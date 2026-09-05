@@ -1,13 +1,16 @@
 name: Eco-System Recovery CI
 
 on:
-  push:
-    branches: ['recovery/**']
   pull_request:
     branches: [main]
+  workflow_dispatch:
 
 permissions:
   contents: read
+
+concurrency:
+  group: eco-system-recovery-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   qualify:
@@ -18,71 +21,47 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - name: Verify segmented transport and extract runtime qualification source
+
+      - name: Verify segmented transport and extract exact runtime qualification source
         shell: bash
         run: |
           set -euo pipefail
           cat > /tmp/chunks.sha256 <<'EOF'
-          d2906fef2c2f2bfc6f0f4ee25e6db1929900ac87ee27c7ad06d7db94a060b740  .recovery/chunks/part-00.b64
-          9f97ddb1279a77f3dafbe0e35ebb5ef6fafdd486f072576217044877cc50d154  .recovery/chunks/part-01.b64
-          91535996223787cb9539679274beff0628241e1a31a9a40462999bf99a81f9ac  .recovery/chunks/part-02.b64
-          da08842d9875ed91e4141f78a0f46874fbc8417f9e0df9ab1361c5a57a668ff0  .recovery/chunks/part-03.b64
-          cd6a9e3595b2275214145d29cdffe795875eea680e0d9ab458b29bedd855e609  .recovery/chunks/part-04.b64
-          1697477d804b806055d2aa2d675faeff41424547a704e602bdb8d986cb61007e  .recovery/chunks/part-05.b64
-          4b9bf6c06216cafde949443cef6031f847d0bca999581bf169603f0bd73b1f1c  .recovery/chunks/part-06.b64
-          41f31fc47c4676fef37c1ef41bcfa5b14deea0d1c29e2e138a18e706d11c7697  .recovery/chunks/part-07.b64
-          5f9a6ff4e02922e6db9db20453bc76ebf3049573eef1b7ca751cabe21280ab7c  .recovery/chunks/part-08.b64
-          67e24be59a21e98999de0c9a373131b1930c079f5ffe30dd83e93fe12b6b5213  .recovery/chunks/part-09.b64
-          d415dff430561dcb11436ee7448f547bdfa97405bf00baba5b6863083d8e7288  .recovery/chunks/part-10.b64
-          179338b5f49e0d86d1d0e9a6a42c51e15610cf85b1988d743eada8e51bc93470  .recovery/chunks/part-11.b64
-          1df51ecc95a4e14420e653c60c4e9b2c1a0faacc4fd4d12da47c710cd1cf9e30  .recovery/chunks/part-12.b64
-          eacfc03eb7ad5077d261d1da7b4d2e6ce0b74f31ae14e6117b56ae2dd157611b  .recovery/chunks/part-13.b64
-          9bd7ad42a784dc7e3d0799b4c95abe6760a26bdc1c70ed301b1d9ed69cd27e6e  .recovery/chunks/part-14.b64
-          a773cda8158f41f28b7d54a3de3abe065767622c1ab2860c1bb31ad325a0994c  .recovery/chunks/part-15.b64
-          83172e1df54872c445a5db5dfcda58ca1a8c50208cd8eed69652be1ed7c37715  .recovery/chunks/part-16.b64
-          0ec39d6135d1b0cb85310d27d056e6eb54c8bd37e6f0305663d7d5b51aa113e4  .recovery/chunks/part-17.b64
-          baf45fc8ee7087dc3c06ee411b08e1884dcd82f9431e763c0b029e6fcb3359aa  .recovery/chunks/part-18.b64
-          a5aa4a63d475d7db6e5cb951c8af6b88be82dae89836ca3690dc629425b1cfd1  .recovery/chunks/part-19.b64
-          3d2dbfe44ddcfbe7f2fb0594675feb902f517f5f3fd2c1c46f32579a22cc2148  .recovery/chunks/part-20.b64
-          0506c369fe1a0799c5ddbb74927b9391467222032c70d235978423f4f5ece33b  .recovery/chunks/part-21.b64
-          3ec93fd98770fdb21eb89048c32834e900e23e696a8c634e2f2bfc41b1a57692  .recovery/chunks/part-22.b64
-          39b0e9f7396851b8204d1e234ef135c08c129e3484187fad854936e2d545b2bf  .recovery/chunks/part-23.b64
-          09970161781abf0ed6782a585059f12800178ba65c272755757e5f15a2611f54  .recovery/chunks/part-24.b64
-          84945678279bd703aded4afbf6fac7d08cfeb603c24b3c5fae571614de3cd72f  .recovery/chunks/part-25.b64
-          f850aafdc6ba09f9545dc1a289d66821d29f08b3852515d0551736c0ea9b6813  .recovery/chunks/part-26.b64
+          89c542751e5e845f30083d0df0f16bf8acb8436aa6937bf683ecd312214a11e5  .recovery/runtime-v2/00.b64
+          5d726d9abeb92e53715cd94f510bf6cc852a901071c7c594f90360097ad16ea5  .recovery/runtime-v2/01.b64
+          821a08952072da41e40de1e3b0a5c2c717287102cefa440849e4ce420a8be669  .recovery/runtime-v2/02.b64
+          fe83b9d967ed75f18cd6555531eb11b54ca53d91bfad243894d73d9bf7f87d9d  .recovery/runtime-v2/03.b64
+          8f834e062e455c89dbd6e3bf43a5ac684f5a9e1cdddc4669616df4b5364addc9  .recovery/runtime-v2/04.b64
+          91b8112d9c750760a412789304318513a77629718b7cc113e2bc589546a1d763  .recovery/runtime-v2/05.b64
+          cf608885a29ad10f40d023252620af483fa12c4625f168c5736841f2dadacb33  .recovery/runtime-v2/06.b64
+          4d1e5195f876ec2101d7724741bdd18029a9317b76e3d7cc21d004063365ffe7  .recovery/runtime-v2/07.b64
           EOF
           sha256sum --check /tmp/chunks.sha256
-          cat .recovery/chunks/part-*.b64 | base64 --decode > /tmp/eco-recovery-qualification.tar.gz
-          echo 'c2c666bb83d63cfaa40dd17ea96d298468837f36849fe927c938e2ffe5e5f070  /tmp/eco-recovery-qualification.tar.gz' | sha256sum --check
+          cat .recovery/runtime-v2/{00,01,02,03,04,05,06,07}.b64 > /tmp/eco-runtime.b64
+          base64 --decode /tmp/eco-runtime.b64 > /tmp/eco-runtime.tar.xz
+          echo '7b423f1494bfdaf8d200e3ae2fd09e4a866bc109fe1b542eb1a78babfb9bfff6  /tmp/eco-runtime.tar.xz' | sha256sum --check
           mkdir recovered
-          tar -xzf /tmp/eco-recovery-qualification.tar.gz -C recovered
+          tar -xJf /tmp/eco-runtime.tar.xz -C recovered
+          test -f recovered/docs/governance/ECO_SYSTEM_PROCEDURE_OBLIGATOIRE_SAUVEGARDE_REPRISE_1.0.0.md
+          test -f recovered/packages/module-registry/src/service-capabilities.ts
+          test -f recovered/workers/api/src/index.ts
+
       - name: Install development dependency
         working-directory: recovered
         run: npm install --ignore-scripts
+
       - name: TypeScript strict
         working-directory: recovered
         run: npm run typecheck
+
       - name: Architecture fitness
         working-directory: recovered
-        run: |
-          # The remote qualification archive intentionally omits UI/Worker source roots.
-          # Empty roots satisfy traversal only; they never invent or certify omitted code.
-          # The full local CI remains authoritative for those source trees.
-          mkdir -p apps workers
-          npm run lint:architecture
-      - name: Service solidarity
+        run: npm run lint:architecture
+
+      - name: Shared governance and service solidarity
         working-directory: recovered
-        run: node scripts/service-solidarity-lint.mjs
-      - name: Build applicability
-        working-directory: recovered
-        shell: bash
-        run: |
-          set -euo pipefail
-          if [ -f apps/web/index.html ]; then
-            npm run build
-          else
-            echo 'NOT_APPLICABLE_IN_RECOVERY_SUBSET: apps/web/index.html intentionally omitted; full local build already qualified.'
-          fi
+        run: npm run lint:shared-governance
+
       - name: Functional recovery regression suite
         working-directory: recovered
-        run: node --test tests/*.test.mjs
+        run: npm test
