@@ -3,4 +3,5 @@ Date: 2026-09-05
 Branch: recovery/0.5.1-memory-discovery-rubric-trust
 Base qualified HEAD: 5835e3ff134c9c4492139f70b0c90b049be754af
 Authorization: explicit user instruction to execute Cloudflare alpha workflow after green Recovery CI and clean PR qualification.
-Constraints: additive D1 migrations only; realMoneyEnabled=false; no merge of main; verify /health before any further feature work.
+Trigger nonce: recovery-ci-green-run-33958481759
+Constraints: additive D1 migrations only; realMoneyEnabled=false; no merge of main; reuse existing GitHub Secrets only; verify /health before any further feature work.
