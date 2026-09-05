@@ -2,6 +2,9 @@ name: Eco-System Alpha Cloudflare — Recovery
 
 on:
   workflow_dispatch:
+  push:
+    branches: ['recovery/0.5.1-memory-discovery-rubric-trust']
+    paths: ['.github/DEPLOY_ECO_SYSTEM_ALPHA_ONCE']
 
 permissions:
   contents: read
