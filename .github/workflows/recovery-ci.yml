@@ -65,10 +65,10 @@ jobs:
       - name: Architecture fitness
         working-directory: recovered
         run: |
-          # The remote qualification archive intentionally omits the web UI source.
-          # Create only the expected empty root so the linter can scan the included
-          # package graph; the full local CI remains authoritative for UI fitness.
-          mkdir -p apps
+          # The remote qualification archive intentionally omits UI/Worker source roots.
+          # Empty roots satisfy traversal only; they never invent or certify omitted code.
+          # The full local CI remains authoritative for those source trees.
+          mkdir -p apps workers
           npm run lint:architecture
       - name: Service solidarity
         working-directory: recovered
