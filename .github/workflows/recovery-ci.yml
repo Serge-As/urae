@@ -46,6 +46,13 @@ jobs:
           test -f recovered/packages/module-registry/src/service-capabilities.ts
           test -f recovered/workers/api/src/index.ts
 
+          # The runtime archive is code/data under qualification; the active deployment
+          # contract remains the branch workflow itself. Copy it into the isolated
+          # recovery workspace so cloudflare-config.test.mjs validates the exact
+          # workflow that would later be dispatched, instead of a duplicate snapshot.
+          mkdir -p recovered/.github/workflows
+          cp .github/workflows/deploy-cloudflare-alpha.yml recovered/.github/workflows/deploy-cloudflare-alpha.yml
+
       - name: Install development dependency
         working-directory: recovered
         run: npm install --ignore-scripts
