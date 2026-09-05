@@ -1,0 +1,33 @@
+name: Import exact Eco-System recovery bundle
+on:
+  push:
+    branches: ["bootstrap/eco-system-recovery-2.3.4"]
+    paths: ["recovery/ECO_SYSTEM_Git_Recovery_0.5.1_2.3.4_2026-09-05.bundle"]
+permissions:
+  contents: write
+jobs:
+  import:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify bundle and import exact history
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          BUNDLE="recovery/ECO_SYSTEM_Git_Recovery_0.5.1_2.3.4_2026-09-05.bundle"
+          TARGET="recovery/0.5.1-memory-discovery-rubric-trust"
+          git bundle verify "$BUNDLE"
+          rm -rf /tmp/eco-recovered
+          git clone "$BUNDLE" /tmp/eco-recovered
+          cd /tmp/eco-recovered
+          git checkout "$TARGET"
+          EXPECTED="$(git rev-parse HEAD)"
+          echo "Recovered HEAD=$EXPECTED"
+          git remote remove origin || true
+          git remote add github "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          git push github "HEAD:refs/heads/${TARGET}"
+          REMOTE="$(git ls-remote github "refs/heads/${TARGET}" | awk '{print $1}')"
+          test "$REMOTE" = "$EXPECTED"
+          echo "Exact recovery branch imported: $REMOTE"
