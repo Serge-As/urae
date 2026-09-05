@@ -1,0 +1,42 @@
+name: Eco-System Recovery CI
+
+on:
+  push:
+    branches: ['recovery/**']
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  qualify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verify and extract recovered runtime source
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo '4db6738d1ad3bdc6615d0cc6de6627ea1bb4489be9937241375e594cfd43d691  .recovery/ECO_SYSTEM_Runtime_Recovery_0.5.1_2.3.4.tar.gz' | sha256sum --check
+          mkdir recovered
+          tar -xzf .recovery/ECO_SYSTEM_Runtime_Recovery_0.5.1_2.3.4.tar.gz -C recovered
+      - name: Install development dependency
+        working-directory: recovered
+        run: npm install --ignore-scripts
+      - name: TypeScript strict
+        working-directory: recovered
+        run: npm run typecheck
+      - name: Architecture fitness
+        working-directory: recovered
+        run: npm run lint:architecture
+      - name: Shared governance / service solidarity
+        working-directory: recovered
+        run: npm run lint:shared-governance
+      - name: Functional regression suite
+        working-directory: recovered
+        run: npm test
