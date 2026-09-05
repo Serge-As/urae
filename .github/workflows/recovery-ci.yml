@@ -64,7 +64,12 @@ jobs:
         run: npm run typecheck
       - name: Architecture fitness
         working-directory: recovered
-        run: npm run lint:architecture
+        run: |
+          # The remote qualification archive intentionally omits the web UI source.
+          # Create only the expected empty root so the linter can scan the included
+          # package graph; the full local CI remains authoritative for UI fitness.
+          mkdir -p apps
+          npm run lint:architecture
       - name: Service solidarity
         working-directory: recovered
         run: node scripts/service-solidarity-lint.mjs
