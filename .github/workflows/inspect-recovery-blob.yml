@@ -1,0 +1,26 @@
+name: Inspect Eco-System recovery blob
+on:
+  push:
+    branches: ["bootstrap/eco-system-recovery-2.3.4"]
+permissions:
+  contents: read
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Inspect without exposing file contents
+        shell: bash
+        run: |
+          set -euo pipefail
+          ls -lh recovery/recovered-2.3.4.xz
+          xz -t recovery/recovered-2.3.4.xz
+          echo "xz integrity: OK"
+          if tar -tJf recovery/recovered-2.3.4.xz >/tmp/list 2>/dev/null; then
+            echo "kind=TAR_XZ"
+            echo "entries=$(wc -l </tmp/list)"
+            sed -n '1,30p' /tmp/list
+          else
+            echo "kind=RAW_XZ"
+            echo "decompressed_bytes=$(xz --robot --list recovery/recovered-2.3.4.xz | awk -F '\t' '$1=="totals"{print $5}')"
+          fi
