@@ -1,0 +1,65 @@
+name: Eco-System Cloudflare Auth Diagnostic
+
+on:
+  workflow_dispatch:
+  push:
+    branches: ['recovery/0.5.1-memory-discovery-rubric-trust']
+    paths: ['.github/workflows/diagnose-cloudflare-auth.yml']
+
+permissions:
+  contents: read
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+    steps:
+      - name: Classify credential safely and verify directly
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json, os, re, subprocess, sys
+          token = os.environ.get('CLOUDFLARE_API_TOKEN', '').replace('\r','').replace('\n','').strip()
+          for _ in range(4):
+              if len(token) >= 2 and token[0] == token[-1] and token[0] in {'"', "'"}:
+                  token = token[1:-1].strip()
+              token = re.sub(r'(?i)^CLOUDFLARE_API_TOKEN\s*=\s*', '', token).strip()
+              token = re.sub(r'(?i)^Authorization\s*:\s*', '', token).strip()
+              token = re.sub(r'(?i)^Bearer(?:\s+|[:=]+)?', '', token).strip()
+          if not token:
+              print('::error::TOKEN_EMPTY')
+              sys.exit(1)
+          print('::add-mask::' + token)
+          print(f'TOKEN_LENGTH={len(token)}')
+          print('TOKEN_FORMAT=cfut_prefixed' if token.startswith('cfut_') else 'TOKEN_FORMAT=legacy_or_non_cfut')
+          print('TOKEN_SHAPE=32_hex_identifier_like' if re.fullmatch(r'[0-9a-fA-F]{32}', token) else 'TOKEN_SHAPE=not_32_hex_identifier')
+          print('ACCOUNT_ID_LENGTH=' + str(len(os.environ.get('CLOUDFLARE_ACCOUNT_ID','').strip())))
+          result = subprocess.run([
+              'curl','--silent','--show-error','--request','GET',
+              'https://api.cloudflare.com/client/v4/user/tokens/verify',
+              '--header', 'Authorization: Bearer ' + token,
+              '--header', 'Content-Type: application/json'
+          ], capture_output=True, text=True)
+          if result.returncode != 0:
+              print('::error::CURL_TRANSPORT_FAILURE')
+              sys.exit(1)
+          try:
+              body = json.loads(result.stdout)
+          except Exception:
+              print('::error::VERIFY_RESPONSE_NOT_JSON')
+              sys.exit(1)
+          safe = {
+              'success': body.get('success'),
+              'errors': [{'code': e.get('code'), 'message': e.get('message')} for e in body.get('errors', [])],
+              'messages': [{'code': e.get('code'), 'message': e.get('message')} for e in body.get('messages', [])],
+              'status': (body.get('result') or {}).get('status')
+          }
+          print('VERIFY_RESULT=' + json.dumps(safe, separators=(',',':')))
+          if body.get('success') is not True or (body.get('result') or {}).get('status') != 'active':
+              print('::error::CLOUDFLARE_TOKEN_NOT_ACTIVE_OR_NOT_API_TOKEN')
+              sys.exit(1)
+          PY
