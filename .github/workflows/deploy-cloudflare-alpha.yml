@@ -68,12 +68,34 @@ jobs:
           npm run lint:shared-governance
           npm test
 
-      - name: Verify deployment credentials exist
+      - name: Verify and normalize deployment credentials
         shell: bash
         run: |
           set -euo pipefail
           test -n "${CLOUDFLARE_ACCOUNT_ID}" || { echo '::error::Missing CLOUDFLARE_ACCOUNT_ID secret'; exit 1; }
           test -n "${CLOUDFLARE_API_TOKEN}" || { echo '::error::Missing CLOUDFLARE_API_TOKEN secret'; exit 1; }
+
+          # Wrangler expects the bare API token. Accept a Secret that was pasted as
+          # "Bearer <token>", with surrounding quotes, or with CR/LF whitespace,
+          # without ever printing the credential.
+          TOKEN="$(printf '%s' "${CLOUDFLARE_API_TOKEN}" | tr -d '\r\n' | sed -E 's/^[[:space:]]+//; s/[[:space:]]+$//; s/^[Bb][Ee][Aa][Rr][Ee][Rr][[:space:]]+//')"
+          if [[ "${TOKEN}" == \"*\" && "${TOKEN}" == *\" ]]; then
+            TOKEN="${TOKEN:1:${#TOKEN}-2}"
+          elif [[ "${TOKEN}" == \'*\' && "${TOKEN}" == *\' ]]; then
+            TOKEN="${TOKEN:1:${#TOKEN}-2}"
+          fi
+          test -n "${TOKEN}" || { echo '::error::Cloudflare API token became empty after normalization'; exit 1; }
+          if [[ "${TOKEN}" =~ [[:space:]] ]]; then
+            echo '::error::Cloudflare API token still contains whitespace after safe normalization'
+            exit 1
+          fi
+
+          echo "::add-mask::${TOKEN}"
+          {
+            echo 'CLOUDFLARE_API_TOKEN<<ECO_TOKEN_EOF'
+            printf '%s\n' "${TOKEN}"
+            echo 'ECO_TOKEN_EOF'
+          } >> "${GITHUB_ENV}"
 
       - name: Resolve or create D1 database
         working-directory: recovered
