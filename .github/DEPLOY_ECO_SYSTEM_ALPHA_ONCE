@@ -1,7 +1,7 @@
 Eco-System alpha deployment authorization checkpoint
 Date: 2026-09-07
 Branch: recovery/0.5.1-memory-discovery-rubric-trust
-Base qualified HEAD: b174b8383f062b0b5583101a8cc0ce9e1b36289b
+Base qualified HEAD: acff2b5d16971f974a34360d2c2cf5adc9d63e21
 Authorization: explicit user instruction to continue Cloudflare alpha deployment and launch-readiness work.
-Trigger nonce: retry-after-token-normalization-2026-09-07
+Trigger nonce: retry-hardened-token-normalization-2026-09-07
 Constraints: additive D1 migrations only; realMoneyEnabled=false; no merge of main; reuse existing GitHub Secrets only; verify /health before any further feature work.
