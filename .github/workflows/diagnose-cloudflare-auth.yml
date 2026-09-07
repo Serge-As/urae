@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
   push:
     branches: ['recovery/0.5.1-memory-discovery-rubric-trust']
-    paths: ['.github/workflows/diagnose-cloudflare-auth.yml']
+    paths: ['.github/DIAGNOSE_CLOUDFLARE_AUTH_ONCE']
 
 permissions:
   contents: read
