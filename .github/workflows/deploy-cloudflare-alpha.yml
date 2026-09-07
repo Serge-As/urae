@@ -75,18 +75,29 @@ jobs:
           test -n "${CLOUDFLARE_ACCOUNT_ID}" || { echo '::error::Missing CLOUDFLARE_ACCOUNT_ID secret'; exit 1; }
           test -n "${CLOUDFLARE_API_TOKEN}" || { echo '::error::Missing CLOUDFLARE_API_TOKEN secret'; exit 1; }
 
-          # Wrangler expects the bare API token. Accept a Secret that was pasted as
-          # "Bearer <token>", with surrounding quotes, or with CR/LF whitespace,
-          # without ever printing the credential.
-          TOKEN="$(printf '%s' "${CLOUDFLARE_API_TOKEN}" | tr -d '\r\n' | sed -E 's/^[[:space:]]+//; s/[[:space:]]+$//; s/^[Bb][Ee][Aa][Rr][Ee][Rr][[:space:]]+//')"
+          TOKEN="$(printf '%s' "${CLOUDFLARE_API_TOKEN}" | tr -d '\r\n' | sed -E 's/^[[:space:]]+//; s/[[:space:]]+$//')"
           if [[ "${TOKEN}" == \"*\" && "${TOKEN}" == *\" ]]; then
             TOKEN="${TOKEN:1:${#TOKEN}-2}"
           elif [[ "${TOKEN}" == \'*\' && "${TOKEN}" == *\' ]]; then
             TOKEN="${TOKEN:1:${#TOKEN}-2}"
           fi
+
+          # Accept common copy/paste wrappers while never logging the credential.
+          TOKEN="$(printf '%s' "${TOKEN}" | sed -E \
+            -e 's/^[Cc][Ll][Oo][Uu][Dd][Ff][Ll][Aa][Rr][Ee]_[Aa][Pp][Ii]_[Tt][Oo][Kk][Ee][Nn][[:space:]]*=[[:space:]]*//' \
+            -e 's/^[Aa][Uu][Tt][Hh][Oo][Rr][Ii][Zz][Aa][Tt][Ii][Oo][Nn][[:space:]]*:[[:space:]]*//' \
+            -e 's/^[Bb][Ee][Aa][Rr][Ee][Rr][[:space:]:=]*/' \
+            -e 's/^[[:space:]]+//; s/[[:space:]]+$//')"
+
+          if [[ "${TOKEN}" == \"*\" && "${TOKEN}" == *\" ]]; then
+            TOKEN="${TOKEN:1:${#TOKEN}-2}"
+          elif [[ "${TOKEN}" == \'*\' && "${TOKEN}" == *\' ]]; then
+            TOKEN="${TOKEN:1:${#TOKEN}-2}"
+          fi
+
           test -n "${TOKEN}" || { echo '::error::Cloudflare API token became empty after normalization'; exit 1; }
-          if [[ "${TOKEN}" =~ [[:space:]] ]]; then
-            echo '::error::Cloudflare API token still contains whitespace after safe normalization'
+          if [[ ! "${TOKEN}" =~ ^[A-Za-z0-9_-]+$ ]]; then
+            echo '::error::Cloudflare API token contains characters incompatible with a bare API token; update the existing GitHub Secret with the raw token only.'
             exit 1
           fi
 
