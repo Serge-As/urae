@@ -74,39 +74,28 @@ jobs:
           set -euo pipefail
           test -n "${CLOUDFLARE_ACCOUNT_ID}" || { echo '::error::Missing CLOUDFLARE_ACCOUNT_ID secret'; exit 1; }
           test -n "${CLOUDFLARE_API_TOKEN}" || { echo '::error::Missing CLOUDFLARE_API_TOKEN secret'; exit 1; }
-
-          TOKEN="$(printf '%s' "${CLOUDFLARE_API_TOKEN}" | tr -d '\r\n' | sed -E 's/^[[:space:]]+//; s/[[:space:]]+$//')"
-          if [[ "${TOKEN}" == \"*\" && "${TOKEN}" == *\" ]]; then
-            TOKEN="${TOKEN:1:${#TOKEN}-2}"
-          elif [[ "${TOKEN}" == \'*\' && "${TOKEN}" == *\' ]]; then
-            TOKEN="${TOKEN:1:${#TOKEN}-2}"
-          fi
-
-          # Accept common copy/paste wrappers while never logging the credential.
-          TOKEN="$(printf '%s' "${TOKEN}" | sed -E \
-            -e 's/^[Cc][Ll][Oo][Uu][Dd][Ff][Ll][Aa][Rr][Ee]_[Aa][Pp][Ii]_[Tt][Oo][Kk][Ee][Nn][[:space:]]*=[[:space:]]*//' \
-            -e 's/^[Aa][Uu][Tt][Hh][Oo][Rr][Ii][Zz][Aa][Tt][Ii][Oo][Nn][[:space:]]*:[[:space:]]*//' \
-            -e 's/^[Bb][Ee][Aa][Rr][Ee][Rr][[:space:]:=]*/' \
-            -e 's/^[[:space:]]+//; s/[[:space:]]+$//')"
-
-          if [[ "${TOKEN}" == \"*\" && "${TOKEN}" == *\" ]]; then
-            TOKEN="${TOKEN:1:${#TOKEN}-2}"
-          elif [[ "${TOKEN}" == \'*\' && "${TOKEN}" == *\' ]]; then
-            TOKEN="${TOKEN:1:${#TOKEN}-2}"
-          fi
-
-          test -n "${TOKEN}" || { echo '::error::Cloudflare API token became empty after normalization'; exit 1; }
-          if [[ ! "${TOKEN}" =~ ^[A-Za-z0-9_-]+$ ]]; then
-            echo '::error::Cloudflare API token contains characters incompatible with a bare API token; update the existing GitHub Secret with the raw token only.'
-            exit 1
-          fi
-
-          echo "::add-mask::${TOKEN}"
-          {
-            echo 'CLOUDFLARE_API_TOKEN<<ECO_TOKEN_EOF'
-            printf '%s\n' "${TOKEN}"
-            echo 'ECO_TOKEN_EOF'
-          } >> "${GITHUB_ENV}"
+          python - <<'PY'
+          import os, re, sys
+          token = os.environ.get('CLOUDFLARE_API_TOKEN', '')
+          token = token.replace('\r', '').replace('\n', '').strip()
+          for _ in range(4):
+              if len(token) >= 2 and token[0] == token[-1] and token[0] in {'"', "'"}:
+                  token = token[1:-1].strip()
+              token = re.sub(r'(?i)^CLOUDFLARE_API_TOKEN\s*=\s*', '', token).strip()
+              token = re.sub(r'(?i)^Authorization\s*:\s*', '', token).strip()
+              token = re.sub(r'(?i)^Bearer(?:\s+|[:=]+)?', '', token).strip()
+          if not token:
+              print('::error::Cloudflare API token became empty after normalization')
+              sys.exit(1)
+          if not re.fullmatch(r'[A-Za-z0-9_-]+', token):
+              print('::error::Cloudflare API token contains characters incompatible with a bare API token; update the existing GitHub Secret with the raw token only.')
+              sys.exit(1)
+          print('::add-mask::' + token)
+          with open(os.environ['GITHUB_ENV'], 'a', encoding='utf-8') as fh:
+              fh.write('CLOUDFLARE_API_TOKEN<<ECO_TOKEN_EOF\n')
+              fh.write(token + '\n')
+              fh.write('ECO_TOKEN_EOF\n')
+          PY
 
       - name: Resolve or create D1 database
         working-directory: recovered
