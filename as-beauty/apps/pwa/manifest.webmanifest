@@ -1,0 +1,10 @@
+{
+  "name": "As Beauty",
+  "short_name": "As Beauty",
+  "start_url": "./#discover",
+  "display": "standalone",
+  "background_color": "#fffaf7",
+  "theme_color": "#6f294f",
+  "description": "Moteur de recherche beauté, soins corporels et bien-être.",
+  "icons": [{"src":"./icon.svg","sizes":"any","type":"image/svg+xml","purpose":"any maskable"}]
+}
