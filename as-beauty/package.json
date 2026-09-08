@@ -1,0 +1,13 @@
+{
+  "name": "as-beauty",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node scripts/dev.mjs",
+    "build": "node scripts/build.mjs",
+    "validate": "node scripts/validate.mjs",
+    "test": "node --test tests/*.test.mjs"
+  },
+  "engines": {"node": ">=22"}
+}
