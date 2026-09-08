@@ -1,0 +1,3 @@
+import test from 'node:test';import assert from 'node:assert/strict';import worker from '../workers/api/src/index.js';
+test('health ne prétend pas activer argent réel ou IA générative',async()=>{const r=await worker.fetch(new Request('https://example.test/health'),{});const b=await r.json();assert.equal(b.ok,true);assert.equal(b.realMoneyEnabled,false);assert.equal(b.generativeAiEnabled,false)});
+test('création de besoin sans paiement obligatoire',async()=>{const r=await worker.fetch(new Request('https://example.test/v1/needs',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({service_query:'massage',city:'Yaoundé'})}),{});const b=await r.json();assert.equal(r.status,201);assert.equal(b.paymentRequired,false)});
