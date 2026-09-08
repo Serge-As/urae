@@ -1,0 +1,3 @@
+import test from 'node:test';import assert from 'node:assert/strict';import {readFile} from 'node:fs/promises';
+test('catalogue couvre le corps et distingue les risques',async()=>{const c=JSON.parse(await readFile('apps/pwa/catalog.json','utf8'));assert.ok(c.zones.includes('Pieds'));assert.ok(c.zones.includes('Visage'));assert.ok(c.items.some(i=>i.title.includes('Lait corporel')));assert.ok(c.items.some(i=>i.description.includes('non médicale')||i.description.includes('non médical')))});
+test('le paiement reste cash-first',async()=>{const sql=await readFile('db/migrations/0001_initial.sql','utf8');assert.match(sql,/PAY_AFTER_SERVICE/);assert.match(sql,/DECLARED/);assert.match(sql,/counterparty_confirmed_at/);assert.match(sql,/provider_verified_at/)});
