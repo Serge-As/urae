@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#6f294f" />
+  <meta name="description" content="As Beauty — trouvez le bon professionnel, au bon endroit, au bon moment." />
+  <link rel="manifest" href="./manifest.webmanifest" />
+  <link rel="stylesheet" href="./styles.css" />
+  <title>As Beauty</title>
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="#discover" aria-label="Accueil As Beauty"><span>AS</span> Beauty</a>
+    <button id="modeButton" class="mode-button" type="button">Passer en mode Pro</button>
+  </header>
+  <main>
+    <section class="hero">
+      <p class="eyebrow">Beauté • Corps • Bien-être • Cameroun</p>
+      <h1>Le bon professionnel. Au bon endroit. Au bon moment.</h1>
+      <p>Trouvez un service de la tête aux pieds, négociez clairement le prix et réservez sans paiement obligatoire.</p>
+      <form id="searchForm" class="searchbar">
+        <input id="searchInput" type="search" placeholder="Ex. massage, peau éclatante, locks, pédicure…" autocomplete="off" />
+        <select id="zoneSelect" aria-label="Zone du corps"><option value="">Toute zone</option></select>
+        <button type="submit">Rechercher</button>
+      </form>
+      <div class="quick-actions">
+        <button data-action="now">Disponible maintenant</button>
+        <button data-action="home">À domicile</button>
+        <button data-action="quote">Demander un devis</button>
+        <button data-action="safe">Mission Sécurisée</button>
+      </div>
+    </section>
+    <nav class="tabs" aria-label="Navigation principale">
+      <a href="#discover">Découvrir</a><a href="#trends">Beauty Trends</a><a href="#loyalty">Fidélité</a><a href="#safety">Sécurité</a><a href="#pro">Cockpit Pro</a>
+    </nav>
+    <section id="view" class="view" aria-live="polite"></section>
+  </main>
+  <template id="resultCardTemplate">
+    <article class="card result-card">
+      <div class="result-icon"></div><div><p class="badge"></p><h3></h3><p class="description"></p><div class="meta"></div></div>
+      <button class="card-action" type="button">Voir</button>
+    </article>
+  </template>
+  <div id="toast" role="status" aria-live="polite"></div>
+  <script type="module" src="./app.js"></script>
+</body>
+</html>
