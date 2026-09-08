@@ -1,0 +1,38 @@
+{
+  "zones": [
+    "Cheveux et cuir chevelu",
+    "Visage",
+    "Peau et corps",
+    "Poitrine et buste",
+    "Ventre et taille",
+    "Dos",
+    "Fessier",
+    "Bras et aisselles",
+    "Mains et ongles",
+    "Jambes",
+    "Pieds",
+    "Corps entier",
+    "Bien-être"
+  ],
+  "items": [
+    {"id":"svc-braids","kind":"service","title":"Tresses et nattes","zone":"Cheveux et cuir chevelu","tags":["coiffure","tresses","domicile"],"price":"5 000–35 000 FCFA","availability":"maintenant","icon":"🪮","description":"Tresses simples, knotless, vanilles et styles événementiels."},
+    {"id":"svc-barber","kind":"service","title":"Coupe & barbe","zone":"Cheveux et cuir chevelu","tags":["barber","homme","enfant"],"price":"1 000–8 000 FCFA","availability":"maintenant","icon":"✂️","description":"Coupe, contours, barbe, rasage et soins après-rasage."},
+    {"id":"svc-scalp","kind":"service","title":"Diagnostic cosmétique du cuir chevelu","zone":"Cheveux et cuir chevelu","tags":["pellicules","routine","non médical"],"price":"Sur devis","availability":"planifié","icon":"🔎","description":"Observation non médicale, historique de routine et orientation vers un professionnel de santé en cas de signe préoccupant."},
+    {"id":"svc-facial","kind":"service","title":"Soin du visage","zone":"Visage","tags":["nettoyage","hydratation","éclat"],"price":"5 000–40 000 FCFA","availability":"aujourd'hui","icon":"✨","description":"Nettoyage, hydratation, masque et soins esthétiques non invasifs."},
+    {"id":"svc-makeup","kind":"service","title":"Maquillage","zone":"Visage","tags":["mariage","soirée","naturel"],"price":"5 000–75 000 FCFA","availability":"planifié","icon":"💄","description":"Maquillage naturel, événementiel, mariée et cours d’auto-maquillage."},
+    {"id":"svc-skin-routine","kind":"service","title":"Routine corporelle personnalisée","zone":"Peau et corps","tags":["lait corporel","savon","routine","formulation"],"price":"Sur devis","availability":"planifié","icon":"🧴","description":"Questionnaire, objectifs esthétiques, ingrédients déclarés, test local conseillé et suivi photographique contrôlé."},
+    {"id":"product-body-milk","kind":"product","title":"Lait corporel personnalisé","zone":"Peau et corps","tags":["hydratation","éclat","teint uniforme"],"price":"Selon formule","availability":"commande","icon":"🧴","description":"Produit formulé selon le profil déclaré. Composition, lot, date et précautions obligatoires."},
+    {"id":"svc-stretch","kind":"service","title":"Programme esthétique vergetures","zone":"Peau et corps","tags":["vergetures","massage","hydratation"],"price":"Sur devis","availability":"planifié","icon":"🌿","description":"Routine cosmétique et suivi réaliste, sans promesse de disparition garantie."},
+    {"id":"svc-massage","kind":"service","title":"Massage relaxant","zone":"Corps entier","tags":["massage","domicile","spa"],"price":"10 000–60 000 FCFA","availability":"aujourd'hui","icon":"💆🏾","description":"Massage de bien-être avec préférences de praticien, lieu sécurisé et consentement explicite."},
+    {"id":"svc-mani","kind":"service","title":"Manucure & onglerie","zone":"Mains et ongles","tags":["ongles","gel","semi-permanent"],"price":"2 000–25 000 FCFA","availability":"maintenant","icon":"💅🏾","description":"Manucure, pose, réparation, nail art et soins des mains."},
+    {"id":"svc-pedi","kind":"service","title":"Pédicure","zone":"Pieds","tags":["pieds","parasol","domicile"],"price":"2 000–20 000 FCFA","availability":"maintenant","icon":"🦶🏾","description":"Pédicure esthétique, soins simples et orientation médicale si plaie ou infection suspectée."},
+    {"id":"svc-wax","kind":"service","title":"Épilation","zone":"Corps entier","tags":["cire","visage","jambes"],"price":"2 000–35 000 FCFA","availability":"aujourd'hui","icon":"🫧","description":"Épilation avec zones, technique, hygiène et contre-indications déclarées."},
+    {"id":"svc-fitness-wellness","kind":"service","title":"Accompagnement bien-être et silhouette","zone":"Bien-être","tags":["activité","habitudes","non médical"],"price":"Sur devis","availability":"planifié","icon":"🧘🏾","description":"Objectifs de bien-être réalistes. Les thés, gélules et promesses de perte de poids nécessitent un circuit de vérification renforcé."},
+    {"id":"training-dermo","kind":"formation","title":"Formation en phyto-dermocosmétologie","zone":"Peau et corps","tags":["formation","formulation","cosmétique"],"price":"Selon organisme","availability":"sessions","icon":"🎓","description":"Programme, formateur, prérequis et statut de certification affichés séparément et vérifiables."}
+  ],
+  "providers": [
+    {"id":"p1","name":"Laboratoire Éclat d’Or","type":"atelier cosmétique","verified":"profil déclaré","location":"Yaoundé","rating":4.5,"note":"Exemple de fiche pilote. Les allégations thérapeutiques et produits ingérables sont masqués jusqu’à vérification."},
+    {"id":"p2","name":"Mboa Glow Studio","type":"maison de beauté","verified":"téléphone vérifié","location":"Douala","rating":4.7,"note":"Soins visage, corps, onglerie et coiffure."},
+    {"id":"p3","name":"Chez Junior Barber","type":"barber mobile","verified":"prestations vérifiées","location":"Yaoundé","rating":4.8,"note":"Disponible maintenant, salon ou domicile."}
+  ]
+}
