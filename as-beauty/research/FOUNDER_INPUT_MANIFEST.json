@@ -1,0 +1,17 @@
+{
+  "generated_at": "2026-09-08",
+  "sources": [
+    {
+      "name": "PTT-20260906-WA0001.opus",
+      "sha256": "3121e7d9e912f2e8cb54884995803394a835cd417b218e657d7c0c535dcef8e0",
+      "size_bytes": 1389591,
+      "storage": "conversation attachment; requirements normalized into docs"
+    },
+    {
+      "name": "PTT-20260907-WA0000.opus",
+      "sha256": "2a55359174ef09d02162e55410f09b2e04fbf5f6fdb1f2df4784aaeca5f9c7b4",
+      "size_bytes": 716334,
+      "storage": "conversation attachment; requirements normalized into docs"
+    }
+  ]
+}
