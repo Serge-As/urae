@@ -1,0 +1,35 @@
+version: 1.2.0
+project: as-beauty
+flags:
+  realMoneyEnabled: false
+  generativeAiEnabled: false
+  medicalDiagnosisEnabled: false
+guardrails:
+  - id: north-star-visible
+    rule: Les deux phrases maîtresses apparaissent dans README, Cahier et cockpit.
+  - id: no-proprietary-copy
+    rule: Reproduire une capacité publique, jamais le code, le texte, la marque ou l'interface propriétaire d'un concurrent.
+  - id: cash-truth
+    rule: DECLARED, COUNTERPARTY_CONFIRMED et PROVIDER_VERIFIED sont des états distincts.
+  - id: unknown-not-success
+    rule: UNKNOWN ne vaut jamais SUCCEEDED.
+  - id: skin-preview-not-prediction
+    rule: Une simulation cutanée est esthétique et non prédictive.
+  - id: no-universal-cure-claim
+    rule: Une promesse de traiter tout problème de peau est bloquée sans examen spécialisé.
+  - id: ingestible-gated
+    rule: Gélules, thés et compléments passent par le circuit à risque élevé.
+  - id: formula-versioning
+    rule: Toute composition personnalisée possède formule, version et lot.
+  - id: adverse-event-reporting
+    rule: Un effet indésirable peut être signalé sans être supprimé par le vendeur.
+  - id: safety-mission-expiry
+    rule: La localisation de mission est consentie, temporaire et expirante.
+  - id: sponsored-labelled
+    rule: Tout résultat payé est marqué Sponsorisé et reste soumis à pertinence et confiance.
+  - id: secrets-outside-repo
+    rule: Aucun secret, token, PIN ou clé privée n'est versionné.
+  - id: additive-migrations
+    rule: Les migrations initiales sont additives et réversibles par correction ciblée.
+  - id: persistent-handoff
+    rule: Toute tranche met à jour Current Truth, tests, manifeste et point de reprise.
