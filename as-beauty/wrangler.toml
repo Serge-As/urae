@@ -1,0 +1,13 @@
+name = "as-beauty-api"
+main = "workers/api/src/index.js"
+compatibility_date = "2026-09-01"
+
+[vars]
+REAL_MONEY_ENABLED = "false"
+GENERATIVE_AI_ENABLED = "false"
+
+# Créer la base puis renseigner database_id sans publier de secret.
+# [[d1_databases]]
+# binding = "DB"
+# database_name = "as-beauty-db"
+# database_id = "TO_BE_CREATED"
