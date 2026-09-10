@@ -1,3 +1,6 @@
 Eco-System verified runtime export
 Date: 2026-09-10
-Purpose: exact-source audit plus BIR+ backup checkpoint.
+Purpose: final BIR+ backup after hardened alpha launch.
+Deployment run: 34421717265
+Runtime SHA-256: 2d2fbeab6f34ef0b84d9c9278796259c0bfc4ebe5197e33deb2a687e16ce6a67
+Trigger nonce: final-post-launch-backup-2026-09-10T01-48-CMR
