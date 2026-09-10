@@ -1,0 +1,1 @@
+Binary-safe transport directory. Files `00.part`..`09.part` are raw chunks of the verified XZ payload and are concatenated byte-for-byte by the materializer. Full archive SHA-256: `69380f1dde05b02721ff1d1dee6774fab0a7ec2c5738c6439073f74fc36456ec`.
