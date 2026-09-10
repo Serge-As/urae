@@ -1,0 +1,1 @@
+Safe binary transport supersedes the earlier text staging parts. The materializer must use `.bootstrap/complete-app-1.0/bin/*.part` when present and verify the full archive SHA-256 `69380f1dde05b02721ff1d1dee6774fab0a7ec2c5738c6439073f74fc36456ec` before extraction. Earlier `part-*.b64` files are transport-only and must not be trusted if their reconstructed SHA differs.
