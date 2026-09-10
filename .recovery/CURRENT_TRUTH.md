@@ -73,6 +73,22 @@ For initial field tests:
 - do not enable real money;
 - report differences between expected rule, observed practice and app behavior rather than forcing workarounds.
 
+Android field-test guide: `docs/testing/ECO_SYSTEM_ANDROID_FIELD_TEST_0.6.0.md`.
+
+## BIR+ backup — ACQUIRED
+A reconstructible backup of the normal 0.6 source has been generated from exact Git HEAD `899ef4b842ad2f3e282a27938a9f3d8768e20200`.
+
+- workflow: `Eco-System 0.6 — BIR+ Verified Source Backup`
+- run: `34431702937`
+- result: **SUCCESS**
+- artifact: `eco-system-0.6-birplus-source`
+- artifact ID: `10134711382`
+- artifact ZIP digest: `sha256:bab4e7988a22322bc2e27d9a6d6c68d4035f96cf2b6f90e8a1e48c96cebba807`
+- source archive SHA-256: `8bd64c3398e6e5a88c4274331a736dd8d20b0783341b314a0f374d8ab6738e81`
+- retention configured: 30 days
+
+The older 0.5.1 recovery artifact remains an independent fallback and must not be deleted merely because 0.6 is now the active preview line.
+
 ## Remaining high-priority work
 1. Android field test of the 0.6 PWA on real devices and unstable networks.
 2. Complete Living Rules UI/configuration so authorized managers can describe, validate and evolve per-rubric policies without code changes.
