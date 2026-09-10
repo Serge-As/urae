@@ -89,13 +89,13 @@ jobs:
           for attempt in 1 2 3 4 5; do
             root="$(curl --fail --silent --show-error --location --max-time 20 "${ECO_SYSTEM_ROOT}" || true)"
             health="$(curl --fail --silent --show-error --location --max-time 20 "${ECO_SYSTEM_HEALTH}" || true)"
-            if printf '%s' "${root}" | grep -q 'Eco-System' && printf '%s' "${health}" | grep -q '"ok": true'; then
+            if printf '%s' "${root}" | grep -qi '<!doctype html>' && printf '%s' "${root}" | grep -q 'Plateforme Tontines & Associations' && printf '%s' "${health}" | grep -q '"ok": true'; then
               break
             fi
             sleep 3
           done
           printf '%s' "${root}" | grep -qi '<!doctype html>'
-          printf '%s' "${root}" | grep -q 'Eco-System'
+          printf '%s' "${root}" | grep -q 'Plateforme Tontines & Associations'
           printf '%s' "${health}" > /tmp/health.json
           node --input-type=module - <<'NODE'
           import fs from 'node:fs';
@@ -103,6 +103,5 @@ jobs:
           if(health.ok!==true) throw new Error('HEALTH_NOT_OK');
           if(health.version!==process.env.EXPECTED_VERSION) throw new Error(`VERSION_MISMATCH:${health.version}`);
           if(health.realMoneyEnabled!==false) throw new Error('REAL_MONEY_MUST_REMAIN_DISABLED');
+          console.log(`Mobile root + health PASS: ${health.version}; realMoneyEnabled=${health.realMoneyEnabled}`);
           NODE
-
-# Root routing fix 189c8bd is included in this deployment trigger.
