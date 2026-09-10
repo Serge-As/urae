@@ -1,4 +1,4 @@
 Eco-System Cloudflare auth diagnostic trigger
 Date: 2026-09-10
-Purpose: verify the rotated GitHub Secret directly against Cloudflare without revealing it.
-Trigger nonce: rotated-token-2026-09-10T01-18-CMR
+Purpose: verify the rotated account-owned GitHub Secret directly against Cloudflare without revealing it.
+Trigger nonce: account-token-endpoint-2026-09-10T01-24-CMR
