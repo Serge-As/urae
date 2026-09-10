@@ -2,43 +2,51 @@
 
 Date: 2026-09-10
 
-Read `.recovery/CURRENT_TRUTH.md` and `.recovery/DOMAIN_POLICY_FLEXIBILITY_2026-09-10.md` first.
+Read `.recovery/CURRENT_TRUTH.md`, `.recovery/DOMAIN_POLICY_FLEXIBILITY_2026-09-10.md` and `docs/governance/ECO_SYSTEM_LIVING_RULES_DOCTRINE_1.0.0.md` first.
 
 ## Acquired — do not redo
-- Recovery v2 segmented transport and cryptographic reconstruction.
-- Account-owned Cloudflare API Token freshly re-verified active on run `34426666080`.
-- Recovery CI green on hardened runtime.
-- `eco-system-db` resolved and all additive migrations applied remotely.
-- Worker `eco-system` deployed.
-- `/health` smoke PASS with `realMoneyEnabled=false` at deployment.
-- Focused business/UI/data-validation hardening: 41/41 PASS.
+- Recovery v2 checkpoint remains preserved as rollback/provenance.
+- Cloudflare Account API Token is valid and active.
+- Normal readable source exists on `next/0.6.0-mobile-living-rules`.
+- Mobile-first PWA is deployed at `https://eco-system.sergemimf.workers.dev/`.
+- The old root `NOT_FOUND` is fixed.
+- `eco-system-db` is resolved and bound to Worker `eco-system`.
+- Additive D1 migrations are already applied.
+- `/health` is green with version `0.6.0-mobile-living-rules` and `realMoneyEnabled=false`.
+- Cloudflare run `34431427752`: SUCCESS.
+- TypeScript / architecture / governance / service solidarity: PASS.
+- Functional suite: 43/43 PASS.
 
-## Mandatory doctrine refinement before more rigid business rules
-The 2026-09-10 founder clarification supersedes any interpretation that creator-only simulation or post-close contribution blocking are universal business rules.
+## Immediate field-test sequence
+1. Open the PWA directly on Android and install/add it to the home screen when offered.
+2. Verify launch, refresh, reopen and basic offline shell behavior.
+3. Use test identities and test financial values only.
+4. Exercise the real vertical slice: project → simulation → group → members → meeting → contribution → close → governed late contribution → re-close/audit.
+5. Exercise Living Rules: create a rubric and distinguish written rule, observed practice, validated operational rule, expected amount, collected amount, member shortfall/debt, solidarity coverage and beneficiary payout.
+6. Report every mismatch as: screen/action → steps → expected behavior → actual behavior → group rule/practice that should govern it.
 
-Implement through canonical capabilities/policies, not case-specific parallel engines:
-1. replace creator-only simulation with capability-based authorization/delegation, separating simulate / edit / approve / convert;
-2. treat meeting close as a versioned checkpoint, preserving idempotency but permitting governed late adjustments when group policy allows;
-3. model mandatory-rubric expected amount, actual member collection, member shortfall/debt, solidarity funding and beneficiary disbursement as distinct flows;
-4. keep physical XAF cash-count validation non-negative/integer while allowing negative business shorthand for debt/shortfall in the UI/model where appropriate;
-5. allow fixed-target guaranteed payouts, collected-only payouts, partial solidarity, sanctions, waivers and mixed policies according to each group's validated rules;
-6. extract candidate rules from RI/statuts/PV with source references, but require authorized human confirmation before sensitive activation;
-7. when a sensitive action is denied, provide a governed authorization/exception/regularization path whenever possible instead of a dead end.
+## Product sequence after first Android feedback
+1. Complete the Living Rules configuration UX: per-rubric rules, mixed variants, authorized exceptions, approval/quorum, time windows, evidence, notifications, regularization and revision history.
+2. Continue RI/statuts/PV assisted reading as reviewable suggestions only; no sensitive automatic activation.
+3. Resume Discovery / Identity / Membership from existing canonical services — no parallel engine.
+4. Complete mutual person→group and opt-in group→candidate discovery, invitations, recruitment campaigns, saved searches/alerts, candidate questions/portfolio/referrals and anti-enumeration.
+5. Keep Membership as sole canonical authority for membership creation.
+6. Add production-grade authentication/session hardening and MFA for sensitive roles before wider pilot exposure.
+7. Run hostile multi-tenant authorization tests and D1 backup/restore/PRA drill.
+8. Field-test old Android / unstable 2G-3G / long offline periods.
+9. Only after those gates: controlled multi-group pilot and GO/NO-GO review.
 
-## Product sequence after this refinement
-- Resume Discovery / Identity / Membership from existing canonical services — no parallel engine.
-- Complete mutual person→group and opt-in group→candidate discovery, governed invitations, recruitment campaigns, saved searches/alerts, candidate questions/portfolio/referrals and anti-enumeration.
-- Keep Membership as the sole authority that creates canonical membership.
-- Add production-grade authentication/session hardening before broader pilot exposure.
-- Qualify multi-tenant authorization negatively and perform D1 backup/restore drill.
-- Field-test PWA/offline behaviour on old Android and unstable low-bandwidth networks.
-- Only after those gates: broader pilot, still with `realMoneyEnabled=false` unless separately authorized.
+## Permanent business doctrine
+Do not program “how a collation works”. Program the means for a group to describe how its collation — or any rubric — works, compare that with what is actually practiced, and validate the operational rule that should govern the app.
+
+Where a business action is blocked, expose an authorized request/exception/regularization path whenever possible. Keep true security/privacy/accounting invariants strict.
 
 ## Do not
 - force-push or rewrite `main`;
-- merge PR #1 without explicit decision;
+- discard recovery backups;
 - enable real money;
 - publish private founder archives/PII;
 - introduce destructive D1 migration;
-- recreate already-acquired Cloudflare resources or secrets;
-- hard-code one group's RI/practice as a universal rule.
+- recreate already-acquired Cloudflare resources/secrets;
+- turn one group's rule into a universal business prohibition;
+- merge product branches without explicit separate authorization.
