@@ -2,23 +2,6 @@ name: Eco-System 1.0 Complete App — Cloudflare
 
 on:
   workflow_dispatch:
-  push:
-    branches: ['next/1.0.0-complete-app']
-    paths:
-      - 'apps/**'
-      - 'packages/**'
-      - 'workers/**'
-      - 'cloudflare/**'
-      - 'scripts/**'
-      - 'tests/**'
-      - 'docs/**'
-      - 'FEATURE_REGISTRY.yaml'
-      - 'PROJECT_STATE.md'
-      - 'NEXT_RUN.md'
-      - 'AGENTS.md'
-      - 'package.json'
-      - 'tsconfig.json'
-      - '.github/workflows/deploy-cloudflare-complete-app.yml'
 
 permissions:
   contents: read
@@ -47,23 +30,18 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-
       - name: Install development dependencies
         run: npm install --ignore-scripts
-
       - name: Verify deployment credentials exist
         shell: bash
         run: |
           set -euo pipefail
           test -n "${CLOUDFLARE_ACCOUNT_ID:-}"
           test -n "${CLOUDFLARE_API_TOKEN:-}"
-
       - name: Complete App full qualification
         run: npm run ci
-
       - name: Build PWA and Worker assets
         run: npm run build
-
       - name: Resolve existing D1 database
         shell: bash
         run: |
@@ -75,13 +53,10 @@ jobs:
             exit 1
           fi
           node scripts/render-wrangler-d1.mjs "${DB_ID}" workers/api/wrangler.ci.toml
-
       - name: Apply additive D1 migrations only
         run: npx --yes wrangler@4 d1 migrations apply "${ECO_SYSTEM_DB}" --remote --config workers/api/wrangler.ci.toml
-
       - name: Deploy Complete App Worker + PWA
         run: npx --yes wrangler@4 deploy --config workers/api/wrangler.ci.toml
-
       - name: Smoke root health and capability catalog
         shell: bash
         run: |
