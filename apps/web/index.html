@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <meta id="metaDescription" name="description" content="Plateforme Tontines & Associations" />
+  <meta name="theme-color" content="#111827" />
+  <link rel="manifest" href="./manifest.webmanifest" />
+  <link rel="stylesheet" href="./styles.css" />
+  <title>Plateforme Tontines & Associations</title>
+</head>
+<body>
+  <a class="skip-link" href="#main">Aller au contenu / Skip to content</a>
+  <header class="topbar">
+    <div>
+      <div class="brand" data-i="appTitle"></div>
+      <div class="subtitle" data-i="appSubtitle"></div>
+    </div>
+    <div class="toolbar">
+      <span id="connectivity" class="status"></span>
+      <label class="language-picker"><span class="sr-only" data-i="language"></span><select id="languageSelect"><option value="fr" data-i="french"></option><option value="en" data-i="english"></option></select></label>
+      <button id="installBtn" type="button" data-i="installApp" hidden></button><button id="modeBtn" type="button"></button>
+    </div>
+  </header>
+
+  <main id="main">
+    <section class="hero card">
+      <div><span class="badge" data-i="versionBadge"></span><h1 data-i="heroTitle"></h1><p data-i="heroBody"></p></div>
+      <div class="safety-grid">
+        <span class="pill good" data-i="localPersistence"></span>
+        <span class="pill good" data-i="manualCashLedger"></span>
+        <span class="pill warn" data-i="realMoneyDisabled"></span>
+        <span class="pill" data-i="serverTruth"></span>
+      </div>
+      <p class="persistence-hint" data-i="persistenceHint"></p>
+    </section>
+
+    <div id="errorBox" class="error" role="alert" hidden></div>
+    <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+
+    <section class="card" aria-labelledby="universe-title">
+      <div class="section-heading"><div><h2 id="universe-title" data-i="myUniverse"></h2><p class="muted" data-i="universeIntro"></p></div><button id="refreshBtn" type="button" data-i="refresh"></button></div>
+      <div id="universeCards" class="metrics"></div>
+    </section>
+
+    <section class="card" aria-labelledby="groups-title">
+      <div class="section-heading"><div><h2 id="groups-title" data-i="myGroups"></h2><p class="muted" data-i="myGroupsIntro"></p></div><div id="activeGroupBadge" class="active-group-badge"></div></div>
+      <div id="groupsList" class="group-list"></div>
+    </section>
+
+    <section class="card essential" aria-labelledby="launch-title">
+      <h2 id="launch-title" data-i="launchStudio"></h2><p class="muted" data-i="launchStudioIntro"></p>
+      <form id="projectForm" class="form-grid">
+        <label><span data-i="projectName"></span><input id="projectName" data-i-placeholder="projectNamePlaceholder" required /></label>
+        <label><span data-i="groupType"></span><select id="groupKind"><option value="rotating_tontine" data-i="groupTypeRotating"></option><option value="association" data-i="groupTypeAssociation"></option><option value="in_kind_tontine" data-i="groupTypeInKind"></option><option value="hybrid" data-i="groupTypeHybrid"></option></select></label>
+        <label><span data-i="governanceModel"></span><select id="governanceModel"><option value="founder_managed" data-i="governanceFounder"></option><option value="community" data-i="governanceCommunity"></option><option value="delegated" data-i="governanceDelegated"></option><option value="ngo_supported" data-i="governanceNgo"></option><option value="hybrid" data-i="governanceHybrid"></option></select></label>
+        <label><span data-i="members"></span><input id="memberCount" type="number" required min="1" step="1" value="20" inputmode="numeric" /></label>
+        <label><span data-i="sessions"></span><input id="sessions" type="number" required min="1" step="1" value="20" inputmode="numeric" /></label>
+        <label><span data-i="nominalContribution"></span><input id="nominalContribution" type="number" required min="0" step="1" value="1000" inputmode="numeric" /></label>
+        <label><span data-i="managementFee"></span><input id="managementFee" type="number" required min="0" step="1" value="50" inputmode="numeric" /></label>
+        <label><span data-i="externalCostRate"></span><input id="externalCostRate" type="number" required min="0" max="100" step="0.01" value="1.75" inputmode="decimal" /></label>
+        <label><span data-i="fixedSessionCost"></span><input id="fixedSessionCost" type="number" required min="0" step="1" value="0" inputmode="numeric" /></label>
+        <div class="actions"><button class="primary" id="simulateBtn" type="submit" data-i="simulate"></button><button id="createGroupBtn" type="button" data-i="createGroup" disabled></button></div>
+      </form>
+      <div id="simulationResult" class="result" aria-live="polite"></div>
+    </section>
+
+    <section id="groupWorkspace" class="card essential" aria-labelledby="workspace-title">
+      <h2 id="workspace-title" data-i="groupWorkspace"></h2><p class="muted" data-i="groupWorkspaceIntro"></p><p id="workspaceEmpty" class="empty" data-i="noActiveGroup"></p>
+      <div id="workspaceContent" hidden>
+        <div class="columns">
+          <section class="subcard"><h3 data-i="memberManagement"></h3><p class="muted" data-i="memberManagementIntro"></p><form id="memberForm"><label><span data-i="memberName"></span><input id="memberName" data-i-placeholder="memberNamePlaceholder" required /></label><div class="actions"><button type="submit" class="primary" data-i="addMember"></button></div></form><ul id="memberList" class="clean-list"></ul></section>
+          <section class="subcard"><h3 data-i="meetingCommandCenter"></h3><p class="muted" data-i="meetingIntro"></p><form id="meetingForm"><label><span data-i="meetingTitle"></span><input id="meetingTitle" data-i-placeholder="meetingTitlePlaceholder" /></label><div class="actions"><button type="submit" class="primary" data-i="openMeeting"></button></div></form><div id="meetingList" class="meeting-list"></div></section>
+        </div>
+
+        <section class="subcard living-rules-card">
+          <h3 data-i="livingRulesTitle"></h3><p class="muted" data-i="livingRulesIntro"></p>
+          <div class="columns">
+            <form id="latePolicyForm" class="form-grid compact">
+              <h4 data-i="latePolicyTitle"></h4><p class="muted" data-i="latePolicyIntro"></p>
+              <label><span data-i="lateMode"></span><select id="lateMode"><option value="GOVERNED" data-i="lateGoverned"></option><option value="OPEN_WITH_TRACE" data-i="lateOpenTrace"></option><option value="FORBIDDEN" data-i="lateForbidden"></option></select></label>
+              <label><span data-i="lateMinApprovals"></span><input id="lateMinApprovals" type="number" min="0" step="1" value="1" inputmode="numeric" /></label>
+              <label><span data-i="lateMaxHours"></span><input id="lateMaxHours" type="number" min="0" step="1" inputmode="numeric" /></label>
+              <div class="actions"><button type="submit" class="primary" data-i="saveLatePolicy"></button></div>
+            </form>
+            <form id="rubricForm" class="form-grid compact">
+              <label><span data-i="rubricName"></span><input id="rubricName" data-i-placeholder="rubricNamePlaceholder" required value="Collation" /></label>
+              <label class="wide"><span data-i="writtenRule"></span><textarea id="writtenRule" rows="3" data-i-placeholder="writtenRulePlaceholder"></textarea></label>
+              <label class="wide"><span data-i="observedPractice"></span><textarea id="observedPractice" rows="3" data-i-placeholder="observedPracticePlaceholder"></textarea></label>
+              <label><span data-i="ruleRealityStatus"></span><select id="ruleRealityStatus"><option value="UNKNOWN" data-i="realityUnknown"></option><option value="ALIGNED" data-i="realityAligned"></option><option value="DIFFERS" data-i="realityDiffers"></option><option value="MIXED" data-i="realityMixed"></option></select></label>
+              <label><span data-i="targetMode"></span><select id="targetMode"><option value="PER_MEMBER_FIXED" data-i="targetPerMember"></option><option value="FIXED_TOTAL" data-i="targetFixedTotal"></option><option value="OPEN" data-i="targetOpen"></option><option value="CUSTOM" data-i="targetCustom"></option></select></label>
+              <label><span data-i="perMemberAmount"></span><input id="perMemberAmount" type="number" min="0" step="1" value="2000" inputmode="numeric" /></label>
+              <label><span data-i="fixedTargetAmount"></span><input id="fixedTargetAmount" type="number" min="0" step="1" value="40000" inputmode="numeric" /></label>
+              <label class="check"><input id="mandatoryAbsentees" type="checkbox" checked /><span data-i="mandatoryAbsentees"></span></label>
+              <label><span data-i="shortfallHandling"></span><select id="shortfallHandling"><option value="SOLIDARITY_COVERAGE" data-i="shortfallSolidarity"></option><option value="LEAVE_SHORT" data-i="shortfallLeave"></option><option value="CONDITIONAL_SOLIDARITY" data-i="shortfallConditional"></option><option value="CUSTOM" data-i="shortfallCustom"></option></select></label>
+              <label><span data-i="payoutMode"></span><select id="payoutMode"><option value="FIXED_TARGET_IF_COVERED" data-i="payoutFixedIfCovered"></option><option value="COLLECTED_ONLY" data-i="payoutCollected"></option><option value="CUSTOM" data-i="payoutCustom"></option></select></label>
+              <label class="check"><input id="immediateFullPayout" type="checkbox" checked /><span data-i="immediateFullPayout"></span></label>
+              <div class="actions"><button type="submit" class="primary" data-i="saveRubric"></button></div>
+            </form>
+          </div>
+          <div id="rubricList" class="group-list"></div>
+          <form id="rubricPreviewForm" class="form-grid compact">
+            <h4 data-i="cyclePreview"></h4>
+            <label><span data-i="chooseRubric"></span><select id="rubricPreviewRubric"></select></label>
+            <label><span data-i="members"></span><input id="previewMemberCount" type="number" min="0" step="1" value="20" inputmode="numeric" /></label>
+            <label><span data-i="collectedFromMembers"></span><input id="previewCollected" type="number" min="0" step="1" value="38000" inputmode="numeric" /></label>
+            <label><span data-i="solidarityCoverage"></span><input id="previewSolidarity" type="number" min="0" step="1" value="2000" inputmode="numeric" /></label>
+            <div class="actions"><button type="submit" class="primary" data-i="previewCycle"></button></div>
+          </form>
+          <div id="rubricPreviewResult" class="result" aria-live="polite"></div>
+        </section>
+
+        <div class="columns">
+          <section class="subcard"><h3 data-i="cashContribution"></h3><p class="muted" data-i="cashContributionIntro"></p><form id="contributionForm" class="form-grid compact"><label><span data-i="chooseMember"></span><select id="contributionMember" required></select></label><label><span data-i="chooseRubric"></span><select id="contributionRubric"></select></label><label><span data-i="contributionMeeting"></span><select id="contributionMeeting"></select></label><label><span data-i="amount"></span><input id="contributionAmount" type="number" required min="1" step="1" value="1000" inputmode="numeric" /></label><label class="wide"><span data-i="lateReason"></span><textarea id="lateReason" rows="2" data-i-placeholder="lateReasonPlaceholder"></textarea></label><div class="actions"><button id="recordCashBtn" type="submit" class="primary" data-i="recordCash"></button></div></form></section>
+          <section class="subcard"><h3 data-i="ledger"></h3><p class="muted" data-i="ledgerIntro"></p><div id="ledgerMetrics" class="metrics small"></div><h4 data-i="receipts"></h4><div id="receiptList" class="receipt-list"></div></section>
+        </div>
+
+        <section class="subcard"><h3 data-i="cashbox"></h3><form id="cashboxForm" class="form-grid compact"><label><span data-i="openingCash"></span><input id="opening" type="number" min="0" step="1" required value="0" inputmode="numeric" /></label><label><span data-i="cashIn"></span><input id="cashIn" type="number" min="0" step="1" required value="0" inputmode="numeric" /></label><label><span data-i="cashOut"></span><input id="cashOut" type="number" min="0" step="1" required value="0" inputmode="numeric" /></label><label><span data-i="countedCash"></span><input id="counted" type="number" min="0" step="1" required value="0" inputmode="numeric" /></label><div class="actions"><button type="submit" class="primary" data-i="reconcileCashbox"></button></div></form><div id="cashboxResult" class="result" aria-live="polite"></div></section>
+      </div>
+    </section>
+
+    <div class="columns advanced-zone">
+      <section class="card"><h2 data-i="offlineSync"></h2><p class="muted" data-i="offlineIntro"></p><div class="actions"><button id="queueBtn" type="button" data-i="queueOfflineIntent"></button><button id="syncBtn" type="button" class="primary" data-i="synchronize"></button></div><ul id="outboxList" class="outbox-list"></ul></section>
+      <section class="card"><h2 data-i="universalInbox"></h2><p class="muted" data-i="inboxIntro"></p><ul id="inboxList" class="clean-list"></ul></section>
+    </div>
+
+    <div class="columns advanced-zone">
+      <section class="card"><h2 data-i="supportCenter"></h2><p class="muted" data-i="supportIntro"></p><form id="supportForm"><textarea id="supportSummary" rows="3" data-i-placeholder="supportPlaceholder" required></textarea><div class="actions"><button class="primary" type="submit" data-i="openCase"></button></div></form><p id="caseLog" class="muted" aria-live="polite"></p></section>
+      <section class="card"><h2 data-i="compatibility"></h2><p class="muted" data-i="compatibilityIntro"></p><div id="compatibilityLevel" class="compat-level"></div><ul id="compatibilityList" class="capability-list"></ul></section>
+    </div>
+
+    <div class="columns advanced-zone">
+      <section class="card"><h2 data-i="platformKernel"></h2><p class="muted" data-i="kernelIntro"></p><ul id="kernelList" class="kernel-list"></ul></section>
+      <section class="card"><h2 data-i="productCatalog"></h2><p class="muted" data-i="productCatalogIntro"></p><div class="filter-row"><button type="button" class="filter active" data-filter="all" data-i="filterAll"></button><button type="button" class="filter" data-filter="FOUNDATION_ACTIVE" data-i="filterActive"></button><button type="button" class="filter" data-filter="STRUCTURAL_V1" data-i="filterStructural"></button><button type="button" class="filter" data-filter="PLANNED_DOMAIN" data-i="filterPlanned"></button></div><div id="moduleCatalog" class="module-catalog"></div></section>
+    </div>
+  </main>
+  <footer data-i="footer"></footer>
+  <script type="module" src="./src/main.js"></script>
+</body>
+</html>

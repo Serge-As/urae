@@ -1,0 +1,15 @@
+{
+  "id": "/",
+  "name": "Eco-System — Tontines & Associations",
+  "short_name": "Eco-System",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#f6f2ea",
+  "theme_color": "#315c4a",
+  "description": "Eco-System mobile : gestion souple, traçable et hors-ligne des tontines, associations et communautés.",
+  "lang": "fr",
+  "dir": "ltr",
+  "categories": ["finance", "business", "social", "productivity"]
+}

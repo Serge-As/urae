@@ -1,0 +1,14 @@
+name = "eco-system"
+main = "src/index.ts"
+compatibility_date = "2026-09-05"
+workers_dev = true
+
+# The CI workflow appends the D1 binding to a temporary wrangler.ci.toml after
+# resolving/creating eco-system-db. No account id, API token or database UUID is
+# committed in this file.
+
+[assets]
+directory = "../../.build"
+binding = "ASSETS"
+run_worker_first = true
+
