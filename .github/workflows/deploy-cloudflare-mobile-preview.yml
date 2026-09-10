@@ -104,3 +104,5 @@ jobs:
           if(health.version!==process.env.EXPECTED_VERSION) throw new Error(`VERSION_MISMATCH:${health.version}`);
           if(health.realMoneyEnabled!==false) throw new Error('REAL_MONEY_MUST_REMAIN_DISABLED');
           NODE
+
+# Root routing fix 189c8bd is included in this deployment trigger.
