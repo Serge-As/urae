@@ -40,9 +40,6 @@ jobs:
         run: |
           set -euo pipefail
           cp -a /tmp/runtime/recovered/. .
-          # The recovery wrapper has a placeholder README while the 0.6 patch
-          # intentionally creates the real product README. Remove only that wrapper
-          # file before applying the verified patch.
           rm -f README.md
           cat .recovery/eco060-patch-part-* | base64 -d > /tmp/eco060.patch.xz
           echo '126977cfcf15e69651205254c6ac0d3a145fa1057c4c92afe0fa3eacae300ebe  /tmp/eco060.patch.xz' | sha256sum -c -
@@ -55,9 +52,13 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          rm -f .recovery/eco060-patch-part-* .github/MATERIALIZE_ECO_SYSTEM_060_ONCE .github/workflows/materialize-eco-system-060.yml
+          rm -f .recovery/eco060-patch-part-* .github/MATERIALIZE_ECO_SYSTEM_060_ONCE
           git config user.name 'Delor85 Eco-System Recovery Bot'
           git config user.email 'actions@users.noreply.github.com'
           git add -A
+          # GitHub's workflow token intentionally cannot create/update workflow files.
+          # Leave every workflow change unstaged; the deploy workflow is added separately
+          # through the authorized repository integration after this source commit lands.
+          git reset HEAD -- .github/workflows || true
           git commit -m 'feat: materialize Eco-System 0.6 mobile living-rules preview'
           git push origin HEAD:next/0.6.0-mobile-living-rules
