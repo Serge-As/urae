@@ -1,6 +1,0 @@
-archive_sha256=69380f1dde05b02721ff1d1dee6774fab0a7ec2c5738c6439073f74fc36456ec
-archive_bytes=73152
-transport=base64-segments
-segments=5
-source=slim-1.0-v2.tar.xz
-qualification=local-npm-run-ci-48-of-48-pass

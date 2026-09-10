@@ -1,4 +1,4 @@
-const CACHE = 'eco-system-mobile-living-rules-v060';
+const CACHE = 'eco-system-complete-app-v100';
 const APP_SHELL = [
   '/',
   '/index.html',
@@ -10,6 +10,7 @@ const APP_SHELL = [
   '/packages/contracts/src/index.js',
   '/packages/domain/src/index.js',
   '/packages/module-registry/src/index.js',
+  '/packages/module-registry/src/service-capabilities.js',
   '/packages/offline/src/index.js',
   '/packages/platform-kernel/src/index.js',
   '/packages/relay/src/index.js',

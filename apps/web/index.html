@@ -1,140 +1,211 @@
 <!doctype html>
 <html lang="fr">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
-  <meta id="metaDescription" name="description" content="Plateforme Tontines & Associations" />
-  <meta name="theme-color" content="#111827" />
-  <link rel="manifest" href="./manifest.webmanifest" />
-  <link rel="stylesheet" href="./styles.css" />
-  <title>Plateforme Tontines & Associations</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#111827">
+  <meta id="metaDescription" name="description" content="Eco-System — plateforme complète de gestion de tontines, associations et communautés">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="stylesheet" href="/styles.css">
+  <title>Eco-System Complete App</title>
 </head>
 <body>
-  <a class="skip-link" href="#main">Aller au contenu / Skip to content</a>
   <header class="topbar">
-    <div>
-      <div class="brand" data-i="appTitle"></div>
-      <div class="subtitle" data-i="appSubtitle"></div>
+    <div class="brand">
+      <div class="logo">E</div>
+      <div><strong>Eco-System</strong><small>Complete App · 1.0.0</small></div>
     </div>
-    <div class="toolbar">
-      <span id="connectivity" class="status"></span>
-      <label class="language-picker"><span class="sr-only" data-i="language"></span><select id="languageSelect"><option value="fr" data-i="french"></option><option value="en" data-i="english"></option></select></label>
-      <button id="installBtn" type="button" data-i="installApp" hidden></button><button id="modeBtn" type="button"></button>
+    <div class="top-actions">
+      <span id="connectivity" class="pill">● …</span>
+      <button id="installBtn" class="ghost" hidden>Installer</button>
+      <button id="refreshBtn" class="ghost">Actualiser</button>
     </div>
   </header>
 
-  <main id="main">
-    <section class="hero card">
-      <div><span class="badge" data-i="versionBadge"></span><h1 data-i="heroTitle"></h1><p data-i="heroBody"></p></div>
-      <div class="safety-grid">
-        <span class="pill good" data-i="localPersistence"></span>
-        <span class="pill good" data-i="manualCashLedger"></span>
-        <span class="pill warn" data-i="realMoneyDisabled"></span>
-        <span class="pill" data-i="serverTruth"></span>
-      </div>
-      <p class="persistence-hint" data-i="persistenceHint"></p>
-    </section>
+  <div id="toast" class="toast" hidden></div>
+  <div id="errorBox" class="error" hidden></div>
 
-    <div id="errorBox" class="error" role="alert" hidden></div>
-    <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+  <div class="app-shell">
+    <nav id="mainNav" class="side-nav" aria-label="Navigation principale">
+      <button data-view="dashboard" class="nav-btn active"><span>⌂</span><b>Accueil</b></button>
+      <button data-view="discovery" class="nav-btn"><span>⌕</span><b>Découvrir</b></button>
+      <button data-view="launch" class="nav-btn"><span>＋</span><b>Créer</b></button>
+      <button data-view="operations" class="nav-btn"><span>☷</span><b>Séance</b></button>
+      <button data-view="finance" class="nav-btn"><span>₣</span><b>Finance</b></button>
+      <button data-view="ecosystem" class="nav-btn"><span>◎</span><b>Écosystème</b></button>
+      <button data-view="services" class="nav-btn"><span>▦</span><b>Services</b></button>
+      <button data-view="inbox" class="nav-btn"><span>✉</span><b>Inbox</b></button>
+      <button data-view="settings" class="nav-btn"><span>⚙</span><b>Réglages</b></button>
+    </nav>
 
-    <section class="card" aria-labelledby="universe-title">
-      <div class="section-heading"><div><h2 id="universe-title" data-i="myUniverse"></h2><p class="muted" data-i="universeIntro"></p></div><button id="refreshBtn" type="button" data-i="refresh"></button></div>
-      <div id="universeCards" class="metrics"></div>
-    </section>
-
-    <section class="card" aria-labelledby="groups-title">
-      <div class="section-heading"><div><h2 id="groups-title" data-i="myGroups"></h2><p class="muted" data-i="myGroupsIntro"></p></div><div id="activeGroupBadge" class="active-group-badge"></div></div>
-      <div id="groupsList" class="group-list"></div>
-    </section>
-
-    <section class="card essential" aria-labelledby="launch-title">
-      <h2 id="launch-title" data-i="launchStudio"></h2><p class="muted" data-i="launchStudioIntro"></p>
-      <form id="projectForm" class="form-grid">
-        <label><span data-i="projectName"></span><input id="projectName" data-i-placeholder="projectNamePlaceholder" required /></label>
-        <label><span data-i="groupType"></span><select id="groupKind"><option value="rotating_tontine" data-i="groupTypeRotating"></option><option value="association" data-i="groupTypeAssociation"></option><option value="in_kind_tontine" data-i="groupTypeInKind"></option><option value="hybrid" data-i="groupTypeHybrid"></option></select></label>
-        <label><span data-i="governanceModel"></span><select id="governanceModel"><option value="founder_managed" data-i="governanceFounder"></option><option value="community" data-i="governanceCommunity"></option><option value="delegated" data-i="governanceDelegated"></option><option value="ngo_supported" data-i="governanceNgo"></option><option value="hybrid" data-i="governanceHybrid"></option></select></label>
-        <label><span data-i="members"></span><input id="memberCount" type="number" required min="1" step="1" value="20" inputmode="numeric" /></label>
-        <label><span data-i="sessions"></span><input id="sessions" type="number" required min="1" step="1" value="20" inputmode="numeric" /></label>
-        <label><span data-i="nominalContribution"></span><input id="nominalContribution" type="number" required min="0" step="1" value="1000" inputmode="numeric" /></label>
-        <label><span data-i="managementFee"></span><input id="managementFee" type="number" required min="0" step="1" value="50" inputmode="numeric" /></label>
-        <label><span data-i="externalCostRate"></span><input id="externalCostRate" type="number" required min="0" max="100" step="0.01" value="1.75" inputmode="decimal" /></label>
-        <label><span data-i="fixedSessionCost"></span><input id="fixedSessionCost" type="number" required min="0" step="1" value="0" inputmode="numeric" /></label>
-        <div class="actions"><button class="primary" id="simulateBtn" type="submit" data-i="simulate"></button><button id="createGroupBtn" type="button" data-i="createGroup" disabled></button></div>
-      </form>
-      <div id="simulationResult" class="result" aria-live="polite"></div>
-    </section>
-
-    <section id="groupWorkspace" class="card essential" aria-labelledby="workspace-title">
-      <h2 id="workspace-title" data-i="groupWorkspace"></h2><p class="muted" data-i="groupWorkspaceIntro"></p><p id="workspaceEmpty" class="empty" data-i="noActiveGroup"></p>
-      <div id="workspaceContent" hidden>
-        <div class="columns">
-          <section class="subcard"><h3 data-i="memberManagement"></h3><p class="muted" data-i="memberManagementIntro"></p><form id="memberForm"><label><span data-i="memberName"></span><input id="memberName" data-i-placeholder="memberNamePlaceholder" required /></label><div class="actions"><button type="submit" class="primary" data-i="addMember"></button></div></form><ul id="memberList" class="clean-list"></ul></section>
-          <section class="subcard"><h3 data-i="meetingCommandCenter"></h3><p class="muted" data-i="meetingIntro"></p><form id="meetingForm"><label><span data-i="meetingTitle"></span><input id="meetingTitle" data-i-placeholder="meetingTitlePlaceholder" /></label><div class="actions"><button type="submit" class="primary" data-i="openMeeting"></button></div></form><div id="meetingList" class="meeting-list"></div></section>
-        </div>
-
-        <section class="subcard living-rules-card">
-          <h3 data-i="livingRulesTitle"></h3><p class="muted" data-i="livingRulesIntro"></p>
-          <div class="columns">
-            <form id="latePolicyForm" class="form-grid compact">
-              <h4 data-i="latePolicyTitle"></h4><p class="muted" data-i="latePolicyIntro"></p>
-              <label><span data-i="lateMode"></span><select id="lateMode"><option value="GOVERNED" data-i="lateGoverned"></option><option value="OPEN_WITH_TRACE" data-i="lateOpenTrace"></option><option value="FORBIDDEN" data-i="lateForbidden"></option></select></label>
-              <label><span data-i="lateMinApprovals"></span><input id="lateMinApprovals" type="number" min="0" step="1" value="1" inputmode="numeric" /></label>
-              <label><span data-i="lateMaxHours"></span><input id="lateMaxHours" type="number" min="0" step="1" inputmode="numeric" /></label>
-              <div class="actions"><button type="submit" class="primary" data-i="saveLatePolicy"></button></div>
-            </form>
-            <form id="rubricForm" class="form-grid compact">
-              <label><span data-i="rubricName"></span><input id="rubricName" data-i-placeholder="rubricNamePlaceholder" required value="Collation" /></label>
-              <label class="wide"><span data-i="writtenRule"></span><textarea id="writtenRule" rows="3" data-i-placeholder="writtenRulePlaceholder"></textarea></label>
-              <label class="wide"><span data-i="observedPractice"></span><textarea id="observedPractice" rows="3" data-i-placeholder="observedPracticePlaceholder"></textarea></label>
-              <label><span data-i="ruleRealityStatus"></span><select id="ruleRealityStatus"><option value="UNKNOWN" data-i="realityUnknown"></option><option value="ALIGNED" data-i="realityAligned"></option><option value="DIFFERS" data-i="realityDiffers"></option><option value="MIXED" data-i="realityMixed"></option></select></label>
-              <label><span data-i="targetMode"></span><select id="targetMode"><option value="PER_MEMBER_FIXED" data-i="targetPerMember"></option><option value="FIXED_TOTAL" data-i="targetFixedTotal"></option><option value="OPEN" data-i="targetOpen"></option><option value="CUSTOM" data-i="targetCustom"></option></select></label>
-              <label><span data-i="perMemberAmount"></span><input id="perMemberAmount" type="number" min="0" step="1" value="2000" inputmode="numeric" /></label>
-              <label><span data-i="fixedTargetAmount"></span><input id="fixedTargetAmount" type="number" min="0" step="1" value="40000" inputmode="numeric" /></label>
-              <label class="check"><input id="mandatoryAbsentees" type="checkbox" checked /><span data-i="mandatoryAbsentees"></span></label>
-              <label><span data-i="shortfallHandling"></span><select id="shortfallHandling"><option value="SOLIDARITY_COVERAGE" data-i="shortfallSolidarity"></option><option value="LEAVE_SHORT" data-i="shortfallLeave"></option><option value="CONDITIONAL_SOLIDARITY" data-i="shortfallConditional"></option><option value="CUSTOM" data-i="shortfallCustom"></option></select></label>
-              <label><span data-i="payoutMode"></span><select id="payoutMode"><option value="FIXED_TARGET_IF_COVERED" data-i="payoutFixedIfCovered"></option><option value="COLLECTED_ONLY" data-i="payoutCollected"></option><option value="CUSTOM" data-i="payoutCustom"></option></select></label>
-              <label class="check"><input id="immediateFullPayout" type="checkbox" checked /><span data-i="immediateFullPayout"></span></label>
-              <div class="actions"><button type="submit" class="primary" data-i="saveRubric"></button></div>
-            </form>
+    <main class="content">
+      <section id="view-dashboard" class="view active">
+        <div class="hero">
+          <div>
+            <span class="eyebrow">Tontines · Associations · Communautés</span>
+            <h1>Un seul espace pour comprendre et faire vivre chaque groupe.</h1>
+            <p>Les règles du groupe guident l'application. Les règles écrites, la pratique réelle et les exceptions gouvernées restent distinctes et traçables.</p>
           </div>
-          <div id="rubricList" class="group-list"></div>
-          <form id="rubricPreviewForm" class="form-grid compact">
-            <h4 data-i="cyclePreview"></h4>
-            <label><span data-i="chooseRubric"></span><select id="rubricPreviewRubric"></select></label>
-            <label><span data-i="members"></span><input id="previewMemberCount" type="number" min="0" step="1" value="20" inputmode="numeric" /></label>
-            <label><span data-i="collectedFromMembers"></span><input id="previewCollected" type="number" min="0" step="1" value="38000" inputmode="numeric" /></label>
-            <label><span data-i="solidarityCoverage"></span><input id="previewSolidarity" type="number" min="0" step="1" value="2000" inputmode="numeric" /></label>
-            <div class="actions"><button type="submit" class="primary" data-i="previewCycle"></button></div>
-          </form>
-          <div id="rubricPreviewResult" class="result" aria-live="polite"></div>
-        </section>
-
-        <div class="columns">
-          <section class="subcard"><h3 data-i="cashContribution"></h3><p class="muted" data-i="cashContributionIntro"></p><form id="contributionForm" class="form-grid compact"><label><span data-i="chooseMember"></span><select id="contributionMember" required></select></label><label><span data-i="chooseRubric"></span><select id="contributionRubric"></select></label><label><span data-i="contributionMeeting"></span><select id="contributionMeeting"></select></label><label><span data-i="amount"></span><input id="contributionAmount" type="number" required min="1" step="1" value="1000" inputmode="numeric" /></label><label class="wide"><span data-i="lateReason"></span><textarea id="lateReason" rows="2" data-i-placeholder="lateReasonPlaceholder"></textarea></label><div class="actions"><button id="recordCashBtn" type="submit" class="primary" data-i="recordCash"></button></div></form></section>
-          <section class="subcard"><h3 data-i="ledger"></h3><p class="muted" data-i="ledgerIntro"></p><div id="ledgerMetrics" class="metrics small"></div><h4 data-i="receipts"></h4><div id="receiptList" class="receipt-list"></div></section>
+          <div class="hero-card">
+            <span>Mode financier réel</span><strong class="safe">DÉSACTIVÉ</strong>
+            <small>Tests fonctionnels et données de démonstration uniquement.</small>
+          </div>
         </div>
 
-        <section class="subcard"><h3 data-i="cashbox"></h3><form id="cashboxForm" class="form-grid compact"><label><span data-i="openingCash"></span><input id="opening" type="number" min="0" step="1" required value="0" inputmode="numeric" /></label><label><span data-i="cashIn"></span><input id="cashIn" type="number" min="0" step="1" required value="0" inputmode="numeric" /></label><label><span data-i="cashOut"></span><input id="cashOut" type="number" min="0" step="1" required value="0" inputmode="numeric" /></label><label><span data-i="countedCash"></span><input id="counted" type="number" min="0" step="1" required value="0" inputmode="numeric" /></label><div class="actions"><button type="submit" class="primary" data-i="reconcileCashbox"></button></div></form><div id="cashboxResult" class="result" aria-live="polite"></div></section>
-      </div>
-    </section>
+        <div id="universeCards" class="metrics"></div>
 
-    <div class="columns advanced-zone">
-      <section class="card"><h2 data-i="offlineSync"></h2><p class="muted" data-i="offlineIntro"></p><div class="actions"><button id="queueBtn" type="button" data-i="queueOfflineIntent"></button><button id="syncBtn" type="button" class="primary" data-i="synchronize"></button></div><ul id="outboxList" class="outbox-list"></ul></section>
-      <section class="card"><h2 data-i="universalInbox"></h2><p class="muted" data-i="inboxIntro"></p><ul id="inboxList" class="clean-list"></ul></section>
-    </div>
+        <div class="two-col">
+          <section class="panel">
+            <div class="panel-head"><div><h2>Groupe actif</h2><p>Votre contexte courant.</p></div><button class="link-btn" data-go="launch">Gérer</button></div>
+            <div id="activeGroupCard" class="empty-state">Aucun groupe actif.</div>
+          </section>
+          <section class="panel">
+            <div class="panel-head"><div><h2>À faire</h2><p>Obligations, cas et actions.</p></div><button class="link-btn" data-go="inbox">Tout voir</button></div>
+            <ul id="dashboardInbox" class="list"></ul>
+          </section>
+        </div>
 
-    <div class="columns advanced-zone">
-      <section class="card"><h2 data-i="supportCenter"></h2><p class="muted" data-i="supportIntro"></p><form id="supportForm"><textarea id="supportSummary" rows="3" data-i-placeholder="supportPlaceholder" required></textarea><div class="actions"><button class="primary" type="submit" data-i="openCase"></button></div></form><p id="caseLog" class="muted" aria-live="polite"></p></section>
-      <section class="card"><h2 data-i="compatibility"></h2><p class="muted" data-i="compatibilityIntro"></p><div id="compatibilityLevel" class="compat-level"></div><ul id="compatibilityList" class="capability-list"></ul></section>
-    </div>
+        <section class="panel">
+          <div class="panel-head"><div><h2>Accès rapide</h2><p>Les grands blocs métier du Prompt Maître A→J.</p></div></div>
+          <div class="quick-grid">
+            <button class="quick" data-go="discovery"><b>Discovery & adhésion</b><span>Rechercher, inviter, candidater</span></button>
+            <button class="quick" data-go="operations"><b>Réunion & règles vivantes</b><span>Cotisations, clôture, retardataires</span></button>
+            <button class="quick" data-go="finance"><b>Ledger & solidarité</b><span>Attendu, collecté, manquants, couverture</span></button>
+            <button class="quick" data-go="ecosystem"><b>Écosystème économique</b><span>Forums, partenaires, achats groupés, Academy</span></button>
+          </div>
+        </section>
+      </section>
 
-    <div class="columns advanced-zone">
-      <section class="card"><h2 data-i="platformKernel"></h2><p class="muted" data-i="kernelIntro"></p><ul id="kernelList" class="kernel-list"></ul></section>
-      <section class="card"><h2 data-i="productCatalog"></h2><p class="muted" data-i="productCatalogIntro"></p><div class="filter-row"><button type="button" class="filter active" data-filter="all" data-i="filterAll"></button><button type="button" class="filter" data-filter="FOUNDATION_ACTIVE" data-i="filterActive"></button><button type="button" class="filter" data-filter="STRUCTURAL_V1" data-i="filterStructural"></button><button type="button" class="filter" data-filter="PLANNED_DOMAIN" data-i="filterPlanned"></button></div><div id="moduleCatalog" class="module-catalog"></div></section>
-    </div>
-  </main>
-  <footer data-i="footer"></footer>
-  <script type="module" src="./src/main.js"></script>
+      <section id="view-discovery" class="view">
+        <div class="page-head"><div><span class="eyebrow">Lot B</span><h1>Discovery · Identity · Membership</h1><p>Le membre cherche un groupe ; le groupe recherche des candidats consentants. L'adhésion reste gouvernée.</p></div></div>
+        <div class="two-col">
+          <section class="panel">
+            <h2>Rechercher des groupes</h2>
+            <form id="discoverySearchForm" class="form-grid">
+              <label>Nom, objet ou mot-clé<input id="discoveryQ" placeholder="Ex. épargne, entraide, quartier…"></label>
+              <label>Localité<input id="discoveryLocality" placeholder="Ex. Yaoundé"></label>
+              <label class="check"><input id="discoveryRecruiting" type="checkbox"><span>Recrutement ouvert seulement</span></label>
+              <button class="primary" type="submit">Rechercher</button>
+            </form>
+            <div id="discoveryResults" class="stack"></div>
+          </section>
+          <section class="panel">
+            <h2>Rendre le groupe découvrable</h2>
+            <p class="hint">Aucune liste de membres, téléphone privé ou solde financier n'est publié.</p>
+            <form id="publishDiscoveryForm" class="form-grid">
+              <label>Visibilité<select id="listingVisibility"><option value="PUBLIC">Public</option><option value="INVITE_ONLY">Sur invitation</option><option value="MEMBERS_ONLY">Membres seulement</option><option value="SECRET">Secret</option></select></label>
+              <label>Adhésion<select id="listingJoinPolicy"><option value="REQUEST">Demande + validation</option><option value="OPEN">Ouverte</option><option value="INVITE_ONLY">Invitation uniquement</option><option value="CLOSED">Fermée</option></select></label>
+              <label>Localité<input id="listingLocality" placeholder="Ville/quartier"></label>
+              <label>Mots-clés mission<input id="listingMission" placeholder="entraide, épargne, famille"></label>
+              <label class="check"><input id="listingRecruiting" type="checkbox" checked><span>Recherche de nouveaux membres</span></label>
+              <button class="primary" type="submit">Publier / mettre à jour</button>
+            </form>
+            <div id="applicationsBox" class="stack"></div>
+          </section>
+        </div>
+      </section>
+
+      <section id="view-launch" class="view">
+        <div class="page-head"><div><span class="eyebrow">Lot C</span><h1>Group Launch Studio</h1><p>Créer une association, une tontine rotative, en nature ou hybride sans enfermer tous les groupes dans la même règle.</p></div></div>
+        <div class="two-col">
+          <section class="panel">
+            <h2>Projet de groupe</h2>
+            <form id="projectForm" class="form-grid">
+              <label>Nom du groupe<input id="projectName" required placeholder="Ex. CERDAS 2027"></label>
+              <label>Famille<select id="groupKind"><option value="association">Association</option><option value="rotating_tontine">Tontine rotative</option><option value="in_kind_tontine">Tontine en nature</option><option value="hybrid">Hybride</option></select></label>
+              <label>Gouvernance<select id="governanceModel"><option value="founder_managed">Fondateur</option><option value="community">Communautaire</option><option value="delegated">Déléguée</option><option value="ngo_supported">Accompagnée ONG</option><option value="hybrid">Hybride</option></select></label>
+              <label>Membres prévus<input id="memberCount" type="number" min="1" step="1" value="20" required></label>
+              <label>Séances / cycle<input id="sessions" type="number" min="1" step="1" value="12" required></label>
+              <label>Cotisation nominale XAF<input id="nominalContribution" type="number" min="0" step="1" value="10000" required></label>
+              <label>Frais de gestion / versement<input id="managementFee" type="number" min="0" step="1" value="0"></label>
+              <label>Coûts externes %<input id="externalCostRate" type="number" min="0" max="100" step="0.1" value="0"></label>
+              <label>Coût fixe / séance<input id="fixedSessionCost" type="number" min="0" step="1" value="0"></label>
+              <button class="primary" type="submit">Simuler</button>
+            </form>
+            <div id="simulationResult" class="result"></div>
+            <button id="createGroupBtn" class="primary wide-btn" disabled>Créer le groupe à partir de cette simulation</button>
+          </section>
+          <section class="panel">
+            <div class="panel-head"><div><h2>Mes groupes</h2><p>Sélectionnez le contexte actif.</p></div></div>
+            <div id="groupsList" class="stack"></div>
+          </section>
+        </div>
+      </section>
+
+      <section id="view-operations" class="view">
+        <div class="page-head"><div><span class="eyebrow">Lots C–D</span><h1>Séance · Membres · Règles vivantes</h1><p>La clôture est un checkpoint. Une opération tardive reste possible si la politique du groupe l'autorise et si les validations requises sont réunies.</p></div></div>
+        <div id="noActiveGroupOperations" class="panel empty-state">Sélectionnez ou créez d'abord un groupe.</div>
+        <div id="operationsContent">
+          <div class="two-col">
+            <section class="panel"><h2>Membres</h2><form id="memberForm" class="inline-form"><input id="memberName" required placeholder="Nom du membre"><button class="primary">Ajouter</button></form><ul id="memberList" class="list"></ul></section>
+            <section class="panel"><h2>Séances</h2><form id="meetingForm" class="inline-form"><input id="meetingTitle" required placeholder="Ex. Séance septembre"><button class="primary">Ouvrir</button></form><div id="meetingList" class="stack"></div></section>
+          </div>
+          <section class="panel">
+            <div class="panel-head"><div><h2>Politique après clôture</h2><p>Une porte de sortie gouvernée plutôt qu'un verrou universel.</p></div></div>
+            <form id="latePolicyForm" class="form-grid">
+              <label>Mode<select id="lateMode"><option value="GOVERNED">Autorisé avec validations</option><option value="ALLOWED">Autorisé</option><option value="FORBIDDEN">Interdit par ce groupe</option></select></label>
+              <label>Nombre d'approbations<input id="lateMinApprovals" type="number" min="0" max="10" step="1" value="1"></label>
+              <label>Délai maximum (heures, vide = aucun)<input id="lateMaxHours" type="number" min="0" step="1"></label>
+              <button class="primary" type="submit">Enregistrer la politique</button>
+            </form>
+          </section>
+          <section class="panel">
+            <h2>Décrire une rubrique comme le groupe la vit</h2>
+            <form id="rubricForm" class="form-grid">
+              <label>Nom<input id="rubricName" required placeholder="Collation, aide locale, main levée…"></label>
+              <label>Règle écrite<textarea id="writtenRule" rows="3" placeholder="Ce que disent RI/statuts/PV"></textarea></label>
+              <label>Pratique observée<textarea id="observedPractice" rows="3" placeholder="Ce qui est réellement fait"></textarea></label>
+              <label>État<select id="ruleRealityStatus"><option value="UNVERIFIED">À vérifier</option><option value="ALIGNED">Aligné</option><option value="DIVERGENT">Différent de l'écrit</option><option value="TOLERATED_EXCEPTION">Exception tolérée</option><option value="DISPUTED">Contesté</option><option value="LOCALLY_VALIDATED">Validé par le groupe</option></select></label>
+              <label>Calcul de l'attendu<select id="targetMode"><option value="OPEN">Libre</option><option value="FIXED_TOTAL">Total fixe obligatoire</option><option value="PER_MEMBER_FIXED">Fixe par membre</option><option value="FORMULA">Formule / règle</option></select></label>
+              <label>Total fixe XAF<input id="fixedTargetAmount" type="number" min="0" step="1" value="40000"></label>
+              <label>Montant / membre XAF<input id="perMemberAmount" type="number" min="0" step="1" value="2000"></label>
+              <label>Gestion du manquant<select id="shortfallHandling"><option value="MEMBER_DEBT_GROUP_ADVANCE">Dette membre + avance du groupe</option><option value="REDUCE_BENEFICIARY_PAYOUT">Réduire le versement au bénéficiaire</option><option value="GROUP_SOLIDARITY_ADVANCE">Solidarité du groupe</option><option value="DEDICATED_FUND_ADVANCE">Caisse dédiée avance</option><option value="MIXED">Mixte selon règles</option><option value="WAIVE">Exonération</option><option value="CUSTOM">Personnalisé</option></select></label>
+              <label>Versement bénéficiaire<select id="payoutMode"><option value="TARGET_WHEN_GUARANTEED">Cible garantie</option><option value="COLLECTED_ONLY">Seulement collecté</option><option value="CUSTOM">Personnalisé</option></select></label>
+              <label class="check"><input id="mandatoryAbsentees" type="checkbox"><span>Obligatoire même pour les absents</span></label>
+              <label class="check"><input id="immediateFullPayout" type="checkbox"><span>Décaissement complet immédiat</span></label>
+              <button class="primary" type="submit">Enregistrer la rubrique</button>
+            </form>
+            <div id="rubricList" class="stack"></div>
+          </section>
+          <section class="panel">
+            <h2>Simuler la réalité d'une rubrique</h2>
+            <form id="rubricPreviewForm" class="inline-grid">
+              <label>Rubrique<select id="rubricPreviewRubric"></select></label><label>Membres<input id="previewMemberCount" type="number" min="1" step="1" value="20"></label><label>Collecté membres<input id="previewCollected" type="number" min="0" step="1" value="38000"></label><label>Couverture solidaire<input id="previewSolidarity" type="number" min="0" step="1" value="2000"></label><button class="primary">Calculer</button>
+            </form><div id="rubricPreviewResult"></div>
+          </section>
+        </div>
+      </section>
+
+      <section id="view-finance" class="view">
+        <div class="page-head"><div><span class="eyebrow">Lot E</span><h1>Finance · Ledger · Solidarité</h1><p>Un montant physique ne devient jamais négatif ; un manquant est représenté comme obligation/dette et une avance comme mouvement distinct.</p></div></div>
+        <div id="noActiveGroupFinance" class="panel empty-state">Sélectionnez un groupe.</div>
+        <div id="financeContent">
+          <div id="ledgerMetrics" class="metrics"></div>
+          <div class="two-col">
+            <section class="panel"><h2>Enregistrer une cotisation</h2><form id="contributionForm" class="form-grid"><label>Membre<select id="contributionMember" required></select></label><label>Montant XAF<input id="contributionAmount" type="number" min="0" step="1" value="2000" required></label><label>Rubrique<select id="contributionRubric"></select></label><label>Séance<select id="contributionMeeting"></select></label><label>Motif si tardif<input id="lateReason" placeholder="Retardataire / décision spéciale"></label><label>Approbateurs (IDs, virgules)<input id="lateApprovers" placeholder="user_founder"></label><button class="primary">Enregistrer</button></form></section>
+            <section class="panel"><h2>Rapprochement de caisse</h2><form id="cashboxForm" class="form-grid"><label>Ouverture<input id="opening" type="number" min="0" step="1" value="0"></label><label>Entrées<input id="cashIn" type="number" min="0" step="1" value="0"></label><label>Sorties<input id="cashOut" type="number" min="0" step="1" value="0"></label><label>Compté physiquement<input id="counted" type="number" min="0" step="1" value="0"></label><button class="primary">Rapprocher</button></form><div id="cashboxResult"></div></section>
+          </div>
+          <section class="panel"><h2>Reçus et écritures</h2><div id="receiptList" class="table-list"></div></section>
+        </div>
+      </section>
+
+      <section id="view-ecosystem" class="view">
+        <div class="page-head"><div><span class="eyebrow">Lots F–I</span><h1>Écosystème communautaire & économique</h1><p>Forums, Hubs, achats groupés, fournisseurs, Business Studio, AdManager, Academy, ONG, IA, Paper Bridge et plus.</p></div></div>
+        <div id="ecosystemHighlights" class="quick-grid"></div>
+      </section>
+
+      <section id="view-services" class="view">
+        <div class="page-head"><div><span class="eyebrow">Encyclopédie opérationnelle</span><h1>Tous les services Eco-System</h1><p>Chaque idée reste retrouvable. Le statut indique ce qui possède déjà un moteur canonique et ce qui fonctionne comme workspace opérationnel avant spécialisation.</p></div></div>
+        <section class="panel"><div class="panel-head"><input id="catalogSearch" class="search" placeholder="Rechercher un service…"><strong id="catalogCount"></strong></div><div id="lotFilters" class="filters"></div><div id="moduleCatalog" class="module-catalog"></div></section>
+        <section class="panel"><h2>Workspace du service</h2><p class="hint">Le workspace ne remplace jamais le moteur métier canonique. Il permet d'utiliser et de suivre une capacité encore en maturation.</p><label>Service<select id="workspaceModule"></select></label><form id="workspaceForm" class="form-grid"><label>Titre<input id="workspaceTitle" required placeholder="Ex. Campagne fournisseurs septembre"></label><label>Statut<select id="workspaceStatus"><option value="DRAFT">Brouillon</option><option value="ACTIVE">Actif</option><option value="WAITING_APPROVAL">En validation</option><option value="COMPLETED">Terminé</option><option value="ARCHIVED">Archivé</option></select></label><label>Tags<input id="workspaceTags" placeholder="urgent, bureau, achat"></label><label class="full">Résumé<textarea id="workspaceSummary" rows="3"></textarea></label><button class="primary">Créer le dossier</button></form><div class="actions"><button id="workspaceReload">Actualiser</button></div><div id="workspaceList" class="stack"></div></section>
+      </section>
+
+      <section id="view-inbox" class="view"><div class="page-head"><div><span class="eyebrow">Inbox universelle</span><h1>Actions & dossiers</h1></div></div><section class="panel"><ul id="inboxList" class="list"></ul></section><section class="panel"><h2>Ouvrir un dossier</h2><form id="supportForm" class="form-grid"><label class="full">Résumé<textarea id="supportSummary" rows="3" required></textarea></label><button class="primary">Ouvrir</button></form><pre id="caseLog"></pre></section></section>
+
+      <section id="view-settings" class="view"><div class="page-head"><div><span class="eyebrow">Préférences</span><h1>Réglages & résilience</h1></div></div><section class="panel"><div class="form-grid"><label>Langue<select id="languageSelect"><option value="fr">Français</option><option value="en">English</option></select></label><label>Expérience<button id="modeBtn" type="button">Basculer Ultra Simple</button></label></div><div class="actions"><button id="queueBtn">Créer une note hors ligne</button><button id="syncBtn">Synchroniser</button></div><p id="compatibility" class="hint"></p><p id="kernelStatus" class="hint"></p><ul id="outboxList" class="list"></ul></section></section>
+    </main>
+  </div>
+  <footer class="footer">Eco-System Complete App · Pré-pilote · Argent réel désactivé</footer>
+  <script type="module" src="/src/main.js"></script>
 </body>
 </html>

@@ -1,9 +1,9 @@
 {
   "name": "tontine-platform",
-  "version": "0.6.0-mobile-living-rules",
+  "version": "1.0.0-complete-app",
   "private": true,
   "type": "module",
-  "description": "Eco-System \u2014 mobile-first living-rules preview, memory-before-code, governed flexibility, discovery/membership gateway, contextual trust and faceted rubrics",
+  "description": "Eco-System Complete App — full mobile-first product shell with canonical domain services, living rules, discovery, finance and extensible persistent workspaces",
   "engines": {
     "node": ">=22"
   },

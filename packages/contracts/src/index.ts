@@ -310,7 +310,6 @@ export interface OutboxItem<T = unknown> {
   attempts: number;
 }
 
-
 export type GroupVisibility = 'PUBLIC' | 'MEMBERS_ONLY' | 'INVITE_ONLY' | 'SECRET';
 export type JoinPolicy = 'CLOSED' | 'INVITE_ONLY' | 'REQUEST' | 'OPEN';
 export type MeetingMode = 'IN_PERSON' | 'REMOTE' | 'HYBRID';
@@ -322,7 +321,6 @@ export interface ContributionBand {
   cadence?: 'daily' | 'weekly' | 'monthly' | 'session' | string;
 }
 
-/** Safe, deliberately sparse cross-tenant projection. Never contains member lists, balances or private contacts. */
 export interface PublicGroupListing {
   id: Id;
   tenantId: Id;
@@ -391,8 +389,6 @@ export interface RubricFacets {
   containerCode?: string;
   custom?: Record<string, string | number | boolean>;
 }
-
-
 
 export type RubricTargetMode = 'OPEN' | 'FIXED_TOTAL' | 'PER_MEMBER_FIXED' | 'CUSTOM';
 export type RubricShortfallHandling = 'LEAVE_SHORT' | 'SOLIDARITY_COVERAGE' | 'CONDITIONAL_SOLIDARITY' | 'CUSTOM';
@@ -484,6 +480,23 @@ export interface CommitmentReliabilityProfile {
   sampleSize: number;
   explanationCodes: string[];
   advisoryOnly: true;
+}
+
+export type WorkspaceStatus = 'DRAFT' | 'ACTIVE' | 'DONE' | 'ARCHIVED';
+
+export interface WorkspaceRecord {
+  id: Id;
+  tenantId: Id;
+  groupId?: Id;
+  moduleId: string;
+  title: string;
+  summary?: string;
+  status: WorkspaceStatus;
+  tags: string[];
+  data: Record<string, string | number | boolean | null>;
+  createdBy: Id;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export const makeId = (prefix: string): string => {
