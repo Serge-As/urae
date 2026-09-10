@@ -10,5 +10,9 @@ workers_dev = true
 [assets]
 directory = "../../.build"
 binding = "ASSETS"
-run_worker_first = true
+# Static/PWA routes are asset-first. Only server routes run the Worker first.
+# This prevents HTML canonicalization loops and guarantees a real mobile door at `/`.
+run_worker_first = ["/api/*", "/health"]
+not_found_handling = "single-page-application"
+html_handling = "auto-trailing-slash"
 
