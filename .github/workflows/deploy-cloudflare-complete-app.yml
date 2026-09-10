@@ -2,6 +2,9 @@ name: Eco-System 1.0 Complete App — Cloudflare
 
 on:
   workflow_dispatch:
+  push:
+    branches: ['next/1.0.0-complete-app']
+    paths: ['.github/DEPLOY_ECO_SYSTEM_COMPLETE_ONCE']
 
 permissions:
   contents: read
