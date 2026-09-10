@@ -1,0 +1,98 @@
+{
+  "version": "1.0.0",
+  "source": "docs/governance/DELOR85_Playbook_Universel_Projets_GardeFous_NonRegression_1.1.0.md",
+  "guardrails": [
+    {
+      "id": "TRUTH.PROOF",
+      "rule": "Status claims require proportionate evidence."
+    },
+    {
+      "id": "MEMORY.BEFORE.CODE",
+      "rule": "Recall relevant project memory before substantive implementation."
+    },
+    {
+      "id": "HISTORY.PRESERVE",
+      "rule": "Never silently erase historical decisions or useful ideas."
+    },
+    {
+      "id": "RSIA.PREVENT",
+      "rule": "Local improvement must not cause global regression."
+    },
+    {
+      "id": "OWNER.CANONICAL",
+      "rule": "A significant capability has one canonical owner."
+    },
+    {
+      "id": "REUSE.BEFORE.BUILD",
+      "rule": "Reuse/extend/adapter before creating a parallel service."
+    },
+    {
+      "id": "CONTRACTS.NOT.TABLES",
+      "rule": "Inter-service collaboration uses contracts/ports/events, not private-table coupling."
+    },
+    {
+      "id": "DEPENDENCY.KNOWN",
+      "rule": "Service dependencies and forbidden responsibilities are explicit."
+    },
+    {
+      "id": "NO.BYPASS",
+      "rule": "Orchestration may coordinate but must not bypass domain policy."
+    },
+    {
+      "id": "IDEMPOTENCE",
+      "rule": "Retries must not duplicate side effects."
+    },
+    {
+      "id": "UNKNOWN.IS.UNKNOWN",
+      "rule": "Uncertain outcomes are not success and are not blindly replayed."
+    },
+    {
+      "id": "OFFLINE.HONEST",
+      "rule": "Offline acceptance must not fake remote finality."
+    },
+    {
+      "id": "AUDIT.REQUIRED",
+      "rule": "Material state changes are auditable."
+    },
+    {
+      "id": "SECRETS.OUTSIDE",
+      "rule": "Secret values never enter repository, docs, logs, or recovery artifacts."
+    },
+    {
+      "id": "LEAST.PRIVILEGE",
+      "rule": "Credentials and service permissions are least-privilege."
+    },
+    {
+      "id": "MIGRATION.EXPAND.FIRST",
+      "rule": "Database evolution is additive/expand-first by default."
+    },
+    {
+      "id": "ROLLBACK.TARGETED",
+      "rule": "Substantive risky changes have a rollback or safe base."
+    },
+    {
+      "id": "DONE.PROVEN",
+      "rule": "Done means code, tests, security, errors, storage/API coherence and required field proof."
+    },
+    {
+      "id": "HANDOFF.PERSISTENT",
+      "rule": "Important truth is persisted outside chat for the next agent."
+    },
+    {
+      "id": "DYNAMIC.REVERIFY",
+      "rule": "Branch/HEAD/CI/deployment/DB facts are revalidated at source."
+    },
+    {
+      "id": "STAGES.DISTINCT",
+      "rule": "Commit, merge, migration, deployment and production approval are distinct."
+    },
+    {
+      "id": "GF-BACKUP-RESTORE-TESTED",
+      "rule": "A substantial checkpoint is incomplete until its restoration path and integrity evidence are testable."
+    },
+    {
+      "id": "GF-DYNAMIC-TRUTH-REVALIDATE",
+      "rule": "Dynamic truth must be revalidated at Git/CI/DB/production sources before mutation."
+    }
+  ]
+}
