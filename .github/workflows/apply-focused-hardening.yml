@@ -66,7 +66,7 @@ jobs:
           npm run lint:shared-governance
           npm test
 
-      - name: Repack, verify and update recovery transport contracts
+      - name: Repack and verify patched runtime
         shell: bash
         run: |
           set -euo pipefail
@@ -76,41 +76,39 @@ jobs:
           base64 -w0 /tmp/eco-runtime-new.tar.xz > /tmp/runtime-new.b64
           python - <<'PY'
           from pathlib import Path
-          import hashlib,re
+          import hashlib
           data=Path('/tmp/runtime-new.b64').read_bytes(); n=8; base=len(data)//n; rem=len(data)%n; pos=0
-          hashes={}
           for i in range(n):
               size=base+(1 if i<rem else 0); chunk=data[pos:pos+size]; pos+=size
               p=Path(f'.recovery/runtime-v2/{i:02d}.b64'); p.write_bytes(chunk)
-              hashes[p.name]=hashlib.sha256(chunk).hexdigest()
+              print(f'{p.name}={hashlib.sha256(chunk).hexdigest()}')
           assert pos==len(data)
-          archive_sha=hashlib.sha256(Path('/tmp/eco-runtime-new.tar.xz').read_bytes()).hexdigest()
-          workflow_paths=[
-              Path('.github/workflows/recovery-ci.yml'),
-              Path('.github/workflows/deploy-cloudflare-alpha.yml'),
-              Path('.github/workflows/export-recovery-runtime.yml'),
-          ]
-          for path in workflow_paths:
-              text=path.read_text()
-              for name,sha in hashes.items():
-                  text=re.sub(rf'^[0-9a-f]{{64}}  \.recovery/runtime-v2/{re.escape(name)}$',f'{sha}  .recovery/runtime-v2/{name}',text,flags=re.M)
-              text=re.sub(r'[0-9a-f]{64}  /tmp/eco-runtime\.tar\.xz',archive_sha+'  /tmp/eco-runtime.tar.xz',text)
-              text=re.sub(r'[0-9a-f]{64}  eco-runtime\.tar\.xz',archive_sha+'  eco-runtime.tar.xz',text)
-              path.write_text(text)
-          print('NEW_ARCHIVE_SHA='+archive_sha)
-          for name in sorted(hashes): print(f'{name}={hashes[name]}')
+          print('NEW_ARCHIVE_SHA='+hashlib.sha256(Path('/tmp/eco-runtime-new.tar.xz').read_bytes()).hexdigest())
           PY
           cat .recovery/runtime-v2/{00,01,02,03,04,05,06,07}.b64 | base64 --decode > /tmp/rebuilt.tar.xz
           cmp /tmp/eco-runtime-new.tar.xz /tmp/rebuilt.tar.xz
           sha256sum /tmp/rebuilt.tar.xz
+          cp /tmp/eco-runtime-new.tar.xz focused-runtime.tar.xz
+          sha256sum focused-runtime.tar.xz > focused-runtime.sha256
 
-      - name: Publish focused patch to the existing PR branch
+      - name: Upload exact candidate backup
+        uses: actions/upload-artifact@v4
+        with:
+          name: eco-system-focused-hardening-candidate
+          path: |
+            focused-runtime.tar.xz
+            focused-runtime.sha256
+            .recovery/runtime-v2/
+          retention-days: 7
+          if-no-files-found: error
+
+      - name: Publish hardened runtime to the existing PR branch
         shell: bash
         run: |
           set -euo pipefail
           git config user.name 'Delor85 Eco-System CI'
           git config user.email 'actions@users.noreply.github.com'
-          git add .recovery/runtime-v2 .github/workflows/recovery-ci.yml .github/workflows/deploy-cloudflare-alpha.yml .github/workflows/export-recovery-runtime.yml
+          git add .recovery/runtime-v2
           git diff --cached --quiet && { echo '::error::No runtime change produced'; exit 1; }
           git commit -m 'fix: harden tontine business validation and UI guardrails'
           git push origin HEAD:recovery/0.5.1-memory-discovery-rubric-trust
