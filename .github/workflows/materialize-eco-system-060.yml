@@ -1,0 +1,58 @@
+name: Eco-System 0.6 — Materialize Verified Runtime
+
+on:
+  workflow_dispatch:
+  push:
+    branches: ['next/0.6.0-mobile-living-rules']
+    paths: ['.github/MATERIALIZE_ECO_SYSTEM_060_ONCE']
+
+permissions:
+  contents: write
+
+jobs:
+  materialize:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout recovery-derived branch
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Download verified runtime artifact
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --silent --show-error --location \
+            -H "Authorization: Bearer ${GH_TOKEN}" \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/artifacts/10131216979/zip" \
+            -o /tmp/runtime.zip
+          mkdir -p /tmp/runtime
+          unzip -q /tmp/runtime.zip -d /tmp/runtime
+          test -f /tmp/runtime/recovered/package.json
+
+      - name: Materialize normal source and apply 0.6 patch
+        shell: bash
+        run: |
+          set -euo pipefail
+          cp -a /tmp/runtime/recovered/. .
+          cat .recovery/eco060-patch-part-* | base64 -d > /tmp/eco060.patch.xz
+          echo '126977cfcf15e69651205254c6ac0d3a145fa1057c4c92afe0fa3eacae300ebe  /tmp/eco060.patch.xz' | sha256sum -c -
+          xz -dc /tmp/eco060.patch.xz | patch -p2
+          test "$(node -p "require('./package.json').version")" = '0.6.0-mobile-living-rules'
+          test -f .github/workflows/deploy-cloudflare-mobile-preview.yml
+          test -f docs/governance/ECO_SYSTEM_LIVING_RULES_DOCTRINE_1.0.0.md
+
+      - name: Commit normalized source
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -f .recovery/eco060-patch-part-* .github/MATERIALIZE_ECO_SYSTEM_060_ONCE .github/workflows/materialize-eco-system-060.yml
+          git config user.name 'Delor85 Eco-System Recovery Bot'
+          git config user.email 'actions@users.noreply.github.com'
+          git add -A
+          git commit -m 'feat: materialize Eco-System 0.6 mobile living-rules preview'
+          git push origin HEAD:next/0.6.0-mobile-living-rules
