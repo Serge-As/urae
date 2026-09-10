@@ -190,7 +190,12 @@ export interface WorkerEnv { DB?: D1DatabaseLike; ASSETS?: AssetsFetcherLike }
 export default {async fetch(request:Request,env:WorkerEnv={}){
   const url=new URL(request.url);
   if(request.method==='GET' && env.ASSETS && url.pathname!=='/health' && !url.pathname.startsWith('/api/')){
-    const asset=await env.ASSETS.fetch(request);
+    // In Worker-first assets mode, make the public mobile entry point explicit.
+    // `/` must always remain a usable PWA door instead of falling through to JSON 404.
+    const assetUrl=new URL(request.url);
+    if(assetUrl.pathname==='/') assetUrl.pathname='/index.html';
+    const assetRequest=assetUrl.href===request.url?request:new Request(assetUrl.href,request);
+    const asset=await env.ASSETS.fetch(assetRequest);
     if(asset.status!==404 || url.pathname==='/' || url.pathname==='/index.html') return asset;
   }
   return createApiHandler(env.DB?new D1PlatformRepository(env.DB):defaultRepo)(request);
