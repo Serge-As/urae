@@ -5,7 +5,7 @@ import type { ProductModule } from '../../../packages/module-registry/src/index.
 const app=new ConnectedApplication({locale:'fr'});
 let groups:Group[]=[]; let members:MembershipView[]=[]; let meetings:MeetingSession[]=[]; let rubrics:RubricDefinition[]=[];
 let groupPolicy:GroupOperatingPolicy|undefined; let lastProjectId:string|undefined; let modules:ProductModule[]=[];
-let selectedLot='ALL'; let deferredInstallPrompt:any;
+let selectedLot='ALL'; let deferredInstallPrompt:any; let wizardStep=1; let launchDraft:Record<string,unknown>={};
 
 const $=<T extends HTMLElement=HTMLElement>(s:string):T=>{const e=document.querySelector(s);if(!e)throw new Error(`UI_ELEMENT_NOT_FOUND:${s}`);return e as T;};
 const val=(id:string)=>(document.getElementById(id) as HTMLInputElement|HTMLSelectElement|HTMLTextAreaElement).value.trim();
@@ -39,6 +39,24 @@ const go=(name:string)=>{
 };
 document.querySelectorAll<HTMLButtonElement>('[data-view]').forEach(b=>b.addEventListener('click',()=>go(b.dataset.view!)));
 document.querySelectorAll<HTMLElement>('[data-go]').forEach(b=>b.addEventListener('click',()=>go(b.dataset.go!)));
+
+const openModuleWorkspace=async(moduleId:string, suggestedTitle?:string)=>{
+  const module=modules.find(x=>x.id===moduleId);
+  if(!module){fail(new Error('INVALID_MODULE_ID'));return;}
+  const select=$('#workspaceModule') as HTMLSelectElement;
+  select.value=moduleId;
+  const title=$('#workspaceTitle') as HTMLInputElement;
+  const summary=$('#workspaceSummary') as HTMLTextAreaElement;
+  if(suggestedTitle) title.value=suggestedTitle;
+  else if(!title.value.trim()) title.value=module.labelFr;
+  if(!summary.value.trim()) summary.value=`Dossier ${module.labelFr} — créé depuis le Master Cockpit Eco-System.`;
+  go('services');
+  await loadWorkspaces();
+  title.focus();
+};
+document.querySelectorAll<HTMLElement>('[data-module-open]').forEach(el=>el.addEventListener('click',()=>{
+  void openModuleWorkspace(el.dataset.moduleOpen!,el.dataset.templateTitle);
+}));
 
 const renderConnectivity=()=>{const online=navigator.onLine;const e=$('#connectivity');e.textContent=`● ${online?'En ligne':'Hors ligne'}`;e.className=`pill ${online?'online':'offline'}`;app.setConnectivity(online?'online':'offline');};
 
@@ -81,6 +99,64 @@ const renderMeetings=async()=>{
 };
 const activeMeeting=()=>meetings.find(x=>x.status==='open')?.id;
 
+const renderMeetingMatrix=()=>{
+  const root=$('#meetingMatrix');
+  root.replaceChildren();
+  if(!app.activeGroup()||!members.length||!rubrics.length){
+    root.innerHTML='<div class="empty-state">Ajoutez des membres et au moins une rubrique pour afficher la matrice.</div>';
+    return;
+  }
+  const table=document.createElement('table');
+  table.className='matrix-table';
+  const head=document.createElement('thead');
+  const hr=document.createElement('tr');
+  hr.innerHTML='<th>Membre</th>'+rubrics.map(r=>`<th>${r.name}</th>`).join('');
+  head.append(hr);table.append(head);
+  const body=document.createElement('tbody');
+  for(const member of members){
+    const tr=document.createElement('tr');
+    const name=document.createElement('td');name.textContent=member.displayName;tr.append(name);
+    for(const rubric of rubrics){
+      const td=document.createElement('td');
+      const input=document.createElement('input');
+      input.type='number';input.min='0';input.step='1';input.placeholder='0';
+      input.dataset.matrixMember=member.id;input.dataset.matrixRubric=rubric.id;
+      input.setAttribute('aria-label',`${member.displayName} — ${rubric.name}`);
+      td.append(input);tr.append(td);
+    }
+    body.append(tr);
+  }
+  table.append(body);root.append(table);
+};
+
+const saveMeetingMatrix=async()=>{
+  const inputs=[...document.querySelectorAll<HTMLInputElement>('[data-matrix-member][data-matrix-rubric]')];
+  const entries=inputs.map(input=>({
+    input,
+    membershipId:input.dataset.matrixMember!,
+    rubricId:input.dataset.matrixRubric!,
+    amount:Number(input.value||0)
+  })).filter(x=>Number.isFinite(x.amount)&&x.amount>0);
+  if(!entries.length){toast('Aucun montant à enregistrer dans la matrice.');return;}
+  clearFail();
+  let done=0;let queued=0;
+  try{
+    for(const x of entries){
+      const result=await app.recordCashContribution({
+        membershipId:x.membershipId,
+        rubricId:x.rubricId,
+        meetingId:activeMeeting(),
+        amount:x.amount
+      });
+      if(result.queued)queued++; else done++;
+      x.input.value='';
+    }
+    renderOutbox();
+    await renderLedger();
+    toast(`Matrice enregistrée : ${done} écriture(s)${queued?` · ${queued} en attente offline`:''}.`);
+  }catch(e){fail(e);}
+};
+
 const renderLivingRules=async()=>{
   if(!app.activeGroup())return;
   try{groupPolicy=await app.groupOperatingPolicy();const late=groupPolicy.latePosting;($('#lateMode') as HTMLSelectElement).value=late.mode;($('#lateMinApprovals') as HTMLInputElement).value=String(late.approval.minimumApprovals);($('#lateMaxHours') as HTMLInputElement).value=late.maxHoursAfterClose===undefined?'':String(late.maxHoursAfterClose);}catch{}
@@ -111,6 +187,16 @@ const renderModules=()=>{
   $('#capabilityCount').textContent=String(modules.length);
   for(const m of chosen){const a=document.createElement('article');a.className='module-card';a.innerHTML=`<span class="module-status ${m.status.toLowerCase()}">${m.status.replaceAll('_',' ')}</span><strong>${m.labelFr}</strong><small>${m.id} · Lot ${m.lot} · ${m.workspace==='SPECIALIZED'?'moteur spécialisé':'workspace universel'}</small>`;a.onclick=()=>{($('#workspaceModule') as HTMLSelectElement).value=m.id;go('services');void loadWorkspaces();};root.append(a);}
 };
+const renderModuleStatuses=()=>{
+  document.querySelectorAll<HTMLElement>('[data-status-for]').forEach(el=>{
+    const m=modules.find(x=>x.id===el.dataset.statusFor);
+    if(!m){el.textContent='À cartographier';return;}
+    const label=m.status==='FOUNDATION_ACTIVE'?'Fondation active':m.status==='STRUCTURAL_V1'?'Structure prête':m.status==='PLANNED_DOMAIN'?'Domaine planifié':'Option ultérieure';
+    el.textContent=label;
+    el.className=`status-inline ${m.status.toLowerCase()}`;
+  });
+};
+
 const renderLotFilters=()=>{const root=$('#lotFilters');root.replaceChildren();for(const lot of ['ALL','B','C','D','E','F','G','H','I','J']){const b=document.createElement('button');b.className=`filter ${lot===selectedLot?'active':''}`;b.textContent=lot==='ALL'?'Tous':`Lot ${lot}`;b.onclick=()=>{selectedLot=lot;renderLotFilters();renderModules();};root.append(b);}};
 
 const renderEcosystemHighlights=()=>{
@@ -132,14 +218,98 @@ const refreshGroupContext=async()=>{
   await renderGroups();const active=Boolean(app.activeGroup());
   ($('#operationsContent') as HTMLElement).style.display=active?'block':'none';($('#noActiveGroupOperations') as HTMLElement).style.display=active?'none':'block';
   ($('#financeContent') as HTMLElement).style.display=active?'block':'none';($('#noActiveGroupFinance') as HTMLElement).style.display=active?'none':'block';
-  if(active){await renderMembers();await renderMeetings();await renderLivingRules();await renderLedger();}
+  if(active){await renderMembers();await renderMeetings();await renderLivingRules();await renderLedger();renderMeetingMatrix();}
   await renderApplications();await renderUniverse();await renderInbox();
 };
-const refreshAll=async()=>{await refreshGroupContext();renderOutbox();renderCompatibility();renderKernel();renderModules();renderEcosystemHighlights();};
+const refreshAll=async()=>{await refreshGroupContext();renderOutbox();renderCompatibility();renderKernel();renderModules();renderEcosystemHighlights();renderModuleStatuses();};
+
+const wizardSteps=[...document.querySelectorAll<HTMLElement>('.wizard-step')];
+const wizardChips=[...document.querySelectorAll<HTMLButtonElement>('[data-step-jump]')];
+const formValue=(id:string)=>{const e=document.getElementById(id) as HTMLInputElement|HTMLSelectElement|HTMLTextAreaElement|null;return e?.value?.trim()??'';};
+const radioValue=(name:string)=>document.querySelector<HTMLInputElement>(`input[name="${name}"]:checked`)?.value??'';
+const checkedValues=(name:string)=>[...document.querySelectorAll<HTMLInputElement>(`input[name="${name}"]:checked`)].map(x=>x.value);
+
+const collectLaunchDraft=()=>({
+  origin:radioValue('origin'),
+  name:formValue('projectName'),
+  historicalStartDate:formValue('historicalStartDate'),
+  exerciseLabel:formValue('exerciseLabel'),
+  family:formValue('groupKind'),
+  governance:formValue('governanceModel'),
+  financialAuthority:formValue('financialAuthority'),
+  launchQuorum:formValue('launchQuorum'),
+  delegationNotes:formValue('delegationNotes'),
+  cycleStartDate:formValue('cycleStartDate'),
+  sessions:formValue('sessions'),
+  meetingFrequency:formValue('meetingFrequency'),
+  meetingDay:formValue('meetingDay'),
+  physicalPresence:checked('physicalPresence'),
+  memberCount:formValue('memberCount'),
+  entryPolicy:formValue('entryPolicy'),
+  trialPeriod:formValue('trialPeriod'),
+  multiSharePolicy:formValue('multiSharePolicy'),
+  memberImportNotes:formValue('memberImportNotes'),
+  benefitMode:formValue('benefitMode'),
+  beneficiaryOrder:formValue('beneficiaryOrder'),
+  catchupPolicy:formValue('catchupPolicy'),
+  starterKit:formValue('starterKit'),
+  plannedRubrics:formValue('plannedRubrics'),
+  nominalContribution:formValue('nominalContribution'),
+  managementFee:formValue('managementFee'),
+  externalCostRate:formValue('externalCostRate'),
+  fixedSessionCost:formValue('fixedSessionCost'),
+  simulationScenario:formValue('simulationScenario'),
+  lateRate:formValue('lateRate'),
+  channels:checkedValues('channel'),
+  publishPolicy:formValue('publishPolicy'),
+  accessibility:radioValue('accessibility'),
+  legacyDevicePriority:checked('legacyDevicePriority')
+});
+
+const renderLaunchPreview=()=>{
+  launchDraft=collectLaunchDraft();
+  const root=$('#launchPreview');root.replaceChildren();
+  const rows:Array<[string,unknown]>=[
+    ['Origine',launchDraft.origin],['Groupe',launchDraft.name||'—'],['Famille',launchDraft.family],
+    ['Gouvernance',launchDraft.governance],['Exercice',launchDraft.exerciseLabel||launchDraft.cycleStartDate||'—'],
+    ['Membres prévus',launchDraft.memberCount],['Séances',launchDraft.sessions],['Rubriques',launchDraft.plannedRubrics||'—'],
+    ['Cotisation nominale',launchDraft.nominalContribution?fmt(Number(launchDraft.nominalContribution)):'—'],
+    ['Communication',Array.isArray(launchDraft.channels)?launchDraft.channels.join(', '):'—'],
+    ['Accessibilité',launchDraft.accessibility],['Faible connexion',launchDraft.legacyDevicePriority?'Prioritaire':'Standard']
+  ];
+  for(const [label,value] of rows){
+    const d=document.createElement('div');d.className='preview-kv';
+    d.innerHTML=`<span>${label}</span><strong>${String(value??'—')}</strong>`;root.append(d);
+  }
+  try{localStorage.setItem('eco-system-launch-draft-v234',JSON.stringify(launchDraft));}catch{}
+};
+
+const setWizardStep=(next:number)=>{
+  wizardStep=Math.max(1,Math.min(10,next));
+  wizardSteps.forEach(x=>x.classList.toggle('active',Number(x.dataset.step)===wizardStep));
+  wizardChips.forEach(x=>{const n=Number(x.dataset.stepJump);x.classList.toggle('active',n===wizardStep);x.classList.toggle('done',n<wizardStep);});
+  $('#wizardProgress').textContent=`Étape ${wizardStep} / 10`;
+  ($('#wizardPrev') as HTMLButtonElement).disabled=wizardStep===1;
+  ($('#wizardNext') as HTMLButtonElement).style.display=wizardStep===10?'none':'inline-flex';
+  if(wizardStep===10)renderLaunchPreview();
+  document.querySelector('.page-head')?.scrollIntoView({behavior:'smooth',block:'start'});
+};
+$('#wizardPrev').addEventListener('click',()=>setWizardStep(wizardStep-1));
+$('#wizardNext').addEventListener('click',()=>setWizardStep(wizardStep+1));
+wizardChips.forEach(x=>x.addEventListener('click',()=>setWizardStep(Number(x.dataset.stepJump))));
+document.querySelectorAll<HTMLInputElement>('input[name="familyChoice"]').forEach(r=>r.addEventListener('change',()=>{
+  const select=$('#groupKind') as HTMLSelectElement;
+  select.value=r.value;
+}));
+try{
+  const saved=localStorage.getItem('eco-system-launch-draft-v234');
+  if(saved)launchDraft=JSON.parse(saved);
+}catch{}
+setWizardStep(1);
 
 $('#projectForm').addEventListener('input',()=>{lastProjectId=undefined;($('#createGroupBtn') as HTMLButtonElement).disabled=true;$('#simulationResult').replaceChildren();});
-$('#projectForm').addEventListener('submit',async e=>{e.preventDefault();try{clearFail();const r=await app.simulateAndStoreProject({name:val('projectName'),kind:val('groupKind') as Group['kind'],governanceModel:val('governanceModel') as Group['governanceModel'],memberCount:num('memberCount'),sessions:num('sessions'),nominalContribution:num('nominalContribution'),managementFeePerContribution:num('managementFee'),estimatedExternalCostRate:num('externalCostRate')/100,fixedOperatingCostPerSession:num('fixedSessionCost')});lastProjectId=r.projectId;const root=$('#simulationResult');root.innerHTML=`<div class="result-row"><span>Volume brut</span><strong>${fmt(r.result.totalNominalContributions)}</strong></div><div class="result-row"><span>Revenus gestion</span><strong>${fmt(r.result.totalManagementFees)}</strong></div><div class="result-row"><span>Coûts estimés</span><strong>${fmt(r.result.estimatedExternalCosts+r.result.fixedOperatingCosts)}</strong></div><div class="result-row"><span>Marge estimée</span><strong>${fmt(r.result.estimatedManagerMargin)}</strong></div>`;($('#createGroupBtn') as HTMLButtonElement).disabled=false;toast('Projet simulé.');}catch(e){fail(e);}});
-$('#createGroupBtn').addEventListener('click',async()=>{if(!lastProjectId)return;try{const g=await app.createGroupFromProject(lastProjectId);toast(`Groupe créé : ${g.name}`);await refreshGroupContext();go('operations');}catch(e){fail(e);}});
+$('#projectForm').addEventListener('submit',async e=>{e.preventDefault();try{clearFail();renderLaunchPreview();const r=await app.simulateAndStoreProject({name:val('projectName'),kind:val('groupKind') as Group['kind'],governanceModel:val('governanceModel') as Group['governanceModel'],memberCount:num('memberCount'),sessions:num('sessions'),nominalContribution:num('nominalContribution'),managementFeePerContribution:num('managementFee'),estimatedExternalCostRate:num('externalCostRate')/100,fixedOperatingCostPerSession:num('fixedSessionCost')});lastProjectId=r.projectId;const root=$('#simulationResult');root.innerHTML=`<div class="result-row"><span>Volume brut</span><strong>${fmt(r.result.totalNominalContributions)}</strong></div><div class="result-row"><span>Revenus gestion</span><strong>${fmt(r.result.totalManagementFees)}</strong></div><div class="result-row"><span>Coûts estimés</span><strong>${fmt(r.result.estimatedExternalCosts+r.result.fixedOperatingCosts)}</strong></div><div class="result-row"><span>Marge estimée</span><strong>${fmt(r.result.estimatedManagerMargin)}</strong></div>`;($('#createGroupBtn') as HTMLButtonElement).disabled=false;toast('Faisabilité simulée. Vous pouvez encore revenir à toute étape.');}catch(e){fail(e);}});
+$('#createGroupBtn').addEventListener('click',async()=>{if(!lastProjectId)return;try{const g=await app.createGroupFromProject(lastProjectId);try{await app.createWorkspaceRecord({moduleId:'GROUP.LAUNCH_STUDIO',title:`Dossier de lancement — ${g.name}`,summary:JSON.stringify(launchDraft),status:'DONE',tags:['cahier-2.3.4','launch-cockpit'],data:{source:'master-cockpit-20260911',draft:launchDraft}});}catch{}try{localStorage.removeItem('eco-system-launch-draft-v234');}catch{}toast(`Groupe créé : ${g.name}`);await refreshGroupContext();go('operations');}catch(e){fail(e);}});
 
 $('#memberForm').addEventListener('submit',async e=>{e.preventDefault();try{await app.addMember(val('memberName'));(document.getElementById('memberName') as HTMLInputElement).value='';await renderMembers();toast('Membre ajouté.');}catch(e){fail(e);}});
 $('#meetingForm').addEventListener('submit',async e=>{e.preventDefault();try{await app.openMeeting(val('meetingTitle')||'Séance');(document.getElementById('meetingTitle') as HTMLInputElement).value='';await renderMeetings();toast('Séance ouverte.');}catch(e){fail(e);}});
@@ -150,6 +320,8 @@ function renderPreview(p:RubricCyclePreview){$('#rubricPreviewResult').innerHTML
 
 $('#contributionForm').addEventListener('submit',async e=>{e.preventDefault();try{const membershipId=val('contributionMember');if(!membershipId)throw new Error('MEMBERSHIP_NOT_FOUND');const r=await app.recordCashContribution({membershipId,amount:num('contributionAmount'),rubricId:val('contributionRubric')||undefined,meetingId:val('contributionMeeting')||undefined,lateReason:val('lateReason')||undefined,approverIds:split(val('lateApprovers'))});toast(r.queued?'Cotisation mise en attente hors ligne.':r.receipt?.latePosting?.isLate?'Cotisation tardive enregistrée et tracée.':'Cotisation enregistrée.');renderOutbox();if(!r.queued)await renderLedger();}catch(e){fail(e);}});
 $('#cashboxForm').addEventListener('submit',async e=>{e.preventDefault();try{const r=await app.reconcileCashbox({openingCash:num('opening'),cashIn:num('cashIn'),cashOut:num('cashOut'),countedClosing:num('counted'),meetingId:activeMeeting()});$('#cashboxResult').innerHTML=`<div class="result-row"><span>Théorique</span><strong>${fmt(r.snapshot.theoreticalClosing)}</strong></div><div class="result-row"><span>Écart</span><strong>${fmt(r.snapshot.variance)}</strong></div><div class="result-row"><span>Statut</span><strong>${r.status}</strong></div>`;toast('Rapprochement enregistré.');}catch(e){fail(e);}});
+$('#matrixRefresh').addEventListener('click',()=>renderMeetingMatrix());
+$('#matrixSave').addEventListener('click',()=>void saveMeetingMatrix());
 
 $('#discoverySearchForm').addEventListener('submit',async e=>{e.preventDefault();try{const xs=await app.searchGroups({q:val('discoveryQ')||undefined,locality:val('discoveryLocality')||undefined,recruitingOnly:checked('discoveryRecruiting')});renderDiscoveryResults(xs);}catch(e){fail(e);}});
 $('#publishDiscoveryForm').addEventListener('submit',async e=>{e.preventDefault();try{await app.publishActiveGroup({visibility:val('listingVisibility') as any,discoverable:val('listingVisibility')==='PUBLIC',joinPolicy:val('listingJoinPolicy') as any,recruiting:checked('listingRecruiting'),locality:val('listingLocality')||undefined,missionTags:split(val('listingMission')),activityTags:[]});toast('Projection publique mise à jour.');}catch(e){fail(e);}});
@@ -174,9 +346,9 @@ async function start(){
   renderConnectivity();renderKernel();
   try{
     await app.bootstrap({displayName:'Gestionnaire Eco-System',locale:'fr'});
-    const catalog=await app.productCatalog();modules=catalog.capabilities;populateWorkspaceModules();renderLotFilters();renderEcosystemHighlights();
+    const catalog=await app.productCatalog();modules=catalog.capabilities;populateWorkspaceModules();renderLotFilters();renderEcosystemHighlights();renderModuleStatuses();
     await refreshAll();await loadWorkspaces();
-    if('serviceWorker'in navigator)try{await navigator.serviceWorker.register('/sw.js',{scope:'/'});}catch{}
+    if('serviceWorker'in navigator)try{const reg=await navigator.serviceWorker.register('/sw.js?v=master-20260911',{scope:'/'});await reg.update();}catch{}
   }catch(e){fail(e);}
 }
 void start();

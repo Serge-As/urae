@@ -13,12 +13,15 @@ test('Complete App catalog exposes more than 100 unique A-J capabilities',()=>{
   for(const id of ['DISCOVERY.GROUP_SEARCH','MEMBERSHIP.APPLICATION','GROUP.LAUNCH_STUDIO','RUBRIC.LIVING_RULES','MEETING.COMMAND_CENTER','LEDGER.CANONICAL','FINANCE.LOANS','COMMUNITY.FORUM','MARKETPLACE.CORE','ADS.MANAGER','LEARNING.MANAGER_ACADEMY','AI.ASSISTANT','PAPER.BRIDGE','REPORTING.EXPORTS','BACKUP.BIR_PLUS']) assert.ok(PRODUCT_MODULES.some(x=>x.id===id),id);
 });
 
-test('Complete App public shell is no longer the old Alpha screen',()=>{
+test('Complete App public shell is the Cahier 2.3.4 Master Cockpit and not the old Alpha screen',()=>{
   const html=fs.readFileSync('apps/web/index.html','utf8');
-  assert.match(html,/Eco-System Complete App/);
+  assert.match(html,/Master Cockpit/);
+  assert.match(html,/Cahier Maître 2\.3\.4/);
   assert.match(html,/Discovery · Identity · Membership/);
   assert.match(html,/Règles vivantes/);
-  assert.match(html,/Écosystème communautaire & économique/);
+  assert.match(html,/Meeting Command Center/);
+  assert.match(html,/AdManager professionnel/);
+  assert.match(html,/Academy · ONG · IA · Safety · Paper Bridge/);
   assert.doesNotMatch(html,/V0\.6\.0 — MOBILE LIVING RULES/);
 });
 

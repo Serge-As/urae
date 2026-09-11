@@ -1,10 +1,10 @@
-const CACHE = 'eco-system-complete-app-v100';
+const CACHE = 'eco-system-master-cockpit-20260911-v1';
 const APP_SHELL = [
   '/',
   '/index.html',
-  '/styles.css',
-  '/manifest.webmanifest',
-  '/src/main.js',
+  '/styles.css?v=master-20260911',
+  '/manifest.webmanifest?v=master-20260911',
+  '/src/main.js?v=master-20260911',
   '/src/i18n.js',
   '/packages/application/src/index.js',
   '/packages/contracts/src/index.js',
@@ -27,10 +27,25 @@ self.addEventListener('install', event => {
 
 self.addEventListener('activate', event => {
   event.waitUntil((async () => {
-    for (const name of await caches.keys()) if (name !== CACHE) await caches.delete(name);
+    for (const name of await caches.keys()) {
+      if (name !== CACHE) await caches.delete(name);
+    }
     await self.clients.claim();
   })());
 });
+
+async function networkFirst(request, fallbackPath) {
+  const cache = await caches.open(CACHE);
+  try {
+    const response = await fetch(request, { cache: 'no-store' });
+    if (response.ok) await cache.put(request, response.clone());
+    return response;
+  } catch {
+    return (await cache.match(request)) ??
+      (fallbackPath ? await cache.match(fallbackPath) : undefined) ??
+      new Response('Offline', { status: 503, headers: { 'content-type': 'text/plain; charset=utf-8' } });
+  }
+}
 
 self.addEventListener('fetch', event => {
   if (event.request.method !== 'GET') return;
@@ -42,22 +57,26 @@ self.addEventListener('fetch', event => {
     return;
   }
 
+  if (event.request.mode === 'navigate' || url.pathname === '/' || url.pathname === '/index.html') {
+    event.respondWith(networkFirst(event.request, '/index.html'));
+    return;
+  }
+
+  const freshCritical =
+    url.pathname === '/styles.css' ||
+    url.pathname === '/src/main.js' ||
+    url.pathname === '/manifest.webmanifest' ||
+    url.pathname === '/sw.js';
+
+  if (freshCritical) {
+    event.respondWith(networkFirst(event.request));
+    return;
+  }
+
   event.respondWith((async () => {
     const cache = await caches.open(CACHE);
     const cached = await cache.match(event.request);
-    if (cached) {
-      event.waitUntil(fetch(event.request).then(response => {
-        if (response.ok) return cache.put(event.request, response.clone());
-      }).catch(() => undefined));
-      return cached;
-    }
-    try {
-      const response = await fetch(event.request);
-      if (response.ok) await cache.put(event.request, response.clone());
-      return response;
-    } catch {
-      if (event.request.mode === 'navigate') return (await cache.match('/index.html')) ?? new Response('Offline', { status: 503 });
-      return new Response('Offline', { status: 503, headers: { 'content-type': 'text/plain; charset=utf-8' } });
-    }
+    if (cached) return cached;
+    return networkFirst(event.request);
   })());
 });

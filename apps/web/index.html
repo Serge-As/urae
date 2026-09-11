@@ -3,19 +3,23 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-  <meta name="theme-color" content="#111827">
-  <meta id="metaDescription" name="description" content="Eco-System — plateforme complète de gestion de tontines, associations et communautés">
-  <link rel="manifest" href="/manifest.webmanifest">
-  <link rel="stylesheet" href="/styles.css">
-  <title>Eco-System Complete App</title>
+  <meta name="theme-color" content="#17352c">
+  <meta id="metaDescription" name="description" content="Eco-System — application complète de gestion de tontines, associations et communautés selon le Cahier Maître 2.3.4">
+  <link rel="manifest" href="/manifest.webmanifest?v=master-20260911">
+  <link rel="stylesheet" href="/styles.css?v=master-20260911">
+  <title>Eco-System — Master Cockpit</title>
 </head>
 <body>
   <header class="topbar">
     <div class="brand">
       <div class="logo">E</div>
-      <div><strong>Eco-System</strong><small>Complete App · 1.0.0</small></div>
+      <div>
+        <strong>Eco-System</strong>
+        <small>Master Cockpit · Cahier Maître 2.3.4</small>
+      </div>
     </div>
     <div class="top-actions">
+      <span class="build-badge">BUILD 2026-09-11</span>
       <span id="connectivity" class="pill">● …</span>
       <button id="installBtn" class="ghost" hidden>Installer</button>
       <button id="refreshBtn" class="ghost">Actualiser</button>
@@ -27,122 +31,273 @@
 
   <div class="app-shell">
     <nav id="mainNav" class="side-nav" aria-label="Navigation principale">
+      <div class="nav-group-label">Piloter</div>
       <button data-view="dashboard" class="nav-btn active"><span>⌂</span><b>Accueil</b></button>
-      <button data-view="discovery" class="nav-btn"><span>⌕</span><b>Découvrir</b></button>
-      <button data-view="launch" class="nav-btn"><span>＋</span><b>Créer</b></button>
+      <button data-view="launch" class="nav-btn"><span>＋</span><b>Créer / intégrer</b></button>
       <button data-view="operations" class="nav-btn"><span>☷</span><b>Séance</b></button>
       <button data-view="finance" class="nav-btn"><span>₣</span><b>Finance</b></button>
-      <button data-view="ecosystem" class="nav-btn"><span>◎</span><b>Écosystème</b></button>
-      <button data-view="services" class="nav-btn"><span>▦</span><b>Services</b></button>
+
+      <div class="nav-group-label">Grandir</div>
+      <button data-view="discovery" class="nav-btn"><span>⌕</span><b>Découverte</b></button>
+      <button data-view="community" class="nav-btn"><span>◉</span><b>Communauté</b></button>
+      <button data-view="marketplace" class="nav-btn"><span>▤</span><b>Marché</b></button>
+      <button data-view="ads" class="nav-btn"><span>✦</span><b>AdManager</b></button>
+
+      <div class="nav-group-label">Accompagner</div>
+      <button data-view="academy" class="nav-btn"><span>◇</span><b>Academy & IA</b></button>
+      <button data-view="reports" class="nav-btn"><span>▥</span><b>Rapports & outils</b></button>
+      <button data-view="services" class="nav-btn"><span>▦</span><b>Tous les services</b></button>
+
+      <div class="nav-group-label">Sécuriser</div>
       <button data-view="inbox" class="nav-btn"><span>✉</span><b>Inbox</b></button>
       <button data-view="settings" class="nav-btn"><span>⚙</span><b>Réglages</b></button>
     </nav>
 
     <main class="content">
       <section id="view-dashboard" class="view active">
-        <div class="hero">
+        <div class="master-ribbon">
           <div>
-            <span class="eyebrow">Tontines · Associations · Communautés</span>
-            <h1>Un seul espace pour comprendre et faire vivre chaque groupe.</h1>
-            <p>Les règles du groupe guident l'application. Les règles écrites, la pratique réelle et les exceptions gouvernées restent distinctes et traçables.</p>
+            <span class="eyebrow">Application maître — Tontines · Associations · Communautés</span>
+            <h1>Le cockpit complet du groupe, de sa création à sa vie quotidienne.</h1>
+            <p>Cette interface suit le Cahier Maître 2.3.4 : deux familles fondamentales, règles vivantes, séance comme centre opérationnel, vérité financière canonique, Discovery, communauté, économie, formation, IA assistée, Paper Bridge, offline et audit.</p>
           </div>
-          <div class="hero-card">
-            <span>Mode financier réel</span><strong class="safe">DÉSACTIVÉ</strong>
-            <small>Tests fonctionnels et données de démonstration uniquement.</small>
+          <div class="release-stamp">
+            <strong>NOUVELLE INTERFACE</strong>
+            <span>Master Cockpit</span>
+            <small>Build 2026-09-11</small>
           </div>
+        </div>
+
+        <div class="safety-strip">
+          <span><b>Argent réel</b> désactivé</span>
+          <span><b>Base</b> eco-system-db</span>
+          <span><b>Living Rules</b> actives</span>
+          <span><b>Offline</b> file + reprise</span>
         </div>
 
         <div id="universeCards" class="metrics"></div>
 
-        <div class="two-col">
-          <section class="panel">
-            <div class="panel-head"><div><h2>Groupe actif</h2><p>Votre contexte courant.</p></div><button class="link-btn" data-go="launch">Gérer</button></div>
+        <div class="three-col">
+          <section class="panel featured">
+            <div class="panel-head"><div><h2>Groupe actif</h2><p>Contexte de travail courant.</p></div><button class="link-btn" data-go="launch">Gérer</button></div>
             <div id="activeGroupCard" class="empty-state">Aucun groupe actif.</div>
           </section>
           <section class="panel">
-            <div class="panel-head"><div><h2>À faire</h2><p>Obligations, cas et actions.</p></div><button class="link-btn" data-go="inbox">Tout voir</button></div>
+            <div class="panel-head"><div><h2>À traiter</h2><p>Obligations, cas et décisions.</p></div><button class="link-btn" data-go="inbox">Tout voir</button></div>
             <ul id="dashboardInbox" class="list"></ul>
+          </section>
+          <section class="panel">
+            <h2>Aujourd'hui</h2>
+            <div class="today-grid">
+              <button class="mini-action" data-go="operations"><b>Ouvrir une séance</b><span>Présences, cotisations, décisions</span></button>
+              <button class="mini-action" data-go="finance"><b>Encaisser</b><span>Cotisation / rubrique / caisse</span></button>
+              <button class="mini-action" data-go="discovery"><b>Recruter</b><span>Groupes & candidats consentants</span></button>
+            </div>
           </section>
         </div>
 
         <section class="panel">
-          <div class="panel-head"><div><h2>Accès rapide</h2><p>Les grands blocs métier du Prompt Maître A→J.</p></div></div>
-          <div class="quick-grid">
-            <button class="quick" data-go="discovery"><b>Discovery & adhésion</b><span>Rechercher, inviter, candidater</span></button>
-            <button class="quick" data-go="operations"><b>Réunion & règles vivantes</b><span>Cotisations, clôture, retardataires</span></button>
-            <button class="quick" data-go="finance"><b>Ledger & solidarité</b><span>Attendu, collecté, manquants, couverture</span></button>
-            <button class="quick" data-go="ecosystem"><b>Écosystème économique</b><span>Forums, partenaires, achats groupés, Academy</span></button>
+          <div class="panel-head">
+            <div><h2>Univers Eco-System</h2><p>Accès directs aux blocs du cahier, sans cacher les fonctions en maturation.</p></div>
+            <button class="link-btn" data-go="services">139 capacités</button>
+          </div>
+          <div class="domain-grid">
+            <button class="domain-card" data-go="launch"><span>01</span><b>Créer / intégrer / transformer</b><small>Cockpit en 10 étapes, modèles et faisabilité</small></button>
+            <button class="domain-card" data-go="operations"><span>02</span><b>Réunion & feuille mensuelle</b><small>Cartes + matrice membres × rubriques</small></button>
+            <button class="domain-card" data-go="finance"><span>03</span><b>Finance & solidarité</b><small>Ledger, prêts, épargne, manquants, caisse</small></button>
+            <button class="domain-card" data-go="discovery"><span>04</span><b>Discovery & Membership</b><small>Trouver un groupe ou des candidats consentants</small></button>
+            <button class="domain-card" data-go="community"><span>05</span><b>Communauté & gouvernance</b><small>Forum, chat, votes, mandats, appels d'offres</small></button>
+            <button class="domain-card" data-go="marketplace"><span>06</span><b>Marketplace & fournisseurs</b><small>Sourcing, achats groupés, Business Studio</small></button>
+            <button class="domain-card" data-go="ads"><span>07</span><b>AdManager</b><small>Campagnes, placements, ciblage respectueux</small></button>
+            <button class="domain-card" data-go="academy"><span>08</span><b>Academy · ONG · IA · Paper</b><small>Formation, connaissance, anti-arnaque, documents</small></button>
+            <button class="domain-card" data-go="reports"><span>09</span><b>Rapports & intégrations</b><small>Exports, calendrier, recherche, notifications, géo</small></button>
+            <button class="domain-card" data-go="settings"><span>10</span><b>Sécurité & continuité</b><small>Offline, audit, compatibilité, backup, PRA</small></button>
           </div>
         </section>
       </section>
 
-      <section id="view-discovery" class="view">
-        <div class="page-head"><div><span class="eyebrow">Lot B</span><h1>Discovery · Identity · Membership</h1><p>Le membre cherche un groupe ; le groupe recherche des candidats consentants. L'adhésion reste gouvernée.</p></div></div>
-        <div class="two-col">
-          <section class="panel">
-            <h2>Rechercher des groupes</h2>
-            <form id="discoverySearchForm" class="form-grid">
-              <label>Nom, objet ou mot-clé<input id="discoveryQ" placeholder="Ex. épargne, entraide, quartier…"></label>
-              <label>Localité<input id="discoveryLocality" placeholder="Ex. Yaoundé"></label>
-              <label class="check"><input id="discoveryRecruiting" type="checkbox"><span>Recrutement ouvert seulement</span></label>
-              <button class="primary" type="submit">Rechercher</button>
-            </form>
-            <div id="discoveryResults" class="stack"></div>
-          </section>
-          <section class="panel">
-            <h2>Rendre le groupe découvrable</h2>
-            <p class="hint">Aucune liste de membres, téléphone privé ou solde financier n'est publié.</p>
-            <form id="publishDiscoveryForm" class="form-grid">
-              <label>Visibilité<select id="listingVisibility"><option value="PUBLIC">Public</option><option value="INVITE_ONLY">Sur invitation</option><option value="MEMBERS_ONLY">Membres seulement</option><option value="SECRET">Secret</option></select></label>
-              <label>Adhésion<select id="listingJoinPolicy"><option value="REQUEST">Demande + validation</option><option value="OPEN">Ouverte</option><option value="INVITE_ONLY">Invitation uniquement</option><option value="CLOSED">Fermée</option></select></label>
-              <label>Localité<input id="listingLocality" placeholder="Ville/quartier"></label>
-              <label>Mots-clés mission<input id="listingMission" placeholder="entraide, épargne, famille"></label>
-              <label class="check"><input id="listingRecruiting" type="checkbox" checked><span>Recherche de nouveaux membres</span></label>
-              <button class="primary" type="submit">Publier / mettre à jour</button>
-            </form>
-            <div id="applicationsBox" class="stack"></div>
-          </section>
-        </div>
-      </section>
-
       <section id="view-launch" class="view">
-        <div class="page-head"><div><span class="eyebrow">Lot C</span><h1>Group Launch Studio</h1><p>Créer une association, une tontine rotative, en nature ou hybride sans enfermer tous les groupes dans la même règle.</p></div></div>
-        <div class="two-col">
+        <div class="page-head">
+          <div><span class="eyebrow">Lot C · Group Creation Cockpit</span><h1>Créer, intégrer ou transformer un groupe</h1><p>Le Cahier Maître interdit de réduire la création à un petit formulaire. Ce cockpit accompagne le novice, le gestionnaire expérimenté et les groupes déjà existants.</p></div>
+          <div class="page-actions"><span id="wizardProgress" class="progress-pill">Étape 1 / 10</span></div>
+        </div>
+
+        <div class="two-col launch-layout">
           <section class="panel">
-            <h2>Projet de groupe</h2>
-            <form id="projectForm" class="form-grid">
-              <label>Nom du groupe<input id="projectName" required placeholder="Ex. CERDAS 2027"></label>
-              <label>Famille<select id="groupKind"><option value="association">Association</option><option value="rotating_tontine">Tontine rotative</option><option value="in_kind_tontine">Tontine en nature</option><option value="hybrid">Hybride</option></select></label>
-              <label>Gouvernance<select id="governanceModel"><option value="founder_managed">Fondateur</option><option value="community">Communautaire</option><option value="delegated">Déléguée</option><option value="ngo_supported">Accompagnée ONG</option><option value="hybrid">Hybride</option></select></label>
-              <label>Membres prévus<input id="memberCount" type="number" min="1" step="1" value="20" required></label>
-              <label>Séances / cycle<input id="sessions" type="number" min="1" step="1" value="12" required></label>
-              <label>Cotisation nominale XAF<input id="nominalContribution" type="number" min="0" step="1" value="10000" required></label>
-              <label>Frais de gestion / versement<input id="managementFee" type="number" min="0" step="1" value="0"></label>
-              <label>Coûts externes %<input id="externalCostRate" type="number" min="0" max="100" step="0.1" value="0"></label>
-              <label>Coût fixe / séance<input id="fixedSessionCost" type="number" min="0" step="1" value="0"></label>
-              <button class="primary" type="submit">Simuler</button>
+            <div class="stepper" id="wizardStepper">
+              <button type="button" data-step-jump="1" class="step-chip active">1 Origine</button>
+              <button type="button" data-step-jump="2" class="step-chip">2 Famille</button>
+              <button type="button" data-step-jump="3" class="step-chip">3 Gouvernance</button>
+              <button type="button" data-step-jump="4" class="step-chip">4 Exercice</button>
+              <button type="button" data-step-jump="5" class="step-chip">5 Membres</button>
+              <button type="button" data-step-jump="6" class="step-chip">6 Modèle</button>
+              <button type="button" data-step-jump="7" class="step-chip">7 Finance</button>
+              <button type="button" data-step-jump="8" class="step-chip">8 Communication</button>
+              <button type="button" data-step-jump="9" class="step-chip">9 Accessibilité</button>
+              <button type="button" data-step-jump="10" class="step-chip">10 Prévisualiser</button>
+            </div>
+
+            <form id="projectForm">
+              <div class="wizard-step active" data-step="1">
+                <h2>1. Origine du groupe</h2>
+                <p class="hint">Créer un groupe neuf, intégrer un groupe déjà existant ou préparer une transformation.</p>
+                <div class="choice-grid">
+                  <label class="choice-card"><input type="radio" name="origin" value="NEW" checked><span><b>Nouveau groupe</b><small>Partir de zéro avec accompagnement.</small></span></label>
+                  <label class="choice-card"><input type="radio" name="origin" value="EXISTING"><span><b>Groupe existant</b><small>Importer ancienneté, exercice et règles actuelles.</small></span></label>
+                  <label class="choice-card"><input type="radio" name="origin" value="TRANSFORM"><span><b>Transformer</b><small>Faire évoluer une tontine sans perdre son histoire.</small></span></label>
+                </div>
+                <div class="form-grid">
+                  <label class="full">Nom du groupe<input id="projectName" required placeholder="Ex. CERDAS 2027"></label>
+                  <label>Date réelle de création<input id="historicalStartDate" type="date"></label>
+                  <label>Exercice actuel<input id="exerciseLabel" placeholder="Ex. 2026–2027"></label>
+                </div>
+              </div>
+
+              <div class="wizard-step" data-step="2">
+                <h2>2. Famille principale</h2>
+                <p class="hint">Le cahier retient deux familles fondamentales. Les variantes sont configurées ensuite.</p>
+                <div class="choice-grid two">
+                  <label class="choice-card strong"><input type="radio" name="familyChoice" value="association" checked><span><b>Association</b><small>Accumulation, rubriques, épargne, prêts, assistances et tontines internes possibles.</small></span></label>
+                  <label class="choice-card strong"><input type="radio" name="familyChoice" value="rotating_tontine"><span><b>Tontine rotative</b><small>Cycle, parts/noms, bénéficiaires, ordre ou tirage, argent ou nature.</small></span></label>
+                </div>
+                <label>Variante<select id="groupKind"><option value="association">Association</option><option value="rotating_tontine">Tontine rotative</option><option value="in_kind_tontine">Tontine en nature</option><option value="hybrid">Hybride</option></select></label>
+              </div>
+
+              <div class="wizard-step" data-step="3">
+                <h2>3. Gouvernance et pouvoirs</h2>
+                <div class="form-grid">
+                  <label>Modèle<select id="governanceModel"><option value="founder_managed">Fondateur / gestion privée</option><option value="community">Communautaire / démocratique</option><option value="delegated">Déléguée / professionnelle</option><option value="ngo_supported">Accompagnée ONG</option><option value="hybrid">Hybride</option></select></label>
+                  <label>Décision financière<select id="financialAuthority"><option>Président + Trésorier</option><option>Bureau</option><option>Assemblée</option><option>Gestionnaire mandaté</option><option>Règle personnalisée</option></select></label>
+                  <label>Quorum indicatif<input id="launchQuorum" type="number" min="0" max="100" value="50">%</label>
+                  <label class="full">Notes de délégation<textarea id="delegationNotes" rows="3" placeholder="Qui peut créer, valider, approuver, simuler ou modifier ?"></textarea></label>
+                </div>
+              </div>
+
+              <div class="wizard-step" data-step="4">
+                <h2>4. Exercice, cycle et réunions</h2>
+                <div class="form-grid">
+                  <label>Date de début<input id="cycleStartDate" type="date"></label>
+                  <label>Séances / cycle<input id="sessions" type="number" min="1" step="1" value="12" required></label>
+                  <label>Périodicité<select id="meetingFrequency"><option>Mensuelle</option><option>Hebdomadaire</option><option>Quinzaine</option><option>Plusieurs fois par semaine</option><option>Personnalisée</option></select></label>
+                  <label>Jour habituel<input id="meetingDay" placeholder="Ex. 1er samedi"></label>
+                  <label class="check full"><input id="physicalPresence" type="checkbox"><span>Présence physique normalement requise</span></label>
+                </div>
+              </div>
+
+              <div class="wizard-step" data-step="5">
+                <h2>5. Membres, cohortes et parts</h2>
+                <div class="form-grid">
+                  <label>Membres prévus<input id="memberCount" type="number" min="1" step="1" value="20" required></label>
+                  <label>Politique d'entrée<select id="entryPolicy"><option>Validation du bureau</option><option>Assemblée</option><option>Invitation</option><option>Ouverte sous conditions</option></select></label>
+                  <label>Période d'essai<input id="trialPeriod" placeholder="Ex. 3 séances"></label>
+                  <label>Parts/noms multiples<select id="multiSharePolicy"><option>Autorisés</option><option>Interdits</option><option>Selon rubrique</option></select></label>
+                  <label class="full">Import / historique<textarea id="memberImportNotes" rows="3" placeholder="Ancienneté, liste d'attente, anciens membres, réintégrations, import papier/Excel…"></textarea></label>
+                </div>
+              </div>
+
+              <div class="wizard-step" data-step="6">
+                <h2>6. Tontine / rubriques / bénéficiaires</h2>
+                <div class="form-grid">
+                  <label>Mode de bénéfice<select id="benefitMode"><option>Argent</option><option>Nature</option><option>Mixte</option></select></label>
+                  <label>Ordre des bénéficiaires<select id="beneficiaryOrder"><option>Tirage à chaque tour</option><option>Tirage unique initial</option><option>Ordre manuel validé</option><option>Autre règle du groupe</option></select></label>
+                  <label>Entrants en cours de cycle<select id="catchupPolicy"><option>Rattrapent les anciens tours</option><option>Ne cotisent que pour les tours futurs</option><option>Politique personnalisée</option></select></label>
+                  <label>Kit de rubriques<select id="starterKit"><option>Association complète</option><option>Épargne & prêts</option><option>Solidarité & assistance</option><option>Tontine rotative</option><option>À composer</option></select></label>
+                  <label class="full">Rubriques prévues<textarea id="plannedRubrics" rows="3">Secours, Épargne, Prêts, Collation, Assistance</textarea></label>
+                </div>
+              </div>
+
+              <div class="wizard-step" data-step="7">
+                <h2>7. Finance et faisabilité</h2>
+                <div class="form-grid">
+                  <label>Cotisation nominale XAF<input id="nominalContribution" type="number" min="0" step="1" value="10000" required></label>
+                  <label>Frais de gestion / versement<input id="managementFee" type="number" min="0" step="1" value="0"></label>
+                  <label>Coûts externes %<input id="externalCostRate" type="number" min="0" max="100" step="0.1" value="0"></label>
+                  <label>Coût fixe / séance<input id="fixedSessionCost" type="number" min="0" step="1" value="0"></label>
+                  <label>Scénario<select id="simulationScenario"><option>Prudent</option><option selected>Normal</option><option>Optimiste</option></select></label>
+                  <label>Retard hypothétique %<input id="lateRate" type="number" min="0" max="100" value="10"></label>
+                </div>
+              </div>
+
+              <div class="wizard-step" data-step="8">
+                <h2>8. Communication & publication</h2>
+                <div class="check-grid">
+                  <label class="check"><input type="checkbox" name="channel" value="IN_APP" checked><span>In-app</span></label>
+                  <label class="check"><input type="checkbox" name="channel" value="EMAIL"><span>Email</span></label>
+                  <label class="check"><input type="checkbox" name="channel" value="SMS"><span>SMS</span></label>
+                  <label class="check"><input type="checkbox" name="channel" value="WHATSAPP"><span>WhatsApp</span></label>
+                  <label class="check"><input type="checkbox" name="channel" value="TELEGRAM"><span>Telegram</span></label>
+                  <label class="check"><input type="checkbox" name="channel" value="PRINT" checked><span>Impression</span></label>
+                </div>
+                <label>Publication fin de séance<select id="publishPolicy"><option>Validation du gestionnaire</option><option>Automatique après clôture validée</option><option>Jamais automatique</option></select></label>
+              </div>
+
+              <div class="wizard-step" data-step="9">
+                <h2>9. Accessibilité et appareils</h2>
+                <div class="choice-grid">
+                  <label class="choice-card"><input type="radio" name="accessibility" value="COMPLETE" checked><span><b>Mode complet</b><small>Pour gestionnaire expérimenté.</small></span></label>
+                  <label class="choice-card"><input type="radio" name="accessibility" value="ULTRA_SIMPLE"><span><b>Ultra Simple</b><small>Grands boutons, étapes courtes.</small></span></label>
+                  <label class="choice-card"><input type="radio" name="accessibility" value="ORAL"><span><b>Oral / guidé</b><small>Guidage et lecture assistée.</small></span></label>
+                </div>
+                <label class="check"><input id="legacyDevicePriority" type="checkbox" checked><span>Prioriser faible connexion et anciens appareils</span></label>
+              </div>
+
+              <div class="wizard-step" data-step="10">
+                <h2>10. Prévisualisation avant activation</h2>
+                <p class="hint">Vérifiez l'identité, le modèle, la gouvernance, les membres, le calendrier, les rubriques, les frais, les obligations et les canaux avant de créer.</p>
+                <div id="launchPreview" class="preview-board"></div>
+                <button class="primary wide-btn" type="submit">Simuler la faisabilité</button>
+                <div id="simulationResult" class="result"></div>
+                <button id="createGroupBtn" class="primary success wide-btn" type="button" disabled>Créer le groupe à partir de cette simulation</button>
+              </div>
+
+              <div class="wizard-nav">
+                <button id="wizardPrev" type="button" class="ghost">← Précédent</button>
+                <button id="wizardNext" type="button" class="primary">Suivant →</button>
+              </div>
             </form>
-            <div id="simulationResult" class="result"></div>
-            <button id="createGroupBtn" class="primary wide-btn" disabled>Créer le groupe à partir de cette simulation</button>
           </section>
-          <section class="panel">
-            <div class="panel-head"><div><h2>Mes groupes</h2><p>Sélectionnez le contexte actif.</p></div></div>
+
+          <section class="panel sticky-panel">
+            <div class="panel-head"><div><h2>Mes groupes</h2><p>Multi-groupes, même compte.</p></div></div>
             <div id="groupsList" class="stack"></div>
+            <hr>
+            <h3>Ce que le cahier exige ici</h3>
+            <ul class="checklist">
+              <li>Groupe neuf, historique ou transformation</li>
+              <li>Association ou tontine rotative</li>
+              <li>Gouvernance et délégations séparées</li>
+              <li>Calendrier, membres, parts multiples</li>
+              <li>Argent / nature / hybride</li>
+              <li>Simulation avant activation</li>
+              <li>Communication et accessibilité</li>
+              <li>Retour possible à toute étape</li>
+            </ul>
           </section>
         </div>
       </section>
 
       <section id="view-operations" class="view">
-        <div class="page-head"><div><span class="eyebrow">Lots C–D</span><h1>Séance · Membres · Règles vivantes</h1><p>La clôture est un checkpoint. Une opération tardive reste possible si la politique du groupe l'autorise et si les validations requises sont réunies.</p></div></div>
+        <div class="page-head"><div><span class="eyebrow">Lots C–D · Meeting Command Center</span><h1>La séance est le centre opérationnel</h1><p>Vue cartes pour téléphone et vue matrice membres × rubriques pour tablette/desktop. La clôture est un checkpoint versionné, pas une tombe.</p></div></div>
         <div id="noActiveGroupOperations" class="panel empty-state">Sélectionnez ou créez d'abord un groupe.</div>
         <div id="operationsContent">
-          <div class="two-col">
+          <div class="three-col">
             <section class="panel"><h2>Membres</h2><form id="memberForm" class="inline-form"><input id="memberName" required placeholder="Nom du membre"><button class="primary">Ajouter</button></form><ul id="memberList" class="list"></ul></section>
             <section class="panel"><h2>Séances</h2><form id="meetingForm" class="inline-form"><input id="meetingTitle" placeholder="Ex. Séance de septembre"><button class="primary">Ouvrir</button></form><div id="meetingList" class="stack"></div></section>
+            <section class="panel"><h2>Actions séance</h2><div class="action-stack">
+              <button data-module-open="MEETING.ATTENDANCE" class="action-card">Présence & émargement <small>ouvrir un dossier</small></button>
+              <button data-module-open="MEETING.BENEFICIARIES" class="action-card">Bénéficiaires & preuves <small>suivre remises</small></button>
+              <button data-module-open="MEETING.MINUTES" class="action-card">Procès-verbal <small>rédiger / publier</small></button>
+              <button data-module-open="GOVERNANCE.VOTE" class="action-card">Vote / décision / quorum <small>tracer la décision</small></button>
+            </div></section>
           </div>
 
+          <section class="panel">
+            <div class="panel-head"><div><h2>Feuille de réunion — matrice</h2><p>Projection smartphone/desktop sur les services canoniques. Saisir un montant crée une vraie intention de cotisation, pas une simple cellule Excel.</p></div><div class="actions"><button id="matrixRefresh" class="ghost" type="button">Actualiser</button><button id="matrixSave" class="primary" type="button">Enregistrer la matrice</button></div></div>
+            <div id="meetingMatrix" class="matrix-wrap"><div class="empty-state">Ajoutez des membres et des rubriques pour afficher la matrice.</div></div>
+          </section>
+
           <section class="panel living">
-            <div class="panel-head"><div><h2>Règles vivantes</h2><p>Écrit ≠ pratique ≠ règle opérationnelle. L'application cherche à comprendre le groupe avant d'imposer.</p></div></div>
+            <div class="panel-head"><div><h2>Règles vivantes</h2><p>« Voilà comment ce groupe décrit la manière dont sa rubrique fonctionne. » Écrit ≠ pratique ≠ règle opérationnelle validée.</p></div></div>
             <div class="two-col">
               <form id="latePolicyForm" class="form-grid">
                 <h3>Après clôture</h3>
@@ -173,9 +328,18 @@
       </section>
 
       <section id="view-finance" class="view">
-        <div class="page-head"><div><span class="eyebrow">Lot E</span><h1>Finance · Ledger · Solidarité</h1><p>Attendu, collecté, manquant/dette, couverture solidaire et décaissement sont des flux distincts.</p></div></div>
+        <div class="page-head"><div><span class="eyebrow">Lot E</span><h1>Finance · Ledger · Prêts · Épargne · Solidarité</h1><p>Attendu, encaissé, dette/manquant, couverture solidaire et décaissement restent des flux distincts. La caisse physique ne devient jamais négative par convention métier.</p></div></div>
         <div id="noActiveGroupFinance" class="panel empty-state">Sélectionnez ou créez d'abord un groupe.</div>
         <div id="financeContent">
+          <div class="finance-launchpad">
+            <button data-module-open="FINANCE.LOANS" class="finance-tile"><b>Prêts internes</b><span>Demande, décision, garanties, échéancier</span><i data-status-for="FINANCE.LOANS"></i></button>
+            <button data-module-open="FINANCE.SAVINGS_YIELD" class="finance-tile"><b>Épargne & intérêts</b><span>Dépôts, blocage, rendement, restitution</span><i data-status-for="FINANCE.SAVINGS_YIELD"></i></button>
+            <button data-module-open="FINANCE.OBLIGATIONS" class="finance-tile"><b>Obligations</b><span>Objectif annuel, échéance, avance, rattrapage</span><i data-status-for="FINANCE.OBLIGATIONS"></i></button>
+            <button data-module-open="FINANCE.ARREARS" class="finance-tile"><b>Impayés / régularisation</b><span>Dette membre, recours, compensation</span><i data-status-for="FINANCE.ARREARS"></i></button>
+            <button data-module-open="FINANCE.LOAN_GUARANTORS" class="finance-tile"><b>Garants</b><span>Consentement, appel et libération</span><i data-status-for="FINANCE.LOAN_GUARANTORS"></i></button>
+            <button data-module-open="FINANCE.ENVELOPES" class="finance-tile"><b>Enveloppes membres</b><span>Allocations par rubrique et imputation future</span><i data-status-for="FINANCE.ENVELOPES"></i></button>
+          </div>
+
           <div class="two-col">
             <section class="panel">
               <h2>Enregistrer une cotisation</h2>
@@ -185,7 +349,7 @@
                 <label>Séance<select id="contributionMeeting"></select></label>
                 <label>Montant XAF<input id="contributionAmount" type="number" min="1" step="1" value="2000" required></label>
                 <label class="full">Motif si opération tardive<textarea id="lateReason" rows="2" placeholder="Ex. retardataire autorisé par Président + Trésorier"></textarea></label>
-                <label class="full">Identifiants des approbateurs (séparés par des virgules)<input id="lateApprovers" placeholder="Ex. user_founder, user_treasurer"></label>
+                <label class="full">Identifiants des approbateurs<input id="lateApprovers" placeholder="Ex. user_founder, user_treasurer"></label>
                 <button id="recordCashBtn" class="primary">Enregistrer</button>
               </form>
             </section>
@@ -214,25 +378,115 @@
             <div id="rubricPreviewResult" class="result"></div>
           </section>
 
-          <section class="panel"><div class="panel-head"><div><h2>Ledger</h2><p>Vérité financière canonique.</p></div></div><div id="ledgerMetrics" class="metrics small"></div><div id="receiptList" class="table-list"></div></section>
+          <section class="panel"><div class="panel-head"><div><h2>Ledger canonique</h2><p>Vérité financière append-only.</p></div></div><div id="ledgerMetrics" class="metrics small"></div><div id="receiptList" class="table-list"></div></section>
         </div>
       </section>
 
-      <section id="view-ecosystem" class="view">
-        <div class="page-head"><div><span class="eyebrow">Lots F–I</span><h1>Écosystème communautaire & économique</h1><p>Forums, partenaires, fournisseurs, achats groupés, Business Studio, AdManager, Academy, ONG, IA, Paper Bridge, exports et intégrations.</p></div></div>
-        <div id="ecosystemHighlights" class="quick-grid"></div>
-        <section class="panel">
-          <div class="panel-head"><div><h2>Catalogue complet</h2><p><strong id="capabilityCount">0</strong> capacités connues. Une fonction non visible dans un résumé n'est jamais considérée supprimée.</p></div><input id="catalogSearch" class="search" placeholder="Rechercher une capacité…"></div>
-          <div id="lotFilters" class="filters"></div>
-          <div id="moduleCatalog" class="module-catalog"></div>
-        </section>
+      <section id="view-discovery" class="view">
+        <div class="page-head"><div><span class="eyebrow">Lot B</span><h1>Discovery · Identity · Membership</h1><p>Le membre trouve un groupe ; un groupe trouve des candidats consentants. Visibilité, découvrabilité, adhésion et aperçu restent quatre choix séparés.</p></div></div>
+        <div class="discovery-launchpad">
+          <button data-module-open="DISCOVERY.MEMBER_SEARCH" class="feature-tile"><b>Candidats consentants</b><span>Recherche groupe → personne, opt-in</span><i data-status-for="DISCOVERY.MEMBER_SEARCH"></i></button>
+          <button data-module-open="MEMBERSHIP.RECRUITMENT" class="feature-tile"><b>Campagne de recrutement</b><span>Profil, questions, portfolio, références</span><i data-status-for="MEMBERSHIP.RECRUITMENT"></i></button>
+          <button data-module-open="DISCOVERY.SAVED_SEARCH" class="feature-tile"><b>Recherches sauvegardées</b><span>Alertes et critères privés</span><i data-status-for="DISCOVERY.SAVED_SEARCH"></i></button>
+          <button data-module-open="DISCOVERY.PROXIMITY" class="feature-tile"><b>Proximité consentie</b><span>Localité sans exposer la position privée</span><i data-status-for="DISCOVERY.PROXIMITY"></i></button>
+        </div>
+        <div class="two-col">
+          <section class="panel">
+            <h2>Rechercher des groupes</h2>
+            <form id="discoverySearchForm" class="form-grid">
+              <label>Nom, objet ou mot-clé<input id="discoveryQ" placeholder="Ex. épargne, entraide, quartier…"></label>
+              <label>Localité<input id="discoveryLocality" placeholder="Ex. Yaoundé"></label>
+              <label class="check"><input id="discoveryRecruiting" type="checkbox"><span>Recrutement ouvert seulement</span></label>
+              <button class="primary" type="submit">Rechercher</button>
+            </form>
+            <div id="discoveryResults" class="stack"></div>
+          </section>
+          <section class="panel">
+            <h2>Page publique du groupe</h2>
+            <p class="hint">Aucune liste de membres, téléphone privé, dette ou solde financier n'est publié.</p>
+            <form id="publishDiscoveryForm" class="form-grid">
+              <label>Visibilité<select id="listingVisibility"><option value="PUBLIC">Public</option><option value="INVITE_ONLY">Sur invitation</option><option value="MEMBERS_ONLY">Membres seulement</option><option value="SECRET">Secret</option></select></label>
+              <label>Adhésion<select id="listingJoinPolicy"><option value="REQUEST">Demande + validation</option><option value="OPEN">Ouverte</option><option value="INVITE_ONLY">Invitation uniquement</option><option value="CLOSED">Fermée</option></select></label>
+              <label>Localité<input id="listingLocality" placeholder="Ville/quartier"></label>
+              <label>Mots-clés mission<input id="listingMission" placeholder="entraide, épargne, famille"></label>
+              <label class="check"><input id="listingRecruiting" type="checkbox" checked><span>Recherche de nouveaux membres</span></label>
+              <button class="primary" type="submit">Publier / mettre à jour</button>
+            </form>
+            <div id="applicationsBox" class="stack"></div>
+          </section>
+        </div>
+      </section>
+
+      <section id="view-community" class="view">
+        <div class="page-head"><div><span class="eyebrow">Lot F</span><h1>Communauté · Gouvernance · Réseaux</h1><p>Un espace social utile au groupe, sans dupliquer les autorités métier ni transformer une conversation privée en donnée publicitaire.</p></div></div>
+        <div class="domain-workbench">
+          <button data-module-open="COMMUNITY.FORUM" class="workbench-card"><span>Forum</span><b>Public / privé</b><p>Discussions structurées, annonces, mémoire communautaire.</p><i data-status-for="COMMUNITY.FORUM"></i></button>
+          <button data-module-open="COMMUNITY.CHAT" class="workbench-card"><span>Chat</span><b>Conversation du groupe</b><p>Coordination quotidienne et notifications maîtrisées.</p><i data-status-for="COMMUNITY.CHAT"></i></button>
+          <button data-module-open="COMMUNITY.PRO_HUBS" class="workbench-card"><span>Professional Hubs</span><b>Réseaux par métier</b><p>Espaces professionnels, entraide, opportunités et partenaires.</p><i data-status-for="COMMUNITY.PRO_HUBS"></i></button>
+          <button data-module-open="GOVERNANCE.VOTE" class="workbench-card"><span>Décisions</span><b>Votes & quorum</b><p>Décisions formelles, résultat, preuve, contestation.</p><i data-status-for="GOVERNANCE.VOTE"></i></button>
+          <button data-module-open="GOVERNANCE.MANDATE" class="workbench-card"><span>Pouvoirs</span><b>Mandats & délégations</b><p>Qui peut voir, proposer, approuver et exécuter.</p><i data-status-for="GOVERNANCE.MANDATE"></i></button>
+          <button data-module-open="GOVERNANCE.TENDER" class="workbench-card"><span>Achats</span><b>Appels d'offres</b><p>Comparer les offres et documenter le choix.</p><i data-status-for="GOVERNANCE.TENDER"></i></button>
+        </div>
+      </section>
+
+      <section id="view-marketplace" class="view">
+        <div class="page-head"><div><span class="eyebrow">Lot F</span><h1>Marketplace · Fournisseurs · Business Studio</h1><p>Connecter les besoins du groupe aux fournisseurs, achats groupés et activités économiques sans mélanger achats, publicité et finance du groupe.</p></div></div>
+        <div class="domain-workbench">
+          <button data-module-open="MARKETPLACE.CORE" class="workbench-card"><span>Marché</span><b>Marketplace</b><p>Produits, services, commandes et contexte communautaire.</p><i data-status-for="MARKETPLACE.CORE"></i></button>
+          <button data-module-open="MARKETPLACE.SUPPLIERS" class="workbench-card"><span>Sourcing</span><b>Fournisseurs</b><p>Prix, qualité, coût rendu, historique et preuve.</p><i data-status-for="MARKETPLACE.SUPPLIERS"></i></button>
+          <button data-module-open="MARKETPLACE.GROUP_BUY" class="workbench-card"><span>Collectif</span><b>Achats groupés</b><p>Objectif, participants, fournisseur, livraison, reliquat.</p><i data-status-for="MARKETPLACE.GROUP_BUY"></i></button>
+          <button data-module-open="MARKETPLACE.SUPPLIER_CREDIT" class="workbench-card"><span>Crédit</span><b>Crédit fournisseur</b><p>Conditions commerciales sans falsifier la dette du groupe.</p><i data-status-for="MARKETPLACE.SUPPLIER_CREDIT"></i></button>
+          <button data-module-open="MANAGER.BUSINESS_STUDIO" class="workbench-card"><span>Gestionnaire</span><b>Business Studio</b><p>Services, portefeuille d'activités, marge et suivi.</p><i data-status-for="MANAGER.BUSINESS_STUDIO"></i></button>
+          <button data-module-open="PARTNERS.DIRECTORY" class="workbench-card"><span>Réseau</span><b>Partenaires</b><p>Annuaire, domaines, disponibilité et relation.</p><i data-status-for="PARTNERS.DIRECTORY"></i></button>
+        </div>
+      </section>
+
+      <section id="view-ads" class="view">
+        <div class="page-head"><div><span class="eyebrow">Lot G</span><h1>AdManager professionnel</h1><p>Une seule autorité publicitaire : campagnes, créatifs, placements, ciblage respectueux, fréquence, mesure et modération. Aucun débit réel sans autorisation.</p></div></div>
+        <div class="domain-workbench">
+          <button data-module-open="ADS.CAMPAIGNS" class="workbench-card"><span>Campagnes</span><b>DRAFT → ACTIVE</b><p>Objectif, budget sandbox, planning et état.</p><i data-status-for="ADS.CAMPAIGNS"></i></button>
+          <button data-module-open="ADS.CREATIVES" class="workbench-card"><span>Créatifs</span><b>Texte / bannière / carrousel</b><p>Version low-data et statut de modération.</p><i data-status-for="ADS.CREATIVES"></i></button>
+          <button data-module-open="ADS.PLACEMENTS" class="workbench-card"><span>Placements</span><b>Accueil, marketplace, forum, PDF</b><p>Inventaire sans pop-up agressif.</p><i data-status-for="ADS.PLACEMENTS"></i></button>
+          <button data-module-open="ADS.TARGETING" class="workbench-card"><span>Ciblage</span><b>Contexte & zone grossière</b><p>Jamais soldes, dettes ou données sensibles.</p><i data-status-for="ADS.TARGETING"></i></button>
+          <button data-module-open="ADS.ANALYTICS" class="workbench-card"><span>Mesure</span><b>Impressions, clics, conversions</b><p>Distinguer estimation et facturation rapprochée.</p><i data-status-for="ADS.ANALYTICS"></i></button>
+          <button data-module-open="ADS.MODERATION" class="workbench-card"><span>Sûreté</span><b>Modération & anti-arnaque</b><p>Secteurs, claims, destination et conformité.</p><i data-status-for="ADS.MODERATION"></i></button>
+        </div>
+      </section>
+
+      <section id="view-academy" class="view">
+        <div class="page-head"><div><span class="eyebrow">Lot H</span><h1>Academy · ONG · IA · Safety · Paper Bridge</h1><p>Former et assister sans remplacer l'autorité humaine du groupe. L'IA lit, explique et propose ; elle n'active pas silencieusement une règle sensible.</p></div></div>
+        <div class="domain-workbench">
+          <button data-module-open="LEARNING.MANAGER_ACADEMY" class="workbench-card"><span>Academy</span><b>Former les gestionnaires</b><p>Parcours, exercices, validation et accompagnement.</p><i data-status-for="LEARNING.MANAGER_ACADEMY"></i></button>
+          <button data-module-open="LEARNING.NGO" class="workbench-card"><span>Terrain</span><b>ONG & animateurs</b><p>Accompagnement, programmes et preuves d'activité.</p><i data-status-for="LEARNING.NGO"></i></button>
+          <button data-module-open="AI.ASSISTANT" class="workbench-card"><span>IA</span><b>Assistant Eco-System</b><p>Explication, aide à la saisie et propositions contrôlées.</p><i data-status-for="AI.ASSISTANT"></i></button>
+          <button data-module-open="SAFETY.ANTISCAM" class="workbench-card"><span>Sécurité</span><b>Centre anti-arnaque</b><p>Signalement, vérification, conseils et recours.</p><i data-status-for="SAFETY.ANTISCAM"></i></button>
+          <button data-module-open="GOVERNANCE.DOCUMENT_STUDIO" class="workbench-card"><span>Documents</span><b>Statuts · RI · PV</b><p>Lire, comparer, proposer puis faire valider les règles.</p><i data-status-for="GOVERNANCE.DOCUMENT_STUDIO"></i></button>
+          <button data-module-open="PAPER.BRIDGE" class="workbench-card"><span>Papier ↔ TIC</span><b>Paper Bridge</b><p>Importer, imprimer et maintenir le pont avec le terrain.</p><i data-status-for="PAPER.BRIDGE"></i></button>
+        </div>
+      </section>
+
+      <section id="view-reports" class="view">
+        <div class="page-head"><div><span class="eyebrow">Lot I</span><h1>Rapports · Recherche · Calendrier · Intégrations</h1><p>Les données doivent revenir à l'utilisateur sous une forme compréhensible, imprimable, exportable et adaptée au faible débit.</p></div></div>
+        <div class="domain-workbench">
+          <button data-module-open="REPORTING.EXPORTS" class="workbench-card"><span>Exports</span><b>PDF · Excel · Word · CSV · JSON</b><p>États, listes, reçus et historiques.</p><i data-status-for="REPORTING.EXPORTS"></i></button>
+          <button data-module-open="DASHBOARDS.ALL" class="workbench-card"><span>Dashboards</span><b>Vue par rôle</b><p>Membre, trésorier, bureau, gestionnaire, partenaire.</p><i data-status-for="DASHBOARDS.ALL"></i></button>
+          <button data-module-open="SEARCH.UNIVERSAL" class="workbench-card"><span>Recherche</span><b>Recherche universelle</b><p>Membre, groupe, rubrique, décision, dossier.</p><i data-status-for="SEARCH.UNIVERSAL"></i></button>
+          <button data-module-open="CALENDAR.UNIFIED" class="workbench-card"><span>Agenda</span><b>Calendrier unifié</b><p>Séances, échéances, tours, événements, campagnes.</p><i data-status-for="CALENDAR.UNIFIED"></i></button>
+          <button data-module-open="NOTIFY.MULTICHANNEL" class="workbench-card"><span>Informer</span><b>Notifications multicanales</b><p>In-app, email, SMS, WhatsApp, Telegram selon budget.</p><i data-status-for="NOTIFY.MULTICHANNEL"></i></button>
+          <button data-module-open="GEO.DIRECTORY" class="workbench-card"><span>Géo</span><b>Annuaire & géolocalisation</b><p>Localité, partenaires et services avec consentement.</p><i data-status-for="GEO.DIRECTORY"></i></button>
+        </div>
       </section>
 
       <section id="view-services" class="view">
-        <div class="page-head"><div><span class="eyebrow">Workspace universel</span><h1>Faire fonctionner les services en maturation</h1><p>Le workspace n'invente pas un second moteur métier. Il permet déjà de saisir, suivre et auditer des dossiers pour chaque capacité pendant que les moteurs spécialisés mûrissent.</p></div></div>
-        <div class="two-col">
-          <section class="panel">
-            <h2>Nouveau dossier</h2>
+        <div class="page-head"><div><span class="eyebrow">Catalogue A→J</span><h1>Tous les services et leur vrai statut</h1><p>Une capacité visible n'est pas automatiquement « terminée ». Les moteurs spécialisés sont distingués des workspaces structurels pour éviter la fausse complétude.</p></div></div>
+        <section class="panel">
+          <div class="panel-head"><div><h2>Catalogue complet</h2><p><strong id="capabilityCount">0</strong> capacités connues.</p></div><input id="catalogSearch" class="search" placeholder="Rechercher une capacité…"></div>
+          <div id="lotFilters" class="filters"></div>
+          <div id="moduleCatalog" class="module-catalog"></div>
+        </section>
+        <section class="panel workspace-panel">
+          <div class="panel-head"><div><h2>Workspace persistant</h2><p>Pour une capacité encore structurelle : dossier réel, statut, résumé, tags et audit D1 sans inventer un faux moteur final.</p></div></div>
+          <div class="two-col">
             <form id="workspaceForm" class="form-grid">
               <label>Service<select id="workspaceModule"></select></label>
               <label>Statut<select id="workspaceStatus"><option value="ACTIVE">Actif</option><option value="DRAFT">Brouillon</option><option value="DONE">Terminé</option><option value="ARCHIVED">Archivé</option></select></label>
@@ -241,25 +495,26 @@
               <label class="full">Tags<input id="workspaceTags" placeholder="urgent, bureau, partenaire"></label>
               <button class="primary">Enregistrer le dossier</button>
             </form>
-          </section>
-          <section class="panel">
-            <div class="panel-head"><div><h2>Dossiers</h2><p>Persistants sur D1 pour le tenant actif.</p></div><button id="workspaceReload" class="link-btn">Actualiser</button></div>
-            <div id="workspaceRecords" class="stack"></div>
-          </section>
-        </div>
+            <div>
+              <div class="panel-head"><div><h3>Dossiers</h3><p>Persistants sur D1 pour le contexte actif.</p></div><button id="workspaceReload" class="link-btn">Actualiser</button></div>
+              <div id="workspaceRecords" class="stack"></div>
+            </div>
+          </div>
+        </section>
+        <div id="ecosystemHighlights" hidden></div>
       </section>
 
       <section id="view-inbox" class="view">
-        <div class="page-head"><div><span class="eyebrow">Transversal</span><h1>Inbox · Support · Offline</h1><p>Une interdiction raisonnable doit proposer une voie d'autorisation, de recours ou de régularisation lorsque c'est possible.</p></div></div>
+        <div class="page-head"><div><span class="eyebrow">Transversal</span><h1>Inbox · Support · Offline</h1><p>Les obligations, litiges, recours et intentions offline convergent ici plutôt que de créer des systèmes parallèles.</p></div></div>
         <div class="two-col">
           <section class="panel"><h2>Boîte universelle</h2><ul id="inboxList" class="list"></ul></section>
           <section class="panel"><h2>Support / litige / recours</h2><form id="supportForm"><textarea id="supportSummary" rows="4" required placeholder="Décrivez la situation…"></textarea><button class="primary">Ouvrir un dossier</button></form><p id="caseLog" class="hint"></p></section>
         </div>
-        <section class="panel"><h2>File offline</h2><div class="actions"><button id="queueBtn">Ajouter une note de test</button><button id="syncBtn" class="primary">Synchroniser</button></div><ul id="outboxList" class="list"></ul></section>
+        <section class="panel"><h2>File offline intelligente</h2><div class="actions"><button id="queueBtn">Ajouter une note de test</button><button id="syncBtn" class="primary">Synchroniser</button></div><ul id="outboxList" class="list"></ul></section>
       </section>
 
       <section id="view-settings" class="view">
-        <div class="page-head"><div><span class="eyebrow">Lot J</span><h1>Réglages · Sécurité · Compatibilité</h1><p>Préparer le pilote sans activer l'argent réel.</p></div></div>
+        <div class="page-head"><div><span class="eyebrow">Lot J</span><h1>Sécurité · Continuité · Accessibilité</h1><p>Préparer le pilote sans argent réel : authentification, audit, compatibilité, offline, BIR+, PRA et qualité de données.</p></div></div>
         <div class="two-col">
           <section class="panel"><h2>Préférences</h2><label>Langue<select id="languageSelect"><option value="fr">Français</option><option value="en">English</option></select></label><button id="modeBtn" class="primary">Mode Ultra Simple</button></section>
           <section class="panel"><h2>État de sécurité</h2><div id="safetyState" class="stack"></div></section>
@@ -268,11 +523,22 @@
           <section class="panel"><h2>Compatibilité appareil</h2><div id="compatibilityLevel"></div><ul id="compatibilityList" class="list"></ul></section>
           <section class="panel"><h2>Services canoniques</h2><ul id="kernelList" class="list"></ul></section>
         </div>
+        <div class="domain-workbench compact">
+          <button data-module-open="SECURITY.AUTH" class="workbench-card"><span>Sécurité</span><b>Authentification</b><i data-status-for="SECURITY.AUTH"></i></button>
+          <button data-module-open="SECURITY.MFA" class="workbench-card"><span>Rôles sensibles</span><b>MFA</b><i data-status-for="SECURITY.MFA"></i></button>
+          <button data-module-open="DATA.TIME_MACHINE" class="workbench-card"><span>Historique</span><b>Time Machine</b><i data-status-for="DATA.TIME_MACHINE"></i></button>
+          <button data-module-open="BACKUP.BIR_PLUS" class="workbench-card"><span>Sauvegarde</span><b>BIR+</b><i data-status-for="BACKUP.BIR_PLUS"></i></button>
+          <button data-module-open="BACKUP.D1_RESTORE" class="workbench-card"><span>PRA</span><b>Backup / restauration D1</b><i data-status-for="BACKUP.D1_RESTORE"></i></button>
+          <button data-module-open="COMPATIBILITY.LEGACY" class="workbench-card"><span>Terrain</span><b>Anciens appareils</b><i data-status-for="COMPATIBILITY.LEGACY"></i></button>
+        </div>
       </section>
     </main>
   </div>
 
-  <footer class="footer">Eco-System 1.0 Complete App · Préversion de qualification · realMoneyEnabled=false</footer>
-  <script type="module" src="/src/main.js"></script>
+  <footer class="footer">
+    <span>Eco-System Complete App · Master Cockpit · Cahier Maître 2.3.4</span>
+    <span>realMoneyEnabled=false · Build 2026-09-11</span>
+  </footer>
+  <script type="module" src="/src/main.js?v=master-20260911"></script>
 </body>
 </html>
