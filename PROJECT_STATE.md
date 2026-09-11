@@ -55,5 +55,16 @@ Acquis 1.0 notamment :
 ## Garde-fous
 Ne pas recréer `eco-system-db`, ne pas recréer les Secrets Cloudflare, ne pas force-push `main`, ne pas introduire de migration destructive, ne pas publier de PII fondatrice brute, ne pas activer l'argent réel sans autorisation séparée.
 
-## Prochaine opération de clôture
-Produire et vérifier le BIR+ 1.0, sauvegarder l'archive sous `/Eco-System/`, puis utiliser la Complete App déployée comme ligne de référence pour les évolutions futures.
+## BIR+ final — ACQUIS ET VÉRIFIÉ
+- Workflow : `Eco-System 1.0 — BIR+ Verified Source Backup`
+- Run final portable : `34641572552` — SUCCESS
+- Artifact : `eco-system-1.0-complete-app-birplus`
+- Artifact ID : `10280162568`
+- SHA-256 ZIP : `21970e60e5d7a71a434c131a03904f5d72821d8cb449b0ec06db98d50bb0417f`
+- SHA-256 archive source : `6707d2228bd9d396ef104357da674ac15ad8d5eeb7e73990f4fe1e6ec6b34ed3`
+- Head archivé : `eb6bd1c71654534f20c60c936567c102088ca333`
+- Vérification locale : ZIP = digest GitHub, `sha256sum --check` PASS, tar.xz lisible, 199 entrées.
+- Sauvegarde Library : `/Eco-System/ECO_SYSTEM_1.0_COMPLETE_APP_BIR_PLUS_FINAL_2026-09-11.zip`
+
+## Point de reprise
+La livraison 1.0 est clôturée. Utiliser la Complete App déployée et le BIR+ ci-dessus comme références. Toute évolution future part d'une branche dérivée, conserve les garde-fous et produit un nouveau BIR+ après qualification.

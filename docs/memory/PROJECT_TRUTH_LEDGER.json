@@ -347,7 +347,7 @@
         "smoke:1.0.0-complete-app; 139 capabilities; realMoneyEnabled=false"
       ],
       "note": "Complete App 1.0 is the active deployed product line. Root PWA, health and capability catalog are qualified remotely.",
-      "next": "Produce verified BIR+ backup, then evolve through derived branches without regressing canonical services or Living Rules."
+      "next": "Use this deployed line as the reference; preserve the verified BIR+ and evolve through derived branches without regressing canonical services or Living Rules."
     },
     {
       "id": "product.alpha_line",
@@ -399,6 +399,25 @@
       ],
       "note": "The exact qualified payload was reconstructed remotely before materialization; no approximate payload was accepted.",
       "next": "Preserve this hash as the 1.0 source-materialization checkpoint."
+    },
+    {
+      "id": "backup.birplus.complete_app_1.0",
+      "status": "VERIFIED_REMOTE",
+      "scope": "backup-recovery",
+      "observedOn": "2026-09-11",
+      "evidence": [
+        "github-actions:Eco-System 1.0 — BIR+ Verified Source Backup run 34641572552 SUCCESS",
+        "github-actions:artifact eco-system-1.0-complete-app-birplus id 10280162568",
+        "artifact-zip-sha256:21970e60e5d7a71a434c131a03904f5d72821d8cb449b0ec06db98d50bb0417f",
+        "source-archive-sha256:6707d2228bd9d396ef104357da674ac15ad8d5eeb7e73990f4fe1e6ec6b34ed3",
+        "manifest-head:eb6bd1c71654534f20c60c936567c102088ca333",
+        "local-download:artifact ZIP digest matched GitHub digest",
+        "local-check:portable sha256sum --check PASS",
+        "local-check:tar.xz readable; 199 archive entries",
+        "library:/Eco-System/ECO_SYSTEM_1.0_COMPLETE_APP_BIR_PLUS_FINAL_2026-09-11.zip"
+      ],
+      "note": "Final portable BIR+ backup was generated from the Complete App branch, downloaded, independently checksum-verified, archive-listed and saved in the user's /Eco-System/ Library folder.",
+      "next": "Preserve this artifact as the 1.0 reconstructible backup and regenerate BIR+ after meaningful future releases."
     }
   ]
 }

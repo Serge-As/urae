@@ -15,6 +15,10 @@ Lire d'abord `AGENTS.md`, `docs/memory/CURRENT_TRUTH.md`, `docs/memory/PROJECT_T
 - Catalogue : 139 capacités.
 - `realMoneyEnabled=false`.
 - PR Complete App #3 ouverte, non fusionnée.
+- BIR+ final portable vérifié : run `34641572552`, artifact `10280162568`.
+- Archive Library : `/Eco-System/ECO_SYSTEM_1.0_COMPLETE_APP_BIR_PLUS_FINAL_2026-09-11.zip`.
+- ZIP SHA-256 : `21970e60e5d7a71a434c131a03904f5d72821d8cb449b0ec06db98d50bb0417f`.
+- Source SHA-256 : `6707d2228bd9d396ef104357da674ac15ad8d5eeb7e73990f4fe1e6ec6b34ed3`.
 
 ## URL de référence
 `https://eco-system.sergemimf.workers.dev/`
