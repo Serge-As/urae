@@ -1,0 +1,290 @@
+{
+  "schemaVersion": 2,
+  "generatedOn": "2026-09-05",
+  "master": "docs/constitution/ECO_SYSTEM_Cahier_des_Charges_Maitre_Exhaustif_Sauvegarde_2.3.4_2026-09-05.md",
+  "rule": "Normal product work uses Master 2.3.4 + later versioned decisions. Raw founder files remain private evidence only.",
+  "topLevelSources": [
+    {
+      "name": "Projet Serge.rar",
+      "sha256": "9912c50ef433bff620e3cf423d45894e3d2e06c7ddebe09e3908ab8552315255",
+      "coverage": "FULL_ARCHIVE_EXTRACTED_AND_INVENTORIED"
+    },
+    {
+      "name": "Feuille mensuelle(1).xlsx",
+      "sha256": "c7ffb87d79896dd586f4ff4d89e5b1bf18d2b58dcaff08a1981aa05bdb9de193",
+      "coverage": "WORKBOOK_ANALYSED"
+    },
+    {
+      "name": "Accueil.xlsm (standalone variant)",
+      "sha256": "e4627765e36d1f479c7e0a6f1bd9511aa26b5a2ef3d04403efee6d90f9a2d43d",
+      "coverage": "VARIANT_FINGERPRINTED_AND_REQUIREMENTS_RECONCILED"
+    },
+    {
+      "name": "Serge Cahier des charges 2025.docx",
+      "sha256": "b8e4a2c904f8a81ed72a36545d5f90ef8e89a3f4d10d87e9f741dedb029d86df",
+      "coverage": "FULL_TEXT_EXTRACTED_AND_MODULES_RECONCILED"
+    }
+  ],
+  "rarEntries": [
+    {
+      "name": "Accueil.xlsm",
+      "sha256": "e00ab3e801f1b638ae414f145d35ece67e49e09d041058a1bac3459cf9e63621",
+      "sizeBytes": 188763
+    },
+    {
+      "name": "Caisses.xlsx",
+      "sha256": "841579b38c1adbee2a020f489b496aba35592dde78c82bd46416e52e5838f3e5",
+      "sizeBytes": 46742
+    },
+    {
+      "name": "Calendrier versements mes Tontines.xlsm",
+      "sha256": "e3f9a45fc8f426168ab3eae9ac6a8e4bccf05dbb419df9933b16c89a0118c53f",
+      "sizeBytes": 128309
+    },
+    {
+      "name": "Configuraion des Rubriques.xlsm",
+      "sha256": "886d147d95ea8eff1b68b09afba5b3bfe90e223cc1854af43d4ac84949c44274",
+      "sizeBytes": 22801
+    },
+    {
+      "name": "Configuration des Membres.xlsm",
+      "sha256": "71c68b12fd8f5f3ebc73ab8a97995b2cfa75132e6ddd299800a8f53b06dfee64",
+      "sizeBytes": 28735
+    },
+    {
+      "name": "example.eap",
+      "sha256": "d8e707bc1d0c0ed6e4267fb701631398a1788b53edca861b5bd99624c4fbf6c1",
+      "sizeBytes": 2156544
+    },
+    {
+      "name": "Feuille mensuelle.xlsx",
+      "sha256": "e5e9a08b12e43cacc37e13f7e4d22f9bfc0f174dcd5ef131a5315faa3f7b4f14",
+      "sizeBytes": 113706
+    },
+    {
+      "name": "Fiche Membre.xlsm",
+      "sha256": "4034ea1f2cf14bff908070f54e38a405267a7b22ef717f3cee171bbf1633b5be",
+      "sizeBytes": 28230
+    },
+    {
+      "name": "FICHE2.xlsx",
+      "sha256": "1eaba1f42991353dd5cc98b67eadb290d69b50dfea338b0fa05b5da7424b4f1c",
+      "sizeBytes": 164788
+    },
+    {
+      "name": "Lanceur.pub",
+      "sha256": "5bb612634bef0450e5230df95fd673499ad48e0ccfb413591913440edc61b0dc",
+      "sizeBytes": 61952
+    },
+    {
+      "name": "Liste des Exercices précédents.xlsm",
+      "sha256": "bfdff763e4e7cab27c95cd9a0ae6ff259cac269a8746330be84fa8251ae67fcb",
+      "sizeBytes": 37041
+    },
+    {
+      "name": "Listes des membres.xlsx",
+      "sha256": "339a4ee53b21dcd71602fdbc3ec7424c70b1bfab4856eeb47ea204133d30c9b7",
+      "sizeBytes": 10401
+    },
+    {
+      "name": "modele.eap",
+      "sha256": "4ba26966d2377571e05cafe9b562d725bf735156b2037bec887af5c3ad2a60c4",
+      "sizeBytes": 2496512
+    },
+    {
+      "name": "Paramètres.xlsx",
+      "sha256": "1d65fb0e2881e7fa4e43b7723d51f4476f6f0fa3f03894f0182e13a65392c132",
+      "sizeBytes": 6313
+    },
+    {
+      "name": "Rapports.docx",
+      "sha256": "a1877ab6e1fc60b60fe59ab88109b7f94ecee1b174df073a6e0e4d9854454f67",
+      "sizeBytes": 185862
+    },
+    {
+      "name": "Rapports.xlsx",
+      "sha256": "2819a644ca5292d563aedd3544464b4d424012f6e0aa7100a53e1de4ac484ae8",
+      "sizeBytes": 7488
+    },
+    {
+      "name": "RECAP.xlsx",
+      "sha256": "cd3f408352cdb013334b00cc924525fd165a54f29436dc04dee59f12c22fdf7e",
+      "sizeBytes": 63638
+    },
+    {
+      "name": "Rubriques Autres Emprunts.xlsx",
+      "sha256": "09a49e19596fa1b3bddc37be638da91ef7ed244289c52b550537cd3b4c9cd8a4",
+      "sizeBytes": 41905
+    },
+    {
+      "name": "Rubriques Emprunts.xlsx",
+      "sha256": "0234b57aea73b0872d259c719ffd4ca7b491e04a8b919f514392d49e25ee4d97",
+      "sizeBytes": 50777
+    },
+    {
+      "name": "Rubriques Epargne à Intérêts.xlsx",
+      "sha256": "031044eeb110bbf1b094b7ef2815a628da62c3a14e06f3eb5057d65cd6e8278a",
+      "sizeBytes": 69834
+    },
+    {
+      "name": "Rubriques Main Levée.xlsx",
+      "sha256": "549056a202a573dae26a720c5b2027760b9626625c20b0d90f74f57ee095351e",
+      "sizeBytes": 23215
+    },
+    {
+      "name": "Rubriques Ordinaires.xlsx",
+      "sha256": "a64171c253411a421dc54d58d09b44af02368e99c4e27df0472ade15f4e8c045",
+      "sizeBytes": 29974
+    },
+    {
+      "name": "Rubriques Remboursements.xlsx",
+      "sha256": "137b56b8110425066564c1f449b2806e35da5db5f5f073464150712e9f2c7cca",
+      "sizeBytes": 30159
+    },
+    {
+      "name": "Rubriques Spécial Emprunt.xlsx",
+      "sha256": "f64655f537b5efac279fd8db2be3d7cdb04a4a964d3185aed9d999cf711c4079",
+      "sizeBytes": 49987
+    },
+    {
+      "name": "Rubriques Tontines.xlsx",
+      "sha256": "3228e65fe5864dafdfea68ed4343fd6e98721247d43a46aef2972f00ce63b50c",
+      "sizeBytes": 29871
+    },
+    {
+      "name": "Statistiques.xlsx",
+      "sha256": "717e34469c6f69200de956ace08034b241646adc4d439a0b721b00c855dd5f3f",
+      "sizeBytes": 7488
+    }
+  ],
+  "domainCoverage": [
+    {
+      "domain": "Discovery/Membership/Trust",
+      "masterSections": [
+        "7D.3",
+        "7D.4",
+        "7D.5",
+        "7D.6"
+      ],
+      "status": "ABSORBED"
+    },
+    {
+      "domain": "Identity/Multi-group",
+      "masterSections": [
+        "7D.7"
+      ],
+      "status": "ABSORBED"
+    },
+    {
+      "domain": "Group Launch/Tontine",
+      "masterSections": [
+        "7D.8",
+        "7D.11"
+      ],
+      "status": "ABSORBED"
+    },
+    {
+      "domain": "Rubrics",
+      "masterSections": [
+        "7D.9"
+      ],
+      "status": "ABSORBED"
+    },
+    {
+      "domain": "Meeting/Cashbox",
+      "masterSections": [
+        "7D.10",
+        "7D.12"
+      ],
+      "status": "ABSORBED"
+    },
+    {
+      "domain": "Loans/Savings/Solidarity",
+      "masterSections": [
+        "7D.13",
+        "7D.14",
+        "7D.15"
+      ],
+      "status": "ABSORBED"
+    },
+    {
+      "domain": "Reporting/Time Machine",
+      "masterSections": [
+        "7D.16",
+        "7D.17"
+      ],
+      "status": "ABSORBED"
+    },
+    {
+      "domain": "Notifications/Community/Marketplace",
+      "masterSections": [
+        "7D.18",
+        "7D.19",
+        "7D.20"
+      ],
+      "status": "ABSORBED"
+    },
+    {
+      "domain": "Governance/Dashboards",
+      "masterSections": [
+        "7D.21",
+        "7D.22"
+      ],
+      "status": "ABSORBED"
+    },
+    {
+      "domain": "Offline/Security/Architecture/Operations",
+      "masterSections": [
+        "7D.23",
+        "7D.24",
+        "7D.25",
+        "7D.26"
+      ],
+      "status": "ABSORBED"
+    },
+    {
+      "domain": "Economics/AI/Knowledge",
+      "masterSections": [
+        "7D.27",
+        "7D.28"
+      ],
+      "status": "ABSORBED"
+    },
+    {
+      "domain": "Deep forensic workbook runtime semantics",
+      "masterSections": [
+        "7E.2",
+        "7E.3",
+        "7E.4",
+        "7E.5",
+        "7E.6",
+        "7E.7",
+        "7E.8",
+        "7E.9",
+        "7E.10",
+        "7E.11",
+        "7E.12"
+      ],
+      "status": "ABSORBED_DEEP"
+    },
+    {
+      "domain": "Discovery mutual graph / historical search intent",
+      "masterSections": [
+        "7E.13"
+      ],
+      "status": "ABSORBED_DEEP"
+    },
+    {
+      "domain": "Project truth / anti-regression memory",
+      "masterSections": [
+        "7E.14",
+        "7E.15",
+        "7E.16",
+        "7E.18",
+        "7E.19"
+      ],
+      "status": "ABSORBED_DEEP"
+    }
+  ],
+  "deepDigest": "docs/memory/SOURCE_DEEP_DIGEST_2.3.3.json"
+}

@@ -138,74 +138,141 @@
         <div id="operationsContent">
           <div class="two-col">
             <section class="panel"><h2>Membres</h2><form id="memberForm" class="inline-form"><input id="memberName" required placeholder="Nom du membre"><button class="primary">Ajouter</button></form><ul id="memberList" class="list"></ul></section>
-            <section class="panel"><h2>Séances</h2><form id="meetingForm" class="inline-form"><input id="meetingTitle" required placeholder="Ex. Séance septembre"><button class="primary">Ouvrir</button></form><div id="meetingList" class="stack"></div></section>
+            <section class="panel"><h2>Séances</h2><form id="meetingForm" class="inline-form"><input id="meetingTitle" placeholder="Ex. Séance de septembre"><button class="primary">Ouvrir</button></form><div id="meetingList" class="stack"></div></section>
           </div>
-          <section class="panel">
-            <div class="panel-head"><div><h2>Politique après clôture</h2><p>Une porte de sortie gouvernée plutôt qu'un verrou universel.</p></div></div>
-            <form id="latePolicyForm" class="form-grid">
-              <label>Mode<select id="lateMode"><option value="GOVERNED">Autorisé avec validations</option><option value="ALLOWED">Autorisé</option><option value="FORBIDDEN">Interdit par ce groupe</option></select></label>
-              <label>Nombre d'approbations<input id="lateMinApprovals" type="number" min="0" max="10" step="1" value="1"></label>
-              <label>Délai maximum (heures, vide = aucun)<input id="lateMaxHours" type="number" min="0" step="1"></label>
-              <button class="primary" type="submit">Enregistrer la politique</button>
-            </form>
-          </section>
-          <section class="panel">
-            <h2>Décrire une rubrique comme le groupe la vit</h2>
-            <form id="rubricForm" class="form-grid">
-              <label>Nom<input id="rubricName" required placeholder="Collation, aide locale, main levée…"></label>
-              <label>Règle écrite<textarea id="writtenRule" rows="3" placeholder="Ce que disent RI/statuts/PV"></textarea></label>
-              <label>Pratique observée<textarea id="observedPractice" rows="3" placeholder="Ce qui est réellement fait"></textarea></label>
-              <label>État<select id="ruleRealityStatus"><option value="UNVERIFIED">À vérifier</option><option value="ALIGNED">Aligné</option><option value="DIVERGENT">Différent de l'écrit</option><option value="TOLERATED_EXCEPTION">Exception tolérée</option><option value="DISPUTED">Contesté</option><option value="LOCALLY_VALIDATED">Validé par le groupe</option></select></label>
-              <label>Calcul de l'attendu<select id="targetMode"><option value="OPEN">Libre</option><option value="FIXED_TOTAL">Total fixe obligatoire</option><option value="PER_MEMBER_FIXED">Fixe par membre</option><option value="FORMULA">Formule / règle</option></select></label>
-              <label>Total fixe XAF<input id="fixedTargetAmount" type="number" min="0" step="1" value="40000"></label>
-              <label>Montant / membre XAF<input id="perMemberAmount" type="number" min="0" step="1" value="2000"></label>
-              <label>Gestion du manquant<select id="shortfallHandling"><option value="MEMBER_DEBT_GROUP_ADVANCE">Dette membre + avance du groupe</option><option value="REDUCE_BENEFICIARY_PAYOUT">Réduire le versement au bénéficiaire</option><option value="GROUP_SOLIDARITY_ADVANCE">Solidarité du groupe</option><option value="DEDICATED_FUND_ADVANCE">Caisse dédiée avance</option><option value="MIXED">Mixte selon règles</option><option value="WAIVE">Exonération</option><option value="CUSTOM">Personnalisé</option></select></label>
-              <label>Versement bénéficiaire<select id="payoutMode"><option value="TARGET_WHEN_GUARANTEED">Cible garantie</option><option value="COLLECTED_ONLY">Seulement collecté</option><option value="CUSTOM">Personnalisé</option></select></label>
-              <label class="check"><input id="mandatoryAbsentees" type="checkbox"><span>Obligatoire même pour les absents</span></label>
-              <label class="check"><input id="immediateFullPayout" type="checkbox"><span>Décaissement complet immédiat</span></label>
-              <button class="primary" type="submit">Enregistrer la rubrique</button>
-            </form>
+
+          <section class="panel living">
+            <div class="panel-head"><div><h2>Règles vivantes</h2><p>Écrit ≠ pratique ≠ règle opérationnelle. L'application cherche à comprendre le groupe avant d'imposer.</p></div></div>
+            <div class="two-col">
+              <form id="latePolicyForm" class="form-grid">
+                <h3>Après clôture</h3>
+                <label>Mode<select id="lateMode"><option value="GOVERNED">Autorisé sous conditions</option><option value="OPEN_WITH_TRACE">Ouvert avec traçabilité</option><option value="FORBIDDEN">Interdit par ce groupe</option></select></label>
+                <label>Nombre minimal d'accords<input id="lateMinApprovals" type="number" min="0" step="1" value="1"></label>
+                <label>Délai maximal en heures (vide = aucun)<input id="lateMaxHours" type="number" min="0" step="1"></label>
+                <button class="primary">Enregistrer la politique</button>
+              </form>
+              <form id="rubricForm" class="form-grid">
+                <h3>Décrire une rubrique</h3>
+                <label>Nom<input id="rubricName" required value="Collation"></label>
+                <label class="full">Ce qui est écrit<textarea id="writtenRule" rows="3" placeholder="Article du RI, statuts, résolution…"></textarea></label>
+                <label class="full">Ce qui est réellement pratiqué<textarea id="observedPractice" rows="3" placeholder="Décrivez la pratique réelle, même si elle diffère du texte."></textarea></label>
+                <label>Écart écrit/pratique<select id="ruleRealityStatus"><option value="UNKNOWN">À vérifier</option><option value="ALIGNED">Conforme</option><option value="DIFFERS">Différent</option><option value="MIXED">Mixte</option></select></label>
+                <label>Cible<select id="targetMode"><option value="PER_MEMBER_FIXED">Montant fixe / membre</option><option value="FIXED_TOTAL">Total fixe obligatoire</option><option value="OPEN">Montant ouvert</option><option value="CUSTOM">Personnalisé</option></select></label>
+                <label>Montant / membre<input id="perMemberAmount" type="number" min="0" step="1" value="2000"></label>
+                <label>Total cible<input id="fixedTargetAmount" type="number" min="0" step="1" value="40000"></label>
+                <label>Manquant<select id="shortfallHandling"><option value="SOLIDARITY_COVERAGE">Couvert par solidarité</option><option value="LEAVE_SHORT">Le bénéficiaire reçoit le collecté</option><option value="CONDITIONAL_SOLIDARITY">Solidarité sous conditions</option><option value="CUSTOM">Règle personnalisée</option></select></label>
+                <label>Décaissement<select id="payoutMode"><option value="FIXED_TARGET_IF_COVERED">Cible fixe si couverte</option><option value="COLLECTED_ONLY">Montant collecté</option><option value="CUSTOM">Personnalisé</option></select></label>
+                <label class="check"><input id="mandatoryAbsentees" type="checkbox" checked><span>Obligatoire même pour les absents</span></label>
+                <label class="check"><input id="immediateFullPayout" type="checkbox" checked><span>Décaissement total immédiat</span></label>
+                <button class="primary">Enregistrer la rubrique</button>
+              </form>
+            </div>
             <div id="rubricList" class="stack"></div>
-          </section>
-          <section class="panel">
-            <h2>Simuler la réalité d'une rubrique</h2>
-            <form id="rubricPreviewForm" class="inline-grid">
-              <label>Rubrique<select id="rubricPreviewRubric"></select></label><label>Membres<input id="previewMemberCount" type="number" min="1" step="1" value="20"></label><label>Collecté membres<input id="previewCollected" type="number" min="0" step="1" value="38000"></label><label>Couverture solidaire<input id="previewSolidarity" type="number" min="0" step="1" value="2000"></label><button class="primary">Calculer</button>
-            </form><div id="rubricPreviewResult"></div>
           </section>
         </div>
       </section>
 
       <section id="view-finance" class="view">
-        <div class="page-head"><div><span class="eyebrow">Lot E</span><h1>Finance · Ledger · Solidarité</h1><p>Un montant physique ne devient jamais négatif ; un manquant est représenté comme obligation/dette et une avance comme mouvement distinct.</p></div></div>
-        <div id="noActiveGroupFinance" class="panel empty-state">Sélectionnez un groupe.</div>
+        <div class="page-head"><div><span class="eyebrow">Lot E</span><h1>Finance · Ledger · Solidarité</h1><p>Attendu, collecté, manquant/dette, couverture solidaire et décaissement sont des flux distincts.</p></div></div>
+        <div id="noActiveGroupFinance" class="panel empty-state">Sélectionnez ou créez d'abord un groupe.</div>
         <div id="financeContent">
-          <div id="ledgerMetrics" class="metrics"></div>
           <div class="two-col">
-            <section class="panel"><h2>Enregistrer une cotisation</h2><form id="contributionForm" class="form-grid"><label>Membre<select id="contributionMember" required></select></label><label>Montant XAF<input id="contributionAmount" type="number" min="0" step="1" value="2000" required></label><label>Rubrique<select id="contributionRubric"></select></label><label>Séance<select id="contributionMeeting"></select></label><label>Motif si tardif<input id="lateReason" placeholder="Retardataire / décision spéciale"></label><label>Approbateurs (IDs, virgules)<input id="lateApprovers" placeholder="user_founder"></label><button class="primary">Enregistrer</button></form></section>
-            <section class="panel"><h2>Rapprochement de caisse</h2><form id="cashboxForm" class="form-grid"><label>Ouverture<input id="opening" type="number" min="0" step="1" value="0"></label><label>Entrées<input id="cashIn" type="number" min="0" step="1" value="0"></label><label>Sorties<input id="cashOut" type="number" min="0" step="1" value="0"></label><label>Compté physiquement<input id="counted" type="number" min="0" step="1" value="0"></label><button class="primary">Rapprocher</button></form><div id="cashboxResult"></div></section>
+            <section class="panel">
+              <h2>Enregistrer une cotisation</h2>
+              <form id="contributionForm" class="form-grid">
+                <label>Membre<select id="contributionMember" required></select></label>
+                <label>Rubrique<select id="contributionRubric"></select></label>
+                <label>Séance<select id="contributionMeeting"></select></label>
+                <label>Montant XAF<input id="contributionAmount" type="number" min="1" step="1" value="2000" required></label>
+                <label class="full">Motif si opération tardive<textarea id="lateReason" rows="2" placeholder="Ex. retardataire autorisé par Président + Trésorier"></textarea></label>
+                <label class="full">Identifiants des approbateurs (séparés par des virgules)<input id="lateApprovers" placeholder="Ex. user_founder, user_treasurer"></label>
+                <button id="recordCashBtn" class="primary">Enregistrer</button>
+              </form>
+            </section>
+            <section class="panel">
+              <h2>Rapprochement de caisse</h2>
+              <form id="cashboxForm" class="form-grid">
+                <label>Ouverture<input id="opening" type="number" min="0" step="1" value="0" required></label>
+                <label>Entrées<input id="cashIn" type="number" min="0" step="1" value="0" required></label>
+                <label>Sorties<input id="cashOut" type="number" min="0" step="1" value="0" required></label>
+                <label>Compté physiquement<input id="counted" type="number" min="0" step="1" value="0" required></label>
+                <button class="primary">Rapprocher</button>
+              </form>
+              <div id="cashboxResult" class="result"></div>
+            </section>
           </div>
-          <section class="panel"><h2>Reçus et écritures</h2><div id="receiptList" class="table-list"></div></section>
+
+          <section class="panel">
+            <h2>Prévisualiser une rubrique fixe / solidaire</h2>
+            <form id="rubricPreviewForm" class="inline-grid">
+              <label>Rubrique<select id="rubricPreviewRubric"></select></label>
+              <label>Membres<input id="previewMemberCount" type="number" min="0" step="1" value="20"></label>
+              <label>Collecté membres<input id="previewCollected" type="number" min="0" step="1" value="38000"></label>
+              <label>Solidarité<input id="previewSolidarity" type="number" min="0" step="1" value="2000"></label>
+              <button class="primary">Calculer</button>
+            </form>
+            <div id="rubricPreviewResult" class="result"></div>
+          </section>
+
+          <section class="panel"><div class="panel-head"><div><h2>Ledger</h2><p>Vérité financière canonique.</p></div></div><div id="ledgerMetrics" class="metrics small"></div><div id="receiptList" class="table-list"></div></section>
         </div>
       </section>
 
       <section id="view-ecosystem" class="view">
-        <div class="page-head"><div><span class="eyebrow">Lots F–I</span><h1>Écosystème communautaire & économique</h1><p>Forums, Hubs, achats groupés, fournisseurs, Business Studio, AdManager, Academy, ONG, IA, Paper Bridge et plus.</p></div></div>
+        <div class="page-head"><div><span class="eyebrow">Lots F–I</span><h1>Écosystème communautaire & économique</h1><p>Forums, partenaires, fournisseurs, achats groupés, Business Studio, AdManager, Academy, ONG, IA, Paper Bridge, exports et intégrations.</p></div></div>
         <div id="ecosystemHighlights" class="quick-grid"></div>
+        <section class="panel">
+          <div class="panel-head"><div><h2>Catalogue complet</h2><p><strong id="capabilityCount">0</strong> capacités connues. Une fonction non visible dans un résumé n'est jamais considérée supprimée.</p></div><input id="catalogSearch" class="search" placeholder="Rechercher une capacité…"></div>
+          <div id="lotFilters" class="filters"></div>
+          <div id="moduleCatalog" class="module-catalog"></div>
+        </section>
       </section>
 
       <section id="view-services" class="view">
-        <div class="page-head"><div><span class="eyebrow">Encyclopédie opérationnelle</span><h1>Tous les services Eco-System</h1><p>Chaque idée reste retrouvable. Le statut indique ce qui possède déjà un moteur canonique et ce qui fonctionne comme workspace opérationnel avant spécialisation.</p></div></div>
-        <section class="panel"><div class="panel-head"><input id="catalogSearch" class="search" placeholder="Rechercher un service…"><strong id="catalogCount"></strong></div><div id="lotFilters" class="filters"></div><div id="moduleCatalog" class="module-catalog"></div></section>
-        <section class="panel"><h2>Workspace du service</h2><p class="hint">Le workspace ne remplace jamais le moteur métier canonique. Il permet d'utiliser et de suivre une capacité encore en maturation.</p><label>Service<select id="workspaceModule"></select></label><form id="workspaceForm" class="form-grid"><label>Titre<input id="workspaceTitle" required placeholder="Ex. Campagne fournisseurs septembre"></label><label>Statut<select id="workspaceStatus"><option value="DRAFT">Brouillon</option><option value="ACTIVE">Actif</option><option value="WAITING_APPROVAL">En validation</option><option value="COMPLETED">Terminé</option><option value="ARCHIVED">Archivé</option></select></label><label>Tags<input id="workspaceTags" placeholder="urgent, bureau, achat"></label><label class="full">Résumé<textarea id="workspaceSummary" rows="3"></textarea></label><button class="primary">Créer le dossier</button></form><div class="actions"><button id="workspaceReload">Actualiser</button></div><div id="workspaceList" class="stack"></div></section>
+        <div class="page-head"><div><span class="eyebrow">Workspace universel</span><h1>Faire fonctionner les services en maturation</h1><p>Le workspace n'invente pas un second moteur métier. Il permet déjà de saisir, suivre et auditer des dossiers pour chaque capacité pendant que les moteurs spécialisés mûrissent.</p></div></div>
+        <div class="two-col">
+          <section class="panel">
+            <h2>Nouveau dossier</h2>
+            <form id="workspaceForm" class="form-grid">
+              <label>Service<select id="workspaceModule"></select></label>
+              <label>Statut<select id="workspaceStatus"><option value="ACTIVE">Actif</option><option value="DRAFT">Brouillon</option><option value="DONE">Terminé</option><option value="ARCHIVED">Archivé</option></select></label>
+              <label class="full">Titre<input id="workspaceTitle" required placeholder="Ex. Fournisseur boissons pour séance de novembre"></label>
+              <label class="full">Résumé<textarea id="workspaceSummary" rows="4" placeholder="Contexte, règle, décision, prochaine action…"></textarea></label>
+              <label class="full">Tags<input id="workspaceTags" placeholder="urgent, bureau, partenaire"></label>
+              <button class="primary">Enregistrer le dossier</button>
+            </form>
+          </section>
+          <section class="panel">
+            <div class="panel-head"><div><h2>Dossiers</h2><p>Persistants sur D1 pour le tenant actif.</p></div><button id="workspaceReload" class="link-btn">Actualiser</button></div>
+            <div id="workspaceRecords" class="stack"></div>
+          </section>
+        </div>
       </section>
 
-      <section id="view-inbox" class="view"><div class="page-head"><div><span class="eyebrow">Inbox universelle</span><h1>Actions & dossiers</h1></div></div><section class="panel"><ul id="inboxList" class="list"></ul></section><section class="panel"><h2>Ouvrir un dossier</h2><form id="supportForm" class="form-grid"><label class="full">Résumé<textarea id="supportSummary" rows="3" required></textarea></label><button class="primary">Ouvrir</button></form><pre id="caseLog"></pre></section></section>
+      <section id="view-inbox" class="view">
+        <div class="page-head"><div><span class="eyebrow">Transversal</span><h1>Inbox · Support · Offline</h1><p>Une interdiction raisonnable doit proposer une voie d'autorisation, de recours ou de régularisation lorsque c'est possible.</p></div></div>
+        <div class="two-col">
+          <section class="panel"><h2>Boîte universelle</h2><ul id="inboxList" class="list"></ul></section>
+          <section class="panel"><h2>Support / litige / recours</h2><form id="supportForm"><textarea id="supportSummary" rows="4" required placeholder="Décrivez la situation…"></textarea><button class="primary">Ouvrir un dossier</button></form><p id="caseLog" class="hint"></p></section>
+        </div>
+        <section class="panel"><h2>File offline</h2><div class="actions"><button id="queueBtn">Ajouter une note de test</button><button id="syncBtn" class="primary">Synchroniser</button></div><ul id="outboxList" class="list"></ul></section>
+      </section>
 
-      <section id="view-settings" class="view"><div class="page-head"><div><span class="eyebrow">Préférences</span><h1>Réglages & résilience</h1></div></div><section class="panel"><div class="form-grid"><label>Langue<select id="languageSelect"><option value="fr">Français</option><option value="en">English</option></select></label><label>Expérience<button id="modeBtn" type="button">Basculer Ultra Simple</button></label></div><div class="actions"><button id="queueBtn">Créer une note hors ligne</button><button id="syncBtn">Synchroniser</button></div><p id="compatibility" class="hint"></p><p id="kernelStatus" class="hint"></p><ul id="outboxList" class="list"></ul></section></section>
+      <section id="view-settings" class="view">
+        <div class="page-head"><div><span class="eyebrow">Lot J</span><h1>Réglages · Sécurité · Compatibilité</h1><p>Préparer le pilote sans activer l'argent réel.</p></div></div>
+        <div class="two-col">
+          <section class="panel"><h2>Préférences</h2><label>Langue<select id="languageSelect"><option value="fr">Français</option><option value="en">English</option></select></label><button id="modeBtn" class="primary">Mode Ultra Simple</button></section>
+          <section class="panel"><h2>État de sécurité</h2><div id="safetyState" class="stack"></div></section>
+        </div>
+        <div class="two-col">
+          <section class="panel"><h2>Compatibilité appareil</h2><div id="compatibilityLevel"></div><ul id="compatibilityList" class="list"></ul></section>
+          <section class="panel"><h2>Services canoniques</h2><ul id="kernelList" class="list"></ul></section>
+        </div>
+      </section>
     </main>
   </div>
-  <footer class="footer">Eco-System Complete App · Pré-pilote · Argent réel désactivé</footer>
+
+  <footer class="footer">Eco-System 1.0 Complete App · Préversion de qualification · realMoneyEnabled=false</footer>
   <script type="module" src="/src/main.js"></script>
 </body>
 </html>

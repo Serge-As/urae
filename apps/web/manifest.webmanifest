@@ -1,11 +1,20 @@
 {
-  "name": "Eco-System Complete — Tontines & Associations",
+  "id": "/",
+  "name": "Eco-System — Complete App",
   "short_name": "Eco-System",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
+  "orientation": "any",
   "background_color": "#f5f6f8",
-  "theme_color": "#111827",
+  "theme_color": "#101c19",
+  "description": "Eco-System Complete App : tontines, associations, règles vivantes, réunions, finance, découverte, communauté et services.",
   "lang": "fr",
-  "description": "Application complète Eco-System pour tontines, associations et communautés."
+  "dir": "ltr",
+  "categories": [
+    "finance",
+    "business",
+    "social",
+    "productivity"
+  ]
 }

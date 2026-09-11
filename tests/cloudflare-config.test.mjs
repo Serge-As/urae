@@ -3,14 +3,14 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { spawnSync } from 'node:child_process';
 
-test('Cloudflare mobile preview config targets eco-system and never commits credentials or D1 UUID',()=>{
+test('Cloudflare Complete App config targets eco-system and never commits credentials or D1 UUID',()=>{
   const cfg=fs.readFileSync('workers/api/wrangler.toml','utf8');
   assert.match(cfg,/name = "eco-system"/); assert.doesNotMatch(cfg,/CLOUDFLARE_API_TOKEN\s*=/); assert.doesNotMatch(cfg,/database_id\s*=\s*"[0-9a-f-]{20,}"/i);
-  const wf=fs.readFileSync('.github/workflows/deploy-cloudflare-mobile-preview.yml','utf8');
-  assert.match(wf,/secrets\.CLOUDFLARE_ACCOUNT_ID/); assert.match(wf,/secrets\.CLOUDFLARE_API_TOKEN/); assert.match(wf,/eco-system-db/); assert.match(wf,/realMoneyEnabled/); assert.match(wf,/ECO_SYSTEM_ROOT/); assert.match(wf,/EXPECTED_VERSION: 0.6.0-mobile-living-rules/);
-  assert.match(wf,/d1 create \"\$\{ECO_SYSTEM_DB\}\" --location=weur --update-config=false/);
-  assert.doesNotMatch(wf,/d1 create[^\n]*--json/);
-  assert.match(wf,/d1 list --json > \/tmp\/d1-list-after-create\.json/);
+  const wf=fs.readFileSync('.github/workflows/deploy-cloudflare-complete-app.yml','utf8');
+  assert.match(wf,/secrets\.CLOUDFLARE_ACCOUNT_ID/); assert.match(wf,/secrets\.CLOUDFLARE_API_TOKEN/); assert.match(wf,/eco-system-db/); assert.match(wf,/realMoneyEnabled/); assert.match(wf,/ECO_SYSTEM_ROOT/); assert.match(wf,/EXPECTED_VERSION: 1.0.0-complete-app/);
+  assert.match(wf,/Refusing to silently create a replacement/);
+  assert.doesNotMatch(wf,/d1 create/);
+  assert.match(wf,/MIN_CAPABILITIES: 100/);
 });
 
 test('Wrangler CI renderer creates the DB binding without touching base config',()=>{

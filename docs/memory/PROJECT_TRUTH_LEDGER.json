@@ -1,0 +1,367 @@
+{
+  "schemaVersion": 1,
+  "generatedOn": "2026-09-05",
+  "purpose": "Anti-regression operational truth. Read before asking founder to recreate/configure anything.",
+  "allowedStatuses": [
+    "ACQUIRED",
+    "VERIFIED_LOCAL",
+    "IMPLEMENTED_UNVERIFIED",
+    "VERIFIED_REMOTE",
+    "IN_PROGRESS",
+    "PLANNED",
+    "DORMANT",
+    "SUPERSEDED",
+    "ABANDONED_WITH_REASON",
+    "TO_VERIFY",
+    "MEMORY_ONLY"
+  ],
+  "rules": [
+    "No secret values are stored here.",
+    "ACQUIRED means the prerequisite exists; do not ask to recreate it.",
+    "VERIFIED_LOCAL never implies DEPLOYED/remote success.",
+    "VERIFIED_REMOTE requires direct remote evidence.",
+    "MEMORY_ONLY never proves implementation.",
+    "SUPERSEDED/ABANDONED records are retained with reason.",
+    "Update this ledger whenever a remote verification, deployment, abandonment or supersession changes project truth."
+  ],
+  "records": [
+    {
+      "id": "constitution.master.2.3.3",
+      "status": "VERIFIED_LOCAL",
+      "scope": "documentation/memory",
+      "observedOn": "2026-09-05",
+      "evidence": [
+        "repo:docs/constitution/ECO_SYSTEM_Cahier_des_Charges_Maitre_Exhaustif_Sauvegarde_2.3.3_2026-09-05.md",
+        "local-git:433f3df8a9406dd555d69de642c6a70f237c63bf",
+        "local-ci:31/31 PASS; truth/source/index gates PASS"
+      ],
+      "note": "2.3.3 preserves 2.3.2 content, adds deep forensic source semantics and anti-regression truth rules; qualified by local CI.",
+      "next": "Run CI and publish through recovery PR."
+    },
+    {
+      "id": "memory.deep_source_ingestion",
+      "status": "VERIFIED_LOCAL",
+      "scope": "project-memory",
+      "observedOn": "2026-09-05",
+      "evidence": [
+        "repo:docs/memory/SOURCE_DEEP_DIGEST_2.3.3.json",
+        "repo:docs/memory/SOURCE_TO_CAPABILITY_COVERAGE_2.3.3.json"
+      ],
+      "note": "26 RAR entries are structurally/semantically digested without raw PII/secrets.",
+      "next": "Use deep digest as first forensic reference before reopening raw archives."
+    },
+    {
+      "id": "memory.previous_chat_0.5_claims",
+      "status": "MEMORY_ONLY",
+      "scope": "recovery",
+      "observedOn": "2026-09-05",
+      "evidence": [
+        "source:Fichier markdown(20260905-013911).md collé"
+      ],
+      "note": "Previous chat described 0.5 work, but no persisted 0.5 source was recovered from bundle/archives/GitHub. Treat described features as requirements/memory unless current code/tests prove them.",
+      "next": "Map any useful claim to Feature Registry rather than pretending old code exists."
+    },
+    {
+      "id": "git.recovered_history.0.1_to_0.3",
+      "status": "VERIFIED_LOCAL",
+      "scope": "git-history",
+      "observedOn": "2026-09-05",
+      "evidence": [
+        "local-git:3ea6fba9e62e4d748cc195d2f238fd40b98c4ad9",
+        "local-git:a424193db58c15b51692e5958d08dc4bb793e4ec"
+      ],
+      "note": "Exact historical local Git chain recovered from supplied bundle.",
+      "next": "Preserve exact history in a new bundle and provenance file before remote import."
+    },
+    {
+      "id": "github.repo",
+      "status": "VERIFIED_REMOTE",
+      "scope": "github",
+      "observedOn": "2026-09-05",
+      "evidence": [
+        "github:Delor85/tontine-platform"
+      ],
+      "note": "Private repo observed; connector has admin/maintain/push permissions.",
+      "next": "Import recovery branch without force-pushing main."
+    },
+    {
+      "id": "github.main.ref",
+      "status": "VERIFIED_REMOTE",
+      "scope": "github",
+      "observedOn": "2026-09-05",
+      "evidence": [
+        "github-ref:main@3664e4fa4d0c01cfd52590df2b095ce82f96691d"
+      ],
+      "note": "Remote main still points to initial Create README.md commit at time of observation.",
+      "next": "Do not infer recovered code on main."
+    },
+    {
+      "id": "github.release_0.5.0.ref",
+      "status": "VERIFIED_REMOTE",
+      "scope": "github",
+      "observedOn": "2026-09-05",
+      "evidence": [
+        "github-ref:release/0.5.0-eco-system-unified@3664e4fa4d0c01cfd52590df2b095ce82f96691d"
+      ],
+      "note": "Branch name exists but points to same initial commit; name alone is not evidence of 0.5 implementation.",
+      "next": "Keep as historical remote ref unless deliberately superseded."
+    },
+    {
+      "id": "github.actions.runs",
+      "status": "VERIFIED_REMOTE",
+      "scope": "github-actions",
+      "observedOn": "2026-09-05",
+      "evidence": [
+        "github-api:/repos/Delor85/tontine-platform/actions/runs total_count=0"
+      ],
+      "note": "No workflow run existed in the remote repo at time of observation.",
+      "next": "After recovery push, trigger qualified CI/deploy workflow and record run URL/id."
+    },
+    {
+      "id": "github.recovery_branch",
+      "status": "VERIFIED_LOCAL",
+      "scope": "git-branch",
+      "observedOn": "2026-09-05",
+      "evidence": [
+        "local-branch:recovery/0.5.1-memory-discovery-rubric-trust",
+        "local-git:433f3df8a9406dd555d69de642c6a70f237c63bf"
+      ],
+      "note": "Recovery branch exists locally; not yet observed on GitHub at the time this ledger entry was created.",
+      "next": "Push/import branch and then update status to VERIFIED_REMOTE."
+    },
+    {
+      "id": "cloudflare.api_token.tontine_platform_github_actions_deploy",
+      "status": "VERIFIED_REMOTE",
+      "scope": "cloudflare-auth",
+      "observedOn": "2026-09-10",
+      "evidence": [
+        "github-actions:Cloudflare Auth Diagnostic run 34426666080 SUCCESS",
+        "cloudflare:Account API Token valid and active"
+      ],
+      "note": "Account-owned token is verified active. Secret value is not stored.",
+      "valueStored": false,
+      "next": "Reuse existing GitHub Secret; never disclose or recreate without evidence."
+    },
+    {
+      "id": "github.secret.CLOUDFLARE_ACCOUNT_ID",
+      "status": "ACQUIRED",
+      "scope": "github-actions-secret",
+      "observedOn": "2026-09-05",
+      "evidence": [
+        "founder-screenshot:GitHub repository secrets"
+      ],
+      "note": "Secret name visibly exists in repository Actions secrets. Secret VALUE is inaccessible/intentionally not stored.",
+      "valueStored": false,
+      "next": "Do not ask founder to recreate or disclose value."
+    },
+    {
+      "id": "github.secret.CLOUDFLARE_API_TOKEN",
+      "status": "ACQUIRED",
+      "scope": "github-actions-secret",
+      "observedOn": "2026-09-05",
+      "evidence": [
+        "founder-screenshot:GitHub repository secrets"
+      ],
+      "note": "Secret name visibly exists in repository Actions secrets. Secret VALUE is inaccessible/intentionally not stored.",
+      "valueStored": false,
+      "next": "Do not ask founder to recreate or disclose value."
+    },
+    {
+      "id": "cloudflare.deploy_workflow.local",
+      "status": "VERIFIED_LOCAL",
+      "scope": "cloudflare-delivery",
+      "observedOn": "2026-09-05",
+      "evidence": [
+        "repo:.github/workflows/deploy-cloudflare-alpha.yml",
+        "local-ci:31/31 pass before 2.3.3 update",
+        "local-ci:31/31 PASS after Project Truth Gate 2.3.3"
+      ],
+      "note": "Manual alpha workflow is prepared to reuse/create eco-system-db, resolve UUID without committing it, apply additive migrations, deploy eco-system and smoke /health.",
+      "next": "Publish branch then execute workflow."
+    },
+    {
+      "id": "cloudflare.d1.eco-system-db",
+      "status": "VERIFIED_REMOTE",
+      "scope": "cloudflare-d1",
+      "observedOn": "2026-09-10",
+      "evidence": [
+        "github-actions:Eco-System 0.6 Mobile Preview — Cloudflare run 34431427752 SUCCESS",
+        "cloudflare:d1 eco-system-db resolved; additive migrations no pending"
+      ],
+      "note": "D1 database eco-system-db is remotely verified and bound to Worker. Reuse; do not recreate.",
+      "next": "Apply only additive migrations required by new releases."
+    },
+    {
+      "id": "cloudflare.worker.eco-system",
+      "status": "VERIFIED_REMOTE",
+      "scope": "cloudflare-worker",
+      "observedOn": "2026-09-10",
+      "evidence": [
+        "github-actions:run 34431427752 SUCCESS",
+        "cloudflare:worker eco-system version 1c72a72a-e4aa-424c-b120-46fa4ad3eff2",
+        "health:https://eco-system.sergemimf.workers.dev/health"
+      ],
+      "note": "Worker and PWA root were remotely verified on 0.6 line. 1.0 must redeploy and requalify.",
+      "next": "Deploy 1.0 Complete App and verify root, health and capability catalog."
+    },
+    {
+      "id": "cloudflare.d1.repository_adapter",
+      "status": "VERIFIED_LOCAL",
+      "scope": "code",
+      "observedOn": "2026-09-05",
+      "evidence": [
+        "repo:D1PlatformRepository",
+        "tests:D1 repository persists across instances"
+      ],
+      "note": "D1 adapter exists behind PlatformRepository and is locally tested.",
+      "next": "Qualify against actual remote D1."
+    },
+    {
+      "id": "cloudflare.migration.0003_platform_records",
+      "status": "VERIFIED_LOCAL",
+      "scope": "database-migration",
+      "observedOn": "2026-09-05",
+      "evidence": [
+        "repo:cloudflare/migrations/0003_platform_records.sql",
+        "sqlite-replay:additive/idempotent"
+      ],
+      "note": "Additive migration locally replayed; no destructive statements.",
+      "next": "Apply via remote workflow and verify."
+    },
+    {
+      "id": "safety.realMoneyEnabled",
+      "status": "ACQUIRED",
+      "scope": "safety-guardrail",
+      "observedOn": "2026-09-10",
+      "evidence": [
+        "worker health contract",
+        "0.6 Cloudflare run 34431427752",
+        "founder authorization constraints"
+      ],
+      "note": "Must remain false through Complete App qualification and pilot until separately authorized.",
+      "next": "Every deploy smoke must fail closed if true."
+    },
+    {
+      "id": "feature.discovery.group_public_projection",
+      "status": "VERIFIED_LOCAL",
+      "scope": "product",
+      "observedOn": "2026-09-05",
+      "evidence": [
+        "repo:packages/discovery",
+        "tests:public projection/secret exclusion"
+      ],
+      "note": "Initial group discovery functional alpha exists.",
+      "next": "Extend toward full mutual graph, geo consent, ranking, invitations and saved searches."
+    },
+    {
+      "id": "feature.discovery.mutual_graph",
+      "status": "PLANNED",
+      "scope": "product",
+      "observedOn": "2026-09-05",
+      "evidence": [
+        "master:7D.3-7D.6",
+        "master:7E.13"
+      ],
+      "note": "Full Meetup/Facebook/Telegram-style mutual discovery is validated but only partially implemented.",
+      "next": "Implement incrementally after Cloud Lot A remote qualification."
+    },
+    {
+      "id": "feature.membership.gateway",
+      "status": "VERIFIED_LOCAL",
+      "scope": "product",
+      "observedOn": "2026-09-05",
+      "evidence": [
+        "repo:packages/discovery MembershipGatewayService",
+        "tests:cross-tenant application approval"
+      ],
+      "note": "Cross-tenant application and canonical membership approval path locally verified.",
+      "next": "Add invitations, custom application questions, portfolio and referrals without duplicating membership engine."
+    },
+    {
+      "id": "feature.trust.contextual_reliability",
+      "status": "VERIFIED_LOCAL",
+      "scope": "product",
+      "observedOn": "2026-09-05",
+      "evidence": [
+        "repo:packages/trust",
+        "tests:no cross-band extrapolation"
+      ],
+      "note": "Reliability is contextual/advisory and does not use wealth/appearance/prestige.",
+      "next": "Add evidence governance, group reliability, appeals and anti-gaming."
+    },
+    {
+      "id": "feature.rubric.faceted_model",
+      "status": "VERIFIED_LOCAL",
+      "scope": "product",
+      "observedOn": "2026-09-05",
+      "evidence": [
+        "repo:packages/rubrics",
+        "tests:mixed rubrics/governance claims"
+      ],
+      "note": "Faceted rubric model locally verified; governance extraction remains human-reviewed.",
+      "next": "Extend templates/reconstitution/visibility/rulebook mapping."
+    },
+    {
+      "id": "architecture.nestjs_postgres_redis_kubernetes",
+      "status": "SUPERSEDED",
+      "scope": "architecture-history",
+      "observedOn": "2026-09-05",
+      "evidence": [
+        "source:Serge Cahier des charges 2025",
+        "master:7D.25"
+      ],
+      "note": "Historical technologies preserved as options; current canonical alpha is modular monorepo + Cloudflare Worker + D1 unless ADR changes it.",
+      "supersededBy": "architecture.cloudflare_worker_d1",
+      "reason": "Lower operational cost/complexity for current scale; historical principles retained."
+    },
+    {
+      "id": "architecture.cloudflare_worker_d1",
+      "status": "VERIFIED_LOCAL",
+      "scope": "architecture",
+      "observedOn": "2026-09-05",
+      "evidence": [
+        "repo:workers/api",
+        "repo:D1PlatformRepository",
+        "repo:wrangler/workflow"
+      ],
+      "note": "Canonical alpha architecture implemented locally; remote deployment still TO_VERIFY.",
+      "next": "Remote qualification through GitHub Actions."
+    },
+    {
+      "id": "product.complete_app_1.0",
+      "status": "IN_PROGRESS",
+      "scope": "product-line",
+      "observedOn": "2026-09-10",
+      "evidence": [
+        "branch:next/1.0.0-complete-app",
+        "local:Complete App UI + 139 capability catalog + universal workspace implementation"
+      ],
+      "note": "Complete App replaces Alpha as visible product target. Status becomes VERIFIED_REMOTE only after CI/deploy/root/health/catalog checks.",
+      "next": "CI, publish, Cloudflare deploy, smoke, BIR+."
+    },
+    {
+      "id": "product.alpha_line",
+      "status": "SUPERSEDED",
+      "scope": "product-line",
+      "observedOn": "2026-09-10",
+      "evidence": [
+        "founder-decision:leave Alpha and move to complete app",
+        "recovery branches retained"
+      ],
+      "note": "0.5.1/0.6 remain recovery/reference checkpoints, not current visible product target.",
+      "supersededBy": "product.complete_app_1.0",
+      "next": "Do not delete fallback artifacts."
+    },
+    {
+      "id": "github.branch.next_1.0",
+      "status": "VERIFIED_REMOTE",
+      "scope": "github",
+      "observedOn": "2026-09-10",
+      "evidence": [
+        "github:branch next/1.0.0-complete-app created from 988b42dda972539c17704654f92c38d2e181eeb4"
+      ],
+      "note": "Dedicated Complete App branch exists; main is not modified.",
+      "next": "Publish qualified Complete App commit without force push."
+    }
+  ]
+}

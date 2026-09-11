@@ -1,7 +1,7 @@
 import type {
   AuditEvent, CashboxReconciliationRecord, CaseRecord, ContributionReceipt, Group, GroupProject, Id,
   LedgerAccount, LedgerEntry, MeetingSession, Membership, Obligation, User, PublicGroupListing, MembershipApplication,
-  RubricDefinition, GovernanceKnowledgeClaim
+  RubricDefinition, GovernanceKnowledgeClaim, WorkspaceRecord
 } from '../../contracts/src/index.js';
 
 export interface PlatformRepository {
@@ -61,6 +61,10 @@ export interface PlatformRepository {
 
   saveGovernanceKnowledgeClaim(claim: GovernanceKnowledgeClaim): void | Promise<void>;
   listGovernanceKnowledgeClaims(tenantId: Id, groupId?: Id): GovernanceKnowledgeClaim[] | Promise<GovernanceKnowledgeClaim[]>;
+
+  saveWorkspaceRecord(record: WorkspaceRecord): void | Promise<void>;
+  getWorkspaceRecord(tenantId: Id, id: Id): WorkspaceRecord | undefined | Promise<WorkspaceRecord | undefined>;
+  listWorkspaceRecords(tenantId: Id, moduleId?: string, groupId?: Id): WorkspaceRecord[] | Promise<WorkspaceRecord[]>;
 }
 
 export class InMemoryPlatformRepository implements PlatformRepository {
@@ -80,6 +84,7 @@ export class InMemoryPlatformRepository implements PlatformRepository {
   private membershipApplications = new Map<Id, MembershipApplication>();
   private rubricDefinitions = new Map<Id, RubricDefinition>();
   private governanceKnowledgeClaims = new Map<Id, GovernanceKnowledgeClaim>();
+  private workspaceRecords = new Map<Id, WorkspaceRecord>();
 
   saveUser(user: User): void { this.users.set(user.id, structuredClone(user)); }
   getUser(id: Id): User | undefined { const x = this.users.get(id); return x ? structuredClone(x) : undefined; }
@@ -149,6 +154,9 @@ export class InMemoryPlatformRepository implements PlatformRepository {
 
   saveGovernanceKnowledgeClaim(claim: GovernanceKnowledgeClaim): void { this.governanceKnowledgeClaims.set(claim.id, structuredClone(claim)); }
   listGovernanceKnowledgeClaims(tenantId: Id, groupId?: Id): GovernanceKnowledgeClaim[] { return [...this.governanceKnowledgeClaims.values()].filter(x=>x.tenantId===tenantId&&(!groupId||x.groupId===groupId)).map(x=>structuredClone(x)); }
+  saveWorkspaceRecord(record: WorkspaceRecord): void { this.workspaceRecords.set(record.id, structuredClone(record)); }
+  getWorkspaceRecord(tenantId: Id, id: Id): WorkspaceRecord | undefined { const x=this.workspaceRecords.get(id); return x?.tenantId===tenantId?structuredClone(x):undefined; }
+  listWorkspaceRecords(tenantId: Id, moduleId?: string, groupId?: Id): WorkspaceRecord[] { return [...this.workspaceRecords.values()].filter(x=>x.tenantId===tenantId&&(!moduleId||x.moduleId===moduleId)&&(!groupId||x.groupId===groupId)).map(x=>structuredClone(x)); }
 }
 
 export interface D1PreparedStatementLike {
@@ -225,6 +233,13 @@ export class D1PlatformRepository implements PlatformRepository {
   listRubricDefinitions(t:Id,g:Id){return this.list<RubricDefinition>('rubric_definition','tenant_id=? AND group_id=?',[t,g]);}
   saveGovernanceKnowledgeClaim(x:GovernanceKnowledgeClaim){return this.saveRecord('governance_claim',x,{tenantId:x.tenantId,groupId:x.groupId});}
   listGovernanceKnowledgeClaims(t:Id,g?:Id){return this.list<GovernanceKnowledgeClaim>('governance_claim',g?'tenant_id=? AND group_id=?':'tenant_id=?',g?[t,g]:[t]);}
+  saveWorkspaceRecord(x:WorkspaceRecord){return this.saveRecord('workspace_record',x,{tenantId:x.tenantId,groupId:x.groupId,assigneeId:x.createdBy});}
+  async getWorkspaceRecord(t:Id,id:Id){const x=await this.byId<WorkspaceRecord>('workspace_record',id);return x?.tenantId===t?x:undefined;}
+  listWorkspaceRecords(t:Id,moduleId?:string,g?:Id){
+    if(moduleId&&g)return this.list<WorkspaceRecord>('workspace_record','tenant_id=? AND group_id=?',[t,g]).then(xs=>xs.filter(x=>x.moduleId===moduleId));
+    if(g)return this.list<WorkspaceRecord>('workspace_record','tenant_id=? AND group_id=?',[t,g]);
+    return this.list<WorkspaceRecord>('workspace_record','tenant_id=?',[t]).then(xs=>moduleId?xs.filter(x=>x.moduleId===moduleId):xs);
+  }
 
   private async firstByScope<T>(type:string,where:string,values:unknown[]):Promise<T|undefined>{return this.parse<T>(await this.db.prepare(`SELECT data_json FROM platform_records WHERE record_type=? AND ${where} LIMIT 1`).bind(type,...values).first<PlatformRecordRow>());}
 }
