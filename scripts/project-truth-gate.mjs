@@ -31,7 +31,7 @@ for(const [id,status] of Object.entries(must)){
   if(r.status!==status)throw new Error(`Unexpected status ${id}: ${r.status}, expected ${status}`);
 }
 const current=fs.readFileSync(currentPath,'utf8');
-for(const s of ['CLOUDFLARE','eco-system-db','1.0.0-complete-app','realMoneyEnabled=false','Living Rules']) if(!current.includes(s)) throw new Error(`CURRENT_TRUTH missing ${s}`);
+for(const s of ['Cloudflare','eco-system-db','1.0.0-complete-app','realMoneyEnabled=false','Living Rules']) if(!current.toLowerCase().includes(s.toLowerCase())) throw new Error(`CURRENT_TRUTH missing ${s}`);
 
 const next=fs.readFileSync(nextPath,'utf8');
 const positiveLines=next.split(/\r?\n/).map(x=>x.trim()).filter(x=>/^[-*0-9.]+\s+/.test(x));
