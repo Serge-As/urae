@@ -59,5 +59,17 @@ Living Rules : règle écrite, pratique observée et politique opérationnelle v
 ## Garde-fous
 Ne pas recréer `eco-system-db` ou les Secrets. Ne pas force-push `main`. Aucune migration destructive. Aucune PII fondatrice brute. Aucun argent réel sans autorisation séparée. Ne jamais confondre « capacité cataloguée », « workspace structurel » et « moteur métier spécialisé qualifié ».
 
-## Sauvegarde
-L'ancien BIR+ 1.0 reste conservé comme fallback pré-Master-Cockpit. Une nouvelle sauvegarde BIR+ post-correction doit être générée après cette mise à jour de vérité.
+## BIR+ Master Cockpit — ACQUIS ET VÉRIFIÉ
+- workflow : `Eco-System 1.0 — BIR+ Verified Source Backup`
+- run : `34645606625` — **SUCCESS**
+- artifact : `eco-system-1.0-complete-app-birplus`
+- artifact ID : `10281862797`
+- head archivé : `6382e7ba19c334bb8ac4d4df2c5f16221ababb61`
+- SHA-256 ZIP : `1b9525e3a994d5ebfd3dd6922691c25ce0a2413bbba283de3a2df1da70aaf04b`
+- SHA-256 archive source : `578596a697781f99d8c70d80881a61a03426366cb9cd50df6f96859a68eba52c`
+- vérification indépendante après téléchargement : digest ZIP = digest GitHub ; `sha256sum --check` **OK** ; archive tar.xz lisible ; **200 entrées** ; présence vérifiée de `apps/web/index.html`, `apps/web/sw.js`, `CURRENT_TRUTH` et `PROJECT_TRUTH_LEDGER`.
+- Library : `/Eco-System/ECO_SYSTEM_1.0_MASTER_COCKPIT_BIR_PLUS_2026-09-11.zip`
+- l'ancien BIR+ pré-Master-Cockpit est conservé comme fallback historique et ne doit pas être supprimé.
+
+## Point de reprise
+La référence visible et déployée est désormais **Master Cockpit — Cahier Maître 2.3.4**. Tester cette interface sur Android/desktop, corriger les écarts terrain, puis spécialiser les capacités encore structurelles sans régression du cockpit ni duplication des services canoniques.
