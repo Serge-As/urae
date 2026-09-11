@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedOn": "2026-09-05",
+  "generatedOn": "2026-09-11",
   "purpose": "Anti-regression operational truth. Read before asking founder to recreate/configure anything.",
   "allowedStatuses": [
     "ACQUIRED",
@@ -183,26 +183,30 @@
       "id": "cloudflare.d1.eco-system-db",
       "status": "VERIFIED_REMOTE",
       "scope": "cloudflare-d1",
-      "observedOn": "2026-09-10",
+      "observedOn": "2026-09-11",
       "evidence": [
-        "github-actions:Eco-System 0.6 Mobile Preview — Cloudflare run 34431427752 SUCCESS",
-        "cloudflare:d1 eco-system-db resolved; additive migrations no pending"
+        "github-actions:Eco-System 1.0 Complete App — Cloudflare run 34640991448 SUCCESS",
+        "cloudflare:d1 eco-system-db resolved",
+        "cloudflare:migrations additive only; No migrations to apply",
+        "cloudflare:env.DB bound to eco-system-db"
       ],
-      "note": "D1 database eco-system-db is remotely verified and bound to Worker. Reuse; do not recreate.",
-      "next": "Apply only additive migrations required by new releases."
+      "note": "The existing D1 database eco-system-db is the qualified Complete App datastore. It was reused, not recreated.",
+      "next": "Reuse this database; apply only additive migrations required by later releases."
     },
     {
       "id": "cloudflare.worker.eco-system",
       "status": "VERIFIED_REMOTE",
       "scope": "cloudflare-worker",
-      "observedOn": "2026-09-10",
+      "observedOn": "2026-09-11",
       "evidence": [
-        "github-actions:run 34431427752 SUCCESS",
-        "cloudflare:worker eco-system version 1c72a72a-e4aa-424c-b120-46fa4ad3eff2",
-        "health:https://eco-system.sergemimf.workers.dev/health"
+        "github-actions:Eco-System 1.0 Complete App — Cloudflare run 34640991448 SUCCESS",
+        "cloudflare:worker eco-system version 70f028b8-6f6e-4335-bf5c-45afeb067a3d",
+        "smoke:https://eco-system.sergemimf.workers.dev/",
+        "smoke:https://eco-system.sergemimf.workers.dev/health",
+        "smoke:https://eco-system.sergemimf.workers.dev/api/v1/product/capabilities"
       ],
-      "note": "Worker and PWA root were remotely verified on 0.6 line. 1.0 must redeploy and requalify.",
-      "next": "Deploy 1.0 Complete App and verify root, health and capability catalog."
+      "note": "Worker/PWA Complete App 1.0 is remotely deployed and smoke-qualified at the single public URL.",
+      "next": "Treat 1.0 Complete App as the active deployed reference until a separately qualified successor replaces it."
     },
     {
       "id": "cloudflare.d1.repository_adapter",
@@ -230,16 +234,15 @@
     },
     {
       "id": "safety.realMoneyEnabled",
-      "status": "ACQUIRED",
+      "status": "VERIFIED_REMOTE",
       "scope": "safety-guardrail",
-      "observedOn": "2026-09-10",
+      "observedOn": "2026-09-11",
       "evidence": [
-        "worker health contract",
-        "0.6 Cloudflare run 34431427752",
-        "founder authorization constraints"
+        "github-actions:Complete App deploy run 34640991448 SUCCESS",
+        "smoke:/health version 1.0.0-complete-app realMoneyEnabled=false"
       ],
-      "note": "Must remain false through Complete App qualification and pilot until separately authorized.",
-      "next": "Every deploy smoke must fail closed if true."
+      "note": "Real money remains disabled in the deployed Complete App. This is a mandatory fail-closed invariant until separately authorized.",
+      "next": "Every later deployment must fail if realMoneyEnabled becomes true without explicit authorization."
     },
     {
       "id": "feature.discovery.group_public_projection",
@@ -316,28 +319,35 @@
     },
     {
       "id": "architecture.cloudflare_worker_d1",
-      "status": "VERIFIED_LOCAL",
+      "status": "VERIFIED_REMOTE",
       "scope": "architecture",
-      "observedOn": "2026-09-05",
+      "observedOn": "2026-09-11",
       "evidence": [
-        "repo:workers/api",
-        "repo:D1PlatformRepository",
-        "repo:wrangler/workflow"
+        "github-actions:deploy run 34640991448 SUCCESS",
+        "cloudflare:eco-system Worker + eco-system-db D1 binding",
+        "smoke:root/health/capability catalog PASS"
       ],
-      "note": "Canonical alpha architecture implemented locally; remote deployment still TO_VERIFY.",
-      "next": "Remote qualification through GitHub Actions."
+      "note": "Canonical Worker + D1 architecture is now remotely qualified on the 1.0 Complete App line.",
+      "next": "Preserve the canonical authority model and avoid parallel business engines."
     },
     {
       "id": "product.complete_app_1.0",
-      "status": "IN_PROGRESS",
+      "status": "VERIFIED_REMOTE",
       "scope": "product-line",
-      "observedOn": "2026-09-10",
+      "observedOn": "2026-09-11",
       "evidence": [
-        "branch:next/1.0.0-complete-app",
-        "local:Complete App UI + 139 capability catalog + universal workspace implementation"
+        "payload-sha256:69380f1dde05b02721ff1d1dee6774fab0a7ec2c5738c6439073f74fc36456ec",
+        "github-actions:materialize run 34640865092 SUCCESS",
+        "github:materialized commit 7e08a76",
+        "ci:48/48 PASS",
+        "architecture-fitness:PASS",
+        "shared-governance:23 guardrails PASS",
+        "service-solidarity:11 canonical services PASS",
+        "github-actions:deploy run 34640991448 SUCCESS",
+        "smoke:1.0.0-complete-app; 139 capabilities; realMoneyEnabled=false"
       ],
-      "note": "Complete App replaces Alpha as visible product target. Status becomes VERIFIED_REMOTE only after CI/deploy/root/health/catalog checks.",
-      "next": "CI, publish, Cloudflare deploy, smoke, BIR+."
+      "note": "Complete App 1.0 is the active deployed product line. Root PWA, health and capability catalog are qualified remotely.",
+      "next": "Produce verified BIR+ backup, then evolve through derived branches without regressing canonical services or Living Rules."
     },
     {
       "id": "product.alpha_line",
@@ -362,6 +372,33 @@
       ],
       "note": "Dedicated Complete App branch exists; main is not modified.",
       "next": "Publish qualified Complete App commit without force push."
+    },
+    {
+      "id": "github.pr.complete_app_1.0",
+      "status": "VERIFIED_REMOTE",
+      "scope": "github-pr",
+      "observedOn": "2026-09-11",
+      "evidence": [
+        "github:PR #3 https://github.com/Delor85/tontine-platform/pull/3",
+        "github:head next/1.0.0-complete-app",
+        "github:base main",
+        "github:state OPEN non-draft"
+      ],
+      "note": "Complete App delivery PR is open and intentionally not merged. Merge remains a separate founder decision.",
+      "next": "Do not merge automatically."
+    },
+    {
+      "id": "delivery.complete_app_payload",
+      "status": "VERIFIED_REMOTE",
+      "scope": "delivery-integrity",
+      "observedOn": "2026-09-11",
+      "evidence": [
+        "sha256:69380f1dde05b02721ff1d1dee6774fab0a7ec2c5738c6439073f74fc36456ec",
+        "github-actions:materialize run 34640865092 SUCCESS",
+        "runner:Payload verified exact SHA before npm run ci"
+      ],
+      "note": "The exact qualified payload was reconstructed remotely before materialization; no approximate payload was accepted.",
+      "next": "Preserve this hash as the 1.0 source-materialization checkpoint."
     }
   ]
 }
