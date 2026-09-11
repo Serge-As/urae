@@ -64,18 +64,19 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          root=''; health=''; catalog=''
+          : > /tmp/root.html
+          : > /tmp/health.json
+          : > /tmp/catalog.json
           for attempt in 1 2 3 4 5 6; do
-            root="$(curl --fail --silent --show-error --location --max-time 20 "${ECO_SYSTEM_ROOT}" || true)"
-            health="$(curl --fail --silent --show-error --location --max-time 20 "${ECO_SYSTEM_HEALTH}" || true)"
-            catalog="$(curl --fail --silent --show-error --location --max-time 20 "${ECO_SYSTEM_CATALOG}" || true)"
-            if printf '%s' "${root}" | grep -qi '<!doctype html>' && printf '%s' "${root}" | grep -q 'Eco-System Complete App' && printf '%s' "${health}" | grep -q '"ok": true' && printf '%s' "${catalog}" | grep -q '"capabilities"'; then break; fi
+            curl --fail --silent --show-error --location --max-time 20 "${ECO_SYSTEM_ROOT}?v=master-20260911" -o /tmp/root.html || true
+            curl --fail --silent --show-error --location --max-time 20 "${ECO_SYSTEM_HEALTH}" -o /tmp/health.json || true
+            curl --fail --silent --show-error --location --max-time 20 "${ECO_SYSTEM_CATALOG}" -o /tmp/catalog.json || true
+            if grep -qi '<!doctype html>' /tmp/root.html && grep -q 'Master Cockpit' /tmp/root.html && grep -q 'Cahier Maître 2.3.4' /tmp/root.html && grep -q '"ok": true' /tmp/health.json && grep -q '"capabilities"' /tmp/catalog.json; then break; fi
             sleep 4
           done
-          printf '%s' "${root}" | grep -qi '<!doctype html>'
-          printf '%s' "${root}" | grep -q 'Eco-System Complete App'
-          printf '%s' "${health}" > /tmp/health.json
-          printf '%s' "${catalog}" > /tmp/catalog.json
+          grep -qi '<!doctype html>' /tmp/root.html
+          grep -q 'Master Cockpit' /tmp/root.html
+          grep -q 'Cahier Maître 2.3.4' /tmp/root.html
           node --input-type=module - <<'NODE'
           import fs from 'node:fs';
           const health=JSON.parse(fs.readFileSync('/tmp/health.json','utf8'));
@@ -89,5 +90,5 @@ jobs:
           for(const required of ['DISCOVERY.GROUP_SEARCH','MEMBERSHIP.APPLICATION','GROUP.LAUNCH_STUDIO','RUBRIC.LIVING_RULES','MEETING.COMMAND_CENTER','LEDGER.CANONICAL','FINANCE.LOANS','COMMUNITY.FORUM','MARKETPLACE.CORE','ADS.MANAGER','LEARNING.MANAGER_ACADEMY','AI.ASSISTANT','PAPER.BRIDGE','REPORTING.EXPORTS','BACKUP.BIR_PLUS']){
             if(!ids.has(required)) throw new Error(`CATALOG_REQUIRED_CAPABILITY_MISSING:${required}`);
           }
-          console.log(`Complete App PASS: ${health.version}; ${catalog.count} capabilities; realMoneyEnabled=${health.realMoneyEnabled}`);
+          console.log(`Master Cockpit PASS: ${health.version}; ${catalog.count} capabilities; realMoneyEnabled=${health.realMoneyEnabled}`);
           NODE
