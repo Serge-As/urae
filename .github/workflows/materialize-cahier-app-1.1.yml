@@ -41,7 +41,7 @@ jobs:
           set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add AGENTS.md FEATURE_REGISTRY.yaml NEXT_RUN.md PROJECT_STATE.md README.md package.json             apps/web workers/api/src/index.ts scripts tests docs .recovery             .github/workflows/deploy-cloudflare-cahier-app.yml             .github/workflows/backup-birplus-cahier-app.yml
+          git add AGENTS.md FEATURE_REGISTRY.yaml NEXT_RUN.md PROJECT_STATE.md README.md package.json apps/web workers/api/src/index.ts scripts tests docs .recovery
           if git diff --cached --quiet; then
             echo "No product changes to commit."
           else
