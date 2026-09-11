@@ -1,20 +1,12 @@
 {
-  "id": "/",
-  "name": "Eco-System — Complete App",
+  "name": "Eco-System — Cahier App",
   "short_name": "Eco-System",
+  "id": "/",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
-  "orientation": "any",
-  "background_color": "#f5f6f8",
-  "theme_color": "#101c19",
-  "description": "Eco-System Complete App : tontines, associations, règles vivantes, réunions, finance, découverte, communauté et services.",
-  "lang": "fr",
-  "dir": "ltr",
-  "categories": [
-    "finance",
-    "business",
-    "social",
-    "productivity"
-  ]
+  "background_color": "#f6f3ec",
+  "theme_color": "#1f6b4f",
+  "description": "Eco-System Cahier App : tontines, associations, communautés, règles vivantes, réunions, finances, découverte, marché, accompagnement et offline.",
+  "lang": "fr"
 }

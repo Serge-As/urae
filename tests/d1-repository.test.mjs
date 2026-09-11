@@ -50,7 +50,7 @@ test('Worker selects env.DB D1 repository and persists between requests',async()
   const create=await worker.fetch(new Request('http://local/api/v1/group-projects',{method:'POST',headers,body:JSON.stringify({name:'Cloud Group',kind:'association',governanceModel:'community',memberCount:10,sessions:10,nominalContribution:1000,currency:'XAF'})}),{DB:db}); assert.equal(create.status,201); const project=await create.json();
   const convert=await worker.fetch(new Request(`http://local/api/v1/group-projects/${project.id}/convert`,{method:'POST',headers}),{DB:db}); assert.equal(convert.status,201);
   const groups=await worker.fetch(new Request('http://local/api/v1/groups',{headers}),{DB:db}); assert.equal(groups.status,200); const list=await groups.json(); assert.equal(list.length,1); assert.equal(list[0].name,'Cloud Group');
-  const health=await worker.fetch(new Request('http://local/health'),{DB:db}); const h=await health.json(); assert.equal(h.realMoneyEnabled,false); assert.equal(h.version,'1.0.0-complete-app');
+  const health=await worker.fetch(new Request('http://local/health'),{DB:db}); const h=await health.json(); assert.equal(h.realMoneyEnabled,false); assert.equal(h.version,'1.1.0-cahier-app');
 });
 
 test('0003 platform_records migration is additive and idempotent by construction',()=>{

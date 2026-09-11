@@ -13,13 +13,22 @@ test('Complete App catalog exposes more than 100 unique A-J capabilities',()=>{
   for(const id of ['DISCOVERY.GROUP_SEARCH','MEMBERSHIP.APPLICATION','GROUP.LAUNCH_STUDIO','RUBRIC.LIVING_RULES','MEETING.COMMAND_CENTER','LEDGER.CANONICAL','FINANCE.LOANS','COMMUNITY.FORUM','MARKETPLACE.CORE','ADS.MANAGER','LEARNING.MANAGER_ACADEMY','AI.ASSISTANT','PAPER.BRIDGE','REPORTING.EXPORTS','BACKUP.BIR_PLUS']) assert.ok(PRODUCT_MODULES.some(x=>x.id===id),id);
 });
 
-test('Complete App public shell is no longer the old Alpha screen',()=>{
+test('Cahier App public shell exposes the Cahier 2.3.4 product structure instead of the old shell',()=>{
   const html=fs.readFileSync('apps/web/index.html','utf8');
-  assert.match(html,/Eco-System Complete App/);
+  assert.match(html,/Cahier Maître 2\.3\.4/);
+  assert.match(html,/1\.1\.0-CAHIER-APP/);
+  assert.match(html,/Créer, intégrer ou transformer un groupe/);
+  assert.match(html,/Meeting Command Center/);
+  assert.match(html,/Communauté & Hubs professionnels/);
+  assert.match(html,/AdManager & sponsoring/);
+  assert.match(html,/Academy · ONG · IA · Safety · Paper Bridge/);
+  assert.match(html,/meetingMatrix/);
+  assert.match(html,/launchJourney/);
   assert.match(html,/Discovery · Identity · Membership/);
   assert.match(html,/Règles vivantes/);
-  assert.match(html,/Écosystème communautaire & économique/);
+  assert.match(html,/Communauté & économie/);
   assert.doesNotMatch(html,/V0\.6\.0 — MOBILE LIVING RULES/);
+  assert.doesNotMatch(html,/Complete App · 1\.0\.0/);
 });
 
 test('capability catalog API reports the same canonical list',async()=>{
@@ -27,7 +36,7 @@ test('capability catalog API reports the same canonical list',async()=>{
   const r=await handler(new Request('http://local/api/v1/product/capabilities',{headers:{'x-tenant-id':'t','x-actor-id':'u'}}));
   assert.equal(r.status,200);
   const body=await r.json();
-  assert.equal(body.version,'1.0.0-complete-app');
+  assert.equal(body.version,'1.1.0-cahier-app');
   assert.equal(body.count,PRODUCT_CAPABILITY_COUNT);
   assert.ok(body.count>=100);
 });
@@ -47,5 +56,5 @@ test('universal workspace creates, lists and updates persistent capability recor
 test('Complete App health keeps real money disabled',async()=>{
   const handler=createApiHandler(new InMemoryPlatformRepository());
   const r=await handler(new Request('http://local/health',{headers:{'x-tenant-id':'t','x-actor-id':'u'}}));
-  const h=await r.json();assert.equal(h.version,'1.0.0-complete-app');assert.equal(h.realMoneyEnabled,false);
+  const h=await r.json();assert.equal(h.version,'1.1.0-cahier-app');assert.equal(h.realMoneyEnabled,false);
 });

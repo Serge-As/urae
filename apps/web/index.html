@@ -3,17 +3,21 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-  <meta name="theme-color" content="#111827">
+  <meta name="theme-color" content="#1f6b4f">
   <meta id="metaDescription" name="description" content="Eco-System — plateforme complète de gestion de tontines, associations et communautés">
   <link rel="manifest" href="/manifest.webmanifest">
-  <link rel="stylesheet" href="/styles.css">
-  <title>Eco-System Complete App</title>
+  <link rel="stylesheet" href="/styles.css?v=110">
+  <title>Eco-System — Cahier App 1.1</title>
 </head>
 <body>
   <header class="topbar">
     <div class="brand">
       <div class="logo">E</div>
-      <div><strong>Eco-System</strong><small>Complete App · 1.0.0</small></div>
+      <div><strong>Eco-System</strong><small>Plateforme Tontines · Associations · Communautés</small><span class="version-badge">CAHIER APP · 1.1</span></div>
+    </div>
+    <div class="top-context">
+      <select id="activeGroupSelect" aria-label="Groupe actif"><option value="">Aucun groupe actif</option></select>
+      <div class="top-search"><input id="globalSearch" placeholder="Rechercher une fonction, un groupe, un service…" autocomplete="off"><div id="globalSearchResults" class="search-popover"></div></div>
     </div>
     <div class="top-actions">
       <span id="connectivity" class="pill">● …</span>
@@ -27,24 +31,29 @@
 
   <div class="app-shell">
     <nav id="mainNav" class="side-nav" aria-label="Navigation principale">
+      <span class="nav-caption">Mon espace</span>
       <button data-view="dashboard" class="nav-btn active"><span>⌂</span><b>Accueil</b></button>
+      <button data-view="inbox" class="nav-btn"><span>✉</span><b>À faire</b></button>
+      <span class="nav-caption">Groupes</span>
       <button data-view="discovery" class="nav-btn"><span>⌕</span><b>Découvrir</b></button>
-      <button data-view="launch" class="nav-btn"><span>＋</span><b>Créer</b></button>
-      <button data-view="operations" class="nav-btn"><span>☷</span><b>Séance</b></button>
-      <button data-view="finance" class="nav-btn"><span>₣</span><b>Finance</b></button>
-      <button data-view="ecosystem" class="nav-btn"><span>◎</span><b>Écosystème</b></button>
-      <button data-view="services" class="nav-btn"><span>▦</span><b>Services</b></button>
-      <button data-view="inbox" class="nav-btn"><span>✉</span><b>Inbox</b></button>
-      <button data-view="settings" class="nav-btn"><span>⚙</span><b>Réglages</b></button>
+      <button data-view="launch" class="nav-btn"><span>＋</span><b>Créer / intégrer</b></button>
+      <button data-view="operations" class="nav-btn"><span>☷</span><b>Réunion</b></button>
+      <button data-view="finance" class="nav-btn"><span>₣</span><b>Finances</b></button>
+      <span class="nav-caption">Écosystème</span>
+      <button data-view="ecosystem" class="nav-btn"><span>◎</span><b>Communauté & économie</b></button>
+      <button data-view="services" class="nav-btn"><span>▦</span><b>Tous les services</b></button>
+      <span class="nav-caption">Plateforme</span>
+      <button data-view="settings" class="nav-btn"><span>⚙</span><b>Sécurité & réglages</b></button>
     </nav>
 
     <main class="content">
       <section id="view-dashboard" class="view active">
+        <div class="cahier-banner"><div><strong>Interface reconstruite sur le Cahier Maître 2.3.4</strong><p>139 capacités indexées · Living Rules · mobile/PWA · offline · D1 canonique · pas de faux « tout est fini ».</p></div><span class="cahier-code">1.1.0-CAHIER-APP</span></div>
         <div class="hero">
           <div>
-            <span class="eyebrow">Tontines · Associations · Communautés</span>
-            <h1>Un seul espace pour comprendre et faire vivre chaque groupe.</h1>
-            <p>Les règles du groupe guident l'application. Les règles écrites, la pratique réelle et les exceptions gouvernées restent distinctes et traçables.</p>
+            <span class="eyebrow">Eco-System · Cahier Maître 2.3.4</span>
+            <h1>Gérer une tontine ou une association sans perdre sa réalité.</h1>
+            <p>Créer, intégrer ou transformer un groupe ; préparer la réunion ; gérer rubriques, caisse, prêts, épargne, solidarité, communauté, marché et accompagnement. L’application suit les règles du groupe, pas l’inverse.</p>
           </div>
           <div class="hero-card">
             <span>Mode financier réel</span><strong class="safe">DÉSACTIVÉ</strong>
@@ -68,10 +77,14 @@
         <section class="panel">
           <div class="panel-head"><div><h2>Accès rapide</h2><p>Les grands blocs métier du Prompt Maître A→J.</p></div></div>
           <div class="quick-grid">
-            <button class="quick" data-go="discovery"><b>Discovery & adhésion</b><span>Rechercher, inviter, candidater</span></button>
-            <button class="quick" data-go="operations"><b>Réunion & règles vivantes</b><span>Cotisations, clôture, retardataires</span></button>
-            <button class="quick" data-go="finance"><b>Ledger & solidarité</b><span>Attendu, collecté, manquants, couverture</span></button>
-            <button class="quick" data-go="ecosystem"><b>Écosystème économique</b><span>Forums, partenaires, achats groupés, Academy</span></button>
+            <button class="quick" data-go="discovery"><b>Découvrir & adhérer</b><span>Groupes, candidats consentants, invitations</span></button>
+            <button class="quick" data-go="launch"><b>Créer / intégrer un groupe</b><span>Studio en 10 étapes, simulation, migration papier/Excel</span></button>
+            <button class="quick" data-go="operations"><b>Réunion & feuille mensuelle</b><span>Cartes smartphone ou matrice membres × rubriques</span></button>
+            <button class="quick" data-go="finance"><b>Finances & solidarité</b><span>Ledger, caisse, épargne, prêts, assistances</span></button>
+            <button class="quick" data-module-open="COMMUNITY.FORUM"><b>Communauté</b><span>Forums, Hubs professionnels, votes, événements</span></button>
+            <button class="quick" data-module-open="MARKETPLACE.CORE"><b>Marché & fournisseurs</b><span>Marketplace, achats groupés, Business Studio</span></button>
+            <button class="quick" data-module-open="ADS.MANAGER"><b>AdManager</b><span>Sponsoring et campagnes respectueuses</span></button>
+            <button class="quick" data-go="ecosystem"><b>Academy · IA · Paper · Rapports</b><span>Accompagnement, documents, exports, intégrations</span></button>
           </div>
         </section>
       </section>
@@ -103,10 +116,23 @@
             <div id="applicationsBox" class="stack"></div>
           </section>
         </div>
+        <section class="panel"><div class="section-kicker"><div><h2>Identité, recrutement et confiance</h2><p>Les capacités complémentaires du lot B restent localisables et auditables.</p></div></div><div id="discoveryHub" class="hub-grid"></div></section>
       </section>
 
       <section id="view-launch" class="view">
-        <div class="page-head"><div><span class="eyebrow">Lot C</span><h1>Group Launch Studio</h1><p>Créer une association, une tontine rotative, en nature ou hybride sans enfermer tous les groupes dans la même règle.</p></div></div>
+        <div class="page-head"><div><span class="eyebrow">Lot C · Cockpit complet</span><h1>Créer, intégrer ou transformer un groupe</h1><p>Le Cahier prévoit un studio guidé, pas un petit formulaire : origine, famille, gouvernance, cycle, membres, rubriques, faisabilité, communication, accessibilité et prévisualisation.</p></div></div>
+        <section class="panel"><div class="journey" id="launchJourney">
+          <div class="journey-step active"><span class="n">1</span><b>Origine</b><small>Nouveau · existant · transformation</small></div>
+          <div class="journey-step active"><span class="n">2</span><b>Famille</b><small>Association · tontine</small></div>
+          <div class="journey-step active"><span class="n">3</span><b>Gouvernance</b><small>Fondateur · communauté · délégation</small></div>
+          <div class="journey-step"><span class="n">4</span><b>Exercice & calendrier</b><small>Cycle, séances, fréquence</small></div>
+          <div class="journey-step"><span class="n">5</span><b>Membres</b><small>Import, historique, rôles, parts</small></div>
+          <div class="journey-step active"><span class="n">6</span><b>Rubriques</b><small>Tontine, épargne, secours, prêts…</small></div>
+          <div class="journey-step active"><span class="n">7</span><b>Faisabilité</b><small>Scénarios et coûts</small></div>
+          <div class="journey-step"><span class="n">8</span><b>Communication</b><small>In-app, SMS, WhatsApp, print</small></div>
+          <div class="journey-step"><span class="n">9</span><b>Accessibilité</b><small>Ultra Simple · oral · ancien appareil</small></div>
+          <div class="journey-step"><span class="n">10</span><b>Prévisualisation</b><small>Règles, risques, permissions</small></div>
+        </div><p class="truth-notice">Les étapes marquées actives utilisent déjà un moteur canonique. Les autres ouvrent un dossier structuré du même groupe jusqu’à leur moteur spécialisé final — sans faire croire qu’un formulaire générique est le moteur métier définitif.</p></section>
         <div class="two-col">
           <section class="panel">
             <h2>Projet de groupe</h2>
@@ -130,12 +156,14 @@
             <div id="groupsList" class="stack"></div>
           </section>
         </div>
+        <section class="panel"><div class="section-kicker"><div><h2>Modèles, transformation et kits</h2><p>Tout ce qui complète la création du groupe.</p></div></div><div id="launchHub" class="hub-grid"></div></section>
       </section>
 
       <section id="view-operations" class="view">
         <div class="page-head"><div><span class="eyebrow">Lots C–D</span><h1>Séance · Membres · Règles vivantes</h1><p>La clôture est un checkpoint. Une opération tardive reste possible si la politique du groupe l'autorise et si les validations requises sont réunies.</p></div></div>
         <div id="noActiveGroupOperations" class="panel empty-state">Sélectionnez ou créez d'abord un groupe.</div>
         <div id="operationsContent">
+          <section class="panel"><div class="panel-head"><div><h2>Meeting Command Center</h2><p>Deux vues du même moteur : cartes pour téléphone, matrice type feuille mensuelle pour tablette/desktop.</p></div><div class="view-switch"><button id="cardViewBtn" class="active" type="button">Cartes</button><button id="matrixViewBtn" type="button">Matrice</button></div></div><div id="meetingMatrixPanel" hidden><div id="meetingMatrix" class="matrix-wrap"></div><p class="hint">Touchez une cellule pour préparer la saisie d’une cotisation dans le service canonique ; la matrice n’écrit jamais directement dans le ledger.</p></div></section>
           <div class="two-col">
             <section class="panel"><h2>Membres</h2><form id="memberForm" class="inline-form"><input id="memberName" required placeholder="Nom du membre"><button class="primary">Ajouter</button></form><ul id="memberList" class="list"></ul></section>
             <section class="panel"><h2>Séances</h2><form id="meetingForm" class="inline-form"><input id="meetingTitle" placeholder="Ex. Séance de septembre"><button class="primary">Ouvrir</button></form><div id="meetingList" class="stack"></div></section>
@@ -169,6 +197,7 @@
             </div>
             <div id="rubricList" class="stack"></div>
           </section>
+          <section class="panel"><div class="section-kicker"><div><h2>Présence, PV, bénéficiaires et publication</h2><p>Le cockpit de réunion s’étend sans casser le ledger ni les règles du groupe.</p></div></div><div id="meetingHub" class="hub-grid"></div></section>
         </div>
       </section>
 
@@ -215,12 +244,18 @@
           </section>
 
           <section class="panel"><div class="panel-head"><div><h2>Ledger</h2><p>Vérité financière canonique.</p></div></div><div id="ledgerMetrics" class="metrics small"></div><div id="receiptList" class="table-list"></div></section>
+          <section class="panel"><div class="section-kicker"><div><h2>Prêts, épargne, tontines et assistance</h2><p>Les flux spécialisés restent séparés, puis se réconcilient dans le ledger canonique.</p></div></div><div id="financeHub" class="hub-grid"></div></section>
         </div>
       </section>
 
       <section id="view-ecosystem" class="view">
-        <div class="page-head"><div><span class="eyebrow">Lots F–I</span><h1>Écosystème communautaire & économique</h1><p>Forums, partenaires, fournisseurs, achats groupés, Business Studio, AdManager, Academy, ONG, IA, Paper Bridge, exports et intégrations.</p></div></div>
+        <div class="page-head"><div><span class="eyebrow">Lots F–I</span><h1>Communauté, économie, croissance et accompagnement</h1><p>Les grands services du Cahier sont désormais organisés par domaine au lieu d’être noyés dans une simple liste.</p></div><div class="page-meta"><span class="pill">Community</span><span class="pill">Marketplace</span><span class="pill">Academy & IA</span></div></div>
         <div id="ecosystemHighlights" class="quick-grid"></div>
+        <section class="panel"><div class="section-kicker"><div><h2>Communauté & Hubs professionnels</h2><p>Forums, événements, votes, réputation, gestionnaires et partenaires.</p></div></div><div id="communityHub" class="hub-grid"></div></section>
+        <section class="panel"><div class="section-kicker"><div><h2>Marché, fournisseurs & Business Studio</h2><p>Achats groupés, appels d’offres, marketplace et activités économiques.</p></div></div><div id="marketHub" class="hub-grid"></div></section>
+        <section class="panel"><div class="section-kicker"><div><h2>AdManager & sponsoring</h2><p>Campagnes, créations, placements, ciblage respectueux, modération et analytics.</p></div></div><div id="growthHub" class="hub-grid"></div></section>
+        <section class="panel"><div class="section-kicker"><div><h2>Academy · ONG · IA · Safety · Paper Bridge</h2><p>Accompagnement des gestionnaires, connaissance, documents, anti-arnaque et pont papier ↔ numérique.</p></div></div><div id="guidanceHub" class="hub-grid"></div></section>
+        <section class="panel"><div class="section-kicker"><div><h2>Rapports, recherche, calendrier et intégrations</h2><p>Exports, dashboards, notifications et connecteurs.</p></div></div><div id="reportsHub" class="hub-grid"></div></section>
         <section class="panel">
           <div class="panel-head"><div><h2>Catalogue complet</h2><p><strong id="capabilityCount">0</strong> capacités connues. Une fonction non visible dans un résumé n'est jamais considérée supprimée.</p></div><input id="catalogSearch" class="search" placeholder="Rechercher une capacité…"></div>
           <div id="lotFilters" class="filters"></div>
@@ -229,7 +264,8 @@
       </section>
 
       <section id="view-services" class="view">
-        <div class="page-head"><div><span class="eyebrow">Workspace universel</span><h1>Faire fonctionner les services en maturation</h1><p>Le workspace n'invente pas un second moteur métier. Il permet déjà de saisir, suivre et auditer des dossiers pour chaque capacité pendant que les moteurs spécialisés mûrissent.</p></div></div>
+        <div class="page-head"><div><span class="eyebrow">Catalogue exécutable · 139 capacités</span><h1>Tous les services du Cahier, sans fausse complétude</h1><p>Un moteur spécialisé reste spécialisé. Une capacité en maturation utilise un dossier persistant D1 jusqu’à son moteur final, sans dupliquer Ledger, Membership, authentification ou paiement.</p></div></div>
+        <div class="status-legend"><span class="truth-chip foundation_active">Moteur actif</span><span class="truth-chip structural_v1">Structure / workspace</span><span class="truth-chip planned_domain">Domaine planifié</span><span class="truth-chip later_optional">Option ultérieure</span></div><br>
         <div class="two-col">
           <section class="panel">
             <h2>Nouveau dossier</h2>
@@ -268,11 +304,13 @@
           <section class="panel"><h2>Compatibilité appareil</h2><div id="compatibilityLevel"></div><ul id="compatibilityList" class="list"></ul></section>
           <section class="panel"><h2>Services canoniques</h2><ul id="kernelList" class="list"></ul></section>
         </div>
+        <section class="panel"><div class="section-kicker"><div><h2>Hardening, sauvegarde et reprise</h2><p>Auth, MFA, qualité des données, Time Machine, BIR+, restauration D1, observabilité et appareils anciens.</p></div></div><div id="hardeningHub" class="hub-grid"></div></section>
+        <section class="panel"><h2>Règle de sécurité actuelle</h2><p class="truth-notice danger-notice"><strong>realMoneyEnabled=false.</strong> Les interfaces Mobile Money et facturation restent sandbox tant qu’une autorisation distincte et les qualifications de sécurité/terrain n’ont pas été données.</p></section>
       </section>
     </main>
   </div>
 
-  <footer class="footer">Eco-System 1.0 Complete App · Préversion de qualification · realMoneyEnabled=false</footer>
-  <script type="module" src="/src/main.js"></script>
+  <footer class="footer">Eco-System 1.1 Cahier App · Cahier Maître 2.3.4 · realMoneyEnabled=false</footer>
+  <script type="module" src="/src/main.js?v=110"></script>
 </body>
 </html>

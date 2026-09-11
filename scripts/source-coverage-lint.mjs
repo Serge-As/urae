@@ -27,8 +27,8 @@ for(const name of requiredRar){ if(!c.rarEntries?.some(x=>x.name===name)) throw 
 const d=JSON.parse(fs.readFileSync(digestPath,'utf8'));
 if(d.entries?.length!==requiredRar.length) throw new Error(`Deep digest must cover ${requiredRar.length} RAR entries, got ${d.entries?.length||0}`);
 for(const name of requiredRar){ const e=d.entries.find(x=>x.name===name); if(!e) throw new Error(`Deep digest missing: ${name}`); if(!e.sha256) throw new Error(`Deep digest missing SHA: ${name}`); if(!Array.isArray(e.semantics)||!e.semantics.length) throw new Error(`Deep digest missing semantics: ${name}`); }
-const supplement='docs/constitution/ECO_SYSTEM_COMPLETE_APP_EXECUTION_SUPPLEMENT_1.0.0_2026-09-10.md';
+const supplement='docs/constitution/ECO_SYSTEM_CAHIER_APP_EXECUTION_SUPPLEMENT_1.1.0_2026-09-11.md';
 if(!fs.existsSync(supplement)) throw new Error(`Missing ${supplement}`);
 const s=fs.readFileSync(supplement,'utf8');
-for(const phrase of ['Living Rules','1.0.0-complete-app','realMoneyEnabled=false']) if(!s.includes(phrase)) throw new Error(`Complete App supplement missing ${phrase}`);
+for(const phrase of ['Living Rules','1.1.0-cahier-app','Cahier Maître 2.3.4','realMoneyEnabled=false']) if(!s.includes(phrase)) throw new Error(`Cahier App supplement missing ${phrase}`);
 console.log(`Source coverage OK: ${requiredTop.length} top sources, ${requiredRar.length} deep RAR entries, ${c.domainCoverage?.length||0} domain mappings; masters 2.3.2→2.3.4 fingerprinted and externally preserved`);

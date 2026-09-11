@@ -6,6 +6,7 @@ const app=new ConnectedApplication({locale:'fr'});
 let groups:Group[]=[]; let members:MembershipView[]=[]; let meetings:MeetingSession[]=[]; let rubrics:RubricDefinition[]=[];
 let groupPolicy:GroupOperatingPolicy|undefined; let lastProjectId:string|undefined; let modules:ProductModule[]=[];
 let selectedLot='ALL'; let deferredInstallPrompt:any;
+const CAHIER_VERSION='1.1.0-cahier-app';
 
 const $=<T extends HTMLElement=HTMLElement>(s:string):T=>{const e=document.querySelector(s);if(!e)throw new Error(`UI_ELEMENT_NOT_FOUND:${s}`);return e as T;};
 const val=(id:string)=>(document.getElementById(id) as HTMLInputElement|HTMLSelectElement|HTMLTextAreaElement).value.trim();
@@ -35,6 +36,7 @@ const go=(name:string)=>{
   document.querySelectorAll('.nav-btn').forEach(x=>x.classList.remove('active'));
   $(`#view-${name}`).classList.add('active');
   document.querySelector<HTMLButtonElement>(`.nav-btn[data-view="${name}"]`)?.classList.add('active');
+  const pop=document.querySelector<HTMLElement>('#globalSearchResults');if(pop)pop.replaceChildren();
   window.scrollTo({top:0,behavior:'smooth'});
 };
 document.querySelectorAll<HTMLButtonElement>('[data-view]').forEach(b=>b.addEventListener('click',()=>go(b.dataset.view!)));
@@ -55,11 +57,18 @@ const renderActiveGroup=()=>{
   root.className='item';root.innerHTML=`<strong>${group.name}</strong><p>${group.kind} · ${group.governanceModel}</p><small>Créé le ${date(group.createdAt)}</small>`;
 };
 
+const renderGroupSelector=()=>{
+  const sel=$('#activeGroupSelect') as HTMLSelectElement;sel.replaceChildren();
+  const empty=document.createElement('option');empty.value='';empty.textContent=groups.length?'Choisir un groupe…':'Aucun groupe — créez ou intégrez-en un';sel.append(empty);
+  for(const g of groups){const o=document.createElement('option');o.value=g.id;o.textContent=g.name;sel.append(o);}
+  sel.value=app.activeGroup()??'';
+};
+
 const renderGroups=async()=>{
   groups=await app.listGroups();const root=$('#groupsList');root.replaceChildren();
-  if(!groups.length){root.innerHTML='<div class="empty-state">Aucun groupe. Lancez votre premier projet.</div>';renderActiveGroup();return;}
+  if(!groups.length){root.innerHTML='<div class="empty-state">Aucun groupe. Lancez votre premier projet.</div>';renderActiveGroup();renderGroupSelector();return;}
   for(const g of groups){const a=document.createElement('article');a.className='item';a.innerHTML=`<strong>${g.name}</strong><p class="hint">${g.kind} · ${g.governanceModel}</p>`;const b=document.createElement('button');b.className='primary';b.textContent=g.id===app.activeGroup()?'Groupe actif':'Sélectionner';b.disabled=g.id===app.activeGroup();b.onclick=async()=>{app.selectGroup(g.id);await refreshGroupContext();toast(`Groupe actif : ${g.name}`);};a.append(b);root.append(a);}
-  renderActiveGroup();
+  renderActiveGroup();renderGroupSelector();
 };
 
 const renderInbox=async()=>{
@@ -81,6 +90,17 @@ const renderMeetings=async()=>{
 };
 const activeMeeting=()=>meetings.find(x=>x.status==='open')?.id;
 
+const renderMeetingMatrix=()=>{
+  const root=$('#meetingMatrix');
+  if(!members.length||!rubrics.length){root.innerHTML='<div class="empty-state">Ajoutez au moins un membre et une rubrique pour afficher la matrice membres × rubriques.</div>';return;}
+  const table=document.createElement('table');table.className='meeting-matrix';
+  const head=document.createElement('thead');const hr=document.createElement('tr');hr.innerHTML='<th>Membre</th>'+rubrics.map(r=>`<th>${r.name}</th>`).join('');head.append(hr);table.append(head);
+  const body=document.createElement('tbody');
+  for(const m of members){const tr=document.createElement('tr');const name=document.createElement('td');name.innerHTML=`<strong>${m.displayName}</strong><small>${m.roles.join(', ')}</small>`;tr.append(name);
+    for(const r of rubrics){const td=document.createElement('td');const b=document.createElement('button');b.type='button';b.className='matrix-cell';b.textContent='Saisir';b.title=`Préparer une cotisation ${m.displayName} · ${r.name}`;b.onclick=()=>{($('#contributionMember') as HTMLSelectElement).value=m.id;($('#contributionRubric') as HTMLSelectElement).value=r.id;if(activeMeeting())($('#contributionMeeting') as HTMLSelectElement).value=activeMeeting()!;go('finance');$('#contributionAmount').focus();toast(`Cotisation prête : ${m.displayName} · ${r.name}`);};td.append(b);tr.append(td);}body.append(tr);}
+  table.append(body);root.replaceChildren(table);
+};
+
 const renderLivingRules=async()=>{
   if(!app.activeGroup())return;
   try{groupPolicy=await app.groupOperatingPolicy();const late=groupPolicy.latePosting;($('#lateMode') as HTMLSelectElement).value=late.mode;($('#lateMinApprovals') as HTMLInputElement).value=String(late.approval.minimumApprovals);($('#lateMaxHours') as HTMLInputElement).value=late.maxHoursAfterClose===undefined?'':String(late.maxHoursAfterClose);}catch{}
@@ -88,6 +108,7 @@ const renderLivingRules=async()=>{
   const none=document.createElement('option');none.value='';none.textContent='Sans rubrique';rselect.append(none);
   if(!rubrics.length){root.innerHTML='<div class="empty-state">Aucune rubrique personnalisée. Décrivez par exemple la collation de ce groupe.</div>';}
   for(const r of rubrics){const a=document.createElement('article');a.className='item';const m=r.operatingModel;a.innerHTML=`<strong>${r.name}</strong><p class="hint">Écrit : ${m?.writtenRule||'—'}</p><p class="hint">Pratique : ${m?.observedPractice||'—'}</p><small>${m?.ruleRealityStatus??'UNKNOWN'} · cible ${m?.targetMode??'OPEN'} · manquant ${m?.shortfallHandling??'—'}</small>`;root.append(a);for(const sel of [rselect,pselect]){const o=document.createElement('option');o.value=r.id;o.textContent=r.name;sel.append(o);}}
+  renderMeetingMatrix();
 };
 
 const renderLedger=async()=>{
@@ -109,13 +130,46 @@ const renderKernel=()=>{const root=$('#kernelList');root.replaceChildren();for(c
 const renderModules=()=>{
   const q=val('catalogSearch').toLowerCase();const root=$('#moduleCatalog');root.replaceChildren();const chosen=modules.filter(m=>(selectedLot==='ALL'||m.lot===selectedLot)&&(!q||`${m.id} ${m.labelFr} ${m.labelEn}`.toLowerCase().includes(q)));
   $('#capabilityCount').textContent=String(modules.length);
-  for(const m of chosen){const a=document.createElement('article');a.className='module-card';a.innerHTML=`<span class="module-status ${m.status.toLowerCase()}">${m.status.replaceAll('_',' ')}</span><strong>${m.labelFr}</strong><small>${m.id} · Lot ${m.lot} · ${m.workspace==='SPECIALIZED'?'moteur spécialisé':'workspace universel'}</small>`;a.onclick=()=>{($('#workspaceModule') as HTMLSelectElement).value=m.id;go('services');void loadWorkspaces();};root.append(a);}
+  for(const m of chosen){const a=document.createElement('article');a.className='module-card';a.innerHTML=`<span class="module-status ${m.status.toLowerCase()}">${m.status.replaceAll('_',' ')}</span><strong>${m.labelFr}</strong><small>${m.id} · Lot ${m.lot} · ${m.workspace==='SPECIALIZED'?'moteur spécialisé':'workspace universel'}</small>`;a.onclick=()=>void openModule(m.id);root.append(a);}
 };
 const renderLotFilters=()=>{const root=$('#lotFilters');root.replaceChildren();for(const lot of ['ALL','B','C','D','E','F','G','H','I','J']){const b=document.createElement('button');b.className=`filter ${lot===selectedLot?'active':''}`;b.textContent=lot==='ALL'?'Tous':`Lot ${lot}`;b.onclick=()=>{selectedLot=lot;renderLotFilters();renderModules();};root.append(b);}};
 
 const renderEcosystemHighlights=()=>{
   const ids=['COMMUNITY.FORUM','COMMUNITY.PRO_HUBS','MARKETPLACE.GROUP_BUY','MANAGER.BUSINESS_STUDIO','ADS.MANAGER','LEARNING.MANAGER_ACADEMY','AI.ASSISTANT','PAPER.BRIDGE'];
-  const root=$('#ecosystemHighlights');root.replaceChildren();for(const id of ids){const m=modules.find(x=>x.id===id);if(!m)continue;const b=document.createElement('button');b.className='quick';b.innerHTML=`<b>${m.labelFr}</b><span>${m.id}</span>`;b.onclick=()=>{($('#workspaceModule') as HTMLSelectElement).value=id;go('services');void loadWorkspaces();};root.append(b);}
+  const root=$('#ecosystemHighlights');root.replaceChildren();for(const id of ids){const m=modules.find(x=>x.id===id);if(!m)continue;const b=document.createElement('button');b.className='quick';b.innerHTML=`<b>${m.labelFr}</b><span>${m.id}</span>`;b.onclick=()=>void openModule(id);root.append(b);}
+};
+
+
+const STATUS_COPY:Record<string,string>={FOUNDATION_ACTIVE:'Moteur actif',STRUCTURAL_V1:'Structure / workspace',PLANNED_DOMAIN:'Domaine planifié',LATER_OPTIONAL:'Option ultérieure'};
+const specializedRoute=(id:string):string|undefined=>{
+  if(id.startsWith('DISCOVERY.')||id.startsWith('MEMBERSHIP.')||id.startsWith('CORE.IDENTITY'))return'discovery';
+  if(id.startsWith('GROUP.')||id.startsWith('CORE.ASSOCIATIONS')||id.startsWith('CORE.ROTATING')||id.startsWith('CORE.IN_KIND')||id.startsWith('CORE.HYBRID'))return'launch';
+  if(id.startsWith('RUBRIC.')||id==='CORE.RUBRICS'||id.startsWith('MEETING.'))return'operations';
+  if(id.startsWith('LEDGER.')||id.startsWith('FINANCE.')||id.startsWith('SAVINGS.')||id.startsWith('LOAN.')||id.startsWith('SOLIDARITY.'))return'finance';
+  if(id.startsWith('OFFLINE.')||id.startsWith('SUPPORT.')||id.startsWith('EXPERIENCE.UNIVERSAL_INBOX'))return'inbox';
+  if(id.startsWith('SECURITY.')||id.startsWith('BACKUP.')||id.startsWith('OBSERVABILITY.')||id.startsWith('COMPATIBILITY.')||id.startsWith('DATA.'))return'settings';
+  return undefined;
+};
+const openModule=async(id:string)=>{
+  const m=modules.find(x=>x.id===id);if(!m)return;
+  const route=m.workspace==='SPECIALIZED'?specializedRoute(id):undefined;
+  if(route){go(route);toast(`${m.labelFr} · moteur canonique`);return;}
+  ($('#workspaceModule') as HTMLSelectElement).value=id;go('services');await loadWorkspaces();
+  setTimeout(()=>$('#workspaceTitle').focus(),50);
+};
+const hubCard=(m:ProductModule)=>{const a=document.createElement('article');a.className='hub-card';a.innerHTML=`<header><b>${m.labelFr}</b><span class="truth-chip ${m.status.toLowerCase()}">${STATUS_COPY[m.status]??m.status}</span></header><p>${m.id} · Lot ${m.lot}</p><small>${m.workspace==='SPECIALIZED'?'Autorité canonique spécialisée':'Dossier persistant D1, sans faux moteur métier'}</small>`;const b=document.createElement('button');b.type='button';b.className=m.workspace==='SPECIALIZED'?'primary':'link-btn';b.textContent=m.workspace==='SPECIALIZED'?'Ouvrir le moteur':'Ouvrir le dossier';b.onclick=()=>void openModule(m.id);a.append(b);return a;};
+const fillHub=(selector:string,predicate:(m:ProductModule)=>boolean,limit=12)=>{const root=$(selector);root.replaceChildren();for(const m of modules.filter(predicate).slice(0,limit))root.append(hubCard(m));};
+const renderDomainHubs=()=>{
+  fillHub('#discoveryHub',m=>m.lot==='B'&&m.id!=='DISCOVERY.GROUP_SEARCH'&&m.id!=='MEMBERSHIP.APPLICATION',9);
+  fillHub('#launchHub',m=>m.lot==='C'&&['GROUP.','CORE.','RUBRIC.STARTER','RUBRIC.EXCEPTIONS'].some(p=>m.id.startsWith(p)),9);
+  fillHub('#meetingHub',m=>m.lot==='D'&&m.id!=='MEETING.COMMAND_CENTER'&&m.id!=='MEETING.CASHBOX.RECONCILE',9);
+  fillHub('#financeHub',m=>m.lot==='E',12);
+  fillHub('#communityHub',m=>m.lot==='F'&&(m.id.startsWith('COMMUNITY.')||m.id.startsWith('MANAGER.')||m.id.startsWith('GROWTH.')||m.id.startsWith('PARTNERS.')),12);
+  fillHub('#marketHub',m=>m.lot==='F'&&(m.id.startsWith('MARKETPLACE.')||m.id.startsWith('SUPPLIER.')||m.id.startsWith('BUSINESS.')||m.id.startsWith('PROCUREMENT.')||m.id.startsWith('COMMERCE.')),12);
+  fillHub('#growthHub',m=>m.lot==='G',12);
+  fillHub('#guidanceHub',m=>m.lot==='H',12);
+  fillHub('#reportsHub',m=>m.lot==='I',12);
+  fillHub('#hardeningHub',m=>m.lot==='J',12);
 };
 
 const populateWorkspaceModules=()=>{const sel=$('#workspaceModule') as HTMLSelectElement;sel.replaceChildren();for(const m of modules){const o=document.createElement('option');o.value=m.id;o.textContent=`${m.labelFr} — ${m.id}`;sel.append(o);}};
@@ -124,7 +178,7 @@ const loadWorkspaces=async()=>{
   try{clearFail();const moduleId=val('workspaceModule');const xs=await app.listWorkspaceRecords(moduleId);const root=$('#workspaceRecords');root.replaceChildren();if(!xs.length){root.innerHTML='<div class="empty-state">Aucun dossier pour ce service. Créez le premier.</div>';return;}for(const x of xs.slice().reverse()){const a=document.createElement('article');a.className='item';a.innerHTML=`<strong>${x.title}</strong><p>${x.summary??''}</p><small>${x.status} · ${x.tags.join(', ')} · ${date(x.updatedAt)}</small>`;const b=document.createElement('button');b.className='link-btn';b.textContent=x.status==='DONE'?'Réactiver':'Marquer terminé';b.onclick=async()=>{await app.updateWorkspaceRecord(x.id,{status:x.status==='DONE'?'ACTIVE':'DONE'});await loadWorkspaces();};a.append(b);root.append(a);}}catch(e){fail(e);}
 };
 
-const renderDiscoveryResults=(xs:any[])=>{const root=$('#discoveryResults');root.replaceChildren();if(!xs.length){root.innerHTML='<div class="empty-state">Aucun groupe public correspondant.</div>';return;}for(const x of xs){const l=x.listing;const a=document.createElement('article');a.className='item';a.innerHTML=`<strong>${l.name}</strong><p>${l.locality??'Localité non publiée'} · ${l.family}</p><small>Affinité ${x.score} · ${l.recruiting?'recrute':'ne recrute pas actuellement'}</small>`;const b=document.createElement('button');b.className='primary';b.textContent='Demander à rejoindre';b.disabled=l.joinPolicy==='CLOSED'||l.joinPolicy==='INVITE_ONLY';b.onclick=async()=>{try{await app.requestToJoin(l.groupId,'Candidature envoyée depuis Eco-System Complete App');toast('Candidature envoyée.');}catch(e){fail(e);}};a.append(b);root.append(a);}};
+const renderDiscoveryResults=(xs:any[])=>{const root=$('#discoveryResults');root.replaceChildren();if(!xs.length){root.innerHTML='<div class="empty-state">Aucun groupe public correspondant.</div>';return;}for(const x of xs){const l=x.listing;const a=document.createElement('article');a.className='item';a.innerHTML=`<strong>${l.name}</strong><p>${l.locality??'Localité non publiée'} · ${l.family}</p><small>Affinité ${x.score} · ${l.recruiting?'recrute':'ne recrute pas actuellement'}</small>`;const b=document.createElement('button');b.className='primary';b.textContent='Demander à rejoindre';b.disabled=l.joinPolicy==='CLOSED'||l.joinPolicy==='INVITE_ONLY';b.onclick=async()=>{try{await app.requestToJoin(l.groupId,'Candidature envoyée depuis Eco-System Cahier App 1.1');toast('Candidature envoyée.');}catch(e){fail(e);}};a.append(b);root.append(a);}};
 
 const renderApplications=async()=>{const root=$('#applicationsBox');root.replaceChildren();if(!app.activeGroup()){root.innerHTML='<div class="empty-state">Sélectionnez un groupe pour voir ses candidatures.</div>';return;}try{const xs=await app.listApplications();if(!xs.length){root.innerHTML='<div class="empty-state">Aucune candidature en attente.</div>';return;}for(const x of xs){const a=document.createElement('article');a.className='item';a.innerHTML=`<strong>${x.applicantUserId}</strong><p>${x.message??''}</p><small>${x.status}</small>`;if(x.status==='PENDING'){for(const decision of ['APPROVE','REJECT'] as const){const b=document.createElement('button');b.className=decision==='APPROVE'?'primary':'link-btn';b.textContent=decision==='APPROVE'?'Approuver':'Refuser';b.onclick=async()=>{try{await app.decideApplication(x.id,decision);toast(decision==='APPROVE'?'Adhésion approuvée.':'Candidature refusée.');await renderApplications();await renderMembers();}catch(e){fail(e);}};a.append(b);}}root.append(a);}}catch(e){fail(e);}};
 
@@ -135,7 +189,15 @@ const refreshGroupContext=async()=>{
   if(active){await renderMembers();await renderMeetings();await renderLivingRules();await renderLedger();}
   await renderApplications();await renderUniverse();await renderInbox();
 };
-const refreshAll=async()=>{await refreshGroupContext();renderOutbox();renderCompatibility();renderKernel();renderModules();renderEcosystemHighlights();};
+const refreshAll=async()=>{await refreshGroupContext();renderOutbox();renderCompatibility();renderKernel();renderModules();renderEcosystemHighlights();renderDomainHubs();};
+
+
+$('#activeGroupSelect').addEventListener('change',async e=>{const id=(e.target as HTMLSelectElement).value;app.selectGroup(id||undefined);try{await refreshGroupContext();toast(id?'Groupe actif changé.':'Aucun groupe actif.');}catch(err){fail(err);}});
+const renderGlobalSearch=()=>{const q=val('globalSearch').toLowerCase();const root=$('#globalSearchResults');root.replaceChildren();if(q.length<2)return;const ms=modules.filter(m=>`${m.id} ${m.labelFr} ${m.labelEn}`.toLowerCase().includes(q)).slice(0,8);const gs=groups.filter(g=>g.name.toLowerCase().includes(q)).slice(0,4);for(const g of gs){const b=document.createElement('button');b.type='button';b.className='search-hit';b.innerHTML=`<strong>${g.name}</strong><small>Groupe · ${g.kind}</small>`;b.onclick=async()=>{app.selectGroup(g.id);await refreshGroupContext();go('dashboard');};root.append(b);}for(const m of ms){const b=document.createElement('button');b.type='button';b.className='search-hit';b.innerHTML=`<strong>${m.labelFr}</strong><small>${m.id} · ${STATUS_COPY[m.status]??m.status}</small>`;b.onclick=()=>void openModule(m.id);root.append(b);}};
+$('#globalSearch').addEventListener('input',renderGlobalSearch);
+document.addEventListener('click',e=>{const t=e.target as HTMLElement;if(!t.closest('.top-search'))$('#globalSearchResults').replaceChildren();const open=t.closest<HTMLElement>('[data-module-open]');if(open?.dataset.moduleOpen)void openModule(open.dataset.moduleOpen);});
+$('#matrixViewBtn').addEventListener('click',()=>{$('#meetingMatrixPanel').hidden=false;$('#matrixViewBtn').classList.add('active');$('#cardViewBtn').classList.remove('active');renderMeetingMatrix();});
+$('#cardViewBtn').addEventListener('click',()=>{$('#meetingMatrixPanel').hidden=true;$('#cardViewBtn').classList.add('active');$('#matrixViewBtn').classList.remove('active');});
 
 $('#projectForm').addEventListener('input',()=>{lastProjectId=undefined;($('#createGroupBtn') as HTMLButtonElement).disabled=true;$('#simulationResult').replaceChildren();});
 $('#projectForm').addEventListener('submit',async e=>{e.preventDefault();try{clearFail();const r=await app.simulateAndStoreProject({name:val('projectName'),kind:val('groupKind') as Group['kind'],governanceModel:val('governanceModel') as Group['governanceModel'],memberCount:num('memberCount'),sessions:num('sessions'),nominalContribution:num('nominalContribution'),managementFeePerContribution:num('managementFee'),estimatedExternalCostRate:num('externalCostRate')/100,fixedOperatingCostPerSession:num('fixedSessionCost')});lastProjectId=r.projectId;const root=$('#simulationResult');root.innerHTML=`<div class="result-row"><span>Volume brut</span><strong>${fmt(r.result.totalNominalContributions)}</strong></div><div class="result-row"><span>Revenus gestion</span><strong>${fmt(r.result.totalManagementFees)}</strong></div><div class="result-row"><span>Coûts estimés</span><strong>${fmt(r.result.estimatedExternalCosts+r.result.fixedOperatingCosts)}</strong></div><div class="result-row"><span>Marge estimée</span><strong>${fmt(r.result.estimatedManagerMargin)}</strong></div>`;($('#createGroupBtn') as HTMLButtonElement).disabled=false;toast('Projet simulé.');}catch(e){fail(e);}});
@@ -156,11 +218,11 @@ $('#publishDiscoveryForm').addEventListener('submit',async e=>{e.preventDefault(
 
 $('#workspaceModule').addEventListener('change',()=>void loadWorkspaces());
 $('#workspaceReload').addEventListener('click',()=>void loadWorkspaces());
-$('#workspaceForm').addEventListener('submit',async e=>{e.preventDefault();try{await app.createWorkspaceRecord({moduleId:val('workspaceModule'),title:val('workspaceTitle'),summary:val('workspaceSummary')||undefined,status:val('workspaceStatus') as any,tags:split(val('workspaceTags')),data:{source:'complete-app-1.0'}});(document.getElementById('workspaceTitle') as HTMLInputElement).value='';(document.getElementById('workspaceSummary') as HTMLTextAreaElement).value='';await loadWorkspaces();toast('Dossier enregistré sur D1.');}catch(e){fail(e);}});
+$('#workspaceForm').addEventListener('submit',async e=>{e.preventDefault();try{await app.createWorkspaceRecord({moduleId:val('workspaceModule'),title:val('workspaceTitle'),summary:val('workspaceSummary')||undefined,status:val('workspaceStatus') as any,tags:split(val('workspaceTags')),data:{source:CAHIER_VERSION}});(document.getElementById('workspaceTitle') as HTMLInputElement).value='';(document.getElementById('workspaceSummary') as HTMLTextAreaElement).value='';await loadWorkspaces();toast('Dossier enregistré sur D1.');}catch(e){fail(e);}});
 $('#catalogSearch').addEventListener('input',renderModules);
 
 $('#supportForm').addEventListener('submit',async e=>{e.preventDefault();try{const c=await app.openSupportCase(val('supportSummary'));(document.getElementById('supportSummary') as HTMLTextAreaElement).value='';$('#caseLog').textContent=`Dossier ${c.id} ouvert.`;await renderInbox();toast('Dossier de support ouvert.');}catch(e){fail(e);}});
-$('#queueBtn').addEventListener('click',async()=>{await app.queueDemoIntent('Note hors ligne Complete App');renderOutbox();toast('Note mise en file.');});
+$('#queueBtn').addEventListener('click',async()=>{await app.queueDemoIntent('Note hors ligne Cahier App 1.1');renderOutbox();toast('Note mise en file.');});
 $('#syncBtn').addEventListener('click',async()=>{if(!navigator.onLine){fail(new Error('Hors ligne'));return;}await app.syncOutbox();renderOutbox();toast('Synchronisation terminée.');});
 $('#refreshBtn').addEventListener('click',async()=>{try{clearFail();await refreshAll();toast('Données actualisées.');}catch(e){fail(e);}});
 $('#modeBtn').addEventListener('click',()=>{document.body.classList.toggle('ultra-simple');toast(document.body.classList.contains('ultra-simple')?'Mode Ultra Simple activé.':'Mode complet activé.');});
@@ -174,9 +236,9 @@ async function start(){
   renderConnectivity();renderKernel();
   try{
     await app.bootstrap({displayName:'Gestionnaire Eco-System',locale:'fr'});
-    const catalog=await app.productCatalog();modules=catalog.capabilities;populateWorkspaceModules();renderLotFilters();renderEcosystemHighlights();
+    const catalog=await app.productCatalog();modules=catalog.capabilities;populateWorkspaceModules();renderLotFilters();renderEcosystemHighlights();renderDomainHubs();
     await refreshAll();await loadWorkspaces();
-    if('serviceWorker'in navigator)try{await navigator.serviceWorker.register('/sw.js',{scope:'/'});}catch{}
+    if('serviceWorker'in navigator)try{const reg=await navigator.serviceWorker.register('/sw.js',{scope:'/'});await reg.update();navigator.serviceWorker.addEventListener('controllerchange',()=>{if(sessionStorage.getItem('eco-sw-reloaded')!=='1'){sessionStorage.setItem('eco-sw-reloaded','1');location.reload();}});}catch{}
   }catch(e){fail(e);}
 }
 void start();

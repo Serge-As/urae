@@ -1,9 +1,9 @@
 {
   "name": "tontine-platform",
-  "version": "1.0.0-complete-app",
+  "version": "1.1.0-cahier-app",
   "private": true,
   "type": "module",
-  "description": "Eco-System Complete App — full mobile-first product shell with canonical domain services, living rules, discovery, finance and extensible persistent workspaces",
+  "description": "Eco-System Cahier App 1.1 — mobile-first PWA aligned with Cahier Maître 2.3.4, canonical services, Living Rules, meeting matrix, discovery, finance and governed A-J workspaces",
   "engines": {
     "node": ">=22"
   },

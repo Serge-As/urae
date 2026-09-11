@@ -19,3 +19,16 @@ test('Wrangler CI renderer creates the DB binding without touching base config',
   const rendered=fs.readFileSync(out,'utf8'); assert.match(rendered,/binding = "DB"/); assert.match(rendered,/database_name = "eco-system-db"/); assert.match(rendered,new RegExp(id)); assert.match(rendered,/migrations_dir = "\.\.\/\.\.\/cloudflare\/migrations"/);
   assert.doesNotMatch(fs.readFileSync('workers/api/wrangler.toml','utf8'),new RegExp(id));
 });
+
+
+test('Cloudflare Cahier App deploy reuses the same Worker and exclusively eco-system-db',()=>{
+  const wf=fs.readFileSync('.github/workflows/deploy-cloudflare-cahier-app.yml','utf8');
+  assert.match(wf,/next\/1\.1\.0-cahier-app/);
+  assert.match(wf,/EXPECTED_VERSION: 1\.1\.0-cahier-app/);
+  assert.match(wf,/ECO_SYSTEM_DB: eco-system-db/);
+  assert.match(wf,/Refusing to silently create a replacement/);
+  assert.doesNotMatch(wf,/d1 create/);
+  assert.match(wf,/1\.1\.0-CAHIER-APP/);
+  assert.match(wf,/Cahier Maître 2\.3\.4/);
+  assert.match(wf,/MIN_CAPABILITIES: 139/);
+});

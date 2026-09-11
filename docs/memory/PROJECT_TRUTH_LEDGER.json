@@ -346,8 +346,9 @@
         "github-actions:deploy run 34640991448 SUCCESS",
         "smoke:1.0.0-complete-app; 139 capabilities; realMoneyEnabled=false"
       ],
-      "note": "Complete App 1.0 is the active deployed product line. Root PWA, health and capability catalog are qualified remotely.",
-      "next": "Use this deployed line as the reference; preserve the verified BIR+ and evolve through derived branches without regressing canonical services or Living Rules."
+      "note": "Complete App 1.0 was remotely qualified and remains a rollback checkpoint; it is superseded as visible target by Cahier App 1.1 after founder observed the UI was still too old/generic.",
+      "next": "Preserve as rollback/BIR+; do not use as visible target after 1.1 qualification.",
+      "currentProductLine": false
     },
     {
       "id": "product.alpha_line",
@@ -401,23 +402,19 @@
       "next": "Preserve this hash as the 1.0 source-materialization checkpoint."
     },
     {
-      "id": "backup.birplus.complete_app_1.0",
-      "status": "VERIFIED_REMOTE",
-      "scope": "backup-recovery",
+      "id": "product.cahier_app_1.1",
+      "status": "IN_PROGRESS",
+      "scope": "product-line",
       "observedOn": "2026-09-11",
+      "currentProductLine": true,
       "evidence": [
-        "github-actions:Eco-System 1.0 — BIR+ Verified Source Backup run 34641572552 SUCCESS",
-        "github-actions:artifact eco-system-1.0-complete-app-birplus id 10280162568",
-        "artifact-zip-sha256:21970e60e5d7a71a434c131a03904f5d72821d8cb449b0ec06db98d50bb0417f",
-        "source-archive-sha256:6707d2228bd9d396ef104357da674ac15ad8d5eeb7e73990f4fe1e6ec6b34ed3",
-        "manifest-head:eb6bd1c71654534f20c60c936567c102088ca333",
-        "local-download:artifact ZIP digest matched GitHub digest",
-        "local-check:portable sha256sum --check PASS",
-        "local-check:tar.xz readable; 199 archive entries",
-        "library:/Eco-System/ECO_SYSTEM_1.0_COMPLETE_APP_BIR_PLUS_FINAL_2026-09-11.zip"
+        "founder-observation:1.0 visible site still looked like an old version",
+        "branch:next/1.1.0-cahier-app",
+        "repo:docs/constitution/ECO_SYSTEM_CAHIER_APP_EXECUTION_SUPPLEMENT_1.1.0_2026-09-11.md",
+        "repo:docs/change-impact/CIR-2026-09-11-cahier-app-1.1.md"
       ],
-      "note": "Final portable BIR+ backup was generated from the Complete App branch, downloaded, independently checksum-verified, archive-listed and saved in the user's /Eco-System/ Library folder.",
-      "next": "Preserve this artifact as the 1.0 reconstructible backup and regenerate BIR+ after meaningful future releases."
+      "note": "Cahier App 1.1 is the current target: visible product rebuilt around Cahier Maître 2.3.4 and A→J while preserving canonical services and truthful statuses.",
+      "next": "Run full CI, deploy same Worker/D1, smoke root/health/catalog, then promote to VERIFIED_REMOTE."
     }
   ]
 }
