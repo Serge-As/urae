@@ -1,0 +1,50 @@
+name: Eco-System 1.1 — BIR+ Cahier App Backup
+
+on:
+  workflow_dispatch:
+  push:
+    branches: ['next/1.1.0-cahier-app']
+    paths: ['.github/BACKUP_CAHIER_APP_1_1_ONCE']
+
+permissions:
+  contents: read
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Build verified source archive and manifest
+        shell: bash
+        env:
+          PRODUCT_VERSION: 1.1.0-cahier-app
+          MOBILE_URL: https://eco-system.sergemimf.workers.dev/
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/eco-backup
+          HEAD_SHA="$(git rev-parse HEAD)"
+          printf '%s\n' \
+            "project=Eco-System" \
+            "version=${PRODUCT_VERSION}" \
+            "branch=next/1.1.0-cahier-app" \
+            "head=${HEAD_SHA}" \
+            "mobile_url=${MOBILE_URL}" \
+            "cahier_maitre=2.3.4" \
+            "realMoneyEnabled=false" \
+            > /tmp/eco-backup/MANIFEST.txt
+          git archive --format=tar HEAD | xz -T0 -9e > /tmp/eco-backup/eco-system-1.1-cahier-app-source.tar.xz
+          (
+            cd /tmp/eco-backup
+            sha256sum eco-system-1.1-cahier-app-source.tar.xz > SHA256SUMS.txt
+            sha256sum --check SHA256SUMS.txt
+          )
+          test -s /tmp/eco-backup/eco-system-1.1-cahier-app-source.tar.xz
+      - uses: actions/upload-artifact@v4
+        with:
+          name: eco-system-1.1-cahier-app-birplus
+          path: /tmp/eco-backup/
+          retention-days: 90
+          if-no-files-found: error
