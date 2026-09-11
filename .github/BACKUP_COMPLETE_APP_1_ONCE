@@ -1,6 +1,6 @@
 backup=true
 version=1.0.0-complete-app
 date=2026-09-11
-revision=2
-portable_sha256sums=true
+revision=3
+ui=master-cockpit-cahier-2.3.4
 include=current-truth,truth-ledger,complete-app-source
