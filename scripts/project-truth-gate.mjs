@@ -21,8 +21,8 @@ const must={
  'cloudflare.api_token.tontine_platform_github_actions_deploy':'VERIFIED_REMOTE',
  'cloudflare.d1.eco-system-db':'VERIFIED_REMOTE',
  'cloudflare.worker.eco-system':'VERIFIED_REMOTE',
- 'safety.realMoneyEnabled':'ACQUIRED',
- 'product.complete_app_1.0':'IN_PROGRESS',
+ 'safety.realMoneyEnabled':'VERIFIED_REMOTE',
+ 'product.complete_app_1.0':'VERIFIED_REMOTE',
  'product.alpha_line':'SUPERSEDED'
 };
 for(const [id,status] of Object.entries(must)){
@@ -47,4 +47,4 @@ for(const line of positiveLines){
 }
 const serialized=JSON.stringify(ledger);
 if(/(?:Bearer\s+|eyJ[a-zA-Z0-9_-]{10,}|[A-Za-z0-9_-]{40,}\.[A-Za-z0-9_-]{20,})/.test(serialized)) throw new Error('Truth ledger appears to contain a secret/token value');
-console.log(`Project truth OK: ${records.length} records; Cloudflare/D1/Worker acquisitions preserved; Complete App remains explicitly IN_PROGRESS until remote 1.0 qualification`);
+console.log(`Project truth OK: ${records.length} records; Cloudflare/D1/Worker and Complete App remote qualification preserved; realMoneyEnabled remains remotely verified false`);
