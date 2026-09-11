@@ -35,8 +35,11 @@ jobs:
             "realMoneyEnabled=false" \
             > /tmp/eco-backup/MANIFEST.txt
           git archive --format=tar HEAD | xz -T0 -9e > /tmp/eco-backup/eco-system-1.0-complete-app-source.tar.xz
-          sha256sum /tmp/eco-backup/eco-system-1.0-complete-app-source.tar.xz > /tmp/eco-backup/SHA256SUMS.txt
-          sha256sum --check /tmp/eco-backup/SHA256SUMS.txt
+          (
+            cd /tmp/eco-backup
+            sha256sum eco-system-1.0-complete-app-source.tar.xz > SHA256SUMS.txt
+            sha256sum --check SHA256SUMS.txt
+          )
           test -s /tmp/eco-backup/eco-system-1.0-complete-app-source.tar.xz
       - uses: actions/upload-artifact@v4
         with:
