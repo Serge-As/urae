@@ -1,0 +1,6 @@
+materialize=true
+expected_sha256=ff04bb97a7a946c730c2f27d062e59f694343cc2936c5e19c4dc9b462037218b
+branch=next/1.1.0-cahier-app
+date=2026-09-11
+parts=6
+source=cahier-master-2.3.4
