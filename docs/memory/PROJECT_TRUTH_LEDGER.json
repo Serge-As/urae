@@ -412,8 +412,8 @@
         "local-check:tar.xz readable; 199 archive entries",
         "library:/Eco-System/ECO_SYSTEM_1.0_COMPLETE_APP_BIR_PLUS_FINAL_2026-09-11.zip"
       ],
-      "note": "Final portable BIR+ backup was generated from the Complete App branch, downloaded, independently checksum-verified, archive-listed and saved in the user's /Eco-System/ Library folder.",
-      "next": "Preserve this artifact as the 1.0 reconstructible backup and regenerate BIR+ after meaningful future releases."
+      "note": "Final portable BIR+ backup was generated from the Complete App branch, downloaded, independently checksum-verified, archive-listed and saved in the user's /Eco-System/ Library folder. This artifact predates the Master Cockpit field correction and is retained as historical fallback.",
+      "next": "Prefer backup.birplus.master_cockpit_1.0 for current reconstruction; do not delete this historical fallback."
     },
     {
       "id": "ui.master_cockpit.cahier_2_3_4",
@@ -443,6 +443,24 @@
       ],
       "note": "New service worker prevents the old cache-first shell from indefinitely masking the Master Cockpit after deployment.",
       "next": "Keep cache versioning and navigation freshness tests for every visible app release."
+    },
+    {
+      "id": "backup.birplus.master_cockpit_1.0",
+      "status": "VERIFIED_REMOTE",
+      "scope": "backup-recovery",
+      "observedOn": "2026-09-11",
+      "evidence": [
+        "github-actions:Eco-System 1.0 — BIR+ Verified Source Backup run 34645606625 SUCCESS",
+        "github-actions:artifact id 10281862797",
+        "artifact-zip-sha256:1b9525e3a994d5ebfd3dd6922691c25ce0a2413bbba283de3a2df1da70aaf04b",
+        "source-archive-sha256:578596a697781f99d8c70d80881a61a03426366cb9cd50df6f96859a68eba52c",
+        "manifest-head:6382e7ba19c334bb8ac4d4df2c5f16221ababb61",
+        "local-check:sha256sum --check OK",
+        "local-check:tar.xz readable; 200 entries; Master Cockpit and truth files present",
+        "library:/Eco-System/ECO_SYSTEM_1.0_MASTER_COCKPIT_BIR_PLUS_2026-09-11.zip"
+      ],
+      "note": "Post-field-correction Master Cockpit source is preserved as a reconstructible BIR+ archive and independently verified after download.",
+      "next": "Regenerate BIR+ after every meaningful product/runtime release; retain earlier backups as historical fallbacks."
     }
   ]
 }
