@@ -1,6 +1,6 @@
 materialize=true
 expected_sha256=69380f1dde05b02721ff1d1dee6774fab0a7ec2c5738c6439073f74fc36456ec
 branch=next/1.0.0-complete-app
-date=2026-09-10
-revision=2
-segments=10
+date=2026-09-11
+revision=3
+transport_files=11
