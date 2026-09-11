@@ -185,13 +185,12 @@
       "scope": "cloudflare-d1",
       "observedOn": "2026-09-11",
       "evidence": [
-        "github-actions:Eco-System 1.0 Complete App — Cloudflare run 34640991448 SUCCESS",
-        "cloudflare:d1 eco-system-db resolved",
-        "cloudflare:migrations additive only; No migrations to apply",
-        "cloudflare:env.DB bound to eco-system-db"
+        "github-actions:deploy run 34645341363 SUCCESS",
+        "cloudflare:env.DB (eco-system-db)",
+        "cloudflare:migrations No migrations to apply"
       ],
-      "note": "The existing D1 database eco-system-db is the qualified Complete App datastore. It was reused, not recreated.",
-      "next": "Reuse this database; apply only additive migrations required by later releases."
+      "note": "Master Cockpit reused the existing eco-system-db exclusively; no replacement database was created.",
+      "next": "Apply only additive migrations later."
     },
     {
       "id": "cloudflare.worker.eco-system",
@@ -199,14 +198,14 @@
       "scope": "cloudflare-worker",
       "observedOn": "2026-09-11",
       "evidence": [
-        "github-actions:Eco-System 1.0 Complete App — Cloudflare run 34640991448 SUCCESS",
-        "cloudflare:worker eco-system version 70f028b8-6f6e-4335-bf5c-45afeb067a3d",
-        "smoke:https://eco-system.sergemimf.workers.dev/",
-        "smoke:https://eco-system.sergemimf.workers.dev/health",
-        "smoke:https://eco-system.sergemimf.workers.dev/api/v1/product/capabilities"
+        "github-actions:Eco-System 1.0 Complete App — Cloudflare run 34645341363 SUCCESS",
+        "cloudflare:worker eco-system version 9ce22308-db14-4da7-9e6f-c2908b6db20c",
+        "smoke:root Master Cockpit/Cahier 2.3.4 PASS",
+        "smoke:/health PASS",
+        "smoke:/api/v1/product/capabilities PASS"
       ],
-      "note": "Worker/PWA Complete App 1.0 is remotely deployed and smoke-qualified at the single public URL.",
-      "next": "Treat 1.0 Complete App as the active deployed reference until a separately qualified successor replaces it."
+      "note": "Worker serves the post-field-feedback Master Cockpit and cache-busted PWA assets.",
+      "next": "Preserve network-first navigation and old-cache purge in later PWA releases."
     },
     {
       "id": "cloudflare.d1.repository_adapter",
@@ -238,11 +237,11 @@
       "scope": "safety-guardrail",
       "observedOn": "2026-09-11",
       "evidence": [
-        "github-actions:Complete App deploy run 34640991448 SUCCESS",
-        "smoke:/health version 1.0.0-complete-app realMoneyEnabled=false"
+        "github-actions:deploy run 34645341363 SUCCESS",
+        "smoke:realMoneyEnabled=false"
       ],
-      "note": "Real money remains disabled in the deployed Complete App. This is a mandatory fail-closed invariant until separately authorized.",
-      "next": "Every later deployment must fail if realMoneyEnabled becomes true without explicit authorization."
+      "note": "Master Cockpit deployment preserved the mandatory real-money-off invariant.",
+      "next": "Fail closed on any future unauthorized enablement."
     },
     {
       "id": "feature.discovery.group_public_projection",
@@ -336,18 +335,15 @@
       "scope": "product-line",
       "observedOn": "2026-09-11",
       "evidence": [
-        "payload-sha256:69380f1dde05b02721ff1d1dee6774fab0a7ec2c5738c6439073f74fc36456ec",
-        "github-actions:materialize run 34640865092 SUCCESS",
-        "github:materialized commit 7e08a76",
-        "ci:48/48 PASS",
-        "architecture-fitness:PASS",
-        "shared-governance:23 guardrails PASS",
-        "service-solidarity:11 canonical services PASS",
-        "github-actions:deploy run 34640991448 SUCCESS",
-        "smoke:1.0.0-complete-app; 139 capabilities; realMoneyEnabled=false"
+        "field-feedback:previous visible shell judged stale/incomplete relative to Cahier 2.3.4",
+        "github:Master Cockpit commit 9d9c0b117e80927edc02dfcd7ea899e4f2c34f08",
+        "github-actions:deploy run 34645341363 SUCCESS",
+        "ci:52/52 PASS",
+        "smoke:Master Cockpit + Cahier Maître 2.3.4 root PASS",
+        "smoke:139 capabilities; realMoneyEnabled=false"
       ],
-      "note": "Complete App 1.0 is the active deployed product line. Root PWA, health and capability catalog are qualified remotely.",
-      "next": "Use this deployed line as the reference; preserve the verified BIR+ and evolve through derived branches without regressing canonical services or Living Rules."
+      "note": "Complete App 1.0 now exposes the Cahier 2.3.4 Master Cockpit rather than the earlier incremental shell. Catalog presence alone is not treated as specialized-engine completeness.",
+      "next": "Use field-visible conformity plus canonical status evidence for future qualification."
     },
     {
       "id": "product.alpha_line",
@@ -418,6 +414,35 @@
       ],
       "note": "Final portable BIR+ backup was generated from the Complete App branch, downloaded, independently checksum-verified, archive-listed and saved in the user's /Eco-System/ Library folder.",
       "next": "Preserve this artifact as the 1.0 reconstructible backup and regenerate BIR+ after meaningful future releases."
+    },
+    {
+      "id": "ui.master_cockpit.cahier_2_3_4",
+      "status": "VERIFIED_REMOTE",
+      "scope": "product-ui",
+      "observedOn": "2026-09-11",
+      "evidence": [
+        "github:9d9c0b117e80927edc02dfcd7ea899e4f2c34f08",
+        "tests:10-step launch cockpit",
+        "tests:dedicated validated domain views",
+        "tests:service-worker fresh navigation + old-cache purge",
+        "github-actions:deploy run 34645341363 SUCCESS",
+        "cloudflare:worker version 9ce22308-db14-4da7-9e6f-c2908b6db20c"
+      ],
+      "note": "Visible app was rebuilt to follow the Cahier Maître 2.3.4 structure: 10-step creation cockpit, meeting matrix, dedicated domain workbenches and honest capability statuses.",
+      "next": "Field-test on Android/desktop and convert priority structural workspaces into specialized engines without UI regression."
+    },
+    {
+      "id": "pwa.cache.master_cockpit_20260911",
+      "status": "VERIFIED_REMOTE",
+      "scope": "pwa-delivery",
+      "observedOn": "2026-09-11",
+      "evidence": [
+        "repo:apps/web/sw.js cache eco-system-master-cockpit-20260911-v1",
+        "tests:network-first critical navigation and old-cache purge PASS",
+        "deploy:root smoke with ?v=master-20260911 PASS"
+      ],
+      "note": "New service worker prevents the old cache-first shell from indefinitely masking the Master Cockpit after deployment.",
+      "next": "Keep cache versioning and navigation freshness tests for every visible app release."
     }
   ]
 }
