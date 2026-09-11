@@ -1,5 +1,5 @@
-Eco-System Complete App 1.0 — one-shot deployment trigger
-Date: 2026-09-10
-Expected version: 1.0.0-complete-app
-Database: eco-system-db (reuse only)
-Safety: realMoneyEnabled=false
+deploy=true
+version=1.0.0-complete-app
+database=eco-system-db
+date=2026-09-11
+revision=2
