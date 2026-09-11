@@ -1,52 +1,37 @@
 # ECO-SYSTEM — NEXT RUN
 
-Date: 2026-09-10
+Date : 2026-09-11
 
-Read `.recovery/CURRENT_TRUTH.md`, `.recovery/DOMAIN_POLICY_FLEXIBILITY_2026-09-10.md` and `docs/governance/ECO_SYSTEM_LIVING_RULES_DOCTRINE_1.0.0.md` first.
+Lire d'abord `AGENTS.md`, `docs/memory/CURRENT_TRUTH.md`, `docs/memory/PROJECT_TRUTH_LEDGER.json`, le Cahier Maître, `FEATURE_REGISTRY.yaml` et les Recall/CIR.
 
-## Acquired — do not redo
-- Recovery v2 checkpoint remains preserved as rollback/provenance.
-- Cloudflare Account API Token is valid and active.
-- Normal readable source exists on `next/0.6.0-mobile-living-rules`.
-- Mobile-first PWA is deployed at `https://eco-system.sergemimf.workers.dev/`.
-- The old root `NOT_FOUND` is fixed.
-- `eco-system-db` is resolved and bound to Worker `eco-system`.
-- Additive D1 migrations are already applied.
-- `/health` is green with version `0.6.0-mobile-living-rules` and `realMoneyEnabled=false`.
-- Cloudflare run `34431427752`: SUCCESS.
-- TypeScript / architecture / governance / service solidarity: PASS.
-- Functional suite: 43/43 PASS.
+## Acquis — ne pas refaire
+- Complete App `1.0.0-complete-app` matérialisée et qualifiée.
+- Payload SHA-256 exact : `69380f1dde05b02721ff1d1dee6774fab0a7ec2c5738c6439073f74fc36456ec`.
+- CI distante : 48/48 PASS.
+- Worker `eco-system` déployé.
+- D1 `eco-system-db` réutilisée, aucune nouvelle base.
+- Migrations additives ; aucune migration en attente au déploiement 1.0.
+- Racine, health et catalogue capacités : smoke PASS.
+- Catalogue : 139 capacités.
+- `realMoneyEnabled=false`.
+- PR Complete App #3 ouverte, non fusionnée.
 
-## Immediate field-test sequence
-1. Open the PWA directly on Android and install/add it to the home screen when offered.
-2. Verify launch, refresh, reopen and basic offline shell behavior.
-3. Use test identities and test financial values only.
-4. Exercise the real vertical slice: project → simulation → group → members → meeting → contribution → close → governed late contribution → re-close/audit.
-5. Exercise Living Rules: create a rubric and distinguish written rule, observed practice, validated operational rule, expected amount, collected amount, member shortfall/debt, solidarity coverage and beneficiary payout.
-6. Report every mismatch as: screen/action → steps → expected behavior → actual behavior → group rule/practice that should govern it.
+## URL de référence
+`https://eco-system.sergemimf.workers.dev/`
 
-## Product sequence after first Android feedback
-1. Complete the Living Rules configuration UX: per-rubric rules, mixed variants, authorized exceptions, approval/quorum, time windows, evidence, notifications, regularization and revision history.
-2. Continue RI/statuts/PV assisted reading as reviewable suggestions only; no sensitive automatic activation.
-3. Resume Discovery / Identity / Membership from existing canonical services — no parallel engine.
-4. Complete mutual person→group and opt-in group→candidate discovery, invitations, recruitment campaigns, saved searches/alerts, candidate questions/portfolio/referrals and anti-enumeration.
-5. Keep Membership as sole canonical authority for membership creation.
-6. Add production-grade authentication/session hardening and MFA for sensitive roles before wider pilot exposure.
-7. Run hostile multi-tenant authorization tests and D1 backup/restore/PRA drill.
-8. Field-test old Android / unstable 2G-3G / long offline periods.
-9. Only after those gates: controlled multi-group pilot and GO/NO-GO review.
+## Reprise normale
+1. ne pas redéployer/recréer l'infrastructure sans besoin démontré ;
+2. partir de la branche `next/1.0.0-complete-app` ou d'une branche dérivée ;
+3. préserver Living Rules, Ledger/Membership canoniques, offline/outbox et isolation multi-tenant ;
+4. faire évoluer les capacités encore structurelles vers des moteurs métier spécialisés sans créer de moteur parallèle ;
+5. ajouter MiniSearch, géolocalisation/MapLibre ou IA locale uniquement si le besoin Eco-System est confirmé, avec consentement, confidentialité, budgets de ressources et tests old-device/offline ;
+6. avant tout pilote financier élargi : auth/session robuste, MFA rôles sensibles, tests multi-tenant hostiles, observabilité, PRA/restore D1 et pilote contrôlé.
 
-## Permanent business doctrine
-Do not program “how a collation works”. Program the means for a group to describe how its collation — or any rubric — works, compare that with what is actually practiced, and validate the operational rule that should govern the app.
-
-Where a business action is blocked, expose an authorized request/exception/regularization path whenever possible. Keep true security/privacy/accounting invariants strict.
-
-## Do not
-- force-push or rewrite `main`;
-- discard recovery backups;
-- enable real money;
-- publish private founder archives/PII;
-- introduce destructive D1 migration;
-- recreate already-acquired Cloudflare resources/secrets;
-- turn one group's rule into a universal business prohibition;
-- merge product branches without explicit separate authorization.
+## Interdictions
+- ne pas recréer `eco-system-db` ;
+- ne pas demander les Secrets déjà acquis ;
+- ne pas force-push ou fusionner `main` sans décision explicite ;
+- ne pas activer l'argent réel ;
+- ne pas publier PII/archives privées ;
+- ne pas introduire de migration destructive ;
+- ne pas hard-coder la pratique d'un groupe comme règle universelle.
