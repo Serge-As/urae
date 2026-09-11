@@ -1,29 +1,35 @@
 # ECO-SYSTEM — NEXT RUN
 
-Date : 2026-09-10
+Date : 2026-09-11
 
-Lire `AGENTS.md`, `docs/memory/CURRENT_TRUTH.md`, le Cahier Maître 2.3.4, le Feature Registry et les Recall/CIR avant modification.
+Lire d'abord `AGENTS.md`, `docs/memory/CURRENT_TRUTH.md`, `docs/memory/PROJECT_TRUTH_LEDGER.json`, le Cahier Maître, `FEATURE_REGISTRY.yaml` et les Recall/CIR.
 
 ## Acquis — ne pas refaire
-- Account API Token Cloudflare actif.
-- Secrets GitHub Actions présents.
-- D1 `eco-system-db` existe et est qualifiée.
-- Worker `eco-system` existe.
-- ancienne Alpha conservée comme fallback.
+- Complete App `1.0.0-complete-app` matérialisée et qualifiée.
+- Payload SHA-256 exact : `69380f1dde05b02721ff1d1dee6774fab0a7ec2c5738c6439073f74fc36456ec`.
+- CI distante : 48/48 PASS.
+- Worker `eco-system` déployé.
+- D1 `eco-system-db` réutilisée, aucune nouvelle base.
+- Migrations additives ; aucune migration en attente au déploiement 1.0.
+- Racine, health et catalogue capacités : smoke PASS.
+- Catalogue : 139 capacités.
 - `realMoneyEnabled=false`.
+- PR Complete App #3 ouverte, non fusionnée.
 
-## Reprise
-1. qualifier la Complete App 1.0 ;
-2. publier sur `next/1.0.0-complete-app` ;
-3. appliquer seulement les migrations additives ;
-4. déployer le Worker/PWA 1.0 ;
-5. vérifier `/`, `/health` et `/api/v1/product/capabilities` ;
-6. ouvrir/mettre à jour la PR Complete App ;
-7. produire BIR+ 1.0 ;
-8. poursuivre les capacités encore STRUCTURAL_V1 vers des moteurs métier spécialisés.
+## URL de référence
+`https://eco-system.sergemimf.workers.dev/`
+
+## Reprise normale
+1. ne pas redéployer/recréer l'infrastructure sans besoin démontré ;
+2. partir de la branche `next/1.0.0-complete-app` ou d'une branche dérivée ;
+3. préserver Living Rules, Ledger/Membership canoniques, offline/outbox et isolation multi-tenant ;
+4. faire évoluer les capacités encore structurelles vers des moteurs métier spécialisés sans créer de moteur parallèle ;
+5. ajouter MiniSearch, géolocalisation/MapLibre ou IA locale uniquement si le besoin Eco-System est confirmé, avec consentement, confidentialité, budgets de ressources et tests old-device/offline ;
+6. avant tout pilote financier élargi : auth/session robuste, MFA rôles sensibles, tests multi-tenant hostiles, observabilité, PRA/restore D1 et pilote contrôlé.
 
 ## Interdictions
-- ne pas recréer D1 ni les Secrets déjà acquis ;
+- ne pas recréer `eco-system-db` ;
+- ne pas demander les Secrets déjà acquis ;
 - ne pas force-push ou fusionner `main` sans décision explicite ;
 - ne pas activer l'argent réel ;
 - ne pas publier PII/archives privées ;
