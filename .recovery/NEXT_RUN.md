@@ -17,7 +17,11 @@ Lire d'abord `AGENTS.md`, `docs/memory/CURRENT_TRUTH.md`, `docs/memory/PROJECT_T
 - Catalogue : 139 capacités.
 - `realMoneyEnabled=false`.
 - PR #3 ouverte, non fusionnée.
-- Ancien BIR+ conservé comme fallback pré-Master-Cockpit ; produire/consommer le nouveau BIR+ post-correction dès qu'il est qualifié.
+- BIR+ Master Cockpit vérifié : run `34645606625`, artifact `10281862797`, head `6382e7ba19c334bb8ac4d4df2c5f16221ababb61`.
+- ZIP SHA-256 : `1b9525e3a994d5ebfd3dd6922691c25ce0a2413bbba283de3a2df1da70aaf04b`.
+- Source SHA-256 : `578596a697781f99d8c70d80881a61a03426366cb9cd50df6f96859a68eba52c`.
+- Library : `/Eco-System/ECO_SYSTEM_1.0_MASTER_COCKPIT_BIR_PLUS_2026-09-11.zip`.
+- Ancien BIR+ pré-Master-Cockpit conservé comme fallback historique.
 
 ## Ce qui est maintenant visible
 1. création/intégration/transformation en cockpit 10 étapes ;
