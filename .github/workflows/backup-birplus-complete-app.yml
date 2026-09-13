@@ -49,6 +49,28 @@ jobs:
             sha256sum --check SHA256SUMS.txt
           )
           test -s /tmp/eco-backup/eco-system-1.2-source.tar.xz
+      - name: Export D1 and verify restore
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes wrangler@4 d1 export "${ECO_SYSTEM_DB}" --remote --output=/tmp/eco-backup/eco-system-d1.sql
+          sqlite3 /tmp/eco-backup/restore-check.sqlite < /tmp/eco-backup/eco-system-d1.sql
+          test "$(sqlite3 /tmp/eco-backup/restore-check.sqlite 'PRAGMA integrity_check;')" = "ok"
+          cd /tmp/eco-backup
+          sha256sum eco-system-1.2-source.tar.xz eco-system-d1.sql > SHA256SUMS.txt
+          sha256sum --check SHA256SUMS.txt
+      - name: Ensure private R2 and upload backup
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes wrangler@4 r2 bucket list > /tmp/r2-list.txt
+          if ! grep -Fq "${R2_BUCKET}" /tmp/r2-list.txt; then
+            npx --yes wrangler@4 r2 bucket create "${R2_BUCKET}"
+          fi
+          KEY="backups/1.2/${GITHUB_SHA}"
+          for file in eco-system-1.2-source.tar.xz eco-system-d1.sql SHA256SUMS.txt MANIFEST.txt; do
+            npx --yes wrangler@4 r2 object put "${R2_BUCKET}/${KEY}/${file}" --remote --file="/tmp/eco-backup/${file}" --force
+          done
       - uses: actions/upload-artifact@v4
         with:
           name: eco-system-1.2-birplus
