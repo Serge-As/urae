@@ -70,7 +70,7 @@ const fail = (e) => {
     };
     box.textContent = friendly[code] ?? `Action non terminée : ${code}`;
     box.hidden = false;
-    if(code==='AUTHENTICATION_REQUIRED')showAuth();
+    if(code==='AUTHENTICATION_REQUIRED')showAuth('Reconnectez-vous : votre saisie en cours reste conservée dans cette page.');
 };
 
 function onSubmit(selector, handler) {
@@ -850,6 +850,18 @@ $('#installBtn').addEventListener('click', async () => { if (deferredInstallProm
     deferredInstallPrompt = undefined;
     $('#installBtn').hidden = true;
 } });
+async function ensureCurrentServiceWorker(){
+    if(!('serviceWorker' in navigator))return;
+    try{
+        const reg=await navigator.serviceWorker.register('/sw.js',{scope:'/',updateViaCache:'none'});
+        await reg.update();
+        navigator.serviceWorker.addEventListener('controllerchange',()=>{
+            try{if(sessionStorage.getItem('eco-system-sw-reloaded')==='1')return;sessionStorage.setItem('eco-system-sw-reloaded','1');}catch{}
+            location.reload();
+        },{once:true});
+    }catch{}
+}
+
 async function start() {
     renderConnectivity();
     renderKernel();
@@ -867,13 +879,6 @@ async function start() {
         renderDomainHubs();
         await refreshAll();
         await loadWorkspaces();
-        if ('serviceWorker' in navigator)
-            try {
-                const reg = await navigator.serviceWorker.register('/sw.js', { scope: '/' });
-                await reg.update();
-                navigator.serviceWorker.addEventListener('controllerchange', () => toast('Mise à jour disponible. Vous pourrez actualiser après votre saisie.'));
-            }
-            catch { }
     }
     catch (e) {
         fail(e);
@@ -901,7 +906,7 @@ async function showStatement(membershipId){
     dialog.append(exportButton,print,close);document.body.append(dialog);dialog.showModal();
 }
 let authMode='login';
-function showAuth(){document.body.classList.add('signed-out');$('#authScreen').hidden=false;$('#authUsername').focus();}
+function showAuth(message=''){document.body.classList.add('signed-out');$('#authScreen').hidden=false;if(message)$('#authError').textContent=message;$('#authUsername').focus();}
 document.querySelectorAll('[data-auth-mode]').forEach(button=>button.addEventListener('click',()=>{
     authMode=button.dataset.authMode;
     document.querySelectorAll('[data-auth-mode]').forEach(b=>{b.classList.toggle('selected',b===button);b.setAttribute('aria-pressed',String(b===button));});
