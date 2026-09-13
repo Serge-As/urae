@@ -32,10 +32,10 @@ const $ = (s) => { const e = document.querySelector(s); if (!e)
 const val = (id) => document.getElementById(id).value.trim();
 const num = (id) => Number(val(id));
 const checked = (id) => document.getElementById(id).checked;
-const fmt = (n) => `${new Intl.NumberFormat('fr-CM', { maximumFractionDigits: 0 }).format(n)} F CFA`;
+const fmt = (n) => `${new Intl.NumberFormat(localeTag(uiLocale), { maximumFractionDigits: 0 }).format(n)} F CFA`;
 const split = (v) => v.split(',').map(x => x.trim()).filter(Boolean);
 const date = (v) => { try {
-    return new Intl.DateTimeFormat('fr-CM', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(v));
+    return new Intl.DateTimeFormat(localeTag(uiLocale), { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(v));
 }
 catch {
     return v;
