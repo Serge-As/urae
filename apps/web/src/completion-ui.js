@@ -1,3 +1,4 @@
+import {MeetingSnapshotStore} from './offline-snapshot.js';
 const KIND_LABELS = {
   IDENTITY_CLAIM:['Rapprochement d’identité historique','Historical identity claim'],
   TONTINE_CYCLE:['Cycle de tontine','Tontine cycle'],
