@@ -27,5 +27,5 @@ test('English catalogue contains no accidental French UI copy', () => {
 test('service worker precaches the transitive foundation modules and is registered at root scope', async () => {
   const sw=await readFile('apps/web/sw.js','utf8'); const main=await readFile('apps/web/src/main.js','utf8');
   for(const critical of ['/packages/application/src/index.js','/packages/platform-kernel/src/index.js','/packages/offline/src/index.js','/packages/repositories/src/index.js']) assert.match(sw,new RegExp(critical.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')));
-  assert.match(main,/register\('\/sw\.js',\s*\{\s*scope:\s*'\/'\s*\}\)/);
+  assert.match(main,/register\('\/sw\.js',\s*\{[^}]*scope:\s*'\/'[^}]*updateViaCache:\s*'none'[^}]*\}\)/);
 });
