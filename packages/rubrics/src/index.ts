@@ -1,4 +1,5 @@
-import type { GovernanceKnowledgeClaim, Id, RubricDefinition, RubricFacets, RubricOperatingModel, RubricCyclePreview } from '../../contracts/src/index.js';
+import type { GovernanceKnowledgeClaim, Id, RubricDefinition, RubricFacets, RubricOperatingModel, RubricCyclePreview, LaunchRubricPlan } from '../../contracts/src/index.js';
+import {validateLaunchRubrics,simulateRubricPlan} from './launch-config.js';
 import { makeId } from '../../contracts/src/index.js';
 import type { PlatformRepository } from '../../repositories/src/index.js';
 import { PlatformKernel } from '../../platform-kernel/src/index.js';
@@ -23,15 +24,37 @@ export class RubricKnowledgeService {
 
   starterCandidates(){return Object.entries(STARTER_RUBRIC_FACETS).map(([code,facets])=>({code,facets:structuredClone(facets),requiresGroupConfirmation:true}));}
 
-  async createRubric(input:{tenantId:Id;groupId:Id;name:string;aliases?:string[];purpose?:string;facets:RubricFacets;source?:RubricDefinition['source'];operatingModel?:RubricOperatingModel}):Promise<RubricDefinition>{
-    await requireManager(this.repo,this.kernel,input.tenantId,input.groupId); const timestamp=now(); const name=input.name.trim(); if(!name)throw new Error('RUBRIC_NAME_REQUIRED');
-    const rubric:RubricDefinition={id:makeId('rubric'),tenantId:input.tenantId,groupId:input.groupId,name,aliases:[...new Set((input.aliases??[]).map(x=>x.trim()).filter(Boolean))],purpose:input.purpose?.trim()||undefined,facets:structuredClone(input.facets),operatingModel:input.operatingModel?structuredClone(input.operatingModel):undefined,status:'DRAFT',source:input.source??'GROUP_CUSTOM',version:1,createdAt:timestamp,updatedAt:timestamp};
+  async createRubric(input:{tenantId:Id;groupId:Id;name:string;aliases?:string[];purpose?:string;facets:RubricFacets;source?:RubricDefinition['source'];operatingModel?:RubricOperatingModel;activityPlan?:LaunchRubricPlan;launchKey?:string;launchProjectId?:string}):Promise<RubricDefinition>{
+    if(input.launchProjectId){
+      const project=await this.repo.getProject(input.tenantId,input.launchProjectId),ctx=this.kernel.context.get(),group=await this.repo.getGroup(input.tenantId,input.groupId);
+      const allowed=project&&ctx.tenantId===project.tenantId&&(ctx.actorId===project.createdBy||project.accessGrants?.some(g=>g.userId===ctx.actorId&&g.capabilities.includes('CONVERT')));
+      const planned=project?.rubrics?.find(p=>p.key===input.launchKey);
+      if(!allowed||!group||group.createdBy!==project.createdBy||group.id!==`group_from_${project.id}`||!planned||JSON.stringify(planned)!==JSON.stringify(input.activityPlan))throw Error('FORBIDDEN_SCOPE');
+    }else await requireManager(this.repo,this.kernel,input.tenantId,input.groupId);
+    const timestamp=now(); const name=input.name.trim(); if(!name)throw new Error('RUBRIC_NAME_REQUIRED');
+    const activityPlan=input.activityPlan?validateLaunchRubrics([input.activityPlan])[0]:undefined;
+    const launchHash=input.launchKey?Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(JSON.stringify([input.tenantId,input.groupId,input.launchKey])))),b=>b.toString(16).padStart(2,'0')).join(''):undefined;
+    const id=launchHash?'rubric_launch_'+launchHash:makeId('rubric');
+    const existing=input.launchKey?await this.repo.getRubricDefinition(input.tenantId,input.groupId,id):undefined;if(existing)return existing;
+    const rubric:RubricDefinition={id,tenantId:input.tenantId,groupId:input.groupId,name,aliases:[...new Set((input.aliases??[]).map(x=>x.trim()).filter(Boolean))],purpose:input.purpose?.trim()||undefined,facets:structuredClone(input.facets),operatingModel:input.operatingModel?structuredClone(input.operatingModel):undefined,activityPlan,status:'DRAFT',source:input.source??'GROUP_CUSTOM',version:1,createdAt:timestamp,updatedAt:timestamp};
     await this.repo.saveRubricDefinition(rubric); const audit=this.kernel.audit.append({tenantId:input.tenantId,actorId:this.kernel.context.get().actorId,action:'RUBRIC_CREATED',targetType:'rubric',targetId:rubric.id,after:rubric,requestId:this.kernel.context.get().requestId});await this.repo.saveAudit(audit);return structuredClone(rubric);
   }
 
   async listRubrics(tenantId:Id,groupId:Id):Promise<RubricDefinition[]>{
     await requireManager(this.repo,this.kernel,tenantId,groupId);
     return this.repo.listRubricDefinitions(tenantId,groupId);
+  }
+
+  async updateActivityPlan(tenantId:Id,groupId:Id,rubricId:Id,input:unknown):Promise<RubricDefinition>{
+    await requireManager(this.repo,this.kernel,tenantId,groupId);
+    const current=await this.repo.getRubricDefinition(tenantId,groupId,rubricId);if(!current)throw Error('RUBRIC_NOT_FOUND');
+    const plan=validateLaunchRubrics([input])[0]!;
+    if(current.activityPlan&&plan.key!==current.activityPlan.key)throw Error('INVALID_RUBRIC_KEY');
+    simulateRubricPlan(plan);
+    const updated:RubricDefinition={...current,name:plan.name,activityPlan:plan,version:current.version+1,updatedAt:now()};
+    await this.repo.saveRubricDefinition(updated);
+    await this.repo.saveAudit(this.kernel.audit.append({tenantId,actorId:this.kernel.context.get().actorId,action:'RUBRIC_ACTIVITY_CONFIGURATION_UPDATED',targetType:'rubric',targetId:rubricId,before:current,after:updated,requestId:this.kernel.context.get().requestId}));
+    return updated;
   }
 
   async updateOperatingModel(input:{tenantId:Id;groupId:Id;rubricId:Id;model:RubricOperatingModel}):Promise<RubricDefinition>{

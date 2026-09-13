@@ -1,17 +1,28 @@
-# Eco-System — Cahier App
+# Eco-System — 1.1.2 locale
 
-Current product line: `1.1.0-cahier-app`.
+Livraison du 13 septembre 2026 : sessions authentifiées, isolation des groupes,
+encaissements atomiques, relevés individuels, contrepassations, matrice et outbox durable.
+Qualification locale : 65 tests réussis. La plateforme complète du cahier reste en cours.
 
-Eco-System is a mobile-first PWA for associations, tontines and community economies. The visible interface is rebuilt against the **Cahier Maître 2.3.4**: group-creation cockpit, Discovery/Membership, Living Rules, Meeting Command Center with smartphone-card and member×rubric matrix views, canonical finance, community/economy, AdManager, Academy/ONG/AI/Paper Bridge, reporting and platform hardening.
+Pour lancer la version précompilée avec Node 24, lire [LISEZ_MOI_LIVRAISON.md](LISEZ_MOI_LIVRAISON.md).
+Pour les preuves et limites : [QUALIFICATION.md](QUALIFICATION.md),
+[audit](delivery-audit/AUDIT_ET_LIVRAISON_2026-09-12.md), [état actuel](docs/memory/CURRENT_TRUTH.md).
+Aucun déploiement distant effectué par cette reprise. Ne pas écraser la production 1.1
+sans rapprocher les identités historiques et qualifier le fonctionnement Workers.
+La branche distante 1.1 a été récupérée et comparée.
+Rubriques personnalisées, simulation indépendante et programmation de chaque part sont ajoutées.
+Plan détaillé des vingt innovations : docs/roadmap/PLAN_20_INNOVATIONS_ET_REPRISE_2026-09-13.md.
 
-Every known capability is visible and truth-labelled. A capability with a canonical specialized engine opens that engine; a capability still in maturation opens a persistent governed D1 workspace. This does **not** falsely claim that all 139 capabilities already have final specialized engines.
+## Documentation historique de la sauvegarde 1.0
+
+Current product line: `1.0.0-complete-app`.
+
+Eco-System is a mobile-first PWA for associations, tontines and community economies. The visible product is no longer the old Alpha UI. It exposes canonical group/meeting/ledger/discovery/rubric flows plus a searchable catalogue of the whole project.
 
 - App: `https://eco-system.sergemimf.workers.dev/`
 - Health: `https://eco-system.sergemimf.workers.dev/health`
-- Capability catalog: `https://eco-system.sergemimf.workers.dev/api/v1/product/capabilities`
-- Master: Cahier Maître 2.3.4
 - Real money: **disabled**.
 - Doctrine: Living Rules — written rule, observed practice, validated operational rule.
-- Continuation prompt: `docs/prompts/ECO_SYSTEM_PROMPT_REPRISE_CHAT_CODEX_1.1.0.md`
+- Prompt: `docs/prompts/ECO_SYSTEM_PROMPT_MAITRE_CODEX_LIVRAISON_COMPLETE_1.0.0.md`
 
-Statuses remain explicit: canonical core, functional, structural/workspace, sandbox, hardening required, verified remote, pilot validated.
+Statuses are explicit: canonical core, workspace operational, sandbox operational, hardening required.

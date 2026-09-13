@@ -65,3 +65,26 @@ a{color:var(--brand)}
   .content{padding:18px 12px 105px}.hero{grid-template-columns:1fr;padding:23px 18px;border-radius:20px}.hero-card{min-height:120px}.two-col,.three-col{grid-template-columns:1fr}.metrics{grid-template-columns:repeat(2,minmax(0,1fr))}.quick-grid,.hub-grid,.module-catalog{grid-template-columns:1fr}.journey{grid-template-columns:repeat(2,minmax(0,1fr))}.page-head{display:block}.page-meta{justify-content:flex-start;margin-top:9px}.form-grid{grid-template-columns:1fr}.form-grid .full{grid-column:auto}.inline-form{grid-template-columns:1fr}.inline-grid{grid-template-columns:1fr}.inline-grid button{grid-column:auto}.receipt{grid-template-columns:1fr}.footer{padding:16px 10px 92px}.panel{padding:16px;border-radius:16px}.panel-head{flex-wrap:wrap}.cahier-banner{align-items:flex-start;flex-direction:column}.search{max-width:none;width:100%}
 }
 @media (max-width:480px){.metrics,.journey{grid-template-columns:1fr}.hero h1{font-size:31px}.brand strong{font-size:15px}.top-actions .pill{font-size:11px;padding:6px 8px}.top-actions #installBtn{display:none}.nav-btn{min-width:74px}.content{padding-left:10px;padding-right:10px}}
+
+[hidden]{display:none!important}
+.signed-out>.topbar,.signed-out>.app-shell,.signed-out>.bottom-nav{display:none!important}
+.auth-screen{min-height:100vh;display:grid;grid-template-columns:1fr 1fr;gap:6vw;align-items:center;padding:6vw;background:#f6f4ed;color:#172b24}
+.auth-brand{max-width:32rem;margin:auto}.auth-brand strong{display:block;font-size:2.8rem;letter-spacing:-.05em}.auth-brand p{font-size:1.35rem;line-height:1.6}.auth-logo{display:grid;place-items:center;background:#1f6b4f;color:white;width:72px;height:72px;border-radius:22px;font-size:2.5rem;font-weight:800;margin-bottom:24px}
+.auth-card{background:#fff;padding:2.5rem;border:1px solid #d7e1db;border-radius:20px;max-width:30rem;box-shadow:0 15px 60px #1237210a}.auth-card h1{font-size:1.6rem;margin-bottom:1.5rem}.auth-tabs{display:flex;border-bottom:1px solid #d7e1db;margin-bottom:1.5rem}.auth-tabs button{flex:1;background:none;border:0;border-bottom:3px solid transparent;border-radius:0;min-height:48px}.auth-tabs .selected{border-bottom-color:#1f6b4f;color:#1f6b4f;font-weight:700}.auth-card .form-grid{display:flex;flex-direction:column;gap:18px}.auth-card input{min-height:48px;font-size:1rem}.auth-card small,.auth-footnote{font-size:.875rem;line-height:1.6;color:#566b61}.auth-footnote{margin-top:24px}#authError{color:#9c2d2d;margin:0}.auth-card button[type=submit]{min-height:48px}
+button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:3px solid #c683a0;outline-offset:3px}
+@media(max-width:760px){.auth-screen{grid-template-columns:1fr;padding:24px;gap:24px}.auth-brand{margin:0;max-width:none}.auth-brand strong{font-size:2rem}.auth-brand p{font-size:1rem;margin:8px 0}.auth-logo{width:48px;height:48px;font-size:1.75rem;margin-bottom:12px}.auth-card{padding:24px;max-width:none}.top-actions #accountName{display:none}}
+@media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;animation:none!important;transition:none!important}}
+
+[hidden]{display:none!important}dialog{border:1px solid #d1c7b9;border-radius:20px;padding:24px;max-width:min(94vw,1000px);max-height:90vh;overflow:auto;background:#fffaf2;color:#172c26}dialog::backdrop{background:#10271c99}dialog table{border-collapse:collapse;width:100%;margin:20px 0}dialog td,dialog th{padding:12px;text-align:left;border-bottom:1px solid #ddd;overflow-wrap:anywhere}dialog button{margin:6px;min-height:48px} @media print{body:has(#statementDialog[open])>*:not(#statementDialog){display:none!important}#statementDialog[open]{position:static;max-width:none;max-height:none;overflow:visible;border:none;width:100%}#statementDialog button{display:none}}
+
+/* Rubric-first creation and editable per-share cycle planning. */
+.launch-rubric,.rubric-settings,.plan-member{min-width:0;border:1px solid var(--line,#ded7c8);border-radius:16px;padding:16px;margin:0 0 16px}
+.launch-rubric legend,.rubric-settings legend,.plan-member legend{font-weight:750;padding:0 6px}
+.rubric-settings{margin-top:16px;background:var(--paper,#fffdf8)}
+.launch-rubric [hidden],#legacyProjectSettings[hidden],#associationRubricSetup[hidden]{display:none!important}
+.share-row{display:grid;grid-template-columns:minmax(0,1fr) minmax(110px,.65fr) auto;gap:10px;align-items:end}
+.share-row button{margin-bottom:2px}.launch-rubric summary{cursor:pointer;font-weight:700;padding:10px 0}
+.simulation-rubric{border-bottom:1px solid var(--line,#ded7c8);padding:12px 0}.simulation-rubric p{overflow-wrap:anywhere}
+.rubric-dialog{width:min(780px,94vw);max-height:90vh;overflow:auto;border:1px solid #ded7c8;border-radius:20px;padding:22px}
+.rubric-dialog::backdrop{background:#102b2480}.rubric-dialog form>button{margin:12px 12px 0 0}
+@media(max-width:700px){.share-row{grid-template-columns:1fr}.launch-rubric,.rubric-settings,.plan-member{padding:12px}.rubric-dialog{padding:14px}.form-grid>.full{min-width:0}}

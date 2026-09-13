@@ -1,5 +1,5 @@
 registry_version: 1
-project_version: 1.1.0-cahier-app
+project_version: 1.1.2-qualified-local
 source_of_truth: docs/constitution + verified_code
 
 capabilities:
@@ -705,3 +705,19 @@ capabilities:
     audit_event: RUBRIC_UPDATED
     tests: [living-rules, late-posting, solidarity-preview]
 
+
+local_qualification_2026_09_12:
+  production_deployed: false
+  real_money_enabled: false
+  source_server_baseline: 1.0.0-complete-app
+  public_ui_baseline: 1.1.0-cahier-app
+  added: [server_sessions, atomic_financial_operations, authenticated_member_statements, receipt_net_matrix, csv_statement_export, durable_cash_intents, d1_discovery_group_lookup]
+  pending: [legacy_identity_reconciliation, workers_runtime_qualification, recovery_and_mfa, independent_quorum_workflow, full_specialized_domains]
+
+local_qualification_2026_09_13:
+  version: 1.1.2-qualified-local
+  added: [association_rubric_configuration, independent_rubric_simulation, tontine_share_planning, canonical_rubric_materialization, editable_activity_plans, safe_conversion_retry]
+  tests: [association-rubrics.test.mjs]
+  production_deployed: false
+  real_money_enabled: false
+  specialized_payout_engine: pending

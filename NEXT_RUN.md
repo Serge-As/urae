@@ -1,32 +1,8 @@
-# ECO-SYSTEM — NEXT RUN
+# Reprise Eco-System 1.1.2 — 13 septembre 2026
 
-Date : 2026-09-11
-
-Lire `AGENTS.md`, `docs/memory/CURRENT_TRUTH.md`, `docs/memory/PROJECT_TRUTH_LEDGER.json`, le Cahier Maître 2.3.4, le supplément Cahier App 1.1, Feature Registry, Recall/CIR avant modification.
-
-## Acquis — ne pas refaire
-- D1 `eco-system-db` existe et doit être réutilisée exclusivement.
-- Worker `eco-system` existe.
-- Secrets Cloudflare acquis.
-- anciennes lignes 1.0/0.6/0.5 conservées comme checkpoints.
-- `realMoneyEnabled=false`.
-
-## Reprise immédiate
-1. qualifier la Cahier App 1.1 ;
-2. publier sur `next/1.1.0-cahier-app` ;
-3. appliquer seulement les migrations additives ;
-4. déployer sur `eco-system` + `eco-system-db` ;
-5. vérifier `/`, `/health` et `/api/v1/product/capabilities` ;
-6. ouvrir/qualifier la PR 1.1 sans la fusionner ;
-7. mettre Truth Ledger/Current Truth/Project State à jour ;
-8. produire, télécharger, vérifier et sauvegarder BIR+ sous `/Eco-System/` ;
-9. fournir le prompt `docs/prompts/ECO_SYSTEM_PROMPT_REPRISE_CHAT_CODEX_1.1.0.md`.
-
-## Interdictions
-- ne pas recréer D1 ni Secrets ;
-- ne pas force-push/fusionner `main` sans décision explicite ;
-- ne pas activer l'argent réel ;
-- ne pas publier PII/archives privées ;
-- ne pas introduire de migration destructive ;
-- ne pas hard-coder la pratique d'un groupe comme règle universelle ;
-- ne pas confondre Workspace structurel et moteur métier final.
+1. Lire AGENTS, CURRENT_TRUTH, Truth Ledger, PROJECT_STATE, QUALIFICATION et le CIR rubriques. Ne pas recommencer l’audit des mêmes archives.
+2. Utiliser la dernière branche de livraison et son journal. Checkpoint source récent : next/1.1.0-cahier-app à f7c203e919c644466289c587669ef817b74130af. GitHub authentifié a été vérifié ; ne pas redemander systématiquement la connexion.
+3. Terminer les domaines obligatoires encore ouverts dans l’audit, notamment l’identité historique et les distributions réelles par part ; une programmation n’est pas un reçu de bénéfice.
+4. Qualifier le runtime Workers, la migration des comptes et les données de recette avant toute publication en production. Réutiliser eco-system-db et les secrets CLOUDFLARE existants. Garder realMoneyEnabled=false.
+5. Appliquer une seule fiche du document PLAN_20_INNOVATIONS_ET_REPRISE_2026-09-13.md par lot, avec ses tests et limites. Ne pas confondre propositions et fonctions déjà intégrées.
+6. Livrer CI, preuve navigateur, état des exigences, PR, archive vérifiée et crédits accessibles sans inventer une valeur exacte.

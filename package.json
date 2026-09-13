@@ -1,11 +1,11 @@
 {
   "name": "tontine-platform",
-  "version": "1.1.0-cahier-app",
+  "version": "1.1.2-qualified-local",
   "private": true,
   "type": "module",
-  "description": "Eco-System Cahier App 1.1 — mobile-first PWA aligned with Cahier Maître 2.3.4, canonical services, Living Rules, meeting matrix, discovery, finance and governed A-J workspaces",
+  "description": "Eco-System: recovered Cahier UI and locally qualified authenticated core; specialized domains remain incomplete.",
   "engines": {
-    "node": ">=22"
+    "node": ">=24"
   },
   "scripts": {
     "build": "node scripts/build.mjs",

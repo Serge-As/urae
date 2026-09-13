@@ -4,7 +4,18 @@ import type {
   RubricDefinition, GovernanceKnowledgeClaim, WorkspaceRecord
 } from '../../contracts/src/index.js';
 
+export interface FinancialOperation {
+  kind: 'contribution' | 'reversal';
+  entry: LedgerEntry;
+  receipt?: ContributionReceipt;
+  accounts: LedgerAccount[];
+  audit: AuditEvent;
+}
+
 export interface PlatformRepository {
+  commitFinancialOperation(operation: FinancialOperation): FinancialOperation | Promise<FinancialOperation>;
+  getGroupById(id:Id):Group|undefined|Promise<Group|undefined>;
+  listMembershipsForUser(userId:Id):Membership[]|Promise<Membership[]>;
   saveUser(user: User): void | Promise<void>;
   getUser(id: Id): User | undefined | Promise<User | undefined>;
 
@@ -68,6 +79,23 @@ export interface PlatformRepository {
 }
 
 export class InMemoryPlatformRepository implements PlatformRepository {
+  getGroupById(id:Id):Group|undefined {const g=this.groups.get(id);return g?structuredClone(g):undefined;}
+  listMembershipsForUser(userId:Id):Membership[]{return [...this.memberships.values()].filter(m=>m.userId===userId).map(m=>structuredClone(m));}
+  private financialOperations = new Map<string, FinancialOperation>();
+  commitFinancialOperation(operation: FinancialOperation): FinancialOperation {
+    const e=operation.entry;
+    const key=JSON.stringify([e.tenantId,e.groupId,operation.kind,e.idempotencyKey]);
+    const existing=this.financialOperations.get(key);
+    if(existing) return structuredClone(existing);
+    const copy=structuredClone(operation);
+    // All changes are synchronous within this in-memory repository transaction.
+    for(const a of copy.accounts) this.ledgerAccounts.set(a.id,a);
+    this.ledgerEntries.set(copy.entry.id,copy.entry);
+    if(copy.receipt) this.receipts.set(copy.receipt.id,copy.receipt);
+    this.audits.set(copy.audit.id,copy.audit);
+    this.financialOperations.set(key,copy);
+    return structuredClone(copy);
+  }
   private users = new Map<Id, User>();
   private projects = new Map<Id, GroupProject>();
   private groups = new Map<Id, Group>();
@@ -182,6 +210,38 @@ type RecordScope={tenantId?:Id;groupId?:Id;assigneeId?:Id;idempotencyKey?:string
  */
 export class D1PlatformRepository implements PlatformRepository {
   constructor(private readonly db:D1DatabaseLike){}
+  getGroupById(id:Id){return this.byId<Group>('group',id);}
+  listMembershipsForUser(userId:Id){return this.list<Membership>('membership','assignee_id=?',[userId]);}
+
+  async commitFinancialOperation(operation:FinancialOperation):Promise<FinancialOperation>{
+    const e=operation.entry;
+    const scope=[e.tenantId,e.groupId,operation.kind,e.idempotencyKey];
+    const statements=[this.db.prepare(`INSERT INTO financial_operations
+      (tenant_id,group_id,operation_kind,idempotency_key,entry_id,operation_json)
+      VALUES(?,?,?,?,?,?) ON CONFLICT(tenant_id,group_id,operation_kind,idempotency_key) DO NOTHING`)
+      .bind(...scope,e.id,JSON.stringify(operation))];
+    const rows:Array<[string,{id:Id},string|null]>=[
+      ...operation.accounts.map(a=>['ledger_account',a,null] as [string,LedgerAccount,null]),
+      ['ledger_entry',e,e.idempotencyKey],['audit',operation.audit,null]
+    ];
+    if(operation.receipt)rows.push(['contribution_receipt',operation.receipt,e.idempotencyKey]);
+    for(const [type,value,key] of rows){
+      statements.push(this.db.prepare(`INSERT INTO platform_records
+        (record_type,record_id,tenant_id,group_id,assignee_id,idempotency_key,data_json,updated_at)
+        SELECT ?,?,?,?,?,?,?,? WHERE EXISTS (SELECT 1 FROM financial_operations
+          WHERE tenant_id=? AND group_id=? AND operation_kind=? AND idempotency_key=? AND entry_id=?)
+        ON CONFLICT(record_type,record_id) DO NOTHING`)
+        .bind(type,value.id,e.tenantId,e.groupId,null,key,JSON.stringify(value),e.createdAt,...scope,e.id));
+    }
+    // D1 batch is transactional: the receipt, entry, accounts and audit either all
+    // commit or all roll back. The unique operation key arbitrates competing requests.
+    await this.db.batch(statements);
+    const winner=await this.db.prepare(`SELECT operation_json FROM financial_operations
+      WHERE tenant_id=? AND group_id=? AND operation_kind=? AND idempotency_key=?`)
+      .bind(...scope).first<{operation_json:string}>();
+    if(!winner)throw new Error('FINANCIAL_COMMIT_NOT_CONFIRMED');
+    return JSON.parse(winner.operation_json) as FinancialOperation;
+  }
 
   private async saveRecord<T extends {id:Id}>(type:string,value:T,scope:RecordScope={}):Promise<void>{
     const sql=`INSERT INTO platform_records(record_type,record_id,tenant_id,group_id,assignee_id,idempotency_key,data_json,updated_at)
@@ -223,8 +283,16 @@ export class D1PlatformRepository implements PlatformRepository {
   saveCashboxReconciliation(x:CashboxReconciliationRecord){return this.saveRecord('cashbox',x,{tenantId:x.tenantId,groupId:x.groupId});}
   listCashboxReconciliations(t:Id,g:Id){return this.list<CashboxReconciliationRecord>('cashbox','tenant_id=? AND group_id=?',[t,g]);}
   savePublicGroupListing(x:PublicGroupListing){return this.saveRecord('public_group_listing',x,{tenantId:x.tenantId,groupId:x.groupId});}
-  getPublicGroupListing(groupId:Id){return this.byId<PublicGroupListing>('public_group_listing',groupId);}
-  listPublicGroupListings(){return this.list<PublicGroupListing>('public_group_listing');}
+  async getPublicGroupListing(groupId:Id){return (await this.listPublicGroupListings()).find(x=>x.groupId===groupId);}
+  async listPublicGroupListings(){
+    // Historical rows use a listing ID, not the group ID. Retain older versions
+    // while exposing only the latest privacy projection for each group.
+    const latest=new Map<Id,PublicGroupListing>();
+    for(const x of await this.list<PublicGroupListing>('public_group_listing')){
+      const previous=latest.get(x.groupId);if(!previous || x.updatedAt>=previous.updatedAt)latest.set(x.groupId,x);
+    }
+    return [...latest.values()];
+  }
   saveMembershipApplication(x:MembershipApplication){return this.saveRecord('membership_application',x,{tenantId:x.targetTenantId,groupId:x.groupId,assigneeId:x.applicantUserId});}
   getMembershipApplication(id:Id){return this.byId<MembershipApplication>('membership_application',id);}
   listMembershipApplicationsForGroup(t:Id,g:Id){return this.list<MembershipApplication>('membership_application','tenant_id=? AND group_id=?',[t,g]);}

@@ -5,7 +5,8 @@ const empty = () => ({
   version: 1,
   users: {}, projects: {}, groups: {}, memberships: {}, obligations: {}, cases: {}, audits: {}, meetings: {},
   ledgerAccounts: {}, ledgerEntries: {}, receipts: {}, cashboxReconciliations: {},
-  publicGroupListings: {}, membershipApplications: {}, rubricDefinitions: {}, governanceKnowledgeClaims: {}
+  publicGroupListings: {}, membershipApplications: {}, rubricDefinitions: {}, governanceKnowledgeClaims: {},
+  workspaceRecords: {}, financialOperations: {}
 });
 
 const clone = value => value === undefined ? undefined : structuredClone(value);
@@ -32,18 +33,20 @@ export class FilePlatformRepository {
   async #persist() {
     const tmp = `${this.filePath}.tmp`;
     await writeFile(tmp, JSON.stringify(this.data, null, 2), 'utf8');
-    try { await rename(tmp, this.filePath); }
-    catch {
-      await rm(this.filePath, { force: true });
-      await rename(tmp, this.filePath);
-    }
+    await rename(tmp, this.filePath);
   }
 
   async #write(mutator) {
     await this.ready;
     let result;
-    this.writeChain = this.writeChain.then(async () => { result = mutator(); await this.#persist(); });
-    await this.writeChain;
+    const writeJob = this.writeChain.then(async () => {
+      const previous = this.data;
+      this.data = structuredClone(previous);
+      try { result = mutator(); await this.#persist(); }
+      catch (error) { this.data = previous; throw error; }
+    });
+    this.writeChain = writeJob.catch(() => undefined);
+    await writeJob;
     return clone(result);
   }
 
@@ -51,11 +54,28 @@ export class FilePlatformRepository {
   #upsert(bucket, value) { this.data[bucket][value.id] = clone(value); return value; }
   #values(bucket) { return Object.values(this.data[bucket]); }
 
+  commitFinancialOperation(operation) {
+    return this.#write(() => {
+      const e=operation.entry;
+      const key=JSON.stringify([e.tenantId,e.groupId,operation.kind,e.idempotencyKey]);
+      const existing=this.data.financialOperations[key];
+      if(existing)return existing;
+      for(const a of operation.accounts)this.#upsert('ledgerAccounts',a);
+      this.#upsert('ledgerEntries',e);
+      if(operation.receipt)this.#upsert('receipts',operation.receipt);
+      this.#upsert('audits',operation.audit);
+      this.data.financialOperations[key]=clone(operation);
+      return operation;
+    });
+  }
+
   saveUser(v){return this.#write(()=>this.#upsert('users',v));}
   getUser(id){return this.#read(()=>this.data.users[id]);}
   saveProject(v){return this.#write(()=>this.#upsert('projects',v));}
   getProject(t,id){return this.#read(()=>{const x=this.data.projects[id];return x?.tenantId===t?x:undefined;});}
   saveGroup(v){return this.#write(()=>this.#upsert('groups',v));}
+  getGroupById(id){return this.#read(()=>this.data.groups[id]);}
+  listMembershipsForUser(userId){return this.#read(()=>this.#values('memberships').filter(m=>m.userId===userId));}
   getGroup(t,id){return this.#read(()=>{const x=this.data.groups[id];return x?.tenantId===t?x:undefined;});}
   listGroups(t){return this.#read(()=>this.#values('groups').filter(x=>x.tenantId===t));}
   saveMembership(v){return this.#write(()=>this.#upsert('memberships',v));}
@@ -92,4 +112,7 @@ export class FilePlatformRepository {
   listRubricDefinitions(t,g){return this.#read(()=>this.#values('rubricDefinitions').filter(x=>x.tenantId===t&&x.groupId===g));}
   saveGovernanceKnowledgeClaim(v){return this.#write(()=>this.#upsert('governanceKnowledgeClaims',v));}
   listGovernanceKnowledgeClaims(t,g){return this.#read(()=>this.#values('governanceKnowledgeClaims').filter(x=>x.tenantId===t&&(!g||x.groupId===g)));}
+  saveWorkspaceRecord(v){return this.#write(()=>this.#upsert('workspaceRecords',v));}
+  getWorkspaceRecord(t,id){return this.#read(()=>{const x=this.data.workspaceRecords[id];return x?.tenantId===t?x:undefined;});}
+  listWorkspaceRecords(t,m,g){return this.#read(()=>this.#values('workspaceRecords').filter(x=>x.tenantId===t&&(!m||x.moduleId===m)&&(!g||x.groupId===g)));}
 }

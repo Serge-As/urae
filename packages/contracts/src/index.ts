@@ -184,6 +184,32 @@ export interface GroupProject {
   status: 'draft' | 'simulated' | 'converted';
   accessGrants?: ProjectAccessGrant[];
   createdAt: string;
+  rubrics?: LaunchRubricPlan[];
+  convertedGroupId?: Id;
+}
+
+export type RubricActivityKind = 'CONTRIBUTION' | 'TONTINE' | 'SAVINGS' | 'SOLIDARITY' | 'OTHER';
+export interface LaunchRubricPlan {
+  key: string;
+  name: string;
+  kind: RubricActivityKind;
+  nominalAmount: Money;
+  amountBasis: 'PER_MEMBER' | 'PER_SHARE';
+  memberCount: number;
+  shareCount?: number;
+  potCount?: number;
+  participants?: Array<{key:string;name:string;shares:Array<{key:string;name:string;turn?:number}>}>;
+  sessions: number;
+  duration: {value:number;unit:'DAYS'|'WEEKS'|'MONTHS'|'YEARS'|'SESSIONS'};
+  managementFeePerPayment: number;
+  estimatedExternalCostRate: number;
+  fixedCostPerSession: number;
+}
+
+export interface RubricFeasibility {
+  key:string;name:string;kind:RubricActivityKind;currency:Currency;
+  unitsPerSession:number;sessions:number;totalNominalContributions:number;
+  totalManagementFees:number;estimatedExternalCosts:number;fixedOperatingCosts:number;estimatedManagerMargin:number;
 }
 
 export interface FeasibilityResult {
@@ -194,8 +220,9 @@ export interface FeasibilityResult {
   estimatedExternalCosts: number;
   fixedOperatingCosts: number;
   estimatedManagerMargin: number;
-  breakEvenMembers: number;
+  breakEvenMembers?: number;
   assumptions: string[];
+  rubricBreakdown?: RubricFeasibility[];
 }
 
 export interface MeetingSession {
@@ -295,6 +322,17 @@ export interface LedgerSummary {
   cashBalance: number;
   memberFundsLiability: number;
   entryCount: number;
+}
+
+export interface MemberStatement {
+  groupId:Id;
+  groupName:string;
+  membershipId:Id;
+  displayName:string;
+  currency:Currency;
+  asOf:string;
+  totalNetContributions:number;
+  receipts:Array<ContributionReceipt & {netAmount:number}>;
 }
 
 export interface OutboxItem<T = unknown> {
@@ -442,6 +480,7 @@ export interface RubricDefinition {
   purpose?: string;
   facets: RubricFacets;
   operatingModel?: RubricOperatingModel;
+  activityPlan?: LaunchRubricPlan;
   status: 'DRAFT' | 'ACTIVE' | 'PAUSED' | 'ARCHIVED';
   source: 'STARTER' | 'GROUP_CUSTOM' | 'GOVERNANCE_TEXT' | 'MIGRATED';
   version: number;
@@ -505,6 +544,6 @@ export interface WorkspaceRecord {
 }
 
 export const makeId = (prefix: string): string => {
-  const id = globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+  const id = globalThis.crypto.randomUUID();
   return `${prefix}_${id}`;
 };

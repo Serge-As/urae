@@ -2,38 +2,58 @@
 
 Date : 2026-09-11
 
-## Ligne produit courante
-- Cible en qualification : `1.1.0-cahier-app`
-- Branche : `next/1.1.0-cahier-app`
-- Cahier Maître : `2.3.4`
-- URL publique conservée : `https://eco-system.sergemimf.workers.dev/`
+## Ligne produit active
+- Produit visible : `1.0.0-complete-app`
+- Branche : `next/1.0.0-complete-app`
+- URL PWA unique : `https://eco-system.sergemimf.workers.dev/`
 - Worker : `eco-system`
 - D1 : exclusivement `eco-system-db`
-- `realMoneyEnabled=false` : invariant obligatoire.
-- `main` : ne pas fusionner sans décision distincte.
+- `realMoneyEnabled=false` : invariant confirmé à distance.
+- `main` : non fusionné par cette livraison.
 
-## Problème traité
-Le fondateur a constaté que l'interface 1.0 visible ressemblait encore à une vieille version et ne matérialisait pas assez le Cahier. La 1.1 reconstruit l'expérience autour des parcours A→J et corrige la stratégie de cache PWA qui pouvait maintenir une ancienne coque.
+## Qualification Complete App 1.0 — ACQUISE
+- Payload source qualifié SHA-256 : `69380f1dde05b02721ff1d1dee6774fab0a7ec2c5738c6439073f74fc36456ec`
+- Matérialisation GitHub Actions : run `34640865092` — SUCCESS
+- Commit produit matérialisé : `7e08a76` (`feat: materialize Eco-System 1.0 Complete App`)
+- `npm run ci` distant : **48/48 PASS**
+- Architecture Fitness : PASS
+- Shared Governance : **23 guardrails PASS**
+- Service Solidarity : **11 services canoniques PASS**
+- Memory / Truth / Constitution / Source Coverage gates : PASS
 
-## État avant déploiement 1.1
-- branche créée depuis le checkpoint 1.0 qualifié ;
-- interface Cahier App reconstruite localement ;
-- Studio groupe 10 étapes, Meeting Command Center cartes + matrice, hubs B→J, recherche globale et contexte groupe ajoutés ;
-- services canoniques et D1 réutilisés ;
-- capacités sans moteur final restent dans un Workspace D1 truth-labelled ;
-- aucun real money, aucune migration destructive ;
-- déploiement 1.1 : **TO_VERIFY** jusqu'à CI et smoke distants.
+## Cloudflare — VERIFIED_REMOTE
+- Déploiement : workflow `Eco-System 1.0 Complete App — Cloudflare`
+- Run : `34640991448` — SUCCESS
+- D1 résolue : `eco-system-db`
+- Migrations : additives uniquement ; état distant **No migrations to apply**
+- Binding : `env.DB (eco-system-db)`
+- Worker Version ID : `70f028b8-6f6e-4335-bf5c-45afeb067a3d`
+- Racine `/` : smoke PASS, shell **Eco-System Complete App**
+- `/health` : PASS, version `1.0.0-complete-app`
+- `/api/v1/product/capabilities` : PASS
+- Catalogue canonique : **139 capacités**
+- `realMoneyEnabled=false` : PASS
 
-## Acquis distants à préserver
-- GitHub Secrets Cloudflare : acquis ; valeurs jamais stockées.
-- Token Cloudflare : vérifié actif.
-- D1 `eco-system-db` : VERIFIED_REMOTE ; ne pas recréer.
-- Worker `eco-system` : VERIFIED_REMOTE sur la dernière ligne déployée.
-- 1.0 et ses BIR+ restent rollback/recovery.
+## Pull Request Complete App
+- PR : `#3` — **Eco-System 1.0 — Complete App deployable**
+- URL : `https://github.com/Delor85/tontine-platform/pull/3`
+- État : OPEN, non-draft, non fusionnée.
+- La fusion vers `main` reste une décision séparée.
 
-## Living Rules
-« Voilà comment un groupe peut décrire la manière dont sa collation fonctionne. »
-Règle écrite, pratique observée, politique opérationnelle validée, exceptions, autorités et preuves restent séparées et auditables.
+## Doctrine métier maintenue
+Eco-System applique les **Living Rules** : les règles d'un groupe ne deviennent pas automatiquement des interdictions universelles.
+Le système distingue règle écrite, pratique observée, politique opérationnelle validée, exception, autorité et preuve.
 
-## Prochaine action
-Qualifier `npm run ci` → publier le commit 1.1 → déployer sur le même Worker/D1 → vérifier `/`, `/health`, `/api/v1/product/capabilities` → ouvrir la PR 1.1 → mettre la vérité à jour → BIR+ vérifié → Library `/Eco-System/`.
+Acquis 1.0 notamment :
+- simulation gouvernée par capacités/délégations plutôt que créateur seulement ;
+- clôture de réunion comme checkpoint versionné, avec ajustement tardif gouverné lorsque permis ;
+- attendu / encaissé / manque-dette / couverture solidaire / décaissement séparés ;
+- D1 canonique derrière `PlatformRepository` ;
+- PWA/offline + outbox sans fausse finalité financière offline ;
+- catalogue A→J, FR/EN et workspace universel sans dupliquer Ledger/Membership.
+
+## Garde-fous
+Ne pas recréer `eco-system-db`, ne pas recréer les Secrets Cloudflare, ne pas force-push `main`, ne pas introduire de migration destructive, ne pas publier de PII fondatrice brute, ne pas activer l'argent réel sans autorisation séparée.
+
+## Prochaine opération de clôture
+Produire et vérifier le BIR+ 1.0, sauvegarder l'archive sous `/Eco-System/`, puis utiliser la Complete App déployée comme ligne de référence pour les évolutions futures.

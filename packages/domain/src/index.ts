@@ -1,17 +1,20 @@
 import type {
   AuditEvent, CashboxReconciliationRecord, CashboxSnapshot, ContributionReceipt, Currency, FeasibilityResult,
   Group, GroupProject, Id, LedgerAccount, LedgerEntry, LedgerLine, LedgerSummary, MeetingSession, Membership,
-  Money, Obligation, User, CaseRecord, GroupOperatingPolicy, ProjectCapability, ProjectAccessGrant, LatePostingTrace
+  Money, Obligation, User, CaseRecord, GroupOperatingPolicy, ProjectCapability, ProjectAccessGrant, LatePostingTrace, MemberStatement
 } from '../../contracts/src/index.js';
 import { makeId } from '../../contracts/src/index.js';
 import type { PlatformRepository } from '../../repositories/src/index.js';
 import { PlatformKernel } from '../../platform-kernel/src/index.js';
+import type {LaunchRubricPlan} from '../../contracts/src/index.js';
+import {validateLaunchRubrics,simulateRubricPlan} from '../../rubrics/src/launch-config.js';
+import {RubricKnowledgeService} from '../../rubrics/src/index.js';
 
 const assertIntNonNegative = (name: string, value: number): void => {
-  if (!Number.isFinite(value) || value < 0 || !Number.isInteger(value)) throw new Error(`INVALID_${name.toUpperCase()}`);
+  if (!Number.isFinite(value) || value < 0 || !Number.isSafeInteger(value)) throw new Error(`INVALID_${name.toUpperCase()}`);
 };
 const assertIntPositive = (name: string, value: number): void => {
-  if (!Number.isFinite(value) || value <= 0 || !Number.isInteger(value)) throw new Error(`INVALID_${name.toUpperCase()}`);
+  if (!Number.isFinite(value) || value <= 0 || !Number.isSafeInteger(value)) throw new Error(`INVALID_${name.toUpperCase()}`);
 };
 const now = (): string => new Date().toISOString();
 
@@ -77,16 +80,23 @@ export interface CreateGroupProjectInput {
   name: string;
   kind: Group['kind'];
   governanceModel: Group['governanceModel'];
-  memberCount: number;
-  sessions: number;
-  nominalContribution: Money;
-  managementFeePerContribution: Money;
-  estimatedExternalCostRate: number;
-  fixedOperatingCostPerSession: Money;
+  memberCount?: number;
+  sessions?: number;
+  nominalContribution?: Money;
+  managementFeePerContribution?: Money;
+  estimatedExternalCostRate?: number;
+  fixedOperatingCostPerSession?: Money;
+  rubrics?: LaunchRubricPlan[];
 }
 
 export class GroupLaunchSimulator {
   simulate(project: GroupProject): FeasibilityResult {
+    if(project.rubrics!==undefined){
+      const plans=validateLaunchRubrics(project.rubrics),rows=plans.map(simulateRubricPlan);
+      if(new Set(rows.map(r=>r.currency)).size!==1)throw Error('CURRENCY_MISMATCH');
+      const total=(field:'totalNominalContributions'|'totalManagementFees'|'estimatedExternalCosts'|'fixedOperatingCosts'|'estimatedManagerMargin')=>{const sum=rows.reduce((n,r)=>n+r[field],0);if(!Number.isSafeInteger(sum))throw Error('SIMULATION_AMOUNT_OUT_OF_RANGE');return sum;};
+      return{projectId:project.id,currency:rows[0]!.currency,totalNominalContributions:total('totalNominalContributions'),totalManagementFees:total('totalManagementFees'),estimatedExternalCosts:total('estimatedExternalCosts'),fixedOperatingCosts:total('fixedOperatingCosts'),estimatedManagerMargin:total('estimatedManagerMargin'),rubricBreakdown:rows,assumptions:['NO_REAL_MONEY','INDEPENDENT_RUBRIC_CYCLES','NOMINAL_PER_MEMBER_OR_SHARE_PER_TURN','POTS_ARE_BENEFICIARY_SLOTS_NOT_CONTRIBUTION_UNITS','PLANNING_DOES_NOT_CREATE_MEMBERSHIPS_OR_DEBTS','EXCLUDES_ARREARS_DISCOUNTS_PRICE_VARIATIONS']};
+    }
     assertIntPositive('memberCount', project.memberCount);
     assertIntPositive('sessions', project.sessions);
     assertIntNonNegative('nominalContribution', project.nominalContribution.amount);
@@ -146,11 +156,14 @@ export class FoundationService {
     if (!input.name.trim()) throw new Error('GROUP_NAME_REQUIRED');
     if (!GROUP_KINDS.has(input.kind)) throw new Error('INVALID_GROUP_KIND');
     if (!GOVERNANCE_MODELS.has(input.governanceModel)) throw new Error('INVALID_GOVERNANCE_MODEL');
-    assertIntPositive('memberCount', input.memberCount); assertIntPositive('sessions', input.sessions);
-    assertIntNonNegative('nominalContribution', input.nominalContribution.amount); assertIntNonNegative('managementFee', input.managementFeePerContribution.amount); assertIntNonNegative('fixedCost', input.fixedOperatingCostPerSession.amount);
-    if (!Number.isFinite(input.estimatedExternalCostRate) || input.estimatedExternalCostRate < 0 || input.estimatedExternalCostRate > 1) throw new Error('INVALID_EXTERNAL_COST_RATE');
-    if (input.nominalContribution.currency !== input.managementFeePerContribution.currency || input.nominalContribution.currency !== input.fixedOperatingCostPerSession.currency) throw new Error('CURRENCY_MISMATCH');
-    const project: GroupProject = { ...input, name:input.name.trim(), id:makeId('project'), status:'draft', createdAt:now() };
+    const plans=input.rubrics===undefined?undefined:validateLaunchRubrics(input.rubrics);
+    const currency=plans?.[0]?.nominalAmount.currency??input.nominalContribution?.currency??'XAF';
+    // Legacy fields are retained for saved projects; rubric plans are the authority for new configurations.
+    const project:GroupProject={tenantId:input.tenantId,createdBy:input.createdBy,name:input.name.trim(),kind:input.kind,governanceModel:input.governanceModel,id:makeId('project'),status:'draft',createdAt:now(),rubrics:plans,
+      memberCount:plans?1:input.memberCount!,sessions:plans?1:input.sessions!,nominalContribution:plans?{currency,amount:0}:input.nominalContribution!,managementFeePerContribution:plans?{currency,amount:0}:input.managementFeePerContribution!,estimatedExternalCostRate:plans?0:input.estimatedExternalCostRate!,fixedOperatingCostPerSession:plans?{currency,amount:0}:input.fixedOperatingCostPerSession!};
+    if(!plans&&(!project.nominalContribution||!project.managementFeePerContribution||!project.fixedOperatingCostPerSession))throw Error('PROJECT_RUBRICS_REQUIRED');
+    if(!Number.isFinite(project.estimatedExternalCostRate))throw Error('INVALID_EXTERNAL_COST_RATE');
+    this.simulator.simulate(project);
     await this.repo.saveProject(project);
     await persistAudit(this.repo,this.kernel,{ tenantId:input.tenantId, actorId:input.createdBy, action:'GROUP_PROJECT_CREATED', targetType:'group_project', targetId:project.id, requestId, after:project });
     this.kernel.events.publish({ id:makeId('event'), type:'GROUP_PROJECT_CREATED', occurredAt:now(), tenantId:input.tenantId, actorId:input.createdBy, aggregateType:'group_project', aggregateId:project.id, payload:{name:project.name} });
@@ -182,16 +195,20 @@ export class FoundationService {
     const project=await this.repo.getProject(tenantId,projectId); if(!project) throw new Error('PROJECT_NOT_FOUND');
     const ctx=this.kernel.context.get(); if(!projectCan(project,ctx,'CONVERT')) throw new Error('FORBIDDEN_SCOPE');
     if(project.status==='draft') await this.simulateProject(tenantId,projectId,requestId);
-    const existingGroups=await this.repo.listGroups(tenantId);
-    const already=existingGroups.find(g=>g.createdBy===project.createdBy&&g.name===project.name&&project.status==='converted');
-    if(already) return already;
-    const group:Group={id:makeId('group'),tenantId,name:project.name,kind:project.kind,governanceModel:project.governanceModel,status:'active',createdBy:project.createdBy,createdAt:now(),operatingPolicy:starterGroupOperatingPolicy()};
+    if(project.status==='converted'){
+      const already=project.convertedGroupId?await this.repo.getGroup(tenantId,project.convertedGroupId):(await this.repo.listGroups(tenantId)).find(g=>g.createdBy===project.createdBy&&g.name===project.name);
+      if(already)return already;
+    }
+    const groupId=project.convertedGroupId??`group_from_${project.id}`;
+    const group:Group=await this.repo.getGroup(tenantId,groupId)??{id:groupId,tenantId,name:project.name,kind:project.kind,governanceModel:project.governanceModel,status:'active',createdBy:project.createdBy,createdAt:now(),operatingPolicy:starterGroupOperatingPolicy()};
     await this.repo.saveGroup(group);
-    const ownerMembership:Membership={id:makeId('membership'),tenantId,groupId:group.id,userId:project.createdBy,roles:['founder','manager'],status:'active',joinedAt:group.createdAt};
-    await this.repo.saveMembership(ownerMembership);
-    await this.repo.saveProject({...project,status:'converted'});
+    const ownerMembership:Membership={id:`membership_owner_${group.id}`,tenantId,groupId:group.id,userId:project.createdBy,roles:['founder','manager'],status:'active',joinedAt:group.createdAt};
+    if(!(await this.repo.listMemberships(tenantId,group.id)).some(m=>m.userId===project.createdBy))await this.repo.saveMembership(ownerMembership);
+    const rubricService=new RubricKnowledgeService(this.repo,this.kernel);
+    for(const plan of project.rubrics??[])await rubricService.createRubric({tenantId,groupId:group.id,name:plan.name,launchKey:plan.key,launchProjectId:project.id,activityPlan:plan,source:'GROUP_CUSTOM',facets:{direction:'MIXED',obligation:'CUSTOM',medium:'CASH',refundability:'CUSTOM',replenishment:'CUSTOM',interestMode:'CUSTOM',eligibilityMode:'RULE_BASED'}});
     const obligation=this.kernel.obligations.create({tenantId,groupId:group.id,assigneeId:project.createdBy,type:'GROUP_SETUP',title:'OBLIGATION_GROUP_SETUP',priority:'normal',sourceType:'group',sourceId:group.id});
     await this.repo.saveObligation(obligation);
+    await this.repo.saveProject({...project,status:'converted',convertedGroupId:group.id});
     await persistAudit(this.repo,this.kernel,{tenantId,actorId:project.createdBy,action:'GROUP_CREATED_FROM_PROJECT',targetType:'group',targetId:group.id,requestId,after:group});
     this.kernel.events.publish({id:makeId('event'),type:'GROUP_CREATED',occurredAt:now(),tenantId,actorId:project.createdBy,aggregateType:'group',aggregateId:group.id,payload:{projectId}});
     return structuredClone(group);
@@ -278,7 +295,10 @@ const authorizeLatePosting = async (repo:PlatformRepository,group:Group,ctx:{act
     const elapsed=(Date.now()-new Date(meeting.closedAt).getTime())/3600000;
     if(Number.isFinite(elapsed)&&elapsed>late.maxHoursAfterClose) throw new Error('LATE_POSTING_WINDOW_EXPIRED');
   }
-  const candidateIds=[...new Set([ctx.actorId,...(input.approverIds??[])])];
+  // Naming another member is not proof that they approved this operation.
+  // Multi-person approvals require independently authenticated approval records.
+  if((input.approverIds??[]).some(id=>id!==ctx.actorId)) throw new Error('INDEPENDENT_APPROVAL_REQUIRED');
+  const candidateIds=[ctx.actorId];
   if(late.mode==='OPEN_WITH_TRACE') return {isLate:true,reason,approvedBy:candidateIds,meetingClosedAt:meeting.closedAt};
   const eligible:Id[]=[]; let founderPresent=false;
   for(const id of candidateIds){
@@ -294,6 +314,35 @@ const authorizeLatePosting = async (repo:PlatformRepository,group:Group,ctx:{act
 export class LedgerService {
   constructor(public readonly repo:PlatformRepository,public readonly kernel:PlatformKernel){registerGroupPolicies(kernel);}
 
+  async receiptPositions(tenantId:Id,groupId:Id,asOf=now()):Promise<Array<ContributionReceipt & {netAmount:number}>>{
+    const cutoff=Date.parse(asOf);if(!Number.isFinite(cutoff))throw Error('INVALID_STATEMENT_DATE');
+    const entries=(await this.repo.listLedgerEntries(tenantId,groupId)).filter(e=>Date.parse(e.createdAt)<=cutoff);
+    const accounts=await this.repo.listLedgerAccounts(tenantId,groupId);
+    const receipts=(await this.repo.listContributionReceipts(tenantId,groupId)).filter(r=>Date.parse(r.receivedAt)<=cutoff);
+    return receipts.map(receipt=>{
+      if(!entries.some(e=>e.id===receipt.ledgerEntryId))throw Error('RECEIPT_LEDGER_INCONSISTENT');
+      const linked=new Set([receipt.ledgerEntryId]);
+      let previous=-1;while(previous!==linked.size){previous=linked.size;for(const e of entries)if(e.reversalOfEntryId&&linked.has(e.reversalOfEntryId))linked.add(e.id);}
+      const cashIds=new Set(accounts.filter(a=>a.code==='CASH'&&a.currency===receipt.amount.currency).map(a=>a.id));
+      let netAmount=0;for(const e of entries)if(linked.has(e.id))for(const line of e.lines)if(cashIds.has(line.accountId))netAmount+=line.debit-line.credit;
+      return{...receipt,netAmount};
+    });
+  }
+
+  async memberStatement(tenantId:Id,groupId:Id,membershipId:Id,asOf=now()):Promise<MemberStatement>{
+    const ctx=this.kernel.context.get();const group=await assertCanAccessGroup(this.repo,ctx,tenantId,groupId);
+    const member=await this.repo.getMembership(tenantId,groupId,membershipId);if(!member)throw Error('MEMBERSHIP_NOT_FOUND');
+    if(member.userId!==ctx.actorId)await assertCanManageGroup(this.repo,ctx,tenantId,groupId);
+    const cutoff=Date.parse(asOf);if(!Number.isFinite(cutoff))throw Error('INVALID_STATEMENT_DATE');
+    const timestamp=new Date(cutoff).toISOString();
+    const rows=(await this.receiptPositions(tenantId,groupId,timestamp)).filter(r=>r.membershipId===membershipId);
+    const receipts=rows;
+    const currencies=new Set(receipts.map(r=>r.amount.currency));if(currencies.size>1)throw Error('MULTI_CURRENCY_STATEMENT_REQUIRES_FILTER');
+    const currency=receipts[0]?.amount.currency??'XAF';
+    const user=await this.repo.getUser(member.userId);
+    return{groupId,groupName:group.name,membershipId,displayName:user?.displayName??member.userId,currency,asOf:timestamp,totalNetContributions:rows.reduce((n,r)=>n+r.netAmount,0),receipts:rows};
+  }
+
   private validateBalanced(entry:LedgerEntry):void{
     if(entry.lines.length<2) throw new Error('LEDGER_MINIMUM_TWO_LINES');
     let debit=0,credit=0;
@@ -305,25 +354,36 @@ export class LedgerService {
     const accounts=await this.repo.listLedgerAccounts(tenantId,groupId);
     let cash=accounts.find(a=>a.code==='CASH'&&a.currency===currency);
     let memberFunds=accounts.find(a=>a.code==='MEMBER_FUNDS_LIABILITY'&&a.currency===currency);
-    if(!cash){cash={id:makeId('acct'),tenantId,groupId,code:'CASH',nameCode:'LEDGER_ACCOUNT_CASH',type:'asset',currency,createdAt:now()};await this.repo.saveLedgerAccount(cash);}
-    if(!memberFunds){memberFunds={id:makeId('acct'),tenantId,groupId,code:'MEMBER_FUNDS_LIABILITY',nameCode:'LEDGER_ACCOUNT_MEMBER_FUNDS',type:'liability',currency,createdAt:now()};await this.repo.saveLedgerAccount(memberFunds);}
+    if(!cash){cash={id:`acct_cash_${encodeURIComponent(JSON.stringify([tenantId,groupId,currency]))}`,tenantId,groupId,code:'CASH',nameCode:'LEDGER_ACCOUNT_CASH',type:'asset',currency,createdAt:now()};}
+    if(!memberFunds){memberFunds={id:`acct_funds_${encodeURIComponent(JSON.stringify([tenantId,groupId,currency]))}`,tenantId,groupId,code:'MEMBER_FUNDS_LIABILITY',nameCode:'LEDGER_ACCOUNT_MEMBER_FUNDS',type:'liability',currency,createdAt:now()};}
     return {cash,memberFunds};
   }
 
   async recordCashContribution(input:{tenantId:Id;groupId:Id;membershipId:Id;amount:number;currency?:Currency;meetingId?:Id;rubricId?:Id;lateReason?:string;approverIds?:Id[];idempotencyKey:string},requestId=makeId('req')):Promise<ContributionReceipt>{
     assertIntPositive('contributionAmount',input.amount); if(!input.idempotencyKey.trim()) throw new Error('IDEMPOTENCY_KEY_REQUIRED');
-    const existing=await this.repo.findContributionReceiptByIdempotency(input.tenantId,input.groupId,input.idempotencyKey); if(existing) return existing;
     const ctx=this.kernel.context.get(); const group=await assertCanManageGroup(this.repo,ctx,input.tenantId,input.groupId);
+    const sameIntent=(receipt:ContributionReceipt)=>{
+      if(receipt.membershipId!==input.membershipId || receipt.amount.amount!==input.amount ||
+        receipt.amount.currency!==(input.currency??'XAF') || receipt.meetingId!==input.meetingId ||
+        receipt.rubricId!==input.rubricId) throw new Error('IDEMPOTENCY_CONFLICT');
+      return receipt;
+    };
+    const existing=await this.repo.findContributionReceiptByIdempotency(input.tenantId,input.groupId,input.idempotencyKey);
+    if(existing) return sameIntent(existing);
+    if(input.rubricId && !(await this.repo.getRubricDefinition(input.tenantId,input.groupId,input.rubricId))) throw new Error('RUBRIC_NOT_FOUND');
     const membership=await this.repo.getMembership(input.tenantId,input.groupId,input.membershipId); if(!membership||membership.status!=='active') throw new Error('MEMBERSHIP_NOT_FOUND');
     let latePosting:LatePostingTrace|undefined;
     if(input.meetingId){const meeting=await this.repo.getMeeting(input.tenantId,input.groupId,input.meetingId);if(!meeting) throw new Error('MEETING_NOT_FOUND');if(meeting.status==='cancelled') throw new Error('MEETING_NOT_OPEN');if(meeting.status==='closed') latePosting=await authorizeLatePosting(this.repo,group,ctx,meeting,input);}
     const decision=this.kernel.policy.evaluate('group:manage',{...ctx,activeGroupId:input.groupId},{groupId:input.groupId}); if(!decision.allowed) throw new Error(decision.reason);
     const currency=input.currency??'XAF'; const accounts=await this.ensureStandardAccounts(input.tenantId,input.groupId,currency);
     const entry:LedgerEntry={id:makeId('ledger'),tenantId:input.tenantId,groupId:input.groupId,currency,descriptionCode:'LEDGER_CASH_CONTRIBUTION',sourceType:'membership_contribution',sourceId:membership.id,idempotencyKey:input.idempotencyKey,meetingId:input.meetingId,createdAt:now(),createdBy:ctx.actorId,lines:[{accountId:accounts.cash.id,debit:input.amount,credit:0,memoCode:'LEDGER_CASH_RECEIVED'},{accountId:accounts.memberFunds.id,debit:0,credit:input.amount,memoCode:'LEDGER_MEMBER_FUNDS_CREDITED'}]};
-    this.validateBalanced(entry); await this.repo.saveLedgerEntry(entry);
+    this.validateBalanced(entry);
     const receipt:ContributionReceipt={id:makeId('receipt'),tenantId:input.tenantId,groupId:input.groupId,membershipId:membership.id,amount:{currency,amount:input.amount},paymentMethod:'cash',ledgerEntryId:entry.id,meetingId:input.meetingId,rubricId:input.rubricId,latePosting,receivedAt:entry.createdAt,receivedBy:ctx.actorId,idempotencyKey:input.idempotencyKey};
-    await this.repo.saveContributionReceipt(receipt);
-    await persistAudit(this.repo,this.kernel,{tenantId:input.tenantId,actorId:ctx.actorId,action:'CASH_CONTRIBUTION_POSTED',targetType:'ledger_entry',targetId:entry.id,requestId,after:{entry,receipt}});
+    const audit=this.kernel.audit.append({tenantId:input.tenantId,actorId:ctx.actorId,action:'CASH_CONTRIBUTION_POSTED',targetType:'ledger_entry',targetId:entry.id,requestId,after:{entry,receipt}});
+    const committed=await this.repo.commitFinancialOperation({kind:'contribution',entry,receipt,accounts:[accounts.cash,accounts.memberFunds],audit});
+    if(!committed.receipt)throw new Error('FINANCIAL_COMMIT_NOT_CONFIRMED');
+    sameIntent(committed.receipt);
+    if(committed.entry.id!==entry.id)return committed.receipt;
     this.kernel.events.publish({id:makeId('event'),type:'CASH_CONTRIBUTION_POSTED',occurredAt:now(),tenantId:input.tenantId,actorId:ctx.actorId,aggregateType:'group',aggregateId:input.groupId,payload:{membershipId:membership.id,amount:input.amount,currency,receiptId:receipt.id},idempotencyKey:input.idempotencyKey});
     return receipt;
   }
@@ -335,16 +395,16 @@ export class LedgerService {
     const reason=input.reason.trim(); if(!reason) throw new Error('REVERSAL_REASON_REQUIRED');
     const lines:LedgerLine[]=original.lines.map(l=>({accountId:l.accountId,debit:l.credit,credit:l.debit,memoCode:'LEDGER_REVERSAL'}));
     const reversal:LedgerEntry={id:makeId('ledger'),tenantId:input.tenantId,groupId:input.groupId,currency:original.currency,descriptionCode:'LEDGER_REVERSAL',sourceType:'ledger_reversal',sourceId:original.id,idempotencyKey:key,createdAt:now(),createdBy:ctx.actorId,meetingId:original.meetingId,reversalOfEntryId:original.id,lines};
-    this.validateBalanced(reversal); await this.repo.saveLedgerEntry(reversal);
-    await persistAudit(this.repo,this.kernel,{tenantId:input.tenantId,actorId:ctx.actorId,action:'LEDGER_ENTRY_REVERSED',targetType:'ledger_entry',targetId:reversal.id,requestId,metadata:{originalEntryId:original.id,reason},after:reversal});
-    return reversal;
+    this.validateBalanced(reversal);
+    const audit=this.kernel.audit.append({tenantId:input.tenantId,actorId:ctx.actorId,action:'LEDGER_ENTRY_REVERSED',targetType:'ledger_entry',targetId:reversal.id,requestId,metadata:{originalEntryId:original.id,reason},after:reversal});
+    return (await this.repo.commitFinancialOperation({kind:'reversal',entry:reversal,accounts:[],audit})).entry;
   }
 
   async summary(tenantId:Id,groupId:Id,currency:Currency='XAF'):Promise<LedgerSummary>{
     const accounts=await this.repo.listLedgerAccounts(tenantId,groupId); const entries=(await this.repo.listLedgerEntries(tenantId,groupId)).filter(e=>e.currency===currency);
-    const cashId=accounts.find(a=>a.code==='CASH'&&a.currency===currency)?.id; const liabilityId=accounts.find(a=>a.code==='MEMBER_FUNDS_LIABILITY'&&a.currency===currency)?.id;
+    const cashIds=new Set(accounts.filter(a=>a.code==='CASH'&&a.currency===currency).map(a=>a.id)); const liabilityIds=new Set(accounts.filter(a=>a.code==='MEMBER_FUNDS_LIABILITY'&&a.currency===currency).map(a=>a.id));
     let cashBalance=0,memberFundsLiability=0;
-    for(const e of entries) for(const l of e.lines){if(l.accountId===cashId) cashBalance+=l.debit-l.credit;if(l.accountId===liabilityId) memberFundsLiability+=l.credit-l.debit;}
+    for(const e of entries) for(const l of e.lines){if(cashIds.has(l.accountId)) cashBalance+=l.debit-l.credit;if(liabilityIds.has(l.accountId)) memberFundsLiability+=l.credit-l.debit;}
     return {currency,cashBalance,memberFundsLiability,entryCount:entries.length};
   }
 }
