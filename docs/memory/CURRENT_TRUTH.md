@@ -65,6 +65,10 @@ Garde-fous permanents :
 - ne pas publier PII/archives privées;
 - préserver Living Rules, Ledger et Membership canoniques, isolation multi-tenant, idempotence et outbox.
 
+## Ancres historiques à préserver
+
+La ligne `1.0.0-complete-app` reste une référence historique supersédée et ne doit pas être effacée du Truth Ledger. Les prérequis **CLOUDFLARE** déjà acquis, notamment les secrets GitHub documentés sans valeur et la D1 `eco-system-db`, restent valides. La doctrine **Living Rules** et l'invariant `realMoneyEnabled=false` demeurent applicables à la ligne 1.2.
+
 ## Point de reprise
 
 Partir exclusivement de `next/1.2.0-functional-completion-20260913`. Considérer la production 1.2 et le correctif multi-tontines comme acquis. Ne pas revenir à l'ancien cockpit 2.3.4 / build 2026-09-11 ni à la logique d'une cotisation nominale unique.
