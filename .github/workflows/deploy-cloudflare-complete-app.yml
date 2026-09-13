@@ -15,6 +15,7 @@ concurrency:
 
 env:
   ECO_SYSTEM_DB: eco-system-db
+  R2_BUCKET: eco-system-backups
   ECO_SYSTEM_ROOT: https://eco-system.sergemimf.workers.dev/
   ECO_SYSTEM_HEALTH: https://eco-system.sergemimf.workers.dev/health
   ECO_SYSTEM_CATALOG: https://eco-system.sergemimf.workers.dev/api/v1/product/capabilities
