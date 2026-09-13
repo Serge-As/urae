@@ -10,6 +10,9 @@ import {
   explainLedgerAnomalies, makeIcs, suggestTontineSchedule, type CompletionKind
 } from '../../../packages/completion/src/index.js';
 import { ExplainabilityService, DocumentSearchService, previewCsv, buildNotificationDigest } from '../../../packages/innovation/src/index.js';
+import { ReceivablesService, TreasuryService, RiskFinanceService } from '../../../packages/finance/src/index.js';
+import { MarketService } from '../../../packages/market/src/index.js';
+import { HistoricalImportService, type ArtifactStoreLike } from '../../../packages/imports/src/index.js';
 import { authenticatedApi } from './authenticated.js';
 
 const defaultRepo = new InMemoryPlatformRepository();
@@ -41,15 +44,17 @@ const finite = (value: unknown, fallback?: number): number => {
   const n=Number(value); if(!Number.isFinite(n)) throw new Error('INVALID_NUMBER'); return n;
 };
 
-const createRequestScope = (request:Request,repo:PlatformRepository) => {
+const createRequestScope = (request:Request,repo:PlatformRepository,artifacts?:ArtifactStoreLike) => {
   const kernel=new PlatformKernel();
   const foundation=new FoundationService(repo,kernel); const ledger=new LedgerService(repo,kernel); const meetings=new MeetingService(repo,kernel); const discovery=new DiscoveryService(repo,kernel); const membershipGateway=new MembershipGatewayService(repo,kernel); const rubrics=new RubricKnowledgeService(repo,kernel);
   const completion=new CompletionSuiteService(repo,kernel);
   const explainability=new ExplainabilityService(repo,kernel); const documents=new DocumentSearchService(repo,kernel);
+  const receivables=new ReceivablesService(repo,kernel); const treasury=new TreasuryService(repo,kernel,ledger); const riskFinance=new RiskFinanceService(repo,kernel,ledger); const market=new MarketService(repo,kernel);
+  const imports=new HistoricalImportService(repo,kernel,ledger,completion,artifacts);
   const tenantId=request.headers.get('x-tenant-id')??'tenant_demo'; const actorId=request.headers.get('x-actor-id')??'user_founder';
   const groupRoles=(request.headers.get('x-group-roles')??'founder,manager').split(',').map(x=>x.trim()).filter(Boolean);
   kernel.context.set({actorId,tenantId,activeGroupId:request.headers.get('x-active-group-id')??undefined,groupRoles,mandateIds:[],deviceId:request.headers.get('x-device-id')??'device_web_demo',sessionId:request.headers.get('x-session-id')??'session_demo',locale:request.headers.get('accept-language')?.toLowerCase().startsWith('en')?'en':'fr',timezone:request.headers.get('x-timezone')??'Africa/Douala',connectivity:'online',requestId:request.headers.get('x-request-id')??makeId('req')});
-  return {kernel,foundation,ledger,meetings,discovery,membershipGateway,rubrics,completion,explainability,documents};
+  return {kernel,foundation,ledger,meetings,discovery,membershipGateway,rubrics,completion,explainability,documents,receivables,treasury,riskFinance,market,imports};
 };
 
 const inboxFor = async (repo:PlatformRepository,tenantId:string,actorId:string) => {
@@ -58,13 +63,13 @@ const inboxFor = async (repo:PlatformRepository,tenantId:string,actorId:string) 
   return [...obligations,...cases];
 };
 
-export const createApiHandler = (repo:PlatformRepository = defaultRepo) => async (request:Request):Promise<Response> => {
+export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{artifacts?:ArtifactStoreLike}={}) => async (request:Request):Promise<Response> => {
   const url=new URL(request.url); const cors=corsHeaders(request);
   if(request.method==='OPTIONS'){
     const allowed=Boolean((cors as Record<string,string>)['access-control-allow-origin']);
     return new Response(null,{status:allowed?204:403,headers:{...baseSecurityHeaders,...cors,'access-control-allow-methods':'GET,POST,PUT,OPTIONS','access-control-allow-headers':'content-type,x-tenant-id,x-actor-id,x-group-roles,x-active-group-id,x-device-id,x-session-id,x-request-id,x-timezone'}});
   }
-  const {kernel,foundation,ledger,meetings,discovery,membershipGateway,rubrics,completion,explainability,documents}=createRequestScope(request,repo); const ctx=kernel.context.get();
+  const {kernel,foundation,ledger,meetings,discovery,membershipGateway,rubrics,completion,explainability,documents,receivables,treasury,riskFinance,market,imports}=createRequestScope(request,repo,options.artifacts); const ctx=kernel.context.get();
   const requireGroup=async(groupId:string,manage=false)=>{
     const group=await repo.getGroup(ctx.tenantId,groupId);if(!group)throw Error('GROUP_NOT_FOUND');
     if(group.createdBy===ctx.actorId)return group;
