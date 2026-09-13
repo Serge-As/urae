@@ -6,8 +6,8 @@
   <meta name="theme-color" content="#1f6b4f">
   <meta id="metaDescription" name="description" content="Eco-System — plateforme de gestion de tontines, associations et communautés">
   <link rel="manifest" href="/manifest.webmanifest">
-  <link rel="stylesheet" href="/styles.css?v=112">
-  <title>Eco-System — Cahier App 1.1.2 · locale</title>
+  <link rel="stylesheet" href="/styles.css?v=120">
+  <title>Eco-System — Cahier App 1.2.0 · locale</title>
 </head>
 <body class="signed-out">
   <section id="authScreen" class="auth-screen" aria-label="Connexion à Eco-System">
@@ -27,7 +27,7 @@
 <header class="topbar">
     <div class="brand">
       <div class="logo">E</div>
-      <div><strong>Eco-System</strong><small>Plateforme Tontines · Associations · Communautés</small><span class="version-badge">CAHIER APP · 1.1.2</span></div>
+      <div><strong>Eco-System</strong><small>Plateforme Tontines · Associations · Communautés</small><span class="version-badge">CAHIER APP · 1.2.0</span></div>
     </div>
     <div class="top-context">
       <select id="activeGroupSelect" aria-label="Groupe actif"><option value="">Aucun groupe actif</option></select>
@@ -62,7 +62,7 @@
 
     <main class="content">
       <section id="view-dashboard" class="view active">
-        <div class="cahier-banner"><div><strong>Votre espace de gestion, version locale</strong><p>Comptes personnels, groupes, séances, cotisations et relevés. Les services en préparation sont identifiés dans le catalogue.</p></div><span class="cahier-code">1.1.2 LOCALE</span></div>
+        <div class="cahier-banner"><div><strong>Votre espace de gestion, version locale</strong><p>Comptes personnels, groupes, séances, cotisations et relevés. Les services en préparation sont identifiés dans le catalogue.</p></div><span class="cahier-code">1.2.0 LOCALE</span></div>
         <div class="hero">
           <div>
             <span class="eyebrow">Eco-System · Cahier Maître 2.3.4</span>
@@ -213,6 +213,38 @@
             </div>
             <div id="rubricList" class="stack"></div>
           </section>
+          <section class="panel completion-panel" id="tontineCompletionPanel">
+            <div class="panel-head"><div><h2 data-i-runtime="tontineCenter">Tontine opérationnelle</h2><p data-i-runtime="tontineCenterIntro">Cycle, parts, programmation des pots et décaissement restent distincts et traçables.</p></div><button id="readinessBtn" type="button" class="link-btn">Vérifier le groupe</button></div>
+            <div class="two-col">
+              <form id="tontineCycleForm" class="form-grid">
+                <h3>Créer un cycle</h3>
+                <label>Rubrique<select id="tontineCycleRubric"></select></label>
+                <label>Nom du cycle<input id="tontineCycleName" required placeholder="Ex. Cycle 2027"></label>
+                <label>Nombre de tours<input id="tontineRounds" type="number" min="1" step="1" value="12" required></label>
+                <label>Pots servis par tour<input id="tontinePots" type="number" min="1" step="1" value="1" required></label>
+                <label>Montant indicatif du pot<input id="tontinePotAmount" type="number" min="1" step="1" value="10000"></label>
+                <button class="primary">Créer le cycle</button>
+              </form>
+              <form id="tontineShareForm" class="form-grid">
+                <h3>Ajouter une part / un nom</h3>
+                <label>Cycle<select id="tontineShareCycle"></select></label>
+                <label>Membre<select id="tontineShareMember"></select></label>
+                <label>Nom de la part<input id="tontineShareLabel" required placeholder="Ex. Serge — Nom 4"></label>
+                <button class="primary">Ajouter la part</button>
+              </form>
+            </div>
+            <div class="actions"><button id="suggestTontineScheduleBtn" type="button">Proposer un planning</button><button id="applyTontineScheduleBtn" type="button" class="primary" disabled>Appliquer le planning proposé</button></div>
+            <div id="tontineSchedulePreview" class="result"></div>
+            <form id="tontineServeForm" class="inline-grid">
+              <label>Part programmée<select id="tontineServeShare"></select></label>
+              <label>Montant du pot<input id="tontineServeAmount" type="number" min="1" step="1" value="10000"></label>
+              <label>Séance<select id="tontineServeMeeting"><option value="">Sans séance</option></select></label>
+              <button class="primary">Servir le pot</button>
+            </form>
+            <div id="tontineCompletionList" class="stack"></div>
+            <div id="readinessResult" class="result"></div>
+          </section>
+
           <section class="panel"><div class="section-kicker"><div><h2>Présence, PV, bénéficiaires et publication</h2><p>Le cockpit de réunion s’étend sans casser le ledger ni les règles du groupe.</p></div></div><div id="meetingHub" class="hub-grid"></div></section>
         </div>
       </section>
@@ -259,6 +291,42 @@
             <div id="rubricPreviewResult" class="result"></div>
           </section>
 
+          <section class="panel" id="loanCompletionPanel">
+            <div class="panel-head"><div><h2>Prêts, obligations et décisions</h2><p>Les simulations, approbations, décaissements et remboursements sont séparés.</p></div></div>
+            <div class="two-col">
+              <form id="loanForm" class="form-grid">
+                <h3>Nouveau prêt</h3>
+                <label>Emprunteur<select id="loanBorrower"></select></label>
+                <label>Capital<input id="loanPrincipal" type="number" min="1" step="1" value="50000" required></label>
+                <label>Échéances<input id="loanInstallments" type="number" min="1" step="1" value="5" required></label>
+                <label>Taux annuel %<input id="loanRate" type="number" min="0" step="0.01" value="10"></label>
+                <label>Frais totaux<input id="loanFees" type="number" min="0" step="1" value="0"></label>
+                <label>Méthode<select id="loanMethod"><option value="DECLINING">Capital restant dû</option><option value="FLAT">Taux fixe sur capital initial</option></select></label>
+                <button class="primary">Simuler et créer la demande</button>
+              </form>
+              <div><h3>Échéancier simulé</h3><div id="loanQuoteResult" class="table-list"></div></div>
+            </div>
+            <div id="loanList" class="stack"></div>
+            <div class="two-col">
+              <form id="obligationForm" class="form-grid">
+                <h3>Créer une échéance</h3>
+                <label>Membre<select id="obligationMember"></select></label>
+                <label>Libellé<input id="obligationTitle" required placeholder="Ex. Cotisation de septembre"></label>
+                <label>Date limite<input id="obligationDueAt" type="datetime-local"></label>
+                <label>Montant<input id="obligationAmount" type="number" min="0" step="1"></label>
+                <button class="primary">Créer l’obligation</button>
+              </form>
+              <form id="decisionForm" class="form-grid">
+                <h3>Décision gouvernée</h3>
+                <label>Titre<input id="decisionTitle" required></label>
+                <label>Objet<textarea id="decisionSubject" rows="3" required></textarea></label>
+                <label>Validations indépendantes requises<input id="decisionThreshold" type="number" min="1" step="1" value="2"></label>
+                <button class="primary">Préparer la décision</button>
+              </form>
+            </div>
+            <div id="decisionList" class="stack"></div>
+          </section>
+
           <section class="panel"><div class="panel-head"><div><h2>Ledger</h2><p>Vérité financière canonique.</p></div></div><div id="ledgerMetrics" class="metrics small"></div><div id="receiptList" class="table-list"></div></section>
           <section class="panel"><div class="section-kicker"><div><h2>Prêts, épargne, tontines et assistance</h2><p>Les flux spécialisés restent séparés, puis se réconcilient dans le ledger canonique.</p></div></div><div id="financeHub" class="hub-grid"></div></section>
         </div>
@@ -281,6 +349,19 @@
 
       <section id="view-services" class="view">
         <div class="page-head"><div><span class="eyebrow">Catalogue exécutable · 139 capacités</span><h1>Tous les services du Cahier, sans fausse complétude</h1><p>Un moteur spécialisé reste spécialisé. Une capacité en maturation utilise un dossier persistant D1 jusqu’à son moteur final, sans dupliquer Ledger, Membership, authentification ou paiement.</p></div></div>
+        <section class="panel" id="completionLab">
+          <div class="panel-head"><div><h2>Laboratoire fonctionnel 1.2</h2><p>Les innovations sont des workflows versionnés, jamais de simples notes. Les actions à risque restent gouvernées.</p></div><button id="completionReload" type="button" class="link-btn">Actualiser</button></div>
+          <div class="two-col">
+            <form id="completionForm" class="form-grid">
+              <label>Workflow<select id="completionKind"></select></label>
+              <label>Titre<input id="completionTitle" required></label>
+              <label class="full">Résumé<textarea id="completionSummary" rows="3"></textarea></label>
+              <label class="full">Données avancées JSON<textarea id="completionData" rows="5" placeholder='{"source":"terrain","consent":true}'></textarea></label>
+              <button class="primary">Créer le workflow</button>
+            </form>
+            <div><h3>État et transitions</h3><div id="completionRecords" class="stack"></div></div>
+          </div>
+        </section>
         <div class="status-legend"><span class="truth-chip foundation_active">Moteur actif</span><span class="truth-chip structural_v1">Structure / workspace</span><span class="truth-chip planned_domain">Domaine planifié</span><span class="truth-chip later_optional">Option ultérieure</span></div><br>
         <div class="two-col">
           <section class="panel">
@@ -326,7 +407,7 @@
     </main>
   </div>
 
-  <footer class="footer">Eco-System 1.1.2 · Version locale · Cahier Maître 2.3.4</footer>
-  <script type="module" src="/src/main.js?v=112"></script>
+  <footer class="footer">Eco-System 1.2.0 · Version locale · Cahier Maître 2.3.4</footer>
+  <script type="module" src="/src/main.js?v=120"></script>
 </body>
 </html>
