@@ -17,6 +17,7 @@ const assertIntPositive = (name: string, value: number): void => {
   if (!Number.isFinite(value) || value <= 0 || !Number.isSafeInteger(value)) throw new Error(`INVALID_${name.toUpperCase()}`);
 };
 const now = (): string => new Date().toISOString();
+const requiredTextCode = (value:string):string => { const clean=value.trim().replace(/[^A-Z0-9_]/gi,'_').toUpperCase(); if(!clean)throw new Error('LEDGER_ACCOUNT_CODE_REQUIRED'); return clean; };
 
 const MANAGEMENT_ROLES = new Set(['founder','manager','admin','president','treasurer']);
 const GROUP_KINDS = new Set<Group['kind']>(['association','rotating_tontine','in_kind_tontine','hybrid']);
@@ -386,6 +387,67 @@ export class LedgerService {
     if(committed.entry.id!==entry.id)return committed.receipt;
     this.kernel.events.publish({id:makeId('event'),type:'CASH_CONTRIBUTION_POSTED',occurredAt:now(),tenantId:input.tenantId,actorId:ctx.actorId,aggregateType:'group',aggregateId:input.groupId,payload:{membershipId:membership.id,amount:input.amount,currency,receiptId:receipt.id},idempotencyKey:input.idempotencyKey});
     return receipt;
+  }
+
+  private async ensureNamedAccount(tenantId:Id,groupId:Id,currency:Currency,code:string,type:LedgerAccount['type']):Promise<LedgerAccount>{
+    const existing=(await this.repo.listLedgerAccounts(tenantId,groupId)).find(a=>a.code===code&&a.currency===currency);
+    if(existing)return existing;
+    return{id:'acct_'+encodeURIComponent(JSON.stringify([tenantId,groupId,currency,code])),tenantId,groupId,code,nameCode:'LEDGER_ACCOUNT_'+code,type,currency,createdAt:now()};
+  }
+
+  async recordCashMovement(input:{
+    tenantId:Id;groupId:Id;amount:number;currency?:Currency;direction:'in'|'out';
+    counterAccountCode:string;counterAccountType:LedgerAccount['type'];descriptionCode:string;
+    sourceType:string;sourceId:Id;meetingId?:Id;idempotencyKey:string;
+    kind:'cash_in'|'cash_out'|'loan_disbursement'|'loan_repayment'|'tontine_benefit'|'opening_balance'|'transfer';
+  },requestId=makeId('req')):Promise<LedgerEntry>{
+    assertIntPositive('cashMovementAmount',input.amount);
+    if(!input.idempotencyKey.trim())throw new Error('IDEMPOTENCY_KEY_REQUIRED');
+    const ctx=this.kernel.context.get();
+    const group=await assertCanManageGroup(this.repo,ctx,input.tenantId,input.groupId);
+    const decision=this.kernel.policy.evaluate('group:manage',{...ctx,activeGroupId:input.groupId},{groupId:input.groupId});
+    if(!decision.allowed)throw new Error(decision.reason);
+    if(input.meetingId){
+      const meeting=await this.repo.getMeeting(input.tenantId,input.groupId,input.meetingId);
+      if(!meeting)throw new Error('MEETING_NOT_FOUND');
+      if(meeting.status!=='open')throw new Error('MEETING_NOT_OPEN');
+    }
+    const currency=input.currency??'XAF';
+    const existing=await this.repo.findLedgerEntryByIdempotency(input.tenantId,input.groupId,input.idempotencyKey);
+    if(existing){
+      const total=existing.lines.reduce((n,l)=>n+l.debit,0);
+      if(existing.currency!==currency||existing.sourceType!==input.sourceType||existing.sourceId!==input.sourceId||
+        existing.descriptionCode!==input.descriptionCode||total!==input.amount)throw new Error('IDEMPOTENCY_CONFLICT');
+      return existing;
+    }
+    if(input.direction==='out'){
+      const balance=(await this.summary(input.tenantId,input.groupId,currency)).cashBalance;
+      if(balance<input.amount)throw new Error('INSUFFICIENT_CASH');
+    }
+    const standard=await this.ensureStandardAccounts(input.tenantId,input.groupId,currency);
+    const counter=input.counterAccountCode==='MEMBER_FUNDS_LIABILITY'
+      ? standard.memberFunds
+      : await this.ensureNamedAccount(input.tenantId,input.groupId,currency,requiredTextCode(input.counterAccountCode),input.counterAccountType);
+    const lines:LedgerLine[]=input.direction==='out'
+      ? [{accountId:counter.id,debit:input.amount,credit:0,memoCode:input.descriptionCode+'_COUNTER'},
+         {accountId:standard.cash.id,debit:0,credit:input.amount,memoCode:input.descriptionCode+'_CASH'}]
+      : [{accountId:standard.cash.id,debit:input.amount,credit:0,memoCode:input.descriptionCode+'_CASH'},
+         {accountId:counter.id,debit:0,credit:input.amount,memoCode:input.descriptionCode+'_COUNTER'}];
+    const entry:LedgerEntry={id:makeId('ledger'),tenantId:input.tenantId,groupId:input.groupId,currency,
+      descriptionCode:input.descriptionCode,sourceType:input.sourceType,sourceId:input.sourceId,
+      idempotencyKey:input.idempotencyKey,createdAt:now(),createdBy:ctx.actorId,meetingId:input.meetingId,lines};
+    this.validateBalanced(entry);
+    const audit=this.kernel.audit.append({tenantId:input.tenantId,actorId:ctx.actorId,action:'CASH_MOVEMENT_POSTED',
+      targetType:'ledger_entry',targetId:entry.id,requestId,metadata:{kind:input.kind,direction:input.direction},after:entry});
+    const committed=await this.repo.commitFinancialOperation({kind:input.kind,entry,accounts:[standard.cash,counter],audit});
+    if(committed.entry.id!==entry.id){
+      const total=committed.entry.lines.reduce((n,l)=>n+l.debit,0);
+      if(total!==input.amount||committed.entry.sourceId!==input.sourceId)throw new Error('IDEMPOTENCY_CONFLICT');
+    }
+    this.kernel.events.publish({id:makeId('event'),type:'CASH_MOVEMENT_POSTED',occurredAt:now(),tenantId:input.tenantId,
+      actorId:ctx.actorId,aggregateType:'group',aggregateId:group.id,payload:{entryId:committed.entry.id,kind:input.kind,amount:input.amount,currency},
+      idempotencyKey:input.idempotencyKey});
+    return committed.entry;
   }
 
   async reverseEntry(input:{tenantId:Id;groupId:Id;entryId:Id;reason:string},requestId=makeId('req')):Promise<LedgerEntry>{
