@@ -19,7 +19,7 @@ const launchEditors=[];
 let modules = [];
 let selectedLot = 'ALL';
 let deferredInstallPrompt;
-const CAHIER_VERSION = '1.1.2-qualified-local';
+const CAHIER_VERSION = '1.2.0-functional-completion';
 const $ = (s) => { const e = document.querySelector(s); if (!e)
     throw new Error(`UI_ELEMENT_NOT_FOUND:${s}`); return e; };
 const val = (id) => document.getElementById(id).value.trim();
@@ -75,6 +75,10 @@ function onSubmit(selector, handler) {
     });
 }
 
+const completionUI = mountCompletionUI({
+    app, notify: toast, showError: fail, getMembers: () => members, getMeetings: () => meetings,
+    getRubrics: () => rubrics, getLocale: () => uiLocale, fmt, date
+});
 const clearFail = () => { $('#errorBox').hidden = true; $('#errorBox').textContent = ''; };
 const go = (name) => {
     document.querySelectorAll('.view').forEach(x => x.classList.remove('active'));
@@ -787,7 +791,15 @@ catch (e) {
     fail(e);
 } });
 $('#modeBtn').addEventListener('click', () => { document.body.classList.toggle('ultra-simple'); toast(document.body.classList.contains('ultra-simple') ? 'Mode Ultra Simple activé.' : 'Mode complet activé.'); });
-$('#languageSelect').addEventListener('change', e => { app.setLocale(e.target.value); toast('Langue du contexte mise à jour. La traduction complète reste progressive.'); });
+$('#languageSelect').addEventListener('change', async e => {
+    uiLocale = e.target.value === 'en' ? 'en' : 'fr';
+    app.setLocale(uiLocale);
+    applyRuntimeLocale(uiLocale);
+    completionUI.setLocale();
+    renderConnectivity(); renderModules(); renderEcosystemHighlights(); renderDomainHubs(); renderActiveGroup(); renderGroupSelector();
+    await renderUniverse(); await renderInbox();
+    toast(tx('Interface passée en français.','Interface switched to English.'));
+});
 window.addEventListener('online', async () => { renderConnectivity(); try {
     await app.syncOutbox();
     await refreshAll();
