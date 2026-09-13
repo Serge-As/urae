@@ -399,7 +399,7 @@ export class LedgerService {
     tenantId:Id;groupId:Id;amount:number;currency?:Currency;direction:'in'|'out';
     counterAccountCode:string;counterAccountType:LedgerAccount['type'];descriptionCode:string;
     sourceType:string;sourceId:Id;meetingId?:Id;idempotencyKey:string;
-    kind:'cash_in'|'cash_out'|'loan_disbursement'|'loan_repayment'|'tontine_benefit'|'opening_balance'|'transfer';
+    kind:'cash_in'|'cash_out'|'loan_disbursement'|'loan_repayment'|'tontine_benefit'|'opening_balance'|'transfer';effectiveAt?:string;
   },requestId=makeId('req')):Promise<LedgerEntry>{
     assertIntPositive('cashMovementAmount',input.amount);
     if(!input.idempotencyKey.trim())throw new Error('IDEMPOTENCY_KEY_REQUIRED');
@@ -435,7 +435,7 @@ export class LedgerService {
          {accountId:counter.id,debit:0,credit:input.amount,memoCode:input.descriptionCode+'_COUNTER'}];
     const entry:LedgerEntry={id:makeId('ledger'),tenantId:input.tenantId,groupId:input.groupId,currency,
       descriptionCode:input.descriptionCode,sourceType:input.sourceType,sourceId:input.sourceId,
-      idempotencyKey:input.idempotencyKey,createdAt:now(),createdBy:ctx.actorId,meetingId:input.meetingId,lines};
+      idempotencyKey:input.idempotencyKey,createdAt:input.effectiveAt===undefined?now():new Date(input.effectiveAt).toISOString(),createdBy:ctx.actorId,meetingId:input.meetingId,lines};
     this.validateBalanced(entry);
     const audit=this.kernel.audit.append({tenantId:input.tenantId,actorId:ctx.actorId,action:'CASH_MOVEMENT_POSTED',
       targetType:'ledger_entry',targetId:entry.id,requestId,metadata:{kind:input.kind,direction:input.direction},after:entry});
