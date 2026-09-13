@@ -63,18 +63,23 @@ export function createRubricEditor(root,{plan,initialName='',initialKind='',onCh
   for(const person of plan?.participants??[])addPerson(person);
   button(roster,'+ Prévoir un participant',()=>{addPerson();onChange();});
   const sync=()=>{
-    const ready=Boolean(kind.value&&name.value.trim()),tontine=kind.value==='TONTINE';config.hidden=!ready;config.disabled=!ready;
+    const ready=Boolean(kind.value&&name.value.trim()),tontine=kind.value==='TONTINE',inKind=contributionMode.value==='IN_KIND',mixed=contributionMode.value==='MIXED';config.hidden=!ready;config.disabled=!ready;
     if(tontine)basis.value='PER_SHARE';basis.options[0].disabled=tontine;
     shares.parentElement.hidden=basis.value!=='PER_SHARE';shares.disabled=basis.value!=='PER_SHARE';
     pots.parentElement.hidden=!tontine;pots.disabled=!tontine;
     explanation.hidden=!tontine;roster.hidden=!tontine;
+    contributionLabel.parentElement.hidden=contributionMode.value==='MONEY';
+    contributionUnit.parentElement.hidden=contributionMode.value==='MONEY';
+    contributionQuantity.parentElement.hidden=contributionMode.value==='MONEY';
+    contributionLabel.required=inKind||mixed;contributionQuantity.required=inKind||mixed;
+    amount.parentElement.hidden=inKind;amount.required=!inKind;if(inKind)amount.value='0';
     for(const input of roster.querySelectorAll('input,select,button'))input.disabled=!tontine;
     head.textContent=name.value.trim()||'Rubrique personnalisée';
   };
   card.addEventListener('input',()=>{sync();onChange();});sync();
   if(onRemove)button(card,'Supprimer cette rubrique',()=>onRemove());
   const planKey=plan?.key??key();
-  return{card,focus:()=>kind.focus(),read:()=>({key:planKey,name:name.value.trim(),kind:kind.value,nominalAmount:{currency:plan?.nominalAmount.currency??'XAF',amount:Number(amount.value)},amountBasis:basis.value,memberCount:Number(members.value),shareCount:basis.value==='PER_SHARE'?Number(shares.value):undefined,potCount:kind.value==='TONTINE'?Number(pots.value):undefined,sessions:Number(sessions.value),duration:{value:Number(duration.value),unit:durationUnit.value},managementFeePerPayment:Number(fees.value),estimatedExternalCostRate:Number(external.value)/100,fixedCostPerSession:Number(fixed.value),participants:kind.value==='TONTINE'?people.map(p=>p.read()):undefined})};
+  return{card,focus:()=>kind.focus(),read:()=>({key:planKey,name:name.value.trim(),kind:kind.value,nominalAmount:{currency:plan?.nominalAmount?.currency??'XAF',amount:Number(amount.value||0)},amountBasis:basis.value,participationMode:participation.value,contributionMode:contributionMode.value,contributionLabel:contributionMode.value==='MONEY'?undefined:contributionLabel.value.trim(),contributionUnit:contributionMode.value==='MONEY'?undefined:contributionUnit.value.trim(),contributionQuantity:contributionMode.value==='MONEY'?undefined:Number(contributionQuantity.value),contextNote:contextNote.value.trim()||undefined,memberCount:Number(members.value),shareCount:basis.value==='PER_SHARE'?Number(shares.value):undefined,potCount:kind.value==='TONTINE'?Number(pots.value):undefined,sessions:Number(sessions.value),duration:{value:Number(duration.value),unit:durationUnit.value},managementFeePerPayment:Number(fees.value),estimatedExternalCostRate:Number(external.value)/100,fixedCostPerSession:Number(fixed.value),participants:kind.value==='TONTINE'?people.map(p=>p.read()):undefined})};
 }
 
 export const readRubricEditors=editors=>validateLaunchRubrics(editors.map(editor=>editor.read()));
