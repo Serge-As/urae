@@ -27,6 +27,21 @@ test('association simulates independent named rubrics without a global contribut
   const sameName=await service.createProject(input([plan()]));assert.notEqual((await service.convertProjectToGroup('tenant_a',sameName.id)).id,group.id);
 });
 
+test('one group can run several independent money and in-kind tontines with different participants',async()=>{
+  const {service}=setup();
+  const small=tontine();small.key='tontine_1000';small.name='Tontine 1 000';small.memberCount=8;small.shareCount=10;small.sessions=10;small.potCount=1;small.nominalAmount={currency:'XAF',amount:1000};small.participants=undefined;small.participationMode='OPTIONAL';
+  const large=tontine();large.key='tontine_10000';large.name='Tontine 10 000';large.memberCount=4;large.shareCount=4;large.sessions=4;large.potCount=1;large.nominalAmount={currency:'XAF',amount:10000};large.participants=undefined;large.participationMode='OPTIONAL';
+  const soap=tontine();soap.key='tontine_savon';soap.name='Savons';soap.memberCount=6;soap.shareCount=6;soap.sessions=6;soap.potCount=1;soap.participants=undefined;
+  soap.nominalAmount={currency:'XAF',amount:0};soap.contributionMode='IN_KIND';soap.contributionLabel='Savon';soap.contributionUnit='pièce';soap.contributionQuantity=2;soap.participationMode='OPTIONAL';soap.contextNote='Réservée aux volontaires';
+  const plans=validateLaunchRubrics([small,large,soap]);
+  assert.deepEqual(plans.map(p=>p.memberCount),[8,4,6]);assert.equal(plans[2].contributionMode,'IN_KIND');assert.equal(plans[2].contributionLabel,'Savon');
+  const project=await service.createProject(input(plans)),result=await service.simulateProject('tenant_a',project.id);
+  assert.equal(result.rubricBreakdown.length,3);assert.equal(result.rubricBreakdown.find(x=>x.key==='tontine_1000').totalNominalContributions,100000);
+  assert.equal(result.rubricBreakdown.find(x=>x.key==='tontine_10000').totalNominalContributions,160000);
+  assert.equal(result.rubricBreakdown.find(x=>x.key==='tontine_savon').totalNominalContributions,0);
+  assert.equal(result.totalNominalContributions,260000);
+});
+
 test('four shares of one member may benefit in one, two or four turns; pots never multiply subscriptions',()=>{
   for(const [turns,pots]of [[[1,1,1,1],4],[[1,1,2,2],2],[[1,2,3,4],1]]){
     const [p]=validateLaunchRubrics([tontine(turns,pots)]);assert.equal(simulateRubricPlan(p).totalNominalContributions,160000);
@@ -71,6 +86,24 @@ test('authenticated D1 API persists association rubrics and per-share scheduling
     const refreshed=await(await request(`/api/v1/groups/${group.id}/rubrics`,'GET',undefined,headers)).json();assert.deepEqual(refreshed.find(r=>r.id===rotation.id).activityPlan.participants[0].shares.map(s=>s.turn),[1,1,2,2]);
     const ledger=await(await request(`/api/v1/groups/${group.id}/ledger`,'GET',undefined,headers)).json();assert.equal(ledger.summary.entryCount,0);
     cookie='';assert.equal((await request(`/api/v1/groups/${group.id}/rubrics`,'GET',undefined,headers)).status,401);
+  }finally{db.close();}
+});
+
+test('authenticated API simulates and creates a group with several distinct tontines',async()=>{
+  const db=new SQLiteD1(':memory:');db.migrate();let cookie='';
+  const request=(path,method='GET',body,extra={})=>worker.fetch(new Request('https://local.test'+path,{method,headers:{origin:'https://local.test','content-type':'application/json',cookie,...extra},body:body===undefined?undefined:JSON.stringify(body)}),{DB:db});
+  try{
+    let response=await request('/api/v1/auth/register','POST',{username:'multi_tontine_owner',password:'Synthetic-multi-tontine-password-2026!',displayName:'Multi Tontine Owner'});
+    assert.equal(response.status,200,await response.clone().text());cookie=response.headers.get('set-cookie').split(';')[0];
+    const a=tontine();a.key='m1000';a.name='Tontine 1 000';a.memberCount=8;a.shareCount=8;a.sessions=8;a.nominalAmount={currency:'XAF',amount:1000};a.participants=undefined;a.participationMode='OPTIONAL';
+    const b=tontine();b.key='m10000';b.name='Tontine 10 000';b.memberCount=3;b.shareCount=3;b.sessions=3;b.nominalAmount={currency:'XAF',amount:10000};b.participants=undefined;b.participationMode='OPTIONAL';
+    const soap=tontine();soap.key='soap';soap.name='Savons';soap.memberCount=5;soap.shareCount=5;soap.sessions=5;soap.participants=undefined;soap.nominalAmount={currency:'XAF',amount:0};soap.contributionMode='IN_KIND';soap.contributionLabel='Savon';soap.contributionUnit='pièce';soap.contributionQuantity=2;soap.participationMode='OPTIONAL';
+    response=await request('/api/v1/group-projects','POST',{name:'Association multi-tontines',kind:'association',governanceModel:'community',rubrics:[a,b,soap]});
+    assert.equal(response.status,201,await response.clone().text());const project=await response.json();
+    response=await request('/api/v1/group-projects/'+project.id+'/simulate','POST',{});assert.equal(response.status,200,await response.clone().text());const simulation=await response.json();assert.equal(simulation.rubricBreakdown.length,3);
+    response=await request('/api/v1/group-projects/'+project.id+'/convert','POST',{});assert.equal(response.status,201,await response.clone().text());const group=await response.json();
+    response=await request('/api/v1/groups/'+group.id+'/rubrics','GET',undefined,{'x-active-group-id':group.id});assert.equal(response.status,200,await response.clone().text());
+    const saved=await response.json();assert.equal(saved.length,3);assert.deepEqual(saved.map(x=>x.name).sort(),['Savons','Tontine 1 000','Tontine 10 000'].sort());
   }finally{db.close();}
 });
 

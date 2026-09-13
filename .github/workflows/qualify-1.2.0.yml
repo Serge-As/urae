@@ -1,0 +1,21 @@
+name: Qualify Eco-System 1.2.0 Functional Completion
+on:
+  push:
+    branches: ['next/1.2.0-functional-completion-20260913']
+  pull_request:
+    branches: ['delivery/1.1.2-rubriques-20260913']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  qualify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: npm run ci

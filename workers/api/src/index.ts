@@ -5,6 +5,14 @@ import { DiscoveryService, MembershipGatewayService } from '../../../packages/di
 import { RubricKnowledgeService } from '../../../packages/rubrics/src/index.js';
 import { makeId, type OutboxItem, type GroupOperatingPolicy, type ProjectCapability, type RubricOperatingModel, type WorkspaceRecord, type WorkspaceStatus } from '../../../packages/contracts/src/index.js';
 import { PRODUCT_MODULES, PRODUCT_CAPABILITY_COUNT } from '../../../packages/module-registry/src/index.js';
+import {
+  CompletionSuiteService, COMPLETION_WORKFLOWS, buildLoanSchedule, compareRules,
+  explainLedgerAnomalies, makeIcs, suggestTontineSchedule, type CompletionKind
+} from '../../../packages/completion/src/index.js';
+import { ExplainabilityService, DocumentSearchService, previewCsv, buildNotificationDigest } from '../../../packages/innovation/src/index.js';
+import { ReceivablesService, TreasuryService, RiskFinanceService } from '../../../packages/finance/src/index.js';
+import { MarketService } from '../../../packages/market/src/index.js';
+import { HistoricalImportService, RepositoryArtifactStore, type ArtifactStoreLike } from '../../../packages/imports/src/index.js';
 import { authenticatedApi } from './authenticated.js';
 
 const defaultRepo = new InMemoryPlatformRepository();
@@ -36,13 +44,18 @@ const finite = (value: unknown, fallback?: number): number => {
   const n=Number(value); if(!Number.isFinite(n)) throw new Error('INVALID_NUMBER'); return n;
 };
 
-const createRequestScope = (request:Request,repo:PlatformRepository) => {
+const createRequestScope = (request:Request,repo:PlatformRepository,artifacts?:ArtifactStoreLike) => {
   const kernel=new PlatformKernel();
   const foundation=new FoundationService(repo,kernel); const ledger=new LedgerService(repo,kernel); const meetings=new MeetingService(repo,kernel); const discovery=new DiscoveryService(repo,kernel); const membershipGateway=new MembershipGatewayService(repo,kernel); const rubrics=new RubricKnowledgeService(repo,kernel);
+  const completion=new CompletionSuiteService(repo,kernel);
+  const explainability=new ExplainabilityService(repo,kernel); const documents=new DocumentSearchService(repo,kernel);
+  const receivables=new ReceivablesService(repo,kernel); const treasury=new TreasuryService(repo,kernel,ledger); const riskFinance=new RiskFinanceService(repo,kernel,ledger); const market=new MarketService(repo,kernel);
+  const artifactStore=artifacts??new RepositoryArtifactStore(repo,kernel);
+  const imports=new HistoricalImportService(repo,kernel,ledger,completion,artifactStore);
   const tenantId=request.headers.get('x-tenant-id')??'tenant_demo'; const actorId=request.headers.get('x-actor-id')??'user_founder';
   const groupRoles=(request.headers.get('x-group-roles')??'founder,manager').split(',').map(x=>x.trim()).filter(Boolean);
   kernel.context.set({actorId,tenantId,activeGroupId:request.headers.get('x-active-group-id')??undefined,groupRoles,mandateIds:[],deviceId:request.headers.get('x-device-id')??'device_web_demo',sessionId:request.headers.get('x-session-id')??'session_demo',locale:request.headers.get('accept-language')?.toLowerCase().startsWith('en')?'en':'fr',timezone:request.headers.get('x-timezone')??'Africa/Douala',connectivity:'online',requestId:request.headers.get('x-request-id')??makeId('req')});
-  return {kernel,foundation,ledger,meetings,discovery,membershipGateway,rubrics};
+  return {kernel,foundation,ledger,meetings,discovery,membershipGateway,rubrics,completion,explainability,documents,receivables,treasury,riskFinance,market,imports};
 };
 
 const inboxFor = async (repo:PlatformRepository,tenantId:string,actorId:string) => {
@@ -51,13 +64,13 @@ const inboxFor = async (repo:PlatformRepository,tenantId:string,actorId:string) 
   return [...obligations,...cases];
 };
 
-export const createApiHandler = (repo:PlatformRepository = defaultRepo) => async (request:Request):Promise<Response> => {
+export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{artifacts?:ArtifactStoreLike}={}) => async (request:Request):Promise<Response> => {
   const url=new URL(request.url); const cors=corsHeaders(request);
   if(request.method==='OPTIONS'){
     const allowed=Boolean((cors as Record<string,string>)['access-control-allow-origin']);
     return new Response(null,{status:allowed?204:403,headers:{...baseSecurityHeaders,...cors,'access-control-allow-methods':'GET,POST,PUT,OPTIONS','access-control-allow-headers':'content-type,x-tenant-id,x-actor-id,x-group-roles,x-active-group-id,x-device-id,x-session-id,x-request-id,x-timezone'}});
   }
-  const {kernel,foundation,ledger,meetings,discovery,membershipGateway,rubrics}=createRequestScope(request,repo); const ctx=kernel.context.get();
+  const {kernel,foundation,ledger,meetings,discovery,membershipGateway,rubrics,completion,explainability,documents,receivables,treasury,riskFinance,market,imports}=createRequestScope(request,repo,options.artifacts); const ctx=kernel.context.get();
   const requireGroup=async(groupId:string,manage=false)=>{
     const group=await repo.getGroup(ctx.tenantId,groupId);if(!group)throw Error('GROUP_NOT_FOUND');
     if(group.createdBy===ctx.actorId)return group;
@@ -72,11 +85,11 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo) => async
   try {
     const scopedGroup=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)/)?.[1];
     if(scopedGroup)await requireGroup(scopedGroup);
-    if(request.method==='GET'&&url.pathname==='/health') return json({ok:true,service:'tontine-api',version:'1.1.2-qualified-local',now:new Date().toISOString(),realMoneyEnabled:kernel.features.enabled('financial-real-money'),manualCashLedgerEnabled:true,contextScope:'request'},200,cors);
+    if(request.method==='GET'&&url.pathname==='/health') return json({ok:true,service:'tontine-api',version:'1.2.0-functional-completion',now:new Date().toISOString(),realMoneyEnabled:kernel.features.enabled('financial-real-money'),manualCashLedgerEnabled:true,artifactStorageBound:true,artifactStorageMode:options.artifacts?'R2':'D1_FALLBACK',contextScope:'request'},200,cors);
     if(request.method==='GET'&&url.pathname==='/api/v1/kernel') return json({services:['context','policy','workflow','events','audit','obligations','evidence','reconciliation','cases','inbox','notifications','configuration','features','data-governance','compatibility','resource-governor'],features:{groupLaunch:kernel.features.enabled('group-launch-studio'),meetingSync:kernel.features.enabled('meeting-sync-core'),realMoney:kernel.features.enabled('financial-real-money'),manualCashLedger:true}},200,cors);
 
     if(request.method==='GET'&&url.pathname==='/api/v1/product/capabilities'){
-      return json({version:'1.1.2-qualified-local',count:PRODUCT_CAPABILITY_COUNT,capabilities:PRODUCT_MODULES},200,cors);
+      return json({version:'1.2.0-functional-completion',count:PRODUCT_CAPABILITY_COUNT,capabilities:PRODUCT_MODULES},200,cors);
     }
 
 
@@ -196,6 +209,260 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo) => async
       const body=await readJson<Record<string,unknown>>(request); return json(await foundation.reconcileCashbox({tenantId:ctx.tenantId,groupId:cashboxRoute[1]!,meetingId:body.meetingId?String(body.meetingId):undefined,openingCash:finite(body.openingCash),cashIn:finite(body.cashIn),cashOut:finite(body.cashOut),countedClosing:finite(body.countedClosing),currency:String(body.currency??'XAF')}),201,cors);
     }
 
+    const amountExplain=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/members\/([^/]+)\/amount-explanation$/);
+    if(amountExplain&&request.method==='GET'){
+      return json(await explainability.amount(amountExplain[1]!,amountExplain[2]!,url.searchParams.get('rubricId')??undefined),200,cors);
+    }
+    const documentSearch=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/documents\/search$/);
+    if(documentSearch&&request.method==='GET'){
+      return json(await documents.search(documentSearch[1]!,url.searchParams.get('q')??'',Number(url.searchParams.get('limit')??20)),200,cors);
+    }
+    const importPreview=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/imports\/csv\/preview$/);
+    if(importPreview&&request.method==='POST'){
+      await requireGroup(importPreview[1]!,true);const body=await readJson<Record<string,unknown>>(request);
+      return json(await imports.stage(importPreview[1]!,{title:String(body.title??'CSV import preview'),kind:String(body.kind??'CONTRIBUTIONS') as any,text:String(body.text??''),delimiter:body.delimiter?String(body.delimiter):undefined}),201,cors);
+    }
+    const importApprove=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/imports\/([^/]+)\/approve$/);
+    if(importApprove&&request.method==='POST'){
+      const body=await readJson<Record<string,unknown>>(request);const mapping=body.mapping&&typeof body.mapping==='object'&&!Array.isArray(body.mapping)?body.mapping as Record<string,string>:{};
+      return json(await imports.approve(importApprove[1]!,importApprove[2]!,mapping),200,cors);
+    }
+    const importApply=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/imports\/([^/]+)\/apply$/);
+    if(importApply&&request.method==='POST')return json(await imports.apply(importApply[1]!,importApply[2]!),200,cors);
+    const groupHealth=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/health-snapshot$/);
+    if(groupHealth&&request.method==='GET')return json(await explainability.health(groupHealth[1]!),200,cors);
+    const digestRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/notification-digest$/);
+    if(digestRoute&&request.method==='GET'){
+      await requireGroup(digestRoute[1]!);
+      const items=(await repo.listObligations(ctx.tenantId)).filter(x=>x.groupId===digestRoute[1]&&x.assigneeId===ctx.actorId&&x.status==='open').map(x=>({id:x.id,title:x.title,dueAt:x.dueAt,priority:x.priority}));
+      return json({items:buildNotificationDigest(items,new Date().toISOString(),Number(url.searchParams.get('hours')??24))},200,cors);
+    }
+
+    if(request.method==='GET'&&url.pathname==='/api/v1/completion/workflows'){
+      return json({version:'1.2.0-functional-completion',workflows:COMPLETION_WORKFLOWS},200,cors);
+    }
+
+    const expectedRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/receivables\/expected$/);
+    if(expectedRoute&&request.method==='POST'){const body=await readJson<Record<string,unknown>>(request);return json(await receivables.createExpected(expectedRoute[1]!,{membershipId:String(body.membershipId??''),title:String(body.title??''),dueAt:String(body.dueAt??''),amount:finite(body.amount),currency:String(body.currency??'XAF'),rubricId:body.rubricId?String(body.rubricId):undefined}),201,cors);}
+    const allocationRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/receivables\/allocations$/);
+    if(allocationRoute&&request.method==='POST'){const body=await readJson<Record<string,unknown>>(request);return json(await receivables.allocate(allocationRoute[1]!,{obligationId:String(body.obligationId??''),receiptId:String(body.receiptId??''),amount:finite(body.amount)}),201,cors);}
+    const arrearsRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/receivables\/arrears$/);
+    if(arrearsRoute&&request.method==='GET')return json(await receivables.report(arrearsRoute[1]!,url.searchParams.get('asOf')??undefined),200,cors);
+    const savingsRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/savings$/);
+    if(savingsRoute&&request.method==='POST'){const body=await readJson<Record<string,unknown>>(request);return json(await treasury.createSavingsPlan(savingsRoute[1]!,{membershipId:String(body.membershipId??''),name:String(body.name??''),targetAmount:body.targetAmount===undefined?undefined:finite(body.targetAmount),currency:String(body.currency??'XAF')}),201,cors);}
+    const savingsPosition=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/savings\/([^/]+)\/position$/);
+    if(savingsPosition&&request.method==='GET')return json(await treasury.savingsPosition(savingsPosition[1]!,savingsPosition[2]!),200,cors);
+    const savingsDeposit=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/savings\/([^/]+)\/deposit$/);
+    if(savingsDeposit&&request.method==='POST'){const body=await readJson<Record<string,unknown>>(request);return json(await treasury.depositSavings(savingsDeposit[1]!,savingsDeposit[2]!,finite(body.amount),String(body.idempotencyKey??request.headers.get('x-idempotency-key')??makeId('savings'))),201,cors);}
+    const savingsWithdraw=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/savings\/([^/]+)\/withdraw$/);
+    if(savingsWithdraw&&request.method==='POST'){const body=await readJson<Record<string,unknown>>(request);return json(await treasury.withdrawSavings(savingsWithdraw[1]!,savingsWithdraw[2]!,finite(body.amount),String(body.idempotencyKey??request.headers.get('x-idempotency-key')??makeId('savings_withdraw'))),201,cors);}
+    const openingRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/ledger\/opening-balance$/);
+    if(openingRoute&&request.method==='POST'){const body=await readJson<Record<string,unknown>>(request);return json(await treasury.openingBalance(openingRoute[1]!,{amount:finite(body.amount),currency:String(body.currency??'XAF'),note:String(body.note??''),idempotencyKey:String(body.idempotencyKey??request.headers.get('x-idempotency-key')??makeId('opening'))}),201,cors);}
+    const custodyRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/custody$/);
+    if(custodyRoute&&request.method==='POST'){const body=await readJson<Record<string,unknown>>(request);return json(await treasury.createCustody(custodyRoute[1]!,{name:String(body.name??''),holder:String(body.holder??''),currency:String(body.currency??'XAF')}),201,cors);}
+    const custodyOut=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/custody\/([^/]+)\/send$/);
+    if(custodyOut&&request.method==='POST'){const body=await readJson<Record<string,unknown>>(request);return json(await treasury.sendToCustody(custodyOut[1]!,custodyOut[2]!,finite(body.amount),String(body.idempotencyKey??makeId('custody_out'))),201,cors);}
+    const custodyIn=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/custody\/([^/]+)\/return$/);
+    if(custodyIn&&request.method==='POST'){const body=await readJson<Record<string,unknown>>(request);return json(await treasury.returnFromCustody(custodyIn[1]!,custodyIn[2]!,finite(body.amount),String(body.idempotencyKey??makeId('custody_in'))),201,cors);}
+    const guarantorRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/loans\/([^/]+)\/guarantors$/);
+    if(guarantorRoute&&request.method==='POST'){const body=await readJson<Record<string,unknown>>(request);return json(await riskFinance.guarantor(guarantorRoute[1]!,{loanId:guarantorRoute[2]!,membershipId:String(body.membershipId??''),guaranteedAmount:finite(body.guaranteedAmount)}),201,cors);}
+    const solidarityRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/solidarity\/cases$/);
+    if(solidarityRoute&&request.method==='POST'){const body=await readJson<Record<string,unknown>>(request);return json(await riskFinance.solidarityCase(solidarityRoute[1]!,{beneficiaryMembershipId:String(body.beneficiaryMembershipId??''),title:String(body.title??''),approvedAmount:finite(body.approvedAmount),currency:String(body.currency??'XAF')}),201,cors);}
+    const solidarityFund=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/solidarity\/cases\/([^/]+)\/fund$/);
+    if(solidarityFund&&request.method==='POST'){const body=await readJson<Record<string,unknown>>(request);return json(await riskFinance.fund(solidarityFund[1]!,solidarityFund[2]!,finite(body.amount),String(body.idempotencyKey??makeId('solidarity_fund'))),201,cors);}
+    const solidarityPay=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/solidarity\/cases\/([^/]+)\/disburse$/);
+    if(solidarityPay&&request.method==='POST'){const body=await readJson<Record<string,unknown>>(request);return json(await riskFinance.disburse(solidarityPay[1]!,solidarityPay[2]!,finite(body.amount),String(body.idempotencyKey??makeId('solidarity_pay'))),201,cors);}
+    const stockRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/market\/stock$/);
+    if(stockRoute&&request.method==='POST'){const body=await readJson<Record<string,unknown>>(request);return json(await market.createStock(stockRoute[1]!,{sku:String(body.sku??''),name:String(body.name??''),quantity:finite(body.quantity),unit:body.unit?String(body.unit):undefined}),201,cors);}
+    const stockAdjust=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/market\/stock\/([^/]+)\/adjust$/);
+    if(stockAdjust&&request.method==='POST'){const body=await readJson<Record<string,unknown>>(request);return json(await market.adjustStock(stockAdjust[1]!,stockAdjust[2]!,finite(body.delta),String(body.reason??'')),200,cors);}
+    const orderRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/market\/orders$/);
+    if(orderRoute&&request.method==='POST'){const body=await readJson<Record<string,unknown>>(request);return json(await market.createOrder(orderRoute[1]!,{stockItemId:String(body.stockItemId??''),quantity:finite(body.quantity),customerRef:String(body.customerRef??''),unitPrice:body.unitPrice===undefined?undefined:finite(body.unitPrice)}),201,cors);}
+    const deliverRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/market\/orders\/([^/]+)\/deliver$/);
+    if(deliverRoute&&request.method==='POST'){const body=await readJson<Record<string,unknown>>(request);return json(await market.deliver(deliverRoute[1]!,deliverRoute[2]!,finite(body.quantity)),200,cors);}
+    const returnRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/market\/orders\/([^/]+)\/return$/);
+    if(returnRoute&&request.method==='POST'){const body=await readJson<Record<string,unknown>>(request);return json(await market.returnItems(returnRoute[1]!,returnRoute[2]!,finite(body.quantity),String(body.reason??'')),200,cors);}
+    const disputeRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/market\/orders\/([^/]+)\/dispute$/);
+    if(disputeRoute&&request.method==='POST'){const body=await readJson<Record<string,unknown>>(request);return json(await market.dispute(disputeRoute[1]!,disputeRoute[2]!,String(body.summary??'')),200,cors);}
+    const groupBuyRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/market\/group-buys$/);
+    if(groupBuyRoute&&request.method==='POST'){const body=await readJson<Record<string,unknown>>(request);return json(await market.createGroupBuy(groupBuyRoute[1]!,{title:String(body.title??''),stockItemId:body.stockItemId?String(body.stockItemId):undefined,thresholdQuantity:finite(body.thresholdQuantity),deadline:String(body.deadline??'')}),201,cors);}
+    const groupBuyCommit=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/market\/group-buys\/([^/]+)\/commit$/);
+    if(groupBuyCommit&&request.method==='POST'){const body=await readJson<Record<string,unknown>>(request);return json(await market.commitGroupBuy(groupBuyCommit[1]!,groupBuyCommit[2]!,String(body.membershipId??''),finite(body.quantity)),200,cors);}
+    const completionCollection=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/completion$/);
+    if(completionCollection&&request.method==='GET'){
+      const kind=url.searchParams.get('kind') as CompletionKind|null;
+      return json(await completion.list(completionCollection[1]!,kind??undefined),200,cors);
+    }
+    if(completionCollection&&request.method==='POST'){
+      const body=await readJson<Record<string,unknown>>(request);
+      const kind=String(body.kind??'') as CompletionKind;
+      const data=body.data&&typeof body.data==='object'&&!Array.isArray(body.data)?body.data as Record<string,unknown>:{};
+      return json(await completion.create(completionCollection[1]!,kind,{
+        title:String(body.title??''),summary:body.summary?String(body.summary):undefined,data,tags:strArray(body.tags)
+      }),201,cors);
+    }
+    const completionTransition=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/completion\/([^/]+)\/transition$/);
+    if(completionTransition&&request.method==='POST'){
+      const body=await readJson<Record<string,unknown>>(request);
+      const patch=body.patch&&typeof body.patch==='object'&&!Array.isArray(body.patch)?body.patch as Record<string,unknown>:{};
+      return json(await completion.transition(completionTransition[1]!,completionTransition[2]!,String(body.to??''),{
+        expectedVersion:finite(body.expectedVersion),patch,reason:body.reason?String(body.reason):undefined
+      }),200,cors);
+    }
+
+    const identityClaim=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/identity-claims$/);
+    if(identityClaim&&request.method==='POST'){
+      const body=await readJson<Record<string,unknown>>(request);
+      return json(await completion.createHistoricalIdentityClaim(identityClaim[1]!,{
+        historicalReference:String(body.historicalReference??''),evidenceReference:String(body.evidenceReference??''),
+        claimedMembershipId:body.claimedMembershipId?String(body.claimedMembershipId):undefined,note:body.note?String(body.note):undefined
+      }),201,cors);
+    }
+
+    const tontineCycle=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/tontine\/cycles$/);
+    if(tontineCycle&&request.method==='POST'){
+      const body=await readJson<Record<string,unknown>>(request);
+      return json(await completion.createTontineCycle(tontineCycle[1]!,{
+        rubricId:String(body.rubricId??''),name:String(body.name??''),rounds:finite(body.rounds),
+        potsPerRound:finite(body.potsPerRound),currency:String(body.currency??'XAF'),
+        nominalPotAmount:body.nominalPotAmount===undefined?undefined:finite(body.nominalPotAmount)
+      }),201,cors);
+    }
+    const tontineShare=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/tontine\/shares$/);
+    if(tontineShare&&request.method==='POST'){
+      const body=await readJson<Record<string,unknown>>(request);
+      return json(await completion.addTontineShare(tontineShare[1]!,{
+        cycleId:String(body.cycleId??''),membershipId:String(body.membershipId??''),label:String(body.label??'')
+      }),201,cors);
+    }
+    const scheduleSuggestion=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/tontine\/schedule\/suggest$/);
+    if(scheduleSuggestion&&request.method==='POST'){
+      const body=await readJson<Record<string,unknown>>(request);
+      await requireGroup(scheduleSuggestion[1]!,true);
+      return json(suggestTontineSchedule(strArray(body.shareIds),finite(body.rounds),finite(body.potsPerRound),
+        Array.isArray(body.constraints)?body.constraints as any:[]),200,cors);
+    }
+    const scheduleShare=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/tontine\/shares\/([^/]+)\/schedule$/);
+    if(scheduleShare&&request.method==='POST'){
+      const body=await readJson<Record<string,unknown>>(request);
+      return json(await completion.scheduleTontineShare(scheduleShare[1]!,scheduleShare[2]!,finite(body.round),finite(body.expectedVersion)),200,cors);
+    }
+    const serveShare=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/tontine\/shares\/([^/]+)\/serve$/);
+    if(serveShare&&request.method==='POST'){
+      const body=await readJson<Record<string,unknown>>(request);
+      const share=(await completion.list(serveShare[1]!,'TONTINE_SHARE')).find(x=>x.id===serveShare[2]!);
+      if(!share)throw new Error('TONTINE_SHARE_NOT_FOUND');
+      if(String(share.data.completionState)!=='SCHEDULED')throw new Error('TONTINE_SHARE_NOT_SCHEDULED');
+      const entry=await ledger.recordCashMovement({
+        tenantId:ctx.tenantId,groupId:serveShare[1]!,amount:finite(body.amount),currency:String(body.currency??'XAF'),
+        direction:'out',counterAccountCode:'MEMBER_FUNDS_LIABILITY',counterAccountType:'liability',
+        descriptionCode:'LEDGER_TONTINE_BENEFIT',sourceType:'tontine_share',sourceId:share.id,
+        meetingId:body.meetingId?String(body.meetingId):undefined,
+        idempotencyKey:String(body.idempotencyKey??request.headers.get('x-idempotency-key')??makeId('benefit')),kind:'tontine_benefit'
+      });
+      return json({entry,share:await completion.markTontineShareServed(serveShare[1]!,share.id,entry.id,finite(body.expectedVersion))},201,cors);
+    }
+
+    const obligationRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/obligations$/);
+    if(obligationRoute&&request.method==='GET')return json(await repo.listObligations(ctx.tenantId),200,cors);
+    if(obligationRoute&&request.method==='POST'){
+      const body=await readJson<Record<string,unknown>>(request);
+      return json(await completion.createFinancialObligation(obligationRoute[1]!,{
+        membershipId:String(body.membershipId??''),type:String(body.type??'CONTRIBUTION_DUE'),title:String(body.title??''),
+        dueAt:body.dueAt?String(body.dueAt):undefined,amount:body.amount===undefined?undefined:finite(body.amount),
+        currency:String(body.currency??'XAF'),sourceId:body.sourceId?String(body.sourceId):undefined
+      }),201,cors);
+    }
+
+    const loanQuote=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/loans\/quote$/);
+    if(loanQuote&&request.method==='POST'){
+      await requireGroup(loanQuote[1]!,true);
+      const body=await readJson<Record<string,unknown>>(request);
+      return json({schedule:buildLoanSchedule({
+        principal:finite(body.principal),installments:finite(body.installments),annualRateBasisPoints:finite(body.annualRateBasisPoints,0),
+        installmentsPerYear:finite(body.installmentsPerYear,12),method:String(body.method??'DECLINING') as any,feesTotal:finite(body.feesTotal,0)
+      })},200,cors);
+    }
+    const loanDisburse=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/loans\/([^/]+)\/disburse$/);
+    if(loanDisburse&&request.method==='POST'){
+      const body=await readJson<Record<string,unknown>>(request);
+      const loan=(await completion.list(loanDisburse[1]!,'LOAN')).find(x=>x.id===loanDisburse[2]!);
+      if(!loan)throw new Error('LOAN_NOT_FOUND');
+      if(String(loan.data.completionState)!=='APPROVED')throw new Error('LOAN_NOT_APPROVED');
+      const principal=finite(body.amount??loan.data.principal);
+      const entry=await ledger.recordCashMovement({
+        tenantId:ctx.tenantId,groupId:loanDisburse[1]!,amount:principal,currency:String(loan.data.currency??'XAF'),
+        direction:'out',counterAccountCode:'LOAN_RECEIVABLE',counterAccountType:'asset',
+        descriptionCode:'LEDGER_LOAN_DISBURSEMENT',sourceType:'loan',sourceId:loan.id,
+        meetingId:body.meetingId?String(body.meetingId):undefined,
+        idempotencyKey:String(body.idempotencyKey??request.headers.get('x-idempotency-key')??makeId('loan_disbursement')),kind:'loan_disbursement'
+      });
+      return json({entry,loan:await completion.transition(loanDisburse[1]!,loan.id,'DISBURSED',{
+        expectedVersion:finite(body.expectedVersion),patch:{ledgerEntryId:entry.id,outstandingPrincipal:principal,disbursedAt:new Date().toISOString()}
+      })},201,cors);
+    }
+    const loanRepay=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/loans\/([^/]+)\/repay$/);
+    if(loanRepay&&request.method==='POST'){
+      const body=await readJson<Record<string,unknown>>(request);
+      const loan=(await completion.list(loanRepay[1]!,'LOAN')).find(x=>x.id===loanRepay[2]!);
+      if(!loan)throw new Error('LOAN_NOT_FOUND');
+      if(!['DISBURSED','REPAYING'].includes(String(loan.data.completionState)))throw new Error('LOAN_NOT_REPAYABLE');
+      const outstanding=finite(loan.data.outstandingPrincipal),principalPaid=finite(body.principalAmount);
+      if(principalPaid<=0||principalPaid>outstanding)throw new Error('INVALID_LOAN_REPAYMENT');
+      const entry=await ledger.recordCashMovement({
+        tenantId:ctx.tenantId,groupId:loanRepay[1]!,amount:principalPaid,currency:String(loan.data.currency??'XAF'),
+        direction:'in',counterAccountCode:'LOAN_RECEIVABLE',counterAccountType:'asset',
+        descriptionCode:'LEDGER_LOAN_REPAYMENT',sourceType:'loan_repayment',sourceId:loan.id,
+        meetingId:body.meetingId?String(body.meetingId):undefined,
+        idempotencyKey:String(body.idempotencyKey??request.headers.get('x-idempotency-key')??makeId('loan_repayment')),kind:'loan_repayment'
+      });
+      const nextOutstanding=outstanding-principalPaid;
+      const target=nextOutstanding===0?'CLOSED':'REPAYING';
+      return json({entry,loan:await completion.transition(loanRepay[1]!,loan.id,target,{
+        expectedVersion:finite(body.expectedVersion),patch:{outstandingPrincipal:nextOutstanding,lastRepaymentLedgerEntryId:entry.id}
+      })},201,cors);
+    }
+
+    const decisionRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/governance\/decisions$/);
+    if(decisionRoute&&request.method==='POST'){
+      const body=await readJson<Record<string,unknown>>(request);
+      return json(await completion.createGovernanceDecision(decisionRoute[1]!,{
+        title:String(body.title??''),subject:String(body.subject??''),threshold:finite(body.threshold),
+        expiresAt:body.expiresAt?String(body.expiresAt):undefined,operationFingerprint:body.operationFingerprint?String(body.operationFingerprint):undefined
+      }),201,cors);
+    }
+    const decisionApprove=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/governance\/decisions\/([^/]+)\/approve$/);
+    if(decisionApprove&&request.method==='POST'){
+      const body=await readJson<Record<string,unknown>>(request);
+      return json(await completion.approveDecision(decisionApprove[1]!,decisionApprove[2]!,finite(body.expectedVersion)),200,cors);
+    }
+
+    const readinessRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/readiness$/);
+    if(readinessRoute&&request.method==='POST')return json(await completion.readinessPassport(readinessRoute[1]!),201,cors);
+
+    const ruleCompareRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/rules\/compare$/);
+    if(ruleCompareRoute&&request.method==='POST'){
+      await requireGroup(ruleCompareRoute[1]!,true);
+      const body=await readJson<Record<string,unknown>>(request);
+      const before=body.before&&typeof body.before==='object'&&!Array.isArray(body.before)?body.before as Record<string,unknown>:{};
+      const after=body.after&&typeof body.after==='object'&&!Array.isArray(body.after)?body.after as Record<string,unknown>:{};
+      return json({differences:compareRules(before,after)},200,cors);
+    }
+
+    const anomalyRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/ledger\/anomalies$/);
+    if(anomalyRoute&&request.method==='GET'){
+      await requireGroup(anomalyRoute[1]!,true);
+      return json(explainLedgerAnomalies(await repo.listLedgerEntries(ctx.tenantId,anomalyRoute[1]!)),200,cors);
+    }
+
+    const calendarRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/calendar\.ics$/);
+    if(calendarRoute&&request.method==='GET'){
+      await requireGroup(calendarRoute[1]!);
+      const meetings=await repo.listMeetings(ctx.tenantId,calendarRoute[1]!);
+      const ics=makeIcs(meetings.filter(x=>x.scheduledAt).map(x=>({uid:x.id,title:x.title,start:x.scheduledAt!,cancelled:x.status==='cancelled'})));
+      return new Response(ics,{status:200,headers:{'content-type':'text/calendar; charset=utf-8','content-disposition':'attachment; filename="eco-system.ics"',...baseSecurityHeaders,...cors}});
+    }
+
     if(request.method==='POST'&&url.pathname==='/api/v1/cases'){
       const body=await readJson<Record<string,unknown>>(request); return json(await foundation.openSupportCase({tenantId:ctx.tenantId,groupId:body.groupId?String(body.groupId):undefined,openedBy:ctx.actorId,summary:String(body.summary??'')}),201,cors);
     }
@@ -262,7 +529,7 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo) => async
 
 export const handleRequest=createApiHandler(defaultRepo);
 export interface AssetsFetcherLike { fetch(request: Request): Promise<Response> }
-export interface WorkerEnv { DB?: D1DatabaseLike; ASSETS?: AssetsFetcherLike }
+export interface WorkerEnv { DB?: D1DatabaseLike; ASSETS?: AssetsFetcherLike; ARTIFACTS?: ArtifactStoreLike }
 export default {async fetch(request:Request,env:WorkerEnv={}){
   const url=new URL(request.url);
   if(request.method==='GET' && env.ASSETS && url.pathname!=='/health' && !url.pathname.startsWith('/api/')){
@@ -279,6 +546,6 @@ export default {async fetch(request:Request,env:WorkerEnv={}){
     return json({error:'PERSISTENT_STORAGE_REQUIRED'},503);
   }
   const repository=new D1PlatformRepository(env.DB);
-  return authenticatedApi(repository,env.DB,createApiHandler(repository))(request);
+  return authenticatedApi(repository,env.DB,createApiHandler(repository,{artifacts:env.ARTIFACTS}))(request);
 }};
 export {defaultRepo as repo};

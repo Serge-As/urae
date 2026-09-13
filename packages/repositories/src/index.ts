@@ -5,7 +5,7 @@ import type {
 } from '../../contracts/src/index.js';
 
 export interface FinancialOperation {
-  kind: 'contribution' | 'reversal';
+  kind: 'contribution' | 'reversal' | 'cash_in' | 'cash_out' | 'loan_disbursement' | 'loan_repayment' | 'tontine_benefit' | 'opening_balance' | 'transfer';
   entry: LedgerEntry;
   receipt?: ContributionReceipt;
   accounts: LedgerAccount[];

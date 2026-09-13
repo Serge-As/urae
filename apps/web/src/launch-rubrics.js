@@ -13,15 +13,23 @@ const field=(root,label,value='',options)=>{
 const number=(root,label,value,min=1)=>{const input=field(root,label,value);input.type='number';input.min=String(min);input.step='1';return input;};
 const button=(root,text,run)=>{const b=el('button',text,'secondary');b.type='button';b.onclick=run;root.append(b);return b;};
 
-export function createRubricEditor(root,{plan,initialName='',onChange=()=>{},onRemove}={}){
+export function createRubricEditor(root,{plan,initialName='',initialKind='',initialContributionMode='MONEY',onChange=()=>{},onRemove}={}){
   const card=el('fieldset',null,'launch-rubric'),head=el('legend','Rubrique personnalisée');card.append(head);root.append(card);
   const identity=el('div',null,'form-grid');card.append(identity);
-  const kind=field(identity,'Cette rubrique sert à…',plan?.kind??'',[['','Choisir la nature de la rubrique'],...Object.entries(activityLabels)]);
+  const kind=field(identity,'Cette rubrique sert à…',plan?.kind??initialKind,[['','Choisir la nature de la rubrique'],...Object.entries(activityLabels)]);
   const name=field(identity,'Nom utilisé dans votre association',plan?.name??initialName);name.maxLength=120;name.placeholder='Votre propre nom pour cette rubrique';
   const config=el('fieldset',null,'form-grid rubric-settings');card.append(config);config.append(el('legend','Caractéristiques de cette rubrique'));
-  const amount=number(config,'Montant nominal par versement (XAF)',plan?.nominalAmount.amount??'',0);
+  const context=el('details',null,'full');context.open=true;context.append(el('summary','Contexte de cette rubrique'));config.append(context);
+  const contextFields=el('div',null,'form-grid');context.append(contextFields);
+  const participation=field(contextFields,'Qui participe à cette rubrique ?',plan?.participationMode??'OPTIONAL',[['OPTIONAL','Participation libre / volontaire'],['MANDATORY','Tous les membres concernés doivent participer'],['RULE_BASED','Selon une règle ou une catégorie du groupe']]);
+  const contributionMode=field(contextFields,'Que verse-t-on ?',plan?.contributionMode??initialContributionMode,[['MONEY','Argent'],['IN_KIND','En nature'],['MIXED','Argent + nature']]);
+  const contributionLabel=field(contextFields,'Nature / article',plan?.contributionLabel??'');contributionLabel.required=false;contributionLabel.placeholder='Ex. savon, huile, drap, sac de riz…';contributionLabel.maxLength=120;
+  const contributionUnit=field(contextFields,'Unité',plan?.contributionUnit??'unité');contributionUnit.required=false;contributionUnit.placeholder='Ex. pièce, litre, paquet…';contributionUnit.maxLength=60;
+  const contributionQuantity=number(contextFields,'Quantité par part / versement',plan?.contributionQuantity??1,0);contributionQuantity.step='0.01';
+  const contextNoteWrap=el('label','Règle / contexte propre à cette rubrique');const contextNote=el('textarea');contextNote.rows=2;contextNote.maxLength=1000;contextNote.required=false;contextNote.value=plan?.contextNote??'';contextNote.placeholder='Ex. réservée aux volontaires, remise le 1er dimanche, bénéficiaire choisit la marque…';contextNoteWrap.append(contextNote);contextFields.append(contextNoteWrap);
+  const amount=number(config,'Montant nominal par versement (XAF)',plan?.nominalAmount?.amount??'',0);
   const basis=field(config,'Ce montant est dû pour…',plan?.amountBasis??'PER_MEMBER',[['PER_MEMBER','Chaque membre'],['PER_SHARE','Chaque nom / part']]);
-  const members=number(config,'Nombre de membres participants',plan?.memberCount??'');
+  const members=number(config,'Nombre de membres participant à cette rubrique',plan?.memberCount??'');
   const shares=number(config,'Nombre total de noms / parts',plan?.shareCount??'');
   const pots=number(config,'Pots servis par tour',plan?.potCount??'');
   const sessions=number(config,'Nombre de tours / versements dans le cycle',plan?.sessions??'');
@@ -55,25 +63,35 @@ export function createRubricEditor(root,{plan,initialName='',onChange=()=>{},onR
   for(const person of plan?.participants??[])addPerson(person);
   button(roster,'+ Prévoir un participant',()=>{addPerson();onChange();});
   const sync=()=>{
-    const ready=Boolean(kind.value&&name.value.trim()),tontine=kind.value==='TONTINE';config.hidden=!ready;config.disabled=!ready;
+    const ready=Boolean(kind.value&&name.value.trim()),tontine=kind.value==='TONTINE',inKind=contributionMode.value==='IN_KIND',mixed=contributionMode.value==='MIXED';config.hidden=!ready;config.disabled=!ready;
     if(tontine)basis.value='PER_SHARE';basis.options[0].disabled=tontine;
     shares.parentElement.hidden=basis.value!=='PER_SHARE';shares.disabled=basis.value!=='PER_SHARE';
     pots.parentElement.hidden=!tontine;pots.disabled=!tontine;
     explanation.hidden=!tontine;roster.hidden=!tontine;
+    contributionLabel.parentElement.hidden=contributionMode.value==='MONEY';
+    contributionUnit.parentElement.hidden=contributionMode.value==='MONEY';
+    contributionQuantity.parentElement.hidden=contributionMode.value==='MONEY';
+    contributionLabel.required=inKind||mixed;contributionQuantity.required=inKind||mixed;
+    amount.parentElement.hidden=inKind;amount.required=!inKind;if(inKind)amount.value='0';
     for(const input of roster.querySelectorAll('input,select,button'))input.disabled=!tontine;
     head.textContent=name.value.trim()||'Rubrique personnalisée';
   };
   card.addEventListener('input',()=>{sync();onChange();});sync();
   if(onRemove)button(card,'Supprimer cette rubrique',()=>onRemove());
   const planKey=plan?.key??key();
-  return{card,focus:()=>kind.focus(),read:()=>({key:planKey,name:name.value.trim(),kind:kind.value,nominalAmount:{currency:plan?.nominalAmount.currency??'XAF',amount:Number(amount.value)},amountBasis:basis.value,memberCount:Number(members.value),shareCount:basis.value==='PER_SHARE'?Number(shares.value):undefined,potCount:kind.value==='TONTINE'?Number(pots.value):undefined,sessions:Number(sessions.value),duration:{value:Number(duration.value),unit:durationUnit.value},managementFeePerPayment:Number(fees.value),estimatedExternalCostRate:Number(external.value)/100,fixedCostPerSession:Number(fixed.value),participants:kind.value==='TONTINE'?people.map(p=>p.read()):undefined})};
+  return{card,focus:()=>kind.focus(),read:()=>({key:planKey,name:name.value.trim(),kind:kind.value,nominalAmount:{currency:plan?.nominalAmount?.currency??'XAF',amount:Number(amount.value||0)},amountBasis:basis.value,participationMode:participation.value,contributionMode:contributionMode.value,contributionLabel:contributionMode.value==='MONEY'?undefined:contributionLabel.value.trim(),contributionUnit:contributionMode.value==='MONEY'?undefined:contributionUnit.value.trim(),contributionQuantity:contributionMode.value==='MONEY'?undefined:Number(contributionQuantity.value),contextNote:contextNote.value.trim()||undefined,memberCount:Number(members.value),shareCount:basis.value==='PER_SHARE'?Number(shares.value):undefined,potCount:kind.value==='TONTINE'?Number(pots.value):undefined,sessions:Number(sessions.value),duration:{value:Number(duration.value),unit:durationUnit.value},managementFeePerPayment:Number(fees.value),estimatedExternalCostRate:Number(external.value)/100,fixedCostPerSession:Number(fixed.value),participants:kind.value==='TONTINE'?people.map(p=>p.read()):undefined})};
 }
 
 export const readRubricEditors=editors=>validateLaunchRubrics(editors.map(editor=>editor.read()));
 export function describeRubricPlan(plan){
-  const parts=plan.amountBasis==='PER_SHARE'?` · ${plan.shareCount} parts`:'';
-  const pots=plan.kind==='TONTINE'?` · ${plan.potCount} pots par tour`:'';
-  return `${activityLabels[plan.kind]} · ${plan.nominalAmount.amount.toLocaleString('fr-FR')} ${plan.nominalAmount.currency} par ${plan.amountBasis==='PER_SHARE'?'part':'membre'} · ${plan.memberCount} membres${parts}${pots} · ${plan.sessions} versements · durée : ${plan.duration.value} ${units[plan.duration.unit]}`;
+  const parts=plan.amountBasis==='PER_SHARE'?' · '+plan.shareCount+' parts':'';
+  const pots=plan.kind==='TONTINE'?' · '+plan.potCount+' pots par tour':'';
+  const participation=plan.participationMode==='MANDATORY'?'obligatoire':plan.participationMode==='RULE_BASED'?'selon règle':'libre';
+  let contribution;
+  if(plan.contributionMode==='IN_KIND')contribution=String(plan.contributionQuantity??1)+' '+String(plan.contributionUnit??'unité')+' de '+String(plan.contributionLabel??'nature');
+  else if(plan.contributionMode==='MIXED')contribution=plan.nominalAmount.amount.toLocaleString('fr-FR')+' '+plan.nominalAmount.currency+' + '+String(plan.contributionQuantity??1)+' '+String(plan.contributionUnit??'unité')+' de '+String(plan.contributionLabel??'nature');
+  else contribution=plan.nominalAmount.amount.toLocaleString('fr-FR')+' '+plan.nominalAmount.currency;
+  return activityLabels[plan.kind]+' · '+contribution+' par '+(plan.amountBasis==='PER_SHARE'?'part':'membre')+' · participation '+participation+' · '+plan.memberCount+' participants'+parts+pots+' · '+plan.sessions+' versements · durée : '+plan.duration.value+' '+units[plan.duration.unit];
 }
 
 export function editRubricPlan(rubric,save,onError){

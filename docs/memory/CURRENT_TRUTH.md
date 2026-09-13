@@ -1,31 +1,74 @@
-# ECO-SYSTEM — État vérifié le 12 septembre 2026
+# ECO-SYSTEM — État vérifié le 13 septembre 2026
 
-Version locale : `1.1.2-qualified-local`. Socle serveur restauré depuis la sauvegarde `1.0.0-complete-app` du 11 septembre ; interface publique 1.1 récupérée puis corrigée. Ce travail ne constitue pas une récupération certifiée du serveur 1.1 distant.
+Version active : `1.2.0-functional-completion`  
+Branche de livraison : `next/1.2.0-functional-completion-20260913`  
+Production : `https://eco-system.sergemimf.workers.dev/`  
+Worker : `eco-system`  
+D1 canonique : `eco-system-db`  
+Argent réel : `realMoneyEnabled=false` — invariant maintenu.  
+`main` : non fusionné.
 
-## État distant et accès
+## Production vérifiée
 
-- Le GET public de `https://eco-system.sergemimf.workers.dev/health` a répondu 200, version `1.1.0-cahier-app`, `realMoneyEnabled=false` ; racine HTML et catalogue de 139 capacités accessibles.
-- Worker historique `eco-system`, D1 historique `eco-system-db`. Identifiants de runs, PR et empreintes 1.0 conservés dans HISTORICAL_TRUTH_2026-09-11.md : assertions importées, non revérifiées par accès authentifié dans cette session.
-- Les secrets `CLOUDFLARE_ACCOUNT_ID` et `CLOUDFLARE_API_TOKEN` sont documentés dans les preuves historiques. Aucun secret lu, recréé ou publié ici.
-- Accès GitHub authentifié désormais vérifié ; la publication du correctif est suivie dans le dossier de livraison. Production inchangée à ce checkpoint.
+Le workflow Cloudflare `34766061058` est **SUCCESS**. Le Worker publié a le Version ID `f04625c8-30a9-4722-8de7-76f08f49b1e4`. La qualification, le build, la résolution de l'infrastructure, les migrations additives, le déploiement et le smoke test ont tous réussi. D1 a été réutilisée et Wrangler a répondu **No migrations to apply**.
 
-## Changements locaux
+Le smoke test a confirmé :
+- `/health` : version `1.2.0-functional-completion`;
+- catalogue canonique : **139 capacités**;
+- `realMoneyEnabled=false`;
+- stockage d'artefacts opérationnel;
+- racine PWA accessible.
 
-Sessions serveur, mots de passe dérivés, cookies HttpOnly, vérification d’origine, limitation de tentatives ; identité et rôles issus de la base. Registre financier atomique, idempotence avec comparaison de l’intention, contrepassations, relevés individuels, export CSV, matrice d’encaissements nets. Outbox sauvegardée avant envoi ; notes réellement conservées ; protection des files appartenant à d’autres comptes. D1 : recherche d’une publication par groupe corrigée, dernière projection de confidentialité privilégiée. Interface 1.1 conservée et textes dynamiques échappés.
+R2 est demandé en priorité mais l'API Cloudflare utilisée par GitHub Actions renvoie encore le code `10042` (« Please enable R2 through the Cloudflare Dashboard »). La production utilise donc actuellement le mode sûr `D1_FALLBACK` pour les petits artefacts/imports, avec taille bornée. Aucun bucket R2 n'est revendiqué comme opérationnel tant que ce code persiste.
 
-Les principes Living Rules restent applicables : écrit / observé / validé distincts ; clôture comme checkpoint gouverné. Une liste d’identifiants ne vaut pas approbation de plusieurs personnes. Le workflow complet de quorum signé reste à développer.
+## Correction métier multi-tontines — acquise
 
-## Qualification et limites
+Le lancement d'un groupe n'impose plus une cotisation nominale globale. **Toutes les familles de groupes** utilisent désormais des rubriques indépendantes.
 
-Voir QUALIFICATION.md et les journaux livrés. Compilation TypeScript et tests exécutés localement avec Node 24 et SQLite ; ce n’est pas une certification du runtime distant Cloudflare. L’authentification scrypt nécessite une qualification du budget CPU Workers avant déploiement. Ne pas activer en production sans rapprochement contrôlé entre les comptes et les anciens groupes.
+Une association ou une tontine peut avoir plusieurs tontines/rubriques simultanées : par exemple Tontine 1 000 F, Tontine 10 000 F, Savons, Huiles, Draps. Chaque rubrique définit séparément :
+- sa participation : libre/volontaire, obligatoire ou selon une règle;
+- ses propres participants — ils ne sont pas obligatoirement tous les membres du groupe;
+- argent, nature ou mode mixte;
+- article, unité et quantité pour les tontines en nature;
+- montant monétaire lorsqu'il existe;
+- nombre de parts/noms, pots, tours et durée;
+- frais/coûts;
+- note de contexte propre à la rubrique;
+- bénéficiaires/parts prévus lorsque nécessaire.
 
-La plateforme entière demandée n’est pas terminée : prêts/épargne complets, distributions rotatives, imports Excel/papier, signature/quorum, paiements fournisseurs, messagerie communautaire, marché transactionnel, IA opérationnelle, traduction intégrale, cache de travail hors ligne après redémarrage et récupération de compte restent notamment à traiter. Le catalogue et les dossiers persistants ne prouvent pas ces moteurs.
+Un membre peut donc participer à 0, 1, plusieurs ou toutes les tontines. Les participants et les nombres de parts peuvent différer d'une tontine à l'autre.
 
+Le test authentifié de bout en bout `34765998225` est **SUCCESS** : connexion → projet avec trois tontines distinctes (1 000 F, 10 000 F et Savons en nature) → simulation → conversion en groupe → récupération des trois rubriques persistées.
 
-## Reprise 1.1.2 — 13 septembre 2026
-Rubriques créées avant les paramètres financiers de l’association ; simulation indépendante ; noms personnalisés ; membres, parts et pots distincts ; programmation facultative des parts ; conservation SQL et édition après création ; reprise de conversion sans doublons ; cache des scripts cohérent avec le HTML. Les noms prévisionnels ne créent ni compte ni adhésion et aucun pot n’est décaissé automatiquement.
-Accès GitHub authentifié vérifié pour Delor85. Branche source next/1.1.0-cahier-app, commit f7c203e919c644466289c587669ef817b74130af. Les 162 blobs de cette branche ont été récupérés par copie identique de 124 fichiers et téléchargement avec vérification SHA de 38 fichiers. Le serveur distant ne diffère du serveur source 1.0 que par les deux numéros de version : les défauts locaux corrigés concernent donc aussi ce code de branche. Aucune exploitation en production n’est revendiquée.
-La plateforme complète reste ouverte selon l’audit : moteurs de distributions, prêts/épargne, quorum complet, import historique, communauté/marché et exploitation distante notamment. La création de rubriques et la programmation ne certifient pas ces moteurs.
-Le déploiement doit encore qualifier l’authentification dans Workers et le rapprochement des identités historiques. Ne pas activer la nouvelle connexion en production au prix de bloquer les propriétaires des groupes anciens.
+## Parcours de connexion et PWA
 
-Qualification finale du 13 septembre : npm run ci exit 0 ; 65 tests sur 65. Preuves : docs/testing/QUALIFICATION_1.1.2.md.
+La PWA vérifie maintenant le Service Worker **avant** l'authentification avec `updateViaCache:'none'`. Le cache 1.2 a été tourné vers `eco-system-cahier-app-v120-completion-r3-20260913`. Navigation et scripts restent network-first afin d'éviter qu'un ancien cockpit reste affiché après un déploiement.
+
+Si une session expire pendant un formulaire de lancement, l'écran de connexion est présenté sans effacer le DOM du brouillon courant. Le message indique que la saisie de la page est conservée.
+
+## Moteurs spécialisés acquis
+
+La ligne 1.2 comprend notamment : tontine opérationnelle (cycles, parts, planning, service d'un pot dans le Ledger), prêts et remboursements, décisions gouvernées/quorum, attendus et impayés, affectation explicite des reçus, épargne, soldes d'ouverture, détenteurs de caisse, garants, solidarité, marché (stock, commandes, livraisons, retours, litiges, achats groupés), import historique contrôlé, explication des montants, recherche documentaire sourcée, comparaison de règles, détection d'anomalies, calendrier, interface FR/EN, snapshots de réunion hors ligne et Relay chiffré AES-GCM.
+
+Une carte ou un workspace générique ne vaut toujours pas moteur métier terminé : chaque fonction spécialisée doit conserver persistance, droits, reprise et tests.
+
+## Sauvegarde / reprise
+
+La sauvegarde pré-déploiement multi-tontines `34766026113` est **SUCCESS** : archive source, export D1, restauration SQLite, `PRAGMA integrity_check = ok`, SHA-256 et GitHub Artifact. Une sauvegarde post-déploiement est également déclenchée après le run Cloudflare validé.
+
+Garde-fous permanents :
+- ne pas recréer `eco-system-db`;
+- migrations additives uniquement;
+- ne pas demander/recréer les secrets Cloudflare déjà acquis;
+- ne pas force-push ou fusionner `main` sans décision explicite;
+- ne pas activer l'argent réel sans autorisation séparée;
+- ne pas publier PII/archives privées;
+- préserver Living Rules, Ledger et Membership canoniques, isolation multi-tenant, idempotence et outbox.
+
+## Ancres historiques à préserver
+
+La ligne `1.0.0-complete-app` reste une référence historique supersédée et ne doit pas être effacée du Truth Ledger. Les prérequis **CLOUDFLARE** déjà acquis, notamment les secrets GitHub documentés sans valeur et la D1 `eco-system-db`, restent valides. La doctrine **Living Rules** et l'invariant `realMoneyEnabled=false` demeurent applicables à la ligne 1.2.
+
+## Point de reprise
+
+Partir exclusivement de `next/1.2.0-functional-completion-20260913`. Considérer la production 1.2 et le correctif multi-tontines comme acquis. Ne pas revenir à l'ancien cockpit 2.3.4 / build 2026-09-11 ni à la logique d'une cotisation nominale unique.

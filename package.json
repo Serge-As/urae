@@ -1,9 +1,9 @@
 {
   "name": "tontine-platform",
-  "version": "1.1.2-qualified-local",
+  "version": "1.2.0-functional-completion",
   "private": true,
   "type": "module",
-  "description": "Eco-System: recovered Cahier UI and locally qualified authenticated core; specialized domains remain incomplete.",
+  "description": "Eco-System: functional completion wave with authenticated canonical core, executable business workflows and innovation pilots.",
   "engines": {
     "node": ">=24"
   },

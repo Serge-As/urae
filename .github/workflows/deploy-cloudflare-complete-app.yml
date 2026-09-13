@@ -1,25 +1,26 @@
-name: Eco-System 1.0 Complete App — Cloudflare
+name: Eco-System 1.2 Functional Completion — Cloudflare
 
 on:
   workflow_dispatch:
   push:
-    branches: ['next/1.0.0-complete-app']
-    paths: ['.github/DEPLOY_ECO_SYSTEM_COMPLETE_ONCE']
+    branches: ['next/1.2.0-functional-completion-20260913']
+    paths: ['.github/DEPLOY_ECO_SYSTEM_1_2_ONCE']
 
 permissions:
   contents: read
 
 concurrency:
-  group: eco-system-complete-app
+  group: eco-system-1-2
   cancel-in-progress: false
 
 env:
   ECO_SYSTEM_DB: eco-system-db
+  R2_BUCKET: eco-system-backups
   ECO_SYSTEM_ROOT: https://eco-system.sergemimf.workers.dev/
   ECO_SYSTEM_HEALTH: https://eco-system.sergemimf.workers.dev/health
   ECO_SYSTEM_CATALOG: https://eco-system.sergemimf.workers.dev/api/v1/product/capabilities
-  EXPECTED_VERSION: 1.1.2-qualified-local
-  MIN_CAPABILITIES: 100
+  EXPECTED_VERSION: 1.2.0-functional-completion
+  MIN_CAPABILITIES: 139
 
 jobs:
   qualify-and-deploy:
@@ -41,11 +42,11 @@ jobs:
           set -euo pipefail
           test -n "${CLOUDFLARE_ACCOUNT_ID:-}"
           test -n "${CLOUDFLARE_API_TOKEN:-}"
-      - name: Complete App full qualification
+      - name: Eco-System 1.2 full qualification
         run: npm run ci
       - name: Build PWA and Worker assets
         run: npm run build
-      - name: Resolve existing D1 database
+      - name: Resolve existing D1 database and private R2 bucket
         shell: bash
         run: |
           set -euo pipefail
@@ -55,10 +56,23 @@ jobs:
             echo "::error::Acquired D1 database ${ECO_SYSTEM_DB} was not found. Refusing to silently create a replacement."
             exit 1
           fi
-          node scripts/render-wrangler-d1.mjs "${DB_ID}" workers/api/wrangler.ci.toml
+          if npx --yes wrangler@4 r2 bucket list > /tmp/r2-list.txt 2>/tmp/r2-error.txt; then
+            if grep -Fq "${R2_BUCKET}" /tmp/r2-list.txt || npx --yes wrangler@4 r2 bucket create "${R2_BUCKET}"; then
+              node scripts/render-wrangler-storage.mjs "${DB_ID}" "${R2_BUCKET}" workers/api/wrangler.ci.toml
+              echo "R2_MODE=R2" >> "${GITHUB_ENV}"
+            else
+              node scripts/render-wrangler-d1.mjs "${DB_ID}" workers/api/wrangler.ci.toml
+              echo "R2_MODE=D1_FALLBACK" >> "${GITHUB_ENV}"
+            fi
+          else
+            cat /tmp/r2-error.txt || true
+            echo "::warning::R2 is not available to this Cloudflare account/token; deploying with bounded D1 artifact fallback."
+            node scripts/render-wrangler-d1.mjs "${DB_ID}" workers/api/wrangler.ci.toml
+            echo "R2_MODE=D1_FALLBACK" >> "${GITHUB_ENV}"
+          fi
       - name: Apply additive D1 migrations only
         run: npx --yes wrangler@4 d1 migrations apply "${ECO_SYSTEM_DB}" --remote --config workers/api/wrangler.ci.toml
-      - name: Deploy Complete App Worker + PWA
+      - name: Deploy Eco-System 1.2 Worker + PWA + R2
         run: npx --yes wrangler@4 deploy --config workers/api/wrangler.ci.toml
       - name: Smoke root health and capability catalog
         shell: bash
@@ -69,11 +83,11 @@ jobs:
             root="$(curl --fail --silent --show-error --location --max-time 20 "${ECO_SYSTEM_ROOT}" || true)"
             health="$(curl --fail --silent --show-error --location --max-time 20 "${ECO_SYSTEM_HEALTH}" || true)"
             catalog="$(curl --fail --silent --show-error --location --max-time 20 "${ECO_SYSTEM_CATALOG}" || true)"
-            if printf '%s' "${root}" | grep -qi '<!doctype html>' && printf '%s' "${root}" | grep -q 'Eco-System' && printf '%s' "${health}" | grep -q '"ok": true' && printf '%s' "${catalog}" | grep -q '"capabilities"'; then break; fi
+            if grep -qi '<!doctype html>' <<<"${root}" && grep -q 'Eco-System' <<<"${root}" && grep -q '"ok": true' <<<"${health}" && grep -q '"capabilities"' <<<"${catalog}"; then break; fi
             sleep 4
           done
-          printf '%s' "${root}" | grep -qi '<!doctype html>'
-          printf '%s' "${root}" | grep -q 'Eco-System'
+          grep -qi '<!doctype html>' <<<"${root}"
+          grep -q 'Eco-System' <<<"${root}"
           printf '%s' "${health}" > /tmp/health.json
           printf '%s' "${catalog}" > /tmp/catalog.json
           node --input-type=module - <<'NODE'
@@ -83,11 +97,12 @@ jobs:
           if(health.ok!==true) throw new Error('HEALTH_NOT_OK');
           if(health.version!==process.env.EXPECTED_VERSION) throw new Error(`VERSION_MISMATCH:${health.version}`);
           if(health.realMoneyEnabled!==false) throw new Error('REAL_MONEY_MUST_REMAIN_DISABLED');
+          if(health.artifactStorageBound!==true) throw new Error('ARTIFACT_STORAGE_NOT_ACTIVE');
           if(catalog.version!==process.env.EXPECTED_VERSION) throw new Error(`CATALOG_VERSION_MISMATCH:${catalog.version}`);
           if(!Array.isArray(catalog.capabilities)||catalog.count<Number(process.env.MIN_CAPABILITIES)||catalog.capabilities.length!==catalog.count) throw new Error(`CAPABILITY_CATALOG_INCOMPLETE:${catalog.count}`);
           const ids=new Set(catalog.capabilities.map(x=>x.id));
           for(const required of ['DISCOVERY.GROUP_SEARCH','MEMBERSHIP.APPLICATION','GROUP.LAUNCH_STUDIO','RUBRIC.LIVING_RULES','MEETING.COMMAND_CENTER','LEDGER.CANONICAL','FINANCE.LOANS','COMMUNITY.FORUM','MARKETPLACE.CORE','ADS.MANAGER','LEARNING.MANAGER_ACADEMY','AI.ASSISTANT','PAPER.BRIDGE','REPORTING.EXPORTS','BACKUP.BIR_PLUS']){
             if(!ids.has(required)) throw new Error(`CATALOG_REQUIRED_CAPABILITY_MISSING:${required}`);
           }
-          console.log(`Complete App PASS: ${health.version}; ${catalog.count} capabilities; realMoneyEnabled=${health.realMoneyEnabled}`);
+          console.log(`Eco-System 1.2 PASS: ${health.version}; ${catalog.count} capabilities; realMoneyEnabled=${health.realMoneyEnabled}`);
           NODE

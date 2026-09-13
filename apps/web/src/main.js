@@ -4,7 +4,15 @@ import {createRubricEditor,readRubricEditors,describeRubricPlan,editRubricPlan} 
 const escapeText=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const html=(strings,...values)=>strings.reduce((out,s,i)=>out+s+(i<values.length?escapeText(values[i]):''),'');
 import { ConnectedApplication } from '../../../packages/application/src/index.js';
-const app = new ConnectedApplication({ locale: 'fr' });
+import { captureRuntimeI18n, applyRuntimeLocale, localeTag, runtimeTranslate } from './runtime-i18n.js';
+import { mountCompletionUI } from './completion-ui.js';
+import { mountAdvancedUI } from './advanced-ui.js';
+let uiLocale = 'fr';
+try { uiLocale = localStorage.getItem('tontine.locale') === 'en' ? 'en' : 'fr'; } catch {}
+const tx = (fr,en) => runtimeTranslate(uiLocale,fr,en);
+const app = new ConnectedApplication({ locale: uiLocale });
+captureRuntimeI18n(document);
+applyRuntimeLocale(uiLocale);
 let groups = [];
 let members = [];
 let meetings = [];
@@ -19,16 +27,16 @@ const launchEditors=[];
 let modules = [];
 let selectedLot = 'ALL';
 let deferredInstallPrompt;
-const CAHIER_VERSION = '1.1.2-qualified-local';
+const CAHIER_VERSION = '1.2.0-functional-completion';
 const $ = (s) => { const e = document.querySelector(s); if (!e)
     throw new Error(`UI_ELEMENT_NOT_FOUND:${s}`); return e; };
 const val = (id) => document.getElementById(id).value.trim();
 const num = (id) => Number(val(id));
 const checked = (id) => document.getElementById(id).checked;
-const fmt = (n) => `${new Intl.NumberFormat('fr-CM', { maximumFractionDigits: 0 }).format(n)} F CFA`;
+const fmt = (n) => `${new Intl.NumberFormat(localeTag(uiLocale), { maximumFractionDigits: 0 }).format(n)} F CFA`;
 const split = (v) => v.split(',').map(x => x.trim()).filter(Boolean);
 const date = (v) => { try {
-    return new Intl.DateTimeFormat('fr-CM', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(v));
+    return new Intl.DateTimeFormat(localeTag(uiLocale), { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(v));
 }
 catch {
     return v;
@@ -62,7 +70,7 @@ const fail = (e) => {
     };
     box.textContent = friendly[code] ?? `Action non terminée : ${code}`;
     box.hidden = false;
-    if(code==='AUTHENTICATION_REQUIRED')showAuth();
+    if(code==='AUTHENTICATION_REQUIRED')showAuth('Reconnectez-vous : votre saisie en cours reste conservée dans cette page.');
 };
 
 function onSubmit(selector, handler) {
@@ -75,6 +83,13 @@ function onSubmit(selector, handler) {
     });
 }
 
+const completionUI = mountCompletionUI({
+    app, notify: toast, showError: fail, getMembers: () => members, getMeetings: () => meetings,
+    getRubrics: () => rubrics, getLocale: () => uiLocale, fmt, date
+});
+const advancedUI = mountAdvancedUI({
+    app, notify: toast, showError: fail, getMembers: () => members, fmt, translate: (fr,en) => tx(fr,en)
+});
 const clearFail = () => { $('#errorBox').hidden = true; $('#errorBox').textContent = ''; };
 const go = (name) => {
     document.querySelectorAll('.view').forEach(x => x.classList.remove('active'));
@@ -88,10 +103,10 @@ const go = (name) => {
 };
 document.querySelectorAll('[data-view]').forEach(b => b.addEventListener('click', () => go(b.dataset.view)));
 document.querySelectorAll('[data-go]').forEach(b => b.addEventListener('click', () => go(b.dataset.go)));
-const renderConnectivity = () => { const online = navigator.onLine; const e = $('#connectivity'); e.textContent = `● ${online ? 'En ligne' : 'Hors ligne'}`; e.className = `pill ${online ? 'online' : 'offline'}`; app.setConnectivity(online ? 'online' : 'offline'); };
+const renderConnectivity = () => { const online = navigator.onLine; const e = $('#connectivity'); e.textContent = `● ${online ? tx('En ligne','Online') : tx('Hors ligne','Offline')}`; e.className = `pill ${online ? 'online' : 'offline'}`; app.setConnectivity(online ? 'online' : 'offline'); };
 const renderUniverse = async () => {
     const u = await app.universe();
-    const rows = [[u.groups, 'Groupes'], [u.inbox, 'Actions à traiter'], [u.pendingSync, 'En attente de synchro'], [u.audit, 'Événements audités']];
+    const rows = [[u.groups, tx('Groupes','Groups')], [u.inbox, tx('Actions à traiter','Actions to do')], [u.pendingSync, tx('En attente de synchro','Pending sync')], [u.audit, tx('Événements audités','Audited events')]];
     const root = $('#universeCards');
     root.replaceChildren();
     for (const [n, l] of rows) {
@@ -107,18 +122,18 @@ const renderActiveGroup = () => {
     const root = $('#activeGroupCard');
     if (!group) {
         root.className = 'empty-state';
-        root.textContent = 'Aucun groupe actif.';
+        root.textContent = tx('Aucun groupe actif.','No active group.');
         return;
     }
     root.className = 'item';
-    root.innerHTML = html`<strong>${group.name}</strong><p>${group.kind} · ${group.governanceModel}</p><small>Créé le ${date(group.createdAt)}</small>`;
+    root.innerHTML = html`<strong>${group.name}</strong><p>${group.kind} · ${group.governanceModel}</p><small>${tx('Créé le','Created on')} ${date(group.createdAt)}</small>`;
 };
 const renderGroupSelector = () => {
     const sel = $('#activeGroupSelect');
     sel.replaceChildren();
     const empty = document.createElement('option');
     empty.value = '';
-    empty.textContent = groups.length ? 'Choisir un groupe…' : 'Aucun groupe — créez ou intégrez-en un';
+    empty.textContent = groups.length ? tx('Choisir un groupe…','Choose a group…') : tx('Aucun groupe — créez ou intégrez-en un','No group — create or join one');
     sel.append(empty);
     for (const g of groups) {
         const o = document.createElement('option');
@@ -133,7 +148,7 @@ const renderGroups = async () => {
     const root = $('#groupsList');
     root.replaceChildren();
     if (!groups.length) {
-        root.innerHTML = '<div class="empty-state">Aucun groupe. Lancez votre premier projet.</div>';
+        root.innerHTML = `<div class="empty-state">${tx('Aucun groupe. Lancez votre premier projet.','No group yet. Start your first project.')}</div>`;
         renderActiveGroup();
         renderGroupSelector();
         return;
@@ -144,9 +159,9 @@ const renderGroups = async () => {
         a.innerHTML = html`<strong>${g.name}</strong><p class="hint">${g.kind} · ${g.governanceModel}</p>`;
         const b = document.createElement('button');
         b.className = 'primary';
-        b.textContent = g.id === app.activeGroup() ? 'Groupe actif' : 'Sélectionner';
+        b.textContent = g.id === app.activeGroup() ? tx('Groupe actif','Active group') : tx('Sélectionner','Select');
         b.disabled = g.id === app.activeGroup();
-        b.onclick = async () => { app.selectGroup(g.id); await refreshGroupContext(); toast(`Groupe actif : ${g.name}`); };
+        b.onclick = async () => { app.selectGroup(g.id); await refreshGroupContext(); toast(`${tx('Groupe actif','Active group')} : ${g.name}`); };
         a.append(b);
         root.append(a);
     }
@@ -159,7 +174,7 @@ const renderInbox = async () => {
         const root = $(selector);
         root.replaceChildren();
         if (!items.length) {
-            root.innerHTML = '<li class="empty-state">Aucune action urgente.</li>';
+            root.innerHTML = `<li class="empty-state">${tx('Aucune action urgente.','No urgent action.')}</li>`;
             continue;
         }
         for (const i of items.slice(0, selector === '#dashboardInbox' ? 5 : 50)) {
@@ -176,15 +191,15 @@ const renderMembers = async () => {
     const select = $('#contributionMember');
     select.replaceChildren();
     if (!members.length) {
-        list.innerHTML = '<li class="empty-state">Aucun membre.</li>';
-        select.innerHTML = '<option value="">Aucun membre</option>';
+        list.innerHTML = `<li class="empty-state">${tx('Aucun membre.','No member.')}</li>`;
+        select.innerHTML = `<option value="">${tx('Aucun membre','No member')}</option>`;
         return;
     }
     for (const m of members) {
         const li = document.createElement('li');
         li.textContent = `${m.displayName} · ${m.roles.join(', ')}`;
         if(isManager() || m.userId===app.currentActor()){
-            const button=document.createElement('button');button.type='button';button.className='link-btn';button.textContent='Relevé';
+            const button=document.createElement('button');button.type='button';button.className='link-btn';button.textContent=tx('Relevé','Statement');
             button.onclick=()=>showStatement(m.id).catch(fail);li.append(button);
         }
         list.append(li);
@@ -202,22 +217,22 @@ const renderMeetings = async () => {
     select.replaceChildren();
     const none = document.createElement('option');
     none.value = '';
-    none.textContent = 'Sans séance';
+    none.textContent = tx('Sans séance','No meeting');
     select.append(none);
     for (const m of meetings.slice().sort((a, b) => b.openedAt.localeCompare(a.openedAt))) {
         const a = document.createElement('article');
         a.className = 'meeting-row';
         const span = document.createElement('span');
-        span.textContent = `${m.title} · ${m.status === 'open' ? 'ouverte' : 'clôturée'} · ${date(m.openedAt)}`;
+        span.textContent = `${m.title} · ${m.status === 'open' ? tx('ouverte','open') : tx('clôturée','closed')} · ${date(m.openedAt)}`;
         a.append(span);
         if (m.status === 'open' && isManager()) {
             const b = document.createElement('button');
-            b.textContent = 'Clôturer';
+            b.textContent = tx('Clôturer','Close');
             b.onclick = async () => { try {
                 clearFail();
                 await app.closeMeeting(m.id);
                 await renderMeetings();
-                toast('Clôture enregistrée comme checkpoint.');
+                toast(tx('Clôture enregistrée comme checkpoint.','Closing recorded as a checkpoint.'));
             }
             catch (e) {
                 fail(e);
@@ -235,14 +250,14 @@ const activeMeeting = () => meetings.find(x => x.status === 'open')?.id;
 const renderMeetingMatrix = () => {
     const root = $('#meetingMatrix');
     if (!members.length || !rubrics.length) {
-        root.innerHTML = '<div class="empty-state">Ajoutez au moins un membre et une rubrique pour afficher la matrice membres × rubriques.</div>';
+        root.innerHTML = `<div class="empty-state">${tx('Ajoutez au moins un membre et une rubrique pour afficher la matrice membres × rubriques.','Add at least one member and one rubric to display the member × rubric matrix.')}</div>`;
         return;
     }
     const table = document.createElement('table');
     table.className = 'meeting-matrix';
     const head = document.createElement('thead');
     const hr = document.createElement('tr');
-    hr.innerHTML = '<th>Membre</th>' + rubrics.map(r => html`<th>${r.name}</th>`).join('');
+    hr.innerHTML = `<th>${tx('Membre','Member')}</th>` + rubrics.map(r => html`<th>${r.name}</th>`).join('');
     head.append(hr);
     table.append(head);
     const body = document.createElement('tbody');
@@ -258,21 +273,21 @@ const renderMeetingMatrix = () => {
             b.className = 'matrix-cell';
             const net=receiptPositions.filter(x=>x.membershipId===m.id && x.rubricId===r.id && (!matrixMeetingId || x.meetingId===matrixMeetingId)).reduce((n,x)=>n+x.netAmount,0);
             b.textContent = fmt(net);b.disabled=!isManager();
-            b.title = `Préparer une cotisation ${m.displayName} · ${r.name}`;
-            b.onclick = () => { $('#contributionMember').value = m.id; $('#contributionRubric').value = r.id; if (matrixMeetingId) $('#contributionMeeting').value = matrixMeetingId; go('finance'); $('#contributionAmount').focus(); toast(`Cotisation prête : ${m.displayName} · ${r.name}`); };
+            b.title = `${tx('Préparer une cotisation','Prepare a contribution')} ${m.displayName} · ${r.name}`;
+            b.onclick = () => { $('#contributionMember').value = m.id; $('#contributionRubric').value = r.id; if (matrixMeetingId) $('#contributionMeeting').value = matrixMeetingId; go('finance'); $('#contributionAmount').focus(); toast(`${tx('Cotisation prête','Contribution ready')} : ${m.displayName} · ${r.name}`); };
             td.append(b);
             tr.append(td);
         }
         body.append(tr);
     }
     table.append(body);
-    const label=document.createElement('label');label.textContent='Encaissements nets confirmés · séance : ';
-    const scope=document.createElement('select');scope.setAttribute('aria-label','Séance de la matrice');
-    for(const [id,title] of [['','Toutes les séances'],...meetings.map(m=>[m.id,m.title])]){
+    const label=document.createElement('label');label.textContent=tx('Encaissements nets confirmés · séance : ','Confirmed net collections · meeting: ');
+    const scope=document.createElement('select');scope.setAttribute('aria-label',tx('Séance de la matrice','Matrix meeting'));
+    for(const [id,title] of [['',tx('Toutes les séances','All meetings')],...meetings.map(m=>[m.id,m.title])]){
         const option=document.createElement('option');option.value=id;option.textContent=title;scope.append(option);
     }
     scope.value=matrixMeetingId;scope.onchange=()=>{matrixMeetingId=scope.value;renderMeetingMatrix();};label.append(scope);
-    const note=document.createElement('p');note.className='hint';note.textContent='Montants comptabilisés, annulations déduites. Une valeur nulle ne constitue pas automatiquement une dette. Cliquez pour préparer une saisie.';
+    const note=document.createElement('p');note.className='hint';note.textContent=tx('Montants comptabilisés, annulations déduites. Une valeur nulle ne constitue pas automatiquement une dette. Cliquez pour préparer une saisie.','Posted amounts, reversals deducted. A zero value does not automatically mean a debt. Click to prepare an entry.');
     root.replaceChildren(label,note,table);
 };
 const renderLivingRules = async () => {
@@ -295,10 +310,10 @@ const renderLivingRules = async () => {
     pselect.replaceChildren();
     const none = document.createElement('option');
     none.value = '';
-    none.textContent = 'Sans rubrique';
+    none.textContent = tx('Sans rubrique','No rubric');
     rselect.append(none);
     if (!rubrics.length) {
-        root.innerHTML = '<div class="empty-state">Aucune rubrique personnalisée. Décrivez par exemple la collation de ce groupe.</div>';
+        root.innerHTML = `<div class="empty-state">${tx('Aucune rubrique personnalisée. Décrivez par exemple la collation de ce groupe.','No custom rubric. Describe, for example, how this group handles refreshments.')}</div>`;
     }
     for (const r of rubrics) {
         const a = document.createElement('article');
@@ -310,8 +325,8 @@ const renderLivingRules = async () => {
             const scheduled=(r.activityPlan.participants??[]).flatMap(p=>p.shares.filter(s=>s.turn!==undefined).map(s=>`${p.name} · ${s.name} : tour ${s.turn}`));
             if(scheduled.length){const list=document.createElement('ul');for(const text of scheduled){const li=document.createElement('li');li.textContent=text;list.append(li);}a.append(list);}
         }
-        const edit=document.createElement('button');edit.type='button';edit.className='secondary';edit.textContent='Configurer les caractéristiques / parts';
-        edit.onclick=()=>editRubricPlan(r,async plan=>{await app.updateRubricActivityPlan(r.id,plan);await renderLivingRules();toast('Caractéristiques enregistrées.');},launchError);
+        const edit=document.createElement('button');edit.type='button';edit.className='secondary';edit.textContent=tx('Configurer les caractéristiques / parts','Configure characteristics / shares');
+        edit.onclick=()=>editRubricPlan(r,async plan=>{await app.updateRubricActivityPlan(r.id,plan);await renderLivingRules();toast(tx('Caractéristiques enregistrées.','Characteristics saved.'));},launchError);
         a.append(edit);
         root.append(a);
         for (const sel of [rselect, pselect]) {
@@ -378,6 +393,13 @@ const renderKernel = () => { const root = $('#kernelList'); root.replaceChildren
     li.textContent = id;
     root.append(li);
 } const s = app.safetyState(); $('#safetyState').innerHTML = html`<article class="item"><strong>Argent réel</strong><p>${s.realMoneyEnabled ? 'ACTIF' : 'DÉSACTIVÉ'}</p></article><article class="item"><strong>Ledger cash manuel</strong><p>${s.manualCashLedgerEnabled ? 'Actif' : 'Inactif'}</p></article><article class="item"><strong>IA cloud payante</strong><p>${s.cloudAiBudgetEnabled ? 'Active' : 'Désactivée'}</p></article>`; };
+const moduleLabel = (m) => uiLocale === 'en' ? (m.labelEn || m.labelFr) : m.labelFr;
+const statusCopy = (status) => ({
+    FOUNDATION_ACTIVE: tx('Parcours de base','Foundation journey'),
+    STRUCTURAL_V1: tx('Dossier · service à compléter','Record · service to complete'),
+    PLANNED_DOMAIN: tx('Domaine planifié','Planned domain'),
+    LATER_OPTIONAL: tx('Option ultérieure','Later option')
+}[status] ?? status);
 const renderModules = () => {
     const q = val('catalogSearch').toLowerCase();
     const root = $('#moduleCatalog');
@@ -387,7 +409,7 @@ const renderModules = () => {
     for (const m of chosen) {
         const a = document.createElement('article');
         a.className = 'module-card';
-        a.innerHTML = html`<span class="module-status ${m.status.toLowerCase()}">${m.status.replaceAll('_', ' ')}</span><strong>${m.labelFr}</strong><small>${m.id} · Lot ${m.lot} · ${m.workspace === 'SPECIALIZED' ? 'moteur spécialisé' : 'workspace universel'}</small>`;
+        a.innerHTML = html`<span class="module-status ${m.status.toLowerCase()}">${statusCopy(m.status)}</span><strong>${moduleLabel(m)}</strong><small>${m.id} · ${tx('Lot','Lot')} ${m.lot} · ${m.workspace === 'SPECIALIZED' ? tx('moteur spécialisé','specialized engine') : tx('workspace universel','universal workspace')}</small>`;
         a.onclick = () => void openModule(m.id);
         root.append(a);
     }
@@ -395,7 +417,7 @@ const renderModules = () => {
 const renderLotFilters = () => { const root = $('#lotFilters'); root.replaceChildren(); for (const lot of ['ALL', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J']) {
     const b = document.createElement('button');
     b.className = `filter ${lot === selectedLot ? 'active' : ''}`;
-    b.textContent = lot === 'ALL' ? 'Tous' : `Lot ${lot}`;
+    b.textContent = lot === 'ALL' ? tx('Tous','All') : `Lot ${lot}`;
     b.onclick = () => { selectedLot = lot; renderLotFilters(); renderModules(); };
     root.append(b);
 } };
@@ -409,12 +431,12 @@ const renderEcosystemHighlights = () => {
             continue;
         const b = document.createElement('button');
         b.className = 'quick';
-        b.innerHTML = html`<b>${m.labelFr}</b><span>${m.id}</span>`;
+        b.innerHTML = html`<b>${moduleLabel(m)}</b><span>${m.id}</span>`;
         b.onclick = () => void openModule(id);
         root.append(b);
     }
 };
-const STATUS_COPY = { FOUNDATION_ACTIVE: 'Parcours de base', STRUCTURAL_V1: 'Dossier · service à compléter', PLANNED_DOMAIN: 'Domaine planifié', LATER_OPTIONAL: 'Option ultérieure' };
+const STATUS_COPY = new Proxy({}, { get: (_target, key) => statusCopy(String(key)) });
 const specializedRoute = (id) => {
     if (id.startsWith('DISCOVERY.') || id.startsWith('MEMBERSHIP.') || id.startsWith('CORE.IDENTITY'))
         return 'discovery';
@@ -437,7 +459,7 @@ const openModule = async (id) => {
     const route = m.workspace === 'SPECIALIZED' && m.status === 'FOUNDATION_ACTIVE' ? specializedRoute(id) : undefined;
     if (route) {
         go(route);
-        toast(m.labelFr);
+        toast(moduleLabel(m));
         return;
     }
     $('#workspaceModule').value = id;
@@ -445,7 +467,7 @@ const openModule = async (id) => {
     await loadWorkspaces();
     setTimeout(() => $('#workspaceTitle').focus(), 50);
 };
-const hubCard = (m) => { const a = document.createElement('article'); a.className = 'hub-card'; a.innerHTML = html`<header><b>${m.labelFr}</b><span class="truth-chip ${m.status.toLowerCase()}">${STATUS_COPY[m.status] ?? m.status}</span></header><p>${m.id} · Lot ${m.lot}</p><small>${m.workspace === 'SPECIALIZED' ? 'Fonctions de base disponibles' : 'Organisation de vos notes et informations'}</small>`; const b = document.createElement('button'); b.type = 'button'; b.className = m.workspace === 'SPECIALIZED' ? 'primary' : 'link-btn'; b.textContent = m.workspace === 'SPECIALIZED' && m.status === 'FOUNDATION_ACTIVE' ? 'Ouvrir' : 'Ouvrir le dossier'; b.onclick = () => void openModule(m.id); a.append(b); return a; };
+const hubCard = (m) => { const a = document.createElement('article'); a.className = 'hub-card'; a.innerHTML = html`<header><b>${moduleLabel(m)}</b><span class="truth-chip ${m.status.toLowerCase()}">${statusCopy(m.status)}</span></header><p>${m.id} · Lot ${m.lot}</p><small>${m.workspace === 'SPECIALIZED' ? tx('Fonctions de base disponibles','Foundation functions available') : tx('Organisation de vos notes et informations','Organize your notes and information')}</small>`; const b = document.createElement('button'); b.type = 'button'; b.className = m.workspace === 'SPECIALIZED' ? 'primary' : 'link-btn'; b.textContent = m.workspace === 'SPECIALIZED' && m.status === 'FOUNDATION_ACTIVE' ? tx('Ouvrir','Open') : tx('Ouvrir le dossier','Open record'); b.onclick = () => void openModule(m.id); a.append(b); return a; };
 const fillHub = (selector, predicate, limit = 12) => { const root = $(selector); root.replaceChildren(); for (const m of modules.filter(predicate).slice(0, limit))
     root.append(hubCard(m)); };
 const renderDomainHubs = () => {
@@ -463,19 +485,19 @@ const renderDomainHubs = () => {
 const populateWorkspaceModules = () => { const sel = $('#workspaceModule'); sel.replaceChildren(); for (const m of modules) {
     const o = document.createElement('option');
     o.value = m.id;
-    o.textContent = `${m.labelFr} — ${m.id}`;
+    o.textContent = `${moduleLabel(m)} — ${m.id}`;
     sel.append(o);
 } };
 const loadWorkspaces = async () => {
     try {
         clearFail();
-        if(app.activeGroup()&&!isManager()){$('#workspaceRecords').textContent='Les dossiers du groupe sont réservés à ses responsables.';return;}
+        if(app.activeGroup()&&!isManager()){$('#workspaceRecords').textContent=tx('Les dossiers du groupe sont réservés à ses responsables.','Group records are reserved for its leaders.');return;}
         const moduleId = val('workspaceModule');
         const xs = await app.listWorkspaceRecords(moduleId);
         const root = $('#workspaceRecords');
         root.replaceChildren();
         if (!xs.length) {
-            root.innerHTML = '<div class="empty-state">Aucun dossier pour ce service. Créez le premier.</div>';
+            root.innerHTML = `<div class="empty-state">${tx('Aucun dossier pour ce service. Créez le premier.','No record for this service. Create the first one.')}</div>`;
             return;
         }
         for (const x of xs.slice().reverse()) {
@@ -484,7 +506,7 @@ const loadWorkspaces = async () => {
             a.innerHTML = html`<strong>${x.title}</strong><p>${x.summary ?? ''}</p><small>${x.status} · ${x.tags.join(', ')} · ${date(x.updatedAt)}</small>`;
             const b = document.createElement('button');
             b.className = 'link-btn';
-            b.textContent = x.status === 'DONE' ? 'Réactiver' : 'Marquer terminé';
+            b.textContent = x.status === 'DONE' ? tx('Réactiver','Reactivate') : tx('Marquer terminé','Mark done');
             b.onclick = async () => { await app.updateWorkspaceRecord(x.id, { status: x.status === 'DONE' ? 'ACTIVE' : 'DONE' }); await loadWorkspaces(); };
             a.append(b);
             root.append(a);
@@ -571,6 +593,8 @@ const refreshGroupContext = async () => {
     if(!active || manage)await renderApplications();else $('#applicationsBox').textContent='Les candidatures sont gérées par les responsables du groupe.';
     await renderUniverse();
     await renderInbox();
+    await completionUI.refresh();
+    await advancedUI.refresh();
 };
 const refreshAll = async () => { await refreshGroupContext(); renderOutbox(); renderCompatibility(); renderKernel(); renderModules(); renderEcosystemHighlights(); renderDomainHubs(); };
 $('#activeGroupSelect').addEventListener('change', async (e) => { const id = e.target.value; app.selectGroup(id || undefined); try {
@@ -606,7 +630,11 @@ const launchError=error=>({
   PROJECT_RUBRICS_REQUIRED:'Ajoutez au moins une rubrique et renseignez ses caractéristiques.',
   RUBRIC_NAME_REQUIRED:'Donnez un nom à chaque rubrique.',
   INVALID_RUBRIC_ACTIVITY:'Choisissez la nature de chaque rubrique.',
-  INVALID_RUBRIC_MONEY:'Le montant nominal doit être un nombre entier positif ou nul.',
+  INVALID_RUBRIC_MONEY:'Le montant monétaire de cette rubrique doit être un entier positif ou nul.',
+  INVALID_RUBRIC_PARTICIPATION:'Choisissez comment les membres participent à cette rubrique.',
+  INVALID_RUBRIC_CONTRIBUTION_MODE:'Choisissez si cette rubrique fonctionne en argent, en nature ou en mode mixte.',
+  INVALID_RUBRIC_IN_KIND:'Pour une rubrique en nature, indiquez l’article et une quantité positive.',
+  INVALID_RUBRIC_CONTEXT:'Vérifiez le contexte de la rubrique : unité ou note trop longue.',
   INVALID_RUBRIC_COUNTS:'Renseignez le nombre de membres, de tours et la durée avec des nombres entiers positifs.',
   INVALID_RUBRIC_AMOUNT_BASIS:'Le montant d’une tontine se définit par nom / part.',
   INVALID_RUBRIC_SHARES:'Le total des parts doit être au moins égal au nombre de membres participants.',
@@ -622,37 +650,50 @@ const launchError=error=>({
   SIMULATION_AMOUNT_OUT_OF_RANGE:'Ces montants sont trop élevés pour un calcul exact. Vérifiez les paramètres.'
 }[error.message]??error.message);
 const invalidateProject=()=>{projectRevision++;lastProjectId=undefined;$('#createGroupBtn').disabled=true;$('#simulationResult').replaceChildren();};
-const addLaunchRubric=()=>{
-  const editor=createRubricEditor($('#launchRubrics'),{onChange:invalidateProject,onRemove:()=>{launchEditors.splice(launchEditors.indexOf(editor),1);editor.card.remove();invalidateProject();}});
-  launchEditors.push(editor);invalidateProject();editor.focus();
+const addLaunchRubric=(preset={})=>{
+  const editor=createRubricEditor($('#launchRubrics'),{
+    initialName:preset.name??'',initialKind:preset.kind??'',initialContributionMode:preset.contributionMode??'MONEY',
+    onChange:invalidateProject,onRemove:()=>{launchEditors.splice(launchEditors.indexOf(editor),1);editor.card.remove();invalidateProject();}
+  });
+  launchEditors.push(editor);invalidateProject();editor.focus();return editor;
 };
-$('#addLaunchRubric').onclick=addLaunchRubric;
+$('#addLaunchRubric').onclick=()=>addLaunchRubric();
+$('#addLaunchTontine').onclick=()=>addLaunchRubric({kind:'TONTINE',contributionMode:val('groupKind')==='in_kind_tontine'?'IN_KIND':'MONEY'});
 const syncLaunchFamily=()=>{
-  const association=['association','hybrid'].includes(val('groupKind'));
-  $('#associationRubricSetup').hidden=!association;
-  for(const editor of launchEditors)editor.card.disabled=!association;
-  $('#legacyProjectSettings').hidden=association;$('#legacyProjectSettings').disabled=association;
+  const family=val('groupKind');
+  $('#associationRubricSetup').hidden=false;
+  for(const editor of launchEditors)editor.card.disabled=false;
+  $('#legacyProjectSettings').hidden=true;$('#legacyProjectSettings').disabled=true;
+  if(['rotating_tontine','in_kind_tontine'].includes(family)&&!launchEditors.some(editor=>editor.read().kind==='TONTINE')){
+    addLaunchRubric({kind:'TONTINE',name:family==='in_kind_tontine'?'Tontine en nature':'Tontine',contributionMode:family==='in_kind_tontine'?'IN_KIND':'MONEY'});
+  }
   invalidateProject();
 };
 $('#groupKind').addEventListener('change',syncLaunchFamily);syncLaunchFamily();
 $('#projectForm').addEventListener('input',invalidateProject);
 onSubmit('#projectForm', async (e) => { e.preventDefault(); try {
     clearFail();const revision=projectRevision;
-    const association=['association','hybrid'].includes(val('groupKind'));
-    const parameters=association?{rubrics:readRubricEditors(launchEditors)}:{memberCount:num('memberCount'),sessions:num('sessions'),nominalContribution:num('nominalContribution'),managementFeePerContribution:num('managementFee'),estimatedExternalCostRate:num('externalCostRate')/100,fixedOperatingCostPerSession:num('fixedSessionCost')};
+    const parameters={rubrics:readRubricEditors(launchEditors)};
     const r=await app.simulateAndStoreProject({name:val('projectName'),kind:val('groupKind'),governanceModel:val('governanceModel'),...parameters});
     if(revision!==projectRevision){toast('Le projet a changé. Relancez la simulation pour vérifier les nouveaux paramètres.');return;}
     lastProjectId=r.projectId;
     const root=$('#simulationResult');root.replaceChildren();
     if(parameters.rubrics){for(const plan of parameters.rubrics){
       const result=r.result.rubricBreakdown.find(row=>row.key===plan.key),card=document.createElement('article');card.className='simulation-rubric';
-      card.innerHTML=html`<h3>${plan.name}</h3><p>${describeRubricPlan(plan)}</p><p>Collecte nominale sur ce cycle : <strong>${fmt(result.totalNominalContributions)}</strong></p>`;
+      card.innerHTML=html`<h3>${plan.name}</h3><p>${describeRubricPlan(plan)}</p>`;
+      if(plan.contributionMode==='IN_KIND'){
+        const volume=result.unitsPerSession*result.sessions*Number(plan.contributionQuantity??1),p=document.createElement('p');
+        p.textContent='Volume prévu sur ce cycle : '+volume+' '+String(plan.contributionUnit??'unité')+' de '+String(plan.contributionLabel??'nature');card.append(p);
+      }else{
+        const p=document.createElement('p');p.innerHTML='Collecte monétaire prévue sur ce cycle : <strong>'+fmt(result.totalNominalContributions)+'</strong>';card.append(p);
+        if(plan.contributionMode==='MIXED'){const q=document.createElement('p');const volume=result.unitsPerSession*result.sessions*Number(plan.contributionQuantity??1);q.textContent='En plus : '+volume+' '+String(plan.contributionUnit??'unité')+' de '+String(plan.contributionLabel??'nature');card.append(q);}
+      }
       if(plan.kind==='TONTINE'){
         const planned=(plan.participants??[]).flatMap(p=>p.shares),note=document.createElement('p');note.className='hint';note.textContent=`${planned.length} / ${plan.shareCount} parts nommées · ${planned.filter(s=>s.turn!==undefined).length} passages programmés. Chaque part bénéficie une fois ; plusieurs parts d’un membre peuvent passer au même tour.`;card.append(note);
       }
       root.append(card);
     }}
-    const totals=document.createElement('div');totals.innerHTML=html`<div class="result-row"><span>Total nominal des cycles prévus</span><strong>${fmt(r.result.totalNominalContributions)}</strong></div><div class="result-row"><span>Frais de gestion perçus</span><strong>${fmt(r.result.totalManagementFees)}</strong></div><div class="result-row"><span>Coûts estimés</span><strong>${fmt(r.result.estimatedExternalCosts+r.result.fixedOperatingCosts)}</strong></div><div class="result-row"><span>Marge de gestion estimée</span><strong>${fmt(r.result.estimatedManagerMargin)}</strong></div><p class="hint">Prévision selon les versements complets. Les rubriques peuvent avoir des durées différentes. Cette simulation ne crée aucun versement ni bénéfice payé.</p>`;root.append(totals);
+    const totals=document.createElement('div');totals.innerHTML=html`<div class="result-row"><span>Total monétaire des rubriques prévues</span><strong>${fmt(r.result.totalNominalContributions)}</strong></div><div class="result-row"><span>Frais de gestion perçus</span><strong>${fmt(r.result.totalManagementFees)}</strong></div><div class="result-row"><span>Coûts estimés</span><strong>${fmt(r.result.estimatedExternalCosts+r.result.fixedOperatingCosts)}</strong></div><div class="result-row"><span>Marge de gestion estimée</span><strong>${fmt(r.result.estimatedManagerMargin)}</strong></div><p class="hint">Prévision selon les versements complets. Les rubriques peuvent avoir des durées différentes. Cette simulation ne crée aucun versement ni bénéfice payé.</p>`;root.append(totals);
     $('#createGroupBtn').disabled=false;toast('Projet et rubriques vérifiés.');
 }catch(e){fail(Error(launchError(e)));} });
 $('#createGroupBtn').addEventListener('click',async()=>{
@@ -787,7 +828,16 @@ catch (e) {
     fail(e);
 } });
 $('#modeBtn').addEventListener('click', () => { document.body.classList.toggle('ultra-simple'); toast(document.body.classList.contains('ultra-simple') ? 'Mode Ultra Simple activé.' : 'Mode complet activé.'); });
-$('#languageSelect').addEventListener('change', e => { app.setLocale(e.target.value); toast('Langue du contexte mise à jour. La traduction complète reste progressive.'); });
+$('#languageSelect').addEventListener('change', async e => {
+    uiLocale = e.target.value === 'en' ? 'en' : 'fr';
+    app.setLocale(uiLocale);
+    applyRuntimeLocale(uiLocale);
+    completionUI.setLocale();
+    advancedUI.setLocale();
+    renderConnectivity(); renderModules(); renderEcosystemHighlights(); renderDomainHubs(); renderActiveGroup(); renderGroupSelector();
+    await renderUniverse(); await renderInbox();
+    toast(tx('Interface passée en français.','Interface switched to English.'));
+});
 window.addEventListener('online', async () => { renderConnectivity(); try {
     await app.syncOutbox();
     await refreshAll();
@@ -800,6 +850,18 @@ $('#installBtn').addEventListener('click', async () => { if (deferredInstallProm
     deferredInstallPrompt = undefined;
     $('#installBtn').hidden = true;
 } });
+async function ensureCurrentServiceWorker(){
+    if(!('serviceWorker' in navigator))return;
+    try{
+        const reg=await navigator.serviceWorker.register('/sw.js',{scope:'/',updateViaCache:'none'});
+        await reg.update();
+        navigator.serviceWorker.addEventListener('controllerchange',()=>{
+            try{if(sessionStorage.getItem('eco-system-sw-reloaded')==='1')return;sessionStorage.setItem('eco-system-sw-reloaded','1');}catch{}
+            location.reload();
+        },{once:true});
+    }catch{}
+}
+
 async function start() {
     renderConnectivity();
     renderKernel();
@@ -817,13 +879,6 @@ async function start() {
         renderDomainHubs();
         await refreshAll();
         await loadWorkspaces();
-        if ('serviceWorker' in navigator)
-            try {
-                const reg = await navigator.serviceWorker.register('/sw.js', { scope: '/' });
-                await reg.update();
-                navigator.serviceWorker.addEventListener('controllerchange', () => toast('Mise à jour disponible. Vous pourrez actualiser après votre saisie.'));
-            }
-            catch { }
     }
     catch (e) {
         fail(e);
@@ -851,7 +906,7 @@ async function showStatement(membershipId){
     dialog.append(exportButton,print,close);document.body.append(dialog);dialog.showModal();
 }
 let authMode='login';
-function showAuth(){document.body.classList.add('signed-out');$('#authScreen').hidden=false;$('#authUsername').focus();}
+function showAuth(message=''){document.body.classList.add('signed-out');$('#authScreen').hidden=false;if(message)$('#authError').textContent=message;$('#authUsername').focus();}
 document.querySelectorAll('[data-auth-mode]').forEach(button=>button.addEventListener('click',()=>{
     authMode=button.dataset.authMode;
     document.querySelectorAll('[data-auth-mode]').forEach(b=>{b.classList.toggle('selected',b===button);b.setAttribute('aria-pressed',String(b===button));});
