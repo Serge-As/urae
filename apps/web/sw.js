@@ -1,10 +1,12 @@
-const CACHE = 'eco-system-master-cockpit-20260911-v1';
+const RELEASE = 'master-cockpit-20260913-r2';
+const CACHE = `eco-system-${RELEASE}`;
 const APP_SHELL = [
-  '/',
+  `/?release=${RELEASE}`,
   '/index.html',
-  '/styles.css?v=master-20260911',
-  '/manifest.webmanifest?v=master-20260911',
-  '/src/main.js?v=master-20260911',
+  `/styles.css?v=${RELEASE}`,
+  `/manifest.webmanifest?v=${RELEASE}`,
+  `/release.json?v=${RELEASE}`,
+  `/src/main.js?v=${RELEASE}`,
   '/src/i18n.js',
   '/packages/application/src/index.js',
   '/packages/contracts/src/index.js',
@@ -31,13 +33,20 @@ self.addEventListener('activate', event => {
       if (name !== CACHE) await caches.delete(name);
     }
     await self.clients.claim();
+    const clients = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+    for (const client of clients) client.postMessage({ type: 'ECO_SYSTEM_RELEASE_ACTIVE', release: RELEASE });
   })());
+});
+
+self.addEventListener('message', event => {
+  if (event.data?.type === 'SKIP_WAITING') self.skipWaiting();
 });
 
 async function networkFirst(request, fallbackPath) {
   const cache = await caches.open(CACHE);
   try {
-    const response = await fetch(request, { cache: 'no-store' });
+    const freshRequest = new Request(request, { cache: 'reload' });
+    const response = await fetch(freshRequest);
     if (response.ok) await cache.put(request, response.clone());
     return response;
   } catch {
@@ -53,7 +62,7 @@ self.addEventListener('fetch', event => {
   if (url.origin !== self.location.origin) return;
 
   if (url.pathname.startsWith('/api/') || url.pathname === '/health') {
-    event.respondWith(fetch(event.request));
+    event.respondWith(fetch(new Request(event.request, { cache: 'no-store' })));
     return;
   }
 
@@ -66,6 +75,7 @@ self.addEventListener('fetch', event => {
     url.pathname === '/styles.css' ||
     url.pathname === '/src/main.js' ||
     url.pathname === '/manifest.webmanifest' ||
+    url.pathname === '/release.json' ||
     url.pathname === '/sw.js';
 
   if (freshCritical) {
