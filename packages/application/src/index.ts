@@ -1,3 +1,4 @@
+import type {LaunchRubricPlan} from '../../contracts/src/index.js';
 import { PlatformKernel, type DeviceCapabilities } from '../../platform-kernel/src/index.js';
 import { InMemoryPlatformRepository } from '../../repositories/src/index.js';
 import { FoundationService } from '../../domain/src/index.js';
@@ -51,6 +52,7 @@ export class FoundationApplication {
 }
 
 export interface ConnectedApplicationOptions { baseUrl?: string; actorId?: string; tenantId?: string; displayName?: string; locale?: string; }
+export interface SessionAccount {id:string;tenantId:string;username:string;displayName:string;locale:string}
 
 export class ConnectedApplication {
   private readonly kernel = new PlatformKernel();
@@ -58,13 +60,15 @@ export class ConnectedApplication {
   private readonly outboxStorage = new IndexedDbOutboxAdapter();
   private actorId:string; private tenantId:string; private displayName:string; private locale:string; private activeGroupId?:string;
   private readonly baseUrl:string;
+  private groupTenants=new Map<string,string>();
+  private homeTenantId?:string;
 
   constructor(options:ConnectedApplicationOptions={}){
     this.baseUrl=options.baseUrl??''; this.actorId=options.actorId??'user_founder'; this.tenantId=options.tenantId??'tenant_local'; this.displayName=options.displayName??'Local Manager'; this.locale=options.locale??'fr';
     try{this.activeGroupId=localStorage.getItem('tontine.activeGroupId')??undefined;}catch{}
   }
 
-  private headers(extra:Record<string,string>={}):HeadersInit{return{'content-type':'application/json','accept-language':this.locale,'x-tenant-id':this.tenantId,'x-actor-id':this.actorId,'x-group-roles':'founder,manager','x-active-group-id':this.activeGroupId??'','x-device-id':'web-local','x-session-id':'session-local','x-timezone':'Africa/Douala',...extra};}
+  private headers(extra:Record<string,string>={}):HeadersInit{return{'content-type':'application/json','accept-language':this.locale,'x-active-group-id':this.activeGroupId??'','x-timezone':'Africa/Douala',...extra};}
   private async request<T>(path:string,init:RequestInit={}):Promise<T>{
     const response=await fetch(`${this.baseUrl}${path}`,{...init,headers:{...this.headers(),...(init.headers??{})}});
     const body=await response.json().catch(()=>({error:`HTTP_${response.status}`}));
@@ -72,19 +76,26 @@ export class ConnectedApplication {
   }
 
   async bootstrap(input:{actorId?:string;tenantId?:string;displayName?:string;locale?:string}={}):Promise<{restoredOutbox:number;groups:Group[]}>{
-    this.actorId=input.actorId??this.actorId;this.tenantId=input.tenantId??this.tenantId;this.displayName=input.displayName??this.displayName;this.locale=input.locale??this.locale;
+    const session=await this.authStatus();if(!session.authenticated || !session.account)throw Error('AUTHENTICATION_REQUIRED');
+    this.actorId=session.account.id;this.homeTenantId=session.account.tenantId;this.tenantId=session.account.tenantId;this.displayName=session.account.displayName;this.locale=session.account.locale;
+    const groups=await this.listGroups();if(this.activeGroupId&&!groups.some(g=>g.id===this.activeGroupId))this.selectGroup(undefined);if(!this.activeGroupId&&groups[0])this.selectGroup(groups[0].id);else this.selectGroup(this.activeGroupId);
     await this.request('/api/v1/bootstrap',{method:'POST',body:JSON.stringify({displayName:this.displayName,locale:this.locale})});
-    let restoredOutbox=0;if(IndexedDbOutboxAdapter.supported())try{const persisted=await this.outboxStorage.load();this.outbox.restore(persisted.filter(x=>x.tenantId===this.tenantId&&x.actorId===this.actorId));restoredOutbox=this.outbox.list().length;}catch{}
-    const groups=await this.listGroups(); if(this.activeGroupId&&!groups.some(g=>g.id===this.activeGroupId))this.selectGroup(undefined); if(!this.activeGroupId&&groups[0])this.selectGroup(groups[0].id);
+    let restoredOutbox=0;if(IndexedDbOutboxAdapter.supported())try{const persisted=await this.outboxStorage.load();this.outbox.restore(persisted.filter(x=>x.actorId===this.actorId));restoredOutbox=this.outbox.list().length;}catch{}
     return{restoredOutbox,groups};
   }
 
+  authStatus():Promise<{authenticated:boolean;account:SessionAccount|null}>{return this.request('/api/v1/auth/session');}
+  currentActor():string{return this.actorId;}
+  async memberStatement(membershipId:string):Promise<import('../../contracts/src/index.js').MemberStatement>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/members/${encodeURIComponent(membershipId)}/statement`);}
+  async authenticate(mode:'login'|'register',input:{username:string;password:string;displayName?:string}):Promise<void>{await this.request(`/api/v1/auth/${mode}`,{method:'POST',body:JSON.stringify({...input,locale:this.locale})});}
+  async logout():Promise<void>{await this.request('/api/v1/auth/logout',{method:'POST',body:'{}'});this.outbox.restore([]);this.selectGroup(undefined);}
+
   setLocale(locale:string):void{this.locale=locale;}
   setConnectivity(_connectivity:'online'|'offline'|'degraded'):void{}
-  selectGroup(groupId?:string):void{this.activeGroupId=groupId;try{if(groupId)localStorage.setItem('tontine.activeGroupId',groupId);else localStorage.removeItem('tontine.activeGroupId');}catch{}}
+  selectGroup(groupId?:string):void{this.activeGroupId=groupId;this.tenantId=(groupId?this.groupTenants.get(groupId):undefined)??this.homeTenantId??this.tenantId;try{if(groupId)localStorage.setItem('tontine.activeGroupId',groupId);else localStorage.removeItem('tontine.activeGroupId');}catch{}}
   activeGroup():string|undefined{return this.activeGroupId;}
 
-  async listGroups():Promise<Group[]>{return this.request('/api/v1/groups');}
+  async listGroups():Promise<Group[]>{const groups=await this.request<Group[]>('/api/v1/groups');this.groupTenants=new Map(groups.map(g=>[g.id,g.tenantId]));return groups;}
   async groupOperatingPolicy():Promise<GroupOperatingPolicy>{if(!this.activeGroupId)throw new Error('ACTIVE_GROUP_REQUIRED');return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/operating-policy`);}
   async updateGroupOperatingPolicy(policy:GroupOperatingPolicy):Promise<Group>{if(!this.activeGroupId)throw new Error('ACTIVE_GROUP_REQUIRED');return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/operating-policy`,{method:'PUT',body:JSON.stringify(policy)});}
   async listRubrics():Promise<RubricDefinition[]>{if(!this.activeGroupId)return[];return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/rubrics`);}
@@ -96,17 +107,27 @@ export class ConnectedApplication {
   async openMeeting(title:string):Promise<MeetingSession>{if(!this.activeGroupId)throw new Error('ACTIVE_GROUP_REQUIRED');return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/meetings`,{method:'POST',body:JSON.stringify({title})});}
   async closeMeeting(meetingId:string):Promise<MeetingSession>{if(!this.activeGroupId)throw new Error('ACTIVE_GROUP_REQUIRED');return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/meetings/${encodeURIComponent(meetingId)}/close`,{method:'POST',body:'{}'});}
 
-  async simulateAndStoreProject(input:{name:string;kind:Group['kind'];governanceModel:Group['governanceModel'];memberCount:number;sessions:number;nominalContribution:number;managementFeePerContribution:number;estimatedExternalCostRate:number;fixedOperatingCostPerSession:number}):Promise<{projectId:string;result:FeasibilityResult}>{
-    const project=await this.request<{id:string}>('/api/v1/group-projects',{method:'POST',body:JSON.stringify({...input,currency:'XAF'})});
-    const result=await this.request<FeasibilityResult>(`/api/v1/group-projects/${encodeURIComponent(project.id)}/simulate`,{method:'POST',body:'{}'}); return{projectId:project.id,result};
+  async simulateAndStoreProject(input:{name:string;kind:Group['kind'];governanceModel:Group['governanceModel'];rubrics?:LaunchRubricPlan[];memberCount?:number;sessions?:number;nominalContribution?:number;managementFeePerContribution?:number;estimatedExternalCostRate?:number;fixedOperatingCostPerSession?:number}):Promise<{projectId:string;result:FeasibilityResult}>{
+    const headers={'x-active-group-id':''};
+    const project=await this.request<{id:string}>('/api/v1/group-projects',{method:'POST',headers,body:JSON.stringify({...input,currency:'XAF'})});
+    const result=await this.request<FeasibilityResult>(`/api/v1/group-projects/${encodeURIComponent(project.id)}/simulate`,{method:'POST',headers,body:'{}'});return{projectId:project.id,result};
   }
-  async createGroupFromProject(projectId:string):Promise<Group>{const group=await this.request<Group>(`/api/v1/group-projects/${encodeURIComponent(projectId)}/convert`,{method:'POST',body:'{}'});this.selectGroup(group.id);return group;}
+  async createGroupFromProject(projectId:string):Promise<Group>{const group=await this.request<Group>(`/api/v1/group-projects/${encodeURIComponent(projectId)}/convert`,{method:'POST',headers:{'x-active-group-id':''},body:'{}'});this.selectGroup(group.id);return group;}
+  async updateRubricActivityPlan(rubricId:string,plan:LaunchRubricPlan):Promise<RubricDefinition>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/rubrics/${encodeURIComponent(rubricId)}/activity-plan`,{method:'PUT',body:JSON.stringify(plan)});}
+
   async addMember(displayName:string):Promise<Membership>{if(!this.activeGroupId)throw new Error('ACTIVE_GROUP_REQUIRED');return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/members`,{method:'POST',body:JSON.stringify({displayName,locale:this.locale})});}
 
   async recordCashContribution(input:{membershipId:string;amount:number;meetingId?:string;rubricId?:string;lateReason?:string;approverIds?:string[]}):Promise<{queued:boolean;receipt?:ContributionReceipt;outbox?:OutboxItem}>{
-    if(!this.activeGroupId)throw new Error('ACTIVE_GROUP_REQUIRED'); const key=`cash-${this.activeGroupId}-${input.membershipId}-${Date.now()}-${Math.random().toString(16).slice(2)}`;
-    if(!navigator.onLine){const item=this.outbox.enqueue({tenantId:this.tenantId,actorId:this.actorId,type:'CONTRIBUTION_CASH_RECORDED',payload:{groupId:this.activeGroupId,membershipId:input.membershipId,amount:input.amount,currency:'XAF',meetingId:input.meetingId,rubricId:input.rubricId,lateReason:input.lateReason,approverIds:input.approverIds},idempotencyKey:key});await this.persistOutbox();return{queued:true,outbox:item};}
-    const receipt=await this.request<ContributionReceipt>(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/contributions/cash`,{method:'POST',body:JSON.stringify({membershipId:input.membershipId,amount:input.amount,currency:'XAF',meetingId:input.meetingId,rubricId:input.rubricId,lateReason:input.lateReason,approverIds:input.approverIds,idempotencyKey:key})});return{queued:false,receipt};
+    if(!this.activeGroupId)throw new Error('ACTIVE_GROUP_REQUIRED'); const key=makeId('cash');
+    if(!Number.isSafeInteger(input.amount)||input.amount<=0)throw Error('INVALID_CONTRIBUTION_AMOUNT');
+    // Persist the same intent before the first send, including while online.
+    // An ambiguous network failure is retried with this key, never a new charge.
+    const item=this.outbox.enqueue({tenantId:this.tenantId,actorId:this.actorId,type:'CONTRIBUTION_CASH_RECORDED',payload:{groupId:this.activeGroupId,...input,currency:'XAF'},idempotencyKey:key});
+    try{await this.persistOutbox();}catch(e){this.outbox.restore(this.outbox.list().filter(x=>x.id!==item.id));throw e;}
+    if(!navigator.onLine)return{queued:true,outbox:item};
+    const result=await this.syncOutbox();const updated=result.find(x=>x.id===item.id)!;
+    if(updated.status!=='CONFIRMED')return{queued:true,outbox:updated};
+    return{queued:false,outbox:updated};
   }
   async ledger():Promise<{summary:LedgerSummary;entries:LedgerEntry[];receipts:ContributionReceipt[]}>{if(!this.activeGroupId)return{summary:{currency:'XAF',cashBalance:0,memberFundsLiability:0,entryCount:0},entries:[],receipts:[]};return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/ledger`);}
   async reverseLedgerEntry(entryId:string,reason:string):Promise<LedgerEntry>{if(!this.activeGroupId)throw new Error('ACTIVE_GROUP_REQUIRED');return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/ledger/${encodeURIComponent(entryId)}/reverse`,{method:'POST',body:JSON.stringify({reason})});}
@@ -127,10 +148,10 @@ export class ConnectedApplication {
   async updateWorkspaceRecord(id:string,input:Partial<Pick<WorkspaceRecord,'title'|'summary'|'status'|'tags'|'data'>>):Promise<WorkspaceRecord>{return this.request(`/api/v1/workspaces/${encodeURIComponent(id)}`,{method:'PUT',body:JSON.stringify(input)});}
 
   async syncOutbox():Promise<OutboxItem[]>{
-    const result=await this.outbox.sync(async item=>{try{const r=await this.request<{accepted:boolean}>('/api/v1/outbox/apply',{method:'POST',body:JSON.stringify(item)});return{ok:r.accepted};}catch{return{ok:false,conflict:false};}});await this.persistOutbox();return result;
+    const result=await this.outbox.sync(async item=>{try{const groupId=(item.payload as {groupId?:string}).groupId;const r=await this.request<{accepted:boolean;stored?:boolean}>('/api/v1/outbox/apply',{method:'POST',headers:{'x-active-group-id':groupId??''},body:JSON.stringify(item)});return{ok:r.accepted&&r.stored!==false};}catch(e){return{ok:false,conflict:e instanceof Error&&['IDEMPOTENCY_CONFLICT','FORBIDDEN_SCOPE'].includes(e.message)};}});await this.persistOutbox();return result;
   }
   async queueDemoIntent(note='Local note'):Promise<OutboxItem>{const item=this.outbox.enqueue({tenantId:this.tenantId,actorId:this.actorId,type:'MEETING_NOTE_UPDATED',payload:{groupId:this.activeGroupId,note},idempotencyKey:`note-${this.activeGroupId??'none'}-${Date.now()}`});await this.persistOutbox();return item;}
-  private async persistOutbox(){if(!IndexedDbOutboxAdapter.supported())return;try{await this.outboxStorage.save(this.outbox.list());}catch{}}
+  private async persistOutbox(){if(!IndexedDbOutboxAdapter.supported())throw Error('DURABLE_STORAGE_REQUIRED');try{await this.outboxStorage.save(this.outbox.list());}catch{throw Error('DURABLE_STORAGE_REQUIRED');}}
   outboxItems():OutboxItem[]{return this.outbox.list();}
 
   productModules(){return structuredClone(PRODUCT_MODULES);}

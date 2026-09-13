@@ -2,13 +2,13 @@ import http from 'node:http';
 import { access, readFile, stat } from 'node:fs/promises';
 import path from 'node:path';
 import { spawn } from 'node:child_process';
-import { createApiHandler } from '../.build/workers/api/src/index.js';
-import { FilePlatformRepository } from './file-repository.mjs';
+import worker from '../.build/workers/api/src/index.js';
+import { SQLiteD1 } from './sqlite-d1.mjs';
 
 const root = path.resolve('.build');
-const dataFile = process.env.TONTINE_DATA_FILE ?? '.data/local-db.json';
-const repo = new FilePlatformRepository(dataFile);
-const handleRequest = createApiHandler(repo);
+const dataFile = process.env.ECO_DATA_FILE ?? '.data/eco-system.sqlite';
+const db = new SQLiteD1(dataFile);db.migrate();
+const handleRequest = request => worker.fetch(request,{DB:db});
 const mime = {
   '.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8',
   '.json':'application/json; charset=utf-8','.webmanifest':'application/manifest+json','.map':'application/json'
@@ -29,10 +29,12 @@ catch {
 let currentPort = 4173;
 const requestHandler = async (req,res) => {
   try {
+    if(![`127.0.0.1:${currentPort}`,`localhost:${currentPort}`].includes(req.headers.host??'')){res.writeHead(403);res.end('Host not allowed');return;}
     if (req.url?.startsWith('/api/') || req.url === '/health') {
-      const chunks=[]; for await (const c of req) chunks.push(c);
+      const chunks=[];let size=0; for await (const c of req) {size+=c.length;if(size>131072){res.writeHead(413);res.end('Request too large');return;}chunks.push(c);}
       const body=Buffer.concat(chunks); const headers=new Headers();
       for(const [k,v] of Object.entries(req.headers)) if(v) headers.set(k,Array.isArray(v)?v.join(','):v);
+      headers.set('cf-connecting-ip',req.socket.remoteAddress??'local');
       const host=req.headers.host??`localhost:${currentPort}`;
       const request=new Request(`http://${host}${req.url}`,{method:req.method,headers,body:['GET','HEAD'].includes(req.method??'GET')?undefined:body});
       const response=await handleRequest(request);
@@ -40,9 +42,10 @@ const requestHandler = async (req,res) => {
       res.end(Buffer.from(await response.arrayBuffer())); return;
     }
     let pathname = new URL(req.url ?? '/', `http://localhost:${currentPort}`).pathname;
-    if (pathname === '/') { res.writeHead(302,{location:'/apps/web/',...securityHeaders}); res.end(); return; }
+    if (pathname === '/') pathname='/index.html';
     if (pathname.endsWith('/')) pathname += 'index.html';
-    const file=path.resolve(root,'.'+pathname); if(!file.startsWith(root)) throw new Error('forbidden');
+    if(pathname.startsWith('/workers/') || pathname.startsWith('/packages/auth/'))throw new Error('forbidden');
+    const file=path.resolve(root,'.'+pathname); const relative=path.relative(root,file);if(relative.startsWith('..')||path.isAbsolute(relative))throw new Error('forbidden');
     const s=await stat(file); if(!s.isFile()) throw new Error('not file');
     const data=await readFile(file);
     const cacheControl = pathname === '/sw.js' ? 'no-cache' : 'no-store';
@@ -69,9 +72,9 @@ for(let port=preferred;port<preferred+20;port++){
 }
 if(!server){console.error('Aucun port libre trouvé entre '+preferred+' et '+(preferred+19));process.exit(1);}
 
-const url=`http://127.0.0.1:${currentPort}/apps/web/`;
+const url=`http://127.0.0.1:${currentPort}/`;
 console.log('\n============================================================');
-console.log(' TONTINE PLATFORM 0.3.0 — FUNCTIONAL LOCAL ALPHA');
+console.log(' ECO-SYSTEM — CAHIER APP 1.1.2 — QUALIFICATION LOCALE');
 console.log('============================================================');
 console.log(` App : ${url}`);
 console.log(` API : http://127.0.0.1:${currentPort}/health`);

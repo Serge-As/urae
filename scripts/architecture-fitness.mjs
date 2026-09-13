@@ -11,6 +11,6 @@ const rules = [
   { where: /^packages\/offline\//, forbidden: /PAYMENT_CONFIRMED|LEDGER_ENTRY_POSTED/, reason: 'Offline layer must not manufacture financial finality' }
 ];
 const violations=[];
-for(const f of files){ const txt=await readFile(f,'utf8'); for(const r of rules) if(r.where.test(f)&&r.forbidden.test(txt)) violations.push(`${f}: ${r.reason}`); }
+for(const f of files){ const txt=await readFile(f,'utf8'); for(const r of rules) if(r.where.test(f.replaceAll('\\','/'))&&r.forbidden.test(txt)) violations.push(`${f}: ${r.reason}`); }
 if(violations.length){ console.error(violations.join('\n')); process.exit(1); }
 console.log(`Architecture fitness OK (${files.length} source files scanned)`);

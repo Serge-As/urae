@@ -36,7 +36,9 @@
         "local-ci:31/31 PASS; truth/source/index gates PASS"
       ],
       "note": "2.3.3 preserves 2.3.2 content, adds deep forensic source semantics and anti-regression truth rules; qualified by local CI.",
-      "next": "Run CI and publish through recovery PR."
+      "next": "Run CI and publish through recovery PR.",
+      "historicalImported": true,
+      "currentProductLine": false
     },
     {
       "id": "memory.deep_source_ingestion",
@@ -48,7 +50,9 @@
         "repo:docs/memory/SOURCE_TO_CAPABILITY_COVERAGE_2.3.3.json"
       ],
       "note": "26 RAR entries are structurally/semantically digested without raw PII/secrets.",
-      "next": "Use deep digest as first forensic reference before reopening raw archives."
+      "next": "Use deep digest as first forensic reference before reopening raw archives.",
+      "historicalImported": true,
+      "currentProductLine": false
     },
     {
       "id": "memory.previous_chat_0.5_claims",
@@ -59,7 +63,9 @@
         "source:Fichier markdown(20260905-013911).md collé"
       ],
       "note": "Previous chat described 0.5 work, but no persisted 0.5 source was recovered from bundle/archives/GitHub. Treat described features as requirements/memory unless current code/tests prove them.",
-      "next": "Map any useful claim to Feature Registry rather than pretending old code exists."
+      "next": "Map any useful claim to Feature Registry rather than pretending old code exists.",
+      "historicalImported": true,
+      "currentProductLine": false
     },
     {
       "id": "git.recovered_history.0.1_to_0.3",
@@ -71,7 +77,9 @@
         "local-git:a424193db58c15b51692e5958d08dc4bb793e4ec"
       ],
       "note": "Exact historical local Git chain recovered from supplied bundle.",
-      "next": "Preserve exact history in a new bundle and provenance file before remote import."
+      "next": "Preserve exact history in a new bundle and provenance file before remote import.",
+      "historicalImported": true,
+      "currentProductLine": false
     },
     {
       "id": "github.repo",
@@ -82,7 +90,9 @@
         "github:Delor85/tontine-platform"
       ],
       "note": "Private repo observed; connector has admin/maintain/push permissions.",
-      "next": "Import recovery branch without force-pushing main."
+      "next": "Import recovery branch without force-pushing main.",
+      "historicalImported": true,
+      "currentProductLine": false
     },
     {
       "id": "github.main.ref",
@@ -93,7 +103,9 @@
         "github-ref:main@3664e4fa4d0c01cfd52590df2b095ce82f96691d"
       ],
       "note": "Remote main still points to initial Create README.md commit at time of observation.",
-      "next": "Do not infer recovered code on main."
+      "next": "Do not infer recovered code on main.",
+      "historicalImported": true,
+      "currentProductLine": false
     },
     {
       "id": "github.release_0.5.0.ref",
@@ -104,7 +116,9 @@
         "github-ref:release/0.5.0-eco-system-unified@3664e4fa4d0c01cfd52590df2b095ce82f96691d"
       ],
       "note": "Branch name exists but points to same initial commit; name alone is not evidence of 0.5 implementation.",
-      "next": "Keep as historical remote ref unless deliberately superseded."
+      "next": "Keep as historical remote ref unless deliberately superseded.",
+      "historicalImported": true,
+      "currentProductLine": false
     },
     {
       "id": "github.actions.runs",
@@ -115,7 +129,9 @@
         "github-api:/repos/Delor85/tontine-platform/actions/runs total_count=0"
       ],
       "note": "No workflow run existed in the remote repo at time of observation.",
-      "next": "After recovery push, trigger qualified CI/deploy workflow and record run URL/id."
+      "next": "After recovery push, trigger qualified CI/deploy workflow and record run URL/id.",
+      "historicalImported": true,
+      "currentProductLine": false
     },
     {
       "id": "github.recovery_branch",
@@ -127,7 +143,9 @@
         "local-git:433f3df8a9406dd555d69de642c6a70f237c63bf"
       ],
       "note": "Recovery branch exists locally; not yet observed on GitHub at the time this ledger entry was created.",
-      "next": "Push/import branch and then update status to VERIFIED_REMOTE."
+      "next": "Push/import branch and then update status to VERIFIED_REMOTE.",
+      "historicalImported": true,
+      "currentProductLine": false
     },
     {
       "id": "cloudflare.api_token.tontine_platform_github_actions_deploy",
@@ -140,7 +158,9 @@
       ],
       "note": "Account-owned token is verified active. Secret value is not stored.",
       "valueStored": false,
-      "next": "Reuse existing GitHub Secret; never disclose or recreate without evidence."
+      "next": "Reuse existing GitHub Secret; never disclose or recreate without evidence.",
+      "historicalImported": true,
+      "currentProductLine": false
     },
     {
       "id": "github.secret.CLOUDFLARE_ACCOUNT_ID",
@@ -152,7 +172,9 @@
       ],
       "note": "Secret name visibly exists in repository Actions secrets. Secret VALUE is inaccessible/intentionally not stored.",
       "valueStored": false,
-      "next": "Do not ask founder to recreate or disclose value."
+      "next": "Do not ask founder to recreate or disclose value.",
+      "historicalImported": true,
+      "currentProductLine": false
     },
     {
       "id": "github.secret.CLOUDFLARE_API_TOKEN",
@@ -164,7 +186,9 @@
       ],
       "note": "Secret name visibly exists in repository Actions secrets. Secret VALUE is inaccessible/intentionally not stored.",
       "valueStored": false,
-      "next": "Do not ask founder to recreate or disclose value."
+      "next": "Do not ask founder to recreate or disclose value.",
+      "historicalImported": true,
+      "currentProductLine": false
     },
     {
       "id": "cloudflare.deploy_workflow.local",
@@ -177,7 +201,9 @@
         "local-ci:31/31 PASS after Project Truth Gate 2.3.3"
       ],
       "note": "Manual alpha workflow is prepared to reuse/create eco-system-db, resolve UUID without committing it, apply additive migrations, deploy eco-system and smoke /health.",
-      "next": "Publish branch then execute workflow."
+      "next": "Publish branch then execute workflow.",
+      "historicalImported": true,
+      "currentProductLine": false
     },
     {
       "id": "cloudflare.d1.eco-system-db",
@@ -191,7 +217,9 @@
         "cloudflare:env.DB bound to eco-system-db"
       ],
       "note": "The existing D1 database eco-system-db is the qualified Complete App datastore. It was reused, not recreated.",
-      "next": "Reuse this database; apply only additive migrations required by later releases."
+      "next": "Reuse this database; apply only additive migrations required by later releases.",
+      "historicalImported": true,
+      "currentProductLine": false
     },
     {
       "id": "cloudflare.worker.eco-system",
@@ -206,7 +234,9 @@
         "smoke:https://eco-system.sergemimf.workers.dev/api/v1/product/capabilities"
       ],
       "note": "Worker/PWA Complete App 1.0 is remotely deployed and smoke-qualified at the single public URL.",
-      "next": "Treat 1.0 Complete App as the active deployed reference until a separately qualified successor replaces it."
+      "next": "Treat 1.0 Complete App as the active deployed reference until a separately qualified successor replaces it.",
+      "historicalImported": true,
+      "currentProductLine": false
     },
     {
       "id": "cloudflare.d1.repository_adapter",
@@ -218,7 +248,9 @@
         "tests:D1 repository persists across instances"
       ],
       "note": "D1 adapter exists behind PlatformRepository and is locally tested.",
-      "next": "Qualify against actual remote D1."
+      "next": "Qualify against actual remote D1.",
+      "historicalImported": true,
+      "currentProductLine": false
     },
     {
       "id": "cloudflare.migration.0003_platform_records",
@@ -230,7 +262,9 @@
         "sqlite-replay:additive/idempotent"
       ],
       "note": "Additive migration locally replayed; no destructive statements.",
-      "next": "Apply via remote workflow and verify."
+      "next": "Apply via remote workflow and verify.",
+      "historicalImported": true,
+      "currentProductLine": false
     },
     {
       "id": "safety.realMoneyEnabled",
@@ -242,7 +276,9 @@
         "smoke:/health version 1.0.0-complete-app realMoneyEnabled=false"
       ],
       "note": "Real money remains disabled in the deployed Complete App. This is a mandatory fail-closed invariant until separately authorized.",
-      "next": "Every later deployment must fail if realMoneyEnabled becomes true without explicit authorization."
+      "next": "Every later deployment must fail if realMoneyEnabled becomes true without explicit authorization.",
+      "historicalImported": true,
+      "currentProductLine": false
     },
     {
       "id": "feature.discovery.group_public_projection",
@@ -254,7 +290,9 @@
         "tests:public projection/secret exclusion"
       ],
       "note": "Initial group discovery functional alpha exists.",
-      "next": "Extend toward full mutual graph, geo consent, ranking, invitations and saved searches."
+      "next": "Extend toward full mutual graph, geo consent, ranking, invitations and saved searches.",
+      "historicalImported": true,
+      "currentProductLine": false
     },
     {
       "id": "feature.discovery.mutual_graph",
@@ -266,7 +304,9 @@
         "master:7E.13"
       ],
       "note": "Full Meetup/Facebook/Telegram-style mutual discovery is validated but only partially implemented.",
-      "next": "Implement incrementally after Cloud Lot A remote qualification."
+      "next": "Implement incrementally after Cloud Lot A remote qualification.",
+      "historicalImported": true,
+      "currentProductLine": false
     },
     {
       "id": "feature.membership.gateway",
@@ -278,7 +318,9 @@
         "tests:cross-tenant application approval"
       ],
       "note": "Cross-tenant application and canonical membership approval path locally verified.",
-      "next": "Add invitations, custom application questions, portfolio and referrals without duplicating membership engine."
+      "next": "Add invitations, custom application questions, portfolio and referrals without duplicating membership engine.",
+      "historicalImported": true,
+      "currentProductLine": false
     },
     {
       "id": "feature.trust.contextual_reliability",
@@ -290,7 +332,9 @@
         "tests:no cross-band extrapolation"
       ],
       "note": "Reliability is contextual/advisory and does not use wealth/appearance/prestige.",
-      "next": "Add evidence governance, group reliability, appeals and anti-gaming."
+      "next": "Add evidence governance, group reliability, appeals and anti-gaming.",
+      "historicalImported": true,
+      "currentProductLine": false
     },
     {
       "id": "feature.rubric.faceted_model",
@@ -302,7 +346,9 @@
         "tests:mixed rubrics/governance claims"
       ],
       "note": "Faceted rubric model locally verified; governance extraction remains human-reviewed.",
-      "next": "Extend templates/reconstitution/visibility/rulebook mapping."
+      "next": "Extend templates/reconstitution/visibility/rulebook mapping.",
+      "historicalImported": true,
+      "currentProductLine": false
     },
     {
       "id": "architecture.nestjs_postgres_redis_kubernetes",
@@ -315,7 +361,9 @@
       ],
       "note": "Historical technologies preserved as options; current canonical alpha is modular monorepo + Cloudflare Worker + D1 unless ADR changes it.",
       "supersededBy": "architecture.cloudflare_worker_d1",
-      "reason": "Lower operational cost/complexity for current scale; historical principles retained."
+      "reason": "Lower operational cost/complexity for current scale; historical principles retained.",
+      "historicalImported": true,
+      "currentProductLine": false
     },
     {
       "id": "architecture.cloudflare_worker_d1",
@@ -328,7 +376,9 @@
         "smoke:root/health/capability catalog PASS"
       ],
       "note": "Canonical Worker + D1 architecture is now remotely qualified on the 1.0 Complete App line.",
-      "next": "Preserve the canonical authority model and avoid parallel business engines."
+      "next": "Preserve the canonical authority model and avoid parallel business engines.",
+      "historicalImported": true,
+      "currentProductLine": false
     },
     {
       "id": "product.complete_app_1.0",
@@ -346,8 +396,9 @@
         "github-actions:deploy run 34640991448 SUCCESS",
         "smoke:1.0.0-complete-app; 139 capabilities; realMoneyEnabled=false"
       ],
-      "note": "Complete App 1.0 was remotely qualified and remains a rollback checkpoint; it is superseded as visible target by Cahier App 1.1 after founder observed the UI was still too old/generic.",
-      "next": "Preserve as rollback/BIR+; do not use as visible target after 1.1 qualification.",
+      "note": "Complete App 1.0 is the active deployed product line. Root PWA, health and capability catalog are qualified remotely.",
+      "next": "Produce verified BIR+ backup, then evolve through derived branches without regressing canonical services or Living Rules.",
+      "historicalImported": true,
       "currentProductLine": false
     },
     {
@@ -361,7 +412,9 @@
       ],
       "note": "0.5.1/0.6 remain recovery/reference checkpoints, not current visible product target.",
       "supersededBy": "product.complete_app_1.0",
-      "next": "Do not delete fallback artifacts."
+      "next": "Do not delete fallback artifacts.",
+      "historicalImported": true,
+      "currentProductLine": false
     },
     {
       "id": "github.branch.next_1.0",
@@ -372,7 +425,9 @@
         "github:branch next/1.0.0-complete-app created from 988b42dda972539c17704654f92c38d2e181eeb4"
       ],
       "note": "Dedicated Complete App branch exists; main is not modified.",
-      "next": "Publish qualified Complete App commit without force push."
+      "next": "Publish qualified Complete App commit without force push.",
+      "historicalImported": true,
+      "currentProductLine": false
     },
     {
       "id": "github.pr.complete_app_1.0",
@@ -386,7 +441,9 @@
         "github:state OPEN non-draft"
       ],
       "note": "Complete App delivery PR is open and intentionally not merged. Merge remains a separate founder decision.",
-      "next": "Do not merge automatically."
+      "next": "Do not merge automatically.",
+      "historicalImported": true,
+      "currentProductLine": false
     },
     {
       "id": "delivery.complete_app_payload",
@@ -399,22 +456,56 @@
         "runner:Payload verified exact SHA before npm run ci"
       ],
       "note": "The exact qualified payload was reconstructed remotely before materialization; no approximate payload was accepted.",
-      "next": "Preserve this hash as the 1.0 source-materialization checkpoint."
+      "next": "Preserve this hash as the 1.0 source-materialization checkpoint.",
+      "historicalImported": true,
+      "currentProductLine": false
     },
     {
-      "id": "product.cahier_app_1.1",
+      "id": "recovery.local_1.1.1",
       "status": "IN_PROGRESS",
-      "scope": "product-line",
-      "observedOn": "2026-09-11",
-      "currentProductLine": true,
+      "scope": "local-delivery",
+      "observedOn": "2026-09-12",
       "evidence": [
-        "founder-observation:1.0 visible site still looked like an old version",
-        "branch:next/1.1.0-cahier-app",
-        "repo:docs/constitution/ECO_SYSTEM_CAHIER_APP_EXECUTION_SUPPLEMENT_1.1.0_2026-09-11.md",
-        "repo:docs/change-impact/CIR-2026-09-11-cahier-app-1.1.md"
+        "source archive sha256:6707d2228bd9d396ef104357da674ac15ad8d5eeb7e73990f4fe1e6ec6b34ed3",
+        "QUALIFICATION.md"
       ],
-      "note": "Cahier App 1.1 is the current target: visible product rebuilt around Cahier Maître 2.3.4 and A→J while preserving canonical services and truthful statuses.",
-      "next": "Run full CI, deploy same Worker/D1, smoke root/health/catalog, then promote to VERIFIED_REMOTE."
+      "note": "Server base 1.0 plus recovered public UI 1.1 and local fixes; no remote deployment.",
+      "currentProductLine": false
+    },
+    {
+      "id": "observation.live_1.1",
+      "status": "VERIFIED_REMOTE",
+      "scope": "public-http",
+      "observedOn": "2026-09-12",
+      "evidence": [
+        "https://eco-system.sergemimf.workers.dev/health GET 200 version 1.1.0-cahier-app",
+        "GET root HTML and public capabilities 139"
+      ],
+      "note": "Public observations only; authenticated repository state unavailable.",
+      "currentProductLine": false
+    },
+    {
+      "id": "release.local.1.1.2.rubriques",
+      "status": "VERIFIED_LOCAL",
+      "currentProductLine": true,
+      "scope": "product",
+      "observedOn": "2026-09-13",
+      "evidence": [
+        "tests/association-rubrics.test.mjs: 7 PASS",
+        "github:Delor85/tontine-platform@f7c203e919c644466289c587669ef817b74130af",
+        "docs/testing/QUALIFICATION_1.1.2.md"
+      ],
+      "note": "1.1.2 local rubric-first creation and per-share planning; full CI exit 0, 65/65 tests; no production deployment."
+    },
+    {
+      "id": "github.recovered.cahier.20260913",
+      "status": "VERIFIED_REMOTE",
+      "scope": "source-recovery",
+      "observedOn": "2026-09-13",
+      "evidence": [
+        "https://github.com/Delor85/tontine-platform/tree/f7c203e919c644466289c587669ef817b74130af"
+      ],
+      "note": "Authenticated Delor85 access verified; 162 blobs recovered, 38 downloaded hashes checked; main is not the application source branch."
     }
   ]
 }

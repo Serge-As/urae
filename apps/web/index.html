@@ -4,22 +4,36 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#1f6b4f">
-  <meta id="metaDescription" name="description" content="Eco-System — plateforme complète de gestion de tontines, associations et communautés">
+  <meta id="metaDescription" name="description" content="Eco-System — plateforme de gestion de tontines, associations et communautés">
   <link rel="manifest" href="/manifest.webmanifest">
-  <link rel="stylesheet" href="/styles.css?v=110">
-  <title>Eco-System — Cahier App 1.1</title>
+  <link rel="stylesheet" href="/styles.css?v=112">
+  <title>Eco-System — Cahier App 1.1.2 · locale</title>
 </head>
-<body>
-  <header class="topbar">
+<body class="signed-out">
+  <section id="authScreen" class="auth-screen" aria-label="Connexion à Eco-System">
+  <div class="auth-brand"><span class="auth-logo">E</span><strong>Eco-System</strong><p>Vos groupes, vos comptes, vos décisions.</p></div>
+  <div class="auth-card">
+    <h1>Bienvenue dans votre espace</h1>
+    <div class="auth-tabs"><button type="button" data-auth-mode="login" class="selected" aria-pressed="true">Connexion</button><button type="button" data-auth-mode="register" aria-pressed="false">Créer un compte</button></div>
+    <form id="authForm" class="form-grid">
+      <label id="authNameLabel" hidden>Votre nom d’affichage<input id="authName" autocomplete="name" maxlength="80"></label>
+      <label>Identifiant<input id="authUsername" autocomplete="username" pattern="[a-zA-Z0-9][a-zA-Z0-9._-]{2,49}" minlength="3" maxlength="50" required><small>Lettres, chiffres, point, tiret ou underscore.</small></label>
+      <label>Mot de passe<input id="authPassword" type="password" autocomplete="current-password" minlength="12" maxlength="128" required><small>12 caractères minimum.</small></label>
+      <p id="authError" role="alert"></p><button id="authSubmit" type="submit" class="primary">Me connecter</button>
+    </form>
+    <p class="auth-footnote">Un compte personnel pour accéder uniquement aux groupes qui vous autorisent. Les données de l’ancienne démonstration nécessitent un rapprochement contrôlé.</p>
+  </div>
+</section>
+<header class="topbar">
     <div class="brand">
       <div class="logo">E</div>
-      <div><strong>Eco-System</strong><small>Plateforme Tontines · Associations · Communautés</small><span class="version-badge">CAHIER APP · 1.1</span></div>
+      <div><strong>Eco-System</strong><small>Plateforme Tontines · Associations · Communautés</small><span class="version-badge">CAHIER APP · 1.1.2</span></div>
     </div>
     <div class="top-context">
       <select id="activeGroupSelect" aria-label="Groupe actif"><option value="">Aucun groupe actif</option></select>
       <div class="top-search"><input id="globalSearch" placeholder="Rechercher une fonction, un groupe, un service…" autocomplete="off"><div id="globalSearchResults" class="search-popover"></div></div>
     </div>
-    <div class="top-actions">
+    <div class="top-actions"><span id="accountName"></span><button id="logoutBtn" type="button" class="ghost">Déconnexion</button>
       <span id="connectivity" class="pill">● …</span>
       <button id="installBtn" class="ghost" hidden>Installer</button>
       <button id="refreshBtn" class="ghost">Actualiser</button>
@@ -27,7 +41,7 @@
   </header>
 
   <div id="toast" class="toast" hidden></div>
-  <div id="errorBox" class="error" hidden></div>
+  <div id="errorBox" class="error" role="alert" hidden></div>
 
   <div class="app-shell">
     <nav id="mainNav" class="side-nav" aria-label="Navigation principale">
@@ -48,12 +62,12 @@
 
     <main class="content">
       <section id="view-dashboard" class="view active">
-        <div class="cahier-banner"><div><strong>Interface reconstruite sur le Cahier Maître 2.3.4</strong><p>139 capacités indexées · Living Rules · mobile/PWA · offline · D1 canonique · pas de faux « tout est fini ».</p></div><span class="cahier-code">1.1.0-CAHIER-APP</span></div>
+        <div class="cahier-banner"><div><strong>Votre espace de gestion, version locale</strong><p>Comptes personnels, groupes, séances, cotisations et relevés. Les services en préparation sont identifiés dans le catalogue.</p></div><span class="cahier-code">1.1.2 LOCALE</span></div>
         <div class="hero">
           <div>
             <span class="eyebrow">Eco-System · Cahier Maître 2.3.4</span>
             <h1>Gérer une tontine ou une association sans perdre sa réalité.</h1>
-            <p>Créer, intégrer ou transformer un groupe ; préparer la réunion ; gérer rubriques, caisse, prêts, épargne, solidarité, communauté, marché et accompagnement. L’application suit les règles du groupe, pas l’inverse.</p>
+            <p>Créez votre groupe, préparez les séances, décrivez ses règles et suivez les encaissements enregistrés. Retrouvez les cotisations et leurs éventuelles annulations dans chaque relevé.</p>
           </div>
           <div class="hero-card">
             <span>Mode financier réel</span><strong class="safe">DÉSACTIVÉ</strong>
@@ -75,12 +89,12 @@
         </div>
 
         <section class="panel">
-          <div class="panel-head"><div><h2>Accès rapide</h2><p>Les grands blocs métier du Prompt Maître A→J.</p></div></div>
+          <div class="panel-head"><div><h2>Accès rapide</h2><p>Retrouvez vos principales activités.</p></div></div>
           <div class="quick-grid">
-            <button class="quick" data-go="discovery"><b>Découvrir & adhérer</b><span>Groupes, candidats consentants, invitations</span></button>
-            <button class="quick" data-go="launch"><b>Créer / intégrer un groupe</b><span>Studio en 10 étapes, simulation, migration papier/Excel</span></button>
+            <button class="quick" data-go="discovery"><b>Découvrir & adhérer</b><span>Groupes publics et demandes d’adhésion</span></button>
+            <button class="quick" data-go="launch"><b>Créer / intégrer un groupe</b><span>Projet, simulation et ouverture du groupe</span></button>
             <button class="quick" data-go="operations"><b>Réunion & feuille mensuelle</b><span>Cartes smartphone ou matrice membres × rubriques</span></button>
-            <button class="quick" data-go="finance"><b>Finances & solidarité</b><span>Ledger, caisse, épargne, prêts, assistances</span></button>
+            <button class="quick" data-go="finance"><b>Finances & solidarité</b><span>Cotisations, caisse et relevés individuels</span></button>
             <button class="quick" data-module-open="COMMUNITY.FORUM"><b>Communauté</b><span>Forums, Hubs professionnels, votes, événements</span></button>
             <button class="quick" data-module-open="MARKETPLACE.CORE"><b>Marché & fournisseurs</b><span>Marketplace, achats groupés, Business Studio</span></button>
             <button class="quick" data-module-open="ADS.MANAGER"><b>AdManager</b><span>Sponsoring et campagnes respectueuses</span></button>
@@ -120,19 +134,13 @@
       </section>
 
       <section id="view-launch" class="view">
-        <div class="page-head"><div><span class="eyebrow">Lot C · Cockpit complet</span><h1>Créer, intégrer ou transformer un groupe</h1><p>Le Cahier prévoit un studio guidé, pas un petit formulaire : origine, famille, gouvernance, cycle, membres, rubriques, faisabilité, communication, accessibilité et prévisualisation.</p></div></div>
+        <div class="page-head"><div><span class="eyebrow">Votre groupe, vos rubriques</span><h1>Créer une association ou une tontine</h1><p>Définissez les rubriques de votre association, donnez-leur vos propres noms, puis personnalisez leur fonctionnement.</p></div></div>
         <section class="panel"><div class="journey" id="launchJourney">
-          <div class="journey-step active"><span class="n">1</span><b>Origine</b><small>Nouveau · existant · transformation</small></div>
-          <div class="journey-step active"><span class="n">2</span><b>Famille</b><small>Association · tontine</small></div>
-          <div class="journey-step active"><span class="n">3</span><b>Gouvernance</b><small>Fondateur · communauté · délégation</small></div>
-          <div class="journey-step"><span class="n">4</span><b>Exercice & calendrier</b><small>Cycle, séances, fréquence</small></div>
-          <div class="journey-step"><span class="n">5</span><b>Membres</b><small>Import, historique, rôles, parts</small></div>
-          <div class="journey-step active"><span class="n">6</span><b>Rubriques</b><small>Tontine, épargne, secours, prêts…</small></div>
-          <div class="journey-step active"><span class="n">7</span><b>Faisabilité</b><small>Scénarios et coûts</small></div>
-          <div class="journey-step"><span class="n">8</span><b>Communication</b><small>In-app, SMS, WhatsApp, print</small></div>
-          <div class="journey-step"><span class="n">9</span><b>Accessibilité</b><small>Ultra Simple · oral · ancien appareil</small></div>
-          <div class="journey-step"><span class="n">10</span><b>Prévisualisation</b><small>Règles, risques, permissions</small></div>
-        </div><p class="truth-notice">Les étapes marquées actives utilisent déjà un moteur canonique. Les autres ouvrent un dossier structuré du même groupe jusqu’à leur moteur spécialisé final — sans faire croire qu’un formulaire générique est le moteur métier définitif.</p></section>
+          <div class="journey-step active"><span class="n">1</span><b>Le groupe</b><small>Identité et gouvernance</small></div>
+          <div class="journey-step active"><span class="n">2</span><b>Vos rubriques</b><small>Nature et noms personnalisés</small></div>
+          <div class="journey-step active"><span class="n">3</span><b>Le fonctionnement</b><small>Montants, membres, parts et tours</small></div>
+          <div class="journey-step active"><span class="n">4</span><b>Vérification</b><small>Simulation puis création</small></div>
+        </div></section>
         <div class="two-col">
           <section class="panel">
             <h2>Projet de groupe</h2>
@@ -140,12 +148,20 @@
               <label>Nom du groupe<input id="projectName" required placeholder="Ex. CERDAS 2027"></label>
               <label>Famille<select id="groupKind"><option value="association">Association</option><option value="rotating_tontine">Tontine rotative</option><option value="in_kind_tontine">Tontine en nature</option><option value="hybrid">Hybride</option></select></label>
               <label>Gouvernance<select id="governanceModel"><option value="founder_managed">Fondateur</option><option value="community">Communautaire</option><option value="delegated">Déléguée</option><option value="ngo_supported">Accompagnée ONG</option><option value="hybrid">Hybride</option></select></label>
+              <fieldset id="legacyProjectSettings" class="form-grid full" hidden disabled><legend>Paramètres de la tontine autonome</legend>
               <label>Membres prévus<input id="memberCount" type="number" min="1" step="1" value="20" required></label>
               <label>Séances / cycle<input id="sessions" type="number" min="1" step="1" value="12" required></label>
               <label>Cotisation nominale XAF<input id="nominalContribution" type="number" min="0" step="1" value="10000" required></label>
               <label>Frais de gestion / versement<input id="managementFee" type="number" min="0" step="1" value="0"></label>
               <label>Coûts externes %<input id="externalCostRate" type="number" min="0" max="100" step="0.1" value="0"></label>
               <label>Coût fixe / séance<input id="fixedSessionCost" type="number" min="0" step="1" value="0"></label>
+              </fieldset>
+              <section id="associationRubricSetup" class="full">
+                <h3>Les rubriques de votre association</h3>
+                <p class="hint">Ajoutez uniquement les rubriques qui existent chez vous. Chacune aura son nom, ses participants et ses paramètres.</p>
+                <div id="launchRubrics" class="stack"></div>
+                <button id="addLaunchRubric" type="button" class="secondary wide-btn">+ Ajouter une rubrique</button>
+              </section>
               <button class="primary" type="submit">Simuler</button>
             </form>
             <div id="simulationResult" class="result"></div>
@@ -163,7 +179,7 @@
         <div class="page-head"><div><span class="eyebrow">Lots C–D</span><h1>Séance · Membres · Règles vivantes</h1><p>La clôture est un checkpoint. Une opération tardive reste possible si la politique du groupe l'autorise et si les validations requises sont réunies.</p></div></div>
         <div id="noActiveGroupOperations" class="panel empty-state">Sélectionnez ou créez d'abord un groupe.</div>
         <div id="operationsContent">
-          <section class="panel"><div class="panel-head"><div><h2>Meeting Command Center</h2><p>Deux vues du même moteur : cartes pour téléphone, matrice type feuille mensuelle pour tablette/desktop.</p></div><div class="view-switch"><button id="cardViewBtn" class="active" type="button">Cartes</button><button id="matrixViewBtn" type="button">Matrice</button></div></div><div id="meetingMatrixPanel" hidden><div id="meetingMatrix" class="matrix-wrap"></div><p class="hint">Touchez une cellule pour préparer la saisie d’une cotisation dans le service canonique ; la matrice n’écrit jamais directement dans le ledger.</p></div></section>
+          <section class="panel"><div class="panel-head"><div><h2>Votre feuille de séance</h2><p>Deux vues du même moteur : cartes pour téléphone, matrice type feuille mensuelle pour tablette/desktop.</p></div><div class="view-switch"><button id="cardViewBtn" class="active" type="button">Cartes</button><button id="matrixViewBtn" type="button">Matrice</button></div></div><div id="meetingMatrixPanel" hidden><div id="meetingMatrix" class="matrix-wrap"></div><p class="hint">Touchez une cellule pour préparer la saisie d’une cotisation dans le service canonique ; la matrice n’écrit jamais directement dans le ledger.</p></div></section>
           <div class="two-col">
             <section class="panel"><h2>Membres</h2><form id="memberForm" class="inline-form"><input id="memberName" required placeholder="Nom du membre"><button class="primary">Ajouter</button></form><ul id="memberList" class="list"></ul></section>
             <section class="panel"><h2>Séances</h2><form id="meetingForm" class="inline-form"><input id="meetingTitle" placeholder="Ex. Séance de septembre"><button class="primary">Ouvrir</button></form><div id="meetingList" class="stack"></div></section>
@@ -214,7 +230,7 @@
                 <label>Séance<select id="contributionMeeting"></select></label>
                 <label>Montant XAF<input id="contributionAmount" type="number" min="1" step="1" value="2000" required></label>
                 <label class="full">Motif si opération tardive<textarea id="lateReason" rows="2" placeholder="Ex. retardataire autorisé par Président + Trésorier"></textarea></label>
-                <label class="full">Identifiants des approbateurs (séparés par des virgules)<input id="lateApprovers" placeholder="Ex. user_founder, user_treasurer"></label>
+                <input id="lateApprovers" type="hidden" value=""><p class="hint full">Les accords sont liés au compte connecté. Le parcours de quorum avec plusieurs personnes reste à compléter.</p>
                 <button id="recordCashBtn" class="primary">Enregistrer</button>
               </form>
             </section>
@@ -310,7 +326,7 @@
     </main>
   </div>
 
-  <footer class="footer">Eco-System 1.1 Cahier App · Cahier Maître 2.3.4 · realMoneyEnabled=false</footer>
-  <script type="module" src="/src/main.js?v=110"></script>
+  <footer class="footer">Eco-System 1.1.2 · Version locale · Cahier Maître 2.3.4</footer>
+  <script type="module" src="/src/main.js?v=112"></script>
 </body>
 </html>

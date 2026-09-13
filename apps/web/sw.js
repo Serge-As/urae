@@ -1,7 +1,8 @@
-const CACHE = 'eco-system-cahier-app-v110';
+const CACHE = 'eco-system-cahier-app-v112-rubriques-r2-20260912';
 const APP_SHELL = [
   '/', '/index.html', '/styles.css', '/manifest.webmanifest',
-  '/src/main.js', '/src/i18n.js',
+  '/src/main.js', '/src/i18n.js', '/src/launch-rubrics.js',
+  '/packages/rubrics/src/launch-config.js', '/packages/rubrics/src/index.js',
   '/packages/application/src/index.js', '/packages/contracts/src/index.js',
   '/packages/domain/src/index.js', '/packages/module-registry/src/index.js',
   '/packages/module-registry/src/service-capabilities.js', '/packages/offline/src/index.js',
@@ -19,7 +20,7 @@ self.addEventListener('install', event => {
 
 self.addEventListener('activate', event => {
   event.waitUntil((async () => {
-    for (const name of await caches.keys()) if (name !== CACHE) await caches.delete(name);
+    for (const name of await caches.keys()) if (name.startsWith('eco-system-') && name !== CACHE) await caches.delete(name);
     await self.clients.claim();
   })());
 });
@@ -48,7 +49,16 @@ self.addEventListener('fetch', event => {
     return;
   }
 
-  // Static assets are stale-while-revalidate for low-data/offline use.
+  // Executable modules/styles must match the newly loaded HTML; fall back only when offline.
+  if (['script','style'].includes(event.request.destination)) {
+    event.respondWith((async () => {
+      const cache=await caches.open(CACHE);
+      try { const response=await fetch(event.request); if(response.ok)await cache.put(url.pathname,response.clone()); return response; }
+      catch { return await cache.match(event.request,{ignoreSearch:true}) ?? new Response('Offline',{status:503}); }
+    })());
+    return;
+  }
+  // Other static assets are stale-while-revalidate for low-data/offline use.
   event.respondWith((async () => {
     const cache = await caches.open(CACHE);
     const cached = await cache.match(event.request, { ignoreSearch: true });

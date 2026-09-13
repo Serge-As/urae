@@ -5,6 +5,7 @@ import { DiscoveryService, MembershipGatewayService } from '../../../packages/di
 import { RubricKnowledgeService } from '../../../packages/rubrics/src/index.js';
 import { makeId, type OutboxItem, type GroupOperatingPolicy, type ProjectCapability, type RubricOperatingModel, type WorkspaceRecord, type WorkspaceStatus } from '../../../packages/contracts/src/index.js';
 import { PRODUCT_MODULES, PRODUCT_CAPABILITY_COUNT } from '../../../packages/module-registry/src/index.js';
+import { authenticatedApi } from './authenticated.js';
 
 const defaultRepo = new InMemoryPlatformRepository();
 
@@ -57,12 +58,25 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo) => async
     return new Response(null,{status:allowed?204:403,headers:{...baseSecurityHeaders,...cors,'access-control-allow-methods':'GET,POST,PUT,OPTIONS','access-control-allow-headers':'content-type,x-tenant-id,x-actor-id,x-group-roles,x-active-group-id,x-device-id,x-session-id,x-request-id,x-timezone'}});
   }
   const {kernel,foundation,ledger,meetings,discovery,membershipGateway,rubrics}=createRequestScope(request,repo); const ctx=kernel.context.get();
+  const requireGroup=async(groupId:string,manage=false)=>{
+    const group=await repo.getGroup(ctx.tenantId,groupId);if(!group)throw Error('GROUP_NOT_FOUND');
+    if(group.createdBy===ctx.actorId)return group;
+    const member=(await repo.listMemberships(ctx.tenantId,groupId)).find(m=>m.userId===ctx.actorId&&m.status==='active');
+    if(!member || manage && !member.roles.some(r=>['founder','manager','admin','president','treasurer'].includes(r)))throw Error('FORBIDDEN_SCOPE');
+    return group;
+  };
+  const visibleWorkspace=async(record:WorkspaceRecord)=>{
+    if(!record.groupId)return record.createdBy===ctx.actorId;
+    try{await requireGroup(record.groupId,true);return true;}catch{return false;}
+  };
   try {
-    if(request.method==='GET'&&url.pathname==='/health') return json({ok:true,service:'tontine-api',version:'1.1.0-cahier-app',now:new Date().toISOString(),realMoneyEnabled:kernel.features.enabled('financial-real-money'),manualCashLedgerEnabled:true,contextScope:'request'},200,cors);
+    const scopedGroup=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)/)?.[1];
+    if(scopedGroup)await requireGroup(scopedGroup);
+    if(request.method==='GET'&&url.pathname==='/health') return json({ok:true,service:'tontine-api',version:'1.1.2-qualified-local',now:new Date().toISOString(),realMoneyEnabled:kernel.features.enabled('financial-real-money'),manualCashLedgerEnabled:true,contextScope:'request'},200,cors);
     if(request.method==='GET'&&url.pathname==='/api/v1/kernel') return json({services:['context','policy','workflow','events','audit','obligations','evidence','reconciliation','cases','inbox','notifications','configuration','features','data-governance','compatibility','resource-governor'],features:{groupLaunch:kernel.features.enabled('group-launch-studio'),meetingSync:kernel.features.enabled('meeting-sync-core'),realMoney:kernel.features.enabled('financial-real-money'),manualCashLedger:true}},200,cors);
 
     if(request.method==='GET'&&url.pathname==='/api/v1/product/capabilities'){
-      return json({version:'1.1.0-cahier-app',count:PRODUCT_CAPABILITY_COUNT,capabilities:PRODUCT_MODULES},200,cors);
+      return json({version:'1.1.2-qualified-local',count:PRODUCT_CAPABILITY_COUNT,capabilities:PRODUCT_MODULES},200,cors);
     }
 
 
@@ -78,7 +92,8 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo) => async
 
     if(request.method==='POST'&&url.pathname==='/api/v1/group-projects'){
       const body=await readJson<Record<string,unknown>>(request);
-      const project=await foundation.createProject({tenantId:ctx.tenantId,createdBy:ctx.actorId,name:String(body.name??''),kind:(body.kind??'rotating_tontine') as any,governanceModel:(body.governanceModel??'founder_managed') as any,memberCount:finite(body.memberCount),sessions:finite(body.sessions),nominalContribution:{currency:String(body.currency??'XAF'),amount:finite(body.nominalContribution)},managementFeePerContribution:{currency:String(body.currency??'XAF'),amount:finite(body.managementFeePerContribution,0)},estimatedExternalCostRate:finite(body.estimatedExternalCostRate,0),fixedOperatingCostPerSession:{currency:String(body.currency??'XAF'),amount:finite(body.fixedOperatingCostPerSession,0)}});
+      const financial=body.rubrics!==undefined?{rubrics:body.rubrics as any}:{memberCount:finite(body.memberCount),sessions:finite(body.sessions),nominalContribution:{currency:String(body.currency??'XAF'),amount:finite(body.nominalContribution)},managementFeePerContribution:{currency:String(body.currency??'XAF'),amount:finite(body.managementFeePerContribution,0)},estimatedExternalCostRate:finite(body.estimatedExternalCostRate,0),fixedOperatingCostPerSession:{currency:String(body.currency??'XAF'),amount:finite(body.fixedOperatingCostPerSession,0)}};
+      const project=await foundation.createProject({tenantId:ctx.tenantId,createdBy:ctx.actorId,name:String(body.name??''),kind:(body.kind??'rotating_tontine') as any,governanceModel:(body.governanceModel??'founder_managed') as any,...financial});
       return json(project,201,cors);
     }
     const projectGrant=url.pathname.match(/^\/api\/v1\/group-projects\/([^/]+)\/access-grants$/);
@@ -127,6 +142,8 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo) => async
       const operatingModel=body.operatingModel&&typeof body.operatingModel==='object'?body.operatingModel as RubricOperatingModel:undefined;
       return json(await rubrics.createRubric({tenantId:ctx.tenantId,groupId:rubricRoute[1]!,name:String(body.name??''),aliases:strArray(body.aliases),purpose:body.purpose?String(body.purpose):undefined,facets:body.facets as any,source:body.source?String(body.source) as any:undefined,operatingModel}),201,cors);
     }
+    const rubricActivityRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/rubrics\/([^/]+)\/activity-plan$/);
+    if(rubricActivityRoute&&request.method==='PUT')return json(await rubrics.updateActivityPlan(ctx.tenantId,rubricActivityRoute[1]!,rubricActivityRoute[2]!,await readJson(request)),200,cors);
     const rubricModelRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/rubrics\/([^/]+)\/operating-model$/);
     if(rubricModelRoute&&request.method==='PUT'){
       const body=await readJson<RubricOperatingModel>(request);return json(await rubrics.updateOperatingModel({tenantId:ctx.tenantId,groupId:rubricModelRoute[1]!,rubricId:rubricModelRoute[2]!,model:body}),200,cors);
@@ -139,6 +156,8 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo) => async
       const body=await readJson<Record<string,unknown>>(request); return json({suggestions:rubrics.suggestClaimsFromGovernanceText(String(body.text??'')),automaticActivation:false},200,cors);
     }
 
+    const statement=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/members\/([^/]+)\/statement$/);
+    if(statement&&request.method==='GET')return json(await ledger.memberStatement(ctx.tenantId,statement[1]!,statement[2]!,url.searchParams.get('asOf')??undefined),200,cors);
     const members=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/members$/);
     if(members&&request.method==='GET'){
       const group=await repo.getGroup(ctx.tenantId,members[1]!); if(!group) return json({error:'NOT_FOUND'},404,cors);
@@ -167,7 +186,7 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo) => async
     }
 
     const ledgerRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/ledger$/);
-    if(ledgerRoute&&request.method==='GET') return json({summary:await ledger.summary(ctx.tenantId,ledgerRoute[1]!),entries:await repo.listLedgerEntries(ctx.tenantId,ledgerRoute[1]!),receipts:await repo.listContributionReceipts(ctx.tenantId,ledgerRoute[1]!)},200,cors);
+    if(ledgerRoute&&request.method==='GET') return json({summary:await ledger.summary(ctx.tenantId,ledgerRoute[1]!),entries:await repo.listLedgerEntries(ctx.tenantId,ledgerRoute[1]!),receipts:await ledger.receiptPositions(ctx.tenantId,ledgerRoute[1]!)},200,cors);
     const reverseRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/ledger\/([^/]+)\/reverse$/);
     if(reverseRoute&&request.method==='POST'){const body=await readJson<Record<string,unknown>>(request);return json(await ledger.reverseEntry({tenantId:ctx.tenantId,groupId:reverseRoute[1]!,entryId:reverseRoute[2]!,reason:String(body.reason??'')}),201,cors);}
 
@@ -185,13 +204,16 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo) => async
     if(request.method==='GET'&&url.pathname==='/api/v1/workspaces'){
       const moduleId=url.searchParams.get('moduleId')??undefined;
       const groupId=url.searchParams.get('groupId')??undefined;
-      return json(await repo.listWorkspaceRecords(ctx.tenantId,moduleId,groupId),200,cors);
+      const records=await repo.listWorkspaceRecords(ctx.tenantId,moduleId,groupId);const visible=[];
+      for(const record of records)if(await visibleWorkspace(record))visible.push(record);
+      return json(visible,200,cors);
     }
     if(request.method==='POST'&&url.pathname==='/api/v1/workspaces'){
       const body=await readJson<Record<string,unknown>>(request);
       const moduleId=String(body.moduleId??'').trim(); const title=String(body.title??'').trim();
       if(!moduleId||!PRODUCT_MODULES.some(x=>x.id===moduleId)) throw new Error('INVALID_MODULE_ID');
       if(!title) throw new Error('WORKSPACE_TITLE_REQUIRED');
+      if(body.groupId)await requireGroup(String(body.groupId),true);
       const timestamp=new Date().toISOString();
       const rawData=body.data&&typeof body.data==='object'&&!Array.isArray(body.data)?body.data as Record<string,unknown>:{};
       const data:Record<string,string|number|boolean|null>={};
@@ -206,6 +228,7 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo) => async
     const workspaceRoute=url.pathname.match(/^\/api\/v1\/workspaces\/([^/]+)$/);
     if(workspaceRoute&&request.method==='PUT'){
       const existing=await repo.getWorkspaceRecord(ctx.tenantId,workspaceRoute[1]!); if(!existing)return json({error:'NOT_FOUND'},404,cors);
+      if(!await visibleWorkspace(existing))throw Error('FORBIDDEN_SCOPE');
       const body=await readJson<Record<string,unknown>>(request);
       const status=String(body.status??existing.status) as WorkspaceStatus; if(!['DRAFT','ACTIVE','DONE','ARCHIVED'].includes(status)) throw new Error('INVALID_WORKSPACE_STATUS');
       const rawData=body.data&&typeof body.data==='object'&&!Array.isArray(body.data)?body.data as Record<string,unknown>:existing.data;
@@ -221,12 +244,20 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo) => async
       if(item.type==='CONTRIBUTION_CASH_RECORDED'){
         const p=item.payload; const receipt=await ledger.recordCashContribution({tenantId:ctx.tenantId,groupId:String(p.groupId??''),membershipId:String(p.membershipId??''),amount:finite(p.amount),currency:String(p.currency??'XAF'),meetingId:p.meetingId?String(p.meetingId):undefined,rubricId:p.rubricId?String(p.rubricId):undefined,lateReason:p.lateReason?String(p.lateReason):undefined,approverIds:strArray(p.approverIds),idempotencyKey:item.idempotencyKey}); return json({accepted:true,receipt},200,cors);
       }
-      if(item.type==='MEETING_NOTE_UPDATED') return json({accepted:true,stored:false,type:item.type},200,cors);
+      if(item.type==='MEETING_NOTE_UPDATED'){
+        const groupId=String(item.payload.groupId??'');await requireGroup(groupId,true);
+        const note=String(item.payload.note??'').trim();if(!note)throw Error('NOTE_REQUIRED');
+        const id='note_'+encodeURIComponent(JSON.stringify([ctx.tenantId,ctx.actorId,item.idempotencyKey]));
+        const existing=await repo.getWorkspaceRecord(ctx.tenantId,id);
+        if(existing && (existing.summary!==note || existing.groupId!==groupId))throw Error('IDEMPOTENCY_CONFLICT');
+        if(!existing)await repo.saveWorkspaceRecord({id,tenantId:ctx.tenantId,groupId,moduleId:'MEETING.COMMAND_CENTER',title:'Note de séance',summary:note,status:'ACTIVE',tags:['note'],data:{},createdBy:ctx.actorId,createdAt:item.createdAt,updatedAt:new Date().toISOString()});
+        return json({accepted:true,stored:true,type:item.type,recordId:id},200,cors);
+      }
       throw new Error('OUTBOX_TYPE_UNSUPPORTED');
     }
 
     return json({error:'NOT_FOUND'},404,cors);
-  } catch(error){const message=error instanceof Error?error.message:'UNKNOWN_ERROR';const status=message==='FORBIDDEN_SCOPE'?403:message.endsWith('_NOT_FOUND')?404:400;return json({error:message,requestId:ctx.requestId},status,cors);}
+  } catch(error){const message=error instanceof Error?error.message:'UNKNOWN_ERROR';const status=message==='FORBIDDEN_SCOPE'?403:message==='IDEMPOTENCY_CONFLICT'?409:message.endsWith('_NOT_FOUND')?404:400;return json({error:message,requestId:ctx.requestId},status,cors);}
 };
 
 export const handleRequest=createApiHandler(defaultRepo);
@@ -243,6 +274,11 @@ export default {async fetch(request:Request,env:WorkerEnv={}){
     const asset=await env.ASSETS.fetch(assetRequest);
     if(asset.status!==404 || url.pathname==='/' || url.pathname==='/index.html') return asset;
   }
-  return createApiHandler(env.DB?new D1PlatformRepository(env.DB):defaultRepo)(request);
+  if(!env.DB){
+    if(request.method==='GET' && ['/health','/api/v1/product/capabilities','/api/v1/kernel','/api/v1/discovery/groups'].includes(url.pathname))return handleRequest(request);
+    return json({error:'PERSISTENT_STORAGE_REQUIRED'},503);
+  }
+  const repository=new D1PlatformRepository(env.DB);
+  return authenticatedApi(repository,env.DB,createApiHandler(repository))(request);
 }};
 export {defaultRepo as repo};

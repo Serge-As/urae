@@ -3,7 +3,12 @@
     "target": "ES2022",
     "module": "ES2022",
     "moduleResolution": "Bundler",
-    "lib": ["ES2022", "DOM", "DOM.Iterable", "WebWorker"],
+    "lib": [
+      "ES2022",
+      "DOM",
+      "DOM.Iterable",
+      "WebWorker"
+    ],
     "strict": true,
     "skipLibCheck": true,
     "noEmitOnError": true,
@@ -11,11 +16,13 @@
     "outDir": ".build",
     "sourceMap": true,
     "declaration": false,
-    "resolveJsonModule": true
+    "resolveJsonModule": true,
+    "allowJs": true
   },
   "include": [
     "apps/**/*.ts",
     "workers/**/*.ts",
-    "packages/**/*.ts"
+    "packages/**/*.ts",
+    "apps/web/src/**/*.js"
   ]
 }
