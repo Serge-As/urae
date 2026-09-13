@@ -1,8 +1,8 @@
 {
   "name": "Eco-System — Tontines, Associations & Communautés",
   "short_name": "Eco-System",
-  "description": "Master Cockpit Eco-System selon le Cahier Maître 2.3.4",
-  "start_url": "/?v=master-20260911",
+  "description": "Master Cockpit Eco-System selon le Cahier Maître 2.3.4 et les validations Living Rules",
+  "start_url": "/?release=master-cockpit-20260913-r2",
   "scope": "/",
   "display": "standalone",
   "background_color": "#f6f0e4",
