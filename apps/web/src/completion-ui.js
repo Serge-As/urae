@@ -199,6 +199,18 @@ export const mountCompletionUI=({app,notify,showError,getMembers,getMeetings,get
     }
   };
 
+  const renderOfflineSnapshots=async()=>{
+    const root=byId('offlineSnapshotList');if(!root)return;
+    root.replaceChildren();const groupId=app.activeGroup();if(!groupId)return;
+    const rows=await snapshotStore.list(groupId);
+    if(!rows.length){root.append(article(tr('Aucun paquet local','No local pack'),'',tr('Préparez le groupe avant de partir hors connexion.','Prepare the group before going offline.')));return;}
+    for(const x of rows){
+      const a=article(tr('Paquet réunion','Meeting pack'),date(x.updatedAt),tr('Contexte local en lecture seule','Read-only local context'));
+      const b=document.createElement('button');b.type='button';b.textContent=tr('Supprimer','Delete');b.onclick=()=>void run(null,async()=>{await snapshotStore.remove(x.id);await renderOfflineSnapshots();});
+      a.append(b);root.append(a);
+    }
+  };
+
   const refresh=async()=>{
     if(!workflows||!Object.keys(workflows).length){const result=await app.completionWorkflows();workflows=result.workflows;fillCompletionKinds();}
     await Promise.all([renderTontine(),renderLoans(),renderCompletionRecords()]);
