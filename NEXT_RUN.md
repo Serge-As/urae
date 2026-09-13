@@ -1,50 +1,33 @@
 # ECO-SYSTEM — NEXT RUN
 
-Date : 2026-09-11
+Date : 2026-09-13
 
-Lire d'abord `AGENTS.md`, `docs/memory/CURRENT_TRUTH.md`, `docs/memory/PROJECT_TRUTH_LEDGER.json`, le Cahier Maître 2.3.4, `FEATURE_REGISTRY.yaml` et les Recall/CIR.
+Lire d'abord `AGENTS.md`, `docs/memory/CURRENT_TRUTH.md`, `docs/memory/PROJECT_TRUTH_LEDGER.json`, `PROJECT_STATE.md`, le Cahier Maître 2.3.4 réellement accessible, `FEATURE_REGISTRY.yaml`, `docs/recovery/ECO_SYSTEM_PROCEDURE_SAUVEGARDE_REPRISE_COMPLETE_APP_2026-09-13.md`, puis les Recall/CIR pertinents.
 
 ## Acquis — ne pas refaire
-- Interface active : **Master Cockpit — Cahier Maître 2.3.4**.
-- PWA : `https://eco-system.sergemimf.workers.dev/`.
-- URL anti-cache : `https://eco-system.sergemimf.workers.dev/?v=master-20260911`.
-- Correctif UI principal : `9d9c0b117e80927edc02dfcd7ea899e4f2c34f08`.
-- Déploiement qualifié : run `34645341363` SUCCESS.
-- Worker version : `9ce22308-db14-4da7-9e6f-c2908b6db20c`.
-- CI de déploiement : **52/52 PASS**.
-- D1 : uniquement `eco-system-db`; aucune recréation ; aucune migration en attente.
-- Root Master Cockpit, health et catalogue : PASS.
-- Catalogue : 139 capacités.
+- Interface active : **Master Cockpit R2 — Cahier Maître 2.3.4 + Living Rules**.
+- Release : `master-cockpit-20260913-r2`.
+- URL : `https://eco-system.sergemimf.workers.dev/`.
+- URL anti-cache/reprise : `https://eco-system.sergemimf.workers.dev/?release=master-cockpit-20260913-r2`.
+- Déploiement R2 : run `34739971297` SUCCESS.
+- Recovery CI : run `34739973185` SUCCESS.
+- Worker Version ID : `ad5ee04e-3882-4f24-bc45-ebb56545e29a`.
+- `npm run ci` : **53/53 PASS**.
+- D1 : uniquement `eco-system-db` ; aucune nouvelle base ; **No migrations to apply**.
+- assets forcés R2 : `release.json`, `manifest.webmanifest`, `sw.js`.
+- root Master Cockpit + Cahier 2.3.4, `/health`, catalogue 139 capacités : PASS.
 - `realMoneyEnabled=false`.
 - PR #3 ouverte, non fusionnée.
-- BIR+ Master Cockpit vérifié : run `34645606625`, artifact `10281862797`, head `6382e7ba19c334bb8ac4d4df2c5f16221ababb61`.
-- ZIP SHA-256 : `1b9525e3a994d5ebfd3dd6922691c25ce0a2413bbba283de3a2df1da70aaf04b`.
-- Source SHA-256 : `578596a697781f99d8c70d80881a61a03426366cb9cd50df6f96859a68eba52c`.
-- Library : `/Eco-System/ECO_SYSTEM_1.0_MASTER_COCKPIT_BIR_PLUS_2026-09-11.zip`.
-- Ancien BIR+ pré-Master-Cockpit conservé comme fallback historique.
+- Procédure sauvegarde/reprise 2026-09-13 et prompt nouveau chat/Codex présents dans le dépôt.
 
-## Ce qui est maintenant visible
-1. création/intégration/transformation en cockpit 10 étapes ;
-2. séance avec matrice membres × rubriques ;
-3. finance/ledger + portes d'entrée prêts, épargne, obligations, impayés, garants, enveloppes ;
-4. Discovery/Membership bidirectionnel et consentement ;
-5. communauté/gouvernance ;
-6. marketplace/fournisseurs/achats groupés/Business Studio ;
-7. AdManager ;
-8. Academy/ONG/IA/Safety/Paper Bridge ;
-9. rapports/recherche/calendrier/notifications/géolocalisation ;
-10. sécurité/offline/audit/backups/compatibilité.
+## Cause terrain mémorisée
+Si un appareil affiche l'ancienne interface alors que le root distant est qualifié Master Cockpit, vérifier d'abord service worker/cache PWA avant de conclure à une régression du source. R2 utilise `skipWaiting`, `clients.claim`, purge des caches anciens, navigation network-first/reload et start_url versionnée.
 
-## Règle de vérité produit
-Ne plus qualifier l'application de « complète » uniquement parce qu'une capacité existe dans le catalogue. Toujours distinguer :
-- moteur spécialisé réellement actif ;
-- structure/workspace persistant utilisable ;
-- domaine planifié ;
-- option ultérieure.
-Le feedback terrain sur l'interface visible prime sur une conclusion abstraite tirée uniquement de la CI.
+## Vérité produit
+Le Master Cockpit expose les domaines validés et leur statut réel. Ne jamais dire qu'une capacité est finalisée uniquement parce qu'elle est dans les 139 capacités ou possède un workspace. Distinguer moteur spécialisé actif, `STRUCTURAL_V1`, domaine planifié et option future.
 
-## Reprise
-Continuer à convertir progressivement les capacités `STRUCTURAL_V1` prioritaires en moteurs spécialisés, sans dupliquer Ledger/Membership/Meeting/Living Rules et sans casser le Master Cockpit. Priorités : auth/session/MFA, hostile multi-tenant, prêts/épargne riches, Discovery bidirectionnel complet, gouvernance documentaire, PRA D1, tests Android ancien/faible débit et pilote contrôlé.
+## Reprise développement
+Continuer à transformer les capacités structurelles prioritaires en moteurs réels sans dupliquer les autorités canoniques. Priorités : Discovery bidirectionnel complet/Membership, prêts-épargne-solidarité avancés, gouvernance documentaire, communauté/marketplace/partenaires/achats groupés, AdManager, Academy/ONG/Paper Bridge, auth/session/MFA, tests multi-tenant hostiles, PRA D1, Android ancien/faible débit/offline et pilote contrôlé.
 
 ## Interdictions
 - ne pas recréer `eco-system-db` ;
@@ -52,5 +35,6 @@ Continuer à convertir progressivement les capacités `STRUCTURAL_V1` prioritair
 - ne pas force-push/fusionner `main` sans décision explicite ;
 - ne pas activer l'argent réel ;
 - ne pas introduire de migration destructive ;
-- ne pas hard-coder la pratique d'un groupe comme règle universelle ;
-- ne pas masquer le vrai statut d'une capacité derrière une belle interface.
+- ne pas hard-coder une pratique locale comme règle universelle ;
+- ne pas masquer le statut réel d'une capacité ;
+- ne pas supprimer les checkpoints historiques.
