@@ -99,10 +99,10 @@ const go = (name) => {
 };
 document.querySelectorAll('[data-view]').forEach(b => b.addEventListener('click', () => go(b.dataset.view)));
 document.querySelectorAll('[data-go]').forEach(b => b.addEventListener('click', () => go(b.dataset.go)));
-const renderConnectivity = () => { const online = navigator.onLine; const e = $('#connectivity'); e.textContent = `● ${online ? 'En ligne' : 'Hors ligne'}`; e.className = `pill ${online ? 'online' : 'offline'}`; app.setConnectivity(online ? 'online' : 'offline'); };
+const renderConnectivity = () => { const online = navigator.onLine; const e = $('#connectivity'); e.textContent = `● ${online ? tx('En ligne','Online') : tx('Hors ligne','Offline')}`; e.className = `pill ${online ? 'online' : 'offline'}`; app.setConnectivity(online ? 'online' : 'offline'); };
 const renderUniverse = async () => {
     const u = await app.universe();
-    const rows = [[u.groups, 'Groupes'], [u.inbox, 'Actions à traiter'], [u.pendingSync, 'En attente de synchro'], [u.audit, 'Événements audités']];
+    const rows = [[u.groups, tx('Groupes','Groups')], [u.inbox, tx('Actions à traiter','Actions to do')], [u.pendingSync, tx('En attente de synchro','Pending sync')], [u.audit, tx('Événements audités','Audited events')]];
     const root = $('#universeCards');
     root.replaceChildren();
     for (const [n, l] of rows) {
@@ -118,18 +118,18 @@ const renderActiveGroup = () => {
     const root = $('#activeGroupCard');
     if (!group) {
         root.className = 'empty-state';
-        root.textContent = 'Aucun groupe actif.';
+        root.textContent = tx('Aucun groupe actif.','No active group.');
         return;
     }
     root.className = 'item';
-    root.innerHTML = html`<strong>${group.name}</strong><p>${group.kind} · ${group.governanceModel}</p><small>Créé le ${date(group.createdAt)}</small>`;
+    root.innerHTML = html`<strong>${group.name}</strong><p>${group.kind} · ${group.governanceModel}</p><small>${tx('Créé le','Created on')} ${date(group.createdAt)}</small>`;
 };
 const renderGroupSelector = () => {
     const sel = $('#activeGroupSelect');
     sel.replaceChildren();
     const empty = document.createElement('option');
     empty.value = '';
-    empty.textContent = groups.length ? 'Choisir un groupe…' : 'Aucun groupe — créez ou intégrez-en un';
+    empty.textContent = groups.length ? tx('Choisir un groupe…','Choose a group…') : tx('Aucun groupe — créez ou intégrez-en un','No group — create or join one');
     sel.append(empty);
     for (const g of groups) {
         const o = document.createElement('option');
@@ -144,7 +144,7 @@ const renderGroups = async () => {
     const root = $('#groupsList');
     root.replaceChildren();
     if (!groups.length) {
-        root.innerHTML = '<div class="empty-state">Aucun groupe. Lancez votre premier projet.</div>';
+        root.innerHTML = `<div class="empty-state">${tx('Aucun groupe. Lancez votre premier projet.','No group yet. Start your first project.')}</div>`;
         renderActiveGroup();
         renderGroupSelector();
         return;
@@ -155,9 +155,9 @@ const renderGroups = async () => {
         a.innerHTML = html`<strong>${g.name}</strong><p class="hint">${g.kind} · ${g.governanceModel}</p>`;
         const b = document.createElement('button');
         b.className = 'primary';
-        b.textContent = g.id === app.activeGroup() ? 'Groupe actif' : 'Sélectionner';
+        b.textContent = g.id === app.activeGroup() ? tx('Groupe actif','Active group') : tx('Sélectionner','Select');
         b.disabled = g.id === app.activeGroup();
-        b.onclick = async () => { app.selectGroup(g.id); await refreshGroupContext(); toast(`Groupe actif : ${g.name}`); };
+        b.onclick = async () => { app.selectGroup(g.id); await refreshGroupContext(); toast(`${tx('Groupe actif','Active group')} : ${g.name}`); };
         a.append(b);
         root.append(a);
     }
@@ -170,7 +170,7 @@ const renderInbox = async () => {
         const root = $(selector);
         root.replaceChildren();
         if (!items.length) {
-            root.innerHTML = '<li class="empty-state">Aucune action urgente.</li>';
+            root.innerHTML = `<li class="empty-state">${tx('Aucune action urgente.','No urgent action.')}</li>`;
             continue;
         }
         for (const i of items.slice(0, selector === '#dashboardInbox' ? 5 : 50)) {
@@ -187,15 +187,15 @@ const renderMembers = async () => {
     const select = $('#contributionMember');
     select.replaceChildren();
     if (!members.length) {
-        list.innerHTML = '<li class="empty-state">Aucun membre.</li>';
-        select.innerHTML = '<option value="">Aucun membre</option>';
+        list.innerHTML = `<li class="empty-state">${tx('Aucun membre.','No member.')}</li>`;
+        select.innerHTML = `<option value="">${tx('Aucun membre','No member')}</option>`;
         return;
     }
     for (const m of members) {
         const li = document.createElement('li');
         li.textContent = `${m.displayName} · ${m.roles.join(', ')}`;
         if(isManager() || m.userId===app.currentActor()){
-            const button=document.createElement('button');button.type='button';button.className='link-btn';button.textContent='Relevé';
+            const button=document.createElement('button');button.type='button';button.className='link-btn';button.textContent=tx('Relevé','Statement');
             button.onclick=()=>showStatement(m.id).catch(fail);li.append(button);
         }
         list.append(li);
