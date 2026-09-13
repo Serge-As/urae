@@ -593,6 +593,8 @@ const refreshGroupContext = async () => {
     if(!active || manage)await renderApplications();else $('#applicationsBox').textContent='Les candidatures sont gérées par les responsables du groupe.';
     await renderUniverse();
     await renderInbox();
+    await completionUI.refresh();
+    await advancedUI.refresh();
 };
 const refreshAll = async () => { await refreshGroupContext(); renderOutbox(); renderCompatibility(); renderKernel(); renderModules(); renderEcosystemHighlights(); renderDomainHubs(); };
 $('#activeGroupSelect').addEventListener('change', async (e) => { const id = e.target.value; app.selectGroup(id || undefined); try {
