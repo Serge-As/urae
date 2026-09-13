@@ -1,6 +1,6 @@
 export interface CsvPreviewIssue{row:number;column?:number;code:string;value?:string;}
 export interface CsvPreview{fingerprint:string;delimiter:string;headers:string[];rows:string[][];issues:CsvPreviewIssue[];rowCount:number;}
-const parse=(text:string,delimiter:string)=>{
+export const parseCsvText=(text:string,delimiter:string)=>{
   const rows:string[][]=[];let row:string[]=[],cell='',quoted=false;
   for(let i=0;i<text.length;i++){const ch=text[i]!;
     if(quoted){if(ch==='"'&&text[i+1]==='"'){cell+='"';i++;continue;}if(ch==='"'){quoted=false;continue;}cell+=ch;continue;}
@@ -17,7 +17,7 @@ export const sha256Text=async(text:string)=>{
 export const previewCsv=async(text:string,options:{delimiter?:string;requiredHeaders?:string[];maxRows?:number}={}):Promise<CsvPreview>=>{
   if(text.length>5_000_000)throw Error('IMPORT_FILE_TOO_LARGE');
   const first=text.split(/\r?\n/,1)[0]??'';const delimiter=options.delimiter??([';',',','\t'].sort((a,b)=>first.split(b).length-first.split(a).length)[0]??';');
-  const parsed=parse(text,delimiter),headers=(parsed.shift()??[]).map(x=>x.trim()),issues:CsvPreviewIssue[]=[];const width=headers.length;
+  const parsed=parseCsvText(text,delimiter),headers=(parsed.shift()??[]).map(x=>x.trim()),issues:CsvPreviewIssue[]=[];const width=headers.length;
   if(!width||headers.some(x=>!x))issues.push({row:1,code:'INVALID_OR_EMPTY_HEADER'});
   const duplicate=headers.find((h,i)=>headers.indexOf(h)!==i);if(duplicate)issues.push({row:1,code:'DUPLICATE_HEADER',value:duplicate});
   for(const required of options.requiredHeaders??[])if(!headers.includes(required))issues.push({row:1,code:'REQUIRED_HEADER_MISSING',value:required});
