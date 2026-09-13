@@ -9,10 +9,10 @@ test('Cloudflare Complete App config targets eco-system and never commits creden
   const cfg=fs.readFileSync('workers/api/wrangler.toml','utf8');
   assert.match(cfg,/name = "eco-system"/); assert.doesNotMatch(cfg,/CLOUDFLARE_API_TOKEN\s*=/); assert.doesNotMatch(cfg,/database_id\s*=\s*"[0-9a-f-]{20,}"/i);
   const wf=fs.readFileSync('.github/workflows/deploy-cloudflare-complete-app.yml','utf8');
-  assert.match(wf,/secrets\.CLOUDFLARE_ACCOUNT_ID/); assert.match(wf,/secrets\.CLOUDFLARE_API_TOKEN/); assert.match(wf,/eco-system-db/); assert.match(wf,/realMoneyEnabled/); assert.match(wf,/ECO_SYSTEM_ROOT/); assert.match(wf,/EXPECTED_VERSION: 1.1.2-qualified-local/);
-  assert.match(wf,/Refusing to silently create a replacement/);
+  assert.match(wf,/secrets\.CLOUDFLARE_ACCOUNT_ID/); assert.match(wf,/secrets\.CLOUDFLARE_API_TOKEN/); assert.match(wf,/eco-system-db/); assert.match(wf,/realMoneyEnabled/); assert.match(wf,/ECO_SYSTEM_ROOT/); assert.match(wf,/EXPECTED_VERSION: 1.2.0-functional-completion/);
+  assert.match(wf,/Refusing to silently create a replacement/); assert.match(wf,/R2_BUCKET: eco-system-backups/); assert.match(wf,/render-wrangler-storage/); assert.match(wf,/R2_BINDING_NOT_ACTIVE/);
   assert.doesNotMatch(wf,/d1 create/);
-  assert.match(wf,/MIN_CAPABILITIES: 100/);
+  assert.match(wf,/MIN_CAPABILITIES: 139/);
 });
 
 test('Wrangler CI renderer creates the DB binding without touching base config',()=>{
@@ -20,4 +20,12 @@ test('Wrangler CI renderer creates the DB binding without touching base config',
   const run=spawnSync(process.execPath,['scripts/render-wrangler-d1.mjs',id,out],{encoding:'utf8'}); assert.equal(run.status,0,run.stderr);
   const rendered=fs.readFileSync(out,'utf8'); assert.match(rendered,/binding = "DB"/); assert.match(rendered,/database_name = "eco-system-db"/); assert.match(rendered,new RegExp(id)); assert.match(rendered,/migrations_dir = "\.\.\/\.\.\/cloudflare\/migrations"/);
   assert.doesNotMatch(fs.readFileSync('workers/api/wrangler.toml','utf8'),new RegExp(id));
+});
+
+
+test('Wrangler storage renderer adds private R2 binding without committing resource identifiers',()=>{
+  const out=path.join(os.tmpdir(),`eco-storage-${crypto.randomUUID()}.toml`);const id='11111111-2222-3333-4444-555555555555';
+  const run=spawnSync(process.execPath,['scripts/render-wrangler-storage.mjs',id,'eco-system-backups',out],{encoding:'utf8'});assert.equal(run.status,0,run.stderr);
+  const rendered=fs.readFileSync(out,'utf8');assert.match(rendered,/binding = "DB"/);assert.match(rendered,/binding = "ARTIFACTS"/);assert.match(rendered,/bucket_name = "eco-system-backups"/);
+  const base=fs.readFileSync('workers/api/wrangler.toml','utf8');assert.doesNotMatch(base,/database_id/);assert.doesNotMatch(base,/bucket_name/);
 });
