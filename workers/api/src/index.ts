@@ -5,6 +5,10 @@ import { DiscoveryService, MembershipGatewayService } from '../../../packages/di
 import { RubricKnowledgeService } from '../../../packages/rubrics/src/index.js';
 import { makeId, type OutboxItem, type GroupOperatingPolicy, type ProjectCapability, type RubricOperatingModel, type WorkspaceRecord, type WorkspaceStatus } from '../../../packages/contracts/src/index.js';
 import { PRODUCT_MODULES, PRODUCT_CAPABILITY_COUNT } from '../../../packages/module-registry/src/index.js';
+import {
+  CompletionSuiteService, COMPLETION_WORKFLOWS, buildLoanSchedule, compareRules,
+  explainLedgerAnomalies, makeIcs, suggestTontineSchedule, type CompletionKind
+} from '../../../packages/completion/src/index.js';
 import { authenticatedApi } from './authenticated.js';
 
 const defaultRepo = new InMemoryPlatformRepository();
@@ -39,10 +43,11 @@ const finite = (value: unknown, fallback?: number): number => {
 const createRequestScope = (request:Request,repo:PlatformRepository) => {
   const kernel=new PlatformKernel();
   const foundation=new FoundationService(repo,kernel); const ledger=new LedgerService(repo,kernel); const meetings=new MeetingService(repo,kernel); const discovery=new DiscoveryService(repo,kernel); const membershipGateway=new MembershipGatewayService(repo,kernel); const rubrics=new RubricKnowledgeService(repo,kernel);
+  const completion=new CompletionSuiteService(repo,kernel);
   const tenantId=request.headers.get('x-tenant-id')??'tenant_demo'; const actorId=request.headers.get('x-actor-id')??'user_founder';
   const groupRoles=(request.headers.get('x-group-roles')??'founder,manager').split(',').map(x=>x.trim()).filter(Boolean);
   kernel.context.set({actorId,tenantId,activeGroupId:request.headers.get('x-active-group-id')??undefined,groupRoles,mandateIds:[],deviceId:request.headers.get('x-device-id')??'device_web_demo',sessionId:request.headers.get('x-session-id')??'session_demo',locale:request.headers.get('accept-language')?.toLowerCase().startsWith('en')?'en':'fr',timezone:request.headers.get('x-timezone')??'Africa/Douala',connectivity:'online',requestId:request.headers.get('x-request-id')??makeId('req')});
-  return {kernel,foundation,ledger,meetings,discovery,membershipGateway,rubrics};
+  return {kernel,foundation,ledger,meetings,discovery,membershipGateway,rubrics,completion};
 };
 
 const inboxFor = async (repo:PlatformRepository,tenantId:string,actorId:string) => {
@@ -57,7 +62,7 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo) => async
     const allowed=Boolean((cors as Record<string,string>)['access-control-allow-origin']);
     return new Response(null,{status:allowed?204:403,headers:{...baseSecurityHeaders,...cors,'access-control-allow-methods':'GET,POST,PUT,OPTIONS','access-control-allow-headers':'content-type,x-tenant-id,x-actor-id,x-group-roles,x-active-group-id,x-device-id,x-session-id,x-request-id,x-timezone'}});
   }
-  const {kernel,foundation,ledger,meetings,discovery,membershipGateway,rubrics}=createRequestScope(request,repo); const ctx=kernel.context.get();
+  const {kernel,foundation,ledger,meetings,discovery,membershipGateway,rubrics,completion}=createRequestScope(request,repo); const ctx=kernel.context.get();
   const requireGroup=async(groupId:string,manage=false)=>{
     const group=await repo.getGroup(ctx.tenantId,groupId);if(!group)throw Error('GROUP_NOT_FOUND');
     if(group.createdBy===ctx.actorId)return group;
@@ -72,11 +77,11 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo) => async
   try {
     const scopedGroup=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)/)?.[1];
     if(scopedGroup)await requireGroup(scopedGroup);
-    if(request.method==='GET'&&url.pathname==='/health') return json({ok:true,service:'tontine-api',version:'1.1.2-qualified-local',now:new Date().toISOString(),realMoneyEnabled:kernel.features.enabled('financial-real-money'),manualCashLedgerEnabled:true,contextScope:'request'},200,cors);
+    if(request.method==='GET'&&url.pathname==='/health') return json({ok:true,service:'tontine-api',version:'1.2.0-functional-completion',now:new Date().toISOString(),realMoneyEnabled:kernel.features.enabled('financial-real-money'),manualCashLedgerEnabled:true,contextScope:'request'},200,cors);
     if(request.method==='GET'&&url.pathname==='/api/v1/kernel') return json({services:['context','policy','workflow','events','audit','obligations','evidence','reconciliation','cases','inbox','notifications','configuration','features','data-governance','compatibility','resource-governor'],features:{groupLaunch:kernel.features.enabled('group-launch-studio'),meetingSync:kernel.features.enabled('meeting-sync-core'),realMoney:kernel.features.enabled('financial-real-money'),manualCashLedger:true}},200,cors);
 
     if(request.method==='GET'&&url.pathname==='/api/v1/product/capabilities'){
-      return json({version:'1.1.2-qualified-local',count:PRODUCT_CAPABILITY_COUNT,capabilities:PRODUCT_MODULES},200,cors);
+      return json({version:'1.2.0-functional-completion',count:PRODUCT_CAPABILITY_COUNT,capabilities:PRODUCT_MODULES},200,cors);
     }
 
 
@@ -194,6 +199,185 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo) => async
     if(cashboxRoute&&request.method==='GET') return json(await repo.listCashboxReconciliations(ctx.tenantId,cashboxRoute[1]!),200,cors);
     if(cashboxRoute&&request.method==='POST'){
       const body=await readJson<Record<string,unknown>>(request); return json(await foundation.reconcileCashbox({tenantId:ctx.tenantId,groupId:cashboxRoute[1]!,meetingId:body.meetingId?String(body.meetingId):undefined,openingCash:finite(body.openingCash),cashIn:finite(body.cashIn),cashOut:finite(body.cashOut),countedClosing:finite(body.countedClosing),currency:String(body.currency??'XAF')}),201,cors);
+    }
+
+    if(request.method==='GET'&&url.pathname==='/api/v1/completion/workflows'){
+      return json({version:'1.2.0-functional-completion',workflows:COMPLETION_WORKFLOWS},200,cors);
+    }
+
+    const completionCollection=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/completion$/);
+    if(completionCollection&&request.method==='GET'){
+      const kind=url.searchParams.get('kind') as CompletionKind|null;
+      return json(await completion.list(completionCollection[1]!,kind??undefined),200,cors);
+    }
+    if(completionCollection&&request.method==='POST'){
+      const body=await readJson<Record<string,unknown>>(request);
+      const kind=String(body.kind??'') as CompletionKind;
+      const data=body.data&&typeof body.data==='object'&&!Array.isArray(body.data)?body.data as Record<string,unknown>:{};
+      return json(await completion.create(completionCollection[1]!,kind,{
+        title:String(body.title??''),summary:body.summary?String(body.summary):undefined,data,tags:strArray(body.tags)
+      }),201,cors);
+    }
+    const completionTransition=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/completion\/([^/]+)\/transition$/);
+    if(completionTransition&&request.method==='POST'){
+      const body=await readJson<Record<string,unknown>>(request);
+      const patch=body.patch&&typeof body.patch==='object'&&!Array.isArray(body.patch)?body.patch as Record<string,unknown>:{};
+      return json(await completion.transition(completionTransition[1]!,completionTransition[2]!,String(body.to??''),{
+        expectedVersion:finite(body.expectedVersion),patch,reason:body.reason?String(body.reason):undefined
+      }),200,cors);
+    }
+
+    const identityClaim=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/identity-claims$/);
+    if(identityClaim&&request.method==='POST'){
+      const body=await readJson<Record<string,unknown>>(request);
+      return json(await completion.createHistoricalIdentityClaim(identityClaim[1]!,{
+        historicalReference:String(body.historicalReference??''),evidenceReference:String(body.evidenceReference??''),
+        claimedMembershipId:body.claimedMembershipId?String(body.claimedMembershipId):undefined,note:body.note?String(body.note):undefined
+      }),201,cors);
+    }
+
+    const tontineCycle=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/tontine\/cycles$/);
+    if(tontineCycle&&request.method==='POST'){
+      const body=await readJson<Record<string,unknown>>(request);
+      return json(await completion.createTontineCycle(tontineCycle[1]!,{
+        rubricId:String(body.rubricId??''),name:String(body.name??''),rounds:finite(body.rounds),
+        potsPerRound:finite(body.potsPerRound),currency:String(body.currency??'XAF'),
+        nominalPotAmount:body.nominalPotAmount===undefined?undefined:finite(body.nominalPotAmount)
+      }),201,cors);
+    }
+    const tontineShare=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/tontine\/shares$/);
+    if(tontineShare&&request.method==='POST'){
+      const body=await readJson<Record<string,unknown>>(request);
+      return json(await completion.addTontineShare(tontineShare[1]!,{
+        cycleId:String(body.cycleId??''),membershipId:String(body.membershipId??''),label:String(body.label??'')
+      }),201,cors);
+    }
+    const scheduleSuggestion=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/tontine\/schedule\/suggest$/);
+    if(scheduleSuggestion&&request.method==='POST'){
+      const body=await readJson<Record<string,unknown>>(request);
+      await requireGroup(scheduleSuggestion[1]!,true);
+      return json(suggestTontineSchedule(strArray(body.shareIds),finite(body.rounds),finite(body.potsPerRound),
+        Array.isArray(body.constraints)?body.constraints as any:[]),200,cors);
+    }
+    const scheduleShare=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/tontine\/shares\/([^/]+)\/schedule$/);
+    if(scheduleShare&&request.method==='POST'){
+      const body=await readJson<Record<string,unknown>>(request);
+      return json(await completion.scheduleTontineShare(scheduleShare[1]!,scheduleShare[2]!,finite(body.round),finite(body.expectedVersion)),200,cors);
+    }
+    const serveShare=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/tontine\/shares\/([^/]+)\/serve$/);
+    if(serveShare&&request.method==='POST'){
+      const body=await readJson<Record<string,unknown>>(request);
+      const share=(await completion.list(serveShare[1]!,'TONTINE_SHARE')).find(x=>x.id===serveShare[2]!);
+      if(!share)throw new Error('TONTINE_SHARE_NOT_FOUND');
+      if(String(share.data.completionState)!=='SCHEDULED')throw new Error('TONTINE_SHARE_NOT_SCHEDULED');
+      const entry=await ledger.recordCashMovement({
+        tenantId:ctx.tenantId,groupId:serveShare[1]!,amount:finite(body.amount),currency:String(body.currency??'XAF'),
+        direction:'out',counterAccountCode:'MEMBER_FUNDS_LIABILITY',counterAccountType:'liability',
+        descriptionCode:'LEDGER_TONTINE_BENEFIT',sourceType:'tontine_share',sourceId:share.id,
+        meetingId:body.meetingId?String(body.meetingId):undefined,
+        idempotencyKey:String(body.idempotencyKey??request.headers.get('x-idempotency-key')??makeId('benefit')),kind:'tontine_benefit'
+      });
+      return json({entry,share:await completion.markTontineShareServed(serveShare[1]!,share.id,entry.id,finite(body.expectedVersion))},201,cors);
+    }
+
+    const obligationRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/obligations$/);
+    if(obligationRoute&&request.method==='GET')return json(await repo.listObligations(ctx.tenantId),200,cors);
+    if(obligationRoute&&request.method==='POST'){
+      const body=await readJson<Record<string,unknown>>(request);
+      return json(await completion.createFinancialObligation(obligationRoute[1]!,{
+        membershipId:String(body.membershipId??''),type:String(body.type??'CONTRIBUTION_DUE'),title:String(body.title??''),
+        dueAt:body.dueAt?String(body.dueAt):undefined,amount:body.amount===undefined?undefined:finite(body.amount),
+        currency:String(body.currency??'XAF'),sourceId:body.sourceId?String(body.sourceId):undefined
+      }),201,cors);
+    }
+
+    const loanQuote=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/loans\/quote$/);
+    if(loanQuote&&request.method==='POST'){
+      await requireGroup(loanQuote[1]!,true);
+      const body=await readJson<Record<string,unknown>>(request);
+      return json({schedule:buildLoanSchedule({
+        principal:finite(body.principal),installments:finite(body.installments),annualRateBasisPoints:finite(body.annualRateBasisPoints,0),
+        installmentsPerYear:finite(body.installmentsPerYear,12),method:String(body.method??'DECLINING') as any,feesTotal:finite(body.feesTotal,0)
+      })},200,cors);
+    }
+    const loanDisburse=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/loans\/([^/]+)\/disburse$/);
+    if(loanDisburse&&request.method==='POST'){
+      const body=await readJson<Record<string,unknown>>(request);
+      const loan=(await completion.list(loanDisburse[1]!,'LOAN')).find(x=>x.id===loanDisburse[2]!);
+      if(!loan)throw new Error('LOAN_NOT_FOUND');
+      if(String(loan.data.completionState)!=='APPROVED')throw new Error('LOAN_NOT_APPROVED');
+      const principal=finite(body.amount??loan.data.principal);
+      const entry=await ledger.recordCashMovement({
+        tenantId:ctx.tenantId,groupId:loanDisburse[1]!,amount:principal,currency:String(loan.data.currency??'XAF'),
+        direction:'out',counterAccountCode:'LOAN_RECEIVABLE',counterAccountType:'asset',
+        descriptionCode:'LEDGER_LOAN_DISBURSEMENT',sourceType:'loan',sourceId:loan.id,
+        meetingId:body.meetingId?String(body.meetingId):undefined,
+        idempotencyKey:String(body.idempotencyKey??request.headers.get('x-idempotency-key')??makeId('loan_disbursement')),kind:'loan_disbursement'
+      });
+      return json({entry,loan:await completion.transition(loanDisburse[1]!,loan.id,'DISBURSED',{
+        expectedVersion:finite(body.expectedVersion),patch:{ledgerEntryId:entry.id,outstandingPrincipal:principal,disbursedAt:new Date().toISOString()}
+      })},201,cors);
+    }
+    const loanRepay=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/loans\/([^/]+)\/repay$/);
+    if(loanRepay&&request.method==='POST'){
+      const body=await readJson<Record<string,unknown>>(request);
+      const loan=(await completion.list(loanRepay[1]!,'LOAN')).find(x=>x.id===loanRepay[2]!);
+      if(!loan)throw new Error('LOAN_NOT_FOUND');
+      if(!['DISBURSED','REPAYING'].includes(String(loan.data.completionState)))throw new Error('LOAN_NOT_REPAYABLE');
+      const outstanding=finite(loan.data.outstandingPrincipal),principalPaid=finite(body.principalAmount);
+      if(principalPaid<=0||principalPaid>outstanding)throw new Error('INVALID_LOAN_REPAYMENT');
+      const entry=await ledger.recordCashMovement({
+        tenantId:ctx.tenantId,groupId:loanRepay[1]!,amount:principalPaid,currency:String(loan.data.currency??'XAF'),
+        direction:'in',counterAccountCode:'LOAN_RECEIVABLE',counterAccountType:'asset',
+        descriptionCode:'LEDGER_LOAN_REPAYMENT',sourceType:'loan_repayment',sourceId:loan.id,
+        meetingId:body.meetingId?String(body.meetingId):undefined,
+        idempotencyKey:String(body.idempotencyKey??request.headers.get('x-idempotency-key')??makeId('loan_repayment')),kind:'loan_repayment'
+      });
+      const nextOutstanding=outstanding-principalPaid;
+      const target=nextOutstanding===0?'CLOSED':'REPAYING';
+      return json({entry,loan:await completion.transition(loanRepay[1]!,loan.id,target,{
+        expectedVersion:finite(body.expectedVersion),patch:{outstandingPrincipal:nextOutstanding,lastRepaymentLedgerEntryId:entry.id}
+      })},201,cors);
+    }
+
+    const decisionRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/governance\/decisions$/);
+    if(decisionRoute&&request.method==='POST'){
+      const body=await readJson<Record<string,unknown>>(request);
+      return json(await completion.createGovernanceDecision(decisionRoute[1]!,{
+        title:String(body.title??''),subject:String(body.subject??''),threshold:finite(body.threshold),
+        expiresAt:body.expiresAt?String(body.expiresAt):undefined,operationFingerprint:body.operationFingerprint?String(body.operationFingerprint):undefined
+      }),201,cors);
+    }
+    const decisionApprove=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/governance\/decisions\/([^/]+)\/approve$/);
+    if(decisionApprove&&request.method==='POST'){
+      const body=await readJson<Record<string,unknown>>(request);
+      return json(await completion.approveDecision(decisionApprove[1]!,decisionApprove[2]!,finite(body.expectedVersion)),200,cors);
+    }
+
+    const readinessRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/readiness$/);
+    if(readinessRoute&&request.method==='POST')return json(await completion.readinessPassport(readinessRoute[1]!),201,cors);
+
+    const ruleCompareRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/rules\/compare$/);
+    if(ruleCompareRoute&&request.method==='POST'){
+      await requireGroup(ruleCompareRoute[1]!,true);
+      const body=await readJson<Record<string,unknown>>(request);
+      const before=body.before&&typeof body.before==='object'&&!Array.isArray(body.before)?body.before as Record<string,unknown>:{};
+      const after=body.after&&typeof body.after==='object'&&!Array.isArray(body.after)?body.after as Record<string,unknown>:{};
+      return json({differences:compareRules(before,after)},200,cors);
+    }
+
+    const anomalyRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/ledger\/anomalies$/);
+    if(anomalyRoute&&request.method==='GET'){
+      await requireGroup(anomalyRoute[1]!,true);
+      return json(explainLedgerAnomalies(await repo.listLedgerEntries(ctx.tenantId,anomalyRoute[1]!)),200,cors);
+    }
+
+    const calendarRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/calendar\.ics$/);
+    if(calendarRoute&&request.method==='GET'){
+      await requireGroup(calendarRoute[1]!);
+      const meetings=await repo.listMeetings(ctx.tenantId,calendarRoute[1]!);
+      const ics=makeIcs(meetings.filter(x=>x.scheduledAt).map(x=>({uid:x.id,title:x.title,start:x.scheduledAt!,cancelled:x.status==='cancelled'})));
+      return new Response(ics,{status:200,headers:{'content-type':'text/calendar; charset=utf-8','content-disposition':'attachment; filename="eco-system.ics"',...baseSecurityHeaders,...cors}});
     }
 
     if(request.method==='POST'&&url.pathname==='/api/v1/cases'){
