@@ -6,6 +6,7 @@ const html=(strings,...values)=>strings.reduce((out,s,i)=>out+s+(i<values.length
 import { ConnectedApplication } from '../../../packages/application/src/index.js';
 import { captureRuntimeI18n, applyRuntimeLocale, localeTag, runtimeTranslate } from './runtime-i18n.js';
 import { mountCompletionUI } from './completion-ui.js';
+import { mountAdvancedUI } from './advanced-ui.js';
 let uiLocale = 'fr';
 try { uiLocale = localStorage.getItem('tontine.locale') === 'en' ? 'en' : 'fr'; } catch {}
 const tx = (fr,en) => runtimeTranslate(uiLocale,fr,en);
@@ -85,6 +86,9 @@ function onSubmit(selector, handler) {
 const completionUI = mountCompletionUI({
     app, notify: toast, showError: fail, getMembers: () => members, getMeetings: () => meetings,
     getRubrics: () => rubrics, getLocale: () => uiLocale, fmt, date
+});
+const advancedUI = mountAdvancedUI({
+    app, notify: toast, showError: fail, getMembers: () => members, fmt, translate: (fr,en) => tx(fr,en)
 });
 const clearFail = () => { $('#errorBox').hidden = true; $('#errorBox').textContent = ''; };
 const go = (name) => {
@@ -810,6 +814,7 @@ $('#languageSelect').addEventListener('change', async e => {
     app.setLocale(uiLocale);
     applyRuntimeLocale(uiLocale);
     completionUI.setLocale();
+    advancedUI.setLocale();
     renderConnectivity(); renderModules(); renderEcosystemHighlights(); renderDomainHubs(); renderActiveGroup(); renderGroupSelector();
     await renderUniverse(); await renderInbox();
     toast(tx('Interface passée en français.','Interface switched to English.'));
