@@ -6,7 +6,12 @@ const html=(strings,...values)=>strings.reduce((out,s,i)=>out+s+(i<values.length
 import { ConnectedApplication } from '../../../packages/application/src/index.js';
 import { captureRuntimeI18n, applyRuntimeLocale, localeTag, runtimeTranslate } from './runtime-i18n.js';
 import { mountCompletionUI } from './completion-ui.js';
-const app = new ConnectedApplication({ locale: 'fr' });
+let uiLocale = 'fr';
+try { uiLocale = localStorage.getItem('tontine.locale') === 'en' ? 'en' : 'fr'; } catch {}
+const tx = (fr,en) => runtimeTranslate(uiLocale,fr,en);
+const app = new ConnectedApplication({ locale: uiLocale });
+captureRuntimeI18n(document);
+applyRuntimeLocale(uiLocale);
 let groups = [];
 let members = [];
 let meetings = [];
