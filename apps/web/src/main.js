@@ -389,6 +389,13 @@ const renderKernel = () => { const root = $('#kernelList'); root.replaceChildren
     li.textContent = id;
     root.append(li);
 } const s = app.safetyState(); $('#safetyState').innerHTML = html`<article class="item"><strong>Argent réel</strong><p>${s.realMoneyEnabled ? 'ACTIF' : 'DÉSACTIVÉ'}</p></article><article class="item"><strong>Ledger cash manuel</strong><p>${s.manualCashLedgerEnabled ? 'Actif' : 'Inactif'}</p></article><article class="item"><strong>IA cloud payante</strong><p>${s.cloudAiBudgetEnabled ? 'Active' : 'Désactivée'}</p></article>`; };
+const moduleLabel = (m) => uiLocale === 'en' ? (m.labelEn || m.labelFr) : m.labelFr;
+const statusCopy = (status) => ({
+    FOUNDATION_ACTIVE: tx('Parcours de base','Foundation journey'),
+    STRUCTURAL_V1: tx('Dossier · service à compléter','Record · service to complete'),
+    PLANNED_DOMAIN: tx('Domaine planifié','Planned domain'),
+    LATER_OPTIONAL: tx('Option ultérieure','Later option')
+}[status] ?? status);
 const renderModules = () => {
     const q = val('catalogSearch').toLowerCase();
     const root = $('#moduleCatalog');
@@ -398,7 +405,7 @@ const renderModules = () => {
     for (const m of chosen) {
         const a = document.createElement('article');
         a.className = 'module-card';
-        a.innerHTML = html`<span class="module-status ${m.status.toLowerCase()}">${m.status.replaceAll('_', ' ')}</span><strong>${m.labelFr}</strong><small>${m.id} · Lot ${m.lot} · ${m.workspace === 'SPECIALIZED' ? 'moteur spécialisé' : 'workspace universel'}</small>`;
+        a.innerHTML = html`<span class="module-status ${m.status.toLowerCase()}">${statusCopy(m.status)}</span><strong>${moduleLabel(m)}</strong><small>${m.id} · ${tx('Lot','Lot')} ${m.lot} · ${m.workspace === 'SPECIALIZED' ? tx('moteur spécialisé','specialized engine') : tx('workspace universel','universal workspace')}</small>`;
         a.onclick = () => void openModule(m.id);
         root.append(a);
     }
@@ -406,7 +413,7 @@ const renderModules = () => {
 const renderLotFilters = () => { const root = $('#lotFilters'); root.replaceChildren(); for (const lot of ['ALL', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J']) {
     const b = document.createElement('button');
     b.className = `filter ${lot === selectedLot ? 'active' : ''}`;
-    b.textContent = lot === 'ALL' ? 'Tous' : `Lot ${lot}`;
+    b.textContent = lot === 'ALL' ? tx('Tous','All') : `Lot ${lot}`;
     b.onclick = () => { selectedLot = lot; renderLotFilters(); renderModules(); };
     root.append(b);
 } };
@@ -420,12 +427,12 @@ const renderEcosystemHighlights = () => {
             continue;
         const b = document.createElement('button');
         b.className = 'quick';
-        b.innerHTML = html`<b>${m.labelFr}</b><span>${m.id}</span>`;
+        b.innerHTML = html`<b>${moduleLabel(m)}</b><span>${m.id}</span>`;
         b.onclick = () => void openModule(id);
         root.append(b);
     }
 };
-const STATUS_COPY = { FOUNDATION_ACTIVE: 'Parcours de base', STRUCTURAL_V1: 'Dossier · service à compléter', PLANNED_DOMAIN: 'Domaine planifié', LATER_OPTIONAL: 'Option ultérieure' };
+const STATUS_COPY = new Proxy({}, { get: (_target, key) => statusCopy(String(key)) });
 const specializedRoute = (id) => {
     if (id.startsWith('DISCOVERY.') || id.startsWith('MEMBERSHIP.') || id.startsWith('CORE.IDENTITY'))
         return 'discovery';
@@ -448,7 +455,7 @@ const openModule = async (id) => {
     const route = m.workspace === 'SPECIALIZED' && m.status === 'FOUNDATION_ACTIVE' ? specializedRoute(id) : undefined;
     if (route) {
         go(route);
-        toast(m.labelFr);
+        toast(moduleLabel(m));
         return;
     }
     $('#workspaceModule').value = id;
@@ -456,7 +463,7 @@ const openModule = async (id) => {
     await loadWorkspaces();
     setTimeout(() => $('#workspaceTitle').focus(), 50);
 };
-const hubCard = (m) => { const a = document.createElement('article'); a.className = 'hub-card'; a.innerHTML = html`<header><b>${m.labelFr}</b><span class="truth-chip ${m.status.toLowerCase()}">${STATUS_COPY[m.status] ?? m.status}</span></header><p>${m.id} · Lot ${m.lot}</p><small>${m.workspace === 'SPECIALIZED' ? 'Fonctions de base disponibles' : 'Organisation de vos notes et informations'}</small>`; const b = document.createElement('button'); b.type = 'button'; b.className = m.workspace === 'SPECIALIZED' ? 'primary' : 'link-btn'; b.textContent = m.workspace === 'SPECIALIZED' && m.status === 'FOUNDATION_ACTIVE' ? 'Ouvrir' : 'Ouvrir le dossier'; b.onclick = () => void openModule(m.id); a.append(b); return a; };
+const hubCard = (m) => { const a = document.createElement('article'); a.className = 'hub-card'; a.innerHTML = html`<header><b>${moduleLabel(m)}</b><span class="truth-chip ${m.status.toLowerCase()}">${statusCopy(m.status)}</span></header><p>${m.id} · Lot ${m.lot}</p><small>${m.workspace === 'SPECIALIZED' ? tx('Fonctions de base disponibles','Foundation functions available') : tx('Organisation de vos notes et informations','Organize your notes and information')}</small>`; const b = document.createElement('button'); b.type = 'button'; b.className = m.workspace === 'SPECIALIZED' ? 'primary' : 'link-btn'; b.textContent = m.workspace === 'SPECIALIZED' && m.status === 'FOUNDATION_ACTIVE' ? tx('Ouvrir','Open') : tx('Ouvrir le dossier','Open record'); b.onclick = () => void openModule(m.id); a.append(b); return a; };
 const fillHub = (selector, predicate, limit = 12) => { const root = $(selector); root.replaceChildren(); for (const m of modules.filter(predicate).slice(0, limit))
     root.append(hubCard(m)); };
 const renderDomainHubs = () => {
@@ -474,19 +481,19 @@ const renderDomainHubs = () => {
 const populateWorkspaceModules = () => { const sel = $('#workspaceModule'); sel.replaceChildren(); for (const m of modules) {
     const o = document.createElement('option');
     o.value = m.id;
-    o.textContent = `${m.labelFr} — ${m.id}`;
+    o.textContent = `${moduleLabel(m)} — ${m.id}`;
     sel.append(o);
 } };
 const loadWorkspaces = async () => {
     try {
         clearFail();
-        if(app.activeGroup()&&!isManager()){$('#workspaceRecords').textContent='Les dossiers du groupe sont réservés à ses responsables.';return;}
+        if(app.activeGroup()&&!isManager()){$('#workspaceRecords').textContent=tx('Les dossiers du groupe sont réservés à ses responsables.','Group records are reserved for its leaders.');return;}
         const moduleId = val('workspaceModule');
         const xs = await app.listWorkspaceRecords(moduleId);
         const root = $('#workspaceRecords');
         root.replaceChildren();
         if (!xs.length) {
-            root.innerHTML = '<div class="empty-state">Aucun dossier pour ce service. Créez le premier.</div>';
+            root.innerHTML = `<div class="empty-state">${tx('Aucun dossier pour ce service. Créez le premier.','No record for this service. Create the first one.')}</div>`;
             return;
         }
         for (const x of xs.slice().reverse()) {
@@ -495,7 +502,7 @@ const loadWorkspaces = async () => {
             a.innerHTML = html`<strong>${x.title}</strong><p>${x.summary ?? ''}</p><small>${x.status} · ${x.tags.join(', ')} · ${date(x.updatedAt)}</small>`;
             const b = document.createElement('button');
             b.className = 'link-btn';
-            b.textContent = x.status === 'DONE' ? 'Réactiver' : 'Marquer terminé';
+            b.textContent = x.status === 'DONE' ? tx('Réactiver','Reactivate') : tx('Marquer terminé','Mark done');
             b.onclick = async () => { await app.updateWorkspaceRecord(x.id, { status: x.status === 'DONE' ? 'ACTIVE' : 'DONE' }); await loadWorkspaces(); };
             a.append(b);
             root.append(a);
