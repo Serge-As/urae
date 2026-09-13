@@ -528,7 +528,7 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
 
 export const handleRequest=createApiHandler(defaultRepo);
 export interface AssetsFetcherLike { fetch(request: Request): Promise<Response> }
-export interface WorkerEnv { DB?: D1DatabaseLike; ASSETS?: AssetsFetcherLike }
+export interface WorkerEnv { DB?: D1DatabaseLike; ASSETS?: AssetsFetcherLike; ARTIFACTS?: ArtifactStoreLike }
 export default {async fetch(request:Request,env:WorkerEnv={}){
   const url=new URL(request.url);
   if(request.method==='GET' && env.ASSETS && url.pathname!=='/health' && !url.pathname.startsWith('/api/')){
@@ -545,6 +545,6 @@ export default {async fetch(request:Request,env:WorkerEnv={}){
     return json({error:'PERSISTENT_STORAGE_REQUIRED'},503);
   }
   const repository=new D1PlatformRepository(env.DB);
-  return authenticatedApi(repository,env.DB,createApiHandler(repository))(request);
+  return authenticatedApi(repository,env.DB,createApiHandler(repository,{artifacts:env.ARTIFACTS}))(request);
 }};
 export {defaultRepo as repo};
