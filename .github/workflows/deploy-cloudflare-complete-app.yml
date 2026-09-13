@@ -1,16 +1,16 @@
-name: Eco-System 1.0 Complete App — Cloudflare
+name: Eco-System 1.2 Functional Completion — Cloudflare
 
 on:
   workflow_dispatch:
   push:
-    branches: ['next/1.0.0-complete-app']
-    paths: ['.github/DEPLOY_ECO_SYSTEM_COMPLETE_ONCE']
+    branches: ['next/1.2.0-functional-completion-20260913']
+    paths: ['.github/DEPLOY_ECO_SYSTEM_1_2_ONCE']
 
 permissions:
   contents: read
 
 concurrency:
-  group: eco-system-complete-app
+  group: eco-system-1-2
   cancel-in-progress: false
 
 env:
@@ -18,8 +18,8 @@ env:
   ECO_SYSTEM_ROOT: https://eco-system.sergemimf.workers.dev/
   ECO_SYSTEM_HEALTH: https://eco-system.sergemimf.workers.dev/health
   ECO_SYSTEM_CATALOG: https://eco-system.sergemimf.workers.dev/api/v1/product/capabilities
-  EXPECTED_VERSION: 1.1.2-qualified-local
-  MIN_CAPABILITIES: 100
+  EXPECTED_VERSION: 1.2.0-functional-completion
+  MIN_CAPABILITIES: 139
 
 jobs:
   qualify-and-deploy:
@@ -41,7 +41,7 @@ jobs:
           set -euo pipefail
           test -n "${CLOUDFLARE_ACCOUNT_ID:-}"
           test -n "${CLOUDFLARE_API_TOKEN:-}"
-      - name: Complete App full qualification
+      - name: Eco-System 1.2 full qualification
         run: npm run ci
       - name: Build PWA and Worker assets
         run: npm run build
@@ -58,7 +58,7 @@ jobs:
           node scripts/render-wrangler-d1.mjs "${DB_ID}" workers/api/wrangler.ci.toml
       - name: Apply additive D1 migrations only
         run: npx --yes wrangler@4 d1 migrations apply "${ECO_SYSTEM_DB}" --remote --config workers/api/wrangler.ci.toml
-      - name: Deploy Complete App Worker + PWA
+      - name: Deploy Eco-System 1.2 Worker + PWA + R2
         run: npx --yes wrangler@4 deploy --config workers/api/wrangler.ci.toml
       - name: Smoke root health and capability catalog
         shell: bash
@@ -89,5 +89,5 @@ jobs:
           for(const required of ['DISCOVERY.GROUP_SEARCH','MEMBERSHIP.APPLICATION','GROUP.LAUNCH_STUDIO','RUBRIC.LIVING_RULES','MEETING.COMMAND_CENTER','LEDGER.CANONICAL','FINANCE.LOANS','COMMUNITY.FORUM','MARKETPLACE.CORE','ADS.MANAGER','LEARNING.MANAGER_ACADEMY','AI.ASSISTANT','PAPER.BRIDGE','REPORTING.EXPORTS','BACKUP.BIR_PLUS']){
             if(!ids.has(required)) throw new Error(`CATALOG_REQUIRED_CAPABILITY_MISSING:${required}`);
           }
-          console.log(`Complete App PASS: ${health.version}; ${catalog.count} capabilities; realMoneyEnabled=${health.realMoneyEnabled}`);
+          console.log(`Eco-System 1.2 PASS: ${health.version}; ${catalog.count} capabilities; realMoneyEnabled=${health.realMoneyEnabled}`);
           NODE
