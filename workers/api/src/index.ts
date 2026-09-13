@@ -9,6 +9,7 @@ import {
   CompletionSuiteService, COMPLETION_WORKFLOWS, buildLoanSchedule, compareRules,
   explainLedgerAnomalies, makeIcs, suggestTontineSchedule, type CompletionKind
 } from '../../../packages/completion/src/index.js';
+import { ExplainabilityService, DocumentSearchService, previewCsv, buildNotificationDigest } from '../../../packages/innovation/src/index.js';
 import { authenticatedApi } from './authenticated.js';
 
 const defaultRepo = new InMemoryPlatformRepository();
@@ -44,10 +45,11 @@ const createRequestScope = (request:Request,repo:PlatformRepository) => {
   const kernel=new PlatformKernel();
   const foundation=new FoundationService(repo,kernel); const ledger=new LedgerService(repo,kernel); const meetings=new MeetingService(repo,kernel); const discovery=new DiscoveryService(repo,kernel); const membershipGateway=new MembershipGatewayService(repo,kernel); const rubrics=new RubricKnowledgeService(repo,kernel);
   const completion=new CompletionSuiteService(repo,kernel);
+  const explainability=new ExplainabilityService(repo,kernel); const documents=new DocumentSearchService(repo,kernel);
   const tenantId=request.headers.get('x-tenant-id')??'tenant_demo'; const actorId=request.headers.get('x-actor-id')??'user_founder';
   const groupRoles=(request.headers.get('x-group-roles')??'founder,manager').split(',').map(x=>x.trim()).filter(Boolean);
   kernel.context.set({actorId,tenantId,activeGroupId:request.headers.get('x-active-group-id')??undefined,groupRoles,mandateIds:[],deviceId:request.headers.get('x-device-id')??'device_web_demo',sessionId:request.headers.get('x-session-id')??'session_demo',locale:request.headers.get('accept-language')?.toLowerCase().startsWith('en')?'en':'fr',timezone:request.headers.get('x-timezone')??'Africa/Douala',connectivity:'online',requestId:request.headers.get('x-request-id')??makeId('req')});
-  return {kernel,foundation,ledger,meetings,discovery,membershipGateway,rubrics,completion};
+  return {kernel,foundation,ledger,meetings,discovery,membershipGateway,rubrics,completion,explainability,documents};
 };
 
 const inboxFor = async (repo:PlatformRepository,tenantId:string,actorId:string) => {
@@ -62,7 +64,7 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo) => async
     const allowed=Boolean((cors as Record<string,string>)['access-control-allow-origin']);
     return new Response(null,{status:allowed?204:403,headers:{...baseSecurityHeaders,...cors,'access-control-allow-methods':'GET,POST,PUT,OPTIONS','access-control-allow-headers':'content-type,x-tenant-id,x-actor-id,x-group-roles,x-active-group-id,x-device-id,x-session-id,x-request-id,x-timezone'}});
   }
-  const {kernel,foundation,ledger,meetings,discovery,membershipGateway,rubrics,completion}=createRequestScope(request,repo); const ctx=kernel.context.get();
+  const {kernel,foundation,ledger,meetings,discovery,membershipGateway,rubrics,completion,explainability,documents}=createRequestScope(request,repo); const ctx=kernel.context.get();
   const requireGroup=async(groupId:string,manage=false)=>{
     const group=await repo.getGroup(ctx.tenantId,groupId);if(!group)throw Error('GROUP_NOT_FOUND');
     if(group.createdBy===ctx.actorId)return group;
@@ -199,6 +201,31 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo) => async
     if(cashboxRoute&&request.method==='GET') return json(await repo.listCashboxReconciliations(ctx.tenantId,cashboxRoute[1]!),200,cors);
     if(cashboxRoute&&request.method==='POST'){
       const body=await readJson<Record<string,unknown>>(request); return json(await foundation.reconcileCashbox({tenantId:ctx.tenantId,groupId:cashboxRoute[1]!,meetingId:body.meetingId?String(body.meetingId):undefined,openingCash:finite(body.openingCash),cashIn:finite(body.cashIn),cashOut:finite(body.cashOut),countedClosing:finite(body.countedClosing),currency:String(body.currency??'XAF')}),201,cors);
+    }
+
+    const amountExplain=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/members\/([^/]+)\/amount-explanation$/);
+    if(amountExplain&&request.method==='GET'){
+      return json(await explainability.amount(amountExplain[1]!,amountExplain[2]!,url.searchParams.get('rubricId')??undefined),200,cors);
+    }
+    const documentSearch=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/documents\/search$/);
+    if(documentSearch&&request.method==='GET'){
+      return json(await documents.search(documentSearch[1]!,url.searchParams.get('q')??'',Number(url.searchParams.get('limit')??20)),200,cors);
+    }
+    const importPreview=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/imports\/csv\/preview$/);
+    if(importPreview&&request.method==='POST'){
+      await requireGroup(importPreview[1]!,true);
+      const body=await readJson<Record<string,unknown>>(request);
+      const preview=await previewCsv(String(body.text??''),{delimiter:body.delimiter?String(body.delimiter):undefined,requiredHeaders:strArray(body.requiredHeaders),maxRows:body.maxRows===undefined?undefined:finite(body.maxRows)});
+      const batch=await completion.create(importPreview[1]!,'IMPORT_BATCH',{title:String(body.title??'CSV import preview'),data:{fingerprint:preview.fingerprint,delimiter:preview.delimiter,headers:preview.headers,rowCount:preview.rowCount,issueCount:preview.issues.length,issues:preview.issues,approved:false}});
+      return json({batch,preview},201,cors);
+    }
+    const groupHealth=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/health-snapshot$/);
+    if(groupHealth&&request.method==='GET')return json(await explainability.health(groupHealth[1]!),200,cors);
+    const digestRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/notification-digest$/);
+    if(digestRoute&&request.method==='GET'){
+      await requireGroup(digestRoute[1]!);
+      const items=(await repo.listObligations(ctx.tenantId)).filter(x=>x.groupId===digestRoute[1]&&x.assigneeId===ctx.actorId&&x.status==='open').map(x=>({id:x.id,title:x.title,dueAt:x.dueAt,priority:x.priority}));
+      return json({items:buildNotificationDigest(items,new Date().toISOString(),Number(url.searchParams.get('hours')??24))},200,cors);
     }
 
     if(request.method==='GET'&&url.pathname==='/api/v1/completion/workflows'){
