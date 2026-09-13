@@ -17,10 +17,22 @@ test('Master Cockpit exposes validated domains as dedicated views',()=>{
 
 test('Master Cockpit service worker forces fresh navigation and purges old app caches',()=>{
   const sw=fs.readFileSync('apps/web/sw.js','utf8');
-  assert.match(sw,/eco-system-master-cockpit-20260911-v1/);
+  assert.match(sw,/master-cockpit-20260913-r2/);
   assert.match(sw,/event\.request\.mode === 'navigate'/);
-  assert.match(sw,/fetch\(request, \{ cache: 'no-store' \}\)/);
+  assert.match(sw,/new Request\(request, \{ cache: 'reload' \}\)/);
   assert.match(sw,/if \(name !== CACHE\) await caches\.delete\(name\)/);
+  assert.match(sw,/self\.skipWaiting\(\)/);
+  assert.match(sw,/self\.clients\.claim\(\)/);
+});
+
+test('Master Cockpit install manifest and public release sentinel point to the forced-update release',()=>{
+  const manifest=JSON.parse(fs.readFileSync('apps/web/manifest.webmanifest','utf8'));
+  const release=JSON.parse(fs.readFileSync('apps/web/release.json','utf8'));
+  assert.match(manifest.start_url,/master-cockpit-20260913-r2/);
+  assert.equal(release.release,'master-cockpit-20260913-r2');
+  assert.equal(release.expectedUi,'Master Cockpit');
+  assert.equal(release.realMoneyEnabled,false);
+  assert.ok(release.capabilityCatalogMinimum>=139);
 });
 
 test('Master Cockpit keeps the safety invariant visible',()=>{
