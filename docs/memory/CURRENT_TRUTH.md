@@ -60,15 +60,16 @@ Règle écrite, pratique observée et politique opérationnelle validée restent
 - Prompt nouveau chat/Codex : `docs/handoff/ECO_SYSTEM_PROMPT_NOUVEAU_CHAT_CODEX_2026-09-13.md`
 - Truth Ledger R2 additif : `docs/memory/PROJECT_TRUTH_LEDGER_R2_ADDENDUM_2026-09-13.json`
 
-## BIR+ Master Cockpit R2 — VÉRIFIÉ
+## BIR+ FINAL Master Cockpit R2 — VÉRIFIÉ
 - workflow : `Eco-System 1.0 — BIR+ Verified Source Backup`
-- run : `34740177562` — **SUCCESS**
-- artifact ID : `10312268250`
-- head archivé : `e2c79af771b8888741b73acf421e145045746303`
-- SHA-256 ZIP : `779910d6471d5c979c9b3dea1856319fc010027c390f7fecf71a758f86bd26e4`
-- SHA-256 archive source : `255268e3a6c613261acfd6d2541b6e14bb33a91f28f2e79ae79b8dc4721e3a01`
-- vérification indépendante : digest ZIP = digest GitHub ; `sha256sum --check` OK ; archive tar.xz lisible ; **205 entrées** ; présence contrôlée de `apps/web/index.html`, `apps/web/sw.js`, `apps/web/release.json`, Current Truth, Truth Ledger, procédure de sauvegarde et prompt de reprise.
-- fichier téléchargé : `ECO_SYSTEM_MASTER_COCKPIT_R2_BIR_PLUS_2026-09-13.zip`.
+- run : `34740295080` — **SUCCESS**
+- artifact ID : `10312023875`
+- head archivé : `64085522697447d7a8707f0362686ffdaf01a2ce`
+- SHA-256 ZIP : `30d1623c9e2f424f0900ccd0f6c48041660a844bb80ffec044920117707ca884`
+- SHA-256 archive source : `775fd4e500d229caa96a9310a5dafeaf7c528752257468fdec80e1adf6ef8b41`
+- vérification indépendante : digest ZIP = digest GitHub ; `sha256sum --check` OK ; archive tar.xz lisible ; **206 entrées** ; présence contrôlée de l'UI Master Cockpit, SW R2, `release.json`, Current Truth, Project State, NEXT_RUN, Truth Ledger, addendum R2, procédure de sauvegarde et prompt de reprise.
+- fichier téléchargé : `ECO_SYSTEM_MASTER_COCKPIT_R2_FINAL_BIR_PLUS_2026-09-13.zip`.
+- ce commit de preuve est postérieur au head archivé, ce qui est normal pour enregistrer le résultat final de l'archive sans boucle auto-référentielle.
 
 ## Garde-fous
 Ne pas recréer `eco-system-db` ni les Secrets. Pas de force-push `main`. Pas de migration destructive. Pas de PII fondatrice brute. Pas d'argent réel sans autorisation distincte. Ne pas supprimer les checkpoints Recovery/Alpha/0.6/1.0.
