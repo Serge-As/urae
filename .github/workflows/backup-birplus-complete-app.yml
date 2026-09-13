@@ -1,10 +1,10 @@
-name: Eco-System 1.0 — BIR+ Verified Source Backup
+name: Eco-System 1.2 — BIR+ Verified Source + D1 + R2 Backup
 
 on:
   workflow_dispatch:
   push:
-    branches: ['next/1.0.0-complete-app']
-    paths: ['.github/BACKUP_COMPLETE_APP_1_ONCE']
+    branches: ['next/1.2.0-functional-completion-20260913']
+    paths: ['.github/BACKUP_ECO_SYSTEM_1_2_ONCE']
 
 permissions:
   contents: read
@@ -12,7 +12,7 @@ permissions:
 jobs:
   backup:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
         with:
@@ -20,7 +20,7 @@ jobs:
       - name: Build verified source archive and manifest
         shell: bash
         env:
-          PRODUCT_VERSION: 1.0.0-complete-app
+          PRODUCT_VERSION: 1.2.0-functional-completion
           MOBILE_URL: https://eco-system.sergemimf.workers.dev/
         run: |
           set -euo pipefail
@@ -29,12 +29,12 @@ jobs:
           printf '%s\n' \
             "project=Eco-System" \
             "version=${PRODUCT_VERSION}" \
-            "branch=next/1.0.0-complete-app" \
+            "branch=next/1.2.0-functional-completion-20260913" \
             "head=${HEAD_SHA}" \
             "mobile_url=${MOBILE_URL}" \
             "realMoneyEnabled=false" \
             > /tmp/eco-backup/MANIFEST.txt
-          git archive --format=tar HEAD | xz -T0 -9e > /tmp/eco-backup/eco-system-1.0-complete-app-source.tar.xz
+          git archive --format=tar HEAD | xz -T0 -9e > /tmp/eco-backup/eco-system-1.2-source.tar.xz
           (
             cd /tmp/eco-backup
             sha256sum eco-system-1.0-complete-app-source.tar.xz > SHA256SUMS.txt
@@ -43,7 +43,7 @@ jobs:
           test -s /tmp/eco-backup/eco-system-1.0-complete-app-source.tar.xz
       - uses: actions/upload-artifact@v4
         with:
-          name: eco-system-1.0-complete-app-birplus
+          name: eco-system-1.2-birplus
           path: /tmp/eco-backup/
           retention-days: 90
           if-no-files-found: error
