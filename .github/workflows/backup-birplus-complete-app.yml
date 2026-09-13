@@ -13,10 +13,18 @@ jobs:
   backup:
     runs-on: ubuntu-latest
     timeout-minutes: 25
+    env:
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      ECO_SYSTEM_DB: eco-system-db
+      R2_BUCKET: eco-system-backups
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
       - name: Build verified source archive and manifest
         shell: bash
         env:
@@ -37,10 +45,10 @@ jobs:
           git archive --format=tar HEAD | xz -T0 -9e > /tmp/eco-backup/eco-system-1.2-source.tar.xz
           (
             cd /tmp/eco-backup
-            sha256sum eco-system-1.0-complete-app-source.tar.xz > SHA256SUMS.txt
+            sha256sum eco-system-1.2-source.tar.xz > SHA256SUMS.txt
             sha256sum --check SHA256SUMS.txt
           )
-          test -s /tmp/eco-backup/eco-system-1.0-complete-app-source.tar.xz
+          test -s /tmp/eco-backup/eco-system-1.2-source.tar.xz
       - uses: actions/upload-artifact@v4
         with:
           name: eco-system-1.2-birplus
