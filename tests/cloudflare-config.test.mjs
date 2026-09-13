@@ -10,7 +10,7 @@ test('Cloudflare Complete App config targets eco-system and never commits creden
   assert.match(cfg,/name = "eco-system"/); assert.doesNotMatch(cfg,/CLOUDFLARE_API_TOKEN\s*=/); assert.doesNotMatch(cfg,/database_id\s*=\s*"[0-9a-f-]{20,}"/i);
   const wf=fs.readFileSync('.github/workflows/deploy-cloudflare-complete-app.yml','utf8');
   assert.match(wf,/secrets\.CLOUDFLARE_ACCOUNT_ID/); assert.match(wf,/secrets\.CLOUDFLARE_API_TOKEN/); assert.match(wf,/eco-system-db/); assert.match(wf,/realMoneyEnabled/); assert.match(wf,/ECO_SYSTEM_ROOT/); assert.match(wf,/EXPECTED_VERSION: 1.2.0-functional-completion/);
-  assert.match(wf,/Refusing to silently create a replacement/); assert.match(wf,/R2_BUCKET: eco-system-backups/); assert.match(wf,/render-wrangler-storage/); assert.match(wf,/R2_BINDING_NOT_ACTIVE/);
+  assert.match(wf,/Refusing to silently create a replacement/); assert.match(wf,/R2_BUCKET: eco-system-backups/); assert.match(wf,/render-wrangler-storage/); assert.match(wf,/ARTIFACT_STORAGE_NOT_ACTIVE/); assert.match(wf,/D1_FALLBACK/);
   assert.doesNotMatch(wf,/d1 create/);
   assert.match(wf,/MIN_CAPABILITIES: 139/);
 });
