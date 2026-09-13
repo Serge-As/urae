@@ -213,22 +213,22 @@ const renderMeetings = async () => {
     select.replaceChildren();
     const none = document.createElement('option');
     none.value = '';
-    none.textContent = 'Sans séance';
+    none.textContent = tx('Sans séance','No meeting');
     select.append(none);
     for (const m of meetings.slice().sort((a, b) => b.openedAt.localeCompare(a.openedAt))) {
         const a = document.createElement('article');
         a.className = 'meeting-row';
         const span = document.createElement('span');
-        span.textContent = `${m.title} · ${m.status === 'open' ? 'ouverte' : 'clôturée'} · ${date(m.openedAt)}`;
+        span.textContent = `${m.title} · ${m.status === 'open' ? tx('ouverte','open') : tx('clôturée','closed')} · ${date(m.openedAt)}`;
         a.append(span);
         if (m.status === 'open' && isManager()) {
             const b = document.createElement('button');
-            b.textContent = 'Clôturer';
+            b.textContent = tx('Clôturer','Close');
             b.onclick = async () => { try {
                 clearFail();
                 await app.closeMeeting(m.id);
                 await renderMeetings();
-                toast('Clôture enregistrée comme checkpoint.');
+                toast(tx('Clôture enregistrée comme checkpoint.','Closing recorded as a checkpoint.'));
             }
             catch (e) {
                 fail(e);
@@ -246,14 +246,14 @@ const activeMeeting = () => meetings.find(x => x.status === 'open')?.id;
 const renderMeetingMatrix = () => {
     const root = $('#meetingMatrix');
     if (!members.length || !rubrics.length) {
-        root.innerHTML = '<div class="empty-state">Ajoutez au moins un membre et une rubrique pour afficher la matrice membres × rubriques.</div>';
+        root.innerHTML = `<div class="empty-state">${tx('Ajoutez au moins un membre et une rubrique pour afficher la matrice membres × rubriques.','Add at least one member and one rubric to display the member × rubric matrix.')}</div>`;
         return;
     }
     const table = document.createElement('table');
     table.className = 'meeting-matrix';
     const head = document.createElement('thead');
     const hr = document.createElement('tr');
-    hr.innerHTML = '<th>Membre</th>' + rubrics.map(r => html`<th>${r.name}</th>`).join('');
+    hr.innerHTML = `<th>${tx('Membre','Member')}</th>` + rubrics.map(r => html`<th>${r.name}</th>`).join('');
     head.append(hr);
     table.append(head);
     const body = document.createElement('tbody');
@@ -269,21 +269,21 @@ const renderMeetingMatrix = () => {
             b.className = 'matrix-cell';
             const net=receiptPositions.filter(x=>x.membershipId===m.id && x.rubricId===r.id && (!matrixMeetingId || x.meetingId===matrixMeetingId)).reduce((n,x)=>n+x.netAmount,0);
             b.textContent = fmt(net);b.disabled=!isManager();
-            b.title = `Préparer une cotisation ${m.displayName} · ${r.name}`;
-            b.onclick = () => { $('#contributionMember').value = m.id; $('#contributionRubric').value = r.id; if (matrixMeetingId) $('#contributionMeeting').value = matrixMeetingId; go('finance'); $('#contributionAmount').focus(); toast(`Cotisation prête : ${m.displayName} · ${r.name}`); };
+            b.title = `${tx('Préparer une cotisation','Prepare a contribution')} ${m.displayName} · ${r.name}`;
+            b.onclick = () => { $('#contributionMember').value = m.id; $('#contributionRubric').value = r.id; if (matrixMeetingId) $('#contributionMeeting').value = matrixMeetingId; go('finance'); $('#contributionAmount').focus(); toast(`${tx('Cotisation prête','Contribution ready')} : ${m.displayName} · ${r.name}`); };
             td.append(b);
             tr.append(td);
         }
         body.append(tr);
     }
     table.append(body);
-    const label=document.createElement('label');label.textContent='Encaissements nets confirmés · séance : ';
-    const scope=document.createElement('select');scope.setAttribute('aria-label','Séance de la matrice');
-    for(const [id,title] of [['','Toutes les séances'],...meetings.map(m=>[m.id,m.title])]){
+    const label=document.createElement('label');label.textContent=tx('Encaissements nets confirmés · séance : ','Confirmed net collections · meeting: ');
+    const scope=document.createElement('select');scope.setAttribute('aria-label',tx('Séance de la matrice','Matrix meeting'));
+    for(const [id,title] of [['',tx('Toutes les séances','All meetings')],...meetings.map(m=>[m.id,m.title])]){
         const option=document.createElement('option');option.value=id;option.textContent=title;scope.append(option);
     }
     scope.value=matrixMeetingId;scope.onchange=()=>{matrixMeetingId=scope.value;renderMeetingMatrix();};label.append(scope);
-    const note=document.createElement('p');note.className='hint';note.textContent='Montants comptabilisés, annulations déduites. Une valeur nulle ne constitue pas automatiquement une dette. Cliquez pour préparer une saisie.';
+    const note=document.createElement('p');note.className='hint';note.textContent=tx('Montants comptabilisés, annulations déduites. Une valeur nulle ne constitue pas automatiquement une dette. Cliquez pour préparer une saisie.','Posted amounts, reversals deducted. A zero value does not automatically mean a debt. Click to prepare an entry.');
     root.replaceChildren(label,note,table);
 };
 const renderLivingRules = async () => {
@@ -306,10 +306,10 @@ const renderLivingRules = async () => {
     pselect.replaceChildren();
     const none = document.createElement('option');
     none.value = '';
-    none.textContent = 'Sans rubrique';
+    none.textContent = tx('Sans rubrique','No rubric');
     rselect.append(none);
     if (!rubrics.length) {
-        root.innerHTML = '<div class="empty-state">Aucune rubrique personnalisée. Décrivez par exemple la collation de ce groupe.</div>';
+        root.innerHTML = `<div class="empty-state">${tx('Aucune rubrique personnalisée. Décrivez par exemple la collation de ce groupe.','No custom rubric. Describe, for example, how this group handles refreshments.')}</div>`;
     }
     for (const r of rubrics) {
         const a = document.createElement('article');
@@ -321,8 +321,8 @@ const renderLivingRules = async () => {
             const scheduled=(r.activityPlan.participants??[]).flatMap(p=>p.shares.filter(s=>s.turn!==undefined).map(s=>`${p.name} · ${s.name} : tour ${s.turn}`));
             if(scheduled.length){const list=document.createElement('ul');for(const text of scheduled){const li=document.createElement('li');li.textContent=text;list.append(li);}a.append(list);}
         }
-        const edit=document.createElement('button');edit.type='button';edit.className='secondary';edit.textContent='Configurer les caractéristiques / parts';
-        edit.onclick=()=>editRubricPlan(r,async plan=>{await app.updateRubricActivityPlan(r.id,plan);await renderLivingRules();toast('Caractéristiques enregistrées.');},launchError);
+        const edit=document.createElement('button');edit.type='button';edit.className='secondary';edit.textContent=tx('Configurer les caractéristiques / parts','Configure characteristics / shares');
+        edit.onclick=()=>editRubricPlan(r,async plan=>{await app.updateRubricActivityPlan(r.id,plan);await renderLivingRules();toast(tx('Caractéristiques enregistrées.','Characteristics saved.'));},launchError);
         a.append(edit);
         root.append(a);
         for (const sel of [rselect, pselect]) {
