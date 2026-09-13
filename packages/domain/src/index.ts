@@ -450,6 +450,34 @@ export class LedgerService {
     return committed.entry;
   }
 
+  async recordAccountTransfer(input:{
+    tenantId:Id;groupId:Id;amount:number;currency?:Currency;
+    fromAccountCode:string;fromAccountType:LedgerAccount['type'];
+    toAccountCode:string;toAccountType:LedgerAccount['type'];
+    descriptionCode:string;sourceType:string;sourceId:Id;idempotencyKey:string;meetingId?:Id;
+  },requestId=makeId('req')):Promise<LedgerEntry>{
+    assertIntPositive('accountTransferAmount',input.amount);
+    if(!input.idempotencyKey.trim())throw new Error('IDEMPOTENCY_KEY_REQUIRED');
+    const ctx=this.kernel.context.get();await assertCanManageGroup(this.repo,ctx,input.tenantId,input.groupId);
+    const decision=this.kernel.policy.evaluate('group:manage',{...ctx,activeGroupId:input.groupId},{groupId:input.groupId});
+    if(!decision.allowed)throw new Error(decision.reason);
+    const currency=input.currency??'XAF';
+    const existing=await this.repo.findLedgerEntryByIdempotency(input.tenantId,input.groupId,input.idempotencyKey);
+    if(existing)return existing;
+    const from=await this.ensureNamedAccount(input.tenantId,input.groupId,currency,requiredTextCode(input.fromAccountCode),input.fromAccountType);
+    const to=await this.ensureNamedAccount(input.tenantId,input.groupId,currency,requiredTextCode(input.toAccountCode),input.toAccountType);
+    if(from.id===to.id)throw new Error('TRANSFER_ACCOUNTS_MUST_DIFFER');
+    const entry:LedgerEntry={id:makeId('ledger'),tenantId:input.tenantId,groupId:input.groupId,currency,
+      descriptionCode:input.descriptionCode,sourceType:input.sourceType,sourceId:input.sourceId,idempotencyKey:input.idempotencyKey,
+      meetingId:input.meetingId,createdAt:now(),createdBy:ctx.actorId,
+      lines:[{accountId:to.id,debit:input.amount,credit:0,memoCode:input.descriptionCode+'_TO'},
+             {accountId:from.id,debit:0,credit:input.amount,memoCode:input.descriptionCode+'_FROM'}]};
+    this.validateBalanced(entry);
+    const audit=this.kernel.audit.append({tenantId:input.tenantId,actorId:ctx.actorId,action:'ACCOUNT_TRANSFER_POSTED',
+      targetType:'ledger_entry',targetId:entry.id,requestId,metadata:{from:from.code,to:to.code},after:entry});
+    return (await this.repo.commitFinancialOperation({kind:'transfer',entry,accounts:[from,to],audit})).entry;
+  }
+
   async reverseEntry(input:{tenantId:Id;groupId:Id;entryId:Id;reason:string},requestId=makeId('req')):Promise<LedgerEntry>{
     const original=await this.repo.getLedgerEntry(input.tenantId,input.groupId,input.entryId); if(!original) throw new Error('LEDGER_ENTRY_NOT_FOUND');
     const ctx=this.kernel.context.get(); await assertCanManageGroup(this.repo,ctx,input.tenantId,input.groupId); const decision=this.kernel.policy.evaluate('group:manage',{...ctx,activeGroupId:input.groupId},{groupId:input.groupId}); if(!decision.allowed) throw new Error(decision.reason);
