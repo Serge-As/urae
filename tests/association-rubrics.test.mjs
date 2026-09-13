@@ -27,6 +27,21 @@ test('association simulates independent named rubrics without a global contribut
   const sameName=await service.createProject(input([plan()]));assert.notEqual((await service.convertProjectToGroup('tenant_a',sameName.id)).id,group.id);
 });
 
+test('one group can run several independent money and in-kind tontines with different participants',async()=>{
+  const {service}=setup();
+  const small=tontine();small.key='tontine_1000';small.name='Tontine 1 000';small.memberCount=8;small.shareCount=10;small.sessions=10;small.potCount=1;small.nominalAmount={currency:'XAF',amount:1000};small.participants=undefined;small.participationMode='OPTIONAL';
+  const large=tontine();large.key='tontine_10000';large.name='Tontine 10 000';large.memberCount=4;large.shareCount=4;large.sessions=4;large.potCount=1;large.nominalAmount={currency:'XAF',amount:10000};large.participants=undefined;large.participationMode='OPTIONAL';
+  const soap=tontine();soap.key='tontine_savon';soap.name='Savons';soap.memberCount=6;soap.shareCount=6;soap.sessions=6;soap.potCount=1;soap.participants=undefined;
+  soap.nominalAmount={currency:'XAF',amount:0};soap.contributionMode='IN_KIND';soap.contributionLabel='Savon';soap.contributionUnit='pièce';soap.contributionQuantity=2;soap.participationMode='OPTIONAL';soap.contextNote='Réservée aux volontaires';
+  const plans=validateLaunchRubrics([small,large,soap]);
+  assert.deepEqual(plans.map(p=>p.memberCount),[8,4,6]);assert.equal(plans[2].contributionMode,'IN_KIND');assert.equal(plans[2].contributionLabel,'Savon');
+  const project=await service.createProject(input(plans)),result=await service.simulateProject('tenant_a',project.id);
+  assert.equal(result.rubricBreakdown.length,3);assert.equal(result.rubricBreakdown.find(x=>x.key==='tontine_1000').totalNominalContributions,100000);
+  assert.equal(result.rubricBreakdown.find(x=>x.key==='tontine_10000').totalNominalContributions,160000);
+  assert.equal(result.rubricBreakdown.find(x=>x.key==='tontine_savon').totalNominalContributions,0);
+  assert.equal(result.totalNominalContributions,260000);
+});
+
 test('four shares of one member may benefit in one, two or four turns; pots never multiply subscriptions',()=>{
   for(const [turns,pots]of [[[1,1,1,1],4],[[1,1,2,2],2],[[1,2,3,4],1]]){
     const [p]=validateLaunchRubrics([tontine(turns,pots)]);assert.equal(simulateRubricPlan(p).totalNominalContributions,160000);
