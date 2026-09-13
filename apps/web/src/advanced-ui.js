@@ -70,7 +70,7 @@ export const mountAdvancedUI=({app,notify,showError,getMembers,fmt,translate})=>
         const dis=document.createElement('button');dis.type='button';dis.textContent=tx('Litige','Dispute');dis.onclick=()=>void run(async()=>{const s=prompt(tx('Résumé du litige','Dispute summary'),'');if(!s)return;await app.disputeMarketOrder(x.id,s);await renderMarket();});a.append(dis);root.append(a);}
     }
     const br=el('groupBuyList');if(br){br.replaceChildren();for(const x of buys){const a=card(x.title,String(x.data.state??''),tx('Engagé','Committed')+' '+String(x.data.committedQuantity??0)+' / '+String(x.data.thresholdQuantity??0));
-      const b=document.createElement('button');b.type='button';b.textContent=tx('Participer','Join');b.onclick=()=>void run(async()=>{const member=getMembers()[0];if(!member)throw Error('MEMBERSHIP_NOT_FOUND');const raw=prompt(tx('Quantité','Quantity'),'1');if(raw===null)return;await app.commitGroupBuy(x.id,member.id,Number(raw));await renderMarket();});a.append(b);br.append(a);}}
+      const b=document.createElement('button');b.type='button';b.textContent=tx('Participer','Join');b.onclick=()=>void run(async()=>{const member=getMembers().find(m=>m.userId===app.currentActor());if(!member)throw Error('MEMBERSHIP_NOT_FOUND');const raw=prompt(tx('Quantité','Quantity'),'1');if(raw===null)return;await app.commitGroupBuy(x.id,member.id,Number(raw));await renderMarket();});a.append(b);br.append(a);}}
   };
 
   const renderImport=()=>{
