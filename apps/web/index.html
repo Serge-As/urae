@@ -148,19 +148,23 @@
               <label>Nom du groupe<input id="projectName" required placeholder="Ex. CERDAS 2027"></label>
               <label>Famille<select id="groupKind"><option value="association">Association</option><option value="rotating_tontine">Tontine rotative</option><option value="in_kind_tontine">Tontine en nature</option><option value="hybrid">Hybride</option></select></label>
               <label>Gouvernance<select id="governanceModel"><option value="founder_managed">Fondateur</option><option value="community">Communautaire</option><option value="delegated">Déléguée</option><option value="ngo_supported">Accompagnée ONG</option><option value="hybrid">Hybride</option></select></label>
-              <fieldset id="legacyProjectSettings" class="form-grid full" hidden disabled><legend>Paramètres de la tontine autonome</legend>
-              <label>Membres prévus<input id="memberCount" type="number" min="1" step="1" value="20" required></label>
-              <label>Séances / cycle<input id="sessions" type="number" min="1" step="1" value="12" required></label>
-              <label>Cotisation nominale XAF<input id="nominalContribution" type="number" min="0" step="1" value="10000" required></label>
+              <fieldset id="legacyProjectSettings" class="form-grid full" hidden disabled aria-hidden="true"><legend>Ancien modèle global — compatibilité uniquement</legend>
+              <label>Membres prévus<input id="memberCount" type="number" min="1" step="1" value="20"></label>
+              <label>Séances / cycle<input id="sessions" type="number" min="1" step="1" value="12"></label>
+              <label>Ancien montant global<input id="nominalContribution" type="number" min="0" step="1" value="0"></label>
               <label>Frais de gestion / versement<input id="managementFee" type="number" min="0" step="1" value="0"></label>
               <label>Coûts externes %<input id="externalCostRate" type="number" min="0" max="100" step="0.1" value="0"></label>
               <label>Coût fixe / séance<input id="fixedSessionCost" type="number" min="0" step="1" value="0"></label>
               </fieldset>
               <section id="associationRubricSetup" class="full">
-                <h3>Les rubriques de votre association</h3>
-                <p class="hint">Ajoutez uniquement les rubriques qui existent chez vous. Chacune aura son nom, ses participants et ses paramètres.</p>
+                <h3>Les rubriques de votre groupe</h3>
+                <p class="hint"><strong>Étape 6 — contexte :</strong> chaque rubrique a sa propre participation, ses règles et son support : argent, nature ou mixte.</p>
+                <p class="hint"><strong>Étape 7 — finance :</strong> Eco-System n’impose plus une cotisation nominale unique. Si vous avez plusieurs tontines, créez-les séparément : Tontine 1 000 F, Tontine 10 000 F, Savons, Huiles, Draps, etc. Les participants peuvent être différents pour chacune.</p>
                 <div id="launchRubrics" class="stack"></div>
-                <button id="addLaunchRubric" type="button" class="secondary wide-btn">+ Ajouter une rubrique</button>
+                <div class="actions">
+                  <button id="addLaunchRubric" type="button" class="secondary">+ Ajouter une rubrique</button>
+                  <button id="addLaunchTontine" type="button" class="primary">+ Ajouter une tontine distincte</button>
+                </div>
               </section>
               <button class="primary" type="submit">Simuler</button>
             </form>
