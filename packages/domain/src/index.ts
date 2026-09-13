@@ -360,7 +360,7 @@ export class LedgerService {
     return {cash,memberFunds};
   }
 
-  async recordCashContribution(input:{tenantId:Id;groupId:Id;membershipId:Id;amount:number;currency?:Currency;meetingId?:Id;rubricId?:Id;lateReason?:string;approverIds?:Id[];idempotencyKey:string},requestId=makeId('req')):Promise<ContributionReceipt>{
+  async recordCashContribution(input:{tenantId:Id;groupId:Id;membershipId:Id;amount:number;currency?:Currency;meetingId?:Id;rubricId?:Id;lateReason?:string;approverIds?:Id[];idempotencyKey:string;effectiveAt?:string},requestId=makeId('req')):Promise<ContributionReceipt>{
     assertIntPositive('contributionAmount',input.amount); if(!input.idempotencyKey.trim()) throw new Error('IDEMPOTENCY_KEY_REQUIRED');
     const ctx=this.kernel.context.get(); const group=await assertCanManageGroup(this.repo,ctx,input.tenantId,input.groupId);
     const sameIntent=(receipt:ContributionReceipt)=>{
