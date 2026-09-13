@@ -4,6 +4,8 @@ import {createRubricEditor,readRubricEditors,describeRubricPlan,editRubricPlan} 
 const escapeText=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const html=(strings,...values)=>strings.reduce((out,s,i)=>out+s+(i<values.length?escapeText(values[i]):''),'');
 import { ConnectedApplication } from '../../../packages/application/src/index.js';
+import { captureRuntimeI18n, applyRuntimeLocale, localeTag, runtimeTranslate } from './runtime-i18n.js';
+import { mountCompletionUI } from './completion-ui.js';
 const app = new ConnectedApplication({ locale: 'fr' });
 let groups = [];
 let members = [];
