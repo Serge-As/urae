@@ -484,7 +484,15 @@ export class CompletionSuiteService {
       await audit(this.repo,this.kernel,'GOVERNANCE_APPROVAL_ADDED',id,{approvalCount:nextApprovers.length,threshold},groupId);
       return structuredClone(next);
     }
-    return this.transition(groupId,id,'APPROVED',{expectedVersion,patch:{approverIds:nextApprovers,approvalCount:nextApprovers.length}});
+    if(Number(record.data.completionVersion)!==expectedVersion)throw new Error('COMPLETION_VERSION_CONFLICT');
+    const data:CompletionData={...record.data,approverIds:JSON.stringify(nextApprovers),approvalCount:nextApprovers.length,
+      completionState:'APPROVED',completionVersion:expectedVersion+1};
+    this.validate(record.data.completionKind as CompletionKind,'APPROVED',data);
+    const tags=record.tags.filter(x=>!x.startsWith('state:'));tags.push('state:APPROVED');
+    const next:CompletionRecord={...record,status:workspaceStatus('APPROVED'),tags,data,updatedAt:now()};
+    await this.repo.saveWorkspaceRecord(next);
+    await audit(this.repo,this.kernel,'GOVERNANCE_DECISION_APPROVED',id,{approvalCount:nextApprovers.length,threshold},groupId);
+    return structuredClone(next);
   }
 
   async readinessPassport(groupId:Id):Promise<CompletionRecord>{
