@@ -247,6 +247,18 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
     if(savingsRoute&&request.method==='POST'){const body=await readJson<Record<string,unknown>>(request);return json(await treasury.createSavingsPlan(savingsRoute[1]!,{membershipId:String(body.membershipId??''),name:String(body.name??''),targetAmount:body.targetAmount===undefined?undefined:finite(body.targetAmount),currency:String(body.currency??'XAF')}),201,cors);}
     const savingsPosition=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/savings\/([^/]+)\/position$/);
     if(savingsPosition&&request.method==='GET')return json(await treasury.savingsPosition(savingsPosition[1]!,savingsPosition[2]!),200,cors);
+    const savingsDeposit=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/savings\/([^/]+)\/deposit$/);
+    if(savingsDeposit&&request.method==='POST'){const body=await readJson<Record<string,unknown>>(request);return json(await treasury.depositSavings(savingsDeposit[1]!,savingsDeposit[2]!,finite(body.amount),String(body.idempotencyKey??request.headers.get('x-idempotency-key')??makeId('savings'))),201,cors);}
+    const savingsWithdraw=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/savings\/([^/]+)\/withdraw$/);
+    if(savingsWithdraw&&request.method==='POST'){const body=await readJson<Record<string,unknown>>(request);return json(await treasury.withdrawSavings(savingsWithdraw[1]!,savingsWithdraw[2]!,finite(body.amount),String(body.idempotencyKey??request.headers.get('x-idempotency-key')??makeId('savings_withdraw'))),201,cors);}
+    const openingRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/ledger\/opening-balance$/);
+    if(openingRoute&&request.method==='POST'){const body=await readJson<Record<string,unknown>>(request);return json(await treasury.openingBalance(openingRoute[1]!,{amount:finite(body.amount),currency:String(body.currency??'XAF'),note:String(body.note??''),idempotencyKey:String(body.idempotencyKey??request.headers.get('x-idempotency-key')??makeId('opening'))}),201,cors);}
+    const custodyRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/custody$/);
+    if(custodyRoute&&request.method==='POST'){const body=await readJson<Record<string,unknown>>(request);return json(await treasury.createCustody(custodyRoute[1]!,{name:String(body.name??''),holder:String(body.holder??''),currency:String(body.currency??'XAF')}),201,cors);}
+    const custodyOut=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/custody\/([^/]+)\/send$/);
+    if(custodyOut&&request.method==='POST'){const body=await readJson<Record<string,unknown>>(request);return json(await treasury.sendToCustody(custodyOut[1]!,custodyOut[2]!,finite(body.amount),String(body.idempotencyKey??makeId('custody_out'))),201,cors);}
+    const custodyIn=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/custody\/([^/]+)\/return$/);
+    if(custodyIn&&request.method==='POST'){const body=await readJson<Record<string,unknown>>(request);return json(await treasury.returnFromCustody(custodyIn[1]!,custodyIn[2]!,finite(body.amount),String(body.idempotencyKey??makeId('custody_in'))),201,cors);}
     const completionCollection=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/completion$/);
     if(completionCollection&&request.method==='GET'){
       const kind=url.searchParams.get('kind') as CompletionKind|null;
