@@ -1,7 +1,7 @@
-const CACHE = 'eco-system-cahier-app-v120-completion-r1-20260913';
+const CACHE = 'eco-system-cahier-app-v120-completion-r2-20260913';
 const APP_SHELL = [
   '/', '/index.html', '/styles.css', '/manifest.webmanifest',
-  '/src/main.js', '/src/i18n.js', '/src/runtime-i18n.js', '/src/completion-ui.js', '/src/launch-rubrics.js',
+  '/src/main.js', '/src/i18n.js', '/src/runtime-i18n.js', '/src/completion-ui.js', '/src/advanced-ui.js', '/src/offline-snapshot.js', '/src/launch-rubrics.js',
   '/packages/rubrics/src/launch-config.js', '/packages/rubrics/src/index.js',
   '/packages/application/src/index.js', '/packages/completion/src/index.js', '/packages/contracts/src/index.js',
   '/packages/domain/src/index.js', '/packages/module-registry/src/index.js',
