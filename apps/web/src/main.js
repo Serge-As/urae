@@ -630,7 +630,11 @@ const launchError=error=>({
   PROJECT_RUBRICS_REQUIRED:'Ajoutez au moins une rubrique et renseignez ses caractéristiques.',
   RUBRIC_NAME_REQUIRED:'Donnez un nom à chaque rubrique.',
   INVALID_RUBRIC_ACTIVITY:'Choisissez la nature de chaque rubrique.',
-  INVALID_RUBRIC_MONEY:'Le montant nominal doit être un nombre entier positif ou nul.',
+  INVALID_RUBRIC_MONEY:'Le montant monétaire de cette rubrique doit être un entier positif ou nul.',
+  INVALID_RUBRIC_PARTICIPATION:'Choisissez comment les membres participent à cette rubrique.',
+  INVALID_RUBRIC_CONTRIBUTION_MODE:'Choisissez si cette rubrique fonctionne en argent, en nature ou en mode mixte.',
+  INVALID_RUBRIC_IN_KIND:'Pour une rubrique en nature, indiquez l’article et une quantité positive.',
+  INVALID_RUBRIC_CONTEXT:'Vérifiez le contexte de la rubrique : unité ou note trop longue.',
   INVALID_RUBRIC_COUNTS:'Renseignez le nombre de membres, de tours et la durée avec des nombres entiers positifs.',
   INVALID_RUBRIC_AMOUNT_BASIS:'Le montant d’une tontine se définit par nom / part.',
   INVALID_RUBRIC_SHARES:'Le total des parts doit être au moins égal au nombre de membres participants.',
@@ -654,7 +658,7 @@ const addLaunchRubric=(preset={})=>{
   launchEditors.push(editor);invalidateProject();editor.focus();return editor;
 };
 $('#addLaunchRubric').onclick=()=>addLaunchRubric();
-$('#addLaunchTontine').onclick=()=>addLaunchRubric({kind:'TONTINE',contributionMode:'MONEY'});
+$('#addLaunchTontine').onclick=()=>addLaunchRubric({kind:'TONTINE',contributionMode:val('groupKind')==='in_kind_tontine'?'IN_KIND':'MONEY'});
 const syncLaunchFamily=()=>{
   const family=val('groupKind');
   $('#associationRubricSetup').hidden=false;
@@ -676,13 +680,20 @@ onSubmit('#projectForm', async (e) => { e.preventDefault(); try {
     const root=$('#simulationResult');root.replaceChildren();
     if(parameters.rubrics){for(const plan of parameters.rubrics){
       const result=r.result.rubricBreakdown.find(row=>row.key===plan.key),card=document.createElement('article');card.className='simulation-rubric';
-      card.innerHTML=html`<h3>${plan.name}</h3><p>${describeRubricPlan(plan)}</p><p>Collecte nominale sur ce cycle : <strong>${fmt(result.totalNominalContributions)}</strong></p>`;
+      card.innerHTML=html`<h3>${plan.name}</h3><p>${describeRubricPlan(plan)}</p>`;
+      if(plan.contributionMode==='IN_KIND'){
+        const volume=result.unitsPerSession*result.sessions*Number(plan.contributionQuantity??1),p=document.createElement('p');
+        p.textContent='Volume prévu sur ce cycle : '+volume+' '+String(plan.contributionUnit??'unité')+' de '+String(plan.contributionLabel??'nature');card.append(p);
+      }else{
+        const p=document.createElement('p');p.innerHTML='Collecte monétaire prévue sur ce cycle : <strong>'+fmt(result.totalNominalContributions)+'</strong>';card.append(p);
+        if(plan.contributionMode==='MIXED'){const q=document.createElement('p');const volume=result.unitsPerSession*result.sessions*Number(plan.contributionQuantity??1);q.textContent='En plus : '+volume+' '+String(plan.contributionUnit??'unité')+' de '+String(plan.contributionLabel??'nature');card.append(q);}
+      }
       if(plan.kind==='TONTINE'){
         const planned=(plan.participants??[]).flatMap(p=>p.shares),note=document.createElement('p');note.className='hint';note.textContent=`${planned.length} / ${plan.shareCount} parts nommées · ${planned.filter(s=>s.turn!==undefined).length} passages programmés. Chaque part bénéficie une fois ; plusieurs parts d’un membre peuvent passer au même tour.`;card.append(note);
       }
       root.append(card);
     }}
-    const totals=document.createElement('div');totals.innerHTML=html`<div class="result-row"><span>Total nominal des cycles prévus</span><strong>${fmt(r.result.totalNominalContributions)}</strong></div><div class="result-row"><span>Frais de gestion perçus</span><strong>${fmt(r.result.totalManagementFees)}</strong></div><div class="result-row"><span>Coûts estimés</span><strong>${fmt(r.result.estimatedExternalCosts+r.result.fixedOperatingCosts)}</strong></div><div class="result-row"><span>Marge de gestion estimée</span><strong>${fmt(r.result.estimatedManagerMargin)}</strong></div><p class="hint">Prévision selon les versements complets. Les rubriques peuvent avoir des durées différentes. Cette simulation ne crée aucun versement ni bénéfice payé.</p>`;root.append(totals);
+    const totals=document.createElement('div');totals.innerHTML=html`<div class="result-row"><span>Total monétaire des rubriques prévues</span><strong>${fmt(r.result.totalNominalContributions)}</strong></div><div class="result-row"><span>Frais de gestion perçus</span><strong>${fmt(r.result.totalManagementFees)}</strong></div><div class="result-row"><span>Coûts estimés</span><strong>${fmt(r.result.estimatedExternalCosts+r.result.fixedOperatingCosts)}</strong></div><div class="result-row"><span>Marge de gestion estimée</span><strong>${fmt(r.result.estimatedManagerMargin)}</strong></div><p class="hint">Prévision selon les versements complets. Les rubriques peuvent avoir des durées différentes. Cette simulation ne crée aucun versement ni bénéfice payé.</p>`;root.append(totals);
     $('#createGroupBtn').disabled=false;toast('Projet et rubriques vérifiés.');
 }catch(e){fail(Error(launchError(e)));} });
 $('#createGroupBtn').addEventListener('click',async()=>{
