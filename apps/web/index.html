@@ -213,6 +213,13 @@
             </div>
             <div id="rubricList" class="stack"></div>
           </section>
+          <details class="panel" id="offlineMeetingPanel">
+            <summary><strong>Réunion préparée hors connexion</strong></summary>
+            <p class="hint">Télécharge uniquement le contexte minimal du groupe sur cet appareil. Les saisies financières offline restent des intentions jusqu’à confirmation serveur.</p>
+            <div class="actions"><button id="prepareOfflineMeetingBtn" type="button" class="primary">Préparer ce groupe hors ligne</button><button id="refreshOfflineSnapshotsBtn" type="button">Actualiser les paquets locaux</button></div>
+            <div id="offlineSnapshotList" class="stack"></div>
+          </details>
+
           <section class="panel completion-panel" id="tontineCompletionPanel">
             <div class="panel-head"><div><h2 data-i-runtime="tontineCenter">Tontine opérationnelle</h2><p data-i-runtime="tontineCenterIntro">Cycle, parts, programmation des pots et décaissement restent distincts et traçables.</p></div><button id="readinessBtn" type="button" class="link-btn">Vérifier le groupe</button></div>
             <div class="two-col">
