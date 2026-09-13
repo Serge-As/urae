@@ -646,24 +646,30 @@ const launchError=error=>({
   SIMULATION_AMOUNT_OUT_OF_RANGE:'Ces montants sont trop élevés pour un calcul exact. Vérifiez les paramètres.'
 }[error.message]??error.message);
 const invalidateProject=()=>{projectRevision++;lastProjectId=undefined;$('#createGroupBtn').disabled=true;$('#simulationResult').replaceChildren();};
-const addLaunchRubric=()=>{
-  const editor=createRubricEditor($('#launchRubrics'),{onChange:invalidateProject,onRemove:()=>{launchEditors.splice(launchEditors.indexOf(editor),1);editor.card.remove();invalidateProject();}});
-  launchEditors.push(editor);invalidateProject();editor.focus();
+const addLaunchRubric=(preset={})=>{
+  const editor=createRubricEditor($('#launchRubrics'),{
+    initialName:preset.name??'',initialKind:preset.kind??'',initialContributionMode:preset.contributionMode??'MONEY',
+    onChange:invalidateProject,onRemove:()=>{launchEditors.splice(launchEditors.indexOf(editor),1);editor.card.remove();invalidateProject();}
+  });
+  launchEditors.push(editor);invalidateProject();editor.focus();return editor;
 };
-$('#addLaunchRubric').onclick=addLaunchRubric;
+$('#addLaunchRubric').onclick=()=>addLaunchRubric();
+$('#addLaunchTontine').onclick=()=>addLaunchRubric({kind:'TONTINE',contributionMode:'MONEY'});
 const syncLaunchFamily=()=>{
-  const association=['association','hybrid'].includes(val('groupKind'));
-  $('#associationRubricSetup').hidden=!association;
-  for(const editor of launchEditors)editor.card.disabled=!association;
-  $('#legacyProjectSettings').hidden=association;$('#legacyProjectSettings').disabled=association;
+  const family=val('groupKind');
+  $('#associationRubricSetup').hidden=false;
+  for(const editor of launchEditors)editor.card.disabled=false;
+  $('#legacyProjectSettings').hidden=true;$('#legacyProjectSettings').disabled=true;
+  if(['rotating_tontine','in_kind_tontine'].includes(family)&&!launchEditors.some(editor=>editor.read().kind==='TONTINE')){
+    addLaunchRubric({kind:'TONTINE',name:family==='in_kind_tontine'?'Tontine en nature':'Tontine',contributionMode:family==='in_kind_tontine'?'IN_KIND':'MONEY'});
+  }
   invalidateProject();
 };
 $('#groupKind').addEventListener('change',syncLaunchFamily);syncLaunchFamily();
 $('#projectForm').addEventListener('input',invalidateProject);
 onSubmit('#projectForm', async (e) => { e.preventDefault(); try {
     clearFail();const revision=projectRevision;
-    const association=['association','hybrid'].includes(val('groupKind'));
-    const parameters=association?{rubrics:readRubricEditors(launchEditors)}:{memberCount:num('memberCount'),sessions:num('sessions'),nominalContribution:num('nominalContribution'),managementFeePerContribution:num('managementFee'),estimatedExternalCostRate:num('externalCostRate')/100,fixedOperatingCostPerSession:num('fixedSessionCost')};
+    const parameters={rubrics:readRubricEditors(launchEditors)};
     const r=await app.simulateAndStoreProject({name:val('projectName'),kind:val('groupKind'),governanceModel:val('governanceModel'),...parameters});
     if(revision!==projectRevision){toast('Le projet a changé. Relancez la simulation pour vérifier les nouveaux paramètres.');return;}
     lastProjectId=r.projectId;
