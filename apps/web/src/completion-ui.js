@@ -49,6 +49,7 @@ const article=(title,meta,body='')=>{
 export const mountCompletionUI=({app,notify,showError,getMembers,getMeetings,getRubrics,getLocale,fmt,date})=>{
   let workflows={};
   let cycles=[],shares=[],loans=[],decisions=[],pendingSchedule=null;
+  const snapshotStore=new MeetingSnapshotStore();
 
   const locale=()=>getLocale()==='en'?'en':'fr';
   const tr=(fr,en)=>locale()==='en'?en:fr;
