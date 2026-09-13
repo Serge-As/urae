@@ -327,6 +327,56 @@
             <div id="decisionList" class="stack"></div>
           </section>
 
+          <details class="panel" id="advancedFinancePanel">
+            <summary><strong>Finances avancées · impayés · épargne · solidarité · caisse</strong></summary>
+            <div class="two-col">
+              <form id="expectedContributionForm" class="form-grid">
+                <h3>Attendu / échéance</h3>
+                <label>Membre<select id="expectedMember"></select></label>
+                <label>Libellé<input id="expectedTitle" required placeholder="Ex. Cotisation septembre"></label>
+                <label>Date limite<input id="expectedDue" type="datetime-local" required></label>
+                <label>Montant<input id="expectedAmount" type="number" min="1" step="1" required></label>
+                <button class="primary">Créer l’attendu</button>
+              </form>
+              <div><div class="panel-head"><h3>Impayés calculés</h3><button id="arrearsRefresh" type="button" class="link-btn">Actualiser</button></div><div id="arrearsList" class="stack"></div></div>
+            </div>
+            <div class="two-col">
+              <form id="savingsPlanForm" class="form-grid">
+                <h3>Plan d’épargne</h3>
+                <label>Membre<select id="savingsMember"></select></label>
+                <label>Nom<input id="savingsName" required placeholder="Ex. Épargne scolaire"></label>
+                <label>Objectif<input id="savingsTarget" type="number" min="0" step="1"></label>
+                <button class="primary">Créer le plan</button>
+              </form>
+              <div><h3>Épargnes</h3><div id="savingsList" class="stack"></div></div>
+            </div>
+            <div class="two-col">
+              <form id="openingBalanceForm" class="form-grid">
+                <h3>Solde d’ouverture vérifié</h3>
+                <label>Montant<input id="openingBalanceAmount" type="number" min="1" step="1" required></label>
+                <label>Justification<textarea id="openingBalanceNote" rows="2" required></textarea></label>
+                <button class="primary">Comptabiliser</button>
+              </form>
+              <form id="custodyForm" class="form-grid">
+                <h3>Détenteur / contenant de caisse</h3>
+                <label>Nom<input id="custodyName" required placeholder="Ex. Dépôt banque"></label>
+                <label>Détenteur<input id="custodyHolder" required placeholder="Ex. Trésorier"></label>
+                <button class="primary">Créer</button>
+              </form>
+            </div>
+            <div id="custodyList" class="stack"></div>
+            <div class="two-col">
+              <form id="solidarityForm" class="form-grid">
+                <h3>Assistance / solidarité</h3>
+                <label>Bénéficiaire<select id="solidarityMember"></select></label>
+                <label>Objet<input id="solidarityTitle" required></label>
+                <label>Montant approuvé<input id="solidarityApproved" type="number" min="1" step="1" required></label>
+                <button class="primary">Créer le dossier</button>
+              </form>
+              <div><h3>Dossiers de solidarité</h3><div id="solidarityList" class="stack"></div></div>
+            </div>
+          </details>
+
           <section class="panel"><div class="panel-head"><div><h2>Ledger</h2><p>Vérité financière canonique.</p></div></div><div id="ledgerMetrics" class="metrics small"></div><div id="receiptList" class="table-list"></div></section>
           <section class="panel"><div class="section-kicker"><div><h2>Prêts, épargne, tontines et assistance</h2><p>Les flux spécialisés restent séparés, puis se réconcilient dans le ledger canonique.</p></div></div><div id="financeHub" class="hub-grid"></div></section>
         </div>
@@ -336,6 +386,30 @@
         <div class="page-head"><div><span class="eyebrow">Lots F–I</span><h1>Communauté, économie, croissance et accompagnement</h1><p>Les grands services du Cahier sont désormais organisés par domaine au lieu d’être noyés dans une simple liste.</p></div><div class="page-meta"><span class="pill">Community</span><span class="pill">Marketplace</span><span class="pill">Academy & IA</span></div></div>
         <div id="ecosystemHighlights" class="quick-grid"></div>
         <section class="panel"><div class="section-kicker"><div><h2>Communauté & Hubs professionnels</h2><p>Forums, événements, votes, réputation, gestionnaires et partenaires.</p></div></div><div id="communityHub" class="hub-grid"></div></section>
+        <details class="panel" id="marketEnginePanel">
+          <summary><strong>Marché opérationnel · stock · commandes · achats groupés</strong></summary>
+          <div class="two-col">
+            <form id="stockForm" class="form-grid">
+              <h3>Article / stock</h3><label>SKU<input id="stockSku" required></label><label>Nom<input id="stockName" required></label>
+              <label>Quantité<input id="stockQuantity" type="number" min="1" step="1" required></label><button class="primary">Ajouter au stock</button>
+            </form>
+            <form id="marketOrderForm" class="form-grid">
+              <h3>Nouvelle commande</h3><label>Article<select id="orderStockItem"></select></label><label>Quantité<input id="orderQuantity" type="number" min="1" step="1 required"></label>
+              <label>Référence client<input id="orderCustomer" required placeholder="Membre, groupe ou client"></label><label>Prix unitaire<input id="orderUnitPrice" type="number" min="0" step="1"></label>
+              <button class="primary">Confirmer la commande</button>
+            </form>
+          </div>
+          <div id="marketRecords" class="stack"></div>
+          <div class="two-col">
+            <form id="groupBuyForm" class="form-grid">
+              <h3>Achat groupé</h3><label>Titre<input id="groupBuyTitle" required></label><label>Article<select id="groupBuyStock"><option value="">Sans article lié</option></select></label>
+              <label>Seuil quantité<input id="groupBuyThreshold" type="number" min="1" step="1" required></label><label>Date limite<input id="groupBuyDeadline" type="datetime-local" required></label>
+              <button class="primary">Ouvrir la campagne</button>
+            </form>
+            <div><h3>Campagnes</h3><div id="groupBuyList" class="stack"></div></div>
+          </div>
+        </details>
+
         <section class="panel"><div class="section-kicker"><div><h2>Marché, fournisseurs & Business Studio</h2><p>Achats groupés, appels d’offres, marketplace et activités économiques.</p></div></div><div id="marketHub" class="hub-grid"></div></section>
         <section class="panel"><div class="section-kicker"><div><h2>AdManager & sponsoring</h2><p>Campagnes, créations, placements, ciblage respectueux, modération et analytics.</p></div></div><div id="growthHub" class="hub-grid"></div></section>
         <section class="panel"><div class="section-kicker"><div><h2>Academy · ONG · IA · Safety · Paper Bridge</h2><p>Accompagnement des gestionnaires, connaissance, documents, anti-arnaque et pont papier ↔ numérique.</p></div></div><div id="guidanceHub" class="hub-grid"></div></section>
@@ -349,6 +423,18 @@
 
       <section id="view-services" class="view">
         <div class="page-head"><div><span class="eyebrow">Catalogue exécutable · 139 capacités</span><h1>Tous les services du Cahier, sans fausse complétude</h1><p>Un moteur spécialisé reste spécialisé. Une capacité en maturation utilise un dossier persistant D1 jusqu’à son moteur final, sans dupliquer Ledger, Membership, authentification ou paiement.</p></div></div>
+        <details class="panel" id="historicalImportPanel">
+          <summary><strong>Reprise historique contrôlée · R2 privé</strong></summary>
+          <form id="historicalImportForm" class="form-grid">
+            <label>Type<select id="historicalImportKind"><option value="CONTRIBUTIONS">Cotisations</option><option value="OPENING_BALANCE">Soldes d’ouverture</option><option value="IDENTITY_CLAIMS">Identités historiques</option><option value="OBLIGATIONS">Attendus / échéances</option></select></label>
+            <label>Titre<input id="historicalImportTitle" required></label>
+            <label class="full">Fichier CSV<input id="historicalImportFile" type="file" accept=".csv,text/csv" required></label>
+            <button class="primary">Analyser sans appliquer</button>
+          </form>
+          <div id="historicalImportPreview" class="result"></div>
+          <div class="actions"><button id="historicalImportApprove" type="button" disabled>Approuver le lot</button><button id="historicalImportApply" type="button" class="primary" disabled>Appliquer le lot approuvé</button></div>
+        </details>
+
         <section class="panel" id="completionLab">
           <div class="panel-head"><div><h2>Laboratoire fonctionnel 1.2</h2><p>Les innovations sont des workflows versionnés, jamais de simples notes. Les actions à risque restent gouvernées.</p></div><button id="completionReload" type="button" class="link-btn">Actualiser</button></div>
           <div class="two-col">
