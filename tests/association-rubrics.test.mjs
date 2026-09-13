@@ -89,6 +89,24 @@ test('authenticated D1 API persists association rubrics and per-share scheduling
   }finally{db.close();}
 });
 
+test('authenticated API simulates and creates a group with several distinct tontines',async()=>{
+  const db=new SQLiteD1(':memory:');db.migrate();let cookie='';
+  const request=(path,method='GET',body,extra={})=>worker.fetch(new Request('https://local.test'+path,{method,headers:{origin:'https://local.test','content-type':'application/json',cookie,...extra},body:body===undefined?undefined:JSON.stringify(body)}),{DB:db});
+  try{
+    let response=await request('/api/v1/auth/register','POST',{username:'multi_tontine_owner',password:'Synthetic-multi-tontine-password-2026!',displayName:'Multi Tontine Owner'});
+    assert.equal(response.status,200,await response.clone().text());cookie=response.headers.get('set-cookie').split(';')[0];
+    const a=tontine();a.key='m1000';a.name='Tontine 1 000';a.memberCount=8;a.shareCount=8;a.sessions=8;a.nominalAmount={currency:'XAF',amount:1000};a.participants=undefined;a.participationMode='OPTIONAL';
+    const b=tontine();b.key='m10000';b.name='Tontine 10 000';b.memberCount=3;b.shareCount=3;b.sessions=3;b.nominalAmount={currency:'XAF',amount:10000};b.participants=undefined;b.participationMode='OPTIONAL';
+    const soap=tontine();soap.key='soap';soap.name='Savons';soap.memberCount=5;soap.shareCount=5;soap.sessions=5;soap.participants=undefined;soap.nominalAmount={currency:'XAF',amount:0};soap.contributionMode='IN_KIND';soap.contributionLabel='Savon';soap.contributionUnit='pièce';soap.contributionQuantity=2;soap.participationMode='OPTIONAL';
+    response=await request('/api/v1/group-projects','POST',{name:'Association multi-tontines',kind:'association',governanceModel:'community',rubrics:[a,b,soap]});
+    assert.equal(response.status,201,await response.clone().text());const project=await response.json();
+    response=await request('/api/v1/group-projects/'+project.id+'/simulate','POST',{});assert.equal(response.status,200,await response.clone().text());const simulation=await response.json();assert.equal(simulation.rubricBreakdown.length,3);
+    response=await request('/api/v1/group-projects/'+project.id+'/convert','POST',{});assert.equal(response.status,201,await response.clone().text());const group=await response.json();
+    response=await request('/api/v1/groups/'+group.id+'/rubrics','GET',undefined,{'x-active-group-id':group.id});assert.equal(response.status,200,await response.clone().text());
+    const saved=await response.json();assert.equal(saved.length,3);assert.deepEqual(saved.map(x=>x.name).sort(),['Savons','Tontine 1 000','Tontine 10 000'].sort());
+  }finally{db.close();}
+});
+
 test('project conversion delegation materializes only the granted project rubrics and retains founder ownership',async()=>{
   const {repo,kernel,service}=setup(),project=await service.createProject(input([tontine()]));
   await service.grantProjectAccess('tenant_a',project.id,'delegate',['CONVERT']);
