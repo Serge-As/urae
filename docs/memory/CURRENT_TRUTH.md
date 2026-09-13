@@ -15,7 +15,7 @@ Date : 2026-09-13
 - `main` non fusionné.
 
 ## Incident terrain traité
-Le fondateur voyait encore une ancienne interface malgré la présence du Master Cockpit dans la branche produit. La divergence était donc entre **source déployable actuelle** et **client/PWA ancien encore servi depuis son cache/service worker**, et non une absence du Master Cockpit dans le dépôt.
+Le fondateur voyait encore une ancienne interface malgré la présence du Master Cockpit dans la branche produit. La divergence était entre **source déployable actuelle** et **client/PWA ancien encore servi depuis son cache/service worker**, et non une absence du Master Cockpit dans le dépôt.
 
 Correction R2 :
 - nouveau namespace de cache `master-cockpit-20260913-r2` ;
@@ -58,6 +58,17 @@ Règle écrite, pratique observée et politique opérationnelle validée restent
 ## Documentation de reprise
 - Procédure : `docs/recovery/ECO_SYSTEM_PROCEDURE_SAUVEGARDE_REPRISE_COMPLETE_APP_2026-09-13.md`
 - Prompt nouveau chat/Codex : `docs/handoff/ECO_SYSTEM_PROMPT_NOUVEAU_CHAT_CODEX_2026-09-13.md`
+- Truth Ledger R2 additif : `docs/memory/PROJECT_TRUTH_LEDGER_R2_ADDENDUM_2026-09-13.json`
+
+## BIR+ Master Cockpit R2 — VÉRIFIÉ
+- workflow : `Eco-System 1.0 — BIR+ Verified Source Backup`
+- run : `34740177562` — **SUCCESS**
+- artifact ID : `10312268250`
+- head archivé : `e2c79af771b8888741b73acf421e145045746303`
+- SHA-256 ZIP : `779910d6471d5c979c9b3dea1856319fc010027c390f7fecf71a758f86bd26e4`
+- SHA-256 archive source : `255268e3a6c613261acfd6d2541b6e14bb33a91f28f2e79ae79b8dc4721e3a01`
+- vérification indépendante : digest ZIP = digest GitHub ; `sha256sum --check` OK ; archive tar.xz lisible ; **205 entrées** ; présence contrôlée de `apps/web/index.html`, `apps/web/sw.js`, `apps/web/release.json`, Current Truth, Truth Ledger, procédure de sauvegarde et prompt de reprise.
+- fichier téléchargé : `ECO_SYSTEM_MASTER_COCKPIT_R2_BIR_PLUS_2026-09-13.zip`.
 
 ## Garde-fous
 Ne pas recréer `eco-system-db` ni les Secrets. Pas de force-push `main`. Pas de migration destructive. Pas de PII fondatrice brute. Pas d'argent réel sans autorisation distincte. Ne pas supprimer les checkpoints Recovery/Alpha/0.6/1.0.
