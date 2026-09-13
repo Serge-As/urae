@@ -13,13 +13,21 @@ const field=(root,label,value='',options)=>{
 const number=(root,label,value,min=1)=>{const input=field(root,label,value);input.type='number';input.min=String(min);input.step='1';return input;};
 const button=(root,text,run)=>{const b=el('button',text,'secondary');b.type='button';b.onclick=run;root.append(b);return b;};
 
-export function createRubricEditor(root,{plan,initialName='',onChange=()=>{},onRemove}={}){
+export function createRubricEditor(root,{plan,initialName='',initialKind='',onChange=()=>{},onRemove}={}){
   const card=el('fieldset',null,'launch-rubric'),head=el('legend','Rubrique personnalisée');card.append(head);root.append(card);
   const identity=el('div',null,'form-grid');card.append(identity);
-  const kind=field(identity,'Cette rubrique sert à…',plan?.kind??'',[['','Choisir la nature de la rubrique'],...Object.entries(activityLabels)]);
+  const kind=field(identity,'Cette rubrique sert à…',plan?.kind??initialKind,[['','Choisir la nature de la rubrique'],...Object.entries(activityLabels)]);
   const name=field(identity,'Nom utilisé dans votre association',plan?.name??initialName);name.maxLength=120;name.placeholder='Votre propre nom pour cette rubrique';
   const config=el('fieldset',null,'form-grid rubric-settings');card.append(config);config.append(el('legend','Caractéristiques de cette rubrique'));
-  const amount=number(config,'Montant nominal par versement (XAF)',plan?.nominalAmount.amount??'',0);
+  const context=el('details',null,'full');context.open=true;context.append(el('summary','Contexte de cette rubrique'));config.append(context);
+  const contextFields=el('div',null,'form-grid');context.append(contextFields);
+  const participation=field(contextFields,'Qui participe à cette rubrique ?',plan?.participationMode??'OPTIONAL',[['OPTIONAL','Participation libre / volontaire'],['MANDATORY','Tous les membres concernés doivent participer'],['RULE_BASED','Selon une règle ou une catégorie du groupe']]);
+  const contributionMode=field(contextFields,'Que verse-t-on ?',plan?.contributionMode??'MONEY',[['MONEY','Argent'],['IN_KIND','En nature'],['MIXED','Argent + nature']]);
+  const contributionLabel=field(contextFields,'Nature / article',plan?.contributionLabel??'');contributionLabel.required=false;contributionLabel.placeholder='Ex. savon, huile, drap, sac de riz…';contributionLabel.maxLength=120;
+  const contributionUnit=field(contextFields,'Unité',plan?.contributionUnit??'unité');contributionUnit.required=false;contributionUnit.placeholder='Ex. pièce, litre, paquet…';contributionUnit.maxLength=60;
+  const contributionQuantity=number(contextFields,'Quantité par part / versement',plan?.contributionQuantity??1,0);contributionQuantity.step='0.01';
+  const contextNoteWrap=el('label','Règle / contexte propre à cette rubrique');const contextNote=el('textarea');contextNote.rows=2;contextNote.maxLength=1000;contextNote.required=false;contextNote.value=plan?.contextNote??'';contextNote.placeholder='Ex. réservée aux volontaires, remise le 1er dimanche, bénéficiaire choisit la marque…';contextNoteWrap.append(contextNote);contextFields.append(contextNoteWrap);
+  const amount=number(config,'Montant nominal par versement (XAF)',plan?.nominalAmount?.amount??'',0);
   const basis=field(config,'Ce montant est dû pour…',plan?.amountBasis??'PER_MEMBER',[['PER_MEMBER','Chaque membre'],['PER_SHARE','Chaque nom / part']]);
   const members=number(config,'Nombre de membres participants',plan?.memberCount??'');
   const shares=number(config,'Nombre total de noms / parts',plan?.shareCount??'');
