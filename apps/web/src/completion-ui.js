@@ -211,6 +211,17 @@ export const mountCompletionUI=({app,notify,showError,getMembers,getMeetings,get
     }
   };
 
+  const prepareOfflineSnapshot=async()=>{
+    const groupId=app.activeGroup();if(!groupId)throw Error('ACTIVE_GROUP_REQUIRED');
+    const snapshot={id:'meeting-snapshot:'+groupId,groupId,actorId:app.currentActor(),preparedAt:new Date().toISOString(),
+      members:getMembers().map(m=>({id:m.id,displayName:m.displayName,roles:m.roles})),
+      rubrics:getRubrics().map(r=>({id:r.id,name:r.name,status:r.status,version:r.version})),
+      meetings:getMeetings().map(m=>({id:m.id,title:m.title,status:m.status,openedAt:m.openedAt})),
+      warning:'READ_ONLY_CONTEXT_FINANCIAL_INTENTS_REQUIRE_SERVER_CONFIRMATION'};
+    await snapshotStore.save(snapshot);await renderOfflineSnapshots();
+    notify(tr('Paquet hors ligne préparé sur cet appareil.','Offline pack prepared on this device.'));
+  };
+
   const refresh=async()=>{
     if(!workflows||!Object.keys(workflows).length){const result=await app.completionWorkflows();workflows=result.workflows;fillCompletionKinds();}
     await Promise.all([renderTontine(),renderLoans(),renderCompletionRecords()]);
