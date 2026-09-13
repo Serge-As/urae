@@ -83,11 +83,11 @@ jobs:
             root="$(curl --fail --silent --show-error --location --max-time 20 "${ECO_SYSTEM_ROOT}" || true)"
             health="$(curl --fail --silent --show-error --location --max-time 20 "${ECO_SYSTEM_HEALTH}" || true)"
             catalog="$(curl --fail --silent --show-error --location --max-time 20 "${ECO_SYSTEM_CATALOG}" || true)"
-            if printf '%s' "${root}" | grep -qi '<!doctype html>' && printf '%s' "${root}" | grep -q 'Eco-System' && printf '%s' "${health}" | grep -q '"ok": true' && printf '%s' "${catalog}" | grep -q '"capabilities"'; then break; fi
+            if grep -qi '<!doctype html>' <<<"${root}" && grep -q 'Eco-System' <<<"${root}" && grep -q '"ok": true' <<<"${health}" && grep -q '"capabilities"' <<<"${catalog}"; then break; fi
             sleep 4
           done
-          printf '%s' "${root}" | grep -qi '<!doctype html>'
-          printf '%s' "${root}" | grep -q 'Eco-System'
+          grep -qi '<!doctype html>' <<<"${root}"
+          grep -q 'Eco-System' <<<"${root}"
           printf '%s' "${health}" > /tmp/health.json
           printf '%s' "${catalog}" > /tmp/catalog.json
           node --input-type=module - <<'NODE'
