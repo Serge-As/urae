@@ -195,6 +195,12 @@ export interface LaunchRubricPlan {
   kind: RubricActivityKind;
   nominalAmount: Money;
   amountBasis: 'PER_MEMBER' | 'PER_SHARE';
+  participationMode?: 'OPTIONAL' | 'MANDATORY' | 'RULE_BASED';
+  contributionMode?: 'MONEY' | 'IN_KIND' | 'MIXED';
+  contributionLabel?: string;
+  contributionUnit?: string;
+  contributionQuantity?: number;
+  contextNote?: string;
   memberCount: number;
   shareCount?: number;
   potCount?: number;
