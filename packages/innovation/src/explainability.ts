@@ -39,7 +39,7 @@ export class ExplainabilityService{
     const [entries,receipts,obligations,records,audits]=await Promise.all([this.repo.listLedgerEntries(ctx.tenantId,groupId),this.repo.listContributionReceipts(ctx.tenantId,groupId),this.repo.listObligations(ctx.tenantId),this.repo.listWorkspaceRecords(ctx.tenantId,undefined,groupId),this.repo.listAudit(ctx.tenantId)]);
     const openObligations=obligations.filter(o=>o.groupId===groupId&&(o.status==='open'||o.status==='overdue')).length;
     const openConflicts=records.filter(r=>r.tags.includes('kind:CONFLICT')&&!['DONE','ARCHIVED'].includes(r.status)).length;
-    const groupAudits=audits.filter(a=>a.metadata?.groupId===groupId||a.targetId===groupId).sort((a,b)=>a.occurredAt.localeCompare(b.occurredAt));
-    return{groupId,ledgerEntries:entries.length,receipts:receipts.length,openObligations,workspaceRecords:records.length,openConflicts,lastAuditAt:groupAudits.at(-1)?.occurredAt};
+    const groupAudits=audits.filter(a=>a.metadata?.groupId===groupId||a.targetId===groupId).sort((a,b)=>a.at.localeCompare(b.at));
+    return{groupId,ledgerEntries:entries.length,receipts:receipts.length,openObligations,workspaceRecords:records.length,openConflicts,lastAuditAt:groupAudits.at(-1)?.at};
   }
 }
