@@ -1,75 +1,66 @@
 # ECO-SYSTEM — CURRENT TRUTH
 
-Date : 2026-09-11
+Date : 2026-09-13
 
-## Ligne produit active
+## Ligne active
 - Produit : `1.0.0-complete-app`
-- Interface active : **Master Cockpit — Cahier Maître 2.3.4**
+- Interface : **Master Cockpit — Cahier Maître 2.3.4 + validations Living Rules**
+- Release PWA forcée : `master-cockpit-20260913-r2`
 - Branche : `next/1.0.0-complete-app`
-- URL PWA : `https://eco-system.sergemimf.workers.dev/`
-- URL anti-cache immédiate : `https://eco-system.sergemimf.workers.dev/?v=master-20260911`
+- URL : `https://eco-system.sergemimf.workers.dev/`
+- URL anti-cache/reprise directe : `https://eco-system.sergemimf.workers.dev/?release=master-cockpit-20260913-r2`
 - Worker : `eco-system`
 - D1 : exclusivement `eco-system-db`
-- `realMoneyEnabled=false` : invariant confirmé à distance.
-- `main` : non fusionné.
+- `realMoneyEnabled=false`.
+- `main` non fusionné.
 
-## Correction terrain — ACQUISE
-Le fondateur a constaté que la précédente interface visible ressemblait à une ancienne version et ne matérialisait pas correctement le Cahier Maître malgré la présence du catalogue et des fondations backend. Ce constat est désormais traité comme une régression produit réelle : **structure/capacités ≠ application visible conforme au cahier**.
+## Incident terrain traité
+Le fondateur voyait encore une ancienne interface malgré la présence du Master Cockpit dans la branche produit. La divergence était donc entre **source déployable actuelle** et **client/PWA ancien encore servi depuis son cache/service worker**, et non une absence du Master Cockpit dans le dépôt.
 
-Correction livrée :
-- commit Master Cockpit : `9d9c0b117e80927edc02dfcd7ea899e4f2c34f08`
-- Group Creation Cockpit en **10 étapes** au lieu du petit formulaire précédent ;
-- Meeting Command Center avec vue opérationnelle et matrice membres × rubriques ;
-- vues dédiées Finance, Discovery/Membership, Communauté/Gouvernance, Marketplace/Fournisseurs, AdManager, Academy/ONG/IA/Paper Bridge, Rapports/Intégrations, Services, Inbox et Sécurité ;
-- statut réel des capacités affiché : `FOUNDATION_ACTIVE`, `STRUCTURAL_V1`, `PLANNED_DOMAIN`, `LATER_OPTIONAL` ; aucune fausse complétude ;
-- palette mobile/desktop beige, vert, rose, noir et contrôles tactiles ;
-- Service Worker remplacé par `eco-system-master-cockpit-20260911-v1`, navigation critique network-first, purge des anciens caches et enregistrement cache-busté.
+Correction R2 :
+- nouveau namespace de cache `master-cockpit-20260913-r2` ;
+- navigation PWA network-first avec `cache: reload` ;
+- `skipWaiting()` + `clients.claim()` ;
+- purge des anciens caches à l'activation ;
+- manifest installable pointant sur la release R2 ;
+- `release.json` public comme sentinelle de version ;
+- build copie explicitement la sentinelle et le nouveau service worker ;
+- test de non-régression dédié au remplacement de l'ancienne PWA.
 
-## Qualification distante — MASTER COCKPIT
+## Qualification distante R2
+- commit de déclenchement : `2cb42fcc793daa9e5d421bac508b62bfdc806424`
 - workflow : `Eco-System 1.0 Complete App — Cloudflare`
-- run : `34645341363` — **SUCCESS**
-- source déployée : head `34684851b14119afa45b513f37c5543ca8260f21`
-- `npm run ci` : **52/52 PASS**
+- run : `34739971297` — **SUCCESS**
+- Recovery CI parallèle : run `34739973185` — **SUCCESS**
+- `npm run ci` : **53/53 PASS**
 - TypeScript strict : PASS
 - Architecture Fitness : PASS
 - Shared Governance : **23 guardrails PASS**
 - Service Solidarity : **11 services canoniques PASS**
-- Truth / Memory / Constitution / Source Coverage : PASS
-- D1 : `eco-system-db`, réutilisée ; aucune nouvelle base
-- migrations distantes : additives uniquement ; **No migrations to apply**
+- Constitution / Truth / Memory / Source Coverage : PASS
+- build PWA : PASS
+- D1 : `eco-system-db` réutilisée, aucune base de remplacement
+- migrations distantes : additives uniquement, **No migrations to apply**
 - binding : `env.DB (eco-system-db)`
-- Worker Version ID : `9ce22308-db14-4da7-9e6f-c2908b6db20c`
-- racine : doctype + **Master Cockpit** + **Cahier Maître 2.3.4** PASS
-- `/health` : version `1.0.0-complete-app` PASS
-- `/api/v1/product/capabilities` : **139 capacités** PASS
+- assets R2 publiés : `/release.json`, `/manifest.webmanifest`, `/sw.js`
+- Worker Version ID : `ad5ee04e-3882-4f24-bc45-ebb56545e29a`
+- racine distante : **Master Cockpit + Cahier Maître 2.3.4 PASS**
+- `/health` : `1.0.0-complete-app` PASS
+- `/api/v1/product/capabilities` : **139 capacités PASS**
 - `realMoneyEnabled=false` : PASS
 
-## Capacités métier visibles et honnêtes
-Les moteurs déjà canoniques restent réutilisés : Ledger, Membership, Living Rules, Meeting, offline/outbox, D1 et services du kernel. Les domaines encore `STRUCTURAL_V1` sont accessibles via un workspace persistant D1 et leur statut est affiché comme tel ; leur présence dans l'UI n'est pas présentée comme un moteur métier spécialisé finalisé.
+## Périmètre honnête
+Le Master Cockpit rend visibles les domaines validés : création/intégration/transformation, Meeting Command Center, Living Rules, finance/ledger, Discovery/Membership, communauté/gouvernance, marketplace/fournisseurs, AdManager, Academy/ONG/IA/Paper Bridge, rapports/intégrations, Inbox/offline et sécurité. Les moteurs déjà canoniques restent réutilisés. Une capacité `STRUCTURAL_V1` reste signalée comme structurelle/workspace ; sa visibilité n'est jamais présentée comme preuve d'un moteur finalisé.
 
-## Pull Request
-- PR #3 : **Eco-System 1.0 — Complete App deployable**
-- `https://github.com/Delor85/tontine-platform/pull/3`
-- OPEN, non-draft, non fusionnée.
-- Fusion de `main` interdite sans décision séparée.
+## Doctrine
+Règle écrite, pratique observée et politique opérationnelle validée restent distinctes. Les exceptions sont gouvernées. La clôture est un checkpoint versionné. Attendu, encaissé, manque/dette, solidarité et décaissement restent des flux distincts. L'offline financier reste une intention jusqu'à confirmation serveur.
 
-## Doctrine maintenue
-Living Rules : règle écrite, pratique observée et politique opérationnelle validée restent distinctes. Les exceptions sont gouvernées ; la clôture de réunion reste un checkpoint versionné ; attendu, encaissé, manque/dette, solidarité et décaissement sont des flux distincts.
+## Documentation de reprise
+- Procédure : `docs/recovery/ECO_SYSTEM_PROCEDURE_SAUVEGARDE_REPRISE_COMPLETE_APP_2026-09-13.md`
+- Prompt nouveau chat/Codex : `docs/handoff/ECO_SYSTEM_PROMPT_NOUVEAU_CHAT_CODEX_2026-09-13.md`
 
 ## Garde-fous
-Ne pas recréer `eco-system-db` ou les Secrets. Ne pas force-push `main`. Aucune migration destructive. Aucune PII fondatrice brute. Aucun argent réel sans autorisation séparée. Ne jamais confondre « capacité cataloguée », « workspace structurel » et « moteur métier spécialisé qualifié ».
-
-## BIR+ Master Cockpit — ACQUIS ET VÉRIFIÉ
-- workflow : `Eco-System 1.0 — BIR+ Verified Source Backup`
-- run : `34645606625` — **SUCCESS**
-- artifact : `eco-system-1.0-complete-app-birplus`
-- artifact ID : `10281862797`
-- head archivé : `6382e7ba19c334bb8ac4d4df2c5f16221ababb61`
-- SHA-256 ZIP : `1b9525e3a994d5ebfd3dd6922691c25ce0a2413bbba283de3a2df1da70aaf04b`
-- SHA-256 archive source : `578596a697781f99d8c70d80881a61a03426366cb9cd50df6f96859a68eba52c`
-- vérification indépendante après téléchargement : digest ZIP = digest GitHub ; `sha256sum --check` **OK** ; archive tar.xz lisible ; **200 entrées** ; présence vérifiée de `apps/web/index.html`, `apps/web/sw.js`, `CURRENT_TRUTH` et `PROJECT_TRUTH_LEDGER`.
-- Library : `/Eco-System/ECO_SYSTEM_1.0_MASTER_COCKPIT_BIR_PLUS_2026-09-11.zip`
-- l'ancien BIR+ pré-Master-Cockpit est conservé comme fallback historique et ne doit pas être supprimé.
+Ne pas recréer `eco-system-db` ni les Secrets. Pas de force-push `main`. Pas de migration destructive. Pas de PII fondatrice brute. Pas d'argent réel sans autorisation distincte. Ne pas supprimer les checkpoints Recovery/Alpha/0.6/1.0.
 
 ## Point de reprise
-La référence visible et déployée est désormais **Master Cockpit — Cahier Maître 2.3.4**. Tester cette interface sur Android/desktop, corriger les écarts terrain, puis spécialiser les capacités encore structurelles sans régression du cockpit ni duplication des services canoniques.
+La référence visible est désormais **Master Cockpit R2**. Toute évolution part de cette ligne, conserve l'honnêteté des statuts et produit un nouveau BIR+ après qualification.
