@@ -218,12 +218,16 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
     }
     const importPreview=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/imports\/csv\/preview$/);
     if(importPreview&&request.method==='POST'){
-      await requireGroup(importPreview[1]!,true);
-      const body=await readJson<Record<string,unknown>>(request);
-      const preview=await previewCsv(String(body.text??''),{delimiter:body.delimiter?String(body.delimiter):undefined,requiredHeaders:strArray(body.requiredHeaders),maxRows:body.maxRows===undefined?undefined:finite(body.maxRows)});
-      const batch=await completion.create(importPreview[1]!,'IMPORT_BATCH',{title:String(body.title??'CSV import preview'),data:{fingerprint:preview.fingerprint,delimiter:preview.delimiter,headers:preview.headers,rowCount:preview.rowCount,issueCount:preview.issues.length,issues:preview.issues,approved:false}});
-      return json({batch,preview},201,cors);
+      await requireGroup(importPreview[1]!,true);const body=await readJson<Record<string,unknown>>(request);
+      return json(await imports.stage(importPreview[1]!,{title:String(body.title??'CSV import preview'),kind:String(body.kind??'CONTRIBUTIONS') as any,text:String(body.text??''),delimiter:body.delimiter?String(body.delimiter):undefined}),201,cors);
     }
+    const importApprove=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/imports\/([^/]+)\/approve$/);
+    if(importApprove&&request.method==='POST'){
+      const body=await readJson<Record<string,unknown>>(request);const mapping=body.mapping&&typeof body.mapping==='object'&&!Array.isArray(body.mapping)?body.mapping as Record<string,string>:{};
+      return json(await imports.approve(importApprove[1]!,importApprove[2]!,mapping),200,cors);
+    }
+    const importApply=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/imports\/([^/]+)\/apply$/);
+    if(importApply&&request.method==='POST')return json(await imports.apply(importApply[1]!,importApply[2]!),200,cors);
     const groupHealth=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/health-snapshot$/);
     if(groupHealth&&request.method==='GET')return json(await explainability.health(groupHealth[1]!),200,cors);
     const digestRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/notification-digest$/);
