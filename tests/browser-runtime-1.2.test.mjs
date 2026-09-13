@@ -46,3 +46,12 @@ test('advanced browser UI parses and exposes governed specialized journeys',()=>
   const html=fs.readFileSync('apps/web/index.html','utf8');
   for(const id of ['advancedFinancePanel','marketEnginePanel','historicalImportPanel','expectedContributionForm','savingsPlanForm','stockForm'])assert.match(html,new RegExp(id));
 });
+
+
+test('launch wizard exposes independent tontines and rubric context instead of one global nominal contribution',()=>{
+  const html=fs.readFileSync('apps/web/index.html','utf8'),rubrics=fs.readFileSync('apps/web/src/launch-rubrics.js','utf8'),main=fs.readFileSync('apps/web/src/main.js','utf8');
+  assert.match(html,/addLaunchTontine/);assert.match(html,/plusieurs tontines/);assert.doesNotMatch(html,/Cotisation nominale XAF/);
+  assert.match(rubrics,/Qui participe à cette rubrique/);assert.match(rubrics,/Argent \+ nature/);assert.match(rubrics,/Nature \/ article/);
+  assert.match(main,/const parameters=\{rubrics:readRubricEditors\(launchEditors\)\}/);
+  assert.match(main,/ensureCurrentServiceWorker/);assert.match(main,/updateViaCache:'none'/);
+});
