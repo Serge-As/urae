@@ -84,9 +84,14 @@ export function createRubricEditor(root,{plan,initialName='',initialKind='',onCh
 
 export const readRubricEditors=editors=>validateLaunchRubrics(editors.map(editor=>editor.read()));
 export function describeRubricPlan(plan){
-  const parts=plan.amountBasis==='PER_SHARE'?` · ${plan.shareCount} parts`:'';
-  const pots=plan.kind==='TONTINE'?` · ${plan.potCount} pots par tour`:'';
-  return `${activityLabels[plan.kind]} · ${plan.nominalAmount.amount.toLocaleString('fr-FR')} ${plan.nominalAmount.currency} par ${plan.amountBasis==='PER_SHARE'?'part':'membre'} · ${plan.memberCount} membres${parts}${pots} · ${plan.sessions} versements · durée : ${plan.duration.value} ${units[plan.duration.unit]}`;
+  const parts=plan.amountBasis==='PER_SHARE'?' · '+plan.shareCount+' parts':'';
+  const pots=plan.kind==='TONTINE'?' · '+plan.potCount+' pots par tour':'';
+  const participation=plan.participationMode==='MANDATORY'?'obligatoire':plan.participationMode==='RULE_BASED'?'selon règle':'libre';
+  let contribution;
+  if(plan.contributionMode==='IN_KIND')contribution=String(plan.contributionQuantity??1)+' '+String(plan.contributionUnit??'unité')+' de '+String(plan.contributionLabel??'nature');
+  else if(plan.contributionMode==='MIXED')contribution=plan.nominalAmount.amount.toLocaleString('fr-FR')+' '+plan.nominalAmount.currency+' + '+String(plan.contributionQuantity??1)+' '+String(plan.contributionUnit??'unité')+' de '+String(plan.contributionLabel??'nature');
+  else contribution=plan.nominalAmount.amount.toLocaleString('fr-FR')+' '+plan.nominalAmount.currency;
+  return activityLabels[plan.kind]+' · '+contribution+' par '+(plan.amountBasis==='PER_SHARE'?'part':'membre')+' · participation '+participation+' · '+plan.memberCount+' participants'+parts+pots+' · '+plan.sessions+' versements · durée : '+plan.duration.value+' '+units[plan.duration.unit];
 }
 
 export function editRubricPlan(rubric,save,onError){
