@@ -224,7 +224,7 @@ export const mountCompletionUI=({app,notify,showError,getMembers,getMeetings,get
 
   const refresh=async()=>{
     if(!workflows||!Object.keys(workflows).length){const result=await app.completionWorkflows();workflows=result.workflows;fillCompletionKinds();}
-    await Promise.all([renderTontine(),renderLoans(),renderCompletionRecords()]);
+    await Promise.all([renderTontine(),renderLoans(),renderCompletionRecords(),renderOfflineSnapshots()]);
   };
 
   byId('tontineCycleForm')?.addEventListener('submit',e=>{e.preventDefault();void run(e.currentTarget,async()=>{
@@ -272,6 +272,8 @@ export const mountCompletionUI=({app,notify,showError,getMembers,getMeetings,get
     await app.createCompletion(value('completionKind'),{title:value('completionTitle'),summary:value('completionSummary')||undefined,data});
     byId('completionTitle').value='';byId('completionSummary').value='';byId('completionData').value='';await renderCompletionRecords();notify(tr('Workflow créé.','Workflow created.'));
   });});
+  byId('prepareOfflineMeetingBtn')?.addEventListener('click',()=>void run(null,prepareOfflineSnapshot));
+  byId('refreshOfflineSnapshotsBtn')?.addEventListener('click',()=>void renderOfflineSnapshots().catch(showError));
   byId('completionKind')?.addEventListener('change',()=>void renderCompletionRecords().catch(showError));
   byId('completionReload')?.addEventListener('click',()=>void refresh().catch(showError));
 
