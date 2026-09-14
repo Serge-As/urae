@@ -11,7 +11,7 @@ export function validateLaunchRubrics(input:unknown):LaunchRubricPlan[]{
     const p=raw as LaunchRubricPlan;
     if(typeof p.key!=='string'||!/^[a-zA-Z0-9_-]{1,80}$/.test(p.key)||keys.has(p.key))throw Error('INVALID_RUBRIC_KEY');keys.add(p.key);
     if(typeof p.name!=='string'||!p.name.trim()||p.name.trim().length>120)throw Error('RUBRIC_NAME_REQUIRED');
-    if(!['CONTRIBUTION','TONTINE','SAVINGS','SOLIDARITY','OTHER'].includes(p.kind))throw Error('INVALID_RUBRIC_ACTIVITY');
+    if(!['CONTRIBUTION','TONTINE','SAVINGS','SOLIDARITY','TRANSPORT','REPAYMENT','LOAN','ASSISTANCE','LEVY','OFFICE','OTHER'].includes(p.kind))throw Error('INVALID_RUBRIC_ACTIVITY');
     if(!p.nominalAmount||!nonNegative(p.nominalAmount.amount)||typeof p.nominalAmount.currency!=='string'||!/^[A-Z]{3}$/.test(p.nominalAmount.currency))throw Error('INVALID_RUBRIC_MONEY');
     const participationMode=p.participationMode??(p.kind==='TONTINE'?'OPTIONAL':'RULE_BASED');
     if(!['OPTIONAL','MANDATORY','RULE_BASED'].includes(participationMode))throw Error('INVALID_RUBRIC_PARTICIPATION');
