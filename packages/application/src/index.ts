@@ -98,6 +98,9 @@ export class ConnectedApplication {
   selectGroup(groupId?:string):void{this.activeGroupId=groupId;this.tenantId=(groupId?this.groupTenants.get(groupId):undefined)??this.homeTenantId??this.tenantId;try{if(groupId)localStorage.setItem('tontine.activeGroupId',groupId);else localStorage.removeItem('tontine.activeGroupId');}catch{}}
   activeGroup():string|undefined{return this.activeGroupId;}
 
+  async analyzeGroupDocument(text:string):Promise<{fingerprint:string;suggestions:any[];requiresHumanConfirmation:boolean;financialWrites:boolean}>{return this.request('/api/v1/assistant/group-launch/analyze',{method:'POST',body:JSON.stringify({text})});}
+  async interpretGroupLaunch(text:string):Promise<{draft:any;requiresHumanConfirmation:boolean;financialWrites:boolean}>{return this.request('/api/v1/assistant/group-launch/interpret',{method:'POST',body:JSON.stringify({text})});}
+
   async listGroups():Promise<Group[]>{const groups=await this.request<Group[]>('/api/v1/groups');this.groupTenants=new Map(groups.map(g=>[g.id,g.tenantId]));return groups;}
   async groupOperatingPolicy():Promise<GroupOperatingPolicy>{if(!this.activeGroupId)throw new Error('ACTIVE_GROUP_REQUIRED');return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/operating-policy`);}
   async updateGroupOperatingPolicy(policy:GroupOperatingPolicy):Promise<Group>{if(!this.activeGroupId)throw new Error('ACTIVE_GROUP_REQUIRED');return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/operating-policy`,{method:'PUT',body:JSON.stringify(policy)});}
