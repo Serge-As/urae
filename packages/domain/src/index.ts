@@ -1,7 +1,7 @@
 import type {
   AuditEvent, CashboxReconciliationRecord, CashboxSnapshot, ContributionReceipt, Currency, FeasibilityResult,
   Group, GroupProject, Id, LedgerAccount, LedgerEntry, LedgerLine, LedgerSummary, MeetingSession, Membership,
-  Money, Obligation, User, CaseRecord, GroupOperatingPolicy, ProjectCapability, ProjectAccessGrant, LatePostingTrace, MemberStatement
+  Money, Obligation, User, CaseRecord, GroupOperatingPolicy, ProjectCapability, ProjectAccessGrant, LatePostingTrace, MemberStatement, GroupProjectLaunchProfile
 } from '../../contracts/src/index.js';
 import { makeId } from '../../contracts/src/index.js';
 import type { PlatformRepository } from '../../repositories/src/index.js';
@@ -88,6 +88,7 @@ export interface CreateGroupProjectInput {
   estimatedExternalCostRate?: number;
   fixedOperatingCostPerSession?: Money;
   rubrics?: LaunchRubricPlan[];
+  launchProfile?: GroupProjectLaunchProfile;
 }
 
 export class GroupLaunchSimulator {
