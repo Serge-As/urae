@@ -226,17 +226,23 @@ export class FoundationService {
       const already=project.convertedGroupId?await this.repo.getGroup(tenantId,project.convertedGroupId):(await this.repo.listGroups(tenantId)).find(g=>g.createdBy===project.createdBy&&g.name===project.name);
       if(already)return already;
     }
-    const groupId=project.convertedGroupId??`group_from_${project.id}`;
-    const group:Group=await this.repo.getGroup(tenantId,groupId)??{id:groupId,tenantId,name:project.name,kind:project.kind,governanceModel:project.governanceModel,status:'active',createdBy:project.createdBy,createdAt:now(),operatingPolicy:starterGroupOperatingPolicy()};
+    const origin=project.launchProfile?.origin??{mode:'NEW' as const};
+    const transforming=origin.mode==='TRANSFORM_REGISTERED'&&Boolean(origin.sourceGroupId);
+    const groupId=transforming?String(origin.sourceGroupId):(project.convertedGroupId??`group_from_${project.id}`);
+    const previous=await this.repo.getGroup(tenantId,groupId);
+    if(transforming&&!previous)throw new Error('SOURCE_GROUP_NOT_FOUND');
+    const group:Group=previous
+      ?{...previous,name:project.name,kind:project.kind,governanceModel:project.governanceModel,status:'active',originMode:origin.mode,historicalCreatedAt:origin.historicalCreatedAt??previous.historicalCreatedAt,currentExerciseLabel:origin.currentExerciseLabel??previous.currentExerciseLabel,evolvedFromKind:previous.kind!==project.kind?previous.kind:previous.evolvedFromKind}
+      :{id:groupId,tenantId,name:project.name,kind:project.kind,governanceModel:project.governanceModel,status:'active',createdBy:project.createdBy,createdAt:now(),operatingPolicy:starterGroupOperatingPolicy(),originMode:origin.mode,historicalCreatedAt:origin.historicalCreatedAt,currentExerciseLabel:origin.currentExerciseLabel};
     await this.repo.saveGroup(group);
     const ownerMembership:Membership={id:`membership_owner_${group.id}`,tenantId,groupId:group.id,userId:project.createdBy,roles:['founder','manager'],status:'active',joinedAt:group.createdAt};
     if(!(await this.repo.listMemberships(tenantId,group.id)).some(m=>m.userId===project.createdBy))await this.repo.saveMembership(ownerMembership);
     const rubricService=new RubricKnowledgeService(this.repo,this.kernel);
     for(const plan of project.rubrics??[])await rubricService.createRubric({tenantId,groupId:group.id,name:plan.name,launchKey:plan.key,launchProjectId:project.id,activityPlan:plan,source:'GROUP_CUSTOM',facets:{direction:'MIXED',obligation:'CUSTOM',medium:'CASH',refundability:'CUSTOM',replenishment:'CUSTOM',interestMode:'CUSTOM',eligibilityMode:'RULE_BASED'}});
-    const obligation=this.kernel.obligations.create({tenantId,groupId:group.id,assigneeId:project.createdBy,type:'GROUP_SETUP',title:'OBLIGATION_GROUP_SETUP',priority:'normal',sourceType:'group',sourceId:group.id});
+    const obligation=this.kernel.obligations.create({tenantId,groupId:group.id,assigneeId:project.createdBy,type:transforming?'GROUP_EVOLUTION_REVIEW':'GROUP_SETUP',title:transforming?'OBLIGATION_GROUP_EVOLUTION_REVIEW':'OBLIGATION_GROUP_SETUP',priority:'normal',sourceType:'group',sourceId:group.id});
     await this.repo.saveObligation(obligation);
     await this.repo.saveProject({...project,status:'converted',convertedGroupId:group.id});
-    await persistAudit(this.repo,this.kernel,{tenantId,actorId:project.createdBy,action:'GROUP_CREATED_FROM_PROJECT',targetType:'group',targetId:group.id,requestId,after:group});
+    await persistAudit(this.repo,this.kernel,{tenantId,actorId:project.createdBy,action:transforming?'GROUP_EVOLVED_FROM_PROJECT':'GROUP_CREATED_FROM_PROJECT',targetType:'group',targetId:group.id,requestId,after:group});
     this.kernel.events.publish({id:makeId('event'),type:'GROUP_CREATED',occurredAt:now(),tenantId,actorId:project.createdBy,aggregateType:'group',aggregateId:group.id,payload:{projectId}});
     return structuredClone(group);
   }
