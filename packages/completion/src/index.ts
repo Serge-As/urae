@@ -261,6 +261,51 @@ export const buildLoanSchedule = (input:{
   return rows;
 };
 
+export type LoanPaymentPriority = 'CAPITAL_FIRST'|'INTEREST_FIRST';
+
+export interface LoanPaymentAllocation {
+  priority:LoanPaymentPriority;
+  principalBefore:number;
+  interestAccrued:number;
+  unpaidInterestBefore:number;
+  totalInterestDue:number;
+  paymentAmount:number;
+  principalPaid:number;
+  interestPaid:number;
+  remainingPrincipal:number;
+  unpaidInterestAfter:number;
+  totalDebtAfter:number;
+}
+
+export const applyLoanPayment=(input:{
+  principalOutstanding:number;
+  unpaidInterest?:number;
+  paymentAmount:number;
+  rateBasisPointsPerPeriod:number;
+  priority?:LoanPaymentPriority;
+}):LoanPaymentAllocation=>{
+  const principal=finiteInt('principalOutstanding',input.principalOutstanding,0);
+  const unpaid=finiteInt('unpaidInterest',input.unpaidInterest??0,0);
+  const payment=finiteInt('paymentAmount',input.paymentAmount,0);
+  const rateBp=finiteInt('rateBasisPointsPerPeriod',input.rateBasisPointsPerPeriod,0);
+  const priority=input.priority??'CAPITAL_FIRST';
+  if(!['CAPITAL_FIRST','INTEREST_FIRST'].includes(priority))throw new Error('INVALID_LOAN_PAYMENT_PRIORITY');
+  // Interest is always calculated on principal only. Unpaid interest is carried separately and never capitalized.
+  const accrued=Math.round(principal*rateBp/10000);
+  const interestDue=unpaid+accrued;
+  let principalPaid=0,interestPaid=0;
+  if(priority==='CAPITAL_FIRST'){
+    principalPaid=Math.min(payment,principal);
+    interestPaid=Math.min(Math.max(0,payment-principalPaid),interestDue);
+  }else{
+    interestPaid=Math.min(payment,interestDue);
+    principalPaid=Math.min(Math.max(0,payment-interestPaid),principal);
+  }
+  const remainingPrincipal=principal-principalPaid;
+  const unpaidInterestAfter=interestDue-interestPaid;
+  return{priority,principalBefore:principal,interestAccrued:accrued,unpaidInterestBefore:unpaid,totalInterestDue:interestDue,paymentAmount:payment,principalPaid,interestPaid,remainingPrincipal,unpaidInterestAfter,totalDebtAfter:remainingPrincipal+unpaidInterestAfter};
+};
+
 export interface RuleDifference {field:string;before:unknown;after:unknown;}
 export const compareRules = (before:Record<string,unknown>,after:Record<string,unknown>):RuleDifference[] => {
   const keys=[...new Set([...Object.keys(before),...Object.keys(after)])].sort();
