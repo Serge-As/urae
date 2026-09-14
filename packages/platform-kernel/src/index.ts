@@ -213,6 +213,13 @@ export class PlatformKernel {
     this.features.set('group-launch-studio', true);
     this.features.set('meeting-sync-core', true);
     this.features.set('cashbox', true);
+    this.features.set('offline_outbox', true);
+    this.features.set('premium_live_ledger', false);
+    this.features.set('crdt_collaboration', false);
+    this.features.set('periodic_sync_hint', false);
+    this.features.set('passkeys_optional', false);
+    this.features.set('share_target_receipts', false);
+    this.features.set('guided_group_assistant', true);
     this.features.set('financial-real-money', false);
     this.resources.setBudget('cloud_ai_calls', 0);
     this.resources.setBudget('relay_media_bytes', 0);
