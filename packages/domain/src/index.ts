@@ -91,6 +91,26 @@ export interface CreateGroupProjectInput {
   launchProfile?: GroupProjectLaunchProfile;
 }
 
+const normalizeLaunchProfile=(profile:GroupProjectLaunchProfile|undefined):GroupProjectLaunchProfile=>{
+  const origin=profile?.origin??{mode:'NEW' as const};
+  if(!['NEW','IMPORT_EXISTING','TRANSFORM_REGISTERED'].includes(origin.mode))throw new Error('INVALID_GROUP_ORIGIN');
+  if(origin.mode==='TRANSFORM_REGISTERED'&&!origin.sourceGroupId)throw new Error('SOURCE_GROUP_REQUIRED');
+  if(origin.historicalCreatedAt&&Number.isNaN(Date.parse(origin.historicalCreatedAt)))throw new Error('INVALID_HISTORICAL_DATE');
+  const expectedMembers=profile?.members?.expectedMembers;
+  if(expectedMembers!==undefined&&(!Number.isSafeInteger(expectedMembers)||expectedMembers<1||expectedMembers>100000))throw new Error('INVALID_EXPECTED_MEMBERS');
+  const expectedSessions=profile?.cycle?.expectedSessions;
+  if(expectedSessions!==undefined&&(!Number.isSafeInteger(expectedSessions)||expectedSessions<1||expectedSessions>10000))throw new Error('INVALID_EXPECTED_SESSIONS');
+  return structuredClone({
+    origin,
+    cycle:profile?.cycle,
+    members:profile?.members,
+    communication:profile?.communication,
+    accessibility:profile?.accessibility,
+    sourceDocumentFingerprints:profile?.sourceDocumentFingerprints??[],
+    previewConfirmed:Boolean(profile?.previewConfirmed)
+  });
+};
+
 export class GroupLaunchSimulator {
   simulate(project: GroupProject): FeasibilityResult {
     if(project.rubrics!==undefined){
