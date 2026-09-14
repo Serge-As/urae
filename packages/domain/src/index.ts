@@ -179,9 +179,14 @@ export class FoundationService {
     if (!GROUP_KINDS.has(input.kind)) throw new Error('INVALID_GROUP_KIND');
     if (!GOVERNANCE_MODELS.has(input.governanceModel)) throw new Error('INVALID_GOVERNANCE_MODEL');
     const plans=input.rubrics===undefined?undefined:validateLaunchRubrics(input.rubrics);
+    const launchProfile=normalizeLaunchProfile(input.launchProfile);
+    if(launchProfile.origin.mode==='TRANSFORM_REGISTERED'){
+      const source=await assertCanManageGroup(this.repo,context,input.tenantId,String(launchProfile.origin.sourceGroupId));
+      if(source.kind!=='rotating_tontine'&&source.kind!=='in_kind_tontine')throw new Error('SOURCE_GROUP_NOT_TONTINE');
+    }
     const currency=plans?.[0]?.nominalAmount.currency??input.nominalContribution?.currency??'XAF';
     // Legacy fields are retained for saved projects; rubric plans are the authority for new configurations.
-    const project:GroupProject={tenantId:input.tenantId,createdBy:input.createdBy,name:input.name.trim(),kind:input.kind,governanceModel:input.governanceModel,id:makeId('project'),status:'draft',createdAt:now(),rubrics:plans,
+    const project:GroupProject={tenantId:input.tenantId,createdBy:input.createdBy,name:input.name.trim(),kind:input.kind,governanceModel:input.governanceModel,id:makeId('project'),status:'draft',createdAt:now(),rubrics:plans,launchProfile,
       memberCount:plans?1:input.memberCount!,sessions:plans?1:input.sessions!,nominalContribution:plans?{currency,amount:0}:input.nominalContribution!,managementFeePerContribution:plans?{currency,amount:0}:input.managementFeePerContribution!,estimatedExternalCostRate:plans?0:input.estimatedExternalCostRate!,fixedOperatingCostPerSession:plans?{currency,amount:0}:input.fixedOperatingCostPerSession!};
     if(!plans&&(!project.nominalContribution||!project.managementFeePerContribution||!project.fixedOperatingCostPerSession))throw Error('PROJECT_RUBRICS_REQUIRED');
     if(!Number.isFinite(project.estimatedExternalCostRate))throw Error('INVALID_EXTERNAL_COST_RATE');
