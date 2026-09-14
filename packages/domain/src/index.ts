@@ -483,6 +483,34 @@ export class LedgerService {
     return committed.entry;
   }
 
+  async recordLoanRepayment(input:{
+    tenantId:Id;groupId:Id;principalAmount:number;interestAmount:number;currency?:Currency;
+    sourceId:Id;idempotencyKey:string;meetingId?:Id;
+  },requestId=makeId('req')):Promise<LedgerEntry>{
+    assertIntNonNegative('loanRepaymentPrincipal',input.principalAmount);
+    assertIntNonNegative('loanRepaymentInterest',input.interestAmount);
+    const total=input.principalAmount+input.interestAmount;
+    assertIntPositive('loanRepaymentTotal',total);
+    if(!input.idempotencyKey.trim())throw new Error('IDEMPOTENCY_KEY_REQUIRED');
+    const ctx=this.kernel.context.get();await assertCanManageGroup(this.repo,ctx,input.tenantId,input.groupId);
+    const currency=input.currency??'XAF';
+    const existing=await this.repo.findLedgerEntryByIdempotency(input.tenantId,input.groupId,input.idempotencyKey);
+    if(existing)return existing;
+    const standard=await this.ensureStandardAccounts(input.tenantId,input.groupId,currency);
+    const receivable=await this.ensureNamedAccount(input.tenantId,input.groupId,currency,'LOAN_RECEIVABLE','asset');
+    const interestIncome=await this.ensureNamedAccount(input.tenantId,input.groupId,currency,'LOAN_INTEREST_INCOME','income');
+    const lines:LedgerLine[]=[{accountId:standard.cash.id,debit:total,credit:0,memoCode:'LEDGER_LOAN_REPAYMENT_CASH'}];
+    if(input.principalAmount)lines.push({accountId:receivable.id,debit:0,credit:input.principalAmount,memoCode:'LEDGER_LOAN_REPAYMENT_PRINCIPAL'});
+    if(input.interestAmount)lines.push({accountId:interestIncome.id,debit:0,credit:input.interestAmount,memoCode:'LEDGER_LOAN_REPAYMENT_INTEREST'});
+    const entry:LedgerEntry={id:makeId('ledger'),tenantId:input.tenantId,groupId:input.groupId,currency,descriptionCode:'LEDGER_LOAN_REPAYMENT',
+      sourceType:'loan_repayment',sourceId:input.sourceId,idempotencyKey:input.idempotencyKey,createdAt:now(),createdBy:ctx.actorId,meetingId:input.meetingId,lines};
+    this.validateBalanced(entry);
+    const audit=this.kernel.audit.append({tenantId:input.tenantId,actorId:ctx.actorId,action:'LOAN_REPAYMENT_POSTED',targetType:'ledger_entry',targetId:entry.id,requestId,metadata:{principalAmount:input.principalAmount,interestAmount:input.interestAmount},after:entry});
+    const committed=await this.repo.commitFinancialOperation({kind:'loan_repayment',entry,accounts:[standard.cash,receivable,interestIncome],audit});
+    this.kernel.events.publish({id:makeId('event'),type:'LOAN_REPAYMENT_POSTED',occurredAt:now(),tenantId:input.tenantId,actorId:ctx.actorId,aggregateType:'group',aggregateId:input.groupId,payload:{entryId:committed.entry.id,principalAmount:input.principalAmount,interestAmount:input.interestAmount,currency},idempotencyKey:input.idempotencyKey});
+    return committed.entry;
+  }
+
   async recordAccountTransfer(input:{
     tenantId:Id;groupId:Id;amount:number;currency?:Currency;
     fromAccountCode:string;fromAccountType:LedgerAccount['type'];
