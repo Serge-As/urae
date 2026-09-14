@@ -1,4 +1,4 @@
-import type {LaunchRubricPlan} from '../../contracts/src/index.js';
+import type {LaunchRubricPlan, GroupProjectLaunchProfile} from '../../contracts/src/index.js';
 import { PlatformKernel, type DeviceCapabilities } from '../../platform-kernel/src/index.js';
 import { InMemoryPlatformRepository } from '../../repositories/src/index.js';
 import { FoundationService } from '../../domain/src/index.js';
@@ -110,7 +110,7 @@ export class ConnectedApplication {
   async openMeeting(title:string):Promise<MeetingSession>{if(!this.activeGroupId)throw new Error('ACTIVE_GROUP_REQUIRED');return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/meetings`,{method:'POST',body:JSON.stringify({title})});}
   async closeMeeting(meetingId:string):Promise<MeetingSession>{if(!this.activeGroupId)throw new Error('ACTIVE_GROUP_REQUIRED');return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/meetings/${encodeURIComponent(meetingId)}/close`,{method:'POST',body:'{}'});}
 
-  async simulateAndStoreProject(input:{name:string;kind:Group['kind'];governanceModel:Group['governanceModel'];rubrics?:LaunchRubricPlan[];memberCount?:number;sessions?:number;nominalContribution?:number;managementFeePerContribution?:number;estimatedExternalCostRate?:number;fixedOperatingCostPerSession?:number}):Promise<{projectId:string;result:FeasibilityResult}>{
+  async simulateAndStoreProject(input:{name:string;kind:Group['kind'];governanceModel:Group['governanceModel'];rubrics?:LaunchRubricPlan[];launchProfile?:GroupProjectLaunchProfile;memberCount?:number;sessions?:number;nominalContribution?:number;managementFeePerContribution?:number;estimatedExternalCostRate?:number;fixedOperatingCostPerSession?:number}):Promise<{projectId:string;result:FeasibilityResult}>{
     const headers={'x-active-group-id':''};
     const project=await this.request<{id:string}>('/api/v1/group-projects',{method:'POST',headers,body:JSON.stringify({...input,currency:'XAF'})});
     const result=await this.request<FeasibilityResult>(`/api/v1/group-projects/${encodeURIComponent(project.id)}/simulate`,{method:'POST',headers,body:'{}'});return{projectId:project.id,result};
