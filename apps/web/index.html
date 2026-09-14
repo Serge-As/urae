@@ -134,49 +134,122 @@
       </section>
 
       <section id="view-launch" class="view">
-        <div class="page-head"><div><span class="eyebrow">Votre groupe, vos rubriques</span><h1>Créer une association ou une tontine</h1><p>Définissez les rubriques de votre association, donnez-leur vos propres noms, puis personnalisez leur fonctionnement.</p></div></div>
-        <section class="panel"><div class="journey" id="launchJourney">
-          <div class="journey-step active"><span class="n">1</span><b>Le groupe</b><small>Identité et gouvernance</small></div>
-          <div class="journey-step active"><span class="n">2</span><b>Vos rubriques</b><small>Nature et noms personnalisés</small></div>
-          <div class="journey-step active"><span class="n">3</span><b>Le fonctionnement</b><small>Montants, membres, parts et tours</small></div>
-          <div class="journey-step active"><span class="n">4</span><b>Vérification</b><small>Simulation puis création</small></div>
-        </div></section>
+        <div class="page-head"><div><span class="eyebrow">Lot C · Studio guidé anti-régression</span><h1>Créer, intégrer ou transformer un groupe</h1><p>Eco-System accompagne le groupe depuis son origine réelle jusqu’à la prévisualisation finale. Une tontine existante peut évoluer en association sans perdre son identité ni son histoire.</p></div></div>
+        <section class="panel">
+          <div class="journey" id="launchJourney">
+            <div class="journey-step active" data-launch-indicator="1"><span class="n">1</span><b>Origine</b><small>Nouveau · existant · transformation</small></div>
+            <div class="journey-step" data-launch-indicator="2"><span class="n">2</span><b>Famille</b><small>Association · tontine rotative</small></div>
+            <div class="journey-step" data-launch-indicator="3"><span class="n">3</span><b>Gouvernance</b><small>Fondateur · communauté · délégation</small></div>
+            <div class="journey-step" data-launch-indicator="4"><span class="n">4</span><b>Exercice & calendrier</b><small>Cycle, séances, fréquence</small></div>
+            <div class="journey-step" data-launch-indicator="5"><span class="n">5</span><b>Membres</b><small>Historique, import, rôles, parts</small></div>
+            <div class="journey-step" data-launch-indicator="6"><span class="n">6</span><b>Rubriques</b><small>Contexte, règles, tontines multiples</small></div>
+            <div class="journey-step" data-launch-indicator="7"><span class="n">7</span><b>Faisabilité</b><small>Scénarios et coûts par rubrique</small></div>
+            <div class="journey-step" data-launch-indicator="8"><span class="n">8</span><b>Communication</b><small>In-app, print, canaux optionnels</small></div>
+            <div class="journey-step" data-launch-indicator="9"><span class="n">9</span><b>Accessibilité</b><small>Ultra Simple · oral · 2G</small></div>
+            <div class="journey-step" data-launch-indicator="10"><span class="n">10</span><b>Prévisualisation</b><small>Règles, risques, confirmation</small></div>
+          </div>
+          <p class="truth-notice">Les dix étapes appartiennent au même projet. Revenir à une étape ne détruit pas les suivantes. L’assistant peut proposer et préremplir, mais seule une validation humaine confirme la configuration.</p>
+        </section>
         <div class="two-col">
           <section class="panel">
-            <h2>Projet de groupe</h2>
             <form id="projectForm" class="form-grid">
-              <label>Nom du groupe<input id="projectName" required placeholder="Ex. CERDAS 2027"></label>
-              <label>Famille<select id="groupKind"><option value="association">Association</option><option value="rotating_tontine">Tontine rotative</option><option value="in_kind_tontine">Tontine en nature</option><option value="hybrid">Hybride</option></select></label>
-              <label>Gouvernance<select id="governanceModel"><option value="founder_managed">Fondateur</option><option value="community">Communautaire</option><option value="delegated">Déléguée</option><option value="ngo_supported">Accompagnée ONG</option><option value="hybrid">Hybride</option></select></label>
-              <fieldset id="legacyProjectSettings" class="form-grid full" hidden disabled aria-hidden="true"><legend>Ancien modèle global — compatibilité uniquement</legend>
-              <label>Membres prévus<input id="memberCount" type="number" min="1" step="1" value="20"></label>
-              <label>Séances / cycle<input id="sessions" type="number" min="1" step="1" value="12"></label>
-              <label>Ancien montant global<input id="nominalContribution" type="number" min="0" step="1" value="0"></label>
-              <label>Frais de gestion / versement<input id="managementFee" type="number" min="0" step="1" value="0"></label>
-              <label>Coûts externes %<input id="externalCostRate" type="number" min="0" max="100" step="0.1" value="0"></label>
-              <label>Coût fixe / séance<input id="fixedSessionCost" type="number" min="0" step="1" value="0"></label>
+              <fieldset class="launch-step-panel full" data-launch-step="1">
+                <legend>1. Origine du groupe</legend>
+                <label>Situation<select id="launchOrigin"><option value="NEW">Nouveau groupe</option><option value="IMPORT_EXISTING">Association / tontine qui existe déjà hors Eco-System</option><option value="TRANSFORM_REGISTERED">Transformer une tontine déjà enregistrée dans Eco-System</option></select></label>
+                <label id="sourceGroupWrap" hidden>Groupe à faire évoluer<select id="sourceGroupId"></select></label>
+                <label id="historicalCreatedAtWrap" hidden>Date réelle de création<input id="historicalCreatedAt" type="date"></label>
+                <label id="currentExerciseLabelWrap" hidden>Exercice actuellement en cours<input id="currentExerciseLabel" placeholder="Ex. 2026-2027"></label>
+                <label class="full" id="historyNoteWrap" hidden>Contexte / histoire connue<textarea id="historyNote" rows="3" placeholder="Ex. créée en 2014, tenue sur papier puis Excel, exercice déjà commencé…"></textarea></label>
               </fieldset>
-              <section id="associationRubricSetup" class="full">
-                <h3>Les rubriques de votre groupe</h3>
-                <p class="hint"><strong>Étape 6 — contexte :</strong> chaque rubrique a sa propre participation, ses règles et son support : argent, nature ou mixte.</p>
-                <p class="hint"><strong>Étape 7 — finance :</strong> Eco-System n’impose plus une cotisation nominale unique. Si vous avez plusieurs tontines, créez-les séparément : Tontine 1 000 F, Tontine 10 000 F, Savons, Huiles, Draps, etc. Les participants peuvent être différents pour chacune.</p>
+
+              <fieldset class="launch-step-panel full" data-launch-step="2" hidden>
+                <legend>2. Famille principale</legend>
+                <label>Nom du groupe<input id="projectName" required placeholder="Ex. CERDAS 2027"></label>
+                <label>Famille<select id="groupKind"><option value="association">Association</option><option value="rotating_tontine">Tontine rotative</option></select></label>
+                <p class="hint full">Une tontine en nature reste une configuration de la tontine. Une association peut contenir zéro, une ou plusieurs tontines comme rubriques.</p>
+              </fieldset>
+
+              <fieldset class="launch-step-panel full" data-launch-step="3" hidden>
+                <legend>3. Modèle et gouvernance</legend>
+                <label>Gouvernance<select id="governanceModel"><option value="founder_managed">Fondateur / gestion privée</option><option value="community">Communautaire / démocratique</option><option value="delegated">Déléguée / professionnelle</option><option value="ngo_supported">Accompagnée ONG</option><option value="hybrid">Hybride</option></select></label>
+                <p class="hint full">Propriété, représentation, gestion opérationnelle, vote et pouvoir financier restent séparés. Les droits sensibles continuent à dépendre des rôles et mandats.</p>
+              </fieldset>
+
+              <fieldset class="launch-step-panel full" data-launch-step="4" hidden>
+                <legend>4. Exercice, cycle et réunions</legend>
+                <label>Libellé exercice / cycle<input id="cycleLabel" placeholder="Ex. Exercice 2026-2027"></label>
+                <label>Date de début<input id="cycleStartsAt" type="date"></label>
+                <label>Nombre prévisionnel de séances<input id="cycleExpectedSessions" type="number" min="1" step="1" value="12"></label>
+                <label>Fréquence<select id="cycleCadence"><option value="MONTHLY">Mensuelle</option><option value="BIWEEKLY">Deux fois par mois</option><option value="WEEKLY">Hebdomadaire</option><option value="CUSTOM">Personnalisée</option></select></label>
+                <label>Jour / règle de réunion<input id="meetingDay" placeholder="Ex. 2e samedi du mois"></label>
+                <label class="check"><input id="physicalMeetingExpected" type="checkbox" checked><span>Réunions physiques prévues</span></label>
+              </fieldset>
+
+              <fieldset class="launch-step-panel full" data-launch-step="5" hidden>
+                <legend>5. Membres</legend>
+                <label>Membres prévus<input id="expectedMembers" type="number" min="1" step="1" value="20"></label>
+                <label>Constitution de la liste<select id="rosterMode"><option value="BUILD_LATER">Ajouter / inviter progressivement</option><option value="INVITE">Inviter par lien / QR</option><option value="IMPORT">Importer une liste</option><option value="HISTORICAL_RECONCILIATION">Rapprocher les membres d’un groupe historique</option></select></label>
+                <label class="check"><input id="allowWaitingList" type="checkbox"><span>Autoriser une liste d’attente</span></label>
+                <label class="check"><input id="allowProbation" type="checkbox"><span>Prévoir une période d’essai / observation</span></label>
+                <p class="hint full">La participation aux rubriques est définie séparément : un membre peut ne participer à aucune tontine, à une seule, à plusieurs ou à toutes.</p>
+              </fieldset>
+
+              <fieldset class="launch-step-panel full" data-launch-step="6" hidden>
+                <legend>6. Rubriques, caisses et contexte</legend>
+                <p class="hint full">Chaque nature peut être utilisée plusieurs fois et recevoir le nom choisi par le groupe. « Tontine » peut donc devenir Tontine 1 000 F, 10 000 F, Savons, Huiles, Draps, etc.</p>
+                <section id="launchAssistantPanel" class="full">
+                  <h3>Assistant IA de configuration — toujours sous contrôle humain</h3>
+                  <p class="hint">Collez un extrait du règlement intérieur ou décrivez le groupe. L’assistant propose ; il n’enregistre aucune opération financière seul.</p>
+                  <label class="full">Texte / règlement intérieur<textarea id="launchAssistantText" rows="6" placeholder="Collez ici les articles du RI ou décrivez oralement le fonctionnement du groupe…"></textarea></label>
+                  <div class="actions"><button id="analyzeLaunchDocument" type="button" class="secondary">Analyser le texte</button><button id="startLaunchVoice" type="button" class="secondary">🎙️ Parler</button><button id="interpretLaunchText" type="button" class="secondary">Comprendre ma description</button></div>
+                  <p id="voiceStatus" class="hint" role="status"></p><div id="launchAssistantSuggestions" class="stack"></div>
+                </section>
                 <div id="launchRubrics" class="stack"></div>
-                <div class="actions">
-                  <button id="addLaunchRubric" type="button" class="secondary">+ Ajouter une rubrique</button>
-                  <button id="addLaunchTontine" type="button" class="primary">+ Ajouter une tontine distincte</button>
-                </div>
-              </section>
-              <button class="primary" type="submit">Simuler</button>
+                <div class="actions"><button id="addLaunchRubric" type="button" class="secondary">+ Ajouter une rubrique</button><button id="addLaunchTontine" type="button" class="primary">+ Ajouter une tontine distincte</button></div>
+              </fieldset>
+
+              <fieldset class="launch-step-panel full" data-launch-step="7" hidden>
+                <legend>7. Finance et faisabilité</legend>
+                <p class="hint full">Il n’existe pas de cotisation nominale unique imposée. La simulation consolide les rubriques, mais conserve leur logique indépendante.</p>
+                <button class="primary" id="simulateProjectBtn" type="submit">Simuler la faisabilité</button>
+                <div id="simulationResult" class="result full"></div>
+              </fieldset>
+
+              <fieldset class="launch-step-panel full" data-launch-step="8" hidden>
+                <legend>8. Communication</legend>
+                <label class="check"><input id="channelInApp" type="checkbox" checked><span>Notifications dans l’application</span></label>
+                <label class="check"><input id="channelPrint" type="checkbox" checked><span>Impression / documents papier</span></label>
+                <label class="check"><input id="channelSms" type="checkbox"><span>SMS si un fournisseur est configuré</span></label>
+                <label class="check"><input id="channelWhatsapp" type="checkbox"><span>WhatsApp si un fournisseur est configuré</span></label>
+                <label class="check"><input id="channelTelegram" type="checkbox"><span>Telegram si configuré</span></label>
+                <label class="check"><input id="publishMemberStatements" type="checkbox" checked><span>Publier les situations individuelles aux membres autorisés</span></label>
+              </fieldset>
+
+              <fieldset class="launch-step-panel full" data-launch-step="9" hidden>
+                <legend>9. Accessibilité et terrain</legend>
+                <label class="check"><input id="ultraSimpleMode" type="checkbox"><span>Mode Ultra Simple</span></label>
+                <label class="check"><input id="oralAssistant" type="checkbox"><span>Assistant oral pour création, rubriques et suivi</span></label>
+                <label class="check"><input id="lowBandwidthPriority" type="checkbox" checked><span>Priorité faible connexion / 2G</span></label>
+                <label class="check"><input id="oldDevicePriority" type="checkbox" checked><span>Priorité anciens téléphones / Android</span></label>
+                <label>Langue principale<select id="projectLocale"><option value="fr">Français</option><option value="en">English</option></select></label>
+              </fieldset>
+
+              <fieldset class="launch-step-panel full" data-launch-step="10" hidden>
+                <legend>10. Prévisualisation et confirmation</legend>
+                <div id="launchPreview" class="stack"></div>
+                <label class="check"><input id="previewConfirmed" type="checkbox"><span>J’ai relu l’origine, les règles, les rubriques et les participants prévus</span></label>
+                <button id="createGroupBtn" class="primary wide-btn" type="button" disabled>Créer / intégrer / transformer le groupe</button>
+              </fieldset>
+
+              <fieldset id="legacyProjectSettings" class="form-grid full" hidden disabled aria-hidden="true"><legend>Compatibilité ancien modèle</legend>
+                <input id="memberCount" type="hidden" value="20"><input id="sessions" type="hidden" value="12"><input id="nominalContribution" type="hidden" value="0"><input id="managementFee" type="hidden" value="0"><input id="externalCostRate" type="hidden" value="0"><input id="fixedSessionCost" type="hidden" value="0">
+              </fieldset>
             </form>
-            <div id="simulationResult" class="result"></div>
-            <button id="createGroupBtn" class="primary wide-btn" disabled>Créer le groupe à partir de cette simulation</button>
+            <div class="actions launch-navigation"><button id="launchPrevBtn" type="button" class="secondary">← Précédent</button><span id="launchStepStatus" class="hint">Étape 1 sur 10</span><button id="launchNextBtn" type="button" class="primary">Suivant →</button></div>
           </section>
-          <section class="panel">
-            <div class="panel-head"><div><h2>Mes groupes</h2><p>Sélectionnez le contexte actif.</p></div></div>
-            <div id="groupsList" class="stack"></div>
-          </section>
+          <section class="panel"><div class="panel-head"><div><h2>Mes groupes</h2><p>Sélectionnez le contexte actif ou choisissez un groupe source à transformer.</p></div></div><div id="groupsList" class="stack"></div></section>
         </div>
-        <section class="panel"><div class="section-kicker"><div><h2>Modèles, transformation et kits</h2><p>Tout ce qui complète la création du groupe.</p></div></div><div id="launchHub" class="hub-grid"></div></section>
+        <section class="panel"><div class="section-kicker"><div><h2>Modèles, transformation et kits</h2><p>Les capacités complémentaires restent accessibles sans remplacer le studio guidé.</p></div></div><div id="launchHub" class="hub-grid"></div></section>
       </section>
 
       <section id="view-operations" class="view">
