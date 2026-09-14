@@ -83,6 +83,10 @@ export interface Group {
   tenantId: Id;
   name: string;
   kind: 'association' | 'rotating_tontine' | 'in_kind_tontine' | 'hybrid';
+  originMode?: 'NEW' | 'IMPORT_EXISTING' | 'TRANSFORM_REGISTERED';
+  historicalCreatedAt?: string;
+  currentExerciseLabel?: string;
+  evolvedFromKind?: 'association' | 'rotating_tontine' | 'in_kind_tontine' | 'hybrid';
   governanceModel: 'community' | 'founder_managed' | 'delegated' | 'ngo_supported' | 'hybrid';
   status: 'draft' | 'active' | 'paused' | 'archived';
   createdBy: Id;
@@ -168,6 +172,53 @@ export interface ProjectAccessGrant {
   grantedAt: string;
 }
 
+export interface GroupProjectOrigin {
+  mode: 'NEW' | 'IMPORT_EXISTING' | 'TRANSFORM_REGISTERED';
+  historicalCreatedAt?: string;
+  currentExerciseLabel?: string;
+  sourceGroupId?: Id;
+  historyNote?: string;
+}
+
+export interface GroupProjectCycle {
+  label?: string;
+  startsAt?: string;
+  expectedSessions?: number;
+  cadence?: 'WEEKLY' | 'BIWEEKLY' | 'MONTHLY' | 'CUSTOM';
+  meetingDay?: string;
+  physicalMeetingExpected?: boolean;
+}
+
+export interface GroupProjectMemberSetup {
+  expectedMembers?: number;
+  rosterMode?: 'BUILD_LATER' | 'INVITE' | 'IMPORT' | 'HISTORICAL_RECONCILIATION';
+  allowWaitingList?: boolean;
+  allowProbation?: boolean;
+}
+
+export interface GroupProjectCommunication {
+  channels?: Array<'IN_APP'|'PRINT'|'SMS'|'WHATSAPP'|'TELEGRAM'|'EMAIL'>;
+  publishMemberStatements?: boolean;
+}
+
+export interface GroupProjectAccessibility {
+  ultraSimple?: boolean;
+  oralAssistant?: boolean;
+  lowBandwidthPriority?: boolean;
+  oldDevicePriority?: boolean;
+  preferredLocale?: 'fr'|'en';
+}
+
+export interface GroupProjectLaunchProfile {
+  origin: GroupProjectOrigin;
+  cycle?: GroupProjectCycle;
+  members?: GroupProjectMemberSetup;
+  communication?: GroupProjectCommunication;
+  accessibility?: GroupProjectAccessibility;
+  sourceDocumentFingerprints?: string[];
+  previewConfirmed?: boolean;
+}
+
 export interface GroupProject {
   id: Id;
   tenantId: Id;
@@ -185,10 +236,11 @@ export interface GroupProject {
   accessGrants?: ProjectAccessGrant[];
   createdAt: string;
   rubrics?: LaunchRubricPlan[];
+  launchProfile?: GroupProjectLaunchProfile;
   convertedGroupId?: Id;
 }
 
-export type RubricActivityKind = 'CONTRIBUTION' | 'TONTINE' | 'SAVINGS' | 'SOLIDARITY' | 'OTHER';
+export type RubricActivityKind = 'CONTRIBUTION' | 'TONTINE' | 'SAVINGS' | 'SOLIDARITY' | 'TRANSPORT' | 'REPAYMENT' | 'LOAN' | 'ASSISTANCE' | 'LEVY' | 'OFFICE' | 'OTHER';
 export interface LaunchRubricPlan {
   key: string;
   name: string;
