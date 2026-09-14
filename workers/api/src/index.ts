@@ -11,6 +11,7 @@ import {
 } from '../../../packages/completion/src/index.js';
 import { ExplainabilityService, DocumentSearchService, previewCsv, buildNotificationDigest } from '../../../packages/innovation/src/index.js';
 import { ReceivablesService, TreasuryService, RiskFinanceService } from '../../../packages/finance/src/index.js';
+import { analyzeGovernanceText, governanceFingerprint, interpretLaunchPrompt } from '../../../packages/guided-assistant/src/index.js';
 import { MarketService } from '../../../packages/market/src/index.js';
 import { HistoricalImportService, RepositoryArtifactStore, type ArtifactStoreLike } from '../../../packages/imports/src/index.js';
 import { authenticatedApi } from './authenticated.js';
@@ -102,6 +103,16 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
       return json({groups:groups.length,inbox:inbox.length,audit:audit.length},200,cors);
     }
     if(request.method==='GET'&&url.pathname==='/api/v1/inbox') return json(await inboxFor(repo,ctx.tenantId,ctx.actorId),200,cors);
+
+    if(request.method==='POST'&&url.pathname==='/api/v1/assistant/group-launch/analyze'){
+      const body=await readJson<Record<string,unknown>>(request);const text=String(body.text??'');
+      const suggestions=analyzeGovernanceText(text);const fingerprint=await governanceFingerprint(text);
+      return json({fingerprint,suggestions,requiresHumanConfirmation:true,financialWrites:false},200,cors);
+    }
+    if(request.method==='POST'&&url.pathname==='/api/v1/assistant/group-launch/interpret'){
+      const body=await readJson<Record<string,unknown>>(request);const text=String(body.text??'');
+      return json({draft:interpretLaunchPrompt(text),requiresHumanConfirmation:true,financialWrites:false},200,cors);
+    }
 
     if(request.method==='POST'&&url.pathname==='/api/v1/group-projects'){
       const body=await readJson<Record<string,unknown>>(request);
