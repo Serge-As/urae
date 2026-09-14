@@ -6,7 +6,7 @@ import { RubricKnowledgeService } from '../../../packages/rubrics/src/index.js';
 import { makeId, type OutboxItem, type GroupOperatingPolicy, type ProjectCapability, type RubricOperatingModel, type WorkspaceRecord, type WorkspaceStatus } from '../../../packages/contracts/src/index.js';
 import { PRODUCT_MODULES, PRODUCT_CAPABILITY_COUNT } from '../../../packages/module-registry/src/index.js';
 import {
-  CompletionSuiteService, COMPLETION_WORKFLOWS, buildLoanSchedule, compareRules,
+  CompletionSuiteService, COMPLETION_WORKFLOWS, buildLoanSchedule, applyLoanPayment, compareRules,
   explainLedgerAnomalies, makeIcs, suggestTontineSchedule, type CompletionKind
 } from '../../../packages/completion/src/index.js';
 import { ExplainabilityService, DocumentSearchService, previewCsv, buildNotificationDigest } from '../../../packages/innovation/src/index.js';
@@ -378,10 +378,15 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
     if(loanQuote&&request.method==='POST'){
       await requireGroup(loanQuote[1]!,true);
       const body=await readJson<Record<string,unknown>>(request);
-      return json({schedule:buildLoanSchedule({
+      const schedule=buildLoanSchedule({
         principal:finite(body.principal),installments:finite(body.installments),annualRateBasisPoints:finite(body.annualRateBasisPoints,0),
         installmentsPerYear:finite(body.installmentsPerYear,12),method:String(body.method??'DECLINING') as any,feesTotal:finite(body.feesTotal,0)
-      })},200,cors);
+      });
+      const examplePayment=body.examplePaymentAmount===undefined?undefined:applyLoanPayment({
+        principalOutstanding:finite(body.principal),unpaidInterest:finite(body.unpaidInterest,0),paymentAmount:finite(body.examplePaymentAmount),
+        rateBasisPointsPerPeriod:finite(body.rateBasisPointsPerPeriod,0),priority:String(body.paymentPriority??'CAPITAL_FIRST') as any
+      });
+      return json({schedule,examplePayment},200,cors);
     }
     const loanDisburse=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/loans\/([^/]+)\/disburse$/);
     if(loanDisburse&&request.method==='POST'){
@@ -401,25 +406,34 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
         expectedVersion:finite(body.expectedVersion),patch:{ledgerEntryId:entry.id,outstandingPrincipal:principal,disbursedAt:new Date().toISOString()}
       })},201,cors);
     }
+    const loanAllocation=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/loans\/allocation-preview$/);
+    if(loanAllocation&&request.method==='POST'){
+      await requireGroup(loanAllocation[1]!,true);const body=await readJson<Record<string,unknown>>(request);
+      return json(applyLoanPayment({
+        principalOutstanding:finite(body.principalOutstanding),unpaidInterest:finite(body.unpaidInterest,0),paymentAmount:finite(body.paymentAmount),
+        rateBasisPointsPerPeriod:finite(body.rateBasisPointsPerPeriod),priority:String(body.priority??'CAPITAL_FIRST') as any
+      }),200,cors);
+    }
     const loanRepay=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/loans\/([^/]+)\/repay$/);
     if(loanRepay&&request.method==='POST'){
       const body=await readJson<Record<string,unknown>>(request);
       const loan=(await completion.list(loanRepay[1]!,'LOAN')).find(x=>x.id===loanRepay[2]!);
       if(!loan)throw new Error('LOAN_NOT_FOUND');
       if(!['DISBURSED','REPAYING'].includes(String(loan.data.completionState)))throw new Error('LOAN_NOT_REPAYABLE');
-      const outstanding=finite(loan.data.outstandingPrincipal),principalPaid=finite(body.principalAmount);
-      if(principalPaid<=0||principalPaid>outstanding)throw new Error('INVALID_LOAN_REPAYMENT');
-      const entry=await ledger.recordCashMovement({
-        tenantId:ctx.tenantId,groupId:loanRepay[1]!,amount:principalPaid,currency:String(loan.data.currency??'XAF'),
-        direction:'in',counterAccountCode:'LOAN_RECEIVABLE',counterAccountType:'asset',
-        descriptionCode:'LEDGER_LOAN_REPAYMENT',sourceType:'loan_repayment',sourceId:loan.id,
-        meetingId:body.meetingId?String(body.meetingId):undefined,
-        idempotencyKey:String(body.idempotencyKey??request.headers.get('x-idempotency-key')??makeId('loan_repayment')),kind:'loan_repayment'
+      const outstanding=finite(loan.data.outstandingPrincipal),unpaidInterest=finite(loan.data.unpaidInterest,0);
+      const explicitPrincipal=body.principalAmount!==undefined;
+      const allocation=explicitPrincipal
+        ?{principalPaid:finite(body.principalAmount),interestPaid:finite(body.interestAmount,0),remainingPrincipal:outstanding-finite(body.principalAmount),unpaidInterestAfter:unpaidInterest,totalDebtAfter:outstanding-finite(body.principalAmount)+unpaidInterest,interestAccrued:0,totalInterestDue:unpaidInterest,paymentAmount:finite(body.principalAmount)+finite(body.interestAmount,0),priority:String(body.priority??'CAPITAL_FIRST')}
+        :applyLoanPayment({principalOutstanding:outstanding,unpaidInterest,paymentAmount:finite(body.paymentAmount),rateBasisPointsPerPeriod:finite(body.rateBasisPointsPerPeriod??loan.data.rateBasisPointsPerPeriod,0),priority:String(body.priority??loan.data.paymentPriority??'CAPITAL_FIRST') as any});
+      if(allocation.principalPaid<0||allocation.principalPaid>outstanding)throw new Error('INVALID_LOAN_REPAYMENT');
+      const entry=await ledger.recordLoanRepayment({
+        tenantId:ctx.tenantId,groupId:loanRepay[1]!,principalAmount:allocation.principalPaid,interestAmount:allocation.interestPaid,
+        currency:String(loan.data.currency??'XAF'),sourceId:loan.id,meetingId:body.meetingId?String(body.meetingId):undefined,
+        idempotencyKey:String(body.idempotencyKey??request.headers.get('x-idempotency-key')??makeId('loan_repayment'))
       });
-      const nextOutstanding=outstanding-principalPaid;
-      const target=nextOutstanding===0?'CLOSED':'REPAYING';
-      return json({entry,loan:await completion.transition(loanRepay[1]!,loan.id,target,{
-        expectedVersion:finite(body.expectedVersion),patch:{outstandingPrincipal:nextOutstanding,lastRepaymentLedgerEntryId:entry.id}
+      const target=allocation.remainingPrincipal===0&&allocation.unpaidInterestAfter===0?'CLOSED':'REPAYING';
+      return json({entry,allocation,loan:await completion.transition(loanRepay[1]!,loan.id,target,{
+        expectedVersion:finite(body.expectedVersion),patch:{outstandingPrincipal:allocation.remainingPrincipal,unpaidInterest:allocation.unpaidInterestAfter,lastRepaymentLedgerEntryId:entry.id,paymentPriority:allocation.priority}
       })},201,cors);
     }
 
