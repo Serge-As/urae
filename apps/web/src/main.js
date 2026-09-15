@@ -13,6 +13,7 @@ import { mountIdentityLiveUI } from './identity-live-ui.js';
 import { mountCommunityShopUI } from './community-shop-ui.js';
 import { mountMiscRubricUI } from './misc-rubrics-ui.js';
 import { mountPairingUI } from './pairing-ui.js';
+import { mountDetailUI } from './detail-ui.js';
 let uiLocale = 'fr';
 try { uiLocale = localStorage.getItem('tontine.locale') === 'en' ? 'en' : 'fr'; } catch {}
 const tx = (fr,en) => runtimeTranslate(uiLocale,fr,en);
@@ -114,6 +115,7 @@ const go = (name) => {
 };
 document.querySelectorAll('[data-view]').forEach(b => b.addEventListener('click', () => go(b.dataset.view)));
 document.querySelectorAll('[data-go]').forEach(b => b.addEventListener('click', () => go(b.dataset.go)));
+const detailUI = mountDetailUI({ app, navigate: go, getGroups: () => groups, getMembers: () => members, getMeetings: () => meetings, getRubrics: () => rubrics, isManager, fmt, date, showError: fail });
 const renderConnectivity = () => { const online = navigator.onLine; const e = $('#connectivity'); e.textContent = `● ${online ? tx('En ligne','Online') : tx('Hors ligne','Offline')}`; e.className = `pill ${online ? 'online' : 'offline'}`; app.setConnectivity(online ? 'online' : 'offline'); };
 const renderUniverse = async () => {
     const u = await app.universe();
@@ -208,7 +210,7 @@ const renderMembers = async () => {
     }
     for (const m of members) {
         const li = document.createElement('li');
-        li.textContent = `${m.displayName} · ${m.roles.join(', ')}`;
+        const memberLink=document.createElement('button');memberLink.type='button';memberLink.className='link-btn';memberLink.dataset.detailType='member';memberLink.dataset.detailId=m.id;memberLink.textContent=m.displayName;li.append(memberLink,document.createTextNode(' · '+m.roles.join(', ')));
         if(isManager() || m.userId===app.currentActor()){
             const button=document.createElement('button');button.type='button';button.className='link-btn';button.textContent=tx('Relevé','Statement');
             button.onclick=()=>showStatement(m.id).catch(fail);li.append(button);
@@ -234,7 +236,8 @@ const renderMeetings = async () => {
         const a = document.createElement('article');
         a.className = 'meeting-row';
         const span = document.createElement('span');
-        span.textContent = `${m.title} · ${m.status === 'open' ? tx('ouverte','open') : tx('clôturée','closed')} · ${date(m.openedAt)}`;
+        const meetingLink=document.createElement('button');meetingLink.type='button';meetingLink.className='link-btn';meetingLink.dataset.detailType='meeting';meetingLink.dataset.detailId=m.id;meetingLink.textContent=m.title;
+        span.append(meetingLink,document.createTextNode(` · ${m.status === 'open' ? tx('ouverte','open') : tx('clôturée','closed')} · ${date(m.openedAt)}`));
         a.append(span);
         if (m.status === 'open' && isManager()) {
             const b = document.createElement('button');
@@ -330,7 +333,10 @@ const renderLivingRules = async () => {
         const a = document.createElement('article');
         a.className = 'item';
         const m = r.operatingModel;
-        a.innerHTML = html`<strong>${r.name}</strong><p class="hint">Écrit : ${m?.writtenRule || '—'}</p><p class="hint">Pratique : ${m?.observedPractice || '—'}</p><small>${m?.ruleRealityStatus ?? 'UNKNOWN'} · cible ${m?.targetMode ?? 'OPEN'} · manquant ${m?.shortfallHandling ?? '—'}</small>`;
+        const rubricLink=document.createElement('button');rubricLink.type='button';rubricLink.className='link-btn';rubricLink.dataset.detailType='rubric';rubricLink.dataset.detailId=r.id;rubricLink.textContent=r.name;a.append(rubricLink);
+        const written=document.createElement('p');written.className='hint';written.textContent='Écrit : '+(m?.writtenRule||'—');a.append(written);
+        const practice=document.createElement('p');practice.className='hint';practice.textContent='Pratique : '+(m?.observedPractice||'—');a.append(practice);
+        const small=document.createElement('small');small.textContent=`${m?.ruleRealityStatus ?? 'UNKNOWN'} · cible ${m?.targetMode ?? 'OPEN'} · manquant ${m?.shortfallHandling ?? '—'}`;a.append(small);
         if(r.activityPlan){
             const summary=document.createElement('p');summary.textContent=describeRubricPlan(r.activityPlan);a.append(summary);
             const scheduled=(r.activityPlan.participants??[]).flatMap(p=>p.shares.filter(s=>s.turn!==undefined).map(s=>`${p.name} · ${s.name} : tour ${s.turn}`));
