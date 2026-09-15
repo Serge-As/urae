@@ -31,6 +31,25 @@ export function mountIdentityLiveUI({app,notify=()=>{},showError=console.error})
     }catch(e){showError(e);}
   };
 
+  const renderFounderObservatory=async()=>{
+    const panel=document.getElementById('founderObservatoryPanel'),stats=document.getElementById('founderObservatoryStats'),list=document.getElementById('founderObservatoryList');
+    if(!panel||!stats||!list)return;
+    try{
+      const data=await app.founderLearningObservatory(5);
+      panel.hidden=false;stats.replaceChildren();list.replaceChildren();
+      for(const [n,label] of [[data.stats?.pseudonymousGroups??0,'Groupes pseudonymes'],[data.stats?.sanitizedSignals??0,'Signaux autorisés'],[data.stats?.discoveries??0,'Découvertes ≥ 5 groupes']]){
+        const d=el('div',undefined,'metric');d.append(el('strong',String(n)),el('span',label));stats.append(d);
+      }
+      if(!(data.discoveries??[]).length)list.append(el('p','Pas encore assez de groupes pour afficher une découverte collective.','hint'));
+      for(const d of data.discoveries??[]){
+        const a=el('article',undefined,'item');a.append(el('strong',d.key+' · '+d.value),row('Catégorie',d.category),row('Groupes concordants',d.supportingGroups),row('Confiance moyenne',Math.round(Number(d.averageConfidence)*100)+'%'),row('Dernière observation',d.lastSeenAt));list.append(a);
+      }
+    }catch(e){
+      panel.hidden=true;stats.replaceChildren();list.replaceChildren();
+      if(e instanceof Error&&!['FOUNDER_TEAM_ONLY','FORBIDDEN_SCOPE'].includes(e.message)&&!e.message.includes('403'))showError(e);
+    }
+  };
+
   const renderMemories=async()=>{
     if(!memoryRoot||!app.activeGroup())return;memoryRoot.replaceChildren();
     const memories=await app.conciergeMemories();
@@ -55,6 +74,7 @@ export function mountIdentityLiveUI({app,notify=()=>{},showError=console.error})
         if(health.enabled){const catchup=await app.liveEvents(lastSeq);for(const event of catchup.events??[])renderEvent(event);}
       }catch(e){liveRoot?.replaceChildren(row('Premium Live','Désactivé sur ce déploiement'),row('Fallback','Outbox offline + actualisation normale'));}      
       await renderMemories();
+      await renderFounderObservatory();
     }catch(e){showError(e);}
   };
 
