@@ -5,3 +5,5 @@ Production Worker eco-system and D1 eco-system-db must remain untouched.
 realMoneyEnabled=false remains mandatory.
 
 Retry after line-ending-safe Worker name render: d0d09ea5c80e3d763f1fb488df22b2df38289c67
+
+Retry E2E after robust JSON and membership lookup: 606d45ce42d5b6a6c018f4776eb05120071f2243
