@@ -21,6 +21,7 @@ import { FounderLearningStore } from '../../../packages/founder-observatory/src/
 import { CommercialPreferenceService, preferenceCookie, clearPreferenceCookie, readPreferenceCookie } from '../../../packages/commercial-preferences/src/index.js';
 import { MiscRubricService } from '../../../packages/misc-rubrics/src/index.js';
 import { GroupPairingService } from '../../../packages/group-pairing/src/index.js';
+import { InterestCommunityService } from '../../../packages/interest-communities/src/index.js';
 import { HistoricalImportService, RepositoryArtifactStore, type ArtifactStoreLike } from '../../../packages/imports/src/index.js';
 import { authenticatedApi } from './authenticated.js';
 export { GroupLiveHub } from './group-live-hub.js';
@@ -81,7 +82,7 @@ const inboxFor = async (repo:PlatformRepository,tenantId:string,actorId:string) 
   return [...obligations,...cases];
 };
 
-export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{artifacts?:ArtifactStoreLike;liveNamespace?:DurableObjectNamespaceLike;premiumLive?:boolean;founderLearning?:FounderLearningStore;founderTeamActors?:Set<string>;commercialPreferences?:CommercialPreferenceService;groupPairing?:GroupPairingService;dataUseDefaultMode?:DataUseDefaultMode}={}) => async (request:Request):Promise<Response> => {
+export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{artifacts?:ArtifactStoreLike;liveNamespace?:DurableObjectNamespaceLike;premiumLive?:boolean;founderLearning?:FounderLearningStore;founderTeamActors?:Set<string>;commercialPreferences?:CommercialPreferenceService;groupPairing?:GroupPairingService;interestCommunities?:InterestCommunityService;dataUseDefaultMode?:DataUseDefaultMode}={}) => async (request:Request):Promise<Response> => {
   const url=new URL(request.url); const cors=corsHeaders(request);
   if(request.method==='OPTIONS'){
     const allowed=Boolean((cors as Record<string,string>)['access-control-allow-origin']);
@@ -160,6 +161,52 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
       return json({groups:groups.length,inbox:inbox.length,audit:audit.length},200,cors);
     }
     if(request.method==='GET'&&url.pathname==='/api/v1/inbox') return json(await inboxFor(repo,ctx.tenantId,ctx.actorId),200,cors);
+    if(url.pathname==='/api/v1/communities'&&request.method==='GET'){
+      if(!options.interestCommunities)throw new Error('COMMUNITY_STORE_UNAVAILABLE');
+      if(url.searchParams.get('mine')==='true')return json(await options.interestCommunities.mine(ctx.actorId),200,cors);
+      return json(await options.interestCommunities.discover(ctx.actorId,{q:url.searchParams.get('q')??undefined,locality:url.searchParams.get('locality')??undefined,tags:strArray(url.searchParams.get('tags')??''),limit:Number(url.searchParams.get('limit')??50)}),200,cors);
+    }
+    if(url.pathname==='/api/v1/communities'&&request.method==='POST'){
+      if(!options.interestCommunities)throw new Error('COMMUNITY_STORE_UNAVAILABLE');
+      const body=await readJson<Record<string,unknown>>(request);
+      return json(await options.interestCommunities.create(ctx.actorId,{name:String(body.name??''),description:body.description?String(body.description):undefined,locality:body.locality?String(body.locality):undefined,visibility:String(body.visibility??'PUBLIC') as any,joinPolicy:String(body.joinPolicy??'OPEN') as any,tags:strArray(body.tags)}),201,cors);
+    }
+    const interestCommunity=url.pathname.match(/^\/api\/v1\/communities\/([^/]+)$/);
+    if(interestCommunity&&request.method==='GET'){
+      if(!options.interestCommunities)throw new Error('COMMUNITY_STORE_UNAVAILABLE');
+      return json(await options.interestCommunities.get(ctx.actorId,interestCommunity[1]!),200,cors);
+    }
+    const interestJoin=url.pathname.match(/^\/api\/v1\/communities\/([^/]+)\/join$/);
+    if(interestJoin&&request.method==='POST'){
+      if(!options.interestCommunities)throw new Error('COMMUNITY_STORE_UNAVAILABLE');
+      const body=await readJson<Record<string,unknown>>(request);return json(await options.interestCommunities.join(ctx.actorId,interestJoin[1]!,String(body.message??'')),200,cors);
+    }
+    const interestRequests=url.pathname.match(/^\/api\/v1\/communities\/([^/]+)\/join-requests$/);
+    if(interestRequests&&request.method==='GET'){
+      if(!options.interestCommunities)throw new Error('COMMUNITY_STORE_UNAVAILABLE');
+      return json(await options.interestCommunities.joinRequests(ctx.actorId,interestRequests[1]!),200,cors);
+    }
+    const interestDecision=url.pathname.match(/^\/api\/v1\/communities\/([^/]+)\/join-requests\/([^/]+)\/decision$/);
+    if(interestDecision&&request.method==='POST'){
+      if(!options.interestCommunities)throw new Error('COMMUNITY_STORE_UNAVAILABLE');
+      const body=await readJson<Record<string,unknown>>(request);return json(await options.interestCommunities.decideJoin(ctx.actorId,interestDecision[1]!,interestDecision[2]!,String(body.decision??'') as any),200,cors);
+    }
+    const interestContent=url.pathname.match(/^\/api\/v1\/communities\/([^/]+)\/content$/);
+    if(interestContent&&request.method==='GET'){
+      if(!options.interestCommunities)throw new Error('COMMUNITY_STORE_UNAVAILABLE');
+      return json(await options.interestCommunities.feed(ctx.actorId,interestContent[1]!,Number(url.searchParams.get('limit')??100)),200,cors);
+    }
+    if(interestContent&&request.method==='POST'){
+      if(!options.interestCommunities)throw new Error('COMMUNITY_STORE_UNAVAILABLE');
+      const body=await readJson<Record<string,unknown>>(request),metadata=body.metadata&&typeof body.metadata==='object'&&!Array.isArray(body.metadata)?body.metadata as Record<string,unknown>:{};
+      return json(await options.interestCommunities.createContent(ctx.actorId,interestContent[1]!,{kind:String(body.kind??'POST') as any,title:body.title?String(body.title):undefined,body:String(body.body??''),category:body.category?String(body.category):undefined,locality:body.locality?String(body.locality):undefined,startsAt:body.startsAt?String(body.startsAt):undefined,endsAt:body.endsAt?String(body.endsAt):undefined,metadata}),201,cors);
+    }
+    const interestModerate=url.pathname.match(/^\/api\/v1\/communities\/([^/]+)\/content\/([^/]+)\/moderate$/);
+    if(interestModerate&&request.method==='POST'){
+      if(!options.interestCommunities)throw new Error('COMMUNITY_STORE_UNAVAILABLE');
+      const body=await readJson<Record<string,unknown>>(request);return json(await options.interestCommunities.moderate(ctx.actorId,interestModerate[1]!,interestModerate[2]!,String(body.state??'') as any),200,cors);
+    }
+
     if(request.method==='POST'&&url.pathname==='/api/v1/join/redeem'){
       if(!options.groupPairing)throw new Error('PAIRING_STORE_UNAVAILABLE');
       const body=await readJson<Record<string,unknown>>(request);return json(await options.groupPairing.redeemInvite(String(body.code??'')),200,cors);
@@ -838,12 +885,13 @@ export default {async fetch(request:Request,env:WorkerEnv={}){
   const founderTeamActors=new Set((env.FOUNDER_TEAM_ACTORS??'').split(',').map(x=>x.trim()).filter(Boolean));
   const dataUseDefaultMode:DataUseDefaultMode=env.DATA_USE_PROFILE==='PRIVACY_FIRST'?'PRIVACY_FIRST':'BETA_OPEN';
   const commercialPreferences=new CommercialPreferenceService(env.DB,dataUseDefaultMode==='BETA_OPEN');
+  const interestCommunities=new InterestCommunityService(env.DB);
   const pairingKernel=new PlatformKernel();
   const groupPairing=new GroupPairingService(env.DB,repository,pairingKernel);
   return authenticatedApi(repository,env.DB,async authenticatedRequest=>{
     const h=authenticatedRequest.headers;
     pairingKernel.context.set({actorId:h.get('x-actor-id')??'unknown',tenantId:h.get('x-tenant-id')??'unknown',activeGroupId:h.get('x-active-group-id')||undefined,groupRoles:(h.get('x-group-roles')??'').split(',').filter(Boolean),mandateIds:[],deviceId:h.get('x-device-id')??'device_web',sessionId:h.get('x-session-id')??'server-authenticated',locale:h.get('accept-language')?.toLowerCase().startsWith('en')?'en':'fr',timezone:h.get('x-timezone')??'Africa/Douala',connectivity:'online',requestId:h.get('x-request-id')??crypto.randomUUID()});
-    return createApiHandler(repository,{artifacts:env.ARTIFACTS,liveNamespace:env.GROUP_LIVE_HUB,premiumLive:env.PREMIUM_LIVE_LEDGER==='true',founderLearning,founderTeamActors,commercialPreferences,groupPairing,dataUseDefaultMode})(authenticatedRequest);
+    return createApiHandler(repository,{artifacts:env.ARTIFACTS,liveNamespace:env.GROUP_LIVE_HUB,premiumLive:env.PREMIUM_LIVE_LEDGER==='true',founderLearning,founderTeamActors,commercialPreferences,groupPairing,interestCommunities,dataUseDefaultMode})(authenticatedRequest);
   })(request);
 }};
 export {defaultRepo as repo};
