@@ -571,13 +571,43 @@
           <section class="panel"><h2>Compatibilité appareil</h2><div id="compatibilityLevel"></div><ul id="compatibilityList" class="list"></ul></section>
           <section class="panel"><h2>Services canoniques</h2><ul id="kernelList" class="list"></ul></section>
         </div>
+        <section class="panel" id="identityLivePanel">
+          <div class="section-kicker"><div><h2>Passeport identitaire · Concierge DNA · Premium Live</h2><p>Le code permanent identifie le groupe ; l’empreinte des règles et le profil Concierge évoluent avec son fonctionnement.</p></div></div>
+          <div class="two-col">
+            <div><h3>Passeport du groupe</h3><div id="identityPassport" class="stack"></div><div class="actions"><button id="refreshPassportBtn" type="button" class="secondary">Rafraîchir le passeport</button></div></div>
+            <div><h3>Concierge DNA</h3><div id="conciergeDna" class="stack"></div></div>
+          </div>
+          <div class="two-col">
+            <div><h3>Premium Live Ledger</h3><div id="premiumLiveStatus" class="stack"></div><div class="actions"><button id="liveConnectBtn" type="button" class="primary">Connecter le Live</button><button id="livePingBtn" type="button" class="secondary">Tester la présence</button></div><div id="liveEventList" class="stack"></div></div>
+            <div><h3>Consentements des données</h3><p class="hint">Chaque usage est indépendant et révocable. Les finances, dettes, litiges, santé/assistance, identités et contacts sont exclus de l’apprentissage collectif et du ciblage commercial.</p>
+              <label class="check"><input id="consentCollectiveLearning" type="checkbox"><span>Apprentissage collectif dé-identifié</span></label>
+              <label class="check"><input id="consentCommercial" type="checkbox"><span>Personnalisation commerciale first-party</span></label>
+              <label class="check"><input id="consentPartners" type="checkbox"><span>Matching partenaires</span></label>
+              <label class="check"><input id="consentCommunity" type="checkbox"><span>Découverte de communautés</span></label>
+            </div>
+          </div>
+          <details>
+            <summary><strong>Mémoire privée de conciergerie</strong></summary>
+            <form id="conciergeMemoryForm" class="form-grid">
+              <label>Catégorie<select id="conciergeMemoryCategory"><option value="MEETING_RHYTHM">Rythme des réunions</option><option value="RUBRIC_PATTERN">Habitude de rubrique</option><option value="OPERATING_PRACTICE">Pratique de gestion</option><option value="UX_PREFERENCE">Préférence d’utilisation</option><option value="MARKET_INTEREST">Intérêt marché/boutique</option><option value="COMMUNITY_INTEREST">Intérêt communauté</option><option value="DOCUMENT_RULE">Règle issue d’un document</option></select></label>
+              <label>Clé<input id="conciergeMemoryKey" required placeholder="Ex. meeting.cadence"></label>
+              <label>Valeur<input id="conciergeMemoryValue" required placeholder="Ex. 2e samedi du mois"></label>
+              <label>Source<input id="conciergeMemorySource" required placeholder="Ex. RI article 8 / PV 2026-09-15"></label>
+              <label>Confiance (0–1)<input id="conciergeMemoryConfidence" type="number" min="0" max="1" step="0.01" value="0.90"></label>
+              <label>Portée<select id="conciergeMemoryPrivacy"><option value="GROUP_PRIVATE">Privée au groupe</option><option value="GROUP_SHAREABLE">Éligible au collectif si consentement</option></select></label>
+              <label>Visibilité<select id="conciergeMemoryVisibility"><option value="MANAGERS">Responsables</option><option value="MEMBERS">Membres</option></select></label>
+              <button class="primary">Apprendre cette information</button>
+            </form>
+            <div id="conciergeMemoryList" class="stack"></div>
+          </details>
+        </section>
         <section class="panel"><div class="section-kicker"><div><h2>Hardening, sauvegarde et reprise</h2><p>Auth, MFA, qualité des données, Time Machine, BIR+, restauration D1, observabilité et appareils anciens.</p></div></div><div id="hardeningHub" class="hub-grid"></div></section>
         <section class="panel"><h2>Règle de sécurité actuelle</h2><p class="truth-notice danger-notice"><strong>realMoneyEnabled=false.</strong> Les interfaces Mobile Money et facturation restent sandbox tant qu’une autorisation distincte et les qualifications de sécurité/terrain n’ont pas été données.</p></section>
       </section>
     </main>
   </div>
 
-  <footer class="footer">Eco-System 1.2.0 · Version locale · Cahier Maître 2.3.4</footer>
-  <script type="module" src="/src/main.js?v=120"></script>
+  <footer class="footer">Eco-System 1.3.0 · Version guidée Live · Cahier Maître 2.3.4</footer>
+  <script type="module" src="/src/main.js?v=130"></script>
 </body>
 </html>
