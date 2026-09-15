@@ -320,6 +320,11 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
       const passport=await groupIdentity.compute(collectiveSignals[1]!);
       return json(await conciergeLearning.safeCollectiveSignals(collectiveSignals[1]!,passport.publicCode),200,cors);
     }
+    const conciergeProfile=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/concierge\/profile$/);
+    if(conciergeProfile&&request.method==='GET'){
+      const passport=await groupIdentity.compute(conciergeProfile[1]!);
+      return json(await conciergeLearning.profile(conciergeProfile[1]!,passport.publicCode,passport.rulesFingerprint),200,cors);
+    }
     const commercialAffinities=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/concierge\/commercial-affinities$/);
     if(commercialAffinities&&request.method==='GET')return json(await conciergeLearning.commercialAffinities(commercialAffinities[1]!),200,cors);
 
