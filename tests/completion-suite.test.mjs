@@ -37,6 +37,7 @@ test('tontine share may be served once and the benefit uses the canonical ledger
   const cycle=await completion.createTontineCycle('group_a',{rubricId:'rubric_tontine',name:'Cycle 2026',rounds:2,potsPerRound:2,nominalPotAmount:40000});
   const share=await completion.addTontineShare('group_a',{cycleId:cycle.id,membershipId:'membership_owner',label:'Nom 1'});
   const scheduled=await completion.scheduleTontineShare('group_a',share.id,1,1);
+  await assert.rejects(()=>completion.markTontineShareServed('group_a',share.id,'missing-ledger-entry',2),/TONTINE_BENEFIT_LEDGER_PROOF_INVALID/);
   await ledger.recordCashContribution({tenantId:'tenant_a',groupId:'group_a',membershipId:'membership_owner',amount:40000,idempotencyKey:'seed-tontine'});
   const benefit=await ledger.recordCashMovement({tenantId:'tenant_a',groupId:'group_a',amount:40000,direction:'out',counterAccountCode:'MEMBER_FUNDS_LIABILITY',counterAccountType:'liability',descriptionCode:'LEDGER_TONTINE_BENEFIT',sourceType:'tontine_share',sourceId:share.id,idempotencyKey:'benefit-1',kind:'tontine_benefit'});
   const served=await completion.markTontineShareServed('group_a',share.id,benefit.id,2);
