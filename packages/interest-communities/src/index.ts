@@ -19,7 +19,7 @@ const tags=(v:unknown)=>{
   const a=Array.isArray(v)?v:String(v??'').split(',');
   return [...new Set(a.map(x=>clean(x,50).toLowerCase()).filter(Boolean))].slice(0,30);
 };
-const parseJson=(v:unknown,fallback)=>{try{return JSON.parse(String(v??''));}catch{return fallback;}};
+const parseJson=<T>(v:unknown,fallback:T):T=>{try{return JSON.parse(String(v??'')) as T;}catch{return fallback;}};
 const toCommunity=(r:Record<string,unknown>):InterestCommunity=>({
   id:String(r.community_id),name:String(r.name),description:r.description?String(r.description):undefined,locality:r.locality?String(r.locality):undefined,
   visibility:String(r.visibility) as InterestCommunityVisibility,joinPolicy:String(r.join_policy) as InterestJoinPolicy,tags:parseJson(r.tags_json,[]),
