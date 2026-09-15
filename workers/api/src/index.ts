@@ -344,6 +344,42 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
       return json({stats,discoveries,privacy:'SANITIZED_PSEUDONYMOUS_K_ANONYMIZED',rawGroupData:false,rawMemberData:false},200,cors);
     }
 
+    const personalCommercial=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/preferences\/commercial-consent$/);
+    if(personalCommercial&&request.method==='GET'){
+      if(!options.commercialPreferences)throw new Error('PREFERENCE_STORE_UNAVAILABLE');
+      const [personal,groupConsent]=await Promise.all([options.commercialPreferences.consent(ctx.actorId,personalCommercial[1]!),conciergeLearning.consent(personalCommercial[1]!)]);
+      return json({personal,groupEnabled:groupConsent.purposes.COMMERCIAL_PERSONALIZATION},200,cors);
+    }
+    if(personalCommercial&&request.method==='POST'){
+      if(!options.commercialPreferences)throw new Error('PREFERENCE_STORE_UNAVAILABLE');
+      const body=await readJson<Record<string,unknown>>(request),granted=Boolean(body.granted);
+      const personal=await options.commercialPreferences.setConsent(ctx.actorId,personalCommercial[1]!,granted);
+      const groupConsent=await conciergeLearning.consent(personalCommercial[1]!);
+      return json({personal,groupEnabled:groupConsent.purposes.COMMERCIAL_PERSONALIZATION},200,{...cors,...(!granted?{'set-cookie':clearPreferenceCookie()}: {})});
+    }
+    const issuePreference=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/preferences\/commercial-cookie$/);
+    if(issuePreference&&request.method==='POST'){
+      if(!options.commercialPreferences)throw new Error('PREFERENCE_STORE_UNAVAILABLE');
+      const groupConsent=await conciergeLearning.consent(issuePreference[1]!);
+      if(!groupConsent.purposes.COMMERCIAL_PERSONALIZATION)throw new Error('GROUP_COMMERCIAL_CONSENT_REQUIRED');
+      const issued=await options.commercialPreferences.issue(ctx.actorId,issuePreference[1]!);
+      const affinities=await conciergeLearning.commercialAffinities(issuePreference[1]!);
+      return json({enabled:true,expiresAt:issued.expiresAt,affinityCount:affinities.length},201,{...cors,'set-cookie':preferenceCookie(issued.token,issued.maxAgeSeconds)});
+    }
+    const revokePreference=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/preferences\/commercial-cookie\/revoke$/);
+    if(revokePreference&&request.method==='POST'){
+      if(!options.commercialPreferences)throw new Error('PREFERENCE_STORE_UNAVAILABLE');
+      await options.commercialPreferences.revokeToken(readPreferenceCookie(request),ctx.actorId,revokePreference[1]!);
+      return json({enabled:false},200,{...cors,'set-cookie':clearPreferenceCookie()});
+    }
+    const preferenceContext=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/preferences\/commercial-context$/);
+    if(preferenceContext&&request.method==='GET'){
+      if(!options.commercialPreferences)throw new Error('PREFERENCE_STORE_UNAVAILABLE');
+      const groupConsent=await conciergeLearning.consent(preferenceContext[1]!);
+      const valid=groupConsent.purposes.COMMERCIAL_PERSONALIZATION&&await options.commercialPreferences.verify(readPreferenceCookie(request),ctx.actorId,preferenceContext[1]!);
+      return json({enabled:valid,affinities:valid?await conciergeLearning.commercialAffinities(preferenceContext[1]!):[]},200,cors);
+    }
+
     const amountExplain=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/members\/([^/]+)\/amount-explanation$/);
     if(amountExplain&&request.method==='GET'){
       return json(await explainability.amount(amountExplain[1]!,amountExplain[2]!,url.searchParams.get('rubricId')??undefined),200,cors);
@@ -729,6 +765,7 @@ export default {async fetch(request:Request,env:WorkerEnv={}){
   const repository=new D1PlatformRepository(env.DB);
   const founderLearning=env.COLLECTIVE_LEARNING_PEPPER?new FounderLearningStore(env.DB,env.COLLECTIVE_LEARNING_PEPPER):undefined;
   const founderTeamActors=new Set((env.FOUNDER_TEAM_ACTORS??'').split(',').map(x=>x.trim()).filter(Boolean));
-  return authenticatedApi(repository,env.DB,createApiHandler(repository,{artifacts:env.ARTIFACTS,liveNamespace:env.GROUP_LIVE_HUB,premiumLive:env.PREMIUM_LIVE_LEDGER==='true',founderLearning,founderTeamActors}))(request);
+  const commercialPreferences=new CommercialPreferenceService(env.DB);
+  return authenticatedApi(repository,env.DB,createApiHandler(repository,{artifacts:env.ARTIFACTS,liveNamespace:env.GROUP_LIVE_HUB,premiumLive:env.PREMIUM_LIVE_LEDGER==='true',founderLearning,founderTeamActors,commercialPreferences}))(request);
 }};
 export {defaultRepo as repo};
