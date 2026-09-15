@@ -613,7 +613,7 @@ const refreshGroupContext = async () => {
     $('#financeContent').style.display = active ? 'block' : 'none';
     $('#noActiveGroupFinance').style.display = active ? 'none' : 'block';
     const manage=active && isManager();
-    for(const id of ['memberForm','meetingForm','latePolicyForm','rubricForm','contributionForm','cashboxForm','publishDiscoveryForm','workspaceForm'])$( '#'+id).hidden=active && !manage;
+    for(const id of ['memberForm','meetingForm','latePolicyForm','rubricForm','contributionForm','cashboxForm','publishDiscoveryForm','workspaceForm','tontineCycleForm','tontineShareForm','adCampaignForm'])$( '#'+id).hidden=active && !manage;
     if (active) {
         await renderMembers();
         await renderMeetings();
