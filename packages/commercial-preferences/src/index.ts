@@ -13,11 +13,11 @@ const randomToken=()=>{
 const stamp=()=>new Date().toISOString();
 
 export class CommercialPreferenceService{
-  constructor(public db:D1DatabaseLike){}
+  constructor(public db:D1DatabaseLike,public defaultGranted=true){}
 
   async consent(accountId:string,groupId:string):Promise<PersonalCommercialConsent>{
     const row=await this.db.prepare('SELECT account_id,group_id,granted,version,updated_at FROM commercial_preference_consents WHERE account_id=? AND group_id=?').bind(accountId,groupId).first<Record<string,unknown>>();
-    return row?{accountId:String(row.account_id),groupId:String(row.group_id),granted:Number(row.granted)===1,version:Number(row.version),updatedAt:String(row.updated_at)}:{accountId,groupId,granted:false,version:0,updatedAt:''};
+    return row?{accountId:String(row.account_id),groupId:String(row.group_id),granted:Number(row.granted)===1,version:Number(row.version),updatedAt:String(row.updated_at)}:{accountId,groupId,granted:this.defaultGranted,version:0,updatedAt:''};
   }
 
   async setConsent(accountId:string,groupId:string,granted:boolean):Promise<PersonalCommercialConsent>{
