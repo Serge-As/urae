@@ -13,6 +13,8 @@ import { ExplainabilityService, DocumentSearchService, previewCsv, buildNotifica
 import { ReceivablesService, TreasuryService, RiskFinanceService } from '../../../packages/finance/src/index.js';
 import { analyzeGovernanceText, governanceFingerprint, interpretLaunchPrompt } from '../../../packages/guided-assistant/src/index.js';
 import { MemberFinancialControlService } from '../../../packages/member-control/src/index.js';
+import { GroupIdentityService } from '../../../packages/group-identity/src/index.js';
+import { ConciergeLearningService, type DataUsePurpose, type LearningCategory } from '../../../packages/concierge-learning/src/index.js';
 import { MarketService } from '../../../packages/market/src/index.js';
 import { HistoricalImportService, RepositoryArtifactStore, type ArtifactStoreLike } from '../../../packages/imports/src/index.js';
 import { authenticatedApi } from './authenticated.js';
