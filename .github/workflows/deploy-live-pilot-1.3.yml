@@ -3,7 +3,7 @@ name: Eco-System 1.3 Premium Live — Isolated Cloudflare Pilot
 on:
   workflow_dispatch:
   push:
-    branches: ['next/1.3.0-guided-ai-live-20260915']
+    branches: ['next/1.3.0-guided-ai-live-20260915', 'next/1.3.1-recovery-recap-services-20260915']
     paths: ['.github/DEPLOY_LIVE_PILOT_1_3_ONCE']
 
 permissions:
@@ -97,8 +97,8 @@ jobs:
         run: |
           set -euo pipefail
           for attempt in 1 2 3 4 5 6; do
-            root="$(curl --fail --silent --show-error --location --max-time 20 "${PILOT_ROOT}/" || true)"
-            health="$(curl --fail --silent --show-error --location --max-time 20 "${PILOT_ROOT}/health" || true)"
+            root="$(curl --fail-with-body --silent --show-error --location --max-time 20 "${PILOT_ROOT}/" || true)"
+            health="$(curl --fail-with-body --silent --show-error --location --max-time 20 "${PILOT_ROOT}/health" || true)"
             if grep -qi '<!doctype html>' <<<"${root}" && grep -q '"ok": true' <<<"${health}" && grep -q "${EXPECTED_VERSION}" <<<"${health}"; then break; fi
             sleep 4
           done
@@ -119,7 +119,7 @@ jobs:
           cat > /tmp/register-body.json <<JSON
           {"username":"${USERNAME}","password":"${PASSWORD}","displayName":"Live Pilot","locale":"fr"}
           JSON
-          curl --fail --silent --show-error -c "${COOKIE}" \
+          curl --fail-with-body --silent --show-error -c "${COOKIE}" \
             -H "origin: ${ORIGIN}" -H 'content-type: application/json' \
             --data-binary @/tmp/register-body.json \
             "${PILOT_ROOT}/api/v1/auth/register" > /tmp/register.json
@@ -149,18 +149,18 @@ jobs:
           }
           JSON
 
-          curl --fail --silent --show-error -b "${COOKIE}" -c "${COOKIE}"             -H "origin: ${ORIGIN}" -H 'content-type: application/json'             --data-binary @/tmp/project.json "${PILOT_ROOT}/api/v1/group-projects" > /tmp/project-created.json
+          curl --fail-with-body --silent --show-error -b "${COOKIE}" -c "${COOKIE}"             -H "origin: ${ORIGIN}" -H 'content-type: application/json'             --data-binary @/tmp/project.json "${PILOT_ROOT}/api/v1/group-projects" > /tmp/project-created.json
           PROJECT_ID="$(node -e "const x=require('/tmp/project-created.json');process.stdout.write(x.id)")"
 
-          curl --fail --silent --show-error -b "${COOKIE}" -c "${COOKIE}"             -H "origin: ${ORIGIN}" -H 'content-type: application/json' -d '{}'             "${PILOT_ROOT}/api/v1/group-projects/${PROJECT_ID}/simulate" > /tmp/simulated.json
+          curl --fail-with-body --silent --show-error -b "${COOKIE}" -c "${COOKIE}"             -H "origin: ${ORIGIN}" -H 'content-type: application/json' -d '{}'             "${PILOT_ROOT}/api/v1/group-projects/${PROJECT_ID}/simulate" > /tmp/simulated.json
 
-          curl --fail --silent --show-error -b "${COOKIE}" -c "${COOKIE}"             -H "origin: ${ORIGIN}" -H 'content-type: application/json' -d '{}'             "${PILOT_ROOT}/api/v1/group-projects/${PROJECT_ID}/convert" > /tmp/group.json
+          curl --fail-with-body --silent --show-error -b "${COOKIE}" -c "${COOKIE}"             -H "origin: ${ORIGIN}" -H 'content-type: application/json' -d '{}'             "${PILOT_ROOT}/api/v1/group-projects/${PROJECT_ID}/convert" > /tmp/group.json
           GROUP_ID="$(node -e "const x=require('/tmp/group.json');process.stdout.write(x.id)")"
-          curl --fail --silent --show-error -b "${COOKIE}" \
+          curl --fail-with-body --silent --show-error -b "${COOKIE}" \
             "${PILOT_ROOT}/api/v1/groups/${GROUP_ID}/members" > /tmp/members.json
           MEMBER_ID="$(ACCOUNT_ID="${ACCOUNT_ID}" node -e "const x=require('/tmp/members.json'),id=process.env.ACCOUNT_ID,m=x.find(v=>v.userId===id);if(!m)process.exit(2);process.stdout.write(m.id)")"
 
-          curl --fail --silent --show-error -b "${COOKIE}"             "${PILOT_ROOT}/api/v1/groups/${GROUP_ID}/live/health" > /tmp/live-health.json
+          curl --fail-with-body --silent --show-error -b "${COOKIE}"             "${PILOT_ROOT}/api/v1/groups/${GROUP_ID}/live/health" > /tmp/live-health.json
           node - <<'NODE'
           const h=require('/tmp/live-health.json');
           if(h.ok!==true||h.enabled!==true)throw new Error('LIVE_LEDGER_NOT_ACTIVE');
@@ -170,12 +170,18 @@ jobs:
           cat > /tmp/contribution-body.json <<JSON
           {"membershipId":"${MEMBER_ID}","amount":1000,"currency":"XAF","idempotencyKey":"pilot-${GITHUB_RUN_ID}"}
           JSON
-          curl --fail --silent --show-error -b "${COOKIE}" \
+          curl --fail-with-body --silent --show-error -b "${COOKIE}" \
             -H "origin: ${ORIGIN}" -H 'content-type: application/json' \
             --data-binary @/tmp/contribution-body.json \
             "${PILOT_ROOT}/api/v1/groups/${GROUP_ID}/contributions/cash" > /tmp/receipt.json
 
-          curl --fail --silent --show-error -b "${COOKIE}"             "${PILOT_ROOT}/api/v1/groups/${GROUP_ID}/live/events?after=0" > /tmp/live-events.json
+          # The canonical contribution is already committed even if a Live projection had a transient failure.
+          # Retry the transactional projection outbox once before asserting the stream.
+          curl --fail-with-body --silent --show-error -b "${COOKIE}" \
+            -H "origin: ${ORIGIN}" -H 'content-type: application/json' -d '{}' \
+            "${PILOT_ROOT}/api/v1/groups/${GROUP_ID}/live/retry-pending" > /tmp/live-retry.json
+
+          curl --fail-with-body --silent --show-error -b "${COOKIE}"             "${PILOT_ROOT}/api/v1/groups/${GROUP_ID}/live/events?after=0" > /tmp/live-events.json
           node - <<'NODE'
           const x=require('/tmp/live-events.json');
           if(!Array.isArray(x.events)||!x.events.some(e=>e.type==='FINANCIAL_NOTICE'))throw new Error('FINANCIAL_NOTICE_NOT_STREAMED');
