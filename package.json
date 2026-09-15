@@ -1,9 +1,9 @@
 {
   "name": "tontine-platform",
-  "version": "1.2.0-functional-completion",
+  "version": "1.3.0-guided-ai-live",
   "private": true,
   "type": "module",
-  "description": "Eco-System: functional completion wave with authenticated canonical core, executable business workflows and innovation pilots.",
+  "description": "Eco-System: guided AI, group identity, privacy-safe concierge learning, communities, boutiques and Durable Object live pilots.",
   "engines": {
     "node": ">=24"
   },
