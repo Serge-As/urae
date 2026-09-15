@@ -152,6 +152,6 @@ export function mountLaunchStudio({app,getGroups,getRubrics,addRubric,invalidate
   byId('startLaunchVoice')?.addEventListener('click',startVoice);
   byId('previewConfirmed')?.addEventListener('change',renderPreview);
   for(const p of panels)p.addEventListener('input',()=>{invalidate();if(step===10)renderPreview();});
-  syncOrigin();showStep(1);
+  refreshGroups();syncOrigin();showStep(1);
   return{readProfile,refreshGroups,showStep,renderPreview,afterSimulation:()=>{window.__ecoLastProjectReady=true;renderPreview();},invalidateSimulation:()=>{window.__ecoLastProjectReady=false;if(byId('createGroupBtn'))byId('createGroupBtn').disabled=true;}};
 }
