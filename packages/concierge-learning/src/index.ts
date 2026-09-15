@@ -18,6 +18,12 @@ export interface SafeCollectiveSignal {
   key:string;value:string;confidence:number;
 }
 export interface CollectiveDiscovery {category:SafeCollectiveSignal['category'];key:string;value:string;supportingGroups:number;averageConfidence:number;privacy:'K_ANONYMIZED';minGroupThreshold:number;}
+export interface GroupConciergeProfile {
+  groupCode:string;algorithmId:string;rulesFingerprint:string;memoryFingerprint:string;profileVersion:1;
+  privateMemoryCount:number;shareableMemoryCount:number;memberVisibleCount:number;managerOnlyCount:number;
+  preferenceKeys:string[];behaviorKeys:string[];confidenceAverage:number;generatedAt:string;
+  modelPolicy:'RETRIEVAL_AND_RULES_NOT_AUTONOMOUS_FINANCE';
+}
 
 const MEMORY_MODULE='AI.GROUP_PRIVATE_MEMORY';
 const CONSENT_MODULE='PRIVACY.DATA_USE_CONSENT';
@@ -85,6 +91,16 @@ export class ConciergeLearningService{
     const consent=await this.consent(groupId);if(!consent.purposes.COMMERCIAL_PERSONALIZATION)return[];
     return (await this.memories(groupId)).filter(m=>['MARKET_INTEREST','COMMUNITY_INTEREST'].includes(m.category)&&!FORBIDDEN_COMMERCIAL.has(m.category)).map(m=>({category:m.category as 'MARKET_INTEREST'|'COMMUNITY_INTEREST',key:m.key,value:m.value}));
   }
+  async profile(groupId:Id,groupCode:string,rulesFingerprint:string):Promise<GroupConciergeProfile>{
+    const memories=await this.memories(groupId),projection=memories.map(m=>({id:m.id,category:m.category,key:m.key,value:m.value,sourceRef:m.sourceRef,confidence:m.confidence,privacy:m.privacy,visibility:m.visibility,version:m.version})).sort((a,b)=>a.id.localeCompare(b.id));
+    const digest=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(JSON.stringify(projection)));
+    const memoryFingerprint=[...new Uint8Array(digest)].slice(0,12).map(x=>x.toString(16).padStart(2,'0')).join('');
+    const preferenceKeys=[...new Set(memories.filter(m=>['UX_PREFERENCE','MARKET_INTEREST','COMMUNITY_INTEREST'].includes(m.category)).map(m=>m.key))].sort();
+    const behaviorKeys=[...new Set(memories.filter(m=>['MEETING_RHYTHM','RUBRIC_PATTERN','OPERATING_PRACTICE','DOCUMENT_RULE'].includes(m.category)).map(m=>m.key))].sort();
+    const confidenceAverage=memories.length?Number((memories.reduce((n,m)=>n+m.confidence,0)/memories.length).toFixed(3)):0;
+    return{groupCode,algorithmId:'CONCIERGE-DNA-'+groupCode+'-'+memoryFingerprint.slice(0,8),rulesFingerprint,memoryFingerprint,profileVersion:1,privateMemoryCount:memories.filter(m=>m.privacy==='GROUP_PRIVATE').length,shareableMemoryCount:memories.filter(m=>m.privacy==='GROUP_SHAREABLE').length,memberVisibleCount:memories.filter(m=>m.visibility==='MEMBERS').length,managerOnlyCount:memories.filter(m=>m.visibility==='MANAGERS').length,preferenceKeys,behaviorKeys,confidenceAverage,generatedAt:now(),modelPolicy:'RETRIEVAL_AND_RULES_NOT_AUTONOMOUS_FINANCE'};
+  }
+
 }
 
 export const aggregateCollectiveLearning=(signals:SafeCollectiveSignal[],minGroups=5):CollectiveDiscovery[]=>{
