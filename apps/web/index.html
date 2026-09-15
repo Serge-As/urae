@@ -470,6 +470,33 @@
         <div class="page-head"><div><span class="eyebrow">Lots F–I</span><h1>Communauté, économie, croissance et accompagnement</h1><p>Les grands services du Cahier sont désormais organisés par domaine au lieu d’être noyés dans une simple liste.</p></div><div class="page-meta"><span class="pill">Community</span><span class="pill">Marketplace</span><span class="pill">Academy & IA</span></div></div>
         <div id="ecosystemHighlights" class="quick-grid"></div>
         <section class="panel"><div class="section-kicker"><div><h2>Communauté & Hubs professionnels</h2><p>Forums, événements, votes, réputation, gestionnaires et partenaires.</p></div></div><div id="communityHub" class="hub-grid"></div></section>
+        <section class="panel" id="communityEnginePanel">
+          <div class="section-kicker"><div><h2>Communautés vivantes</h2><p>Espaces privés ou publics, discussions, annonces, offres et demandes. Les fédérations entre groupes utilisent uniquement leurs codes identitaires publics.</p></div></div>
+          <div class="two-col">
+            <form id="communityHubForm" class="form-grid">
+              <h3>Créer un Hub</h3>
+              <label>Nom<input id="communityHubTitle" required placeholder="Ex. Femmes entrepreneures · Yaoundé"></label>
+              <label>Visibilité<select id="communityHubVisibility"><option value="GROUP_PRIVATE">Privée au groupe</option><option value="PLATFORM_PUBLIC">Publique sur Eco-System</option></select></label>
+              <label class="full">Description<textarea id="communityHubAbout" rows="3" placeholder="Objet, règles et public concerné"></textarea></label>
+              <label>Sujets / tags<input id="communityHubTags" placeholder="épargne, agriculture, commerce"></label>
+              <label>Codes de groupes fédérés<input id="communityFederatedCodes" placeholder="ECO-GRP-... , ECO-GRP-..."></label>
+              <button class="primary">Créer le Hub</button>
+            </form>
+            <div><h3>Mes Hubs</h3><div id="communityHubList" class="stack"></div></div>
+          </div>
+          <div class="two-col">
+            <form id="communityPostForm" class="form-grid">
+              <h3>Publier</h3>
+              <label>Hub<select id="communityPostHub"></select></label>
+              <label>Type<select id="communityPostKind"><option value="DISCUSSION">Discussion</option><option value="ANNOUNCEMENT">Annonce</option><option value="OFFER">Offre</option><option value="REQUEST">Demande</option></select></label>
+              <label>Titre<input id="communityPostTitle" placeholder="Facultatif"></label>
+              <label class="full">Message<textarea id="communityPostBody" rows="4" required></textarea></label>
+              <button class="primary">Publier</button>
+            </form>
+            <div><h3>Fil du Hub</h3><div id="communityPostList" class="stack"></div></div>
+          </div>
+        </section>
+
         <details class="panel" id="marketEnginePanel">
           <summary><strong>Marché opérationnel · stock · commandes · achats groupés</strong></summary>
           <div class="two-col">
@@ -493,6 +520,23 @@
             <div><h3>Campagnes</h3><div id="groupBuyList" class="stack"></div></div>
           </div>
         </details>
+
+        <section class="panel" id="groupShopPanel">
+          <div class="section-kicker"><div><h2>Boutique du groupe</h2><p>La vitrine réutilise le stock et les commandes du Marketplace canonique : aucun second inventaire, aucun second paiement.</p></div></div>
+          <div class="two-col">
+            <form id="groupShopForm" class="form-grid">
+              <h3>Configurer la boutique</h3>
+              <label>Nom<input id="groupShopName" required></label>
+              <label>Visibilité<select id="groupShopVisibility"><option value="GROUP_ONLY">Groupe seulement</option><option value="PUBLIC">Publique</option></select></label>
+              <label>Slogan<input id="groupShopTagline" placeholder="Ex. Les bons produits de notre communauté"></label>
+              <label>Localité<input id="groupShopLocality" placeholder="Yaoundé"></label>
+              <label class="full">Catégories<input id="groupShopCategories" placeholder="savon, huile, alimentation, textile"></label>
+              <button class="primary">Enregistrer la boutique</button>
+            </form>
+            <div><h3>Vitrine</h3><div id="groupStorefront" class="stack"></div></div>
+          </div>
+          <p class="hint">Pour publier un article, créez-le dans le stock ci-dessus puis activez sa visibilité dans la vitrine. Le stock disponible affiché est le stock réel moins les quantités réservées.</p>
+        </section>
 
         <section class="panel"><div class="section-kicker"><div><h2>Marché, fournisseurs & Business Studio</h2><p>Achats groupés, appels d’offres, marketplace et activités économiques.</p></div></div><div id="marketHub" class="hub-grid"></div></section>
         <section class="panel"><div class="section-kicker"><div><h2>AdManager & sponsoring</h2><p>Campagnes, créations, placements, ciblage respectueux, modération et analytics.</p></div></div><div id="growthHub" class="hub-grid"></div></section>
