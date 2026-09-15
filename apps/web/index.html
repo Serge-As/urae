@@ -53,6 +53,7 @@
       <button data-view="launch" class="nav-btn"><span>＋</span><b>Créer / intégrer</b></button>
       <button data-view="operations" class="nav-btn"><span>☷</span><b>Réunion</b></button>
       <button data-view="finance" class="nav-btn"><span>₣</span><b>Finances</b></button>
+      <button id="recapNavBtn" data-view="recap" class="nav-btn" hidden><span>▤</span><b>Recap</b></button>
       <span class="nav-caption">Écosystème</span>
       <button data-view="ecosystem" class="nav-btn"><span>◎</span><b>Communauté & économie</b></button>
       <button data-view="services" class="nav-btn"><span>▦</span><b>Tous les services</b></button>
@@ -62,7 +63,7 @@
 
     <main class="content">
       <section id="view-dashboard" class="view active">
-        <div class="cahier-banner"><div><strong>Votre espace de gestion, version locale</strong><p>Comptes personnels, groupes, séances, cotisations et relevés. Les services en préparation sont identifiés dans le catalogue.</p></div><span class="cahier-code">1.2.0 LOCALE</span></div>
+        <div class="cahier-banner"><div><strong>Votre cockpit Eco-System</strong><p>Groupes, communautés, séances, situation personnelle, activités Live et actions utiles dans un seul espace.</p></div><span class="cahier-code">1.3.0 BETA LIVE</span></div>
         <div class="hero">
           <div>
             <span class="eyebrow">Eco-System · Cahier Maître 2.3.4</span>
@@ -87,6 +88,19 @@
             <ul id="dashboardInbox" class="list"></ul>
           </section>
         </div>
+
+        <section class="panel" id="personalCockpitPanel">
+          <div class="panel-head"><div><h2>Mon cockpit</h2><p>Votre situation et vos prochaines actions, sans données administratives inutiles.</p></div><button class="link-btn" data-go="discovery">Rejoindre / découvrir</button></div>
+          <div id="personalCockpitMetrics" class="metrics small"></div>
+          <div class="two-col">
+            <div><h3>Ma situation</h3><div id="personalSituation" class="stack"></div></div>
+            <div><h3>Maintenant / bientôt</h3><div id="personalNext" class="stack"></div></div>
+          </div>
+          <div class="two-col">
+            <div><h3>Avis Live & validations</h3><div id="personalLiveNotices" class="stack"></div></div>
+            <div><h3>Mes espaces</h3><div id="personalSpaces" class="stack"></div></div>
+          </div>
+        </section>
 
         <section class="panel">
           <div class="panel-head"><div><h2>Accès rapide</h2><p>Retrouvez vos principales activités.</p></div></div>
@@ -528,6 +542,30 @@
 
           <section class="panel"><div class="panel-head"><div><h2>Ledger</h2><p>Vérité financière canonique.</p></div></div><div id="ledgerMetrics" class="metrics small"></div><div id="receiptList" class="table-list"></div></section>
           <section class="panel"><div class="section-kicker"><div><h2>Prêts, épargne, tontines et assistance</h2><p>Les flux spécialisés restent séparés, puis se réconcilient dans le ledger canonique.</p></div></div><div id="financeHub" class="hub-grid"></div></section>
+        </div>
+      </section>
+
+      <section id="view-recap" class="view">
+        <div class="page-head"><div><span class="eyebrow">Back-office · Responsable</span><h1>Recap du groupe</h1><p>Une vue de pilotage dense mais lisible, avec forage vers les membres, séances, rubriques et opérations.</p></div><div class="page-meta"><span class="pill">Live</span><span class="pill">Ledger</span><span class="pill">Gouvernance</span></div></div>
+        <div id="recapAccessDenied" class="panel empty-state" hidden>Le Recap est réservé aux responsables habilités du groupe.</div>
+        <div id="recapContent">
+          <div id="recapMetrics" class="metrics"></div>
+          <div class="two-col">
+            <section class="panel"><div class="panel-head"><div><h2>État immédiat</h2><p>Ce qui demande une attention.</p></div></div><div id="recapAlerts" class="stack"></div></section>
+            <section class="panel"><div class="panel-head"><div><h2>Identité & Live</h2><p>Passeport, règles et synchronisation.</p></div></div><div id="recapIdentityLive" class="stack"></div></section>
+          </div>
+          <div class="two-col">
+            <section class="panel"><h2>Membres & appairages</h2><div id="recapMembers" class="stack"></div></section>
+            <section class="panel"><h2>Séances & rubriques</h2><div id="recapMeetingsRubrics" class="stack"></div></section>
+          </div>
+          <div class="two-col">
+            <section class="panel"><h2>Finances canoniques</h2><div id="recapFinance" class="stack"></div></section>
+            <section class="panel"><h2>Autres · impayés · exceptions</h2><div id="recapExceptions" class="stack"></div></section>
+          </div>
+          <div class="two-col">
+            <section class="panel"><h2>Communauté & boutique</h2><div id="recapCommunityMarket" class="stack"></div></section>
+            <section class="panel"><h2>Actions rapides</h2><div id="recapActions" class="quick-grid"></div></section>
+          </div>
         </div>
       </section>
 
