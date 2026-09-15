@@ -57,9 +57,9 @@ export class ConciergeLearningService{
   }
   async consent(groupId:Id):Promise<GroupConsentProfile>{
     const ctx=this.kernel.context.get();await this.membership(groupId);
-    const profile=parseConsent(await this.repo.getWorkspaceRecord(ctx.tenantId,consentId(groupId)),groupId,ctx.actorId,this.defaultMode);
-    if(this.defaultMode==='BETA_OPEN')return{...profile,purposes:{COLLECTIVE_LEARNING:true,COMMERCIAL_PERSONALIZATION:true,PARTNER_MATCHING:true,COMMUNITY_DISCOVERY:true},defaultMode:'BETA_OPEN'};
-    return profile;
+    // BETA_OPEN enables every transverse purpose only until the group stores an explicit preference.
+    // Once stored, an explicit OFF must remain OFF.
+    return parseConsent(await this.repo.getWorkspaceRecord(ctx.tenantId,consentId(groupId)),groupId,ctx.actorId,this.defaultMode);
   }
   async setConsent(groupId:Id,purpose:DataUsePurpose,granted:boolean):Promise<GroupConsentProfile>{
     const ctx=this.kernel.context.get(),access=await this.membership(groupId);if(!access.manager)throw new Error('FORBIDDEN_SCOPE');
