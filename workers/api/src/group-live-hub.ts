@@ -16,8 +16,19 @@ export class GroupLiveHub{
   constructor(private readonly state:StateLike,private readonly env:unknown){void env;}
 
   private async events(after=0,limit=100,userId?:string):Promise<GroupLiveEvent[]>{
-    const rows=await this.state.storage.list<GroupLiveEvent>({prefix:'event:',limit:500});
-    return [...rows.values()].filter(x=>x.seq>after&&(!x.targetUserId||x.targetUserId===userId)).sort((a,b)=>a.seq-b.seq).slice(0,Math.min(Math.max(limit,1),500));
+    const max=Math.min(Math.max(Math.trunc(limit)||100,1),500),visible:GroupLiveEvent[]=[];
+    let cursor=after>0?'event:'+String(Math.trunc(after)).padStart(12,'0'):undefined;
+    while(visible.length<max){
+      const rows=await this.state.storage.list<GroupLiveEvent>({prefix:'event:',startAfter:cursor,limit:500});
+      const entries=[...rows.entries()];if(!entries.length)break;
+      for(const [,event] of entries){
+        if(event.seq>after&&(!event.targetUserId||event.targetUserId===userId))visible.push(event);
+        if(visible.length>=max)break;
+      }
+      cursor=entries[entries.length-1]![0];
+      if(entries.length<500)break;
+    }
+    return visible.sort((a,b)=>a.seq-b.seq).slice(0,max);
   }
   private broadcast(event:GroupLiveEvent){
     const message=JSON.stringify({type:'GROUP_LIVE_EVENT',event});
