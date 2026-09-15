@@ -10,6 +10,8 @@ export interface FinancialOperation {
   receipt?: ContributionReceipt;
   accounts: LedgerAccount[];
   audit: AuditEvent;
+  /** Records committed in the same financial transaction and dispatched afterwards. */
+  outboxRecords?: WorkspaceRecord[];
 }
 
 export interface PlatformRepository {
@@ -93,6 +95,7 @@ export class InMemoryPlatformRepository implements PlatformRepository {
     this.ledgerEntries.set(copy.entry.id,copy.entry);
     if(copy.receipt) this.receipts.set(copy.receipt.id,copy.receipt);
     this.audits.set(copy.audit.id,copy.audit);
+    for(const record of copy.outboxRecords??[])this.workspaceRecords.set(record.id,record);
     this.financialOperations.set(key,copy);
     return structuredClone(copy);
   }
@@ -225,6 +228,7 @@ export class D1PlatformRepository implements PlatformRepository {
       ['ledger_entry',e,e.idempotencyKey],['audit',operation.audit,null]
     ];
     if(operation.receipt)rows.push(['contribution_receipt',operation.receipt,e.idempotencyKey]);
+    for(const record of operation.outboxRecords??[])rows.push(['workspace_record',record,null]);
     for(const [type,value,key] of rows){
       statements.push(this.db.prepare(`INSERT INTO platform_records
         (record_type,record_id,tenant_id,group_id,assignee_id,idempotency_key,data_json,updated_at)
