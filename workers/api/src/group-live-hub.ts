@@ -41,7 +41,8 @@ export class GroupLiveHub{
       if(!this.state.acceptWebSocket)return json({error:'HIBERNATION_UNAVAILABLE'},503);
       const Pair=(globalThis as unknown as {WebSocketPair:new()=>{0:WebSocket;1:WebSocket}}).WebSocketPair;if(!Pair)return json({error:'WEBSOCKET_PAIR_UNAVAILABLE'},503);
       const pair=new Pair(),client=pair[0],server=pair[1];this.state.acceptWebSocket(server,['group-live']);
-      server.serializeAttachment?.({connectedAt:new Date().toISOString()});
+      const hibernatingSocket=server as WebSocket & {serializeAttachment?:(value:unknown)=>void};
+      hibernatingSocket.serializeAttachment?.({connectedAt:new Date().toISOString()});
       return new Response(null,{status:101,webSocket:client} as ResponseInit&{webSocket:WebSocket});
     }
     if(request.method==='GET'&&url.pathname.endsWith('/events'))return json({events:await this.events(Number(url.searchParams.get('after')??0),Number(url.searchParams.get('limit')??100)),latest:await this.state.storage.get<number>('seq')??0});
