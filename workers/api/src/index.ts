@@ -23,6 +23,7 @@ import { MiscRubricService } from '../../../packages/misc-rubrics/src/index.js';
 import { allocateSavingsYield, splitInterestPool } from '../../../packages/savings-yield/src/index.js';
 import { buildFinancialRecap, buildSessionRecap, buildClosingCarryover } from '../../../packages/recap-engine/src/index.js';
 import { AdManagerService } from '../../../packages/ad-manager/src/index.js';
+import { EconomicIntelligenceService } from '../../../packages/economic-intelligence/src/index.js';
 import { GroupPairingService } from '../../../packages/group-pairing/src/index.js';
 import { InterestCommunityService } from '../../../packages/interest-communities/src/index.js';
 import { EcoPulseService, type EngagementAction, type RecommendationCandidate } from '../../../packages/ecopulse/src/index.js';
@@ -75,10 +76,11 @@ const createRequestScope = (request:Request,repo:PlatformRepository,artifacts?:A
   const conciergeLearning=new ConciergeLearningService(repo,kernel,dataUseDefaultMode);
   const miscRubrics=new MiscRubricService(repo,kernel,ledger);
   const adManager=new AdManagerService(repo,kernel);
+  const economicIntelligence=new EconomicIntelligenceService(repo,kernel);
   const tenantId=request.headers.get('x-tenant-id')??'tenant_demo'; const actorId=request.headers.get('x-actor-id')??'user_founder';
   const groupRoles=(request.headers.get('x-group-roles')??'founder,manager').split(',').map(x=>x.trim()).filter(Boolean);
   kernel.context.set({actorId,tenantId,activeGroupId:request.headers.get('x-active-group-id')??undefined,groupRoles,mandateIds:[],deviceId:request.headers.get('x-device-id')??'device_web_demo',sessionId:request.headers.get('x-session-id')??'session_demo',locale:request.headers.get('accept-language')?.toLowerCase().startsWith('en')?'en':'fr',timezone:request.headers.get('x-timezone')??'Africa/Douala',connectivity:'online',requestId:request.headers.get('x-request-id')??makeId('req')});
-  return {kernel,foundation,ledger,meetings,discovery,membershipGateway,rubrics,completion,explainability,documents,receivables,treasury,riskFinance,market,community,imports,memberControl,groupIdentity,conciergeLearning,miscRubrics,adManager};
+  return {kernel,foundation,ledger,meetings,discovery,membershipGateway,rubrics,completion,explainability,documents,receivables,treasury,riskFinance,market,community,imports,memberControl,groupIdentity,conciergeLearning,miscRubrics,adManager,economicIntelligence};
 };
 
 const inboxFor = async (repo:PlatformRepository,tenantId:string,actorId:string) => {
@@ -93,7 +95,7 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
     const allowed=Boolean((cors as Record<string,string>)['access-control-allow-origin']);
     return new Response(null,{status:allowed?204:403,headers:{...baseSecurityHeaders,...cors,'access-control-allow-methods':'GET,POST,PUT,OPTIONS','access-control-allow-headers':'content-type,x-tenant-id,x-actor-id,x-group-roles,x-active-group-id,x-device-id,x-session-id,x-request-id,x-timezone'}});
   }
-  const {kernel,foundation,ledger,meetings,discovery,membershipGateway,rubrics,completion,explainability,documents,receivables,treasury,riskFinance,market,community,imports,memberControl,groupIdentity,conciergeLearning,miscRubrics,adManager}=createRequestScope(request,repo,options.artifacts,options.dataUseDefaultMode??'BETA_OPEN'); const ctx=kernel.context.get();
+  const {kernel,foundation,ledger,meetings,discovery,membershipGateway,rubrics,completion,explainability,documents,receivables,treasury,riskFinance,market,community,imports,memberControl,groupIdentity,conciergeLearning,miscRubrics,adManager,economicIntelligence}=createRequestScope(request,repo,options.artifacts,options.dataUseDefaultMode??'BETA_OPEN'); const ctx=kernel.context.get();
   if(options.premiumLive)kernel.features.set('premium_live_ledger',true);
   const requireGroup=async(groupId:string,manage=false)=>{
     const group=await repo.getGroup(ctx.tenantId,groupId);if(!group)throw Error('GROUP_NOT_FOUND');
@@ -541,6 +543,15 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
       const body=await readJson<Record<string,unknown>>(request),decision=String(body.decision??'');
       if(decision!=='APPROVE_AFTER_REVIEW'&&decision!=='MAINTAIN_RESERVE')throw new Error('INVALID_MEMBER_REVIEW_DECISION');
       return json(await memberControl.memberReview(noticeMemberReview[1]!,noticeMemberReview[2]!,decision,String(body.note??'')),200,cors);
+    }
+
+    const economicProfile=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/economic-profile$/);
+    if(economicProfile&&request.method==='GET'){
+      const groupId=economicProfile[1]!;await requireGroup(groupId,true);
+      const passport=await groupIdentity.compute(groupId),consent=await conciergeLearning.consent(groupId);
+      const profile=await economicIntelligence.profile(groupId,passport.publicCode);
+      const enabled=consent.purposes.PARTNER_MATCHING;
+      return json(enabled?profile:{...profile,exportable:false,exportBlockers:[...profile.exportBlockers,'PARTNER_MATCHING_DISABLED']},200,cors);
     }
 
     const identityPassport=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/identity-passport$/);
