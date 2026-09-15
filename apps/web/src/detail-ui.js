@@ -1,6 +1,6 @@
 const el=(tag,text,className)=>{const e=document.createElement(tag);if(text!==undefined)e.textContent=text;if(className)e.className=className;return e;};
 const row=(label,value)=>{const p=el('p');p.append(el('strong',label+' : '),document.createTextNode(String(value??'—')));return p;};
-const link=(label,type,id)=>{const b=el('button',label,'link-btn');b.type='button';b.dataset.detailType=type;b.dataset.detailId=id;return b;};
+const link=(label,type,id)=>{const a=el('a',label,'link-btn');a.href='#detail='+encodeURIComponent(type)+':'+encodeURIComponent(id);a.dataset.detailType=type;a.dataset.detailId=id;return a;};
 
 export function mountDetailUI({app,navigate,getGroups,getMembers,getMeetings,getRubrics,isManager=()=>false,fmt=n=>String(n),date=x=>String(x),showError=console.error}){
   const title=document.getElementById('detailTitle'),subtitle=document.getElementById('detailSubtitle'),metrics=document.getElementById('detailMetrics'),body=document.getElementById('detailBody');
