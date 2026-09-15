@@ -1,4 +1,4 @@
-import type { GovernanceKnowledgeClaim, Id, RubricDefinition, RubricFacets, RubricOperatingModel, RubricCyclePreview, LaunchRubricPlan } from '../../contracts/src/index.js';
+import type { GovernanceKnowledgeClaim, Id, RubricDefinition, RubricFacets, RubricOperatingModel, RubricCyclePreview, LaunchRubricPlan, RubricPolicies } from '../../contracts/src/index.js';
 import {validateLaunchRubrics,simulateRubricPlan} from './launch-config.js';
 import { makeId } from '../../contracts/src/index.js';
 import type { PlatformRepository } from '../../repositories/src/index.js';
@@ -24,7 +24,7 @@ export class RubricKnowledgeService {
 
   starterCandidates(){return Object.entries(STARTER_RUBRIC_FACETS).map(([code,facets])=>({code,facets:structuredClone(facets),requiresGroupConfirmation:true}));}
 
-  async createRubric(input:{tenantId:Id;groupId:Id;name:string;aliases?:string[];purpose?:string;facets:RubricFacets;source?:RubricDefinition['source'];operatingModel?:RubricOperatingModel;activityPlan?:LaunchRubricPlan;launchKey?:string;launchProjectId?:string}):Promise<RubricDefinition>{
+  async createRubric(input:{tenantId:Id;groupId:Id;name:string;aliases?:string[];purpose?:string;facets:RubricFacets;source?:RubricDefinition['source'];operatingModel?:RubricOperatingModel;policies?:RubricPolicies;activityPlan?:LaunchRubricPlan;launchKey?:string;launchProjectId?:string}):Promise<RubricDefinition>{
     if(input.launchProjectId){
       const project=await this.repo.getProject(input.tenantId,input.launchProjectId),ctx=this.kernel.context.get(),group=await this.repo.getGroup(input.tenantId,input.groupId);
       const allowed=project&&ctx.tenantId===project.tenantId&&(ctx.actorId===project.createdBy||project.accessGrants?.some(g=>g.userId===ctx.actorId&&g.capabilities.includes('CONVERT')));
@@ -37,7 +37,7 @@ export class RubricKnowledgeService {
     const launchHash=input.launchKey?Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(JSON.stringify([input.tenantId,input.groupId,input.launchKey])))),b=>b.toString(16).padStart(2,'0')).join(''):undefined;
     const id=launchHash?'rubric_launch_'+launchHash:makeId('rubric');
     const existing=input.launchKey?await this.repo.getRubricDefinition(input.tenantId,input.groupId,id):undefined;if(existing)return existing;
-    const rubric:RubricDefinition={id,tenantId:input.tenantId,groupId:input.groupId,name,aliases:[...new Set((input.aliases??[]).map(x=>x.trim()).filter(Boolean))],purpose:input.purpose?.trim()||undefined,facets:structuredClone(input.facets),operatingModel:input.operatingModel?structuredClone(input.operatingModel):undefined,activityPlan,status:'DRAFT',source:input.source??'GROUP_CUSTOM',version:1,createdAt:timestamp,updatedAt:timestamp};
+    const rubric:RubricDefinition={id,tenantId:input.tenantId,groupId:input.groupId,name,aliases:[...new Set((input.aliases??[]).map(x=>x.trim()).filter(Boolean))],purpose:input.purpose?.trim()||undefined,facets:structuredClone(input.facets),operatingModel:input.operatingModel?structuredClone(input.operatingModel):undefined,policies:input.policies?structuredClone(input.policies):undefined,activityPlan,status:'DRAFT',source:input.source??'GROUP_CUSTOM',version:1,createdAt:timestamp,updatedAt:timestamp};
     await this.repo.saveRubricDefinition(rubric); const audit=this.kernel.audit.append({tenantId:input.tenantId,actorId:this.kernel.context.get().actorId,action:'RUBRIC_CREATED',targetType:'rubric',targetId:rubric.id,after:rubric,requestId:this.kernel.context.get().requestId});await this.repo.saveAudit(audit);return structuredClone(rubric);
   }
 
@@ -71,6 +71,25 @@ export class RubricKnowledgeService {
     const updated:RubricDefinition={...current,operatingModel:{...model,confirmedAt:now(),confirmedBy:this.kernel.context.get().actorId},version:current.version+1,updatedAt:now()};
     await this.repo.saveRubricDefinition(updated);
     const audit=this.kernel.audit.append({tenantId:input.tenantId,actorId:this.kernel.context.get().actorId,action:'RUBRIC_OPERATING_MODEL_UPDATED',targetType:'rubric',targetId:current.id,before:current.operatingModel,after:updated.operatingModel,requestId:this.kernel.context.get().requestId}); await this.repo.saveAudit(audit);
+    return structuredClone(updated);
+  }
+
+  async updatePolicies(input:{tenantId:Id;groupId:Id;rubricId:Id;policies:RubricPolicies}):Promise<RubricDefinition>{
+    await requireManager(this.repo,this.kernel,input.tenantId,input.groupId);
+    const current=await this.repo.getRubricDefinition(input.tenantId,input.groupId,input.rubricId);if(!current)throw new Error('RUBRIC_NOT_FOUND');
+    const policies=structuredClone(input.policies);
+    if(policies.loan){
+      if(policies.loan.interestBase!=='PRINCIPAL_ONLY'||policies.loan.noInterestOnInterest!==true)throw new Error('INTEREST_ON_INTEREST_FORBIDDEN');
+      if(policies.loan.rateBasisPointsPerPeriod!==undefined&&(!Number.isFinite(policies.loan.rateBasisPointsPerPeriod)||policies.loan.rateBasisPointsPerPeriod<0))throw new Error('INVALID_LOAN_RATE');
+    }
+    if(policies.yield){
+      if(policies.yield.distributableShareBasisPoints!==undefined&&(!Number.isInteger(policies.yield.distributableShareBasisPoints)||policies.yield.distributableShareBasisPoints<0||policies.yield.distributableShareBasisPoints>10000))throw new Error('INVALID_YIELD_SHARE');
+      for(const value of Object.values(policies.yield.coefficientSchedule??{}))if(!Number.isFinite(value)||value<0)throw new Error('INVALID_YIELD_COEFFICIENT');
+    }
+    if(policies.lifecycle?.visibility==='FIRST_N_SESSIONS'&&(!Number.isInteger(policies.lifecycle.activeFirstSessions)||Number(policies.lifecycle.activeFirstSessions)<=0))throw new Error('INVALID_RUBRIC_LIFECYCLE');
+    const updated:RubricDefinition={...current,policies,version:current.version+1,updatedAt:now()};
+    await this.repo.saveRubricDefinition(updated);
+    await this.repo.saveAudit(this.kernel.audit.append({tenantId:input.tenantId,actorId:this.kernel.context.get().actorId,action:'RUBRIC_POLICIES_UPDATED',targetType:'rubric',targetId:current.id,before:current.policies,after:policies,requestId:this.kernel.context.get().requestId}));
     return structuredClone(updated);
   }
 
