@@ -14,7 +14,7 @@ import { ReceivablesService, TreasuryService, RiskFinanceService } from '../../.
 import { analyzeGovernanceText, governanceFingerprint, interpretLaunchPrompt } from '../../../packages/guided-assistant/src/index.js';
 import { MemberFinancialControlService } from '../../../packages/member-control/src/index.js';
 import { GroupIdentityService } from '../../../packages/group-identity/src/index.js';
-import { ConciergeLearningService, type DataUsePurpose, type LearningCategory } from '../../../packages/concierge-learning/src/index.js';
+import { ConciergeLearningService, type DataUsePurpose, type LearningCategory, type DataUseDefaultMode } from '../../../packages/concierge-learning/src/index.js';
 import { MarketService } from '../../../packages/market/src/index.js';
 import { CommunityService } from '../../../packages/community/src/index.js';
 import { FounderLearningStore } from '../../../packages/founder-observatory/src/index.js';
@@ -55,7 +55,7 @@ const finite = (value: unknown, fallback?: number): number => {
   const n=Number(value); if(!Number.isFinite(n)) throw new Error('INVALID_NUMBER'); return n;
 };
 
-const createRequestScope = (request:Request,repo:PlatformRepository,artifacts?:ArtifactStoreLike) => {
+const createRequestScope = (request:Request,repo:PlatformRepository,artifacts?:ArtifactStoreLike,dataUseDefaultMode:DataUseDefaultMode='BETA_OPEN') => {
   const kernel=new PlatformKernel();
   const foundation=new FoundationService(repo,kernel); const ledger=new LedgerService(repo,kernel); const meetings=new MeetingService(repo,kernel); const discovery=new DiscoveryService(repo,kernel); const membershipGateway=new MembershipGatewayService(repo,kernel); const rubrics=new RubricKnowledgeService(repo,kernel);
   const completion=new CompletionSuiteService(repo,kernel);
@@ -65,7 +65,7 @@ const createRequestScope = (request:Request,repo:PlatformRepository,artifacts?:A
   const imports=new HistoricalImportService(repo,kernel,ledger,completion,artifactStore);
   const memberControl=new MemberFinancialControlService(repo,kernel);
   const groupIdentity=new GroupIdentityService(repo,kernel);
-  const conciergeLearning=new ConciergeLearningService(repo,kernel);
+  const conciergeLearning=new ConciergeLearningService(repo,kernel,dataUseDefaultMode);
   const tenantId=request.headers.get('x-tenant-id')??'tenant_demo'; const actorId=request.headers.get('x-actor-id')??'user_founder';
   const groupRoles=(request.headers.get('x-group-roles')??'founder,manager').split(',').map(x=>x.trim()).filter(Boolean);
   kernel.context.set({actorId,tenantId,activeGroupId:request.headers.get('x-active-group-id')??undefined,groupRoles,mandateIds:[],deviceId:request.headers.get('x-device-id')??'device_web_demo',sessionId:request.headers.get('x-session-id')??'session_demo',locale:request.headers.get('accept-language')?.toLowerCase().startsWith('en')?'en':'fr',timezone:request.headers.get('x-timezone')??'Africa/Douala',connectivity:'online',requestId:request.headers.get('x-request-id')??makeId('req')});
@@ -78,13 +78,13 @@ const inboxFor = async (repo:PlatformRepository,tenantId:string,actorId:string) 
   return [...obligations,...cases];
 };
 
-export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{artifacts?:ArtifactStoreLike;liveNamespace?:DurableObjectNamespaceLike;premiumLive?:boolean;founderLearning?:FounderLearningStore;founderTeamActors?:Set<string>;commercialPreferences?:CommercialPreferenceService}={}) => async (request:Request):Promise<Response> => {
+export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{artifacts?:ArtifactStoreLike;liveNamespace?:DurableObjectNamespaceLike;premiumLive?:boolean;founderLearning?:FounderLearningStore;founderTeamActors?:Set<string>;commercialPreferences?:CommercialPreferenceService;dataUseDefaultMode?:DataUseDefaultMode}={}) => async (request:Request):Promise<Response> => {
   const url=new URL(request.url); const cors=corsHeaders(request);
   if(request.method==='OPTIONS'){
     const allowed=Boolean((cors as Record<string,string>)['access-control-allow-origin']);
     return new Response(null,{status:allowed?204:403,headers:{...baseSecurityHeaders,...cors,'access-control-allow-methods':'GET,POST,PUT,OPTIONS','access-control-allow-headers':'content-type,x-tenant-id,x-actor-id,x-group-roles,x-active-group-id,x-device-id,x-session-id,x-request-id,x-timezone'}});
   }
-  const {kernel,foundation,ledger,meetings,discovery,membershipGateway,rubrics,completion,explainability,documents,receivables,treasury,riskFinance,market,community,imports,memberControl,groupIdentity,conciergeLearning}=createRequestScope(request,repo,options.artifacts); const ctx=kernel.context.get();
+  const {kernel,foundation,ledger,meetings,discovery,membershipGateway,rubrics,completion,explainability,documents,receivables,treasury,riskFinance,market,community,imports,memberControl,groupIdentity,conciergeLearning}=createRequestScope(request,repo,options.artifacts,options.dataUseDefaultMode??'BETA_OPEN'); const ctx=kernel.context.get();
   if(options.premiumLive)kernel.features.set('premium_live_ledger',true);
   const requireGroup=async(groupId:string,manage=false)=>{
     const group=await repo.getGroup(ctx.tenantId,groupId);if(!group)throw Error('GROUP_NOT_FOUND');
@@ -746,7 +746,7 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
 
 export const handleRequest=createApiHandler(defaultRepo);
 export interface AssetsFetcherLike { fetch(request: Request): Promise<Response> }
-export interface WorkerEnv { DB?: D1DatabaseLike; ASSETS?: AssetsFetcherLike; ARTIFACTS?: ArtifactStoreLike; GROUP_LIVE_HUB?: DurableObjectNamespaceLike; PREMIUM_LIVE_LEDGER?: string; COLLECTIVE_LEARNING_PEPPER?: string; FOUNDER_TEAM_ACTORS?: string }
+export interface WorkerEnv { DB?: D1DatabaseLike; ASSETS?: AssetsFetcherLike; ARTIFACTS?: ArtifactStoreLike; GROUP_LIVE_HUB?: DurableObjectNamespaceLike; PREMIUM_LIVE_LEDGER?: string; DATA_USE_PROFILE?: string; COLLECTIVE_LEARNING_PEPPER?: string; FOUNDER_TEAM_ACTORS?: string }
 export default {async fetch(request:Request,env:WorkerEnv={}){
   const url=new URL(request.url);
   if(request.method==='GET' && env.ASSETS && url.pathname!=='/health' && !url.pathname.startsWith('/api/')){
@@ -765,7 +765,8 @@ export default {async fetch(request:Request,env:WorkerEnv={}){
   const repository=new D1PlatformRepository(env.DB);
   const founderLearning=env.COLLECTIVE_LEARNING_PEPPER?new FounderLearningStore(env.DB,env.COLLECTIVE_LEARNING_PEPPER):undefined;
   const founderTeamActors=new Set((env.FOUNDER_TEAM_ACTORS??'').split(',').map(x=>x.trim()).filter(Boolean));
-  const commercialPreferences=new CommercialPreferenceService(env.DB);
-  return authenticatedApi(repository,env.DB,createApiHandler(repository,{artifacts:env.ARTIFACTS,liveNamespace:env.GROUP_LIVE_HUB,premiumLive:env.PREMIUM_LIVE_LEDGER==='true',founderLearning,founderTeamActors,commercialPreferences}))(request);
+  const dataUseDefaultMode:DataUseDefaultMode=env.DATA_USE_PROFILE==='PRIVACY_FIRST'?'PRIVACY_FIRST':'BETA_OPEN';
+  const commercialPreferences=new CommercialPreferenceService(env.DB,dataUseDefaultMode==='BETA_OPEN');
+  return authenticatedApi(repository,env.DB,createApiHandler(repository,{artifacts:env.ARTIFACTS,liveNamespace:env.GROUP_LIVE_HUB,premiumLive:env.PREMIUM_LIVE_LEDGER==='true',founderLearning,founderTeamActors,commercialPreferences,dataUseDefaultMode}))(request);
 }};
 export {defaultRepo as repo};
