@@ -8,12 +8,13 @@ export function mountInterestCommunityUI({app,notify=()=>{},showError=console.er
   if(!results||!mineRoot||!workspace||!title||!meta||!feedRoot||!requestsBox)return{refresh:async()=>{},my:()=>[]};
   let mine=[],activeId='';
 
-  const open=async id=>{
+  const open=async (id,contentId)=>{
     activeId=id;workspace.hidden=false;
     const community=await app.interestCommunity(id);title.textContent=community.name;meta.textContent=[community.locality,(community.tags??[]).join(' · '),community.memberCount+' membre(s)'].filter(Boolean).join(' · ');
     const locality=document.getElementById('interestContentLocality');if(locality&&!locality.value)locality.value=community.locality??'';
     await Promise.all([renderFeed(),renderRequests(community)]);
-    workspace.scrollIntoView({behavior:'smooth',block:'start'});
+    const target=contentId?feedRoot.querySelector(`[data-community-content-id="${CSS.escape(String(contentId))}"]`):null;
+    (target??workspace).scrollIntoView({behavior:'smooth',block:'start'});
   };
   const renderCommunityCard=(c,container,discover=false)=>{
     const card=el('article',undefined,'item');card.append(el('strong',c.name),row('Localité',c.locality||'—'),row('Membres',c.memberCount),row('Centres d’intérêt',(c.tags??[]).join(', ')||'—'));
@@ -39,7 +40,7 @@ export function mountInterestCommunityUI({app,notify=()=>{},showError=console.er
     const feed=await app.interestCommunityFeed(activeId,100);
     if(!feed.length){feedRoot.append(el('p','Le fil est vide. Soyez la première personne à partager une bonne adresse, un événement ou une discussion.','hint'));return;}
     for(const item of feed){
-      const card=el('article',undefined,'item');const prefix={POST:'Publication',EVENT:'Événement',PLACE:'Bon coin',OFFER:'Offre',REQUEST:'Demande'}[item.kind]??item.kind;
+      const card=el('article',undefined,'item');card.dataset.communityContentId=item.id;const prefix={POST:'Publication',EVENT:'Événement',PLACE:'Bon coin',OFFER:'Offre',REQUEST:'Demande'}[item.kind]??item.kind;
       card.append(el('strong',(item.title||prefix)),el('span',prefix+' · '+(item.category||'général'),'pill'),el('p',item.body));
       if(item.locality)card.append(row('Lieu',item.locality));if(item.startsAt)card.append(row('Quand',date(item.startsAt)+(item.endsAt?' → '+date(item.endsAt):'')));feedRoot.append(card);
     }
@@ -60,7 +61,7 @@ export function mountInterestCommunityUI({app,notify=()=>{},showError=console.er
     }catch{}
   };
 
-  document.addEventListener('eco:open-interest-community',e=>{const id=e instanceof CustomEvent?String(e.detail?.id??''):'';if(id)void open(id).catch(showError);});
+  document.addEventListener('eco:open-interest-community',e=>{const id=e instanceof CustomEvent?String(e.detail?.id??''):'';const contentId=e instanceof CustomEvent?String(e.detail?.contentId??''):'';if(id)void open(id,contentId||undefined).catch(showError);});
   document.getElementById('interestCommunitySearchForm')?.addEventListener('submit',e=>{e.preventDefault();void search().catch(showError);});
   document.getElementById('interestCommunityCreateForm')?.addEventListener('submit',e=>{e.preventDefault();void (async()=>{try{
     const c=await app.createInterestCommunity({name:value('interestCommunityName'),description:value('interestCommunityDescription')||undefined,locality:value('interestCommunityCreateLocality')||undefined,visibility:value('interestCommunityVisibility'),joinPolicy:value('interestCommunityJoinPolicy'),tags:split(value('interestCommunityCreateTags'))});
