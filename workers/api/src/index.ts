@@ -22,6 +22,7 @@ import { CommercialPreferenceService, preferenceCookie, clearPreferenceCookie, r
 import { MiscRubricService } from '../../../packages/misc-rubrics/src/index.js';
 import { GroupPairingService } from '../../../packages/group-pairing/src/index.js';
 import { InterestCommunityService } from '../../../packages/interest-communities/src/index.js';
+import { EcoPulseService, type EngagementAction, type RecommendationCandidate } from '../../../packages/ecopulse/src/index.js';
 import { HistoricalImportService, RepositoryArtifactStore, type ArtifactStoreLike } from '../../../packages/imports/src/index.js';
 import { authenticatedApi } from './authenticated.js';
 export { GroupLiveHub } from './group-live-hub.js';
@@ -82,7 +83,7 @@ const inboxFor = async (repo:PlatformRepository,tenantId:string,actorId:string) 
   return [...obligations,...cases];
 };
 
-export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{artifacts?:ArtifactStoreLike;liveNamespace?:DurableObjectNamespaceLike;premiumLive?:boolean;founderLearning?:FounderLearningStore;founderTeamActors?:Set<string>;commercialPreferences?:CommercialPreferenceService;groupPairing?:GroupPairingService;interestCommunities?:InterestCommunityService;dataUseDefaultMode?:DataUseDefaultMode}={}) => async (request:Request):Promise<Response> => {
+export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{artifacts?:ArtifactStoreLike;liveNamespace?:DurableObjectNamespaceLike;premiumLive?:boolean;founderLearning?:FounderLearningStore;founderTeamActors?:Set<string>;commercialPreferences?:CommercialPreferenceService;groupPairing?:GroupPairingService;interestCommunities?:InterestCommunityService;ecoPulse?:EcoPulseService;dataUseDefaultMode?:DataUseDefaultMode}={}) => async (request:Request):Promise<Response> => {
   const url=new URL(request.url); const cors=corsHeaders(request);
   if(request.method==='OPTIONS'){
     const allowed=Boolean((cors as Record<string,string>)['access-control-allow-origin']);
@@ -886,12 +887,13 @@ export default {async fetch(request:Request,env:WorkerEnv={}){
   const dataUseDefaultMode:DataUseDefaultMode=env.DATA_USE_PROFILE==='PRIVACY_FIRST'?'PRIVACY_FIRST':'BETA_OPEN';
   const commercialPreferences=new CommercialPreferenceService(env.DB,dataUseDefaultMode==='BETA_OPEN');
   const interestCommunities=new InterestCommunityService(env.DB);
+  const ecoPulse=new EcoPulseService(env.DB);
   const pairingKernel=new PlatformKernel();
   const groupPairing=new GroupPairingService(env.DB,repository,pairingKernel);
   return authenticatedApi(repository,env.DB,async authenticatedRequest=>{
     const h=authenticatedRequest.headers;
     pairingKernel.context.set({actorId:h.get('x-actor-id')??'unknown',tenantId:h.get('x-tenant-id')??'unknown',activeGroupId:h.get('x-active-group-id')||undefined,groupRoles:(h.get('x-group-roles')??'').split(',').filter(Boolean),mandateIds:[],deviceId:h.get('x-device-id')??'device_web',sessionId:h.get('x-session-id')??'server-authenticated',locale:h.get('accept-language')?.toLowerCase().startsWith('en')?'en':'fr',timezone:h.get('x-timezone')??'Africa/Douala',connectivity:'online',requestId:h.get('x-request-id')??crypto.randomUUID()});
-    return createApiHandler(repository,{artifacts:env.ARTIFACTS,liveNamespace:env.GROUP_LIVE_HUB,premiumLive:env.PREMIUM_LIVE_LEDGER==='true',founderLearning,founderTeamActors,commercialPreferences,groupPairing,interestCommunities,dataUseDefaultMode})(authenticatedRequest);
+    return createApiHandler(repository,{artifacts:env.ARTIFACTS,liveNamespace:env.GROUP_LIVE_HUB,premiumLive:env.PREMIUM_LIVE_LEDGER==='true',founderLearning,founderTeamActors,commercialPreferences,groupPairing,interestCommunities,ecoPulse,dataUseDefaultMode})(authenticatedRequest);
   })(request);
 }};
 export {defaultRepo as repo};
