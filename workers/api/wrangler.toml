@@ -20,6 +20,7 @@ html_handling = "auto-trailing-slash"
 
 [vars]
 PREMIUM_LIVE_LEDGER = "false"
+DATA_USE_PROFILE = "BETA_OPEN"
 
 [[durable_objects.bindings]]
 name = "GROUP_LIVE_HUB"
