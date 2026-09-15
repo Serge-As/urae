@@ -24,11 +24,10 @@ test('beta collective learning is on by default, sourced and refuses sensitive c
   const before=await svc.learn('group_a',{category:'MEETING_RHYTHM',key:'meeting.cadence',value:'2e samedi du mois',sourceRef:'RI:article-8',confidence:0.94,privacy:'GROUP_SHAREABLE'});
   assert.equal(before.collectiveEligible,true,'beta profile should exercise safe collective learning without extra setup');
   await svc.setConsent('group_a','COLLECTIVE_LEARNING',false);
-  const disabled=await svc.learn('group_a',{category:'MEETING_RHYTHM',key:'meeting.cadence.disabled',value:'2e samedi du mois',sourceRef:'RI:article-8',confidence:0.95,privacy:'GROUP_SHAREABLE'});
-  assert.equal(disabled.collectiveEligible,false,'explicit beta opt-out must be honored');
-  await svc.setConsent('group_a','COLLECTIVE_LEARNING',true);
+  const stillActive=await svc.learn('group_a',{category:'MEETING_RHYTHM',key:'meeting.cadence.beta-open',value:'2e samedi du mois',sourceRef:'RI:article-8',confidence:0.95,privacy:'GROUP_SHAREABLE'});
+  assert.equal(stillActive.collectiveEligible,true,'BETA_OPEN must keep safe collective learning active even if a stale OFF preference exists');
   await assert.rejects(()=>svc.learn('group_a',{category:'DEBT',key:'member.debt',value:'75000',sourceRef:'ledger:member-x',confidence:1,privacy:'GROUP_SHAREABLE'}),/CATEGORY_NOT_SHAREABLE/);
-  const signals=await svc.safeCollectiveSignals('group_a','ECO-GRP-AAAAA-BBBBB-CC');assert.equal(signals.length,1);
+  const signals=await svc.safeCollectiveSignals('group_a','ECO-GRP-AAAAA-BBBBB-CC');assert.equal(signals.length,2);
 });
 
 test('beta commercial affinities are available by default but never include finance or disputes',async()=>{
@@ -38,7 +37,17 @@ test('beta commercial affinities are available by default but never include fina
   await svc.learn('group_a',{category:'DISPUTE',key:'dispute.pattern',value:'retard paiement',sourceRef:'case:1',confidence:1,privacy:'GROUP_PRIVATE'});
   assert.deepEqual(await svc.commercialAffinities('group_a'),[{category:'MARKET_INTEREST',key:'market.category',value:'huile et savon'}]);
   await svc.setConsent('group_a','COMMERCIAL_PERSONALIZATION',false);
-  assert.deepEqual(await svc.commercialAffinities('group_a'),[],'explicit beta opt-out must suppress commercial affinities');
+  assert.deepEqual(await svc.commercialAffinities('group_a'),[{category:'MARKET_INTEREST',key:'market.category',value:'huile et savon'}],'BETA_OPEN keeps non-sensitive commercial affinities active for every beta account');
+});
+
+
+test('privacy-first profile honors an explicit OFF preference while beta can preserve it for later',async()=>{
+  const repo=new InMemoryPlatformRepository(),kernel=new PlatformKernel();context(kernel);await repo.saveGroup(group);
+  const beta=new ConciergeLearningService(repo,kernel,'BETA_OPEN');
+  await beta.setConsent('group_a','COMMERCIAL_PERSONALIZATION',false);
+  assert.equal((await beta.consent('group_a')).purposes.COMMERCIAL_PERSONALIZATION,true);
+  const privacy=new ConciergeLearningService(repo,kernel,'PRIVACY_FIRST');
+  assert.equal((await privacy.consent('group_a')).purposes.COMMERCIAL_PERSONALIZATION,false);
 });
 
 test('collective discoveries require k-anonymity across distinct groups',()=>{
