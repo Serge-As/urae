@@ -20,6 +20,7 @@ import { CommunityService } from '../../../packages/community/src/index.js';
 import { FounderLearningStore } from '../../../packages/founder-observatory/src/index.js';
 import { CommercialPreferenceService, preferenceCookie, clearPreferenceCookie, readPreferenceCookie } from '../../../packages/commercial-preferences/src/index.js';
 import { MiscRubricService } from '../../../packages/misc-rubrics/src/index.js';
+import { GroupPairingService } from '../../../packages/group-pairing/src/index.js';
 import { HistoricalImportService, RepositoryArtifactStore, type ArtifactStoreLike } from '../../../packages/imports/src/index.js';
 import { authenticatedApi } from './authenticated.js';
 export { GroupLiveHub } from './group-live-hub.js';
@@ -80,7 +81,7 @@ const inboxFor = async (repo:PlatformRepository,tenantId:string,actorId:string) 
   return [...obligations,...cases];
 };
 
-export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{artifacts?:ArtifactStoreLike;liveNamespace?:DurableObjectNamespaceLike;premiumLive?:boolean;founderLearning?:FounderLearningStore;founderTeamActors?:Set<string>;commercialPreferences?:CommercialPreferenceService;dataUseDefaultMode?:DataUseDefaultMode}={}) => async (request:Request):Promise<Response> => {
+export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{artifacts?:ArtifactStoreLike;liveNamespace?:DurableObjectNamespaceLike;premiumLive?:boolean;founderLearning?:FounderLearningStore;founderTeamActors?:Set<string>;commercialPreferences?:CommercialPreferenceService;groupPairing?:GroupPairingService;dataUseDefaultMode?:DataUseDefaultMode}={}) => async (request:Request):Promise<Response> => {
   const url=new URL(request.url); const cors=corsHeaders(request);
   if(request.method==='OPTIONS'){
     const allowed=Boolean((cors as Record<string,string>)['access-control-allow-origin']);
@@ -159,6 +160,47 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
       return json({groups:groups.length,inbox:inbox.length,audit:audit.length},200,cors);
     }
     if(request.method==='GET'&&url.pathname==='/api/v1/inbox') return json(await inboxFor(repo,ctx.tenantId,ctx.actorId),200,cors);
+    if(request.method==='POST'&&url.pathname==='/api/v1/join/redeem'){
+      if(!options.groupPairing)throw new Error('PAIRING_STORE_UNAVAILABLE');
+      const body=await readJson<Record<string,unknown>>(request);return json(await options.groupPairing.redeemInvite(String(body.code??'')),200,cors);
+    }
+    const pairingStatusRoute=url.pathname.match(/^\/api\/v1\/join\/pairing-requests\/([^/]+)$/);
+    if(pairingStatusRoute&&request.method==='GET'){
+      if(!options.groupPairing)throw new Error('PAIRING_STORE_UNAVAILABLE');
+      return json(await options.groupPairing.pairingStatus(pairingStatusRoute[1]!),200,cors);
+    }
+    if(request.method==='POST'&&url.pathname==='/api/v1/pairing-code'){
+      if(!options.groupPairing)throw new Error('PAIRING_STORE_UNAVAILABLE');
+      return json(await options.groupPairing.createMemberPairingCode(),201,cors);
+    }
+    const joinLinksRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/join-links$/);
+    if(joinLinksRoute&&request.method==='GET'){
+      if(!options.groupPairing)throw new Error('PAIRING_STORE_UNAVAILABLE');
+      return json(await options.groupPairing.listInvites(joinLinksRoute[1]!),200,cors);
+    }
+    if(joinLinksRoute&&request.method==='POST'){
+      if(!options.groupPairing)throw new Error('PAIRING_STORE_UNAVAILABLE');
+      const body=await readJson<Record<string,unknown>>(request);
+      return json(await options.groupPairing.createInvite(joinLinksRoute[1]!,{mode:body.mode?String(body.mode) as any:undefined,label:body.label?String(body.label):undefined,expiresHours:body.expiresHours===undefined?undefined:finite(body.expiresHours),maxUses:body.maxUses===undefined?undefined:finite(body.maxUses)}),201,cors);
+    }
+    const pairingRequestsRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/pairing-requests$/);
+    if(pairingRequestsRoute&&request.method==='GET'){
+      if(!options.groupPairing)throw new Error('PAIRING_STORE_UNAVAILABLE');
+      return json(await options.groupPairing.listPairingRequests(pairingRequestsRoute[1]!),200,cors);
+    }
+    const pairingDecisionRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/pairing-requests\/([^/]+)\/decision$/);
+    if(pairingDecisionRoute&&request.method==='POST'){
+      if(!options.groupPairing)throw new Error('PAIRING_STORE_UNAVAILABLE');
+      const body=await readJson<Record<string,unknown>>(request);
+      return json(await options.groupPairing.decidePairing(pairingDecisionRoute[1]!,pairingDecisionRoute[2]!,{decision:String(body.decision??'') as any,membershipId:body.membershipId?String(body.membershipId):undefined,reason:body.reason?String(body.reason):undefined}),200,cors);
+    }
+    const pairMemberCodeRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/pair-member-code$/);
+    if(pairMemberCodeRoute&&request.method==='POST'){
+      if(!options.groupPairing)throw new Error('PAIRING_STORE_UNAVAILABLE');
+      const body=await readJson<Record<string,unknown>>(request);
+      return json(await options.groupPairing.bindWithMemberCode(pairMemberCodeRoute[1]!,String(body.membershipId??''),String(body.code??'')),200,cors);
+    }
+
 
     if(request.method==='POST'&&url.pathname==='/api/v1/assistant/group-launch/analyze'){
       const body=await readJson<Record<string,unknown>>(request);const text=String(body.text??'');
@@ -796,6 +838,12 @@ export default {async fetch(request:Request,env:WorkerEnv={}){
   const founderTeamActors=new Set((env.FOUNDER_TEAM_ACTORS??'').split(',').map(x=>x.trim()).filter(Boolean));
   const dataUseDefaultMode:DataUseDefaultMode=env.DATA_USE_PROFILE==='PRIVACY_FIRST'?'PRIVACY_FIRST':'BETA_OPEN';
   const commercialPreferences=new CommercialPreferenceService(env.DB,dataUseDefaultMode==='BETA_OPEN');
-  return authenticatedApi(repository,env.DB,createApiHandler(repository,{artifacts:env.ARTIFACTS,liveNamespace:env.GROUP_LIVE_HUB,premiumLive:env.PREMIUM_LIVE_LEDGER==='true',founderLearning,founderTeamActors,commercialPreferences,dataUseDefaultMode}))(request);
+  const pairingKernel=new PlatformKernel();
+  const groupPairing=new GroupPairingService(env.DB,repository,pairingKernel);
+  return authenticatedApi(repository,env.DB,async authenticatedRequest=>{
+    const h=authenticatedRequest.headers;
+    pairingKernel.context.set({actorId:h.get('x-actor-id')??'unknown',tenantId:h.get('x-tenant-id')??'unknown',activeGroupId:h.get('x-active-group-id')||undefined,groupRoles:(h.get('x-group-roles')??'').split(',').filter(Boolean),mandateIds:[],deviceId:h.get('x-device-id')??'device_web',sessionId:h.get('x-session-id')??'server-authenticated',locale:h.get('accept-language')?.toLowerCase().startsWith('en')?'en':'fr',timezone:h.get('x-timezone')??'Africa/Douala',connectivity:'online',requestId:h.get('x-request-id')??crypto.randomUUID()});
+    return createApiHandler(repository,{artifacts:env.ARTIFACTS,liveNamespace:env.GROUP_LIVE_HUB,premiumLive:env.PREMIUM_LIVE_LEDGER==='true',founderLearning,founderTeamActors,commercialPreferences,groupPairing,dataUseDefaultMode})(authenticatedRequest);
+  })(request);
 }};
 export {defaultRepo as repo};
