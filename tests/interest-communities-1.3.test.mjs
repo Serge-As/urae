@@ -13,6 +13,7 @@ test('Yaoundé by Night can exist independently of any financial group',async()=
     await svc.createContent('bob',c.id,{kind:'PLACE',title:'Bon coin Bastos',body:'Lieu recommandé par la communauté.',category:'sortie',locality:'Yaoundé'});
     await svc.createContent('alice',c.id,{kind:'EVENT',title:'Sortie du samedi',body:'Rencontre de la communauté.',category:'musique',locality:'Yaoundé',startsAt:'2026-09-19T20:00:00+01:00'});
     const feed=await svc.feed('bob',c.id);assert.equal(feed.length,2);assert.ok(feed.some(x=>x.kind==='PLACE'));assert.ok(feed.some(x=>x.kind==='EVENT'));
+    const discoveryFeed=await svc.discoverContent('bob',20);assert.equal(discoveryFeed.length,2);assert.ok(discoveryFeed.every(x=>x.communityName==='Yaoundé by Night'));assert.ok(discoveryFeed.some(x=>x.kind==='PLACE'));
     assert.equal((await svc.mine('bob'))[0].name,'Yaoundé by Night');
   }finally{db.close();}
 });
@@ -23,7 +24,9 @@ test('private or request communities preserve membership governance',async()=>{
     const svc=new InterestCommunityService(db);
     const publicRequest=await svc.create('alice',{name:'Entrepreneurs Yaoundé',visibility:'PUBLIC',joinPolicy:'REQUEST',tags:['business']});
     const privateC=await svc.create('alice',{name:'Cercle privé',visibility:'PRIVATE',joinPolicy:'REQUEST',tags:['privé']});
+    await svc.createContent('alice',privateC.id,{kind:'POST',title:'Secret',body:'Contenu réservé aux membres du cercle privé.'});
     const discovered=await svc.discover('bob',{});assert.ok(discovered.some(x=>x.id===publicRequest.id));assert.equal(discovered.some(x=>x.id===privateC.id),false);
+    assert.equal((await svc.discoverContent('bob',20)).some(x=>x.communityId===privateC.id),false,'private community content must stay outside global discovery');
     const pending=await svc.join('bob',publicRequest.id,'Je suis entrepreneur');assert.equal(pending.status,'PENDING');
     const reqs=await svc.joinRequests('alice',publicRequest.id);assert.equal(reqs.length,1);
     await svc.decideJoin('alice',publicRequest.id,reqs[0].id,'APPROVE');
