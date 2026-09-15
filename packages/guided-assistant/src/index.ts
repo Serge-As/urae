@@ -77,6 +77,30 @@ export const analyzeGovernanceText=(raw:string):GuidedSuggestion[]=>{
     if(new RegExp(item,'i').test(text)&&/tontine/i.test(text))out.push(suggestion({category:'RUBRIC',title:'Tontine en nature : '+item,confidence:0.82,evidence:evidence(text,new RegExp(item,'i')),explanation:'Tontine en nature détectée ; conservez-la comme instance autonome.',
       rubric:{name:item[0]!.toUpperCase()+item.slice(1),kind:'TONTINE',participationMode:'OPTIONAL',contributionMode:'IN_KIND',contributionLabel:item,contributionUnit:'unité',contributionQuantity:1,contextNote:'Quantité, qualité, fournisseur, transport et preuve de remise à confirmer.'}}));
   }
+  if(has(/épargne\s+scolaire|epargne\s+scolaire/i)){
+    out.push(suggestion({category:'RUBRIC',title:'Épargne scolaire',confidence:0.93,evidence:evidence(text,/épargne\s+scolaire|epargne\s+scolaire/i),
+      explanation:'Épargne scolaire distincte détectée : elle conserve son propre calendrier de restitution et sa propre enveloppe de rendement.',
+      rubric:{name:'Épargne scolaire',kind:'SAVINGS',participationMode:'OPTIONAL',contributionMode:'MONEY',contextNote:'Restitution avant la rentrée ou la Cassation selon le règlement.',policyDraft:{participation:{mode:'OPTIONAL'},contribution:{cadence:'FLEXIBLE',allowedMedia:['CASH','MOBILE_MONEY','TRANSFER']},refund:{mode:'FULLY_REFUNDABLE',settlementTiming:'MID_CYCLE'},loan:{allowed:true,rateBasisPointsPerPeriod:500,interestBase:'PRINCIPAL_ONLY',paymentPriority:'CAPITAL_FIRST',noInterestOnInterest:true},yield:{enabled:true,allocationModel:'EXACT_WEIGHTED_DEPOSITS',rounding:'LARGEST_REMAINDER'},lifecycle:{visibility:'PERSISTENT'}}}}));
+  }
+  if(has(/assistance/i))out.push(suggestion({category:'RUBRIC',title:'Assistance',confidence:0.86,evidence:evidence(text,/assistance/i),
+    explanation:'Assistance détectée : elle peut être un décaissement, une main levée ou un mélange selon le cas.',
+    rubric:{name:'Assistance',kind:'ASSISTANCE',participationMode:'RULE_BASED',contributionMode:'MONEY',contextNote:'Qualifier chaque type d’assistance : décaissement de caisse, main levée ou mixte.',policyDraft:{participation:{mode:'RULE_BASED'},assistance:{fundingMode:has(/main\s+levée|main\s+levee/i)?'MIXED':'DISBURSEMENT',authorization:'BUREAU'},lifecycle:{visibility:'EVENT_DRIVEN'}}}}));
+  if(has(/main\s+levée|main\s+levee/i))out.push(suggestion({category:'RUBRIC',title:'Main levée',confidence:0.88,evidence:evidence(text,/main\s+levée|main\s+levee/i),
+    explanation:'Collecte ponctuelle liée à un événement détectée.',
+    rubric:{name:'Main levée',kind:'LEVY',participationMode:'RULE_BASED',contributionMode:'MONEY',contextNote:'Définir motif, bénéficiaires et caractère obligatoire ou volontaire.',policyDraft:{participation:{mode:'RULE_BASED'},contribution:{cadence:'EVENT',allowedMedia:['CASH','MOBILE_MONEY']},beneficiary:{mode:'EVENT_BASED'},lifecycle:{visibility:'EVENT_DRIVEN'}}}}));
+  if(has(/frais\s+d['’]?inscription|inscription[^.]{0,80}(?:500|1000|franc)/i))out.push(suggestion({category:'RUBRIC',title:'Inscription',confidence:0.9,evidence:evidence(text,/frais\s+d['’]?inscription|inscription/i),
+    explanation:'Petite rubrique d’ouverture d’exercice détectée.',
+    rubric:{name:'Inscription',kind:'OTHER',participationMode:'MANDATORY',contributionMode:'MONEY',contextNote:'Rubrique éphémère de début d’exercice.',policyDraft:{participation:{mode:'MANDATORY'},contribution:{cadence:'EXERCISE_OPENING',allowedMedia:['CASH','MOBILE_MONEY']},lifecycle:{visibility:'FIRST_N_SESSIONS',activeFirstSessions:6}}}}));
+  if(has(/amende|discipline/i))out.push(suggestion({category:'RUBRIC',title:'Amendes',confidence:0.84,evidence:evidence(text,/amende|discipline/i),
+    explanation:'Rubrique événementielle d’amendes détectée.',
+    rubric:{name:'Amendes',kind:'OTHER',participationMode:'RULE_BASED',contributionMode:'MONEY',contextNote:'Montant selon l’infraction et la qualité du membre.',policyDraft:{participation:{mode:'RULE_BASED'},contribution:{cadence:'EVENT',allowedMedia:['CASH','MOBILE_MONEY'],missingHandling:'DEBT'},lifecycle:{visibility:'EVENT_DRIVEN'}}}}));
+  if(has(/cassation|clôture[^.]{0,80}f[eê]te|f[eê]te[^.]{0,80}fin\s+d['’]?exercice/i))out.push(suggestion({category:'RUBRIC',title:'Cassation / fête de clôture',confidence:0.82,evidence:evidence(text,/cassation|f[eê]te/i),
+    explanation:'Activité ou dépense de clôture détectée ; elle reste distincte du RECAP financier.',
+    rubric:{name:'Cassation',kind:'OTHER',participationMode:'RULE_BASED',contributionMode:'MONEY',contextNote:'Prévoir budget, comité, recettes éventuelles et décaissements de clôture.',policyDraft:{participation:{mode:'RULE_BASED'},contribution:{cadence:'END_OF_EXERCISE',allowedMedia:['CASH','MOBILE_MONEY']},lifecycle:{visibility:'EVENT_DRIVEN'}}}}));
+  if(has(/tenue|tissu|uniforme/i))out.push(suggestion({category:'RUBRIC',title:'Tissu / Tenue',confidence:0.8,evidence:evidence(text,/tenue|tissu|uniforme/i),
+    explanation:'Projet de tenue ou uniforme détecté.',
+    rubric:{name:'Tissu / Tenue',kind:'OTHER',participationMode:'RULE_BASED',contributionMode:'MIXED',contributionLabel:'tissu / tenue',contributionUnit:'pièce',contributionQuantity:1,contextNote:'Définir fournisseur, qualité, prix, date et preuve de remise.',policyDraft:{participation:{mode:'RULE_BASED'},lifecycle:{visibility:'EXERCISE'}}}}));
+
   if(has(/emprunt|prêt|pret/i)){
     const normalRate=money(text,/(?:taux\s+d['’]?intérêt|taux\s+d['’]?interet)[^0-9]{0,40}([0-9]{1,3})\s*%/i);
     out.push(suggestion({category:'LOAN_RULE',title:'Règles de prêts',confidence:0.95,evidence:evidence(text,/emprunt|prêt|pret/i),
