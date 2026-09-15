@@ -1,7 +1,7 @@
 const CACHE = 'eco-system-v130-guided-live-r1-20260915';
 const APP_SHELL = [
   '/', '/index.html', '/styles.css', '/manifest.webmanifest',
-  '/src/main.js', '/src/i18n.js', '/src/runtime-i18n.js', '/src/completion-ui.js', '/src/advanced-ui.js', '/src/offline-snapshot.js', '/src/launch-rubrics.js', '/src/launch-studio.js', '/src/member-control-ui.js', '/src/identity-live-ui.js', '/src/community-shop-ui.js', '/src/misc-rubrics-ui.js',
+  '/src/main.js', '/src/i18n.js', '/src/runtime-i18n.js', '/src/completion-ui.js', '/src/advanced-ui.js', '/src/offline-snapshot.js', '/src/launch-rubrics.js', '/src/launch-studio.js', '/src/member-control-ui.js', '/src/identity-live-ui.js', '/src/community-shop-ui.js', '/src/misc-rubrics-ui.js', '/src/pairing-ui.js',
   '/packages/rubrics/src/launch-config.js', '/packages/rubrics/src/index.js',
   '/packages/application/src/index.js', '/packages/completion/src/index.js', '/packages/contracts/src/index.js',
   '/packages/domain/src/index.js', '/packages/module-registry/src/index.js',
