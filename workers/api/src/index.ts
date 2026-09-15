@@ -311,11 +311,17 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
     if(memoriesRoute&&request.method==='GET')return json(await conciergeLearning.memories(memoriesRoute[1]!),200,cors);
     if(memoriesRoute&&request.method==='POST'){
       const body=await readJson<Record<string,unknown>>(request),category=String(body.category??'') as LearningCategory;
-      return json(await conciergeLearning.learn(memoriesRoute[1]!,{
+      const memory=await conciergeLearning.learn(memoriesRoute[1]!,{
         category,key:String(body.key??''),value:String(body.value??''),sourceRef:String(body.sourceRef??''),
         evidenceSnippet:body.evidenceSnippet?String(body.evidenceSnippet):undefined,confidence:finite(body.confidence),
         privacy:String(body.privacy??'GROUP_PRIVATE') as any,visibility:String(body.visibility??'MANAGERS') as any
-      }),201,cors);
+      });
+      if(memory.collectiveEligible&&options.founderLearning){
+        const passport=await groupIdentity.compute(memoriesRoute[1]!);
+        const signals=await conciergeLearning.safeCollectiveSignals(memoriesRoute[1]!,passport.publicCode);
+        await options.founderLearning.ingest(passport.publicCode,signals.filter(x=>x.key===memory.key&&x.value===memory.value));
+      }
+      return json(memory,201,cors);
     }
     const collectiveSignals=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/concierge\/collective-signals$/);
     if(collectiveSignals&&request.method==='GET'){
@@ -329,6 +335,13 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
     }
     const commercialAffinities=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/concierge\/commercial-affinities$/);
     if(commercialAffinities&&request.method==='GET')return json(await conciergeLearning.commercialAffinities(commercialAffinities[1]!),200,cors);
+
+    if(request.method==='GET'&&url.pathname==='/api/v1/founder/learning-observatory'){
+      if(!options.founderLearning||!options.founderTeamActors?.has(ctx.actorId))throw new Error('FOUNDER_TEAM_ONLY');
+      const minGroups=Math.max(5,Number(url.searchParams.get('minGroups')??5));
+      const [stats,discoveries]=await Promise.all([options.founderLearning.stats(minGroups),options.founderLearning.discoveries(minGroups,Number(url.searchParams.get('limit')??100))]);
+      return json({stats,discoveries,privacy:'SANITIZED_PSEUDONYMOUS_K_ANONYMIZED',rawGroupData:false,rawMemberData:false},200,cors);
+    }
 
     const amountExplain=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/members\/([^/]+)\/amount-explanation$/);
     if(amountExplain&&request.method==='GET'){
