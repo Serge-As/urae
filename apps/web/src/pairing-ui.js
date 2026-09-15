@@ -23,6 +23,7 @@ export function mountPairingUI({app,notify=()=>{},showError=console.error,getMem
         if(status.status==='APPROVED'){
           showJoin('Appairage validé','Votre compte personnel est maintenant relié à votre ancienne fiche de membre.');
           notify('Votre groupe historique est maintenant disponible.');
+          await app.recordEcoPulse({itemId:groupId,itemKind:'group-membership',action:'JOIN',source:'secure-pairing',groupId,tags:['historical-group','membership']}).catch(()=>{});
           await afterMembershipChanged(groupId);return;
         }
         if(status.status==='REJECTED'){showJoin('Appairage non validé',status.decisionReason||'Contactez un responsable du groupe.');return;}
@@ -38,6 +39,7 @@ export function mountPairingUI({app,notify=()=>{},showError=console.error,getMem
     if(result.status==='JOINED'){
       showJoin('Bienvenue dans le groupe','Votre compte est relié. Les données autorisées du groupe vont se charger automatiquement.');
       notify('Groupe rejoint avec succès.');
+      await app.recordEcoPulse({itemId:result.groupId,itemKind:'group-membership',action:'JOIN',source:'secure-join',groupId:result.groupId,tags:['group','membership']}).catch(()=>{});
       await afterMembershipChanged(result.groupId);
     }else{
       showJoin('Code reconnu','Ce groupe existait avant Eco-System. Un responsable doit vous rattacher à votre fiche historique.');
