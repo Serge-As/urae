@@ -19,6 +19,7 @@ import { MarketService } from '../../../packages/market/src/index.js';
 import { CommunityService } from '../../../packages/community/src/index.js';
 import { FounderLearningStore } from '../../../packages/founder-observatory/src/index.js';
 import { CommercialPreferenceService, preferenceCookie, clearPreferenceCookie, readPreferenceCookie } from '../../../packages/commercial-preferences/src/index.js';
+import { MiscRubricService } from '../../../packages/misc-rubrics/src/index.js';
 import { HistoricalImportService, RepositoryArtifactStore, type ArtifactStoreLike } from '../../../packages/imports/src/index.js';
 import { authenticatedApi } from './authenticated.js';
 export { GroupLiveHub } from './group-live-hub.js';
@@ -66,10 +67,11 @@ const createRequestScope = (request:Request,repo:PlatformRepository,artifacts?:A
   const memberControl=new MemberFinancialControlService(repo,kernel);
   const groupIdentity=new GroupIdentityService(repo,kernel);
   const conciergeLearning=new ConciergeLearningService(repo,kernel,dataUseDefaultMode);
+  const miscRubrics=new MiscRubricService(repo,kernel,ledger);
   const tenantId=request.headers.get('x-tenant-id')??'tenant_demo'; const actorId=request.headers.get('x-actor-id')??'user_founder';
   const groupRoles=(request.headers.get('x-group-roles')??'founder,manager').split(',').map(x=>x.trim()).filter(Boolean);
   kernel.context.set({actorId,tenantId,activeGroupId:request.headers.get('x-active-group-id')??undefined,groupRoles,mandateIds:[],deviceId:request.headers.get('x-device-id')??'device_web_demo',sessionId:request.headers.get('x-session-id')??'session_demo',locale:request.headers.get('accept-language')?.toLowerCase().startsWith('en')?'en':'fr',timezone:request.headers.get('x-timezone')??'Africa/Douala',connectivity:'online',requestId:request.headers.get('x-request-id')??makeId('req')});
-  return {kernel,foundation,ledger,meetings,discovery,membershipGateway,rubrics,completion,explainability,documents,receivables,treasury,riskFinance,market,community,imports,memberControl,groupIdentity,conciergeLearning};
+  return {kernel,foundation,ledger,meetings,discovery,membershipGateway,rubrics,completion,explainability,documents,receivables,treasury,riskFinance,market,community,imports,memberControl,groupIdentity,conciergeLearning,miscRubrics};
 };
 
 const inboxFor = async (repo:PlatformRepository,tenantId:string,actorId:string) => {
@@ -84,7 +86,7 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
     const allowed=Boolean((cors as Record<string,string>)['access-control-allow-origin']);
     return new Response(null,{status:allowed?204:403,headers:{...baseSecurityHeaders,...cors,'access-control-allow-methods':'GET,POST,PUT,OPTIONS','access-control-allow-headers':'content-type,x-tenant-id,x-actor-id,x-group-roles,x-active-group-id,x-device-id,x-session-id,x-request-id,x-timezone'}});
   }
-  const {kernel,foundation,ledger,meetings,discovery,membershipGateway,rubrics,completion,explainability,documents,receivables,treasury,riskFinance,market,community,imports,memberControl,groupIdentity,conciergeLearning}=createRequestScope(request,repo,options.artifacts,options.dataUseDefaultMode??'BETA_OPEN'); const ctx=kernel.context.get();
+  const {kernel,foundation,ledger,meetings,discovery,membershipGateway,rubrics,completion,explainability,documents,receivables,treasury,riskFinance,market,community,imports,memberControl,groupIdentity,conciergeLearning,miscRubrics}=createRequestScope(request,repo,options.artifacts,options.dataUseDefaultMode??'BETA_OPEN'); const ctx=kernel.context.get();
   if(options.premiumLive)kernel.features.set('premium_live_ledger',true);
   const requireGroup=async(groupId:string,manage=false)=>{
     const group=await repo.getGroup(ctx.tenantId,groupId);if(!group)throw Error('GROUP_NOT_FOUND');
@@ -255,6 +257,33 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
       const body=await readJson<Record<string,unknown>>(request); return json(await meetings.openMeeting(ctx.tenantId,meetingRoute[1]!,{title:String(body.title??''),scheduledAt:body.scheduledAt?String(body.scheduledAt):undefined}),201,cors);
     }
     const closeMeeting=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/meetings\/([^/]+)\/close$/); if(closeMeeting&&request.method==='POST') return json(await meetings.closeMeeting(ctx.tenantId,closeMeeting[1]!,closeMeeting[2]!),200,cors);
+
+    const miscCatalog=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/misc-rubrics$/);
+    if(miscCatalog&&request.method==='GET'){
+      const meetingId=url.searchParams.get('meetingId')??undefined;
+      return json(await miscRubrics.list(miscCatalog[1]!,meetingId),200,cors);
+    }
+    if(miscCatalog&&request.method==='POST'){
+      const body=await readJson<Record<string,unknown>>(request),action=String(body.action??'ensure_starters');
+      if(action==='ensure_starters')return json(await miscRubrics.ensureStarters(miscCatalog[1]!),200,cors);
+      if(action==='create_custom')return json(await miscRubrics.createCustom(miscCatalog[1]!,{name:String(body.name??''),description:body.description?String(body.description):undefined,lifecycle:String(body.lifecycle??'PERSISTENT') as any,amountMode:String(body.amountMode??'VARIABLE') as any,defaultAmount:body.defaultAmount===undefined?undefined:finite(body.defaultAmount),activeFirstSessions:body.activeFirstSessions===undefined?undefined:finite(body.activeFirstSessions)}),201,cors);
+      throw new Error('INVALID_MISC_ACTION');
+    }
+    const miscPostings=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/misc-rubrics\/postings$/);
+    if(miscPostings&&request.method==='GET')return json(await miscRubrics.postings(miscPostings[1]!,{meetingId:url.searchParams.get('meetingId')??undefined,membershipId:url.searchParams.get('membershipId')??undefined}),200,cors);
+    if(miscPostings&&request.method==='POST'){
+      const body=await readJson<Record<string,unknown>>(request),items=Array.isArray(body.items)?body.items as Array<Record<string,unknown>>:[];
+      const results=await miscRubrics.postBatch(miscPostings[1]!,{membershipId:String(body.membershipId??''),meetingId:body.meetingId?String(body.meetingId):undefined,idempotencyKey:String(body.idempotencyKey??request.headers.get('x-idempotency-key')??makeId('misc_batch')),items:items.map(x=>({templateId:String(x.templateId??''),amount:finite(x.amount),note:x.note?String(x.note):undefined}))});
+      for(const result of results){
+        const entry=await repo.getLedgerEntry(ctx.tenantId,miscPostings[1]!,result.ledgerEntryId),membership=await repo.getMembership(ctx.tenantId,miscPostings[1]!,String(body.membershipId??''));
+        if(entry&&membership){
+          const positions=await ledger.receiptPositions(ctx.tenantId,miscPostings[1]!);const after=positions.filter(x=>x.membershipId===membership.id).reduce((n,x)=>n+x.netAmount,0);
+          const notice=await memberControl.create({groupId:miscPostings[1]!,membershipId:membership.id,entry,operationType:'OTHER_RUBRIC_'+result.template.kind,amount:result.amount,currency:result.currency,rubricId:result.template.rubricId,meetingId:body.meetingId?String(body.meetingId):undefined,previousSituation:after-result.amount,newSituation:after});
+          await publishLive(miscPostings[1]!,'FINANCIAL_NOTICE','notice:'+notice.id,{noticeId:notice.id,ledgerEntryId:notice.ledgerEntryId,operationType:notice.operationType,amount:notice.amount,currency:notice.currency,previousSituation:notice.previousSituation??0,newSituation:notice.newSituation??0},notice.userId);
+        }
+      }
+      return json({results},201,cors);
+    }
 
     const contributionRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/contributions\/cash$/);
     if(contributionRoute&&request.method==='POST'){
