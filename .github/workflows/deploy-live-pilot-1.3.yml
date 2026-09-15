@@ -116,11 +116,18 @@ jobs:
           PASSWORD="EcoLive-${GITHUB_RUN_ID}-Safe123!"
           COOKIE=/tmp/pilot-cookie.txt
 
-          curl --fail --silent --show-error -c "${COOKIE}"             -H "origin: ${ORIGIN}" -H 'content-type: application/json'             -d "{"username":"${USERNAME}","password":"${PASSWORD}","displayName":"Live Pilot","locale":"fr"}"             "${PILOT_ROOT}/api/v1/auth/register" > /tmp/register.json
+          cat > /tmp/register-body.json <<JSON
+          {"username":"${USERNAME}","password":"${PASSWORD}","displayName":"Live Pilot","locale":"fr"}
+          JSON
+          curl --fail --silent --show-error -c "${COOKIE}" \
+            -H "origin: ${ORIGIN}" -H 'content-type: application/json' \
+            --data-binary @/tmp/register-body.json \
+            "${PILOT_ROOT}/api/v1/auth/register" > /tmp/register.json
+          ACCOUNT_ID="$(node -e "const x=require('/tmp/register.json');process.stdout.write(x.account.id)")"
 
           cat > /tmp/project.json <<'JSON'
           {
-            "name":"Groupe Premium Live Pilote",
+            "name":"Groupe Live Ledger Pilote",
             "kind":"association",
             "governanceModel":"community",
             "rubrics":[{
@@ -149,16 +156,24 @@ jobs:
 
           curl --fail --silent --show-error -b "${COOKIE}" -c "${COOKIE}"             -H "origin: ${ORIGIN}" -H 'content-type: application/json' -d '{}'             "${PILOT_ROOT}/api/v1/group-projects/${PROJECT_ID}/convert" > /tmp/group.json
           GROUP_ID="$(node -e "const x=require('/tmp/group.json');process.stdout.write(x.id)")"
-          MEMBER_ID="membership_owner_${GROUP_ID}"
+          curl --fail --silent --show-error -b "${COOKIE}" \
+            "${PILOT_ROOT}/api/v1/groups/${GROUP_ID}/members" > /tmp/members.json
+          MEMBER_ID="$(ACCOUNT_ID="${ACCOUNT_ID}" node -e "const x=require('/tmp/members.json'),id=process.env.ACCOUNT_ID,m=x.find(v=>v.userId===id);if(!m)process.exit(2);process.stdout.write(m.id)")"
 
           curl --fail --silent --show-error -b "${COOKIE}"             "${PILOT_ROOT}/api/v1/groups/${GROUP_ID}/live/health" > /tmp/live-health.json
           node - <<'NODE'
           const h=require('/tmp/live-health.json');
-          if(h.ok!==true||h.enabled!==true)throw new Error('PREMIUM_LIVE_NOT_ACTIVE');
+          if(h.ok!==true||h.enabled!==true)throw new Error('LIVE_LEDGER_NOT_ACTIVE');
           if(!String(h.groupCode||'').startsWith('ECO-GRP-'))throw new Error('GROUP_IDENTITY_CODE_MISSING');
           NODE
 
-          curl --fail --silent --show-error -b "${COOKIE}"             -H "origin: ${ORIGIN}" -H 'content-type: application/json'             -d "{"membershipId":"${MEMBER_ID}","amount":1000,"currency":"XAF","idempotencyKey":"pilot-${GITHUB_RUN_ID}"}"             "${PILOT_ROOT}/api/v1/groups/${GROUP_ID}/contributions/cash" > /tmp/receipt.json
+          cat > /tmp/contribution-body.json <<JSON
+          {"membershipId":"${MEMBER_ID}","amount":1000,"currency":"XAF","idempotencyKey":"pilot-${GITHUB_RUN_ID}"}
+          JSON
+          curl --fail --silent --show-error -b "${COOKIE}" \
+            -H "origin: ${ORIGIN}" -H 'content-type: application/json' \
+            --data-binary @/tmp/contribution-body.json \
+            "${PILOT_ROOT}/api/v1/groups/${GROUP_ID}/contributions/cash" > /tmp/receipt.json
 
           curl --fail --silent --show-error -b "${COOKIE}"             "${PILOT_ROOT}/api/v1/groups/${GROUP_ID}/live/events?after=0" > /tmp/live-events.json
           node - <<'NODE'
@@ -166,8 +181,8 @@ jobs:
           if(!Array.isArray(x.events)||!x.events.some(e=>e.type==='FINANCIAL_NOTICE'))throw new Error('FINANCIAL_NOTICE_NOT_STREAMED');
           const n=x.events.find(e=>e.type==='FINANCIAL_NOTICE');
           if(n.payload.amount!==1000||n.payload.currency!=='XAF')throw new Error('FINANCIAL_NOTICE_PAYLOAD_MISMATCH');
-          console.log('Premium Live pilot PASS:', {latest:x.latest,eventType:n.type,amount:n.payload.amount});
+          console.log('Live Ledger pilot PASS:', {latest:x.latest,eventType:n.type,amount:n.payload.amount});
           NODE
 
       - name: Pilot URL
-        run: echo "Premium Live pilot ready at ${PILOT_ROOT}/"
+        run: echo "Live Ledger pilot ready at ${PILOT_ROOT}/"
