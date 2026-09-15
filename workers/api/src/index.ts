@@ -22,6 +22,7 @@ import { CommercialPreferenceService, preferenceCookie, clearPreferenceCookie, r
 import { MiscRubricService } from '../../../packages/misc-rubrics/src/index.js';
 import { allocateSavingsYield, splitInterestPool } from '../../../packages/savings-yield/src/index.js';
 import { buildFinancialRecap, buildSessionRecap, buildClosingCarryover } from '../../../packages/recap-engine/src/index.js';
+import { AdManagerService } from '../../../packages/ad-manager/src/index.js';
 import { GroupPairingService } from '../../../packages/group-pairing/src/index.js';
 import { InterestCommunityService } from '../../../packages/interest-communities/src/index.js';
 import { EcoPulseService, type EngagementAction, type RecommendationCandidate } from '../../../packages/ecopulse/src/index.js';
@@ -73,10 +74,11 @@ const createRequestScope = (request:Request,repo:PlatformRepository,artifacts?:A
   const groupIdentity=new GroupIdentityService(repo,kernel);
   const conciergeLearning=new ConciergeLearningService(repo,kernel,dataUseDefaultMode);
   const miscRubrics=new MiscRubricService(repo,kernel,ledger);
+  const adManager=new AdManagerService(repo,kernel);
   const tenantId=request.headers.get('x-tenant-id')??'tenant_demo'; const actorId=request.headers.get('x-actor-id')??'user_founder';
   const groupRoles=(request.headers.get('x-group-roles')??'founder,manager').split(',').map(x=>x.trim()).filter(Boolean);
   kernel.context.set({actorId,tenantId,activeGroupId:request.headers.get('x-active-group-id')??undefined,groupRoles,mandateIds:[],deviceId:request.headers.get('x-device-id')??'device_web_demo',sessionId:request.headers.get('x-session-id')??'session_demo',locale:request.headers.get('accept-language')?.toLowerCase().startsWith('en')?'en':'fr',timezone:request.headers.get('x-timezone')??'Africa/Douala',connectivity:'online',requestId:request.headers.get('x-request-id')??makeId('req')});
-  return {kernel,foundation,ledger,meetings,discovery,membershipGateway,rubrics,completion,explainability,documents,receivables,treasury,riskFinance,market,community,imports,memberControl,groupIdentity,conciergeLearning,miscRubrics};
+  return {kernel,foundation,ledger,meetings,discovery,membershipGateway,rubrics,completion,explainability,documents,receivables,treasury,riskFinance,market,community,imports,memberControl,groupIdentity,conciergeLearning,miscRubrics,adManager};
 };
 
 const inboxFor = async (repo:PlatformRepository,tenantId:string,actorId:string) => {
@@ -91,7 +93,7 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
     const allowed=Boolean((cors as Record<string,string>)['access-control-allow-origin']);
     return new Response(null,{status:allowed?204:403,headers:{...baseSecurityHeaders,...cors,'access-control-allow-methods':'GET,POST,PUT,OPTIONS','access-control-allow-headers':'content-type,x-tenant-id,x-actor-id,x-group-roles,x-active-group-id,x-device-id,x-session-id,x-request-id,x-timezone'}});
   }
-  const {kernel,foundation,ledger,meetings,discovery,membershipGateway,rubrics,completion,explainability,documents,receivables,treasury,riskFinance,market,community,imports,memberControl,groupIdentity,conciergeLearning,miscRubrics}=createRequestScope(request,repo,options.artifacts,options.dataUseDefaultMode??'BETA_OPEN'); const ctx=kernel.context.get();
+  const {kernel,foundation,ledger,meetings,discovery,membershipGateway,rubrics,completion,explainability,documents,receivables,treasury,riskFinance,market,community,imports,memberControl,groupIdentity,conciergeLearning,miscRubrics,adManager}=createRequestScope(request,repo,options.artifacts,options.dataUseDefaultMode??'BETA_OPEN'); const ctx=kernel.context.get();
   if(options.premiumLive)kernel.features.set('premium_live_ledger',true);
   const requireGroup=async(groupId:string,manage=false)=>{
     const group=await repo.getGroup(ctx.tenantId,groupId);if(!group)throw Error('GROUP_NOT_FOUND');
@@ -713,6 +715,23 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
     }
     const storefrontRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/market\/storefront$/);
     if(storefrontRoute&&request.method==='GET')return json(await market.storefront(storefrontRoute[1]!),200,cors);
+    const adCampaigns=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/ads\/campaigns$/);
+    if(adCampaigns&&request.method==='GET')return json(await adManager.list(adCampaigns[1]!),200,cors);
+    if(adCampaigns&&request.method==='POST'){
+      const body=await readJson<Record<string,unknown>>(request);
+      return json(await adManager.create(adCampaigns[1]!,body as any),201,cors);
+    }
+    const adTransition=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/ads\/campaigns\/([^/]+)\/transition$/);
+    if(adTransition&&request.method==='POST'){
+      const body=await readJson<Record<string,unknown>>(request);
+      return json(await adManager.transition(adTransition[1]!,adTransition[2]!,String(body.state??'') as any,String(body.note??'')),200,cors);
+    }
+    const adMetric=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/ads\/campaigns\/([^/]+)\/metric$/);
+    if(adMetric&&request.method==='POST'){
+      const body=await readJson<Record<string,unknown>>(request);
+      return json(await adManager.metric(adMetric[1]!,adMetric[2]!,String(body.event??'') as any),200,cors);
+    }
+
     const stockListing=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/market\/stock\/([^/]+)\/listing$/);
     if(stockListing&&request.method==='POST'){const body=await readJson<Record<string,unknown>>(request);return json(await market.setStockListing(stockListing[1]!,stockListing[2]!,{published:Boolean(body.published),unitPrice:body.unitPrice===undefined?undefined:finite(body.unitPrice),description:body.description?String(body.description):undefined}),200,cors);}
 
