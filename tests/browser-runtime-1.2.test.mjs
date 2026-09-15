@@ -4,7 +4,7 @@ import fs from 'node:fs';
 import {spawnSync} from 'node:child_process';
 import {runtimeDictionary, localeTag} from '../.build/apps/web/src/runtime-i18n.js';
 
-test('browser entrypoint imports every 1.2 runtime module it invokes',()=>{
+test('browser entrypoint imports every 1.3 runtime module it invokes',()=>{
   const main=fs.readFileSync('apps/web/src/main.js','utf8');
   assert.match(main,/captureRuntimeI18n/);
   assert.match(main,/from ['"]\.\/runtime-i18n\.js['"]/);
@@ -54,4 +54,26 @@ test('launch wizard exposes independent tontines and rubric context instead of o
   assert.match(rubrics,/Qui participe à cette rubrique/);assert.match(rubrics,/Argent \+ nature/);assert.match(rubrics,/Nature \/ article/);
   assert.match(main,/const parameters=\{rubrics:readRubricEditors\(launchEditors\),launchProfile:launchStudio\.readProfile\(\)\}/);
   assert.match(main,/ensureCurrentServiceWorker/);assert.match(main,/updateViaCache:'none'/);
+});
+
+
+test('beta shell keeps intelligence and Live standard without premium consent switches',()=>{
+  const html=fs.readFileSync('apps/web/index.html','utf8');
+  assert.match(html,/ecoPulsePanel/);assert.match(html,/EcoPulse · BETA_OPEN/);assert.match(html,/Live Ledger · bêta/);
+  for(const stale of ['consentCollectiveLearning','consentCommercial','consentPartners','consentCommunity','personalCommercialConsent','liveConnectBtn','livePingBtn'])assert.doesNotMatch(html,new RegExp(stale),stale);
+  assert.doesNotMatch(html,/Premium Live/);
+});
+
+test('current PWA caches pairing detail cockpit recap and Meetup-style community journeys',()=>{
+  const sw=fs.readFileSync('apps/web/sw.js','utf8');
+  for(const path of ['/src/pairing-ui.js','/src/detail-ui.js','/src/personal-cockpit-ui.js','/src/recap-ui.js','/src/interest-community-ui.js'])assert.ok(sw.includes(path),path);
+  const main=fs.readFileSync('apps/web/src/main.js','utf8');
+  assert.match(main,/detailUI\.openFromLocation/);assert.match(main,/recordEcoPulse/);
+  const detail=fs.readFileSync('apps/web/src/detail-ui.js','utf8');
+  assert.match(detail,/href='#detail='/);assert.match(detail,/openFromLocation/);
+});
+
+test('Recap is a real manager back-office across onboarding Autres Live AI and market',()=>{
+  const recap=fs.readFileSync('apps/web/src/recap-ui.js','utf8');
+  for(const token of ['listJoinLinks','miscRubrics','dataUseConsent','ecoPulseProfile','Live Ledger','EcoPulse apprend','cycle de vie','Rapprochements historiques'])assert.match(recap,new RegExp(token));
 });
