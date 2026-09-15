@@ -1,6 +1,6 @@
 name = "eco-system"
 main = "src/index.ts"
-compatibility_date = "2026-09-05"
+compatibility_date = "2026-09-15"
 compatibility_flags = ["nodejs_compat"]
 workers_dev = true
 
@@ -17,3 +17,14 @@ run_worker_first = ["/api/*", "/health"]
 not_found_handling = "single-page-application"
 html_handling = "auto-trailing-slash"
 
+
+[vars]
+PREMIUM_LIVE_LEDGER = "false"
+
+[[durable_objects.bindings]]
+name = "GROUP_LIVE_HUB"
+class_name = "GroupLiveHub"
+
+[exports.GroupLiveHub]
+type = "durable-object"
+storage = "sqlite"
