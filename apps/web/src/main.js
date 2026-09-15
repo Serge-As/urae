@@ -849,6 +849,10 @@ window.addEventListener('online', async () => { renderConnectivity(); try {
 }
 catch { } });
 window.addEventListener('offline', renderConnectivity);
+if('serviceWorker' in navigator)navigator.serviceWorker.addEventListener('message',event=>{
+    if(event.data?.type!=='ECO_SYSTEM_SYNC_OUTBOX'||!navigator.onLine)return;
+    void (async()=>{try{await app.syncOutbox();renderOutbox();if(app.activeGroup())await refreshGroupContext();}catch{}})();
+});
 window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); deferredInstallPrompt = e; $('#installBtn').hidden = false; });
 $('#installBtn').addEventListener('click', async () => { if (deferredInstallPrompt) {
     await deferredInstallPrompt.prompt();
