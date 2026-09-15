@@ -14,9 +14,9 @@ export function mountPersonalCockpitUI({app,getGroups,getMembers,getMeetings,nav
   };
   const pulseOpen=async item=>{
     await pulseSignal(item,'OPEN');
-    if(item.kind==='interest-community'){
+    if(item.kind==='interest-community'||item.kind.startsWith('interest-content-')){
       navigate('ecosystem');
-      document.dispatchEvent(new CustomEvent('eco:open-interest-community',{detail:{id:item.id}}));
+      document.dispatchEvent(new CustomEvent('eco:open-interest-community',{detail:{id:String(item.payload?.communityId??item.id),contentId:item.payload?.contentId}}));
       return;
     }
     if(item.kind==='public-group'){
@@ -55,7 +55,8 @@ export function mountPersonalCockpitUI({app,getGroups,getMembers,getMeetings,nav
       for(const item of feed.items){
         const card=el('article',undefined,'item');card.dataset.pulseId=item.id;card.dataset.pulseKind=item.kind;
         const heading=el('strong',item.title);card.append(heading);
-        const meta=[item.locality,item.kind==='interest-community'?'Communauté d’intérêt':item.kind==='public-group'?'Groupe à découvrir':item.kind==='meeting'?'Vie de mon groupe':item.kind==='shop-item'?'Boutique':item.kind==='group-hub'?'Hub du groupe':item.kind].filter(Boolean).join(' · ');
+        const communityContentLabel=item.kind.startsWith('interest-content-')?({event:'Événement',place:'Bon coin',offer:'Offre',request:'Demande',post:'Publication'}[item.kind.replace('interest-content-','')]??'Communauté'):null;
+        const meta=[item.locality,item.kind==='interest-community'?'Communauté d’intérêt':communityContentLabel??(item.kind==='public-group'?'Groupe à découvrir':item.kind==='meeting'?'Vie de mon groupe':item.kind==='shop-item'?'Boutique':item.kind==='group-hub'?'Hub du groupe':item.kind)].filter(Boolean).join(' · ');
         if(meta)card.append(el('p',meta,'hint'));
         if(item.why?.length)card.append(el('p','Pourquoi ceci ? '+item.why.join(' · '),'hint'));
         if(item.kind==='shop-item'&&item.payload?.unitPrice!==undefined)card.append(row('Prix',fmt(Number(item.payload.unitPrice))));
