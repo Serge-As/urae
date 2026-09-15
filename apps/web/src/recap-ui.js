@@ -1,6 +1,6 @@
 const el=(tag,text,className)=>{const e=document.createElement(tag);if(text!==undefined)e.textContent=text;if(className)e.className=className;return e;};
 const row=(label,value)=>{const p=el('p');p.append(el('strong',label+' : '),document.createTextNode(String(value??'—')));return p;};
-const detail=(label,type,id)=>{const b=el('button',label,'link-btn');b.type='button';b.dataset.detailType=type;b.dataset.detailId=id;return b;};
+const detail=(label,type,id)=>{const a=el('a',label,'link-btn');a.href='#detail='+encodeURIComponent(type)+':'+encodeURIComponent(id);a.dataset.detailType=type;a.dataset.detailId=id;return a;};
 export function mountRecapUI({app,getGroups,getMembers,getMeetings,getRubrics,isManager,navigate,fmt=n=>String(n),date=x=>String(x),showError=console.error}){
   const ids=['recapMetrics','recapAlerts','recapIdentityLive','recapMembers','recapMeetingsRubrics','recapFinance','recapExceptions','recapCommunityMarket','recapActions'];
   const roots=Object.fromEntries(ids.map(id=>[id,document.getElementById(id)]));if(ids.some(id=>!roots[id]))return{refresh:async()=>{}};
