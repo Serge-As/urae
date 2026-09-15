@@ -262,6 +262,34 @@
             <section class="panel"><h2>Séances</h2><form id="meetingForm" class="inline-form"><input id="meetingTitle" placeholder="Ex. Séance de septembre"><button class="primary">Ouvrir</button></form><div id="meetingList" class="stack"></div></section>
           </div>
 
+          <section class="panel" id="miscRubricPanel">
+            <div class="panel-head"><div><h2>Autres · petites rubriques</h2><p>Inscription, timbre de prêt, amende et rubriques ponctuelles restent regroupés ici pour ne pas surcharger la feuille principale.</p></div></div>
+            <div class="two-col">
+              <form id="miscRubricPostingForm" class="form-grid">
+                <h3>Enregistrer plusieurs « Autres » en une fois</h3>
+                <label>Membre<select id="miscRubricMember"></select></label>
+                <label>Séance<select id="miscRubricMeeting"><option value="">Sans séance</option></select></label>
+                <div id="miscRubricChoices" class="stack full"></div>
+                <button class="primary">Enregistrer les éléments sélectionnés</button>
+              </form>
+              <div>
+                <details id="miscRubricConfig">
+                  <summary><strong>Ajouter une petite rubrique personnalisée</strong></summary>
+                  <form id="miscRubricCustomForm" class="form-grid">
+                    <label>Nom<input id="miscRubricCustomName" required placeholder="Ex. Badge, dossier, pénalité spéciale"></label>
+                    <label>Durée<select id="miscRubricCustomLifecycle"><option value="PERSISTENT">Toujours disponible</option><option value="EPHEMERAL">Temporaire au démarrage</option><option value="SESSION_ONLY">Selon la séance</option></select></label>
+                    <label>Premières séances<input id="miscRubricCustomSessions" type="number" min="1" step="1" placeholder="Ex. 2"></label>
+                    <label>Montant suggéré<input id="miscRubricCustomAmount" type="number" min="0" step="1"></label>
+                    <label class="full">Description<input id="miscRubricCustomDescription" placeholder="Règle ou usage de cette petite rubrique"></label>
+                    <button class="secondary">Créer dans « Autres »</button>
+                  </form>
+                </details>
+                <h3>Derniers enregistrements</h3>
+                <div id="miscRubricPostingList" class="stack"></div>
+              </div>
+            </div>
+          </section>
+
           <section class="panel living">
             <div class="panel-head"><div><h2>Règles vivantes</h2><p>Écrit ≠ pratique ≠ règle opérationnelle. L'application cherche à comprendre le groupe avant d'imposer.</p></div></div>
             <div class="two-col">
