@@ -208,6 +208,12 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
     if(contributionRoute&&request.method==='POST'){
       const body=await readJson<Record<string,unknown>>(request);
       const receipt=await ledger.recordCashContribution({tenantId:ctx.tenantId,groupId:contributionRoute[1]!,membershipId:String(body.membershipId??''),amount:finite(body.amount),currency:String(body.currency??'XAF'),meetingId:body.meetingId?String(body.meetingId):undefined,rubricId:body.rubricId?String(body.rubricId):undefined,lateReason:body.lateReason?String(body.lateReason):undefined,approverIds:strArray(body.approverIds),idempotencyKey:String(body.idempotencyKey??request.headers.get('x-idempotency-key')??makeId('idem'))});
+      const entry=await repo.getLedgerEntry(ctx.tenantId,contributionRoute[1]!,receipt.ledgerEntryId);
+      if(entry){
+        const positions=await ledger.receiptPositions(ctx.tenantId,contributionRoute[1]!);
+        const after=positions.filter(p=>p.membershipId===receipt.membershipId).reduce((n,p)=>n+p.netAmount,0);
+        await memberControl.create({groupId:contributionRoute[1]!,membershipId:receipt.membershipId,entry,operationType:'CASH_CONTRIBUTION',amount:receipt.amount.amount,currency:receipt.amount.currency,rubricId:receipt.rubricId,meetingId:receipt.meetingId,previousSituation:after-receipt.amount.amount,newSituation:after});
+      }
       return json(receipt,201,cors);
     }
 
