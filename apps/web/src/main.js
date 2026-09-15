@@ -9,6 +9,7 @@ import { ConnectedApplication } from '../../../packages/application/src/index.js
 import { captureRuntimeI18n, applyRuntimeLocale, localeTag, runtimeTranslate } from './runtime-i18n.js';
 import { mountCompletionUI } from './completion-ui.js';
 import { mountAdvancedUI } from './advanced-ui.js';
+import { mountIdentityLiveUI } from './identity-live-ui.js';
 let uiLocale = 'fr';
 try { uiLocale = localStorage.getItem('tontine.locale') === 'en' ? 'en' : 'fr'; } catch {}
 const tx = (fr,en) => runtimeTranslate(uiLocale,fr,en);
@@ -93,6 +94,7 @@ const completionUI = mountCompletionUI({
 const advancedUI = mountAdvancedUI({
     app, notify: toast, showError: fail, getMembers: () => members, fmt, translate: (fr,en) => tx(fr,en)
 });
+const identityLiveUI = mountIdentityLiveUI({ app, notify: toast, showError: fail });
 const clearFail = () => { $('#errorBox').hidden = true; $('#errorBox').textContent = ''; };
 const go = (name) => {
     document.querySelectorAll('.view').forEach(x => x.classList.remove('active'));
@@ -598,6 +600,7 @@ const refreshGroupContext = async () => {
     await renderInbox();
     await completionUI.refresh();
     await advancedUI.refresh();
+    await identityLiveUI.refresh();
 };
 const refreshAll = async () => { await refreshGroupContext(); renderOutbox(); renderCompatibility(); renderKernel(); renderModules(); renderEcosystemHighlights(); renderDomainHubs(); };
 $('#activeGroupSelect').addEventListener('change', async (e) => { const id = e.target.value; app.selectGroup(id || undefined); try {
