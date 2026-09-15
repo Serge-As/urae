@@ -74,7 +74,11 @@ export class EcoPulseService{
 
   async rank(accountId:string,candidates:RecommendationCandidate[],input:{locality?:string;limit?:number;dayKey?:string}={}):Promise<RankedRecommendation[]>{
     const limit=Math.min(Math.max(Math.trunc(input.limit??12),1),30),aff=await this.affinities(accountId,100),map=new Map(aff.map(a=>[affinityKey(a.dimension,a.value),a.score]));
-    const recent=await this.db.prepare(`SELECT item_id,item_kind,action,occurred_at FROM engagement_events WHERE account_id=? ORDER BY occurred_at DESC LIMIT 300`).bind(accountId).all<Record<string,unknown>>();
+    const [recent,statsRows]=await Promise.all([
+      this.db.prepare(`SELECT item_id,item_kind,action,occurred_at FROM engagement_events WHERE account_id=? ORDER BY occurred_at DESC LIMIT 300`).bind(accountId).all<Record<string,unknown>>(),
+      this.db.prepare(`SELECT * FROM engagement_item_stats ORDER BY updated_at DESC LIMIT 1000`).all<Record<string,unknown>>()
+    ]);
+    const statsMap=new Map(statsRows.results.map(r=>[String(r.item_kind)+'\u0000'+String(r.item_id),r]));
     const opened=new Map<string,string>(),hidden=new Set<string>();
     for(const r of recent.results){const key=String(r.item_kind)+'\u0000'+String(r.item_id);if(['HIDE','NOT_INTERESTED'].includes(String(r.action)))hidden.add(key);if(['OPEN','JOIN','SAVE','SHARE'].includes(String(r.action))&&!opened.has(key))opened.set(key,String(r.occurred_at));}
     const ranked:RankedRecommendation[]=[];
@@ -88,8 +92,8 @@ export class EcoPulseService{
       if(affinity>0){score+=Math.min(28,affinity*1.6);reasonCodes.push('PERSONAL_AFFINITY');why.push('Correspond à vos interactions et centres d’intérêt');}
       if(input.locality&&candidate.locality===normalize(input.locality)){score+=6;reasonCodes.push('LOCALITY');why.push('Proche de votre zone');}
       if(candidate.freshnessAt&&Number.isFinite(Date.parse(candidate.freshnessAt))){const bonus=Math.max(0,8-days(candidate.freshnessAt)*0.45);if(bonus>1){score+=bonus;reasonCodes.push('FRESH');why.push('Contenu récent');}}
-      const stats=await this.db.prepare('SELECT * FROM engagement_item_stats WHERE item_kind=? AND item_id=?').bind(candidate.kind,candidate.id).first<Record<string,unknown>>();
-      if(stats){const popularity=Math.log1p(Number(stats.opens??0)+2*Number(stats.saves??0)+3*Number(stats.shares??0)+4*Number(stats.joins??0)-2*Number(stats.hides??0));if(popularity>0.4){score+=Math.min(10,popularity*1.5);reasonCodes.push('COMMUNITY_SIGNAL');why.push('Intéresse aussi d’autres utilisateurs');}}
+      const stats=statsMap.get(key);
+      if(stats){const rawPopularity=Number(stats.opens??0)+2*Number(stats.saves??0)+3*Number(stats.shares??0)+4*Number(stats.joins??0)-2*Number(stats.hides??0);const popularity=Math.log1p(Math.max(0,rawPopularity));if(popularity>0.4){score+=Math.min(10,popularity*1.5);reasonCodes.push('COMMUNITY_SIGNAL');why.push('Intéresse aussi d’autres utilisateurs');}}
       const seenAt=opened.get(key);if(seenAt){const age=days(seenAt);score-=age<1?16:age<7?8:3;reasonCodes.push('RECENTLY_SEEN');}
       const bucket=await hashBucket(accountId+'|'+candidate.id+'|'+(input.dayKey??new Date().toISOString().slice(0,10)));
       if(bucket%100<15){score+=5;reasonCodes.push('EXPLORATION');why.push('Découverte volontaire pour élargir vos suggestions');}
