@@ -1,5 +1,6 @@
 import {createRubricEditor,readRubricEditors,describeRubricPlan,editRubricPlan} from './launch-rubrics.js';
 import {mountLaunchStudio} from './launch-studio.js';
+import {renderMemberFinancialNotices} from './member-control-ui.js';
 // UI recovered from the public Cahier App 1.1 on 2026-09-12, then hardened locally.
 // Dynamic text is escaped before use in fixed HTML templates.
 const escapeText=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
