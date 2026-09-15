@@ -19,8 +19,8 @@ export function mountInterestCommunityUI({app,notify=()=>{},showError=console.er
     const card=el('article',undefined,'item');card.append(el('strong',c.name),row('Localité',c.locality||'—'),row('Membres',c.memberCount),row('Centres d’intérêt',(c.tags??[]).join(', ')||'—'));
     if(c.description)card.append(el('p',c.description));
     const actions=el('div',undefined,'actions');
-    if(c.viewerStatus==='ACTIVE'){const b=el('button','Ouvrir','primary');b.type='button';b.onclick=()=>void open(c.id).catch(showError);actions.append(b);}
-    else if(discover){const b=el('button',c.joinPolicy==='OPEN'?'Rejoindre':'Demander à rejoindre','primary');b.type='button';b.onclick=()=>void (async()=>{try{const r=await app.joinInterestCommunity(c.id);notify(r.status==='JOINED'?'Communauté rejointe.':'Demande envoyée.');await refresh();if(r.status==='JOINED')await open(c.id);}catch(e){showError(e);}})();actions.append(b);}
+    if(c.viewerStatus==='ACTIVE'){const b=el('button','Ouvrir','primary');b.type='button';b.onclick=()=>void (async()=>{try{await app.recordEcoPulse({itemId:c.id,itemKind:'interest-community',action:'OPEN',source:'community-discovery',locality:c.locality,tags:c.tags??[]});await open(c.id);}catch(e){showError(e);}})();actions.append(b);}
+    else if(discover){const b=el('button',c.joinPolicy==='OPEN'?'Rejoindre':'Demander à rejoindre','primary');b.type='button';b.onclick=()=>void (async()=>{try{const r=await app.joinInterestCommunity(c.id);await app.recordEcoPulse({itemId:c.id,itemKind:'interest-community',action:r.status==='JOINED'?'JOIN':'SEARCH_CLICK',source:'community-discovery',locality:c.locality,tags:c.tags??[]}).catch(()=>{});notify(r.status==='JOINED'?'Communauté rejointe.':'Demande envoyée.');await refresh();if(r.status==='JOINED')await open(c.id);}catch(e){showError(e);}})();actions.append(b);}
     card.append(actions);container.append(card);
   };
   const search=async()=>{
