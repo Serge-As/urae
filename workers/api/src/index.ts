@@ -20,6 +20,9 @@ import { HistoricalImportService, RepositoryArtifactStore, type ArtifactStoreLik
 import { authenticatedApi } from './authenticated.js';
 export { GroupLiveHub } from './group-live-hub.js';
 
+interface DurableObjectStubLike { fetch(request:Request):Promise<Response>; }
+interface DurableObjectNamespaceLike { idFromName(name:string):unknown; get(id:unknown):DurableObjectStubLike; }
+
 const defaultRepo = new InMemoryPlatformRepository();
 
 const baseSecurityHeaders: HeadersInit = {
@@ -72,7 +75,7 @@ const inboxFor = async (repo:PlatformRepository,tenantId:string,actorId:string) 
   return [...obligations,...cases];
 };
 
-export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{artifacts?:ArtifactStoreLike}={}) => async (request:Request):Promise<Response> => {
+export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{artifacts?:ArtifactStoreLike;liveNamespace?:DurableObjectNamespaceLike;premiumLive?:boolean}={}) => async (request:Request):Promise<Response> => {
   const url=new URL(request.url); const cors=corsHeaders(request);
   if(request.method==='OPTIONS'){
     const allowed=Boolean((cors as Record<string,string>)['access-control-allow-origin']);
