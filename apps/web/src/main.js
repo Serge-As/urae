@@ -16,6 +16,7 @@ import { mountPairingUI } from './pairing-ui.js';
 import { mountDetailUI } from './detail-ui.js';
 import { mountPersonalCockpitUI } from './personal-cockpit-ui.js';
 import { mountRecapUI } from './recap-ui.js';
+import { mountInterestCommunityUI } from './interest-community-ui.js';
 let uiLocale = 'fr';
 try { uiLocale = localStorage.getItem('tontine.locale') === 'en' ? 'en' : 'fr'; } catch {}
 const tx = (fr,en) => runtimeTranslate(uiLocale,fr,en);
@@ -120,6 +121,7 @@ document.querySelectorAll('[data-go]').forEach(b => b.addEventListener('click', 
 const detailUI = mountDetailUI({ app, navigate: go, getGroups: () => groups, getMembers: () => members, getMeetings: () => meetings, getRubrics: () => rubrics, isManager, fmt, date, showError: fail });
 const personalCockpitUI = mountPersonalCockpitUI({ app, getGroups: () => groups, getMembers: () => members, getMeetings: () => meetings, navigate: go, fmt, date, showError: fail });
 const recapUI = mountRecapUI({ app, getGroups: () => groups, getMembers: () => members, getMeetings: () => meetings, getRubrics: () => rubrics, isManager, navigate: go, fmt, date, showError: fail });
+const interestCommunityUI = mountInterestCommunityUI({ app, notify: toast, showError: fail, date });
 const renderConnectivity = () => { const online = navigator.onLine; const e = $('#connectivity'); e.textContent = `● ${online ? tx('En ligne','Online') : tx('Hors ligne','Offline')}`; e.className = `pill ${online ? 'online' : 'offline'}`; app.setConnectivity(online ? 'online' : 'offline'); };
 const renderUniverse = async () => {
     const u = await app.universe();
@@ -622,6 +624,7 @@ const refreshGroupContext = async () => {
     await pairingUI.refresh();
     await personalCockpitUI.refresh();
     await recapUI.refresh();
+    await interestCommunityUI.refresh();
 };
 const refreshAll = async () => { await refreshGroupContext(); renderOutbox(); renderCompatibility(); renderKernel(); renderModules(); renderEcosystemHighlights(); renderDomainHubs(); };
 $('#activeGroupSelect').addEventListener('change', async (e) => { const id = e.target.value; app.selectGroup(id || undefined); try {
