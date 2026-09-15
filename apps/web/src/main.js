@@ -628,7 +628,7 @@ const refreshGroupContext = async () => {
     await recapUI.refresh();
     await interestCommunityUI.refresh();
 };
-const refreshAll = async () => { await refreshGroupContext(); renderOutbox(); renderCompatibility(); renderKernel(); renderModules(); renderEcosystemHighlights(); renderDomainHubs(); };
+const refreshAll = async () => { await refreshGroupContext(); renderOutbox(); renderCompatibility(); renderKernel(); renderModules(); renderEcosystemHighlights(); renderDomainHubs(); await detailUI.openFromLocation?.(); };
 $('#activeGroupSelect').addEventListener('change', async (e) => { const id = e.target.value; app.selectGroup(id || undefined); try {
     await refreshGroupContext();
     toast(id ? 'Groupe actif changé.' : 'Aucun groupe actif.');
