@@ -12,7 +12,8 @@ export interface ConciergeMemoryCapsule {
   evidenceSnippet?:string;confidence:number;privacy:MemoryPrivacy;visibility:MemoryVisibility;
   collectiveEligible:boolean;createdBy:Id;createdAt:string;updatedAt:string;version:number;
 }
-export interface GroupConsentProfile {groupId:Id;purposes:Record<DataUsePurpose,boolean>;version:number;updatedAt:string;updatedBy:Id;}
+export type DataUseDefaultMode='BETA_OPEN'|'PRIVACY_FIRST';
+export interface GroupConsentProfile {groupId:Id;purposes:Record<DataUsePurpose,boolean>;version:number;updatedAt:string;updatedBy:Id;defaultMode:DataUseDefaultMode;}
 export interface SafeCollectiveSignal {
   groupCode:string;category:Extract<LearningCategory,'MEETING_RHYTHM'|'RUBRIC_PATTERN'|'OPERATING_PRACTICE'|'UX_PREFERENCE'|'MARKET_INTEREST'|'COMMUNITY_INTEREST'>;
   key:string;value:string;confidence:number;
@@ -34,11 +35,11 @@ const now=()=>new Date().toISOString();
 const consentId=(groupId:Id)=>'data_use_consent_'+encodeURIComponent(groupId);
 const memoryId=()=> 'memory_'+crypto.randomUUID();
 
-const defaultConsent=(groupId:Id,actorId:Id):GroupConsentProfile=>({groupId,purposes:{COLLECTIVE_LEARNING:false,COMMERCIAL_PERSONALIZATION:false,PARTNER_MATCHING:false,COMMUNITY_DISCOVERY:false},version:1,updatedAt:now(),updatedBy:actorId});
-const parseConsent=(r:WorkspaceRecord|undefined,groupId:Id,actorId:Id):GroupConsentProfile=>{
-  if(!r)return defaultConsent(groupId,actorId);
+const defaultConsent=(groupId:Id,actorId:Id,defaultMode:DataUseDefaultMode):GroupConsentProfile=>{const enabled=defaultMode==='BETA_OPEN';return{groupId,purposes:{COLLECTIVE_LEARNING:enabled,COMMERCIAL_PERSONALIZATION:enabled,PARTNER_MATCHING:enabled,COMMUNITY_DISCOVERY:enabled},version:1,updatedAt:now(),updatedBy:actorId,defaultMode};};
+const parseConsent=(r:WorkspaceRecord|undefined,groupId:Id,actorId:Id,defaultMode:DataUseDefaultMode):GroupConsentProfile=>{
+  if(!r)return defaultConsent(groupId,actorId,defaultMode);
   const raw=JSON.parse(String(r.data.purposesJson??'{}')) as Partial<Record<DataUsePurpose,boolean>>;
-  return{groupId,purposes:{COLLECTIVE_LEARNING:Boolean(raw.COLLECTIVE_LEARNING),COMMERCIAL_PERSONALIZATION:Boolean(raw.COMMERCIAL_PERSONALIZATION),PARTNER_MATCHING:Boolean(raw.PARTNER_MATCHING),COMMUNITY_DISCOVERY:Boolean(raw.COMMUNITY_DISCOVERY)},version:Number(r.data.version??1),updatedAt:r.updatedAt,updatedBy:String(r.data.updatedBy??r.createdBy)};
+  return{groupId,purposes:{COLLECTIVE_LEARNING:Boolean(raw.COLLECTIVE_LEARNING),COMMERCIAL_PERSONALIZATION:Boolean(raw.COMMERCIAL_PERSONALIZATION),PARTNER_MATCHING:Boolean(raw.PARTNER_MATCHING),COMMUNITY_DISCOVERY:Boolean(raw.COMMUNITY_DISCOVERY)},version:Number(r.data.version??1),updatedAt:r.updatedAt,updatedBy:String(r.data.updatedBy??r.createdBy),defaultMode:String(r.data.defaultMode??defaultMode) as DataUseDefaultMode};
 };
 const parseMemory=(r:WorkspaceRecord):ConciergeMemoryCapsule=>({
   id:r.id,groupId:String(r.groupId??''),category:String(r.data.category) as LearningCategory,key:String(r.data.key),value:String(r.data.value),sourceRef:String(r.data.sourceRef),
@@ -47,7 +48,7 @@ const parseMemory=(r:WorkspaceRecord):ConciergeMemoryCapsule=>({
 });
 
 export class ConciergeLearningService{
-  constructor(public repo:PlatformRepository,public kernel:PlatformKernel){}
+  constructor(public repo:PlatformRepository,public kernel:PlatformKernel,public defaultMode:DataUseDefaultMode='BETA_OPEN'){}
   private async membership(groupId:Id){
     const ctx=this.kernel.context.get(),group=await this.repo.getGroup(ctx.tenantId,groupId);if(!group)throw new Error('GROUP_NOT_FOUND');
     if(group.createdBy===ctx.actorId)return{group,manager:true};
@@ -56,13 +57,13 @@ export class ConciergeLearningService{
   }
   async consent(groupId:Id):Promise<GroupConsentProfile>{
     const ctx=this.kernel.context.get();await this.membership(groupId);
-    return parseConsent(await this.repo.getWorkspaceRecord(ctx.tenantId,consentId(groupId)),groupId,ctx.actorId);
+    return parseConsent(await this.repo.getWorkspaceRecord(ctx.tenantId,consentId(groupId)),groupId,ctx.actorId,this.defaultMode);
   }
   async setConsent(groupId:Id,purpose:DataUsePurpose,granted:boolean):Promise<GroupConsentProfile>{
     const ctx=this.kernel.context.get(),access=await this.membership(groupId);if(!access.manager)throw new Error('FORBIDDEN_SCOPE');
     const current=await this.consent(groupId),stamp=now(),next:GroupConsentProfile={...current,purposes:{...current.purposes,[purpose]:granted},version:current.version+1,updatedAt:stamp,updatedBy:ctx.actorId};
     const existing=await this.repo.getWorkspaceRecord(ctx.tenantId,consentId(groupId));
-    await this.repo.saveWorkspaceRecord({id:consentId(groupId),tenantId:ctx.tenantId,groupId,moduleId:CONSENT_MODULE,title:'Consentements d’usage des données du groupe',summary:'Contrôle séparé de l’apprentissage collectif, personnalisation commerciale, partenaires et découverte communautaire.',status:'ACTIVE',tags:['privacy','consent','revocable'],data:{purposesJson:JSON.stringify(next.purposes),version:next.version,updatedBy:ctx.actorId},createdBy:existing?.createdBy??ctx.actorId,createdAt:existing?.createdAt??stamp,updatedAt:stamp});
+    await this.repo.saveWorkspaceRecord({id:consentId(groupId),tenantId:ctx.tenantId,groupId,moduleId:CONSENT_MODULE,title:'Consentements d’usage des données du groupe',summary:'Contrôle séparé de l’apprentissage collectif, personnalisation commerciale, partenaires et découverte communautaire.',status:'ACTIVE',tags:['privacy','consent','revocable'],data:{purposesJson:JSON.stringify(next.purposes),version:next.version,updatedBy:ctx.actorId,defaultMode:this.defaultMode},createdBy:existing?.createdBy??ctx.actorId,createdAt:existing?.createdAt??stamp,updatedAt:stamp});
     await this.repo.saveAudit(this.kernel.audit.append({tenantId:ctx.tenantId,actorId:ctx.actorId,action:'GROUP_DATA_USE_CONSENT_UPDATED',targetType:'group',targetId:groupId,requestId:ctx.requestId,metadata:{purpose,granted,version:next.version}}));
     return next;
   }
