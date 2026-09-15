@@ -698,7 +698,30 @@
         </section>
 
         <section class="panel"><div class="section-kicker"><div><h2>Marché, fournisseurs & Business Studio</h2><p>Achats groupés, appels d’offres, marketplace et activités économiques.</p></div></div><div id="marketHub" class="hub-grid"></div></section>
-        <section class="panel"><div class="section-kicker"><div><h2>AdManager & sponsoring</h2><p>Campagnes, créations, placements, ciblage respectueux, modération et analytics.</p></div></div><div id="growthHub" class="hub-grid"></div></section>
+        <section class="panel"><div class="section-kicker"><div><h2>AdManager & sponsoring</h2><p>Campagnes, créations, placements, ciblage contextuel et financier agrégé, modération et analytics. Aucun ciblage individuel par dette, solde, CNI ou identité.</p></div></div><div id="growthHub" class="hub-grid"></div></section>
+        <section class="panel" id="adManagerPanel">
+          <div class="section-kicker"><div><h2>Studio AdManager</h2><p>Créez une campagne sandbox avant toute facturation réelle. Eco-System peut exploiter des centres d’intérêt, localités et tranches de masse monétaire <strong>agrégées au niveau du groupe/rubrique</strong>, jamais la situation financière personnelle d’un membre.</p></div></div>
+          <div class="two-col">
+            <form id="adCampaignForm" class="form-grid">
+              <h3>Nouvelle campagne</h3>
+              <label>Nom<input id="adCampaignName" required placeholder="Ex. Offre savons rentrée 2026"></label>
+              <label>Objectif<select id="adCampaignObjective"><option value="AWARENESS">Visibilité</option><option value="COMMUNITY_JOIN">Rejoindre une communauté</option><option value="EVENT_RSVP">Événement</option><option value="DEAL_OPEN">Ouvrir un deal</option><option value="GROUP_BUY">Achat groupé</option><option value="LEAD">Prospect qualifié</option><option value="PARTNER_PROGRAM">Programme partenaire/ONG</option></select></label>
+              <label>Budget sandbox (F CFA)<input id="adCampaignBudget" type="number" min="0" step="1" value="0"></label>
+              <label>Plafond / 7 jours<input id="adCampaignFrequency" type="number" min="1" max="50" value="3"></label>
+              <label>Placements<input id="adCampaignPlacements" value="FEED" placeholder="FEED, COMMUNITY, RECAP"></label>
+              <label>Localités<input id="adCampaignLocalities" placeholder="Yaoundé, Douala"></label>
+              <label>Centres d’intérêt<input id="adCampaignInterests" placeholder="épargne, agriculture, formation"></label>
+              <label>Types de rubriques<input id="adCampaignRubricKinds" placeholder="SAVINGS, TONTINE, SOLIDARITY"></label>
+              <label class="full">Tranches de volumes agrégés<input id="adCampaignVolumeBands" placeholder="SAVON:100000-500000, EPARGNE:1000000-5000000"></label>
+              <label>Titre créatif<input id="adCampaignHeadline" required></label>
+              <label>Action<input id="adCampaignCta" required placeholder="Voir l’offre"></label>
+              <label class="full">Message<textarea id="adCampaignBody" rows="3" required></textarea></label>
+              <label class="full">Destination interne<input id="adCampaignDestination" required placeholder="group-buy:..., community:..., partner-program:..."></label>
+              <button class="primary">Créer le brouillon sandbox</button>
+            </form>
+            <div><h3>Campagnes</h3><div id="adCampaignList" class="stack"></div></div>
+          </div>
+        </section>
         <section class="panel"><div class="section-kicker"><div><h2>Academy · ONG · IA · Safety · Paper Bridge</h2><p>Accompagnement des gestionnaires, connaissance, documents, anti-arnaque et pont papier ↔ numérique.</p></div></div><div id="guidanceHub" class="hub-grid"></div></section>
         <section class="panel"><div class="section-kicker"><div><h2>Rapports, recherche, calendrier et intégrations</h2><p>Exports, dashboards, notifications et connecteurs.</p></div></div><div id="reportsHub" class="hub-grid"></div></section>
         <section class="panel">
