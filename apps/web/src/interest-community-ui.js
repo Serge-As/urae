@@ -60,6 +60,7 @@ export function mountInterestCommunityUI({app,notify=()=>{},showError=console.er
     }catch{}
   };
 
+  document.addEventListener('eco:open-interest-community',e=>{const id=e instanceof CustomEvent?String(e.detail?.id??''):'';if(id)void open(id).catch(showError);});
   document.getElementById('interestCommunitySearchForm')?.addEventListener('submit',e=>{e.preventDefault();void search().catch(showError);});
   document.getElementById('interestCommunityCreateForm')?.addEventListener('submit',e=>{e.preventDefault();void (async()=>{try{
     const c=await app.createInterestCommunity({name:value('interestCommunityName'),description:value('interestCommunityDescription')||undefined,locality:value('interestCommunityCreateLocality')||undefined,visibility:value('interestCommunityVisibility'),joinPolicy:value('interestCommunityJoinPolicy'),tags:split(value('interestCommunityCreateTags'))});
