@@ -864,6 +864,12 @@ async function ensureCurrentServiceWorker(){
     try{
         const reg=await navigator.serviceWorker.register('/sw.js',{scope:'/',updateViaCache:'none'});
         await reg.update();
+        try{
+            if('periodicSync' in reg)await reg.periodicSync.register('eco-system-outbox',{minInterval:12*60*60*1000});
+        }catch{}
+        try{
+            if('sync' in reg && app.outboxItems().some(x=>x.status!=='CONFIRMED'))await reg.sync.register('eco-system-outbox');
+        }catch{}
         navigator.serviceWorker.addEventListener('controllerchange',()=>{
             try{if(sessionStorage.getItem('eco-system-sw-reloaded')==='1')return;sessionStorage.setItem('eco-system-sw-reloaded','1');}catch{}
             location.reload();
