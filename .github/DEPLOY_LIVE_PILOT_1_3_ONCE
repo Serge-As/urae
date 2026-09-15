@@ -3,3 +3,5 @@ Authorized by user on 2026-09-15.
 Source qualified at 4ccd51bb8a04600ac4ecfe2ace1e3e1ed643b018.
 Production Worker eco-system and D1 eco-system-db must remain untouched.
 realMoneyEnabled=false remains mandatory.
+
+Retry after line-ending-safe Worker name render: d0d09ea5c80e3d763f1fb488df22b2df38289c67
