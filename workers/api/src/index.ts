@@ -228,6 +228,21 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
       const body=await readJson<Record<string,unknown>>(request); return json(await foundation.reconcileCashbox({tenantId:ctx.tenantId,groupId:cashboxRoute[1]!,meetingId:body.meetingId?String(body.meetingId):undefined,openingCash:finite(body.openingCash),cashIn:finite(body.cashIn),cashOut:finite(body.cashOut),countedClosing:finite(body.countedClosing),currency:String(body.currency??'XAF')}),201,cors);
     }
 
+    const memberNotices=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/members\/([^/]+)\/financial-notices$/);
+    if(memberNotices&&request.method==='GET')return json(await memberControl.list(memberNotices[1]!,memberNotices[2]!),200,cors);
+    const noticeConfirm=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/financial-notices\/([^/]+)\/confirm$/);
+    if(noticeConfirm&&request.method==='POST')return json(await memberControl.confirm(noticeConfirm[1]!,noticeConfirm[2]!),200,cors);
+    const noticeReserve=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/financial-notices\/([^/]+)\/reserve$/);
+    if(noticeReserve&&request.method==='POST'){const body=await readJson<Record<string,unknown>>(request);return json(await memberControl.reserve(noticeReserve[1]!,noticeReserve[2]!,String(body.reason??'')),201,cors);}
+    const noticeOfficer=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/financial-notices\/([^/]+)\/officer-review$/);
+    if(noticeOfficer&&request.method==='POST'){const body=await readJson<Record<string,unknown>>(request);return json(await memberControl.officerReview(noticeOfficer[1]!,noticeOfficer[2]!,String(body.note??'')),200,cors);}
+    const noticeMemberReview=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/financial-notices\/([^/]+)\/member-review$/);
+    if(noticeMemberReview&&request.method==='POST'){
+      const body=await readJson<Record<string,unknown>>(request),decision=String(body.decision??'');
+      if(decision!=='APPROVE_AFTER_REVIEW'&&decision!=='MAINTAIN_RESERVE')throw new Error('INVALID_MEMBER_REVIEW_DECISION');
+      return json(await memberControl.memberReview(noticeMemberReview[1]!,noticeMemberReview[2]!,decision,String(body.note??'')),200,cors);
+    }
+
     const amountExplain=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/members\/([^/]+)\/amount-explanation$/);
     if(amountExplain&&request.method==='GET'){
       return json(await explainability.amount(amountExplain[1]!,amountExplain[2]!,url.searchParams.get('rubricId')??undefined),200,cors);
