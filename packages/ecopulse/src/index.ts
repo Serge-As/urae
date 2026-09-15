@@ -45,17 +45,19 @@ export class EcoPulseService{
     await this.db.prepare(`INSERT INTO engagement_events(event_id,account_id,group_id,item_id,item_kind,action,source,locality,tags_json,weight,session_id,occurred_at)
       VALUES(?,?,?,?,?,?,?,?,?,?,?,?)`).bind(eventId,accountId,input.groupId??null,itemId,itemKind,input.action,source,locality??null,JSON.stringify(tags),weight,input.sessionId?clean(input.sessionId,120):null,stamp).run();
 
-    const dims:Array<[string,string,number]>=[['kind',itemKind,0.9],['source',source,0.65],...tags.map(t=>['tag',t,1] as [string,string,number])];
-    if(locality)dims.push(['locality',locality,0.75]);
-    for(const [dimension,value,multiplier] of dims){
-      const delta=weight*multiplier,positive=POSITIVE.has(input.action)?1:0,negative=NEGATIVE.has(input.action)?1:0;
-      await this.db.prepare(`INSERT INTO engagement_affinities(account_id,dimension,affinity_value,score,positive_count,negative_count,updated_at)
-        VALUES(?,?,?,?,?,?,?)
-        ON CONFLICT(account_id,dimension,affinity_value) DO UPDATE SET
-          score=engagement_affinities.score+excluded.score,
-          positive_count=engagement_affinities.positive_count+excluded.positive_count,
-          negative_count=engagement_affinities.negative_count+excluded.negative_count,
-          updated_at=excluded.updated_at`).bind(accountId,dimension,value,delta,positive,negative,stamp).run();
+    if(input.action!=='IMPRESSION'){
+      const dims:Array<[string,string,number]>=[['kind',itemKind,0.9],['source',source,0.65],...tags.map(t=>['tag',t,1] as [string,string,number])];
+      if(locality)dims.push(['locality',locality,0.75]);
+      for(const [dimension,value,multiplier] of dims){
+        const delta=weight*multiplier,positive=POSITIVE.has(input.action)?1:0,negative=NEGATIVE.has(input.action)?1:0;
+        await this.db.prepare(`INSERT INTO engagement_affinities(account_id,dimension,affinity_value,score,positive_count,negative_count,updated_at)
+          VALUES(?,?,?,?,?,?,?)
+          ON CONFLICT(account_id,dimension,affinity_value) DO UPDATE SET
+            score=engagement_affinities.score+excluded.score,
+            positive_count=engagement_affinities.positive_count+excluded.positive_count,
+            negative_count=engagement_affinities.negative_count+excluded.negative_count,
+            updated_at=excluded.updated_at`).bind(accountId,dimension,value,delta,positive,negative,stamp).run();
+      }
     }
     const counters:{[K in EngagementAction]?:string}={IMPRESSION:'impressions',OPEN:'opens',SAVE:'saves',SHARE:'shares',JOIN:'joins',HIDE:'hides',NOT_INTERESTED:'hides'};
     const column=counters[input.action];
