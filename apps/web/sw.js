@@ -1,7 +1,7 @@
-const CACHE = 'eco-system-cahier-app-v120-completion-r3-20260913';
+const CACHE = 'eco-system-v130-guided-live-r1-20260915';
 const APP_SHELL = [
   '/', '/index.html', '/styles.css', '/manifest.webmanifest',
-  '/src/main.js', '/src/i18n.js', '/src/runtime-i18n.js', '/src/completion-ui.js', '/src/advanced-ui.js', '/src/offline-snapshot.js', '/src/launch-rubrics.js',
+  '/src/main.js', '/src/i18n.js', '/src/runtime-i18n.js', '/src/completion-ui.js', '/src/advanced-ui.js', '/src/offline-snapshot.js', '/src/launch-rubrics.js', '/src/launch-studio.js', '/src/member-control-ui.js',
   '/packages/rubrics/src/launch-config.js', '/packages/rubrics/src/index.js',
   '/packages/application/src/index.js', '/packages/completion/src/index.js', '/packages/contracts/src/index.js',
   '/packages/domain/src/index.js', '/packages/module-registry/src/index.js',
@@ -69,5 +69,20 @@ self.addEventListener('fetch', event => {
     if (cached) { event.waitUntil(network.catch(() => undefined)); return cached; }
     try { return await network; }
     catch { return new Response('Offline', { status: 503, headers: { 'content-type': 'text/plain; charset=utf-8' } }); }
+  })());
+});
+
+
+self.addEventListener('periodicsync',event=>{
+  if(event.tag!=='eco-system-outbox')return;
+  event.waitUntil((async()=>{
+    for(const client of await self.clients.matchAll({type:'window',includeUncontrolled:true}))client.postMessage({type:'ECO_SYSTEM_SYNC_OUTBOX',reason:'periodic'});
+  })());
+});
+
+self.addEventListener('sync',event=>{
+  if(event.tag!=='eco-system-outbox')return;
+  event.waitUntil((async()=>{
+    for(const client of await self.clients.matchAll({type:'window',includeUncontrolled:true}))client.postMessage({type:'ECO_SYSTEM_SYNC_OUTBOX',reason:'background'});
   })());
 });
