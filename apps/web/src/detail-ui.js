@@ -98,10 +98,15 @@ export function mountDetailUI({app,navigate,getGroups,getMembers,getMeetings,get
     }catch(e){showError(e);}
   }
 
+  const openFromLocation=async()=>{
+    const raw=location.hash.match(/^#detail=([^:]+):(.+)$/);if(!raw)return false;
+    const type=decodeURIComponent(raw[1]),id=decodeURIComponent(raw[2]);if(!type||!id)return false;
+    await open(type,id);return true;
+  };
   document.addEventListener('click',e=>{
     const target=e.target instanceof Element?e.target.closest('[data-detail-type][data-detail-id]'):null;if(!target)return;
     e.preventDefault();jump(target.dataset.detailType,target.dataset.detailId);
   });
   document.getElementById('detailBackBtn')?.addEventListener('click',()=>{navigate(previous);try{history.replaceState(null,'',location.pathname+location.search);}catch{}});
-  return{open};
+  return{open,openFromLocation};
 }
