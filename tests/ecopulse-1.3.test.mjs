@@ -63,14 +63,14 @@ test('EcoPulse diversity caps prevent one source or kind from monopolizing the f
   }finally{db.close();}
 });
 
-test('commercial preference service keeps beta accounts active but privacy-first honors stored OFF',async()=>{
+test('commercial preference service uses beta ON as a default but honors explicit stored OFF',async()=>{
   const db=new SQLiteD1(':memory:');db.migrate();
   try{
     const beta=new CommercialPreferenceService(db,true);
     assert.equal((await beta.consent('user_a','group_a')).granted,true);
     await beta.setConsent('user_a','group_a',false);
-    assert.equal((await beta.consent('user_a','group_a')).granted,true,'BETA_OPEN should ignore stale OFF for effective access');
+    assert.equal((await beta.consent('user_a','group_a')).granted,false,'explicit OFF must override the beta-open default');
     const privacy=new CommercialPreferenceService(db,false);
-    assert.equal((await privacy.consent('user_a','group_a')).granted,false,'future privacy-first mode should honor persisted OFF');
+    assert.equal((await privacy.consent('user_a','group_a')).granted,false,'privacy-first also honors persisted OFF');
   }finally{db.close();}
 });
