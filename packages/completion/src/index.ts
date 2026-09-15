@@ -475,7 +475,10 @@ export class CompletionSuiteService {
     const share=await this.getRecord(groupId,shareId,true);
     if(share.data.completionKind!=='TONTINE_SHARE')throw new Error('TONTINE_SHARE_NOT_FOUND');
     if(!share.data.scheduledRound)throw new Error('TONTINE_SHARE_NOT_SCHEDULED');
-    return this.transition(groupId,shareId,'SERVED',{expectedVersion,patch:{benefitLedgerEntryId:requiredText('benefitLedgerEntryId',benefitLedgerEntryId),servedAt:now()}});
+    const ctx=this.kernel.context.get(),entryId=requiredText('benefitLedgerEntryId',benefitLedgerEntryId);
+    const entry=await this.repo.getLedgerEntry(ctx.tenantId,groupId,entryId);
+    if(!entry||entry.sourceType!=='tontine_share'||entry.sourceId!==share.id||entry.descriptionCode!=='LEDGER_TONTINE_BENEFIT')throw new Error('TONTINE_BENEFIT_LEDGER_PROOF_INVALID');
+    return this.transition(groupId,shareId,'SERVED',{expectedVersion,patch:{benefitLedgerEntryId:entryId,servedAt:now()}});
   }
 
   async createFinancialObligation(groupId:Id,input:{
