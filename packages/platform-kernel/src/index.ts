@@ -220,6 +220,8 @@ export class PlatformKernel {
     this.features.set('passkeys_optional', false);
     this.features.set('share_target_receipts', false);
     this.features.set('guided_group_assistant', true);
+    this.features.set('member_live_confirmation', true);
+    this.features.set('member_nonblocking_reserve', true);
     this.features.set('financial-real-money', false);
     this.resources.setBudget('cloud_ai_calls', 0);
     this.resources.setBudget('relay_media_bytes', 0);
