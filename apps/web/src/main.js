@@ -10,6 +10,7 @@ import { captureRuntimeI18n, applyRuntimeLocale, localeTag, runtimeTranslate } f
 import { mountCompletionUI } from './completion-ui.js';
 import { mountAdvancedUI } from './advanced-ui.js';
 import { mountIdentityLiveUI } from './identity-live-ui.js';
+import { mountCommunityShopUI } from './community-shop-ui.js';
 let uiLocale = 'fr';
 try { uiLocale = localStorage.getItem('tontine.locale') === 'en' ? 'en' : 'fr'; } catch {}
 const tx = (fr,en) => runtimeTranslate(uiLocale,fr,en);
@@ -95,6 +96,7 @@ const advancedUI = mountAdvancedUI({
     app, notify: toast, showError: fail, getMembers: () => members, fmt, translate: (fr,en) => tx(fr,en)
 });
 const identityLiveUI = mountIdentityLiveUI({ app, notify: toast, showError: fail });
+const communityShopUI = mountCommunityShopUI({ app, notify: toast, showError: fail, isManager, fmt });
 const clearFail = () => { $('#errorBox').hidden = true; $('#errorBox').textContent = ''; };
 const go = (name) => {
     document.querySelectorAll('.view').forEach(x => x.classList.remove('active'));
@@ -601,6 +603,7 @@ const refreshGroupContext = async () => {
     await completionUI.refresh();
     await advancedUI.refresh();
     await identityLiveUI.refresh();
+    await communityShopUI.refresh();
 };
 const refreshAll = async () => { await refreshGroupContext(); renderOutbox(); renderCompatibility(); renderKernel(); renderModules(); renderEcosystemHighlights(); renderDomainHubs(); };
 $('#activeGroupSelect').addEventListener('change', async (e) => { const id = e.target.value; app.selectGroup(id || undefined); try {
