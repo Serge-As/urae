@@ -180,10 +180,18 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
       if(!options.ecoPulse)throw new Error('ECOPULSE_UNAVAILABLE');
       const candidates:RecommendationCandidate[]=[];
       if(options.interestCommunities){
-        const communities=await options.interestCommunities.discover(ctx.actorId,{limit:80});
+        const [communities,communityContent]=await Promise.all([
+          options.interestCommunities.discover(ctx.actorId,{limit:80}),
+          options.interestCommunities.discoverContent(ctx.actorId,120)
+        ]);
         for(const item of communities)candidates.push({
           id:item.id,kind:'interest-community',title:item.name,source:'community-discovery',tags:item.tags??[],locality:item.locality,
           freshnessAt:item.updatedAt??item.createdAt,payload:{communityId:item.id,memberCount:item.memberCount??0,viewerStatus:item.viewerStatus??''}
+        });
+        for(const item of communityContent)candidates.push({
+          id:item.id,kind:'interest-content-'+item.kind.toLowerCase(),title:item.title??item.communityName,source:'community-content',
+          tags:[...item.communityTags,item.kind,item.category??''].filter(Boolean),locality:item.locality,
+          freshnessAt:item.startsAt??item.updatedAt??item.createdAt,payload:{communityId:item.communityId,contentId:item.id,contentKind:item.kind}
         });
       }
       for(const match of (await discovery.search({})).slice(0,80)){
