@@ -1,17 +1,85 @@
 const el=(tag,text,className)=>{const e=document.createElement(tag);if(text!==undefined)e.textContent=text;if(className)e.className=className;return e;};
 const row=(label,value)=>{const p=el('p');p.append(el('strong',label+' : '),document.createTextNode(String(value??'—')));return p;};
-const detail=(label,type,id)=>{const b=el('button',label,'link-btn');b.type='button';b.dataset.detailType=type;b.dataset.detailId=id;return b;};
+const detail=(label,type,id)=>{const a=el('a',label,'link-btn');a.href='#detail='+encodeURIComponent(type)+':'+encodeURIComponent(id);a.dataset.detailType=type;a.dataset.detailId=id;return a;};
+
 export function mountPersonalCockpitUI({app,getGroups,getMembers,getMeetings,navigate,fmt=n=>String(n),date=x=>String(x),showError=console.error}){
   const metrics=document.getElementById('personalCockpitMetrics'),situation=document.getElementById('personalSituation'),next=document.getElementById('personalNext'),noticesRoot=document.getElementById('personalLiveNotices'),spaces=document.getElementById('personalSpaces');
+  const pulseRoot=document.getElementById('ecoPulseFeed'),pulseProfile=document.getElementById('ecoPulseProfile');
   if(!metrics||!situation||!next||!noticesRoot||!spaces)return{refresh:async()=>{}};
   const metric=(value,label)=>{const d=el('div',undefined,'metric');d.append(el('strong',String(value)),el('span',label));return d;};
   const action=(label,view)=>{const b=el('button',label,'secondary');b.type='button';b.onclick=()=>navigate(view);return b;};
+  const impressed=new Set(),dwelled=new Set(),timers=new Map();
+  const pulseSignal=async(item,actionName)=>{
+    try{await app.recordEcoPulse({itemId:item.id,itemKind:item.kind,action:actionName,source:item.source,groupId:item.groupId,locality:item.locality,tags:item.tags??[]});}catch{}
+  };
+  const pulseOpen=async item=>{
+    await pulseSignal(item,'OPEN');
+    if(item.kind==='interest-community'){
+      navigate('ecosystem');
+      document.dispatchEvent(new CustomEvent('eco:open-interest-community',{detail:{id:item.id}}));
+      return;
+    }
+    if(item.kind==='public-group'){
+      navigate('discovery');
+      const q=document.getElementById('discoveryQ');if(q)q.value=item.title;
+      document.getElementById('discoverySearchForm')?.dispatchEvent(new Event('submit',{bubbles:true,cancelable:true}));
+      return;
+    }
+    if(item.kind==='group-hub'){
+      navigate('ecosystem');document.getElementById('communityEnginePanel')?.scrollIntoView({behavior:'smooth',block:'start'});return;
+    }
+    if(item.kind==='shop-item'){
+      navigate('ecosystem');document.getElementById('groupShopPanel')?.scrollIntoView({behavior:'smooth',block:'start'});return;
+    }
+  };
+  const observeDwell=(card,item)=>{
+    if(!('IntersectionObserver' in globalThis))return;
+    const observer=new IntersectionObserver(entries=>{
+      for(const entry of entries){
+        const key=item.kind+':'+item.id;
+        if(entry.isIntersecting&&entry.intersectionRatio>=0.6&&!dwelled.has(key)){
+          if(!timers.has(key))timers.set(key,setTimeout(()=>{dwelled.add(key);timers.delete(key);void pulseSignal(item,'DWELL_10S');observer.disconnect();},10000));
+        }else if(timers.has(key)){clearTimeout(timers.get(key));timers.delete(key);}
+      }
+    },{threshold:[0.6]});
+    observer.observe(card);
+  };
+  const renderPulse=async()=>{
+    if(!pulseRoot||!pulseProfile)return;
+    pulseRoot.replaceChildren();pulseProfile.textContent='EcoPulse prépare vos suggestions…';
+    try{
+      const [feed,profile]=await Promise.all([app.ecoPulseFeed({limit:12}),app.ecoPulseProfile()]);
+      const top=(profile.affinities??[]).filter(x=>x.score>0).slice(0,5);
+      pulseProfile.textContent=top.length?'EcoPulse apprend surtout : '+top.map(x=>x.value).join(' · ')+' · 15% d’exploration pour éviter une bulle fermée.':'EcoPulse démarre en mode exploration : vos ouvertures, recherches, adhésions et masquages vont rapidement personnaliser ce fil.';
+      if(!(feed.items??[]).length){pulseRoot.append(el('p','Les recommandations apparaîtront dès que des groupes ou communautés seront publiés.','hint'));return;}
+      for(const item of feed.items){
+        const card=el('article',undefined,'item');card.dataset.pulseId=item.id;card.dataset.pulseKind=item.kind;
+        const heading=el('strong',item.title);card.append(heading);
+        const meta=[item.locality,item.kind==='interest-community'?'Communauté d’intérêt':item.kind==='public-group'?'Groupe à découvrir':item.kind==='meeting'?'Vie de mon groupe':item.kind==='shop-item'?'Boutique':item.kind==='group-hub'?'Hub du groupe':item.kind].filter(Boolean).join(' · ');
+        if(meta)card.append(el('p',meta,'hint'));
+        if(item.why?.length)card.append(el('p','Pourquoi ceci ? '+item.why.join(' · '),'hint'));
+        if(item.kind==='shop-item'&&item.payload?.unitPrice!==undefined)card.append(row('Prix',fmt(Number(item.payload.unitPrice))));
+        const actions=el('div',undefined,'actions');
+        if(item.kind==='meeting'){
+          const a=detail('Ouvrir', 'meeting', String(item.payload?.meetingId??item.id));a.classList.add('primary');a.addEventListener('click',()=>void pulseSignal(item,'OPEN'));actions.append(a);
+        }else{
+          const open=el('button','Ouvrir','primary');open.type='button';open.onclick=()=>void pulseOpen(item);actions.append(open);
+        }
+        const hide=el('button','Moins de ceci','secondary');hide.type='button';hide.onclick=()=>void (async()=>{await pulseSignal(item,'NOT_INTERESTED');card.remove();})();actions.append(hide);
+        card.append(actions);pulseRoot.append(card);
+        const key=item.kind+':'+item.id;if(!impressed.has(key)){impressed.add(key);void pulseSignal(item,'IMPRESSION');}
+        observeDwell(card,item);
+      }
+    }catch(e){pulseProfile.textContent='EcoPulse reste disponible dès que la synchronisation serveur revient.';pulseRoot.append(el('p','Le cockpit principal continue de fonctionner sans recommandation réseau.','hint'));}
+  };
+
   const refresh=async()=>{
     metrics.replaceChildren();situation.replaceChildren();next.replaceChildren();noticesRoot.replaceChildren();spaces.replaceChildren();
     const groups=getGroups(),groupId=app.activeGroup(),members=getMembers(),meetings=getMeetings(),mine=members.find(m=>m.userId===app.currentActor());
     metrics.append(metric(groups.length,'Groupes accessibles'));
     let personalCommunities=[];try{personalCommunities=await app.myInterestCommunities();}catch{}
     metrics.append(metric(personalCommunities.length,'Communautés d’intérêt'));
+    void renderPulse();
     if(!groupId){
       situation.append(el('p','Choisissez un groupe ou rejoignez-en un avec un code.','hint'),action('Choisir / rejoindre','discovery'));
       next.append(el('p','Aucun groupe actif : votre cockpit reste centré sur votre compte.','hint'));
@@ -46,7 +114,7 @@ export function mountPersonalCockpitUI({app,getGroups,getMembers,getMeetings,nav
       if(mineItems.length){const a=el('article',undefined,'item');a.append(el('strong',mineItems.length+' action(s) à traiter'));const b=action('Ouvrir À faire','inbox');a.append(b);next.append(a);}
     }catch{}
     try{
-      const health=await app.liveHealth();const a=el('article',undefined,'item');a.append(el('strong','Premium Live'),row('État',health.enabled?'Connecté / disponible':'Non activé sur ce déploiement'),row('Séquence',health.latest??0));noticesRoot.prepend(a);
+      const health=await app.liveHealth();const a=el('article',undefined,'item');a.append(el('strong','Live Ledger'),row('État',health.enabled?'Connecté / disponible':'Non actif sur ce déploiement'),row('Séquence',health.latest??0));noticesRoot.prepend(a);
     }catch{}
     try{
       const hubs=await app.listCommunityHubs();if(hubs.length){const h=el('article',undefined,'item');h.append(el('strong',hubs.length+' Hub(s) du groupe'),action('Voir Communauté & économie','ecosystem'));spaces.append(h);}
@@ -54,5 +122,6 @@ export function mountPersonalCockpitUI({app,getGroups,getMembers,getMeetings,nav
     for(const c of personalCommunities.slice(0,8)){const a=el('article',undefined,'item');a.append(el('strong',c.name),row('Communauté',c.locality||'Sans localité'));spaces.append(a);}
     spaces.append(action('Découvrir d’autres groupes','discovery'),action('Communautés d’intérêt','ecosystem'));
   };
-  return{refresh};
+  document.getElementById('ecoPulseRefreshBtn')?.addEventListener('click',()=>void renderPulse());
+  return{refresh,refreshPulse:renderPulse};
 }
