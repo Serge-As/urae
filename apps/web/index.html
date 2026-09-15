@@ -130,6 +130,43 @@
             <div id="applicationsBox" class="stack"></div>
           </section>
         </div>
+        <section class="panel" id="securePairingPanel">
+          <div class="section-kicker"><div><h2>Rejoindre ou appairer un membre</h2><p>Un lien ou code sécurisé suffit. Les groupes historiques conservent l’identité financière du membre et demandent un rapprochement avec sa fiche existante.</p></div></div>
+          <div class="two-col">
+            <div>
+              <form id="joinCodeForm" class="form-grid">
+                <h3>Je rejoins un groupe</h3>
+                <label class="full">Code ou lien reçu<input id="joinCodeInput" autocomplete="one-time-code" placeholder="Ex. ABCD-EFGH-JKLM ou collez le lien"></label>
+                <button class="primary">Rejoindre / demander l’appairage</button>
+              </form>
+              <div class="actions"><button id="myPairingCodeBtn" type="button" class="secondary">Mon code à montrer au responsable</button></div>
+              <div id="myPairingCodeResult" class="result"></div>
+              <div id="joinStatus" class="stack"></div>
+            </div>
+            <div id="managerPairingBox">
+              <form id="joinLinkForm" class="form-grid">
+                <h3>Inviter les membres du groupe actif</h3>
+                <label>Mode<select id="joinLinkMode"><option value="">Automatique selon l’origine du groupe</option><option value="AUTO_JOIN">Adhésion directe</option><option value="HISTORICAL_MATCH">Rapprochement historique</option></select></label>
+                <label>Validité (heures)<input id="joinLinkHours" type="number" min="1" max="720" value="72"></label>
+                <label>Nombre d’utilisations<input id="joinLinkUses" type="number" min="1" max="5000" value="200"></label>
+                <label>Libellé<input id="joinLinkLabel" placeholder="Ex. Réunion de septembre"></label>
+                <button class="primary">Créer le lien / code</button>
+              </form>
+              <div id="joinLinkResult" class="result"></div>
+              <details>
+                <summary><strong>Le membre m’envoie son code</strong></summary>
+                <form id="pairMemberCodeForm" class="form-grid">
+                  <label>Membre historique<select id="pairMemberMembership"></select></label>
+                  <label>Code du membre<input id="pairMemberCode" autocomplete="one-time-code" placeholder="ABCD-EFGH-JK"></label>
+                  <button class="secondary">Appairer ce compte</button>
+                </form>
+              </details>
+              <h3>Demandes d’appairage historique</h3>
+              <div id="pairingRequestList" class="stack"></div>
+            </div>
+          </div>
+        </section>
+
         <section class="panel"><div class="section-kicker"><div><h2>Identité, recrutement et confiance</h2><p>Les capacités complémentaires du lot B restent localisables et auditables.</p></div></div><div id="discoveryHub" class="hub-grid"></div></section>
       </section>
 
