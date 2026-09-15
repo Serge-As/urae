@@ -3,7 +3,7 @@ import { D1PlatformRepository, InMemoryPlatformRepository, type D1DatabaseLike, 
 import { FoundationService, LedgerService, MeetingService, starterGroupOperatingPolicy } from '../../../packages/domain/src/index.js';
 import { DiscoveryService, MembershipGatewayService } from '../../../packages/discovery/src/index.js';
 import { RubricKnowledgeService } from '../../../packages/rubrics/src/index.js';
-import { makeId, type OutboxItem, type GroupOperatingPolicy, type ProjectCapability, type RubricOperatingModel, type WorkspaceRecord, type WorkspaceStatus } from '../../../packages/contracts/src/index.js';
+import { makeId, type OutboxItem, type GroupOperatingPolicy, type ProjectCapability, type RubricOperatingModel, type RubricPolicies, type WorkspaceRecord, type WorkspaceStatus } from '../../../packages/contracts/src/index.js';
 import { PRODUCT_MODULES, PRODUCT_CAPABILITY_COUNT } from '../../../packages/module-registry/src/index.js';
 import {
   CompletionSuiteService, COMPLETION_WORKFLOWS, buildLoanSchedule, applyLoanPayment, compareRules,
@@ -402,6 +402,10 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
     const rubricModelRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/rubrics\/([^/]+)\/operating-model$/);
     if(rubricModelRoute&&request.method==='PUT'){
       const body=await readJson<RubricOperatingModel>(request);return json(await rubrics.updateOperatingModel({tenantId:ctx.tenantId,groupId:rubricModelRoute[1]!,rubricId:rubricModelRoute[2]!,model:body}),200,cors);
+    }
+    const rubricPoliciesRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/rubrics\/([^/]+)\/policies$/);
+    if(rubricPoliciesRoute&&request.method==='PUT'){
+      const body=await readJson<RubricPolicies>(request);return json(await rubrics.updatePolicies({tenantId:ctx.tenantId,groupId:rubricPoliciesRoute[1]!,rubricId:rubricPoliciesRoute[2]!,policies:body}),200,cors);
     }
     const rubricPreviewRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/rubrics\/([^/]+)\/preview-cycle$/);
     if(rubricPreviewRoute&&request.method==='POST'){
