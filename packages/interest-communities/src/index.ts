@@ -138,6 +138,18 @@ export class InterestCommunityService{
     return{id:contentId,communityId:id,authorAccountId:actorId,kind,title:clean(input.title,180)||undefined,body,category:clean(input.category,80)||undefined,locality:clean(input.locality,160)||undefined,startsAt:input.startsAt?new Date(input.startsAt).toISOString():undefined,endsAt:input.endsAt?new Date(input.endsAt).toISOString():undefined,metadata,moderationState:'PUBLISHED',createdAt:stamp,updatedAt:stamp};
   }
 
+  async discoverContent(actorId:string,limit=100):Promise<Array<InterestCommunityContent&{communityName:string;communityTags:string[]}>>{
+    const rows=await this.db.prepare(`SELECT p.*,c.name AS community_name,c.tags_json AS community_tags_json,c.visibility,
+      vm.status AS viewer_status
+      FROM interest_community_content p
+      JOIN interest_communities c ON c.community_id=p.community_id
+      LEFT JOIN interest_community_members vm ON vm.community_id=c.community_id AND vm.account_id=?
+      WHERE c.status='ACTIVE' AND p.moderation_state='PUBLISHED' AND (c.visibility='PUBLIC' OR vm.status='ACTIVE')
+      ORDER BY COALESCE(p.starts_at,p.created_at) DESC LIMIT ?`)
+      .bind(actorId,Math.min(Math.max(Math.trunc(limit),1),250)).all<Record<string,unknown>>();
+    return rows.results.map(r=>({...toContent(r),communityName:String(r.community_name),communityTags:parseJson<string[]>(r.community_tags_json,[])}));
+  }
+
   async feed(actorId:string,id:string,limit=100):Promise<InterestCommunityContent[]>{
     const access=await this.requireVisible(actorId,id),manager=['CREATOR','MODERATOR'].includes(String(access.role?.role));
     const rows=await this.db.prepare(`SELECT * FROM interest_community_content WHERE community_id=? ${manager?'':"AND moderation_state='PUBLISHED'"} ORDER BY created_at DESC LIMIT ?`).bind(id,Math.min(Math.max(Math.trunc(limit),1),200)).all<Record<string,unknown>>();
