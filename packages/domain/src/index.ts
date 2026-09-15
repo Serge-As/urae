@@ -1,7 +1,7 @@
 import type {
   AuditEvent, CashboxReconciliationRecord, CashboxSnapshot, ContributionReceipt, Currency, FeasibilityResult,
   Group, GroupProject, Id, LedgerAccount, LedgerEntry, LedgerLine, LedgerSummary, MeetingSession, Membership,
-  Money, Obligation, User, CaseRecord, GroupOperatingPolicy, ProjectCapability, ProjectAccessGrant, LatePostingTrace, MemberStatement, GroupProjectLaunchProfile
+  Money, Obligation, User, CaseRecord, GroupOperatingPolicy, ProjectCapability, ProjectAccessGrant, LatePostingTrace, MemberStatement, GroupProjectLaunchProfile, WorkspaceRecord
 } from '../../contracts/src/index.js';
 import { makeId } from '../../contracts/src/index.js';
 import type { PlatformRepository } from '../../repositories/src/index.js';
@@ -414,7 +414,15 @@ export class LedgerService {
     this.validateBalanced(entry);
     const receipt:ContributionReceipt={id:makeId('receipt'),tenantId:input.tenantId,groupId:input.groupId,membershipId:membership.id,amount:{currency,amount:input.amount},paymentMethod:'cash',ledgerEntryId:entry.id,meetingId:input.meetingId,rubricId:input.rubricId,latePosting,receivedAt:entry.createdAt,receivedBy:ctx.actorId,idempotencyKey:input.idempotencyKey};
     const audit=this.kernel.audit.append({tenantId:input.tenantId,actorId:ctx.actorId,action:'CASH_CONTRIBUTION_POSTED',targetType:'ledger_entry',targetId:entry.id,requestId,after:{entry,receipt}});
-    const committed=await this.repo.commitFinancialOperation({kind:'contribution',entry,receipt,accounts:[accounts.cash,accounts.memberFunds],audit});
+    const projection:WorkspaceRecord={
+      id:'financial_projection_'+entry.id,tenantId:input.tenantId,groupId:input.groupId,moduleId:'FINANCE.LIVE_PROJECTION',
+      title:'Projection financière à diffuser',summary:'Avis membre et diffusion Live à produire après validation du ledger.',
+      status:'ACTIVE',tags:['financial-projection','pending','cash-contribution'],
+      data:{entryId:entry.id,membershipId:membership.id,operationType:'CASH_CONTRIBUTION',amount:input.amount,currency,
+        rubricId:input.rubricId??null,meetingId:input.meetingId??null,idempotencyKey:input.idempotencyKey,attemptCount:0,lastError:null},
+      createdBy:ctx.actorId,createdAt:effectiveAt,updatedAt:effectiveAt
+    };
+    const committed=await this.repo.commitFinancialOperation({kind:'contribution',entry,receipt,accounts:[accounts.cash,accounts.memberFunds],audit,outboxRecords:[projection]});
     if(!committed.receipt)throw new Error('FINANCIAL_COMMIT_NOT_CONFIRMED');
     sameIntent(committed.receipt);
     if(committed.entry.id!==entry.id)return committed.receipt;
