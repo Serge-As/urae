@@ -704,12 +704,12 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
     }
 
     return json({error:'NOT_FOUND'},404,cors);
-  } catch(error){const message=error instanceof Error?error.message:'UNKNOWN_ERROR';const status=message==='FORBIDDEN_SCOPE'?403:message==='IDEMPOTENCY_CONFLICT'?409:message.endsWith('_NOT_FOUND')?404:400;return json({error:message,requestId:ctx.requestId},status,cors);}
+  } catch(error){const message=error instanceof Error?error.message:'UNKNOWN_ERROR';const status=['FORBIDDEN_SCOPE','FOUNDER_TEAM_ONLY'].includes(message)?403:message==='IDEMPOTENCY_CONFLICT'?409:message.endsWith('_NOT_FOUND')?404:400;return json({error:message,requestId:ctx.requestId},status,cors);}
 };
 
 export const handleRequest=createApiHandler(defaultRepo);
 export interface AssetsFetcherLike { fetch(request: Request): Promise<Response> }
-export interface WorkerEnv { DB?: D1DatabaseLike; ASSETS?: AssetsFetcherLike; ARTIFACTS?: ArtifactStoreLike; GROUP_LIVE_HUB?: DurableObjectNamespaceLike; PREMIUM_LIVE_LEDGER?: string }
+export interface WorkerEnv { DB?: D1DatabaseLike; ASSETS?: AssetsFetcherLike; ARTIFACTS?: ArtifactStoreLike; GROUP_LIVE_HUB?: DurableObjectNamespaceLike; PREMIUM_LIVE_LEDGER?: string; COLLECTIVE_LEARNING_PEPPER?: string; FOUNDER_TEAM_ACTORS?: string }
 export default {async fetch(request:Request,env:WorkerEnv={}){
   const url=new URL(request.url);
   if(request.method==='GET' && env.ASSETS && url.pathname!=='/health' && !url.pathname.startsWith('/api/')){
@@ -726,6 +726,8 @@ export default {async fetch(request:Request,env:WorkerEnv={}){
     return json({error:'PERSISTENT_STORAGE_REQUIRED'},503);
   }
   const repository=new D1PlatformRepository(env.DB);
-  return authenticatedApi(repository,env.DB,createApiHandler(repository,{artifacts:env.ARTIFACTS,liveNamespace:env.GROUP_LIVE_HUB,premiumLive:env.PREMIUM_LIVE_LEDGER==='true'}))(request);
+  const founderLearning=env.COLLECTIVE_LEARNING_PEPPER?new FounderLearningStore(env.DB,env.COLLECTIVE_LEARNING_PEPPER):undefined;
+  const founderTeamActors=new Set((env.FOUNDER_TEAM_ACTORS??'').split(',').map(x=>x.trim()).filter(Boolean));
+  return authenticatedApi(repository,env.DB,createApiHandler(repository,{artifacts:env.ARTIFACTS,liveNamespace:env.GROUP_LIVE_HUB,premiumLive:env.PREMIUM_LIVE_LEDGER==='true',founderLearning,founderTeamActors}))(request);
 }};
 export {defaultRepo as repo};
