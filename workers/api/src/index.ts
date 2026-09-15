@@ -247,6 +247,36 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
       return json(await memberControl.memberReview(noticeMemberReview[1]!,noticeMemberReview[2]!,decision,String(body.note??'')),200,cors);
     }
 
+    const identityPassport=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/identity-passport$/);
+    if(identityPassport&&request.method==='GET')return json(await groupIdentity.compute(identityPassport[1]!),200,cors);
+    if(identityPassport&&request.method==='POST')return json(await groupIdentity.issue(identityPassport[1]!),201,cors);
+
+    const dataConsent=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/data-use-consent$/);
+    if(dataConsent&&request.method==='GET')return json(await conciergeLearning.consent(dataConsent[1]!),200,cors);
+    if(dataConsent&&request.method==='POST'){
+      const body=await readJson<Record<string,unknown>>(request),purpose=String(body.purpose??'') as DataUsePurpose;
+      if(!['COLLECTIVE_LEARNING','COMMERCIAL_PERSONALIZATION','PARTNER_MATCHING','COMMUNITY_DISCOVERY'].includes(purpose))throw new Error('INVALID_DATA_USE_PURPOSE');
+      return json(await conciergeLearning.setConsent(dataConsent[1]!,purpose,Boolean(body.granted)),200,cors);
+    }
+
+    const memoriesRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/concierge\/memories$/);
+    if(memoriesRoute&&request.method==='GET')return json(await conciergeLearning.memories(memoriesRoute[1]!),200,cors);
+    if(memoriesRoute&&request.method==='POST'){
+      const body=await readJson<Record<string,unknown>>(request),category=String(body.category??'') as LearningCategory;
+      return json(await conciergeLearning.learn(memoriesRoute[1]!,{
+        category,key:String(body.key??''),value:String(body.value??''),sourceRef:String(body.sourceRef??''),
+        evidenceSnippet:body.evidenceSnippet?String(body.evidenceSnippet):undefined,confidence:finite(body.confidence),
+        privacy:String(body.privacy??'GROUP_PRIVATE') as any,visibility:String(body.visibility??'MANAGERS') as any
+      }),201,cors);
+    }
+    const collectiveSignals=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/concierge\/collective-signals$/);
+    if(collectiveSignals&&request.method==='GET'){
+      const passport=await groupIdentity.compute(collectiveSignals[1]!);
+      return json(await conciergeLearning.safeCollectiveSignals(collectiveSignals[1]!,passport.publicCode),200,cors);
+    }
+    const commercialAffinities=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/concierge\/commercial-affinities$/);
+    if(commercialAffinities&&request.method==='GET')return json(await conciergeLearning.commercialAffinities(commercialAffinities[1]!),200,cors);
+
     const amountExplain=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/members\/([^/]+)\/amount-explanation$/);
     if(amountExplain&&request.method==='GET'){
       return json(await explainability.amount(amountExplain[1]!,amountExplain[2]!,url.searchParams.get('rubricId')??undefined),200,cors);
