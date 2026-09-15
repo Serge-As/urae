@@ -114,6 +114,13 @@ export const analyzeGovernanceText=(raw:string):GuidedSuggestion[]=>{
   }
   if(has(/réunion.{0,40}mensuel|réunions\s+sont\s+mensuelles/i))out.push(suggestion({category:'MEETING_RULE',title:'Réunions mensuelles',confidence:0.9,evidence:evidence(text,/réunions?[^.]{0,80}mensuel/i),explanation:'Cadence mensuelle détectée.',rule:{cadence:'MONTHLY'}}));
   if(has(/adhésion|inscription/i))out.push(suggestion({category:'MEMBERSHIP_RULE',title:'Adhésion / inscription',confidence:0.8,evidence:evidence(text,/adhésion|inscription/i),explanation:'Des règles d’adhésion ont été détectées. Elles doivent alimenter l’étape Membres, sans créer automatiquement un membre.',rule:{humanApprovalRequired:true}}));
+
+  const ratio=text.match(/(\d+)\s*\/\s*(\d+)[^.]{0,80}?(\d+(?:[.,]\d+)?)\s*%/i);
+  if(ratio){
+    const numerator=Number(ratio[1]),denominator=Number(ratio[2]),stated=Number(ratio[3].replace(',','.')),expected=denominator?numerator/denominator*100:NaN;
+    if(Number.isFinite(expected)&&Math.abs(expected-stated)>0.01)out.push(suggestion({category:'CONTRADICTION',title:'Contradiction mathématique à arbitrer',confidence:0.99,evidence:clean(ratio[0]),explanation:'La fraction et le pourcentage annoncés ne sont pas équivalents. Aucune pénalité n’est activée automatiquement.',rule:{fraction:ratio[1]+'/'+ratio[2],expectedPercent:Number(expected.toFixed(4)),statedPercent:stated,humanDecisionRequired:true}}));
+  }
+  if(/secours/i.test(text)&&/prochaine\s+(?:réunion|seance|séance)/i.test(text)&&/(?:deux|2)\s+mois/i.test(text))out.push(suggestion({category:'CONTRADICTION',title:'Délai de reconstitution du Secours à arbitrer',confidence:0.9,evidence:evidence(text,/prochaine\s+(?:réunion|seance|séance)|(?:deux|2)\s+mois/i),explanation:'Deux horizons différents semblent gouverner la reconstitution du Secours. L’assistant conserve les deux et exige une validation humaine.',rule:{candidateA:'PROCHAINE_SEANCE',candidateB:'DEUX_MOIS',humanDecisionRequired:true}}));
   return out;
 };
 
