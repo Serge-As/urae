@@ -1,0 +1,173 @@
+name: Eco-System 1.3 Premium Live — Isolated Cloudflare Pilot
+
+on:
+  workflow_dispatch:
+  push:
+    branches: ['next/1.3.0-guided-ai-live-20260915']
+    paths: ['.github/DEPLOY_LIVE_PILOT_1_3_ONCE']
+
+permissions:
+  contents: read
+
+concurrency:
+  group: eco-system-live-pilot-1-3
+  cancel-in-progress: false
+
+env:
+  PILOT_WORKER: eco-system-live-pilot
+  PILOT_DB: eco-system-live-pilot-db
+  PILOT_ROOT: https://eco-system-live-pilot.sergemimf.workers.dev
+  EXPECTED_VERSION: 1.3.0-guided-ai-live
+
+jobs:
+  qualify-deploy-and-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    env:
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      COLLECTIVE_LEARNING_PEPPER: ${{ secrets.COLLECTIVE_LEARNING_PEPPER }}
+      FOUNDER_TEAM_ACTORS: ${{ secrets.FOUNDER_TEAM_ACTORS }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci --ignore-scripts
+
+      - name: Verify Cloudflare credentials
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${CLOUDFLARE_ACCOUNT_ID:-}"
+          test -n "${CLOUDFLARE_API_TOKEN:-}"
+
+      - name: Full 1.3 qualification
+        run: npm run ci
+
+      - name: Build PWA and Worker
+        run: npm run build
+
+      - name: Resolve or create isolated pilot D1 only
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes wrangler@4 d1 list --json > /tmp/d1-list.json
+          DB_ID="$(node scripts/cloudflare-d1-id.mjs /tmp/d1-list.json "${PILOT_DB}" || true)"
+          if [ -z "${DB_ID}" ]; then
+            echo "Creating isolated pilot database ${PILOT_DB}; production eco-system-db is untouched."
+            npx --yes wrangler@4 d1 create "${PILOT_DB}"
+            npx --yes wrangler@4 d1 list --json > /tmp/d1-list.json
+            DB_ID="$(node scripts/cloudflare-d1-id.mjs /tmp/d1-list.json "${PILOT_DB}" || true)"
+          fi
+          test -n "${DB_ID}"
+          node scripts/render-wrangler-d1.mjs "${DB_ID}" workers/api/wrangler.pilot.toml "${PILOT_DB}"
+          sed -i 's/^name = "eco-system"$/name = "eco-system-live-pilot"/' workers/api/wrangler.pilot.toml
+          sed -i 's/PREMIUM_LIVE_LEDGER = "false"/PREMIUM_LIVE_LEDGER = "true"/' workers/api/wrangler.pilot.toml
+          grep -q 'name = "eco-system-live-pilot"' workers/api/wrangler.pilot.toml
+          grep -q 'PREMIUM_LIVE_LEDGER = "true"' workers/api/wrangler.pilot.toml
+          grep -q 'database_name = "eco-system-live-pilot-db"' workers/api/wrangler.pilot.toml
+          grep -q 'class_name = "GroupLiveHub"' workers/api/wrangler.pilot.toml
+          grep -q 'storage = "sqlite"' workers/api/wrangler.pilot.toml
+
+      - name: Apply additive migrations to pilot D1
+        run: npx --yes wrangler@4 d1 migrations apply "${PILOT_DB}" --remote --config workers/api/wrangler.pilot.toml
+
+      - name: Deploy isolated Premium Live pilot
+        run: npx --yes wrangler@4 deploy --config workers/api/wrangler.pilot.toml
+
+      - name: Configure optional founder-learning secrets
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -n "${COLLECTIVE_LEARNING_PEPPER:-}" ]; then
+            printf '%s' "${COLLECTIVE_LEARNING_PEPPER}" | npx --yes wrangler@4 secret put COLLECTIVE_LEARNING_PEPPER --config workers/api/wrangler.pilot.toml
+          else
+            echo "::notice::COLLECTIVE_LEARNING_PEPPER is absent; cross-group learning export stays disabled."
+          fi
+          if [ -n "${FOUNDER_TEAM_ACTORS:-}" ]; then
+            printf '%s' "${FOUNDER_TEAM_ACTORS}" | npx --yes wrangler@4 secret put FOUNDER_TEAM_ACTORS --config workers/api/wrangler.pilot.toml
+          else
+            echo "::notice::FOUNDER_TEAM_ACTORS is absent; founder observatory stays inaccessible."
+          fi
+
+      - name: Smoke root and health
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in 1 2 3 4 5 6; do
+            root="$(curl --fail --silent --show-error --location --max-time 20 "${PILOT_ROOT}/" || true)"
+            health="$(curl --fail --silent --show-error --location --max-time 20 "${PILOT_ROOT}/health" || true)"
+            if grep -qi '<!doctype html>' <<<"${root}" && grep -q '"ok": true' <<<"${health}" && grep -q "${EXPECTED_VERSION}" <<<"${health}"; then break; fi
+            sleep 4
+          done
+          grep -qi '<!doctype html>' <<<"${root}"
+          printf '%s' "${health}" | grep -q '"ok": true'
+          printf '%s' "${health}" | grep -q "${EXPECTED_VERSION}"
+          printf '%s' "${health}" | grep -q '"realMoneyEnabled": false'
+
+      - name: End-to-end Ledger to member notice to Durable Object live stream
+        shell: bash
+        run: |
+          set -euo pipefail
+          ORIGIN="${PILOT_ROOT}"
+          USERNAME="livepilot-${GITHUB_RUN_ID}"
+          PASSWORD="EcoLive-${GITHUB_RUN_ID}-Safe123!"
+          COOKIE=/tmp/pilot-cookie.txt
+
+          curl --fail --silent --show-error -c "${COOKIE}"             -H "origin: ${ORIGIN}" -H 'content-type: application/json'             -d "{"username":"${USERNAME}","password":"${PASSWORD}","displayName":"Live Pilot","locale":"fr"}"             "${PILOT_ROOT}/api/v1/auth/register" > /tmp/register.json
+
+          cat > /tmp/project.json <<'JSON'
+          {
+            "name":"Groupe Premium Live Pilote",
+            "kind":"association",
+            "governanceModel":"community",
+            "rubrics":[{
+              "key":"pilot_contribution",
+              "name":"Cotisation pilote",
+              "kind":"CONTRIBUTION",
+              "nominalAmount":{"currency":"XAF","amount":1000},
+              "amountBasis":"PER_MEMBER",
+              "participationMode":"OPTIONAL",
+              "contributionMode":"MONEY",
+              "memberCount":1,
+              "sessions":1,
+              "duration":{"value":1,"unit":"SESSIONS"},
+              "managementFeePerPayment":0,
+              "estimatedExternalCostRate":0,
+              "fixedCostPerSession":0
+            }],
+            "launchProfile":{"origin":{"mode":"NEW"},"previewConfirmed":true}
+          }
+          JSON
+
+          curl --fail --silent --show-error -b "${COOKIE}" -c "${COOKIE}"             -H "origin: ${ORIGIN}" -H 'content-type: application/json'             --data-binary @/tmp/project.json "${PILOT_ROOT}/api/v1/group-projects" > /tmp/project-created.json
+          PROJECT_ID="$(node -e "const x=require('/tmp/project-created.json');process.stdout.write(x.id)")"
+
+          curl --fail --silent --show-error -b "${COOKIE}" -c "${COOKIE}"             -H "origin: ${ORIGIN}" -H 'content-type: application/json' -d '{}'             "${PILOT_ROOT}/api/v1/group-projects/${PROJECT_ID}/simulate" > /tmp/simulated.json
+
+          curl --fail --silent --show-error -b "${COOKIE}" -c "${COOKIE}"             -H "origin: ${ORIGIN}" -H 'content-type: application/json' -d '{}'             "${PILOT_ROOT}/api/v1/group-projects/${PROJECT_ID}/convert" > /tmp/group.json
+          GROUP_ID="$(node -e "const x=require('/tmp/group.json');process.stdout.write(x.id)")"
+          MEMBER_ID="membership_owner_${GROUP_ID}"
+
+          curl --fail --silent --show-error -b "${COOKIE}"             "${PILOT_ROOT}/api/v1/groups/${GROUP_ID}/live/health" > /tmp/live-health.json
+          node - <<'NODE'
+          const h=require('/tmp/live-health.json');
+          if(h.ok!==true||h.enabled!==true)throw new Error('PREMIUM_LIVE_NOT_ACTIVE');
+          if(!String(h.groupCode||'').startsWith('ECO-GRP-'))throw new Error('GROUP_IDENTITY_CODE_MISSING');
+          NODE
+
+          curl --fail --silent --show-error -b "${COOKIE}"             -H "origin: ${ORIGIN}" -H 'content-type: application/json'             -d "{"membershipId":"${MEMBER_ID}","amount":1000,"currency":"XAF","idempotencyKey":"pilot-${GITHUB_RUN_ID}"}"             "${PILOT_ROOT}/api/v1/groups/${GROUP_ID}/contributions/cash" > /tmp/receipt.json
+
+          curl --fail --silent --show-error -b "${COOKIE}"             "${PILOT_ROOT}/api/v1/groups/${GROUP_ID}/live/events?after=0" > /tmp/live-events.json
+          node - <<'NODE'
+          const x=require('/tmp/live-events.json');
+          if(!Array.isArray(x.events)||!x.events.some(e=>e.type==='FINANCIAL_NOTICE'))throw new Error('FINANCIAL_NOTICE_NOT_STREAMED');
+          const n=x.events.find(e=>e.type==='FINANCIAL_NOTICE');
+          if(n.payload.amount!==1000||n.payload.currency!=='XAF')throw new Error('FINANCIAL_NOTICE_PAYLOAD_MISMATCH');
+          console.log('Premium Live pilot PASS:', {latest:x.latest,eventType:n.type,amount:n.payload.amount});
+          NODE
+
+      - name: Pilot URL
+        run: echo "Premium Live pilot ready at ${PILOT_ROOT}/"
