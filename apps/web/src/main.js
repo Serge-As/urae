@@ -471,6 +471,8 @@ const specializedRoute = (id) => {
         return 'operations';
     if (id.startsWith('LEDGER.') || id.startsWith('FINANCE.') || id.startsWith('SAVINGS.') || id.startsWith('LOAN.') || id.startsWith('SOLIDARITY.'))
         return 'finance';
+    if (id.startsWith('ADS.'))
+        return 'ecosystem';
     if (id.startsWith('OFFLINE.') || id.startsWith('SUPPORT.') || id.startsWith('EXPERIENCE.UNIVERSAL_INBOX'))
         return 'inbox';
     if (id.startsWith('SECURITY.') || id.startsWith('BACKUP.') || id.startsWith('OBSERVABILITY.') || id.startsWith('COMPATIBILITY.') || id.startsWith('DATA.'))
