@@ -238,7 +238,7 @@ export class FoundationService {
     const ownerMembership:Membership={id:`membership_owner_${group.id}`,tenantId,groupId:group.id,userId:project.createdBy,roles:['founder','manager'],status:'active',joinedAt:group.createdAt};
     if(!(await this.repo.listMemberships(tenantId,group.id)).some(m=>m.userId===project.createdBy))await this.repo.saveMembership(ownerMembership);
     const rubricService=new RubricKnowledgeService(this.repo,this.kernel);
-    for(const plan of project.rubrics??[])await rubricService.createRubric({tenantId,groupId:group.id,name:plan.name,launchKey:plan.key,launchProjectId:project.id,activityPlan:plan,source:'GROUP_CUSTOM',facets:{direction:'MIXED',obligation:'CUSTOM',medium:'CASH',refundability:'CUSTOM',replenishment:'CUSTOM',interestMode:'CUSTOM',eligibilityMode:'RULE_BASED'}});
+    for(const plan of project.rubrics??[])await rubricService.createRubric({tenantId,groupId:group.id,name:plan.name,launchKey:plan.key,launchProjectId:project.id,activityPlan:plan,policies:plan.policyDraft,source:'GROUP_CUSTOM',facets:{direction:'MIXED',obligation:'CUSTOM',medium:'CASH',refundability:'CUSTOM',replenishment:'CUSTOM',interestMode:'CUSTOM',eligibilityMode:'RULE_BASED'}});
     const obligation=this.kernel.obligations.create({tenantId,groupId:group.id,assigneeId:project.createdBy,type:transforming?'GROUP_EVOLUTION_REVIEW':'GROUP_SETUP',title:transforming?'OBLIGATION_GROUP_EVOLUTION_REVIEW':'OBLIGATION_GROUP_SETUP',priority:'normal',sourceType:'group',sourceId:group.id});
     await this.repo.saveObligation(obligation);
     await this.repo.saveProject({...project,status:'converted',convertedGroupId:group.id});
