@@ -261,7 +261,8 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
       if(entry){
         const positions=await ledger.receiptPositions(ctx.tenantId,contributionRoute[1]!);
         const after=positions.filter(p=>p.membershipId===receipt.membershipId).reduce((n,p)=>n+p.netAmount,0);
-        await memberControl.create({groupId:contributionRoute[1]!,membershipId:receipt.membershipId,entry,operationType:'CASH_CONTRIBUTION',amount:receipt.amount.amount,currency:receipt.amount.currency,rubricId:receipt.rubricId,meetingId:receipt.meetingId,previousSituation:after-receipt.amount.amount,newSituation:after});
+        const notice=await memberControl.create({groupId:contributionRoute[1]!,membershipId:receipt.membershipId,entry,operationType:'CASH_CONTRIBUTION',amount:receipt.amount.amount,currency:receipt.amount.currency,rubricId:receipt.rubricId,meetingId:receipt.meetingId,previousSituation:after-receipt.amount.amount,newSituation:after});
+        await publishLive(contributionRoute[1]!,'FINANCIAL_NOTICE','notice:'+notice.id,{noticeId:notice.id,ledgerEntryId:notice.ledgerEntryId,operationType:notice.operationType,amount:notice.amount,currency:notice.currency,previousSituation:notice.previousSituation??0,newSituation:notice.newSituation??0},notice.userId);
       }
       return json(receipt,201,cors);
     }
