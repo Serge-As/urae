@@ -899,6 +899,8 @@ async function showStatement(membershipId){
     const body=document.createElement('tbody');
     for(const r of statement.receipts){const tr=document.createElement('tr');tr.innerHTML=html`<td>${date(r.receivedAt)}</td><td>${r.id}</td><td>${fmt(r.amount.amount)}</td><td>${fmt(r.netAmount)}</td>`;body.append(tr);}
     table.append(body);dialog.append(table);
+    const statementMember=members.find(m=>m.id===membershipId);
+    try{dialog.append(await renderMemberFinancialNotices({app,membershipId,memberUserId:statementMember?.userId,manager:isManager(),notify:toast,showError:fail}));}catch(e){const p=document.createElement('p');p.className='hint';p.textContent='Le contrôle des modifications financières sera disponible après synchronisation.';dialog.append(p);}
     const exportButton=document.createElement('button');exportButton.textContent='Exporter CSV';exportButton.className='primary';
     exportButton.onclick=()=>{
         const rows=[['Date','Référence','Membre','Groupe','Devise','Montant reçu','Montant net'],...statement.receipts.map(r=>[r.receivedAt,r.id,statement.displayName,statement.groupName,r.amount.currency,r.amount.amount,r.netAmount])];
