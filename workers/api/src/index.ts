@@ -109,6 +109,34 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
   try {
     const scopedGroup=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)/)?.[1];
     if(scopedGroup)await requireGroup(scopedGroup);
+    const liveRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/live\/(health|events|connect|publish)$/);
+    if(liveRoute){
+      const groupId=liveRoute[1]!,action=liveRoute[2]!;
+      if(!options.premiumLive||!options.liveNamespace)return json({enabled:false,error:'PREMIUM_LIVE_LEDGER_DISABLED'},503,cors);
+      const {stub,passport}=await liveStubFor(groupId);
+      if(action==='health'&&request.method==='GET'){
+        const response=await stub.fetch(new Request('https://group-live.internal/health'));
+        const body=await response.json() as Record<string,unknown>;
+        return json({...body,enabled:true,groupCode:passport.publicCode,rulesFingerprint:passport.rulesFingerprint},response.status,cors);
+      }
+      if(action==='events'&&request.method==='GET'){
+        const after=url.searchParams.get('after')??'0',limit=url.searchParams.get('limit')??'100';
+        return stub.fetch(new Request('https://group-live.internal/events?after='+encodeURIComponent(after)+'&limit='+encodeURIComponent(limit)));
+      }
+      if(action==='connect'&&request.method==='GET')return stub.fetch(new Request('https://group-live.internal/connect',{method:'GET',headers:request.headers}));
+      if(action==='publish'&&request.method==='POST'){
+        const body=await readJson<Record<string,unknown>>(request),type=String(body.type??'');
+        if(type==='MEETING_UPDATE')await requireGroup(groupId,true);
+        else if(!['PRESENCE','SYNC_HINT'].includes(type))throw new Error('LIVE_CLIENT_EVENT_NOT_ALLOWED');
+        const raw=body.payload&&typeof body.payload==='object'&&!Array.isArray(body.payload)?body.payload as Record<string,unknown>:{};
+        const payload:Record<string,string|number|boolean|null>={};
+        for(const [k,v] of Object.entries(raw))if(typeof v==='string'||typeof v==='number'||typeof v==='boolean'||v===null)payload[k]=v;
+        const idempotencyKey=String(body.idempotencyKey??request.headers.get('x-idempotency-key')??makeId('live'));
+        await publishLive(groupId,type,idempotencyKey,payload);
+        return json({accepted:true,groupCode:passport.publicCode},202,cors);
+      }
+      return json({error:'METHOD_NOT_ALLOWED'},405,cors);
+    }
     if(request.method==='GET'&&url.pathname==='/health') return json({ok:true,service:'tontine-api',version:'1.2.0-functional-completion',now:new Date().toISOString(),realMoneyEnabled:kernel.features.enabled('financial-real-money'),manualCashLedgerEnabled:true,artifactStorageBound:true,artifactStorageMode:options.artifacts?'R2':'D1_FALLBACK',contextScope:'request'},200,cors);
     if(request.method==='GET'&&url.pathname==='/api/v1/kernel') return json({services:['context','policy','workflow','events','audit','obligations','evidence','reconciliation','cases','inbox','notifications','configuration','features','data-governance','compatibility','resource-governor'],features:{groupLaunch:kernel.features.enabled('group-launch-studio'),meetingSync:kernel.features.enabled('meeting-sync-core'),realMoney:kernel.features.enabled('financial-real-money'),manualCashLedger:true}},200,cors);
 
