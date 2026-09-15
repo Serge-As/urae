@@ -1,7 +1,5 @@
 const el=(tag,text,className)=>{const e=document.createElement(tag);if(text!==undefined)e.textContent=text;if(className)e.className=className;return e;};
 const value=id=>String(document.getElementById(id)?.value??'').trim();
-const checked=id=>Boolean(document.getElementById(id)?.checked);
-const setChecked=(id,v)=>{const e=document.getElementById(id);if(e)e.checked=Boolean(v);};
 const row=(label,value)=>{const p=el('p');const b=el('strong',label+' : ');p.append(b,document.createTextNode(String(value??'—')));return p;};
 
 export function mountIdentityLiveUI({app,notify=()=>{},showError=console.error}){
@@ -24,7 +22,7 @@ export function mountIdentityLiveUI({app,notify=()=>{},showError=console.error})
     closeSocket();activeGroup=app.activeGroup();
     try{
       socket=new WebSocket(app.liveWebSocketUrl());
-      socket.onopen=()=>{if(liveRoot){liveRoot.replaceChildren(row('Connexion','WebSocket connecté'),row('Groupe',activeGroup));}notify('Canal Premium Live connecté.');};
+      socket.onopen=()=>{if(liveRoot){liveRoot.replaceChildren(row('Connexion','WebSocket connecté'),row('Groupe',activeGroup));}notify('Canal Live connecté.');};
       socket.onmessage=e=>{try{const msg=JSON.parse(String(e.data));if(msg.type==='GROUP_LIVE_EVENT'&&msg.event)renderEvent(msg.event);}catch{}};
       socket.onclose=()=>{if(liveRoot)liveRoot.append(row('Canal','Déconnecté — le mode offline reste actif'));};
       socket.onerror=()=>{if(liveRoot)liveRoot.append(row('WebSocket','Indisponible — aucune donnée perdue, l’outbox reste prioritaire'));};
@@ -64,38 +62,33 @@ export function mountIdentityLiveUI({app,notify=()=>{},showError=console.error})
     if(activeGroup&&activeGroup!==group){closeSocket();lastSeq=0;eventsRoot?.replaceChildren();}
     activeGroup=group;
     try{
-      const [passport,dna,consent,personalCommercial]=await Promise.all([app.groupIdentityPassport(),app.conciergeProfile(),app.dataUseConsent(),app.personalCommercialConsent()]);
+      const [passport,dna]=await Promise.all([app.groupIdentityPassport(),app.conciergeProfile()]);
       passportRoot.replaceChildren(row('Code identitaire',passport.publicCode),row('Empreinte identité',passport.identityFingerprint),row('Empreinte règles',passport.rulesFingerprint),row('Rubriques',passport.rubricCount),row('Sécurité','Identifiant public, jamais un secret d’accès'));
       dnaRoot?.replaceChildren(row('Algorithme',dna.algorithmId),row('Empreinte mémoire',dna.memoryFingerprint),row('Mémoire privée',dna.privateMemoryCount),row('Mémoire partageable',dna.shareableMemoryCount),row('Confiance moyenne',Math.round(Number(dna.confidenceAverage)*100)+'%'),row('Politique','Conseil + règles ; aucune finance autonome'));
-      setChecked('consentCollectiveLearning',consent.purposes.COLLECTIVE_LEARNING);setChecked('consentCommercial',consent.purposes.COMMERCIAL_PERSONALIZATION);setChecked('consentPartners',consent.purposes.PARTNER_MATCHING);setChecked('consentCommunity',consent.purposes.COMMUNITY_DISCOVERY);setChecked('personalCommercialConsent',personalCommercial.personal?.granted);
       const preferenceStatus=document.getElementById('commercialPreferenceStatus');
-      if(personalCommercial.personal?.granted&&personalCommercial.groupEnabled){
-        try{const issued=await app.ensureCommercialPreferenceCookie();const context=await app.commercialPreferenceContext();preferenceStatus?.replaceChildren(row('Profil bêta','Actif'),row('Cookie','First-party opaque / HttpOnly'),row('Affinités sûres',context.affinities?.length??issued.affinityCount??0));}
-        catch(e){preferenceStatus?.replaceChildren(row('Profil bêta','Actif'),row('Cookie','En attente de synchronisation'));} 
-      }else preferenceStatus?.replaceChildren(row('Profil bêta',personalCommercial.personal?.granted?'Le groupe a désactivé la personnalisation commerciale':'Désactivé pour mon compte'));
       try{
-        const health=await app.liveHealth();liveRoot?.replaceChildren(row('Premium Live',health.enabled?'ACTIF':'INACTIF'),row('Objets connectés',health.webSockets??0),row('Dernière séquence',health.latest??0),row('Code groupe',health.groupCode??passport.publicCode));
+        const issued=await app.ensureCommercialPreferenceCookie(),context=await app.commercialPreferenceContext();
+        preferenceStatus?.replaceChildren(
+          row('Profil bêta','BETA_OPEN · actif pour tous'),
+          row('Apprentissage collectif','Actif · catégories non sensibles seulement'),
+          row('Communautés & partenaires','Actifs'),
+          row('Profil first-party','Cookie opaque / HttpOnly'),
+          row('Affinités sûres',context.affinities?.length??issued.affinityCount??0)
+        );
+      }catch(e){
+        preferenceStatus?.replaceChildren(row('Profil bêta','BETA_OPEN'),row('Profil first-party','En attente de synchronisation'));
+      }
+      try{
+        const health=await app.liveHealth();liveRoot?.replaceChildren(row('Live Ledger',health.enabled?'ACTIF':'INACTIF'),row('Objets connectés',health.webSockets??0),row('Dernière séquence',health.latest??0),row('Code groupe',health.groupCode??passport.publicCode));
         if(health.enabled&&(!socket||socket.readyState>1))connect();
         if(health.enabled){const catchup=await app.liveEvents(lastSeq);for(const event of catchup.events??[])renderEvent(event);}
-      }catch(e){liveRoot?.replaceChildren(row('Premium Live','Désactivé sur ce déploiement'),row('Fallback','Outbox offline + actualisation normale'));}      
+      }catch(e){liveRoot?.replaceChildren(row('Live Ledger','Non disponible sur ce déploiement'),row('Fallback','Outbox offline + actualisation normale'));}      
       await renderMemories();
       await renderFounderObservatory();
     }catch(e){showError(e);}
   };
 
   document.getElementById('refreshPassportBtn')?.addEventListener('click',()=>void (async()=>{try{await app.groupIdentityPassport(true);notify('Passeport identitaire rafraîchi.');await refresh();}catch(e){showError(e);}})());
-  document.getElementById('liveConnectBtn')?.addEventListener('click',connect);
-  document.getElementById('livePingBtn')?.addEventListener('click',()=>void (async()=>{try{await app.publishLive('PRESENCE',{state:'ACTIVE',at:new Date().toISOString()});notify('Présence envoyée au Live Hub.');}catch(e){showError(e);}})());
-
-  const consentMap={consentCollectiveLearning:'COLLECTIVE_LEARNING',consentCommercial:'COMMERCIAL_PERSONALIZATION',consentPartners:'PARTNER_MATCHING',consentCommunity:'COMMUNITY_DISCOVERY'};
-  for(const [id,purpose] of Object.entries(consentMap))document.getElementById(id)?.addEventListener('change',e=>void (async()=>{try{await app.setDataUseConsent(purpose,e.target.checked);notify('Consentement mis à jour.');await refresh();}catch(err){e.target.checked=!e.target.checked;showError(err);}})());
-  document.getElementById('personalCommercialConsent')?.addEventListener('change',e=>void (async()=>{try{
-    await app.setPersonalCommercialConsent(e.target.checked);
-    if(e.target.checked)await app.ensureCommercialPreferenceCookie();else await app.revokeCommercialPreferenceCookie();
-    notify(e.target.checked?'Personnalisation bêta activée pour votre compte.':'Personnalisation commerciale désactivée pour votre compte.');
-    await refresh();
-  }catch(err){e.target.checked=!e.target.checked;showError(err);}})());
-
   document.getElementById('conciergeMemoryForm')?.addEventListener('submit',e=>{e.preventDefault();void (async()=>{try{
     await app.learnConciergeMemory({category:value('conciergeMemoryCategory'),key:value('conciergeMemoryKey'),value:value('conciergeMemoryValue'),sourceRef:value('conciergeMemorySource'),confidence:Number(value('conciergeMemoryConfidence')||0),privacy:value('conciergeMemoryPrivacy'),visibility:value('conciergeMemoryVisibility')});
     notify('Nouvel apprentissage ajouté à la mémoire du groupe.');document.getElementById('conciergeMemoryValue').value='';document.getElementById('conciergeMemorySource').value='';await refresh();
