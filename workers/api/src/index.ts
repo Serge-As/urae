@@ -107,7 +107,26 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
     if(!options.premiumLive||!options.liveNamespace)return;
     const {stub}=await liveStubFor(groupId);
     const response=await stub.fetch(new Request('https://group-live.internal/publish',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({type,actorId:ctx.actorId,idempotencyKey,payload,targetUserId})}));
-    if(!response.ok)throw new Error('LIVE_PUBLISH_FAILED');
+    if(!response.ok){
+      const detail=(await response.text().catch(()=>'' )).slice(0,500);
+      throw new Error('LIVE_PUBLISH_FAILED'+(detail?':'+detail:''));
+    }
+  };
+
+  const dispatchContributionProjection=async(groupId:string,receipt:import('../../../packages/contracts/src/index.js').ContributionReceipt,entry:import('../../../packages/contracts/src/index.js').LedgerEntry)=>{
+    const projectionId='financial_projection_'+entry.id,existing=await repo.getWorkspaceRecord(ctx.tenantId,projectionId);
+    try{
+      const positions=await ledger.receiptPositions(ctx.tenantId,groupId);
+      const after=positions.filter(p=>p.membershipId===receipt.membershipId).reduce((n,p)=>n+p.netAmount,0);
+      const notice=await memberControl.create({groupId,membershipId:receipt.membershipId,entry,operationType:'CASH_CONTRIBUTION',amount:receipt.amount.amount,currency:receipt.amount.currency,rubricId:receipt.rubricId,meetingId:receipt.meetingId,previousSituation:after-receipt.amount.amount,newSituation:after});
+      // Keep the Live idempotency key deliberately short and stable. The old encoded notice id could exceed the DO limit.
+      await publishLive(groupId,'FINANCIAL_NOTICE','financial-notice:'+entry.id,{noticeId:notice.id,ledgerEntryId:notice.ledgerEntryId,operationType:notice.operationType,amount:notice.amount,currency:notice.currency,previousSituation:notice.previousSituation??0,newSituation:notice.newSituation??0},notice.userId);
+      if(existing)await repo.saveWorkspaceRecord({...existing,status:'DONE',tags:[...new Set(existing.tags.filter(t=>t!=='pending').concat('dispatched'))],data:{...existing.data,attemptCount:Number(existing.data.attemptCount??0)+1,lastError:null,dispatchedAt:new Date().toISOString()},updatedAt:new Date().toISOString()});
+      return true;
+    }catch(error){
+      if(existing)await repo.saveWorkspaceRecord({...existing,status:'ACTIVE',tags:[...new Set(existing.tags.concat('pending','retry-required'))],data:{...existing.data,attemptCount:Number(existing.data.attemptCount??0)+1,lastError:(error instanceof Error?error.message:String(error)).slice(0,500)},updatedAt:new Date().toISOString()});
+      return false;
+    }
   };
 
   const visibleWorkspace=async(record:WorkspaceRecord)=>{
@@ -446,13 +465,23 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
       const body=await readJson<Record<string,unknown>>(request);
       const receipt=await ledger.recordCashContribution({tenantId:ctx.tenantId,groupId:contributionRoute[1]!,membershipId:String(body.membershipId??''),amount:finite(body.amount),currency:String(body.currency??'XAF'),meetingId:body.meetingId?String(body.meetingId):undefined,rubricId:body.rubricId?String(body.rubricId):undefined,lateReason:body.lateReason?String(body.lateReason):undefined,approverIds:strArray(body.approverIds),idempotencyKey:String(body.idempotencyKey??request.headers.get('x-idempotency-key')??makeId('idem'))});
       const entry=await repo.getLedgerEntry(ctx.tenantId,contributionRoute[1]!,receipt.ledgerEntryId);
-      if(entry){
-        const positions=await ledger.receiptPositions(ctx.tenantId,contributionRoute[1]!);
-        const after=positions.filter(p=>p.membershipId===receipt.membershipId).reduce((n,p)=>n+p.netAmount,0);
-        const notice=await memberControl.create({groupId:contributionRoute[1]!,membershipId:receipt.membershipId,entry,operationType:'CASH_CONTRIBUTION',amount:receipt.amount.amount,currency:receipt.amount.currency,rubricId:receipt.rubricId,meetingId:receipt.meetingId,previousSituation:after-receipt.amount.amount,newSituation:after});
-        await publishLive(contributionRoute[1]!,'FINANCIAL_NOTICE','notice:'+notice.id,{noticeId:notice.id,ledgerEntryId:notice.ledgerEntryId,operationType:notice.operationType,amount:notice.amount,currency:notice.currency,previousSituation:notice.previousSituation??0,newSituation:notice.newSituation??0},notice.userId);
-      }
+      if(entry)await dispatchContributionProjection(contributionRoute[1]!,receipt,entry);
+      // The financial transaction is authoritative once D1 has committed it.
+      // A temporary Live failure must never turn a committed contribution into an ambiguous HTTP failure.
       return json(receipt,201,cors);
+    }
+
+    const retryProjectionRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/live\/retry-pending$/);
+    if(retryProjectionRoute&&request.method==='POST'){
+      const groupId=retryProjectionRoute[1]!;await requireGroup(groupId,true);
+      const pending=(await repo.listWorkspaceRecords(ctx.tenantId,'FINANCE.LIVE_PROJECTION',groupId)).filter(r=>r.status==='ACTIVE');
+      const receipts=await repo.listContributionReceipts(ctx.tenantId,groupId);let retried=0,confirmed=0;
+      for(const record of pending){
+        const entryId=String(record.data.entryId??''),entry=entryId?await repo.getLedgerEntry(ctx.tenantId,groupId,entryId):undefined;
+        const receipt=receipts.find(x=>x.ledgerEntryId===entryId);
+        if(!entry||!receipt)continue;retried++;if(await dispatchContributionProjection(groupId,receipt,entry))confirmed++;
+      }
+      return json({retried,confirmed,pending:Math.max(0,pending.length-confirmed)},200,cors);
     }
 
     const ledgerRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/ledger$/);
@@ -748,7 +777,10 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
     }
 
     const obligationRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/obligations$/);
-    if(obligationRoute&&request.method==='GET')return json(await repo.listObligations(ctx.tenantId),200,cors);
+    if(obligationRoute&&request.method==='GET'){
+      const groupId=obligationRoute[1]!;await requireGroup(groupId);
+      return json((await repo.listObligations(ctx.tenantId)).filter(x=>x.groupId===groupId),200,cors);
+    }
     if(obligationRoute&&request.method==='POST'){
       const body=await readJson<Record<string,unknown>>(request);
       return json(await completion.createFinancialObligation(obligationRoute[1]!,{
