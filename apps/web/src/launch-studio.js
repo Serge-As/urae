@@ -75,12 +75,29 @@ export function mountLaunchStudio({app,getGroups,getRubrics,addRubric,invalidate
     textLine(card,'Groupe',value('projectName'));
     textLine(card,'Famille',value('groupKind'));
     textLine(card,'Gouvernance',value('governanceModel'));
+    textLine(card,'Création historique',profile.origin.historicalCreatedAt||'Nouveau groupe / non renseignée');
     textLine(card,'Exercice',profile.cycle.label||profile.origin.currentExerciseLabel||'À préciser');
+    textLine(card,'Calendrier',[profile.cycle.cadence,profile.cycle.meetingDay,profile.cycle.expectedSessions?profile.cycle.expectedSessions+' séance(s) prévues':''].filter(Boolean).join(' · ')||'À préciser');
     textLine(card,'Membres prévus',String(profile.members.expectedMembers??'—'));
-    textLine(card,'Rubriques',getRubrics().map(r=>r.name).join(', ')||'Aucune');
+    textLine(card,'Constitution des membres',profile.members.rosterMode||'Progressive');
+    const historical=profile.origin.mode==='IMPORT_EXISTING'||Boolean(profile.origin.historicalCreatedAt);
+    textLine(card,'Adhésion après création',historical?'Lien/code sécurisé → rapprochement avec la fiche membre historique':'Lien/code sécurisé → adhésion directe possible sans seconde action du responsable');
+    const rubrics=getRubrics();
+    textLine(card,'Rubriques principales',rubrics.map(r=>r.name).join(', ')||'Aucune');
+    const rubricBox=document.createElement('div');rubricBox.className='stack';
+    for(const r of rubrics){
+      const line=document.createElement('article');line.className='item';const p=r.activityPlan;
+      textLine(line,r.name,[p?.kind,p?.participationMode,p?.nominalAmount?.amount!==undefined?p.nominalAmount.amount+' '+(p.nominalAmount.currency||'XAF'):'',p?.sessions?p.sessions+' séance(s)':''].filter(Boolean).join(' · '));
+      rubricBox.append(line);
+    }
+    if(rubrics.length)card.append(rubricBox);
+    textLine(card,'Petites rubriques « Autres »','Inscription (temporaire au démarrage) · Timbre de prêt · Amende · personnalisables ; plusieurs possibles pour un membre pendant la même séance');
     textLine(card,'Communication',(profile.communication.channels??[]).join(', '));
     textLine(card,'Accessibilité',[profile.accessibility.ultraSimple?'Ultra Simple':'',profile.accessibility.oralAssistant?'Oral':'',profile.accessibility.lowBandwidthPriority?'2G':'',profile.accessibility.oldDevicePriority?'Ancien appareil':''].filter(Boolean).join(', ')||'Standard');
-    const warning=document.createElement('p');warning.className='truth-notice';warning.textContent='Aucune proposition de l’assistant ne crée une transaction financière. Après création, les règles restent versionnées et modifiables selon les droits du groupe.';card.append(warning);root.append(card);
+    textLine(card,'Profil bêta','BETA_OPEN : apprentissage collectif non sensible, recommandations, communautés/partenaires et préférence first-party actifs par défaut, désactivables');
+    textLine(card,'Premium Live','Préparé pour Durable Object / Live Ledger ; fallback offline conservé');
+    textLine(card,'Argent réel','DÉSACTIVÉ — aucune opération Mobile Money réelle n’est autorisée par cette création');
+    const warning=document.createElement('p');warning.className='truth-notice';warning.textContent='Aucune proposition de l’assistant ne crée une transaction financière. Après création, les règles restent versionnées et modifiables selon les droits du groupe. Les données sensibles restent exclues des apprentissages collectifs et commerciaux.';card.append(warning);root.append(card);
     const confirmed=checked('previewConfirmed');byId('createGroupBtn').disabled=!confirmed||!window.__ecoLastProjectReady;
   };
 
