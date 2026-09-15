@@ -95,10 +95,10 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
     const passport=await groupIdentity.compute(groupId);
     return{stub:options.liveNamespace.get(options.liveNamespace.idFromName(passport.publicCode)),passport};
   };
-  const publishLive=async(groupId:string,type:string,idempotencyKey:string,payload:Record<string,string|number|boolean|null>)=>{
+  const publishLive=async(groupId:string,type:string,idempotencyKey:string,payload:Record<string,string|number|boolean|null>,targetUserId?:string)=>{
     if(!options.premiumLive||!options.liveNamespace)return;
     const {stub}=await liveStubFor(groupId);
-    const response=await stub.fetch(new Request('https://group-live.internal/publish',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({type,actorId:ctx.actorId,idempotencyKey,payload})}));
+    const response=await stub.fetch(new Request('https://group-live.internal/publish',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({type,actorId:ctx.actorId,idempotencyKey,payload,targetUserId})}));
     if(!response.ok)throw new Error('LIVE_PUBLISH_FAILED');
   };
 
@@ -121,9 +121,9 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
       }
       if(action==='events'&&request.method==='GET'){
         const after=url.searchParams.get('after')??'0',limit=url.searchParams.get('limit')??'100';
-        return stub.fetch(new Request('https://group-live.internal/events?after='+encodeURIComponent(after)+'&limit='+encodeURIComponent(limit)));
+        return stub.fetch(new Request('https://group-live.internal/events?after='+encodeURIComponent(after)+'&limit='+encodeURIComponent(limit)+'&userId='+encodeURIComponent(ctx.actorId)));
       }
-      if(action==='connect'&&request.method==='GET')return stub.fetch(new Request('https://group-live.internal/connect',{method:'GET',headers:request.headers}));
+      if(action==='connect'&&request.method==='GET')return stub.fetch(new Request('https://group-live.internal/connect?userId='+encodeURIComponent(ctx.actorId),{method:'GET',headers:request.headers}));
       if(action==='publish'&&request.method==='POST'){
         const body=await readJson<Record<string,unknown>>(request),type=String(body.type??'');
         if(type==='MEETING_UPDATE')await requireGroup(groupId,true);
