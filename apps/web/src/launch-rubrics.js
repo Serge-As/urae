@@ -2,7 +2,7 @@ import {validateLaunchRubrics} from '../../../packages/rubrics/src/launch-config
 
 const el=(tag,text,className)=>{const e=document.createElement(tag);if(text)e.textContent=text;if(className)e.className=className;return e;};
 const key=()=>crypto.randomUUID();
-export const activityLabels={CONTRIBUTION:'Collection / Aide locale / Ration',TONTINE:'Tontine / Cotisation',SAVINGS:'Épargne',SOLIDARITY:'Secours / Solidarité / Assurance',TRANSPORT:'Transport',REPAYMENT:'Remboursement',LOAN:'Prêt',ASSISTANCE:'Assistance',LEVY:'Main levée',OFFICE:'Fonctionnement du Bureau',OTHER:'Autres'};
+export const activityLabels={CONTRIBUTION:'Collation / Aide locale / Ration',TONTINE:'Tontine / Cotisation',SAVINGS:'Épargne',SOLIDARITY:'Secours / Solidarité / Assurance',TRANSPORT:'Transport',REPAYMENT:'Remboursement',LOAN:'Prêt',ASSISTANCE:'Assistance',LEVY:'Main levée',OFFICE:'Fonctionnement du Bureau',OTHER:'Autres'};
 const units={DAYS:'jours',WEEKS:'semaines',MONTHS:'mois',YEARS:'années',SESSIONS:'tours / séances'};
 const field=(root,label,value='',options)=>{
   const wrap=el('label',label),input=el(options?'select':'input');
