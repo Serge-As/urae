@@ -20,6 +20,8 @@ import { CommunityService } from '../../../packages/community/src/index.js';
 import { FounderLearningStore } from '../../../packages/founder-observatory/src/index.js';
 import { CommercialPreferenceService, preferenceCookie, clearPreferenceCookie, readPreferenceCookie } from '../../../packages/commercial-preferences/src/index.js';
 import { MiscRubricService } from '../../../packages/misc-rubrics/src/index.js';
+import { allocateSavingsYield, splitInterestPool } from '../../../packages/savings-yield/src/index.js';
+import { buildFinancialRecap, buildSessionRecap, buildClosingCarryover } from '../../../packages/recap-engine/src/index.js';
 import { GroupPairingService } from '../../../packages/group-pairing/src/index.js';
 import { InterestCommunityService } from '../../../packages/interest-communities/src/index.js';
 import { EcoPulseService, type EngagementAction, type RecommendationCandidate } from '../../../packages/ecopulse/src/index.js';
@@ -486,6 +488,31 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
         if(!entry||!receipt)continue;retried++;if(await dispatchContributionProjection(groupId,receipt,entry))confirmed++;
       }
       return json({retried,confirmed,pending:Math.max(0,pending.length-confirmed)},200,cors);
+    }
+
+    const savingsYieldPreview=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/savings-yield\/preview$/);
+    if(savingsYieldPreview&&request.method==='POST'){
+      await requireGroup(savingsYieldPreview[1]!,true);const body=await readJson<Record<string,unknown>>(request);
+      return json(allocateSavingsYield(body as any),200,cors);
+    }
+    const savingsYieldSplit=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/savings-yield\/split-preview$/);
+    if(savingsYieldSplit&&request.method==='POST'){
+      await requireGroup(savingsYieldSplit[1]!,true);const body=await readJson<Record<string,unknown>>(request);
+      return json(splitInterestPool(finite(body.total),Array.isArray(body.shares)?body.shares as any:[]),200,cors);
+    }
+    const financialRecapPreview=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/recap\/financial-preview$/);
+    if(financialRecapPreview&&request.method==='POST'){
+      await requireGroup(financialRecapPreview[1]!,true);return json(buildFinancialRecap(await readJson<any>(request)),200,cors);
+    }
+    const sessionRecapPreview=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/meetings\/([^/]+)\/recap-preview$/);
+    if(sessionRecapPreview&&request.method==='POST'){
+      await requireGroup(sessionRecapPreview[1]!,true);
+      if(!(await repo.getMeeting(ctx.tenantId,sessionRecapPreview[1]!,sessionRecapPreview[2]!)))throw new Error('MEETING_NOT_FOUND');
+      return json(buildSessionRecap(await readJson<any>(request)),200,cors);
+    }
+    const closingCarryoverPreview=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/closing\/carryover-preview$/);
+    if(closingCarryoverPreview&&request.method==='POST'){
+      await requireGroup(closingCarryoverPreview[1]!,true);return json(buildClosingCarryover(await readJson<any>(request)),200,cors);
     }
 
     const ledgerRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/ledger$/);
