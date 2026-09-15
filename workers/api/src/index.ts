@@ -90,6 +90,18 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
     if(!member || manage && !member.roles.some(r=>['founder','manager','admin','president','treasurer'].includes(r)))throw Error('FORBIDDEN_SCOPE');
     return group;
   };
+  const liveStubFor=async(groupId:string)=>{
+    if(!options.premiumLive||!options.liveNamespace)throw new Error('PREMIUM_LIVE_LEDGER_DISABLED');
+    const passport=await groupIdentity.compute(groupId);
+    return{stub:options.liveNamespace.get(options.liveNamespace.idFromName(passport.publicCode)),passport};
+  };
+  const publishLive=async(groupId:string,type:string,idempotencyKey:string,payload:Record<string,string|number|boolean|null>)=>{
+    if(!options.premiumLive||!options.liveNamespace)return;
+    const {stub}=await liveStubFor(groupId);
+    const response=await stub.fetch(new Request('https://group-live.internal/publish',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({type,actorId:ctx.actorId,idempotencyKey,payload})}));
+    if(!response.ok)throw new Error('LIVE_PUBLISH_FAILED');
+  };
+
   const visibleWorkspace=async(record:WorkspaceRecord)=>{
     if(!record.groupId)return record.createdBy===ctx.actorId;
     try{await requireGroup(record.groupId,true);return true;}catch{return false;}
