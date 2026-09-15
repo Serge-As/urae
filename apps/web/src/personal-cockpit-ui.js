@@ -10,10 +10,14 @@ export function mountPersonalCockpitUI({app,getGroups,getMembers,getMeetings,nav
     metrics.replaceChildren();situation.replaceChildren();next.replaceChildren();noticesRoot.replaceChildren();spaces.replaceChildren();
     const groups=getGroups(),groupId=app.activeGroup(),members=getMembers(),meetings=getMeetings(),mine=members.find(m=>m.userId===app.currentActor());
     metrics.append(metric(groups.length,'Groupes accessibles'));
+    let personalCommunities=[];try{personalCommunities=await app.myInterestCommunities();}catch{}
+    metrics.append(metric(personalCommunities.length,'Communautés d’intérêt'));
     if(!groupId){
       situation.append(el('p','Choisissez un groupe ou rejoignez-en un avec un code.','hint'),action('Choisir / rejoindre','discovery'));
       next.append(el('p','Aucun groupe actif : votre cockpit reste centré sur votre compte.','hint'));
       spaces.append(...groups.slice(0,12).map(g=>detail(g.name,'group',g.id)));
+      for(const c of personalCommunities.slice(0,8)){const a=el('article',undefined,'item');a.append(el('strong',c.name),row('Communauté',c.locality||'Sans localité'));spaces.append(a);}
+      spaces.append(action('Découvrir des communautés','ecosystem'));
       return;
     }
     const active=groups.find(g=>g.id===groupId);if(active)spaces.append(detail(active.name,'group',active.id));
@@ -47,7 +51,8 @@ export function mountPersonalCockpitUI({app,getGroups,getMembers,getMeetings,nav
     try{
       const hubs=await app.listCommunityHubs();if(hubs.length){const h=el('article',undefined,'item');h.append(el('strong',hubs.length+' Hub(s) du groupe'),action('Voir Communauté & économie','ecosystem'));spaces.append(h);}
     }catch{}
-    spaces.append(action('Découvrir d’autres espaces','discovery'),action('Communautés & économie','ecosystem'));
+    for(const c of personalCommunities.slice(0,8)){const a=el('article',undefined,'item');a.append(el('strong',c.name),row('Communauté',c.locality||'Sans localité'));spaces.append(a);}
+    spaces.append(action('Découvrir d’autres groupes','discovery'),action('Communautés d’intérêt','ecosystem'));
   };
   return{refresh};
 }
