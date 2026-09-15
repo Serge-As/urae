@@ -552,8 +552,10 @@ const renderDiscoveryResults = (xs) => { const root = $('#discoveryResults'); ro
     b.textContent = 'Demander à rejoindre';
     b.disabled = l.joinPolicy === 'CLOSED' || l.joinPolicy === 'INVITE_ONLY';
     b.onclick = async () => { try {
-        await app.requestToJoin(l.groupId, 'Candidature envoyée depuis Eco-System Cahier App 1.1');
+        await app.requestToJoin(l.groupId, 'Candidature envoyée depuis Eco-System 1.3');
+        await app.recordEcoPulse({itemId:l.groupId,itemKind:'public-group',action:'SEARCH_CLICK',source:'group-discovery',locality:l.locality,tags:[l.family,...(l.missionTags??[]),...(l.activityTags??[])]}).catch(()=>{});
         toast('Candidature envoyée.');
+        void personalCockpitUI.refreshPulse?.();
     }
     catch (e) {
         fail(e);
