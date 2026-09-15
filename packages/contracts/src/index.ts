@@ -262,6 +262,8 @@ export interface LaunchRubricPlan {
   managementFeePerPayment: number;
   estimatedExternalCostRate: number;
   fixedCostPerSession: number;
+  /** Optional AI/manual policy draft applied only after the launch configuration is confirmed. */
+  policyDraft?: RubricPolicies;
 }
 
 export interface RubricFeasibility {
