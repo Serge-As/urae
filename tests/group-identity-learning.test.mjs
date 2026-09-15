@@ -18,26 +18,27 @@ test('group passport code is stable while rules fingerprint tracks governed conf
   assert.equal((await identity.verify('group_a',a.publicCode,a.rulesFingerprint)).identityMatches,true);
 });
 
-test('collective learning is opt-in, sourced and refuses sensitive categories',async()=>{
+test('beta collective learning is on by default, sourced and refuses sensitive categories',async()=>{
   const repo=new InMemoryPlatformRepository(),kernel=new PlatformKernel();context(kernel);await repo.saveGroup(group);
   const svc=new ConciergeLearningService(repo,kernel);
   const before=await svc.learn('group_a',{category:'MEETING_RHYTHM',key:'meeting.cadence',value:'2e samedi du mois',sourceRef:'RI:article-8',confidence:0.94,privacy:'GROUP_SHAREABLE'});
-  assert.equal(before.collectiveEligible,false,'no collective learning before explicit consent');
+  assert.equal(before.collectiveEligible,true,'beta profile should exercise safe collective learning without extra setup');
+  await svc.setConsent('group_a','COLLECTIVE_LEARNING',false);
+  const disabled=await svc.learn('group_a',{category:'MEETING_RHYTHM',key:'meeting.cadence.disabled',value:'2e samedi du mois',sourceRef:'RI:article-8',confidence:0.95,privacy:'GROUP_SHAREABLE'});
+  assert.equal(disabled.collectiveEligible,false,'explicit beta opt-out must be honored');
   await svc.setConsent('group_a','COLLECTIVE_LEARNING',true);
-  const after=await svc.learn('group_a',{category:'MEETING_RHYTHM',key:'meeting.cadence',value:'2e samedi du mois',sourceRef:'RI:article-8',confidence:0.95,privacy:'GROUP_SHAREABLE'});
-  assert.equal(after.collectiveEligible,true);
   await assert.rejects(()=>svc.learn('group_a',{category:'DEBT',key:'member.debt',value:'75000',sourceRef:'ledger:member-x',confidence:1,privacy:'GROUP_SHAREABLE'}),/CATEGORY_NOT_SHAREABLE/);
   const signals=await svc.safeCollectiveSignals('group_a','ECO-GRP-AAAAA-BBBBB-CC');assert.equal(signals.length,1);
 });
 
-test('commercial affinities remain empty until separate consent and never include finance or disputes',async()=>{
+test('beta commercial affinities are available by default but never include finance or disputes',async()=>{
   const repo=new InMemoryPlatformRepository(),kernel=new PlatformKernel();context(kernel);await repo.saveGroup(group);
   const svc=new ConciergeLearningService(repo,kernel);
   await svc.learn('group_a',{category:'MARKET_INTEREST',key:'market.category',value:'huile et savon',sourceRef:'market:group-buy-preference',confidence:0.8,privacy:'GROUP_PRIVATE'});
   await svc.learn('group_a',{category:'DISPUTE',key:'dispute.pattern',value:'retard paiement',sourceRef:'case:1',confidence:1,privacy:'GROUP_PRIVATE'});
-  assert.deepEqual(await svc.commercialAffinities('group_a'),[]);
-  await svc.setConsent('group_a','COMMERCIAL_PERSONALIZATION',true);
   assert.deepEqual(await svc.commercialAffinities('group_a'),[{category:'MARKET_INTEREST',key:'market.category',value:'huile et savon'}]);
+  await svc.setConsent('group_a','COMMERCIAL_PERSONALIZATION',false);
+  assert.deepEqual(await svc.commercialAffinities('group_a'),[],'explicit beta opt-out must suppress commercial affinities');
 });
 
 test('collective discoveries require k-anonymity across distinct groups',()=>{
@@ -45,4 +46,17 @@ test('collective discoveries require k-anonymity across distinct groups',()=>{
   signals.push({groupCode:'G1',category:'MEETING_RHYTHM',key:'cadence',value:'monthly',confidence:0.9});
   const discoveries=aggregateCollectiveLearning(signals,5);assert.equal(discoveries.length,1);assert.equal(discoveries[0].supportingGroups,5);assert.equal(discoveries[0].privacy,'K_ANONYMIZED');
   assert.deepEqual(aggregateCollectiveLearning(signals.slice(0,4),5),[]);
+});
+
+test('privacy-first profile keeps all transverse purposes off until explicitly enabled',async()=>{
+  const repo=new InMemoryPlatformRepository(),kernel=new PlatformKernel();context(kernel);await repo.saveGroup(group);
+  const svc=new ConciergeLearningService(repo,kernel,'PRIVACY_FIRST');
+  const consent=await svc.consent('group_a');
+  assert.deepEqual(consent.purposes,{COLLECTIVE_LEARNING:false,COMMERCIAL_PERSONALIZATION:false,PARTNER_MATCHING:false,COMMUNITY_DISCOVERY:false});
+  assert.equal(consent.defaultMode,'PRIVACY_FIRST');
+  const memory=await svc.learn('group_a',{category:'MEETING_RHYTHM',key:'meeting.cadence',value:'monthly',sourceRef:'RI:1',confidence:0.8,privacy:'GROUP_SHAREABLE'});
+  assert.equal(memory.collectiveEligible,false);
+  await svc.setConsent('group_a','COLLECTIVE_LEARNING',true);
+  const enabled=await svc.learn('group_a',{category:'MEETING_RHYTHM',key:'meeting.cadence.2',value:'monthly',sourceRef:'RI:1',confidence:0.8,privacy:'GROUP_SHAREABLE'});
+  assert.equal(enabled.collectiveEligible,true);
 });
