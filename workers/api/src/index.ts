@@ -16,6 +16,7 @@ import { MemberFinancialControlService } from '../../../packages/member-control/
 import { GroupIdentityService } from '../../../packages/group-identity/src/index.js';
 import { ConciergeLearningService, type DataUsePurpose, type LearningCategory } from '../../../packages/concierge-learning/src/index.js';
 import { MarketService } from '../../../packages/market/src/index.js';
+import { CommunityService } from '../../../packages/community/src/index.js';
 import { HistoricalImportService, RepositoryArtifactStore, type ArtifactStoreLike } from '../../../packages/imports/src/index.js';
 import { authenticatedApi } from './authenticated.js';
 export { GroupLiveHub } from './group-live-hub.js';
