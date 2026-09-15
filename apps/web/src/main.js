@@ -18,6 +18,7 @@ import { mountPersonalCockpitUI } from './personal-cockpit-ui.js';
 import { mountRecapUI } from './recap-ui.js';
 import { mountInterestCommunityUI } from './interest-community-ui.js';
 import { mountAdManagerUI } from './ad-manager-ui.js';
+import { mountTontineManagerUI } from './tontine-manager-ui.js';
 let uiLocale = 'fr';
 try { uiLocale = localStorage.getItem('tontine.locale') === 'en' ? 'en' : 'fr'; } catch {}
 const tx = (fr,en) => runtimeTranslate(uiLocale,fr,en);
@@ -124,6 +125,7 @@ const personalCockpitUI = mountPersonalCockpitUI({ app, getGroups: () => groups,
 const recapUI = mountRecapUI({ app, getGroups: () => groups, getMembers: () => members, getMeetings: () => meetings, getRubrics: () => rubrics, isManager, navigate: go, fmt, date, showError: fail });
 const interestCommunityUI = mountInterestCommunityUI({ app, notify: toast, showError: fail, date });
 const adManagerUI = mountAdManagerUI({ app, notify: toast, showError: fail, isManager, fmt });
+const tontineManagerUI = mountTontineManagerUI({ app, getRubrics: () => rubrics, getMembers: () => members, notify: toast, showError: fail, fmt, isManager });
 const renderConnectivity = () => { const online = navigator.onLine; const e = $('#connectivity'); e.textContent = `● ${online ? tx('En ligne','Online') : tx('Hors ligne','Offline')}`; e.className = `pill ${online ? 'online' : 'offline'}`; app.setConnectivity(online ? 'online' : 'offline'); };
 const renderUniverse = async () => {
     const u = await app.universe();
@@ -632,6 +634,7 @@ const refreshGroupContext = async () => {
     await recapUI.refresh();
     await interestCommunityUI.refresh();
     await adManagerUI.refresh();
+    await tontineManagerUI.refresh();
 };
 const refreshAll = async () => { await refreshGroupContext(); renderOutbox(); renderCompatibility(); renderKernel(); renderModules(); renderEcosystemHighlights(); renderDomainHubs(); await detailUI.openFromLocation?.(); };
 $('#activeGroupSelect').addEventListener('change', async (e) => { const id = e.target.value; app.selectGroup(id || undefined); try {
