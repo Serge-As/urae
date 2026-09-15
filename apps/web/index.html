@@ -572,6 +572,56 @@
       <section id="view-ecosystem" class="view">
         <div class="page-head"><div><span class="eyebrow">Lots F–I</span><h1>Communauté, économie, croissance et accompagnement</h1><p>Les grands services du Cahier sont désormais organisés par domaine au lieu d’être noyés dans une simple liste.</p></div><div class="page-meta"><span class="pill">Community</span><span class="pill">Marketplace</span><span class="pill">Academy & IA</span></div></div>
         <div id="ecosystemHighlights" class="quick-grid"></div>
+        <section class="panel" id="interestCommunityPanel">
+          <div class="section-kicker"><div><h2>Communautés d’intérêts · style Meetup</h2><p>Des communautés indépendantes des tontines : sorties, métiers, passions, quartiers, sport, culture, entrepreneuriat, entraide et vie locale.</p></div></div>
+          <div class="two-col">
+            <div>
+              <form id="interestCommunitySearchForm" class="form-grid">
+                <h3>Découvrir</h3>
+                <label>Thème / mot-clé<input id="interestCommunityQ" placeholder="Ex. Yaoundé by night, randonnée, tech"></label>
+                <label>Localité<input id="interestCommunityLocality" placeholder="Ex. Yaoundé"></label>
+                <label class="full">Centres d’intérêt<input id="interestCommunityTags" placeholder="sorties, restaurants, hébergement, musique"></label>
+                <button class="primary">Rechercher des communautés</button>
+              </form>
+              <div id="interestCommunityResults" class="stack"></div>
+            </div>
+            <div>
+              <details open>
+                <summary><strong>Créer une communauté</strong></summary>
+                <form id="interestCommunityCreateForm" class="form-grid">
+                  <label>Nom<input id="interestCommunityName" required placeholder="Ex. Yaoundé by Night"></label>
+                  <label>Localité<input id="interestCommunityCreateLocality" placeholder="Yaoundé"></label>
+                  <label class="full">Description<textarea id="interestCommunityDescription" rows="3" placeholder="Ce que les membres vont partager et découvrir"></textarea></label>
+                  <label>Visibilité<select id="interestCommunityVisibility"><option value="PUBLIC">Publique</option><option value="PRIVATE">Privée</option></select></label>
+                  <label>Adhésion<select id="interestCommunityJoinPolicy"><option value="OPEN">Ouverte</option><option value="REQUEST">Sur demande</option></select></label>
+                  <label class="full">Centres d’intérêt<input id="interestCommunityCreateTags" placeholder="nightlife, food, musique, hôtels"></label>
+                  <button class="primary">Créer la communauté</button>
+                </form>
+              </details>
+              <h3>Mes communautés</h3>
+              <div id="myInterestCommunityList" class="stack"></div>
+            </div>
+          </div>
+          <div id="interestCommunityWorkspace" hidden>
+            <div class="panel-head"><div><h3 id="activeInterestCommunityTitle">Communauté</h3><p id="activeInterestCommunityMeta"></p></div><button id="closeInterestCommunityBtn" type="button" class="secondary">Fermer</button></div>
+            <div class="two-col">
+              <form id="interestContentForm" class="form-grid">
+                <h3>Partager</h3>
+                <label>Type<select id="interestContentKind"><option value="POST">Publication</option><option value="EVENT">Événement</option><option value="PLACE">Bon coin / lieu</option><option value="OFFER">Offre</option><option value="REQUEST">Demande</option></select></label>
+                <label>Catégorie<input id="interestContentCategory" placeholder="sortie, restaurant, boisson, hébergement…"></label>
+                <label>Titre<input id="interestContentTitle"></label>
+                <label>Localité<input id="interestContentLocality"></label>
+                <label class="full">Message<textarea id="interestContentBody" rows="4" required></textarea></label>
+                <label>Début événement<input id="interestContentStartsAt" type="datetime-local"></label>
+                <label>Fin événement<input id="interestContentEndsAt" type="datetime-local"></label>
+                <button class="primary">Publier</button>
+              </form>
+              <div><h3>Fil & bonnes adresses</h3><div id="interestCommunityFeed" class="stack"></div></div>
+            </div>
+            <div id="interestCommunityRequestsBox" class="stack"></div>
+          </div>
+        </section>
+
         <section class="panel"><div class="section-kicker"><div><h2>Communauté & Hubs professionnels</h2><p>Forums, événements, votes, réputation, gestionnaires et partenaires.</p></div></div><div id="communityHub" class="hub-grid"></div></section>
         <section class="panel" id="communityEnginePanel">
           <div class="section-kicker"><div><h2>Communautés vivantes</h2><p>Espaces privés ou publics, discussions, annonces, offres et demandes. Les fédérations entre groupes utilisent uniquement leurs codes identitaires publics.</p></div></div>
