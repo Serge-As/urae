@@ -542,7 +542,11 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
     if(request.method==='POST'&&url.pathname==='/api/v1/outbox/apply'){
       const item=await readJson<OutboxItem<Record<string,unknown>>>(request); if(item.tenantId!==ctx.tenantId||item.actorId!==ctx.actorId) throw new Error('FORBIDDEN_SCOPE');
       if(item.type==='CONTRIBUTION_CASH_RECORDED'){
-        const p=item.payload; const receipt=await ledger.recordCashContribution({tenantId:ctx.tenantId,groupId:String(p.groupId??''),membershipId:String(p.membershipId??''),amount:finite(p.amount),currency:String(p.currency??'XAF'),meetingId:p.meetingId?String(p.meetingId):undefined,rubricId:p.rubricId?String(p.rubricId):undefined,lateReason:p.lateReason?String(p.lateReason):undefined,approverIds:strArray(p.approverIds),idempotencyKey:item.idempotencyKey}); return json({accepted:true,receipt},200,cors);
+        const p=item.payload;const groupId=String(p.groupId??'');
+        const receipt=await ledger.recordCashContribution({tenantId:ctx.tenantId,groupId,membershipId:String(p.membershipId??''),amount:finite(p.amount),currency:String(p.currency??'XAF'),meetingId:p.meetingId?String(p.meetingId):undefined,rubricId:p.rubricId?String(p.rubricId):undefined,lateReason:p.lateReason?String(p.lateReason):undefined,approverIds:strArray(p.approverIds),idempotencyKey:item.idempotencyKey});
+        const entry=await repo.getLedgerEntry(ctx.tenantId,groupId,receipt.ledgerEntryId);
+        if(entry){const positions=await ledger.receiptPositions(ctx.tenantId,groupId);const after=positions.filter(x=>x.membershipId===receipt.membershipId).reduce((n,x)=>n+x.netAmount,0);await memberControl.create({groupId,membershipId:receipt.membershipId,entry,operationType:'CASH_CONTRIBUTION',amount:receipt.amount.amount,currency:receipt.amount.currency,rubricId:receipt.rubricId,meetingId:receipt.meetingId,previousSituation:after-receipt.amount.amount,newSituation:after});}
+        return json({accepted:true,receipt},200,cors);
       }
       if(item.type==='MEETING_NOTE_UPDATED'){
         const groupId=String(item.payload.groupId??'');await requireGroup(groupId,true);
