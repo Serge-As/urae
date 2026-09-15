@@ -1,5 +1,5 @@
 type LivePayload=Record<string,string|number|boolean|null>;
-export interface GroupLiveEvent {seq:number;id:string;type:string;at:string;actorId:string;idempotencyKey:string;payload:LivePayload;}
+export interface GroupLiveEvent {seq:number;id:string;type:string;at:string;actorId:string;idempotencyKey:string;targetUserId?:string;payload:LivePayload;}
 type StorageLike={get<T=unknown>(key:string):Promise<T|undefined>;put(key:string,value:unknown):Promise<void>;list<T=unknown>(options?:{prefix?:string;startAfter?:string;limit?:number}):Promise<Map<string,T>>;};
 type StateLike={storage:StorageLike;acceptWebSocket?(ws:WebSocket,tags?:string[]):void;getWebSockets?(tag?:string):WebSocket[];};
 
@@ -15,13 +15,14 @@ const cleanPayload=(value:unknown):LivePayload=>{
 export class GroupLiveHub{
   constructor(private readonly state:StateLike,private readonly env:unknown){void env;}
 
-  private async events(after=0,limit=100):Promise<GroupLiveEvent[]>{
-    const rows=await this.state.storage.list<GroupLiveEvent>({prefix:'event:',limit:Math.min(Math.max(limit,1),500)});
-    return [...rows.values()].filter(x=>x.seq>after).sort((a,b)=>a.seq-b.seq).slice(0,limit);
+  private async events(after=0,limit=100,userId?:string):Promise<GroupLiveEvent[]>{
+    const rows=await this.state.storage.list<GroupLiveEvent>({prefix:'event:',limit:500});
+    return [...rows.values()].filter(x=>x.seq>after&&(!x.targetUserId||x.targetUserId===userId)).sort((a,b)=>a.seq-b.seq).slice(0,Math.min(Math.max(limit,1),500));
   }
   private broadcast(event:GroupLiveEvent){
     const message=JSON.stringify({type:'GROUP_LIVE_EVENT',event});
-    for(const ws of this.state.getWebSockets?.()??[])try{if(ws.readyState===WebSocket.OPEN)ws.send(message);}catch{}
+    const sockets=event.targetUserId?this.state.getWebSockets?.('user:'+event.targetUserId)??[]:this.state.getWebSockets?.('group-live')??[];
+    for(const ws of sockets)try{if(ws.readyState===WebSocket.OPEN)ws.send(message);}catch{}
   }
   private async publish(input:Record<string,unknown>):Promise<GroupLiveEvent>{
     const type=String(input.type??'');if(!allowedTypes.has(type))throw new Error('LIVE_EVENT_TYPE_NOT_ALLOWED');
@@ -29,7 +30,8 @@ export class GroupLiveHub{
     const idemKey='idem:'+idempotencyKey,existingSeq=await this.state.storage.get<number>(idemKey);
     if(existingSeq){const existing=await this.state.storage.get<GroupLiveEvent>('event:'+String(existingSeq).padStart(12,'0'));if(existing)return existing;}
     const seq=(await this.state.storage.get<number>('seq')??0)+1;
-    const event:GroupLiveEvent={seq,id:String(input.id??crypto.randomUUID()),type,at:new Date().toISOString(),actorId:String(input.actorId??'unknown').slice(0,200),idempotencyKey,payload:cleanPayload(input.payload)};
+    const targetUserId=input.targetUserId?String(input.targetUserId).slice(0,200):undefined;
+    const event:GroupLiveEvent={seq,id:String(input.id??crypto.randomUUID()),type,at:new Date().toISOString(),actorId:String(input.actorId??'unknown').slice(0,200),idempotencyKey,targetUserId,payload:cleanPayload(input.payload)};
     await this.state.storage.put('event:'+String(seq).padStart(12,'0'),event);await this.state.storage.put('seq',seq);await this.state.storage.put(idemKey,seq);
     this.broadcast(event);return event;
   }
@@ -39,13 +41,14 @@ export class GroupLiveHub{
     if(url.pathname.endsWith('/connect')){
       if(request.headers.get('Upgrade')?.toLowerCase()!=='websocket')return json({error:'WEBSOCKET_UPGRADE_REQUIRED'},426);
       if(!this.state.acceptWebSocket)return json({error:'HIBERNATION_UNAVAILABLE'},503);
+      const userId=url.searchParams.get('userId')?.slice(0,200);if(!userId)return json({error:'LIVE_USER_REQUIRED'},400);
       const Pair=(globalThis as unknown as {WebSocketPair:new()=>{0:WebSocket;1:WebSocket}}).WebSocketPair;if(!Pair)return json({error:'WEBSOCKET_PAIR_UNAVAILABLE'},503);
-      const pair=new Pair(),client=pair[0],server=pair[1];this.state.acceptWebSocket(server,['group-live']);
+      const pair=new Pair(),client=pair[0],server=pair[1];this.state.acceptWebSocket(server,['group-live','user:'+userId]);
       const hibernatingSocket=server as WebSocket & {serializeAttachment?:(value:unknown)=>void};
       hibernatingSocket.serializeAttachment?.({connectedAt:new Date().toISOString()});
       return new Response(null,{status:101,webSocket:client} as ResponseInit&{webSocket:WebSocket});
     }
-    if(request.method==='GET'&&url.pathname.endsWith('/events'))return json({events:await this.events(Number(url.searchParams.get('after')??0),Number(url.searchParams.get('limit')??100)),latest:await this.state.storage.get<number>('seq')??0});
+    if(request.method==='GET'&&url.pathname.endsWith('/events'))return json({events:await this.events(Number(url.searchParams.get('after')??0),Number(url.searchParams.get('limit')??100),url.searchParams.get('userId')??undefined),latest:await this.state.storage.get<number>('seq')??0});
     if(request.method==='POST'&&url.pathname.endsWith('/publish')){
       try{return json({event:await this.publish(await request.json() as Record<string,unknown>)},201);}catch(e){return json({error:e instanceof Error?e.message:'LIVE_ERROR'},400);}
     }
