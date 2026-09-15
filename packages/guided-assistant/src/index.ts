@@ -1,8 +1,8 @@
-import type {RubricActivityKind, GroupProjectLaunchProfile} from '../../contracts/src/index.js';
+import type {RubricActivityKind, GroupProjectLaunchProfile, RubricPolicies} from '../../contracts/src/index.js';
 
 export interface GuidedSuggestion {
   id:string;
-  category:'RUBRIC'|'LOAN_RULE'|'MEETING_RULE'|'MEMBERSHIP_RULE'|'GOVERNANCE_RULE';
+  category:'RUBRIC'|'LOAN_RULE'|'MEETING_RULE'|'MEMBERSHIP_RULE'|'GOVERNANCE_RULE'|'CONTRADICTION';
   title:string;
   confidence:number;
   evidence:string;
@@ -17,6 +17,7 @@ export interface GuidedSuggestion {
     contributionUnit?:string;
     contributionQuantity?:number;
     contextNote?:string;
+    policyDraft?:RubricPolicies;
   };
   rule?:Record<string,string|number|boolean>;
 }
