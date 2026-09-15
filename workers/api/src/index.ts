@@ -18,6 +18,7 @@ import { ConciergeLearningService, type DataUsePurpose, type LearningCategory } 
 import { MarketService } from '../../../packages/market/src/index.js';
 import { HistoricalImportService, RepositoryArtifactStore, type ArtifactStoreLike } from '../../../packages/imports/src/index.js';
 import { authenticatedApi } from './authenticated.js';
+export { GroupLiveHub } from './group-live-hub.js';
 
 const defaultRepo = new InMemoryPlatformRepository();
 
