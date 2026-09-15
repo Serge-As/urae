@@ -1,4 +1,5 @@
 import {createRubricEditor,readRubricEditors,describeRubricPlan,editRubricPlan} from './launch-rubrics.js';
+import {mountLaunchStudio} from './launch-studio.js';
 // UI recovered from the public Cahier App 1.1 on 2026-09-12, then hardened locally.
 // Dynamic text is escaped before use in fixed HTML templates.
 const escapeText=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -24,6 +25,7 @@ let groupPolicy;
 let lastProjectId;
 let projectRevision=0;
 const launchEditors=[];
+let launchStudio;
 let modules = [];
 let selectedLot = 'ALL';
 let deferredInstallPrompt;
@@ -649,31 +651,33 @@ const launchError=error=>({
   INVALID_RUBRIC_COSTS:'Vérifiez les frais : montants entiers positifs ou nuls, taux entre 0 et 100 %.',
   SIMULATION_AMOUNT_OUT_OF_RANGE:'Ces montants sont trop élevés pour un calcul exact. Vérifiez les paramètres.'
 }[error.message]??error.message);
-const invalidateProject=()=>{projectRevision++;lastProjectId=undefined;$('#createGroupBtn').disabled=true;$('#simulationResult').replaceChildren();};
+const invalidateProject=()=>{projectRevision++;lastProjectId=undefined;launchStudio?.invalidateSimulation();$('#createGroupBtn').disabled=true;$('#simulationResult').replaceChildren();};
 const addLaunchRubric=(preset={})=>{
   const editor=createRubricEditor($('#launchRubrics'),{
-    initialName:preset.name??'',initialKind:preset.kind??'',initialContributionMode:preset.contributionMode??'MONEY',
+    plan:preset.plan,initialName:preset.name??'',initialKind:preset.kind??'',initialContributionMode:preset.contributionMode??'MONEY',
     onChange:invalidateProject,onRemove:()=>{launchEditors.splice(launchEditors.indexOf(editor),1);editor.card.remove();invalidateProject();}
   });
   launchEditors.push(editor);invalidateProject();editor.focus();return editor;
 };
 $('#addLaunchRubric').onclick=()=>addLaunchRubric();
-$('#addLaunchTontine').onclick=()=>addLaunchRubric({kind:'TONTINE',contributionMode:val('groupKind')==='in_kind_tontine'?'IN_KIND':'MONEY'});
+$('#addLaunchTontine').onclick=()=>addLaunchRubric({kind:'TONTINE',contributionMode:'MONEY'});
 const syncLaunchFamily=()=>{
   const family=val('groupKind');
-  $('#associationRubricSetup').hidden=false;
-  for(const editor of launchEditors)editor.card.disabled=false;
-  $('#legacyProjectSettings').hidden=true;$('#legacyProjectSettings').disabled=true;
-  if(['rotating_tontine','in_kind_tontine'].includes(family)&&!launchEditors.some(editor=>editor.read().kind==='TONTINE')){
-    addLaunchRubric({kind:'TONTINE',name:family==='in_kind_tontine'?'Tontine en nature':'Tontine',contributionMode:family==='in_kind_tontine'?'IN_KIND':'MONEY'});
+  if(family==='rotating_tontine'&&!launchEditors.some(editor=>editor.read().kind==='TONTINE')){
+    addLaunchRubric({kind:'TONTINE',name:'Tontine',contributionMode:'MONEY'});
   }
   invalidateProject();
 };
-$('#groupKind').addEventListener('change',syncLaunchFamily);syncLaunchFamily();
+$('#groupKind').addEventListener('change',syncLaunchFamily);
+launchStudio=mountLaunchStudio({
+  app,getGroups:()=>groups,getRubrics:()=>{try{return readRubricEditors(launchEditors);}catch{return launchEditors.map(e=>e.read());}},
+  addRubric:addLaunchRubric,invalidate:invalidateProject,toast,showError:fail
+});
+syncLaunchFamily();
 $('#projectForm').addEventListener('input',invalidateProject);
 onSubmit('#projectForm', async (e) => { e.preventDefault(); try {
     clearFail();const revision=projectRevision;
-    const parameters={rubrics:readRubricEditors(launchEditors)};
+    const parameters={rubrics:readRubricEditors(launchEditors),launchProfile:launchStudio.readProfile()};
     const r=await app.simulateAndStoreProject({name:val('projectName'),kind:val('groupKind'),governanceModel:val('governanceModel'),...parameters});
     if(revision!==projectRevision){toast('Le projet a changé. Relancez la simulation pour vérifier les nouveaux paramètres.');return;}
     lastProjectId=r.projectId;
@@ -694,7 +698,7 @@ onSubmit('#projectForm', async (e) => { e.preventDefault(); try {
       root.append(card);
     }}
     const totals=document.createElement('div');totals.innerHTML=html`<div class="result-row"><span>Total monétaire des rubriques prévues</span><strong>${fmt(r.result.totalNominalContributions)}</strong></div><div class="result-row"><span>Frais de gestion perçus</span><strong>${fmt(r.result.totalManagementFees)}</strong></div><div class="result-row"><span>Coûts estimés</span><strong>${fmt(r.result.estimatedExternalCosts+r.result.fixedOperatingCosts)}</strong></div><div class="result-row"><span>Marge de gestion estimée</span><strong>${fmt(r.result.estimatedManagerMargin)}</strong></div><p class="hint">Prévision selon les versements complets. Les rubriques peuvent avoir des durées différentes. Cette simulation ne crée aucun versement ni bénéfice payé.</p>`;root.append(totals);
-    $('#createGroupBtn').disabled=false;toast('Projet et rubriques vérifiés.');
+    launchStudio.afterSimulation();toast('Projet et rubriques vérifiés. Continuez jusqu’à la prévisualisation finale.');
 }catch(e){fail(Error(launchError(e)));} });
 $('#createGroupBtn').addEventListener('click',async()=>{
   if($('#createGroupBtn').disabled||!lastProjectId)return;
