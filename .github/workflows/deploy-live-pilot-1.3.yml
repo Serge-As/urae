@@ -63,7 +63,7 @@ jobs:
           fi
           test -n "${DB_ID}"
           node scripts/render-wrangler-d1.mjs "${DB_ID}" workers/api/wrangler.pilot.toml "${PILOT_DB}"
-          sed -i 's/^name = "eco-system"$/name = "eco-system-live-pilot"/' workers/api/wrangler.pilot.toml
+          sed -i 's/name = "eco-system"/name = "eco-system-live-pilot"/' workers/api/wrangler.pilot.toml
           sed -i 's/PREMIUM_LIVE_LEDGER = "false"/PREMIUM_LIVE_LEDGER = "true"/' workers/api/wrangler.pilot.toml
           grep -q 'name = "eco-system-live-pilot"' workers/api/wrangler.pilot.toml
           grep -q 'PREMIUM_LIVE_LEDGER = "true"' workers/api/wrangler.pilot.toml
