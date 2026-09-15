@@ -31,7 +31,7 @@ test('runtime bilingual dictionary covers critical current shell journeys',()=>{
 test('PWA cache contains new functional and bilingual transitive modules',()=>{
   const sw=fs.readFileSync('apps/web/sw.js','utf8');
   for(const path of ['/src/runtime-i18n.js','/src/completion-ui.js','/src/advanced-ui.js','/src/offline-snapshot.js','/packages/completion/src/index.js'])assert.ok(sw.includes(path),path);
-  assert.match(sw,/v120/);
+  assert.match(sw,/v130/);
 });
 
 test('current shell identifies 1.2 instead of stale 1.1.2 copy',()=>{
