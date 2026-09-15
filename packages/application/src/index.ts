@@ -89,6 +89,12 @@ export class ConnectedApplication {
 
   authStatus():Promise<{authenticated:boolean;account:SessionAccount|null}>{return this.request('/api/v1/auth/session');}
   currentActor():string{return this.actorId;}
+  async financialNotices(membershipId:string):Promise<any[]>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/members/${encodeURIComponent(membershipId)}/financial-notices`);}
+  async confirmFinancialNotice(noticeId:string):Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/financial-notices/${encodeURIComponent(noticeId)}/confirm`,{method:'POST',body:'{}'});}
+  async reserveFinancialNotice(noticeId:string,reason:string):Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/financial-notices/${encodeURIComponent(noticeId)}/reserve`,{method:'POST',body:JSON.stringify({reason})});}
+  async officerReviewFinancialNotice(noticeId:string,note:string):Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/financial-notices/${encodeURIComponent(noticeId)}/officer-review`,{method:'POST',body:JSON.stringify({note})});}
+  async memberReviewFinancialNotice(noticeId:string,decision:'APPROVE_AFTER_REVIEW'|'MAINTAIN_RESERVE',note=''):Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/financial-notices/${encodeURIComponent(noticeId)}/member-review`,{method:'POST',body:JSON.stringify({decision,note})});}
+
   async memberStatement(membershipId:string):Promise<import('../../contracts/src/index.js').MemberStatement>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/members/${encodeURIComponent(membershipId)}/statement`);}
   async authenticate(mode:'login'|'register',input:{username:string;password:string;displayName?:string}):Promise<void>{await this.request(`/api/v1/auth/${mode}`,{method:'POST',body:JSON.stringify({...input,locale:this.locale})});}
   async logout():Promise<void>{await this.request('/api/v1/auth/logout',{method:'POST',body:'{}'});this.outbox.restore([]);this.selectGroup(undefined);}
