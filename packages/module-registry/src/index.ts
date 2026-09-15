@@ -67,7 +67,7 @@ export const PRODUCT_MODULES: ProductModule[] = [
   {id:'FINANCE.LOAN_GUARANTORS',labelFr:'Garants',labelEn:'Loan guarantors',status:'STRUCTURAL_V1',lot:'E',canonicalDependencies:['KERNEL.POLICY','LEDGER.CANONICAL'],workspace:'UNIVERSAL'},
   {id:'FINANCE.INTEREST',labelFr:'Intérêts fixes/variables',labelEn:'Fixed/variable interest',status:'STRUCTURAL_V1',lot:'E',canonicalDependencies:['KERNEL.POLICY','LEDGER.CANONICAL'],workspace:'UNIVERSAL'},
   {id:'FINANCE.REPAYMENTS',labelFr:'Remboursements',labelEn:'Repayments',status:'STRUCTURAL_V1',lot:'E',canonicalDependencies:['KERNEL.POLICY','LEDGER.CANONICAL'],workspace:'UNIVERSAL'},
-  {id:'FINANCE.SAVINGS_YIELD',labelFr:"Rendement d'épargne",labelEn:'Savings yield',status:'STRUCTURAL_V1',lot:'E',canonicalDependencies:['KERNEL.POLICY','LEDGER.CANONICAL'],workspace:'UNIVERSAL'},
+  {id:'FINANCE.SAVINGS_YIELD',labelFr:"Rendement d'épargne",labelEn:'Savings yield',status:'FOUNDATION_ACTIVE',lot:'E',canonicalDependencies:['KERNEL.POLICY','LEDGER.CANONICAL'],workspace:'SPECIALIZED'},
   {id:'FINANCE.SOLIDARITY',labelFr:'Couverture solidaire',labelEn:'Solidarity coverage',status:'FOUNDATION_ACTIVE',lot:'E',canonicalDependencies:['KERNEL.POLICY','LEDGER.CANONICAL'],workspace:'SPECIALIZED'},
   {id:'FINANCE.SHORTFALL',labelFr:'Manquants et dettes membres',labelEn:'Member shortfalls & debt',status:'FOUNDATION_ACTIVE',lot:'E',canonicalDependencies:['KERNEL.POLICY','LEDGER.CANONICAL'],workspace:'SPECIALIZED'},
   {id:'FINANCE.FIXED_TARGET',labelFr:'Cagnottes à cible fixe',labelEn:'Fixed target pools',status:'FOUNDATION_ACTIVE',lot:'E',canonicalDependencies:['KERNEL.POLICY','LEDGER.CANONICAL'],workspace:'SPECIALIZED'},
