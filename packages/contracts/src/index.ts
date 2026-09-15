@@ -529,6 +529,73 @@ export interface RubricCyclePreview {
   notes: string[];
 }
 
+export interface RubricParticipationPolicy {
+  mode:'OPTIONAL'|'MANDATORY'|'RULE_BASED';
+  absentMemberRule?:'PAYS'|'DOES_NOT_PAY'|'REPRESENTATIVE_RULE'|'CUSTOM';
+  memberRule?:string;
+}
+export interface RubricContributionPolicy {
+  cadence?:string;
+  targetAmount?:Money;
+  dueBySession?:number;
+  allowedMedia?:Array<'CASH'|'MOBILE_MONEY'|'TRANSFER'|'IN_KIND'>;
+  missingHandling?:'DEBT'|'SOLIDARITY_ADVANCE'|'IGNORE'|'CUSTOM';
+}
+export interface RubricBeneficiaryPolicy {
+  mode:'NONE'|'HOST'|'ROTATING'|'SCHEDULED'|'EVENT_BASED'|'SELECTED'|'CUSTOM';
+  beneficiariesPerSession?:number;
+  selectionRule?:string;
+}
+export interface RubricRefundPolicy {
+  mode:RubricRefundability;
+  settlementTiming?:'SESSION'|'MID_CYCLE'|'END_OF_EXERCISE'|'CUSTOM';
+  retainedAmount?:Money;
+  retainedTargetPerMember?:Money;
+}
+export interface RubricReservePolicy {
+  carryForward:boolean;
+  trackPerMember:boolean;
+  openingBalanceSource?:'PRIOR_CLOSING'|'MANUAL'|'ZERO'|'CUSTOM';
+  replenishmentRule?:string;
+}
+export interface RubricLoanPolicy {
+  allowed:boolean;
+  rateBasisPointsPerPeriod?:number;
+  interestBase:'PRINCIPAL_ONLY';
+  paymentPriority?:'CAPITAL_FIRST'|'INTEREST_FIRST'|'EXPLICIT_ALLOCATION';
+  noInterestOnInterest:true;
+}
+export interface RubricYieldPolicy {
+  enabled:boolean;
+  allocationModel?:'EXACT_WEIGHTED_DEPOSITS'|'LEGACY_COEFFICIENTS'|'AMOUNT_TIME'|'HYBRID_TIME_AMOUNT';
+  coefficientSchedule?:Record<string,number>;
+  distributableShareBasisPoints?:number;
+  rounding?:'LARGEST_REMAINDER';
+}
+export interface RubricAssistancePolicy {
+  fundingMode:'DISBURSEMENT'|'LEVY'|'MIXED';
+  authorization?:'MANAGER'|'BUREAU'|'ASSEMBLY'|'DOUBLE_VALIDATION'|'CUSTOM';
+  eligibleEvents?:string[];
+}
+export interface RubricLifecyclePolicy {
+  visibility:'PERSISTENT'|'EXERCISE'|'FIRST_N_SESSIONS'|'SESSION_ONLY'|'EVENT_DRIVEN';
+  activeFirstSessions?:number;
+  effectiveFromSession?:number;
+  effectiveUntilSession?:number;
+}
+export interface RubricPolicies {
+  participation?:RubricParticipationPolicy;
+  contribution?:RubricContributionPolicy;
+  beneficiary?:RubricBeneficiaryPolicy;
+  refund?:RubricRefundPolicy;
+  reserve?:RubricReservePolicy;
+  loan?:RubricLoanPolicy;
+  yield?:RubricYieldPolicy;
+  assistance?:RubricAssistancePolicy;
+  lifecycle?:RubricLifecyclePolicy;
+  notes?:string[];
+}
+
 export interface RubricDefinition {
   id: Id;
   tenantId: Id;
@@ -538,6 +605,8 @@ export interface RubricDefinition {
   purpose?: string;
   facets: RubricFacets;
   operatingModel?: RubricOperatingModel;
+  /** Composable policies: the rubric keeps one identity while its operational rules evolve independently. */
+  policies?: RubricPolicies;
   activityPlan?: LaunchRubricPlan;
   status: 'DRAFT' | 'ACTIVE' | 'PAUSED' | 'ARCHIVED';
   source: 'STARTER' | 'GROUP_CUSTOM' | 'GOVERNANCE_TEXT' | 'MIGRATED';
