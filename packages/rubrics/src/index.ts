@@ -29,7 +29,8 @@ export class RubricKnowledgeService {
       const project=await this.repo.getProject(input.tenantId,input.launchProjectId),ctx=this.kernel.context.get(),group=await this.repo.getGroup(input.tenantId,input.groupId);
       const allowed=project&&ctx.tenantId===project.tenantId&&(ctx.actorId===project.createdBy||project.accessGrants?.some(g=>g.userId===ctx.actorId&&g.capabilities.includes('CONVERT')));
       const planned=project?.rubrics?.find(p=>p.key===input.launchKey);
-      if(!allowed||!group||group.createdBy!==project.createdBy||group.id!==`group_from_${project.id}`||!planned||JSON.stringify(planned)!==JSON.stringify(input.activityPlan))throw Error('FORBIDDEN_SCOPE');
+      const expectedGroupId=project?.launchProfile?.origin.mode==='TRANSFORM_REGISTERED'?project.launchProfile.origin.sourceGroupId:`group_from_${project?.id}`;
+      if(!allowed||!group||group.createdBy!==project.createdBy||group.id!==expectedGroupId||!planned||JSON.stringify(planned)!==JSON.stringify(input.activityPlan))throw Error('FORBIDDEN_SCOPE');
     }else await requireManager(this.repo,this.kernel,input.tenantId,input.groupId);
     const timestamp=now(); const name=input.name.trim(); if(!name)throw new Error('RUBRIC_NAME_REQUIRED');
     const activityPlan=input.activityPlan?validateLaunchRubrics([input.activityPlan])[0]:undefined;
