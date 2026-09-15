@@ -24,6 +24,7 @@ import { allocateSavingsYield, splitInterestPool } from '../../../packages/savin
 import { buildFinancialRecap, buildSessionRecap, buildClosingCarryover } from '../../../packages/recap-engine/src/index.js';
 import { AdManagerService } from '../../../packages/ad-manager/src/index.js';
 import { EconomicIntelligenceService } from '../../../packages/economic-intelligence/src/index.js';
+import { IdentityProofService } from '../../../packages/identity-proof/src/index.js';
 import { GroupPairingService } from '../../../packages/group-pairing/src/index.js';
 import { InterestCommunityService } from '../../../packages/interest-communities/src/index.js';
 import { EcoPulseService, type EngagementAction, type RecommendationCandidate } from '../../../packages/ecopulse/src/index.js';
@@ -89,7 +90,7 @@ const inboxFor = async (repo:PlatformRepository,tenantId:string,actorId:string) 
   return [...obligations,...cases];
 };
 
-export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{artifacts?:ArtifactStoreLike;liveNamespace?:DurableObjectNamespaceLike;premiumLive?:boolean;founderLearning?:FounderLearningStore;founderTeamActors?:Set<string>;commercialPreferences?:CommercialPreferenceService;groupPairing?:GroupPairingService;interestCommunities?:InterestCommunityService;ecoPulse?:EcoPulseService;dataUseDefaultMode?:DataUseDefaultMode}={}) => async (request:Request):Promise<Response> => {
+export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{artifacts?:ArtifactStoreLike;liveNamespace?:DurableObjectNamespaceLike;premiumLive?:boolean;founderLearning?:FounderLearningStore;founderTeamActors?:Set<string>;commercialPreferences?:CommercialPreferenceService;groupPairing?:GroupPairingService;interestCommunities?:InterestCommunityService;ecoPulse?:EcoPulseService;identityProof?:IdentityProofService;dataUseDefaultMode?:DataUseDefaultMode}={}) => async (request:Request):Promise<Response> => {
   const url=new URL(request.url); const cors=corsHeaders(request);
   if(request.method==='OPTIONS'){
     const allowed=Boolean((cors as Record<string,string>)['access-control-allow-origin']);
@@ -177,6 +178,24 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
       return json({version:'1.3.0-guided-ai-live',count:PRODUCT_CAPABILITY_COUNT,capabilities:PRODUCT_MODULES},200,cors);
     }
 
+
+    if(request.method==='POST'&&url.pathname==='/api/v1/identity-proofs/cni'){
+      if(!options.identityProof)throw new Error('IDENTITY_PROOF_UNAVAILABLE');
+      const body=await readJson<Record<string,unknown>>(request);
+      return json(await options.identityProof.registerAccountCni(ctx.actorId,String(body.cni??''),String(body.sourceRef??'USER_PRESENTED')),201,cors);
+    }
+    if(request.method==='GET'&&url.pathname==='/api/v1/identity-proofs/cni/matches'){
+      if(!options.identityProof)throw new Error('IDENTITY_PROOF_UNAVAILABLE');
+      return json(await options.identityProof.candidateMatches(ctx.actorId),200,cors);
+    }
+    const cniHint=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/members\/([^/]+)\/cni-hint$/);
+    if(cniHint&&request.method==='POST'){
+      if(!options.identityProof)throw new Error('IDENTITY_PROOF_UNAVAILABLE');
+      const groupId=cniHint[1]!,membershipId=cniHint[2]!;await requireGroup(groupId,true);
+      if(!(await repo.getMembership(ctx.tenantId,groupId,membershipId)))throw new Error('MEMBERSHIP_NOT_FOUND');
+      const body=await readJson<Record<string,unknown>>(request);
+      return json(await options.identityProof.recordHistoricalCniHint({tenantId:ctx.tenantId,groupId,membershipId,cni:String(body.cni??''),createdBy:ctx.actorId}),201,cors);
+    }
 
     if(request.method==='POST'&&url.pathname==='/api/v1/bootstrap'){
       const body=await readJson<Record<string,unknown>>(request); await foundation.ensureUser({id:ctx.actorId,displayName:String(body.displayName??'Local Manager').trim()||'Local Manager',locale:String(body.locale??ctx.locale),createdAt:new Date().toISOString()});
@@ -1024,7 +1043,7 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
 
 export const handleRequest=createApiHandler(defaultRepo);
 export interface AssetsFetcherLike { fetch(request: Request): Promise<Response> }
-export interface WorkerEnv { DB?: D1DatabaseLike; ASSETS?: AssetsFetcherLike; ARTIFACTS?: ArtifactStoreLike; GROUP_LIVE_HUB?: DurableObjectNamespaceLike; PREMIUM_LIVE_LEDGER?: string; DATA_USE_PROFILE?: string; COLLECTIVE_LEARNING_PEPPER?: string; FOUNDER_TEAM_ACTORS?: string }
+export interface WorkerEnv { DB?: D1DatabaseLike; ASSETS?: AssetsFetcherLike; ARTIFACTS?: ArtifactStoreLike; GROUP_LIVE_HUB?: DurableObjectNamespaceLike; PREMIUM_LIVE_LEDGER?: string; DATA_USE_PROFILE?: string; COLLECTIVE_LEARNING_PEPPER?: string; IDENTITY_MATCH_PEPPER?: string; FOUNDER_TEAM_ACTORS?: string }
 export default {async fetch(request:Request,env:WorkerEnv={}){
   const url=new URL(request.url);
   if(request.method==='GET' && env.ASSETS && url.pathname!=='/health' && !url.pathname.startsWith('/api/')){
@@ -1042,6 +1061,8 @@ export default {async fetch(request:Request,env:WorkerEnv={}){
   }
   const repository=new D1PlatformRepository(env.DB);
   const founderLearning=env.COLLECTIVE_LEARNING_PEPPER?new FounderLearningStore(env.DB,env.COLLECTIVE_LEARNING_PEPPER):undefined;
+  const identityPepper=env.IDENTITY_MATCH_PEPPER??env.COLLECTIVE_LEARNING_PEPPER;
+  const identityProof=identityPepper?new IdentityProofService(env.DB,identityPepper):undefined;
   const founderTeamActors=new Set((env.FOUNDER_TEAM_ACTORS??'').split(',').map(x=>x.trim()).filter(Boolean));
   const dataUseDefaultMode:DataUseDefaultMode=env.DATA_USE_PROFILE==='PRIVACY_FIRST'?'PRIVACY_FIRST':'BETA_OPEN';
   const commercialPreferences=new CommercialPreferenceService(env.DB,dataUseDefaultMode==='BETA_OPEN');
@@ -1052,7 +1073,7 @@ export default {async fetch(request:Request,env:WorkerEnv={}){
   return authenticatedApi(repository,env.DB,async authenticatedRequest=>{
     const h=authenticatedRequest.headers;
     pairingKernel.context.set({actorId:h.get('x-actor-id')??'unknown',tenantId:h.get('x-tenant-id')??'unknown',activeGroupId:h.get('x-active-group-id')||undefined,groupRoles:(h.get('x-group-roles')??'').split(',').filter(Boolean),mandateIds:[],deviceId:h.get('x-device-id')??'device_web',sessionId:h.get('x-session-id')??'server-authenticated',locale:h.get('accept-language')?.toLowerCase().startsWith('en')?'en':'fr',timezone:h.get('x-timezone')??'Africa/Douala',connectivity:'online',requestId:h.get('x-request-id')??crypto.randomUUID()});
-    return createApiHandler(repository,{artifacts:env.ARTIFACTS,liveNamespace:env.GROUP_LIVE_HUB,premiumLive:env.PREMIUM_LIVE_LEDGER==='true',founderLearning,founderTeamActors,commercialPreferences,groupPairing,interestCommunities,ecoPulse,dataUseDefaultMode})(authenticatedRequest);
+    return createApiHandler(repository,{artifacts:env.ARTIFACTS,liveNamespace:env.GROUP_LIVE_HUB,premiumLive:env.PREMIUM_LIVE_LEDGER==='true',founderLearning,founderTeamActors,commercialPreferences,groupPairing,interestCommunities,ecoPulse,identityProof,dataUseDefaultMode})(authenticatedRequest);
   })(request);
 }};
 export {defaultRepo as repo};
