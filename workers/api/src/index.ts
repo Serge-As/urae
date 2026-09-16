@@ -175,22 +175,36 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
       }
       return json({error:'METHOD_NOT_ALLOWED'},405,cors);
     }
-    if(request.method==='GET'&&url.pathname==='/health') return json({ok:true,service:'tontine-api',version:'1.3.0-guided-ai-live',now:new Date().toISOString(),realMoneyEnabled:kernel.features.enabled('financial-real-money'),manualCashLedgerEnabled:true,artifactStorageBound:true,artifactStorageMode:options.artifacts?'R2':'D1_FALLBACK',contextScope:'request'},200,cors);
+    if(request.method==='GET'&&url.pathname==='/health') return json({ok:true,service:'tontine-api',version:'1.3.2-savings-control-forum-live',now:new Date().toISOString(),realMoneyEnabled:kernel.features.enabled('financial-real-money'),manualCashLedgerEnabled:true,artifactStorageBound:true,artifactStorageMode:options.artifacts?'R2':'D1_FALLBACK',contextScope:'request'},200,cors);
     if(request.method==='GET'&&url.pathname==='/api/v1/kernel') return json({services:['context','policy','workflow','events','audit','obligations','evidence','reconciliation','cases','inbox','notifications','configuration','features','data-governance','compatibility','resource-governor'],features:{groupLaunch:kernel.features.enabled('group-launch-studio'),meetingSync:kernel.features.enabled('meeting-sync-core'),realMoney:kernel.features.enabled('financial-real-money'),manualCashLedger:true}},200,cors);
 
     if(request.method==='GET'&&url.pathname==='/api/v1/product/capabilities'){
-      return json({version:'1.3.0-guided-ai-live',count:PRODUCT_CAPABILITY_COUNT,capabilities:PRODUCT_MODULES},200,cors);
+      return json({version:'1.3.2-savings-control-forum-live',count:PRODUCT_CAPABILITY_COUNT,capabilities:PRODUCT_MODULES},200,cors);
     }
 
 
-    if(request.method==='POST'&&url.pathname==='/api/v1/identity-proofs/cni'){
+    const accountProof=url.pathname.match(/^\/api\/v1\/identity-proofs\/(cni|phone|name)$/);
+    if(accountProof&&request.method==='POST'){
       if(!options.identityProof)throw new Error('IDENTITY_PROOF_UNAVAILABLE');
-      const body=await readJson<Record<string,unknown>>(request);
-      return json(await options.identityProof.registerAccountCni(ctx.actorId,String(body.cni??''),String(body.sourceRef??'USER_PRESENTED')),201,cors);
+      const proofType=accountProof[1]!.toUpperCase() as 'CNI'|'PHONE'|'NAME',body=await readJson<Record<string,unknown>>(request);
+      const value=String(body.value??body.cni??body.phone??body.name??'');
+      return json(await options.identityProof.registerAccountProof(ctx.actorId,proofType,value,String(body.sourceRef??'USER_PRESENTED')),201,cors);
+    }
+    if(request.method==='GET'&&url.pathname==='/api/v1/identity-proofs/matches'){
+      if(!options.identityProof)throw new Error('IDENTITY_PROOF_UNAVAILABLE');
+      return json(await options.identityProof.candidateMatches(ctx.actorId),200,cors);
     }
     if(request.method==='GET'&&url.pathname==='/api/v1/identity-proofs/cni/matches'){
       if(!options.identityProof)throw new Error('IDENTITY_PROOF_UNAVAILABLE');
-      return json(await options.identityProof.candidateMatches(ctx.actorId),200,cors);
+      return json((await options.identityProof.candidateMatches(ctx.actorId)).filter(x=>x.proofType==='CNI'),200,cors);
+    }
+    const identityHint=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/members\/([^/]+)\/identity-hint\/(cni|phone|name)$/);
+    if(identityHint&&request.method==='POST'){
+      if(!options.identityProof)throw new Error('IDENTITY_PROOF_UNAVAILABLE');
+      const groupId=identityHint[1]!,membershipId=identityHint[2]!,proofType=identityHint[3]!.toUpperCase() as 'CNI'|'PHONE'|'NAME';await requireGroup(groupId,true);
+      if(!(await repo.getMembership(ctx.tenantId,groupId,membershipId)))throw new Error('MEMBERSHIP_NOT_FOUND');
+      const body=await readJson<Record<string,unknown>>(request);
+      return json(await options.identityProof.recordHistoricalHint({tenantId:ctx.tenantId,groupId,membershipId,proofType,value:String(body.value??''),createdBy:ctx.actorId}),201,cors);
     }
     const cniHint=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/members\/([^/]+)\/cni-hint$/);
     if(cniHint&&request.method==='POST'){
@@ -808,7 +822,7 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
     }
 
     if(request.method==='GET'&&url.pathname==='/api/v1/completion/workflows'){
-      return json({version:'1.3.0-guided-ai-live',workflows:COMPLETION_WORKFLOWS},200,cors);
+      return json({version:'1.3.2-savings-control-forum-live',workflows:COMPLETION_WORKFLOWS},200,cors);
     }
 
     const expectedRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/receivables\/expected$/);
