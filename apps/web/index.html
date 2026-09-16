@@ -548,30 +548,41 @@
           </details>
 
           <section class="panel" id="savingsYieldLab">
-            <div class="section-kicker"><div><h2>Répartition des intérêts d’Épargne</h2><p>Chaque dépôt garde son propre montant, sa propre période et le coefficient choisi par le Bureau. La simulation redistribue exactement 100 % de l’enveloppe indiquée, au franc près.</p></div></div>
+            <div class="section-kicker"><div><h2>Moteur Épargne → Principal → Intérêts provisoires → Intérêts finaux</h2><p>Le moteur reproduit maintenant les étapes du classeur historique au lieu de réduire le calcul à « dépôt × coefficient ». Il peut aussi comparer cette méthode à une répartition fondée sur le capital réellement mis au travail par les prêts.</p></div></div>
             <div class="two-col">
               <div>
                 <div class="form-grid">
                   <label>Enveloppe réelle d’intérêts à distribuer<input id="yieldInterestPool" type="number" min="0" step="1" value="18500"></label>
-                  <label>Modèle<select id="yieldMode"><option value="EXACT_WEIGHTED_DEPOSITS">Recommandé — dépôts pondérés exacts</option><option value="LEGACY_COEFFICIENTS">Compatibilité ancien Excel</option><option value="AMOUNT_TIME">Montant × temps</option><option value="HYBRID_TIME_AMOUNT">Hybride temps/montant</option></select></label>
+                  <label>Modèle<select id="yieldMode"><option value="WORKBOOK_RECONSTRUCTED">Fidèle au classeur — Principal → provisoires → finaux</option><option value="EXACT_WEIGHTED_DEPOSITS">Dépôts pondérés normalisés</option><option value="LEGACY_COEFFICIENTS">Compatibilité coefficients historiques</option><option value="AMOUNT_TIME">Montant × temps</option><option value="HYBRID_TIME_AMOUNT">Hybride temps/montant</option></select></label>
                   <label>Puissance montant (mode hybride)<input id="yieldAmountPower" type="number" min="0.1" max="1" step="0.05" value="0.75"></label>
+                  <label class="check"><input id="yieldNoLoanNoYield" type="checkbox"><span>Règle du groupe : une période sans nouveau prêt ne génère aucun gain pour les dépôts de cette période</span></label>
                 </div>
                 <h3>Coefficients du Bureau</h3><div id="yieldCoefficients" class="form-grid"></div>
-                <div class="actions"><button id="yieldPreviewBtn" type="button" class="primary">Simuler la répartition</button><button id="yieldLegacySplitBtn" type="button" class="secondary">Voir partage 70 % / 10 % / 20 %</button></div>
+                <div class="actions"><button id="yieldPreviewBtn" type="button" class="primary">Reconstituer le calcul</button><button id="yieldLegacySplitBtn" type="button" class="secondary">Partager le pool 70 % / 10 % / 20 %</button></div>
               </div>
               <div>
                 <form id="yieldDepositForm" class="form-grid">
-                  <h3>Ajouter un dépôt</h3>
+                  <h3>Ajouter un dépôt réel</h3>
                   <label>Membre<select id="yieldDepositMember" required></select></label>
-                  <label>Période<select id="yieldDepositPeriod" required></select></label>
+                  <label>Séance / période<select id="yieldDepositPeriod" required></select></label>
                   <label>Montant<input id="yieldDepositAmount" type="number" min="1" step="1" required></label>
                   <button class="secondary">Ajouter le dépôt</button>
                 </form>
                 <div id="yieldDepositList" class="stack"></div>
               </div>
             </div>
+            <details class="panel-lite">
+              <summary><strong>Capital réellement mis au travail — activité des séances</strong></summary>
+              <p class="hint">Renseignez les nouveaux prêts, remboursements de capital et intérêts encaissés. Les remboursements remettent la même épargne en circulation : ils ne créent pas une seconde propriété d’épargne. Les intérêts encaissés peuvent être reprêtés si la politique du groupe le permet.</p>
+              <div class="form-grid">
+                <label>Mesure de productivité<select id="yieldAtWorkBasis"><option value="NEW_DISBURSEMENT">Nouveaux prêts de la séance — séance sans prêt = 0</option><option value="OUTSTANDING_LOANS">Encours réellement encore prêté</option></select></label>
+                <label class="check"><input id="yieldRelendInterest" type="checkbox"><span>Les intérêts encaissés peuvent aussi être reprêtés comme liquidité</span></label>
+              </div>
+              <div id="yieldActivityGrid" class="table-list"></div>
+              <button id="yieldAtWorkPreviewBtn" type="button" class="secondary">Comparer avec la méthode « capital au travail »</button>
+            </details>
             <div id="yieldResult" class="stack"></div>
-            <p class="truth-notice">Aucun intérêt sur intérêt : l’intérêt impayé d’un prêt reste séparé du capital et ne devient jamais une nouvelle assiette d’intérêts.</p>
+            <p class="truth-notice">Deux choses restent distinctes : réutiliser l’argent des intérêts encaissés comme liquidité de prêt peut être autorisé par un groupe ; en revanche, l’intérêt impayé d’un emprunteur ne devient jamais automatiquement du nouveau capital portant lui-même intérêt.</p>
           </section>
 
           <section class="panel"><div class="panel-head"><div><h2>Ledger</h2><p>Vérité financière canonique.</p></div></div><div id="ledgerMetrics" class="metrics small"></div><div id="receiptList" class="table-list"></div></section>
