@@ -43,7 +43,8 @@ export class FounderControlService{
     ]);
     const issues=issuesR.map(issueFrom),editorial=editorialR.map(editorialFrom),checks=checksR.map(checkFrom);
     const latestCheck=new Map<string,FounderServiceCheck>();
-    for(const check of checks.sort((a,b)=>b.checkedAt.localeCompare(a.checkedAt)))if(!latestCheck.has(check.serviceId))latestCheck.set(check.serviceId,check);
+    const activeChecks=checksR.filter(r=>r.status!=='ARCHIVED').map(checkFrom);
+    for(const check of activeChecks)latestCheck.set(check.serviceId,check);
     // Registry-driven on purpose: adding a product module automatically puts it
     // under founder supervision without a second manual dashboard update.
     const services=PRODUCT_MODULES.map(module=>{
@@ -90,6 +91,8 @@ export class FounderControlService{
   }
   async recordCheck(input:{serviceId:string;state:CheckState;source?:string;summary?:string}){
     const ctx=this.ctx(),serviceId=clean(input.serviceId,160);if(!serviceId)throw new Error('SERVICE_ID_REQUIRED');const state=checkState(input.state),stamp=now();
+    const previous=(await this.repo.listWorkspaceRecords(ctx.tenantId,CHECK_MODULE)).filter(r=>String(r.data.serviceId??'')===serviceId&&r.status!=='ARCHIVED');
+    for(const old of previous)await this.repo.saveWorkspaceRecord({...old,status:'ARCHIVED',updatedAt:stamp});
     const r:WorkspaceRecord={id:makeId('service_check'),tenantId:ctx.tenantId,moduleId:CHECK_MODULE,title:serviceId,summary:clean(input.summary,1000)||undefined,status:state==='PASS'?'DONE':'ACTIVE',tags:['founder-control','service-check','service:'+serviceId],data:{serviceId,state,source:clean(input.source,120)||'manual',checkedAt:stamp},createdBy:ctx.actorId,createdAt:stamp,updatedAt:stamp};
     await this.repo.saveWorkspaceRecord(r);return checkFrom(r);
   }
