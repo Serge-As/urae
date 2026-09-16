@@ -1,74 +1,109 @@
-# ECO-SYSTEM — État vérifié le 13 septembre 2026
+# ECO-SYSTEM — CURRENT TRUTH
 
-Version active : `1.2.0-functional-completion`  
-Branche de livraison : `next/1.2.0-functional-completion-20260913`  
-Production : `https://eco-system.sergemimf.workers.dev/`  
-Worker : `eco-system`  
-D1 canonique : `eco-system-db`  
-Argent réel : `realMoneyEnabled=false` — invariant maintenu.  
-`main` : non fusionné.
+Date : 2026-09-16
 
-## Production vérifiée
+## 1. Vérité à ne pas confondre
 
-Le workflow Cloudflare `34766061058` est **SUCCESS**. Le Worker publié a le Version ID `f04625c8-30a9-4722-8de7-76f08f49b1e4`. La qualification, le build, la résolution de l'infrastructure, les migrations additives, le déploiement et le smoke test ont tous réussi. D1 a été réutilisée et Wrangler a répondu **No migrations to apply**.
+### Production publique actuelle
+- URL : `https://eco-system.sergemimf.workers.dev/`
+- dernière ligne de production qualifiée documentée : `1.2.0-functional-completion`
+- Worker : `eco-system`
+- D1 canonique : `eco-system-db`
+- argent réel : **DÉSACTIVÉ**
 
-Le smoke test a confirmé :
-- `/health` : version `1.2.0-functional-completion`;
-- catalogue canonique : **139 capacités**;
-- `realMoneyEnabled=false`;
-- stockage d'artefacts opérationnel;
-- racine PWA accessible.
+### Ligne de développement qualifiée
+- branche : `next/1.3.1-recovery-recap-services-20260915`
+- base préservée : `next/1.3.0-guided-ai-live-20260915@ffee0901720b453167783868c10a59a484c61677`
+- 1.3.1 n'est pas déclarée déployée sur le Worker public tant qu'un workflow de production séparé n'est pas autorisé et qualifié.
 
-R2 est demandé en priorité mais l'API Cloudflare utilisée par GitHub Actions renvoie encore le code `10042` (« Please enable R2 through the Cloudflare Dashboard »). La production utilise donc actuellement le mode sûr `D1_FALLBACK` pour les petits artefacts/imports, avec taille bornée. Aucun bucket R2 n'est revendiqué comme opérationnel tant que ce code persiste.
+### Premium Live pilote isolé
+- Worker : `eco-system-live-pilot`
+- D1 : `eco-system-live-pilot-db`
+- URL : `https://eco-system-live-pilot.sergemimf.workers.dev/`
+- qualification end-to-end : run `35018989303` — **SUCCESS**
+- preuve : Ledger → projection outbox → avis membre → Durable Object → flux Live.
+- Worker Version ID de cette preuve : `ac345e24-c622-492c-8410-0949fe2dd027`
+- `realMoneyEnabled=false`
 
-## Correction métier multi-tontines — acquise
+## 2. Qualification 1.3.1
 
-Le lancement d'un groupe n'impose plus une cotisation nominale globale. **Toutes les familles de groupes** utilisent désormais des rubriques indépendantes.
+La qualification de base avant extension Partenaires/ONG : run `35018989468` — **151/151 PASS**.
 
-Une association ou une tontine peut avoir plusieurs tontines/rubriques simultanées : par exemple Tontine 1 000 F, Tontine 10 000 F, Savons, Huiles, Draps. Chaque rubrique définit séparément :
-- sa participation : libre/volontaire, obligatoire ou selon une règle;
-- ses propres participants — ils ne sont pas obligatoirement tous les membres du groupe;
-- argent, nature ou mode mixte;
-- article, unité et quantité pour les tontines en nature;
-- montant monétaire lorsqu'il existe;
-- nombre de parts/noms, pots, tours et durée;
-- frais/coûts;
-- note de contexte propre à la rubrique;
-- bénéficiaires/parts prévus lorsque nécessaire.
+Les extensions Partenaires/ONG et les documents 3.0 sont ensuite qualifiés à chaque push sur la même branche. Toujours vérifier le dernier run avant toute modification.
 
-Un membre peut donc participer à 0, 1, plusieurs ou toutes les tontines. Les participants et les nombres de parts peuvent différer d'une tontine à l'autre.
+## 3. Acquis anti-régression
 
-Le test authentifié de bout en bout `34765998225` est **SUCCESS** : connexion → projet avec trois tontines distinctes (1 000 F, 10 000 F et Savons en nature) → simulation → conversion en groupe → récupération des trois rubriques persistées.
+- création en **10 étapes** ;
+- libellé **Collation** ;
+- plusieurs tontines par groupe ;
+- participants propres à chaque tontine ;
+- argent/nature/mixte ;
+- Tontine Manager permanent ;
+- part `SERVED` seulement avec preuve Ledger ;
+- Ledger canonique D1 ;
+- outbox transactionnelle pour projections Live ;
+- panne Live ≠ échec d'une écriture financière déjà commitée ;
+- replay Live au-delà de la séquence 500 ;
+- OFF explicite prioritaire sur BETA_OPEN ;
+- RubricDefinition + policies composables ;
+- assistant RI policy-aware + contradictions ;
+- calcul Épargne/intérêts **par dépôt/période** ;
+- coefficients Legacy 9,8,7,6,5,4,3,2,1,0.5,0,0 ;
+- distribution exacte par plus grands restes ;
+- RECAP financier + RECAP de séance ;
+- carryover Secours par membre et autres fonds structurés ;
+- CNI matching HMAC sans numéro brut dans le moteur de rapprochement ;
+- profil économique pseudonymisé par groupe/rubrique ;
+- AdManager spécialisé ;
+- moteur demande agrégée/fournisseurs/unit economics ;
+- Forum/Hubs et communautés d'intérêt ;
+- Partners/ONG spécialisés avec share packs agrégés expirants/révocables.
 
-## Parcours de connexion et PWA
+## 4. Documents de référence nouveaux
 
-La PWA vérifie maintenant le Service Worker **avant** l'authentification avec `updateViaCache:'none'`. Le cache 1.2 a été tourné vers `eco-system-cahier-app-v120-completion-r3-20260913`. Navigation et scripts restent network-first afin d'éviter qu'un ancien cockpit reste affiché après un déploiement.
+- `docs/constitution/ECO_SYSTEM_Cahier_des_Charges_Maitre_Exhaustif_3.0.0_2026-09-16.md`
+- `docs/economics/ECO_SYSTEM_Modele_Economique_AdManager_Intelligence_3.0.0_2026-09-16.md`
 
-Si une session expire pendant un formulaire de lancement, l'écran de connexion est présenté sans effacer le DOM du brouillon courant. Le message indique que la saisie de la page est conservée.
+## 5. Données économiques
 
-## Moteurs spécialisés acquis
+Le profil partenaire peut inclure, lorsque le groupe l'autorise :
+- code `ECO-GRP-...` ;
+- effectif agrégé ;
+- total collecté ;
+- cash in/out ;
+- masse monétaire par rubrique ;
+- nombre d'opérations.
 
-La ligne 1.2 comprend notamment : tontine opérationnelle (cycles, parts, planning, service d'un pot dans le Ledger), prêts et remboursements, décisions gouvernées/quorum, attendus et impayés, affectation explicite des reçus, épargne, soldes d'ouverture, détenteurs de caisse, garants, solidarité, marché (stock, commandes, livraisons, retours, litiges, achats groupés), import historique contrôlé, explication des montants, recherche documentaire sourcée, comparaison de règles, détection d'anomalies, calendrier, interface FR/EN, snapshots de réunion hors ligne et Relay chiffré AES-GCM.
+Il ne contient pas de montant financier individuel nominatif.
 
-Une carte ou un workspace générique ne vaut toujours pas moteur métier terminé : chaque fonction spécialisée doit conserver persistance, droits, reprise et tests.
+## 6. Identité / CNI
 
-## Sauvegarde / reprise
+La CNI peut servir de preuve/indice durable de rapprochement.
+Le mécanisme actuel normalise puis HMAC le numéro avec un secret serveur.
+Aucune CNI brute ne doit être exposée dans les recherches, analytics ou ciblages.
 
-La sauvegarde pré-déploiement multi-tontines `34766026113` est **SUCCESS** : archive source, export D1, restauration SQLite, `PRAGMA integrity_check = ok`, SHA-256 et GitHub Artifact. Une sauvegarde post-déploiement est également déclenchée après le run Cloudflare validé.
+## 7. Garde-fous permanents
 
-Garde-fous permanents :
-- ne pas recréer `eco-system-db`;
-- migrations additives uniquement;
-- ne pas demander/recréer les secrets Cloudflare déjà acquis;
-- ne pas force-push ou fusionner `main` sans décision explicite;
-- ne pas activer l'argent réel sans autorisation séparée;
-- ne pas publier PII/archives privées;
-- préserver Living Rules, Ledger et Membership canoniques, isolation multi-tenant, idempotence et outbox.
+- ne pas recréer `eco-system-db` ;
+- migrations additives uniquement ;
+- ne pas fusionner/force-push `main` sans décision explicite ;
+- ne pas activer l'argent réel ;
+- ne pas créer un second Ledger ;
+- ne pas utiliser dettes/soldes/CNI/identité individuels pour AdManager ;
+- ne pas confondre profil financier agrégé avec données personnelles de membre ;
+- ne pas supprimer les parcours précédents pour simplifier l'interface ;
+- ne pas présenter un domaine STRUCTURAL comme terminé.
 
-## Ancres historiques à préserver
+## 8. Point de reprise
 
-La ligne `1.0.0-complete-app` reste une référence historique supersédée et ne doit pas être effacée du Truth Ledger. Les prérequis **CLOUDFLARE** déjà acquis, notamment les secrets GitHub documentés sans valeur et la D1 `eco-system-db`, restent valides. La doctrine **Living Rules** et l'invariant `realMoneyEnabled=false` demeurent applicables à la ligne 1.2.
+Reprendre sur `next/1.3.1-recovery-recap-services-20260915`, au HEAD distant le plus récent, après vérification de la CI.
 
-## Point de reprise
-
-Partir exclusivement de `next/1.2.0-functional-completion-20260913`. Considérer la production 1.2 et le correctif multi-tontines comme acquis. Ne pas revenir à l'ancien cockpit 2.3.4 / build 2026-09-11 ni à la logique d'une cotisation nominale unique.
+Priorités suivantes :
+1. terminer l'ergonomie RECAP financier/clôture ;
+2. Deals/Offers/Négociation/Reverse Auction UI et persistance ;
+3. Analytics Engine / Economic Control Center ;
+4. Forum avancé ;
+5. ONG/Partenaires avancés ;
+6. connecteurs multicanaux ;
+7. tests terrain seniors/2G ;
+8. seulement après autorisation distincte : qualification production 1.3.1.
