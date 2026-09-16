@@ -1,9 +1,9 @@
 {
   "name": "tontine-platform",
-  "version": "1.3.0-guided-ai-live",
+  "version": "1.3.2-savings-control-forum-live",
   "private": true,
   "type": "module",
-  "description": "Eco-System: guided AI, group identity, privacy-safe concierge learning, communities, boutiques and Durable Object live pilots.",
+  "description": "Eco-System: savings capital-at-work, founder control center, cross-device forum and qualified Premium Live.",
   "engines": {
     "node": ">=24"
   },
