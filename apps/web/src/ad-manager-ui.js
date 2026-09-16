@@ -97,6 +97,15 @@ export function mountAdManagerUI({app,notify=()=>{},showError=console.error,isMa
     const tab=button.dataset.adopsTab;document.querySelectorAll('[data-adops-tab]').forEach(b=>b.classList.toggle('active',b===button));
     document.querySelectorAll('[data-adops-panel]').forEach(p=>p.hidden=p.dataset.adopsPanel!==tab);
   }));
+  document.getElementById('adHouseAIBtn')?.addEventListener('click',()=>void(async()=>{try{
+    const status=document.getElementById('adHouseAIStatus');if(status)status.textContent='Composition IA en cours — contexte agrégé uniquement…';
+    const data=await app.adHouseVariants();
+    if(houseRoot){houseRoot.replaceChildren();
+      for(const h of data.variants??[]){const card=el('article',undefined,'ad-placement-card house-ad-card');card.append(el('strong',h.headline),el('span',h.source==='WORKERS_AI'?'IA contextualisée':'Repli déterministe','pill'),el('p',h.body),el('small','CTA : '+h.callToAction+' · '+h.key));houseRoot.append(card);}
+    }
+    if(status)status.textContent=data.aiUsed?'Variantes Workers AI générées via AI Gateway. Le classement métier reste déterministe.':('Repli sans IA utilisé. '+(data.warning??''));
+    notify(data.aiUsed?'4 variantes House Ads générées par IA.':'Variantes déterministes utilisées sans bloquer la régie.');
+  }catch(e){showError(e);}})());
   document.getElementById('adManagerRefreshBtn')?.addEventListener('click',()=>void render().catch(showError));
   document.addEventListener('eco:group-context-changed',()=>void render().catch(showError));
   return{refresh:render};
