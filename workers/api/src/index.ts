@@ -17,6 +17,7 @@ import { GroupIdentityService } from '../../../packages/group-identity/src/index
 import { ConciergeLearningService, type DataUsePurpose, type LearningCategory, type DataUseDefaultMode } from '../../../packages/concierge-learning/src/index.js';
 import { MarketService } from '../../../packages/market/src/index.js';
 import { CommunityService } from '../../../packages/community/src/index.js';
+import { CommunityRealtimeStore } from '../../../packages/community-realtime/src/index.js';
 import { FounderLearningStore } from '../../../packages/founder-observatory/src/index.js';
 import { FounderControlStore, type CapabilityHealth } from '../../../packages/founder-control/src/index.js';
 import { CommercialPreferenceService, preferenceCookie, clearPreferenceCookie, readPreferenceCookie } from '../../../packages/commercial-preferences/src/index.js';
@@ -93,7 +94,7 @@ const inboxFor = async (repo:PlatformRepository,tenantId:string,actorId:string) 
   return [...obligations,...cases];
 };
 
-export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{artifacts?:ArtifactStoreLike;liveNamespace?:DurableObjectNamespaceLike;premiumLive?:boolean;founderLearning?:FounderLearningStore;founderControl?:FounderControlStore;founderTeamActors?:Set<string>;commercialPreferences?:CommercialPreferenceService;groupPairing?:GroupPairingService;interestCommunities?:InterestCommunityService;ecoPulse?:EcoPulseService;identityProof?:IdentityProofService;dataUseDefaultMode?:DataUseDefaultMode}={}) => async (request:Request):Promise<Response> => {
+export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{artifacts?:ArtifactStoreLike;liveNamespace?:DurableObjectNamespaceLike;premiumLive?:boolean;founderLearning?:FounderLearningStore;founderControl?:FounderControlStore;communityRealtime?:CommunityRealtimeStore;founderTeamActors?:Set<string>;commercialPreferences?:CommercialPreferenceService;groupPairing?:GroupPairingService;interestCommunities?:InterestCommunityService;ecoPulse?:EcoPulseService;identityProof?:IdentityProofService;dataUseDefaultMode?:DataUseDefaultMode}={}) => async (request:Request):Promise<Response> => {
   const url=new URL(request.url); const cors=corsHeaders(request);
   if(request.method==='OPTIONS'){
     const allowed=Boolean((cors as Record<string,string>)['access-control-allow-origin']);
@@ -577,6 +578,53 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
       const body=await readJson<Record<string,unknown>>(request),decision=String(body.decision??'');
       if(decision!=='APPROVE_AFTER_REVIEW'&&decision!=='MAINTAIN_RESERVE')throw new Error('INVALID_MEMBER_REVIEW_DECISION');
       return json(await memberControl.memberReview(noticeMemberReview[1]!,noticeMemberReview[2]!,decision,String(body.note??'')),200,cors);
+    }
+
+    const forumMessages=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/forum-v2\/hubs\/([^/]+)\/messages$/);
+    if(forumMessages&&request.method==='GET'){
+      if(!options.communityRealtime)throw new Error('COMMUNITY_REALTIME_UNAVAILABLE');
+      const groupId=forumMessages[1]!,hubId=decodeURIComponent(forumMessages[2]!);await community.federationProfile(groupId,hubId);
+      return json(await options.communityRealtime.listMessages({tenantId:ctx.tenantId,groupId,hubId,viewerId:ctx.actorId,limit:Number(url.searchParams.get('limit')??50),before:url.searchParams.get('before')??undefined,after:url.searchParams.get('after')??undefined}),200,cors);
+    }
+    if(forumMessages&&request.method==='POST'){
+      if(!options.communityRealtime)throw new Error('COMMUNITY_REALTIME_UNAVAILABLE');
+      const groupId=forumMessages[1]!,hubId=decodeURIComponent(forumMessages[2]!);await community.federationProfile(groupId,hubId);
+      const body=await readJson<Record<string,unknown>>(request);
+      const message=await options.communityRealtime.createMessage({tenantId:ctx.tenantId,groupId,hubId,authorId:ctx.actorId,kind:String(body.kind??'DISCUSSION') as any,title:body.title?String(body.title):undefined,body:String(body.body??''),parentId:body.parentId?String(body.parentId):undefined});
+      await options.communityRealtime.clearDraft(ctx.tenantId,groupId,hubId,ctx.actorId);
+      await publishLive(groupId,'COMMUNITY_EVENT','forum-message:'+message.id,{hubId,messageId:message.id,event:'MESSAGE_CREATED'});
+      return json(message,201,cors);
+    }
+    const forumState=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/forum-v2\/hubs\/([^/]+)\/state$/);
+    if(forumState&&request.method==='GET'){
+      if(!options.communityRealtime)throw new Error('COMMUNITY_REALTIME_UNAVAILABLE');
+      const groupId=forumState[1]!,hubId=decodeURIComponent(forumState[2]!);await community.federationProfile(groupId,hubId);
+      return json(await options.communityRealtime.state(ctx.tenantId,groupId,hubId,ctx.actorId),200,cors);
+    }
+    const forumDraft=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/forum-v2\/hubs\/([^/]+)\/draft$/);
+    if(forumDraft&&request.method==='PUT'){
+      if(!options.communityRealtime)throw new Error('COMMUNITY_REALTIME_UNAVAILABLE');
+      const groupId=forumDraft[1]!,hubId=decodeURIComponent(forumDraft[2]!);await community.federationProfile(groupId,hubId);
+      const body=await readJson<Record<string,unknown>>(request),state=await options.communityRealtime.saveDraft({tenantId:ctx.tenantId,groupId,hubId,userId:ctx.actorId,title:String(body.title??''),body:String(body.body??'')});
+      await publishLive(groupId,'COMMUNITY_DRAFT_SYNC','forum-draft:'+ctx.actorId+':'+hubId+':'+state.updatedAt,{hubId,updatedAt:state.updatedAt},ctx.actorId);
+      return json(state,200,cors);
+    }
+    const forumRead=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/forum-v2\/hubs\/([^/]+)\/read-position$/);
+    if(forumRead&&request.method==='PUT'){
+      if(!options.communityRealtime)throw new Error('COMMUNITY_REALTIME_UNAVAILABLE');
+      const groupId=forumRead[1]!,hubId=decodeURIComponent(forumRead[2]!);await community.federationProfile(groupId,hubId);
+      const body=await readJson<Record<string,unknown>>(request),state=await options.communityRealtime.markRead({tenantId:ctx.tenantId,groupId,hubId,userId:ctx.actorId,messageId:String(body.messageId??''),anchorRatio:finite(body.anchorRatio,0)});
+      await publishLive(groupId,'COMMUNITY_READ_SYNC','forum-read:'+ctx.actorId+':'+hubId+':'+state.updatedAt,{hubId,messageId:state.lastReadMessageId??'',updatedAt:state.updatedAt},ctx.actorId);
+      return json(state,200,cors);
+    }
+    const forumReaction=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/forum-v2\/messages\/([^/]+)\/reaction$/);
+    if(forumReaction&&request.method==='POST'){
+      if(!options.communityRealtime)throw new Error('COMMUNITY_REALTIME_UNAVAILABLE');
+      const groupId=forumReaction[1]!,body=await readJson<Record<string,unknown>>(request),messageId=decodeURIComponent(forumReaction[2]!);
+      await requireGroup(groupId);
+      const state=await options.communityRealtime.toggleReaction({messageId,userId:ctx.actorId,reaction:String(body.reaction??'')});
+      await publishLive(groupId,'COMMUNITY_EVENT','forum-reaction:'+messageId+':'+ctx.actorId+':'+String(body.reaction??'')+':'+(state.active?'on':'off'),{messageId,event:'REACTION_CHANGED'});
+      return json(state,200,cors);
     }
 
     const economicProfile=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/economic-profile$/);
@@ -1135,6 +1183,7 @@ export default {async fetch(request:Request,env:WorkerEnv={}){
   const repository=new D1PlatformRepository(env.DB);
   const founderLearning=env.COLLECTIVE_LEARNING_PEPPER?new FounderLearningStore(env.DB,env.COLLECTIVE_LEARNING_PEPPER):undefined;
   const founderControl=env.DB?new FounderControlStore(env.DB):undefined;
+  const communityRealtime=env.DB?new CommunityRealtimeStore(env.DB):undefined;
   const identityPepper=env.IDENTITY_MATCH_PEPPER??env.COLLECTIVE_LEARNING_PEPPER;
   const identityProof=identityPepper?new IdentityProofService(env.DB,identityPepper):undefined;
   const founderTeamActors=new Set((env.FOUNDER_TEAM_ACTORS??'').split(',').map(x=>x.trim()).filter(Boolean));
@@ -1147,7 +1196,7 @@ export default {async fetch(request:Request,env:WorkerEnv={}){
   return authenticatedApi(repository,env.DB,async authenticatedRequest=>{
     const h=authenticatedRequest.headers;
     pairingKernel.context.set({actorId:h.get('x-actor-id')??'unknown',tenantId:h.get('x-tenant-id')??'unknown',activeGroupId:h.get('x-active-group-id')||undefined,groupRoles:(h.get('x-group-roles')??'').split(',').filter(Boolean),mandateIds:[],deviceId:h.get('x-device-id')??'device_web',sessionId:h.get('x-session-id')??'server-authenticated',locale:h.get('accept-language')?.toLowerCase().startsWith('en')?'en':'fr',timezone:h.get('x-timezone')??'Africa/Douala',connectivity:'online',requestId:h.get('x-request-id')??crypto.randomUUID()});
-    return createApiHandler(repository,{artifacts:env.ARTIFACTS,liveNamespace:env.GROUP_LIVE_HUB,premiumLive:env.PREMIUM_LIVE_LEDGER==='true',founderLearning,founderControl,founderTeamActors,commercialPreferences,groupPairing,interestCommunities,ecoPulse,identityProof,dataUseDefaultMode})(authenticatedRequest);
+    return createApiHandler(repository,{artifacts:env.ARTIFACTS,liveNamespace:env.GROUP_LIVE_HUB,premiumLive:env.PREMIUM_LIVE_LEDGER==='true',founderLearning,founderControl,communityRealtime,founderTeamActors,commercialPreferences,groupPairing,interestCommunities,ecoPulse,identityProof,dataUseDefaultMode})(authenticatedRequest);
   })(request);
 }};
 export {defaultRepo as repo};
