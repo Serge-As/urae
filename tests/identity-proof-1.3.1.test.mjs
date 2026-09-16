@@ -23,3 +23,20 @@ test('CNI matching is useless without the server-only pepper and never exposes t
     await assert.rejects(()=>svc.registerAccountCni('a','12345678'),/IDENTITY_MATCH_PEPPER_REQUIRED/);
   }finally{db.close();}
 });
+
+
+test('phone and normalized name matching use keyed hashes without storing raw values',async()=>{
+  const db=new SQLiteD1(':memory:');db.migrate();
+  try{
+    const svc=new IdentityProofService(db,'identity-match-pepper-very-long-secret-2026');
+    await svc.registerAccountPhone('account_p','6 99 11 22 33');
+    await svc.recordHistoricalPhoneHint({tenantId:'t',groupId:'g',membershipId:'m-phone',phone:'+237699112233',createdBy:'manager'});
+    await svc.registerAccountName('account_p','  Élodie   M'BALA ');
+    await svc.recordHistoricalNameHint({tenantId:'t',groupId:'g',membershipId:'m-name',name:'ELODIE M BALA',createdBy:'manager'});
+    const matches=await svc.candidateMatches('account_p');
+    assert.ok(matches.some(x=>x.membershipId==='m-phone'&&x.proofType==='PHONE'));
+    assert.ok(matches.some(x=>x.membershipId==='m-name'&&x.proofType==='NAME'));
+    const rows=db.db.prepare("SELECT proof_type,identifier_hash FROM identity_proof_tokens WHERE account_id='account_p'").all();
+    assert.ok(rows.every(x=>!String(x.identifier_hash).includes('699112233')&&!String(x.identifier_hash).includes('ELODIE')));
+  }finally{db.close();}
+});
