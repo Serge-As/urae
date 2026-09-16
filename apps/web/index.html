@@ -548,30 +548,61 @@
           </details>
 
           <section class="panel" id="savingsYieldLab">
-            <div class="section-kicker"><div><h2>Répartition des intérêts d’Épargne</h2><p>Chaque dépôt garde son propre montant, sa propre période et le coefficient choisi par le Bureau. La simulation redistribue exactement 100 % de l’enveloppe indiquée, au franc près.</p></div></div>
+            <div class="section-kicker"><div><h2>Moteur Épargne · intérêts · capital réellement productif</h2><p>Eco-System peut reproduire le chemin historique Feuille mensuelle → Épargne → Principal → Intérêts provisoires → Intérêts finaux, puis comparer ce résultat avec un modèle plus fidèle : le capital effectivement prêté, remboursé et éventuellement reprêté.</p></div></div>
             <div class="two-col">
               <div>
                 <div class="form-grid">
-                  <label>Enveloppe réelle d’intérêts à distribuer<input id="yieldInterestPool" type="number" min="0" step="1" value="18500"></label>
-                  <label>Modèle<select id="yieldMode"><option value="EXACT_WEIGHTED_DEPOSITS">Recommandé — dépôts pondérés exacts</option><option value="LEGACY_COEFFICIENTS">Compatibilité ancien Excel</option><option value="AMOUNT_TIME">Montant × temps</option><option value="HYBRID_TIME_AMOUNT">Hybride temps/montant</option></select></label>
-                  <label>Puissance montant (mode hybride)<input id="yieldAmountPower" type="number" min="0.1" max="1" step="0.05" value="0.75"></label>
+                  <label>Intérêts réellement encaissés à répartir<input id="yieldInterestPool" type="number" min="0" step="1" value="18500"></label>
+                  <label>Part Épargne classique %<input id="yieldClassicShare" type="number" min="0" max="100" step="0.1" value="70"></label>
+                  <label>Part Épargne scolaire %<input id="yieldSchoolShare" type="number" min="0" max="100" step="0.1" value="10"></label>
+                  <label>Indemnités / charges Bureau %<input id="yieldOfficeShare" type="number" min="0" max="100" step="0.1" value="20"></label>
+                  <label>Coefficient maximal historique<input id="yieldHighestCoefficient" type="number" min="0.1" step="0.1" value="9"></label>
+                  <label>Dernière séance de l’exercice<input id="yieldEndSession" type="number" min="1" step="1" value="12"></label>
                 </div>
-                <h3>Coefficients du Bureau</h3><div id="yieldCoefficients" class="form-grid"></div>
-                <div class="actions"><button id="yieldPreviewBtn" type="button" class="primary">Simuler la répartition</button><button id="yieldLegacySplitBtn" type="button" class="secondary">Voir partage 70 % / 10 % / 20 %</button></div>
+                <h3>Coefficients historiques / décidés par le Bureau</h3><div id="yieldCoefficients" class="form-grid"></div>
+                <div class="actions"><button id="yieldWorkbookBtn" type="button" class="secondary">Reproduire le moteur Excel</button><button id="yieldProductiveBtn" type="button" class="primary">Calculer selon le capital réellement prêté</button></div>
+                <details>
+                  <summary><strong>Comparer aussi l’ancien calcul simplifié</strong></summary>
+                  <div class="form-grid">
+                    <label>Modèle simplifié<select id="yieldMode"><option value="EXACT_WEIGHTED_DEPOSITS">Dépôts pondérés normalisés</option><option value="LEGACY_COEFFICIENTS">Compatibilité coefficients</option><option value="AMOUNT_TIME">Montant × temps</option><option value="HYBRID_TIME_AMOUNT">Hybride temps/montant</option></select></label>
+                    <label>Puissance montant (hybride)<input id="yieldAmountPower" type="number" min="0.1" max="1" step="0.05" value="0.75"></label>
+                  </div>
+                  <button id="yieldPreviewBtn" type="button">Simuler l’ancien moteur</button>
+                </details>
               </div>
               <div>
                 <form id="yieldDepositForm" class="form-grid">
-                  <h3>Ajouter un dépôt</h3>
+                  <h3>Dépôts d’Épargne</h3>
                   <label>Membre<select id="yieldDepositMember" required></select></label>
+                  <label>Caisse<select id="yieldDepositFund"><option value="CLASSIC">Épargne classique</option><option value="SCHOOL">Épargne scolaire</option></select></label>
                   <label>Période<select id="yieldDepositPeriod" required></select></label>
+                  <label>Séance n°<input id="yieldDepositSession" type="number" min="1" step="1" value="1"></label>
                   <label>Montant<input id="yieldDepositAmount" type="number" min="1" step="1" required></label>
                   <button class="secondary">Ajouter le dépôt</button>
                 </form>
                 <div id="yieldDepositList" class="stack"></div>
               </div>
             </div>
+            <details class="panel-soft">
+              <summary><strong>Prêts, remboursements et intérêts encaissés — moteur capital productif</strong></summary>
+              <p class="hint">Un dépôt peut ne rien gagner tant qu’il n’a pas réellement servi à financer un prêt. Le principal remboursé garde l’identité économique du dépôt d’origine et peut être prêté à nouveau.</p>
+              <form id="yieldEventForm" class="inline-grid">
+                <label>Événement<select id="yieldEventType"><option value="LOAN_DISBURSEMENT">Prêt accordé</option><option value="LOAN_PRINCIPAL_REPAYMENT">Remboursement de principal</option><option value="LOAN_INTEREST_RECEIPT">Intérêt de prêt encaissé</option></select></label>
+                <label>Séance<input id="yieldEventSession" type="number" min="1" step="1" value="1"></label>
+                <label>Référence prêt<input id="yieldEventLoanId" placeholder="Ex. P-001" required></label>
+                <label>Caisse<select id="yieldEventFund"><option value="CLASSIC">Épargne classique</option><option value="SCHOOL">Épargne scolaire</option></select></label>
+                <label>Montant<input id="yieldEventAmount" type="number" min="1" step="1" required></label>
+                <button class="secondary">Ajouter l’événement</button>
+              </form>
+              <div class="actions">
+                <label class="check"><input id="yieldNoLoanNoYield" type="checkbox" checked><span>Sans prêt effectif, l’épargne ne produit aucun droit à intérêt</span></label>
+                <label class="check"><input id="yieldRecyclePrincipal" type="checkbox" checked><span>Le principal remboursé peut être reprêté</span></label>
+                <label class="check"><input id="yieldReinvestInterest" type="checkbox"><span>Les intérêts encaissés peuvent être reprêtés comme capital collectif</span></label>
+              </div>
+              <div id="yieldEventList" class="stack"></div>
+            </details>
             <div id="yieldResult" class="stack"></div>
-            <p class="truth-notice">Aucun intérêt sur intérêt : l’intérêt impayé d’un prêt reste séparé du capital et ne devient jamais une nouvelle assiette d’intérêts.</p>
+            <p class="truth-notice">Aucun intérêt sur intérêt d’un emprunteur : un intérêt impayé ne rejoint jamais son capital. En revanche, un intérêt déjà réellement encaissé peut, si le groupe le décide, être réinvesti comme une nouvelle ressource collective distincte.</p>
           </section>
 
           <section class="panel"><div class="panel-head"><div><h2>Ledger</h2><p>Vérité financière canonique.</p></div></div><div id="ledgerMetrics" class="metrics small"></div><div id="receiptList" class="table-list"></div></section>
