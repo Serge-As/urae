@@ -1,12 +1,12 @@
-# AGENTS.md — Eco-System 1.3.3 Fairness / AdOps / Guided Launch
+# AGENTS.md — Eco-System 1.3.3 Production / Fairness / AdOps / Guided Launch
 
 ## Mission
 Continuer Eco-System sans recommencer, simplifier ou remplacer silencieusement les acquis.
 
 ### Vérité courante
-- production publique qualifiée : `1.3.2-savings-control-forum-live` tant que le smoke 1.3.3 n'est pas prouvé ;
+- production publique qualifiée : `1.3.3-fairness-adops-doctor-launch` ;
 - développement courant : `next/1.3.3-interest-lab-adops-ui-20260916` ;
-- Premium Live : actif en production 1.3.2 et à préserver dans la livraison 1.3.3 ;
+- Premium Live : actif en production 1.3.3 ;
 - argent réel : `realMoneyEnabled=false`.
 
 ## MEMORY BEFORE CODE
