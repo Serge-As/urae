@@ -20,7 +20,7 @@ import { CommunityService } from '../../../packages/community/src/index.js';
 import { FounderLearningStore } from '../../../packages/founder-observatory/src/index.js';
 import { CommercialPreferenceService, preferenceCookie, clearPreferenceCookie, readPreferenceCookie } from '../../../packages/commercial-preferences/src/index.js';
 import { MiscRubricService } from '../../../packages/misc-rubrics/src/index.js';
-import { allocateSavingsYield, splitInterestPool } from '../../../packages/savings-yield/src/index.js';
+import { allocateSavingsYield, splitInterestPool, simulateWorkbookYieldPipeline, allocateCapitalAtWorkYield } from '../../../packages/savings-yield/src/index.js';
 import { buildFinancialRecap, buildSessionRecap, buildClosingCarryover } from '../../../packages/recap-engine/src/index.js';
 import { AdManagerService } from '../../../packages/ad-manager/src/index.js';
 import { EconomicIntelligenceService } from '../../../packages/economic-intelligence/src/index.js';
@@ -519,6 +519,18 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
     if(savingsYieldPreview&&request.method==='POST'){
       await requireGroup(savingsYieldPreview[1]!,true);const body=await readJson<Record<string,unknown>>(request);
       return json(allocateSavingsYield(body as any),200,cors);
+    }
+    const savingsYieldWorkbook=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/savings-yield\/workbook-preview$/);
+    if(savingsYieldWorkbook&&request.method==='POST'){
+      await requireGroup(savingsYieldWorkbook[1]!,true);
+      const body=await readJson<Record<string,unknown>>(request);
+      return json(simulateWorkbookYieldPipeline(body as any),200,cors);
+    }
+    const savingsYieldProductive=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/savings-yield\/capital-at-work-preview$/);
+    if(savingsYieldProductive&&request.method==='POST'){
+      await requireGroup(savingsYieldProductive[1]!,true);
+      const body=await readJson<Record<string,unknown>>(request);
+      return json(allocateCapitalAtWorkYield(body as any),200,cors);
     }
     const savingsYieldSplit=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/savings-yield\/split-preview$/);
     if(savingsYieldSplit&&request.method==='POST'){
