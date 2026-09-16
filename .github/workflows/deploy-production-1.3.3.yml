@@ -3,7 +3,7 @@ name: Eco-System 1.3.3 — Production Deploy
 on:
   workflow_dispatch:
   push:
-    branches: ['next/1.3.3-fairness-adops-doctor-launch-20260916']
+    branches: ['next/1.3.3-interest-lab-adops-ui-20260916']
     paths: ['.github/DEPLOY_ECO_SYSTEM_1_3_3_ONCE']
 
 permissions:
