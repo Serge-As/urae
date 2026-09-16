@@ -3,7 +3,7 @@ const row=(label,value)=>{const p=el('p');p.append(el('strong',label+' : '),docu
 const detail=(label,type,id)=>{const a=el('a',label,'link-btn');a.href='#detail='+encodeURIComponent(type)+':'+encodeURIComponent(id);a.dataset.detailType=type;a.dataset.detailId=id;return a;};
 
 export function mountRecapUI({app,getGroups,getMembers,getMeetings,getRubrics,isManager,navigate,fmt=n=>String(n),date=x=>String(x),showError=console.error}){
-  const ids=['recapMetrics','recapAlerts','recapIdentityLive','recapMembers','recapMeetingsRubrics','recapFinance','recapExceptions','recapCommunityMarket','recapActions'];
+  const ids=['recapMetrics','recapAlerts','recapIdentityLive','recapMembers','recapMeetingsRubrics','recapFinance','recapFundPositions','recapExceptions','recapCommunityMarket','recapActions'];
   const roots=Object.fromEntries(ids.map(id=>[id,document.getElementById(id)]));if(ids.some(id=>!roots[id]))return{refresh:async()=>{}};
   const denied=document.getElementById('recapAccessDenied'),content=document.getElementById('recapContent'),nav=document.getElementById('recapNavBtn');
   const metric=(value,label)=>{const d=el('div',undefined,'metric');d.append(el('strong',String(value)),el('span',label));return d;};
@@ -70,6 +70,20 @@ export function mountRecapUI({app,getGroups,getMembers,getMeetings,getRubrics,is
       if(recent.length){const box=section('Derniers encaissements');for(const receipt of recent){const member=members.find(m=>m.id===receipt.membershipId),line=el('div',undefined,'stack');line.append(member?detail(member.displayName,'member',member.id):el('span',receipt.membershipId),row('Net',fmt(receipt.netAmount)));if(receipt.meetingId)line.append(detail('Séance','meeting',receipt.meetingId));if(receipt.rubricId)line.append(detail('Rubrique','rubric',receipt.rubricId));box.append(line);}roots.recapFinance.append(box);}
     }else roots.recapFinance.append(el('p','Ledger non disponible dans ce contexte.','hint'));
 
+    const fundRubrics=rubrics.filter(r=>/(secours|solidarit|assurance)/i.test(r.name??''));
+    const fundRubricSelect=document.getElementById('fundAdjustmentRubric'),fundMemberSelect=document.getElementById('fundAdjustmentMember');
+    if(fundRubricSelect){const previous=fundRubricSelect.value;fundRubricSelect.replaceChildren();for(const r of fundRubrics)fundRubricSelect.add(new Option(r.name,r.id));if([...fundRubricSelect.options].some(o=>o.value===previous))fundRubricSelect.value=previous;}
+    if(fundMemberSelect){const previous=fundMemberSelect.value;fundMemberSelect.replaceChildren();for(const m of members)fundMemberSelect.add(new Option(m.displayName,m.id));if([...fundMemberSelect.options].some(o=>o.value===previous))fundMemberSelect.value=previous;}
+    if(!fundRubrics.length)roots.recapFundPositions.append(el('p','Aucune rubrique Secours / Solidarité / Assurance identifiable. Renommez ou caractérisez la rubrique pour activer cette répartition.','hint'));
+    for(const fund of fundRubrics){
+      const exercise=document.getElementById('fundAdjustmentExercise')?.value?.trim()||'CURRENT',positions=await app.fundMemberPositions(fund.id,exercise).catch(()=>null);if(!positions)continue;
+      const box=section(fund.name+' · '+exercise);box.append(row('Retenues d’ouverture',fmt(positions.totals.openingRetained)),row('Contributions nettes',fmt(positions.totals.contributions)),row('Remboursements',fmt(positions.totals.refunds)),row('Assistances imputées',fmt(positions.totals.assistanceCharges)),row('Réserve attribuable totale',fmt(positions.totals.attributableReserve)));
+      for(const p of positions.positions.filter(x=>x.openingRetained||x.contributions||x.refunds||x.assistanceCharges||x.adjustmentIn||x.adjustmentOut).slice(0,80)){
+        const line=el('div',undefined,'item');line.append(el('strong',p.displayName),el('p','Retenu N-1 : '+fmt(p.openingRetained)+' · contributions : '+fmt(p.contributions)+' · remboursements : '+fmt(p.refunds)+' · assistances : '+fmt(p.assistanceCharges)),el('span','Réserve attribuable : '+fmt(p.attributableReserve),'pill'));box.append(line);
+      }
+      roots.recapFundPositions.append(box);
+    }
+
     const byKind=new Map();for(const p of misc)byKind.set(String(p.data?.kind??p.title),(byKind.get(String(p.data?.kind??p.title))??0)+Number(p.data?.amount??0));
     if(byKind.size){for(const [k,v] of byKind)roots.recapExceptions.append(row(k,fmt(v)));}else roots.recapExceptions.append(el('p','Aucune petite rubrique enregistrée.','hint'));
     roots.recapExceptions.append(row('Impayés calculés',arrears.length),row('Appairages en attente',pendingPair.length),row('Demandes d’adhésion en attente',pendingApps.length));
@@ -80,5 +94,10 @@ export function mountRecapUI({app,getGroups,getMembers,getMeetings,getRubrics,is
 
     for(const [label,view] of [['Réunion','operations'],['Finances','finance'],['Adhésions & appairages','discovery'],['Communautés & boutique','ecosystem'],['Identité · Live · IA','settings']])roots.recapActions.append(action(label,view));
   };
+  document.getElementById('fundMemberAdjustmentForm')?.addEventListener('submit',event=>{event.preventDefault();void(async()=>{try{
+    const rubricId=document.getElementById('fundAdjustmentRubric')?.value,membershipId=document.getElementById('fundAdjustmentMember')?.value,exerciseLabel=document.getElementById('fundAdjustmentExercise')?.value?.trim()||'CURRENT',kind=document.getElementById('fundAdjustmentKind')?.value,amount=Number(document.getElementById('fundAdjustmentAmount')?.value),note=document.getElementById('fundAdjustmentNote')?.value?.trim()||undefined;
+    if(!rubricId||!membershipId||!Number.isSafeInteger(amount)||amount<0)throw new Error('INVALID_FUND_MEMBER_ADJUSTMENT');
+    await app.recordFundMemberAdjustment(rubricId,{membershipId,exerciseLabel,kind,amount,note});document.getElementById('fundAdjustmentAmount').value='';document.getElementById('fundAdjustmentNote').value='';await refresh();
+  }catch(e){showError(e);}})();});
   return{refresh};
 }
