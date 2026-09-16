@@ -34,6 +34,31 @@ const evidence=(text:string,needle:RegExp):string=>{
 };
 const suggestion=(input:Omit<GuidedSuggestion,'id'>):GuidedSuggestion=>({...input,id:'suggest_'+crypto.randomUUID()});
 
+const assistanceEventCatalog=[
+  {key:'ILLNESS',label:'Maladie',re:/maladie|hospitalisation|hospitalisé|hospitalisee?/i},
+  {key:'DEATH',label:'Deuil / décès',re:/deuil|décès|deces|obsèques|obseques|funérailles|funerailles/i},
+  {key:'MARRIAGE',label:'Mariage',re:/mariage/i},
+  {key:'BAPTISM',label:'Baptême',re:/bapt[eê]me/i},
+  {key:'BIRTH',label:'Naissance',re:/naissance|accouchement/i},
+  {key:'ACCIDENT',label:'Accident',re:/accident/i},
+  {key:'RETIREMENT',label:'Retraite',re:/retraite/i},
+  {key:'BEREAVEMENT_PARENT',label:'Décès d’un proche',re:/décès[^.]{0,80}(?:père|mere|mère|conjoint|enfant|parent)|deuil[^.]{0,80}(?:père|mere|mère|conjoint|enfant|parent)/i}
+] as const;
+const assistanceEvents=(text:string)=>{
+  const rows:Array<{key:string;label:string;fundingMode?:'DISBURSEMENT'|'LEVY'|'MIXED';amount?:{currency:'XAF';amount:number};contributionPerMember?:{currency:'XAF';amount:number};sourceEvidence?:string}>=[];
+  for(const item of assistanceEventCatalog){
+    const match=item.re.exec(text);if(!match)continue;
+    const start=Math.max(0,match.index-110),end=Math.min(text.length,match.index+match[0].length+260),slice=clean(text.slice(start,end));
+    const moneyMatch=slice.match(/([0-9][0-9 .]{1,})\s*(?:f\s*cfa|fcfa|f\b)/i);
+    const amount=moneyMatch?Number(moneyMatch[1]!.replace(/[ .]/g,'')):undefined;
+    const fundingMode=/main\s+lev[ée]e/i.test(slice)?'LEVY':/caisse\s+(?:secours|assistance)|décaissement|decaissement/i.test(slice)?'DISBURSEMENT':undefined;
+    const perMember=amount&&/(?:\/\s*membre|par\s+membre|membre\s+doit|chaque\s+membre)/i.test(slice)?{currency:'XAF' as const,amount}:undefined;
+    rows.push({key:item.key,label:item.label,fundingMode,amount:amount&&!perMember?{currency:'XAF',amount}:undefined,contributionPerMember:perMember,sourceEvidence:slice});
+  }
+  return rows;
+};
+
+
 export const governanceFingerprint=async(text:string):Promise<string>=>{
   const digest=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(text));
   return[...new Uint8Array(digest)].map(x=>x.toString(16).padStart(2,'0')).join('');
@@ -82,15 +107,38 @@ export const analyzeGovernanceText=(raw:string):GuidedSuggestion[]=>{
       explanation:'Épargne scolaire distincte détectée : elle conserve son propre calendrier de restitution et sa propre enveloppe de rendement.',
       rubric:{name:'Épargne scolaire',kind:'SAVINGS',participationMode:'OPTIONAL',contributionMode:'MONEY',contextNote:'Restitution avant la rentrée ou la Cassation selon le règlement.',policyDraft:{participation:{mode:'OPTIONAL'},contribution:{cadence:'FLEXIBLE',allowedMedia:['CASH','MOBILE_MONEY','TRANSFER']},refund:{mode:'FULLY_REFUNDABLE',settlementTiming:'MID_CYCLE'},loan:{allowed:true,rateBasisPointsPerPeriod:500,interestBase:'PRINCIPAL_ONLY',paymentPriority:'CAPITAL_FIRST',noInterestOnInterest:true},yield:{enabled:true,allocationModel:'EXACT_WEIGHTED_DEPOSITS',rounding:'LARGEST_REMAINDER'},lifecycle:{visibility:'PERSISTENT'}}}}));
   }
-  if(has(/assistance/i))out.push(suggestion({category:'RUBRIC',title:'Assistance',confidence:0.86,evidence:evidence(text,/assistance/i),
-    explanation:'Assistance détectée : elle peut être un décaissement, une main levée ou un mélange selon le cas.',
-    rubric:{name:'Assistance',kind:'ASSISTANCE',participationMode:'RULE_BASED',contributionMode:'MONEY',contextNote:'Qualifier chaque type d’assistance : décaissement de caisse, main levée ou mixte.',policyDraft:{participation:{mode:'RULE_BASED'},assistance:{fundingMode:has(/main\s+levée|main\s+levee/i)?'MIXED':'DISBURSEMENT',authorization:'BUREAU'},lifecycle:{visibility:'EVENT_DRIVEN'}}}}));
+  if(has(/assistance/i)){
+    const eventRules=assistanceEvents(text);
+    const annualAmount=money(text,/assistance[^.]{0,180}?(?:annuel|annuelle|annualité|annualite)[^0-9]{0,40}([0-9 .]{2,})\s*(?:f|fcfa)/i);
+    out.push(suggestion({category:'RUBRIC',title:'Assistance',confidence:0.86,evidence:evidence(text,/assistance/i),
+      explanation:eventRules.length
+        ?'Assistance détectée avec plusieurs modalités événementielles dans le RI. Elles sont importées comme brouillon et doivent être validées plus tard dans le menu Assistance, sans forcer une longue configuration pendant la création.'
+        :'Assistance détectée : le gestionnaire pourra définir ses modalités plus tard par RI, texte, voix ou saisie manuelle.',
+      rubric:{name:'Assistance',kind:'ASSISTANCE',participationMode:'RULE_BASED',contributionMode:'MONEY',nominalAmount:annualAmount,
+        contextNote:eventRules.length?'Modalités détectées : '+eventRules.map(x=>x.label).join(', ')+'. Validation détaillée reportée.':'Qualifier chaque type d’assistance : décaissement de caisse, main levée ou mixte.',
+        policyDraft:{participation:{mode:'RULE_BASED'},contribution:annualAmount?{cadence:'ANNUAL',targetAmount:{currency:'XAF',amount:annualAmount},allowedMedia:['CASH','MOBILE_MONEY'],missingHandling:'CUSTOM'}:undefined,
+          assistance:{fundingMode:has(/main\s+levée|main\s+levee/i)?'MIXED':'DISBURSEMENT',authorization:'BUREAU',eligibleEvents:eventRules.map(x=>x.label),eventRules,reviewStatus:'DEFERRED',definitionSource:'GOVERNANCE_DOCUMENT'},
+          lifecycle:{visibility:'EVENT_DRIVEN'},notes:['ASSISTANCE_DETAILED_VALIDATION_DEFERRED']}}}));
+  }
   if(has(/main\s+levée|main\s+levee/i))out.push(suggestion({category:'RUBRIC',title:'Main levée',confidence:0.88,evidence:evidence(text,/main\s+levée|main\s+levee/i),
     explanation:'Collecte ponctuelle liée à un événement détectée.',
     rubric:{name:'Main levée',kind:'LEVY',participationMode:'RULE_BASED',contributionMode:'MONEY',contextNote:'Définir motif, bénéficiaires et caractère obligatoire ou volontaire.',policyDraft:{participation:{mode:'RULE_BASED'},contribution:{cadence:'EVENT',allowedMedia:['CASH','MOBILE_MONEY']},beneficiary:{mode:'EVENT_BASED'},lifecycle:{visibility:'EVENT_DRIVEN'}}}}));
-  if(has(/frais\s+d['’]?inscription|inscription[^.]{0,80}(?:500|1000|franc)/i))out.push(suggestion({category:'RUBRIC',title:'Inscription',confidence:0.9,evidence:evidence(text,/frais\s+d['’]?inscription|inscription/i),
-    explanation:'Petite rubrique d’ouverture d’exercice détectée.',
-    rubric:{name:'Inscription',kind:'OTHER',participationMode:'MANDATORY',contributionMode:'MONEY',contextNote:'Rubrique éphémère de début d’exercice.',policyDraft:{participation:{mode:'MANDATORY'},contribution:{cadence:'EXERCISE_OPENING',allowedMedia:['CASH','MOBILE_MONEY']},lifecycle:{visibility:'FIRST_N_SESSIONS',activeFirstSessions:6}}}}));
+  if(has(/frais\s+d['’]?inscription|inscription[^.]{0,120}(?:500|1000|franc|gratuit|ancien|nouveau)|réinscription|reinscription/i)){
+    const single=money(text,/(?:frais\s+d['’]?inscription|inscription)[^.]{0,140}?([0-9 .]{2,})\s*(?:f|fcfa)/i);
+    const returning=money(text,/(?:ancien(?:s)?|réinscription|reinscription)[^.]{0,120}?([0-9 .]{2,})\s*(?:f|fcfa)/i);
+    const newcomer=money(text,/(?:nouveau(?:x)?|nouvel(?:le)?\s+membre)[^.]{0,120}?([0-9 .]{2,})\s*(?:f|fcfa)/i);
+    const freeReturning=/(?:ancien(?:s)?|réinscription|reinscription)[^.]{0,90}?gratuit|gratuit[^.]{0,90}?(?:ancien(?:s)?|réinscription|reinscription)/i.test(text);
+    const freeAll=/inscription[^.]{0,90}?gratuite?\s+(?:pour\s+)?tous|gratuit[e]?\s+pour\s+tous/i.test(text);
+    const byStatus=returning!==undefined||newcomer!==undefined||freeReturning||/(?:ancien|nouveau|réinscription|reinscription)[^.]{0,120}inscription|inscription[^.]{0,120}(?:ancien|nouveau|réinscription|reinscription)/i.test(text);
+    const pricingModel=freeAll?'FREE_ALL':byStatus?'BY_MEMBER_STATUS':single!==undefined?'SINGLE_AMOUNT':'RULE_TABLE';
+    out.push(suggestion({category:'RUBRIC',title:'Inscription',confidence:0.9,evidence:evidence(text,/frais\s+d['’]?inscription|inscription|réinscription|reinscription/i),
+      explanation:byStatus?'Inscription détectée avec tarification potentiellement variable selon l’ancienneté/statut du membre. Les anciens et nouveaux membres peuvent avoir des montants différents ou une réinscription gratuite.':'Rubrique d’ouverture d’exercice détectée ; son tarif peut être fixe, gratuit ou dépendre du statut du membre.',
+      rubric:{name:'Inscription',kind:'OTHER',participationMode:'RULE_BASED',contributionMode:'MONEY',nominalAmount:single,
+        contextNote:'Tarification configurable : anciens/réinscriptions, nouveaux membres, gratuité éventuelle et autres critères du groupe.',
+        policyDraft:{participation:{mode:'RULE_BASED'},contribution:{cadence:'EXERCISE_OPENING',targetAmount:single!==undefined?{currency:'XAF',amount:single}:undefined,allowedMedia:['CASH','MOBILE_MONEY']},
+          registration:{pricingModel,returningMemberAmount:returning!==undefined?{currency:'XAF',amount:returning}:undefined,newMemberAmount:newcomer!==undefined?{currency:'XAF',amount:newcomer}:undefined,defaultAmount:single!==undefined?{currency:'XAF',amount:single}:undefined,freeReturningMembers:freeReturning,seniorityRule:'Ancienneté / statut dans le groupe à confirmer',reviewStatus:'DRAFT'},
+          lifecycle:{visibility:'FIRST_N_SESSIONS',activeFirstSessions:6}}}}));
+  }
   if(has(/amende|discipline/i))out.push(suggestion({category:'RUBRIC',title:'Amendes',confidence:0.84,evidence:evidence(text,/amende|discipline/i),
     explanation:'Rubrique événementielle d’amendes détectée.',
     rubric:{name:'Amendes',kind:'OTHER',participationMode:'RULE_BASED',contributionMode:'MONEY',contextNote:'Montant selon l’infraction et la qualité du membre.',policyDraft:{participation:{mode:'RULE_BASED'},contribution:{cadence:'EVENT',allowedMedia:['CASH','MOBILE_MONEY'],missingHandling:'DEBT'},lifecycle:{visibility:'EVENT_DRIVEN'}}}}));
