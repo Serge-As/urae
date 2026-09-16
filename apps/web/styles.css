@@ -88,3 +88,36 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 .rubric-dialog{width:min(780px,94vw);max-height:90vh;overflow:auto;border:1px solid #ded7c8;border-radius:20px;padding:22px}
 .rubric-dialog::backdrop{background:#102b2480}.rubric-dialog form>button{margin:12px 12px 0 0}
 @media(max-width:700px){.share-row{grid-template-columns:1fr}.launch-rubric,.rubric-settings,.plan-member{padding:12px}.rubric-dialog{padding:14px}.form-grid>.full{min-width:0}}
+
+
+/* 1.3.3 guided RI review, Assistance Rulebook and AdOps */
+.governance-upload{display:grid;gap:12px;padding:16px;border:1px dashed #b8cfc2;border-radius:16px;background:linear-gradient(180deg,#fbfffc,#f6faf7);margin:12px 0}
+.governance-upload input[type=file]{background:#fff;border-style:dashed;padding:14px;min-height:58px}
+.rubric-review-head{display:flex;justify-content:space-between;gap:14px;align-items:flex-start;margin:18px 0 10px;padding:12px 14px;border-radius:13px;background:var(--brand-soft)}
+.rubric-review-head span{max-width:700px;color:var(--muted);font-size:12px}
+.suggestion-review-stack{counter-reset:rubric-review}
+.suggestion-review-card{position:relative;display:grid;gap:8px;padding:16px}
+.suggestion-review-card[data-rubric=true]{counter-increment:rubric-review;padding-left:54px}
+.suggestion-review-card[data-rubric=true]::before{content:counter(rubric-review);position:absolute;left:14px;top:15px;width:27px;height:27px;border-radius:50%;display:grid;place-items:center;background:var(--brand-soft);color:var(--brand);font-weight:900}
+.suggestion-inline-config{grid-column:1/-1;margin-top:8px;padding:14px;border:1px solid #b8cfc2;border-radius:14px;background:#fbfefa}
+.suggestion-inline-config .launch-rubric{margin:0;border:0;padding:0;background:transparent}
+.specialized-rubric-policy{grid-column:1/-1;border:1px solid #d8d0c4;border-radius:13px;background:#fbf9f4;padding:10px 12px;margin:6px 0}
+.specialized-rubric-policy summary{cursor:pointer;font-weight:800;color:var(--brand)}
+.assistance-event-card{border:1px solid var(--line);border-radius:16px;padding:16px;background:#fff;margin:0}
+.assistance-event-card legend{font-weight:850;padding:0 7px;color:var(--brand)}
+.fairness-policy-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:14px 0}
+.adops-tabs{display:flex;gap:8px;overflow-x:auto;padding:4px 0 14px;margin-bottom:12px}
+.ad-placement-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.ad-placement-card{display:grid;gap:7px;align-content:start;min-height:150px;padding:15px;border:1px solid var(--line);border-radius:15px;background:#fff}
+.ad-placement-card strong{font-size:15px}.ad-placement-card p{margin:0}.house-ad-card{background:linear-gradient(180deg,#fffdf8,#f7fbf8)}
+.ad-campaign-card{display:grid;gap:7px}
+#adManagerPanel select[multiple]{min-height:160px;padding:8px}
+#adManagerPanel select[multiple] option{padding:8px;border-radius:6px}
+#assistanceRulebookPanel{scroll-margin-top:90px}
+#savingsYieldLab{scroll-margin-top:90px}
+@media(max-width:1180px){.ad-placement-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.fairness-policy-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:860px){
+  .rubric-review-head{display:grid}.suggestion-review-card[data-rubric=true]{padding-left:46px}
+  .ad-placement-grid,.fairness-policy-grid{grid-template-columns:1fr}
+  .suggestion-inline-config{padding:10px}
+}
