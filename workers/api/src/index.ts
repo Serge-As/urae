@@ -909,6 +909,23 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
     }
     const storefrontRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/market\/storefront$/);
     if(storefrontRoute&&request.method==='GET')return json(await market.storefront(storefrontRoute[1]!),200,cors);
+    const adDashboard=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/ads\/dashboard$/);
+    if(adDashboard&&request.method==='GET')return json(await adManager.dashboard(adDashboard[1]!),200,cors);
+    const adProspects=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/ads\/prospects$/);
+    if(adProspects&&request.method==='GET')return json(await adManager.listProspects(adProspects[1]!),200,cors);
+    if(adProspects&&request.method==='POST')return json(await adManager.createProspect(adProspects[1]!,await readJson<any>(request)),201,cors);
+    const adProspectTransition=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/ads\/prospects\/([^/]+)\/transition$/);
+    if(adProspectTransition&&request.method==='POST'){
+      const body=await readJson<Record<string,unknown>>(request);
+      return json(await adManager.transitionProspect(adProspectTransition[1]!,adProspectTransition[2]!,String(body.state??'') as any,String(body.note??'')),200,cors);
+    }
+    const adInventory=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/ads\/inventory$/);
+    if(adInventory&&request.method==='GET'){await requireGroup(adInventory[1]!,true);return json({placements:AD_PLACEMENT_CATALOG,houseAds:HOUSE_AD_CATALOG},200,cors);}
+    const adDecision=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/ads\/decision-preview$/);
+    if(adDecision&&request.method==='POST'){
+      const groupId=adDecision[1]!,campaigns=await adManager.list(groupId),body=await readJson<any>(request);
+      return json(selectAdDelivery(campaigns,body),200,cors);
+    }
     const adCampaigns=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/ads\/campaigns$/);
     if(adCampaigns&&request.method==='GET')return json(await adManager.list(adCampaigns[1]!),200,cors);
     if(adCampaigns&&request.method==='POST'){
