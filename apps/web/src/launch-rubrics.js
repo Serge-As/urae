@@ -27,6 +27,27 @@ export function createRubricEditor(root,{plan,initialName='',initialKind='',init
   const contributionUnit=field(contextFields,'Unité',plan?.contributionUnit??'unité');contributionUnit.required=false;contributionUnit.placeholder='Ex. pièce, litre, paquet…';contributionUnit.maxLength=60;
   const contributionQuantity=number(contextFields,'Quantité par part / versement',plan?.contributionQuantity??1,0);contributionQuantity.step='0.01';
   const contextNoteWrap=el('label','Règle / contexte propre à cette rubrique');const contextNote=el('textarea');contextNote.rows=2;contextNote.maxLength=1000;contextNote.required=false;contextNote.value=plan?.contextNote??'';contextNote.placeholder='Ex. réservée aux volontaires, remise le 1er dimanche, bénéficiaire choisit la marque…';contextNoteWrap.append(contextNote);contextFields.append(contextNoteWrap);
+
+  const assistanceBox=el('details',null,'full specialized-rubric-policy');config.append(assistanceBox);assistanceBox.append(el('summary','Modalités Assistance — validation détaillée possible plus tard'));
+  const assistanceFields=el('div',null,'form-grid');assistanceBox.append(assistanceFields);
+  const assistanceReview=field(assistanceFields,'État de validation',plan?.policyDraft?.assistance?.reviewStatus??'DEFERRED',[['DEFERRED','Reporter les détails au menu Assistance'],['DRAFT','Brouillon à relire'],['VALIDATED','Déjà validé par le groupe']]);
+  const assistanceSource=field(assistanceFields,'Source des règles',plan?.policyDraft?.assistance?.definitionSource??'MANUAL',[['GOVERNANCE_DOCUMENT','RI / document'],['TEXT','Texte saisi'],['VOICE','Description orale'],['MANUAL','Saisie manuelle']]);
+  const assistanceFunding=field(assistanceFields,'Mode de financement par défaut',plan?.policyDraft?.assistance?.fundingMode??'DISBURSEMENT',[['DISBURSEMENT','Décaissement de caisse'],['LEVY','Main levée / collecte événementielle'],['MIXED','Mixte selon l’événement']]);
+  const assistanceAuth=field(assistanceFields,'Autorité de validation',plan?.policyDraft?.assistance?.authorization??'BUREAU',[['MANAGER','Gestionnaire'],['BUREAU','Bureau'],['ASSEMBLY','Assemblée'],['DOUBLE_VALIDATION','Double validation'],['CUSTOM','Règle spécifique']]);
+  const assistanceEventsWrap=el('label','Événements détectés / prévus — un par ligne');assistanceEventsWrap.className='full';const assistanceEvents=el('textarea');assistanceEvents.rows=5;assistanceEvents.required=false;assistanceEvents.value=(plan?.policyDraft?.assistance?.eligibleEvents??[]).join('\n');assistanceEvents.placeholder='Maladie\nDeuil\nMariage\nBaptême\nNaissance…';assistanceEventsWrap.append(assistanceEvents);assistanceFields.append(assistanceEventsWrap);
+  assistanceFields.append(el('p','Les montants, bénéficiaires, main levée éventuelle, représentation et exceptions peuvent rester dans le brouillon importé et être validés événement par événement après la création du groupe.','hint full'));
+
+  const registrationBox=el('details',null,'full specialized-rubric-policy');config.append(registrationBox);registrationBox.append(el('summary','Tarification de l’inscription / réinscription'));
+  const registrationFields=el('div',null,'form-grid');registrationBox.append(registrationFields);
+  const reg=plan?.policyDraft?.registration;
+  const registrationMode=field(registrationFields,'Modèle tarifaire',reg?.pricingModel??'BY_MEMBER_STATUS',[['BY_MEMBER_STATUS','Montant selon ancien / nouveau membre'],['SINGLE_AMOUNT','Même montant pour tous'],['FREE_ALL','Gratuit pour tous'],['RULE_TABLE','Grille selon plusieurs critères']]);
+  const registrationReturning=number(registrationFields,'Ancien / réinscription (XAF)',reg?.returningMemberAmount?.amount??0,0);
+  const registrationNew=number(registrationFields,'Nouveau membre (XAF)',reg?.newMemberAmount?.amount??0,0);
+  const registrationDefault=number(registrationFields,'Montant par défaut (XAF)',reg?.defaultAmount?.amount??plan?.nominalAmount?.amount??0,0);
+  const freeReturningLabel=el('label',null,'check');const freeReturning=el('input');freeReturning.type='checkbox';freeReturning.checked=Boolean(reg?.freeReturningMembers);freeReturningLabel.append(freeReturning,el('span','Réinscription gratuite pour les anciens membres'));registrationFields.append(freeReturningLabel);
+  const seniorityWrap=el('label','Règle d’ancienneté / statut');const seniority=el('textarea');seniority.rows=2;seniority.required=false;seniority.value=reg?.seniorityRule??'Ancien membre / membre déjà inscrit à l’exercice précédent';seniorityWrap.append(seniority);registrationFields.append(seniorityWrap);
+  const criteriaWrap=el('label','Autres critères éventuels — un par ligne');const criteria=el('textarea');criteria.rows=2;criteria.required=false;criteria.value=(reg?.otherCriteria??[]).join('\n');criteria.placeholder='Ex. ancienneté > 5 ans\nRéintégration après suspension';criteriaWrap.append(criteria);registrationFields.append(criteriaWrap);
+
   const amount=number(config,'Montant nominal par versement (XAF)',plan?.nominalAmount?.amount??'',0);
   const basis=field(config,'Ce montant est dû pour…',plan?.amountBasis??'PER_MEMBER',[['PER_MEMBER','Chaque membre'],['PER_SHARE','Chaque nom / part']]);
   const members=number(config,'Nombre de membres participant à cette rubrique',plan?.memberCount??'');
@@ -73,13 +94,22 @@ export function createRubricEditor(root,{plan,initialName='',initialKind='',init
     contributionQuantity.parentElement.hidden=contributionMode.value==='MONEY';
     contributionLabel.required=inKind||mixed;contributionQuantity.required=inKind||mixed;
     amount.parentElement.hidden=inKind;amount.required=!inKind;if(inKind)amount.value='0';
+    const assistance=kind.value==='ASSISTANCE',registration=kind.value==='OTHER'&&/inscription|réinscription|reinscription/i.test(name.value);
+    assistanceBox.hidden=!assistance;for(const input of assistanceBox.querySelectorAll('input,select,textarea,button'))input.disabled=!assistance;
+    registrationBox.hidden=!registration;for(const input of registrationBox.querySelectorAll('input,select,textarea,button'))input.disabled=!registration;
     for(const input of roster.querySelectorAll('input,select,button'))input.disabled=!tontine;
     head.textContent=name.value.trim()||'Rubrique personnalisée';
   };
   card.addEventListener('input',()=>{sync();onChange();});sync();
   if(onRemove)button(card,'Supprimer cette rubrique',()=>onRemove());
   const planKey=plan?.key??key();
-  return{card,focus:()=>kind.focus(),read:()=>({key:planKey,name:name.value.trim(),kind:kind.value,nominalAmount:{currency:plan?.nominalAmount?.currency??'XAF',amount:Number(amount.value||0)},amountBasis:basis.value,participationMode:participation.value,contributionMode:contributionMode.value,contributionLabel:contributionMode.value==='MONEY'?undefined:contributionLabel.value.trim(),contributionUnit:contributionMode.value==='MONEY'?undefined:contributionUnit.value.trim(),contributionQuantity:contributionMode.value==='MONEY'?undefined:Number(contributionQuantity.value),contextNote:contextNote.value.trim()||undefined,memberCount:Number(members.value),shareCount:basis.value==='PER_SHARE'?Number(shares.value):undefined,potCount:kind.value==='TONTINE'?Number(pots.value):undefined,sessions:Number(sessions.value),duration:{value:Number(duration.value),unit:durationUnit.value},managementFeePerPayment:Number(fees.value),estimatedExternalCostRate:Number(external.value)/100,fixedCostPerSession:Number(fixed.value),participants:kind.value==='TONTINE'?people.map(p=>p.read()):undefined,policyDraft:plan?.policyDraft?structuredClone(plan.policyDraft):undefined})};
+  const readPolicyDraft=()=>{
+    const draft=plan?.policyDraft?structuredClone(plan.policyDraft):{};
+    if(kind.value==='ASSISTANCE')draft.assistance={...(draft.assistance??{}),fundingMode:assistanceFunding.value,authorization:assistanceAuth.value,eligibleEvents:assistanceEvents.value.split(/\n+/).map(x=>x.trim()).filter(Boolean),reviewStatus:assistanceReview.value,definitionSource:assistanceSource.value};
+    if(kind.value==='OTHER'&&/inscription|réinscription|reinscription/i.test(name.value))draft.registration={pricingModel:registrationMode.value,returningMemberAmount:{currency:'XAF',amount:Number(registrationReturning.value||0)},newMemberAmount:{currency:'XAF',amount:Number(registrationNew.value||0)},defaultAmount:{currency:'XAF',amount:Number(registrationDefault.value||0)},seniorityRule:seniority.value.trim()||undefined,otherCriteria:criteria.value.split(/\n+/).map(x=>x.trim()).filter(Boolean),freeReturningMembers:freeReturning.checked,reviewStatus:'DRAFT'};
+    return Object.keys(draft).length?draft:undefined;
+  };
+  return{card,focus:()=>kind.focus(),read:()=>({key:planKey,name:name.value.trim(),kind:kind.value,nominalAmount:{currency:plan?.nominalAmount?.currency??'XAF',amount:Number(amount.value||0)},amountBasis:basis.value,participationMode:participation.value,contributionMode:contributionMode.value,contributionLabel:contributionMode.value==='MONEY'?undefined:contributionLabel.value.trim(),contributionUnit:contributionMode.value==='MONEY'?undefined:contributionUnit.value.trim(),contributionQuantity:contributionMode.value==='MONEY'?undefined:Number(contributionQuantity.value),contextNote:contextNote.value.trim()||undefined,memberCount:Number(members.value),shareCount:basis.value==='PER_SHARE'?Number(shares.value):undefined,potCount:kind.value==='TONTINE'?Number(pots.value):undefined,sessions:Number(sessions.value),duration:{value:Number(duration.value),unit:durationUnit.value},managementFeePerPayment:Number(fees.value),estimatedExternalCostRate:Number(external.value)/100,fixedCostPerSession:Number(fixed.value),participants:kind.value==='TONTINE'?people.map(p=>p.read()):undefined,policyDraft:readPolicyDraft()})};
 }
 
 export const readRubricEditors=editors=>validateLaunchRubrics(editors.map(editor=>editor.read()));
