@@ -22,6 +22,7 @@ import { mountTontineManagerUI } from './tontine-manager-ui.js';
 import { mountSavingsYieldUI } from './savings-yield-ui.js';
 import { mountExternalProgramsUI } from './external-programs-ui.js';
 import { mountFounderControlUI } from './founder-control-ui.js';
+import { mountAssistanceRulebookUI } from './assistance-rulebook-ui.js';
 let uiLocale = 'fr';
 try { uiLocale = localStorage.getItem('tontine.locale') === 'en' ? 'en' : 'fr'; } catch {}
 const tx = (fr,en) => runtimeTranslate(uiLocale,fr,en);
@@ -132,6 +133,7 @@ const tontineManagerUI = mountTontineManagerUI({ app, getRubrics: () => rubrics,
 const savingsYieldUI = mountSavingsYieldUI({ app, getMembers: () => members, notify: toast, showError: fail, fmt, isManager });
 const externalProgramsUI = mountExternalProgramsUI({ app, notify: toast, showError: fail, isManager, fmt });
 const founderControlUI = mountFounderControlUI({ app, notify: toast, showError: fail });
+const assistanceRulebookUI = mountAssistanceRulebookUI({ app, notify: toast, showError: fail, isManager });
 const renderConnectivity = () => { const online = navigator.onLine; const e = $('#connectivity'); e.textContent = `● ${online ? tx('En ligne','Online') : tx('Hors ligne','Offline')}`; e.className = `pill ${online ? 'online' : 'offline'}`; app.setConnectivity(online ? 'online' : 'offline'); };
 const renderUniverse = async () => {
     const u = await app.universe();
@@ -644,6 +646,7 @@ const refreshGroupContext = async () => {
     await adManagerUI.refresh();
     await tontineManagerUI.refresh();
     await savingsYieldUI.refresh();
+    await assistanceRulebookUI.refresh();
     await externalProgramsUI.refresh();
     await founderControlUI.refresh();
 };
