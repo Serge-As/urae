@@ -706,7 +706,7 @@ const addLaunchRubric=(preset={})=>{
     plan:preset.plan,initialName:preset.name??'',initialKind:preset.kind??'',initialContributionMode:preset.contributionMode??'MONEY',
     onChange:invalidateProject,onRemove:()=>{launchEditors.splice(launchEditors.indexOf(editor),1);editor.card.remove();invalidateProject();}
   });
-  launchEditors.push(editor);invalidateProject();editor.focus();return editor;
+  launchEditors.push(editor);invalidateProject();if(!preset.skipFocus)editor.focus();return editor;
 };
 $('#addLaunchRubric').onclick=()=>addLaunchRubric();
 $('#addLaunchTontine').onclick=()=>addLaunchRubric({kind:'TONTINE',contributionMode:'MONEY'});
