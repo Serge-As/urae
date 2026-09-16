@@ -39,6 +39,11 @@ export { GroupLiveHub } from './group-live-hub.js';
 
 interface DurableObjectStubLike { fetch(request:Request):Promise<Response>; }
 interface DurableObjectNamespaceLike { idFromName(name:string):unknown; get(id:unknown):DurableObjectStubLike; }
+interface MarkdownConversionResultLike { id?:string; name:string; mimetype?:string; mimeType?:string; format:'markdown'|'text'|'error'; tokens?:number; data?:string; error?:string; }
+interface WorkersAILike {
+  toMarkdown(input:{name:string;blob:Blob}|Array<{name:string;blob:Blob}>,options?:Record<string,unknown>):Promise<MarkdownConversionResultLike|MarkdownConversionResultLike[]|{result:MarkdownConversionResultLike|MarkdownConversionResultLike[]}>;
+  run?(model:string,input:Record<string,unknown>,options?:Record<string,unknown>):Promise<unknown>;
+}
 
 const defaultRepo = new InMemoryPlatformRepository();
 
@@ -68,6 +73,21 @@ const finite = (value: unknown, fallback?: number): number => {
   if ((value === undefined || value === null || value === '') && fallback !== undefined) return fallback;
   const n=Number(value); if(!Number.isFinite(n)) throw new Error('INVALID_NUMBER'); return n;
 };
+const safeArtifactName=(name:string)=>name.normalize('NFKD').replace(/[^a-zA-Z0-9._-]+/g,'_').replace(/^_+|_+$/g,'').slice(0,120)||'document';
+const sha256Bytes=async(buffer:ArrayBuffer)=>{
+  const digest=await crypto.subtle.digest('SHA-256',buffer);
+  return[...new Uint8Array(digest)].map(x=>x.toString(16).padStart(2,'0')).join('');
+};
+const launchDocumentExtension=(name:string)=>name.toLowerCase().match(/\.([a-z0-9]+)$/)?.[1]??'';
+const launchDocumentKind=(file:File)=>{
+  const ext=launchDocumentExtension(file.name),mime=file.type.toLowerCase();
+  if(mime.startsWith('image/')||['jpg','jpeg','png','webp','bmp','gif','svg'].includes(ext))return'IMAGE';
+  if(['txt','md','csv','html','htm','xml'].includes(ext)||mime.startsWith('text/'))return'TEXT';
+  if(ext==='pdf'||mime==='application/pdf')return'PDF';
+  if(['docx','odt'].includes(ext)||mime.includes('wordprocessingml')||mime.includes('opendocument.text'))return'DOCUMENT';
+  if(ext==='doc'||mime==='application/msword')return'LEGACY_WORD';
+  return'UNKNOWN';
+};
 
 const createRequestScope = (request:Request,repo:PlatformRepository,artifacts?:ArtifactStoreLike,dataUseDefaultMode:DataUseDefaultMode='BETA_OPEN') => {
   const kernel=new PlatformKernel();
@@ -96,7 +116,7 @@ const inboxFor = async (repo:PlatformRepository,tenantId:string,actorId:string) 
   return [...obligations,...cases];
 };
 
-export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{artifacts?:ArtifactStoreLike;liveNamespace?:DurableObjectNamespaceLike;premiumLive?:boolean;founderLearning?:FounderLearningStore;founderControl?:FounderControlStore;communityRealtime?:CommunityRealtimeStore;founderTeamActors?:Set<string>;commercialPreferences?:CommercialPreferenceService;groupPairing?:GroupPairingService;interestCommunities?:InterestCommunityService;ecoPulse?:EcoPulseService;identityProof?:IdentityProofService;dataUseDefaultMode?:DataUseDefaultMode}={}) => async (request:Request):Promise<Response> => {
+export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{artifacts?:ArtifactStoreLike;documentAI?:WorkersAILike;liveNamespace?:DurableObjectNamespaceLike;premiumLive?:boolean;founderLearning?:FounderLearningStore;founderControl?:FounderControlStore;communityRealtime?:CommunityRealtimeStore;founderTeamActors?:Set<string>;commercialPreferences?:CommercialPreferenceService;groupPairing?:GroupPairingService;interestCommunities?:InterestCommunityService;ecoPulse?:EcoPulseService;identityProof?:IdentityProofService;dataUseDefaultMode?:DataUseDefaultMode}={}) => async (request:Request):Promise<Response> => {
   const url=new URL(request.url); const cors=corsHeaders(request);
   if(request.method==='OPTIONS'){
     const allowed=Boolean((cors as Record<string,string>)['access-control-allow-origin']);
@@ -380,6 +400,42 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
       return json(await options.groupPairing.bindWithMemberCode(pairMemberCodeRoute[1]!,String(body.membershipId??''),String(body.code??'')),200,cors);
     }
 
+
+    if(request.method==='POST'&&url.pathname==='/api/v1/assistant/group-launch/analyze-files'){
+      if(!options.artifacts)throw Error('R2_ARTIFACT_REQUIRED');
+      const form=await request.formData();
+      const files=form.getAll('files').filter((x):x is File=>typeof File!=='undefined'&&x instanceof File);
+      if(!files.length)throw Error('GOVERNANCE_DOCUMENT_REQUIRED');
+      if(files.length>40)throw Error('TOO_MANY_GOVERNANCE_FILES');
+      const totalSize=files.reduce((n,x)=>n+x.size,0);if(totalSize>25*1024*1024)throw Error('GOVERNANCE_DOCUMENTS_TOO_LARGE');
+      const warnings:string[]=[],converted:Array<{file:File;kind:string;text:string;fingerprint:string;artifactKey:string;tokens?:number;format?:string;error?:string}>=[];
+      const imageCount=files.filter(x=>launchDocumentKind(x)==='IMAGE').length;
+      if(imageCount===1)warnings.push('PHOTO_SET_SINGLE_IMAGE_REVIEW_RECOMMENDED');
+      for(const file of files){
+        if(file.size<=0)throw Error('EMPTY_GOVERNANCE_DOCUMENT');
+        const kind=launchDocumentKind(file),buffer=await file.arrayBuffer(),fingerprint=await sha256Bytes(buffer);
+        const artifactKey='launch-documents/'+ctx.tenantId+'/'+ctx.actorId+'/'+fingerprint+'/'+safeArtifactName(file.name);
+        await options.artifacts.put(artifactKey,buffer,{httpMetadata:{contentType:file.type||'application/octet-stream'},customMetadata:{tenantId:ctx.tenantId,actorId:ctx.actorId,fingerprint,kind,originalName:file.name.slice(0,180)}});
+        let text='',tokens:undefined|number,format:undefined|string,error:undefined|string;
+        if(kind==='LEGACY_WORD')warnings.push('LEGACY_DOC_ARCHIVED_CONVERSION_NOT_GUARANTEED:'+file.name);
+        else if(kind==='TEXT'){text=new TextDecoder('utf-8',{fatal:false}).decode(buffer);format='text';}
+        else if(kind==='PDF'||kind==='DOCUMENT'||kind==='IMAGE'){
+          if(!options.documentAI)warnings.push('AI_DOCUMENT_CONVERTER_UNAVAILABLE:'+file.name);
+          else{
+            const raw=await options.documentAI.toMarkdown({name:file.name,blob:new Blob([buffer],{type:file.type||'application/octet-stream'})},{conversionOptions:{output:{format:'text'},image:{descriptionLanguage:'fr'},pdf:{metadata:false}}});
+            const unpacked=(raw&&typeof raw==='object'&&'result'in raw?(raw as {result:any}).result:raw) as MarkdownConversionResultLike|MarkdownConversionResultLike[];
+            const one=Array.isArray(unpacked)?unpacked[0]:unpacked;
+            if(one?.format==='error'){error=one.error??'DOCUMENT_CONVERSION_FAILED';warnings.push('DOCUMENT_CONVERSION_FAILED:'+file.name);}
+            else{text=String(one?.data??'');tokens=one?.tokens;format=one?.format;}
+          }
+        }else warnings.push('UNSUPPORTED_GOVERNANCE_FILE:'+file.name);
+        converted.push({file,kind,text,fingerprint,artifactKey,tokens,format,error});
+      }
+      const combinedText=converted.filter(x=>x.text.trim()).map(x=>'--- '+x.file.name+' ---\n'+x.text.trim()).join('\n\n').slice(0,1_900_000);
+      if(!combinedText.trim())throw Error('NO_EXTRACTABLE_GOVERNANCE_TEXT');
+      const suggestions=analyzeGovernanceText(combinedText),textFingerprint=await governanceFingerprint(combinedText);
+      return json({combinedText,fingerprints:[textFingerprint,...converted.map(x=>x.fingerprint)],files:converted.map(x=>({name:x.file.name,size:x.file.size,type:x.file.type,kind:x.kind,fingerprint:x.fingerprint,artifactKey:x.artifactKey,tokens:x.tokens,format:x.format,error:x.error})),warnings,suggestions,requiresHumanConfirmation:true,financialWrites:false},200,cors);
+    }
 
     if(request.method==='POST'&&url.pathname==='/api/v1/assistant/group-launch/analyze'){
       const body=await readJson<Record<string,unknown>>(request);const text=String(body.text??'');
@@ -1224,7 +1280,7 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
 
 export const handleRequest=createApiHandler(defaultRepo);
 export interface AssetsFetcherLike { fetch(request: Request): Promise<Response> }
-export interface WorkerEnv { DB?: D1DatabaseLike; ASSETS?: AssetsFetcherLike; ARTIFACTS?: ArtifactStoreLike; GROUP_LIVE_HUB?: DurableObjectNamespaceLike; PREMIUM_LIVE_LEDGER?: string; DATA_USE_PROFILE?: string; COLLECTIVE_LEARNING_PEPPER?: string; IDENTITY_MATCH_PEPPER?: string; FOUNDER_TEAM_ACTORS?: string }
+export interface WorkerEnv { DB?: D1DatabaseLike; ASSETS?: AssetsFetcherLike; ARTIFACTS?: ArtifactStoreLike; AI?: WorkersAILike; GROUP_LIVE_HUB?: DurableObjectNamespaceLike; PREMIUM_LIVE_LEDGER?: string; DATA_USE_PROFILE?: string; COLLECTIVE_LEARNING_PEPPER?: string; IDENTITY_MATCH_PEPPER?: string; FOUNDER_TEAM_ACTORS?: string }
 export default {async fetch(request:Request,env:WorkerEnv={}){
   const url=new URL(request.url);
   if(request.method==='GET' && env.ASSETS && url.pathname!=='/health' && !url.pathname.startsWith('/api/')){
@@ -1256,7 +1312,7 @@ export default {async fetch(request:Request,env:WorkerEnv={}){
   return authenticatedApi(repository,env.DB,async authenticatedRequest=>{
     const h=authenticatedRequest.headers;
     pairingKernel.context.set({actorId:h.get('x-actor-id')??'unknown',tenantId:h.get('x-tenant-id')??'unknown',activeGroupId:h.get('x-active-group-id')||undefined,groupRoles:(h.get('x-group-roles')??'').split(',').filter(Boolean),mandateIds:[],deviceId:h.get('x-device-id')??'device_web',sessionId:h.get('x-session-id')??'server-authenticated',locale:h.get('accept-language')?.toLowerCase().startsWith('en')?'en':'fr',timezone:h.get('x-timezone')??'Africa/Douala',connectivity:'online',requestId:h.get('x-request-id')??crypto.randomUUID()});
-    return createApiHandler(repository,{artifacts:env.ARTIFACTS,liveNamespace:env.GROUP_LIVE_HUB,premiumLive:env.PREMIUM_LIVE_LEDGER==='true',founderLearning,founderControl,communityRealtime,founderTeamActors,commercialPreferences,groupPairing,interestCommunities,ecoPulse,identityProof,dataUseDefaultMode})(authenticatedRequest);
+    return createApiHandler(repository,{artifacts:env.ARTIFACTS,documentAI:env.AI,liveNamespace:env.GROUP_LIVE_HUB,premiumLive:env.PREMIUM_LIVE_LEDGER==='true',founderLearning,founderControl,communityRealtime,founderTeamActors,commercialPreferences,groupPairing,interestCommunities,ecoPulse,identityProof,dataUseDefaultMode})(authenticatedRequest);
   })(request);
 }};
 export {defaultRepo as repo};
