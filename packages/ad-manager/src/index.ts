@@ -116,7 +116,7 @@ export class AdManagerService{
     },createdBy:ctx.actorId,createdAt:stamp,updatedAt:stamp};
     await this.repo.saveWorkspaceRecord(record);
     await this.repo.saveAudit(this.kernel.audit.append({tenantId:ctx.tenantId,actorId:ctx.actorId,action:'AD_PROSPECT_CREATED',targetType:'ad_prospect',targetId:record.id,requestId:ctx.requestId,metadata:{groupId,category:record.data.category}}));
-    return{id:record.id,groupId,organization,state:'DISCOVERED',...record.data,createdAt:stamp,updatedAt:stamp,createdBy:ctx.actorId};
+    return{id:record.id,groupId,organization,...record.data,state:'DISCOVERED',createdAt:stamp,updatedAt:stamp,createdBy:ctx.actorId};
   }
   async transitionProspect(groupId:string,id:string,to:AdProspectState,note=''){
     await this.requireManager(groupId);const ctx=this.kernel.context.get(),record=await this.repo.getWorkspaceRecord(ctx.tenantId,id);
@@ -127,7 +127,7 @@ export class AdManagerService{
     const updatedAt=now(),data={...record.data,state:to,note:clean(note||String(record.data.note??''),1000)};
     await this.repo.saveWorkspaceRecord({...record,data,tags:['ad-prospect','state:'+to],updatedAt,status:to==='LOST'?'ARCHIVED':'ACTIVE'});
     await this.repo.saveAudit(this.kernel.audit.append({tenantId:ctx.tenantId,actorId:ctx.actorId,action:'AD_PROSPECT_STATE_CHANGED',targetType:'ad_prospect',targetId:id,requestId:ctx.requestId,metadata:{from,to}}));
-    return{id,organization:record.title,state:to,...data,updatedAt};
+    return{id,organization:record.title,...data,state:to,updatedAt};
   }
 
   async metric(groupId:string,id:string,event:'IMPRESSION'|'OPEN'|'ACTION'|'NEGATIVE_FEEDBACK'){
