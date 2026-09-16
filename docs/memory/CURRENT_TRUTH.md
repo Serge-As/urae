@@ -118,8 +118,8 @@ Les prochains déploiements doivent les **préserver**, pas les régénérer.
 
 ## 7. Documents maîtres
 
-- `docs/constitution/ECO_SYSTEM_Cahier_des_Charges_Maitre_Exhaustif_3.1.0_2026-09-16.md`
-- `docs/economics/ECO_SYSTEM_Modele_Economique_Detaille_3.1.0_2026-09-16.md`
+- `docs/constitution/ECO_SYSTEM_Cahier_des_Charges_Maitre_Exhaustif_3.2.0_2026-09-16.md` (continuation détaillée ; socle 2.3.4 conservé)
+- `docs/economics/ECO_SYSTEM_Modele_Economique_AdManager_Approfondi_3.2.0_2026-09-16.md`
 - audit classeur réel livré séparément en XLSX.
 
 ## 8. Limites vraies
@@ -166,3 +166,15 @@ Après 3–5 sous-lots : commit + CI + mise à jour de cette vérité + checkpoi
 - Lignée de récupération conservée : **1.0.0-complete-app** reste une balise historique du projet et ne désigne pas la version courante.
 - Finance réelle : **realMoneyEnabled=false**.
 - Doctrine métier : **Living Rules** ; écrit, pratique observée, règle activée et exception restent distincts.
+
+
+## 12. Candidat 1.3.3 — qualifié avant production
+
+- version : `1.3.3-fairness-adops-doctor-launch` ;
+- branche : `next/1.3.3-interest-lab-adops-ui-20260916` ;
+- production reste 1.3.2 jusqu'au smoke 1.3.3 ;
+- 181 tests couvrent notamment les cinq politiques d'intérêts, RI multi-document, revue séquentielle, Assistance/Inscription, AdOps, House Ads, Group Doctor et Meeting Autopilot ;
+- l'IA House Ads reçoit uniquement des signaux collectifs dérivés (familles et catégories de besoins), jamais les noms libres des rubriques ;
+- workflows BIR+ et déploiement 1.3.3 préparés, sans création de D1 et avec `realMoneyEnabled=false`.
+
+**Point de reprise** : CI finale → BIR+ 1.3.3 → production workflow → smoke → basculer seulement alors la section 1 vers 1.3.3.
