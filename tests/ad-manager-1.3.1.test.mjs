@@ -57,3 +57,28 @@ test('paid ad delivery checks contextual interest tags and falls back to a conte
   const match=selectAdDelivery([c],{placementId:'FEED_NATIVE',locality:'Yaoundé',interestTags:['achats-groupes'],rubricKind:'TONTINE_IN_KIND',houseContext:{groupKey:'g',exerciseProgress:.4,monthsToExerciseEnd:7,rubricKinds:['TONTINE'],rubricNames:['Tontine savons']}});
   assert.equal(match.kind,'PAID');assert.equal(match.campaignId,c.id);
 });
+
+
+test('House AI composer receives only aggregate group context and falls back safely on malformed output',async()=>{
+  const {repo,kernel}=await setup();let captured='';
+  const ai={run:async(_model,input)=>{captured=JSON.stringify(input);return{response:'not-json'};}};
+  const ads=new AdManagerService(repo,kernel,ai);
+  const r=await ads.composeHouseVariants('g');
+  assert.equal(r.aiUsed,false);assert.equal(r.variants.length,4);
+  assert.ok(!/memberId|phone|cni|debt|balance/i.test(captured));
+});
+
+test('House AI composer accepts bounded JSON variants for known services only',async()=>{
+  const {repo,kernel}=await setup();
+  const ai={run:async()=>({response:JSON.stringify([
+    {key:'ACADEMY',headline:'Former le Bureau dès maintenant',body:'Préparez les rôles et contrôles du nouvel exercice.',callToAction:'Voir Academy'},
+    {key:'PAPER_BRIDGE',headline:'Préparez vos registres',body:'Imprimez des feuilles utiles aux séances et gardez la même vérité numérique.',callToAction:'Ouvrir Paper Bridge'},
+    {key:'MEETING_AUTOPILOT',headline:'Préparez la réunion',body:'Vérifiez les éléments attendus avant la prochaine séance.',callToAction:'Préparer'},
+    {key:'UNKNOWN_SERVICE',headline:'X',body:'Y',callToAction:'Z'}
+  ])})};
+  const ads=new AdManagerService(repo,kernel,ai);
+  const r=await ads.composeHouseVariants('g');
+  assert.equal(r.aiUsed,true);assert.equal(r.variants.length,3);
+  assert.ok(r.variants.every(x=>x.source==='WORKERS_AI'));
+  assert.ok(r.variants.every(x=>x.key!=='UNKNOWN_SERVICE'));
+});
