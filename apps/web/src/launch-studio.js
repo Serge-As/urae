@@ -1,3 +1,4 @@
+import {createRubricEditor,readRubricEditors} from './launch-rubrics.js';
 const byId=id=>document.getElementById(id);
 const value=id=>String(byId(id)?.value??'').trim();
 const checked=id=>Boolean(byId(id)?.checked);
@@ -98,7 +99,7 @@ export function mountLaunchStudio({app,getGroups,getRubrics,addRubric,invalidate
     textLine(card,'Live Ledger','Durable Object / synchronisation Live disponibles pour tous en bêta ; fallback offline conservé');
     textLine(card,'Argent réel','DÉSACTIVÉ — aucune opération Mobile Money réelle n’est autorisée par cette création');
     const warning=document.createElement('p');warning.className='truth-notice';warning.textContent='Aucune proposition de l’assistant ne crée une transaction financière. Après création, les règles restent versionnées et modifiables selon les droits du groupe. Les données sensibles restent exclues des apprentissages collectifs et commerciaux.';card.append(warning);root.append(card);
-    const confirmed=checked('previewConfirmed');byId('createGroupBtn').disabled=!confirmed||!window.__ecoLastProjectReady;
+    const confirmed=checked('previewConfirmed');byId('createGroupBtn').disabled=!confirmed;
   };
 
   const rubricFromSuggestion=s=>{
@@ -120,16 +121,97 @@ export function mountLaunchStudio({app,getGroups,getRubrics,addRubric,invalidate
   const renderSuggestions=(data)=>{
     const root=byId('launchAssistantSuggestions');root.replaceChildren();
     if(data.fingerprint)fingerprints.add(data.fingerprint);
-    for(const s of data.suggestions??[]){
-      const a=document.createElement('article');a.className='item';
+    for(const fp of data.fingerprints??[])fingerprints.add(fp);
+    const suggestions=data.suggestions??[],cards=[];
+    const openNext=index=>{
+      for(let i=index+1;i<cards.length;i++){
+        const next=cards[i];if(next?.dataset.rubric==='true'&&next.dataset.review!=='validated'&&next.dataset.review!=='deferred'){
+          const btn=next.querySelector('[data-configure-suggestion]');btn?.click();next.scrollIntoView({behavior:'smooth',block:'center'});return;
+        }
+      }
+      toast('Toutes les rubriques détectées ont été parcourues. Vous pouvez relire le récapitulatif ou continuer.');
+    };
+    suggestions.forEach((s,index)=>{
+      const a=document.createElement('article');a.className='item suggestion-review-card';a.dataset.rubric=String(Boolean(s.rubric));a.dataset.review='pending';
       const h=document.createElement('strong');h.textContent=s.title+' · '+Math.round(Number(s.confidence??0)*100)+'%';
+      const state=document.createElement('span');state.className='pill';state.textContent=s.rubric?'À vérifier':s.category;
       const p=document.createElement('p');p.textContent=s.explanation??'';const ev=document.createElement('p');ev.className='hint';ev.textContent=s.evidence?'Source : '+s.evidence:'';
-      a.append(h,p,ev);
-      if(s.rubric){const b=document.createElement('button');b.type='button';b.className='primary';b.textContent='Ajouter comme rubrique à vérifier';b.onclick=()=>{addRubric({plan:rubricFromSuggestion(s)});toast('Proposition ajoutée au brouillon. Vérifiez-la avant simulation.');};a.append(b);}
-      root.append(a);
-    }
-    if(!(data.suggestions??[]).length){const p=document.createElement('p');p.className='hint';p.textContent='Aucune règle assez claire n’a été détectée. Décrivez-la oralement ou ajoutez la rubrique manuellement.';root.append(p);}
+      a.append(h,state,p,ev);
+      if(s.rubric){
+        const config=document.createElement('div');config.className='suggestion-inline-config';config.hidden=true;a.append(config);
+        const b=document.createElement('button');b.type='button';b.className='primary';b.dataset.configureSuggestion='1';
+        b.textContent=s.rubric.kind==='ASSISTANCE'?'Examiner l’Assistance — détails validables plus tard':'Configurer ici';
+        let editor;
+        b.onclick=()=>{
+          for(const other of root.querySelectorAll('.suggestion-inline-config'))if(other!==config)other.hidden=true;
+          config.hidden=false;
+          if(!editor){
+            let plan=rubricFromSuggestion(s);
+            if(plan.policyDraft?.assistance&&!plan.policyDraft.assistance.sourceFingerprint){
+              const fp=[...fingerprints].slice(-1)[0];if(fp)plan.policyDraft.assistance.sourceFingerprint=fp;
+            }
+            const editorRoot=document.createElement('div');config.append(editorRoot);
+            editor=createRubricEditor(editorRoot,{plan,onChange:()=>{}});
+            if(plan.kind==='ASSISTANCE'){
+              const note=document.createElement('p');note.className='truth-notice';note.textContent='Les modalités longues détectées dans le RI sont conservées comme brouillon. Vous pourrez les valider événement par événement dans le menu Assistance après création du groupe.';config.prepend(note);
+            }
+            const actions=document.createElement('div');actions.className='actions';
+            const validate=document.createElement('button');validate.type='button';validate.className='primary';validate.textContent='Valider cette rubrique et passer à la suivante';
+            validate.onclick=()=>{
+              try{
+                const [validated]=readRubricEditors([editor]);addRubric({plan:validated,skipFocus:true});
+                a.dataset.review='validated';state.textContent='Validée';state.className='pill online';config.hidden=true;b.disabled=true;b.textContent='Rubrique validée';
+                toast(validated.name+' ajoutée sans déplacement en bas de page.');openNext(index);
+              }catch(error){showError(error);}
+            };
+            const defer=document.createElement('button');defer.type='button';defer.className='link-btn';defer.textContent=s.rubric.kind==='ASSISTANCE'?'Reporter les détails, conserver le brouillon':'Traiter plus tard';
+            defer.onclick=()=>{
+              try{
+                if(s.rubric.kind==='ASSISTANCE'){
+                  const [validated]=readRubricEditors([editor]);addRubric({plan:validated,skipFocus:true});
+                  a.dataset.review='validated';state.textContent='Brouillon Assistance conservé';b.disabled=true;b.textContent='Brouillon conservé';
+                }else{a.dataset.review='deferred';state.textContent='À traiter plus tard';}
+                config.hidden=true;openNext(index);
+              }catch(error){showError(error);}
+            };
+            actions.append(validate,defer);config.append(actions);
+          }
+          config.scrollIntoView({behavior:'smooth',block:'nearest'});
+        };
+        a.append(b);
+      }
+      cards.push(a);root.append(a);
+    });
+    if(!suggestions.length){const p=document.createElement('p');p.className='hint';p.textContent='Aucune règle assez claire n’a été détectée. Décrivez-la oralement ou ajoutez la rubrique manuellement.';root.append(p);}
   };
+
+  const renderSelectedFiles=async()=>{
+    const input=byId('launchGovernanceFiles'),root=byId('launchGovernanceFileList'),status=byId('launchFileStatus');
+    if(!input||!root||!status)return;root.replaceChildren();const files=[...(input.files??[])];
+    if(!files.length){status.textContent='Aucun document sélectionné.';return;}
+    const imageFiles=files.filter(f=>f.type.startsWith('image/')||/\.(?:jpe?g|png|webp|bmp|gif)$/i.test(f.name));
+    status.textContent=imageFiles.length===1?'Une seule photo sélectionnée : ajoutez les autres pages si le RI en comporte plusieurs.':' '+files.length+' fichier(s) prêt(s) pour analyse.';
+    for(const file of files){
+      const row=document.createElement('article');row.className='item';const strong=document.createElement('strong');strong.textContent=file.name;
+      const meta=document.createElement('p');meta.className='hint';meta.textContent=(file.type||'type inconnu')+' · '+Math.max(1,Math.round(file.size/1024)).toLocaleString('fr-FR')+' Ko';
+      row.append(strong,meta);root.append(row);
+      if(imageFiles.includes(file)&&'createImageBitmap'in window)try{
+        const bitmap=await createImageBitmap(file);const q=document.createElement('span');q.className='pill';q.textContent=bitmap.width+'×'+bitmap.height+(Math.min(bitmap.width,bitmap.height)<900?' · résolution à vérifier':' · lisibilité probable');row.append(q);bitmap.close?.();
+      }catch{}
+    }
+  };
+  const analyzeFiles=async()=>{try{
+    const input=byId('launchGovernanceFiles'),status=byId('launchFileStatus'),files=[...(input?.files??[])];
+    if(!files.length)throw Error('Sélectionnez au moins un document ou plusieurs photos lisibles.');
+    status.textContent='Téléversement sécurisé vers R2 et extraction du contenu en cours…';
+    const data=await app.analyzeGroupDocumentFiles(files);
+    for(const fp of data.fingerprints??[])fingerprints.add(fp);
+    if(data.combinedText&&data.combinedText.length<=120000&&!value('launchAssistantText'))byId('launchAssistantText').value=data.combinedText;
+    const friendly=(data.warnings??[]).map(w=>w.startsWith('PHOTO_SET_SINGLE_IMAGE')?'Une seule photo a été reçue : vérifiez qu’aucune page du RI ne manque.':w.startsWith('LEGACY_DOC')?'Ancien Word .doc archivé : préférez .docx ou PDF pour une extraction automatique complète.':w.startsWith('DOCUMENT_CONVERSION_FAILED')?'Un fichier n’a pas pu être lu automatiquement ; l’original reste archivé.':w);
+    status.textContent='Analyse terminée : '+(data.files?.length??files.length)+' fichier(s), '+(data.suggestions?.length??0)+' proposition(s).'+(friendly.length?' '+friendly.join(' '):'');
+    renderSuggestions(data);invalidate();toast('RI analysé. Validez maintenant les rubriques une par une, sur place.');
+  }catch(e){showError(e);if(byId('launchFileStatus'))byId('launchFileStatus').textContent='Analyse non terminée.';}};
+  const clearFiles=()=>{const input=byId('launchGovernanceFiles');if(input)input.value='';byId('launchGovernanceFileList')?.replaceChildren();if(byId('launchFileStatus'))byId('launchFileStatus').textContent='Fichiers retirés du brouillon local.';};
 
   const analyze=async()=>{try{const text=value('launchAssistantText');if(!text)throw Error('Ajoutez le texte du règlement ou une description.');renderSuggestions(await app.analyzeGroupDocument(text));}catch(e){showError(e);}};
   const interpret=async()=>{try{
@@ -166,6 +248,9 @@ export function mountLaunchStudio({app,getGroups,getRubrics,addRubric,invalidate
   byId('launchNextBtn')?.addEventListener('click',()=>showStep(step+1));
   byId('launchOrigin')?.addEventListener('change',syncOrigin);
   byId('analyzeLaunchDocument')?.addEventListener('click',()=>void analyze());
+  byId('launchGovernanceFiles')?.addEventListener('change',()=>void renderSelectedFiles());
+  byId('analyzeLaunchFiles')?.addEventListener('click',()=>void analyzeFiles());
+  byId('clearLaunchFiles')?.addEventListener('click',clearFiles);
   byId('interpretLaunchText')?.addEventListener('click',()=>void interpret());
   byId('startLaunchVoice')?.addEventListener('click',startVoice);
   byId('previewConfirmed')?.addEventListener('change',renderPreview);
