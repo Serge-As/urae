@@ -46,11 +46,8 @@ jobs:
           set -euo pipefail
           test -n "${CLOUDFLARE_ACCOUNT_ID:-}"
           test -n "${CLOUDFLARE_API_TOKEN:-}"
-          test -n "${FOUNDER_TEAM_ACTORS:-}" || { echo "::error::FOUNDER_TEAM_ACTORS is required so the Control Center is not silently hidden."; exit 2; }
-          if [ -z "${IDENTITY_MATCH_PEPPER:-}" ] && [ -z "${COLLECTIVE_LEARNING_PEPPER:-}" ]; then
-            echo "::error::IDENTITY_MATCH_PEPPER or COLLECTIVE_LEARNING_PEPPER is required for protected identity matching."
-            exit 2
-          fi
+          # Founder control has a durable D1 owner bootstrap; an optional GitHub secret can add extra team actors later.
+          # Identity/learning peppers are created once as Cloudflare Worker secrets if absent, then preserved.
           npx --yes wrangler@4 d1 list --json >/tmp/d1-auth.json
           npx --yes wrangler@4 r2 bucket list >/tmp/r2-auth.txt
           echo "Cloudflare D1 + R2 authentication PASS"
@@ -119,16 +116,31 @@ jobs:
           cmp /tmp/predeploy/SHA256SUMS.txt /tmp/r2-SHA256SUMS.txt
           echo "R2 BIR+ mirror PASS"
 
-      - name: Configure production secrets
+      - name: Configure or preserve production secrets
         shell: bash
         run: |
           set -euo pipefail
-          printf '%s' "${FOUNDER_TEAM_ACTORS}" | npx --yes wrangler@4 secret put FOUNDER_TEAM_ACTORS --config workers/api/wrangler.prod132.toml
+          npx --yes wrangler@4 secret list --config workers/api/wrangler.prod132.toml > /tmp/worker-secrets.txt || true
+          if [ -n "${FOUNDER_TEAM_ACTORS:-}" ]; then
+            printf '%s' "${FOUNDER_TEAM_ACTORS}" | npx --yes wrangler@4 secret put FOUNDER_TEAM_ACTORS --config workers/api/wrangler.prod132.toml
+          else
+            echo "::notice::FOUNDER_TEAM_ACTORS absent; durable platform_control_owners remains authoritative."
+          fi
           if [ -n "${COLLECTIVE_LEARNING_PEPPER:-}" ]; then
             printf '%s' "${COLLECTIVE_LEARNING_PEPPER}" | npx --yes wrangler@4 secret put COLLECTIVE_LEARNING_PEPPER --config workers/api/wrangler.prod132.toml
+          elif grep -q 'COLLECTIVE_LEARNING_PEPPER' /tmp/worker-secrets.txt; then
+            echo "Preserving existing COLLECTIVE_LEARNING_PEPPER."
+          else
+            openssl rand -hex 48 | npx --yes wrangler@4 secret put COLLECTIVE_LEARNING_PEPPER --config workers/api/wrangler.prod132.toml
+            echo "Created one-time COLLECTIVE_LEARNING_PEPPER in Cloudflare."
           fi
           if [ -n "${IDENTITY_MATCH_PEPPER:-}" ]; then
             printf '%s' "${IDENTITY_MATCH_PEPPER}" | npx --yes wrangler@4 secret put IDENTITY_MATCH_PEPPER --config workers/api/wrangler.prod132.toml
+          elif grep -q 'IDENTITY_MATCH_PEPPER' /tmp/worker-secrets.txt; then
+            echo "Preserving existing IDENTITY_MATCH_PEPPER."
+          else
+            openssl rand -hex 48 | npx --yes wrangler@4 secret put IDENTITY_MATCH_PEPPER --config workers/api/wrangler.prod132.toml
+            echo "Created one-time IDENTITY_MATCH_PEPPER in Cloudflare."
           fi
 
       - name: Apply additive D1 migrations
