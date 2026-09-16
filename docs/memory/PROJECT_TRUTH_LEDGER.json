@@ -640,10 +640,12 @@
       "evidence": [
         "github-actions:35138465887 SUCCESS",
         "R2:eco-system-backups/birplus/1.3.3/<sha>/final",
-        "restore:SQLite PRAGMA integrity_check=ok"
+        "restore:SQLite PRAGMA integrity_check=ok",
+        "github-actions:35139053215 SUCCESS",
+        "checkpoint-head:4d7ce535f60fbc4af3317ed157374ec884b3ff2e"
       ],
-      "note": "Source and production D1 were archived, checksummed, restored and mirrored to private R2 before production mutation.",
-      "next": "Repeat BIR+ before the next production release.",
+      "note": "Pre-deploy and closure BIR+ checkpoints both succeeded. Source and production D1 were archived, checksummed, restored and mirrored to private R2; closure backup reflects post-deployment 1.3.3 production data and updated handoff docs.",
+      "next": "Repeat BIR+ before the next production mutation.",
       "currentProductLine": true
     },
     {
