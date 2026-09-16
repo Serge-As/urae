@@ -5,9 +5,9 @@ Date : 2026-09-16
 ## 1. Production publique — vérité actuelle
 
 - URL : `https://eco-system.sergemimf.workers.dev/`
-- version : **1.3.2-savings-control-forum-live**
+- version : **1.3.3-fairness-adops-doctor-launch**
 - Worker : `eco-system`
-- Worker Version ID : `f6e8b41f-8093-4ca9-9feb-202a4037c7b9`
+- Worker Version ID : `fdb6c9f3-8e46-49e9-85df-1e238975d257`
 - D1 canonique : `eco-system-db`
 - R2 privé : `eco-system-backups`
 - Premium Live : **ACTIF**
@@ -15,14 +15,14 @@ Date : 2026-09-16
 - Forum v2 temps réel : **BOUND / production**
 - stockage artifacts : **R2**
 - argent réel : **DÉSACTIVÉ**
-- workflow de déploiement + smoke : run **35096484915 — SUCCESS**
-- qualification du HEAD pré-déploiement : **SUCCESS**
+- workflow de déploiement + smoke : run **35138597876 — SUCCESS**
+- source déployée : `8396be2ed40ab51031a543787e2e61d41a42ad21` ; qualification complète dans le workflow : **SUCCESS**
 - la ligne 1.2.0 est désormais historique et supersédée.
 
 ## 2. Branche et point de reprise
 
 - branche de développement : `next/1.3.3-interest-lab-adops-ui-20260916`
-- production stable actuelle : `next/1.3.2-savings-control-forum-live-20260916`
+- production stable actuelle : `next/1.3.3-interest-lab-adops-ui-20260916`
 - reprendre au **HEAD distant le plus récent**, jamais à partir d'un SHA mémorisé sans le revérifier.
 - ne pas repartir de 1.2 ou 1.3.1 pour continuer le développement courant.
 
@@ -168,13 +168,23 @@ Après 3–5 sous-lots : commit + CI + mise à jour de cette vérité + checkpoi
 - Doctrine métier : **Living Rules** ; écrit, pratique observée, règle activée et exception restent distincts.
 
 
-## 12. Candidat 1.3.3 — qualifié avant production
+## 12. 1.3.3 — production qualifiée
 
 - version : `1.3.3-fairness-adops-doctor-launch` ;
 - branche : `next/1.3.3-interest-lab-adops-ui-20260916` ;
-- production reste 1.3.2 jusqu'au smoke 1.3.3 ;
+- production 1.3.3 smoke-testée ;
 - 181 tests couvrent notamment les cinq politiques d'intérêts, RI multi-document, revue séquentielle, Assistance/Inscription, AdOps, House Ads, Group Doctor et Meeting Autopilot ;
 - l'IA House Ads reçoit uniquement des signaux collectifs dérivés (familles et catégories de besoins), jamais les noms libres des rubriques ;
-- workflows BIR+ et déploiement 1.3.3 préparés, sans création de D1 et avec `realMoneyEnabled=false`.
+- BIR+ 1.3.3 : run `35138465887` SUCCESS ; déploiement/smoke : run `35138597876` SUCCESS ; Worker Version ID `fdb6c9f3-8e46-49e9-85df-1e238975d257` ; `realMoneyEnabled=false`.
 
-**Point de reprise** : CI finale → BIR+ 1.3.3 → production workflow → smoke → basculer seulement alors la section 1 vers 1.3.3.
+**Point de reprise** : recette terrain 1.3.3 puis corrections ciblées ; toute nouvelle production reste précédée d'un BIR+ et d'un smoke.
+
+
+## 13. Livraison 1.3.3 — preuves
+- BIR+ : `35138465887` SUCCESS (source + export D1 + restauration SQLite + SHA + miroir R2).
+- Deploy : `35138597876` SUCCESS.
+- D1 : existante réutilisée ; `No migrations to apply`.
+- R2 predeploy mirror : PASS.
+- Worker Version ID : `fdb6c9f3-8e46-49e9-85df-1e238975d257`.
+- Smoke : version 1.3.3, realMoney=false, Premium Live=true, Founder Control=true, Community Realtime=true, artifactStorageMode=R2.
+- Les capacités 1.3.3 sont déployées mais restent FUNCTIONAL_BETA là où une recette terrain dédiée manque.
