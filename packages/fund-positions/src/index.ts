@@ -29,7 +29,7 @@ export class FundPositionService{
     const ctx=this.kernel.context.get(),members=await this.repo.listMemberships(ctx.tenantId,groupId),positions=await this.ledger.receiptPositions(ctx.tenantId,groupId);
     const receipts=positions.filter(x=>x.rubricId===rubricId);
     const adjustments=(await this.repo.listWorkspaceRecords(ctx.tenantId,MODULE,groupId)).map(decode).filter(x=>x.rubricId===rubricId&&x.exerciseLabel===exerciseLabel);
-    const users=await Promise.all(members.map(async m=>({m,u:await this.repo.getUser(ctx.tenantId,m.userId)})));
+    const users=await Promise.all(members.map(async m=>({m,u:await this.repo.getUser(m.userId)})));
     const rows:FundMemberPosition[]=users.map(({m,u})=>{
       const contribution=receipts.filter(x=>x.membershipId===m.id).reduce((n,x)=>n+x.netAmount,0),mine=adjustments.filter(x=>x.membershipId===m.id);
       const sum=(kind:FundMemberAdjustmentKind)=>mine.filter(x=>x.kind===kind).reduce((n,x)=>n+x.amount,0);
