@@ -106,16 +106,27 @@ export class AdManagerService{
   async composeHouseVariants(groupId:string){
     const base=await this.housePlan(groupId),top=base.plan.slice(0,4);
     if(!this.houseAI?.run)return{...base,aiUsed:false,model:null,variants:top.map(x=>({key:x.key,headline:x.headline,body:x.body,callToAction:x.callToAction,source:'DETERMINISTIC_FALLBACK'}))};
+    const rubricFamilies=[...new Set((base.context.rubricKinds??[]).map(x=>String(x).toUpperCase()).filter(x=>/^[A-Z0-9_:-]{1,48}$/.test(x)))].slice(0,24);
+    const names=(base.context.rubricNames??[]).join(' ').toLowerCase();
+    const commerceSignals=[
+      /savon/.test(names)?'SOAP':null,
+      /huile/.test(names)?'OIL':null,
+      /drap/.test(names)?'LINEN':null,
+      /tissu/.test(names)?'TEXTILE':null,
+      /assiette/.test(names)?'TABLEWARE':null
+    ].filter(Boolean);
     const safeContext={
       stage:top[0]?.stage??'ANY',groupKind:base.context.groupKind??'unknown',originMode:base.context.originMode??'unknown',
       monthsToExerciseEnd:base.context.monthsToExerciseEnd===undefined?null:Number(base.context.monthsToExerciseEnd.toFixed(1)),
-      rubricKinds:base.context.rubricKinds??[],rubricNames:(base.context.rubricNames??[]).slice(0,30),
+      rubricFamilies,commerceSignals,
+      hasSavings:rubricFamilies.includes('SAVINGS'),hasAssistance:rubricFamilies.includes('ASSISTANCE'),
+      hasTontine:rubricFamilies.some(x=>x.includes('TONTINE')),hasInKindDemand:commerceSignals.length>0,
       lowBandwidth:Boolean(base.context.lowBandwidth),deferredAssistance:Boolean(base.context.deferredAssistance)
     };
     const prompt=[
       'Tu es le rédacteur publicitaire interne d Eco-System, plateforme de tontines et associations au Cameroun.',
       'Crée exactement 4 variantes House Ads en français à partir du contexte de GROUPE ci-dessous et des services candidats.',
-      'Contraintes absolues : aucun nom de membre, aucune dette, aucun solde individuel, aucune donnée CNI/téléphone/santé ; pas de manipulation ; pas de promesse financière ; pas de faux sentiment d urgence.',
+      'Contraintes absolues : n utiliser que les signaux collectifs fournis ; aucune donnée personnelle ou financière individuelle ; pas de manipulation ; pas de promesse financière ; pas de faux sentiment d urgence.',
       'Chaque variante : key existante, headline <= 80 caractères, body <= 260 caractères, callToAction <= 45 caractères.',
       'La publicité doit être utile au moment de l exercice. Une tontine savon/huile/drap peut renforcer Demand Exchange, mais un groupe sans cette rubrique peut encore recevoir une promotion commerce en exploration modérée.',
       'Réponds UNIQUEMENT par un tableau JSON valide sans markdown.',
