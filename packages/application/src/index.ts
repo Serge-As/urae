@@ -72,7 +72,10 @@ export class ConnectedApplication {
 
   private headers(extra:Record<string,string>={}):HeadersInit{return{'content-type':'application/json','accept-language':this.locale,'x-active-group-id':this.activeGroupId??'','x-timezone':'Africa/Douala',...extra};}
   private async request<T>(path:string,init:RequestInit={}):Promise<T>{
-    const response=await fetch(`${this.baseUrl}${path}`,{...init,headers:{...this.headers(),...(init.headers??{})}});
+    const headers=new Headers(this.headers());
+    for(const [k,v] of new Headers(init.headers??{}))headers.set(k,v);
+    if(typeof FormData!=='undefined'&&init.body instanceof FormData)headers.delete('content-type');
+    const response=await fetch(`${this.baseUrl}${path}`,{...init,headers});
     const body=await response.json().catch(()=>({error:`HTTP_${response.status}`}));
     if(!response.ok) throw new Error(String(body.error??`HTTP_${response.status}`)); return body as T;
   }
@@ -105,6 +108,10 @@ export class ConnectedApplication {
   activeGroup():string|undefined{return this.activeGroupId;}
 
   async analyzeGroupDocument(text:string):Promise<{fingerprint:string;suggestions:any[];requiresHumanConfirmation:boolean;financialWrites:boolean}>{return this.request('/api/v1/assistant/group-launch/analyze',{method:'POST',body:JSON.stringify({text})});}
+  async analyzeGroupDocumentFiles(files:File[]):Promise<{combinedText:string;fingerprints:string[];files:any[];warnings:string[];suggestions:any[];requiresHumanConfirmation:boolean;financialWrites:boolean}>{
+    const form=new FormData();for(const file of files)form.append('files',file,file.name);
+    return this.request('/api/v1/assistant/group-launch/analyze-files',{method:'POST',body:form});
+  }
   async interpretGroupLaunch(text:string):Promise<{draft:any;requiresHumanConfirmation:boolean;financialWrites:boolean}>{return this.request('/api/v1/assistant/group-launch/interpret',{method:'POST',body:JSON.stringify({text})});}
 
   async listGroups():Promise<Group[]>{const groups=await this.request<Group[]>('/api/v1/groups');this.groupTenants=new Map(groups.map(g=>[g.id,g.tenantId]));return groups;}
@@ -113,6 +120,7 @@ export class ConnectedApplication {
   async listRubrics():Promise<RubricDefinition[]>{if(!this.activeGroupId)return[];return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/rubrics`);}
   async createRubric(input:{name:string;writtenRule?:string;observedPractice?:string;model:RubricOperatingModel}):Promise<RubricDefinition>{if(!this.activeGroupId)throw new Error('ACTIVE_GROUP_REQUIRED');const facets={direction:'BIDIRECTIONAL',obligation:'CUSTOM',medium:'CASH',refundability:'CONDITIONAL',replenishment:'CUSTOM',interestMode:'NONE',eligibilityMode:'RULE_BASED'};return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/rubrics`,{method:'POST',body:JSON.stringify({name:input.name,facets,source:'GROUP_CUSTOM',operatingModel:{...input.model,writtenRule:input.writtenRule,observedPractice:input.observedPractice}})});}
   async updateRubricOperatingModel(rubricId:string,model:RubricOperatingModel):Promise<RubricDefinition>{if(!this.activeGroupId)throw new Error('ACTIVE_GROUP_REQUIRED');return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/rubrics/${encodeURIComponent(rubricId)}/operating-model`,{method:'PUT',body:JSON.stringify(model)});}
+  async updateRubricPolicies(rubricId:string,policies:any):Promise<RubricDefinition>{if(!this.activeGroupId)throw new Error('ACTIVE_GROUP_REQUIRED');return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/rubrics/${encodeURIComponent(rubricId)}/policies`,{method:'PUT',body:JSON.stringify(policies)});}
   async previewRubricCycle(rubricId:string,input:{memberCount:number;collectedFromMembers:number;solidarityCoverageAmount?:number;beneficiaryDisbursement?:number}):Promise<RubricCyclePreview>{if(!this.activeGroupId)throw new Error('ACTIVE_GROUP_REQUIRED');return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/rubrics/${encodeURIComponent(rubricId)}/preview-cycle`,{method:'POST',body:JSON.stringify(input)});}
   async listMembers():Promise<MembershipView[]>{if(!this.activeGroupId)return[];return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/members`);}
   async listMeetings():Promise<MeetingSession[]>{if(!this.activeGroupId)return[];return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/meetings`);}
