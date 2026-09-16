@@ -29,3 +29,7 @@ class_name = "GroupLiveHub"
 [exports.GroupLiveHub]
 type = "durable-object"
 storage = "sqlite"
+
+
+[ai]
+binding = "AI"
