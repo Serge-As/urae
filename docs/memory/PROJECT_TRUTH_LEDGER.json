@@ -576,6 +576,22 @@
       "note": "Partners and NGO programs are specialized flows. Aggregate financial share packs are pseudonymous, time-bounded, revocable and blocked when export/consent conditions fail.",
       "next": "Expand multi-group partner/NGO dashboards and indicators.",
       "currentProductLine": true
+    },
+    {
+      "id": "backup.birplus.1.3.1.2026-09-16",
+      "status": "VERIFIED_REMOTE",
+      "scope": "backup-recovery",
+      "observedOn": "2026-09-16",
+      "evidence": [
+        "github-actions:run 35062074470 SUCCESS",
+        "artifact:eco-system-1.3.1-birplus id 10432673201",
+        "artifact-sha256:cabb94e293d6aa347145344f4c37f7c5ee67f4e705dd32c90c88ca7e4640f476",
+        "d1-export:eco-system-db restore PRAGMA integrity_check=ok",
+        "r2-upload:Cloudflare code 10042 non-blocking"
+      ],
+      "note": "Source and production D1 snapshot were archived and verified in GitHub Artifact. R2 upload remained unavailable to the GitHub token; do not claim R2 backup success.",
+      "next": "Use GitHub Artifact as verified remote checkpoint; retry R2 only after Cloudflare/token availability is proven.",
+      "currentProductLine": true
     }
   ]
 }
