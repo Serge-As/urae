@@ -22,9 +22,11 @@ import { FounderLearningStore } from '../../../packages/founder-observatory/src/
 import { FounderControlStore, type CapabilityHealth } from '../../../packages/founder-control/src/index.js';
 import { CommercialPreferenceService, preferenceCookie, clearPreferenceCookie, readPreferenceCookie } from '../../../packages/commercial-preferences/src/index.js';
 import { MiscRubricService } from '../../../packages/misc-rubrics/src/index.js';
-import { allocateSavingsYield, splitInterestPool, simulateWorkbookYieldPipeline, allocateCapitalAtWorkYield } from '../../../packages/savings-yield/src/index.js';
+import { allocateSavingsYield, splitInterestPool, simulateWorkbookYieldPipeline, allocateCapitalAtWorkYield, allocateCapitalTimeYield, allocateAttributedProductiveYield, SAVINGS_YIELD_POLICY_PRESETS } from '../../../packages/savings-yield/src/index.js';
 import { buildFinancialRecap, buildSessionRecap, buildClosingCarryover } from '../../../packages/recap-engine/src/index.js';
-import { AdManagerService } from '../../../packages/ad-manager/src/index.js';
+import { AdManagerService, AD_PLACEMENT_CATALOG, HOUSE_AD_CATALOG, selectAdDelivery } from '../../../packages/ad-manager/src/index.js';
+import { diagnoseGroup } from '../../../packages/group-doctor/src/index.js';
+import { prepareMeetingAutopilot } from '../../../packages/meeting-autopilot/src/index.js';
 import { EconomicIntelligenceService } from '../../../packages/economic-intelligence/src/index.js';
 import { ExternalProgramsService, type ExternalProgramKind, type ExternalProgramState, type AggregateDataAccess } from '../../../packages/external-programs/src/index.js';
 import { IdentityProofService } from '../../../packages/identity-proof/src/index.js';
