@@ -943,3 +943,24 @@ candidate_qualification_2026_09_16_1_3_3:
   master: docs/constitution/ECO_SYSTEM_Cahier_des_Charges_Maitre_Exhaustif_3.2.0_2026-09-16.md
   economics: docs/economics/ECO_SYSTEM_Modele_Economique_AdManager_Approfondi_3.2.0_2026-09-16.md
   note: Production status changes only after BIR+ plus production deployment plus smoke.
+
+
+production_qualification_2026_09_16_1_3_3:
+  version: 1.3.3-fairness-adops-doctor-launch
+  branch: next/1.3.3-interest-lab-adops-ui-20260916
+  deployed: true
+  source_deployed: 8396be2ed40ab51031a543787e2e61d41a42ad21
+  production_url: https://eco-system.sergemimf.workers.dev/
+  worker_version_id: fdb6c9f3-8e46-49e9-85df-1e238975d257
+  birplus_run: 35138465887
+  deploy_smoke_run: 35138597876
+  d1: eco-system-db
+  r2: eco-system-backups
+  migrations: no_migrations_to_apply
+  premium_live_enabled: true
+  founder_control_bound: true
+  community_realtime_bound: true
+  artifact_storage_mode: R2
+  real_money_enabled: false
+  field_reception: pending_for_1_3_3_new_user_flows
+  note: New 1.3.3 capabilities are deployed and CI-tested; keep FUNCTIONAL_BETA until dedicated field reception proves each flow.
