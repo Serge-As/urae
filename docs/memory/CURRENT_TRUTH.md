@@ -21,7 +21,8 @@ Date : 2026-09-16
 
 ## 2. Branche et point de reprise
 
-- branche : `next/1.3.2-savings-control-forum-live-20260916`
+- branche de développement : `next/1.3.3-interest-lab-adops-ui-20260916`
+- production stable actuelle : `next/1.3.2-savings-control-forum-live-20260916`
 - reprendre au **HEAD distant le plus récent**, jamais à partir d'un SHA mémorisé sans le revérifier.
 - ne pas repartir de 1.2 ou 1.3.1 pour continuer le développement courant.
 
@@ -46,35 +47,46 @@ La production 1.3.2 a :
 
 Une sauvegarde BIR+ GitHub séparée avant le déploiement a aussi réussi : run **35095940942 — SUCCESS**.
 
-## 4. Épargne — audit réel du classeur
+## 4. Épargne — audit étendu du dossier historique
 
-Sources auditées : `Feuille mensuelle.xlsx` et `Rubriques Epargne à intérêts.xlsx`.
+Sources auditées : le nouveau dossier historique, notamment `Feuille mensuelle.xlsx` et `Rubriques Epargne à intérêts.xlsx`.
 
-Vérités :
-- intérêts encaissés : **18 500 F** ;
-- pool Épargne classique : **12 950 F (70 %)** ;
-- pool Épargne scolaire : **1 850 F (10 %)** ;
-- indemnités Bureau : **3 700 F (20 %)** ;
-- principal classique annuel : **14 935 199 F** ;
-- principal scolaire : **1 081 000 F**.
+Vérités corrigées du dossier complet :
+- intérêts réellement collectés dans `Principal!F3` : **708 500 F CFA** ;
+- principal Épargne classique : **14 935 199 F** ;
+- principal Épargne scolaire : **1 081 000 F** ;
+- exemple de clé décidée par le Bureau : **70 % Épargne classique = 495 950 F**, **10 % Épargne scolaire = 70 850 F**, **20 % Bureau = 141 700 F** ;
+- coefficients historiques classiques : **9, 8, 7, 6, 5, 4, 3, 2, 1, 0,5, 0, 0** ;
+- coefficients scolaires : **7, 6, 5, 4, 3, 2, 1, 0, 0, 0, 0, 0**.
 
-### Moteur 1 — reproduction historique
-Le pipeline `EPARGNE → Principal → Intérêts provisoires → Intérêts Finaux` est reproduit.
-Écart maximum moteur Eco-System vs cellules finales cachées du classeur : environ **9×10^-13 F**.
-Conclusion : **résultats mathématiquement identiques au classeur sur le jeu réel audité**.
+### Moteur historique
+Le pipeline détaillé du classeur reste reproductible pour explication. Mathématiquement, après normalisation, sa part relative est équivalente à :
+`poids dépôt = montant × coefficient de période`, puis
+`gain dépôt = pool de la caisse × poids dépôt / somme des poids`.
+Eco-System conserve le pipeline historique pour audit, mais peut utiliser cette forme simplifiée pour calculer immédiatement le même résultat.
 
-### Moteur 2 — capital réellement productif
-Il suit le capital effectivement prêté et peut appliquer `noLoanNoYield=true`.
-Sur les preuves disponibles :
-- prêt ordinaire enregistré : **50 050 F**, en janvier ;
-- SPECIAL PRÊT : **50 000 F** ;
-- remboursements principal : **75 500 F** ;
-- les fichiers ne permettent pas encore de relier de façon certaine chaque remboursement à un lot de dépôt d'origine.
+### Moteur Capital × Temps
+Nouvelle politique transparente :
+`score = montant^β × durée_éligible^α`.
+- défaut : α=1, β=1 ;
+- α>1 renforce explicitement la prime aux dépôts précoces ;
+- β<1 peut, si le groupe le décide, atténuer la domination de dépôts exceptionnellement élevés ;
+- date/session limite d'éligibilité entièrement configurable.
 
-Le moteur 2 refuse donc d'inventer les liens manquants. Sous l'hypothèse conservatrice testée, les importants dépôts d'avril/octobre ne sont pas rémunérés s'ils n'ont financé aucun prêt prouvé.
-L'Épargne scolaire ne reçoit pas artificiellement un rendement productif tant que le groupe n'a pas indiqué si sa caisse est mutualisée ou séparée pour les prêts.
+### Moteur productif attribué / hybride
+Le nouveau dossier apporte des preuves supplémentaires :
+- janvier : prêt ordinaire de **1 000 000 F** à Nicaise, remboursé en mars avec **90 000 F** d'intérêts ;
+- avril : prêt ordinaire de **6 000 000 F** à Thierry, remboursé en juin avec **600 000 F** d'intérêts ;
+- soit **690 000 F** d'intérêts à causalité forte sur **708 500 F** collectés ;
+- **18 500 F** restent résiduels/non attribués avec certitude et ne doivent pas recevoir une causalité inventée.
 
-Test fixture réel : commit `7ccbfef6e064431959f2f34d12fcbe2c5ba706e9`, CI **SUCCESS**.
+Le moteur supporte désormais :
+- `SEGREGATED` : caisses séparées ;
+- `POOLED` : Épargne classique et scolaire mutualisées ;
+- `CUSTOM_MATRIX` : matrice explicite des caisses autorisées par prêt ;
+- résidu : `TIME_WEIGHTED`, `FIXED_FUND_SPLIT` ou `UNALLOCATED`.
+
+**Règle** : l'application demande explicitement au Bureau si Épargne classique et Épargne scolaire sont mélangées pour les prêts, car cette décision varie selon les groupes.
 
 ## 5. Acquis 1.3.2 anti-régression
 
@@ -146,3 +158,11 @@ Priorités :
 8. tests terrain 2G/seniors.
 
 Après 3–5 sous-lots : commit + CI + mise à jour de cette vérité + checkpoint BIR+.
+
+
+## 11. Compatibilité avec les garde-fous historiques
+
+- Infrastructure : **CLOUDFLARE** Workers + D1 + R2 + Durable Objects.
+- Lignée de récupération conservée : **1.0.0-complete-app** reste une balise historique du projet et ne désigne pas la version courante.
+- Finance réelle : **realMoneyEnabled=false**.
+- Doctrine métier : **Living Rules** ; écrit, pratique observée, règle activée et exception restent distincts.
