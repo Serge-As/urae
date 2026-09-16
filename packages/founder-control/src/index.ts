@@ -27,6 +27,12 @@ interface Row{[key:string]:unknown}
 export class FounderControlStore{
   constructor(public db:D1DatabaseLike){}
 
+  async isPlatformOwner(accountId:string):Promise<boolean>{
+    if(!accountId)return false;
+    const row=await this.db.prepare("SELECT account_id FROM platform_control_owners WHERE account_id=? LIMIT 1").bind(accountId).first<{account_id:string}>();
+    return Boolean(row?.account_id);
+  }
+
   async syncCapabilities(capabilities:Array<{id:string;labelFr:string;labelEn:string;status:string;lot:string;workspace:string}>):Promise<void>{
     const stamp=now();
     const sql="INSERT INTO founder_control_items (id,item_type,item_key,title,status,priority,data_json,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?) ON CONFLICT(item_type,item_key) DO UPDATE SET title=excluded.title,data_json=json_set(founder_control_items.data_json,'$.labelFr',json_extract(excluded.data_json,'$.labelFr'),'$.labelEn',json_extract(excluded.data_json,'$.labelEn'),'$.declaredStatus',json_extract(excluded.data_json,'$.declaredStatus'),'$.lot',json_extract(excluded.data_json,'$.lot'),'$.workspace',json_extract(excluded.data_json,'$.workspace')),updated_at=excluded.updated_at";
