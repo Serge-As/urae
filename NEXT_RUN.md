@@ -7,51 +7,39 @@ Date : 2026-09-16
 2. `docs/memory/CURRENT_TRUTH.md`
 3. `PROJECT_STATE.md`
 4. `docs/memory/PROJECT_TRUTH_LEDGER.json`
-5. `docs/constitution/ECO_SYSTEM_Cahier_des_Charges_Maitre_Exhaustif_3.1.0_2026-09-16.md`
-6. `docs/economics/ECO_SYSTEM_Modele_Economique_Detaille_3.1.0_2026-09-16.md`
-7. `FEATURE_REGISTRY.yaml`
-8. derniers runs GitHub de la branche.
+5. `docs/constitution/ECO_SYSTEM_Cahier_des_Charges_Maitre_Exhaustif_3.2.0_2026-09-16.md`
+6. socle constitutionnel 2.3.4 conservé
+7. `docs/economics/ECO_SYSTEM_Modele_Economique_AdManager_Approfondi_3.2.0_2026-09-16.md`
+8. `FEATURE_REGISTRY.yaml`
+9. derniers runs GitHub.
 
-## Branche de reprise
-`next/1.3.2-savings-control-forum-live-20260916`
+## Branche
+`next/1.3.3-interest-lab-adops-ui-20260916`
 
-Toujours récupérer le HEAD distant le plus récent.
+Toujours lire le HEAD distant le plus récent. Ne jamais reprendre un SHA mémorisé sans vérification.
 
-## Vérité production
-Eco-System 1.3.2 est **déployé et smoke-testé** :
-- run production : `35096484915` SUCCESS ;
-- Worker Version ID : `f6e8b41f-8093-4ca9-9feb-202a4037c7b9`;
-- R2 `eco-system-backups` actif ;
-- Premium Live / Founder Control / Community Realtime liés ;
-- argent réel false.
+## Production actuelle
+La production reste **1.3.2-savings-control-forum-live** tant qu'un smoke 1.3.3 réussi n'est pas inscrit ici.
+
+## Candidat 1.3.3
+Version : `1.3.3-fairness-adops-doctor-launch`.
+Acquis : guided RI upload, revue rubriques séquentielle, Assistance Rulebook, RegistrationPolicy, cinq moteurs Épargne/Fairness Lab, Group Doctor, Meeting Autopilot, AdOps/CRM, House Ads contextuelles et composition IA agrégée.
+
+## Point de reprise immédiat
+1. vérifier CI du HEAD ;
+2. déclencher `.github/workflows/backup-birplus-1.3.3.yml` via le marqueur `.github/BACKUP_ECO_SYSTEM_1_3_3_ONCE` ;
+3. exiger export D1 + restauration SQLite + integrity_check + SHA + miroir R2 ;
+4. seulement après sauvegarde verte, déclencher `.github/workflows/deploy-production-1.3.3.yml` via `.github/DEPLOY_ECO_SYSTEM_1_3_3_ONCE` ;
+5. exiger smoke version, realMoney=false, Premium Live, Founder Control, Community Realtime, R2 et Cahier 3.2.0 ;
+6. mettre à jour Current Truth / Project State / Truth Ledger / Feature Registry avec les IDs des runs et Worker Version ID.
 
 ## Ne pas refaire
-- R2 est activé ; le jeton GitHub actuel passe D1 et R2.
-- Ne pas demander à l'utilisateur de recréer ce token sans nouveau code d'erreur.
-- Moteur historique Épargne déjà confronté au classeur réel : identique.
-- Moteur productif déjà testé sur les prêts documentés ; il refuse les sources non prouvées.
-- Forum v2, Control Center, Secours membre, identité phone/name/CNI sont acquis 1.3.2.
-- Les peppers Cloudflare existent désormais ; les préserver.
+- ne pas recréer D1 ;
+- ne pas redemander un token R2 : D1 et R2 étaient OK en 1.3.2 ;
+- ne pas supprimer les 10 étapes ;
+- ne pas revenir à l'ancien pool 18 500 : le dossier étendu prouve 708 500 F ;
+- ne pas renvoyer les noms libres de rubriques à l'IA House Ads ;
+- ne pas réactiver argent réel.
 
-## Prochains lots
-1. Ledger → moteur productif : tracer source de prêt, principal remboursé, réemploi, caisse classique/scolaire.
-2. RECAP/Cassation + UI Secours membre.
-3. R2 media/photo + miniatures + contrôle.
-4. Passkeys + Push.
-5. Forum recherche, signets, voix, sondages, modération.
-6. RealtimeKit audio/vidéo.
-7. Demand Exchange/Deals + Analytics/Cost Control.
-8. tests terrain seniors/2G.
-
-## Interdictions
-- ne pas recréer `eco-system-db`;
-- pas de migration destructive ;
-- pas d'argent réel ;
-- pas de second Ledger ;
-- pas de données individuelles sensibles en pub/partenaires ;
-- pas d'intérêt impayé capitalisé automatiquement ;
-- pas de suppression d'acquis pour simplifier l'UI ;
-- pas de force-push/merge main sans décision.
-
-## Procédure anti-interruption
-Après 3–5 sous-lots significatifs : commit + CI + Current Truth/NEXT_RUN si la vérité change. Avant toute production : BIR+ source + export D1 + restauration/integrity check + Artifact GitHub + miroir R2 + smoke.
+## Après 1.3.3
+Photo/R2 pipeline, passkeys, Push, Forum recherche/voix/sondages, RealtimeKit, Demand Exchange/Deals, Cost Control, tests terrain 2G/seniors.
