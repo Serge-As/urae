@@ -31,15 +31,27 @@ export class CommunityRealtimeStore{
     return{id,tenantId:input.tenantId,groupId:input.groupId,hubId:input.hubId,authorId:input.authorId,parentId:input.parentId,rootId,kind,title:title||undefined,body,moderationState:'PUBLISHED',createdAt:stamp,reactions:{},viewerReactions:[]};
   }
 
-  async listMessages(input:{tenantId:string;groupId:string;hubId:string;viewerId:string;limit?:number;before?:string;after?:string}):Promise<{messages:ForumMessage[];nextBefore?:string;nextAfter?:string}>{
+  async listMessages(input:{tenantId:string;groupId:string;hubId:string;viewerId:string;limit?:number;before?:string;after?:string;around?:string}):Promise<{messages:ForumMessage[];nextBefore?:string;nextAfter?:string}>{
     const limit=Math.min(Math.max(Math.trunc(input.limit??50),1),100);
-    let sql='SELECT * FROM community_messages WHERE tenant_id=? AND group_id=? AND hub_id=? AND moderation_state=\'PUBLISHED\'';
-    const args:unknown[]=[input.tenantId,input.groupId,input.hubId];
-    if(input.before){sql+=' AND created_at < ?';args.push(input.before);}
-    if(input.after){sql+=' AND created_at > ?';args.push(input.after);}
-    sql+=' ORDER BY created_at '+(input.after?'ASC':'DESC')+', id '+(input.after?'ASC':'DESC')+' LIMIT ?';args.push(limit);
-    const rows=await this.db.prepare(sql).bind(...args).all<Row>();
-    const ordered=input.after?rows.results:[...rows.results].reverse();
+    let ordered:Row[]=[];
+    if(input.around){
+      const anchor=await this.db.prepare('SELECT created_at FROM community_messages WHERE id=? AND tenant_id=? AND group_id=? AND hub_id=?').bind(input.around,input.tenantId,input.groupId,input.hubId).first<{created_at:string}>();
+      if(anchor){
+        const half=Math.max(1,Math.floor(limit/2));
+        const beforeRows=await this.db.prepare("SELECT * FROM community_messages WHERE tenant_id=? AND group_id=? AND hub_id=? AND moderation_state='PUBLISHED' AND created_at<=? ORDER BY created_at DESC,id DESC LIMIT ?").bind(input.tenantId,input.groupId,input.hubId,anchor.created_at,half+1).all<Row>();
+        const afterRows=await this.db.prepare("SELECT * FROM community_messages WHERE tenant_id=? AND group_id=? AND hub_id=? AND moderation_state='PUBLISHED' AND created_at>? ORDER BY created_at ASC,id ASC LIMIT ?").bind(input.tenantId,input.groupId,input.hubId,anchor.created_at,half).all<Row>();
+        ordered=[...beforeRows.results].reverse().concat(afterRows.results);
+      }
+    }
+    if(!ordered.length){
+      let sql='SELECT * FROM community_messages WHERE tenant_id=? AND group_id=? AND hub_id=? AND moderation_state=\'PUBLISHED\'';
+      const args:unknown[]=[input.tenantId,input.groupId,input.hubId];
+      if(input.before){sql+=' AND created_at < ?';args.push(input.before);}
+      if(input.after){sql+=' AND created_at > ?';args.push(input.after);}
+      sql+=' ORDER BY created_at '+(input.after?'ASC':'DESC')+', id '+(input.after?'ASC':'DESC')+' LIMIT ?';args.push(limit);
+      const rows=await this.db.prepare(sql).bind(...args).all<Row>();
+      ordered=input.after?rows.results:[...rows.results].reverse();
+    }
     const ids=ordered.map(r=>String(r.id));
     const reactions=new Map<string,Array<{reaction:string;user_id:string}>>();
     if(ids.length){
