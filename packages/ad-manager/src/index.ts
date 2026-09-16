@@ -49,8 +49,9 @@ const decode=(r:WorkspaceRecord):AdCampaign=>({
   createdAt:r.createdAt,updatedAt:r.updatedAt,createdBy:r.createdBy,moderationNote:r.data.moderationNote?String(r.data.moderationNote):undefined
 });
 
+export interface HouseAdAILike{run?(model:string,input:Record<string,unknown>,options?:Record<string,unknown>):Promise<unknown>;}
 export class AdManagerService{
-  constructor(public repo:PlatformRepository,public kernel:PlatformKernel){}
+  constructor(public repo:PlatformRepository,public kernel:PlatformKernel,public houseAI?:HouseAdAILike){}
   private async requireManager(groupId:string){
     const ctx=this.kernel.context.get(),group=await this.repo.getGroup(ctx.tenantId,groupId);if(!group)throw new Error('GROUP_NOT_FOUND');
     if(group.createdBy===ctx.actorId)return group;
@@ -100,6 +101,41 @@ export class AdManagerService{
     const deferredAssistance=rubrics.some(r=>r.activityPlan?.kind==='ASSISTANCE'&&r.policies?.assistance?.reviewStatus!=='VALIDATED');
     const context:HouseAdContext={groupKey:group.id,groupKind:group.kind,originMode:group.originMode,exerciseProgress,monthsToExerciseEnd,rubricKinds:rubrics.map(r=>r.activityPlan?.kind).filter(Boolean) as string[],rubricNames:rubrics.map(r=>r.name),lowBandwidth:Boolean(profile?.accessibility?.lowBandwidthPriority),deferredAssistance};
     return{context,plan:buildContextualHouseAdPlan(context),generatedAt:now()};
+  }
+
+  async composeHouseVariants(groupId:string){
+    const base=await this.housePlan(groupId),top=base.plan.slice(0,4);
+    if(!this.houseAI?.run)return{...base,aiUsed:false,model:null,variants:top.map(x=>({key:x.key,headline:x.headline,body:x.body,callToAction:x.callToAction,source:'DETERMINISTIC_FALLBACK'}))};
+    const safeContext={
+      stage:top[0]?.stage??'ANY',groupKind:base.context.groupKind??'unknown',originMode:base.context.originMode??'unknown',
+      monthsToExerciseEnd:base.context.monthsToExerciseEnd===undefined?null:Number(base.context.monthsToExerciseEnd.toFixed(1)),
+      rubricKinds:base.context.rubricKinds??[],rubricNames:(base.context.rubricNames??[]).slice(0,30),
+      lowBandwidth:Boolean(base.context.lowBandwidth),deferredAssistance:Boolean(base.context.deferredAssistance)
+    };
+    const prompt=[
+      'Tu es le rédacteur publicitaire interne d Eco-System, plateforme de tontines et associations au Cameroun.',
+      'Crée exactement 4 variantes House Ads en français à partir du contexte de GROUPE ci-dessous et des services candidats.',
+      'Contraintes absolues : aucun nom de membre, aucune dette, aucun solde individuel, aucune donnée CNI/téléphone/santé ; pas de manipulation ; pas de promesse financière ; pas de faux sentiment d urgence.',
+      'Chaque variante : key existante, headline <= 80 caractères, body <= 260 caractères, callToAction <= 45 caractères.',
+      'La publicité doit être utile au moment de l exercice. Une tontine savon/huile/drap peut renforcer Demand Exchange, mais un groupe sans cette rubrique peut encore recevoir une promotion commerce en exploration modérée.',
+      'Réponds UNIQUEMENT par un tableau JSON valide sans markdown.',
+      'CONTEXTE='+JSON.stringify(safeContext),
+      'CANDIDATS='+JSON.stringify(top.map(x=>({key:x.key,headline:x.headline,body:x.body,callToAction:x.callToAction,reasonCodes:x.reasonCodes})))
+    ].join('\n');
+    try{
+      const raw=await this.houseAI.run('@cf/zai-org/glm-4.7-flash',{messages:[{role:'user',content:prompt}],max_tokens:900,temperature:.7},{gateway:{id:'default',skipCache:false,cacheTtl:86400}});
+      const carrier=raw as any,text=String(carrier?.response??carrier?.result?.response??carrier?.output_text??carrier?.choices?.[0]?.message?.content??'').trim();
+      const jsonText=text.replace(/^\`\`\`(?:json)?\s*/i,'').replace(/\s*\`\`\`$/,'');
+      const parsed=JSON.parse(jsonText);
+      if(!Array.isArray(parsed))throw new Error('HOUSE_AI_INVALID_SHAPE');
+      const known=new Set(top.map(x=>x.key)),variants=parsed.slice(0,4).filter(x=>x&&known.has(String(x.key))).map(x=>({
+        key:String(x.key),headline:clean(String(x.headline??''),80),body:clean(String(x.body??''),260),callToAction:clean(String(x.callToAction??''),45),source:'WORKERS_AI'
+      })).filter(x=>x.headline&&x.body&&x.callToAction);
+      if(!variants.length)throw new Error('HOUSE_AI_EMPTY');
+      return{...base,aiUsed:true,model:'@cf/zai-org/glm-4.7-flash',variants};
+    }catch(error){
+      return{...base,aiUsed:false,model:'@cf/zai-org/glm-4.7-flash',warning:'AI_COMPOSER_FALLBACK:'+String((error as Error)?.message??error),variants:top.map(x=>({key:x.key,headline:x.headline,body:x.body,callToAction:x.callToAction,source:'DETERMINISTIC_FALLBACK'}))};
+    }
   }
 
   async dashboard(groupId:string){
