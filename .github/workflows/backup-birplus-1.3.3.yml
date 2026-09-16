@@ -3,7 +3,7 @@ name: Eco-System 1.3.3 — BIR+ Source + D1 Backup
 on:
   workflow_dispatch:
   push:
-    branches: ['next/1.3.3-fairness-adops-doctor-launch-20260916']
+    branches: ['next/1.3.3-interest-lab-adops-ui-20260916']
     paths: ['.github/BACKUP_ECO_SYSTEM_1_3_3_ONCE']
 
 permissions:
@@ -30,7 +30,7 @@ jobs:
           set -euo pipefail
           mkdir -p /tmp/eco-backup
           HEAD_SHA="$(git rev-parse HEAD)"
-          printf '%s\n'             "project=Eco-System"             "development_line=1.3.3-fairness-adops-doctor-launch"             "branch=next/1.3.3-fairness-adops-doctor-launch-20260916"             "head=${HEAD_SHA}"             "production_url=https://eco-system.sergemimf.workers.dev/"             "realMoneyEnabled=false"             > /tmp/eco-backup/MANIFEST.txt
+          printf '%s\n'             "project=Eco-System"             "development_line=1.3.3-fairness-adops-doctor-launch"             "branch=next/1.3.3-interest-lab-adops-ui-20260916"             "head=${HEAD_SHA}"             "production_url=https://eco-system.sergemimf.workers.dev/"             "realMoneyEnabled=false"             > /tmp/eco-backup/MANIFEST.txt
           git archive --format=tar HEAD | xz -T0 -9e > /tmp/eco-backup/eco-system-1.3.3-source.tar.xz
       - name: Export production D1 and prove restoration
         shell: bash
