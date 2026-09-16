@@ -7,7 +7,7 @@
   <meta id="metaDescription" name="description" content="Eco-System — plateforme de gestion de tontines, associations et communautés">
   <link rel="manifest" href="/manifest.webmanifest">
   <link rel="stylesheet" href="/styles.css?v=120">
-  <title>Eco-System — 1.3.2 Control · Live · Épargne</title>
+  <title>Eco-System — 1.3.3 Fairness Lab · AdOps · Doctor</title>
 </head>
 <body class="signed-out">
   <section id="authScreen" class="auth-screen" aria-label="Connexion à Eco-System">
@@ -27,7 +27,7 @@
 <header class="topbar">
     <div class="brand">
       <div class="logo">E</div>
-      <div><strong>Eco-System</strong><small>Plateforme Tontines · Associations · Communautés</small><span class="version-badge">ECO-SYSTEM · 1.3.2</span></div>
+      <div><strong>Eco-System</strong><small>Plateforme Tontines · Associations · Communautés</small><span class="version-badge">ECO-SYSTEM · 1.3.3</span></div>
     </div>
     <div class="top-context">
       <select id="activeGroupSelect" aria-label="Groupe actif"><option value="">Aucun groupe actif</option></select>
@@ -65,10 +65,10 @@
 
     <main class="content">
       <section id="view-dashboard" class="view active">
-        <div class="cahier-banner"><div><strong>Votre cockpit Eco-System</strong><p>Groupes, communautés, séances, situation personnelle, activités Live et actions utiles dans un seul espace.</p></div><span class="cahier-code">1.3.2 CONTROL · FORUM · LIVE</span></div>
+        <div class="cahier-banner"><div><strong>Votre cockpit Eco-System</strong><p>Groupes, communautés, séances, situation personnelle, activités Live et actions utiles dans un seul espace.</p></div><span class="cahier-code">1.3.3 FAIRNESS · ADOPS · DOCTOR</span></div>
         <div class="hero">
           <div>
-            <span class="eyebrow">Eco-System · Cahier Maître 3.0.0</span>
+            <span class="eyebrow">Eco-System · Cahier Maître 3.2.0</span>
             <h1>Gérer une tontine ou une association sans perdre sa réalité.</h1>
             <p>Créez votre groupe, préparez les séances, décrivez ses règles et suivez les encaissements enregistrés. Retrouvez les cotisations et leurs éventuelles annulations dans chaque relevé.</p>
           </div>
@@ -553,7 +553,7 @@
             <div class="two-col">
               <div>
                 <div class="form-grid">
-                  <label>Intérêts réellement encaissés à répartir<input id="yieldInterestPool" type="number" min="0" step="1" value="18500"></label>
+                  <label>Intérêts réellement encaissés à répartir<input id="yieldInterestPool" type="number" min="0" step="1" value="708500"><small>Exemple du dossier audité : 708 500 F. Remplacez par le pool réel du groupe.</small></label>
                   <label>Part Épargne classique %<input id="yieldClassicShare" type="number" min="0" max="100" step="0.1" value="70"></label>
                   <label>Part Épargne scolaire %<input id="yieldSchoolShare" type="number" min="0" max="100" step="0.1" value="10"></label>
                   <label>Indemnités / charges Bureau %<input id="yieldOfficeShare" type="number" min="0" max="100" step="0.1" value="20"></label>
@@ -561,7 +561,21 @@
                   <label>Dernière séance de l’exercice<input id="yieldEndSession" type="number" min="1" step="1" value="12"></label>
                 </div>
                 <h3>Coefficients historiques / décidés par le Bureau</h3><div id="yieldCoefficients" class="form-grid"></div>
-                <div class="actions"><button id="yieldWorkbookBtn" type="button" class="secondary">Reproduire le moteur Excel</button><button id="yieldProductiveBtn" type="button" class="primary">Calculer selon le capital réellement prêté</button></div>
+                <div class="actions">
+  <button id="yieldWorkbookBtn" type="button" class="secondary">1 · Reproduire la méthode historique</button>
+  <button id="yieldCapitalTimeBtn" type="button" class="primary">2 · Capital × Temps</button>
+  <button id="yieldProductiveBtn" type="button" class="secondary">3 · Productif attribué / hybride</button>
+  <button id="yieldDoctorBtn" type="button" class="link-btn">Diagnostic Group Doctor</button>
+</div>
+<div class="fairness-policy-grid">
+  <label>Fin de période éligible<input id="yieldEligibleThrough" type="number" min="1" step="1" value="10"><small>Ex. 9 si les dépôts après septembre ne participent plus.</small></label>
+  <label>Prime de précocité α<input id="yieldTimeExponent" type="number" min="0.1" max="5" step="0.1" value="1"><small>1 = linéaire ; >1 renforce les dépôts précoces.</small></label>
+  <label>Poids du montant β<input id="yieldAmountPowerFair" type="number" min="0.1" max="1" step="0.05" value="1"><small>1 = montant proportionnel ; <1 atténue les très gros dépôts.</small></label>
+  <label>Mélange des caisses<select id="yieldPoolingMode"><option value="POOLED">Épargne classique + scolaire mutualisées</option><option value="SEGREGATED">Caisses séparées</option><option value="CUSTOM_MATRIX">Matrice personnalisée par prêt</option></select></label>
+  <label>Résidu non attribué<select id="yieldResidualPolicy"><option value="TIME_WEIGHTED">Capital × Temps</option><option value="FIXED_FUND_SPLIT">Clé fixe du Bureau</option><option value="UNALLOCATED">Garder en attente de décision</option></select></label>
+  <label>Clé résiduelle classique %<input id="yieldResidualClassicShare" type="number" min="0" max="100" step="0.1" value="87.5"><small>À utiliser seulement si « clé fixe ».</small></label>
+</div>
+<p class="truth-notice"><strong>Rien n’est figé.</strong> Le Bureau peut conserver sa méthode, choisir Capital × Temps, distinguer ou mutualiser Épargne classique / scolaire, ou appliquer une matrice spécifique. Chaque simulation reste sans écriture financière jusqu’à validation humaine.</p>
                 <details>
                   <summary><strong>Comparer aussi l’ancien calcul simplifié</strong></summary>
                   <div class="form-grid">
@@ -601,6 +615,7 @@
                 <label class="check"><input id="yieldReinvestInterest" type="checkbox"><span>Les intérêts encaissés peuvent être reprêtés comme capital collectif</span></label>
               </div>
               <div id="yieldEventList" class="stack"></div>
+<p class="hint">Le moteur attribué regroupe les événements d’un même prêt. Si la source de financement n’est pas prouvée, Eco-System ne l’invente pas et signale le résidu.</p>
             </details>
             <div id="yieldResult" class="stack"></div>
             <p class="truth-notice">Aucun intérêt sur intérêt d’un emprunteur : un intérêt impayé ne rejoint jamais son capital. En revanche, un intérêt déjà réellement encaissé peut, si le groupe le décide, être réinvesti comme une nouvelle ressource collective distincte.</p>
@@ -812,26 +827,59 @@
 
         <section class="panel"><div class="section-kicker"><div><h2>AdManager & sponsoring</h2><p>Campagnes, créations, placements, ciblage contextuel et financier agrégé, modération et analytics. Aucun ciblage individuel par dette, solde, CNI ou identité.</p></div></div><div id="growthHub" class="hub-grid"></div></section>
         <section class="panel" id="adManagerPanel">
-          <div class="section-kicker"><div><h2>Studio AdManager</h2><p>Créez une campagne sandbox avant toute facturation réelle. Eco-System peut exploiter des centres d’intérêt, localités et tranches de masse monétaire <strong>agrégées au niveau du groupe/rubrique</strong>, jamais la situation financière personnelle d’un membre.</p></div></div>
-          <div class="two-col">
-            <form id="adCampaignForm" class="form-grid">
-              <h3>Nouvelle campagne</h3>
-              <label>Nom<input id="adCampaignName" required placeholder="Ex. Offre savons rentrée 2026"></label>
-              <label>Objectif<select id="adCampaignObjective"><option value="AWARENESS">Visibilité</option><option value="COMMUNITY_JOIN">Rejoindre une communauté</option><option value="EVENT_RSVP">Événement</option><option value="DEAL_OPEN">Ouvrir un deal</option><option value="GROUP_BUY">Achat groupé</option><option value="LEAD">Prospect qualifié</option><option value="PARTNER_PROGRAM">Programme partenaire/ONG</option></select></label>
-              <label>Budget sandbox (F CFA)<input id="adCampaignBudget" type="number" min="0" step="1" value="0"></label>
-              <label>Plafond / 7 jours<input id="adCampaignFrequency" type="number" min="1" max="50" value="3"></label>
-              <label>Placements<input id="adCampaignPlacements" value="FEED" placeholder="FEED, COMMUNITY, RECAP"></label>
-              <label>Localités<input id="adCampaignLocalities" placeholder="Yaoundé, Douala"></label>
-              <label>Centres d’intérêt<input id="adCampaignInterests" placeholder="épargne, agriculture, formation"></label>
-              <label>Types de rubriques<input id="adCampaignRubricKinds" placeholder="SAVINGS, TONTINE, SOLIDARITY"></label>
-              <label class="full">Tranches de volumes agrégés<input id="adCampaignVolumeBands" placeholder="SAVON:100000-500000, EPARGNE:1000000-5000000"></label>
-              <label>Titre créatif<input id="adCampaignHeadline" required></label>
-              <label>Action<input id="adCampaignCta" required placeholder="Voir l’offre"></label>
-              <label class="full">Message<textarea id="adCampaignBody" rows="3" required></textarea></label>
-              <label class="full">Destination interne<input id="adCampaignDestination" required placeholder="group-buy:..., community:..., partner-program:..."></label>
-              <button class="primary">Créer le brouillon sandbox</button>
-            </form>
-            <div><h3>Campagnes</h3><div id="adCampaignList" class="stack"></div></div>
+          <div class="section-kicker"><div><span class="eyebrow">AdOps · régie complète</span><h2>AdManager & Revenue Studio</h2><p>Inventaire, campagnes, créations, prospects annonceurs, auto-promotion Eco-System et mesure. La publicité reste native, faible-data et absente du cœur d’une action financière critique.</p></div><button id="adManagerRefreshBtn" type="button" class="link-btn">Actualiser la régie</button></div>
+          <div id="adKpis" class="metrics small"></div>
+          <div class="adops-tabs" role="tablist" aria-label="Régie publicitaire">
+            <button type="button" class="filter active" data-adops-tab="campaigns">Campagnes</button>
+            <button type="button" class="filter" data-adops-tab="inventory">Inventaire & placements</button>
+            <button type="button" class="filter" data-adops-tab="house">Pub Eco-System</button>
+            <button type="button" class="filter" data-adops-tab="prospects">Prospects annonceurs</button>
+          </div>
+          <div data-adops-panel="campaigns">
+            <div class="two-col">
+              <form id="adCampaignForm" class="form-grid">
+                <h3>Nouvelle campagne</h3>
+                <label>Nom<input id="adCampaignName" required placeholder="Ex. Offre savons rentrée 2026"></label>
+                <label>Objectif<select id="adCampaignObjective"><option value="AWARENESS">Visibilité</option><option value="COMMUNITY_JOIN">Rejoindre une communauté</option><option value="EVENT_RSVP">Événement</option><option value="DEAL_OPEN">Ouvrir un deal</option><option value="GROUP_BUY">Achat groupé</option><option value="LEAD">Prospect qualifié</option><option value="PARTNER_PROGRAM">Programme partenaire/ONG</option></select></label>
+                <label>Budget sandbox (F CFA)<input id="adCampaignBudget" type="number" min="0" step="1" value="0"></label>
+                <label>Plafond / 7 jours<input id="adCampaignFrequency" type="number" min="1" max="50" value="3"></label>
+                <label>Placements<select id="adCampaignPlacements" multiple size="5"><option value="HOME_AFTER_PRIORITIES">Accueil après priorités</option><option value="FEED_NATIVE">Fil natif</option><option value="FORUM_NATIVE">Forum natif</option><option value="MARKETPLACE_SPONSORED">Marketplace sponsorisée</option><option value="GROUP_SPONSOR">Sponsor de groupe</option><option value="REPORT_FOOTER">Rapport</option><option value="RECEIPT_FOOTER">Reçu</option><option value="NOTIFICATION_OPT_IN">Notification opt-in</option></select></label>
+                <label>Localités<input id="adCampaignLocalities" placeholder="Yaoundé, Douala"></label>
+                <label>Centres d’intérêt<input id="adCampaignInterests" placeholder="épargne, agriculture, formation"></label>
+                <label>Types de rubriques<input id="adCampaignRubricKinds" placeholder="SAVINGS, TONTINE, SOLIDARITY"></label>
+                <label class="full">Tranches de volumes agrégés<input id="adCampaignVolumeBands" placeholder="SAVON:100000-500000, EPARGNE:1000000-5000000"></label>
+                <label>Titre créatif<input id="adCampaignHeadline" required></label>
+                <label>Action<input id="adCampaignCta" required placeholder="Voir l’offre"></label>
+                <label class="full">Message<textarea id="adCampaignBody" rows="3" required></textarea></label>
+                <label class="full">Destination interne<input id="adCampaignDestination" required placeholder="group-buy:..., community:..., partner-program:..."></label>
+                <button class="primary">Créer le brouillon sandbox</button>
+              </form>
+              <div><h3>Campagnes</h3><div id="adCampaignList" class="stack"></div></div>
+            </div>
+          </div>
+          <div data-adops-panel="inventory" hidden>
+            <p class="truth-notice">Principe de rendement UX : une publicité ne doit jamais repousser une dette urgente, une validation, une réserve ou une opération financière. L’inventaire commercial commence après le contenu utile.</p>
+            <div id="adInventoryList" class="ad-placement-grid"></div>
+          </div>
+          <div data-adops-panel="house" hidden>
+            <p class="hint">Les espaces invendus servent d’abord à faire connaître les produits Eco-System : Fairness Lab, Group Doctor, Academy, Paper Bridge, achats groupés, services partenaires. Ces impressions « maison » sont séparées du revenu publicitaire.</p>
+            <div id="adHouseList" class="ad-placement-grid"></div>
+          </div>
+          <div data-adops-panel="prospects" hidden>
+            <div class="two-col">
+              <form id="adProspectForm" class="form-grid">
+                <h3>Pipeline annonceurs</h3>
+                <label>Organisation<input id="adProspectOrganization" required placeholder="Entreprise, boutique, ONG, sponsor…"></label>
+                <label>Catégorie<input id="adProspectCategory" placeholder="Banque, école, commerce, transport…"></label>
+                <label>Localité<input id="adProspectLocality" placeholder="Yaoundé"></label>
+                <label>Budget mensuel estimatif<input id="adProspectBudget" type="number" min="0" step="1"></label>
+                <label class="full">Source publique / référence<input id="adProspectSource" placeholder="Annuaire public, recommandation, salon, inbound…"></label>
+                <label class="full">Contact commercial public/consenti<input id="adProspectContact" placeholder="Email/téléphone professionnel public ou fourni"></label>
+                <label class="full">Note<textarea id="adProspectNote" rows="3"></textarea></label>
+                <button class="primary">Ajouter au pipeline</button>
+              </form>
+              <div><h3>Prospects & ventes</h3><div id="adProspectList" class="stack"></div></div>
+            </div>
           </div>
         </section>
         <section class="panel"><div class="section-kicker"><div><h2>Academy · ONG · IA · Safety · Paper Bridge</h2><p>Accompagnement des gestionnaires, connaissance, documents, anti-arnaque et pont papier ↔ numérique.</p></div></div><div id="guidanceHub" class="hub-grid"></div></section>
