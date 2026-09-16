@@ -52,10 +52,26 @@ jobs:
           test -s PROJECT_STATE.md
           test -s NEXT_RUN.md
           test -s FEATURE_REGISTRY.yaml
-          test -s docs/constitution/ECO_SYSTEM_Cahier_des_Charges_Maitre_Exhaustif_3.0.0_2026-09-16.md
+          test -s docs/constitution/ECO_SYSTEM_Cahier_des_Charges_Maitre_Exhaustif_3.1.0_2026-09-16.md
       - uses: actions/upload-artifact@v4
         with:
           name: eco-system-1.3.2-birplus
           path: /tmp/eco-backup/
           retention-days: 90
           if-no-files-found: error
+
+      - name: Mirror final BIR+ checkpoint to R2 when available
+        shell: bash
+        run: |
+          set -euo pipefail
+          if npx --yes wrangler@4 r2 bucket list | grep -Fq 'eco-system-backups'; then
+            PREFIX="birplus/1.3.2/${GITHUB_SHA}/final"
+            npx --yes wrangler@4 r2 object put "eco-system-backups/${PREFIX}/eco-system-1.3.2-source.tar.xz" --file /tmp/eco-backup/eco-system-1.3.2-source.tar.xz --remote
+            npx --yes wrangler@4 r2 object put "eco-system-backups/${PREFIX}/eco-system-production-d1.sql" --file /tmp/eco-backup/eco-system-production-d1.sql --remote
+            npx --yes wrangler@4 r2 object put "eco-system-backups/${PREFIX}/SHA256SUMS.txt" --file /tmp/eco-backup/SHA256SUMS.txt --remote
+            npx --yes wrangler@4 r2 object get "eco-system-backups/${PREFIX}/SHA256SUMS.txt" --file /tmp/final-r2-checksums.txt --remote
+            cmp /tmp/eco-backup/SHA256SUMS.txt /tmp/final-r2-checksums.txt
+            echo "Final BIR+ R2 mirror PASS"
+          else
+            echo "::warning::R2 bucket not available; GitHub Artifact remains the verified remote checkpoint."
+          fi
