@@ -221,6 +221,13 @@ export class ConnectedApplication {
   async previewSessionRecap(meetingId:string,input:any):Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/meetings/'+encodeURIComponent(meetingId)+'/recap-preview',{method:'POST',body:JSON.stringify(input)});}
   async previewClosingCarryover(input:any):Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/closing/carryover-preview',{method:'POST',body:JSON.stringify(input)});}
 
+  async founderControlCenter():Promise<any>{return this.request('/api/v1/founder/control-center');}
+  async createFounderIssue(input:any):Promise<any>{return this.request('/api/v1/founder/control-issues',{method:'POST',body:JSON.stringify(input)});}
+  async transitionFounderIssue(id:string,state:string,resolution=''):Promise<any>{return this.request('/api/v1/founder/control-issues/'+encodeURIComponent(id)+'/transition',{method:'POST',body:JSON.stringify({state,resolution})});}
+  async createFounderEditorial(input:any):Promise<any>{return this.request('/api/v1/founder/editorial',{method:'POST',body:JSON.stringify(input)});}
+  async transitionFounderEditorial(id:string,state:string,notes?:string):Promise<any>{return this.request('/api/v1/founder/editorial/'+encodeURIComponent(id)+'/transition',{method:'POST',body:JSON.stringify({state,notes})});}
+  async recordFounderServiceCheck(input:any):Promise<any>{return this.request('/api/v1/founder/service-checks',{method:'POST',body:JSON.stringify(input)});}
+
   async externalPrograms(kind?:'PARTNER'|'NGO'):Promise<any[]>{if(!this.activeGroupId)return[];const q=kind?'?kind='+encodeURIComponent(kind):'';return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/external-programs'+q);}
   async createExternalProgram(input:{kind:'PARTNER'|'NGO';partyName:string;programName:string;purpose:string;localities?:string[];tags?:string[];dataAccess?:'NONE'|'GROUP_AGGREGATE_ECONOMIC'}):Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/external-programs',{method:'POST',body:JSON.stringify(input)});}
   async transitionExternalProgram(id:string,state:'ACTIVE'|'PAUSED'|'COMPLETED'):Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/external-programs/'+encodeURIComponent(id)+'/transition',{method:'POST',body:JSON.stringify({state})});}
