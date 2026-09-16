@@ -17,7 +17,7 @@ Date : 2026-09-16
 - argent réel : **désactivé**
 - déploiement + smoke : run `35138597876` SUCCESS
 - migrations : **No migrations to apply**
-- BIR+ final pré-déploiement : run `35138465887` SUCCESS + snapshot R2 dans le workflow de déploiement.
+- BIR+ avant déploiement : run `35138465887` SUCCESS ; BIR+ de clôture post-déploiement : run `35139053215` SUCCESS ; snapshot pré-prod R2 également validé par le workflow de production.
 
 ## Livraison 1.3.3
 Déployés dans le code de production, avec tests CI :
