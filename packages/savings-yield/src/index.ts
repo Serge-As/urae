@@ -359,3 +359,298 @@ export function allocateCapitalAtWorkYield(input:CapitalAtWorkInput):CapitalAtWo
     ]
   };
 }
+
+
+/* -------------------------------------------------------------------------- */
+/*  Policy-driven fairness lab                                                 */
+/* -------------------------------------------------------------------------- */
+
+export type FundPoolingMode='SEGREGATED'|'POOLED'|'CUSTOM_MATRIX';
+export type ResidualYieldPolicy='TIME_WEIGHTED'|'FIXED_FUND_SPLIT'|'UNALLOCATED';
+
+export interface CapitalTimeDeposit extends CapitalAtWorkDeposit{
+  periodKey?:string;
+}
+export interface CapitalTimePolicy{
+  endSession:number;
+  /** Last session whose deposits are allowed to earn a yield. Defaults to endSession. */
+  eligibleThroughSession?:number;
+  /** 1 = linear time. >1 deliberately strengthens the premium for early deposits. */
+  timeExponent?:number;
+  /** 1 = amount fully proportional. Values below 1 soften domination by very large deposits. */
+  amountPower?:number;
+}
+export interface CapitalTimeYieldInput{
+  interestPool:number;
+  deposits:CapitalTimeDeposit[];
+  policy:CapitalTimePolicy;
+}
+export interface CapitalTimeYieldResult extends SavingsYieldResult{
+  timeExponent:number;
+  amountPower:number;
+  endSession:number;
+  eligibleThroughSession:number;
+}
+
+/**
+ * Transparent alternative to hand-tuned monthly coefficients.
+ * score = amount^amountPower × productive_time^timeExponent.
+ * With defaults (1,1), twice the amount or twice the eligible time gives twice the score.
+ */
+export function allocateCapitalTimeYield(input:CapitalTimeYieldInput):CapitalTimeYieldResult{
+  const pool=integer('interest_pool',input.interestPool);
+  if(!input.deposits.length)throw new Error('SAVINGS_DEPOSITS_REQUIRED');
+  const endSession=integer('end_session',input.policy.endSession,1);
+  const eligibleThroughSession=integer('eligible_through_session',input.policy.eligibleThroughSession??endSession,1);
+  if(eligibleThroughSession>endSession)throw new Error('ELIGIBLE_SESSION_AFTER_END');
+  const timeExponent=finite('time_exponent',input.policy.timeExponent??1,0);
+  const amountPower=finite('amount_power',input.policy.amountPower??1,0);
+  if(timeExponent<=0||timeExponent>5)throw new Error('INVALID_TIME_EXPONENT');
+  if(amountPower<=0||amountPower>1)throw new Error('INVALID_AMOUNT_POWER');
+  const seen=new Set<string>();
+  const deposits:SavingsDepositWeight[]=input.deposits.map(d=>{
+    if(!d.id||seen.has(d.id)||!d.memberId)throw new Error('INVALID_DEPOSIT_ID');seen.add(d.id);
+    integer('deposit_amount',d.amount,1);integer('deposit_session',d.session,1);
+    if(d.session>endSession)throw new Error('DEPOSIT_AFTER_END_SESSION');
+    const eligible=d.session<=eligibleThroughSession;
+    const productiveTime=eligible?Math.max(1,endSession-d.session+1):0;
+    const coefficient=eligible?Math.pow(productiveTime,timeExponent):0;
+    const score=eligible?Math.pow(d.amount,amountPower)*coefficient:0;
+    return{id:d.id,memberId:d.memberId,amount:d.amount,periodKey:d.periodKey??String(d.session),fund:d.fund,coefficient,score};
+  });
+  const grouped=new Map<string,{principal:number;score:number;count:number}>();
+  for(const d of deposits){
+    const row=grouped.get(d.memberId)??{principal:0,score:0,count:0};
+    row.principal+=d.amount;row.score+=d.score;row.count++;grouped.set(d.memberId,row);
+  }
+  const members=exactAllocate(pool,[...grouped.entries()].map(([memberId,row])=>({memberId,principal:row.principal,score:row.score,depositCount:row.count})));
+  const distributedInterest=members.reduce((n,m)=>n+m.interest,0);
+  return{
+    mode:'AMOUNT_TIME',interestPool:pool,totalPrincipal:deposits.reduce((n,d)=>n+d.amount,0),
+    totalWeightedScore:deposits.reduce((n,d)=>n+d.score,0),distributedInterest,undistributedInterest:pool-distributedInterest,
+    deposits,members,timeExponent,amountPower,endSession,eligibleThroughSession,
+    explanation:[
+      'Le poids est calculé directement à partir du montant et du temps : montant^β × durée^α.',
+      'α=1 et β=1 donnent une règle linéaire, facile à expliquer : plus tôt et plus élevé = plus de droits.',
+      'α>1 permet au groupe de privilégier encore davantage les dépôts précoces ; β<1 peut limiter la domination de très gros dépôts si le groupe le décide.',
+      'La date/session limite d’éligibilité est une politique du groupe et n’est jamais figée dans Eco-System.',
+      'Les derniers francs d’arrondi utilisent la méthode des plus grands restes afin que le pool soit conservé exactement.'
+    ]
+  };
+}
+
+export interface AttributedLoanCycle{
+  loanId:string;
+  disbursedSession:number;
+  principal:number;
+  /** Realized gross interest evidenced for this loan/cycle. */
+  realizedInterest:number;
+  /** Session where the evidenced principal is available again. Omit when still outstanding at closing. */
+  repaidSession?:number;
+  /** Required for SEGREGATED, optional for POOLED. */
+  sourceFund?:SavingsFund;
+  /** For CUSTOM_MATRIX, explicitly list the funds authorized to finance this loan. */
+  eligibleFunds?:SavingsFund[];
+}
+export interface AttributedProductivePolicy{
+  officeShareBasisPoints:number;
+  poolingMode:FundPoolingMode;
+  allocationMethod:CapitalAllocationMethod;
+  residualPolicy:ResidualYieldPolicy;
+  endSession:number;
+  eligibleThroughSession?:number;
+  timeExponent?:number;
+  amountPower?:number;
+  /** Used only when residualPolicy=FIXED_FUND_SPLIT. Saver fund shares must total 10000 bps. */
+  residualFundSharesBasisPoints?:Partial<Record<SavingsFund,number>>;
+}
+export interface AttributedProductiveInput{
+  realizedInterestPool:number;
+  deposits:CapitalTimeDeposit[];
+  loans:AttributedLoanCycle[];
+  policy:AttributedProductivePolicy;
+}
+export interface AttributedLoanTrace{
+  loanId:string;
+  principal:number;
+  grossInterest:number;
+  saverInterest:number;
+  disbursedSession:number;
+  repaidSession?:number;
+  allocations:Array<{lotId:string;memberId:string;fund:SavingsFund;amount:number}>;
+  fundPrincipal:Partial<Record<SavingsFund,number>>;
+}
+export interface AttributedProductiveResult{
+  realizedInterestPool:number;
+  officeIndemnity:number;
+  saverPool:number;
+  evidencedGrossInterest:number;
+  residualGrossInterest:number;
+  attributedSaverInterest:number;
+  residualSaverInterest:number;
+  unallocatedSaverInterest:number;
+  members:SavingsMemberAllocation[];
+  fundInterest:Partial<Record<SavingsFund,number>>;
+  loanTraces:AttributedLoanTrace[];
+  exactPoolConservation:boolean;
+  warnings:string[];
+  explanation:string[];
+}
+
+type ProductiveLot={
+  lotId:string;memberId:string;fund:SavingsFund;amount:number;available:number;session:number;
+};
+const integerAllocate=(pool:number,rows:Array<{key:string;score:number}>)=>{
+  integer('allocation_pool',pool);
+  if(pool===0)return rows.map(x=>({key:x.key,amount:0,exact:0}));
+  const total=rows.reduce((n,x)=>n+x.score,0);
+  if(total<=0)throw new Error('ZERO_WEIGHT_CANNOT_DISTRIBUTE_INTEREST');
+  const raw=rows.map((r,index)=>({index,key:r.key,score:r.score,exact:pool*r.score/total,amount:0,remainder:0}));
+  for(const r of raw){r.amount=Math.floor(r.exact);r.remainder=r.exact-r.amount;}
+  let left=pool-raw.reduce((n,x)=>n+x.amount,0);
+  raw.sort((a,b)=>b.remainder-a.remainder||b.score-a.score||a.key.localeCompare(b.key)||a.index-b.index);
+  for(let i=0;i<left;i++)raw[i%raw.length]!.amount++;
+  return raw.sort((a,b)=>a.index-b.index).map(({key,amount,exact})=>({key,amount,exact}));
+};
+
+/**
+ * Causal engine: each evidenced loan carries its own realized interest back to the
+ * savings lots that actually financed that loan. Unmatched interest is never invented;
+ * it follows an explicit residual policy chosen by the group/Bureau.
+ */
+export function allocateAttributedProductiveYield(input:AttributedProductiveInput):AttributedProductiveResult{
+  const total=integer('realized_interest_pool',input.realizedInterestPool),officeBps=integer('office_share_basis_points',input.policy.officeShareBasisPoints);
+  if(officeBps>10000)throw new Error('INVALID_OFFICE_SHARE');
+  const endSession=integer('end_session',input.policy.endSession,1);
+  const eligibleThroughSession=integer('eligible_through_session',input.policy.eligibleThroughSession??endSession,1);
+  if(eligibleThroughSession>endSession)throw new Error('ELIGIBLE_SESSION_AFTER_END');
+  if(!input.deposits.length)throw new Error('SAVINGS_DEPOSITS_REQUIRED');
+  const timeExponent=finite('time_exponent',input.policy.timeExponent??1,0),amountPower=finite('amount_power',input.policy.amountPower??1,0);
+  if(timeExponent<=0||timeExponent>5)throw new Error('INVALID_TIME_EXPONENT');
+  if(amountPower<=0||amountPower>1)throw new Error('INVALID_AMOUNT_POWER');
+  if(!['SEGREGATED','POOLED','CUSTOM_MATRIX'].includes(input.policy.poolingMode))throw new Error('INVALID_POOLING_MODE');
+  if(!['PRO_RATA_AVAILABLE','FIFO_AVAILABLE'].includes(input.policy.allocationMethod))throw new Error('INVALID_CAPITAL_ALLOCATION_METHOD');
+  if(!['TIME_WEIGHTED','FIXED_FUND_SPLIT','UNALLOCATED'].includes(input.policy.residualPolicy))throw new Error('INVALID_RESIDUAL_POLICY');
+
+  const poolSplit=splitInterestPool(total,[{key:'SAVERS',basisPoints:10000-officeBps},{key:'OFFICE',basisPoints:officeBps}]);
+  const saverPool=poolSplit.find(x=>x.key==='SAVERS')!.amount,officeIndemnity=poolSplit.find(x=>x.key==='OFFICE')!.amount;
+  const ids=new Set<string>(),lots:ProductiveLot[]=input.deposits.map(d=>{
+    if(!d.id||ids.has(d.id)||!d.memberId)throw new Error('INVALID_DEPOSIT_ID');ids.add(d.id);
+    integer('deposit_amount',d.amount,1);integer('deposit_session',d.session,1);
+    if(d.session>endSession)throw new Error('DEPOSIT_AFTER_END_SESSION');
+    return{lotId:d.id,memberId:d.memberId,fund:d.fund,amount:d.amount,available:0,session:d.session};
+  });
+  const loans=[...input.loans].sort((a,b)=>a.disbursedSession-b.disbursedSession||a.loanId.localeCompare(b.loanId));
+  const loanIds=new Set<string>();
+  for(const loan of loans){
+    if(!loan.loanId||loanIds.has(loan.loanId))throw new Error('INVALID_LOAN_ID');loanIds.add(loan.loanId);
+    integer('loan_principal',loan.principal,1);integer('loan_interest',loan.realizedInterest,0);integer('loan_session',loan.disbursedSession,1);
+    if(loan.disbursedSession>endSession)throw new Error('LOAN_AFTER_END_SESSION');
+    if(loan.repaidSession!==undefined){integer('loan_repaid_session',loan.repaidSession,loan.disbursedSession);if(loan.repaidSession>endSession)throw new Error('REPAYMENT_AFTER_END_SESSION');}
+    if(input.policy.poolingMode==='SEGREGATED'&&!loan.sourceFund)throw new Error('SOURCE_FUND_REQUIRED:'+loan.loanId);
+    if(input.policy.poolingMode==='CUSTOM_MATRIX'&&!(loan.eligibleFunds?.length))throw new Error('ELIGIBLE_FUNDS_REQUIRED:'+loan.loanId);
+  }
+  const evidencedGrossInterest=loans.reduce((n,l)=>n+l.realizedInterest,0);
+  if(evidencedGrossInterest>total)throw new Error('EVIDENCED_INTEREST_EXCEEDS_POOL');
+  const residualGrossInterest=total-evidencedGrossInterest;
+  const grossBuckets=[...loans.map(l=>({key:'loan:'+l.loanId,score:l.realizedInterest})),{key:'residual',score:residualGrossInterest}];
+  const saverByGross=integerAllocate(saverPool,grossBuckets.filter(x=>x.score>0));
+  const saverAmountFor=(key:string)=>saverByGross.find(x=>x.key===key)?.amount??0;
+
+  const memberInterest=new Map<string,number>(),memberPrincipal=new Map<string,number>(),memberCount=new Map<string,number>(),fundInterest:Partial<Record<SavingsFund,number>>={CLASSIC:0,SCHOOL:0};
+  for(const lot of lots){memberPrincipal.set(lot.memberId,(memberPrincipal.get(lot.memberId)??0)+lot.amount);memberCount.set(lot.memberId,(memberCount.get(lot.memberId)??0)+1);}
+  const traces:AttributedLoanTrace[]=[],warnings:string[]=[];
+  const returnedAt=new Map<number,Array<{lotId:string;amount:number}>>();
+  const activate=(session:number)=>{for(const l of lots)if(l.session===session&&l.available===0)l.available=l.amount;};
+  activate(1);
+  const allSessions=[...new Set(lots.map(x=>x.session).concat(loans.flatMap(x=>[x.disbursedSession,...(x.repaidSession?[x.repaidSession]:[])]),[endSession]))].sort((a,b)=>a-b);
+  const allocationByLoan=new Map<string,Array<{lotId:string;memberId:string;fund:SavingsFund;amount:number}>>();
+  for(const session of allSessions){
+    if(session>1)activate(session);
+    for(const r of returnedAt.get(session)??[]){const lot=lots.find(x=>x.lotId===r.lotId);if(lot)lot.available+=r.amount;}
+    for(const loan of loans.filter(x=>x.disbursedSession===session)){
+      const allowedFunds=input.policy.poolingMode==='POOLED'
+        ?new Set<SavingsFund>(['CLASSIC','SCHOOL'])
+        :input.policy.poolingMode==='SEGREGATED'
+          ?new Set<SavingsFund>([loan.sourceFund!])
+          :new Set<SavingsFund>(loan.eligibleFunds!);
+      const candidates=lots.filter(l=>l.available>0&&allowedFunds.has(l.fund)&&l.session<=eligibleThroughSession);
+      const available=candidates.reduce((n,l)=>n+l.available,0);
+      if(loan.principal>available)throw new Error('INSUFFICIENT_PRODUCTIVE_CAPITAL:'+loan.loanId);
+      const allocations:Array<{lotId:string;memberId:string;fund:SavingsFund;amount:number}>=[];
+      if(input.policy.allocationMethod==='FIFO_AVAILABLE'){
+        candidates.sort((a,b)=>a.session-b.session||a.lotId.localeCompare(b.lotId));let remaining=loan.principal;
+        for(const l of candidates){if(remaining<=0)break;const take=Math.min(l.available,remaining);l.available-=take;remaining-=take;allocations.push({lotId:l.lotId,memberId:l.memberId,fund:l.fund,amount:take});}
+      }else{
+        const parts=integerAllocate(loan.principal,candidates.map(l=>({key:l.lotId,score:l.available})));
+        for(const p of parts.filter(x=>x.amount>0)){const l=candidates.find(x=>x.lotId===p.key)!;l.available-=p.amount;allocations.push({lotId:l.lotId,memberId:l.memberId,fund:l.fund,amount:p.amount});}
+      }
+      allocationByLoan.set(loan.loanId,allocations);
+      if(loan.repaidSession!==undefined){
+        const list=returnedAt.get(loan.repaidSession)??[];for(const a of allocations)list.push({lotId:a.lotId,amount:a.amount});returnedAt.set(loan.repaidSession,list);
+      }
+      const saverInterest=saverAmountFor('loan:'+loan.loanId);
+      if(saverInterest>0){
+        const parts=integerAllocate(saverInterest,allocations.map(a=>({key:a.lotId,score:a.amount})));
+        for(const p of parts){
+          const a=allocations.find(x=>x.lotId===p.key)!;
+          memberInterest.set(a.memberId,(memberInterest.get(a.memberId)??0)+p.amount);
+          fundInterest[a.fund]=(fundInterest[a.fund]??0)+p.amount;
+        }
+      }
+      const fundPrincipal:Partial<Record<SavingsFund,number>>={};
+      for(const a of allocations)fundPrincipal[a.fund]=(fundPrincipal[a.fund]??0)+a.amount;
+      traces.push({loanId:loan.loanId,principal:loan.principal,grossInterest:loan.realizedInterest,saverInterest,disbursedSession:loan.disbursedSession,repaidSession:loan.repaidSession,allocations,fundPrincipal});
+    }
+  }
+
+  const residualSaverInterest=saverAmountFor('residual');let unallocatedSaverInterest=0;
+  if(residualSaverInterest>0){
+    if(input.policy.residualPolicy==='UNALLOCATED'){
+      unallocatedSaverInterest=residualSaverInterest;warnings.push('RESIDUAL_INTEREST_HELD_FOR_BUREAU_DECISION');
+    }else if(input.policy.residualPolicy==='TIME_WEIGHTED'){
+      const weights=lots.map(l=>({key:l.lotId,score:l.session<=eligibleThroughSession?Math.pow(l.amount,amountPower)*Math.pow(Math.max(1,endSession-l.session+1),timeExponent):0})).filter(x=>x.score>0);
+      const parts=integerAllocate(residualSaverInterest,weights);
+      for(const p of parts){const l=lots.find(x=>x.lotId===p.key)!;memberInterest.set(l.memberId,(memberInterest.get(l.memberId)??0)+p.amount);fundInterest[l.fund]=(fundInterest[l.fund]??0)+p.amount;}
+    }else{
+      const shares=input.policy.residualFundSharesBasisPoints??{};
+      const classic=integer('classic_residual_share',Number(shares.CLASSIC??0)),school=integer('school_residual_share',Number(shares.SCHOOL??0));
+      if(classic+school!==10000)throw new Error('RESIDUAL_FUND_SHARES_MUST_TOTAL_10000_BPS');
+      const split=splitInterestPool(residualSaverInterest,[{key:'CLASSIC',basisPoints:classic},{key:'SCHOOL',basisPoints:school}]);
+      for(const s of split){
+        if(s.amount===0)continue;const fund=s.key as SavingsFund;
+        const weights=lots.filter(l=>l.fund===fund&&l.session<=eligibleThroughSession).map(l=>({key:l.lotId,score:Math.pow(l.amount,amountPower)*Math.pow(Math.max(1,endSession-l.session+1),timeExponent)}));
+        if(!weights.length){unallocatedSaverInterest+=s.amount;warnings.push('NO_ELIGIBLE_DEPOSITS_FOR_RESIDUAL_FUND:'+fund);continue;}
+        const parts=integerAllocate(s.amount,weights);for(const p of parts){const l=lots.find(x=>x.lotId===p.key)!;memberInterest.set(l.memberId,(memberInterest.get(l.memberId)??0)+p.amount);fundInterest[l.fund]=(fundInterest[l.fund]??0)+p.amount;}
+      }
+    }
+  }
+  const members:SavingsMemberAllocation[]=[...memberPrincipal.entries()].map(([memberId,principal])=>({memberId,principal,weightedScore:0,exactInterest:memberInterest.get(memberId)??0,interest:memberInterest.get(memberId)??0,depositCount:memberCount.get(memberId)??0})).sort((a,b)=>b.interest-a.interest||a.memberId.localeCompare(b.memberId));
+  const attributedSaverInterest=traces.reduce((n,x)=>n+x.saverInterest,0);
+  const distributed=members.reduce((n,x)=>n+x.interest,0);
+  if(input.policy.poolingMode==='POOLED')warnings.push('CLASSIC_AND_SCHOOL_SAVINGS_MAY_FINANCE_THE_SAME_LOANS');
+  if(residualGrossInterest>0)warnings.push('UNATTRIBUTED_GROSS_INTEREST:'+residualGrossInterest);
+  return{
+    realizedInterestPool:total,officeIndemnity,saverPool,evidencedGrossInterest,residualGrossInterest,attributedSaverInterest,residualSaverInterest,unallocatedSaverInterest,
+    members,fundInterest,loanTraces:traces,exactPoolConservation:officeIndemnity+distributed+unallocatedSaverInterest===total,warnings,
+    explanation:[
+      'La part du Bureau est prélevée sur le pool réel selon la clé décidée par le groupe.',
+      'Chaque intérêt de prêt documenté est attribué aux lots d’épargne qui ont effectivement financé ce prêt.',
+      'Le principal remboursé revient aux mêmes lots et peut financer un prêt ultérieur : la propriété économique du capital n’est pas perdue.',
+      'Le mélange Épargne classique / Épargne scolaire est un paramètre explicite : séparé, mutualisé ou matrice personnalisée.',
+      'Les intérêts non rattachés à un prêt restent visibles comme résidu et suivent une politique explicite : pondération temps, clé fixe ou attente de décision.',
+      'Aucun lien prêt ↔ épargne n’est inventé lorsqu’il manque une preuve.'
+    ]
+  };
+}
+
+export interface YieldPolicyPreset{
+  id:string;labelFr:string;descriptionFr:string;recommendedWhen:string;requiresLoanEvidence:boolean;
+}
+export const SAVINGS_YIELD_POLICY_PRESETS:YieldPolicyPreset[]=[
+  {id:'LEGACY_COEFFICIENTS',labelFr:'Méthode historique à coefficients',descriptionFr:'Reproduit les coefficients décidés par le Bureau et la méthode du classeur.',recommendedWhen:'Le groupe veut conserver exactement sa méthode actuelle ou migrer un historique.',requiresLoanEvidence:false},
+  {id:'CAPITAL_TIME_LINEAR',labelFr:'Capital × temps (linéaire)',descriptionFr:'Le montant et la durée d’immobilisation comptent directement, sans coefficients arbitraires.',recommendedWhen:'Le groupe veut une règle simple, transparente et fortement explicable qui favorise naturellement les dépôts précoces.',requiresLoanEvidence:false},
+  {id:'CAPITAL_TIME_EARLY_BONUS',labelFr:'Capital × temps avec bonus de précocité',descriptionFr:'Même principe, avec un exposant temps > 1 décidé par le groupe pour renforcer la prime aux dépôts très précoces.',recommendedWhen:'Le groupe veut encourager explicitement les dépôts des premiers mois.',requiresLoanEvidence:false},
+  {id:'ATTRIBUTED_PRODUCTIVE',labelFr:'Capital réellement productif',descriptionFr:'Les intérêts documentés d’un prêt reviennent aux lots d’épargne qui ont réellement financé ce prêt.',recommendedWhen:'Le groupe peut tracer suffisamment bien prêts, sources de caisse, remboursements et intérêts.',requiresLoanEvidence:true},
+  {id:'HYBRID_PRODUCTIVE_TIME',labelFr:'Hybride productif + temps',descriptionFr:'Les intérêts attribuables suivent les prêts réels ; le résidu suit une pondération montant × temps ou reste en attente de décision.',recommendedWhen:'Les historiques sont partiellement traçables et le groupe veut éviter d’inventer les liens manquants.',requiresLoanEvidence:true}
+];
