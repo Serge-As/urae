@@ -17,7 +17,7 @@ export class CommercialPreferenceService{
 
   async consent(accountId:string,groupId:string):Promise<PersonalCommercialConsent>{
     const row=await this.db.prepare('SELECT account_id,group_id,granted,version,updated_at FROM commercial_preference_consents WHERE account_id=? AND group_id=?').bind(accountId,groupId).first<Record<string,unknown>>();
-    if(row){const stored=Number(row.granted)===1;return{accountId:String(row.account_id),groupId:String(row.group_id),granted:this.defaultGranted?true:stored,version:Number(row.version),updatedAt:String(row.updated_at)};}
+    if(row){const stored=Number(row.granted)===1;return{accountId:String(row.account_id),groupId:String(row.group_id),granted:stored,version:Number(row.version),updatedAt:String(row.updated_at)};}
     return{accountId,groupId,granted:this.defaultGranted,version:0,updatedAt:''};
   }
 

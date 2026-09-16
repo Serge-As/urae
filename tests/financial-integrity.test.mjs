@@ -47,7 +47,7 @@ test('file repository persists workspaces and one atomic financial operation acr
  const dir=fs.mkdtempSync(path.join(os.tmpdir(),'eco-integrity-'));const file=path.join(dir,'db.json');
  try{const repo=new FilePlatformRepository(file);const{ledger,input}=await setup(repo);await Promise.all([ledger.recordCashContribution(input),ledger.recordCashContribution(input)]);
  await repo.saveWorkspaceRecord({id:'workspace',tenantId:'integrity',moduleId:'COMMUNITY.FORUM',title:'Meeting notes',status:'ACTIVE',tags:[],data:{},createdBy:'owner',createdAt:'2026-09-12',updatedAt:'2026-09-12'});
- const restored=new FilePlatformRepository(file);assert.equal((await restored.listContributionReceipts(input.tenantId,input.groupId)).length,1);assert.equal((await restored.listWorkspaceRecords('integrity')).length,1);
+ const restored=new FilePlatformRepository(file);assert.equal((await restored.listContributionReceipts(input.tenantId,input.groupId)).length,1);const workspaces=await restored.listWorkspaceRecords('integrity');assert.equal(workspaces.length,2);assert.ok(workspaces.some(x=>x.moduleId==='FINANCE.LIVE_PROJECTION'));assert.ok(workspaces.some(x=>x.moduleId==='COMMUNITY.FORUM'));
  }finally{fs.rmSync(dir,{recursive:true,force:true});}
 });
 test('two simultaneous sync requests send each queued intent once and identity keys remain separate',async()=>{

@@ -64,6 +64,7 @@ export class FilePlatformRepository {
       this.#upsert('ledgerEntries',e);
       if(operation.receipt)this.#upsert('receipts',operation.receipt);
       this.#upsert('audits',operation.audit);
+      for(const record of operation.outboxRecords??[])this.#upsert('workspaceRecords',record);
       this.data.financialOperations[key]=clone(operation);
       return operation;
     });

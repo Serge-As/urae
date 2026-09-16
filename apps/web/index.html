@@ -53,6 +53,7 @@
       <button data-view="launch" class="nav-btn"><span>＋</span><b>Créer / intégrer</b></button>
       <button data-view="operations" class="nav-btn"><span>☷</span><b>Réunion</b></button>
       <button data-view="finance" class="nav-btn"><span>₣</span><b>Finances</b></button>
+      <button data-view="tontines" class="nav-btn"><span>↻</span><b>Tontines</b></button>
       <button id="recapNavBtn" data-view="recap" class="nav-btn" hidden><span>▤</span><b>Recap</b></button>
       <span class="nav-caption">Écosystème</span>
       <button data-view="ecosystem" class="nav-btn"><span>◎</span><b>Communauté & économie</b></button>
@@ -546,9 +547,64 @@
             </div>
           </details>
 
+          <section class="panel" id="savingsYieldLab">
+            <div class="section-kicker"><div><h2>Répartition des intérêts d’Épargne</h2><p>Chaque dépôt garde son propre montant, sa propre période et le coefficient choisi par le Bureau. La simulation redistribue exactement 100 % de l’enveloppe indiquée, au franc près.</p></div></div>
+            <div class="two-col">
+              <div>
+                <div class="form-grid">
+                  <label>Enveloppe réelle d’intérêts à distribuer<input id="yieldInterestPool" type="number" min="0" step="1" value="18500"></label>
+                  <label>Modèle<select id="yieldMode"><option value="EXACT_WEIGHTED_DEPOSITS">Recommandé — dépôts pondérés exacts</option><option value="LEGACY_COEFFICIENTS">Compatibilité ancien Excel</option><option value="AMOUNT_TIME">Montant × temps</option><option value="HYBRID_TIME_AMOUNT">Hybride temps/montant</option></select></label>
+                  <label>Puissance montant (mode hybride)<input id="yieldAmountPower" type="number" min="0.1" max="1" step="0.05" value="0.75"></label>
+                </div>
+                <h3>Coefficients du Bureau</h3><div id="yieldCoefficients" class="form-grid"></div>
+                <div class="actions"><button id="yieldPreviewBtn" type="button" class="primary">Simuler la répartition</button><button id="yieldLegacySplitBtn" type="button" class="secondary">Voir partage 70 % / 10 % / 20 %</button></div>
+              </div>
+              <div>
+                <form id="yieldDepositForm" class="form-grid">
+                  <h3>Ajouter un dépôt</h3>
+                  <label>Membre<select id="yieldDepositMember" required></select></label>
+                  <label>Période<select id="yieldDepositPeriod" required></select></label>
+                  <label>Montant<input id="yieldDepositAmount" type="number" min="1" step="1" required></label>
+                  <button class="secondary">Ajouter le dépôt</button>
+                </form>
+                <div id="yieldDepositList" class="stack"></div>
+              </div>
+            </div>
+            <div id="yieldResult" class="stack"></div>
+            <p class="truth-notice">Aucun intérêt sur intérêt : l’intérêt impayé d’un prêt reste séparé du capital et ne devient jamais une nouvelle assiette d’intérêts.</p>
+          </section>
+
           <section class="panel"><div class="panel-head"><div><h2>Ledger</h2><p>Vérité financière canonique.</p></div></div><div id="ledgerMetrics" class="metrics small"></div><div id="receiptList" class="table-list"></div></section>
           <section class="panel"><div class="section-kicker"><div><h2>Prêts, épargne, tontines et assistance</h2><p>Les flux spécialisés restent séparés, puis se réconcilient dans le ledger canonique.</p></div></div><div id="financeHub" class="hub-grid"></div></section>
         </div>
+      </section>
+
+      <section id="view-tontines" class="view">
+        <div class="page-head"><div><span class="eyebrow">Gestion permanente du groupe</span><h1>Tontines</h1><p>Chaque tontine reste indépendante : participants, parts, calendrier, pots et historique. Ajouter un retardataire ou reprogrammer un tour futur ne réécrit jamais les pots déjà servis.</p></div><div class="page-meta"><span class="pill">Parts</span><span class="pill">Tours</span><span class="pill">Ledger</span></div></div>
+        <div class="two-col">
+          <section class="panel">
+            <form id="tontineCycleForm" class="form-grid">
+              <h2>Nouveau cycle</h2>
+              <label>Rubrique Tontine<select id="tontineCycleRubric" required></select></label>
+              <label>Nom du cycle<input id="tontineCycleName" required placeholder="Ex. Tontine 10 000 — exercice 2027"></label>
+              <label>Nombre de tours<input id="tontineCycleRounds" type="number" min="1" step="1" required></label>
+              <label>Pots servis par tour<input id="tontineCyclePots" type="number" min="1" step="1" value="1" required></label>
+              <label>Montant indicatif du pot<input id="tontineCycleAmount" type="number" min="1" step="1"></label>
+              <button class="primary">Créer le cycle</button>
+            </form>
+          </section>
+          <section class="panel">
+            <form id="tontineShareForm" class="form-grid">
+              <h2>Ajouter une part</h2>
+              <label>Cycle<select id="tontineShareCycle" required></select></label>
+              <label>Membre<select id="tontineShareMember" required></select></label>
+              <label>Nom de la part<input id="tontineShareLabel" required placeholder="Ex. Pauline — Part 2"></label>
+              <button class="primary">Ajouter la part</button>
+            </form>
+            <p class="truth-notice">Une part servie exige désormais une vraie écriture du Ledger canonique. Une simple référence texte ne peut plus marquer un pot comme payé.</p>
+          </section>
+        </div>
+        <section class="panel"><div class="panel-head"><div><h2>Cycles, parts et calendrier</h2><p>Programmer, reprogrammer, servir ou annuler avec historique versionné.</p></div></div><div id="tontineManagerList" class="stack"></div></section>
       </section>
 
       <section id="view-recap" class="view">
@@ -698,7 +754,50 @@
         </section>
 
         <section class="panel"><div class="section-kicker"><div><h2>Marché, fournisseurs & Business Studio</h2><p>Achats groupés, appels d’offres, marketplace et activités économiques.</p></div></div><div id="marketHub" class="hub-grid"></div></section>
-        <section class="panel"><div class="section-kicker"><div><h2>AdManager & sponsoring</h2><p>Campagnes, créations, placements, ciblage respectueux, modération et analytics.</p></div></div><div id="growthHub" class="hub-grid"></div></section>
+        <section class="panel" id="externalProgramsPanel">
+          <div class="section-kicker"><div><h2>Partenaires · ONG · Programmes</h2><p>Formalisez l'accompagnement d'un groupe par une ONG, un partenaire financier, un fournisseur, une assurance, un opérateur ou un autre acteur. Le partage financier reste agrégé au niveau du groupe pseudonymisé.</p></div></div>
+          <div class="two-col">
+            <form id="externalProgramForm" class="form-grid">
+              <h3>Créer un programme</h3>
+              <label>Nature<select id="externalProgramKind"><option value="PARTNER">Partenaire</option><option value="NGO">ONG / programme d'accompagnement</option></select></label>
+              <label>Organisation<input id="externalPartyName" required placeholder="Ex. institution financière, ONG, fournisseur"></label>
+              <label>Programme / offre<input id="externalProgramName" required placeholder="Ex. Financement achats groupés"></label>
+              <label class="full">Objet<textarea id="externalProgramPurpose" rows="3" required placeholder="Ce que le partenaire apporte au groupe et ce qui est attendu"></textarea></label>
+              <label>Localités<input id="externalProgramLocalities" placeholder="Yaoundé, Douala"></label>
+              <label>Thèmes<input id="externalProgramTags" placeholder="épargne, savon, agriculture, formation"></label>
+              <label class="full">Données accessibles<select id="externalProgramDataAccess"><option value="NONE">Aucune donnée financière partagée</option><option value="GROUP_AGGREGATE_ECONOMIC">Profil économique agrégé du groupe pseudonymisé</option></select></label>
+              <button class="primary">Créer le brouillon</button>
+            </form>
+            <div><h3>Programmes actifs et dossiers partagés</h3><div id="externalProgramList" class="stack"></div></div>
+          </div>
+          <div class="panel-head"><div><h3>Profil économique du groupe</h3><p>Exemple : ECO-GRP-… · Tontine Savons 150 000 F. Aucun nom de membre ni solde individuel.</p></div></div>
+          <div id="economicProfilePreview" class="stack"></div>
+        </section>
+
+        <section class="panel"><div class="section-kicker"><div><h2>AdManager & sponsoring</h2><p>Campagnes, créations, placements, ciblage contextuel et financier agrégé, modération et analytics. Aucun ciblage individuel par dette, solde, CNI ou identité.</p></div></div><div id="growthHub" class="hub-grid"></div></section>
+        <section class="panel" id="adManagerPanel">
+          <div class="section-kicker"><div><h2>Studio AdManager</h2><p>Créez une campagne sandbox avant toute facturation réelle. Eco-System peut exploiter des centres d’intérêt, localités et tranches de masse monétaire <strong>agrégées au niveau du groupe/rubrique</strong>, jamais la situation financière personnelle d’un membre.</p></div></div>
+          <div class="two-col">
+            <form id="adCampaignForm" class="form-grid">
+              <h3>Nouvelle campagne</h3>
+              <label>Nom<input id="adCampaignName" required placeholder="Ex. Offre savons rentrée 2026"></label>
+              <label>Objectif<select id="adCampaignObjective"><option value="AWARENESS">Visibilité</option><option value="COMMUNITY_JOIN">Rejoindre une communauté</option><option value="EVENT_RSVP">Événement</option><option value="DEAL_OPEN">Ouvrir un deal</option><option value="GROUP_BUY">Achat groupé</option><option value="LEAD">Prospect qualifié</option><option value="PARTNER_PROGRAM">Programme partenaire/ONG</option></select></label>
+              <label>Budget sandbox (F CFA)<input id="adCampaignBudget" type="number" min="0" step="1" value="0"></label>
+              <label>Plafond / 7 jours<input id="adCampaignFrequency" type="number" min="1" max="50" value="3"></label>
+              <label>Placements<input id="adCampaignPlacements" value="FEED" placeholder="FEED, COMMUNITY, RECAP"></label>
+              <label>Localités<input id="adCampaignLocalities" placeholder="Yaoundé, Douala"></label>
+              <label>Centres d’intérêt<input id="adCampaignInterests" placeholder="épargne, agriculture, formation"></label>
+              <label>Types de rubriques<input id="adCampaignRubricKinds" placeholder="SAVINGS, TONTINE, SOLIDARITY"></label>
+              <label class="full">Tranches de volumes agrégés<input id="adCampaignVolumeBands" placeholder="SAVON:100000-500000, EPARGNE:1000000-5000000"></label>
+              <label>Titre créatif<input id="adCampaignHeadline" required></label>
+              <label>Action<input id="adCampaignCta" required placeholder="Voir l’offre"></label>
+              <label class="full">Message<textarea id="adCampaignBody" rows="3" required></textarea></label>
+              <label class="full">Destination interne<input id="adCampaignDestination" required placeholder="group-buy:..., community:..., partner-program:..."></label>
+              <button class="primary">Créer le brouillon sandbox</button>
+            </form>
+            <div><h3>Campagnes</h3><div id="adCampaignList" class="stack"></div></div>
+          </div>
+        </section>
         <section class="panel"><div class="section-kicker"><div><h2>Academy · ONG · IA · Safety · Paper Bridge</h2><p>Accompagnement des gestionnaires, connaissance, documents, anti-arnaque et pont papier ↔ numérique.</p></div></div><div id="guidanceHub" class="hub-grid"></div></section>
         <section class="panel"><div class="section-kicker"><div><h2>Rapports, recherche, calendrier et intégrations</h2><p>Exports, dashboards, notifications et connecteurs.</p></div></div><div id="reportsHub" class="hub-grid"></div></section>
         <section class="panel">

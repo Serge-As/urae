@@ -17,6 +17,10 @@ import { mountDetailUI } from './detail-ui.js';
 import { mountPersonalCockpitUI } from './personal-cockpit-ui.js';
 import { mountRecapUI } from './recap-ui.js';
 import { mountInterestCommunityUI } from './interest-community-ui.js';
+import { mountAdManagerUI } from './ad-manager-ui.js';
+import { mountTontineManagerUI } from './tontine-manager-ui.js';
+import { mountSavingsYieldUI } from './savings-yield-ui.js';
+import { mountExternalProgramsUI } from './external-programs-ui.js';
 let uiLocale = 'fr';
 try { uiLocale = localStorage.getItem('tontine.locale') === 'en' ? 'en' : 'fr'; } catch {}
 const tx = (fr,en) => runtimeTranslate(uiLocale,fr,en);
@@ -122,6 +126,10 @@ const detailUI = mountDetailUI({ app, navigate: go, getGroups: () => groups, get
 const personalCockpitUI = mountPersonalCockpitUI({ app, getGroups: () => groups, getMembers: () => members, getMeetings: () => meetings, navigate: go, fmt, date, showError: fail });
 const recapUI = mountRecapUI({ app, getGroups: () => groups, getMembers: () => members, getMeetings: () => meetings, getRubrics: () => rubrics, isManager, navigate: go, fmt, date, showError: fail });
 const interestCommunityUI = mountInterestCommunityUI({ app, notify: toast, showError: fail, date });
+const adManagerUI = mountAdManagerUI({ app, notify: toast, showError: fail, isManager, fmt });
+const tontineManagerUI = mountTontineManagerUI({ app, getRubrics: () => rubrics, getMembers: () => members, notify: toast, showError: fail, fmt, isManager });
+const savingsYieldUI = mountSavingsYieldUI({ app, getMembers: () => members, notify: toast, showError: fail, fmt, isManager });
+const externalProgramsUI = mountExternalProgramsUI({ app, notify: toast, showError: fail, isManager, fmt });
 const renderConnectivity = () => { const online = navigator.onLine; const e = $('#connectivity'); e.textContent = `● ${online ? tx('En ligne','Online') : tx('Hors ligne','Offline')}`; e.className = `pill ${online ? 'online' : 'offline'}`; app.setConnectivity(online ? 'online' : 'offline'); };
 const renderUniverse = async () => {
     const u = await app.universe();
@@ -469,8 +477,12 @@ const specializedRoute = (id) => {
         return 'operations';
     if (id.startsWith('LEDGER.') || id.startsWith('FINANCE.') || id.startsWith('SAVINGS.') || id.startsWith('LOAN.') || id.startsWith('SOLIDARITY.'))
         return 'finance';
+    if (id.startsWith('ADS.'))
+        return 'ecosystem';
     if (id.startsWith('OFFLINE.') || id.startsWith('SUPPORT.') || id.startsWith('EXPERIENCE.UNIVERSAL_INBOX'))
         return 'inbox';
+    if (id.startsWith('PARTNERS.') || id === 'LEARNING.NGO' || id.startsWith('ADS.'))
+        return 'ecosystem';
     if (id.startsWith('SECURITY.') || id.startsWith('BACKUP.') || id.startsWith('OBSERVABILITY.') || id.startsWith('COMPATIBILITY.') || id.startsWith('DATA.'))
         return 'settings';
     return undefined;
@@ -607,7 +619,7 @@ const refreshGroupContext = async () => {
     $('#financeContent').style.display = active ? 'block' : 'none';
     $('#noActiveGroupFinance').style.display = active ? 'none' : 'block';
     const manage=active && isManager();
-    for(const id of ['memberForm','meetingForm','latePolicyForm','rubricForm','contributionForm','cashboxForm','publishDiscoveryForm','workspaceForm'])$( '#'+id).hidden=active && !manage;
+    for(const id of ['memberForm','meetingForm','latePolicyForm','rubricForm','contributionForm','cashboxForm','publishDiscoveryForm','workspaceForm','tontineCycleForm','tontineShareForm','adCampaignForm'])$( '#'+id).hidden=active && !manage;
     if (active) {
         await renderMembers();
         await renderMeetings();
@@ -627,6 +639,10 @@ const refreshGroupContext = async () => {
     await personalCockpitUI.refresh();
     await recapUI.refresh();
     await interestCommunityUI.refresh();
+    await adManagerUI.refresh();
+    await tontineManagerUI.refresh();
+    await savingsYieldUI.refresh();
+    await externalProgramsUI.refresh();
 };
 const refreshAll = async () => { await refreshGroupContext(); renderOutbox(); renderCompatibility(); renderKernel(); renderModules(); renderEcosystemHighlights(); renderDomainHubs(); await detailUI.openFromLocation?.(); };
 $('#activeGroupSelect').addEventListener('change', async (e) => { const id = e.target.value; app.selectGroup(id || undefined); try {

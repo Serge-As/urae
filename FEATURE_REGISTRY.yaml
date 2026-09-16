@@ -1,5 +1,5 @@
 registry_version: 1
-project_version: 1.1.2-qualified-local
+project_version: 1.3.1-recovery-recap-services
 source_of_truth: docs/constitution + verified_code
 
 capabilities:
@@ -721,3 +721,76 @@ local_qualification_2026_09_13:
   production_deployed: false
   real_money_enabled: false
   specialized_payout_engine: pending
+
+
+  # 1.3.1 — recovery/recap/services qualified additions
+  - id: LIVE.PREMIUM.GROUP_COORDINATION
+    domain: live
+    status: VERIFIED_REMOTE_PILOT
+    risk_class: financial_critical
+    offline_policy: canonical_finance_in_d1_projection_queue_retry
+    audit_event: FINANCIAL_PROJECTION_LIVE
+    tests: [live-replay-after-500,financial-projection-outbox,live-pilot-end-to-end]
+  - id: RUBRIC.POLICIES.COMPOSABLE
+    domain: rubrics
+    status: FUNCTIONAL_BETA
+    risk_class: high
+    offline_policy: draft_allowed_activation_governed
+    audit_event: RUBRIC_POLICIES_UPDATED
+    tests: [rubric-policy-draft,launch-policy-materialization]
+  - id: TONTINE.PERMANENT_MANAGER
+    domain: rotating-tontine
+    status: FUNCTIONAL_BETA
+    risk_class: financial_critical
+    offline_policy: read_cached_mutation_server_authoritative
+    audit_event: TONTINE_SHARE_TRANSITION
+    tests: [tontine-ledger-proof,completion-suite]
+  - id: SAVINGS.YIELD.PER_DEPOSIT
+    domain: savings
+    status: FUNCTIONAL_BETA
+    risk_class: financial_critical
+    offline_policy: simulation_local_possible_posting_separate
+    audit_event: NONE_PREVIEW
+    tests: [savings-yield-exact-pool,savings-yield-per-deposit]
+  - id: RECAP.FINANCIAL.ENGINE
+    domain: reporting
+    status: FUNCTIONAL_BETA
+    risk_class: financial_critical
+    offline_policy: preview_allowed_closing_server_authoritative
+    audit_event: RECAP_ADJUSTMENT_WHEN_PERSISTED
+    tests: [financial-recap,session-recap,closing-carryover]
+  - id: IDENTITY.CNI.HMAC_MATCHING
+    domain: identity
+    status: FUNCTIONAL_BETA
+    risk_class: privacy_critical
+    offline_policy: server_only
+    audit_event: IDENTITY_PROOF_MATCHED
+    tests: [identity-proof-cni-no-raw-storage]
+  - id: ECONOMIC.GROUP.AGGREGATE_PROFILE
+    domain: economic-intelligence
+    status: FUNCTIONAL_BETA
+    risk_class: privacy_critical
+    offline_policy: cached_aggregate_only
+    audit_event: AGGREGATE_ECONOMIC_SHARE_ISSUED
+    tests: [economic-profile-pseudonymous,external-program-share]
+  - id: ADS.MANAGER.SPECIALIZED
+    domain: advertising
+    status: FUNCTIONAL_BETA
+    risk_class: privacy_critical
+    offline_policy: draft_allowed_activation_server_authoritative
+    audit_event: AD_CAMPAIGN_STATE_CHANGED
+    tests: [ad-manager-lifecycle,ad-targeting-sensitive-block]
+  - id: PARTNERS.NGO.PROGRAMS
+    domain: partnerships
+    status: FUNCTIONAL_BETA
+    risk_class: privacy_critical
+    offline_policy: cached_records_only_sharing_server_authoritative
+    audit_event: EXTERNAL_PROGRAM_CREATED_AGGREGATE_ECONOMIC_SHARE_ISSUED
+    tests: [external-programs-governed,external-share-aggregate-only]
+  - id: ECONOMIC.DEMAND.EXCHANGE.CORE
+    domain: economy
+    status: FUNCTIONAL_BETA
+    risk_class: medium
+    offline_policy: deterministic_aggregation_possible
+    audit_event: NONE_ENGINE_ONLY
+    tests: [aggregate-demand,supplier-ranking,unit-economics]

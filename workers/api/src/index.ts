@@ -3,7 +3,7 @@ import { D1PlatformRepository, InMemoryPlatformRepository, type D1DatabaseLike, 
 import { FoundationService, LedgerService, MeetingService, starterGroupOperatingPolicy } from '../../../packages/domain/src/index.js';
 import { DiscoveryService, MembershipGatewayService } from '../../../packages/discovery/src/index.js';
 import { RubricKnowledgeService } from '../../../packages/rubrics/src/index.js';
-import { makeId, type OutboxItem, type GroupOperatingPolicy, type ProjectCapability, type RubricOperatingModel, type WorkspaceRecord, type WorkspaceStatus } from '../../../packages/contracts/src/index.js';
+import { makeId, type OutboxItem, type GroupOperatingPolicy, type ProjectCapability, type RubricOperatingModel, type RubricPolicies, type WorkspaceRecord, type WorkspaceStatus } from '../../../packages/contracts/src/index.js';
 import { PRODUCT_MODULES, PRODUCT_CAPABILITY_COUNT } from '../../../packages/module-registry/src/index.js';
 import {
   CompletionSuiteService, COMPLETION_WORKFLOWS, buildLoanSchedule, applyLoanPayment, compareRules,
@@ -20,6 +20,12 @@ import { CommunityService } from '../../../packages/community/src/index.js';
 import { FounderLearningStore } from '../../../packages/founder-observatory/src/index.js';
 import { CommercialPreferenceService, preferenceCookie, clearPreferenceCookie, readPreferenceCookie } from '../../../packages/commercial-preferences/src/index.js';
 import { MiscRubricService } from '../../../packages/misc-rubrics/src/index.js';
+import { allocateSavingsYield, splitInterestPool } from '../../../packages/savings-yield/src/index.js';
+import { buildFinancialRecap, buildSessionRecap, buildClosingCarryover } from '../../../packages/recap-engine/src/index.js';
+import { AdManagerService } from '../../../packages/ad-manager/src/index.js';
+import { EconomicIntelligenceService } from '../../../packages/economic-intelligence/src/index.js';
+import { ExternalProgramsService, type ExternalProgramKind, type ExternalProgramState, type AggregateDataAccess } from '../../../packages/external-programs/src/index.js';
+import { IdentityProofService } from '../../../packages/identity-proof/src/index.js';
 import { GroupPairingService } from '../../../packages/group-pairing/src/index.js';
 import { InterestCommunityService } from '../../../packages/interest-communities/src/index.js';
 import { EcoPulseService, type EngagementAction, type RecommendationCandidate } from '../../../packages/ecopulse/src/index.js';
@@ -71,10 +77,13 @@ const createRequestScope = (request:Request,repo:PlatformRepository,artifacts?:A
   const groupIdentity=new GroupIdentityService(repo,kernel);
   const conciergeLearning=new ConciergeLearningService(repo,kernel,dataUseDefaultMode);
   const miscRubrics=new MiscRubricService(repo,kernel,ledger);
+  const adManager=new AdManagerService(repo,kernel);
+  const economicIntelligence=new EconomicIntelligenceService(repo,kernel);
+  const externalPrograms=new ExternalProgramsService(repo,kernel);
   const tenantId=request.headers.get('x-tenant-id')??'tenant_demo'; const actorId=request.headers.get('x-actor-id')??'user_founder';
   const groupRoles=(request.headers.get('x-group-roles')??'founder,manager').split(',').map(x=>x.trim()).filter(Boolean);
   kernel.context.set({actorId,tenantId,activeGroupId:request.headers.get('x-active-group-id')??undefined,groupRoles,mandateIds:[],deviceId:request.headers.get('x-device-id')??'device_web_demo',sessionId:request.headers.get('x-session-id')??'session_demo',locale:request.headers.get('accept-language')?.toLowerCase().startsWith('en')?'en':'fr',timezone:request.headers.get('x-timezone')??'Africa/Douala',connectivity:'online',requestId:request.headers.get('x-request-id')??makeId('req')});
-  return {kernel,foundation,ledger,meetings,discovery,membershipGateway,rubrics,completion,explainability,documents,receivables,treasury,riskFinance,market,community,imports,memberControl,groupIdentity,conciergeLearning,miscRubrics};
+  return {kernel,foundation,ledger,meetings,discovery,membershipGateway,rubrics,completion,explainability,documents,receivables,treasury,riskFinance,market,community,imports,memberControl,groupIdentity,conciergeLearning,miscRubrics,adManager,economicIntelligence,externalPrograms};
 };
 
 const inboxFor = async (repo:PlatformRepository,tenantId:string,actorId:string) => {
@@ -83,13 +92,13 @@ const inboxFor = async (repo:PlatformRepository,tenantId:string,actorId:string) 
   return [...obligations,...cases];
 };
 
-export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{artifacts?:ArtifactStoreLike;liveNamespace?:DurableObjectNamespaceLike;premiumLive?:boolean;founderLearning?:FounderLearningStore;founderTeamActors?:Set<string>;commercialPreferences?:CommercialPreferenceService;groupPairing?:GroupPairingService;interestCommunities?:InterestCommunityService;ecoPulse?:EcoPulseService;dataUseDefaultMode?:DataUseDefaultMode}={}) => async (request:Request):Promise<Response> => {
+export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{artifacts?:ArtifactStoreLike;liveNamespace?:DurableObjectNamespaceLike;premiumLive?:boolean;founderLearning?:FounderLearningStore;founderTeamActors?:Set<string>;commercialPreferences?:CommercialPreferenceService;groupPairing?:GroupPairingService;interestCommunities?:InterestCommunityService;ecoPulse?:EcoPulseService;identityProof?:IdentityProofService;dataUseDefaultMode?:DataUseDefaultMode}={}) => async (request:Request):Promise<Response> => {
   const url=new URL(request.url); const cors=corsHeaders(request);
   if(request.method==='OPTIONS'){
     const allowed=Boolean((cors as Record<string,string>)['access-control-allow-origin']);
     return new Response(null,{status:allowed?204:403,headers:{...baseSecurityHeaders,...cors,'access-control-allow-methods':'GET,POST,PUT,OPTIONS','access-control-allow-headers':'content-type,x-tenant-id,x-actor-id,x-group-roles,x-active-group-id,x-device-id,x-session-id,x-request-id,x-timezone'}});
   }
-  const {kernel,foundation,ledger,meetings,discovery,membershipGateway,rubrics,completion,explainability,documents,receivables,treasury,riskFinance,market,community,imports,memberControl,groupIdentity,conciergeLearning,miscRubrics}=createRequestScope(request,repo,options.artifacts,options.dataUseDefaultMode??'BETA_OPEN'); const ctx=kernel.context.get();
+  const {kernel,foundation,ledger,meetings,discovery,membershipGateway,rubrics,completion,explainability,documents,receivables,treasury,riskFinance,market,community,imports,memberControl,groupIdentity,conciergeLearning,miscRubrics,adManager,economicIntelligence,externalPrograms}=createRequestScope(request,repo,options.artifacts,options.dataUseDefaultMode??'BETA_OPEN'); const ctx=kernel.context.get();
   if(options.premiumLive)kernel.features.set('premium_live_ledger',true);
   const requireGroup=async(groupId:string,manage=false)=>{
     const group=await repo.getGroup(ctx.tenantId,groupId);if(!group)throw Error('GROUP_NOT_FOUND');
@@ -107,7 +116,26 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
     if(!options.premiumLive||!options.liveNamespace)return;
     const {stub}=await liveStubFor(groupId);
     const response=await stub.fetch(new Request('https://group-live.internal/publish',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({type,actorId:ctx.actorId,idempotencyKey,payload,targetUserId})}));
-    if(!response.ok)throw new Error('LIVE_PUBLISH_FAILED');
+    if(!response.ok){
+      const detail=(await response.text().catch(()=>'' )).slice(0,500);
+      throw new Error('LIVE_PUBLISH_FAILED'+(detail?':'+detail:''));
+    }
+  };
+
+  const dispatchContributionProjection=async(groupId:string,receipt:import('../../../packages/contracts/src/index.js').ContributionReceipt,entry:import('../../../packages/contracts/src/index.js').LedgerEntry)=>{
+    const projectionId='financial_projection_'+entry.id,existing=await repo.getWorkspaceRecord(ctx.tenantId,projectionId);
+    try{
+      const positions=await ledger.receiptPositions(ctx.tenantId,groupId);
+      const after=positions.filter(p=>p.membershipId===receipt.membershipId).reduce((n,p)=>n+p.netAmount,0);
+      const notice=await memberControl.create({groupId,membershipId:receipt.membershipId,entry,operationType:'CASH_CONTRIBUTION',amount:receipt.amount.amount,currency:receipt.amount.currency,rubricId:receipt.rubricId,meetingId:receipt.meetingId,previousSituation:after-receipt.amount.amount,newSituation:after});
+      // Keep the Live idempotency key deliberately short and stable. The old encoded notice id could exceed the DO limit.
+      await publishLive(groupId,'FINANCIAL_NOTICE','financial-notice:'+entry.id,{noticeId:notice.id,ledgerEntryId:notice.ledgerEntryId,operationType:notice.operationType,amount:notice.amount,currency:notice.currency,previousSituation:notice.previousSituation??0,newSituation:notice.newSituation??0},notice.userId);
+      if(existing)await repo.saveWorkspaceRecord({...existing,status:'DONE',tags:[...new Set(existing.tags.filter(t=>t!=='pending').concat('dispatched'))],data:{...existing.data,attemptCount:Number(existing.data.attemptCount??0)+1,lastError:null,dispatchedAt:new Date().toISOString()},updatedAt:new Date().toISOString()});
+      return true;
+    }catch(error){
+      if(existing)await repo.saveWorkspaceRecord({...existing,status:'ACTIVE',tags:[...new Set(existing.tags.concat('pending','retry-required'))],data:{...existing.data,attemptCount:Number(existing.data.attemptCount??0)+1,lastError:(error instanceof Error?error.message:String(error)).slice(0,500)},updatedAt:new Date().toISOString()});
+      return false;
+    }
   };
 
   const visibleWorkspace=async(record:WorkspaceRecord)=>{
@@ -152,6 +180,24 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
       return json({version:'1.3.0-guided-ai-live',count:PRODUCT_CAPABILITY_COUNT,capabilities:PRODUCT_MODULES},200,cors);
     }
 
+
+    if(request.method==='POST'&&url.pathname==='/api/v1/identity-proofs/cni'){
+      if(!options.identityProof)throw new Error('IDENTITY_PROOF_UNAVAILABLE');
+      const body=await readJson<Record<string,unknown>>(request);
+      return json(await options.identityProof.registerAccountCni(ctx.actorId,String(body.cni??''),String(body.sourceRef??'USER_PRESENTED')),201,cors);
+    }
+    if(request.method==='GET'&&url.pathname==='/api/v1/identity-proofs/cni/matches'){
+      if(!options.identityProof)throw new Error('IDENTITY_PROOF_UNAVAILABLE');
+      return json(await options.identityProof.candidateMatches(ctx.actorId),200,cors);
+    }
+    const cniHint=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/members\/([^/]+)\/cni-hint$/);
+    if(cniHint&&request.method==='POST'){
+      if(!options.identityProof)throw new Error('IDENTITY_PROOF_UNAVAILABLE');
+      const groupId=cniHint[1]!,membershipId=cniHint[2]!;await requireGroup(groupId,true);
+      if(!(await repo.getMembership(ctx.tenantId,groupId,membershipId)))throw new Error('MEMBERSHIP_NOT_FOUND');
+      const body=await readJson<Record<string,unknown>>(request);
+      return json(await options.identityProof.recordHistoricalCniHint({tenantId:ctx.tenantId,groupId,membershipId,cni:String(body.cni??''),createdBy:ctx.actorId}),201,cors);
+    }
 
     if(request.method==='POST'&&url.pathname==='/api/v1/bootstrap'){
       const body=await readJson<Record<string,unknown>>(request); await foundation.ensureUser({id:ctx.actorId,displayName:String(body.displayName??'Local Manager').trim()||'Local Manager',locale:String(body.locale??ctx.locale),createdAt:new Date().toISOString()});
@@ -384,6 +430,10 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
     if(rubricModelRoute&&request.method==='PUT'){
       const body=await readJson<RubricOperatingModel>(request);return json(await rubrics.updateOperatingModel({tenantId:ctx.tenantId,groupId:rubricModelRoute[1]!,rubricId:rubricModelRoute[2]!,model:body}),200,cors);
     }
+    const rubricPoliciesRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/rubrics\/([^/]+)\/policies$/);
+    if(rubricPoliciesRoute&&request.method==='PUT'){
+      const body=await readJson<RubricPolicies>(request);return json(await rubrics.updatePolicies({tenantId:ctx.tenantId,groupId:rubricPoliciesRoute[1]!,rubricId:rubricPoliciesRoute[2]!,policies:body}),200,cors);
+    }
     const rubricPreviewRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/rubrics\/([^/]+)\/preview-cycle$/);
     if(rubricPreviewRoute&&request.method==='POST'){
       const body=await readJson<Record<string,unknown>>(request);return json(await rubrics.previewCycle({tenantId:ctx.tenantId,groupId:rubricPreviewRoute[1]!,rubricId:rubricPreviewRoute[2]!,memberCount:finite(body.memberCount),collectedFromMembers:finite(body.collectedFromMembers),solidarityCoverageAmount:body.solidarityCoverageAmount===undefined?undefined:finite(body.solidarityCoverageAmount),beneficiaryDisbursement:body.beneficiaryDisbursement===undefined?undefined:finite(body.beneficiaryDisbursement)}),200,cors);
@@ -446,13 +496,48 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
       const body=await readJson<Record<string,unknown>>(request);
       const receipt=await ledger.recordCashContribution({tenantId:ctx.tenantId,groupId:contributionRoute[1]!,membershipId:String(body.membershipId??''),amount:finite(body.amount),currency:String(body.currency??'XAF'),meetingId:body.meetingId?String(body.meetingId):undefined,rubricId:body.rubricId?String(body.rubricId):undefined,lateReason:body.lateReason?String(body.lateReason):undefined,approverIds:strArray(body.approverIds),idempotencyKey:String(body.idempotencyKey??request.headers.get('x-idempotency-key')??makeId('idem'))});
       const entry=await repo.getLedgerEntry(ctx.tenantId,contributionRoute[1]!,receipt.ledgerEntryId);
-      if(entry){
-        const positions=await ledger.receiptPositions(ctx.tenantId,contributionRoute[1]!);
-        const after=positions.filter(p=>p.membershipId===receipt.membershipId).reduce((n,p)=>n+p.netAmount,0);
-        const notice=await memberControl.create({groupId:contributionRoute[1]!,membershipId:receipt.membershipId,entry,operationType:'CASH_CONTRIBUTION',amount:receipt.amount.amount,currency:receipt.amount.currency,rubricId:receipt.rubricId,meetingId:receipt.meetingId,previousSituation:after-receipt.amount.amount,newSituation:after});
-        await publishLive(contributionRoute[1]!,'FINANCIAL_NOTICE','notice:'+notice.id,{noticeId:notice.id,ledgerEntryId:notice.ledgerEntryId,operationType:notice.operationType,amount:notice.amount,currency:notice.currency,previousSituation:notice.previousSituation??0,newSituation:notice.newSituation??0},notice.userId);
-      }
+      if(entry)await dispatchContributionProjection(contributionRoute[1]!,receipt,entry);
+      // The financial transaction is authoritative once D1 has committed it.
+      // A temporary Live failure must never turn a committed contribution into an ambiguous HTTP failure.
       return json(receipt,201,cors);
+    }
+
+    const retryProjectionRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/live\/retry-pending$/);
+    if(retryProjectionRoute&&request.method==='POST'){
+      const groupId=retryProjectionRoute[1]!;await requireGroup(groupId,true);
+      const pending=(await repo.listWorkspaceRecords(ctx.tenantId,'FINANCE.LIVE_PROJECTION',groupId)).filter(r=>r.status==='ACTIVE');
+      const receipts=await repo.listContributionReceipts(ctx.tenantId,groupId);let retried=0,confirmed=0;
+      for(const record of pending){
+        const entryId=String(record.data.entryId??''),entry=entryId?await repo.getLedgerEntry(ctx.tenantId,groupId,entryId):undefined;
+        const receipt=receipts.find(x=>x.ledgerEntryId===entryId);
+        if(!entry||!receipt)continue;retried++;if(await dispatchContributionProjection(groupId,receipt,entry))confirmed++;
+      }
+      return json({retried,confirmed,pending:Math.max(0,pending.length-confirmed)},200,cors);
+    }
+
+    const savingsYieldPreview=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/savings-yield\/preview$/);
+    if(savingsYieldPreview&&request.method==='POST'){
+      await requireGroup(savingsYieldPreview[1]!,true);const body=await readJson<Record<string,unknown>>(request);
+      return json(allocateSavingsYield(body as any),200,cors);
+    }
+    const savingsYieldSplit=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/savings-yield\/split-preview$/);
+    if(savingsYieldSplit&&request.method==='POST'){
+      await requireGroup(savingsYieldSplit[1]!,true);const body=await readJson<Record<string,unknown>>(request);
+      return json(splitInterestPool(finite(body.total),Array.isArray(body.shares)?body.shares as any:[]),200,cors);
+    }
+    const financialRecapPreview=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/recap\/financial-preview$/);
+    if(financialRecapPreview&&request.method==='POST'){
+      await requireGroup(financialRecapPreview[1]!,true);return json(buildFinancialRecap(await readJson<any>(request)),200,cors);
+    }
+    const sessionRecapPreview=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/meetings\/([^/]+)\/recap-preview$/);
+    if(sessionRecapPreview&&request.method==='POST'){
+      await requireGroup(sessionRecapPreview[1]!,true);
+      if(!(await repo.getMeeting(ctx.tenantId,sessionRecapPreview[1]!,sessionRecapPreview[2]!)))throw new Error('MEETING_NOT_FOUND');
+      return json(buildSessionRecap(await readJson<any>(request)),200,cors);
+    }
+    const closingCarryoverPreview=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/closing\/carryover-preview$/);
+    if(closingCarryoverPreview&&request.method==='POST'){
+      await requireGroup(closingCarryoverPreview[1]!,true);return json(buildClosingCarryover(await readJson<any>(request)),200,cors);
     }
 
     const ledgerRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/ledger$/);
@@ -480,6 +565,45 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
       if(decision!=='APPROVE_AFTER_REVIEW'&&decision!=='MAINTAIN_RESERVE')throw new Error('INVALID_MEMBER_REVIEW_DECISION');
       return json(await memberControl.memberReview(noticeMemberReview[1]!,noticeMemberReview[2]!,decision,String(body.note??'')),200,cors);
     }
+
+    const economicProfile=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/economic-profile$/);
+    if(economicProfile&&request.method==='GET'){
+      const groupId=economicProfile[1]!;await requireGroup(groupId,true);
+      const passport=await groupIdentity.compute(groupId),consent=await conciergeLearning.consent(groupId);
+      const profile=await economicIntelligence.profile(groupId,passport.publicCode);
+      const enabled=consent.purposes.PARTNER_MATCHING;
+      return json(enabled?profile:{...profile,exportable:false,exportBlockers:[...profile.exportBlockers,'PARTNER_MATCHING_DISABLED']},200,cors);
+    }
+
+    const externalProgramsRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/external-programs$/);
+    if(externalProgramsRoute&&request.method==='GET'){
+      const kind=url.searchParams.get('kind') as ExternalProgramKind|null;
+      return json(await externalPrograms.list(externalProgramsRoute[1]!,kind??undefined),200,cors);
+    }
+    if(externalProgramsRoute&&request.method==='POST'){
+      const body=await readJson<Record<string,unknown>>(request);
+      return json(await externalPrograms.create(externalProgramsRoute[1]!,{
+        kind:String(body.kind??'PARTNER') as ExternalProgramKind,partyName:String(body.partyName??''),programName:String(body.programName??''),
+        purpose:String(body.purpose??''),localities:strArray(body.localities),tags:strArray(body.tags),
+        dataAccess:String(body.dataAccess??'NONE') as AggregateDataAccess
+      }),201,cors);
+    }
+    const externalTransition=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/external-programs\/([^/]+)\/transition$/);
+    if(externalTransition&&request.method==='POST'){
+      const body=await readJson<Record<string,unknown>>(request);
+      return json(await externalPrograms.transition(externalTransition[1]!,externalTransition[2]!,String(body.state??'') as ExternalProgramState),200,cors);
+    }
+    const externalShare=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/external-programs\/([^/]+)\/share-packs$/);
+    if(externalShare&&request.method==='GET')return json(await externalPrograms.sharePacks(externalShare[1]!,externalShare[2]!),200,cors);
+    if(externalShare&&request.method==='POST'){
+      const groupId=externalShare[1]!,passport=await groupIdentity.compute(groupId),consent=await conciergeLearning.consent(groupId);
+      if(!consent.purposes.PARTNER_MATCHING)throw new Error('PARTNER_MATCHING_DISABLED');
+      const profile=await economicIntelligence.profile(groupId,passport.publicCode);
+      const body=await readJson<Record<string,unknown>>(request);
+      return json(await externalPrograms.issueAggregateSharePack(groupId,externalShare[2]!,profile,String(body.purpose??''),finite(body.ttlDays,30)),201,cors);
+    }
+    const externalRevoke=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/external-share-packs\/([^/]+)\/revoke$/);
+    if(externalRevoke&&request.method==='POST'){await externalPrograms.revokeSharePack(externalRevoke[1]!,externalRevoke[2]!);return json({revoked:true},200,cors);}
 
     const identityPassport=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/identity-passport$/);
     if(identityPassport&&request.method==='GET')return json(await groupIdentity.compute(identityPassport[1]!),200,cors);
@@ -653,6 +777,23 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
     }
     const storefrontRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/market\/storefront$/);
     if(storefrontRoute&&request.method==='GET')return json(await market.storefront(storefrontRoute[1]!),200,cors);
+    const adCampaigns=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/ads\/campaigns$/);
+    if(adCampaigns&&request.method==='GET')return json(await adManager.list(adCampaigns[1]!),200,cors);
+    if(adCampaigns&&request.method==='POST'){
+      const body=await readJson<Record<string,unknown>>(request);
+      return json(await adManager.create(adCampaigns[1]!,body as any),201,cors);
+    }
+    const adTransition=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/ads\/campaigns\/([^/]+)\/transition$/);
+    if(adTransition&&request.method==='POST'){
+      const body=await readJson<Record<string,unknown>>(request);
+      return json(await adManager.transition(adTransition[1]!,adTransition[2]!,String(body.state??'') as any,String(body.note??'')),200,cors);
+    }
+    const adMetric=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/ads\/campaigns\/([^/]+)\/metric$/);
+    if(adMetric&&request.method==='POST'){
+      const body=await readJson<Record<string,unknown>>(request);
+      return json(await adManager.metric(adMetric[1]!,adMetric[2]!,String(body.event??'') as any),200,cors);
+    }
+
     const stockListing=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/market\/stock\/([^/]+)\/listing$/);
     if(stockListing&&request.method==='POST'){const body=await readJson<Record<string,unknown>>(request);return json(await market.setStockListing(stockListing[1]!,stockListing[2]!,{published:Boolean(body.published),unitPrice:body.unitPrice===undefined?undefined:finite(body.unitPrice),description:body.description?String(body.description):undefined}),200,cors);}
 
@@ -748,7 +889,10 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
     }
 
     const obligationRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/obligations$/);
-    if(obligationRoute&&request.method==='GET')return json(await repo.listObligations(ctx.tenantId),200,cors);
+    if(obligationRoute&&request.method==='GET'){
+      const groupId=obligationRoute[1]!;await requireGroup(groupId);
+      return json((await repo.listObligations(ctx.tenantId)).filter(x=>x.groupId===groupId),200,cors);
+    }
     if(obligationRoute&&request.method==='POST'){
       const body=await readJson<Record<string,unknown>>(request);
       return json(await completion.createFinancialObligation(obligationRoute[1]!,{
@@ -910,7 +1054,7 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
         const p=item.payload;const groupId=String(p.groupId??'');
         const receipt=await ledger.recordCashContribution({tenantId:ctx.tenantId,groupId,membershipId:String(p.membershipId??''),amount:finite(p.amount),currency:String(p.currency??'XAF'),meetingId:p.meetingId?String(p.meetingId):undefined,rubricId:p.rubricId?String(p.rubricId):undefined,lateReason:p.lateReason?String(p.lateReason):undefined,approverIds:strArray(p.approverIds),idempotencyKey:item.idempotencyKey});
         const entry=await repo.getLedgerEntry(ctx.tenantId,groupId,receipt.ledgerEntryId);
-        if(entry){const positions=await ledger.receiptPositions(ctx.tenantId,groupId);const after=positions.filter(x=>x.membershipId===receipt.membershipId).reduce((n,x)=>n+x.netAmount,0);const notice=await memberControl.create({groupId,membershipId:receipt.membershipId,entry,operationType:'CASH_CONTRIBUTION',amount:receipt.amount.amount,currency:receipt.amount.currency,rubricId:receipt.rubricId,meetingId:receipt.meetingId,previousSituation:after-receipt.amount.amount,newSituation:after});await publishLive(groupId,'FINANCIAL_NOTICE','notice:'+notice.id,{noticeId:notice.id,ledgerEntryId:notice.ledgerEntryId,operationType:notice.operationType,amount:notice.amount,currency:notice.currency,previousSituation:notice.previousSituation??0,newSituation:notice.newSituation??0},notice.userId);}
+        if(entry)await dispatchContributionProjection(groupId,receipt,entry);
         return json({accepted:true,receipt},200,cors);
       }
       if(item.type==='MEETING_NOTE_UPDATED'){
@@ -931,7 +1075,7 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
 
 export const handleRequest=createApiHandler(defaultRepo);
 export interface AssetsFetcherLike { fetch(request: Request): Promise<Response> }
-export interface WorkerEnv { DB?: D1DatabaseLike; ASSETS?: AssetsFetcherLike; ARTIFACTS?: ArtifactStoreLike; GROUP_LIVE_HUB?: DurableObjectNamespaceLike; PREMIUM_LIVE_LEDGER?: string; DATA_USE_PROFILE?: string; COLLECTIVE_LEARNING_PEPPER?: string; FOUNDER_TEAM_ACTORS?: string }
+export interface WorkerEnv { DB?: D1DatabaseLike; ASSETS?: AssetsFetcherLike; ARTIFACTS?: ArtifactStoreLike; GROUP_LIVE_HUB?: DurableObjectNamespaceLike; PREMIUM_LIVE_LEDGER?: string; DATA_USE_PROFILE?: string; COLLECTIVE_LEARNING_PEPPER?: string; IDENTITY_MATCH_PEPPER?: string; FOUNDER_TEAM_ACTORS?: string }
 export default {async fetch(request:Request,env:WorkerEnv={}){
   const url=new URL(request.url);
   if(request.method==='GET' && env.ASSETS && url.pathname!=='/health' && !url.pathname.startsWith('/api/')){
@@ -949,6 +1093,8 @@ export default {async fetch(request:Request,env:WorkerEnv={}){
   }
   const repository=new D1PlatformRepository(env.DB);
   const founderLearning=env.COLLECTIVE_LEARNING_PEPPER?new FounderLearningStore(env.DB,env.COLLECTIVE_LEARNING_PEPPER):undefined;
+  const identityPepper=env.IDENTITY_MATCH_PEPPER??env.COLLECTIVE_LEARNING_PEPPER;
+  const identityProof=identityPepper?new IdentityProofService(env.DB,identityPepper):undefined;
   const founderTeamActors=new Set((env.FOUNDER_TEAM_ACTORS??'').split(',').map(x=>x.trim()).filter(Boolean));
   const dataUseDefaultMode:DataUseDefaultMode=env.DATA_USE_PROFILE==='PRIVACY_FIRST'?'PRIVACY_FIRST':'BETA_OPEN';
   const commercialPreferences=new CommercialPreferenceService(env.DB,dataUseDefaultMode==='BETA_OPEN');
@@ -959,7 +1105,7 @@ export default {async fetch(request:Request,env:WorkerEnv={}){
   return authenticatedApi(repository,env.DB,async authenticatedRequest=>{
     const h=authenticatedRequest.headers;
     pairingKernel.context.set({actorId:h.get('x-actor-id')??'unknown',tenantId:h.get('x-tenant-id')??'unknown',activeGroupId:h.get('x-active-group-id')||undefined,groupRoles:(h.get('x-group-roles')??'').split(',').filter(Boolean),mandateIds:[],deviceId:h.get('x-device-id')??'device_web',sessionId:h.get('x-session-id')??'server-authenticated',locale:h.get('accept-language')?.toLowerCase().startsWith('en')?'en':'fr',timezone:h.get('x-timezone')??'Africa/Douala',connectivity:'online',requestId:h.get('x-request-id')??crypto.randomUUID()});
-    return createApiHandler(repository,{artifacts:env.ARTIFACTS,liveNamespace:env.GROUP_LIVE_HUB,premiumLive:env.PREMIUM_LIVE_LEDGER==='true',founderLearning,founderTeamActors,commercialPreferences,groupPairing,interestCommunities,ecoPulse,dataUseDefaultMode})(authenticatedRequest);
+    return createApiHandler(repository,{artifacts:env.ARTIFACTS,liveNamespace:env.GROUP_LIVE_HUB,premiumLive:env.PREMIUM_LIVE_LEDGER==='true',founderLearning,founderTeamActors,commercialPreferences,groupPairing,interestCommunities,ecoPulse,identityProof,dataUseDefaultMode})(authenticatedRequest);
   })(request);
 }};
 export {defaultRepo as repo};

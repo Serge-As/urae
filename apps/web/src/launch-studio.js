@@ -112,7 +112,8 @@ export function mountLaunchStudio({app,getGroups,getRubrics,addRubric,invalidate
       contextNote:[r.contextNote,s.evidence?'Source RI : '+s.evidence:''].filter(Boolean).join('\n').slice(0,1000),
       memberCount:members,shareCount:isTontine?members:undefined,potCount:isTontine?1:undefined,
       sessions:Number(value('cycleExpectedSessions')||12)||12,duration:{value:Number(value('cycleExpectedSessions')||12)||12,unit:'SESSIONS'},
-      managementFeePerPayment:0,estimatedExternalCostRate:0,fixedCostPerSession:0,participants:undefined
+      managementFeePerPayment:0,estimatedExternalCostRate:0,fixedCostPerSession:0,participants:undefined,
+      policyDraft:r.policyDraft?structuredClone(r.policyDraft):undefined
     };
   };
 
