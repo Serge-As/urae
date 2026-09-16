@@ -16,7 +16,7 @@ const cleanPhone=(value:string)=>{
   return normalized;
 };
 const cleanName=(value:string)=>{
-  const normalized=value.normalize('NFKC').toUpperCase().replace(/[’']/g,' ').replace(/[^\p{L}\p{N}\s-]/gu,' ').replace(/\s+/g,' ').trim();
+  const normalized=value.normalize('NFKD').replace(/\p{M}+/gu,'').toUpperCase().replace(/[’']/g,' ').replace(/[^\p{L}\p{N}\s-]/gu,' ').replace(/\s+/g,' ').trim();
   if(normalized.length<3||normalized.length>160)throw new Error('INVALID_NAME_FORMAT');
   return normalized;
 };
