@@ -713,14 +713,18 @@
           </div>
           <div class="two-col">
             <form id="communityPostForm" class="form-grid">
-              <h3>Publier</h3>
+              <h3>Publier · brouillon synchronisé</h3>
               <label>Hub<select id="communityPostHub"></select></label>
               <label>Type<select id="communityPostKind"><option value="DISCUSSION">Discussion</option><option value="ANNOUNCEMENT">Annonce</option><option value="OFFER">Offre</option><option value="REQUEST">Demande</option></select></label>
               <label>Titre<input id="communityPostTitle" placeholder="Facultatif"></label>
-              <label class="full">Message<textarea id="communityPostBody" rows="4" required></textarea></label>
+              <label class="full">Message<textarea id="communityPostBody" rows="5" required placeholder="Votre brouillon est sauvegardé sur le serveur et peut être retrouvé sur un autre appareil."></textarea></label>
+              <p id="communityDraftStatus" class="hint full">Brouillon prêt à être synchronisé.</p>
               <button class="primary">Publier</button>
             </form>
-            <div><h3>Fil du Hub</h3><div id="communityPostList" class="stack"></div></div>
+            <div>
+              <div class="panel-head"><div><h3>Fil du Hub</h3><p id="communityReadStatus" class="hint">Votre position de lecture est mémorisée.</p></div><button id="communityResumeBtn" type="button" class="secondary">Reprendre où j’étais</button></div>
+              <div id="communityPostList" class="stack"></div>
+            </div>
           </div>
         </section>
 
