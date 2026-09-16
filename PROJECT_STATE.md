@@ -2,48 +2,62 @@
 
 Date : 2026-09-16
 
-## Production publique
-- version : **1.3.2-savings-control-forum-live** tant que le smoke 1.3.3 n'est pas prouvé ;
-- URL : `https://eco-system.sergemimf.workers.dev/` ;
-- Worker : `eco-system` ;
-- Version ID connue : `f6e8b41f-8093-4ca9-9feb-202a4037c7b9` ;
-- D1 : `eco-system-db` ; R2 : `eco-system-backups` ;
-- Premium Live / Founder Control / Forum v2 : actifs ;
-- argent réel : **désactivé** ;
-- smoke 1.3.2 : run `35096484915` SUCCESS.
+## Production publique — VERIFIED_REMOTE
+- version : **1.3.3-fairness-adops-doctor-launch**
+- URL : `https://eco-system.sergemimf.workers.dev/`
+- Worker : `eco-system`
+- Worker Version ID : `fdb6c9f3-8e46-49e9-85df-1e238975d257`
+- source déployée : `8396be2ed40ab51031a543787e2e61d41a42ad21`
+- D1 : `eco-system-db`
+- R2 : `eco-system-backups`
+- Premium Live : actif
+- Founder Control Center : bound
+- Forum/Community Realtime : bound
+- artifacts : R2
+- argent réel : **désactivé**
+- déploiement + smoke : run `35138597876` SUCCESS
+- migrations : **No migrations to apply**
+- BIR+ final pré-déploiement : run `35138465887` SUCCESS + snapshot R2 dans le workflow de déploiement.
 
-## Candidat 1.3.3
-- branche : `next/1.3.3-interest-lab-adops-ui-20260916` ;
-- version API/package : `1.3.3-fairness-adops-doctor-launch` ;
-- qualification : **181/181 tests** au dernier run vert observé après alignement version/registre ;
-- Cahier : `docs/constitution/ECO_SYSTEM_Cahier_des_Charges_Maitre_Exhaustif_3.2.0_2026-09-16.md` ;
-- modèle économique : `docs/economics/ECO_SYSTEM_Modele_Economique_AdManager_Approfondi_3.2.0_2026-09-16.md`.
-
-### Acquis candidat 1.3.3
-- création finale répare une simulation manquante ;
-- RI PDF/DOCX/ODT/texte/images → R2 + extraction ;
-- validation séquentielle des rubriques ;
+## Livraison 1.3.3
+Déployés dans le code de production, avec tests CI :
+- correction du blocage de création finale ;
+- RI multi-documents PDF/DOCX/ODT/texte/images → R2 + extraction ;
+- revue séquentielle des rubriques ;
 - Assistance Rulebook différé ;
 - RegistrationPolicy ancien/nouveau/gratuit/multi-critères ;
-- 5 politiques d'intérêts + Fairness Lab ;
-- Group Doctor ; Meeting Autopilot ;
-- AdOps/CRM ; House Ads contextuelles ;
-- rédacteur Workers AI avec **signaux collectifs dérivés uniquement** et fallback déterministe.
+- cinq politiques d'intérêts + Fairness Lab ;
+- Group Doctor ;
+- Meeting Autopilot ;
+- AdOps/CRM ;
+- House Ads contextuelles ;
+- rédacteur Workers AI recevant uniquement des signaux collectifs dérivés et fallback déterministe.
 
-## Vérité financière du dossier étendu
-- intérêts bruts : **708 500 F** ;
-- part Bureau exemple : 141 700 F ; pool épargnants : **566 800 F** ;
-- causalité forte : 690 000 F bruts ; résidu brut : 18 500 F ;
-- pas d'intérêt impayé capitalisé automatiquement ;
-- POOLED / SEGREGATED / CUSTOM_MATRIX configurables.
+**Nuance de vérité :** déployé + CI ne signifie pas encore recette terrain exhaustive de chaque parcours. Les fonctions restent FUNCTIONAL_BETA tant que les tests terrain dédiés ne sont pas faits.
 
-## Sauvegarde / déploiement
-- workflows 1.3.3 BIR+ et production préparés ;
-- **ne pas** déclarer 1.3.3 production avant BIR+ + deploy + smoke réussis ;
-- D1 existant uniquement ; migrations additives ; R2 privé ; secrets existants préservés.
+## Vérité financière
+- intérêts bruts dossier étendu : **708 500 F**
+- pool épargnants exemple : **566 800 F**
+- causalité forte : 690 000 F bruts
+- résidu brut non attribué avec certitude : 18 500 F
+- politiques : historique, Capital×Temps, bonus précocité, productif attribué, hybride
+- caisses : POOLED / SEGREGATED / CUSTOM_MATRIX
+- pas d'intérêt impayé capitalisé automatiquement.
+
+## Documents
+- `docs/constitution/ECO_SYSTEM_Cahier_des_Charges_Maitre_Exhaustif_3.2.0_2026-09-16.md`
+- `docs/economics/ECO_SYSTEM_Modele_Economique_AdManager_Approfondi_3.2.0_2026-09-16.md`
+- le socle constitutionnel 2.3.4 demeure absorbé et non supprimé.
 
 ## Invariants
-10 étapes ; Collation ; multi-tontines ; Ledger unique ; Live projection ; offline honnête ; données individuelles sensibles hors pub/partenaires ; realMoney=false ; pas de force-push/main implicite.
+10 étapes ; Collation ; multi-tontines ; Ledger unique ; Live projection ; offline honnête ; données individuelles sensibles hors pub/partenaires ; realMoney=false ; pas de force-push/main implicite ; BIR+ avant production.
 
-## Prochain point
-Qualifier le HEAD final → BIR+ 1.3.3 → déploiement protégé → smoke → mettre à jour cette vérité avec le nouveau Worker Version ID et les runs. Ensuite seulement : photo/pipeline média, passkeys, Push, Forum avancé, RealtimeKit, Demand Exchange réel.
+## Prochain jalon
+1. recette terrain 1.3.3 : création groupe + import RI + 20–40 rubriques + Assistance/Inscription ;
+2. confronter les 5 politiques d'intérêts sur plusieurs groupes ;
+3. photo/R2 media pipeline + vérification faciale 1-à-1 ;
+4. passkeys + Push ;
+5. Forum recherche/signets/voix/sondages ;
+6. RealtimeKit avec budget explicite ;
+7. Demand Exchange/Deals + Cost Control ;
+8. tests 2G/seniors.
