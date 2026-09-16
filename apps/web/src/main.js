@@ -481,6 +481,8 @@ const specializedRoute = (id) => {
         return 'ecosystem';
     if (id.startsWith('OFFLINE.') || id.startsWith('SUPPORT.') || id.startsWith('EXPERIENCE.UNIVERSAL_INBOX'))
         return 'inbox';
+    if (id.startsWith('PARTNERS.') || id === 'LEARNING.NGO' || id.startsWith('ADS.'))
+        return 'ecosystem';
     if (id.startsWith('SECURITY.') || id.startsWith('BACKUP.') || id.startsWith('OBSERVABILITY.') || id.startsWith('COMPATIBILITY.') || id.startsWith('DATA.'))
         return 'settings';
     return undefined;
