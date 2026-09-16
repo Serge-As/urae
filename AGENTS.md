@@ -1,41 +1,102 @@
-# AGENTS.md — Eco-System Complete App
+# AGENTS.md — Eco-System 1.3.1 Recovery / Recap / Services
 
 ## Mission
-Continuer le produit réel Eco-System sans recommencer depuis zéro. La version locale est `1.1.2-qualified-local`, reprise serveur de `1.0.0-complete-app` et interface publique 1.1. La production 1.1 n’a pas été remplacée. L’ancienne 0.5/0.6 reste fallback historique, pas cible UI.
+Continuer Eco-System sans recommencer, simplifier ou remplacer silencieusement les acquis.
+
+### Vérité courante
+- production publique qualifiée : `1.2.0-functional-completion`;
+- développement courant : `next/1.3.1-recovery-recap-services-20260915`;
+- Premium Live : pilote isolé qualifié, pas encore activé sur la production publique ;
+- argent réel : `realMoneyEnabled=false`.
 
 ## MEMORY BEFORE CODE
-Avant tout lot substantiel, lire :
+Avant tout lot substantiel, lire dans cet ordre :
 1. `AGENTS.md` ;
 2. `docs/memory/CURRENT_TRUTH.md` ;
 3. `docs/memory/PROJECT_TRUTH_LEDGER.json` ;
 4. `PROJECT_STATE.md` ;
-5. `docs/constitution/ECO_SYSTEM_COMPLETE_APP_EXECUTION_SUPPLEMENT_1.0.0_2026-09-10.md` ;
-6. `docs/governance/ECO_SYSTEM_LIVING_RULES_DOCTRINE_1.0.0.md` ;
-7. `FEATURE_REGISTRY.yaml` ;
-8. `NEXT_RUN.md` ;
-9. CIR/ADR/Recall pertinents ;
-10. effectuer un Memory Recall avant code.
+5. `docs/constitution/ECO_SYSTEM_Cahier_des_Charges_Maitre_Exhaustif_3.0.0_2026-09-16.md` ;
+6. `docs/economics/ECO_SYSTEM_Modele_Economique_AdManager_Intelligence_3.0.0_2026-09-16.md` ;
+7. `docs/governance/ECO_SYSTEM_LIVING_RULES_DOCTRINE_1.0.0.md` ;
+8. `FEATURE_REGISTRY.yaml` ;
+9. `NEXT_RUN.md` ;
+10. CIR/ADR/Recall pertinents ;
+11. vérifier le HEAD distant et les derniers runs GitHub avant de coder.
 
-Le dernier prompt, un écran ou un résumé n’est jamais la totalité du besoin. Une absence ≠ suppression.
+Un prompt, une capture ou un résumé n'est jamais la totalité du besoin. **Absence visible ≠ suppression autorisée.**
 
-## Sources de vérité
-- Métier : Cahiers Eco-System 2.3.x fingerprintés + décisions ultérieures versionnées + supplément Complete App.
-- Implémentation : code + tests réellement exécutés.
-- Déploiement : Cloudflare/D1 réellement vérifiés.
-- Mémoire : Truth Ledger, Feature Registry, Deep Digest, Source Coverage, Recall/CIR.
+## Contrats anti-régression
+Ne pas supprimer ou réduire :
+- les dix étapes de création ;
+- Collation ;
+- multi-tontines ;
+- participants distincts par tontine ;
+- Living Rules ;
+- Ledger canonique ;
+- outbox/offline ;
+- RECAP financier et de séance ;
+- fonds reconduits ;
+- Tontine Manager ;
+- savings yield par dépôt ;
+- CNI matching protégé ;
+- communautés/Forum ;
+- Marketplace ;
+- AdManager ;
+- Partners/ONG ;
+- Premium Live qualifié.
 
-## Doctrine
+## Doctrine métier
 > « Voilà comment un groupe peut décrire la manière dont sa collation fonctionne. »
 
-Comprendre et distinguer règle écrite, pratique observée, règle opérationnelle validée. Ne jamais transformer une pratique locale en interdiction universelle. Prévoir exception/habilitation/quorum/trace/régularisation lorsque l’intégrité le permet.
+Distinguer :
+- règle écrite ;
+- pratique observée ;
+- règle opérationnelle validée ;
+- exception.
+
+Ne jamais convertir automatiquement une pratique locale en interdiction universelle.
 
 ## Architecture
-Une activité métier = une autorité canonique. Les `CAPABILITY_WORKSPACES` offrent un dossier opérationnel transversal, mais ne remplacent jamais Ledger, Membership, auth, paiement ou autres moteurs spécialisés.
+Une activité métier = une autorité canonique.
+- finance : Ledger/D1 canonique ;
+- Live : coordination/projection, jamais second solde ;
+- partenaires/ONG : agrégats pseudonymisés, jamais finance individuelle ;
+- analytics : observation, jamais autorité transactionnelle.
+
+## Données
+L'utilisation de données financières agrégées au niveau `ECO-GRP-...` est permise lorsqu'elle est gouvernée.
+Interdiction de ciblage publicitaire individuel par :
+- dette ;
+- solde ;
+- prêt ;
+- CNI ;
+- santé ;
+- litige ;
+- identité brute.
+
+Un OFF explicite de consentement/préférence l'emporte toujours sur BETA_OPEN.
+
+## Finance
+- pas d'intérêt sur intérêt dans le modèle courant ;
+- une part Tontine SERVED exige une preuve Ledger ;
+- distribution d'intérêts Épargne calculée dépôt par dépôt ;
+- somme distribuée = exactement le pool validé ;
+- correction RECAP manuelle = ajustement tracé, pas destruction de la valeur source.
 
 ## Sécurité
-`realMoneyEnabled=false`. Pas de secret/PII brut dans Git. Pas de migration destructive. Pas de force-push `main`. Pas d’activation fournisseur/paiement réel sans autorisation distincte.
+- pas de secret/PII brut dans Git ;
+- migrations additives ;
+- pas de force-push/merge `main` sans décision ;
+- ne pas recréer `eco-system-db` ;
+- ne pas activer argent réel sans autorisation et qualification distinctes.
 
-## Clôture obligatoire
-Tests → Project State → Feature Registry → Current Truth/Truth Ledger → NEXT_RUN → Recall/CIR → BIR+ → bloc ÉTAT DU PROJET.
+## Checkpoint anti-interruption
+Un chat peut s'arrêter sans prévenir. Pour rendre cela sans conséquence :
+- après 3–5 sous-lots ou tout changement d'architecture : commit ;
+- laisser CI s'exécuter ;
+- si la vérité change : mettre à jour Current Truth/Truth Ledger/NEXT_RUN ;
+- ne jamais garder une décision critique uniquement dans le chat ;
+- avant une longue phase : préférer plusieurs commits atomiques à un énorme commit final.
 
-Lire aussi le supplément Cahier App 1.1 et la décision rubriques/parts/pots du CIR du 12 septembre. Le document des vingt innovations est un plan de reprises limitées ; ne pas toutes les activer implicitement.
+## Clôture obligatoire d'un jalon
+Tests → Project State → Feature Registry → Current Truth/Truth Ledger → NEXT_RUN → CIR/Recall si besoin → BIR+ → bloc **ÉTAT DU PROJET APRÈS ÉTAPE**.
