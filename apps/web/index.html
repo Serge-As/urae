@@ -636,6 +636,22 @@
             <section class="panel"><h2>Finances canoniques</h2><div id="recapFinance" class="stack"></div></section>
             <section class="panel"><h2>Autres · impayés · exceptions</h2><div id="recapExceptions" class="stack"></div></section>
           </div>
+          <section class="panel">
+            <div class="section-kicker"><div><h2>Fonds Secours / Solidarité — répartition par membre</h2><p>Le total de la caisse ne suffit pas : Eco-System montre la contribution nette, la retenue d’ouverture, les remboursements/assistances imputés et la réserve attribuable à chaque membre.</p></div></div>
+            <div id="recapFundPositions" class="stack"></div>
+            <details>
+              <summary><strong>Enregistrer une retenue ou un ajustement attribuable</strong></summary>
+              <form id="fundMemberAdjustmentForm" class="form-grid">
+                <label>Rubrique<select id="fundAdjustmentRubric"></select></label>
+                <label>Membre<select id="fundAdjustmentMember"></select></label>
+                <label>Exercice<input id="fundAdjustmentExercise" value="CURRENT" placeholder="Ex. 2027"></label>
+                <label>Nature<select id="fundAdjustmentKind"><option value="OPENING_RETAINED">Retenue provenant de N-1</option><option value="REFUND">Remboursement au membre</option><option value="ASSISTANCE_CHARGE">Assistance imputée à sa part</option><option value="ADJUSTMENT_IN">Ajustement positif</option><option value="ADJUSTMENT_OUT">Ajustement négatif</option></select></label>
+                <label>Montant XAF<input id="fundAdjustmentAmount" type="number" min="0" step="1" required></label>
+                <label class="full">Justification<input id="fundAdjustmentNote" placeholder="PV, décision, régularisation…"></label>
+                <button class="secondary">Enregistrer et recalculer</button>
+              </form>
+            </details>
+          </section>
           <div class="two-col">
             <section class="panel"><h2>Communauté & boutique</h2><div id="recapCommunityMarket" class="stack"></div></section>
             <section class="panel"><h2>Actions rapides</h2><div id="recapActions" class="quick-grid"></div></section>
