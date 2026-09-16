@@ -92,6 +92,8 @@ export interface Group {
   createdBy: Id;
   createdAt: string;
   operatingPolicy?: GroupOperatingPolicy;
+  /** Snapshot of the validated launch profile. Keeps exercise context available after conversion for contextual services such as House Ads and meeting preparation. */
+  launchProfileSnapshot?: GroupProjectLaunchProfile;
 }
 
 export interface Membership {
@@ -574,10 +576,36 @@ export interface RubricYieldPolicy {
   distributableShareBasisPoints?:number;
   rounding?:'LARGEST_REMAINDER';
 }
+export interface RubricAssistanceEventRule {
+  key:string;
+  label:string;
+  fundingMode?:'DISBURSEMENT'|'LEVY'|'MIXED';
+  amount?:Money;
+  contributionPerMember?:Money;
+  beneficiaryRule?:string;
+  eligibilityRule?:string;
+  representationRule?:string;
+  sourceEvidence?:string;
+}
 export interface RubricAssistancePolicy {
   fundingMode:'DISBURSEMENT'|'LEVY'|'MIXED';
   authorization?:'MANAGER'|'BUREAU'|'ASSEMBLY'|'DOUBLE_VALIDATION'|'CUSTOM';
   eligibleEvents?:string[];
+  /** Long event-by-event rules may be imported now and validated later in the dedicated Assistance Rulebook. */
+  eventRules?:RubricAssistanceEventRule[];
+  reviewStatus?:'DRAFT'|'DEFERRED'|'VALIDATED';
+  definitionSource?:'GOVERNANCE_DOCUMENT'|'TEXT'|'VOICE'|'MANUAL';
+  sourceFingerprint?:string;
+}
+export interface RubricRegistrationPolicy {
+  pricingModel:'FREE_ALL'|'SINGLE_AMOUNT'|'BY_MEMBER_STATUS'|'RULE_TABLE';
+  returningMemberAmount?:Money;
+  newMemberAmount?:Money;
+  defaultAmount?:Money;
+  seniorityRule?:string;
+  otherCriteria?:string[];
+  freeReturningMembers?:boolean;
+  reviewStatus?:'DRAFT'|'VALIDATED';
 }
 export interface RubricLifecyclePolicy {
   visibility:'PERSISTENT'|'EXERCISE'|'FIRST_N_SESSIONS'|'SESSION_ONLY'|'EVENT_DRIVEN';
@@ -594,6 +622,7 @@ export interface RubricPolicies {
   loan?:RubricLoanPolicy;
   yield?:RubricYieldPolicy;
   assistance?:RubricAssistancePolicy;
+  registration?:RubricRegistrationPolicy;
   lifecycle?:RubricLifecyclePolicy;
   notes?:string[];
 }
