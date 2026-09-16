@@ -94,7 +94,15 @@ Aucune CNI brute ne doit être exposée dans les recherches, analytics ou ciblag
 - ne pas supprimer les parcours précédents pour simplifier l'interface ;
 - ne pas présenter un domaine STRUCTURAL comme terminé.
 
-## 8. Point de reprise
+## 8. Ancres historiques et infrastructure à préserver
+
+- **CLOUDFLARE** : réutiliser les Secrets GitHub existants et les ressources déjà qualifiées ; ne pas demander leurs valeurs ni recréer les prérequis sans preuve qu'ils ont disparu.
+- **`1.0.0-complete-app`** : reste une ancre historique supersédée dans le Truth Ledger ; ne jamais supprimer l'histoire parce que la ligne courante est 1.3.1.
+- **Living Rules** : doctrine permanente. Règle écrite, pratique observée, règle opérationnelle validée et exception restent distinctes.
+- D1 `eco-system-db` : ressource canonique de production à réutiliser.
+- Les anciennes preuves 1.2/1.0 restent historiques même lorsqu'une nouvelle ligne les supersède.
+
+## 9. Point de reprise
 
 Reprendre sur `next/1.3.1-recovery-recap-services-20260915`, au HEAD distant le plus récent, après vérification de la CI.
 
