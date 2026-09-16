@@ -20,7 +20,8 @@ export function mountFounderControlUI({app,notify=()=>{},showError=console.error
   };
   const renderServices=d=>{
     servicesRoot.replaceChildren();
-    const sorted=[...d.services].sort((a,b)=>({FAIL:0,ATTENTION:1,UNKNOWN:2,PASS:3}[a.attention]-({FAIL:0,ATTENTION:1,UNKNOWN:2,PASS:3}[b.attention])||a.labelFr.localeCompare(b.labelFr));
+    const rank={FAIL:0,ATTENTION:1,UNKNOWN:2,PASS:3};
+    const sorted=[...d.services].sort((a,b)=>(rank[a.attention]??9)-(rank[b.attention]??9)||a.labelFr.localeCompare(b.labelFr));
     for(const s of sorted){
       const card=el('article',undefined,'item');card.dataset.serviceId=s.id;
       card.append(el('strong',s.labelFr),el('span',s.attention+' · '+s.catalogStatus,'pill'),el('p',s.id,'hint'));
