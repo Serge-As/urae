@@ -592,6 +592,101 @@
       "note": "Source and production D1 snapshot were archived and verified in GitHub Artifact. R2 upload remained unavailable to the GitHub token; do not claim R2 backup success.",
       "next": "Use GitHub Artifact as verified remote checkpoint; retry R2 only after Cloudflare/token availability is proven.",
       "currentProductLine": true
+    },
+    {
+      "id": "constitution.master.3.2.0",
+      "status": "VERIFIED_REMOTE",
+      "scope": "documentation/memory",
+      "observedOn": "2026-09-16",
+      "evidence": [
+        "repo:docs/constitution/ECO_SYSTEM_Cahier_des_Charges_Maitre_Exhaustif_3.2.0_2026-09-16.md",
+        "github-actions:qualification 35138357359 SUCCESS"
+      ],
+      "note": "3.2.0 is an additive detailed continuation; the exhaustive 2.3.4 baseline remains active unless explicitly superseded.",
+      "next": "Use 3.2.0 together with the preserved 2.3.4 constitutional baseline.",
+      "currentProductLine": true
+    },
+    {
+      "id": "economics.adops.3.2.0",
+      "status": "VERIFIED_REMOTE",
+      "scope": "documentation/economics",
+      "observedOn": "2026-09-16",
+      "evidence": [
+        "repo:docs/economics/ECO_SYSTEM_Modele_Economique_AdManager_Approfondi_3.2.0_2026-09-16.md",
+        "github-actions:qualification 35138357359 SUCCESS"
+      ],
+      "note": "Detailed monetization and AdOps model versioned in GitHub; pricing remains hypothesis until field cohorts.",
+      "next": "Validate pricing, attribution and advertiser demand through pilots.",
+      "currentProductLine": true
+    },
+    {
+      "id": "github.branch.1.3.3",
+      "status": "VERIFIED_REMOTE",
+      "scope": "git-branch",
+      "observedOn": "2026-09-16",
+      "evidence": [
+        "github:next/1.3.3-interest-lab-adops-ui-20260916",
+        "deployed-source:8396be2ed40ab51031a543787e2e61d41a42ad21"
+      ],
+      "note": "1.3.3 development line exists remotely and was used for the qualified production deployment.",
+      "next": "Continue from latest remote HEAD; never infer production from branch name alone.",
+      "currentProductLine": true
+    },
+    {
+      "id": "backup.birplus.1.3.3",
+      "status": "VERIFIED_REMOTE",
+      "scope": "recovery",
+      "observedOn": "2026-09-16",
+      "evidence": [
+        "github-actions:35138465887 SUCCESS",
+        "R2:eco-system-backups/birplus/1.3.3/<sha>/final",
+        "restore:SQLite PRAGMA integrity_check=ok"
+      ],
+      "note": "Source and production D1 were archived, checksummed, restored and mirrored to private R2 before production mutation.",
+      "next": "Repeat BIR+ before the next production release.",
+      "currentProductLine": true
+    },
+    {
+      "id": "cloudflare.production.1.3.3",
+      "status": "VERIFIED_REMOTE",
+      "scope": "cloudflare-production",
+      "observedOn": "2026-09-16",
+      "evidence": [
+        "github-actions:35138597876 SUCCESS",
+        "worker:eco-system",
+        "worker-version:fdb6c9f3-8e46-49e9-85df-1e238975d257",
+        "smoke:https://eco-system.sergemimf.workers.dev/"
+      ],
+      "note": "Production deployment passed qualification, build, existing D1/R2 resolution, predeploy restore/mirror, secret preservation, migrations, deploy and smoke. realMoneyEnabled=false.",
+      "next": "Perform founder field reception of the new 1.3.3 user flows; deployed does not imply every field scenario is accepted.",
+      "currentProductLine": true
+    },
+    {
+      "id": "cloudflare.d1.1.3.3.migrations",
+      "status": "VERIFIED_REMOTE",
+      "scope": "cloudflare-d1",
+      "observedOn": "2026-09-16",
+      "evidence": [
+        "github-actions:35138597876",
+        "wrangler:No migrations to apply"
+      ],
+      "note": "Existing eco-system-db was reused and no D1 migration was required for 1.3.3.",
+      "next": "Keep additive-migration-only rule.",
+      "currentProductLine": true
+    },
+    {
+      "id": "ads.house_ai.aggregate_context.1.3.3",
+      "status": "VERIFIED_REMOTE",
+      "scope": "privacy/advertising",
+      "observedOn": "2026-09-16",
+      "evidence": [
+        "repo:packages/ad-manager/src/index.ts",
+        "github-actions:35137430369 SUCCESS",
+        "github-actions:35138597876 full qualification SUCCESS"
+      ],
+      "note": "House Ads AI composer receives derived collective signals rather than raw rubric names or individual financial/identity data; deterministic fallback remains available.",
+      "next": "Field-test copy quality and frequency without relaxing privacy constraints.",
+      "currentProductLine": true
     }
   ]
 }
