@@ -1,5 +1,7 @@
-Eco-System 1.3.3 BIR+ one-shot trigger
+Eco-System 1.3.3 BIR+ closure trigger
 Date: 2026-09-16
-Reason: final qualified 1.3.3 checkpoint before any production mutation.
-Expected: source archive + production D1 export + SQLite restore/integrity + SHA256 + R2 mirror.
+Reason: archive post-deployment source truth, updated 3.2.0 documentation and current production D1.
+Production deploy run: 35138597876 SUCCESS
+Worker Version ID: fdb6c9f3-8e46-49e9-85df-1e238975d257
+Expected: source archive + production D1 export + SQLite restore/integrity + SHA256 + R2 final mirror.
 realMoneyEnabled=false
