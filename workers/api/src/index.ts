@@ -19,6 +19,7 @@ import { MarketService } from '../../../packages/market/src/index.js';
 import { CommunityService } from '../../../packages/community/src/index.js';
 import { FounderLearningStore } from '../../../packages/founder-observatory/src/index.js';
 import { FounderControlService, type ControlIssueState, type EditorialState, type CheckState } from '../../../packages/founder-control/src/index.js';
+import { FundPositionService, type FundMemberAdjustmentKind } from '../../../packages/fund-positions/src/index.js';
 import { CommercialPreferenceService, preferenceCookie, clearPreferenceCookie, readPreferenceCookie } from '../../../packages/commercial-preferences/src/index.js';
 import { MiscRubricService } from '../../../packages/misc-rubrics/src/index.js';
 import { allocateSavingsYield, allocateSavingsYieldAtWork, splitInterestPool } from '../../../packages/savings-yield/src/index.js';
@@ -81,11 +82,12 @@ const createRequestScope = (request:Request,repo:PlatformRepository,artifacts?:A
   const adManager=new AdManagerService(repo,kernel);
   const economicIntelligence=new EconomicIntelligenceService(repo,kernel);
   const founderControl=new FounderControlService(repo,kernel);
+  const fundPositions=new FundPositionService(repo,kernel,ledger);
   const externalPrograms=new ExternalProgramsService(repo,kernel);
   const tenantId=request.headers.get('x-tenant-id')??'tenant_demo'; const actorId=request.headers.get('x-actor-id')??'user_founder';
   const groupRoles=(request.headers.get('x-group-roles')??'founder,manager').split(',').map(x=>x.trim()).filter(Boolean);
   kernel.context.set({actorId,tenantId,activeGroupId:request.headers.get('x-active-group-id')??undefined,groupRoles,mandateIds:[],deviceId:request.headers.get('x-device-id')??'device_web_demo',sessionId:request.headers.get('x-session-id')??'session_demo',locale:request.headers.get('accept-language')?.toLowerCase().startsWith('en')?'en':'fr',timezone:request.headers.get('x-timezone')??'Africa/Douala',connectivity:'online',requestId:request.headers.get('x-request-id')??makeId('req')});
-  return {kernel,foundation,ledger,meetings,discovery,membershipGateway,rubrics,completion,explainability,documents,receivables,treasury,riskFinance,market,community,imports,memberControl,groupIdentity,conciergeLearning,miscRubrics,adManager,economicIntelligence,externalPrograms,founderControl};
+  return {kernel,foundation,ledger,meetings,discovery,membershipGateway,rubrics,completion,explainability,documents,receivables,treasury,riskFinance,market,community,imports,memberControl,groupIdentity,conciergeLearning,miscRubrics,adManager,economicIntelligence,externalPrograms,founderControl,fundPositions};
 };
 
 const inboxFor = async (repo:PlatformRepository,tenantId:string,actorId:string) => {
@@ -100,7 +102,7 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
     const allowed=Boolean((cors as Record<string,string>)['access-control-allow-origin']);
     return new Response(null,{status:allowed?204:403,headers:{...baseSecurityHeaders,...cors,'access-control-allow-methods':'GET,POST,PUT,OPTIONS','access-control-allow-headers':'content-type,x-tenant-id,x-actor-id,x-group-roles,x-active-group-id,x-device-id,x-session-id,x-request-id,x-timezone'}});
   }
-  const {kernel,foundation,ledger,meetings,discovery,membershipGateway,rubrics,completion,explainability,documents,receivables,treasury,riskFinance,market,community,imports,memberControl,groupIdentity,conciergeLearning,miscRubrics,adManager,economicIntelligence,externalPrograms,founderControl}=createRequestScope(request,repo,options.artifacts,options.dataUseDefaultMode??'BETA_OPEN'); const ctx=kernel.context.get();
+  const {kernel,foundation,ledger,meetings,discovery,membershipGateway,rubrics,completion,explainability,documents,receivables,treasury,riskFinance,market,community,imports,memberControl,groupIdentity,conciergeLearning,miscRubrics,adManager,economicIntelligence,externalPrograms,founderControl,fundPositions}=createRequestScope(request,repo,options.artifacts,options.dataUseDefaultMode??'BETA_OPEN'); const ctx=kernel.context.get();
   if(options.premiumLive)kernel.features.set('premium_live_ledger',true);
   const requireGroup=async(groupId:string,manage=false)=>{
     const group=await repo.getGroup(ctx.tenantId,groupId);if(!group)throw Error('GROUP_NOT_FOUND');
@@ -531,6 +533,20 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
     if(savingsYieldSplit&&request.method==='POST'){
       await requireGroup(savingsYieldSplit[1]!,true);const body=await readJson<Record<string,unknown>>(request);
       return json(splitInterestPool(finite(body.total),Array.isArray(body.shares)?body.shares as any:[]),200,cors);
+    }
+    const fundMemberPositions=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/funds\/([^/]+)\/member-positions$/);
+    if(fundMemberPositions&&request.method==='GET'){
+      await requireGroup(fundMemberPositions[1]!,true);
+      return json(await fundPositions.positions(fundMemberPositions[1]!,fundMemberPositions[2]!,url.searchParams.get('exercise')??'CURRENT'),200,cors);
+    }
+    const fundMemberAdjustments=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/funds\/([^/]+)\/member-adjustments$/);
+    if(fundMemberAdjustments&&request.method==='POST'){
+      await requireGroup(fundMemberAdjustments[1]!,true);const body=await readJson<Record<string,unknown>>(request);
+      return json(await fundPositions.record(fundMemberAdjustments[1]!,fundMemberAdjustments[2]!,{
+        membershipId:String(body.membershipId??''),exerciseLabel:String(body.exerciseLabel??'CURRENT'),
+        kind:String(body.kind??'ADJUSTMENT_IN') as FundMemberAdjustmentKind,amount:finite(body.amount),
+        note:body.note?String(body.note):undefined,occurredAt:body.occurredAt?String(body.occurredAt):undefined
+      }),201,cors);
     }
     const financialRecapPreview=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/recap\/financial-preview$/);
     if(financialRecapPreview&&request.method==='POST'){
