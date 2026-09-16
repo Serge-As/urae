@@ -18,6 +18,7 @@ import { ConciergeLearningService, type DataUsePurpose, type LearningCategory, t
 import { MarketService } from '../../../packages/market/src/index.js';
 import { CommunityService } from '../../../packages/community/src/index.js';
 import { FounderLearningStore } from '../../../packages/founder-observatory/src/index.js';
+import { FounderControlService, type ControlIssueState, type EditorialState, type CheckState } from '../../../packages/founder-control/src/index.js';
 import { CommercialPreferenceService, preferenceCookie, clearPreferenceCookie, readPreferenceCookie } from '../../../packages/commercial-preferences/src/index.js';
 import { MiscRubricService } from '../../../packages/misc-rubrics/src/index.js';
 import { allocateSavingsYield, allocateSavingsYieldAtWork, splitInterestPool } from '../../../packages/savings-yield/src/index.js';
@@ -79,11 +80,12 @@ const createRequestScope = (request:Request,repo:PlatformRepository,artifacts?:A
   const miscRubrics=new MiscRubricService(repo,kernel,ledger);
   const adManager=new AdManagerService(repo,kernel);
   const economicIntelligence=new EconomicIntelligenceService(repo,kernel);
+  const founderControl=new FounderControlService(repo,kernel);
   const externalPrograms=new ExternalProgramsService(repo,kernel);
   const tenantId=request.headers.get('x-tenant-id')??'tenant_demo'; const actorId=request.headers.get('x-actor-id')??'user_founder';
   const groupRoles=(request.headers.get('x-group-roles')??'founder,manager').split(',').map(x=>x.trim()).filter(Boolean);
   kernel.context.set({actorId,tenantId,activeGroupId:request.headers.get('x-active-group-id')??undefined,groupRoles,mandateIds:[],deviceId:request.headers.get('x-device-id')??'device_web_demo',sessionId:request.headers.get('x-session-id')??'session_demo',locale:request.headers.get('accept-language')?.toLowerCase().startsWith('en')?'en':'fr',timezone:request.headers.get('x-timezone')??'Africa/Douala',connectivity:'online',requestId:request.headers.get('x-request-id')??makeId('req')});
-  return {kernel,foundation,ledger,meetings,discovery,membershipGateway,rubrics,completion,explainability,documents,receivables,treasury,riskFinance,market,community,imports,memberControl,groupIdentity,conciergeLearning,miscRubrics,adManager,economicIntelligence,externalPrograms};
+  return {kernel,foundation,ledger,meetings,discovery,membershipGateway,rubrics,completion,explainability,documents,receivables,treasury,riskFinance,market,community,imports,memberControl,groupIdentity,conciergeLearning,miscRubrics,adManager,economicIntelligence,externalPrograms,founderControl};
 };
 
 const inboxFor = async (repo:PlatformRepository,tenantId:string,actorId:string) => {
@@ -98,7 +100,7 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
     const allowed=Boolean((cors as Record<string,string>)['access-control-allow-origin']);
     return new Response(null,{status:allowed?204:403,headers:{...baseSecurityHeaders,...cors,'access-control-allow-methods':'GET,POST,PUT,OPTIONS','access-control-allow-headers':'content-type,x-tenant-id,x-actor-id,x-group-roles,x-active-group-id,x-device-id,x-session-id,x-request-id,x-timezone'}});
   }
-  const {kernel,foundation,ledger,meetings,discovery,membershipGateway,rubrics,completion,explainability,documents,receivables,treasury,riskFinance,market,community,imports,memberControl,groupIdentity,conciergeLearning,miscRubrics,adManager,economicIntelligence,externalPrograms}=createRequestScope(request,repo,options.artifacts,options.dataUseDefaultMode??'BETA_OPEN'); const ctx=kernel.context.get();
+  const {kernel,foundation,ledger,meetings,discovery,membershipGateway,rubrics,completion,explainability,documents,receivables,treasury,riskFinance,market,community,imports,memberControl,groupIdentity,conciergeLearning,miscRubrics,adManager,economicIntelligence,externalPrograms,founderControl}=createRequestScope(request,repo,options.artifacts,options.dataUseDefaultMode??'BETA_OPEN'); const ctx=kernel.context.get();
   if(options.premiumLive)kernel.features.set('premium_live_ledger',true);
   const requireGroup=async(groupId:string,manage=false)=>{
     const group=await repo.getGroup(ctx.tenantId,groupId);if(!group)throw Error('GROUP_NOT_FOUND');
@@ -650,6 +652,33 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
     }
     const commercialAffinities=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/concierge\/commercial-affinities$/);
     if(commercialAffinities&&request.method==='GET')return json(await conciergeLearning.commercialAffinities(commercialAffinities[1]!),200,cors);
+
+    const requireFounderTeam=()=>{if(!options.founderTeamActors?.has(ctx.actorId))throw new Error('FOUNDER_TEAM_ONLY');};
+    if(request.method==='GET'&&url.pathname==='/api/v1/founder/control-center'){
+      requireFounderTeam();return json(await founderControl.dashboard(),200,cors);
+    }
+    if(request.method==='POST'&&url.pathname==='/api/v1/founder/control-issues'){
+      requireFounderTeam();const body=await readJson<Record<string,unknown>>(request);
+      return json(await founderControl.createIssue({serviceId:body.serviceId?String(body.serviceId):undefined,title:String(body.title??''),summary:String(body.summary??''),severity:body.severity?String(body.severity) as any:undefined,source:body.source?String(body.source) as any:undefined,groupId:body.groupId?String(body.groupId):undefined}),201,cors);
+    }
+    const founderIssueTransition=url.pathname.match(/^\/api\/v1\/founder\/control-issues\/([^/]+)\/transition$/);
+    if(founderIssueTransition&&request.method==='POST'){
+      requireFounderTeam();const body=await readJson<Record<string,unknown>>(request);
+      return json(await founderControl.transitionIssue(founderIssueTransition[1]!,String(body.state??'') as ControlIssueState,String(body.resolution??'')),200,cors);
+    }
+    if(request.method==='POST'&&url.pathname==='/api/v1/founder/editorial'){
+      requireFounderTeam();const body=await readJson<Record<string,unknown>>(request);
+      return json(await founderControl.createEditorial({serviceId:body.serviceId?String(body.serviceId):undefined,title:String(body.title??''),kind:body.kind?String(body.kind) as any:undefined,state:body.state?String(body.state) as EditorialState:undefined,owner:body.owner?String(body.owner):undefined,notes:body.notes?String(body.notes):undefined}),201,cors);
+    }
+    const founderEditorialTransition=url.pathname.match(/^\/api\/v1\/founder\/editorial\/([^/]+)\/transition$/);
+    if(founderEditorialTransition&&request.method==='POST'){
+      requireFounderTeam();const body=await readJson<Record<string,unknown>>(request);
+      return json(await founderControl.transitionEditorial(founderEditorialTransition[1]!,String(body.state??'') as EditorialState,body.notes===undefined?undefined:String(body.notes)),200,cors);
+    }
+    if(request.method==='POST'&&url.pathname==='/api/v1/founder/service-checks'){
+      requireFounderTeam();const body=await readJson<Record<string,unknown>>(request);
+      return json(await founderControl.recordCheck({serviceId:String(body.serviceId??''),state:String(body.state??'UNKNOWN') as CheckState,source:body.source?String(body.source):undefined,summary:body.summary?String(body.summary):undefined}),201,cors);
+    }
 
     if(request.method==='GET'&&url.pathname==='/api/v1/founder/learning-observatory'){
       if(!options.founderLearning||!options.founderTeamActors?.has(ctx.actorId))throw new Error('FOUNDER_TEAM_ONLY');
