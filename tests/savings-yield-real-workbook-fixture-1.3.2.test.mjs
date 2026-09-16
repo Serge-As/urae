@@ -103,3 +103,57 @@ test('segregated productive policy makes the source-fund decision explicit inste
   assert.ok((r.fundInterest.SCHOOL??0)>0,'school receives only the explicit residual share');
   assert.ok((r.fundInterest.CLASSIC??0)>(r.fundInterest.SCHOOL??0));
 });
+
+
+test('five-policy field comparison preserves the pool and exposes materially different allocation philosophies',()=>{
+  const merge=(...results)=>{
+    const by=new Map();
+    for(const r of results)for(const row of r.members??[])by.set(row.memberId,(by.get(row.memberId)??0)+row.interest);
+    return Object.fromEntries([...by.entries()].sort((a,b)=>a[0].localeCompare(b[0],undefined,{numeric:true})));
+  };
+  const historical=simulateWorkbookYieldPipeline({
+    realizedInterestPool:708500,bureauShareBasisPoints:2000,deposits:all.map(({session,...d})=>d),
+    funds:[
+      {fund:'CLASSIC',shareBasisPoints:7000,eligiblePeriods:['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT'],highestCoefficient:9,coefficients:{JAN:9,FEB:8,MAR:7,APR:6,MAY:5,JUN:4,JUL:3,AUG:2,SEP:1,OCT:.5,NOV:0,DEC:0}},
+      {fund:'SCHOOL',shareBasisPoints:1000,eligiblePeriods:['JAN','FEB','MAR','APR','MAY','JUN','JUL'],highestCoefficient:7,coefficients:{JAN:7,FEB:6,MAR:5,APR:4,MAY:3,JUN:2,JUL:1,AUG:0,SEP:0,OCT:0,NOV:0,DEC:0}}
+    ]
+  });
+  const linearClassic=allocateCapitalTimeYield({interestPool:495950,deposits:classic,policy:{endSession:12,eligibleThroughSession:10,timeExponent:1,amountPower:1}});
+  const linearSchool=allocateCapitalTimeYield({interestPool:70850,deposits:school,policy:{endSession:12,eligibleThroughSession:7,timeExponent:1,amountPower:1}});
+  const earlyClassic=allocateCapitalTimeYield({interestPool:495950,deposits:classic,policy:{endSession:12,eligibleThroughSession:10,timeExponent:1.5,amountPower:1}});
+  const earlySchool=allocateCapitalTimeYield({interestPool:70850,deposits:school,policy:{endSession:12,eligibleThroughSession:7,timeExponent:1.5,amountPower:1}});
+  const loans=[
+    {loanId:'jan-1m',disbursedSession:1,principal:1000000,realizedInterest:90000,repaidSession:3},
+    {loanId:'apr-6m',disbursedSession:4,principal:6000000,realizedInterest:600000,repaidSession:6}
+  ];
+  const productive=allocateAttributedProductiveYield({
+    realizedInterestPool:708500,deposits:all,loans,
+    policy:{officeShareBasisPoints:2000,poolingMode:'POOLED',allocationMethod:'PRO_RATA_AVAILABLE',residualPolicy:'UNALLOCATED',endSession:12,eligibleThroughSession:10,timeExponent:1,amountPower:1}
+  });
+  const hybrid=allocateAttributedProductiveYield({
+    realizedInterestPool:708500,deposits:all,loans,
+    policy:{officeShareBasisPoints:2000,poolingMode:'POOLED',allocationMethod:'PRO_RATA_AVAILABLE',residualPolicy:'TIME_WEIGHTED',endSession:12,eligibleThroughSession:10,timeExponent:1,amountPower:1}
+  });
+  const historicalMembers=merge(...historical.funds),linearMembers=merge(linearClassic,linearSchool),earlyMembers=merge(earlyClassic,earlySchool),productiveMembers=merge(productive),hybridMembers=merge(hybrid);
+  const sum=x=>Object.values(x).reduce((n,v)=>n+v,0);
+  assert.equal(sum(historicalMembers),566800);
+  assert.equal(sum(linearMembers),566800);
+  assert.equal(sum(earlyMembers),566800);
+  assert.equal(sum(productiveMembers),552000);
+  assert.equal(productive.unallocatedSaverInterest,14800);
+  assert.equal(sum(hybridMembers),566800);
+  assert.notDeepEqual(linearMembers,historicalMembers);
+  assert.notDeepEqual(earlyMembers,linearMembers);
+  assert.notDeepEqual(productiveMembers,hybridMembers);
+  const top=(x,n=8)=>Object.entries(x).sort((a,b)=>b[1]-a[1]||a[0].localeCompare(b[0],undefined,{numeric:true})).slice(0,n);
+  console.log('FIVE_POLICY_FIELD_REPORT='+JSON.stringify({
+    pool:708500,office:141700,saverPool:566800,
+    policies:{
+      historical:{distributed:sum(historicalMembers),unallocated:0,top:top(historicalMembers),members:historicalMembers},
+      capital_time_linear:{alpha:1,beta:1,classicEligibleThrough:10,schoolEligibleThrough:7,distributed:sum(linearMembers),unallocated:0,top:top(linearMembers),members:linearMembers},
+      capital_time_early_bonus:{alpha:1.5,beta:1,classicEligibleThrough:10,schoolEligibleThrough:7,distributed:sum(earlyMembers),unallocated:0,top:top(earlyMembers),members:earlyMembers},
+      productive_attributed:{evidencedGrossInterest:productive.evidencedGrossInterest,residualGrossInterest:productive.residualGrossInterest,distributed:sum(productiveMembers),unallocated:productive.unallocatedSaverInterest,top:top(productiveMembers),members:productiveMembers},
+      hybrid_productive_time:{evidencedGrossInterest:hybrid.evidencedGrossInterest,residualGrossInterest:hybrid.residualGrossInterest,distributed:sum(hybridMembers),unallocated:0,top:top(hybridMembers),members:hybridMembers}
+    }
+  }));
+});
