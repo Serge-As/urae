@@ -2,71 +2,56 @@
 
 Date : 2026-09-16
 
-## Lecture obligatoire avant toute modification
+## Lecture obligatoire
 1. `AGENTS.md`
 2. `docs/memory/CURRENT_TRUTH.md`
 3. `PROJECT_STATE.md`
 4. `docs/memory/PROJECT_TRUTH_LEDGER.json`
-5. `docs/constitution/ECO_SYSTEM_Cahier_des_Charges_Maitre_Exhaustif_3.0.0_2026-09-16.md`
-6. `docs/economics/ECO_SYSTEM_Modele_Economique_AdManager_Intelligence_3.0.0_2026-09-16.md`
+5. `docs/constitution/ECO_SYSTEM_Cahier_des_Charges_Maitre_Exhaustif_3.1.0_2026-09-16.md`
+6. `docs/economics/ECO_SYSTEM_Modele_Economique_Detaille_3.1.0_2026-09-16.md`
 7. `FEATURE_REGISTRY.yaml`
 8. derniers runs GitHub de la branche.
 
 ## Branche de reprise
-`next/1.3.1-recovery-recap-services-20260915`
+`next/1.3.2-savings-control-forum-live-20260916`
 
-Toujours prendre le HEAD distant le plus récent ; ne jamais repartir de la 1.2 pour le développement courant.
+Toujours récupérer le HEAD distant le plus récent.
 
-## Ne pas confondre
-- production publique : 1.2 qualifiée ;
-- développement : 1.3.1 ;
-- Premium Live : pilote isolé qualifié ;
-- aucune autorisation n'a été donnée dans ce lot pour déployer 1.3.1 sur le Worker public.
+## Vérité production
+Eco-System 1.3.2 est **déployé et smoke-testé** :
+- run production : `35096484915` SUCCESS ;
+- Worker Version ID : `f6e8b41f-8093-4ca9-9feb-202a4037c7b9`;
+- R2 `eco-system-backups` actif ;
+- Premium Live / Founder Control / Community Realtime liés ;
+- argent réel false.
 
-## Acquis — ne pas refaire
-- 10 étapes création ;
-- Collation ;
-- multi-tontines indépendantes ;
-- RubricDefinition/policies ;
-- Rule Architect avec contradictions ;
-- Tontine Manager permanent ;
-- preuve Ledger avant SERVED ;
-- loans CAPITAL_FIRST/INTEREST_FIRST, pas d'intérêt sur intérêt ;
-- savings-yield par dépôt et distribution exacte ;
-- RECAP financier/session/carryover ;
-- Secours par membre + autres fonds reportables ;
-- outbox Live + replay >500 ;
-- Premium Live pilote end-to-end vert ;
-- CNI matching HMAC ;
-- profil économique groupe/rubrique pseudonymisé ;
-- AdManager spécialisé ;
-- demande agrégée / supplier ranking / unit economics ;
-- Forum et communautés ;
-- Partners/ONG spécialisés avec share packs expirants/révocables.
+## Ne pas refaire
+- R2 est activé ; le jeton GitHub actuel passe D1 et R2.
+- Ne pas demander à l'utilisateur de recréer ce token sans nouveau code d'erreur.
+- Moteur historique Épargne déjà confronté au classeur réel : identique.
+- Moteur productif déjà testé sur les prêts documentés ; il refuse les sources non prouvées.
+- Forum v2, Control Center, Secours membre, identité phone/name/CNI sont acquis 1.3.2.
+- Les peppers Cloudflare existent désormais ; les préserver.
 
-## Prochains lots recommandés
-1. UX complète RECAP/Cassation et persistance des modèles de clôture.
-2. Deals/Offers/Negotiation et Demand Exchange avec persistance.
-3. Economic Control Center + Analytics Engine optionnel.
-4. Forum avancé.
-5. Programmes ONG avancés et annuaire partenaires multi-groupes.
-6. notifications/connecteurs.
-7. tests terrain seniors/2G/Android anciens.
-8. seulement avec autorisation explicite : préparation + backup + déploiement public 1.3.1.
+## Prochains lots
+1. Ledger → moteur productif : tracer source de prêt, principal remboursé, réemploi, caisse classique/scolaire.
+2. RECAP/Cassation + UI Secours membre.
+3. R2 media/photo + miniatures + contrôle.
+4. Passkeys + Push.
+5. Forum recherche, signets, voix, sondages, modération.
+6. RealtimeKit audio/vidéo.
+7. Demand Exchange/Deals + Analytics/Cost Control.
+8. tests terrain seniors/2G.
 
 ## Interdictions
 - ne pas recréer `eco-system-db`;
-- ne pas réintroduire une cotisation nominale globale ;
-- ne pas réduire le parcours 10 étapes ;
-- ne pas utiliser une CNI brute dans pub/analytics ;
-- ne pas exposer de finance individuelle à partenaires/ONG ;
-- ne pas laisser BETA_OPEN écraser un OFF explicite ;
-- ne pas créer de second Ledger ;
-- ne pas capitaliser automatiquement les intérêts impayés ;
-- ne pas activer l'argent réel ;
 - pas de migration destructive ;
+- pas d'argent réel ;
+- pas de second Ledger ;
+- pas de données individuelles sensibles en pub/partenaires ;
+- pas d'intérêt impayé capitalisé automatiquement ;
+- pas de suppression d'acquis pour simplifier l'UI ;
 - pas de force-push/merge main sans décision.
 
-## Checkpoint anti-interruption
-Après chaque 3–5 sous-lots significatifs : commit + CI + Current Truth/NEXT_RUN si la vérité change.
-Aucune décision critique ne doit rester uniquement dans un chat.
+## Procédure anti-interruption
+Après 3–5 sous-lots significatifs : commit + CI + Current Truth/NEXT_RUN si la vérité change. Avant toute production : BIR+ source + export D1 + restauration/integrity check + Artifact GitHub + miroir R2 + smoke.
