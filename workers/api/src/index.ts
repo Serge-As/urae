@@ -101,7 +101,7 @@ const createRequestScope = (request:Request,repo:PlatformRepository,artifacts?:A
   const groupIdentity=new GroupIdentityService(repo,kernel);
   const conciergeLearning=new ConciergeLearningService(repo,kernel,dataUseDefaultMode);
   const miscRubrics=new MiscRubricService(repo,kernel,ledger);
-  const adManager=new AdManagerService(repo,kernel);
+  const adManager=new AdManagerService(repo,kernel,options.documentAI);
   const economicIntelligence=new EconomicIntelligenceService(repo,kernel);
   const externalPrograms=new ExternalProgramsService(repo,kernel);
   const tenantId=request.headers.get('x-tenant-id')??'tenant_demo'; const actorId=request.headers.get('x-actor-id')??'user_founder';
@@ -969,6 +969,8 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
     if(adDashboard&&request.method==='GET')return json(await adManager.dashboard(adDashboard[1]!),200,cors);
     const adHousePlan=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/ads\/house-plan$/);
     if(adHousePlan&&request.method==='GET')return json(await adManager.housePlan(adHousePlan[1]!),200,cors);
+    const adHouseVariants=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/ads\/house-variants$/);
+    if(adHouseVariants&&request.method==='POST')return json(await adManager.composeHouseVariants(adHouseVariants[1]!),200,cors);
     const adProspects=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/ads\/prospects$/);
     if(adProspects&&request.method==='GET')return json(await adManager.listProspects(adProspects[1]!),200,cors);
     if(adProspects&&request.method==='POST')return json(await adManager.createProspect(adProspects[1]!,await readJson<any>(request)),201,cors);
