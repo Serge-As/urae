@@ -798,6 +798,32 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
       const body=await readJson<Record<string,unknown>>(request);
       return json(await community.createPost(communityPosts[1]!,{hubId:communityPosts[2]!,kind:String(body.kind??'DISCUSSION') as any,title:body.title?String(body.title):undefined,body:String(body.body??'')}),201,cors);
     }
+    const communityTimeline=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/community\/hubs\/([^/]+)\/timeline$/);
+    if(communityTimeline&&request.method==='GET')return json(await community.timeline(communityTimeline[1]!,communityTimeline[2]!,Number(url.searchParams.get('limit')??60)),200,cors);
+    const communityDraft=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/community\/hubs\/([^/]+)\/draft$/);
+    if(communityDraft&&request.method==='GET')return json(await community.draft(communityDraft[1]!,communityDraft[2]!),200,cors);
+    if(communityDraft&&request.method==='POST'){
+      const body=await readJson<Record<string,unknown>>(request);
+      return json(await community.saveDraft(communityDraft[1]!,communityDraft[2]!,{body:String(body.body??''),title:String(body.title??''),kind:String(body.kind??'DISCUSSION') as any}),200,cors);
+    }
+    const communityRead=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/community\/hubs\/([^/]+)\/read-cursor$/);
+    if(communityRead&&request.method==='GET')return json(await community.cursor(communityRead[1]!,communityRead[2]!),200,cors);
+    if(communityRead&&request.method==='POST'){
+      const body=await readJson<Record<string,unknown>>(request);
+      return json(await community.markRead(communityRead[1]!,communityRead[2]!,String(body.anchorPostId??'')),200,cors);
+    }
+    const communityReact=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/community\/posts\/([^/]+)\/reactions$/);
+    if(communityReact&&request.method==='POST'){
+      const body=await readJson<Record<string,unknown>>(request);
+      return json(await community.react(communityReact[1]!,communityReact[2]!,String(body.reaction??'LIKE') as any),200,cors);
+    }
+    const communityEngagement=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/community\/posts\/([^/]+)\/engagement$/);
+    if(communityEngagement&&request.method==='GET')return json(await community.engagement(communityEngagement[1]!,communityEngagement[2]!),200,cors);
+    const communityComments=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/community\/posts\/([^/]+)\/comments$/);
+    if(communityComments&&request.method==='POST'){
+      const body=await readJson<Record<string,unknown>>(request);
+      return json(await community.createComment(communityComments[1]!,communityComments[2]!,String(body.body??''),body.parentCommentId?String(body.parentCommentId):undefined),201,cors);
+    }
     const communityModerate=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/community\/posts\/([^/]+)\/moderate$/);
     if(communityModerate&&request.method==='POST'){const body=await readJson<Record<string,unknown>>(request);return json(await community.moderate(communityModerate[1]!,communityModerate[2]!,String(body.state??'') as any,String(body.reason??'')),200,cors);}
     const communityFederation=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/community\/hubs\/([^/]+)\/federation$/);
