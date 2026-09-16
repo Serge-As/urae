@@ -88,6 +88,20 @@ export class AdManagerService{
     await this.repo.saveAudit(this.kernel.audit.append({tenantId:ctx.tenantId,actorId:ctx.actorId,action:'AD_CAMPAIGN_STATE_CHANGED',targetType:'ad_campaign',targetId:id,requestId:ctx.requestId,metadata:{from,to,note:note.trim().slice(0,200)}}));return next;
   }
 
+  async housePlan(groupId:string){
+    const group=await this.requireManager(groupId),ctx=this.kernel.context.get(),[rubrics,meetings]=await Promise.all([this.repo.listRubricDefinitions(ctx.tenantId,groupId),this.repo.listMeetings(ctx.tenantId,groupId)]);
+    const profile=group.launchProfileSnapshot,expected=profile?.cycle?.expectedSessions??0,done=meetings.filter(x=>x.status==='closed').length;
+    const exerciseProgress=expected>0?Math.min(1,done/expected):undefined;
+    let monthsToExerciseEnd:undefined|number;
+    if(profile?.cycle?.startsAt&&expected>0){
+      const start=Date.parse(profile.cycle.startsAt),cadence=profile.cycle.cadence??'MONTHLY',daysPerSession=cadence==='WEEKLY'?7:cadence==='BIWEEKLY'?14:cadence==='MONTHLY'?30.4375:30.4375;
+      if(Number.isFinite(start)){const end=start+expected*daysPerSession*86400000;monthsToExerciseEnd=Math.max(0,(end-Date.now())/(30.4375*86400000));}
+    }
+    const deferredAssistance=rubrics.some(r=>r.activityPlan?.kind==='ASSISTANCE'&&r.policies?.assistance?.reviewStatus!=='VALIDATED');
+    const context:HouseAdContext={groupKey:group.id,groupKind:group.kind,originMode:group.originMode,exerciseProgress,monthsToExerciseEnd,rubricKinds:rubrics.map(r=>r.activityPlan?.kind).filter(Boolean) as string[],rubricNames:rubrics.map(r=>r.name),lowBandwidth:Boolean(profile?.accessibility?.lowBandwidthPriority),deferredAssistance};
+    return{context,plan:buildContextualHouseAdPlan(context),generatedAt:now()};
+  }
+
   async dashboard(groupId:string){
     const campaigns=await this.list(groupId),prospects=await this.listProspects(groupId);
     const impressions=campaigns.reduce((n,x)=>n+x.impressions,0),opens=campaigns.reduce((n,x)=>n+x.opens,0),actions=campaigns.reduce((n,x)=>n+x.actions,0),negativeFeedback=campaigns.reduce((n,x)=>n+x.negativeFeedback,0);
@@ -155,16 +169,68 @@ export const AD_PLACEMENT_CATALOG:AdPlacementSpec[]=[
   {id:'NOTIFICATION_OPT_IN',labelFr:'Notification sponsorisée opt-in',surface:'notification',paid:true,houseFallback:false,maxDensity:'fortement limitée, préférence explicite',lowData:'texte',reason:'Canal puissant réservé aux utilisateurs ayant accepté ce format.'}
 ];
 
-export interface HouseAdCreative{key:string;headline:string;body:string;callToAction:string;destinationRef:string;placementIds:AdPlacementId[];objective:string;}
+export type HouseAdStage='EARLY'|'MID'|'CLOSING'|'ANY';
+export interface HouseAdCreative{key:string;headline:string;body:string;callToAction:string;destinationRef:string;placementIds:AdPlacementId[];objective:string;stages?:HouseAdStage[];rubricHints?:string[];universal?:boolean;}
+export interface HouseAdContext{
+  groupKey:string;
+  groupKind?:string;
+  originMode?:string;
+  exerciseProgress?:number;
+  monthsToExerciseEnd?:number;
+  rubricKinds?:string[];
+  rubricNames?:string[];
+  lowBandwidth?:boolean;
+  deferredAssistance?:boolean;
+}
+export interface ContextualHouseAd extends HouseAdCreative{score:number;reasonCodes:string[];stage:HouseAdStage;variant:number;}
+const textHash=(s:string)=>{let h=2166136261;for(let i=0;i<s.length;i++)h=Math.imul(h^s.charCodeAt(i),16777619);return h>>>0;};
+const stageFor=(ctx:HouseAdContext):HouseAdStage=>{
+  if(ctx.monthsToExerciseEnd!==undefined&&ctx.monthsToExerciseEnd<=4)return'CLOSING';
+  const p=ctx.exerciseProgress??0;if(p<.25)return'EARLY';if(p>=.67)return'CLOSING';return'MID';
+};
+const contextualBody=(ad:HouseAdCreative,ctx:HouseAdContext,stage:HouseAdStage,variant:number)=>{
+  const rubricNames=(ctx.rubricNames??[]).join(' ').toLowerCase(),inKind=/savon|huile|drap|assiette|tissu/.test(rubricNames);
+  if(ad.key==='PAPER_BRIDGE'&&stage==='EARLY')return variant%2?'Commencez l’exercice avec des fiches papier cohérentes avec Eco-System, utiles en réunion et en cas de connexion faible.':'Préparez dès maintenant feuilles de séance, registres et états de caisse imprimables, puis retrouvez la même vérité dans Eco-System.';
+  if(ad.key==='ACADEMY'&&stage==='EARLY')return variant%2?'Formez rapidement président, trésorier et contrôleur avant que les habitudes de l’exercice ne soient figées.':'Début d’exercice : une courte formation du Bureau évite beaucoup de corrections de caisse et de règles plus tard.';
+  if(ad.key==='GROUP_DOCTOR'&&stage!=='EARLY')return variant%2?'Comparez le RI, les pratiques observées et les opérations déjà enregistrées avant que les écarts ne deviennent difficiles à corriger.':'Votre règlement, vos habitudes et vos comptes racontent-ils la même histoire ? Faites un diagnostic sans modifier les données.';
+  if(ad.key==='INTEREST_FAIRNESS_LAB'&&stage==='CLOSING')return variant%2?'La fin d’exercice approche : comparez coefficients, Capital × Temps et capital réellement productif avant de partager les intérêts.':'À moins de quatre mois de la clôture, testez plusieurs règles de redistribution et montrez les écarts au Bureau avant toute validation.';
+  if(ad.key==='DEMAND_EXCHANGE'&&inKind)return variant%2?'Vos rubriques en nature peuvent devenir un pouvoir d’achat collectif : comparez fournisseurs, transport et délais.':'Savons, huiles, draps ou autres besoins : agrégez la demande et négociez le coût rendu au lieu de comparer seulement le prix affiché.';
+  if(ad.key==='ASSISTANCE_RULEBOOK')return'Les modalités maladie, deuil, mariage, baptême et autres événements peuvent être relues et validées une par une sans ralentir la création du groupe.';
+  if(ad.key==='MEETING_AUTOPILOT')return'Préparez la prochaine séance : solde d’ouverture, rubriques actives, avances, bénéficiaires prévus et preuves encore attendues.';
+  return ad.body;
+};
 export const HOUSE_AD_CATALOG:HouseAdCreative[]=[
-  {key:'INTEREST_FAIRNESS_LAB',headline:'Testez votre règle de partage des intérêts',body:'Comparez votre méthode historique, Capital × Temps et le capital réellement productif avant la clôture.',callToAction:'Ouvrir le Fairness Lab',destinationRef:'module:SAVINGS.YIELD.FAIRNESS_LAB',placementIds:['HOME_AFTER_PRIORITIES','POST_ACTION_HOUSE','REPORT_FOOTER'],objective:'ADOPTION'},
-  {key:'GROUP_DOCTOR',headline:'Votre groupe est-il cohérent ?',body:'Le Group Doctor signale règles contradictoires, preuves manquantes et écarts sans modifier vos décisions.',callToAction:'Faire le diagnostic',destinationRef:'module:GROUP.DOCTOR',placementIds:['HOME_AFTER_PRIORITIES','POST_ACTION_HOUSE'],objective:'ADOPTION'},
-  {key:'ACADEMY',headline:'Former le Bureau sans longs manuels',body:'Micro-formations caisse, prêts, rapprochement, gouvernance et transition papier-numérique.',callToAction:'Voir Academy',destinationRef:'module:ACADEMY',placementIds:['FEED_NATIVE','FORUM_NATIVE','POST_ACTION_HOUSE'],objective:'RETENTION'},
-  {key:'DEMAND_EXCHANGE',headline:'Achetez à plusieurs, négociez mieux',body:'Regroupez les besoins de plusieurs groupes et comparez prix rendu, capacité et délai.',callToAction:'Voir les achats groupés',destinationRef:'module:ECONOMIC.DEMAND.EXCHANGE.CORE',placementIds:['MARKETPLACE_SPONSORED','FEED_NATIVE'],objective:'ECONOMY'},
-  {key:'PAPER_BRIDGE',headline:'Gardez aussi vos registres papier',body:'Préparez les fiches de séance, états de caisse et registres imprimables à partir des mêmes données.',callToAction:'Préparer un registre',destinationRef:'module:PAPER.BRIDGE',placementIds:['POST_ACTION_HOUSE','REPORT_FOOTER'],objective:'ADOPTION'}
+  {key:'INTEREST_FAIRNESS_LAB',headline:'Préparez le partage des intérêts',body:'Comparez votre méthode historique, Capital × Temps et le capital réellement productif avant la clôture.',callToAction:'Ouvrir le Fairness Lab',destinationRef:'module:SAVINGS.YIELD.FAIRNESS_LAB',placementIds:['HOME_AFTER_PRIORITIES','POST_ACTION_HOUSE','REPORT_FOOTER'],objective:'ADOPTION',stages:['CLOSING'],rubricHints:['SAVINGS']},
+  {key:'GROUP_DOCTOR',headline:'Votre groupe est-il cohérent ?',body:'Le Group Doctor signale règles contradictoires, preuves manquantes et écarts sans modifier vos décisions.',callToAction:'Faire le diagnostic',destinationRef:'module:GROUP.DOCTOR',placementIds:['HOME_AFTER_PRIORITIES','POST_ACTION_HOUSE'],objective:'ADOPTION',stages:['MID','CLOSING'],universal:true},
+  {key:'ACADEMY',headline:'Former le Bureau sans longs manuels',body:'Micro-formations caisse, prêts, rapprochement, gouvernance et transition papier-numérique.',callToAction:'Voir Academy',destinationRef:'module:ACADEMY',placementIds:['FEED_NATIVE','FORUM_NATIVE','POST_ACTION_HOUSE','HOME_AFTER_PRIORITIES'],objective:'RETENTION',stages:['EARLY','MID'],universal:true},
+  {key:'DEMAND_EXCHANGE',headline:'Achetez à plusieurs, négociez mieux',body:'Regroupez les besoins de plusieurs groupes et comparez prix rendu, capacité et délai.',callToAction:'Voir les achats groupés',destinationRef:'module:ECONOMIC.DEMAND.EXCHANGE.CORE',placementIds:['MARKETPLACE_SPONSORED','FEED_NATIVE'],objective:'ECONOMY',stages:['ANY'],rubricHints:['TONTINE','IN_KIND','CONTRIBUTION'],universal:true},
+  {key:'PAPER_BRIDGE',headline:'Gardez aussi vos registres papier',body:'Préparez les fiches de séance, états de caisse et registres imprimables à partir des mêmes données.',callToAction:'Préparer un registre',destinationRef:'module:PAPER.BRIDGE',placementIds:['POST_ACTION_HOUSE','REPORT_FOOTER','HOME_AFTER_PRIORITIES'],objective:'ADOPTION',stages:['EARLY','MID'],universal:true},
+  {key:'ASSISTANCE_RULEBOOK',headline:'Validez les modalités d’assistance sans bloquer la création',body:'Relisez maladie, deuil, mariage, baptême et autres événements dans un menu dédié.',callToAction:'Ouvrir les règles Assistance',destinationRef:'view:finance#assistanceRulebookPanel',placementIds:['HOME_AFTER_PRIORITIES','POST_ACTION_HOUSE'],objective:'ADOPTION',stages:['EARLY','MID'],rubricHints:['ASSISTANCE']},
+  {key:'MEETING_AUTOPILOT',headline:'Préparez la prochaine réunion en quelques contrôles',body:'Vérifiez solde d’ouverture, rubriques, bénéficiaires et preuves avant la séance.',callToAction:'Préparer la réunion',destinationRef:'module:MEETING.AUTOPILOT',placementIds:['HOME_AFTER_PRIORITIES','POST_ACTION_HOUSE'],objective:'RETENTION',stages:['ANY'],universal:true}
 ];
 
-export interface AdDeliveryRequest{placementId:AdPlacementId;locality?:string;interestTags?:string[];groupKind?:string;rubricKind?:string;viewerFrequency7d?:Record<string,number>;}
+export function buildContextualHouseAdPlan(context:HouseAdContext):ContextualHouseAd[]{
+  const stage=stageFor(context),kinds=new Set((context.rubricKinds??[]).map(x=>x.toUpperCase())),names=(context.rubricNames??[]).join(' ').toLowerCase(),seed=textHash(context.groupKey||'group');
+  return HOUSE_AD_CATALOG.map((ad,index)=>{
+    let score=10,reasonCodes:string[]=[];
+    const stageMatch=!ad.stages?.length||ad.stages.includes('ANY')||ad.stages.includes(stage);
+    if(stageMatch){score+=35;reasonCodes.push('STAGE_MATCH:'+stage);}else score-=25;
+    const hintMatch=(ad.rubricHints??[]).some(h=>kinds.has(h)||names.includes(h.toLowerCase()));
+    if(hintMatch){score+=55;reasonCodes.push('RUBRIC_MATCH');}
+    else if(ad.rubricHints?.length&&ad.universal){score+=8;reasonCodes.push('EXPLORATION_ALLOWED');}
+    else if(ad.rubricHints?.length)score-=20;
+    if(context.originMode==='IMPORT_EXISTING'&&ad.key==='PAPER_BRIDGE'){score+=45;reasonCodes.push('HISTORICAL_GROUP');}
+    if(context.lowBandwidth&&ad.key==='PAPER_BRIDGE'){score+=25;reasonCodes.push('LOW_BANDWIDTH');}
+    if(context.deferredAssistance&&ad.key==='ASSISTANCE_RULEBOOK'){score+=80;reasonCodes.push('ASSISTANCE_REVIEW_PENDING');}
+    if(stage==='CLOSING'&&ad.key==='INTEREST_FAIRNESS_LAB'&&kinds.has('SAVINGS')){score+=100;reasonCodes.push('FOUR_MONTH_CLOSING_WINDOW');}
+    if(/savon|huile|drap|assiette|tissu/.test(names)&&ad.key==='DEMAND_EXCHANGE'){score+=90;reasonCodes.push('IN_KIND_DEMAND');}
+    if(stage==='EARLY'&&ad.key==='ACADEMY'){score+=75;reasonCodes.push('EARLY_TRAINING');}
+    const variant=(seed+index)%3;
+    return{...ad,body:contextualBody(ad,context,stage,variant),score,reasonCodes,stage,variant};
+  }).sort((a,b)=>b.score-a.score||a.key.localeCompare(b.key));
+}
+
+export interface AdDeliveryRequest{placementId:AdPlacementId;locality?:string;interestTags?:string[];groupKind?:string;rubricKind?:string;viewerFrequency7d?:Record<string,number>;houseContext?:HouseAdContext;}
 export interface AdDeliveryDecision{kind:'PAID'|'HOUSE'|'NONE';campaignId?:string;houseKey?:string;reason:string;score:number;}
 export function selectAdDelivery(campaigns:AdCampaign[],request:AdDeliveryRequest):AdDeliveryDecision{
   const spec=AD_PLACEMENT_CATALOG.find(x=>x.id===request.placementId);if(!spec)throw new Error('UNKNOWN_AD_PLACEMENT');
@@ -176,6 +242,10 @@ export function selectAdDelivery(campaigns:AdCampaign[],request:AdDeliveryReques
     if(c.targeting.localities?.length&&(!request.locality||!c.targeting.localities.includes(request.locality)))return false;
     if(c.targeting.groupKinds?.length&&(!request.groupKind||!c.targeting.groupKinds.includes(request.groupKind)))return false;
     if(c.targeting.rubricKinds?.length&&(!request.rubricKind||!c.targeting.rubricKinds.includes(request.rubricKind)))return false;
+    if(c.targeting.interestTags?.length){
+      const viewer=new Set((request.interestTags??[]).map(x=>x.toLowerCase()));
+      if(!c.targeting.interestTags.some(x=>viewer.has(x.toLowerCase())))return false;
+    }
     return true;
   }).map(c=>{
     const engagement=(c.actions*5+c.opens+1)/(c.impressions+20),feedbackPenalty=1/(1+c.negativeFeedback*0.2),freshness=c.impressions<100?1.08:1;
@@ -184,8 +254,9 @@ export function selectAdDelivery(campaigns:AdCampaign[],request:AdDeliveryReques
   }).sort((a,b)=>b.score-a.score||a.c.id.localeCompare(b.c.id));
   if(eligible[0])return{kind:'PAID',campaignId:eligible[0].c.id,reason:'ACTIVE_ELIGIBLE_HIGHEST_VALUE',score:eligible[0].score};
   if(spec.houseFallback){
-    const house=HOUSE_AD_CATALOG.find(h=>h.placementIds.includes(request.placementId));
-    if(house)return{kind:'HOUSE',houseKey:house.key,reason:'UNSOLD_INVENTORY_FILLED_BY_PLATFORM_PROMOTION',score:0};
+    const plan=request.houseContext?buildContextualHouseAdPlan(request.houseContext):HOUSE_AD_CATALOG.map((h,index)=>({...h,score:0,reasonCodes:['NO_CONTEXT'],stage:'ANY' as HouseAdStage,variant:index%3}));
+    const house=plan.find(h=>h.placementIds.includes(request.placementId));
+    if(house)return{kind:'HOUSE',houseKey:house.key,reason:'UNSOLD_INVENTORY_CONTEXTUAL_PLATFORM_PROMOTION',score:house.score};
   }
   return{kind:'NONE',reason:'NO_ELIGIBLE_CAMPAIGN',score:0};
 }
