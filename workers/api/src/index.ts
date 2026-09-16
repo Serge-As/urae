@@ -584,7 +584,7 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
     if(forumMessages&&request.method==='GET'){
       if(!options.communityRealtime)throw new Error('COMMUNITY_REALTIME_UNAVAILABLE');
       const groupId=forumMessages[1]!,hubId=decodeURIComponent(forumMessages[2]!);await community.federationProfile(groupId,hubId);
-      return json(await options.communityRealtime.listMessages({tenantId:ctx.tenantId,groupId,hubId,viewerId:ctx.actorId,limit:Number(url.searchParams.get('limit')??50),before:url.searchParams.get('before')??undefined,after:url.searchParams.get('after')??undefined}),200,cors);
+      return json(await options.communityRealtime.listMessages({tenantId:ctx.tenantId,groupId,hubId,viewerId:ctx.actorId,limit:Number(url.searchParams.get('limit')??50),before:url.searchParams.get('before')??undefined,after:url.searchParams.get('after')??undefined,around:url.searchParams.get('around')??undefined}),200,cors);
     }
     if(forumMessages&&request.method==='POST'){
       if(!options.communityRealtime)throw new Error('COMMUNITY_REALTIME_UNAVAILABLE');
