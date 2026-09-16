@@ -557,10 +557,12 @@
                   <label>Part Épargne classique %<input id="yieldClassicShare" type="number" min="0" max="100" step="0.1" value="70"></label>
                   <label>Part Épargne scolaire %<input id="yieldSchoolShare" type="number" min="0" max="100" step="0.1" value="10"></label>
                   <label>Indemnités / charges Bureau %<input id="yieldOfficeShare" type="number" min="0" max="100" step="0.1" value="20"></label>
-                  <label>Coefficient maximal historique<input id="yieldHighestCoefficient" type="number" min="0.1" step="0.1" value="9"></label>
+                  <label>Coefficient maximal classique<input id="yieldHighestCoefficient" type="number" min="0.1" step="0.1" value="9"></label>
+<label>Coefficient maximal scolaire<input id="yieldHighestCoefficientSchool" type="number" min="0.1" step="0.1" value="7"></label>
                   <label>Dernière séance de l’exercice<input id="yieldEndSession" type="number" min="1" step="1" value="12"></label>
                 </div>
-                <h3>Coefficients historiques / décidés par le Bureau</h3><div id="yieldCoefficients" class="form-grid"></div>
+                <h3>Coefficients Épargne classique</h3><div id="yieldCoefficients" class="form-grid"></div>
+<details><summary><strong>Coefficients Épargne scolaire</strong></summary><p class="hint">Le groupe peut utiliser une courbe différente pour l’épargne scolaire, comme dans le dossier historique.</p><div id="yieldSchoolCoefficients" class="form-grid"></div></details>
                 <div class="actions">
   <button id="yieldWorkbookBtn" type="button" class="secondary">1 · Reproduire la méthode historique</button>
   <button id="yieldCapitalTimeBtn" type="button" class="primary">2 · Capital × Temps</button>
