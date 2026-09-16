@@ -551,6 +551,32 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
       const body=await readJson<Record<string,unknown>>(request);
       return json(allocateCapitalAtWorkYield(body as any),200,cors);
     }
+    const savingsYieldCapitalTime=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/savings-yield\/capital-time-preview$/);
+    if(savingsYieldCapitalTime&&request.method==='POST'){
+      await requireGroup(savingsYieldCapitalTime[1]!,true);
+      return json(allocateCapitalTimeYield(await readJson<any>(request)),200,cors);
+    }
+    const savingsYieldAttributed=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/savings-yield\/attributed-productive-preview$/);
+    if(savingsYieldAttributed&&request.method==='POST'){
+      await requireGroup(savingsYieldAttributed[1]!,true);
+      return json(allocateAttributedProductiveYield(await readJson<any>(request)),200,cors);
+    }
+    const savingsYieldPolicies=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/savings-yield\/policies$/);
+    if(savingsYieldPolicies&&request.method==='GET'){
+      await requireGroup(savingsYieldPolicies[1]!,true);
+      return json({presets:SAVINGS_YIELD_POLICY_PRESETS,activation:'HUMAN_CONFIRMATION_REQUIRED',financialPosting:false},200,cors);
+    }
+    const savingsYieldDoctor=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/savings-yield\/doctor$/);
+    if(savingsYieldDoctor&&request.method==='POST'){
+      await requireGroup(savingsYieldDoctor[1]!,true);
+      return json(diagnoseGroup(await readJson<any>(request)),200,cors);
+    }
+    const meetingAutopilot=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/meetings\/autopilot-preview$/);
+    if(meetingAutopilot&&request.method==='POST'){
+      await requireGroup(meetingAutopilot[1]!,true);
+      return json(prepareMeetingAutopilot(await readJson<any>(request)),200,cors);
+    }
+
     const savingsYieldSplit=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/savings-yield\/split-preview$/);
     if(savingsYieldSplit&&request.method==='POST'){
       await requireGroup(savingsYieldSplit[1]!,true);const body=await readJson<Record<string,unknown>>(request);
