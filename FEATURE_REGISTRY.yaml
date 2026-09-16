@@ -1,5 +1,5 @@
 registry_version: 1
-project_version: 1.3.2-savings-control-forum-live
+project_version: 1.3.3-fairness-adops-doctor-launch
 source_of_truth: docs/constitution + verified_code
 
 capabilities:
@@ -860,3 +860,86 @@ production_qualification_2026_09_16:
   community_realtime_bound: true
   real_money_enabled: false
   smoke_run: 35096484915
+
+
+  # 1.3.3 — candidate additions, CI-qualified but not production until smoke proves it
+  - id: GROUP.LAUNCH.RI.MULTIDOCUMENT
+    domain: group-launch
+    status: FUNCTIONAL_BETA
+    risk_class: privacy_critical
+    offline_policy: local_selection_upload_server_authoritative
+    audit_event: GOVERNANCE_SOURCE_INGESTED
+    tests: [guided-launch-document-upload]
+  - id: GROUP.LAUNCH.RUBRIC.SEQUENTIAL_REVIEW
+    domain: group-launch
+    status: FUNCTIONAL_BETA
+    risk_class: medium
+    offline_policy: local_draft_server_persisted
+    audit_event: RUBRIC_UPDATED
+    tests: [guided-launch-sequential-rubric-review]
+  - id: ASSISTANCE.RULEBOOK
+    domain: solidarity
+    status: FUNCTIONAL_BETA
+    risk_class: high
+    offline_policy: draft_allowed_financial_action_separate
+    audit_event: RUBRIC_POLICIES_UPDATED
+    tests: [assistance-modalities-deferred]
+  - id: MEMBERSHIP.REGISTRATION.PRICING_POLICY
+    domain: membership
+    status: FUNCTIONAL_BETA
+    risk_class: medium
+    offline_policy: cached_rule_server_authoritative
+    audit_event: REGISTRATION_FEE_POLICY_CHANGED
+    tests: [registration-returning-new-free]
+  - id: SAVINGS.YIELD.FAIRNESS_LAB
+    domain: savings
+    status: FUNCTIONAL_BETA
+    risk_class: financial_critical
+    offline_policy: simulation_only_no_posting
+    audit_event: NONE_PREVIEW
+    tests: [five-policy-field-comparison,capital-time-policy,productive-attributed-policy]
+  - id: GROUP.DOCTOR
+    domain: governance-ai
+    status: FUNCTIONAL_BETA
+    risk_class: high
+    offline_policy: advisory_only
+    audit_event: NONE_ADVISORY
+    tests: [group-doctor-diagnostics]
+  - id: MEETING.AUTOPILOT
+    domain: meetings
+    status: FUNCTIONAL_BETA
+    risk_class: high
+    offline_policy: preparation_allowed_posting_separate
+    audit_event: NONE_PREPARATION
+    tests: [meeting-autopilot-previous-variance]
+  - id: ADS.HOUSE.CONTEXTUAL
+    domain: advertising
+    status: FUNCTIONAL_BETA
+    risk_class: privacy_critical
+    offline_policy: deterministic_fallback
+    audit_event: NONE_DELIVERY_DECISION
+    tests: [house-ads-contextual,house-ads-exploration]
+  - id: ADS.HOUSE.AI_COMPOSER
+    domain: advertising
+    status: FUNCTIONAL_BETA
+    risk_class: privacy_critical
+    offline_policy: deterministic_fallback
+    audit_event: NONE_COPY_GENERATION
+    tests: [house-ai-aggregate-context,house-ai-safe-fallback]
+  - id: ADS.PROSPECT.CRM
+    domain: advertising
+    status: FUNCTIONAL_BETA
+    risk_class: medium
+    offline_policy: draft_allowed_server_authoritative
+    audit_event: AD_PROSPECT_STATE_CHANGED
+    tests: [ad-prospect-lifecycle]
+
+candidate_qualification_2026_09_16_1_3_3:
+  version: 1.3.3-fairness-adops-doctor-launch
+  branch: next/1.3.3-interest-lab-adops-ui-20260916
+  deployed: false
+  production_still: 1.3.2-savings-control-forum-live
+  real_money_enabled: false
+  master: docs/constitution/ECO_SYSTEM_Cahier_des_Charges_Maitre_Exhaustif_3.2.0_2026-09-16.md
+  economics: docs/economics/ECO_SYSTEM_Modele_Economique_AdManager_Approfondi_3.2.0_2026-09-16.md
+  note: Production status changes only after BIR+ plus production deployment plus smoke.
