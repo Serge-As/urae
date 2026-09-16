@@ -18,6 +18,7 @@ import { ConciergeLearningService, type DataUsePurpose, type LearningCategory, t
 import { MarketService } from '../../../packages/market/src/index.js';
 import { CommunityService } from '../../../packages/community/src/index.js';
 import { FounderLearningStore } from '../../../packages/founder-observatory/src/index.js';
+import { FounderControlStore, type CapabilityHealth } from '../../../packages/founder-control/src/index.js';
 import { CommercialPreferenceService, preferenceCookie, clearPreferenceCookie, readPreferenceCookie } from '../../../packages/commercial-preferences/src/index.js';
 import { MiscRubricService } from '../../../packages/misc-rubrics/src/index.js';
 import { allocateSavingsYield, splitInterestPool, simulateWorkbookYieldPipeline, allocateCapitalAtWorkYield } from '../../../packages/savings-yield/src/index.js';
@@ -92,7 +93,7 @@ const inboxFor = async (repo:PlatformRepository,tenantId:string,actorId:string) 
   return [...obligations,...cases];
 };
 
-export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{artifacts?:ArtifactStoreLike;liveNamespace?:DurableObjectNamespaceLike;premiumLive?:boolean;founderLearning?:FounderLearningStore;founderTeamActors?:Set<string>;commercialPreferences?:CommercialPreferenceService;groupPairing?:GroupPairingService;interestCommunities?:InterestCommunityService;ecoPulse?:EcoPulseService;identityProof?:IdentityProofService;dataUseDefaultMode?:DataUseDefaultMode}={}) => async (request:Request):Promise<Response> => {
+export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{artifacts?:ArtifactStoreLike;liveNamespace?:DurableObjectNamespaceLike;premiumLive?:boolean;founderLearning?:FounderLearningStore;founderControl?:FounderControlStore;founderTeamActors?:Set<string>;commercialPreferences?:CommercialPreferenceService;groupPairing?:GroupPairingService;interestCommunities?:InterestCommunityService;ecoPulse?:EcoPulseService;identityProof?:IdentityProofService;dataUseDefaultMode?:DataUseDefaultMode}={}) => async (request:Request):Promise<Response> => {
   const url=new URL(request.url); const cors=corsHeaders(request);
   if(request.method==='OPTIONS'){
     const allowed=Boolean((cors as Record<string,string>)['access-control-allow-origin']);
@@ -658,6 +659,34 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
     const commercialAffinities=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/concierge\/commercial-affinities$/);
     if(commercialAffinities&&request.method==='GET')return json(await conciergeLearning.commercialAffinities(commercialAffinities[1]!),200,cors);
 
+    if(request.method==='GET'&&url.pathname==='/api/v1/founder/control'){
+      if(!options.founderControl||!options.founderTeamActors?.has(ctx.actorId))throw new Error('FOUNDER_TEAM_ONLY');
+      return json(await options.founderControl.snapshot(PRODUCT_MODULES.map(x=>({id:x.id,labelFr:x.labelFr,labelEn:x.labelEn,status:x.status,lot:x.lot,workspace:x.workspace}))),200,cors);
+    }
+    if(request.method==='POST'&&url.pathname==='/api/v1/founder/control/content'){
+      if(!options.founderControl||!options.founderTeamActors?.has(ctx.actorId))throw new Error('FOUNDER_TEAM_ONLY');
+      const body=await readJson<Record<string,unknown>>(request);
+      return json(await options.founderControl.createContent({key:String(body.key??''),title:String(body.title??''),status:body.status?String(body.status):undefined,priority:body.priority?String(body.priority):undefined,kind:body.kind?String(body.kind):undefined,url:body.url?String(body.url):undefined,note:body.note?String(body.note):undefined}),201,cors);
+    }
+    if(request.method==='POST'&&url.pathname==='/api/v1/founder/control/incidents'){
+      if(!options.founderControl||!options.founderTeamActors?.has(ctx.actorId))throw new Error('FOUNDER_TEAM_ONLY');
+      const body=await readJson<Record<string,unknown>>(request);
+      return json(await options.founderControl.createIncident({key:String(body.key??''),title:String(body.title??''),priority:body.priority?String(body.priority):undefined,source:body.source?String(body.source):undefined,note:body.note?String(body.note):undefined}),201,cors);
+    }
+    const controlTransition=url.pathname.match(/^\/api\/v1\/founder\/control\/items\/([^/]+)\/transition$/);
+    if(controlTransition&&request.method==='POST'){
+      if(!options.founderControl||!options.founderTeamActors?.has(ctx.actorId))throw new Error('FOUNDER_TEAM_ONLY');
+      const body=await readJson<Record<string,unknown>>(request);
+      return json(await options.founderControl.transition(decodeURIComponent(controlTransition[1]!),String(body.status??''),String(body.note??'')),200,cors);
+    }
+    const capabilityCheck=url.pathname.match(/^\/api\/v1\/founder\/control\/capabilities\/(.+)\/check$/);
+    if(capabilityCheck&&request.method==='POST'){
+      if(!options.founderControl||!options.founderTeamActors?.has(ctx.actorId))throw new Error('FOUNDER_TEAM_ONLY');
+      const body=await readJson<Record<string,unknown>>(request);
+      await options.founderControl.recordCapabilityCheck(decodeURIComponent(capabilityCheck[1]!),String(body.health??'UNKNOWN') as CapabilityHealth,String(body.note??''));
+      return json({ok:true},200,cors);
+    }
+
     if(request.method==='GET'&&url.pathname==='/api/v1/founder/learning-observatory'){
       if(!options.founderLearning||!options.founderTeamActors?.has(ctx.actorId))throw new Error('FOUNDER_TEAM_ONLY');
       const minGroups=Math.max(5,Number(url.searchParams.get('minGroups')??5));
@@ -1105,6 +1134,7 @@ export default {async fetch(request:Request,env:WorkerEnv={}){
   }
   const repository=new D1PlatformRepository(env.DB);
   const founderLearning=env.COLLECTIVE_LEARNING_PEPPER?new FounderLearningStore(env.DB,env.COLLECTIVE_LEARNING_PEPPER):undefined;
+  const founderControl=env.DB?new FounderControlStore(env.DB):undefined;
   const identityPepper=env.IDENTITY_MATCH_PEPPER??env.COLLECTIVE_LEARNING_PEPPER;
   const identityProof=identityPepper?new IdentityProofService(env.DB,identityPepper):undefined;
   const founderTeamActors=new Set((env.FOUNDER_TEAM_ACTORS??'').split(',').map(x=>x.trim()).filter(Boolean));
@@ -1117,7 +1147,7 @@ export default {async fetch(request:Request,env:WorkerEnv={}){
   return authenticatedApi(repository,env.DB,async authenticatedRequest=>{
     const h=authenticatedRequest.headers;
     pairingKernel.context.set({actorId:h.get('x-actor-id')??'unknown',tenantId:h.get('x-tenant-id')??'unknown',activeGroupId:h.get('x-active-group-id')||undefined,groupRoles:(h.get('x-group-roles')??'').split(',').filter(Boolean),mandateIds:[],deviceId:h.get('x-device-id')??'device_web',sessionId:h.get('x-session-id')??'server-authenticated',locale:h.get('accept-language')?.toLowerCase().startsWith('en')?'en':'fr',timezone:h.get('x-timezone')??'Africa/Douala',connectivity:'online',requestId:h.get('x-request-id')??crypto.randomUUID()});
-    return createApiHandler(repository,{artifacts:env.ARTIFACTS,liveNamespace:env.GROUP_LIVE_HUB,premiumLive:env.PREMIUM_LIVE_LEDGER==='true',founderLearning,founderTeamActors,commercialPreferences,groupPairing,interestCommunities,ecoPulse,identityProof,dataUseDefaultMode})(authenticatedRequest);
+    return createApiHandler(repository,{artifacts:env.ARTIFACTS,liveNamespace:env.GROUP_LIVE_HUB,premiumLive:env.PREMIUM_LIVE_LEDGER==='true',founderLearning,founderControl,founderTeamActors,commercialPreferences,groupPairing,interestCommunities,ecoPulse,identityProof,dataUseDefaultMode})(authenticatedRequest);
   })(request);
 }};
 export {defaultRepo as repo};
