@@ -24,6 +24,7 @@ import { allocateSavingsYield, splitInterestPool } from '../../../packages/savin
 import { buildFinancialRecap, buildSessionRecap, buildClosingCarryover } from '../../../packages/recap-engine/src/index.js';
 import { AdManagerService } from '../../../packages/ad-manager/src/index.js';
 import { EconomicIntelligenceService } from '../../../packages/economic-intelligence/src/index.js';
+import { ExternalProgramsService, type ExternalProgramKind, type ExternalProgramState, type AggregateDataAccess } from '../../../packages/external-programs/src/index.js';
 import { IdentityProofService } from '../../../packages/identity-proof/src/index.js';
 import { GroupPairingService } from '../../../packages/group-pairing/src/index.js';
 import { InterestCommunityService } from '../../../packages/interest-communities/src/index.js';
@@ -78,10 +79,11 @@ const createRequestScope = (request:Request,repo:PlatformRepository,artifacts?:A
   const miscRubrics=new MiscRubricService(repo,kernel,ledger);
   const adManager=new AdManagerService(repo,kernel);
   const economicIntelligence=new EconomicIntelligenceService(repo,kernel);
+  const externalPrograms=new ExternalProgramsService(repo,kernel);
   const tenantId=request.headers.get('x-tenant-id')??'tenant_demo'; const actorId=request.headers.get('x-actor-id')??'user_founder';
   const groupRoles=(request.headers.get('x-group-roles')??'founder,manager').split(',').map(x=>x.trim()).filter(Boolean);
   kernel.context.set({actorId,tenantId,activeGroupId:request.headers.get('x-active-group-id')??undefined,groupRoles,mandateIds:[],deviceId:request.headers.get('x-device-id')??'device_web_demo',sessionId:request.headers.get('x-session-id')??'session_demo',locale:request.headers.get('accept-language')?.toLowerCase().startsWith('en')?'en':'fr',timezone:request.headers.get('x-timezone')??'Africa/Douala',connectivity:'online',requestId:request.headers.get('x-request-id')??makeId('req')});
-  return {kernel,foundation,ledger,meetings,discovery,membershipGateway,rubrics,completion,explainability,documents,receivables,treasury,riskFinance,market,community,imports,memberControl,groupIdentity,conciergeLearning,miscRubrics,adManager,economicIntelligence};
+  return {kernel,foundation,ledger,meetings,discovery,membershipGateway,rubrics,completion,explainability,documents,receivables,treasury,riskFinance,market,community,imports,memberControl,groupIdentity,conciergeLearning,miscRubrics,adManager,economicIntelligence,externalPrograms};
 };
 
 const inboxFor = async (repo:PlatformRepository,tenantId:string,actorId:string) => {
@@ -96,7 +98,7 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
     const allowed=Boolean((cors as Record<string,string>)['access-control-allow-origin']);
     return new Response(null,{status:allowed?204:403,headers:{...baseSecurityHeaders,...cors,'access-control-allow-methods':'GET,POST,PUT,OPTIONS','access-control-allow-headers':'content-type,x-tenant-id,x-actor-id,x-group-roles,x-active-group-id,x-device-id,x-session-id,x-request-id,x-timezone'}});
   }
-  const {kernel,foundation,ledger,meetings,discovery,membershipGateway,rubrics,completion,explainability,documents,receivables,treasury,riskFinance,market,community,imports,memberControl,groupIdentity,conciergeLearning,miscRubrics,adManager,economicIntelligence}=createRequestScope(request,repo,options.artifacts,options.dataUseDefaultMode??'BETA_OPEN'); const ctx=kernel.context.get();
+  const {kernel,foundation,ledger,meetings,discovery,membershipGateway,rubrics,completion,explainability,documents,receivables,treasury,riskFinance,market,community,imports,memberControl,groupIdentity,conciergeLearning,miscRubrics,adManager,economicIntelligence,externalPrograms}=createRequestScope(request,repo,options.artifacts,options.dataUseDefaultMode??'BETA_OPEN'); const ctx=kernel.context.get();
   if(options.premiumLive)kernel.features.set('premium_live_ledger',true);
   const requireGroup=async(groupId:string,manage=false)=>{
     const group=await repo.getGroup(ctx.tenantId,groupId);if(!group)throw Error('GROUP_NOT_FOUND');
@@ -572,6 +574,36 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
       const enabled=consent.purposes.PARTNER_MATCHING;
       return json(enabled?profile:{...profile,exportable:false,exportBlockers:[...profile.exportBlockers,'PARTNER_MATCHING_DISABLED']},200,cors);
     }
+
+    const externalProgramsRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/external-programs$/);
+    if(externalProgramsRoute&&request.method==='GET'){
+      const kind=url.searchParams.get('kind') as ExternalProgramKind|null;
+      return json(await externalPrograms.list(externalProgramsRoute[1]!,kind??undefined),200,cors);
+    }
+    if(externalProgramsRoute&&request.method==='POST'){
+      const body=await readJson<Record<string,unknown>>(request);
+      return json(await externalPrograms.create(externalProgramsRoute[1]!,{
+        kind:String(body.kind??'PARTNER') as ExternalProgramKind,partyName:String(body.partyName??''),programName:String(body.programName??''),
+        purpose:String(body.purpose??''),localities:strArray(body.localities),tags:strArray(body.tags),
+        dataAccess:String(body.dataAccess??'NONE') as AggregateDataAccess
+      }),201,cors);
+    }
+    const externalTransition=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/external-programs\/([^/]+)\/transition$/);
+    if(externalTransition&&request.method==='POST'){
+      const body=await readJson<Record<string,unknown>>(request);
+      return json(await externalPrograms.transition(externalTransition[1]!,externalTransition[2]!,String(body.state??'') as ExternalProgramState),200,cors);
+    }
+    const externalShare=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/external-programs\/([^/]+)\/share-packs$/);
+    if(externalShare&&request.method==='GET')return json(await externalPrograms.sharePacks(externalShare[1]!,externalShare[2]!),200,cors);
+    if(externalShare&&request.method==='POST'){
+      const groupId=externalShare[1]!,passport=await groupIdentity.compute(groupId),consent=await conciergeLearning.consent(groupId);
+      if(!consent.purposes.PARTNER_MATCHING)throw new Error('PARTNER_MATCHING_DISABLED');
+      const profile=await economicIntelligence.profile(groupId,passport.publicCode);
+      const body=await readJson<Record<string,unknown>>(request);
+      return json(await externalPrograms.issueAggregateSharePack(groupId,externalShare[2]!,profile,String(body.purpose??''),finite(body.ttlDays,30)),201,cors);
+    }
+    const externalRevoke=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/external-share-packs\/([^/]+)\/revoke$/);
+    if(externalRevoke&&request.method==='POST'){await externalPrograms.revokeSharePack(externalRevoke[1]!,externalRevoke[2]!);return json({revoked:true},200,cors);}
 
     const identityPassport=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/identity-passport$/);
     if(identityPassport&&request.method==='GET')return json(await groupIdentity.compute(identityPassport[1]!),200,cors);
