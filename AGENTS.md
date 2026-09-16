@@ -1,12 +1,12 @@
-# AGENTS.md — Eco-System 1.3.1 Recovery / Recap / Services
+# AGENTS.md — Eco-System 1.3.3 Fairness / AdOps / Guided Launch
 
 ## Mission
 Continuer Eco-System sans recommencer, simplifier ou remplacer silencieusement les acquis.
 
 ### Vérité courante
-- production publique qualifiée : `1.2.0-functional-completion`;
-- développement courant : `next/1.3.1-recovery-recap-services-20260915`;
-- Premium Live : pilote isolé qualifié, pas encore activé sur la production publique ;
+- production publique qualifiée : `1.3.2-savings-control-forum-live` tant que le smoke 1.3.3 n'est pas prouvé ;
+- développement courant : `next/1.3.3-interest-lab-adops-ui-20260916` ;
+- Premium Live : actif en production 1.3.2 et à préserver dans la livraison 1.3.3 ;
 - argent réel : `realMoneyEnabled=false`.
 
 ## MEMORY BEFORE CODE
@@ -15,8 +15,8 @@ Avant tout lot substantiel, lire dans cet ordre :
 2. `docs/memory/CURRENT_TRUTH.md` ;
 3. `docs/memory/PROJECT_TRUTH_LEDGER.json` ;
 4. `PROJECT_STATE.md` ;
-5. `docs/constitution/ECO_SYSTEM_Cahier_des_Charges_Maitre_Exhaustif_3.0.0_2026-09-16.md` ;
-6. `docs/economics/ECO_SYSTEM_Modele_Economique_AdManager_Intelligence_3.0.0_2026-09-16.md` ;
+5. `docs/constitution/ECO_SYSTEM_Cahier_des_Charges_Maitre_Exhaustif_3.2.0_2026-09-16.md` + socle constitutionnel 2.3.4 ;
+6. `docs/economics/ECO_SYSTEM_Modele_Economique_AdManager_Approfondi_3.2.0_2026-09-16.md` ;
 7. `docs/governance/ECO_SYSTEM_LIVING_RULES_DOCTRINE_1.0.0.md` ;
 8. `FEATURE_REGISTRY.yaml` ;
 9. `NEXT_RUN.md` ;
