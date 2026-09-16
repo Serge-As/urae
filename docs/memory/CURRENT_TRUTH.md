@@ -2,125 +2,147 @@
 
 Date : 2026-09-16
 
-## 1. Vérité à ne pas confondre
+## 1. Production publique — vérité actuelle
 
-### Production publique actuelle
 - URL : `https://eco-system.sergemimf.workers.dev/`
-- dernière ligne de production qualifiée documentée : `1.2.0-functional-completion`
+- version : **1.3.2-savings-control-forum-live**
 - Worker : `eco-system`
+- Worker Version ID : `f6e8b41f-8093-4ca9-9feb-202a4037c7b9`
 - D1 canonique : `eco-system-db`
+- R2 privé : `eco-system-backups`
+- Premium Live : **ACTIF**
+- Control Center : **BOUND / production**
+- Forum v2 temps réel : **BOUND / production**
+- stockage artifacts : **R2**
 - argent réel : **DÉSACTIVÉ**
+- workflow de déploiement + smoke : run **35096484915 — SUCCESS**
+- qualification du HEAD pré-déploiement : **SUCCESS**
+- la ligne 1.2.0 est désormais historique et supersédée.
 
-### Ligne de développement qualifiée
-- branche : `next/1.3.1-recovery-recap-services-20260915`
-- base préservée : `next/1.3.0-guided-ai-live-20260915@ffee0901720b453167783868c10a59a484c61677`
-- 1.3.1 n'est pas déclarée déployée sur le Worker public tant qu'un workflow de production séparé n'est pas autorisé et qualifié.
+## 2. Branche et point de reprise
 
-### Premium Live pilote isolé
-- Worker : `eco-system-live-pilot`
-- D1 : `eco-system-live-pilot-db`
-- URL : `https://eco-system-live-pilot.sergemimf.workers.dev/`
-- qualification end-to-end : run `35018989303` — **SUCCESS**
-- preuve : Ledger → projection outbox → avis membre → Durable Object → flux Live.
-- Worker Version ID de cette preuve : `ac345e24-c622-492c-8410-0949fe2dd027`
-- `realMoneyEnabled=false`
+- branche : `next/1.3.2-savings-control-forum-live-20260916`
+- reprendre au **HEAD distant le plus récent**, jamais à partir d'un SHA mémorisé sans le revérifier.
+- ne pas repartir de 1.2 ou 1.3.1 pour continuer le développement courant.
 
-## 2. Qualification 1.3.1
+## 3. R2 / sauvegarde
 
-La qualification de base avant extension Partenaires/ONG : run `35018989468` — **151/151 PASS**.
+Le jeton GitHub Cloudflare existant a été retesté après activation R2 :
+- `d1=OK`
+- `r2=OK`
 
-Les extensions Partenaires/ONG et les documents 3.0 sont ensuite qualifiés à chaque push sur la même branche. Toujours vérifier le dernier run avant toute modification.
+Aucun nouveau jeton n'est nécessaire pour D1/R2 tant que ces contrôles restent verts.
 
-## 3. Acquis anti-régression
+La production 1.3.2 a :
+- créé/réutilisé le bucket privé `eco-system-backups` ;
+- exporté `eco-system-db` avant déploiement ;
+- vérifié la restauration SQLite et `PRAGMA integrity_check=ok` ;
+- archivé les sources ;
+- calculé les SHA256 ;
+- copié source + export D1 + checksums dans R2 sous le préfixe :
+  `birplus/1.3.2/0226b9b145c8aa49eb94ed190dedfd8c544ff80c/predeploy/` ;
+- téléchargé les checksums depuis R2 pour vérifier la copie ;
+- résultat : **R2 BIR+ mirror PASS**.
 
-- création en **10 étapes** ;
-- libellé **Collation** ;
-- plusieurs tontines par groupe ;
-- participants propres à chaque tontine ;
-- argent/nature/mixte ;
+Une sauvegarde BIR+ GitHub séparée avant le déploiement a aussi réussi : run **35095940942 — SUCCESS**.
+
+## 4. Épargne — audit réel du classeur
+
+Sources auditées : `Feuille mensuelle.xlsx` et `Rubriques Epargne à intérêts.xlsx`.
+
+Vérités :
+- intérêts encaissés : **18 500 F** ;
+- pool Épargne classique : **12 950 F (70 %)** ;
+- pool Épargne scolaire : **1 850 F (10 %)** ;
+- indemnités Bureau : **3 700 F (20 %)** ;
+- principal classique annuel : **14 935 199 F** ;
+- principal scolaire : **1 081 000 F**.
+
+### Moteur 1 — reproduction historique
+Le pipeline `EPARGNE → Principal → Intérêts provisoires → Intérêts Finaux` est reproduit.
+Écart maximum moteur Eco-System vs cellules finales cachées du classeur : environ **9×10^-13 F**.
+Conclusion : **résultats mathématiquement identiques au classeur sur le jeu réel audité**.
+
+### Moteur 2 — capital réellement productif
+Il suit le capital effectivement prêté et peut appliquer `noLoanNoYield=true`.
+Sur les preuves disponibles :
+- prêt ordinaire enregistré : **50 050 F**, en janvier ;
+- SPECIAL PRÊT : **50 000 F** ;
+- remboursements principal : **75 500 F** ;
+- les fichiers ne permettent pas encore de relier de façon certaine chaque remboursement à un lot de dépôt d'origine.
+
+Le moteur 2 refuse donc d'inventer les liens manquants. Sous l'hypothèse conservatrice testée, les importants dépôts d'avril/octobre ne sont pas rémunérés s'ils n'ont financé aucun prêt prouvé.
+L'Épargne scolaire ne reçoit pas artificiellement un rendement productif tant que le groupe n'a pas indiqué si sa caisse est mutualisée ou séparée pour les prêts.
+
+Test fixture réel : commit `7ccbfef6e064431959f2f34d12fcbe2c5ba706e9`, CI **SUCCESS**.
+
+## 5. Acquis 1.3.2 anti-régression
+
+- parcours création 10 étapes ;
+- Collation ;
+- rubriques multiples et multi-tontines avec participants propres ;
 - Tontine Manager permanent ;
-- part `SERVED` seulement avec preuve Ledger ;
-- Ledger canonique D1 ;
-- outbox transactionnelle pour projections Live ;
-- panne Live ≠ échec d'une écriture financière déjà commitée ;
-- replay Live au-delà de la séquence 500 ;
-- OFF explicite prioritaire sur BETA_OPEN ;
-- RubricDefinition + policies composables ;
-- assistant RI policy-aware + contradictions ;
-- calcul Épargne/intérêts **par dépôt/période** ;
-- coefficients Legacy 9,8,7,6,5,4,3,2,1,0.5,0,0 ;
-- distribution exacte par plus grands restes ;
-- RECAP financier + RECAP de séance ;
-- carryover Secours par membre et autres fonds structurés ;
-- CNI matching HMAC sans numéro brut dans le moteur de rapprochement ;
-- profil économique pseudonymisé par groupe/rubrique ;
-- AdManager spécialisé ;
-- moteur demande agrégée/fournisseurs/unit economics ;
-- Forum/Hubs et communautés d'intérêt ;
-- Partners/ONG spécialisés avec share packs agrégés expirants/révocables.
+- Ledger D1 canonique ;
+- panne Live ≠ rollback d'une finance déjà commitée ;
+- Premium Live + Durable Object ;
+- moteurs Épargne historique et capital productif ;
+- Fonds Secours : détail contribution/retenue par membre ;
+- RECAP financier/session/carryover ;
+- Forum v2 : messages, threads, réactions, brouillons serveur, curseur/ancre de lecture multi-appareils ;
+- Control Center : auto-enregistrement des capacités, incidents, plaintes, contenus ;
+- propriétaire initial du Control Center persisté dans D1, distinct du simple rôle fondateur d'un groupe ;
+- identité CNI + téléphone + nom normalisé par HMAC serveur ;
+- R2 pour imports/médias/sauvegarde ;
+- AdManager spécialisé, profil économique agrégé, Demand Exchange, Partners/ONG ;
+- PWA/offline/FR-EN ;
+- `realMoneyEnabled=false`.
 
-## 4. Documents de référence nouveaux
+## 6. Secrets production
 
-- `docs/constitution/ECO_SYSTEM_Cahier_des_Charges_Maitre_Exhaustif_3.0.0_2026-09-16.md`
-- `docs/economics/ECO_SYSTEM_Modele_Economique_AdManager_Intelligence_3.0.0_2026-09-16.md`
+Les clés `COLLECTIVE_LEARNING_PEPPER` et `IDENTITY_MATCH_PEPPER` ont été créées une seule fois comme **Cloudflare Worker secrets** durant la livraison 1.3.2. Elles ne doivent jamais être copiées dans GitHub ou dans le dépôt.
+Les prochains déploiements doivent les **préserver**, pas les régénérer.
 
-## 5. Données économiques
+`FOUNDER_TEAM_ACTORS` est optionnel : le propriétaire plateforme durable en D1 donne l'accès initial au Control Center ; ce secret pourra servir plus tard à ajouter explicitement des contrôleurs supplémentaires.
 
-Le profil partenaire peut inclure, lorsque le groupe l'autorise :
-- code `ECO-GRP-...` ;
-- effectif agrégé ;
-- total collecté ;
-- cash in/out ;
-- masse monétaire par rubrique ;
-- nombre d'opérations.
+## 7. Documents maîtres
 
-Il ne contient pas de montant financier individuel nominatif.
+- `docs/constitution/ECO_SYSTEM_Cahier_des_Charges_Maitre_Exhaustif_3.1.0_2026-09-16.md`
+- `docs/economics/ECO_SYSTEM_Modele_Economique_Detaille_3.1.0_2026-09-16.md`
+- audit classeur réel livré séparément en XLSX.
 
-## 6. Identité / CNI
+## 8. Limites vraies
 
-La CNI peut servir de preuve/indice durable de rapprochement.
-Le mécanisme actuel normalise puis HMAC le numéro avec un secret serveur.
-Aucune CNI brute ne doit être exposée dans les recherches, analytics ou ciblages.
+- moteur productif : besoin d'une preuve prêt → caisse/source → remboursement → remise en prêt pour une allocation causale complète ;
+- Épargne scolaire : politique de mutualisation des prêts à préciser ;
+- photo R2 + vérification faciale volontaire 1-à-1 : à implémenter ;
+- passkeys/WebAuthn : à implémenter ;
+- appels audio/vidéo RealtimeKit : à implémenter ;
+- Push complet, recherche Forum, voix/sondages/live avancés : à implémenter ;
+- argent réel : non autorisé.
 
-## 7. Garde-fous permanents
+## 9. Garde-fous permanents
 
-- ne pas recréer `eco-system-db` ;
+- ne jamais recréer `eco-system-db` ;
 - migrations additives uniquement ;
-- ne pas fusionner/force-push `main` sans décision explicite ;
-- ne pas activer l'argent réel ;
-- ne pas créer un second Ledger ;
-- ne pas utiliser dettes/soldes/CNI/identité individuels pour AdManager ;
-- ne pas confondre profil financier agrégé avec données personnelles de membre ;
-- ne pas supprimer les parcours précédents pour simplifier l'interface ;
-- ne pas présenter un domaine STRUCTURAL comme terminé.
+- pas de second Ledger ;
+- pas d'intérêt impayé automatiquement capitalisé ;
+- aucune finance/CNI/téléphone/biométrie individuelle dans AdManager ou partage partenaire ;
+- OFF explicite > BETA_OPEN ;
+- UNKNOWN ≠ SUCCEEDED ;
+- sauvegarde BIR+ avant production ;
+- tout nouveau service supervisable est automatiquement inscrit au Control Center ;
+- pas de force-push / merge main sans décision explicite.
 
-## 7.1 Sauvegarde BIR+ 1.3.1 vérifiée
+## 10. Prochain point de reprise
 
-- workflow : `35062074470` — **SUCCESS** ;
-- source archivée + export distant de `eco-system-db` ;
-- restauration SQLite : `PRAGMA integrity_check = ok` ;
-- Artifact GitHub : `eco-system-1.3.1-birplus`, ID `10432673201` ;
-- digest Artifact ZIP : `cabb94e293d6aa347145344f4c37f7c5ee67f4e705dd32c90c88ca7e4640f476` ;
-- tentative R2 : **NON QUALIFIÉE**, Cloudflare code `10042` via le token GitHub. L'Artifact GitHub reste la sauvegarde distante vérifiée ; ne pas prétendre que `eco-system-backups` a reçu cette sauvegarde.
+Priorités :
+1. relier automatiquement le moteur Épargne au Ledger/Feuille mensuelle et aux vraies sources de prêts ;
+2. UX Fonds Secours par membre + RECAP/Cassation complète ;
+3. photos R2 et pipeline média ;
+4. passkeys + Web Push ;
+5. Forum recherche/signets/voix/sondages ;
+6. RealtimeKit réunions audio/vidéo ;
+7. Demand Exchange/Deals + Analytics/Cost Control ;
+8. tests terrain 2G/seniors.
 
-## 8. Ancres historiques et infrastructure à préserver
-
-- **CLOUDFLARE** : réutiliser les Secrets GitHub existants et les ressources déjà qualifiées ; ne pas demander leurs valeurs ni recréer les prérequis sans preuve qu'ils ont disparu.
-- **`1.0.0-complete-app`** : reste une ancre historique supersédée dans le Truth Ledger ; ne jamais supprimer l'histoire parce que la ligne courante est 1.3.1.
-- **Living Rules** : doctrine permanente. Règle écrite, pratique observée, règle opérationnelle validée et exception restent distinctes.
-- D1 `eco-system-db` : ressource canonique de production à réutiliser.
-- Les anciennes preuves 1.2/1.0 restent historiques même lorsqu'une nouvelle ligne les supersède.
-
-## 9. Point de reprise
-
-Reprendre sur `next/1.3.1-recovery-recap-services-20260915`, au HEAD distant le plus récent, après vérification de la CI.
-
-Priorités suivantes :
-1. terminer l'ergonomie RECAP financier/clôture ;
-2. Deals/Offers/Négociation/Reverse Auction UI et persistance ;
-3. Analytics Engine / Economic Control Center ;
-4. Forum avancé ;
-5. ONG/Partenaires avancés ;
-6. connecteurs multicanaux ;
-7. tests terrain seniors/2G ;
-8. seulement après autorisation distincte : qualification production 1.3.1.
+Après 3–5 sous-lots : commit + CI + mise à jour de cette vérité + checkpoint BIR+.
