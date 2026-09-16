@@ -724,37 +724,51 @@ launchStudio=mountLaunchStudio({
 });
 syncLaunchFamily();
 $('#projectForm').addEventListener('input',invalidateProject);
+const simulateCurrentLaunch=async({silent=false}={})=>{
+  clearFail();const revision=projectRevision;
+  const parameters={rubrics:readRubricEditors(launchEditors),launchProfile:launchStudio.readProfile()};
+  const r=await app.simulateAndStoreProject({name:val('projectName'),kind:val('groupKind'),governanceModel:val('governanceModel'),...parameters});
+  if(revision!==projectRevision)throw new Error('PROJECT_CHANGED_DURING_SIMULATION');
+  lastProjectId=r.projectId;
+  const root=$('#simulationResult');root.replaceChildren();
+  if(parameters.rubrics){for(const plan of parameters.rubrics){
+    const result=r.result.rubricBreakdown.find(row=>row.key===plan.key),card=document.createElement('article');card.className='simulation-rubric';
+    card.innerHTML=html`<h3>${plan.name}</h3><p>${describeRubricPlan(plan)}</p>`;
+    if(plan.contributionMode==='IN_KIND'){
+      const volume=result.unitsPerSession*result.sessions*Number(plan.contributionQuantity??1),p=document.createElement('p');
+      p.textContent='Volume prévu sur ce cycle : '+volume+' '+String(plan.contributionUnit??'unité')+' de '+String(plan.contributionLabel??'nature');card.append(p);
+    }else{
+      const p=document.createElement('p');p.innerHTML='Collecte monétaire prévue sur ce cycle : <strong>'+fmt(result.totalNominalContributions)+'</strong>';card.append(p);
+      if(plan.contributionMode==='MIXED'){const q=document.createElement('p');const volume=result.unitsPerSession*result.sessions*Number(plan.contributionQuantity??1);q.textContent='En plus : '+volume+' '+String(plan.contributionUnit??'unité')+' de '+String(plan.contributionLabel??'nature');card.append(q);}
+    }
+    if(plan.kind==='TONTINE'){
+      const planned=(plan.participants??[]).flatMap(p=>p.shares),note=document.createElement('p');note.className='hint';note.textContent=`${planned.length} / ${plan.shareCount} parts nommées · ${planned.filter(s=>s.turn!==undefined).length} passages programmés. Chaque part bénéficie une fois ; plusieurs parts d’un membre peuvent passer au même tour.`;card.append(note);
+    }
+    root.append(card);
+  }}
+  const totals=document.createElement('div');totals.innerHTML=html`<div class="result-row"><span>Total monétaire des rubriques prévues</span><strong>${fmt(r.result.totalNominalContributions)}</strong></div><div class="result-row"><span>Frais de gestion perçus</span><strong>${fmt(r.result.totalManagementFees)}</strong></div><div class="result-row"><span>Coûts estimés</span><strong>${fmt(r.result.estimatedExternalCosts+r.result.fixedOperatingCosts)}</strong></div><div class="result-row"><span>Marge de gestion estimée</span><strong>${fmt(r.result.estimatedManagerMargin)}</strong></div><p class="hint">Prévision selon les versements complets. Les rubriques peuvent avoir des durées différentes. Cette simulation ne crée aucun versement ni bénéfice payé.</p>`;root.append(totals);
+  launchStudio.afterSimulation();if(!silent)toast('Projet et rubriques vérifiés. Continuez jusqu’à la prévisualisation finale.');
+  return r;
+};
 onSubmit('#projectForm', async (e) => { e.preventDefault(); try {
-    clearFail();const revision=projectRevision;
-    const parameters={rubrics:readRubricEditors(launchEditors),launchProfile:launchStudio.readProfile()};
-    const r=await app.simulateAndStoreProject({name:val('projectName'),kind:val('groupKind'),governanceModel:val('governanceModel'),...parameters});
-    if(revision!==projectRevision){toast('Le projet a changé. Relancez la simulation pour vérifier les nouveaux paramètres.');return;}
-    lastProjectId=r.projectId;
-    const root=$('#simulationResult');root.replaceChildren();
-    if(parameters.rubrics){for(const plan of parameters.rubrics){
-      const result=r.result.rubricBreakdown.find(row=>row.key===plan.key),card=document.createElement('article');card.className='simulation-rubric';
-      card.innerHTML=html`<h3>${plan.name}</h3><p>${describeRubricPlan(plan)}</p>`;
-      if(plan.contributionMode==='IN_KIND'){
-        const volume=result.unitsPerSession*result.sessions*Number(plan.contributionQuantity??1),p=document.createElement('p');
-        p.textContent='Volume prévu sur ce cycle : '+volume+' '+String(plan.contributionUnit??'unité')+' de '+String(plan.contributionLabel??'nature');card.append(p);
-      }else{
-        const p=document.createElement('p');p.innerHTML='Collecte monétaire prévue sur ce cycle : <strong>'+fmt(result.totalNominalContributions)+'</strong>';card.append(p);
-        if(plan.contributionMode==='MIXED'){const q=document.createElement('p');const volume=result.unitsPerSession*result.sessions*Number(plan.contributionQuantity??1);q.textContent='En plus : '+volume+' '+String(plan.contributionUnit??'unité')+' de '+String(plan.contributionLabel??'nature');card.append(q);}
-      }
-      if(plan.kind==='TONTINE'){
-        const planned=(plan.participants??[]).flatMap(p=>p.shares),note=document.createElement('p');note.className='hint';note.textContent=`${planned.length} / ${plan.shareCount} parts nommées · ${planned.filter(s=>s.turn!==undefined).length} passages programmés. Chaque part bénéficie une fois ; plusieurs parts d’un membre peuvent passer au même tour.`;card.append(note);
-      }
-      root.append(card);
-    }}
-    const totals=document.createElement('div');totals.innerHTML=html`<div class="result-row"><span>Total monétaire des rubriques prévues</span><strong>${fmt(r.result.totalNominalContributions)}</strong></div><div class="result-row"><span>Frais de gestion perçus</span><strong>${fmt(r.result.totalManagementFees)}</strong></div><div class="result-row"><span>Coûts estimés</span><strong>${fmt(r.result.estimatedExternalCosts+r.result.fixedOperatingCosts)}</strong></div><div class="result-row"><span>Marge de gestion estimée</span><strong>${fmt(r.result.estimatedManagerMargin)}</strong></div><p class="hint">Prévision selon les versements complets. Les rubriques peuvent avoir des durées différentes. Cette simulation ne crée aucun versement ni bénéfice payé.</p>`;root.append(totals);
-    launchStudio.afterSimulation();toast('Projet et rubriques vérifiés. Continuez jusqu’à la prévisualisation finale.');
+  await simulateCurrentLaunch();
 }catch(e){fail(Error(launchError(e)));} });
 $('#createGroupBtn').addEventListener('click',async()=>{
-  if($('#createGroupBtn').disabled||!lastProjectId)return;
-  const project=lastProjectId;$('#createGroupBtn').disabled=true;$('#projectForm').inert=true;
-  try{const group=await app.createGroupFromProject(project);lastProjectId=undefined;toast(`Groupe créé : ${group.name}`);await refreshGroupContext();go('operations');}
-  catch(error){if(lastProjectId===project)$('#createGroupBtn').disabled=false;fail(error);}
-  finally{$('#projectForm').inert=false;}
+  const button=$('#createGroupBtn');if(button.disabled)return;
+  button.disabled=true;$('#projectForm').inert=true;
+  try{
+    let project=lastProjectId;
+    if(!project){
+      toast('Vérification automatique de la faisabilité avant création…');
+      const simulated=await simulateCurrentLaunch({silent:true});project=simulated.projectId;button.disabled=true;
+    }
+    const group=await app.createGroupFromProject(project);
+    lastProjectId=undefined;window.__ecoLastProjectReady=false;
+    toast(`Groupe créé : ${group.name}`);
+    await refreshGroupContext();go('operations');
+  }catch(error){
+    launchStudio.renderPreview();fail(Error(launchError(error)));
+  }finally{$('#projectForm').inert=false;}
 });
 onSubmit('#memberForm', async (e) => { e.preventDefault(); try {
     await app.addMember(val('memberName'));
