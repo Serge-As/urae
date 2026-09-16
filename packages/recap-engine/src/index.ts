@@ -127,6 +127,63 @@ export function buildSessionRecap(input:SessionRecapInput):SessionRecapResult{
   return{openingCash,totalInflow,totalOutflow,theoreticalClosing,countedClosing,variance:countedClosing-theoreticalClosing,rubrics};
 }
 
+
+export type MemberFundMovementKind='OPENING_RETENTION'|'CONTRIBUTION'|'REFUND_TO_MEMBER'|'FORFEITURE'|'ADJUSTMENT_IN'|'ADJUSTMENT_OUT';
+export interface MemberFundMovement{
+  id:string;
+  membershipId:string;
+  kind:MemberFundMovementKind;
+  amount:number;
+  at?:string;
+  sourceId?:string;
+  note?:string;
+}
+export interface MemberFundPosition{
+  membershipId:string;
+  openingRetention:number;
+  contributions:number;
+  refunds:number;
+  forfeitures:number;
+  adjustmentsIn:number;
+  adjustmentsOut:number;
+  closingRetention:number;
+  movementCount:number;
+}
+export interface MemberFundBreakdown{
+  fundCode:string;
+  openingTotal:number;
+  contributionsTotal:number;
+  reductionsTotal:number;
+  closingTotal:number;
+  members:MemberFundPosition[];
+  movements:MemberFundMovement[];
+}
+
+export function buildMemberFundBreakdown(input:{fundCode:string;movements:MemberFundMovement[]}):MemberFundBreakdown{
+  if(!input.fundCode.trim())throw new Error('FUND_CODE_REQUIRED');
+  const seen=new Set<string>(),rows=new Map<string,MemberFundPosition>();
+  const movements=input.movements.map(m=>{
+    if(!m.id||seen.has(m.id))throw new Error('INVALID_FUND_MOVEMENT_ID');seen.add(m.id);
+    if(!m.membershipId)throw new Error('FUND_MOVEMENT_MEMBER_REQUIRED');
+    const v=amount('fund_movement_amount',m.amount);
+    const row=rows.get(m.membershipId)??{membershipId:m.membershipId,openingRetention:0,contributions:0,refunds:0,forfeitures:0,adjustmentsIn:0,adjustmentsOut:0,closingRetention:0,movementCount:0};
+    if(m.kind==='OPENING_RETENTION')row.openingRetention+=v;
+    else if(m.kind==='CONTRIBUTION')row.contributions+=v;
+    else if(m.kind==='REFUND_TO_MEMBER')row.refunds+=v;
+    else if(m.kind==='FORFEITURE')row.forfeitures+=v;
+    else if(m.kind==='ADJUSTMENT_IN')row.adjustmentsIn+=v;
+    else if(m.kind==='ADJUSTMENT_OUT')row.adjustmentsOut+=v;
+    else throw new Error('INVALID_FUND_MOVEMENT_KIND');
+    row.movementCount++;
+    row.closingRetention=row.openingRetention+row.contributions+row.adjustmentsIn-row.refunds-row.forfeitures-row.adjustmentsOut;
+    if(row.closingRetention<0)throw new Error('NEGATIVE_MEMBER_FUND_RETENTION:'+m.membershipId);
+    rows.set(m.membershipId,row);return{...m,amount:v};
+  });
+  const members=[...rows.values()].sort((a,b)=>a.membershipId.localeCompare(b.membershipId));
+  const openingTotal=members.reduce((n,x)=>n+x.openingRetention,0),contributionsTotal=members.reduce((n,x)=>n+x.contributions+x.adjustmentsIn,0),reductionsTotal=members.reduce((n,x)=>n+x.refunds+x.forfeitures+x.adjustmentsOut,0),closingTotal=members.reduce((n,x)=>n+x.closingRetention,0);
+  return{fundCode:input.fundCode,openingTotal,contributionsTotal,reductionsTotal,closingTotal,members,movements};
+}
+
 export function buildClosingCarryover(input:ClosingCarryoverInput):ClosingCarryoverResult{
   const closingCash=amount('closing_cash',input.closingCash);
   const funds=input.funds.map(f=>{
