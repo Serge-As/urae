@@ -59,6 +59,7 @@
       <button data-view="ecosystem" class="nav-btn"><span>◎</span><b>Communauté & économie</b></button>
       <button data-view="services" class="nav-btn"><span>▦</span><b>Tous les services</b></button>
       <span class="nav-caption">Plateforme</span>
+      <button id="founderControlNav" data-view="founder-control" class="nav-btn" hidden><span>◉</span><b>Pilotage fondateur</b></button>
       <button data-view="settings" class="nav-btn"><span>⚙</span><b>Sécurité & réglages</b></button>
     </nav>
 
@@ -881,6 +882,44 @@
         </div>
         <div id="detailMetrics" class="metrics small"></div>
         <div id="detailBody" class="stack"></div>
+      </section>
+
+      <section id="view-founder-control" class="view">
+        <div class="page-head"><div><span class="eyebrow">Contrôle opérateur</span><h1>Pilotage fondateur · Centre de contrôle</h1><p>Un seul cockpit pour savoir ce qui fonctionne réellement, ce qui doit être corrigé, les plaintes, les contenus à écrire et l’état de chaque service. Tout nouveau module du registre est automatiquement ajouté à cette supervision.</p></div><div class="page-meta"><span id="founderGeneratedAt" class="pill">Chargement…</span></div></div>
+        <section class="panel">
+          <div class="section-kicker"><div><h2>Vue globale</h2><p>PASS ne remplace jamais une preuve terrain ; « À surveiller » regroupe notamment les modules structurels, les incidents et les contenus manquants.</p></div></div>
+          <div id="founderControlMetrics" class="metrics small"></div>
+        </section>
+        <div class="two-col">
+          <section class="panel">
+            <h2>Signaler / suivre un incident</h2>
+            <form id="founderIssueForm" class="form-grid">
+              <label>Service<select id="founderIssueService"></select></label>
+              <label>Sévérité<select id="founderIssueSeverity"><option value="LOW">Faible</option><option value="MEDIUM" selected>Moyenne</option><option value="HIGH">Haute</option><option value="CRITICAL">Critique</option></select></label>
+              <label class="full">Titre<input id="founderIssueTitle" required placeholder="Ex. Création de groupe bloquée étape 7"></label>
+              <label class="full">Constat<textarea id="founderIssueSummary" rows="3" required placeholder="Symptôme, contexte, utilisateur, appareil, preuve…"></textarea></label>
+              <button class="primary">Créer l’incident</button>
+            </form>
+          </section>
+          <section class="panel">
+            <h2>Textes, articles et contenus à produire</h2>
+            <form id="founderEditorialForm" class="form-grid">
+              <label>Service<select id="founderEditorialService"></select></label>
+              <label>Nature<select id="founderEditorialKind"><option value="HELP">Aide</option><option value="ARTICLE">Article</option><option value="LEGAL">Légal / politique</option><option value="ONBOARDING">Onboarding</option><option value="FAQ">FAQ</option><option value="MARKETING">Marketing</option><option value="OTHER">Autre</option></select></label>
+              <label>État<select id="founderEditorialState"><option value="MISSING">Manquant</option><option value="DRAFT">Brouillon</option><option value="REVIEW">À relire</option><option value="NEEDS_FIX">À corriger</option><option value="READY">Prêt</option><option value="PUBLISHED">Publié</option></select></label>
+              <label>Responsable<input id="founderEditorialOwner" placeholder="Serge / membre équipe"></label>
+              <label class="full">Titre<input id="founderEditorialTitle" required placeholder="Ex. Guide Fonds Secours"></label>
+              <label class="full">Notes<textarea id="founderEditorialNotes" rows="3"></textarea></label>
+              <button class="primary">Ajouter au suivi</button>
+            </form>
+          </section>
+        </div>
+        <section class="panel"><div class="section-kicker"><div><h2>État de tous les services</h2><p>La liste provient directement du registre produit. Ajouter une fonctionnalité au registre l’intègre automatiquement ici : aucune double saisie n’est requise.</p></div></div><div id="founderServiceList" class="stack"></div></section>
+        <div class="two-col">
+          <section class="panel"><h2>Incidents et corrections</h2><div id="founderIssueList" class="stack"></div></section>
+          <section class="panel"><h2>Contenus éditoriaux</h2><div id="founderEditorialList" class="stack"></div></section>
+        </div>
+        <section class="panel"><div class="section-kicker"><div><h2>Plaintes et cas utilisateurs ouverts</h2><p>Les signalements existants remontent ici afin que l’équipe de contrôle puisse les trier, les traiter et vérifier la résolution.</p></div></div><div id="founderUserCaseList" class="stack"></div></section>
       </section>
 
       <section id="view-settings" class="view">
