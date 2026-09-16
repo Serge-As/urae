@@ -46,3 +46,42 @@ test('boutique listing never creates a second ledger or inventory record',async(
   assert.equal(records.filter(x=>x.data.marketKind==='STOCK_ITEM').length,1);
   assert.equal((await repo.listLedgerEntries('tenant_a','group_a')).length,0,'publishing a catalog item is not a financial transaction');
 });
+
+
+test('forum draft survives device/session changes for the same account',async()=>{
+  const repo=new InMemoryPlatformRepository(),kernel=new PlatformKernel();context(kernel);await repo.saveGroup(group);
+  const svc=new CommunityService(repo,kernel),hub=await svc.createHub('group_a',{title:'Forum'});
+  context(kernel,'owner');
+  await svc.saveDraft('group_a',hub.id,{body:'Message commencé mais pas envoyé',title:'Mon brouillon',kind:'DISCUSSION'});
+  kernel.context.set({tenantId:'tenant_a',actorId:'owner',activeGroupId:'group_a',groupRoles:['founder'],mandateIds:[],deviceId:'other-device',sessionId:'other-session',locale:'fr',timezone:'Africa/Douala',connectivity:'online',requestId:'r2'});
+  const draft=await svc.draft('group_a',hub.id);
+  assert.equal(draft.body,'Message commencé mais pas envoyé');assert.equal(draft.draftTitle,'Mon brouillon');
+});
+
+test('forum read cursor restores the exact last-read post and computes unread count',async()=>{
+  const repo=new InMemoryPlatformRepository(),kernel=new PlatformKernel();context(kernel);await repo.saveGroup(group);
+  const svc=new CommunityService(repo,kernel),hub=await svc.createHub('group_a',{title:'Forum'});
+  const p1=await svc.createPost('group_a',{hubId:hub.id,body:'Message 1'}),p2=await svc.createPost('group_a',{hubId:hub.id,body:'Message 2'}),p3=await svc.createPost('group_a',{hubId:hub.id,body:'Message 3'});
+  await svc.markRead('group_a',hub.id,p2.id);
+  const timeline=await svc.timeline('group_a',hub.id,20);
+  assert.equal(timeline.cursor.anchorPostId,p2.id);assert.equal(timeline.unreadCount,1);
+  assert.ok(timeline.posts.some(x=>x.id===p1.id));assert.ok(timeline.posts.some(x=>x.id===p3.id));
+});
+
+test('forum reactions toggle and comments are synchronized server state',async()=>{
+  const repo=new InMemoryPlatformRepository(),kernel=new PlatformKernel();context(kernel);await repo.saveGroup(group);
+  const svc=new CommunityService(repo,kernel),hub=await svc.createHub('group_a',{title:'Forum'}),post=await svc.createPost('group_a',{hubId:hub.id,body:'Sujet'});
+  let reaction=await svc.react('group_a',post.id,'LOVE');assert.equal(reaction.active,true);
+  await svc.createComment('group_a',post.id,'Réponse utile');
+  let engagement=await svc.engagement('group_a',post.id);assert.equal(engagement.reactions.LOVE,1);assert.equal(engagement.comments.length,1);
+  reaction=await svc.react('group_a',post.id,'LOVE');assert.equal(reaction.active,false);
+  engagement=await svc.engagement('group_a',post.id);assert.equal(engagement.reactions.LOVE,0);
+});
+
+test('publishing archives the synced draft instead of leaving stale text on other devices',async()=>{
+  const repo=new InMemoryPlatformRepository(),kernel=new PlatformKernel();context(kernel);await repo.saveGroup(group);
+  const svc=new CommunityService(repo,kernel),hub=await svc.createHub('group_a',{title:'Forum'});
+  await svc.saveDraft('group_a',hub.id,{body:'Brouillon'});
+  await svc.createPost('group_a',{hubId:hub.id,body:'Brouillon'});
+  assert.equal(await svc.draft('group_a',hub.id),null);
+});
