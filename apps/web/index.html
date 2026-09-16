@@ -737,10 +737,14 @@
               <label>Hub<select id="communityPostHub"></select></label>
               <label>Type<select id="communityPostKind"><option value="DISCUSSION">Discussion</option><option value="ANNOUNCEMENT">Annonce</option><option value="OFFER">Offre</option><option value="REQUEST">Demande</option></select></label>
               <label>Titre<input id="communityPostTitle" placeholder="Facultatif"></label>
-              <label class="full">Message<textarea id="communityPostBody" rows="4" required></textarea></label>
+              <label class="full">Message<textarea id="communityPostBody" rows="4" required placeholder="Le brouillon est synchronisé avec vos autres appareils."></textarea></label>
+              <p id="communityDraftState" class="hint full">Brouillon serveur : en attente.</p>
               <button class="primary">Publier</button>
             </form>
-            <div><h3>Fil du Hub</h3><div id="communityPostList" class="stack"></div></div>
+            <div>
+              <div class="panel-head"><div><h3>Fil du Hub</h3><p id="communityReadState" class="hint">La dernière position lue est mémorisée par compte.</p></div><button id="communityLoadOlderBtn" type="button" class="link-btn">Messages précédents</button></div>
+              <div id="communityPostList" class="stack"></div>
+            </div>
           </div>
         </section>
 
