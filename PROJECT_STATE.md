@@ -3,45 +3,47 @@
 Date : 2026-09-16
 
 ## Production publique
-- version : **1.3.2-savings-control-forum-live**
-- URL : `https://eco-system.sergemimf.workers.dev/`
-- Worker : `eco-system`
-- Version ID : `f6e8b41f-8093-4ca9-9feb-202a4037c7b9`
-- D1 : `eco-system-db`
-- R2 : `eco-system-backups`
-- Premium Live : actif
-- Founder Control Center : actif/bound
-- Forum v2 : actif/bound
-- artifacts : R2
-- argent réel : désactivé
-- smoke : run `35096484915` SUCCESS.
+- version : **1.3.2-savings-control-forum-live** tant que le smoke 1.3.3 n'est pas prouvé ;
+- URL : `https://eco-system.sergemimf.workers.dev/` ;
+- Worker : `eco-system` ;
+- Version ID connue : `f6e8b41f-8093-4ca9-9feb-202a4037c7b9` ;
+- D1 : `eco-system-db` ; R2 : `eco-system-backups` ;
+- Premium Live / Founder Control / Forum v2 : actifs ;
+- argent réel : **désactivé** ;
+- smoke 1.3.2 : run `35096484915` SUCCESS.
 
-## Développement courant
-- branche : `next/1.3.2-savings-control-forum-live-20260916`
-- reprendre au HEAD distant le plus récent.
-- la 1.2 et la 1.3.1 restent historiques, pas des bases de reprise.
+## Candidat 1.3.3
+- branche : `next/1.3.3-interest-lab-adops-ui-20260916` ;
+- version API/package : `1.3.3-fairness-adops-doctor-launch` ;
+- qualification : **181/181 tests** au dernier run vert observé après alignement version/registre ;
+- Cahier : `docs/constitution/ECO_SYSTEM_Cahier_des_Charges_Maitre_Exhaustif_3.2.0_2026-09-16.md` ;
+- modèle économique : `docs/economics/ECO_SYSTEM_Modele_Economique_AdManager_Approfondi_3.2.0_2026-09-16.md`.
 
-## Acquis 1.3.2
-- audit du moteur Excel réel : reproduction exacte à la précision flottante ;
-- moteur alternatif « capital réellement productif » avec no-loan-no-yield ;
-- Secours par membre ;
-- Control Center auto-supervisé ;
-- Forum v2 multi-appareils ;
-- CNI/téléphone/nom protégés par HMAC ;
-- R2 opérationnel + BIR+ miroir vérifié ;
-- bootstrap durable du propriétaire plateforme ;
-- secrets HMAC générés une seule fois dans Cloudflare ;
-- Premium Live en production ;
-- tests et smoke verts.
+### Acquis candidat 1.3.3
+- création finale répare une simulation manquante ;
+- RI PDF/DOCX/ODT/texte/images → R2 + extraction ;
+- validation séquentielle des rubriques ;
+- Assistance Rulebook différé ;
+- RegistrationPolicy ancien/nouveau/gratuit/multi-critères ;
+- 5 politiques d'intérêts + Fairness Lab ;
+- Group Doctor ; Meeting Autopilot ;
+- AdOps/CRM ; House Ads contextuelles ;
+- rédacteur Workers AI avec **signaux collectifs dérivés uniquement** et fallback déterministe.
 
-## Sauvegarde
-- BIR+ GitHub run `35095940942` SUCCESS.
-- miroir R2 pré-production sous `birplus/1.3.2/0226b9b145c8aa49eb94ed190dedfd8c544ff80c/predeploy/`.
-- restauration SQLite vérifiée.
-- `realMoneyEnabled=false`.
+## Vérité financière du dossier étendu
+- intérêts bruts : **708 500 F** ;
+- part Bureau exemple : 141 700 F ; pool épargnants : **566 800 F** ;
+- causalité forte : 690 000 F bruts ; résidu brut : 18 500 F ;
+- pas d'intérêt impayé capitalisé automatiquement ;
+- POOLED / SEGREGATED / CUSTOM_MATRIX configurables.
+
+## Sauvegarde / déploiement
+- workflows 1.3.3 BIR+ et production préparés ;
+- **ne pas** déclarer 1.3.3 production avant BIR+ + deploy + smoke réussis ;
+- D1 existant uniquement ; migrations additives ; R2 privé ; secrets existants préservés.
 
 ## Invariants
-D1 unique ; migrations additives ; aucun second Ledger ; pas de données sensibles pour publicité/partenaires ; aucune activation argent réel ; non-régression des 10 étapes/multi-tontines/Collation ; sauvegarde + smoke obligatoires.
+10 étapes ; Collation ; multi-tontines ; Ledger unique ; Live projection ; offline honnête ; données individuelles sensibles hors pub/partenaires ; realMoney=false ; pas de force-push/main implicite.
 
-## Prochain jalon
-Connecter le moteur productif aux sources de prêts/réemplois du Ledger, compléter RECAP/Cassation/Secours, puis photo R2/passkeys/Push/Forum avancé/RealtimeKit.
+## Prochain point
+Qualifier le HEAD final → BIR+ 1.3.3 → déploiement protégé → smoke → mettre à jour cette vérité avec le nouveau Worker Version ID et les runs. Ensuite seulement : photo/pipeline média, passkeys, Push, Forum avancé, RealtimeKit, Demand Exchange réel.
