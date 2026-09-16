@@ -94,6 +94,15 @@ Aucune CNI brute ne doit être exposée dans les recherches, analytics ou ciblag
 - ne pas supprimer les parcours précédents pour simplifier l'interface ;
 - ne pas présenter un domaine STRUCTURAL comme terminé.
 
+## 7.1 Sauvegarde BIR+ 1.3.1 vérifiée
+
+- workflow : `35062074470` — **SUCCESS** ;
+- source archivée + export distant de `eco-system-db` ;
+- restauration SQLite : `PRAGMA integrity_check = ok` ;
+- Artifact GitHub : `eco-system-1.3.1-birplus`, ID `10432673201` ;
+- digest Artifact ZIP : `cabb94e293d6aa347145344f4c37f7c5ee67f4e705dd32c90c88ca7e4640f476` ;
+- tentative R2 : **NON QUALIFIÉE**, Cloudflare code `10042` via le token GitHub. L'Artifact GitHub reste la sauvegarde distante vérifiée ; ne pas prétendre que `eco-system-backups` a reçu cette sauvegarde.
+
 ## 8. Ancres historiques et infrastructure à préserver
 
 - **CLOUDFLARE** : réutiliser les Secrets GitHub existants et les ressources déjà qualifiées ; ne pas demander leurs valeurs ni recréer les prérequis sans preuve qu'ils ont disparu.
