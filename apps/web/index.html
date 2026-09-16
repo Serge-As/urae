@@ -754,6 +754,26 @@
         </section>
 
         <section class="panel"><div class="section-kicker"><div><h2>Marché, fournisseurs & Business Studio</h2><p>Achats groupés, appels d’offres, marketplace et activités économiques.</p></div></div><div id="marketHub" class="hub-grid"></div></section>
+        <section class="panel" id="externalProgramsPanel">
+          <div class="section-kicker"><div><h2>Partenaires · ONG · Programmes</h2><p>Formalisez l'accompagnement d'un groupe par une ONG, un partenaire financier, un fournisseur, une assurance, un opérateur ou un autre acteur. Le partage financier reste agrégé au niveau du groupe pseudonymisé.</p></div></div>
+          <div class="two-col">
+            <form id="externalProgramForm" class="form-grid">
+              <h3>Créer un programme</h3>
+              <label>Nature<select id="externalProgramKind"><option value="PARTNER">Partenaire</option><option value="NGO">ONG / programme d'accompagnement</option></select></label>
+              <label>Organisation<input id="externalPartyName" required placeholder="Ex. institution financière, ONG, fournisseur"></label>
+              <label>Programme / offre<input id="externalProgramName" required placeholder="Ex. Financement achats groupés"></label>
+              <label class="full">Objet<textarea id="externalProgramPurpose" rows="3" required placeholder="Ce que le partenaire apporte au groupe et ce qui est attendu"></textarea></label>
+              <label>Localités<input id="externalProgramLocalities" placeholder="Yaoundé, Douala"></label>
+              <label>Thèmes<input id="externalProgramTags" placeholder="épargne, savon, agriculture, formation"></label>
+              <label class="full">Données accessibles<select id="externalProgramDataAccess"><option value="NONE">Aucune donnée financière partagée</option><option value="GROUP_AGGREGATE_ECONOMIC">Profil économique agrégé du groupe pseudonymisé</option></select></label>
+              <button class="primary">Créer le brouillon</button>
+            </form>
+            <div><h3>Programmes actifs et dossiers partagés</h3><div id="externalProgramList" class="stack"></div></div>
+          </div>
+          <div class="panel-head"><div><h3>Profil économique du groupe</h3><p>Exemple : ECO-GRP-… · Tontine Savons 150 000 F. Aucun nom de membre ni solde individuel.</p></div></div>
+          <div id="economicProfilePreview" class="stack"></div>
+        </section>
+
         <section class="panel"><div class="section-kicker"><div><h2>AdManager & sponsoring</h2><p>Campagnes, créations, placements, ciblage contextuel et financier agrégé, modération et analytics. Aucun ciblage individuel par dette, solde, CNI ou identité.</p></div></div><div id="growthHub" class="hub-grid"></div></section>
         <section class="panel" id="adManagerPanel">
           <div class="section-kicker"><div><h2>Studio AdManager</h2><p>Créez une campagne sandbox avant toute facturation réelle. Eco-System peut exploiter des centres d’intérêt, localités et tranches de masse monétaire <strong>agrégées au niveau du groupe/rubrique</strong>, jamais la situation financière personnelle d’un membre.</p></div></div>
