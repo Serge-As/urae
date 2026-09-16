@@ -28,7 +28,8 @@ test('founder can track a complaint from new to verified with an explicit resolu
 });
 
 test('resolved issue cannot hide without a resolution note',async()=>{
-  const {svc}=setup();const issue=await svc.createIssue({title:'Erreur',summary:'Détail',severity:'MEDIUM'});
+  const {svc}=setup();let issue=await svc.createIssue({title:'Erreur',summary:'Détail',severity:'MEDIUM'});
+  issue=await svc.transitionIssue(issue.id,'TRIAGED');issue=await svc.transitionIssue(issue.id,'IN_PROGRESS');
   await assert.rejects(()=>svc.transitionIssue(issue.id,'RESOLVED',''),/CONTROL_ISSUE_RESOLUTION_REQUIRED/);
 });
 
