@@ -89,7 +89,7 @@ const launchDocumentKind=(file:File)=>{
   return'UNKNOWN';
 };
 
-const createRequestScope = (request:Request,repo:PlatformRepository,artifacts?:ArtifactStoreLike,dataUseDefaultMode:DataUseDefaultMode='BETA_OPEN') => {
+const createRequestScope = (request:Request,repo:PlatformRepository,artifacts?:ArtifactStoreLike,dataUseDefaultMode:DataUseDefaultMode='BETA_OPEN',documentAI?:WorkersAILike) => {
   const kernel=new PlatformKernel();
   const foundation=new FoundationService(repo,kernel); const ledger=new LedgerService(repo,kernel); const meetings=new MeetingService(repo,kernel); const discovery=new DiscoveryService(repo,kernel); const membershipGateway=new MembershipGatewayService(repo,kernel); const rubrics=new RubricKnowledgeService(repo,kernel);
   const completion=new CompletionSuiteService(repo,kernel);
@@ -101,7 +101,7 @@ const createRequestScope = (request:Request,repo:PlatformRepository,artifacts?:A
   const groupIdentity=new GroupIdentityService(repo,kernel);
   const conciergeLearning=new ConciergeLearningService(repo,kernel,dataUseDefaultMode);
   const miscRubrics=new MiscRubricService(repo,kernel,ledger);
-  const adManager=new AdManagerService(repo,kernel,options.documentAI);
+  const adManager=new AdManagerService(repo,kernel,documentAI);
   const economicIntelligence=new EconomicIntelligenceService(repo,kernel);
   const externalPrograms=new ExternalProgramsService(repo,kernel);
   const tenantId=request.headers.get('x-tenant-id')??'tenant_demo'; const actorId=request.headers.get('x-actor-id')??'user_founder';
@@ -122,7 +122,7 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
     const allowed=Boolean((cors as Record<string,string>)['access-control-allow-origin']);
     return new Response(null,{status:allowed?204:403,headers:{...baseSecurityHeaders,...cors,'access-control-allow-methods':'GET,POST,PUT,OPTIONS','access-control-allow-headers':'content-type,x-tenant-id,x-actor-id,x-group-roles,x-active-group-id,x-device-id,x-session-id,x-request-id,x-timezone'}});
   }
-  const {kernel,foundation,ledger,meetings,discovery,membershipGateway,rubrics,completion,explainability,documents,receivables,treasury,riskFinance,market,community,imports,memberControl,groupIdentity,conciergeLearning,miscRubrics,adManager,economicIntelligence,externalPrograms}=createRequestScope(request,repo,options.artifacts,options.dataUseDefaultMode??'BETA_OPEN'); const ctx=kernel.context.get();
+  const {kernel,foundation,ledger,meetings,discovery,membershipGateway,rubrics,completion,explainability,documents,receivables,treasury,riskFinance,market,community,imports,memberControl,groupIdentity,conciergeLearning,miscRubrics,adManager,economicIntelligence,externalPrograms}=createRequestScope(request,repo,options.artifacts,options.dataUseDefaultMode??'BETA_OPEN',options.documentAI); const ctx=kernel.context.get();
   if(options.premiumLive)kernel.features.set('premium_live_ledger',true);
   const isFounderTeamActor=async()=>Boolean(options.founderTeamActors?.has(ctx.actorId))||Boolean(options.founderControl&&await options.founderControl.isPlatformOwner(ctx.actorId));
   const requireGroup=async(groupId:string,manage=false)=>{
