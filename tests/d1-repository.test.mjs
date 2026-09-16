@@ -50,7 +50,7 @@ test('trusted API handler persists through the D1 adapter between requests',asyn
   const create=await handler(new Request('http://local/api/v1/group-projects',{method:'POST',headers,body:JSON.stringify({name:'Cloud Group',kind:'association',governanceModel:'community',memberCount:10,sessions:10,nominalContribution:1000,currency:'XAF'})})); assert.equal(create.status,201); const project=await create.json();
   const convert=await handler(new Request(`http://local/api/v1/group-projects/${project.id}/convert`,{method:'POST',headers})); assert.equal(convert.status,201);
   const groups=await handler(new Request('http://local/api/v1/groups',{headers})); assert.equal(groups.status,200); const list=await groups.json(); assert.equal(list.length,1); assert.equal(list[0].name,'Cloud Group');
-  const health=await handler(new Request('http://local/health')); const h=await health.json(); assert.equal(h.realMoneyEnabled,false); assert.equal(h.version,'1.3.0-guided-ai-live');
+  const health=await handler(new Request('http://local/health')); const h=await health.json(); assert.equal(h.realMoneyEnabled,false); assert.equal(h.version,'1.3.2-savings-control-forum-live');
 });
 
 test('0003 platform_records migration is additive and idempotent by construction',()=>{
