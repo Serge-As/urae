@@ -37,3 +37,17 @@ test('Founder Control Center tracks editorial work and incidents to resolution',
     assert.equal(snap.incidents[0].status,'RESOLVED');
   }finally{db.close();}
 });
+
+
+test('first existing account becomes durable platform owner while later accounts do not',async()=>{
+  const db=new SQLiteD1(':memory:');
+  try{
+    db.db.exec("CREATE TABLE auth_accounts(id TEXT PRIMARY KEY,username TEXT NOT NULL UNIQUE,display_name TEXT NOT NULL,tenant_id TEXT NOT NULL UNIQUE,locale TEXT NOT NULL,created_at TEXT NOT NULL,salt TEXT NOT NULL,password_hash TEXT NOT NULL);");
+    db.db.prepare("INSERT INTO auth_accounts VALUES(?,?,?,?,?,?,?,?)").run('user_first','first','First','tenant_first','fr','2026-01-01T00:00:00Z','salt','hash');
+    db.db.prepare("INSERT INTO auth_accounts VALUES(?,?,?,?,?,?,?,?)").run('user_later','later','Later','tenant_later','fr','2026-02-01T00:00:00Z','salt2','hash2');
+    db.migrate();
+    const store=new FounderControlStore(db);
+    assert.equal(await store.isPlatformOwner('user_first'),true);
+    assert.equal(await store.isPlatformOwner('user_later'),false);
+  }finally{db.close();}
+});
