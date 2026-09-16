@@ -21,6 +21,7 @@ import { mountAdManagerUI } from './ad-manager-ui.js';
 import { mountTontineManagerUI } from './tontine-manager-ui.js';
 import { mountSavingsYieldUI } from './savings-yield-ui.js';
 import { mountExternalProgramsUI } from './external-programs-ui.js';
+import { mountFounderControlUI } from './founder-control-ui.js';
 let uiLocale = 'fr';
 try { uiLocale = localStorage.getItem('tontine.locale') === 'en' ? 'en' : 'fr'; } catch {}
 const tx = (fr,en) => runtimeTranslate(uiLocale,fr,en);
@@ -130,6 +131,7 @@ const adManagerUI = mountAdManagerUI({ app, notify: toast, showError: fail, isMa
 const tontineManagerUI = mountTontineManagerUI({ app, getRubrics: () => rubrics, getMembers: () => members, notify: toast, showError: fail, fmt, isManager });
 const savingsYieldUI = mountSavingsYieldUI({ app, getMembers: () => members, notify: toast, showError: fail, fmt, isManager });
 const externalProgramsUI = mountExternalProgramsUI({ app, notify: toast, showError: fail, isManager, fmt });
+const founderControlUI = mountFounderControlUI({ app, notify: toast, showError: fail, date });
 const renderConnectivity = () => { const online = navigator.onLine; const e = $('#connectivity'); e.textContent = `● ${online ? tx('En ligne','Online') : tx('Hors ligne','Offline')}`; e.className = `pill ${online ? 'online' : 'offline'}`; app.setConnectivity(online ? 'online' : 'offline'); };
 const renderUniverse = async () => {
     const u = await app.universe();
@@ -643,6 +645,7 @@ const refreshGroupContext = async () => {
     await tontineManagerUI.refresh();
     await savingsYieldUI.refresh();
     await externalProgramsUI.refresh();
+    await founderControlUI.refresh();
 };
 const refreshAll = async () => { await refreshGroupContext(); renderOutbox(); renderCompatibility(); renderKernel(); renderModules(); renderEcosystemHighlights(); renderDomainHubs(); await detailUI.openFromLocation?.(); };
 $('#activeGroupSelect').addEventListener('change', async (e) => { const id = e.target.value; app.selectGroup(id || undefined); try {
