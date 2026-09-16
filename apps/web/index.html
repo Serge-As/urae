@@ -434,7 +434,7 @@
       </section>
 
       <section id="view-finance" class="view">
-        <div class="page-head"><div><span class="eyebrow">Lot E</span><h1>Finance · Ledger · Solidarité</h1><p>Attendu, collecté, manquant/dette, couverture solidaire et décaissement sont des flux distincts.</p></div></div>
+        <div class="page-head"><div><span class="eyebrow">Lot E</span><h1>Finance · Ledger · Solidarité</h1><p>Attendu, collecté, manquant/dette, couverture solidaire et décaissement sont des flux distincts.</p></div><div class="page-meta"><button id="openAssistanceRulebookBtn" type="button" class="link-btn">Règles Assistance</button><button id="openSavingsLabBtn" type="button" class="link-btn">Partage des intérêts</button></div></div>
         <div id="noActiveGroupFinance" class="panel empty-state">Sélectionnez ou créez d'abord un groupe.</div>
         <div id="financeContent">
           <div class="two-col">
@@ -560,6 +560,19 @@
               <div><h3>Dossiers de solidarité</h3><div id="solidarityList" class="stack"></div></div>
             </div>
           </details>
+
+          <section class="panel" id="assistanceRulebookPanel">
+            <div class="section-kicker"><div><span class="eyebrow">Règles événementielles</span><h2>Assistance · validation détaillée</h2><p>Les longues modalités détectées dans le RI peuvent être conservées à la création puis validées ici, événement par événement : maladie, deuil, mariage, baptême, naissance, etc. Si aucun RI n’existe, le gestionnaire peut les saisir ou les dicter.</p></div><span class="pill">Aucune finance automatique</span></div>
+            <div class="two-col">
+              <div>
+                <label>Rubrique Assistance<select id="assistanceRulebookRubric"></select></label>
+                <div class="actions"><button id="assistanceRulebookAddEvent" type="button" class="secondary">+ Ajouter une modalité</button><button id="assistanceRulebookSaveDraft" type="button" class="secondary">Enregistrer le brouillon</button><button id="assistanceRulebookValidate" type="button" class="primary">Valider les modalités</button></div>
+                <p class="hint">La validation porte sur les règles ; elle ne crée ni assistance, ni dette, ni décaissement. Les opérations réelles resteront soumises aux droits et preuves.</p>
+              </div>
+              <div id="assistanceRulebookSummary" class="stack"></div>
+            </div>
+            <div id="assistanceRulebookEvents" class="stack"></div>
+          </section>
 
           <section class="panel" id="savingsYieldLab">
             <div class="section-kicker"><div><h2>Moteur Épargne · intérêts · capital réellement productif</h2><p>Eco-System peut reproduire le chemin historique Feuille mensuelle → Épargne → Principal → Intérêts provisoires → Intérêts finaux, puis comparer ce résultat avec un modèle plus fidèle : le capital effectivement prêté, remboursé et éventuellement reprêté.</p></div></div>
