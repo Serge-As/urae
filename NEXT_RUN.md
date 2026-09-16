@@ -8,38 +8,43 @@ Date : 2026-09-16
 3. `PROJECT_STATE.md`
 4. `docs/memory/PROJECT_TRUTH_LEDGER.json`
 5. `docs/constitution/ECO_SYSTEM_Cahier_des_Charges_Maitre_Exhaustif_3.2.0_2026-09-16.md`
-6. socle constitutionnel 2.3.4 conservé
+6. socle constitutionnel 2.3.4
 7. `docs/economics/ECO_SYSTEM_Modele_Economique_AdManager_Approfondi_3.2.0_2026-09-16.md`
 8. `FEATURE_REGISTRY.yaml`
-9. derniers runs GitHub.
+9. derniers runs GitHub et état Cloudflare réel.
 
-## Branche
+## Branche de reprise
 `next/1.3.3-interest-lab-adops-ui-20260916`
+Toujours récupérer le HEAD distant le plus récent.
 
-Toujours lire le HEAD distant le plus récent. Ne jamais reprendre un SHA mémorisé sans vérification.
-
-## Production actuelle
-La production reste **1.3.2-savings-control-forum-live** tant qu'un smoke 1.3.3 réussi n'est pas inscrit ici.
-
-## Candidat 1.3.3
-Version : `1.3.3-fairness-adops-doctor-launch`.
-Acquis : guided RI upload, revue rubriques séquentielle, Assistance Rulebook, RegistrationPolicy, cinq moteurs Épargne/Fairness Lab, Group Doctor, Meeting Autopilot, AdOps/CRM, House Ads contextuelles et composition IA agrégée.
-
-## Point de reprise immédiat
-1. vérifier CI du HEAD ;
-2. déclencher `.github/workflows/backup-birplus-1.3.3.yml` via le marqueur `.github/BACKUP_ECO_SYSTEM_1_3_3_ONCE` ;
-3. exiger export D1 + restauration SQLite + integrity_check + SHA + miroir R2 ;
-4. seulement après sauvegarde verte, déclencher `.github/workflows/deploy-production-1.3.3.yml` via `.github/DEPLOY_ECO_SYSTEM_1_3_3_ONCE` ;
-5. exiger smoke version, realMoney=false, Premium Live, Founder Control, Community Realtime, R2 et Cahier 3.2.0 ;
-6. mettre à jour Current Truth / Project State / Truth Ledger / Feature Registry avec les IDs des runs et Worker Version ID.
+## Production
+- version : **1.3.3-fairness-adops-doctor-launch**
+- source déployée : `8396be2ed40ab51031a543787e2e61d41a42ad21`
+- Worker Version ID : `fdb6c9f3-8e46-49e9-85df-1e238975d257`
+- production run : `35138597876` SUCCESS
+- BIR+ run : `35138465887` SUCCESS
+- Premium Live / Founder Control / Community Realtime / R2 : actifs/bound
+- realMoneyEnabled=false.
 
 ## Ne pas refaire
-- ne pas recréer D1 ;
-- ne pas redemander un token R2 : D1 et R2 étaient OK en 1.3.2 ;
-- ne pas supprimer les 10 étapes ;
-- ne pas revenir à l'ancien pool 18 500 : le dossier étendu prouve 708 500 F ;
-- ne pas renvoyer les noms libres de rubriques à l'IA House Ads ;
-- ne pas réactiver argent réel.
+- ne pas recréer `eco-system-db` ;
+- ne pas recréer token D1/R2 sans nouvelle preuve d'échec ;
+- ne pas réduire les 10 étapes ;
+- ne pas revenir aux anciens 18 500 F comme pool total : le dossier étendu donne 708 500 F ;
+- ne pas envoyer noms libres de rubriques/données personnelles au rédacteur House Ads ;
+- ne pas prétendre qu'une fonction déployée a déjà réussi une recette terrain si elle n'a que CI/smoke.
 
-## Après 1.3.3
-Photo/R2 pipeline, passkeys, Push, Forum recherche/voix/sondages, RealtimeKit, Demand Exchange/Deals, Cost Control, tests terrain 2G/seniors.
+## Prochain chantier conseillé
+**Recette terrain 1.3.3**, puis corrections ciblées seulement :
+1. créer réellement un groupe depuis zéro ;
+2. importer un RI multi-format ;
+3. traiter une longue liste de rubriques sans scroll aller-retour ;
+4. vérifier Assistance Rulebook et tarification inscription ;
+5. simuler les 5 politiques sur données terrain ;
+6. tester AdOps/House Ads dans plusieurs contextes ;
+7. transformer chaque défaut reproductible en test permanent.
+
+Ensuite : photo/R2 pipeline, passkeys/Push, Forum voix/sondages/recherche, RealtimeKit, Demand Exchange/Deals, Cost Control.
+
+## Anti-interruption
+Après 3–5 sous-lots : commit + CI + mise à jour Truth. Avant chaque production : BIR+ + restauration D1 + R2 + smoke.
