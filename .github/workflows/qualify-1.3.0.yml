@@ -1,7 +1,7 @@
 name: Qualify Eco-System 1.3.0 Guided AI + Live Innovations
 on:
   push:
-    branches: ['next/1.3.0-guided-ai-live-20260915', 'next/1.3.1-recovery-recap-services-20260915', 'next/1.3.2-savings-control-forum-live-20260916']
+    branches: ['next/1.3.0-guided-ai-live-20260915', 'next/1.3.1-recovery-recap-services-20260915', 'next/1.3.2-savings-control-forum-live-20260916', 'next/1.3.3-interest-lab-adops-ui-20260916']
   pull_request:
     branches: ['next/1.2.0-functional-completion-20260913']
   workflow_dispatch:
