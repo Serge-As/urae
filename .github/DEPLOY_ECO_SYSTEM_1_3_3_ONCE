@@ -1,0 +1,4 @@
+Eco-System 1.3.3 production one-shot trigger
+Date: 2026-09-16
+Prerequisite: BIR+ run 35138465887 SUCCESS and qualification run 35138465748 SUCCESS on backup-trigger HEAD.
+Constraints: reuse eco-system-db; additive migrations only; preserve R2 and existing secrets; Premium Live on; realMoneyEnabled=false; smoke required.
