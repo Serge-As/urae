@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {buildFinancialRecap,buildSessionRecap,buildClosingCarryover} from '../.build/packages/recap-engine/src/index.js';
+import {buildFinancialRecap,buildSessionRecap,buildClosingCarryover,buildMemberFundBreakdown} from '../.build/packages/recap-engine/src/index.js';
 
 test('financial recap preserves automatic source while allowing governed manual display override',()=>{
   const r=buildFinancialRecap({
@@ -45,4 +45,24 @@ test('closing carries structured Secours and Project funds into next exercise op
 
 test('carryover cannot promise more structured funds than physical closing cash',()=>{
   assert.throws(()=>buildClosingCarryover({closingCash:10000,funds:[{fundCode:'S',label:'Secours',carryForward:true,unassignedAmount:11000}]}),/CARRYOVER_FUNDS_EXCEED_CLOSING_CASH/);
+});
+
+
+test('Fonds Secours preserves exact member contribution and retention positions',()=>{
+  const b=buildMemberFundBreakdown({fundCode:'SECOURS',movements:[
+    {id:'o1',membershipId:'m1',kind:'OPENING_RETENTION',amount:12000},
+    {id:'c1',membershipId:'m1',kind:'CONTRIBUTION',amount:6000},
+    {id:'c2',membershipId:'m2',kind:'CONTRIBUTION',amount:24000},
+    {id:'r1',membershipId:'m1',kind:'REFUND_TO_MEMBER',amount:3000}
+  ]});
+  const m1=b.members.find(x=>x.membershipId==='m1'),m2=b.members.find(x=>x.membershipId==='m2');
+  assert.equal(m1.openingRetention,12000);assert.equal(m1.contributions,6000);assert.equal(m1.closingRetention,15000);
+  assert.equal(m2.closingRetention,24000);
+  assert.equal(b.openingTotal,12000);assert.equal(b.contributionsTotal,30000);assert.equal(b.reductionsTotal,3000);assert.equal(b.closingTotal,39000);
+});
+
+test('member reserve cannot become silently negative',()=>{
+  assert.throws(()=>buildMemberFundBreakdown({fundCode:'SECOURS',movements:[
+    {id:'x',membershipId:'m1',kind:'REFUND_TO_MEMBER',amount:1}
+  ]}),/NEGATIVE_MEMBER_FUND_RETENTION/);
 });
