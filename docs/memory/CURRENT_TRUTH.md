@@ -188,3 +188,10 @@ Après 3–5 sous-lots : commit + CI + mise à jour de cette vérité + checkpoi
 - Worker Version ID : `fdb6c9f3-8e46-49e9-85df-1e238975d257`.
 - Smoke : version 1.3.3, realMoney=false, Premium Live=true, Founder Control=true, Community Realtime=true, artifactStorageMode=R2.
 - Les capacités 1.3.3 sont déployées mais restent FUNCTIONAL_BETA là où une recette terrain dédiée manque.
+
+
+## 14. Checkpoint de clôture 1.3.3
+- HEAD checkpoint : `4d7ce535f60fbc4af3317ed157374ec884b3ff2e`.
+- qualification : run `35139053318` SUCCESS.
+- BIR+ de clôture : run `35139053215` SUCCESS.
+- ce checkpoint archive le code/documentation post-déploiement et exporte la D1 déjà en production 1.3.3, avec restauration/integrity, SHA256 et miroir R2.
