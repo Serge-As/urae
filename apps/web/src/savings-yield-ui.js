@@ -7,7 +7,7 @@ const monthSession=new Map(months.map((m,i)=>[m[0],i+1]));
 export function mountSavingsYieldUI({app,getMembers,notify=()=>{},showError=console.error,fmt=n=>String(n),isManager=()=>false}){
   const form=document.getElementById('yieldDepositForm'),eventForm=document.getElementById('yieldEventForm'),root=document.getElementById('yieldDepositList'),eventRoot=document.getElementById('yieldEventList'),result=document.getElementById('yieldResult'),coefRoot=document.getElementById('yieldCoefficients'),schoolCoefRoot=document.getElementById('yieldSchoolCoefficients');
   if(!form||!root||!result||!coefRoot)return{refresh:async()=>{}};
-  const deposits=[],events=[];let seq=0,eventSeq=0;
+  const deposits=[],events=[];let seq=0,eventSeq=0,canonicalLoaded=false;const canonicalSummary=document.getElementById('yieldCanonicalSummary');
   const option=(v,t)=>{const o=document.createElement('option');o.value=v;o.textContent=t;return o;};
   if(!coefRoot.children.length)for(const [key,label,coef] of months){const l=el('label',label);const i=el('input');i.type='number';i.step='0.1';i.min='0';i.value=String(coef);i.dataset.period=key;l.append(i);coefRoot.append(l);}
   const schoolDefaults=new Map([['JAN',7],['FEB',6],['MAR',5],['APR',4],['MAY',3],['JUN',2],['JUL',1],['AUG',0],['SEP',0],['OCT',0],['NOV',0],['DEC',0]]);
@@ -41,9 +41,32 @@ export function mountSavingsYieldUI({app,getMembers,notify=()=>{},showError=cons
     const select=document.getElementById('yieldDepositMember');if(!select)return;const previous=select.value;select.replaceChildren(option('','Choisir un membre'));
     for(const m of getMembers())select.append(option(m.id,m.displayName));if([...select.options].some(o=>o.value===previous))select.value=previous;
   };
+  const renderCanonicalSummary=data=>{
+    if(!canonicalSummary)return;canonicalSummary.replaceChildren();
+    const totals=data?.totals??{},cards=[
+      ['Épargne classique',totals.classicPrincipal??0],['Épargne scolaire',totals.schoolPrincipal??0],
+      ['Épargne totale',totals.totalPrincipal??0],['Intérêts réellement recouvrés',totals.recoveredInterest??0]
+    ];
+    for(const [label,amount] of cards){const card=el('div');card.append(el('span',label),el('strong',fmt(amount)));canonicalSummary.append(card);}
+    const matrix=document.createElement('div');matrix.className='yield-source-matrix';const memberRows=data?.members??[];
+    const by=new Map();for(const d of data?.deposits??[]){const key=d.memberId+'|'+d.periodKey;by.set(key,(by.get(key)??0)+Number(d.amount??0));}
+    const table=document.createElement('table');table.className='meeting-matrix';const head=document.createElement('thead'),hr=document.createElement('tr');hr.append(el('th','Membre'));for(const m of months)hr.append(el('th',m[1].slice(0,3)));hr.append(el('th','Total'));head.append(hr);table.append(head);
+    const body=document.createElement('tbody');for(const member of memberRows){const tr=document.createElement('tr');tr.append(el('th',member.displayName));let total=0;for(const m of months){const v=Number(by.get(member.id+'|'+m[0])??0);total+=v;tr.append(el('td',v?fmt(v):'—'));}tr.append(el('td',fmt(total)));body.append(tr);}table.append(body);matrix.append(el('h3','Dépôts réels par membre et période'),table);canonicalSummary.after(matrix);
+  };
+  const loadCanonical=async(forcePool=false)=>{
+    if(!isManager())return;const data=await app.savingsYieldSourceData();canonicalLoaded=true;
+    deposits.splice(0,deposits.length,...(data.deposits??[]).map(d=>({...d,id:'canonical:'+d.id})));
+    const recovered=Number(data.totals?.recoveredInterest??0),pool=document.getElementById('yieldInterestPool');
+    if(pool&&recovered>0&&(forcePool||!Number(pool.dataset.userEdited))){pool.value=String(recovered);pool.dataset.canonicalValue=String(recovered);}
+    renderDeposits();renderCanonicalSummary(data);
+    notify('Données Épargne rechargées depuis les fiches membres et le Ledger canonique.');
+  };
+  document.getElementById('yieldInterestPool')?.addEventListener('input',e=>{e.currentTarget.dataset.userEdited='1';});
+  document.getElementById('yieldLoadCanonical')?.addEventListener('click',()=>void loadCanonical(true).catch(showError));
+
   const checkShares=()=>{
-    const shares=number('yieldClassicShare')+number('yieldSchoolShare')+number('yieldOfficeShare');
-    if(Math.abs(shares-100)>.0001)throw new Error('Les parts Épargne + Épargne scolaire + Bureau doivent totaliser 100 %.');
+    const shares=number('yieldClassicShare')+number('yieldSchoolShare')+number('yieldOfficeShare')+number('yieldReserveShare');
+    if(Math.abs(shares-100)>.0001)throw new Error('Les parts Épargne classique + Épargne scolaire + Bureau + Réserve doivent totaliser 100 %.');
   };
   const renderMembers=(data,title)=>{
     result.replaceChildren();result.append(el('h3',title),el('p','Enveloppe effectivement distribuée : '+fmt(data.distributedInterest??data.distributedToSavers??0),'truth-notice'));
@@ -69,14 +92,14 @@ export function mountSavingsYieldUI({app,getMembers,notify=()=>{},showError=cons
   document.getElementById('yieldWorkbookBtn')?.addEventListener('click',()=>void(async()=>{try{
     if(!isManager())throw new Error('FORBIDDEN_SCOPE');checkShares();
     const data=await app.previewWorkbookSavingsYield({
-      realizedInterestPool:number('yieldInterestPool'),bureauShareBasisPoints:bps(number('yieldOfficeShare')),
+      realizedInterestPool:number('yieldInterestPool'),bureauShareBasisPoints:bps(number('yieldOfficeShare')+number('yieldReserveShare')),
       deposits:deposits.map(({session,...d})=>d),
       funds:[
         {fund:'CLASSIC',shareBasisPoints:bps(number('yieldClassicShare')),eligiblePeriods:eligiblePeriods(coefficients()),highestCoefficient:number('yieldHighestCoefficient'),coefficients:coefficients()},
         {fund:'SCHOOL',shareBasisPoints:bps(number('yieldSchoolShare')),eligiblePeriods:eligiblePeriods(schoolCoefficients()),highestCoefficient:number('yieldHighestCoefficientSchool'),coefficients:schoolCoefficients()}
       ]
     });
-    result.replaceChildren();result.append(el('h3','Reproduction du moteur historique'),el('p','Pool réel : '+fmt(data.realizedInterestPool)+' · Bureau : '+fmt(data.bureauIndemnity)+' · Épargnants : '+fmt(data.distributedToSavers),'truth-notice'));
+    result.replaceChildren();result.append(el('h3','Reproduction du moteur historique'),el('p','Pool choisi : '+fmt(data.realizedInterestPool)+' · Retenue Bureau + Réserve : '+fmt(data.bureauIndemnity)+' · Épargnants : '+fmt(data.distributedToSavers),'truth-notice'));
     result.append(el('p',data.algebraicFinding,'hint'));
     for(const fund of data.funds){
       const box=el('article',undefined,'item');box.append(el('strong',fund.fund==='CLASSIC'?'Épargne classique':'Épargne scolaire'),el('p','Principal annuel : '+fmt(fund.totalPrincipal)+' · Pool : '+fmt(fund.allocatedPool)),el('p','Taux général : '+fund.generalRatePercent.toFixed(6)+' % · taux provisoire : '+fund.provisionalBaseRate.toFixed(6)+' · total provisoire : '+fund.provisionalTotal.toFixed(2)+' · ratio final : '+fund.normalizationRatio.toFixed(6),'hint'));
@@ -87,8 +110,8 @@ export function mountSavingsYieldUI({app,getMembers,notify=()=>{},showError=cons
   }catch(err){showError(err);}})());
 
   const saverPool=()=>{
-    checkShares();const total=number('yieldInterestPool'),office=bps(number('yieldOfficeShare'));
-    return Math.round(total*(10000-office)/10000);
+    checkShares();const total=number('yieldInterestPool'),retained=bps(number('yieldOfficeShare')+number('yieldReserveShare'));
+    return Math.round(total*(10000-retained)/10000);
   };
   const fundPool=(fund)=>{
     checkShares();const total=number('yieldInterestPool'),share=number(fund==='CLASSIC'?'yieldClassicShare':'yieldSchoolShare');
@@ -143,7 +166,7 @@ export function mountSavingsYieldUI({app,getMembers,notify=()=>{},showError=cons
       deposits:deposits.map(d=>({id:d.id,memberId:d.memberId,amount:d.amount,session:d.session,fund:d.fund,periodKey:d.periodKey})),
       loans:loanCycles(),
       policy:{
-        officeShareBasisPoints:bps(number('yieldOfficeShare')),poolingMode,allocationMethod:'PRO_RATA_AVAILABLE',residualPolicy,
+        officeShareBasisPoints:bps(number('yieldOfficeShare')+number('yieldReserveShare')),poolingMode,allocationMethod:'PRO_RATA_AVAILABLE',residualPolicy,
         residualFundSharesBasisPoints:residualPolicy==='FIXED_FUND_SPLIT'?{CLASSIC:classicResidual,SCHOOL:schoolResidual}:undefined,
         endSession:number('yieldEndSession'),eligibleThroughSession:number('yieldEligibleThrough')||number('yieldEndSession'),
         timeExponent:number('yieldTimeExponent')||1,amountPower:number('yieldAmountPowerFair')||1
@@ -177,6 +200,6 @@ export function mountSavingsYieldUI({app,getMembers,notify=()=>{},showError=cons
   }catch(err){showError(err);}})());
 
   period?.addEventListener('change',()=>{const s=document.getElementById('yieldDepositSession');if(s)s.value=String(monthSession.get(period.value)??1);});
-  renderDeposits();renderEvents();
-  return{refresh:async()=>{populateMembers();}};
+  renderDeposits();renderEvents();populateMembers();if(isManager())void loadCanonical(false).catch(()=>{});
+  return{refresh:async()=>{populateMembers();if(isManager()&&!canonicalLoaded)await loadCanonical(false).catch(()=>{});}};
 }
