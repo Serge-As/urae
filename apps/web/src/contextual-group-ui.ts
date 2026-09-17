@@ -23,7 +23,7 @@ function ensureDomainNav(rubrics:any[]){
     ['contextSavingsNav','◫',tr('Épargne + Intérêts','Savings + Interest'),has('SAVINGS',/epargne|saving/),'finance','savingsYieldLab'],
     ['contextLoansNav','₣',tr('Prêts + Intérêts','Loans + Interest'),has('LOAN',/pret|emprunt|credit|loan/),'finance','mg-loan'],
     ['contextAssistanceNav','♡',tr('Assistances','Assistance'),has('ASSISTANCE',/assist|secours|main levee/),'finance','assistanceRulebookPanel'],
-    ['contextOtherNav','⋯',tr('Autres rubriques','Other rubrics'),rubrics.some(r=>/amende|inscription|timbre|collation|transport|autre/.test(normalize(String(r.name??'')))),'finance','miscRubricWorkspace']
+    ['contextOtherNav','⋯',tr('Autres rubriques','Other rubrics'),rubrics.some(r=>/amende|inscription|timbre|collation|transport|autre/.test(normalize(String(r.name??'')))),'operations','miscRubricPanel']
   ] as const;
   for(const [id,icon,label,visible,view,target] of defs){let b=byId<HTMLButtonElement>(id);if(!b){b=document.createElement('button');b.id=id;b.className='nav-btn contextual-domain-nav';b.type='button';b.innerHTML='<span>'+icon+'</span><b>'+label+'</b>';b.onclick=()=>{if(target==='mg-loan'){document.querySelector<HTMLButtonElement>('#masterGovernanceCenter [data-mg="loan"]')?.click();setTimeout(()=>byId('mg-loan')?.scrollIntoView({behavior:'smooth',block:'start'}),120);}else go(view,target);};before?.before(b);}b.hidden=!visible;}
 }
