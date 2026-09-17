@@ -1,9 +1,9 @@
 {
   "name": "tontine-platform",
-  "version": "1.3.3-fairness-adops-doctor-launch",
+  "version": "1.3.4-voice-two-sheet-documents-final",
   "private": true,
   "type": "module",
-  "description": "Eco-System: Fairness Lab, AdOps, Group Doctor, guided RI launch, savings policies, founder control, Forum Live and qualified Premium Live.",
+  "description": "Eco-System 1.3.4: guided RI launch, canonical two-sheet entries, voice-assisted field capture, governed expenses, secure member dossiers, group documents, contextual rubrics, Premium Live, Fairness Lab, AdOps and Group Doctor.",
   "engines": {
     "node": ">=24"
   },
