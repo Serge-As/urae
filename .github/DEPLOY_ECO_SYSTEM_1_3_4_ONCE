@@ -1,0 +1,6 @@
+Eco-System 1.3.4 production deployment trigger
+Date: 2026-09-17
+Qualified parent SHA: 1b010967275e374c4b902bcd4086279c0cad05db
+Version: 1.3.4-voice-two-sheet-documents-final
+Scope: BIR+ predeploy -> additive migrations -> eco-system Worker/PWA -> smoke -> BIR+ postdeploy.
+No destructive migration or replacement of eco-system-db is authorized.
