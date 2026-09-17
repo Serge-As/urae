@@ -94,8 +94,8 @@ export function parseVoiceFinancialCommand(raw:string):VoiceFinancialCommandDraf
   const warnings:string[]=[];const wake=stripWake(raw);const localeGuess=detectLocale(raw);let body=wake.text.trim();
   const action=body.match(ACTION_WORDS);const actionIndex=action?.index??-1;const header=actionIndex>=0?body.slice(0,actionIndex):body;
   let memberQuery:string|undefined,meetingQuery:string|undefined;
-  const member=header.match(/(?:chez|pour|for)\s+(?:le\s+|the\s+)?(?:membre|member)?\s*([^,;]+?)(?=\s+(?:a\s+la\s+seance|à\s+la\s+séance|seance|séance|meeting)\b|$)/i)
-    ??header.match(/(?:membre|member)\s+([^,;]+?)(?=\s+(?:seance|séance|meeting)\b|$)/i);
+  const member=header.match(/(?:chez|pour|for)\s+(?:le\s+|the\s+)?(?:membre|member)?\s*([^,;]+?)(?=\s+(?:a\s+la\s+seance|à\s+la\s+séance|seance|séance|meeting)\b|\s*[,;]|$)/i)
+    ??header.match(/(?:membre|member)\s+([^,;]+?)(?=\s+(?:seance|séance|meeting)\b|\s*[,;]|$)/i);
   if(member?.[1])memberQuery=member[1].trim().replace(/[,:-]+$/,'').trim();
   const meeting=header.match(/(?:a\s+la\s+seance|à\s+la\s+séance|seance|séance|reunion|réunion|meeting)\s+([^,;]+)/i);if(meeting?.[1])meetingQuery=meeting[1].trim();
   let entriesText=actionIndex>=0?body.slice(actionIndex):body;
