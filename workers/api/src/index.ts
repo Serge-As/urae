@@ -36,6 +36,8 @@ import { EcoPulseService, type EngagementAction, type RecommendationCandidate } 
 import { HistoricalImportService, RepositoryArtifactStore, type ArtifactStoreLike } from '../../../packages/imports/src/index.js';
 import { GovernanceVoteService } from '../../../packages/governance-vote/src/index.js';
 import { NotificationService } from '../../../packages/notifications/src/index.js';
+import { OperationalCockpitService } from '../../../packages/operational-cockpit/src/index.js';
+import { simulatePeriodicLoan } from '../../../packages/loan-simulator/src/index.js';
 import { authenticatedApi } from './authenticated.js';
 export { GroupLiveHub } from './group-live-hub.js';
 
@@ -106,10 +108,11 @@ const createRequestScope = (request:Request,repo:PlatformRepository,artifacts?:A
   const adManager=new AdManagerService(repo,kernel,documentAI);
   const economicIntelligence=new EconomicIntelligenceService(repo,kernel);
   const externalPrograms=new ExternalProgramsService(repo,kernel);
+  const operationalCockpit=new OperationalCockpitService(repo,kernel,ledger);
   const tenantId=request.headers.get('x-tenant-id')??'tenant_demo'; const actorId=request.headers.get('x-actor-id')??'user_founder';
   const groupRoles=(request.headers.get('x-group-roles')??'founder,manager').split(',').map(x=>x.trim()).filter(Boolean);
   kernel.context.set({actorId,tenantId,activeGroupId:request.headers.get('x-active-group-id')??undefined,groupRoles,mandateIds:[],deviceId:request.headers.get('x-device-id')??'device_web_demo',sessionId:request.headers.get('x-session-id')??'session_demo',locale:request.headers.get('accept-language')?.toLowerCase().startsWith('en')?'en':'fr',timezone:request.headers.get('x-timezone')??'Africa/Douala',connectivity:'online',requestId:request.headers.get('x-request-id')??makeId('req')});
-  return {kernel,foundation,ledger,meetings,discovery,membershipGateway,rubrics,completion,explainability,documents,receivables,treasury,riskFinance,market,community,imports,memberControl,groupIdentity,conciergeLearning,miscRubrics,adManager,economicIntelligence,externalPrograms};
+  return {kernel,foundation,ledger,meetings,discovery,membershipGateway,rubrics,completion,explainability,documents,receivables,treasury,riskFinance,market,community,imports,memberControl,groupIdentity,conciergeLearning,miscRubrics,adManager,economicIntelligence,externalPrograms,operationalCockpit};
 };
 
 const inboxFor = async (repo:PlatformRepository,tenantId:string,actorId:string) => {
@@ -124,7 +127,7 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
     const allowed=Boolean((cors as Record<string,string>)['access-control-allow-origin']);
     return new Response(null,{status:allowed?204:403,headers:{...baseSecurityHeaders,...cors,'access-control-allow-methods':'GET,POST,PUT,OPTIONS','access-control-allow-headers':'content-type,x-tenant-id,x-actor-id,x-group-roles,x-active-group-id,x-device-id,x-session-id,x-request-id,x-timezone'}});
   }
-  const {kernel,foundation,ledger,meetings,discovery,membershipGateway,rubrics,completion,explainability,documents,receivables,treasury,riskFinance,market,community,imports,memberControl,groupIdentity,conciergeLearning,miscRubrics,adManager,economicIntelligence,externalPrograms}=createRequestScope(request,repo,options.artifacts,options.dataUseDefaultMode??'BETA_OPEN',options.documentAI); const ctx=kernel.context.get();
+  const {kernel,foundation,ledger,meetings,discovery,membershipGateway,rubrics,completion,explainability,documents,receivables,treasury,riskFinance,market,community,imports,memberControl,groupIdentity,conciergeLearning,miscRubrics,adManager,economicIntelligence,externalPrograms,operationalCockpit}=createRequestScope(request,repo,options.artifacts,options.dataUseDefaultMode??'BETA_OPEN',options.documentAI); const ctx=kernel.context.get();
   const governanceVotes=new GovernanceVoteService(repo,kernel,options.governanceSecret??'eco-system-nonproduction-governance-secret');
   const notifications=new NotificationService(repo,kernel);
   if(options.premiumLive)kernel.features.set('premium_live_ledger',true);
@@ -1348,6 +1351,24 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
     if(groupNotifications&&request.method==='POST'){const body=await readJson<any>(request);return json(await notifications.publish(groupNotifications[1]!,body),201,cors);}
     const readNotification=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/notifications\/([^/]+)\/read$/);
     if(readNotification&&request.method==='POST')return json(await notifications.markRead(readNotification[1]!,readNotification[2]!),200,cors);
+
+    const operationalSheetRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/members\/([^/]+)\/operational-sheet$/);
+    if(operationalSheetRoute&&request.method==='GET')return json(await operationalCockpit.memberSheet(operationalSheetRoute[1]!,operationalSheetRoute[2]!),200,cors);
+
+    const recapGlobalRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/recap\/global$/);
+    if(recapGlobalRoute&&request.method==='GET')return json(await operationalCockpit.globalRecap(recapGlobalRoute[1]!),200,cors);
+    const recapLayoutRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/recap\/layout$/);
+    if(recapLayoutRoute&&request.method==='GET')return json(await operationalCockpit.getRecapLayout(recapLayoutRoute[1]!),200,cors);
+    if(recapLayoutRoute&&request.method==='PUT'){const body=await readJson<any>(request);return json(await operationalCockpit.saveRecapLayout(recapLayoutRoute[1]!,{columns:Array.isArray(body.columns)?body.columns:[],expectedVersion:body.expectedVersion===undefined?undefined:Number(body.expectedVersion)}),200,cors);}
+    const recapOverrideRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/recap\/overrides$/);
+    if(recapOverrideRoute&&request.method==='PUT'){const body=await readJson<any>(request);return json(await operationalCockpit.setRecapOverride(recapOverrideRoute[1]!,{membershipId:String(body.membershipId??''),columnId:String(body.columnId??''),amount:body.amount===null?null:Number(body.amount),reason:String(body.reason??'')}),200,cors);}
+
+    const loanSimulationRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/loans\/simulate$/);
+    if(loanSimulationRoute&&request.method==='POST'){
+      await requireGroup(loanSimulationRoute[1]!);
+      const body=await readJson<any>(request);
+      return json({rows:simulatePeriodicLoan({principal:Number(body.principal),periods:Number(body.periods),ratePercentPerPeriod:Number(body.ratePercentPerPeriod),priority:String(body.priority??'CAPITAL_FIRST') as any,interestBasis:String(body.interestBasis??'OUTSTANDING') as any,payments:Array.isArray(body.payments)?body.payments.map(Number):[]}),simulationOnly:true,noInterestOnInterest:true},200,cors);
+    }
 
     const notebookRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/members\/([^/]+)\/notebook$/);
     if(notebookRoute&&request.method==='GET'){
