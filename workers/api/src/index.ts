@@ -623,6 +623,33 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
       return json({retried,confirmed,pending:Math.max(0,pending.length-confirmed)},200,cors);
     }
 
+    const savingsYieldSource=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/savings-yield\/source-data$/);
+    if(savingsYieldSource&&request.method==='GET'){
+      const groupId=savingsYieldSource[1]!;await requireGroup(groupId,true);
+      const [rubricRows,meetingRows,positions,accounts,entries,memberships]=await Promise.all([
+        repo.listRubricDefinitions(ctx.tenantId,groupId),repo.listMeetings(ctx.tenantId,groupId),ledger.receiptPositions(ctx.tenantId,groupId),
+        repo.listLedgerAccounts(ctx.tenantId,groupId),repo.listLedgerEntries(ctx.tenantId,groupId),repo.listMemberships(ctx.tenantId,groupId)
+      ]);
+      const savingsRubrics=rubricRows.filter(r=>r.status==='ACTIVE'&&(String(r.activityPlan?.kind??'').toUpperCase()==='SAVINGS'||/[ée]pargne|saving/i.test(r.name)));
+      const savingsIds=new Set(savingsRubrics.map(r=>r.id));
+      const orderedMeetings=meetingRows.slice().sort((a,b)=>String(a.scheduledAt??a.openedAt).localeCompare(String(b.scheduledAt??b.openedAt)));
+      const sessionByMeeting=new Map(orderedMeetings.map((m,i)=>[m.id,i+1]));
+      const periodKeys=['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
+      const rubricById=new Map(savingsRubrics.map(r=>[r.id,r]));
+      const deposits=positions.filter(p=>p.rubricId&&savingsIds.has(p.rubricId)&&p.netAmount>0).map(p=>{
+        const rubric=rubricById.get(p.rubricId!)!,session=p.meetingId?(sessionByMeeting.get(p.meetingId)??1):1;
+        const fund=/scolaire|school/i.test(rubric.name)?'SCHOOL':'CLASSIC';
+        return{id:p.id,memberId:p.membershipId,amount:p.netAmount,session,fund,periodKey:periodKeys[(session-1)%12],rubricId:p.rubricId,meetingId:p.meetingId??null,receivedAt:p.receivedAt};
+      });
+      const memberRows=[];for(const m of memberships){const u=await repo.getUser(m.userId);memberRows.push({id:m.id,displayName:u?.displayName??m.userId,status:m.status});}
+      const accountById=new Map(accounts.map(a=>[a.id,a]));
+      const interestByAccount:Record<string,number>={};
+      for(const entry of entries)for(const line of entry.lines){const account=accountById.get(line.accountId);if(account&&/INTEREST.*INCOME|INTEREST_INCOME/i.test(account.code)){interestByAccount[account.code]=(interestByAccount[account.code]??0)+(line.credit-line.debit);}}
+      const recoveredInterest=Object.values(interestByAccount).reduce((n,x)=>n+x,0);
+      const classicPrincipal=deposits.filter(d=>d.fund==='CLASSIC').reduce((n,d)=>n+d.amount,0),schoolPrincipal=deposits.filter(d=>d.fund==='SCHOOL').reduce((n,d)=>n+d.amount,0);
+      return json({generatedAt:new Date().toISOString(),source:'CANONICAL_LEDGER_AND_RECEIPTS',members:memberRows,rubrics:savingsRubrics.map(r=>({id:r.id,name:r.name})),meetings:orderedMeetings.map((m,i)=>({id:m.id,title:m.title,session:i+1,scheduledAt:m.scheduledAt??m.openedAt})),deposits,totals:{classicPrincipal,schoolPrincipal,totalPrincipal:classicPrincipal+schoolPrincipal,recoveredInterest},interestByAccount,warnings:recoveredInterest===0?['NO_REALIZED_INTEREST_FOUND']:[]},200,cors);
+    }
+
     const savingsYieldPreview=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/savings-yield\/preview$/);
     if(savingsYieldPreview&&request.method==='POST'){
       await requireGroup(savingsYieldPreview[1]!,true);const body=await readJson<Record<string,unknown>>(request);
