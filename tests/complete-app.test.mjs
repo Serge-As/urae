@@ -5,6 +5,8 @@ import { PRODUCT_MODULES, PRODUCT_CAPABILITY_COUNT } from '../.build/packages/mo
 import { InMemoryPlatformRepository } from '../.build/packages/repositories/src/index.js';
 import { createApiHandler } from '../.build/workers/api/src/index.js';
 
+const RELEASE_VERSION='1.3.4-voice-two-sheet-documents-final';
+
 test('Complete App catalog exposes more than 100 unique A-J capabilities',()=>{
   assert.ok(PRODUCT_CAPABILITY_COUNT>=100,`catalog too small: ${PRODUCT_CAPABILITY_COUNT}`);
   assert.equal(PRODUCT_MODULES.length,PRODUCT_CAPABILITY_COUNT);
@@ -27,7 +29,7 @@ test('capability catalog API reports the same canonical list',async()=>{
   const r=await handler(new Request('http://local/api/v1/product/capabilities',{headers:{'x-tenant-id':'t','x-actor-id':'u'}}));
   assert.equal(r.status,200);
   const body=await r.json();
-  assert.equal(body.version,'1.3.3-fairness-adops-doctor-launch');
+  assert.equal(body.version,RELEASE_VERSION);
   assert.equal(body.count,PRODUCT_CAPABILITY_COUNT);
   assert.ok(body.count>=100);
 });
@@ -47,5 +49,5 @@ test('universal workspace creates, lists and updates persistent capability recor
 test('Complete App health keeps real money disabled',async()=>{
   const handler=createApiHandler(new InMemoryPlatformRepository());
   const r=await handler(new Request('http://local/health',{headers:{'x-tenant-id':'t','x-actor-id':'u'}}));
-  const h=await r.json();assert.equal(h.version,'1.3.3-fairness-adops-doctor-launch');assert.equal(h.realMoneyEnabled,false);
+  const h=await r.json();assert.equal(h.version,RELEASE_VERSION);assert.equal(h.realMoneyEnabled,false);
 });
