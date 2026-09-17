@@ -23,7 +23,7 @@ test('runtime bilingual dictionary covers critical current shell journeys',()=>{
   for(const [fr,en] of [
     ['Connexion','Sign in'],['Découvrir','Discover'],['Créer une association ou une tontine','Create an association or tontine'],
     ['Tontine opérationnelle','Operational tontine'],['Prêts, obligations et décisions','Loans, obligations and decisions'],
-    ['Laboratoire fonctionnel 1.2','1.2 functional lab'],['Réglages · Sécurité · Compatibilité','Settings · Security & Compatibility']
+    ['Laboratoire fonctionnel 1.2','1.2 functional lab'],['Réglages · Sécurité · Compatibilité','Settings · Security · Compatibility']
   ]) assert.equal(d[fr],en,fr);
   assert.equal(localeTag('fr'),'fr-CM');assert.equal(localeTag('en'),'en-CM');
 });
