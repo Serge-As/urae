@@ -62,3 +62,15 @@ test('cross-tenant admission grants own statement, never group ledger or another
   const ledger=await (await e.request(`/api/v1/groups/${g.id}/ledger`,'GET',undefined,owner.cookie,headers)).json();assert.equal(ledger.summary.cashBalance,0);assert.equal(ledger.receipts[0].netAmount,0);
  }finally{e.db.close();}
 });
+
+test('authenticated governance document upload accepts multipart while other business writes still require JSON',async()=>{
+ const e=environment();try{
+  const a=await register(e,'document_owner');
+  const form=new FormData();form.append('files',new Blob(['Secours obligatoire 1000 FCFA. Tontine de 2000 FCFA.'],{type:'text/plain'}),'rubriques.txt');
+  const uploaded=await worker.fetch(new Request('https://local.test/api/v1/assistant/group-launch/analyze-files',{method:'POST',headers:{origin:'https://local.test',cookie:a.cookie},body:form}),{DB:e.db,ARTIFACTS:{put:async()=>{}}});
+  assert.equal(uploaded.status,200,await uploaded.clone().text());
+  const result=await uploaded.json();assert.ok(result.suggestions.some(x=>x.rubric));
+  const wrongType=await worker.fetch(new Request('https://local.test/api/v1/bootstrap',{method:'POST',headers:{origin:'https://local.test',cookie:a.cookie,'content-type':'text/plain'},body:'hello'}),{DB:e.db});
+  assert.equal(wrongType.status,415);assert.equal((await wrongType.json()).error,'JSON_REQUIRED');
+ }finally{e.db.close();}
+});
