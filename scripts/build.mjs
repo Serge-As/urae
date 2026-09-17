@@ -18,6 +18,20 @@ await cp('.build/apps/web/src', '.build/src', { recursive: true });
 await cp('apps/web/sw.js', '.build/apps/web/sw.js');
 await cp('apps/web/sw.js', '.build/sw.js');
 
+// 1.3.4: the historical page contains two generations of Tontine forms with
+// duplicate ids. field-hardening removes the obsolete Réunion panel before
+// main.js mounts, then this scoped compatibility guard prevents completion-ui
+// from binding its older Tontine controller to the remaining dedicated forms.
+// TontineManagerUI is therefore the single operational owner.
+for (const target of ['.build/apps/web/src/completion-ui.js','.build/src/completion-ui.js']) {
+  let source=await readFile(target,'utf8');
+  const needle="const byId=id=>document.getElementById(id);";
+  const replacement="const byId=id=>{const tontineOperational=/^(?:tontine(?:Cycle|Share|Serve|Rounds|Pots|PotAmount|Schedule|Completion)|suggestTontine|applyTontine|readiness)/.test(id);if(tontineOperational&&!document.getElementById('tontineCompletionPanel'))return null;return document.getElementById(id);};";
+  if(!source.includes(needle))throw Error('COMPLETION_TONTINE_GUARD_ANCHOR_NOT_FOUND');
+  source=source.replace(needle,replacement);
+  await writeFile(target,source,'utf8');
+}
+
 // 1.3.4 field hardening must run before main.js. It removes the obsolete
 // duplicate operational Tontine panel and installs mobile/voice guards before
 // the regular UI modules bind their handlers. Keep the source HTML historical;
