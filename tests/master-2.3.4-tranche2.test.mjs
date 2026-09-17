@@ -47,7 +47,7 @@ test('member notebook is self-readable and remains manager-scoped for another me
   let r=await handler(new Request('http://local/api/v1/groups/group_t2/members/membership_member_t2/notebook',{headers:memberHeaders}));
   assert.equal(r.status,200);let body=await r.json();assert.equal(body.group.id,'group_t2');assert.equal(body.membership.id,'membership_member_t2');assert.ok(Array.isArray(body.timeline));
   r=await handler(new Request('http://local/api/v1/groups/group_t2/members/membership_founder_t2/notebook',{headers:memberHeaders}));
-  assert.equal(r.status,400);body=await r.json();assert.equal(body.error,'FORBIDDEN_SCOPE');
+  assert.equal(r.status,403);body=await r.json();assert.equal(body.error,'FORBIDDEN_SCOPE');
 });
 
 test('tranche 2 shell exposes votes, notifications, secure invitations, calendar and member notebook',()=>{
