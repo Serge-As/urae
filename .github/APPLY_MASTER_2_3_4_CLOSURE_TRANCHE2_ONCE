@@ -3,3 +3,4 @@ Date: 2026-09-17
 Scope: governance votes + notifications + secure invitation/calendar exposure + member notebook.
 Run script -> full CI -> commit only on green.
 No production deployment.
+Retry: patcher syntax corrected after first guarded failure.
