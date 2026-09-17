@@ -171,6 +171,12 @@ function installFocusedFieldDictation(){
   button.onclick=()=>{if(!target)return;controller?.stop?.();controller=speech(uiEn()?'en-US':'fr-FR',text=>{if(!target)return;if(target instanceof HTMLInputElement&&target.type==='number'){const amount=parseVoiceAmount(text);if(amount!==undefined)target.value=String(amount);}else target.value+=(target.value&& !/\s$/.test(target.value)?' ':'')+text;target.dispatchEvent(new Event('input',{bubbles:true}));target.dispatchEvent(new Event('change',{bubbles:true}));},(active)=>{button.textContent=active?'⏹️':'🎙️';});controller.toggle();};
 }
 
+function installTwoSheetChooser(){
+  const meeting=byId<HTMLButtonElement>('meetingSheetViewBtn'),individual=byId<HTMLButtonElement>('individualSheetsViewBtn'),mode=byId('meetingSheetMode');
+  if(!meeting||!individual||meeting.dataset.bound==='1')return;meeting.dataset.bound='1';
+  meeting.onclick=()=>{meeting.classList.add('active');individual.classList.remove('active');if(mode)mode.hidden=false;byId<HTMLButtonElement>('matrixViewBtn')?.click();setTimeout(()=>byId('meetingMatrix')?.scrollIntoView({behavior:'smooth',block:'start'}),80);};
+  individual.onclick=()=>{individual.classList.add('active');meeting.classList.remove('active');document.querySelector<HTMLButtonElement>('#masterGovernanceCenter [data-mg="sheet"]')?.click();setTimeout(()=>byId('mg-sheet')?.scrollIntoView({behavior:'smooth',block:'start'}),80);};
+}
 function translateInjected(){for(const el of document.querySelectorAll<HTMLElement>('[data-v-fr][data-v-en]'))el.textContent=uiEn()?el.dataset.vEn??'':el.dataset.vFr??'';}
 
-export function mountVoiceEntryUI(){installFinancialVoicePanel();hardenLegacyMatrix();watchDetailSheets();installBackOfficeExpense();installFocusedFieldDictation();translateInjected();byId<HTMLSelectElement>('languageSelect')?.addEventListener('change',()=>{translateInjected();});byId<HTMLSelectElement>('activeGroupSelect')?.addEventListener('change',()=>{loadedGroup='';void loadContext(true).catch(()=>{});});}
+export function mountVoiceEntryUI(){installFinancialVoicePanel();hardenLegacyMatrix();watchDetailSheets();installBackOfficeExpense();installFocusedFieldDictation();installTwoSheetChooser();translateInjected();byId<HTMLSelectElement>('languageSelect')?.addEventListener('change',()=>{translateInjected();});byId<HTMLSelectElement>('activeGroupSelect')?.addEventListener('change',()=>{loadedGroup='';void loadContext(true).catch(()=>{});});}
