@@ -1,4 +1,5 @@
 import {mountVoiceEntryUI} from './voice-entry-ui.js';
+import {mountExpenseRecapUI} from './expense-recap-ui.js';
 
 const style=document.createElement('style');
 style.id='voice-entry-134-styles';
@@ -27,5 +28,5 @@ style.textContent=`
 `;
 document.head.append(style);
 
-const start=()=>mountVoiceEntryUI();
+const start=()=>{mountVoiceEntryUI();mountExpenseRecapUI();};
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});else start();
