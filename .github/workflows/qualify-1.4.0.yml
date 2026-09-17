@@ -1,0 +1,19 @@
+name: Qualify Eco-System 1.4.0 Master 2.3.4 Closure
+on:
+  push:
+    branches: ['next/1.4.0-master-2.3.4-closure-20260917']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  qualify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: npm run ci
