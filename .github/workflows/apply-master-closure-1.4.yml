@@ -1,0 +1,39 @@
+name: Apply Eco-System 1.4.0 Master 2.3.4 Closure
+on:
+  push:
+    branches: ['next/1.4.0-master-2.3.4-closure-20260917']
+    paths: ['.github/APPLY_MASTER_2_3_4_CLOSURE_1_4_ONCE']
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  apply-test-commit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: next/1.4.0-master-2.3.4-closure-20260917
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - name: Bootstrap and apply guarded closure patch
+        run: |
+          node scripts/fix-master-closure-patcher.mjs
+          node scripts/apply-master-closure-1.4.mjs
+      - name: Full qualification before commit
+        run: npm run ci
+      - name: Commit qualified closure tranche
+        run: |
+          if git diff --quiet; then
+            echo 'No source changes to commit.'
+            exit 0
+          fi
+          git config user.name 'Delor85 Eco-System CI'
+          git config user.email 'actions@users.noreply.github.com'
+          git add package.json packages apps workers tests scripts/apply-master-closure-1.4.mjs
+          git commit -m 'feat(1.4): close Master 2.3.4 operational core gaps'
+          git push origin HEAD:next/1.4.0-master-2.3.4-closure-20260917
