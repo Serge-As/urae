@@ -24,6 +24,7 @@ jobs:
         run: |
           node scripts/fix-master-closure-patcher.mjs
           node scripts/apply-master-closure-1.4.mjs
+          node scripts/post-master-closure-fixes.mjs
           printf '\nApplied in guarded CI on %s at %s.\n' "$GITHUB_SHA" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> docs/memory/recalls/RECALL-2026-09-17-master-2.3.4-closure.md
           printf '\nQualified change application checkpoint: %s.\n' "$GITHUB_SHA" >> docs/change-impact/CIR-2026-09-17-master-2.3.4-closure.md
       - name: Full qualification before commit
@@ -36,6 +37,6 @@ jobs:
           fi
           git config user.name 'Delor85 Eco-System CI'
           git config user.email 'actions@users.noreply.github.com'
-          git add package.json packages apps workers tests scripts/apply-master-closure-1.4.mjs docs/memory/recalls/RECALL-2026-09-17-master-2.3.4-closure.md docs/change-impact/CIR-2026-09-17-master-2.3.4-closure.md
+          git add package.json packages apps workers tests scripts docs/memory/recalls/RECALL-2026-09-17-master-2.3.4-closure.md docs/change-impact/CIR-2026-09-17-master-2.3.4-closure.md
           git commit -m 'feat(1.4): close Master 2.3.4 operational core gaps'
           git push origin HEAD:next/1.4.0-master-2.3.4-closure-20260917
