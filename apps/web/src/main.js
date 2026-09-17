@@ -758,20 +758,22 @@ onSubmit('#projectForm', async (e) => { e.preventDefault(); try {
 }catch(e){fail(Error(launchError(e)));} });
 $('#createGroupBtn').addEventListener('click',async()=>{
   const button=$('#createGroupBtn');if(button.disabled)return;
-  button.disabled=true;$('#projectForm').inert=true;
+  const originalLabel=button.textContent;button.disabled=true;$('#projectForm').inert=true;
+  const status=$('#launchStepStatus');const say=(message)=>{button.textContent=message;status.textContent=message;toast(message);};
   try{
     let project=lastProjectId;
     if(!project){
-      toast('Vérification automatique de la faisabilité avant création…');
+      say('1/3 · Vérification de la faisabilité…');
       const simulated=await simulateCurrentLaunch({silent:true});project=simulated.projectId;button.disabled=true;
     }
+    say('2/3 · Création du groupe et de ses rubriques…');
     const group=await app.createGroupFromProject(project);
     lastProjectId=undefined;window.__ecoLastProjectReady=false;
-    toast(`Groupe créé : ${group.name}`);
-    await refreshGroupContext();go('operations');
+    say('3/3 · Synchronisation du groupe…');
+    await refreshGroupContext();toast(`Groupe créé : ${group.name}`);go('operations');
   }catch(error){
     launchStudio.renderPreview();fail(Error(launchError(error)));
-  }finally{$('#projectForm').inert=false;}
+  }finally{$('#projectForm').inert=false;button.textContent=originalLabel;}
 });
 onSubmit('#memberForm', async (e) => { e.preventDefault(); try {
     await app.addMember(val('memberName'));
