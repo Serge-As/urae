@@ -25,10 +25,10 @@ await cp('apps/web/sw.js', '.build/sw.js');
 // TontineManagerUI is therefore the single operational owner.
 for (const target of ['.build/apps/web/src/completion-ui.js','.build/src/completion-ui.js']) {
   let source=await readFile(target,'utf8');
-  const needle="const byId=id=>document.getElementById(id);";
+  const anchor=/const\s+byId\s*=\s*id\s*=>\s*document\.getElementById\(id\)\s*;/;
   const replacement="const byId=id=>{const tontineOperational=/^(?:tontine(?:Cycle|Share|Serve|Rounds|Pots|PotAmount|Schedule|Completion)|suggestTontine|applyTontine|readiness)/.test(id);if(tontineOperational&&!document.getElementById('tontineCompletionPanel'))return null;return document.getElementById(id);};";
-  if(!source.includes(needle))throw Error('COMPLETION_TONTINE_GUARD_ANCHOR_NOT_FOUND');
-  source=source.replace(needle,replacement);
+  if(!anchor.test(source))throw Error('COMPLETION_TONTINE_GUARD_ANCHOR_NOT_FOUND');
+  source=source.replace(anchor,replacement);
   await writeFile(target,source,'utf8');
 }
 
