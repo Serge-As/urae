@@ -190,7 +190,7 @@ export function mountLaunchStudio({app,getGroups,getRubrics,addRubric,invalidate
     if(!input||!root||!status)return;root.replaceChildren();const files=[...(input.files??[])];
     if(!files.length){status.textContent='Aucun document sélectionné.';return;}
     const imageFiles=files.filter(f=>f.type.startsWith('image/')||/\.(?:jpe?g|png|webp|bmp|gif)$/i.test(f.name));
-    status.textContent=imageFiles.length===1?'Une seule photo sélectionnée : ajoutez les autres pages si le RI en comporte plusieurs.':' '+files.length+' fichier(s) prêt(s) pour analyse.';
+    status.textContent=imageFiles.length===1?'Une seule photo sélectionnée : si le RI ou la liste de rubriques comporte plusieurs pages, ajoutez les autres images avant analyse.':' '+files.length+' fichier(s) prêt(s) pour analyse.';
     for(const file of files){
       const row=document.createElement('article');row.className='item';const strong=document.createElement('strong');strong.textContent=file.name;
       const meta=document.createElement('p');meta.className='hint';meta.textContent=(file.type||'type inconnu')+' · '+Math.max(1,Math.round(file.size/1024)).toLocaleString('fr-FR')+' Ko';
@@ -207,9 +207,9 @@ export function mountLaunchStudio({app,getGroups,getRubrics,addRubric,invalidate
     const data=await app.analyzeGroupDocumentFiles(files);
     for(const fp of data.fingerprints??[])fingerprints.add(fp);
     if(data.combinedText&&data.combinedText.length<=120000&&!value('launchAssistantText'))byId('launchAssistantText').value=data.combinedText;
-    const friendly=(data.warnings??[]).map(w=>w.startsWith('PHOTO_SET_SINGLE_IMAGE')?'Une seule photo a été reçue : vérifiez qu’aucune page du RI ne manque.':w.startsWith('LEGACY_DOC')?'Ancien Word .doc archivé : préférez .docx ou PDF pour une extraction automatique complète.':w.startsWith('DOCUMENT_CONVERSION_FAILED')?'Un fichier n’a pas pu être lu automatiquement ; l’original reste archivé.':w);
+    const friendly=(data.warnings??[]).map(w=>w.startsWith('PHOTO_SET_SINGLE_IMAGE')?'Une seule photo a été reçue : vérifiez qu’aucune page du RI ou de la liste de rubriques ne manque.':w.startsWith('LEGACY_DOC')?'Ancien Word .doc archivé : préférez .docx ou PDF pour une extraction automatique complète.':w.startsWith('DOCUMENT_CONVERSION_FAILED')?'Un fichier n’a pas pu être lu automatiquement ; l’original reste archivé.':w);
     status.textContent='Analyse terminée : '+(data.files?.length??files.length)+' fichier(s), '+(data.suggestions?.length??0)+' proposition(s).'+(friendly.length?' '+friendly.join(' '):'');
-    renderSuggestions(data);invalidate();toast('RI analysé. Validez maintenant les rubriques une par une, sur place.');
+    renderSuggestions(data);invalidate();toast('Document analysé. Validez maintenant les rubriques une par une, sur place.');
   }catch(e){showError(e);if(byId('launchFileStatus'))byId('launchFileStatus').textContent='Analyse non terminée.';}};
   const clearFiles=()=>{const input=byId('launchGovernanceFiles');if(input)input.value='';byId('launchGovernanceFileList')?.replaceChildren();if(byId('launchFileStatus'))byId('launchFileStatus').textContent='Fichiers retirés du brouillon local.';};
 
@@ -232,16 +232,18 @@ export function mountLaunchStudio({app,getGroups,getRubrics,addRubric,invalidate
     };a.append(b);root.append(a);
   }catch(e){showError(e);}};
 
+  let launchVoiceRecognition=null,launchVoiceActive=false;
   const startVoice=()=>{
     const SpeechRecognition=window.SpeechRecognition||window.webkitSpeechRecognition;
-    const status=byId('voiceStatus');
+    const status=byId('voiceStatus'),button=byId('startLaunchVoice');
     if(!SpeechRecognition){status.textContent='Reconnaissance vocale non disponible sur cet appareil. Utilisez le champ texte : aucune fonction essentielle n’en dépend.';return;}
-    const recognition=new SpeechRecognition();recognition.lang=value('projectLocale')==='en'?'en-US':'fr-FR';recognition.interimResults=false;recognition.maxAlternatives=1;
-    recognition.onstart=()=>status.textContent='Écoute en cours… Parlez du groupe, de ses membres, rubriques ou règles.';
-    recognition.onerror=e=>status.textContent='Voix non disponible : '+String(e.error??'erreur')+'. Vous pouvez continuer au clavier.';
-    recognition.onresult=e=>{const transcript=e.results?.[0]?.[0]?.transcript??'';const box=byId('launchAssistantText');box.value=(box.value?box.value+'\n':'')+transcript;status.textContent='Texte capturé. Relisez-le avant de demander une interprétation.';};
-    recognition.onend=()=>{if(!status.textContent.includes('capturé'))status.textContent='Écoute terminée.';};
-    recognition.start();
+    if(launchVoiceActive){launchVoiceActive=false;try{launchVoiceRecognition?.stop?.();}catch{}button.textContent='🎙️ Dicter sans limite courte';status.textContent='Dictée arrêtée. Vous pouvez relire puis reprendre exactement où vous étiez.';return;}
+    const recognition=new SpeechRecognition();launchVoiceRecognition=recognition;launchVoiceActive=true;recognition.lang=value('projectLocale')==='en'?'en-US':'fr-FR';recognition.continuous=true;recognition.interimResults=true;recognition.maxAlternatives=1;
+    recognition.onstart=()=>{button.textContent='⏹ Arrêter la dictée';status.textContent='Écoute continue en cours… Parlez normalement, faites des pauses : le micro reste actif.';};
+    recognition.onerror=e=>{const code=String(e.error??'erreur');if(code==='not-allowed'||code==='service-not-allowed'){launchVoiceActive=false;button.textContent='🎙️ Dicter sans limite courte';}status.textContent='Voix : '+code+'. Le texte déjà capturé est conservé.';};
+    recognition.onresult=e=>{const box=byId('launchAssistantText');let finals='';let interim='';for(let i=e.resultIndex??0;i<(e.results?.length??0);i++){const txt=e.results[i]?.[0]?.transcript??'';if(e.results[i]?.isFinal)finals+=txt+' ';else interim+=txt;}if(finals.trim()){box.value=(box.value&& !/\s$/.test(box.value)?box.value+' ':box.value)+finals.trim()+' ';box.dispatchEvent(new Event('input',{bubbles:true}));}status.textContent='Écoute continue… '+(interim?'En cours : « '+interim.trim()+' »':'Texte conservé ; continuez à parler.');};
+    recognition.onend=()=>{if(launchVoiceActive){setTimeout(()=>{if(!launchVoiceActive)return;try{recognition.start();}catch{}},250);}else{button.textContent='🎙️ Dicter sans limite courte';status.textContent='Dictée arrêtée. Le texte capturé reste disponible.';}};
+    try{recognition.start();}catch(error){launchVoiceActive=false;button.textContent='🎙️ Dicter sans limite courte';status.textContent='Impossible de démarrer le micro : '+String(error);}
   };
 
   byId('launchPrevBtn')?.addEventListener('click',()=>showStep(step-1));
