@@ -23,15 +23,15 @@ test('runtime bilingual dictionary covers critical current shell journeys',()=>{
   for(const [fr,en] of [
     ['Connexion','Sign in'],['Découvrir','Discover'],['Créer une association ou une tontine','Create an association or tontine'],
     ['Tontine opérationnelle','Operational tontine'],['Prêts, obligations et décisions','Loans, obligations and decisions'],
-    ['Laboratoire fonctionnel 1.2','1.2 functional lab'],['Réglages · Sécurité · Compatibilité','Settings · Security · Compatibility']
+    ['Laboratoire fonctionnel 1.2','1.2 functional lab'],['Réglages · Sécurité · Compatibilité','Settings · Security & Compatibility']
   ]) assert.equal(d[fr],en,fr);
   assert.equal(localeTag('fr'),'fr-CM');assert.equal(localeTag('en'),'en-CM');
 });
 
-test('PWA cache contains new functional and bilingual transitive modules',()=>{
+test('PWA cache contains current 1.3.4 field and bilingual transitive modules',()=>{
   const sw=fs.readFileSync('apps/web/sw.js','utf8');
-  for(const path of ['/src/runtime-i18n.js','/src/completion-ui.js','/src/advanced-ui.js','/src/offline-snapshot.js','/packages/completion/src/index.js'])assert.ok(sw.includes(path),path);
-  assert.match(sw,/v13[012]/);
+  for(const path of ['/src/field-hardening.js','/src/voice-entry-bootstrap.js','/src/voice-entry-ui.js','/src/expense-recap-ui.js','/src/member-dossier-ui.js','/src/documents-ui.js','/src/contextual-group-ui.js','/src/runtime-i18n.js','/src/completion-ui.js','/src/advanced-ui.js','/src/offline-snapshot.js','/packages/completion/src/index.js'])assert.ok(sw.includes(path),path);
+  assert.match(sw,/v134/);
 });
 
 test('current shell identifies 1.3 instead of stale 1.1.2 copy',()=>{
