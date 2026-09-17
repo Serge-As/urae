@@ -4,7 +4,7 @@ const t=(fr:string,enText:string)=>en()?enText:fr;
 const esc=(v:unknown)=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]!));
 const group=()=>($<HTMLSelectElement>('activeGroupSelect')?.value)||localStorage.getItem('tontine.activeGroupId')||'';
 async function api<T=any>(path:string,init:RequestInit={}):Promise<T>{const h=new Headers(init.headers);h.set('accept-language',en()?'en':'fr');if(init.body&&!h.has('content-type'))h.set('content-type','application/json');const g=group();if(g)h.set('x-active-group-id',g);const r=await fetch(path,{...init,headers:h});const b=await r.json().catch(()=>({error:'HTTP_'+r.status}));if(!r.ok)throw Error(String(b.error??'HTTP_'+r.status));return b as T}
-const post=(p:string,b:any)=>api(p,{method:'POST',body:JSON.stringify(b)});const put=(p:string,b:any)=>api(p,{method:'PUT',body:JSON.stringify(b)});
+const post=<T=any>(p:string,b:any)=>api<T>(p,{method:'POST',body:JSON.stringify(b)});const put=<T=any>(p:string,b:any)=>api<T>(p,{method:'PUT',body:JSON.stringify(b)});
 function info(msg:string,bad=false){const e=$('mgNotice');if(!e)return;e.textContent=msg;e.className='m24-alert '+(bad?'m24-danger':'m24-subtle')}
 function selectedMembers(){return Array.from(document.querySelectorAll<HTMLInputElement>('[data-notice-member]:checked')).map(x=>x.value)}
 
