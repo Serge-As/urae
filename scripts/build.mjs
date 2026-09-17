@@ -32,17 +32,16 @@ for (const target of ['.build/apps/web/src/completion-ui.js','.build/src/complet
   await writeFile(target,source,'utf8');
 }
 
-// 1.3.4 field hardening must run before main.js. It removes the obsolete
-// duplicate operational Tontine panel and installs mobile/voice guards before
-// the regular UI modules bind their handlers. Keep the source HTML historical;
-// the generated deployable artifact is explicit and testable.
+// 1.3.4 hardening and the two-sheet/voice compatibility layer must bind before
+// main.js, so they can neutralize stale click semantics rather than competing
+// with them after the page is live.
 for (const target of ['.build/index.html','.build/apps/web/index.html']) {
   let html=await readFile(target,'utf8');
   const main='<script type="module" src="/src/main.js?v=130"></script>';
   if(!html.includes(main))throw Error('MAIN_SCRIPT_ANCHOR_NOT_FOUND');
-  html=html.replace(main,'<script type="module" src="/src/field-hardening.js?v=134"></script>\n  '+main);
+  html=html.replace(main,'<script type="module" src="/src/field-hardening.js?v=134"></script>\n  <script type="module" src="/src/voice-entry-bootstrap.js?v=134"></script>\n  '+main);
   await writeFile(target,html,'utf8');
 }
-console.log('Build OK: .build/ (root service worker + web app + 1.3.4 field hardening)');
+console.log('Build OK: .build/ (root service worker + web app + 1.3.4 field hardening + voice/two-sheet layer)');
 
 await import('./public-assets.mjs');
