@@ -1,6 +1,7 @@
 import {mountVoiceEntryUI} from './voice-entry-ui.js';
 import {mountExpenseRecapUI} from './expense-recap-ui.js';
 import {mountMemberDossierUI} from './member-dossier-ui.js';
+import {mountDocumentsUI} from './documents-ui.js';
 
 const style=document.createElement('style');
 style.id='voice-entry-134-styles';
@@ -18,16 +19,17 @@ style.textContent=`
 .sheet-cell-editor{display:grid;grid-template-columns:48px minmax(78px,1fr) 44px;gap:5px;align-items:center}.sheet-cell-editor select,.sheet-cell-editor input,.sheet-cell-editor button{min-width:0;min-height:39px;padding:6px}
 .focused-field-dictation{position:fixed;right:18px;bottom:82px;z-index:80;width:54px;height:54px;border-radius:50%;padding:0;box-shadow:0 8px 25px #10271c33;background:var(--brand);color:white;font-size:22px;border:0}.focused-field-dictation[hidden]{display:none!important}
 #backOfficeExpensePanel .form-grid{align-items:end}.member-dossier{border-color:#cadbd2}.member-dossier .identity-proof-box{padding:12px;border:1px dashed var(--line);border-radius:12px}.member-dossier textarea{width:100%}
+#view-documents input[type=file]{min-height:58px;border-style:dashed;background:#fff}.member-dossier .full,#view-documents .full{grid-column:1/-1}
 @media(max-width:1000px){.voice-entry-row{grid-template-columns:repeat(2,minmax(0,1fr))}.voice-entry-row strong{grid-column:1/-1}}
 @media(max-width:700px){
  .voice-command-grid,.voice-preview-head,.voice-entry-row{grid-template-columns:minmax(0,1fr)}
  .voice-command-grid .full,.voice-entry-row strong{grid-column:1}
  .voice-entry-row{padding:10px}.voice-entry-row button{width:100%}
  .canonical-two-sheet{min-width:760px}.sheet-cell-editor{grid-template-columns:45px minmax(72px,1fr) 42px}
- .focused-field-dictation{right:12px;bottom:76px}.member-dossier .form-grid{grid-template-columns:minmax(0,1fr)!important}
+ .focused-field-dictation{right:12px;bottom:76px}.member-dossier .form-grid,#view-documents .form-grid{grid-template-columns:minmax(0,1fr)!important}
 }
 `;
 document.head.append(style);
 
-const start=()=>{mountVoiceEntryUI();mountExpenseRecapUI();mountMemberDossierUI();};
+const start=()=>{mountVoiceEntryUI();mountExpenseRecapUI();mountMemberDossierUI();mountDocumentsUI();};
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});else start();
