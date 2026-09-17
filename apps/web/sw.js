@@ -1,7 +1,8 @@
-const CACHE = 'eco-system-v132-savings-control-forum-r1-20260916';
+const CACHE = 'eco-system-v134-voice-two-sheet-documents-final-20260917';
 const APP_SHELL = [
   '/', '/index.html', '/styles.css', '/manifest.webmanifest',
-  '/src/main.js', '/src/i18n.js', '/src/runtime-i18n.js', '/src/completion-ui.js', '/src/advanced-ui.js', '/src/offline-snapshot.js', '/src/launch-rubrics.js', '/src/launch-studio.js', '/src/member-control-ui.js', '/src/identity-live-ui.js', '/src/community-shop-ui.js', '/src/misc-rubrics-ui.js', '/src/pairing-ui.js', '/src/detail-ui.js', '/src/personal-cockpit-ui.js', '/src/recap-ui.js', '/src/interest-community-ui.js', '/src/ad-manager-ui.js', '/src/tontine-manager-ui.js', '/src/savings-yield-ui.js', '/src/external-programs-ui.js', '/src/founder-control-ui.js',
+  '/src/field-hardening.js', '/src/voice-entry-bootstrap.js', '/src/voice-entry-ui.js', '/src/expense-recap-ui.js', '/src/member-dossier-ui.js', '/src/documents-ui.js', '/src/contextual-group-ui.js',
+  '/src/main.js', '/src/i18n.js', '/src/runtime-i18n.js', '/src/completion-ui.js', '/src/advanced-ui.js', '/src/offline-snapshot.js', '/src/launch-rubrics.js', '/src/launch-studio.js', '/src/member-control-ui.js', '/src/identity-live-ui.js', '/src/community-shop-ui.js', '/src/misc-rubrics-ui.js', '/src/pairing-ui.js', '/src/detail-ui.js', '/src/personal-cockpit-ui.js', '/src/recap-ui.js', '/src/interest-community-ui.js', '/src/ad-manager-ui.js', '/src/tontine-manager-ui.js', '/src/savings-yield-ui.js', '/src/external-programs-ui.js', '/src/founder-control-ui.js', '/src/assistance-rulebook-ui.js',
   '/packages/rubrics/src/launch-config.js', '/packages/rubrics/src/index.js',
   '/packages/application/src/index.js', '/packages/completion/src/index.js', '/packages/contracts/src/index.js',
   '/packages/domain/src/index.js', '/packages/module-registry/src/index.js',
@@ -71,7 +72,6 @@ self.addEventListener('fetch', event => {
     catch { return new Response('Offline', { status: 503, headers: { 'content-type': 'text/plain; charset=utf-8' } }); }
   })());
 });
-
 
 self.addEventListener('periodicsync',event=>{
   if(event.tag!=='eco-system-outbox')return;
