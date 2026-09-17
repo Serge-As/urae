@@ -255,6 +255,7 @@ export function mountLaunchStudio({app,getGroups,getRubrics,addRubric,invalidate
   byId('clearLaunchFiles')?.addEventListener('click',clearFiles);
   byId('interpretLaunchText')?.addEventListener('click',()=>void interpret());
   byId('startLaunchVoice')?.addEventListener('click',startVoice);
+  byId('ecoAiNavBtn')?.addEventListener('click',()=>setTimeout(()=>{showStep(6);byId('launchAssistantPanel')?.scrollIntoView({behavior:'smooth',block:'start'});},80));
   byId('previewConfirmed')?.addEventListener('change',renderPreview);
   for(const p of panels)p.addEventListener('input',()=>{invalidate();if(step===10)renderPreview();});
   refreshGroups();syncOrigin();showStep(1);
