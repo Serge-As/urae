@@ -62,3 +62,27 @@ test('loan simulator applies founder monthly rule with no interest on interest',
   assert.equal(body.rows[1].principalAfter,20000);assert.equal(body.rows[1].interestAfter,5000);assert.equal(body.rows[1].totalDebtAfter,25000);
   assert.equal(body.rows[2].interestNew,1000);assert.equal(body.rows[2].principalAfter,0);assert.equal(body.rows[2].interestAfter,6000);assert.equal(body.rows[2].totalDebtAfter,6000);
 });
+
+
+test('savings source data reads member deposits and realized interest from canonical records',async()=>{
+  const {repo,handler}=await seed();
+  let r=await handler(new Request('http://local/api/v1/groups/group_t3/contributions/cash',{method:'POST',headers:founder,body:JSON.stringify({membershipId:'mm_t3',amount:12000,currency:'XAF',meetingId:'meeting_t3',rubricId:'rubric_savings',idempotencyKey:'t3-source-save'})}));
+  assert.equal(r.status,201);
+  await repo.saveLedgerAccount({id:'acct_interest_t3',tenantId:'tenant_t3',groupId:'group_t3',code:'LOAN_INTEREST_INCOME',nameCode:'LOAN_INTEREST_INCOME',type:'income',currency:'XAF',createdAt:'2026-01-10T10:00:00Z'});
+  await repo.saveLedgerAccount({id:'acct_cash_interest_t3',tenantId:'tenant_t3',groupId:'group_t3',code:'CASH_INTEREST_TEST',nameCode:'CASH_INTEREST_TEST',type:'asset',currency:'XAF',createdAt:'2026-01-10T10:00:00Z'});
+  await repo.saveLedgerEntry({id:'ledger_interest_t3',tenantId:'tenant_t3',groupId:'group_t3',currency:'XAF',descriptionCode:'LEDGER_LOAN_REPAYMENT',sourceType:'loan_repayment',sourceId:'loan_t3',idempotencyKey:'interest-source-t3',createdAt:'2026-01-10T10:01:00Z',createdBy:'founder_t3',meetingId:'meeting_t3',lines:[{accountId:'acct_cash_interest_t3',debit:2500,credit:0},{accountId:'acct_interest_t3',debit:0,credit:2500}]});
+  r=await handler(new Request('http://local/api/v1/groups/group_t3/savings-yield/source-data',{headers:founder}));
+  assert.equal(r.status,200);const source=await r.json();
+  assert.equal(source.source,'CANONICAL_LEDGER_AND_RECEIPTS');
+  assert.equal(source.totals.classicPrincipal,12000);
+  assert.equal(source.totals.recoveredInterest,2500);
+  assert.equal(source.deposits[0].memberId,'mm_t3');
+  assert.equal(source.deposits[0].periodKey,'JAN');
+});
+
+test('fine grids and loan sanctions are governed rubric policies',async()=>{
+  const {handler}=await seed();
+  let r=await handler(new Request('http://local/api/v1/groups/group_t3/rubrics/rubric_fine/policies',{method:'PUT',headers:founder,body:JSON.stringify({fine:{rules:[{key:'late_lt_30',label:'Retard moins de 30 min',amount:500,currency:'XAF'},{key:'absence',label:'Absence non justifiée',amount:2000,currency:'XAF'}],reviewStatus:'VALIDATED',definitionSource:'MANUAL'}})}));
+  assert.equal(r.status,200);let rubric=await r.json();assert.equal(rubric.policies.fine.rules.length,2);
+  await assert.doesNotReject(async()=>{r=await handler(new Request('http://local/api/v1/groups/group_t3/rubrics/rubric_fine/policies',{method:'PUT',headers:founder,body:JSON.stringify({loan:{allowed:true,rateBasisPointsPerPeriod:500,interestBase:'PRINCIPAL_ONLY',paymentPriority:'CAPITAL_FIRST',noInterestOnInterest:true,overdue:{maxDurationPeriods:3,penaltyRateBasisPointsPerPeriod:1000,blockNewLoanUntilSettled:true,blockNextExercise:true,recoverFrom:['TONTINE','GUARANTOR']},specialLoans:[{key:'urgent',label:'Prêt urgence',rateBasisPointsPerPeriod:300,maxDurationPeriods:1,paymentPriority:'CAPITAL_FIRST'}]}})}));assert.equal(r.status,200);});
+});
