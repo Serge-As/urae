@@ -2,6 +2,7 @@ import {mountVoiceEntryUI} from './voice-entry-ui.js';
 import {mountExpenseRecapUI} from './expense-recap-ui.js';
 import {mountMemberDossierUI} from './member-dossier-ui.js';
 import {mountDocumentsUI} from './documents-ui.js';
+import {mountContextualGroupUI} from './contextual-group-ui.js';
 
 const style=document.createElement('style');
 style.id='voice-entry-134-styles';
@@ -20,6 +21,7 @@ style.textContent=`
 .focused-field-dictation{position:fixed;right:18px;bottom:82px;z-index:80;width:54px;height:54px;border-radius:50%;padding:0;box-shadow:0 8px 25px #10271c33;background:var(--brand);color:white;font-size:22px;border:0}.focused-field-dictation[hidden]{display:none!important}
 #backOfficeExpensePanel .form-grid{align-items:end}.member-dossier{border-color:#cadbd2}.member-dossier .identity-proof-box{padding:12px;border:1px dashed var(--line);border-radius:12px}.member-dossier textarea{width:100%}
 #view-documents input[type=file]{min-height:58px;border-style:dashed;background:#fff}.member-dossier .full,#view-documents .full{grid-column:1/-1}
+.contextual-rubric-panel{border-color:#c7ddcf;background:linear-gradient(180deg,#fbfffc,#f4faf6)}.contextual-rubric-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:10px}.contextual-rubric-card{display:grid;gap:8px;padding:12px;border:1px solid var(--line);border-radius:13px;background:#fff;min-width:0}.contextual-rubric-card small{color:var(--muted);overflow-wrap:anywhere}.contextual-rubric-card .actions{margin-top:auto}
 @media(max-width:1000px){.voice-entry-row{grid-template-columns:repeat(2,minmax(0,1fr))}.voice-entry-row strong{grid-column:1/-1}}
 @media(max-width:700px){
  .voice-command-grid,.voice-preview-head,.voice-entry-row{grid-template-columns:minmax(0,1fr)}
@@ -27,9 +29,10 @@ style.textContent=`
  .voice-entry-row{padding:10px}.voice-entry-row button{width:100%}
  .canonical-two-sheet{min-width:760px}.sheet-cell-editor{grid-template-columns:45px minmax(72px,1fr) 42px}
  .focused-field-dictation{right:12px;bottom:76px}.member-dossier .form-grid,#view-documents .form-grid{grid-template-columns:minmax(0,1fr)!important}
+ .contextual-rubric-grid{grid-template-columns:minmax(0,1fr)}
 }
 `;
 document.head.append(style);
 
-const start=()=>{mountVoiceEntryUI();mountExpenseRecapUI();mountMemberDossierUI();mountDocumentsUI();};
+const start=()=>{mountVoiceEntryUI();mountExpenseRecapUI();mountMemberDossierUI();mountDocumentsUI();mountContextualGroupUI();};
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});else start();
