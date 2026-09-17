@@ -436,12 +436,16 @@
       </section>
 
       <section id="view-finance" class="view">
-        <div class="page-head"><div><span class="eyebrow">Lot E</span><h1>Finance · Ledger · Solidarité</h1><p>Attendu, collecté, manquant/dette, couverture solidaire et décaissement sont des flux distincts.</p></div><div class="page-meta"><button id="openAssistanceRulebookBtn" type="button" class="link-btn">Règles Assistance</button><button id="openSavingsLabBtn" type="button" class="link-btn">Partage des intérêts</button></div></div>
+        <div class="page-head"><div><span class="eyebrow">Lot E</span><h1>Configuration financière · simulations · contrôle</h1><p>Les cotisations réelles se saisissent sur « Votre feuille de séance » ou « Vos fiches individuelles ». Ici, le Bureau configure les règles, simule, rapproche et contrôle les finances.</p></div><div class="page-meta"><button id="openAssistanceRulebookBtn" type="button" class="link-btn">Règles Assistance</button><button id="openSavingsLabBtn" type="button" class="link-btn">Épargne + Intérêts</button></div></div>
+        <nav class="finance-toc" aria-label="Plan de la page Finance"><a href="#financeEntryGuide">Saisie des cotisations</a><a href="#financeLoanGuide">Prêts + Intérêts</a><a href="#assistanceRulebookPanel">Assistances</a><a href="#savingsYieldLab">Épargne + Intérêts</a><a href="#advancedFinancePanel">Contrôles avancés</a><a href="#financeLedgerPanel">Historique financier</a></nav>
         <div id="noActiveGroupFinance" class="panel empty-state">Sélectionnez ou créez d'abord un groupe.</div>
         <div id="financeContent">
+          <section class="panel" id="financeEntryGuide">
+            <div class="panel-head"><div><h2>Où saisir les cotisations ?</h2><p>Sur les deux feuilles liées : la feuille de séance générale ou la fiche individuelle du membre. Une saisie enregistrée sur l’une apparaît sur l’autre parce qu’elles utilisent le même service canonique.</p></div><div class="actions"><button type="button" class="primary" data-go="operations">Votre feuille de séance</button><button type="button" id="financeIndividualSheetBtn">Vos fiches individuelles</button></div></div>
+          </section>
           <div class="two-col">
-            <section class="panel">
-              <h2>Enregistrer une cotisation</h2>
+            <section class="panel" hidden aria-hidden="true">
+              <h2>Saisie technique de secours</h2>
               <form id="contributionForm" class="form-grid">
                 <label>Membre<select id="contributionMember" required></select></label>
                 <label>Rubrique<select id="contributionRubric"></select></label>
@@ -477,7 +481,8 @@
             <div id="rubricPreviewResult" class="result"></div>
           </section>
 
-          <section class="panel" id="loanCompletionPanel">
+          <section class="panel" id="financeLoanGuide"><div class="panel-head"><div><h2>Prêts + Intérêts</h2><p>Configurez le taux par période, la priorité Capital/Intérêts, la durée maximale, les sanctions, les prêts spéciaux et simulez la dette sans écrire dans le Ledger.</p></div><button type="button" id="financeLoanRulesBtn" class="primary">Configurer / simuler les prêts</button></div></section>
+          <section class="panel" id="loanCompletionPanel" hidden aria-hidden="true">
             <div class="panel-head"><div><h2>Prêts, obligations et décisions</h2><p>Les simulations, approbations, décaissements et remboursements sont séparés.</p></div></div>
             <div class="two-col">
               <form id="loanForm" class="form-grid">
@@ -655,7 +660,7 @@
             <p class="truth-notice">Aucun intérêt sur intérêt d’un emprunteur : un intérêt impayé ne rejoint jamais son capital. En revanche, un intérêt déjà réellement encaissé peut, si le groupe le décide, être réinvesti comme une nouvelle ressource collective distincte.</p>
           </section>
 
-          <section class="panel"><div class="panel-head"><div><h2>Ledger</h2><p>Vérité financière canonique.</p></div></div><div id="ledgerMetrics" class="metrics small"></div><div id="receiptList" class="table-list"></div></section>
+          <section class="panel" id="financeLedgerPanel"><div class="panel-head"><div><h2>Historique financier sécurisé</h2><p>Le « Ledger » est le registre comptable de référence : il conserve les écritures confirmées et leurs corrections. Une correction ne supprime jamais l’histoire : Eco-System crée une écriture inverse afin que chacun puisse comprendre ce qui s’est passé.</p></div><span class="pill">Ledger canonique</span></div><div id="ledgerMetrics" class="metrics small"></div><div id="receiptList" class="table-list"></div></section>
           <section class="panel"><div class="section-kicker"><div><h2>Prêts, épargne, tontines et assistance</h2><p>Les flux spécialisés restent séparés, puis se réconcilient dans le ledger canonique.</p></div></div><div id="financeHub" class="hub-grid"></div></section>
         </div>
       </section>
