@@ -1,19 +1,25 @@
 import {PlatformKernel} from '../../../packages/platform-kernel/src/index.js';
 import {LedgerService} from '../../../packages/domain/src/index.js';
 import {ExpenseService,type ExpenseScope} from '../../../packages/expenses/src/index.js';
+import {MemberProfileService} from '../../../packages/member-profile/src/index.js';
 import {makeId} from '../../../packages/contracts/src/index.js';
 import type {PlatformRepository} from '../../../packages/repositories/src/index.js';
 
 const json=(body:unknown,status=200)=>new Response(JSON.stringify(body),{status,headers:{'content-type':'application/json; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff'}});
-const errorStatus=(code:string)=>code==='FORBIDDEN_SCOPE'?403:code.endsWith('_NOT_FOUND')?404:400;
+const errorStatus=(code:string)=>code==='FORBIDDEN_SCOPE'?403:code==='MEMBER_PROFILE_VERSION_CONFLICT'?409:code.endsWith('_NOT_FOUND')?404:400;
+const kernelFor=(request:Request,groupId:string)=>{const tenantId=request.headers.get('x-tenant-id')??'',actorId=request.headers.get('x-actor-id')??'';if(!tenantId||!actorId)return undefined;const kernel=new PlatformKernel();kernel.context.set({actorId,tenantId,activeGroupId:groupId,groupRoles:(request.headers.get('x-group-roles')??'').split(',').map(x=>x.trim()).filter(Boolean),mandateIds:[],deviceId:request.headers.get('x-device-id')??'web',sessionId:request.headers.get('x-session-id')??'server-authenticated',locale:request.headers.get('accept-language')?.toLowerCase().startsWith('en')?'en':'fr',timezone:request.headers.get('x-timezone')??'Africa/Douala',connectivity:'online',requestId:request.headers.get('x-request-id')??makeId('req')});return kernel;};
 
 export async function maybeHandleFinancialExtension(repo:PlatformRepository,request:Request):Promise<Response|undefined>{
-  const url=new URL(request.url),route=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/expenses$/);if(!route)return undefined;
-  const groupId=route[1]!,tenantId=request.headers.get('x-tenant-id')??'',actorId=request.headers.get('x-actor-id')??'';
-  if(!tenantId||!actorId)return json({error:'AUTHENTICATION_REQUIRED'},401);
-  const kernel=new PlatformKernel();kernel.context.set({actorId,tenantId,activeGroupId:groupId,groupRoles:(request.headers.get('x-group-roles')??'').split(',').map(x=>x.trim()).filter(Boolean),mandateIds:[],deviceId:request.headers.get('x-device-id')??'web',sessionId:request.headers.get('x-session-id')??'server-authenticated',locale:request.headers.get('accept-language')?.toLowerCase().startsWith('en')?'en':'fr',timezone:request.headers.get('x-timezone')??'Africa/Douala',connectivity:'online',requestId:request.headers.get('x-request-id')??makeId('req')});
-  const service=new ExpenseService(repo,kernel,new LedgerService(repo,kernel));
+  const url=new URL(request.url),expenseRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/expenses$/),profileRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/members\/([^/]+)\/profile$/);if(!expenseRoute&&!profileRoute)return undefined;
+  const groupId=(expenseRoute?.[1]??profileRoute?.[1])!,kernel=kernelFor(request,groupId);if(!kernel)return json({error:'AUTHENTICATION_REQUIRED'},401);
   try{
+    if(profileRoute){
+      const membershipId=profileRoute[2]!,service=new MemberProfileService(repo,kernel);
+      if(request.method==='GET')return json((await service.get(groupId,membershipId))??{membershipId,groupId,profileVersion:0},200);
+      if(request.method==='PUT')return json(await service.save(groupId,membershipId,await request.json() as any),200);
+      return json({error:'METHOD_NOT_ALLOWED'},405);
+    }
+    const service=new ExpenseService(repo,kernel,new LedgerService(repo,kernel));
     if(request.method==='GET'){
       const scope=url.searchParams.get('scope') as ExpenseScope|null;
       const rows=await service.list(groupId,{meetingId:url.searchParams.get('meetingId')??undefined,membershipId:url.searchParams.get('membershipId')??undefined,rubricId:url.searchParams.get('rubricId')??undefined,scope:scope??undefined});
