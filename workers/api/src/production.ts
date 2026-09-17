@@ -1,7 +1,7 @@
 import worker,{type WorkerEnv} from './index.js';
 export {GroupLiveHub} from './group-live-hub.js';
 
-export const RELEASE_VERSION='1.3.4-voice-two-sheet-documents-final';
+export const RELEASE_VERSION='1.4.0-master-2.3.4-closure';
 
 const releaseTruthPaths=new Set(['/health','/api/v1/product/capabilities']);
 

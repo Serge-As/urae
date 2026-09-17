@@ -7,7 +7,7 @@ import { FoundationService } from '../.build/packages/domain/src/index.js';
 import { DiscoveryService } from '../.build/packages/discovery/src/index.js';
 import worker, {createApiHandler} from '../.build/workers/api/src/index.js';
 
-const RELEASE_VERSION='1.3.4-voice-two-sheet-documents-final';
+const RELEASE_VERSION='1.4.0-master-2.3.4-closure';
 class FakeStatement {
   constructor(db,sql){this.db=db;this.sql=sql;this.values=[];}
   bind(...values){this.values=values;return this;}

@@ -34,9 +34,9 @@ test('PWA cache contains current 1.3.4 field and bilingual transitive modules',(
   assert.match(sw,/v134/);
 });
 
-test('current shell identifies 1.3 instead of stale 1.1.2 copy',()=>{
+test('current shell identifies 1.4 instead of stale copies',()=>{
   const html=fs.readFileSync('apps/web/index.html','utf8');
-  assert.match(html,/Eco-System 1\.3\.2/);assert.doesNotMatch(html,/1\.1\.2/);
+  assert.match(html,/1\.4\.0/);assert.doesNotMatch(html,/1\.1\.2/);
   assert.match(html,/tontineCompletionPanel/);assert.match(html,/loanCompletionPanel/);assert.match(html,/completionLab/);
 });
 

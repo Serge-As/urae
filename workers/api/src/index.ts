@@ -4,7 +4,7 @@ import { FoundationService, LedgerService, MeetingService, starterGroupOperating
 import { DiscoveryService, MembershipGatewayService } from '../../../packages/discovery/src/index.js';
 import { RubricKnowledgeService } from '../../../packages/rubrics/src/index.js';
 import { makeId, type OutboxItem, type GroupOperatingPolicy, type ProjectCapability, type RubricOperatingModel, type RubricPolicies, type WorkspaceRecord, type WorkspaceStatus } from '../../../packages/contracts/src/index.js';
-import { PRODUCT_MODULES, PRODUCT_CAPABILITY_COUNT } from '../../../packages/module-registry/src/index.js';
+import { PRODUCT_MODULES, PRODUCT_CAPABILITY_COUNT, buildProductReadinessReport } from '../../../packages/module-registry/src/index.js';
 import {
   CompletionSuiteService, COMPLETION_WORKFLOWS, buildLoanSchedule, applyLoanPayment, compareRules,
   explainLedgerAnomalies, makeIcs, suggestTontineSchedule, type CompletionKind
@@ -198,11 +198,11 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
       }
       return json({error:'METHOD_NOT_ALLOWED'},405,cors);
     }
-    if(request.method==='GET'&&url.pathname==='/health') return json({ok:true,service:'tontine-api',version:'1.3.3-fairness-adops-doctor-launch',now:new Date().toISOString(),realMoneyEnabled:kernel.features.enabled('financial-real-money'),manualCashLedgerEnabled:true,premiumLiveEnabled:options.premiumLive===true&&Boolean(options.liveNamespace),founderControlBound:Boolean(options.founderControl),communityRealtimeBound:Boolean(options.communityRealtime),artifactStorageBound:true,artifactStorageMode:options.artifacts?'R2':'D1_FALLBACK',contextScope:'request'},200,cors);
+    if(request.method==='GET'&&url.pathname==='/health') return json({ok:true,service:'tontine-api',version:'1.4.0-master-2.3.4-closure',now:new Date().toISOString(),realMoneyEnabled:kernel.features.enabled('financial-real-money'),manualCashLedgerEnabled:true,premiumLiveEnabled:options.premiumLive===true&&Boolean(options.liveNamespace),founderControlBound:Boolean(options.founderControl),communityRealtimeBound:Boolean(options.communityRealtime),artifactStorageBound:true,artifactStorageMode:options.artifacts?'R2':'D1_FALLBACK',contextScope:'request'},200,cors);
     if(request.method==='GET'&&url.pathname==='/api/v1/kernel') return json({services:['context','policy','workflow','events','audit','obligations','evidence','reconciliation','cases','inbox','notifications','configuration','features','data-governance','compatibility','resource-governor'],features:{groupLaunch:kernel.features.enabled('group-launch-studio'),meetingSync:kernel.features.enabled('meeting-sync-core'),realMoney:kernel.features.enabled('financial-real-money'),manualCashLedger:true}},200,cors);
 
     if(request.method==='GET'&&url.pathname==='/api/v1/product/capabilities'){
-      return json({version:'1.3.3-fairness-adops-doctor-launch',count:PRODUCT_CAPABILITY_COUNT,capabilities:PRODUCT_MODULES},200,cors);
+      return json({version:'1.4.0-master-2.3.4-closure',count:PRODUCT_CAPABILITY_COUNT,capabilities:PRODUCT_MODULES,readiness:buildProductReadinessReport(PRODUCT_MODULES)},200,cors);
     }
 
 
@@ -530,6 +530,32 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
       const group=await repo.getGroup(ctx.tenantId,members[1]!); if(!group) return json({error:'NOT_FOUND'},404,cors);
       const body=await readJson<Record<string,unknown>>(request); const displayName=String(body.displayName??'').trim(); if(!displayName) throw new Error('MEMBER_NAME_REQUIRED');
       const membership=await foundation.addMember(ctx.tenantId,group.id,{id:String(body.userId??makeId('user')),displayName,locale:String(body.locale??ctx.locale),createdAt:new Date().toISOString()}); return json(membership,201,cors);
+    }
+    const memberLifecycle=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/members\/([^/]+)\/lifecycle$/);
+    if(memberLifecycle&&request.method==='PUT'){
+      const groupId=memberLifecycle[1]!,membershipId=memberLifecycle[2]!,group=await requireGroup(groupId,true);
+      const existing=await repo.getMembership(ctx.tenantId,groupId,membershipId);if(!existing)throw new Error('MEMBERSHIP_NOT_FOUND');
+      const body=await readJson<Record<string,unknown>>(request),status=String(body.status??existing.status) as import('../../../packages/contracts/src/index.js').Membership['status'];
+      if(!['invited','waitlisted','trial','active','suspended','left'].includes(status))throw new Error('INVALID_MEMBERSHIP_STATUS');
+      const expected=body.expectedRevision===undefined?Number(existing.lifecycleRevision??0):finite(body.expectedRevision);
+      if(expected!==Number(existing.lifecycleRevision??0))throw new Error('STALE_MEMBERSHIP_VERSION');
+      const roles=body.roles===undefined?existing.roles:strArray(body.roles);if(existing.userId===group.createdBy&&!roles.includes('founder'))throw new Error('FOUNDER_ROLE_REQUIRED');
+      const now=new Date().toISOString(),reinstated=status==='active'&&['suspended','left','waitlisted','trial'].includes(existing.status)?now:existing.reinstatedAt;
+      const next={...existing,status,roles,historicalJoinedAt:body.historicalJoinedAt?String(body.historicalJoinedAt):existing.historicalJoinedAt,probationEndsAt:body.probationEndsAt?String(body.probationEndsAt):undefined,lifecycleReason:body.reason?String(body.reason):existing.lifecycleReason,lifecycleUpdatedAt:now,lifecycleUpdatedBy:ctx.actorId,lifecycleRevision:Number(existing.lifecycleRevision??0)+1,reinstatedAt:reinstated};
+      await repo.saveMembership(next);const audit=kernel.audit.append({tenantId:ctx.tenantId,actorId:ctx.actorId,action:'MEMBERSHIP_LIFECYCLE_UPDATED',targetType:'membership',targetId:membershipId,before:{status:existing.status,roles:existing.roles,revision:existing.lifecycleRevision??0},after:{status:next.status,roles:next.roles,revision:next.lifecycleRevision},requestId:ctx.requestId});await repo.saveAudit(audit);return json(next,200,cors);
+    }
+    const memberParticipation=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/members\/([^/]+)\/participations$/);
+    if(memberParticipation&&request.method==='GET'){
+      const groupId=memberParticipation[1]!,membershipId=memberParticipation[2]!;await requireGroup(groupId);if(!(await repo.getMembership(ctx.tenantId,groupId,membershipId)))throw new Error('MEMBERSHIP_NOT_FOUND');
+      return json((await repo.listWorkspaceRecords(ctx.tenantId,'MEMBERSHIP.RUBRIC_PARTICIPATION',groupId)).filter(x=>String(x.data.membershipId??'')===membershipId),200,cors);
+    }
+    if(memberParticipation&&request.method==='POST'){
+      const groupId=memberParticipation[1]!,membershipId=memberParticipation[2]!;await requireGroup(groupId,true);if(!(await repo.getMembership(ctx.tenantId,groupId,membershipId)))throw new Error('MEMBERSHIP_NOT_FOUND');
+      const body=await readJson<Record<string,unknown>>(request),rubricId=String(body.rubricId??''),rubric=await repo.getRubricDefinition(ctx.tenantId,groupId,rubricId);if(!rubric)throw new Error('RUBRIC_NOT_FOUND');
+      const status=String(body.status??'ACTIVE');if(!['ACTIVE','PAUSED','OPTED_OUT'].includes(status))throw new Error('INVALID_PARTICIPATION_STATUS');const shareCount=finite(body.shareCount,1);if(!Number.isInteger(shareCount)||shareCount<0)throw new Error('INVALID_SHARE_COUNT');
+      const id='member_rubric_'+encodeURIComponent(JSON.stringify([groupId,membershipId,rubricId])),existing=await repo.getWorkspaceRecord(ctx.tenantId,id),now=new Date().toISOString();
+      const record:WorkspaceRecord={id,tenantId:ctx.tenantId,groupId,moduleId:'MEMBERSHIP.RUBRIC_PARTICIPATION',title:rubric.name,summary:'Participation '+status,status:'ACTIVE',tags:['membership','rubric-participation'],data:{membershipId,rubricId,rubricName:rubric.name,status,shareCount,shareNames:String(body.shareNames??'')},createdBy:existing?.createdBy??ctx.actorId,createdAt:existing?.createdAt??now,updatedAt:now};
+      await repo.saveWorkspaceRecord(record);const audit=kernel.audit.append({tenantId:ctx.tenantId,actorId:ctx.actorId,action:'MEMBERSHIP_RUBRIC_PARTICIPATION_UPDATED',targetType:'workspace_record',targetId:id,before:existing?.data,after:record.data,requestId:ctx.requestId});await repo.saveAudit(audit);return json(record,existing?200:201,cors);
     }
 
     const meetingRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/meetings$/);
@@ -907,7 +933,7 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
     }
 
     if(request.method==='GET'&&url.pathname==='/api/v1/completion/workflows'){
-      return json({version:'1.3.3-fairness-adops-doctor-launch',workflows:COMPLETION_WORKFLOWS},200,cors);
+      return json({version:'1.4.0-master-2.3.4-closure',workflows:COMPLETION_WORKFLOWS},200,cors);
     }
 
     const expectedRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/receivables\/expected$/);
@@ -1109,6 +1135,25 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
         dueAt:body.dueAt?String(body.dueAt):undefined,amount:body.amount===undefined?undefined:finite(body.amount),
         currency:String(body.currency??'XAF'),sourceId:body.sourceId?String(body.sourceId):undefined
       }),201,cors);
+    }
+    const obligationUpdate=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/obligations\/([^/]+)$/);
+    if(obligationUpdate&&request.method==='PUT'){
+      const groupId=obligationUpdate[1]!,obligationId=obligationUpdate[2]!;await requireGroup(groupId,true);const existing=(await repo.listObligations(ctx.tenantId)).find(x=>x.id===obligationId&&x.groupId===groupId);if(!existing)throw new Error('OBLIGATION_NOT_FOUND');
+      const body=await readJson<Record<string,unknown>>(request),status=String(body.status??existing.status) as typeof existing.status;if(!['open','completed','cancelled','overdue'].includes(status))throw new Error('INVALID_OBLIGATION_STATUS');
+      const next={...existing,status,title:body.title?String(body.title):existing.title,dueAt:body.dueAt?String(body.dueAt):existing.dueAt,priority:body.priority?String(body.priority) as typeof existing.priority:existing.priority};await repo.saveObligation(next);const audit=kernel.audit.append({tenantId:ctx.tenantId,actorId:ctx.actorId,action:'OBLIGATION_UPDATED',targetType:'obligation',targetId:existing.id,before:{status:existing.status,dueAt:existing.dueAt},after:{status:next.status,dueAt:next.dueAt},requestId:ctx.requestId});await repo.saveAudit(audit);return json(next,200,cors);
+    }
+    const masterArrearsRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/arrears$/);
+    if(masterArrearsRoute&&request.method==='GET'){
+      const groupId=masterArrearsRoute[1]!;await requireGroup(groupId,true);const now=Date.now(),rows=(await repo.listObligations(ctx.tenantId)).filter(x=>x.groupId===groupId&&(x.status==='overdue'||(x.status==='open'&&Boolean(x.dueAt)&&Date.parse(x.dueAt!)<now)));return json(rows,200,cors);
+    }
+    const recoveryCase=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/arrears\/([^/]+)\/recovery-case$/);
+    if(recoveryCase&&request.method==='POST'){
+      const groupId=recoveryCase[1]!,obligationId=recoveryCase[2]!;await requireGroup(groupId,true);const obligation=(await repo.listObligations(ctx.tenantId)).find(x=>x.id===obligationId&&x.groupId===groupId);if(!obligation)throw new Error('OBLIGATION_NOT_FOUND');const body=await readJson<Record<string,unknown>>(request),now=new Date().toISOString();
+      const record={id:makeId('case'),tenantId:ctx.tenantId,groupId,type:'ARREARS_RECOVERY',subjectType:'obligation',subjectId:obligation.id,status:'OPEN' as const,openedBy:ctx.actorId,openedAt:now,summary:String(body.summary??('Régularisation: '+obligation.title))};await repo.saveCase(record);const audit=kernel.audit.append({tenantId:ctx.tenantId,actorId:ctx.actorId,action:'ARREARS_RECOVERY_OPENED',targetType:'case',targetId:record.id,after:{obligationId:obligation.id,membershipId:obligation.assigneeId},requestId:ctx.requestId});await repo.saveAudit(audit);return json(record,201,cors);
+    }
+    const operationalReport=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/reports\/operational-summary$/);
+    if(operationalReport&&request.method==='GET'){
+      const groupId=operationalReport[1]!,group=await requireGroup(groupId,true);const [members,meetingRows,rubricRows,obligationRows,ledgerSummary,entries]=await Promise.all([repo.listMemberships(ctx.tenantId,groupId),repo.listMeetings(ctx.tenantId,groupId),repo.listRubricDefinitions(ctx.tenantId,groupId),repo.listObligations(ctx.tenantId),ledger.summary(ctx.tenantId,groupId),repo.listLedgerEntries(ctx.tenantId,groupId)]);const groupObligations=obligationRows.filter(x=>x.groupId===groupId);return json({group:{id:group.id,name:group.name,kind:group.kind,status:group.status},generatedAt:new Date().toISOString(),summary:{members:members.length,activeMembers:members.filter(x=>x.status==='active').length,meetings:meetingRows.length,openMeetings:meetingRows.filter(x=>x.status==='open').length,rubrics:rubricRows.length,openObligations:groupObligations.filter(x=>x.status==='open'||x.status==='overdue').length,cashBalance:ledgerSummary.cashBalance,ledgerEntries:entries.length},members,meetings:meetingRows,rubrics:rubricRows,obligations:groupObligations,ledger:{summary:ledgerSummary,entries}},200,cors);
     }
 
     const loanQuote=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/loans\/quote$/);

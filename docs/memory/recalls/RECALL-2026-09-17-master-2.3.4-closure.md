@@ -51,3 +51,5 @@ No release may be labelled `MASTER_COMPLETE` while an in-scope Master 2.3.4 capa
 Implementation cycle for this branch:
 
 `RECALL -> MAP OWNER/DEPENDENCIES -> CIR -> IMPLEMENT -> CONTRACT/REGRESSION TEST -> VERIFY -> UPDATE TRUTH -> DEPLOY WITH BIR+`.
+
+Applied in guarded CI on 164f07456842856ffaa751cfe87fbe5fbac8a37a at 2026-09-17T20:54:38Z.

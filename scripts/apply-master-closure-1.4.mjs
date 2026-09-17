@@ -46,13 +46,13 @@ const replaceAll=(s,from,to)=>s.split(from).join(to);
   s=replaceAll(s,'1.3.3-fairness-adops-doctor-launch','1.4.0-master-2.3.4-closure');
   s=replaceOnce(s,"return json({version:'1.4.0-master-2.3.4-closure',count:PRODUCT_CAPABILITY_COUNT,capabilities:PRODUCT_MODULES},200,cors);","return json({version:'1.4.0-master-2.3.4-closure',count:PRODUCT_CAPABILITY_COUNT,capabilities:PRODUCT_MODULES,readiness:buildProductReadinessReport(PRODUCT_MODULES)},200,cors);",'capability-readiness');
 
-  const memberAnchor="""    if(members&&request.method==='POST'){
+  const memberAnchor=`    if(members&&request.method==='POST'){
       const group=await repo.getGroup(ctx.tenantId,members[1]!); if(!group) return json({error:'NOT_FOUND'},404,cors);
       const body=await readJson<Record<string,unknown>>(request); const displayName=String(body.displayName??'').trim(); if(!displayName) throw new Error('MEMBER_NAME_REQUIRED');
       const membership=await foundation.addMember(ctx.tenantId,group.id,{id:String(body.userId??makeId('user')),displayName,locale:String(body.locale??ctx.locale),createdAt:new Date().toISOString()}); return json(membership,201,cors);
     }
 
-""";
+`;
   const memberRoutes=`    if(members&&request.method==='POST'){
       const group=await repo.getGroup(ctx.tenantId,members[1]!); if(!group) return json({error:'NOT_FOUND'},404,cors);
       const body=await readJson<Record<string,unknown>>(request); const displayName=String(body.displayName??'').trim(); if(!displayName) throw new Error('MEMBER_NAME_REQUIRED');
@@ -88,7 +88,7 @@ const replaceAll=(s,from,to)=>s.split(from).join(to);
 `;
   s=replaceOnce(s,memberAnchor,memberRoutes,'member-routes');
 
-  const obligationAnchor="""    if(obligationRoute&&request.method==='POST'){
+  const obligationAnchor=`    if(obligationRoute&&request.method==='POST'){
       const body=await readJson<Record<string,unknown>>(request);
       return json(await completion.createFinancialObligation(obligationRoute[1]!,{
         membershipId:String(body.membershipId??''),type:String(body.type??'CONTRIBUTION_DUE'),title:String(body.title??''),
@@ -97,7 +97,7 @@ const replaceAll=(s,from,to)=>s.split(from).join(to);
       }),201,cors);
     }
 
-""";
+`;
   const obligationRoutes=`    if(obligationRoute&&request.method==='POST'){
       const body=await readJson<Record<string,unknown>>(request);
       return json(await completion.createFinancialObligation(obligationRoute[1]!,{
@@ -112,9 +112,9 @@ const replaceAll=(s,from,to)=>s.split(from).join(to);
       const body=await readJson<Record<string,unknown>>(request),status=String(body.status??existing.status) as typeof existing.status;if(!['open','completed','cancelled','overdue'].includes(status))throw new Error('INVALID_OBLIGATION_STATUS');
       const next={...existing,status,title:body.title?String(body.title):existing.title,dueAt:body.dueAt?String(body.dueAt):existing.dueAt,priority:body.priority?String(body.priority) as typeof existing.priority:existing.priority};await repo.saveObligation(next);const audit=kernel.audit.append({tenantId:ctx.tenantId,actorId:ctx.actorId,action:'OBLIGATION_UPDATED',targetType:'obligation',targetId:existing.id,before:{status:existing.status,dueAt:existing.dueAt},after:{status:next.status,dueAt:next.dueAt},requestId:ctx.requestId});await repo.saveAudit(audit);return json(next,200,cors);
     }
-    const arrearsRoute=url.pathname.match(/^\\/api\\/v1\\/groups\\/([^/]+)\\/arrears$/);
-    if(arrearsRoute&&request.method==='GET'){
-      const groupId=arrearsRoute[1]!;await requireGroup(groupId,true);const now=Date.now(),rows=(await repo.listObligations(ctx.tenantId)).filter(x=>x.groupId===groupId&&(x.status==='overdue'||(x.status==='open'&&Boolean(x.dueAt)&&Date.parse(x.dueAt!)<now)));return json(rows,200,cors);
+    const masterArrearsRoute=url.pathname.match(/^\\/api\\/v1\\/groups\\/([^/]+)\\/arrears$/);
+    if(masterArrearsRoute&&request.method==='GET'){
+      const groupId=masterArrearsRoute[1]!;await requireGroup(groupId,true);const now=Date.now(),rows=(await repo.listObligations(ctx.tenantId)).filter(x=>x.groupId===groupId&&(x.status==='overdue'||(x.status==='open'&&Boolean(x.dueAt)&&Date.parse(x.dueAt!)<now)));return json(rows,200,cors);
     }
     const recoveryCase=url.pathname.match(/^\\/api\\/v1\\/groups\\/([^/]+)\\/arrears\\/([^/]+)\\/recovery-case$/);
     if(recoveryCase&&request.method==='POST'){

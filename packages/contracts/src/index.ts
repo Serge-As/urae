@@ -102,11 +102,18 @@ export interface Membership {
   groupId: Id;
   userId: Id;
   roles: string[];
-  status: 'invited' | 'active' | 'suspended' | 'left';
+  status: 'invited' | 'waitlisted' | 'trial' | 'active' | 'suspended' | 'left';
   joinedAt?: string;
   historicalJoinedAt?: string;
   historicalTenureStatus?: 'DECLARED' | 'VALIDATED' | 'CONTESTABLE' | 'HISTORICAL_TENURE_LOCKED';
+  probationEndsAt?: string;
+  lifecycleReason?: string;
+  lifecycleUpdatedAt?: string;
+  lifecycleUpdatedBy?: Id;
+  lifecycleRevision?: number;
+  reinstatedAt?: string;
 }
+
 
 export interface MembershipView extends Membership {
   displayName: string;

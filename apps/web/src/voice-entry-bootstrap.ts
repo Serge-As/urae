@@ -3,6 +3,7 @@ import {mountExpenseRecapUI} from './expense-recap-ui.js';
 import {mountMemberDossierUI} from './member-dossier-ui.js';
 import {mountDocumentsUI} from './documents-ui.js';
 import {mountContextualGroupUI} from './contextual-group-ui.js';
+import {mountMasterClosureUI} from './master-closure-ui.js';
 
 const style=document.createElement('style');
 style.id='voice-entry-134-styles';
@@ -34,5 +35,5 @@ style.textContent=`
 `;
 document.head.append(style);
 
-const start=()=>{mountVoiceEntryUI();mountExpenseRecapUI();mountMemberDossierUI();mountDocumentsUI();mountContextualGroupUI();};
+const start=()=>{mountVoiceEntryUI();mountExpenseRecapUI();mountMemberDossierUI();mountDocumentsUI();mountContextualGroupUI();mountMasterClosureUI();};
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});else start();
