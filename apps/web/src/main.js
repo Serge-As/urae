@@ -233,6 +233,14 @@ const renderMembers = async () => {
             const button=document.createElement('button');button.type='button';button.className='link-btn';button.textContent=tx('Relevé','Statement');
             button.onclick=()=>showStatement(m.id).catch(fail);li.append(button);
         }
+        if(isManager()){
+            const details=document.createElement('details');details.className='member-authority-editor';const summary=document.createElement('summary');summary.textContent=tx('Habilitations / statut','Authorities / status');details.append(summary);
+            const status=document.createElement('select');for(const s of ['invited','waitlisted','trial','active','suspended','left']){const o=document.createElement('option');o.value=s;o.textContent=s;status.append(o)}status.value=m.status;
+            const roles=document.createElement('input');roles.value=m.roles.join(', ');roles.placeholder=tx('member, treasurer, president…','member, treasurer, president…');
+            const reason=document.createElement('input');reason.placeholder=tx('Motif / décision du groupe','Reason / group decision');
+            const save=document.createElement('button');save.type='button';save.className='secondary';save.textContent=tx('Enregistrer les habilitations','Save authorities');save.onclick=async()=>{try{const nextRoles=roles.value.split(',').map(x=>x.trim()).filter(Boolean);await app.updateMemberLifecycle(m.id,{status:status.value,roles:nextRoles,reason:reason.value,expectedRevision:Number(m.lifecycleRevision??0)});await renderMembers();toast(tx('Habilitations mises à jour et auditées.','Authorities updated and audited.'));}catch(e){fail(e);}};
+            const box=document.createElement('div');box.className='inline-form';box.append(status,roles,reason,save);details.append(box);li.append(details);
+        }
         list.append(li);
         const o = document.createElement('option');
         o.value = m.id;
