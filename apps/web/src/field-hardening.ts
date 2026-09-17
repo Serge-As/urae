@@ -5,6 +5,7 @@
  */
 
 const byId=<T extends HTMLElement=HTMLElement>(id:string)=>document.getElementById(id) as T|null;
+const showFieldError=(message:string,focus?:HTMLElement|null)=>{const box=byId('errorBox');if(box){box.textContent=message;box.hidden=false;}focus?.focus();};
 
 // 1.3.3 exposed the same Tontine forms twice: once inside Réunion and once in
 // the dedicated Tontines page. Both UI controllers then bound the duplicate ids.
@@ -27,6 +28,8 @@ style.textContent=`
 .field-link-notice{border-style:dashed;background:#f8fcf9}
 .voice-live{display:inline-flex;align-items:center;gap:8px;color:var(--brand);font-weight:800}
 .voice-live::before{content:'●';animation:voicePulse 1.2s infinite}
+.loan-simulation-explain{grid-column:1/-1;padding:12px;border-radius:12px;background:#f6faf7;border:1px dashed #b8cfc2}
+.loan-simulation-table{overflow:auto;margin-top:12px}.loan-simulation-table table{width:100%;min-width:760px;border-collapse:collapse}.loan-simulation-table th,.loan-simulation-table td{padding:9px;border:1px solid var(--line);text-align:right;white-space:nowrap}.loan-simulation-table th:first-child,.loan-simulation-table td:first-child{text-align:left}.loan-simulation-table th{background:#f5f2eb}
 @keyframes voicePulse{50%{opacity:.25}}
 @media(max-width:900px){
   #view-launch .suggestion-review-card[data-rubric=true]{padding:52px 12px 14px!important}
@@ -117,19 +120,79 @@ if(errorBox){
   new MutationObserver(friendly).observe(errorBox,{childList:true,subtree:true,characterData:true});
 }
 
+// Restore the group practice for loan simulation: the rate is per period/month,
+// only principal is taxable and unpaid interest never generates interest.
+type LoanPriority='CAPITAL_FIRST'|'INTEREST_FIRST';
+type LoanInterestBasis='OUTSTANDING'|'INITIAL';
+interface LoanLine{period:number;principalBefore:number;interestOpening:number;interestNew:number;payment:number;principalPaid:number;interestPaid:number;principalAfter:number;interestAfter:number;totalAfter:number;}
+const simulateLoan=(principal:number,periods:number,ratePct:number,priority:LoanPriority,basis:LoanInterestBasis,payments:number[]):LoanLine[]=>{
+  let capital=principal,interestDue=0;const rows:LoanLine[]=[];
+  for(let period=1;period<=periods;period++){
+    const before=capital,interestOpening=interestDue;
+    const interestNew=Math.round((basis==='INITIAL'?principal:capital)*ratePct/100);
+    interestDue+=interestNew;let available=Math.max(0,Math.round(payments[period-1]??0)),principalPaid=0,interestPaid=0;
+    if(priority==='CAPITAL_FIRST'){
+      principalPaid=Math.min(capital,available);capital-=principalPaid;available-=principalPaid;
+      interestPaid=Math.min(interestDue,available);interestDue-=interestPaid;
+    }else{
+      interestPaid=Math.min(interestDue,available);interestDue-=interestPaid;available-=interestPaid;
+      principalPaid=Math.min(capital,available);capital-=principalPaid;
+    }
+    rows.push({period,principalBefore:before,interestOpening,interestNew,payment:Math.round(payments[period-1]??0),principalPaid,interestPaid,principalAfter:capital,interestAfter:interestDue,totalAfter:capital+interestDue});
+  }
+  return rows;
+};
+const money=(n:number)=>new Intl.NumberFormat('fr-FR',{maximumFractionDigits:0}).format(n)+' F';
+const prepareLoanSimulator=()=>{
+  const form=byId<HTMLFormElement>('loanForm');if(!form)return;
+  const rate=byId<HTMLInputElement>('loanRate'),method=byId<HTMLSelectElement>('loanMethod'),installments=byId<HTMLInputElement>('loanInstallments');
+  if(rate){const label=rate.closest('label');if(label){label.childNodes[0]!.textContent='Taux par mois / période %';}rate.value=rate.value==='10'?'5':rate.value;}
+  if(installments){const label=installments.closest('label');if(label)label.childNodes[0]!.textContent='Nombre de mois / périodes à simuler';if(installments.value==='5')installments.value='3';}
+  if(method){const label=method.closest('label');if(label)label.childNodes[0]!.textContent='Base de calcul de l’intérêt';method.replaceChildren(new Option('Capital restant dû','OUTSTANDING'),new Option('Capital initial (taux fixe)','INITIAL'));}
+  if(!byId('loanPriority')){
+    const priority=document.createElement('label');priority.textContent='Priorité d’imputation du paiement';
+    const select=document.createElement('select');select.id='loanPriority';select.append(new Option('Capital d’abord','CAPITAL_FIRST'),new Option('Intérêts d’abord','INTEREST_FIRST'));priority.append(select);
+    const scenario=document.createElement('label');scenario.className='full';scenario.textContent='Paiements simulés par mois / période';
+    const input=document.createElement('input');input.id='loanScenarioPayments';input.placeholder='Ex. 0, 30000, 20000 = rien au mois 1, puis 30 000, puis 20 000';scenario.append(input);
+    const explain=document.createElement('p');explain.className='loan-simulation-explain';explain.textContent='Simulation uniquement : l’intérêt de chaque période est calculé sur le capital taxable selon la règle choisie. Les intérêts impayés restent séparés et ne produisent jamais d’autres intérêts. Cette simulation ne crée aucun prêt ni aucune dette.';
+    const submit=form.querySelector('button[type="submit"],button:not([type])');submit?.before(priority,scenario,explain);if(submit)submit.textContent='Simuler uniquement';
+  }
+};
+prepareLoanSimulator();
+
+const renderLoanSimulation=()=>{
+  const principal=Number(byId<HTMLInputElement>('loanPrincipal')?.value??0),periods=Number(byId<HTMLInputElement>('loanInstallments')?.value??0),ratePct=Number(byId<HTMLInputElement>('loanRate')?.value??0);
+  if(!Number.isSafeInteger(principal)||principal<=0)return showFieldError('Le capital doit être un entier positif.',byId('loanPrincipal'));
+  if(!Number.isSafeInteger(periods)||periods<1||periods>120)return showFieldError('Le nombre de périodes doit être compris entre 1 et 120.',byId('loanInstallments'));
+  if(!Number.isFinite(ratePct)||ratePct<0||ratePct>100)return showFieldError('Le taux par période doit être compris entre 0 et 100 %.',byId('loanRate'));
+  const priority=(byId<HTMLSelectElement>('loanPriority')?.value||'CAPITAL_FIRST') as LoanPriority;
+  const basis=(byId<HTMLSelectElement>('loanMethod')?.value||'OUTSTANDING') as LoanInterestBasis;
+  const raw=byId<HTMLInputElement>('loanScenarioPayments')?.value??'';
+  const payments=raw.split(/[;,]/).map(x=>x.trim()).filter(Boolean).map(Number);
+  if(payments.some(x=>!Number.isFinite(x)||x<0))return showFieldError('Les paiements simulés doivent être des montants positifs séparés par des virgules.',byId('loanScenarioPayments'));
+  const rows=simulateLoan(principal,periods,ratePct,priority,basis,payments),root=byId('loanQuoteResult');if(!root)return;
+  root.replaceChildren();const intro=document.createElement('p');intro.className='truth-notice';intro.textContent=`Capital ${money(principal)} · taux ${ratePct}% par période · ${priority==='CAPITAL_FIRST'?'capital payé en priorité':'intérêts payés en priorité'} · intérêts impayés non taxables.`;root.append(intro);
+  const wrap=document.createElement('div');wrap.className='loan-simulation-table';const table=document.createElement('table');
+  table.innerHTML='<thead><tr><th>Période</th><th>Capital début</th><th>Intérêt antérieur</th><th>Nouvel intérêt</th><th>Paiement</th><th>Capital payé</th><th>Intérêt payé</th><th>Capital restant</th><th>Intérêt restant</th><th>Dette totale</th></tr></thead>';
+  const body=document.createElement('tbody');
+  for(const r of rows){const tr=document.createElement('tr');for(const v of [String(r.period),money(r.principalBefore),money(r.interestOpening),money(r.interestNew),money(r.payment),money(r.principalPaid),money(r.interestPaid),money(r.principalAfter),money(r.interestAfter),money(r.totalAfter)]){const td=document.createElement('td');td.textContent=v;tr.append(td);}body.append(tr);}table.append(body);wrap.append(table);root.append(wrap);
+  const last=rows.at(-1)!;const totalInterest=rows.reduce((s,r)=>s+r.interestNew,0);const summary=document.createElement('p');summary.className='hint';summary.textContent=`Après ${periods} période(s) : capital restant ${money(last.principalAfter)} · intérêts non payés ${money(last.interestAfter)} · intérêts générés ${money(totalInterest)}. Aucun intérêt n’a été calculé sur les intérêts impayés.`;root.append(summary);
+};
+
 // Dedicated Tontine forms are the only submission surface. Capture validation
 // blocks stale/empty references before older listeners can expose raw errors.
+// The loan form is also intercepted: Finance is a simulator/configurator, not a
+// hidden loan-creation shortcut.
 document.addEventListener('submit',event=>{
   const form=event.target as HTMLFormElement|null;if(!form)return;
+  if(form.id==='loanForm'){event.preventDefault();event.stopImmediatePropagation();renderLoanSimulation();return;}
   if(form.id==='tontineShareForm'){
     const cycle=byId<HTMLSelectElement>('tontineShareCycle');
-    if(!cycle?.value){event.preventDefault();event.stopImmediatePropagation();
-      const box=byId('errorBox');if(box){box.textContent='Créez ou sélectionnez d’abord un cycle Tontine avant d’ajouter une part.';box.hidden=false;}cycle?.focus();}
+    if(!cycle?.value){event.preventDefault();event.stopImmediatePropagation();showFieldError('Créez ou sélectionnez d’abord un cycle Tontine avant d’ajouter une part.',cycle);}
   }
   if(form.id==='tontineCycleForm'){
     const rubric=byId<HTMLSelectElement>('tontineCycleRubric');
-    if(!rubric?.value){event.preventDefault();event.stopImmediatePropagation();
-      const box=byId('errorBox');if(box){box.textContent='Choisissez d’abord une rubrique Tontine active.';box.hidden=false;}rubric?.focus();}
+    if(!rubric?.value){event.preventDefault();event.stopImmediatePropagation();showFieldError('Choisissez d’abord une rubrique Tontine active.',rubric);}
   }
 },true);
 
