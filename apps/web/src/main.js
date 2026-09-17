@@ -404,9 +404,9 @@ const renderLedger = async () => {
         d.innerHTML = html`<strong>${fmt(r.amount.amount)}</strong><span>${members.find(m=>m.id===r.membershipId)?.displayName ?? r.membershipId}</span><small>${date(r.receivedAt)}${r.latePosting?.isLate ? ' · tardive' : ''}</small>`;
         const net=document.createElement('small');net.textContent=`Net après annulations : ${fmt(r.netAmount)}`;d.append(net);
         const statement=document.createElement('button');statement.className='link-btn';statement.textContent='Relevé';statement.onclick=()=>showStatement(r.membershipId).catch(fail);d.append(statement);
-        if(r.netAmount>0){const reverse=document.createElement('button');reverse.className='link-btn';reverse.textContent='Contrepasser';reverse.onclick=async()=>{
-            const reason=prompt('Motif de la contrepassation (le reçu original sera conservé)');if(!reason?.trim())return;
-            reverse.disabled=true;try{await app.reverseLedgerEntry(r.ledgerEntryId,reason);await renderLedger();toast('Contrepassation enregistrée.');}catch(e){fail(e);reverse.disabled=false;}
+        if(r.netAmount>0){const reverse=document.createElement('button');reverse.className='link-btn';reverse.textContent='Annuler / corriger';reverse.title='Conserve le reçu original et crée une écriture inverse auditée.';reverse.onclick=async()=>{
+            const reason=prompt('Pourquoi annuler / corriger cette écriture ? Le reçu original restera visible et Eco-System créera automatiquement l’écriture inverse.');if(!reason?.trim())return;
+            reverse.disabled=true;try{await app.reverseLedgerEntry(r.ledgerEntryId,reason);await renderLedger();toast('Correction enregistrée : l’écriture originale est conservée et son inverse a été ajouté.');}catch(e){fail(e);reverse.disabled=false;}
         };d.append(reverse);}
         receipts.append(d);
     }
