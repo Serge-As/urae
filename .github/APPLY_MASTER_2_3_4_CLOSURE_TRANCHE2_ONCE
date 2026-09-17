@@ -1,0 +1,5 @@
+Eco-System Master 2.3.4 closure tranche 2
+Date: 2026-09-17
+Scope: governance votes + notifications + secure invitation/calendar exposure + member notebook.
+Run script -> full CI -> commit only on green.
+No production deployment.
