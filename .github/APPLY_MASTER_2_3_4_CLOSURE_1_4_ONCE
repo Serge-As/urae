@@ -2,4 +2,5 @@ Eco-System 1.4.0 Master 2.3.4 closure trigger
 Date: 2026-09-17
 Parent production: 1.3.4 / 1817ad7d3c7dd8e2497244a6735e712a3a414253
 Scope: apply audited closure patch -> full CI -> commit qualified source.
+Retry: 2 — route identifier collision corrected.
 No production deployment in this workflow.
