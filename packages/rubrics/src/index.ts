@@ -81,6 +81,25 @@ export class RubricKnowledgeService {
     if(policies.loan){
       if(policies.loan.interestBase!=='PRINCIPAL_ONLY'||policies.loan.noInterestOnInterest!==true)throw new Error('INTEREST_ON_INTEREST_FORBIDDEN');
       if(policies.loan.rateBasisPointsPerPeriod!==undefined&&(!Number.isFinite(policies.loan.rateBasisPointsPerPeriod)||policies.loan.rateBasisPointsPerPeriod<0))throw new Error('INVALID_LOAN_RATE');
+      if(policies.loan.overdue){
+        const o=policies.loan.overdue;
+        if(o.maxDurationPeriods!==undefined&&(!Number.isSafeInteger(o.maxDurationPeriods)||o.maxDurationPeriods<1))throw new Error('INVALID_LOAN_MAX_DURATION');
+        if(o.gracePeriods!==undefined&&(!Number.isSafeInteger(o.gracePeriods)||o.gracePeriods<0))throw new Error('INVALID_LOAN_GRACE');
+        if(o.penaltyRateBasisPointsPerPeriod!==undefined&&(!Number.isFinite(o.penaltyRateBasisPointsPerPeriod)||o.penaltyRateBasisPointsPerPeriod<0))throw new Error('INVALID_LOAN_PENALTY_RATE');
+        const allowed=new Set(['TONTINE','SOLIDARITY','GUARANTOR','OTHER']);for(const source of o.recoverFrom??[])if(!allowed.has(source))throw new Error('INVALID_LOAN_RECOVERY_SOURCE');
+      }
+      for(const special of policies.loan.specialLoans??[]){
+        if(!special.key?.trim()||!special.label?.trim())throw new Error('INVALID_SPECIAL_LOAN');
+        if(!Number.isFinite(special.rateBasisPointsPerPeriod)||special.rateBasisPointsPerPeriod<0)throw new Error('INVALID_SPECIAL_LOAN_RATE');
+        if(special.maxDurationPeriods!==undefined&&(!Number.isSafeInteger(special.maxDurationPeriods)||special.maxDurationPeriods<1))throw new Error('INVALID_SPECIAL_LOAN_DURATION');
+      }
+    }
+    if(policies.fine){
+      if(!Array.isArray(policies.fine.rules)||policies.fine.rules.length>100)throw new Error('INVALID_FINE_GRID');
+      for(const rule of policies.fine.rules){
+        if(!rule.key?.trim()||!rule.label?.trim())throw new Error('INVALID_FINE_RULE');
+        if(!Number.isSafeInteger(rule.amount)||rule.amount<0)throw new Error('INVALID_FINE_AMOUNT');
+      }
     }
     if(policies.yield){
       if(policies.yield.distributableShareBasisPoints!==undefined&&(!Number.isInteger(policies.yield.distributableShareBasisPoints)||policies.yield.distributableShareBasisPoints<0||policies.yield.distributableShareBasisPoints>10000))throw new Error('INVALID_YIELD_SHARE');
