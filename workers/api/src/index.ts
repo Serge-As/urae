@@ -1352,6 +1352,12 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
     const readNotification=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/notifications\/([^/]+)\/read$/);
     if(readNotification&&request.method==='POST')return json(await notifications.markRead(readNotification[1]!,readNotification[2]!),200,cors);
 
+    const myMembershipRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/me$/);
+    if(myMembershipRoute&&request.method==='GET'){
+      const groupId=myMembershipRoute[1]!,group=await requireGroup(groupId),membership=(await repo.listMemberships(ctx.tenantId,groupId)).find(x=>x.userId===ctx.actorId&&x.status==='active');
+      return json({membership:membership??null,isManager:group.createdBy===ctx.actorId||Boolean(membership?.roles.some(r=>['founder','manager','admin','president','treasurer','auditor'].includes(r))),group:{id:group.id,name:group.name,kind:group.kind}},200,cors);
+    }
+
     const operationalSheetRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/members\/([^/]+)\/operational-sheet$/);
     if(operationalSheetRoute&&request.method==='GET')return json(await operationalCockpit.memberSheet(operationalSheetRoute[1]!,operationalSheetRoute[2]!),200,cors);
 
