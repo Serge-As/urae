@@ -126,7 +126,7 @@ export function mountMiscRubricUI({app,notify=()=>{},showError=console.error,get
       policies.registration={pricingModel:mode,returningMemberAmount:{currency:'XAF',amount:returning},newMemberAmount:{currency:'XAF',amount:fresh},defaultAmount:{currency:'XAF',amount:def},seniorityRule:String(form.querySelector('[data-reg-seniority]').value??'').trim()||undefined,freeReturningMembers:form.querySelector('[data-reg-free-returning]').checked,reviewStatus:'VALIDATED'};
       await app.updateRubricPolicies(rubricId,policies);notify('Politique d’inscription enregistrée.');
     }else if(form.dataset.finePolicyForm){
-      const rules=[...form.querySelectorAll('[data-fine-label]')].map((name,i)=>({label:String(name.value??'').trim(),amount:Number(form.querySelectorAll('[data-fine-amount]')[i]?.value??0)})).filter(r=>r.label);
+      const rules=[...form.querySelectorAll('[data-fine-label]')].map((name,i)=>{const label=String(name.value??'').trim();return{key:'fine_'+(i+1)+'_'+label.normalize('NFKD').replace(/[^a-zA-Z0-9]+/g,'_').replace(/^_+|_+$/g,'').toLowerCase().slice(0,48),label,amount:Number(form.querySelectorAll('[data-fine-amount]')[i]?.value??0),currency:'XAF'};}).filter(r=>r.label);
       if(!rules.length)throw Error('Ajoutez au moins un motif d’amende.');for(const r of rules)if(!Number.isSafeInteger(r.amount)||r.amount<0)throw Error('Chaque tarif d’amende doit être un entier positif ou zéro.');
       policies.fine={rules,reviewStatus:'VALIDATED',definitionSource:'MANUAL'};
       await app.updateRubricPolicies(rubricId,policies);notify('Grille des amendes enregistrée.');
