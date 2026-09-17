@@ -569,12 +569,31 @@ export interface RubricReservePolicy {
   openingBalanceSource?:'PRIOR_CLOSING'|'MANUAL'|'ZERO'|'CUSTOM';
   replenishmentRule?:string;
 }
+export interface RubricLoanOverduePolicy {
+  maxDurationPeriods?:number;
+  gracePeriods?:number;
+  penaltyRateBasisPointsPerPeriod?:number;
+  blockNewLoanUntilSettled?:boolean;
+  blockNextExercise?:boolean;
+  recoverFrom?:Array<'TONTINE'|'SOLIDARITY'|'GUARANTOR'|'OTHER'>;
+  notes?:string[];
+}
+export interface RubricSpecialLoanRule {
+  key:string;
+  label:string;
+  rateBasisPointsPerPeriod:number;
+  maxDurationPeriods?:number;
+  paymentPriority?:'CAPITAL_FIRST'|'INTEREST_FIRST'|'EXPLICIT_ALLOCATION';
+  eligibilityRule?:string;
+}
 export interface RubricLoanPolicy {
   allowed:boolean;
   rateBasisPointsPerPeriod?:number;
   interestBase:'PRINCIPAL_ONLY';
   paymentPriority?:'CAPITAL_FIRST'|'INTEREST_FIRST'|'EXPLICIT_ALLOCATION';
   noInterestOnInterest:true;
+  overdue?:RubricLoanOverduePolicy;
+  specialLoans?:RubricSpecialLoanRule[];
 }
 export interface RubricYieldPolicy {
   enabled:boolean;
@@ -614,6 +633,18 @@ export interface RubricRegistrationPolicy {
   freeReturningMembers?:boolean;
   reviewStatus?:'DRAFT'|'VALIDATED';
 }
+export interface RubricFineRule {
+  key:string;
+  label:string;
+  amount:number;
+  currency?:Currency;
+  condition?:string;
+}
+export interface RubricFinePolicy {
+  rules:RubricFineRule[];
+  reviewStatus?:'DRAFT'|'VALIDATED';
+  definitionSource?:'GOVERNANCE_DOCUMENT'|'TEXT'|'VOICE'|'MANUAL';
+}
 export interface RubricLifecyclePolicy {
   visibility:'PERSISTENT'|'EXERCISE'|'FIRST_N_SESSIONS'|'SESSION_ONLY'|'EVENT_DRIVEN';
   activeFirstSessions?:number;
@@ -630,6 +661,7 @@ export interface RubricPolicies {
   yield?:RubricYieldPolicy;
   assistance?:RubricAssistancePolicy;
   registration?:RubricRegistrationPolicy;
+  fine?:RubricFinePolicy;
   lifecycle?:RubricLifecyclePolicy;
   notes?:string[];
 }
