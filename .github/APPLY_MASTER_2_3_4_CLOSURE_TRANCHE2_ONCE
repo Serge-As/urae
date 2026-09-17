@@ -5,3 +5,4 @@ Run script -> full CI -> commit only on green.
 No production deployment.
 Retry: patcher syntax corrected after first guarded failure.
 Retry: typecheck corrections for notification scalar persistence and typed UI helper.
+Retry: forbidden notebook expectation aligned with authenticated API 403 semantics.
