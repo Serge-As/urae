@@ -34,6 +34,8 @@ import { GroupPairingService } from '../../../packages/group-pairing/src/index.j
 import { InterestCommunityService } from '../../../packages/interest-communities/src/index.js';
 import { EcoPulseService, type EngagementAction, type RecommendationCandidate } from '../../../packages/ecopulse/src/index.js';
 import { HistoricalImportService, RepositoryArtifactStore, type ArtifactStoreLike } from '../../../packages/imports/src/index.js';
+import { GovernanceVoteService } from '../../../packages/governance-vote/src/index.js';
+import { NotificationService } from '../../../packages/notifications/src/index.js';
 import { authenticatedApi } from './authenticated.js';
 export { GroupLiveHub } from './group-live-hub.js';
 
@@ -116,13 +118,15 @@ const inboxFor = async (repo:PlatformRepository,tenantId:string,actorId:string) 
   return [...obligations,...cases];
 };
 
-export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{artifacts?:ArtifactStoreLike;documentAI?:WorkersAILike;liveNamespace?:DurableObjectNamespaceLike;premiumLive?:boolean;founderLearning?:FounderLearningStore;founderControl?:FounderControlStore;communityRealtime?:CommunityRealtimeStore;founderTeamActors?:Set<string>;commercialPreferences?:CommercialPreferenceService;groupPairing?:GroupPairingService;interestCommunities?:InterestCommunityService;ecoPulse?:EcoPulseService;identityProof?:IdentityProofService;dataUseDefaultMode?:DataUseDefaultMode}={}) => async (request:Request):Promise<Response> => {
+export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{artifacts?:ArtifactStoreLike;documentAI?:WorkersAILike;liveNamespace?:DurableObjectNamespaceLike;premiumLive?:boolean;founderLearning?:FounderLearningStore;founderControl?:FounderControlStore;communityRealtime?:CommunityRealtimeStore;founderTeamActors?:Set<string>;commercialPreferences?:CommercialPreferenceService;groupPairing?:GroupPairingService;interestCommunities?:InterestCommunityService;ecoPulse?:EcoPulseService;identityProof?:IdentityProofService;dataUseDefaultMode?:DataUseDefaultMode;governanceSecret?:string}={}) => async (request:Request):Promise<Response> => {
   const url=new URL(request.url); const cors=corsHeaders(request);
   if(request.method==='OPTIONS'){
     const allowed=Boolean((cors as Record<string,string>)['access-control-allow-origin']);
     return new Response(null,{status:allowed?204:403,headers:{...baseSecurityHeaders,...cors,'access-control-allow-methods':'GET,POST,PUT,OPTIONS','access-control-allow-headers':'content-type,x-tenant-id,x-actor-id,x-group-roles,x-active-group-id,x-device-id,x-session-id,x-request-id,x-timezone'}});
   }
   const {kernel,foundation,ledger,meetings,discovery,membershipGateway,rubrics,completion,explainability,documents,receivables,treasury,riskFinance,market,community,imports,memberControl,groupIdentity,conciergeLearning,miscRubrics,adManager,economicIntelligence,externalPrograms}=createRequestScope(request,repo,options.artifacts,options.dataUseDefaultMode??'BETA_OPEN',options.documentAI); const ctx=kernel.context.get();
+  const governanceVotes=new GovernanceVoteService(repo,kernel,options.governanceSecret??'eco-system-nonproduction-governance-secret');
+  const notifications=new NotificationService(repo,kernel);
   if(options.premiumLive)kernel.features.set('premium_live_ledger',true);
   const isFounderTeamActor=async()=>Boolean(options.founderTeamActors?.has(ctx.actorId))||Boolean(options.founderControl&&await options.founderControl.isPlatformOwner(ctx.actorId));
   const requireGroup=async(groupId:string,manage=false)=>{
@@ -1323,6 +1327,42 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
       throw new Error('OUTBOX_TYPE_UNSUPPORTED');
     }
 
+
+    const pollsRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/governance\/polls$/);
+    if(pollsRoute&&request.method==='GET')return json(await governanceVotes.list(pollsRoute[1]!),200,cors);
+    if(pollsRoute&&request.method==='POST'){
+      const body=await readJson<Record<string,unknown>>(request);
+      return json(await governanceVotes.open(pollsRoute[1]!,{title:String(body.title??''),question:String(body.question??''),options:strArray(body.options),mode:String(body.mode??'NAMED') as any,kind:String(body.kind??'YES_NO') as any,quorumBps:finite(body.quorumBps,5000),majority:String(body.majority??'SIMPLE') as any,qualifiedThresholdBps:body.qualifiedThresholdBps===undefined?undefined:finite(body.qualifiedThresholdBps),closesAt:body.closesAt?String(body.closesAt):undefined}),201,cors);
+    }
+    const ballotRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/governance\/polls\/([^/]+)\/ballots$/);
+    if(ballotRoute&&request.method==='POST'){const body=await readJson<Record<string,unknown>>(request);return json(await governanceVotes.cast(ballotRoute[1]!,ballotRoute[2]!,strArray(body.selections)),201,cors);}
+    const tallyRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/governance\/polls\/([^/]+)\/tally$/);
+    if(tallyRoute&&request.method==='GET')return json(await governanceVotes.tally(tallyRoute[1]!,tallyRoute[2]!),200,cors);
+    const closePollRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/governance\/polls\/([^/]+)\/close$/);
+    if(closePollRoute&&request.method==='POST'){const body=await readJson<Record<string,unknown>>(request);return json(await governanceVotes.close(closePollRoute[1]!,closePollRoute[2]!,String(body.state??'CLOSED')==='CANCELLED'?'CANCELLED':'CLOSED'),200,cors);}
+
+    if(url.pathname==='/api/v1/notifications/preferences'&&request.method==='GET')return json(await notifications.preferences(),200,cors);
+    if(url.pathname==='/api/v1/notifications/preferences'&&request.method==='PUT'){const body=await readJson<any>(request);return json(await notifications.savePreferences(body),200,cors);}
+    const groupNotifications=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/notifications$/);
+    if(groupNotifications&&request.method==='GET')return json(await notifications.inbox(groupNotifications[1]!),200,cors);
+    if(groupNotifications&&request.method==='POST'){const body=await readJson<any>(request);return json(await notifications.publish(groupNotifications[1]!,body),201,cors);}
+    const readNotification=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/notifications\/([^/]+)\/read$/);
+    if(readNotification&&request.method==='POST')return json(await notifications.markRead(readNotification[1]!,readNotification[2]!),200,cors);
+
+    const notebookRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/members\/([^/]+)\/notebook$/);
+    if(notebookRoute&&request.method==='GET'){
+      const groupId=notebookRoute[1]!,membershipId=notebookRoute[2]!,group=await requireGroup(groupId),target=await repo.getMembership(ctx.tenantId,groupId,membershipId);if(!target)throw new Error('MEMBERSHIP_NOT_FOUND');
+      const viewer=(await repo.listMemberships(ctx.tenantId,groupId)).find(x=>x.userId===ctx.actorId&&x.status==='active'),manager=group.createdBy===ctx.actorId||Boolean(viewer?.roles.some(r=>['founder','manager','admin','president','treasurer'].includes(r)));
+      if(!manager&&target.userId!==ctx.actorId)throw new Error('FORBIDDEN_SCOPE');
+      const [statement,obligations,attendance,participations,profile,allWorkspace]=await Promise.all([
+        ledger.memberStatement(ctx.tenantId,groupId,membershipId,url.searchParams.get('asOf')??undefined),
+        repo.listObligations(ctx.tenantId),repo.listWorkspaceRecords(ctx.tenantId,'MEETING.ATTENDANCE',groupId),repo.listWorkspaceRecords(ctx.tenantId,'MEMBERSHIP.RUBRIC_PARTICIPATION',groupId),repo.getWorkspaceRecord(ctx.tenantId,'member_profile_'+membershipId),repo.listWorkspaceRecords(ctx.tenantId,undefined,groupId)
+      ]);
+      const ownObligations=obligations.filter(x=>x.groupId===groupId&&x.assigneeId===membershipId),ownAttendance=attendance.filter(x=>String(x.data.membershipId??'')===membershipId),ownParticipation=participations.filter(x=>String(x.data.membershipId??'')===membershipId),assigned=allWorkspace.filter(x=>String(x.data.assigneeMembershipId??x.data.membershipId??'')===membershipId&&!['MEETING.ATTENDANCE','MEMBERSHIP.RUBRIC_PARTICIPATION'].includes(x.moduleId));
+      const timeline=[...statement.receipts.map(x=>({at:x.receivedAt,kind:'RECEIPT',title:String(x.netAmount)+' '+String(x.amount.currency)})),...ownObligations.map(x=>({at:x.dueAt??'',kind:'OBLIGATION',title:x.title})),...ownAttendance.map(x=>({at:x.createdAt,kind:'ATTENDANCE',title:String(x.data.attendance??x.title)})),...assigned.map(x=>({at:x.updatedAt,kind:x.moduleId,title:x.title}))].filter(x=>x.at).sort((a,b)=>String(b.at).localeCompare(String(a.at)));
+      return json({group:{id:group.id,name:group.name},membership:target,profile:profile?.data??null,statement,obligations:ownObligations,attendance:ownAttendance,participations:ownParticipation,assignedRecords:assigned,timeline},200,cors);
+    }
+
     return json({error:'NOT_FOUND'},404,cors);
   } catch(error){const message=error instanceof Error?error.message:'UNKNOWN_ERROR';const status=['FORBIDDEN_SCOPE','FOUNDER_TEAM_ONLY'].includes(message)?403:message==='IDEMPOTENCY_CONFLICT'?409:message.endsWith('_NOT_FOUND')?404:400;return json({error:message,requestId:ctx.requestId},status,cors);}
 };
@@ -1361,7 +1401,7 @@ export default {async fetch(request:Request,env:WorkerEnv={}){
   return authenticatedApi(repository,env.DB,async authenticatedRequest=>{
     const h=authenticatedRequest.headers;
     pairingKernel.context.set({actorId:h.get('x-actor-id')??'unknown',tenantId:h.get('x-tenant-id')??'unknown',activeGroupId:h.get('x-active-group-id')||undefined,groupRoles:(h.get('x-group-roles')??'').split(',').filter(Boolean),mandateIds:[],deviceId:h.get('x-device-id')??'device_web',sessionId:h.get('x-session-id')??'server-authenticated',locale:h.get('accept-language')?.toLowerCase().startsWith('en')?'en':'fr',timezone:h.get('x-timezone')??'Africa/Douala',connectivity:'online',requestId:h.get('x-request-id')??crypto.randomUUID()});
-    return createApiHandler(repository,{artifacts:env.ARTIFACTS,documentAI:env.AI,liveNamespace:env.GROUP_LIVE_HUB,premiumLive:env.PREMIUM_LIVE_LEDGER==='true',founderLearning,founderControl,communityRealtime,founderTeamActors,commercialPreferences,groupPairing,interestCommunities,ecoPulse,identityProof,dataUseDefaultMode})(authenticatedRequest);
+    return createApiHandler(repository,{artifacts:env.ARTIFACTS,documentAI:env.AI,liveNamespace:env.GROUP_LIVE_HUB,premiumLive:env.PREMIUM_LIVE_LEDGER==='true',founderLearning,founderControl,communityRealtime,founderTeamActors,commercialPreferences,groupPairing,interestCommunities,ecoPulse,identityProof,dataUseDefaultMode,governanceSecret:env.COLLECTIVE_LEARNING_PEPPER??env.IDENTITY_MATCH_PEPPER})(authenticatedRequest);
   })(request);
 }};
 export {defaultRepo as repo};

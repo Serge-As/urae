@@ -53,3 +53,6 @@ Implementation cycle for this branch:
 `RECALL -> MAP OWNER/DEPENDENCIES -> CIR -> IMPLEMENT -> CONTRACT/REGRESSION TEST -> VERIFY -> UPDATE TRUTH -> DEPLOY WITH BIR+`.
 
 Applied in guarded CI on 164f07456842856ffaa751cfe87fbe5fbac8a37a at 2026-09-17T20:54:38Z.
+
+## Tranche 2 — gouvernance, notifications, invitations, calendrier, carnet membre
+Applied from checkpoint c82d50a519d4a99b173c996c31ecfb5af49c0ddb at 2026-09-17T22:01:41Z. Dedicated contracts and UI are now under qualification; external provider delivery remains explicitly gated.
