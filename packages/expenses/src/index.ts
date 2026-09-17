@@ -1,5 +1,4 @@
 import type {Id,Membership,WorkspaceRecord} from '../../contracts/src/index.js';
-import {makeId} from '../../contracts/src/index.js';
 import type {PlatformRepository} from '../../repositories/src/index.js';
 import type {PlatformKernel} from '../../platform-kernel/src/index.js';
 import type {LedgerService} from '../../domain/src/index.js';
@@ -45,7 +44,7 @@ export class ExpenseService{
     if(input.meetingId){const meeting=(await this.repo.listMeetings(ctx.tenantId,groupId)).find(x=>x.id===input.meetingId);if(!meeting)throw Error('MEETING_NOT_FOUND');}
     if(input.rubricId){const rubric=await this.repo.getRubricDefinition(ctx.tenantId,groupId,input.rubricId);if(!rubric)throw Error('RUBRIC_NOT_FOUND');}
     const id='expense_'+safe(key),existing=await this.repo.getWorkspaceRecord(ctx.tenantId,id);if(existing)return parse(existing);
-    const entry=await this.ledger.recordCashMovement({tenantId:ctx.tenantId,groupId,amount,currency:'XAF',direction:'out',counterAccountCode:'GROUP_EXPENSE',counterAccountName:'Dépenses du groupe',counterAccountType:'expense',descriptionCode:'LEDGER_GROUP_EXPENSE',sourceType:'group_expense',sourceId:id,meetingId:input.meetingId,idempotencyKey:key,kind:'cash_out'});
+    const entry=await this.ledger.recordCashMovement({tenantId:ctx.tenantId,groupId,amount,currency:'XAF',direction:'out',counterAccountCode:'GROUP_EXPENSE',counterAccountType:'expense',descriptionCode:'LEDGER_GROUP_EXPENSE',sourceType:'group_expense',sourceId:id,meetingId:input.meetingId,idempotencyKey:key,kind:'cash_out'});
     const stamp=entry.createdAt??new Date().toISOString();
     const record:WorkspaceRecord={id,tenantId:ctx.tenantId,groupId,moduleId:MODULE,title:label,summary:input.note?.trim().slice(0,500)||undefined,status:'DONE',tags:['expense','scope:'+scope.toLowerCase(),input.meetingId?'meeting-linked':'backoffice'],data:{amount,currency:'XAF',scope,meetingId:input.meetingId??null,membershipId:input.membershipId??null,rubricId:input.rubricId??null,ledgerEntryId:entry.id,idempotencyKey:key},createdBy:ctx.actorId,createdAt:stamp,updatedAt:stamp};
     await this.repo.saveWorkspaceRecord(record);return parse(record);
