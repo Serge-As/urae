@@ -1,6 +1,7 @@
 import { SessionService } from '../../../packages/auth/src/index.js';
 import type { D1DatabaseLike, PlatformRepository } from '../../../packages/repositories/src/index.js';
 import type { Group } from '../../../packages/contracts/src/index.js';
+import {maybeHandleFinancialExtension} from './financial-extension.js';
 
 const response=(body:unknown,status=200)=>new Response(JSON.stringify(body),{status,headers:{'content-type':'application/json','cache-control':'no-store','x-content-type-options':'nosniff'}});
 const publicPaths=new Set(['/health','/api/v1/product/capabilities','/api/v1/discovery/groups','/api/v1/kernel']);
@@ -45,7 +46,7 @@ export function authenticatedApi(repo:PlatformRepository,db:D1DatabaseLike,handl
    // Read-only members can view their own statement, but no full group financial
    // data or shared administrative dossiers until a finer read policy is defined.
    const memberStatement=/^\/api\/v1\/groups\/[^/]+\/members\/[^/]+\/statement$/.test(url.pathname);
-   const sensitive=/\/(?:ledger|cashbox|applications|operating-policy)(?:\/|$)/.test(url.pathname)||url.pathname==='/api/v1/workspaces';
+   const sensitive=/\/(?:ledger|cashbox|applications|operating-policy|expenses)(?:\/|$)/.test(url.pathname)||url.pathname==='/api/v1/workspaces';
    if(group && sensitive && !memberStatement && !roles.some(r=>managementRoles.has(r)))return response({error:'FORBIDDEN_SCOPE'},403);
    const headers=new Headers(request.headers);
    for(const name of ['x-tenant-id','x-actor-id','x-group-roles','x-session-id','x-request-id'])headers.delete(name);
@@ -56,6 +57,7 @@ export function authenticatedApi(repo:PlatformRepository,db:D1DatabaseLike,handl
     return response({ok:true,actorId:account.id,tenantId:group?.tenantId??account.tenantId,displayName:account.displayName});
    }
    const rewritten=new Request(request,{headers});
+   const extension=await maybeHandleFinancialExtension(repo,rewritten);if(extension)return extension;
    return handle(rewritten);
   }catch{return response({error:'SERVICE_UNAVAILABLE'},503);}
  };
