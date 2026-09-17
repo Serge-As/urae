@@ -5,6 +5,9 @@ import type { Group } from '../../../packages/contracts/src/index.js';
 const response=(body:unknown,status=200)=>new Response(JSON.stringify(body),{status,headers:{'content-type':'application/json','cache-control':'no-store','x-content-type-options':'nosniff'}});
 const publicPaths=new Set(['/health','/api/v1/product/capabilities','/api/v1/discovery/groups','/api/v1/kernel']);
 const managementRoles=new Set(['founder','manager','admin','president','treasurer']);
+const multipartPaths=new Set(['/api/v1/assistant/group-launch/analyze-files']);
+const JSON_BODY_LIMIT=128*1024;
+const MULTIPART_BODY_LIMIT=26*1024*1024;
 
 export function authenticatedApi(repo:PlatformRepository,db:D1DatabaseLike,handle:(request:Request)=>Promise<Response>){
  const sessions=new SessionService(db);
@@ -14,10 +17,14 @@ export function authenticatedApi(repo:PlatformRepository,db:D1DatabaseLike,handl
   try{
    if(!['GET','HEAD','OPTIONS'].includes(request.method)){
     if(request.headers.get('origin')!==url.origin)return response({error:'ORIGIN_NOT_ALLOWED'},403);
-    if(!request.headers.get('content-type')?.toLowerCase().startsWith('application/json'))return response({error:'JSON_REQUIRED'},415);
-    if(Number(request.headers.get('content-length')??0)>131072)return response({error:'REQUEST_TOO_LARGE'},413);
+    const contentType=(request.headers.get('content-type')??'').toLowerCase();
+    const multipartAllowed=multipartPaths.has(url.pathname)&&contentType.startsWith('multipart/form-data;');
+    const jsonAllowed=contentType.startsWith('application/json');
+    if(!jsonAllowed&&!multipartAllowed)return response({error:'JSON_REQUIRED'},415);
+    const bodyLimit=multipartAllowed?MULTIPART_BODY_LIMIT:JSON_BODY_LIMIT;
+    if(Number(request.headers.get('content-length')??0)>bodyLimit)return response({error:'REQUEST_TOO_LARGE'},413);
     const reader=request.body?.getReader(),chunks:Uint8Array[]=[];let size=0;
-    if(reader){while(true){const next=await reader.read();if(next.done)break;size+=next.value.length;if(size>131072){await reader.cancel();return response({error:'REQUEST_TOO_LARGE'},413);}chunks.push(next.value);}}
+    if(reader){while(true){const next=await reader.read();if(next.done)break;size+=next.value.length;if(size>bodyLimit){await reader.cancel();return response({error:'REQUEST_TOO_LARGE'},413);}chunks.push(next.value);}}
     const data=new Uint8Array(size);let offset=0;for(const c of chunks){data.set(c,offset);offset+=c.length;}
     request=new Request(url,{method:request.method,headers:request.headers,body:data});
    }
