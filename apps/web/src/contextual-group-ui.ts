@@ -8,7 +8,7 @@ async function api<T=any>(path:string):Promise<T>{
   const headers=new Headers();headers.set('accept-language',en()?'en':'fr');const group=activeGroup();if(group)headers.set('x-active-group-id',group);
   const response=await fetch(path,{headers});const body=await response.json().catch(()=>({error:'HTTP_'+response.status}));if(!response.ok)throw Error(String(body.error??'HTTP_'+response.status));return body as T;
 }
-function go(view:string){(document.querySelector(`.nav-btn[data-view="${view}"]`) as HTMLButtonElement|null)?.click();window.scrollTo({top:0,behavior:'smooth'});}
+function go(view:string,target?:string){(document.querySelector(`.nav-btn[data-view="${view}"]`) as HTMLButtonElement|null)?.click();if(target)setTimeout(()=>byId(target)?.scrollIntoView({behavior:'smooth',block:'start'}),120);else window.scrollTo({top:0,behavior:'smooth'});}
 function destination(rubric:any){
   const hay=normalize([rubric?.name,...(rubric?.aliases??[]),rubric?.purpose??''].join(' '));
   if(/tontine|rotati|tour|pot|savon|huile|drap/.test(hay))return 'tontines';
@@ -16,6 +16,17 @@ function destination(rubric:any){
   return 'operations';
 }
 function labelFor(view:string){return view==='tontines'?tr('Gérer la tontine','Manage tontine'):view==='finance'?tr('Saisir / gérer','Record / manage'):tr('Saisir en séance','Record in meeting');}
+function ensureDomainNav(rubrics:any[]){
+  const nav=byId('mainNav');if(!nav)return;const before=nav.querySelector('[data-view="ecosystem"]')?.previousElementSibling??nav.querySelector('[data-view="ecosystem"]');
+  const has=(kind:string,rx:RegExp)=>rubrics.some(r=>String(r.activityPlan?.kind??'').toUpperCase()===kind||rx.test(normalize(String(r.name??''))));
+  const defs=[
+    ['contextSavingsNav','◫',tr('Épargne + Intérêts','Savings + Interest'),has('SAVINGS',/epargne|saving/),'finance','savingsYieldLab'],
+    ['contextLoansNav','₣',tr('Prêts + Intérêts','Loans + Interest'),has('LOAN',/pret|emprunt|credit|loan/),'finance','mg-loan'],
+    ['contextAssistanceNav','♡',tr('Assistances','Assistance'),has('ASSISTANCE',/assist|secours|main levee/),'finance','assistanceRulebookPanel'],
+    ['contextOtherNav','⋯',tr('Autres rubriques','Other rubrics'),rubrics.some(r=>/amende|inscription|timbre|collation|transport|autre/.test(normalize(String(r.name??'')))),'finance','miscRubricWorkspace']
+  ] as const;
+  for(const [id,icon,label,visible,view,target] of defs){let b=byId<HTMLButtonElement>(id);if(!b){b=document.createElement('button');b.id=id;b.className='nav-btn contextual-domain-nav';b.type='button';b.innerHTML='<span>'+icon+'</span><b>'+label+'</b>';b.onclick=()=>{if(target==='mg-loan'){document.querySelector<HTMLButtonElement>('#masterGovernanceCenter [data-mg="loan"]')?.click();setTimeout(()=>byId('mg-loan')?.scrollIntoView({behavior:'smooth',block:'start'}),120);}else go(view,target);};before?.before(b);}b.hidden=!visible;}
+}
 function install(){
   if(byId('contextualRubricPanel'))return;
   const host=byId('view-operations');if(!host)return;
@@ -29,7 +40,7 @@ async function refresh(){
   const configure=document.createElement('button');configure.type='button';configure.className='secondary';configure.textContent=tr('Configurer les rubriques','Configure rubrics');configure.onclick=()=>go('launch');head.append(title,configure);root.append(head);
   if(!group){const p=document.createElement('p');p.className='hint';p.textContent=tr('Sélectionnez un groupe pour afficher ses rubriques actives.','Select a group to show its active rubrics.');root.append(p);return;}
   try{
-    const rubrics=await api<any[]>(`/api/v1/groups/${encodeURIComponent(group)}/rubrics`),grid=document.createElement('div');grid.className='contextual-rubric-grid';
+    const rubrics=await api<any[]>(`/api/v1/groups/${encodeURIComponent(group)}/rubrics`),grid=document.createElement('div');grid.className='contextual-rubric-grid';ensureDomainNav(rubrics);
     if(!rubrics.length){const p=document.createElement('p');p.className='hint';p.textContent=tr('Aucune rubrique active. Utilisez « Configurer les rubriques » pour en créer ou valider.','No active rubric. Use “Configure rubrics” to create or validate one.');root.append(p);return;}
     for(const rubric of rubrics){
       const card=document.createElement('article');card.className='contextual-rubric-card';
