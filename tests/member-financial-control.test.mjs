@@ -41,3 +41,21 @@ test('member-control actions cannot be taken for another member by an outsider',
   setContext(kernel,'outsider',[]);
   await assert.rejects(()=>svc.list('group_a','m1'),/FORBIDDEN_SCOPE/);
 });
+
+
+test('self-benefit correction cannot be confirmed or reviewed by its own author',async()=>{
+  const repo=new InMemoryPlatformRepository(),kernel=new PlatformKernel(),svc=new MemberFinancialControlService(repo,kernel);
+  await repo.saveGroup({id:'group_a',tenantId:'tenant_a',name:'Groupe',kind:'association',governanceModel:'community',status:'active',createdBy:'founder',createdAt:'2026-09-15T00:00:00.000Z'});
+  await repo.saveMembership({id:'self_manager',tenantId:'tenant_a',groupId:'group_a',userId:'manager_self',roles:['member','manager'],status:'active',joinedAt:'2026-09-15T00:00:00.000Z'});
+  await repo.saveMembership({id:'other_manager',tenantId:'tenant_a',groupId:'group_a',userId:'manager_other',roles:['manager'],status:'active',joinedAt:'2026-09-15T00:00:00.000Z'});
+  const entry={id:'ledger_correction',tenantId:'tenant_a',groupId:'group_a',currency:'XAF',descriptionCode:'LEDGER_CASH_CONTRIBUTION',sourceType:'membership_contribution',sourceId:'self_manager',idempotencyKey:'corr',createdAt:'2026-09-18T14:00:00.000Z',createdBy:'manager_self',lines:[{accountId:'cash',debit:5000,credit:0},{accountId:'liability',debit:0,credit:5000}]};
+  await repo.saveLedgerEntry(entry);
+  setContext(kernel,'manager_self',['member','manager']);
+  const notice=await svc.create({groupId:'group_a',membershipId:'self_manager',entry,operationType:'CASH_CONTRIBUTION_CORRECTED',amount:5000,currency:'XAF',previousSituation:2000,newSituation:5000,previousAmount:2000,newAmount:5000,correctionReason:'Correction test',selfBenefit:true,requiresIndependentReview:true});
+  assert.equal(notice.disputeState,'UNDER_REVIEW');assert.equal(notice.previousAmount,2000);assert.equal(notice.newAmount,5000);
+  await assert.rejects(()=>svc.confirm('group_a',notice.id),/INDEPENDENT_REVIEW_REQUIRED/);
+  await assert.rejects(()=>svc.officerReview('group_a',notice.id,'Je valide moi-même'),/INDEPENDENT_REVIEW_REQUIRED/);
+  setContext(kernel,'manager_other',['manager']);
+  const reviewed=await svc.officerReview('group_a',notice.id,'Vérifié par un autre responsable.');
+  assert.equal(reviewed.disputeState,'OFFICER_CONFIRMED');
+});
