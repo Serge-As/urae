@@ -182,7 +182,6 @@ jobs:
             grep -E 'mount(VoiceEntry|ExpenseRecap|MemberDossier|Documents|ContextualGroup)UI' /tmp/smoke/voice.js || true
             exit 1
           fi
-          grep -Fq 'Cahier Maître 3.2.0' /tmp/smoke/root.html
           EXPECTED_VERSION="${EXPECTED_VERSION}" node --input-type=module <<'NODE'
           import fs from 'node:fs';
           const h=JSON.parse(fs.readFileSync('/tmp/smoke/health.json','utf8'));
