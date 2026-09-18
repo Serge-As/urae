@@ -82,7 +82,7 @@ export function mountMiscRubricUI({app,notify=()=>{},showError=console.error,get
       if(t.kind==='FINE'&&!(finePolicy(t)?.rules?.length))row.append(el('small','Aucune grille d’amendes n’est encore définie : configurez-la ci-dessous ou saisissez ponctuellement un montant.','hint'));
       choices.append(row);
     }
-    if(isManager())choices.prepend(buildPolicyEditor(templates));
+    if(policyConfig){policyConfig.replaceChildren();if(isManager())policyConfig.append(buildPolicyEditor(templates));}
   };
 
   const policyRow=(label,amount)=>{const row=el('div',undefined,'fine-policy-row inline-grid');const name=document.createElement('input');name.placeholder='Ex. Retard < 30 min';name.value=label??'';name.dataset.fineLabel='1';const value=document.createElement('input');value.type='number';value.min='0';value.step='1';value.placeholder='Montant XAF';value.value=amount??'';value.dataset.fineAmount='1';const remove=el('button','Retirer','link-btn');remove.type='button';remove.onclick=()=>row.remove();row.append(name,value,remove);return row;};
@@ -166,12 +166,14 @@ export function mountMiscRubricUI({app,notify=()=>{},showError=console.error,get
   }catch(err){showError(err);}})();});
 
   const refresh=async()=>{
-    const active=Boolean(app.activeGroup());document.getElementById('miscRubricPostingForm').hidden=active&&!isManager();document.getElementById('miscRubricConfig').hidden=active&&!isManager();
+    const active=Boolean(app.activeGroup());document.getElementById('miscRubricPostingForm').hidden=true;document.getElementById('miscRubricConfig').hidden=active&&!isManager();
     if(!active){choices.replaceChildren();postings.replaceChildren();return;}
     renderSelectors();
-    if(isManager())await app.ensureMiscRubricStarters();
+    // No automatic Inscription/Amende/Timbre injection: these are optional examples, never replacements for the group's real rubric list.
     rubricDefinitions=await app.listRubrics();
     await renderChoices();await renderPostings();
   };
+  document.getElementById('miscOpenMeetingSheet')?.addEventListener('click',()=>{document.getElementById('meetingSheetViewBtn')?.click();document.getElementById('meetingMatrixPanel')?.scrollIntoView({behavior:'smooth',block:'start'});});
+  document.getElementById('miscOpenIndividualSheet')?.addEventListener('click',()=>{document.getElementById('individualSheetsViewBtn')?.click();});
   return{refresh};
 }
