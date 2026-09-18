@@ -17,14 +17,14 @@ export async function renderMemberFinancialNotices({app,membershipId,memberUserI
     for(const n of notices){
       const a=document.createElement('article');a.className='item';
       const title=document.createElement('strong');title.textContent=n.operationType+' · '+fmt(n.amount,n.currency);a.append(title);
-      const authorLabel=actorName(n.authorId),authorText=authorLabel+(authorLabel!==n.authorId?' · réf. '+n.authorId:'')+(n.authorRoles?.length?' · '+n.authorRoles.join(', '):'');
+      const authorLabel=actorName(n.authorId),authorText=authorLabel+(n.authorRoles?.length?' · '+n.authorRoles.join(', '):'');
       a.append(line('Auteur',authorText));
       if(n.meetingId)a.append(line('Séance',meetingName(n.meetingId)));
       if(n.previousAmount!==undefined||n.newAmount!==undefined)a.append(line('Correction du montant',fmt(n.previousAmount??0,n.currency)+' → '+fmt(n.newAmount??n.amount??0,n.currency)));
       if(n.correctionReason)a.append(line('Motif',n.correctionReason));
       if(n.previousSituation!==undefined||n.newSituation!==undefined)a.append(line('Situation du membre avant / après cette action',fmt(n.previousSituation??0,n.currency)+' → '+fmt(n.newSituation??0,n.currency)));
       if(n.selfBenefit||n.requiresIndependentReview){const warn=document.createElement('p');warn.className='truth-notice error';warn.textContent='⚠ Auto-modification financière : l’auteur agit sur sa propre situation. Une revue par un autre responsable habilité est obligatoire avant validation.';a.append(warn);}
-      const tech=document.createElement('details');const summary=document.createElement('summary');summary.textContent='Références techniques';tech.append(summary,line('Écriture',n.ledgerEntryId));a.append(tech);
+      const tech=document.createElement('details');const summary=document.createElement('summary');summary.textContent='Références techniques';tech.append(summary,line('Écriture',n.ledgerEntryId),line('Compte auteur',n.authorId));a.append(tech);
       a.append(line('État membre',n.memberState),line('Réserve / revue',n.disputeState));
       if(n.reserveReason)a.append(line('Motif de réserve',n.reserveReason));
       if(n.officerNote)a.append(line('Vérification responsable',n.officerNote));
