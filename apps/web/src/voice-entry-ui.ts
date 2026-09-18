@@ -25,7 +25,10 @@ const friendly=(code:string)=>({
   INVALID_EXPENSE_AMOUNT:t('Le montant de la dépense doit être un entier positif.','Expense amount must be a positive integer.'),
   TONTINE_SHARE_NOT_FOUND:t('La part Tontine concernée doit être choisie dans Tontines.','The relevant Tontine share must be chosen in Tontines.'),
   LOAN_REQUIRED:t('Choisissez le prêt concerné par ce remboursement.','Choose the loan concerned by this repayment.'),
-  MULTIPLE_LOANS:t('Plusieurs prêts actifs existent pour ce membre : choisissez le bon prêt.','This member has several active loans: choose the correct loan.')
+  MULTIPLE_LOANS:t('Plusieurs prêts actifs existent pour ce membre : choisissez le prêt directement dans la cellule de remboursement.','This member has several active loans: choose the loan directly in the repayment cell.'),
+  LOAN_POLICY_REQUIRED:t('Cette rubrique Prêt doit d’abord avoir ses règles de prêt configurées.','This Loan rubric must have its loan rules configured first.'),
+  LOAN_RATE_REQUIRED:t('Définissez explicitement le taux par période de cette rubrique Prêt, même s’il est de 0 %.','Explicitly define the per-period rate for this Loan rubric, even if it is 0%.'),
+  LOAN_INTEREST_PAYMENT_EXCEEDS_DUE:t('Le montant saisi dépasse les intérêts réellement dus à cette période.','The entered amount exceeds interest actually due for this period.')
 } as Record<string,string>)[code]??code.replaceAll('_',' ');
 
 let members:AnyRecord[]=[],rubrics:AnyRecord[]=[],meetings:AnyRecord[]=[],misc:AnyRecord[]=[],loans:AnyRecord[]=[],loadedGroup='';
@@ -48,7 +51,13 @@ const memberCandidates=()=>members.map(m=>({id:m.id,label:m.displayName,aliases:
 const openMeetings=()=>meetings.filter(m=>m.status==='open').sort((a,b)=>String(b.scheduledAt??b.openedAt).localeCompare(String(a.scheduledAt??a.openedAt)));
 const miscForRubric=(rubricId:string)=>misc.find(x=>String(x.rubricId)===rubricId);
 const rubricById=(id:string)=>rubrics.find(r=>r.id===id);
-const activeLoansFor=(membershipId:string)=>loans.filter(l=>String(l.data?.borrowerMembershipId??'')===membershipId&&['DISBURSED','REPAYING'].includes(String(l.data?.completionState??''))&&Number(l.data?.outstandingPrincipal??l.data?.principal??0)>0);
+const activeLoansFor=(membershipId:string)=>loans.filter(l=>String(l.data?.borrowerMembershipId??'')===membershipId&&['DISBURSED','REPAYING'].includes(String(l.data?.completionState??''))&&(Number(l.data?.outstandingPrincipal??l.data?.principal??0)>0||Number(l.data?.unpaidInterest??0)>0));
+const normalizeLabel=(value:unknown)=>String(value??'').normalize('NFKD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
+const rubricKind=(rubric:any)=>String(rubric?.activityPlan?.kind??'').toUpperCase();
+const repaymentComponent=(rubric:any)=>{
+  const explicit=String(rubric?.facets?.custom?.repaymentComponent??'').toUpperCase();if(explicit==='INTEREST'||explicit==='PRINCIPAL')return explicit;
+  return /interet|interest/.test(normalizeLabel(rubric?.name))?'INTEREST':'PRINCIPAL';
+};
 
 async function postIncome(membershipId:string,rubricId:string,meetingId:string,amount:number,note=''){
   const group=activeGroup();if(!group)throw Error('ACTIVE_GROUP_REQUIRED');const template=miscForRubric(rubricId);
@@ -58,10 +67,24 @@ async function postIncome(membershipId:string,rubricId:string,meetingId:string,a
 async function postExpense(membershipId:string,rubricId:string,meetingId:string,amount:number,label:string,note=''){
   const group=activeGroup();if(!group)throw Error('ACTIVE_GROUP_REQUIRED');return api(`/api/v1/groups/${encodeURIComponent(group)}/expenses`,{method:'POST',body:JSON.stringify({membershipId,rubricId,meetingId,amount,label,scope:'SHEET',note,idempotencyKey:idem('sheet_out')})});
 }
-async function postRepayment(membershipId:string,meetingId:string,amount:number,loanId?:string){
+async function postLoanFromSheet(membershipId:string,rubric:any,meetingId:string,amount:number){
+  const group=activeGroup();if(!group)throw Error('ACTIVE_GROUP_REQUIRED');const policy=rubric?.policies?.loan;if(!policy?.allowed)throw Error('LOAN_POLICY_REQUIRED');
+  const special=/special/.test(normalizeLabel(rubric?.name))?(policy.specialLoans?.[0]??undefined):undefined;
+  const rawRate=special?.rateBasisPointsPerPeriod??policy.rateBasisPointsPerPeriod;if(rawRate===undefined||rawRate===null)throw Error('LOAN_RATE_REQUIRED');
+  const rateBasisPointsPerPeriod=Number(rawRate),paymentPriority=special?.paymentPriority??policy.paymentPriority??'CAPITAL_FIRST';
+  const periods=Number(special?.maxDurationPeriods??policy.overdue?.maxDurationPeriods??6),member=members.find(x=>x.id===membershipId),key=idem('sheet_loan');
+  let loan=await api<any>(`/api/v1/groups/${encodeURIComponent(group)}/completion`,{method:'POST',body:JSON.stringify({kind:'LOAN',title:(rubric?.name??t('Prêt','Loan'))+' · '+(member?.displayName??membershipId),data:{principal:amount,currency:'XAF',borrowerMembershipId:membershipId,rubricId:rubric.id,rateBasisPointsPerPeriod,paymentPriority,noInterestOnInterest:true,periods,outstandingPrincipal:0,unpaidInterest:0,loanClass:special?'SPECIAL':'STANDARD',sourceSurface:'TWO_SHEETS',sheetEntryKey:key}})});
+  loan=await api<any>(`/api/v1/groups/${encodeURIComponent(group)}/completion/${encodeURIComponent(loan.id)}/transition`,{method:'POST',body:JSON.stringify({to:'SUBMITTED',expectedVersion:Number(loan.data?.completionVersion??1),patch:{submittedFromSheet:true,meetingId}})});
+  loan=await api<any>(`/api/v1/groups/${encodeURIComponent(group)}/completion/${encodeURIComponent(loan.id)}/transition`,{method:'POST',body:JSON.stringify({to:'APPROVED',expectedVersion:Number(loan.data?.completionVersion??2),patch:{approvedAt:new Date().toISOString(),approvedFromSheet:true}})});
+  const result=await api<any>(`/api/v1/groups/${encodeURIComponent(group)}/loans/${encodeURIComponent(loan.id)}/disburse`,{method:'POST',body:JSON.stringify({amount,expectedVersion:Number(loan.data?.completionVersion??3),meetingId,rubricId:rubric.id,idempotencyKey:key+':disburse'})});
+  loans=await api<any[]>(`/api/v1/groups/${encodeURIComponent(group)}/completion?kind=LOAN`).catch(()=>loans);return result;
+}
+async function postRepayment(membershipId:string,meetingId:string,rubric:any,amount:number,loanId?:string){
   const group=activeGroup();if(!group)throw Error('ACTIVE_GROUP_REQUIRED');const active=activeLoansFor(membershipId);let loan=loanId?active.find(x=>x.id===loanId):undefined;
   if(!loan&&active.length===1)loan=active[0];if(!loan)throw Error(active.length>1?'MULTIPLE_LOANS':'LOAN_REQUIRED');
-  return api(`/api/v1/groups/${encodeURIComponent(group)}/loans/${encodeURIComponent(loan.id)}/repay`,{method:'POST',body:JSON.stringify({principalAmount:amount,expectedVersion:Number(loan.data?.completionVersion??0),meetingId,idempotencyKey:idem('voice_repayment')})});
+  const component=repaymentComponent(rubric),body:any={principalAmount:component==='PRINCIPAL'?amount:0,interestAmount:component==='INTEREST'?amount:0,expectedVersion:Number(loan.data?.completionVersion??0),meetingId,rubricId:rubric.id,idempotencyKey:idem('sheet_repayment')};
+  const result=await api<any>(`/api/v1/groups/${encodeURIComponent(group)}/loans/${encodeURIComponent(loan.id)}/repay`,{method:'POST',body:JSON.stringify(body)});
+  loans=await api<any[]>(`/api/v1/groups/${encodeURIComponent(group)}/completion?kind=LOAN`).catch(()=>loans);return result;
 }
 
 interface PreviewRow{draft:VoiceFinancialEntryDraft;rubricId:string;direction:'IN'|'OUT';amount:number;loanId?:string;}
@@ -90,7 +113,7 @@ function renderPreview(memberId:string,meetingId:string,status:HTMLElement){
     const direction=document.createElement('select');direction.dataset.role='direction';direction.append(makeOption('IN',t('Entrée / cotisation (+)','Income / contribution (+)')),makeOption('OUT',t('Dépense / sortie (−)','Expense / outflow (−)')));direction.value=row.direction;
     const amount=document.createElement('input');amount.type='number';amount.min='1';amount.step='1';amount.inputMode='numeric';amount.value=String(row.amount);amount.dataset.role='amount';
     const loan=document.createElement('select');loan.dataset.role='loan';loan.hidden=true;
-    const syncLoan=()=>{const r=rubricById(rubric.value),isRepay=String(r?.activityPlan?.kind??'')==='REPAYMENT'&&direction.value==='IN';loan.hidden=!isRepay;if(isRepay){loan.replaceChildren(makeOption('',t('Choisir le prêt','Choose loan')));for(const x of activeLoansFor(memberSelect.value))loan.append(makeOption(x.id,x.title+' · '+fmt(Number(x.data?.outstandingPrincipal??0))));if(activeLoansFor(memberSelect.value).length===1)loan.value=activeLoansFor(memberSelect.value)[0].id;}};
+    const syncLoan=()=>{const r=rubricById(rubric.value),kind=rubricKind(r),isRepay=kind==='REPAYMENT';if(kind==='LOAN'){direction.value='OUT';direction.disabled=true;}else if(kind==='REPAYMENT'){direction.value='IN';direction.disabled=true;}else direction.disabled=false;loan.hidden=!isRepay;if(isRepay){loan.replaceChildren(makeOption('',t('Choisir le prêt','Choose loan')));for(const x of activeLoansFor(memberSelect.value))loan.append(makeOption(x.id,x.title+' · '+fmt(Number(x.data?.outstandingPrincipal??0))+' · '+t('int. dus ','int. due ')+fmt(Number(x.data?.unpaidInterest??0))));if(activeLoansFor(memberSelect.value).length===1)loan.value=activeLoansFor(memberSelect.value)[0].id;}};
     rubric.onchange=syncLoan;direction.onchange=syncLoan;memberSelect.addEventListener('change',syncLoan);syncLoan();
     const remove=document.createElement('button');remove.type='button';remove.className='link-btn';remove.textContent='×';remove.title=t('Retirer cette ligne','Remove this row');remove.onclick=()=>{previewRows.splice(index,1);renderPreview(memberSelect.value,meetingSelect.value,status);};
     article.append(label,rubric,direction,amount,loan,remove);root.append(article);
@@ -102,8 +125,10 @@ function renderPreview(memberId:string,meetingId:string,status:HTMLElement){
     const rows=[...root.querySelectorAll<HTMLElement>('.voice-entry-row')];for(let i=0;i<rows.length;i++){
       const node=rows[i]!,rubricId=(node.querySelector('[data-role=rubric]') as HTMLSelectElement).value,direction=(node.querySelector('[data-role=direction]') as HTMLSelectElement).value as 'IN'|'OUT',amount=Number((node.querySelector('[data-role=amount]') as HTMLInputElement).value),loanId=(node.querySelector('[data-role=loan]') as HTMLSelectElement)?.value;
       if(!rubricId)throw Error(t('Rubrique non choisie à la ligne ','Category not selected on row ')+(i+1));if(!Number.isSafeInteger(amount)||amount<=0)throw Error(t('Montant invalide à la ligne ','Invalid amount on row ')+(i+1));const r=rubricById(rubricId);
-      if(direction==='OUT')await postExpense(membershipId,rubricId,meeting,amount,r?.name??previewRows[i].draft.label,t('Saisie depuis les deux feuilles / dictée','Entry from two-sheet / dictation flow'));
-      else if(String(r?.activityPlan?.kind??'')==='REPAYMENT')await postRepayment(membershipId,meeting,amount,loanId);
+      const kind=rubricKind(r);
+      if(kind==='LOAN')await postLoanFromSheet(membershipId,r,meeting,amount);
+      else if(kind==='REPAYMENT')await postRepayment(membershipId,meeting,r,amount,loanId);
+      else if(direction==='OUT')await postExpense(membershipId,rubricId,meeting,amount,r?.name??previewRows[i].draft.label,t('Saisie depuis les deux feuilles / dictée','Entry from two-sheet / dictation flow'));
       else await postIncome(membershipId,rubricId,meeting,amount,t('Saisie dictée confirmée','Confirmed dictated entry'));
       done++;
     }
@@ -133,11 +158,13 @@ function installFinancialVoicePanel(){
   byId<HTMLButtonElement>('voiceFinancialMic')!.onclick=()=>controller.toggle();byId<HTMLButtonElement>('voiceFinancialInterpret')!.onclick=()=>void interpretFinancialCommand(status);byId<HTMLButtonElement>('voiceFinancialClear')!.onclick=()=>{box.value='';previewRows=[];byId('voiceFinancialPreview')?.replaceChildren();status.textContent='';};
 }
 
-async function recordSheetCell(membershipId:string,rubricId:string,meetingId:string,direction:'IN'|'OUT',amount:number,status?:HTMLElement){
-  const rubric=rubricById(rubricId);if(direction==='OUT')await postExpense(membershipId,rubricId,meetingId,amount,rubric?.name??t('Dépense de séance','Meeting expense'));
-  else if(String(rubric?.activityPlan?.kind??'')==='REPAYMENT')await postRepayment(membershipId,meetingId,amount);
+async function recordSheetCell(membershipId:string,rubricId:string,meetingId:string,direction:'IN'|'OUT',amount:number,status?:HTMLElement,loanId?:string){
+  const rubric=rubricById(rubricId),kind=rubricKind(rubric);
+  if(kind==='LOAN')await postLoanFromSheet(membershipId,rubric,meetingId,amount);
+  else if(kind==='REPAYMENT')await postRepayment(membershipId,meetingId,rubric,amount,loanId);
+  else if(direction==='OUT')await postExpense(membershipId,rubricId,meetingId,amount,rubric?.name??t('Dépense de séance','Meeting expense'));
   else await postIncome(membershipId,rubricId,meetingId,amount);
-  if(status)status.textContent=t('Enregistré.','Recorded.');await loadContext(true);byId<HTMLButtonElement>('refreshBtn')?.click();
+  if(status)status.textContent=t('Enregistré sur les deux feuilles.','Recorded on both sheets.');await loadContext(true);byId<HTMLButtonElement>('refreshBtn')?.click();
 }
 
 async function renderCanonicalMeetingMatrix(root:HTMLElement,meetingId?:string){
