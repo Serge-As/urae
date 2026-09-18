@@ -253,3 +253,15 @@ test('manager correcting own 2,000 XAF contribution to 5,000 keeps the full trac
   assert.equal(n.previousAmount,2000);assert.equal(n.newAmount,5000);assert.equal(n.previousSituation,2000);assert.equal(n.newSituation,5000);assert.equal(n.disputeState,'UNDER_REVIEW');assert.equal(n.selfBenefit,true);
   const traces=await repo.listWorkspaceRecords('tenant_t3','FINANCE.CORRECTION','group_t3');assert.equal(traces.length,1);assert.equal(traces[0].status,'DONE');assert.equal(traces[0].data.oldAmount,2000);assert.equal(traces[0].data.newAmount,5000);
 });
+
+
+test('targeted tranche 7 exposes manager rubric matrix, self-owned dossier and direct loan cell editing',()=>{
+  const detail=fs.readFileSync('apps/web/src/detail-ui.js','utf8');
+  const dossier=fs.readFileSync('apps/web/src/member-dossier-ui.ts','utf8');
+  const governance=fs.readFileSync('apps/web/src/master-governance-ui.ts','utf8');
+  const control=fs.readFileSync('apps/web/src/member-control-ui.js','utf8');
+  assert.match(detail,/rubricContributionMatrix/);assert.match(detail,/Tableau récapitulatif des contributions/);assert.match(detail,/rubricConfigurationEditor/);
+  assert.match(dossier,/Consultation Bureau/);assert.match(dossier,/Votre dossier/);assert.match(dossier,/const self=/);
+  assert.match(governance,/loan-matrix-edit-value/);assert.match(governance,/Touchez directement un montant encadré/);assert.match(governance,/data-loan-payment-index/);
+  assert.match(control,/Auto-modification financière/);assert.match(control,/Revue indépendante/);assert.match(control,/actorName/);
+});
