@@ -113,7 +113,7 @@ export function mountTontineManagerUI({app,getRubrics,getMembers,notify=()=>{},s
     const model={ruleRealityStatus:'UNKNOWN',targetMode:'OPEN',mandatoryForAbsentees:false,shortfallHandling:'LEAVE_SHORT',payoutMode:'COLLECTED_ONLY',immediateFullPayout:false};
     const created=await app.createRubric({name,model}),sessions=Math.max(1,Math.ceil(sharesCount/pots)),key='tontine_'+Date.now().toString(36);
     await app.updateRubricActivityPlan(created.id,{key,name,kind:'TONTINE',nominalAmount:{currency:'XAF',amount:nominal},amountBasis:'PER_SHARE',participationMode:'OPTIONAL',contributionMode:'MONEY',memberCount:sharesCount,shareCount:sharesCount,potCount:pots,sessions,duration:{value:sessions,unit:'SESSIONS'},managementFeePerPayment:0,estimatedExternalCostRate:0,fixedCostPerSession:0});
-    notify('Rubrique Tontine créée dans ce groupe.');e.currentTarget.reset();await refresh();const s=document.getElementById('tontineCycleRubric');if(s){s.value=created.id;s.dispatchEvent(new Event('change'));}
+    notify('Rubrique Tontine créée dans ce groupe.');e.currentTarget.reset();document.getElementById('refreshBtn')?.click();setTimeout(()=>{const s=document.getElementById('tontineCycleRubric');if(s){s.value=created.id;s.dispatchEvent(new Event('change'));}},350);
   }catch(err){showError(err);}})();});
   return{refresh};
 }
