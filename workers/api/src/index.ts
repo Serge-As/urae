@@ -614,6 +614,37 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
       return json({results},201,cors);
     }
 
+    const contributionCorrectionRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/contributions\/([^/]+)\/correct$/);
+    if(contributionCorrectionRoute&&request.method==='POST'){
+      const groupId=contributionCorrectionRoute[1]!,receiptId=decodeURIComponent(contributionCorrectionRoute[2]!),group=await requireGroup(groupId,true);
+      const body=await readJson<Record<string,unknown>>(request),newAmount=Number(body.newAmount),reason=String(body.reason??'').trim();
+      if(!Number.isSafeInteger(newAmount)||newAmount<0)throw new Error('INVALID_CONTRIBUTION_AMOUNT');
+      if(!reason)throw new Error('REVERSAL_REASON_REQUIRED');
+      const receipts=await repo.listContributionReceipts(ctx.tenantId,groupId),receipt=receipts.find(x=>x.id===receiptId);if(!receipt)throw new Error('CONTRIBUTION_RECEIPT_NOT_FOUND');
+      const target=await repo.getMembership(ctx.tenantId,groupId,receipt.membershipId);if(!target)throw new Error('MEMBERSHIP_NOT_FOUND');
+      const positionsBefore=await ledger.receiptPositions(ctx.tenantId,groupId),position=positionsBefore.find(x=>x.id===receipt.id);if(!position||position.netAmount<=0)throw new Error('CONTRIBUTION_ALREADY_REVERSED');
+      const beforeSituation=positionsBefore.filter(x=>x.membershipId===receipt.membershipId).reduce((n,x)=>n+x.netAmount,0),oldAmount=position.netAmount;
+      const selfBenefit=target.userId===ctx.actorId,correctionId='financial_correction_'+makeId('corr');
+      const stamp=new Date().toISOString(),record:WorkspaceRecord={id:correctionId,tenantId:ctx.tenantId,groupId,moduleId:'FINANCE.CORRECTION',title:'Correction financière',summary:reason,status:'ACTIVE',tags:['financial-correction',selfBenefit?'self-benefit':'manager-correction'],data:{receiptId:receipt.id,membershipId:receipt.membershipId,rubricId:receipt.rubricId??null,meetingId:receipt.meetingId??null,oldAmount,newAmount,beforeSituation,authorId:ctx.actorId,selfBenefit,requiresIndependentReview:selfBenefit},createdBy:ctx.actorId,createdAt:stamp,updatedAt:stamp};
+      await repo.saveWorkspaceRecord(record);
+      try{
+        const reversal=await ledger.reverseEntry({tenantId:ctx.tenantId,groupId,entryId:receipt.ledgerEntryId,reason});
+        let replacementReceipt:import('../../../packages/contracts/src/index.js').ContributionReceipt|undefined,replacementEntry:import('../../../packages/contracts/src/index.js').LedgerEntry|undefined;
+        if(newAmount>0){
+          replacementReceipt=await ledger.recordCashContribution({tenantId:ctx.tenantId,groupId,membershipId:receipt.membershipId,amount:newAmount,currency:receipt.amount.currency,meetingId:receipt.meetingId,rubricId:receipt.rubricId,idempotencyKey:'correction:'+correctionId});
+          replacementEntry=await repo.getLedgerEntry(ctx.tenantId,groupId,replacementReceipt.ledgerEntryId);
+        }
+        const positionsAfter=await ledger.receiptPositions(ctx.tenantId,groupId),afterSituation=positionsAfter.filter(x=>x.membershipId===receipt.membershipId).reduce((n,x)=>n+x.netAmount,0),noticeEntry=replacementEntry??reversal;
+        const notice=await memberControl.create({groupId,membershipId:receipt.membershipId,entry:noticeEntry,operationType:'CASH_CONTRIBUTION_CORRECTED',amount:newAmount,currency:receipt.amount.currency,rubricId:receipt.rubricId,meetingId:receipt.meetingId,previousSituation:beforeSituation,newSituation:afterSituation,previousAmount:oldAmount,newAmount,correctionReason:reason,selfBenefit,requiresIndependentReview:selfBenefit});
+        await repo.saveWorkspaceRecord({...record,status:'DONE',tags:[...record.tags,'completed'],data:{...record.data,reversalEntryId:reversal.id,replacementReceiptId:replacementReceipt?.id??null,replacementEntryId:replacementEntry?.id??null,afterSituation,noticeId:notice.id},updatedAt:new Date().toISOString()});
+        try{await publishLive(groupId,'FINANCIAL_NOTICE','correction-notice:'+noticeEntry.id,{noticeId:notice.id,ledgerEntryId:notice.ledgerEntryId,operationType:notice.operationType,amount:notice.amount,currency:notice.currency,previousSituation:notice.previousSituation??0,newSituation:notice.newSituation??0,selfBenefit},notice.userId);}catch{}
+        return json({correctionId,receiptId:receipt.id,oldAmount,newAmount,beforeSituation,afterSituation,selfBenefit,requiresIndependentReview:selfBenefit,reversalEntryId:reversal.id,replacementReceiptId:replacementReceipt?.id??null,notice},200,cors);
+      }catch(error){
+        await repo.saveWorkspaceRecord({...record,status:'FAILED',tags:[...record.tags,'failed'],data:{...record.data,error:(error instanceof Error?error.message:String(error)).slice(0,300)},updatedAt:new Date().toISOString()});
+        throw error;
+      }
+    }
+
     const contributionRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/contributions\/cash$/);
     if(contributionRoute&&request.method==='POST'){
       const body=await readJson<Record<string,unknown>>(request);
