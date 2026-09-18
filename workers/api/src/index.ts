@@ -37,7 +37,7 @@ import { HistoricalImportService, RepositoryArtifactStore, type ArtifactStoreLik
 import { GovernanceVoteService } from '../../../packages/governance-vote/src/index.js';
 import { NotificationService } from '../../../packages/notifications/src/index.js';
 import { OperationalCockpitService } from '../../../packages/operational-cockpit/src/index.js';
-import { simulatePeriodicLoan } from '../../../packages/loan-simulator/src/index.js';
+import { simulatePeriodicLoan, summarizePeriodicLoan } from '../../../packages/loan-simulator/src/index.js';
 import { authenticatedApi } from './authenticated.js';
 export { GroupLiveHub } from './group-live-hub.js';
 
@@ -1431,7 +1431,9 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
     if(loanSimulationRoute&&request.method==='POST'){
       await requireGroup(loanSimulationRoute[1]!);
       const body=await readJson<any>(request);
-      return json({rows:simulatePeriodicLoan({principal:Number(body.principal),periods:Number(body.periods),ratePercentPerPeriod:Number(body.ratePercentPerPeriod),priority:String(body.priority??'CAPITAL_FIRST') as any,interestBasis:String(body.interestBasis??'OUTSTANDING') as any,payments:Array.isArray(body.payments)?body.payments.map(Number):[]}),simulationOnly:true,noInterestOnInterest:true},200,cors);
+      const input={principal:Number(body.principal),periods:Number(body.periods),ratePercentPerPeriod:Number(body.ratePercentPerPeriod),priority:String(body.priority??'CAPITAL_FIRST') as any,interestBasis:String(body.interestBasis??'OUTSTANDING') as any,payments:Array.isArray(body.payments)?body.payments.map(Number):[]};
+      const rows=simulatePeriodicLoan(input);
+      return json({rows,summary:summarizePeriodicLoan(input,rows),simulationOnly:true,noInterestOnInterest:true,interestBasis:'OUTSTANDING_PRINCIPAL'},200,cors);
     }
 
     const notebookRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/members\/([^/]+)\/notebook$/);
