@@ -233,3 +233,23 @@ test('targeted tranche 6 keeps Tontines Members Back-office and loan editing coh
   assert.match(gov,/data-loan-edit-capital/);assert.match(gov,/data-loan-payment-index/);assert.doesNotMatch(gov,/JSON\.stringify\(x,null,2\)/);
   assert.match(misc,/name:'Timbre de prêt'/);assert.doesNotMatch(misc,/name:'Timbre',/);
 });
+
+
+test('manager correcting own 2,000 XAF contribution to 5,000 keeps the full trace and requires independent review',async()=>{
+  const {repo,handler}=await seed();
+  let r=await handler(new Request('http://local/api/v1/groups/group_t3/contributions/cash',{method:'POST',headers:founder,body:JSON.stringify({membershipId:'mm_t3',amount:2000,currency:'XAF',meetingId:'meeting_t3',rubricId:'rubric_fine',idempotencyKey:'own-corr-original'})}));
+  assert.equal(r.status,201);const original=await r.json();
+  const membership=await repo.getMembership('tenant_t3','group_t3','mm_t3');await repo.saveMembership({...membership,roles:['member','manager']});
+  const selfManager={'content-type':'application/json','x-tenant-id':'tenant_t3','x-actor-id':'member_t3','x-group-roles':'member,manager'};
+  r=await handler(new Request('http://local/api/v1/groups/group_t3/contributions/'+encodeURIComponent(original.id)+'/correct',{method:'POST',headers:selfManager,body:JSON.stringify({newAmount:5000,reason:'Montant réellement versé = 5 000'})}));
+  assert.equal(r.status,200);const correction=await r.json();
+  assert.equal(correction.oldAmount,2000);assert.equal(correction.newAmount,5000);assert.equal(correction.beforeSituation,2000);assert.equal(correction.afterSituation,5000);
+  assert.equal(correction.selfBenefit,true);assert.equal(correction.requiresIndependentReview,true);
+  const positions=await (await handler(new Request('http://local/api/v1/groups/group_t3/ledger',{headers:selfManager}))).json();
+  const old=positions.receipts.find(x=>x.id===original.id),replacement=positions.receipts.find(x=>x.id===correction.replacementReceiptId);
+  assert.equal(old.netAmount,0);assert.equal(replacement.netAmount,5000);
+  const notices=await (await handler(new Request('http://local/api/v1/groups/group_t3/members/mm_t3/financial-notices',{headers:selfManager}))).json();
+  const n=notices.find(x=>x.operationType==='CASH_CONTRIBUTION_CORRECTED');
+  assert.equal(n.previousAmount,2000);assert.equal(n.newAmount,5000);assert.equal(n.previousSituation,2000);assert.equal(n.newSituation,5000);assert.equal(n.disputeState,'UNDER_REVIEW');assert.equal(n.selfBenefit,true);
+  const traces=await repo.listWorkspaceRecords('tenant_t3','FINANCE.CORRECTION','group_t3');assert.equal(traces.length,1);assert.equal(traces[0].status,'DONE');assert.equal(traces[0].data.oldAmount,2000);assert.equal(traces[0].data.newAmount,5000);
+});
