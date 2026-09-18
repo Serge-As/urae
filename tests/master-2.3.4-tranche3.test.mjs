@@ -217,3 +217,19 @@ test('group policy may block a new loan until both prior principal and interest 
   const r=await handler(new Request('http://local/api/v1/groups/group_t3/completion',{method:'POST',headers:founder,body:JSON.stringify({kind:'LOAN',title:'Nouveau prêt',data:{principal:10000,currency:'XAF',borrowerMembershipId:'mm_t3',rubricId:'rubric_loan_policy',outstandingPrincipal:0}})}));
   assert.equal(r.status,400);const body=await r.json();assert.equal(body.error,'PREVIOUS_LOAN_DEBT_NOT_SETTLED');
 });
+
+
+test('targeted tranche 6 keeps Tontines Members Back-office and loan editing coherent',()=>{
+  const html=fs.readFileSync('apps/web/index.html','utf8');
+  const tontine=fs.readFileSync('apps/web/src/tontine-manager-ui.js','utf8');
+  const completion=fs.readFileSync('apps/web/src/completion-ui.js','utf8');
+  const dossier=fs.readFileSync('apps/web/src/member-dossier-ui.ts','utf8');
+  const gov=fs.readFileSync('apps/web/src/master-governance-ui.ts','utf8');
+  const misc=fs.readFileSync('packages/misc-rubrics/src/index.ts','utf8');
+  assert.match(html,/data-view="members"/);assert.match(html,/data-view="backoffice"/);assert.match(html,/id="memberDossierHost"/);
+  assert.match(tontine,/status!=='ARCHIVED'/);assert.match(tontine,/nominal\*parts\/pots/);assert.match(tontine,/tontineRubricCreateForm/);assert.match(tontine,/tontineRankingList/);
+  assert.match(completion,/if\(!byId\('tontineCompletionPanel'\)\)return/);
+  assert.match(dossier,/memberDossierHost/);assert.doesNotMatch(dossier,/q\('detailBody'\)/);
+  assert.match(gov,/data-loan-edit-capital/);assert.match(gov,/data-loan-payment-index/);assert.doesNotMatch(gov,/JSON\.stringify\(x,null,2\)/);
+  assert.match(misc,/name:'Timbre de prêt'/);assert.doesNotMatch(misc,/name:'Timbre',/);
+});
