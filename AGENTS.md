@@ -1,12 +1,15 @@
-# AGENTS.md — Eco-System 1.3.3 Production / Fairness / AdOps / Guided Launch
+# AGENTS.md — Eco-System 1.4.0 Production / Master 2.3.4 Closure / Two-Sheet Finance
 
 ## Mission
 Continuer Eco-System sans recommencer, simplifier ou remplacer silencieusement les acquis.
 
 ### Vérité courante
-- production publique qualifiée : `1.3.3-fairness-adops-doctor-launch` ;
-- développement courant : `next/1.3.3-interest-lab-adops-ui-20260916` ;
-- Premium Live : actif en production 1.3.3 ;
+- production publique qualifiée : `1.4.0-master-2.3.4-closure` ;
+- développement courant : `next/1.4.0-master-2.3.4-closure-20260917` ;
+- source déployée : `e869918002a6a649751b68088de39510dad3b29a` ;
+- Worker Version ID : `182e7992-1bf9-479f-914b-c0f04ab1b85c` ;
+- qualification + déploiement + smoke + BIR+ : run `35314965700` SUCCESS ;
+- Premium Live : actif en production 1.4.0 ;
 - argent réel : `realMoneyEnabled=false`.
 
 ## MEMORY BEFORE CODE
@@ -77,6 +80,14 @@ Interdiction de ciblage publicitaire individuel par :
 Un OFF explicite de consentement/préférence l'emporte toujours sur BETA_OPEN.
 
 ## Finance
+- les seules surfaces normales de saisie financière membre sont **Votre feuille de séance** et **Vos fiches individuelles** ;
+- toute rubrique créée et non archivée doit apparaître sur les deux feuilles ; le nombre de rubriques appartient au groupe (1, 20, 40 sont des scénarios valides ; plafond technique actuel du validateur de lancement : 100) ;
+- les rubriques Prêt / Remboursement / Remboursement intérêts utilisent le moteur canonique du prêt depuis ces feuilles ;
+- le capital restant dû génère l'intérêt de chaque nouvelle période tant qu'il est > 0 ;
+- un remboursement partiel réduit l'assiette du mois suivant ;
+- les intérêts impayés restent séparés et ne produisent jamais d'intérêt sur intérêt ;
+- le groupe choisit **CAPITAL_FIRST** ou **INTEREST_FIRST** ;
+- si la politique l'exige, aucun nouveau prêt tant que capital + intérêts du précédent ne sont pas apurés ;
 - pas d'intérêt sur intérêt dans le modèle courant ;
 - une part Tontine SERVED exige une preuve Ledger ;
 - distribution d'intérêts Épargne calculée dépôt par dépôt ;
