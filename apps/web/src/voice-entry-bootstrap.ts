@@ -19,7 +19,7 @@ style.textContent=`
 .sheet-controls{display:flex;align-items:end;gap:12px;justify-content:space-between;flex-wrap:wrap;margin:0 0 12px}.sheet-controls label{display:grid;gap:6px}
 .canonical-two-sheet td,.canonical-two-sheet th{vertical-align:top;min-width:150px}.canonical-two-sheet th:first-child{position:sticky;left:0;z-index:3;background:#fff;min-width:170px}
 .sheet-cell-value{display:grid;gap:3px;margin-bottom:7px}.sheet-cell-value small{font-size:11px;color:var(--muted);white-space:normal}
-.sheet-cell-editor{display:grid;grid-template-columns:48px minmax(78px,1fr) 44px;gap:5px;align-items:center}.sheet-cell-editor select,.sheet-cell-editor input,.sheet-cell-editor button{min-width:0;min-height:39px;padding:6px}
+.sheet-cell-editor{display:grid;grid-template-columns:72px minmax(82px,1fr) 44px;gap:5px;align-items:center}.sheet-cell-editor select,.sheet-cell-editor input,.sheet-cell-editor button{min-width:0;min-height:39px;padding:6px}.sheet-cell-editor .sheet-loan-select{grid-column:1/-1;width:100%}
 .focused-field-dictation{position:fixed;right:18px;bottom:82px;z-index:80;width:54px;height:54px;border-radius:50%;padding:0;box-shadow:0 8px 25px #10271c33;background:var(--brand);color:white;font-size:22px;border:0}.focused-field-dictation[hidden]{display:none!important}
 #backOfficeExpensePanel .form-grid{align-items:end}.member-dossier{border-color:#cadbd2}.member-dossier .identity-proof-box{padding:12px;border:1px dashed var(--line);border-radius:12px}.member-dossier textarea{width:100%}
 #view-documents input[type=file]{min-height:58px;border-style:dashed;background:#fff}.member-dossier .full,#view-documents .full{grid-column:1/-1}
