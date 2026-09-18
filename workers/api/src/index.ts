@@ -1190,6 +1190,19 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
       const groupId=operationalReport[1]!,group=await requireGroup(groupId,true);const [members,meetingRows,rubricRows,obligationRows,ledgerSummary,entries]=await Promise.all([repo.listMemberships(ctx.tenantId,groupId),repo.listMeetings(ctx.tenantId,groupId),repo.listRubricDefinitions(ctx.tenantId,groupId),repo.listObligations(ctx.tenantId),ledger.summary(ctx.tenantId,groupId),repo.listLedgerEntries(ctx.tenantId,groupId)]);const groupObligations=obligationRows.filter(x=>x.groupId===groupId);return json({group:{id:group.id,name:group.name,kind:group.kind,status:group.status},generatedAt:new Date().toISOString(),summary:{members:members.length,activeMembers:members.filter(x=>x.status==='active').length,meetings:meetingRows.length,openMeetings:meetingRows.filter(x=>x.status==='open').length,rubrics:rubricRows.length,openObligations:groupObligations.filter(x=>x.status==='open'||x.status==='overdue').length,cashBalance:ledgerSummary.cashBalance,ledgerEntries:entries.length},members,meetings:meetingRows,rubrics:rubricRows,obligations:groupObligations,ledger:{summary:ledgerSummary,entries}},200,cors);
     }
 
+    const loanHistory=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/loans\/([^/]+)\/history$/);
+    if(loanHistory&&request.method==='GET'){
+      const groupId=loanHistory[1]!,loanId=loanHistory[2]!,loan=(await completion.list(groupId,'LOAN')).find(x=>x.id===loanId);
+      if(!loan)throw new Error('LOAN_NOT_FOUND');
+      const events=(await repo.listWorkspaceRecords(ctx.tenantId,'FINANCE.SHEET_EVENT',groupId))
+        .filter(x=>String(x.data.loanId??'')===loanId)
+        .sort((a,b)=>a.createdAt.localeCompare(b.createdAt))
+        .map(x=>({id:x.id,title:x.title,meetingId:x.data.meetingId?String(x.data.meetingId):undefined,rubricId:x.data.rubricId?String(x.data.rubricId):undefined,
+          amount:Number(x.data.amount??0),direction:String(x.data.direction??''),principalPaid:Number(x.data.principalPaid??0),interestPaid:Number(x.data.interestPaid??0),
+          ledgerEntryId:x.data.ledgerEntryId?String(x.data.ledgerEntryId):undefined,createdAt:x.createdAt}));
+      return json({loanId,borrowerMembershipId:String(loan.data.borrowerMembershipId??''),events},200,cors);
+    }
+
     const loanQuote=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/loans\/quote$/);
     if(loanQuote&&request.method==='POST'){
       await requireGroup(loanQuote[1]!,true);
