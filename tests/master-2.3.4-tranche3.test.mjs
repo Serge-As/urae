@@ -132,11 +132,12 @@ test('partial principal then interest repayment in one meeting accrues interest 
   const events=(await repo.listWorkspaceRecords('tenant_t3','FINANCE.SHEET_EVENT','group_t3'));assert.equal(events.length,2);
 });
 
-test('loan simulator returns at least six explicit evolution lines without interest on interest',async()=>{
+test('loan simulator supports a flexible 9-period circuit matrix without interest on interest',async()=>{
   const {handler}=await seed();
-  const r=await handler(new Request('http://local/api/v1/groups/group_t3/loans/simulate',{method:'POST',headers:member,body:JSON.stringify({principal:50000,periods:6,ratePercentPerPeriod:5,priority:'CAPITAL_FIRST',payments:[0,30000,20000,0,0,0]})}));
-  assert.equal(r.status,200);const body=await r.json();assert.equal(body.rows.length,6);assert.equal(body.noInterestOnInterest,true);
-  assert.deepEqual(Object.keys(body.rows[0]).sort(),['interestAfter','interestNew','interestOpening','interestPaid','nextTaxablePrincipal','payment','period','principalAfter','principalBefore','principalPaid','totalDebtAfter','unappliedPayment'].sort());
+  const r=await handler(new Request('http://local/api/v1/groups/group_t3/loans/simulate',{method:'POST',headers:member,body:JSON.stringify({principal:50000,periods:9,ratePercentPerPeriod:5,priority:'CAPITAL_FIRST',payments:[0,30000,20000,0,0,0,0,0,0]})}));
+  assert.equal(r.status,200);const body=await r.json();assert.equal(body.rows.length,9);assert.equal(body.noInterestOnInterest,true);
+  assert.deepEqual(Object.keys(body.rows[0]).sort(),['interestAfter','interestNew','interestOpening','interestPaid','nextInterestProjected','nextTaxablePrincipal','nextTotalDueProjected','payment','period','principalAfter','principalBefore','principalPaid','totalDebtAfter','unappliedPayment'].sort());
+  assert.equal(body.summary.originalPrincipal,50000);assert.equal(body.summary.periodsSimulated,9);
 });
 
 
@@ -161,6 +162,37 @@ test('web shell locks the two-sheet UX contract and does not auto-inject the thr
   assert.match(voice,/postLoanFromSheet/);assert.match(voice,/x\.status!=='ARCHIVED'/);assert.match(voice,/FINANCE\.SHEET_EVENT/);
   assert.doesNotMatch(misc,/await app\.ensureMiscRubricStarters\(\)/);
   assert.match(html,/Votre feuille de séance/);assert.match(html,/Vos fiches individuelles/);assert.match(html,/Utilisez les deux feuilles/);
-  assert.match(gov,/id="mgLoanPeriods" type="number" min="6" value="6"/);
-  assert.match(gov,/Capital remboursé/);assert.match(gov,/Intérêt remboursé/);assert.match(gov,/Base taxable suivante/);
+  assert.match(gov,/id="mgLoanPeriods" type="number" min="1" max="120" value="9"/);
+  assert.match(gov,/Capital remboursé/);assert.match(gov,/Intérêt payé/);assert.match(gov,/Intérêt restant dû/);assert.match(gov,/Total mensuel restant dû pour séance suivante/);assert.match(gov,/Comparer les 2 systèmes/);
+});
+
+
+test('founder exact 50,000 XAF example differentiates capital-first and interest-first through month four',async()=>{
+  const {handler}=await seed();
+  let r=await handler(new Request('http://local/api/v1/groups/group_t3/loans/simulate',{method:'POST',headers:member,body:JSON.stringify({principal:50000,periods:4,ratePercentPerPeriod:5,priority:'CAPITAL_FIRST',payments:[0,30000,20000,6000]})}));
+  assert.equal(r.status,200);let x=await r.json();
+  assert.equal(x.rows[0].interestNew,2500);assert.equal(x.rows[0].totalDebtAfter,52500);
+  assert.equal(x.rows[1].principalPaid,30000);assert.equal(x.rows[1].principalAfter,20000);assert.equal(x.rows[1].interestAfter,5000);assert.equal(x.rows[1].totalDebtAfter,25000);
+  assert.equal(x.rows[2].interestNew,1000);assert.equal(x.rows[2].principalPaid,20000);assert.equal(x.rows[2].principalAfter,0);assert.equal(x.rows[2].interestAfter,6000);assert.equal(x.rows[2].nextInterestProjected,0);assert.equal(x.rows[2].nextTotalDueProjected,6000);
+  assert.equal(x.rows[3].principalAfter,0);assert.equal(x.rows[3].interestAfter,0);assert.equal(x.rows[3].totalDebtAfter,0);
+
+  r=await handler(new Request('http://local/api/v1/groups/group_t3/loans/simulate',{method:'POST',headers:member,body:JSON.stringify({principal:50000,periods:4,ratePercentPerPeriod:5,priority:'INTEREST_FIRST',payments:[0,30000,20000,6563]})}));
+  assert.equal(r.status,200);x=await r.json();
+  assert.equal(x.rows[1].interestPaid,5000);assert.equal(x.rows[1].principalPaid,25000);assert.equal(x.rows[1].principalAfter,25000);assert.equal(x.rows[1].interestAfter,0);
+  assert.equal(x.rows[2].interestNew,1250);assert.equal(x.rows[2].interestPaid,1250);assert.equal(x.rows[2].principalPaid,18750);assert.equal(x.rows[2].principalAfter,6250);assert.equal(x.rows[2].interestAfter,0);
+  assert.equal(x.rows[2].nextInterestProjected,313);assert.equal(x.rows[2].nextTotalDueProjected,6563);
+  assert.equal(x.rows[3].interestNew,313);assert.equal(x.rows[3].interestPaid,313);assert.equal(x.rows[3].principalPaid,6250);assert.equal(x.rows[3].principalAfter,0);assert.equal(x.rows[3].interestAfter,0);assert.equal(x.rows[3].totalDebtAfter,0);
+});
+
+test('rubric count is group-defined: one rubric and forty rubrics both convert without a twenty-rubric rule',async()=>{
+  for(const count of [1,40]){
+    const repo=new InMemoryPlatformRepository(),founderId='founder_count_'+count,tenant='tenant_count_'+count;
+    await repo.saveUser({id:founderId,displayName:'Responsable '+count,locale:'fr',createdAt:'2026-01-01T00:00:00Z'});
+    const handler=createApiHandler(repo),h={'content-type':'application/json','x-tenant-id':tenant,'x-actor-id':founderId,'x-group-roles':'founder,manager'};
+    const rubrics=Array.from({length:count},(_,i)=>({key:'rubric_'+(i+1),name:'Rubrique '+(i+1),kind:'CONTRIBUTION',nominalAmount:{currency:'XAF',amount:1000},amountBasis:'PER_MEMBER',participationMode:'OPTIONAL',contributionMode:'MONEY',memberCount:5,sessions:12,duration:{value:12,unit:'MONTHS'},managementFeePerPayment:0,estimatedExternalCostRate:0,fixedCostPerSession:0}));
+    let r=await handler(new Request('http://local/api/v1/group-projects',{method:'POST',headers:h,body:JSON.stringify({name:'Groupe '+count+' rubriques',kind:'association',governanceModel:'community',rubrics,launchProfile:{origin:{mode:'NEW'}}})}));
+    assert.equal(r.status,201);const project=await r.json();
+    r=await handler(new Request('http://local/api/v1/group-projects/'+project.id+'/convert',{method:'POST',headers:h,body:'{}'}));assert.equal(r.status,201);const group=await r.json();
+    const defs=await repo.listRubricDefinitions(tenant,group.id);assert.equal(defs.length,count);assert.ok(defs.every(x=>x.status==='ACTIVE'));
+  }
 });
