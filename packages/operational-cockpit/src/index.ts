@@ -48,6 +48,11 @@ export class OperationalCockpitService{
       id:x.id,meetingId:x.data.meetingId?String(x.data.meetingId):undefined,rubricId:x.data.rubricId?String(x.data.rubricId):undefined,
       amount:Number(x.data.amount??0),label:x.title,scope:String(x.data.scope??'BACKOFFICE'),createdAt:x.createdAt
     }));
+    const sheetEvents=workspaces.filter(x=>x.moduleId==='FINANCE.SHEET_EVENT'&&String(x.data.membershipId??'')===membershipId).map(x=>({
+      id:x.id,meetingId:x.data.meetingId?String(x.data.meetingId):undefined,rubricId:x.data.rubricId?String(x.data.rubricId):undefined,
+      amount:Number(x.data.amount??0),direction:String(x.data.direction??'IN'),loanId:x.data.loanId?String(x.data.loanId):undefined,
+      principalPaid:Number(x.data.principalPaid??0),interestPaid:Number(x.data.interestPaid??0),createdAt:x.createdAt
+    }));
     const loans=workspaces.filter(x=>x.tags.includes('completion')&&x.data.completionKind==='LOAN'&&String(x.data.borrowerMembershipId??'')===membershipId);
     const tontines=workspaces.filter(x=>x.tags.includes('completion')&&x.data.completionKind==='TONTINE_SHARE'&&String(x.data.membershipId??'')===membershipId);
     const notices=workspaces.filter(x=>x.moduleId==='FINANCE.MEMBER_CONTROL'&&String(x.data.membershipId??'')===membershipId).map(x=>({
@@ -62,8 +67,11 @@ export class OperationalCockpitService{
     const rows:MemberExerciseRow[]=meetings.slice().sort((a,b)=>(a.scheduledAt??a.openedAt).localeCompare(b.scheduledAt??b.openedAt)).map(meeting=>{
       const cells:Record<string,MemberExerciseCell>={};let total=0;
       for(const rubric of rubrics){
-        const inflow=receipts.filter(x=>x.meetingId===meeting.id&&x.rubricId===rubric.id).reduce((n,x)=>n+Number(x.netAmount??0),0);
-        const outflow=expenses.filter(x=>x.meetingId===meeting.id&&x.rubricId===rubric.id).reduce((n,x)=>n+x.amount,0);
+        const receiptInflow=receipts.filter(x=>x.meetingId===meeting.id&&x.rubricId===rubric.id).reduce((n,x)=>n+Number(x.netAmount??0),0);
+        const loanInflow=sheetEvents.filter(x=>x.meetingId===meeting.id&&x.rubricId===rubric.id&&x.direction==='IN').reduce((n,x)=>n+x.amount,0);
+        const expenseOutflow=expenses.filter(x=>x.scope==='SHEET'&&x.meetingId===meeting.id&&x.rubricId===rubric.id).reduce((n,x)=>n+x.amount,0);
+        const loanOutflow=sheetEvents.filter(x=>x.meetingId===meeting.id&&x.rubricId===rubric.id&&x.direction==='OUT').reduce((n,x)=>n+x.amount,0);
+        const inflow=receiptInflow+loanInflow,outflow=expenseOutflow+loanOutflow;
         cells[rubric.id]={rubricId:rubric.id,inflow,outflow,net:inflow-outflow};total+=inflow-outflow;
       }
       return{meetingId:meeting.id,title:meeting.title,scheduledAt:meeting.scheduledAt,status:meeting.status,cells,total};
@@ -73,7 +81,7 @@ export class OperationalCockpitService{
       membership:{...target,displayName:user?.displayName??target.userId},profile:profile?{title:profile.title,summary:profile.summary,data:profile.data,updatedAt:profile.updatedAt}:null,
       rubrics:rubrics.filter(r=>r.status!=='ARCHIVED').map(r=>({id:r.id,name:r.name,kind:r.activityPlan?.kind,status:r.status,policies:r.policies})),
       exerciseMatrix:rows,statement,loans,tontines,obligations:obligations.filter(x=>x.groupId===groupId),
-      notices,generatedAt:now()
+      notices,sheetEvents,generatedAt:now()
     };
   }
 
@@ -82,8 +90,8 @@ export class OperationalCockpitService{
     if(record){
       const columns=parseJson<RecapColumnConfig[]>(record.data.columnsJson,[]);return{columns,version:Number(record.data.version??1),updatedAt:record.updatedAt,updatedBy:String(record.data.updatedBy??record.createdBy)};
     }
-    const rubrics=(await this.repo.listRubricDefinitions(ctx.tenantId,groupId)).filter(r=>r.status==='ACTIVE');
-    const columns:RecapColumnConfig[]=rubrics.slice(0,12).map(r=>({id:'rubric:'+r.id,label:r.name,polarity:'POSITIVE',sourceRubricId:r.id}));
+    const rubrics=(await this.repo.listRubricDefinitions(ctx.tenantId,groupId)).filter(r=>r.status!=='ARCHIVED');
+    const columns:RecapColumnConfig[]=rubrics.slice(0,80).map(r=>({id:'rubric:'+r.id,label:r.name,polarity:r.facets.direction==='OUTFLOW'?'NEGATIVE':'POSITIVE',sourceRubricId:r.id}));
     return{columns,version:0,updatedAt:now(),updatedBy:ctx.actorId};
   }
 
