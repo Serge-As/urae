@@ -217,10 +217,35 @@ async function renderCanonicalMeetingMatrix(root:HTMLElement,meetingId?:string){
 function hardenLegacyMatrix(){const root=byId('meetingMatrix');if(!root)return;const observer=new MutationObserver(()=>{if(root.childElementCount&&!root.querySelector('.canonical-two-sheet')){delete root.dataset.canonical;void renderCanonicalMeetingMatrix(root).catch(()=>{});}});observer.observe(root,{childList:true,subtree:false});document.addEventListener('click',event=>{const target=event.target instanceof Element?event.target.closest('#meetingMatrix .matrix-cell'):null;if(target){event.preventDefault();event.stopImmediatePropagation();void renderCanonicalMeetingMatrix(root);}},true);}
 
 async function enhanceDetailSheets(){
-  const body=byId('detailBody');if(!body)return;const group=activeGroup();if(!group)return;await loadContext();const expenses=await api<any[]>(`/api/v1/groups/${encodeURIComponent(group)}/expenses`).catch(()=>[]);const ledger=await api<AnyRecord>(`/api/v1/groups/${encodeURIComponent(group)}/ledger`).catch(()=>({receipts:[]}));
+  const body=byId('detailBody');if(!body)return;const group=activeGroup();if(!group)return;await loadContext();
+  const me=await api<any>(`/api/v1/groups/${encodeURIComponent(group)}/me`).catch(()=>({isManager:false}));
+  // A simple member's individual sheet is already built from the privacy-safe operational projection.
+  // Never replace it with group-wide ledger reads that the member is not allowed to perform.
+  if(!me.isManager)return;
+  const [expenses,ledger,sheetEvents]=await Promise.all([
+    api<any[]>(`/api/v1/groups/${encodeURIComponent(group)}/expenses`).catch(()=>[]),
+    api<AnyRecord>(`/api/v1/groups/${encodeURIComponent(group)}/ledger`).catch(()=>({receipts:[]})),
+    api<any[]>(`/api/v1/workspaces?moduleId=FINANCE.SHEET_EVENT&groupId=${encodeURIComponent(group)}`).catch(()=>[])
+  ]);
   for(const table of body.querySelectorAll<HTMLTableElement>('.member-exercise-matrix table,.meeting-entry-matrix table')){
-    if(table.dataset.twoSheetEnhanced==='1')continue;table.dataset.twoSheetEnhanced='1';const rubricIds=[...table.querySelectorAll<HTMLAnchorElement>('thead th a[data-detail-type="rubric"]')].map(a=>a.dataset.detailId??'');const isMember=Boolean(table.closest('.member-exercise-matrix'));const hash=location.hash.match(/^#detail=(member|meeting):(.+)$/);if(!hash)continue;const currentId=decodeURIComponent(hash[2]);
-    const rows=[...table.querySelectorAll<HTMLTableRowElement>('tbody tr')];for(const tr of rows){const rowLink=tr.querySelector<HTMLAnchorElement>('th a[data-detail-id]');const rowId=rowLink?.dataset.detailId??'';const membershipId=isMember?currentId:rowId,meetingId=isMember?rowId:currentId;if(!membershipId||!meetingId)continue;const cells=[...tr.querySelectorAll<HTMLTableCellElement>('td')];cells.forEach((td,i)=>{const rubricId=rubricIds[i];if(!rubricId)return;const inflow=(ledger.receipts??[]).filter((x:any)=>x.membershipId===membershipId&&x.meetingId===meetingId&&x.rubricId===rubricId).reduce((n:number,x:any)=>n+Number(x.netAmount??x.amount?.amount??0),0),outflow=expenses.filter(x=>x.scope==='SHEET'&&x.membershipId===membershipId&&x.meetingId===meetingId&&x.rubricId===rubricId).reduce((n,x)=>n+Number(x.amount??0),0);const shown=td.querySelector<HTMLElement>('.matrix-confirmed');if(shown){shown.textContent=fmt(inflow-outflow);shown.title=t(`Net : +${fmt(inflow)} − ${fmt(outflow)}`,`Net: +${fmt(inflow)} − ${fmt(outflow)}`);}const old=td.querySelector('.matrix-entry');if(old){const editor=document.createElement('div');editor.className='sheet-cell-editor';const dir=document.createElement('select');dir.append(makeOption('IN','+'),makeOption('OUT','−'));const input=document.createElement('input');input.type='number';input.min='1';input.step='1';input.inputMode='numeric';input.placeholder='0';const save=document.createElement('button');save.type='button';save.textContent='✓';save.onclick=()=>void(async()=>{try{save.disabled=true;await recordSheetCell(membershipId,rubricId,meetingId,dir.value as 'IN'|'OUT',Number(input.value));}catch(e){const box=byId('errorBox');if(box){box.textContent=friendly(e instanceof Error?e.message:String(e));box.hidden=false;}}finally{save.disabled=false;}})();editor.append(dir,input,save);old.replaceWith(editor);}});}
+    if(table.dataset.twoSheetEnhanced==='1')continue;table.dataset.twoSheetEnhanced='1';
+    const rubricIds=[...table.querySelectorAll<HTMLAnchorElement>('thead th a[data-detail-type="rubric"]')].map(a=>a.dataset.detailId??'');
+    const isMember=Boolean(table.closest('.member-exercise-matrix')),hash=location.hash.match(/^#detail=(member|meeting):(.+)$/);if(!hash)continue;const currentId=decodeURIComponent(hash[2]);
+    const rows=[...table.querySelectorAll<HTMLTableRowElement>('tbody tr')];
+    for(const tr of rows){
+      const rowLink=tr.querySelector<HTMLAnchorElement>('th a[data-detail-id]'),rowId=rowLink?.dataset.detailId??'',membershipId=isMember?currentId:rowId,meetingId=isMember?rowId:currentId;if(!membershipId||!meetingId)continue;
+      const cells=[...tr.querySelectorAll<HTMLTableCellElement>('td')];
+      cells.forEach((td,i)=>{
+        const rubricId=rubricIds[i],rubric=rubricById(rubricId);if(!rubricId||!rubric)return;
+        const receiptIn=(ledger.receipts??[]).filter((x:any)=>x.membershipId===membershipId&&x.meetingId===meetingId&&x.rubricId===rubricId).reduce((n:number,x:any)=>n+Number(x.netAmount??x.amount?.amount??0),0);
+        const eventIn=sheetEvents.filter((x:any)=>String(x.data?.membershipId??'')===membershipId&&x.data?.meetingId===meetingId&&x.data?.rubricId===rubricId&&x.data?.direction==='IN').reduce((n:number,x:any)=>n+Number(x.data?.amount??0),0);
+        const expenseOut=expenses.filter((x:any)=>x.scope==='SHEET'&&x.membershipId===membershipId&&x.meetingId===meetingId&&x.rubricId===rubricId).reduce((n:number,x:any)=>n+Number(x.amount??0),0);
+        const eventOut=sheetEvents.filter((x:any)=>String(x.data?.membershipId??'')===membershipId&&x.data?.meetingId===meetingId&&x.data?.rubricId===rubricId&&x.data?.direction==='OUT').reduce((n:number,x:any)=>n+Number(x.data?.amount??0),0);
+        const inflow=receiptIn+eventIn,outflow=expenseOut+eventOut,shown=td.querySelector<HTMLElement>('.matrix-confirmed');
+        if(shown){shown.textContent=fmt(inflow-outflow);shown.title=t(`Net : +${fmt(inflow)} − ${fmt(outflow)}`,`Net: +${fmt(inflow)} − ${fmt(outflow)}`);}
+        const old=td.querySelector('.matrix-entry');if(old)old.replaceWith(buildSheetCellEditor(membershipId,rubric,meetingId));
+      });
+    }
   }
 }
 
