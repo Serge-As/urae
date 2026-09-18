@@ -62,3 +62,15 @@ Capital 50 000 XAF, taux 5 %, paiements 0 / 30 000 / 20 000 :
 
 ## Prochain jalon
 Recette terrain ciblée de la production 1.4.0 : groupe à nombre variable de rubriques, présence identique dans les deux feuilles, compte simple membre, saisie Prêt/Remboursement/Intérêts depuis les feuilles, comparaison des deux politiques de remboursement et vérification du circuit réel sur plusieurs séances. Toute anomalie reproductible devient un test permanent avant correction.
+
+
+## Correction terrain ciblée 2026-09-18 — candidate de production
+
+- Checkpoint fonctionnel qualifié : `99a7c0c37fd7aa7f69fbce0eeb00342886b2bb2e`.
+- CI de qualification : `35330825785 SUCCESS`.
+- Deux feuilles visibles et éditables par cellule/pop-up compact.
+- « Membres & habilitations » est séparé de Réunion ; Dossier Membre y est déplacé.
+- Menu « Back-office » ajouté.
+- Tontines reliées aux rubriques TONTINE ; calcul du montant total du pot ; listes Cycle/Membre ; classement bénéficiaires.
+- Matrice Prêt modifiable pour la simulation sans altérer les règles financières.
+- La production publique reste au checkpoint 1.4 précédent jusqu'au déploiement ciblé et au smoke final.
