@@ -701,7 +701,7 @@ $('#globalSearch').addEventListener('input', renderGlobalSearch);
 document.addEventListener('click', e => { const t = e.target; if (!t.closest('.top-search'))
     $('#globalSearchResults').replaceChildren(); const open = t.closest('[data-module-open]'); if (open?.dataset.moduleOpen)
     void openModule(open.dataset.moduleOpen); });
-$('#matrixViewBtn').addEventListener('click', () => { $('#meetingMatrixPanel').hidden = false; $('#matrixViewBtn').classList.add('active'); $('#cardViewBtn').classList.remove('active'); renderMeetingMatrix(); });
+$('#matrixViewBtn').addEventListener('click', () => { $('#meetingMatrixPanel').hidden = false; $('#matrixViewBtn').classList.add('active'); $('#cardViewBtn').classList.remove('active'); document.dispatchEvent(new CustomEvent('eco:render-two-sheets')); });
 $('#cardViewBtn').addEventListener('click', () => { $('#meetingMatrixPanel').hidden = true; $('#cardViewBtn').classList.add('active'); $('#matrixViewBtn').classList.remove('active'); });
 const launchError=error=>({
   PROJECT_RUBRICS_REQUIRED:'Ajoutez au moins une rubrique et renseignez ses caractéristiques.',
