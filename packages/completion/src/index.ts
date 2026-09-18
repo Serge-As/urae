@@ -392,6 +392,13 @@ export class CompletionSuiteService {
     const title=requiredText('title',input.title);
     const data:CompletionData={completionKind:kind,completionState:spec.initial,completionVersion:1};
     for(const [key,value] of Object.entries(input.data??{}))data[key]=encodeValue(value);
+    if(kind==='LOAN'&&data.borrowerMembershipId&&data.rubricId){
+      const rubric=await this.repo.getRubricDefinition(ctx.tenantId,groupId,String(data.rubricId)),block=Boolean(rubric?.policies?.loan?.overdue?.blockNewLoanUntilSettled);
+      if(block){
+        const existing=(await this.repo.listWorkspaceRecords(ctx.tenantId,undefined,groupId)).filter(r=>r.tags.includes('completion')&&r.data.completionKind==='LOAN'&&String(r.data.borrowerMembershipId??'')===String(data.borrowerMembershipId)&&['DISBURSED','REPAYING'].includes(String(r.data.completionState))&&(Number(r.data.outstandingPrincipal??0)>0||Number(r.data.unpaidInterest??0)>0));
+        if(existing.length)throw new Error('PREVIOUS_LOAN_DEBT_NOT_SETTLED');
+      }
+    }
     this.validate(kind,spec.initial,data);
     const timestamp=now();
     const record:CompletionRecord={
