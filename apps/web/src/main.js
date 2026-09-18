@@ -58,6 +58,9 @@ const date = (v) => { try {
 catch {
     return v;
 } };
+const dateOnly=(v)=>{try{return new Intl.DateTimeFormat(localeTag(uiLocale),{dateStyle:'long'}).format(new Date(v));}catch{return String(v??'');}};
+const meetingLabel=(m)=>tx('Réunion du ','Meeting on ')+dateOnly(m?.scheduledAt??m?.openedAt??m?.createdAt??'');
+const actorDisplayName=(actorId)=>members.find(m=>m.userId===actorId)?.displayName??actorId;
 const toast = (m) => { const e = $('#toast'); e.textContent = m; e.hidden = false; setTimeout(() => e.hidden = true, 2600); };
 const fail = (e) => {
     const box = $('#errorBox');
@@ -263,8 +266,9 @@ const renderMeetings = async () => {
         const a = document.createElement('article');
         a.className = 'meeting-row';
         const span = document.createElement('span');
-        const meetingLink=document.createElement('button');meetingLink.type='button';meetingLink.className='link-btn';meetingLink.dataset.detailType='meeting';meetingLink.dataset.detailId=m.id;meetingLink.textContent=m.title;
-        span.append(meetingLink,document.createTextNode(` · ${m.status === 'open' ? tx('ouverte','open') : tx('clôturée','closed')} · ${date(m.openedAt)}`));
+        const meetingLink=document.createElement('button');meetingLink.type='button';meetingLink.className='link-btn';meetingLink.dataset.detailType='meeting';meetingLink.dataset.detailId=m.id;meetingLink.textContent=meetingLabel(m);
+        span.append(meetingLink,document.createTextNode(` · ${m.status === 'open' ? tx('ouverte','open') : tx('clôturée','closed')}`));
+        if(m.title&&m.title!==meetingLink.textContent){const stored=document.createElement('small');stored.textContent=' · '+tx('titre interne: ','stored title: ')+m.title;span.append(stored);}
         a.append(span);
         if (m.status === 'open' && isManager()) {
             const b = document.createElement('button');
@@ -283,7 +287,7 @@ const renderMeetings = async () => {
         root.append(a);
         const o = document.createElement('option');
         o.value = m.id;
-        o.textContent = `${m.title} (${m.status})`;
+        o.textContent = `${meetingLabel(m)} · ${m.status}`;
         select.append(o);
     }
 };
@@ -808,7 +812,8 @@ catch (e) {
     fail(e);
 } });
 onSubmit('#meetingForm', async (e) => { e.preventDefault(); try {
-    await app.openMeeting(val('meetingTitle') || 'Séance');
+    const title=val('meetingTitle') || meetingLabel({openedAt:new Date().toISOString()});
+    await app.openMeeting(title);
     document.getElementById('meetingTitle').value = '';
     await renderMeetings();
     toast('Séance ouverte.');
