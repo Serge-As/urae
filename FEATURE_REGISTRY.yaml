@@ -970,6 +970,8 @@ release_capabilities_1_4_0:
   - id: FINANCE.TWO_SHEETS.ALL_RUBRICS
     status: FUNCTIONAL_BETA
     risk_class: financial_critical
+    offline_policy: cached_projection_read_financial_writes_require_server_confirmation
+    audit_event: CANONICAL_FINANCIAL_ENTRY
     authority: canonical_ledger_and_operational_projection
     rule: every_created_non_archived_rubric_appears_in_meeting_and_individual_sheets
     tests: [twenty-rubric-conversion,variable-rubric-count-1-and-40,two-sheet-ux-contract]
@@ -982,6 +984,8 @@ release_capabilities_1_4_0:
   - id: LOAN.MONTHLY.CIRCUIT
     status: FUNCTIONAL_BETA
     risk_class: financial_critical
+    offline_policy: simulation_allowed_real_accrual_server_authoritative
+    audit_event: LOAN_REPAYMENT_POSTED
     authority: canonical_loan_state_plus_finance_loan_period
     rule: remaining_principal_accrues_once_per_monthly_meeting_until_principal_zero
     no_interest_on_interest: true
@@ -989,12 +993,16 @@ release_capabilities_1_4_0:
   - id: LOAN.PAYMENT.PRIORITY
     status: FUNCTIONAL_BETA
     risk_class: financial_critical
+    offline_policy: simulation_allowed_policy_write_server_authoritative
+    audit_event: RUBRIC_POLICIES_UPDATED
     allowed_policies: [CAPITAL_FIRST, INTEREST_FIRST]
     selection: manager_simulates_then_validates_group_policy
     tests: [founder-four-month-examples,loan-allocation-models]
   - id: LOAN.PRIOR_DEBT.ELIGIBILITY
     status: FUNCTIONAL_BETA
     risk_class: financial_critical
+    offline_policy: server_authoritative_fail_closed
+    audit_event: COMPLETION_RECORD_CREATED_OR_REJECTED
     rule: when_group_policy_enabled_new_loan_requires_prior_principal_and_interest_zero
     tests: [prior-debt-eligibility]
 
