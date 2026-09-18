@@ -1,0 +1,232 @@
+name: Eco-System 1.4.0 — Production Deploy
+
+on:
+  workflow_dispatch:
+  push:
+    branches: ['next/1.4.0-master-2.3.4-closure-20260917']
+    paths: ['.github/DEPLOY_ECO_SYSTEM_1_4_0_ONCE']
+
+permissions:
+  contents: read
+
+concurrency:
+  group: eco-system-production-1-4-0
+  cancel-in-progress: false
+
+env:
+  PROD_WORKER: eco-system
+  PROD_DB: eco-system-db
+  PROD_R2: eco-system-backups
+  PROD_ROOT: https://eco-system.sergemimf.workers.dev
+  EXPECTED_VERSION: 1.4.0-master-2.3.4-closure
+
+jobs:
+  qualify-backup-deploy-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 55
+    env:
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      COLLECTIVE_LEARNING_PEPPER: ${{ secrets.COLLECTIVE_LEARNING_PEPPER }}
+      IDENTITY_MATCH_PEPPER: ${{ secrets.IDENTITY_MATCH_PEPPER }}
+      FOUNDER_TEAM_ACTORS: ${{ secrets.FOUNDER_TEAM_ACTORS }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci --ignore-scripts
+
+      - name: Verify production prerequisites before any mutation
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${CLOUDFLARE_ACCOUNT_ID:-}"
+          test -n "${CLOUDFLARE_API_TOKEN:-}"
+          npx --yes wrangler@4 d1 list --json >/tmp/d1-auth.json
+          npx --yes wrangler@4 r2 bucket list >/tmp/r2-auth.txt
+          echo "Cloudflare D1 + R2 authentication PASS"
+
+      - name: Full qualification
+        run: npm run ci
+
+      - name: Build Worker and PWA
+        run: npm run build
+
+      - name: Resolve existing production D1 and private R2
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes wrangler@4 d1 list --json > /tmp/d1-list.json
+          DB_ID="$(node scripts/cloudflare-d1-id.mjs /tmp/d1-list.json "${PROD_DB}" || true)"
+          if [ -z "${DB_ID}" ]; then
+            echo "::error::Existing production DB ${PROD_DB} not found. Refusing to create or replace it."
+            exit 3
+          fi
+          npx --yes wrangler@4 r2 bucket list > /tmp/r2-list.txt
+          if ! grep -Fq "${PROD_R2}" /tmp/r2-list.txt; then
+            echo "::error::Existing production R2 bucket ${PROD_R2} not found. Refusing to create or replace it."
+            exit 4
+          fi
+          echo "Reusing existing private R2 bucket ${PROD_R2}."
+          node scripts/render-wrangler-storage.mjs "${DB_ID}" "${PROD_R2}" workers/api/wrangler.prod140.toml
+          sed -i 's#main = "src/index.ts"#main = "src/production.ts"#' workers/api/wrangler.prod140.toml
+          sed -i 's/PREMIUM_LIVE_LEDGER = "false"/PREMIUM_LIVE_LEDGER = "true"/' workers/api/wrangler.prod140.toml
+          grep -q 'main = "src/production.ts"' workers/api/wrangler.prod140.toml
+          grep -q 'name = "eco-system"' workers/api/wrangler.prod140.toml
+          grep -q 'database_name = "eco-system-db"' workers/api/wrangler.prod140.toml
+          grep -q 'bucket_name = "eco-system-backups"' workers/api/wrangler.prod140.toml
+          grep -q 'PREMIUM_LIVE_LEDGER = "true"' workers/api/wrangler.prod140.toml
+          grep -q 'class_name = "GroupLiveHub"' workers/api/wrangler.prod140.toml
+          grep -q 'storage = "sqlite"' workers/api/wrangler.prod140.toml
+          grep -q 'binding = "AI"' workers/api/wrangler.prod140.toml
+
+      - name: Pre-deploy BIR+ production snapshot
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/predeploy
+          git archive --format=tar HEAD | xz -T0 -9e > /tmp/predeploy/eco-system-1.4.0-source.tar.xz
+          npx --yes wrangler@4 d1 export "${PROD_DB}" --remote --output=/tmp/predeploy/eco-system-production-before-1.4.0.sql
+          sqlite3 /tmp/predeploy/restore-check.sqlite < /tmp/predeploy/eco-system-production-before-1.4.0.sql
+          test "$(sqlite3 /tmp/predeploy/restore-check.sqlite 'PRAGMA integrity_check;')" = "ok"
+          cd /tmp/predeploy
+          sha256sum eco-system-1.4.0-source.tar.xz eco-system-production-before-1.4.0.sql > SHA256SUMS.txt
+          sha256sum --check SHA256SUMS.txt
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: eco-system-1.4.0-predeploy-birplus
+          path: /tmp/predeploy/
+          retention-days: 90
+          if-no-files-found: error
+
+      - name: Mirror pre-deploy BIR+ snapshot to R2
+        shell: bash
+        run: |
+          set -euo pipefail
+          PREFIX="birplus/1.4.0/${GITHUB_SHA}/predeploy"
+          npx --yes wrangler@4 r2 object put "${PROD_R2}/${PREFIX}/eco-system-1.4.0-source.tar.xz" --file /tmp/predeploy/eco-system-1.4.0-source.tar.xz --remote
+          npx --yes wrangler@4 r2 object put "${PROD_R2}/${PREFIX}/eco-system-production-before-1.4.0.sql" --file /tmp/predeploy/eco-system-production-before-1.4.0.sql --remote
+          npx --yes wrangler@4 r2 object put "${PROD_R2}/${PREFIX}/SHA256SUMS.txt" --file /tmp/predeploy/SHA256SUMS.txt --remote
+          npx --yes wrangler@4 r2 object get "${PROD_R2}/${PREFIX}/SHA256SUMS.txt" --file /tmp/r2-pre-SHA256SUMS.txt --remote
+          cmp /tmp/predeploy/SHA256SUMS.txt /tmp/r2-pre-SHA256SUMS.txt
+          echo "Pre-deploy R2 BIR+ mirror PASS"
+
+      - name: Configure or preserve production secrets
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes wrangler@4 secret list --config workers/api/wrangler.prod140.toml > /tmp/worker-secrets.txt || true
+          if [ -n "${FOUNDER_TEAM_ACTORS:-}" ]; then
+            printf '%s' "${FOUNDER_TEAM_ACTORS}" | npx --yes wrangler@4 secret put FOUNDER_TEAM_ACTORS --config workers/api/wrangler.prod140.toml
+          else
+            echo "::notice::FOUNDER_TEAM_ACTORS absent; durable platform_control_owners remains authoritative."
+          fi
+          if [ -n "${COLLECTIVE_LEARNING_PEPPER:-}" ]; then
+            printf '%s' "${COLLECTIVE_LEARNING_PEPPER}" | npx --yes wrangler@4 secret put COLLECTIVE_LEARNING_PEPPER --config workers/api/wrangler.prod140.toml
+          elif grep -q 'COLLECTIVE_LEARNING_PEPPER' /tmp/worker-secrets.txt; then
+            echo "Preserving existing COLLECTIVE_LEARNING_PEPPER."
+          else
+            openssl rand -hex 48 | npx --yes wrangler@4 secret put COLLECTIVE_LEARNING_PEPPER --config workers/api/wrangler.prod140.toml
+            echo "Created one-time COLLECTIVE_LEARNING_PEPPER in Cloudflare."
+          fi
+          if [ -n "${IDENTITY_MATCH_PEPPER:-}" ]; then
+            printf '%s' "${IDENTITY_MATCH_PEPPER}" | npx --yes wrangler@4 secret put IDENTITY_MATCH_PEPPER --config workers/api/wrangler.prod140.toml
+          elif grep -q 'IDENTITY_MATCH_PEPPER' /tmp/worker-secrets.txt; then
+            echo "Preserving existing IDENTITY_MATCH_PEPPER."
+          else
+            openssl rand -hex 48 | npx --yes wrangler@4 secret put IDENTITY_MATCH_PEPPER --config workers/api/wrangler.prod140.toml
+            echo "Created one-time IDENTITY_MATCH_PEPPER in Cloudflare."
+          fi
+
+      - name: Apply additive D1 migrations
+        run: npx --yes wrangler@4 d1 migrations apply "${PROD_DB}" --remote --config workers/api/wrangler.prod140.toml
+
+      - name: Deploy Eco-System 1.4.0 production
+        run: npx --yes wrangler@4 deploy --config workers/api/wrangler.prod140.toml
+
+      - name: Smoke production truth
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/smoke
+          ready=0
+          for attempt in 1 2 3 4 5 6 7 8; do
+            if curl --fail-with-body --silent --show-error --location --max-time 20 "${PROD_ROOT}/" > /tmp/smoke/root.html \
+              && curl --fail-with-body --silent --show-error --location --max-time 20 "${PROD_ROOT}/health" > /tmp/smoke/health.json \
+              && curl --fail-with-body --silent --show-error --location --max-time 20 "${PROD_ROOT}/src/voice-entry-bootstrap.js" > /tmp/smoke/voice.js \
+              && curl --fail-with-body --silent --show-error --location --max-time 20 "${PROD_ROOT}/src/documents-ui.js" > /tmp/smoke/documents.js \
+              && grep -Fq '1.4.0 VOICE' /tmp/smoke/root.html \
+              && grep -Fq "${EXPECTED_VERSION}" /tmp/smoke/health.json \
+              && grep -Fq 'mountVoiceEntryUI' /tmp/smoke/voice.js \
+              && grep -Fq 'mountDocumentsUI' /tmp/smoke/voice.js; then
+              ready=1
+              break
+            fi
+            echo "Smoke attempt ${attempt}/8 not ready yet"
+            sleep 4
+          done
+          if [ "${ready}" != 1 ]; then
+            echo '--- root markers ---'
+            grep -Eo '1\.4\.[0-9][^<]{0,80}' /tmp/smoke/root.html | head -20 || true
+            echo '--- health ---'
+            cat /tmp/smoke/health.json || true
+            echo '--- voice imports ---'
+            grep -E 'mount(VoiceEntry|ExpenseRecap|MemberDossier|Documents|ContextualGroup)UI' /tmp/smoke/voice.js || true
+            exit 1
+          fi
+          grep -Fq 'Cahier Maître 3.2.0' /tmp/smoke/root.html
+          EXPECTED_VERSION="${EXPECTED_VERSION}" node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          const h=JSON.parse(fs.readFileSync('/tmp/smoke/health.json','utf8'));
+          const expected=process.env.EXPECTED_VERSION;
+          const checks={ok:h.ok===true,version:h.version===expected,realMoneyDisabled:h.realMoneyEnabled===false,premiumLive:h.premiumLiveEnabled===true,founderControl:h.founderControlBound===true,communityRealtime:h.communityRealtimeBound===true,r2:h.artifactStorageMode==='R2'};
+          const failed=Object.entries(checks).filter(([,v])=>!v).map(([k])=>k);
+          if(failed.length)throw new Error('PRODUCTION_HEALTH_SMOKE_FAILED:'+failed.join(',')+' '+JSON.stringify(h));
+          console.log('Production health PASS',h.version);
+          NODE
+          for token in mountVoiceEntryUI mountExpenseRecapUI mountMemberDossierUI mountDocumentsUI mountContextualGroupUI; do grep -Fq "${token}" /tmp/smoke/voice.js; done
+          grep -Fq 'Documents du groupe' /tmp/smoke/documents.js
+          grep -Fq 'Comparer les 2 systèmes' /tmp/smoke/governance.js
+          grep -Fq 'Total mensuel restant dû pour séance suivante' /tmp/smoke/governance.js
+          grep -Fq 'Capital restant' /tmp/smoke/governance.js
+          echo "Production 1.4.0 smoke PASS"
+
+      - name: Post-deploy BIR+ production snapshot
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/postdeploy
+          printf '%s\n' "version=${EXPECTED_VERSION}" "commit=${GITHUB_SHA}" "worker=${PROD_WORKER}" "database=${PROD_DB}" "deployed_at=$(date -u +%Y-%m-%dT%H:%M:%SZ)" > /tmp/postdeploy/DEPLOYMENT_TRUTH.txt
+          npx --yes wrangler@4 d1 export "${PROD_DB}" --remote --output=/tmp/postdeploy/eco-system-production-after-1.4.0.sql
+          sqlite3 /tmp/postdeploy/restore-check.sqlite < /tmp/postdeploy/eco-system-production-after-1.4.0.sql
+          test "$(sqlite3 /tmp/postdeploy/restore-check.sqlite 'PRAGMA integrity_check;')" = "ok"
+          cd /tmp/postdeploy
+          sha256sum eco-system-production-after-1.4.0.sql DEPLOYMENT_TRUTH.txt > SHA256SUMS.txt
+          sha256sum --check SHA256SUMS.txt
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: eco-system-1.4.0-postdeploy-birplus
+          path: /tmp/postdeploy/
+          retention-days: 90
+          if-no-files-found: error
+
+      - name: Mirror post-deploy BIR+ snapshot to R2
+        shell: bash
+        run: |
+          set -euo pipefail
+          PREFIX="birplus/1.4.0/${GITHUB_SHA}/postdeploy"
+          npx --yes wrangler@4 r2 object put "${PROD_R2}/${PREFIX}/eco-system-production-after-1.4.0.sql" --file /tmp/postdeploy/eco-system-production-after-1.4.0.sql --remote
+          npx --yes wrangler@4 r2 object put "${PROD_R2}/${PREFIX}/DEPLOYMENT_TRUTH.txt" --file /tmp/postdeploy/DEPLOYMENT_TRUTH.txt --remote
+          npx --yes wrangler@4 r2 object put "${PROD_R2}/${PREFIX}/SHA256SUMS.txt" --file /tmp/postdeploy/SHA256SUMS.txt --remote
+          npx --yes wrangler@4 r2 object get "${PROD_R2}/${PREFIX}/SHA256SUMS.txt" --file /tmp/r2-post-SHA256SUMS.txt --remote
+          cmp /tmp/postdeploy/SHA256SUMS.txt /tmp/r2-post-SHA256SUMS.txt
+          echo "Post-deploy R2 BIR+ mirror PASS"
+
+      - name: Production URL
+        run: echo "${PROD_ROOT}/"
