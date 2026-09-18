@@ -60,3 +60,16 @@ Toujours récupérer le HEAD distant réel avant toute modification.
 
 ## Anti-interruption
 Commit atomique → CI exacte → Truth → BIR+ avant production → smoke → BIR+ post-production. Ne jamais déclarer « terminé » si le site public n'a pas reçu le SHA concerné.
+
+
+## Point de reprise immédiat — tranche terrain ciblée
+
+Continuer exclusivement depuis `next/1.4.0-master-2.3.4-closure-20260917`.
+
+Ordre obligatoire :
+1. conserver le périmètre ciblé de la tranche 6 ;
+2. obtenir CI verte sur le HEAD documentaire final ;
+3. lancer BIR+ ;
+4. déployer la même ligne 1.4.0 ;
+5. smoke production : deux feuilles visibles, pop-up cellule, Membres & habilitations, Back-office, Tontines / montant total du pot, matrice Prêt ;
+6. BIR+ de fermeture puis mise à jour de la vérité de production.
