@@ -47,7 +47,7 @@ async function loadContext(force=false){
   ]);loadedGroup=group;
 }
 
-const rubricCandidates=()=>rubrics.filter(r=>r.status!=='ARCHIVED').map(r=>({id:r.id,label:r.name,aliases:[...(r.aliases??[]),...(kindAliases[String(r.activityPlan?.kind??'')]??[])]}));
+const rubricCandidates=()=>rubrics.filter(r=>r.status!=='ARCHIVED'&&!isLegacyStampDuplicate(r)).map(r=>({id:r.id,label:r.name,aliases:[...(r.aliases??[]),...(kindAliases[String(r.activityPlan?.kind??'')]??[])]}));
 const memberCandidates=()=>members.map(m=>({id:m.id,label:m.displayName,aliases:[m.displayName]}));
 const openMeetings=()=>meetings.filter(m=>m.status==='open').sort((a,b)=>String(b.scheduledAt??b.openedAt).localeCompare(String(a.scheduledAt??a.openedAt)));
 const miscForRubric=(rubricId:string)=>misc.find(x=>String(x.rubricId)===rubricId);
