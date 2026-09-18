@@ -1002,15 +1002,20 @@ async function showStatement(membershipId){
     document.getElementById('statementDialog')?.remove();
     const dialog=document.createElement('dialog');dialog.id='statementDialog';
     dialog.innerHTML=html`<h2>Relevé des cotisations</h2><p>${statement.displayName} · ${statement.groupName}</p><p>Arrêté au ${date(statement.asOf)}</p><strong>Total net : ${fmt(statement.totalNetContributions)}</strong><p class="hint">Ce relevé retrace les encaissements enregistrés et leurs contrepassations. Il ne calcule pas les dettes, prêts ou avoirs d’épargne.</p>`;
-    const table=document.createElement('table');table.innerHTML='<thead><tr><th>Date</th><th>Référence</th><th>Reçu</th><th>Net</th></tr></thead>';
+    const table=document.createElement('table');table.innerHTML='<thead><tr><th>Date</th><th>Séance / période</th><th>Reçu</th><th>Net</th><th>Détail</th></tr></thead>';
     const body=document.createElement('tbody');
-    for(const r of statement.receipts){const tr=document.createElement('tr');tr.innerHTML=html`<td>${date(r.receivedAt)}</td><td>${r.id}</td><td>${fmt(r.amount.amount)}</td><td>${fmt(r.netAmount)}</td>`;body.append(tr);}
+    for(const r of statement.receipts){
+        const tr=document.createElement('tr'),meeting=meetings.find(m=>m.id===r.meetingId);
+        const tech=r.id+(r.ledgerEntryId?' · '+r.ledgerEntryId:'');
+        tr.innerHTML=html`<td>${date(r.receivedAt)}</td><td>${meeting?meetingLabel(meeting):tx('Sans séance','No meeting')}</td><td>${fmt(r.amount.amount)}</td><td>${fmt(r.netAmount)}</td><td></td>`;
+        const details=document.createElement('details'),summary=document.createElement('summary');summary.textContent=tx('Références techniques','Technical references');details.append(summary,document.createTextNode(tech));tr.lastElementChild.append(details);body.append(tr);
+    }
     table.append(body);dialog.append(table);
     const statementMember=members.find(m=>m.id===membershipId);
     try{dialog.append(await renderMemberFinancialNotices({app,membershipId,memberUserId:statementMember?.userId,manager:isManager(),notify:toast,showError:fail}));}catch(e){const p=document.createElement('p');p.className='hint';p.textContent='Le contrôle des modifications financières sera disponible après synchronisation.';dialog.append(p);}
     const exportButton=document.createElement('button');exportButton.textContent='Exporter CSV';exportButton.className='primary';
     exportButton.onclick=()=>{
-        const rows=[['Date','Référence','Membre','Groupe','Devise','Montant reçu','Montant net'],...statement.receipts.map(r=>[r.receivedAt,r.id,statement.displayName,statement.groupName,r.amount.currency,r.amount.amount,r.netAmount])];
+        const rows=[['Date','Séance / période','Référence technique','Membre','Groupe','Devise','Montant reçu','Montant net'],...statement.receipts.map(r=>{const meeting=meetings.find(m=>m.id===r.meetingId);return[r.receivedAt,meeting?meetingLabel(meeting):'Sans séance',r.id,statement.displayName,statement.groupName,r.amount.currency,r.amount.amount,r.netAmount];})];
         const cell=value=>'"'+String(value).replace(/^[\s]*[=+@\-]/,"'$&").replaceAll('"','""')+'"';
         const blob=new Blob(['\ufeff'+rows.map(row=>row.map(cell).join(';')).join('\r\n')],{type:'text/csv;charset=utf-8'});
         const url=URL.createObjectURL(blob),link=document.createElement('a');link.href=url;link.download=`releve-${membershipId}.csv`;link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
