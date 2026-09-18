@@ -627,6 +627,7 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
       const selfBenefit=target.userId===ctx.actorId,correctionId='financial_correction_'+makeId('corr');
       const stamp=new Date().toISOString(),record:WorkspaceRecord={id:correctionId,tenantId:ctx.tenantId,groupId,moduleId:'FINANCE.CORRECTION',title:'Correction financière',summary:reason,status:'ACTIVE',tags:['financial-correction',selfBenefit?'self-benefit':'manager-correction'],data:{receiptId:receipt.id,membershipId:receipt.membershipId,rubricId:receipt.rubricId??null,meetingId:receipt.meetingId??null,oldAmount,newAmount,beforeSituation,authorId:ctx.actorId,selfBenefit,requiresIndependentReview:selfBenefit},createdBy:ctx.actorId,createdAt:stamp,updatedAt:stamp};
       await repo.saveWorkspaceRecord(record);
+      await repo.saveAudit(kernel.audit.append({tenantId:ctx.tenantId,actorId:ctx.actorId,action:'FINANCIAL_CORRECTION_REQUESTED',targetType:'contribution_receipt',targetId:receipt.id,requestId:ctx.requestId,metadata:{correctionId,oldAmount,newAmount,beforeSituation,selfBenefit,reason}}));
       try{
         const reversal=await ledger.reverseEntry({tenantId:ctx.tenantId,groupId,entryId:receipt.ledgerEntryId,reason});
         let replacementReceipt:import('../../../packages/contracts/src/index.js').ContributionReceipt|undefined,replacementEntry:import('../../../packages/contracts/src/index.js').LedgerEntry|undefined;
@@ -637,10 +638,13 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
         const positionsAfter=await ledger.receiptPositions(ctx.tenantId,groupId),afterSituation=positionsAfter.filter(x=>x.membershipId===receipt.membershipId).reduce((n,x)=>n+x.netAmount,0),noticeEntry=replacementEntry??reversal;
         const notice=await memberControl.create({groupId,membershipId:receipt.membershipId,entry:noticeEntry,operationType:'CASH_CONTRIBUTION_CORRECTED',amount:newAmount,currency:receipt.amount.currency,rubricId:receipt.rubricId,meetingId:receipt.meetingId,previousSituation:beforeSituation,newSituation:afterSituation,previousAmount:oldAmount,newAmount,correctionReason:reason,selfBenefit,requiresIndependentReview:selfBenefit});
         await repo.saveWorkspaceRecord({...record,status:'DONE',tags:[...record.tags,'completed'],data:{...record.data,reversalEntryId:reversal.id,replacementReceiptId:replacementReceipt?.id??null,replacementEntryId:replacementEntry?.id??null,afterSituation,noticeId:notice.id},updatedAt:new Date().toISOString()});
+        await repo.saveAudit(kernel.audit.append({tenantId:ctx.tenantId,actorId:ctx.actorId,action:'FINANCIAL_CORRECTION_COMPLETED',targetType:'financial_correction',targetId:correctionId,requestId:ctx.requestId,metadata:{receiptId:receipt.id,reversalEntryId:reversal.id,replacementReceiptId:replacementReceipt?.id??'',oldAmount,newAmount,beforeSituation,afterSituation,selfBenefit,requiresIndependentReview:selfBenefit}}));
         try{await publishLive(groupId,'FINANCIAL_NOTICE','correction-notice:'+noticeEntry.id,{noticeId:notice.id,ledgerEntryId:notice.ledgerEntryId,operationType:notice.operationType,amount:notice.amount,currency:notice.currency,previousSituation:notice.previousSituation??0,newSituation:notice.newSituation??0,selfBenefit},notice.userId);}catch{}
         return json({correctionId,receiptId:receipt.id,oldAmount,newAmount,beforeSituation,afterSituation,selfBenefit,requiresIndependentReview:selfBenefit,reversalEntryId:reversal.id,replacementReceiptId:replacementReceipt?.id??null,notice},200,cors);
       }catch(error){
-        await repo.saveWorkspaceRecord({...record,status:'ACTIVE',tags:[...record.tags,'failed','recovery-required'],data:{...record.data,error:(error instanceof Error?error.message:String(error)).slice(0,300)},updatedAt:new Date().toISOString()});
+        const failure=(error instanceof Error?error.message:String(error)).slice(0,300);
+        await repo.saveWorkspaceRecord({...record,status:'ACTIVE',tags:[...record.tags,'failed','recovery-required'],data:{...record.data,error:failure},updatedAt:new Date().toISOString()});
+        await repo.saveAudit(kernel.audit.append({tenantId:ctx.tenantId,actorId:ctx.actorId,action:'FINANCIAL_CORRECTION_FAILED',targetType:'financial_correction',targetId:correctionId,requestId:ctx.requestId,metadata:{receiptId:receipt.id,oldAmount,newAmount,selfBenefit,error:failure}}));
         throw error;
       }
     }
