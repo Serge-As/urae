@@ -196,3 +196,24 @@ test('rubric count is group-defined: one rubric and forty rubrics both convert w
     const defs=await repo.listRubricDefinitions(tenant,group.id);assert.equal(defs.length,count);assert.ok(defs.every(x=>x.status==='ACTIVE'));
   }
 });
+
+
+test('closing a monthly meeting accrues interest once on remaining principal even without payment',async()=>{
+  const {repo,handler}=await seed();
+  await repo.saveWorkspaceRecord({id:'loan_close_t3',tenantId:'tenant_t3',groupId:'group_t3',moduleId:'FINANCE.LOANS',title:'Prêt 50 000',status:'ACTIVE',tags:['completion','kind:LOAN','state:DISBURSED'],data:{completionKind:'LOAN',completionState:'DISBURSED',completionVersion:4,borrowerMembershipId:'mm_t3',principal:50000,outstandingPrincipal:50000,unpaidInterest:0,rateBasisPointsPerPeriod:500,paymentPriority:'CAPITAL_FIRST',ledgerEntryId:'ledger_disbursement_close',currency:'XAF',accruedMeetingIdsJson:'[]'},createdBy:'founder_t3',createdAt:'2026-01-10T09:00:00Z',updatedAt:'2026-01-10T09:00:00Z'});
+  let r=await handler(new Request('http://local/api/v1/groups/group_t3/meetings/meeting_t3/close',{method:'POST',headers:founder,body:'{}'}));assert.equal(r.status,200);
+  let loan=await repo.getWorkspaceRecord('tenant_t3','loan_close_t3');assert.equal(Number(loan.data.unpaidInterest),2500);assert.equal(Number(loan.data.outstandingPrincipal),50000);
+  assert.deepEqual(JSON.parse(String(loan.data.accruedMeetingIdsJson)),['meeting_t3']);
+  let periods=await repo.listWorkspaceRecords('tenant_t3','FINANCE.LOAN_PERIOD','group_t3');assert.equal(periods.length,1);assert.equal(Number(periods[0].data.interestNew),2500);assert.equal(Number(periods[0].data.nextTotalDueProjected),55000);
+  r=await handler(new Request('http://local/api/v1/groups/group_t3/meetings/meeting_t3/close',{method:'POST',headers:founder,body:'{}'}));assert.equal(r.status,200);
+  loan=await repo.getWorkspaceRecord('tenant_t3','loan_close_t3');assert.equal(Number(loan.data.unpaidInterest),2500);periods=await repo.listWorkspaceRecords('tenant_t3','FINANCE.LOAN_PERIOD','group_t3');assert.equal(periods.length,1);
+});
+
+test('group policy may block a new loan until both prior principal and interest are settled',async()=>{
+  const {repo,handler}=await seed();
+  const base={tenantId:'tenant_t3',groupId:'group_t3',aliases:[],facets:{direction:'OUTFLOW',obligation:'OPTIONAL',medium:'CASH',refundability:'CONDITIONAL',replenishment:'CUSTOM',interestMode:'RATE',eligibilityMode:'RULE_BASED'},status:'ACTIVE',source:'GROUP_CUSTOM',version:1,createdAt:'2026-01-01T00:00:00Z',updatedAt:'2026-01-01T00:00:00Z'};
+  await repo.saveRubricDefinition({...base,id:'rubric_loan_policy',name:'PRETS',activityPlan:{key:'prets',name:'PRETS',kind:'LOAN',nominalAmount:{currency:'XAF',amount:0},amountBasis:'PER_MEMBER',memberCount:2,sessions:12,duration:{value:12,unit:'MONTHS'},managementFeePerPayment:0,estimatedExternalCostRate:0,fixedCostPerSession:0},policies:{loan:{allowed:true,rateBasisPointsPerPeriod:500,interestBase:'PRINCIPAL_ONLY',paymentPriority:'CAPITAL_FIRST',noInterestOnInterest:true,overdue:{blockNewLoanUntilSettled:true,recoverFrom:[]},specialLoans:[]}}});
+  await repo.saveWorkspaceRecord({id:'loan_prior_t3',tenantId:'tenant_t3',groupId:'group_t3',moduleId:'FINANCE.LOANS',title:'Prêt antérieur',status:'ACTIVE',tags:['completion','kind:LOAN','state:REPAYING'],data:{completionKind:'LOAN',completionState:'REPAYING',completionVersion:5,borrowerMembershipId:'mm_t3',rubricId:'rubric_loan_policy',principal:50000,outstandingPrincipal:0,unpaidInterest:6000,rateBasisPointsPerPeriod:500,paymentPriority:'CAPITAL_FIRST',ledgerEntryId:'ledger_prior'},createdBy:'founder_t3',createdAt:'2026-01-01T00:00:00Z',updatedAt:'2026-01-10T00:00:00Z'});
+  const r=await handler(new Request('http://local/api/v1/groups/group_t3/completion',{method:'POST',headers:founder,body:JSON.stringify({kind:'LOAN',title:'Nouveau prêt',data:{principal:10000,currency:'XAF',borrowerMembershipId:'mm_t3',rubricId:'rubric_loan_policy',outstandingPrincipal:0}})}));
+  assert.equal(r.status,400);const body=await r.json();assert.equal(body.error,'PREVIOUS_LOAN_DEBT_NOT_SETTLED');
+});
