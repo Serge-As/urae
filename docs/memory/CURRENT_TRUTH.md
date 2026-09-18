@@ -1,13 +1,13 @@
 # ECO-SYSTEM — CURRENT TRUTH
 
-Date : 2026-09-16
+Date : 2026-09-18
 
 ## 1. Production publique — vérité actuelle
 
 - URL : `https://eco-system.sergemimf.workers.dev/`
-- version : **1.3.3-fairness-adops-doctor-launch**
+- version : **1.4.0-master-2.3.4-closure**
 - Worker : `eco-system`
-- Worker Version ID : `fdb6c9f3-8e46-49e9-85df-1e238975d257`
+- Worker Version ID : `182e7992-1bf9-479f-914b-c0f04ab1b85c`
 - D1 canonique : `eco-system-db`
 - R2 privé : `eco-system-backups`
 - Premium Live : **ACTIF**
@@ -15,16 +15,19 @@ Date : 2026-09-16
 - Forum v2 temps réel : **BOUND / production**
 - stockage artifacts : **R2**
 - argent réel : **DÉSACTIVÉ**
-- workflow de déploiement + smoke : run **35138597876 — SUCCESS**
-- source déployée : `8396be2ed40ab51031a543787e2e61d41a42ad21` ; qualification complète dans le workflow : **SUCCESS**
-- la ligne 1.2.0 est désormais historique et supersédée.
+- workflow qualification + build + BIR+ pré/post + déploiement + smoke : run **35314965700 — SUCCESS**
+- qualification parallèle du SHA déployé : **35314965698 — SUCCESS**
+- source déployée : `e869918002a6a649751b68088de39510dad3b29a`
+- tests dans le workflow : **231/231 PASS**
+- D1 : **No migrations to apply**
+- 1.3.3 et les lignes antérieures restent historiques et ne sont plus la production courante.
 
 ## 2. Branche et point de reprise
 
-- branche de développement : `next/1.3.3-interest-lab-adops-ui-20260916`
-- production stable actuelle : `next/1.3.3-interest-lab-adops-ui-20260916`
+- branche de développement : `next/1.4.0-master-2.3.4-closure-20260917`
+- production stable actuelle : cette même lignée 1.4.0, source `e869918002a6a649751b68088de39510dad3b29a`
 - reprendre au **HEAD distant le plus récent**, jamais à partir d'un SHA mémorisé sans le revérifier.
-- ne pas repartir de 1.2 ou 1.3.1 pour continuer le développement courant.
+- ne pas repartir d'une lignée 1.3.x pour corriger la production 1.4.0.
 
 ## 3. R2 / sauvegarde
 
@@ -195,3 +198,43 @@ Après 3–5 sous-lots : commit + CI + mise à jour de cette vérité + checkpoi
 - qualification : run `35139053318` SUCCESS.
 - BIR+ de clôture : run `35139053215` SUCCESS.
 - ce checkpoint archive le code/documentation post-déploiement et exporte la D1 déjà en production 1.3.3, avec restauration/integrity, SHA256 et miroir R2.
+
+
+## 15. 1.4.0 — deux feuilles / toutes rubriques / circuit Prêts + Intérêts — VERIFIED_REMOTE
+
+Production 1.4.0 qualifiée le 2026-09-18.
+
+### Deux feuilles
+- **Votre feuille de séance** et **Vos fiches individuelles** sont les deux surfaces normales de saisie financière membre.
+- Toute rubrique créée et non archivée apparaît sur les deux.
+- Le test à 20 rubriques est uniquement un test de non-régression terrain. Les scénarios **1 rubrique** et **40 rubriques** sont également couverts et passent.
+- Le validateur de lancement conserve un plafond technique actuel de 100 rubriques ; ce n'est pas une règle métier « 20 rubriques ».
+- Amendes / Inscription / Timbre ne remplacent jamais le catalogue réel du groupe.
+- Le simple membre voit sa propre fiche et ses propres prêts, pas ceux des autres membres.
+
+### Prêts
+- Le capital restant est l'assiette de l'intérêt de la nouvelle période.
+- Après remboursement partiel du capital, la période suivante taxe uniquement le capital restant.
+- Les intérêts impayés restent séparés et ne produisent jamais eux-mêmes des intérêts.
+- Si capital = 0 mais intérêts > 0, aucun nouvel intérêt n'est produit.
+- Le gestionnaire compare puis valide **CAPITAL_FIRST** ou **INTEREST_FIRST** au niveau de la rubrique Prêt.
+- Une période réelle de prêt est persistée par prêt + séance (`FINANCE.LOAN_PERIOD`) ; l'accrual est idempotent pour éviter un double intérêt dans la même séance.
+- La matrice réelle/simulée est horizontale par séance/mois et contient : capital début, capital remboursé, capital restant, intérêt exigible, intérêt payé, intérêt restant, paiement, dette après séance, intérêt projeté suivant, total projeté suivant, plus synthèse/totaux.
+- Si la politique du groupe active le blocage, un nouveau prêt est interdit tant que capital ou intérêts du précédent restent dus.
+
+### Exemple fondateur permanent
+50 000 XAF, 5 %, paiements 0 / 30 000 / 20 000 :
+- CAPITAL_FIRST : fin mois 3 = capital 0, intérêts 6 000 ; mois 4 = 6 000 sans nouvel intérêt.
+- INTEREST_FIRST : fin mois 3 = capital 6 250 ; période suivante = 6 250 + 5 % = 312,5 théoriques, arrondis actuellement à 313 XAF ; total final projeté 6 563 XAF.
+
+### Preuves distantes
+- qualification SHA déployé : run `35314965698` SUCCESS ;
+- production + smoke : run `35314965700` SUCCESS ;
+- tests : 231/231 PASS ;
+- Worker Version ID : `182e7992-1bf9-479f-914b-c0f04ab1b85c` ;
+- pré-BIR+ : export D1 restauré + integrity_check + SHA256 + miroir R2 PASS ;
+- post-BIR+ : export D1 restauré + integrity_check + SHA256 + miroir R2 PASS ;
+- migrations : aucune migration à appliquer ;
+- production health : `1.4.0-master-2.3.4-closure`, realMoney=false, Premium Live/Founder Control/Community Realtime/R2 actifs.
+
+**Réception terrain :** encore à effectuer. Ne pas confondre CI/smoke avec validation complète par le fondateur.
