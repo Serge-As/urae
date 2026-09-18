@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
 import {InMemoryPlatformRepository} from '../.build/packages/repositories/src/index.js';
 import {createApiHandler} from '../.build/workers/api/src/index.js';
 
