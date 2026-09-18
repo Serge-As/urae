@@ -53,6 +53,8 @@ test('self-benefit correction cannot be confirmed or reviewed by its own author'
   setContext(kernel,'manager_self',['member','manager']);
   const notice=await svc.create({groupId:'group_a',membershipId:'self_manager',entry,operationType:'CASH_CONTRIBUTION_CORRECTED',amount:5000,currency:'XAF',previousSituation:2000,newSituation:5000,previousAmount:2000,newAmount:5000,correctionReason:'Correction test',selfBenefit:true,requiresIndependentReview:true});
   assert.equal(notice.disputeState,'UNDER_REVIEW');assert.equal(notice.previousAmount,2000);assert.equal(notice.newAmount,5000);
+  assert.equal((await repo.listObligations('tenant_a','manager_other')).filter(x=>x.type==='FINANCIAL_INDEPENDENT_REVIEW').length,1);
+  assert.equal((await repo.listObligations('tenant_a','manager_self')).filter(x=>x.type==='FINANCIAL_INDEPENDENT_REVIEW').length,0);
   await assert.rejects(()=>svc.confirm('group_a',notice.id),/INDEPENDENT_REVIEW_REQUIRED/);
   await assert.rejects(()=>svc.officerReview('group_a',notice.id,'Je valide moi-même'),/INDEPENDENT_REVIEW_REQUIRED/);
   setContext(kernel,'manager_other',['manager']);
