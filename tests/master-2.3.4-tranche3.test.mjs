@@ -252,6 +252,8 @@ test('manager correcting own 2,000 XAF contribution to 5,000 keeps the full trac
   const n=notices.find(x=>x.operationType==='CASH_CONTRIBUTION_CORRECTED');
   assert.equal(n.previousAmount,2000);assert.equal(n.newAmount,5000);assert.equal(n.previousSituation,2000);assert.equal(n.newSituation,5000);assert.equal(n.disputeState,'UNDER_REVIEW');assert.equal(n.selfBenefit,true);
   const traces=await repo.listWorkspaceRecords('tenant_t3','FINANCE.CORRECTION','group_t3');assert.equal(traces.length,1);assert.equal(traces[0].status,'DONE');assert.equal(traces[0].data.oldAmount,2000);assert.equal(traces[0].data.newAmount,5000);
+  const audits=await repo.listAudit('tenant_t3');assert.ok(audits.some(x=>x.action==='FINANCIAL_CORRECTION_REQUESTED'));assert.ok(audits.some(x=>x.action==='FINANCIAL_CORRECTION_COMPLETED'));
+  const reviewTasks=await repo.listObligations('tenant_t3','founder_t3');assert.ok(reviewTasks.some(x=>x.type==='FINANCIAL_INDEPENDENT_REVIEW'&&x.sourceId===n.id));
 });
 
 
