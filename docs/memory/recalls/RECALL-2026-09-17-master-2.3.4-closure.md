@@ -56,3 +56,22 @@ Applied in guarded CI on 164f07456842856ffaa751cfe87fbe5fbac8a37a at 2026-09-17T
 
 ## Tranche 2 — gouvernance, notifications, invitations, calendrier, carnet membre
 Applied from checkpoint c82d50a519d4a99b173c996c31ecfb5af49c0ddb at 2026-09-17T22:01:41Z. Dedicated contracts and UI are now under qualification; external provider delivery remains explicitly gated.
+
+
+## Tranche 4 — correction de cohérence métier imposée par la vérité terrain (2026-09-18)
+
+Le fondateur a signalé une régression fonctionnelle réelle malgré une CI verte. Cette tranche corrige la définition de la vérité opérationnelle avant toute nouvelle extension.
+
+### Invariants non négociables relus dans le Cahier 2.3.4, les consignes récentes et les classeurs historiques
+- **Toutes les rubriques actives du groupe** doivent apparaître sur les deux feuilles de saisie : « Votre feuille de séance » et « Vos fiches individuelles ». Une rubrique créée puis absente de ces deux surfaces est un défaut.
+- Les trois rubriques Amendes / Inscription / Timbre de prêt sont des exemples/sous-rubriques « Autres », jamais un remplacement du catalogue réel du groupe.
+- **Les deux feuilles sont les seules surfaces normales de saisie financière membre**. Les menus spécialisés servent à configurer, simuler, analyser et piloter ; ils ne doivent pas créer un troisième tunnel de saisie ordinaire.
+- Une même écriture validée sur l’une des deux feuilles doit apparaître sur l’autre car elles lisent la même source canonique.
+- Les rubriques Prêt, Remboursement, Remboursement intérêts, Prêt spécial et Remboursement spécial appartiennent à la matrice membres × rubriques, conformément aux feuilles Excel historiques.
+- Un simple membre actif doit retrouver son groupe, sa propre fiche individuelle, ses soldes/rubriques et ses simulations autorisées depuis son compte. Il ne reçoit pas les droits Bureau sur les autres membres ou la répartition collective.
+- Le simulateur de prêt doit présenter au moins six périodes/lignes et montrer distinctement capital, intérêt nouveau, paiement, capital remboursé, intérêt remboursé, capital restant, intérêts dus, dette totale et prochaine assiette taxable.
+- Les menus spécialisés (Tontines, Prêts + Intérêts, Épargne + Intérêts, Assistances, Autres rubriques, Classements, Membres & habilitations, Eco IA) sont contextuels : une rubrique créée rend son domaine accessible ; l’absence d’une rubrique ne doit pas encombrer une tontine simple.
+- Une CI verte ne suffit plus à déclarer ce parcours correct : il faut un test de non-régression « 20 rubriques -> 20 rubriques dans les deux feuilles » et un test « membre simple -> propre fiche financière visible ».
+
+### Erreur corrigée
+La tranche précédente a confondu **configuration de rubrique** et **surface de saisie financière** et a laissé subsister des tunnels historiques séparés (notamment « Autres » et le formulaire Finance). La correction doit unifier l’UX autour des deux feuilles sans créer de second Ledger ni perdre les moteurs spécialisés.
