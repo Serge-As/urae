@@ -23,6 +23,21 @@ export interface PeriodicLoanLine{
   interestAfter:number;
   totalDebtAfter:number;
   nextTaxablePrincipal:number;
+  nextInterestProjected:number;
+  nextTotalDueProjected:number;
+}
+
+export interface PeriodicLoanSummary{
+  originalPrincipal:number;
+  totalPrincipalPaid:number;
+  totalInterestGenerated:number;
+  totalInterestPaid:number;
+  finalPrincipalDue:number;
+  finalInterestDue:number;
+  finalDebt:number;
+  nextInterestProjected:number;
+  nextTotalDueProjected:number;
+  periodsSimulated:number;
 }
 
 const xaf=(value:number,name:string)=>{
@@ -63,7 +78,26 @@ export function simulatePeriodicLoan(input:PeriodicLoanInput):PeriodicLoanLine[]
       interestPaid=Math.min(interestDue,available);interestDue-=interestPaid;available-=interestPaid;
       principalPaid=Math.min(capital,available);capital-=principalPaid;available-=principalPaid;
     }
-    rows.push({period,principalBefore,interestOpening,interestNew,payment,principalPaid,interestPaid,unappliedPayment:available,principalAfter:capital,interestAfter:interestDue,totalDebtAfter:capital+interestDue,nextTaxablePrincipal:capital});
+    const nextTaxablePrincipal=capital,nextTaxable=basis==='INITIAL'&&capital>0?principal:capital;
+    const nextInterestProjected=Math.round(nextTaxable*input.ratePercentPerPeriod/100),nextTotalDueProjected=capital+interestDue+nextInterestProjected;
+    rows.push({period,principalBefore,interestOpening,interestNew,payment,principalPaid,interestPaid,unappliedPayment:available,principalAfter:capital,interestAfter:interestDue,totalDebtAfter:capital+interestDue,nextTaxablePrincipal,nextInterestProjected,nextTotalDueProjected});
   }
   return rows;
+}
+
+
+export function summarizePeriodicLoan(input:PeriodicLoanInput,rows:PeriodicLoanLine[]):PeriodicLoanSummary{
+  const last=rows.at(-1);
+  return{
+    originalPrincipal:input.principal,
+    totalPrincipalPaid:rows.reduce((n,r)=>n+r.principalPaid,0),
+    totalInterestGenerated:rows.reduce((n,r)=>n+r.interestNew,0),
+    totalInterestPaid:rows.reduce((n,r)=>n+r.interestPaid,0),
+    finalPrincipalDue:last?.principalAfter??input.principal,
+    finalInterestDue:last?.interestAfter??0,
+    finalDebt:last?.totalDebtAfter??input.principal,
+    nextInterestProjected:last?.nextInterestProjected??Math.round(input.principal*input.ratePercentPerPeriod/100),
+    nextTotalDueProjected:last?.nextTotalDueProjected??input.principal+Math.round(input.principal*input.ratePercentPerPeriod/100),
+    periodsSimulated:rows.length
+  };
 }
