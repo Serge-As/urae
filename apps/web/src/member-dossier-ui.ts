@@ -7,10 +7,11 @@ const field=(name:string,labelFr:string,labelEn:string,type='text')=>`<label>${t
 const textArea=(name:string,labelFr:string,labelEn:string,help='')=>`<label class="full">${tr(labelFr,labelEn)}<textarea name="${name}" rows="2"></textarea>${help?`<small>${help}</small>`:''}</label>`;
 let busy=false;
 
-async function enhance(){
-  const body=q('detailBody'),match=location.hash.match(/^#detail=member:(.+)$/),group=groupId();if(!body||!match||!group||busy||body.querySelector('[data-member-dossier]'))return;busy=true;
+async function enhance(requestedMembershipId?:string){
+  const body=q('memberDossierHost'),group=groupId(),membershipId=requestedMembershipId||body?.dataset.memberId||'';if(!body||!membershipId||!group||busy)return;busy=true;
   try{
-    const membershipId=decodeURIComponent(match[1]!),profile=await api<any>(`/api/v1/groups/${encodeURIComponent(group)}/members/${encodeURIComponent(membershipId)}/profile`).catch(()=>null);if(profile===null)return;
+    body.dataset.memberId=membershipId;body.replaceChildren();
+    const profile=await api<any>(`/api/v1/groups/${encodeURIComponent(group)}/members/${encodeURIComponent(membershipId)}/profile`).catch(()=>null);if(profile===null){body.innerHTML='<div class="empty-state">'+tr('Dossier inaccessible avec vos habilitations actuelles.','Dossier unavailable with your current permissions.')+'</div>';return;}
     const panel=document.createElement('article');panel.className='panel member-dossier';panel.dataset.memberDossier='1';
     panel.innerHTML=`<div class="panel-head"><div><h2>${tr('Dossier membre','Member dossier')}</h2><p>${tr('Identité de groupe, situation familiale utile, fonction, ancienneté et contacts. CNI/téléphone de rapprochement ne sont jamais réaffichés : seuls leurs empreintes HMAC sont conservées.','Group identity, useful family situation, office role, seniority and contacts. Matching CNI/phone values are never displayed again: only their HMAC fingerprints are retained.')}</p></div><span class="pill">v<span data-profile-version>${Number(profile.profileVersion??0)}</span></span></div>
     <form class="form-grid" data-member-profile-form>
@@ -38,4 +39,4 @@ async function enhance(){
   }finally{busy=false;}
 }
 
-export function mountMemberDossierUI(){const body=q('detailBody');if(body)new MutationObserver(()=>{if(!busy)setTimeout(()=>void enhance(),70);}).observe(body,{childList:true,subtree:false});document.addEventListener('click',event=>{const target=event.target instanceof Element?event.target.closest('[data-detail-type="member"]'):null;if(target)setTimeout(()=>void enhance(),80);});q<HTMLSelectElement>('languageSelect')?.addEventListener('change',()=>{document.querySelector('[data-member-dossier]')?.remove();setTimeout(()=>void enhance(),50);});setTimeout(()=>void enhance(),100);}
+export function mountMemberDossierUI(){document.addEventListener('click',event=>{const target=event.target instanceof Element?event.target.closest<HTMLElement>('[data-member-dossier-open]'):null;if(!target)return;const id=target.dataset.memberDossierOpen;if(id)void enhance(id);});q<HTMLSelectElement>('languageSelect')?.addEventListener('change',()=>{const host=q('memberDossierHost');if(host?.dataset.memberId)void enhance(host.dataset.memberId);});}
