@@ -37,7 +37,7 @@ test('PWA cache contains current 1.3.4 field and bilingual transitive modules',(
 test('current shell identifies 1.4 instead of stale copies',()=>{
   const html=fs.readFileSync('apps/web/index.html','utf8');
   assert.match(html,/1\.4\.0/);assert.doesNotMatch(html,/1\.1\.2/);
-  assert.match(html,/tontineCompletionPanel/);assert.match(html,/loanCompletionPanel/);assert.match(html,/completionLab/);
+  assert.match(html,/view-tontines/);assert.match(html,/tontineRubricCatalog/);assert.match(html,/view-members/);assert.match(html,/view-backoffice/);assert.match(html,/loanCompletionPanel/);assert.match(html,/completionLab/);
 });
 
 
@@ -76,4 +76,14 @@ test('current PWA caches pairing detail cockpit recap and Meetup-style community
 test('Recap is a real manager back-office across onboarding Autres Live AI and market',()=>{
   const recap=fs.readFileSync('apps/web/src/recap-ui.js','utf8');
   for(const token of ['listJoinLinks','miscRubrics','dataUseConsent','ecoPulseProfile','Live Ledger','EcoPulse apprend','cycle de vie','Rapprochements historiques'])assert.match(recap,new RegExp(token));
+});
+
+
+test('targeted 1.4 shell exposes two real sheets and only one permanent Tontine form set',()=>{
+  const html=fs.readFileSync('apps/web/index.html','utf8');
+  assert.match(html,/id="meetingMatrixPanel"/);assert.doesNotMatch(html,/id="meetingMatrixPanel" hidden/);
+  assert.match(html,/id="individualSheetMatrix"/);assert.match(html,/data-view="members"/);assert.match(html,/data-view="backoffice"/);
+  assert.equal((html.match(/id="tontineCycleForm"/g)??[]).length,1);
+  assert.equal((html.match(/id="tontineShareForm"/g)??[]).length,1);
+  assert.match(html,/Montant total du pot/);assert.doesNotMatch(html,/Montant indicatif du pot/);
 });
