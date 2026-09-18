@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedOn": "2026-09-16",
+  "generatedOn": "2026-09-18",
   "purpose": "Anti-regression operational truth. Read before asking founder to recreate/configure anything.",
   "allowedStatuses": [
     "ACQUIRED",
@@ -688,6 +688,82 @@
       ],
       "note": "House Ads AI composer receives derived collective signals rather than raw rubric names or individual financial/identity data; deterministic fallback remains available.",
       "next": "Field-test copy quality and frequency without relaxing privacy constraints.",
+      "currentProductLine": true
+    },
+    {
+      "id": "github.branch.1.4.0",
+      "status": "VERIFIED_REMOTE",
+      "scope": "git-branch",
+      "observedOn": "2026-09-18",
+      "evidence": [
+        "github:next/1.4.0-master-2.3.4-closure-20260917",
+        "deployed-source:e869918002a6a649751b68088de39510dad3b29a",
+        "github-actions:35314965698 SUCCESS"
+      ],
+      "note": "1.4.0 line is remotely qualified. It preserves Master 2.3.4 and introduces the two-sheet/all-rubric correction and loan circuit.",
+      "next": "Continue only from latest remote HEAD and preserve field-reception distinction.",
+      "currentProductLine": true
+    },
+    {
+      "id": "cloudflare.production.1.4.0",
+      "status": "VERIFIED_REMOTE",
+      "scope": "cloudflare-production",
+      "observedOn": "2026-09-18",
+      "evidence": [
+        "github-actions:35314965700 SUCCESS",
+        "worker:eco-system",
+        "worker-version:182e7992-1bf9-479f-914b-c0f04ab1b85c",
+        "health-version:1.4.0-master-2.3.4-closure",
+        "smoke:loan matrix markers + health PASS"
+      ],
+      "note": "1.4.0 production completed qualification, build, pre-BIR+, existing D1/R2 resolution, no migrations, deploy, health/UI smoke, post-BIR+ and R2 mirror. realMoneyEnabled=false.",
+      "next": "Perform founder field reception for variable rubrics, the two sheets, simple-member account and multi-period loans.",
+      "currentProductLine": true
+    },
+    {
+      "id": "backup.birplus.1.4.0",
+      "status": "VERIFIED_REMOTE",
+      "scope": "backup-recovery",
+      "observedOn": "2026-09-18",
+      "evidence": [
+        "github-actions:35314965700 SUCCESS",
+        "R2:eco-system-backups/birplus/1.4.0/e869918002a6a649751b68088de39510dad3b29a/predeploy",
+        "R2:eco-system-backups/birplus/1.4.0/e869918002a6a649751b68088de39510dad3b29a/postdeploy",
+        "restore:SQLite PRAGMA integrity_check=ok",
+        "SHA256:verified"
+      ],
+      "note": "Both predeploy and postdeploy production D1 snapshots were restored, integrity-checked, checksummed and mirrored to R2; source was archived predeploy.",
+      "next": "Create a closure checkpoint after handoff-document commits without redeploying code.",
+      "currentProductLine": true
+    },
+    {
+      "id": "finance.two_sheet_all_rubrics.1.4.0",
+      "status": "VERIFIED_REMOTE",
+      "scope": "finance-ux",
+      "observedOn": "2026-09-18",
+      "evidence": [
+        "tests:20-rubric conversion PASS",
+        "tests:1 and 40 rubric conversion PASS",
+        "production-smoke:1.4.0 SUCCESS"
+      ],
+      "note": "Twenty is not a business limit. Created non-archived rubrics feed both meeting and individual sheets. Technical launch validator safety cap remains 100.",
+      "next": "Field-test arbitrary group-selected rubric sets.",
+      "currentProductLine": true
+    },
+    {
+      "id": "finance.loan_circuit.1.4.0",
+      "status": "VERIFIED_REMOTE",
+      "scope": "loans",
+      "observedOn": "2026-09-18",
+      "evidence": [
+        "tests:founder 50,000 XAF four-month CAPITAL_FIRST PASS",
+        "tests:founder 50,000 XAF four-month INTEREST_FIRST PASS",
+        "tests:monthly meeting accrual idempotence PASS",
+        "tests:prior-debt eligibility PASS",
+        "production-smoke:loan matrix UI markers PASS"
+      ],
+      "note": "Remaining principal accrues interest once per period until principal reaches zero; unpaid interest stays separate. Managers compare and validate CAPITAL_FIRST or INTEREST_FIRST. New loan can be blocked until principal and interest are both settled.",
+      "next": "Field-receive the real multi-meeting circuit from the two financial sheets.",
       "currentProductLine": true
     }
   ]
