@@ -20,6 +20,12 @@ style.textContent=`
 .canonical-two-sheet td,.canonical-two-sheet th{vertical-align:top;min-width:150px}.canonical-two-sheet th:first-child{position:sticky;left:0;z-index:3;background:#fff;min-width:170px}
 .sheet-cell-value{display:grid;gap:3px;margin-bottom:7px}.sheet-cell-value small{font-size:11px;color:var(--muted);white-space:normal}
 .sheet-cell-editor{display:grid;grid-template-columns:72px minmax(82px,1fr) 44px;gap:5px;align-items:center}.sheet-cell-editor select,.sheet-cell-editor input,.sheet-cell-editor button{min-width:0;min-height:39px;padding:6px}.sheet-cell-editor .sheet-loan-select{grid-column:1/-1;width:100%}
+.sheet-cell-edit-trigger{width:100%;min-height:34px;padding:5px 8px;font-size:12px;background:#f7fbf8;border:1px dashed var(--line);color:var(--brand)}
+.sheet-cell-popover{position:fixed;z-index:120;display:grid;gap:9px;padding:12px;border:1px solid var(--line);border-radius:14px;background:#fff;box-shadow:0 16px 44px #10271c38;max-width:calc(100vw - 24px)}
+.sheet-pop-head{display:flex;align-items:center;justify-content:space-between;gap:12px}.sheet-pop-head button{width:34px;height:34px;padding:0;font-size:21px}.sheet-pop-context{color:var(--muted);overflow-wrap:anywhere}.sheet-pop-amount{width:100%;min-height:48px;font-size:20px;font-weight:800}
+.sheet-pop-actions{display:flex;gap:8px;justify-content:flex-end}.sheet-pop-actions button{min-width:110px}
+.individual-sheet-table td,.individual-sheet-table th{min-width:145px}
+
 .focused-field-dictation{position:fixed;right:18px;bottom:82px;z-index:80;width:54px;height:54px;border-radius:50%;padding:0;box-shadow:0 8px 25px #10271c33;background:var(--brand);color:white;font-size:22px;border:0}.focused-field-dictation[hidden]{display:none!important}
 #backOfficeExpensePanel .form-grid{align-items:end}.member-dossier{border-color:#cadbd2}.member-dossier .identity-proof-box{padding:12px;border:1px dashed var(--line);border-radius:12px}.member-dossier textarea{width:100%}
 #view-documents input[type=file]{min-height:58px;border-style:dashed;background:#fff}.member-dossier .full,#view-documents .full{grid-column:1/-1}
