@@ -91,7 +91,7 @@ export class OperationalCockpitService{
       const columns=parseJson<RecapColumnConfig[]>(record.data.columnsJson,[]);return{columns,version:Number(record.data.version??1),updatedAt:record.updatedAt,updatedBy:String(record.data.updatedBy??record.createdBy)};
     }
     const rubrics=(await this.repo.listRubricDefinitions(ctx.tenantId,groupId)).filter(r=>r.status!=='ARCHIVED');
-    const columns:RecapColumnConfig[]=rubrics.slice(0,80).map(r=>({id:'rubric:'+r.id,label:r.name,polarity:r.facets.direction==='OUTFLOW'?'NEGATIVE':'POSITIVE',sourceRubricId:r.id}));
+    const columns:RecapColumnConfig[]=rubrics.slice(0,80).map(r=>({id:'rubric:'+r.id,label:r.name,polarity:(r.activityPlan?.kind==='LOAN'||r.facets.direction==='OUTFLOW')?'NEGATIVE':'POSITIVE',sourceRubricId:r.id}));
     return{columns,version:0,updatedAt:now(),updatedBy:ctx.actorId};
   }
 
@@ -133,7 +133,13 @@ export class OperationalCockpitService{
       const user=await this.repo.getUser(membership.userId),statement=await this.ledger.memberStatement(ctx.tenantId,groupId,membership.id),cells:Record<string,RecapCell>={};let positiveTotal=0,negativeTotal=0;
       for(const column of layout.columns){
         let automaticAmount=0,source:RecapCell['source']='NONE';
-        if(column.sourceRubricId&&!column.manualOnly){automaticAmount=statement.receipts.filter(x=>x.rubricId===column.sourceRubricId).reduce((n,x)=>n+Number(x.netAmount??0),0);source='RUBRIC';}
+        if(column.sourceRubricId&&!column.manualOnly){
+          const receiptIn=statement.receipts.filter(x=>x.rubricId===column.sourceRubricId).reduce((n,x)=>n+Number(x.netAmount??0),0);
+          const eventIn=workspaces.filter(x=>x.moduleId==='FINANCE.SHEET_EVENT'&&String(x.data.membershipId??'')===membership.id&&String(x.data.rubricId??'')===column.sourceRubricId&&String(x.data.direction??'')==='IN').reduce((n,x)=>n+Number(x.data.amount??0),0);
+          const expenseOut=workspaces.filter(x=>x.moduleId==='FINANCE.EXPENSE'&&x.data.scope==='SHEET'&&String(x.data.membershipId??'')===membership.id&&String(x.data.rubricId??'')===column.sourceRubricId).reduce((n,x)=>n+Number(x.data.amount??0),0);
+          const eventOut=workspaces.filter(x=>x.moduleId==='FINANCE.SHEET_EVENT'&&String(x.data.membershipId??'')===membership.id&&String(x.data.rubricId??'')===column.sourceRubricId&&String(x.data.direction??'')==='OUT').reduce((n,x)=>n+Number(x.data.amount??0),0);
+          automaticAmount=column.polarity==='POSITIVE'?receiptIn+eventIn:expenseOut+eventOut;source='RUBRIC';
+        }
         if(column.manualOnly)source='MANUAL_ONLY';
         const override=overrideMap.get(membership.id+'|'+column.id),manualOverride=override?.data.amount===null||override?.data.amount===undefined?undefined:Number(override.data.amount),displayAmount=manualOverride??automaticAmount;
         cells[column.id]={automaticAmount,displayAmount,manualOverride,reason:override?.summary,source};
