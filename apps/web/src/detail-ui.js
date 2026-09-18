@@ -22,7 +22,7 @@ export function mountDetailUI({app,navigate,getGroups,getMembers,getMeetings,get
 
   const buildExerciseMatrix=({member,statement,editable})=>{
     const meetings=getMeetings().slice().sort((a,b)=>(a.scheduledAt??a.openedAt).localeCompare(b.scheduledAt??b.openedAt));
-    const rubrics=getRubrics().filter(r=>r.status==='ACTIVE');
+    const rubrics=getRubrics().filter(r=>r.status!=='ARCHIVED');
     const wrap=el('div',undefined,'matrix-wrap member-exercise-matrix');const table=document.createElement('table');table.className='meeting-matrix';
     const thead=document.createElement('thead'),hr=document.createElement('tr');hr.append(el('th','Séance / période'));
     for(const r of rubrics){const th=document.createElement('th');th.append(link(r.name,'rubric',r.id));hr.append(th);}thead.append(hr);table.append(thead);
@@ -41,7 +41,7 @@ export function mountDetailUI({app,navigate,getGroups,getMembers,getMeetings,get
   };
 
   const buildMeetingMatrix=({meeting,ledger,editable})=>{
-    const members=getMembers(),rubrics=getRubrics().filter(r=>r.status==='ACTIVE');
+    const members=getMembers(),rubrics=getRubrics().filter(r=>r.status!=='ARCHIVED');
     const wrap=el('div',undefined,'matrix-wrap meeting-entry-matrix'),table=document.createElement('table');table.className='meeting-matrix';
     const thead=document.createElement('thead'),hr=document.createElement('tr');hr.append(el('th','Membre'));
     for(const r of rubrics){const th=document.createElement('th');th.append(link(r.name,'rubric',r.id));hr.append(th);}thead.append(hr);table.append(thead);
