@@ -8,7 +8,7 @@ async function api<T=any>(path:string):Promise<T>{
   const headers=new Headers();headers.set('accept-language',en()?'en':'fr');const group=activeGroup();if(group)headers.set('x-active-group-id',group);
   const response=await fetch(path,{headers});const body=await response.json().catch(()=>({error:'HTTP_'+response.status}));if(!response.ok)throw Error(String(body.error??'HTTP_'+response.status));return body as T;
 }
-function go(view:string,target?:string){(document.querySelector(`.nav-btn[data-view="${view}"]`) as HTMLButtonElement|null)?.click();if(target)setTimeout(()=>byId(target)?.scrollIntoView({behavior:'smooth',block:'start'}),120);else window.scrollTo({top:0,behavior:'smooth'});}
+function go(view:string,target?:string){const nav=document.querySelector(`.nav-btn[data-view="${view}"]`) as HTMLButtonElement|null;if(nav)nav.click();else{document.querySelectorAll('.view').forEach(x=>x.classList.remove('active'));byId('view-'+view)?.classList.add('active');document.querySelectorAll('.nav-btn').forEach(x=>x.classList.remove('active'));}if(target)setTimeout(()=>byId(target)?.scrollIntoView({behavior:'smooth',block:'start'}),120);else window.scrollTo({top:0,behavior:'smooth'});}
 function destination(rubric:any){
   const hay=normalize([rubric?.name,...(rubric?.aliases??[]),rubric?.purpose??''].join(' '));
   if(/tontine|rotati|tour|pot|savon|huile|drap/.test(hay))return 'tontines';
@@ -29,7 +29,7 @@ function ensureDomainNav(rubrics:any[],isManager:boolean){
     ['contextDocumentsNav','▤',tr('Documents du groupe','Group documents'),true,'documents','']
   ] as const;
   const tontineNav=document.querySelector<HTMLButtonElement>('.nav-btn[data-view="tontines"]');if(tontineNav)tontineNav.hidden=!tontine;
-  for(const [id,icon,label,visible,view,target] of defs){let b=byId<HTMLButtonElement>(id);if(!b){b=document.createElement('button');b.id=id;b.className='nav-btn contextual-domain-nav';b.type='button';b.innerHTML='<span>'+icon+'</span><b>'+label+'</b>';b.onclick=()=>{if(target==='mg-loan'){document.querySelector<HTMLButtonElement>('#masterGovernanceCenter [data-mg="loan"]')?.click();setTimeout(()=>byId('mg-loan')?.scrollIntoView({behavior:'smooth',block:'start'}),120);}else go(view,target);};before?.before(b);}b.hidden=!visible;}
+  for(const [id,icon,label,visible,view,target] of defs){let b=byId<HTMLButtonElement>(id);if(!b){b=document.createElement('button');b.id=id;b.className='nav-btn contextual-domain-nav';b.type='button';b.innerHTML='<span>'+icon+'</span><b>'+label+'</b>';b.onclick=()=>{if(target==='mg-loan'){go('operations');setTimeout(()=>{document.querySelector<HTMLButtonElement>('#masterGovernanceCenter [data-mg="loan"]')?.click();byId('mg-loan')?.scrollIntoView({behavior:'smooth',block:'start'});},120);}else go(view,target);};before?.before(b);}b.hidden=!visible;}
 }
 function install(){
   if(byId('contextualRubricPanel'))return;
