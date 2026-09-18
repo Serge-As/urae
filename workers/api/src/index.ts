@@ -570,7 +570,21 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
     if(meetingRoute&&request.method==='POST'){
       const body=await readJson<Record<string,unknown>>(request); return json(await meetings.openMeeting(ctx.tenantId,meetingRoute[1]!,{title:String(body.title??''),scheduledAt:body.scheduledAt?String(body.scheduledAt):undefined}),201,cors);
     }
-    const closeMeeting=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/meetings\/([^/]+)\/close$/); if(closeMeeting&&request.method==='POST') return json(await meetings.closeMeeting(ctx.tenantId,closeMeeting[1]!,closeMeeting[2]!),200,cors);
+    const closeMeeting=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/meetings\/([^/]+)\/close$/);
+    if(closeMeeting&&request.method==='POST'){
+      const groupId=closeMeeting[1]!,meetingId=closeMeeting[2]!,closed=await meetings.closeMeeting(ctx.tenantId,groupId,meetingId);
+      const activeLoans=(await completion.list(groupId,'LOAN')).filter(x=>['DISBURSED','REPAYING'].includes(String(x.data.completionState))&&finite(x.data.outstandingPrincipal,0)>0);
+      for(const loan of activeLoans){
+        let accruedMeetingIds:string[]=[];try{accruedMeetingIds=JSON.parse(String(loan.data.accruedMeetingIdsJson??'[]'));if(!Array.isArray(accruedMeetingIds))accruedMeetingIds=[];}catch{accruedMeetingIds=[];}
+        if(accruedMeetingIds.includes(meetingId))continue;
+        const principal=finite(loan.data.outstandingPrincipal,0),interestOpening=finite(loan.data.unpaidInterest,0),rate=finite(loan.data.rateBasisPointsPerPeriod,0),interestNew=Math.round(principal*rate/10000),interestAfter=interestOpening+interestNew;
+        accruedMeetingIds.push(meetingId);
+        await completion.transition(groupId,loan.id,'REPAYING',{expectedVersion:finite(loan.data.completionVersion),patch:{unpaidInterest:interestAfter,accruedMeetingIdsJson:JSON.stringify(accruedMeetingIds),lastAccruedMeetingId:meetingId,lastAccruedInterest:interestNew}});
+        const periodId='loan_period_'+encodeURIComponent(loan.id+'|'+meetingId),stamp=new Date().toISOString(),nextInterest=Math.round(principal*rate/10000);
+        await repo.saveWorkspaceRecord({id:periodId,tenantId:ctx.tenantId,groupId,moduleId:'FINANCE.LOAN_PERIOD',title:'Période de prêt · '+closed.title,summary:'Intérêt mensuel exigible calculé sur le capital restant, sans intérêt sur intérêt.',status:'DONE',tags:['loan-period','loan:'+loan.id,'meeting:'+meetingId],data:{loanId:loan.id,membershipId:String(loan.data.borrowerMembershipId??''),meetingId,principalBefore:principal,interestOpening,interestNew,paymentAmount:0,principalPaid:0,interestPaid:0,principalAfter:principal,interestAfter,totalDebtAfter:principal+interestAfter,nextInterestProjected:nextInterest,nextTotalDueProjected:principal+interestAfter+nextInterest,priority:String(loan.data.paymentPriority??'CAPITAL_FIRST'),rateBasisPointsPerPeriod:rate},createdBy:ctx.actorId,createdAt:stamp,updatedAt:stamp});
+      }
+      return json(closed,200,cors);
+    }
 
     const miscCatalog=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/misc-rubrics$/);
     if(miscCatalog&&request.method==='GET'){
@@ -1200,7 +1214,10 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
         .map(x=>({id:x.id,title:x.title,meetingId:x.data.meetingId?String(x.data.meetingId):undefined,rubricId:x.data.rubricId?String(x.data.rubricId):undefined,
           amount:Number(x.data.amount??0),direction:String(x.data.direction??''),principalPaid:Number(x.data.principalPaid??0),interestPaid:Number(x.data.interestPaid??0),
           ledgerEntryId:x.data.ledgerEntryId?String(x.data.ledgerEntryId):undefined,createdAt:x.createdAt}));
-      return json({loanId,borrowerMembershipId:String(loan.data.borrowerMembershipId??''),events},200,cors);
+      const periods=(await repo.listWorkspaceRecords(ctx.tenantId,'FINANCE.LOAN_PERIOD',groupId))
+        .filter(x=>String(x.data.loanId??'')===loanId).sort((a,b)=>a.createdAt.localeCompare(b.createdAt))
+        .map(x=>({id:x.id,title:x.title,meetingId:String(x.data.meetingId??''),principalBefore:Number(x.data.principalBefore??0),interestOpening:Number(x.data.interestOpening??0),interestNew:Number(x.data.interestNew??0),payment:Number(x.data.paymentAmount??0),principalPaid:Number(x.data.principalPaid??0),interestPaid:Number(x.data.interestPaid??0),principalAfter:Number(x.data.principalAfter??0),interestAfter:Number(x.data.interestAfter??0),totalDebtAfter:Number(x.data.totalDebtAfter??0),nextInterestProjected:Number(x.data.nextInterestProjected??0),nextTotalDueProjected:Number(x.data.nextTotalDueProjected??0),priority:String(x.data.priority??loan.data.paymentPriority??'CAPITAL_FIRST'),createdAt:x.createdAt}));
+      return json({loanId,borrowerMembershipId:String(loan.data.borrowerMembershipId??''),events,periods},200,cors);
     }
 
     const loanQuote=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/loans\/quote$/);
@@ -1276,6 +1293,11 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
       const updatedLoan=await completion.transition(loanRepay[1]!,loan.id,target,{
         expectedVersion:finite(body.expectedVersion),patch:{outstandingPrincipal:allocation.remainingPrincipal,unpaidInterest:allocation.unpaidInterestAfter,lastRepaymentLedgerEntryId:entry.id,paymentPriority:allocation.priority,accruedMeetingIdsJson:JSON.stringify(accruedMeetingIds)}
       });
+      if(meetingId){
+        const periodId='loan_period_'+encodeURIComponent(loan.id+'|'+meetingId),oldPeriod=await repo.getWorkspaceRecord(ctx.tenantId,periodId),stamp=entry.createdAt,nextInterest=Math.round(allocation.remainingPrincipal*rateBasisPointsPerPeriod/10000);
+        const previousPayment=Number(oldPeriod?.data.paymentAmount??0),previousPrincipalPaid=Number(oldPeriod?.data.principalPaid??0),previousInterestPaid=Number(oldPeriod?.data.interestPaid??0),previousInterestNew=Number(oldPeriod?.data.interestNew??0);
+        await repo.saveWorkspaceRecord({id:periodId,tenantId:ctx.tenantId,groupId:loanRepay[1]!,moduleId:'FINANCE.LOAN_PERIOD',title:'Période de prêt',summary:'Évolution mensuelle du capital et des intérêts issue des écritures des deux feuilles.',status:'DONE',tags:['loan-period','loan:'+loan.id,'meeting:'+meetingId],data:{loanId:loan.id,membershipId:String(loan.data.borrowerMembershipId??''),meetingId,principalBefore:Number(oldPeriod?.data.principalBefore??outstanding),interestOpening:Number(oldPeriod?.data.interestOpening??unpaidInterest),interestNew:previousInterestNew+periodInterest,paymentAmount:previousPayment+allocation.paymentAmount,principalPaid:previousPrincipalPaid+allocation.principalPaid,interestPaid:previousInterestPaid+allocation.interestPaid,principalAfter:allocation.remainingPrincipal,interestAfter:allocation.unpaidInterestAfter,totalDebtAfter:allocation.totalDebtAfter,nextInterestProjected:nextInterest,nextTotalDueProjected:allocation.totalDebtAfter+nextInterest,priority:String(allocation.priority),rateBasisPointsPerPeriod},createdBy:oldPeriod?.createdBy??ctx.actorId,createdAt:oldPeriod?.createdAt??stamp,updatedAt:stamp});
+      }
       const repaymentRubricId=body.rubricId?String(body.rubricId):undefined;
       if(repaymentRubricId&&meetingId){
         const eventId='sheet_loan_event_'+entry.id,existing=await repo.getWorkspaceRecord(ctx.tenantId,eventId);
