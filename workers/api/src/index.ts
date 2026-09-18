@@ -231,16 +231,17 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
     const identityHint=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/members\/([^/]+)\/identity-hint\/(cni|phone|name)$/);
     if(identityHint&&request.method==='POST'){
       if(!options.identityProof)throw new Error('IDENTITY_PROOF_UNAVAILABLE');
-      const groupId=identityHint[1]!,membershipId=identityHint[2]!,proofType=identityHint[3]!.toUpperCase() as 'CNI'|'PHONE'|'NAME';await requireGroup(groupId,true);
-      if(!(await repo.getMembership(ctx.tenantId,groupId,membershipId)))throw new Error('MEMBERSHIP_NOT_FOUND');
+      const groupId=identityHint[1]!,membershipId=identityHint[2]!,proofType=identityHint[3]!.toUpperCase() as 'CNI'|'PHONE'|'NAME';
+      const target=await repo.getMembership(ctx.tenantId,groupId,membershipId);if(!target)throw new Error('MEMBERSHIP_NOT_FOUND');
+      if(target.userId!==ctx.actorId)await requireGroup(groupId,true);else await requireGroup(groupId,false);
       const body=await readJson<Record<string,unknown>>(request);
       return json(await options.identityProof.recordHistoricalHint({tenantId:ctx.tenantId,groupId,membershipId,proofType,value:String(body.value??''),createdBy:ctx.actorId}),201,cors);
     }
     const cniHint=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/members\/([^/]+)\/cni-hint$/);
     if(cniHint&&request.method==='POST'){
       if(!options.identityProof)throw new Error('IDENTITY_PROOF_UNAVAILABLE');
-      const groupId=cniHint[1]!,membershipId=cniHint[2]!;await requireGroup(groupId,true);
-      if(!(await repo.getMembership(ctx.tenantId,groupId,membershipId)))throw new Error('MEMBERSHIP_NOT_FOUND');
+      const groupId=cniHint[1]!,membershipId=cniHint[2]!,target=await repo.getMembership(ctx.tenantId,groupId,membershipId);if(!target)throw new Error('MEMBERSHIP_NOT_FOUND');
+      if(target.userId!==ctx.actorId)await requireGroup(groupId,true);else await requireGroup(groupId,false);
       const body=await readJson<Record<string,unknown>>(request);
       return json(await options.identityProof.recordHistoricalCniHint({tenantId:ctx.tenantId,groupId,membershipId,cni:String(body.cni??''),createdBy:ctx.actorId}),201,cors);
     }
