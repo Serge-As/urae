@@ -129,3 +129,18 @@ Le fondateur demande une correction **strictement ciblée** : ne pas modifier le
 
 ### Présentation
 - « Plus de détail » du Carnet membre doit éviter les dumps techniques/bruts et privilégier des libellés métier lisibles.
+
+
+## Tranche 7 — critiques terrain ciblées saisie / rubriques / traçabilité / dossiers (2026-09-18)
+
+Périmètre strict : ne modifier aucune capacité non citée.
+
+1. Les deux feuilles doivent toujours afficher clairement une action de saisie financière lorsqu'une séance est ouverte ; ne pas dépendre d'un tableau legacy concurrent.
+2. Le détail d'une rubrique, ouvert depuis son nom dans les feuilles, doit afficher pour les responsables une matrice récapitulative **membres en lignes × séances/périodes en colonnes**, plus la configuration de cette même rubrique.
+3. Toute correction financière doit laisser une chaîne explicite et compréhensible : ancienne valeur, contrepassation, nouvelle valeur, motif, auteur humain lisible, date, état de revue. Le relevé ne doit pas donner l'impression trompeuse d'un simple 0 → nouvelle valeur lorsqu'il y a eu correction.
+4. Une modification effectuée par un responsable sur sa propre situation financière doit être signalée comme **auto-modification à risque / revue indépendante requise** ; elle ne peut pas être silencieusement auto-validée par le même auteur.
+5. Remplacer autant que possible les identifiants techniques affichés par les noms : nom du membre pour user, titre/date lisible pour séance. Les identifiants restent conservés dans l'audit technique.
+6. Le Dossier Membre est rempli par le membre lui-même. Les responsables habilités du Bureau peuvent le consulter ; ils ne doivent pas modifier discrètement le contenu personnel d'un autre membre.
+7. La saisie financière reste le premier bloc fonctionnel de Réunion. Les panneaux injectés ne doivent pas la pousser en bas.
+8. Le tableau de simulation Prêts doit offrir le même éditeur compact sur capital initial et remboursements mensuels, adapté aux personnes peu technophiles, sans changer les moteurs financiers.
+9. Le seul intitulé starter métier est « Timbre de prêt ». Aucun doublon générique « Timbre » ne doit être injecté.
