@@ -8,6 +8,7 @@ export function mountMiscRubricUI({app,notify=()=>{},showError=console.error,get
   const meetingSelect=document.getElementById('miscRubricMeeting');
   const choices=document.getElementById('miscRubricChoices');
   const postings=document.getElementById('miscRubricPostingList');
+  const policyConfig=document.getElementById('miscRubricPolicyConfig');
   if(!memberSelect||!meetingSelect||!choices||!postings)return{refresh:async()=>{}};
   let rubricDefinitions=[];
 
