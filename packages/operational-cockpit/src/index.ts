@@ -63,10 +63,10 @@ export class OperationalCockpitService{
       disputeState:String(x.data.disputeState??'NO_RESERVE'),createdAt:x.createdAt,updatedAt:x.updatedAt
     }));
     const profile=workspaces.find(x=>x.moduleId==='MEMBER.PROFILE'&&String(x.data.membershipId??'')===membershipId);
-    const receipts=statement.receipts;
+    const receipts=statement.receipts,visibleRubrics=rubrics.filter(r=>r.status!=='ARCHIVED');
     const rows:MemberExerciseRow[]=meetings.slice().sort((a,b)=>(a.scheduledAt??a.openedAt).localeCompare(b.scheduledAt??b.openedAt)).map(meeting=>{
       const cells:Record<string,MemberExerciseCell>={};let total=0;
-      for(const rubric of rubrics){
+      for(const rubric of visibleRubrics){
         const receiptInflow=receipts.filter(x=>x.meetingId===meeting.id&&x.rubricId===rubric.id).reduce((n,x)=>n+Number(x.netAmount??0),0);
         const loanInflow=sheetEvents.filter(x=>x.meetingId===meeting.id&&x.rubricId===rubric.id&&x.direction==='IN').reduce((n,x)=>n+x.amount,0);
         const expenseOutflow=expenses.filter(x=>x.scope==='SHEET'&&x.meetingId===meeting.id&&x.rubricId===rubric.id).reduce((n,x)=>n+x.amount,0);
@@ -79,7 +79,7 @@ export class OperationalCockpitService{
     return{
       group:{id:group.id,name:group.name,kind:group.kind,currentExerciseLabel:group.currentExerciseLabel},
       membership:{...target,displayName:user?.displayName??target.userId},profile:profile?{title:profile.title,summary:profile.summary,data:profile.data,updatedAt:profile.updatedAt}:null,
-      rubrics:rubrics.filter(r=>r.status!=='ARCHIVED').map(r=>({id:r.id,name:r.name,kind:r.activityPlan?.kind,status:r.status,policies:r.policies})),
+      rubrics:visibleRubrics.map(r=>({id:r.id,name:r.name,kind:r.activityPlan?.kind,status:r.status,policies:r.policies})),
       exerciseMatrix:rows,statement,loans,tontines,obligations:obligations.filter(x=>x.groupId===groupId),
       notices,sheetEvents,generatedAt:now()
     };
