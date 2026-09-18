@@ -238,3 +238,21 @@ Production 1.4.0 qualifiée le 2026-09-18.
 - production health : `1.4.0-master-2.3.4-closure`, realMoney=false, Premium Live/Founder Control/Community Realtime/R2 actifs.
 
 **Réception terrain :** encore à effectuer. Ne pas confondre CI/smoke avec validation complète par le fondateur.
+
+
+## 16. Tranche terrain ciblée — qualifiée sur branche, production en attente (2026-09-18)
+
+Checkpoint qualifié : `99a7c0c37fd7aa7f69fbce0eeb00342886b2bb2e` ; CI `35330825785 SUCCESS`.
+
+Périmètre volontairement limité aux critiques terrain :
+- deux feuilles visibles : « Votre feuille de séance » et « Vos fiches individuelles » ;
+- saisie/correction par cellule avec éditeur compact ancré ; les valeurs environnantes restent visibles ;
+- aucun renvoi obligatoire vers Finance pour saisir une cellule ;
+- simulation Prêt : capital initial et paiements mensuels modifiables depuis la matrice ; moteurs CAPITAL_FIRST / INTEREST_FIRST inchangés ;
+- menu Tontines synchronisé avec les rubriques TONTINE du groupe, création additionnelle possible, montant total du pot calculé, membres/cycles alimentés et classement des bénéficiaires ;
+- vue « Membres & habilitations » dédiée ; Dossier Membre déplacé dans cette vue ;
+- vue « Back-office » dédiée ;
+- Carnet membre présenté en sections métier au lieu d'un dump JSON ;
+- le starter métier est « Timbre de prêt » ; aucun starter générique « Timbre » n'est injecté automatiquement.
+
+Statut : `QUALIFIED_BRANCH`. Ne pas déclarer `PRODUCTION_VERIFIED` avant BIR+, déploiement et smoke ciblé.
