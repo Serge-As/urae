@@ -27,5 +27,13 @@ test('two-sheet UI explicitly supports French English and honest local-language 
 });
 
 test('matrix interception prevents old click-to-Finance behavior from owning sheet cells',async()=>{
-  const source=await readFile('.build/src/voice-entry-ui.js','utf8');assert.match(source,/stopImmediatePropagation/);assert.match(source,/canonical-two-sheet/);assert.match(source,/sheet-cell-editor/);
+  const source=await readFile('.build/src/voice-entry-ui.js','utf8');assert.match(source,/stopImmediatePropagation/);assert.match(source,/canonical-two-sheet/);assert.match(source,/sheet-cell-edit-trigger/);assert.match(source,/sheet-cell-popover/);assert.match(source,/individualSheetMatrix/);
+});
+
+
+test('two-sheet workspace uses compact anchored entry instead of redirecting cells to Finance',async()=>{
+  const source=await readFile('.build/src/voice-entry-ui.js','utf8');
+  const main=await readFile('apps/web/src/main.js','utf8');
+  assert.match(source,/Saisir \/ corriger/);assert.match(source,/sheetCellPopover/);assert.match(source,/renderIndividualSheetWorkspace/);
+  assert.doesNotMatch(main,/go\('finance'\); \$\('#contributionAmount'\)\.focus\(\)/);
 });
