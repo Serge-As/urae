@@ -1,4 +1,6 @@
-trigger=1.4.0-second-pass
-qualified_sha=11632b71c13b755a4975af687384bc5513484347
+trigger=1.4.0-targeted-field-tranche
+qualified_sha=99af570f560214120e713e9558964b37bdb57a3e
+qualified_run=35331257070
+birplus_run=35331257061
 requested_by=founder
-purpose=verify deployed Master 2.3.4 closure and complete postdeploy BIR+ after smoke fix
+purpose=deploy targeted two-sheet Tontines Members Back-office corrections after BIR+ and green CI
