@@ -169,7 +169,7 @@ async function recordSheetCell(membershipId:string,rubricId:string,meetingId:str
 
 function closeSheetCellPopover(){byId('sheetCellPopover')?.remove();}
 
-function buildSheetCellEditor(membershipId:string,rubric:any,meetingId:string,status?:HTMLElement){
+function buildSheetCellEditor(membershipId:string,rubric:any,meetingId:string,status?:HTMLElement,existingReceipts:any[]=[]){
   const trigger=document.createElement('button');trigger.type='button';trigger.className='sheet-cell-edit-trigger';trigger.textContent=t('Saisir / corriger','Enter / correct');
   trigger.onclick=()=>{
     closeSheetCellPopover();const kind=rubricKind(rubric),member=members.find(x=>x.id===membershipId),meeting=meetings.find(x=>x.id===meetingId);
@@ -182,6 +182,11 @@ function buildSheetCellEditor(membershipId:string,rubric:any,meetingId:string,st
     let loanSelect:HTMLSelectElement|undefined;if(kind==='REPAYMENT'){loanSelect=document.createElement('select');loanSelect.append(makeOption('',t('Prêt concerné','Related loan')));const active=activeLoansFor(membershipId);for(const loan of active)loanSelect.append(makeOption(loan.id,loan.title+' · '+t('capital ','principal ')+fmt(Number(loan.data?.outstandingPrincipal??0))+' · '+t('intérêts ','interest ')+fmt(Number(loan.data?.unpaidInterest??0))));if(active.length===1)loanSelect.value=active[0].id;}
     const actions=document.createElement('div');actions.className='sheet-pop-actions';const save=document.createElement('button');save.type='button';save.className='primary';save.textContent=t('Enregistrer','Save');
     save.onclick=()=>void(async()=>{try{const n=Number(amount.value);if(!Number.isSafeInteger(n)||n<=0)throw Error('INVALID_NUMBER');save.disabled=true;await recordSheetCell(membershipId,rubric.id,meetingId,dir.value as 'IN'|'OUT',n,status,loanSelect?.value||undefined);closeSheetCellPopover();}catch(e){context.textContent=friendly(e instanceof Error?e.message:String(e));context.className='sheet-pop-context error';}finally{save.disabled=false;}})();actions.append(save);
+    const activeReceipts=existingReceipts.filter(x=>Number(x.netAmount??x.amount?.amount??0)>0);
+    if(kind!=='LOAN'&&kind!=='REPAYMENT'&&activeReceipts.length===1){
+      const replace=document.createElement('button');replace.type='button';replace.className='secondary';replace.textContent=t('Remplacer cette saisie','Replace this entry');
+      replace.onclick=()=>void(async()=>{try{const n=Number(amount.value);if(!Number.isSafeInteger(n)||n<0)throw Error('INVALID_NUMBER');const reason=prompt(t('Motif de la correction','Correction reason'),t('Erreur de saisie corrigée depuis la feuille','Entry error corrected from sheet'));if(!reason?.trim())return;replace.disabled=true;const group=activeGroup();if(!group)throw Error('ACTIVE_GROUP_REQUIRED');await api('/api/v1/groups/'+encodeURIComponent(group)+'/ledger/'+encodeURIComponent(String(activeReceipts[0].ledgerEntryId))+'/reverse',{method:'POST',body:JSON.stringify({reason})});if(n>0)await postIncome(membershipId,rubric.id,meetingId,n,t('Correction depuis la feuille','Correction from sheet'));closeSheetCellPopover();byId<HTMLButtonElement>('refreshBtn')?.click();}catch(e){context.textContent=friendly(e instanceof Error?e.message:String(e));context.className='sheet-pop-context error';}finally{replace.disabled=false;}})();actions.append(replace);
+    }
     pop.append(head,context,dir,amount);if(loanSelect)pop.append(loanSelect);pop.append(actions);document.body.append(pop);
     const r=trigger.getBoundingClientRect(),w=Math.min(360,window.innerWidth-24);pop.style.width=w+'px';pop.style.left=Math.max(12,Math.min(window.innerWidth-w-12,r.left+r.width/2-w/2))+'px';pop.style.top=Math.max(12,Math.min(window.innerHeight-230,r.bottom+8))+'px';amount.focus();
   };return trigger;
@@ -209,7 +214,7 @@ async function renderCanonicalMeetingMatrix(root:HTMLElement,meetingId?:string){
         const expenseOut=expenses.filter((x:any)=>x.scope==='SHEET'&&x.membershipId===m.id&&(!chosen||x.meetingId===chosen)&&x.rubricId===r.id).reduce((n:number,x:any)=>n+Number(x.amount??0),0);
         const eventOut=sheetEvents.filter((x:any)=>String(x.data?.membershipId??'')===m.id&&(!chosen||x.data?.meetingId===chosen)&&x.data?.rubricId===r.id&&x.data?.direction==='OUT').reduce((n:number,x:any)=>n+Number(x.data?.amount??0),0);
         const inflow=receiptIn+eventIn,outflow=expenseOut+eventOut,value=document.createElement('div');value.className='sheet-cell-value';value.innerHTML=`<strong>${fmt(inflow-outflow)}</strong><small>+${fmt(inflow)} · −${fmt(outflow)}</small>`;td.append(value);
-        if(chosen&&meetings.find(x=>x.id===chosen)?.status==='open')td.append(buildSheetCellEditor(m.id,r,chosen,status));tr.append(td);
+        if(chosen&&meetings.find(x=>x.id===chosen)?.status==='open')td.append(buildSheetCellEditor(m.id,r,chosen,status,cellReceipts));tr.append(td);
       }
       tbody.append(tr);
     }
@@ -272,7 +277,7 @@ async function renderIndividualSheetWorkspace(){
   const sheet=await api<any>('/api/v1/groups/'+encodeURIComponent(group)+'/members/'+encodeURIComponent(selector.value)+'/operational-sheet'),rub=sheet.rubrics??[],table=document.createElement('table');table.className='meeting-matrix canonical-two-sheet individual-sheet-table';
   const head=document.createElement('thead'),hr=document.createElement('tr');hr.append(Object.assign(document.createElement('th'),{textContent:t('Séance','Meeting')}));for(const r of rub){const th=document.createElement('th');th.textContent=r.name;hr.append(th);}hr.append(Object.assign(document.createElement('th'),{textContent:t('Total','Total')}));head.append(hr);table.append(head);
   const body=document.createElement('tbody');for(const row of sheet.exerciseMatrix??[]){const tr=document.createElement('tr'),th=document.createElement('th');th.textContent=row.title;tr.append(th);const meeting=meetings.find(m=>m.id===row.meetingId),editable=Boolean(me.isManager&&meeting?.status==='open');
-    for(const r of rub){const cell=row.cells?.[r.id]??{inflow:0,outflow:0,net:0},td=document.createElement('td'),value=document.createElement('div');value.className='sheet-cell-value';value.innerHTML='<strong>'+fmt(Number(cell.net??0))+'</strong><small>+'+fmt(Number(cell.inflow??0))+' · −'+fmt(Number(cell.outflow??0))+'</small>';td.append(value);if(editable)td.append(buildSheetCellEditor(selector.value,r,row.meetingId));tr.append(td);}const total=document.createElement('td');total.innerHTML='<strong>'+fmt(Number(row.total??0))+'</strong>';tr.append(total);body.append(tr);}
+    for(const r of rub){const cell=row.cells?.[r.id]??{inflow:0,outflow:0,net:0},td=document.createElement('td'),value=document.createElement('div');value.className='sheet-cell-value';value.innerHTML='<strong>'+fmt(Number(cell.net??0))+'</strong><small>+'+fmt(Number(cell.inflow??0))+' · −'+fmt(Number(cell.outflow??0))+'</small>';td.append(value);if(editable){const receipts=(sheet.statement?.receipts??[]).filter((x:any)=>x.meetingId===row.meetingId&&x.rubricId===r.id);td.append(buildSheetCellEditor(selector.value,r,row.meetingId,undefined,receipts));}tr.append(td);}const total=document.createElement('td');total.innerHTML='<strong>'+fmt(Number(row.total??0))+'</strong>';tr.append(total);body.append(tr);}
   table.append(body);root.replaceChildren(table);
 }
 function installTwoSheetChooser(){
