@@ -11,7 +11,12 @@ async function enhance(requestedMembershipId?:string){
   const body=q('memberDossierHost'),group=groupId(),membershipId=requestedMembershipId||body?.dataset.memberId||'';if(!body||!membershipId||!group||busy)return;busy=true;
   try{
     body.dataset.memberId=membershipId;body.replaceChildren();
-    const profile=await api<any>(`/api/v1/groups/${encodeURIComponent(group)}/members/${encodeURIComponent(membershipId)}/profile`).catch(()=>null);if(profile===null){body.innerHTML='<div class="empty-state">'+tr('Dossier inaccessible avec vos habilitations actuelles.','Dossier unavailable with your current permissions.')+'</div>';return;}
+    const [profile,viewer]=await Promise.all([
+      api<any>(`/api/v1/groups/${encodeURIComponent(group)}/members/${encodeURIComponent(membershipId)}/profile`).catch(()=>null),
+      api<any>(`/api/v1/groups/${encodeURIComponent(group)}/me`).catch(()=>({membership:null,isManager:false}))
+    ]);
+    if(profile===null){body.innerHTML='<div class="empty-state">'+tr('Dossier inaccessible avec vos habilitations actuelles.','Dossier unavailable with your current permissions.')+'</div>';return;}
+    const self=String(viewer?.membership?.id??'')===membershipId,readOnly=!self;
     const panel=document.createElement('article');panel.className='panel member-dossier';panel.dataset.memberDossier='1';
     panel.innerHTML=`<div class="panel-head"><div><h2>${tr('Dossier membre','Member dossier')}</h2><p>${tr('Identité de groupe, situation familiale utile, fonction, ancienneté et contacts. CNI/téléphone de rapprochement ne sont jamais réaffichés : seuls leurs empreintes HMAC sont conservées.','Group identity, useful family situation, office role, seniority and contacts. Matching CNI/phone values are never displayed again: only their HMAC fingerprints are retained.')}</p></div><span class="pill">v<span data-profile-version>${Number(profile.profileVersion??0)}</span></span></div>
     <form class="form-grid" data-member-profile-form>
@@ -27,8 +32,15 @@ async function enhance(requestedMembershipId?:string){
       <input type="hidden" name="expectedVersion" value="${Number(profile.profileVersion??0)}"><button class="primary" type="submit">${tr('Enregistrer le dossier','Save member dossier')}</button><p class="hint" data-member-profile-status></p>
     </form>`;
     body.append(panel);const form=panel.querySelector<HTMLFormElement>('[data-member-profile-form]')!;
+    const head=panel.querySelector('.panel-head > div');if(head){const rule=document.createElement('p');rule.className='hint';rule.textContent=readOnly?tr('Consultation Bureau : ce dossier appartient au membre. Seul le membre peut modifier ses informations personnelles.','Bureau view: this dossier belongs to the member. Only the member can edit their personal information.'):tr('Votre dossier : vous le remplissez et vous le mettez à jour vous-même. Les responsables habilités peuvent le consulter.','Your dossier: you complete and update it yourself. Authorized officers may consult it.');head.append(rule);}
+    if(readOnly){
+      for(const el of form.querySelectorAll<HTMLInputElement|HTMLTextAreaElement|HTMLSelectElement>('input,textarea,select'))el.disabled=true;
+      form.querySelector<HTMLButtonElement>('button[type=submit]')?.remove();
+      form.querySelector<HTMLElement>('.identity-proof-box')?.remove();
+    }
     const put=(name:string,value:any)=>{const el=form.elements.namedItem(name) as HTMLInputElement|HTMLTextAreaElement|null;if(!el)return;if(Array.isArray(value))el.value=value.join('\n');else if(value!==undefined&&value!==null)el.value=String(value);};
     for(const name of ['legalName','displayAlias','domicile','quarter','profession','joinedYear','fatherName','motherName','spouseName','sponsorName','emergencyContactName','emergencyContactRelation','officeTitle','notes','preferredLocale','children','siblings'])put(name,profile[name]);
+    if(readOnly)return;
     form.onsubmit=event=>{event.preventDefault();void(async()=>{const status=form.querySelector<HTMLElement>('[data-member-profile-status]')!;const button=form.querySelector<HTMLButtonElement>('button[type=submit]')!;button.disabled=true;try{
       const fd=new FormData(form),get=(name:string)=>String(fd.get(name)??'').trim(),split=(name:string)=>get(name).split(/[;\n]/).map(x=>x.trim()).filter(Boolean);
       const payload:any={expectedVersion:Number(get('expectedVersion')||0),legalName:get('legalName')||undefined,displayAlias:get('displayAlias')||undefined,domicile:get('domicile')||undefined,quarter:get('quarter')||undefined,profession:get('profession')||undefined,joinedYear:get('joinedYear')?Number(get('joinedYear')):undefined,fatherName:get('fatherName')||undefined,motherName:get('motherName')||undefined,spouseName:get('spouseName')||undefined,children:split('children'),siblings:split('siblings'),sponsorName:get('sponsorName')||undefined,emergencyContactName:get('emergencyContactName')||undefined,emergencyContactRelation:get('emergencyContactRelation')||undefined,officeTitle:get('officeTitle')||undefined,notes:get('notes')||undefined,preferredLocale:get('preferredLocale')||undefined};
