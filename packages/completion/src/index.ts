@@ -366,11 +366,21 @@ export class CompletionSuiteService {
   }
 
   async list(groupId:Id,kind?:CompletionKind):Promise<CompletionRecord[]>{
-    await this.membership(groupId,false);
+    const viewer=await this.membership(groupId,false);
     const ctx=this.kernel.context.get();
     const records=(await this.repo.listWorkspaceRecords(ctx.tenantId,undefined,groupId))
       .filter(r=>r.tags.includes('completion'));
-    return records.filter(r=>!kind||r.data.completionKind===kind) as CompletionRecord[];
+    let visible=records.filter(r=>!kind||r.data.completionKind===kind) as CompletionRecord[];
+    const manager=!viewer||viewer.roles.some(r=>MANAGEMENT_ROLES.has(r));
+    if(!manager){
+      visible=visible.filter(r=>{
+        if(r.data.completionKind==='LOAN')return String(r.data.borrowerMembershipId??'')===viewer.id;
+        if(r.data.completionKind==='TONTINE_SHARE')return String(r.data.membershipId??'')===viewer.id;
+        if(r.data.completionKind==='IDENTITY_CLAIM')return !r.data.claimedMembershipId||String(r.data.claimedMembershipId)===viewer.id;
+        return !['GOVERNANCE_DECISION','APPROVAL_REQUEST','IMPORT_BATCH'].includes(String(r.data.completionKind));
+      });
+    }
+    return visible;
   }
 
   async create(groupId:Id,kind:CompletionKind,input:{
