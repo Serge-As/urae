@@ -86,3 +86,54 @@ test('fine grids and loan sanctions are governed rubric policies',async()=>{
   assert.equal(r.status,200);let rubric=await r.json();assert.equal(rubric.policies.fine.rules.length,2);
   await assert.doesNotReject(async()=>{r=await handler(new Request('http://local/api/v1/groups/group_t3/rubrics/rubric_fine/policies',{method:'PUT',headers:founder,body:JSON.stringify({loan:{allowed:true,rateBasisPointsPerPeriod:500,interestBase:'PRINCIPAL_ONLY',paymentPriority:'CAPITAL_FIRST',noInterestOnInterest:true,overdue:{maxDurationPeriods:3,penaltyRateBasisPointsPerPeriod:1000,blockNewLoanUntilSettled:true,blockNextExercise:true,recoverFrom:['TONTINE','GUARANTOR']},specialLoans:[{key:'urgent',label:'Prêt urgence',rateBasisPointsPerPeriod:300,maxDurationPeriods:1,paymentPriority:'CAPITAL_FIRST'}]}})}));assert.equal(r.status,200);});
 });
+
+
+test('twenty project rubrics survive conversion and are visible on the member operational sheet',async()=>{
+  const repo=new InMemoryPlatformRepository();
+  await repo.saveUser({id:'founder_20',displayName:'Responsable 20',locale:'fr',createdAt:'2026-01-01T00:00:00Z'});
+  const handler=createApiHandler(repo);
+  const h={'content-type':'application/json','x-tenant-id':'tenant_20','x-actor-id':'founder_20','x-group-roles':'founder,manager'};
+  const historical=[
+    ['aide_locale','AIDE LOCALE','ASSISTANCE'],['secours','SECOURS','SOLIDARITY'],['epargne','EPARGNE','SAVINGS'],['epargne_scolaire','EPARGNE SCOLAIRE','SAVINGS'],
+    ['remboursement','REMBOURSEMENT','REPAYMENT'],['remb_interets','REMBOUR INTERETS','REPAYMENT'],['tontine_10000','TONTINE 10000F','TONTINE'],['tontine_25000','TONTINE 25000F','TONTINE'],
+    ['main_levee_espece','MAIN LEVEE ESPECE','LEVY'],['autres','AUTRES','OTHER'],['huile_savon','HUILLE ET SAVON','TONTINE'],['main_levee_nature','MAIN LEVEE NATURE','LEVY'],
+    ['prets','PRETS','LOAN'],['special_pret','SPECIAL PRET','LOAN'],['special_remb','SPECIAL REMBOURSEMENT','REPAYMENT'],['inscription','INSCRIPTION','CONTRIBUTION'],
+    ['amendes','AMENDES','CONTRIBUTION'],['timbre','TIMBRE DE PRET','CONTRIBUTION'],['collation','COLLATION','CONTRIBUTION'],['transport','TRANSPORT','TRANSPORT']
+  ];
+  const rubrics=historical.map(([key,name,kind])=>({key,name,kind,nominalAmount:{currency:'XAF',amount:kind==='TONTINE'?10000:1000},amountBasis:kind==='TONTINE'?'PER_SHARE':'PER_MEMBER',participationMode:'OPTIONAL',contributionMode:'MONEY',memberCount:20,shareCount:kind==='TONTINE'?20:undefined,potCount:kind==='TONTINE'?2:undefined,sessions:12,duration:{value:12,unit:'MONTHS'},managementFeePerPayment:0,estimatedExternalCostRate:0,fixedCostPerSession:0}));
+  let r=await handler(new Request('http://local/api/v1/group-projects',{method:'POST',headers:h,body:JSON.stringify({name:'Groupe 20 rubriques',kind:'association',governanceModel:'community',rubrics,launchProfile:{origin:{mode:'NEW'}}})}));
+  assert.equal(r.status,201);const project=await r.json();
+  r=await handler(new Request('http://local/api/v1/group-projects/'+project.id+'/simulate',{method:'POST',headers:h,body:'{}'}));assert.equal(r.status,200);
+  r=await handler(new Request('http://local/api/v1/group-projects/'+project.id+'/convert',{method:'POST',headers:h,body:'{}'}));assert.equal(r.status,201);const group=await r.json();
+  let defs=await repo.listRubricDefinitions('tenant_20',group.id);assert.equal(defs.length,20);assert.ok(defs.every(x=>x.status==='ACTIVE'));
+  await repo.saveUser({id:'member_20',displayName:'Membre 20',locale:'fr',createdAt:'2026-01-01T00:00:00Z'});
+  await repo.saveMembership({id:'membership_20',tenantId:'tenant_20',groupId:group.id,userId:'member_20',roles:['member'],status:'active',joinedAt:'2026-01-02T00:00:00Z'});
+  await repo.saveMeeting({id:'meeting_20',tenantId:'tenant_20',groupId:group.id,title:'Janvier',status:'open',openedBy:'founder_20',openedAt:'2026-01-10T10:00:00Z'});
+  const mh={'content-type':'application/json','x-tenant-id':'tenant_20','x-actor-id':'member_20','x-group-roles':'member'};
+  r=await handler(new Request('http://local/api/v1/groups/'+group.id+'/rubrics',{headers:mh}));assert.equal(r.status,200);defs=await r.json();assert.equal(defs.length,20);
+  r=await handler(new Request('http://local/api/v1/groups/'+group.id+'/members/membership_20/operational-sheet',{headers:mh}));assert.equal(r.status,200);const sheet=await r.json();
+  assert.equal(sheet.rubrics.length,20);assert.equal(Object.keys(sheet.exerciseMatrix[0].cells).length,20);
+  for(const name of historical.map(x=>x[1]))assert.ok(sheet.rubrics.some(x=>x.name===name),name+' must remain on the individual sheet');
+});
+
+test('partial principal then interest repayment in one meeting accrues interest only once and projects both rubric cells',async()=>{
+  const {repo,handler}=await seed();
+  const base={tenantId:'tenant_t3',groupId:'group_t3',aliases:[],facets:{direction:'INFLOW',obligation:'OPTIONAL',medium:'CASH',refundability:'NON_REFUNDABLE',replenishment:'NONE',interestMode:'NONE',eligibilityMode:'ALL_MEMBERS'},status:'ACTIVE',source:'GROUP_CUSTOM',version:1,createdAt:'2026-01-01T00:00:00Z',updatedAt:'2026-01-01T00:00:00Z'};
+  await repo.saveRubricDefinition({...base,id:'rubric_repay_principal',name:'REMBOURSEMENT',activityPlan:{key:'rep_principal',name:'REMBOURSEMENT',kind:'REPAYMENT',nominalAmount:{currency:'XAF',amount:0},amountBasis:'PER_MEMBER',memberCount:2,sessions:12,duration:{value:12,unit:'MONTHS'},managementFeePerPayment:0,estimatedExternalCostRate:0,fixedCostPerSession:0}});
+  await repo.saveRubricDefinition({...base,id:'rubric_repay_interest',name:'REMBOUR INTERETS',activityPlan:{key:'rep_interest',name:'REMBOUR INTERETS',kind:'REPAYMENT',nominalAmount:{currency:'XAF',amount:0},amountBasis:'PER_MEMBER',memberCount:2,sessions:12,duration:{value:12,unit:'MONTHS'},managementFeePerPayment:0,estimatedExternalCostRate:0,fixedCostPerSession:0}});
+  await repo.saveWorkspaceRecord({id:'loan_sheet_t3',tenantId:'tenant_t3',groupId:'group_t3',moduleId:'FINANCE.LOANS',title:'Prêt test',status:'ACTIVE',tags:['completion','kind:LOAN','state:DISBURSED'],data:{completionKind:'LOAN',completionState:'DISBURSED',completionVersion:4,borrowerMembershipId:'mm_t3',principal:50000,outstandingPrincipal:50000,unpaidInterest:0,rateBasisPointsPerPeriod:500,paymentPriority:'CAPITAL_FIRST',ledgerEntryId:'ledger_disbursement_evidence',currency:'XAF',accruedMeetingIdsJson:'[]'},createdBy:'founder_t3',createdAt:'2026-01-10T09:00:00Z',updatedAt:'2026-01-10T09:00:00Z'});
+  let r=await handler(new Request('http://local/api/v1/groups/group_t3/loans/loan_sheet_t3/repay',{method:'POST',headers:founder,body:JSON.stringify({principalAmount:10000,interestAmount:0,rateBasisPointsPerPeriod:500,meetingId:'meeting_t3',rubricId:'rubric_repay_principal',expectedVersion:4,idempotencyKey:'rep-principal-t3'})}));
+  assert.equal(r.status,201);let body=await r.json();assert.equal(body.allocation.interestAccrued,2500);assert.equal(body.allocation.remainingPrincipal,40000);assert.equal(body.allocation.unpaidInterestAfter,2500);
+  r=await handler(new Request('http://local/api/v1/groups/group_t3/loans/loan_sheet_t3/repay',{method:'POST',headers:founder,body:JSON.stringify({principalAmount:0,interestAmount:2500,rateBasisPointsPerPeriod:500,meetingId:'meeting_t3',rubricId:'rubric_repay_interest',expectedVersion:5,idempotencyKey:'rep-interest-t3'})}));
+  assert.equal(r.status,201);body=await r.json();assert.equal(body.allocation.interestAccrued,0);assert.equal(body.allocation.remainingPrincipal,40000);assert.equal(body.allocation.unpaidInterestAfter,0);
+  r=await handler(new Request('http://local/api/v1/groups/group_t3/members/mm_t3/operational-sheet',{headers:member}));assert.equal(r.status,200);const sheet=await r.json(),row=sheet.exerciseMatrix.find(x=>x.meetingId==='meeting_t3');
+  assert.equal(row.cells.rubric_repay_principal.inflow,10000);assert.equal(row.cells.rubric_repay_interest.inflow,2500);
+  const events=(await repo.listWorkspaceRecords('tenant_t3','FINANCE.SHEET_EVENT','group_t3'));assert.equal(events.length,2);
+});
+
+test('loan simulator returns at least six explicit evolution lines without interest on interest',async()=>{
+  const {handler}=await seed();
+  const r=await handler(new Request('http://local/api/v1/groups/group_t3/loans/simulate',{method:'POST',headers:member,body:JSON.stringify({principal:50000,periods:6,ratePercentPerPeriod:5,priority:'CAPITAL_FIRST',payments:[0,30000,20000,0,0,0]})}));
+  assert.equal(r.status,200);const body=await r.json();assert.equal(body.rows.length,6);assert.equal(body.noInterestOnInterest,true);
+  assert.deepEqual(Object.keys(body.rows[0]).sort(),['interestAfter','interestNew','interestOpening','interestPaid','nextTaxablePrincipal','payment','period','principalAfter','principalBefore','principalPaid','totalDebtAfter','unappliedPayment'].sort());
+});
