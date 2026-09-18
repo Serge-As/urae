@@ -127,7 +127,12 @@ export class MemberFinancialControlService{
     const x=await this.get(groupId,id);if(!['MEMBER_RESERVE','UNDER_REVIEW','MEMBER_RESERVE_MAINTAINED'].includes(x.notice.disputeState))throw new Error('NO_MEMBER_RESERVE');
     if(x.notice.requiresIndependentReview&&x.notice.authorId===ctx.actorId)throw new Error('INDEPENDENT_REVIEW_REQUIRED');
     const notice={...x.notice,disputeState:'OFFICER_CONFIRMED' as const,officerId:ctx.actorId,officerNote:note.trim()||'Validation après vérification',version:x.notice.version+1,updatedAt:now()};
-    return this.save(x.record,notice,'FINANCIAL_RESERVE_OFFICER_CONFIRMED');
+    const saved=await this.save(x.record,notice,'FINANCIAL_RESERVE_OFFICER_CONFIRMED');
+    if(saved.requiresIndependentReview){
+      const tasks=(await this.repo.listObligations(ctx.tenantId)).filter(o=>o.type==='FINANCIAL_INDEPENDENT_REVIEW'&&o.sourceId===saved.id&&o.status==='open');
+      for(const task of tasks)await this.repo.saveObligation({...task,status:'completed'});
+    }
+    return saved;
   }
 
   async memberReview(groupId:string,id:string,decision:'APPROVE_AFTER_REVIEW'|'MAINTAIN_RESERVE',note=''):Promise<FinancialNotice>{
