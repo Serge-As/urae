@@ -37,12 +37,17 @@ export class RubricKnowledgeService {
     const launchHash=input.launchKey?Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(JSON.stringify([input.tenantId,input.groupId,input.launchKey])))),b=>b.toString(16).padStart(2,'0')).join(''):undefined;
     const id=launchHash?'rubric_launch_'+launchHash:makeId('rubric');
     const existing=input.launchKey?await this.repo.getRubricDefinition(input.tenantId,input.groupId,id):undefined;if(existing)return existing;
-    const rubric:RubricDefinition={id,tenantId:input.tenantId,groupId:input.groupId,name,aliases:[...new Set((input.aliases??[]).map(x=>x.trim()).filter(Boolean))],purpose:input.purpose?.trim()||undefined,facets:structuredClone(input.facets),operatingModel:input.operatingModel?structuredClone(input.operatingModel):undefined,policies:input.policies?structuredClone(input.policies):undefined,activityPlan,status:'DRAFT',source:input.source??'GROUP_CUSTOM',version:1,createdAt:timestamp,updatedAt:timestamp};
+    const rubric:RubricDefinition={id,tenantId:input.tenantId,groupId:input.groupId,name,aliases:[...new Set((input.aliases??[]).map(x=>x.trim()).filter(Boolean))],purpose:input.purpose?.trim()||undefined,facets:structuredClone(input.facets),operatingModel:input.operatingModel?structuredClone(input.operatingModel):undefined,policies:input.policies?structuredClone(input.policies):undefined,activityPlan,status:input.launchProjectId?'ACTIVE':'DRAFT',source:input.source??'GROUP_CUSTOM',version:1,createdAt:timestamp,updatedAt:timestamp};
     await this.repo.saveRubricDefinition(rubric); const audit=this.kernel.audit.append({tenantId:input.tenantId,actorId:this.kernel.context.get().actorId,action:'RUBRIC_CREATED',targetType:'rubric',targetId:rubric.id,after:rubric,requestId:this.kernel.context.get().requestId});await this.repo.saveAudit(audit);return structuredClone(rubric);
   }
 
   async listRubrics(tenantId:Id,groupId:Id):Promise<RubricDefinition[]>{
-    await requireManager(this.repo,this.kernel,tenantId,groupId);
+    const ctx=this.kernel.context.get();if(ctx.tenantId!==tenantId)throw new Error('FORBIDDEN_SCOPE');
+    const group=await this.repo.getGroup(tenantId,groupId);if(!group)throw new Error('GROUP_NOT_FOUND');
+    if(group.createdBy!==ctx.actorId){
+      const membership=(await this.repo.listMemberships(tenantId,groupId)).find(x=>x.userId===ctx.actorId&&x.status==='active');
+      if(!membership)throw new Error('FORBIDDEN_SCOPE');
+    }
     return this.repo.listRubricDefinitions(tenantId,groupId);
   }
 
