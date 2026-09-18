@@ -12,6 +12,8 @@ export function mountDetailUI({app,navigate,getGroups,getMembers,getMeetings,get
   const currentView=()=>document.querySelector('.view.active')?.id?.replace(/^view-/,'')||'dashboard';
   const jump=(type,id)=>void open(type,id);
   const managerOrSelf=m=>isManager()||m.userId===app.currentActor();
+  const humanMeetingLabel=m=>'Réunion du '+date(m?.scheduledAt??m?.openedAt??m?.createdAt??'');
+  const actorName=id=>getMembers().find(m=>m.userId===id)?.displayName??id;
 
   const quickEntry=({membershipId,rubricId,meetingId,onSaved})=>{
     const box=el('div',undefined,'matrix-entry');const input=document.createElement('input');input.type='number';input.min='1';input.step='1';input.inputMode='numeric';input.placeholder='Ajouter…';input.setAttribute('aria-label','Montant à enregistrer');
@@ -29,7 +31,7 @@ export function mountDetailUI({app,navigate,getGroups,getMembers,getMeetings,get
     const tbody=document.createElement('tbody');
     const rows=meetings.length?meetings:[{id:'',title:'Sans séance',openedAt:''}];
     for(const meeting of rows){
-      const tr=document.createElement('tr'),th=document.createElement('th');if(meeting.id)th.append(link(meeting.title,'meeting',meeting.id));else th.textContent='Sans séance';tr.append(th);
+      const tr=document.createElement('tr'),th=document.createElement('th');if(meeting.id)th.append(link(humanMeetingLabel(meeting),'meeting',meeting.id));else th.textContent='Sans séance';tr.append(th);
       for(const rubric of rubrics){
         const opRow=operational?.exerciseMatrix?.find(x=>x.meetingId===meeting.id),opCell=opRow?.cells?.[rubric.id],confirmed=opCell?Number(opCell.net??0):amountFor(statement.receipts,{meetingId:meeting.id||undefined,rubricId:rubric.id});const td=document.createElement('td'),shown=el('strong',fmt(confirmed),'matrix-confirmed');shown.title=opCell?'Net de la même écriture canonique que la feuille de séance':'Montant net confirmé dans le Ledger';td.append(shown);
         if(editable&&meeting.id)td.append(quickEntry({membershipId:member.id,rubricId:rubric.id,meetingId:meeting.id,onSaved:async()=>{await open('member',member.id,true);}}));
@@ -91,20 +93,55 @@ export function mountDetailUI({app,navigate,getGroups,getMembers,getMeetings,get
 
   const meetingDetail=async id=>{
     const meeting=getMeetings().find(x=>x.id===id);if(!meeting)throw Error('MEETING_NOT_FOUND');
-    title.textContent=meeting.title;subtitle.textContent='Feuille de séance · membres × rubriques · mêmes écritures que les fiches individuelles.';
+    title.textContent=humanMeetingLabel(meeting);subtitle.textContent='Feuille de séance · membres × rubriques · mêmes écritures que les fiches individuelles.';
     metrics.replaceChildren(metric(meeting.status,'État'),metric(date(meeting.scheduledAt??meeting.openedAt),'Date'));
-    const info=card('Séance');info.append(row('Titre',meeting.title),row('Ouverte par',meeting.openedBy),row('Planifiée',meeting.scheduledAt?date(meeting.scheduledAt):'—'),row('Clôturée',meeting.closedAt?date(meeting.closedAt):'—'));body.replaceChildren(info);
+    const info=card('Séance');info.append(row('Titre affiché',humanMeetingLabel(meeting)),row('Titre interne conservé',meeting.title),row('Ouverte par',actorName(meeting.openedBy)),row('Planifiée',meeting.scheduledAt?date(meeting.scheduledAt):'—'),row('Clôturée',meeting.closedAt?date(meeting.closedAt):'—'));body.replaceChildren(info);
     if(isManager()){
       try{const ledger=await app.ledger(),receipts=ledger.receipts.filter(r=>r.meetingId===id);metrics.append(metric(receipts.length,'Encaissements'));const sheet=card('Votre feuille de séance');sheet.append(el('p','Les noms des membres et les titres des rubriques ouvrent leurs fiches. Les montants ne sont plus des liens : saisissez un ajout dans la cellule et validez ✓.','hint'),buildMeetingMatrix({meeting,ledger,editable:meeting.status==='open'}));body.append(sheet);}catch(e){showError(e);}
     }else body.append(el('p','La feuille complète est réservée aux responsables. Votre fiche individuelle reste accessible depuis votre compte.','hint'));
     try{const misc=await app.miscPostings({meetingId:id});if(misc.length){const other=card('Autres · séance');for(const p of misc){const m=getMembers().find(x=>x.id===p.data?.membershipId),a=el('article',undefined,'item');a.append(el('strong',p.title),row('Montant',fmt(Number(p.data?.amount??0))));if(m)a.append(link(m.displayName,'member',m.id));other.append(a);}body.append(other);}}catch{}
   };
 
+
+  const rubricContributionMatrix=(rubric,ledger)=>{
+    const meetings=getMeetings().slice().sort((a,b)=>String(a.scheduledAt??a.openedAt).localeCompare(String(b.scheduledAt??b.openedAt))),members=getMembers();
+    const wrap=el('div',undefined,'matrix-wrap rubric-contribution-matrix'),table=document.createElement('table');table.className='meeting-matrix';
+    const head=document.createElement('thead'),hr=document.createElement('tr');hr.append(el('th','Membre'));
+    for(const meeting of meetings){const th=document.createElement('th');th.append(link(humanMeetingLabel(meeting),'meeting',meeting.id));hr.append(th);}
+    const noMeeting=ledger.receipts.some(x=>x.rubricId===rubric.id&&!x.meetingId);if(noMeeting)hr.append(el('th','Sans séance'));
+    hr.append(el('th','Total rubrique'));head.append(hr);table.append(head);const bodyRows=document.createElement('tbody');
+    for(const member of members){const tr=document.createElement('tr'),name=document.createElement('th');name.append(link(member.displayName,'member',member.id));tr.append(name);let total=0;
+      for(const meeting of meetings){const amount=ledger.receipts.filter(x=>x.membershipId===member.id&&x.rubricId===rubric.id&&x.meetingId===meeting.id).reduce((n,x)=>n+Number(x.netAmount??0),0);total+=amount;tr.append(el('td',fmt(amount)));}
+      if(noMeeting){const amount=ledger.receipts.filter(x=>x.membershipId===member.id&&x.rubricId===rubric.id&&!x.meetingId).reduce((n,x)=>n+Number(x.netAmount??0),0);total+=amount;tr.append(el('td',fmt(amount)));}
+      const sum=el('td');sum.append(el('strong',fmt(total)));tr.append(sum);bodyRows.append(tr);
+    }
+    table.append(bodyRows);wrap.append(table);return wrap;
+  };
+
+  const rubricConfigurationEditor=r=>{
+    const box=card('Configurer cette rubrique'),ruleForm=document.createElement('form');ruleForm.className='form-grid';
+    const written=document.createElement('textarea');written.rows=2;written.value=r.operatingModel?.writtenRule??'';const observed=document.createElement('textarea');observed.rows=2;observed.value=r.operatingModel?.observedPractice??'';
+    const reality=document.createElement('select');for(const [v,label] of [['UNKNOWN','À vérifier'],['ALIGNED','Conforme'],['DIFFERS','Différent'],['MIXED','Mixte']]){const o=new Option(label,v);reality.append(o);}reality.value=r.operatingModel?.ruleRealityStatus??'UNKNOWN';
+    const saveRule=el('button','Enregistrer règle et pratique','primary');saveRule.type='submit';
+    const label=(text,node)=>{const l=document.createElement('label');l.textContent=text;l.append(node);return l;};
+    ruleForm.append(label('Ce qui est écrit',written),label('Pratique observée',observed),label('Écart écrit / pratique',reality),saveRule);
+    ruleForm.onsubmit=e=>void(async()=>{e.preventDefault();try{saveRule.disabled=true;const base=r.operatingModel??{targetMode:'OPEN',mandatoryForAbsentees:false,shortfallHandling:'LEAVE_SHORT',payoutMode:'COLLECTED_ONLY',immediateFullPayout:false};await app.updateRubricOperatingModel(r.id,{...base,writtenRule:written.value.trim()||undefined,observedPractice:observed.value.trim()||undefined,ruleRealityStatus:reality.value});await open('rubric',r.id,true);}catch(err){showError(err);}finally{saveRule.disabled=false;}})();
+    box.append(ruleForm);
+    if(r.activityPlan){
+      const planForm=document.createElement('form');planForm.className='form-grid';const amount=document.createElement('input');amount.type='number';amount.min='0';amount.max='999999999999';amount.step='1';amount.value=String(r.activityPlan.nominalAmount?.amount??0);
+      const participation=document.createElement('select');for(const [v,label] of [['OPTIONAL','Facultative'],['MANDATORY','Obligatoire'],['RULE_BASED','Selon règle']])participation.append(new Option(label,v));participation.value=r.activityPlan.participationMode??'RULE_BASED';
+      const savePlan=el('button','Enregistrer les paramètres','secondary');savePlan.type='submit';planForm.append(label('Montant nominal / part',amount),label('Participation',participation),savePlan);
+      planForm.onsubmit=e=>void(async()=>{e.preventDefault();try{const n=Number(amount.value);if(!Number.isSafeInteger(n)||n<0)throw Error('Montant invalide.');savePlan.disabled=true;await app.updateRubricActivityPlan(r.id,{...r.activityPlan,nominalAmount:{...r.activityPlan.nominalAmount,amount:n},participationMode:participation.value});await open('rubric',r.id,true);}catch(err){showError(err);}finally{savePlan.disabled=false;}})();box.append(planForm);
+    }
+    return box;
+  };
+
   const rubricDetail=async id=>{
     const r=getRubrics().find(x=>x.id===id);if(!r)throw Error('RUBRIC_NOT_FOUND');title.textContent=r.name;subtitle.textContent='Règle, pratique observée et mouvements liés.';metrics.replaceChildren(metric(r.status,'État'),metric(r.source,'Source'),metric(r.version,'Version'));
     const info=card('Règle de la rubrique');info.append(row('Nom',r.name),row('Objet',r.purpose??'—'),row('Écrit',r.operatingModel?.writtenRule??'—'),row('Pratique observée',r.operatingModel?.observedPractice??'—'),row('Règle effective',r.operatingModel?.effectiveRuleSummary??'—'),row('Écart',r.operatingModel?.ruleRealityStatus??'UNKNOWN'),row('Participation',r.activityPlan?.participationMode??r.facets?.obligation??'—'),row('Cadence',r.facets?.cadence??'—'));body.replaceChildren(info);
-    if(r.activityPlan){const plan=card('Configuration');plan.append(row('Nature',r.activityPlan.kind),row('Montant nominal',fmt(Number(r.activityPlan.nominalAmount?.amount??0))),row('Durée',r.activityPlan.duration?r.activityPlan.duration.value+' '+r.activityPlan.duration.unit:'—'),row('Séances',r.activityPlan.sessions));body.append(plan);}
-    if(isManager()){try{const ledger=await app.ledger(),receipts=ledger.receipts.filter(x=>x.rubricId===id);metrics.append(metric(receipts.length,'Écritures'));const fin=card('Mouvements par membre');for(const p of receipts.slice(0,100)){const m=getMembers().find(x=>x.id===p.membershipId),a=el('article',undefined,'item');a.append(link(m?.displayName??p.membershipId,'member',p.membershipId),row('Net',fmt(p.netAmount)));if(p.meetingId)a.append(link('Séance','meeting',p.meetingId));fin.append(a);}body.append(fin);}catch{}}
+    if(r.activityPlan){const plan=card('Configuration actuelle');plan.append(row('Nature',r.activityPlan.kind),row('Montant nominal',fmt(Number(r.activityPlan.nominalAmount?.amount??0))),row('Durée',r.activityPlan.duration?r.activityPlan.duration.value+' '+r.activityPlan.duration.unit:'—'),row('Séances',r.activityPlan.sessions));body.append(plan);}
+    if(isManager()){try{const ledger=await app.ledger(),receipts=ledger.receipts.filter(x=>x.rubricId===id);metrics.append(metric(receipts.length,'Écritures'));const recap=card('Tableau récapitulatif des contributions');recap.append(el('p','Responsables uniquement · membres en lignes, réunions/périodes en colonnes. Les montants sont les positions nettes après contrepassations.','hint'),rubricContributionMatrix(r,ledger));body.append(recap,rubricConfigurationEditor(r));}catch(e){showError(e);}}
+    else body.append(el('p','Le tableau global de cette rubrique et sa configuration sont réservés aux responsables habilités.','hint'));
   };
 
   async function open(type,id,preservePrevious=false){
