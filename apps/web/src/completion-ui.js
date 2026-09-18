@@ -71,6 +71,7 @@ export const mountCompletionUI=({app,notify,showError,getMembers,getMeetings,get
   };
 
   const renderTontine=async()=>{
+    if(!byId('tontineCompletionPanel'))return;
     if(!app.activeGroup()){cycles=[];shares=[];return;}
     [cycles,shares]=await Promise.all([app.listCompletion('TONTINE_CYCLE'),app.listCompletion('TONTINE_SHARE')]);
     refill(byId('tontineShareCycle'),cycles.map(x=>({id:x.id,label:x.title})),tr('Choisir un cycle','Choose a cycle'));
@@ -227,22 +228,22 @@ export const mountCompletionUI=({app,notify,showError,getMembers,getMeetings,get
     await Promise.all([renderTontine(),renderLoans(),renderCompletionRecords(),renderOfflineSnapshots()]);
   };
 
-  byId('tontineCycleForm')?.addEventListener('submit',e=>{e.preventDefault();void run(e.currentTarget,async()=>{
+  byId('tontineCompletionPanel')?.querySelector('#tontineCycleForm')?.addEventListener('submit',e=>{e.preventDefault();void run(e.currentTarget,async()=>{
     await app.createTontineCycle({rubricId:value('tontineCycleRubric'),name:value('tontineCycleName'),rounds:number('tontineRounds'),potsPerRound:number('tontinePots'),nominalPotAmount:number('tontinePotAmount')});
     byId('tontineCycleName').value='';await renderTontine();notify(tr('Cycle créé.','Cycle created.'));
   });});
-  byId('tontineShareForm')?.addEventListener('submit',e=>{e.preventDefault();void run(e.currentTarget,async()=>{
+  byId('tontineCompletionPanel')?.querySelector('#tontineShareForm')?.addEventListener('submit',e=>{e.preventDefault();void run(e.currentTarget,async()=>{
     await app.addTontineShare({cycleId:value('tontineShareCycle'),membershipId:value('tontineShareMember'),label:value('tontineShareLabel')});
     byId('tontineShareLabel').value='';await renderTontine();notify(tr('Part ajoutée.','Share added.'));
   });});
-  byId('suggestTontineScheduleBtn')?.addEventListener('click',()=>void run(null,proposeSchedule));
-  byId('applyTontineScheduleBtn')?.addEventListener('click',()=>void run(null,applySchedule));
-  byId('tontineServeForm')?.addEventListener('submit',e=>{e.preventDefault();void run(e.currentTarget,async()=>{
+  byId('tontineCompletionPanel')?.querySelector('#suggestTontineScheduleBtn')?.addEventListener('click',()=>void run(null,proposeSchedule));
+  byId('tontineCompletionPanel')?.querySelector('#applyTontineScheduleBtn')?.addEventListener('click',()=>void run(null,applySchedule));
+  byId('tontineCompletionPanel')?.querySelector('#tontineServeForm')?.addEventListener('submit',e=>{e.preventDefault();void run(e.currentTarget,async()=>{
     const share=shares.find(x=>x.id===value('tontineServeShare'));if(!share)throw Error('TONTINE_SHARE_NOT_FOUND');
     await app.serveTontineShare(share.id,{amount:number('tontineServeAmount'),expectedVersion:primitiveVersion(share),meetingId:value('tontineServeMeeting')||undefined});
     await renderTontine();notify(tr('Pot servi et comptabilisé.','Pot served and posted to the ledger.'));
   });});
-  byId('readinessBtn')?.addEventListener('click',()=>void run(null,async()=>{
+  byId('tontineCompletionPanel')?.querySelector('#readinessBtn')?.addEventListener('click',()=>void run(null,async()=>{
     const p=await app.createReadinessPassport();const blockers=safeJson(p.data.blockers,[]);
     byId('readinessResult').textContent=p.data.ready===true?tr('Groupe prêt : aucun blocage détecté.','Group ready: no blocker detected.'):tr('À compléter : ','To complete: ')+blockers.join(', ');
   }));
