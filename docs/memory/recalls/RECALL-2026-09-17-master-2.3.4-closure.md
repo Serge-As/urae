@@ -75,3 +75,23 @@ Le fondateur a signalé une régression fonctionnelle réelle malgré une CI ver
 
 ### Erreur corrigée
 La tranche précédente a confondu **configuration de rubrique** et **surface de saisie financière** et a laissé subsister des tunnels historiques séparés (notamment « Autres » et le formulaire Finance). La correction doit unifier l’UX autour des deux feuilles sans créer de second Ledger ni perdre les moteurs spécialisés.
+
+
+## Tranche 5 — clarification fondateur Prêts + Intérêts et nombre de rubriques (2026-09-18)
+
+### Invariants métier
+- Le nombre de rubriques n’est **jamais fixé à 20**. Le test à 20 n’était qu’un scénario de non-régression reproduisant le test terrain du fondateur. Un groupe peut avoir 1, 20, 40 rubriques ou une autre quantité dans la limite technique de sécurité ; la quantité est une décision du groupe.
+- Le capital restant dû d’un prêt continue à générer l’intérêt de chaque nouvelle séance/période mensuelle jusqu’à apurement total du capital.
+- Un remboursement partiel du capital réduit immédiatement l’assiette taxable ; le mois suivant, l’intérêt se calcule sur le capital restant.
+- Les intérêts impayés sont reportés séparément. Ils ne deviennent pas du capital et ne produisent pas d’intérêt sur intérêt.
+- Si le capital est totalement apuré mais qu’il reste des intérêts, le mois suivant n’ajoute aucun nouvel intérêt ; seule la dette d’intérêts demeure à régler.
+- Le gestionnaire choisit et valide au niveau de la rubrique Prêt l’un des deux systèmes officiels de répartition d’un paiement : **CAPITAL_FIRST** ou **INTEREST_FIRST**. Il doit pouvoir simuler les deux avant validation.
+- Lorsque la politique du groupe l’exige, un nouveau prêt est interdit tant que capital et intérêts du prêt précédent ne sont pas intégralement apurés.
+
+### Exemple fondateur à verrouiller
+Capital initial 50 000 XAF, taux 5 % par mois, paiements : mois 1 = 0, mois 2 = 30 000, mois 3 = 20 000.
+- CAPITAL_FIRST : fin mois 1 = 50 000 capital + 2 500 intérêts ; mois 2 ajoute 2 500 intérêts puis rembourse 30 000 de capital -> 20 000 capital + 5 000 intérêts ; mois 3 ajoute 1 000 intérêts puis rembourse les 20 000 de capital -> capital 0, intérêts dus 6 000. Le mois 4 n’ajoute aucun intérêt ; paiement de 6 000 libère la dette.
+- INTEREST_FIRST : fin mois 1 = 50 000 capital + 2 500 intérêts ; mois 2 ajoute 2 500 intérêts, le paiement 30 000 solde les 5 000 intérêts et amortit 25 000 de capital -> capital 25 000 ; mois 3 ajoute 1 250 intérêts, le paiement 20 000 solde 1 250 intérêts et amortit 18 750 de capital -> capital restant 6 250 ; mois 4 génère 5 % de 6 250, soit 312,5 théoriques, arrondis selon l’unité XAF de l’application, puis le paiement final libère la dette.
+
+### Matrice de suivi
+Colonnes = séances/mois ; lignes = Capital initial/début de période, Capital remboursé, Capital restant dû, Intérêt exigible, Intérêt payé, Intérêt restant dû, Paiement, Dette totale, Intérêt projeté prochain mois, Total dû prochaine séance. Pied = totaux et solde final.
