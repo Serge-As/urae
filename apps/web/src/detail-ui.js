@@ -20,7 +20,7 @@ export function mountDetailUI({app,navigate,getGroups,getMembers,getMeetings,get
     button.onclick=()=>void save();input.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();void save();}});box.append(input,button);return box;
   };
 
-  const buildExerciseMatrix=({member,statement,editable})=>{
+  const buildExerciseMatrix=({member,statement,operational,editable})=>{
     const meetings=getMeetings().slice().sort((a,b)=>(a.scheduledAt??a.openedAt).localeCompare(b.scheduledAt??b.openedAt));
     const rubrics=getRubrics().filter(r=>r.status!=='ARCHIVED');
     const wrap=el('div',undefined,'matrix-wrap member-exercise-matrix');const table=document.createElement('table');table.className='meeting-matrix';
@@ -31,7 +31,7 @@ export function mountDetailUI({app,navigate,getGroups,getMembers,getMeetings,get
     for(const meeting of rows){
       const tr=document.createElement('tr'),th=document.createElement('th');if(meeting.id)th.append(link(meeting.title,'meeting',meeting.id));else th.textContent='Sans séance';tr.append(th);
       for(const rubric of rubrics){
-        const td=document.createElement('td'),confirmed=amountFor(statement.receipts,{meetingId:meeting.id||undefined,rubricId:rubric.id});const shown=el('strong',fmt(confirmed),'matrix-confirmed');shown.title='Montant net confirmé dans le Ledger';td.append(shown);
+        const opRow=operational?.exerciseMatrix?.find(x=>x.meetingId===meeting.id),opCell=opRow?.cells?.[rubric.id],confirmed=opCell?Number(opCell.net??0):amountFor(statement.receipts,{meetingId:meeting.id||undefined,rubricId:rubric.id});const td=document.createElement('td'),shown=el('strong',fmt(confirmed),'matrix-confirmed');shown.title=opCell?'Net de la même écriture canonique que la feuille de séance':'Montant net confirmé dans le Ledger';td.append(shown);
         if(editable&&meeting.id)td.append(quickEntry({membershipId:member.id,rubricId:rubric.id,meetingId:meeting.id,onSaved:async()=>{await open('member',member.id,true);}}));
         tr.append(td);
       }
@@ -78,9 +78,9 @@ export function mountDetailUI({app,navigate,getGroups,getMembers,getMeetings,get
     metrics.replaceChildren(metric((m.roles??[]).join(', ')||'member','Rôle'),metric(m.status,'État'));
     const identity=card('Identité dans ce groupe');identity.append(row('Nom',m.displayName),row('Fiche membre',m.id),row('Année / ancienneté',m.historicalJoinedAt?date(m.historicalJoinedAt):m.joinedAt?date(m.joinedAt):'—'));
     body.replaceChildren(identity);if(!managerOrSelf(m))return;
-    let statement;try{statement=await app.memberStatement(m.id);}catch(e){showError(e);return;}
-    metrics.append(metric(fmt(statement.totalNetContributions),'Cotisations nettes'));
-    const sheet=card('Votre fiche individuelle');sheet.append(el('p','Chaque ligne est une séance/période et chaque colonne une rubrique. Les montants affichés sont ceux confirmés dans le Ledger. Un responsable habilité peut saisir directement dans la cellule ; le membre voit la même vérité sans pouvoir modifier les écritures.','hint'),buildExerciseMatrix({member:m,statement,editable:isManager()}));body.append(sheet);
+    let statement,operational;try{[statement,operational]=await Promise.all([app.memberStatement(m.id),app.memberOperationalSheet(m.id)]);}catch(e){showError(e);return;}
+    metrics.append(metric(fmt(statement.totalNetContributions),'Cotisations nettes'),metric((operational?.rubrics??[]).length,'Rubriques de ma fiche'));
+    const sheet=card('Votre fiche individuelle');sheet.append(el('p','Chaque rubrique créée et non archivée du groupe apparaît ici. Chaque ligne est une séance/période. Cette fiche lit exactement la même vérité que la feuille de séance ; un membre voit sa propre fiche sans accéder aux fiches financières des autres.','hint'),buildExerciseMatrix({member:m,statement,operational,editable:isManager()}));body.append(sheet);
     try{
       const loans=(await app.listCompletion('LOAN')).filter(x=>String(x.data?.borrowerMembershipId??'')===m.id);if(loans.length){const loanCard=card('Prêts / dettes');for(const loan of loans){const a=el('article',undefined,'item');a.append(el('strong',loan.title),row('État',loan.data?.completionState??'—'),row('Capital initial',fmt(Number(loan.data?.principal??0))),row('Capital restant',fmt(Number(loan.data?.outstandingPrincipal??0))));loanCard.append(a);}body.append(loanCard);}
     }catch{}
