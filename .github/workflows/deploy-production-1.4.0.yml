@@ -165,6 +165,12 @@ jobs:
               && grep -Fq "${EXPECTED_VERSION}" /tmp/smoke/health.json \
               && grep -Fq 'mountVoiceEntryUI' /tmp/smoke/voice.js \
               && grep -Fq 'mountDocumentsUI' /tmp/smoke/voice.js \
+              && grep -Fq 'sheet-cell-popover' /tmp/smoke/voice.js \
+              && grep -Fq 'individualSheetMatrix' /tmp/smoke/root.html \
+              && grep -Fq 'data-view="members"' /tmp/smoke/root.html \
+              && grep -Fq 'data-view="backoffice"' /tmp/smoke/root.html \
+              && grep -Fq 'memberDossierHost' /tmp/smoke/root.html \
+              && grep -Fq 'Montant total du pot' /tmp/smoke/root.html \
               && grep -Fq 'Comparer les 2 systèmes' /tmp/smoke/governance.js \
               && grep -Fq 'Total mensuel restant dû pour séance suivante' /tmp/smoke/governance.js; then
               ready=1
@@ -193,6 +199,12 @@ jobs:
           NODE
           for token in mountVoiceEntryUI mountExpenseRecapUI mountMemberDossierUI mountDocumentsUI mountContextualGroupUI; do grep -Fq "${token}" /tmp/smoke/voice.js; done
           grep -Fq 'Documents du groupe' /tmp/smoke/documents.js
+          grep -Fq 'sheet-cell-popover' /tmp/smoke/voice.js
+          grep -Fq 'individualSheetMatrix' /tmp/smoke/root.html
+          grep -Fq 'data-view="members"' /tmp/smoke/root.html
+          grep -Fq 'data-view="backoffice"' /tmp/smoke/root.html
+          grep -Fq 'memberDossierHost' /tmp/smoke/root.html
+          grep -Fq 'Montant total du pot' /tmp/smoke/root.html
           grep -Fq 'Comparer les 2 systèmes' /tmp/smoke/governance.js
           grep -Fq 'Total mensuel restant dû pour séance suivante' /tmp/smoke/governance.js
           grep -Fq 'Capital restant' /tmp/smoke/governance.js
