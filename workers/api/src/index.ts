@@ -640,7 +640,7 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
         try{await publishLive(groupId,'FINANCIAL_NOTICE','correction-notice:'+noticeEntry.id,{noticeId:notice.id,ledgerEntryId:notice.ledgerEntryId,operationType:notice.operationType,amount:notice.amount,currency:notice.currency,previousSituation:notice.previousSituation??0,newSituation:notice.newSituation??0,selfBenefit},notice.userId);}catch{}
         return json({correctionId,receiptId:receipt.id,oldAmount,newAmount,beforeSituation,afterSituation,selfBenefit,requiresIndependentReview:selfBenefit,reversalEntryId:reversal.id,replacementReceiptId:replacementReceipt?.id??null,notice},200,cors);
       }catch(error){
-        await repo.saveWorkspaceRecord({...record,status:'FAILED',tags:[...record.tags,'failed'],data:{...record.data,error:(error instanceof Error?error.message:String(error)).slice(0,300)},updatedAt:new Date().toISOString()});
+        await repo.saveWorkspaceRecord({...record,status:'ACTIVE',tags:[...record.tags,'failed','recovery-required'],data:{...record.data,error:(error instanceof Error?error.message:String(error)).slice(0,300)},updatedAt:new Date().toISOString()});
         throw error;
       }
     }
