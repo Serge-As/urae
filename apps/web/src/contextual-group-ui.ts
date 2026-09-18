@@ -25,7 +25,7 @@ function ensureDomainNav(rubrics:any[],isManager:boolean){
     ['contextLoansNav','₣',tr('Prêts + Intérêts','Loans + Interest'),has('LOAN',/pret|emprunt|credit|loan/),'finance','mg-loan'],
     ['contextAssistanceNav','♡',tr('Assistances','Assistance'),isManager&&has('ASSISTANCE',/assist|secours|main levee/),'finance','assistanceRulebookPanel'],
     ['contextOtherNav','⋯',tr('Autres rubriques','Other rubrics'),isManager&&rubrics.some(r=>/amende|inscription|timbre|collation|transport|autre/.test(normalize(String(r.name??'')))),'operations','miscRubricPanel'],
-    ['contextRankingsNav','≋',tr('Classements & calendrier','Schedules & calendar'),tontine,'tontines','tontineManagerList'],
+    ['contextRankingsNav','≋',tr('Classements & calendrier','Schedules & calendar'),tontine,'tontines','tontineRankingPanel'],
     ['contextDocumentsNav','▤',tr('Documents du groupe','Group documents'),true,'documents','']
   ] as const;
   const tontineNav=document.querySelector<HTMLButtonElement>('.nav-btn[data-view="tontines"]');if(tontineNav)tontineNav.hidden=!tontine;
