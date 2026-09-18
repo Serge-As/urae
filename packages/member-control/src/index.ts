@@ -9,7 +9,8 @@ export type DisputeState='NO_RESERVE'|'MEMBER_RESERVE'|'UNDER_REVIEW'|'OFFICER_C
 export interface FinancialNotice {
   id:string;groupId:string;membershipId:string;userId:string;ledgerEntryId:string;
   operationType:string;amount:number;currency:string;rubricId?:string;meetingId?:string;
-  previousSituation?:number;newSituation?:number;authorId:string;authorRoles:string[];
+  previousSituation?:number;newSituation?:number;previousAmount?:number;newAmount?:number;correctionReason?:string;
+  selfBenefit?:boolean;requiresIndependentReview?:boolean;authorId:string;authorRoles:string[];
   createdAt:string;memberState:MemberNoticeState;disputeState:DisputeState;version:number;
   reserveReason?:string;officerId?:string;officerNote?:string;memberReviewNote?:string;updatedAt:string;
 }
@@ -27,6 +28,10 @@ const toNotice=(r:WorkspaceRecord):FinancialNotice=>{
     rubricId:d.rubricId?String(d.rubricId):undefined,meetingId:d.meetingId?String(d.meetingId):undefined,
     previousSituation:d.previousSituation===null||d.previousSituation===undefined?undefined:Number(d.previousSituation),
     newSituation:d.newSituation===null||d.newSituation===undefined?undefined:Number(d.newSituation),
+    previousAmount:d.previousAmount===null||d.previousAmount===undefined?undefined:Number(d.previousAmount),
+    newAmount:d.newAmount===null||d.newAmount===undefined?undefined:Number(d.newAmount),
+    correctionReason:d.correctionReason?String(d.correctionReason):undefined,
+    selfBenefit:Boolean(d.selfBenefit),requiresIndependentReview:Boolean(d.requiresIndependentReview),
     authorId:String(d.authorId??''),authorRoles:JSON.parse(String(d.authorRolesJson??'[]')) as string[],
     createdAt:r.createdAt,memberState:String(d.memberState??'NOTIFIED') as MemberNoticeState,
     disputeState:String(d.disputeState??'NO_RESERVE') as DisputeState,version:Number(d.version??1),
@@ -38,6 +43,8 @@ const toNotice=(r:WorkspaceRecord):FinancialNotice=>{
 const dataFor=(n:FinancialNotice):WorkspaceRecord['data']=>({
   membershipId:n.membershipId,userId:n.userId,ledgerEntryId:n.ledgerEntryId,operationType:n.operationType,amount:n.amount,currency:n.currency,
   rubricId:n.rubricId??null,meetingId:n.meetingId??null,previousSituation:n.previousSituation??null,newSituation:n.newSituation??null,
+  previousAmount:n.previousAmount??null,newAmount:n.newAmount??null,correctionReason:n.correctionReason??null,
+  selfBenefit:Boolean(n.selfBenefit),requiresIndependentReview:Boolean(n.requiresIndependentReview),
   authorId:n.authorId,authorRolesJson:JSON.stringify(n.authorRoles),memberState:n.memberState,disputeState:n.disputeState,version:n.version,
   reserveReason:n.reserveReason??null,officerId:n.officerId??null,officerNote:n.officerNote??null,memberReviewNote:n.memberReviewNote??null
 });
@@ -71,11 +78,11 @@ export class MemberFinancialControlService{
     await this.repo.saveAudit(audit);return structuredClone(notice);
   }
 
-  async create(input:{groupId:string;membershipId:string;entry:LedgerEntry;operationType:string;amount:number;currency:string;rubricId?:string;meetingId?:string;previousSituation?:number;newSituation?:number}):Promise<FinancialNotice>{
+  async create(input:{groupId:string;membershipId:string;entry:LedgerEntry;operationType:string;amount:number;currency:string;rubricId?:string;meetingId?:string;previousSituation?:number;newSituation?:number;previousAmount?:number;newAmount?:number;correctionReason?:string;selfBenefit?:boolean;requiresIndependentReview?:boolean}):Promise<FinancialNotice>{
     const ctx=this.kernel.context.get(),m=await this.membership(input.groupId,input.membershipId);
     const id=noticeId(input.groupId,input.membershipId,input.entry.id),existing=await this.repo.getWorkspaceRecord(ctx.tenantId,id);
     if(existing)return toNotice(existing);
-    const stamp=now(),notice:FinancialNotice={id,groupId:input.groupId,membershipId:m.id,userId:m.userId,ledgerEntryId:input.entry.id,operationType:input.operationType,amount:input.amount,currency:input.currency,rubricId:input.rubricId,meetingId:input.meetingId,previousSituation:input.previousSituation,newSituation:input.newSituation,authorId:input.entry.createdBy,authorRoles:[...ctx.groupRoles],createdAt:stamp,memberState:'NOTIFIED',disputeState:'NO_RESERVE',version:1,updatedAt:stamp};
+    const stamp=now(),notice:FinancialNotice={id,groupId:input.groupId,membershipId:m.id,userId:m.userId,ledgerEntryId:input.entry.id,operationType:input.operationType,amount:input.amount,currency:input.currency,rubricId:input.rubricId,meetingId:input.meetingId,previousSituation:input.previousSituation,newSituation:input.newSituation,previousAmount:input.previousAmount,newAmount:input.newAmount,correctionReason:input.correctionReason,selfBenefit:Boolean(input.selfBenefit),requiresIndependentReview:Boolean(input.requiresIndependentReview),authorId:input.entry.createdBy,authorRoles:[...ctx.groupRoles],createdAt:stamp,memberState:'NOTIFIED',disputeState:input.requiresIndependentReview?'UNDER_REVIEW':'NO_RESERVE',version:1,updatedAt:stamp};
     const record:WorkspaceRecord={id,tenantId:ctx.tenantId,groupId:input.groupId,moduleId:MODULE,title:'Avis financier membre',summary:'Une opération a modifié votre situation. Vérifiez-la.',status:'ACTIVE',tags:['financial-notice','member-control'],data:dataFor(notice),createdBy:input.entry.createdBy,createdAt:stamp,updatedAt:stamp};
     await this.repo.saveWorkspaceRecord(record);
     const audit=this.kernel.audit.append({tenantId:ctx.tenantId,actorId:input.entry.createdBy,action:'MEMBER_FINANCIAL_NOTICE_CREATED',targetType:'financial_notice',targetId:id,requestId:ctx.requestId,metadata:{ledgerEntryId:input.entry.id,membershipId:m.id}});
@@ -90,6 +97,7 @@ export class MemberFinancialControlService{
   async confirm(groupId:string,id:string):Promise<FinancialNotice>{
     const ctx=this.kernel.context.get(),x=await this.get(groupId,id),m=await this.membership(groupId,x.notice.membershipId);
     if(m.userId!==ctx.actorId)throw new Error('MEMBER_SELF_ACTION_REQUIRED');
+    if(x.notice.requiresIndependentReview)throw new Error('INDEPENDENT_REVIEW_REQUIRED');
     if(x.notice.memberState==='MEMBER_CONFIRMED')return x.notice;
     const notice={...x.notice,memberState:'MEMBER_CONFIRMED' as const,version:x.notice.version+1,updatedAt:now()};
     return this.save(x.record,notice,'MEMBER_FINANCIAL_NOTICE_CONFIRMED');
@@ -109,6 +117,7 @@ export class MemberFinancialControlService{
   async officerReview(groupId:string,id:string,note:string):Promise<FinancialNotice>{
     const ctx=this.kernel.context.get();if(!(await this.canManage(groupId)))throw new Error('FORBIDDEN_SCOPE');
     const x=await this.get(groupId,id);if(!['MEMBER_RESERVE','UNDER_REVIEW','MEMBER_RESERVE_MAINTAINED'].includes(x.notice.disputeState))throw new Error('NO_MEMBER_RESERVE');
+    if(x.notice.requiresIndependentReview&&x.notice.authorId===ctx.actorId)throw new Error('INDEPENDENT_REVIEW_REQUIRED');
     const notice={...x.notice,disputeState:'OFFICER_CONFIRMED' as const,officerId:ctx.actorId,officerNote:note.trim()||'Validation après vérification',version:x.notice.version+1,updatedAt:now()};
     return this.save(x.record,notice,'FINANCIAL_RESERVE_OFFICER_CONFIRMED');
   }
