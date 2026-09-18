@@ -53,8 +53,9 @@
       <button data-view="launch" class="nav-btn"><span>＋</span><b>Créer / intégrer</b></button>
       <button id="ecoAiNavBtn" data-view="launch" class="nav-btn"><span>✦</span><b>Eco IA</b></button>
       <button data-view="operations" class="nav-btn"><span>☷</span><b>Réunion</b></button>
-      <button id="membersNavBtn" data-view="operations" class="nav-btn"><span>♙</span><b>Membres & habilitations</b></button>
+      <button id="membersNavBtn" data-view="members" class="nav-btn"><span>♙</span><b>Membres & habilitations</b></button>
       <button data-view="finance" class="nav-btn"><span>₣</span><b>Finances</b></button>
+      <button id="backOfficeNavBtn" data-view="backoffice" class="nav-btn"><span>▣</span><b>Back-office</b></button>
       <button data-view="tontines" class="nav-btn"><span>↻</span><b>Tontines</b></button>
       <button id="recapNavBtn" data-view="recap" class="nav-btn" hidden><span>▤</span><b>Recap</b></button>
       <span class="nav-caption">Écosystème</span>
@@ -330,11 +331,11 @@
         <div class="page-head"><div><span class="eyebrow">Lots C–D</span><h1>Séance · Membres · Règles vivantes</h1><p>La clôture est un checkpoint. Une opération tardive reste possible si la politique du groupe l'autorise et si les validations requises sont réunies.</p></div></div>
         <div id="noActiveGroupOperations" class="panel empty-state">Sélectionnez ou créez d'abord un groupe.</div>
         <div id="operationsContent">
-          <section class="panel"><div class="panel-head"><div><h2>Saisie de séance</h2><p>Alternez entre la feuille générale et les fiches individuelles. Les deux utilisent exactement les mêmes écritures et se mettent à jour ensemble.</p></div><div class="view-switch"><button id="meetingSheetViewBtn" class="active" type="button">Votre feuille de séance</button><button id="individualSheetsViewBtn" type="button">Vos fiches individuelles</button></div></div><div id="meetingSheetMode"><div class="view-switch compact"><button id="cardViewBtn" class="active" type="button">Vue cartes</button><button id="matrixViewBtn" type="button">Vue tableau</button></div><div id="meetingMatrixPanel" hidden><div id="meetingMatrix" class="matrix-wrap"></div><p class="hint">Saisissez directement les montants dans les cellules du tableau canonique. Les noms des membres et les titres de rubriques ouvrent leurs fiches ; les chiffres ne sont pas des liens.</p></div></div></section>
-          <div class="two-col">
-            <section class="panel"><h2>Membres</h2><form id="memberForm" class="inline-form"><input id="memberName" required placeholder="Nom du membre"><button class="primary">Ajouter</button></form><ul id="memberList" class="list"></ul></section>
-            <section class="panel"><h2>Séances</h2><form id="meetingForm" class="inline-form"><input id="meetingTitle" placeholder="Ex. Séance de septembre"><button class="primary">Ouvrir</button></form><div id="meetingList" class="stack"></div></section>
-          </div>
+          <section class="panel" id="twoSheetWorkspace"><div class="panel-head"><div><h2>Saisie financière des membres</h2><p>Ce sont les deux feuilles de saisie. Cliquez une cellule pour ouvrir un petit éditeur au-dessus de la case, sans quitter le tableau.</p></div><div class="view-switch"><button id="meetingSheetViewBtn" class="active" type="button">Votre feuille de séance</button><button id="individualSheetsViewBtn" type="button">Vos fiches individuelles</button></div></div>
+            <div id="meetingSheetMode"><div class="view-switch compact"><button id="matrixViewBtn" class="active" type="button">Tableau modifiable</button><button id="cardViewBtn" type="button">Vue cartes</button></div><div id="meetingMatrixPanel"><div id="meetingMatrix" class="matrix-wrap"></div><p class="hint">Les montants antérieurs restent visibles. Une cellule ouverte conserve le contexte séance × membre × rubrique et accepte de grands montants.</p></div></div>
+            <div id="individualSheetsMode" hidden><div class="sheet-toolbar"><label>Membre<select id="individualSheetMember"></select></label><button id="individualSheetRefreshBtn" type="button" class="secondary">Actualiser la fiche</button></div><div id="individualSheetMatrix" class="matrix-wrap"></div><p class="hint">Chaque ligne est une séance et chaque colonne une rubrique. Les responsables saisissent directement par cellule ; un simple membre ne voit que sa propre fiche.</p></div>
+          </section>
+          <section class="panel"><div class="panel-head"><div><h2>Séances</h2><p>Ouvrez, choisissez ou clôturez une séance. Les montants se saisissent dans les deux feuilles ci-dessus.</p></div></div><form id="meetingForm" class="inline-form"><input id="meetingTitle" placeholder="Ex. Séance de septembre"><button class="primary">Ouvrir</button></form><div id="meetingList" class="stack"></div></section>
 
           <section class="panel" id="miscRubricPanel">
             <div class="panel-head"><div><h2>Autres · configuration des sous-rubriques</h2><p>Inscription, Timbre de prêt, Amendes et toute autre sous-rubrique sont configurés ici. <strong>Leurs montants réels se saisissent uniquement dans « Votre feuille de séance » ou « Vos fiches individuelles ».</strong></p></div><div class="actions"><button id="miscOpenMeetingSheet" type="button" class="primary">Votre feuille de séance</button><button id="miscOpenIndividualSheet" type="button" class="secondary">Vos fiches individuelles</button></div></div>
@@ -400,40 +401,26 @@
             <div id="offlineSnapshotList" class="stack"></div>
           </details>
 
-          <section class="panel completion-panel" id="tontineCompletionPanel">
-            <div class="panel-head"><div><h2 data-i-runtime="tontineCenter">Tontine opérationnelle</h2><p data-i-runtime="tontineCenterIntro">Cycle, parts, programmation des pots et décaissement restent distincts et traçables.</p></div><button id="readinessBtn" type="button" class="link-btn">Vérifier le groupe</button></div>
-            <div class="two-col">
-              <form id="tontineCycleForm" class="form-grid">
-                <h3>Créer un cycle</h3>
-                <label>Rubrique<select id="tontineCycleRubric"></select></label>
-                <label>Nom du cycle<input id="tontineCycleName" required placeholder="Ex. Cycle 2027"></label>
-                <label>Nombre de tours<input id="tontineRounds" type="number" min="1" step="1" value="12" required></label>
-                <label>Pots servis par tour<input id="tontinePots" type="number" min="1" step="1" value="1" required></label>
-                <label>Montant indicatif du pot<input id="tontinePotAmount" type="number" min="1" step="1" value="10000"></label>
-                <button class="primary">Créer le cycle</button>
-              </form>
-              <form id="tontineShareForm" class="form-grid">
-                <h3>Ajouter une part / un nom</h3>
-                <label>Cycle<select id="tontineShareCycle"></select></label>
-                <label>Membre<select id="tontineShareMember"></select></label>
-                <label>Nom de la part<input id="tontineShareLabel" required placeholder="Ex. Serge — Nom 4"></label>
-                <button class="primary">Ajouter la part</button>
-              </form>
-            </div>
-            <div class="actions"><button id="suggestTontineScheduleBtn" type="button">Proposer un planning</button><button id="applyTontineScheduleBtn" type="button" class="primary" disabled>Appliquer le planning proposé</button></div>
-            <div id="tontineSchedulePreview" class="result"></div>
-            <form id="tontineServeForm" class="inline-grid">
-              <label>Part programmée<select id="tontineServeShare"></select></label>
-              <label>Montant du pot<input id="tontineServeAmount" type="number" min="1" step="1" value="10000"></label>
-              <label>Séance<select id="tontineServeMeeting"><option value="">Sans séance</option></select></label>
-              <button class="primary">Servir le pot</button>
-            </form>
-            <div id="tontineCompletionList" class="stack"></div>
-            <div id="readinessResult" class="result"></div>
-          </section>
-
+          <section class="panel"><div class="panel-head"><div><h2>Tontines permanentes</h2><p>La configuration des tontines, parts et bénéficiaires est centralisée dans le menu Tontines pour éviter deux écrans concurrents.</p></div><button type="button" class="primary" data-go="tontines">Ouvrir le menu Tontines</button></div></section>
           <section class="panel"><div class="section-kicker"><div><h2>Présence, PV, bénéficiaires et publication</h2><p>Le cockpit de réunion s’étend sans casser le ledger ni les règles du groupe.</p></div></div><div id="meetingHub" class="hub-grid"></div></section>
         </div>
+      </section>
+
+      <section id="view-members" class="view">
+        <div class="page-head"><div><span class="eyebrow">Gestion du groupe</span><h1>Membres & habilitations</h1><p>Ajouter un membre, gérer son statut et ses rôles, puis ouvrir son Dossier Membre sans passer par la séance.</p></div></div>
+        <div id="noActiveGroupMembers" class="panel empty-state">Sélectionnez ou créez d'abord un groupe.</div>
+        <div id="membersContent">
+          <div class="two-col">
+            <section class="panel"><h2>Membres du groupe</h2><form id="memberForm" class="inline-form"><input id="memberName" required placeholder="Nom du membre"><button class="primary">Ajouter</button></form><ul id="memberList" class="list"></ul></section>
+            <section class="panel"><div class="panel-head"><div><h2>Dossier Membre</h2><p>Sélectionnez un membre pour consulter ou modifier son dossier autorisé.</p></div></div><div id="memberDossierHost" class="stack"><div class="empty-state">Choisissez « Dossier membre » sur un membre.</div></div></section>
+          </div>
+        </div>
+      </section>
+
+      <section id="view-backoffice" class="view">
+        <div class="page-head"><div><span class="eyebrow">Responsables habilités</span><h1>Back-office</h1><p>Dépenses sans membre, contrôles et accès au Récap. Les cotisations des membres restent exclusivement dans les deux feuilles.</p></div><div class="page-meta"><button type="button" class="link-btn" data-go="recap">Ouvrir le Récap</button><button type="button" class="link-btn" data-go="finance">Contrôles financiers</button></div></div>
+        <div id="noActiveGroupBackoffice" class="panel empty-state">Sélectionnez ou créez d'abord un groupe.</div>
+        <div id="backOfficeContent"><section class="panel"><h2>Back-office du groupe</h2><p class="hint">Les dépenses non rattachées directement à un membre sont enregistrées ici. Les dépenses de membre/séance restent visibles dans les feuilles et le Récap.</p></section></div>
       </section>
 
       <section id="view-finance" class="view">
@@ -668,15 +655,16 @@
 
       <section id="view-tontines" class="view">
         <div class="page-head"><div><span class="eyebrow">Gestion permanente du groupe</span><h1>Tontines</h1><p>Chaque tontine reste indépendante : participants, parts, calendrier, pots et historique. Ajouter un retardataire ou reprogrammer un tour futur ne réécrit jamais les pots déjà servis.</p></div><div class="page-meta"><span class="pill">Parts</span><span class="pill">Tours</span><span class="pill">Ledger</span></div></div>
+        <section class="panel" id="tontineRubricCatalogPanel"><div class="panel-head"><div><h2>Mes rubriques Tontines</h2><p>Celles créées pendant la création du groupe apparaissent automatiquement ici. Vous pouvez aussi en ajouter une nouvelle.</p></div></div><div id="tontineRubricCatalog" class="stack"></div><details><summary><strong>Créer une nouvelle Tontine dans ce groupe</strong></summary><form id="tontineRubricCreateForm" class="form-grid"><label>Nom de la Tontine<input id="tontineRubricCreateName" required placeholder="Ex. Tontine 2 000"></label><label>Montant par part<input id="tontineRubricCreateNominal" type="number" min="0" step="1" inputmode="numeric" required></label><label>Nombre de parts / participants prévu<input id="tontineRubricCreateShares" type="number" min="1" step="1" required></label><label>Pots servis par tour<input id="tontineRubricCreatePots" type="number" min="1" step="1" value="1"></label><button class="primary">Créer la rubrique Tontine</button></form></details></section>
         <div class="two-col">
           <section class="panel">
             <form id="tontineCycleForm" class="form-grid">
-              <h2>Nouveau cycle</h2>
-              <label>Rubrique Tontine<select id="tontineCycleRubric" required></select></label>
-              <label>Nom du cycle<input id="tontineCycleName" required placeholder="Ex. Tontine 10 000 — exercice 2027"></label>
+              <h2>Configurer une tontine du groupe</h2>
+              <label>Tontine à configurer<select id="tontineCycleRubric" required></select><small>Liste automatique des rubriques Tontines créées avec le groupe ou ajoutées ici.</small></label>
+              <label>Nom de l’exercice / cycle<input id="tontineCycleName" required placeholder="Ex. Tontine 10 000 — exercice 2027"><small>Eco-System propose automatiquement le nom de la tontine sélectionnée ; vous pouvez le compléter par l’exercice.</small></label>
               <label>Nombre de tours<input id="tontineCycleRounds" type="number" min="1" step="1" required></label>
               <label>Pots servis par tour<input id="tontineCyclePots" type="number" min="1" step="1" value="1" required></label>
-              <label>Montant indicatif du pot<input id="tontineCycleAmount" type="number" min="1" step="1"></label>
+              <label>Montant total du pot<input id="tontineCycleAmount" type="number" min="1" step="1"></label>
               <button class="primary">Créer le cycle</button>
             </form>
           </section>
@@ -692,6 +680,7 @@
           </section>
         </div>
         <section class="panel"><div class="panel-head"><div><h2>Cycles, parts et calendrier</h2><p>Programmer, reprogrammer, servir ou annuler avec historique versionné.</p></div></div><div id="tontineManagerList" class="stack"></div></section>
+        <section class="panel" id="tontineRankingPanel"><div class="panel-head"><div><h2>Classement des bénéficiaires</h2><p>Le classement est géré ici puis repris par le menu « Classements & calendrier » : une seule source, aucun classement parallèle.</p></div></div><div id="tontineRankingList" class="stack"></div></section>
       </section>
 
       <section id="view-recap" class="view">
