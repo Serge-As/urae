@@ -1218,9 +1218,15 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
         meetingId:body.meetingId?String(body.meetingId):undefined,
         idempotencyKey:String(body.idempotencyKey??request.headers.get('x-idempotency-key')??makeId('loan_disbursement')),kind:'loan_disbursement'
       });
-      return json({entry,loan:await completion.transition(loanDisburse[1]!,loan.id,'DISBURSED',{
-        expectedVersion:finite(body.expectedVersion),patch:{ledgerEntryId:entry.id,outstandingPrincipal:principal,disbursedAt:new Date().toISOString()}
-      })},201,cors);
+      const updatedLoan=await completion.transition(loanDisburse[1]!,loan.id,'DISBURSED',{
+        expectedVersion:finite(body.expectedVersion),patch:{ledgerEntryId:entry.id,outstandingPrincipal:principal,unpaidInterest:0,accruedMeetingIdsJson:'[]',disbursedAt:new Date().toISOString()}
+      });
+      const rubricId=body.rubricId?String(body.rubricId):String(loan.data.rubricId??'');
+      if(rubricId&&body.meetingId){
+        const eventId='sheet_loan_event_'+entry.id,meetingId=String(body.meetingId),existing=await repo.getWorkspaceRecord(ctx.tenantId,eventId);
+        if(!existing)await repo.saveWorkspaceRecord({id:eventId,tenantId:ctx.tenantId,groupId:loanDisburse[1]!,moduleId:'FINANCE.SHEET_EVENT',title:'Prêt décaissé',summary:'Projection de feuille liée à l’écriture canonique du prêt.',status:'DONE',tags:['sheet-event','loan-disbursement','ledger:'+entry.id],data:{membershipId:String(loan.data.borrowerMembershipId??''),meetingId,rubricId,loanId:loan.id,ledgerEntryId:entry.id,amount:principal,direction:'OUT'},createdBy:ctx.actorId,createdAt:entry.createdAt,updatedAt:entry.createdAt});
+      }
+      return json({entry,loan:updatedLoan},201,cors);
     }
     const loanAllocation=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/loans\/allocation-preview$/);
     if(loanAllocation&&request.method==='POST'){
@@ -1236,21 +1242,33 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
       const loan=(await completion.list(loanRepay[1]!,'LOAN')).find(x=>x.id===loanRepay[2]!);
       if(!loan)throw new Error('LOAN_NOT_FOUND');
       if(!['DISBURSED','REPAYING'].includes(String(loan.data.completionState)))throw new Error('LOAN_NOT_REPAYABLE');
-      const outstanding=finite(loan.data.outstandingPrincipal),unpaidInterest=finite(loan.data.unpaidInterest,0);
-      const explicitPrincipal=body.principalAmount!==undefined;
-      const allocation=explicitPrincipal
-        ?{principalPaid:finite(body.principalAmount),interestPaid:finite(body.interestAmount,0),remainingPrincipal:outstanding-finite(body.principalAmount),unpaidInterestAfter:unpaidInterest,totalDebtAfter:outstanding-finite(body.principalAmount)+unpaidInterest,interestAccrued:0,totalInterestDue:unpaidInterest,paymentAmount:finite(body.principalAmount)+finite(body.interestAmount,0),priority:String(body.priority??'CAPITAL_FIRST')}
-        :applyLoanPayment({principalOutstanding:outstanding,unpaidInterest,paymentAmount:finite(body.paymentAmount),rateBasisPointsPerPeriod:finite(body.rateBasisPointsPerPeriod??loan.data.rateBasisPointsPerPeriod,0),priority:String(body.priority??loan.data.paymentPriority??'CAPITAL_FIRST') as any});
+      const outstanding=finite(loan.data.outstandingPrincipal),unpaidInterest=finite(loan.data.unpaidInterest,0),meetingId=body.meetingId?String(body.meetingId):undefined;
+      const rateBasisPointsPerPeriod=finite(body.rateBasisPointsPerPeriod??loan.data.rateBasisPointsPerPeriod,0);
+      let accruedMeetingIds:string[]=[];try{accruedMeetingIds=JSON.parse(String(loan.data.accruedMeetingIdsJson??'[]'));if(!Array.isArray(accruedMeetingIds))accruedMeetingIds=[];}catch{accruedMeetingIds=[];}
+      let periodInterest=0,interestDue=unpaidInterest;
+      if(meetingId&&!accruedMeetingIds.includes(meetingId)){
+        periodInterest=Math.round(outstanding*rateBasisPointsPerPeriod/10000);interestDue+=periodInterest;accruedMeetingIds.push(meetingId);
+      }
+      const explicitAllocation=body.principalAmount!==undefined||body.interestAmount!==undefined;
+      const allocation=explicitAllocation
+        ?(()=>{const principalPaid=finite(body.principalAmount,0),interestPaid=finite(body.interestAmount,0);if(principalPaid>outstanding)throw new Error('INVALID_LOAN_REPAYMENT');if(interestPaid>interestDue)throw new Error('LOAN_INTEREST_PAYMENT_EXCEEDS_DUE');const remainingPrincipal=outstanding-principalPaid,unpaidInterestAfter=interestDue-interestPaid;return{principalPaid,interestPaid,remainingPrincipal,unpaidInterestAfter,totalDebtAfter:remainingPrincipal+unpaidInterestAfter,interestAccrued:periodInterest,totalInterestDue:interestDue,paymentAmount:principalPaid+interestPaid,priority:String(body.priority??loan.data.paymentPriority??'CAPITAL_FIRST')};})()
+        :applyLoanPayment({principalOutstanding:outstanding,unpaidInterest:interestDue,paymentAmount:finite(body.paymentAmount),rateBasisPointsPerPeriod:meetingId?0:rateBasisPointsPerPeriod,priority:String(body.priority??loan.data.paymentPriority??'CAPITAL_FIRST') as any});
       if(allocation.principalPaid<0||allocation.principalPaid>outstanding)throw new Error('INVALID_LOAN_REPAYMENT');
       const entry=await ledger.recordLoanRepayment({
         tenantId:ctx.tenantId,groupId:loanRepay[1]!,principalAmount:allocation.principalPaid,interestAmount:allocation.interestPaid,
-        currency:String(loan.data.currency??'XAF'),sourceId:loan.id,meetingId:body.meetingId?String(body.meetingId):undefined,
+        currency:String(loan.data.currency??'XAF'),sourceId:loan.id,meetingId,
         idempotencyKey:String(body.idempotencyKey??request.headers.get('x-idempotency-key')??makeId('loan_repayment'))
       });
       const target=allocation.remainingPrincipal===0&&allocation.unpaidInterestAfter===0?'CLOSED':'REPAYING';
-      return json({entry,allocation,loan:await completion.transition(loanRepay[1]!,loan.id,target,{
-        expectedVersion:finite(body.expectedVersion),patch:{outstandingPrincipal:allocation.remainingPrincipal,unpaidInterest:allocation.unpaidInterestAfter,lastRepaymentLedgerEntryId:entry.id,paymentPriority:allocation.priority}
-      })},201,cors);
+      const updatedLoan=await completion.transition(loanRepay[1]!,loan.id,target,{
+        expectedVersion:finite(body.expectedVersion),patch:{outstandingPrincipal:allocation.remainingPrincipal,unpaidInterest:allocation.unpaidInterestAfter,lastRepaymentLedgerEntryId:entry.id,paymentPriority:allocation.priority,accruedMeetingIdsJson:JSON.stringify(accruedMeetingIds)}
+      });
+      const repaymentRubricId=body.rubricId?String(body.rubricId):undefined;
+      if(repaymentRubricId&&meetingId){
+        const eventId='sheet_loan_event_'+entry.id,existing=await repo.getWorkspaceRecord(ctx.tenantId,eventId);
+        if(!existing)await repo.saveWorkspaceRecord({id:eventId,tenantId:ctx.tenantId,groupId:loanRepay[1]!,moduleId:'FINANCE.SHEET_EVENT',title:'Remboursement prêt',summary:'Projection de feuille liée à une écriture canonique de remboursement.',status:'DONE',tags:['sheet-event','loan-repayment','ledger:'+entry.id],data:{membershipId:String(loan.data.borrowerMembershipId??''),meetingId,rubricId:repaymentRubricId,loanId:loan.id,ledgerEntryId:entry.id,principalPaid:allocation.principalPaid,interestPaid:allocation.interestPaid,amount:allocation.paymentAmount,direction:'IN'},createdBy:ctx.actorId,createdAt:entry.createdAt,updatedAt:entry.createdAt});
+      }
+      return json({entry,allocation,loan:updatedLoan},201,cors);
     }
 
     const decisionRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/governance\/decisions$/);
