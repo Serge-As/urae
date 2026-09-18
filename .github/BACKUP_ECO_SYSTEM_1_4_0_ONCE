@@ -1,0 +1,4 @@
+checkpoint=1.4.0-closure
+qualified_head=ef6791c54bfed1e79dac4c4fa09ab3d82f1c8ddf
+production_run=35314965700
+purpose=final source + production D1 closure checkpoint after truth handoff
