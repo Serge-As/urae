@@ -1,4 +1,4 @@
-import type {CaseRecord, Id, LedgerEntry, Membership, WorkspaceRecord} from '../../contracts/src/index.js';
+import type {CaseRecord, Id, LedgerEntry, Membership, Obligation, WorkspaceRecord} from '../../contracts/src/index.js';
 import {makeId} from '../../contracts/src/index.js';
 import type {PlatformRepository} from '../../repositories/src/index.js';
 import type {PlatformKernel} from '../../platform-kernel/src/index.js';
@@ -85,8 +85,16 @@ export class MemberFinancialControlService{
     const stamp=now(),notice:FinancialNotice={id,groupId:input.groupId,membershipId:m.id,userId:m.userId,ledgerEntryId:input.entry.id,operationType:input.operationType,amount:input.amount,currency:input.currency,rubricId:input.rubricId,meetingId:input.meetingId,previousSituation:input.previousSituation,newSituation:input.newSituation,previousAmount:input.previousAmount,newAmount:input.newAmount,correctionReason:input.correctionReason,selfBenefit:Boolean(input.selfBenefit),requiresIndependentReview:Boolean(input.requiresIndependentReview),authorId:input.entry.createdBy,authorRoles:[...ctx.groupRoles],createdAt:stamp,memberState:'NOTIFIED',disputeState:input.requiresIndependentReview?'UNDER_REVIEW':'NO_RESERVE',version:1,updatedAt:stamp};
     const record:WorkspaceRecord={id,tenantId:ctx.tenantId,groupId:input.groupId,moduleId:MODULE,title:'Avis financier membre',summary:'Une opération a modifié votre situation. Vérifiez-la.',status:'ACTIVE',tags:['financial-notice','member-control'],data:dataFor(notice),createdBy:input.entry.createdBy,createdAt:stamp,updatedAt:stamp};
     await this.repo.saveWorkspaceRecord(record);
-    const audit=this.kernel.audit.append({tenantId:ctx.tenantId,actorId:input.entry.createdBy,action:'MEMBER_FINANCIAL_NOTICE_CREATED',targetType:'financial_notice',targetId:id,requestId:ctx.requestId,metadata:{ledgerEntryId:input.entry.id,membershipId:m.id}});
-    await this.repo.saveAudit(audit);return notice;
+    const audit=this.kernel.audit.append({tenantId:ctx.tenantId,actorId:input.entry.createdBy,action:'MEMBER_FINANCIAL_NOTICE_CREATED',targetType:'financial_notice',targetId:id,requestId:ctx.requestId,metadata:{ledgerEntryId:input.entry.id,membershipId:m.id,selfBenefit:Boolean(input.selfBenefit),requiresIndependentReview:Boolean(input.requiresIndependentReview)}});
+    await this.repo.saveAudit(audit);
+    if(notice.requiresIndependentReview){
+      const reviewers=(await this.repo.listMemberships(ctx.tenantId,input.groupId)).filter(x=>x.status==='active'&&x.userId!==notice.authorId&&x.roles.some(r=>managers.has(r)));
+      for(const reviewer of reviewers){
+        const obligation:Obligation={id:'obligation_self_review_'+encodeURIComponent(JSON.stringify([id,reviewer.userId])),tenantId:ctx.tenantId,groupId:input.groupId,assigneeId:reviewer.userId,type:'FINANCIAL_INDEPENDENT_REVIEW',title:'Vérifier une auto-modification financière : '+input.operationType+' '+input.amount+' '+input.currency,dueAt:stamp,priority:'high',status:'open',sourceType:'financial_notice',sourceId:id};
+        await this.repo.saveObligation(obligation);
+      }
+    }
+    return notice;
   }
 
   async list(groupId:string,membershipId:string):Promise<FinancialNotice[]>{
