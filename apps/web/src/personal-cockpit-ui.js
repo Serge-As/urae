@@ -105,7 +105,7 @@ export function mountPersonalCockpitUI({app,getGroups,getMembers,getMeetings,nav
             const total=matrix.reduce((n,r)=>n+Number(r.cells?.[rubric.id]?.net??0),0),item=el('button',undefined,'secondary');
             item.type='button';item.innerHTML='<span>'+String(rubric.name)+'</span><strong>'+fmt(total)+'</strong>';item.onclick=()=>{location.hash='#detail=member:'+encodeURIComponent(mine.id);};grid.append(item);
           }
-          box.append(grid);const open=el('button','Ouvrir ma fiche individuelle complète','primary');open.type='button';open.onclick=()=>{location.hash='#detail=member:'+encodeURIComponent(mine.id);};box.append(open);situation.append(box);
+          box.append(grid);const actions=el('div',undefined,'actions'),open=el('button','Ouvrir ma fiche individuelle complète','primary');open.type='button';open.onclick=()=>{location.hash='#detail=member:'+encodeURIComponent(mine.id);};const sim=el('button','Simuler l’évolution de mon prêt','secondary');sim.type='button';sim.onclick=()=>{document.querySelector('.nav-btn[data-view="operations"]')?.click();setTimeout(()=>{document.querySelector('#masterGovernanceCenter [data-mg="loan"]')?.click();document.getElementById('mg-loan')?.scrollIntoView({behavior:'smooth',block:'start'});},120);};actions.append(open,sim);box.append(actions);situation.append(box);
         }catch(e){situation.append(el('p','La fiche financière détaillée sera affichée dès que la synchronisation du groupe est disponible.','hint'));}
       }catch(e){situation.append(detail(mine.displayName,'member',mine.id),el('p','Votre relevé personnel reste accessible depuis votre fiche.','hint'));}
       try{
