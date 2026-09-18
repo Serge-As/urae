@@ -167,21 +167,24 @@ async function recordSheetCell(membershipId:string,rubricId:string,meetingId:str
   if(status)status.textContent=t('Enregistré sur les deux feuilles.','Recorded on both sheets.');await loadContext(true);byId<HTMLButtonElement>('refreshBtn')?.click();
 }
 
+function closeSheetCellPopover(){byId('sheetCellPopover')?.remove();}
+
 function buildSheetCellEditor(membershipId:string,rubric:any,meetingId:string,status?:HTMLElement){
-  const editor=document.createElement('div');editor.className='sheet-cell-editor';const kind=rubricKind(rubric);
-  const dir=document.createElement('select');dir.append(makeOption('IN','+'),makeOption('OUT','−'));dir.title=t('Entrée ou sortie','Income or outflow');
-  if(kind==='LOAN'){dir.replaceChildren(makeOption('OUT',t('Prêt −','Loan −')));dir.value='OUT';dir.disabled=true;}
-  else if(kind==='REPAYMENT'){dir.replaceChildren(makeOption('IN',repaymentComponent(rubric)==='INTEREST'?t('Intérêts +','Interest +'):t('Remb. +','Repay +')));dir.value='IN';dir.disabled=true;}
-  else if(String(rubric?.facets?.direction??'')==='OUTFLOW')dir.value='OUT';
-  const amount=document.createElement('input');amount.type='number';amount.min='1';amount.step='1';amount.inputMode='numeric';amount.placeholder='0';amount.setAttribute('aria-label',t('Montant','Amount'));
-  let loanSelect:HTMLSelectElement|undefined;
-  if(kind==='REPAYMENT'){
-    loanSelect=document.createElement('select');loanSelect.className='sheet-loan-select';loanSelect.append(makeOption('',t('Prêt concerné','Related loan')));
-    const active=activeLoansFor(membershipId);for(const loan of active)loanSelect.append(makeOption(loan.id,loan.title+' · '+t('capital ','principal ')+fmt(Number(loan.data?.outstandingPrincipal??0))+' · '+t('intérêts ','interest ')+fmt(Number(loan.data?.unpaidInterest??0))));
-    if(active.length===1){loanSelect.value=active[0].id;loanSelect.hidden=true;}
-  }
-  const save=document.createElement('button');save.type='button';save.textContent='✓';save.title=t('Valider cette cellule','Confirm this cell');save.onclick=()=>void(async()=>{try{save.disabled=true;await recordSheetCell(membershipId,rubric.id,meetingId,dir.value as 'IN'|'OUT',Number(amount.value),status,loanSelect?.value||undefined);amount.value='';}catch(e){if(status)status.textContent=friendly(e instanceof Error?e.message:String(e));}finally{save.disabled=false;}})();
-  editor.append(dir,amount);if(loanSelect)editor.append(loanSelect);editor.append(save);return editor;
+  const trigger=document.createElement('button');trigger.type='button';trigger.className='sheet-cell-edit-trigger';trigger.textContent=t('Saisir / corriger','Enter / correct');
+  trigger.onclick=()=>{
+    closeSheetCellPopover();const kind=rubricKind(rubric),member=members.find(x=>x.id===membershipId),meeting=meetings.find(x=>x.id===meetingId);
+    const pop=document.createElement('div');pop.id='sheetCellPopover';pop.className='sheet-cell-popover';pop.setAttribute('role','dialog');
+    const head=document.createElement('div');head.className='sheet-pop-head';const title=document.createElement('strong');title.textContent=String(member?.displayName??membershipId)+' · '+String(rubric?.name??'');const close=document.createElement('button');close.type='button';close.textContent='×';close.setAttribute('aria-label',t('Fermer','Close'));close.onclick=closeSheetCellPopover;head.append(title,close);
+    const context=document.createElement('small');context.className='sheet-pop-context';context.textContent=String(meeting?.title??meetingId);
+    const dir=document.createElement('select');dir.append(makeOption('IN',t('Entrée / cotisation +','Income / contribution +')),makeOption('OUT',t('Sortie / dépense −','Outflow / expense −')));
+    if(kind==='LOAN'){dir.replaceChildren(makeOption('OUT',t('Prêt accordé −','Loan granted −')));dir.value='OUT';dir.disabled=true;}else if(kind==='REPAYMENT'){dir.replaceChildren(makeOption('IN',repaymentComponent(rubric)==='INTEREST'?t('Intérêt remboursé +','Interest repaid +'):t('Capital remboursé +','Principal repaid +')));dir.value='IN';dir.disabled=true;}else if(String(rubric?.facets?.direction??'')==='OUTFLOW')dir.value='OUT';
+    const amount=document.createElement('input');amount.type='number';amount.min='1';amount.step='1';amount.inputMode='numeric';amount.placeholder=t('Montant F CFA','Amount XAF');amount.className='sheet-pop-amount';amount.max='999999999999';
+    let loanSelect:HTMLSelectElement|undefined;if(kind==='REPAYMENT'){loanSelect=document.createElement('select');loanSelect.append(makeOption('',t('Prêt concerné','Related loan')));const active=activeLoansFor(membershipId);for(const loan of active)loanSelect.append(makeOption(loan.id,loan.title+' · '+t('capital ','principal ')+fmt(Number(loan.data?.outstandingPrincipal??0))+' · '+t('intérêts ','interest ')+fmt(Number(loan.data?.unpaidInterest??0))));if(active.length===1)loanSelect.value=active[0].id;}
+    const actions=document.createElement('div');actions.className='sheet-pop-actions';const save=document.createElement('button');save.type='button';save.className='primary';save.textContent=t('Enregistrer','Save');
+    save.onclick=()=>void(async()=>{try{const n=Number(amount.value);if(!Number.isSafeInteger(n)||n<=0)throw Error('INVALID_NUMBER');save.disabled=true;await recordSheetCell(membershipId,rubric.id,meetingId,dir.value as 'IN'|'OUT',n,status,loanSelect?.value||undefined);closeSheetCellPopover();}catch(e){context.textContent=friendly(e instanceof Error?e.message:String(e));context.className='sheet-pop-context error';}finally{save.disabled=false;}})();actions.append(save);
+    pop.append(head,context,dir,amount);if(loanSelect)pop.append(loanSelect);pop.append(actions);document.body.append(pop);
+    const r=trigger.getBoundingClientRect(),w=Math.min(360,window.innerWidth-24);pop.style.width=w+'px';pop.style.left=Math.max(12,Math.min(window.innerWidth-w-12,r.left+r.width/2-w/2))+'px';pop.style.top=Math.max(12,Math.min(window.innerHeight-230,r.bottom+8))+'px';amount.focus();
+  };return trigger;
 }
 
 async function renderCanonicalMeetingMatrix(root:HTMLElement,meetingId?:string){
