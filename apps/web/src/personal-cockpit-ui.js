@@ -97,6 +97,16 @@ export function mountPersonalCockpitUI({app,getGroups,getMembers,getMeetings,nav
         const statement=await app.memberStatement(mine.id);
         metrics.append(metric(fmt(statement.totalNetContributions),'Ma situation nette'));
         situation.append(detail(mine.displayName,'member',mine.id),row('Total net enregistré',fmt(statement.totalNetContributions)),row('Dernière actualisation',date(statement.asOf)));
+        try{
+          const sheet=await app.memberOperationalSheet(mine.id),rubrics=sheet.rubrics??[],matrix=sheet.exerciseMatrix??[],box=el('article',undefined,'item');
+          box.append(el('strong','Ma fiche financière du groupe'),el('p','Toutes les rubriques du groupe sont reprises ici depuis la même vérité que la feuille de séance.','hint'));
+          const grid=el('div',undefined,'personal-rubric-grid');
+          for(const rubric of rubrics){
+            const total=matrix.reduce((n,r)=>n+Number(r.cells?.[rubric.id]?.net??0),0),item=el('button',undefined,'secondary');
+            item.type='button';item.innerHTML='<span>'+String(rubric.name)+'</span><strong>'+fmt(total)+'</strong>';item.onclick=()=>{location.hash='#detail=member:'+encodeURIComponent(mine.id);};grid.append(item);
+          }
+          box.append(grid);const open=el('button','Ouvrir ma fiche individuelle complète','primary');open.type='button';open.onclick=()=>{location.hash='#detail=member:'+encodeURIComponent(mine.id);};box.append(open);situation.append(box);
+        }catch(e){situation.append(el('p','La fiche financière détaillée sera affichée dès que la synchronisation du groupe est disponible.','hint'));}
       }catch(e){situation.append(detail(mine.displayName,'member',mine.id),el('p','Votre relevé personnel reste accessible depuis votre fiche.','hint'));}
       try{
         const notices=await app.financialNotices(mine.id),pending=notices.filter(n=>!['CONFIRMED','APPROVED_AFTER_REVIEW'].includes(String(n.status)));
