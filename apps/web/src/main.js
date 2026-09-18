@@ -368,9 +368,11 @@ const renderLivingRules = async () => {
             const scheduled=(r.activityPlan.participants??[]).flatMap(p=>p.shares.filter(s=>s.turn!==undefined).map(s=>`${p.name} · ${s.name} : tour ${s.turn}`));
             if(scheduled.length){const list=document.createElement('ul');for(const text of scheduled){const li=document.createElement('li');li.textContent=text;list.append(li);}a.append(list);}
         }
-        const edit=document.createElement('button');edit.type='button';edit.className='secondary';edit.textContent=tx('Configurer les caractéristiques / parts','Configure characteristics / shares');
-        edit.onclick=()=>editRubricPlan(r,async plan=>{await app.updateRubricActivityPlan(r.id,plan);await renderLivingRules();toast(tx('Caractéristiques enregistrées.','Characteristics saved.'));},launchError);
-        a.append(edit);
+        if(isManager()){
+          const edit=document.createElement('button');edit.type='button';edit.className='secondary';edit.textContent=tx('Configurer les caractéristiques / parts','Configure characteristics / shares');
+          edit.onclick=()=>editRubricPlan(r,async plan=>{await app.updateRubricActivityPlan(r.id,plan);await renderLivingRules();toast(tx('Caractéristiques enregistrées.','Characteristics saved.'));},launchError);
+          a.append(edit);
+        }
         root.append(a);
         for (const sel of [rselect, pselect]) {
             const o = document.createElement('option');
@@ -632,6 +634,8 @@ const refreshGroupContext = async () => {
     $('#noActiveGroupFinance').style.display = active ? 'none' : 'block';
     const manage=active && isManager();
     for(const id of ['memberForm','meetingForm','latePolicyForm','rubricForm','contributionForm','cashboxForm','publishDiscoveryForm','workspaceForm','tontineCycleForm','tontineShareForm','adCampaignForm'])$( '#'+id).hidden=active && !manage;
+    for(const id of ['advancedFinancePanel','assistanceRulebookPanel','savingsYieldLab','financeLedgerPanel']){const node=$('#'+id);if(node)node.hidden=active&&!manage;}
+    for(const id of ['openAssistanceRulebookBtn','openSavingsLabBtn']){const node=$('#'+id);if(node)node.hidden=active&&!manage;}
     if (active) {
         await renderMembers();
         await renderMeetings();
