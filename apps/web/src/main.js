@@ -233,6 +233,7 @@ const renderMembers = async () => {
             const button=document.createElement('button');button.type='button';button.className='link-btn';button.textContent=tx('Relevé','Statement');
             button.onclick=()=>showStatement(m.id).catch(fail);li.append(button);
         }
+        const dossier=document.createElement('button');dossier.type='button';dossier.className='link-btn';dossier.dataset.memberDossierOpen=m.id;dossier.textContent=tx('Dossier membre','Member dossier');li.append(dossier);
         if(isManager()){
             const details=document.createElement('details');details.className='member-authority-editor';const summary=document.createElement('summary');summary.textContent=tx('Habilitations / statut','Authorities / status');details.append(summary);
             const status=document.createElement('select');for(const s of ['invited','waitlisted','trial','active','suspended','left']){const o=document.createElement('option');o.value=s;o.textContent=s;status.append(o)}status.value=m.status;
@@ -318,7 +319,7 @@ const renderMeetingMatrix = () => {
             const net=receiptPositions.filter(x=>x.membershipId===m.id && x.rubricId===r.id && (!matrixMeetingId || x.meetingId===matrixMeetingId)).reduce((n,x)=>n+x.netAmount,0);
             b.textContent = fmt(net);b.disabled=!isManager();
             b.title = `${tx('Préparer une cotisation','Prepare a contribution')} ${m.displayName} · ${r.name}`;
-            b.onclick = () => { $('#contributionMember').value = m.id; $('#contributionRubric').value = r.id; if (matrixMeetingId) $('#contributionMeeting').value = matrixMeetingId; go('finance'); $('#contributionAmount').focus(); toast(`${tx('Cotisation prête','Contribution ready')} : ${m.displayName} · ${r.name}`); };
+            b.onclick = () => { toast(tx('Ouverture de la cellule…','Opening cell…')); };
             td.append(b);
             tr.append(td);
         }
@@ -636,7 +637,13 @@ const refreshGroupContext = async () => {
     $('#noActiveGroupOperations').style.display = active ? 'none' : 'block';
     $('#financeContent').style.display = active ? 'block' : 'none';
     $('#noActiveGroupFinance').style.display = active ? 'none' : 'block';
+    $('#membersContent').style.display = active ? 'block' : 'none';
+    $('#noActiveGroupMembers').style.display = active ? 'none' : 'block';
     const manage=active && isManager();
+    $('#backOfficeContent').style.display = manage ? 'block' : 'none';
+    $('#noActiveGroupBackoffice').style.display = manage ? 'none' : 'block';
+    $('#noActiveGroupBackoffice').textContent = active&&!manage ? tx('Le Back-office est réservé aux responsables habilités du groupe.','Back office is restricted to authorized group managers.') : tx('Sélectionnez ou créez d’abord un groupe.','Select or create a group first.');
+    $('#backOfficeNavBtn').hidden = active && !manage;
     for(const id of ['memberForm','meetingForm','latePolicyForm','rubricForm','contributionForm','cashboxForm','publishDiscoveryForm','workspaceForm','tontineCycleForm','tontineShareForm','adCampaignForm'])$( '#'+id).hidden=active && !manage;
     for(const id of ['advancedFinancePanel','assistanceRulebookPanel','savingsYieldLab','financeLedgerPanel']){const node=$('#'+id);if(node)node.hidden=active&&!manage;}
     for(const id of ['openAssistanceRulebookBtn','openSavingsLabBtn']){const node=$('#'+id);if(node)node.hidden=active&&!manage;}
