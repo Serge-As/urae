@@ -1,50 +1,62 @@
 # ECO-SYSTEM — NEXT RUN
 
-Date : 2026-09-16
+Date : 2026-09-18
 
 ## Lecture obligatoire
 1. `AGENTS.md`
 2. `docs/memory/CURRENT_TRUTH.md`
 3. `PROJECT_STATE.md`
 4. `docs/memory/PROJECT_TRUTH_LEDGER.json`
-5. `docs/constitution/ECO_SYSTEM_Cahier_des_Charges_Maitre_Exhaustif_3.2.0_2026-09-16.md`
-6. socle constitutionnel 2.3.4
-7. `docs/economics/ECO_SYSTEM_Modele_Economique_AdManager_Approfondi_3.2.0_2026-09-16.md`
-8. `FEATURE_REGISTRY.yaml`
-9. derniers runs GitHub et état Cloudflare réel.
+5. socle constitutionnel **2.3.4**
+6. `docs/constitution/ECO_SYSTEM_Cahier_des_Charges_Maitre_Exhaustif_3.2.0_2026-09-16.md`
+7. `docs/memory/recalls/RECALL-2026-09-17-master-2.3.4-closure.md`
+8. `docs/change-impact/CIR-2026-09-17-master-2.3.4-closure.md`
+9. `FEATURE_REGISTRY.yaml`
+10. derniers runs GitHub et état Cloudflare réel.
 
 ## Branche de reprise
-`next/1.3.3-interest-lab-adops-ui-20260916`
-Toujours récupérer le HEAD distant le plus récent.
+`next/1.4.0-master-2.3.4-closure-20260917`
 
-## Production
-- version : **1.3.3-fairness-adops-doctor-launch**
-- source déployée : `8396be2ed40ab51031a543787e2e61d41a42ad21`
-- Worker Version ID : `fdb6c9f3-8e46-49e9-85df-1e238975d257`
-- production run : `35138597876` SUCCESS
-- BIR+ run : `35138465887` SUCCESS
+Toujours récupérer le HEAD distant réel avant toute modification.
+
+## Production actuelle
+- version : **1.4.0-master-2.3.4-closure**
+- source déployée : `e869918002a6a649751b68088de39510dad3b29a`
+- Worker Version ID : `182e7992-1bf9-479f-914b-c0f04ab1b85c`
+- production run : **35314965700 SUCCESS**
+- qualification du SHA déployé : **35314965698 SUCCESS**
+- tests : **231/231 PASS**
+- D1 : `eco-system-db` réutilisée ; **No migrations to apply**
+- R2 : `eco-system-backups` ; pré/post BIR+ restaurés, checksummés et remirrored
 - Premium Live / Founder Control / Community Realtime / R2 : actifs/bound
-- realMoneyEnabled=false.
+- `realMoneyEnabled=false`.
 
-## Ne pas refaire
-- ne pas recréer `eco-system-db` ;
-- ne pas recréer token D1/R2 sans nouvelle preuve d'échec ;
-- ne pas réduire les 10 étapes ;
-- ne pas revenir aux anciens 18 500 F comme pool total : le dossier étendu donne 708 500 F ;
-- ne pas envoyer noms libres de rubriques/données personnelles au rédacteur House Ads ;
-- ne pas prétendre qu'une fonction déployée a déjà réussi une recette terrain si elle n'a que CI/smoke.
+## Invariants à ne plus casser
+- seules **Votre feuille de séance** et **Vos fiches individuelles** sont les surfaces normales de saisie financière membre ;
+- toute rubrique créée et non archivée apparaît dans les deux feuilles ;
+- 20 rubriques n'est pas une règle : 1 et 40 sont testées ; le plafond 100 est une limite technique de lancement, pas une décision métier du groupe ;
+- Prêt / Remboursement / Remboursement intérêts restent des rubriques des feuilles ;
+- le capital restant génère l'intérêt de chaque nouvelle période ; un remboursement partiel réduit l'assiette suivante ;
+- intérêts impayés séparés, jamais capitalisés ;
+- deux politiques officielles : `CAPITAL_FIRST` et `INTEREST_FIRST` ;
+- si la politique le demande, nouveau prêt impossible avant apurement capital + intérêts ;
+- un membre simple voit sa propre fiche et ses propres prêts, jamais ceux d'un autre membre ;
+- Ledger D1 canonique unique ; Live reste projection/coordination.
 
-## Prochain chantier conseillé
-**Recette terrain 1.3.3**, puis corrections ciblées seulement :
-1. créer réellement un groupe depuis zéro ;
-2. importer un RI multi-format ;
-3. traiter une longue liste de rubriques sans scroll aller-retour ;
-4. vérifier Assistance Rulebook et tarification inscription ;
-5. simuler les 5 politiques sur données terrain ;
-6. tester AdOps/House Ads dans plusieurs contextes ;
-7. transformer chaque défaut reproductible en test permanent.
+## Exemple de contrôle permanent
+50 000 XAF à 5 %, paiements 0 / 30 000 / 20 000 :
+- Capital d'abord → fin mois 3 : capital 0, intérêts 6 000 ; mois 4 : 6 000 à payer, sans nouvel intérêt.
+- Intérêts d'abord → fin mois 3 : capital 6 250 ; mois 4 : intérêt théorique 312,5, arrondi entier XAF actuel 313 ; total 6 563.
 
-Ensuite : photo/R2 pipeline, passkeys/Push, Forum voix/sondages/recherche, RealtimeKit, Demand Exchange/Deals, Cost Control.
+## Prochain chantier
+**Recette terrain production 1.4.0, puis corrections ciblées uniquement.**
+1. créer/tester groupe avec un nombre choisi de rubriques ;
+2. vérifier la même liste dans les deux feuilles ;
+3. vérifier compte membre simple et confidentialité ;
+4. saisir Prêt, remboursement capital, remboursement intérêts depuis les feuilles ;
+5. comparer les deux systèmes puis valider la politique du groupe ;
+6. faire vivre un prêt sur plusieurs séances et confronter la matrice réelle ;
+7. transformer chaque défaut observé en test permanent.
 
 ## Anti-interruption
-Après 3–5 sous-lots : commit + CI + mise à jour Truth. Avant chaque production : BIR+ + restauration D1 + R2 + smoke.
+Commit atomique → CI exacte → Truth → BIR+ avant production → smoke → BIR+ post-production. Ne jamais déclarer « terminé » si le site public n'a pas reçu le SHA concerné.
