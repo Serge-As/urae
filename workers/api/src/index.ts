@@ -762,7 +762,23 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
     const ledgerRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/ledger$/);
     if(ledgerRoute&&request.method==='GET') return json({summary:await ledger.summary(ctx.tenantId,ledgerRoute[1]!),entries:await repo.listLedgerEntries(ctx.tenantId,ledgerRoute[1]!),receipts:await ledger.receiptPositions(ctx.tenantId,ledgerRoute[1]!)},200,cors);
     const reverseRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/ledger\/([^/]+)\/reverse$/);
-    if(reverseRoute&&request.method==='POST'){const body=await readJson<Record<string,unknown>>(request);return json(await ledger.reverseEntry({tenantId:ctx.tenantId,groupId:reverseRoute[1]!,entryId:reverseRoute[2]!,reason:String(body.reason??'')}),201,cors);}
+    if(reverseRoute&&request.method==='POST'){
+      const groupId=reverseRoute[1]!,entryId=decodeURIComponent(reverseRoute[2]!),body=await readJson<Record<string,unknown>>(request),reason=String(body.reason??'').trim();
+      if(!reason)throw new Error('REVERSAL_REASON_REQUIRED');
+      const receipts=await repo.listContributionReceipts(ctx.tenantId,groupId),receipt=receipts.find(x=>x.ledgerEntryId===entryId);
+      let beforeSituation:number|undefined,oldAmount:number|undefined,target:import('../../../packages/contracts/src/index.js').Membership|undefined;
+      if(receipt){
+        const before=await ledger.receiptPositions(ctx.tenantId,groupId),position=before.find(x=>x.id===receipt.id);
+        oldAmount=position?.netAmount??receipt.amount.amount;beforeSituation=before.filter(x=>x.membershipId===receipt.membershipId).reduce((n,x)=>n+x.netAmount,0);target=await repo.getMembership(ctx.tenantId,groupId,receipt.membershipId);
+      }
+      const reversal=await ledger.reverseEntry({tenantId:ctx.tenantId,groupId,entryId,reason});
+      if(receipt&&target){
+        const after=await ledger.receiptPositions(ctx.tenantId,groupId),afterSituation=after.filter(x=>x.membershipId===receipt.membershipId).reduce((n,x)=>n+x.netAmount,0),selfBenefit=target.userId===ctx.actorId;
+        const notice=await memberControl.create({groupId,membershipId:receipt.membershipId,entry:reversal,operationType:'CASH_CONTRIBUTION_REVERSED',amount:0,currency:receipt.amount.currency,rubricId:receipt.rubricId,meetingId:receipt.meetingId,previousSituation:beforeSituation,newSituation:afterSituation,previousAmount:oldAmount,newAmount:0,correctionReason:reason,selfBenefit,requiresIndependentReview:selfBenefit});
+        try{await publishLive(groupId,'FINANCIAL_NOTICE','reversal-notice:'+reversal.id,{noticeId:notice.id,ledgerEntryId:notice.ledgerEntryId,operationType:notice.operationType,amount:0,currency:notice.currency,previousSituation:notice.previousSituation??0,newSituation:notice.newSituation??0,selfBenefit},notice.userId);}catch{}
+      }
+      return json(reversal,201,cors);
+    }
 
     const cashboxRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/cashbox\/reconciliations$/);
     if(cashboxRoute&&request.method==='GET') return json(await repo.listCashboxReconciliations(ctx.tenantId,cashboxRoute[1]!),200,cors);
