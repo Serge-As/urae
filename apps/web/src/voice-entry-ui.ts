@@ -208,8 +208,8 @@ async function renderCanonicalMeetingMatrix(root:HTMLElement,meetingId?:string){
     for(const m of members){
       const tr=document.createElement('tr'),th=document.createElement('th');const a=document.createElement('a');a.href='#detail=member:'+encodeURIComponent(m.id);a.dataset.detailType='member';a.dataset.detailId=m.id;a.textContent=m.displayName;th.append(a);tr.append(th);
       for(const r of activeRubrics){
-        const td=document.createElement('td');
-        const receiptIn=(ledger.receipts??[]).filter((x:any)=>x.membershipId===m.id&&(!chosen||x.meetingId===chosen)&&x.rubricId===r.id).reduce((n:number,x:any)=>n+Number(x.netAmount??x.amount?.amount??0),0);
+        const td=document.createElement('td'),cellReceipts=(ledger.receipts??[]).filter((x:any)=>x.membershipId===m.id&&(!chosen||x.meetingId===chosen)&&x.rubricId===r.id);
+        const receiptIn=cellReceipts.reduce((n:number,x:any)=>n+Number(x.netAmount??x.amount?.amount??0),0);
         const eventIn=sheetEvents.filter((x:any)=>String(x.data?.membershipId??'')===m.id&&(!chosen||x.data?.meetingId===chosen)&&x.data?.rubricId===r.id&&x.data?.direction==='IN').reduce((n:number,x:any)=>n+Number(x.data?.amount??0),0);
         const expenseOut=expenses.filter((x:any)=>x.scope==='SHEET'&&x.membershipId===m.id&&(!chosen||x.meetingId===chosen)&&x.rubricId===r.id).reduce((n:number,x:any)=>n+Number(x.amount??0),0);
         const eventOut=sheetEvents.filter((x:any)=>String(x.data?.membershipId??'')===m.id&&(!chosen||x.data?.meetingId===chosen)&&x.data?.rubricId===r.id&&x.data?.direction==='OUT').reduce((n:number,x:any)=>n+Number(x.data?.amount??0),0);
