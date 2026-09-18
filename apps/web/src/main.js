@@ -73,6 +73,8 @@ const fail = (e) => {
         ACCOUNT_UNAVAILABLE: 'Cet identifiant est déjà utilisé.',
         RATE_LIMITED: 'Trop de tentatives. Réessayez dans dix minutes.',
         INDEPENDENT_APPROVAL_REQUIRED: 'Chaque approbateur doit valider avec son propre compte. Une liste de noms ne vaut pas validation.',
+        INDEPENDENT_REVIEW_REQUIRED: 'Cette modification concerne la situation financière de son propre auteur. Un autre responsable habilité doit effectuer la revue.',
+        MEMBER_SELF_ACTION_REQUIRED: 'Le dossier personnel et certaines validations doivent être effectués par le membre concerné lui-même.',
         IDEMPOTENCY_CONFLICT: 'Cette référence correspond déjà à une opération différente. Consultez le reçu existant.',
         FORBIDDEN_SCOPE: 'Votre compte ne dispose pas de l’autorisation nécessaire pour ce groupe.',
         DURABLE_STORAGE_REQUIRED: 'Le stockage local est indisponible. Cette opération n’a pas été envoyée.',
@@ -415,7 +417,7 @@ const renderLedger = async () => {
         d.innerHTML = html`<strong>${fmt(r.amount.amount)}</strong><span>${members.find(m=>m.id===r.membershipId)?.displayName ?? r.membershipId}</span><small>${date(r.receivedAt)}${r.latePosting?.isLate ? ' · tardive' : ''}</small>`;
         const net=document.createElement('small');net.textContent=`Net après annulations : ${fmt(r.netAmount)}`;d.append(net);
         const statement=document.createElement('button');statement.className='link-btn';statement.textContent='Relevé';statement.onclick=()=>showStatement(r.membershipId).catch(fail);d.append(statement);
-        if(r.netAmount>0){const reverse=document.createElement('button');reverse.className='link-btn';reverse.textContent='Annuler / corriger';reverse.title='Conserve le reçu original et crée une écriture inverse auditée.';reverse.onclick=async()=>{
+        if(r.netAmount>0){const reverse=document.createElement('button');reverse.className='link-btn';reverse.textContent='Annuler avec trace';reverse.title='Annule cette écriture en conservant son historique. Pour remplacer le montant, utilisez « Saisir / corriger » dans la cellule de la feuille.';reverse.onclick=async()=>{
             const reason=prompt('Pourquoi annuler / corriger cette écriture ? Le reçu original restera visible et Eco-System créera automatiquement l’écriture inverse.');if(!reason?.trim())return;
             reverse.disabled=true;try{await app.reverseLedgerEntry(r.ledgerEntryId,reason);await renderLedger();toast('Correction enregistrée : l’écriture originale est conservée et son inverse a été ajouté.');}catch(e){fail(e);reverse.disabled=false;}
         };d.append(reverse);}
