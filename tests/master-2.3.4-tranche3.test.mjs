@@ -137,3 +137,29 @@ test('loan simulator returns at least six explicit evolution lines without inter
   assert.equal(r.status,200);const body=await r.json();assert.equal(body.rows.length,6);assert.equal(body.noInterestOnInterest,true);
   assert.deepEqual(Object.keys(body.rows[0]).sort(),['interestAfter','interestNew','interestOpening','interestPaid','nextTaxablePrincipal','payment','period','principalAfter','principalBefore','principalPaid','totalDebtAfter','unappliedPayment'].sort());
 });
+
+
+test('simple member loan completion list and history stay scoped to own borrower identity',async()=>{
+  const {repo,handler}=await seed();
+  await repo.saveUser({id:'other_t3',displayName:'Autre Membre',locale:'fr',createdAt:'2026-01-01T00:00:00Z'});
+  await repo.saveMembership({id:'mo_t3',tenantId:'tenant_t3',groupId:'group_t3',userId:'other_t3',roles:['member'],status:'active',joinedAt:'2026-01-01T00:00:00Z'});
+  const base={tenantId:'tenant_t3',groupId:'group_t3',moduleId:'FINANCE.LOANS',status:'ACTIVE',tags:['completion','kind:LOAN','state:DISBURSED'],createdBy:'founder_t3',createdAt:'2026-01-10T09:00:00Z',updatedAt:'2026-01-10T09:00:00Z'};
+  await repo.saveWorkspaceRecord({...base,id:'loan_own_t3',title:'Prêt du membre',data:{completionKind:'LOAN',completionState:'DISBURSED',completionVersion:4,borrowerMembershipId:'mm_t3',principal:10000,outstandingPrincipal:10000,unpaidInterest:0,rateBasisPointsPerPeriod:500,paymentPriority:'CAPITAL_FIRST',ledgerEntryId:'ledger_own'}});
+  await repo.saveWorkspaceRecord({...base,id:'loan_other_t3',title:'Prêt autre membre',data:{completionKind:'LOAN',completionState:'DISBURSED',completionVersion:4,borrowerMembershipId:'mo_t3',principal:90000,outstandingPrincipal:90000,unpaidInterest:0,rateBasisPointsPerPeriod:500,paymentPriority:'CAPITAL_FIRST',ledgerEntryId:'ledger_other'}});
+  await repo.saveWorkspaceRecord({id:'sheet_event_own_t3',tenantId:'tenant_t3',groupId:'group_t3',moduleId:'FINANCE.SHEET_EVENT',title:'Prêt décaissé',status:'DONE',tags:['sheet-event','loan-disbursement'],data:{membershipId:'mm_t3',meetingId:'meeting_t3',rubricId:'rubric_fine',loanId:'loan_own_t3',ledgerEntryId:'ledger_own',amount:10000,direction:'OUT'},createdBy:'founder_t3',createdAt:'2026-01-10T09:00:00Z',updatedAt:'2026-01-10T09:00:00Z'});
+  let r=await handler(new Request('http://local/api/v1/groups/group_t3/completion?kind=LOAN',{headers:member}));assert.equal(r.status,200);let loans=await r.json();assert.equal(loans.length,1);assert.equal(loans[0].id,'loan_own_t3');
+  r=await handler(new Request('http://local/api/v1/groups/group_t3/loans/loan_own_t3/history',{headers:member}));assert.equal(r.status,200);let history=await r.json();assert.equal(history.events.length,1);assert.equal(history.events[0].amount,10000);
+  r=await handler(new Request('http://local/api/v1/groups/group_t3/loans/loan_other_t3/history',{headers:member}));assert.notEqual(r.status,200);
+});
+
+test('web shell locks the two-sheet UX contract and does not auto-inject the three starter rubrics',()=>{
+  const voice=fs.readFileSync('apps/web/src/voice-entry-ui.ts','utf8');
+  const misc=fs.readFileSync('apps/web/src/misc-rubrics-ui.js','utf8');
+  const gov=fs.readFileSync('apps/web/src/master-governance-ui.ts','utf8');
+  const html=fs.readFileSync('apps/web/index.html','utf8');
+  assert.match(voice,/postLoanFromSheet/);assert.match(voice,/x\.status!=='ARCHIVED'/);assert.match(voice,/FINANCE\.SHEET_EVENT/);
+  assert.doesNotMatch(misc,/await app\.ensureMiscRubricStarters\(\)/);
+  assert.match(html,/Votre feuille de séance/);assert.match(html,/Vos fiches individuelles/);assert.match(html,/Utilisez les deux feuilles/);
+  assert.match(gov,/id="mgLoanPeriods" type="number" min="6" value="6"/);
+  assert.match(gov,/Capital remboursé/);assert.match(gov,/Intérêt remboursé/);assert.match(gov,/Base taxable suivante/);
+});
