@@ -167,17 +167,54 @@ async function recordSheetCell(membershipId:string,rubricId:string,meetingId:str
   if(status)status.textContent=t('Enregistré sur les deux feuilles.','Recorded on both sheets.');await loadContext(true);byId<HTMLButtonElement>('refreshBtn')?.click();
 }
 
+function buildSheetCellEditor(membershipId:string,rubric:any,meetingId:string,status?:HTMLElement){
+  const editor=document.createElement('div');editor.className='sheet-cell-editor';const kind=rubricKind(rubric);
+  const dir=document.createElement('select');dir.append(makeOption('IN','+'),makeOption('OUT','−'));dir.title=t('Entrée ou sortie','Income or outflow');
+  if(kind==='LOAN'){dir.replaceChildren(makeOption('OUT',t('Prêt −','Loan −')));dir.value='OUT';dir.disabled=true;}
+  else if(kind==='REPAYMENT'){dir.replaceChildren(makeOption('IN',repaymentComponent(rubric)==='INTEREST'?t('Intérêts +','Interest +'):t('Remb. +','Repay +')));dir.value='IN';dir.disabled=true;}
+  else if(String(rubric?.facets?.direction??'')==='OUTFLOW')dir.value='OUT';
+  const amount=document.createElement('input');amount.type='number';amount.min='1';amount.step='1';amount.inputMode='numeric';amount.placeholder='0';amount.setAttribute('aria-label',t('Montant','Amount'));
+  let loanSelect:HTMLSelectElement|undefined;
+  if(kind==='REPAYMENT'){
+    loanSelect=document.createElement('select');loanSelect.className='sheet-loan-select';loanSelect.append(makeOption('',t('Prêt concerné','Related loan')));
+    const active=activeLoansFor(membershipId);for(const loan of active)loanSelect.append(makeOption(loan.id,loan.title+' · '+t('capital ','principal ')+fmt(Number(loan.data?.outstandingPrincipal??0))+' · '+t('intérêts ','interest ')+fmt(Number(loan.data?.unpaidInterest??0))));
+    if(active.length===1){loanSelect.value=active[0].id;loanSelect.hidden=true;}
+  }
+  const save=document.createElement('button');save.type='button';save.textContent='✓';save.title=t('Valider cette cellule','Confirm this cell');save.onclick=()=>void(async()=>{try{save.disabled=true;await recordSheetCell(membershipId,rubric.id,meetingId,dir.value as 'IN'|'OUT',Number(amount.value),status,loanSelect?.value||undefined);amount.value='';}catch(e){if(status)status.textContent=friendly(e instanceof Error?e.message:String(e));}finally{save.disabled=false;}})();
+  editor.append(dir,amount);if(loanSelect)editor.append(loanSelect);editor.append(save);return editor;
+}
+
 async function renderCanonicalMeetingMatrix(root:HTMLElement,meetingId?:string){
   await loadContext();const group=activeGroup();if(!group||root.dataset.canonicalRendering==='1')return;root.dataset.canonicalRendering='1';try{
-    const ledger=await api<AnyRecord>(`/api/v1/groups/${encodeURIComponent(group)}/ledger`),expenses=await api<any[]>(`/api/v1/groups/${encodeURIComponent(group)}/expenses`).catch(()=>[]);
+    const [ledger,expenses,sheetEvents]=await Promise.all([
+      api<AnyRecord>(`/api/v1/groups/${encodeURIComponent(group)}/ledger`),
+      api<any[]>(`/api/v1/groups/${encodeURIComponent(group)}/expenses`).catch(()=>[]),
+      api<any[]>(`/api/v1/workspaces?moduleId=FINANCE.SHEET_EVENT&groupId=${encodeURIComponent(group)}`).catch(()=>[])
+    ]);
     let chosen=meetingId||root.dataset.meetingId||openMeetings()[0]?.id||meetings[0]?.id||'';
     const controls=document.createElement('div');controls.className='sheet-controls';const label=document.createElement('label');label.textContent=t('Séance de la feuille ','Sheet meeting ');const select=document.createElement('select');select.append(makeOption('',t('Choisir une séance','Choose a meeting')));for(const m of meetings.slice().sort((a,b)=>String(b.openedAt).localeCompare(String(a.openedAt))))select.append(makeOption(m.id,m.title+(m.status==='open'?' · '+t('ouverte','open'):' · '+t('clôturée','closed'))));select.value=chosen;label.append(select);controls.append(label);
-    const status=document.createElement('p');status.className='hint';controls.append(status);const table=document.createElement('table');table.className='meeting-matrix canonical-two-sheet';const thead=document.createElement('thead'),hr=document.createElement('tr');hr.append(Object.assign(document.createElement('th'),{textContent:t('Membre','Member')}));for(const r of rubrics.filter(x=>x.status!=='ARCHIVED')){const th=document.createElement('th');const a=document.createElement('a');a.href='#detail=rubric:'+encodeURIComponent(r.id);a.dataset.detailType='rubric';a.dataset.detailId=r.id;a.textContent=r.name;th.append(a);hr.append(th);}thead.append(hr);table.append(thead);const tbody=document.createElement('tbody');
-    const activeRubrics=rubrics.filter(x=>x.status!=='ARCHIVED');for(const m of members){const tr=document.createElement('tr'),th=document.createElement('th');const a=document.createElement('a');a.href='#detail=member:'+encodeURIComponent(m.id);a.dataset.detailType='member';a.dataset.detailId=m.id;a.textContent=m.displayName;th.append(a);tr.append(th);for(const r of activeRubrics){const td=document.createElement('td');const inflow=(ledger.receipts??[]).filter((x:any)=>x.membershipId===m.id&&(!chosen||x.meetingId===chosen)&&x.rubricId===r.id).reduce((n:number,x:any)=>n+Number(x.netAmount??x.amount?.amount??0),0);const outflow=expenses.filter(x=>x.scope==='SHEET'&&x.membershipId===m.id&&(!chosen||x.meetingId===chosen)&&x.rubricId===r.id).reduce((n,x)=>n+Number(x.amount??0),0);const value=document.createElement('div');value.className='sheet-cell-value';value.innerHTML=`<strong>${fmt(inflow-outflow)}</strong><small>+${fmt(inflow)} · −${fmt(outflow)}</small>`;td.append(value);if(chosen&&meetings.find(x=>x.id===chosen)?.status==='open'){const editor=document.createElement('div');editor.className='sheet-cell-editor';const dir=document.createElement('select');dir.append(makeOption('IN','+'),makeOption('OUT','−'));dir.title=t('Entrée ou dépense','Income or expense');const amount=document.createElement('input');amount.type='number';amount.min='1';amount.step='1';amount.inputMode='numeric';amount.placeholder='0';const save=document.createElement('button');save.type='button';save.textContent='✓';save.onclick=()=>void(async()=>{try{save.disabled=true;await recordSheetCell(m.id,r.id,chosen,dir.value as 'IN'|'OUT',Number(amount.value),status);}catch(e){status.textContent=friendly(e instanceof Error?e.message:String(e));}finally{save.disabled=false;}})();editor.append(dir,amount,save);td.append(editor);}tr.append(td);}tbody.append(tr);}table.append(tbody);root.replaceChildren(controls,table);root.dataset.meetingId=chosen;root.dataset.canonical='1';select.onchange=()=>{delete root.dataset.canonicalRendering;root.dataset.meetingId=select.value;void renderCanonicalMeetingMatrix(root,select.value);};
+    const status=document.createElement('p');status.className='hint';status.textContent=t('Toutes les rubriques créées non archivées sont affichées. Prêts et remboursements passent par leur moteur canonique, pas par une cotisation générique.','All created non-archived rubrics are shown. Loans and repayments use their canonical engine, not a generic contribution.');controls.append(status);
+    const activeRubrics=rubrics.filter(x=>x.status!=='ARCHIVED'),table=document.createElement('table');table.className='meeting-matrix canonical-two-sheet';table.dataset.rubricCount=String(activeRubrics.length);
+    const thead=document.createElement('thead'),hr=document.createElement('tr');hr.append(Object.assign(document.createElement('th'),{textContent:t('Membre','Member')}));
+    for(const r of activeRubrics){const th=document.createElement('th');const a=document.createElement('a');a.href='#detail=rubric:'+encodeURIComponent(r.id);a.dataset.detailType='rubric';a.dataset.detailId=r.id;a.textContent=r.name;th.append(a);hr.append(th);}thead.append(hr);table.append(thead);const tbody=document.createElement('tbody');
+    for(const m of members){
+      const tr=document.createElement('tr'),th=document.createElement('th');const a=document.createElement('a');a.href='#detail=member:'+encodeURIComponent(m.id);a.dataset.detailType='member';a.dataset.detailId=m.id;a.textContent=m.displayName;th.append(a);tr.append(th);
+      for(const r of activeRubrics){
+        const td=document.createElement('td');
+        const receiptIn=(ledger.receipts??[]).filter((x:any)=>x.membershipId===m.id&&(!chosen||x.meetingId===chosen)&&x.rubricId===r.id).reduce((n:number,x:any)=>n+Number(x.netAmount??x.amount?.amount??0),0);
+        const eventIn=sheetEvents.filter((x:any)=>String(x.data?.membershipId??'')===m.id&&(!chosen||x.data?.meetingId===chosen)&&x.data?.rubricId===r.id&&x.data?.direction==='IN').reduce((n:number,x:any)=>n+Number(x.data?.amount??0),0);
+        const expenseOut=expenses.filter((x:any)=>x.scope==='SHEET'&&x.membershipId===m.id&&(!chosen||x.meetingId===chosen)&&x.rubricId===r.id).reduce((n:number,x:any)=>n+Number(x.amount??0),0);
+        const eventOut=sheetEvents.filter((x:any)=>String(x.data?.membershipId??'')===m.id&&(!chosen||x.data?.meetingId===chosen)&&x.data?.rubricId===r.id&&x.data?.direction==='OUT').reduce((n:number,x:any)=>n+Number(x.data?.amount??0),0);
+        const inflow=receiptIn+eventIn,outflow=expenseOut+eventOut,value=document.createElement('div');value.className='sheet-cell-value';value.innerHTML=`<strong>${fmt(inflow-outflow)}</strong><small>+${fmt(inflow)} · −${fmt(outflow)}</small>`;td.append(value);
+        if(chosen&&meetings.find(x=>x.id===chosen)?.status==='open')td.append(buildSheetCellEditor(m.id,r,chosen,status));tr.append(td);
+      }
+      tbody.append(tr);
+    }
+    table.append(tbody);root.replaceChildren(controls,table);root.dataset.meetingId=chosen;root.dataset.canonical='1';select.onchange=()=>{delete root.dataset.canonicalRendering;root.dataset.meetingId=select.value;void renderCanonicalMeetingMatrix(root,select.value);};
   }finally{delete root.dataset.canonicalRendering;}
 }
 
-function hardenLegacyMatrix(){const root=byId('meetingMatrix');if(!root)return;const observer=new MutationObserver(()=>{if(root.childElementCount&&root.dataset.canonical!=='1')void renderCanonicalMeetingMatrix(root).catch(()=>{});});observer.observe(root,{childList:true,subtree:false});document.addEventListener('click',event=>{const target=event.target instanceof Element?event.target.closest('#meetingMatrix .matrix-cell'):null;if(target){event.preventDefault();event.stopImmediatePropagation();void renderCanonicalMeetingMatrix(root);}},true);}
+function hardenLegacyMatrix(){const root=byId('meetingMatrix');if(!root)return;const observer=new MutationObserver(()=>{if(root.childElementCount&&!root.querySelector('.canonical-two-sheet')){delete root.dataset.canonical;void renderCanonicalMeetingMatrix(root).catch(()=>{});}});observer.observe(root,{childList:true,subtree:false});document.addEventListener('click',event=>{const target=event.target instanceof Element?event.target.closest('#meetingMatrix .matrix-cell'):null;if(target){event.preventDefault();event.stopImmediatePropagation();void renderCanonicalMeetingMatrix(root);}},true);}
 
 async function enhanceDetailSheets(){
   const body=byId('detailBody');if(!body)return;const group=activeGroup();if(!group)return;await loadContext();const expenses=await api<any[]>(`/api/v1/groups/${encodeURIComponent(group)}/expenses`).catch(()=>[]);const ledger=await api<AnyRecord>(`/api/v1/groups/${encodeURIComponent(group)}/ledger`).catch(()=>({receipts:[]}));
