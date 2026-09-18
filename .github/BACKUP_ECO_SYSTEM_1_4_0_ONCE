@@ -1,4 +1,4 @@
-checkpoint=1.4.0-closure
-qualified_head=ef6791c54bfed1e79dac4c4fa09ab3d82f1c8ddf
-production_run=35314965700
-purpose=final source + production D1 closure checkpoint after truth handoff
+checkpoint=1.4.0-targeted-two-sheets-tontines-members-backoffice
+qualified_head=6d44f6b6b60b5d16f46fb6b49f49d3bbbc41abe4
+qualified_run=35331003436
+purpose=predeploy BIR+ for targeted field corrections requested 2026-09-18
