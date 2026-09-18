@@ -60,4 +60,5 @@ test('self-benefit correction cannot be confirmed or reviewed by its own author'
   setContext(kernel,'manager_other',['manager']);
   const reviewed=await svc.officerReview('group_a',notice.id,'Vérifié par un autre responsable.');
   assert.equal(reviewed.disputeState,'OFFICER_CONFIRMED');
+  assert.equal((await repo.listObligations('tenant_a','manager_other')).find(x=>x.type==='FINANCIAL_INDEPENDENT_REVIEW')?.status,'completed');
 });
