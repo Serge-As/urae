@@ -289,6 +289,10 @@ const renderMeetings = async () => {
 const activeMeeting = () => meetings.find(x => x.status === 'open')?.id;
 const renderMeetingMatrix = () => {
     const root = $('#meetingMatrix');
+    if (!isManager()) {
+        root.innerHTML = '<div class="empty-state">'+tx('La feuille générale de séance est réservée aux responsables habilités. Utilisez « Vos fiches individuelles » pour consulter votre propre situation.','The general meeting sheet is restricted to authorized managers. Use “Your individual sheets” to view your own situation.')+'</div>';
+        return;
+    }
     if (!members.length || !rubrics.length) {
         root.innerHTML = `<div class="empty-state">${tx('Ajoutez au moins un membre et une rubrique pour afficher la matrice membres × rubriques.','Add at least one member and one rubric to display the member × rubric matrix.')}</div>`;
         return;
