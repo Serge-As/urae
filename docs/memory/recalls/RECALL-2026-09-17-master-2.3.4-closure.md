@@ -95,3 +95,37 @@ Capital initial 50 000 XAF, taux 5 % par mois, paiements : mois 1 = 0, mois 2 = 
 
 ### Matrice de suivi
 Colonnes = séances/mois ; lignes = Capital initial/début de période, Capital remboursé, Capital restant dû, Intérêt exigible, Intérêt payé, Intérêt restant dû, Paiement, Dette totale, Intérêt projeté prochain mois, Total dû prochaine séance. Pied = totaux et solde final.
+
+
+## Tranche 6 — critiques terrain ciblées UI / deux feuilles / Tontines / Membres / Back-office (2026-09-18)
+
+Le fondateur demande une correction **strictement ciblée** : ne pas modifier les parties non concernées.
+
+### Deux feuilles
+- « Votre feuille de séance » et « Vos fiches individuelles » doivent être visibles et accessibles comme de vraies surfaces de travail, pas comme des boutons qui renvoient vers un autre panneau.
+- Les responsables doivent pouvoir saisir/modifier directement dans une cellule de tableau, ou via un petit pop-up ancré sur la cellule qui laisse le tableau visible.
+- Le pop-up doit accepter de grands montants (millions/milliards) et conserver le contexte membre × rubrique × séance.
+- La feuille de séance doit permettre de voir les données antérieures tout en saisissant la séance courante.
+- La fiche individuelle doit permettre la même saisie canonique, avec les séances en lignes et les rubriques en colonnes.
+
+### Prêts
+- La matrice Prêt doit être manipulable plus simplement : le gestionnaire peut modifier les valeurs de simulation (capital initial, paiements mensuels, système) directement dans le tableau ou via un petit éditeur contextuel.
+- Les deux systèmes CAPITAL_FIRST / INTEREST_FIRST restent inchangés ; ne pas toucher au moteur financier hors UX concernée.
+
+### Tontines
+- Toute rubrique de type TONTINE créée pendant le lancement doit apparaître automatiquement dans le menu Tontines.
+- Ce menu doit aussi permettre de créer/configurer une nouvelle rubrique Tontine sans repasser par la création du groupe.
+- « Rubrique Tontine » = sélection de la tontine concernée.
+- « Nom du cycle » doit être reformulé pour être compréhensible (nom de l’exercice/cycle de cette tontine, avec valeur proposée automatiquement).
+- « Montant indicatif du pot » devient « Montant total du pot » et se calcule automatiquement à partir du montant par part × nombre de parts/participants concernés lorsque ces données existent.
+- Les sélecteurs Cycle et Membre doivent être effectivement alimentés.
+- Le classement des bénéficiaires doit se faire dans le menu Tontines et alimenter le menu Classements/calendrier.
+
+### Membres / Back-office
+- « Membres & habilitations » doit être une vraie vue dédiée et ne plus simplement ouvrir « Réunion ».
+- Le Dossier Membre doit être déplacé de Séance vers « Membres & habilitations ».
+- Ajouter un vrai menu « Back-office » pour les dépenses/recap/opérations administratives déjà existantes ; ne pas dupliquer les moteurs.
+- Éviter le doublon « Timbre » / « Timbre de prêt » : « Timbre de prêt » est l’intitulé métier ; ne pas créer un deuxième starter « Timbre ».
+
+### Présentation
+- « Plus de détail » du Carnet membre doit éviter les dumps techniques/bruts et privilégier des libellés métier lisibles.
