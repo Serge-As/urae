@@ -940,6 +940,9 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
     const identityPassport=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/identity-passport$/);
     if(identityPassport&&request.method==='GET')return json(await groupIdentity.compute(identityPassport[1]!),200,cors);
     if(identityPassport&&request.method==='POST')return json(await groupIdentity.issue(identityPassport[1]!),201,cors);
+    const identityProfile=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/identity-profile$/);
+    if(identityProfile&&request.method==='GET')return json(await groupIdentity.profile(identityProfile[1]!),200,cors);
+    if(identityProfile&&request.method==='PUT')return json(await groupIdentity.updateProfile(identityProfile[1]!,await readJson<any>(request)),200,cors);
 
     const dataConsent=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/data-use-consent$/);
     if(dataConsent&&request.method==='GET')return json(await conciergeLearning.consent(dataConsent[1]!),200,cors);
