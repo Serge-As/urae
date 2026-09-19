@@ -60,3 +60,12 @@ test('financial dictation is confidence-aware and never treats noise robustness 
   assert.match(source,/bruit n.est pas présenté comme résolu|Noise handling is not claimed as solved/);
   assert.match(source,/no-speech/);
 });
+
+
+test('sheet correction copy distinguishes self-benefit from ordinary independent review',async()=>{
+  const source=await readFile('.build/src/voice-entry-ui.js','utf8');
+  assert.match(source,/result\.selfBenefit/);
+  assert.match(source,/votre propre situation|your own situation/);
+  assert.match(source,/autre responsable habilité doit la vérifier avant validation institutionnelle|authorized manager must review it before institutional confirmation/);
+  assert.match(source,/ancienne valeur, contrepassation et nouvelle valeur|previous value, reversal and new value/);
+});
