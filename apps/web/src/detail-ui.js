@@ -187,7 +187,7 @@ export function mountDetailUI({app,navigate,getGroups,getMembers,getMeetings,get
     const evidenceByDeclaration=new Map(evidences.map(x=>[String(x.data?.declarationId??''),x])),list=el('div',undefined,'stack');
     for(const declaration of declarations){
       const memberName=declaration.displayName??getMembers().find(x=>x.id===declaration.data?.membershipId)?.displayName??'Membre',rubricName=getRubrics().find(x=>x.id===declaration.data?.rubricId)?.name??'Sans rubrique',evidence=evidenceByDeclaration.get(declaration.id),item=el('article',undefined,'item');
-      item.append(el('strong',memberName+' · '+rubricName),row('Montant déclaré',fmt(Number(declaration.data?.amount??0))),row('État',evidence?'Réception prouvée':'Preuve en attente'));
+      item.append(el('strong',memberName+' · '+rubricName),row('Montant déclaré',fmt(Number(declaration.data?.amount??0))),row('Code de réception',String(declaration.data?.proofCode??'—')),row('État',evidence?'Réception prouvée':'Preuve en attente'));
       if(evidence)item.append(row('Mode de preuve',String(evidence.data?.method??'—')),row('Enregistrée le',date(evidence.createdAt)));
       else{
         const actions=el('div',undefined,'actions'),own=String(declaration.data?.membershipId??'')===String(me?.membership?.id??'');
