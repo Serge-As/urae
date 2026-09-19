@@ -1,5 +1,5 @@
 import type {
-  AuditEvent, CashboxReconciliationRecord, CaseRecord, ContributionReceipt, Group, GroupProject, Id,
+  AuditEvent, CashboxReconciliationRecord, CaseRecord, ContributionReceipt, EvidenceRecord, Group, GroupProject, Id,
   LedgerAccount, LedgerEntry, MeetingSession, Membership, Obligation, User, PublicGroupListing, MembershipApplication,
   RubricDefinition, GovernanceKnowledgeClaim, WorkspaceRecord
 } from '../../contracts/src/index.js';
@@ -37,6 +37,10 @@ export interface PlatformRepository {
 
   saveCase(record: CaseRecord): void | Promise<void>;
   listCases(tenantId: Id, openedBy?: Id): CaseRecord[] | Promise<CaseRecord[]>;
+
+  saveEvidence(record: EvidenceRecord): void | Promise<void>;
+  getEvidence(tenantId: Id, id: Id): EvidenceRecord | undefined | Promise<EvidenceRecord | undefined>;
+  listEvidence(tenantId: Id, subjectType?: string, subjectId?: Id): EvidenceRecord[] | Promise<EvidenceRecord[]>;
 
   saveAudit(event: AuditEvent): void | Promise<void>;
   listAudit(tenantId: Id): AuditEvent[] | Promise<AuditEvent[]>;
@@ -105,6 +109,7 @@ export class InMemoryPlatformRepository implements PlatformRepository {
   private memberships = new Map<Id, Membership>();
   private obligations = new Map<Id, Obligation>();
   private cases = new Map<Id, CaseRecord>();
+  private evidences = new Map<Id, EvidenceRecord>();
   private audits = new Map<Id, AuditEvent>();
   private meetings = new Map<Id, MeetingSession>();
   private ledgerAccounts = new Map<Id, LedgerAccount>();
@@ -138,6 +143,16 @@ export class InMemoryPlatformRepository implements PlatformRepository {
 
   saveCase(record: CaseRecord): void { this.cases.set(record.id, structuredClone(record)); }
   listCases(tenantId: Id, openedBy?: Id): CaseRecord[] { return [...this.cases.values()].filter(x => x.tenantId === tenantId && (!openedBy || x.openedBy === openedBy)).map(x => structuredClone(x)); }
+
+  saveEvidence(record: EvidenceRecord): void {
+    const previous=this.evidences.get(record.id);
+    if(previous&&JSON.stringify(previous)!==JSON.stringify(record))throw new Error('EVIDENCE_IMMUTABLE_CONFLICT');
+    this.evidences.set(record.id,structuredClone(record));
+  }
+  getEvidence(tenantId: Id, id: Id): EvidenceRecord | undefined { const x=this.evidences.get(id);return x?.tenantId===tenantId?structuredClone(x):undefined; }
+  listEvidence(tenantId: Id, subjectType?: string, subjectId?: Id): EvidenceRecord[] {
+    return [...this.evidences.values()].filter(x=>x.tenantId===tenantId&&(!subjectType||x.subjectType===subjectType)&&(!subjectId||x.subjectId===subjectId)).map(x=>structuredClone(x));
+  }
 
   saveAudit(event: AuditEvent): void { this.audits.set(event.id, structuredClone(event)); }
   listAudit(tenantId: Id): AuditEvent[] { return [...this.audits.values()].filter(x => x.tenantId === tenantId).map(x => structuredClone(x)); }
@@ -270,6 +285,16 @@ export class D1PlatformRepository implements PlatformRepository {
   listObligations(t:Id,a?:Id){return this.list<Obligation>('obligation',a?'tenant_id=? AND assignee_id=?':'tenant_id=?',a?[t,a]:[t]);}
   saveCase(x:CaseRecord){return this.saveRecord('case',x,{tenantId:x.tenantId,groupId:x.groupId,assigneeId:x.openedBy});}
   listCases(t:Id,o?:Id){return this.list<CaseRecord>('case',o?'tenant_id=? AND assignee_id=?':'tenant_id=?',o?[t,o]:[t]);}
+  async saveEvidence(x:EvidenceRecord){
+    const previous=await this.byId<EvidenceRecord>('evidence',x.id);
+    if(previous&&JSON.stringify(previous)!==JSON.stringify(x))throw new Error('EVIDENCE_IMMUTABLE_CONFLICT');
+    if(!previous)await this.saveRecord('evidence',x,{tenantId:x.tenantId});
+  }
+  async getEvidence(t:Id,id:Id){const x=await this.byId<EvidenceRecord>('evidence',id);return x?.tenantId===t?x:undefined;}
+  async listEvidence(t:Id,subjectType?:string,subjectId?:Id){
+    const rows=await this.list<EvidenceRecord>('evidence','tenant_id=?',[t]);
+    return rows.filter(x=>(!subjectType||x.subjectType===subjectType)&&(!subjectId||x.subjectId===subjectId));
+  }
   saveAudit(x:AuditEvent){return this.saveRecord('audit',x,{tenantId:x.tenantId});}
   listAudit(t:Id){return this.list<AuditEvent>('audit','tenant_id=?',[t]);}
   saveMeeting(x:MeetingSession){return this.saveRecord('meeting',x,{tenantId:x.tenantId,groupId:x.groupId});}
