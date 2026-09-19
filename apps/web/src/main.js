@@ -23,6 +23,7 @@ import { mountSavingsYieldUI } from './savings-yield-ui.js';
 import { mountExternalProgramsUI } from './external-programs-ui.js';
 import { mountFounderControlUI } from './founder-control-ui.js';
 import { mountAssistanceRulebookUI } from './assistance-rulebook-ui.js';
+import { mountGroupHomeUI } from './group-home-ui.js';
 let uiLocale = 'fr';
 try { uiLocale = localStorage.getItem('tontine.locale') === 'en' ? 'en' : 'fr'; } catch {}
 const tx = (fr,en) => runtimeTranslate(uiLocale,fr,en);
@@ -139,6 +140,7 @@ const savingsYieldUI = mountSavingsYieldUI({ app, getMembers: () => members, not
 const externalProgramsUI = mountExternalProgramsUI({ app, notify: toast, showError: fail, isManager, fmt });
 const founderControlUI = mountFounderControlUI({ app, notify: toast, showError: fail });
 const assistanceRulebookUI = mountAssistanceRulebookUI({ app, notify: toast, showError: fail, isManager });
+const groupHomeUI = mountGroupHomeUI({ app, getGroups:()=>groups, getMembers:()=>members, getMeetings:()=>meetings, navigate:go, fmt });
 const renderConnectivity = () => { const online = navigator.onLine; const e = $('#connectivity'); e.textContent = `● ${online ? tx('En ligne','Online') : tx('Hors ligne','Offline')}`; e.className = `pill ${online ? 'online' : 'offline'}`; app.setConnectivity(online ? 'online' : 'offline'); };
 let lastOfflineSnapshotNotice=0;
 window.addEventListener('eco:offline-snapshot-used',event=>{
@@ -653,6 +655,7 @@ const refreshGroupContext = async () => {
     $('#membersContent').style.display = active ? 'block' : 'none';
     $('#noActiveGroupMembers').style.display = active ? 'none' : 'block';
     const manage=active && isManager();
+    if(!active)await groupHomeUI.refresh();
     $('#backOfficeContent').style.display = manage ? 'block' : 'none';
     $('#noActiveGroupBackoffice').style.display = manage ? 'none' : 'block';
     $('#noActiveGroupBackoffice').textContent = active&&!manage ? tx('Le Back-office est réservé aux responsables habilités du groupe.','Back office is restricted to authorized group managers.') : tx('Sélectionnez ou créez d’abord un groupe.','Select or create a group first.');
@@ -664,6 +667,7 @@ const refreshGroupContext = async () => {
         await renderMembers();
         await renderMeetings();
         await renderLivingRules();
+        await groupHomeUI.refresh();
         if(manage)await renderLedger();
         else{receiptPositions=[];$('#ledgerMetrics').replaceChildren();$('#receiptList').textContent='Votre relevé individuel est accessible depuis la liste des membres.';}
     }
