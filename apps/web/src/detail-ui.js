@@ -139,11 +139,25 @@ export function mountDetailUI({app,navigate,getGroups,getMembers,getMeetings,get
         }
         const openArrears=(arrears??[]).filter(x=>!['settled','paid','closed','resolved'].includes(String(x.status??'').toLowerCase()));
         const activeLoans=(loans??[]).filter(x=>['APPROVED','DISBURSED','REPAYING'].includes(String(x.data?.completionState??''))&&(Number(x.data?.outstandingPrincipal??0)>0||Number(x.data?.unpaidInterest??0)>0));
-        const debt=el('div',undefined,'actions');debt.append(metric(String(openArrears.length),'Impayés / obligations ouverts'),metric(String(activeLoans.length),'Prêts avec dette suivie'));
-        const loanButton=el('button','Ouvrir Prêts + Intérêts','secondary');loanButton.type='button';loanButton.onclick=()=>navigate('finance');const ranking=el('button','Classements & calendrier','secondary');ranking.type='button';ranking.onclick=()=>navigate('tontines');debt.append(loanButton,ranking);finance.append(debt);body.append(finance);
+        const debtSummary=el('div',undefined,'actions');debtSummary.append(metric(String(openArrears.length),'Impayés / obligations ouverts'),metric(String(activeLoans.length),'Prêts avec dette suivie'));
+        const loanButton=el('button','Ouvrir Prêts + Intérêts','secondary');loanButton.type='button';loanButton.onclick=()=>navigate('finance');const ranking=el('button','Classements & calendrier','secondary');ranking.type='button';ranking.onclick=()=>navigate('tontines');debtSummary.append(loanButton,ranking);finance.append(debtSummary);body.append(finance);
+
+        const debtTable=card('Gestion des dettes à ce jour');
+        if(openArrears.length){
+          const table=document.createElement('table');table.className='meeting-matrix';const head=document.createElement('thead'),hr=document.createElement('tr');for(const h of ['Membre','Motif','Montant restant','Échéance','État'])hr.append(el('th',h));head.append(hr);table.append(head);const tb=document.createElement('tbody');
+          for(const item of openArrears){const member=getMembers().find(m=>m.userId===item.assigneeId),tr=document.createElement('tr');tr.append(el('td',member?.displayName??item.assigneeId),el('td',item.title??'—'),el('td',fmt(Number(item.outstanding??0))),el('td',item.dueAt?date(item.dueAt):'—'),el('td',String(item.status??'OPEN')));tb.append(tr);}table.append(tb);debtTable.append(table);
+        }else debtTable.append(el('p','Aucun membre redevable selon les créances canoniques à cette date.','hint'));
+        body.append(debtTable);
+
+        const backOffice=expenses.filter(x=>String(x.scope??x.data?.scope??'').toUpperCase()==='BACKOFFICE'),backOfficeCard=card('Caisses / dépenses du Back-office comprises');
+        if(backOffice.length){for(const expense of backOffice){const a=el('article',undefined,'item');a.append(el('strong',String(expense.label??expense.title??'Dépense Back-office')),row('Montant',fmt(Number(expense.amount??expense.data?.amount??0))),row('Date',date(expense.createdAt)));backOfficeCard.append(a);}}else backOfficeCard.append(el('p','Aucune dépense Back-office rattachée à cette séance.','hint'));
+        body.append(backOfficeCard);
 
         metrics.append(metric(receipts.length,'Encaissements'));
-        const sheet=card('Tableau complet de la séance');sheet.append(el('p','Membres en lignes, rubriques en colonnes. Les mêmes écritures alimentent les fiches individuelles, les rubriques et le Récap.','hint'),buildMeetingMatrix({meeting,ledger,editable:meeting.status==='open'}));body.append(sheet);
+        const sheet=card('Tableau complet de la séance');sheet.append(el('p','Membres en lignes, rubriques en colonnes. Les mêmes écritures alimentent les fiches individuelles, les rubriques et le Récap.','hint'),buildMeetingMatrix({meeting,ledger,editable:meeting.status==='open'}));
+        const manageActions=el('div',undefined,'actions');
+        for(const [label,view] of [['Fiches individuelles','operations'],['Gérer les membres','members'],['Gérer / archiver les rubriques','operations'],['Ouvrir le Récap','recap']]){const b=el('button',label,'secondary');b.type='button';b.onclick=()=>navigate(view);manageActions.append(b);}
+        sheet.append(manageActions);body.append(sheet);
       }catch(e){showError(e);}
     }else{
       body.append(el('p','Le tableau financier global est réservé aux responsables. Votre propre situation de séance reste accessible ci-dessous.','hint'));
@@ -190,6 +204,9 @@ export function mountDetailUI({app,navigate,getGroups,getMembers,getMeetings,get
     beneficiaryCard.append(list);body.append(beneficiaryCard);
 
     try{const misc=await app.miscPostings({meetingId:id});if(misc.length){const other=card('Autres · séance');for(const p of misc){const m=getMembers().find(x=>x.id===p.data?.membershipId),a=el('article',undefined,'item');a.append(el('strong',p.title),row('Montant',fmt(Number(p.data?.amount??0))));if(m)a.append(link(m.displayName,'member',m.id));other.append(a);}body.append(other);}}catch{}
+    const sessionList=card('Liste des séances / précédentes séances');const sessionStack=el('div',undefined,'stack');
+    for(const item of ordered.slice().reverse()){const a=el('article',undefined,'item'),head=el('div',undefined,'actions');head.append(link(humanMeetingLabel(item),'meeting',item.id),el('span',item.status==='closed'?'Clôturée':'Ouverte','pill'));a.append(head,el('p',[item.location?('Lieu : '+item.location):null,item.theme?('Thème : '+item.theme):null].filter(Boolean).join(' · ')||'Contexte non renseigné','hint'));sessionStack.append(a);}
+    if(!ordered.length)sessionStack.append(el('p','Aucune autre séance.','hint'));sessionList.append(sessionStack);body.append(sessionList);
   };
 
   const rubricContributionMatrix=(rubric,ledger)=>{
