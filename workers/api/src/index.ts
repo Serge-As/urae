@@ -112,7 +112,7 @@ const createRequestScope = (request:Request,repo:PlatformRepository,artifacts?:A
   const tenantId=request.headers.get('x-tenant-id')??'tenant_demo'; const actorId=request.headers.get('x-actor-id')??'user_founder';
   const groupRoles=(request.headers.get('x-group-roles')??'founder,manager').split(',').map(x=>x.trim()).filter(Boolean);
   kernel.context.set({actorId,tenantId,activeGroupId:request.headers.get('x-active-group-id')??undefined,groupRoles,mandateIds:[],deviceId:request.headers.get('x-device-id')??'device_web_demo',sessionId:request.headers.get('x-session-id')??'session_demo',locale:request.headers.get('accept-language')?.toLowerCase().startsWith('en')?'en':'fr',timezone:request.headers.get('x-timezone')??'Africa/Douala',connectivity:'online',requestId:request.headers.get('x-request-id')??makeId('req')});
-  return {kernel,foundation,ledger,meetings,discovery,membershipGateway,rubrics,completion,explainability,documents,receivables,treasury,riskFinance,market,community,imports,memberControl,groupIdentity,conciergeLearning,miscRubrics,adManager,economicIntelligence,externalPrograms,operationalCockpit};
+  return {kernel,foundation,ledger,meetings,discovery,membershipGateway,rubrics,completion,explainability,documents,receivables,treasury,riskFinance,market,community,imports,artifactStore,memberControl,groupIdentity,conciergeLearning,miscRubrics,adManager,economicIntelligence,externalPrograms,operationalCockpit};
 };
 
 const inboxFor = async (repo:PlatformRepository,tenantId:string,actorId:string) => {
@@ -127,7 +127,7 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
     const allowed=Boolean((cors as Record<string,string>)['access-control-allow-origin']);
     return new Response(null,{status:allowed?204:403,headers:{...baseSecurityHeaders,...cors,'access-control-allow-methods':'GET,POST,PUT,OPTIONS','access-control-allow-headers':'content-type,x-tenant-id,x-actor-id,x-group-roles,x-active-group-id,x-device-id,x-session-id,x-request-id,x-timezone'}});
   }
-  const {kernel,foundation,ledger,meetings,discovery,membershipGateway,rubrics,completion,explainability,documents,receivables,treasury,riskFinance,market,community,imports,memberControl,groupIdentity,conciergeLearning,miscRubrics,adManager,economicIntelligence,externalPrograms,operationalCockpit}=createRequestScope(request,repo,options.artifacts,options.dataUseDefaultMode??'BETA_OPEN',options.documentAI); const ctx=kernel.context.get();
+  const {kernel,foundation,ledger,meetings,discovery,membershipGateway,rubrics,completion,explainability,documents,receivables,treasury,riskFinance,market,community,imports,artifactStore,memberControl,groupIdentity,conciergeLearning,miscRubrics,adManager,economicIntelligence,externalPrograms,operationalCockpit}=createRequestScope(request,repo,options.artifacts,options.dataUseDefaultMode??'BETA_OPEN',options.documentAI); const ctx=kernel.context.get();
   const governanceVotes=new GovernanceVoteService(repo,kernel,options.governanceSecret??'eco-system-nonproduction-governance-secret');
   const notifications=new NotificationService(repo,kernel);
   if(options.premiumLive)kernel.features.set('premium_live_ledger',true);
@@ -571,6 +571,44 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
     if(meetingRoute&&request.method==='POST'){
       const body=await readJson<Record<string,unknown>>(request); return json(await meetings.openMeeting(ctx.tenantId,meetingRoute[1]!,{title:String(body.title??''),scheduledAt:body.scheduledAt?String(body.scheduledAt):undefined}),201,cors);
     }
+    const meetingAttendance=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/meetings\/([^/]+)\/attendance$/);
+    if(meetingAttendance&&request.method==='GET')return json(await meetings.listAttendance(ctx.tenantId,meetingAttendance[1]!,meetingAttendance[2]!),200,cors);
+    if(meetingAttendance&&request.method==='POST'){
+      const body=await readJson<Record<string,unknown>>(request);
+      return json(await meetings.recordAttendance(ctx.tenantId,meetingAttendance[1]!,meetingAttendance[2]!,{membershipId:String(body.membershipId??''),attendance:String(body.attendance??'') as any,note:body.note?String(body.note):undefined}),200,cors);
+    }
+    const meetingBeneficiaries=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/meetings\/([^/]+)\/beneficiaries$/);
+    if(meetingBeneficiaries&&request.method==='GET')return json(await meetings.listBenefitDeclarations(ctx.tenantId,meetingBeneficiaries[1]!,meetingBeneficiaries[2]!),200,cors);
+    if(meetingBeneficiaries&&request.method==='POST'){
+      const body=await readJson<Record<string,unknown>>(request);
+      return json(await meetings.declareBenefit(ctx.tenantId,meetingBeneficiaries[1]!,meetingBeneficiaries[2]!,{membershipId:String(body.membershipId??''),rubricId:body.rubricId?String(body.rubricId):undefined,amount:finite(body.amount),currency:String(body.currency??'XAF'),note:body.note?String(body.note):undefined}),201,cors);
+    }
+    const benefitEvidenceUpload=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/meetings\/([^/]+)\/beneficiary-evidence\/upload$/);
+    if(benefitEvidenceUpload&&request.method==='POST'){
+      const groupId=benefitEvidenceUpload[1]!,meetingId=benefitEvidenceUpload[2]!;await requireGroup(groupId);
+      if(!(await repo.getMeeting(ctx.tenantId,groupId,meetingId)))throw new Error('MEETING_NOT_FOUND');
+      const form=await request.formData(),file=form.get('file');
+      if(!(file instanceof File)||file.size<=0)throw new Error('EVIDENCE_FILE_REQUIRED');
+      if(file.size>10_000_000)throw new Error('EVIDENCE_FILE_TOO_LARGE');
+      const ext=launchDocumentExtension(file.name),mime=file.type.toLowerCase();
+      if(!mime.startsWith('image/')&&mime!=='application/pdf'&&!['jpg','jpeg','png','webp','pdf'].includes(ext))throw new Error('EVIDENCE_FILE_TYPE_NOT_ALLOWED');
+      const buffer=await file.arrayBuffer(),fingerprint=await sha256Bytes(buffer),key='evidence/'+ctx.tenantId+'/'+groupId+'/'+meetingId+'/'+fingerprint+'-'+safeArtifactName(file.name);
+      try{await artifactStore.put(key,buffer,{httpMetadata:{contentType:file.type||'application/octet-stream'},customMetadata:{tenantId:ctx.tenantId,groupId,meetingId,fingerprint,purpose:'MEETING_BENEFIT_RECEIPT'}});}
+      catch(error){if(error instanceof Error&&['D1_FALLBACK_TEXT_ONLY','INVALID_ARTIFACT_KEY','R2_REQUIRED_FOR_LARGE_ARTIFACT'].includes(error.message))throw new Error('R2_REQUIRED_FOR_EVIDENCE_FILE');throw error;}
+      return json({artifactKey:key,fingerprint,name:file.name,size:file.size,contentType:file.type||'application/octet-stream'},201,cors);
+    }
+    const benefitEvidence=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/meetings\/([^/]+)\/beneficiary-evidence$/);
+    if(benefitEvidence&&request.method==='GET')return json(await meetings.listBenefitEvidence(ctx.tenantId,benefitEvidence[1]!,benefitEvidence[2]!),200,cors);
+    if(benefitEvidence&&request.method==='POST'){
+      const body=await readJson<Record<string,unknown>>(request);
+      return json(await meetings.recordBenefitEvidence(ctx.tenantId,benefitEvidence[1]!,benefitEvidence[2]!,{
+        declarationId:String(body.declarationId??''),membershipId:String(body.membershipId??''),rubricId:body.rubricId?String(body.rubricId):undefined,
+        amount:body.amount===undefined?undefined:finite(body.amount),currency:body.currency?String(body.currency):undefined,
+        method:String(body.method??'') as any,artifactKey:body.artifactKey?String(body.artifactKey):undefined,fingerprint:body.fingerprint?String(body.fingerprint):undefined,
+        note:body.note?String(body.note):undefined,idempotencyKey:String(body.idempotencyKey??request.headers.get('x-idempotency-key')??makeId('benefit_evidence'))
+      }),201,cors);
+    }
+
     const closeMeeting=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/meetings\/([^/]+)\/close$/);
     if(closeMeeting&&request.method==='POST'){
       const groupId=closeMeeting[1]!,meetingId=closeMeeting[2]!,closed=await meetings.closeMeeting(ctx.tenantId,groupId,meetingId);
