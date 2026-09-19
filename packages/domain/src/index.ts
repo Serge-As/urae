@@ -295,13 +295,32 @@ export class FoundationService {
 
 export class MeetingService {
   constructor(public readonly repo:PlatformRepository,public readonly kernel:PlatformKernel){registerGroupPolicies(kernel);}
-  async openMeeting(tenantId:Id,groupId:Id,input:{title?:string;scheduledAt?:string},requestId=makeId('req')):Promise<MeetingSession>{
-    const ctx=this.kernel.context.get(); const group=await assertCanManageGroup(this.repo,ctx,tenantId,groupId);
+  async openMeeting(tenantId:Id,groupId:Id,input:{title?:string;scheduledAt?:string;location?:string;theme?:string;dressCode?:string},requestId=makeId('req')):Promise<MeetingSession>{
+    const ctx=this.kernel.context.get(); await assertCanManageGroup(this.repo,ctx,tenantId,groupId);
     const decision=this.kernel.policy.evaluate('group:manage',{...ctx,activeGroupId:groupId},{groupId}); if(!decision.allowed) throw new Error(decision.reason);
-    const meeting:MeetingSession={id:makeId('meeting'),tenantId,groupId,title:input.title?.trim()||'MEETING_DEFAULT_TITLE',status:'open',openedBy:ctx.actorId,openedAt:now(),scheduledAt:input.scheduledAt};
+    if(input.scheduledAt&&!Number.isFinite(Date.parse(input.scheduledAt)))throw Error('INVALID_MEETING_DATE');
+    const trim=(value?:string,max=180)=>{const clean=value?.trim();if(!clean)return undefined;if(clean.length>max)throw Error('MEETING_CONTEXT_TOO_LONG');return clean;};
+    const meeting:MeetingSession={id:makeId('meeting'),tenantId,groupId,title:trim(input.title,240)||'MEETING_DEFAULT_TITLE',status:'open',openedBy:ctx.actorId,openedAt:now(),
+      scheduledAt:input.scheduledAt?new Date(input.scheduledAt).toISOString():undefined,location:trim(input.location),theme:trim(input.theme),dressCode:trim(input.dressCode)};
     await this.repo.saveMeeting(meeting);
     await persistAudit(this.repo,this.kernel,{tenantId,actorId:ctx.actorId,action:'MEETING_OPENED',targetType:'meeting',targetId:meeting.id,requestId,after:meeting});
     return meeting;
+  }
+
+  async updateMeetingContext(tenantId:Id,groupId:Id,meetingId:Id,input:{scheduledAt?:string|null;location?:string|null;theme?:string|null;dressCode?:string|null},requestId=makeId('req')):Promise<MeetingSession>{
+    const ctx=this.kernel.context.get();await assertCanManageGroup(this.repo,ctx,tenantId,groupId);
+    const current=await this.repo.getMeeting(tenantId,groupId,meetingId);if(!current)throw Error('MEETING_NOT_FOUND');
+    if(input.scheduledAt!==undefined&&input.scheduledAt!==null&&!Number.isFinite(Date.parse(input.scheduledAt)))throw Error('INVALID_MEETING_DATE');
+    const clean=(value:string|null|undefined,max=180)=>{if(value===undefined)return undefined;if(value===null)return null;const v=value.trim();if(v.length>max)throw Error('MEETING_CONTEXT_TOO_LONG');return v||null;};
+    const scheduled=clean(input.scheduledAt,80),location=clean(input.location),theme=clean(input.theme),dressCode=clean(input.dressCode);
+    const next:MeetingSession={...current,
+      scheduledAt:scheduled===undefined?current.scheduledAt:scheduled===null?undefined:new Date(scheduled).toISOString(),
+      location:location===undefined?current.location:location===null?undefined:location,
+      theme:theme===undefined?current.theme:theme===null?undefined:theme,
+      dressCode:dressCode===undefined?current.dressCode:dressCode===null?undefined:dressCode};
+    await this.repo.saveMeeting(next);
+    await persistAudit(this.repo,this.kernel,{tenantId,actorId:ctx.actorId,action:'MEETING_CONTEXT_UPDATED',targetType:'meeting',targetId:meetingId,requestId,before:current,after:next});
+    return next;
   }
   async closeMeeting(tenantId:Id,groupId:Id,meetingId:Id,requestId=makeId('req')):Promise<MeetingSession>{
     const current=await this.repo.getMeeting(tenantId,groupId,meetingId); if(!current) throw new Error('MEETING_NOT_FOUND');
