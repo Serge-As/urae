@@ -75,7 +75,7 @@ export class ConnectedApplication {
   private headers(extra:Record<string,string>={}):HeadersInit{return{'content-type':'application/json','accept-language':this.locale,'x-active-group-id':this.activeGroupId??'','x-timezone':'Africa/Douala',...extra};}
   private offlineReadAllowed(path:string):boolean{
     if(path==='/api/v1/auth/session'||path==='/api/v1/groups')return true;
-    return /^\/api\/v1\/groups\/[^/?]+\/(me|members|meetings|rubrics|operating-policy|ledger|cashbox\/reconciliations|expenses)(?:\?.*)?$/.test(path)
+    return /^\/api\/v1\/groups\/[^/?]+\/(me|members|meetings|rubrics|operating-policy|ledger|cashbox\/reconciliations|expenses|identity-passport|identity-profile)(?:\?.*)?$/.test(path)
       || /^\/api\/v1\/groups\/[^/?]+\/recap\/global(?:\?.*)?$/.test(path)
       || /^\/api\/v1\/groups\/[^/?]+\/meetings\/[^/?]+\/(attendance|beneficiaries|beneficiary-evidence)(?:\?.*)?$/.test(path)
       || /^\/api\/v1\/groups\/[^/?]+\/members\/[^/?]+\/(statement|operational-sheet)(?:\?.*)?$/.test(path);
@@ -223,6 +223,8 @@ export class ConnectedApplication {
 
   async completionWorkflows():Promise<{version:string;workflows:Record<string,unknown>}>{return this.request('/api/v1/completion/workflows');}
   async groupIdentityPassport(issue=false):Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/identity-passport`,issue?{method:'POST',body:'{}'}:undefined);}
+  async groupIdentityProfile():Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/identity-profile`);}
+  async updateGroupIdentityProfile(input:{declarationDate?:string;declarationNumber?:string;officeMandateStart?:string;officeMandateEnd?:string;note?:string}):Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/identity-profile`,{method:'PUT',body:JSON.stringify(input)});}
   async dataUseConsent():Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/data-use-consent`);}
   async setDataUseConsent(purpose:'COLLECTIVE_LEARNING'|'COMMERCIAL_PERSONALIZATION'|'PARTNER_MATCHING'|'COMMUNITY_DISCOVERY',granted:boolean):Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/data-use-consent`,{method:'POST',body:JSON.stringify({purpose,granted})});}
   async conciergeMemories():Promise<any[]>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/concierge/memories`);}
