@@ -2,7 +2,7 @@ import type {LaunchRubricPlan, GroupProjectLaunchProfile} from '../../contracts/
 import { PlatformKernel, type DeviceCapabilities } from '../../platform-kernel/src/index.js';
 import { InMemoryPlatformRepository } from '../../repositories/src/index.js';
 import { FoundationService } from '../../domain/src/index.js';
-import { IndexedDbOutboxAdapter, Outbox } from '../../offline/src/index.js';
+import { IndexedDbOutboxAdapter, IndexedDbReadSnapshotAdapter, Outbox } from '../../offline/src/index.js';
 import { LoopbackRelayTransport, envelopeForOutbox } from '../../relay/src/index.js';
 import { PRODUCT_MODULES } from '../../module-registry/src/index.js';
 import { makeId, type CashboxReconciliationRecord, type CashboxSnapshot, type CaseRecord, type ContributionReceipt, type FeasibilityResult, type Group, type LedgerEntry, type LedgerSummary, type MeetingSession, type Membership, type MembershipView, type OutboxItem, type GroupOperatingPolicy, type RubricDefinition, type RubricOperatingModel, type RubricCyclePreview, type GroupDiscoveryMatch, type PublicGroupListing, type MembershipApplication, type WorkspaceRecord, type WorkspaceStatus } from '../../contracts/src/index.js';
@@ -59,6 +59,8 @@ export class ConnectedApplication {
   private readonly kernel = new PlatformKernel();
   private readonly outbox = new Outbox();
   private readonly outboxStorage = new IndexedDbOutboxAdapter();
+  private readonly readSnapshots = new IndexedDbReadSnapshotAdapter();
+  private usingOfflineSnapshot=false;
   private actorId:string; private tenantId:string; private displayName:string; private locale:string; private activeGroupId?:string;
   private readonly baseUrl:string;
   private groupTenants=new Map<string,string>();
@@ -71,13 +73,40 @@ export class ConnectedApplication {
   }
 
   private headers(extra:Record<string,string>={}):HeadersInit{return{'content-type':'application/json','accept-language':this.locale,'x-active-group-id':this.activeGroupId??'','x-timezone':'Africa/Douala',...extra};}
+  private offlineReadAllowed(path:string):boolean{
+    if(path==='/api/v1/auth/session'||path==='/api/v1/groups')return true;
+    return /^\\/api\\/v1\\/groups\\/[^/?]+\\/(me|members|meetings|rubrics|operating-policy)(?:\\?.*)?$/.test(path)
+      || /^\\/api\\/v1\\/groups\\/[^/?]+\\/members\\/[^/?]+\\/(statement|operational-sheet)(?:\\?.*)?$/.test(path);
+  }
+  private offlineReadKey(path:string):string{return path==='/api/v1/auth/session'?'session:last':JSON.stringify([this.actorId,this.tenantId,this.activeGroupId??'',path]);}
+  private async cacheReadSnapshot<T>(path:string,body:T):Promise<void>{
+    if(!IndexedDbReadSnapshotAdapter.supported()||!this.offlineReadAllowed(path))return;
+    const session=path==='/api/v1/auth/session'?(body as any)?.account:undefined;
+    try{await this.readSnapshots.save({id:this.offlineReadKey(path),actorId:String(session?.id??this.actorId),tenantId:String(session?.tenantId??this.tenantId),path,body});}catch{}
+  }
+  private announceOfflineSnapshot(path:string,updatedAt:string):void{
+    this.usingOfflineSnapshot=true;
+    if(typeof window!=='undefined'&&typeof CustomEvent!=='undefined')window.dispatchEvent(new CustomEvent('eco:offline-snapshot-used',{detail:{path,updatedAt}}));
+  }
   private async request<T>(path:string,init:RequestInit={}):Promise<T>{
     const headers=new Headers(this.headers());
     for(const [k,v] of new Headers(init.headers??{}))headers.set(k,v);
     if(typeof FormData!=='undefined'&&init.body instanceof FormData)headers.delete('content-type');
-    const response=await fetch(`${this.baseUrl}${path}`,{...init,headers});
+    const method=String(init.method??'GET').toUpperCase(),cacheable=method==='GET'&&this.offlineReadAllowed(path);
+    let response:Response;
+    try{
+      response=await fetch(`${this.baseUrl}${path}`,{...init,headers});
+    }catch(error){
+      if(cacheable&&IndexedDbReadSnapshotAdapter.supported()){
+        try{const snapshot=await this.readSnapshots.get<T>(this.offlineReadKey(path));if(snapshot){this.announceOfflineSnapshot(path,snapshot.updatedAt);return structuredClone(snapshot.body);}}catch{}
+      }
+      throw new Error('NETWORK_UNAVAILABLE',{cause:error});
+    }
     const body=await response.json().catch(()=>({error:`HTTP_${response.status}`}));
-    if(!response.ok) throw new Error(String(body.error??`HTTP_${response.status}`)); return body as T;
+    if(!response.ok)throw new Error(String(body.error??`HTTP_${response.status}`));
+    this.usingOfflineSnapshot=false;
+    if(cacheable)await this.cacheReadSnapshot(path,body as T);
+    return body as T;
   }
 
   async bootstrap(input:{actorId?:string;tenantId?:string;displayName?:string;locale?:string}={}):Promise<{restoredOutbox:number;groups:Group[]}>{
@@ -85,7 +114,7 @@ export class ConnectedApplication {
     this.actorId=session.account.id;this.homeTenantId=session.account.tenantId;this.tenantId=session.account.tenantId;this.displayName=session.account.displayName;
     let preferred:string|undefined;try{preferred=localStorage.getItem('tontine.locale')??undefined;}catch{}this.locale=preferred??session.account.locale;
     const groups=await this.listGroups();if(this.activeGroupId&&!groups.some(g=>g.id===this.activeGroupId))this.selectGroup(undefined);if(!this.activeGroupId&&groups[0])this.selectGroup(groups[0].id);else this.selectGroup(this.activeGroupId);
-    await this.request('/api/v1/bootstrap',{method:'POST',body:JSON.stringify({displayName:this.displayName,locale:this.locale})});
+    if(!this.usingOfflineSnapshot)await this.request('/api/v1/bootstrap',{method:'POST',body:JSON.stringify({displayName:this.displayName,locale:this.locale})});
     let restoredOutbox=0;if(IndexedDbOutboxAdapter.supported())try{const persisted=await this.outboxStorage.load();this.outbox.restore(persisted.filter(x=>x.actorId===this.actorId));restoredOutbox=this.outbox.list().length;}catch{}
     return{restoredOutbox,groups};
   }
@@ -101,7 +130,7 @@ export class ConnectedApplication {
   async memberStatement(membershipId:string):Promise<import('../../contracts/src/index.js').MemberStatement>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/members/${encodeURIComponent(membershipId)}/statement`);}
   async memberOperationalSheet(membershipId:string):Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/members/${encodeURIComponent(membershipId)}/operational-sheet`);}
   async authenticate(mode:'login'|'register',input:{username:string;password:string;displayName?:string}):Promise<void>{await this.request(`/api/v1/auth/${mode}`,{method:'POST',body:JSON.stringify({...input,locale:this.locale})});}
-  async logout():Promise<void>{await this.request('/api/v1/auth/logout',{method:'POST',body:'{}'});this.outbox.restore([]);this.selectGroup(undefined);}
+  async logout():Promise<void>{const actor=this.actorId;await this.request('/api/v1/auth/logout',{method:'POST',body:'{}'});this.outbox.restore([]);this.selectGroup(undefined);try{await this.readSnapshots.clearForActor(actor);await this.readSnapshots.remove('session:last');}catch{}}
 
   setLocale(locale:string):void{this.locale=locale==='en'?'en':'fr';try{localStorage.setItem('tontine.locale',this.locale);}catch{}}
   setConnectivity(_connectivity:'online'|'offline'|'degraded'):void{}
