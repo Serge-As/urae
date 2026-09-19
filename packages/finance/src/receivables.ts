@@ -56,8 +56,8 @@ export class ReceivablesService{
     return record;
   }
   async report(groupId:Id,asOf=now()){
-    await this.access(groupId,false);const ctx=this.kernel.context.get(),cutoff=Date.parse(asOf);if(!Number.isFinite(cutoff))throw Error('INVALID_AS_OF');
-    const obligations=(await this.repo.listObligations(ctx.tenantId)).filter(o=>o.groupId===groupId&&o.amount&&o.status!=='cancelled'&&(!o.dueAt||Date.parse(o.dueAt)<=cutoff));
+    const viewer=await this.access(groupId,false);const ctx=this.kernel.context.get(),cutoff=Date.parse(asOf);if(!Number.isFinite(cutoff))throw Error('INVALID_AS_OF');
+    const obligations=(await this.repo.listObligations(ctx.tenantId)).filter(o=>o.groupId===groupId&&o.amount&&o.status!=='cancelled'&&(!viewer||o.assigneeId===viewer.userId)&&(!o.dueAt||Date.parse(o.dueAt)<=cutoff));
     const allocations=await this.allocations(groupId);
     return obligations.map(o=>{const allocated=allocations.filter(a=>a.data.obligationId===o.id).reduce((n,a)=>n+Number(a.data.amount),0);
       const expected=o.amount!.amount,outstanding=Math.max(0,expected-allocated);
