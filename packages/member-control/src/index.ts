@@ -90,7 +90,7 @@ export class MemberFinancialControlService{
     if(notice.requiresIndependentReview){
       const reviewers=(await this.repo.listMemberships(ctx.tenantId,input.groupId)).filter(x=>x.status==='active'&&x.userId!==notice.authorId&&x.roles.some(r=>managers.has(r)));
       for(const reviewer of reviewers){
-        const obligation:Obligation={id:'obligation_self_review_'+encodeURIComponent(JSON.stringify([id,reviewer.userId])),tenantId:ctx.tenantId,groupId:input.groupId,assigneeId:reviewer.userId,type:'FINANCIAL_INDEPENDENT_REVIEW',title:'Vérifier une auto-modification financière : '+input.operationType+' '+input.amount+' '+input.currency,dueAt:stamp,priority:'high',status:'open',sourceType:'financial_notice',sourceId:id};
+        const obligation:Obligation={id:'obligation_self_review_'+encodeURIComponent(JSON.stringify([id,reviewer.userId])),tenantId:ctx.tenantId,groupId:input.groupId,assigneeId:reviewer.userId,type:'FINANCIAL_INDEPENDENT_REVIEW',title:(notice.selfBenefit?'Vérifier une auto-modification financière : ':'Vérifier une correction financière : ')+input.operationType+' '+input.amount+' '+input.currency,dueAt:stamp,priority:'high',status:'open',sourceType:'financial_notice',sourceId:id};
         await this.repo.saveObligation(obligation);
       }
     }
