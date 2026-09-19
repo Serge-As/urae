@@ -2,6 +2,16 @@ import type {Group, Id, RubricDefinition, WorkspaceRecord} from '../../contracts
 import type {PlatformRepository} from '../../repositories/src/index.js';
 import type {PlatformKernel} from '../../platform-kernel/src/index.js';
 
+export interface GroupOperationalIdentityProfile {
+  declarationDate?:string;
+  declarationNumber?:string;
+  officeMandateStart?:string;
+  officeMandateEnd?:string;
+  note?:string;
+  updatedAt?:string;
+  updatedBy?:Id;
+}
+
 export interface GroupIdentityPassport {
   groupId:Id;
   tenantId:Id;
@@ -21,6 +31,7 @@ export interface GroupIdentityPassport {
 }
 
 const MODULE='IDENTITY.GROUP_PASSPORT';
+const PROFILE_MODULE='IDENTITY.GROUP_PROFILE';
 const managers=new Set(['founder','manager','admin','president','treasurer']);
 const encode=(bytes:Uint8Array)=>{
   const alphabet='23456789ABCDEFGHJKLMNPQRSTUVWXYZ';
@@ -49,6 +60,7 @@ const codeFor=async(group:Group)=>{
   return `ECO-GRP-${body.slice(0,5)}-${body.slice(5)}-${check}`;
 };
 const passportId=(groupId:string)=>'group_passport_'+encodeURIComponent(groupId);
+const profileId=(groupId:string)=>'group_profile_'+encodeURIComponent(groupId);
 
 export class GroupIdentityService{
   constructor(public repo:PlatformRepository,public kernel:PlatformKernel){}
@@ -91,5 +103,28 @@ export class GroupIdentityService{
   async verify(groupId:Id,publicCode:string,rulesFingerprint?:string){
     const passport=await this.compute(groupId);
     return{identityMatches:passport.publicCode===publicCode,rulesMatch:rulesFingerprint===undefined?undefined:passport.rulesFingerprint===rulesFingerprint,current:passport};
+  }
+
+  async profile(groupId:Id):Promise<GroupOperationalIdentityProfile>{
+    const ctx=this.kernel.context.get();await this.access(groupId,false);
+    const row=await this.repo.getWorkspaceRecord(ctx.tenantId,profileId(groupId));
+    if(!row||row.moduleId!==PROFILE_MODULE)return{};
+    const text=(key:string)=>row.data[key]===null||row.data[key]===undefined?undefined:String(row.data[key]);
+    return{declarationDate:text('declarationDate'),declarationNumber:text('declarationNumber'),officeMandateStart:text('officeMandateStart'),officeMandateEnd:text('officeMandateEnd'),note:text('note'),updatedAt:row.updatedAt,updatedBy:text('updatedBy')};
+  }
+
+  async updateProfile(groupId:Id,input:GroupOperationalIdentityProfile):Promise<GroupOperationalIdentityProfile>{
+    const ctx=this.kernel.context.get();await this.access(groupId,true);
+    const clean=(value:unknown,max:number)=>{const v=String(value??'').trim();if(v.length>max)throw Error('GROUP_PROFILE_FIELD_TOO_LONG');return v||undefined;};
+    const date=(value:unknown)=>{const v=clean(value,40);if(!v)return undefined;if(!Number.isFinite(Date.parse(v)))throw Error('INVALID_GROUP_PROFILE_DATE');return new Date(v).toISOString();};
+    const declarationDate=date(input.declarationDate),officeMandateStart=date(input.officeMandateStart),officeMandateEnd=date(input.officeMandateEnd);
+    if(officeMandateStart&&officeMandateEnd&&Date.parse(officeMandateEnd)<Date.parse(officeMandateStart))throw Error('INVALID_OFFICE_MANDATE_RANGE');
+    const declarationNumber=clean(input.declarationNumber,120),note=clean(input.note,1000),id=profileId(groupId),previous=await this.repo.getWorkspaceRecord(ctx.tenantId,id),stamp=new Date().toISOString();
+    const data={declarationDate:declarationDate??null,declarationNumber:declarationNumber??null,officeMandateStart:officeMandateStart??null,officeMandateEnd:officeMandateEnd??null,note:note??null,updatedBy:ctx.actorId};
+    const row:WorkspaceRecord={id,tenantId:ctx.tenantId,groupId,moduleId:PROFILE_MODULE,title:'Profil identitaire et administratif du groupe',summary:'Déclaration et période de mandat du Bureau. Aucune valeur n’est inventée.',status:'ACTIVE',tags:['group-identity','administrative-profile'],data,createdBy:previous?.createdBy??ctx.actorId,createdAt:previous?.createdAt??stamp,updatedAt:stamp};
+    await this.repo.saveWorkspaceRecord(row);
+    const audit=this.kernel.audit.append({tenantId:ctx.tenantId,actorId:ctx.actorId,action:previous?'GROUP_IDENTITY_PROFILE_UPDATED':'GROUP_IDENTITY_PROFILE_CREATED',targetType:'group_identity_profile',targetId:id,requestId:ctx.requestId,before:previous?.data,after:data});
+    await this.repo.saveAudit(audit);
+    return{declarationDate,declarationNumber,officeMandateStart,officeMandateEnd,note,updatedAt:stamp,updatedBy:ctx.actorId};
   }
 }
