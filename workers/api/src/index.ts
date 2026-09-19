@@ -777,8 +777,8 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
       }
       const reversal=await ledger.reverseEntry({tenantId:ctx.tenantId,groupId,entryId,reason});
       if(receipt&&target){
-        const after=await ledger.receiptPositions(ctx.tenantId,groupId),afterSituation=after.filter(x=>x.membershipId===receipt.membershipId).reduce((n,x)=>n+x.netAmount,0),selfBenefit=target.userId===ctx.actorId;
-        const notice=await memberControl.create({groupId,membershipId:receipt.membershipId,entry:reversal,operationType:'CASH_CONTRIBUTION_REVERSED',amount:0,currency:receipt.amount.currency,rubricId:receipt.rubricId,meetingId:receipt.meetingId,previousSituation:beforeSituation,newSituation:afterSituation,previousAmount:oldAmount,newAmount:0,correctionReason:reason,selfBenefit,requiresIndependentReview:selfBenefit});
+        const after=await ledger.receiptPositions(ctx.tenantId,groupId),afterSituation=after.filter(x=>x.membershipId===receipt.membershipId).reduce((n,x)=>n+x.netAmount,0),selfBenefit=target.userId===ctx.actorId,requiresIndependentReview=true;
+        const notice=await memberControl.create({groupId,membershipId:receipt.membershipId,entry:reversal,operationType:'CASH_CONTRIBUTION_REVERSED',amount:0,currency:receipt.amount.currency,rubricId:receipt.rubricId,meetingId:receipt.meetingId,previousSituation:beforeSituation,newSituation:afterSituation,previousAmount:oldAmount,newAmount:0,correctionReason:reason,selfBenefit,requiresIndependentReview});
         try{await publishLive(groupId,'FINANCIAL_NOTICE','reversal-notice:'+reversal.id,{noticeId:notice.id,ledgerEntryId:notice.ledgerEntryId,operationType:notice.operationType,amount:0,currency:notice.currency,previousSituation:notice.previousSituation??0,newSituation:notice.newSituation??0,selfBenefit},notice.userId);}catch{}
       }
       return json(reversal,201,cors);
