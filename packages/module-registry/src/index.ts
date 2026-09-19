@@ -112,7 +112,7 @@ export const PRODUCT_MODULES: ProductModule[] = [
   {id:'AI.ASSISTANT',labelFr:'Assistant IA',labelEn:'AI assistant',status:'FOUNDATION_ACTIVE',lot:'H',canonicalDependencies:['KERNEL.POLICY'],workspace:'UNIVERSAL'},
   {id:'AI.FOUNDER',labelFr:'Founder AI',labelEn:'Founder AI',status:'STRUCTURAL_V1',lot:'H',canonicalDependencies:['KERNEL.POLICY'],workspace:'UNIVERSAL'},
   {id:'AI.LOCAL',labelFr:'Assistant local',labelEn:'Local assistant',status:'STRUCTURAL_V1',lot:'H',canonicalDependencies:['KERNEL.POLICY'],workspace:'UNIVERSAL'},
-  {id:'SAFETY.ANTISCAM',labelFr:'Centre anti-arnaque',labelEn:'Anti-scam center',status:'STRUCTURAL_V1',lot:'H',canonicalDependencies:['KERNEL.POLICY','KERNEL.AUDIT'],workspace:'UNIVERSAL'},
+  {id:'SAFETY.ANTISCAM',labelFr:'Centre anti-arnaques & Labo financier',labelEn:'Anti-scam & Financial Lab',status:'STRUCTURAL_V1',lot:'H',canonicalDependencies:['KERNEL.POLICY','KERNEL.AUDIT','KERNEL.EVIDENCE'],workspace:'UNIVERSAL'},
   {id:'SAFETY.QUIET_WATCH',labelFr:'Quiet Watch',labelEn:'Quiet Watch',status:'STRUCTURAL_V1',lot:'H',canonicalDependencies:['KERNEL.POLICY','KERNEL.AUDIT'],workspace:'UNIVERSAL'},
   {id:'GOVERNANCE.DOCUMENT_STUDIO',labelFr:'Governance Document Studio',labelEn:'Governance Document Studio',status:'STRUCTURAL_V1',lot:'H',canonicalDependencies:['KERNEL.POLICY'],workspace:'UNIVERSAL'},
   {id:'PAPER.BRIDGE',labelFr:'Paper Bridge',labelEn:'Paper Bridge',status:'STRUCTURAL_V1',lot:'H',canonicalDependencies:['KERNEL.POLICY'],workspace:'UNIVERSAL'},
