@@ -48,3 +48,15 @@ test('targeted tranche 7 keeps canonical matrix ownership and audited replacemen
   assert.match(source,/ancien — ne plus utiliser/);assert.match(source,/Timbre de prêt/);
   assert.match(main,/eco:render-two-sheets/);assert.doesNotMatch(main,/\#matrixViewBtn[^\n]+renderMeetingMatrix\(\)/);
 });
+
+
+test('financial dictation is confidence-aware and never treats noise robustness as proven',async()=>{
+  const source=await readFile('.build/src/voice-entry-ui.js','utf8');
+  assert.match(source,/maxAlternatives\s*=\s*3/);
+  assert.match(source,/confidence/);
+  assert.match(source,/Transcription incertaine|Uncertain transcription/);
+  assert.match(source,/faible confiance|low confidence/);
+  assert.match(source,/Rien n.a été remplacé|Nothing was replaced/);
+  assert.match(source,/bruit n.est pas présenté comme résolu|Noise handling is not claimed as solved/);
+  assert.match(source,/no-speech/);
+});
