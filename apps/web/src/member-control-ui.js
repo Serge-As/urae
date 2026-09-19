@@ -23,7 +23,7 @@ export async function renderMemberFinancialNotices({app,membershipId,memberUserI
       if(n.previousAmount!==undefined||n.newAmount!==undefined)a.append(line('Correction du montant',fmt(n.previousAmount??0,n.currency)+' → '+fmt(n.newAmount??n.amount??0,n.currency)));
       if(n.correctionReason)a.append(line('Motif',n.correctionReason));
       if(n.previousSituation!==undefined||n.newSituation!==undefined)a.append(line('Situation du membre avant / après cette action',fmt(n.previousSituation??0,n.currency)+' → '+fmt(n.newSituation??0,n.currency)));
-      if(n.selfBenefit||n.requiresIndependentReview){const warn=document.createElement('p');warn.className='truth-notice error';warn.textContent='⚠ Auto-modification financière : l’auteur agit sur sa propre situation. Une revue par un autre responsable habilité est obligatoire avant validation.';a.append(warn);}
+      if(n.selfBenefit){const warn=document.createElement('p');warn.className='truth-notice error';warn.textContent='⚠ Auto-modification financière : l’auteur agit sur sa propre situation. Une revue par un autre responsable habilité est obligatoire avant validation.';a.append(warn);}else if(n.requiresIndependentReview){const warn=document.createElement('p');warn.className='truth-notice';warn.textContent='Correction financière : l’ancienne valeur, la contrepassation et la nouvelle valeur sont tracées. Un autre responsable habilité doit effectuer la revue indépendante.';a.append(warn);}
       const tech=document.createElement('details');const summary=document.createElement('summary');summary.textContent='Références techniques';tech.append(summary,line('Écriture',n.ledgerEntryId),line('Compte auteur',n.authorId));a.append(tech);
       a.append(line('État membre',n.memberState),line('Réserve / revue',n.disputeState));
       if(n.reserveReason)a.append(line('Motif de réserve',n.reserveReason));
@@ -32,9 +32,9 @@ export async function renderMemberFinancialNotices({app,membershipId,memberUserI
       if(self&&n.memberState!=='MEMBER_CONFIRMED'&&!n.requiresIndependentReview){
         const confirm=button('Valider la transaction','primary');confirm.onclick=()=>void (async()=>{try{await app.confirmFinancialNotice(n.id);notify('Transaction reconnue par le membre.');await refresh();}catch(e){showError(e);}})();actions.append(confirm);
       }else if(self&&n.requiresIndependentReview){
-        const waiting=document.createElement('span');waiting.className='hint';waiting.textContent='Validation personnelle bloquée : un autre responsable doit d’abord vérifier cette auto-modification.';actions.append(waiting);
+        const waiting=document.createElement('span');waiting.className='hint';waiting.textContent=n.selfBenefit?'Validation personnelle bloquée : un autre responsable doit d’abord vérifier cette auto-modification.':'Correction en revue indépendante : vous pouvez émettre une réserve maintenant ou attendre la vérification d’un autre responsable.';actions.append(waiting);
       }
-      if(self&&['NO_RESERVE','RESOLVED'].includes(n.disputeState)){
+      if(self&&['NO_RESERVE','RESOLVED','UNDER_REVIEW'].includes(n.disputeState)){
         const reserve=button('Émettre une réserve');reserve.onclick=()=>void (async()=>{const reason=window.prompt('Expliquez brièvement ce qui vous paraît incorrect ou à vérifier :','');if(!reason?.trim())return;try{await app.reserveFinancialNotice(n.id,reason.trim());notify('Réserve transmise aux responsables sans bloquer la comptabilité.');await refresh();}catch(e){showError(e);}})();actions.append(reserve);
       }
       if(manager&&['MEMBER_RESERVE','UNDER_REVIEW','MEMBER_RESERVE_MAINTAINED'].includes(n.disputeState)&&n.authorId!==app.currentActor()){
