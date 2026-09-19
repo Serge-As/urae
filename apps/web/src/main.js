@@ -74,7 +74,7 @@ const fail = (e) => {
         ACCOUNT_UNAVAILABLE: 'Cet identifiant est déjà utilisé.',
         RATE_LIMITED: 'Trop de tentatives. Réessayez dans dix minutes.',
         INDEPENDENT_APPROVAL_REQUIRED: 'Chaque approbateur doit valider avec son propre compte. Une liste de noms ne vaut pas validation.',
-        INDEPENDENT_REVIEW_REQUIRED: 'Cette modification concerne la situation financière de son propre auteur. Un autre responsable habilité doit effectuer la revue.',
+        INDEPENDENT_REVIEW_REQUIRED: 'Cette correction financière exige la revue d’un autre responsable habilité. L’auteur ne peut jamais valider sa propre correction.',
         MEMBER_SELF_ACTION_REQUIRED: 'Le dossier personnel et certaines validations doivent être effectués par le membre concerné lui-même.',
         IDEMPOTENCY_CONFLICT: 'Cette référence correspond déjà à une opération différente. Consultez le reçu existant.',
         FORBIDDEN_SCOPE: 'Votre compte ne dispose pas de l’autorisation nécessaire pour ce groupe.',
