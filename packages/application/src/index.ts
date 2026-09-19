@@ -5,7 +5,7 @@ import { FoundationService } from '../../domain/src/index.js';
 import { IndexedDbOutboxAdapter, IndexedDbReadSnapshotAdapter, Outbox } from '../../offline/src/index.js';
 import { LoopbackRelayTransport, envelopeForOutbox } from '../../relay/src/index.js';
 import { PRODUCT_MODULES } from '../../module-registry/src/index.js';
-import { makeId, type CashboxReconciliationRecord, type CashboxSnapshot, type CaseRecord, type ContributionReceipt, type FeasibilityResult, type Group, type LedgerEntry, type LedgerSummary, type MeetingSession, type Membership, type MembershipView, type OutboxItem, type GroupOperatingPolicy, type RubricDefinition, type RubricOperatingModel, type RubricCyclePreview, type GroupDiscoveryMatch, type PublicGroupListing, type MembershipApplication, type WorkspaceRecord, type WorkspaceStatus } from '../../contracts/src/index.js';
+import { makeId, type CashboxReconciliationRecord, type CashboxSnapshot, type CaseRecord, type ContributionReceipt, type EvidenceRecord, type FeasibilityResult, type Group, type LedgerEntry, type LedgerSummary, type MeetingSession, type Membership, type MembershipView, type OutboxItem, type GroupOperatingPolicy, type RubricDefinition, type RubricOperatingModel, type RubricCyclePreview, type GroupDiscoveryMatch, type PublicGroupListing, type MembershipApplication, type WorkspaceRecord, type WorkspaceStatus } from '../../contracts/src/index.js';
 import type { CompletionKind, CompletionRecord, TontineScheduleConstraint, TontineScheduleResult, LoanScheduleRow } from '../../completion/src/index.js';
 
 export const KERNEL_SERVICE_IDS = [
@@ -75,8 +75,9 @@ export class ConnectedApplication {
   private headers(extra:Record<string,string>={}):HeadersInit{return{'content-type':'application/json','accept-language':this.locale,'x-active-group-id':this.activeGroupId??'','x-timezone':'Africa/Douala',...extra};}
   private offlineReadAllowed(path:string):boolean{
     if(path==='/api/v1/auth/session'||path==='/api/v1/groups')return true;
-    return /^\/api\/v1\/groups\/[^/?]+\/(me|members|meetings|rubrics|operating-policy|ledger)(?:\?.*)?$/.test(path)
+    return /^\/api\/v1\/groups\/[^/?]+\/(me|members|meetings|rubrics|operating-policy|ledger|cashbox\/reconciliations|expenses)(?:\?.*)?$/.test(path)
       || /^\/api\/v1\/groups\/[^/?]+\/recap\/global(?:\?.*)?$/.test(path)
+      || /^\/api\/v1\/groups\/[^/?]+\/meetings\/[^/?]+\/(attendance|beneficiaries|beneficiary-evidence)(?:\?.*)?$/.test(path)
       || /^\/api\/v1\/groups\/[^/?]+\/members\/[^/?]+\/(statement|operational-sheet)(?:\?.*)?$/.test(path);
   }
   private offlineReadKey(path:string):string{return path==='/api/v1/auth/session'?'session:last':JSON.stringify([this.actorId,this.tenantId,this.activeGroupId??'',path]);}
@@ -158,6 +159,13 @@ export class ConnectedApplication {
   async updateMemberLifecycle(membershipId:string,input:{status?:string;roles?:string[];reason?:string;probationEndsAt?:string;historicalJoinedAt?:string;expectedRevision?:number}):Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/members/'+encodeURIComponent(membershipId)+'/lifecycle',{method:'PUT',body:JSON.stringify(input)});}
   async listMembers():Promise<MembershipView[]>{if(!this.activeGroupId)return[];return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/members`);}
   async listMeetings():Promise<MeetingSession[]>{if(!this.activeGroupId)return[];return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/meetings`);}
+  async meetingAttendance(meetingId:string):Promise<any[]>{if(!this.activeGroupId)return[];return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/meetings/${encodeURIComponent(meetingId)}/attendance`);}
+  async recordMeetingAttendance(meetingId:string,input:{membershipId:string;attendance:'PRESENT'|'ABSENT'|'EXCUSED'|'REPRESENTED'|'LATE';note?:string}):Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/meetings/${encodeURIComponent(meetingId)}/attendance`,{method:'POST',body:JSON.stringify(input)});}
+  async meetingBeneficiaries(meetingId:string):Promise<any[]>{if(!this.activeGroupId)return[];return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/meetings/${encodeURIComponent(meetingId)}/beneficiaries`);}
+  async declareMeetingBeneficiary(meetingId:string,input:{membershipId:string;rubricId?:string;amount:number;currency?:string;note?:string}):Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/meetings/${encodeURIComponent(meetingId)}/beneficiaries`,{method:'POST',body:JSON.stringify(input)});}
+  async meetingBenefitEvidence(meetingId:string):Promise<EvidenceRecord[]>{if(!this.activeGroupId)return[];return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/meetings/${encodeURIComponent(meetingId)}/beneficiary-evidence`);}
+  async recordMeetingBenefitEvidence(meetingId:string,input:{declarationId:string;membershipId:string;rubricId?:string;amount?:number;currency?:string;method:'MEMBER_CONFIRMATION'|'PAPER_EMARGEMENT'|'PHOTO_DOCUMENT';artifactKey?:string;fingerprint?:string;note?:string;idempotencyKey?:string}):Promise<EvidenceRecord>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/meetings/${encodeURIComponent(meetingId)}/beneficiary-evidence`,{method:'POST',body:JSON.stringify(input)});}
+  async uploadMeetingBenefitEvidence(meetingId:string,file:File):Promise<{artifactKey:string;fingerprint:string;name:string;size:number;contentType:string}>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');const form=new FormData();form.append('file',file);return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/meetings/${encodeURIComponent(meetingId)}/beneficiary-evidence/upload`,{method:'POST',body:form});}
   async openMeeting(title:string):Promise<MeetingSession>{if(!this.activeGroupId)throw new Error('ACTIVE_GROUP_REQUIRED');return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/meetings`,{method:'POST',body:JSON.stringify({title})});}
   async closeMeeting(meetingId:string):Promise<MeetingSession>{if(!this.activeGroupId)throw new Error('ACTIVE_GROUP_REQUIRED');return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/meetings/${encodeURIComponent(meetingId)}/close`,{method:'POST',body:'{}'});}
 
@@ -191,7 +199,9 @@ export class ConnectedApplication {
   async ledger():Promise<{summary:LedgerSummary;entries:LedgerEntry[];receipts:ContributionReceipt[]}>{if(!this.activeGroupId)return{summary:{currency:'XAF',cashBalance:0,memberFundsLiability:0,entryCount:0},entries:[],receipts:[]};return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/ledger`);}
   async reverseLedgerEntry(entryId:string,reason:string):Promise<LedgerEntry>{if(!this.activeGroupId)throw new Error('ACTIVE_GROUP_REQUIRED');return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/ledger/${encodeURIComponent(entryId)}/reverse`,{method:'POST',body:JSON.stringify({reason})});}
 
+  async cashboxReconciliations():Promise<CashboxReconciliationRecord[]>{if(!this.activeGroupId)return[];return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/cashbox/reconciliations`);}
   async reconcileCashbox(input:{openingCash:number;cashIn:number;cashOut:number;countedClosing:number;meetingId?:string}):Promise<CashboxReconciliationRecord>{if(!this.activeGroupId)throw new Error('ACTIVE_GROUP_REQUIRED');return this.request<CashboxReconciliationRecord>(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/cashbox/reconciliations`,{method:'POST',body:JSON.stringify({...input,currency:'XAF'})});}
+  async expenses(input:{meetingId?:string;membershipId?:string;rubricId?:string;scope?:string}={}):Promise<any[]>{if(!this.activeGroupId)return[];const q=new URLSearchParams();for(const [k,v] of Object.entries(input))if(v)q.set(k,String(v));return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/expenses?${q}`);}
   async openSupportCase(summary:string):Promise<CaseRecord>{return this.request('/api/v1/cases',{method:'POST',body:JSON.stringify({summary,groupId:this.activeGroupId})});}
   async inboxItems():Promise<Array<{id:string;kind:string;title:string;priority:string;status:string;groupId?:string}>>{return this.request('/api/v1/inbox');}
 
