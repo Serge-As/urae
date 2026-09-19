@@ -366,10 +366,6 @@ export class MeetingService {
     const member=await this.repo.getMembership(tenantId,groupId,input.membershipId);if(!member||member.status==='left')throw Error('MEMBERSHIP_NOT_FOUND');
     if(input.rubricId&&!(await this.repo.getRubricDefinition(tenantId,groupId,input.rubricId)))throw Error('RUBRIC_NOT_FOUND');
     if(input.amount!==undefined)assertIntNonNegative('benefitAmount',input.amount);
-    const declaration=await this.repo.getWorkspaceRecord(tenantId,input.declarationId);
-    if(!declaration||declaration.groupId!==groupId||declaration.moduleId!=='MEETING.BENEFICIARIES'||String(declaration.data.meetingId??'')!==meetingId||String(declaration.data.membershipId??'')!==member.id||declaration.status!=='ACTIVE')throw Error('BENEFIT_DECLARATION_NOT_FOUND');
-    const declaredRubric=declaration.data.rubricId===null||declaration.data.rubricId===undefined?undefined:String(declaration.data.rubricId),declaredAmount=Number(declaration.data.amount??0),declaredCurrency=String(declaration.data.currency??'XAF');
-    if((input.rubricId??undefined)!==(declaredRubric??undefined)||Number(input.amount??declaredAmount)!==declaredAmount||String(input.currency??declaredCurrency)!==declaredCurrency)throw Error('BENEFIT_EVIDENCE_MISMATCH');
     const manager=group.createdBy===ctx.actorId||(await this.repo.listMemberships(tenantId,groupId)).some(m=>m.userId===ctx.actorId&&m.status==='active'&&m.roles.some(r=>MANAGEMENT_ROLES.has(r)));
     const self=member.userId===ctx.actorId;
     if(input.method==='MEMBER_CONFIRMATION'&&!self)throw Error('MEMBER_SELF_ACTION_REQUIRED');
@@ -377,7 +373,14 @@ export class MeetingService {
     if(input.method==='PHOTO_DOCUMENT'&&!input.artifactKey)throw Error('EVIDENCE_ARTIFACT_REQUIRED');
     const key=input.idempotencyKey.trim();if(!key)throw Error('IDEMPOTENCY_KEY_REQUIRED');
     const id='evidence_benefit_'+encodeURIComponent(JSON.stringify([tenantId,groupId,meetingId,member.id,input.rubricId??'',input.declarationId,key])),existing=await this.repo.getEvidence(tenantId,id);
-    if(existing)return existing;
+    if(existing){
+      if(String(existing.data.method??'')!==input.method||String(existing.data.declarationId??'')!==input.declarationId)throw Error('IDEMPOTENCY_CONFLICT');
+      return existing;
+    }
+    const declaration=await this.repo.getWorkspaceRecord(tenantId,input.declarationId);
+    if(!declaration||declaration.groupId!==groupId||declaration.moduleId!=='MEETING.BENEFICIARIES'||String(declaration.data.meetingId??'')!==meetingId||String(declaration.data.membershipId??'')!==member.id||declaration.status!=='ACTIVE')throw Error('BENEFIT_DECLARATION_NOT_FOUND');
+    const declaredRubric=declaration.data.rubricId===null||declaration.data.rubricId===undefined?undefined:String(declaration.data.rubricId),declaredAmount=Number(declaration.data.amount??0),declaredCurrency=String(declaration.data.currency??'XAF');
+    if((input.rubricId??undefined)!==(declaredRubric??undefined)||Number(input.amount??declaredAmount)!==declaredAmount||String(input.currency??declaredCurrency)!==declaredCurrency)throw Error('BENEFIT_EVIDENCE_MISMATCH');
     const subjectId='meeting_benefit_'+encodeURIComponent(JSON.stringify([groupId,meetingId,member.id,input.rubricId??'',input.declarationId,key]));
     const created=this.kernel.evidence.add({id,tenantId,type:'MEETING_BENEFIT_RECEIPT',subjectType:'meeting_benefit',subjectId,createdBy:ctx.actorId,
       data:{groupId,meetingId,declarationId:input.declarationId,membershipId:member.id,rubricId:declaredRubric??null,amount:declaredAmount,currency:declaredCurrency,method:input.method,artifactKey:input.artifactKey??null,fingerprint:input.fingerprint??null,note:input.note?.trim()||null,idempotencyKey:key,memberSelfConfirmed:self},immutable:true});
