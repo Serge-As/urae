@@ -98,7 +98,7 @@ export function mountDetailUI({app,navigate,getGroups,getMembers,getMeetings,get
     metrics.replaceChildren(metric(meeting.status,'État'),metric(date(meeting.scheduledAt??meeting.openedAt),'Date'),metric(group?.currentExerciseLabel??group?.launchProfileSnapshot?.cycle?.label??'À compléter','Exercice / cycle'));
 
     const info=card('Identification de la séance');
-    info.append(row('Groupe',group?.name??'—'),row('Réunion',humanMeetingLabel(meeting)),row('Exercice / cycle',group?.currentExerciseLabel??group?.launchProfileSnapshot?.cycle?.label??'À compléter'),row('Ouverte par',actorName(meeting.openedBy)),row('Planifiée',meeting.scheduledAt?date(meeting.scheduledAt):'—'),row('Clôturée',meeting.closedAt?date(meeting.closedAt):'—'));
+    info.append(row('Groupe',group?.name??'—'),row('Réunion',humanMeetingLabel(meeting)),row('Exercice / cycle',group?.currentExerciseLabel??group?.launchProfileSnapshot?.cycle?.label??'À compléter'),row('Ouverte par',actorName(meeting.openedBy)),row('Planifiée',meeting.scheduledAt?date(meeting.scheduledAt):'—'),row('Lieu / canal',meeting.location??'À compléter'),row('Thème',meeting.theme??'À compléter'),row('Tenue / code vestimentaire',meeting.dressCode??'À compléter'),row('Clôturée',meeting.closedAt?date(meeting.closedAt):'—'));
     const technical=document.createElement('details');technical.append(el('summary','Références techniques'),row('Titre interne',meeting.title),row('ID séance',meeting.id));info.append(technical);
     body.replaceChildren(info);
 
@@ -111,6 +111,17 @@ export function mountDetailUI({app,navigate,getGroups,getMembers,getMeetings,get
     timeline.append(timelineActions);body.append(timeline);
 
     const me=await app.groupMe().catch(()=>({isManager:false,membership:null})),manager=Boolean(me?.isManager);
+    if(manager){
+      const planning=card('Préparer / ajuster cette séance'),form=document.createElement('form');form.className='form-grid';
+      const scheduled=document.createElement('input');scheduled.type='datetime-local';if(meeting.scheduledAt){const d=new Date(meeting.scheduledAt),local=new Date(d.getTime()-d.getTimezoneOffset()*60000);scheduled.value=local.toISOString().slice(0,16);}
+      const location=document.createElement('input');location.value=meeting.location??'';location.placeholder='Domicile, salle, téléphone…';
+      const theme=document.createElement('input');theme.value=meeting.theme??'';theme.placeholder='Thème / objet';
+      const dress=document.createElement('input');dress.value=meeting.dressCode??'';dress.placeholder='Tenue / code vestimentaire';
+      const wrap=(label,node)=>{const l=document.createElement('label');l.textContent=label;l.append(node);return l;},save=el('button','Enregistrer le contexte','primary');save.type='submit';
+      form.append(wrap('Date / heure prévue',scheduled),wrap('Lieu / canal',location),wrap('Thème',theme),wrap('Tenue / code vestimentaire',dress),save);
+      form.onsubmit=e=>void(async()=>{e.preventDefault();try{save.disabled=true;const updated=await app.updateMeetingContext(id,{scheduledAt:scheduled.value?new Date(scheduled.value).toISOString():null,location:location.value||null,theme:theme.value||null,dressCode:dress.value||null});Object.assign(meeting,updated);await open('meeting',id,true);}catch(err){showError(err);}finally{save.disabled=false;}})();
+      planning.append(form,el('p','Ces informations alimentent le calendrier précédente / actuelle / prochaines sans créer un second service de planning.','hint'));body.append(planning);
+    }
     if(manager){
       try{
         const [ledger,cashboxes,expenses,arrears,loans]=await Promise.all([
