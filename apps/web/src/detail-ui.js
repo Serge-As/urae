@@ -93,15 +93,93 @@ export function mountDetailUI({app,navigate,getGroups,getMembers,getMeetings,get
 
   const meetingDetail=async id=>{
     const meeting=getMeetings().find(x=>x.id===id);if(!meeting)throw Error('MEETING_NOT_FOUND');
-    title.textContent=humanMeetingLabel(meeting);subtitle.textContent='Feuille de séance · membres × rubriques · mêmes écritures que les fiches individuelles.';
-    metrics.replaceChildren(metric(meeting.status,'État'),metric(date(meeting.scheduledAt??meeting.openedAt),'Date'));
-    const info=card('Séance');info.append(row('Titre affiché',humanMeetingLabel(meeting)),row('Titre interne conservé',meeting.title),row('Ouverte par',actorName(meeting.openedBy)),row('Planifiée',meeting.scheduledAt?date(meeting.scheduledAt):'—'),row('Clôturée',meeting.closedAt?date(meeting.closedAt):'—'));body.replaceChildren(info);
-    if(isManager()){
-      try{const ledger=await app.ledger(),receipts=ledger.receipts.filter(r=>r.meetingId===id);metrics.append(metric(receipts.length,'Encaissements'));const sheet=card('Votre feuille de séance');sheet.append(el('p','Les noms des membres et les titres des rubriques ouvrent leurs fiches. Les montants ne sont plus des liens : saisissez un ajout dans la cellule et validez ✓.','hint'),buildMeetingMatrix({meeting,ledger,editable:meeting.status==='open'}));body.append(sheet);}catch(e){showError(e);}
-    }else body.append(el('p','La feuille complète est réservée aux responsables. Votre fiche individuelle reste accessible depuis votre compte.','hint'));
+    const group=getGroups().find(x=>x.id===app.activeGroup()),ordered=getMeetings().slice().sort((a,b)=>String(a.scheduledAt??a.openedAt).localeCompare(String(b.scheduledAt??b.openedAt))),index=ordered.findIndex(x=>x.id===id),previous=index>0?ordered[index-1]:undefined,next=index>=0&&index<ordered.length-1?ordered[index+1]:undefined;
+    title.textContent=humanMeetingLabel(meeting);subtitle.textContent='Séance du groupe · finances, membres, présence, bénéficiaires et preuves selon vos droits.';
+    metrics.replaceChildren(metric(meeting.status,'État'),metric(date(meeting.scheduledAt??meeting.openedAt),'Date'),metric(group?.currentExerciseLabel??group?.launchProfileSnapshot?.cycle?.label??'À compléter','Exercice / cycle'));
+
+    const info=card('Identification de la séance');
+    info.append(row('Groupe',group?.name??'—'),row('Réunion',humanMeetingLabel(meeting)),row('Exercice / cycle',group?.currentExerciseLabel??group?.launchProfileSnapshot?.cycle?.label??'À compléter'),row('Ouverte par',actorName(meeting.openedBy)),row('Planifiée',meeting.scheduledAt?date(meeting.scheduledAt):'—'),row('Clôturée',meeting.closedAt?date(meeting.closedAt):'—'));
+    const technical=document.createElement('details');technical.append(el('summary','Références techniques'),row('Titre interne',meeting.title),row('ID séance',meeting.id));info.append(technical);
+    body.replaceChildren(info);
+
+    const timeline=card('Temporalité de la séance'),timelineActions=el('div',undefined,'actions');
+    if(previous){const b=el('button','← '+humanMeetingLabel(previous),'secondary');b.type='button';b.onclick=()=>jump('meeting',previous.id);timelineActions.append(b);}
+    else timelineActions.append(el('span','Aucune séance précédente.','hint'));
+    const now=el('strong',humanMeetingLabel(meeting));timelineActions.append(now);
+    if(next){const b=el('button',humanMeetingLabel(next)+' →','secondary');b.type='button';b.onclick=()=>jump('meeting',next.id);timelineActions.append(b);}
+    else timelineActions.append(el('span','Aucune séance suivante programmée.','hint'));
+    timeline.append(timelineActions);body.append(timeline);
+
+    const me=await app.groupMe().catch(()=>({isManager:false,membership:null})),manager=Boolean(me?.isManager);
+    if(manager){
+      try{
+        const [ledger,cashboxes,expenses,arrears,loans]=await Promise.all([
+          app.ledger(),app.cashboxReconciliations().catch(()=>[]),app.expenses({meetingId:id}).catch(()=>[]),app.arrears().catch(()=>[]),app.listCompletion('LOAN').catch(()=>[])
+        ]);
+        const receipts=ledger.receipts.filter(r=>r.meetingId===id),latestCashbox=cashboxes.filter(x=>x.meetingId===id).sort((a,b)=>String(b.createdAt).localeCompare(String(a.createdAt)))[0];
+        const receiptIn=receipts.reduce((n,r)=>n+Number(r.netAmount??0),0),expenseOut=expenses.reduce((n,x)=>n+Number(x.amount??x.data?.amount??0),0);
+        const finance=card('Finances de la séance');
+        if(latestCashbox){
+          const f=latestCashbox.snapshot,grid=el('div',undefined,'metrics small');
+          for(const [label,value] of [['Solde au début',fmt(Number(f.openingCash??0))],['Recettes',fmt(Number(f.cashIn??0))],['Dépenses',fmt(Number(f.cashOut??0))],['Solde théorique',fmt(Number(f.theoreticalClosing??0))],['Compté physiquement',fmt(Number(f.countedClosing??0))],['Écart',fmt(Number(f.variance??0))]])grid.append(metric(value,label));
+          finance.append(grid,row('Rapprochement',latestCashbox.status),el('p','Les chiffres de caisse proviennent du rapprochement canonique de cette séance.','hint'));
+        }else{
+          const grid=el('div',undefined,'metrics small');grid.append(metric('À rapprocher','Solde au début'),metric(fmt(receiptIn),'Recettes Ledger connues'),metric(fmt(expenseOut),'Dépenses enregistrées'),metric('À rapprocher','Solde à la clôture'));finance.append(grid,el('p','Aucun rapprochement de caisse n’est enregistré pour cette séance. Eco-System n’invente pas le solde d’ouverture ou de clôture.','hint'));
+        }
+        const openArrears=(arrears??[]).filter(x=>!['settled','paid','closed','resolved'].includes(String(x.status??'').toLowerCase()));
+        const activeLoans=(loans??[]).filter(x=>['APPROVED','DISBURSED','REPAYING'].includes(String(x.data?.completionState??''))&&(Number(x.data?.outstandingPrincipal??0)>0||Number(x.data?.unpaidInterest??0)>0));
+        const debt=el('div',undefined,'actions');debt.append(metric(String(openArrears.length),'Impayés / obligations ouverts'),metric(String(activeLoans.length),'Prêts avec dette suivie'));
+        const loanButton=el('button','Ouvrir Prêts + Intérêts','secondary');loanButton.type='button';loanButton.onclick=()=>navigate('finance');const ranking=el('button','Classements & calendrier','secondary');ranking.type='button';ranking.onclick=()=>navigate('tontines');debt.append(loanButton,ranking);finance.append(debt);body.append(finance);
+
+        metrics.append(metric(receipts.length,'Encaissements'));
+        const sheet=card('Tableau complet de la séance');sheet.append(el('p','Membres en lignes, rubriques en colonnes. Les mêmes écritures alimentent les fiches individuelles, les rubriques et le Récap.','hint'),buildMeetingMatrix({meeting,ledger,editable:meeting.status==='open'}));body.append(sheet);
+      }catch(e){showError(e);}
+    }else{
+      body.append(el('p','Le tableau financier global est réservé aux responsables. Votre propre situation de séance reste accessible ci-dessous.','hint'));
+      if(me?.membership?.id)try{
+        const operational=await app.memberOperationalSheet(me.membership.id),rowForMeeting=(operational.exerciseMatrix??[]).find(x=>x.meetingId===id),own=card('Ma situation dans cette séance');
+        own.append(metric(fmt(Number(rowForMeeting?.total??0)),'Net de ma séance'));
+        if(rowForMeeting){const list=el('div',undefined,'stack');for(const rubric of operational.rubrics??[]){const cell=rowForMeeting.cells?.[rubric.id];if(!cell||(!cell.inflow&&!cell.outflow))continue;const a=el('article',undefined,'item');a.append(el('strong',rubric.name),row('Entrées',fmt(Number(cell.inflow??0))),row('Sorties',fmt(Number(cell.outflow??0))),row('Net',fmt(Number(cell.net??0))));list.append(a);}own.append(list);}
+        body.append(own);
+      }catch(e){showError(e);}
+    }
+
+    const attendanceCard=card('Présence et émargement'),attendanceRows=await app.meetingAttendance(id).catch(()=>[]);
+    if(manager){
+      const byMember=new Map(attendanceRows.map(x=>[String(x.data?.membershipId??''),x])),table=document.createElement('table');table.className='meeting-matrix attendance-table';const head=document.createElement('thead'),hr=document.createElement('tr');for(const h of ['Membre','Présence','Observation','Action'])hr.append(el('th',h));head.append(hr);table.append(head);const tb=document.createElement('tbody');
+      for(const member of getMembers().filter(x=>x.status!=='left')){const existing=byMember.get(member.id),tr=document.createElement('tr'),name=document.createElement('th');name.append(link(member.displayName,'member',member.id));const status=document.createElement('select');for(const [v,l] of [['PRESENT','Présent'],['LATE','En retard'],['REPRESENTED','Représenté'],['EXCUSED','Excusé'],['ABSENT','Absent']])status.append(new Option(l,v));status.value=String(existing?.data?.attendance??'PRESENT');const note=document.createElement('input');note.placeholder='Observation';note.value=String(existing?.data?.note??'');const save=el('button',existing?'Mettre à jour':'Enregistrer','secondary');save.type='button';save.onclick=()=>void(async()=>{try{save.disabled=true;await app.recordMeetingAttendance(id,{membershipId:member.id,attendance:status.value,note:note.value.trim()||undefined});await open('meeting',id,true);}catch(e){showError(e);}finally{save.disabled=false;}})();for(const node of [name,el('td'),el('td'),el('td')])tr.append(node);tr.children[1].append(status);tr.children[2].append(note);tr.children[3].append(save);tb.append(tr);}
+      table.append(tb);attendanceCard.append(el('p','Le Bureau enregistre la présence. Chaque changement est audité.','hint'),table);
+    }else{
+      const own=attendanceRows[0];attendanceCard.append(row('Ma présence',own?String(own.data?.attendance??'—'):'Non renseignée'),own?.data?.note?row('Observation',own.data.note):el('p','Seul votre propre statut de présence est visible ici.','hint'));
+    }
+    body.append(attendanceCard);
+
+    const beneficiaryCard=card('Bénéficiaires et preuves de réception'),[declarations,evidences]=await Promise.all([app.meetingBeneficiaries(id).catch(()=>[]),app.meetingBenefitEvidence(id).catch(()=>[])]);
+    beneficiaryCard.append(el('p','Une preuve n’est enregistrée qu’après déclaration du bénéficiaire. Émargement papier, photo/document ou confirmation personnelle sont conservés comme preuves immuables.','hint'));
+    if(manager){
+      const form=document.createElement('form');form.className='form-grid';const member=document.createElement('select');member.append(new Option('Choisir le bénéficiaire',''));for(const m of getMembers().filter(x=>x.status!=='left'))member.append(new Option(m.displayName,m.id));const rubric=document.createElement('select');rubric.append(new Option('Sans rubrique spécifique',''));for(const r of getRubrics().filter(x=>x.status!=='ARCHIVED'))rubric.append(new Option(r.name,r.id));const amount=document.createElement('input');amount.type='number';amount.min='0';amount.step='1';amount.inputMode='numeric';amount.placeholder='Montant reçu';const note=document.createElement('input');note.placeholder='Note / contexte';const declare=el('button','Déclarer le bénéficiaire','primary');declare.type='submit';const label=(txt,node)=>{const l=document.createElement('label');l.textContent=txt;l.append(node);return l;};form.append(label('Bénéficiaire',member),label('Rubrique',rubric),label('Montant XAF',amount),label('Note',note),declare);form.onsubmit=e=>void(async()=>{e.preventDefault();try{const n=Number(amount.value);if(!member.value||!Number.isSafeInteger(n)||n<0)throw Error('Bénéficiaire et montant valides requis.');declare.disabled=true;await app.declareMeetingBeneficiary(id,{membershipId:member.value,rubricId:rubric.value||undefined,amount:n,currency:'XAF',note:note.value.trim()||undefined});await open('meeting',id,true);}catch(err){showError(err);}finally{declare.disabled=false;}})();beneficiaryCard.append(form);
+    }
+    const evidenceByDeclaration=new Map(evidences.map(x=>[String(x.data?.declarationId??''),x])),list=el('div',undefined,'stack');
+    for(const declaration of declarations){
+      const memberName=declaration.displayName??getMembers().find(x=>x.id===declaration.data?.membershipId)?.displayName??'Membre',rubricName=getRubrics().find(x=>x.id===declaration.data?.rubricId)?.name??'Sans rubrique',evidence=evidenceByDeclaration.get(declaration.id),item=el('article',undefined,'item');
+      item.append(el('strong',memberName+' · '+rubricName),row('Montant déclaré',fmt(Number(declaration.data?.amount??0))),row('État',evidence?'Réception prouvée':'Preuve en attente'));
+      if(evidence)item.append(row('Mode de preuve',String(evidence.data?.method??'—')),row('Enregistrée le',date(evidence.createdAt)));
+      else{
+        const actions=el('div',undefined,'actions'),own=String(declaration.data?.membershipId??'')===String(me?.membership?.id??'');
+        if(own){const confirm=el('button','Je confirme avoir reçu','primary');confirm.type='button';confirm.onclick=()=>void(async()=>{try{confirm.disabled=true;await app.recordMeetingBenefitEvidence(id,{declarationId:declaration.id,membershipId:String(declaration.data.membershipId),rubricId:declaration.data.rubricId?String(declaration.data.rubricId):undefined,amount:Number(declaration.data.amount??0),currency:String(declaration.data.currency??'XAF'),method:'MEMBER_CONFIRMATION',idempotencyKey:'benefit:'+declaration.id+':member-confirm'});await open('meeting',id,true);}catch(err){showError(err);}finally{confirm.disabled=false;}})();actions.append(confirm);}
+        if(manager){
+          const paper=el('button','Émargement papier reçu','secondary');paper.type='button';paper.onclick=()=>void(async()=>{try{paper.disabled=true;await app.recordMeetingBenefitEvidence(id,{declarationId:declaration.id,membershipId:String(declaration.data.membershipId),rubricId:declaration.data.rubricId?String(declaration.data.rubricId):undefined,amount:Number(declaration.data.amount??0),currency:String(declaration.data.currency??'XAF'),method:'PAPER_EMARGEMENT',note:'Émargement papier constaté par un responsable habilité.',idempotencyKey:'benefit:'+declaration.id+':paper'});await open('meeting',id,true);}catch(err){showError(err);}finally{paper.disabled=false;}})();
+          const file=document.createElement('input');file.type='file';file.accept='image/*,.pdf';file.setAttribute('aria-label','Photo ou PDF de la preuve');const upload=el('button','Joindre photo / document','secondary');upload.type='button';upload.onclick=()=>void(async()=>{try{const f=file.files?.[0];if(!f)throw Error('Choisissez une photo ou un PDF.');upload.disabled=true;const saved=await app.uploadMeetingBenefitEvidence(id,f);await app.recordMeetingBenefitEvidence(id,{declarationId:declaration.id,membershipId:String(declaration.data.membershipId),rubricId:declaration.data.rubricId?String(declaration.data.rubricId):undefined,amount:Number(declaration.data.amount??0),currency:String(declaration.data.currency??'XAF'),method:'PHOTO_DOCUMENT',artifactKey:saved.artifactKey,fingerprint:saved.fingerprint,note:'Preuve documentaire téléversée.',idempotencyKey:'benefit:'+declaration.id+':photo:'+saved.fingerprint});await open('meeting',id,true);}catch(err){showError(err);}finally{upload.disabled=false;}})();actions.append(paper,file,upload);
+        }
+        if(actions.childElementCount)item.append(actions);
+      }
+      list.append(item);
+    }
+    if(!declarations.length)list.append(el('p','Aucun bénéficiaire déclaré pour cette séance.','hint'));
+    beneficiaryCard.append(list);body.append(beneficiaryCard);
+
     try{const misc=await app.miscPostings({meetingId:id});if(misc.length){const other=card('Autres · séance');for(const p of misc){const m=getMembers().find(x=>x.id===p.data?.membershipId),a=el('article',undefined,'item');a.append(el('strong',p.title),row('Montant',fmt(Number(p.data?.amount??0))));if(m)a.append(link(m.displayName,'member',m.id));other.append(a);}body.append(other);}}catch{}
   };
-
 
   const rubricContributionMatrix=(rubric,ledger)=>{
     const meetings=getMeetings().slice().sort((a,b)=>String(a.scheduledAt??a.openedAt).localeCompare(String(b.scheduledAt??b.openedAt))),members=getMembers();
