@@ -303,6 +303,9 @@ export interface MeetingSession {
   openedBy: Id;
   openedAt: string;
   scheduledAt?: string;
+  location?: string;
+  theme?: string;
+  dressCode?: string;
   closedAt?: string;
 }
 
