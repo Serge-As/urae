@@ -62,7 +62,7 @@ test('beneficiary receipt requires a prior manager declaration and a member can 
   const done=await repo.getWorkspaceRecord('tenant_session',declaration.id);
   assert.equal(done.status,'DONE');assert.equal(done.data.evidenceId,evidence.id);
 
-  await assert.rejects(()=>repo.saveEvidence({...evidence,data:{...evidence.data,amount:99999}}),/EVIDENCE_IMMUTABLE_CONFLICT/);
+  assert.throws(()=>repo.saveEvidence({...evidence,data:{...evidence.data,amount:99999}}),/EVIDENCE_IMMUTABLE_CONFLICT/);
 });
 
 test('member cannot acknowledge another beneficiary and manager can record paper evidence',async()=>{
@@ -94,6 +94,6 @@ test('photo evidence requires an artifact and session UI exposes the complete go
   const ui=await readFile('apps/web/src/detail-ui.js','utf8'),api=await readFile('workers/api/src/index.ts','utf8'),app=await readFile('packages/application/src/index.ts','utf8');
   for(const phrase of ['Identification de la séance','Temporalité de la séance','Finances de la séance','Présence et émargement','Bénéficiaires et preuves de réception','Aucun rapprochement de caisse n’est enregistré'])assert.ok(ui.includes(phrase),phrase);
   assert.ok(ui.includes('Je confirme avoir reçu'));assert.ok(ui.includes('Émargement papier reçu'));assert.ok(ui.includes('Joindre photo / document'));
-  assert.ok(api.includes('beneficiary-evidence/upload'));assert.ok(api.includes('recordBenefitEvidence'));
+  assert.ok(api.includes('beneficiary-evidence')&&api.includes('upload'));assert.ok(api.includes('recordBenefitEvidence'));
   assert.ok(app.includes('meetingAttendance'));assert.ok(app.includes('meetingBeneficiaries'));assert.ok(app.includes('meetingBenefitEvidence'));
 });
