@@ -75,8 +75,8 @@ export class ConnectedApplication {
   private headers(extra:Record<string,string>={}):HeadersInit{return{'content-type':'application/json','accept-language':this.locale,'x-active-group-id':this.activeGroupId??'','x-timezone':'Africa/Douala',...extra};}
   private offlineReadAllowed(path:string):boolean{
     if(path==='/api/v1/auth/session'||path==='/api/v1/groups')return true;
-    return /^\\/api\\/v1\\/groups\\/[^/?]+\\/(me|members|meetings|rubrics|operating-policy)(?:\\?.*)?$/.test(path)
-      || /^\\/api\\/v1\\/groups\\/[^/?]+\\/members\\/[^/?]+\\/(statement|operational-sheet)(?:\\?.*)?$/.test(path);
+    return /^\/api\/v1\/groups\/[^/?]+\/(me|members|meetings|rubrics|operating-policy)(?:\?.*)?$/.test(path)
+      || /^\/api\/v1\/groups\/[^/?]+\/members\/[^/?]+\/(statement|operational-sheet)(?:\?.*)?$/.test(path);
   }
   private offlineReadKey(path:string):string{return path==='/api/v1/auth/session'?'session:last':JSON.stringify([this.actorId,this.tenantId,this.activeGroupId??'',path]);}
   private async cacheReadSnapshot<T>(path:string,body:T):Promise<void>{
