@@ -257,6 +257,40 @@ test('manager correcting own 2,000 XAF contribution to 5,000 keeps the full trac
 });
 
 
+
+test('manager correction of another member is never institutionally silent',async()=>{
+  const {repo,handler}=await seed();
+  await repo.saveUser({id:'reviewer_t3',displayName:'Deuxième Responsable',locale:'fr',createdAt:'2026-01-01T00:00:00Z'});
+  await repo.saveMembership({id:'reviewer_membership_t3',tenantId:'tenant_t3',groupId:'group_t3',userId:'reviewer_t3',roles:['manager'],status:'active',joinedAt:'2026-01-01T00:00:00Z'});
+
+  let r=await handler(new Request('http://local/api/v1/groups/group_t3/contributions/cash',{method:'POST',headers:founder,body:JSON.stringify({membershipId:'mm_t3',amount:2000,currency:'XAF',meetingId:'meeting_t3',rubricId:'rubric_fine',idempotencyKey:'other-corr-original'})}));
+  assert.equal(r.status,201);const original=await r.json();
+
+  r=await handler(new Request('http://local/api/v1/groups/group_t3/contributions/'+encodeURIComponent(original.id)+'/correct',{method:'POST',headers:founder,body:JSON.stringify({newAmount:5000,reason:'Correction 2 000 vers 5 000 avec revue indépendante'})}));
+  assert.equal(r.status,200);const correction=await r.json();
+  assert.equal(correction.selfBenefit,false);
+  assert.equal(correction.requiresIndependentReview,true);
+  assert.equal(correction.notice.disputeState,'UNDER_REVIEW');
+  assert.equal(correction.notice.previousAmount,2000);
+  assert.equal(correction.notice.newAmount,5000);
+
+  const ledger=(await (await handler(new Request('http://local/api/v1/groups/group_t3/ledger',{headers:founder}))).json());
+  assert.equal(ledger.receipts.find(x=>x.id===original.id).netAmount,0);
+  assert.equal(ledger.receipts.find(x=>x.id===correction.replacementReceiptId).netAmount,5000);
+
+  const tasks=await repo.listObligations('tenant_t3','reviewer_t3');
+  assert.ok(tasks.some(x=>x.type==='FINANCIAL_INDEPENDENT_REVIEW'&&x.sourceId===correction.notice.id&&x.status==='open'));
+
+  r=await handler(new Request('http://local/api/v1/groups/group_t3/financial-notices/'+encodeURIComponent(correction.notice.id)+'/officer-review',{method:'POST',headers:founder,body:JSON.stringify({note:'Auteur tente de valider sa propre correction'})}));
+  assert.equal(r.status,400);
+  assert.equal((await r.json()).error,'INDEPENDENT_REVIEW_REQUIRED');
+
+  const reviewer={'content-type':'application/json','x-tenant-id':'tenant_t3','x-actor-id':'reviewer_t3','x-group-roles':'manager'};
+  r=await handler(new Request('http://local/api/v1/groups/group_t3/financial-notices/'+encodeURIComponent(correction.notice.id)+'/officer-review',{method:'POST',headers:reviewer,body:JSON.stringify({note:'Correction vérifiée par le deuxième responsable'})}));
+  assert.equal(r.status,200);const reviewed=await r.json();assert.equal(reviewed.disputeState,'OFFICER_CONFIRMED');
+  assert.equal((await repo.listObligations('tenant_t3','reviewer_t3')).find(x=>x.sourceId===correction.notice.id)?.status,'completed');
+});
+
 test('targeted tranche 7 exposes manager rubric matrix, self-owned dossier and direct loan cell editing',()=>{
   const detail=fs.readFileSync('apps/web/src/detail-ui.js','utf8');
   const dossier=fs.readFileSync('apps/web/src/member-dossier-ui.ts','utf8');
