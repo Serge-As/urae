@@ -825,11 +825,12 @@ catch (e) {
     fail(e);
 } });
 onSubmit('#meetingForm', async (e) => { e.preventDefault(); try {
-    const title=val('meetingTitle') || meetingLabel({openedAt:new Date().toISOString()});
-    await app.openMeeting(title);
-    document.getElementById('meetingTitle').value = '';
+    const rawScheduled=val('meetingScheduledAt'),scheduledAt=rawScheduled?new Date(rawScheduled).toISOString():undefined;
+    const title=val('meetingTitle') || meetingLabel({openedAt:scheduledAt??new Date().toISOString()});
+    await app.openMeeting({title,scheduledAt,location:val('meetingLocation')||undefined,theme:val('meetingTheme')||undefined,dressCode:val('meetingDressCode')||undefined});
+    for(const id of ['meetingTitle','meetingScheduledAt','meetingLocation','meetingTheme','meetingDressCode'])document.getElementById(id).value='';
     await renderMeetings();
-    toast('Séance ouverte.');
+    toast(scheduledAt?'Séance programmée / ouverte.':'Séance ouverte.');
 }
 catch (e) {
     fail(e);
