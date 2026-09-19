@@ -596,11 +596,11 @@ capabilities:
     tests: []
   - id: MEETING.BENEFICIARY_REGISTER
     domain: meetings
-    status: STRUCTURAL_V1
+    status: FUNCTIONAL_BETA
     risk_class: financial_critical
-    offline_policy: beneficiary_intent_pending_server_evidence
-    audit_event: BENEFICIARY_EVIDENCE_RECORDED
-    tests: []
+    offline_policy: beneficiary_reads_cached_evidence_write_server_authoritative
+    audit_event: MEETING_BENEFIT_EVIDENCE_RECORDED
+    tests: [meeting-session-evidence-1.4.1]
   - id: MEETING.PERIOD_CARRY
     domain: meetings
     status: STRUCTURAL_V1
@@ -1030,3 +1030,101 @@ production_qualification_2026_09_18_1_4_0:
   rubric_count_rule: group_defined_not_twenty
   launch_validator_technical_max_rubrics: 100
   field_reception: pending_for_1_4_0_user_flows
+
+
+release_capabilities_1_4_1:
+  branch: next/1.4.1-field-integrity-guardrails-20260919
+  production_deployed: false
+  real_money_enabled: false
+  field_reception: pending
+  source_basis: [founder_field_feedback_2026_09_19,Cadre_minimal_Accueil_Seances,historical_workbooks_and_master]
+  capabilities:
+    - id: ARCH.CANONICAL_AUTHORITY.CONVENTION
+      status: QUALIFIED_BRANCH_GUARDRAIL
+      risk_class: architecture_critical
+      authority: shared_governance_registry
+      rule: one_significant_capability_one_canonical_authority
+      tests: [shared-governance-lint]
+    - id: ARCH.REUSE_BEFORE_BUILD.CONVENTION
+      status: QUALIFIED_BRANCH_GUARDRAIL
+      risk_class: architecture_critical
+      authority: shared_governance_registry
+      rule: reuse_extend_adapter_before_parallel_owner
+      tests: [shared-governance-lint]
+    - id: FINANCE.CONTRIBUTION_CORRECTION.INDEPENDENT_REVIEW
+      status: FUNCTIONAL_BETA
+      risk_class: financial_critical
+      authority: canonical_ledger_plus_member_financial_control
+      offline_policy: write_server_authoritative
+      audit_event: MEMBER_FINANCIAL_NOTICE_CREATED
+      rule: original_plus_reversal_plus_replacement_plus_independent_review
+      tests: [member-financial-control,master-2.3.4-tranche3]
+    - id: OFFLINE.READ_SNAPSHOT
+      status: FUNCTIONAL_BETA
+      risk_class: high
+      authority: server_truth_plus_actor_scoped_indexeddb_projection
+      offline_policy: stale_read_with_timestamp_never_fake_remote_finality
+      audit_event: NONE_LOCAL_READ
+      tests: [offline-read-snapshots-1.4.1]
+    - id: VOICE.FINANCE.CONFIDENCE_GUARD
+      status: FUNCTIONAL_BETA
+      risk_class: financial_critical
+      authority: voice_adapter_to_canonical_financial_preview
+      offline_policy: browser_capability_dependent_text_fallback
+      audit_event: NONE_BEFORE_CONFIRMED_POST
+      rule: low_confidence_numeric_dictation_does_not_replace_amount
+      tests: [voice-two-sheet-ui-1.3.4]
+    - id: GROUP.HOME.MINIMUM_FRAME
+      status: FUNCTIONAL_BETA
+      risk_class: high
+      authority: projection_of_identity_meetings_ledger_recap_receivables_completion
+      offline_policy: cached_projection_read_only
+      audit_event: NONE_PROJECTION
+      tests: [group-home-1.4.1,minimum-frame-1.4.1]
+    - id: GROUP.IDENTITY.ADMIN_PROFILE
+      status: FUNCTIONAL_BETA
+      risk_class: high
+      authority: IDENTITY.GROUP_PROFILE
+      offline_policy: cached_read_write_server_authoritative
+      audit_event: GROUP_IDENTITY_PROFILE_CREATED_OR_UPDATED
+      tests: [minimum-frame-1.4.1]
+    - id: MEETING.SESSION.COCKPIT
+      status: FUNCTIONAL_BETA
+      risk_class: financial_critical
+      authority: MeetingService_plus_canonical_financial_projections
+      offline_policy: cached_read_write_server_authoritative
+      audit_event: MEETING_CONTEXT_UPDATED
+      tests: [meeting-session-evidence-1.4.1,minimum-frame-1.4.1]
+    - id: MEETING.ATTENDANCE.GOVERNED
+      status: FUNCTIONAL_BETA
+      risk_class: medium
+      authority: MeetingService
+      offline_policy: cached_read_write_server_authoritative
+      audit_event: MEETING_ATTENDANCE_RECORDED_OR_UPDATED
+      tests: [meeting-session-evidence-1.4.1]
+    - id: MEETING.BENEFICIARY.EVIDENCE
+      status: FUNCTIONAL_BETA
+      risk_class: financial_critical
+      authority: MeetingService_plus_KERNEL_EVIDENCE
+      offline_policy: cached_read_evidence_creation_server_authoritative
+      audit_event: MEETING_BENEFIT_EVIDENCE_RECORDED
+      rule: declaration_before_evidence_self_or_authorized_officer_immutable_idempotent
+      proof_methods: [MEMBER_CONFIRMATION,PAPER_EMARGEMENT,PHOTO_DOCUMENT]
+      short_code: ECO_RCP_IDENTIFIER_NOT_SECRET
+      tests: [meeting-session-evidence-1.4.1]
+    - id: FINANCE.ARREARS.MEMBER_PRIVACY
+      status: FUNCTIONAL_BETA
+      risk_class: privacy_critical
+      authority: ReceivablesService
+      offline_policy: own_cached_projection_only
+      audit_event: NONE_READ
+      rule: manager_group_report_member_own_debts_only
+      tests: [minimum-frame-1.4.1]
+    - id: SAFETY.ANTISCAM.FINANCIAL_LAB
+      status: STRUCTURAL_V1
+      risk_class: high
+      authority: SAFETY.ANTISCAM
+      offline_policy: education_and_deterministic_simulation_possible_external_verification_online
+      audit_event: FUTURE_CASE_AND_EVIDENCE
+      note: specified_and_restored_not_yet_claimed_functional
+      tests: []
