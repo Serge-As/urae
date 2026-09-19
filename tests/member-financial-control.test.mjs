@@ -43,6 +43,35 @@ test('member-control actions cannot be taken for another member by an outsider',
 });
 
 
+
+test('every correction requires an independent manager review even when the author does not benefit',async()=>{
+  const repo=new InMemoryPlatformRepository(),kernel=new PlatformKernel(),svc=new MemberFinancialControlService(repo,kernel);
+  await repo.saveGroup({id:'group_a',tenantId:'tenant_a',name:'Groupe',kind:'association',governanceModel:'community',status:'active',createdBy:'manager_a',createdAt:'2026-09-15T00:00:00.000Z'});
+  await repo.saveMembership({id:'target_member',tenantId:'tenant_a',groupId:'group_a',userId:'member_target',roles:['member'],status:'active',joinedAt:'2026-09-15T00:00:00.000Z'});
+  await repo.saveMembership({id:'manager_a_membership',tenantId:'tenant_a',groupId:'group_a',userId:'manager_a',roles:['manager'],status:'active',joinedAt:'2026-09-15T00:00:00.000Z'});
+  await repo.saveMembership({id:'manager_b_membership',tenantId:'tenant_a',groupId:'group_a',userId:'manager_b',roles:['manager'],status:'active',joinedAt:'2026-09-15T00:00:00.000Z'});
+  const entry={id:'ledger_correction_other',tenantId:'tenant_a',groupId:'group_a',currency:'XAF',descriptionCode:'LEDGER_CASH_CONTRIBUTION',sourceType:'membership_contribution',sourceId:'target_member',idempotencyKey:'corr-other',createdAt:'2026-09-19T10:00:00.000Z',createdBy:'manager_a',lines:[{accountId:'cash',debit:5000,credit:0},{accountId:'liability',debit:0,credit:5000}]};
+  await repo.saveLedgerEntry(entry);
+
+  setContext(kernel,'manager_a',['manager']);
+  const notice=await svc.create({groupId:'group_a',membershipId:'target_member',entry,operationType:'CASH_CONTRIBUTION_CORRECTED',amount:5000,currency:'XAF',previousSituation:2000,newSituation:5000,previousAmount:2000,newAmount:5000,correctionReason:'Erreur de saisie',selfBenefit:false,requiresIndependentReview:true});
+  assert.equal(notice.disputeState,'UNDER_REVIEW');
+  assert.equal(notice.selfBenefit,false);
+  assert.equal(notice.requiresIndependentReview,true);
+  assert.equal((await repo.listObligations('tenant_a','manager_b')).filter(x=>x.type==='FINANCIAL_INDEPENDENT_REVIEW').length,1);
+  assert.equal((await repo.listObligations('tenant_a','manager_a')).filter(x=>x.type==='FINANCIAL_INDEPENDENT_REVIEW').length,0);
+  await assert.rejects(()=>svc.officerReview('group_a',notice.id,'Je relis ma propre correction.'),/INDEPENDENT_REVIEW_REQUIRED/);
+
+  setContext(kernel,'member_target',['member']);
+  const reserved=await svc.reserve('group_a',notice.id,'Je veux vérifier les 5 000 F.');
+  assert.equal(reserved.notice.disputeState,'MEMBER_RESERVE');
+
+  setContext(kernel,'manager_b',['manager']);
+  const reviewed=await svc.officerReview('group_a',notice.id,'Correction et justificatif vérifiés.');
+  assert.equal(reviewed.disputeState,'OFFICER_CONFIRMED');
+  assert.equal((await repo.listObligations('tenant_a','manager_b')).find(x=>x.type==='FINANCIAL_INDEPENDENT_REVIEW')?.status,'completed');
+});
+
 test('self-benefit correction cannot be confirmed or reviewed by its own author',async()=>{
   const repo=new InMemoryPlatformRepository(),kernel=new PlatformKernel(),svc=new MemberFinancialControlService(repo,kernel);
   await repo.saveGroup({id:'group_a',tenantId:'tenant_a',name:'Groupe',kind:'association',governanceModel:'community',status:'active',createdBy:'founder',createdAt:'2026-09-15T00:00:00.000Z'});
