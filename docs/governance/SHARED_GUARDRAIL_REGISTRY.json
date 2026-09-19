@@ -1,6 +1,26 @@
 {
-  "version": "1.0.0",
+  "version": "1.1.0",
   "source": "docs/governance/DELOR85_Playbook_Universel_Projets_GardeFous_NonRegression_1.1.0.md",
+  "conventionSource": "docs/governance/DELOR85_DEUX_CONVENTIONS_FONDATRICES_UNIVERSELLES_1.0.0.md",
+  "scope": "all_current_and_future_projects",
+  "conventions": [
+    {
+      "id": "CONVENTION.CANONICAL_AUTHORITY",
+      "aliasOf": "OWNER.CANONICAL",
+      "status": "MANDATORY",
+      "scope": "all_current_and_future_projects",
+      "rule": "One significant business capability has exactly one canonical authority; all other surfaces delegate, project, cache or consume it without creating a second truth.",
+      "blockerWhenViolated": "BLOCKED_ARCHITECTURE"
+    },
+    {
+      "id": "CONVENTION.REUSE_FIRST",
+      "aliasOf": "REUSE.BEFORE.BUILD",
+      "status": "MANDATORY",
+      "scope": "all_current_and_future_projects",
+      "rule": "Reuse, extend or adapt an existing canonical capability before creating a parallel service, engine, database or workflow; a genuinely new owner requires documented impact evidence.",
+      "blockerWhenViolated": "BLOCKED_DUPLICATION_RISK"
+    }
+  ],
   "guardrails": [
     {
       "id": "TRUTH.PROOF",
