@@ -47,6 +47,7 @@ test('beneficiary receipt requires a prior manager declaration and a member can 
   const declaration=await service.declareBenefit('tenant_session','group_session','meeting_session',{membershipId:'member_a',amount:10000,currency:'XAF',note:'Assistance remise en séance'});
   assert.equal(declaration.status,'ACTIVE');
   assert.equal(declaration.data.amount,10000);
+  assert.match(String(declaration.data.proofCode),/^ECO-RCP-[A-Z0-9]{10}$/);
 
   setContext(kernel,{actorId:'member_a_user',roles:['member']});
   const visible=await service.listBenefitDeclarations('tenant_session','group_session','meeting_session');
@@ -56,6 +57,7 @@ test('beneficiary receipt requires a prior manager declaration and a member can 
   assert.equal(evidence.type,'MEETING_BENEFIT_RECEIPT');
   assert.equal(evidence.data.memberSelfConfirmed,true);
   assert.equal(evidence.data.amount,10000);
+  assert.equal(evidence.data.proofCode,declaration.data.proofCode);
 
   const retried=await service.recordBenefitEvidence('tenant_session','group_session','meeting_session',input);
   assert.equal(retried.id,evidence.id);
@@ -94,6 +96,7 @@ test('photo evidence requires an artifact and session UI exposes the complete go
   const ui=await readFile('apps/web/src/detail-ui.js','utf8'),api=await readFile('workers/api/src/index.ts','utf8'),app=await readFile('packages/application/src/index.ts','utf8');
   for(const phrase of ['Identification de la séance','Temporalité de la séance','Finances de la séance','Présence et émargement','Bénéficiaires et preuves de réception','Aucun rapprochement de caisse n’est enregistré'])assert.ok(ui.includes(phrase),phrase);
   assert.ok(ui.includes('Je confirme avoir reçu'));assert.ok(ui.includes('Émargement papier reçu'));assert.ok(ui.includes('Joindre photo / document'));
+  assert.ok(ui.includes('Code de réception'));
   assert.ok(api.includes('beneficiary-evidence')&&api.includes('upload'));assert.ok(api.includes('recordBenefitEvidence'));
   assert.ok(app.includes('meetingAttendance'));assert.ok(app.includes('meetingBeneficiaries'));assert.ok(app.includes('meetingBenefitEvidence'));
 });
