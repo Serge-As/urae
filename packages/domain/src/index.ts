@@ -362,8 +362,9 @@ export class MeetingService {
     assertIntNonNegative('benefitAmount',input.amount);
     const id='benefit_decl_'+encodeURIComponent(JSON.stringify([tenantId,groupId,meetingId,member.id,input.rubricId??''])),previous=await this.repo.getWorkspaceRecord(tenantId,id),stamp=now();
     if(previous?.status==='DONE')throw Error('BENEFIT_ALREADY_RECEIPTED');
+    const proofCode=String(previous?.data.proofCode??('ECO-RCP-'+makeId('proof').split('_').at(-1)!.replace(/-/g,'').slice(0,10).toUpperCase()));
     const record:WorkspaceRecord={id,tenantId,groupId,moduleId:'MEETING.BENEFICIARIES',title:'Bénéficiaire déclaré',summary:input.note?.trim()||undefined,status:'ACTIVE',
-      tags:['beneficiary','pending-evidence','meeting:'+meetingId,'member:'+member.id],data:{meetingId,membershipId:member.id,rubricId:input.rubricId??null,amount:input.amount,currency:input.currency??'XAF',evidenceId:null,declaredBy:ctx.actorId},
+      tags:['beneficiary','pending-evidence','meeting:'+meetingId,'member:'+member.id],data:{meetingId,membershipId:member.id,rubricId:input.rubricId??null,amount:input.amount,currency:input.currency??'XAF',proofCode,evidenceId:null,declaredBy:ctx.actorId},
       createdBy:previous?.createdBy??ctx.actorId,createdAt:previous?.createdAt??stamp,updatedAt:stamp};
     await this.repo.saveWorkspaceRecord(record);
     await persistAudit(this.repo,this.kernel,{tenantId,actorId:ctx.actorId,action:previous?'MEETING_BENEFIT_DECLARATION_UPDATED':'MEETING_BENEFIT_DECLARED',targetType:'meeting_benefit',targetId:id,requestId,before:previous?.data,after:record.data});
@@ -402,11 +403,11 @@ export class MeetingService {
     if((input.rubricId??undefined)!==(declaredRubric??undefined)||Number(input.amount??declaredAmount)!==declaredAmount||String(input.currency??declaredCurrency)!==declaredCurrency)throw Error('BENEFIT_EVIDENCE_MISMATCH');
     const subjectId='meeting_benefit_'+encodeURIComponent(JSON.stringify([groupId,meetingId,member.id,input.rubricId??'',input.declarationId,key]));
     const created=this.kernel.evidence.add({id,tenantId,type:'MEETING_BENEFIT_RECEIPT',subjectType:'meeting_benefit',subjectId,createdBy:ctx.actorId,
-      data:{groupId,meetingId,declarationId:input.declarationId,membershipId:member.id,rubricId:declaredRubric??null,amount:declaredAmount,currency:declaredCurrency,method:input.method,artifactKey:input.artifactKey??null,fingerprint:input.fingerprint??null,note:input.note?.trim()||null,idempotencyKey:key,memberSelfConfirmed:self},immutable:true});
+      data:{groupId,meetingId,declarationId:input.declarationId,membershipId:member.id,rubricId:declaredRubric??null,amount:declaredAmount,currency:declaredCurrency,proofCode:String(declaration.data.proofCode??''),method:input.method,artifactKey:input.artifactKey??null,fingerprint:input.fingerprint??null,note:input.note?.trim()||null,idempotencyKey:key,memberSelfConfirmed:self},immutable:true});
     await this.repo.saveEvidence(created);
     const stamp=created.createdAt;
     await this.repo.saveWorkspaceRecord({...declaration,status:'DONE',tags:[...new Set([...declaration.tags.filter(x=>x!=='pending-evidence'),'evidence-recorded'])],data:{...declaration.data,evidenceId:created.id,evidenceMethod:input.method},updatedAt:stamp});
-    const projection:WorkspaceRecord={id:'benefit_projection_'+created.id,tenantId,groupId,moduleId:'MEETING.BENEFICIARIES',title:'Preuve de réception bénéficiaire',summary:input.note?.trim()||undefined,status:'DONE',tags:['beneficiary','evidence','meeting:'+meetingId,'member:'+member.id],data:{meetingId,declarationId:input.declarationId,membershipId:member.id,rubricId:declaredRubric??null,evidenceId:created.id,amount:declaredAmount,currency:declaredCurrency,method:input.method},createdBy:ctx.actorId,createdAt:stamp,updatedAt:stamp};
+    const projection:WorkspaceRecord={id:'benefit_projection_'+created.id,tenantId,groupId,moduleId:'MEETING.BENEFICIARIES',title:'Preuve de réception bénéficiaire',summary:input.note?.trim()||undefined,status:'DONE',tags:['beneficiary','evidence','meeting:'+meetingId,'member:'+member.id],data:{meetingId,declarationId:input.declarationId,membershipId:member.id,rubricId:declaredRubric??null,evidenceId:created.id,proofCode:String(declaration.data.proofCode??''),amount:declaredAmount,currency:declaredCurrency,method:input.method},createdBy:ctx.actorId,createdAt:stamp,updatedAt:stamp};
     await this.repo.saveWorkspaceRecord(projection);
     await persistAudit(this.repo,this.kernel,{tenantId,actorId:ctx.actorId,action:'MEETING_BENEFIT_EVIDENCE_RECORDED',targetType:'evidence',targetId:created.id,requestId,after:{meetingId,declarationId:input.declarationId,membershipId:member.id,rubricId:declaredRubric??null,method:input.method,amount:declaredAmount}});
     return created;
