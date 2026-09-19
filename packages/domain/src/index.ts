@@ -335,27 +335,58 @@ export class MeetingService {
     return out;
   }
 
-  async recordBenefitEvidence(tenantId:Id,groupId:Id,meetingId:Id,input:{membershipId:Id;rubricId?:Id;amount?:number;currency?:string;method:'MEMBER_CONFIRMATION'|'PAPER_EMARGEMENT'|'PHOTO_DOCUMENT';artifactKey?:string;fingerprint?:string;note?:string;idempotencyKey:string},requestId=makeId('req')):Promise<EvidenceRecord>{
+  async declareBenefit(tenantId:Id,groupId:Id,meetingId:Id,input:{membershipId:Id;rubricId?:Id;amount:number;currency?:string;note?:string},requestId=makeId('req')):Promise<WorkspaceRecord>{
+    const ctx=this.kernel.context.get();await assertCanManageGroup(this.repo,ctx,tenantId,groupId);
+    const meeting=await this.repo.getMeeting(tenantId,groupId,meetingId);if(!meeting)throw Error('MEETING_NOT_FOUND');
+    const member=await this.repo.getMembership(tenantId,groupId,input.membershipId);if(!member||member.status==='left')throw Error('MEMBERSHIP_NOT_FOUND');
+    if(input.rubricId&&!(await this.repo.getRubricDefinition(tenantId,groupId,input.rubricId)))throw Error('RUBRIC_NOT_FOUND');
+    assertIntNonNegative('benefitAmount',input.amount);
+    const id='benefit_decl_'+encodeURIComponent(JSON.stringify([tenantId,groupId,meetingId,member.id,input.rubricId??''])),previous=await this.repo.getWorkspaceRecord(tenantId,id),stamp=now();
+    if(previous?.status==='DONE')throw Error('BENEFIT_ALREADY_RECEIPTED');
+    const record:WorkspaceRecord={id,tenantId,groupId,moduleId:'MEETING.BENEFICIARIES',title:'Bénéficiaire déclaré',summary:input.note?.trim()||undefined,status:'ACTIVE',
+      tags:['beneficiary','pending-evidence','meeting:'+meetingId,'member:'+member.id],data:{meetingId,membershipId:member.id,rubricId:input.rubricId??null,amount:input.amount,currency:input.currency??'XAF',evidenceId:null,declaredBy:ctx.actorId},
+      createdBy:previous?.createdBy??ctx.actorId,createdAt:previous?.createdAt??stamp,updatedAt:stamp};
+    await this.repo.saveWorkspaceRecord(record);
+    await persistAudit(this.repo,this.kernel,{tenantId,actorId:ctx.actorId,action:previous?'MEETING_BENEFIT_DECLARATION_UPDATED':'MEETING_BENEFIT_DECLARED',targetType:'meeting_benefit',targetId:id,requestId,before:previous?.data,after:record.data});
+    return structuredClone(record);
+  }
+
+  async listBenefitDeclarations(tenantId:Id,groupId:Id,meetingId:Id):Promise<Array<WorkspaceRecord&{displayName:string}>>{
+    const ctx=this.kernel.context.get();const group=await assertCanAccessGroup(this.repo,ctx,tenantId,groupId),memberships=await this.repo.listMemberships(tenantId,groupId);
+    const manager=group.createdBy===ctx.actorId||memberships.some(m=>m.userId===ctx.actorId&&m.status==='active'&&m.roles.some(r=>MANAGEMENT_ROLES.has(r)));
+    const rows=(await this.repo.listWorkspaceRecords(tenantId,'MEETING.BENEFICIARIES',groupId)).filter(x=>String(x.data.meetingId??'')===meetingId&&x.tags.includes('beneficiary')&&!x.tags.includes('evidence'));
+    const visible=manager?rows:rows.filter(x=>memberships.find(m=>m.id===String(x.data.membershipId??''))?.userId===ctx.actorId),out:Array<WorkspaceRecord&{displayName:string}>=[];
+    for(const row of visible){const m=memberships.find(x=>x.id===String(row.data.membershipId??'')),u=m?await this.repo.getUser(m.userId):undefined;out.push({...structuredClone(row),displayName:u?.displayName??m?.userId??String(row.data.membershipId??'')});}
+    return out;
+  }
+
+  async recordBenefitEvidence(tenantId:Id,groupId:Id,meetingId:Id,input:{declarationId:Id;membershipId:Id;rubricId?:Id;amount?:number;currency?:string;method:'MEMBER_CONFIRMATION'|'PAPER_EMARGEMENT'|'PHOTO_DOCUMENT';artifactKey?:string;fingerprint?:string;note?:string;idempotencyKey:string},requestId=makeId('req')):Promise<EvidenceRecord>{
     const ctx=this.kernel.context.get();const group=await assertCanAccessGroup(this.repo,ctx,tenantId,groupId);
     const meeting=await this.repo.getMeeting(tenantId,groupId,meetingId);if(!meeting)throw Error('MEETING_NOT_FOUND');
     const member=await this.repo.getMembership(tenantId,groupId,input.membershipId);if(!member||member.status==='left')throw Error('MEMBERSHIP_NOT_FOUND');
     if(input.rubricId&&!(await this.repo.getRubricDefinition(tenantId,groupId,input.rubricId)))throw Error('RUBRIC_NOT_FOUND');
     if(input.amount!==undefined)assertIntNonNegative('benefitAmount',input.amount);
+    const declaration=await this.repo.getWorkspaceRecord(tenantId,input.declarationId);
+    if(!declaration||declaration.groupId!==groupId||declaration.moduleId!=='MEETING.BENEFICIARIES'||String(declaration.data.meetingId??'')!==meetingId||String(declaration.data.membershipId??'')!==member.id||declaration.status!=='ACTIVE')throw Error('BENEFIT_DECLARATION_NOT_FOUND');
+    const declaredRubric=declaration.data.rubricId===null||declaration.data.rubricId===undefined?undefined:String(declaration.data.rubricId),declaredAmount=Number(declaration.data.amount??0),declaredCurrency=String(declaration.data.currency??'XAF');
+    if((input.rubricId??undefined)!==(declaredRubric??undefined)||Number(input.amount??declaredAmount)!==declaredAmount||String(input.currency??declaredCurrency)!==declaredCurrency)throw Error('BENEFIT_EVIDENCE_MISMATCH');
     const manager=group.createdBy===ctx.actorId||(await this.repo.listMemberships(tenantId,groupId)).some(m=>m.userId===ctx.actorId&&m.status==='active'&&m.roles.some(r=>MANAGEMENT_ROLES.has(r)));
     const self=member.userId===ctx.actorId;
     if(input.method==='MEMBER_CONFIRMATION'&&!self)throw Error('MEMBER_SELF_ACTION_REQUIRED');
     if(input.method!=='MEMBER_CONFIRMATION'&&!manager)throw Error('FORBIDDEN_SCOPE');
     if(input.method==='PHOTO_DOCUMENT'&&!input.artifactKey)throw Error('EVIDENCE_ARTIFACT_REQUIRED');
     const key=input.idempotencyKey.trim();if(!key)throw Error('IDEMPOTENCY_KEY_REQUIRED');
-    const id='evidence_benefit_'+encodeURIComponent(JSON.stringify([tenantId,groupId,meetingId,member.id,input.rubricId??'',key])),existing=await this.repo.getEvidence(tenantId,id);
+    const id='evidence_benefit_'+encodeURIComponent(JSON.stringify([tenantId,groupId,meetingId,member.id,input.rubricId??'',input.declarationId,key])),existing=await this.repo.getEvidence(tenantId,id);
     if(existing)return existing;
-    const subjectId='meeting_benefit_'+encodeURIComponent(JSON.stringify([groupId,meetingId,member.id,input.rubricId??'',key]));
+    const subjectId='meeting_benefit_'+encodeURIComponent(JSON.stringify([groupId,meetingId,member.id,input.rubricId??'',input.declarationId,key]));
     const created=this.kernel.evidence.add({id,tenantId,type:'MEETING_BENEFIT_RECEIPT',subjectType:'meeting_benefit',subjectId,createdBy:ctx.actorId,
-      data:{groupId,meetingId,membershipId:member.id,rubricId:input.rubricId??null,amount:input.amount??null,currency:input.currency??'XAF',method:input.method,artifactKey:input.artifactKey??null,fingerprint:input.fingerprint??null,note:input.note?.trim()||null,idempotencyKey:key,memberSelfConfirmed:self},immutable:true});
+      data:{groupId,meetingId,declarationId:input.declarationId,membershipId:member.id,rubricId:declaredRubric??null,amount:declaredAmount,currency:declaredCurrency,method:input.method,artifactKey:input.artifactKey??null,fingerprint:input.fingerprint??null,note:input.note?.trim()||null,idempotencyKey:key,memberSelfConfirmed:self},immutable:true});
     await this.repo.saveEvidence(created);
-    const stamp=created.createdAt,projection:WorkspaceRecord={id:'benefit_projection_'+created.id,tenantId,groupId,moduleId:'MEETING.BENEFICIARIES',title:'Preuve de réception bénéficiaire',summary:input.note?.trim()||undefined,status:'DONE',tags:['beneficiary','evidence','meeting:'+meetingId,'member:'+member.id],data:{meetingId,membershipId:member.id,rubricId:input.rubricId??null,evidenceId:created.id,amount:input.amount??null,currency:input.currency??'XAF',method:input.method},createdBy:ctx.actorId,createdAt:stamp,updatedAt:stamp};
+    const stamp=created.createdAt;
+    await this.repo.saveWorkspaceRecord({...declaration,status:'DONE',tags:[...new Set([...declaration.tags.filter(x=>x!=='pending-evidence'),'evidence-recorded'])],data:{...declaration.data,evidenceId:created.id,evidenceMethod:input.method},updatedAt:stamp});
+    const projection:WorkspaceRecord={id:'benefit_projection_'+created.id,tenantId,groupId,moduleId:'MEETING.BENEFICIARIES',title:'Preuve de réception bénéficiaire',summary:input.note?.trim()||undefined,status:'DONE',tags:['beneficiary','evidence','meeting:'+meetingId,'member:'+member.id],data:{meetingId,declarationId:input.declarationId,membershipId:member.id,rubricId:declaredRubric??null,evidenceId:created.id,amount:declaredAmount,currency:declaredCurrency,method:input.method},createdBy:ctx.actorId,createdAt:stamp,updatedAt:stamp};
     await this.repo.saveWorkspaceRecord(projection);
-    await persistAudit(this.repo,this.kernel,{tenantId,actorId:ctx.actorId,action:'MEETING_BENEFIT_EVIDENCE_RECORDED',targetType:'evidence',targetId:created.id,requestId,after:{meetingId,membershipId:member.id,rubricId:input.rubricId??null,method:input.method,amount:input.amount??null}});
+    await persistAudit(this.repo,this.kernel,{tenantId,actorId:ctx.actorId,action:'MEETING_BENEFIT_EVIDENCE_RECORDED',targetType:'evidence',targetId:created.id,requestId,after:{meetingId,declarationId:input.declarationId,membershipId:member.id,rubricId:declaredRubric??null,method:input.method,amount:declaredAmount}});
     return created;
   }
 
