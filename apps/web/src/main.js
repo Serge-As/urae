@@ -140,6 +140,13 @@ const externalProgramsUI = mountExternalProgramsUI({ app, notify: toast, showErr
 const founderControlUI = mountFounderControlUI({ app, notify: toast, showError: fail });
 const assistanceRulebookUI = mountAssistanceRulebookUI({ app, notify: toast, showError: fail, isManager });
 const renderConnectivity = () => { const online = navigator.onLine; const e = $('#connectivity'); e.textContent = `● ${online ? tx('En ligne','Online') : tx('Hors ligne','Offline')}`; e.className = `pill ${online ? 'online' : 'offline'}`; app.setConnectivity(online ? 'online' : 'offline'); };
+let lastOfflineSnapshotNotice=0;
+window.addEventListener('eco:offline-snapshot-used',event=>{
+    const detail=event instanceof CustomEvent?event.detail:undefined,stamp=detail?.updatedAt?new Date(detail.updatedAt):undefined,e=$('#connectivity');
+    const when=stamp&&!Number.isNaN(stamp.getTime())?stamp.toLocaleString():tx('dernière synchro connue','last known sync');
+    e.textContent=tx(`● Hors ligne · données du ${when}`,`● Offline · data from ${when}`);e.className='pill offline';
+    const now=Date.now();if(now-lastOfflineSnapshotNotice>8000){toast(tx('Mode hors ligne : affichage de la dernière copie synchronisée. Les écritures restent en attente de confirmation serveur.','Offline mode: showing the last synchronized copy. Writes remain pending server confirmation.'));lastOfflineSnapshotNotice=now;}
+});
 const renderUniverse = async () => {
     const u = await app.universe();
     const rows = [[u.groups, tx('Groupes','Groups')], [u.inbox, tx('Actions à traiter','Actions to do')], [u.pendingSync, tx('En attente de synchro','Pending sync')], [u.audit, tx('Événements audités','Audited events')]];
