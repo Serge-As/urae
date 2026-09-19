@@ -52,7 +52,7 @@
       <button data-view="discovery" class="nav-btn"><span>⌕</span><b>Découvrir</b></button>
       <button data-view="launch" class="nav-btn"><span>＋</span><b>Créer / intégrer</b></button>
       <button id="ecoAiNavBtn" data-view="launch" class="nav-btn"><span>✦</span><b>Eco IA</b></button>
-      <button data-view="operations" class="nav-btn"><span>☷</span><b>Réunion</b></button>
+      <button data-view="operations" class="nav-btn"><span>☷</span><b>Séances</b></button>
       <button id="membersNavBtn" data-view="members" class="nav-btn"><span>♙</span><b>Membres & habilitations</b></button>
       <button data-view="finance" class="nav-btn"><span>₣</span><b>Finances</b></button>
       <button id="backOfficeNavBtn" data-view="backoffice" class="nav-btn"><span>▣</span><b>Back-office</b></button>
@@ -94,6 +94,11 @@
           </section>
         </div>
 
+        <section class="panel" id="groupHomePanel">
+          <div class="panel-head"><div><span class="eyebrow">Association / Tontine</span><h2>Accueil du groupe</h2><p>Identification, cycle, séances et situation financière selon vos droits — projections des services canoniques.</p></div><button class="link-btn" data-go="operations">Ouvrir les Séances</button></div>
+          <div id="groupHomeContent" class="stack"></div>
+        </section>
+
         <section class="panel" id="personalCockpitPanel">
           <div class="panel-head"><div><h2>Mon cockpit</h2><p>Votre situation et vos prochaines actions, sans données administratives inutiles.</p></div><button class="link-btn" data-go="discovery">Rejoindre / découvrir</button></div>
           <div id="personalCockpitMetrics" class="metrics small"></div>
@@ -118,7 +123,7 @@
           <div class="quick-grid">
             <button class="quick" data-go="discovery"><b>Découvrir & adhérer</b><span>Groupes publics et demandes d’adhésion</span></button>
             <button class="quick" data-go="launch"><b>Créer / intégrer un groupe</b><span>Projet, simulation et ouverture du groupe</span></button>
-            <button class="quick" data-go="operations"><b>Réunion & feuille mensuelle</b><span>Cartes smartphone ou matrice membres × rubriques</span></button>
+            <button class="quick" data-go="operations"><b>Séances & feuilles financières</b><span>Feuille de séance ou fiches individuelles · même vérité comptable</span></button>
             <button class="quick" data-go="finance"><b>Finances & solidarité</b><span>Cotisations, caisse et relevés individuels</span></button>
             <button class="quick" data-module-open="COMMUNITY.FORUM"><b>Communauté</b><span>Forums, Hubs professionnels, votes, événements</span></button>
             <button class="quick" data-module-open="MARKETPLACE.CORE"><b>Marché & fournisseurs</b><span>Marketplace, achats groupés, Business Studio</span></button>
