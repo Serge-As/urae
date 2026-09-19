@@ -108,3 +108,83 @@ export class IndexedDbOutboxAdapter {
     } finally { db.close(); }
   }
 }
+
+
+export interface ReadSnapshot<T=unknown>{
+  id:string;
+  actorId:string;
+  tenantId:string;
+  path:string;
+  body:T;
+  updatedAt:string;
+}
+
+const READ_DB_NAME='eco-system-read-snapshots';
+const READ_DB_VERSION=1;
+const READ_STORE='snapshots';
+
+export class IndexedDbReadSnapshotAdapter {
+  static supported():boolean{return typeof indexedDB!=='undefined';}
+
+  private async open():Promise<IDBDatabase>{
+    if(!IndexedDbReadSnapshotAdapter.supported())throw new Error('INDEXEDDB_UNAVAILABLE');
+    return await new Promise((resolve,reject)=>{
+      const request=indexedDB.open(READ_DB_NAME,READ_DB_VERSION);
+      request.onupgradeneeded=()=>{const db=request.result;if(!db.objectStoreNames.contains(READ_STORE))db.createObjectStore(READ_STORE,{keyPath:'id'});};
+      request.onsuccess=()=>resolve(request.result);
+      request.onerror=()=>reject(request.error??new Error('INDEXEDDB_OPEN_FAILED'));
+    });
+  }
+
+  async get<T=unknown>(id:string):Promise<ReadSnapshot<T>|undefined>{
+    if(!IndexedDbReadSnapshotAdapter.supported())return undefined;
+    const db=await this.open();
+    try{
+      return await new Promise((resolve,reject)=>{
+        const request=db.transaction(READ_STORE,'readonly').objectStore(READ_STORE).get(id);
+        request.onsuccess=()=>resolve(request.result as ReadSnapshot<T>|undefined);
+        request.onerror=()=>reject(request.error??new Error('INDEXEDDB_READ_FAILED'));
+      });
+    }finally{db.close();}
+  }
+
+  async save<T=unknown>(snapshot:Omit<ReadSnapshot<T>,'updatedAt'>):Promise<ReadSnapshot<T>>{
+    if(!IndexedDbReadSnapshotAdapter.supported())return{...snapshot,updatedAt:new Date().toISOString()};
+    const value:ReadSnapshot<T>={...structuredClone(snapshot),updatedAt:new Date().toISOString()};
+    const db=await this.open();
+    try{
+      await new Promise<void>((resolve,reject)=>{
+        const tx=db.transaction(READ_STORE,'readwrite');tx.objectStore(READ_STORE).put(value);
+        tx.oncomplete=()=>resolve();tx.onerror=()=>reject(tx.error??new Error('INDEXEDDB_WRITE_FAILED'));tx.onabort=()=>reject(tx.error??new Error('INDEXEDDB_WRITE_ABORTED'));
+      });
+      return value;
+    }finally{db.close();}
+  }
+
+  async remove(id:string):Promise<void>{
+    if(!IndexedDbReadSnapshotAdapter.supported())return;
+    const db=await this.open();
+    try{
+      await new Promise<void>((resolve,reject)=>{
+        const tx=db.transaction(READ_STORE,'readwrite');tx.objectStore(READ_STORE).delete(id);
+        tx.oncomplete=()=>resolve();tx.onerror=()=>reject(tx.error??new Error('INDEXEDDB_DELETE_FAILED'));
+      });
+    }finally{db.close();}
+  }
+
+  async clearForActor(actorId:string):Promise<void>{
+    if(!IndexedDbReadSnapshotAdapter.supported())return;
+    const db=await this.open();
+    try{
+      const rows=await new Promise<ReadSnapshot[]>((resolve,reject)=>{
+        const request=db.transaction(READ_STORE,'readonly').objectStore(READ_STORE).getAll();
+        request.onsuccess=()=>resolve((request.result??[]) as ReadSnapshot[]);request.onerror=()=>reject(request.error??new Error('INDEXEDDB_READ_FAILED'));
+      });
+      await new Promise<void>((resolve,reject)=>{
+        const tx=db.transaction(READ_STORE,'readwrite'),store=tx.objectStore(READ_STORE);
+        for(const row of rows)if(row.actorId===actorId)store.delete(row.id);
+        tx.oncomplete=()=>resolve();tx.onerror=()=>reject(tx.error??new Error('INDEXEDDB_DELETE_FAILED'));
+      });
+    }finally{db.close();}
+  }
+}
