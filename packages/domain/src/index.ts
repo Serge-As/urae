@@ -1,7 +1,7 @@
 import type {
   AuditEvent, CashboxReconciliationRecord, CashboxSnapshot, ContributionReceipt, Currency, FeasibilityResult,
   Group, GroupProject, Id, LedgerAccount, LedgerEntry, LedgerLine, LedgerSummary, MeetingSession, Membership,
-  Money, Obligation, User, CaseRecord, GroupOperatingPolicy, ProjectCapability, ProjectAccessGrant, LatePostingTrace, MemberStatement, GroupProjectLaunchProfile, WorkspaceRecord
+  Money, Obligation, User, CaseRecord, EvidenceRecord, GroupOperatingPolicy, ProjectCapability, ProjectAccessGrant, LatePostingTrace, MemberStatement, GroupProjectLaunchProfile, WorkspaceRecord
 } from '../../contracts/src/index.js';
 import { makeId } from '../../contracts/src/index.js';
 import type { PlatformRepository } from '../../repositories/src/index.js';
@@ -311,6 +311,58 @@ export class MeetingService {
     const next={...current,status:'closed' as const,closedAt:now()}; await this.repo.saveMeeting(next);
     await persistAudit(this.repo,this.kernel,{tenantId,actorId:ctx.actorId,action:'MEETING_CLOSED',targetType:'meeting',targetId:meetingId,requestId,before:current,after:next});
     return next;
+  }
+
+  async recordAttendance(tenantId:Id,groupId:Id,meetingId:Id,input:{membershipId:Id;attendance:'PRESENT'|'ABSENT'|'EXCUSED'|'REPRESENTED'|'LATE';note?:string},requestId=makeId('req')):Promise<WorkspaceRecord>{
+    const ctx=this.kernel.context.get();await assertCanManageGroup(this.repo,ctx,tenantId,groupId);
+    const meeting=await this.repo.getMeeting(tenantId,groupId,meetingId);if(!meeting)throw Error('MEETING_NOT_FOUND');
+    const member=await this.repo.getMembership(tenantId,groupId,input.membershipId);if(!member||member.status==='left')throw Error('MEMBERSHIP_NOT_FOUND');
+    if(!['PRESENT','ABSENT','EXCUSED','REPRESENTED','LATE'].includes(input.attendance))throw Error('INVALID_ATTENDANCE');
+    const id='attendance_'+encodeURIComponent(JSON.stringify([tenantId,groupId,meetingId,member.id])),previous=await this.repo.getWorkspaceRecord(tenantId,id),stamp=now();
+    const record:WorkspaceRecord={id,tenantId,groupId,moduleId:'MEETING.ATTENDANCE',title:'Présence · '+meetingId,summary:input.note?.trim()||undefined,status:'ACTIVE',tags:['attendance','meeting:'+meetingId,'member:'+member.id],
+      data:{meetingId,membershipId:member.id,attendance:input.attendance,note:input.note?.trim()||null,updatedBy:ctx.actorId},createdBy:previous?.createdBy??ctx.actorId,createdAt:previous?.createdAt??stamp,updatedAt:stamp};
+    await this.repo.saveWorkspaceRecord(record);
+    await persistAudit(this.repo,this.kernel,{tenantId,actorId:ctx.actorId,action:previous?'MEETING_ATTENDANCE_UPDATED':'MEETING_ATTENDANCE_RECORDED',targetType:'meeting_attendance',targetId:id,requestId,before:previous?.data,after:record.data});
+    return structuredClone(record);
+  }
+
+  async listAttendance(tenantId:Id,groupId:Id,meetingId:Id):Promise<Array<WorkspaceRecord&{displayName:string}>>{
+    const ctx=this.kernel.context.get();await assertCanAccessGroup(this.repo,ctx,tenantId,groupId);
+    const rows=(await this.repo.listWorkspaceRecords(tenantId,'MEETING.ATTENDANCE',groupId)).filter(x=>String(x.data.meetingId??'')===meetingId);
+    const memberships=await this.repo.listMemberships(tenantId,groupId),manager=(await assertCanManageGroup(this.repo,ctx,tenantId,groupId).then(()=>true).catch(()=>false));
+    const visible=manager?rows:rows.filter(x=>memberships.find(m=>m.id===String(x.data.membershipId??''))?.userId===ctx.actorId),out=[];
+    for(const row of visible){const m=memberships.find(x=>x.id===String(row.data.membershipId??'')),u=m?await this.repo.getUser(m.userId):undefined;out.push({...structuredClone(row),displayName:u?.displayName??m?.userId??String(row.data.membershipId??'')});}
+    return out;
+  }
+
+  async recordBenefitEvidence(tenantId:Id,groupId:Id,meetingId:Id,input:{membershipId:Id;rubricId?:Id;amount?:number;currency?:string;method:'MEMBER_CONFIRMATION'|'PAPER_EMARGEMENT'|'PHOTO_DOCUMENT';artifactKey?:string;fingerprint?:string;note?:string;idempotencyKey:string},requestId=makeId('req')):Promise<EvidenceRecord>{
+    const ctx=this.kernel.context.get();const group=await assertCanAccessGroup(this.repo,ctx,tenantId,groupId);
+    const meeting=await this.repo.getMeeting(tenantId,groupId,meetingId);if(!meeting)throw Error('MEETING_NOT_FOUND');
+    const member=await this.repo.getMembership(tenantId,groupId,input.membershipId);if(!member||member.status==='left')throw Error('MEMBERSHIP_NOT_FOUND');
+    if(input.rubricId&&!(await this.repo.getRubricDefinition(tenantId,groupId,input.rubricId)))throw Error('RUBRIC_NOT_FOUND');
+    if(input.amount!==undefined)assertIntNonNegative('benefitAmount',input.amount);
+    const manager=group.createdBy===ctx.actorId||(await this.repo.listMemberships(tenantId,groupId)).some(m=>m.userId===ctx.actorId&&m.status==='active'&&m.roles.some(r=>MANAGEMENT_ROLES.has(r)));
+    const self=member.userId===ctx.actorId;
+    if(input.method==='MEMBER_CONFIRMATION'&&!self)throw Error('MEMBER_SELF_ACTION_REQUIRED');
+    if(input.method!=='MEMBER_CONFIRMATION'&&!manager)throw Error('FORBIDDEN_SCOPE');
+    if(input.method==='PHOTO_DOCUMENT'&&!input.artifactKey)throw Error('EVIDENCE_ARTIFACT_REQUIRED');
+    const key=input.idempotencyKey.trim();if(!key)throw Error('IDEMPOTENCY_KEY_REQUIRED');
+    const id='evidence_benefit_'+encodeURIComponent(JSON.stringify([tenantId,groupId,meetingId,member.id,input.rubricId??'',key])),existing=await this.repo.getEvidence(tenantId,id);
+    if(existing)return existing;
+    const subjectId='meeting_benefit_'+encodeURIComponent(JSON.stringify([groupId,meetingId,member.id,input.rubricId??'',key]));
+    const created=this.kernel.evidence.add({id,tenantId,type:'MEETING_BENEFIT_RECEIPT',subjectType:'meeting_benefit',subjectId,createdBy:ctx.actorId,
+      data:{groupId,meetingId,membershipId:member.id,rubricId:input.rubricId??null,amount:input.amount??null,currency:input.currency??'XAF',method:input.method,artifactKey:input.artifactKey??null,fingerprint:input.fingerprint??null,note:input.note?.trim()||null,idempotencyKey:key,memberSelfConfirmed:self},immutable:true});
+    await this.repo.saveEvidence(created);
+    const stamp=created.createdAt,projection:WorkspaceRecord={id:'benefit_projection_'+created.id,tenantId,groupId,moduleId:'MEETING.BENEFICIARIES',title:'Preuve de réception bénéficiaire',summary:input.note?.trim()||undefined,status:'DONE',tags:['beneficiary','evidence','meeting:'+meetingId,'member:'+member.id],data:{meetingId,membershipId:member.id,rubricId:input.rubricId??null,evidenceId:created.id,amount:input.amount??null,currency:input.currency??'XAF',method:input.method},createdBy:ctx.actorId,createdAt:stamp,updatedAt:stamp};
+    await this.repo.saveWorkspaceRecord(projection);
+    await persistAudit(this.repo,this.kernel,{tenantId,actorId:ctx.actorId,action:'MEETING_BENEFIT_EVIDENCE_RECORDED',targetType:'evidence',targetId:created.id,requestId,after:{meetingId,membershipId:member.id,rubricId:input.rubricId??null,method:input.method,amount:input.amount??null}});
+    return created;
+  }
+
+  async listBenefitEvidence(tenantId:Id,groupId:Id,meetingId:Id):Promise<EvidenceRecord[]>{
+    const ctx=this.kernel.context.get();const group=await assertCanAccessGroup(this.repo,ctx,tenantId,groupId),memberships=await this.repo.listMemberships(tenantId,groupId);
+    const manager=group.createdBy===ctx.actorId||memberships.some(m=>m.userId===ctx.actorId&&m.status==='active'&&m.roles.some(r=>MANAGEMENT_ROLES.has(r)));
+    return (await this.repo.listEvidence(tenantId,'meeting_benefit')).filter(x=>String(x.data.groupId??'')===groupId&&String(x.data.meetingId??'')===meetingId&&(manager||memberships.find(m=>m.id===String(x.data.membershipId??''))?.userId===ctx.actorId));
   }
 }
 
