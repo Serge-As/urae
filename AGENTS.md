@@ -5,7 +5,8 @@ Continuer Eco-System sans recommencer, simplifier ou remplacer silencieusement l
 
 ### Vérité courante
 - production publique qualifiée : `1.4.0-master-2.3.4-closure` ;
-- développement courant : `next/1.4.0-master-2.3.4-closure-20260917` ;
+- lignée de production : `next/1.4.0-master-2.3.4-closure-20260917` ;
+- branche de travail courante : `next/1.4.1-field-integrity-guardrails-20260919` ;
 - source déployée : `e869918002a6a649751b68088de39510dad3b29a` ;
 - Worker Version ID : `182e7992-1bf9-479f-914b-c0f04ab1b85c` ;
 - qualification + déploiement + smoke + BIR+ : run `35314965700` SUCCESS ;
@@ -20,11 +21,12 @@ Avant tout lot substantiel, lire dans cet ordre :
 4. `PROJECT_STATE.md` ;
 5. `docs/constitution/ECO_SYSTEM_Cahier_des_Charges_Maitre_Exhaustif_3.2.0_2026-09-16.md` + socle constitutionnel 2.3.4 ;
 6. `docs/economics/ECO_SYSTEM_Modele_Economique_AdManager_Approfondi_3.2.0_2026-09-16.md` ;
-7. `docs/governance/ECO_SYSTEM_LIVING_RULES_DOCTRINE_1.0.0.md` ;
-8. `FEATURE_REGISTRY.yaml` ;
-9. `NEXT_RUN.md` ;
-10. CIR/ADR/Recall pertinents ;
-11. vérifier le HEAD distant et les derniers runs GitHub avant de coder.
+7. `docs/governance/DELOR85_DEUX_CONVENTIONS_FONDATRICES_UNIVERSELLES_1.0.0.md` ;
+8. `docs/governance/ECO_SYSTEM_LIVING_RULES_DOCTRINE_1.0.0.md` ;
+9. `FEATURE_REGISTRY.yaml` ;
+10. `NEXT_RUN.md` ;
+11. CIR/ADR/Recall pertinents ;
+12. vérifier le HEAD distant et les derniers runs GitHub avant de coder.
 
 Un prompt, une capture ou un résumé n'est jamais la totalité du besoin. **Absence visible ≠ suppression autorisée.**
 
@@ -58,6 +60,12 @@ Distinguer :
 - exception.
 
 Ne jamais convertir automatiquement une pratique locale en interdiction universelle.
+
+## Deux conventions universelles obligatoires
+- **Autorité canonique** : une capacité métier significative possède un seul propriétaire de vérité. Toute autre surface délègue, projette ou consomme cette vérité ; elle ne la duplique pas.
+- **Reuse Before Build** : réutiliser, étendre ou adapter le propriétaire canonique avant de créer un service, moteur, base ou workflow parallèle. Une nouvelle autorité exige une justification CIR/ADR et une preuve de non-duplication.
+- Source normative : `docs/governance/DELOR85_DEUX_CONVENTIONS_FONDATRICES_UNIVERSELLES_1.0.0.md` + `SHARED_GUARDRAIL_REGISTRY.json`.
+- Portée : tous les projets actuels et futurs du fondateur ; adoption additive, jamais prétexte à une réécriture régressive.
 
 ## Architecture
 Une activité métier = une autorité canonique.
