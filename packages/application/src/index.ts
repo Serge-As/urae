@@ -75,7 +75,8 @@ export class ConnectedApplication {
   private headers(extra:Record<string,string>={}):HeadersInit{return{'content-type':'application/json','accept-language':this.locale,'x-active-group-id':this.activeGroupId??'','x-timezone':'Africa/Douala',...extra};}
   private offlineReadAllowed(path:string):boolean{
     if(path==='/api/v1/auth/session'||path==='/api/v1/groups')return true;
-    return /^\/api\/v1\/groups\/[^/?]+\/(me|members|meetings|rubrics|operating-policy)(?:\?.*)?$/.test(path)
+    return /^\/api\/v1\/groups\/[^/?]+\/(me|members|meetings|rubrics|operating-policy|ledger)(?:\?.*)?$/.test(path)
+      || /^\/api\/v1\/groups\/[^/?]+\/recap\/global(?:\?.*)?$/.test(path)
       || /^\/api\/v1\/groups\/[^/?]+\/members\/[^/?]+\/(statement|operational-sheet)(?:\?.*)?$/.test(path);
   }
   private offlineReadKey(path:string):string{return path==='/api/v1/auth/session'?'session:last':JSON.stringify([this.actorId,this.tenantId,this.activeGroupId??'',path]);}
@@ -128,6 +129,8 @@ export class ConnectedApplication {
   async memberReviewFinancialNotice(noticeId:string,decision:'APPROVE_AFTER_REVIEW'|'MAINTAIN_RESERVE',note=''):Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/financial-notices/${encodeURIComponent(noticeId)}/member-review`,{method:'POST',body:JSON.stringify({decision,note})});}
 
   async memberStatement(membershipId:string):Promise<import('../../contracts/src/index.js').MemberStatement>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/members/${encodeURIComponent(membershipId)}/statement`);}
+  async groupMe():Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/me`);}
+  async globalRecap():Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/recap/global`);}
   async memberOperationalSheet(membershipId:string):Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/members/${encodeURIComponent(membershipId)}/operational-sheet`);}
   async authenticate(mode:'login'|'register',input:{username:string;password:string;displayName?:string}):Promise<void>{await this.request(`/api/v1/auth/${mode}`,{method:'POST',body:JSON.stringify({...input,locale:this.locale})});}
   async logout():Promise<void>{const actor=this.actorId;await this.request('/api/v1/auth/logout',{method:'POST',body:'{}'});this.outbox.restore([]);this.selectGroup(undefined);try{await this.readSnapshots.clearForActor(actor);await this.readSnapshots.remove('session:last');}catch{}}
