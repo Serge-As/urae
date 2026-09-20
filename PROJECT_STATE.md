@@ -119,3 +119,31 @@ Déploiement qualifié : run `35488899806 SUCCESS` ; Worker Version ID `d4e56867
 - miroir R2 final : `birplus/1.4.1/4edf2dcb27c54303becce71ac9bd5b7db2c50496/final/` — **PASS**
 - ce BIR+ ferme le jalon de livraison ; la recette terrain reste la prochaine étape sans redéploiement préalable.
 
+## Candidate 1.4.2 — Centre opérationnel / Séances / Blueprint (2026-09-20)
+
+La production publique reste **1.4.1** jusqu'au déploiement/smoke 1.4.2.
+
+Branche candidate :
+`next/1.4.2-operational-center-sessions-blueprint-20260920`
+
+Runtime candidat :
+`1.4.2-operational-center-sessions-blueprint`
+
+Qualification release avant vérité finale :
+- run `35493817301 SUCCESS`.
+
+Périmètre :
+- ancien menu Séances renommé Centre opérationnel sans suppression de contenu ;
+- nouvelle page Séances avec huit sections métier ;
+- présence de l'ancien Centre reroutée vers MeetingService, éliminant le double owner ;
+- navigation mobile lisible et horizontalement scrollable ;
+- Blueprint exécutable Association/Tontine-first ;
+- Anticipation, Meeting Autopilot, Group Doctor, Need, Demand Exchange, Procurement, Eco NOW, Harvest/Fresh Drop/Pickup, Value Discovery, Business/Talent/Creator, Trust/Market Intelligence ;
+- achats groupés transmis au moteur canonique existant ;
+- fora/communautés adaptés avec presets Besoin/Offre/Achat groupé/Récolte/Compétence/Formation/Info sourcée/Buzz ;
+- Labo financier SAFETY.ANTISCAM devenu FUNCTIONAL_BETA déterministe, sans verdict légal ni argent réel ;
+- Eco Route/Backhaul explicitement exclu de ce projet.
+
+Document maître :
+`docs/implementation/ECO_SYSTEM_Document_Maitre_Implementation_Blueprint_Executable_1.4.2_2026-09-20.md`
+
