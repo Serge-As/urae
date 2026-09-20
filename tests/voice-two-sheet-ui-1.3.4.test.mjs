@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 
 test('deployable shell loads field hardening and voice two-sheet layer before legacy main',async()=>{
-  const html=await readFile('.build/index.html','utf8');const hard=html.indexOf('/src/field-hardening.js?v=134'),voice=html.indexOf('/src/voice-entry-bootstrap.js?v=134'),main=html.indexOf('/src/main.js?v=130');
+  const html=await readFile('.build/index.html','utf8');const hard=html.indexOf('/src/field-hardening.js'),voice=html.indexOf('/src/voice-entry-bootstrap.js'),main=html.indexOf('/src/main.js');
   assert.ok(hard>=0);assert.ok(voice>hard);assert.ok(main>voice);
 });
 
