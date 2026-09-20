@@ -1286,6 +1286,7 @@ production_hotfix_2026_09_20_1_4_2_pwa_visibility:
   source_deployed: a9fe00f94daa7a6787d5a4440a5edc0bc5e4a1c8
   qualification_run: 35499693852
   deploy_smoke_birplus_run: 35499693884
+  worker_version_id: 6c7b4be2-7daa-4f15-ae11-0861d248f60a
   predeploy_artifact_id: 10602035551
   postdeploy_artifact_id: 10602215385
   pwa_regression_test_commit: 113ad9fc021edecdb4fdc03696d7288125ca9c81
@@ -1301,3 +1302,15 @@ production_hotfix_2026_09_20_1_4_2_pwa_visibility:
     - no_schema_change
   field_reception: pending
   note: Hotfix activates the already-defined ensureCurrentServiceWorker path; runtime identity remains 1.4.2 and field observation is still required.
+
+
+final_hotfix_closure_2026_09_20_1_4_2:
+  checkpoint: d686929b44bf9f5f61ddee2ddee434e891c39afb
+  qualification_run: 35499946396
+  birplus_run: 35499946216
+  artifact_id: 10600699685
+  r2_prefix: birplus/1.4.2/d686929b44bf9f5f61ddee2ddee434e891c39afb/final/
+  restore_integrity: pass
+  sha256: verified
+  production_source_unchanged: a9fe00f94daa7a6787d5a4440a5edc0bc5e4a1c8
+  field_reception: pending
