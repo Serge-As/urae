@@ -821,6 +821,42 @@
       "note": "Actor-scoped IndexedDB read snapshots are used only on network loss and never mask live HTTP failure. Dictation uses confidence-aware preview and does not claim noise robustness as solved.",
       "next": "Test on Android/desktop with network cut and noisy real meeting.",
       "currentProductLine": true
+    },
+    {
+      "id": "cloudflare.production.1.4.1",
+      "status": "VERIFIED_REMOTE",
+      "scope": "cloudflare-production",
+      "observedOn": "2026-09-20",
+      "evidence": [
+        "github-actions:35488899806 SUCCESS",
+        "qualification:35488899790 SUCCESS",
+        "source-deployed:024b9837b6fa577c0c2c39297c2ce672f7d130b3",
+        "worker-version:d4e56867-077c-47cd-bfc9-9aba4735d596",
+        "health-version:1.4.1-field-integrity-home-sessions",
+        "tests:256/256 PASS",
+        "migrations:No migrations to apply"
+      ],
+      "note": "Eco-System 1.4.1 is deployed to production. Health smoke confirmed realMoneyEnabled=false, Premium Live, Founder Control, Community Realtime and R2, plus Group Home, Sessions, attendance, beneficiary receipt code and offline markers.",
+      "next": "Perform real founder field reception for Bureau/member/offline/noisy-voice/senior workflows; do not confuse smoke with field acceptance.",
+      "currentProductLine": true
+    },
+    {
+      "id": "backup.birplus.deploy.1.4.1",
+      "status": "VERIFIED_REMOTE",
+      "scope": "backup-recovery",
+      "observedOn": "2026-09-20",
+      "evidence": [
+        "github-actions:35488899806 SUCCESS",
+        "artifact:eco-system-1.4.1-predeploy-birplus id 10597739771",
+        "artifact:eco-system-1.4.1-postdeploy-birplus id 10598184332",
+        "R2:birplus/1.4.1/024b9837b6fa577c0c2c39297c2ce672f7d130b3/predeploy",
+        "R2:birplus/1.4.1/024b9837b6fa577c0c2c39297c2ce672f7d130b3/postdeploy",
+        "restore:SQLite PRAGMA integrity_check=ok",
+        "SHA256:verified"
+      ],
+      "note": "Production D1 was backed up and restored before and after deployment, integrity checked, checksummed and mirrored to private R2. A final post-documentation BIR+ checkpoint is still required.",
+      "next": "Trigger backup-birplus-1.4.1 after final truth documentation commits.",
+      "currentProductLine": true
     }
   ]
 }
