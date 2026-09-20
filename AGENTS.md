@@ -119,3 +119,15 @@ Un chat peut s'arrêter sans prévenir. Pour rendre cela sans conséquence :
 
 ## Clôture obligatoire d'un jalon
 Tests → Project State → Feature Registry → Current Truth/Truth Ledger → NEXT_RUN → CIR/Recall si besoin → BIR+ → bloc **ÉTAT DU PROJET APRÈS ÉTAPE**.
+
+## Ligne candidate 1.4.1 — 2026-09-20
+- branche de travail : `next/1.4.1-field-integrity-guardrails-20260919` ;
+- runtime candidat : `1.4.1-field-integrity-home-sessions` ;
+- production reste 1.4.0 jusqu'au déploiement/smoke 1.4.1 ;
+- Accueil et Séances sont des **projections/cockpits**, jamais de nouvelles autorités financières ;
+- ReceivablesService impose la confidentialité des dettes membre au niveau service ;
+- MeetingService est owner du contexte séance, présence et déclaration de bénéficiaire ;
+- KERNEL.EVIDENCE porte la preuve immuable de réception ;
+- un code ECO-RCP identifie une preuve mais n'accorde aucun droit ;
+- suppression historique d'un membre/rubrique se traduit par lifecycle/archivage si une trace métier doit être conservée.
+
