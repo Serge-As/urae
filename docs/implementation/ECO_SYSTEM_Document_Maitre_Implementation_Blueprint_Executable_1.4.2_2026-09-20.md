@@ -3,8 +3,10 @@
 
 **Date de référence : 20 septembre 2026**  
 **Branche d’implémentation : `next/1.4.2-operational-center-sessions-blueprint-20260920`**  
-**Version candidate : `1.4.2-operational-center-sessions-blueprint`**  
-**Production de départ préservée : `1.4.1-field-integrity-home-sessions`**  
+**Version livrée : `1.4.2-operational-center-sessions-blueprint`**  
+**Production vérifiée : `1.4.2-operational-center-sessions-blueprint` — run `35497930031 SUCCESS`**  
+**Source déployée : `61a6d83ac5793bb5fecac7ba77a7bd4149031e27` · Worker `b54df0a5-2338-4e37-8b4d-a05351b43658`**  
+**Socle préservé : `1.4.1-field-integrity-home-sessions` + acquis antérieurs**  
 **D1 canonique : `eco-system-db` — NE JAMAIS RECRÉER**  
 **R2 privé : `eco-system-backups`**  
 **Argent réel : `realMoneyEnabled=false`**
@@ -1597,11 +1599,13 @@ Production + recette terrain suffisante + garde-fou permanent.
 
 # 56. ÉTAT 1.4.2 AU MOMENT DE CE DOCUMENT
 
-Implémenté sur la branche :
+## 56.1 Production vérifiée
+
+Implémenté, qualifié et déployé :
 - Centre opérationnel séparé ;
 - Sessions dédié ;
 - mobile lisible ;
-- owner présence consolidé ;
+- owner présence consolidé sur MeetingService ;
 - cadre minimum séance ;
 - Blueprint exécutable ;
 - forums/communautés adaptés ;
@@ -1610,14 +1614,33 @@ Implémenté sur la branche :
 - PWA cache nouveaux modules ;
 - tests de non-régression.
 
+Preuves :
+- qualification : `35497930024 SUCCESS` ;
+- deploy + smoke + BIR+ pré/post : `35497930031 SUCCESS` ;
+- source : `61a6d83ac5793bb5fecac7ba77a7bd4149031e27` ;
+- Worker Version ID : `b54df0a5-2338-4e37-8b4d-a05351b43658` ;
+- tests : **264/264 PASS** ;
+- D1 : `eco-system-db` réutilisée, **No migrations to apply** ;
+- R2 : `eco-system-backups`, miroirs BIR+ pré/post PASS ;
+- artifacts : `10601637363` pré, `10601512437` post ;
+- `realMoneyEnabled=false`.
+
+## 56.2 Ce qui reste à FIELD_QUALIFIED
+
 À ne pas qualifier « acquis terrain » avant test :
-- confort réel mobile sur tous appareils ;
+- confort réel mobile sur les appareils utilisés par le fondateur ;
+- huit sections Séances sur flux réel Bureau/membre ;
 - bruit réel de dictée ;
 - ergonomie senior ;
+- parcours Blueprint avec données terrain ;
+- presets Forum/Communautés en usage réel ;
+- Financial Lab confronté à des cas réels sans ambiguïté de verdict ;
 - interprétation Assistance automatique ;
 - performances à grande échelle du Blueprint ;
 - workflows commerciaux lourds ;
 - paiement réel.
+
+**Règle :** CI + production + smoke = `PRODUCTION_QUALIFIED` ; ce n'est pas encore `ACQUIS` sans recette terrain suffisante.
 
 ---
 
@@ -1647,31 +1670,31 @@ et, pour l’exécution :
 
 # 59. CHECKLIST DE LIVRAISON
 
-- [ ] CI HEAD final verte
-- [ ] version runtime 1.4.2
-- [ ] D1 existante résolue
-- [ ] R2 existant résolu
-- [ ] BIR+ pré
-- [ ] migrations additives seulement
-- [ ] SHA exact déployé
-- [ ] health 1.4.2
-- [ ] Centre opérationnel smoke
-- [ ] Séances smoke
-- [ ] présence smoke
-- [ ] bénéficiaires/preuves smoke
-- [ ] mobile markers smoke
-- [ ] Blueprint smoke
-- [ ] Financial Lab smoke
-- [ ] forums presets smoke
-- [ ] acquis 1.4.1 smoke
-- [ ] BIR+ post
-- [ ] Project State
-- [ ] Current Truth
-- [ ] Truth Ledger
-- [ ] Feature Registry
-- [ ] NEXT_RUN
-- [ ] BIR+ fermeture
-- [ ] recette terrain fondateur
+- [x] CI HEAD déployé verte — `35497930024`
+- [x] version runtime 1.4.2
+- [x] D1 existante résolue
+- [x] R2 existant résolu
+- [x] BIR+ pré
+- [x] migrations additives seulement — aucune migration à appliquer
+- [x] SHA exact déployé — `61a6d83ac5793bb5fecac7ba77a7bd4149031e27`
+- [x] health 1.4.2
+- [x] Centre opérationnel smoke
+- [x] Séances smoke
+- [x] présence smoke
+- [x] bénéficiaires/preuves smoke
+- [x] mobile markers smoke
+- [x] Blueprint smoke
+- [x] Financial Lab smoke
+- [x] forums presets smoke
+- [x] acquis 1.4.1 smoke
+- [x] BIR+ post
+- [x] Project State
+- [x] Current Truth
+- [x] Truth Ledger
+- [x] Feature Registry
+- [x] NEXT_RUN
+- [ ] BIR+ fermeture — à exécuter après ce checkpoint documentaire
+- [ ] recette terrain fondateur — obligatoire avant statut ACQUIS
 
 ---
 
