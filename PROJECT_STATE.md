@@ -6,8 +6,8 @@ Date : 2026-09-20
 - version : **1.4.2-operational-center-sessions-blueprint**
 - URL : `https://eco-system.sergemimf.workers.dev/`
 - Worker : `eco-system`
-- Worker Version ID : `b54df0a5-2338-4e37-8b4d-a05351b43658`
-- source déployée : `61a6d83ac5793bb5fecac7ba77a7bd4149031e27`
+- Worker Version ID : **superseded par le hotfix PWA** ; le nouvel ID n'est pas exposé par les métadonnées GitHub consultables, preuve de déploiement = run `35499693884`
+- source déployée : `a9fe00f94daa7a6787d5a4440a5edc0bc5e4a1c8`
 - branche : `next/1.4.2-operational-center-sessions-blueprint-20260920`
 - D1 : `eco-system-db`
 - R2 : `eco-system-backups`
@@ -16,13 +16,13 @@ Date : 2026-09-20
 - Forum/Community Realtime : bound
 - artifacts : R2
 - argent réel : **désactivé**
-- qualification du SHA déployé : run **35497930024 — SUCCESS**
-- qualification + build + pré-BIR+ + déploiement + smoke + post-BIR+ : run **35497930031 — SUCCESS**
-- tests du workflow : **264/264 PASS**
+- qualification du SHA déployé : run **35499693852 — SUCCESS**
+- qualification + build + pré-BIR+ + déploiement + smoke + post-BIR+ : run **35499693884 — SUCCESS**
+- tests du workflow : **265/265 PASS**
 - migrations : **No migrations to apply**
 - pré-BIR+ et post-BIR+ : restauration SQLite + `PRAGMA integrity_check=ok` + SHA256 + miroir R2 validés.
-- artifacts : pré-déploiement **10601637363** ; post-déploiement **10601512437**.
-- R2 : `birplus/1.4.2/61a6d83ac5793bb5fecac7ba77a7bd4149031e27/predeploy/` et `.../postdeploy/` — **PASS**.
+- artifacts : pré-déploiement **10602035551** ; post-déploiement **10602215385**.
+- R2 : `birplus/1.4.2/a9fe00f94daa7a6787d5a4440a5edc0bc5e4a1c8/predeploy/` et `.../postdeploy/` — **PASS**.
 - smoke production : version/health + Centre opérationnel + vraie page Séances + mobile lisible + Blueprint exécutable + presets Forum/Communautés + Financial Lab + acquis 1.4.1 **PASS**.
 - recette terrain : **EN ATTENTE** ; CI/smoke ne valent pas FIELD_ACCEPTED.
 
@@ -164,3 +164,26 @@ Prochaine étape normale : recette terrain réelle sur téléphone et ordinateur
 - SHA256 : validé
 - miroir R2 final : `birplus/1.4.2/d1a69bb5c904268d5f16fc2421e2246154000598/final/` — **PASS**
 - la prochaine étape normale est la recette terrain 1.4.2 ; aucun nouveau moteur n'est requis avant défaut reproductible ou décision produit explicite.
+
+
+## Hotfix visibilité PWA 1.4.2 — 2026-09-20
+
+Constat terrain : la production 1.4.2 était bien déployée, mais un navigateur/PWA déjà ouvert pouvait continuer à présenter l'ancien shell 1.4.1. Le mécanisme `ensureCurrentServiceWorker()` existait mais n'était jamais invoqué.
+
+Correction minimale, sans changement de modèle métier :
+- appel actif de `ensureCurrentServiceWorker()` avant le démarrage normal de l'application ;
+- maintien de l'identité runtime `1.4.2-operational-center-sessions-blueprint` ;
+- maintien du cache Service Worker qualifié existant ;
+- test permanent ajouté pour empêcher le retour d'un Service Worker défini mais non déclenché ;
+- aucun changement Ledger, D1, règle métier, migration ou argent réel.
+
+Preuves finales :
+- test permanent / HEAD qualifié : `113ad9fc021edecdb4fdc03696d7288125ca9c81`, run **35499635884 SUCCESS** ;
+- SHA de production : `a9fe00f94daa7a6787d5a4440a5edc0bc5e4a1c8` ;
+- qualification du SHA de production : **35499693852 SUCCESS** ;
+- deploy + smoke + BIR+ pré/post : **35499693884 SUCCESS** ;
+- artifact pré : **10602035551** ;
+- artifact post : **10602215385** ;
+- `realMoneyEnabled=false` inchangé.
+
+La recette terrain reste nécessaire : la première ouverture/actualisation du navigateur doit désormais permettre au shell courant de contrôler et mettre à jour le Service Worker ; CI/smoke ne remplacent pas l'observation réelle sur l'appareil du fondateur.
