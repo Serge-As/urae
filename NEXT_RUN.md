@@ -129,7 +129,7 @@ Preuves production :
 - argent réel : OFF.
 
 Ordre obligatoire suivant :
-1. terminer la sauvegarde BIR+ de fermeture 1.4.2 après synchronisation de la vérité projet ;
+1. BIR+ de fermeture 1.4.2 **ACQUIS** : run `35498239942 SUCCESS`, artifact `10601038586`, R2 `birplus/1.4.2/d1a69bb5c904268d5f16fc2421e2246154000598/final/` PASS ;
 2. recette terrain sur le téléphone du fondateur : distinguer visuellement **Centre opérationnel** et **Séances** ;
 3. parcourir les huit sections Séances : vue d'ensemble, feuille, présence, bénéficiaires/preuves, obligations/impayés, caisse, actions/PV/historique selon les droits ;
 4. confirmer la lisibilité des onglets/navigation mobile sans disparition de fonctionnalité ;
@@ -141,3 +141,13 @@ Ordre obligatoire suivant :
 10. pour chaque défaut reproductible : test permanent → correction ciblée → CI → vérité → sauvegarde.
 
 Ne pas déclarer FIELD_ACCEPTED à partir du smoke seul. Ne pas réintroduire un second Ledger, un second Meeting owner, un second Marketplace/Forum, ni Eco Route/Backhaul dans Eco-System.
+
+
+## Checkpoint de fermeture 1.4.2 acquis
+- checkpoint : `d1a69bb5c904268d5f16fc2421e2246154000598`
+- CI : `35498239952 SUCCESS`
+- BIR+ fermeture : `35498239942 SUCCESS`
+- artifact : `10601038586`
+- R2 final : `birplus/1.4.2/d1a69bb5c904268d5f16fc2421e2246154000598/final/`
+
+Reprendre directement par la recette terrain 1.4.2 ; ne redéployer que pour un défaut reproductible et couvert par test permanent.
