@@ -1,16 +1,17 @@
-# AGENTS.md — Eco-System 1.4.0 Production / Master 2.3.4 Closure / Two-Sheet Finance
+# AGENTS.md — Eco-System 1.4.1 Production / Field Integrity / Master 2.3.4
 
 ## Mission
 Continuer Eco-System sans recommencer, simplifier ou remplacer silencieusement les acquis.
 
 ### Vérité courante
-- production publique qualifiée : `1.4.0-master-2.3.4-closure` ;
-- lignée de production : `next/1.4.0-master-2.3.4-closure-20260917` ;
+- production publique qualifiée : `1.4.1-field-integrity-home-sessions` ;
+- lignée de production : `next/1.4.1-field-integrity-guardrails-20260919` ;
 - branche de travail courante : `next/1.4.1-field-integrity-guardrails-20260919` ;
-- source déployée : `e869918002a6a649751b68088de39510dad3b29a` ;
-- Worker Version ID : `182e7992-1bf9-479f-914b-c0f04ab1b85c` ;
-- qualification + déploiement + smoke + BIR+ : run `35314965700` SUCCESS ;
-- Premium Live : actif en production 1.4.0 ;
+- source déployée : `024b9837b6fa577c0c2c39297c2ce672f7d130b3` ;
+- Worker Version ID : `d4e56867-077c-47cd-bfc9-9aba4735d596` ;
+- qualification du SHA déployé : run `35488899790` SUCCESS ;
+- qualification + déploiement + smoke + BIR+ pré/post : run `35488899806` SUCCESS ;
+- Premium Live : actif en production 1.4.1 ;
 - argent réel : `realMoneyEnabled=false`.
 
 ## MEMORY BEFORE CODE
@@ -120,10 +121,10 @@ Un chat peut s'arrêter sans prévenir. Pour rendre cela sans conséquence :
 ## Clôture obligatoire d'un jalon
 Tests → Project State → Feature Registry → Current Truth/Truth Ledger → NEXT_RUN → CIR/Recall si besoin → BIR+ → bloc **ÉTAT DU PROJET APRÈS ÉTAPE**.
 
-## Ligne candidate 1.4.1 — 2026-09-20
+## Ligne production 1.4.1 — 2026-09-20
 - branche de travail : `next/1.4.1-field-integrity-guardrails-20260919` ;
-- runtime candidat : `1.4.1-field-integrity-home-sessions` ;
-- production reste 1.4.0 jusqu'au déploiement/smoke 1.4.1 ;
+- runtime courant : `1.4.1-field-integrity-home-sessions` ;
+- production 1.4.1 vérifiée sur le SHA exact `024b9837b6fa577c0c2c39297c2ce672f7d130b3` ;
 - Accueil et Séances sont des **projections/cockpits**, jamais de nouvelles autorités financières ;
 - ReceivablesService impose la confidentialité des dettes membre au niveau service ;
 - MeetingService est owner du contexte séance, présence et déclaration de bénéficiaire ;
