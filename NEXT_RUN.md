@@ -73,3 +73,34 @@ Ordre obligatoire :
 4. déployer la même ligne 1.4.0 ;
 5. smoke production : deux feuilles visibles, pop-up cellule, Membres & habilitations, Back-office, Tontines / montant total du pot, matrice Prêt ;
 6. BIR+ de fermeture puis mise à jour de la vérité de production.
+
+## Reprise 1.4.1 — 2026-09-20
+
+La branche active est désormais :
+`next/1.4.1-field-integrity-guardrails-20260919`.
+
+Version candidate :
+`1.4.1-field-integrity-home-sessions`.
+
+Ordre obligatoire de fin de livraison :
+1. obtenir CI verte sur le HEAD final ;
+2. déclencher le workflow `deploy-production-1.4.1.yml` par le marqueur prévu ;
+3. le workflow doit réutiliser `eco-system-db` et `eco-system-backups`, produire le BIR+ pré-déploiement puis appliquer uniquement les migrations additives ;
+4. smoke : health/version, deux feuilles, Membres, Back-office, prêt, Accueil Groupe, présence, bénéficiaires, code de réception, offline snapshot ;
+5. relever le Worker Version ID réel ;
+6. mettre à jour Project State, Current Truth, Truth Ledger et NEXT_RUN ;
+7. lancer le BIR+ de fermeture 1.4.1 ;
+8. ne déclarer la version terminée qu'ensuite.
+
+Recette terrain après livraison :
+- Bureau puis membre ;
+- correction 2 000 → 5 000 + revue indépendante ;
+- présence ;
+- bénéficiaire + confirmation / papier / photo ;
+- créances propres uniquement ;
+- réseau coupé après synchro ;
+- dictée en environnement réellement bruyant ;
+- ergonomie prêt avec utilisateur senior.
+
+Ne pas réouvrir les moteurs déjà qualifiés sans défaut reproductible.
+
