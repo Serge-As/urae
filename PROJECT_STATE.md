@@ -153,3 +153,14 @@ Document maître d'implémentation :
 `docs/implementation/ECO_SYSTEM_Document_Maitre_Implementation_Blueprint_Executable_1.4.2_2026-09-20.md`
 
 Prochaine étape normale : recette terrain réelle sur téléphone et ordinateur, puis uniquement corrections reproductibles avec test permanent.
+
+
+## Clôture BIR+ 1.4.2 — 2026-09-20
+- checkpoint documentaire sauvegardé : `d1a69bb5c904268d5f16fc2421e2246154000598`
+- qualification du checkpoint : **35498239952 — SUCCESS**
+- BIR+ final source + D1 : **35498239942 — SUCCESS**
+- Artifact GitHub : **10601038586**
+- D1 restaurée : `PRAGMA integrity_check=ok`
+- SHA256 : validé
+- miroir R2 final : `birplus/1.4.2/d1a69bb5c904268d5f16fc2421e2246154000598/final/` — **PASS**
+- la prochaine étape normale est la recette terrain 1.4.2 ; aucun nouveau moteur n'est requis avant défaut reproductible ou décision produit explicite.
