@@ -8,6 +8,7 @@ on:
 permissions:
   contents: read
 jobs:
+  # qualification checkpoint after Sessions/Blueprint implementation
   qualify:
     runs-on: ubuntu-latest
     timeout-minutes: 30
