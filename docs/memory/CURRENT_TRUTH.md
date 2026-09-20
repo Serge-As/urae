@@ -5,9 +5,9 @@ Date : 2026-09-20
 ## 1. Production publique — vérité actuelle
 
 - URL : `https://eco-system.sergemimf.workers.dev/`
-- version : **1.4.1-field-integrity-home-sessions**
+- version : **1.4.2-operational-center-sessions-blueprint**
 - Worker : `eco-system`
-- Worker Version ID : `d4e56867-077c-47cd-bfc9-9aba4735d596`
+- Worker Version ID : `b54df0a5-2338-4e37-8b4d-a05351b43658`
 - D1 canonique : `eco-system-db`
 - R2 privé : `eco-system-backups`
 - Premium Live : **ACTIF**
@@ -15,22 +15,23 @@ Date : 2026-09-20
 - Forum v2 temps réel : **BOUND / production**
 - stockage artifacts : **R2**
 - argent réel : **DÉSACTIVÉ**
-- qualification du SHA déployé : **35488899790 — SUCCESS**
-- workflow qualification + build + BIR+ pré/post + déploiement + smoke : **35488899806 — SUCCESS**
-- source déployée : `024b9837b6fa577c0c2c39297c2ce672f7d130b3`
-- tests dans le workflow : **256/256 PASS**
+- qualification du SHA déployé : **35497930024 — SUCCESS**
+- workflow qualification + build + BIR+ pré/post + déploiement + smoke : **35497930031 — SUCCESS**
+- source déployée : `61a6d83ac5793bb5fecac7ba77a7bd4149031e27`
+- tests dans le workflow : **264/264 PASS**
 - D1 : **No migrations to apply**
-- BIR+ pré/post : restauration SQLite + `PRAGMA integrity_check=ok` + SHA256 + miroir R2 **PASS**
-- smoke : version/health + Accueil Groupe + Séances + présence + bénéficiaires + code de réception + offline markers + acquis 1.4.0 **PASS**.
-- 1.4.0 et les lignes antérieures restent historiques ; elles ne sont plus la production courante.
+- BIR+ pré/post : restauration SQLite + `PRAGMA integrity_check=ok` + SHA256 + miroir R2 **PASS**.
+- artifacts : pré-déploiement `10601637363` ; post-déploiement `10601512437`.
+- smoke : version/health + Centre opérationnel + vraie page Séances + présence MeetingService + bénéficiaires/preuves + mobile + Blueprint exécutable + presets Forum/Communautés + Financial Lab + acquis 1.4.1 **PASS**.
+- 1.4.1 et les lignes antérieures deviennent historiques ; elles restent des acquis de non-régression.
 
 ## 2. Branche et point de reprise
 
-- branche de développement et de production courante : `next/1.4.1-field-integrity-guardrails-20260919`
-- source actuellement déployée : `024b9837b6fa577c0c2c39297c2ce672f7d130b3`
+- branche de développement et de production courante : `next/1.4.2-operational-center-sessions-blueprint-20260920`
+- source actuellement déployée : `61a6d83ac5793bb5fecac7ba77a7bd4149031e27`
 - reprendre au **HEAD distant le plus récent**, jamais à partir d'un SHA mémorisé sans le revérifier.
-- la prochaine action normale est la **recette terrain 1.4.1** puis des corrections ciblées et testées ; ne pas repartir d'une lignée 1.3.x/1.4.0.
-- le smoke production ne remplace pas la validation réelle Bureau/membre/offline/bruit/senior.
+- prochaine action normale : **BIR+ de fermeture 1.4.2**, puis recette terrain réelle Centre opérationnel / Séances / mobile / Blueprint / communautés / Financial Lab.
+- le smoke production ne remplace pas la validation réelle Bureau/membre/offline/bruit/senior ni la réception terrain des nouveaux parcours 1.4.2.
 
 ## 3. R2 / sauvegarde
 
@@ -302,24 +303,51 @@ Ne pas confondre :
 
 Le prochain travail normal est la recette terrain de la production 1.4.1. Aucun nouveau déploiement n'est nécessaire avant qu'un défaut reproductible le justifie.
 
-## 19. Candidate 1.4.2 — Centre opérationnel / Séances / Blueprint
+## 19. Production 1.4.2 — Centre opérationnel / Séances / Blueprint
 
-Production avant promotion : `1.4.1-field-integrity-home-sessions`.
+**Production actuelle : `1.4.2-operational-center-sessions-blueprint`.**  
+**Branche : `next/1.4.2-operational-center-sessions-blueprint-20260920`.**  
+**Source déployée : `61a6d83ac5793bb5fecac7ba77a7bd4149031e27`.**  
+**Run production : `35497930031 SUCCESS`.**
 
-Candidate :
-- version : `1.4.2-operational-center-sessions-blueprint` ;
-- branche : `next/1.4.2-operational-center-sessions-blueprint-20260920` ;
-- qualification release intermédiaire : `35493817301 SUCCESS` ;
-- argent réel : OFF.
+Décisions d'architecture désormais implémentées :
+1. `operations` = **Centre opérationnel**, cockpit transversal préservé.
+2. `sessions` = page métier **Séances**, centrée sur une réunion déterminée.
+3. `MeetingService` = owner unique du contexte séance et de la présence.
+4. Ledger/Receivables/Evidence restent les owners canoniques de leurs vérités ; la nouvelle page ne crée pas de second moteur financier.
+5. La saisie/correction membre reste déléguée aux deux feuilles canoniques.
+6. Navigation mobile : labels lisibles, scroll horizontal/snap, recentrage de l'onglet actif, aucune fonction supprimée pour gagner de la place.
 
-Décisions irréversibles de compréhension :
-1. `operations` est le **Centre opérationnel** transversal, pas le propriétaire d'une séance ;
-2. `sessions` est la vraie page Séances ;
-3. MeetingService est l'unique owner du contexte séance et de la présence ;
-4. la page Séances projette le Ledger et renvoie à l'éditeur canonique des deux feuilles pour la saisie/correction ;
-5. le Blueprint orchestre mais ne possède pas les transactions ;
-6. Group Buy est transmis au moteur existant ;
-7. forums/communautés sont enrichis, jamais dupliqués ;
-8. Financial Lab explique les hypothèses, jamais un verdict « Ponzi/arnaque » ;
-9. Eco Route/Backhaul reste un projet autonome extérieur.
+Blueprint 5.0.0 rendu exécutable :
+- Association/Tontine d'abord : Anticipation, Meeting Autopilot, Group Doctor ;
+- besoins/opportunités : Opportunity Need, Demand Exchange, Smart Procurement ;
+- commerce local : Eco NOW, Harvest & Local Commerce, Fresh Drop, Pickup Network ;
+- valeur/activité : Value Discovery, Business Studio, Business Agent, Talent, Creator & Seller Studio ;
+- confiance : Trust Graph explicable, Market Intelligence, SAFETY.ANTISCAM ;
+- les workflows sont créés en DRAFT, exigent validation humaine avant ACTIVE et ne créent jamais silencieusement une transaction ;
+- doctrine : **PRÉDIRE/OBSERVER → PROPOSER → VALIDATION HUMAINE → EXÉCUTER DANS L'OWNER CANONIQUE** ;
+- **prévision ≠ demande ≠ engagement ≠ transaction** ;
+- Group Buy est transmis au moteur `MARKETPLACE.GROUP_BUY` existant ;
+- Forum/Communautés sont enrichis via presets d'action, sans second moteur social ;
+- Eco Route / Backhaul / Return Load demeure un projet autonome extérieur à Eco-System.
 
+Financial Lab :
+- `SAFETY.ANTISCAM.FINANCIAL_LAB` passe à **FUNCTIONAL_BETA** ;
+- analyse déterministe de scénarios/hypothèses ;
+- aucun verdict juridique automatique « Ponzi/arnaque » ;
+- aucune action d'argent réel.
+
+Preuves production :
+- qualification : `35497930024 SUCCESS` ;
+- déploiement + smoke + BIR+ pré/post : `35497930031 SUCCESS` ;
+- Worker Version ID : `b54df0a5-2338-4e37-8b4d-a05351b43658` ;
+- tests : **264/264 PASS** ;
+- D1 : `eco-system-db`, aucune migration ;
+- R2 : `eco-system-backups`, préfixes pré/post du SHA déployé, miroir PASS ;
+- artifacts GitHub : `10601637363` et `10601512437` ;
+- `realMoneyEnabled=false`.
+
+**Limite vraie :** ces preuves établissent CI + déploiement + smoke. Les capacités orientées utilisateur restent FUNCTIONAL_BETA jusqu'à la recette terrain du fondateur.
+
+Document maître :
+`docs/implementation/ECO_SYSTEM_Document_Maitre_Implementation_Blueprint_Executable_1.4.2_2026-09-20.md`
