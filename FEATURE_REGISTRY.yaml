@@ -1,5 +1,5 @@
 registry_version: 1
-project_version: 1.4.0-master-2.3.4-closure
+project_version: 1.4.1-field-integrity-home-sessions
 source_of_truth: docs/constitution + verified_code
 
 capabilities:
@@ -1034,7 +1034,7 @@ production_qualification_2026_09_18_1_4_0:
 
 release_capabilities_1_4_1:
   branch: next/1.4.1-field-integrity-guardrails-20260919
-  production_deployed: false
+  production_deployed: true
   real_money_enabled: false
   field_reception: pending
   source_basis: [founder_field_feedback_2026_09_19,Cadre_minimal_Accueil_Seances,historical_workbooks_and_master]
@@ -1128,3 +1128,29 @@ release_capabilities_1_4_1:
       audit_event: FUTURE_CASE_AND_EVIDENCE
       note: specified_and_restored_not_yet_claimed_functional
       tests: []
+
+
+production_qualification_2026_09_20_1_4_1:
+  version: 1.4.1-field-integrity-home-sessions
+  branch: next/1.4.1-field-integrity-guardrails-20260919
+  deployed: true
+  source_deployed: 024b9837b6fa577c0c2c39297c2ce672f7d130b3
+  production_url: https://eco-system.sergemimf.workers.dev/
+  worker_version_id: d4e56867-077c-47cd-bfc9-9aba4735d596
+  qualification_run: 35488899790
+  deploy_smoke_birplus_run: 35488899806
+  test_count: 256
+  tests_passed: 256
+  d1: eco-system-db
+  r2: eco-system-backups
+  migrations: no_migrations_to_apply
+  predeploy_birplus: restore_integrity_sha256_r2_pass
+  postdeploy_birplus: restore_integrity_sha256_r2_pass
+  premium_live_enabled: true
+  founder_control_bound: true
+  community_realtime_bound: true
+  artifact_storage_mode: R2
+  real_money_enabled: false
+  smoke_scope: [health_version,two_sheets,members_backoffice,loan_matrix,group_home,meeting_attendance,beneficiary_receipt_code,offline_snapshot]
+  field_reception: pending_for_real_bureau_member_offline_noise_senior_flows
+  note: Production deployment is verified; FUNCTIONAL_BETA capabilities remain field-reception pending where real-user validation is required.
