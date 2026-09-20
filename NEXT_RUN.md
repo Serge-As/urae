@@ -110,3 +110,28 @@ Ne pas rouvrir les moteurs déjà qualifiés sans défaut reproductible. Le smok
 
 Reprendre directement par la recette terrain 1.4.1 ; ne relancer ni D1 ni déploiement sans défaut reproductible.
 
+## Candidate 1.4.2 — point de reprise avant production
+
+Branche :
+`next/1.4.2-operational-center-sessions-blueprint-20260920`
+
+Version :
+`1.4.2-operational-center-sessions-blueprint`
+
+Dernière qualification release connue avant clôture documentaire :
+`35493817301 SUCCESS`.
+
+Avant toute production :
+1. récupérer HEAD distant final ;
+2. exécuter CI finale ;
+3. BIR+ pré-déploiement ;
+4. réutiliser `eco-system-db` et `eco-system-backups` ;
+5. migrations additives seulement ;
+6. déployer SHA exact ;
+7. smoke Centre opérationnel + Séances + mobile + Blueprint + forums presets + Financial Lab + acquis 1.4.1 ;
+8. BIR+ post ;
+9. vérité production ;
+10. BIR+ fermeture.
+
+Après production : recette terrain sur le téléphone du fondateur, puis uniquement corrections reproductibles.
+
