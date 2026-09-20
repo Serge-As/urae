@@ -351,3 +351,15 @@ Preuves production :
 
 Document maître :
 `docs/implementation/ECO_SYSTEM_Document_Maitre_Implementation_Blueprint_Executable_1.4.2_2026-09-20.md`
+
+
+## 20. BIR+ de fermeture 1.4.2
+- checkpoint : `d1a69bb5c904268d5f16fc2421e2246154000598`
+- qualification : `35498239952 SUCCESS`
+- backup final source + D1 : `35498239942 SUCCESS`
+- artifact : `10601038586`
+- restauration SQLite : `PRAGMA integrity_check=ok`
+- SHA256 : vérifié
+- miroir R2 : `birplus/1.4.2/d1a69bb5c904268d5f16fc2421e2246154000598/final/` — PASS
+
+La production 1.4.2 est donc sauvegardée après synchronisation de la vérité projet. Prochaine étape : recette terrain réelle ; ne pas confondre PRODUCTION_QUALIFIED et FIELD_ACCEPTED.
