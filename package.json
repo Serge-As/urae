@@ -1,9 +1,9 @@
 {
   "name": "tontine-platform",
-  "version": "1.4.2.1-shell-refresh-hotfix",
+  "version": "1.4.2-operational-center-sessions-blueprint",
   "private": true,
   "type": "module",
-  "description": "Eco-System 1.4.2.1: 1.4.2 feature lot preserved; PWA shell self-refresh hotfix so deployed Operational Center, Sessions and executable Blueprint become visible after navigation.",
+  "description": "Eco-System 1.4.2: 1.4.1 preserved; Operational Center separated from true Sessions workspace; mobile navigation hardened; executable Association-first Blueprint, community action presets, deterministic anti-scam financial lab, and active PWA shell refresh.",
   "engines": {
     "node": ">=24"
   },
