@@ -1625,6 +1625,15 @@ Preuves :
 - artifacts : `10601637363` pré, `10601512437` post ;
 - `realMoneyEnabled=false`.
 
+## 56.3 Fermeture BIR+
+
+- checkpoint : `d1a69bb5c904268d5f16fc2421e2246154000598` ;
+- qualification : `35498239952 SUCCESS` ;
+- backup : `35498239942 SUCCESS` ;
+- artifact : `10601038586` ;
+- R2 : `birplus/1.4.2/d1a69bb5c904268d5f16fc2421e2246154000598/final/` ;
+- SQLite restore + integrity + SHA256 : PASS.
+
 ## 56.2 Ce qui reste à FIELD_QUALIFIED
 
 À ne pas qualifier « acquis terrain » avant test :
@@ -1693,7 +1702,7 @@ et, pour l’exécution :
 - [x] Truth Ledger
 - [x] Feature Registry
 - [x] NEXT_RUN
-- [ ] BIR+ fermeture — à exécuter après ce checkpoint documentaire
+- [x] BIR+ fermeture — `35498239942 SUCCESS` · artifact `10601038586` · R2 final PASS
 - [ ] recette terrain fondateur — obligatoire avant statut ACQUIS
 
 ---
