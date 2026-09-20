@@ -177,3 +177,14 @@ Ne pas déclarer FIELD_ACCEPTED à partir du smoke seul. Ne pas réintroduire un
 - R2 final : `birplus/1.4.2/d1a69bb5c904268d5f16fc2421e2246154000598/final/`
 
 Reprendre directement par la recette terrain 1.4.2 ; ne redéployer que pour un défaut reproductible et couvert par test permanent.
+
+
+## Reprise après clôture 1.4.2 post-hotfix
+- production : `1.4.2-operational-center-sessions-blueprint`
+- source : `a9fe00f94daa7a6787d5a4440a5edc0bc5e4a1c8`
+- Worker : `6c7b4be2-7daa-4f15-ae11-0861d248f60a`
+- HEAD documentaire final : `d686929b44bf9f5f61ddee2ddee434e891c39afb`
+- CI finale : `35499946396 SUCCESS`
+- BIR+ final : `35499946216 SUCCESS`
+- artifact : `10600699685`
+- prochaine action : recette terrain Centre opérationnel + Séances + Blueprint + Communautés sur téléphone/ordinateur ; aucun redéploiement avant défaut reproductible.
