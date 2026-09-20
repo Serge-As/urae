@@ -6,8 +6,9 @@ test('group home is rooted in Association/Tontine context and keeps Séances exp
   const html=await readFile('apps/web/index.html','utf8');
   assert.match(html,/id="groupHomePanel"/);
   assert.match(html,/Accueil du groupe/);
-  assert.match(html,/data-view="operations"[^>]*><span>☷<\/span><b>Séances<\/b>/);
-  assert.match(html,/Séances & feuilles financières/);
+  assert.match(html,/data-view="operations"[^>]*>[\s\S]*?Centre opérationnel/);
+  assert.match(html,/data-view="sessions"[^>]*>[\s\S]*?<b[^>]*>Séances<\/b>/);
+  assert.match(html,/data-go="sessions"[^>]*>[\s\S]*?Séances & réunions/);
 });
 
 test('group home projects canonical recap ledger and self sheet instead of recalculating a parallel truth',async()=>{
