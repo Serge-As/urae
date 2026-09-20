@@ -1159,3 +1159,82 @@ production_qualification_2026_09_20_1_4_1:
   smoke_scope: [health_version,two_sheets,members_backoffice,loan_matrix,group_home,meeting_attendance,beneficiary_receipt_code,offline_snapshot]
   field_reception: pending_for_real_bureau_member_offline_noise_senior_flows
   note: Production deployment is verified; FUNCTIONAL_BETA capabilities remain field-reception pending where real-user validation is required.
+
+
+release_capabilities_1_4_2:
+  branch: next/1.4.2-operational-center-sessions-blueprint-20260920
+  production_deployed: false
+  production_still: 1.4.1-field-integrity-home-sessions
+  real_money_enabled: false
+  source_basis: [founder_mobile_screenshots_2026_09_20,Cadre_minimal_Accueil_Seances,validated_executable_blueprint,historical_audit]
+  capabilities:
+    - id: UX.OPERATIONAL_CENTER.SPLIT
+      status: FUNCTIONAL_BETA
+      risk_class: high
+      authority: existing_operations_view_preserved
+      rule: legacy_transversal_cockpit_is_operational_center_not_session_owner
+      tests: [operational-center-sessions-blueprint-1.4.2]
+    - id: MEETING.DEDICATED.SESSIONS_WORKSPACE
+      status: FUNCTIONAL_BETA
+      risk_class: financial_critical
+      authority: MeetingService_plus_canonical_financial_projections
+      rule: eight_session_tabs_no_second_financial_editor
+      tests: [operational-center-sessions-blueprint-1.4.2,minimum-frame-1.4.1]
+    - id: UX.MOBILE.NAV_READABILITY
+      status: FUNCTIONAL_BETA
+      risk_class: medium
+      authority: responsive_shell
+      rule: horizontal_scroll_snap_multiline_labels_no_feature_hiding
+      tests: [operational-center-sessions-blueprint-1.4.2]
+    - id: MEETING.ATTENDANCE.SINGLE_OWNER
+      status: FUNCTIONAL_BETA
+      risk_class: high
+      authority: MeetingService
+      rule: operational_center_and_sessions_both_use_canonical_meeting_attendance_routes
+      tests: [operational-center-sessions-blueprint-1.4.2,meeting-session-evidence-1.4.1]
+    - id: BLUEPRINT.EXECUTABLE
+      status: FUNCTIONAL_BETA
+      risk_class: high
+      authority: orchestration_workspaces_delegating_to_canonical_owners
+      rule: predict_observe_then_propose_then_human_validate_then_execute_in_owner
+      hard_guards: [forecast_not_demand,demand_not_commitment,commitment_not_transaction,real_money_false]
+      tests: [operational-center-sessions-blueprint-1.4.2]
+    - id: COMMUNITY.ACTION_PRESETS
+      status: FUNCTIONAL_BETA
+      risk_class: medium
+      authority: existing_community_and_interest_community_engines
+      rule: presets_reuse_existing_post_kinds_and_never_create_second_social_engine
+      tests: [operational-center-sessions-blueprint-1.4.2]
+    - id: SAFETY.ANTISCAM.FINANCIAL_LAB
+      status: FUNCTIONAL_BETA
+      risk_class: high
+      authority: SAFETY.ANTISCAM
+      rule: deterministic_assumption_analysis_no_legal_verdict_no_money_action
+      tests: [operational-center-sessions-blueprint-1.4.2]
+    - id: MARKETPLACE.HARVEST_LOCAL.BLUEPRINT
+      status: FUNCTIONAL_BETA
+      risk_class: medium
+      authority: blueprint_workspace_then_marketplace_owner_when_transactional
+      rule: forecast_stock_and_confirmed_stock_must_remain_distinct
+      tests: [operational-center-sessions-blueprint-1.4.2]
+    - id: MARKETPLACE.GROUP_BUY.BLUEPRINT_HANDOFF
+      status: FUNCTIONAL_BETA
+      risk_class: high
+      authority: MARKETPLACE.GROUP_BUY
+      rule: blueprint_never_creates_parallel_group_buy_record
+      tests: [operational-center-sessions-blueprint-1.4.2]
+    - id: PROJECT.BACKHAUL.EXCLUSION
+      status: QUALIFIED_BRANCH_GUARDRAIL
+      risk_class: architecture_critical
+      rule: Eco_Route_Backhaul_Return_Load_is_separate_project_not_Eco_System_module
+      tests: [operational-center-sessions-blueprint-1.4.2]
+
+candidate_qualification_2026_09_20_1_4_2:
+  version: 1.4.2-operational-center-sessions-blueprint
+  branch: next/1.4.2-operational-center-sessions-blueprint-20260920
+  deployed: false
+  production_still: 1.4.1-field-integrity-home-sessions
+  qualification_run: 35493817301
+  real_money_enabled: false
+  implementation_document: docs/implementation/ECO_SYSTEM_Document_Maitre_Implementation_Blueprint_Executable_1.4.2_2026-09-20.md
+  note: Promote to production only after final HEAD qualification, BIR+ predeploy, exact-SHA deployment, smoke and BIR+ postdeploy.
