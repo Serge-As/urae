@@ -1139,6 +1139,11 @@ production_qualification_2026_09_20_1_4_1:
   worker_version_id: d4e56867-077c-47cd-bfc9-9aba4735d596
   qualification_run: 35488899790
   deploy_smoke_birplus_run: 35488899806
+  closure_qualification_run: 35489112828
+  closure_birplus_run: 35489112862
+  closure_checkpoint: 4edf2dcb27c54303becce71ac9bd5b7db2c50496
+  closure_artifact_id: 10598209553
+  closure_r2_prefix: birplus/1.4.1/4edf2dcb27c54303becce71ac9bd5b7db2c50496/final/
   test_count: 256
   tests_passed: 256
   d1: eco-system-db
