@@ -1,7 +1,7 @@
 import worker,{type WorkerEnv} from './index.js';
 export {GroupLiveHub} from './group-live-hub.js';
 
-export const RELEASE_VERSION='1.4.1-field-integrity-home-sessions';
+export const RELEASE_VERSION='1.4.2-operational-center-sessions-blueprint';
 
 const releaseTruthPaths=new Set(['/health','/api/v1/product/capabilities']);
 
