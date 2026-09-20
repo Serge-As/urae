@@ -1,13 +1,13 @@
 # ECO-SYSTEM — CURRENT TRUTH
 
-Date : 2026-09-18
+Date : 2026-09-20
 
 ## 1. Production publique — vérité actuelle
 
 - URL : `https://eco-system.sergemimf.workers.dev/`
-- version : **1.4.0-master-2.3.4-closure**
+- version : **1.4.1-field-integrity-home-sessions**
 - Worker : `eco-system`
-- Worker Version ID : `182e7992-1bf9-479f-914b-c0f04ab1b85c`
+- Worker Version ID : `d4e56867-077c-47cd-bfc9-9aba4735d596`
 - D1 canonique : `eco-system-db`
 - R2 privé : `eco-system-backups`
 - Premium Live : **ACTIF**
@@ -15,19 +15,22 @@ Date : 2026-09-18
 - Forum v2 temps réel : **BOUND / production**
 - stockage artifacts : **R2**
 - argent réel : **DÉSACTIVÉ**
-- workflow qualification + build + BIR+ pré/post + déploiement + smoke : run **35314965700 — SUCCESS**
-- qualification parallèle du SHA déployé : **35314965698 — SUCCESS**
-- source déployée : `e869918002a6a649751b68088de39510dad3b29a`
-- tests dans le workflow : **231/231 PASS**
+- qualification du SHA déployé : **35488899790 — SUCCESS**
+- workflow qualification + build + BIR+ pré/post + déploiement + smoke : **35488899806 — SUCCESS**
+- source déployée : `024b9837b6fa577c0c2c39297c2ce672f7d130b3`
+- tests dans le workflow : **256/256 PASS**
 - D1 : **No migrations to apply**
-- 1.3.3 et les lignes antérieures restent historiques et ne sont plus la production courante.
+- BIR+ pré/post : restauration SQLite + `PRAGMA integrity_check=ok` + SHA256 + miroir R2 **PASS**
+- smoke : version/health + Accueil Groupe + Séances + présence + bénéficiaires + code de réception + offline markers + acquis 1.4.0 **PASS**.
+- 1.4.0 et les lignes antérieures restent historiques ; elles ne sont plus la production courante.
 
 ## 2. Branche et point de reprise
 
-- branche de développement : `next/1.4.0-master-2.3.4-closure-20260917`
-- production stable actuelle : cette même lignée 1.4.0, source `e869918002a6a649751b68088de39510dad3b29a`
+- branche de développement et de production courante : `next/1.4.1-field-integrity-guardrails-20260919`
+- source actuellement déployée : `024b9837b6fa577c0c2c39297c2ce672f7d130b3`
 - reprendre au **HEAD distant le plus récent**, jamais à partir d'un SHA mémorisé sans le revérifier.
-- ne pas repartir d'une lignée 1.3.x pour corriger la production 1.4.0.
+- la prochaine action normale est la **recette terrain 1.4.1** puis des corrections ciblées et testées ; ne pas repartir d'une lignée 1.3.x/1.4.0.
+- le smoke production ne remplace pas la validation réelle Bureau/membre/offline/bruit/senior.
 
 ## 3. R2 / sauvegarde
 
@@ -257,11 +260,12 @@ Périmètre volontairement limité aux critiques terrain :
 
 Statut : `QUALIFIED_BRANCH`. Ne pas déclarer `PRODUCTION_VERIFIED` avant BIR+, déploiement et smoke ciblé.
 
-## 17. Candidate 1.4.1 — réajustement terrain en cours de livraison (2026-09-20)
+## 17. Production 1.4.1 — réajustement terrain livré (2026-09-20)
 
-**Production actuelle avant déploiement : 1.4.0.**  
-**Branche candidate : `next/1.4.1-field-integrity-guardrails-20260919`.**  
-**Version runtime candidate : `1.4.1-field-integrity-home-sessions`.**
+**Production actuelle : `1.4.1-field-integrity-home-sessions`.**  
+**Branche : `next/1.4.1-field-integrity-guardrails-20260919`.**  
+**Source déployée : `024b9837b6fa577c0c2c39297c2ce672f7d130b3`.**  
+**Run production : `35488899806 SUCCESS`.**
 
 Acquis 1.4.1 sur branche :
 - Accueil Groupe et Accueil Membre raccordés aux owners canoniques ;
