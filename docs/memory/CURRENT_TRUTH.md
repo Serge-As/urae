@@ -290,3 +290,15 @@ Ne pas confondre :
 
 `realMoneyEnabled=false` reste obligatoire.
 
+## 18. BIR+ de fermeture 1.4.1
+- checkpoint : `4edf2dcb27c54303becce71ac9bd5b7db2c50496`
+- qualification : `35489112828 SUCCESS`
+- backup final : `35489112862 SUCCESS`
+- artifact : `10598209553`
+- source + D1 exportés ;
+- restauration SQLite : `PRAGMA integrity_check=ok` ;
+- SHA256 vérifiés ;
+- miroir R2 : `birplus/1.4.1/4edf2dcb27c54303becce71ac9bd5b7db2c50496/final/` PASS.
+
+Le prochain travail normal est la recette terrain de la production 1.4.1. Aucun nouveau déploiement n'est nécessaire avant qu'un défaut reproductible le justifie.
+
