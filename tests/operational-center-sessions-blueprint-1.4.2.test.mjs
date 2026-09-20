@@ -98,3 +98,17 @@ test('PWA precaches all new 1.4.2 UI modules',async()=>{
   const sw=await readFile('apps/web/sw.js','utf8');
   for(const path of ['/src/sessions-ui.js','/src/blueprint-executable-ui.js','/src/community-blueprint-presets.js','/src/financial-lab-ui.js'])assert.ok(sw.includes(path),path);
 });
+
+
+test('1.4.2 actively refreshes the PWA shell so deployed UI replaces stale 1.4.1 caches',async()=>{
+  const [main,sw,html]=await Promise.all([
+    readFile('apps/web/src/main.js','utf8'),
+    readFile('apps/web/sw.js','utf8'),
+    readFile('apps/web/index.html','utf8')
+  ]);
+  assert.match(main,/void ensureCurrentServiceWorker\(\);[\s\S]*?void start\(\);/);
+  assert.match(sw,/eco-system-v1421-shell-refresh-20260920/);
+  assert.match(html,/\/styles\.css\?v=1421/);
+  assert.match(html,/\/src\/main\.js\?v=1421/);
+  assert.match(html,/ECO-SYSTEM · 1\.4\.2/);
+});
