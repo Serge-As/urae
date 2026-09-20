@@ -788,6 +788,16 @@
             <div class="two-col">
               <form id="interestContentForm" class="form-grid">
                 <h3>Partager</h3>
+                <div id="interestContentPresets" class="actions full contextual-action-presets">
+                  <button type="button" class="link-btn" data-interest-preset="need">Besoin</button>
+                  <button type="button" class="link-btn" data-interest-preset="offer">Offre</button>
+                  <button type="button" class="link-btn" data-interest-preset="event">Événement</button>
+                  <button type="button" class="link-btn" data-interest-preset="place">Bon coin / lieu</button>
+                  <button type="button" class="link-btn" data-interest-preset="harvest">Récolte / local</button>
+                  <button type="button" class="link-btn" data-interest-preset="skill">Compétence</button>
+                  <button type="button" class="link-btn" data-interest-preset="sourced">Info sourcée</button>
+                  <button type="button" class="link-btn" data-interest-preset="buzz">Buzz / tendance</button>
+                </div>
                 <label>Type<select id="interestContentKind"><option value="POST">Publication</option><option value="EVENT">Événement</option><option value="PLACE">Bon coin / lieu</option><option value="OFFER">Offre</option><option value="REQUEST">Demande</option></select></label>
                 <label>Catégorie<input id="interestContentCategory" placeholder="sortie, restaurant, boisson, hébergement…"></label>
                 <label>Titre<input id="interestContentTitle"></label>
@@ -806,6 +816,18 @@
         <section class="panel"><div class="section-kicker"><div><h2>Communauté & Hubs professionnels</h2><p>Forums, événements, votes, réputation, gestionnaires et partenaires.</p></div></div><div id="communityHub" class="hub-grid"></div></section>
         <section class="panel" id="communityEnginePanel">
           <div class="section-kicker"><div><h2>Communautés vivantes</h2><p>Espaces privés ou publics, discussions, annonces, offres et demandes. Les fédérations entre groupes utilisent uniquement leurs codes identitaires publics.</p></div></div>
+          <div class="community-innovation-strip">
+            <strong>Adapter le forum à l’action</strong>
+            <p class="hint">Un forum reste un espace social ; ces raccourcis structurent le besoin sans créer un second moteur. Toute information dite « sourcée » doit citer une source/auteur/preuve : l’heure de publication ne rend jamais une information vraie.</p>
+            <div id="communityHubPresets" class="actions">
+              <button type="button" class="secondary" data-hub-preset="main">Forum principal</button>
+              <button type="button" class="secondary" data-hub-preset="opportunity">Opportunités</button>
+              <button type="button" class="secondary" data-hub-preset="market">Marché & besoins</button>
+              <button type="button" class="secondary" data-hub-preset="skills">Compétences & emploi</button>
+              <button type="button" class="secondary" data-hub-preset="agri">Agriculture & production</button>
+              <button type="button" class="secondary" data-hub-preset="news">Actualités sourcées</button>
+            </div>
+          </div>
           <div class="two-col">
             <form id="communityHubForm" class="form-grid">
               <h3>Créer un Hub</h3>
@@ -821,6 +843,16 @@
           <div class="two-col">
             <form id="communityPostForm" class="form-grid">
               <h3>Publier</h3>
+              <div id="communityPostPresets" class="actions full contextual-action-presets">
+                <button type="button" class="link-btn" data-post-preset="need">Besoin</button>
+                <button type="button" class="link-btn" data-post-preset="offer">Offre</button>
+                <button type="button" class="link-btn" data-post-preset="groupbuy">Achat groupé</button>
+                <button type="button" class="link-btn" data-post-preset="harvest">Récolte / arrivage</button>
+                <button type="button" class="link-btn" data-post-preset="skill">Compétence / service</button>
+                <button type="button" class="link-btn" data-post-preset="learn">Formation / savoir</button>
+                <button type="button" class="link-btn" data-post-preset="sourced">Info sourcée</button>
+                <button type="button" class="link-btn" data-post-preset="buzz">Tendance / Buzz</button>
+              </div>
               <label>Hub<select id="communityPostHub"></select></label>
               <label>Type<select id="communityPostKind"><option value="DISCUSSION">Discussion</option><option value="ANNOUNCEMENT">Annonce</option><option value="OFFER">Offre</option><option value="REQUEST">Demande</option></select></label>
               <label>Titre<input id="communityPostTitle" placeholder="Facultatif"></label>
