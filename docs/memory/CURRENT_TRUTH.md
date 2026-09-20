@@ -302,3 +302,24 @@ Ne pas confondre :
 
 Le prochain travail normal est la recette terrain de la production 1.4.1. Aucun nouveau déploiement n'est nécessaire avant qu'un défaut reproductible le justifie.
 
+## 19. Candidate 1.4.2 — Centre opérationnel / Séances / Blueprint
+
+Production avant promotion : `1.4.1-field-integrity-home-sessions`.
+
+Candidate :
+- version : `1.4.2-operational-center-sessions-blueprint` ;
+- branche : `next/1.4.2-operational-center-sessions-blueprint-20260920` ;
+- qualification release intermédiaire : `35493817301 SUCCESS` ;
+- argent réel : OFF.
+
+Décisions irréversibles de compréhension :
+1. `operations` est le **Centre opérationnel** transversal, pas le propriétaire d'une séance ;
+2. `sessions` est la vraie page Séances ;
+3. MeetingService est l'unique owner du contexte séance et de la présence ;
+4. la page Séances projette le Ledger et renvoie à l'éditeur canonique des deux feuilles pour la saisie/correction ;
+5. le Blueprint orchestre mais ne possède pas les transactions ;
+6. Group Buy est transmis au moteur existant ;
+7. forums/communautés sont enrichis, jamais dupliqués ;
+8. Financial Lab explique les hypothèses, jamais un verdict « Ponzi/arnaque » ;
+9. Eco Route/Backhaul reste un projet autonome extérieur.
+
