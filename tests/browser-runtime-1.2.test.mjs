@@ -28,15 +28,15 @@ test('runtime bilingual dictionary covers critical current shell journeys',()=>{
   assert.equal(localeTag('fr'),'fr-CM');assert.equal(localeTag('en'),'en-CM');
 });
 
-test('PWA cache contains current 1.3.4 field and bilingual transitive modules',()=>{
+test('PWA cache contains current field-integrity and bilingual transitive modules',()=>{
   const sw=fs.readFileSync('apps/web/sw.js','utf8');
   for(const path of ['/src/field-hardening.js','/src/voice-entry-bootstrap.js','/src/voice-entry-ui.js','/src/expense-recap-ui.js','/src/member-dossier-ui.js','/src/documents-ui.js','/src/contextual-group-ui.js','/src/runtime-i18n.js','/src/completion-ui.js','/src/advanced-ui.js','/src/offline-snapshot.js','/packages/completion/src/index.js'])assert.ok(sw.includes(path),path);
-  assert.match(sw,/v134/);
+  assert.match(sw,/eco-system-v141-field-integrity-home-sessions-20260920/);
 });
 
 test('current shell identifies 1.4 instead of stale copies',()=>{
   const html=fs.readFileSync('apps/web/index.html','utf8');
-  assert.match(html,/1\.4\.0/);assert.doesNotMatch(html,/1\.1\.2/);
+  assert.match(html,/1\.4\.1/);assert.doesNotMatch(html,/1\.1\.2/);
   assert.match(html,/view-tontines/);assert.match(html,/tontineRubricCatalog/);assert.match(html,/view-members/);assert.match(html,/view-backoffice/);assert.match(html,/loanCompletionPanel/);assert.match(html,/completionLab/);
 });
 
