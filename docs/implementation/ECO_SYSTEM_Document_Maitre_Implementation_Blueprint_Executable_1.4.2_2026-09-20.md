@@ -4,8 +4,8 @@
 **Date de référence : 20 septembre 2026**  
 **Branche d’implémentation : `next/1.4.2-operational-center-sessions-blueprint-20260920`**  
 **Version livrée : `1.4.2-operational-center-sessions-blueprint`**  
-**Production vérifiée : `1.4.2-operational-center-sessions-blueprint` — run `35497930031 SUCCESS`**  
-**Source déployée : `61a6d83ac5793bb5fecac7ba77a7bd4149031e27` · Worker `b54df0a5-2338-4e37-8b4d-a05351b43658`**  
+**Production vérifiée : `1.4.2-operational-center-sessions-blueprint` — hotfix PWA livré par run `35499693884 SUCCESS`**  
+**Source déployée : `a9fe00f94daa7a6787d5a4440a5edc0bc5e4a1c8` · Worker Version ID `6c7b4be2-7daa-4f15-ae11-0861d248f60a`**  
 **Socle préservé : `1.4.1-field-integrity-home-sessions` + acquis antérieurs**  
 **D1 canonique : `eco-system-db` — NE JAMAIS RECRÉER**  
 **R2 privé : `eco-system-backups`**  
@@ -1786,3 +1786,32 @@ La première observation réelle sur l’appareil du fondateur reste une recette
 **Terrain :** à recevoir sur téléphone/ordinateur du fondateur.
 
 **Fin du document maître d’implémentation 1.4.2.**
+
+
+# 63. CHECKPOINT FINAL POST-HOTFIX
+
+Le lot 1.4.2 a été refermé après la correction de convergence PWA et la synchronisation de la vérité projet.
+
+État final vérifié :
+- version publique : `1.4.2-operational-center-sessions-blueprint` ;
+- source réellement déployée : `a9fe00f94daa7a6787d5a4440a5edc0bc5e4a1c8` ;
+- Worker Version ID : `6c7b4be2-7daa-4f15-ae11-0861d248f60a` ;
+- qualification du SHA livré : `35499693852 SUCCESS` ;
+- déploiement + smoke + BIR+ pré/post : `35499693884 SUCCESS` ;
+- tests : **265/265 PASS** ;
+- D1 : `eco-system-db`, réutilisée ;
+- R2 : `eco-system-backups`, réutilisé ;
+- migrations : **No migrations to apply** ;
+- argent réel : **OFF**.
+
+Checkpoint documentaire final :
+- HEAD : `d686929b44bf9f5f61ddee2ddee434e891c39afb` ;
+- qualification : `35499946396 SUCCESS` ;
+- BIR+ final : `35499946216 SUCCESS` ;
+- artifact final : `10600699685` ;
+- restauration SQLite : `PRAGMA integrity_check=ok` ;
+- SHA256 : validé ;
+- R2 final : `birplus/1.4.2/d686929b44bf9f5f61ddee2ddee434e891c39afb/final/` — PASS.
+
+La prochaine étape normale n'est pas un nouveau développement massif : c'est la recette terrain de cette production, puis des corrections uniquement sur défaut reproductible.
+
