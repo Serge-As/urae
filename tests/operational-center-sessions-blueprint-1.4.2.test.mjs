@@ -82,7 +82,19 @@ test('forums and communities receive action presets without a parallel social en
   assert.doesNotMatch(presets,/createSecondForum|parallelForum|newSocialEngine/i);
 });
 
+test('financial anti-scam lab is deterministic educational analysis, not a legal verdict',async()=>{
+  const [html,lab]=await Promise.all([readFile('apps/web/index.html','utf8'),readFile('apps/web/src/financial-lab-ui.js','utf8')]);
+  assert.ok(html.includes('Labo financier & anti-arnaques'));
+  assert.match(lab,/Math\.pow\(1\+rate,months\)/);
+  assert.match(lab,/gapWithoutNew/);
+  assert.match(lab,/newDeposits/);
+  assert.match(lab,/Eco-System ne conclut pas « Ponzi » ou « arnaque »/);
+  assert.match(lab,/legalVerdict:false/);
+  assert.match(lab,/realMoney:false/);
+  assert.match(lab,/moduleId:'SAFETY\.ANTISCAM'/);
+});
+
 test('PWA precaches all new 1.4.2 UI modules',async()=>{
   const sw=await readFile('apps/web/sw.js','utf8');
-  for(const path of ['/src/sessions-ui.js','/src/blueprint-executable-ui.js','/src/community-blueprint-presets.js'])assert.ok(sw.includes(path),path);
+  for(const path of ['/src/sessions-ui.js','/src/blueprint-executable-ui.js','/src/community-blueprint-presets.js','/src/financial-lab-ui.js'])assert.ok(sw.includes(path),path);
 });
