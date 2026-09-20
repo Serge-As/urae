@@ -390,3 +390,19 @@ Preuves :
 - `realMoneyEnabled=false`.
 
 Point terrain immédiat : ouvrir/actualiser l'application sur le téléphone et vérifier que le menu affiche **Centre opérationnel** séparé de **Séances**, puis tester les huit sections Séances. Ne pas marquer FIELD_ACCEPTED avant cette vérification réelle.
+
+
+## 19. Production 1.4.2 post-hotfix — références finales
+- source déployée : `a9fe00f94daa7a6787d5a4440a5edc0bc5e4a1c8`
+- Worker Version ID : `6c7b4be2-7daa-4f15-ae11-0861d248f60a`
+- qualification production : `35499693852 SUCCESS`
+- deploy/smoke/BIR+ : `35499693884 SUCCESS`
+- tests : `265/265 PASS`
+- checkpoint documentaire final : `d686929b44bf9f5f61ddee2ddee434e891c39afb`
+- qualification finale : `35499946396 SUCCESS`
+- BIR+ final : `35499946216 SUCCESS`
+- artifact : `10600699685`
+- R2 final : `birplus/1.4.2/d686929b44bf9f5f61ddee2ddee434e891c39afb/final/`
+- realMoneyEnabled : `false`.
+
+La production est TECHNIQUEMENT QUALIFIÉE. Les nouveaux parcours restent FIELD_ACCEPTED uniquement après observation réelle du fondateur.
