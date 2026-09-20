@@ -256,3 +256,33 @@ Périmètre volontairement limité aux critiques terrain :
 - le starter métier est « Timbre de prêt » ; aucun starter générique « Timbre » n'est injecté automatiquement.
 
 Statut : `QUALIFIED_BRANCH`. Ne pas déclarer `PRODUCTION_VERIFIED` avant BIR+, déploiement et smoke ciblé.
+
+## 17. Candidate 1.4.1 — réajustement terrain en cours de livraison (2026-09-20)
+
+**Production actuelle avant déploiement : 1.4.0.**  
+**Branche candidate : `next/1.4.1-field-integrity-guardrails-20260919`.**  
+**Version runtime candidate : `1.4.1-field-integrity-home-sessions`.**
+
+Acquis 1.4.1 sur branche :
+- Accueil Groupe et Accueil Membre raccordés aux owners canoniques ;
+- identité publique ECO-GRP + profil déclaration/mandat ;
+- page Séances comme cockpit complet ;
+- date/lieu/thème/tenue sur MeetingService ;
+- présence gouvernée ;
+- bénéficiaire déclaré avant preuve ;
+- preuve de réception immuable et idempotente avec code ECO-RCP non secret ;
+- photo/PDF de preuve via artifact store/R2 ;
+- créances membre filtrées dans ReceivablesService ;
+- correction financière avec revue indépendante systématique ;
+- offline snapshot explicite, actor-scoped, jamais substitut d'une réussite serveur ;
+- dictée à confiance contrôlée ;
+- PWA/cache 1.4.1 ;
+- workflow de production 1.4.1 avec qualification + BIR+ pré + déploiement + smoke + BIR+ post.
+
+Ne pas confondre :
+- CI branche = qualification technique ;
+- smoke production = présence fonctionnelle de marqueurs ;
+- recette terrain = validation réelle Bureau/membre/offline/bruit/senior.
+
+`realMoneyEnabled=false` reste obligatoire.
+
