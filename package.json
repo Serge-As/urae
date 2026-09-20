@@ -3,7 +3,7 @@
   "version": "1.4.2-operational-center-sessions-blueprint",
   "private": true,
   "type": "module",
-  "description": "Eco-System 1.4.2: 1.4.1 preserved; Operational Center separated from true Sessions workspace; mobile navigation hardened; executable Association-first Blueprint, community action presets, deterministic anti-scam financial lab, and active PWA shell refresh.",
+  "description": "Eco-System 1.4.2: 1.4.1 preserved; Operational Center separated from true Sessions workspace; mobile navigation hardened; executable Association-first Blueprint, community action presets and deterministic anti-scam financial lab.",
   "engines": {
     "node": ">=24"
   },
