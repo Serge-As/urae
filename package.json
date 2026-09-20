@@ -1,9 +1,9 @@
 {
   "name": "tontine-platform",
-  "version": "1.4.1-field-integrity-home-sessions",
+  "version": "1.4.2-operational-center-sessions-blueprint",
   "private": true,
   "type": "module",
-  "description": "Eco-System 1.4.1: Master 2.3.4 preserved, field-integrity corrections, canonical group Home and Sessions cockpit, governed attendance, beneficiary receipt evidence, honest offline snapshots, voice confidence guards, loans/savings/Forum/AdOps/Marketplace retained.",
+  "description": "Eco-System 1.4.2: 1.4.1 preserved; Operational Center separated from true Sessions workspace; mobile navigation hardened; executable Association-first Blueprint, community action presets and deterministic anti-scam financial lab.",
   "engines": {
     "node": ">=24"
   },
