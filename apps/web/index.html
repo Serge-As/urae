@@ -753,6 +753,25 @@
           <div id="blueprintExecutableRoot" class="stack"></div>
         </section>
 
+        <section class="panel" id="financialLabPanel">
+          <div class="panel-head"><div><span class="eyebrow">SAFETY.ANTISCAM · éducation financière</span><h2>Labo financier & anti-arnaques</h2><p>Décomposez une promesse financière en hypothèses et ressources. Le Labo ne déclare jamais qu’une personne ou entreprise est frauduleuse : il montre les écarts à vérifier.</p></div><button id="financialLabRefreshBtn" type="button" class="secondary">Historique</button></div>
+          <form id="financialLabForm" class="form-grid">
+            <label>Nom du scénario<input id="financialLabTitle" required placeholder="Ex. Placement promettant 20 % par mois"></label>
+            <label>Participants / comptes<input id="financialLabParticipants" type="number" min="1" step="1" value="1" required></label>
+            <label>Mise initiale par participant (XAF)<input id="financialLabDeposit" type="number" min="0" step="1" value="100000" required></label>
+            <label>Rendement promis par mois (%)<input id="financialLabRate" type="number" min="0" max="10000" step="0.01" value="10" required></label>
+            <label>Durée (mois)<input id="financialLabMonths" type="number" min="1" max="1200" step="1" value="6" required></label>
+            <label>Revenus économiques documentés / mois (XAF)<input id="financialLabExternalRevenue" type="number" min="0" step="1" value="0"></label>
+            <label>Nouveaux dépôts attendus / mois (XAF)<input id="financialLabNewDeposits" type="number" min="0" step="1" value="0"></label>
+            <label class="full">Mécanisme économique déclaré<textarea id="financialLabMechanism" rows="3" placeholder="Activité, produit ou service censé générer le rendement"></textarea></label>
+            <label class="full">Source / preuve / document<textarea id="financialLabEvidence" rows="2" placeholder="URL, référence, document, licence annoncée, preuve d’activité…"></textarea></label>
+            <label>Mode de calcul<select id="financialLabMode"><option value="COMPOUND">Capitalisation mensuelle de la promesse</option><option value="SIMPLE">Promesse simple sur capital initial</option></select></label>
+            <button class="primary">Analyser le scénario</button>
+          </form>
+          <div id="financialLabResult" class="stack"></div>
+          <div id="financialLabHistory" class="stack"></div>
+        </section>
+
         <section class="panel" id="interestCommunityPanel">
           <div class="section-kicker"><div><h2>Communautés d’intérêts · style Meetup</h2><p>Des communautés indépendantes des tontines : sorties, métiers, passions, quartiers, sport, culture, entrepreneuriat, entraide et vie locale.</p></div></div>
           <div class="two-col">
