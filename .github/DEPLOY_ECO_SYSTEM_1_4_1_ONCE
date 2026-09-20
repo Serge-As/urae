@@ -1,0 +1,5 @@
+Eco-System 1.4.1 production delivery marker
+version=1.4.1-field-integrity-home-sessions
+branch=next/1.4.1-field-integrity-guardrails-20260919
+authorized_by_founder_chat=2026-09-20
+guardrails=full_ci,birplus_pre,reuse_existing_d1_r2,additive_migrations_only,smoke,birplus_post,real_money_false
