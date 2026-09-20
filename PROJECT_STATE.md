@@ -74,3 +74,37 @@ Recette terrain ciblée de la production 1.4.0 : groupe à nombre variable de ru
 - Tontines reliées aux rubriques TONTINE ; calcul du montant total du pot ; listes Cycle/Membre ; classement bénéficiaires.
 - Matrice Prêt modifiable pour la simulation sans altérer les règles financières.
 - La production publique reste au checkpoint 1.4 précédent jusqu'au déploiement ciblé et au smoke final.
+
+## Candidate 1.4.1 — Field Integrity / Accueil / Séances (2026-09-20)
+
+La production publique reste **1.4.0** tant que le workflow de déploiement 1.4.1 n'a pas fini BIR+ + deploy + smoke.
+
+Ligne candidate :
+- version : `1.4.1-field-integrity-home-sessions` ;
+- branche : `next/1.4.1-field-integrity-guardrails-20260919` ;
+- `realMoneyEnabled=false` inchangé ;
+- D1 canonique à réutiliser : `eco-system-db` ;
+- R2 privé à réutiliser : `eco-system-backups`.
+
+Périmètre intégré :
+1. Accueil Groupe enrichi sans second moteur comptable : code ECO-GRP, déclaration, mandat, Bureau, cycle, séances, situation Ledger/Récap, créances, classement Tontines.
+2. Accueil Membre : propre situation, propres dettes, propres participations/bénéfices et accès aux fiches/simulations selon droits.
+3. Séance complète : contexte date/lieu/thème/tenue, temporalité précédente/courante/suivante, finance, caisse, dettes, Back-office, présence, bénéficiaires, preuves et historique.
+4. Preuve bénéficiaire : déclaration préalable, confirmation personnelle ou émargement responsable ou photo/PDF R2, preuve KERNEL.EVIDENCE immuable, retry idempotent, code `ECO-RCP-...` non secret.
+5. Confidentialité créances : le responsable voit le rapport groupe ; le membre simple obtient uniquement ses obligations.
+6. Correction financière : ancienne valeur + contrepassation + nouvelle valeur + motif + audit + revue indépendante ; auteur jamais son propre réviseur.
+7. Offline : dernière projection actor-scoped avec horodatage, jamais faux succès serveur.
+8. Dictée : garde de confiance, alternatives et preview obligatoire ; robustesse parfaite au bruit non déclarée acquise.
+9. Deux conventions obligatoires : Autorité canonique unique + Reuse Before Build.
+10. Labo financier anti-arnaques/Ponzi restauré comme `SAFETY.ANTISCAM` STRUCTURAL_V1, non présenté comme fonction terrain déjà qualifiée.
+
+Documents :
+- `docs/implementation/ECO_SYSTEM_PLAN_IMPLEMENTATION_REAJUSTEMENT_1.4.1_2026-09-19.md`
+- `docs/constitution/ECO_SYSTEM_Additif_Reajustement_Accueil_Seances_Vision_1.4.1_2026-09-19.md`
+
+Déploiement préparé par :
+- `.github/workflows/deploy-production-1.4.1.yml`
+- `.github/workflows/backup-birplus-1.4.1.yml`
+
+Règle de clôture : ne déclarer 1.4.1 visible en production qu'après le smoke du SHA exact.
+
