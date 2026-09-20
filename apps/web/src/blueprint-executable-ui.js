@@ -59,11 +59,11 @@ const DEFINITIONS={
 
 export function mountBlueprintExecutableUI({app,getGroups,getMeetings,navigate,notify,showError}){
   const root=byId('blueprintExecutableRoot');if(!root)return{refresh:async()=>{}};
-  let active='core';
+  let active='core',workContext='GROUP';
 
   const activeGroup=()=>getGroups().find(x=>x.id===app.activeGroup());
   const contextControl=()=>{
-    const select=document.createElement('select');select.id='blueprintContext';select.append(new Option(t('Groupe actif','Active group'),'GROUP'),new Option(t('Personnel / hors groupe','Personal / outside group'),'PERSONAL'));return select;
+    const select=document.createElement('select');select.id='blueprintContext';select.append(new Option(t('Groupe actif','Active group'),'GROUP'),new Option(t('Personnel / hors groupe','Personal / outside group'),'PERSONAL'));select.value=workContext;return select;
   };
 
   const renderHeader=()=>{
@@ -99,7 +99,7 @@ export function mountBlueprintExecutableUI({app,getGroups,getMeetings,navigate,n
       if(r.status==='DRAFT'){const validate=button(t('Valider humainement','Human validate'),'primary');validate.onclick=()=>void(async()=>{try{validate.disabled=true;await app.updateWorkspaceRecord(r.id,{status:'ACTIVE',data:{...r.data,humanValidated:true,validatedAt:new Date().toISOString()}});notify(t('Proposition validée comme workflow actif. Cela ne crée toujours pas de transaction financière.','Proposal validated as active workflow. This still creates no financial transaction.'));await renderRecords(moduleId,box);}catch(e){showError(e);}finally{validate.disabled=false;}})();acts.append(validate);}
       if(r.status==='ACTIVE'){const done=button(t('Marquer réalisé','Mark done'));done.onclick=()=>void(async()=>{try{await app.updateWorkspaceRecord(r.id,{status:'DONE',data:{...r.data,completedAt:new Date().toISOString()}});await renderRecords(moduleId,box);}catch(e){showError(e);}})();acts.append(done);}
       if(['DRAFT','ACTIVE','DONE'].includes(r.status)){const archive=button(t('Archiver','Archive'));archive.onclick=()=>void(async()=>{try{await app.updateWorkspaceRecord(r.id,{status:'ARCHIVED'});await renderRecords(moduleId,box);}catch(e){showError(e);}})();acts.append(archive);}
-      if(moduleId==='MARKETPLACE.GROUP_BUY'&&r.status==='ACTIVE'){const specialized=button(t('Continuer dans Marketplace','Continue in Marketplace'));specialized.onclick=()=>navigate('marketplace');acts.append(specialized);}
+      if(moduleId==='MARKETPLACE.GROUP_BUY'&&r.status==='ACTIVE'){const specialized=button(t('Continuer dans Marketplace','Continue in Marketplace'));specialized.onclick=()=>navigate('ecosystem');acts.append(specialized);}
       item.append(acts);host.append(item);
     }
   };
@@ -113,7 +113,7 @@ export function mountBlueprintExecutableUI({app,getGroups,getMeetings,navigate,n
     }
     for(const def of d.items)head.append(workflowForm(def,context));
     root.append(head);
-    context.onchange=()=>void refresh();
+    context.onchange=()=>{workContext=context.value;void refresh();};
     for(const box of head.querySelectorAll('.blueprint-workflow-card')){const moduleId=box.querySelector('.blueprint-state')?.textContent;if(moduleId&&String(moduleId).includes('.'))await renderRecords(moduleId,box);}
     const doctrine=el('article',undefined,'truth-notice');doctrine.append(el('strong',t('Doctrine d’exécution','Execution doctrine')),el('p',t('PRÉDIRE / OBSERVER → PROPOSER → VALIDATION HUMAINE → EXÉCUTER DANS LE MOTEUR CANONIQUE. Prévision ≠ demande ≠ engagement ≠ transaction. Aucun argent réel n’est déclenché par ce cockpit.','PREDICT / OBSERVE → PROPOSE → HUMAN VALIDATION → EXECUTE IN THE CANONICAL ENGINE. Forecast ≠ demand ≠ commitment ≠ transaction. This cockpit triggers no real-money action.')));root.append(doctrine);
   }
