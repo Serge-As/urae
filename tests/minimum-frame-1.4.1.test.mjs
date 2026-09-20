@@ -66,5 +66,8 @@ test('Accueil and Séances implement the minimum frame with non-destructive mana
   for(const phrase of ['Finances de la séance','Gestion des dettes à ce jour','Caisses / dépenses du Back-office comprises','Présence et émargement','Bénéficiaires et preuves de réception','Liste des séances / précédentes séances','Lieu / canal','Thème','Tenue / code vestimentaire'])assert.ok(detail.includes(phrase),phrase);
   assert.ok(home.includes('Gérer / archiver les rubriques'));
   assert.ok(!home.includes('Supprimer définitivement les rubriques'));
-  assert.ok(html.includes('Séances · Feuilles · Présences · Bénéficiaires'));
+  assert.ok(html.includes('Centre opérationnel'));
+  assert.ok(html.includes('id="view-sessions"'));
+  assert.ok(html.includes('Vue d’ensemble'));
+  assert.ok(html.includes('Bénéficiaires & preuves'));
 });
