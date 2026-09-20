@@ -1720,4 +1720,69 @@ Il faut d’abord :
 
 Ensuite, les modules STRUCTURAL_V1 du Blueprint peuvent être spécialisés progressivement selon les usages observés.
 
+# 61. HOTFIX DE VISIBILITÉ PWA — LIVRAISON FINALE
+
+## 61.1 Symptôme terrain
+
+Après le premier déploiement 1.4.2, la production distante était qualifiée et smoke-testée, mais un appareil déjà contrôlé par l’ancien shell pouvait continuer à afficher l’interface 1.4.1.
+
+Ce défaut n’était pas un défaut des données, du Ledger, de D1 ou du contenu 1.4.2. Il s’agissait d’un défaut de convergence du shell PWA.
+
+## 61.2 Cause
+
+La fonction `ensureCurrentServiceWorker()` existait dans `apps/web/src/main.js` et savait :
+- enregistrer `/sw.js` au scope racine ;
+- utiliser `updateViaCache:'none'` ;
+- appeler `reg.update()` ;
+- recharger une fois lors de `controllerchange`.
+
+Mais elle n’était jamais invoquée.
+
+## 61.3 Correction
+
+Correction volontairement minimale :
+1. invoquer `ensureCurrentServiceWorker()` avant `start()` ;
+2. ne pas changer l’identité runtime 1.4.2 ;
+3. ne pas changer le cache Service Worker qualifié ;
+4. ne toucher ni au Ledger, ni aux règles métier, ni aux migrations ;
+5. ajouter un test permanent qui vérifie que le mécanisme n’est plus seulement défini mais réellement déclenché.
+
+## 61.4 Preuves
+
+- commit du test anti-régression : `113ad9fc021edecdb4fdc03696d7288125ca9c81` ;
+- qualification : **35499635884 SUCCESS** ;
+- SHA final déployé : `a9fe00f94daa7a6787d5a4440a5edc0bc5e4a1c8` ;
+- qualification du SHA final : **35499693852 SUCCESS** ;
+- déploiement + smoke + BIR+ pré/post : **35499693884 SUCCESS** ;
+- artifact BIR+ pré : **10602035551** ;
+- artifact BIR+ post : **10602215385** ;
+- D1 : `eco-system-db` réutilisée ;
+- R2 : `eco-system-backups` réutilisé ;
+- argent réel : toujours **OFF**.
+
+## 61.5 Ce que l’utilisateur doit constater
+
+Après ouverture/actualisation réseau de l’application :
+- la navigation doit afficher **Centre opérationnel** ;
+- un menu **Séances** séparé doit être visible ;
+- la page Séances doit exposer ses huit sections ;
+- le Blueprint exécutable doit être visible dans Communauté & économie ;
+- les presets Forum/Communautés et le Labo financier doivent rester disponibles.
+
+La première observation réelle sur l’appareil du fondateur reste une recette terrain. Elle ne doit pas être inventée à partir du smoke distant.
+
+---
+
+# 62. ÉTAT FINAL DU LOT
+
+**Version runtime :** 1.4.2-operational-center-sessions-blueprint  
+**Branche :** next/1.4.2-operational-center-sessions-blueprint-20260920  
+**Source production :** a9fe00f94daa7a6787d5a4440a5edc0bc5e4a1c8  
+**Qualification production :** 35499693852 SUCCESS  
+**Deploy / smoke / BIR+ :** 35499693884 SUCCESS  
+**D1 :** eco-system-db, conservée  
+**R2 :** eco-system-backups, conservé  
+**Real Money :** OFF  
+**Terrain :** à recevoir sur téléphone/ordinateur du fondateur.
+
 **Fin du document maître d’implémentation 1.4.2.**
