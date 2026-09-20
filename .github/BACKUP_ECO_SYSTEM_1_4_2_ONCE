@@ -3,3 +3,5 @@ production_version=1.4.2-operational-center-sessions-blueprint
 production_source=61a6d83ac5793bb5fecac7ba77a7bd4149031e27
 production_run=35497930031
 field_acceptance=pending
+truth_closure_recorded=35498239942
+final_mirror_requested=2026-09-20
