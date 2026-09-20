@@ -15,17 +15,17 @@ Date : 2026-09-20
 10. derniers runs GitHub et état Cloudflare réel.
 
 ## Branche de reprise
-`next/1.4.1-field-integrity-guardrails-20260919`
+`next/1.4.2-operational-center-sessions-blueprint-20260920`
 
 Toujours récupérer le HEAD distant réel avant toute modification.
 
 ## Production actuelle
-- version : **1.4.1-field-integrity-home-sessions**
-- source déployée : `024b9837b6fa577c0c2c39297c2ce672f7d130b3`
-- Worker Version ID : `d4e56867-077c-47cd-bfc9-9aba4735d596`
-- production + smoke + BIR+ pré/post : **35488899806 SUCCESS**
-- qualification du SHA déployé : **35488899790 SUCCESS**
-- tests : **256/256 PASS**
+- version : **1.4.2-operational-center-sessions-blueprint**
+- source déployée : `61a6d83ac5793bb5fecac7ba77a7bd4149031e27`
+- Worker Version ID : `b54df0a5-2338-4e37-8b4d-a05351b43658`
+- production + smoke + BIR+ pré/post : **35497930031 SUCCESS**
+- qualification du SHA déployé : **35497930024 SUCCESS**
+- tests : **264/264 PASS**
 - D1 : `eco-system-db` réutilisée ; **No migrations to apply**
 - R2 : `eco-system-backups` ; pré/post BIR+ restaurés, checksummés et remirrored
 - Premium Live / Founder Control / Community Realtime / R2 : actifs/bound
@@ -110,7 +110,7 @@ Ne pas rouvrir les moteurs déjà qualifiés sans défaut reproductible. Le smok
 
 Reprendre directement par la recette terrain 1.4.1 ; ne relancer ni D1 ni déploiement sans défaut reproductible.
 
-## Candidate 1.4.2 — point de reprise avant production
+## Reprise 1.4.2 — production vérifiée, recette terrain à faire
 
 Branche :
 `next/1.4.2-operational-center-sessions-blueprint-20260920`
@@ -118,20 +118,26 @@ Branche :
 Version :
 `1.4.2-operational-center-sessions-blueprint`
 
-Dernière qualification release connue avant clôture documentaire :
-`35493817301 SUCCESS`.
+Preuves production :
+- source déployée : `61a6d83ac5793bb5fecac7ba77a7bd4149031e27` ;
+- qualification : `35497930024 SUCCESS` ;
+- deploy/smoke/BIR+ pré/post : `35497930031 SUCCESS` ;
+- Worker Version ID : `b54df0a5-2338-4e37-8b4d-a05351b43658` ;
+- 264/264 tests ;
+- aucune migration D1 à appliquer ;
+- BIR+ pré/post R2 : PASS ;
+- argent réel : OFF.
 
-Avant toute production :
-1. récupérer HEAD distant final ;
-2. exécuter CI finale ;
-3. BIR+ pré-déploiement ;
-4. réutiliser `eco-system-db` et `eco-system-backups` ;
-5. migrations additives seulement ;
-6. déployer SHA exact ;
-7. smoke Centre opérationnel + Séances + mobile + Blueprint + forums presets + Financial Lab + acquis 1.4.1 ;
-8. BIR+ post ;
-9. vérité production ;
-10. BIR+ fermeture.
+Ordre obligatoire suivant :
+1. terminer la sauvegarde BIR+ de fermeture 1.4.2 après synchronisation de la vérité projet ;
+2. recette terrain sur le téléphone du fondateur : distinguer visuellement **Centre opérationnel** et **Séances** ;
+3. parcourir les huit sections Séances : vue d'ensemble, feuille, présence, bénéficiaires/preuves, obligations/impayés, caisse, actions/PV/historique selon les droits ;
+4. confirmer la lisibilité des onglets/navigation mobile sans disparition de fonctionnalité ;
+5. vérifier qu'une présence saisie depuis les parcours disponibles aboutit toujours à MeetingService ;
+6. tester le Blueprint : brouillon → validation humaine → owner canonique, sans création silencieuse de transaction ;
+7. tester les presets Forum/Communautés ;
+8. tester le Financial Lab sur plusieurs scénarios et vérifier l'absence de verdict automatique ;
+9. vérifier que les acquis 1.4.1 restent intacts : deux feuilles, correction indépendante, confidentialité membre, preuves bénéficiaire, offline, prêts/intérêts ;
+10. pour chaque défaut reproductible : test permanent → correction ciblée → CI → vérité → sauvegarde.
 
-Après production : recette terrain sur le téléphone du fondateur, puis uniquement corrections reproductibles.
-
+Ne pas déclarer FIELD_ACCEPTED à partir du smoke seul. Ne pas réintroduire un second Ledger, un second Meeting owner, un second Marketplace/Forum, ni Eco Route/Backhaul dans Eco-System.
