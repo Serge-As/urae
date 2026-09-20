@@ -24,6 +24,7 @@ import { mountExternalProgramsUI } from './external-programs-ui.js';
 import { mountFounderControlUI } from './founder-control-ui.js';
 import { mountAssistanceRulebookUI } from './assistance-rulebook-ui.js';
 import { mountGroupHomeUI } from './group-home-ui.js';
+import { mountSessionsUI } from './sessions-ui.js';
 let uiLocale = 'fr';
 try { uiLocale = localStorage.getItem('tontine.locale') === 'en' ? 'en' : 'fr'; } catch {}
 const tx = (fr,en) => runtimeTranslate(uiLocale,fr,en);
@@ -122,7 +123,8 @@ const go = (name) => {
     document.querySelectorAll('.view').forEach(x => x.classList.remove('active'));
     document.querySelectorAll('.nav-btn').forEach(x => x.classList.remove('active'));
     $(`#view-${name}`).classList.add('active');
-    document.querySelector(`.nav-btn[data-view="${name}"]`)?.classList.add('active');
+    const activeNav=document.querySelector(`.nav-btn[data-view="${name}"]`);activeNav?.classList.add('active');
+    if(activeNav&&window.matchMedia('(max-width:860px)').matches)setTimeout(()=>activeNav.scrollIntoView({behavior:'smooth',block:'nearest',inline:'center'}),20);
     const pop = document.querySelector('#globalSearchResults');
     if (pop)
         pop.replaceChildren();
@@ -141,6 +143,11 @@ const externalProgramsUI = mountExternalProgramsUI({ app, notify: toast, showErr
 const founderControlUI = mountFounderControlUI({ app, notify: toast, showError: fail });
 const assistanceRulebookUI = mountAssistanceRulebookUI({ app, notify: toast, showError: fail, isManager });
 const groupHomeUI = mountGroupHomeUI({ app, getGroups:()=>groups, getMembers:()=>members, getMeetings:()=>meetings, navigate:go, fmt });
+const sessionsUI = mountSessionsUI({
+    app,getGroups:()=>groups,getMembers:()=>members,getMeetings:()=>meetings,getRubrics:()=>rubrics,navigate:go,
+    openDetail:(type,id)=>detailUI.open(type,id),showError:fail,notify:toast,
+    reloadMeetings:async()=>{await renderMeetings();}
+});
 const renderConnectivity = () => { const online = navigator.onLine; const e = $('#connectivity'); e.textContent = `● ${online ? tx('En ligne','Online') : tx('Hors ligne','Offline')}`; e.className = `pill ${online ? 'online' : 'offline'}`; app.setConnectivity(online ? 'online' : 'offline'); };
 let lastOfflineSnapshotNotice=0;
 window.addEventListener('eco:offline-snapshot-used',event=>{
@@ -650,12 +657,14 @@ const refreshGroupContext = async () => {
     const active = Boolean(app.activeGroup());
     $('#operationsContent').style.display = active ? 'block' : 'none';
     $('#noActiveGroupOperations').style.display = active ? 'none' : 'block';
+    $('#sessionsContent').style.display = active ? 'block' : 'none';
+    $('#noActiveGroupSessions').style.display = active ? 'none' : 'block';
     $('#financeContent').style.display = active ? 'block' : 'none';
     $('#noActiveGroupFinance').style.display = active ? 'none' : 'block';
     $('#membersContent').style.display = active ? 'block' : 'none';
     $('#noActiveGroupMembers').style.display = active ? 'none' : 'block';
     const manage=active && isManager();
-    if(!active)await groupHomeUI.refresh();
+    if(!active){await groupHomeUI.refresh();await sessionsUI.refresh();}
     $('#backOfficeContent').style.display = manage ? 'block' : 'none';
     $('#noActiveGroupBackoffice').style.display = manage ? 'none' : 'block';
     $('#noActiveGroupBackoffice').textContent = active&&!manage ? tx('Le Back-office est réservé aux responsables habilités du groupe.','Back office is restricted to authorized group managers.') : tx('Sélectionnez ou créez d’abord un groupe.','Select or create a group first.');
@@ -668,6 +677,7 @@ const refreshGroupContext = async () => {
         await renderMeetings();
         await renderLivingRules();
         await groupHomeUI.refresh();
+        await sessionsUI.refresh();
         if(manage)await renderLedger();
         else{receiptPositions=[];$('#ledgerMetrics').replaceChildren();$('#receiptList').textContent='Votre relevé individuel est accessible depuis la liste des membres.';}
     }
