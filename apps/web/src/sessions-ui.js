@@ -48,7 +48,7 @@ export function mountSessionsUI({app,getGroups,getMembers,getMeetings,getRubrics
     }
   };
 
-  const actions=()=>{const a=el('div',undefined,'actions');const center=button(t('Centre opérationnel','Operational Center'));center.onclick=()=>navigate('operations');const members=button(t('Membres','Members'));members.onclick=()=>navigate('members');const recap=button(t('Récap global','Global recap'));recap.onclick=()=>navigate('recap');a.append(center,members,recap);return a;};
+  const actions=()=>{const a=el('div',undefined,'actions');const center=button(t('Centre opérationnel','Operational Center'));center.onclick=()=>navigate('operations');const sheets=button(t('Fiches individuelles','Individual sheets'));sheets.onclick=()=>{navigate('operations');setTimeout(()=>byId('individualSheetsViewBtn')?.click(),90);};const members=button(t('Gérer les membres','Manage members'));members.onclick=()=>navigate('members');const rubrics=button(t('Gérer / archiver les rubriques','Manage / archive rubrics'));rubrics.onclick=()=>{navigate('operations');setTimeout(()=>byId('rubricList')?.scrollIntoView({behavior:'smooth',block:'start'}),90);};const recap=button(t('Récap global','Global recap'));recap.onclick=()=>navigate('recap');a.append(center,sheets,members,rubrics,recap);return a;};
 
   const renderOverview=async(c)=>{
     const {group,meeting,meetings,members,me}=c;if(!meeting)return card(t('Vue d’ensemble','Overview')).appendChild(el('div',t('Aucune séance disponible.','No session available.'),'empty-state')).parentNode;
