@@ -1,14 +1,14 @@
 # ECO-SYSTEM — PROJECT STATE
 
-Date : 2026-09-18
+Date : 2026-09-20
 
 ## Production publique — VERIFIED_REMOTE
-- version : **1.4.0-master-2.3.4-closure**
+- version : **1.4.1-field-integrity-home-sessions**
 - URL : `https://eco-system.sergemimf.workers.dev/`
 - Worker : `eco-system`
-- Worker Version ID : `182e7992-1bf9-479f-914b-c0f04ab1b85c`
-- source déployée : `e869918002a6a649751b68088de39510dad3b29a`
-- branche : `next/1.4.0-master-2.3.4-closure-20260917`
+- Worker Version ID : `d4e56867-077c-47cd-bfc9-9aba4735d596`
+- source déployée : `024b9837b6fa577c0c2c39297c2ce672f7d130b3`
+- branche : `next/1.4.1-field-integrity-guardrails-20260919`
 - D1 : `eco-system-db`
 - R2 : `eco-system-backups`
 - Premium Live : actif
@@ -16,11 +16,12 @@ Date : 2026-09-18
 - Forum/Community Realtime : bound
 - artifacts : R2
 - argent réel : **désactivé**
-- qualification + build + pré-BIR+ + déploiement + smoke + post-BIR+ : run **35314965700 — SUCCESS**
-- qualification parallèle du SHA déployé : run **35314965698 — SUCCESS**
-- tests du workflow : **231/231 PASS**
+- qualification du SHA déployé : run **35488899790 — SUCCESS**
+- qualification + build + pré-BIR+ + déploiement + smoke + post-BIR+ : run **35488899806 — SUCCESS**
+- tests du workflow : **256/256 PASS**
 - migrations : **No migrations to apply**
-- pré-BIR+ et post-BIR+ : restaurations SQLite + `PRAGMA integrity_check=ok` + SHA256 + miroir R2 validés.
+- pré-BIR+ et post-BIR+ : restauration SQLite + `PRAGMA integrity_check=ok` + SHA256 + miroir R2 validés.
+- smoke production : version 1.4.1, `realMoneyEnabled=false`, Premium Live/Founder Control/Community Realtime/R2 confirmés.
 
 ## Correction 1.4.0 — deux feuilles / toutes rubriques
 La vérité métier opérationnelle est désormais :
@@ -75,11 +76,11 @@ Recette terrain ciblée de la production 1.4.0 : groupe à nombre variable de ru
 - Matrice Prêt modifiable pour la simulation sans altérer les règles financières.
 - La production publique reste au checkpoint 1.4 précédent jusqu'au déploiement ciblé et au smoke final.
 
-## Candidate 1.4.1 — Field Integrity / Accueil / Séances (2026-09-20)
+## Production 1.4.1 — Field Integrity / Accueil / Séances (2026-09-20)
 
-La production publique reste **1.4.0** tant que le workflow de déploiement 1.4.1 n'a pas fini BIR+ + deploy + smoke.
+La production publique **1.4.1 est maintenant déployée et smoke-testée** sur le SHA exact `024b9837b6fa577c0c2c39297c2ce672f7d130b3`.
 
-Ligne candidate :
+Ligne de production :
 - version : `1.4.1-field-integrity-home-sessions` ;
 - branche : `next/1.4.1-field-integrity-guardrails-20260919` ;
 - `realMoneyEnabled=false` inchangé ;
@@ -106,5 +107,5 @@ Déploiement préparé par :
 - `.github/workflows/deploy-production-1.4.1.yml`
 - `.github/workflows/backup-birplus-1.4.1.yml`
 
-Règle de clôture : ne déclarer 1.4.1 visible en production qu'après le smoke du SHA exact.
+Déploiement qualifié : run `35488899806 SUCCESS` ; Worker Version ID `d4e56867-077c-47cd-bfc9-9aba4735d596`. La recette terrain Bureau/membre/offline/bruit/senior reste distincte du smoke technique.
 
