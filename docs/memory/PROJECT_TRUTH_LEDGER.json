@@ -994,6 +994,24 @@
       "note": "Eco Route / Backhaul / Return Load remains an autonomous project and is not an Eco-System module. Eco-System may later consume an external transport API without absorbing the project.",
       "next": "Keep the boundary unless the founder explicitly changes project scope.",
       "currentProductLine": true
+    },
+    {
+      "id": "backup.birplus.closure.1.4.2",
+      "status": "VERIFIED_REMOTE",
+      "scope": "backup-recovery",
+      "observedOn": "2026-09-20",
+      "evidence": [
+        "github-actions:35498239952 qualification SUCCESS",
+        "github-actions:35498239942 BIR+ SUCCESS",
+        "checkpoint:d1a69bb5c904268d5f16fc2421e2246154000598",
+        "artifact:10601038586",
+        "R2:birplus/1.4.2/d1a69bb5c904268d5f16fc2421e2246154000598/final/",
+        "restore:SQLite PRAGMA integrity_check=ok",
+        "SHA256:verified"
+      ],
+      "note": "Final 1.4.2 source and current production D1 were archived after production-truth documentation, restored for integrity, checksummed and mirrored to private R2.",
+      "next": "Start real founder field reception; redeploy only after a reproducible defect and permanent regression test.",
+      "currentProductLine": true
     }
   ]
 }
