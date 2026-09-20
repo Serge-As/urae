@@ -1030,6 +1030,26 @@
       "note": "Production 1.4.2 was already functionally deployed, but ensureCurrentServiceWorker was defined without being invoked. The hotfix activates that update check without changing release identity, D1 schema, Ledger, business rules or real-money state.",
       "next": "Founder field-receive the visible shell on the real phone/browser and verify Operational Center + Sessions. Keep FIELD_ACCEPTED separate from remote smoke.",
       "currentProductLine": true
+    },
+    {
+      "id": "backup.birplus.closure.1.4.2.pwa_hotfix",
+      "status": "VERIFIED_REMOTE",
+      "scope": "backup-recovery",
+      "observedOn": "2026-09-20",
+      "evidence": [
+        "github-actions:35499946396 qualification SUCCESS",
+        "github-actions:35499946216 BIR+ SUCCESS",
+        "checkpoint:d686929b44bf9f5f61ddee2ddee434e891c39afb",
+        "artifact:10600699685",
+        "R2:birplus/1.4.2/d686929b44bf9f5f61ddee2ddee434e891c39afb/final/",
+        "restore:SQLite PRAGMA integrity_check=ok",
+        "SHA256:verified",
+        "production-source:a9fe00f94daa7a6787d5a4440a5edc0bc5e4a1c8",
+        "worker-version:6c7b4be2-7daa-4f15-ae11-0861d248f60a"
+      ],
+      "note": "Final post-hotfix 1.4.2 truth checkpoint archived source and current production D1 after PWA convergence fix and documentation synchronization.",
+      "next": "Founder field-receives Centre opérationnel, dedicated Sessions, Blueprint and community flows. Redeploy only after reproducible defect.",
+      "currentProductLine": true
     }
   ]
 }
