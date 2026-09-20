@@ -1,5 +1,31 @@
 # ECO-SYSTEM — NEXT RUN
 
+## CURRENT OVERRIDE — 1.4.2 PWA visibility hotfix (2026-09-20)
+
+Current production source: `a9fe00f94daa7a6787d5a4440a5edc0bc5e4a1c8` on `next/1.4.2-operational-center-sessions-blueprint-20260920`.
+
+Verified evidence:
+- qualification exact production SHA: `35499693852 SUCCESS`;
+- deploy + smoke + pre/post BIR+: `35499693884 SUCCESS`;
+- pre artifact: `10602035551`;
+- post artifact: `10602215385`;
+- runtime version remains `1.4.2-operational-center-sessions-blueprint`;
+- real money remains OFF.
+
+The hotfix only activates the already-defined Service Worker update path so a previously stale 1.4.1 PWA shell can converge to deployed 1.4.2. Do not change D1, Ledger, business rules, cache identity or release identity to address this issue.
+
+Next normal action:
+1. founder field reception on the real phone/browser;
+2. confirm visible **Centre opérationnel** + separate **Séances**;
+3. exercise the 8 Sessions sections;
+4. test Blueprint DRAFT → human validation → ACTIVE with no silent transaction;
+5. convert every reproducible defect into a permanent test before a targeted correction.
+
+Do not redeploy merely because this document changed.
+
+---
+
+
 Date : 2026-09-20
 
 ## Lecture obligatoire
