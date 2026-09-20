@@ -857,6 +857,24 @@
       "note": "Production D1 was backed up and restored before and after deployment, integrity checked, checksummed and mirrored to private R2. A final post-documentation BIR+ checkpoint is still required.",
       "next": "Trigger backup-birplus-1.4.1 after final truth documentation commits.",
       "currentProductLine": true
+    },
+    {
+      "id": "backup.birplus.closure.1.4.1",
+      "status": "VERIFIED_REMOTE",
+      "scope": "backup-recovery",
+      "observedOn": "2026-09-20",
+      "evidence": [
+        "github-actions:35489112828 qualification SUCCESS",
+        "github-actions:35489112862 BIR+ SUCCESS",
+        "checkpoint:4edf2dcb27c54303becce71ac9bd5b7db2c50496",
+        "artifact:10598209553",
+        "R2:birplus/1.4.1/4edf2dcb27c54303becce71ac9bd5b7db2c50496/final/",
+        "restore:SQLite PRAGMA integrity_check=ok",
+        "SHA256:verified"
+      ],
+      "note": "Final 1.4.1 source and current production D1 were archived after post-deploy truth documentation, restored for integrity, checksummed and mirrored to private R2.",
+      "next": "Start real field reception; redeploy only after a reproducible defect and permanent regression test.",
+      "currentProductLine": true
     }
   ]
 }
