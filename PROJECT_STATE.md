@@ -6,7 +6,7 @@ Date : 2026-09-20
 - version : **1.4.2-operational-center-sessions-blueprint**
 - URL : `https://eco-system.sergemimf.workers.dev/`
 - Worker : `eco-system`
-- Worker Version ID : **superseded par le hotfix PWA** ; le nouvel ID n'est pas exposé par les métadonnées GitHub consultables, preuve de déploiement = run `35499693884`
+- Worker Version ID : `6c7b4be2-7daa-4f15-ae11-0861d248f60a`
 - source déployée : `a9fe00f94daa7a6787d5a4440a5edc0bc5e4a1c8`
 - branche : `next/1.4.2-operational-center-sessions-blueprint-20260920`
 - D1 : `eco-system-db`
@@ -187,3 +187,13 @@ Preuves finales :
 - `realMoneyEnabled=false` inchangé.
 
 La recette terrain reste nécessaire : la première ouverture/actualisation du navigateur doit désormais permettre au shell courant de contrôler et mettre à jour le Service Worker ; CI/smoke ne remplacent pas l'observation réelle sur l'appareil du fondateur.
+
+
+## Clôture post-hotfix 1.4.2 — d686929
+- checkpoint final : `d686929b44bf9f5f61ddee2ddee434e891c39afb`
+- qualification finale : **35499946396 — SUCCESS**
+- BIR+ final : **35499946216 — SUCCESS**
+- artifact : **10600699685**
+- R2 : `birplus/1.4.2/d686929b44bf9f5f61ddee2ddee434e891c39afb/final/`
+- D1 restore/integrity + SHA256 : **PASS**
+- code production inchangé depuis `a9fe00f94daa7a6787d5a4440a5edc0bc5e4a1c8` ; seuls les documents de vérité/fermeture ont évolué après le déploiement.
