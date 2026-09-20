@@ -101,3 +101,12 @@ Ordre obligatoire suivant :
 
 Ne pas rouvrir les moteurs déjà qualifiés sans défaut reproductible. Le smoke production ne vaut pas recette terrain.
 
+## Checkpoint de fermeture acquis
+- checkpoint : `4edf2dcb27c54303becce71ac9bd5b7db2c50496`
+- CI : `35489112828 SUCCESS`
+- BIR+ fermeture : `35489112862 SUCCESS`
+- artifact : `10598209553`
+- R2 final : `birplus/1.4.1/4edf2dcb27c54303becce71ac9bd5b7db2c50496/final/`
+
+Reprendre directement par la recette terrain 1.4.1 ; ne relancer ni D1 ni déploiement sans défaut reproductible.
+
