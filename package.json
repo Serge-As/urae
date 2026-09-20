@@ -1,9 +1,9 @@
 {
   "name": "tontine-platform",
-  "version": "1.4.0-master-2.3.4-closure",
+  "version": "1.4.1-field-integrity-home-sessions",
   "private": true,
   "type": "module",
-  "description": "Eco-System 1.4.0: truthful Master 2.3.4 closure, member lifecycle, meeting governance, arrears/recovery, operational reporting, voice/two-sheet, documents, Premium Live, Fairness Lab, AdOps and Group Doctor.",
+  "description": "Eco-System 1.4.1: Master 2.3.4 preserved, field-integrity corrections, canonical group Home and Sessions cockpit, governed attendance, beneficiary receipt evidence, honest offline snapshots, voice confidence guards, loans/savings/Forum/AdOps/Marketplace retained.",
   "engines": {
     "node": ">=24"
   },
