@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedOn": "2026-09-18",
+  "generatedOn": "2026-09-20",
   "purpose": "Anti-regression operational truth. Read before asking founder to recreate/configure anything.",
   "allowedStatuses": [
     "ACQUIRED",
@@ -764,6 +764,62 @@
       ],
       "note": "Remaining principal accrues interest once per period until principal reaches zero; unpaid interest stays separate. Managers compare and validate CAPITAL_FIRST or INTEREST_FIRST. New loan can be blocked until principal and interest are both settled.",
       "next": "Field-receive the real multi-meeting circuit from the two financial sheets.",
+      "currentProductLine": true
+    },
+    {
+      "id": "github.branch.1.4.1.field_integrity",
+      "status": "VERIFIED_REMOTE",
+      "scope": "git-branch",
+      "observedOn": "2026-09-20",
+      "evidence": [
+        "github:next/1.4.1-field-integrity-guardrails-20260919",
+        "github-actions:35488799444 SUCCESS",
+        "runtime-candidate:1.4.1-field-integrity-home-sessions"
+      ],
+      "note": "The 1.4.1 candidate preserves 1.4.0 and adds field-integrity corrections, canonical Group Home/Sessions, governed attendance and beneficiary receipt evidence, member arrears privacy, honest offline reads and voice confidence guards.",
+      "next": "Deploy only through the 1.4.1 guarded workflow with BIR+ pre/post and production smoke.",
+      "currentProductLine": true
+    },
+    {
+      "id": "meeting.home_sessions_evidence.1.4.1",
+      "status": "VERIFIED_REMOTE",
+      "scope": "group-home/meetings/evidence",
+      "observedOn": "2026-09-20",
+      "evidence": [
+        "tests:minimum-frame-1.4.1 PASS",
+        "tests:meeting-session-evidence-1.4.1 PASS",
+        "github-actions:35488799444 SUCCESS"
+      ],
+      "note": "Accueil projects canonical owners; MeetingService owns session context/attendance/beneficiary declarations; KERNEL.EVIDENCE stores immutable receipt evidence; ECO-RCP is a non-secret proof identifier.",
+      "next": "Field-receive Bureau/member journeys after deployment.",
+      "currentProductLine": true
+    },
+    {
+      "id": "finance.arrears_privacy_and_correction.1.4.1",
+      "status": "VERIFIED_REMOTE",
+      "scope": "finance/privacy",
+      "observedOn": "2026-09-20",
+      "evidence": [
+        "tests:minimum-frame-1.4.1 member own debts PASS",
+        "tests:member-financial-control independent review PASS",
+        "github-actions:35488799444 SUCCESS"
+      ],
+      "note": "A simple member receives only own arrears from ReceivablesService. Financial corrections preserve original/reversal/replacement and require an independent authorized reviewer; the author cannot self-review.",
+      "next": "Verify with two real manager accounts and one simple-member account in field reception.",
+      "currentProductLine": true
+    },
+    {
+      "id": "offline.voice_guardrails.1.4.1",
+      "status": "VERIFIED_REMOTE",
+      "scope": "offline/voice",
+      "observedOn": "2026-09-20",
+      "evidence": [
+        "tests:offline-read-snapshots-1.4.1 PASS",
+        "tests:voice-two-sheet-ui-1.3.4 PASS",
+        "github-actions:35488799444 SUCCESS"
+      ],
+      "note": "Actor-scoped IndexedDB read snapshots are used only on network loss and never mask live HTTP failure. Dictation uses confidence-aware preview and does not claim noise robustness as solved.",
+      "next": "Test on Android/desktop with network cut and noisy real meeting.",
       "currentProductLine": true
     }
   ]
