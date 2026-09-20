@@ -1163,8 +1163,8 @@ production_qualification_2026_09_20_1_4_1:
 
 release_capabilities_1_4_2:
   branch: next/1.4.2-operational-center-sessions-blueprint-20260920
-  production_deployed: false
-  production_still: 1.4.1-field-integrity-home-sessions
+  production_deployed: true
+  production_current: 1.4.2-operational-center-sessions-blueprint
   real_money_enabled: false
   source_basis: [founder_mobile_screenshots_2026_09_20,Cadre_minimal_Accueil_Seances,validated_executable_blueprint,historical_audit]
   capabilities:
@@ -1232,9 +1232,39 @@ release_capabilities_1_4_2:
 candidate_qualification_2026_09_20_1_4_2:
   version: 1.4.2-operational-center-sessions-blueprint
   branch: next/1.4.2-operational-center-sessions-blueprint-20260920
-  deployed: false
-  production_still: 1.4.1-field-integrity-home-sessions
-  qualification_run: 35493817301
+  deployed: true
+  promoted_by: guarded_production_workflow
+  qualification_run: 35497930024
+  deploy_smoke_birplus_run: 35497930031
   real_money_enabled: false
   implementation_document: docs/implementation/ECO_SYSTEM_Document_Maitre_Implementation_Blueprint_Executable_1.4.2_2026-09-20.md
-  note: Promote to production only after final HEAD qualification, BIR+ predeploy, exact-SHA deployment, smoke and BIR+ postdeploy.
+  note: CI/deploy/smoke verified; field reception remains pending for user-facing flows.
+
+production_qualification_2026_09_20_1_4_2:
+  version: 1.4.2-operational-center-sessions-blueprint
+  branch: next/1.4.2-operational-center-sessions-blueprint-20260920
+  deployed: true
+  source_deployed: 61a6d83ac5793bb5fecac7ba77a7bd4149031e27
+  production_url: https://eco-system.sergemimf.workers.dev/
+  worker_version_id: b54df0a5-2338-4e37-8b4d-a05351b43658
+  qualification_run: 35497930024
+  deploy_smoke_birplus_run: 35497930031
+  predeploy_artifact_id: 10601637363
+  postdeploy_artifact_id: 10601512437
+  predeploy_r2_prefix: birplus/1.4.2/61a6d83ac5793bb5fecac7ba77a7bd4149031e27/predeploy/
+  postdeploy_r2_prefix: birplus/1.4.2/61a6d83ac5793bb5fecac7ba77a7bd4149031e27/postdeploy/
+  test_count: 264
+  tests_passed: 264
+  d1: eco-system-db
+  r2: eco-system-backups
+  migrations: no_migrations_to_apply
+  predeploy_birplus: restore_integrity_sha256_r2_pass
+  postdeploy_birplus: restore_integrity_sha256_r2_pass
+  premium_live_enabled: true
+  founder_control_bound: true
+  community_realtime_bound: true
+  artifact_storage_mode: R2
+  real_money_enabled: false
+  smoke_scope: [health_version,operational_center,dedicated_sessions,meeting_attendance,beneficiary_evidence,mobile_nav,blueprint_workflows,community_presets,financial_lab,offline,loan_matrix,1_4_1_regression_guards]
+  field_reception: pending_for_founder_phone_bureau_member_offline_noise_senior_blueprint_flows
+  note: Production 1.4.2 is verified remotely; FUNCTIONAL_BETA user-facing capabilities are not FIELD_ACCEPTED until founder field reception.
