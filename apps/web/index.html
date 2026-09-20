@@ -52,7 +52,8 @@
       <button data-view="discovery" class="nav-btn"><span>⌕</span><b>Découvrir</b></button>
       <button data-view="launch" class="nav-btn"><span>＋</span><b>Créer / intégrer</b></button>
       <button id="ecoAiNavBtn" data-view="launch" class="nav-btn"><span>✦</span><b>Eco IA</b></button>
-      <button data-view="operations" class="nav-btn"><span>☷</span><b>Séances</b></button>
+      <button data-view="operations" class="nav-btn"><span>⌘</span><b data-mobile-label="Centre op.">Centre opérationnel</b></button>
+      <button id="sessionsNavBtn" data-view="sessions" class="nav-btn"><span>☷</span><b data-mobile-label="Séances">Séances</b></button>
       <button id="membersNavBtn" data-view="members" class="nav-btn"><span>♙</span><b>Membres & habilitations</b></button>
       <button data-view="finance" class="nav-btn"><span>₣</span><b>Finances</b></button>
       <button id="backOfficeNavBtn" data-view="backoffice" class="nav-btn"><span>▣</span><b>Back-office</b></button>
@@ -95,7 +96,7 @@
         </div>
 
         <section class="panel" id="groupHomePanel">
-          <div class="panel-head"><div><span class="eyebrow">Association / Tontine</span><h2>Accueil du groupe</h2><p>Identification, cycle, séances et situation financière selon vos droits — projections des services canoniques.</p></div><button class="link-btn" data-go="operations">Ouvrir les Séances</button></div>
+          <div class="panel-head"><div><span class="eyebrow">Association / Tontine</span><h2>Accueil du groupe</h2><p>Identification, cycle, séances et situation financière selon vos droits — projections des services canoniques.</p></div><button class="link-btn" data-go="sessions">Ouvrir les Séances</button></div>
           <div id="groupHomeContent" class="stack"></div>
         </section>
 
@@ -123,7 +124,8 @@
           <div class="quick-grid">
             <button class="quick" data-go="discovery"><b>Découvrir & adhérer</b><span>Groupes publics et demandes d’adhésion</span></button>
             <button class="quick" data-go="launch"><b>Créer / intégrer un groupe</b><span>Projet, simulation et ouverture du groupe</span></button>
-            <button class="quick" data-go="operations"><b>Séances & feuilles financières</b><span>Feuille de séance ou fiches individuelles · même vérité comptable</span></button>
+            <button class="quick" data-go="operations"><b>Centre opérationnel</b><span>Pilotage transversal, membres, impayés, rapports, gouvernance et capacités</span></button>
+            <button class="quick" data-go="sessions"><b>Séances & réunions</b><span>Réunion du jour, feuille de séance, présence, bénéficiaires, caisse, dettes et historique</span></button>
             <button class="quick" data-go="finance"><b>Finances & solidarité</b><span>Cotisations, caisse et relevés individuels</span></button>
             <button class="quick" data-module-open="COMMUNITY.FORUM"><b>Communauté</b><span>Forums, Hubs professionnels, votes, événements</span></button>
             <button class="quick" data-module-open="MARKETPLACE.CORE"><b>Marché & fournisseurs</b><span>Marketplace, achats groupés, Business Studio</span></button>
@@ -333,7 +335,7 @@
       </section>
 
       <section id="view-operations" class="view">
-        <div class="page-head"><div><span class="eyebrow">Lots C–D</span><h1>Séances · Feuilles · Présences · Bénéficiaires</h1><p>Chaque séance relie la même vérité financière aux fiches individuelles, au rapprochement de caisse, aux présences, aux bénéficiaires et à leurs preuves de réception. La clôture reste un checkpoint gouverné.</p></div></div>
+        <div class="page-head"><div><span class="eyebrow">Pilotage transversal du groupe</span><h1>Centre opérationnel</h1><p>Le contenu historique est conservé : membres, feuilles liées, gouvernance, impayés, rapports, recrutement, règles vivantes et suivi des capacités. Les séances disposent désormais de leur propre espace métier.</p></div><div class="page-meta"><button type="button" class="primary" data-go="sessions">Ouvrir les Séances</button></div></div>
         <div id="noActiveGroupOperations" class="panel empty-state">Sélectionnez ou créez d'abord un groupe.</div>
         <div id="operationsContent">
           <section class="panel" id="twoSheetWorkspace"><div class="panel-head"><div><h2>Saisie financière des membres</h2><p>Ce sont les deux feuilles de saisie. Cliquez une cellule pour ouvrir un petit éditeur au-dessus de la case, sans quitter le tableau.</p></div><div class="view-switch"><button id="meetingSheetViewBtn" class="active" type="button">Votre feuille de séance</button><button id="individualSheetsViewBtn" type="button">Vos fiches individuelles</button></div></div>
@@ -411,6 +413,37 @@
         </div>
       </section>
 
+      <section id="view-sessions" class="view">
+        <div class="page-head"><div><span class="eyebrow">Association / Tontine · unité opérationnelle</span><h1>Séances</h1><p>Préparez et gérez une réunion précise : finances de séance, feuille membres × rubriques, présence, bénéficiaires, preuves, dettes, classement, précédente / actuelle / suivante et historique.</p></div><div class="page-meta"><button type="button" class="secondary" data-go="operations">Centre opérationnel</button><button id="sessionsRefreshBtn" type="button" class="primary">Actualiser</button></div></div>
+        <div id="noActiveGroupSessions" class="panel empty-state">Sélectionnez ou créez d'abord un groupe.</div>
+        <div id="sessionsContent">
+          <section class="panel sessions-selector-panel">
+            <div class="panel-head"><div><h2>Choisir ou préparer une séance</h2><p>Le titre visible reste « Réunion du… ». Le titre interne est secondaire.</p></div></div>
+            <div id="sessionsTimelineStrip" class="session-timeline-strip" aria-label="Séance précédente, actuelle et suivante"></div>
+            <form id="sessionsCreateForm" class="form-grid">
+              <label>Note interne<input id="sessionsTitle" placeholder="Facultatif"></label>
+              <label>Date / heure prévue<input id="sessionsScheduledAt" type="datetime-local"></label>
+              <label>Lieu / canal<input id="sessionsLocation" placeholder="Ex. Domicile, salle, téléphone"></label>
+              <label>Thème<input id="sessionsTheme" placeholder="Ex. Réunion ordinaire"></label>
+              <label>Tenue / code vestimentaire<input id="sessionsDressCode" placeholder="Facultatif"></label>
+              <button id="sessionsCreateBtn" class="primary">Nouvelle séance</button>
+            </form>
+            <div class="session-picker-row"><label>Séance active<select id="sessionsMeetingSelect"></select></label><button id="sessionsOpenDetailBtn" type="button" class="secondary">Ouvrir la fiche détaillée</button></div>
+          </section>
+          <nav id="sessionsTabs" class="sessions-tabs" aria-label="Sections de la séance">
+            <button type="button" data-session-tab="overview" class="active">Vue d’ensemble</button>
+            <button type="button" data-session-tab="sheet">Feuille de séance</button>
+            <button type="button" data-session-tab="attendance">Présences</button>
+            <button type="button" data-session-tab="beneficiaries">Bénéficiaires & preuves</button>
+            <button type="button" data-session-tab="recap">Récap & caisse</button>
+            <button type="button" data-session-tab="debts">Dettes & amendes</button>
+            <button type="button" data-session-tab="schedule">Classements & programmation</button>
+            <button type="button" data-session-tab="history">Historique</button>
+          </nav>
+          <div id="sessionsWorkspace" class="stack"></div>
+        </div>
+      </section>
+
       <section id="view-members" class="view">
         <div class="page-head"><div><span class="eyebrow">Gestion du groupe</span><h1>Membres & habilitations</h1><p>Ajouter un membre, gérer son statut et ses rôles, puis ouvrir son Dossier Membre sans passer par la séance.</p></div></div>
         <div id="noActiveGroupMembers" class="panel empty-state">Sélectionnez ou créez d'abord un groupe.</div>
@@ -434,7 +467,7 @@
         <div id="noActiveGroupFinance" class="panel empty-state">Sélectionnez ou créez d'abord un groupe.</div>
         <div id="financeContent">
           <section class="panel" id="financeEntryGuide">
-            <div class="panel-head"><div><h2>Où saisir les cotisations ?</h2><p>Sur les deux feuilles liées : la feuille de séance générale ou la fiche individuelle du membre. Une saisie enregistrée sur l’une apparaît sur l’autre parce qu’elles utilisent le même service canonique.</p></div><div class="actions"><button type="button" class="primary" data-go="operations">Votre feuille de séance</button><button type="button" id="financeIndividualSheetBtn">Vos fiches individuelles</button></div></div>
+            <div class="panel-head"><div><h2>Où saisir les cotisations ?</h2><p>Sur les deux feuilles liées : la feuille de séance générale ou la fiche individuelle du membre. Une saisie enregistrée sur l’une apparaît sur l’autre parce qu’elles utilisent le même service canonique.</p></div><div class="actions"><button type="button" class="primary" data-go="sessions">Votre feuille de séance</button><button type="button" id="financeIndividualSheetBtn">Vos fiches individuelles</button></div></div>
           </section>
           <div class="two-col">
             <section class="panel" hidden aria-hidden="true">
@@ -715,6 +748,11 @@
       <section id="view-ecosystem" class="view">
         <div class="page-head"><div><span class="eyebrow">Lots F–I</span><h1>Communauté, économie, croissance et accompagnement</h1><p>Les grands services du Cahier sont désormais organisés par domaine au lieu d’être noyés dans une simple liste.</p></div><div class="page-meta"><span class="pill">Community</span><span class="pill">Marketplace</span><span class="pill">Academy & IA</span></div></div>
         <div id="ecosystemHighlights" class="quick-grid"></div>
+        <section class="panel" id="blueprintExecutablePanel">
+          <div class="panel-head"><div><span class="eyebrow">Blueprint exécutable</span><h2>Association / Tontine d’abord · opportunités autour · valeur au-delà</h2><p>Les idées validées deviennent des workflows persistants reliés aux moteurs existants. Une proposition reste une proposition jusqu’à validation humaine ; aucun paiement réel n’est déclenché ici.</p></div><button id="blueprintRefreshBtn" type="button" class="secondary">Actualiser</button></div>
+          <div id="blueprintExecutableRoot" class="stack"></div>
+        </section>
+
         <section class="panel" id="interestCommunityPanel">
           <div class="section-kicker"><div><h2>Communautés d’intérêts · style Meetup</h2><p>Des communautés indépendantes des tontines : sorties, métiers, passions, quartiers, sport, culture, entrepreneuriat, entraide et vie locale.</p></div></div>
           <div class="two-col">
