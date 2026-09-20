@@ -1,6 +1,6 @@
 # ECO-SYSTEM — NEXT RUN
 
-Date : 2026-09-18
+Date : 2026-09-20
 
 ## Lecture obligatoire
 1. `AGENTS.md`
@@ -15,17 +15,17 @@ Date : 2026-09-18
 10. derniers runs GitHub et état Cloudflare réel.
 
 ## Branche de reprise
-`next/1.4.0-master-2.3.4-closure-20260917`
+`next/1.4.1-field-integrity-guardrails-20260919`
 
 Toujours récupérer le HEAD distant réel avant toute modification.
 
 ## Production actuelle
-- version : **1.4.0-master-2.3.4-closure**
-- source déployée : `e869918002a6a649751b68088de39510dad3b29a`
-- Worker Version ID : `182e7992-1bf9-479f-914b-c0f04ab1b85c`
-- production run : **35314965700 SUCCESS**
-- qualification du SHA déployé : **35314965698 SUCCESS**
-- tests : **231/231 PASS**
+- version : **1.4.1-field-integrity-home-sessions**
+- source déployée : `024b9837b6fa577c0c2c39297c2ce672f7d130b3`
+- Worker Version ID : `d4e56867-077c-47cd-bfc9-9aba4735d596`
+- production + smoke + BIR+ pré/post : **35488899806 SUCCESS**
+- qualification du SHA déployé : **35488899790 SUCCESS**
+- tests : **256/256 PASS**
 - D1 : `eco-system-db` réutilisée ; **No migrations to apply**
 - R2 : `eco-system-backups` ; pré/post BIR+ restaurés, checksummés et remirrored
 - Premium Live / Founder Control / Community Realtime / R2 : actifs/bound
@@ -76,31 +76,28 @@ Ordre obligatoire :
 
 ## Reprise 1.4.1 — 2026-09-20
 
-La branche active est désormais :
+La branche active et production courante est :
 `next/1.4.1-field-integrity-guardrails-20260919`.
 
-Version candidate :
+Version :
 `1.4.1-field-integrity-home-sessions`.
 
-Ordre obligatoire de fin de livraison :
-1. obtenir CI verte sur le HEAD final ;
-2. déclencher le workflow `deploy-production-1.4.1.yml` par le marqueur prévu ;
-3. le workflow doit réutiliser `eco-system-db` et `eco-system-backups`, produire le BIR+ pré-déploiement puis appliquer uniquement les migrations additives ;
-4. smoke : health/version, deux feuilles, Membres, Back-office, prêt, Accueil Groupe, présence, bénéficiaires, code de réception, offline snapshot ;
-5. relever le Worker Version ID réel ;
-6. mettre à jour Project State, Current Truth, Truth Ledger et NEXT_RUN ;
-7. lancer le BIR+ de fermeture 1.4.1 ;
-8. ne déclarer la version terminée qu'ensuite.
+Production vérifiée :
+- source : `024b9837b6fa577c0c2c39297c2ce672f7d130b3` ;
+- Worker : `d4e56867-077c-47cd-bfc9-9aba4735d596` ;
+- qualification : `35488899790 SUCCESS` ;
+- déploiement + smoke + BIR+ pré/post : `35488899806 SUCCESS`.
 
-Recette terrain après livraison :
-- Bureau puis membre ;
-- correction 2 000 → 5 000 + revue indépendante ;
-- présence ;
-- bénéficiaire + confirmation / papier / photo ;
-- créances propres uniquement ;
-- réseau coupé après synchro ;
-- dictée en environnement réellement bruyant ;
-- ergonomie prêt avec utilisateur senior.
+Ordre obligatoire suivant :
+1. terminer le BIR+ de fermeture du checkpoint documentaire post-déploiement ;
+2. faire la recette terrain Bureau puis membre ;
+3. tester correction 2 000 → 5 000 + revue indépendante ;
+4. tester présence et bénéficiaire + confirmation/papier/photo ;
+5. vérifier qu'un membre simple ne voit que ses propres dettes ;
+6. couper le réseau après synchronisation et vérifier la dernière copie connue ;
+7. tester la dictée en environnement réellement bruyant ;
+8. tester la matrice Prêt avec un utilisateur senior ;
+9. transformer tout défaut reproductible en test permanent avant correction.
 
-Ne pas réouvrir les moteurs déjà qualifiés sans défaut reproductible.
+Ne pas rouvrir les moteurs déjà qualifiés sans défaut reproductible. Le smoke production ne vaut pas recette terrain.
 
