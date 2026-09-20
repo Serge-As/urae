@@ -1071,4 +1071,5 @@ $('#authForm').addEventListener('submit',async event=>{
     finally{button.disabled=false;}
 });
 $('#logoutBtn').addEventListener('click',async()=>{try{await app.logout();location.reload();}catch(e){fail(e);}});
+void ensureCurrentServiceWorker();
 void start();
