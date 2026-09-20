@@ -14,7 +14,7 @@ const isOpen=m=>m?.status==='open';
 const normalizeStatus=s=>String(s??'').toUpperCase();
 const statusFr=s=>({PRESENT:'Présent',LATE:'En retard',REPRESENTED:'Représenté',EXCUSED:'Excusé',ABSENT:'Absent'}[String(s)]??String(s??'—'));
 
-export function mountSessionsUI({app,getGroups,getMembers,getMeetings,getRubrics,navigate,openDetail,showError,notify}){
+export function mountSessionsUI({app,getGroups,getMembers,getMeetings,getRubrics,navigate,openDetail,showError,notify,reloadMeetings}){
   const root=byId('sessionsWorkspace'),select=byId('sessionsMeetingSelect'),timeline=byId('sessionsTimelineStrip');
   let activeTab='overview';
 
@@ -190,7 +190,7 @@ export function mountSessionsUI({app,getGroups,getMembers,getMeetings,getRubrics
   select?.addEventListener('change',()=>void refresh());
   byId('sessionsRefreshBtn')?.addEventListener('click',()=>void refresh());
   byId('sessionsOpenDetailBtn')?.addEventListener('click',()=>{if(select?.value&&openDetail)openDetail('meeting',select.value);});
-  byId('sessionsCreateForm')?.addEventListener('submit',e=>void(async()=>{e.preventDefault();const submit=byId('sessionsCreateBtn');try{submit.disabled=true;const raw=byId('sessionsScheduledAt').value,created=await app.openMeeting({title:byId('sessionsTitle').value.trim()||undefined,scheduledAt:raw?new Date(raw).toISOString():undefined,location:byId('sessionsLocation').value.trim()||undefined,theme:byId('sessionsTheme').value.trim()||undefined,dressCode:byId('sessionsDressCode').value.trim()||undefined});notify(t('Séance créée.','Session created.'));await Promise.resolve();if(select)select.value=created.id;window.dispatchEvent(new CustomEvent('eco:sessions-changed'));await refresh();}catch(err){showError(err);}finally{submit.disabled=false;}})());
+  byId('sessionsCreateForm')?.addEventListener('submit',e=>void(async()=>{e.preventDefault();const submit=byId('sessionsCreateBtn');try{submit.disabled=true;const raw=byId('sessionsScheduledAt').value,created=await app.openMeeting({title:byId('sessionsTitle').value.trim()||undefined,scheduledAt:raw?new Date(raw).toISOString():undefined,location:byId('sessionsLocation').value.trim()||undefined,theme:byId('sessionsTheme').value.trim()||undefined,dressCode:byId('sessionsDressCode').value.trim()||undefined});notify(t('Séance créée.','Session created.'));if(reloadMeetings)await reloadMeetings();if(select)select.value=created.id;window.dispatchEvent(new CustomEvent('eco:sessions-changed'));await refresh();}catch(err){showError(err);}finally{submit.disabled=false;}})());
 
   return{refresh};
 }
