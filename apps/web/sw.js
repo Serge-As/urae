@@ -1,4 +1,4 @@
-const CACHE = 'eco-system-v134-field-integrity-offline-20260919';
+const CACHE = 'eco-system-v141-field-integrity-home-sessions-20260920';
 const APP_SHELL = [
   '/', '/index.html', '/styles.css', '/manifest.webmanifest',
   '/src/field-hardening.js', '/src/voice-entry-bootstrap.js', '/src/voice-entry-ui.js', '/src/expense-recap-ui.js', '/src/member-dossier-ui.js', '/src/documents-ui.js', '/src/contextual-group-ui.js',
