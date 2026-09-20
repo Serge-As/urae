@@ -363,3 +363,30 @@ Document maître :
 - miroir R2 : `birplus/1.4.2/d1a69bb5c904268d5f16fc2421e2246154000598/final/` — PASS
 
 La production 1.4.2 est donc sauvegardée après synchronisation de la vérité projet. Prochaine étape : recette terrain réelle ; ne pas confondre PRODUCTION_QUALIFIED et FIELD_ACCEPTED.
+
+
+## LATEST — hotfix visibilité PWA 1.4.2 (2026-09-20)
+
+La production fonctionnelle reste **1.4.2-operational-center-sessions-blueprint**, mais sa source déployée est désormais :
+`a9fe00f94daa7a6787d5a4440a5edc0bc5e4a1c8`.
+
+Pourquoi ce hotfix :
+- le shell 1.4.2 était déployé et smoke-testé ;
+- un navigateur/PWA déjà contrôlé par l'ancien shell pouvait cependant rester visuellement sur 1.4.1 ;
+- `ensureCurrentServiceWorker()` était défini mais jamais appelé.
+
+Correction :
+- invocation active du contrôle/mise à jour du Service Worker avant `start()` ;
+- aucun changement de cache canonique, version runtime, Ledger, D1, modèle métier ou argent réel ;
+- test anti-régression permanent.
+
+Preuves :
+- commit test qualifié : `113ad9fc021edecdb4fdc03696d7288125ca9c81` — **35499635884 SUCCESS** ;
+- source de production : `a9fe00f94daa7a6787d5a4440a5edc0bc5e4a1c8` ;
+- qualification même SHA : **35499693852 SUCCESS** ;
+- déploiement + smoke + BIR+ : **35499693884 SUCCESS** ;
+- artifacts : pré **10602035551**, post **10602215385** ;
+- D1 `eco-system-db` et R2 `eco-system-backups` réutilisés ;
+- `realMoneyEnabled=false`.
+
+Point terrain immédiat : ouvrir/actualiser l'application sur le téléphone et vérifier que le menu affiche **Centre opérationnel** séparé de **Séances**, puis tester les huit sections Séances. Ne pas marquer FIELD_ACCEPTED avant cette vérification réelle.
