@@ -132,3 +132,23 @@ Tests → Project State → Feature Registry → Current Truth/Truth Ledger → 
 - un code ECO-RCP identifie une preuve mais n'accorde aucun droit ;
 - suppression historique d'un membre/rubrique se traduit par lifecycle/archivage si une trace métier doit être conservée.
 
+## Ligne candidate 1.4.2 — séparation UX et Blueprint exécutable
+
+Branche :
+`next/1.4.2-operational-center-sessions-blueprint-20260920`
+
+Runtime candidat :
+`1.4.2-operational-center-sessions-blueprint`.
+
+Invariants supplémentaires :
+- l'ancien `view-operations` est le **Centre opérationnel** et son contenu historique reste préservé ;
+- le vrai `view-sessions` est centré sur une réunion ;
+- aucune présence ne doit être persistée dans un second workspace générique : utiliser MeetingService ;
+- la page Séances ne devient jamais un second éditeur financier ;
+- Blueprint : `Prévision != Demande != Engagement != Transaction` ;
+- tous les workflows Blueprint démarrent sans engagement financier ;
+- Group Buy doit déléguer au moteur Group Buy existant ;
+- fora/communautés utilisent les moteurs existants ;
+- Financial Lab n'émet aucun verdict légal ;
+- Eco Route / Backhaul / Return Load est exclu du périmètre Eco-System.
+
