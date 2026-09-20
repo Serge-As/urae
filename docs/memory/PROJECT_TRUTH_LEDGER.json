@@ -1012,6 +1012,24 @@
       "note": "Final 1.4.2 source and current production D1 were archived after production-truth documentation, restored for integrity, checksummed and mirrored to private R2.",
       "next": "Start real founder field reception; redeploy only after a reproducible defect and permanent regression test.",
       "currentProductLine": true
+    },
+    {
+      "id": "cloudflare.production.1.4.2.pwa_visibility_hotfix",
+      "status": "VERIFIED_REMOTE",
+      "scope": "pwa/cloudflare-production",
+      "observedOn": "2026-09-20",
+      "evidence": [
+        "commit:113ad9fc021edecdb4fdc03696d7288125ca9c81",
+        "github-actions:35499635884 SUCCESS",
+        "source-deployed:a9fe00f94daa7a6787d5a4440a5edc0bc5e4a1c8",
+        "github-actions:35499693852 qualification SUCCESS",
+        "github-actions:35499693884 deploy-smoke-birplus SUCCESS",
+        "artifact:10602035551 predeploy",
+        "artifact:10602215385 postdeploy"
+      ],
+      "note": "Production 1.4.2 was already functionally deployed, but ensureCurrentServiceWorker was defined without being invoked. The hotfix activates that update check without changing release identity, D1 schema, Ledger, business rules or real-money state.",
+      "next": "Founder field-receive the visible shell on the real phone/browser and verify Operational Center + Sessions. Keep FIELD_ACCEPTED separate from remote smoke.",
+      "currentProductLine": true
     }
   ]
 }
