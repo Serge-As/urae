@@ -778,7 +778,7 @@
       ],
       "note": "The 1.4.1 candidate preserves 1.4.0 and adds field-integrity corrections, canonical Group Home/Sessions, governed attendance and beneficiary receipt evidence, member arrears privacy, honest offline reads and voice confidence guards.",
       "next": "Deploy only through the 1.4.1 guarded workflow with BIR+ pre/post and production smoke.",
-      "currentProductLine": true
+      "currentProductLine": false
     },
     {
       "id": "meeting.home_sessions_evidence.1.4.1",
@@ -792,7 +792,7 @@
       ],
       "note": "Accueil projects canonical owners; MeetingService owns session context/attendance/beneficiary declarations; KERNEL.EVIDENCE stores immutable receipt evidence; ECO-RCP is a non-secret proof identifier.",
       "next": "Field-receive Bureau/member journeys after deployment.",
-      "currentProductLine": true
+      "currentProductLine": false
     },
     {
       "id": "finance.arrears_privacy_and_correction.1.4.1",
@@ -806,7 +806,7 @@
       ],
       "note": "A simple member receives only own arrears from ReceivablesService. Financial corrections preserve original/reversal/replacement and require an independent authorized reviewer; the author cannot self-review.",
       "next": "Verify with two real manager accounts and one simple-member account in field reception.",
-      "currentProductLine": true
+      "currentProductLine": false
     },
     {
       "id": "offline.voice_guardrails.1.4.1",
@@ -820,7 +820,7 @@
       ],
       "note": "Actor-scoped IndexedDB read snapshots are used only on network loss and never mask live HTTP failure. Dictation uses confidence-aware preview and does not claim noise robustness as solved.",
       "next": "Test on Android/desktop with network cut and noisy real meeting.",
-      "currentProductLine": true
+      "currentProductLine": false
     },
     {
       "id": "cloudflare.production.1.4.1",
@@ -838,7 +838,7 @@
       ],
       "note": "Eco-System 1.4.1 is deployed to production. Health smoke confirmed realMoneyEnabled=false, Premium Live, Founder Control, Community Realtime and R2, plus Group Home, Sessions, attendance, beneficiary receipt code and offline markers.",
       "next": "Perform real founder field reception for Bureau/member/offline/noisy-voice/senior workflows; do not confuse smoke with field acceptance.",
-      "currentProductLine": true
+      "currentProductLine": false
     },
     {
       "id": "backup.birplus.deploy.1.4.1",
@@ -856,7 +856,7 @@
       ],
       "note": "Production D1 was backed up and restored before and after deployment, integrity checked, checksummed and mirrored to private R2. A final post-documentation BIR+ checkpoint is still required.",
       "next": "Trigger backup-birplus-1.4.1 after final truth documentation commits.",
-      "currentProductLine": true
+      "currentProductLine": false
     },
     {
       "id": "backup.birplus.closure.1.4.1",
@@ -874,6 +874,125 @@
       ],
       "note": "Final 1.4.1 source and current production D1 were archived after post-deploy truth documentation, restored for integrity, checksummed and mirrored to private R2.",
       "next": "Start real field reception; redeploy only after a reproducible defect and permanent regression test.",
+      "currentProductLine": false
+    },
+    {
+      "id": "github.branch.1.4.2.operational_center_sessions_blueprint",
+      "status": "VERIFIED_REMOTE",
+      "scope": "git-branch",
+      "observedOn": "2026-09-20",
+      "evidence": [
+        "github:next/1.4.2-operational-center-sessions-blueprint-20260920",
+        "qualification:35497930024 SUCCESS",
+        "deployment:35497930031 SUCCESS",
+        "source-deployed:61a6d83ac5793bb5fecac7ba77a7bd4149031e27"
+      ],
+      "note": "The 1.4.2 line preserves 1.4.1 and separates the transversal Operational Center from the canonical Sessions workspace while mounting the executable Blueprint, community presets and Financial Lab.",
+      "next": "Field-receive the production line; only reproducible defects become correction work.",
+      "currentProductLine": true
+    },
+    {
+      "id": "ux.operational_center_sessions_split.1.4.2",
+      "status": "VERIFIED_REMOTE",
+      "scope": "sessions/ux",
+      "observedOn": "2026-09-20",
+      "evidence": [
+        "tests:operational-center-sessions-blueprint-1.4.2 PASS",
+        "github-actions:35497930024 SUCCESS",
+        "production-smoke:35497930031 Centre opérationnel + dedicated sessions + mobile nav PASS"
+      ],
+      "note": "operations is the preserved transversal Operational Center; sessions is a dedicated meeting workspace. MeetingService owns meeting context/attendance and the financial page projects canonical owners without creating a second Ledger.",
+      "next": "Validate all eight Sessions sections and mobile navigation on the founder's phone.",
+      "currentProductLine": true
+    },
+    {
+      "id": "blueprint.executable.1.4.2",
+      "status": "VERIFIED_REMOTE",
+      "scope": "product-orchestration",
+      "observedOn": "2026-09-20",
+      "evidence": [
+        "tests:operational-center-sessions-blueprint-1.4.2 PASS",
+        "production-smoke:blueprint-executable-ui PASS",
+        "registry:validated structural modules mounted"
+      ],
+      "note": "Validated Blueprint 5.0.0 proposals are executable as governed DRAFT→human validation→ACTIVE workflows that delegate transactional execution to canonical owners. Forecast != demand != commitment != transaction. Group Buy hands off to the existing Marketplace owner.",
+      "next": "Field-test human-validation, owner handoff and no-silent-transaction behavior. Do not mark FIELD_ACCEPTED from smoke.",
+      "currentProductLine": true
+    },
+    {
+      "id": "community.action_presets.1.4.2",
+      "status": "VERIFIED_REMOTE",
+      "scope": "community",
+      "observedOn": "2026-09-20",
+      "evidence": [
+        "tests:operational-center-sessions-blueprint-1.4.2 PASS",
+        "production-smoke:community-blueprint-presets PASS"
+      ],
+      "note": "Existing Forum and interest-community engines receive action presets for needs, offers, group buying, harvest, skills, training and sourced information; no second social engine was created.",
+      "next": "Field-test creation, sharing and handoff from real community conversations.",
+      "currentProductLine": true
+    },
+    {
+      "id": "safety.financial_lab.1.4.2",
+      "status": "VERIFIED_REMOTE",
+      "scope": "safety/education",
+      "observedOn": "2026-09-20",
+      "evidence": [
+        "tests:deterministic financial lab PASS",
+        "production-smoke:financial-lab-ui PASS",
+        "realMoneyEnabled:false"
+      ],
+      "note": "SAFETY.ANTISCAM Financial Lab performs deterministic assumption/scenario analysis. It does not issue legal verdicts such as Ponzi/scam and cannot move money.",
+      "next": "Field-test multiple scenarios and preserve non-verdict wording.",
+      "currentProductLine": true
+    },
+    {
+      "id": "cloudflare.production.1.4.2",
+      "status": "VERIFIED_REMOTE",
+      "scope": "cloudflare-production",
+      "observedOn": "2026-09-20",
+      "evidence": [
+        "github-actions:35497930031 SUCCESS",
+        "qualification:35497930024 SUCCESS",
+        "source-deployed:61a6d83ac5793bb5fecac7ba77a7bd4149031e27",
+        "worker-version:b54df0a5-2338-4e37-8b4d-a05351b43658",
+        "health-version:1.4.2-operational-center-sessions-blueprint",
+        "tests:264/264 PASS",
+        "migrations:No migrations to apply"
+      ],
+      "note": "Eco-System 1.4.2 is deployed to production. Smoke confirms realMoneyEnabled=false, Premium Live, Founder Control, Community Realtime, R2, Operational Center, dedicated Sessions, mobile navigation, executable Blueprint, community presets, Financial Lab and 1.4.1 regression guards.",
+      "next": "Run founder field reception. Smoke is not FIELD_ACCEPTED.",
+      "currentProductLine": true
+    },
+    {
+      "id": "backup.birplus.deploy.1.4.2",
+      "status": "VERIFIED_REMOTE",
+      "scope": "backup-recovery",
+      "observedOn": "2026-09-20",
+      "evidence": [
+        "github-actions:35497930031 SUCCESS",
+        "artifact:predeploy 10601637363",
+        "artifact:postdeploy 10601512437",
+        "R2:birplus/1.4.2/61a6d83ac5793bb5fecac7ba77a7bd4149031e27/predeploy/",
+        "R2:birplus/1.4.2/61a6d83ac5793bb5fecac7ba77a7bd4149031e27/postdeploy/",
+        "restore:SQLite PRAGMA integrity_check=ok",
+        "SHA256:verified"
+      ],
+      "note": "Production D1 and exact source were backed up/restored/checksummed and mirrored to R2 before deployment; post-deploy D1 and deployment truth were backed up the same way.",
+      "next": "Create the final 1.4.2 closure BIR+ after truth documentation.",
+      "currentProductLine": true
+    },
+    {
+      "id": "project.backhaul.exclusion.1.4.2",
+      "status": "VERIFIED_REMOTE",
+      "scope": "architecture-boundary",
+      "observedOn": "2026-09-20",
+      "evidence": [
+        "tests:operational-center-sessions-blueprint-1.4.2 PASS",
+        "feature-registry:PROJECT.BACKHAUL.EXCLUSION"
+      ],
+      "note": "Eco Route / Backhaul / Return Load remains an autonomous project and is not an Eco-System module. Eco-System may later consume an external transport API without absorbing the project.",
+      "next": "Keep the boundary unless the founder explicitly changes project scope.",
       "currentProductLine": true
     }
   ]
