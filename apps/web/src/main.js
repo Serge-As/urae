@@ -27,6 +27,7 @@ import { mountGroupHomeUI } from './group-home-ui.js';
 import { mountSessionsUI } from './sessions-ui.js';
 import { mountBlueprintExecutableUI } from './blueprint-executable-ui.js';
 import { mountCommunityBlueprintPresets } from './community-blueprint-presets.js';
+import { mountFinancialLabUI } from './financial-lab-ui.js';
 let uiLocale = 'fr';
 try { uiLocale = localStorage.getItem('tontine.locale') === 'en' ? 'en' : 'fr'; } catch {}
 const tx = (fr,en) => runtimeTranslate(uiLocale,fr,en);
@@ -152,6 +153,7 @@ const sessionsUI = mountSessionsUI({
 });
 const blueprintExecutableUI = mountBlueprintExecutableUI({app,getGroups:()=>groups,getMeetings:()=>meetings,navigate:go,notify:toast,showError:fail});
 mountCommunityBlueprintPresets();
+const financialLabUI = mountFinancialLabUI({app,notify:toast,showError:fail});
 const renderConnectivity = () => { const online = navigator.onLine; const e = $('#connectivity'); e.textContent = `● ${online ? tx('En ligne','Online') : tx('Hors ligne','Offline')}`; e.className = `pill ${online ? 'online' : 'offline'}`; app.setConnectivity(online ? 'online' : 'offline'); };
 let lastOfflineSnapshotNotice=0;
 window.addEventListener('eco:offline-snapshot-used',event=>{
@@ -703,6 +705,7 @@ const refreshGroupContext = async () => {
     await assistanceRulebookUI.refresh();
     await externalProgramsUI.refresh();
     await blueprintExecutableUI.refresh();
+    await financialLabUI.refresh();
     await founderControlUI.refresh();
 };
 const refreshAll = async () => { await refreshGroupContext(); renderOutbox(); renderCompatibility(); renderKernel(); renderModules(); renderEcosystemHighlights(); renderDomainHubs(); await detailUI.openFromLocation?.(); };
