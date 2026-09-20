@@ -109,3 +109,13 @@ Déploiement préparé par :
 
 Déploiement qualifié : run `35488899806 SUCCESS` ; Worker Version ID `d4e56867-077c-47cd-bfc9-9aba4735d596`. La recette terrain Bureau/membre/offline/bruit/senior reste distincte du smoke technique.
 
+## Clôture BIR+ 1.4.1 — 2026-09-20
+- checkpoint sauvegardé : `4edf2dcb27c54303becce71ac9bd5b7db2c50496`
+- qualification du checkpoint : **35489112828 — SUCCESS**
+- BIR+ final source + D1 : **35489112862 — SUCCESS**
+- Artifact GitHub : **10598209553**
+- D1 restaurée : `PRAGMA integrity_check=ok`
+- SHA256 : validé
+- miroir R2 final : `birplus/1.4.1/4edf2dcb27c54303becce71ac9bd5b7db2c50496/final/` — **PASS**
+- ce BIR+ ferme le jalon de livraison ; la recette terrain reste la prochaine étape sans redéploiement préalable.
+
