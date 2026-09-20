@@ -108,7 +108,7 @@ test('1.4.2 actively refreshes the PWA shell so deployed UI replaces stale 1.4.1
   ]);
   assert.match(main,/void ensureCurrentServiceWorker\(\);[\s\S]*?void start\(\);/);
   assert.match(sw,/eco-system-v142-operational-center-sessions-blueprint-20260920/);
-  assert.match(html,/\/styles\.css\?v=1421/);
-  assert.match(html,/\/src\/main\.js\?v=1421/);
+  assert.match(html,/\/styles\.css\?v=142/);
+  assert.match(html,/\/src\/main\.js\?v=142/);
   assert.match(html,/ECO-SYSTEM · 1\.4\.2/);
 });
