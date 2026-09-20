@@ -1278,3 +1278,26 @@ closure_qualification_2026_09_20_1_4_2:
   restore_integrity: pass
   sha256: verified
   field_reception: pending
+
+
+production_hotfix_2026_09_20_1_4_2_pwa_visibility:
+  version: 1.4.2-operational-center-sessions-blueprint
+  branch: next/1.4.2-operational-center-sessions-blueprint-20260920
+  source_deployed: a9fe00f94daa7a6787d5a4440a5edc0bc5e4a1c8
+  qualification_run: 35499693852
+  deploy_smoke_birplus_run: 35499693884
+  predeploy_artifact_id: 10602035551
+  postdeploy_artifact_id: 10602215385
+  pwa_regression_test_commit: 113ad9fc021edecdb4fdc03696d7288125ca9c81
+  pwa_regression_test_run: 35499635884
+  d1: eco-system-db
+  r2: eco-system-backups
+  real_money_enabled: false
+  scope:
+    - active_service_worker_update_check
+    - stale_1_4_1_shell_convergence
+    - no_business_rule_change
+    - no_ledger_change
+    - no_schema_change
+  field_reception: pending
+  note: Hotfix activates the already-defined ensureCurrentServiceWorker path; runtime identity remains 1.4.2 and field observation is still required.
