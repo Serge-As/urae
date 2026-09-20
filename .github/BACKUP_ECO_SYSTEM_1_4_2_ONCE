@@ -5,3 +5,6 @@ production_run=35497930031
 field_acceptance=pending
 truth_closure_recorded=35498239942
 final_mirror_requested=2026-09-20
+
+FINAL_PWA_HOTFIX_CLOSURE=2026-09-20T08:35Z
+QUALIFIED_DOC_HEAD=8db486a71353ed6074c62f9882f184220adfb8d5
