@@ -95,3 +95,32 @@ test('Blueprint need workflow delegates to the canonical opportunity service ins
   assert.match(ui,/Aucune transaction n’a été créée/);
 });
 
+test('social source handoff is idempotent and reuses one canonical opportunity record',async()=>{
+  const repo=new InMemoryPlatformRepository(),kernel=new PlatformKernel();setContext(kernel);await repo.saveGroup(group);
+  await repo.saveMembership({id:'m_alice',tenantId:'tenant_a',groupId:'group_a',userId:'alice',roles:['member'],status:'active'});
+  setContext(kernel,'alice',['member']);const svc=new OpportunityService(repo,kernel);
+  const first=await svc.create({title:'Besoin du forum',groupId:'group_a',source:'FORUM',sourceRef:'forum-v2:msg_1'});
+  const second=await svc.create({title:'Même message retraité',groupId:'group_a',source:'FORUM',sourceRef:'forum-v2:msg_1'});
+  assert.equal(second.id,first.id);
+  const records=await repo.listWorkspaceRecords('tenant_a','OPPORTUNITY.NEED','group_a');
+  assert.equal(records.length,1);
+});
+
+test('Forum v2 UI only offers a governed handoff and the API creates a draft opportunity rather than an order',async()=>{
+  const [api,app,ui]=await Promise.all([
+    readFile('workers/api/src/index.ts','utf8'),
+    readFile('packages/application/src/index.ts','utf8'),
+    readFile('apps/web/src/community-shop-ui.js','utf8')
+  ]);
+  assert.match(api,/forum-v2/);
+  assert.match(api,/forumOpportunity/);
+  assert.match(api,/source:'FORUM'/);
+  assert.match(api,/sourceRef:'forum-v2:'\+message\.id/);
+  assert.match(app,/createOpportunityFromForumMessage/);
+  assert.match(ui,/Transformer en besoin/);
+  assert.match(ui,/Transformer en offre/);
+  assert.match(ui,/post\.authorId===app\.currentActor\(\)/);
+  assert.match(ui,/Aucune transaction n’a été créée/);
+  assert.doesNotMatch(ui,/createMarketOrder\(.*post\.id/);
+});
+
