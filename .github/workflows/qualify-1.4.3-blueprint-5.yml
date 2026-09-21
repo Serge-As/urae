@@ -1,0 +1,22 @@
+name: Qualify Eco-System 1.4.3 Blueprint 5.0.0 Finalization
+on:
+  push:
+    branches: ['next/1.4.3-blueprint-5-0-0-finalization-20260921']
+  pull_request:
+    branches: ['next/1.4.2-operational-center-sessions-blueprint-20260920']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  # qualification checkpoint after Sessions/Blueprint implementation
+  qualify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: npm run ci
