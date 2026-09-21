@@ -355,6 +355,11 @@ export class ConnectedApplication {
   async ledgerAnomalies():Promise<Array<{code:string;entryId?:string;details:string}>>{if(!this.activeGroupId)return[];return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/ledger/anomalies');}
   calendarIcsUrl():string{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.baseUrl+'/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/calendar.ics';}
 
+  async listOpportunities(groupId?:string):Promise<WorkspaceRecord[]>{const p=new URLSearchParams();if(groupId)p.set('groupId',groupId);return this.request('/api/v1/opportunities'+(p.size?'?'+p:''));}
+  async getOpportunity(id:string):Promise<WorkspaceRecord>{return this.request('/api/v1/opportunities/'+encodeURIComponent(id));}
+  async createOpportunity(input:{title:string;summary?:string;direction?:'NEED'|'OFFER';category?:string;quantity?:number;unit?:string;locality?:string;targetDate?:string;urgency?:'NORMAL'|'SOON'|'NOW';visibility?:'PRIVATE'|'GROUP'|'PLATFORM';source?:'DIRECT'|'BLUEPRINT'|'FORUM'|'COMMUNITY';sourceRef?:string;groupId?:string}):Promise<WorkspaceRecord>{return this.request('/api/v1/opportunities',{method:'POST',body:JSON.stringify(input)});}
+  async transitionOpportunity(id:string,state:'DRAFT'|'OPEN'|'MATCHING'|'FULFILLED'|'CANCELLED'):Promise<WorkspaceRecord>{return this.request('/api/v1/opportunities/'+encodeURIComponent(id)+'/transition',{method:'POST',body:JSON.stringify({state})});}
+
   async listWorkspaceRecords(moduleId?:string,groupId?:string):Promise<WorkspaceRecord[]>{const p=new URLSearchParams();if(moduleId)p.set('moduleId',moduleId);if(groupId)p.set('groupId',groupId);return this.request(`/api/v1/workspaces?${p}`);}
   async createWorkspaceRecord(input:{moduleId:string;title:string;summary?:string;status?:WorkspaceStatus;tags?:string[];data?:Record<string,string|number|boolean|null>;groupId?:string}):Promise<WorkspaceRecord>{return this.request('/api/v1/workspaces',{method:'POST',body:JSON.stringify({...input,groupId:input.groupId??this.activeGroupId})});}
   async updateWorkspaceRecord(id:string,input:Partial<Pick<WorkspaceRecord,'title'|'summary'|'status'|'tags'|'data'>>):Promise<WorkspaceRecord>{return this.request(`/api/v1/workspaces/${encodeURIComponent(id)}`,{method:'PUT',body:JSON.stringify(input)});}
