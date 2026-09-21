@@ -1,3 +1,4 @@
+import {installEcoRelayUI} from './eco-relay-ui.js';
 import {createRubricEditor,readRubricEditors,describeRubricPlan,editRubricPlan} from './launch-rubrics.js';
 import {mountLaunchStudio} from './launch-studio.js';
 import {renderMemberFinancialNotices} from './member-control-ui.js';
@@ -1071,5 +1072,6 @@ $('#authForm').addEventListener('submit',async event=>{
     finally{button.disabled=false;}
 });
 $('#logoutBtn').addEventListener('click',async()=>{try{await app.logout();location.reload();}catch(e){fail(e);}});
+installEcoRelayUI();
 void ensureCurrentServiceWorker();
 void start();
