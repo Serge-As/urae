@@ -51,4 +51,18 @@ async function scanCamera(){
 }
 export function installEcoRelayUI(){
  const share=$('#shareQrBtn'),receive=$('#receiveQrBtn');if(share)share.onclick=()=>void shareQr();if(receive)receive.onclick=()=>void receiveQr();
+ window.addEventListener('eco:relay-reconcile-meeting',event=>void openMeetingRelay(event.detail,'reconcile'));
+ window.addEventListener('eco:relay-distribute-members',event=>void openMeetingRelay(event.detail,'distribute'));
+}
+async function openMeetingRelay(detail,mode){
+ const d=modal(),body=d.querySelector('#relayBody'),reconcile=mode==='reconcile';
+ body.innerHTML=`<div class="relay-step"><h2>${reconcile?'Confronter les gestionnaires':'Diffuser aux membres'}</h2><p>${reconcile?'Le gestionnaire A choisit le moyen. Le gestionnaire B appuie Recevoir et attend. Eco-System doit échanger les deltas de cette séance et ne comparer que les divergences.':'Cette action est séparée du rapprochement. Elle prépare uniquement les mises à jour autorisées des membres après accord des gestionnaires.'}</p><div class="relay-method-grid"><button data-relay-method="qr" class="primary">QR Code · recommandé</button><button data-relay-method="nearby">Téléphone à proximité · rapide</button><button data-relay-method="native">Partage du téléphone</button><button data-relay-method="file">Fichier Eco Relay</button></div><p class="hint">Séance : ${escapeHtml(detail?.meetingId||'—')}. Les moyens non disponibles doivent basculer vers QR/fichier sans perdre les données.</p></div>`;d.showModal();
+ body.querySelector('[data-relay-method="qr"]').onclick=()=>void shareMeetingDelta(detail,reconcile?'CONSENSUS':'MEMBER_DELTA');
+ body.querySelector('[data-relay-method="native"]').onclick=()=>void shareMeetingDelta(detail,reconcile?'CONSENSUS':'MEMBER_DELTA',true);
+ body.querySelector('[data-relay-method="file"]').onclick=()=>void shareMeetingDelta(detail,reconcile?'CONSENSUS':'MEMBER_DELTA',true);
+ body.querySelector('[data-relay-method="nearby"]').onclick=()=>{body.querySelector('.hint').textContent='Proximité/Wi‑Fi direct est en qualification. Utilisez QR maintenant : aucune donnée ne sera perdue.';};
+}
+async function shareMeetingDelta(detail,kind,native=false){
+ const bundle=await createEcoRelayBundle({kind,senderActorId:actor(),senderDeviceId:device(),groupId:detail?.groupId,meetingId:detail?.meetingId,recipientScope:kind==='MEMBER_DELTA'?'MEMBER':'GROUP_MANAGERS',events:[],parentBundleIds:[]});
+ state.frames=await encodeRelayQrFrames(bundle,700);state.index=0;if(native){await nativeShare(JSON.stringify(state.frames));return;}renderFrame();
 }
