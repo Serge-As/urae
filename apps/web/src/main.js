@@ -980,17 +980,34 @@ if('serviceWorker' in navigator)navigator.serviceWorker.addEventListener('messag
     if(event.data?.type!=='ECO_SYSTEM_SYNC_OUTBOX'||!navigator.onLine)return;
     void (async()=>{try{await app.syncOutbox();renderOutbox();if(app.activeGroup())await refreshGroupContext();}catch{}})();
 });
+const iosLike=()=>/iPad|iPhone|iPod/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
+const standaloneMode=()=>window.matchMedia?.('(display-mode: standalone)')?.matches||navigator.standalone===true;
+const showIosInstallGuide=()=>{
+    document.getElementById('iosInstallGuide')?.remove();
+    const dialog=document.createElement('dialog');dialog.id='iosInstallGuide';dialog.className='ios-install-guide';
+    const h=document.createElement('h2');h.textContent=tx('Installer Eco-System sur iPhone / iPad','Install Eco-System on iPhone / iPad');
+    const p=document.createElement('p');p.textContent=tx('Dans Safari : touchez Partager, puis « Sur l’écran d’accueil », puis Ajouter. Ouvrez ensuite Eco-System depuis son icône pour profiter du mode application et du cache hors ligne.','In Safari: tap Share, then “Add to Home Screen”, then Add. Open Eco-System from its icon to use app mode and offline cache.');
+    const note=document.createElement('p');note.className='hint';note.textContent=tx('Aucune suppression de données n’est nécessaire. Si l’option n’apparaît pas, ouvrez cette page directement dans Safari.','You do not need to delete any data. If the option is missing, open this page directly in Safari.');
+    const close=document.createElement('button');close.type='button';close.className='primary';close.textContent=tx('J’ai compris','Got it');close.onclick=()=>dialog.close();
+    dialog.append(h,p,note,close);document.body.append(dialog);dialog.showModal();
+};
 window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); deferredInstallPrompt = e; $('#installBtn').hidden = false; });
-$('#installBtn').addEventListener('click', async () => { if (deferredInstallPrompt) {
-    await deferredInstallPrompt.prompt();
-    deferredInstallPrompt = undefined;
-    $('#installBtn').hidden = true;
-} });
+if(iosLike()&&!standaloneMode()){$('#installBtn').hidden=false;$('#installBtn').textContent=tx('Installer sur iPhone / iPad','Install on iPhone / iPad');}
+$('#installBtn').addEventListener('click', async () => {
+    if (deferredInstallPrompt) {
+        await deferredInstallPrompt.prompt();
+        deferredInstallPrompt = undefined;
+        $('#installBtn').hidden = true;
+        return;
+    }
+    if(iosLike()&&!standaloneMode())showIosInstallGuide();
+});
 async function ensureCurrentServiceWorker(){
     if(!('serviceWorker' in navigator))return;
     try{
         const reg=await navigator.serviceWorker.register('/sw.js',{scope:'/',updateViaCache:'none'});
         await reg.update();
+        try{if(navigator.storage?.persist)await navigator.storage.persist();}catch{}
         try{
             if('periodicSync' in reg)await reg.periodicSync.register('eco-system-outbox',{minInterval:12*60*60*1000});
         }catch{}
