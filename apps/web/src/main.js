@@ -376,54 +376,132 @@ const renderMeetings = async () => {
         select.append(o);
     }
 };
-const activeMeeting = () => meetings.find(x => x.status === 'open')?.id;
+const activeMeeting = () => {
+    const sessionSelected=document.querySelector('#sessionsMeetingSelect')?.value;
+    if(sessionSelected&&sessionSelected!=='__cumulative__'&&meetings.some(x=>x.id===sessionSelected))return sessionSelected;
+    if(matrixMeetingId&&meetings.some(x=>x.id===matrixMeetingId))return matrixMeetingId;
+    return meetings.find(x=>x.status==='open')?.id??meetings.at(-1)?.id;
+};
+const exactCellRows=(membershipId,rubricId,meetingId)=>receiptPositions.filter(x=>x.membershipId===membershipId&&x.rubricId===rubricId&&x.meetingId===meetingId);
+const exactCellAmount=(membershipId,rubricId,meetingId)=>exactCellRows(membershipId,rubricId,meetingId).reduce((n,x)=>n+Number(x.netAmount??0),0);
+
+const openFinancialCellEditor=({member,rubric,meetingId})=>{
+    const meeting=meetings.find(x=>x.id===meetingId);if(!meeting){fail(new Error('MEETING_NOT_FOUND'));return;}
+    if(!isManager()){fail(new Error('FORBIDDEN_SCOPE'));return;}
+    const current=exactCellAmount(member.id,rubric.id,meetingId);
+    document.getElementById('financialCellEditor')?.remove();
+    const dialog=document.createElement('dialog');dialog.id='financialCellEditor';dialog.className='financial-cell-editor';
+    const h=document.createElement('h2');h.textContent=tx('Saisir / corriger la valeur','Enter / correct value');
+    const context=document.createElement('p');context.textContent=`${member.displayName} · ${rubric.name} · ${meetingLabel(meeting)}`;
+    const currentLine=document.createElement('p');currentLine.className='current-value';currentLine.textContent=tx('Valeur actuelle : ','Current value: ')+fmt(current);
+    const warning=document.createElement('p');warning.className=meeting.status==='closed'?'truth-notice danger':'hint';
+    warning.textContent=meeting.status==='closed'
+      ? tx('Séance clôturée : toute correction reste tracée et déclenche une alerte aux gestionnaires et au membre.','Closed meeting: every correction remains audited and alerts managers and the member.')
+      : current>0
+        ? tx('Vous indiquez la nouvelle valeur totale de cette cellule. Eco-System ne l’ajoutera pas à l’ancienne valeur. Si un autre gestionnaire avait saisi la donnée, une confrontation sera ouverte.','Enter the new total value for this cell. Eco-System will not add it to the old value. If another manager entered it, reconciliation will open.')
+        : tx('Nouvelle saisie pendant une séance ouverte : le membre recevra une alerte verte.','New entry during an open meeting: the member will receive a green alert.');
+    const form=document.createElement('form');form.method='dialog';form.className='form-grid';
+    const amount=document.createElement('input');amount.type='number';amount.min='0';amount.step='1';amount.inputMode='numeric';amount.required=true;amount.value=String(current);
+    const amountLabel=document.createElement('label');amountLabel.textContent=tx('Nouvelle valeur totale (F CFA)','New total value (XAF)');amountLabel.append(amount);
+    const reason=document.createElement('textarea');reason.rows=3;reason.placeholder=tx('Motif de la correction / précision utile','Reason for correction / useful note');if(current>0||meeting.status==='closed')reason.required=true;
+    const reasonLabel=document.createElement('label');reasonLabel.className='full';reasonLabel.textContent=tx('Motif','Reason');reasonLabel.append(reason);
+    const actions=document.createElement('div');actions.className='actions full';
+    const save=document.createElement('button');save.type='submit';save.className='primary';save.textContent=current>0?tx('Proposer / enregistrer cette valeur','Propose / save this value'):tx('Enregistrer cette valeur','Save this value');
+    const cancel=document.createElement('button');cancel.type='button';cancel.className='secondary';cancel.textContent=tx('Annuler','Cancel');cancel.onclick=()=>dialog.close();
+    actions.append(save,cancel);form.append(amountLabel,reasonLabel,actions);dialog.append(h,context,currentLine,warning,form);document.body.append(dialog);
+    form.onsubmit=e=>void(async()=>{
+        e.preventDefault();const target=Number(amount.value);
+        if(!Number.isSafeInteger(target)||target<0){fail(new Error('INVALID_CONTRIBUTION_AMOUNT'));return;}
+        if(target===current){dialog.close();toast(tx('Aucun changement : la valeur est déjà celle-ci.','No change: this is already the current value.'));return;}
+        try{
+            save.disabled=true;
+            const result=await app.setFinancialCellTarget({meetingId,membershipId:member.id,rubricId:rubric.id,targetAmount:target,currentAmount:current,reason:reason.value.trim()});
+            if(result?.status==='CONSENSUS_REQUIRED')toast(tx('La valeur n’a pas été modifiée : confrontation ouverte entre gestionnaires.','Value not changed: manager reconciliation opened.'));
+            else if(result?.status==='QUEUED_CONSENSUS'||result?.queued)toast(tx('Opération conservée hors ligne. La correction sera confrontée / synchronisée à la reconnexion.','Operation saved offline. The correction will be reconciled / synchronized on reconnection.'));
+            else toast(tx('Valeur enregistrée avec traçabilité.','Value saved with audit trail.'));
+            dialog.close();await renderLedger();await sessionsUI.refresh?.();renderIndividualSheetMatrix();
+        }catch(err){fail(err);}finally{save.disabled=false;}
+    });
+    dialog.addEventListener('close',()=>dialog.remove(),{once:true});dialog.showModal();amount.focus();amount.select();
+};
+
+const ensureMatrixMeeting=()=>{
+    if(matrixMeetingId&&meetings.some(x=>x.id===matrixMeetingId&&x.status!=='cancelled'))return matrixMeetingId;
+    matrixMeetingId=meetings.find(x=>x.status==='open')?.id??meetings.filter(x=>x.status!=='cancelled').at(-1)?.id??'';
+    return matrixMeetingId;
+};
 const renderMeetingMatrix = () => {
     const root = $('#meetingMatrix');
     if (!isManager()) {
-        root.innerHTML = '<div class="empty-state">'+tx('La feuille générale de séance est réservée aux responsables habilités. Utilisez « Vos fiches individuelles » pour consulter votre propre situation.','The general meeting sheet is restricted to authorized managers. Use “Your individual sheets” to view your own situation.')+'</div>';
+        root.innerHTML = '<div class="empty-state">'+tx('La feuille générale de séance est réservée aux responsables habilités. Utilisez « Fiches membres » pour consulter votre propre situation.','The general meeting sheet is restricted to authorized managers. Use “Member sheets” to view your own situation.')+'</div>';
         return;
     }
     if (!members.length || !rubrics.length) {
         root.innerHTML = `<div class="empty-state">${tx('Ajoutez au moins un membre et une rubrique pour afficher la matrice membres × rubriques.','Add at least one member and one rubric to display the member × rubric matrix.')}</div>`;
         return;
     }
-    const table = document.createElement('table');
-    table.className = 'meeting-matrix';
-    const head = document.createElement('thead');
-    const hr = document.createElement('tr');
-    hr.innerHTML = `<th>${tx('Membre','Member')}</th>` + rubrics.map(r => html`<th>${r.name}</th>`).join('');
-    head.append(hr);
-    table.append(head);
-    const body = document.createElement('tbody');
-    for (const m of members) {
-        const tr = document.createElement('tr');
-        const name = document.createElement('td');
-        name.innerHTML = html`<strong>${m.displayName}</strong><small>${m.roles.join(', ')}</small>`;
-        tr.append(name);
-        for (const r of rubrics) {
-            const td = document.createElement('td');
-            const b = document.createElement('button');
-            b.type = 'button';
-            b.className = 'matrix-cell';
-            const net=receiptPositions.filter(x=>x.membershipId===m.id && x.rubricId===r.id && (!matrixMeetingId || x.meetingId===matrixMeetingId)).reduce((n,x)=>n+x.netAmount,0);
-            b.textContent = fmt(net);b.disabled=!isManager();
-            b.title = `${tx('Préparer une cotisation','Prepare a contribution')} ${m.displayName} · ${r.name}`;
-            b.onclick = () => { toast(tx('Ouverture de la cellule…','Opening cell…')); };
-            td.append(b);
-            tr.append(td);
+    const selectedMeeting=ensureMatrixMeeting();
+    if(!selectedMeeting){root.innerHTML='<div class="empty-state">'+tx('Créez une séance avant de saisir des données financières.','Create a meeting before entering financial data.')+'</div>';return;}
+    const table = document.createElement('table');table.className = 'meeting-matrix';
+    const head = document.createElement('thead'),hr = document.createElement('tr');
+    hr.innerHTML = `<th>${tx('Membre','Member')}</th>` + rubrics.filter(r=>r.status!=='ARCHIVED').map(r => html`<th>${r.name}</th>`).join('');
+    head.append(hr);table.append(head);const body = document.createElement('tbody');
+    for (const m of members.filter(x=>x.status!=='left')) {
+        const tr = document.createElement('tr'),name = document.createElement('td');
+        name.innerHTML = html`<strong>${m.displayName}</strong><small>${m.roles.join(', ')}</small>`;tr.append(name);
+        for (const rubric of rubrics.filter(x=>x.status!=='ARCHIVED')) {
+            const td=document.createElement('td'),b=document.createElement('button');b.type='button';b.className='matrix-cell';
+            const net=exactCellAmount(m.id,rubric.id,selectedMeeting);b.textContent=fmt(net);b.disabled=!isManager();
+            b.title=tx('Saisir la valeur totale de cette cellule — pas un montant à ajouter','Enter the total cell value — not an amount to add');
+            b.onclick=()=>openFinancialCellEditor({member:m,rubric,meetingId:selectedMeeting});td.append(b);tr.append(td);
         }
         body.append(tr);
     }
     table.append(body);
-    const label=document.createElement('label');label.textContent=tx('Encaissements nets confirmés · séance : ','Confirmed net collections · meeting: ');
-    const scope=document.createElement('select');scope.setAttribute('aria-label',tx('Séance de la matrice','Matrix meeting'));
-    for(const [id,title] of [['',tx('Toutes les séances','All meetings')],...meetings.map(m=>[m.id,m.title])]){
-        const option=document.createElement('option');option.value=id;option.textContent=title;scope.append(option);
+    const toolbar=document.createElement('div');toolbar.className='session-safety-toolbar';
+    const label=document.createElement('label');label.textContent=tx('Séance de saisie : ','Entry meeting: ');
+    const scope=document.createElement('select');scope.id='meetingMatrixScope';scope.setAttribute('aria-label',tx('Séance exacte de la matrice','Exact matrix meeting'));
+    for(const m of meetings.filter(x=>x.status!=='cancelled').slice().sort((a,b)=>String(a.scheduledAt??a.openedAt).localeCompare(String(b.scheduledAt??b.openedAt)))){
+        const option=document.createElement('option');option.value=m.id;option.textContent=meetingLabel(m)+' · '+(m.status==='closed'?tx('clôturée','closed'):tx('ouverte','open'));scope.append(option);
     }
-    scope.value=matrixMeetingId;scope.onchange=()=>{matrixMeetingId=scope.value;renderMeetingMatrix();};label.append(scope);
-    const note=document.createElement('p');note.className='hint';note.textContent=tx('Montants comptabilisés, annulations déduites. Une valeur nulle ne constitue pas automatiquement une dette. Cliquez pour préparer une saisie.','Posted amounts, reversals deducted. A zero value does not automatically mean a debt. Click to prepare an entry.');
-    root.replaceChildren(label,note,table);
+    scope.value=selectedMeeting;scope.onchange=()=>{matrixMeetingId=scope.value;renderMeetingMatrix();renderIndividualSheetMatrix();};label.append(scope);
+    const other=document.createElement('button');other.type='button';other.className='secondary';other.textContent=tx('Voir les séances','View meetings');other.onclick=()=>go('sessions',{meetingId:selectedMeeting,force:true});
+    const add=document.createElement('button');add.type='button';add.className='secondary';add.textContent=tx('+ Nouvelle séance','+ New meeting');add.onclick=()=>go('sessions',{anchor:'sessionsCreateForm',force:true});
+    toolbar.append(label,other,add);
+    const note=document.createElement('p');note.className='truth-notice';note.textContent=tx('Sécurité : chaque cellule représente la valeur totale pour la séance choisie. Remplacer 1 000 par 500 donne 500 — jamais 1 500. Une valeur existante saisie dans un contexte multi-gestionnaires passe par confrontation avant modification.','Safety: each cell is the total value for the selected meeting. Replacing 1,000 with 500 gives 500 — never 1,500. An existing value in a multi-manager context goes through reconciliation before changing.');
+    root.replaceChildren(toolbar,note,table);
 };
+
+const renderIndividualSheetMatrix=()=>{
+    const root=document.querySelector('#individualSheetMatrix'),select=document.querySelector('#individualSheetMember');if(!root||!select)return;
+    const previous=select.value;select.replaceChildren();
+    const visible=isManager()?members.filter(x=>x.status!=='left'):members.filter(x=>x.userId===app.currentActor()&&x.status!=='left');
+    for(const m of visible){const o=document.createElement('option');o.value=m.id;o.textContent=m.displayName;select.append(o);}
+    if(previous&&visible.some(x=>x.id===previous))select.value=previous;
+    const membershipId=select.value,member=visible.find(x=>x.id===membershipId);root.replaceChildren();
+    if(!member){root.innerHTML='<div class="empty-state">'+tx('Aucune fiche individuelle accessible.','No individual sheet available.')+'</div>';return;}
+    const table=document.createElement('table');table.className='meeting-matrix';const head=document.createElement('thead'),hr=document.createElement('tr');hr.append(document.createElement('th'));hr.firstChild.textContent=tx('Séance','Meeting');
+    for(const rubric of rubrics.filter(x=>x.status!=='ARCHIVED')){const th=document.createElement('th');th.textContent=rubric.name;hr.append(th);}const totalTh=document.createElement('th');totalTh.textContent='Total';hr.append(totalTh);head.append(hr);table.append(head);
+    const body=document.createElement('tbody');
+    for(const meeting of meetings.filter(x=>x.status!=='cancelled').slice().sort((a,b)=>String(a.scheduledAt??a.openedAt).localeCompare(String(b.scheduledAt??b.openedAt)))){
+        const tr=document.createElement('tr'),th=document.createElement('th');th.textContent=meetingLabel(meeting)+(meeting.status==='closed'?' · '+tx('clôturée','closed'):'');tr.append(th);let total=0;
+        for(const rubric of rubrics.filter(x=>x.status!=='ARCHIVED')){const value=exactCellAmount(member.id,rubric.id,meeting.id);total+=value;const td=document.createElement('td');
+            if(isManager()){const b=document.createElement('button');b.type='button';b.className='matrix-cell';b.textContent=fmt(value);b.onclick=()=>openFinancialCellEditor({member,rubric,meetingId:meeting.id});td.append(b);}else td.textContent=fmt(value);tr.append(td);
+        }
+        const td=document.createElement('td');td.textContent=fmt(total);tr.append(td);body.append(tr);
+    }
+    table.append(body);root.append(table);
+};
+document.querySelector('#individualSheetMember')?.addEventListener('change',renderIndividualSheetMatrix);
+document.querySelector('#meetingSheetViewBtn')?.addEventListener('click',()=>{document.querySelector('#meetingMatrixPanel').hidden=false;document.querySelector('#individualSheetsMode').hidden=true;document.querySelector('#meetingSheetViewBtn').classList.add('active');document.querySelector('#individualSheetsViewBtn').classList.remove('active');renderMeetingMatrix();});
+document.querySelector('#individualSheetsViewBtn')?.addEventListener('click',()=>{document.querySelector('#meetingMatrixPanel').hidden=true;document.querySelector('#individualSheetsMode').hidden=false;document.querySelector('#individualSheetsViewBtn').classList.add('active');document.querySelector('#meetingSheetViewBtn').classList.remove('active');renderIndividualSheetMatrix();});
+window.addEventListener('eco:render-two-sheets',()=>{renderMeetingMatrix();renderIndividualSheetMatrix();});
+window.addEventListener('eco:restore-financial-sheet',event=>{
+    const detail=event instanceof CustomEvent?event.detail??{}:{};
+    if(detail.matrixMeetingId&&meetings.some(x=>x.id===detail.matrixMeetingId))matrixMeetingId=detail.matrixMeetingId;
+    if(detail.sheetMode==='individual')document.querySelector('#individualSheetsViewBtn')?.click();else document.querySelector('#meetingSheetViewBtn')?.click();
+    renderMeetingMatrix();renderIndividualSheetMatrix();
+});
 const renderLivingRules = async () => {
     if (!app.activeGroup())
         return;
