@@ -58,7 +58,14 @@ export function mountCommunityShopUI({app,notify=()=>{},showError=console.error,
       const active=(post.viewerReactions??[]).includes(reaction),count=Number(post.reactions?.[reaction]??0);
       const b=el('button',reaction+(count?' '+count:''),active?'primary':'link-btn');b.type='button';b.onclick=()=>void(async()=>{try{await app.toggleForumReaction(post.id,reaction);await renderPosts({preserveDraft:true,around:post.id});}catch(e){showError(e);}})();actions.append(b);
     }
-    const reply=el('button','Répondre','secondary');reply.type='button';reply.onclick=()=>{if(bodyInput){bodyInput.dataset.replyTo=post.id;bodyInput.focus();bodyInput.placeholder='Réponse à ce message…';}notify('Votre prochain message répondra à celui-ci.');};actions.append(reply);card.append(actions);return card;
+    const reply=el('button','Répondre','secondary');reply.type='button';reply.onclick=()=>{if(bodyInput){bodyInput.dataset.replyTo=post.id;bodyInput.focus();bodyInput.placeholder='Réponse à ce message…';}notify('Votre prochain message répondra à celui-ci.');};actions.append(reply);
+    const canHandoff=isManager()||post.authorId===app.currentActor();
+    if(canHandoff&&['DISCUSSION','REQUEST','OFFER'].includes(post.kind)){
+      const handoff=el('button',post.kind==='OFFER'?'Transformer en offre':'Transformer en besoin','secondary');handoff.type='button';
+      handoff.onclick=()=>void(async()=>{try{handoff.disabled=true;const opportunity=await app.createOpportunityFromForumMessage(activeHub,post.id);notify((post.kind==='OFFER'?'Offre':'Besoin')+' préparé en brouillon. Aucune transaction n’a été créée.');handoff.textContent='Brouillon lié · '+opportunity.id.slice(-6);}catch(e){showError(e);}finally{handoff.disabled=false;}})();
+      actions.append(handoff);
+    }
+    card.append(actions);return card;
   };
 
   const renderPosts=async(options={})=>{
