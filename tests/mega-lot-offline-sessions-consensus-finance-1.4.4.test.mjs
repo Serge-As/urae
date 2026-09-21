@@ -15,7 +15,7 @@ test('mega lot keeps one canonical offline replay path for core group operations
     'GROUP_PROJECT_UPSERT_V1','GROUP_PROJECT_CONVERT_V1','MEMBER_ADD_V1','RUBRIC_CREATE_V1',
     'RUBRIC_ACTIVITY_PLAN_V1','RUBRIC_MODEL_V1','RUBRIC_POLICIES_V1','GROUP_POLICY_V1',
     'MEETING_OPEN_V1','MEETING_CONTEXT_V1','MEETING_ATTENDANCE_V1','MEETING_BENEFIT_V1',
-    'MEETING_BENEFIT_EVIDENCE_V1','MEETING_CLOSE_V1','CASHBOX_RECONCILE_V1','CONTRIBUTION_CASH_RECORDED'
+    'MEETING_BENEFIT_EVIDENCE_V1','MEETING_DISTRIBUTION_V1','MEETING_CLOSE_V1','CASHBOX_RECONCILE_V1','CONTRIBUTION_CASH_RECORDED'
   ]){
     assert.ok(application.includes(type)||type==='MEETING_CLOSE_V1'||type==='CASHBOX_RECONCILE_V1',type);
     assert.ok(api.includes(type),type+' server replay');
@@ -41,7 +41,7 @@ test('lot 3 restores view session tab selected meeting details scroll and focus 
 
 test('lot 4 keeps manager proposals votes majority and dissent reserve separate from ledger',()=>{
   for(const token of ['DIVERGENT','MAJORITY_SELECTED','UNANIMOUS','RESERVE_OPEN','LIVE_DATA_DIVERGENCE','stableColor'])assert.ok(consensus.includes(token),token);
-  assert.match(sessions,/Confronter les saisies/);
+  assert.match(sessions,/Confronter les (?:saisies|données)/);
   assert.match(sessions,/reserveLiveConsensus/);
   assert.doesNotMatch(consensus,/recordCashContribution|saveLedgerEntry|postLedger/);
 });
