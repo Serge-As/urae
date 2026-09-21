@@ -129,16 +129,24 @@ const captureNavState=()=>{
     const view=activeViewName(),active=document.querySelector(`#view-${view}`);
     const sessionTab=document.querySelector('#sessionsTabs [data-session-tab].active')?.dataset?.sessionTab;
     const meetingId=document.querySelector('#sessionsMeetingSelect')?.value||undefined;
+    const matrixMeetingId=document.querySelector('#meetingMatrixScope')?.value||undefined;
+    const sheetMode=!document.querySelector('#individualSheetsMode')?.hidden?'individual':'meeting';
     const openDetails=[...(active?.querySelectorAll('details[open][id]')??[])].map(x=>x.id).slice(0,40);
     const focusId=document.activeElement?.id||undefined;
-    return{view,scrollY:window.scrollY,sessionTab,meetingId,openDetails,focusId};
+    return{view,scrollY:window.scrollY,sessionTab,meetingId,matrixMeetingId,sheetMode,openDetails,focusId};
 };
 const restoreNavState=state=>{
     if(!state)return;
     if(state.meetingId){const pick=document.querySelector('#sessionsMeetingSelect');if(pick&&[...pick.options].some(o=>o.value===state.meetingId)){pick.value=state.meetingId;pick.dispatchEvent(new Event('change',{bubbles:true}));}}
     if(state.sessionTab){const tab=document.querySelector(`#sessionsTabs [data-session-tab="${state.sessionTab}"]`);if(tab&&!tab.classList.contains('active'))tab.click();}
     for(const id of state.openDetails??[]){const node=document.getElementById(id);if(node?.tagName==='DETAILS')node.open=true;}
-    requestAnimationFrame(()=>{window.scrollTo({top:Number(state.scrollY)||0,behavior:'auto'});if(state.focusId)document.getElementById(state.focusId)?.focus?.({preventScroll:true});});
+    requestAnimationFrame(()=>{
+        if(state.openTarget){const node=document.getElementById(state.openTarget);if(node){if(node.tagName==='DETAILS')node.open=true;node.hidden=false;node.setAttribute('aria-hidden','false');}}
+        if(state.sheetMode||state.matrixMeetingId)window.dispatchEvent(new CustomEvent('eco:restore-financial-sheet',{detail:{sheetMode:state.sheetMode,matrixMeetingId:state.matrixMeetingId}}));
+        const anchor=state.anchor?document.getElementById(state.anchor):undefined;
+        if(anchor)anchor.scrollIntoView({behavior:'auto',block:'start'});else window.scrollTo({top:Number(state.scrollY)||0,behavior:'auto'});
+        if(state.focusId)document.getElementById(state.focusId)?.focus?.({preventScroll:true});
+    });
 };
 const updateBackButton=()=>{const b=document.querySelector('#appBackBtn');if(b)b.hidden=navDepth<=0;};
 const showView=(name,state)=>{
@@ -146,7 +154,8 @@ const showView=(name,state)=>{
     document.querySelectorAll('.view').forEach(x=>x.classList.remove('active'));
     document.querySelectorAll('.nav-btn').forEach(x=>x.classList.remove('active'));
     target.classList.add('active');
-    const activeNav=document.querySelector(`.nav-btn[data-view="${name}"]`);activeNav?.classList.add('active');
+    const activeNav=[...document.querySelectorAll(`.nav-btn[data-view="${name}"]`)].find(x=>!state?.anchor||x.dataset.anchor===state.anchor)||document.querySelector(`.nav-btn[data-view="${name}"]`);
+    activeNav?.classList.add('active');
     if(activeNav&&window.matchMedia('(max-width:860px)').matches)setTimeout(()=>activeNav.scrollIntoView({behavior:'smooth',block:'nearest',inline:'center'}),20);
     document.querySelector('#globalSearchResults')?.replaceChildren();
     restoreNavState(state??{view:name,scrollY:0});
@@ -154,22 +163,31 @@ const showView=(name,state)=>{
     return true;
 };
 const go=(name,options={})=>{
-    const current=captureNavState();
-    if(name===current.view&&!options.force)return;
+    const current=captureNavState(),sameDestination=name===current.view&&!options.anchor&&!options.force&&!options.sheetMode&&!options.openTarget;
+    if(sameDestination)return;
     try{history.replaceState({ecoNav:current,ecoDepth:navDepth},'',`#${current.view}`);}catch{}
     navDepth+=1;
-    const next={view:name,scrollY:Number(options.scrollY)||0};
-    try{history.pushState({ecoNav:next,ecoDepth:navDepth},'',`#${name}`);}catch{}
+    const next={view:name,scrollY:Number(options.scrollY)||0,anchor:options.anchor,sessionTab:options.sessionTab,meetingId:options.meetingId,matrixMeetingId:options.matrixMeetingId,sheetMode:options.sheetMode,openTarget:options.openTarget};
+    const hash=options.anchor?`#${options.anchor}`:`#${name}`;
+    try{history.pushState({ecoNav:next,ecoDepth:navDepth},'',hash);}catch{}
     showView(name,next);updateBackButton();
 };
 const goBack=()=>{if(navDepth>0)history.back();};
-document.querySelectorAll('[data-view]').forEach(b=>b.addEventListener('click',()=>go(b.dataset.view)));
-document.querySelectorAll('[data-go]').forEach(b=>b.addEventListener('click',()=>go(b.dataset.go)));
+document.querySelectorAll('[data-view]').forEach(b=>b.addEventListener('click',()=>go(b.dataset.view,{anchor:b.dataset.anchor,meetingId:b.dataset.meetingId,matrixMeetingId:b.dataset.matrixMeetingId,sheetMode:b.dataset.sheetMode,openTarget:b.dataset.openTarget,force:Boolean(b.dataset.anchor||b.dataset.sheetMode||b.dataset.openTarget)})));
+document.querySelectorAll('[data-go]').forEach(b=>b.addEventListener('click',()=>go(b.dataset.go,{anchor:b.dataset.anchor,meetingId:b.dataset.meetingId,matrixMeetingId:b.dataset.matrixMeetingId,sheetMode:b.dataset.sheetMode,openTarget:b.dataset.openTarget,force:Boolean(b.dataset.anchor||b.dataset.sheetMode||b.dataset.openTarget)})));
+document.addEventListener('click',event=>{
+    const link=event.target instanceof Element?event.target.closest('a[href^="#"]'):null;if(!link)return;
+    const id=(link.getAttribute('href')||'').slice(1);if(!id)return;
+    const target=document.getElementById(id);if(!target)return;
+    const view=target.closest('.view')?.id?.replace(/^view-/,'');if(!view)return;
+    event.preventDefault();go(view,{anchor:id,force:true});
+});
 document.querySelector('#appBackBtn')?.addEventListener('click',goBack);
 window.addEventListener('popstate',event=>{
     const state=event.state?.ecoNav,hash=location.hash.slice(1);
     navDepth=Math.max(0,Number(event.state?.ecoDepth??Math.max(0,navDepth-1)));
-    if(state?.view)showView(state.view,state);else if(hash)showView(hash,{view:hash,scrollY:0});
+    if(state?.view)showView(state.view,state);
+    else if(hash){const target=document.getElementById(hash),view=target?.closest('.view')?.id?.replace(/^view-/,'')||hash;showView(view,{view,anchor:target?hash:undefined,scrollY:0});}
     updateBackButton();
 });
 try{
