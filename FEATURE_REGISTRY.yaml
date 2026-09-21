@@ -1348,3 +1348,27 @@ production_qualification_2026_09_21_1_4_3:
   excluded_projects:
     - BACKHAUL_RETURN_LOAD_ECO_ROUTE
   field_reception: pending
+
+release_capabilities_1_4_4_evidence_foundation:
+  branch: next/1.4.4-evidence-field-acceptance-20260921
+  production_deployed: false
+  production_current: 1.4.3-blueprint-5-0-0-finalized
+  capabilities:
+    - id: TRUTH.EVIDENCE_REGISTRY
+      status: FUNCTIONAL_BETA
+      risk_class: high
+      authority: EVIDENCE_REGISTRY.yaml
+      rule: feature_declaration_is_not_proof_and_each_promoted_stage_requires_explicit_evidence
+      tests: [evidence-registry-1.4.4]
+    - id: TRUTH.FIELD_ACCEPTANCE_GATE
+      status: FUNCTIONAL_BETA
+      risk_class: high
+      authority: scripts/evidence-gate.mjs
+      rule: field_accepted_or_acquired_cannot_be_claimed_while_required_field_cases_are_pending_failed_or_blocked
+      tests: [evidence-registry-1.4.4]
+  qualification:
+    run: 35576062246
+    conclusion: SUCCESS
+    production_mutation: false
+    field_reception: not_applicable_for_ci_guardrail
+
