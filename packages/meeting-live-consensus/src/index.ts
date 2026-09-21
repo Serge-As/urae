@@ -30,11 +30,15 @@ const data=(x:LiveConsensus):WorkspaceRecord['data']=>({meetingId:x.meetingId,ce
 
 export class MeetingLiveConsensusService{
   constructor(private repo:PlatformRepository,private kernel:PlatformKernel){}
-  private async requireManager(groupId:string){
+  private async managerIds(groupId:string):Promise<string[]>{
     const ctx=this.kernel.context.get(),g=await this.repo.getGroup(ctx.tenantId,groupId);if(!g)throw Error('GROUP_NOT_FOUND');
-    if(g.createdBy===ctx.actorId)return;
-    const m=(await this.repo.listMemberships(ctx.tenantId,groupId)).find(x=>x.userId===ctx.actorId&&x.status==='active');
-    if(!m||!m.roles.some(r=>MANAGER_ROLES.has(r)))throw Error('MANAGER_REQUIRED');
+    const ids=new Set<string>([g.createdBy]);
+    for(const m of await this.repo.listMemberships(ctx.tenantId,groupId))if(m.status==='active'&&m.roles.some(r=>MANAGER_ROLES.has(r)))ids.add(m.userId);
+    return [...ids];
+  }
+  private async requireManager(groupId:string){
+    const ctx=this.kernel.context.get(),ids=await this.managerIds(groupId);
+    if(!ids.includes(ctx.actorId))throw Error('MANAGER_REQUIRED');
   }
   private async save(x:LiveConsensus,action:string){
     const ctx=this.kernel.context.get(),existing=await this.repo.getWorkspaceRecord(ctx.tenantId,x.id);
@@ -44,21 +48,38 @@ export class MeetingLiveConsensusService{
     return structuredClone(x);
   }
   async submit(input:{groupId:string;meetingId:string;cellKey:string;value:unknown;label?:string;membershipId?:string;rubricId?:string}){
-    await this.requireManager(input.groupId);const ctx=this.kernel.context.get(),id=idFor(input.groupId,input.meetingId,input.cellKey),existing=await this.repo.getWorkspaceRecord(ctx.tenantId,id),stamp=now();
+    await this.requireManager(input.groupId);const ctx=this.kernel.context.get(),id=idFor(input.groupId,input.meetingId,input.cellKey),existing=await this.repo.getWorkspaceRecord(ctx.tenantId,id),stamp=now(),managerIds=await this.managerIds(input.groupId);
     const x:LiveConsensus=existing?parse(existing):{id,groupId:input.groupId,meetingId:input.meetingId,cellKey:input.cellKey,membershipId:input.membershipId,rubricId:input.rubricId,proposals:[],votes:[],state:'COLLECTING',dissentingActorIds:[],version:0,createdAt:stamp,updatedAt:stamp};
     const proposal:ManagerProposal={actorId:ctx.actorId,value:clean(input.value),label:clean(input.label||ctx.actorId),color:stableColor(ctx.actorId),submittedAt:stamp};
     x.proposals=[...x.proposals.filter(p=>p.actorId!==ctx.actorId),proposal];x.votes=x.votes.filter(v=>v.actorId!==ctx.actorId);x.version++;x.updatedAt=stamp;
-    const values=new Set(x.proposals.map(p=>p.value));x.state=values.size>1?'DIVERGENT':x.proposals.length>1?'UNANIMOUS':'COLLECTING';if(x.state==='UNANIMOUS'){x.selectedValue=proposal.value;x.selectedProposalActorId=proposal.actorId;}
+    const actual=x.proposals.filter(p=>managerIds.includes(p.actorId)),values=new Set(x.proposals.map(p=>p.value));
+    x.selectedValue=undefined;x.selectedProposalActorId=undefined;
+    x.state=values.size>1?'DIVERGENT':actual.length>=managerIds.length&&managerIds.length>0?'UNANIMOUS':'COLLECTING';
+    if(x.state==='UNANIMOUS'){x.selectedValue=proposal.value;x.selectedProposalActorId=proposal.actorId;x.dissentingActorIds=[];}
     return this.save(x,'LIVE_MANAGER_PROPOSAL_SUBMITTED');
+  }
+
+  async proposeAgainstBaseline(input:{groupId:string;meetingId:string;cellKey:string;value:unknown;baselineValue:unknown;baselineActorId?:string;label?:string;membershipId?:string;rubricId?:string}){
+    await this.requireManager(input.groupId);const ctx=this.kernel.context.get(),id=idFor(input.groupId,input.meetingId,input.cellKey),existing=await this.repo.getWorkspaceRecord(ctx.tenantId,id),stamp=now();
+    if(clean(input.value)===clean(input.baselineValue))return this.submit({groupId:input.groupId,meetingId:input.meetingId,cellKey:input.cellKey,value:input.value,label:input.label,membershipId:input.membershipId,rubricId:input.rubricId});
+    const x:LiveConsensus=existing?parse(existing):{id,groupId:input.groupId,meetingId:input.meetingId,cellKey:input.cellKey,membershipId:input.membershipId,rubricId:input.rubricId,proposals:[],votes:[],state:'COLLECTING',dissentingActorIds:[],version:0,createdAt:stamp,updatedAt:stamp};
+    const baselineId='baseline:'+clean(input.baselineActorId||'ledger'),baseline:ManagerProposal={actorId:baselineId,value:clean(input.baselineValue),label:'Valeur canonique actuelle',color:stableColor(baselineId),submittedAt:stamp};
+    const proposal:ManagerProposal={actorId:ctx.actorId,value:clean(input.value),label:clean(input.label||ctx.actorId),color:stableColor(ctx.actorId),submittedAt:stamp};
+    x.proposals=[...x.proposals.filter(p=>p.actorId!==ctx.actorId&&!p.actorId.startsWith('baseline:')),baseline,proposal];
+    x.votes=x.votes.filter(v=>v.actorId!==ctx.actorId);x.state='DIVERGENT';x.selectedValue=undefined;x.selectedProposalActorId=undefined;x.dissentingActorIds=[];x.version++;x.updatedAt=stamp;
+    return this.save(x,'LIVE_MANAGER_CORRECTION_PROPOSED_AGAINST_BASELINE');
   }
   async vote(groupId:string,meetingId:string,cellKey:string,proposalActorId:string){
     await this.requireManager(groupId);const ctx=this.kernel.context.get(),id=idFor(groupId,meetingId,cellKey),record=await this.repo.getWorkspaceRecord(ctx.tenantId,id);if(!record)throw Error('LIVE_CONSENSUS_NOT_FOUND');
-    const x=parse(record),candidate=x.proposals.find(p=>p.actorId===proposalActorId);if(!candidate)throw Error('PROPOSAL_NOT_FOUND');const stamp=now();
+    const x=parse(record),candidate=x.proposals.find(p=>p.actorId===proposalActorId);if(!candidate)throw Error('PROPOSAL_NOT_FOUND');const stamp=now(),managerIds=await this.managerIds(groupId);
     x.votes=[...x.votes.filter(v=>v.actorId!==ctx.actorId),{actorId:ctx.actorId,proposalActorId,votedAt:stamp}];x.version++;x.updatedAt=stamp;
-    const counts=new Map<string,number>();for(const v of x.votes)counts.set(v.proposalActorId,(counts.get(v.proposalActorId)??0)+1);
-    const ranked=[...counts.entries()].sort((a,b)=>b[1]-a[1]);const winner=ranked[0],second=ranked[1]?.[1]??0;
-    if(winner&&winner[0]&&winner[1]>second){const p=x.proposals.find(q=>q.actorId===winner[0])!;x.selectedValue=p.value;x.selectedProposalActorId=p.actorId;x.dissentingActorIds=x.proposals.filter(q=>q.value!==p.value).map(q=>q.actorId);x.state=x.dissentingActorIds.length?'MAJORITY_SELECTED':'UNANIMOUS';}
-    else x.state='DIVERGENT';
+    const eligible=x.votes.filter(v=>managerIds.includes(v.actorId)),counts=new Map<string,number>();for(const v of eligible)counts.set(v.proposalActorId,(counts.get(v.proposalActorId)??0)+1);
+    const ranked=[...counts.entries()].sort((a,b)=>b[1]-a[1]),winner=ranked[0],second=ranked[1]?.[1]??0,majority=Math.floor(managerIds.length/2)+1;
+    if(winner&&winner[0]&&winner[1]>=majority&&winner[1]>second){
+      const p=x.proposals.find(q=>q.actorId===winner[0])!;x.selectedValue=p.value;x.selectedProposalActorId=p.actorId;
+      x.dissentingActorIds=[...new Set([...x.proposals.filter(q=>!q.actorId.startsWith('baseline:')&&q.value!==p.value).map(q=>q.actorId),...eligible.filter(v=>v.proposalActorId!==winner[0]).map(v=>v.actorId)])];
+      x.state=eligible.length===managerIds.length&&eligible.every(v=>v.proposalActorId===winner[0])?'UNANIMOUS':'MAJORITY_SELECTED';
+    } else {x.state='DIVERGENT';x.selectedValue=undefined;x.selectedProposalActorId=undefined;}
     return this.save(x,'LIVE_MANAGER_CONSENSUS_VOTED');
   }
   async maintainDissent(groupId:string,meetingId:string,cellKey:string,reason:string){
