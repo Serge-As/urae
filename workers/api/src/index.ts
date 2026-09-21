@@ -1636,6 +1636,8 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
       if(item.type==='MEETING_DISTRIBUTION_V1'){
         const p=item.payload,groupId=String(p.groupId??''),meetingId=String(p.meetingId??'');await requireGroup(groupId,true);
         if(!(await repo.getMeeting(ctx.tenantId,groupId,meetingId)))throw Error('MEETING_NOT_FOUND');
+        const unresolved=(await new MeetingLiveConsensusService(repo,kernel).list(groupId,meetingId)).some(x=>['COLLECTING','DIVERGENT'].includes(x.state));
+        if(unresolved)throw Error('CONSENSUS_UNRESOLVED');
         const at=new Date().toISOString(),id='meeting_distribution_'+markerHash;
         await repo.saveWorkspaceRecord({id,tenantId:ctx.tenantId,groupId,moduleId:'MEETING.DISTRIBUTION',title:'Diffusion membres prête',summary:'Projection de séance validée et rendue disponible aux membres.',status:'DONE',tags:['meeting-distribution','meeting:'+meetingId],data:{meetingId,kind:'MEMBER_DISTRIBUTION_READY',confirmedAt:String(p.confirmedAt??at)},createdBy:ctx.actorId,createdAt:at,updatedAt:at});
         await publishLive(groupId,'MEETING_UPDATE',item.idempotencyKey,{meetingId,kind:'MEMBER_DISTRIBUTION_READY',at});
