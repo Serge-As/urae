@@ -188,3 +188,25 @@ Reprendre directement par la recette terrain 1.4.2 ; ne redéployer que pour un 
 - BIR+ final : `35499946216 SUCCESS`
 - artifact : `10600699685`
 - prochaine action : recette terrain Centre opérationnel + Séances + Blueprint + Communautés sur téléphone/ordinateur ; aucun redéploiement avant défaut reproductible.
+
+## Reprise après production 1.4.3 — 2026-09-21
+
+Production :
+- `1.4.3-blueprint-5-0-0-finalized`
+- branche : `next/1.4.3-blueprint-5-0-0-finalization-20260921`
+- source déployée : `96b8f41467af476b12179b786d7d8f140ef86ce7`
+- Worker : `07939344-ceca-4578-bc3b-3d1d589ad7eb`
+- deploy/smoke/BIR+ pré-post : `35560714108 SUCCESS`
+- 265/265 tests PASS
+- D1/R2 historiques conservés
+- argent réel OFF.
+
+Reprendre par :
+1. recette téléphone : badge 1.4.3, Centre opérationnel, Séances distinctes, barre mobile lisible ;
+2. recette Blueprint 5.0.0 ;
+3. recette Hubs Business/Formation/Impact/Créateurs et posts contextuels ;
+4. test groupe + membre + offline ;
+5. consigner tout défaut reproductible et écrire le test avant correction.
+
+Ne pas réintroduire Backhaul/Eco Route dans Eco-System.
+
