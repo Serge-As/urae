@@ -1,7 +1,7 @@
 import type {LaunchRubricPlan, GroupProjectLaunchProfile} from '../../contracts/src/index.js';
 import { PlatformKernel, type DeviceCapabilities } from '../../platform-kernel/src/index.js';
 import { InMemoryPlatformRepository } from '../../repositories/src/index.js';
-import { FoundationService } from '../../domain/src/index.js';
+import { FoundationService, GroupLaunchSimulator, starterGroupOperatingPolicy } from '../../domain/src/index.js';
 import { IndexedDbOutboxAdapter, IndexedDbReadSnapshotAdapter, Outbox } from '../../offline/src/index.js';
 import { LoopbackRelayTransport, envelopeForOutbox } from '../../relay/src/index.js';
 import { PRODUCT_MODULES } from '../../module-registry/src/index.js';
@@ -88,6 +88,26 @@ export class ConnectedApplication {
   private announceOfflineSnapshot(path:string,updatedAt:string):void{
     this.usingOfflineSnapshot=true;
     if(typeof window!=='undefined'&&typeof CustomEvent!=='undefined')window.dispatchEvent(new CustomEvent('eco:offline-snapshot-used',{detail:{path,updatedAt}}));
+  }
+  private isOffline():boolean{return typeof navigator!=='undefined'&&navigator.onLine===false;}
+  private async cached<T>(path:string):Promise<T|undefined>{try{return (await this.readSnapshots.get<T>(this.offlineReadKey(path)))?.body;}catch{return undefined;}}
+  private async saveCached<T>(path:string,body:T):Promise<void>{
+    if(!IndexedDbReadSnapshotAdapter.supported())throw Error('DURABLE_STORAGE_REQUIRED');
+    await this.readSnapshots.save({id:this.offlineReadKey(path),actorId:this.actorId,tenantId:this.tenantId,path,body});
+  }
+  private async patchCachedArray<T>(path:string,updater:(items:T[])=>T[]):Promise<T[]>{
+    const current=structuredClone(await this.cached<T[]>(path)??[]),next=updater(current);
+    await this.saveCached(path,next);return next;
+  }
+  private async queueLocal(type:string,payload:Record<string,unknown>,idempotencyKey=makeId('op')):Promise<OutboxItem>{
+    const item=this.outbox.enqueue({tenantId:this.tenantId,actorId:this.actorId,type,payload,idempotencyKey});
+    await this.persistOutbox();
+    if(typeof window!=='undefined'&&typeof CustomEvent!=='undefined')window.dispatchEvent(new CustomEvent('eco:local-mutation',{detail:{type,id:item.id,idempotencyKey}}));
+    return item;
+  }
+  private async sha256Hex(value:string):Promise<string>{
+    const bytes=new TextEncoder().encode(value),digest=await crypto.subtle.digest('SHA-256',bytes);
+    return[...new Uint8Array(digest)].map(x=>x.toString(16).padStart(2,'0')).join('');
   }
   private async request<T>(path:string,init:RequestInit={}):Promise<T>{
     const headers=new Headers(this.headers());
