@@ -1314,3 +1314,37 @@ final_hotfix_closure_2026_09_20_1_4_2:
   sha256: verified
   production_source_unchanged: a9fe00f94daa7a6787d5a4440a5edc0bc5e4a1c8
   field_reception: pending
+
+
+production_qualification_2026_09_21_1_4_3:
+  version: 1.4.3-blueprint-5-0-0-finalized
+  branch: next/1.4.3-blueprint-5-0-0-finalization-20260921
+  deployed: true
+  source_deployed: 96b8f41467af476b12179b786d7d8f140ef86ce7
+  production_url: https://eco-system.sergemimf.workers.dev/
+  worker_version_id: 07939344-ceca-4578-bc3b-3d1d589ad7eb
+  deploy_smoke_birplus_run: 35560714108
+  tests_passed: 265
+  d1: eco-system-db
+  r2: eco-system-backups
+  migrations: no_migrations_to_apply
+  predeploy_artifact: 10621409310
+  postdeploy_artifact: 10621833522
+  real_money_enabled: false
+  pwa_cache: eco-system-v143-blueprint-5-0-0-finalized-20260921
+  blueprint_version: 5.0.0
+  blueprint_layers:
+    - association_tontine
+    - needs_opportunities
+    - eco_now_harvest_local
+    - value_business_talent_creator
+    - communities_forums_support
+    - trust_market_intelligence_antiscam
+  canonical_handoffs:
+    COMMUNITY.FORUM: COMMUNITY.FORUM
+    COMMUNITY.PRO_HUBS: COMMUNITY.PRO_HUBS
+    MARKETPLACE.GROUP_BUY: MARKETPLACE.GROUP_BUY
+    PARTNERS.DIRECTORY: PARTNERS.DIRECTORY
+  excluded_projects:
+    - BACKHAUL_RETURN_LOAD_ECO_ROUTE
+  field_reception: pending
