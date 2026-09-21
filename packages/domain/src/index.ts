@@ -504,7 +504,7 @@ export class LedgerService {
     return {cash,memberFunds};
   }
 
-  async recordCashContribution(input:{tenantId:Id;groupId:Id;membershipId:Id;amount:number;currency?:Currency;meetingId?:Id;rubricId?:Id;lateReason?:string;approverIds?:Id[];idempotencyKey:string;effectiveAt?:string},requestId=makeId('req')):Promise<ContributionReceipt>{
+  async recordCashContribution(input:{tenantId:Id;groupId:Id;membershipId:Id;amount:number;currency?:Currency;meetingId?:Id;rubricId?:Id;lateReason?:string;approverIds?:Id[];idempotencyKey:string;effectiveAt?:string;governedCorrectionReason?:string},requestId=makeId('req')):Promise<ContributionReceipt>{
     assertIntPositive('contributionAmount',input.amount); if(!input.idempotencyKey.trim()) throw new Error('IDEMPOTENCY_KEY_REQUIRED');
     const ctx=this.kernel.context.get(); const group=await assertCanManageGroup(this.repo,ctx,input.tenantId,input.groupId);
     const sameIntent=(receipt:ContributionReceipt)=>{
@@ -518,7 +518,15 @@ export class LedgerService {
     if(input.rubricId && !(await this.repo.getRubricDefinition(input.tenantId,input.groupId,input.rubricId))) throw new Error('RUBRIC_NOT_FOUND');
     const membership=await this.repo.getMembership(input.tenantId,input.groupId,input.membershipId); if(!membership||membership.status!=='active') throw new Error('MEMBERSHIP_NOT_FOUND');
     let latePosting:LatePostingTrace|undefined;
-    if(input.meetingId){const meeting=await this.repo.getMeeting(input.tenantId,input.groupId,input.meetingId);if(!meeting) throw new Error('MEETING_NOT_FOUND');if(meeting.status==='cancelled') throw new Error('MEETING_NOT_OPEN');if(meeting.status==='closed') latePosting=await authorizeLatePosting(this.repo,group,ctx,meeting,input);}
+    if(input.meetingId){
+      const meeting=await this.repo.getMeeting(input.tenantId,input.groupId,input.meetingId);if(!meeting) throw new Error('MEETING_NOT_FOUND');if(meeting.status==='cancelled') throw new Error('MEETING_NOT_OPEN');
+      if(meeting.status==='closed'){
+        const correctionReason=input.governedCorrectionReason?.trim();
+        latePosting=correctionReason
+          ? {isLate:true,reason:correctionReason,approvedBy:[ctx.actorId],meetingClosedAt:meeting.closedAt}
+          : await authorizeLatePosting(this.repo,group,ctx,meeting,input);
+      }
+    }
     const decision=this.kernel.policy.evaluate('group:manage',{...ctx,activeGroupId:input.groupId},{groupId:input.groupId}); if(!decision.allowed) throw new Error(decision.reason);
     const currency=input.currency??'XAF'; const accounts=await this.ensureStandardAccounts(input.tenantId,input.groupId,currency);
     const effectiveAt=input.effectiveAt===undefined?now():new Date(input.effectiveAt).toISOString(); if(!Number.isFinite(Date.parse(effectiveAt)))throw new Error('INVALID_EFFECTIVE_AT');
