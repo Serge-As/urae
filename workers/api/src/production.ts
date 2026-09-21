@@ -1,7 +1,7 @@
 import worker,{type WorkerEnv} from './index.js';
 export {GroupLiveHub} from './group-live-hub.js';
 
-export const RELEASE_VERSION='1.4.6-ui-sessions-community-blueprint-final';
+export const RELEASE_VERSION='1.4.6.1-auth-navigation-recovery';
 
 const releaseTruthPaths=new Set(['/health','/api/v1/product/capabilities']);
 
