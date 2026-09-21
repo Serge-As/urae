@@ -50,6 +50,31 @@ export function mountSessionsUI({app,getGroups,getMembers,getMeetings,getRubrics
 
   const actions=()=>{const a=el('div',undefined,'actions');const center=button(t('Centre opérationnel','Operational Center'));center.onclick=()=>navigate('operations');const sheets=button(t('Fiches individuelles','Individual sheets'));sheets.onclick=()=>{navigate('operations');setTimeout(()=>byId('individualSheetsViewBtn')?.click(),90);};const members=button(t('Gérer les membres','Manage members'));members.onclick=()=>navigate('members');const rubrics=button(t('Gérer / archiver les rubriques','Manage / archive rubrics'));rubrics.onclick=()=>{navigate('operations');setTimeout(()=>byId('rubricList')?.scrollIntoView({behavior:'smooth',block:'start'}),90);};const recap=button(t('Récap global','Global recap'));recap.onclick=()=>navigate('recap');a.append(center,sheets,members,rubrics,recap);return a;};
 
+  const renderLiveConsensus=async(c)=>{
+    const {meeting,me,members,rubrics}=c;if(!meeting||!me.isManager)return null;
+    const section=card(t('Saisie live multi-gestionnaires','Multi-manager live entry'),'panel live-consensus-panel');
+    section.append(el('p',t('Chaque responsable garde une couleur stable. Si deux saisies divergent, la valeur n’est pas écrasée : le Bureau choisit la bonne donnée. La majorité est retenue, une dissidence maintenue reste en contentieux sans bloquer la séance.','Each manager keeps a stable color. If entries diverge, no value is silently overwritten: managers choose the correct value. The majority is retained and a maintained dissent remains a non-blocking dispute.'),'hint'));
+    const form=el('form',undefined,'form-grid'),member=document.createElement('select'),rubric=document.createElement('select'),value=document.createElement('input'),save=button(t('Proposer cette donnée','Submit this value'),'primary');
+    member.append(new Option(t('Membre concerné','Affected member'),''));for(const m of members.filter(x=>x.status!=='left'))member.append(new Option(m.displayName,m.id));
+    rubric.append(new Option(t('Rubrique','Rubric'),''));for(const r of rubrics.filter(x=>x.status!=='ARCHIVED'))rubric.append(new Option(r.name,r.id));
+    value.type='number';value.inputMode='numeric';value.step='1';value.placeholder='0';save.type='submit';
+    form.append(label(t('Membre','Member'),member),label(t('Rubrique','Rubric'),rubric),label(t('Valeur','Value'),value),save);section.append(form);
+    const list=el('div',undefined,'item-list');
+    const draw=async()=>{list.replaceChildren();const items=await app.liveConsensus(meeting.id).catch(()=>[]);
+      for(const item of items){const box=el('article',undefined,'item '+(item.state==='RESERVE_OPEN'?'danger':''));
+        const title=el('strong',(members.find(x=>x.id===item.membershipId)?.displayName??item.membershipId??item.cellKey)+' · '+(rubrics.find(x=>x.id===item.rubricId)?.name??item.rubricId??''));
+        box.append(title,el('small',item.state+(item.selectedValue!==undefined?' · '+t('retenu : ','selected: ')+item.selectedValue:'')));
+        const chips=el('div',undefined,'actions');
+        for(const p of item.proposals??[]){const b=button((p.label||p.actorId)+' : '+p.value);b.style.borderLeft='8px solid '+p.color;b.style.boxShadow='inset 0 0 0 1px '+p.color;b.onclick=()=>void(async()=>{try{b.disabled=true;await app.voteLiveConsensus(meeting.id,item.cellKey,p.actorId);notify(t('Choix transmis à tous les responsables.','Choice sent to all managers.'));await draw();}catch(e){showError(e);}finally{b.disabled=false;}})();chips.append(b);}
+        box.append(chips);
+        if(['MAJORITY_SELECTED','RESERVE_OPEN'].includes(item.state)){const reserve=button(t('Maintenir une donnée différente / réserve','Maintain different value / reserve'));reserve.onclick=()=>void(async()=>{const reason=prompt(t('Motif de la réserve :','Reserve reason:'))||'';if(!reason)return;try{await app.reserveLiveConsensus(meeting.id,item.cellKey,reason);notify(t('Réserve enregistrée sans bloquer la séance.','Reserve recorded without blocking the meeting.'));await draw();}catch(e){showError(e);}})();box.append(reserve);}
+        list.append(box);
+      }if(!items.length)list.append(el('div',t('Aucune divergence ou saisie live pour cette séance.','No live entry or divergence for this meeting.'),'empty-state'));
+    };
+    form.onsubmit=e=>void(async()=>{e.preventDefault();try{if(!member.value||!rubric.value||value.value==='')throw Error(t('Choisissez le membre, la rubrique et la valeur.','Choose member, rubric and value.'));save.disabled=true;const cellKey=member.value+':'+rubric.value;await app.submitLiveConsensus(meeting.id,{cellKey,value:Number(value.value),membershipId:member.value,rubricId:rubric.value});notify(t('Saisie live transmise.','Live entry sent.'));value.value='';await draw();}catch(err){showError(err);}finally{save.disabled=false;}})();
+    section.append(list);await draw();return section;
+  };
+
   const renderOverview=async(c)=>{
     const {group,meeting,meetings,members,me}=c;if(!meeting)return card(t('Vue d’ensemble','Overview')).appendChild(el('div',t('Aucune séance disponible.','No session available.'),'empty-state')).parentNode;
     const section=card(meetingLabel(meeting));
@@ -87,7 +112,7 @@ export function mountSessionsUI({app,getGroups,getMembers,getMeetings,getRubrics
       const sheet=await app.memberOperationalSheet(me.membership.id).catch(()=>null),r=sheet?.exerciseMatrix?.find(x=>x.meetingId===meeting.id);
       const own=el('div',undefined,'truth-notice');own.textContent=t('Votre situation pour cette séance : ','Your position for this session: ')+(r?money(r.total):t('aucun mouvement connu','no known movement'));section.append(own);
     }
-    section.append(actions());return section;
+    if(me.isManager){const live=await renderLiveConsensus(c);if(live)section.append(live);}section.append(actions());return section;
   };
 
   const renderSheet=async(c)=>{
