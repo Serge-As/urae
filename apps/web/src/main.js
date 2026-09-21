@@ -123,19 +123,24 @@ const communityShopUI = mountCommunityShopUI({ app, notify: toast, showError: fa
 const miscRubricUI = mountMiscRubricUI({ app, notify: toast, showError: fail, getMembers: () => members, getMeetings: () => meetings, isManager, fmt });
 const pairingUI = mountPairingUI({ app, notify: toast, showError: fail, getMembers: () => members, isManager, afterMembershipChanged: async groupId => { await renderGroups(); if(groupId){ app.selectGroup(groupId); await refreshGroupContext(); } } });
 const clearFail = () => { $('#errorBox').hidden = true; $('#errorBox').textContent = ''; };
-const go = (name) => {
-    document.querySelectorAll('.view').forEach(x => x.classList.remove('active'));
-    document.querySelectorAll('.nav-btn').forEach(x => x.classList.remove('active'));
-    $(`#view-${name}`).classList.add('active');
-    const activeNav=document.querySelector(`.nav-btn[data-view="${name}"]`);activeNav?.classList.add('active');
+const navStack=[];
+const activeViewName=()=>document.querySelector('.view.active')?.id?.replace(/^view-/,'')||'dashboard';
+const rememberNavigationPoint=()=>({view:activeViewName(),scrollY:window.scrollY});
+const updateBackButton=()=>{const b=document.querySelector('#appBackBtn');if(b)b.hidden=navStack.length===0;};
+const showView=(name,scrollY=0)=>{
+    const target=document.querySelector(`#view-${name}`);if(!target)return false;
+    document.querySelectorAll('.view').forEach(x=>x.classList.remove('active'));document.querySelectorAll('.nav-btn').forEach(x=>x.classList.remove('active'));
+    target.classList.add('active');const activeNav=document.querySelector(`.nav-btn[data-view="${name}"]`);activeNav?.classList.add('active');
     if(activeNav&&window.matchMedia('(max-width:860px)').matches)setTimeout(()=>activeNav.scrollIntoView({behavior:'smooth',block:'nearest',inline:'center'}),20);
-    const pop = document.querySelector('#globalSearchResults');
-    if (pop)
-        pop.replaceChildren();
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    document.querySelector('#globalSearchResults')?.replaceChildren();requestAnimationFrame(()=>window.scrollTo({top:scrollY,behavior:'auto'}));updateBackButton();return true;
 };
-document.querySelectorAll('[data-view]').forEach(b => b.addEventListener('click', () => go(b.dataset.view)));
-document.querySelectorAll('[data-go]').forEach(b => b.addEventListener('click', () => go(b.dataset.go)));
+const go=(name,options={})=>{const current=rememberNavigationPoint();if(name===current.view&&!options.force)return;if(options.remember!==false)navStack.push(current);showView(name,options.scrollY??0);try{history.pushState({ecoView:name},'',`#${name}`);}catch{}};
+const goBack=()=>{const previous=navStack.pop();if(previous){showView(previous.view,previous.scrollY);try{history.replaceState({ecoView:previous.view},'',`#${previous.view}`);}catch{}return;}if(history.length>1)history.back();};
+document.querySelectorAll('[data-view]').forEach(b=>b.addEventListener('click',()=>go(b.dataset.view)));
+document.querySelectorAll('[data-go]').forEach(b=>b.addEventListener('click',()=>go(b.dataset.go)));
+document.querySelector('#appBackBtn')?.addEventListener('click',goBack);
+window.addEventListener('popstate',()=>{const previous=navStack.pop();if(previous)showView(previous.view,previous.scrollY);else{const hash=location.hash.slice(1);if(hash)showView(hash,0);}updateBackButton();});
+updateBackButton();
 const detailUI = mountDetailUI({ app, navigate: go, getGroups: () => groups, getMembers: () => members, getMeetings: () => meetings, getRubrics: () => rubrics, isManager, fmt, date, showError: fail });
 const personalCockpitUI = mountPersonalCockpitUI({ app, getGroups: () => groups, getMembers: () => members, getMeetings: () => meetings, navigate: go, fmt, date, showError: fail });
 const recapUI = mountRecapUI({ app, getGroups: () => groups, getMembers: () => members, getMeetings: () => meetings, getRubrics: () => rubrics, isManager, navigate: go, fmt, date, showError: fail });
