@@ -83,3 +83,15 @@ test('API and connected application expose dedicated opportunity endpoints inste
   assert.match(app,/createOpportunity/);
   assert.match(app,/transitionOpportunity/);
 });
+
+test('Blueprint need workflow delegates to the canonical opportunity service instead of generic workspace mutation',async()=>{
+  const ui=await readFile('apps/web/src/blueprint-executable-ui.js','utf8');
+  assert.match(ui,/moduleId==='OPPORTUNITY\.NEED'/);
+  assert.match(ui,/app\.createOpportunity\(/);
+  assert.match(ui,/app\.listOpportunities\(/);
+  assert.match(ui,/app\.transitionOpportunity\(r\.id,'OPEN'\)/);
+  assert.match(ui,/app\.transitionOpportunity\(r\.id,'FULFILLED'\)/);
+  assert.match(ui,/app\.transitionOpportunity\(r\.id,'CANCELLED'\)/);
+  assert.match(ui,/Aucune transaction n’a été créée/);
+});
+
