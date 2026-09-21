@@ -49,7 +49,7 @@ test('lot 4 keeps manager proposals votes majority and dissent reserve separate 
 test('lot 7 member financial control remains confirm or reserve with live refresh',()=>{
   const member=fs.readFileSync('apps/web/src/member-control-ui.js','utf8');
   const identity=fs.readFileSync('apps/web/src/identity-live-ui.js','utf8');
-  assert.match(member,/Valider transaction/);
+  assert.match(member,/Valider (?:la )?transaction/);
   assert.match(member,/Émettre une réserve/);
   assert.match(member,/eco:financial-live-update/);
   assert.match(identity,/MEMBER_PROJECTION_UPDATED/);
