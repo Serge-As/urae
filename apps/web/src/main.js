@@ -1060,18 +1060,16 @@ async function ensureCurrentServiceWorker(){
     if(!('serviceWorker' in navigator))return;
     try{
         const reg=await navigator.serviceWorker.register('/sw.js',{scope:'/',updateViaCache:'none'});
-        await reg.update();
-        try{if(navigator.storage?.persist)await navigator.storage.persist();}catch{}
+        try{if(navigator.storage&&navigator.storage.persist)await navigator.storage.persist();}catch{}
         try{
             if('periodicSync' in reg)await reg.periodicSync.register('eco-system-outbox',{minInterval:12*60*60*1000});
         }catch{}
         try{
             if('sync' in reg && app.outboxItems().some(x=>x.status!=='CONFIRMED'))await reg.sync.register('eco-system-outbox');
         }catch{}
-        navigator.serviceWorker.addEventListener('controllerchange',()=>{
-            try{if(sessionStorage.getItem('eco-system-sw-reloaded')==='1')return;sessionStorage.setItem('eco-system-sw-reloaded','1');}catch{}
-            location.reload();
-        },{once:true});
+        // Never reload a live session because a worker changed. On old Android,
+        // a forced reload during loss of network can destroy the usable cached page.
+        if(navigator.onLine)setTimeout(()=>{try{reg.update();}catch{}},5000);
     }catch{}
 }
 
