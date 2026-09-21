@@ -76,6 +76,7 @@ const persistAudit = async (repo: PlatformRepository, kernel: PlatformKernel, in
 };
 
 export interface CreateGroupProjectInput {
+  projectId?: Id;
   tenantId: Id;
   createdBy: Id;
   name: string;
@@ -186,7 +187,9 @@ export class FoundationService {
     }
     const currency=plans?.[0]?.nominalAmount.currency??input.nominalContribution?.currency??'XAF';
     // Legacy fields are retained for saved projects; rubric plans are the authority for new configurations.
-    const project:GroupProject={tenantId:input.tenantId,createdBy:input.createdBy,name:input.name.trim(),kind:input.kind,governanceModel:input.governanceModel,id:makeId('project'),status:'draft',createdAt:now(),rubrics:plans,launchProfile,
+    const requestedId=input.projectId?.trim();
+    if(requestedId){const existing=await this.repo.getProject(input.tenantId,requestedId);if(existing){if(existing.createdBy!==input.createdBy||existing.name!==input.name.trim()||existing.kind!==input.kind||existing.governanceModel!==input.governanceModel)throw Error('IDEMPOTENCY_CONFLICT');return structuredClone(existing);}}
+    const project:GroupProject={tenantId:input.tenantId,createdBy:input.createdBy,name:input.name.trim(),kind:input.kind,governanceModel:input.governanceModel,id:requestedId||makeId('project'),status:'draft',createdAt:now(),rubrics:plans,launchProfile,
       memberCount:plans?1:input.memberCount!,sessions:plans?1:input.sessions!,nominalContribution:plans?{currency,amount:0}:input.nominalContribution!,managementFeePerContribution:plans?{currency,amount:0}:input.managementFeePerContribution!,estimatedExternalCostRate:plans?0:input.estimatedExternalCostRate!,fixedOperatingCostPerSession:plans?{currency,amount:0}:input.fixedOperatingCostPerSession!};
     if(!plans&&(!project.nominalContribution||!project.managementFeePerContribution||!project.fixedOperatingCostPerSession))throw Error('PROJECT_RUBRICS_REQUIRED');
     if(!Number.isFinite(project.estimatedExternalCostRate))throw Error('INVALID_EXTERNAL_COST_RATE');
@@ -260,12 +263,14 @@ export class FoundationService {
     return structuredClone(next);
   }
 
-  async addMember(tenantId: Id, groupId: Id, user: User, requestId = makeId('req')): Promise<Membership> {
+  async addMember(tenantId: Id, groupId: Id, user: User, requestId = makeId('req'), membershipId?:Id): Promise<Membership> {
     const ctx=this.kernel.context.get(); const group=await assertCanManageGroup(this.repo,ctx,tenantId,groupId);
     const decision=this.kernel.policy.evaluate('group:manage',{...ctx,activeGroupId:groupId},{groupId}); if(!decision.allowed) throw new Error(decision.reason);
     if(!user.displayName.trim()) throw new Error('MEMBER_NAME_REQUIRED');
     await this.repo.saveUser({...user,displayName:user.displayName.trim()});
-    const membership:Membership={id:makeId('membership'),tenantId,groupId,userId:user.id,roles:['member'],status:'active',joinedAt:now()};
+    const requestedMembershipId=membershipId?.trim();
+    if(requestedMembershipId){const existing=await this.repo.getMembership(tenantId,groupId,requestedMembershipId);if(existing){if(existing.userId!==user.id)throw Error('IDEMPOTENCY_CONFLICT');return structuredClone(existing);}}
+    const membership:Membership={id:requestedMembershipId||makeId('membership'),tenantId,groupId,userId:user.id,roles:['member'],status:'active',joinedAt:now()};
     await this.repo.saveMembership(membership);
     await persistAudit(this.repo,this.kernel,{tenantId,actorId:ctx.actorId,action:'MEMBER_ADDED',targetType:'membership',targetId:membership.id,requestId,after:membership});
     this.kernel.events.publish({id:makeId('event'),type:'MEMBER_ADDED',occurredAt:now(),tenantId,actorId:ctx.actorId,aggregateType:'group',aggregateId:groupId,payload:{userId:user.id,membershipId:membership.id}});
@@ -295,12 +300,13 @@ export class FoundationService {
 
 export class MeetingService {
   constructor(public readonly repo:PlatformRepository,public readonly kernel:PlatformKernel){registerGroupPolicies(kernel);}
-  async openMeeting(tenantId:Id,groupId:Id,input:{title?:string;scheduledAt?:string;location?:string;theme?:string;dressCode?:string},requestId=makeId('req')):Promise<MeetingSession>{
+  async openMeeting(tenantId:Id,groupId:Id,input:{id?:Id;title?:string;scheduledAt?:string;location?:string;theme?:string;dressCode?:string},requestId=makeId('req')):Promise<MeetingSession>{
     const ctx=this.kernel.context.get(); await assertCanManageGroup(this.repo,ctx,tenantId,groupId);
     const decision=this.kernel.policy.evaluate('group:manage',{...ctx,activeGroupId:groupId},{groupId}); if(!decision.allowed) throw new Error(decision.reason);
     if(input.scheduledAt&&!Number.isFinite(Date.parse(input.scheduledAt)))throw Error('INVALID_MEETING_DATE');
     const trim=(value?:string,max=180)=>{const clean=value?.trim();if(!clean)return undefined;if(clean.length>max)throw Error('MEETING_CONTEXT_TOO_LONG');return clean;};
-    const meeting:MeetingSession={id:makeId('meeting'),tenantId,groupId,title:trim(input.title,240)||'MEETING_DEFAULT_TITLE',status:'open',openedBy:ctx.actorId,openedAt:now(),
+    const requestedId=input.id?.trim();if(requestedId){const existing=await this.repo.getMeeting(tenantId,groupId,requestedId);if(existing)return structuredClone(existing);}
+    const meeting:MeetingSession={id:requestedId||makeId('meeting'),tenantId,groupId,title:trim(input.title,240)||'MEETING_DEFAULT_TITLE',status:'open',openedBy:ctx.actorId,openedAt:now(),
       scheduledAt:input.scheduledAt?new Date(input.scheduledAt).toISOString():undefined,location:trim(input.location),theme:trim(input.theme),dressCode:trim(input.dressCode)};
     await this.repo.saveMeeting(meeting);
     await persistAudit(this.repo,this.kernel,{tenantId,actorId:ctx.actorId,action:'MEETING_OPENED',targetType:'meeting',targetId:meeting.id,requestId,after:meeting});
