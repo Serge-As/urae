@@ -399,6 +399,14 @@ export class ConnectedApplication {
   async submitLiveConsensus(meetingId:string,input:{cellKey:string;value:string|number;label?:string;membershipId?:string;rubricId?:string}):Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/meetings/${encodeURIComponent(meetingId)}/live-consensus`,{method:'POST',body:JSON.stringify(input)});}
   async voteLiveConsensus(meetingId:string,cellKey:string,proposalActorId:string):Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/meetings/${encodeURIComponent(meetingId)}/live-consensus/${encodeURIComponent(cellKey)}/vote`,{method:'POST',body:JSON.stringify({proposalActorId})});}
   async reserveLiveConsensus(meetingId:string,cellKey:string,reason:string):Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/meetings/${encodeURIComponent(meetingId)}/live-consensus/${encodeURIComponent(cellKey)}/reserve`,{method:'POST',body:JSON.stringify({reason})});}
+  async distributeMeetingSummary(meetingId:string):Promise<{queued:boolean;outbox:OutboxItem}>{
+    if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');
+    const items=await this.liveConsensus(meetingId).catch(error=>{if(this.isOffline()&&error instanceof Error&&error.message==='NETWORK_UNAVAILABLE')return[];throw error;});
+    if(items.some((x:any)=>['COLLECTING','DIVERGENT'].includes(String(x.state))))throw Error('CONSENSUS_UNRESOLVED');
+    const item=await this.queueLocal('MEETING_DISTRIBUTION_V1',{groupId:this.activeGroupId,meetingId,kind:'MEMBER_DISTRIBUTION_READY',confirmedAt:new Date().toISOString()},'meeting-distribution:'+meetingId);
+    if(this.isOffline())return{queued:true,outbox:item};
+    const synced=await this.syncOutbox(),updated=synced.find(x=>x.id===item.id)??item;return{queued:updated.status!=='CONFIRMED',outbox:updated};
+  }
   async liveHealth():Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/live/health`);}
   async liveEvents(after=0):Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/live/events?after=${encodeURIComponent(String(after))}`);}
   async publishLive(type:'PRESENCE'|'SYNC_HINT'|'MEETING_UPDATE',payload:Record<string,string|number|boolean|null>={}):Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/live/publish`,{method:'POST',body:JSON.stringify({type,payload,idempotencyKey:makeId('live')})});}
