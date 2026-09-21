@@ -22,18 +22,19 @@ export function mountSessionsUI({app,getGroups,getMembers,getMeetings,getRubrics
     const group=getGroups().find(x=>x.id===app.activeGroup()),members=getMembers(),meetings=getMeetings().slice().sort((a,b)=>String(meetingAt(a)).localeCompare(String(meetingAt(b)))),rubrics=getRubrics();
     if(!group)return{group:null,members,meetings,rubrics,me:{isManager:false,membership:null},meeting:null};
     const me=await app.groupMe().catch(()=>({isManager:false,membership:null}));
-    const wanted=select?.value,meeting=meetings.find(x=>x.id===wanted)??meetings.find(x=>x.status==='open')??meetings.at(-1)??null;
-    return{group,members,meetings,rubrics,me,meeting};
+    const wanted=select?.value,meeting=wanted==='__cumulative__'?null:(meetings.find(x=>x.id===wanted)??meetings.find(x=>x.status==='open')??meetings.at(-1)??null);
+    return{group,members,meetings,rubrics,me,meeting,cumulative:wanted==='__cumulative__'};
   };
 
   const ensurePicker=async()=>{
     if(!select)return;
     const {meetings,meeting}=await context(),before=select.value;
     select.replaceChildren();
-    if(!meetings.length){select.append(new Option(t('Aucune séance','No session'),''));select.disabled=true;return;}
+    select.append(new Option(t('★ Feuille récapitulative · exercice / cycle','★ Cumulative sheet · exercise / cycle'),'__cumulative__'));
+    if(!meetings.length){select.disabled=false;select.value='__cumulative__';return;}
     select.disabled=false;
-    for(const m of meetings)select.append(new Option(meetingLabel(m)+' · '+(isOpen(m)?t('ouverte','open'):t('clôturée','closed')),m.id));
-    select.value=meetings.some(x=>x.id===before)?before:meeting?.id??meetings.at(-1).id;
+    for(const m of meetings.filter(x=>x.status!=='cancelled'))select.append(new Option(meetingLabel(m)+' · '+(isOpen(m)?t('ouverte','open'):t('clôturée','closed')),m.id));
+    select.value=before==='__cumulative__'||meetings.some(x=>x.id===before)?before:'__cumulative__';
   };
 
   const renderTimeline=async()=>{
@@ -144,7 +145,10 @@ export function mountSessionsUI({app,getGroups,getMembers,getMeetings,getRubrics
         const exp=expenses.filter(x=>x.membershipId===m.id&&x.rubricId===r.id).reduce((n,x)=>n+Number(x.amount??0),0),net=receiptIn+eventIn-eventOut-exp;total+=net;tr.append(el('td',money(net)));
       }tr.append(el('td',money(total)));body.append(tr);
     }table.append(body);const wrap=el('div',undefined,'matrix-wrap');wrap.append(table);section.append(el('p',t('Ce tableau projette les mêmes écritures canoniques que les deux feuilles. La saisie/correction reste dans le composant canonique pour éviter deux éditeurs concurrents.','This table projects the same canonical records as the two sheets. Entry/correction stays in the canonical component to avoid two competing editors.'),'hint'),wrap);
-    const edit=button(t('Saisir / corriger dans la feuille canonique','Enter / correct in canonical sheet'),'primary');edit.onclick=()=>{navigate('operations');setTimeout(()=>byId('twoSheetWorkspace')?.scrollIntoView({behavior:'smooth',block:'start'}),80);};section.append(edit);return section;
+    const edit=button(t('Saisir / corriger cette séance dans la feuille canonique','Enter / correct this meeting in the canonical sheet'),'primary');edit.onclick=()=>navigate('operations',{anchor:'twoSheetWorkspace',matrixMeetingId:meeting.id,sheetMode:'meeting',force:true});
+    const other=button(t('Choisir une autre séance','Choose another meeting'));other.onclick=()=>select?.scrollIntoView({behavior:'smooth',block:'center'});
+    const add=button(t('+ Nouvelle séance','+ New meeting'));add.onclick=()=>byId('sessionsCreateForm')?.scrollIntoView({behavior:'smooth',block:'start'});
+    section.append(edit,other,add);return section;
   };
 
   const renderCumulative=async(c)=>{
@@ -229,14 +233,32 @@ export function mountSessionsUI({app,getGroups,getMembers,getMeetings,getRubrics
 
   const renderTab=async()=>{
     if(!root)return;root.replaceChildren();const c=await context();if(!c.group){root.append(el('div',t('Sélectionnez un groupe.','Select a group.'),'empty-state'));return;}
+    if(c.cumulative){
+      activeTab='cumulative';byId('sessionsTabs')?.querySelectorAll('button').forEach(x=>x.classList.toggle('active',x.dataset.sessionTab==='cumulative'));
+      try{root.append(await renderCumulative(c));}catch(e){showError(e);}return;
+    }
     const fn={overview:renderOverview,sheet:renderSheet,cumulative:renderCumulative,attendance:renderAttendance,beneficiaries:renderBeneficiaries,recap:renderRecap,debts:renderDebts,schedule:renderSchedule,history:renderHistory}[activeTab]??renderOverview;
-    try{root.append(await fn(c));}catch(e){showError(e);root.append(el('div',t('Cette section n’a pas pu être chargée. Les autres modules restent disponibles.','This section could not be loaded. Other modules remain available.'),'empty-state'));}
+    try{
+      if(c.meeting&&c.me.isManager){
+        const bar=el('div',undefined,'panel session-safety-toolbar');
+        const edit=button(t('Saisir / corriger cette séance','Enter / correct this meeting'),'primary');
+        edit.onclick=()=>navigate('operations',{anchor:'twoSheetWorkspace',matrixMeetingId:c.meeting.id,sheetMode:'meeting',force:true});
+        const reconcile=button(t('Confronter les gestionnaires','Reconcile managers'));reconcile.onclick=()=>{activeTab='overview';byId('sessionsTabs')?.querySelector('[data-session-tab="overview"]')?.click();setTimeout(()=>document.querySelector('.live-consensus-panel')?.scrollIntoView({behavior:'smooth',block:'start'}),50);};
+        const distribute=button(t('Diffuser aux membres','Distribute to members'));distribute.onclick=()=>void(async()=>{try{const x=await app.distributeMeetingSummary(c.meeting.id);notify(x.queued?t('Diffusion mise en file.','Distribution queued.'):t('Diffusion validée.','Distribution validated.'));}catch(e){showError(e);}})();
+        const modify=button(c.meeting.status==='closed'?t('Modifier la séance clôturée','Edit closed meeting'):t('Modifier la séance','Edit meeting'));
+        modify.onclick=()=>void(async()=>{const location=prompt(t('Lieu / canal :','Location / channel:'),c.meeting.location??'');if(location===null)return;const theme=prompt(t('Thème :','Theme:'),c.meeting.theme??'');if(theme===null)return;const dressCode=prompt(t('Tenue / consigne :','Dress code / instruction:'),c.meeting.dressCode??'');if(dressCode===null)return;try{await app.updateMeetingContext(c.meeting.id,{location,theme,dressCode});notify(c.meeting.status==='closed'?t('Séance clôturée corrigée : les responsables sont signalés.','Closed meeting corrected: managers were alerted.'):t('Séance modifiée.','Meeting updated.'));if(reloadMeetings)await reloadMeetings();await refresh();}catch(e){showError(e);}})();
+        const other=button(t('Autres séances','Other meetings'));other.onclick=()=>{select.focus();select.scrollIntoView({behavior:'smooth',block:'center'});};
+        const add=button(t('+ Nouvelle séance','+ New meeting'));add.onclick=()=>byId('sessionsCreateForm')?.scrollIntoView({behavior:'smooth',block:'start'});
+        bar.append(edit,reconcile,distribute,modify,other,add);root.append(bar);
+      }
+      root.append(await fn(c));
+    }catch(e){showError(e);root.append(el('div',t('Cette section n’a pas pu être chargée. Les autres modules restent disponibles.','This section could not be loaded. Other modules remain available.'),'empty-state'));}
   };
 
   const refresh=async()=>{await ensurePicker();await renderTimeline();await renderTab();};
 
   byId('sessionsTabs')?.querySelectorAll('button[data-session-tab]').forEach(b=>b.addEventListener('click',()=>{activeTab=b.dataset.sessionTab||'overview';byId('sessionsTabs').querySelectorAll('button').forEach(x=>x.classList.toggle('active',x===b));void renderTab();}));
-  select?.addEventListener('change',()=>void refresh());
+  select?.addEventListener('change',()=>{if(select.value==='__cumulative__')activeTab='cumulative';else if(activeTab==='cumulative')activeTab='overview';void refresh();});
   byId('sessionsRefreshBtn')?.addEventListener('click',()=>void refresh());
   byId('sessionsOpenDetailBtn')?.addEventListener('click',()=>{if(select?.value&&openDetail)openDetail('meeting',select.value);});
   byId('sessionsCreateForm')?.addEventListener('submit',e=>void(async()=>{e.preventDefault();const submit=byId('sessionsCreateBtn');try{submit.disabled=true;const raw=byId('sessionsScheduledAt').value,created=await app.openMeeting({title:byId('sessionsTitle').value.trim()||undefined,scheduledAt:raw?new Date(raw).toISOString():undefined,location:byId('sessionsLocation').value.trim()||undefined,theme:byId('sessionsTheme').value.trim()||undefined,dressCode:byId('sessionsDressCode').value.trim()||undefined});notify(t('Séance créée.','Session created.'));if(reloadMeetings)await reloadMeetings();if(select)select.value=created.id;window.dispatchEvent(new CustomEvent('eco:sessions-changed'));await refresh();}catch(err){showError(err);}finally{submit.disabled=false;}})());
