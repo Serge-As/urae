@@ -1,7 +1,7 @@
 import type {LaunchRubricPlan, GroupProjectLaunchProfile} from '../../contracts/src/index.js';
 import { PlatformKernel, type DeviceCapabilities } from '../../platform-kernel/src/index.js';
 import { InMemoryPlatformRepository } from '../../repositories/src/index.js';
-import { FoundationService } from '../../domain/src/index.js';
+import { FoundationService, GroupLaunchSimulator, starterGroupOperatingPolicy } from '../../domain/src/index.js';
 import { IndexedDbOutboxAdapter, IndexedDbReadSnapshotAdapter, Outbox } from '../../offline/src/index.js';
 import { LoopbackRelayTransport, envelopeForOutbox } from '../../relay/src/index.js';
 import { PRODUCT_MODULES } from '../../module-registry/src/index.js';
@@ -74,11 +74,10 @@ export class ConnectedApplication {
 
   private headers(extra:Record<string,string>={}):HeadersInit{return{'content-type':'application/json','accept-language':this.locale,'x-active-group-id':this.activeGroupId??'','x-timezone':'Africa/Douala',...extra};}
   private offlineReadAllowed(path:string):boolean{
-    if(path==='/api/v1/auth/session'||path==='/api/v1/groups')return true;
-    return /^\/api\/v1\/groups\/[^/?]+\/(me|members|meetings|rubrics|operating-policy|ledger|cashbox\/reconciliations|expenses|identity-passport|identity-profile)(?:\?.*)?$/.test(path)
-      || /^\/api\/v1\/groups\/[^/?]+\/recap\/global(?:\?.*)?$/.test(path)
-      || /^\/api\/v1\/groups\/[^/?]+\/meetings\/[^/?]+\/(attendance|beneficiaries|beneficiary-evidence)(?:\?.*)?$/.test(path)
-      || /^\/api\/v1\/groups\/[^/?]+\/members\/[^/?]+\/(statement|operational-sheet)(?:\?.*)?$/.test(path);
+    // Actor-scoped IndexedDB snapshots are safe for GET projections. Keeping this
+    // generic prevents a newly-added read screen from becoming an accidental
+    // offline blocker. Mutations are never synthesized here.
+    return path==='/api/v1/auth/session'||path.startsWith('/api/v1/');
   }
   private offlineReadKey(path:string):string{return path==='/api/v1/auth/session'?'session:last':JSON.stringify([this.actorId,this.tenantId,this.activeGroupId??'',path]);}
   private async cacheReadSnapshot<T>(path:string,body:T):Promise<void>{
@@ -89,6 +88,33 @@ export class ConnectedApplication {
   private announceOfflineSnapshot(path:string,updatedAt:string):void{
     this.usingOfflineSnapshot=true;
     if(typeof window!=='undefined'&&typeof CustomEvent!=='undefined')window.dispatchEvent(new CustomEvent('eco:offline-snapshot-used',{detail:{path,updatedAt}}));
+  }
+  private isOffline():boolean{return this.usingOfflineSnapshot||(typeof navigator!=='undefined'&&navigator.onLine===false);}
+  private async cached<T>(path:string):Promise<T|undefined>{try{return (await this.readSnapshots.get<T>(this.offlineReadKey(path)))?.body;}catch{return undefined;}}
+  private async saveCached<T>(path:string,body:T):Promise<void>{
+    if(!IndexedDbReadSnapshotAdapter.supported())throw Error('DURABLE_STORAGE_REQUIRED');
+    await this.readSnapshots.save({id:this.offlineReadKey(path),actorId:this.actorId,tenantId:this.tenantId,path,body});
+  }
+  private async patchCachedArray<T>(path:string,updater:(items:T[])=>T[]):Promise<T[]>{
+    const current=structuredClone(await this.cached<T[]>(path)??[]),next=updater(current);
+    await this.saveCached(path,next);return next;
+  }
+  private async queueLocal(type:string,payload:Record<string,unknown>,idempotencyKey=makeId('op')):Promise<OutboxItem>{
+    const item=this.outbox.enqueue({tenantId:this.tenantId,actorId:this.actorId,type,payload,idempotencyKey});
+    await this.persistOutbox();
+    if(typeof window!=='undefined'&&typeof CustomEvent!=='undefined')window.dispatchEvent(new CustomEvent('eco:local-mutation',{detail:{type,id:item.id,idempotencyKey}}));
+    return item;
+  }
+  private async sha256Hex(value:string):Promise<string>{
+    const bytes=new TextEncoder().encode(value),digest=await crypto.subtle.digest('SHA-256',bytes);
+    return[...new Uint8Array(digest)].map(x=>x.toString(16).padStart(2,'0')).join('');
+  }
+  private async patchCachedFinancialNotice(membershipId:string,noticeId:string,patch:Record<string,unknown>):Promise<any>{
+    if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');
+    const path=`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/members/${encodeURIComponent(membershipId)}/financial-notices`;
+    const rows=await this.cached<any[]>(path)??[],current=rows.find(x=>x.id===noticeId);if(!current)throw Error('FINANCIAL_NOTICE_NOT_CACHED');
+    const updated={...current,...patch,version:Number(current.version??0)+1,updatedAt:new Date().toISOString(),localActionPending:true};
+    await this.saveCached(path,rows.map(x=>x.id===noticeId?updated:x));return updated;
   }
   private async request<T>(path:string,init:RequestInit={}):Promise<T>{
     const headers=new Headers(this.headers());
@@ -124,10 +150,34 @@ export class ConnectedApplication {
   authStatus():Promise<{authenticated:boolean;account:SessionAccount|null}>{return this.request('/api/v1/auth/session');}
   currentActor():string{return this.actorId;}
   async financialNotices(membershipId:string):Promise<any[]>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/members/${encodeURIComponent(membershipId)}/financial-notices`);}
-  async confirmFinancialNotice(noticeId:string):Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/financial-notices/${encodeURIComponent(noticeId)}/confirm`,{method:'POST',body:'{}'});}
-  async reserveFinancialNotice(noticeId:string,reason:string):Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/financial-notices/${encodeURIComponent(noticeId)}/reserve`,{method:'POST',body:JSON.stringify({reason})});}
-  async officerReviewFinancialNotice(noticeId:string,note:string):Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/financial-notices/${encodeURIComponent(noticeId)}/officer-review`,{method:'POST',body:JSON.stringify({note})});}
-  async memberReviewFinancialNotice(noticeId:string,decision:'APPROVE_AFTER_REVIEW'|'MAINTAIN_RESERVE',note=''):Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/financial-notices/${encodeURIComponent(noticeId)}/member-review`,{method:'POST',body:JSON.stringify({decision,note})});}
+  async confirmFinancialNotice(noticeId:string,membershipId?:string):Promise<any>{
+    if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');
+    if(!this.isOffline())try{return await this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/financial-notices/${encodeURIComponent(noticeId)}/confirm`,{method:'POST',body:'{}'});}catch(error){if(!(error instanceof Error)||error.message!=='NETWORK_UNAVAILABLE')throw error;}
+    if(!membershipId)throw Error('MEMBERSHIP_REQUIRED_FOR_OFFLINE_ACTION');
+    const updated=await this.patchCachedFinancialNotice(membershipId,noticeId,{memberState:'MEMBER_CONFIRMED'});
+    await this.queueLocal('FINANCIAL_NOTICE_CONFIRM_V1',{groupId:this.activeGroupId,noticeId,membershipId},'notice-confirm:'+noticeId);return updated;
+  }
+  async reserveFinancialNotice(noticeId:string,reason:string,membershipId?:string):Promise<any>{
+    if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');const clean=reason.trim();if(!clean)throw Error('RESERVE_REASON_REQUIRED');
+    if(!this.isOffline())try{return await this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/financial-notices/${encodeURIComponent(noticeId)}/reserve`,{method:'POST',body:JSON.stringify({reason:clean})});}catch(error){if(!(error instanceof Error)||error.message!=='NETWORK_UNAVAILABLE')throw error;}
+    if(!membershipId)throw Error('MEMBERSHIP_REQUIRED_FOR_OFFLINE_ACTION');
+    const updated=await this.patchCachedFinancialNotice(membershipId,noticeId,{disputeState:'MEMBER_RESERVE',reserveReason:clean});
+    await this.queueLocal('FINANCIAL_NOTICE_RESERVE_V1',{groupId:this.activeGroupId,noticeId,membershipId,reason:clean},'notice-reserve:'+noticeId+':'+await this.sha256Hex(clean));return{notice:updated,case:{localPending:true}};
+  }
+  async officerReviewFinancialNotice(noticeId:string,note:string,membershipId?:string):Promise<any>{
+    if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');const clean=note.trim()||'Validation après vérification';
+    if(!this.isOffline())try{return await this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/financial-notices/${encodeURIComponent(noticeId)}/officer-review`,{method:'POST',body:JSON.stringify({note:clean})});}catch(error){if(!(error instanceof Error)||error.message!=='NETWORK_UNAVAILABLE')throw error;}
+    if(!membershipId)throw Error('MEMBERSHIP_REQUIRED_FOR_OFFLINE_ACTION');
+    const updated=await this.patchCachedFinancialNotice(membershipId,noticeId,{disputeState:'OFFICER_CONFIRMED',officerId:this.actorId,officerNote:clean});
+    await this.queueLocal('FINANCIAL_NOTICE_OFFICER_REVIEW_V1',{groupId:this.activeGroupId,noticeId,membershipId,note:clean},'notice-officer:'+noticeId+':'+this.actorId+':'+await this.sha256Hex(clean));return updated;
+  }
+  async memberReviewFinancialNotice(noticeId:string,decision:'APPROVE_AFTER_REVIEW'|'MAINTAIN_RESERVE',note='',membershipId?:string):Promise<any>{
+    if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');const clean=note.trim(),disputeState=decision==='APPROVE_AFTER_REVIEW'?'MEMBER_APPROVED_AFTER_REVIEW':'MEMBER_RESERVE_MAINTAINED';
+    if(!this.isOffline())try{return await this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/financial-notices/${encodeURIComponent(noticeId)}/member-review`,{method:'POST',body:JSON.stringify({decision,note:clean})});}catch(error){if(!(error instanceof Error)||error.message!=='NETWORK_UNAVAILABLE')throw error;}
+    if(!membershipId)throw Error('MEMBERSHIP_REQUIRED_FOR_OFFLINE_ACTION');
+    const updated=await this.patchCachedFinancialNotice(membershipId,noticeId,{disputeState,memberReviewNote:clean||undefined});
+    await this.queueLocal('FINANCIAL_NOTICE_MEMBER_REVIEW_V1',{groupId:this.activeGroupId,noticeId,membershipId,decision,note:clean},'notice-member-review:'+noticeId+':'+decision+':'+await this.sha256Hex(clean));return updated;
+  }
 
   async memberStatement(membershipId:string):Promise<import('../../contracts/src/index.js').MemberStatement>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/members/${encodeURIComponent(membershipId)}/statement`);}
   async groupMe():Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/me`);}
@@ -150,35 +200,149 @@ export class ConnectedApplication {
 
   async listGroups():Promise<Group[]>{const groups=await this.request<Group[]>('/api/v1/groups');this.groupTenants=new Map(groups.map(g=>[g.id,g.tenantId]));return groups;}
   async groupOperatingPolicy():Promise<GroupOperatingPolicy>{if(!this.activeGroupId)throw new Error('ACTIVE_GROUP_REQUIRED');return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/operating-policy`);}
-  async updateGroupOperatingPolicy(policy:GroupOperatingPolicy):Promise<Group>{if(!this.activeGroupId)throw new Error('ACTIVE_GROUP_REQUIRED');return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/operating-policy`,{method:'PUT',body:JSON.stringify(policy)});}
+  async updateGroupOperatingPolicy(policy:GroupOperatingPolicy):Promise<Group>{
+    if(!this.activeGroupId)throw new Error('ACTIVE_GROUP_REQUIRED');
+    if(!this.isOffline())try{return await this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/operating-policy`,{method:'PUT',body:JSON.stringify(policy)});}catch(error){if(!(error instanceof Error)||error.message!=='NETWORK_UNAVAILABLE')throw error;}
+    const groupId=this.activeGroupId,groups=await this.cached<Group[]>('/api/v1/groups')??[],current=groups.find(g=>g.id===groupId);if(!current)throw Error('GROUP_NOT_FOUND');
+    const nextPolicy={...structuredClone(policy),version:Math.max(Number(current.operatingPolicy?.version??0)+1,Number(policy.version??1)),updatedAt:new Date().toISOString(),updatedBy:this.actorId};
+    const group={...current,operatingPolicy:nextPolicy};await this.saveCached(`/api/v1/groups/${encodeURIComponent(groupId)}/operating-policy`,nextPolicy);
+    await this.saveCached('/api/v1/groups',groups.map(g=>g.id===groupId?group:g));await this.queueLocal('GROUP_POLICY_V1',{groupId,policy:nextPolicy});
+    return group;
+  }
   async listRubrics():Promise<RubricDefinition[]>{if(!this.activeGroupId)return[];return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/rubrics`);}
-  async createRubric(input:{name:string;writtenRule?:string;observedPractice?:string;model:RubricOperatingModel}):Promise<RubricDefinition>{if(!this.activeGroupId)throw new Error('ACTIVE_GROUP_REQUIRED');const facets={direction:'BIDIRECTIONAL',obligation:'CUSTOM',medium:'CASH',refundability:'CONDITIONAL',replenishment:'CUSTOM',interestMode:'NONE',eligibilityMode:'RULE_BASED'};return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/rubrics`,{method:'POST',body:JSON.stringify({name:input.name,facets,source:'GROUP_CUSTOM',operatingModel:{...input.model,writtenRule:input.writtenRule,observedPractice:input.observedPractice}})});}
-  async updateRubricOperatingModel(rubricId:string,model:RubricOperatingModel):Promise<RubricDefinition>{if(!this.activeGroupId)throw new Error('ACTIVE_GROUP_REQUIRED');return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/rubrics/${encodeURIComponent(rubricId)}/operating-model`,{method:'PUT',body:JSON.stringify(model)});}
-  async updateRubricPolicies(rubricId:string,policies:any):Promise<RubricDefinition>{if(!this.activeGroupId)throw new Error('ACTIVE_GROUP_REQUIRED');return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/rubrics/${encodeURIComponent(rubricId)}/policies`,{method:'PUT',body:JSON.stringify(policies)});}
+  async createRubric(input:{name:string;writtenRule?:string;observedPractice?:string;model:RubricOperatingModel}):Promise<RubricDefinition>{
+    if(!this.activeGroupId)throw new Error('ACTIVE_GROUP_REQUIRED');
+    const facets={direction:'BIDIRECTIONAL',obligation:'CUSTOM',medium:'CASH',refundability:'CONDITIONAL',replenishment:'CUSTOM',interestMode:'NONE',eligibilityMode:'RULE_BASED'} as const;
+    const operatingModel={...input.model,writtenRule:input.writtenRule,observedPractice:input.observedPractice};
+    if(!this.isOffline())try{return await this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/rubrics`,{method:'POST',body:JSON.stringify({name:input.name,facets,source:'GROUP_CUSTOM',operatingModel})});}catch(error){if(!(error instanceof Error)||error.message!=='NETWORK_UNAVAILABLE')throw error;}
+    const stamp=new Date().toISOString(),id=makeId('rubric'),rubric:RubricDefinition={id,tenantId:this.tenantId,groupId:this.activeGroupId,name:input.name.trim(),aliases:[],facets:structuredClone(facets),operatingModel:structuredClone(operatingModel),status:'DRAFT',source:'GROUP_CUSTOM',version:1,createdAt:stamp,updatedAt:stamp};
+    await this.patchCachedArray<RubricDefinition>(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/rubrics`,rows=>rows.some(x=>x.id===id)?rows:[...rows,rubric]);
+    await this.queueLocal('RUBRIC_CREATE_V1',{groupId:this.activeGroupId,id,name:rubric.name,facets,source:'GROUP_CUSTOM',operatingModel});
+    return rubric;
+  }
+  async updateRubricOperatingModel(rubricId:string,model:RubricOperatingModel):Promise<RubricDefinition>{
+    if(!this.activeGroupId)throw new Error('ACTIVE_GROUP_REQUIRED');
+    if(!this.isOffline())try{return await this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/rubrics/${encodeURIComponent(rubricId)}/operating-model`,{method:'PUT',body:JSON.stringify(model)});}catch(error){if(!(error instanceof Error)||error.message!=='NETWORK_UNAVAILABLE')throw error;}
+    const path=`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/rubrics`,rows=await this.cached<RubricDefinition[]>(path)??[],current=rows.find(x=>x.id===rubricId);if(!current)throw Error('RUBRIC_NOT_FOUND');
+    const confirmed={...structuredClone(model),confirmedAt:new Date().toISOString(),confirmedBy:this.actorId},updated={...current,operatingModel:confirmed,version:current.version+1,updatedAt:new Date().toISOString()};await this.saveCached(path,rows.map(x=>x.id===rubricId?updated:x));
+    await this.queueLocal('RUBRIC_MODEL_V1',{groupId:this.activeGroupId,rubricId,model});return updated;
+  }
+  async updateRubricPolicies(rubricId:string,policies:any):Promise<RubricDefinition>{
+    if(!this.activeGroupId)throw new Error('ACTIVE_GROUP_REQUIRED');
+    if(!this.isOffline())try{return await this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/rubrics/${encodeURIComponent(rubricId)}/policies`,{method:'PUT',body:JSON.stringify(policies)});}catch(error){if(!(error instanceof Error)||error.message!=='NETWORK_UNAVAILABLE')throw error;}
+    const path=`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/rubrics`,rows=await this.cached<RubricDefinition[]>(path)??[],current=rows.find(x=>x.id===rubricId);if(!current)throw Error('RUBRIC_NOT_FOUND');
+    const updated={...current,policies:structuredClone(policies),version:current.version+1,updatedAt:new Date().toISOString()};await this.saveCached(path,rows.map(x=>x.id===rubricId?updated:x));
+    await this.queueLocal('RUBRIC_POLICIES_V1',{groupId:this.activeGroupId,rubricId,policies});return updated;
+  }
   async previewRubricCycle(rubricId:string,input:{memberCount:number;collectedFromMembers:number;solidarityCoverageAmount?:number;beneficiaryDisbursement?:number}):Promise<RubricCyclePreview>{if(!this.activeGroupId)throw new Error('ACTIVE_GROUP_REQUIRED');return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/rubrics/${encodeURIComponent(rubricId)}/preview-cycle`,{method:'POST',body:JSON.stringify(input)});}
   async updateMemberLifecycle(membershipId:string,input:{status?:string;roles?:string[];reason?:string;probationEndsAt?:string;historicalJoinedAt?:string;expectedRevision?:number}):Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/members/'+encodeURIComponent(membershipId)+'/lifecycle',{method:'PUT',body:JSON.stringify(input)});}
   async listMembers():Promise<MembershipView[]>{if(!this.activeGroupId)return[];return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/members`);}
   async listMeetings():Promise<MeetingSession[]>{if(!this.activeGroupId)return[];return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/meetings`);}
   async meetingAttendance(meetingId:string):Promise<any[]>{if(!this.activeGroupId)return[];return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/meetings/${encodeURIComponent(meetingId)}/attendance`);}
-  async recordMeetingAttendance(meetingId:string,input:{membershipId:string;attendance:'PRESENT'|'ABSENT'|'EXCUSED'|'REPRESENTED'|'LATE';note?:string}):Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/meetings/${encodeURIComponent(meetingId)}/attendance`,{method:'POST',body:JSON.stringify(input)});}
+  async recordMeetingAttendance(meetingId:string,input:{membershipId:string;attendance:'PRESENT'|'ABSENT'|'EXCUSED'|'REPRESENTED'|'LATE';note?:string}):Promise<any>{
+    if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');
+    if(!this.isOffline())try{return await this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/meetings/${encodeURIComponent(meetingId)}/attendance`,{method:'POST',body:JSON.stringify(input)});}catch(error){if(!(error instanceof Error)||error.message!=='NETWORK_UNAVAILABLE')throw error;}
+    const path=`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/meetings/${encodeURIComponent(meetingId)}/attendance`,id='attendance_'+encodeURIComponent(JSON.stringify([this.tenantId,this.activeGroupId,meetingId,input.membershipId])),stamp=new Date().toISOString();
+    const members=await this.cached<MembershipView[]>(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/members`)??[],displayName=members.find(x=>x.id===input.membershipId)?.displayName??input.membershipId;
+    const previous=(await this.cached<any[]>(path)??[]).find(x=>x.id===id),record={id,tenantId:this.tenantId,groupId:this.activeGroupId,moduleId:'MEETING.ATTENDANCE',title:'Présence · '+meetingId,summary:input.note?.trim()||undefined,status:'ACTIVE',tags:['attendance','meeting:'+meetingId,'member:'+input.membershipId],data:{meetingId,membershipId:input.membershipId,attendance:input.attendance,note:input.note?.trim()||null,updatedBy:this.actorId},createdBy:previous?.createdBy??this.actorId,createdAt:previous?.createdAt??stamp,updatedAt:stamp,displayName};
+    await this.patchCachedArray<any>(path,rows=>[...rows.filter(x=>x.id!==id),record]);await this.queueLocal('MEETING_ATTENDANCE_V1',{groupId:this.activeGroupId,meetingId,...input});return record;
+  }
   async meetingBeneficiaries(meetingId:string):Promise<any[]>{if(!this.activeGroupId)return[];return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/meetings/${encodeURIComponent(meetingId)}/beneficiaries`);}
-  async declareMeetingBeneficiary(meetingId:string,input:{membershipId:string;rubricId?:string;amount:number;currency?:string;note?:string}):Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/meetings/${encodeURIComponent(meetingId)}/beneficiaries`,{method:'POST',body:JSON.stringify(input)});}
+  async declareMeetingBeneficiary(meetingId:string,input:{membershipId:string;rubricId?:string;amount:number;currency?:string;note?:string}):Promise<any>{
+    if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');
+    if(!this.isOffline())try{return await this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/meetings/${encodeURIComponent(meetingId)}/beneficiaries`,{method:'POST',body:JSON.stringify(input)});}catch(error){if(!(error instanceof Error)||error.message!=='NETWORK_UNAVAILABLE')throw error;}
+    if(!Number.isSafeInteger(input.amount)||input.amount<0)throw Error('INVALID_BENEFIT_AMOUNT');
+    const path=`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/meetings/${encodeURIComponent(meetingId)}/beneficiaries`,id='benefit_decl_'+encodeURIComponent(JSON.stringify([this.tenantId,this.activeGroupId,meetingId,input.membershipId,input.rubricId??''])),stamp=new Date().toISOString();
+    const previous=(await this.cached<any[]>(path)??[]).find(x=>x.id===id);if(previous?.status==='DONE')throw Error('BENEFIT_ALREADY_RECEIPTED');
+    const members=await this.cached<MembershipView[]>(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/members`)??[],displayName=members.find(x=>x.id===input.membershipId)?.displayName??input.membershipId;
+    const record={id,tenantId:this.tenantId,groupId:this.activeGroupId,moduleId:'MEETING.BENEFICIARIES',title:'Bénéficiaire déclaré',summary:input.note?.trim()||undefined,status:'ACTIVE',tags:['beneficiary','pending-evidence','meeting:'+meetingId,'member:'+input.membershipId],data:{meetingId,membershipId:input.membershipId,rubricId:input.rubricId??null,amount:input.amount,currency:input.currency??'XAF',proofCode:previous?.data?.proofCode??('ECO-RCP-LOCAL-'+makeId('proof').slice(-8).toUpperCase()),evidenceId:null,declaredBy:this.actorId},createdBy:previous?.createdBy??this.actorId,createdAt:previous?.createdAt??stamp,updatedAt:stamp,displayName};
+    await this.patchCachedArray<any>(path,rows=>[...rows.filter(x=>x.id!==id),record]);await this.queueLocal('MEETING_BENEFIT_V1',{groupId:this.activeGroupId,meetingId,...input,currency:input.currency??'XAF'});return record;
+  }
   async meetingBenefitEvidence(meetingId:string):Promise<EvidenceRecord[]>{if(!this.activeGroupId)return[];return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/meetings/${encodeURIComponent(meetingId)}/beneficiary-evidence`);}
-  async recordMeetingBenefitEvidence(meetingId:string,input:{declarationId:string;membershipId:string;rubricId?:string;amount?:number;currency?:string;method:'MEMBER_CONFIRMATION'|'PAPER_EMARGEMENT'|'PHOTO_DOCUMENT';artifactKey?:string;fingerprint?:string;note?:string;idempotencyKey?:string}):Promise<EvidenceRecord>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/meetings/${encodeURIComponent(meetingId)}/beneficiary-evidence`,{method:'POST',body:JSON.stringify(input)});}
+  async recordMeetingBenefitEvidence(meetingId:string,input:{declarationId:string;membershipId:string;rubricId?:string;amount?:number;currency?:string;method:'MEMBER_CONFIRMATION'|'PAPER_EMARGEMENT'|'PHOTO_DOCUMENT';artifactKey?:string;fingerprint?:string;note?:string;idempotencyKey?:string}):Promise<EvidenceRecord>{
+    if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');
+    if(!this.isOffline())try{return await this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/meetings/${encodeURIComponent(meetingId)}/beneficiary-evidence`,{method:'POST',body:JSON.stringify(input)});}catch(error){if(!(error instanceof Error)||error.message!=='NETWORK_UNAVAILABLE')throw error;}
+    if(input.method==='PHOTO_DOCUMENT'&&!input.artifactKey)throw Error('OFFLINE_EVIDENCE_FILE_REQUIRES_ONLINE_UPLOAD');
+    const key=input.idempotencyKey?.trim()||makeId('benefit_evidence'),path=`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/meetings/${encodeURIComponent(meetingId)}/beneficiary-evidence`,id='evidence_benefit_'+encodeURIComponent(JSON.stringify([this.tenantId,this.activeGroupId,meetingId,input.membershipId,input.rubricId??'',input.declarationId,key])),stamp=new Date().toISOString();
+    const existing=(await this.cached<EvidenceRecord[]>(path)??[]).find(x=>x.id===id);if(existing)return existing;
+    const evidence:EvidenceRecord={id,tenantId:this.tenantId,type:'MEETING_BENEFIT_RECEIPT',subjectType:'meeting_benefit',subjectId:'meeting_benefit_'+encodeURIComponent(JSON.stringify([this.activeGroupId,meetingId,input.membershipId,input.rubricId??'',input.declarationId,key])),createdAt:stamp,createdBy:this.actorId,data:{groupId:this.activeGroupId,meetingId,declarationId:input.declarationId,membershipId:input.membershipId,rubricId:input.rubricId??null,amount:input.amount??0,currency:input.currency??'XAF',method:input.method,artifactKey:input.artifactKey??null,fingerprint:input.fingerprint??null,note:input.note?.trim()||null,idempotencyKey:key,memberSelfConfirmed:input.method==='MEMBER_CONFIRMATION'},immutable:true};
+    await this.patchCachedArray<EvidenceRecord>(path,rows=>[...rows,evidence]);
+    const declarationsPath=`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/meetings/${encodeURIComponent(meetingId)}/beneficiaries`;
+    await this.patchCachedArray<any>(declarationsPath,rows=>rows.map(x=>x.id===input.declarationId?{...x,status:'DONE',tags:[...new Set([...(x.tags??[]).filter((t:string)=>t!=='pending-evidence'),'evidence-recorded'])],data:{...x.data,evidenceId:id,evidenceMethod:input.method},updatedAt:stamp}:x));
+    await this.queueLocal('MEETING_BENEFIT_EVIDENCE_V1',{groupId:this.activeGroupId,meetingId,...input,idempotencyKey:key},key);return evidence;
+  }
   async uploadMeetingBenefitEvidence(meetingId:string,file:File):Promise<{artifactKey:string;fingerprint:string;name:string;size:number;contentType:string}>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');const form=new FormData();form.append('file',file);return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/meetings/${encodeURIComponent(meetingId)}/beneficiary-evidence/upload`,{method:'POST',body:form});}
-  async openMeeting(input:string|{title?:string;scheduledAt?:string;location?:string;theme?:string;dressCode?:string}):Promise<MeetingSession>{if(!this.activeGroupId)throw new Error('ACTIVE_GROUP_REQUIRED');const body=typeof input==='string'?{title:input}:input;return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/meetings`,{method:'POST',body:JSON.stringify(body)});}
-  async updateMeetingContext(meetingId:string,input:{scheduledAt?:string|null;location?:string|null;theme?:string|null;dressCode?:string|null}):Promise<MeetingSession>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/meetings/${encodeURIComponent(meetingId)}/context`,{method:'PUT',body:JSON.stringify(input)});}
-  async closeMeeting(meetingId:string):Promise<MeetingSession>{if(!this.activeGroupId)throw new Error('ACTIVE_GROUP_REQUIRED');return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/meetings/${encodeURIComponent(meetingId)}/close`,{method:'POST',body:'{}'});}
+  async openMeeting(input:string|{title?:string;scheduledAt?:string;location?:string;theme?:string;dressCode?:string}):Promise<MeetingSession>{
+    if(!this.activeGroupId)throw new Error('ACTIVE_GROUP_REQUIRED');const body=typeof input==='string'?{title:input}:input;
+    if(!this.isOffline())try{return await this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/meetings`,{method:'POST',body:JSON.stringify(body)});}catch(error){if(!(error instanceof Error)||error.message!=='NETWORK_UNAVAILABLE')throw error;}
+    const stamp=new Date().toISOString(),id=makeId('meeting'),meeting:MeetingSession={id,tenantId:this.tenantId,groupId:this.activeGroupId,title:body.title?.trim()||'MEETING_DEFAULT_TITLE',status:'open',openedBy:this.actorId,openedAt:stamp,scheduledAt:body.scheduledAt?new Date(body.scheduledAt).toISOString():undefined,location:body.location?.trim()||undefined,theme:body.theme?.trim()||undefined,dressCode:body.dressCode?.trim()||undefined};
+    await this.patchCachedArray<MeetingSession>(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/meetings`,rows=>rows.some(x=>x.id===id)?rows:[...rows,meeting]);
+    await this.queueLocal('MEETING_OPEN_V1',{...meeting},id);return meeting;
+  }
+  async updateMeetingContext(meetingId:string,input:{scheduledAt?:string|null;location?:string|null;theme?:string|null;dressCode?:string|null}):Promise<MeetingSession>{
+    if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');
+    if(!this.isOffline())try{return await this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/meetings/${encodeURIComponent(meetingId)}/context`,{method:'PUT',body:JSON.stringify(input)});}catch(error){if(!(error instanceof Error)||error.message!=='NETWORK_UNAVAILABLE')throw error;}
+    const path=`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/meetings`,rows=await this.cached<MeetingSession[]>(path)??[],current=rows.find(x=>x.id===meetingId);if(!current)throw Error('MEETING_NOT_FOUND');
+    const clean=(value:string|null|undefined,currentValue:string|undefined)=>value===undefined?currentValue:value===null?undefined:(value.trim()||undefined);
+    const updated:MeetingSession={...current,scheduledAt:input.scheduledAt===undefined?current.scheduledAt:input.scheduledAt===null?undefined:new Date(input.scheduledAt).toISOString(),location:clean(input.location,current.location),theme:clean(input.theme,current.theme),dressCode:clean(input.dressCode,current.dressCode)};
+    await this.saveCached(path,rows.map(x=>x.id===meetingId?updated:x));await this.queueLocal('MEETING_CONTEXT_V1',{groupId:this.activeGroupId,meetingId,...input});return updated;
+  }
+  async closeMeeting(meetingId:string):Promise<MeetingSession>{
+    if(!this.activeGroupId)throw new Error('ACTIVE_GROUP_REQUIRED');
+    if(!this.isOffline())try{return await this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/meetings/${encodeURIComponent(meetingId)}/close`,{method:'POST',body:'{}'});}catch(error){if(!(error instanceof Error)||error.message!=='NETWORK_UNAVAILABLE')throw error;}
+    const path=`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/meetings`,rows=await this.cached<MeetingSession[]>(path)??[],current=rows.find(x=>x.id===meetingId);if(!current)throw Error('MEETING_NOT_FOUND');if(current.status==='closed')return current;if(current.status!=='open')throw Error('MEETING_NOT_OPEN');
+    const updated:MeetingSession={...current,status:'closed',closedAt:new Date().toISOString()};await this.saveCached(path,rows.map(x=>x.id===meetingId?updated:x));await this.queueLocal('MEETING_CLOSE_V1',{groupId:this.activeGroupId,meetingId},'close:'+meetingId);return updated;
+  }
 
   async simulateAndStoreProject(input:{name:string;kind:Group['kind'];governanceModel:Group['governanceModel'];rubrics?:LaunchRubricPlan[];launchProfile?:GroupProjectLaunchProfile;memberCount?:number;sessions?:number;nominalContribution?:number;managementFeePerContribution?:number;estimatedExternalCostRate?:number;fixedOperatingCostPerSession?:number}):Promise<{projectId:string;result:FeasibilityResult}>{
-    const headers={'x-active-group-id':''};
-    const project=await this.request<{id:string}>('/api/v1/group-projects',{method:'POST',headers,body:JSON.stringify({...input,currency:'XAF'})});
-    const result=await this.request<FeasibilityResult>(`/api/v1/group-projects/${encodeURIComponent(project.id)}/simulate`,{method:'POST',headers,body:'{}'});return{projectId:project.id,result};
+    const headers={'x-active-group-id':''},projectId=makeId('project'),stamp=new Date().toISOString(),currency='XAF',launchProfile=input.launchProfile??{origin:{mode:'NEW'}};
+    const localProject:any={id:projectId,tenantId:this.tenantId,createdBy:this.actorId,name:input.name.trim(),kind:input.kind,governanceModel:input.governanceModel,status:'simulated',createdAt:stamp,rubrics:input.rubrics?structuredClone(input.rubrics):undefined,launchProfile:structuredClone(launchProfile),
+      memberCount:input.rubrics?1:Number(input.memberCount??0),sessions:input.rubrics?1:Number(input.sessions??0),nominalContribution:{currency,amount:input.rubrics?0:Number(input.nominalContribution??0)},managementFeePerContribution:{currency,amount:input.rubrics?0:Number(input.managementFeePerContribution??0)},estimatedExternalCostRate:input.rubrics?0:Number(input.estimatedExternalCostRate??0),fixedOperatingCostPerSession:{currency,amount:input.rubrics?0:Number(input.fixedOperatingCostPerSession??0)}};
+    const localResult=new GroupLaunchSimulator().simulate(localProject);await this.saveCached(`/api/v1/offline/projects/${projectId}`,localProject);
+    if(!this.isOffline()){
+      try{
+        const project=await this.request<{id:string}>('/api/v1/group-projects',{method:'POST',headers,body:JSON.stringify({...input,projectId,currency:'XAF'})});
+        const result=await this.request<FeasibilityResult>(`/api/v1/group-projects/${encodeURIComponent(project.id)}/simulate`,{method:'POST',headers,body:'{}'});
+        if(project.id!==projectId)await this.saveCached(`/api/v1/offline/projects/${project.id}`,{...localProject,id:project.id});
+        return{projectId:project.id,result};
+      }catch(error){if(!(error instanceof Error)||error.message!=='NETWORK_UNAVAILABLE')throw error;}
+    }
+    await this.queueLocal('GROUP_PROJECT_UPSERT_V1',{projectId,input:structuredClone(input)},projectId);return{projectId,result:localResult};
   }
-  async createGroupFromProject(projectId:string):Promise<Group>{const group=await this.request<Group>(`/api/v1/group-projects/${encodeURIComponent(projectId)}/convert`,{method:'POST',headers:{'x-active-group-id':''},body:'{}'});this.selectGroup(group.id);return group;}
-  async updateRubricActivityPlan(rubricId:string,plan:LaunchRubricPlan):Promise<RubricDefinition>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/rubrics/${encodeURIComponent(rubricId)}/activity-plan`,{method:'PUT',body:JSON.stringify(plan)});}
+  async createGroupFromProject(projectId:string):Promise<Group>{
+    if(!this.isOffline())try{const group=await this.request<Group>(`/api/v1/group-projects/${encodeURIComponent(projectId)}/convert`,{method:'POST',headers:{'x-active-group-id':''},body:'{}'});this.selectGroup(group.id);return group;}catch(error){if(!(error instanceof Error)||error.message!=='NETWORK_UNAVAILABLE')throw error;}
+    const project=await this.cached<any>(`/api/v1/offline/projects/${projectId}`);if(!project)throw Error('PROJECT_NOT_FOUND');
+    const origin=project.launchProfile?.origin??{mode:'NEW'},groupId=origin.mode==='TRANSFORM_REGISTERED'&&origin.sourceGroupId?String(origin.sourceGroupId):`group_from_${projectId}`,stamp=new Date().toISOString();
+    const existingGroups=await this.cached<Group[]>('/api/v1/groups')??[],previous=existingGroups.find(g=>g.id===groupId);
+    const group:Group=previous?{...previous,name:project.name,kind:project.kind,governanceModel:project.governanceModel,status:'active',launchProfileSnapshot:structuredClone(project.launchProfile)}:{id:groupId,tenantId:this.tenantId,name:project.name,kind:project.kind,governanceModel:project.governanceModel,status:'active',createdBy:this.actorId,createdAt:stamp,operatingPolicy:starterGroupOperatingPolicy(),originMode:origin.mode,historicalCreatedAt:origin.historicalCreatedAt,currentExerciseLabel:origin.currentExerciseLabel,launchProfileSnapshot:structuredClone(project.launchProfile)};
+    this.groupTenants.set(groupId,this.tenantId);await this.saveCached('/api/v1/groups',[...existingGroups.filter(g=>g.id!==groupId),group]);this.selectGroup(groupId);
+    await this.saveCached('/api/v1/groups',[...existingGroups.filter(g=>g.id!==groupId),group]);
+    await this.saveCached(`/api/v1/groups/${encodeURIComponent(groupId)}/operating-policy`,group.operatingPolicy??starterGroupOperatingPolicy());
+    const owner:MembershipView={id:`membership_owner_${groupId}`,tenantId:this.tenantId,groupId,userId:this.actorId,roles:['founder','manager'],status:'active',joinedAt:group.createdAt,displayName:this.displayName};
+    await this.saveCached(`/api/v1/groups/${encodeURIComponent(groupId)}/members`,[owner]);
+    await this.saveCached(`/api/v1/groups/${encodeURIComponent(groupId)}/meetings`,[]);
+    const localRubrics:RubricDefinition[]=[];
+    for(const plan of project.rubrics??[]){const hash=await this.sha256Hex(JSON.stringify([this.tenantId,groupId,plan.key]));localRubrics.push({id:'rubric_launch_'+hash,tenantId:this.tenantId,groupId,name:plan.name,aliases:[],facets:{direction:'MIXED',obligation:'CUSTOM',medium:'CASH',refundability:'CUSTOM',replenishment:'CUSTOM',interestMode:'CUSTOM',eligibilityMode:'RULE_BASED'},policies:plan.policyDraft,activityPlan:structuredClone(plan),status:'ACTIVE',source:'GROUP_CUSTOM',version:1,createdAt:stamp,updatedAt:stamp});}
+    await this.saveCached(`/api/v1/groups/${encodeURIComponent(groupId)}/rubrics`,localRubrics);
+    await this.queueLocal('GROUP_PROJECT_CONVERT_V1',{projectId,groupId},'convert:'+projectId);return group;
+  }
+  async updateRubricActivityPlan(rubricId:string,plan:LaunchRubricPlan):Promise<RubricDefinition>{
+    if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');
+    if(!this.isOffline())try{return await this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/rubrics/${encodeURIComponent(rubricId)}/activity-plan`,{method:'PUT',body:JSON.stringify(plan)});}catch(error){if(!(error instanceof Error)||error.message!=='NETWORK_UNAVAILABLE')throw error;}
+    const path=`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/rubrics`,rows=await this.cached<RubricDefinition[]>(path)??[],current=rows.find(x=>x.id===rubricId);if(!current)throw Error('RUBRIC_NOT_FOUND');
+    const updated={...current,name:plan.name,activityPlan:structuredClone(plan),version:current.version+1,updatedAt:new Date().toISOString()};await this.saveCached(path,rows.map(x=>x.id===rubricId?updated:x));
+    await this.queueLocal('RUBRIC_ACTIVITY_PLAN_V1',{groupId:this.activeGroupId,rubricId,plan});return updated;
+  }
 
-  async addMember(displayName:string):Promise<Membership>{if(!this.activeGroupId)throw new Error('ACTIVE_GROUP_REQUIRED');return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/members`,{method:'POST',body:JSON.stringify({displayName,locale:this.locale})});}
+  async addMember(displayName:string):Promise<Membership>{
+    if(!this.activeGroupId)throw new Error('ACTIVE_GROUP_REQUIRED');
+    if(!this.isOffline())try{return await this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/members`,{method:'POST',body:JSON.stringify({displayName,locale:this.locale})});}catch(error){if(!(error instanceof Error)||error.message!=='NETWORK_UNAVAILABLE')throw error;}
+    const name=displayName.trim();if(!name)throw Error('MEMBER_NAME_REQUIRED');
+    const stamp=new Date().toISOString(),userId=makeId('user'),membershipId=makeId('membership'),membership:MembershipView={id:membershipId,tenantId:this.tenantId,groupId:this.activeGroupId,userId,roles:['member'],status:'active',joinedAt:stamp,displayName:name};
+    await this.patchCachedArray<MembershipView>(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/members`,rows=>rows.some(x=>x.id===membershipId)?rows:[...rows,membership]);
+    await this.queueLocal('MEMBER_ADD_V1',{groupId:this.activeGroupId,userId,membershipId,displayName:name,locale:this.locale,createdAt:stamp});
+    return membership;
+  }
 
   async recordCashContribution(input:{membershipId:string;amount:number;meetingId?:string;rubricId?:string;lateReason?:string;approverIds?:string[]}):Promise<{queued:boolean;receipt?:ContributionReceipt;outbox?:OutboxItem}>{
     if(!this.activeGroupId)throw new Error('ACTIVE_GROUP_REQUIRED'); const key=makeId('cash');
@@ -187,7 +351,15 @@ export class ConnectedApplication {
     // An ambiguous network failure is retried with this key, never a new charge.
     const item=this.outbox.enqueue({tenantId:this.tenantId,actorId:this.actorId,type:'CONTRIBUTION_CASH_RECORDED',payload:{groupId:this.activeGroupId,...input,currency:'XAF'},idempotencyKey:key});
     try{await this.persistOutbox();}catch(e){this.outbox.restore(this.outbox.list().filter(x=>x.id!==item.id));throw e;}
-    if(!navigator.onLine)return{queued:true,outbox:item};
+    if(this.isOffline()){
+      const path=`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/ledger`,current=await this.cached<any>(path)??{summary:{currency:'XAF',cashBalance:0,memberFundsLiability:0,entryCount:0},entries:[],receipts:[]};
+      if(!(current.receipts??[]).some((x:any)=>x.idempotencyKey===key)){
+        const stamp=new Date().toISOString(),receipt={id:'local_receipt_'+item.id,tenantId:this.tenantId,groupId:this.activeGroupId,membershipId:input.membershipId,amount:{currency:'XAF',amount:input.amount},paymentMethod:'cash',ledgerEntryId:'local_pending_'+item.id,meetingId:input.meetingId,receivedAt:stamp,receivedBy:this.actorId,idempotencyKey:key,rubricId:input.rubricId,latePosting:undefined,netAmount:input.amount,localPending:true};
+        const summary={...current.summary,cashBalance:Number(current.summary?.cashBalance??0)+input.amount,memberFundsLiability:Number(current.summary?.memberFundsLiability??0)+input.amount,entryCount:Number(current.summary?.entryCount??0)+1};
+        await this.saveCached(path,{...current,summary,receipts:[...(current.receipts??[]),receipt]});
+      }
+      return{queued:true,outbox:item};
+    }
     const result=await this.syncOutbox();const updated=result.find(x=>x.id===item.id)!;
     if(updated.status!=='CONFIRMED')return{queued:true,outbox:updated};
     return{queued:false,outbox:updated};
@@ -201,12 +373,28 @@ export class ConnectedApplication {
   async reverseLedgerEntry(entryId:string,reason:string):Promise<LedgerEntry>{if(!this.activeGroupId)throw new Error('ACTIVE_GROUP_REQUIRED');return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/ledger/${encodeURIComponent(entryId)}/reverse`,{method:'POST',body:JSON.stringify({reason})});}
 
   async cashboxReconciliations():Promise<CashboxReconciliationRecord[]>{if(!this.activeGroupId)return[];return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/cashbox/reconciliations`);}
-  async reconcileCashbox(input:{openingCash:number;cashIn:number;cashOut:number;countedClosing:number;meetingId?:string}):Promise<CashboxReconciliationRecord>{if(!this.activeGroupId)throw new Error('ACTIVE_GROUP_REQUIRED');return this.request<CashboxReconciliationRecord>(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/cashbox/reconciliations`,{method:'POST',body:JSON.stringify({...input,currency:'XAF'})});}
+  async reconcileCashbox(input:{openingCash:number;cashIn:number;cashOut:number;countedClosing:number;meetingId?:string}):Promise<CashboxReconciliationRecord>{
+    if(!this.activeGroupId)throw new Error('ACTIVE_GROUP_REQUIRED');
+    if(!this.isOffline())try{return await this.request<CashboxReconciliationRecord>(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/cashbox/reconciliations`,{method:'POST',body:JSON.stringify({...input,currency:'XAF'})});}catch(error){if(!(error instanceof Error)||error.message!=='NETWORK_UNAVAILABLE')throw error;}
+    for(const value of [input.openingCash,input.cashIn,input.cashOut,input.countedClosing])if(!Number.isSafeInteger(value)||value<0)throw Error('INVALID_CASHBOX_VALUE');
+    const theoreticalClosing=input.openingCash+input.cashIn-input.cashOut,stamp=new Date().toISOString(),record:CashboxReconciliationRecord={id:makeId('cashrec'),tenantId:this.tenantId,groupId:this.activeGroupId,meetingId:input.meetingId,snapshot:{openingCash:input.openingCash,cashIn:input.cashIn,cashOut:input.cashOut,theoreticalClosing,countedClosing:input.countedClosing,variance:input.countedClosing-theoreticalClosing,currency:'XAF'},status:input.countedClosing===theoreticalClosing?'MATCHED':'MISMATCH',createdAt:stamp,createdBy:this.actorId};
+    await this.patchCachedArray<CashboxReconciliationRecord>(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/cashbox/reconciliations`,rows=>[...rows,record]);
+    await this.queueLocal('CASHBOX_RECONCILE_V1',{groupId:this.activeGroupId,...input,currency:'XAF'},record.id);return record;
+  }
   async expenses(input:{meetingId?:string;membershipId?:string;rubricId?:string;scope?:string}={}):Promise<any[]>{if(!this.activeGroupId)return[];const q=new URLSearchParams();for(const [k,v] of Object.entries(input))if(v)q.set(k,String(v));return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/expenses?${q}`);}
   async openSupportCase(summary:string):Promise<CaseRecord>{return this.request('/api/v1/cases',{method:'POST',body:JSON.stringify({summary,groupId:this.activeGroupId})});}
   async inboxItems():Promise<Array<{id:string;kind:string;title:string;priority:string;status:string;groupId?:string}>>{return this.request('/api/v1/inbox');}
 
-  async productCatalog():Promise<{version:string;count:number;capabilities:ReturnType<ConnectedApplication['productModules']>}>{return this.request('/api/v1/product/capabilities');}
+  async productCatalog():Promise<{version:string;count:number;capabilities:ReturnType<ConnectedApplication['productModules']>}>{
+    try{return await this.request('/api/v1/product/capabilities');}
+    catch(error){
+      if((error instanceof Error)&&error.message==='NETWORK_UNAVAILABLE'){
+        const capabilities=this.productModules();
+        return{version:'offline-bundled',count:capabilities.length,capabilities};
+      }
+      throw error;
+    }
+  }
   async searchGroups(input:{q?:string;locality?:string;recruitingOnly?:boolean}={}):Promise<GroupDiscoveryMatch[]>{const p=new URLSearchParams();if(input.q)p.set('q',input.q);if(input.locality)p.set('locality',input.locality);if(input.recruitingOnly)p.set('recruitingOnly','true');return this.request(`/api/v1/discovery/groups?${p}`);}
   async publishActiveGroup(input:{visibility:'PUBLIC'|'INVITE_ONLY'|'SECRET'|'MEMBERS_ONLY';discoverable:boolean;joinPolicy:'REQUEST'|'OPEN'|'INVITE_ONLY'|'CLOSED';recruiting:boolean;locality?:string;missionTags?:string[];activityTags?:string[]}):Promise<PublicGroupListing>{if(!this.activeGroupId)throw new Error('ACTIVE_GROUP_REQUIRED');return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/discovery`,{method:'POST',body:JSON.stringify(input)});}
   async createJoinLink(input:{mode?:'AUTO_JOIN'|'HISTORICAL_MATCH';label?:string;expiresHours?:number;maxUses?:number}={}):Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/join-links`,{method:'POST',body:JSON.stringify(input)});}
@@ -238,6 +426,18 @@ export class ConnectedApplication {
   async revokeCommercialPreferenceCookie():Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/preferences/commercial-cookie/revoke`,{method:'POST',body:'{}'});}
   async commercialPreferenceContext():Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/preferences/commercial-context`);}
   async commercialAffinities():Promise<any[]>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/concierge/commercial-affinities`);}
+  async liveConsensus(meetingId:string):Promise<any[]>{if(!this.activeGroupId)return[];const r=await this.request<any>(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/meetings/${encodeURIComponent(meetingId)}/live-consensus`);return r.items??[];}
+  async submitLiveConsensus(meetingId:string,input:{cellKey:string;value:string|number;label?:string;membershipId?:string;rubricId?:string}):Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/meetings/${encodeURIComponent(meetingId)}/live-consensus`,{method:'POST',body:JSON.stringify(input)});}
+  async voteLiveConsensus(meetingId:string,cellKey:string,proposalActorId:string):Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/meetings/${encodeURIComponent(meetingId)}/live-consensus/${encodeURIComponent(cellKey)}/vote`,{method:'POST',body:JSON.stringify({proposalActorId})});}
+  async reserveLiveConsensus(meetingId:string,cellKey:string,reason:string):Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/meetings/${encodeURIComponent(meetingId)}/live-consensus/${encodeURIComponent(cellKey)}/reserve`,{method:'POST',body:JSON.stringify({reason})});}
+  async distributeMeetingSummary(meetingId:string):Promise<{queued:boolean;outbox:OutboxItem}>{
+    if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');
+    const items=await this.liveConsensus(meetingId).catch(error=>{if(this.isOffline()&&error instanceof Error&&error.message==='NETWORK_UNAVAILABLE')return[];throw error;});
+    if(items.some((x:any)=>['COLLECTING','DIVERGENT'].includes(String(x.state))))throw Error('CONSENSUS_UNRESOLVED');
+    const item=await this.queueLocal('MEETING_DISTRIBUTION_V1',{groupId:this.activeGroupId,meetingId,kind:'MEMBER_DISTRIBUTION_READY',confirmedAt:new Date().toISOString()},'meeting-distribution:'+meetingId);
+    if(this.isOffline())return{queued:true,outbox:item};
+    const synced=await this.syncOutbox(),updated=synced.find(x=>x.id===item.id)??item;return{queued:updated.status!=='CONFIRMED',outbox:updated};
+  }
   async liveHealth():Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/live/health`);}
   async liveEvents(after=0):Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/live/events?after=${encodeURIComponent(String(after))}`);}
   async publishLive(type:'PRESENCE'|'SYNC_HINT'|'MEETING_UPDATE',payload:Record<string,string|number|boolean|null>={}):Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/live/publish`,{method:'POST',body:JSON.stringify({type,payload,idempotencyKey:makeId('live')})});}
@@ -363,6 +563,7 @@ export class ConnectedApplication {
     const result=await this.outbox.sync(async item=>{try{const groupId=(item.payload as {groupId?:string}).groupId;const r=await this.request<{accepted:boolean;stored?:boolean}>('/api/v1/outbox/apply',{method:'POST',headers:{'x-active-group-id':groupId??''},body:JSON.stringify(item)});return{ok:r.accepted&&r.stored!==false};}catch(e){return{ok:false,conflict:e instanceof Error&&['IDEMPOTENCY_CONFLICT','FORBIDDEN_SCOPE'].includes(e.message)};}});await this.persistOutbox();return result;
   }
   async queueDemoIntent(note='Local note'):Promise<OutboxItem>{const item=this.outbox.enqueue({tenantId:this.tenantId,actorId:this.actorId,type:'MEETING_NOTE_UPDATED',payload:{groupId:this.activeGroupId,note},idempotencyKey:`note-${this.activeGroupId??'none'}-${Date.now()}`});await this.persistOutbox();return item;}
+  async retryOutboxItem(id:string):Promise<OutboxItem|undefined>{const item=this.outbox.retry(id);await this.persistOutbox();return item;}
   private async persistOutbox(){if(!IndexedDbOutboxAdapter.supported())throw Error('DURABLE_STORAGE_REQUIRED');try{await this.outboxStorage.save(this.outbox.list());}catch{throw Error('DURABLE_STORAGE_REQUIRED');}}
   outboxItems():OutboxItem[]{return this.outbox.list();}
 

@@ -8,5 +8,18 @@
   "background_color": "#f6f3ec",
   "theme_color": "#1f6b4f",
   "description": "Eco-System Cahier App : tontines, associations, communautés, règles vivantes, réunions, finances, découverte, marché, accompagnement et offline.",
-  "lang": "fr"
+  "lang": "fr",
+  "display_override": [
+    "standalone",
+    "minimal-ui",
+    "browser"
+  ],
+  "orientation": "any",
+  "categories": [
+    "finance",
+    "business",
+    "productivity",
+    "social"
+  ],
+  "prefer_related_applications": false
 }

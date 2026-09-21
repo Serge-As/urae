@@ -81,6 +81,7 @@ const fail = (e) => {
         INDEPENDENT_REVIEW_REQUIRED: 'Cette correction financière exige la revue d’un autre responsable habilité. L’auteur ne peut jamais valider sa propre correction.',
         MEMBER_SELF_ACTION_REQUIRED: 'Le dossier personnel et certaines validations doivent être effectués par le membre concerné lui-même.',
         IDEMPOTENCY_CONFLICT: 'Cette référence correspond déjà à une opération différente. Consultez le reçu existant.',
+        CONSENSUS_UNRESOLVED: 'Des saisies de gestionnaires sont encore divergentes. Confrontez-les et choisissez la valeur retenue avant de diffuser aux membres.',
         FORBIDDEN_SCOPE: 'Votre compte ne dispose pas de l’autorisation nécessaire pour ce groupe.',
         DURABLE_STORAGE_REQUIRED: 'Le stockage local est indisponible. Cette opération n’a pas été envoyée.',
         INVALID_CONTRIBUTION_AMOUNT: 'Le montant doit être un entier positif en F CFA.',
@@ -122,19 +123,61 @@ const communityShopUI = mountCommunityShopUI({ app, notify: toast, showError: fa
 const miscRubricUI = mountMiscRubricUI({ app, notify: toast, showError: fail, getMembers: () => members, getMeetings: () => meetings, isManager, fmt });
 const pairingUI = mountPairingUI({ app, notify: toast, showError: fail, getMembers: () => members, isManager, afterMembershipChanged: async groupId => { await renderGroups(); if(groupId){ app.selectGroup(groupId); await refreshGroupContext(); } } });
 const clearFail = () => { $('#errorBox').hidden = true; $('#errorBox').textContent = ''; };
-const go = (name) => {
-    document.querySelectorAll('.view').forEach(x => x.classList.remove('active'));
-    document.querySelectorAll('.nav-btn').forEach(x => x.classList.remove('active'));
-    $(`#view-${name}`).classList.add('active');
+let navDepth=Number(history.state?.ecoDepth??0);
+const activeViewName=()=>document.querySelector('.view.active')?.id?.replace(/^view-/,'')||'dashboard';
+const captureNavState=()=>{
+    const view=activeViewName(),active=document.querySelector(`#view-${view}`);
+    const sessionTab=document.querySelector('#sessionsTabs [data-session-tab].active')?.dataset?.sessionTab;
+    const meetingId=document.querySelector('#sessionsMeetingSelect')?.value||undefined;
+    const openDetails=[...(active?.querySelectorAll('details[open][id]')??[])].map(x=>x.id).slice(0,40);
+    const focusId=document.activeElement?.id||undefined;
+    return{view,scrollY:window.scrollY,sessionTab,meetingId,openDetails,focusId};
+};
+const restoreNavState=state=>{
+    if(!state)return;
+    if(state.meetingId){const pick=document.querySelector('#sessionsMeetingSelect');if(pick&&[...pick.options].some(o=>o.value===state.meetingId)){pick.value=state.meetingId;pick.dispatchEvent(new Event('change',{bubbles:true}));}}
+    if(state.sessionTab){const tab=document.querySelector(`#sessionsTabs [data-session-tab="${state.sessionTab}"]`);if(tab&&!tab.classList.contains('active'))tab.click();}
+    for(const id of state.openDetails??[]){const node=document.getElementById(id);if(node?.tagName==='DETAILS')node.open=true;}
+    requestAnimationFrame(()=>{window.scrollTo({top:Number(state.scrollY)||0,behavior:'auto'});if(state.focusId)document.getElementById(state.focusId)?.focus?.({preventScroll:true});});
+};
+const updateBackButton=()=>{const b=document.querySelector('#appBackBtn');if(b)b.hidden=navDepth<=0;};
+const showView=(name,state)=>{
+    const target=document.querySelector(`#view-${name}`);if(!target)return false;
+    document.querySelectorAll('.view').forEach(x=>x.classList.remove('active'));
+    document.querySelectorAll('.nav-btn').forEach(x=>x.classList.remove('active'));
+    target.classList.add('active');
     const activeNav=document.querySelector(`.nav-btn[data-view="${name}"]`);activeNav?.classList.add('active');
     if(activeNav&&window.matchMedia('(max-width:860px)').matches)setTimeout(()=>activeNav.scrollIntoView({behavior:'smooth',block:'nearest',inline:'center'}),20);
-    const pop = document.querySelector('#globalSearchResults');
-    if (pop)
-        pop.replaceChildren();
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    document.querySelector('#globalSearchResults')?.replaceChildren();
+    restoreNavState(state??{view:name,scrollY:0});
+    updateBackButton();
+    return true;
 };
-document.querySelectorAll('[data-view]').forEach(b => b.addEventListener('click', () => go(b.dataset.view)));
-document.querySelectorAll('[data-go]').forEach(b => b.addEventListener('click', () => go(b.dataset.go)));
+const go=(name,options={})=>{
+    const current=captureNavState();
+    if(name===current.view&&!options.force)return;
+    try{history.replaceState({ecoNav:current,ecoDepth:navDepth},'',`#${current.view}`);}catch{}
+    navDepth+=1;
+    const next={view:name,scrollY:Number(options.scrollY)||0};
+    try{history.pushState({ecoNav:next,ecoDepth:navDepth},'',`#${name}`);}catch{}
+    showView(name,next);updateBackButton();
+};
+const goBack=()=>{if(navDepth>0)history.back();};
+document.querySelectorAll('[data-view]').forEach(b=>b.addEventListener('click',()=>go(b.dataset.view)));
+document.querySelectorAll('[data-go]').forEach(b=>b.addEventListener('click',()=>go(b.dataset.go)));
+document.querySelector('#appBackBtn')?.addEventListener('click',goBack);
+window.addEventListener('popstate',event=>{
+    const state=event.state?.ecoNav,hash=location.hash.slice(1);
+    navDepth=Math.max(0,Number(event.state?.ecoDepth??Math.max(0,navDepth-1)));
+    if(state?.view)showView(state.view,state);else if(hash)showView(hash,{view:hash,scrollY:0});
+    updateBackButton();
+});
+try{
+    const initial=captureNavState();
+    if(!history.state?.ecoNav)history.replaceState({ecoNav:initial,ecoDepth:0},'',location.href);
+    navDepth=Math.max(0,Number(history.state?.ecoDepth??0));
+}catch{}
+updateBackButton();
 const detailUI = mountDetailUI({ app, navigate: go, getGroups: () => groups, getMembers: () => members, getMeetings: () => meetings, getRubrics: () => rubrics, isManager, fmt, date, showError: fail });
 const personalCockpitUI = mountPersonalCockpitUI({ app, getGroups: () => groups, getMembers: () => members, getMeetings: () => meetings, navigate: go, fmt, date, showError: fail });
 const recapUI = mountRecapUI({ app, getGroups: () => groups, getMembers: () => members, getMeetings: () => meetings, getRubrics: () => rubrics, isManager, navigate: go, fmt, date, showError: fail });
@@ -450,8 +493,9 @@ const renderOutbox = () => { const root = $('#outboxList'); root.replaceChildren
     root.innerHTML = '<li class="empty-state">Aucune opération en attente.</li>';
     return;
 } for (const x of xs) {
-    const li = document.createElement('li');
-    li.textContent = `${x.type} · ${x.status}`;
+    const li = document.createElement('li'),label=document.createElement('span');
+    label.textContent = `${x.type} · ${x.status} · tentative ${x.attempts}/5`;li.append(label);
+    if(x.status==='FAILED'&&x.attempts>=5){const retry=document.createElement('button');retry.type='button';retry.className='link-btn';retry.textContent=tx('Réessayer','Retry');retry.onclick=()=>void(async()=>{await app.retryOutboxItem(x.id);renderOutbox();if(navigator.onLine){await app.syncOutbox();renderOutbox();}})();li.append(retry);}
     root.append(li);
 } };
 const renderCompatibility = () => {
@@ -658,6 +702,16 @@ const renderApplications = async () => { const root = $('#applicationsBox'); roo
 catch (e) {
     fail(e);
 } };
+const refreshOptionalOfflineSafe=async(label,fn)=>{
+    try{return await fn();}
+    catch(error){
+        if(!navigator.onLine && error instanceof Error && error.message==='NETWORK_UNAVAILABLE'){
+            console.info('Offline optional section skipped:',label);
+            return;
+        }
+        throw error;
+    }
+};
 const refreshGroupContext = async () => {
     await renderGroups();
     const active = Boolean(app.activeGroup());
@@ -687,26 +741,26 @@ const refreshGroupContext = async () => {
         if(manage)await renderLedger();
         else{receiptPositions=[];$('#ledgerMetrics').replaceChildren();$('#receiptList').textContent='Votre relevé individuel est accessible depuis la liste des membres.';}
     }
-    if(!active || manage)await renderApplications();else $('#applicationsBox').textContent='Les candidatures sont gérées par les responsables du groupe.';
-    await renderUniverse();
-    await renderInbox();
-    await completionUI.refresh();
-    await advancedUI.refresh();
-    await identityLiveUI.refresh();
-    await communityShopUI.refresh();
-    await miscRubricUI.refresh();
-    await pairingUI.refresh();
-    await personalCockpitUI.refresh();
-    await recapUI.refresh();
-    await interestCommunityUI.refresh();
-    await adManagerUI.refresh();
-    await tontineManagerUI.refresh();
-    await savingsYieldUI.refresh();
-    await assistanceRulebookUI.refresh();
-    await externalProgramsUI.refresh();
-    await blueprintExecutableUI.refresh();
-    await financialLabUI.refresh();
-    await founderControlUI.refresh();
+    if(!active || manage)await refreshOptionalOfflineSafe('applications',renderApplications);else $('#applicationsBox').textContent='Les candidatures sont gérées par les responsables du groupe.';
+    await refreshOptionalOfflineSafe('universe',renderUniverse);
+    await refreshOptionalOfflineSafe('inbox',renderInbox);
+    await refreshOptionalOfflineSafe('completion',()=>completionUI.refresh());
+    await refreshOptionalOfflineSafe('advanced',()=>advancedUI.refresh());
+    await refreshOptionalOfflineSafe('identity-live',()=>identityLiveUI.refresh());
+    await refreshOptionalOfflineSafe('community-shop',()=>communityShopUI.refresh());
+    await refreshOptionalOfflineSafe('misc-rubrics',()=>miscRubricUI.refresh());
+    await refreshOptionalOfflineSafe('pairing',()=>pairingUI.refresh());
+    await refreshOptionalOfflineSafe('personal-cockpit',()=>personalCockpitUI.refresh());
+    await refreshOptionalOfflineSafe('recap',()=>recapUI.refresh());
+    await refreshOptionalOfflineSafe('interest-community',()=>interestCommunityUI.refresh());
+    await refreshOptionalOfflineSafe('ad-manager',()=>adManagerUI.refresh());
+    await refreshOptionalOfflineSafe('tontine-manager',()=>tontineManagerUI.refresh());
+    await refreshOptionalOfflineSafe('savings-yield',()=>savingsYieldUI.refresh());
+    await refreshOptionalOfflineSafe('assistance-rulebook',()=>assistanceRulebookUI.refresh());
+    await refreshOptionalOfflineSafe('external-programs',()=>externalProgramsUI.refresh());
+    await refreshOptionalOfflineSafe('blueprint',()=>blueprintExecutableUI.refresh());
+    await refreshOptionalOfflineSafe('financial-lab',()=>financialLabUI.refresh());
+    await refreshOptionalOfflineSafe('founder-control',()=>founderControlUI.refresh());
 };
 const refreshAll = async () => { await refreshGroupContext(); renderOutbox(); renderCompatibility(); renderKernel(); renderModules(); renderEcosystemHighlights(); renderDomainHubs(); await detailUI.openFromLocation?.(); };
 $('#activeGroupSelect').addEventListener('change', async (e) => { const id = e.target.value; app.selectGroup(id || undefined); try {
@@ -980,17 +1034,34 @@ if('serviceWorker' in navigator)navigator.serviceWorker.addEventListener('messag
     if(event.data?.type!=='ECO_SYSTEM_SYNC_OUTBOX'||!navigator.onLine)return;
     void (async()=>{try{await app.syncOutbox();renderOutbox();if(app.activeGroup())await refreshGroupContext();}catch{}})();
 });
+const iosLike=()=>/iPad|iPhone|iPod/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
+const standaloneMode=()=>window.matchMedia?.('(display-mode: standalone)')?.matches||navigator.standalone===true;
+const showIosInstallGuide=()=>{
+    document.getElementById('iosInstallGuide')?.remove();
+    const dialog=document.createElement('dialog');dialog.id='iosInstallGuide';dialog.className='ios-install-guide';
+    const h=document.createElement('h2');h.textContent=tx('Installer Eco-System sur iPhone / iPad','Install Eco-System on iPhone / iPad');
+    const p=document.createElement('p');p.textContent=tx('Dans Safari : touchez Partager, puis « Sur l’écran d’accueil », puis Ajouter. Ouvrez ensuite Eco-System depuis son icône pour profiter du mode application et du cache hors ligne.','In Safari: tap Share, then “Add to Home Screen”, then Add. Open Eco-System from its icon to use app mode and offline cache.');
+    const note=document.createElement('p');note.className='hint';note.textContent=tx('Aucune suppression de données n’est nécessaire. Si l’option n’apparaît pas, ouvrez cette page directement dans Safari.','You do not need to delete any data. If the option is missing, open this page directly in Safari.');
+    const close=document.createElement('button');close.type='button';close.className='primary';close.textContent=tx('J’ai compris','Got it');close.onclick=()=>dialog.close();
+    dialog.append(h,p,note,close);document.body.append(dialog);dialog.showModal();
+};
 window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); deferredInstallPrompt = e; $('#installBtn').hidden = false; });
-$('#installBtn').addEventListener('click', async () => { if (deferredInstallPrompt) {
-    await deferredInstallPrompt.prompt();
-    deferredInstallPrompt = undefined;
-    $('#installBtn').hidden = true;
-} });
+if(iosLike()&&!standaloneMode()){$('#installBtn').hidden=false;$('#installBtn').textContent=tx('Installer sur iPhone / iPad','Install on iPhone / iPad');}
+$('#installBtn').addEventListener('click', async () => {
+    if (deferredInstallPrompt) {
+        await deferredInstallPrompt.prompt();
+        deferredInstallPrompt = undefined;
+        $('#installBtn').hidden = true;
+        return;
+    }
+    if(iosLike()&&!standaloneMode())showIosInstallGuide();
+});
 async function ensureCurrentServiceWorker(){
     if(!('serviceWorker' in navigator))return;
     try{
         const reg=await navigator.serviceWorker.register('/sw.js',{scope:'/',updateViaCache:'none'});
         await reg.update();
+        try{if(navigator.storage?.persist)await navigator.storage.persist();}catch{}
         try{
             if('periodicSync' in reg)await reg.periodicSync.register('eco-system-outbox',{minInterval:12*60*60*1000});
         }catch{}

@@ -114,19 +114,25 @@ export class MemberFinancialControlService{
   async reserve(groupId:string,id:string,reason:string):Promise<{notice:FinancialNotice;case:CaseRecord}>{
     const ctx=this.kernel.context.get(),clean=reason.trim();if(!clean)throw new Error('RESERVE_REASON_REQUIRED');
     const x=await this.get(groupId,id),m=await this.membership(groupId,x.notice.membershipId);if(m.userId!==ctx.actorId)throw new Error('MEMBER_SELF_ACTION_REQUIRED');
-    const notice={...x.notice,disputeState:'MEMBER_RESERVE' as const,reserveReason:clean,version:x.notice.version+1,updatedAt:now()};
-    const saved=await this.save(x.record,notice,'MEMBER_FINANCIAL_RESERVE_OPENED');
     const caseId='case_reserve_'+encodeURIComponent(id);
     let record=(await this.repo.listCases(ctx.tenantId,m.userId)).find(c=>c.id===caseId);
+    if(x.notice.disputeState==='MEMBER_RESERVE'&&x.notice.reserveReason===clean){
+      if(!record){record={id:caseId,tenantId:ctx.tenantId,groupId,type:'FINANCIAL_RESERVE',subjectType:'ledger_entry',subjectId:x.notice.ledgerEntryId,status:'OPEN',openedBy:m.userId,openedAt:now(),summary:clean};await this.repo.saveCase(record);}
+      return{notice:x.notice,case:record};
+    }
+    const notice={...x.notice,disputeState:'MEMBER_RESERVE' as const,reserveReason:clean,version:x.notice.version+1,updatedAt:now()};
+    const saved=await this.save(x.record,notice,'MEMBER_FINANCIAL_RESERVE_OPENED');
     if(!record){record={id:caseId,tenantId:ctx.tenantId,groupId,type:'FINANCIAL_RESERVE',subjectType:'ledger_entry',subjectId:notice.ledgerEntryId,status:'OPEN',openedBy:m.userId,openedAt:now(),summary:clean};await this.repo.saveCase(record);}
     return{notice:saved,case:record};
   }
 
   async officerReview(groupId:string,id:string,note:string):Promise<FinancialNotice>{
     const ctx=this.kernel.context.get();if(!(await this.canManage(groupId)))throw new Error('FORBIDDEN_SCOPE');
-    const x=await this.get(groupId,id);if(!['MEMBER_RESERVE','UNDER_REVIEW','MEMBER_RESERVE_MAINTAINED'].includes(x.notice.disputeState))throw new Error('NO_MEMBER_RESERVE');
+    const x=await this.get(groupId,id),clean=note.trim()||'Validation après vérification';
+    if(x.notice.disputeState==='OFFICER_CONFIRMED'&&x.notice.officerId===ctx.actorId&&x.notice.officerNote===clean)return x.notice;
+    if(!['MEMBER_RESERVE','UNDER_REVIEW','MEMBER_RESERVE_MAINTAINED'].includes(x.notice.disputeState))throw new Error('NO_MEMBER_RESERVE');
     if(x.notice.requiresIndependentReview&&x.notice.authorId===ctx.actorId)throw new Error('INDEPENDENT_REVIEW_REQUIRED');
-    const notice={...x.notice,disputeState:'OFFICER_CONFIRMED' as const,officerId:ctx.actorId,officerNote:note.trim()||'Validation après vérification',version:x.notice.version+1,updatedAt:now()};
+    const notice={...x.notice,disputeState:'OFFICER_CONFIRMED' as const,officerId:ctx.actorId,officerNote:clean,version:x.notice.version+1,updatedAt:now()};
     const saved=await this.save(x.record,notice,'FINANCIAL_RESERVE_OFFICER_CONFIRMED');
     if(saved.requiresIndependentReview){
       const tasks=(await this.repo.listObligations(ctx.tenantId)).filter(o=>o.type==='FINANCIAL_INDEPENDENT_REVIEW'&&o.sourceId===saved.id&&o.status==='open');
@@ -137,9 +143,10 @@ export class MemberFinancialControlService{
 
   async memberReview(groupId:string,id:string,decision:'APPROVE_AFTER_REVIEW'|'MAINTAIN_RESERVE',note=''):Promise<FinancialNotice>{
     const ctx=this.kernel.context.get(),x=await this.get(groupId,id),m=await this.membership(groupId,x.notice.membershipId);if(m.userId!==ctx.actorId)throw new Error('MEMBER_SELF_ACTION_REQUIRED');
+    const disputeState=decision==='APPROVE_AFTER_REVIEW'?'MEMBER_APPROVED_AFTER_REVIEW':'MEMBER_RESERVE_MAINTAINED',clean=note.trim()||undefined;
+    if(x.notice.disputeState===disputeState&&x.notice.memberReviewNote===clean)return x.notice;
     if(x.notice.disputeState!=='OFFICER_CONFIRMED')throw new Error('OFFICER_REVIEW_REQUIRED');
-    const disputeState=decision==='APPROVE_AFTER_REVIEW'?'MEMBER_APPROVED_AFTER_REVIEW':'MEMBER_RESERVE_MAINTAINED';
-    const notice={...x.notice,disputeState:disputeState as DisputeState,memberReviewNote:note.trim()||undefined,version:x.notice.version+1,updatedAt:now()};
+    const notice={...x.notice,disputeState:disputeState as DisputeState,memberReviewNote:clean,version:x.notice.version+1,updatedAt:now()};
     return this.save(x.record,notice,decision==='APPROVE_AFTER_REVIEW'?'MEMBER_RESERVE_APPROVED_AFTER_REVIEW':'MEMBER_RESERVE_MAINTAINED');
   }
 }
