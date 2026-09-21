@@ -304,7 +304,7 @@ const renderInbox = async () => {
     }
 };
 const renderMembers = async () => {
-    members = await app.listMembers();
+    members = (await app.listMembers()).filter(x=>x.status!=='left');
     const list = $('#memberList');
     list.replaceChildren();
     const select = $('#contributionMember');
@@ -329,6 +329,7 @@ const renderMembers = async () => {
             const reason=document.createElement('input');reason.placeholder=tx('Motif / décision du groupe','Reason / group decision');
             const save=document.createElement('button');save.type='button';save.className='secondary';save.textContent=tx('Enregistrer les habilitations','Save authorities');save.onclick=async()=>{try{const nextRoles=roles.value.split(',').map(x=>x.trim()).filter(Boolean);await app.updateMemberLifecycle(m.id,{status:status.value,roles:nextRoles,reason:reason.value,expectedRevision:Number(m.lifecycleRevision??0)});await renderMembers();toast(tx('Habilitations mises à jour et auditées.','Authorities updated and audited.'));}catch(e){fail(e);}};
             const box=document.createElement('div');box.className='inline-form';box.append(status,roles,reason,save);details.append(box);li.append(details);
+            const remove=document.createElement('button');remove.type='button';remove.className='link-btn';remove.textContent=tx('Mettre à la corbeille','Move to trash');remove.onclick=()=>void(async()=>{if(!confirm(tx('Retirer ce membre du groupe ? Il restera restaurable pendant 6 mois.','Remove this member from the group? It remains restorable for 6 months.')))return;try{await app.moveToTrash('MEMBER',m.id);await renderMembers();await renderTrash();toast(tx('Membre placé dans la corbeille.','Member moved to trash.'));}catch(e){fail(e);}})();li.append(remove);
         }
         list.append(li);
         const o = document.createElement('option');
@@ -338,7 +339,7 @@ const renderMembers = async () => {
     }
 };
 const renderMeetings = async () => {
-    meetings = await app.listMeetings();
+    meetings = (await app.listMeetings()).filter(x=>x.status!=='cancelled');
     const root = $('#meetingList');
     root.replaceChildren();
     const select = $('#contributionMeeting');
@@ -368,6 +369,10 @@ const renderMeetings = async () => {
                 fail(e);
             } };
             a.append(b);
+        }
+        if(isManager()){
+            const edit=document.createElement('button');edit.type='button';edit.className='link-btn';edit.textContent=tx('Modifier','Edit');edit.onclick=()=>go('sessions',{meetingId:m.id,force:true});
+            const remove=document.createElement('button');remove.type='button';remove.className='link-btn';remove.textContent=tx('Corbeille','Trash');remove.onclick=()=>void(async()=>{if(!confirm(tx('Mettre cette séance à la corbeille ? Elle reste restaurable pendant 6 mois et aucune écriture financière n’est supprimée.','Move this meeting to trash? It remains restorable for 6 months and no financial entry is deleted.')))return;try{await app.moveToTrash('MEETING',m.id);await renderMeetings();await renderTrash();toast(tx('Séance placée dans la corbeille.','Meeting moved to trash.'));}catch(e){fail(e);}})();a.append(edit,remove);
         }
         root.append(a);
         const o = document.createElement('option');
@@ -527,7 +532,9 @@ const renderLivingRules = async () => {
     if (!rubrics.length) {
         root.innerHTML = `<div class="empty-state">${tx('Aucune rubrique personnalisée. Décrivez par exemple la collation de ce groupe.','No custom rubric. Describe, for example, how this group handles refreshments.')}</div>`;
     }
+    if(isManager()){const add=document.createElement('button');add.type='button';add.className='primary';add.textContent=tx('+ Ajouter une rubrique à ce groupe','+ Add a rubric to this group');add.onclick=()=>document.querySelector('#rubricForm')?.scrollIntoView({behavior:'smooth',block:'start'});root.append(add);}
     for (const r of rubrics) {
+        if(r.status==='ARCHIVED')continue;
         const a = document.createElement('article');
         a.className = 'item';
         const m = r.operatingModel;
@@ -543,7 +550,8 @@ const renderLivingRules = async () => {
         if(isManager()){
           const edit=document.createElement('button');edit.type='button';edit.className='secondary';edit.textContent=tx('Configurer les caractéristiques / parts','Configure characteristics / shares');
           edit.onclick=()=>editRubricPlan(r,async plan=>{await app.updateRubricActivityPlan(r.id,plan);await renderLivingRules();toast(tx('Caractéristiques enregistrées.','Characteristics saved.'));},launchError);
-          a.append(edit);
+          const remove=document.createElement('button');remove.type='button';remove.className='link-btn';remove.textContent=tx('Mettre à la corbeille','Move to trash');remove.onclick=()=>void(async()=>{if(!confirm(tx('Archiver cette rubrique dans la corbeille pendant 6 mois ? Les anciennes écritures restent intactes.','Archive this rubric in trash for 6 months? Existing entries remain intact.')))return;try{await app.moveToTrash('RUBRIC',r.id);await renderLivingRules();await renderTrash();toast(tx('Rubrique placée dans la corbeille.','Rubric moved to trash.'));}catch(e){fail(e);}})();
+          a.append(edit,remove);
         }
         root.append(a);
         for (const sel of [rselect, pselect]) {
@@ -798,6 +806,19 @@ const renderApplications = async () => { const root = $('#applicationsBox'); roo
 catch (e) {
     fail(e);
 } };
+const renderTrash=async()=>{
+    const root=document.querySelector('#trashList');if(!root)return;root.replaceChildren();
+    if(!app.activeGroup()){root.innerHTML='<div class="empty-state">'+tx('Sélectionnez un groupe.','Select a group.')+'</div>';return;}
+    try{
+      const items=await app.trashItems();if(!items.length){root.innerHTML='<div class="empty-state">'+tx('Corbeille vide.','Trash is empty.')+'</div>';return;}
+      for(const item of items){const expired=item.status!=='ACTIVE'||Boolean(item.data?.expired),a=document.createElement('article');a.className='item '+(expired?'trash-expired':'');
+        const kind={MEETING:tx('Séance','Meeting'),MEMBER:tx('Membre','Member'),RUBRIC:tx('Rubrique','Rubric')}[item.data?.kind]??String(item.data?.kind??'Élément');
+        const h=document.createElement('strong');h.textContent=kind+' · '+item.title;const p=document.createElement('p');p.textContent=expired?tx('Délai de restauration expiré. L’élément est définitivement retiré des vues opérationnelles ; l’audit financier reste conservé.','Restore period expired. The item is permanently removed from operational views; financial audit remains preserved.'):tx('Restaurable jusqu’au ','Restorable until ')+date(String(item.data?.restoreUntil??''));a.append(h,p);
+        if(!expired){const restore=document.createElement('button');restore.type='button';restore.className='primary';restore.textContent=tx('Restaurer intégralement','Restore fully');restore.onclick=()=>void(async()=>{try{await app.restoreTrashItem(item.id);await refreshGroupContext();toast(tx('Élément restauré.','Item restored.'));}catch(e){fail(e);}})();a.append(restore);}root.append(a);
+      }
+    }catch(e){fail(e);}
+};
+document.querySelector('#trashRefreshBtn')?.addEventListener('click',()=>void renderTrash());
 const refreshOptionalOfflineSafe=async(label,fn)=>{
     try{return await fn();}
     catch(error){
@@ -880,6 +901,7 @@ const refreshGroupContext = async () => {
     await refreshOptionalOfflineSafe('blueprint',()=>blueprintExecutableUI.refresh());
     await refreshOptionalOfflineSafe('financial-lab',()=>financialLabUI.refresh());
     await refreshOptionalOfflineSafe('founder-control',()=>founderControlUI.refresh());
+    if(manage)await refreshOptionalOfflineSafe('trash',renderTrash);
 };
 const refreshAll = async () => { await refreshGroupContext(); renderOutbox(); renderCompatibility(); renderKernel(); renderModules(); renderEcosystemHighlights(); renderDomainHubs(); await detailUI.openFromLocation?.(); };
 $('#activeGroupSelect').addEventListener('change', async (e) => { const id = e.target.value; app.selectGroup(id || undefined); try {
