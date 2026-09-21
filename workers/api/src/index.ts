@@ -867,6 +867,19 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
       await publishLive(groupId,'COMMUNITY_EVENT','forum-message:'+message.id,{hubId,messageId:message.id,event:'MESSAGE_CREATED'});
       return json(message,201,cors);
     }
+    const forumOpportunity=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/forum-v2\/hubs\/([^/]+)\/messages\/([^/]+)\/opportunity$/);
+    if(forumOpportunity&&request.method==='POST'){
+      if(!options.communityRealtime)throw new Error('COMMUNITY_REALTIME_UNAVAILABLE');
+      const groupId=forumOpportunity[1]!,hubId=decodeURIComponent(forumOpportunity[2]!),messageId=decodeURIComponent(forumOpportunity[3]!);
+      await community.federationProfile(groupId,hubId);
+      const around=await options.communityRealtime.listMessages({tenantId:ctx.tenantId,groupId,hubId,viewerId:ctx.actorId,limit:9,around:messageId});
+      const message=around.messages.find(x=>x.id===messageId);if(!message)throw new Error('COMMUNITY_MESSAGE_NOT_FOUND');
+      if(message.authorId!==ctx.actorId)await requireGroup(groupId,true);
+      const direction=message.kind==='OFFER'?'OFFER':'NEED';
+      const created=await opportunity.create({title:message.title??message.body.slice(0,160),summary:message.body,direction,groupId,visibility:'GROUP',source:'FORUM',sourceRef:'forum-v2:'+message.id});
+      return json(created,201,cors);
+    }
+
     const forumState=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/forum-v2\/hubs\/([^/]+)\/state$/);
     if(forumState&&request.method==='GET'){
       if(!options.communityRealtime)throw new Error('COMMUNITY_REALTIME_UNAVAILABLE');
