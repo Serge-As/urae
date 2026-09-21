@@ -447,6 +447,9 @@ export class ConnectedApplication {
     return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/meetings/${encodeURIComponent(meetingId)}/financial-cells/${encodeURIComponent(cellKey)}/apply`,{method:'POST',body:JSON.stringify({reason})});
   }
   async groupNotifications():Promise<any[]>{if(!this.activeGroupId)return[];return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/notifications`);}
+  async trashItems():Promise<any[]>{if(!this.activeGroupId)return[];return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/trash`);}
+  async moveToTrash(kind:'MEETING'|'MEMBER'|'RUBRIC',entityId:string):Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/trash`,{method:'POST',body:JSON.stringify({kind,entityId})});}
+  async restoreTrashItem(trashId:string):Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/trash/${encodeURIComponent(trashId)}/restore`,{method:'POST',body:'{}'});}
   async markGroupNotificationRead(id:string):Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/notifications/${encodeURIComponent(id)}/read`,{method:'POST',body:'{}'});}
   async distributeMeetingSummary(meetingId:string):Promise<{queued:boolean;outbox:OutboxItem}>{
     if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');
