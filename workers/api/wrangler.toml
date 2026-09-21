@@ -4,6 +4,9 @@ compatibility_date = "2026-09-15"
 compatibility_flags = ["nodejs_compat"]
 workers_dev = true
 
+[observability.traces]
+enabled = true
+
 # The CI workflow appends the D1 binding to a temporary wrangler.ci.toml after
 # resolving the existing eco-system-db. No account id, API token or database UUID is
 # committed in this file.
