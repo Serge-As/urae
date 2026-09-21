@@ -1,0 +1,7 @@
+import test from 'node:test';import assert from 'node:assert/strict';import fs from 'node:fs';
+const index=fs.readFileSync('apps/web/index.html','utf8'),auth=fs.readFileSync('apps/web/src/auth-bootstrap.js','utf8'),sw=fs.readFileSync('apps/web/sw.js','utf8'),build=fs.readFileSync('scripts/build.mjs','utf8');
+test('auth recovery loads before main application graph',()=>{const a=index.indexOf('/src/auth-bootstrap.js?v=1461'),m=index.indexOf('/src/main.js?v=1461');assert.ok(a>=0&&m>a);});
+test('login recovery is independent, same-origin and reports failures',()=>{assert.match(auth,/recoveryBound/);assert.match(auth,/credentials:'same-origin'/);assert.match(auth,/Connexion en cours/);assert.match(auth,/AUTH_SERVICE_UNAVAILABLE/);assert.match(auth,/stopImmediatePropagation/);});
+test('PWA refresh contains auth recovery',()=>{assert.match(sw,/v1461-auth-recovery/);assert.match(sw,/auth-bootstrap\.js/);});
+test('production build keeps the hotfix script versions',()=>{assert.match(build,/main\.js\?v=1461/);assert.match(build,/field-hardening\.js\?v=1461/);});
+test('all primary navigation destinations exist and are unique views',()=>{const views=[...index.matchAll(/id="view-([^"]+)"/g)].map(x=>x[1]);for(const name of ['dashboard','inbox','discovery','launch','operations','sessions','members','finance','backoffice','tontines','recap','ecosystem','services','control','settings'])assert.ok(views.includes(name),name);assert.equal(new Set(views).size,views.length);});
