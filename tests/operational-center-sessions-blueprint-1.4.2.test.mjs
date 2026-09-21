@@ -62,6 +62,10 @@ test('validated Blueprint is executable but cannot silently create money commitm
   assert.match(ui,/realMoney:false/);
   assert.match(ui,/Prévision ≠ demande ≠ engagement ≠ transaction/);
   assert.match(ui,/moduleId==='MARKETPLACE\.GROUP_BUY'/);
+  assert.match(ui,/Blueprint 5\.0\.0/);
+  assert.match(ui,/COMMUNITY\.FORUM/);
+  assert.match(ui,/COMMUNITY\.PRO_HUBS/);
+  assert.match(ui,/PARTNERS\.DIRECTORY/);
   assert.match(ui,/moteur canonique d’achats groupés/);
   assert.doesNotMatch(registry,/BACKHAUL|RETURN_LOAD|ECO_ROUTE/i);
 });
@@ -71,8 +75,8 @@ test('forums and communities receive action presets without a parallel social en
     readFile('apps/web/index.html','utf8'),
     readFile('apps/web/src/community-blueprint-presets.js','utf8')
   ]);
-  for(const label of ['Forum principal','Opportunités','Marché & besoins','Compétences & emploi','Agriculture & production','Actualités sourcées'])assert.ok(html.includes(label),label);
-  for(const label of ['Achat groupé','Récolte / arrivage','Info sourcée','Tendance / Buzz'])assert.ok(html.includes(label),label);
+  for(const label of ['Forum principal','Opportunités','Marché & besoins','Compétences & emploi','Agriculture & production','Business & fournisseurs','Formation & transmission','ONG · partenaires · impact','Créateurs & vitrines','Actualités sourcées'])assert.ok(html.includes(label),label);
+  for(const label of ['Achat groupé','Récolte / arrivage','Activité / vitrine','Partenaire / programme','Création / contenu utile','Info sourcée','Tendance / Buzz'])assert.ok(html.includes(label),label);
   assert.match(presets,/\[BESOIN\]/);
   assert.match(presets,/\[OFFRE\]/);
   assert.match(presets,/\[INFO SOURCÉE\]/);
@@ -80,6 +84,8 @@ test('forums and communities receive action presets without a parallel social en
   assert.match(presets,/kind:'REQUEST'/);
   assert.match(presets,/kind:'OFFER'/);
   assert.doesNotMatch(presets,/createSecondForum|parallelForum|newSocialEngine/i);
+  assert.match(presets,/ONG · partenaires · impact/);
+  assert.match(presets,/Créateurs · vitrines · contenus utiles/);
 });
 
 test('financial anti-scam lab is deterministic educational analysis, not a legal verdict',async()=>{
@@ -94,21 +100,21 @@ test('financial anti-scam lab is deterministic educational analysis, not a legal
   assert.match(lab,/moduleId:'SAFETY\.ANTISCAM'/);
 });
 
-test('PWA precaches all new 1.4.2 UI modules',async()=>{
+test('PWA precaches all Blueprint UI modules',async()=>{
   const sw=await readFile('apps/web/sw.js','utf8');
   for(const path of ['/src/sessions-ui.js','/src/blueprint-executable-ui.js','/src/community-blueprint-presets.js','/src/financial-lab-ui.js'])assert.ok(sw.includes(path),path);
 });
 
 
-test('1.4.2 actively refreshes the PWA shell so deployed UI replaces stale 1.4.1 caches',async()=>{
+test('1.4.3 actively refreshes the PWA shell so Blueprint 5.0.0 replaces stale caches',async()=>{
   const [main,sw,html]=await Promise.all([
     readFile('apps/web/src/main.js','utf8'),
     readFile('apps/web/sw.js','utf8'),
     readFile('apps/web/index.html','utf8')
   ]);
   assert.match(main,/void ensureCurrentServiceWorker\(\);[\s\S]*?void start\(\);/);
-  assert.match(sw,/eco-system-v142-operational-center-sessions-blueprint-20260920/);
-  assert.match(html,/\/styles\.css\?v=142/);
-  assert.match(html,/\/src\/main\.js\?v=142/);
-  assert.match(html,/ECO-SYSTEM · 1\.4\.2/);
+  assert.match(sw,/eco-system-v143-blueprint-5-0-0-finalized-20260921/);
+  assert.match(html,/\/styles\.css\?v=143/);
+  assert.match(html,/\/src\/main\.js\?v=143/);
+  assert.match(html,/ECO-SYSTEM · 1\.4\.3/);
 });
