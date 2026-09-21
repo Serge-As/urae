@@ -146,3 +146,9 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
   .sessions-selector-panel .form-grid{grid-template-columns:1fr}
   .session-picker-row{display:grid;grid-template-columns:1fr}.session-picker-row button{width:100%}
 }
+
+.relay-dialog{width:min(620px,94vw);max-height:92vh;border:1px solid var(--line);border-radius:20px;padding:0;background:var(--surface);color:var(--ink);box-shadow:var(--shadow)}
+.relay-dialog::backdrop{background:rgba(0,0,0,.55)}
+.relay-head{display:flex;align-items:center;justify-content:space-between;padding:15px 18px;border-bottom:1px solid var(--line)}.relay-head strong,.relay-head small{display:block}.relay-head button{border:0;background:transparent;font-size:20px}
+#relayBody{padding:18px}.relay-step{display:grid;gap:14px}.relay-step h2,.relay-step p{margin:0}.relay-qr{display:grid;place-items:center;padding:14px;background:white;border:1px solid var(--line);border-radius:16px}.relay-qr canvas{width:min(290px,80vw);height:auto;image-rendering:pixelated}.relay-step video{width:100%;max-height:55vh;border-radius:14px;background:#111}.relay-step textarea{font-family:ui-monospace,monospace;font-size:11px}
+@media(max-width:900px){.relay-top-btn{font-size:0;width:48px;padding:8px}.relay-top-btn::after{font-size:20px}.relay-top-btn#shareQrBtn::after{content:'▦↑'}.relay-top-btn#receiveQrBtn::after{content:'▦↓'}}
