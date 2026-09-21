@@ -246,7 +246,7 @@ export class ConnectedApplication {
     if(!this.isOffline())return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/meetings`,{method:'POST',body:JSON.stringify(body)});
     const stamp=new Date().toISOString(),id=makeId('meeting'),meeting:MeetingSession={id,tenantId:this.tenantId,groupId:this.activeGroupId,title:body.title?.trim()||'MEETING_DEFAULT_TITLE',status:'open',openedBy:this.actorId,openedAt:stamp,scheduledAt:body.scheduledAt?new Date(body.scheduledAt).toISOString():undefined,location:body.location?.trim()||undefined,theme:body.theme?.trim()||undefined,dressCode:body.dressCode?.trim()||undefined};
     await this.patchCachedArray<MeetingSession>(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/meetings`,rows=>rows.some(x=>x.id===id)?rows:[...rows,meeting]);
-    await this.queueLocal('MEETING_OPEN_V1',{groupId:this.activeGroupId,...meeting},id);return meeting;
+    await this.queueLocal('MEETING_OPEN_V1',{...meeting},id);return meeting;
   }
   async updateMeetingContext(meetingId:string,input:{scheduledAt?:string|null;location?:string|null;theme?:string|null;dressCode?:string|null}):Promise<MeetingSession>{
     if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');
