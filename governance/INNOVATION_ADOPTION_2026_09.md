@@ -167,3 +167,80 @@ ADOPT_NOW comme règle : `premium_live_ledger`, `crdt_collaboration`, `periodic_
 Tests de concurrence, double soumission, replay, coupure réseau, reprise après crash, appareil offline plusieurs jours, inversion d’ordre, duplication, rollback métier par écriture compensatrice, export comptable, audit, restauration depuis snapshot+journal et comparaison automatique des totaux.
 
 Ajouter obligatoirement des tests du protocole membre : notification quasi temps réel, téléphone offline puis reconnexion, validation membre, réserve non bloquante, seconde validation par responsable, maintien de réserve, rectification d’une transaction déjà confirmée, tentative de modification après clôture, responsable sans autorité, opération hors période autorisée, plusieurs appareils du même membre, double clic sur validation/réserve et conservation intégrale du contentieux.
+
+
+## 10. Offline-first autonome — règle d'architecture obligatoire
+Statut : ADOPT_NOW. Décision du 21 septembre 2026.
+
+La plateforme ne doit plus être conçue comme une application connectée possédant un mode dégradé hors connexion. Elle doit être une application locale autonome qui synchronise lorsqu'un transport devient disponible.
+
+### 10.1 Périmètre utilisable sans Internet
+Après installation initiale de la PWA, doivent rester réalisables sans accès Internet dès lors qu'aucun service externe n'est intrinsèquement requis :
+- création d'un compte local et ouverture ultérieure de la session locale ;
+- création, simulation et configuration d'un groupe ;
+- ajout/modification des membres, rôles, rubriques et politiques ;
+- création et gestion des séances ;
+- saisies opérationnelles et financières autorisées ;
+- validations locales, réserves, corrections par écritures compensatrices et simulations ;
+- consultation des états, historiques, récapitulatifs et données déjà détenues par l'appareil ;
+- préparation de documents et pièces qui seront transférés/synchronisés ultérieurement.
+
+Fonctions intrinsèquement connectées (ex. Discovery global, paiement réseau, vérification externe, données distantes jamais détenues localement) doivent afficher clairement leur indisponibilité et ne jamais empêcher le reste de l'application.
+
+### 10.2 Local-first data engine
+IndexedDB devient le store opérationnel du client, pas un simple cache. Toute mutation locale reçoit avant retour UI :
+- un UUID global ;
+- actor/device/group IDs ;
+- horodatage local + compteur logique/causal ;
+- type d'opération et version de schéma ;
+- payload ;
+- idempotency key ;
+- état local LOCAL_COMMITTED, puis SYNC_PENDING, SYNCING, SERVER_CONFIRMED, CONFLICT ou REJECTED.
+
+L'UI lit d'abord les projections locales. Le réseau sert à synchroniser et enrichir, pas à rendre l'écran utilisable.
+
+### 10.3 Identité offline
+La création de compte sans Internet crée une identité locale LOCAL_PENDING_REGISTRATION avec identifiant généré sur l'appareil. Les secrets/mots de passe ne sont jamais stockés en clair. À la première connexion, le serveur réclame l'identité locale avec un identifiant idempotent et rattache les groupes/opérations existants sans les recréer. Les collisions de nom/téléphone/email sont résolues explicitement ; jamais par écrasement silencieux.
+
+### 10.4 Synchronisation multi-maître encadrée
+Les données non financières fusionnables utilisent versions/causalité et, lorsque pertinent, CRDT. Les opérations financières restent append-only : aucune fusion arithmétique silencieuse. Le serveur/Durable Object arbitre les conflits d'autorité, de période, de clôture et de doublon. Les données locales ne sont effacées qu'après accusé durable et restent auditables selon politique de rétention.
+
+### 10.5 Relay sans Internet entre appareils
+Introduire un protocole Eco Relay Bundle transport-agnostique. Un bundle signé/chiffré contient seulement des événements autorisés, leurs dépendances/version causale minimale, pièces nécessaires, identifiants et preuves d'intégrité. Il peut être transporté :
+- via partage natif Android (navigator.share) sous forme de fichier quand disponible, ce qui peut proposer Bluetooth/Wi-Fi Direct/Nearby selon l'OS ;
+- par export/import manuel de fichier comme fallback universel ;
+- par QR pour petits jetons, invitations et accusés ;
+- par WebRTC DataChannel sur réseau local/hotspot lorsque les appareils peuvent établir la session ;
+- par Bluetooth direct uniquement comme capacité expérimentale détectée, jamais comme dépendance de la PWA.
+
+Le même bundle doit pouvoir faire plusieurs sauts sans duplication grâce à ses IDs idempotents.
+
+### 10.6 Téléphone passerelle / mule de synchronisation
+Un appareil connecté peut aider un appareil ou gestionnaire hors ligne sans obtenir le droit de modifier ses données. Flux cible :
+A hors ligne exporte un bundle chiffré/signé -> B le transporte -> B synchronise avec le serveur quand Internet est disponible -> B récupère l'accusé et les deltas autorisés -> B les retransmet à A localement. Le serveur vérifie l'auteur original et les droits de chaque événement ; B est RELAY_ONLY, pas l'auteur métier.
+
+Ce mécanisme doit aussi permettre à un membre connecté de rapporter au gestionnaire hors ligne les deltas du groupe auxquels le gestionnaire a droit, sans exposer à ce membre les données privées des autres.
+
+### 10.7 Sécurité et conflits du relay
+Obligatoire : chiffrement de bout en bout du bundle destiné au groupe/appareil, signature ou MAC d'intégrité, expiration pour invitations, anti-replay, idempotence, scopes de données, journal des relais, révocation/rattrapage lors de la prochaine connexion. Un appareil relais ne doit jamais pouvoir fabriquer une validation au nom d'un autre acteur.
+
+### 10.8 Compatibilité terrain
+Ne jamais dépendre exclusivement de Web Bluetooth, WebRTC, Background Sync, Periodic Background Sync ou Web Share. Chaque transport est un accélérateur facultatif. Le fallback minimal est fichier export/import + QR pour appairage/manifestes + IndexedDB/outbox.
+
+### 10.9 Critères de recette offline absolue
+Tester au minimum :
+1. installation puis mode avion ;
+2. création compte local ;
+3. création/configuration groupe ;
+4. ajout de 40 rubriques et plusieurs membres ;
+5. simulation ;
+6. séance et saisies financières ;
+7. validation/réserve/correction ;
+8. fermeture forcée et redémarrage téléphone ;
+9. réouverture sans Internet avec état intact ;
+10. plusieurs jours offline ;
+11. échange A↔B sans Internet ;
+12. B sert de passerelle Internet pour A sans devenir auteur ;
+13. reconnexion simultanée de plusieurs appareils ;
+14. doublons, ordre inversé, conflit de droits et clôture ;
+15. convergence finale avec Ledger/D1/DO sans double comptabilisation.
