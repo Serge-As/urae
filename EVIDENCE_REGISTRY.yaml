@@ -180,6 +180,50 @@
       "acquisition_reason": "Founder decision + regression guard",
       "last_verified_at": "2026-09-21",
       "verifier": "GitHub Actions + repository audit"
+    },
+    {
+      "capability_id": "TRUTH.EVIDENCE_REGISTRY",
+      "status": "CI_QUALIFIED",
+      "commit": "7fd854ae4f52e3ebd0d10af81c39fea61bc1f1bf",
+      "test_ids": [
+        "evidence-registry-1.4.4"
+      ],
+      "ci_run": "35576062246",
+      "deploy_run": null,
+      "smoke": [],
+      "field_required": false,
+      "field_cases": [
+        {
+          "id": "TRUTH-001",
+          "label": "Registry schema and status requirements enforced in CI",
+          "status": "NOT_APPLICABLE"
+        }
+      ],
+      "last_verified_at": "2026-09-21",
+      "verifier": "GitHub Actions",
+      "notes": "Branch-only foundation; no production deployment claimed."
+    },
+    {
+      "capability_id": "TRUTH.FIELD_ACCEPTANCE_GATE",
+      "status": "CI_QUALIFIED",
+      "commit": "7fd854ae4f52e3ebd0d10af81c39fea61bc1f1bf",
+      "test_ids": [
+        "evidence-registry-1.4.4"
+      ],
+      "ci_run": "35576062246",
+      "deploy_run": null,
+      "smoke": [],
+      "field_required": false,
+      "field_cases": [
+        {
+          "id": "TRUTH-002",
+          "label": "Gate rejects FIELD_ACCEPTED when required field case remains pending",
+          "status": "NOT_APPLICABLE"
+        }
+      ],
+      "last_verified_at": "2026-09-21",
+      "verifier": "GitHub Actions",
+      "notes": "Branch-only guardrail; production remains 1.4.3."
     }
   ]
 }
