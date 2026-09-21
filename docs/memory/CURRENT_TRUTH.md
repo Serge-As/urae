@@ -406,3 +406,21 @@ Point terrain immédiat : ouvrir/actualiser l'application sur le téléphone et 
 - realMoneyEnabled : `false`.
 
 La production est TECHNIQUEMENT QUALIFIÉE. Les nouveaux parcours restent FIELD_ACCEPTED uniquement après observation réelle du fondateur.
+
+## 19. Production 1.4.3 — Blueprint exécutable 5.0.0 livré (2026-09-21)
+
+- version : `1.4.3-blueprint-5-0-0-finalized`
+- source : `96b8f41467af476b12179b786d7d8f140ef86ce7`
+- Worker Version ID : `07939344-ceca-4578-bc3b-3d1d589ad7eb`
+- workflow production : `35560714108 SUCCESS`
+- tests : `265/265 PASS`
+- D1 `eco-system-db` : réutilisée ; aucune migration à appliquer
+- R2 `eco-system-backups` : réutilisé
+- BIR+ pré : artifact `10621409310`, miroir R2 PASS
+- BIR+ post : artifact `10621833522`, miroir R2 PASS
+- PWA : cache `eco-system-v143-blueprint-5-0-0-finalized-20260921`; scripts/styles network-first no-store.
+- Blueprint 5.0.0 : six couches ; Communities/Forums/Partners utilisent les owners canoniques existants.
+- realMoneyEnabled : false.
+
+Le smoke distant est qualifié. La visibilité et l’ergonomie sur l’appareil réel du fondateur restent une recette terrain à constater, pas une réussite inventée.
+
