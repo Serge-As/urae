@@ -1,4 +1,4 @@
-const CACHE = 'eco-system-v1461-auth-recovery-20260921';
+const CACHE = 'eco-system-v146-sessions-community-blueprint-final-20260921-auth-recovery-1461';
 const APP_SHELL = [
   '/', '/index.html', '/styles.css', '/manifest.webmanifest',
   '/src/auth-bootstrap.js', '/src/field-hardening.js', '/src/voice-entry-bootstrap.js', '/src/voice-entry-ui.js', '/src/expense-recap-ui.js', '/src/member-dossier-ui.js', '/src/documents-ui.js', '/src/contextual-group-ui.js',
