@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-  <meta name="theme-color" content="#1f6b4f">
+  <meta name="theme-color" content="#1f6b4f">\n  <meta name="apple-mobile-web-app-capable" content="yes">\n  <meta name="apple-mobile-web-app-status-bar-style" content="default">\n  <meta name="apple-mobile-web-app-title" content="Eco-System">\n  <meta name="mobile-web-app-capable" content="yes">
   <meta id="metaDescription" name="description" content="Eco-System — plateforme de gestion de tontines, associations et communautés">
   <link rel="manifest" href="/manifest.webmanifest">
   <link rel="stylesheet" href="/styles.css?v=143">
@@ -33,10 +33,10 @@
       <select id="activeGroupSelect" aria-label="Groupe actif"><option value="">Aucun groupe actif</option></select>
       <div class="top-search"><input id="globalSearch" placeholder="Rechercher une fonction, un groupe, un service…" autocomplete="off"><div id="globalSearchResults" class="search-popover"></div></div>
     </div>
-    <div class="top-actions"><span id="accountName"></span><button id="logoutBtn" type="button" class="ghost">Déconnexion</button>
+    <div class="top-actions"><button id="appBackBtn" class="ghost app-back-btn" type="button" hidden aria-label="Retour à l’écran précédent">← Retour</button><span id="accountName"></span><button id="logoutBtn" type="button" class="ghost">Déconnexion</button>
       <span id="connectivity" class="pill">● …</span>
       <button id="installBtn" class="ghost" hidden>Installer</button>
-      <button id="refreshBtn" class="ghost">Actualiser</button>
+      <button id="shareQrBtn" class="ghost relay-top-btn" type="button">Partager via QR Code</button><button id="receiveQrBtn" class="ghost relay-top-btn" type="button">Recevoir par QR Code</button><button id="refreshBtn" class="ghost">Actualiser</button>
     </div>
   </header>
 
@@ -432,7 +432,7 @@
           </section>
           <nav id="sessionsTabs" class="sessions-tabs" aria-label="Sections de la séance">
             <button type="button" data-session-tab="overview" class="active">Vue d’ensemble</button>
-            <button type="button" data-session-tab="sheet">Feuille de séance</button>
+            <button type="button" data-session-tab="sheet">Feuille de séance</button>\n            <button type="button" data-session-tab="cumulative">Feuille récapitulative</button>
             <button type="button" data-session-tab="attendance">Présences</button>
             <button type="button" data-session-tab="beneficiaries">Bénéficiaires & preuves</button>
             <button type="button" data-session-tab="recap">Récap & caisse</button>
