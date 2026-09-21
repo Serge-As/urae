@@ -2,7 +2,7 @@ import { rm, mkdir, cp, access, readFile, writeFile } from 'node:fs/promises';
 import { spawnSync } from 'node:child_process';
 import path from 'node:path';
 
-const RELEASE_VERSION='1.4.6-ui-sessions-community-blueprint-final';
+const RELEASE_VERSION='1.4.6.1-auth-navigation-recovery';
 const compiler=path.resolve('node_modules/typescript/bin/tsc');
 try{await access(compiler);}catch{await import('./build-portable.mjs');process.exit(0);}
 const output=path.resolve('.build');
