@@ -46,8 +46,18 @@ const DEFINITIONS={
       ['CREATOR.STUDIO','Creator & Seller Studio','Creator & Seller Studio','Contenu relié à une action utile : apprendre, réserver, acheter, rejoindre','Content linked to useful action: learn, book, buy, join']
     ]
   },
+  community:{
+    titleFr:'5 · Communautés, forums et accompagnement',titleEn:'5 · Communities, forums and support',
+    introFr:'Transformer les forums et communautés en espaces d’action sans casser leur rôle social : discuter, documenter un besoin, transmettre un savoir, présenter une offre, préparer un partenariat ou relayer une opportunité vers son moteur canonique.',introEn:'Turn forums and communities into action spaces without breaking their social role: discuss, document a need, share knowledge, present an offer, prepare a partnership or hand an opportunity to its canonical engine.',
+    items:[
+      ['COMMUNITY.FORUM','Forum principal et forums de groupe','Main and group forums','Discuter, décider, suivre la vie du groupe et orienter une publication vers une action utile','Discuss, decide, follow group life and route a post toward useful action'],
+      ['COMMUNITY.PRO_HUBS','Hubs professionnels et thématiques','Professional and thematic hubs','Fédérer compétences, agriculture, business, emploi, créateurs ou territoires sans second forum','Federate skills, agriculture, business, jobs, creators or local areas without a second forum'],
+      ['PARTNERS.DIRECTORY','Partenaires · ONG · programmes','Partners · NGOs · programs','Préparer un accompagnement traçable d’un groupe, d’une communauté ou d’un projet','Prepare traceable support for a group, community or project'],
+      ['LEARNING.MANAGER_ACADEMY','Academy · transmission · savoir-faire','Academy · learning · know-how','Besoin ou offre de formation, mentorat, savoir-faire ou accompagnement','Training, mentoring, know-how or support need/offer']
+    ]
+  },
   trust:{
-    titleFr:'5 · Confiance et intelligence de marché',titleEn:'5 · Trust and market intelligence',
+    titleFr:'6 · Confiance et intelligence de marché',titleEn:'6 · Trust and market intelligence',
     introFr:'Documenter les preuves et signaux collectifs sans transformer un score en verdict ni exploiter les finances individuelles pour la publicité.',introEn:'Document evidence and collective signals without turning a score into a verdict or using individual finance for advertising.',
     items:[
       ['TRUST.GRAPH','Trust Graph explicable','Explainable Trust Graph','Preuve de fiabilité, mandat, livraison ou compétence','Evidence of reliability, mandate, delivery or skill'],
@@ -58,7 +68,7 @@ const DEFINITIONS={
 };
 
 export function mountBlueprintExecutableUI({app,getGroups,getMeetings,navigate,notify,showError}){
-  const root=byId('blueprintExecutableRoot');if(!root)return{refresh:async()=>{}};
+  const root=byId('blueprintExecutableRoot');if(!root)return{refresh:async()=>{}};root.dataset.blueprintVersion='5.0.0';
   let active='core',workContext='GROUP';
 
   const activeGroup=()=>getGroups().find(x=>x.id===app.activeGroup());
@@ -84,6 +94,14 @@ export function mountBlueprintExecutableUI({app,getGroups,getMeetings,navigate,n
     if(moduleId==='MARKETPLACE.GROUP_BUY'){
       const notice=el('p',t('Cette activité possède déjà un moteur canonique d’achats groupés. Le Blueprint ne crée donc aucun second enregistrement : il vous transmet vers le Marketplace existant.','This activity already has a canonical group-buy engine. Blueprint therefore creates no second record and hands off to the existing Marketplace.'),'truth-notice');
       const go=button(t('Ouvrir les achats groupés canoniques','Open canonical group buying'),'primary');go.onclick=()=>{navigate('ecosystem');setTimeout(()=>byId('marketEnginePanel')?.scrollIntoView({behavior:'smooth',block:'start'}),100);};box.append(notice,go);return box;
+    }
+    if(['COMMUNITY.FORUM','COMMUNITY.PRO_HUBS'].includes(moduleId)){
+      const notice=el('p',t('Les forums et Hubs possèdent déjà leur moteur canonique. Le Blueprint 5.0.0 ne crée donc pas un second forum : il vous transmet vers Communautés vivantes avec des préréglages Besoin, Offre, Achat groupé, Récolte, Compétence, Formation, Business, Partenaire, Créateur et Info sourcée.','Forums and Hubs already have their canonical engine. Blueprint 5.0.0 therefore creates no second forum and hands off to Living Communities with action presets.'),'truth-notice');
+      const go=button(t('Ouvrir les communautés et forums','Open communities and forums'),'primary');go.onclick=()=>{navigate('ecosystem');setTimeout(()=>byId('communityEnginePanel')?.scrollIntoView({behavior:'smooth',block:'start'}),100);};box.append(notice,go);return box;
+    }
+    if(moduleId==='PARTNERS.DIRECTORY'){
+      const notice=el('p',t('Les partenaires, ONG et programmes utilisent le répertoire/programmes existant. Le Blueprint prépare le contexte mais n’invente aucun financement ni soutien public.','Partners, NGOs and programs use the existing directory/program engine. Blueprint prepares context but invents no funding or public support.'),'truth-notice');
+      const go=button(t('Ouvrir Partenaires · ONG · Programmes','Open Partners · NGOs · Programs'),'primary');go.onclick=()=>{navigate('ecosystem');setTimeout(()=>byId('externalProgramsPanel')?.scrollIntoView({behavior:'smooth',block:'start'}),100);};box.append(notice,go);return box;
     }
     const form=el('form',undefined,'form-grid'),title=document.createElement('input'),summary=document.createElement('textarea'),locality=document.createElement('input'),quantity=document.createElement('input'),due=document.createElement('input'),evidence=document.createElement('input'),confidence=document.createElement('select'),save=button(t('Créer le workflow','Create workflow'),'primary');
     title.placeholder=t('Titre concret','Concrete title');summary.placeholder=t('Contexte, besoin, proposition, contraintes…','Context, need, proposal, constraints…');summary.rows=3;locality.placeholder=t('Lieu / zone si utile','Location / area if useful');quantity.type='number';quantity.min='0';quantity.step='1';quantity.placeholder=t('Quantité si utile','Quantity if useful');due.type='date';evidence.placeholder=t('Source / preuve / référence','Source / evidence / reference');for(const [v,l] of [['CERTAIN',t('Certain : fait observé','Certain: observed fact')],['VERY_PROBABLE',t('Très probable','Very probable')],['HISTORICAL_INFERENCE',t('Inférence historique','Historical inference')],['OPPORTUNITY',t('Opportunité','Opportunity')]])confidence.append(new Option(l,v));save.type='submit';
