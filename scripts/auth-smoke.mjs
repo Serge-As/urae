@@ -1,3 +1,4 @@
+import {writeFileSync} from 'node:fs';
 import {randomBytes} from 'node:crypto';
 const root=(process.argv[2]||'').replace(/\/$/,'');
 if(!/^https:\/\/[a-z0-9.-]+$/i.test(root)) throw new Error('VALID_HTTPS_ROOT_REQUIRED');
@@ -53,7 +54,7 @@ const session=async(label)=>{
  return j;
 };
 const registered=await post('/api/v1/auth/register',{username,password,displayName:'Eco Smoke',locale:'fr'});
-out.accountId=registered?.account?.id||null;
+out.accountId=registered?.account?.id||null;if(process.env.AUTH_SMOKE_STATE_FILE)writeFileSync(process.env.AUTH_SMOKE_STATE_FILE,JSON.stringify({accountId:out.accountId,username}),{encoding:'utf8'});
 let s=await session('session after register');
 if(!s.authenticated||s.account?.username!==username)fail('register session','not authenticated');
 await post('/api/v1/auth/logout',{});
