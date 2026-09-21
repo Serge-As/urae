@@ -1,0 +1,185 @@
+{
+  "registry_version": 1,
+  "doctrine": "NO_EVIDENCE_NO_REALITY",
+  "source_release": "1.4.3-blueprint-5-0-0-finalized",
+  "source_deployed_commit": "96b8f41467af476b12179b786d7d8f140ef86ce7",
+  "allowed_statuses": [
+    "IDEA",
+    "SPECIFIED",
+    "IMPLEMENTED",
+    "CI_QUALIFIED",
+    "DEPLOYED",
+    "SMOKE_VERIFIED",
+    "FIELD_ACCEPTED",
+    "ACQUIRED"
+  ],
+  "field_case_statuses": [
+    "PENDING",
+    "PASS",
+    "FAIL",
+    "BLOCKED",
+    "NOT_APPLICABLE"
+  ],
+  "entries": [
+    {
+      "capability_id": "BLUEPRINT.EXECUTABLE",
+      "status": "SMOKE_VERIFIED",
+      "commit": "96b8f41467af476b12179b786d7d8f140ef86ce7",
+      "test_ids": [
+        "operational-center-sessions-blueprint-1.4.2"
+      ],
+      "ci_run": "35560714108",
+      "deploy_run": "35560714108",
+      "smoke": [
+        "production health/version",
+        "blueprint executable UI",
+        "canonical handoff guards",
+        "realMoneyEnabled=false"
+      ],
+      "field_required": true,
+      "field_cases": [
+        {
+          "id": "BP-FIELD-001",
+          "label": "DRAFT -> human validation -> ACTIVE without silent transaction",
+          "status": "PENDING"
+        },
+        {
+          "id": "BP-FIELD-002",
+          "label": "owner handoff from Blueprint to canonical engine",
+          "status": "PENDING"
+        }
+      ],
+      "last_verified_at": "2026-09-21",
+      "verifier": "GitHub Actions + repository audit",
+      "notes": "Remote production proof exists; founder field reception is still pending."
+    },
+    {
+      "capability_id": "COMMUNITY.ACTION_PRESETS",
+      "status": "SMOKE_VERIFIED",
+      "commit": "96b8f41467af476b12179b786d7d8f140ef86ce7",
+      "test_ids": [
+        "operational-center-sessions-blueprint-1.4.2"
+      ],
+      "ci_run": "35560714108",
+      "deploy_run": "35560714108",
+      "smoke": [
+        "Forum/Community preset markers",
+        "no parallel social engine"
+      ],
+      "field_required": true,
+      "field_cases": [
+        {
+          "id": "COMM-FIELD-001",
+          "label": "Create a group need from Forum preset",
+          "status": "PENDING"
+        },
+        {
+          "id": "COMM-FIELD-002",
+          "label": "Create agriculture/business/learning/impact preset and reopen it",
+          "status": "PENDING"
+        }
+      ],
+      "last_verified_at": "2026-09-21",
+      "verifier": "GitHub Actions + repository audit",
+      "notes": "Visible in production but not yet FIELD_ACCEPTED."
+    },
+    {
+      "capability_id": "SAFETY.ANTISCAM.FINANCIAL_LAB",
+      "status": "SMOKE_VERIFIED",
+      "commit": "96b8f41467af476b12179b786d7d8f140ef86ce7",
+      "test_ids": [
+        "operational-center-sessions-blueprint-1.4.2"
+      ],
+      "ci_run": "35560714108",
+      "deploy_run": "35560714108",
+      "smoke": [
+        "deterministic scenario engine",
+        "no legal verdict",
+        "realMoney=false"
+      ],
+      "field_required": true,
+      "field_cases": [
+        {
+          "id": "SAFE-FIELD-001",
+          "label": "Run multiple scenarios and verify non-verdict wording",
+          "status": "PENDING"
+        }
+      ],
+      "last_verified_at": "2026-09-21",
+      "verifier": "GitHub Actions + repository audit"
+    },
+    {
+      "capability_id": "MARKETPLACE.HARVEST_LOCAL.BLUEPRINT",
+      "status": "DEPLOYED",
+      "commit": "96b8f41467af476b12179b786d7d8f140ef86ce7",
+      "test_ids": [
+        "operational-center-sessions-blueprint-1.4.2"
+      ],
+      "ci_run": "35560714108",
+      "deploy_run": "35560714108",
+      "smoke": [],
+      "field_required": true,
+      "field_cases": [
+        {
+          "id": "HARVEST-FIELD-001",
+          "label": "Forecast remains distinct from confirmed stock",
+          "status": "PENDING"
+        },
+        {
+          "id": "HARVEST-FIELD-002",
+          "label": "Group/GIC-assisted publication preserves one canonical market object",
+          "status": "PENDING"
+        }
+      ],
+      "last_verified_at": "2026-09-21",
+      "verifier": "Repository audit",
+      "notes": "Code is deployed as Blueprint workflow; no dedicated harvest field acceptance exists yet."
+    },
+    {
+      "capability_id": "MARKETPLACE.GROUP_BUY.BLUEPRINT_HANDOFF",
+      "status": "CI_QUALIFIED",
+      "commit": "96b8f41467af476b12179b786d7d8f140ef86ce7",
+      "test_ids": [
+        "operational-center-sessions-blueprint-1.4.2"
+      ],
+      "ci_run": "35560714108",
+      "deploy_run": "35560714108",
+      "smoke": [],
+      "field_required": true,
+      "field_cases": [
+        {
+          "id": "GB-FIELD-001",
+          "label": "Blueprint handoff reuses MARKETPLACE.GROUP_BUY and creates no duplicate record",
+          "status": "PENDING"
+        }
+      ],
+      "last_verified_at": "2026-09-21",
+      "verifier": "Repository audit",
+      "notes": "Deliberately not promoted to SMOKE_VERIFIED without a dedicated smoke assertion."
+    },
+    {
+      "capability_id": "PROJECT.BACKHAUL.EXCLUSION",
+      "status": "ACQUIRED",
+      "commit": "96b8f41467af476b12179b786d7d8f140ef86ce7",
+      "test_ids": [
+        "operational-center-sessions-blueprint-1.4.2"
+      ],
+      "ci_run": "35560714108",
+      "deploy_run": "35560714108",
+      "smoke": [
+        "Backhaul/Return Load absent from Eco-System Blueprint registry"
+      ],
+      "field_required": false,
+      "field_cases": [
+        {
+          "id": "ARCH-001",
+          "label": "Architectural boundary: Backhaul remains external project",
+          "status": "NOT_APPLICABLE"
+        }
+      ],
+      "acquisition_reason": "Founder decision + regression guard",
+      "last_verified_at": "2026-09-21",
+      "verifier": "GitHub Actions + repository audit"
+    }
+  ]
+}
