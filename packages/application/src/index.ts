@@ -317,7 +317,15 @@ export class ConnectedApplication {
     // An ambiguous network failure is retried with this key, never a new charge.
     const item=this.outbox.enqueue({tenantId:this.tenantId,actorId:this.actorId,type:'CONTRIBUTION_CASH_RECORDED',payload:{groupId:this.activeGroupId,...input,currency:'XAF'},idempotencyKey:key});
     try{await this.persistOutbox();}catch(e){this.outbox.restore(this.outbox.list().filter(x=>x.id!==item.id));throw e;}
-    if(!navigator.onLine)return{queued:true,outbox:item};
+    if(this.isOffline()){
+      const path=`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/ledger`,current=await this.cached<any>(path)??{summary:{currency:'XAF',cashBalance:0,memberFundsLiability:0,entryCount:0},entries:[],receipts:[]};
+      if(!(current.receipts??[]).some((x:any)=>x.idempotencyKey===key)){
+        const stamp=new Date().toISOString(),receipt={id:'local_receipt_'+item.id,tenantId:this.tenantId,groupId:this.activeGroupId,membershipId:input.membershipId,amount:{currency:'XAF',amount:input.amount},paymentMethod:'cash',ledgerEntryId:'local_pending_'+item.id,meetingId:input.meetingId,receivedAt:stamp,receivedBy:this.actorId,idempotencyKey:key,rubricId:input.rubricId,latePosting:undefined,netAmount:input.amount,localPending:true};
+        const summary={...current.summary,cashBalance:Number(current.summary?.cashBalance??0)+input.amount,memberFundsLiability:Number(current.summary?.memberFundsLiability??0)+input.amount,entryCount:Number(current.summary?.entryCount??0)+1};
+        await this.saveCached(path,{...current,summary,receipts:[...(current.receipts??[]),receipt]});
+      }
+      return{queued:true,outbox:item};
+    }
     const result=await this.syncOutbox();const updated=result.find(x=>x.id===item.id)!;
     if(updated.status!=='CONFIRMED')return{queued:true,outbox:updated};
     return{queued:false,outbox:updated};
