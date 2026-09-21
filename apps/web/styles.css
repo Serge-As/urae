@@ -146,3 +146,21 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
   .sessions-selector-panel .form-grid{grid-template-columns:1fr}
   .session-picker-row{display:grid;grid-template-columns:1fr}.session-picker-row button{width:100%}
 }
+
+/* 1.4.5 RC — persistent back and financial alert surfaces */
+.app-back-btn{position:fixed;z-index:80;left:calc(var(--sidebar,240px) + 18px);bottom:18px;min-height:48px;padding:10px 16px;border:1px solid #b9cfc3;border-radius:999px;background:#fff;color:#184d39;font-weight:800;box-shadow:0 8px 28px #10271c24}
+.app-back-btn:hover{background:#edf7f1}
+.financial-alert-bar{position:sticky;z-index:70;top:76px;margin:0;padding:12px clamp(16px,3vw,42px);border-bottom:1px solid transparent;font-weight:800}
+.financial-alert-bar.is-open{display:block!important;background:#e5f5ec;color:#155e3d;border-color:#a9d6bd}
+.financial-alert-bar.is-closed{display:block!important;background:#fff0d8;color:#814e00;border-color:#edc071}
+.financial-alert-bar.is-critical{display:block!important;background:#fde8e8;color:#922f35;border-color:#e8a2a5}
+.matrix-cell{min-width:86px;min-height:46px}
+.matrix-cell.pending-consensus{outline:3px solid #e4a74b;outline-offset:1px}
+.financial-cell-editor{display:grid;gap:10px;min-width:min(420px,90vw)}
+.financial-cell-editor .current-value{font-size:1.1rem;font-weight:800}
+.session-safety-toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:10px 0}
+.trash-expired{opacity:.66}
+@media(max-width:860px){
+  .app-back-btn{left:12px;bottom:100px;min-height:52px}
+  .financial-alert-bar{top:0}
+}
