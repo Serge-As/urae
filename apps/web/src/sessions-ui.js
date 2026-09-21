@@ -117,9 +117,9 @@ export function mountSessionsUI({app,getGroups,getMembers,getMeetings,getRubrics
       finish.append(el('p',t('Étape 1 : les gestionnaires confrontent uniquement les différences. Étape 2 : après accord, la diffusion aux membres est une action séparée pour éviter une erreur.','Step 1: managers compare differences only. Step 2: after agreement, member distribution is a separate action to prevent mistakes.'),'hint'));
       const finishActions=el('div',undefined,'actions');
       const reconcile=button(t('1 · Confronter les données entre gestionnaires','1 · Reconcile manager data'),'primary');
-      reconcile.onclick=()=>window.dispatchEvent(new CustomEvent('eco:relay-reconcile-meeting',{detail:{meetingId:meeting.id,groupId:app.activeGroup()}}));
+      reconcile.onclick=()=>void(async()=>{await refresh();setTimeout(()=>document.querySelector('.live-consensus-panel')?.scrollIntoView({behavior:'smooth',block:'start'}),40);notify(t('Confrontation ouverte : seules les divergences demandent une décision.','Reconciliation opened: only divergences require a decision.'));})();
       const distribute=button(t('2 · Diffuser aux membres','2 · Distribute to members'),'secondary');
-      distribute.onclick=()=>window.dispatchEvent(new CustomEvent('eco:relay-distribute-members',{detail:{meetingId:meeting.id,groupId:app.activeGroup()}}));
+      distribute.onclick=()=>void(async()=>{try{distribute.disabled=true;const r=await app.distributeMeetingSummary(meeting.id);notify(r.queued?t('Diffusion enregistrée hors ligne. Elle partira à la reconnexion.','Distribution saved offline. It will be sent on reconnection.'):t('Diffusion validée : les membres peuvent actualiser leur situation.','Distribution validated: members can refresh their position.'));}catch(e){showError(e);}finally{distribute.disabled=false;}})();
       finishActions.append(reconcile,distribute);finish.append(finishActions);
       const live=await renderLiveConsensus(c);if(live)finish.append(live);section.append(finish);
     }section.append(actions());return section;
