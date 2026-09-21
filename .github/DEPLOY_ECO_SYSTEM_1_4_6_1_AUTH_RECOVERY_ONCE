@@ -1,0 +1,6 @@
+Eco-System 1.4.6.1 guarded production recovery
+version=1.4.6.1-auth-navigation-recovery
+branch=hotfix/1.4.6-auth-navigation-regression-20260921
+base_preserved=1.4.6-ui-sessions-community-blueprint-final
+qualification_run=35629616825
+guardrails=full_ci,birplus_pre,reuse_existing_d1_r2,additive_migrations_only,auth_probe,navigation_smoke,birplus_post,real_money_false
