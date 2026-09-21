@@ -1,7 +1,7 @@
-const CACHE = 'eco-system-v146-sessions-community-blueprint-final-20260921';
+const CACHE = 'eco-system-v146-sessions-community-blueprint-final-20260921-auth-recovery-1461';
 const APP_SHELL = [
   '/', '/index.html', '/styles.css', '/manifest.webmanifest',
-  '/src/field-hardening.js', '/src/voice-entry-bootstrap.js', '/src/voice-entry-ui.js', '/src/expense-recap-ui.js', '/src/member-dossier-ui.js', '/src/documents-ui.js', '/src/contextual-group-ui.js',
+  '/src/auth-bootstrap.js', '/src/field-hardening.js', '/src/voice-entry-bootstrap.js', '/src/voice-entry-ui.js', '/src/expense-recap-ui.js', '/src/member-dossier-ui.js', '/src/documents-ui.js', '/src/contextual-group-ui.js',
   '/src/main.js', '/src/group-home-ui.js', '/src/sessions-ui.js', '/src/blueprint-executable-ui.js', '/src/community-blueprint-presets.js', '/src/financial-lab-ui.js', '/src/i18n.js', '/src/runtime-i18n.js', '/src/completion-ui.js', '/src/advanced-ui.js', '/src/offline-snapshot.js', '/src/launch-rubrics.js', '/src/launch-studio.js', '/src/member-control-ui.js', '/src/identity-live-ui.js', '/src/community-shop-ui.js', '/src/misc-rubrics-ui.js', '/src/pairing-ui.js', '/src/detail-ui.js', '/src/personal-cockpit-ui.js', '/src/recap-ui.js', '/src/interest-community-ui.js', '/src/ad-manager-ui.js', '/src/tontine-manager-ui.js', '/src/savings-yield-ui.js', '/src/external-programs-ui.js', '/src/founder-control-ui.js', '/src/assistance-rulebook-ui.js',
   '/packages/rubrics/src/launch-config.js', '/packages/rubrics/src/index.js',
   '/packages/application/src/index.js', '/packages/completion/src/index.js', '/packages/contracts/src/index.js',

@@ -1,0 +1,7 @@
+Eco-System 1.4.6.1 isolated auth pilot
+version=1.4.6.1-auth-navigation-recovery
+purpose=prove_public_assets_and_register_login_session_before_production
+production_worker_unchanged=eco-system
+pilot_worker=eco-system-auth-pilot
+
+retry_after_workers_propagation_guard=2

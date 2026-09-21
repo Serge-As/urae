@@ -175,3 +175,6 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
   .nav-btn{flex-basis:108px!important;min-width:108px!important;width:108px!important}
   .sessions-tabs button{min-width:108px}
 }
+
+.app-back-btn{font-weight:850;border-color:#b9b1a5;background:var(--surface);white-space:nowrap}
+@media(max-width:900px){.app-back-btn{position:fixed;left:max(12px,env(safe-area-inset-left));bottom:max(14px,calc(env(safe-area-inset-bottom) + 10px));z-index:95;box-shadow:0 8px 24px rgba(20,32,26,.22);background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:10px 16px}.app-back-btn[hidden]{display:none}}

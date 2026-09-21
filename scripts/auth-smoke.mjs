@@ -1,0 +1,74 @@
+import {writeFileSync} from 'node:fs';
+import {randomBytes} from 'node:crypto';
+const root=(process.argv[2]||'').replace(/\/$/,'');
+if(!/^https:\/\/[a-z0-9.-]+$/i.test(root)) throw new Error('VALID_HTTPS_ROOT_REQUIRED');
+const expected=process.env.EXPECTED_VERSION||'1.4.6.1-auth-navigation-recovery';
+const out={root,checks:[],accountId:null};
+const pass=(name,detail='')=>{out.checks.push({name,ok:true,detail});console.error('PASS',name,detail)};
+const fail=(name,detail='')=>{out.checks.push({name,ok:false,detail});throw new Error(name+': '+detail)};
+const sleep=ms=>new Promise(resolve=>setTimeout(resolve,ms));
+async function get(path){
+  let lastStatus=0,lastText='';
+  for(let attempt=1;attempt<=10;attempt++){
+    try{
+      const r=await fetch(root+path,{redirect:'follow',cache:'no-store'});
+      const text=await r.text();lastStatus=r.status;lastText=text;
+      if(r.ok){pass('GET '+path,'HTTP '+r.status+' '+text.length+' bytes · attempt '+attempt);return {r,text};}
+      console.error('WAIT','GET '+path,'HTTP '+r.status+' · attempt '+attempt+'/10');
+    }catch(error){lastText=String(error);console.error('WAIT','GET '+path,lastText,'· attempt '+attempt+'/10');}
+    if(attempt<10)await sleep(3000);
+  }
+  fail('GET '+path,'HTTP '+lastStatus+' '+lastText.slice(0,200));
+}
+const rootPage=await get('/');
+const health=await get('/health');
+const authAsset=await get('/src/auth-bootstrap.js');
+const mainAsset=await get('/src/main.js');
+const sessionsAsset=await get('/src/sessions-ui.js');
+const swAsset=await get('/sw.js');
+const requireText=(name,text,needle)=>text.includes(needle)?pass(name,needle):fail(name,'missing '+needle);
+requireText('root release',rootPage.text,'ECO-SYSTEM · 1.4.6.1');
+requireText('root auth form',rootPage.text,'id="authForm"');
+requireText('root auth bootstrap order',rootPage.text,'/src/auth-bootstrap.js?v=1461');
+if(rootPage.text.indexOf('/src/auth-bootstrap.js?v=1461')>rootPage.text.indexOf('/src/main.js?v=1461')) fail('root auth bootstrap order','auth bootstrap is after main');
+requireText('auth recovery handler',authAsset.text,'recoveryBound');
+requireText('auth progress copy',authAsset.text,'Connexion en cours');
+requireText('sessions canary',sessionsAsset.text,'Fiches individuelles');
+requireText('main canary',mainAsset.text,'Réunion du');
+requireText('service worker release',swAsset.text,'auth-recovery-1461');
+const h=JSON.parse(health.text);
+if(!(h.ok===true&&h.version===expected&&h.realMoneyEnabled===false)) fail('health truth',JSON.stringify(h));
+pass('health truth',h.version);
+const username='eco_smoke_'+Date.now().toString(36)+'_'+randomBytes(4).toString('hex');
+const password=randomBytes(24).toString('base64url');
+let cookie='';
+const post=async(path,body)=>{
+ const headers={'content-type':'application/json','origin':root};
+ if(cookie)headers.cookie=cookie;
+ const r=await fetch(root+path,{method:'POST',headers,body:JSON.stringify(body),redirect:'manual'});
+ const text=await r.text();
+ if(!r.ok)fail('POST '+path,'HTTP '+r.status+' '+text.slice(0,300));
+ const set=r.headers.get('set-cookie');
+ if(set)cookie=set.split(';',1)[0];
+ pass('POST '+path,'HTTP '+r.status);
+ return JSON.parse(text);
+};
+const session=async(label)=>{
+ const r=await fetch(root+'/api/v1/auth/session',{headers:cookie?{cookie}:{},cache:'no-store'});
+ const text=await r.text();
+ if(!r.ok)fail(label,'HTTP '+r.status+' '+text.slice(0,300));
+ const j=JSON.parse(text);pass(label,JSON.stringify({authenticated:j.authenticated,username:j.account?.username}));
+ return j;
+};
+const registered=await post('/api/v1/auth/register',{username,password,displayName:'Eco Smoke',locale:'fr'});
+out.accountId=registered?.account?.id||null;if(process.env.AUTH_SMOKE_STATE_FILE)writeFileSync(process.env.AUTH_SMOKE_STATE_FILE,JSON.stringify({accountId:out.accountId,username}),{encoding:'utf8'});
+let s=await session('session after register');
+if(!s.authenticated||s.account?.username!==username)fail('register session','not authenticated');
+await post('/api/v1/auth/logout',{});
+cookie='';
+await post('/api/v1/auth/login',{username,password});
+s=await session('session after login');
+if(!s.authenticated||s.account?.username!==username)fail('login session','not authenticated');
+await post('/api/v1/auth/logout',{});
+pass('auth round trip','register → session → logout → login → session → logout');
+console.log(JSON.stringify(out));

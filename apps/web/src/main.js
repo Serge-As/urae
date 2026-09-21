@@ -49,7 +49,7 @@ let launchStudio;
 let modules = [];
 let selectedLot = 'ALL';
 let deferredInstallPrompt;
-const CAHIER_VERSION = '1.4.6-ui-sessions-community-blueprint-final';
+const CAHIER_VERSION = '1.4.6.1-auth-navigation-recovery';
 const $ = (s) => { const e = document.querySelector(s); if (!e)
     throw new Error(`UI_ELEMENT_NOT_FOUND:${s}`); return e; };
 const val = (id) => document.getElementById(id).value.trim();
@@ -122,19 +122,45 @@ const communityShopUI = mountCommunityShopUI({ app, notify: toast, showError: fa
 const miscRubricUI = mountMiscRubricUI({ app, notify: toast, showError: fail, getMembers: () => members, getMeetings: () => meetings, isManager, fmt });
 const pairingUI = mountPairingUI({ app, notify: toast, showError: fail, getMembers: () => members, isManager, afterMembershipChanged: async groupId => { await renderGroups(); if(groupId){ app.selectGroup(groupId); await refreshGroupContext(); } } });
 const clearFail = () => { $('#errorBox').hidden = true; $('#errorBox').textContent = ''; };
-const go = (name) => {
-    document.querySelectorAll('.view').forEach(x => x.classList.remove('active'));
-    document.querySelectorAll('.nav-btn').forEach(x => x.classList.remove('active'));
-    $(`#view-${name}`).classList.add('active');
-    const activeNav=document.querySelector(`.nav-btn[data-view="${name}"]`);activeNav?.classList.add('active');
+const navStack=[];
+const activeViewName=()=>document.querySelector('.view.active')?.id?.replace(/^view-/,'')||'dashboard';
+const captureSafeNavigationState=()=>({
+    view:activeViewName(),
+    scrollY:window.scrollY,
+    activeGroupId:app.activeGroup()??'',
+    sessionsTab:document.querySelector('[data-session-tab].selected,[data-session-tab][aria-selected="true"]')?.dataset?.sessionTab??'',
+    focusedId:document.activeElement instanceof HTMLElement && document.activeElement.id ? document.activeElement.id : ''
+});
+const updateBackButton=()=>{const b=document.querySelector('#appBackBtn');if(b)b.hidden=navStack.length===0;};
+const showView=(name,state={})=>{
+    const target=document.querySelector(`#view-${name}`);if(!target)return false;
+    document.querySelectorAll('.view').forEach(x=>x.classList.remove('active'));document.querySelectorAll('.nav-btn').forEach(x=>x.classList.remove('active'));
+    target.classList.add('active');const activeNav=document.querySelector(`.nav-btn[data-view="${name}"]`);activeNav?.classList.add('active');
     if(activeNav&&window.matchMedia('(max-width:860px)').matches)setTimeout(()=>activeNav.scrollIntoView({behavior:'smooth',block:'nearest',inline:'center'}),20);
-    const pop = document.querySelector('#globalSearchResults');
-    if (pop)
-        pop.replaceChildren();
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    document.querySelector('#globalSearchResults')?.replaceChildren();
+    requestAnimationFrame(()=>{
+      window.scrollTo({top:Number(state.scrollY??0),behavior:'auto'});
+      if(state.sessionsTab&&name==='sessions')document.querySelector(`[data-session-tab="${CSS.escape(state.sessionsTab)}"]`)?.click();
+      if(state.focusedId)document.getElementById(state.focusedId)?.focus({preventScroll:true});
+    });
+    updateBackButton();return true;
 };
-document.querySelectorAll('[data-view]').forEach(b => b.addEventListener('click', () => go(b.dataset.view)));
-document.querySelectorAll('[data-go]').forEach(b => b.addEventListener('click', () => go(b.dataset.go)));
+const go=(name,options={})=>{
+    const current=captureSafeNavigationState();if(name===current.view&&!options.force)return;
+    if(options.remember!==false)navStack.push(current);
+    showView(name,{scrollY:options.scrollY??0});
+    try{history.pushState({ecoView:name},'',`#${name}`);}catch{}
+};
+const goBack=()=>{
+    const previous=navStack.pop();
+    if(previous){if(previous.activeGroupId&&previous.activeGroupId!==app.activeGroup())app.selectGroup(previous.activeGroupId);showView(previous.view,previous);try{history.replaceState({ecoView:previous.view},'',`#${previous.view}`);}catch{}return;}
+    if(history.length>1)history.back();
+};
+document.querySelectorAll('[data-view]').forEach(b=>b.addEventListener('click',()=>go(b.dataset.view)));
+document.querySelectorAll('[data-go]').forEach(b=>b.addEventListener('click',()=>go(b.dataset.go)));
+document.querySelector('#appBackBtn')?.addEventListener('click',goBack);
+window.addEventListener('popstate',()=>{const previous=navStack.pop();if(previous)showView(previous.view,previous);else{const hash=location.hash.slice(1);if(hash)showView(hash,{scrollY:0});}updateBackButton();});
+updateBackButton();
 document.querySelectorAll('[data-eco-jump]').forEach(b=>b.addEventListener('click',()=>{
     go('ecosystem');
     const target=b.dataset.ecoJump;

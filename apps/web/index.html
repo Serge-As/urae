@@ -6,8 +6,8 @@
   <meta name="theme-color" content="#1f6b4f">
   <meta id="metaDescription" name="description" content="Eco-System — plateforme de gestion de tontines, associations et communautés">
   <link rel="manifest" href="/manifest.webmanifest">
-  <link rel="stylesheet" href="/styles.css?v=146">
-  <title>Eco-System — 1.4.6 · Centre opérationnel · Séances · Blueprint 5.0.0</title>
+  <link rel="stylesheet" href="/styles.css?v=1461">
+  <title>Eco-System — 1.4.6.1 · Centre opérationnel · Séances · Blueprint 5.0.0</title>
 </head>
 <body class="signed-out">
   <section id="authScreen" class="auth-screen" aria-label="Connexion à Eco-System">
@@ -27,13 +27,13 @@
 <header class="topbar">
     <div class="brand">
       <div class="logo">E</div>
-      <div><strong>Eco-System</strong><small>Plateforme Tontines · Associations · Communautés</small><span class="version-badge">ECO-SYSTEM · 1.4.6</span></div>
+      <div><strong>Eco-System</strong><small>Plateforme Tontines · Associations · Communautés</small><span class="version-badge">ECO-SYSTEM · 1.4.6.1</span></div>
     </div>
     <div class="top-context">
       <select id="activeGroupSelect" aria-label="Groupe actif"><option value="">Aucun groupe actif</option></select>
       <div class="top-search"><input id="globalSearch" placeholder="Rechercher une fonction, un groupe, un service…" autocomplete="off"><div id="globalSearchResults" class="search-popover"></div></div>
     </div>
-    <div class="top-actions"><span id="accountName"></span><button id="logoutBtn" type="button" class="ghost">Déconnexion</button>
+    <div class="top-actions"><button id="appBackBtn" class="ghost app-back-btn" type="button" hidden aria-label="Retour à l’écran précédent">← Retour</button><span id="accountName"></span><button id="logoutBtn" type="button" class="ghost">Déconnexion</button>
       <span id="connectivity" class="pill">● …</span>
       <button id="installBtn" class="ghost" hidden>Installer</button>
       <button id="refreshBtn" class="ghost">Actualiser</button>
@@ -1178,7 +1178,8 @@
     </main>
   </div>
 
-  <footer class="footer">Eco-System 1.4.0 · Cahier Maître 2.3.4 + additifs 3.2.0 · vérité fonctionnelle</footer>
-  <script type="module" src="/src/main.js?v=146"></script>
+  <footer class="footer">Eco-System 1.4.6.1 · Auth recovery · Cahier Maître + additifs · vérité fonctionnelle</footer>
+  <script type="module" src="/src/auth-bootstrap.js?v=1461"></script>
+  <script type="module" src="/src/main.js?v=1461"></script>
 </body>
 </html>

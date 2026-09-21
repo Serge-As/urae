@@ -1,0 +1,71 @@
+name: Eco-System 1.4.6.1 — Isolated Auth Pilot
+
+on:
+  push:
+    branches: ['hotfix/1.4.6-auth-navigation-regression-20260921']
+    paths: ['.github/DEPLOY_ECO_SYSTEM_1_4_6_1_AUTH_PILOT_ONCE']
+
+permissions:
+  contents: read
+
+concurrency:
+  group: eco-system-auth-pilot-1-4-6-1
+  cancel-in-progress: false
+
+env:
+  PILOT_WORKER: eco-system-auth-pilot
+  PROD_DB: eco-system-db
+  PROD_R2: eco-system-backups
+  PILOT_ROOT: https://eco-system-auth-pilot.sergemimf.workers.dev
+  EXPECTED_VERSION: 1.4.6.1-auth-navigation-recovery
+
+jobs:
+  pilot:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    env:
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: npm run ci
+      - run: npm run build
+
+      - name: Resolve existing storage and render isolated pilot
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes wrangler@4 d1 list --json > /tmp/d1-list.json
+          DB_ID="$(node scripts/cloudflare-d1-id.mjs /tmp/d1-list.json "${PROD_DB}")"
+          npx --yes wrangler@4 r2 bucket list > /tmp/r2-list.txt
+          grep -Fq "${PROD_R2}" /tmp/r2-list.txt
+          node scripts/render-wrangler-storage.mjs "${DB_ID}" "${PROD_R2}" workers/api/wrangler.pilot1461.toml
+          sed -i 's#main = "src/index.ts"#main = "src/production.ts"#' workers/api/wrangler.pilot1461.toml
+          sed -i 's/name = "eco-system"/name = "eco-system-auth-pilot"/' workers/api/wrangler.pilot1461.toml
+          grep -q 'name = "eco-system-auth-pilot"' workers/api/wrangler.pilot1461.toml
+          grep -q 'main = "src/production.ts"' workers/api/wrangler.pilot1461.toml
+
+      - name: Deploy isolated pilot
+        run: npx --yes wrangler@4 deploy --config workers/api/wrangler.pilot1461.toml
+
+      - name: Real shell and authentication round-trip
+        shell: bash
+        env:
+          AUTH_SMOKE_STATE_FILE: /tmp/auth-smoke-state.json
+        run: |
+          set -euo pipefail
+          cleanup() {
+            if [ -f "${AUTH_SMOKE_STATE_FILE}" ]; then
+              ACCOUNT_ID="$(node -e "const j=require(process.env.AUTH_SMOKE_STATE_FILE);process.stdout.write(j.accountId||'')" || true)"
+              if [ -n "${ACCOUNT_ID}" ]; then
+                npx --yes wrangler@4 d1 execute "${PROD_DB}" --remote --command "DELETE FROM auth_sessions WHERE account_id='${ACCOUNT_ID}'; DELETE FROM auth_accounts WHERE id='${ACCOUNT_ID}';" >/tmp/auth-cleanup.txt 2>&1 || true
+              fi
+            fi
+          }
+          trap cleanup EXIT
+          node scripts/auth-smoke.mjs "${PILOT_ROOT}"

@@ -1,0 +1,213 @@
+name: Eco-System 1.4.6.1 — Production Auth Recovery
+
+on:
+  workflow_dispatch:
+  push:
+    branches: ['hotfix/1.4.6-auth-navigation-regression-20260921']
+    paths: ['.github/DEPLOY_ECO_SYSTEM_1_4_6_1_AUTH_HOTFIX_ONCE']
+
+permissions:
+  contents: read
+
+concurrency:
+  group: eco-system-production-1-4-6-1-auth-recovery
+  cancel-in-progress: false
+
+env:
+  PROD_WORKER: eco-system
+  PROD_DB: eco-system-db
+  PROD_R2: eco-system-backups
+  PROD_ROOT: https://eco-system.sergemimf.workers.dev
+  EXPECTED_VERSION: 1.4.6.1-auth-navigation-recovery
+
+jobs:
+  qualify-backup-deploy-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 55
+    env:
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      COLLECTIVE_LEARNING_PEPPER: ${{ secrets.COLLECTIVE_LEARNING_PEPPER }}
+      IDENTITY_MATCH_PEPPER: ${{ secrets.IDENTITY_MATCH_PEPPER }}
+      FOUNDER_TEAM_ACTORS: ${{ secrets.FOUNDER_TEAM_ACTORS }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci --ignore-scripts
+
+      - name: Verify production prerequisites before any mutation
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${CLOUDFLARE_ACCOUNT_ID:-}"
+          test -n "${CLOUDFLARE_API_TOKEN:-}"
+          npx --yes wrangler@4 d1 list --json >/tmp/d1-auth.json
+          npx --yes wrangler@4 r2 bucket list >/tmp/r2-auth.txt
+          echo "Cloudflare D1 + R2 authentication PASS"
+
+      - name: Full qualification
+        run: npm run ci
+
+      - name: Build Worker and PWA
+        run: npm run build
+
+      - name: Resolve existing production D1 and private R2
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes wrangler@4 d1 list --json > /tmp/d1-list.json
+          DB_ID="$(node scripts/cloudflare-d1-id.mjs /tmp/d1-list.json "${PROD_DB}" || true)"
+          if [ -z "${DB_ID}" ]; then
+            echo "::error::Existing production DB ${PROD_DB} not found. Refusing to create or replace it."
+            exit 3
+          fi
+          npx --yes wrangler@4 r2 bucket list > /tmp/r2-list.txt
+          if ! grep -Fq "${PROD_R2}" /tmp/r2-list.txt; then
+            echo "::error::Existing production R2 bucket ${PROD_R2} not found. Refusing to create or replace it."
+            exit 4
+          fi
+          echo "Reusing existing private R2 bucket ${PROD_R2}."
+          node scripts/render-wrangler-storage.mjs "${DB_ID}" "${PROD_R2}" workers/api/wrangler.prod146.toml
+          sed -i 's#main = "src/index.ts"#main = "src/production.ts"#' workers/api/wrangler.prod146.toml
+          sed -i 's/PREMIUM_LIVE_LEDGER = "false"/PREMIUM_LIVE_LEDGER = "true"/' workers/api/wrangler.prod146.toml
+          grep -q 'main = "src/production.ts"' workers/api/wrangler.prod146.toml
+          grep -q 'name = "eco-system"' workers/api/wrangler.prod146.toml
+          grep -q 'database_name = "eco-system-db"' workers/api/wrangler.prod146.toml
+          grep -q 'bucket_name = "eco-system-backups"' workers/api/wrangler.prod146.toml
+          grep -q 'PREMIUM_LIVE_LEDGER = "true"' workers/api/wrangler.prod146.toml
+          grep -q 'class_name = "GroupLiveHub"' workers/api/wrangler.prod146.toml
+          grep -q 'storage = "sqlite"' workers/api/wrangler.prod146.toml
+          grep -q 'binding = "AI"' workers/api/wrangler.prod146.toml
+
+      - name: Pre-deploy BIR+ production snapshot
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/predeploy
+          git archive --format=tar HEAD | xz -T0 -9e > /tmp/predeploy/eco-system-1.4.6-source.tar.xz
+          npx --yes wrangler@4 d1 export "${PROD_DB}" --remote --output=/tmp/predeploy/eco-system-production-before-1.4.6.sql
+          sqlite3 /tmp/predeploy/restore-check.sqlite < /tmp/predeploy/eco-system-production-before-1.4.6.sql
+          test "$(sqlite3 /tmp/predeploy/restore-check.sqlite 'PRAGMA integrity_check;')" = "ok"
+          cd /tmp/predeploy
+          sha256sum eco-system-1.4.6-source.tar.xz eco-system-production-before-1.4.6.sql > SHA256SUMS.txt
+          sha256sum --check SHA256SUMS.txt
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: eco-system-1.4.6-predeploy-birplus
+          path: /tmp/predeploy/
+          retention-days: 90
+          if-no-files-found: error
+
+      - name: Mirror pre-deploy BIR+ snapshot to R2
+        shell: bash
+        run: |
+          set -euo pipefail
+          PREFIX="birplus/1.4.6/${GITHUB_SHA}/predeploy"
+          npx --yes wrangler@4 r2 object put "${PROD_R2}/${PREFIX}/eco-system-1.4.6-source.tar.xz" --file /tmp/predeploy/eco-system-1.4.6-source.tar.xz --remote
+          npx --yes wrangler@4 r2 object put "${PROD_R2}/${PREFIX}/eco-system-production-before-1.4.6.sql" --file /tmp/predeploy/eco-system-production-before-1.4.6.sql --remote
+          npx --yes wrangler@4 r2 object put "${PROD_R2}/${PREFIX}/SHA256SUMS.txt" --file /tmp/predeploy/SHA256SUMS.txt --remote
+          npx --yes wrangler@4 r2 object get "${PROD_R2}/${PREFIX}/SHA256SUMS.txt" --file /tmp/r2-pre-SHA256SUMS.txt --remote
+          cmp /tmp/predeploy/SHA256SUMS.txt /tmp/r2-pre-SHA256SUMS.txt
+          echo "Pre-deploy R2 BIR+ mirror PASS"
+
+      - name: Configure or preserve production secrets
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes wrangler@4 secret list --config workers/api/wrangler.prod146.toml > /tmp/worker-secrets.txt || true
+          if [ -n "${FOUNDER_TEAM_ACTORS:-}" ]; then
+            printf '%s' "${FOUNDER_TEAM_ACTORS}" | npx --yes wrangler@4 secret put FOUNDER_TEAM_ACTORS --config workers/api/wrangler.prod146.toml
+          else
+            echo "::notice::FOUNDER_TEAM_ACTORS absent; durable platform_control_owners remains authoritative."
+          fi
+          if [ -n "${COLLECTIVE_LEARNING_PEPPER:-}" ]; then
+            printf '%s' "${COLLECTIVE_LEARNING_PEPPER}" | npx --yes wrangler@4 secret put COLLECTIVE_LEARNING_PEPPER --config workers/api/wrangler.prod146.toml
+          elif grep -q 'COLLECTIVE_LEARNING_PEPPER' /tmp/worker-secrets.txt; then
+            echo "Preserving existing COLLECTIVE_LEARNING_PEPPER."
+          else
+            openssl rand -hex 48 | npx --yes wrangler@4 secret put COLLECTIVE_LEARNING_PEPPER --config workers/api/wrangler.prod146.toml
+            echo "Created one-time COLLECTIVE_LEARNING_PEPPER in Cloudflare."
+          fi
+          if [ -n "${IDENTITY_MATCH_PEPPER:-}" ]; then
+            printf '%s' "${IDENTITY_MATCH_PEPPER}" | npx --yes wrangler@4 secret put IDENTITY_MATCH_PEPPER --config workers/api/wrangler.prod146.toml
+          elif grep -q 'IDENTITY_MATCH_PEPPER' /tmp/worker-secrets.txt; then
+            echo "Preserving existing IDENTITY_MATCH_PEPPER."
+          else
+            openssl rand -hex 48 | npx --yes wrangler@4 secret put IDENTITY_MATCH_PEPPER --config workers/api/wrangler.prod146.toml
+            echo "Created one-time IDENTITY_MATCH_PEPPER in Cloudflare."
+          fi
+
+      - name: Apply additive D1 migrations
+        run: npx --yes wrangler@4 d1 migrations apply "${PROD_DB}" --remote --config workers/api/wrangler.prod146.toml
+
+      - name: Deploy Eco-System 1.4.6.1 auth recovery
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes wrangler@4 deploy --config workers/api/wrangler.prod146.toml
+          touch /tmp/eco-system-1461-deployed
+
+      - name: Real production shell + register-login-session smoke
+        shell: bash
+        env:
+          AUTH_SMOKE_STATE_FILE: /tmp/eco-auth-production-smoke.json
+        run: |
+          set -euo pipefail
+          cleanup() {
+            if [ -f "${AUTH_SMOKE_STATE_FILE}" ]; then
+              ACCOUNT_ID="$(node -e "const j=require(process.env.AUTH_SMOKE_STATE_FILE);process.stdout.write(j.accountId||'')" || true)"
+              if [ -n "${ACCOUNT_ID}" ]; then
+                npx --yes wrangler@4 d1 execute "${PROD_DB}" --remote --command "DELETE FROM auth_sessions WHERE account_id='${ACCOUNT_ID}'; DELETE FROM auth_accounts WHERE id='${ACCOUNT_ID}';" >/tmp/auth-production-cleanup.txt 2>&1 || true
+              fi
+            fi
+          }
+          trap cleanup EXIT
+          EXPECTED_VERSION="${EXPECTED_VERSION}" node scripts/auth-smoke.mjs "${PROD_ROOT}"
+
+      - name: Automatic Worker rollback if post-deploy smoke fails
+        if: failure()
+        shell: bash
+        run: |
+          if [ -f /tmp/eco-system-1461-deployed ]; then
+            npx --yes wrangler@4 rollback --config workers/api/wrangler.prod146.toml --message "Automatic rollback: Eco-System 1.4.6.1 auth smoke failed"
+          fi
+      - name: Post-deploy BIR+ production snapshot
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/postdeploy
+          printf '%s\n' "version=${EXPECTED_VERSION}" "commit=${GITHUB_SHA}" "worker=${PROD_WORKER}" "database=${PROD_DB}" "deployed_at=$(date -u +%Y-%m-%dT%H:%M:%SZ)" > /tmp/postdeploy/DEPLOYMENT_TRUTH.txt
+          npx --yes wrangler@4 d1 export "${PROD_DB}" --remote --output=/tmp/postdeploy/eco-system-production-after-1.4.6.sql
+          sqlite3 /tmp/postdeploy/restore-check.sqlite < /tmp/postdeploy/eco-system-production-after-1.4.6.sql
+          test "$(sqlite3 /tmp/postdeploy/restore-check.sqlite 'PRAGMA integrity_check;')" = "ok"
+          cd /tmp/postdeploy
+          sha256sum eco-system-production-after-1.4.6.sql DEPLOYMENT_TRUTH.txt > SHA256SUMS.txt
+          sha256sum --check SHA256SUMS.txt
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: eco-system-1.4.6-postdeploy-birplus
+          path: /tmp/postdeploy/
+          retention-days: 90
+          if-no-files-found: error
+
+      - name: Mirror post-deploy BIR+ snapshot to R2
+        shell: bash
+        run: |
+          set -euo pipefail
+          PREFIX="birplus/1.4.6/${GITHUB_SHA}/postdeploy"
+          npx --yes wrangler@4 r2 object put "${PROD_R2}/${PREFIX}/eco-system-production-after-1.4.6.sql" --file /tmp/postdeploy/eco-system-production-after-1.4.6.sql --remote
+          npx --yes wrangler@4 r2 object put "${PROD_R2}/${PREFIX}/DEPLOYMENT_TRUTH.txt" --file /tmp/postdeploy/DEPLOYMENT_TRUTH.txt --remote
+          npx --yes wrangler@4 r2 object put "${PROD_R2}/${PREFIX}/SHA256SUMS.txt" --file /tmp/postdeploy/SHA256SUMS.txt --remote
+          npx --yes wrangler@4 r2 object get "${PROD_R2}/${PREFIX}/SHA256SUMS.txt" --file /tmp/r2-post-SHA256SUMS.txt --remote
+          cmp /tmp/postdeploy/SHA256SUMS.txt /tmp/r2-post-SHA256SUMS.txt
+          echo "Post-deploy R2 BIR+ mirror PASS"
+
+      - name: Production URL
+        run: echo "${PROD_ROOT}/"
