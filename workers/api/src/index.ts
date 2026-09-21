@@ -13,6 +13,7 @@ import { ExplainabilityService, DocumentSearchService, previewCsv, buildNotifica
 import { ReceivablesService, TreasuryService, RiskFinanceService } from '../../../packages/finance/src/index.js';
 import { analyzeGovernanceText, governanceFingerprint, interpretLaunchPrompt } from '../../../packages/guided-assistant/src/index.js';
 import { MemberFinancialControlService } from '../../../packages/member-control/src/index.js';
+import { MeetingLiveConsensusService } from '../../../packages/meeting-live-consensus/src/index.js';
 import { GroupIdentityService } from '../../../packages/group-identity/src/index.js';
 import { ConciergeLearningService, type DataUsePurpose, type LearningCategory, type DataUseDefaultMode } from '../../../packages/concierge-learning/src/index.js';
 import { MarketService } from '../../../packages/market/src/index.js';
@@ -178,6 +179,33 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
   try {
     const scopedGroup=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)/)?.[1];
     if(scopedGroup)await requireGroup(scopedGroup);
+    const consensusBase=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/meetings\/([^/]+)\/live-consensus$/);
+    const consensusAction=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/meetings\/([^/]+)\/live-consensus\/([^/]+)\/(vote|reserve)$/);
+    if(consensusBase||consensusAction){
+      const groupId=(consensusBase?.[1]??consensusAction?.[1])!,meetingId=(consensusBase?.[2]??consensusAction?.[2])!;
+      await requireGroup(groupId,true);
+      const consensus=new MeetingLiveConsensusService(repo,kernel);
+      if(consensusBase&&request.method==='GET')return json({items:await consensus.list(groupId,meetingId)},200,cors);
+      if(consensusBase&&request.method==='POST'){
+        const body=await readJson<Record<string,unknown>>(request),cellKey=String(body.cellKey??'').trim();if(!cellKey)throw Error('CELL_KEY_REQUIRED');
+        const item=await consensus.submit({groupId,meetingId,cellKey,value:body.value,label:body.label?String(body.label):undefined,membershipId:body.membershipId?String(body.membershipId):undefined,rubricId:body.rubricId?String(body.rubricId):undefined});
+        await publishLive(groupId,item.state==='DIVERGENT'?'CONSENSUS_REQUIRED':'MANAGER_ENTRY','manager-entry:'+item.id+':'+item.version,{meetingId,cellKey,state:item.state,version:item.version,selectedValue:item.selectedValue??''});
+        return json(item,201,cors);
+      }
+      if(consensusAction&&request.method==='POST'){
+        const cellKey=decodeURIComponent(consensusAction[3]!),action=consensusAction[4]!,body=await readJson<Record<string,unknown>>(request);
+        if(action==='vote'){
+          const item=await consensus.vote(groupId,meetingId,cellKey,String(body.proposalActorId??''));
+          await publishLive(groupId,item.state==='MAJORITY_SELECTED'||item.state==='UNANIMOUS'?'CONSENSUS_SELECTED':'CONSENSUS_REQUIRED','consensus-vote:'+item.id+':'+item.version,{meetingId,cellKey,state:item.state,version:item.version,selectedValue:item.selectedValue??''});
+          if(item.membershipId)await publishLive(groupId,'MEMBER_PROJECTION_UPDATED','member-projection:'+item.id+':'+item.version,{meetingId,cellKey,state:item.state,selectedValue:item.selectedValue??''},item.membershipId);
+          return json(item,200,cors);
+        }
+        const item=await consensus.maintainDissent(groupId,meetingId,cellKey,String(body.reason??''));
+        await publishLive(groupId,'MANAGER_RESERVE','manager-reserve:'+item.id+':'+item.version,{meetingId,cellKey,state:item.state,version:item.version,selectedValue:item.selectedValue??''});
+        return json(item,200,cors);
+      }
+      return json({error:'METHOD_NOT_ALLOWED'},405,cors);
+    }
     const liveRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/live\/(health|events|connect|publish)$/);
     if(liveRoute){
       const groupId=liveRoute[1]!,action=liveRoute[2]!;
