@@ -1,3 +1,4 @@
+export {};
 // Minimal authentication recovery path, independent from the large application module graph.
 const byId=id=>document.getElementById(id);
 const screen=byId('authScreen'),form=byId('authForm'),errorBox=byId('authError'),submit=byId('authSubmit');
