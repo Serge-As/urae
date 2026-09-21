@@ -109,6 +109,13 @@ export class ConnectedApplication {
     const bytes=new TextEncoder().encode(value),digest=await crypto.subtle.digest('SHA-256',bytes);
     return[...new Uint8Array(digest)].map(x=>x.toString(16).padStart(2,'0')).join('');
   }
+  private async patchCachedFinancialNotice(membershipId:string,noticeId:string,patch:Record<string,unknown>):Promise<any>{
+    if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');
+    const path=`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/members/${encodeURIComponent(membershipId)}/financial-notices`;
+    const rows=await this.cached<any[]>(path)??[],current=rows.find(x=>x.id===noticeId);if(!current)throw Error('FINANCIAL_NOTICE_NOT_CACHED');
+    const updated={...current,...patch,version:Number(current.version??0)+1,updatedAt:new Date().toISOString(),localActionPending:true};
+    await this.saveCached(path,rows.map(x=>x.id===noticeId?updated:x));return updated;
+  }
   private async request<T>(path:string,init:RequestInit={}):Promise<T>{
     const headers=new Headers(this.headers());
     for(const [k,v] of new Headers(init.headers??{}))headers.set(k,v);
@@ -143,10 +150,34 @@ export class ConnectedApplication {
   authStatus():Promise<{authenticated:boolean;account:SessionAccount|null}>{return this.request('/api/v1/auth/session');}
   currentActor():string{return this.actorId;}
   async financialNotices(membershipId:string):Promise<any[]>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/members/${encodeURIComponent(membershipId)}/financial-notices`);}
-  async confirmFinancialNotice(noticeId:string):Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/financial-notices/${encodeURIComponent(noticeId)}/confirm`,{method:'POST',body:'{}'});}
-  async reserveFinancialNotice(noticeId:string,reason:string):Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/financial-notices/${encodeURIComponent(noticeId)}/reserve`,{method:'POST',body:JSON.stringify({reason})});}
-  async officerReviewFinancialNotice(noticeId:string,note:string):Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/financial-notices/${encodeURIComponent(noticeId)}/officer-review`,{method:'POST',body:JSON.stringify({note})});}
-  async memberReviewFinancialNotice(noticeId:string,decision:'APPROVE_AFTER_REVIEW'|'MAINTAIN_RESERVE',note=''):Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/financial-notices/${encodeURIComponent(noticeId)}/member-review`,{method:'POST',body:JSON.stringify({decision,note})});}
+  async confirmFinancialNotice(noticeId:string,membershipId?:string):Promise<any>{
+    if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');
+    if(!this.isOffline())try{return await this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/financial-notices/${encodeURIComponent(noticeId)}/confirm`,{method:'POST',body:'{}'});}catch(error){if(!(error instanceof Error)||error.message!=='NETWORK_UNAVAILABLE')throw error;}
+    if(!membershipId)throw Error('MEMBERSHIP_REQUIRED_FOR_OFFLINE_ACTION');
+    const updated=await this.patchCachedFinancialNotice(membershipId,noticeId,{memberState:'MEMBER_CONFIRMED'});
+    await this.queueLocal('FINANCIAL_NOTICE_CONFIRM_V1',{groupId:this.activeGroupId,noticeId,membershipId},'notice-confirm:'+noticeId);return updated;
+  }
+  async reserveFinancialNotice(noticeId:string,reason:string,membershipId?:string):Promise<any>{
+    if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');const clean=reason.trim();if(!clean)throw Error('RESERVE_REASON_REQUIRED');
+    if(!this.isOffline())try{return await this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/financial-notices/${encodeURIComponent(noticeId)}/reserve`,{method:'POST',body:JSON.stringify({reason:clean})});}catch(error){if(!(error instanceof Error)||error.message!=='NETWORK_UNAVAILABLE')throw error;}
+    if(!membershipId)throw Error('MEMBERSHIP_REQUIRED_FOR_OFFLINE_ACTION');
+    const updated=await this.patchCachedFinancialNotice(membershipId,noticeId,{disputeState:'MEMBER_RESERVE',reserveReason:clean});
+    await this.queueLocal('FINANCIAL_NOTICE_RESERVE_V1',{groupId:this.activeGroupId,noticeId,membershipId,reason:clean},'notice-reserve:'+noticeId+':'+await this.sha256Hex(clean));return{notice:updated,case:{localPending:true}};
+  }
+  async officerReviewFinancialNotice(noticeId:string,note:string,membershipId?:string):Promise<any>{
+    if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');const clean=note.trim()||'Validation après vérification';
+    if(!this.isOffline())try{return await this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/financial-notices/${encodeURIComponent(noticeId)}/officer-review`,{method:'POST',body:JSON.stringify({note:clean})});}catch(error){if(!(error instanceof Error)||error.message!=='NETWORK_UNAVAILABLE')throw error;}
+    if(!membershipId)throw Error('MEMBERSHIP_REQUIRED_FOR_OFFLINE_ACTION');
+    const updated=await this.patchCachedFinancialNotice(membershipId,noticeId,{disputeState:'OFFICER_CONFIRMED',officerId:this.actorId,officerNote:clean});
+    await this.queueLocal('FINANCIAL_NOTICE_OFFICER_REVIEW_V1',{groupId:this.activeGroupId,noticeId,membershipId,note:clean},'notice-officer:'+noticeId+':'+this.actorId+':'+await this.sha256Hex(clean));return updated;
+  }
+  async memberReviewFinancialNotice(noticeId:string,decision:'APPROVE_AFTER_REVIEW'|'MAINTAIN_RESERVE',note='',membershipId?:string):Promise<any>{
+    if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');const clean=note.trim(),disputeState=decision==='APPROVE_AFTER_REVIEW'?'MEMBER_APPROVED_AFTER_REVIEW':'MEMBER_RESERVE_MAINTAINED';
+    if(!this.isOffline())try{return await this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/financial-notices/${encodeURIComponent(noticeId)}/member-review`,{method:'POST',body:JSON.stringify({decision,note:clean})});}catch(error){if(!(error instanceof Error)||error.message!=='NETWORK_UNAVAILABLE')throw error;}
+    if(!membershipId)throw Error('MEMBERSHIP_REQUIRED_FOR_OFFLINE_ACTION');
+    const updated=await this.patchCachedFinancialNotice(membershipId,noticeId,{disputeState,memberReviewNote:clean||undefined});
+    await this.queueLocal('FINANCIAL_NOTICE_MEMBER_REVIEW_V1',{groupId:this.activeGroupId,noticeId,membershipId,decision,note:clean},'notice-member-review:'+noticeId+':'+decision+':'+await this.sha256Hex(clean));return updated;
+  }
 
   async memberStatement(membershipId:string):Promise<import('../../contracts/src/index.js').MemberStatement>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/members/${encodeURIComponent(membershipId)}/statement`);}
   async groupMe():Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/me`);}
