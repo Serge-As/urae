@@ -152,3 +152,15 @@ Invariants supplémentaires :
 - Financial Lab n'émet aucun verdict légal ;
 - Eco Route / Backhaul / Return Load est exclu du périmètre Eco-System.
 
+## Production 1.4.3 / Blueprint 5.0.0 — 2026-09-21
+- ligne active : `next/1.4.3-blueprint-5-0-0-finalization-20260921`
+- version publique : `1.4.3-blueprint-5-0-0-finalized`
+- source déployée : `96b8f41467af476b12179b786d7d8f140ef86ce7`
+- Worker Version ID : `07939344-ceca-4578-bc3b-3d1d589ad7eb`
+- production workflow : `35560714108 SUCCESS`
+- 265/265 tests PASS ; D1/R2 réutilisés ; realMoney=false.
+- Blueprint 5.0.0 orchestre six couches ; il ne devient owner d’aucune transaction.
+- Forums/Hubs restent `COMMUNITY.FORUM` / `COMMUNITY.PRO_HUBS`; Group Buy reste `MARKETPLACE.GROUP_BUY`; Partners reste le moteur programmes existant.
+- PWA 1.4.3 : scripts/styles network-first `cache:no-store`; aucun retour volontaire au cache v142.
+- Backhaul / Return Load / Eco Route est un projet distinct, interdit dans ce repo sauf décision explicite future.
+
