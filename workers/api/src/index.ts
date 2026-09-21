@@ -681,7 +681,7 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
       const updated=await meetings.updateMeetingContext(ctx.tenantId,groupId,meetingId,{scheduledAt:optional('scheduledAt'),location:optional('location'),theme:optional('theme'),dressCode:optional('dressCode')});
       if(before?.status==='closed'){
         await notifications.publish(groupId,{title:'Séance clôturée modifiée',message:'Un responsable a modifié le contexte d’une séance déjà clôturée. Consultez l’historique et les nouvelles valeurs.',channels:['IN_APP','WEB_PUSH'],audience:'MANAGERS',priority:'CRITICAL'});
-        await publishLive(groupId,'MEETING_UPDATE','closed-meeting-context:'+meetingId+':'+updated.updatedAt,{meetingId,kind:'CLOSED_MEETING_CONTEXT_CHANGED',meetingClosed:true});
+        await publishLive(groupId,'MEETING_UPDATE','closed-meeting-context:'+meetingId+':'+new Date().toISOString(),{meetingId,kind:'CLOSED_MEETING_CONTEXT_CHANGED',meetingClosed:true});
       }
       return json(updated,200,cors);
     }
