@@ -1706,7 +1706,12 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
       }
       if(item.type==='MEETING_CONTEXT_V1'){
         const p=item.payload,groupId=String(p.groupId??''),meetingId=String(p.meetingId??'');await requireGroup(groupId,true);
+        const before=await repo.getMeeting(ctx.tenantId,groupId,meetingId);
         const meeting=await meetings.updateMeetingContext(ctx.tenantId,groupId,meetingId,{scheduledAt:p.scheduledAt===undefined?undefined:p.scheduledAt===null?null:String(p.scheduledAt),location:p.location===undefined?undefined:p.location===null?null:String(p.location),theme:p.theme===undefined?undefined:p.theme===null?null:String(p.theme),dressCode:p.dressCode===undefined?undefined:p.dressCode===null?null:String(p.dressCode)},item.idempotencyKey);
+        if(before?.status==='closed'){
+          await notifications.publish(groupId,{title:'Séance clôturée modifiée hors ligne',message:'Une modification préparée hors ligne vient d’être synchronisée sur une séance clôturée.',channels:['IN_APP','WEB_PUSH'],audience:'MANAGERS',priority:'CRITICAL'});
+          await publishLive(groupId,'MEETING_UPDATE','closed-meeting-context-sync:'+item.idempotencyKey,{meetingId,kind:'CLOSED_MEETING_CONTEXT_CHANGED',meetingClosed:true});
+        }
         await markApplied();
         return json({accepted:true,stored:true,meeting},200,cors);
       }
