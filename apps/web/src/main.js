@@ -658,6 +658,16 @@ const renderApplications = async () => { const root = $('#applicationsBox'); roo
 catch (e) {
     fail(e);
 } };
+const refreshOptionalOfflineSafe=async(label,fn)=>{
+    try{return await fn();}
+    catch(error){
+        if(!navigator.onLine && error instanceof Error && error.message==='NETWORK_UNAVAILABLE'){
+            console.info('Offline optional section skipped:',label);
+            return;
+        }
+        throw error;
+    }
+};
 const refreshGroupContext = async () => {
     await renderGroups();
     const active = Boolean(app.activeGroup());
@@ -687,26 +697,26 @@ const refreshGroupContext = async () => {
         if(manage)await renderLedger();
         else{receiptPositions=[];$('#ledgerMetrics').replaceChildren();$('#receiptList').textContent='Votre relevé individuel est accessible depuis la liste des membres.';}
     }
-    if(!active || manage)await renderApplications();else $('#applicationsBox').textContent='Les candidatures sont gérées par les responsables du groupe.';
-    await renderUniverse();
-    await renderInbox();
-    await completionUI.refresh();
-    await advancedUI.refresh();
-    await identityLiveUI.refresh();
-    await communityShopUI.refresh();
-    await miscRubricUI.refresh();
-    await pairingUI.refresh();
-    await personalCockpitUI.refresh();
-    await recapUI.refresh();
-    await interestCommunityUI.refresh();
-    await adManagerUI.refresh();
-    await tontineManagerUI.refresh();
-    await savingsYieldUI.refresh();
-    await assistanceRulebookUI.refresh();
-    await externalProgramsUI.refresh();
-    await blueprintExecutableUI.refresh();
-    await financialLabUI.refresh();
-    await founderControlUI.refresh();
+    if(!active || manage)await refreshOptionalOfflineSafe('applications',renderApplications);else $('#applicationsBox').textContent='Les candidatures sont gérées par les responsables du groupe.';
+    await refreshOptionalOfflineSafe('universe',renderUniverse);
+    await refreshOptionalOfflineSafe('inbox',renderInbox);
+    await refreshOptionalOfflineSafe('completion',()=>completionUI.refresh());
+    await refreshOptionalOfflineSafe('advanced',()=>advancedUI.refresh());
+    await refreshOptionalOfflineSafe('identity-live',()=>identityLiveUI.refresh());
+    await refreshOptionalOfflineSafe('community-shop',()=>communityShopUI.refresh());
+    await refreshOptionalOfflineSafe('misc-rubrics',()=>miscRubricUI.refresh());
+    await refreshOptionalOfflineSafe('pairing',()=>pairingUI.refresh());
+    await refreshOptionalOfflineSafe('personal-cockpit',()=>personalCockpitUI.refresh());
+    await refreshOptionalOfflineSafe('recap',()=>recapUI.refresh());
+    await refreshOptionalOfflineSafe('interest-community',()=>interestCommunityUI.refresh());
+    await refreshOptionalOfflineSafe('ad-manager',()=>adManagerUI.refresh());
+    await refreshOptionalOfflineSafe('tontine-manager',()=>tontineManagerUI.refresh());
+    await refreshOptionalOfflineSafe('savings-yield',()=>savingsYieldUI.refresh());
+    await refreshOptionalOfflineSafe('assistance-rulebook',()=>assistanceRulebookUI.refresh());
+    await refreshOptionalOfflineSafe('external-programs',()=>externalProgramsUI.refresh());
+    await refreshOptionalOfflineSafe('blueprint',()=>blueprintExecutableUI.refresh());
+    await refreshOptionalOfflineSafe('financial-lab',()=>financialLabUI.refresh());
+    await refreshOptionalOfflineSafe('founder-control',()=>founderControlUI.refresh());
 };
 const refreshAll = async () => { await refreshGroupContext(); renderOutbox(); renderCompatibility(); renderKernel(); renderModules(); renderEcosystemHighlights(); renderDomainHubs(); await detailUI.openFromLocation?.(); };
 $('#activeGroupSelect').addEventListener('change', async (e) => { const id = e.target.value; app.selectGroup(id || undefined); try {
