@@ -15,7 +15,8 @@ test('mega lot keeps one canonical offline replay path for core group operations
     'GROUP_PROJECT_UPSERT_V1','GROUP_PROJECT_CONVERT_V1','MEMBER_ADD_V1','RUBRIC_CREATE_V1',
     'RUBRIC_ACTIVITY_PLAN_V1','RUBRIC_MODEL_V1','RUBRIC_POLICIES_V1','GROUP_POLICY_V1',
     'MEETING_OPEN_V1','MEETING_CONTEXT_V1','MEETING_ATTENDANCE_V1','MEETING_BENEFIT_V1',
-    'MEETING_BENEFIT_EVIDENCE_V1','MEETING_DISTRIBUTION_V1','MEETING_CLOSE_V1','CASHBOX_RECONCILE_V1','CONTRIBUTION_CASH_RECORDED'
+    'MEETING_BENEFIT_EVIDENCE_V1','MEETING_DISTRIBUTION_V1','MEETING_CLOSE_V1','CASHBOX_RECONCILE_V1','CONTRIBUTION_CASH_RECORDED',
+    'FINANCIAL_NOTICE_CONFIRM_V1','FINANCIAL_NOTICE_RESERVE_V1','FINANCIAL_NOTICE_OFFICER_REVIEW_V1','FINANCIAL_NOTICE_MEMBER_REVIEW_V1'
   ]){
     assert.ok(application.includes(type)||type==='MEETING_CLOSE_V1'||type==='CASHBOX_RECONCILE_V1',type);
     assert.ok(api.includes(type),type+' server replay');
@@ -44,6 +45,8 @@ test('lot 4 keeps manager proposals votes majority and dissent reserve separate 
   assert.match(sessions,/Confronter les (?:saisies|données)/);
   assert.match(sessions,/reserveLiveConsensus/);
   assert.doesNotMatch(consensus,/recordCashContribution|saveLedgerEntry|postLedger/);
+  assert.match(api,/CONSENSUS_UNRESOLVED/);
+  assert.match(api,/new MeetingLiveConsensusService\(repo,kernel\)\.list\(groupId,meetingId\)/);
 });
 
 test('lot 7 member financial control remains confirm or reserve with live refresh',()=>{
@@ -53,6 +56,7 @@ test('lot 7 member financial control remains confirm or reserve with live refres
   assert.match(member,/Émettre une réserve/);
   assert.match(member,/eco:financial-live-update/);
   assert.match(identity,/MEMBER_PROJECTION_UPDATED/);
+  for(const type of ['FINANCIAL_NOTICE_CONFIRM_V1','FINANCIAL_NOTICE_RESERVE_V1','FINANCIAL_NOTICE_OFFICER_REVIEW_V1','FINANCIAL_NOTICE_MEMBER_REVIEW_V1'])assert.ok(application.includes(type),type);
 });
 
 test('lots 8 and 9 retain canonical finance, savings yield, assistance and multi-document RI paths',()=>{
