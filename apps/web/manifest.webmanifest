@@ -21,22 +21,5 @@
     "productivity",
     "social"
   ],
-  "prefer_related_applications": false,
-  "shortcuts": [
-    {
-      "name": "Séances",
-      "short_name": "Séances",
-      "url": "/#sessions"
-    },
-    {
-      "name": "Membres",
-      "short_name": "Membres",
-      "url": "/#members"
-    },
-    {
-      "name": "RECAP",
-      "short_name": "RECAP",
-      "url": "/#recap"
-    }
-  ]
+  "prefer_related_applications": false
 }
