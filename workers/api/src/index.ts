@@ -216,6 +216,40 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
   try {
     const scopedGroup=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)/)?.[1];
     if(scopedGroup)await requireGroup(scopedGroup);
+    const financialCellBase=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/meetings\/([^/]+)\/financial-cells$/);
+    const financialCellApply=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/meetings\/([^/]+)\/financial-cells\/([^/]+)\/apply$/);
+    if(financialCellBase&&request.method==='POST'){
+      const groupId=financialCellBase[1]!,meetingId=financialCellBase[2]!;await requireGroup(groupId,true);
+      const body=await readJson<Record<string,unknown>>(request),membershipId=String(body.membershipId??''),rubricId=String(body.rubricId??''),targetAmount=finite(body.targetAmount),reason=String(body.reason??'').trim();
+      if(!membershipId||!rubricId)throw Error('FINANCIAL_CELL_REQUIRED');
+      if(!Number.isSafeInteger(targetAmount)||targetAmount<0)throw Error('INVALID_CONTRIBUTION_AMOUNT');
+      const state=await financialCellState(groupId,meetingId,membershipId,rubricId),meeting=await repo.getMeeting(ctx.tenantId,groupId,meetingId);if(!meeting||meeting.status==='cancelled')throw Error('MEETING_NOT_FOUND');
+      if(state.current===targetAmount)return json({status:'NO_CHANGE',current:state.current,target:targetAmount},200,cors);
+      const managers=await managerUserIds(groupId);
+      if(state.current>0&&managers.length>1){
+        const item=await new MeetingLiveConsensusService(repo,kernel).proposeAgainstBaseline({groupId,meetingId,cellKey:membershipId+':'+rubricId,value:targetAmount,baselineValue:state.current,baselineActorId:state.baselineActorId,label:'Proposition de correction',membershipId,rubricId});
+        await notifications.publish(groupId,{title:'Donnée financière à confronter',message:`Un responsable propose de remplacer ${state.current} par ${targetAmount} F CFA. La valeur canonique reste inchangée tant que le Bureau n'a pas choisi.`,channels:['IN_APP','WEB_PUSH'],audience:'MANAGERS',priority:'HIGH'});
+        await publishLive(groupId,'CONSENSUS_REQUIRED','financial-cell-proposal:'+item.id+':'+item.version,{meetingId,cellKey:item.cellKey,state:item.state,version:item.version,baselineValue:state.current,proposedValue:targetAmount});
+        return json({status:'CONSENSUS_REQUIRED',current:state.current,target:targetAmount,consensus:item},202,cors);
+      }
+      if(state.current===0&&meeting.status==='open'&&targetAmount>0){
+        const key=String(request.headers.get('x-idempotency-key')??makeId('cell'));
+        const receipt=await ledger.recordCashContribution({tenantId:ctx.tenantId,groupId,membershipId,amount:targetAmount,currency:'XAF',meetingId,rubricId,idempotencyKey:key},ctx.requestId);
+        const entry=await repo.getLedgerEntry(ctx.tenantId,groupId,receipt.ledgerEntryId);if(entry)await dispatchContributionProjection(groupId,receipt,entry);
+        return json({status:'POSTED',current:0,target:targetAmount,receipt},201,cors);
+      }
+      const applied=await applyFinancialCellTarget({groupId,meetingId,membershipId,rubricId,targetAmount,reason:reason||'Correction explicite de la feuille de séance',idempotencyKey:String(request.headers.get('x-idempotency-key')??makeId('cell-correction'))});
+      return json(applied,200,cors);
+    }
+    if(financialCellApply&&request.method==='POST'){
+      const groupId=financialCellApply[1]!,meetingId=financialCellApply[2]!,cellKey=decodeURIComponent(financialCellApply[3]!);await requireGroup(groupId,true);
+      const body=await readJson<Record<string,unknown>>(request),consensus=new MeetingLiveConsensusService(repo,kernel),item=await consensus.get(groupId,meetingId,cellKey);
+      if(!item||!item.selectedValue||!['MAJORITY_SELECTED','UNANIMOUS','RESERVE_OPEN'].includes(item.state))throw Error('CONSENSUS_SELECTION_REQUIRED');
+      if(!item.membershipId||!item.rubricId)throw Error('FINANCIAL_CELL_REQUIRED');
+      const targetAmount=Number(item.selectedValue);if(!Number.isSafeInteger(targetAmount)||targetAmount<0)throw Error('INVALID_CONTRIBUTION_AMOUNT');
+      const applied=await applyFinancialCellTarget({groupId,meetingId,membershipId:item.membershipId,rubricId:item.rubricId,targetAmount,reason:String(body.reason??'Valeur retenue après confrontation des gestionnaires'),idempotencyKey:'cell-consensus:'+item.id+':v'+item.version,consensusId:item.id,consensusVersion:item.version});
+      return json({...applied,consensusState:item.state},200,cors);
+    }
     const consensusBase=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/meetings\/([^/]+)\/live-consensus$/);
     const consensusAction=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/meetings\/([^/]+)\/live-consensus\/([^/]+)\/(vote|reserve)$/);
     if(consensusBase||consensusAction){
