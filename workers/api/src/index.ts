@@ -157,18 +157,56 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
 
   const dispatchContributionProjection=async(groupId:string,receipt:import('../../../packages/contracts/src/index.js').ContributionReceipt,entry:import('../../../packages/contracts/src/index.js').LedgerEntry)=>{
     const projectionId='financial_projection_'+entry.id,existing=await repo.getWorkspaceRecord(ctx.tenantId,projectionId);
+    if(existing?.status==='DONE')return true;
     try{
       const positions=await ledger.receiptPositions(ctx.tenantId,groupId);
       const after=positions.filter(p=>p.membershipId===receipt.membershipId).reduce((n,p)=>n+p.netAmount,0);
+      const meeting=receipt.meetingId?await repo.getMeeting(ctx.tenantId,groupId,receipt.meetingId):undefined,closed=meeting?.status==='closed';
       const notice=await memberControl.create({groupId,membershipId:receipt.membershipId,entry,operationType:'CASH_CONTRIBUTION',amount:receipt.amount.amount,currency:receipt.amount.currency,rubricId:receipt.rubricId,meetingId:receipt.meetingId,previousSituation:after-receipt.amount.amount,newSituation:after});
+      await notifications.publish(groupId,{title:closed?'Saisie financière après clôture':'Nouvelle saisie financière',message:closed?'Votre situation a été modifiée après la clôture de la séance. Vérifiez cette opération.':'Une nouvelle donnée financière a été saisie pendant la séance. Vérifiez votre situation.',channels:['IN_APP','WEB_PUSH'],audience:'SELECTED',selectedMembershipIds:[receipt.membershipId],priority:closed?'HIGH':'NORMAL'});
       // Keep the Live idempotency key deliberately short and stable. The old encoded notice id could exceed the DO limit.
-      await publishLive(groupId,'FINANCIAL_NOTICE','financial-notice:'+entry.id,{noticeId:notice.id,ledgerEntryId:notice.ledgerEntryId,operationType:notice.operationType,amount:notice.amount,currency:notice.currency,previousSituation:notice.previousSituation??0,newSituation:notice.newSituation??0},notice.userId);
+      await publishLive(groupId,'FINANCIAL_NOTICE','financial-notice:'+entry.id,{noticeId:notice.id,ledgerEntryId:notice.ledgerEntryId,operationType:notice.operationType,amount:notice.amount,currency:notice.currency,previousSituation:notice.previousSituation??0,newSituation:notice.newSituation??0,meetingClosed:Boolean(closed),alertLevel:closed?'closed':'open'},notice.userId);
       if(existing)await repo.saveWorkspaceRecord({...existing,status:'DONE',tags:[...new Set(existing.tags.filter(t=>t!=='pending').concat('dispatched'))],data:{...existing.data,attemptCount:Number(existing.data.attemptCount??0)+1,lastError:null,dispatchedAt:new Date().toISOString()},updatedAt:new Date().toISOString()});
       return true;
     }catch(error){
       if(existing)await repo.saveWorkspaceRecord({...existing,status:'ACTIVE',tags:[...new Set(existing.tags.concat('pending','retry-required'))],data:{...existing.data,attemptCount:Number(existing.data.attemptCount??0)+1,lastError:(error instanceof Error?error.message:String(error)).slice(0,500)},updatedAt:new Date().toISOString()});
       return false;
     }
+  };
+
+  const managerUserIds=async(groupId:string)=>{
+    const group=await requireGroup(groupId,true),ids=new Set<string>([group.createdBy]);
+    for(const m of await repo.listMemberships(ctx.tenantId,groupId))if(m.status==='active'&&m.roles.some(r=>['founder','manager','admin','president','treasurer','secretary','auditor'].includes(r)))ids.add(m.userId);
+    return [...ids];
+  };
+  const financialCellState=async(groupId:string,meetingId:string,membershipId:string,rubricId:string)=>{
+    const rows=(await ledger.receiptPositions(ctx.tenantId,groupId)).filter(x=>x.meetingId===meetingId&&x.membershipId===membershipId&&x.rubricId===rubricId&&x.netAmount!==0);
+    return{rows,current:rows.reduce((n,x)=>n+x.netAmount,0),baselineActorId:rows.slice().reverse().find(x=>x.netAmount>0)?.receivedBy};
+  };
+  const applyFinancialCellTarget=async(input:{groupId:string;meetingId:string;membershipId:string;rubricId:string;targetAmount:number;reason:string;idempotencyKey:string;consensusId?:string;consensusVersion?:number})=>{
+    const group=await requireGroup(input.groupId,true),meeting=await repo.getMeeting(ctx.tenantId,input.groupId,input.meetingId);if(!meeting||meeting.status==='cancelled')throw Error('MEETING_NOT_FOUND');
+    if(!Number.isSafeInteger(input.targetAmount)||input.targetAmount<0)throw Error('INVALID_CONTRIBUTION_AMOUNT');
+    const beforeAll=await ledger.receiptPositions(ctx.tenantId,input.groupId),beforeSituation=beforeAll.filter(x=>x.membershipId===input.membershipId).reduce((n,x)=>n+x.netAmount,0);
+    const state=await financialCellState(input.groupId,input.meetingId,input.membershipId,input.rubricId);
+    if(state.current===input.targetAmount)return{status:'NO_CHANGE',current:state.current,target:input.targetAmount};
+    const reason=input.reason.trim()||'Correction de cellule financière';
+    let evidenceEntry:import('../../../packages/contracts/src/index.js').LedgerEntry|undefined;
+    for(const row of state.rows.filter(x=>x.netAmount>0)){
+      evidenceEntry=await ledger.reverseEntry({tenantId:ctx.tenantId,groupId:input.groupId,entryId:row.ledgerEntryId,reason},ctx.requestId);
+    }
+    let receipt:import('../../../packages/contracts/src/index.js').ContributionReceipt|undefined;
+    if(input.targetAmount>0){
+      receipt=await ledger.recordCashContribution({tenantId:ctx.tenantId,groupId:input.groupId,membershipId:input.membershipId,amount:input.targetAmount,currency:'XAF',meetingId:input.meetingId,rubricId:input.rubricId,idempotencyKey:input.idempotencyKey,governedCorrectionReason:meeting.status==='closed'?reason:undefined},ctx.requestId);
+      evidenceEntry=await repo.getLedgerEntry(ctx.tenantId,input.groupId,receipt.ledgerEntryId);
+    }
+    if(!evidenceEntry)throw Error('FINANCIAL_CORRECTION_NOT_APPLIED');
+    const afterAll=await ledger.receiptPositions(ctx.tenantId,input.groupId),newSituation=afterAll.filter(x=>x.membershipId===input.membershipId).reduce((n,x)=>n+x.netAmount,0),targetMember=await repo.getMembership(ctx.tenantId,input.groupId,input.membershipId);
+    const notice=await memberControl.create({groupId:input.groupId,membershipId:input.membershipId,entry:evidenceEntry,operationType:'FINANCIAL_CELL_CORRECTION',amount:input.targetAmount,currency:'XAF',rubricId:input.rubricId,meetingId:input.meetingId,previousSituation:beforeSituation,newSituation,previousAmount:state.current,newAmount:input.targetAmount,correctionReason:reason,selfBenefit:targetMember?.userId===ctx.actorId,requiresIndependentReview:false});
+    await notifications.publish(input.groupId,{title:meeting.status==='closed'?'Séance clôturée modifiée':'Donnée financière corrigée',message:`Une valeur financière est passée de ${state.current} à ${input.targetAmount} F CFA. Motif : ${reason}`,channels:['IN_APP','WEB_PUSH'],audience:'MANAGERS',priority:meeting.status==='closed'?'CRITICAL':'HIGH'});
+    await notifications.publish(input.groupId,{title:meeting.status==='closed'?'Votre compte a été corrigé après clôture':'Votre compte a été corrigé',message:`Une donnée de votre séance est passée de ${state.current} à ${input.targetAmount} F CFA. Vous pouvez valider ou émettre une réserve.`,channels:['IN_APP','WEB_PUSH'],audience:'SELECTED',selectedMembershipIds:[input.membershipId],priority:meeting.status==='closed'?'CRITICAL':'HIGH'});
+    if(targetMember)await publishLive(input.groupId,'FINANCIAL_NOTICE','financial-cell-correction:'+evidenceEntry.id,{noticeId:notice.id,ledgerEntryId:evidenceEntry.id,operationType:'FINANCIAL_CELL_CORRECTION',amount:input.targetAmount,currency:'XAF',previousAmount:state.current,newAmount:input.targetAmount,meetingClosed:meeting.status==='closed',alertLevel:meeting.status==='closed'?'closed':'correction'},targetMember.userId);
+    await publishLive(input.groupId,'MEETING_UPDATE','financial-cell-managers:'+evidenceEntry.id,{meetingId:input.meetingId,kind:'FINANCIAL_CELL_CORRECTION',membershipId:input.membershipId,rubricId:input.rubricId,previousAmount:state.current,newAmount:input.targetAmount,meetingClosed:meeting.status==='closed'});
+    return{status:'APPLIED',previousAmount:state.current,newAmount:input.targetAmount,receipt,notice,groupId:group.id};
   };
 
   const visibleWorkspace=async(record:WorkspaceRecord)=>{
