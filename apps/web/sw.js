@@ -1,4 +1,4 @@
-const CACHE = 'eco-system-v142-operational-center-sessions-blueprint-20260920';
+const CACHE = 'eco-system-v143-blueprint-5-0-0-finalized-20260921';
 const APP_SHELL = [
   '/', '/index.html', '/styles.css', '/manifest.webmanifest',
   '/src/field-hardening.js', '/src/voice-entry-bootstrap.js', '/src/voice-entry-ui.js', '/src/expense-recap-ui.js', '/src/member-dossier-ui.js', '/src/documents-ui.js', '/src/contextual-group-ui.js',
@@ -54,7 +54,7 @@ self.addEventListener('fetch', event => {
   if (['script','style'].includes(event.request.destination)) {
     event.respondWith((async () => {
       const cache=await caches.open(CACHE);
-      try { const response=await fetch(event.request); if(response.ok)await cache.put(url.pathname,response.clone()); return response; }
+      try { const response=await fetch(event.request,{cache:'no-store'}); if(response.ok)await cache.put(url.pathname,response.clone()); return response; }
       catch { return await cache.match(event.request,{ignoreSearch:true}) ?? new Response('Offline',{status:503}); }
     })());
     return;
