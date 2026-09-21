@@ -1,0 +1,6 @@
+Eco-System 1.4.3 Blueprint executable 5.0.0 production marker
+version=1.4.3-blueprint-5-0-0-finalized
+qualified_sha=3da4cfcb5814addbf5598647bf48150693723872
+branch=next/1.4.3-blueprint-5-0-0-finalization-20260921
+authorized_by_founder_chat=2026-09-21
+guardrails=full_ci,birplus_pre,reuse_existing_d1_r2,additive_migrations_only,smoke_blueprint_community_pwa,birplus_post,real_money_false
