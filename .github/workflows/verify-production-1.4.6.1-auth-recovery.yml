@@ -1,0 +1,49 @@
+name: Eco-System 1.4.6.1 — Production Recovery Verification
+
+on:
+  pull_request:
+    branches: ['next/1.4.6-ui-sessions-community-blueprint-final-20260921']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify-production:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - name: Verify public production recovery
+        shell: bash
+        env:
+          PROD_ROOT: https://eco-system.sergemimf.workers.dev
+          EXPECTED_VERSION: 1.4.6.1-auth-navigation-recovery
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/eco-verify
+          ready=0
+          for attempt in $(seq 1 12); do
+            if curl --fail-with-body --silent --show-error --location --max-time 20 "$PROD_ROOT/" > /tmp/eco-verify/root.html               && curl --fail-with-body --silent --show-error --location --max-time 20 "$PROD_ROOT/health" > /tmp/eco-verify/health.json               && curl --fail-with-body --silent --show-error --location --max-time 20 "$PROD_ROOT/src/auth-bootstrap.js?v=1461" > /tmp/eco-verify/auth-bootstrap.js; then
+              if grep -Fq 'ECO-SYSTEM · 1.4.6.1' /tmp/eco-verify/root.html                 && grep -Fq 'id="appBackBtn"' /tmp/eco-verify/root.html                 && grep -Fq '/src/auth-bootstrap.js?v=1461' /tmp/eco-verify/root.html                 && grep -Fq "$EXPECTED_VERSION" /tmp/eco-verify/health.json                 && grep -Fq 'recoveryBound' /tmp/eco-verify/auth-bootstrap.js; then
+                ready=1
+                break
+              fi
+            fi
+            echo "Production recovery not visible yet: attempt $attempt/12"
+            sleep 10
+          done
+          test "$ready" = 1
+          curl --fail-with-body --silent --show-error --location --max-time 20 "$PROD_ROOT/api/v1/auth/session" > /tmp/eco-verify/session.json
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          const h=JSON.parse(fs.readFileSync('/tmp/eco-verify/health.json','utf8'));
+          const s=JSON.parse(fs.readFileSync('/tmp/eco-verify/session.json','utf8'));
+          if(h.version!=='1.4.6.1-auth-navigation-recovery')throw new Error('WRONG_VERSION:'+JSON.stringify(h));
+          if(h.realMoneyEnabled!==false)throw new Error('REAL_MONEY_MUST_REMAIN_OFF');
+          if(s.authenticated!==false||s.account!==null)throw new Error('PUBLIC_SESSION_PROBE_FAILED:'+JSON.stringify(s));
+          console.log('Health + public session PASS');
+          NODE
+          code="$(curl --silent --show-error --max-time 30 -o /tmp/eco-verify/login.json -w '%{http_code}' -X POST "$PROD_ROOT/api/v1/auth/login" -H "Origin: $PROD_ROOT" -H 'Content-Type: application/json' --data '{"username":"eco_recovery_probe_nonexistent","password":"ProbePassword_2026_NOT_REAL"}')"
+          test "$code" = "401"
+          grep -Fq '"error":"INVALID_CREDENTIALS"' /tmp/eco-verify/login.json
+          echo "PRODUCTION AUTH/NAVIGATION RECOVERY VERIFIED"
