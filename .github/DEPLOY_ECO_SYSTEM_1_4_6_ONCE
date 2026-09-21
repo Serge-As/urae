@@ -1,0 +1,6 @@
+Eco-System 1.4.6 guarded production delivery
+version=1.4.6-ui-sessions-community-blueprint-final
+branch=next/1.4.6-ui-sessions-community-blueprint-final-20260921
+base_preserved=1.4.5-live-multi-manager-consensus
+authorized_by_founder_chat=2026-09-21
+guardrails=full_ci,birplus_pre,reuse_existing_d1_r2,additive_migrations_only,smoke,birplus_post,real_money_false
