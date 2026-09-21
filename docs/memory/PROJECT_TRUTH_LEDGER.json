@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedOn": "2026-09-20",
+  "generatedOn": "2026-09-21",
   "purpose": "Anti-regression operational truth. Read before asking founder to recreate/configure anything.",
   "allowedStatuses": [
     "ACQUIRED",
@@ -1049,6 +1049,25 @@
       ],
       "note": "Final post-hotfix 1.4.2 truth checkpoint archived source and current production D1 after PWA convergence fix and documentation synchronization.",
       "next": "Founder field-receives Centre opérationnel, dedicated Sessions, Blueprint and community flows. Redeploy only after reproducible defect.",
+      "currentProductLine": true
+    },
+    {
+      "id": "cloudflare.production.1.4.3.blueprint5",
+      "status": "VERIFIED_REMOTE",
+      "scope": "cloudflare-production",
+      "observedOn": "2026-09-21",
+      "evidence": [
+        "github-actions:35560714108 SUCCESS",
+        "source-deployed:96b8f41467af476b12179b786d7d8f140ef86ce7",
+        "worker-version:07939344-ceca-4578-bc3b-3d1d589ad7eb",
+        "health-version:1.4.3-blueprint-5-0-0-finalized",
+        "tests:265/265 PASS",
+        "migrations:No migrations to apply",
+        "artifact-pre:10621409310",
+        "artifact-post:10621833522"
+      ],
+      "note": "Blueprint 5.0.0 delivered with visible 1.4.3 PWA revision, canonical Community/Forum/Partners handoffs, extended community presets and all 1.4.2 acquired behavior preserved.",
+      "next": "Field-receive on founder phone/desktop; permanent-test any reproducible defect before correction.",
       "currentProductLine": true
     }
   ]
