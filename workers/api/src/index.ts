@@ -1742,6 +1742,19 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
         await markApplied();
         return json({accepted:true,stored:true,notice},200,cors);
       }
+      if(item.type==='FINANCIAL_CELL_CORRECTION_PROPOSAL_V1'){
+        const p=item.payload,groupId=String(p.groupId??''),meetingId=String(p.meetingId??''),membershipId=String(p.membershipId??''),rubricId=String(p.rubricId??''),targetAmount=finite(p.targetAmount),reason=String(p.reason??'');
+        await requireGroup(groupId,true);
+        const state=await financialCellState(groupId,meetingId,membershipId,rubricId),managers=await managerUserIds(groupId);
+        if(state.current===targetAmount){await markApplied();return json({accepted:true,stored:true,status:'NO_CHANGE'},200,cors);}
+        if(state.current>0&&managers.length>1){
+          const consensus=await new MeetingLiveConsensusService(repo,kernel).proposeAgainstBaseline({groupId,meetingId,cellKey:membershipId+':'+rubricId,value:targetAmount,baselineValue:state.current,baselineActorId:state.baselineActorId,label:'Proposition reçue hors ligne',membershipId,rubricId});
+          await notifications.publish(groupId,{title:'Correction offline à confronter',message:`Une proposition hors ligne demande ${targetAmount} F CFA au lieu de ${state.current}. La valeur canonique reste inchangée avant décision du Bureau.`,channels:['IN_APP','WEB_PUSH'],audience:'MANAGERS',priority:'HIGH'});
+          await markApplied();return json({accepted:true,stored:true,status:'CONSENSUS_REQUIRED',consensus},200,cors);
+        }
+        const result=await applyFinancialCellTarget({groupId,meetingId,membershipId,rubricId,targetAmount,reason:reason||'Correction saisie hors ligne puis synchronisée',idempotencyKey:'offline-cell:'+item.idempotencyKey});
+        await markApplied();return json({accepted:true,stored:true,...result},200,cors);
+      }
 
       throw new Error('OUTBOX_TYPE_UNSUPPORTED');
     }
