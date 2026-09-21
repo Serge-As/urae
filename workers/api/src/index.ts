@@ -197,7 +197,7 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
         if(action==='vote'){
           const item=await consensus.vote(groupId,meetingId,cellKey,String(body.proposalActorId??''));
           await publishLive(groupId,item.state==='MAJORITY_SELECTED'||item.state==='UNANIMOUS'?'CONSENSUS_SELECTED':'CONSENSUS_REQUIRED','consensus-vote:'+item.id+':'+item.version,{meetingId,cellKey,state:item.state,version:item.version,selectedValue:item.selectedValue??''});
-          if(item.membershipId)await publishLive(groupId,'MEMBER_PROJECTION_UPDATED','member-projection:'+item.id+':'+item.version,{meetingId,cellKey,state:item.state,selectedValue:item.selectedValue??''},item.membershipId);
+          if(item.membershipId){const target=await repo.getMembership(ctx.tenantId,groupId,item.membershipId);if(target)await publishLive(groupId,'MEMBER_PROJECTION_UPDATED','member-projection:'+item.id+':'+item.version,{meetingId,cellKey,state:item.state,selectedValue:item.selectedValue??''},target.userId);}
           return json(item,200,cors);
         }
         const item=await consensus.maintainDissent(groupId,meetingId,cellKey,String(body.reason??''));
