@@ -209,6 +209,42 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
     return{status:'APPLIED',previousAmount:state.current,newAmount:input.targetAmount,receipt,notice,groupId:group.id};
   };
 
+  const trashEntity=async(groupId:string,kind:string,entityId:string)=>{
+    await requireGroup(groupId,true);const now=new Date(),restoreUntil=new Date(now);restoreUntil.setUTCMonth(restoreUntil.getUTCMonth()+6);
+    let snapshot:unknown,label=entityId;
+    if(kind==='MEETING'){
+      const entity=await repo.getMeeting(ctx.tenantId,groupId,entityId);if(!entity)throw Error('MEETING_NOT_FOUND');snapshot=entity;label=entity.title;
+      await repo.saveMeeting({...entity,status:'cancelled'});
+    }else if(kind==='MEMBER'){
+      const entity=await repo.getMembership(ctx.tenantId,groupId,entityId);if(!entity)throw Error('MEMBERSHIP_NOT_FOUND');snapshot=entity;
+      const user=await repo.getUser(entity.userId);label=user?.displayName??entity.userId;await repo.saveMembership({...entity,status:'left'});
+    }else if(kind==='RUBRIC'){
+      const entity=await repo.getRubricDefinition(ctx.tenantId,groupId,entityId);if(!entity)throw Error('RUBRIC_NOT_FOUND');snapshot=entity;label=entity.name;
+      await repo.saveRubricDefinition({...entity,status:'ARCHIVED',updatedAt:now.toISOString(),version:entity.version+1});
+    }else throw Error('TRASH_KIND_UNSUPPORTED');
+    const id='trash_'+encodeURIComponent(JSON.stringify([groupId,kind,entityId])),existing=await repo.getWorkspaceRecord(ctx.tenantId,id);
+    const record:WorkspaceRecord={id,tenantId:ctx.tenantId,groupId,moduleId:'TRASH.ITEM',title:label,summary:'Restaurable pendant six mois',status:'ACTIVE',tags:['trash',kind.toLowerCase()],data:{kind,entityId,deletedAt:now.toISOString(),restoreUntil:restoreUntil.toISOString(),snapshotJson:JSON.stringify(snapshot),deletedBy:ctx.actorId},createdBy:existing?.createdBy??ctx.actorId,createdAt:existing?.createdAt??now.toISOString(),updatedAt:now.toISOString()};
+    await repo.saveWorkspaceRecord(record);await repo.saveAudit(kernel.audit.append({tenantId:ctx.tenantId,actorId:ctx.actorId,action:'ENTITY_MOVED_TO_TRASH',targetType:kind.toLowerCase(),targetId:entityId,requestId:ctx.requestId,metadata:{trashId:id,restoreUntil:restoreUntil.toISOString()}}));
+    return record;
+  };
+  const listTrash=async(groupId:string)=>{
+    await requireGroup(groupId,true);const now=Date.now(),items=await repo.listWorkspaceRecords(ctx.tenantId,'TRASH.ITEM',groupId);
+    const result=[] as WorkspaceRecord[];
+    for(const item of items){const expired=Date.parse(String(item.data.restoreUntil??''))<now;if(expired&&item.status==='ACTIVE'){const updated={...item,status:'ARCHIVED' as WorkspaceStatus,data:{...item.data,expired:true},updatedAt:new Date().toISOString()};await repo.saveWorkspaceRecord(updated);result.push(updated);}else result.push(item);}
+    return result.sort((a,b)=>String(b.data.deletedAt??b.createdAt).localeCompare(String(a.data.deletedAt??a.createdAt)));
+  };
+  const restoreTrash=async(groupId:string,trashId:string)=>{
+    await requireGroup(groupId,true);const record=await repo.getWorkspaceRecord(ctx.tenantId,trashId);if(!record||record.groupId!==groupId||record.moduleId!=='TRASH.ITEM')throw Error('TRASH_ITEM_NOT_FOUND');
+    if(record.status!=='ACTIVE'||Date.parse(String(record.data.restoreUntil??''))<Date.now())throw Error('TRASH_RETENTION_EXPIRED');
+    const snapshot=JSON.parse(String(record.data.snapshotJson??'{}')),kind=String(record.data.kind??'');
+    if(kind==='MEETING')await repo.saveMeeting(snapshot);
+    else if(kind==='MEMBER')await repo.saveMembership(snapshot);
+    else if(kind==='RUBRIC')await repo.saveRubricDefinition(snapshot);
+    else throw Error('TRASH_KIND_UNSUPPORTED');
+    const restored={...record,status:'DONE' as WorkspaceStatus,data:{...record.data,restoredAt:new Date().toISOString(),restoredBy:ctx.actorId},updatedAt:new Date().toISOString()};await repo.saveWorkspaceRecord(restored);
+    await repo.saveAudit(kernel.audit.append({tenantId:ctx.tenantId,actorId:ctx.actorId,action:'ENTITY_RESTORED_FROM_TRASH',targetType:kind.toLowerCase(),targetId:String(record.data.entityId??''),requestId:ctx.requestId,metadata:{trashId}}));
+    return restored;
+  };
   const visibleWorkspace=async(record:WorkspaceRecord)=>{
     if(!record.groupId)return record.createdBy===ctx.actorId;
     try{await requireGroup(record.groupId,true);return true;}catch{return false;}
@@ -216,6 +252,11 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
   try {
     const scopedGroup=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)/)?.[1];
     if(scopedGroup)await requireGroup(scopedGroup);
+    const trashRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/trash$/);
+    const trashRestore=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/trash\/([^/]+)\/restore$/);
+    if(trashRoute&&request.method==='GET')return json(await listTrash(trashRoute[1]!),200,cors);
+    if(trashRoute&&request.method==='POST'){const body=await readJson<Record<string,unknown>>(request);return json(await trashEntity(trashRoute[1]!,String(body.kind??''),String(body.entityId??'')),201,cors);}
+    if(trashRestore&&request.method==='POST')return json(await restoreTrash(trashRestore[1]!,decodeURIComponent(trashRestore[2]!)),200,cors);
     const financialCellBase=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/meetings\/([^/]+)\/financial-cells$/);
     const financialCellApply=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/meetings\/([^/]+)\/financial-cells\/([^/]+)\/apply$/);
     if(financialCellBase&&request.method==='POST'){
