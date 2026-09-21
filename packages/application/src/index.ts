@@ -279,7 +279,7 @@ export class ConnectedApplication {
     await this.queueLocal('GROUP_PROJECT_UPSERT_V1',{projectId,input:structuredClone(input)},projectId);return{projectId,result:localResult};
   }
   async createGroupFromProject(projectId:string):Promise<Group>{
-    if(!this.isOffline()){const group=await this.request<Group>(`/api/v1/group-projects/${encodeURIComponent(projectId)}/convert`,{method:'POST',headers:{'x-active-group-id':''},body:'{}'});this.selectGroup(group.id);return group;}
+    if(!this.isOffline())try{const group=await this.request<Group>(`/api/v1/group-projects/${encodeURIComponent(projectId)}/convert`,{method:'POST',headers:{'x-active-group-id':''},body:'{}'});this.selectGroup(group.id);return group;}catch(error){if(!(error instanceof Error)||error.message!=='NETWORK_UNAVAILABLE')throw error;}
     const project=await this.cached<any>(`/api/v1/offline/projects/${projectId}`);if(!project)throw Error('PROJECT_NOT_FOUND');
     const origin=project.launchProfile?.origin??{mode:'NEW'},groupId=origin.mode==='TRANSFORM_REGISTERED'&&origin.sourceGroupId?String(origin.sourceGroupId):`group_from_${projectId}`,stamp=new Date().toISOString();
     const existingGroups=await this.cached<Group[]>('/api/v1/groups')??[],previous=existingGroups.find(g=>g.id===groupId);
