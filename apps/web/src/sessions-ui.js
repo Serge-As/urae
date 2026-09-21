@@ -112,7 +112,17 @@ export function mountSessionsUI({app,getGroups,getMembers,getMeetings,getRubrics
       const sheet=await app.memberOperationalSheet(me.membership.id).catch(()=>null),r=sheet?.exerciseMatrix?.find(x=>x.meetingId===meeting.id);
       const own=el('div',undefined,'truth-notice');own.textContent=t('Votre situation pour cette séance : ','Your position for this session: ')+(r?money(r.total):t('aucun mouvement connu','no known movement'));section.append(own);
     }
-    if(me.isManager){const live=await renderLiveConsensus(c);if(live)section.append(live);}section.append(actions());return section;
+    if(me.isManager){
+      const finish=card(t('Fin de séance · rapprocher puis diffuser','End of session · reconcile then distribute'),'panel session-finish-panel');
+      finish.append(el('p',t('Étape 1 : les gestionnaires confrontent uniquement les différences. Étape 2 : après accord, la diffusion aux membres est une action séparée pour éviter une erreur.','Step 1: managers compare differences only. Step 2: after agreement, member distribution is a separate action to prevent mistakes.'),'hint'));
+      const finishActions=el('div',undefined,'actions');
+      const reconcile=button(t('1 · Confronter les données entre gestionnaires','1 · Reconcile manager data'),'primary');
+      reconcile.onclick=()=>window.dispatchEvent(new CustomEvent('eco:relay-reconcile-meeting',{detail:{meetingId:meeting.id,groupId:app.activeGroup()}}));
+      const distribute=button(t('2 · Diffuser aux membres','2 · Distribute to members'),'secondary');
+      distribute.onclick=()=>window.dispatchEvent(new CustomEvent('eco:relay-distribute-members',{detail:{meetingId:meeting.id,groupId:app.activeGroup()}}));
+      finishActions.append(reconcile,distribute);finish.append(finishActions);
+      const live=await renderLiveConsensus(c);if(live)finish.append(live);section.append(finish);
+    }section.append(actions());return section;
   };
 
   const renderSheet=async(c)=>{
