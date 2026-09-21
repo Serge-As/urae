@@ -147,6 +147,20 @@ export function mountSessionsUI({app,getGroups,getMembers,getMeetings,getRubrics
     const edit=button(t('Saisir / corriger dans la feuille canonique','Enter / correct in canonical sheet'),'primary');edit.onclick=()=>{navigate('operations');setTimeout(()=>byId('twoSheetWorkspace')?.scrollIntoView({behavior:'smooth',block:'start'}),80);};section.append(edit);return section;
   };
 
+  const renderCumulative=async(c)=>{
+    const {group,me,members,rubrics,meetings}=c,section=card(t('Feuille de saisie récapitulative · exercice / cycle','Cumulative entry sheet · exercise / cycle'));
+    section.append(el('p',t('Cette feuille reprend les données déjà enregistrées des séances précédentes. Elle ne crée pas une seconde comptabilité : elle projette le Ledger canonique et sert de point d’entrée vers la saisie/correction autorisée.','This sheet carries forward data already recorded in previous sessions. It does not create a second accounting system: it projects the canonical Ledger and is an entry point to authorized entry/correction.'),'hint'));
+    const ident=el('div',undefined,'metrics small');
+    for(const [l,v] of [[t('Nom du groupe','Group name'),group?.name??'—'],[t('Code plateforme','Platform code'),group?.code??group?.id??'—'],[t('Date du jour / heure','Current date / time'),date(new Date().toISOString())],[t('Nombre de membres','Members'),members.filter(x=>x.status!=='left').length],[t('Exercice / cycle','Exercise / cycle'),group?.currentExerciseLabel??group?.launchProfileSnapshot?.cycle?.label??t('À compléter','To complete')]]){const m=el('div',undefined,'metric');m.append(el('span',l),el('strong',v));ident.append(m);}section.append(ident);
+    if(!me.isManager){section.append(el('div',t('La feuille générale récapitulative est réservée aux responsables. Votre fiche individuelle reste disponible.','The cumulative group sheet is restricted to managers. Your individual sheet remains available.'),'empty-state'));return section;}
+    const ledger=await app.ledger().catch(()=>({receipts:[]})),receipts=ledger.receipts??[],activeRubrics=rubrics.filter(x=>x.status!=='ARCHIVED'),activeMembers=members.filter(x=>x.status!=='left');
+    if(!activeMembers.length||!activeRubrics.length){section.append(el('div',t('Ajoutez au moins un membre et une rubrique pour générer la feuille.','Add at least one member and one rubric to generate the sheet.'),'empty-state'));return section;}
+    const wrap=el('div',undefined,'matrix-wrap'),table=el('table',undefined,'meeting-matrix sessions-read-table'),head=el('thead'),hr=el('tr');hr.append(el('th',t('Membre','Member')));for(const r of activeRubrics)hr.append(el('th',r.name));hr.append(el('th',t('Total exercice','Exercise total')));head.append(hr);table.append(head);const body=el('tbody');
+    for(const m of activeMembers){const tr=el('tr'),name=el('th',m.displayName);tr.append(name);let total=0;for(const r of activeRubrics){const amount=receipts.filter(x=>x.membershipId===m.id&&x.rubricId===r.id).reduce((n,x)=>n+Number(x.netAmount??0),0);total+=amount;const td=el('td');const b=button(money(amount),'matrix-cell');b.title=t('Ouvrir la saisie canonique pour ce membre et cette rubrique','Open canonical entry for this member and rubric');b.onclick=()=>{navigate('operations');setTimeout(()=>byId('twoSheetWorkspace')?.scrollIntoView({behavior:'smooth',block:'start'}),80);};td.append(b);tr.append(td);}tr.append(el('td',money(total)));body.append(tr);}table.append(body);wrap.append(table);section.append(wrap);
+    const sessions=el('div',undefined,'stack');sessions.append(el('h3',t('Séances déjà intégrées','Sessions already included')));for(const m of meetings.slice().sort((a,b)=>String(meetingAt(a)).localeCompare(String(meetingAt(b))))){const n=receipts.filter(x=>x.meetingId===m.id).reduce((s,x)=>s+Number(x.netAmount??0),0);sessions.append(row(meetingLabel(m),money(n)));}section.append(sessions);
+    const actionsBox=el('div',undefined,'actions'),individual=button(t('Fiches individuelles','Individual sheets')),rubric=button(t('Autres · configuration des rubriques','Other · rubric configuration'));individual.onclick=()=>{navigate('operations');setTimeout(()=>byId('individualSheetsViewBtn')?.click(),80);};rubric.onclick=()=>{navigate('operations');setTimeout(()=>byId('rubricList')?.scrollIntoView({behavior:'smooth',block:'start'}),80);};actionsBox.append(individual,rubric);section.append(actionsBox);return section;
+  };
+
   const renderAttendance=async(c)=>{
     const {meeting,me,members}=c,section=card(t('Présences','Attendance'));if(!meeting){section.append(el('div',t('Aucune séance.','No session.'),'empty-state'));return section;}
     const rows=await app.meetingAttendance(meeting.id).catch(()=>[]),byMember=new Map(rows.map(x=>[String(x.data?.membershipId??''),x]));
@@ -215,7 +229,7 @@ export function mountSessionsUI({app,getGroups,getMembers,getMeetings,getRubrics
 
   const renderTab=async()=>{
     if(!root)return;root.replaceChildren();const c=await context();if(!c.group){root.append(el('div',t('Sélectionnez un groupe.','Select a group.'),'empty-state'));return;}
-    const fn={overview:renderOverview,sheet:renderSheet,attendance:renderAttendance,beneficiaries:renderBeneficiaries,recap:renderRecap,debts:renderDebts,schedule:renderSchedule,history:renderHistory}[activeTab]??renderOverview;
+    const fn={overview:renderOverview,sheet:renderSheet,cumulative:renderCumulative,attendance:renderAttendance,beneficiaries:renderBeneficiaries,recap:renderRecap,debts:renderDebts,schedule:renderSchedule,history:renderHistory}[activeTab]??renderOverview;
     try{root.append(await fn(c));}catch(e){showError(e);root.append(el('div',t('Cette section n’a pas pu être chargée. Les autres modules restent disponibles.','This section could not be loaded. Other modules remain available.'),'empty-state'));}
   };
 
