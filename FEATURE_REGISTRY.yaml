@@ -1372,3 +1372,46 @@ release_capabilities_1_4_4_evidence_foundation:
     production_mutation: false
     field_reception: not_applicable_for_ci_guardrail
 
+
+
+release_capabilities_1_4_6:
+  branch: next/1.4.6-ui-sessions-community-blueprint-final-20260921
+  production_deployed: false
+  production_current_before_delivery: 1.4.3-blueprint-5-0-0-finalized
+  real_money_enabled: false
+  source_basis:
+    - ECO_SYSTEM_Blueprint_Executable_5.0.0_FINAL_2026-09-21
+    - founder_mobile_feedback_sessions_navigation
+    - qualified_1.4.4_evidence_opportunity
+    - qualified_1.4.5_live_multi_manager_consensus
+  capabilities:
+    - id: UX.OPERATIONAL_CENTER.FINAL_SEPARATION
+      status: FUNCTIONAL_BETA
+      authority: responsive_shell_plus_existing_operational_center
+      rule: historical_cockpit_preserved_and_session_work_explained_as_compatibility
+      tests: [ui-sessions-community-blueprint-1.4.6,operational-center-sessions-blueprint-1.4.2]
+    - id: UX.SESSIONS.DEDICATED_FINAL
+      status: FUNCTIONAL_BETA
+      authority: MeetingService_plus_canonical_projections
+      rule: eight_tabs_with_full_desktop_and_short_mobile_labels
+      tests: [ui-sessions-community-blueprint-1.4.6,meeting-session-evidence-1.4.1,meeting-live-consensus-1.4.5]
+    - id: UX.MOBILE.NAVIGATION.READABLE_1_4_6
+      status: FUNCTIONAL_BETA
+      authority: responsive_shell
+      rule: every_primary_destination_has_short_phone_label_and_horizontal_scroll
+      tests: [ui-sessions-community-blueprint-1.4.6]
+    - id: BLUEPRINT.COMMUNITY_VALUE.LANDING
+      status: FUNCTIONAL_BETA
+      authority: blueprint_orchestration_plus_existing_canonical_owners
+      rule: Community_and_Value_landing_links_Blueprint_Forums_Interest_Market_Partners_Trust
+      tests: [ui-sessions-community-blueprint-1.4.6,operational-center-sessions-blueprint-1.4.2]
+    - id: BLUEPRINT.COMMUNITY.ACTION_PRESETS_FINAL
+      status: FUNCTIONAL_BETA
+      authority: COMMUNITY.FORUM_and_COMMUNITY.PRO_HUBS
+      rule: presets_structure_action_but_never_create_parallel_social_engine
+      tests: [ui-sessions-community-blueprint-1.4.6,opportunity-intent-1.4.4]
+    - id: RELEASE.SUCCESSOR_PRESERVATION_1_4_6
+      status: QUALIFIED_BRANCH_GUARDRAIL
+      authority: git_ancestry_plus_regression_suite
+      rule: 1_4_6_preserves_1_4_4_evidence_opportunity_and_1_4_5_live_consensus
+      tests: [evidence-registry-1.4.4,opportunity-intent-1.4.4,meeting-live-consensus-1.4.5,ui-sessions-community-blueprint-1.4.6]
