@@ -1,4 +1,4 @@
-const CACHE = 'eco-system-v143-blueprint-5-0-0-finalized-20260921';
+const CACHE = 'eco-system-v145-true-offline-20260921';
 const APP_SHELL = [
   '/', '/index.html', '/styles.css', '/manifest.webmanifest',
   '/src/field-hardening.js', '/src/voice-entry-bootstrap.js', '/src/voice-entry-ui.js', '/src/expense-recap-ui.js', '/src/member-dossier-ui.js', '/src/documents-ui.js', '/src/contextual-group-ui.js',
