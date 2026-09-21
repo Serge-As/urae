@@ -1,9 +1,9 @@
 {
   "name": "tontine-platform",
-  "version": "1.4.6-ui-sessions-community-blueprint-final",
+  "version": "1.4.6.1-auth-navigation-recovery",
   "private": true,
   "type": "module",
-  "description": "Eco-System 1.4.6: 1.4.5 preserved; Centre opérationnel and dedicated Sessions made unmistakable, mobile navigation readable, Blueprint executable 5.0.0 and communities/forums/value network harmonized, evidence/opportunity/live consensus retained.",
+  "description": "Eco-System 1.4.6.1: auth/navigation recovery over 1.4.6; 1.4.5 preserved; Centre opérationnel and dedicated Sessions made unmistakable, mobile navigation readable, Blueprint executable 5.0.0 and communities/forums/value network harmonized, evidence/opportunity/live consensus retained.",
   "engines": {
     "node": ">=24"
   },
