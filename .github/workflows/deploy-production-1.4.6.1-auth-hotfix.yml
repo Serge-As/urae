@@ -153,60 +153,22 @@ jobs:
           npx --yes wrangler@4 deploy --config workers/api/wrangler.prod146.toml
           touch /tmp/eco-system-1461-deployed
 
-      - name: Smoke production shell and critical canaries
+      - name: Real production shell + register-login-session smoke
         shell: bash
+        env:
+          AUTH_SMOKE_STATE_FILE: /tmp/eco-auth-production-smoke.json
         run: |
           set -euo pipefail
-          mkdir -p /tmp/smoke
-          curl --fail-with-body -sS -L --max-time 20 "${PROD_ROOT}/" > /tmp/smoke/root.html
-          curl --fail-with-body -sS -L --max-time 20 "${PROD_ROOT}/health" > /tmp/smoke/health.json
-          curl --fail-with-body -sS -L --max-time 20 "${PROD_ROOT}/src/auth-bootstrap.js" > /tmp/smoke/auth-bootstrap.js
-          curl --fail-with-body -sS -L --max-time 20 "${PROD_ROOT}/src/main.js" > /tmp/smoke/main.js
-          curl --fail-with-body -sS -L --max-time 20 "${PROD_ROOT}/src/sessions-ui.js" > /tmp/smoke/sessions.js
-          curl --fail-with-body -sS -L --max-time 20 "${PROD_ROOT}/sw.js" > /tmp/smoke/sw.js
-          grep -Fq 'ECO-SYSTEM · 1.4.6.1' /tmp/smoke/root.html
-          grep -Fq 'id="authForm"' /tmp/smoke/root.html
-          grep -Fq '/src/auth-bootstrap.js?v=1461' /tmp/smoke/root.html
-          grep -Fq '/src/main.js?v=1461' /tmp/smoke/root.html
-          for view in operations sessions members finance backoffice tontines ecosystem; do grep -Fq "data-view=\"${view}\"" /tmp/smoke/root.html; done
-          grep -Fq 'recoveryBound' /tmp/smoke/auth-bootstrap.js
-          grep -Fq 'Connexion en cours' /tmp/smoke/auth-bootstrap.js
-          grep -Fq 'Fiches individuelles' /tmp/smoke/sessions.js
-          grep -Fq 'MeetingService' /tmp/smoke/sessions.js
-          grep -Fq 'Réunion du' /tmp/smoke/main.js
-          grep -Fq 'auth-recovery-1461' /tmp/smoke/sw.js
-          EXPECTED_VERSION="${EXPECTED_VERSION}" node --input-type=module <<'NODE'
-          import fs from 'node:fs';
-          const h=JSON.parse(fs.readFileSync('/tmp/smoke/health.json','utf8'));
-          const checks={ok:h.ok===true,version:h.version===process.env.EXPECTED_VERSION,realMoneyDisabled:h.realMoneyEnabled===false,premiumLive:h.premiumLiveEnabled===true,founderControl:h.founderControlBound===true,communityRealtime:h.communityRealtimeBound===true,r2:h.artifactStorageMode==='R2'};
-          const failed=Object.entries(checks).filter(([,v])=>!v).map(([k])=>k);
-          if(failed.length)throw new Error('PRODUCTION_HEALTH_SMOKE_FAILED:'+failed.join(',')+' '+JSON.stringify(h));
-          NODE
-          echo 'Production shell + health + critical navigation canaries PASS'
-      - name: Real production authentication smoke
-        shell: bash
-        run: |
-          set -euo pipefail
-          curl --fail-with-body -sS -L --max-time 20 "${PROD_ROOT}/src/auth-bootstrap.js" > /tmp/smoke/auth-bootstrap.js
-          grep -Fq 'recoveryBound' /tmp/smoke/auth-bootstrap.js
-          grep -Fq '/src/auth-bootstrap.js?v=1461' /tmp/smoke/root.html
-          grep -Fq 'ECO-SYSTEM · 1.4.6.1' /tmp/smoke/root.html
-          SMOKE_USER="eco_smoke_${GITHUB_RUN_ID}_${GITHUB_RUN_ATTEMPT}"
-          SMOKE_PASSWORD="$(openssl rand -hex 20)"
-          COOKIE=/tmp/smoke/auth-cookie.txt
-          REGISTER_PAYLOAD="$(node -e "process.stdout.write(JSON.stringify({username:process.argv[1],password:process.argv[2],displayName:'Eco Smoke',locale:'fr'}))" "${SMOKE_USER}" "${SMOKE_PASSWORD}")"
-          curl --fail-with-body -sS -c "${COOKIE}" -b "${COOKIE}" -H "Origin: ${PROD_ROOT}" -H 'Content-Type: application/json' --data "${REGISTER_PAYLOAD}" "${PROD_ROOT}/api/v1/auth/register" > /tmp/smoke/auth-register.json
-          curl --fail-with-body -sS -c "${COOKIE}" -b "${COOKIE}" "${PROD_ROOT}/api/v1/auth/session" > /tmp/smoke/auth-session-register.json
-          SMOKE_ACCOUNT_ID="$(node -e "const j=JSON.parse(require('fs').readFileSync('/tmp/smoke/auth-session-register.json','utf8'));if(!j.authenticated||!j.account?.id)process.exit(2);process.stdout.write(j.account.id)")"
-          curl --fail-with-body -sS -c "${COOKIE}" -b "${COOKIE}" -H "Origin: ${PROD_ROOT}" -H 'Content-Type: application/json' --data '{}' "${PROD_ROOT}/api/v1/auth/logout" > /tmp/smoke/auth-logout1.json
-          rm -f "${COOKIE}"
-          LOGIN_PAYLOAD="$(node -e "process.stdout.write(JSON.stringify({username:process.argv[1],password:process.argv[2]}))" "${SMOKE_USER}" "${SMOKE_PASSWORD}")"
-          curl --fail-with-body -sS -c "${COOKIE}" -b "${COOKIE}" -H "Origin: ${PROD_ROOT}" -H 'Content-Type: application/json' --data "${LOGIN_PAYLOAD}" "${PROD_ROOT}/api/v1/auth/login" > /tmp/smoke/auth-login.json
-          curl --fail-with-body -sS -c "${COOKIE}" -b "${COOKIE}" "${PROD_ROOT}/api/v1/auth/session" > /tmp/smoke/auth-session-login.json
-          node -e "const j=JSON.parse(require('fs').readFileSync('/tmp/smoke/auth-session-login.json','utf8'));if(!j.authenticated||j.account?.username!==process.argv[1])process.exit(3)" "${SMOKE_USER}"
-          curl --fail-with-body -sS -c "${COOKIE}" -b "${COOKIE}" -H "Origin: ${PROD_ROOT}" -H 'Content-Type: application/json' --data '{}' "${PROD_ROOT}/api/v1/auth/logout" > /tmp/smoke/auth-logout2.json
-          npx --yes wrangler@4 d1 execute "${PROD_DB}" --remote --command "DELETE FROM platform_records WHERE record_type='user' AND record_id='${SMOKE_ACCOUNT_ID}'; DELETE FROM auth_sessions WHERE account_id='${SMOKE_ACCOUNT_ID}'; DELETE FROM auth_accounts WHERE id='${SMOKE_ACCOUNT_ID}';" >/tmp/smoke/auth-cleanup.txt
-          echo 'Production register → logout → login → session → logout PASS'
+          cleanup() {
+            if [ -f "${AUTH_SMOKE_STATE_FILE}" ]; then
+              ACCOUNT_ID="$(node -e "const j=require(process.env.AUTH_SMOKE_STATE_FILE);process.stdout.write(j.accountId||'')" || true)"
+              if [ -n "${ACCOUNT_ID}" ]; then
+                npx --yes wrangler@4 d1 execute "${PROD_DB}" --remote --command "DELETE FROM auth_sessions WHERE account_id='${ACCOUNT_ID}'; DELETE FROM auth_accounts WHERE id='${ACCOUNT_ID}';" >/tmp/auth-production-cleanup.txt 2>&1 || true
+              fi
+            fi
+          }
+          trap cleanup EXIT
+          EXPECTED_VERSION="${EXPECTED_VERSION}" node scripts/auth-smoke.mjs "${PROD_ROOT}"
 
       - name: Automatic Worker rollback if post-deploy smoke fails
         if: failure()
