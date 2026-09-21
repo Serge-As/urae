@@ -1,0 +1,23 @@
+name: Qualify 1.4.6 Sessions Community Blueprint Final
+on:
+  push:
+    branches:
+      - next/1.4.6-ui-sessions-community-blueprint-final-20260921
+  pull_request:
+    branches:
+      - next/1.4.5-live-multi-manager-consensus-20260921
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  qualify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci
+      - run: npm run ci
