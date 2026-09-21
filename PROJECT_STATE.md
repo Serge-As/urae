@@ -197,3 +197,35 @@ La recette terrain reste nécessaire : la première ouverture/actualisation du n
 - R2 : `birplus/1.4.2/d686929b44bf9f5f61ddee2ddee434e891c39afb/final/`
 - D1 restore/integrity + SHA256 : **PASS**
 - code production inchangé depuis `a9fe00f94daa7a6787d5a4440a5edc0bc5e4a1c8` ; seuls les documents de vérité/fermeture ont évolué après le déploiement.
+
+## Production 1.4.3 — Blueprint exécutable 5.0.0 (2026-09-21)
+
+Production vérifiée :
+- version : `1.4.3-blueprint-5-0-0-finalized`
+- branche : `next/1.4.3-blueprint-5-0-0-finalization-20260921`
+- source déployée : `96b8f41467af476b12179b786d7d8f140ef86ce7`
+- Worker Version ID : `07939344-ceca-4578-bc3b-3d1d589ad7eb`
+- deploy + qualification interne + smoke + BIR+ pré/post : `35560714108 SUCCESS`
+- tests : **265/265 PASS**
+- D1 : `eco-system-db` réutilisée ; **No migrations to apply**
+- R2 : `eco-system-backups` réutilisé ; BIR+ pré/post miroirs PASS
+- artifact pré : `10621409310`
+- artifact post : `10621833522`
+- health : version 1.4.3, argent réel OFF, Premium Live / Founder Control / Community Realtime / R2 validés.
+
+Apports visibles :
+1. Centre opérationnel et vrai menu Séances restent séparés.
+2. PWA 1.4.3 force scripts/styles en network-first `cache:no-store`, fallback cache seulement hors connexion.
+3. Blueprint exécutable **5.0.0** visible et structuré en six couches.
+4. Couche Communautés/Forums/Accompagnement ajoutée sans second moteur social.
+5. Hubs : Business & fournisseurs, Formation & transmission, ONG/partenaires/impact, Créateurs & vitrines.
+6. Publications contextuelles : Activité/vitrine, Partenaire/programme, Création/contenu utile.
+7. Handoffs vers Community, Marketplace Group Buy et Partners existants au lieu de doublons.
+8. Backhaul/Eco Route reste explicitement hors de ce repo.
+9. `realMoneyEnabled=false` inchangé.
+
+Document maître :
+`docs/implementation/ECO_SYSTEM_Blueprint_Executable_5.0.0_Implementation_2026-09-21.md`.
+
+La prochaine étape normale est la recette terrain sur téléphone/ordinateur ; tout défaut reproductible doit devenir un test permanent avant correction.
+
