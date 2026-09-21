@@ -123,7 +123,7 @@ const communityShopUI = mountCommunityShopUI({ app, notify: toast, showError: fa
 const miscRubricUI = mountMiscRubricUI({ app, notify: toast, showError: fail, getMembers: () => members, getMeetings: () => meetings, isManager, fmt });
 const pairingUI = mountPairingUI({ app, notify: toast, showError: fail, getMembers: () => members, isManager, afterMembershipChanged: async groupId => { await renderGroups(); if(groupId){ app.selectGroup(groupId); await refreshGroupContext(); } } });
 const clearFail = () => { $('#errorBox').hidden = true; $('#errorBox').textContent = ''; };
-const navStack=[];
+let navDepth=Number(history.state?.ecoDepth??0);
 const activeViewName=()=>document.querySelector('.view.active')?.id?.replace(/^view-/,'')||'dashboard';
 const captureNavState=()=>{
     const view=activeViewName(),active=document.querySelector(`#view-${view}`);
@@ -140,7 +140,7 @@ const restoreNavState=state=>{
     for(const id of state.openDetails??[]){const node=document.getElementById(id);if(node?.tagName==='DETAILS')node.open=true;}
     requestAnimationFrame(()=>{window.scrollTo({top:Number(state.scrollY)||0,behavior:'auto'});if(state.focusId)document.getElementById(state.focusId)?.focus?.({preventScroll:true});});
 };
-const updateBackButton=()=>{const b=document.querySelector('#appBackBtn');if(b)b.hidden=navStack.length===0&&history.length<=1;};
+const updateBackButton=()=>{const b=document.querySelector('#appBackBtn');if(b)b.hidden=navDepth<=0;};
 const showView=(name,state)=>{
     const target=document.querySelector(`#view-${name}`);if(!target)return false;
     document.querySelectorAll('.view').forEach(x=>x.classList.remove('active'));
@@ -156,25 +156,27 @@ const showView=(name,state)=>{
 const go=(name,options={})=>{
     const current=captureNavState();
     if(name===current.view&&!options.force)return;
-    if(options.remember!==false)navStack.push(current);
+    try{history.replaceState({ecoNav:current,ecoDepth:navDepth},'',`#${current.view}`);}catch{}
+    navDepth+=1;
     const next={view:name,scrollY:Number(options.scrollY)||0};
-    showView(name,next);
-    try{history.pushState({ecoNav:next},'',`#${name}`);}catch{}
+    try{history.pushState({ecoNav:next,ecoDepth:navDepth},'',`#${name}`);}catch{}
+    showView(name,next);updateBackButton();
 };
-const goBack=()=>{
-    if(navStack.length){const previous=navStack.pop();showView(previous.view,previous);try{history.replaceState({ecoNav:previous},'',`#${previous.view}`);}catch{}updateBackButton();return;}
-    if(history.length>1)history.back();
-};
+const goBack=()=>{if(navDepth>0)history.back();};
 document.querySelectorAll('[data-view]').forEach(b=>b.addEventListener('click',()=>go(b.dataset.view)));
 document.querySelectorAll('[data-go]').forEach(b=>b.addEventListener('click',()=>go(b.dataset.go)));
 document.querySelector('#appBackBtn')?.addEventListener('click',goBack);
 window.addEventListener('popstate',event=>{
-    const remembered=navStack.pop(),state=event.state?.ecoNav??remembered;
-    const hash=location.hash.slice(1);
+    const state=event.state?.ecoNav,hash=location.hash.slice(1);
+    navDepth=Math.max(0,Number(event.state?.ecoDepth??Math.max(0,navDepth-1)));
     if(state?.view)showView(state.view,state);else if(hash)showView(hash,{view:hash,scrollY:0});
     updateBackButton();
 });
-try{if(!history.state?.ecoNav)history.replaceState({ecoNav:captureNavState()},'',location.href);}catch{}
+try{
+    const initial=captureNavState();
+    if(!history.state?.ecoNav)history.replaceState({ecoNav:initial,ecoDepth:0},'',location.href);
+    navDepth=Math.max(0,Number(history.state?.ecoDepth??0));
+}catch{}
 updateBackButton();
 const detailUI = mountDetailUI({ app, navigate: go, getGroups: () => groups, getMembers: () => members, getMeetings: () => meetings, getRubrics: () => rubrics, isManager, fmt, date, showError: fail });
 const personalCockpitUI = mountPersonalCockpitUI({ app, getGroups: () => groups, getMembers: () => members, getMeetings: () => meetings, navigate: go, fmt, date, showError: fail });
