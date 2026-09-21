@@ -1,0 +1,77 @@
+name: Eco-System 1.4.3 — BIR+ Source + D1 Backup
+
+on:
+  workflow_dispatch:
+  push:
+    branches: ['next/1.4.3-blueprint-5-0-0-finalization-20260921']
+    paths: ['.github/BACKUP_ECO_SYSTEM_1_4_3_ONCE']
+
+permissions:
+  contents: read
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      ECO_SYSTEM_DB: eco-system-db
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Archive exact source
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/eco-backup
+          HEAD_SHA="$(git rev-parse HEAD)"
+          printf '%s\n'             "project=Eco-System"             "development_line=1.4.3-blueprint-5-0-0-finalized"             "branch=next/1.4.3-blueprint-5-0-0-finalization-20260921"             "head=${HEAD_SHA}"             "production_url=https://eco-system.sergemimf.workers.dev/"             "realMoneyEnabled=false"             > /tmp/eco-backup/MANIFEST.txt
+          git archive --format=tar HEAD | xz -T0 -9e > /tmp/eco-backup/eco-system-1.4.3-source.tar.xz
+      - name: Export production D1 and prove restoration
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes wrangler@4 d1 export "${ECO_SYSTEM_DB}" --remote --output=/tmp/eco-backup/eco-system-production-d1.sql
+          sqlite3 /tmp/eco-backup/restore-check.sqlite < /tmp/eco-backup/eco-system-production-d1.sql
+          test "$(sqlite3 /tmp/eco-backup/restore-check.sqlite 'PRAGMA integrity_check;')" = "ok"
+          cd /tmp/eco-backup
+          sha256sum eco-system-1.4.3-source.tar.xz eco-system-production-d1.sql > SHA256SUMS.txt
+          sha256sum --check SHA256SUMS.txt
+      - name: Verify recovery anchors
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s AGENTS.md
+          test -s docs/memory/CURRENT_TRUTH.md
+          test -s docs/memory/PROJECT_TRUTH_LEDGER.json
+          test -s PROJECT_STATE.md
+          test -s NEXT_RUN.md
+          test -s FEATURE_REGISTRY.yaml
+          test -s docs/constitution/ECO_SYSTEM_Cahier_des_Charges_Maitre_Exhaustif_3.2.0_2026-09-16.md
+      - uses: actions/upload-artifact@v4
+        with:
+          name: eco-system-1.4.3-birplus
+          path: /tmp/eco-backup/
+          retention-days: 90
+          if-no-files-found: error
+
+      - name: Mirror final BIR+ checkpoint to R2 when available
+        shell: bash
+        run: |
+          set -euo pipefail
+          if npx --yes wrangler@4 r2 bucket list | grep -Fq 'eco-system-backups'; then
+            PREFIX="birplus/1.4.3/${GITHUB_SHA}/final"
+            npx --yes wrangler@4 r2 object put "eco-system-backups/${PREFIX}/eco-system-1.4.3-source.tar.xz" --file /tmp/eco-backup/eco-system-1.4.3-source.tar.xz --remote
+            npx --yes wrangler@4 r2 object put "eco-system-backups/${PREFIX}/eco-system-production-d1.sql" --file /tmp/eco-backup/eco-system-production-d1.sql --remote
+            npx --yes wrangler@4 r2 object put "eco-system-backups/${PREFIX}/SHA256SUMS.txt" --file /tmp/eco-backup/SHA256SUMS.txt --remote
+            npx --yes wrangler@4 r2 object get "eco-system-backups/${PREFIX}/SHA256SUMS.txt" --file /tmp/final-r2-checksums.txt --remote
+            cmp /tmp/eco-backup/SHA256SUMS.txt /tmp/final-r2-checksums.txt
+            echo "Final BIR+ R2 mirror PASS"
+          else
+            echo "::warning::R2 bucket not available; GitHub Artifact remains the verified remote checkpoint."
+          fi
