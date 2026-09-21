@@ -1520,11 +1520,16 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
 
     if(request.method==='POST'&&url.pathname==='/api/v1/outbox/apply'){
       const item=await readJson<OutboxItem<Record<string,unknown>>>(request); if(item.tenantId!==ctx.tenantId||item.actorId!==ctx.actorId) throw new Error('FORBIDDEN_SCOPE');
+      const markerHash=await sha256Bytes(new TextEncoder().encode(JSON.stringify([ctx.tenantId,ctx.actorId,item.idempotencyKey])).buffer);
+      const markerId='outbox_applied_'+markerHash,existingMarker=await repo.getWorkspaceRecord(ctx.tenantId,markerId);
+      if(existingMarker)return json({accepted:true,stored:true,replayed:true,type:item.type,idempotencyKey:item.idempotencyKey},200,cors);
+      const markApplied=async()=>{const at=new Date().toISOString();await repo.saveWorkspaceRecord({id:markerId,tenantId:ctx.tenantId,groupId:(item.payload as any).groupId?String((item.payload as any).groupId):undefined,moduleId:'OFFLINE.OUTBOX_ACK',title:'Offline operation acknowledged',summary:undefined,status:'DONE',tags:['offline','idempotency','type:'+item.type],data:{type:item.type,idempotencyKey:item.idempotencyKey},createdBy:ctx.actorId,createdAt:at,updatedAt:at});};
       if(item.type==='CONTRIBUTION_CASH_RECORDED'){
         const p=item.payload;const groupId=String(p.groupId??'');
         const receipt=await ledger.recordCashContribution({tenantId:ctx.tenantId,groupId,membershipId:String(p.membershipId??''),amount:finite(p.amount),currency:String(p.currency??'XAF'),meetingId:p.meetingId?String(p.meetingId):undefined,rubricId:p.rubricId?String(p.rubricId):undefined,lateReason:p.lateReason?String(p.lateReason):undefined,approverIds:strArray(p.approverIds),idempotencyKey:item.idempotencyKey});
         const entry=await repo.getLedgerEntry(ctx.tenantId,groupId,receipt.ledgerEntryId);
         if(entry)await dispatchContributionProjection(groupId,receipt,entry);
+        await markApplied();
         return json({accepted:true,receipt},200,cors);
       }
       if(item.type==='MEETING_NOTE_UPDATED'){
@@ -1534,6 +1539,7 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
         const existing=await repo.getWorkspaceRecord(ctx.tenantId,id);
         if(existing && (existing.summary!==note || existing.groupId!==groupId))throw Error('IDEMPOTENCY_CONFLICT');
         if(!existing)await repo.saveWorkspaceRecord({id,tenantId:ctx.tenantId,groupId,moduleId:'MEETING.COMMAND_CENTER',title:'Note de séance',summary:note,status:'ACTIVE',tags:['note'],data:{},createdBy:ctx.actorId,createdAt:item.createdAt,updatedAt:new Date().toISOString()});
+        await markApplied();
         return json({accepted:true,stored:true,type:item.type,recordId:id},200,cors);
       }
       if(item.type==='GROUP_PROJECT_UPSERT_V1'){
@@ -1541,75 +1547,90 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
         const financial=rubricPlans!==undefined?{rubrics:rubricPlans as any}:{memberCount:finite(input.memberCount),sessions:finite(input.sessions),nominalContribution:{currency:'XAF',amount:finite(input.nominalContribution)},managementFeePerContribution:{currency:'XAF',amount:finite(input.managementFeePerContribution,0)},estimatedExternalCostRate:finite(input.estimatedExternalCostRate,0),fixedOperatingCostPerSession:{currency:'XAF',amount:finite(input.fixedOperatingCostPerSession,0)}};
         const project=await foundation.createProject({projectId:String(p.projectId??''),tenantId:ctx.tenantId,createdBy:ctx.actorId,name:String(input.name??''),kind:String(input.kind??'rotating_tontine') as any,governanceModel:String(input.governanceModel??'founder_managed') as any,launchProfile:input.launchProfile as any,...financial},item.idempotencyKey);
         const result=await foundation.simulateProject(ctx.tenantId,project.id,item.idempotencyKey);
+        await markApplied();
         return json({accepted:true,stored:true,project,result},200,cors);
       }
       if(item.type==='GROUP_PROJECT_CONVERT_V1'){
         const group=await foundation.convertProjectToGroup(ctx.tenantId,String(item.payload.projectId??''),item.idempotencyKey);
+        await markApplied();
         return json({accepted:true,stored:true,group},200,cors);
       }
       if(item.type==='MEMBER_ADD_V1'){
         const p=item.payload,groupId=String(p.groupId??'');await requireGroup(groupId,true);
         const membership=await foundation.addMember(ctx.tenantId,groupId,{id:String(p.userId??''),displayName:String(p.displayName??''),locale:String(p.locale??ctx.locale),createdAt:String(p.createdAt??new Date().toISOString())},item.idempotencyKey,String(p.membershipId??''));
+        await markApplied();
         return json({accepted:true,stored:true,membership},200,cors);
       }
       if(item.type==='RUBRIC_CREATE_V1'){
         const p=item.payload,groupId=String(p.groupId??'');await requireGroup(groupId,true);
         const rubric=await rubrics.createRubric({id:String(p.id??''),tenantId:ctx.tenantId,groupId,name:String(p.name??''),aliases:strArray(p.aliases),purpose:p.purpose?String(p.purpose):undefined,facets:p.facets as any,source:String(p.source??'GROUP_CUSTOM') as any,operatingModel:p.operatingModel as any,policies:p.policies as any,activityPlan:p.activityPlan as any});
+        await markApplied();
         return json({accepted:true,stored:true,rubric},200,cors);
       }
       if(item.type==='RUBRIC_ACTIVITY_PLAN_V1'){
         const p=item.payload,groupId=String(p.groupId??'');await requireGroup(groupId,true);
         const rubric=await rubrics.updateActivityPlan(ctx.tenantId,groupId,String(p.rubricId??''),p.plan);
+        await markApplied();
         return json({accepted:true,stored:true,rubric},200,cors);
       }
       if(item.type==='GROUP_POLICY_V1'){
         const p=item.payload,groupId=String(p.groupId??'');await requireGroup(groupId,true);
         const group=await foundation.updateGroupOperatingPolicy(ctx.tenantId,groupId,p.policy as GroupOperatingPolicy,item.idempotencyKey);
+        await markApplied();
         return json({accepted:true,stored:true,group},200,cors);
       }
       if(item.type==='MEETING_OPEN_V1'){
         const p=item.payload,groupId=String(p.groupId??'');await requireGroup(groupId,true);
         const meeting=await meetings.openMeeting(ctx.tenantId,groupId,{id:String(p.id??''),title:p.title?String(p.title):undefined,scheduledAt:p.scheduledAt?String(p.scheduledAt):undefined,location:p.location?String(p.location):undefined,theme:p.theme?String(p.theme):undefined,dressCode:p.dressCode?String(p.dressCode):undefined},item.idempotencyKey);
+        await markApplied();
         return json({accepted:true,stored:true,meeting},200,cors);
       }
       if(item.type==='MEETING_CONTEXT_V1'){
         const p=item.payload,groupId=String(p.groupId??''),meetingId=String(p.meetingId??'');await requireGroup(groupId,true);
         const meeting=await meetings.updateMeetingContext(ctx.tenantId,groupId,meetingId,{scheduledAt:p.scheduledAt===undefined?undefined:p.scheduledAt===null?null:String(p.scheduledAt),location:p.location===undefined?undefined:p.location===null?null:String(p.location),theme:p.theme===undefined?undefined:p.theme===null?null:String(p.theme),dressCode:p.dressCode===undefined?undefined:p.dressCode===null?null:String(p.dressCode)},item.idempotencyKey);
+        await markApplied();
         return json({accepted:true,stored:true,meeting},200,cors);
       }
       if(item.type==='MEETING_ATTENDANCE_V1'){
         const p=item.payload,groupId=String(p.groupId??'');await requireGroup(groupId,true);
         const record=await meetings.recordAttendance(ctx.tenantId,groupId,String(p.meetingId??''),{membershipId:String(p.membershipId??''),attendance:String(p.attendance??'') as any,note:p.note?String(p.note):undefined},item.idempotencyKey);
+        await markApplied();
         return json({accepted:true,stored:true,record},200,cors);
       }
       if(item.type==='MEETING_BENEFIT_V1'){
         const p=item.payload,groupId=String(p.groupId??'');await requireGroup(groupId,true);
         const record=await meetings.declareBenefit(ctx.tenantId,groupId,String(p.meetingId??''),{membershipId:String(p.membershipId??''),rubricId:p.rubricId?String(p.rubricId):undefined,amount:finite(p.amount),currency:String(p.currency??'XAF'),note:p.note?String(p.note):undefined},item.idempotencyKey);
+        await markApplied();
         return json({accepted:true,stored:true,record},200,cors);
       }
       if(item.type==='MEETING_BENEFIT_EVIDENCE_V1'){
         const p=item.payload,groupId=String(p.groupId??'');await requireGroup(groupId,false);
         const evidence=await meetings.recordBenefitEvidence(ctx.tenantId,groupId,String(p.meetingId??''),{declarationId:String(p.declarationId??''),membershipId:String(p.membershipId??''),rubricId:p.rubricId?String(p.rubricId):undefined,amount:p.amount===undefined?undefined:finite(p.amount),currency:p.currency?String(p.currency):undefined,method:String(p.method??'') as any,artifactKey:p.artifactKey?String(p.artifactKey):undefined,fingerprint:p.fingerprint?String(p.fingerprint):undefined,note:p.note?String(p.note):undefined,idempotencyKey:String(p.idempotencyKey??item.idempotencyKey)},item.idempotencyKey);
+        await markApplied();
         return json({accepted:true,stored:true,evidence},200,cors);
       }
       if(item.type==='RUBRIC_MODEL_V1'){
         const p=item.payload,groupId=String(p.groupId??'');await requireGroup(groupId,true);
         const rubric=await rubrics.updateOperatingModel({tenantId:ctx.tenantId,groupId,rubricId:String(p.rubricId??''),model:p.model as RubricOperatingModel});
+        await markApplied();
         return json({accepted:true,stored:true,rubric},200,cors);
       }
       if(item.type==='RUBRIC_POLICIES_V1'){
         const p=item.payload,groupId=String(p.groupId??'');await requireGroup(groupId,true);
         const rubric=await rubrics.updatePolicies({tenantId:ctx.tenantId,groupId,rubricId:String(p.rubricId??''),policies:p.policies as RubricPolicies});
+        await markApplied();
         return json({accepted:true,stored:true,rubric},200,cors);
       }
       if(item.type==='MEETING_CLOSE_V1'){
         const p=item.payload,groupId=String(p.groupId??'');await requireGroup(groupId,true);
         const meeting=await meetings.closeMeeting(ctx.tenantId,groupId,String(p.meetingId??''),item.idempotencyKey);
+        await markApplied();
         return json({accepted:true,stored:true,meeting},200,cors);
       }
       if(item.type==='CASHBOX_RECONCILE_V1'){
         const p=item.payload,groupId=String(p.groupId??'');await requireGroup(groupId,true);
         const record=await foundation.reconcileCashbox({tenantId:ctx.tenantId,groupId,meetingId:p.meetingId?String(p.meetingId):undefined,openingCash:finite(p.openingCash),cashIn:finite(p.cashIn),cashOut:finite(p.cashOut),countedClosing:finite(p.countedClosing),currency:String(p.currency??'XAF')},item.idempotencyKey);
+        await markApplied();
         return json({accepted:true,stored:true,record},200,cors);
       }
       throw new Error('OUTBOX_TYPE_UNSUPPORTED');
