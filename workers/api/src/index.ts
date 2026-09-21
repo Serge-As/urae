@@ -16,6 +16,7 @@ import { MemberFinancialControlService } from '../../../packages/member-control/
 import { GroupIdentityService } from '../../../packages/group-identity/src/index.js';
 import { ConciergeLearningService, type DataUsePurpose, type LearningCategory, type DataUseDefaultMode } from '../../../packages/concierge-learning/src/index.js';
 import { MarketService } from '../../../packages/market/src/index.js';
+import { OpportunityService, type OpportunityState } from '../../../packages/opportunity/src/index.js';
 import { CommunityService } from '../../../packages/community/src/index.js';
 import { CommunityRealtimeStore } from '../../../packages/community-realtime/src/index.js';
 import { FounderLearningStore } from '../../../packages/founder-observatory/src/index.js';
@@ -98,7 +99,7 @@ const createRequestScope = (request:Request,repo:PlatformRepository,artifacts?:A
   const foundation=new FoundationService(repo,kernel); const ledger=new LedgerService(repo,kernel); const meetings=new MeetingService(repo,kernel); const discovery=new DiscoveryService(repo,kernel); const membershipGateway=new MembershipGatewayService(repo,kernel); const rubrics=new RubricKnowledgeService(repo,kernel);
   const completion=new CompletionSuiteService(repo,kernel);
   const explainability=new ExplainabilityService(repo,kernel); const documents=new DocumentSearchService(repo,kernel);
-  const receivables=new ReceivablesService(repo,kernel); const treasury=new TreasuryService(repo,kernel,ledger); const riskFinance=new RiskFinanceService(repo,kernel,ledger); const market=new MarketService(repo,kernel); const community=new CommunityService(repo,kernel);
+  const receivables=new ReceivablesService(repo,kernel); const treasury=new TreasuryService(repo,kernel,ledger); const riskFinance=new RiskFinanceService(repo,kernel,ledger); const market=new MarketService(repo,kernel); const opportunity=new OpportunityService(repo,kernel); const community=new CommunityService(repo,kernel);
   const artifactStore=artifacts??new RepositoryArtifactStore(repo,kernel);
   const imports=new HistoricalImportService(repo,kernel,ledger,completion,artifactStore);
   const memberControl=new MemberFinancialControlService(repo,kernel);
@@ -112,7 +113,7 @@ const createRequestScope = (request:Request,repo:PlatformRepository,artifacts?:A
   const tenantId=request.headers.get('x-tenant-id')??'tenant_demo'; const actorId=request.headers.get('x-actor-id')??'user_founder';
   const groupRoles=(request.headers.get('x-group-roles')??'founder,manager').split(',').map(x=>x.trim()).filter(Boolean);
   kernel.context.set({actorId,tenantId,activeGroupId:request.headers.get('x-active-group-id')??undefined,groupRoles,mandateIds:[],deviceId:request.headers.get('x-device-id')??'device_web_demo',sessionId:request.headers.get('x-session-id')??'session_demo',locale:request.headers.get('accept-language')?.toLowerCase().startsWith('en')?'en':'fr',timezone:request.headers.get('x-timezone')??'Africa/Douala',connectivity:'online',requestId:request.headers.get('x-request-id')??makeId('req')});
-  return {kernel,foundation,ledger,meetings,discovery,membershipGateway,rubrics,completion,explainability,documents,receivables,treasury,riskFinance,market,community,imports,artifactStore,memberControl,groupIdentity,conciergeLearning,miscRubrics,adManager,economicIntelligence,externalPrograms,operationalCockpit};
+  return {kernel,foundation,ledger,meetings,discovery,membershipGateway,rubrics,completion,explainability,documents,receivables,treasury,riskFinance,market,opportunity,community,imports,artifactStore,memberControl,groupIdentity,conciergeLearning,miscRubrics,adManager,economicIntelligence,externalPrograms,operationalCockpit};
 };
 
 const inboxFor = async (repo:PlatformRepository,tenantId:string,actorId:string) => {
@@ -127,7 +128,7 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
     const allowed=Boolean((cors as Record<string,string>)['access-control-allow-origin']);
     return new Response(null,{status:allowed?204:403,headers:{...baseSecurityHeaders,...cors,'access-control-allow-methods':'GET,POST,PUT,OPTIONS','access-control-allow-headers':'content-type,x-tenant-id,x-actor-id,x-group-roles,x-active-group-id,x-device-id,x-session-id,x-request-id,x-timezone'}});
   }
-  const {kernel,foundation,ledger,meetings,discovery,membershipGateway,rubrics,completion,explainability,documents,receivables,treasury,riskFinance,market,community,imports,artifactStore,memberControl,groupIdentity,conciergeLearning,miscRubrics,adManager,economicIntelligence,externalPrograms,operationalCockpit}=createRequestScope(request,repo,options.artifacts,options.dataUseDefaultMode??'BETA_OPEN',options.documentAI); const ctx=kernel.context.get();
+  const {kernel,foundation,ledger,meetings,discovery,membershipGateway,rubrics,completion,explainability,documents,receivables,treasury,riskFinance,market,opportunity,community,imports,artifactStore,memberControl,groupIdentity,conciergeLearning,miscRubrics,adManager,economicIntelligence,externalPrograms,operationalCockpit}=createRequestScope(request,repo,options.artifacts,options.dataUseDefaultMode??'BETA_OPEN',options.documentAI); const ctx=kernel.context.get();
   const governanceVotes=new GovernanceVoteService(repo,kernel,options.governanceSecret??'eco-system-nonproduction-governance-secret');
   const notifications=new NotificationService(repo,kernel);
   if(options.premiumLive)kernel.features.set('premium_live_ledger',true);
@@ -1451,6 +1452,30 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
       const body=await readJson<Record<string,unknown>>(request); return json(await foundation.openSupportCase({tenantId:ctx.tenantId,groupId:body.groupId?String(body.groupId):undefined,openedBy:ctx.actorId,summary:String(body.summary??'')}),201,cors);
     }
     if(request.method==='GET'&&url.pathname==='/api/v1/cases') return json(await repo.listCases(ctx.tenantId,ctx.actorId),200,cors);
+
+    if(request.method==='GET'&&url.pathname==='/api/v1/opportunities'){
+      const groupId=url.searchParams.get('groupId')??undefined;
+      return json(await opportunity.list(groupId),200,cors);
+    }
+    if(request.method==='POST'&&url.pathname==='/api/v1/opportunities'){
+      const body=await readJson<Record<string,unknown>>(request);
+      return json(await opportunity.create({
+        title:String(body.title??''),summary:body.summary?String(body.summary):undefined,
+        direction:body.direction?String(body.direction) as any:undefined,category:body.category?String(body.category):undefined,
+        quantity:body.quantity===undefined||body.quantity===null||body.quantity===''?undefined:finite(body.quantity),
+        unit:body.unit?String(body.unit):undefined,locality:body.locality?String(body.locality):undefined,
+        targetDate:body.targetDate?String(body.targetDate):undefined,urgency:body.urgency?String(body.urgency) as any:undefined,
+        visibility:body.visibility?String(body.visibility) as any:undefined,source:body.source?String(body.source) as any:undefined,
+        sourceRef:body.sourceRef?String(body.sourceRef):undefined,groupId:body.groupId?String(body.groupId):undefined
+      }),201,cors);
+    }
+    const opportunityRoute=url.pathname.match(/^\/api\/v1\/opportunities\/([^/]+)$/);
+    if(opportunityRoute&&request.method==='GET')return json(await opportunity.get(opportunityRoute[1]!),200,cors);
+    const opportunityTransition=url.pathname.match(/^\/api\/v1\/opportunities\/([^/]+)\/transition$/);
+    if(opportunityTransition&&request.method==='POST'){
+      const body=await readJson<Record<string,unknown>>(request);
+      return json(await opportunity.transition(opportunityTransition[1]!,String(body.state??'') as OpportunityState),200,cors);
+    }
 
     if(request.method==='GET'&&url.pathname==='/api/v1/workspaces'){
       const moduleId=url.searchParams.get('moduleId')??undefined;
