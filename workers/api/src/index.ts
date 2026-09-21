@@ -675,9 +675,15 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
     }
     const meetingContext=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/meetings\/([^/]+)\/context$/);
     if(meetingContext&&request.method==='PUT'){
+      const groupId=meetingContext[1]!,meetingId=meetingContext[2]!,before=await repo.getMeeting(ctx.tenantId,groupId,meetingId);
       const body=await readJson<Record<string,unknown>>(request);
       const optional=(key:string)=>Object.prototype.hasOwnProperty.call(body,key)?(body[key]===null?null:String(body[key])):undefined;
-      return json(await meetings.updateMeetingContext(ctx.tenantId,meetingContext[1]!,meetingContext[2]!,{scheduledAt:optional('scheduledAt'),location:optional('location'),theme:optional('theme'),dressCode:optional('dressCode')}),200,cors);
+      const updated=await meetings.updateMeetingContext(ctx.tenantId,groupId,meetingId,{scheduledAt:optional('scheduledAt'),location:optional('location'),theme:optional('theme'),dressCode:optional('dressCode')});
+      if(before?.status==='closed'){
+        await notifications.publish(groupId,{title:'Séance clôturée modifiée',message:'Un responsable a modifié le contexte d’une séance déjà clôturée. Consultez l’historique et les nouvelles valeurs.',channels:['IN_APP','WEB_PUSH'],audience:'MANAGERS',priority:'CRITICAL'});
+        await publishLive(groupId,'MEETING_UPDATE','closed-meeting-context:'+meetingId+':'+updated.updatedAt,{meetingId,kind:'CLOSED_MEETING_CONTEXT_CHANGED',meetingClosed:true});
+      }
+      return json(updated,200,cors);
     }
     const meetingAttendance=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/meetings\/([^/]+)\/attendance$/);
     if(meetingAttendance&&request.method==='GET')return json(await meetings.listAttendance(ctx.tenantId,meetingAttendance[1]!,meetingAttendance[2]!),200,cors);
