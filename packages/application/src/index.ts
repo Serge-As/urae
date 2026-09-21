@@ -74,11 +74,11 @@ export class ConnectedApplication {
 
   private headers(extra:Record<string,string>={}):HeadersInit{return{'content-type':'application/json','accept-language':this.locale,'x-active-group-id':this.activeGroupId??'','x-timezone':'Africa/Douala',...extra};}
   private offlineReadAllowed(path:string):boolean{
-    if(path==='/api/v1/auth/session'||path==='/api/v1/groups')return true;
-    return /^\/api\/v1\/groups\/[^/?]+\/(me|members|meetings|rubrics|operating-policy|ledger|cashbox\/reconciliations|expenses|identity-passport|identity-profile)(?:\?.*)?$/.test(path)
-      || /^\/api\/v1\/groups\/[^/?]+\/recap\/global(?:\?.*)?$/.test(path)
-      || /^\/api\/v1\/groups\/[^/?]+\/meetings\/[^/?]+\/(attendance|beneficiaries|beneficiary-evidence)(?:\?.*)?$/.test(path)
-      || /^\/api\/v1\/groups\/[^/?]+\/members\/[^/?]+\/(statement|operational-sheet)(?:\?.*)?$/.test(path);
+    // Every authenticated JSON GET may be projected locally. Security remains actor-scoped:
+    // logout clears that actor's snapshots and live HTTP authorization failures are never hidden.
+    // This turns offline mode into a last-synchronized read model instead of a small endpoint allow-list.
+    if(path==='/api/v1/auth/session')return true;
+    return path.startsWith('/api/v1/');
   }
   private offlineReadKey(path:string):string{return path==='/api/v1/auth/session'?'session:last':JSON.stringify([this.actorId,this.tenantId,this.activeGroupId??'',path]);}
   private async cacheReadSnapshot<T>(path:string,body:T):Promise<void>{
