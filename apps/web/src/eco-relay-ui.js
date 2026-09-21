@@ -11,7 +11,7 @@ function modal(){
  document.body.append(d);return d;
 }
 function actor(){return document.querySelector('#accountName')?.textContent?.trim()||'local-user';}
-function device(){let id=localStorage.getItem('eco.relay.deviceId');if(!id){id=crypto.randomUUID?.()||('device-'+Date.now());localStorage.setItem('eco.relay.deviceId',id);}return id;}
+function device(){let id=localStorage.getItem('eco.relay.deviceId');if(!id){id=crypto.randomUUID?.()||('device-'+[...crypto.getRandomValues(new Uint32Array(4))].map(x=>x.toString(16)).join(''));localStorage.setItem('eco.relay.deviceId',id);}return id;}
 function activeGroup(){return document.querySelector('#activeGroupSelect')?.value||undefined;}
 function drawPseudoQr(text){
  const size=29,canvas=document.createElement('canvas');canvas.width=canvas.height=290;const ctx=canvas.getContext('2d');ctx.fillStyle='#fff';ctx.fillRect(0,0,290,290);
@@ -51,8 +51,8 @@ async function scanCamera(){
 }
 export function installEcoRelayUI(){
  const share=$('#shareQrBtn'),receive=$('#receiveQrBtn');if(share)share.onclick=()=>void shareQr();if(receive)receive.onclick=()=>void receiveQr();
- window.addEventListener('eco:relay-reconcile-meeting',event=>void openMeetingRelay(event.detail,'reconcile'));
- window.addEventListener('eco:relay-distribute-members',event=>void openMeetingRelay(event.detail,'distribute'));
+ window.addEventListener('eco:relay-reconcile-meeting',event=>void openMeetingReconcile(event.detail));
+ window.addEventListener('eco:relay-distribute-members',event=>void openMemberDistribution(event.detail));
 }
 async function openMeetingRelay(detail,mode){
  const d=modal(),body=d.querySelector('#relayBody'),reconcile=mode==='reconcile';
