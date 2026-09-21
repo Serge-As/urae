@@ -490,8 +490,9 @@ const renderOutbox = () => { const root = $('#outboxList'); root.replaceChildren
     root.innerHTML = '<li class="empty-state">Aucune opération en attente.</li>';
     return;
 } for (const x of xs) {
-    const li = document.createElement('li');
-    li.textContent = `${x.type} · ${x.status}`;
+    const li = document.createElement('li'),label=document.createElement('span');
+    label.textContent = `${x.type} · ${x.status} · tentative ${x.attempts}/5`;li.append(label);
+    if(x.status==='FAILED'&&x.attempts>=5){const retry=document.createElement('button');retry.type='button';retry.className='link-btn';retry.textContent=tx('Réessayer','Retry');retry.onclick=()=>void(async()=>{await app.retryOutboxItem(x.id);renderOutbox();if(navigator.onLine){await app.syncOutbox();renderOutbox();}})();li.append(retry);}
     root.append(li);
 } };
 const renderCompatibility = () => {
