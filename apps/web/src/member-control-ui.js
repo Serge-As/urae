@@ -50,5 +50,6 @@ export async function renderMemberFinancialNotices({app,membershipId,memberUserI
       if(actions.childElementCount)a.append(actions);list.append(a);
     }
   };
+  window.addEventListener('eco:financial-live-update',()=>void refresh());
   await refresh();return root;
 }
