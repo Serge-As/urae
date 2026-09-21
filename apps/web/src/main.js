@@ -563,7 +563,7 @@ const renderLedger = async () => {
     if (!app.activeGroup())
         return;
     const l = await app.ledger();
-    receiptPositions=l.receipts;renderMeetingMatrix();
+    receiptPositions=l.receipts;renderMeetingMatrix();renderIndividualSheetMatrix();
     for (const [n, label] of [[l.summary.cashBalance, 'Solde caisse'], [l.summary.memberFundsLiability, 'Engagement membres'], [l.summary.entryCount, 'Écritures']]) {
         const d = document.createElement('div');
         d.className = 'metric';
@@ -808,6 +808,28 @@ const refreshOptionalOfflineSafe=async(label,fn)=>{
         throw error;
     }
 };
+const showFinancialAlert=(input={})=>{
+    const bar=document.querySelector('#financialAlertBar');if(!bar)return;
+    bar.replaceChildren();const title=document.createElement('strong'),message=document.createElement('span');
+    title.textContent=input.title||tx('Mise à jour financière','Financial update');message.textContent=' · '+String(input.message||'');
+    bar.className='financial-alert-bar '+(input.closed?'is-critical':input.correction?'is-closed':'is-open');bar.hidden=false;bar.append(title,message);
+    if(input.notificationId){const seen=document.createElement('button');seen.type='button';seen.className='link-btn';seen.textContent=tx('J’ai vu','Seen');seen.onclick=()=>void(async()=>{try{await app.markGroupNotificationRead(input.notificationId);bar.hidden=true;}catch(e){fail(e);}})();bar.append(seen);}
+};
+const renderFinancialAlerts=async()=>{
+    const bar=document.querySelector('#financialAlertBar');if(!bar)return;
+    if(!app.activeGroup()){bar.hidden=true;return;}
+    try{
+      const notices=await app.groupNotifications(),unread=notices.filter(x=>!x.read).filter(x=>/financi|cotisation|compte|séance clôturée/i.test(String(x.title??'')+' '+String(x.message??'')));
+      const latest=unread[0];if(!latest){bar.hidden=true;return;}
+      const closed=String(latest.priority)==='CRITICAL'||/clôtur|après clôture/i.test(String(latest.title??'')+' '+String(latest.message??''));
+      showFinancialAlert({title:latest.title,message:latest.message,closed,correction:String(latest.priority)==='HIGH',notificationId:latest.id});
+    }catch(error){if(navigator.onLine)console.info('Financial alerts unavailable',error);}
+};
+window.addEventListener('eco:financial-live-update',event=>{
+    const e=event instanceof CustomEvent?event.detail:undefined,p=e?.payload??{};
+    showFinancialAlert({title:p.meetingClosed?tx('Alerte après clôture','Post-close alert'):tx('Nouvelle saisie financière','New financial entry'),message:p.operationType==='FINANCIAL_CELL_CORRECTION'?tx('Votre situation financière vient d’être corrigée. Vérifiez-la.','Your financial position was corrected. Please review it.'):tx('Une nouvelle donnée financière vient d’être enregistrée sur votre compte.','A new financial value was recorded on your account.'),closed:Boolean(p.meetingClosed),correction:p.operationType==='FINANCIAL_CELL_CORRECTION'});
+});
+
 const refreshGroupContext = async () => {
     await renderGroups();
     const active = Boolean(app.activeGroup());
@@ -843,6 +865,7 @@ const refreshGroupContext = async () => {
     await refreshOptionalOfflineSafe('completion',()=>completionUI.refresh());
     await refreshOptionalOfflineSafe('advanced',()=>advancedUI.refresh());
     await refreshOptionalOfflineSafe('identity-live',()=>identityLiveUI.refresh());
+    await refreshOptionalOfflineSafe('financial-alerts',renderFinancialAlerts);
     await refreshOptionalOfflineSafe('community-shop',()=>communityShopUI.refresh());
     await refreshOptionalOfflineSafe('misc-rubrics',()=>miscRubricUI.refresh());
     await refreshOptionalOfflineSafe('pairing',()=>pairingUI.refresh());
@@ -887,6 +910,11 @@ document.addEventListener('click', e => { const t = e.target; if (!t.closest('.t
     $('#globalSearchResults').replaceChildren(); const open = t.closest('[data-module-open]'); if (open?.dataset.moduleOpen)
     void openModule(open.dataset.moduleOpen); });
 $('#matrixViewBtn').addEventListener('click', () => { $('#meetingMatrixPanel').hidden = false; $('#matrixViewBtn').classList.add('active'); $('#cardViewBtn').classList.remove('active'); document.dispatchEvent(new CustomEvent('eco:render-two-sheets')); });
+document.querySelector('#financeIndividualSheetBtn')?.addEventListener('click',()=>go('operations',{anchor:'twoSheetWorkspace',sheetMode:'individual',force:true}));
+document.querySelector('#financeLoanRulesBtn')?.addEventListener('click',()=>go('finance',{anchor:'financeLoanGuide',openTarget:'loanCompletionPanel',force:true}));
+document.querySelector('#openSavingsLabBtn')?.addEventListener('click',()=>go('finance',{anchor:'savingsYieldLab',force:true}));
+document.querySelector('#openAssistanceRulebookBtn')?.addEventListener('click',()=>go('finance',{anchor:'assistanceRulebookPanel',force:true}));
+
 $('#cardViewBtn').addEventListener('click', () => { $('#meetingMatrixPanel').hidden = true; $('#cardViewBtn').classList.add('active'); $('#matrixViewBtn').classList.remove('active'); });
 const launchError=error=>({
   PROJECT_RUBRICS_REQUIRED:'Ajoutez au moins une rubrique et renseignez ses caractéristiques.',
