@@ -264,16 +264,19 @@ export class ConnectedApplication {
   }
 
   async simulateAndStoreProject(input:{name:string;kind:Group['kind'];governanceModel:Group['governanceModel'];rubrics?:LaunchRubricPlan[];launchProfile?:GroupProjectLaunchProfile;memberCount?:number;sessions?:number;nominalContribution?:number;managementFeePerContribution?:number;estimatedExternalCostRate?:number;fixedOperatingCostPerSession?:number}):Promise<{projectId:string;result:FeasibilityResult}>{
-    const headers={'x-active-group-id':''},projectId=makeId('project');
-    if(!this.isOffline()){
-      const project=await this.request<{id:string}>('/api/v1/group-projects',{method:'POST',headers,body:JSON.stringify({...input,projectId,currency:'XAF'})});
-      const result=await this.request<FeasibilityResult>(`/api/v1/group-projects/${encodeURIComponent(project.id)}/simulate`,{method:'POST',headers,body:'{}'});return{projectId:project.id,result};
-    }
-    const stamp=new Date().toISOString(),currency='XAF',launchProfile=input.launchProfile??{origin:{mode:'NEW'}};
-    const project:any={id:projectId,tenantId:this.tenantId,createdBy:this.actorId,name:input.name.trim(),kind:input.kind,governanceModel:input.governanceModel,status:'simulated',createdAt:stamp,rubrics:input.rubrics?structuredClone(input.rubrics):undefined,launchProfile:structuredClone(launchProfile),
+    const headers={'x-active-group-id':''},projectId=makeId('project'),stamp=new Date().toISOString(),currency='XAF',launchProfile=input.launchProfile??{origin:{mode:'NEW'}};
+    const localProject:any={id:projectId,tenantId:this.tenantId,createdBy:this.actorId,name:input.name.trim(),kind:input.kind,governanceModel:input.governanceModel,status:'simulated',createdAt:stamp,rubrics:input.rubrics?structuredClone(input.rubrics):undefined,launchProfile:structuredClone(launchProfile),
       memberCount:input.rubrics?1:Number(input.memberCount??0),sessions:input.rubrics?1:Number(input.sessions??0),nominalContribution:{currency,amount:input.rubrics?0:Number(input.nominalContribution??0)},managementFeePerContribution:{currency,amount:input.rubrics?0:Number(input.managementFeePerContribution??0)},estimatedExternalCostRate:input.rubrics?0:Number(input.estimatedExternalCostRate??0),fixedOperatingCostPerSession:{currency,amount:input.rubrics?0:Number(input.fixedOperatingCostPerSession??0)}};
-    const result=new GroupLaunchSimulator().simulate(project);await this.saveCached(`/api/v1/offline/projects/${projectId}`,project);
-    await this.queueLocal('GROUP_PROJECT_UPSERT_V1',{projectId,input:structuredClone(input)},projectId);return{projectId,result};
+    const localResult=new GroupLaunchSimulator().simulate(localProject);await this.saveCached(`/api/v1/offline/projects/${projectId}`,localProject);
+    if(!this.isOffline()){
+      try{
+        const project=await this.request<{id:string}>('/api/v1/group-projects',{method:'POST',headers,body:JSON.stringify({...input,projectId,currency:'XAF'})});
+        const result=await this.request<FeasibilityResult>(`/api/v1/group-projects/${encodeURIComponent(project.id)}/simulate`,{method:'POST',headers,body:'{}'});
+        if(project.id!==projectId)await this.saveCached(`/api/v1/offline/projects/${project.id}`,{...localProject,id:project.id});
+        return{projectId:project.id,result};
+      }catch(error){if(!(error instanceof Error)||error.message!=='NETWORK_UNAVAILABLE')throw error;}
+    }
+    await this.queueLocal('GROUP_PROJECT_UPSERT_V1',{projectId,input:structuredClone(input)},projectId);return{projectId,result:localResult};
   }
   async createGroupFromProject(projectId:string):Promise<Group>{
     if(!this.isOffline()){const group=await this.request<Group>(`/api/v1/group-projects/${encodeURIComponent(projectId)}/convert`,{method:'POST',headers:{'x-active-group-id':''},body:'{}'});this.selectGroup(group.id);return group;}
