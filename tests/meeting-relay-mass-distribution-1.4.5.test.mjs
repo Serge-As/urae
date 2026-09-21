@@ -1,0 +1,4 @@
+import test from 'node:test';import assert from 'node:assert/strict';import {readFile} from 'node:fs/promises';
+test('session end separates manager reconciliation and member distribution',async()=>{const s=await readFile('apps/web/src/sessions-ui.js','utf8');assert.match(s,/Confronter les données entre gestionnaires/);assert.match(s,/Diffuser aux membres/);assert.match(s,/eco:relay-reconcile-meeting/);assert.match(s,/eco:relay-distribute-members/);});
+test('relay UI offers simple transport chooser',async()=>{const s=await readFile('apps/web/src/eco-relay-ui.js','utf8');for(const x of ['QR Code · recommandé','Téléphone à proximité · rapide','Partage du téléphone','Fichier Eco Relay'])assert.ok(s.includes(x));});
+test('mass distribution architecture forbids fake receipt completion',async()=>{const s=await readFile('docs/architecture/ECO_RELAY_MASS_DISTRIBUTION_1.4.5.md','utf8');assert.match(s,/Meeting Hub/);assert.match(s,/80 accusés vérifiables/);});
