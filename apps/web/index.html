@@ -11,7 +11,7 @@
   <meta id="metaDescription" name="description" content="Eco-System — plateforme de gestion de tontines, associations et communautés">
   <link rel="manifest" href="/manifest.webmanifest">
   <link rel="stylesheet" href="/styles.css?v=143">
-  <title>Eco-System — 1.4.3 · Blueprint exécutable 5.0.0</title>
+  <title>Eco-System — 1.4.5 RC · Offline & Gouvernance</title>
 </head>
 <body class="signed-out">
   <section id="authScreen" class="auth-screen" aria-label="Connexion à Eco-System">
@@ -31,7 +31,7 @@
 <header class="topbar">
     <div class="brand">
       <div class="logo">E</div>
-      <div><strong>Eco-System</strong><small>Plateforme Tontines · Associations · Communautés</small><span class="version-badge">ECO-SYSTEM · 1.4.3</span></div>
+      <div><strong>Eco-System</strong><small>Plateforme Tontines · Associations · Communautés</small><span class="version-badge">ECO-SYSTEM · 1.4.5 RC</span></div>
     </div>
     <div class="top-context">
       <select id="activeGroupSelect" aria-label="Groupe actif"><option value="">Aucun groupe actif</option></select>
@@ -46,6 +46,8 @@
 
   <div id="toast" class="toast" hidden></div>
   <div id="errorBox" class="error" role="alert" hidden></div>
+  <div id="financialAlertBar" class="financial-alert-bar" role="status" hidden></div>
+  <button id="appBackBtn" type="button" class="app-back-btn" hidden aria-label="Retour à l’écran précédent">← Retour</button>
 
   <div class="app-shell">
     <nav id="mainNav" class="side-nav" aria-label="Navigation principale">
@@ -58,17 +60,29 @@
       <button id="ecoAiNavBtn" data-view="launch" class="nav-btn"><span>✦</span><b>Eco IA</b></button>
       <button data-view="operations" class="nav-btn"><span>⌘</span><b data-mobile-label="Centre op.">Centre opérationnel</b></button>
       <button id="sessionsNavBtn" data-view="sessions" class="nav-btn"><span>☷</span><b data-mobile-label="Séances">Séances</b></button>
-      <button id="membersNavBtn" data-view="members" class="nav-btn"><span>♙</span><b>Membres & habilitations</b></button>
+      <button id="memberSheetsNavBtn" data-view="operations" data-anchor="twoSheetWorkspace" data-sheet-mode="individual" class="nav-btn"><span>▥</span><b>Fiches membres</b></button>
+      <button id="membersNavBtn" data-view="members" class="nav-btn"><span>♙</span><b>Membres</b></button>
+      <button id="rubricsNavBtn" data-view="operations" data-anchor="rubricsManagementPanel" class="nav-btn"><span>▧</span><b>Rubriques</b></button>
+      <span class="nav-caption">Finances du groupe</span>
       <button data-view="finance" class="nav-btn"><span>₣</span><b>Finances</b></button>
-      <button id="backOfficeNavBtn" data-view="backoffice" class="nav-btn"><span>▣</span><b>Back-office</b></button>
+      <button id="loansNavBtn" data-view="finance" data-anchor="financeLoanGuide" data-open-target="loanCompletionPanel" class="nav-btn"><span>↗</span><b>Prêts</b></button>
+      <button id="savingsNavBtn" data-view="finance" data-anchor="savingsYieldLab" class="nav-btn"><span>◫</span><b>Épargne</b></button>
+      <button id="assistanceNavBtn" data-view="finance" data-anchor="assistanceRulebookPanel" class="nav-btn"><span>♡</span><b>Assistances</b></button>
       <button data-view="tontines" class="nav-btn"><span>↻</span><b>Tontines</b></button>
-      <button id="recapNavBtn" data-view="recap" class="nav-btn" hidden><span>▤</span><b>Recap</b></button>
+      <button id="recapNavBtn" data-view="recap" class="nav-btn"><span>▤</span><b>Recap</b></button>
+      <button id="backOfficeNavBtn" data-view="backoffice" class="nav-btn"><span>▣</span><b>Back-office</b></button>
       <span class="nav-caption">Écosystème</span>
-      <button data-view="ecosystem" class="nav-btn"><span>◎</span><b>Communauté & économie</b></button>
+      <button data-view="ecosystem" data-anchor="interestCommunityPanel" class="nav-btn"><span>◎</span><b>Communautés</b></button>
+      <button data-view="ecosystem" data-anchor="externalProgramsPanel" class="nav-btn"><span>◇</span><b>Partenaires & ONG</b></button>
+      <button data-view="ecosystem" data-anchor="adManagerPanel" class="nav-btn"><span>◈</span><b>Publicité</b></button>
       <button data-view="services" class="nav-btn"><span>▦</span><b>Tous les services</b></button>
+      <span class="nav-caption">Résilience</span>
+      <button data-view="relay" data-anchor="ecoRelayPanel" class="nav-btn"><span>⇄</span><b>Eco Relay</b></button>
+      <button data-view="relay" data-anchor="ecoLocalPanel" class="nav-btn"><span>⌁</span><b>Eco Local</b></button>
       <span class="nav-caption">Plateforme</span>
-      <button id="founderControlNavBtn" data-view="control" class="nav-btn" hidden><span>◉</span><b>Control Center</b></button>
+      <button id="founderControlNavBtn" data-view="control" class="nav-btn"><span>◉</span><b>Control Center</b></button>
       <button data-view="settings" class="nav-btn"><span>⚙</span><b>Sécurité & réglages</b></button>
+      <button data-view="trash" class="nav-btn"><span>⌫</span><b>Corbeille</b></button>
     </nav>
 
     <main class="content">
@@ -377,7 +391,7 @@
             </div>
           </section>
 
-          <section class="panel living">
+          <section class="panel living" id="rubricsManagementPanel">
             <div class="panel-head"><div><h2>Règles vivantes</h2><p>Écrit ≠ pratique ≠ règle opérationnelle. L'application cherche à comprendre le groupe avant d'imposer.</p></div></div>
             <div class="two-col">
               <form id="latePolicyForm" class="form-grid">
@@ -1127,7 +1141,18 @@
         </div>
       </section>
 
-      <section id="view-settings" class="view">
+            <section id="view-relay" class="view">
+        <div class="page-head"><div><span class="eyebrow">Lots 5 & 6</span><h1>Eco Relay · Eco Local</h1><p>Échanges hors Internet entre appareils, confrontation des gestionnaires et diffusion locale assistée. Le transport ne devient jamais l’auteur financier.</p></div></div>
+        <section class="panel" id="ecoRelayPanel"><div class="panel-head"><div><h2>Eco Relay sécurisé</h2><p>Préparer, exporter, recevoir et vérifier des paquets de synchronisation avec identifiant d’opération, expiration, anti-rejeu et contrôle d’intégrité.</p></div></div><div id="ecoRelayWorkspace" class="stack"></div></section>
+        <section class="panel" id="ecoLocalPanel"><div class="panel-head"><div><h2>Eco Local · salle de séance</h2><p>Un responsable ouvre une salle locale ; les appareils associés reçoivent les mises à jour disponibles et renvoient leurs accusés lorsque le transport local est disponible.</p></div></div><div id="ecoLocalWorkspace" class="stack"></div></section>
+      </section>
+
+      <section id="view-trash" class="view">
+        <div class="page-head"><div><span class="eyebrow">Protection anti-erreur</span><h1>Corbeille</h1><p>Les suppressions fonctionnelles restent restaurables pendant six mois. Aucune suppression définitive manuelle n’est proposée.</p></div></div>
+        <section class="panel"><div class="panel-head"><div><h2>Éléments supprimés</h2><p>Séances, membres et rubriques archivés temporairement. Les écritures financières et audits ne sont jamais effacés.</p></div><button id="trashRefreshBtn" type="button" class="secondary">Actualiser</button></div><div id="trashList" class="stack"></div></section>
+      </section>
+
+<section id="view-settings" class="view">
         <div class="page-head"><div><span class="eyebrow">Lot J</span><h1>Réglages · Sécurité · Compatibilité</h1><p>Préparer le pilote sans activer l'argent réel.</p></div></div>
         <div class="two-col">
           <section class="panel"><h2>Préférences</h2><label>Langue<select id="languageSelect"><option value="fr">Français</option><option value="en">English</option></select></label><button id="modeBtn" class="primary">Mode Ultra Simple</button></section>
