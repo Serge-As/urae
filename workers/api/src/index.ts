@@ -1592,6 +1592,26 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
         const evidence=await meetings.recordBenefitEvidence(ctx.tenantId,groupId,String(p.meetingId??''),{declarationId:String(p.declarationId??''),membershipId:String(p.membershipId??''),rubricId:p.rubricId?String(p.rubricId):undefined,amount:p.amount===undefined?undefined:finite(p.amount),currency:p.currency?String(p.currency):undefined,method:String(p.method??'') as any,artifactKey:p.artifactKey?String(p.artifactKey):undefined,fingerprint:p.fingerprint?String(p.fingerprint):undefined,note:p.note?String(p.note):undefined,idempotencyKey:String(p.idempotencyKey??item.idempotencyKey)},item.idempotencyKey);
         return json({accepted:true,stored:true,evidence},200,cors);
       }
+      if(item.type==='RUBRIC_MODEL_V1'){
+        const p=item.payload,groupId=String(p.groupId??'');await requireGroup(groupId,true);
+        const rubric=await rubrics.updateOperatingModel({tenantId:ctx.tenantId,groupId,rubricId:String(p.rubricId??''),model:p.model as RubricOperatingModel});
+        return json({accepted:true,stored:true,rubric},200,cors);
+      }
+      if(item.type==='RUBRIC_POLICIES_V1'){
+        const p=item.payload,groupId=String(p.groupId??'');await requireGroup(groupId,true);
+        const rubric=await rubrics.updatePolicies({tenantId:ctx.tenantId,groupId,rubricId:String(p.rubricId??''),policies:p.policies as RubricPolicies});
+        return json({accepted:true,stored:true,rubric},200,cors);
+      }
+      if(item.type==='MEETING_CLOSE_V1'){
+        const p=item.payload,groupId=String(p.groupId??'');await requireGroup(groupId,true);
+        const meeting=await meetings.closeMeeting(ctx.tenantId,groupId,String(p.meetingId??''),item.idempotencyKey);
+        return json({accepted:true,stored:true,meeting},200,cors);
+      }
+      if(item.type==='CASHBOX_RECONCILE_V1'){
+        const p=item.payload,groupId=String(p.groupId??'');await requireGroup(groupId,true);
+        const record=await foundation.reconcileCashbox({tenantId:ctx.tenantId,groupId,meetingId:p.meetingId?String(p.meetingId):undefined,openingCash:finite(p.openingCash),cashIn:finite(p.cashIn),cashOut:finite(p.cashOut),countedClosing:finite(p.countedClosing),currency:String(p.currency??'XAF')},item.idempotencyKey);
+        return json({accepted:true,stored:true,record},200,cors);
+      }
       throw new Error('OUTBOX_TYPE_UNSUPPORTED');
     }
 
