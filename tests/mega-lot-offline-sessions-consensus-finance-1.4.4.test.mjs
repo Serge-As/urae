@@ -60,7 +60,8 @@ test('lots 8 and 9 retain canonical finance, savings yield, assistance and multi
   assert.match(application,/analyzeGroupDocumentFiles/);
   assert.match(api,/analyze-files/);
   for(const token of ["'IMAGE'","'PDF'","'DOCUMENT'","'LEGACY_WORD'"])assert.ok(api.includes(token),token);
-  assert.match(application,/sourceDocumentFingerprints/);
+  const launchStudio=fs.readFileSync('apps/web/src/launch-studio.js','utf8');
+  assert.match(launchStudio,/sourceDocumentFingerprints/);
 });
 
 test('lot 13 stops automatic retry storms but permits deliberate operator recovery',async()=>{
