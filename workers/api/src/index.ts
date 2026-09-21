@@ -486,7 +486,7 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
     if(request.method==='POST'&&url.pathname==='/api/v1/group-projects'){
       const body=await readJson<Record<string,unknown>>(request);
       const financial=body.rubrics!==undefined?{rubrics:body.rubrics as any}:{memberCount:finite(body.memberCount),sessions:finite(body.sessions),nominalContribution:{currency:String(body.currency??'XAF'),amount:finite(body.nominalContribution)},managementFeePerContribution:{currency:String(body.currency??'XAF'),amount:finite(body.managementFeePerContribution,0)},estimatedExternalCostRate:finite(body.estimatedExternalCostRate,0),fixedOperatingCostPerSession:{currency:String(body.currency??'XAF'),amount:finite(body.fixedOperatingCostPerSession,0)}};
-      const project=await foundation.createProject({tenantId:ctx.tenantId,createdBy:ctx.actorId,name:String(body.name??''),kind:(body.kind??'rotating_tontine') as any,governanceModel:(body.governanceModel??'founder_managed') as any,launchProfile:body.launchProfile as any,...financial});
+      const project=await foundation.createProject({projectId:body.projectId?String(body.projectId):undefined,tenantId:ctx.tenantId,createdBy:ctx.actorId,name:String(body.name??''),kind:(body.kind??'rotating_tontine') as any,governanceModel:(body.governanceModel??'founder_managed') as any,launchProfile:body.launchProfile as any,...financial});
       return json(project,201,cors);
     }
     const projectGrant=url.pathname.match(/^\/api\/v1\/group-projects\/([^/]+)\/access-grants$/);
@@ -533,7 +533,7 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
     if(rubricRoute&&request.method==='POST'){
       const body=await readJson<Record<string,unknown>>(request); if(!body.facets||typeof body.facets!=='object') throw new Error('RUBRIC_FACETS_REQUIRED');
       const operatingModel=body.operatingModel&&typeof body.operatingModel==='object'?body.operatingModel as RubricOperatingModel:undefined;
-      return json(await rubrics.createRubric({tenantId:ctx.tenantId,groupId:rubricRoute[1]!,name:String(body.name??''),aliases:strArray(body.aliases),purpose:body.purpose?String(body.purpose):undefined,facets:body.facets as any,source:body.source?String(body.source) as any:undefined,operatingModel}),201,cors);
+      return json(await rubrics.createRubric({id:body.id?String(body.id):undefined,tenantId:ctx.tenantId,groupId:rubricRoute[1]!,name:String(body.name??''),aliases:strArray(body.aliases),purpose:body.purpose?String(body.purpose):undefined,facets:body.facets as any,source:body.source?String(body.source) as any:undefined,operatingModel}),201,cors);
     }
     const rubricActivityRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/rubrics\/([^/]+)\/activity-plan$/);
     if(rubricActivityRoute&&request.method==='PUT')return json(await rubrics.updateActivityPlan(ctx.tenantId,rubricActivityRoute[1]!,rubricActivityRoute[2]!,await readJson(request)),200,cors);
@@ -565,7 +565,7 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
     if(members&&request.method==='POST'){
       const group=await repo.getGroup(ctx.tenantId,members[1]!); if(!group) return json({error:'NOT_FOUND'},404,cors);
       const body=await readJson<Record<string,unknown>>(request); const displayName=String(body.displayName??'').trim(); if(!displayName) throw new Error('MEMBER_NAME_REQUIRED');
-      const membership=await foundation.addMember(ctx.tenantId,group.id,{id:String(body.userId??makeId('user')),displayName,locale:String(body.locale??ctx.locale),createdAt:new Date().toISOString()}); return json(membership,201,cors);
+      const membership=await foundation.addMember(ctx.tenantId,group.id,{id:String(body.userId??makeId('user')),displayName,locale:String(body.locale??ctx.locale),createdAt:new Date().toISOString()},String(body.operationId??body.membershipId??request.headers.get('x-idempotency-key')??makeId('req')),body.membershipId?String(body.membershipId):undefined); return json(membership,201,cors);
     }
     const memberLifecycle=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/members\/([^/]+)\/lifecycle$/);
     if(memberLifecycle&&request.method==='PUT'){
@@ -598,7 +598,7 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
     if(meetingRoute&&request.method==='GET') return json(await repo.listMeetings(ctx.tenantId,meetingRoute[1]!),200,cors);
     if(meetingRoute&&request.method==='POST'){
       const body=await readJson<Record<string,unknown>>(request); return json(await meetings.openMeeting(ctx.tenantId,meetingRoute[1]!,{
-        title:String(body.title??''),scheduledAt:body.scheduledAt?String(body.scheduledAt):undefined,location:body.location?String(body.location):undefined,theme:body.theme?String(body.theme):undefined,dressCode:body.dressCode?String(body.dressCode):undefined
+        id:body.id?String(body.id):undefined,title:String(body.title??''),scheduledAt:body.scheduledAt?String(body.scheduledAt):undefined,location:body.location?String(body.location):undefined,theme:body.theme?String(body.theme):undefined,dressCode:body.dressCode?String(body.dressCode):undefined
       }),201,cors);
     }
     const meetingContext=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/meetings\/([^/]+)\/context$/);
@@ -1535,6 +1535,62 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
         if(existing && (existing.summary!==note || existing.groupId!==groupId))throw Error('IDEMPOTENCY_CONFLICT');
         if(!existing)await repo.saveWorkspaceRecord({id,tenantId:ctx.tenantId,groupId,moduleId:'MEETING.COMMAND_CENTER',title:'Note de séance',summary:note,status:'ACTIVE',tags:['note'],data:{},createdBy:ctx.actorId,createdAt:item.createdAt,updatedAt:new Date().toISOString()});
         return json({accepted:true,stored:true,type:item.type,recordId:id},200,cors);
+      }
+      if(item.type==='GROUP_PROJECT_UPSERT_V1'){
+        const p=item.payload,input=(p.input&&typeof p.input==='object'?p.input:{}) as Record<string,unknown>,rubricPlans=Array.isArray(input.rubrics)?input.rubrics:undefined;
+        const financial=rubricPlans!==undefined?{rubrics:rubricPlans as any}:{memberCount:finite(input.memberCount),sessions:finite(input.sessions),nominalContribution:{currency:'XAF',amount:finite(input.nominalContribution)},managementFeePerContribution:{currency:'XAF',amount:finite(input.managementFeePerContribution,0)},estimatedExternalCostRate:finite(input.estimatedExternalCostRate,0),fixedOperatingCostPerSession:{currency:'XAF',amount:finite(input.fixedOperatingCostPerSession,0)}};
+        const project=await foundation.createProject({projectId:String(p.projectId??''),tenantId:ctx.tenantId,createdBy:ctx.actorId,name:String(input.name??''),kind:String(input.kind??'rotating_tontine') as any,governanceModel:String(input.governanceModel??'founder_managed') as any,launchProfile:input.launchProfile as any,...financial},item.idempotencyKey);
+        const result=await foundation.simulateProject(ctx.tenantId,project.id,item.idempotencyKey);
+        return json({accepted:true,stored:true,project,result},200,cors);
+      }
+      if(item.type==='GROUP_PROJECT_CONVERT_V1'){
+        const group=await foundation.convertProjectToGroup(ctx.tenantId,String(item.payload.projectId??''),item.idempotencyKey);
+        return json({accepted:true,stored:true,group},200,cors);
+      }
+      if(item.type==='MEMBER_ADD_V1'){
+        const p=item.payload,groupId=String(p.groupId??'');await requireGroup(groupId,true);
+        const membership=await foundation.addMember(ctx.tenantId,groupId,{id:String(p.userId??''),displayName:String(p.displayName??''),locale:String(p.locale??ctx.locale),createdAt:String(p.createdAt??new Date().toISOString())},item.idempotencyKey,String(p.membershipId??''));
+        return json({accepted:true,stored:true,membership},200,cors);
+      }
+      if(item.type==='RUBRIC_CREATE_V1'){
+        const p=item.payload,groupId=String(p.groupId??'');await requireGroup(groupId,true);
+        const rubric=await rubrics.createRubric({id:String(p.id??''),tenantId:ctx.tenantId,groupId,name:String(p.name??''),aliases:strArray(p.aliases),purpose:p.purpose?String(p.purpose):undefined,facets:p.facets as any,source:String(p.source??'GROUP_CUSTOM') as any,operatingModel:p.operatingModel as any,policies:p.policies as any,activityPlan:p.activityPlan as any});
+        return json({accepted:true,stored:true,rubric},200,cors);
+      }
+      if(item.type==='RUBRIC_ACTIVITY_PLAN_V1'){
+        const p=item.payload,groupId=String(p.groupId??'');await requireGroup(groupId,true);
+        const rubric=await rubrics.updateActivityPlan(ctx.tenantId,groupId,String(p.rubricId??''),p.plan);
+        return json({accepted:true,stored:true,rubric},200,cors);
+      }
+      if(item.type==='GROUP_POLICY_V1'){
+        const p=item.payload,groupId=String(p.groupId??'');await requireGroup(groupId,true);
+        const group=await foundation.updateGroupOperatingPolicy(ctx.tenantId,groupId,p.policy as GroupOperatingPolicy,item.idempotencyKey);
+        return json({accepted:true,stored:true,group},200,cors);
+      }
+      if(item.type==='MEETING_OPEN_V1'){
+        const p=item.payload,groupId=String(p.groupId??'');await requireGroup(groupId,true);
+        const meeting=await meetings.openMeeting(ctx.tenantId,groupId,{id:String(p.id??''),title:p.title?String(p.title):undefined,scheduledAt:p.scheduledAt?String(p.scheduledAt):undefined,location:p.location?String(p.location):undefined,theme:p.theme?String(p.theme):undefined,dressCode:p.dressCode?String(p.dressCode):undefined},item.idempotencyKey);
+        return json({accepted:true,stored:true,meeting},200,cors);
+      }
+      if(item.type==='MEETING_CONTEXT_V1'){
+        const p=item.payload,groupId=String(p.groupId??''),meetingId=String(p.meetingId??'');await requireGroup(groupId,true);
+        const meeting=await meetings.updateMeetingContext(ctx.tenantId,groupId,meetingId,{scheduledAt:p.scheduledAt===undefined?undefined:p.scheduledAt===null?null:String(p.scheduledAt),location:p.location===undefined?undefined:p.location===null?null:String(p.location),theme:p.theme===undefined?undefined:p.theme===null?null:String(p.theme),dressCode:p.dressCode===undefined?undefined:p.dressCode===null?null:String(p.dressCode)},item.idempotencyKey);
+        return json({accepted:true,stored:true,meeting},200,cors);
+      }
+      if(item.type==='MEETING_ATTENDANCE_V1'){
+        const p=item.payload,groupId=String(p.groupId??'');await requireGroup(groupId,true);
+        const record=await meetings.recordAttendance(ctx.tenantId,groupId,String(p.meetingId??''),{membershipId:String(p.membershipId??''),attendance:String(p.attendance??'') as any,note:p.note?String(p.note):undefined},item.idempotencyKey);
+        return json({accepted:true,stored:true,record},200,cors);
+      }
+      if(item.type==='MEETING_BENEFIT_V1'){
+        const p=item.payload,groupId=String(p.groupId??'');await requireGroup(groupId,true);
+        const record=await meetings.declareBenefit(ctx.tenantId,groupId,String(p.meetingId??''),{membershipId:String(p.membershipId??''),rubricId:p.rubricId?String(p.rubricId):undefined,amount:finite(p.amount),currency:String(p.currency??'XAF'),note:p.note?String(p.note):undefined},item.idempotencyKey);
+        return json({accepted:true,stored:true,record},200,cors);
+      }
+      if(item.type==='MEETING_BENEFIT_EVIDENCE_V1'){
+        const p=item.payload,groupId=String(p.groupId??'');await requireGroup(groupId,false);
+        const evidence=await meetings.recordBenefitEvidence(ctx.tenantId,groupId,String(p.meetingId??''),{declarationId:String(p.declarationId??''),membershipId:String(p.membershipId??''),rubricId:p.rubricId?String(p.rubricId):undefined,amount:p.amount===undefined?undefined:finite(p.amount),currency:p.currency?String(p.currency):undefined,method:String(p.method??'') as any,artifactKey:p.artifactKey?String(p.artifactKey):undefined,fingerprint:p.fingerprint?String(p.fingerprint):undefined,note:p.note?String(p.note):undefined,idempotencyKey:String(p.idempotencyKey??item.idempotencyKey)},item.idempotencyKey);
+        return json({accepted:true,stored:true,evidence},200,cors);
       }
       throw new Error('OUTBOX_TYPE_UNSUPPORTED');
     }
