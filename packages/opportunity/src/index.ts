@@ -86,6 +86,12 @@ export class OpportunityService{
     if(!input.groupId&&visibility==='GROUP')throw Error('GROUP_VISIBILITY_REQUIRES_GROUP');
     const source=input.source??'DIRECT';
     if(!['DIRECT','BLUEPRINT','FORUM','COMMUNITY'].includes(source))throw Error('INVALID_OPPORTUNITY_SOURCE');
+    const sourceRef=clean(input.sourceRef,220);
+    if(sourceRef&&['FORUM','COMMUNITY'].includes(source)){
+      const existing=(await this.repo.listWorkspaceRecords(ctx.tenantId,'OPPORTUNITY.NEED',input.groupId))
+        .find(x=>String(x.data.source??'')===source&&String(x.data.sourceRef??'')===sourceRef) as OpportunityRecord|undefined;
+      if(existing){await this.recordAccess(existing,false);return existing;}
+    }
     const stamp=now(),record:OpportunityRecord={
       id:makeId('opportunity'),tenantId:ctx.tenantId,groupId:input.groupId,moduleId:'OPPORTUNITY.NEED',
       title,summary:clean(input.summary,1200)||undefined,status:'DRAFT',
@@ -93,7 +99,7 @@ export class OpportunityService{
       data:{
         opportunityDirection:direction,opportunityState:'DRAFT',category:clean(input.category,120),quantity:input.quantity??null,
         unit:clean(input.unit,80),locality:clean(input.locality,160),targetDate:input.targetDate?new Date(input.targetDate).toISOString():null,
-        urgency,visibility,source,sourceRef:clean(input.sourceRef,220),humanValidated:false,commercialCommitment:false,realMoney:false,version:1
+        urgency,visibility,source,sourceRef,humanValidated:false,commercialCommitment:false,realMoney:false,version:1
       },
       createdBy:ctx.actorId,createdAt:stamp,updatedAt:stamp
     };
