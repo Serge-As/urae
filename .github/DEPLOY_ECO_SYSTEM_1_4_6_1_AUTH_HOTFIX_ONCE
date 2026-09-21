@@ -6,3 +6,6 @@ authorized_by_founder_chat=2026-09-21
 guardrails=full_ci,birplus_pre,reuse_existing_d1_r2,additive_migrations_only,real_auth_roundtrip,automatic_worker_rollback,birplus_post,real_money_false
 
 retry_after_smoke_gate_fix=2
+
+pilot_proof_run=35621413605
+retry_after_pilot_success=3
