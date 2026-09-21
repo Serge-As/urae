@@ -247,11 +247,34 @@ export class ConnectedApplication {
   async closeMeeting(meetingId:string):Promise<MeetingSession>{if(!this.activeGroupId)throw new Error('ACTIVE_GROUP_REQUIRED');return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/meetings/${encodeURIComponent(meetingId)}/close`,{method:'POST',body:'{}'});}
 
   async simulateAndStoreProject(input:{name:string;kind:Group['kind'];governanceModel:Group['governanceModel'];rubrics?:LaunchRubricPlan[];launchProfile?:GroupProjectLaunchProfile;memberCount?:number;sessions?:number;nominalContribution?:number;managementFeePerContribution?:number;estimatedExternalCostRate?:number;fixedOperatingCostPerSession?:number}):Promise<{projectId:string;result:FeasibilityResult}>{
-    const headers={'x-active-group-id':''};
-    const project=await this.request<{id:string}>('/api/v1/group-projects',{method:'POST',headers,body:JSON.stringify({...input,currency:'XAF'})});
-    const result=await this.request<FeasibilityResult>(`/api/v1/group-projects/${encodeURIComponent(project.id)}/simulate`,{method:'POST',headers,body:'{}'});return{projectId:project.id,result};
+    const headers={'x-active-group-id':''},projectId=makeId('project');
+    if(!this.isOffline()){
+      const project=await this.request<{id:string}>('/api/v1/group-projects',{method:'POST',headers,body:JSON.stringify({...input,projectId,currency:'XAF'})});
+      const result=await this.request<FeasibilityResult>(`/api/v1/group-projects/${encodeURIComponent(project.id)}/simulate`,{method:'POST',headers,body:'{}'});return{projectId:project.id,result};
+    }
+    const stamp=new Date().toISOString(),currency='XAF',launchProfile=input.launchProfile??{origin:{mode:'NEW'}};
+    const project:any={id:projectId,tenantId:this.tenantId,createdBy:this.actorId,name:input.name.trim(),kind:input.kind,governanceModel:input.governanceModel,status:'simulated',createdAt:stamp,rubrics:input.rubrics?structuredClone(input.rubrics):undefined,launchProfile:structuredClone(launchProfile),
+      memberCount:input.rubrics?1:Number(input.memberCount??0),sessions:input.rubrics?1:Number(input.sessions??0),nominalContribution:{currency,amount:input.rubrics?0:Number(input.nominalContribution??0)},managementFeePerContribution:{currency,amount:input.rubrics?0:Number(input.managementFeePerContribution??0)},estimatedExternalCostRate:input.rubrics?0:Number(input.estimatedExternalCostRate??0),fixedOperatingCostPerSession:{currency,amount:input.rubrics?0:Number(input.fixedOperatingCostPerSession??0)}};
+    const result=new GroupLaunchSimulator().simulate(project);await this.saveCached(`/api/v1/offline/projects/${projectId}`,project);
+    await this.queueLocal('GROUP_PROJECT_UPSERT_V1',{projectId,input:structuredClone(input)},projectId);return{projectId,result};
   }
-  async createGroupFromProject(projectId:string):Promise<Group>{const group=await this.request<Group>(`/api/v1/group-projects/${encodeURIComponent(projectId)}/convert`,{method:'POST',headers:{'x-active-group-id':''},body:'{}'});this.selectGroup(group.id);return group;}
+  async createGroupFromProject(projectId:string):Promise<Group>{
+    if(!this.isOffline()){const group=await this.request<Group>(`/api/v1/group-projects/${encodeURIComponent(projectId)}/convert`,{method:'POST',headers:{'x-active-group-id':''},body:'{}'});this.selectGroup(group.id);return group;}
+    const project=await this.cached<any>(`/api/v1/offline/projects/${projectId}`);if(!project)throw Error('PROJECT_NOT_FOUND');
+    const origin=project.launchProfile?.origin??{mode:'NEW'},groupId=origin.mode==='TRANSFORM_REGISTERED'&&origin.sourceGroupId?String(origin.sourceGroupId):`group_from_${projectId}`,stamp=new Date().toISOString();
+    const existingGroups=await this.cached<Group[]>('/api/v1/groups')??[],previous=existingGroups.find(g=>g.id===groupId);
+    const group:Group=previous?{...previous,name:project.name,kind:project.kind,governanceModel:project.governanceModel,status:'active',launchProfileSnapshot:structuredClone(project.launchProfile)}:{id:groupId,tenantId:this.tenantId,name:project.name,kind:project.kind,governanceModel:project.governanceModel,status:'active',createdBy:this.actorId,createdAt:stamp,operatingPolicy:starterGroupOperatingPolicy(),originMode:origin.mode,historicalCreatedAt:origin.historicalCreatedAt,currentExerciseLabel:origin.currentExerciseLabel,launchProfileSnapshot:structuredClone(project.launchProfile)};
+    this.groupTenants.set(groupId,this.tenantId);await this.saveCached('/api/v1/groups',[...existingGroups.filter(g=>g.id!==groupId),group]);this.selectGroup(groupId);
+    await this.saveCached('/api/v1/groups',[...existingGroups.filter(g=>g.id!==groupId),group]);
+    await this.saveCached(`/api/v1/groups/${encodeURIComponent(groupId)}/operating-policy`,group.operatingPolicy??starterGroupOperatingPolicy());
+    const owner:MembershipView={id:`membership_owner_${groupId}`,tenantId:this.tenantId,groupId,userId:this.actorId,roles:['founder','manager'],status:'active',joinedAt:group.createdAt,displayName:this.displayName};
+    await this.saveCached(`/api/v1/groups/${encodeURIComponent(groupId)}/members`,[owner]);
+    await this.saveCached(`/api/v1/groups/${encodeURIComponent(groupId)}/meetings`,[]);
+    const localRubrics:RubricDefinition[]=[];
+    for(const plan of project.rubrics??[]){const hash=await this.sha256Hex(JSON.stringify([this.tenantId,groupId,plan.key]));localRubrics.push({id:'rubric_launch_'+hash,tenantId:this.tenantId,groupId,name:plan.name,aliases:[],facets:{direction:'MIXED',obligation:'CUSTOM',medium:'CASH',refundability:'CUSTOM',replenishment:'CUSTOM',interestMode:'CUSTOM',eligibilityMode:'RULE_BASED'},policies:plan.policyDraft,activityPlan:structuredClone(plan),status:'ACTIVE',source:'GROUP_CUSTOM',version:1,createdAt:stamp,updatedAt:stamp});}
+    await this.saveCached(`/api/v1/groups/${encodeURIComponent(groupId)}/rubrics`,localRubrics);
+    await this.queueLocal('GROUP_PROJECT_CONVERT_V1',{projectId,groupId},'convert:'+projectId);return group;
+  }
   async updateRubricActivityPlan(rubricId:string,plan:LaunchRubricPlan):Promise<RubricDefinition>{
     if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');
     if(!this.isOffline())return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/rubrics/${encodeURIComponent(rubricId)}/activity-plan`,{method:'PUT',body:JSON.stringify(plan)});
