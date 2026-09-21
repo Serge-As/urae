@@ -1,9 +1,9 @@
 {
   "name": "tontine-platform",
-  "version": "1.4.2-operational-center-sessions-blueprint",
+  "version": "1.4.3-blueprint-5-0-0-finalized",
   "private": true,
   "type": "module",
-  "description": "Eco-System 1.4.2: 1.4.1 preserved; Operational Center separated from true Sessions workspace; mobile navigation hardened; executable Association-first Blueprint, community action presets and deterministic anti-scam financial lab.",
+  "description": "Eco-System 1.4.3: 1.4.2 preserved; Blueprint executable 5.0.0 harmonized across Association/Tontine, communities/forums, opportunity, local commerce, business/talent and trust; PWA delivery hardened for visible updates.",
   "engines": {
     "node": ">=24"
   },
