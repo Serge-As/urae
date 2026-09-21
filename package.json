@@ -13,7 +13,7 @@
     "test": "node scripts/build.mjs && node --test tests/*.test.mjs",
     "lint:architecture": "node scripts/architecture-fitness.mjs",
     "lint:constitution": "node scripts/constitution-lint.mjs",
-    "ci": "npm run typecheck && npm run lint:architecture && npm run lint:shared-governance && npm run lint:constitution && npm run lint:truth && npm run lint:memory && npm run lint:memory-index && npm run lint:source-coverage && npm run test",
+    "ci": "npm run typecheck && npm run lint:architecture && npm run lint:shared-governance && npm run lint:constitution && npm run lint:truth && npm run lint:evidence && npm run lint:memory && npm run lint:memory-index && npm run lint:source-coverage && npm run test",
     "demo": "node scripts/dev-server.mjs",
     "demo:rebuild": "node scripts/build.mjs && node scripts/dev-server.mjs",
     "start": "node scripts/dev-server.mjs",
@@ -23,7 +23,8 @@
     "lint:memory-index": "node scripts/build-memory-index.mjs --check",
     "lint:source-coverage": "node scripts/source-coverage-lint.mjs",
     "lint:truth": "node scripts/project-truth-gate.mjs",
-    "lint:shared-governance": "node scripts/shared-governance-lint.mjs && node scripts/service-solidarity-lint.mjs"
+    "lint:shared-governance": "node scripts/shared-governance-lint.mjs && node scripts/service-solidarity-lint.mjs",
+    "lint:evidence": "node scripts/evidence-gate.mjs"
   },
   "devDependencies": {
     "typescript": "^5.8.3"
