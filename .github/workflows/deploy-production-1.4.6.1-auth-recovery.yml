@@ -1,4 +1,4 @@
-name: Eco-System 1.4.6.1 — Auth Navigation Recovery Deploy
+name: Eco-System — EMERGENCY Restore 1.4.3 via Recovery Lane
 
 on:
   workflow_dispatch:
@@ -10,7 +10,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: eco-system-production-1-4-6-1-auth-recovery
+  group: eco-system-emergency-restore-known-stable-1-4-3
   cancel-in-progress: false
 
 env:
@@ -18,7 +18,7 @@ env:
   PROD_DB: eco-system-db
   PROD_R2: eco-system-backups
   PROD_ROOT: https://eco-system.sergemimf.workers.dev
-  EXPECTED_VERSION: 1.4.6.1-auth-navigation-recovery
+  EXPECTED_VERSION: 1.4.3-blueprint-5-0-0-finalized
 
 jobs:
   qualify-backup-deploy-smoke:
@@ -33,6 +33,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
+          ref: next/1.4.3-blueprint-5-0-0-finalization-20260921
           fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
@@ -72,34 +73,34 @@ jobs:
             exit 4
           fi
           echo "Reusing existing private R2 bucket ${PROD_R2}."
-          node scripts/render-wrangler-storage.mjs "${DB_ID}" "${PROD_R2}" workers/api/wrangler.prod1461.toml
-          sed -i 's#main = "src/index.ts"#main = "src/production.ts"#' workers/api/wrangler.prod1461.toml
-          sed -i 's/PREMIUM_LIVE_LEDGER = "false"/PREMIUM_LIVE_LEDGER = "true"/' workers/api/wrangler.prod1461.toml
-          grep -q 'main = "src/production.ts"' workers/api/wrangler.prod1461.toml
-          grep -q 'name = "eco-system"' workers/api/wrangler.prod1461.toml
-          grep -q 'database_name = "eco-system-db"' workers/api/wrangler.prod1461.toml
-          grep -q 'bucket_name = "eco-system-backups"' workers/api/wrangler.prod1461.toml
-          grep -q 'PREMIUM_LIVE_LEDGER = "true"' workers/api/wrangler.prod1461.toml
-          grep -q 'class_name = "GroupLiveHub"' workers/api/wrangler.prod1461.toml
-          grep -q 'storage = "sqlite"' workers/api/wrangler.prod1461.toml
-          grep -q 'binding = "AI"' workers/api/wrangler.prod1461.toml
+          node scripts/render-wrangler-storage.mjs "${DB_ID}" "${PROD_R2}" workers/api/wrangler.prod143.toml
+          sed -i 's#main = "src/index.ts"#main = "src/production.ts"#' workers/api/wrangler.prod143.toml
+          sed -i 's/PREMIUM_LIVE_LEDGER = "false"/PREMIUM_LIVE_LEDGER = "true"/' workers/api/wrangler.prod143.toml
+          grep -q 'main = "src/production.ts"' workers/api/wrangler.prod143.toml
+          grep -q 'name = "eco-system"' workers/api/wrangler.prod143.toml
+          grep -q 'database_name = "eco-system-db"' workers/api/wrangler.prod143.toml
+          grep -q 'bucket_name = "eco-system-backups"' workers/api/wrangler.prod143.toml
+          grep -q 'PREMIUM_LIVE_LEDGER = "true"' workers/api/wrangler.prod143.toml
+          grep -q 'class_name = "GroupLiveHub"' workers/api/wrangler.prod143.toml
+          grep -q 'storage = "sqlite"' workers/api/wrangler.prod143.toml
+          grep -q 'binding = "AI"' workers/api/wrangler.prod143.toml
 
       - name: Pre-deploy BIR+ production snapshot
         shell: bash
         run: |
           set -euo pipefail
           mkdir -p /tmp/predeploy
-          git archive --format=tar HEAD | xz -T0 -9e > /tmp/predeploy/eco-system-1.4.6.1-source.tar.xz
-          npx --yes wrangler@4 d1 export "${PROD_DB}" --remote --output=/tmp/predeploy/eco-system-production-before-1.4.6.1.sql
-          sqlite3 /tmp/predeploy/restore-check.sqlite < /tmp/predeploy/eco-system-production-before-1.4.6.1.sql
+          git archive --format=tar HEAD | xz -T0 -9e > /tmp/predeploy/eco-system-1.4.3-source.tar.xz
+          npx --yes wrangler@4 d1 export "${PROD_DB}" --remote --output=/tmp/predeploy/eco-system-production-before-1.4.3.sql
+          sqlite3 /tmp/predeploy/restore-check.sqlite < /tmp/predeploy/eco-system-production-before-1.4.3.sql
           test "$(sqlite3 /tmp/predeploy/restore-check.sqlite 'PRAGMA integrity_check;')" = "ok"
           cd /tmp/predeploy
-          sha256sum eco-system-1.4.6.1-source.tar.xz eco-system-production-before-1.4.6.1.sql > SHA256SUMS.txt
+          sha256sum eco-system-1.4.3-source.tar.xz eco-system-production-before-1.4.3.sql > SHA256SUMS.txt
           sha256sum --check SHA256SUMS.txt
 
       - uses: actions/upload-artifact@v4
         with:
-          name: eco-system-1.4.6.1-predeploy-birplus
+          name: eco-system-1.4.3-predeploy-birplus
           path: /tmp/predeploy/
           retention-days: 90
           if-no-files-found: error
@@ -108,9 +109,9 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          PREFIX="birplus/1.4.6.1/${GITHUB_SHA}/predeploy"
-          npx --yes wrangler@4 r2 object put "${PROD_R2}/${PREFIX}/eco-system-1.4.6.1-source.tar.xz" --file /tmp/predeploy/eco-system-1.4.6.1-source.tar.xz --remote
-          npx --yes wrangler@4 r2 object put "${PROD_R2}/${PREFIX}/eco-system-production-before-1.4.6.1.sql" --file /tmp/predeploy/eco-system-production-before-1.4.6.1.sql --remote
+          PREFIX="birplus/1.4.3/${GITHUB_SHA}/predeploy"
+          npx --yes wrangler@4 r2 object put "${PROD_R2}/${PREFIX}/eco-system-1.4.3-source.tar.xz" --file /tmp/predeploy/eco-system-1.4.3-source.tar.xz --remote
+          npx --yes wrangler@4 r2 object put "${PROD_R2}/${PREFIX}/eco-system-production-before-1.4.3.sql" --file /tmp/predeploy/eco-system-production-before-1.4.3.sql --remote
           npx --yes wrangler@4 r2 object put "${PROD_R2}/${PREFIX}/SHA256SUMS.txt" --file /tmp/predeploy/SHA256SUMS.txt --remote
           npx --yes wrangler@4 r2 object get "${PROD_R2}/${PREFIX}/SHA256SUMS.txt" --file /tmp/r2-pre-SHA256SUMS.txt --remote
           cmp /tmp/predeploy/SHA256SUMS.txt /tmp/r2-pre-SHA256SUMS.txt
@@ -120,34 +121,34 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          npx --yes wrangler@4 secret list --config workers/api/wrangler.prod1461.toml > /tmp/worker-secrets.txt || true
+          npx --yes wrangler@4 secret list --config workers/api/wrangler.prod143.toml > /tmp/worker-secrets.txt || true
           if [ -n "${FOUNDER_TEAM_ACTORS:-}" ]; then
-            printf '%s' "${FOUNDER_TEAM_ACTORS}" | npx --yes wrangler@4 secret put FOUNDER_TEAM_ACTORS --config workers/api/wrangler.prod1461.toml
+            printf '%s' "${FOUNDER_TEAM_ACTORS}" | npx --yes wrangler@4 secret put FOUNDER_TEAM_ACTORS --config workers/api/wrangler.prod143.toml
           else
             echo "::notice::FOUNDER_TEAM_ACTORS absent; durable platform_control_owners remains authoritative."
           fi
           if [ -n "${COLLECTIVE_LEARNING_PEPPER:-}" ]; then
-            printf '%s' "${COLLECTIVE_LEARNING_PEPPER}" | npx --yes wrangler@4 secret put COLLECTIVE_LEARNING_PEPPER --config workers/api/wrangler.prod1461.toml
+            printf '%s' "${COLLECTIVE_LEARNING_PEPPER}" | npx --yes wrangler@4 secret put COLLECTIVE_LEARNING_PEPPER --config workers/api/wrangler.prod143.toml
           elif grep -q 'COLLECTIVE_LEARNING_PEPPER' /tmp/worker-secrets.txt; then
             echo "Preserving existing COLLECTIVE_LEARNING_PEPPER."
           else
-            openssl rand -hex 48 | npx --yes wrangler@4 secret put COLLECTIVE_LEARNING_PEPPER --config workers/api/wrangler.prod1461.toml
+            openssl rand -hex 48 | npx --yes wrangler@4 secret put COLLECTIVE_LEARNING_PEPPER --config workers/api/wrangler.prod143.toml
             echo "Created one-time COLLECTIVE_LEARNING_PEPPER in Cloudflare."
           fi
           if [ -n "${IDENTITY_MATCH_PEPPER:-}" ]; then
-            printf '%s' "${IDENTITY_MATCH_PEPPER}" | npx --yes wrangler@4 secret put IDENTITY_MATCH_PEPPER --config workers/api/wrangler.prod1461.toml
+            printf '%s' "${IDENTITY_MATCH_PEPPER}" | npx --yes wrangler@4 secret put IDENTITY_MATCH_PEPPER --config workers/api/wrangler.prod143.toml
           elif grep -q 'IDENTITY_MATCH_PEPPER' /tmp/worker-secrets.txt; then
             echo "Preserving existing IDENTITY_MATCH_PEPPER."
           else
-            openssl rand -hex 48 | npx --yes wrangler@4 secret put IDENTITY_MATCH_PEPPER --config workers/api/wrangler.prod1461.toml
+            openssl rand -hex 48 | npx --yes wrangler@4 secret put IDENTITY_MATCH_PEPPER --config workers/api/wrangler.prod143.toml
             echo "Created one-time IDENTITY_MATCH_PEPPER in Cloudflare."
           fi
 
       - name: Apply additive D1 migrations
-        run: npx --yes wrangler@4 d1 migrations apply "${PROD_DB}" --remote --config workers/api/wrangler.prod1461.toml
+        run: npx --yes wrangler@4 d1 migrations apply "${PROD_DB}" --remote --config workers/api/wrangler.prod143.toml
 
-      - name: Deploy Eco-System 1.4.6 production
-        run: npx --yes wrangler@4 deploy --config workers/api/wrangler.prod1461.toml
+      - name: EMERGENCY RESTORE Eco-System 1.4.3 production
+        run: npx --yes wrangler@4 deploy --config workers/api/wrangler.prod143.toml
 
       - name: Smoke production truth
         shell: bash
@@ -167,15 +168,12 @@ jobs:
               && curl --fail-with-body --silent --show-error --location --max-time 20 "${PROD_ROOT}/src/sessions-ui.js" > /tmp/smoke/sessions.js \
               && curl --fail-with-body --silent --show-error --location --max-time 20 "${PROD_ROOT}/src/blueprint-executable-ui.js" > /tmp/smoke/blueprint.js \
               && curl --fail-with-body --silent --show-error --location --max-time 20 "${PROD_ROOT}/src/community-blueprint-presets.js" > /tmp/smoke/community-presets.js \
-              && curl --fail-with-body --silent --show-error --location --max-time 20 "${PROD_ROOT}/src/community-shop-ui.js" > /tmp/smoke/community-shop.js \
-              && curl --fail-with-body --silent --show-error --location --max-time 20 "${PROD_ROOT}/packages/application/src/index.js" > /tmp/smoke/application.js \
               && curl --fail-with-body --silent --show-error --location --max-time 20 "${PROD_ROOT}/src/financial-lab-ui.js" > /tmp/smoke/financial-lab.js \
               && curl --fail-with-body --silent --show-error --location --max-time 20 "${PROD_ROOT}/styles.css" > /tmp/smoke/styles.css \
               && curl --fail-with-body --silent --show-error --location --max-time 20 "${PROD_ROOT}/src/offline-snapshot.js" > /tmp/smoke/offline.js \
               && curl --fail-with-body --silent --show-error --location --max-time 20 "${PROD_ROOT}/src/member-dossier-ui.js" > /tmp/smoke/member-dossier.js \
               && curl --fail-with-body --silent --show-error --location --max-time 20 "${PROD_ROOT}/src/main.js" > /tmp/smoke/main.js \
-              && curl --fail-with-body --silent --show-error --location --max-time 20 "${PROD_ROOT}/sw.js" > /tmp/smoke/sw.js \
-              && grep -Fq 'ECO-SYSTEM · 1.4.6.1' /tmp/smoke/root.html \
+              && grep -Fq 'ECO-SYSTEM · 1.4.3' /tmp/smoke/root.html \
               && grep -Fq "${EXPECTED_VERSION}" /tmp/smoke/health.json \
               && grep -Fq 'mountVoiceEntryUI' /tmp/smoke/voice.js \
               && grep -Fq 'mountDocumentsUI' /tmp/smoke/voice.js \
@@ -206,14 +204,6 @@ jobs:
               && grep -Fq 'Une tranche horaire ne transforme jamais un contenu en information vérifiée' /tmp/smoke/community-presets.js \
               && grep -Fq 'ONG · partenaires · impact' /tmp/smoke/community-presets.js \
               && grep -Fq 'Créateurs · vitrines · contenus utiles' /tmp/smoke/community-presets.js \
-              && grep -Fq 'Transformer en besoin' /tmp/smoke/community-shop.js \
-              && grep -Fq 'createOpportunity' /tmp/smoke/application.js \
-              && grep -Fqi 'consensus' /tmp/smoke/sessions.js \
-              && grep -Fq 'Communautés & valeur' /tmp/smoke/root.html \
-              && grep -Fq 'data-mobile-label="Membres"' /tmp/smoke/root.html \
-              && grep -Fq 'data-mobile-label="Bénéf."' /tmp/smoke/root.html \
-              && grep -Fq 'data-eco-jump="communityEnginePanel"' /tmp/smoke/root.html \
-              && grep -Fq 'eco-system-v146-sessions-community-blueprint-final-20260921-auth-recovery-1461' /tmp/smoke/sw.js \
               && grep -Fq 'Eco-System ne conclut pas « Ponzi » ou « arnaque »' /tmp/smoke/financial-lab.js \
               && grep -Fq 'data-mobile-label' /tmp/smoke/root.html \
               && grep -Fq 'scroll-snap-type:x proximity' /tmp/smoke/styles.css \
@@ -275,14 +265,6 @@ jobs:
           grep -Fq 'Une tranche horaire ne transforme jamais un contenu en information vérifiée' /tmp/smoke/community-presets.js
           grep -Fq 'ONG · partenaires · impact' /tmp/smoke/community-presets.js
           grep -Fq 'Créateurs · vitrines · contenus utiles' /tmp/smoke/community-presets.js
-          grep -Fq 'Transformer en besoin' /tmp/smoke/community-shop.js
-          grep -Fq 'createOpportunity' /tmp/smoke/application.js
-          grep -Fqi 'consensus' /tmp/smoke/sessions.js
-          grep -Fq 'Communautés & valeur' /tmp/smoke/root.html
-          grep -Fq 'data-mobile-label="Membres"' /tmp/smoke/root.html
-          grep -Fq 'data-mobile-label="Bénéf."' /tmp/smoke/root.html
-          grep -Fq 'data-eco-jump="communityEnginePanel"' /tmp/smoke/root.html
-          grep -Fq 'eco-system-v146-sessions-community-blueprint-final-20260921-auth-recovery-1461' /tmp/smoke/sw.js
           grep -Fq 'Eco-System ne conclut pas « Ponzi » ou « arnaque »' /tmp/smoke/financial-lab.js
           grep -Fq 'data-mobile-label' /tmp/smoke/root.html
           grep -Fq 'scroll-snap-type:x proximity' /tmp/smoke/styles.css
@@ -293,20 +275,7 @@ jobs:
           grep -Fq 'Comparer les 2 systèmes' /tmp/smoke/governance.js
           grep -Fq 'Total mensuel restant dû pour séance suivante' /tmp/smoke/governance.js
           grep -Fq 'Capital restant' /tmp/smoke/governance.js
-          grep -Fq 'id="appBackBtn"' /tmp/smoke/root.html
-          grep -Fq '/src/auth-bootstrap.js?v=1461' /tmp/smoke/root.html
-          curl --fail-with-body --silent --show-error --location --max-time 20 "${PROD_ROOT}/api/v1/auth/session" > /tmp/smoke/auth-session.json
-          node --input-type=module <<'NODE'
-          import fs from 'node:fs';
-          const s=JSON.parse(fs.readFileSync('/tmp/smoke/auth-session.json','utf8'));
-          if(s.authenticated!==false || s.account!==null)throw new Error('AUTH_SESSION_PUBLIC_PROBE_FAILED:'+JSON.stringify(s));
-          console.log('Auth session public probe PASS');
-          NODE
-          AUTH_CODE="$(curl --silent --show-error --max-time 30 -o /tmp/smoke/auth-login.json -w '%{http_code}' -X POST "${PROD_ROOT}/api/v1/auth/login" -H "Origin: ${PROD_ROOT}" -H 'Content-Type: application/json' --data '{"username":"eco_auth_probe_nonexistent","password":"ProbePassword_2026_NOT_REAL"}')"
-          test "${AUTH_CODE}" = "401"
-          grep -Fq '"error":"INVALID_CREDENTIALS"' /tmp/smoke/auth-login.json
-          echo "Auth login route probe PASS"
-          echo "Production 1.4.6.1 smoke PASS"
+          echo "Emergency restore 1.4.3 smoke PASS"
 
       - name: Post-deploy BIR+ production snapshot
         shell: bash
@@ -314,16 +283,16 @@ jobs:
           set -euo pipefail
           mkdir -p /tmp/postdeploy
           printf '%s\n' "version=${EXPECTED_VERSION}" "commit=${GITHUB_SHA}" "worker=${PROD_WORKER}" "database=${PROD_DB}" "deployed_at=$(date -u +%Y-%m-%dT%H:%M:%SZ)" > /tmp/postdeploy/DEPLOYMENT_TRUTH.txt
-          npx --yes wrangler@4 d1 export "${PROD_DB}" --remote --output=/tmp/postdeploy/eco-system-production-after-1.4.6.1.sql
-          sqlite3 /tmp/postdeploy/restore-check.sqlite < /tmp/postdeploy/eco-system-production-after-1.4.6.1.sql
+          npx --yes wrangler@4 d1 export "${PROD_DB}" --remote --output=/tmp/postdeploy/eco-system-production-after-1.4.3.sql
+          sqlite3 /tmp/postdeploy/restore-check.sqlite < /tmp/postdeploy/eco-system-production-after-1.4.3.sql
           test "$(sqlite3 /tmp/postdeploy/restore-check.sqlite 'PRAGMA integrity_check;')" = "ok"
           cd /tmp/postdeploy
-          sha256sum eco-system-production-after-1.4.6.1.sql DEPLOYMENT_TRUTH.txt > SHA256SUMS.txt
+          sha256sum eco-system-production-after-1.4.3.sql DEPLOYMENT_TRUTH.txt > SHA256SUMS.txt
           sha256sum --check SHA256SUMS.txt
 
       - uses: actions/upload-artifact@v4
         with:
-          name: eco-system-1.4.6.1-postdeploy-birplus
+          name: eco-system-1.4.3-postdeploy-birplus
           path: /tmp/postdeploy/
           retention-days: 90
           if-no-files-found: error
@@ -332,8 +301,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          PREFIX="birplus/1.4.6.1/${GITHUB_SHA}/postdeploy"
-          npx --yes wrangler@4 r2 object put "${PROD_R2}/${PREFIX}/eco-system-production-after-1.4.6.1.sql" --file /tmp/postdeploy/eco-system-production-after-1.4.6.1.sql --remote
+          PREFIX="birplus/1.4.3/${GITHUB_SHA}/postdeploy"
+          npx --yes wrangler@4 r2 object put "${PROD_R2}/${PREFIX}/eco-system-production-after-1.4.3.sql" --file /tmp/postdeploy/eco-system-production-after-1.4.3.sql --remote
           npx --yes wrangler@4 r2 object put "${PROD_R2}/${PREFIX}/DEPLOYMENT_TRUTH.txt" --file /tmp/postdeploy/DEPLOYMENT_TRUTH.txt --remote
           npx --yes wrangler@4 r2 object put "${PROD_R2}/${PREFIX}/SHA256SUMS.txt" --file /tmp/postdeploy/SHA256SUMS.txt --remote
           npx --yes wrangler@4 r2 object get "${PROD_R2}/${PREFIX}/SHA256SUMS.txt" --file /tmp/r2-post-SHA256SUMS.txt --remote
