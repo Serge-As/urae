@@ -74,11 +74,10 @@ export class ConnectedApplication {
 
   private headers(extra:Record<string,string>={}):HeadersInit{return{'content-type':'application/json','accept-language':this.locale,'x-active-group-id':this.activeGroupId??'','x-timezone':'Africa/Douala',...extra};}
   private offlineReadAllowed(path:string):boolean{
-    if(path==='/api/v1/auth/session'||path==='/api/v1/groups')return true;
-    return /^\/api\/v1\/groups\/[^/?]+\/(me|members|meetings|rubrics|operating-policy|ledger|cashbox\/reconciliations|expenses|identity-passport|identity-profile)(?:\?.*)?$/.test(path)
-      || /^\/api\/v1\/groups\/[^/?]+\/recap\/global(?:\?.*)?$/.test(path)
-      || /^\/api\/v1\/groups\/[^/?]+\/meetings\/[^/?]+\/(attendance|beneficiaries|beneficiary-evidence)(?:\?.*)?$/.test(path)
-      || /^\/api\/v1\/groups\/[^/?]+\/members\/[^/?]+\/(statement|operational-sheet)(?:\?.*)?$/.test(path);
+    // Actor-scoped IndexedDB snapshots are safe for GET projections. Keeping this
+    // generic prevents a newly-added read screen from becoming an accidental
+    // offline blocker. Mutations are never synthesized here.
+    return path==='/api/v1/auth/session'||path.startsWith('/api/v1/');
   }
   private offlineReadKey(path:string):string{return path==='/api/v1/auth/session'?'session:last':JSON.stringify([this.actorId,this.tenantId,this.activeGroupId??'',path]);}
   private async cacheReadSnapshot<T>(path:string,body:T):Promise<void>{
@@ -206,7 +205,16 @@ export class ConnectedApplication {
   async openSupportCase(summary:string):Promise<CaseRecord>{return this.request('/api/v1/cases',{method:'POST',body:JSON.stringify({summary,groupId:this.activeGroupId})});}
   async inboxItems():Promise<Array<{id:string;kind:string;title:string;priority:string;status:string;groupId?:string}>>{return this.request('/api/v1/inbox');}
 
-  async productCatalog():Promise<{version:string;count:number;capabilities:ReturnType<ConnectedApplication['productModules']>}>{return this.request('/api/v1/product/capabilities');}
+  async productCatalog():Promise<{version:string;count:number;capabilities:ReturnType<ConnectedApplication['productModules']>}>{
+    try{return await this.request('/api/v1/product/capabilities');}
+    catch(error){
+      if((error instanceof Error)&&error.message==='NETWORK_UNAVAILABLE'){
+        const capabilities=this.productModules();
+        return{version:'offline-bundled',count:capabilities.length,capabilities};
+      }
+      throw error;
+    }
+  }
   async searchGroups(input:{q?:string;locality?:string;recruitingOnly?:boolean}={}):Promise<GroupDiscoveryMatch[]>{const p=new URLSearchParams();if(input.q)p.set('q',input.q);if(input.locality)p.set('locality',input.locality);if(input.recruitingOnly)p.set('recruitingOnly','true');return this.request(`/api/v1/discovery/groups?${p}`);}
   async publishActiveGroup(input:{visibility:'PUBLIC'|'INVITE_ONLY'|'SECRET'|'MEMBERS_ONLY';discoverable:boolean;joinPolicy:'REQUEST'|'OPEN'|'INVITE_ONLY'|'CLOSED';recruiting:boolean;locality?:string;missionTags?:string[];activityTags?:string[]}):Promise<PublicGroupListing>{if(!this.activeGroupId)throw new Error('ACTIVE_GROUP_REQUIRED');return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/discovery`,{method:'POST',body:JSON.stringify(input)});}
   async createJoinLink(input:{mode?:'AUTO_JOIN'|'HISTORICAL_MATCH';label?:string;expiresHours?:number;maxUses?:number}={}):Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/join-links`,{method:'POST',body:JSON.stringify(input)});}
