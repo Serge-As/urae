@@ -402,7 +402,8 @@
                 <button class="primary">Enregistrer la politique</button>
               </form>
               <form id="rubricForm" class="form-grid">
-                <h3>Décrire une rubrique</h3>
+                <h3>Ajouter / décrire une rubrique</h3>
+                <div class="actions full"><button id="quickRubricLoan" type="button" class="secondary">Prêt</button><button id="quickRubricSavings" type="button" class="secondary">Épargne</button><button id="quickRubricAssistance" type="button" class="secondary">Assistance</button><span class="hint">Raccourcis : ils préparent le formulaire dans le groupe actif, sans recréer de groupe.</span></div>
                 <label>Nom<input id="rubricName" required value="Collation"></label>
                 <label class="full">Ce qui est écrit<textarea id="writtenRule" rows="3" placeholder="Article du RI, statuts, résolution…"></textarea></label>
                 <label class="full">Ce qui est réellement pratiqué<textarea id="observedPractice" rows="3" placeholder="Décrivez la pratique réelle, même si elle diffère du texte."></textarea></label>
@@ -564,7 +565,8 @@
           </section>
 
           <details class="panel" id="advancedFinancePanel">
-            <summary><strong>Finances avancées · impayés · épargne · solidarité · caisse</strong></summary>
+            <summary><strong>Outils financiers complémentaires · échéances · caisse · suivi</strong></summary>
+            <p class="hint">Ces outils complètent les menus principaux. Pour le travail courant, utilisez directement « Prêts », « Épargne » ou « Assistances » dans le menu latéral. Ici se trouvent surtout les attendus/impayés, soldes d’ouverture, contenants de caisse et dossiers de suivi.</p>
             <div class="two-col">
               <form id="expectedContributionForm" class="form-grid">
                 <h3>Attendu / échéance</h3>
