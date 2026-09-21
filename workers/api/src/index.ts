@@ -1644,6 +1644,32 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
         await markApplied();
         return json({accepted:true,stored:true,recordId:id},200,cors);
       }
+      if(item.type==='FINANCIAL_NOTICE_CONFIRM_V1'){
+        const p=item.payload,groupId=String(p.groupId??'');await requireGroup(groupId,false);
+        const notice=await memberControl.confirm(groupId,String(p.noticeId??''));
+        await markApplied();
+        return json({accepted:true,stored:true,notice},200,cors);
+      }
+      if(item.type==='FINANCIAL_NOTICE_RESERVE_V1'){
+        const p=item.payload,groupId=String(p.groupId??'');await requireGroup(groupId,false);
+        const result=await memberControl.reserve(groupId,String(p.noticeId??''),String(p.reason??''));
+        await markApplied();
+        return json({accepted:true,stored:true,...result},200,cors);
+      }
+      if(item.type==='FINANCIAL_NOTICE_OFFICER_REVIEW_V1'){
+        const p=item.payload,groupId=String(p.groupId??'');await requireGroup(groupId,true);
+        const notice=await memberControl.officerReview(groupId,String(p.noticeId??''),String(p.note??''));
+        await markApplied();
+        return json({accepted:true,stored:true,notice},200,cors);
+      }
+      if(item.type==='FINANCIAL_NOTICE_MEMBER_REVIEW_V1'){
+        const p=item.payload,groupId=String(p.groupId??''),decision=String(p.decision??'');
+        await requireGroup(groupId,false);
+        if(decision!=='APPROVE_AFTER_REVIEW'&&decision!=='MAINTAIN_RESERVE')throw Error('INVALID_MEMBER_REVIEW_DECISION');
+        const notice=await memberControl.memberReview(groupId,String(p.noticeId??''),decision,String(p.note??''));
+        await markApplied();
+        return json({accepted:true,stored:true,notice},200,cors);
+      }
 
       throw new Error('OUTBOX_TYPE_UNSUPPORTED');
     }
