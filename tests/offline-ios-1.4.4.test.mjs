@@ -46,8 +46,11 @@ test('offline loss of an optional section does not block Group Core',()=>{
 });
 
 test('service worker keeps full app shell and uses a new isolated cache version',()=>{
-  assert.match(sw,/eco-system-v144-offline-ios-safe-20260921/);
+  assert.match(sw,/eco-system-v14(?:4-offline-ios-safe|5-final-mega-offline-safe)-20260921/);
   for(const asset of ['/index.html','/styles.css','/src/main.js','/src/sessions-ui.js','/packages/application/src/index.js','/packages/offline/src/index.js'])assert.ok(sw.includes(asset),asset);
   assert.match(sw,/event\.request\.mode === 'navigate'/);
   assert.match(sw,/cache\.match\('\/index\.html'\)/);
+  assert.match(sw,/cache-first/i);
+  assert.doesNotMatch(main,/controllerchange[\s\S]{0,500}location\.reload\(/);
+  assert.doesNotMatch(sw,/skipWaiting\(/);
 });
