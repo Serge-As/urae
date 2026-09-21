@@ -6,12 +6,19 @@ const expected=process.env.EXPECTED_VERSION||'1.4.6.1-auth-navigation-recovery';
 const out={root,checks:[],accountId:null};
 const pass=(name,detail='')=>{out.checks.push({name,ok:true,detail});console.error('PASS',name,detail)};
 const fail=(name,detail='')=>{out.checks.push({name,ok:false,detail});throw new Error(name+': '+detail)};
+const sleep=ms=>new Promise(resolve=>setTimeout(resolve,ms));
 async function get(path){
-  const r=await fetch(root+path,{redirect:'follow',cache:'no-store'});
-  const text=await r.text();
-  if(!r.ok)fail('GET '+path,'HTTP '+r.status+' '+text.slice(0,200));
-  pass('GET '+path,'HTTP '+r.status+' '+text.length+' bytes');
-  return {r,text};
+  let lastStatus=0,lastText='';
+  for(let attempt=1;attempt<=10;attempt++){
+    try{
+      const r=await fetch(root+path,{redirect:'follow',cache:'no-store'});
+      const text=await r.text();lastStatus=r.status;lastText=text;
+      if(r.ok){pass('GET '+path,'HTTP '+r.status+' '+text.length+' bytes · attempt '+attempt);return {r,text};}
+      console.error('WAIT','GET '+path,'HTTP '+r.status+' · attempt '+attempt+'/10');
+    }catch(error){lastText=String(error);console.error('WAIT','GET '+path,lastText,'· attempt '+attempt+'/10');}
+    if(attempt<10)await sleep(3000);
+  }
+  fail('GET '+path,'HTTP '+lastStatus+' '+lastText.slice(0,200));
 }
 const rootPage=await get('/');
 const health=await get('/health');
