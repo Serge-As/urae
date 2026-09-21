@@ -6,8 +6,8 @@
   <meta name="theme-color" content="#1f6b4f">
   <meta id="metaDescription" name="description" content="Eco-System — plateforme de gestion de tontines, associations et communautés">
   <link rel="manifest" href="/manifest.webmanifest">
-  <link rel="stylesheet" href="/styles.css?v=143">
-  <title>Eco-System — 1.4.3 · Blueprint exécutable 5.0.0</title>
+  <link rel="stylesheet" href="/styles.css?v=146">
+  <title>Eco-System — 1.4.6 · Centre opérationnel · Séances · Blueprint 5.0.0</title>
 </head>
 <body class="signed-out">
   <section id="authScreen" class="auth-screen" aria-label="Connexion à Eco-System">
@@ -27,7 +27,7 @@
 <header class="topbar">
     <div class="brand">
       <div class="logo">E</div>
-      <div><strong>Eco-System</strong><small>Plateforme Tontines · Associations · Communautés</small><span class="version-badge">ECO-SYSTEM · 1.4.3</span></div>
+      <div><strong>Eco-System</strong><small>Plateforme Tontines · Associations · Communautés</small><span class="version-badge">ECO-SYSTEM · 1.4.6</span></div>
     </div>
     <div class="top-context">
       <select id="activeGroupSelect" aria-label="Groupe actif"><option value="">Aucun groupe actif</option></select>
@@ -46,30 +46,30 @@
   <div class="app-shell">
     <nav id="mainNav" class="side-nav" aria-label="Navigation principale">
       <span class="nav-caption">Mon espace</span>
-      <button data-view="dashboard" class="nav-btn active"><span>⌂</span><b>Accueil</b></button>
-      <button data-view="inbox" class="nav-btn"><span>✉</span><b>À faire</b></button>
+      <button data-view="dashboard" class="nav-btn active"><span>⌂</span><b data-mobile-label="Accueil">Accueil</b></button>
+      <button data-view="inbox" class="nav-btn"><span>✉</span><b data-mobile-label="À faire">À faire</b></button>
       <span class="nav-caption">Groupes</span>
-      <button data-view="discovery" class="nav-btn"><span>⌕</span><b>Découvrir</b></button>
-      <button data-view="launch" class="nav-btn"><span>＋</span><b>Créer / intégrer</b></button>
-      <button id="ecoAiNavBtn" data-view="launch" class="nav-btn"><span>✦</span><b>Eco IA</b></button>
+      <button data-view="discovery" class="nav-btn"><span>⌕</span><b data-mobile-label="Découvrir">Découvrir</b></button>
+      <button data-view="launch" class="nav-btn"><span>＋</span><b data-mobile-label="Créer">Créer / intégrer</b></button>
+      <button id="ecoAiNavBtn" data-view="launch" class="nav-btn"><span>✦</span><b data-mobile-label="Eco IA">Eco IA</b></button>
       <button data-view="operations" class="nav-btn"><span>⌘</span><b data-mobile-label="Centre op.">Centre opérationnel</b></button>
       <button id="sessionsNavBtn" data-view="sessions" class="nav-btn"><span>☷</span><b data-mobile-label="Séances">Séances</b></button>
-      <button id="membersNavBtn" data-view="members" class="nav-btn"><span>♙</span><b>Membres & habilitations</b></button>
-      <button data-view="finance" class="nav-btn"><span>₣</span><b>Finances</b></button>
-      <button id="backOfficeNavBtn" data-view="backoffice" class="nav-btn"><span>▣</span><b>Back-office</b></button>
-      <button data-view="tontines" class="nav-btn"><span>↻</span><b>Tontines</b></button>
-      <button id="recapNavBtn" data-view="recap" class="nav-btn" hidden><span>▤</span><b>Recap</b></button>
+      <button id="membersNavBtn" data-view="members" class="nav-btn"><span>♙</span><b data-mobile-label="Membres">Membres & habilitations</b></button>
+      <button data-view="finance" class="nav-btn"><span>₣</span><b data-mobile-label="Finances">Finances</b></button>
+      <button id="backOfficeNavBtn" data-view="backoffice" class="nav-btn"><span>▣</span><b data-mobile-label="Back-office">Back-office</b></button>
+      <button data-view="tontines" class="nav-btn"><span>↻</span><b data-mobile-label="Tontines">Tontines</b></button>
+      <button id="recapNavBtn" data-view="recap" class="nav-btn" hidden><span>▤</span><b data-mobile-label="Récap">Recap</b></button>
       <span class="nav-caption">Écosystème</span>
-      <button data-view="ecosystem" class="nav-btn"><span>◎</span><b>Communauté & économie</b></button>
-      <button data-view="services" class="nav-btn"><span>▦</span><b>Tous les services</b></button>
+      <button data-view="ecosystem" class="nav-btn"><span>◎</span><b data-mobile-label="Communautés">Communautés & valeur</b></button>
+      <button data-view="services" class="nav-btn"><span>▦</span><b data-mobile-label="Services">Tous les services</b></button>
       <span class="nav-caption">Plateforme</span>
-      <button id="founderControlNavBtn" data-view="control" class="nav-btn" hidden><span>◉</span><b>Control Center</b></button>
-      <button data-view="settings" class="nav-btn"><span>⚙</span><b>Sécurité & réglages</b></button>
+      <button id="founderControlNavBtn" data-view="control" class="nav-btn" hidden><span>◉</span><b data-mobile-label="Control">Control Center</b></button>
+      <button data-view="settings" class="nav-btn"><span>⚙</span><b data-mobile-label="Réglages">Sécurité & réglages</b></button>
     </nav>
 
     <main class="content">
       <section id="view-dashboard" class="view active">
-        <div class="cahier-banner"><div><strong>Votre cockpit Eco-System</strong><p>Groupes, communautés, séances, situation personnelle, activités Live et actions utiles dans un seul espace.</p></div><span class="cahier-code">1.4.3 · BLUEPRINT EXÉCUTABLE 5.0.0</span></div>
+        <div class="cahier-banner"><div><strong>Votre cockpit Eco-System</strong><p>Groupes, communautés, séances, situation personnelle, activités Live et actions utiles dans un seul espace.</p></div><span class="cahier-code">1.4.6 · BLUEPRINT 5.0.0 · COMMUNAUTÉS & VALEUR</span></div>
         <div class="hero">
           <div>
             <span class="eyebrow">Eco-System · Cahier Maître 2.3.4 + additifs 3.2.0</span>
@@ -338,11 +338,11 @@
         <div class="page-head"><div><span class="eyebrow">Pilotage transversal du groupe</span><h1>Centre opérationnel</h1><p>Le contenu historique est conservé : membres, feuilles liées, gouvernance, impayés, rapports, recrutement, règles vivantes et suivi des capacités. Les séances disposent désormais de leur propre espace métier.</p></div><div class="page-meta"><button type="button" class="primary" data-go="sessions">Ouvrir les Séances</button></div></div>
         <div id="noActiveGroupOperations" class="panel empty-state">Sélectionnez ou créez d'abord un groupe.</div>
         <div id="operationsContent">
-          <section class="panel" id="twoSheetWorkspace"><div class="panel-head"><div><h2>Saisie financière des membres</h2><p>Ce sont les deux feuilles de saisie. Cliquez une cellule pour ouvrir un petit éditeur au-dessus de la case, sans quitter le tableau.</p></div><div class="view-switch"><button id="meetingSheetViewBtn" class="active" type="button">Votre feuille de séance</button><button id="individualSheetsViewBtn" type="button">Vos fiches individuelles</button></div></div>
+          <section class="panel operational-legacy-access" id="twoSheetWorkspace"><div class="panel-head"><div><span class="eyebrow">Accès historique conservé</span><h2>Feuilles financières</h2><p>Les deux feuilles restent accessibles ici pour éviter toute régression. La gestion d’une réunion précise se fait désormais dans <strong>Séances</strong>.</p></div><div class="actions"><button type="button" class="primary" data-go="sessions">Ouvrir Séances</button></div></div><div class="view-switch"><button id="meetingSheetViewBtn" class="active" type="button">Votre feuille de séance</button><button id="individualSheetsViewBtn" type="button">Vos fiches individuelles</button></div></div>
             <div id="meetingSheetMode"><div class="view-switch compact"><button id="matrixViewBtn" class="active" type="button">Tableau modifiable</button><button id="cardViewBtn" type="button">Vue cartes</button></div><div id="meetingMatrixPanel"><div id="meetingMatrix" class="matrix-wrap"></div><p class="hint">Les montants antérieurs restent visibles. Une cellule ouverte conserve le contexte séance × membre × rubrique et accepte de grands montants.</p></div></div>
             <div id="individualSheetsMode" hidden><div class="sheet-toolbar"><label>Membre<select id="individualSheetMember"></select></label><button id="individualSheetRefreshBtn" type="button" class="secondary">Actualiser la fiche</button></div><div id="individualSheetMatrix" class="matrix-wrap"></div><p class="hint">Chaque ligne est une séance et chaque colonne une rubrique. Les responsables saisissent directement par cellule ; un simple membre ne voit que sa propre fiche.</p></div>
           </section>
-          <section class="panel"><div class="panel-head"><div><h2>Séances</h2><p>Ouvrez, choisissez ou clôturez une séance. Cliquez sur « Réunion du… » pour voir finances, temporalité, présence, dettes/obligations, bénéficiaires et preuves.</p></div></div><form id="meetingForm" class="form-grid"><label>Note interne<input id="meetingTitle" placeholder="Facultatif — le titre affiché sera Réunion du…"></label><label>Date / heure prévue<input id="meetingScheduledAt" type="datetime-local"></label><label>Lieu / canal<input id="meetingLocation" placeholder="Ex. Domicile, salle, téléphone"></label><label>Thème<input id="meetingTheme" placeholder="Ex. Assemblée, fête, réunion ordinaire"></label><label>Tenue / code vestimentaire<input id="meetingDressCode" placeholder="Facultatif"></label><button class="primary">Ouvrir / programmer</button></form><div id="meetingList" class="stack"></div></section>
+          <section class="panel operational-legacy-access"><div class="panel-head"><div><span class="eyebrow">Compatibilité historique</span><h2>Accès rapide aux réunions</h2><p>Ce formulaire historique est conservé pour ne casser aucun parcours existant. Le cockpit complet — feuille, présence, bénéficiaires, caisse, dettes, classement et historique — est dans le menu <strong>Séances</strong>.</p></div><button type="button" class="primary" data-go="sessions">Gérer les Séances</button></div><form id="meetingForm" class="form-grid"><label>Note interne<input id="meetingTitle" placeholder="Facultatif — le titre affiché sera Réunion du…"></label><label>Date / heure prévue<input id="meetingScheduledAt" type="datetime-local"></label><label>Lieu / canal<input id="meetingLocation" placeholder="Ex. Domicile, salle, téléphone"></label><label>Thème<input id="meetingTheme" placeholder="Ex. Assemblée, fête, réunion ordinaire"></label><label>Tenue / code vestimentaire<input id="meetingDressCode" placeholder="Facultatif"></label><button class="primary">Ouvrir / programmer</button></form><div id="meetingList" class="stack"></div></section>
 
           <section class="panel" id="miscRubricPanel">
             <div class="panel-head"><div><h2>Autres · configuration des sous-rubriques</h2><p>Inscription, Timbre de prêt, Amendes et toute autre sous-rubrique sont configurés ici. <strong>Leurs montants réels se saisissent uniquement dans « Votre feuille de séance » ou « Vos fiches individuelles ».</strong></p></div><div class="actions"><button id="miscOpenMeetingSheet" type="button" class="primary">Votre feuille de séance</button><button id="miscOpenIndividualSheet" type="button" class="secondary">Vos fiches individuelles</button></div></div>
@@ -431,14 +431,14 @@
             <div class="session-picker-row"><label>Séance active<select id="sessionsMeetingSelect"></select></label><button id="sessionsOpenDetailBtn" type="button" class="secondary">Ouvrir la fiche détaillée</button></div>
           </section>
           <nav id="sessionsTabs" class="sessions-tabs" aria-label="Sections de la séance">
-            <button type="button" data-session-tab="overview" class="active">Vue d’ensemble</button>
-            <button type="button" data-session-tab="sheet">Feuille de séance</button>
-            <button type="button" data-session-tab="attendance">Présences</button>
-            <button type="button" data-session-tab="beneficiaries">Bénéficiaires & preuves</button>
-            <button type="button" data-session-tab="recap">Récap & caisse</button>
-            <button type="button" data-session-tab="debts">Dettes & amendes</button>
-            <button type="button" data-session-tab="schedule">Classements & programmation</button>
-            <button type="button" data-session-tab="history">Historique</button>
+            <button type="button" data-session-tab="overview" data-mobile-label="Vue" class="active">Vue d’ensemble</button>
+            <button type="button" data-session-tab="sheet" data-mobile-label="Feuille">Feuille de séance</button>
+            <button type="button" data-session-tab="attendance" data-mobile-label="Présences">Présences</button>
+            <button type="button" data-session-tab="beneficiaries" data-mobile-label="Bénéf.">Bénéficiaires & preuves</button>
+            <button type="button" data-session-tab="recap" data-mobile-label="Récap">Récap & caisse</button>
+            <button type="button" data-session-tab="debts" data-mobile-label="Dettes">Dettes & amendes</button>
+            <button type="button" data-session-tab="schedule" data-mobile-label="Classement">Classements & programmation</button>
+            <button type="button" data-session-tab="history" data-mobile-label="Historique">Historique</button>
           </nav>
           <div id="sessionsWorkspace" class="stack"></div>
         </div>
@@ -746,7 +746,15 @@
       </section>
 
       <section id="view-ecosystem" class="view">
-        <div class="page-head"><div><span class="eyebrow">Lots F–I</span><h1>Communauté, économie, croissance et accompagnement</h1><p>Les grands services du Cahier sont désormais organisés par domaine au lieu d’être noyés dans une simple liste.</p></div><div class="page-meta"><span class="pill">Community</span><span class="pill">Marketplace</span><span class="pill">Academy & IA</span></div></div>
+        <div class="page-head"><div><span class="eyebrow">Community & Value Network · Blueprint 5.0.0</span><h1>Communautés & valeur</h1><p>Le cœur Association/Tontine reste prioritaire. Autour et au-delà, Eco-System relie forums, besoins, opportunités, agriculture, commerce local, compétences, business, partenaires, Academy et confiance — sans créer de moteurs parallèles.</p></div><div class="page-meta"><span class="pill">Communautés</span><span class="pill">Opportunités</span><span class="pill">Marketplace</span><span class="pill">Academy & IA</span></div></div>
+        <nav class="ecosystem-jump-grid" aria-label="Accès rapides Communautés et Blueprint">
+          <button type="button" data-eco-jump="blueprintExecutablePanel"><b>Blueprint 5.0.0</b><span>Anticipation · besoins · NOW · Harvest · Business · Trust</span></button>
+          <button type="button" data-eco-jump="communityEnginePanel"><b>Forums & Hubs</b><span>Groupe · communautés · professionnels · actions utiles</span></button>
+          <button type="button" data-eco-jump="interestCommunityPanel"><b>Communautés d’intérêt</b><span>Métier · ville · agriculture · loisirs · formation</span></button>
+          <button type="button" data-eco-jump="marketEnginePanel"><b>Marché & besoins</b><span>Marketplace · achats groupés · fournisseurs · commerce local</span></button>
+          <button type="button" data-eco-jump="externalProgramsPanel"><b>ONG & partenaires</b><span>Programmes · accompagnement · impact traçable</span></button>
+          <button type="button" data-eco-jump="financialLabPanel"><b>Confiance & Labo</b><span>Anti-arnaques · scénarios · preuves · explications</span></button>
+        </nav>
         <div id="ecosystemHighlights" class="quick-grid"></div>
         <section class="panel" id="blueprintExecutablePanel">
           <div class="panel-head"><div><span class="eyebrow">Blueprint exécutable 5.0.0</span><h2>Association / Tontine d’abord · communautés et opportunités autour · valeur au-delà</h2><p>Les idées validées deviennent des workflows persistants reliés aux moteurs existants : groupe, forums/communautés, besoins, commerce local, activité, talent et confiance. Une proposition reste une proposition jusqu’à validation humaine ; aucun paiement réel n’est déclenché ici.</p></div><button id="blueprintRefreshBtn" type="button" class="secondary">Actualiser</button></div>
