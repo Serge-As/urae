@@ -30,6 +30,11 @@ export class Outbox {
 
   list(): OutboxItem[] { return [...this.items.values()].sort((a,b)=>a.createdAt.localeCompare(b.createdAt)).map(x => structuredClone(x)); }
 
+  retry(id:Id):OutboxItem|undefined{
+    const current=this.items.get(id);if(!current||current.status==='CONFIRMED'||current.status==='CANCELLED'||current.status==='CONFLICT')return current?structuredClone(current):undefined;
+    const reset={...current,status:'PENDING' as const,attempts:0,updatedAt:new Date().toISOString()};this.items.set(id,reset);return structuredClone(reset);
+  }
+
   sync(handler: SyncHandler): Promise<OutboxItem[]> {
     if(this.syncing)return this.syncing;
     this.syncing=this.syncPending(handler).finally(()=>{this.syncing=undefined;});
@@ -37,7 +42,7 @@ export class Outbox {
   }
 
   private async syncPending(handler: SyncHandler): Promise<OutboxItem[]> {
-    for (const current of [...this.items.values()].filter(x => x.status === 'PENDING' || x.status === 'FAILED')) {
+    for (const current of [...this.items.values()].filter(x => (x.status === 'PENDING' || x.status === 'FAILED') && x.attempts < 5)) {
       const syncing = { ...current, status: 'SYNCING' as const, attempts: current.attempts + 1, updatedAt: new Date().toISOString() };
       this.items.set(current.id, syncing);
       try {
