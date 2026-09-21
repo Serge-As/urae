@@ -1,0 +1,19 @@
+name: Qualify Eco-System 1.4.4 Evidence Field Acceptance
+on:
+  push:
+    branches: ['next/1.4.4-evidence-field-acceptance-20260921']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  qualify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: npm run ci
