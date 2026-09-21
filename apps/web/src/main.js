@@ -1069,6 +1069,24 @@ onSubmit('#latePolicyForm', async (e) => { e.preventDefault(); try {
 catch (e) {
     fail(e);
 } });
+const prepareRubricPreset=(name,description)=>{
+    const form=document.querySelector('#rubricForm');if(!form)return;
+    document.querySelector('#rubricName').value=name;
+    document.querySelector('#writtenRule').value='';
+    document.querySelector('#observedPractice').value=description;
+    document.querySelector('#ruleRealityStatus').value='UNKNOWN';
+    document.querySelector('#targetMode').value='OPEN';
+    document.querySelector('#perMemberAmount').value='0';
+    document.querySelector('#fixedTargetAmount').value='0';
+    document.querySelector('#shortfallHandling').value='CUSTOM';
+    document.querySelector('#payoutMode').value='CUSTOM';
+    document.querySelector('#mandatoryAbsentees').checked=false;
+    document.querySelector('#immediateFullPayout').checked=false;
+    form.scrollIntoView({behavior:'smooth',block:'start'});document.querySelector('#rubricName')?.focus();
+};
+document.querySelector('#quickRubricLoan')?.addEventListener('click',()=>prepareRubricPreset('Prêt','Rubrique de prêts : règles de demande, approbation, décaissement, taux, remboursement et éventuelles sanctions à confirmer par le groupe.'));
+document.querySelector('#quickRubricSavings')?.addEventListener('click',()=>prepareRubricPreset('Épargne','Rubrique d’épargne : versements, retrait, période d’éligibilité et règles de rendement/intérêts à confirmer par le groupe.'));
+document.querySelector('#quickRubricAssistance')?.addEventListener('click',()=>prepareRubricPreset('Assistance','Rubrique d’assistance/solidarité : événements éligibles, preuves, montants et processus d’approbation à confirmer par le groupe.'));
 onSubmit('#rubricForm', async (e) => { e.preventDefault(); try {
     const tm = val('targetMode');
     const model = { writtenRule: val('writtenRule') || undefined, observedPractice: val('observedPractice') || undefined, ruleRealityStatus: val('ruleRealityStatus'), targetMode: tm, targetAmount: tm === 'FIXED_TOTAL' ? { currency: 'XAF', amount: num('fixedTargetAmount') } : undefined, perMemberAmount: tm === 'PER_MEMBER_FIXED' ? { currency: 'XAF', amount: num('perMemberAmount') } : undefined, mandatoryForAbsentees: checked('mandatoryAbsentees'), shortfallHandling: val('shortfallHandling'), payoutMode: val('payoutMode'), immediateFullPayout: checked('immediateFullPayout') };
