@@ -76,3 +76,14 @@ function openMemberDistribution(detail={}){
  $('#memberBroadcastNearby').onclick=()=>{$('#memberBroadcastStatus').textContent='Mode proximité préparé : la qualification réseau local/WebRTC multi-appareils reste requise avant activation terrain.';};
  $('#memberBroadcastQr').onclick=()=>void shareQr();$('#memberBroadcastFile').onclick=()=>void nativeShare(JSON.stringify({format:'eco-relay-member-distribution',meetingId:detail.meetingId,groupId:detail.groupId}));
 }
+
+function chooseTransport(mode,detail){
+ const d=modal(),body=d.querySelector('#relayBody'),title=mode==='reconcile'?'Confronter les données entre gestionnaires':'Diffuser la mise à jour aux membres';
+ body.innerHTML=`<div class="relay-step"><h2>${title}</h2><p>${mode==='reconcile'?'Le gestionnaire A choisit le moyen. Le gestionnaire B ouvre Recevoir et attend. Eco-System transfère seulement les deltas utiles à la comparaison.':'Cette action est séparée du rapprochement. Eco-System prépare une diffusion destinée aux membres, avec uniquement les données autorisées à chacun.'}</p><div class="relay-transport-grid"><button id="rtQr" class="primary" type="button">QR Code · recommandé</button><button id="rtNear" type="button">Téléphones à proximité · rapide</button><button id="rtShare" type="button">Partage du téléphone</button><button id="rtFile" type="button">Fichier Eco Relay</button></div><p id="rtHint" class="hint"></p></div>`;d.showModal();
+ $('#rtQr').onclick=()=>void shareQr();
+ $('#rtShare').onclick=()=>void nativeShare(JSON.stringify({format:'eco-relay-intent',version:1,mode,...detail}));
+ $('#rtFile').onclick=()=>void nativeShare(JSON.stringify({format:'eco-relay-intent',version:1,mode,...detail}));
+ $('#rtNear').onclick=()=>{$('#rtHint').textContent='Mode proximité en qualification : Wi-Fi local/WebRTC d’abord, avec QR ou fichier en secours. Il ne sera pas présenté comme automatique avant les tests Android/iPhone.';};
+}
+window.addEventListener('eco:relay-reconcile-meeting',e=>chooseTransport('reconcile',e.detail||{}));
+window.addEventListener('eco:relay-distribute-members',e=>chooseTransport('members',e.detail||{}));
