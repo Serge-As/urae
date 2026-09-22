@@ -1345,8 +1345,11 @@ async function start() {
         if(!session.authenticated||!session.account){showAuth(session.offline?tx('Aucun compte local n’existe encore. Créez votre compte maintenant : Internet n’est pas nécessaire.','No local account exists yet. Create your account now: Internet is not required.'):undefined,session.offline?'register':undefined);return;}
         $('#authScreen').hidden=true;document.body.classList.remove('signed-out');
         $('#accountName').textContent=session.account.displayName+(session.registrationState==='LOCAL_PENDING_REGISTRATION'?tx(' · local',' · local'):'');
-        const claim=$('#claimLocalAccountBtn');claim.hidden=session.registrationState!=='LOCAL_PENDING_REGISTRATION';claim.disabled=session.registrationState==='LOCAL_PENDING_REGISTRATION'&&!navigator.onLine;
-        claim.textContent=navigator.onLine?tx('Finaliser le compte local','Finalize local account'):tx('Compte local · Internet requis pour finaliser','Local account · Internet needed to finalize');
+        const claim=document.querySelector('#claimLocalAccountBtn');
+        if(claim){
+          claim.hidden=session.registrationState!=='LOCAL_PENDING_REGISTRATION';claim.disabled=session.registrationState==='LOCAL_PENDING_REGISTRATION'&&!navigator.onLine;
+          claim.textContent=navigator.onLine?tx('Finaliser le compte local','Finalize local account'):tx('Compte local · Internet requis pour finaliser','Local account · Internet needed to finalize');
+        }
         await app.bootstrap();
         const catalog = await app.productCatalog();
         modules = catalog.capabilities;
@@ -1416,16 +1419,16 @@ $('#authForm').addEventListener('submit',async event=>{
     catch(e){fail(e);$('#authError').textContent=$('#errorBox').textContent;}
     finally{button.disabled=false;}
 });
-$('#claimLocalAccountBtn').addEventListener('click',()=>void(async()=>{
+document.querySelector('#claimLocalAccountBtn')?.addEventListener('click',()=>void(async()=>{
     if(!navigator.onLine){toast(tx('Internet est nécessaire uniquement pour finaliser le compte sur le serveur. Vous pouvez continuer à travailler hors ligne.','Internet is only needed to finalize the account on the server. You can keep working offline.'));return;}
     const password=prompt(tx('Saisissez le mot de passe de ce compte local pour le finaliser et synchroniser ses données :','Enter this local account password to finalize it and synchronize its data:'));
     if(!password)return;
-    const button=$('#claimLocalAccountBtn');button.disabled=true;
+    const button=document.querySelector('#claimLocalAccountBtn');if(button)button.disabled=true;
     try{const result=await app.claimLocalAccount(password);toast(tx(`Compte finalisé · ${result.synced} opération(s) synchronisée(s), ${result.pending} en attente.`,`Account finalized · ${result.synced} operation(s) synchronized, ${result.pending} pending.`));await start();}
     catch(e){fail(e);}
-    finally{button.disabled=false;}
+    finally{if(button)button.disabled=false;}
 })());
-$('#logoutBtn').addEventListener('click',async()=>{try{await app.logout();document.body.classList.add('signed-out');$('#authScreen').hidden=false;$('#accountName').textContent='';$('#claimLocalAccountBtn').hidden=true;showAuth(tx('Compte fermé sur cet appareil. Vos données locales ne sont pas supprimées.','Account signed out on this device. Your local data was not deleted.'));}catch(e){fail(e);}});
+$('#logoutBtn').addEventListener('click',async()=>{try{await app.logout();document.body.classList.add('signed-out');$('#authScreen').hidden=false;$('#accountName').textContent='';const claim=document.querySelector('#claimLocalAccountBtn');if(claim)claim.hidden=true;showAuth(tx('Compte fermé sur cet appareil. Vos données locales ne sont pas supprimées.','Account signed out on this device. Your local data was not deleted.'));}catch(e){fail(e);}});
 window.addEventListener('online',()=>{renderConnectivity();void start();});
 window.addEventListener('offline',()=>{renderConnectivity();const claim=document.querySelector('#claimLocalAccountBtn');if(claim&&!claim.hidden){claim.disabled=true;claim.textContent=tx('Compte local · Internet requis pour finaliser','Local account · Internet needed to finalize');}});
 void ensureCurrentServiceWorker();
