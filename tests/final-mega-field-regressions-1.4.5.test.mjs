@@ -50,7 +50,7 @@ test('multi-manager correction compares with canonical baseline and requires rea
   assert.match(consensus,/Valeur canonique actuelle/);
   assert.match(consensus,/Math\.floor\(managerIds\.length\/2\)\+1/);
   assert.match(api,/status:'CONSENSUS_REQUIRED'/);
-  assert.match(api,/financial-cells\/\(\[\^\/\]\+\)\/apply/);
+  assert.ok(api.includes("financial-cells\\/([^/]+)\\/apply"));
   assert.match(sessions,/Appliquer la valeur retenue/);
   assert.match(sessions,/applyFinancialCellConsensus/);
   assert.doesNotMatch(consensus,/recordCashContribution|saveLedgerEntry|reverseEntry/);
@@ -128,7 +128,7 @@ test('Eco Relay uses authenticated encryption random nonce expiry and anti-repla
 });
 
 test('Lots 9 10 11 12 acquired engines remain present',()=>{
-  for(const token of ['analyzeGroupDocumentFiles','sourceDocumentFingerprints','previewWorkbookSavingsYield','quoteLoan','repayLoan'])assert.ok(app.includes(token)||main.includes(token),token);
+  for(const token of ['analyzeGroupDocumentFiles','fingerprints:string[]','previewWorkbookSavingsYield','quoteLoan','repayLoan'])assert.ok(app.includes(token)||main.includes(token),token);
   for(const id of ['interestCommunityPanel','externalProgramsPanel','adManagerPanel','founderControlNavBtn'])assert.ok(html.includes(id),id);
   assert.ok(fs.existsSync('apps/web/src/interest-community-ui.js'));
   assert.ok(fs.existsSync('apps/web/src/external-programs-ui.js'));
