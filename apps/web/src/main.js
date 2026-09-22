@@ -291,6 +291,11 @@ const renderGroups = async () => {
         b.disabled = g.id === app.activeGroup();
         b.onclick = async () => { app.selectGroup(g.id); await refreshGroupContext(); toast(`${tx('Groupe actif','Active group')} : ${g.name}`); };
         a.append(b);
+        if(g.id===app.activeGroup()&&isManager()){
+          const danger=document.createElement('details');danger.className='group-danger-zone';const summary=document.createElement('summary');summary.textContent=tx('Gérer / supprimer le groupe','Manage / delete group');danger.append(summary);
+          const remove=document.createElement('button');remove.type='button';remove.className='secondary danger-action';remove.textContent=tx('Placer le groupe à la corbeille','Move group to trash');
+          remove.onclick=()=>void(async()=>{const typed=prompt(tx(`Pour éviter une suppression accidentelle, écrivez exactement : ${g.name}`,`To prevent accidental deletion, type exactly: ${g.name}`));if(typed!==g.name)return;try{await app.moveToTrash('GROUP',g.id);app.selectGroup(undefined);await renderGroups();await renderTrash();toast(tx('Groupe placé dans la corbeille pour 6 mois.','Group moved to trash for 6 months.'));}catch(e){fail(e);}})();danger.append(remove);a.append(danger);
+        }
         root.append(a);
     }
     renderActiveGroup();
@@ -868,13 +873,16 @@ catch (e) {
 } };
 const renderTrash=async()=>{
     const root=document.querySelector('#trashList');if(!root)return;root.replaceChildren();
-    if(!app.activeGroup()){root.innerHTML='<div class="empty-state">'+tx('Sélectionnez un groupe.','Select a group.')+'</div>';return;}
     try{
-      const items=await app.trashItems();if(!items.length){root.innerHTML='<div class="empty-state">'+tx('Corbeille vide.','Trash is empty.')+'</div>';return;}
+      const groupItems=await app.groupTrashItems().catch(()=>[]),scoped=app.activeGroup()?await app.trashItems().catch(()=>[]):[],seen=new Set(),items=[...groupItems,...scoped].filter(x=>!seen.has(x.id)&&seen.add(x.id));
+      if(!items.length){root.innerHTML='<div class="empty-state">'+tx('Corbeille vide.','Trash is empty.')+'</div>';return;}
       for(const item of items){const expired=item.status!=='ACTIVE'||Boolean(item.data?.expired),a=document.createElement('article');a.className='item '+(expired?'trash-expired':'');
-        const kind={MEETING:tx('Séance','Meeting'),MEMBER:tx('Membre','Member'),RUBRIC:tx('Rubrique','Rubric')}[item.data?.kind]??String(item.data?.kind??'Élément');
-        const h=document.createElement('strong');h.textContent=kind+' · '+item.title;const p=document.createElement('p');p.textContent=expired?tx('Délai de restauration expiré. L’élément est définitivement retiré des vues opérationnelles ; l’audit financier reste conservé.','Restore period expired. The item is permanently removed from operational views; financial audit remains preserved.'):tx('Restaurable jusqu’au ','Restorable until ')+date(String(item.data?.restoreUntil??''));a.append(h,p);
-        if(!expired){const restore=document.createElement('button');restore.type='button';restore.className='primary';restore.textContent=tx('Restaurer intégralement','Restore fully');restore.onclick=()=>void(async()=>{try{await app.restoreTrashItem(item.id);await refreshGroupContext();toast(tx('Élément restauré.','Item restored.'));}catch(e){fail(e);}})();a.append(restore);}root.append(a);
+        const kind={MEETING:tx('Séance','Meeting'),MEMBER:tx('Membre','Member'),RUBRIC:tx('Rubrique','Rubric'),GROUP:tx('Groupe','Group')}[item.data?.kind]??String(item.data?.kind??'Élément');
+        const h=document.createElement('strong');h.textContent=kind+' · '+item.title;const p=document.createElement('p');p.textContent=expired?tx('Délai de restauration expiré. Les données opérationnelles restaurables ont été supprimées définitivement ; les preuves d’audit restent conservées.','Restore period expired. Restorable operational data was permanently removed; audit evidence remains preserved.'):tx('Restaurable jusqu’au ','Restorable until ')+date(String(item.data?.restoreUntil??''));a.append(h,p);
+        if(item.data?.kind==='GROUP'&&!expired){const reminder=document.createElement('p');reminder.className='hint';reminder.textContent=item.data?.remindersEnabled===false?tx('Rappel mensuel désactivé.','Monthly reminder disabled.'):tx('Rappel mensuel actif pour le fondateur et le gestionnaire ayant supprimé le groupe.','Monthly reminder active for the founder and the manager who deleted the group.');a.append(reminder);}
+        if(!expired){const restore=document.createElement('button');restore.type='button';restore.className='primary';restore.textContent=tx('Restaurer intégralement','Restore fully');restore.onclick=()=>void(async()=>{try{if(item.data?.kind==='GROUP')await app.restoreGroupTrashItem(item.id);else await app.restoreTrashItem(item.id);await renderGroups();await refreshGroupContext();toast(tx('Élément restauré.','Item restored.'));}catch(e){fail(e);}})();a.append(restore);
+          if(item.data?.kind==='GROUP'&&item.data?.remindersEnabled!==false){const mute=document.createElement('button');mute.type='button';mute.className='secondary';mute.textContent=tx('Ne plus rappeler chaque mois','Stop monthly reminders');mute.onclick=()=>void(async()=>{try{await app.setGroupTrashReminders(item.id,false);await renderTrash();toast(tx('Rappels mensuels désactivés.','Monthly reminders disabled.'));}catch(e){fail(e);}})();a.append(mute);}
+        }root.append(a);
       }
     }catch(e){fail(e);}
 };

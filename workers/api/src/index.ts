@@ -231,12 +231,16 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
     }else if(kind==='RUBRIC'){
       const entity=await repo.getRubricDefinition(ctx.tenantId,groupId,entityId);if(!entity)throw Error('RUBRIC_NOT_FOUND');snapshot=entity;label=entity.name;
       await repo.saveRubricDefinition({...entity,status:'ARCHIVED',updatedAt:now.toISOString(),version:entity.version+1});
+    }else if(kind==='GROUP'){
+      if(entityId!==groupId)throw Error('GROUP_SCOPE_MISMATCH');const entity=await repo.getGroup(ctx.tenantId,groupId);if(!entity)throw Error('GROUP_NOT_FOUND');snapshot=entity;label=entity.name;
+      await repo.saveGroup({...entity,status:'archived'});
     }else throw Error('TRASH_KIND_UNSUPPORTED');
     const id='trash_'+encodeURIComponent(JSON.stringify([groupId,kind,entityId])),existing=await repo.getWorkspaceRecord(ctx.tenantId,id);
-    const record:WorkspaceRecord={id,tenantId:ctx.tenantId,groupId,moduleId:'TRASH.ITEM',title:label,summary:'Restaurable pendant six mois',status:'ACTIVE',tags:['trash',kind.toLowerCase()],data:{kind,entityId,deletedAt:now.toISOString(),restoreUntil:restoreUntil.toISOString(),snapshotJson:JSON.stringify(snapshot),deletedBy:ctx.actorId},createdBy:existing?.createdBy??ctx.actorId,createdAt:existing?.createdAt??now.toISOString(),updatedAt:now.toISOString()};
+    const record:WorkspaceRecord={id,tenantId:ctx.tenantId,groupId,moduleId:'TRASH.ITEM',title:label,summary:'Restaurable pendant six mois',status:'ACTIVE',tags:['trash',kind.toLowerCase()],data:{kind,entityId,deletedAt:now.toISOString(),restoreUntil:restoreUntil.toISOString(),snapshotJson:JSON.stringify(snapshot),deletedBy:ctx.actorId,founderId:kind==='GROUP'?(snapshot as any)?.createdBy:undefined,remindersEnabled:kind==='GROUP',nextReminderAt:kind==='GROUP'?new Date(Date.UTC(now.getUTCFullYear(),now.getUTCMonth()+1,Math.min(now.getUTCDate(),28),9,0,0)).toISOString():undefined},createdBy:existing?.createdBy??ctx.actorId,createdAt:existing?.createdAt??now.toISOString(),updatedAt:now.toISOString()};
     await repo.saveWorkspaceRecord(record);await repo.saveAudit(kernel.audit.append({tenantId:ctx.tenantId,actorId:ctx.actorId,action:'ENTITY_MOVED_TO_TRASH',targetType:kind.toLowerCase(),targetId:entityId,requestId:ctx.requestId,metadata:{trashId:id,restoreUntil:restoreUntil.toISOString()}}));
-    const actor=await actorLabel(),kindLabel=kind==='MEETING'?'Séance':kind==='MEMBER'?'Membre':'Rubrique',action={view:'trash',entityKind:kind,entityId,id,label:'Voir la corbeille'};
-    await notifications.publish(groupId,{title:kindLabel+' placé(e) à la corbeille',message:`${actor} a placé « ${label} » à la corbeille. Restauration possible jusqu’au ${restoreUntil.toLocaleDateString('fr-FR')}.`,channels:['IN_APP','WEB_PUSH'],audience:'MANAGERS',priority:'HIGH',action});
+    const actor=await actorLabel(),kindLabel=kind==='MEETING'?'Séance':kind==='MEMBER'?'Membre':kind==='GROUP'?'Groupe':'Rubrique',action={view:'trash',entityKind:kind,entityId,id,label:'Voir la corbeille'};
+    if(kind==='GROUP'){const founderId=String((snapshot as any)?.createdBy??''),selectedUserIds=[...new Set([founderId,ctx.actorId].filter(Boolean))];await notifications.publish(groupId,{title:'Groupe placé à la corbeille',message:`${actor} a placé « ${label} » à la corbeille. Restauration intégrale possible jusqu’au ${restoreUntil.toLocaleDateString('fr-FR')}. Un rappel mensuel restera actif sauf désactivation.`,channels:['IN_APP','WEB_PUSH'],audience:'SELECTED_USERS',selectedUserIds,priority:'CRITICAL',action});}
+    else await notifications.publish(groupId,{title:kindLabel+' placé(e) à la corbeille',message:`${actor} a placé « ${label} » à la corbeille. Restauration possible jusqu’au ${restoreUntil.toLocaleDateString('fr-FR')}.`,channels:['IN_APP','WEB_PUSH'],audience:'MANAGERS',priority:'HIGH',action});
     if(kind==='MEMBER')await notifications.publish(groupId,{title:'Votre dossier a été placé à la corbeille',message:`${actor} a retiré temporairement votre dossier du groupe. La restauration reste possible pendant six mois.`,channels:['IN_APP','WEB_PUSH'],audience:'SELECTED',selectedMembershipIds:[entityId],priority:'HIGH',action});
     return record;
   };
@@ -253,18 +257,34 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
     if(kind==='MEETING')await repo.saveMeeting(snapshot);
     else if(kind==='MEMBER')await repo.saveMembership(snapshot);
     else if(kind==='RUBRIC')await repo.saveRubricDefinition(snapshot);
+    else if(kind==='GROUP')await repo.saveGroup(snapshot);
     else throw Error('TRASH_KIND_UNSUPPORTED');
     const restored={...record,status:'DONE' as WorkspaceStatus,data:{...record.data,restoredAt:new Date().toISOString(),restoredBy:ctx.actorId},updatedAt:new Date().toISOString()};await repo.saveWorkspaceRecord(restored);
     await repo.saveAudit(kernel.audit.append({tenantId:ctx.tenantId,actorId:ctx.actorId,action:'ENTITY_RESTORED_FROM_TRASH',targetType:kind.toLowerCase(),targetId:String(record.data.entityId??''),requestId:ctx.requestId,metadata:{trashId}}));
-    const actor=await actorLabel(),entityId=String(record.data.entityId??''),kindLabel=kind==='MEETING'?'Séance':kind==='MEMBER'?'Membre':'Rubrique';
-    await notifications.publish(groupId,{title:kindLabel+' restauré(e)',message:`${actor} a restauré intégralement « ${record.title} » depuis la corbeille.`,channels:['IN_APP','WEB_PUSH'],audience:'MANAGERS',priority:'HIGH',action:{view:kind==='MEETING'?'sessions':kind==='MEMBER'?'members':'operations',anchor:kind==='RUBRIC'?'rubricsManagementPanel':undefined,meetingId:kind==='MEETING'?entityId:undefined,membershipId:kind==='MEMBER'?entityId:undefined,rubricId:kind==='RUBRIC'?entityId:undefined,entityKind:kind,entityId,label:'Voir l’élément restauré'}});
+    const actor=await actorLabel(),entityId=String(record.data.entityId??''),kindLabel=kind==='MEETING'?'Séance':kind==='MEMBER'?'Membre':kind==='GROUP'?'Groupe':'Rubrique';
+    await notifications.publish(groupId,{title:kindLabel+' restauré(e)',message:`${actor} a restauré intégralement « ${record.title} » depuis la corbeille.`,channels:['IN_APP','WEB_PUSH'],audience:'MANAGERS',priority:'HIGH',action:{view:kind==='MEETING'?'sessions':kind==='MEMBER'?'members':kind==='GROUP'?'launch':'operations',anchor:kind==='RUBRIC'?'rubricsManagementPanel':undefined,meetingId:kind==='MEETING'?entityId:undefined,membershipId:kind==='MEMBER'?entityId:undefined,rubricId:kind==='RUBRIC'?entityId:undefined,entityKind:kind,entityId,label:'Voir l’élément restauré'}});
     return restored;
+  };
+  const groupTrashVisible=async(record:WorkspaceRecord)=>{if(String(record.data.kind??'')!=='GROUP')return false;const groupId=String(record.data.entityId??record.groupId??''),group=await repo.getGroup(ctx.tenantId,groupId);if(!group)return false;if(group.createdBy===ctx.actorId||String(record.data.deletedBy??'')===ctx.actorId)return true;const member=(await repo.listMemberships(ctx.tenantId,groupId)).find(m=>m.userId===ctx.actorId&&m.status==='active');return Boolean(member?.roles.some(r=>['founder','manager','admin','president','treasurer'].includes(r)));};
+  const listGroupTrash=async()=>{
+    const rows=(await repo.listWorkspaceRecords(ctx.tenantId,'TRASH.ITEM')).filter(x=>String(x.data.kind??'')==='GROUP'),out=[] as WorkspaceRecord[];
+    for(let item of rows){if(!await groupTrashVisible(item))continue;const expired=Date.parse(String(item.data.restoreUntil??''))<Date.now();
+      if(expired&&item.status==='ACTIVE'){const safe={...item.data};delete safe.snapshotJson;item={...item,status:'ARCHIVED' as WorkspaceStatus,data:{...safe,expired:true,permanentlyRemovedAt:new Date().toISOString()},updatedAt:new Date().toISOString()};await repo.saveWorkspaceRecord(item);await repo.saveAudit(kernel.audit.append({tenantId:ctx.tenantId,actorId:ctx.actorId,action:'TRASH_RETENTION_EXPIRED',targetType:'group',targetId:String(item.data.entityId??''),requestId:ctx.requestId,metadata:{trashId:item.id}}));}
+      const due=item.status==='ACTIVE'&&item.data.remindersEnabled!==false&&Date.parse(String(item.data.nextReminderAt??''))<=Date.now();
+      if(due){const groupId=String(item.data.entityId??''),founderId=String(item.data.founderId??''),deletedBy=String(item.data.deletedBy??''),next=new Date();next.setUTCMonth(next.getUTCMonth()+1);try{await notifications.publish(groupId,{title:'Rappel · groupe dans la corbeille',message:`« ${item.title} » est toujours dans la corbeille. Restauration possible jusqu’au ${new Date(String(item.data.restoreUntil)).toLocaleDateString('fr-FR')}. Vous pouvez désactiver ce rappel mensuel.`,channels:['IN_APP','WEB_PUSH'],audience:'SELECTED_USERS',selectedUserIds:[...new Set([founderId,deletedBy].filter(Boolean))],priority:'HIGH',action:{view:'trash',entityKind:'GROUP',entityId:groupId,label:'Voir le groupe supprimé'}});item={...item,data:{...item.data,lastReminderAt:new Date().toISOString(),nextReminderAt:next.toISOString()},updatedAt:new Date().toISOString()};await repo.saveWorkspaceRecord(item);}catch{}}
+      out.push(item);
+    }return out.sort((a,b)=>String(b.data.deletedAt??b.createdAt).localeCompare(String(a.data.deletedAt??a.createdAt)));
   };
   const visibleWorkspace=async(record:WorkspaceRecord)=>{
     if(!record.groupId)return record.createdBy===ctx.actorId;
     try{await requireGroup(record.groupId,true);return true;}catch{return false;}
   };
   try {
+    if(url.pathname==='/api/v1/trash/groups'&&request.method==='GET')return json(await listGroupTrash(),200,cors);
+    const globalGroupTrashRestore=url.pathname.match(/^\/api\/v1\/trash\/groups\/([^/]+)\/restore$/);
+    if(globalGroupTrashRestore&&request.method==='POST'){const id=decodeURIComponent(globalGroupTrashRestore[1]!),record=await repo.getWorkspaceRecord(ctx.tenantId,id);if(!record||!await groupTrashVisible(record))throw Error('TRASH_ITEM_NOT_FOUND');return json(await restoreTrash(String(record.data.entityId??record.groupId??''),id),200,cors);}
+    const globalGroupTrashReminders=url.pathname.match(/^\/api\/v1\/trash\/groups\/([^/]+)\/reminders$/);
+    if(globalGroupTrashReminders&&request.method==='PUT'){const id=decodeURIComponent(globalGroupTrashReminders[1]!),record=await repo.getWorkspaceRecord(ctx.tenantId,id);if(!record||!await groupTrashVisible(record))throw Error('TRASH_ITEM_NOT_FOUND');const body=await readJson<Record<string,unknown>>(request),enabled=body.enabled!==false,updated={...record,data:{...record.data,remindersEnabled:enabled},updatedAt:new Date().toISOString()};await repo.saveWorkspaceRecord(updated);return json(updated,200,cors);}
     const scopedGroup=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)/)?.[1];
     if(scopedGroup)await requireGroup(scopedGroup);
     const trashRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/trash$/);

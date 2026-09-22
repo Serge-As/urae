@@ -143,6 +143,11 @@ test('six month trash is reversible and exposes no manual permanent-delete route
   assert.match(api,/delete safeData\.snapshotJson/);
   assert.doesNotMatch(api,/trash[^\n]{0,120}request\.method==='DELETE'/);
   assert.match(main,/Restaurer intégralement/);
+  assert.match(api,/kind==='GROUP'/);
+  assert.match(api,/Rappel · groupe dans la corbeille/);
+  assert.match(api,/remindersEnabled/);
+  assert.match(app,/groupTrashItems/);
+  assert.match(main,/Ne plus rappeler chaque mois/);
 });
 
 test('Eco Relay uses authenticated encryption random nonce expiry and anti-replay while preserving original actor',()=>{
