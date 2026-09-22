@@ -64,13 +64,15 @@ export class OperationalCockpitService{
     }));
     const profile=workspaces.find(x=>x.moduleId==='MEMBER.PROFILE'&&String(x.data.membershipId??'')===membershipId);
     const receipts=statement.receipts,visibleRubrics=rubrics.filter(r=>r.status!=='ARCHIVED');
+    const isLoanRubric=(r:any)=>r.activityPlan?.kind==='LOAN'||r.facets?.direction==='OUTFLOW'||String(r.facets?.custom?.systemKey??'')==='LOAN'||['pret','prets','loan','loans'].includes(String(r.name??'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim());
     const rows:MemberExerciseRow[]=meetings.slice().sort((a,b)=>(a.scheduledAt??a.openedAt).localeCompare(b.scheduledAt??b.openedAt)).map(meeting=>{
       const cells:Record<string,MemberExerciseCell>={};let total=0;
       for(const rubric of visibleRubrics){
-        const receiptInflow=receipts.filter(x=>x.meetingId===meeting.id&&x.rubricId===rubric.id).reduce((n,x)=>n+Number(x.netAmount??0),0);
+        const receiptAmount=receipts.filter(x=>x.meetingId===meeting.id&&x.rubricId===rubric.id).reduce((n,x)=>n+Number(x.netAmount??0),0),loanRubric=isLoanRubric(rubric);
+        const receiptInflow=loanRubric?0:receiptAmount,legacyLoanOutflow=loanRubric?Math.max(0,receiptAmount):0;
         const loanInflow=sheetEvents.filter(x=>x.meetingId===meeting.id&&x.rubricId===rubric.id&&x.direction==='IN').reduce((n,x)=>n+x.amount,0);
         const expenseOutflow=expenses.filter(x=>x.scope==='SHEET'&&x.meetingId===meeting.id&&x.rubricId===rubric.id).reduce((n,x)=>n+x.amount,0);
-        const loanOutflow=sheetEvents.filter(x=>x.meetingId===meeting.id&&x.rubricId===rubric.id&&x.direction==='OUT').reduce((n,x)=>n+x.amount,0);
+        const loanOutflow=sheetEvents.filter(x=>x.meetingId===meeting.id&&x.rubricId===rubric.id&&x.direction==='OUT').reduce((n,x)=>n+x.amount,0)+legacyLoanOutflow;
         const inflow=receiptInflow+loanInflow,outflow=expenseOutflow+loanOutflow;
         cells[rubric.id]={rubricId:rubric.id,inflow,outflow,net:inflow-outflow};total+=inflow-outflow;
       }
@@ -79,7 +81,7 @@ export class OperationalCockpitService{
     return{
       group:{id:group.id,name:group.name,kind:group.kind,currentExerciseLabel:group.currentExerciseLabel},
       membership:{...target,displayName:user?.displayName??target.userId},profile:profile?{title:profile.title,summary:profile.summary,data:profile.data,updatedAt:profile.updatedAt}:null,
-      rubrics:visibleRubrics.map(r=>({id:r.id,name:r.name,kind:r.activityPlan?.kind,status:r.status,policies:r.policies})),
+      rubrics:visibleRubrics.map(r=>({id:r.id,name:r.name,kind:r.activityPlan?.kind,status:r.status,policies:r.policies,direction:r.facets?.direction,systemKey:r.facets?.custom?.systemKey,polarity:isLoanRubric(r)?'NEGATIVE':'POSITIVE'})),
       exerciseMatrix:rows,statement,loans,tontines,obligations:obligations.filter(x=>x.groupId===groupId),
       notices,sheetEvents,generatedAt:now()
     };
