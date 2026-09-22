@@ -10,7 +10,6 @@ const detail=fs.readFileSync('apps/web/src/detail-ui.js','utf8');
 const personal=fs.readFileSync('apps/web/src/personal-cockpit-ui.js','utf8');
 const operational=fs.readFileSync('packages/operational-cockpit/src/index.ts','utf8');
 const loanSimulator=fs.readFileSync('packages/loan-simulator/src/index.ts','utf8');
-const sw=fs.readFileSync('apps/web/sw.js','utf8');
 const recap=fs.readFileSync('apps/web/src/recap-ui.js','utf8');
 const app=fs.readFileSync('packages/application/src/index.ts','utf8');
 const api=fs.readFileSync('workers/api/src/index.ts','utf8');
@@ -18,9 +17,9 @@ const consensus=fs.readFileSync('packages/meeting-live-consensus/src/index.ts','
 const relay=fs.readFileSync('packages/relay/src/index.ts','utf8');
 const resilience=fs.readFileSync('apps/web/src/resilience-ui.js','utf8');
 
-test('Android 6 offline shell is cache-first and never force-reloads on worker takeover',()=>{
-  assert.match(sw,/eco-system-v145-final-mega-offline-safe-20260921/);
-  assert.match(sw,/Navigation is cache-first/);
+test('Android 6 offline shell remains fast offline and never force-reloads on worker takeover',()=>{
+  assert.match(sw,/eco-system-v1451-field-corrections-20260922/);
+  assert.match(sw,/Offline \/ unstable 2G: fall back quickly/);
   assert.match(sw,/Scripts\/styles\/assets are cache-first/);
   assert.doesNotMatch(sw,/skipWaiting\(/);
   assert.doesNotMatch(main,/controllerchange[\s\S]{0,600}location\.reload\(/);
