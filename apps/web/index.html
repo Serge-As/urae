@@ -476,7 +476,16 @@
         <div id="noActiveGroupMembers" class="panel empty-state">Sélectionnez ou créez d'abord un groupe.</div>
         <div id="membersContent">
           <div class="two-col">
-            <section class="panel"><h2>Membres du groupe</h2><form id="memberForm" class="inline-form"><input id="memberName" required placeholder="Nom du membre"><button class="primary">Ajouter</button></form><ul id="memberList" class="list"></ul></section>
+            <section class="panel"><h2>Membres du groupe</h2>
+              <form id="memberForm" class="inline-form"><input id="memberName" required placeholder="Nom du membre"><button class="primary">Ajouter membre</button></form>
+              <div class="member-management-toolbar">
+                <label>Classer les membres<select id="memberSort"><option value="chronological">Ordre chronologique</option><option value="name">Nom A → Z</option><option value="role">Rôle / fonction</option></select></label>
+                <label>Membre à gérer<select id="memberManageSelect"></select></label>
+                <button id="memberRenameBtn" type="button" class="secondary">Modifier membre</button>
+                <button id="memberTrashBtn" type="button" class="secondary danger-action">Supprimer / corbeille</button>
+              </div>
+              <p class="hint">La suppression n’est jamais immédiate : le membre passe dans la corbeille pendant 6 mois. Les écritures financières restent intactes et auditables.</p>
+              <ul id="memberList" class="list"></ul></section>
             <section class="panel"><div class="panel-head"><div><h2>Dossier Membre</h2><p>Sélectionnez un membre pour consulter ou modifier son dossier autorisé.</p></div></div><div id="memberDossierHost" class="stack"><div class="empty-state">Choisissez « Dossier membre » sur un membre.</div></div></section>
           </div>
         </div>
@@ -494,7 +503,17 @@
         <div id="noActiveGroupFinance" class="panel empty-state">Sélectionnez ou créez d'abord un groupe.</div>
         <div id="financeContent">
           <section class="panel" id="financeEntryGuide">
-            <div class="panel-head"><div><h2>Où saisir les cotisations ?</h2><p>Sur les deux feuilles liées : la feuille de séance générale ou la fiche individuelle du membre. Une saisie enregistrée sur l’une apparaît sur l’autre parce qu’elles utilisent le même service canonique.</p></div><div class="actions"><button type="button" class="primary" data-go="sessions">Votre feuille de séance</button><button type="button" id="financeIndividualSheetBtn">Vos fiches individuelles</button></div></div>
+            <div class="panel-head"><div><h2>Où saisir ou corriger les données financières ?</h2><p>Utilisez la feuille de séance générale ou la fiche individuelle du membre. Les cellules utilisent la même écriture canonique : saisir 500 à la place de 1 000 remplace 1 000 par 500, sans additionner les deux montants.</p></div><div class="actions"><button type="button" class="primary" data-go="sessions">Votre feuille de séance</button><button type="button" id="financeIndividualSheetBtn">Vos fiches individuelles</button></div></div>
+          </section>
+          <section class="panel" id="financeToolsGuide">
+            <div class="panel-head"><div><h2>Outils financiers complémentaires</h2><p>Cette page n’est pas une seconde feuille de saisie. Pour les opérations courantes, utilisez directement « Prêts », « Épargne » ou « Assistances » ; la saisie des cotisations reste dans les feuilles canoniques.</p></div></div>
+            <div class="finance-tool-guide">
+              <article class="item"><strong>Prêts + Intérêts</strong><p>Capital prêté, capital restant, intérêts, remboursements et échéances. Un prêt est une dette du membre et une sortie du groupe, jamais une cotisation positive.</p></article>
+              <article class="item"><strong>Épargne + Intérêts</strong><p>Suivi de l’épargne et calcul des intérêts selon les règles du groupe. Ce module ne remplace pas la feuille de séance.</p></article>
+              <article class="item"><strong>Assistances</strong><p>Règles de secours, mains levées et assistances, avec historique et bénéficiaires.</p></article>
+              <article class="item"><strong>Impayés / Dettes</strong><p>Sommes restant dues : capital de prêt, intérêts, amendes et autres obligations. Elles sont séparées des cotisations nettes.</p></article>
+              <article class="item"><strong>Contrôles avancés</strong><p>Rapprochement, audit, anomalies et simulations. Ils servent à contrôler les comptes, pas à ressaisir les cotisations.</p></article>
+            </div>
           </section>
           <div class="two-col">
             <section class="panel" hidden aria-hidden="true">

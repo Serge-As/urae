@@ -37,6 +37,9 @@ test('financial sheet edits a target value for one exact meeting instead of addi
   assert.match(main,/Nouvelle valeur totale/);
   assert.match(main,/Remplacer 1 000 par 500 donne 500/);
   assert.match(main,/setFinancialCellTarget\(\{meetingId,membershipId:member\.id,rubricId:rubric\.id,targetAmount:target,currentAmount:current/);
+  assert.match(main,/makeFinancialEntryCell/);
+  assert.match(main,/cell-target-input/);
+  assert.match(main,/cell-validate/);
   assert.match(main,/meetingMatrixScope/);
   assert.match(api,/financialCellState/);
   assert.match(api,/applyFinancialCellTarget/);
@@ -99,8 +102,27 @@ test('closed sessions can be edited with manager alert and financial member aler
 test('individual sheets are restored and manager can edit exact member-session-rubric cells',()=>{
   assert.match(html,/id="individualSheetMatrix"/);
   assert.match(main,/renderIndividualSheetMatrix/);
-  assert.match(main,/openFinancialCellEditor\(\{member,rubric,meetingId:meeting\.id\}\)/);
+  assert.match(main,/makeFinancialEntryCell\(\{member,rubric,meetingId:meeting\.id,editable:true\}\)/);
   assert.match(main,/financeIndividualSheetBtn/);
+});
+
+test('member management removes inline trash risk and supports rename and ordering',()=>{
+  assert.match(html,/id="memberSort"/);
+  assert.match(html,/id="memberManageSelect"/);
+  assert.match(html,/id="memberRenameBtn"/);
+  assert.match(html,/id="memberTrashBtn"/);
+  assert.match(main,/updateMemberName/);
+  assert.doesNotMatch(main,/li\.append\(remove\)/);
+});
+
+test('member and session histories expose human-readable financial provenance',()=>{
+  assert.match(main,/Historique des contributions et modifications/);
+  assert.match(main,/Capital prêts \/ dettes/);
+  assert.match(sessions,/meetingHistory\(meeting\.id\)/);
+  assert.match(sessions,/Modification financière/);
+  assert.match(api,/receivedByName/);
+  assert.match(api,/debtPrincipal/);
+  assert.match(api,/meetingHistoryRoute/);
 });
 
 test('six month trash is reversible and exposes no manual permanent-delete route',()=>{
@@ -110,6 +132,7 @@ test('six month trash is reversible and exposes no manual permanent-delete route
   assert.match(api,/ENTITY_RESTORED_FROM_TRASH/);
   assert.match(api,/snapshotJson/);
   assert.match(api,/TRASH_RETENTION_EXPIRED/);
+  assert.match(api,/delete safeData\.snapshotJson/);
   assert.doesNotMatch(api,/trash[^\n]{0,120}request\.method==='DELETE'/);
   assert.match(main,/Restaurer intégralement/);
 });

@@ -46,6 +46,7 @@ let meetings = [];
 let rubrics = [];
 let receiptPositions = [];
 let matrixMeetingId = '';
+let memberSortMode = 'chronological';
 const MANAGER_ROLE_IDS=new Set(['founder','manager','admin','president','treasurer','secretary','auditor']);
 const isManager = () => {const g=groups.find(g=>g.id===app.activeGroup());return Boolean(g&&(g.createdBy===app.currentActor()||(g.viewerRoles??[]).some(r=>MANAGER_ROLE_IDS.has(r))));};
 let groupPolicy;
@@ -313,16 +314,21 @@ const renderInbox = async () => {
 };
 const renderMembers = async () => {
     members = (await app.listMembers()).filter(x=>x.status!=='left');
-    const list = $('#memberList');
-    list.replaceChildren();
-    const select = $('#contributionMember');
-    select.replaceChildren();
-    if (!members.length) {
+    const list = $('#memberList'),select = $('#contributionMember'),manageSelect=document.querySelector('#memberManageSelect');
+    list.replaceChildren();select.replaceChildren();manageSelect?.replaceChildren();
+    const sortDate=m=>Date.parse(m.historicalJoinedAt??m.joinedAt??'')||Number.MAX_SAFE_INTEGER;
+    const ordered=members.slice().sort((a,b)=>{
+      if(memberSortMode==='name')return String(a.displayName).localeCompare(String(b.displayName),localeTag(uiLocale),{sensitivity:'base'});
+      if(memberSortMode==='role')return String(a.roles?.[0]??'').localeCompare(String(b.roles?.[0]??''),localeTag(uiLocale),{sensitivity:'base'})||String(a.displayName).localeCompare(String(b.displayName),localeTag(uiLocale),{sensitivity:'base'});
+      return sortDate(a)-sortDate(b)||String(a.displayName).localeCompare(String(b.displayName),localeTag(uiLocale),{sensitivity:'base'});
+    });
+    if (!ordered.length) {
         list.innerHTML = `<li class="empty-state">${tx('Aucun membre.','No member.')}</li>`;
         select.innerHTML = `<option value="">${tx('Aucun membre','No member')}</option>`;
+        if(manageSelect)manageSelect.innerHTML=`<option value="">${tx('Aucun membre','No member')}</option>`;
         return;
     }
-    for (const m of members) {
+    for (const m of ordered) {
         const li = document.createElement('li');
         const memberLink=document.createElement('button');memberLink.type='button';memberLink.className='link-btn';memberLink.dataset.detailType='member';memberLink.dataset.detailId=m.id;memberLink.textContent=m.displayName;li.append(memberLink,document.createTextNode(' · '+m.roles.join(', ')));
         if(isManager() || m.userId===app.currentActor()){
@@ -337,15 +343,25 @@ const renderMembers = async () => {
             const reason=document.createElement('input');reason.placeholder=tx('Motif / décision du groupe','Reason / group decision');
             const save=document.createElement('button');save.type='button';save.className='secondary';save.textContent=tx('Enregistrer les habilitations','Save authorities');save.onclick=async()=>{try{const nextRoles=roles.value.split(',').map(x=>x.trim()).filter(Boolean);await app.updateMemberLifecycle(m.id,{status:status.value,roles:nextRoles,reason:reason.value,expectedRevision:Number(m.lifecycleRevision??0)});await renderMembers();toast(tx('Habilitations mises à jour et auditées.','Authorities updated and audited.'));}catch(e){fail(e);}};
             const box=document.createElement('div');box.className='inline-form';box.append(status,roles,reason,save);details.append(box);li.append(details);
-            const remove=document.createElement('button');remove.type='button';remove.className='link-btn';remove.textContent=tx('Mettre à la corbeille','Move to trash');remove.onclick=()=>void(async()=>{if(!confirm(tx('Retirer ce membre du groupe ? Il restera restaurable pendant 6 mois.','Remove this member from the group? It remains restorable for 6 months.')))return;try{await app.moveToTrash('MEMBER',m.id);await renderMembers();await renderTrash();toast(tx('Membre placé dans la corbeille.','Member moved to trash.'));}catch(e){fail(e);}})();li.append(remove);
         }
         list.append(li);
-        const o = document.createElement('option');
-        o.value = m.id;
-        o.textContent = m.displayName;
-        select.append(o);
+        const o = document.createElement('option');o.value = m.id;o.textContent = m.displayName;select.append(o);
+        if(manageSelect){const mo=document.createElement('option');mo.value=m.id;mo.textContent=m.displayName;manageSelect.append(mo);}
     }
 };
+document.querySelector('#memberSort')?.addEventListener('change',event=>{memberSortMode=event.target.value||'chronological';void renderMembers();});
+document.querySelector('#memberRenameBtn')?.addEventListener('click',()=>void(async()=>{
+    const id=document.querySelector('#memberManageSelect')?.value,m=members.find(x=>x.id===id);if(!m)return;
+    const next=prompt(tx('Corriger le nom du membre :','Correct member name:'),m.displayName);if(next===null||!next.trim()||next.trim()===m.displayName)return;
+    const reason=prompt(tx('Motif de la correction du nom :','Reason for name correction:'),tx('Correction d’une erreur de saisie','Correction of an entry error'));if(reason===null||!reason.trim())return;
+    try{await app.updateMemberName(m.id,next.trim(),reason.trim());await renderMembers();toast(tx('Nom du membre corrigé et modification signalée.','Member name corrected and change notified.'));}catch(e){fail(e);}
+})());
+document.querySelector('#memberTrashBtn')?.addEventListener('click',()=>void(async()=>{
+    const id=document.querySelector('#memberManageSelect')?.value,m=members.find(x=>x.id===id);if(!m)return;
+    if(!confirm(tx(`Placer « ${m.displayName} » dans la corbeille pendant 6 mois ? Aucune écriture financière ne sera effacée.`,`Move “${m.displayName}” to trash for 6 months? No financial record will be erased.`)))return;
+    try{await app.moveToTrash('MEMBER',m.id);await renderMembers();await renderTrash();toast(tx('Membre placé dans la corbeille.','Member moved to trash.'));}catch(e){fail(e);}
+})();
+
 const renderMeetings = async () => {
     meetings = (await app.listMeetings()).filter(x=>x.status!=='cancelled');
     const root = $('#meetingList');
@@ -397,6 +413,33 @@ const activeMeeting = () => {
 };
 const exactCellRows=(membershipId,rubricId,meetingId)=>receiptPositions.filter(x=>x.membershipId===membershipId&&x.rubricId===rubricId&&x.meetingId===meetingId);
 const exactCellAmount=(membershipId,rubricId,meetingId)=>exactCellRows(membershipId,rubricId,meetingId).reduce((n,x)=>n+Number(x.netAmount??0),0);
+
+const makeFinancialEntryCell=({member,rubric,meetingId,editable=true})=>{
+    const holder=document.createElement('div');holder.className='matrix-cell matrix-cell-entry';holder.dataset.membershipId=member.id;holder.dataset.rubricId=rubric.id;holder.dataset.meetingId=meetingId;holder.tabIndex=-1;
+    const current=exactCellAmount(member.id,rubric.id,meetingId),currentLabel=document.createElement('strong');currentLabel.className='cell-current';currentLabel.textContent=fmt(current);holder.append(currentLabel);
+    if(!editable)return holder;
+    const input=document.createElement('input');input.type='number';input.min='0';input.step='1';input.inputMode='numeric';input.className='cell-target-input';input.placeholder=current>0?tx('Modifier…','Change…'):tx('Saisir…','Enter…');input.setAttribute('aria-label',tx('Nouvelle valeur totale','New total value'));
+    const validate=document.createElement('button');validate.type='button';validate.className='cell-validate';validate.textContent='✓';validate.title=tx('Valider la valeur totale','Confirm total value');
+    const submit=()=>void(async()=>{
+      const raw=input.value.trim();if(raw==='')return;const target=Number(raw);if(!Number.isSafeInteger(target)||target<0){fail(new Error('INVALID_CONTRIBUTION_AMOUNT'));return;}
+      if(target===current){input.value='';toast(tx('Aucun changement : cette valeur est déjà enregistrée.','No change: this value is already recorded.'));return;}
+      const meeting=meetings.find(x=>x.id===meetingId);let reason='';
+      if(current>0||meeting?.status==='closed'){
+        reason=prompt(tx(`Motif de la modification ${fmt(current)} → ${fmt(target)} :`,`Reason for change ${fmt(current)} → ${fmt(target)}:`),tx('Correction de la valeur de la cellule','Cell value correction'))??'';
+        if(!reason.trim())return;
+      }
+      validate.disabled=true;input.disabled=true;
+      try{
+        const result=await app.setFinancialCellTarget({meetingId,membershipId:member.id,rubricId:rubric.id,targetAmount:target,currentAmount:current,reason:reason.trim()});
+        if(result?.status==='CONSENSUS_REQUIRED'){holder.classList.add('pending-consensus');toast(tx('Modification proposée : la valeur reste inchangée jusqu’à la décision des gestionnaires.','Change proposed: the value remains unchanged until managers decide.'));}
+        else if(result?.status==='QUEUED_CONSENSUS'||result?.queued)toast(tx('Modification conservée hors ligne pour confrontation à la reconnexion.','Change saved offline for reconciliation when reconnected.'));
+        else toast(tx('Valeur enregistrée.','Value saved.'));
+        input.value='';await renderLedger();await sessionsUI.refresh?.();renderIndividualSheetMatrix();
+      }catch(e){fail(e);}finally{validate.disabled=false;input.disabled=false;}
+    });
+    validate.onclick=submit;input.addEventListener('keydown',event=>{if(event.key==='Enter'){event.preventDefault();submit();}});
+    holder.append(input,validate);return holder;
+};
 
 const openFinancialCellEditor=({member,rubric,meetingId})=>{
     const meeting=meetings.find(x=>x.id===meetingId);if(!meeting){fail(new Error('MEETING_NOT_FOUND'));return;}
@@ -464,10 +507,7 @@ const renderMeetingMatrix = () => {
         const tr = document.createElement('tr'),name = document.createElement('td');
         name.innerHTML = html`<strong>${m.displayName}</strong><small>${m.roles.join(', ')}</small>`;tr.append(name);
         for (const rubric of rubrics.filter(x=>x.status!=='ARCHIVED')) {
-            const td=document.createElement('td'),b=document.createElement('button');b.type='button';b.className='matrix-cell';b.dataset.membershipId=m.id;b.dataset.rubricId=rubric.id;b.dataset.meetingId=selectedMeeting;
-            const net=exactCellAmount(m.id,rubric.id,selectedMeeting);b.textContent=fmt(net);b.disabled=!isManager();
-            b.title=tx('Saisir la valeur totale de cette cellule — pas un montant à ajouter','Enter the total cell value — not an amount to add');
-            b.onclick=()=>openFinancialCellEditor({member:m,rubric,meetingId:selectedMeeting});td.append(b);tr.append(td);
+            const td=document.createElement('td');td.append(makeFinancialEntryCell({member:m,rubric,meetingId:selectedMeeting,editable:isManager()}));tr.append(td);
         }
         body.append(tr);
     }
@@ -503,7 +543,7 @@ const renderIndividualSheetMatrix=()=>{
     for(const meeting of meetings.filter(x=>x.status!=='cancelled').slice().sort((a,b)=>String(a.scheduledAt??a.openedAt).localeCompare(String(b.scheduledAt??b.openedAt)))){
         const tr=document.createElement('tr'),th=document.createElement('th');th.textContent=meetingLabel(meeting)+(meeting.status==='closed'?' · '+tx('clôturée','closed'):'');tr.append(th);let total=0;
         for(const rubric of rubrics.filter(x=>x.status!=='ARCHIVED')){const value=exactCellAmount(member.id,rubric.id,meeting.id);total+=value;const td=document.createElement('td');
-            if(isManager()){const b=document.createElement('button');b.type='button';b.className='matrix-cell';b.textContent=fmt(value);b.onclick=()=>openFinancialCellEditor({member,rubric,meetingId:meeting.id});td.append(b);}else td.textContent=fmt(value);tr.append(td);
+            if(isManager())td.append(makeFinancialEntryCell({member,rubric,meetingId:meeting.id,editable:true}));else td.textContent=fmt(value);tr.append(td);
         }
         const td=document.createElement('td');td.textContent=fmt(total);tr.append(td);body.append(tr);
     }
@@ -1318,30 +1358,33 @@ async function start() {
 async function showStatement(membershipId){
     const statement=await app.memberStatement(membershipId);
     document.getElementById('statementDialog')?.remove();
-    const dialog=document.createElement('dialog');dialog.id='statementDialog';
-    dialog.innerHTML=html`<h2>Relevé des cotisations</h2><p>${statement.displayName} · ${statement.groupName}</p><p>Arrêté au ${date(statement.asOf)}</p><strong>Total net : ${fmt(statement.totalNetContributions)}</strong><p class="hint">Ce relevé retrace les encaissements enregistrés et leurs contrepassations. Il ne calcule pas les dettes, prêts ou avoirs d’épargne.</p>`;
-    const table=document.createElement('table');table.innerHTML='<thead><tr><th>Date</th><th>Séance / période</th><th>Reçu</th><th>Net</th><th>Détail</th></tr></thead>';
-    const body=document.createElement('tbody');
-    for(const r of statement.receipts){
-        const tr=document.createElement('tr'),meeting=meetings.find(m=>m.id===r.meetingId);
-        const tech=r.id+(r.ledgerEntryId?' · '+r.ledgerEntryId:'');
-        tr.innerHTML=html`<td>${date(r.receivedAt)}</td><td>${meeting?meetingLabel(meeting):tx('Sans séance','No meeting')}</td><td>${fmt(r.amount.amount)}</td><td>${fmt(r.netAmount)}</td><td></td>`;
-        const details=document.createElement('details'),summary=document.createElement('summary');summary.textContent=tx('Références techniques','Technical references');details.append(summary,document.createTextNode(tech));tr.lastElementChild.append(details);body.append(tr);
+    const dialog=document.createElement('dialog');dialog.id='statementDialog';dialog.className='statement-dialog';
+    dialog.innerHTML=html`<h2>${tx('Relevé financier du membre','Member financial statement')}</h2><p>${statement.displayName} · ${statement.groupName}</p><p>${tx('Arrêté au','As of')} ${date(statement.asOf)}</p>`;
+    const metrics=document.createElement('div');metrics.className='metrics small statement-metrics';
+    const metric=(value,label)=>{const d=document.createElement('div');d.className='metric';d.innerHTML=html`<strong>${fmt(Number(value??0))}</strong><span>${label}</span>`;return d;};
+    metrics.append(metric(statement.totalNetContributions,tx('Cotisations nettes','Net contributions')),metric(statement.debtPrincipal,tx('Capital prêts / dettes','Loan principal / debt')),metric(statement.debtInterest,tx('Intérêts dus','Interest due')),metric(statement.totalDebt,tx('Dette totale','Total debt')));
+    dialog.append(metrics);
+    const note=document.createElement('p');note.className='truth-notice';note.textContent=tx('Les prêts et autres sorties ne sont pas comptés comme des cotisations positives. Ils sont présentés séparément dans les dettes.','Loans and other outflows are not counted as positive contributions. They are shown separately under debts.');dialog.append(note);
+    const groupsMap=new Map();
+    for(const r of statement.receipts){const key=JSON.stringify([r.meetingId??'',r.rubricId??'']);if(!groupsMap.has(key))groupsMap.set(key,{title:(r.meetingTitle??tx('Sans séance','No meeting'))+' · '+(r.rubricName??tx('Sans rubrique','No rubric')),rows:[]});groupsMap.get(key).rows.push(r);}
+    const history=document.createElement('div');history.className='statement-history-groups';const heading=document.createElement('h3');heading.textContent=tx('Historique des contributions et modifications','Contribution and change history');history.append(heading);
+    for(const group of groupsMap.values()){
+      const details=document.createElement('details');details.open=true;const summary=document.createElement('summary');summary.textContent=group.title;details.append(summary);const list=document.createElement('div');list.className='stack';
+      for(const r of group.rows.slice().sort((a,b)=>String(b.receivedAt).localeCompare(String(a.receivedAt)))){
+        const item=document.createElement('article');item.className='item contribution-history-item';
+        const kind=r.financialNature==='LOAN_DEBT'?tx('Prêt / dette — exclu des cotisations nettes','Loan / debt — excluded from net contributions'):(r.isModified||Number(r.netAmount)!==Number(r.amount.amount)?tx('Contribution modifiée','Modified contribution'):tx('Contribution saisie','Recorded contribution'));
+        const title=document.createElement('strong');title.textContent=kind+' · '+fmt(r.amount.amount);
+        const info=document.createElement('p');info.textContent=`${tx('Net','Net')} : ${fmt(r.netAmount)} · ${tx('Date / heure','Date / time')} : ${date(r.receivedAt)} · ${tx('Auteur','Author')} : ${r.receivedByName??actorDisplayName(r.receivedBy)}`;item.append(title,info);
+        if(r.corrections?.length){const corr=document.createElement('ul');for(const c of r.corrections){const li=document.createElement('li');li.textContent=`${tx('Modification','Change')} · ${date(c.at)} · ${tx('Auteur','Author')} : ${c.authorName??c.authorId??'—'} · ${tx('Motif','Reason')} : ${c.reason??'—'}`;corr.append(li);}item.append(corr);}list.append(item);
+      }
+      details.append(list);history.append(details);
     }
-    const totalRow=document.createElement('tr');totalRow.className='table-total-row';totalRow.innerHTML=`<th>${tx('TOTAL','TOTAL')}</th><td></td><td>${fmt(statement.receipts.reduce((n,r)=>n+Number(r.amount.amount??0),0))}</td><td>${fmt(statement.receipts.reduce((n,r)=>n+Number(r.netAmount??0),0))}</td><td></td>`;body.append(totalRow);
-    table.append(body);dialog.append(table);
-    const statementMember=members.find(m=>m.id===membershipId);
-    try{dialog.append(await renderMemberFinancialNotices({app,membershipId,memberUserId:statementMember?.userId,manager:isManager(),notify:toast,showError:fail}));}catch(e){const p=document.createElement('p');p.className='hint';p.textContent='Le contrôle des modifications financières sera disponible après synchronisation.';dialog.append(p);}
-    const exportButton=document.createElement('button');exportButton.textContent='Exporter CSV';exportButton.className='primary';
-    exportButton.onclick=()=>{
-        const rows=[['Date','Séance / période','Référence technique','Membre','Groupe','Devise','Montant reçu','Montant net'],...statement.receipts.map(r=>{const meeting=meetings.find(m=>m.id===r.meetingId);return[r.receivedAt,meeting?meetingLabel(meeting):'Sans séance',r.id,statement.displayName,statement.groupName,r.amount.currency,r.amount.amount,r.netAmount];})];
-        const cell=value=>'"'+String(value).replace(/^[\s]*[=+@\-]/,"'$&").replaceAll('"','""')+'"';
-        const blob=new Blob(['\ufeff'+rows.map(row=>row.map(cell).join(';')).join('\r\n')],{type:'text/csv;charset=utf-8'});
-        const url=URL.createObjectURL(blob),link=document.createElement('a');link.href=url;link.download=`releve-${membershipId}.csv`;link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
-    };
-    const print=document.createElement('button');print.textContent='Imprimer / PDF';print.onclick=()=>window.print();
-    const close=document.createElement('button');close.textContent='Fermer';close.onclick=()=>dialog.close();
-    dialog.append(exportButton,print,close);document.body.append(dialog);dialog.showModal();
+    if(!groupsMap.size){const empty=document.createElement('div');empty.className='empty-state';empty.textContent=tx('Aucun encaissement enregistré.','No recorded contribution.');history.append(empty);}dialog.append(history);
+    const debtDetail=document.createElement('p');debtDetail.className='hint';debtDetail.textContent=tx(`Dette détaillée : capital ${fmt(statement.debtPrincipal??0)} + intérêts ${fmt(statement.debtInterest??0)} + autres impayés ${fmt(statement.otherDebt??0)}.`,`Debt detail: principal ${fmt(statement.debtPrincipal??0)} + interest ${fmt(statement.debtInterest??0)} + other arrears ${fmt(statement.otherDebt??0)}.`);dialog.append(debtDetail);
+    try{dialog.append(await renderMemberFinancialNotices({app,membershipId,memberUserId:members.find(m=>m.id===membershipId)?.userId,manager:isManager(),notify:toast,showError:fail}));}catch(e){const p=document.createElement('p');p.className='hint';p.textContent=tx('Le contrôle des modifications financières sera disponible après synchronisation.','Financial change review will be available after synchronization.');dialog.append(p);}
+    const exportButton=document.createElement('button');exportButton.textContent=tx('Exporter CSV','Export CSV');exportButton.className='primary';
+    exportButton.onclick=()=>{const rows=[['Date / heure','Séance','Rubrique','Nature','Auteur','Montant saisi','Montant net','Motif(s) de modification'],...statement.receipts.map(r=>[r.receivedAt,r.meetingTitle??'Sans séance',r.rubricName??'Sans rubrique',r.financialNature??'CONTRIBUTION',r.receivedByName??r.receivedBy,r.amount.amount,r.netAmount,(r.corrections??[]).map(c=>c.reason??'').filter(Boolean).join(' | ')])];const cell=value=>'"'+String(value??'').replace(/^[\s]*[=+@\-]/,"'$&").replaceAll('"','""')+'"';const blob=new Blob(['\ufeff'+rows.map(row=>row.map(cell).join(';')).join('\r\n')],{type:'text/csv;charset=utf-8'});const url=URL.createObjectURL(blob),link=document.createElement('a');link.href=url;link.download=`releve-${membershipId}.csv`;link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);};
+    const print=document.createElement('button');print.textContent=tx('Imprimer / PDF','Print / PDF');print.onclick=()=>window.print();const close=document.createElement('button');close.textContent=tx('Fermer','Close');close.onclick=()=>dialog.close();dialog.append(exportButton,print,close);document.body.append(dialog);dialog.showModal();
 }
 let authMode='login';
 const setAuthMode=mode=>{

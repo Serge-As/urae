@@ -167,3 +167,19 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 
 .mobile-important-nav{display:none}
 @media(max-width:860px){.mobile-important-nav{display:flex!important}}
+
+/* 1.4.5.1 field corrections — inline canonical financial entry */
+.matrix-cell-entry{display:grid!important;grid-template-columns:minmax(72px,1fr) 44px;gap:4px;align-items:end;min-width:118px;padding:5px!important;background:transparent!important;color:inherit!important;border:0!important}
+.matrix-cell-entry .cell-current{grid-column:1/-1;display:block;font-size:12px;line-height:1.2;white-space:normal}
+.matrix-cell-entry .cell-target-input{width:100%;min-width:0;min-height:44px;padding:7px 8px;border:1px solid var(--line);border-radius:12px;background:#fff;font:inherit}
+.matrix-cell-entry .cell-validate{min-width:44px;min-height:44px;padding:4px;border-radius:8px;font-size:20px;font-weight:900}
+.matrix-cell-entry.pending-consensus{outline:3px solid #e4a74b;outline-offset:1px;border-radius:10px}
+.member-management-toolbar{display:grid;grid-template-columns:minmax(180px,1fr) minmax(180px,1fr) auto auto;gap:8px;align-items:end;margin:12px 0}
+.member-management-toolbar label{display:grid;gap:5px;font-size:12px;font-weight:750}
+.danger-action{border-color:#ddb4b4;color:#862d34;background:#fff7f7}
+.finance-tool-guide{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:10px}
+.statement-dialog{width:min(980px,94vw);max-height:90vh;overflow:auto}
+.statement-history-groups{display:grid;gap:10px;margin:14px 0}.statement-history-groups details{border:1px solid var(--line);border-radius:12px;padding:9px}.statement-history-groups summary{font-weight:850;cursor:pointer}
+.contribution-history-item p{margin:6px 0}
+@media(max-width:860px){.member-management-toolbar{grid-template-columns:1fr 1fr}.matrix-cell-entry{min-width:122px}.meeting-matrix th,.meeting-matrix td{padding:7px}}
+@media(max-width:560px){.member-management-toolbar{grid-template-columns:1fr}.member-management-toolbar button{width:100%}}
