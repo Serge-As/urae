@@ -1,7 +1,7 @@
 import worker,{type WorkerEnv} from './index.js';
 export {GroupLiveHub} from './group-live-hub.js';
 
-export const RELEASE_VERSION='1.4.3-blueprint-5-0-0-finalized';
+export const RELEASE_VERSION='1.4.5-final-mega-offline-governance';
 
 const releaseTruthPaths=new Set(['/health','/api/v1/product/capabilities']);
 
