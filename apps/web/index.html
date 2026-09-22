@@ -563,6 +563,7 @@
                 <label>Capital<input id="loanPrincipal" type="number" min="1" step="1" value="50000" required></label>
                 <label>Échéances<input id="loanInstallments" type="number" min="1" step="1" value="5" required></label>
                 <label>Taux annuel %<input id="loanRate" type="number" min="0" step="0.01" value="10"></label>
+                <label>Périodes / an<input id="loanPeriodsPerYear" type="number" min="1" max="365" step="1" value="12" title="12 = mensuel, 24 = deux fois par mois, 52 = hebdomadaire"></label>
                 <label>Frais totaux<input id="loanFees" type="number" min="0" step="1" value="0"></label>
                 <label>Méthode<select id="loanMethod"><option value="DECLINING">Capital restant dû</option><option value="FLAT">Taux fixe sur capital initial</option></select></label>
                 <button class="primary">Simuler et créer la demande</button>
