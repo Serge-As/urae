@@ -35,7 +35,7 @@ test('iOS users receive install guidance while other platforms keep beforeinstal
   assert.match(main,/showIosInstallGuide/);
   assert.match(main,/Sur l’écran d’accueil/);
   assert.match(main,/beforeinstallprompt/);
-  assert.match(main,/navigator\.storage\?\.persist/);
+  assert.match(main,/navigator\.storage(?:\?\.|&&navigator\.storage\.)persist/);
 });
 
 test('offline loss of an optional section does not block Group Core',()=>{
