@@ -846,12 +846,41 @@ const refreshOptionalOfflineSafe=async(label,fn)=>{
         throw error;
     }
 };
+const openNoticeAction=action=>{
+    if(!action?.view)return;
+    go(action.view,{anchor:action.anchor,meetingId:action.meetingId,matrixMeetingId:action.meetingId,sheetMode:action.membershipId&&action.rubricId?'meeting':undefined,membershipId:action.membershipId,rubricId:action.rubricId,force:true});
+    if(action.entityKind&&action.entityId)requestAnimationFrame(()=>{
+      const type=String(action.entityKind).toLowerCase(),selector=`[data-detail-type="${CSS.escape(type)}"][data-detail-id="${CSS.escape(String(action.entityId))}"]`,button=document.querySelector(selector);
+      button?.scrollIntoView({behavior:'smooth',block:'center'});button?.click?.();
+    });
+};
+const renderUrgentNotifications=async()=>{
+    const root=document.querySelector('#urgentNotificationsList');if(!root)return;
+    root.replaceChildren();
+    if(!app.activeGroup()){root.innerHTML='<div class="empty-state">'+tx('Sélectionnez un groupe pour voir ses alertes.','Select a group to see its alerts.')+'</div>';return;}
+    try{
+      const notices=await app.groupNotifications(),urgent=notices.filter(x=>!x.read&&['HIGH','CRITICAL'].includes(String(x.priority))).slice(0,12);
+      if(!urgent.length){root.innerHTML='<div class="empty-state">'+tx('Aucune notification urgente.','No urgent notification.')+'</div>';return;}
+      for(const n of urgent){
+        const article=document.createElement('article');article.className='item '+(n.priority==='CRITICAL'?'urgent-critical':'urgent-high');
+        const h=document.createElement('strong');h.textContent=(n.priority==='CRITICAL'?'🔴 ':'🟠 ')+n.title;
+        const p=document.createElement('p');p.textContent=n.message??'';const meta=document.createElement('small');meta.textContent=tx('Auteur : ','Author: ')+actorDisplayName(n.createdBy)+' · '+date(n.createdAt);
+        const actions=document.createElement('div');actions.className='actions';
+        if(n.action?.view){const open=document.createElement('button');open.type='button';open.className='primary';open.textContent=n.action.label||tx('Voir le détail','View details');open.onclick=()=>openNoticeAction(n.action);actions.append(open);}
+        const seen=document.createElement('button');seen.type='button';seen.className='secondary';seen.textContent=tx('Marquer comme lu','Mark as read');seen.onclick=()=>void(async()=>{try{await app.markGroupNotificationRead(n.id);await renderUrgentNotifications();await renderFinancialAlerts();}catch(e){fail(e);}})();actions.append(seen);
+        article.append(h,p,meta,actions);root.append(article);
+      }
+    }catch(error){if(navigator.onLine)fail(error);else root.innerHTML='<div class="empty-state">'+tx('Alertes non synchronisées hors ligne. Les alertes déjà chargées restent disponibles dans les copies locales.','Alerts not synchronized offline. Previously loaded alerts remain in local copies.')+'</div>';}
+};
+document.querySelector('#urgentNotificationsRefreshBtn')?.addEventListener('click',()=>void renderUrgentNotifications());
+
 const showFinancialAlert=(input={})=>{
     const bar=document.querySelector('#financialAlertBar');if(!bar)return;
     bar.replaceChildren();const title=document.createElement('strong'),message=document.createElement('span');
     title.textContent=input.title||tx('Mise à jour financière','Financial update');message.textContent=' · '+String(input.message||'');
     bar.className='financial-alert-bar '+(input.closed?'is-critical':input.correction?'is-closed':'is-open');bar.hidden=false;bar.append(title,message);
-    if(input.notificationId){const seen=document.createElement('button');seen.type='button';seen.className='link-btn';seen.textContent=tx('J’ai vu','Seen');seen.onclick=()=>void(async()=>{try{await app.markGroupNotificationRead(input.notificationId);bar.hidden=true;}catch(e){fail(e);}})();bar.append(seen);}
+    if(input.action?.view){const open=document.createElement('button');open.type='button';open.className='link-btn';open.textContent=input.action.label||tx('Voir le détail','View details');open.onclick=()=>openNoticeAction(input.action);bar.append(open);}
+    if(input.notificationId){const seen=document.createElement('button');seen.type='button';seen.className='link-btn';seen.textContent=tx('J’ai vu','Seen');seen.onclick=()=>void(async()=>{try{await app.markGroupNotificationRead(input.notificationId);bar.hidden=true;await renderUrgentNotifications();}catch(e){fail(e);}})();bar.append(seen);}
 };
 const renderFinancialAlerts=async()=>{
     const bar=document.querySelector('#financialAlertBar');if(!bar)return;
@@ -860,7 +889,7 @@ const renderFinancialAlerts=async()=>{
       const notices=await app.groupNotifications(),unread=notices.filter(x=>!x.read).filter(x=>/financi|cotisation|compte|séance clôturée/i.test(String(x.title??'')+' '+String(x.message??'')));
       const latest=unread[0];if(!latest){bar.hidden=true;return;}
       const closed=String(latest.priority)==='CRITICAL'||/clôtur|après clôture/i.test(String(latest.title??'')+' '+String(latest.message??''));
-      showFinancialAlert({title:latest.title,message:latest.message,closed,correction:String(latest.priority)==='HIGH',notificationId:latest.id});
+      showFinancialAlert({title:latest.title,message:latest.message,closed,correction:String(latest.priority)==='HIGH',notificationId:latest.id,action:latest.action});
     }catch(error){if(navigator.onLine)console.info('Financial alerts unavailable',error);}
 };
 window.addEventListener('eco:financial-live-update',event=>{
@@ -904,6 +933,7 @@ const refreshGroupContext = async () => {
     await refreshOptionalOfflineSafe('advanced',()=>advancedUI.refresh());
     await refreshOptionalOfflineSafe('identity-live',()=>identityLiveUI.refresh());
     await refreshOptionalOfflineSafe('financial-alerts',renderFinancialAlerts);
+    await refreshOptionalOfflineSafe('urgent-notifications',renderUrgentNotifications);
     await refreshOptionalOfflineSafe('community-shop',()=>communityShopUI.refresh());
     await refreshOptionalOfflineSafe('misc-rubrics',()=>miscRubricUI.refresh());
     await refreshOptionalOfflineSafe('pairing',()=>pairingUI.refresh());
