@@ -25,7 +25,8 @@
       <label>Mot de passe<input id="authPassword" type="password" autocomplete="current-password" minlength="12" maxlength="128" required><small>12 caractères minimum.</small></label>
       <p id="authError" role="alert"></p><button id="authSubmit" type="submit" class="primary">Me connecter</button>
     </form>
-    <p class="auth-footnote">Un compte personnel pour accéder uniquement aux groupes qui vous autorisent. Les données de l’ancienne démonstration nécessitent un rapprochement contrôlé.</p>
+    <p id="offlineFirstUseNote" class="truth-notice"><strong>Première utilisation hors ligne :</strong> « Créer un compte » fonctionne désormais sans session Internet préalable sur un appareil où Eco-System est déjà installé. Le compte reste local et sera rapproché du serveur seulement lorsque vous déciderez de le finaliser avec Internet.</p>
+    <p class="auth-footnote">Le mot de passe du compte local n’est pas stocké en clair. Vos groupes et saisies restent sur l’appareil et les intentions de synchronisation conservent leur auteur d’origine.</p>
   </div>
 </section>
 <header class="topbar">
@@ -37,7 +38,7 @@
       <select id="activeGroupSelect" aria-label="Groupe actif"><option value="">Aucun groupe actif</option></select>
       <div class="top-search"><input id="globalSearch" placeholder="Rechercher une fonction, un groupe, un service…" autocomplete="off"><div id="globalSearchResults" class="search-popover"></div></div>
     </div>
-    <div class="top-actions"><span id="accountName"></span><button id="logoutBtn" type="button" class="ghost">Déconnexion</button>
+    <div class="top-actions"><span id="accountName"></span><button id="claimLocalAccountBtn" type="button" class="primary" hidden>Finaliser le compte local</button><button id="logoutBtn" type="button" class="ghost">Déconnexion</button>
       <span id="connectivity" class="pill">● …</span>
       <button id="installBtn" class="ghost" hidden>Installer</button>
       <button id="refreshBtn" class="ghost">Actualiser</button>
