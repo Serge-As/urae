@@ -164,3 +164,6 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
   .app-back-btn{left:12px;bottom:100px;min-height:52px}
   .financial-alert-bar{top:0}
 }
+
+.mobile-important-nav{display:none}
+@media(max-width:860px){.mobile-important-nav{display:flex!important}}
