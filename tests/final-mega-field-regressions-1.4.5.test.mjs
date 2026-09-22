@@ -6,6 +6,7 @@ const main=fs.readFileSync('apps/web/src/main.js','utf8');
 const html=fs.readFileSync('apps/web/index.html','utf8');
 const sw=fs.readFileSync('apps/web/sw.js','utf8');
 const sessions=fs.readFileSync('apps/web/src/sessions-ui.js','utf8');
+const detail=fs.readFileSync('apps/web/src/detail-ui.js','utf8');
 const recap=fs.readFileSync('apps/web/src/recap-ui.js','utf8');
 const app=fs.readFileSync('packages/application/src/index.ts','utf8');
 const api=fs.readFileSync('workers/api/src/index.ts','utf8');
