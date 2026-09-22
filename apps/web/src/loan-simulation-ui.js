@@ -10,7 +10,7 @@ export const openLoanSimulationDialog=async({app,loan,fallbackDebt=0,fallbackInt
   const interestInput=document.createElement('input');interestInput.type='number';interestInput.min='0';interestInput.step='1';interestInput.value=String(openingInterest);
   const periods=document.createElement('input');periods.type='number';periods.min='1';periods.max='120';periods.step='1';periods.value=String(Math.max(1,Number(data.remainingPeriods??data.installments??12)||12));
   const rate=document.createElement('input');rate.type='number';rate.min='0';rate.max='100';rate.step='0.01';
-  const bps=Number(data.rateBasisPointsPerPeriod??0);rate.value=bps>0?String(bps/100):'0';
+  const periodsPerYear=Math.max(1,Number(data.installmentsPerYear??12)||12),bps=Number(data.rateBasisPointsPerPeriod??0),annualBps=Number(data.annualRateBasisPoints??0);rate.value=bps>0?String(bps/100):annualBps>0?String((annualBps/periodsPerYear)/100):'0';
   const priority=document.createElement('select');priority.innerHTML='<option value="CAPITAL_FIRST">Capital d’abord</option><option value="INTEREST_FIRST">Intérêts d’abord</option>';priority.value=String(data.paymentPriority??'CAPITAL_FIRST');
   const payments=document.createElement('input');payments.placeholder='Ex. 5000, 5000, 10000';payments.autocomplete='off';
   const note=document.createElement('p');note.className='hint';note.textContent='Le taux est saisi par période/séance. Les intérêts impayés restent séparés : aucun intérêt n’est calculé sur les intérêts.';
