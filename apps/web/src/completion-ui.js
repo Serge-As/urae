@@ -251,11 +251,11 @@ export const mountCompletionUI=({app,notify,showError,getMembers,getMeetings,get
   }));
 
   byId('loanForm')?.addEventListener('submit',e=>{e.preventDefault();void run(e.currentTarget,async()=>{
-    const principal=number('loanPrincipal'),installments=number('loanInstallments'),rate=Math.round(number('loanRate')*100),fees=number('loanFees');
-    const quote=await app.quoteLoan({principal,installments,annualRateBasisPoints:rate,feesTotal:fees,method:value('loanMethod')});
+    const principal=number('loanPrincipal'),installments=number('loanInstallments'),rate=Math.round(number('loanRate')*100),periodsPerYear=number('loanPeriodsPerYear'),fees=number('loanFees');
+    const quote=await app.quoteLoan({principal,installments,annualRateBasisPoints:rate,installmentsPerYear:periodsPerYear,feesTotal:fees,method:value('loanMethod')});
     renderQuote(quote.schedule);
     let loan=await app.createCompletion('LOAN',{title:tr('Prêt de ','Loan of ')+fmt(principal),data:{
-      principal,currency:'XAF',borrowerMembershipId:value('loanBorrower'),installments,annualRateBasisPoints:rate,feesTotal:fees,method:value('loanMethod'),schedule:quote.schedule,outstandingPrincipal:0
+      principal,currency:'XAF',borrowerMembershipId:value('loanBorrower'),installments,annualRateBasisPoints:rate,installmentsPerYear:periodsPerYear,rateBasisPointsPerPeriod:Math.round(rate/periodsPerYear),paymentPriority:'CAPITAL_FIRST',feesTotal:fees,method:value('loanMethod'),schedule:quote.schedule,outstandingPrincipal:0
     }});
     loan=await app.transitionCompletion(loan.id,'SUBMITTED',primitiveVersion(loan));await renderLoans();notify(tr('Demande de prêt créée.','Loan request created.'));
   });});
