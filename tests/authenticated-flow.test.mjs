@@ -74,3 +74,53 @@ test('authenticated governance document upload accepts multipart while other bus
   assert.equal(wrongType.status,415);assert.equal((await wrongType.json()).error,'JSON_REQUIRED');
  }finally{e.db.close();}
 });
+
+
+test('two managers replace 1000 by 500 through consensus without ever producing 1500',async()=>{
+ const e=environment();try{
+  const owner=await register(e,'cell_owner'),manager=await register(e,'cell_manager');
+  const g=await group(e,owner),headers={'x-active-group-id':g.id};
+
+  let r=await e.request(`/api/v1/groups/${g.id}/discovery`,'POST',{visibility:'PUBLIC',discoverable:true,joinPolicy:'REQUEST',recruiting:true},owner.cookie,headers);
+  assert.equal(r.status,200,await r.clone().text());
+  r=await e.request('/api/v1/membership-applications','POST',{groupId:g.id,message:'gestionnaire'},manager.cookie);assert.equal(r.status,201,await r.clone().text());const application=await r.json();
+  r=await e.request(`/api/v1/membership-applications/${application.id}/decision`,'POST',{decision:'APPROVE'},owner.cookie,headers);assert.equal(r.status,200,await r.clone().text());
+
+  let members=await (await e.request(`/api/v1/groups/${g.id}/members`,'GET',undefined,owner.cookie,headers)).json();
+  const ownerMembership=members.find(x=>x.userId===owner.account.id),managerMembership=members.find(x=>x.userId===manager.account.id);
+  r=await e.request(`/api/v1/groups/${g.id}/members/${managerMembership.id}/lifecycle`,'PUT',{status:'active',roles:['member','manager'],expectedRevision:Number(managerMembership.lifecycleRevision??0),reason:'test multi-manager'},owner.cookie,headers);
+  assert.equal(r.status,200,await r.clone().text());
+
+  r=await e.request(`/api/v1/groups/${g.id}/rubrics`,'POST',{name:'Cotisation test',facets:{direction:'BIDIRECTIONAL',obligation:'CUSTOM',medium:'CASH',refundability:'CONDITIONAL',replenishment:'CUSTOM',interestMode:'NONE',eligibilityMode:'RULE_BASED'},source:'GROUP_CUSTOM',operatingModel:{ruleRealityStatus:'ALIGNED',targetMode:'OPEN',mandatoryForAbsentees:false,shortfallHandling:'LEAVE_SHORT',payoutMode:'COLLECTED_ONLY',immediateFullPayout:false}},owner.cookie,headers);
+  assert.equal(r.status,201,await r.clone().text());const rubric=await r.json();
+
+  r=await e.request(`/api/v1/groups/${g.id}/meetings`,'POST',{title:'Séance cible',scheduledAt:'2026-09-22T08:00:00.000Z'},owner.cookie,headers);
+  assert.equal(r.status,201,await r.clone().text());const meeting=await r.json();
+
+  const cell={membershipId:ownerMembership.id,rubricId:rubric.id,targetAmount:1000,reason:'Saisie initiale'};
+  r=await e.request(`/api/v1/groups/${g.id}/meetings/${meeting.id}/financial-cells`,'POST',cell,owner.cookie,headers);
+  assert.equal(r.status,201,await r.clone().text());assert.equal((await r.json()).target,1000);
+
+  const managerHeaders={'x-active-group-id':g.id};
+  r=await e.request(`/api/v1/groups/${g.id}/meetings/${meeting.id}/financial-cells`,'POST',{...cell,targetAmount:500,reason:'Correction constatée'},manager.cookie,managerHeaders);
+  assert.equal(r.status,202,await r.clone().text());const proposed=await r.json();assert.equal(proposed.status,'CONSENSUS_REQUIRED');assert.equal(proposed.current,1000);assert.equal(proposed.target,500);
+
+  let ledger=await (await e.request(`/api/v1/groups/${g.id}/ledger`,'GET',undefined,owner.cookie,headers)).json();
+  let total=ledger.receipts.filter(x=>x.membershipId===ownerMembership.id&&x.rubricId===rubric.id&&x.meetingId===meeting.id).reduce((n,x)=>n+x.netAmount,0);
+  assert.equal(total,1000,'proposal must not silently mutate canonical value');
+
+  const cellKey=ownerMembership.id+':'+rubric.id,encoded=encodeURIComponent(cellKey);
+  r=await e.request(`/api/v1/groups/${g.id}/meetings/${meeting.id}/live-consensus/${encoded}/vote`,'POST',{proposalActorId:manager.account.id},owner.cookie,headers);assert.equal(r.status,200,await r.clone().text());
+  r=await e.request(`/api/v1/groups/${g.id}/meetings/${meeting.id}/live-consensus/${encoded}/vote`,'POST',{proposalActorId:manager.account.id},manager.cookie,managerHeaders);assert.equal(r.status,200,await r.clone().text());const selected=await r.json();assert.equal(selected.selectedValue,'500');
+
+  r=await e.request(`/api/v1/groups/${g.id}/meetings/${meeting.id}/financial-cells/${encoded}/apply`,'POST',{reason:'500 retenu par les deux gestionnaires'},owner.cookie,headers);
+  assert.equal(r.status,200,await r.clone().text());const applied=await r.json();assert.equal(applied.previousAmount,1000);assert.equal(applied.newAmount,500);
+
+  ledger=await (await e.request(`/api/v1/groups/${g.id}/ledger`,'GET',undefined,owner.cookie,headers)).json();
+  total=ledger.receipts.filter(x=>x.membershipId===ownerMembership.id&&x.rubricId===rubric.id&&x.meetingId===meeting.id).reduce((n,x)=>n+x.netAmount,0);
+  assert.equal(total,500,'target value must replace 1000, never add +500');
+
+  const memberAlerts=await (await e.request(`/api/v1/groups/${g.id}/notifications`,'GET',undefined,owner.cookie,headers)).json();
+  assert.ok(memberAlerts.some(x=>/compte a été corrigé|Donnée financière corrigée/i.test(String(x.title??''))), 'affected member must receive a correction alert');
+ }finally{e.db.close();}
+});
