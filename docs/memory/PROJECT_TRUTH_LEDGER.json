@@ -1069,6 +1069,76 @@
       "note": "Blueprint 5.0.0 delivered with visible 1.4.3 PWA revision, canonical Community/Forum/Partners handoffs, extended community presets and all 1.4.2 acquired behavior preserved.",
       "next": "Field-receive on founder phone/desktop; permanent-test any reproducible defect before correction.",
       "currentProductLine": true
+    },
+    {
+      "id": "cloudflare.production.1.4.5.offline_governance",
+      "status": "VERIFIED_REMOTE",
+      "scope": "cloudflare-production",
+      "observedOn": "2026-09-22",
+      "evidence": [
+        "github-actions:35713621388 SUCCESS",
+        "qualification-push:35713621161 SUCCESS",
+        "qualification-pr:35713626133 SUCCESS",
+        "source-deployed:463035adab2303874878c8e72f1965475ac0b209",
+        "worker-version:29c8f0e2-1cb1-4361-8481-27b514906fcf",
+        "health-version:1.4.5-final-mega-offline-governance",
+        "tests:298/298 PASS",
+        "migrations:No migrations to apply",
+        "realMoneyEnabled:false"
+      ],
+      "note": "Production 1.4.5 restores the field-critical menus and canonical sheets, hardens Android 6 offline shell behavior, adds sessionless local account bootstrap, governed target-value financial corrections, member/manager alerts, six-month trash and deployed Relay/Local surfaces. Remote smoke passed; field acceptance remains separate.",
+      "next": "Founder field-receives desktop and Android 6. Do not merge or redeploy for documentation alone; convert any reproducible defect into a permanent test.",
+      "currentProductLine": true
+    },
+    {
+      "id": "offline.first_account.sessionless.1.4.5",
+      "status": "VERIFIED_REMOTE",
+      "scope": "offline/authentication",
+      "observedOn": "2026-09-22",
+      "evidence": [
+        "tests:offline-first-account-1.4.5 PASS",
+        "tests:Android 6 offline shell cache-first PASS",
+        "production-smoke:LOCAL_PENDING_REGISTRATION + IndexedDbLocalAuthAdapter + PBKDF2 markers PASS",
+        "source:packages/offline IndexedDbLocalAuthAdapter",
+        "source:packages/application claimLocalAccount identity migration"
+      ],
+      "note": "An installed/cached Eco-System shell can create and authenticate a first local account with no previous server session. Password verifier uses salted PBKDF2; local actor/tenant snapshots and outbox migrate when the account is later claimed online. This does not make an uninstalled website appear on a device that has never received its application files.",
+      "next": "Field-test on Android 6 fully offline after shell delivery. A never-installed/never-connected device requires a separately distributed physical APK/offline pack before this scenario can be declared end-to-end complete.",
+      "currentProductLine": true
+    },
+    {
+      "id": "finance.multi_manager.target_cell.1.4.5",
+      "status": "VERIFIED_REMOTE",
+      "scope": "finance/governance",
+      "observedOn": "2026-09-22",
+      "evidence": [
+        "tests:two managers replace 1000 by 500 through consensus without ever producing 1500 PASS",
+        "tests:298/298 production qualification PASS",
+        "source:MeetingLiveConsensusService.proposeAgainstBaseline",
+        "source:financial-cells target-value routes",
+        "source:Ledger reverseEntry + replacement contribution"
+      ],
+      "note": "A financial cell is a target total for one exact meeting/member/rubric. Editing an existing value in a multi-manager group opens reconciliation and leaves canonical value unchanged until a real-manager majority selects a value; application uses append-only reversal plus new target value. The 1000→500 regression is permanently tested to finish at 500, not 1500.",
+      "next": "Field-test with two real manager accounts and verify visual divergence/selection/member alerts.",
+      "currentProductLine": true
+    },
+    {
+      "id": "backup.birplus.deploy.1.4.5",
+      "status": "VERIFIED_REMOTE",
+      "scope": "backup-recovery",
+      "observedOn": "2026-09-22",
+      "evidence": [
+        "github-actions:35713621388 SUCCESS",
+        "artifact-predeploy:10688266480",
+        "artifact-postdeploy:10688236533",
+        "R2:birplus/1.4.5/463035adab2303874878c8e72f1965475ac0b209/predeploy/",
+        "R2:birplus/1.4.5/463035adab2303874878c8e72f1965475ac0b209/postdeploy/",
+        "restore:SQLite PRAGMA integrity_check=ok",
+        "SHA256:verified"
+      ],
+      "note": "Exact 1.4.5 source and production D1 were archived/restored/checksummed and mirrored to private R2 before mutation; post-deploy D1 and deployment truth were archived the same way.",
+      "next": "Keep these checkpoints immutable; no redeploy is required for truth-document updates.",
+      "currentProductLine": true
     }
   ]
 }
