@@ -67,6 +67,7 @@
       <span class="nav-caption">Finances du groupe</span>
       <button data-view="finance" class="nav-btn"><span>₣</span><b>Finances</b></button>
       <button id="loansNavBtn" data-view="finance" data-anchor="financeLoanGuide" data-open-target="loanCompletionPanel" class="nav-btn"><span>↗</span><b>Prêts</b></button>
+      <button id="loanInterestMobileNavBtn" data-view="finance" data-anchor="loanOfficialConfig" data-open-target="loanCompletionPanel" class="nav-btn mobile-important-nav"><span>％</span><b>Prêts + Intérêts</b></button>
       <button id="savingsNavBtn" data-view="finance" data-anchor="savingsYieldLab" class="nav-btn"><span>◫</span><b>Épargne</b></button>
       <button id="assistanceNavBtn" data-view="finance" data-anchor="assistanceRulebookPanel" class="nav-btn"><span>♡</span><b>Assistances</b></button>
       <button data-view="tontines" class="nav-btn"><span>↻</span><b>Tontines</b></button>
@@ -484,7 +485,7 @@
 
       <section id="view-finance" class="view">
         <div class="page-head"><div><span class="eyebrow">Lot E</span><h1>Configuration financière · simulations · contrôle</h1><p>Les cotisations réelles se saisissent sur « Votre feuille de séance » ou « Vos fiches individuelles ». Ici, le Bureau configure les règles, simule, rapproche et contrôle les finances.</p></div><div class="page-meta"><button id="openAssistanceRulebookBtn" type="button" class="link-btn">Règles Assistance</button><button id="openSavingsLabBtn" type="button" class="link-btn">Épargne + Intérêts</button></div></div>
-        <nav class="finance-toc" aria-label="Plan de la page Finance"><a href="#financeEntryGuide">Saisie des cotisations</a><a href="#financeLoanGuide">Prêts + Intérêts</a><a href="#assistanceRulebookPanel">Assistances</a><a href="#savingsYieldLab">Épargne + Intérêts</a><a href="#advancedFinancePanel">Contrôles avancés</a><a href="#financeLedgerPanel">Historique financier</a></nav>
+        <nav class="finance-toc" aria-label="Plan de la page Finance"><a href="#financeEntryGuide">Saisie des cotisations</a><a href="#loanOfficialConfig" data-open-target="loanCompletionPanel">Prêts + Intérêts</a><a href="#assistanceRulebookPanel">Assistances</a><a href="#savingsYieldLab">Épargne + Intérêts</a><a href="#advancedFinancePanel">Contrôles avancés</a><a href="#financeLedgerPanel">Historique financier</a></nav>
         <div id="noActiveGroupFinance" class="panel empty-state">Sélectionnez ou créez d'abord un groupe.</div>
         <div id="financeContent">
           <section class="panel" id="financeEntryGuide">
@@ -530,7 +531,7 @@
 
           <section class="panel" id="financeLoanGuide"><div class="panel-head"><div><h2>Prêts + Intérêts</h2><p>Configurez le taux par période, la priorité Capital/Intérêts, la durée maximale, les sanctions, les prêts spéciaux et simulez la dette sans écrire dans le Ledger.</p></div><button type="button" id="financeLoanRulesBtn" class="primary">Configurer / simuler les prêts</button></div></section>
           <section class="panel" id="loanCompletionPanel" hidden aria-hidden="true">
-            <div class="panel-head"><div><h2>Prêts, obligations et décisions</h2><p>Les simulations, approbations, décaissements et remboursements sont séparés.</p></div></div>
+            <div class="panel-head" id="loanOfficialConfig"><div><h2>Configuration officielle du système Prêts + Intérêts</h2><p>Les simulations, approbations, décaissements et remboursements sont séparés. Cette configuration pilote le capital, les intérêts, la priorité d’imputation, les échéances et les prêts spéciaux du groupe.</p></div></div>
             <div class="two-col">
               <form id="loanForm" class="form-grid">
                 <h3>Nouveau prêt</h3>
