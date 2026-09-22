@@ -309,6 +309,28 @@ export class IndexedDbLocalAuthAdapter{
       return jsonClone(account);
     }finally{db.close();}
   }
+  async rememberServerAccount(input:{username:string;password:string;displayName:string;locale:string;serverActorId:string;serverTenantId:string}):Promise<LocalAccountRecord>{
+    const username=normalizeLocalUsername(input.username),password=input.password,displayName=input.displayName.trim();
+    if(!/^[a-z0-9][a-z0-9._-]{2,49}$/.test(username)||password.length<12||password.length>128)throw Error('INVALID_CREDENTIAL_FORMAT');
+    if(!displayName||displayName.length>80)throw Error('INVALID_DISPLAY_NAME');
+    const db=await this.open();
+    try{
+      const accounts=await idbAll<LocalAccountRecord>(db.transaction(LOCAL_ACCOUNT_STORE,'readonly').objectStore(LOCAL_ACCOUNT_STORE));
+      const existing=accounts.find(x=>x.username===username&&x.registrationState==='SERVER_CLAIMED');
+      const salt=existing?.salt??base64Bytes(crypto.getRandomValues(new Uint8Array(16))),iterations=existing?.iterations??120000;
+      const account:LocalAccountRecord={
+        id:existing?.id??('local_mirror_'+randomHex(16)),
+        tenantId:existing?.tenantId??input.serverTenantId,
+        username,displayName,locale:input.locale==='en'?'en':'fr',
+        createdAt:existing?.createdAt??new Date().toISOString(),
+        registrationState:'SERVER_CLAIMED',
+        salt,passwordVerifier:await deriveLocalPasswordVerifier(password,salt,iterations),iterations,
+        serverActorId:input.serverActorId,serverTenantId:input.serverTenantId,claimedAt:new Date().toISOString()
+      };
+      await new Promise<void>((resolve,reject)=>{const tx=db.transaction([LOCAL_ACCOUNT_STORE,LOCAL_META_STORE],'readwrite');tx.objectStore(LOCAL_ACCOUNT_STORE).put(account);tx.objectStore(LOCAL_META_STORE).put({key:'current',value:account.id});tx.oncomplete=()=>resolve();tx.onerror=()=>reject(tx.error??new Error('INDEXEDDB_WRITE_FAILED'));});
+      return jsonClone(account);
+    }finally{db.close();}
+  }
   async logout():Promise<void>{
     if(!IndexedDbLocalAuthAdapter.supported())return;const db=await this.open();
     try{await new Promise<void>((resolve,reject)=>{const tx=db.transaction(LOCAL_META_STORE,'readwrite');tx.objectStore(LOCAL_META_STORE).delete('current');tx.oncomplete=()=>resolve();tx.onerror=()=>reject(tx.error??new Error('INDEXEDDB_DELETE_FAILED'));});}finally{db.close();}
