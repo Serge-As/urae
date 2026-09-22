@@ -2,7 +2,7 @@ import type {LaunchRubricPlan, GroupProjectLaunchProfile} from '../../contracts/
 import { PlatformKernel, type DeviceCapabilities } from '../../platform-kernel/src/index.js';
 import { InMemoryPlatformRepository } from '../../repositories/src/index.js';
 import { FoundationService, GroupLaunchSimulator, starterGroupOperatingPolicy } from '../../domain/src/index.js';
-import { IndexedDbOutboxAdapter, IndexedDbReadSnapshotAdapter, Outbox } from '../../offline/src/index.js';
+import { IndexedDbLocalAuthAdapter, IndexedDbOutboxAdapter, IndexedDbReadSnapshotAdapter, Outbox, type LocalAccountRecord } from '../../offline/src/index.js';
 import { LoopbackRelayTransport, envelopeForOutbox } from '../../relay/src/index.js';
 import { PRODUCT_MODULES } from '../../module-registry/src/index.js';
 import { makeId, type CashboxReconciliationRecord, type CashboxSnapshot, type CaseRecord, type ContributionReceipt, type EvidenceRecord, type FeasibilityResult, type Group, type LedgerEntry, type LedgerSummary, type MeetingSession, type Membership, type MembershipView, type OutboxItem, type GroupOperatingPolicy, type RubricDefinition, type RubricOperatingModel, type RubricCyclePreview, type GroupDiscoveryMatch, type PublicGroupListing, type MembershipApplication, type WorkspaceRecord, type WorkspaceStatus } from '../../contracts/src/index.js';
@@ -60,6 +60,7 @@ export class ConnectedApplication {
   private readonly outbox = new Outbox();
   private readonly outboxStorage = new IndexedDbOutboxAdapter();
   private readonly readSnapshots = new IndexedDbReadSnapshotAdapter();
+  private readonly localAuth = new IndexedDbLocalAuthAdapter();
   private usingOfflineSnapshot=false;
   private actorId:string; private tenantId:string; private displayName:string; private locale:string; private activeGroupId?:string;
   private readonly baseUrl:string;
@@ -70,6 +71,21 @@ export class ConnectedApplication {
     this.baseUrl=options.baseUrl??''; this.actorId=options.actorId??'user_founder'; this.tenantId=options.tenantId??'tenant_local'; this.displayName=options.displayName??'Local Manager';
     let storedLocale:string|undefined;try{storedLocale=localStorage.getItem('tontine.locale')??undefined;this.activeGroupId=localStorage.getItem('tontine.activeGroupId')??undefined;}catch{}
     this.locale=options.locale??storedLocale??'fr';
+  }
+
+  private adoptLocalAccount(account:LocalAccountRecord):SessionAccount{
+    const claimed=account.registrationState==='SERVER_CLAIMED'&&account.serverActorId&&account.serverTenantId;
+    this.actorId=claimed?account.serverActorId!:account.id;this.homeTenantId=claimed?account.serverTenantId!:account.tenantId;this.tenantId=this.homeTenantId;this.displayName=account.displayName;this.locale=account.locale;this.usingOfflineSnapshot=true;
+    return{id:this.actorId,tenantId:this.tenantId,username:account.username,displayName:account.displayName,locale:account.locale};
+  }
+  private async seedLocalAccount(account:LocalAccountRecord):Promise<SessionAccount>{
+    const projected=this.adoptLocalAccount(account);
+    await this.saveCached('/api/v1/auth/session',{authenticated:true,account:projected,local:true,registrationState:account.registrationState});
+    const existing=await this.cached<Group[]>('/api/v1/groups');if(!existing)await this.saveCached('/api/v1/groups',[]);
+    return projected;
+  }
+  private async serverAuthenticate(mode:'login'|'register',input:{username:string;password:string;displayName?:string}):Promise<{authenticated:boolean;account:SessionAccount}>{
+    return this.request(`/api/v1/auth/${mode}`,{method:'POST',body:JSON.stringify({...input,locale:this.locale})});
   }
 
   private headers(extra:Record<string,string>={}):HeadersInit{return{'content-type':'application/json','accept-language':this.locale,'x-active-group-id':this.activeGroupId??'','x-timezone':'Africa/Douala',...extra};}
@@ -143,11 +159,33 @@ export class ConnectedApplication {
     let preferred:string|undefined;try{preferred=localStorage.getItem('tontine.locale')??undefined;}catch{}this.locale=preferred??session.account.locale;
     const groups=await this.listGroups();if(this.activeGroupId&&!groups.some(g=>g.id===this.activeGroupId))this.selectGroup(undefined);if(!this.activeGroupId&&groups[0])this.selectGroup(groups[0].id);else this.selectGroup(this.activeGroupId);
     if(!this.usingOfflineSnapshot)await this.request('/api/v1/bootstrap',{method:'POST',body:JSON.stringify({displayName:this.displayName,locale:this.locale})});
-    let restoredOutbox=0;if(IndexedDbOutboxAdapter.supported())try{const persisted=await this.outboxStorage.load();this.outbox.restore(persisted.filter(x=>x.actorId===this.actorId));restoredOutbox=this.outbox.list().length;}catch{}
+    let restoredOutbox=0;if(IndexedDbOutboxAdapter.supported())try{const persisted=await this.outboxStorage.load();this.outbox.restore(persisted.filter(x=>x.actorId===this.actorId&&x.tenantId===this.tenantId));restoredOutbox=this.outbox.list().length;}catch{}
     return{restoredOutbox,groups};
   }
 
-  authStatus():Promise<{authenticated:boolean;account:SessionAccount|null}>{return this.request('/api/v1/auth/session');}
+  async authStatus():Promise<{authenticated:boolean;account:SessionAccount|null;local?:boolean;registrationState?:string;offline?:boolean}>{
+    let local:LocalAccountRecord|undefined;try{local=await this.localAuth.current();}catch{}
+    if(local?.registrationState==='LOCAL_PENDING_REGISTRATION'){
+      const account=this.adoptLocalAccount(local);return{authenticated:true,account,local:true,registrationState:local.registrationState,offline:true};
+    }
+    if(typeof navigator!=='undefined'&&navigator.onLine===false){
+      if(local){const account=this.adoptLocalAccount(local);return{authenticated:true,account,local:true,registrationState:local.registrationState,offline:true};}
+      try{const cached=await this.readSnapshots.get<any>('session:last');if(cached?.body?.authenticated&&cached.body.account){this.announceOfflineSnapshot('/api/v1/auth/session',cached.updatedAt);return{...cached.body,offline:true};}}catch{}
+      return{authenticated:false,account:null,offline:true};
+    }
+    try{
+      const server=await this.request<{authenticated:boolean;account:SessionAccount|null}>('/api/v1/auth/session');
+      if(server.authenticated&&server.account){this.actorId=server.account.id;this.homeTenantId=server.account.tenantId;this.tenantId=server.account.tenantId;this.displayName=server.account.displayName;this.usingOfflineSnapshot=false;return server;}
+      if(local){const account=this.adoptLocalAccount(local);return{authenticated:true,account,local:true,registrationState:local.registrationState};}
+      return server;
+    }catch(error){
+      if(error instanceof Error&&error.message==='NETWORK_UNAVAILABLE'){
+        if(local){const account=this.adoptLocalAccount(local);return{authenticated:true,account,local:true,registrationState:local.registrationState,offline:true};}
+        return{authenticated:false,account:null,offline:true};
+      }
+      throw error;
+    }
+  }
   currentActor():string{return this.actorId;}
   async financialNotices(membershipId:string):Promise<any[]>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/members/${encodeURIComponent(membershipId)}/financial-notices`);}
   async confirmFinancialNotice(noticeId:string,membershipId?:string):Promise<any>{
@@ -183,8 +221,47 @@ export class ConnectedApplication {
   async groupMe():Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/me`);}
   async globalRecap():Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/recap/global`);}
   async memberOperationalSheet(membershipId:string):Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/members/${encodeURIComponent(membershipId)}/operational-sheet`);}
-  async authenticate(mode:'login'|'register',input:{username:string;password:string;displayName?:string}):Promise<void>{await this.request(`/api/v1/auth/${mode}`,{method:'POST',body:JSON.stringify({...input,locale:this.locale})});}
-  async logout():Promise<void>{const actor=this.actorId;await this.request('/api/v1/auth/logout',{method:'POST',body:'{}'});this.outbox.restore([]);this.selectGroup(undefined);try{await this.readSnapshots.clearForActor(actor);await this.readSnapshots.remove('session:last');}catch{}}
+  async authenticate(mode:'login'|'register',input:{username:string;password:string;displayName?:string}):Promise<void>{
+    const localFlow=async()=>{
+      if(!IndexedDbLocalAuthAdapter.supported())throw Error('LOCAL_AUTH_UNAVAILABLE');
+      const local=mode==='register'
+        ? await this.localAuth.register({username:input.username,password:input.password,displayName:input.displayName??'',locale:this.locale})
+        : await this.localAuth.login(input.username,input.password);
+      await this.seedLocalAccount(local);this.selectGroup(undefined);
+    };
+    if(typeof navigator!=='undefined'&&navigator.onLine===false){await localFlow();return;}
+    try{
+      const result=await this.serverAuthenticate(mode,input);if(!result.authenticated||!result.account)throw Error('AUTHENTICATION_REQUIRED');
+      this.actorId=result.account.id;this.homeTenantId=result.account.tenantId;this.tenantId=result.account.tenantId;this.displayName=result.account.displayName;this.usingOfflineSnapshot=false;
+    }catch(error){
+      if(error instanceof Error&&error.message==='NETWORK_UNAVAILABLE'){await localFlow();return;}
+      throw error;
+    }
+  }
+  async claimLocalAccount(password:string):Promise<{account:SessionAccount;synced:number;pending:number}>{
+    const local=await this.localAuth.current();if(!local||local.registrationState!=='LOCAL_PENDING_REGISTRATION')throw Error('LOCAL_ACCOUNT_NOT_PENDING');
+    if(typeof navigator!=='undefined'&&navigator.onLine===false)throw Error('NETWORK_UNAVAILABLE');
+    let server:{authenticated:boolean;account:SessionAccount};
+    try{server=await this.serverAuthenticate('register',{username:local.username,password,displayName:local.displayName});}
+    catch(error){
+      if(!(error instanceof Error)||error.message!=='ACCOUNT_UNAVAILABLE')throw error;
+      server=await this.serverAuthenticate('login',{username:local.username,password});
+    }
+    if(!server.authenticated||!server.account)throw Error('AUTHENTICATION_REQUIRED');
+    const oldActor=local.id,oldTenant=local.tenantId,next=server.account;
+    await this.readSnapshots.migrateIdentity(oldActor,oldTenant,next.id,next.tenantId);
+    const migrated=await this.outboxStorage.migrateIdentity(oldActor,oldTenant,next.id,next.tenantId);
+    await this.localAuth.markClaimed(local.id,{id:next.id,tenantId:next.tenantId});
+    this.actorId=next.id;this.homeTenantId=next.tenantId;this.tenantId=next.tenantId;this.displayName=next.displayName;this.locale=next.locale;this.usingOfflineSnapshot=false;
+    this.outbox.restore(migrated);await this.saveCached('/api/v1/auth/session',{authenticated:true,account:next,local:true,registrationState:'SERVER_CLAIMED'});
+    const syncedRows=await this.syncOutbox(),pending=syncedRows.filter(x=>x.status!=='CONFIRMED').length;
+    return{account:next,synced:syncedRows.length-pending,pending};
+  }
+  async localAccountInfo():Promise<{username:string;displayName:string;registrationState:string}|undefined>{const local=await this.localAuth.current();return local?{username:local.username,displayName:local.displayName,registrationState:local.registrationState}:undefined;}
+  async logout():Promise<void>{
+    try{if(typeof navigator==='undefined'||navigator.onLine!==false)await this.request('/api/v1/auth/logout',{method:'POST',body:'{}'});}catch(error){if(!(error instanceof Error)||error.message!=='NETWORK_UNAVAILABLE')throw error;}
+    try{await this.localAuth.logout();}catch{}this.outbox.restore([]);this.selectGroup(undefined);this.usingOfflineSnapshot=false;try{await this.readSnapshots.remove('session:last');}catch{}
+  }
 
   setLocale(locale:string):void{this.locale=locale==='en'?'en':'fr';try{localStorage.setItem('tontine.locale',this.locale);}catch{}}
   setConnectivity(_connectivity:'online'|'offline'|'degraded'):void{}
