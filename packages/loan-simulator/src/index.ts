@@ -8,6 +8,7 @@ export interface PeriodicLoanInput{
   priority:LoanPaymentPriority;
   interestBasis?:LoanInterestBasis;
   payments?:number[];
+  openingInterestDue?:number;
 }
 
 export interface PeriodicLoanLine{
@@ -29,6 +30,7 @@ export interface PeriodicLoanLine{
 
 export interface PeriodicLoanSummary{
   originalPrincipal:number;
+  openingInterestDue:number;
   totalPrincipalPaid:number;
   totalInterestGenerated:number;
   totalInterestPaid:number;
@@ -63,7 +65,7 @@ export function simulatePeriodicLoan(input:PeriodicLoanInput):PeriodicLoanLine[]
   if(!['CAPITAL_FIRST','INTEREST_FIRST'].includes(input.priority))throw Error('INVALID_LOAN_PRIORITY');
   const basis=input.interestBasis??'OUTSTANDING';if(!['OUTSTANDING','INITIAL'].includes(basis))throw Error('INVALID_LOAN_INTEREST_BASIS');
   const payments=(input.payments??[]).map((p,i)=>xaf(p,'LOAN_PAYMENT_'+(i+1)));
-  let capital=principal,interestDue=0;const rows:PeriodicLoanLine[]=[];
+  let capital=principal,interestDue=xaf(input.openingInterestDue??0,'OPENING_INTEREST_DUE');const rows:PeriodicLoanLine[]=[];
   for(let period=1;period<=input.periods;period++){
     const principalBefore=capital,interestOpening=interestDue;
     // No interest on interest: the taxable basis never includes interestDue.
@@ -90,6 +92,7 @@ export function summarizePeriodicLoan(input:PeriodicLoanInput,rows:PeriodicLoanL
   const last=rows.at(-1);
   return{
     originalPrincipal:input.principal,
+    openingInterestDue:input.openingInterestDue??0,
     totalPrincipalPaid:rows.reduce((n,r)=>n+r.principalPaid,0),
     totalInterestGenerated:rows.reduce((n,r)=>n+r.interestNew,0),
     totalInterestPaid:rows.reduce((n,r)=>n+r.interestPaid,0),
