@@ -1,5 +1,57 @@
 # ECO-SYSTEM — PROJECT STATE
 
+## CURRENT OVERRIDE — Production 1.4.5 Offline/Gouvernance (2026-09-22)
+
+### Production vérifiée
+- version : **1.4.5-final-mega-offline-governance**
+- URL : `https://eco-system.sergemimf.workers.dev/`
+- Worker : `eco-system`
+- Worker Version ID : `29c8f0e2-1cb1-4361-8481-27b514906fcf`
+- source déployée : `463035adab2303874878c8e72f1965475ac0b209`
+- branche : `next/1.4.5-final-mega-offline-governance-20260921`
+- PR : **#12**, gardée ouverte pour recette terrain
+- qualification du SHA déployé : runs **35713621161 SUCCESS** (push) et **35713626133 SUCCESS** (PR)
+- workflow qualification + build + BIR+ pré/post + déploiement + smoke : **35713621388 SUCCESS**
+- tests : **298/298 PASS**
+- D1 : `eco-system-db` réutilisée ; **No migrations to apply**
+- R2 : `eco-system-backups`
+- BIR+ pré : artifact **10688266480** + miroir R2 PASS
+- BIR+ post : artifact **10688236533** + miroir R2 PASS
+- préfixes R2 : `birplus/1.4.5/463035adab2303874878c8e72f1965475ac0b209/predeploy/` et `.../postdeploy/`
+- Premium Live : **ACTIF**
+- Founder Control / Community Realtime / R2 : **BOUND / PASS**
+- argent réel : **DÉSACTIVÉ**
+
+### Corrections terrain livrées
+1. Android 6/PWA : shell cache-first, aucune recharge forcée lors du changement de Service Worker ; secours `crypto.getRandomValues()` si `randomUUID()` absent ; IndexedDB `openCursor()` si `getAll()` absent ; fallback JSON pour `structuredClone`.
+2. Premier compte sans session serveur préalable : compte local `LOCAL_PENDING_REGISTRATION`, mot de passe dérivé PBKDF2 salé, session locale et données actor-scoped ; rapprochement serveur ultérieur + migration snapshots/outbox avant synchronisation.
+3. Menus restaurés/visibles : Fiches membres, Rubriques, Prêts, Épargne, Assistances, Recap, Eco Relay, Eco Local, Corbeille, etc.
+4. Deux feuilles restaurées : feuille de séance modifiable et fiches individuelles membres.
+5. Feuille récapitulative : présente par défaut dans le sélecteur Séances et projetée aussi dans Recap, sans second Ledger.
+6. Navigation Retour : historique vue/scroll/séance/onglet/feuille/ancres ; tout lien interne `#...` passe par la navigation gérée.
+7. Saisie financière : cellule = **valeur totale cible**, jamais « montant à ajouter ». Test permanent multi-gestionnaires : 1000 → proposition 500 → consensus → total final 500, jamais 1500.
+8. Multi-gestionnaires : correction d'une valeur existante ouvre une confrontation ; Ledger reste inchangé tant que la sélection n'est pas résolue ; majorité réelle des responsables.
+9. Séance exacte : « Saisir/corriger » transporte l'ID de la séance sélectionnée vers la feuille canonique ; accès Autres séances + Nouvelle séance.
+10. Séance clôturée : contexte et données financières restent corrigeables de façon gouvernée ; alertes aux gestionnaires et, pour donnée membre, au membre.
+11. Alertes membre : barre verte pendant séance ouverte ; orange/rouge pour correction/après clôture, plus notifications groupe/Live selon disponibilité.
+12. CRUD protégé : ajout/modification + mise à la Corbeille des séances, membres et rubriques ; restauration pendant 6 mois ; aucun bouton de suppression définitive ; Ledger/audit jamais effacés.
+13. Rubriques : Prêt/Épargne/Assistance peuvent être ajoutées directement au groupe actif, sans recréer de groupe.
+14. Eco Relay : paquet chiffré AES-GCM, expiration, nonce aléatoire, anti-rejeu, partage/fichier, auteur original conservé et rôle RELAY_ONLY.
+15. Eco Local : transport WebRTC 1:1 après appairage, avec fichier/partage en secours.
+
+### Limites à ne pas maquiller
+- La recette terrain Android 6 réelle reste à faire par le fondateur après ce déploiement ; CI/smoke ne remplacent pas le test physique.
+- iPhone/iOS : qualification statique/PWA acquise, **pas de recette physique iPhone** faute d'appareil disponible.
+- Un téléphone qui n'a jamais eu Internet **et qui n'a jamais reçu les fichiers Eco-System** ne peut pas télécharger un site web sans réseau. Le compte/session n'exige plus Internet, mais le cas « appareil vierge + zéro Internet à vie » nécessite un paquet physique installable (APK/pack offline) à livrer séparément.
+- Eco Local WebRTC est actuellement un transport local **1:1** ; ne pas prétendre qu'un fanout offline instantané vers 80 téléphones est déjà acquis.
+- La Corbeille expire la capacité de restauration à 6 mois et retire définitivement l'élément des vues opérationnelles ; les preuves/audits financiers restent conservés pour intégrité.
+- `realMoneyEnabled=false` reste obligatoire.
+
+### Point de reprise
+Faire maintenant la recette terrain sur PC + Android 6 **sans redéployer** : voir le badge 1.4.5, créer/ouvrir un groupe, vérifier les menus, les deux feuilles, la feuille récapitulative, correction 1000→500 à deux gestionnaires, alertes membre, séance clôturée, Retour, Corbeille, puis couper le réseau et créer un compte local sur un appareil disposant déjà du shell 1.4.5. Tout défaut reproductible devient un test avant correction.
+
+---
+
 Date : 2026-09-20
 
 ## Production publique — VERIFIED_REMOTE
