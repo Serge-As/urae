@@ -1,0 +1,20 @@
+name: Eco-System 1.4.4 — Offline iOS Lot 1 Qualification
+on:
+  push:
+    branches: ['next/1.4.4-offline-ios-safe-20260921','next/1.4.5-final-mega-offline-governance-20260921']
+  pull_request:
+    branches: ['next/1.4.3-blueprint-5-0-0-finalization-20260921']
+permissions:
+  contents: read
+jobs:
+  qualify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: npm run ci

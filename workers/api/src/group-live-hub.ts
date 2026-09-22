@@ -4,7 +4,7 @@ type StorageLike={get<T=unknown>(key:string):Promise<T|undefined>;put(key:string
 type StateLike={storage:StorageLike;acceptWebSocket?(ws:WebSocket,tags?:string[]):void;getWebSockets?(tag?:string):WebSocket[];};
 
 const json=(data:unknown,status=200)=>new Response(JSON.stringify(data),{status,headers:{'content-type':'application/json; charset=utf-8','cache-control':'no-store'}});
-const allowedTypes=new Set(['FINANCIAL_NOTICE','MEMBER_CONTROL','MEETING_UPDATE','PRESENCE','SYNC_HINT','RULE_UPDATE','COMMUNITY_EVENT','COMMUNITY_DRAFT_SYNC','COMMUNITY_READ_SYNC']);
+const allowedTypes=new Set(['FINANCIAL_NOTICE','MEMBER_CONTROL','MEETING_UPDATE','MANAGER_ENTRY','CONSENSUS_REQUIRED','CONSENSUS_SELECTED','MANAGER_RESERVE','MEMBER_PROJECTION_UPDATED','PRESENCE','SYNC_HINT','RULE_UPDATE','COMMUNITY_EVENT','COMMUNITY_DRAFT_SYNC','COMMUNITY_READ_SYNC']);
 const cleanPayload=(value:unknown):LivePayload=>{
   if(!value||typeof value!=='object'||Array.isArray(value))return{};
   const out:LivePayload={};for(const [k,v] of Object.entries(value as Record<string,unknown>)){

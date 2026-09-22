@@ -63,6 +63,17 @@ export function mountRecapUI({app,getGroups,getMembers,getMeetings,getRubrics,is
     for(const m of meetings.slice().sort((a,b)=>(b.openedAt??'').localeCompare(a.openedAt??'')).slice(0,12))roots.recapMeetingsRubrics.append(detail(m.title,'meeting',m.id));
     const rubBox=section('Rubriques principales');for(const r of rubrics.slice(0,20))rubBox.append(detail(r.name,'rubric',r.id));roots.recapMeetingsRubrics.append(rubBox);
     const miscBox=section('Autres · cycle de vie');miscBox.append(row('Persistantes',persistent.map(x=>x.name).join(', ')||'—'),row('Éphémères',ephemeral.map(x=>x.name+(x.activeFirstSessions?' ('+x.activeFirstSessions+' premières séances)':'')).join(', ')||'—'),row('Selon séance',sessionOnly.map(x=>x.name).join(', ')||'—'));roots.recapMeetingsRubrics.append(miscBox);
+    if(ledger&&members.length&&rubrics.length){
+      const cumulative=section('Feuille récapitulative · exercice / cycle');
+      const hint=el('p','Même projection canonique que dans Séances : membres × rubriques, cumul de toutes les séances enregistrées. Aucune seconde comptabilité.','hint');cumulative.append(hint);
+      const wrap=el('div',undefined,'matrix-wrap'),table=el('table',undefined,'meeting-matrix'),head=el('thead'),hr=el('tr');hr.append(el('th','Membre'));
+      const activeRubrics=rubrics.filter(r=>r.status!=='ARCHIVED');for(const rubric of activeRubrics)hr.append(el('th',rubric.name));hr.append(el('th','Total'));head.append(hr);table.append(head);const body=el('tbody');
+      for(const member of members.filter(m=>m.status!=='left')){const tr=el('tr');tr.append(el('th',member.displayName));let total=0;
+        for(const rubric of activeRubrics){const amount=(ledger.receipts??[]).filter(x=>x.membershipId===member.id&&x.rubricId===rubric.id).reduce((n,x)=>n+Number(x.netAmount??0),0);total+=amount;tr.append(el('td',fmt(amount)));}
+        tr.append(el('td',fmt(total)));body.append(tr);
+      }
+      table.append(body);wrap.append(table);cumulative.append(wrap);roots.recapMeetingsRubrics.append(cumulative);
+    }
 
     if(ledger){
       roots.recapFinance.append(row('Solde caisse',fmt(ledger.summary.cashBalance)),row('Fonds membres',fmt(ledger.summary.memberFundsLiability)),row('Écritures canoniques',ledger.summary.entryCount),row('Reçus',ledger.receipts.length));

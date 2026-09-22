@@ -24,7 +24,7 @@ export class RubricKnowledgeService {
 
   starterCandidates(){return Object.entries(STARTER_RUBRIC_FACETS).map(([code,facets])=>({code,facets:structuredClone(facets),requiresGroupConfirmation:true}));}
 
-  async createRubric(input:{tenantId:Id;groupId:Id;name:string;aliases?:string[];purpose?:string;facets:RubricFacets;source?:RubricDefinition['source'];operatingModel?:RubricOperatingModel;policies?:RubricPolicies;activityPlan?:LaunchRubricPlan;launchKey?:string;launchProjectId?:string}):Promise<RubricDefinition>{
+  async createRubric(input:{id?:Id;tenantId:Id;groupId:Id;name:string;aliases?:string[];purpose?:string;facets:RubricFacets;source?:RubricDefinition['source'];operatingModel?:RubricOperatingModel;policies?:RubricPolicies;activityPlan?:LaunchRubricPlan;launchKey?:string;launchProjectId?:string}):Promise<RubricDefinition>{
     if(input.launchProjectId){
       const project=await this.repo.getProject(input.tenantId,input.launchProjectId),ctx=this.kernel.context.get(),group=await this.repo.getGroup(input.tenantId,input.groupId);
       const allowed=project&&ctx.tenantId===project.tenantId&&(ctx.actorId===project.createdBy||project.accessGrants?.some(g=>g.userId===ctx.actorId&&g.capabilities.includes('CONVERT')));
@@ -35,8 +35,8 @@ export class RubricKnowledgeService {
     const timestamp=now(); const name=input.name.trim(); if(!name)throw new Error('RUBRIC_NAME_REQUIRED');
     const activityPlan=input.activityPlan?validateLaunchRubrics([input.activityPlan])[0]:undefined;
     const launchHash=input.launchKey?Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(JSON.stringify([input.tenantId,input.groupId,input.launchKey])))),b=>b.toString(16).padStart(2,'0')).join(''):undefined;
-    const id=launchHash?'rubric_launch_'+launchHash:makeId('rubric');
-    const existing=input.launchKey?await this.repo.getRubricDefinition(input.tenantId,input.groupId,id):undefined;if(existing)return existing;
+    const id=launchHash?'rubric_launch_'+launchHash:(input.id?.trim()||makeId('rubric'));
+    const existing=(input.launchKey||input.id)?await this.repo.getRubricDefinition(input.tenantId,input.groupId,id):undefined;if(existing){if(existing.name!==name)throw Error('IDEMPOTENCY_CONFLICT');return existing;}
     const rubric:RubricDefinition={id,tenantId:input.tenantId,groupId:input.groupId,name,aliases:[...new Set((input.aliases??[]).map(x=>x.trim()).filter(Boolean))],purpose:input.purpose?.trim()||undefined,facets:structuredClone(input.facets),operatingModel:input.operatingModel?structuredClone(input.operatingModel):undefined,policies:input.policies?structuredClone(input.policies):undefined,activityPlan,status:input.launchProjectId?'ACTIVE':'DRAFT',source:input.source??'GROUP_CUSTOM',version:1,createdAt:timestamp,updatedAt:timestamp};
     await this.repo.saveRubricDefinition(rubric); const audit=this.kernel.audit.append({tenantId:input.tenantId,actorId:this.kernel.context.get().actorId,action:'RUBRIC_CREATED',targetType:'rubric',targetId:rubric.id,after:rubric,requestId:this.kernel.context.get().requestId});await this.repo.saveAudit(audit);return structuredClone(rubric);
   }

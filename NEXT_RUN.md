@@ -1,5 +1,38 @@
 # ECO-SYSTEM — NEXT RUN
 
+## CURRENT OVERRIDE — Reprise après production 1.4.5 (2026-09-22)
+
+Production actuelle :
+- version `1.4.5-final-mega-offline-governance`
+- source `463035adab2303874878c8e72f1965475ac0b209`
+- branche `next/1.4.5-final-mega-offline-governance-20260921`
+- Worker Version ID `29c8f0e2-1cb1-4361-8481-27b514906fcf`
+- qualification push/PR : `35713621161 SUCCESS` / `35713626133 SUCCESS`
+- déploiement + smoke + BIR+ : `35713621388 SUCCESS`
+- tests : **298/298 PASS**
+- D1 `eco-system-db` : aucune migration
+- R2 `eco-system-backups` : pré/post miroirs PASS
+- artifacts : pré `10688266480`, post `10688236533`
+- argent réel : **OFF**
+
+Ordre obligatoire de la prochaine reprise :
+1. ne pas redéployer avant la recette terrain ;
+2. sur PC, vérifier menus Prêts/Épargne/Assistances/Rubriques/Fiches membres/Corbeille ;
+3. vérifier feuille récapitulative par défaut dans Séances + Recap ;
+4. vérifier « Saisir/corriger » sur la séance exacte ;
+5. avec deux comptes gestionnaires, reproduire 1000 → 500 et vérifier qu'aucun 1500 n'apparaît ;
+6. vérifier alertes vertes pendant séance ouverte et orange/rouge après clôture ;
+7. modifier une séance clôturée et vérifier l'alerte responsables/membre selon donnée touchée ;
+8. tester Retour depuis chaque navigation/hypertexte observé ;
+9. tester corbeille séance/membre/rubrique + restauration ;
+10. Android 6 : mettre à jour une fois vers le shell 1.4.5, puis couper le réseau et tester navigation/compte local/saisie ;
+11. iOS : seulement quand un iPhone réel est disponible ; ne pas déclarer FIELD_ACCEPTED avant ce test ;
+12. cas « appareil n'ayant jamais reçu Eco-System et zéro Internet » : livrer/tester un paquet physique installable avant de déclarer ce scénario totalement résolu.
+
+Garde-fous : Ledger unique append-only ; correction par contrepassation ; pas de second Meeting owner ; pas de second moteur Prêt/Épargne/Assistance ; CRDT jamais pour l'argent ; Live n'est pas l'autorité canonique ; suppression définitive manuelle interdite ; real money OFF.
+
+---
+
 ## CURRENT OVERRIDE — 1.4.2 PWA visibility hotfix (2026-09-20)
 
 Current production source: `a9fe00f94daa7a6787d5a4440a5edc0bc5e4a1c8` on `next/1.4.2-operational-center-sessions-blueprint-20260920`.

@@ -1,5 +1,15 @@
 # ECO-SYSTEM — CURRENT TRUTH
 
+## CURRENT OVERRIDE — 1.4.5 VERIFIED_REMOTE (2026-09-22)
+
+Production vérifiée : `1.4.5-final-mega-offline-governance` sur `eco-system`, source `463035adab2303874878c8e72f1965475ac0b209`, Worker Version ID `29c8f0e2-1cb1-4361-8481-27b514906fcf`. Run production `35713621388 SUCCESS`, **298/298 tests PASS**, smoke 1.4.5 PASS, D1 existante sans migration, Premium Live/Founder Control/Community Realtime/R2 actifs, argent réel OFF. BIR+ pré `10688266480`, post `10688236533`, restauration SQLite/integrity/SHA256 et miroirs R2 PASS.
+
+Vérité fonctionnelle nouvelle : premier compte local possible sans ancienne session serveur ; PWA Android 6 cache-first sans reload forcé ; deux feuilles financières restaurées ; feuille récapitulative par défaut dans Séances + Recap ; menus spécialisés restaurés ; valeur cellule = valeur cible ; modification existante multi-gestionnaires gouvernée par consensus ; alertes membre/gestionnaires ; séance exacte transportée vers la feuille ; corrections après clôture auditées ; Corbeille 6 mois ; Eco Relay chiffré + Eco Local 1:1.
+
+Limites : recette terrain Android 6 et iPhone distincte du smoke. Un appareil qui n'a jamais reçu les fichiers Eco-System nécessite encore une distribution physique du shell (APK/pack offline) ; le 1.4.5 supprime la dépendance à une **session Internet**, pas les lois physiques du téléchargement. Eco Local 80 appareils offline n'est pas encore déclaré acquis.
+
+---
+
 Date : 2026-09-20
 
 ## 1. Production publique — vérité actuelle

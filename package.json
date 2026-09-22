@@ -1,9 +1,9 @@
 {
   "name": "tontine-platform",
-  "version": "1.4.3-blueprint-5-0-0-finalized",
+  "version": "1.4.5-final-mega-offline-governance",
   "private": true,
   "type": "module",
-  "description": "Eco-System 1.4.3: 1.4.2 preserved; Blueprint executable 5.0.0 harmonized across Association/Tontine, communities/forums, opportunity, local commerce, business/talent and trust; PWA delivery hardened for visible updates.",
+  "description": "Eco-System 1.4.5: true offline first account, Android 6 cache hardening, restored sheets/menus, governed multi-manager financial corrections, alerts, trash and relay.",
   "engines": {
     "node": ">=24"
   },

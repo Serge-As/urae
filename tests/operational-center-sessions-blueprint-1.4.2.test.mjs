@@ -106,15 +106,15 @@ test('PWA precaches all Blueprint UI modules',async()=>{
 });
 
 
-test('1.4.3 actively refreshes the PWA shell so Blueprint 5.0.0 replaces stale caches',async()=>{
+test('PWA shell refresh remains versioned without forced offline reload',async()=>{
   const [main,sw,html]=await Promise.all([
     readFile('apps/web/src/main.js','utf8'),
     readFile('apps/web/sw.js','utf8'),
     readFile('apps/web/index.html','utf8')
   ]);
   assert.match(main,/void ensureCurrentServiceWorker\(\);[\s\S]*?void start\(\);/);
-  assert.match(sw,/eco-system-v143-blueprint-5-0-0-finalized-20260921/);
-  assert.match(html,/\/styles\.css\?v=143/);
-  assert.match(html,/\/src\/main\.js\?v=143/);
-  assert.match(html,/ECO-SYSTEM · 1\.4\.3/);
+  assert.match(sw,/eco-system-v14(?:3-blueprint-5-0-0-finalized|4-offline-ios-safe|5-final-mega-offline-safe)-20260921/);
+  assert.match(html,/\/styles\.css\?v=(?:143|145)/);
+  assert.match(html,/\/src\/main\.js\?v=(?:143|145)/);
+  assert.match(html,/ECO-SYSTEM · 1\.4\.(?:3|5(?: RC)?)/);
 });

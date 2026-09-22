@@ -34,9 +34,9 @@ export const envelopeForOutbox = (deviceId: string, item: OutboxItem): RelayEnve
   recipient: 'server',
   createdAt: new Date().toISOString(),
   expiresAt: new Date(Date.now() + 5 * 60_000).toISOString(),
-  nonce: item.idempotencyKey,
-  payload: JSON.stringify({ id: item.id, type: item.type, tenantId: item.tenantId, payload: item.payload }),
-  opaque: false // devient true lorsque le chiffrement E2E du relay est branché.
+  nonce: item.idempotencyKey+':'+([...(crypto.getRandomValues(new Uint8Array(8)))].map(x=>x.toString(16).padStart(2,'0')).join('')),
+  payload: JSON.stringify({ id: item.id, type: item.type, tenantId: item.tenantId, actorId:item.actorId, idempotencyKey:item.idempotencyKey, createdAt:item.createdAt, payload: item.payload }),
+  opaque: false
 });
 
 
@@ -86,3 +86,30 @@ export const decryptRelayEnvelope=async(envelope:EncryptedRelayEnvelope,key:Cryp
       createdAt:envelope.createdAt,expiresAt:envelope.expiresAt,nonce:envelope.nonce,payload:new TextDecoder().decode(plain),opaque:false};
   }catch{throw new Error('RELAY_INTEGRITY_FAILED');}
 };
+export interface RelayKeyMaterial { keyId:string; rawKey:string; }
+export const exportRelayKey=async(key:CryptoKey):Promise<RelayKeyMaterial>=>{
+  if(!globalThis.crypto?.subtle)throw new Error('WEB_CRYPTO_REQUIRED');
+  const raw=new Uint8Array(await crypto.subtle.exportKey('raw',key));
+  const digest=new Uint8Array(await crypto.subtle.digest('SHA-256',relayBuffer(raw)));
+  return{keyId:[...digest.slice(0,8)].map(x=>x.toString(16).padStart(2,'0')).join(''),rawKey:bytesToBase64(raw)};
+};
+export const importRelayKey=async(material:RelayKeyMaterial):Promise<CryptoKey>=>{
+  if(!globalThis.crypto?.subtle)throw new Error('WEB_CRYPTO_REQUIRED');
+  const raw=base64ToBytes(material.rawKey),digest=new Uint8Array(await crypto.subtle.digest('SHA-256',relayBuffer(raw))),keyId=[...digest.slice(0,8)].map(x=>x.toString(16).padStart(2,'0')).join('');
+  if(keyId!==material.keyId)throw new Error('RELAY_KEY_FINGERPRINT_MISMATCH');
+  return crypto.subtle.importKey('raw',relayBuffer(raw),{name:'AES-GCM',length:256},true,['encrypt','decrypt']);
+};
+
+export class RelayReplayGuard{
+  private seen=new Map<string,number>();
+  constructor(private maxEntries=2000){}
+  accept(envelope:Pick<RelayEnvelope,'senderDeviceId'|'nonce'|'expiresAt'>):boolean{
+    const now=Date.now(),expiry=Date.parse(envelope.expiresAt);if(!Number.isFinite(expiry)||expiry<=now)return false;
+    for(const [key,until] of this.seen)if(until<=now)this.seen.delete(key);
+    const key=envelope.senderDeviceId+':'+envelope.nonce;if(this.seen.has(key))return false;
+    this.seen.set(key,expiry);
+    if(this.seen.size>this.maxEntries){const first=this.seen.keys().next().value;if(first)this.seen.delete(first);}
+    return true;
+  }
+}
+
