@@ -235,6 +235,9 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
     const id='trash_'+encodeURIComponent(JSON.stringify([groupId,kind,entityId])),existing=await repo.getWorkspaceRecord(ctx.tenantId,id);
     const record:WorkspaceRecord={id,tenantId:ctx.tenantId,groupId,moduleId:'TRASH.ITEM',title:label,summary:'Restaurable pendant six mois',status:'ACTIVE',tags:['trash',kind.toLowerCase()],data:{kind,entityId,deletedAt:now.toISOString(),restoreUntil:restoreUntil.toISOString(),snapshotJson:JSON.stringify(snapshot),deletedBy:ctx.actorId},createdBy:existing?.createdBy??ctx.actorId,createdAt:existing?.createdAt??now.toISOString(),updatedAt:now.toISOString()};
     await repo.saveWorkspaceRecord(record);await repo.saveAudit(kernel.audit.append({tenantId:ctx.tenantId,actorId:ctx.actorId,action:'ENTITY_MOVED_TO_TRASH',targetType:kind.toLowerCase(),targetId:entityId,requestId:ctx.requestId,metadata:{trashId:id,restoreUntil:restoreUntil.toISOString()}}));
+    const actor=await actorLabel(),kindLabel=kind==='MEETING'?'Séance':kind==='MEMBER'?'Membre':'Rubrique',action={view:'trash',entityKind:kind,entityId,id,label:'Voir la corbeille'};
+    await notifications.publish(groupId,{title:kindLabel+' placé(e) à la corbeille',message:`${actor} a placé « ${label} » à la corbeille. Restauration possible jusqu’au ${restoreUntil.toLocaleDateString('fr-FR')}.`,channels:['IN_APP','WEB_PUSH'],audience:'MANAGERS',priority:'HIGH',action});
+    if(kind==='MEMBER')await notifications.publish(groupId,{title:'Votre dossier a été placé à la corbeille',message:`${actor} a retiré temporairement votre dossier du groupe. La restauration reste possible pendant six mois.`,channels:['IN_APP','WEB_PUSH'],audience:'SELECTED',selectedMembershipIds:[entityId],priority:'HIGH',action});
     return record;
   };
   const listTrash=async(groupId:string)=>{
@@ -253,6 +256,8 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
     else throw Error('TRASH_KIND_UNSUPPORTED');
     const restored={...record,status:'DONE' as WorkspaceStatus,data:{...record.data,restoredAt:new Date().toISOString(),restoredBy:ctx.actorId},updatedAt:new Date().toISOString()};await repo.saveWorkspaceRecord(restored);
     await repo.saveAudit(kernel.audit.append({tenantId:ctx.tenantId,actorId:ctx.actorId,action:'ENTITY_RESTORED_FROM_TRASH',targetType:kind.toLowerCase(),targetId:String(record.data.entityId??''),requestId:ctx.requestId,metadata:{trashId}}));
+    const actor=await actorLabel(),entityId=String(record.data.entityId??''),kindLabel=kind==='MEETING'?'Séance':kind==='MEMBER'?'Membre':'Rubrique';
+    await notifications.publish(groupId,{title:kindLabel+' restauré(e)',message:`${actor} a restauré intégralement « ${record.title} » depuis la corbeille.`,channels:['IN_APP','WEB_PUSH'],audience:'MANAGERS',priority:'HIGH',action:{view:kind==='MEETING'?'sessions':kind==='MEMBER'?'members':'operations',anchor:kind==='RUBRIC'?'rubricsManagementPanel':undefined,meetingId:kind==='MEETING'?entityId:undefined,membershipId:kind==='MEMBER'?entityId:undefined,rubricId:kind==='RUBRIC'?entityId:undefined,entityKind:kind,entityId,label:'Voir l’élément restauré'}});
     return restored;
   };
   const visibleWorkspace=async(record:WorkspaceRecord)=>{
@@ -747,9 +752,12 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
       const body=await readJson<Record<string,unknown>>(request);
       const optional=(key:string)=>Object.prototype.hasOwnProperty.call(body,key)?(body[key]===null?null:String(body[key])):undefined;
       const updated=await meetings.updateMeetingContext(ctx.tenantId,groupId,meetingId,{scheduledAt:optional('scheduledAt'),location:optional('location'),theme:optional('theme'),dressCode:optional('dressCode')});
-      if(before?.status==='closed'){
-        await notifications.publish(groupId,{title:'Séance clôturée modifiée',message:'Un responsable a modifié le contexte d’une séance déjà clôturée. Consultez l’historique et les nouvelles valeurs.',channels:['IN_APP','WEB_PUSH'],audience:'MANAGERS',priority:'CRITICAL'});
-        await publishLive(groupId,'MEETING_UPDATE','closed-meeting-context:'+meetingId+':'+new Date().toISOString(),{meetingId,kind:'CLOSED_MEETING_CONTEXT_CHANGED',meetingClosed:true});
+      const changes:string[]=[];
+      if(before){for(const key of ['scheduledAt','location','theme','dressCode'] as const){if(String(before[key]??'')!==String(updated[key]??''))changes.push(`${key}: « ${String(before[key]??'—')} » → « ${String(updated[key]??'—')} »`);}}
+      if(changes.length){
+        const closed=before?.status==='closed',actor=await actorLabel();
+        await notifications.publish(groupId,{title:closed?'Séance clôturée modifiée':'Séance modifiée',message:`${actor} a modifié « ${updated.title} » · ${changes.join(' · ')}`,channels:['IN_APP','WEB_PUSH'],audience:'MANAGERS',priority:closed?'CRITICAL':'HIGH',action:{view:'sessions',meetingId,entityKind:'MEETING',entityId:meetingId,label:'Voir la séance'}});
+        await publishLive(groupId,'MEETING_UPDATE',(closed?'closed-':'')+'meeting-context:'+meetingId+':'+new Date().toISOString(),{meetingId,kind:closed?'CLOSED_MEETING_CONTEXT_CHANGED':'MEETING_CONTEXT_CHANGED',meetingClosed:Boolean(closed),changedFields:changes.map(x=>x.split(':')[0]).join(',')});
       }
       return json(updated,200,cors);
     }
