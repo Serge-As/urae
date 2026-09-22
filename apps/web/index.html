@@ -115,6 +115,11 @@
           </section>
         </div>
 
+        <section class="panel urgent-home-panel" id="urgentNotificationsPanel">
+          <div class="panel-head"><div><span class="eyebrow">Alertes prioritaires</span><h2>Notifications urgentes</h2><p>Modifications importantes du groupe, corrections financières, séance clôturée, membres et rubriques.</p></div><button id="urgentNotificationsRefreshBtn" type="button" class="link-btn">Actualiser</button></div>
+          <div id="urgentNotificationsList" class="stack"><div class="empty-state">Aucune notification urgente.</div></div>
+        </section>
+
         <section class="panel" id="groupHomePanel">
           <div class="panel-head"><div><span class="eyebrow">Association / Tontine</span><h2>Accueil du groupe</h2><p>Identification, cycle, séances et situation financière selon vos droits — projections des services canoniques.</p></div><button class="link-btn" data-go="sessions">Ouvrir les Séances</button></div>
           <div id="groupHomeContent" class="stack"></div>
@@ -567,8 +572,8 @@
           </section>
 
           <details class="panel" id="advancedFinancePanel">
-            <summary><strong>Outils financiers complémentaires · échéances · caisse · suivi</strong></summary>
-            <p class="hint">Ces outils complètent les menus principaux. Pour le travail courant, utilisez directement « Prêts », « Épargne » ou « Assistances » dans le menu latéral. Ici se trouvent surtout les attendus/impayés, soldes d’ouverture, contenants de caisse et dossiers de suivi.</p>
+            <summary><strong>Suivi financier complémentaire · impayés · épargne · caisse</strong></summary>
+            <p class="hint"><strong>À quoi sert ce bloc ?</strong> Il ne remplace pas les rubriques du groupe. « Impayés » compare ce qui était attendu à ce qui a réellement été réglé ; « Épargne » suit les plans et mouvements d’épargne ; « Caisse » suit les soldes d’ouverture et les contenants/détenteurs. Pour le travail courant, utilisez toujours d’abord les menus « Prêts », « Épargne » et « Assistances ».</p>
             <div class="two-col">
               <form id="expectedContributionForm" class="form-grid">
                 <h3>Attendu / échéance</h3>
