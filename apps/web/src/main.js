@@ -923,6 +923,7 @@ const refreshGroupContext = async () => {
     if (active) {
         await renderMembers();
         await renderMeetings();
+        if(manage)await refreshOptionalOfflineSafe('official-loan-rubric',()=>app.ensureOfficialLoanRubric());
         await renderLivingRules();
         await groupHomeUI.refresh();
         await sessionsUI.refresh();
