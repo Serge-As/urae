@@ -293,6 +293,22 @@ export class ConnectedApplication {
     return group;
   }
   async listRubrics():Promise<RubricDefinition[]>{if(!this.activeGroupId)return[];return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/rubrics`);}
+  async ensureOfficialLoanRubric():Promise<RubricDefinition>{
+    if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');
+    const rows=await this.listRubrics(),normalize=(v:string)=>v.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim();
+    const existing=rows.find(r=>String(r.facets?.custom?.systemKey??'')==='LOAN'||['pret','prets','loan','loans'].includes(normalize(r.name)));
+    if(existing)return existing;
+    const groupId=this.activeGroupId,id='rubric_core_loan_'+groupId,stamp=new Date().toISOString();
+    const facets={direction:'OUTFLOW',obligation:'EVENT_DRIVEN',medium:'CASH',refundability:'NOT_APPLICABLE',replenishment:'EVENT_DRIVEN',interestMode:'RATE',eligibilityMode:'RULE_BASED',fundCode:'LOAN_RECEIVABLE',custom:{systemKey:'LOAN',financialSign:-1}} as const;
+    const operatingModel:RubricOperatingModel={writtenRule:'Le prêt est une sortie de caisse du groupe et crée une créance sur le membre.',observedPractice:'Capital restant et intérêts sont suivis séparément.',effectiveRuleSummary:'Décaissement négatif pour la caisse ; remboursement positif ; aucun intérêt sur intérêt.',ruleRealityStatus:'ALIGNED',targetMode:'OPEN',mandatoryForAbsentees:false,shortfallHandling:'LEAVE_SHORT',payoutMode:'COLLECTED_ONLY',immediateFullPayout:false};
+    if(this.isOffline()){
+      const rubric:RubricDefinition={id,tenantId:this.tenantId,groupId,name:'Prêt',aliases:['Prêts','Loan'],purpose:'Prêts aux membres : capital, intérêts et remboursements.',facets:structuredClone(facets),operatingModel:structuredClone(operatingModel),status:'ACTIVE',source:'GROUP_CUSTOM',version:1,createdAt:stamp,updatedAt:stamp};
+      await this.patchCachedArray<RubricDefinition>(`/api/v1/groups/${encodeURIComponent(groupId)}/rubrics`,items=>items.some(x=>x.id===id)?items:[...items,rubric]);
+      await this.queueLocal('RUBRIC_CREATE_V1',{groupId,id,name:rubric.name,aliases:rubric.aliases,purpose:rubric.purpose,facets,source:'GROUP_CUSTOM',operatingModel},'ensure-loan-rubric:'+groupId);
+      return rubric;
+    }
+    return this.request(`/api/v1/groups/${encodeURIComponent(groupId)}/rubrics`,{method:'POST',body:JSON.stringify({id,name:'Prêt',aliases:['Prêts','Loan'],purpose:'Prêts aux membres : capital, intérêts et remboursements.',facets,source:'GROUP_CUSTOM',operatingModel})});
+  }
   async createRubric(input:{name:string;writtenRule?:string;observedPractice?:string;model:RubricOperatingModel}):Promise<RubricDefinition>{
     if(!this.activeGroupId)throw new Error('ACTIVE_GROUP_REQUIRED');
     const facets={direction:'BIDIRECTIONAL',obligation:'CUSTOM',medium:'CASH',refundability:'CONDITIONAL',replenishment:'CUSTOM',interestMode:'NONE',eligibilityMode:'RULE_BASED'} as const;
