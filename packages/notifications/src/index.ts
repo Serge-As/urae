@@ -9,7 +9,7 @@ export interface GroupNoticeAction {view:string;anchor?:string;meetingId?:Id;mem
 export interface GroupNotice {id:Id;groupId:Id;title:string;message:string;channels:NotifyChannel[];audience:'ALL_MEMBERS'|'MANAGERS'|'SELECTED';selectedMembershipIds:string[];priority:'LOW'|'NORMAL'|'HIGH'|'CRITICAL';createdAt:string;createdBy:Id;delivery:Record<NotifyChannel,'AVAILABLE'|'MANUAL_SHARE'|'PROVIDER_PENDING'|'PROVIDER_CONFIRMED'>;action?:GroupNoticeAction;}
 
 const PREF='NOTIFY.PREFERENCES',NOTICE='NOTIFY.MESSAGE',READ='NOTIFY.READ';
-const managerRoles=new Set(['founder','manager','admin','president','treasurer']);
+const managerRoles=new Set(['founder','manager','admin','president','treasurer','secretary','auditor']);
 const allChannels:NotifyChannel[]=['IN_APP','WEB_PUSH','EMAIL','SMS','WHATSAPP','TELEGRAM'];
 const now=()=>new Date().toISOString();
 const clean=(s:string,n=1000)=>s.trim().replace(/\s+/g,' ').slice(0,n);
