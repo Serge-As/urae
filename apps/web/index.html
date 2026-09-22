@@ -22,7 +22,7 @@
     <form id="authForm" class="form-grid">
       <label id="authNameLabel" hidden>Votre nom d’affichage<input id="authName" autocomplete="name" maxlength="80"></label>
       <label>Identifiant<input id="authUsername" autocomplete="username" pattern="[a-zA-Z0-9][a-zA-Z0-9._-]{2,49}" minlength="3" maxlength="50" required><small>Lettres, chiffres, point, tiret ou underscore.</small></label>
-      <label>Mot de passe<input id="authPassword" type="password" autocomplete="current-password" minlength="12" maxlength="128" required><small>12 caractères minimum.</small></label>
+      <label>Mot de passe<input id="authPassword" type="password" autocomplete="current-password" minlength="12" maxlength="128" required><small>12 caractères minimum.</small><span class="inline-check"><input id="authShowPassword" type="checkbox"> Afficher le mot de passe</span></label>
       <p id="authError" role="alert"></p><button id="authSubmit" type="submit" class="primary">Me connecter</button>
     </form>
     <p id="offlineFirstUseNote" class="truth-notice"><strong>Première utilisation hors ligne :</strong> « Créer un compte » fonctionne désormais sans session Internet préalable sur un appareil où Eco-System est déjà installé. Le compte reste local et sera rapproché du serveur seulement lorsque vous déciderez de le finaliser avec Internet.</p>
