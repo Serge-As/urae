@@ -186,7 +186,7 @@ document.addEventListener('click',event=>{
     const id=(link.getAttribute('href')||'').slice(1);if(!id)return;
     const target=document.getElementById(id);if(!target)return;
     const view=target.closest('.view')?.id?.replace(/^view-/,'');if(!view)return;
-    event.preventDefault();go(view,{anchor:id,force:true});
+    event.preventDefault();go(view,{anchor:id,openTarget:link.dataset.openTarget,force:true});
 });
 document.querySelector('#appBackBtn')?.addEventListener('click',goBack);
 window.addEventListener('popstate',event=>{
@@ -941,7 +941,7 @@ document.addEventListener('click', e => { const t = e.target; if (!t.closest('.t
     void openModule(open.dataset.moduleOpen); });
 $('#matrixViewBtn').addEventListener('click', () => { $('#meetingMatrixPanel').hidden = false; $('#matrixViewBtn').classList.add('active'); $('#cardViewBtn').classList.remove('active'); document.dispatchEvent(new CustomEvent('eco:render-two-sheets')); });
 document.querySelector('#financeIndividualSheetBtn')?.addEventListener('click',()=>go('operations',{anchor:'twoSheetWorkspace',sheetMode:'individual',force:true}));
-document.querySelector('#financeLoanRulesBtn')?.addEventListener('click',()=>go('finance',{anchor:'financeLoanGuide',openTarget:'loanCompletionPanel',force:true}));
+document.querySelector('#financeLoanRulesBtn')?.addEventListener('click',()=>go('finance',{anchor:'loanOfficialConfig',openTarget:'loanCompletionPanel',force:true}));
 document.querySelector('#openSavingsLabBtn')?.addEventListener('click',()=>go('finance',{anchor:'savingsYieldLab',force:true}));
 document.querySelector('#openAssistanceRulebookBtn')?.addEventListener('click',()=>go('finance',{anchor:'assistanceRulebookPanel',force:true}));
 
@@ -1308,6 +1308,8 @@ const setAuthMode=mode=>{
 };
 function showAuth(message='',preferredMode){document.body.classList.add('signed-out');$('#authScreen').hidden=false;if(preferredMode)setAuthMode(preferredMode);if(message)$('#authError').textContent=message;$('#authUsername').focus();}
 document.querySelectorAll('[data-auth-mode]').forEach(button=>button.addEventListener('click',()=>setAuthMode(button.dataset.authMode)));
+document.querySelector('#authShowPassword')?.addEventListener('change',event=>{const input=document.querySelector('#authPassword');if(input)input.type=event.target.checked?'text':'password';});
+
 $('#authForm').addEventListener('submit',async event=>{
     event.preventDefault();const button=$('#authSubmit');button.disabled=true;$('#authError').textContent='';
     try{
