@@ -1,4 +1,4 @@
-const CACHE = 'eco-system-v145-final-mega-offline-safe-20260921';
+const CACHE = 'eco-system-v1451-field-corrections-20260922';
 const APP_SHELL = [
   '/', '/index.html', '/styles.css', '/manifest.webmanifest',
   '/src/field-hardening.js', '/src/voice-entry-bootstrap.js', '/src/voice-entry-ui.js', '/src/expense-recap-ui.js', '/src/member-dossier-ui.js', '/src/documents-ui.js', '/src/contextual-group-ui.js',
@@ -57,30 +57,24 @@ self.addEventListener('fetch', event => {
     return;
   }
 
-  // Navigation is cache-first. This is deliberate for Android 6 / unstable 2G:
-  // opening or returning to the app must not depend on a successful network trip.
+  // Online: prefer fresh HTML so cached old markup is never mixed with newer JavaScript.
+  // Offline / unstable 2G: fall back quickly to the complete local shell.
   if (event.request.mode === 'navigate') {
     event.respondWith((async () => {
       const cache = await caches.open(CACHE);
       const cached = await cache.match('/index.html') || await cache.match('/');
-      if (cached) {
-        if (self.navigator && self.navigator.onLine !== false) {
-          event.waitUntil((async () => {
-            try {
-              const fresh = await fetch(event.request, { cache: 'no-store' });
-              if (fresh.ok) await cache.put('/index.html', fresh.clone());
-            } catch (_) {}
-          })());
-        }
-        return cached;
-      }
-      try {
-        const fresh = await fetch(event.request, { cache: 'no-store' });
-        if (fresh.ok) await cache.put('/index.html', fresh.clone());
-        return fresh;
-      } catch (_) {
-        return new Response('<!doctype html><meta charset="utf-8"><title>Eco-System</title><h1>Eco-System</h1><p>Le premier chargement hors ligne n’est pas encore disponible sur cet appareil. Reconnectez une fois Internet pour installer le contenu local.</p>', { status: 503, headers: { 'content-type': 'text/html; charset=utf-8' } });
-      }
+      const freshWithTimeout=async()=>{
+        const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),2500);
+        try{
+          const fresh=await fetch(event.request,{cache:'no-store',signal:controller.signal});
+          if(fresh.ok)await cache.put('/index.html',fresh.clone());
+          return fresh.ok?fresh:null;
+        }catch{return null;}finally{clearTimeout(timer);}
+      };
+      if(self.navigator?.onLine!==false){const fresh=await freshWithTimeout();if(fresh)return fresh;}
+      if(cached)return cached;
+      const fresh=await freshWithTimeout();if(fresh)return fresh;
+      return new Response('<!doctype html><meta charset="utf-8"><title>Eco-System</title><h1>Eco-System</h1><p>Eco-System doit être installé ou transféré sur cet appareil avant une toute première utilisation sans Internet.</p>', { status: 503, headers: { 'content-type': 'text/html; charset=utf-8' } });
     })());
     return;
   }
