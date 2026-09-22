@@ -37,9 +37,9 @@ for (const target of ['.build/apps/web/src/completion-ui.js','.build/src/complet
 // before main.js so stale click semantics cannot win the event race.
 for (const target of ['.build/index.html','.build/apps/web/index.html']) {
   let html=await readFile(target,'utf8');
-  const main='<script type="module" src="/src/main.js?v=145"></script>';
+  const main='<script type="module" src="/src/main.js?v=1451"></script>';
   if(!html.includes(main))throw Error('MAIN_SCRIPT_ANCHOR_NOT_FOUND');
-  html=html.replace(main,'<script type="module" src="/src/field-hardening.js?v=145"></script>\n  <script type="module" src="/src/voice-entry-bootstrap.js?v=145"></script>\n  '+main);
+  html=html.replace(main,'<script type="module" src="/src/field-hardening.js?v=1451"></script>\n  <script type="module" src="/src/voice-entry-bootstrap.js?v=1451"></script>\n  '+main);
   html=html
     .replaceAll('Eco-System — 1.3.3 Fairness Lab · AdOps · Doctor','Eco-System — 1.3.4 Voice · Two-Sheet · Documents')
     .replaceAll('ECO-SYSTEM · 1.3.3','ECO-SYSTEM · 1.3.4')
