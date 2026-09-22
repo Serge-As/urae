@@ -1,3 +1,4 @@
+import {openLoanSimulationDialog} from './loan-simulation-ui.js';
 const el=(tag,text,className)=>{const e=document.createElement(tag);if(text!==undefined)e.textContent=text;if(className)e.className=className;return e;};
 const row=(label,value)=>{const p=el('p');p.append(el('strong',label+' : '),document.createTextNode(String(value??'—')));return p;};
 const detail=(label,type,id)=>{const a=el('a',label,'link-btn');a.href='#detail='+encodeURIComponent(type)+':'+encodeURIComponent(id);a.dataset.detailType=type;a.dataset.detailId=id;return a;};
@@ -95,17 +96,18 @@ export function mountPersonalCockpitUI({app,getGroups,getMembers,getMeetings,nav
     if(mine){
       try{
         const statement=await app.memberStatement(mine.id);
-        metrics.append(metric(fmt(statement.totalNetContributions),'Ma situation nette'));
-        situation.append(detail(mine.displayName,'member',mine.id),row('Total net enregistré',fmt(statement.totalNetContributions)),row('Dernière actualisation',date(statement.asOf)));
+        const totalDebt=Number(statement.totalDebt??0),positionAfterDebt=Number(statement.totalNetContributions??0)-totalDebt;
+        metrics.append(metric(fmt(statement.totalNetContributions),'Mes cotisations nettes'),metric(fmt(totalDebt),'Mes dettes'),metric(fmt(positionAfterDebt),'Position après dettes'));
+        situation.append(detail(mine.displayName,'member',mine.id),row('Cotisations nettes',fmt(statement.totalNetContributions)),row('Dettes / prêts + intérêts',fmt(totalDebt)),row('Position après dettes',fmt(positionAfterDebt)),row('Dernière actualisation',date(statement.asOf)));
         try{
           const sheet=await app.memberOperationalSheet(mine.id),rubrics=sheet.rubrics??[],matrix=sheet.exerciseMatrix??[],box=el('article',undefined,'item');
           box.append(el('strong','Ma fiche financière du groupe'),el('p','Toutes les rubriques du groupe sont reprises ici depuis la même vérité que la feuille de séance.','hint'));
           const grid=el('div',undefined,'personal-rubric-grid');
           for(const rubric of rubrics){
             const total=matrix.reduce((n,r)=>n+Number(r.cells?.[rubric.id]?.net??0),0),item=el('button',undefined,'secondary');
-            item.type='button';item.innerHTML='<span>'+String(rubric.name)+'</span><strong>'+fmt(total)+'</strong>';item.onclick=()=>{location.hash='#detail=member:'+encodeURIComponent(mine.id);};grid.append(item);
+            item.type='button';if(rubric.polarity==='NEGATIVE')item.classList.add('financial-negative');item.innerHTML='<span>'+String(rubric.name)+'</span><strong>'+fmt(total)+'</strong>';item.onclick=()=>{location.hash='#detail=member:'+encodeURIComponent(mine.id);};grid.append(item);
           }
-          box.append(grid);const actions=el('div',undefined,'actions'),open=el('button','Ouvrir ma fiche individuelle complète','primary');open.type='button';open.onclick=()=>{location.hash='#detail=member:'+encodeURIComponent(mine.id);};const sim=el('button','Simuler l’évolution de mon prêt','secondary');sim.type='button';sim.onclick=()=>{document.querySelector('.nav-btn[data-view="operations"]')?.click();setTimeout(()=>{document.querySelector('#masterGovernanceCenter [data-mg="loan"]')?.click();document.getElementById('mg-loan')?.scrollIntoView({behavior:'smooth',block:'start'});},120);};actions.append(open,sim);box.append(actions);situation.append(box);
+          box.append(grid);const actions=el('div',undefined,'actions'),open=el('button','Ouvrir ma fiche individuelle complète','primary');open.type='button';open.onclick=()=>{location.hash='#detail=member:'+encodeURIComponent(mine.id);};const sim=el('button','Simuler l’évolution de mon prêt','secondary');sim.type='button';sim.onclick=()=>void(async()=>{try{const loans=(sheet.loans??[]).filter(x=>['DISBURSED','REPAYING'].includes(String(x.data?.completionState??''))),loan=loans[0];await openLoanSimulationDialog({app,loan,fallbackDebt:Number(statement.debtPrincipal??0),fallbackInterest:Number(statement.debtInterest??0),title:'Évolution de mon prêt',memberName:mine.displayName});}catch(e){showError(e);}})();actions.append(open,sim);box.append(actions);situation.append(box);
         }catch(e){situation.append(el('p','La fiche financière détaillée sera affichée dès que la synchronisation du groupe est disponible.','hint'));}
       }catch(e){situation.append(detail(mine.displayName,'member',mine.id),el('p','Votre relevé personnel reste accessible depuis votre fiche.','hint'));}
       try{
