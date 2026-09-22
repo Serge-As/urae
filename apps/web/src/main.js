@@ -440,6 +440,7 @@ const openFinancialCellEditor=({member,rubric,meetingId})=>{
 
 const ensureMatrixMeeting=()=>{
     if(matrixMeetingId&&meetings.some(x=>x.id===matrixMeetingId&&x.status!=='cancelled'))return matrixMeetingId;
+    try{const saved=sessionStorage.getItem('eco.matrixMeetingId');if(saved&&meetings.some(x=>x.id===saved&&x.status!=='cancelled')){matrixMeetingId=saved;return matrixMeetingId;}}catch{}
     matrixMeetingId=meetings.find(x=>x.status==='open')?.id??meetings.filter(x=>x.status!=='cancelled').at(-1)?.id??'';
     return matrixMeetingId;
 };
@@ -480,7 +481,7 @@ const renderMeetingMatrix = () => {
     for(const m of meetings.filter(x=>x.status!=='cancelled').slice().sort((a,b)=>String(a.scheduledAt??a.openedAt).localeCompare(String(b.scheduledAt??b.openedAt)))){
         const option=document.createElement('option');option.value=m.id;option.textContent=meetingLabel(m)+' · '+(m.status==='closed'?tx('clôturée','closed'):tx('ouverte','open'));scope.append(option);
     }
-    scope.value=selectedMeeting;scope.onchange=()=>{matrixMeetingId=scope.value;renderMeetingMatrix();renderIndividualSheetMatrix();};label.append(scope);
+    scope.value=selectedMeeting;scope.onchange=()=>{matrixMeetingId=scope.value;try{sessionStorage.setItem('eco.matrixMeetingId',matrixMeetingId);}catch{}renderMeetingMatrix();renderIndividualSheetMatrix();};label.append(scope);
     const other=document.createElement('button');other.type='button';other.className='secondary';other.textContent=tx('Voir les séances','View meetings');other.onclick=()=>go('sessions',{meetingId:selectedMeeting,force:true});
     const add=document.createElement('button');add.type='button';add.className='secondary';add.textContent=tx('+ Nouvelle séance','+ New meeting');add.onclick=()=>go('sessions',{anchor:'sessionsCreateForm',force:true});
     toolbar.append(label,other,add);
@@ -515,6 +516,8 @@ document.querySelector('#individualSheetMember')?.addEventListener('change',rend
 document.querySelector('#meetingSheetViewBtn')?.addEventListener('click',()=>{document.querySelector('#meetingMatrixPanel').hidden=false;document.querySelector('#individualSheetsMode').hidden=true;document.querySelector('#meetingSheetViewBtn').classList.add('active');document.querySelector('#individualSheetsViewBtn').classList.remove('active');renderMeetingMatrix();});
 document.querySelector('#individualSheetsViewBtn')?.addEventListener('click',()=>{document.querySelector('#meetingMatrixPanel').hidden=true;document.querySelector('#individualSheetsMode').hidden=false;document.querySelector('#individualSheetsViewBtn').classList.add('active');document.querySelector('#meetingSheetViewBtn').classList.remove('active');renderIndividualSheetMatrix();});
 window.addEventListener('eco:render-two-sheets',()=>{renderMeetingMatrix();renderIndividualSheetMatrix();});
+window.addEventListener('eco:set-matrix-meeting',event=>{const id=event instanceof CustomEvent?String(event.detail?.meetingId??''):'';if(id&&meetings.some(x=>x.id===id)){matrixMeetingId=id;try{sessionStorage.setItem('eco.matrixMeetingId',id);}catch{}}});
+
 window.addEventListener('eco:restore-financial-sheet',event=>{
     const detail=event instanceof CustomEvent?event.detail??{}:{};
     if(detail.matrixMeetingId&&meetings.some(x=>x.id===detail.matrixMeetingId))matrixMeetingId=detail.matrixMeetingId;
