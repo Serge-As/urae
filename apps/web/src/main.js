@@ -46,7 +46,8 @@ let meetings = [];
 let rubrics = [];
 let receiptPositions = [];
 let matrixMeetingId = '';
-const isManager = () => groups.find(g => g.id === app.activeGroup())?.viewerRoles?.some(r => ['founder','manager','admin','president','treasurer'].includes(r)) ?? false;
+const MANAGER_ROLE_IDS=new Set(['founder','manager','admin','president','treasurer','secretary','auditor']);
+const isManager = () => {const g=groups.find(g=>g.id===app.activeGroup());return Boolean(g&&(g.createdBy===app.currentActor()||(g.viewerRoles??[]).some(r=>MANAGER_ROLE_IDS.has(r))));};
 let groupPolicy;
 let lastProjectId;
 let projectRevision=0;
@@ -148,7 +149,7 @@ const restoreNavState=state=>{
     for(const id of state.openDetails??[]){const node=document.getElementById(id);if(node?.tagName==='DETAILS')node.open=true;}
     requestAnimationFrame(()=>{
         if(state.openTarget){const node=document.getElementById(state.openTarget);if(node){if(node.tagName==='DETAILS')node.open=true;node.hidden=false;node.setAttribute('aria-hidden','false');}}
-        if(state.sheetMode||state.matrixMeetingId)window.dispatchEvent(new CustomEvent('eco:restore-financial-sheet',{detail:{sheetMode:state.sheetMode,matrixMeetingId:state.matrixMeetingId}}));
+        if(state.sheetMode||state.matrixMeetingId||state.membershipId||state.rubricId)window.dispatchEvent(new CustomEvent('eco:restore-financial-sheet',{detail:{sheetMode:state.sheetMode,matrixMeetingId:state.matrixMeetingId,membershipId:state.membershipId,rubricId:state.rubricId}}));
         const anchor=state.anchor?document.getElementById(state.anchor):undefined;
         if(anchor)anchor.scrollIntoView({behavior:'auto',block:'start'});else window.scrollTo({top:Number(state.scrollY)||0,behavior:'auto'});
         if(state.focusId)document.getElementById(state.focusId)?.focus?.({preventScroll:true});
@@ -173,7 +174,7 @@ const go=(name,options={})=>{
     if(sameDestination)return;
     try{history.replaceState({ecoNav:current,ecoDepth:navDepth},'',`#${current.view}`);}catch{}
     navDepth+=1;
-    const next={view:name,scrollY:Number(options.scrollY)||0,anchor:options.anchor,sessionTab:options.sessionTab,meetingId:options.meetingId,matrixMeetingId:options.matrixMeetingId,sheetMode:options.sheetMode,openTarget:options.openTarget};
+    const next={view:name,scrollY:Number(options.scrollY)||0,anchor:options.anchor,sessionTab:options.sessionTab,meetingId:options.meetingId,matrixMeetingId:options.matrixMeetingId,sheetMode:options.sheetMode,openTarget:options.openTarget,membershipId:options.membershipId,rubricId:options.rubricId};
     const hash=options.anchor?`#${options.anchor}`:`#${name}`;
     try{history.pushState({ecoNav:next,ecoDepth:navDepth},'',hash);}catch{}
     showView(name,next);updateBackButton();
@@ -389,9 +390,9 @@ const renderMeetings = async () => {
     }
 };
 const activeMeeting = () => {
+    if(matrixMeetingId&&meetings.some(x=>x.id===matrixMeetingId))return matrixMeetingId;
     const sessionSelected=document.querySelector('#sessionsMeetingSelect')?.value;
     if(sessionSelected&&sessionSelected!=='__cumulative__'&&meetings.some(x=>x.id===sessionSelected))return sessionSelected;
-    if(matrixMeetingId&&meetings.some(x=>x.id===matrixMeetingId))return matrixMeetingId;
     return meetings.find(x=>x.status==='open')?.id??meetings.at(-1)?.id;
 };
 const exactCellRows=(membershipId,rubricId,meetingId)=>receiptPositions.filter(x=>x.membershipId===membershipId&&x.rubricId===rubricId&&x.meetingId===meetingId);
@@ -462,13 +463,16 @@ const renderMeetingMatrix = () => {
         const tr = document.createElement('tr'),name = document.createElement('td');
         name.innerHTML = html`<strong>${m.displayName}</strong><small>${m.roles.join(', ')}</small>`;tr.append(name);
         for (const rubric of rubrics.filter(x=>x.status!=='ARCHIVED')) {
-            const td=document.createElement('td'),b=document.createElement('button');b.type='button';b.className='matrix-cell';
+            const td=document.createElement('td'),b=document.createElement('button');b.type='button';b.className='matrix-cell';b.dataset.membershipId=m.id;b.dataset.rubricId=rubric.id;b.dataset.meetingId=selectedMeeting;
             const net=exactCellAmount(m.id,rubric.id,selectedMeeting);b.textContent=fmt(net);b.disabled=!isManager();
             b.title=tx('Saisir la valeur totale de cette cellule — pas un montant à ajouter','Enter the total cell value — not an amount to add');
             b.onclick=()=>openFinancialCellEditor({member:m,rubric,meetingId:selectedMeeting});td.append(b);tr.append(td);
         }
         body.append(tr);
     }
+    const totalRow=document.createElement('tr');totalRow.className='table-total-row';const totalLabel=document.createElement('th');totalLabel.textContent=tx('TOTAL','TOTAL');totalRow.append(totalLabel);
+    for(const rubric of rubrics.filter(x=>x.status!=='ARCHIVED')){const td=document.createElement('td');td.textContent=fmt(members.filter(x=>x.status!=='left').reduce((sum,m)=>sum+exactCellAmount(m.id,rubric.id,selectedMeeting),0));totalRow.append(td);}
+    body.append(totalRow);
     table.append(body);
     const toolbar=document.createElement('div');toolbar.className='session-safety-toolbar';
     const label=document.createElement('label');label.textContent=tx('Séance de saisie : ','Entry meeting: ');
@@ -502,6 +506,9 @@ const renderIndividualSheetMatrix=()=>{
         }
         const td=document.createElement('td');td.textContent=fmt(total);tr.append(td);body.append(tr);
     }
+    const totalRow=document.createElement('tr');totalRow.className='table-total-row';const label=document.createElement('th');label.textContent=tx('TOTAL','TOTAL');totalRow.append(label);let grand=0;
+    for(const rubric of rubrics.filter(x=>x.status!=='ARCHIVED')){const amount=meetings.filter(x=>x.status!=='cancelled').reduce((sum,meeting)=>sum+exactCellAmount(member.id,rubric.id,meeting.id),0);grand+=amount;const td=document.createElement('td');td.textContent=fmt(amount);totalRow.append(td);}
+    const grandTd=document.createElement('td');grandTd.textContent=fmt(grand);totalRow.append(grandTd);body.append(totalRow);
     table.append(body);root.append(table);
 };
 document.querySelector('#individualSheetMember')?.addEventListener('change',renderIndividualSheetMatrix);
@@ -513,6 +520,9 @@ window.addEventListener('eco:restore-financial-sheet',event=>{
     if(detail.matrixMeetingId&&meetings.some(x=>x.id===detail.matrixMeetingId))matrixMeetingId=detail.matrixMeetingId;
     if(detail.sheetMode==='individual')document.querySelector('#individualSheetsViewBtn')?.click();else document.querySelector('#meetingSheetViewBtn')?.click();
     renderMeetingMatrix();renderIndividualSheetMatrix();
+    if(detail.membershipId&&detail.rubricId&&matrixMeetingId){
+      requestAnimationFrame(()=>{const cell=document.querySelector(`.matrix-cell[data-membership-id="${CSS.escape(detail.membershipId)}"][data-rubric-id="${CSS.escape(detail.rubricId)}"][data-meeting-id="${CSS.escape(matrixMeetingId)}"]`);if(cell){cell.classList.add('pending-consensus');cell.scrollIntoView({behavior:'smooth',block:'center',inline:'center'});cell.focus({preventScroll:true});}});
+    }
 });
 const renderLivingRules = async () => {
     if (!app.activeGroup())
@@ -1284,6 +1294,7 @@ async function showStatement(membershipId){
         tr.innerHTML=html`<td>${date(r.receivedAt)}</td><td>${meeting?meetingLabel(meeting):tx('Sans séance','No meeting')}</td><td>${fmt(r.amount.amount)}</td><td>${fmt(r.netAmount)}</td><td></td>`;
         const details=document.createElement('details'),summary=document.createElement('summary');summary.textContent=tx('Références techniques','Technical references');details.append(summary,document.createTextNode(tech));tr.lastElementChild.append(details);body.append(tr);
     }
+    const totalRow=document.createElement('tr');totalRow.className='table-total-row';totalRow.innerHTML=`<th>${tx('TOTAL','TOTAL')}</th><td></td><td>${fmt(statement.receipts.reduce((n,r)=>n+Number(r.amount.amount??0),0))}</td><td>${fmt(statement.receipts.reduce((n,r)=>n+Number(r.netAmount??0),0))}</td><td></td>`;body.append(totalRow);
     table.append(body);dialog.append(table);
     const statementMember=members.find(m=>m.id===membershipId);
     try{dialog.append(await renderMemberFinancialNotices({app,membershipId,memberUserId:statementMember?.userId,manager:isManager(),notify:toast,showError:fail}));}catch(e){const p=document.createElement('p');p.className='hint';p.textContent='Le contrôle des modifications financières sera disponible après synchronisation.';dialog.append(p);}
