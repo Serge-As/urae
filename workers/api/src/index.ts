@@ -657,19 +657,25 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
     const rubricRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/rubrics$/);
     if(rubricRoute&&request.method==='GET') return json(await rubrics.listRubrics(ctx.tenantId,rubricRoute[1]!),200,cors);
     if(rubricRoute&&request.method==='POST'){
-      const body=await readJson<Record<string,unknown>>(request); if(!body.facets||typeof body.facets!=='object') throw new Error('RUBRIC_FACETS_REQUIRED');
+      const groupId=rubricRoute[1]!,body=await readJson<Record<string,unknown>>(request); if(!body.facets||typeof body.facets!=='object') throw new Error('RUBRIC_FACETS_REQUIRED');
       const operatingModel=body.operatingModel&&typeof body.operatingModel==='object'?body.operatingModel as RubricOperatingModel:undefined;
-      return json(await rubrics.createRubric({id:body.id?String(body.id):undefined,tenantId:ctx.tenantId,groupId:rubricRoute[1]!,name:String(body.name??''),aliases:strArray(body.aliases),purpose:body.purpose?String(body.purpose):undefined,facets:body.facets as any,source:body.source?String(body.source) as any:undefined,operatingModel}),201,cors);
+      const rubric=await rubrics.createRubric({id:body.id?String(body.id):undefined,tenantId:ctx.tenantId,groupId,name:String(body.name??''),aliases:strArray(body.aliases),purpose:body.purpose?String(body.purpose):undefined,facets:body.facets as any,source:body.source?String(body.source) as any:undefined,operatingModel});
+      await notifyGovernanceChange(groupId,{title:'Rubrique ajoutée',message:`Rubrique « ${rubric.name} » ajoutée au groupe.`,action:{view:'operations',anchor:'rubricsManagementPanel',rubricId:rubric.id,entityKind:'RUBRIC',entityId:rubric.id,label:'Voir la rubrique'}});
+      return json(rubric,201,cors);
     }
     const rubricActivityRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/rubrics\/([^/]+)\/activity-plan$/);
-    if(rubricActivityRoute&&request.method==='PUT')return json(await rubrics.updateActivityPlan(ctx.tenantId,rubricActivityRoute[1]!,rubricActivityRoute[2]!,await readJson(request)),200,cors);
+    if(rubricActivityRoute&&request.method==='PUT'){const groupId=rubricActivityRoute[1]!,rubricId=rubricActivityRoute[2]!,updated=await rubrics.updateActivityPlan(ctx.tenantId,groupId,rubricId,await readJson(request));await notifyGovernanceChange(groupId,{title:'Rubrique modifiée',message:`Caractéristiques de « ${updated.name} » modifiées.`,action:{view:'operations',anchor:'rubricsManagementPanel',rubricId,entityKind:'RUBRIC',entityId:rubricId,label:'Voir la rubrique'}});return json(updated,200,cors);}
     const rubricModelRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/rubrics\/([^/]+)\/operating-model$/);
     if(rubricModelRoute&&request.method==='PUT'){
-      const body=await readJson<RubricOperatingModel>(request);return json(await rubrics.updateOperatingModel({tenantId:ctx.tenantId,groupId:rubricModelRoute[1]!,rubricId:rubricModelRoute[2]!,model:body}),200,cors);
+      const groupId=rubricModelRoute[1]!,rubricId=rubricModelRoute[2]!,body=await readJson<RubricOperatingModel>(request),updated=await rubrics.updateOperatingModel({tenantId:ctx.tenantId,groupId,rubricId,model:body});
+      await notifyGovernanceChange(groupId,{title:'Règle de rubrique modifiée',message:`Règle opérationnelle de « ${updated.name} » modifiée.`,action:{view:'operations',anchor:'rubricsManagementPanel',rubricId,entityKind:'RUBRIC',entityId:rubricId,label:'Voir la rubrique'}});
+      return json(updated,200,cors);
     }
     const rubricPoliciesRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/rubrics\/([^/]+)\/policies$/);
     if(rubricPoliciesRoute&&request.method==='PUT'){
-      const body=await readJson<RubricPolicies>(request);return json(await rubrics.updatePolicies({tenantId:ctx.tenantId,groupId:rubricPoliciesRoute[1]!,rubricId:rubricPoliciesRoute[2]!,policies:body}),200,cors);
+      const groupId=rubricPoliciesRoute[1]!,rubricId=rubricPoliciesRoute[2]!,body=await readJson<RubricPolicies>(request),updated=await rubrics.updatePolicies({tenantId:ctx.tenantId,groupId,rubricId,policies:body});
+      await notifyGovernanceChange(groupId,{title:'Politiques de rubrique modifiées',message:`Politiques de « ${updated.name} » modifiées.`,action:{view:'operations',anchor:'rubricsManagementPanel',rubricId,entityKind:'RUBRIC',entityId:rubricId,label:'Voir la rubrique'}});
+      return json(updated,200,cors);
     }
     const rubricPreviewRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/rubrics\/([^/]+)\/preview-cycle$/);
     if(rubricPreviewRoute&&request.method==='POST'){
@@ -691,7 +697,9 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
     if(members&&request.method==='POST'){
       const group=await repo.getGroup(ctx.tenantId,members[1]!); if(!group) return json({error:'NOT_FOUND'},404,cors);
       const body=await readJson<Record<string,unknown>>(request); const displayName=String(body.displayName??'').trim(); if(!displayName) throw new Error('MEMBER_NAME_REQUIRED');
-      const membership=await foundation.addMember(ctx.tenantId,group.id,{id:String(body.userId??makeId('user')),displayName,locale:String(body.locale??ctx.locale),createdAt:new Date().toISOString()},String(body.operationId??body.membershipId??request.headers.get('x-idempotency-key')??makeId('req')),body.membershipId?String(body.membershipId):undefined); return json(membership,201,cors);
+      const membership=await foundation.addMember(ctx.tenantId,group.id,{id:String(body.userId??makeId('user')),displayName,locale:String(body.locale??ctx.locale),createdAt:new Date().toISOString()},String(body.operationId??body.membershipId??request.headers.get('x-idempotency-key')??makeId('req')),body.membershipId?String(body.membershipId):undefined);
+      await notifyGovernanceChange(group.id,{title:'Membre ajouté',message:`Membre « ${displayName} » ajouté au groupe.`,action:{view:'members',membershipId:membership.id,entityKind:'MEMBER',entityId:membership.id,label:'Voir le membre'}});
+      return json(membership,201,cors);
     }
     const memberLifecycle=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/members\/([^/]+)\/lifecycle$/);
     if(memberLifecycle&&request.method==='PUT'){
@@ -704,7 +712,11 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
       const roles=body.roles===undefined?existing.roles:strArray(body.roles);if(existing.userId===group.createdBy&&!roles.includes('founder'))throw new Error('FOUNDER_ROLE_REQUIRED');
       const now=new Date().toISOString(),reinstated=status==='active'&&['suspended','left','waitlisted','trial'].includes(existing.status)?now:existing.reinstatedAt;
       const next={...existing,status,roles,historicalJoinedAt:body.historicalJoinedAt?String(body.historicalJoinedAt):existing.historicalJoinedAt,probationEndsAt:body.probationEndsAt?String(body.probationEndsAt):undefined,lifecycleReason:body.reason?String(body.reason):existing.lifecycleReason,lifecycleUpdatedAt:now,lifecycleUpdatedBy:ctx.actorId,lifecycleRevision:Number(existing.lifecycleRevision??0)+1,reinstatedAt:reinstated};
-      await repo.saveMembership(next);const audit=kernel.audit.append({tenantId:ctx.tenantId,actorId:ctx.actorId,action:'MEMBERSHIP_LIFECYCLE_UPDATED',targetType:'membership',targetId:membershipId,before:{status:existing.status,roles:existing.roles,revision:existing.lifecycleRevision??0},after:{status:next.status,roles:next.roles,revision:next.lifecycleRevision},requestId:ctx.requestId});await repo.saveAudit(audit);return json(next,200,cors);
+      await repo.saveMembership(next);const audit=kernel.audit.append({tenantId:ctx.tenantId,actorId:ctx.actorId,action:'MEMBERSHIP_LIFECYCLE_UPDATED',targetType:'membership',targetId:membershipId,before:{status:existing.status,roles:existing.roles,revision:existing.lifecycleRevision??0},after:{status:next.status,roles:next.roles,revision:next.lifecycleRevision},requestId:ctx.requestId});await repo.saveAudit(audit);
+      const mName=await memberLabel(groupId,membershipId),msg=`Membre « ${mName} » : statut ${existing.status} → ${next.status}; rôles ${existing.roles.join(', ')||'—'} → ${next.roles.join(', ')||'—'}.`;
+      await notifyGovernanceChange(groupId,{title:'Membre modifié',message:msg,action:{view:'members',membershipId,entityKind:'MEMBER',entityId:membershipId,label:'Voir le membre'}});
+      await notifications.publish(groupId,{title:'Votre dossier de membre a été modifié',message:msg,channels:['IN_APP','WEB_PUSH'],audience:'SELECTED',selectedMembershipIds:[membershipId],priority:'HIGH',action:{view:'members',membershipId,entityKind:'MEMBER',entityId:membershipId,label:'Voir mon dossier'}});
+      return json(next,200,cors);
     }
     const memberParticipation=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/members\/([^/]+)\/participations$/);
     if(memberParticipation&&request.method==='GET'){
@@ -723,9 +735,11 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
     const meetingRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/meetings$/);
     if(meetingRoute&&request.method==='GET') return json(await repo.listMeetings(ctx.tenantId,meetingRoute[1]!),200,cors);
     if(meetingRoute&&request.method==='POST'){
-      const body=await readJson<Record<string,unknown>>(request); return json(await meetings.openMeeting(ctx.tenantId,meetingRoute[1]!,{
+      const groupId=meetingRoute[1]!,body=await readJson<Record<string,unknown>>(request),meeting=await meetings.openMeeting(ctx.tenantId,groupId,{
         id:body.id?String(body.id):undefined,title:String(body.title??''),scheduledAt:body.scheduledAt?String(body.scheduledAt):undefined,location:body.location?String(body.location):undefined,theme:body.theme?String(body.theme):undefined,dressCode:body.dressCode?String(body.dressCode):undefined
-      }),201,cors);
+      });
+      await notifyGovernanceChange(groupId,{title:'Séance ajoutée',message:`Séance « ${meeting.title} » créée.`,action:{view:'sessions',meetingId:meeting.id,entityKind:'MEETING',entityId:meeting.id,label:'Voir la séance'}});
+      return json(meeting,201,cors);
     }
     const meetingContext=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/meetings\/([^/]+)\/context$/);
     if(meetingContext&&request.method==='PUT'){
