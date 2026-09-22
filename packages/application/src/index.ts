@@ -233,6 +233,12 @@ export class ConnectedApplication {
     try{
       const result=await this.serverAuthenticate(mode,input);if(!result.authenticated||!result.account)throw Error('AUTHENTICATION_REQUIRED');
       this.actorId=result.account.id;this.homeTenantId=result.account.tenantId;this.tenantId=result.account.tenantId;this.displayName=result.account.displayName;this.usingOfflineSnapshot=false;
+      // A successful online authentication becomes an offline-capable credential on this device.
+      // Only a salted PBKDF2 verifier is persisted; the clear password is never stored.
+      try{
+        const mirror=await this.localAuth.rememberServerAccount({username:result.account.username,password:input.password,displayName:result.account.displayName,locale:result.account.locale,serverActorId:result.account.id,serverTenantId:result.account.tenantId});
+        await this.saveCached('/api/v1/auth/session',{authenticated:true,account:result.account,local:true,registrationState:mirror.registrationState});
+      }catch{}
     }catch(error){
       if(error instanceof Error&&error.message==='NETWORK_UNAVAILABLE'){await localFlow();return;}
       throw error;
