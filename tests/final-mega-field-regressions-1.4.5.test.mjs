@@ -7,6 +7,10 @@ const html=fs.readFileSync('apps/web/index.html','utf8');
 const sw=fs.readFileSync('apps/web/sw.js','utf8');
 const sessions=fs.readFileSync('apps/web/src/sessions-ui.js','utf8');
 const detail=fs.readFileSync('apps/web/src/detail-ui.js','utf8');
+const personal=fs.readFileSync('apps/web/src/personal-cockpit-ui.js','utf8');
+const operational=fs.readFileSync('packages/operational-cockpit/src/index.ts','utf8');
+const loanSimulator=fs.readFileSync('packages/loan-simulator/src/index.ts','utf8');
+const sw=fs.readFileSync('apps/web/sw.js','utf8');
 const recap=fs.readFileSync('apps/web/src/recap-ui.js','utf8');
 const app=fs.readFileSync('packages/application/src/index.ts','utf8');
 const api=fs.readFileSync('workers/api/src/index.ts','utf8');
@@ -170,4 +174,22 @@ test('Lots 9 10 11 12 acquired engines remain present',()=>{
   assert.ok(fs.existsSync('apps/web/src/external-programs-ui.js'));
   assert.ok(fs.existsSync('apps/web/src/ad-manager-ui.js'));
   assert.ok(fs.existsSync('apps/web/src/founder-control-ui.js'));
+});
+
+test('loan is a negative member position and simulation is available to member and manager',()=>{
+  assert.match(operational,/legacyLoanOutflow/);
+  assert.match(operational,/polarity:isLoanRubric\(r\)\?'NEGATIVE':'POSITIVE'/);
+  assert.match(personal,/Position après dettes/);
+  assert.match(personal,/openLoanSimulationDialog/);
+  assert.match(loanSimulator,/openingInterestDue/);
+  assert.match(app,/simulateLoan/);
+  assert.match(app,/loanHistory/);
+});
+
+test('stale cached html no longer crashes on optional local-account control and 1.4.5.1 cache is isolated',()=>{
+  assert.match(main,/document\.querySelector\('#claimLocalAccountBtn'\)\?\.addEventListener/);
+  assert.doesNotMatch(main,/\$\('#claimLocalAccountBtn'\)\.addEventListener/);
+  assert.match(sw,/eco-system-v1451-field-corrections-20260922/);
+  assert.match(html,/ECO-SYSTEM · 1\.4\.5\.1/);
+  assert.match(html,/main\.js\?v=1451/);
 });
