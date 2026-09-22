@@ -1,4 +1,5 @@
 import {MeetingSnapshotStore} from './offline-snapshot.js';
+import {openLoanSimulationDialog} from './loan-simulation-ui.js';
 const KIND_LABELS = {
   IDENTITY_CLAIM:['Rapprochement d’identité historique','Historical identity claim'],
   TONTINE_CYCLE:['Cycle de tontine','Tontine cycle'],
@@ -139,6 +140,7 @@ export const mountCompletionUI=({app,notify,showError,getMembers,getMeetings,get
         const state=primitiveState(loan),a=article(loan.title,state,
           tr('Capital','Principal')+': '+fmt(Number(loan.data.principal??0))+' · '+tr('reste','outstanding')+': '+fmt(Number(loan.data.outstandingPrincipal??0)));
         const actions=document.createElement('div');actions.className='actions';
+        const simulate=document.createElement('button');simulate.type='button';simulate.textContent=tr('Simuler l’évolution','Simulate evolution');simulate.onclick=()=>void openLoanSimulationDialog({app,loan,title:tr('Simulation du prêt','Loan simulation'),memberName:nameOfMember(String(loan.data.borrowerMembershipId??''))});actions.append(simulate);
         if(state==='SUBMITTED'){
           const b=document.createElement('button');b.type='button';b.textContent=tr('Approuver','Approve');b.onclick=()=>void run(null,async()=>{await app.transitionCompletion(loan.id,'APPROVED',primitiveVersion(loan),{approvedAt:new Date().toISOString()});await renderLoans();});actions.append(b);
         }
