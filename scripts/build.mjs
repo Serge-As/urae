@@ -2,7 +2,7 @@ import { rm, mkdir, cp, access, readFile, writeFile } from 'node:fs/promises';
 import { spawnSync } from 'node:child_process';
 import path from 'node:path';
 
-const RELEASE_VERSION='1.4.3-blueprint-5-0-0-finalized';
+const RELEASE_VERSION='1.4.5-final-mega-offline-governance';
 const compiler=path.resolve('node_modules/typescript/bin/tsc');
 try{await access(compiler);}catch{await import('./build-portable.mjs');process.exit(0);}
 const output=path.resolve('.build');
@@ -59,6 +59,6 @@ for (const target of ['.build/apps/web/src/main.js','.build/src/main.js']) {
   source=source.replace("const CAHIER_VERSION = '1.3.2-savings-control-forum-live';",`const CAHIER_VERSION = '${RELEASE_VERSION}';`);
   await writeFile(target,source,'utf8');
 }
-console.log(`Build OK: .build/ (Eco-System ${RELEASE_VERSION}; 1.4.2 preserved + Blueprint executable 5.0.0 + communities/forums + opportunity/local commerce/business/trust + visible PWA refresh)`);
+console.log(`Build OK: .build/ (Eco-System ${RELEASE_VERSION}; 1.4.5 offline governance + restored financial/session/member flows`);
 
 await import('./public-assets.mjs');
