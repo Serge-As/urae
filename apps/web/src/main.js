@@ -1250,7 +1250,7 @@ async function start() {
     renderKernel();
     try {
         const session=await app.authStatus();
-        if(!session.authenticated||!session.account){showAuth(session.offline?tx('Aucun compte local n’existe encore. Choisissez « Créer un compte » : Internet n’est pas nécessaire.','No local account exists yet. Choose “Create account”: Internet is not required.'):undefined);return;}
+        if(!session.authenticated||!session.account){showAuth(session.offline?tx('Aucun compte local n’existe encore. Créez votre compte maintenant : Internet n’est pas nécessaire.','No local account exists yet. Create your account now: Internet is not required.'):undefined,session.offline?'register':undefined);return;}
         $('#authScreen').hidden=true;document.body.classList.remove('signed-out');
         $('#accountName').textContent=session.account.displayName+(session.registrationState==='LOCAL_PENDING_REGISTRATION'?tx(' · local',' · local'):'');
         const claim=$('#claimLocalAccountBtn');claim.hidden=session.registrationState!=='LOCAL_PENDING_REGISTRATION';claim.disabled=session.registrationState==='LOCAL_PENDING_REGISTRATION'&&!navigator.onLine;
@@ -1266,7 +1266,7 @@ async function start() {
         await loadWorkspaces();
     }
     catch (e) {
-        if(e instanceof Error&&e.message==='NETWORK_UNAVAILABLE'){showAuth(tx('Mode hors ligne disponible : connectez-vous à un compte local ou créez-en un maintenant.','Offline mode is available: sign in to a local account or create one now.'));return;}
+        if(e instanceof Error&&e.message==='NETWORK_UNAVAILABLE'){showAuth(tx('Mode hors ligne disponible : créez votre premier compte local maintenant.','Offline mode is available: create your first local account now.'),'register');return;}
         fail(e);
     }
 }
@@ -1299,14 +1299,15 @@ async function showStatement(membershipId){
     dialog.append(exportButton,print,close);document.body.append(dialog);dialog.showModal();
 }
 let authMode='login';
-function showAuth(message=''){document.body.classList.add('signed-out');$('#authScreen').hidden=false;if(message)$('#authError').textContent=message;$('#authUsername').focus();}
-document.querySelectorAll('[data-auth-mode]').forEach(button=>button.addEventListener('click',()=>{
-    authMode=button.dataset.authMode;
-    document.querySelectorAll('[data-auth-mode]').forEach(b=>{b.classList.toggle('selected',b===button);b.setAttribute('aria-pressed',String(b===button));});
+const setAuthMode=mode=>{
+    authMode=mode==='register'?'register':'login';
+    document.querySelectorAll('[data-auth-mode]').forEach(b=>{const selected=b.dataset.authMode===authMode;b.classList.toggle('selected',selected);b.setAttribute('aria-pressed',String(selected));});
     $('#authNameLabel').hidden=authMode!=='register';$('#authName').required=authMode==='register';
-    $('#authSubmit').textContent=authMode==='register'?'Créer mon compte':'Me connecter';
+    $('#authSubmit').textContent=authMode==='register'?'Créer mon compte hors ligne ou en ligne':'Me connecter';
     $('#authPassword').autocomplete=authMode==='register'?'new-password':'current-password';
-}));
+};
+function showAuth(message='',preferredMode){document.body.classList.add('signed-out');$('#authScreen').hidden=false;if(preferredMode)setAuthMode(preferredMode);if(message)$('#authError').textContent=message;$('#authUsername').focus();}
+document.querySelectorAll('[data-auth-mode]').forEach(button=>button.addEventListener('click',()=>setAuthMode(button.dataset.authMode)));
 $('#authForm').addEventListener('submit',async event=>{
     event.preventDefault();const button=$('#authSubmit');button.disabled=true;$('#authError').textContent='';
     try{
