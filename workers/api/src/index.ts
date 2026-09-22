@@ -858,7 +858,7 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
       for(const loan of activeLoans){
         let accruedMeetingIds:string[]=[];try{accruedMeetingIds=JSON.parse(String(loan.data.accruedMeetingIdsJson??'[]'));if(!Array.isArray(accruedMeetingIds))accruedMeetingIds=[];}catch{accruedMeetingIds=[];}
         if(accruedMeetingIds.includes(meetingId))continue;
-        const principal=finite(loan.data.outstandingPrincipal,0),interestOpening=finite(loan.data.unpaidInterest,0),rate=finite(loan.data.rateBasisPointsPerPeriod,0),interestNew=Math.round(principal*rate/10000),interestAfter=interestOpening+interestNew;
+        const principal=finite(loan.data.outstandingPrincipal,0),interestOpening=finite(loan.data.unpaidInterest,0),perYear=Math.max(1,finite(loan.data.installmentsPerYear,12)),rate=finite(loan.data.rateBasisPointsPerPeriod,Math.round(finite(loan.data.annualRateBasisPoints,0)/perYear)),interestNew=Math.round(principal*rate/10000),interestAfter=interestOpening+interestNew;
         accruedMeetingIds.push(meetingId);
         await completion.transition(groupId,loan.id,'REPAYING',{expectedVersion:finite(loan.data.completionVersion),patch:{unpaidInterest:interestAfter,accruedMeetingIdsJson:JSON.stringify(accruedMeetingIds),lastAccruedMeetingId:meetingId,lastAccruedInterest:interestNew}});
         const periodId='loan_period_'+encodeURIComponent(loan.id+'|'+meetingId),stamp=new Date().toISOString(),nextInterest=Math.round(principal*rate/10000);
@@ -1608,7 +1608,7 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
       if(!loan)throw new Error('LOAN_NOT_FOUND');
       if(!['DISBURSED','REPAYING'].includes(String(loan.data.completionState)))throw new Error('LOAN_NOT_REPAYABLE');
       const outstanding=finite(loan.data.outstandingPrincipal),unpaidInterest=finite(loan.data.unpaidInterest,0),meetingId=body.meetingId?String(body.meetingId):undefined;
-      const rateBasisPointsPerPeriod=finite(body.rateBasisPointsPerPeriod??loan.data.rateBasisPointsPerPeriod,0);
+      const repaymentPeriodsPerYear=Math.max(1,finite(loan.data.installmentsPerYear,12)),rateBasisPointsPerPeriod=finite(body.rateBasisPointsPerPeriod??loan.data.rateBasisPointsPerPeriod??Math.round(finite(loan.data.annualRateBasisPoints,0)/repaymentPeriodsPerYear),0);
       let accruedMeetingIds:string[]=[];try{accruedMeetingIds=JSON.parse(String(loan.data.accruedMeetingIdsJson??'[]'));if(!Array.isArray(accruedMeetingIds))accruedMeetingIds=[];}catch{accruedMeetingIds=[];}
       let periodInterest=0,interestDue=unpaidInterest;
       if(meetingId&&!accruedMeetingIds.includes(meetingId)){
