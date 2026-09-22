@@ -1,0 +1,5 @@
+Eco-System 1.4.5 production deployment gate
+Requested by founder after field regression report on 2026-09-22.
+Source before gate: eb20a4d5a1f102d802b962bd1f2a1927e5e284c4
+Required: full CI + predeploy BIR+ + D1 integrity + deploy + critical-path smoke + postdeploy BIR+.
+Real money must remain disabled.
