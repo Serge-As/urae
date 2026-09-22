@@ -1,7 +1,7 @@
 import worker,{type WorkerEnv} from './index.js';
 export {GroupLiveHub} from './group-live-hub.js';
 
-export const RELEASE_VERSION='1.4.5-final-mega-offline-governance';
+export const RELEASE_VERSION='1.4.5.1-field-corrections';
 
 const releaseTruthPaths=new Set(['/health','/api/v1/product/capabilities']);
 
