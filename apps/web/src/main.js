@@ -360,7 +360,7 @@ document.querySelector('#memberTrashBtn')?.addEventListener('click',()=>void(asy
     const id=document.querySelector('#memberManageSelect')?.value,m=members.find(x=>x.id===id);if(!m)return;
     if(!confirm(tx(`Placer « ${m.displayName} » dans la corbeille pendant 6 mois ? Aucune écriture financière ne sera effacée.`,`Move “${m.displayName}” to trash for 6 months? No financial record will be erased.`)))return;
     try{await app.moveToTrash('MEMBER',m.id);await renderMembers();await renderTrash();toast(tx('Membre placé dans la corbeille.','Member moved to trash.'));}catch(e){fail(e);}
-}})());
+})());
 
 const renderMeetings = async () => {
     meetings = (await app.listMeetings()).filter(x=>x.status!=='cancelled');
