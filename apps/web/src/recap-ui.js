@@ -15,8 +15,8 @@ export function mountRecapUI({app,getGroups,getMembers,getMeetings,getRubrics,is
     const active=Boolean(app.activeGroup()),manager=active&&isManager();if(nav)nav.hidden=!manager;if(denied)denied.hidden=manager||!active;if(content)content.hidden=!manager;clear();if(!manager)return;
     const group=getGroups().find(g=>g.id===app.activeGroup()),members=getMembers(),meetings=getMeetings(),rubrics=getRubrics(),openMeetings=meetings.filter(m=>m.status==='open');
     const futureMeetings=meetings.filter(m=>m.scheduledAt&&Date.parse(m.scheduledAt)>Date.now()).sort((a,b)=>Date.parse(a.scheduledAt)-Date.parse(b.scheduledAt));
-    const [passport,dna,ledger,arrears,pairings,applications,misc,miscCatalog,hubs,storefront,live,joinLinks,beta,pulse]=await Promise.all([
-      app.groupIdentityPassport().catch(()=>null),app.conciergeProfile().catch(()=>null),app.ledger().catch(()=>null),app.arrears().catch(()=>[]),
+    const [passport,dna,ledger,arrears,loans,pairings,applications,misc,miscCatalog,hubs,storefront,live,joinLinks,beta,pulse]=await Promise.all([
+      app.groupIdentityPassport().catch(()=>null),app.conciergeProfile().catch(()=>null),app.ledger().catch(()=>null),app.arrears().catch(()=>[]),app.listCompletion('LOAN').catch(()=>[]),
       app.listPairingRequests().catch(()=>[]),app.listApplications().catch(()=>[]),app.miscPostings().catch(()=>[]),app.miscRubrics().catch(()=>[]),
       app.listCommunityHubs().catch(()=>[]),app.groupStorefront().catch(()=>({shop:null,items:[]})),app.liveHealth().catch(()=>null),
       app.listJoinLinks().catch(()=>[]),app.dataUseConsent().catch(()=>null),app.ecoPulseProfile().catch(()=>({affinities:[]}))
@@ -72,6 +72,7 @@ export function mountRecapUI({app,getGroups,getMembers,getMeetings,getRubrics,is
         for(const rubric of activeRubrics){const amount=(ledger.receipts??[]).filter(x=>x.membershipId===member.id&&x.rubricId===rubric.id).reduce((n,x)=>n+Number(x.netAmount??0),0);total+=amount;tr.append(el('td',fmt(amount)));}
         tr.append(el('td',fmt(total)));body.append(tr);
       }
+      const totalRow=el('tr',undefined,'table-total-row');totalRow.append(el('th','TOTAL'));let grand=0;for(const rubric of activeRubrics){const amount=(ledger.receipts??[]).filter(x=>x.rubricId===rubric.id).reduce((n,x)=>n+Number(x.netAmount??0),0);grand+=amount;totalRow.append(el('td',fmt(amount)));}totalRow.append(el('td',fmt(grand)));body.append(totalRow);
       table.append(body);wrap.append(table);cumulative.append(wrap);roots.recapMeetingsRubrics.append(cumulative);
     }
 
@@ -80,6 +81,22 @@ export function mountRecapUI({app,getGroups,getMembers,getMeetings,getRubrics,is
       const recent=ledger.receipts.slice().sort((a,b)=>(b.receivedAt??'').localeCompare(a.receivedAt??'')).slice(0,8);
       if(recent.length){const box=section('Derniers encaissements');for(const receipt of recent){const member=members.find(m=>m.id===receipt.membershipId),line=el('div',undefined,'stack');line.append(member?detail(member.displayName,'member',member.id):el('span',receipt.membershipId),row('Net',fmt(receipt.netAmount)));if(receipt.meetingId)line.append(detail('Séance','meeting',receipt.meetingId));if(receipt.rubricId)line.append(detail('Rubrique','rubric',receipt.rubricId));box.append(line);}roots.recapFinance.append(box);}
     }else roots.recapFinance.append(el('p','Ledger non disponible dans ce contexte.','hint'));
+
+    const debtRows=[];
+    for(const member of activeMembers){
+      const memberLoans=(loans??[]).filter(x=>String(x.data?.borrowerMembershipId??'')===member.id&&['DISBURSED','REPAYING'].includes(String(x.data?.completionState??'')));
+      const principal=memberLoans.reduce((n,x)=>n+Number(x.data?.outstandingPrincipal??0),0),interest=memberLoans.reduce((n,x)=>n+Number(x.data?.unpaidInterest??0),0),memberArrears=arrears.filter(x=>x.assigneeId===member.userId&&Number(x.outstanding??0)>0);
+      const fines=memberArrears.filter(x=>/amende|pénalit|penalt|fine/i.test(String(x.title??''))).reduce((n,x)=>n+Number(x.outstanding??0),0),other=memberArrears.filter(x=>!/amende|pénalit|penalt|fine/i.test(String(x.title??''))).reduce((n,x)=>n+Number(x.outstanding??0),0),total=principal+interest+fines+other;
+      if(total>0)debtRows.push({member,principal,interest,fines,other,total});
+    }
+    const debtSection=section('Dettes · capital + intérêts + amendes + autres impayés');
+    debtSection.append(el('p','Le prêt est une sortie de caisse du groupe (rubrique négative). La dette du membre additionne le capital restant, les intérêts dus, les amendes/pénalités et les autres obligations ouvertes.','hint'));
+    if(debtRows.length){
+      const wrap=el('div',undefined,'matrix-wrap'),table=el('table',undefined,'meeting-matrix'),head=el('thead'),hr=el('tr');for(const h of ['Membre','Capital prêts','Intérêts','Amendes','Autres impayés','Dette totale'])hr.append(el('th',h));head.append(hr);table.append(head);const body=el('tbody');
+      for(const d of debtRows){const tr=el('tr');tr.append(el('td',d.member.displayName),el('td',fmt(d.principal)),el('td',fmt(d.interest)),el('td',fmt(d.fines)),el('td',fmt(d.other)),el('td',fmt(d.total)));body.append(tr);}
+      const totals=debtRows.reduce((a,d)=>({principal:a.principal+d.principal,interest:a.interest+d.interest,fines:a.fines+d.fines,other:a.other+d.other,total:a.total+d.total}),{principal:0,interest:0,fines:0,other:0,total:0}),tr=el('tr',undefined,'table-total-row');tr.append(el('th','TOTAL'),el('td',fmt(totals.principal)),el('td',fmt(totals.interest)),el('td',fmt(totals.fines)),el('td',fmt(totals.other)),el('td',fmt(totals.total)));body.append(tr);table.append(body);wrap.append(table);debtSection.append(wrap);
+    }else debtSection.append(el('p','Aucune dette ouverte connue.','empty-state'));
+    roots.recapFinance.append(debtSection);
 
     const byKind=new Map();for(const p of misc)byKind.set(String(p.data?.kind??p.title),(byKind.get(String(p.data?.kind??p.title))??0)+Number(p.data?.amount??0));
     if(byKind.size){for(const [k,v] of byKind)roots.recapExceptions.append(row(k,fmt(v)));}else roots.recapExceptions.append(el('p','Aucune petite rubrique enregistrée.','hint'));
