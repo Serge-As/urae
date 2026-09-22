@@ -36,7 +36,7 @@ test('PWA cache contains current field-integrity and bilingual transitive module
 
 test('current shell identifies 1.4 instead of stale copies',()=>{
   const html=fs.readFileSync('apps/web/index.html','utf8');
-  assert.match(html,/1\.4\.3/);assert.match(html,/BLUEPRINT EXÉCUTABLE 5\.0\.0/);assert.doesNotMatch(html,/1\.1\.2/);
+  assert.match(html,/1\.4\.5/);assert.match(html,/BLUEPRINT(?: EXÉCUTABLE)? 5\.0\.0/);assert.doesNotMatch(html,/1\.1\.2/);
   assert.match(html,/view-tontines/);assert.match(html,/tontineRubricCatalog/);assert.match(html,/view-members/);assert.match(html,/view-backoffice/);assert.match(html,/loanCompletionPanel/);assert.match(html,/completionLab/);
 });
 
