@@ -5,6 +5,11 @@ import {renderMemberFinancialNotices} from './member-control-ui.js';
 // Dynamic text is escaped before use in fixed HTML templates.
 const escapeText=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const html=(strings,...values)=>strings.reduce((out,s,i)=>out+s+(i<values.length?escapeText(values[i]):''),'');
+if(typeof structuredClone!=='function'){
+    // JSON-safe fallback for the local projections used by Eco-System on older Chrome/WebView.
+    // Blobs/Files are never passed through this compatibility clone.
+    window.structuredClone=value=>value===undefined?undefined:JSON.parse(JSON.stringify(value));
+}
 import { ConnectedApplication } from '../../../packages/application/src/index.js';
 import { captureRuntimeI18n, applyRuntimeLocale, localeTag, runtimeTranslate } from './runtime-i18n.js';
 import { mountCompletionUI } from './completion-ui.js';
@@ -1245,9 +1250,11 @@ async function start() {
     renderKernel();
     try {
         const session=await app.authStatus();
-        if(!session.authenticated){showAuth();return;}
+        if(!session.authenticated||!session.account){showAuth(session.offline?tx('Aucun compte local n’existe encore. Choisissez « Créer un compte » : Internet n’est pas nécessaire.','No local account exists yet. Choose “Create account”: Internet is not required.'):undefined);return;}
         $('#authScreen').hidden=true;document.body.classList.remove('signed-out');
-        $('#accountName').textContent=session.account.displayName;
+        $('#accountName').textContent=session.account.displayName+(session.registrationState==='LOCAL_PENDING_REGISTRATION'?tx(' · local',' · local'):'');
+        const claim=$('#claimLocalAccountBtn');claim.hidden=session.registrationState!=='LOCAL_PENDING_REGISTRATION';claim.disabled=session.registrationState==='LOCAL_PENDING_REGISTRATION'&&!navigator.onLine;
+        claim.textContent=navigator.onLine?tx('Finaliser le compte local','Finalize local account'):tx('Compte local · Internet requis pour finaliser','Local account · Internet needed to finalize');
         await app.bootstrap();
         const catalog = await app.productCatalog();
         modules = catalog.capabilities;
@@ -1259,6 +1266,7 @@ async function start() {
         await loadWorkspaces();
     }
     catch (e) {
+        if(e instanceof Error&&e.message==='NETWORK_UNAVAILABLE'){showAuth(tx('Mode hors ligne disponible : connectez-vous à un compte local ou créez-en un maintenant.','Offline mode is available: sign in to a local account or create one now.'));return;}
         fail(e);
     }
 }
@@ -1301,11 +1309,25 @@ document.querySelectorAll('[data-auth-mode]').forEach(button=>button.addEventLis
 }));
 $('#authForm').addEventListener('submit',async event=>{
     event.preventDefault();const button=$('#authSubmit');button.disabled=true;$('#authError').textContent='';
-    try{await app.authenticate(authMode,{username:val('authUsername'),password:document.getElementById('authPassword').value,displayName:val('authName')});
-        $('#authPassword').value='';clearFail();await start();}
+    try{
+        await app.authenticate(authMode,{username:val('authUsername'),password:document.getElementById('authPassword').value,displayName:val('authName')});
+        $('#authPassword').value='';clearFail();await start();
+        if(!navigator.onLine&&authMode==='register')toast(tx('Compte créé sur ce téléphone. Vous pouvez commencer sans Internet.','Account created on this phone. You can start without Internet.'));
+    }
     catch(e){fail(e);$('#authError').textContent=$('#errorBox').textContent;}
     finally{button.disabled=false;}
 });
-$('#logoutBtn').addEventListener('click',async()=>{try{await app.logout();location.reload();}catch(e){fail(e);}});
+$('#claimLocalAccountBtn').addEventListener('click',()=>void(async()=>{
+    if(!navigator.onLine){toast(tx('Internet est nécessaire uniquement pour finaliser le compte sur le serveur. Vous pouvez continuer à travailler hors ligne.','Internet is only needed to finalize the account on the server. You can keep working offline.'));return;}
+    const password=prompt(tx('Saisissez le mot de passe de ce compte local pour le finaliser et synchroniser ses données :','Enter this local account password to finalize it and synchronize its data:'));
+    if(!password)return;
+    const button=$('#claimLocalAccountBtn');button.disabled=true;
+    try{const result=await app.claimLocalAccount(password);toast(tx(`Compte finalisé · ${result.synced} opération(s) synchronisée(s), ${result.pending} en attente.`,`Account finalized · ${result.synced} operation(s) synchronized, ${result.pending} pending.`));await start();}
+    catch(e){fail(e);}
+    finally{button.disabled=false;}
+})());
+$('#logoutBtn').addEventListener('click',async()=>{try{await app.logout();document.body.classList.add('signed-out');$('#authScreen').hidden=false;$('#accountName').textContent='';$('#claimLocalAccountBtn').hidden=true;showAuth(tx('Compte fermé sur cet appareil. Vos données locales ne sont pas supprimées.','Account signed out on this device. Your local data was not deleted.'));}catch(e){fail(e);}});
+window.addEventListener('online',()=>{renderConnectivity();void start();});
+window.addEventListener('offline',()=>{renderConnectivity();const claim=document.querySelector('#claimLocalAccountBtn');if(claim&&!claim.hidden){claim.disabled=true;claim.textContent=tx('Compte local · Internet requis pour finaliser','Local account · Internet needed to finalize');}});
 void ensureCurrentServiceWorker();
 void start();
