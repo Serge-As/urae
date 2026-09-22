@@ -15,10 +15,20 @@ export function mountDetailUI({app,navigate,getGroups,getMembers,getMeetings,get
   const humanMeetingLabel=m=>'Réunion du '+date(m?.scheduledAt??m?.openedAt??m?.createdAt??'');
   const actorName=id=>getMembers().find(m=>m.userId===id)?.displayName??id;
 
-  const quickEntry=({membershipId,rubricId,meetingId,onSaved})=>{
-    const box=el('div',undefined,'matrix-entry');const input=document.createElement('input');input.type='number';input.min='1';input.step='1';input.inputMode='numeric';input.placeholder='Ajouter…';input.setAttribute('aria-label','Montant à enregistrer');
-    const button=el('button','✓','matrix-save');button.type='button';button.title='Enregistrer ce montant';
-    const save=async()=>{try{const amount=Number(input.value);if(!Number.isSafeInteger(amount)||amount<=0)throw Error('Le montant doit être un entier positif.');button.disabled=true;input.disabled=true;const result=await app.recordCashContribution({membershipId,rubricId,meetingId,amount});if(result.queued)throw Error('Opération conservée en attente de synchronisation : vérifiez la file avant une nouvelle saisie.');input.value='';await onSaved?.();}catch(e){showError(e);}finally{button.disabled=false;input.disabled=false;}};
+  const quickEntry=({membershipId,rubricId,meetingId,currentAmount=0,onSaved})=>{
+    const box=el('div',undefined,'matrix-entry');box.dataset.membershipId=membershipId;box.dataset.rubricId=rubricId;box.dataset.meetingId=meetingId;
+    const input=document.createElement('input');input.type='number';input.min='0';input.step='1';input.inputMode='numeric';input.placeholder=Number(currentAmount)>0?'Modifier…':'Saisir…';input.setAttribute('aria-label','Nouvelle valeur totale de la cellule');
+    const button=el('button','✓','matrix-save');button.type='button';button.title='Valider la nouvelle valeur totale';
+    const save=async()=>{try{
+      const raw=input.value.trim();if(raw==='')return;const targetAmount=Number(raw);if(!Number.isSafeInteger(targetAmount)||targetAmount<0)throw Error('Le montant doit être un entier positif ou zéro.');
+      const current=Math.max(0,Number(currentAmount??0));if(targetAmount===current){input.value='';return;}
+      const meeting=getMeetings().find(x=>x.id===meetingId);let reason='';
+      if(current>0||meeting?.status==='closed'){reason=prompt(`Motif de la modification ${fmt(current)} → ${fmt(targetAmount)} :`,'Correction de la valeur de la cellule')??'';if(!reason.trim())return;}
+      button.disabled=true;input.disabled=true;
+      const result=await app.setFinancialCellTarget({membershipId,rubricId,meetingId,targetAmount,currentAmount:current,reason:reason.trim()});
+      if(result?.status==='CONSENSUS_REQUIRED')box.classList.add('pending-consensus');
+      input.value='';await onSaved?.();
+    }catch(e){showError(e);}finally{button.disabled=false;input.disabled=false;}};
     button.onclick=()=>void save();input.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();void save();}});box.append(input,button);return box;
   };
 
@@ -34,7 +44,7 @@ export function mountDetailUI({app,navigate,getGroups,getMembers,getMeetings,get
       const tr=document.createElement('tr'),th=document.createElement('th');if(meeting.id)th.append(link(humanMeetingLabel(meeting),'meeting',meeting.id));else th.textContent='Sans séance';tr.append(th);
       for(const rubric of rubrics){
         const opRow=operational?.exerciseMatrix?.find(x=>x.meetingId===meeting.id),opCell=opRow?.cells?.[rubric.id],confirmed=opCell?Number(opCell.net??0):amountFor(statement.receipts,{meetingId:meeting.id||undefined,rubricId:rubric.id});const td=document.createElement('td'),shown=el('strong',fmt(confirmed),'matrix-confirmed');shown.title=opCell?'Net de la même écriture canonique que la feuille de séance':'Montant net confirmé dans le Ledger';td.append(shown);
-        if(editable&&meeting.id)td.append(quickEntry({membershipId:member.id,rubricId:rubric.id,meetingId:meeting.id,onSaved:async()=>{await open('member',member.id,true);}}));
+        if(editable&&meeting.id)td.append(quickEntry({membershipId:member.id,rubricId:rubric.id,meetingId:meeting.id,currentAmount:Math.max(0,confirmed),onSaved:async()=>{await open('member',member.id,true);}}));
         tr.append(td);
       }
       tbody.append(tr);
@@ -53,7 +63,7 @@ export function mountDetailUI({app,navigate,getGroups,getMembers,getMeetings,get
         // Filter member separately: this is the member x rubric cell, not the group total.
         const cell=ledger.receipts.filter(r=>r.membershipId===member.id&&r.meetingId===meeting.id&&r.rubricId===rubric.id).reduce((n,r)=>n+Number(r.netAmount??0),0);
         td.append(el('strong',fmt(cell),'matrix-confirmed'));
-        if(editable)td.append(quickEntry({membershipId:member.id,rubricId:rubric.id,meetingId:meeting.id,onSaved:async()=>{await open('meeting',meeting.id,true);}}));
+        if(editable)td.append(quickEntry({membershipId:member.id,rubricId:rubric.id,meetingId:meeting.id,currentAmount:Math.max(0,cell),onSaved:async()=>{await open('meeting',meeting.id,true);}}));
         tr.append(td);
       }tbody.append(tr);
     }
@@ -81,14 +91,14 @@ export function mountDetailUI({app,navigate,getGroups,getMembers,getMeetings,get
     const identity=card('Identité dans ce groupe');identity.append(row('Nom',m.displayName),row('Fiche membre',m.id),row('Année / ancienneté',m.historicalJoinedAt?date(m.historicalJoinedAt):m.joinedAt?date(m.joinedAt):'—'));
     body.replaceChildren(identity);if(!managerOrSelf(m))return;
     let statement,operational;try{[statement,operational]=await Promise.all([app.memberStatement(m.id),app.memberOperationalSheet(m.id)]);}catch(e){showError(e);return;}
-    metrics.append(metric(fmt(statement.totalNetContributions),'Cotisations nettes'),metric((operational?.rubrics??[]).length,'Rubriques de ma fiche'));
+    metrics.append(metric(fmt(statement.totalNetContributions),'Cotisations nettes'),metric(fmt(statement.debtPrincipal??0),'Prêts / capital dû'),metric(fmt(statement.debtInterest??0),'Intérêts dus'),metric(fmt(statement.totalDebt??0),'Dette totale'),metric((operational?.rubrics??[]).length,'Rubriques de ma fiche'));
     const sheet=card('Votre fiche individuelle');sheet.append(el('p','Chaque rubrique créée et non archivée du groupe apparaît ici. Chaque ligne est une séance/période. Cette fiche lit exactement la même vérité que la feuille de séance ; un membre voit sa propre fiche sans accéder aux fiches financières des autres.','hint'),buildExerciseMatrix({member:m,statement,operational,editable:isManager()}));body.append(sheet);
     try{
       const loans=(await app.listCompletion('LOAN')).filter(x=>String(x.data?.borrowerMembershipId??'')===m.id);if(loans.length){const loanCard=card('Prêts / dettes');for(const loan of loans){const a=el('article',undefined,'item');a.append(el('strong',loan.title),row('État',loan.data?.completionState??'—'),row('Capital initial',fmt(Number(loan.data?.principal??0))),row('Capital restant',fmt(Number(loan.data?.outstandingPrincipal??0))));loanCard.append(a);}body.append(loanCard);}
     }catch{}
     try{const misc=await app.miscPostings({membershipId:m.id});if(misc.length){const other=card('Inscription · amendes · timbres · autres');for(const p of misc.slice(0,50)){const a=el('article',undefined,'item');a.append(el('strong',p.title),row('Montant',fmt(Number(p.data?.amount??0))));if(p.data?.meetingId)a.append(link('Voir la séance','meeting',String(p.data.meetingId)));other.append(a);}body.append(other);}}catch{}
     try{const notices=await app.financialNotices(m.id);if(notices.length){const n=card('Modifications, avis et validations');for(const x of notices.slice(0,30)){const a=el('article',undefined,'item');a.append(el('strong',x.operationType??'Opération'),row('État',x.status),row('Montant',fmt(Number(x.amount??0))));n.append(a);}body.append(n);}}catch{}
-    const history=card('Historique des encaissements');for(const r of statement.receipts.slice().sort((a,b)=>b.receivedAt.localeCompare(a.receivedAt)).slice(0,100)){const item=el('article',undefined,'item');item.append(el('strong',fmt(r.netAmount)),row('Date',date(r.receivedAt)));if(r.meetingId)item.append(link('Séance','meeting',r.meetingId));if(r.rubricId)item.append(link('Rubrique','rubric',r.rubricId));history.append(item);}body.append(history);
+    const history=card('Historique des contributions et modifications'),grouped=new Map();for(const r of statement.receipts.slice().sort((a,b)=>b.receivedAt.localeCompare(a.receivedAt)).slice(0,100)){const key=JSON.stringify([r.meetingId??'',r.rubricId??'']);if(!grouped.has(key))grouped.set(key,{label:(r.meetingTitle??'Sans séance')+' · '+(r.rubricName??'Sans rubrique'),rows:[]});grouped.get(key).rows.push(r);}for(const g of grouped.values()){const d=document.createElement('details');d.open=true;d.append(el('summary',g.label));for(const r of g.rows){const item=el('article',undefined,'item'),nature=r.financialNature==='LOAN_DEBT'?'Prêt / dette — exclu des cotisations nettes':r.isModified?'Contribution modifiée':'Contribution saisie';item.append(el('strong',nature+' · '+fmt(r.amount?.amount??r.netAmount)),row('Montant net',fmt(r.netAmount)),row('Date / heure',date(r.receivedAt)),row('Auteur',r.receivedByName??actorName(r.receivedBy)));if(r.corrections?.length){for(const c of r.corrections)item.append(row('Modification',date(c.at)+' · '+(c.authorName??c.authorId??'—')+' · Motif : '+(c.reason??'—')));}d.append(item);}history.append(d);}if(!grouped.size)history.append(el('p','Aucune contribution enregistrée.','hint'));body.append(history);
   };
 
   const meetingDetail=async id=>{

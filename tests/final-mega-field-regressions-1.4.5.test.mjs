@@ -115,6 +115,13 @@ test('member management removes inline trash risk and supports rename and orderi
   assert.doesNotMatch(main,/li\.append\(remove\)/);
 });
 
+test('detail-sheet inline entry replaces totals instead of adding deltas',()=>{
+  assert.match(detail,/setFinancialCellTarget/);
+  assert.match(detail,/Nouvelle valeur totale de la cellule/);
+  assert.doesNotMatch(detail,/input\.placeholder='Ajouter…'/);
+  assert.match(detail,/Prêts \/ capital dû/);
+});
+
 test('member and session histories expose human-readable financial provenance',()=>{
   assert.match(main,/Historique des contributions et modifications/);
   assert.match(main,/Capital prêts \/ dettes/);
