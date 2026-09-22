@@ -1,4 +1,4 @@
-name: Eco-System 1.4.5 — Production Deploy
+name: Eco-System 1.4.5.1 — Production Deploy
 
 on:
   workflow_dispatch:
@@ -18,7 +18,7 @@ env:
   PROD_DB: eco-system-db
   PROD_R2: eco-system-backups
   PROD_ROOT: https://eco-system.sergemimf.workers.dev
-  EXPECTED_VERSION: 1.4.5-final-mega-offline-governance
+  EXPECTED_VERSION: 1.4.5.1-field-corrections
 
 jobs:
   qualify-backup-deploy-smoke:
@@ -83,17 +83,17 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p /tmp/predeploy
-          git archive --format=tar HEAD | xz -T0 -9e > /tmp/predeploy/eco-system-1.4.5-source.tar.xz
-          npx --yes wrangler@4 d1 export "${PROD_DB}" --remote --output=/tmp/predeploy/eco-system-production-before-1.4.5.sql
-          sqlite3 /tmp/predeploy/restore-check.sqlite < /tmp/predeploy/eco-system-production-before-1.4.5.sql
+          git archive --format=tar HEAD | xz -T0 -9e > /tmp/predeploy/eco-system-1.4.5.1-source.tar.xz
+          npx --yes wrangler@4 d1 export "${PROD_DB}" --remote --output=/tmp/predeploy/eco-system-production-before-1.4.5.1.sql
+          sqlite3 /tmp/predeploy/restore-check.sqlite < /tmp/predeploy/eco-system-production-before-1.4.5.1.sql
           test "$(sqlite3 /tmp/predeploy/restore-check.sqlite 'PRAGMA integrity_check;')" = "ok"
           cd /tmp/predeploy
-          sha256sum eco-system-1.4.5-source.tar.xz eco-system-production-before-1.4.5.sql > SHA256SUMS.txt
+          sha256sum eco-system-1.4.5.1-source.tar.xz eco-system-production-before-1.4.5.1.sql > SHA256SUMS.txt
           sha256sum --check SHA256SUMS.txt
 
       - uses: actions/upload-artifact@v4
         with:
-          name: eco-system-1.4.5-predeploy-birplus
+          name: eco-system-1.4.5.1-predeploy-birplus
           path: /tmp/predeploy/
           retention-days: 90
           if-no-files-found: error
@@ -102,8 +102,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          PREFIX="birplus/1.4.5/${GITHUB_SHA}/predeploy"
-          for F in eco-system-1.4.5-source.tar.xz eco-system-production-before-1.4.5.sql SHA256SUMS.txt; do
+          PREFIX="birplus/1.4.5.1/${GITHUB_SHA}/predeploy"
+          for F in eco-system-1.4.5.1-source.tar.xz eco-system-production-before-1.4.5.1.sql SHA256SUMS.txt; do
             npx --yes wrangler@4 r2 object put "${PROD_R2}/${PREFIX}/${F}" --file "/tmp/predeploy/${F}" --remote
           done
           npx --yes wrangler@4 r2 object get "${PROD_R2}/${PREFIX}/SHA256SUMS.txt" --file /tmp/r2-pre-check.txt --remote
@@ -129,10 +129,10 @@ jobs:
       - name: Apply additive D1 migrations
         run: npx --yes wrangler@4 d1 migrations apply "${PROD_DB}" --remote --config workers/api/wrangler.prod145.toml
 
-      - name: Deploy Eco-System 1.4.5
+      - name: Deploy Eco-System 1.4.5.1
         run: npx --yes wrangler@4 deploy --config workers/api/wrangler.prod145.toml
 
-      - name: Smoke production 1.4.5 user-critical paths
+      - name: Smoke production 1.4.5.1 user-critical paths
         shell: bash
         run: |
           set -euo pipefail
@@ -141,12 +141,12 @@ jobs:
           for attempt in 1 2 3 4 5 6 7 8; do
             curl --fail-with-body --silent --show-error --location --max-time 20 "${PROD_ROOT}/" > /tmp/smoke/root.html || true
             curl --fail-with-body --silent --show-error --location --max-time 20 "${PROD_ROOT}/health" > /tmp/smoke/health.json || true
-            curl --fail-with-body --silent --show-error --location --max-time 20 "${PROD_ROOT}/src/main.js?v=145" > /tmp/smoke/main.js || true
+            curl --fail-with-body --silent --show-error --location --max-time 20 "${PROD_ROOT}/src/main.js?v=1451" > /tmp/smoke/main.js || true
             curl --fail-with-body --silent --show-error --location --max-time 20 "${PROD_ROOT}/src/sessions-ui.js" > /tmp/smoke/sessions.js || true
             curl --fail-with-body --silent --show-error --location --max-time 20 "${PROD_ROOT}/packages/application/src/index.js" > /tmp/smoke/application.js || true
             curl --fail-with-body --silent --show-error --location --max-time 20 "${PROD_ROOT}/packages/offline/src/index.js" > /tmp/smoke/offline.js || true
             curl --fail-with-body --silent --show-error --location --max-time 20 "${PROD_ROOT}/sw.js" > /tmp/smoke/sw.js || true
-            if grep -Fq 'ECO-SYSTEM · 1.4.5' /tmp/smoke/root.html               && grep -Fq 'Première utilisation hors ligne' /tmp/smoke/root.html               && grep -Fq 'id="claimLocalAccountBtn"' /tmp/smoke/root.html               && grep -Fq '>Prêts<' /tmp/smoke/root.html               && grep -Fq '>Assistances<' /tmp/smoke/root.html               && grep -Fq '>Fiches membres<' /tmp/smoke/root.html               && grep -Fq '>Rubriques<' /tmp/smoke/root.html               && grep -Fq '>Corbeille<' /tmp/smoke/root.html               && grep -Fq '>Eco Relay<' /tmp/smoke/root.html               && grep -Fq 'id="meetingMatrixPanel"' /tmp/smoke/root.html               && grep -Fq 'id="individualSheetMatrix"' /tmp/smoke/root.html               && grep -Fq 'financialAlertBar' /tmp/smoke/root.html               && grep -Fq 'appBackBtn' /tmp/smoke/root.html               && grep -Fq 'Feuille récapitulative' /tmp/smoke/sessions.js               && grep -Fq 'Saisir / corriger cette séance' /tmp/smoke/sessions.js               && grep -Fq 'LOCAL_PENDING_REGISTRATION' /tmp/smoke/application.js               && grep -Fq 'claimLocalAccount' /tmp/smoke/application.js               && grep -Fq 'IndexedDbLocalAuthAdapter' /tmp/smoke/offline.js               && grep -Fq 'PBKDF2' /tmp/smoke/offline.js               && grep -Fq "eco-system-v145-final-mega-offline-safe-20260921" /tmp/smoke/sw.js; then
+            if grep -Fq 'ECO-SYSTEM · 1.4.5.1' /tmp/smoke/root.html               && grep -Fq 'Première utilisation hors ligne' /tmp/smoke/root.html               && grep -Fq 'id="claimLocalAccountBtn"' /tmp/smoke/root.html               && grep -Fq '>Prêts<' /tmp/smoke/root.html               && grep -Fq '>Assistances<' /tmp/smoke/root.html               && grep -Fq '>Fiches membres<' /tmp/smoke/root.html               && grep -Fq '>Rubriques<' /tmp/smoke/root.html               && grep -Fq '>Corbeille<' /tmp/smoke/root.html               && grep -Fq '>Eco Relay<' /tmp/smoke/root.html               && grep -Fq 'id="meetingMatrixPanel"' /tmp/smoke/root.html               && grep -Fq 'id="individualSheetMatrix"' /tmp/smoke/root.html               && grep -Fq 'financialAlertBar' /tmp/smoke/root.html               && grep -Fq 'appBackBtn' /tmp/smoke/root.html               && grep -Fq 'Feuille récapitulative' /tmp/smoke/sessions.js               && grep -Fq 'Saisir / corriger cette séance' /tmp/smoke/sessions.js               && grep -Fq 'LOCAL_PENDING_REGISTRATION' /tmp/smoke/application.js               && grep -Fq 'claimLocalAccount' /tmp/smoke/application.js               && grep -Fq 'IndexedDbLocalAuthAdapter' /tmp/smoke/offline.js               && grep -Fq 'PBKDF2' /tmp/smoke/offline.js               && grep -Fq "eco-system-v1451-field-corrections-20260922" /tmp/smoke/sw.js; then
               ready=1; break
             fi
             sleep 4
@@ -166,7 +166,7 @@ jobs:
           };
           const failed=Object.entries(checks).filter(([,v])=>!v).map(([k])=>k);
           if(failed.length)throw new Error('PRODUCTION_145_SMOKE_FAILED:'+failed.join(',')+' '+JSON.stringify(h));
-          console.log('Production 1.4.5 health PASS');
+          console.log('Production 1.4.5.1 health PASS');
           NODE
 
       - name: Post-deploy BIR+ snapshot
@@ -175,16 +175,16 @@ jobs:
           set -euo pipefail
           mkdir -p /tmp/postdeploy
           printf '%s\n' "version=${EXPECTED_VERSION}" "commit=${GITHUB_SHA}" "worker=${PROD_WORKER}" "database=${PROD_DB}" "deployed_at=$(date -u +%Y-%m-%dT%H:%M:%SZ)" > /tmp/postdeploy/DEPLOYMENT_TRUTH.txt
-          npx --yes wrangler@4 d1 export "${PROD_DB}" --remote --output=/tmp/postdeploy/eco-system-production-after-1.4.5.sql
-          sqlite3 /tmp/postdeploy/restore-check.sqlite < /tmp/postdeploy/eco-system-production-after-1.4.5.sql
+          npx --yes wrangler@4 d1 export "${PROD_DB}" --remote --output=/tmp/postdeploy/eco-system-production-after-1.4.5.1.sql
+          sqlite3 /tmp/postdeploy/restore-check.sqlite < /tmp/postdeploy/eco-system-production-after-1.4.5.1.sql
           test "$(sqlite3 /tmp/postdeploy/restore-check.sqlite 'PRAGMA integrity_check;')" = "ok"
           cd /tmp/postdeploy
-          sha256sum eco-system-production-after-1.4.5.sql DEPLOYMENT_TRUTH.txt > SHA256SUMS.txt
+          sha256sum eco-system-production-after-1.4.5.1.sql DEPLOYMENT_TRUTH.txt > SHA256SUMS.txt
           sha256sum --check SHA256SUMS.txt
 
       - uses: actions/upload-artifact@v4
         with:
-          name: eco-system-1.4.5-postdeploy-birplus
+          name: eco-system-1.4.5.1-postdeploy-birplus
           path: /tmp/postdeploy/
           retention-days: 90
           if-no-files-found: error
@@ -193,8 +193,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          PREFIX="birplus/1.4.5/${GITHUB_SHA}/postdeploy"
-          for F in eco-system-production-after-1.4.5.sql DEPLOYMENT_TRUTH.txt SHA256SUMS.txt; do
+          PREFIX="birplus/1.4.5.1/${GITHUB_SHA}/postdeploy"
+          for F in eco-system-production-after-1.4.5.1.sql DEPLOYMENT_TRUTH.txt SHA256SUMS.txt; do
             npx --yes wrangler@4 r2 object put "${PROD_R2}/${PREFIX}/${F}" --file "/tmp/postdeploy/${F}" --remote
           done
           npx --yes wrangler@4 r2 object get "${PROD_R2}/${PREFIX}/SHA256SUMS.txt" --file /tmp/r2-post-check.txt --remote
