@@ -183,3 +183,11 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 .contribution-history-item p{margin:6px 0}
 @media(max-width:860px){.member-management-toolbar{grid-template-columns:1fr 1fr}.matrix-cell-entry{min-width:122px}.meeting-matrix th,.meeting-matrix td{padding:7px}}
 @media(max-width:560px){.member-management-toolbar{grid-template-columns:1fr}.member-management-toolbar button{width:100%}}
+
+/* 1.4.5.1 — dette et simulation de prêt */
+.personal-rubric-grid .financial-negative{border-color:#d7a78a;background:#fff7f0}
+.personal-rubric-grid .financial-negative strong{font-weight:900}
+.loan-evolution-dialog{width:min(1040px,95vw);max-height:92vh;overflow:auto}
+.loan-evolution-dialog .loan-simulation-result{margin-top:12px}
+.loan-evolution-dialog .matrix-wrap{max-height:52vh;overflow:auto}
+.loan-evolution-dialog table{min-width:880px}
