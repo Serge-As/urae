@@ -1876,14 +1876,19 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
       if(item.type==='FINANCIAL_CELL_CORRECTION_PROPOSAL_V1'){
         const p=item.payload,groupId=String(p.groupId??''),meetingId=String(p.meetingId??''),membershipId=String(p.membershipId??''),rubricId=String(p.rubricId??''),targetAmount=finite(p.targetAmount),reason=String(p.reason??'');
         await requireGroup(groupId,true);
-        const state=await financialCellState(groupId,meetingId,membershipId,rubricId),managers=await managerUserIds(groupId);
+        const state=await financialCellState(groupId,meetingId,membershipId,rubricId),baselineValue=finite(p.baselineValue,state.current),managers=await managerUserIds(groupId),meeting=await repo.getMeeting(ctx.tenantId,groupId,meetingId);
+        if(!meeting||meeting.status==='cancelled')throw Error('MEETING_NOT_FOUND');
+        // A replay after an ambiguous network response is already satisfied when
+        // the canonical value equals the requested target.
         if(state.current===targetAmount){await markApplied();return json({accepted:true,stored:true,status:'NO_CHANGE'},200,cors);}
-        if(state.current>0&&managers.length>1){
-          const consensus=await new MeetingLiveConsensusService(repo,kernel).proposeAgainstBaseline({groupId,meetingId,cellKey:membershipId+':'+rubricId,value:targetAmount,baselineValue:state.current,baselineActorId:state.baselineActorId,label:'Proposition reçue hors ligne',membershipId,rubricId});
-          await notifications.publish(groupId,{title:'Correction offline à confronter',message:`Une proposition hors ligne demande ${targetAmount} F CFA au lieu de ${state.current}. La valeur canonique reste inchangée avant décision du Bureau.`,channels:['IN_APP','WEB_PUSH'],audience:'MANAGERS',priority:'HIGH'});
-          await markApplied();return json({accepted:true,stored:true,status:'CONSENSUS_REQUIRED',consensus},200,cors);
+        const staleBaseline=baselineValue!==state.current;
+        const needsConsensus=staleBaseline||meeting.status==='closed'||(state.current>0&&managers.length>1);
+        if(needsConsensus){
+          const consensus=await new MeetingLiveConsensusService(repo,kernel).proposeAgainstBaseline({groupId,meetingId,cellKey:membershipId+':'+rubricId,value:targetAmount,baselineValue:state.current,baselineActorId:state.baselineActorId,label:staleBaseline?'Conflit de base hors ligne':'Proposition reçue hors ligne',membershipId,rubricId});
+          await notifications.publish(groupId,{title:staleBaseline?'Conflit de saisie hors ligne':'Correction offline à confronter',message:`La saisie hors ligne partait de ${baselineValue} F CFA ; la valeur canonique est maintenant ${state.current} F CFA et la proposition demande ${targetAmount} F CFA. La valeur canonique reste inchangée avant décision du Bureau.`,channels:['IN_APP','WEB_PUSH'],audience:'MANAGERS',priority:staleBaseline?'CRITICAL':'HIGH'});
+          await markApplied();return json({accepted:true,stored:true,status:'CONSENSUS_REQUIRED',staleBaseline,consensus},200,cors);
         }
-        const result=await applyFinancialCellTarget({groupId,meetingId,membershipId,rubricId,targetAmount,reason:reason||'Correction saisie hors ligne puis synchronisée',idempotencyKey:'offline-cell:'+item.idempotencyKey});
+        const result=await applyFinancialCellTarget({groupId,meetingId,membershipId,rubricId,targetAmount,expectedCurrentAmount:baselineValue,reason:reason||'Correction saisie hors ligne puis synchronisée',idempotencyKey:item.idempotencyKey});
         await markApplied();return json({accepted:true,stored:true,...result},200,cors);
       }
 
