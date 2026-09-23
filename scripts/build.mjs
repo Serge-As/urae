@@ -2,7 +2,7 @@ import { rm, mkdir, cp, access, readFile, writeFile } from 'node:fs/promises';
 import { spawnSync } from 'node:child_process';
 import path from 'node:path';
 
-const RELEASE_VERSION='1.4.5.1-field-corrections';
+const RELEASE_VERSION='1.5.0-audit-complete';
 const compiler=path.resolve('node_modules/typescript/bin/tsc');
 try{await access(compiler);}catch{await import('./build-portable.mjs');process.exit(0);}
 const output=path.resolve('.build');
@@ -59,6 +59,6 @@ for (const target of ['.build/apps/web/src/main.js','.build/src/main.js']) {
   source=source.replace("const CAHIER_VERSION = '1.3.2-savings-control-forum-live';",`const CAHIER_VERSION = '${RELEASE_VERSION}';`);
   await writeFile(target,source,'utf8');
 }
-console.log(`Build OK: .build/ (Eco-System ${RELEASE_VERSION}; 1.4.5.1 field corrections + loan/offline/session/member hardening`);
+console.log(`Build OK: .build/ (Eco-System ${RELEASE_VERSION}; audit-complete finance/offline/governance/business/value/knowledge hardening`);
 
 await import('./public-assets.mjs');
