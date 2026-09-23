@@ -66,6 +66,35 @@ export function mountGroupHomeUI({app,getGroups,getMembers,getMeetings,navigate,
     if(manage)actions.append(action(t('Gérer les membres','Manage members'),'members','memberList'),action(t('Gérer / archiver les rubriques','Manage / archive rubrics'),'operations','rubricList'),action(t('Ouvrir le Récap','Open Recap'),'recap'));identification.append(actions);
     const ref=make('details','');ref.append(make('summary','',t('Référence technique','Technical reference')),make('code','',group.id),make('p','hint',t('Le code ECO-GRP identifie le groupe sans donner d’accès. L’ID technique reste secondaire.','The ECO-GRP code identifies the group without granting access. The technical ID remains secondary.')));identification.append(ref);root.append(identification);
 
+    const starterRows=await app.listWorkspaceRecords('GROUP.STARTER_KIT',group.id).catch(()=>[]);
+    const starter=starterRows.find(x=>x.tags?.includes('starter-kit:canonical'))??starterRows[0];
+    if(starter){
+      const kit=make('section','group-home-block');kit.id='groupStarterKit';kit.append(make('h3','',t('Kit prêt à l’emploi du groupe','Group ready-to-use kit')));
+      const parse=value=>{try{return JSON.parse(String(value??''));}catch{return[];}};
+      const checklist=parse(starter.data?.checklistJson),risks=parse(starter.data?.risksJson),calendar=parse(starter.data?.calendarJson),rubricRows=parse(starter.data?.rubricRowsJson),rules=parse(starter.data?.rulesJson);
+      const metrics=make('div','metrics small');
+      for(const [label,value] of [
+        [t('Volume collectif simulé','Simulated collective volume'),fmt(Number(starter.data?.monetaryVolume??0))],
+        [t('Frais de gestion simulés','Simulated management fees'),fmt(Number(starter.data?.managerFees??0))],
+        [t('Coûts externes estimés','Estimated external costs'),fmt(Number(starter.data?.estimatedExternal??0)+Number(starter.data?.fixedCosts??0))],
+        [t('Marge de gestion indicative','Indicative manager margin'),fmt(Number(starter.data?.estimatedMargin??0))]
+      ]){const c=make('div','metric');c.append(make('span','',label),make('strong','',value));metrics.append(c);}kit.append(metrics);
+      const status=make('div','two-col'),todo=make('article','item'),risk=make('article','item');todo.append(make('strong','',t('Checklist de lancement','Launch checklist')),make('p','hint',checklist.length?t(checklist.length+' point(s) générés. Utilisez le Kit imprimable pour les cocher et les adapter.','Generated points: '+checklist.length+'. Use the printable kit to check and adapt them.'):t('Checklist non disponible.','Checklist unavailable.')));risk.append(make('strong','',t('Risques / décisions à compléter','Risks / decisions to complete')),make('p','hint',risks.length?risks.join(' • '):t('Aucun blocage détecté par le Kit.','No blocking item detected by the kit.')));status.append(todo,risk);kit.append(status);
+      const actions=make('div','actions');
+      const print=make('button','primary',t('Ouvrir / imprimer le Kit','Open / print kit'));print.type='button';print.onclick=()=>{
+        const w=window.open('','_blank','noopener,noreferrer,width=900,height=800');if(!w)return;
+        const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+        const list=items=>'<ul>'+items.map(x=>'<li>'+esc(Array.isArray(x)?'['+x[0]+'] '+x[1]:x)+'</li>').join('')+'</ul>';
+        const html='<!doctype html><meta charset="utf-8"><title>'+esc(starter.title)+'</title><style>body{font-family:system-ui,sans-serif;max-width:900px;margin:30px auto;padding:0 20px;line-height:1.45}table{border-collapse:collapse;width:100%;font-size:13px}th,td{border:1px solid #bbb;padding:7px}pre{white-space:pre-wrap;border:1px solid #ccc;padding:12px}@media print{button{display:none}}</style><h1>'+esc(starter.title)+'</h1><h2>Checklist</h2>'+list(checklist)+'<h2>Règlement type</h2>'+list(rules)+'<h2>Rubriques</h2><table><tr><th>Rubrique</th><th>Mode</th><th>Montant</th><th>Volume cycle</th><th>Frais gestion</th></tr>'+rubricRows.map(r=>'<tr><td>'+esc(r.name)+'</td><td>'+esc(r.mode)+'</td><td>'+esc(r.amount)+'</td><td>'+esc(r.nominalCycle)+'</td><td>'+esc(r.fees)+'</td></tr>').join('')+'</table><h2>Calendrier</h2>'+list(calendar.map(x=>x.label+' · '+x.date))+'<h2>Risques</h2>'+list(risks.length?risks:['Aucun blocage détecté.'])+'<h2>Invitation</h2><pre>'+esc(starter.data?.invitation)+'</pre><h2>PV</h2><pre>'+esc(starter.data?.minutes)+'</pre><button onclick="print()">Imprimer / Enregistrer en PDF</button>';
+        w.document.open();w.document.write(html);w.document.close();
+      };
+      actions.append(print);
+      if(manage){const business=make('button','secondary',t('Ouvrir Business Studio','Open Business Studio'));business.type='button';business.onclick=()=>{navigate('ecosystem');setTimeout(()=>{const panel=byId('businessStudioOperational');if(panel){panel.open=true;panel.scrollIntoView({behavior:'smooth',block:'start'});}},120);};actions.append(business);}
+      kit.append(actions);root.append(kit);
+    }else if(manage){
+      const missing=make('section','group-home-block');missing.append(make('h3','',t('Kit prêt à l’emploi','Ready-to-use kit')),make('p','hint',t('Ce groupe historique ne possède pas encore de Kit canonique. Utilisez Créer / intégrer pour préparer un nouveau Kit sans altérer ses écritures existantes.','This historical group does not yet have a canonical kit. Use Create / integrate to prepare one without altering existing entries.')));root.append(missing);
+    }
+
     const ordered=meetings.slice().sort((a,b)=>meetingTime(a)-meetingTime(b)),current=ordered.find(x=>x.status==='open')??ordered.find(x=>meetingTime(x)>=now.getTime()),currentIndex=current?ordered.findIndex(x=>x.id===current.id):-1,previous=currentIndex>0?ordered[currentIndex-1]:ordered.filter(x=>meetingTime(x)<now.getTime()).at(-1),future=currentIndex>=0?ordered.slice(currentIndex+1):ordered.filter(x=>meetingTime(x)>now.getTime()),focusMeetings=[previous,current,...future.slice(0,4)].filter((x,i,a)=>x&&a.findIndex(y=>y.id===x.id)===i);
     const declarationPairs=await Promise.all(focusMeetings.map(async m=>[m.id,await app.meetingBeneficiaries(m.id).catch(()=>[]),await app.meetingAttendance(m.id).catch(()=>[])])),meetingData=new Map(declarationPairs.map(([id,beneficiaries,attendance])=>[id,{beneficiaries,attendance}]));
     const timeline=make('section','group-home-block');timeline.append(make('h3','',t('Classement / calendrier : séance précédente · actuelle · prochaines','Schedule: previous · current · upcoming')));

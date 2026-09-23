@@ -56,11 +56,11 @@ interface WorkersAILike {
   run?(model:string,input:Record<string,unknown>,options?:Record<string,unknown>):Promise<unknown>;
 }
 
-const RELEASE_VERSION='1.5.0-audit-complete';
-const RELEASE_BUILD_ID='eco-system-1.5.0-20260923';
+const RELEASE_VERSION='1.5.2-unified-ux-blueprint';
+const RELEASE_BUILD_ID='eco-system-1.5.2-20260923';
 const RELEASE_SCHEMA_VERSION='d1-additive-20260923';
-const RELEASE_POLICY_VERSION='audit-20260923';
-const RELEASE_PWA_CACHE='eco-system-v150-audit-complete-20260923';
+const RELEASE_POLICY_VERSION='blueprint-ux-20260923';
+const RELEASE_PWA_CACHE='eco-system-v152-unified-ux-blueprint-20260923';
 
 const defaultRepo = new InMemoryPlatformRepository();
 const defaultReferralBudgets = new InMemoryReferralBudgetStore();
@@ -475,15 +475,31 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
     if(request.method==='POST'&&url.pathname==='/api/v1/business/clients'){const body=await readJson<any>(request);return json(await businessStudio.createClient(body),201,cors);}
     const businessClient=url.pathname.match(/^\/api\/v1\/business\/clients\/([^/]+)\/state$/);
     if(businessClient&&request.method==='POST'){const body=await readJson<any>(request);return json(await businessStudio.setClientState(businessClient[1]!,String(body.state??'PROSPECT') as any),200,cors);}
+    if(request.method==='POST'&&url.pathname==='/api/v1/business/offers'){const body=await readJson<any>(request);return json(await businessStudio.createOffer(body),201,cors);}
+    const businessOffer=url.pathname.match(/^\/api\/v1\/business\/offers\/([^/]+)\/state$/);
+    if(businessOffer&&request.method==='POST'){const body=await readJson<any>(request);return json(await businessStudio.setOfferState(businessOffer[1]!,String(body.state??'ACTIVE') as any),200,cors);}
+    if(request.method==='POST'&&url.pathname==='/api/v1/business/requests'){const body=await readJson<any>(request);return json(await businessStudio.createRequest(body),201,cors);}
+    const businessRequest=url.pathname.match(/^\/api\/v1\/business\/requests\/([^/]+)\/state$/);
+    if(businessRequest&&request.method==='POST'){const body=await readJson<any>(request);return json(await businessStudio.setRequestState(businessRequest[1]!,String(body.state??'OPEN') as any),200,cors);}
     if(request.method==='POST'&&url.pathname==='/api/v1/business/quotes'){const body=await readJson<any>(request);return json(await businessStudio.createQuote(body),201,cors);}
     const businessQuote=url.pathname.match(/^\/api\/v1\/business\/quotes\/([^/]+)\/decision$/);
     if(businessQuote&&request.method==='POST'){const body=await readJson<any>(request);return json(await businessStudio.quoteDecision(businessQuote[1]!,String(body.state??'SENT') as any),200,cors);}
+    if(request.method==='POST'&&url.pathname==='/api/v1/business/orders'){const body=await readJson<any>(request);return json(await businessStudio.createOrder(body),201,cors);}
+    const businessOrder=url.pathname.match(/^\/api\/v1\/business\/orders\/([^/]+)\/state$/);
+    if(businessOrder&&request.method==='POST'){const body=await readJson<any>(request);return json(await businessStudio.setOrderState(businessOrder[1]!,String(body.state??'DRAFT') as any),200,cors);}
     if(request.method==='POST'&&url.pathname==='/api/v1/business/contracts'){const body=await readJson<any>(request);return json(await businessStudio.createContract(body),201,cors);}
     if(request.method==='POST'&&url.pathname==='/api/v1/business/invoices'){const body=await readJson<any>(request);return json(await businessStudio.issueInvoice(body),201,cors);}
     if(request.method==='POST'&&url.pathname==='/api/v1/business/payments'){const body=await readJson<any>(request);return json(await businessStudio.recordPayment(body),201,cors);}
     if(request.method==='POST'&&url.pathname==='/api/v1/business/expenses'){const body=await readJson<any>(request);return json(await businessStudio.recordExpense(body),201,cors);}
+    if(request.method==='POST'&&url.pathname==='/api/v1/business/revenues'){const body=await readJson<any>(request);return json(await businessStudio.recordRevenue(body),201,cors);}
+    if(request.method==='POST'&&url.pathname==='/api/v1/business/communications'){const body=await readJson<any>(request);return json(await businessStudio.logCommunication(body),201,cors);}
+    if(request.method==='POST'&&url.pathname==='/api/v1/business/actions'){const body=await readJson<any>(request);return json(await businessStudio.createAction(body),201,cors);}
+    const businessAction=url.pathname.match(/^\/api\/v1\/business\/actions\/([^/]+)\/complete$/);
+    if(businessAction&&request.method==='POST')return json(await businessStudio.completeAction(businessAction[1]!),200,cors);
     if(request.method==='POST'&&url.pathname==='/api/v1/business/time'){const body=await readJson<any>(request);return json(await businessStudio.recordTime(body),201,cors);}
     if(request.method==='POST'&&url.pathname==='/api/v1/business/scenarios'){const body=await readJson<any>(request);return json(await businessStudio.scenario(body),201,cors);}
+    if(request.method==='GET'&&url.pathname==='/api/v1/business/profitability')return json({items:await businessStudio.profitability()},200,cors);
+    if(request.method==='GET'&&url.pathname==='/api/v1/business/brief')return json(await businessStudio.operatingBrief(),200,cors);
 
     if(request.method==='GET'&&url.pathname==='/api/v1/kernel') return json({services:['context','policy','workflow','events','audit','obligations','evidence','reconciliation','cases','inbox','notifications','configuration','features','data-governance','compatibility','resource-governor'],features:{groupLaunch:kernel.features.enabled('group-launch-studio'),meetingSync:kernel.features.enabled('meeting-sync-core'),realMoney:kernel.features.enabled('financial-real-money'),manualCashLedger:true}},200,cors);
 

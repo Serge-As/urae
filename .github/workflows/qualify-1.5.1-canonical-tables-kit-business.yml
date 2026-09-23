@@ -1,0 +1,20 @@
+name: Eco-System 1.5.x — Canonical Core & Unified UX Qualification
+on:
+  push:
+    branches: ['fix/1.5.1-canonical-financial-tables-kit-business-20260923','release/1.5.2-unified-ux-blueprint-20260923']
+  pull_request:
+    branches: ['next/1.5.0-audit-complete-platform-20260923']
+permissions:
+  contents: read
+jobs:
+  qualify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: npm run ci

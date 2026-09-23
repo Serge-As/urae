@@ -1,9 +1,9 @@
 {
   "name": "tontine-platform",
-  "version": "1.5.0-audit-complete",
+  "version": "1.5.2-unified-ux-blueprint",
   "private": true,
   "type": "module",
-  "description": "Eco-System 1.5.0: audit-complete hardening of finance, offline identity, governance, trash/reconstitution, Value Network, Business, Marketplace, Knowledge, Academy and supervision.",
+  "description": "Eco-System 1.5.2: unified canonical finance, stable PWA/session restoration, three user experience modes, Ready-to-Use Kit, Business Studio and Blueprint 5.0.0 consolidation.",
   "engines": {
     "node": ">=24"
   },

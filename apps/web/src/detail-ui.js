@@ -15,61 +15,8 @@ export function mountDetailUI({app,navigate,getGroups,getMembers,getMeetings,get
   const humanMeetingLabel=m=>'Réunion du '+date(m?.scheduledAt??m?.openedAt??m?.createdAt??'');
   const actorName=id=>getMembers().find(m=>m.userId===id)?.displayName??id;
 
-  const quickEntry=({membershipId,rubricId,meetingId,currentAmount=0,onSaved})=>{
-    const box=el('div',undefined,'matrix-entry');box.dataset.membershipId=membershipId;box.dataset.rubricId=rubricId;box.dataset.meetingId=meetingId;
-    const input=document.createElement('input');input.type='number';input.min='0';input.step='1';input.inputMode='numeric';input.placeholder=Number(currentAmount)>0?'Modifier…':'Saisir…';input.setAttribute('aria-label','Nouvelle valeur totale de la cellule');
-    const button=el('button','✓','matrix-save');button.type='button';button.title='Valider la nouvelle valeur totale';
-    const save=async()=>{try{
-      const raw=input.value.trim();if(raw==='')return;const targetAmount=Number(raw);if(!Number.isSafeInteger(targetAmount)||targetAmount<0)throw Error('Le montant doit être un entier positif ou zéro.');
-      const current=Math.max(0,Number(currentAmount??0));if(targetAmount===current){input.value='';return;}
-      const meeting=getMeetings().find(x=>x.id===meetingId);let reason='';
-      if(current>0||meeting?.status==='closed'){reason=prompt(`Motif de la modification ${fmt(current)} → ${fmt(targetAmount)} :`,'Correction de la valeur de la cellule')??'';if(!reason.trim())return;}
-      button.disabled=true;input.disabled=true;
-      const result=await app.setFinancialCellTarget({membershipId,rubricId,meetingId,targetAmount,currentAmount:current,reason:reason.trim()});
-      if(result?.status==='CONSENSUS_REQUIRED')box.classList.add('pending-consensus');
-      input.value='';await onSaved?.();
-    }catch(e){showError(e);}finally{button.disabled=false;input.disabled=false;}};
-    button.onclick=()=>void save();input.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();void save();}});box.append(input,button);return box;
-  };
-
-  const buildExerciseMatrix=({member,statement,operational,editable})=>{
-    const meetings=getMeetings().slice().sort((a,b)=>(a.scheduledAt??a.openedAt).localeCompare(b.scheduledAt??b.openedAt));
-    const rubrics=getRubrics().filter(r=>r.status!=='ARCHIVED');
-    const wrap=el('div',undefined,'matrix-wrap member-exercise-matrix');const table=document.createElement('table');table.className='meeting-matrix';
-    const thead=document.createElement('thead'),hr=document.createElement('tr');hr.append(el('th','Séance / période'));
-    for(const r of rubrics){const th=document.createElement('th');th.append(link(r.name,'rubric',r.id));hr.append(th);}thead.append(hr);table.append(thead);
-    const tbody=document.createElement('tbody');
-    const rows=meetings.length?meetings:[{id:'',title:'Sans séance',openedAt:''}];
-    for(const meeting of rows){
-      const tr=document.createElement('tr'),th=document.createElement('th');if(meeting.id)th.append(link(humanMeetingLabel(meeting),'meeting',meeting.id));else th.textContent='Sans séance';tr.append(th);
-      for(const rubric of rubrics){
-        const opRow=operational?.exerciseMatrix?.find(x=>x.meetingId===meeting.id),opCell=opRow?.cells?.[rubric.id],confirmed=opCell?Number(opCell.net??0):amountFor(statement.receipts,{meetingId:meeting.id||undefined,rubricId:rubric.id});const td=document.createElement('td'),shown=el('strong',fmt(confirmed),'matrix-confirmed');shown.title=opCell?'Net de la même écriture canonique que la feuille de séance':'Montant net confirmé dans le Ledger';td.append(shown);
-        if(editable&&meeting.id)td.append(quickEntry({membershipId:member.id,rubricId:rubric.id,meetingId:meeting.id,currentAmount:Math.max(0,confirmed),onSaved:async()=>{await open('member',member.id,true);}}));
-        tr.append(td);
-      }
-      tbody.append(tr);
-    }
-    table.append(tbody);wrap.append(table);return wrap;
-  };
-
-  const buildMeetingMatrix=({meeting,ledger,editable})=>{
-    const members=getMembers(),rubrics=getRubrics().filter(r=>r.status!=='ARCHIVED');
-    const wrap=el('div',undefined,'matrix-wrap meeting-entry-matrix'),table=document.createElement('table');table.className='meeting-matrix';
-    const thead=document.createElement('thead'),hr=document.createElement('tr');hr.append(el('th','Membre'));
-    for(const r of rubrics){const th=document.createElement('th');th.append(link(r.name,'rubric',r.id));hr.append(th);}thead.append(hr);table.append(thead);
-    const tbody=document.createElement('tbody');
-    for(const member of members){const tr=document.createElement('tr'),th=document.createElement('th');th.append(link(member.displayName,'member',member.id));tr.append(th);
-      for(const rubric of rubrics){const td=document.createElement('td'),confirmed=amountFor(ledger.receipts,{meetingId:meeting.id,rubricId:rubric.id});
-        // Filter member separately: this is the member x rubric cell, not the group total.
-        const cell=ledger.receipts.filter(r=>r.membershipId===member.id&&r.meetingId===meeting.id&&r.rubricId===rubric.id).reduce((n,r)=>n+Number(r.netAmount??0),0);
-        td.append(el('strong',fmt(cell),'matrix-confirmed'));
-        if(editable)td.append(quickEntry({membershipId:member.id,rubricId:rubric.id,meetingId:meeting.id,currentAmount:Math.max(0,cell),onSaved:async()=>{await open('meeting',meeting.id,true);}}));
-        tr.append(td);
-      }tbody.append(tr);
-    }
-    table.append(tbody);wrap.append(table);return wrap;
-  };
-
+  // 1.5.1: financial tables are rendered exclusively by main.js.
+  // Detail views create canonical hosts; they never construct a second matrix or editor.
   const groupDetail=async id=>{
     const g=getGroups().find(x=>x.id===id);if(!g)throw Error('GROUP_NOT_FOUND');
     title.textContent=g.name;subtitle.textContent='Identité du groupe, gouvernance et éléments reliés.';
@@ -92,7 +39,7 @@ export function mountDetailUI({app,navigate,getGroups,getMembers,getMeetings,get
     body.replaceChildren(identity);if(!managerOrSelf(m))return;
     let statement,operational;try{[statement,operational]=await Promise.all([app.memberStatement(m.id),app.memberOperationalSheet(m.id)]);}catch(e){showError(e);return;}
     metrics.append(metric(fmt(statement.totalNetContributions),'Cotisations nettes'),metric(fmt(statement.debtPrincipal??0),'Prêts / capital dû'),metric(fmt(statement.debtInterest??0),'Intérêts dus'),metric(fmt(statement.totalDebt??0),'Dette totale'),metric((operational?.rubrics??[]).length,'Rubriques de ma fiche'));
-    const sheet=card('Votre fiche individuelle');sheet.append(el('p','Chaque rubrique créée et non archivée du groupe apparaît ici. Chaque ligne est une séance/période. Cette fiche lit exactement la même vérité que la feuille de séance ; un membre voit sa propre fiche sans accéder aux fiches financières des autres.','hint'),buildExerciseMatrix({member:m,statement,operational,editable:isManager()}));body.append(sheet);
+    const sheet=card('Votre fiche individuelle'),host=el('div',undefined,'canonical-financial-table-host');host.dataset.canonicalFinancialHost='1';host.dataset.financialMode='individual';host.dataset.membershipId=m.id;host.dataset.showToolbar='false';host.dataset.editable=isManager()?'true':'false';sheet.append(el('p','Chaque rubrique créée et non archivée du groupe apparaît ici. Cette fiche utilise le même tableau canonique que la feuille de séance : même saisie montant + ✓, même remplacement exact et mêmes totaux par colonne.','truth-notice'),host);body.append(sheet);window.dispatchEvent(new CustomEvent('eco:render-canonical-financial-table',{detail:{root:host,mode:'individual',membershipId:m.id,showToolbar:false,editable:isManager()}}));
     try{
       const loans=(await app.listCompletion('LOAN')).filter(x=>String(x.data?.borrowerMembershipId??'')===m.id);if(loans.length){const loanCard=card('Prêts / dettes');for(const loan of loans){const a=el('article',undefined,'item');a.append(el('strong',loan.title),row('État',loan.data?.completionState??'—'),row('Capital initial',fmt(Number(loan.data?.principal??0))),row('Capital restant',fmt(Number(loan.data?.outstandingPrincipal??0))));loanCard.append(a);}body.append(loanCard);}
     }catch{}
@@ -175,7 +122,9 @@ export function mountDetailUI({app,navigate,getGroups,getMembers,getMeetings,get
         body.append(backOfficeCard);
 
         metrics.append(metric(receipts.length,'Encaissements'));
-        const sheet=card('Tableau complet de la séance');sheet.append(el('p','Membres en lignes, rubriques en colonnes. Les mêmes écritures alimentent les fiches individuelles, les rubriques et le Récap.','hint'),buildMeetingMatrix({meeting,ledger,editable:meeting.status==='open'}));
+        const sheet=card('Tableau complet de la séance'),meetingHost=el('div',undefined,'canonical-financial-table-host');meetingHost.dataset.canonicalFinancialHost='1';meetingHost.dataset.financialMode='meeting';meetingHost.dataset.meetingId=meeting.id;meetingHost.dataset.showToolbar='false';meetingHost.dataset.editable=manager?'true':'false';
+        sheet.append(el('p','Membres en lignes, rubriques en colonnes. Ce détail utilise le même tableau canonique que la feuille de séance et les fiches individuelles : saisie montant + ✓, remplacement exact et totaux de chaque colonne.','truth-notice'),meetingHost);
+        window.dispatchEvent(new CustomEvent('eco:render-canonical-financial-table',{detail:{root:meetingHost,mode:'meeting',meetingId:meeting.id,showToolbar:false,editable:manager}}));
         const manageActions=el('div',undefined,'actions');
         for(const [label,view] of [['Fiches individuelles','operations'],['Gérer les membres','members'],['Gérer / archiver les rubriques','operations'],['Ouvrir le Récap','recap']]){const b=el('button',label,'secondary');b.type='button';b.onclick=()=>navigate(view);manageActions.append(b);}
         sheet.append(manageActions);body.append(sheet);

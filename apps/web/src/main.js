@@ -60,7 +60,7 @@ let launchStudio;
 let modules = [];
 let selectedLot = 'ALL';
 let deferredInstallPrompt;
-const CAHIER_VERSION = '1.4.5-final-mega-offline-governance';
+const CAHIER_VERSION = '1.5.1-canonical-financial-tables-kit-business';
 const $ = (s) => { const e = document.querySelector(s); if (!e)
     throw new Error(`UI_ELEMENT_NOT_FOUND:${s}`); return e; };
 const val = (id) => document.getElementById(id).value.trim();
@@ -215,7 +215,7 @@ const adManagerUI = mountAdManagerUI({ app, notify: toast, showError: fail, isMa
 const tontineManagerUI = mountTontineManagerUI({ app, getRubrics: () => rubrics, getMembers: () => members, notify: toast, showError: fail, fmt, isManager });
 const savingsYieldUI = mountSavingsYieldUI({ app, getMembers: () => members, notify: toast, showError: fail, fmt, isManager });
 const externalProgramsUI = mountExternalProgramsUI({ app, notify: toast, showError: fail, isManager, fmt });
-const businessStudioUI = mountBusinessStudioUI({app,notify:toast,showError:fail});
+const businessStudioUI = mountBusinessStudioUI({app,navigate:go,notify:toast,showError:fail});
 const coreEconomicLearningUI = mountCoreEconomicLearningUI({app,notify:toast,showError:fail,isManager});
 const founderControlUI = mountFounderControlUI({ app, notify: toast, showError: fail });
 const assistanceRulebookUI = mountAssistanceRulebookUI({ app, notify: toast, showError: fail, isManager });
@@ -444,52 +444,14 @@ const makeFinancialEntryCell=({member,rubric,meetingId,editable=true})=>{
         const result=await app.setFinancialCellTarget({meetingId,membershipId:member.id,rubricId:rubric.id,targetAmount:target,currentAmount:current,currentVersion:exactCellVersion(member.id,rubric.id,meetingId),reason:reason.trim()});
         if(result?.status==='CONSENSUS_REQUIRED'){holder.classList.add('pending-consensus');toast(tx('Modification proposée : la valeur reste inchangée jusqu’à la décision des gestionnaires.','Change proposed: the value remains unchanged until managers decide.'));}
         else if(result?.status==='QUEUED_CONSENSUS'||result?.queued)toast(tx('Modification conservée hors ligne pour confrontation à la reconnexion.','Change saved offline for reconciliation when reconnected.'));
-        else toast(tx('Valeur enregistrée.','Value saved.'));
-        input.value='';await renderLedger();await sessionsUI.refresh?.();renderIndividualSheetMatrix();
+        else if(result?.selfBenefit)toast(tx('⚠ Correction de votre propre situation : ancienne valeur, contrepassation et nouvelle valeur sont tracées. Un autre responsable habilité doit la vérifier.','⚠ Correction of your own situation: previous value, reversal and new value are traced. Another authorized manager must review it.'));
+        else if(result?.requiresIndependentReview)toast(tx('Correction enregistrée avec ancienne valeur, contrepassation et nouvelle valeur. Un autre responsable habilité doit la vérifier avant validation institutionnelle.','Correction recorded with previous value, reversal and new value. Another authorized manager must review it before institutional confirmation.'));
+        else toast(tx('Valeur enregistrée avec traçabilité de la valeur cible.','Target value saved with an audit trail.'));
+        input.value='';await renderLedger();window.dispatchEvent(new CustomEvent('eco:financial-data-changed',{detail:{meetingId,membershipId:member.id,rubricId:rubric.id}}));await sessionsUI.refresh?.();renderIndividualSheetMatrix();
       }catch(e){fail(e);}finally{validate.disabled=false;input.disabled=false;}
     });
     validate.onclick=submit;input.addEventListener('keydown',event=>{if(event.key==='Enter'){event.preventDefault();submit();}});
     holder.append(input,validate);return holder;
-};
-
-const openFinancialCellEditor=({member,rubric,meetingId})=>{
-    const meeting=meetings.find(x=>x.id===meetingId);if(!meeting){fail(new Error('MEETING_NOT_FOUND'));return;}
-    if(!isManager()){fail(new Error('FORBIDDEN_SCOPE'));return;}
-    const current=exactCellAmount(member.id,rubric.id,meetingId);
-    document.getElementById('financialCellEditor')?.remove();
-    const dialog=document.createElement('dialog');dialog.id='financialCellEditor';dialog.className='financial-cell-editor';
-    const h=document.createElement('h2');h.textContent=tx('Saisir / corriger la valeur','Enter / correct value');
-    const context=document.createElement('p');context.textContent=`${member.displayName} · ${rubric.name} · ${meetingLabel(meeting)}`;
-    const currentLine=document.createElement('p');currentLine.className='current-value';currentLine.textContent=tx('Valeur actuelle : ','Current value: ')+fmt(current);
-    const warning=document.createElement('p');warning.className=meeting.status==='closed'?'truth-notice danger':'hint';
-    warning.textContent=meeting.status==='closed'
-      ? tx('Séance clôturée : toute correction reste tracée et déclenche une alerte aux gestionnaires et au membre.','Closed meeting: every correction remains audited and alerts managers and the member.')
-      : current>0
-        ? tx('Vous indiquez la nouvelle valeur totale de cette cellule. Eco-System ne l’ajoutera pas à l’ancienne valeur. Si un autre gestionnaire avait saisi la donnée, une confrontation sera ouverte.','Enter the new total value for this cell. Eco-System will not add it to the old value. If another manager entered it, reconciliation will open.')
-        : tx('Nouvelle saisie pendant une séance ouverte : le membre recevra une alerte verte.','New entry during an open meeting: the member will receive a green alert.');
-    const form=document.createElement('form');form.method='dialog';form.className='form-grid';
-    const amount=document.createElement('input');amount.type='number';amount.min='0';amount.step='1';amount.inputMode='numeric';amount.required=true;amount.value=String(current);
-    const amountLabel=document.createElement('label');amountLabel.textContent=tx('Nouvelle valeur totale (F CFA)','New total value (XAF)');amountLabel.append(amount);
-    const reason=document.createElement('textarea');reason.rows=3;reason.placeholder=tx('Motif de la correction / précision utile','Reason for correction / useful note');if(current>0||meeting.status==='closed')reason.required=true;
-    const reasonLabel=document.createElement('label');reasonLabel.className='full';reasonLabel.textContent=tx('Motif','Reason');reasonLabel.append(reason);
-    const actions=document.createElement('div');actions.className='actions full';
-    const save=document.createElement('button');save.type='submit';save.className='primary';save.textContent=current>0?tx('Proposer / enregistrer cette valeur','Propose / save this value'):tx('Enregistrer cette valeur','Save this value');
-    const cancel=document.createElement('button');cancel.type='button';cancel.className='secondary';cancel.textContent=tx('Annuler','Cancel');cancel.onclick=()=>dialog.close();
-    actions.append(save,cancel);form.append(amountLabel,reasonLabel,actions);dialog.append(h,context,currentLine,warning,form);document.body.append(dialog);
-    form.onsubmit=e=>void(async()=>{
-        e.preventDefault();const target=Number(amount.value);
-        if(!Number.isSafeInteger(target)||target<0){fail(new Error('INVALID_CONTRIBUTION_AMOUNT'));return;}
-        if(target===current){dialog.close();toast(tx('Aucun changement : la valeur est déjà celle-ci.','No change: this is already the current value.'));return;}
-        try{
-            save.disabled=true;
-            const result=await app.setFinancialCellTarget({meetingId,membershipId:member.id,rubricId:rubric.id,targetAmount:target,currentAmount:current,currentVersion:exactCellVersion(member.id,rubric.id,meetingId),reason:reason.value.trim()});
-            if(result?.status==='CONSENSUS_REQUIRED')toast(tx('La valeur n’a pas été modifiée : confrontation ouverte entre gestionnaires.','Value not changed: manager reconciliation opened.'));
-            else if(result?.status==='QUEUED_CONSENSUS'||result?.queued)toast(tx('Opération conservée hors ligne. La correction sera confrontée / synchronisée à la reconnexion.','Operation saved offline. The correction will be reconciled / synchronized on reconnection.'));
-            else toast(tx('Valeur enregistrée avec traçabilité.','Value saved with audit trail.'));
-            dialog.close();await renderLedger();await sessionsUI.refresh?.();renderIndividualSheetMatrix();
-        }catch(err){fail(err);}finally{save.disabled=false;}
-    });
-    dialog.addEventListener('close',()=>dialog.remove(),{once:true});dialog.showModal();amount.focus();amount.select();
 };
 
 const ensureMatrixMeeting=()=>{
@@ -498,71 +460,111 @@ const ensureMatrixMeeting=()=>{
     matrixMeetingId=meetings.find(x=>x.status==='open')?.id??meetings.filter(x=>x.status!=='cancelled').at(-1)?.id??'';
     return matrixMeetingId;
 };
-const renderMeetingMatrix = () => {
-    const root = $('#meetingMatrix');
-    if (!isManager()) {
-        root.innerHTML = '<div class="empty-state">'+tx('La feuille générale de séance est réservée aux responsables habilités. Utilisez « Fiches membres » pour consulter votre propre situation.','The general meeting sheet is restricted to authorized managers. Use “Member sheets” to view your own situation.')+'</div>';
-        return;
-    }
-    if (!members.length || !rubrics.length) {
-        root.innerHTML = `<div class="empty-state">${tx('Ajoutez au moins un membre et une rubrique pour afficher la matrice membres × rubriques.','Add at least one member and one rubric to display the member × rubric matrix.')}</div>`;
-        return;
-    }
-    const selectedMeeting=ensureMatrixMeeting();
-    if(!selectedMeeting){root.innerHTML='<div class="empty-state">'+tx('Créez une séance avant de saisir des données financières.','Create a meeting before entering financial data.')+'</div>';return;}
-    const table = document.createElement('table');table.className = 'meeting-matrix';
-    const head = document.createElement('thead'),hr = document.createElement('tr');
-    hr.innerHTML = `<th>${tx('Membre','Member')}</th>` + rubrics.filter(r=>r.status!=='ARCHIVED').map(r => html`<th>${r.name}</th>`).join('');
-    head.append(hr);table.append(head);const body = document.createElement('tbody');
-    for (const m of members.filter(x=>x.status!=='left')) {
-        const tr = document.createElement('tr'),name = document.createElement('td');
-        name.innerHTML = html`<strong>${m.displayName}</strong><small>${m.roles.join(', ')}</small>`;tr.append(name);
-        for (const rubric of rubrics.filter(x=>x.status!=='ARCHIVED')) {
-            const td=document.createElement('td');td.append(makeFinancialEntryCell({member:m,rubric,meetingId:selectedMeeting,editable:isManager()}));tr.append(td);
-        }
-        body.append(tr);
-    }
-    const totalRow=document.createElement('tr');totalRow.className='table-total-row';const totalLabel=document.createElement('th');totalLabel.textContent=tx('TOTAL','TOTAL');totalRow.append(totalLabel);
-    for(const rubric of rubrics.filter(x=>x.status!=='ARCHIVED')){const td=document.createElement('td');td.textContent=fmt(members.filter(x=>x.status!=='left').reduce((sum,m)=>sum+exactCellAmount(m.id,rubric.id,selectedMeeting),0));totalRow.append(td);}
-    body.append(totalRow);
-    table.append(body);
-    const toolbar=document.createElement('div');toolbar.className='session-safety-toolbar';
-    const label=document.createElement('label');label.textContent=tx('Séance de saisie : ','Entry meeting: ');
-    const scope=document.createElement('select');scope.id='meetingMatrixScope';scope.setAttribute('aria-label',tx('Séance exacte de la matrice','Exact matrix meeting'));
-    for(const m of meetings.filter(x=>x.status!=='cancelled').slice().sort((a,b)=>String(a.scheduledAt??a.openedAt).localeCompare(String(b.scheduledAt??b.openedAt)))){
-        const option=document.createElement('option');option.value=m.id;option.textContent=meetingLabel(m)+' · '+(m.status==='closed'?tx('clôturée','closed'):tx('ouverte','open'));scope.append(option);
-    }
-    scope.value=selectedMeeting;scope.onchange=()=>{matrixMeetingId=scope.value;try{sessionStorage.setItem('eco.matrixMeetingId',matrixMeetingId);}catch{}renderMeetingMatrix();renderIndividualSheetMatrix();};label.append(scope);
-    const other=document.createElement('button');other.type='button';other.className='secondary';other.textContent=tx('Voir les séances','View meetings');other.onclick=()=>go('sessions',{meetingId:selectedMeeting,force:true});
-    const add=document.createElement('button');add.type='button';add.className='secondary';add.textContent=tx('+ Nouvelle séance','+ New meeting');add.onclick=()=>go('sessions',{anchor:'sessionsCreateForm',force:true});
-    toolbar.append(label,other,add);
-    const note=document.createElement('p');note.className='truth-notice';note.textContent=tx('Sécurité : chaque cellule représente la valeur totale pour la séance choisie. Remplacer 1 000 par 500 donne 500 — jamais 1 500. Une valeur existante saisie dans un contexte multi-gestionnaires passe par confrontation avant modification.','Safety: each cell is the total value for the selected meeting. Replacing 1,000 with 500 gives 500 — never 1,500. An existing value in a multi-manager context goes through reconciliation before changing.');
-    root.replaceChildren(toolbar,note,table);
+const normalizeFinancialLabel=value=>String(value??'').normalize('NFKD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim();
+const hasCanonicalLoanStamp=()=>rubrics.some(r=>r.status!=='ARCHIVED'&&normalizeFinancialLabel(r.name)==='timbre de pret');
+const isLegacyStampDuplicate=r=>hasCanonicalLoanStamp()&&normalizeFinancialLabel(r?.name)==='timbre';
+const activeFinancialRubrics=()=>rubrics.filter(x=>x.status!=='ARCHIVED'&&!isLegacyStampDuplicate(x));
+const activeFinancialMembers=()=>members.filter(x=>x.status!=='left');
+const canonicalFinancialObservers=new WeakMap();
+const protectCanonicalFinancialHost=root=>{
+    if(!root||canonicalFinancialObservers.has(root))return;
+    const observer=new MutationObserver(()=>{
+      if(root.dataset.canonicalTableReady!=='1'||root.dataset.canonicalRepairQueued==='1')return;
+      if(root.querySelector('.canonical-financial-matrix'))return;
+      root.dataset.canonicalRepairQueued='1';
+      queueMicrotask(()=>{
+        delete root.dataset.canonicalRepairQueued;
+        if(!root.isConnected||root.dataset.canonicalTableReady!=='1'||root.querySelector('.canonical-financial-matrix'))return;
+        renderCanonicalFinancialTable({
+          root,
+          mode:root.dataset.financialMode||'meeting',
+          meetingId:root.dataset.meetingId||'',
+          membershipId:root.dataset.membershipId||'',
+          showToolbar:root.dataset.showToolbar!=='false',
+          editable:root.dataset.editable!=='false'
+        });
+      });
+    });
+    observer.observe(root,{childList:true});
+    canonicalFinancialObservers.set(root,observer);
 };
-
+const renderCanonicalFinancialTable=({root,mode='meeting',meetingId='',membershipId='',showToolbar=true,editable=isManager()})=>{
+    if(!root)return;
+    protectCanonicalFinancialHost(root);
+    root.dataset.canonicalFinancialHost='1';root.dataset.canonicalFinancialOwner='main-v151';root.dataset.canonicalTableReady='0';root.dataset.financialMode=mode;root.dataset.meetingId=meetingId||'';root.dataset.membershipId=membershipId||'';root.dataset.showToolbar=showToolbar===false?'false':'true';root.dataset.editable=editable===false?'false':'true';
+    root.replaceChildren();
+    const activeRubrics=activeFinancialRubrics(),activeMembers=activeFinancialMembers();
+    if(!activeRubrics.length||!activeMembers.length){root.innerHTML='<div class="empty-state">'+tx('Ajoutez au moins un membre et une rubrique active.','Add at least one member and one active rubric.')+'</div>';return;}
+    const wrap=document.createElement('div');wrap.className='matrix-wrap canonical-financial-wrap';
+    const table=document.createElement('table');table.className='meeting-matrix canonical-financial-matrix';
+    const head=document.createElement('thead'),hr=document.createElement('tr'),body=document.createElement('tbody');
+    if(mode==='meeting'){
+      if(!isManager()){root.innerHTML='<div class="empty-state">'+tx('La feuille générale de séance est réservée aux responsables habilités.','The general meeting sheet is restricted to authorized managers.')+'</div>';return;}
+      const requested=meetingId&&meetings.some(x=>x.id===meetingId&&x.status!=='cancelled')?meetingId:'';
+      const selectedMeeting=requested||ensureMatrixMeeting();
+      if(!selectedMeeting){root.innerHTML='<div class="empty-state">'+tx('Créez une séance avant de saisir des données financières.','Create a meeting before entering financial data.')+'</div>';return;}
+      matrixMeetingId=selectedMeeting;root.dataset.meetingId=selectedMeeting;
+      hr.append(document.createElement('th'));hr.firstChild.textContent=tx('Membre','Member');
+      for(const r of activeRubrics){const th=document.createElement('th');th.textContent=r.name;hr.append(th);}
+      const totalHead=document.createElement('th');totalHead.textContent=tx('Total membre','Member total');hr.append(totalHead);head.append(hr);table.append(head);
+      for(const m of activeMembers){
+        const tr=document.createElement('tr'),name=document.createElement('th');name.innerHTML=html`<strong>${m.displayName}</strong><small>${m.roles.join(', ')}</small>`;tr.append(name);let rowTotal=0;
+        for(const r of activeRubrics){const value=exactCellAmount(m.id,r.id,selectedMeeting);rowTotal+=value;const td=document.createElement('td');td.append(makeFinancialEntryCell({member:m,rubric:r,meetingId:selectedMeeting,editable:Boolean(editable&&isManager())}));tr.append(td);}
+        const total=document.createElement('td');total.className='table-row-total';total.textContent=fmt(rowTotal);tr.append(total);body.append(tr);
+      }
+      const totalRow=document.createElement('tr');totalRow.className='table-total-row';const totalLabel=document.createElement('th');totalLabel.textContent=tx('TOTAL COLONNES','COLUMN TOTALS');totalRow.append(totalLabel);let grand=0;
+      for(const r of activeRubrics){const amount=activeMembers.reduce((sum,m)=>sum+exactCellAmount(m.id,r.id,selectedMeeting),0);grand+=amount;const td=document.createElement('td');td.textContent=fmt(amount);totalRow.append(td);}
+      const grandTd=document.createElement('td');grandTd.className='table-grand-total';grandTd.textContent=fmt(grand);totalRow.append(grandTd);body.append(totalRow);
+      table.append(body);wrap.append(table);
+      const note=document.createElement('p');note.className='truth-notice';note.textContent=tx('Une seule matrice financière canonique est utilisée ici et dans les fiches individuelles. Chaque cellule est la valeur totale de la séance : Remplacer 1 000 par 500 donne 500. La dernière ligne totalise chaque colonne et la dernière colonne totalise chaque membre.','One canonical financial matrix is used here and in individual sheets. Each cell is the total value for the meeting: replacing 1,000 with 500 gives 500. The last row totals every column and the last column totals every member.');
+      if(showToolbar){
+        const toolbar=document.createElement('div');toolbar.className='session-safety-toolbar';
+        const label=document.createElement('label');label.textContent=tx('Séance de saisie : ','Entry meeting: ');
+        const scope=document.createElement('select');scope.id='meetingMatrixScope';scope.className='meeting-matrix-scope';scope.setAttribute('aria-label',tx('Séance exacte de la matrice','Exact matrix meeting'));
+        for(const m of meetings.filter(x=>x.status!=='cancelled').slice().sort((a,b)=>String(a.scheduledAt??a.openedAt).localeCompare(String(b.scheduledAt??b.openedAt)))){const o=document.createElement('option');o.value=m.id;o.textContent=meetingLabel(m)+' · '+(m.status==='closed'?tx('clôturée','closed'):tx('ouverte','open'));scope.append(o);}
+        scope.value=selectedMeeting;scope.onchange=()=>{matrixMeetingId=scope.value;try{sessionStorage.setItem('eco.matrixMeetingId',matrixMeetingId);}catch{}renderCanonicalFinancialTable({root,mode:'meeting',meetingId:matrixMeetingId,showToolbar,editable});renderIndividualSheetMatrix();};
+        label.append(scope);
+        const other=document.createElement('button');other.type='button';other.className='secondary';other.textContent=tx('Voir les séances','View meetings');other.onclick=()=>go('sessions',{meetingId:selectedMeeting,force:true});
+        const add=document.createElement('button');add.type='button';add.className='secondary';add.textContent=tx('+ Nouvelle séance','+ New meeting');add.onclick=()=>go('sessions',{anchor:'sessionsCreateForm',force:true});
+        toolbar.append(label,other,add);root.append(toolbar);
+      }
+      root.append(note,wrap);root.dataset.canonicalTableReady='1';return;
+    }
+    const member=activeMembers.find(x=>x.id===membershipId);
+    if(!member){root.innerHTML='<div class="empty-state">'+tx('Aucune fiche individuelle accessible.','No individual sheet available.')+'</div>';return;}
+    hr.append(document.createElement('th'));hr.firstChild.textContent=tx('Séance','Meeting');
+    for(const r of activeRubrics){const th=document.createElement('th');th.textContent=r.name;hr.append(th);}
+    const totalHead=document.createElement('th');totalHead.textContent=tx('Total séance','Meeting total');hr.append(totalHead);head.append(hr);table.append(head);
+    const activeMeetings=meetings.filter(x=>x.status!=='cancelled').slice().sort((a,b)=>String(a.scheduledAt??a.openedAt).localeCompare(String(b.scheduledAt??b.openedAt)));
+    for(const meeting of activeMeetings){
+      const tr=document.createElement('tr'),th=document.createElement('th');th.textContent=meetingLabel(meeting)+(meeting.status==='closed'?' · '+tx('clôturée','closed'):'');tr.append(th);let rowTotal=0;
+      for(const r of activeRubrics){const value=exactCellAmount(member.id,r.id,meeting.id);rowTotal+=value;const td=document.createElement('td');td.append(makeFinancialEntryCell({member,rubric:r,meetingId:meeting.id,editable:Boolean(editable&&isManager())}));tr.append(td);}
+      const total=document.createElement('td');total.className='table-row-total';total.textContent=fmt(rowTotal);tr.append(total);body.append(tr);
+    }
+    const totalRow=document.createElement('tr');totalRow.className='table-total-row';const label=document.createElement('th');label.textContent=tx('TOTAL COLONNES','COLUMN TOTALS');totalRow.append(label);let grand=0;
+    for(const r of activeRubrics){const amount=activeMeetings.reduce((sum,meeting)=>sum+exactCellAmount(member.id,r.id,meeting.id),0);grand+=amount;const td=document.createElement('td');td.textContent=fmt(amount);totalRow.append(td);}
+    const grandTd=document.createElement('td');grandTd.className='table-grand-total';grandTd.textContent=fmt(grand);totalRow.append(grandTd);body.append(totalRow);table.append(body);wrap.append(table);
+    const note=document.createElement('p');note.className='truth-notice';note.textContent=tx('Cette fiche utilise exactement le même éditeur financier que la feuille de séance. Les totaux de chaque rubrique figurent sur la dernière ligne.','This sheet uses exactly the same financial editor as the meeting sheet. Totals for every rubric appear on the last row.');
+    root.append(note,wrap);root.dataset.canonicalTableReady='1';
+};
+const renderMeetingMatrix=()=>renderCanonicalFinancialTable({root:document.querySelector('#meetingMatrix'),mode:'meeting',meetingId:ensureMatrixMeeting(),showToolbar:true,editable:isManager()});
 const renderIndividualSheetMatrix=()=>{
     const root=document.querySelector('#individualSheetMatrix'),select=document.querySelector('#individualSheetMember');if(!root||!select)return;
-    const previous=select.value;select.replaceChildren();
-    const visible=isManager()?members.filter(x=>x.status!=='left'):members.filter(x=>x.userId===app.currentActor()&&x.status!=='left');
+    const previous=select.value;select.replaceChildren();const visible=isManager()?activeFinancialMembers():activeFinancialMembers().filter(x=>x.userId===app.currentActor());
     for(const m of visible){const o=document.createElement('option');o.value=m.id;o.textContent=m.displayName;select.append(o);}
-    if(previous&&visible.some(x=>x.id===previous))select.value=previous;
-    const membershipId=select.value,member=visible.find(x=>x.id===membershipId);root.replaceChildren();
-    if(!member){root.innerHTML='<div class="empty-state">'+tx('Aucune fiche individuelle accessible.','No individual sheet available.')+'</div>';return;}
-    const table=document.createElement('table');table.className='meeting-matrix';const head=document.createElement('thead'),hr=document.createElement('tr');hr.append(document.createElement('th'));hr.firstChild.textContent=tx('Séance','Meeting');
-    for(const rubric of rubrics.filter(x=>x.status!=='ARCHIVED')){const th=document.createElement('th');th.textContent=rubric.name;hr.append(th);}const totalTh=document.createElement('th');totalTh.textContent='Total';hr.append(totalTh);head.append(hr);table.append(head);
-    const body=document.createElement('tbody');
-    for(const meeting of meetings.filter(x=>x.status!=='cancelled').slice().sort((a,b)=>String(a.scheduledAt??a.openedAt).localeCompare(String(b.scheduledAt??b.openedAt)))){
-        const tr=document.createElement('tr'),th=document.createElement('th');th.textContent=meetingLabel(meeting)+(meeting.status==='closed'?' · '+tx('clôturée','closed'):'');tr.append(th);let total=0;
-        for(const rubric of rubrics.filter(x=>x.status!=='ARCHIVED')){const value=exactCellAmount(member.id,rubric.id,meeting.id);total+=value;const td=document.createElement('td');
-            if(isManager())td.append(makeFinancialEntryCell({member,rubric,meetingId:meeting.id,editable:true}));else td.textContent=fmt(value);tr.append(td);
-        }
-        const td=document.createElement('td');td.textContent=fmt(total);tr.append(td);body.append(tr);
-    }
-    const totalRow=document.createElement('tr');totalRow.className='table-total-row';const label=document.createElement('th');label.textContent=tx('TOTAL','TOTAL');totalRow.append(label);let grand=0;
-    for(const rubric of rubrics.filter(x=>x.status!=='ARCHIVED')){const amount=meetings.filter(x=>x.status!=='cancelled').reduce((sum,meeting)=>sum+exactCellAmount(member.id,rubric.id,meeting.id),0);grand+=amount;const td=document.createElement('td');td.textContent=fmt(amount);totalRow.append(td);}
-    const grandTd=document.createElement('td');grandTd.textContent=fmt(grand);totalRow.append(grandTd);body.append(totalRow);
-    table.append(body);root.append(table);
+    if(previous&&visible.some(x=>x.id===previous))select.value=previous;else if(!select.value&&visible[0])select.value=visible[0].id;
+    renderCanonicalFinancialTable({root,mode:'individual',membershipId:select.value,showToolbar:false,editable:isManager()});
 };
+const renderAllCanonicalFinancialHosts=scope=>{
+  const provider=scope??document,roots=provider.querySelectorAll?[...provider.querySelectorAll('[data-canonical-financial-host="1"]')]:[];
+  for(const root of roots){if(root.id==='meetingMatrix'||root.id==='individualSheetMatrix')continue;renderCanonicalFinancialTable({root,mode:root.dataset.financialMode||'meeting',meetingId:root.dataset.meetingId||'',membershipId:root.dataset.membershipId||'',showToolbar:root.dataset.showToolbar!=='false',editable:root.dataset.editable!=='false'});}
+};
+window.addEventListener('eco:render-canonical-financial-table',event=>{
+  const d=event instanceof CustomEvent?event.detail??{}:{};const root=d.root instanceof Element?d.root:null;if(!root)return;
+  root.dataset.canonicalFinancialHost='1';root.dataset.financialMode=d.mode||'meeting';root.dataset.meetingId=d.meetingId||'';root.dataset.membershipId=d.membershipId||'';root.dataset.showToolbar=d.showToolbar===false?'false':'true';root.dataset.editable=d.editable===false?'false':'true';
+  renderCanonicalFinancialTable({root,mode:root.dataset.financialMode,meetingId:root.dataset.meetingId,membershipId:root.dataset.membershipId,showToolbar:root.dataset.showToolbar!=='false',editable:root.dataset.editable!=='false'});
+});
+window.addEventListener('eco:financial-data-changed',()=>{renderMeetingMatrix();renderIndividualSheetMatrix();renderAllCanonicalFinancialHosts();});
 document.querySelector('#individualSheetMember')?.addEventListener('change',renderIndividualSheetMatrix);
 document.querySelector('#meetingSheetViewBtn')?.addEventListener('click',()=>{document.querySelector('#meetingMatrixPanel').hidden=false;document.querySelector('#individualSheetsMode').hidden=true;document.querySelector('#meetingSheetViewBtn').classList.add('active');document.querySelector('#individualSheetsViewBtn').classList.remove('active');renderMeetingMatrix();});
 document.querySelector('#individualSheetsViewBtn')?.addEventListener('click',()=>{document.querySelector('#meetingMatrixPanel').hidden=true;document.querySelector('#individualSheetsMode').hidden=false;document.querySelector('#individualSheetsViewBtn').classList.add('active');document.querySelector('#meetingSheetViewBtn').classList.remove('active');renderIndividualSheetMatrix();});
@@ -1176,8 +1178,10 @@ $('#createGroupBtn').addEventListener('click',async()=>{
     say('2/3 · Création du groupe et de ses rubriques…');
     const group=await app.createGroupFromProject(project);
     lastProjectId=undefined;window.__ecoLastProjectReady=false;
-    say('3/3 · Synchronisation du groupe…');
-    await refreshGroupContext();toast(`Groupe créé : ${group.name}`);go('operations');
+    say('3/4 · Enregistrement du Kit prêt à l’emploi…');
+    await launchStudio.persistStarterKit?.(group.id);
+    say('4/4 · Synchronisation du groupe…');
+    await refreshGroupContext();toast(`Groupe créé : ${group.name} · Kit prêt à l’emploi archivé avec le groupe.`);go('operations');
   }catch(error){
     launchStudio.renderPreview();fail(Error(launchError(error)));
   }finally{$('#projectForm').inert=false;button.textContent=originalLabel;}
@@ -1387,12 +1391,13 @@ async function ensureCurrentServiceWorker(){
 }
 
 async function start() {
+    document.body.classList.add('auth-restoring');
     renderConnectivity();
     renderKernel();
     try {
         const session=await app.authStatus();
         if(!session.authenticated||!session.account){showAuth(session.offline?tx('Aucun compte local n’existe encore. Créez votre compte maintenant : Internet n’est pas nécessaire.','No local account exists yet. Create your account now: Internet is not required.'):undefined,session.offline?'register':undefined);return;}
-        $('#authScreen').hidden=true;document.body.classList.remove('signed-out');
+        $('#authScreen').hidden=true;document.body.classList.remove('signed-out','auth-restoring');
         $('#accountName').textContent=session.account.displayName+(session.registrationState==='LOCAL_PENDING_REGISTRATION'?tx(' · local',' · local'):'');
         const claim=document.querySelector('#claimLocalAccountBtn');
         if(claim){
@@ -1454,14 +1459,14 @@ const setAuthMode=mode=>{
     $('#authSubmit').textContent=authMode==='register'?'Créer mon compte hors ligne ou en ligne':'Me connecter';
     $('#authPassword').autocomplete=authMode==='register'?'new-password':'current-password';
 };
-function showAuth(message='',preferredMode){document.body.classList.add('signed-out');$('#authScreen').hidden=false;if(preferredMode)setAuthMode(preferredMode);if(message)$('#authError').textContent=message;$('#authUsername').focus();}
+function showAuth(message='',preferredMode){document.body.classList.remove('auth-restoring');document.body.classList.add('signed-out');$('#authScreen').hidden=false;if(preferredMode)setAuthMode(preferredMode);if(message)$('#authError').textContent=message;$('#authUsername').focus();}
 document.querySelectorAll('[data-auth-mode]').forEach(button=>button.addEventListener('click',()=>setAuthMode(button.dataset.authMode)));
 document.querySelector('#authShowPassword')?.addEventListener('change',event=>{const input=document.querySelector('#authPassword');if(input)input.type=event.target.checked?'text':'password';});
 
 $('#authForm').addEventListener('submit',async event=>{
     event.preventDefault();const button=$('#authSubmit');button.disabled=true;$('#authError').textContent='';
     try{
-        await app.authenticate(authMode,{username:val('authUsername'),password:document.getElementById('authPassword').value,displayName:val('authName')});
+        await app.authenticate(authMode,{username:val('authUsername'),password:document.getElementById('authPassword').value,displayName:val('authName'),rememberDevice:Boolean(document.getElementById('authRememberDevice')?.checked)});
         $('#authPassword').value='';clearFail();await start();
         if(!navigator.onLine&&authMode==='register')toast(tx('Compte créé sur ce téléphone. Vous pouvez commencer sans Internet.','Account created on this phone. You can start without Internet.'));
     }

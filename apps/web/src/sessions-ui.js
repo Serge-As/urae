@@ -131,7 +131,7 @@ export function mountSessionsUI({app,getGroups,getMembers,getMeetings,getRubrics
   };
 
   const renderSheet=async(c)=>{
-    const {meeting,me,members,rubrics}=c,section=card(t('Feuille de séance','Meeting sheet'));if(!meeting){section.append(el('div',t('Aucune séance.','No session.'),'empty-state'));return section;}
+    const {meeting,me}=c,section=card(t('Feuille de séance','Meeting sheet'));if(!meeting){section.append(el('div',t('Aucune séance.','No session.'),'empty-state'));return section;}
     if(!me.isManager){
       if(!me.membership?.id){section.append(el('div',t('Aucune fiche accessible.','No accessible sheet.'),'empty-state'));return section;}
       const sheet=await app.memberOperationalSheet(me.membership.id).catch(()=>null),mr=sheet?.exerciseMatrix?.find(x=>x.meetingId===meeting.id);
@@ -139,20 +139,14 @@ export function mountSessionsUI({app,getGroups,getMembers,getMeetings,getRubrics
       const table=el('table',undefined,'meeting-matrix sessions-read-table'),head=el('thead'),hr=el('tr');hr.append(el('th',t('Rubrique','Rubric')),el('th',t('Entrées','Inflows')),el('th',t('Sorties','Outflows')),el('th','Net'));head.append(hr);table.append(head);const body=el('tbody');
       let tin=0,tout=0,tnet=0;for(const r of sheet.rubrics??[]){const cell=mr.cells?.[r.id]??{inflow:0,outflow:0,net:0};tin+=Number(cell.inflow??0);tout+=Number(cell.outflow??0);tnet+=Number(cell.net??0);const tr=el('tr');tr.append(el('td',r.name),el('td',money(cell.inflow)),el('td',money(cell.outflow)),el('td',money(cell.net)));body.append(tr);}const totalRow=el('tr',undefined,'table-total-row');totalRow.append(el('th',t('TOTAL','TOTAL')),el('td',money(tin)),el('td',money(tout)),el('td',money(tnet)));body.append(totalRow);table.append(body);const wrap=el('div',undefined,'matrix-wrap');wrap.append(table);section.append(wrap);return section;
     }
-    const [ledger,expenses,events]=await Promise.all([app.ledger(),app.expenses({meetingId:meeting.id}).catch(()=>[]),app.listWorkspaceRecords('FINANCE.SHEET_EVENT',app.activeGroup()).catch(()=>[])]);
-    const table=el('table',undefined,'meeting-matrix sessions-read-table'),head=el('thead'),hr=el('tr');hr.append(el('th',t('Membre','Member')));for(const r of rubrics.filter(x=>x.status!=='ARCHIVED'))hr.append(el('th',r.name));hr.append(el('th','Total'));head.append(hr);table.append(head);const body=el('tbody');
-    const activeRubrics=rubrics.filter(x=>x.status!=='ARCHIVED');
-    const sessionNet=(membershipId,rubricId)=>{const receiptIn=(ledger.receipts??[]).filter(x=>x.meetingId===meeting.id&&x.membershipId===membershipId&&x.rubricId===rubricId).reduce((n,x)=>n+Number(x.netAmount??0),0),eventIn=events.filter(x=>x.data?.meetingId===meeting.id&&x.data?.membershipId===membershipId&&x.data?.rubricId===rubricId&&x.data?.direction==='IN').reduce((n,x)=>n+Number(x.data?.amount??0),0),eventOut=events.filter(x=>x.data?.meetingId===meeting.id&&x.data?.membershipId===membershipId&&x.data?.rubricId===rubricId&&x.data?.direction==='OUT').reduce((n,x)=>n+Number(x.data?.amount??0),0),exp=expenses.filter(x=>x.membershipId===membershipId&&x.rubricId===rubricId).reduce((n,x)=>n+Number(x.amount??0),0);return receiptIn+eventIn-eventOut-exp;};
-    const activeMembers=members.filter(x=>x.status!=='left');
-    for(const m of activeMembers){const tr=el('tr'),name=el('th',m.displayName);tr.append(name);let total=0;
-      for(const r of activeRubrics){const net=sessionNet(m.id,r.id);total+=net;tr.append(el('td',money(net)));}
-      tr.append(el('td',money(total)));body.append(tr);
-    }
-    const totalRow=el('tr',undefined,'table-total-row');totalRow.append(el('th',t('TOTAL','TOTAL')));let grand=0;for(const r of activeRubrics){const col=activeMembers.reduce((sum,m)=>sum+sessionNet(m.id,r.id),0);grand+=col;totalRow.append(el('td',money(col)));}totalRow.append(el('td',money(grand)));body.append(totalRow);table.append(body);const wrap=el('div',undefined,'matrix-wrap');wrap.append(table);section.append(el('p',t('Ce tableau projette les mêmes écritures canoniques que les deux feuilles. La saisie/correction reste dans le composant canonique pour éviter deux éditeurs concurrents.','This table projects the same canonical records as the two sheets. Entry/correction stays in the canonical component to avoid two competing editors.'),'hint'),wrap);
-    const edit=button(t('Saisir / corriger cette séance dans la feuille canonique','Enter / correct this meeting in the canonical sheet'),'primary');edit.onclick=()=>{window.dispatchEvent(new CustomEvent('eco:set-matrix-meeting',{detail:{meetingId:meeting.id}}));navigate('operations',{anchor:'twoSheetWorkspace',matrixMeetingId:meeting.id,sheetMode:'meeting',force:true});};
-    const other=button(t('Choisir une autre séance','Choose another meeting'));other.onclick=()=>select?.scrollIntoView({behavior:'smooth',block:'center'});
-    const add=button(t('+ Nouvelle séance','+ New meeting'));add.onclick=()=>byId('sessionsCreateForm')?.scrollIntoView({behavior:'smooth',block:'start'});
-    section.append(edit,other,add);return section;
+    const notice=el('p',t('Cette page utilise maintenant le même tableau de saisie canonique que les fiches individuelles : montant + ✓, remplacement exact de la valeur et totaux par colonne et par membre. Aucun ancien tableau ne peut reprendre la main après le rafraîchissement.','This page now uses the same canonical entry table as individual sheets: amount + ✓, exact replacement, and totals by column and member. No legacy table can take over after refresh.'),'truth-notice');
+    const host=el('div',undefined,'canonical-financial-table-host');host.dataset.canonicalFinancialHost='1';host.dataset.financialMode='meeting';host.dataset.meetingId=meeting.id;host.dataset.showToolbar='false';host.dataset.editable='true';
+    const actions=el('div',undefined,'actions');
+    const focus=button(t('Saisir / corriger cette séance','Enter / correct this meeting'),'primary');focus.onclick=()=>setTimeout(()=>host.querySelector('input.cell-target-input')?.focus(),0);
+    const other=button(t('Autres séances','Other meetings'));other.onclick=()=>select?.scrollIntoView({behavior:'smooth',block:'center'});
+    const add=button(t('+ Nouvelle séance','+ New meeting'));add.onclick=()=>navigate('sessions',{anchor:'sessionsCreateForm',force:true});
+    const individual=button(t('Fiches individuelles','Individual sheets'));individual.onclick=()=>navigate('operations',{anchor:'twoSheetWorkspace',sheetMode:'individual',force:true});
+    actions.append(focus,other,add,individual);section.append(notice,host,actions);return section;
   };
 
   const renderCumulative=async(c)=>{
@@ -266,7 +260,7 @@ export function mountSessionsUI({app,getGroups,getMembers,getMeetings,getRubrics
         const add=button(t('+ Nouvelle séance','+ New meeting'));add.onclick=()=>byId('sessionsCreateForm')?.scrollIntoView({behavior:'smooth',block:'start'});
         bar.append(edit,reconcile,distribute,modify,other,add);root.append(bar);
       }
-      root.append(await fn(c));
+      const rendered=await fn(c);root.append(rendered);for(const host of rendered.querySelectorAll?.('[data-canonical-financial-host="1"]')??[]){window.dispatchEvent(new CustomEvent('eco:render-canonical-financial-table',{detail:{root:host,mode:host.dataset.financialMode||'meeting',meetingId:host.dataset.meetingId||'',membershipId:host.dataset.membershipId||'',showToolbar:host.dataset.showToolbar!=='false',editable:host.dataset.editable!=='false'}}));}
     }catch(e){showError(e);root.append(el('div',t('Cette section n’a pas pu être chargée. Les autres modules restent disponibles.','This section could not be loaded. Other modules remain available.'),'empty-state'));}
   };
 

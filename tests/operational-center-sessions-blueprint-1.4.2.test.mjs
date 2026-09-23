@@ -31,7 +31,7 @@ test('dedicated Sessions exposes the founder minimum frame and keeps canonical o
   assert.match(ui,/app\.reconcileCashbox\(/);
   assert.match(ui,/app\.arrears\(/);
   assert.match(ui,/app\.ledger\(/);
-  assert.match(ui,/saisie\/correction reste dans le composant canonique/i);
+  assert.match(ui,/canonical-financial-table-host/);assert.match(ui,/eco:render-canonical-financial-table/);
 });
 
 test('Operational Center no longer writes attendance through a generic workspace duplicate',async()=>{
@@ -113,8 +113,8 @@ test('PWA shell refresh remains versioned without forced offline reload',async()
     readFile('apps/web/index.html','utf8')
   ]);
   assert.match(main,/void ensureCurrentServiceWorker\(\);[\s\S]*?void start\(\);/);
-  assert.match(sw,/eco-system-v14(?:3-blueprint-5-0-0-finalized|4-offline-ios-safe|5-final-mega-offline-safe)-20260921|eco-system-v1451-field-corrections-20260922/);
-  assert.match(html,/\/styles\.css\?v=(?:143|145|1451)/);
-  assert.match(html,/\/src\/main\.js\?v=(?:143|145|1451)/);
-  assert.match(html,/ECO-SYSTEM · 1\.(?:4\.(?:3|5(?:\.1| RC)?)|5\.0)/);
+  assert.match(sw,/eco-system-v152-unified-ux-blueprint-20260923/);
+  assert.match(html,/\/styles\.css\?v=(?:143|145|1451|152)/);
+  assert.match(html,/\/src\/main\.js\?v=(?:143|145|1451|152)/);
+  assert.match(html,/ECO-SYSTEM · 1\.(?:4\.(?:3|5(?:\.1| RC)?)|5\.(?:0|2))/);
 });

@@ -1,5 +1,46 @@
 # ECO-SYSTEM — CURRENT TRUTH
 
+## CURRENT OVERRIDE — 1.5.2 UNIFIED UX / CANONICAL CORE — CI QUALIFIED (2026-09-23)
+
+**Statut : CI_QUALIFIED sur branche ; PAS ENCORE DÉPLOYÉ ; PAS FIELD_ACCEPTED.**
+
+- Branche : `release/1.5.2-unified-ux-blueprint-20260923`.
+- Base reprise : chantier 1.5.1 abandonné au SHA `0c29e7a80c40bf8887a901e7439c2ea928d99ce6`, lui-même au-dessus de la production 1.5.0.
+- Qualification verte avant ce checkpoint documentaire : run **35857889951 SUCCESS**, **337/337 tests PASS**.
+- Version runtime candidate : `1.5.2-unified-ux-blueprint`.
+- Build ID candidat : `eco-system-1.5.2-20260923`.
+- PWA cache candidat : `eco-system-v152-unified-ux-blueprint-20260923`.
+- D1 à préserver : `eco-system-db`.
+- R2 à préserver : `eco-system-backups`.
+- Argent réel : **OFF**.
+
+### Acquis consolidés dans 1.5.2
+1. **Owner financier unique** : feuille de séance et fiches individuelles passent par le même renderer canonique de `main.js`, saisie montant + ✓, remplacement de valeur cible, totaux ligne/colonne/global, consensus et revue indépendante préservés. Les vues Detail/Voice/Sessions délèguent ; elles ne recréent pas une seconde matrice.
+2. **Cause du retour de l'ancien tableau corrigée** : un asset versionné 1.5.2 ne peut plus retomber sur un asset non versionné d'un cache antérieur. Le shell essentiel reste atomique et conserve 1.5.0 comme rollback cohérent.
+3. **Authentification au rafraîchissement** : état `auth-restoring` avant affichage de la connexion ; session standard moins agressive ; option volontaire « appareil privé » avec session longue durée. Aucun droit métier supplémentaire.
+4. **Trois modes d'utilisation, même métier** en haut de l'Accueil :
+   - **Visuel** : interface moderne/attractive ;
+   - **Senior** : textes/contrôles plus grands, navigation lisible, grandes cibles tactiles ;
+   - **Assisté / Dictée** : gros contrôles et accès prioritaire à la dictée, sans validation financière silencieuse.
+   Le choix persiste sous `eco.uiMode`; aucun mode n'a son propre Ledger ou moteur.
+5. **Ergonomie mobile** : suppression du cassage agressif des libellés, meilleure hauteur de ligne/cibles tactiles, tableaux à scroll horizontal local, en-têtes/première colonne collants.
+6. **Release identity cohérente** : package/build/Worker/health/PWA utilisent la même identité 1.5.2.
+
+### Garde-fous / limites vraies
+- La production publique reste **1.5.0-audit-complete** jusqu'à un workflow de déploiement prouvé du SHA exact 1.5.2.
+- Un run CI vert ne vaut ni smoke production ni recette terrain.
+- Les capacités encore `STRUCTURAL_V1` ou `FUNCTIONAL_BETA` gardent ce statut ; leur présence dans le lot ne les transforme pas en FIELD_ACCEPTED.
+- Les owners historiques restent : Ledger, MeetingService, Rubrics/Living Rules, Membership/Identity, Marketplace, Business Studio, Knowledge Bank, Community, Evidence/Trust.
+- Aucun moteur parallèle ne doit être réintroduit pour les trois modes UX, le Kit, Business Studio, Marketplace ou les dashboards.
+- Les dix étapes, multi-tontines, Collation, RECAP, prêts/intérêts, offline/outbox, Community/Forum/Live, Control Center, D1/R2 et `realMoneyEnabled=false` restent des acquis de non-régression.
+
+Document de transmission 1.5.2 :
+`docs/implementation/ECO_SYSTEM_1.5.2_UNIFIED_UX_BLUEPRINT_2026-09-23.md`.
+
+**Point de reprise :** qualifier le HEAD documentaire exact, puis PR unique vers `next/1.5.0-audit-complete-platform-20260923`. Déploiement seulement avec BIR+ pré, même SHA, smoke et BIR+ post. La recette réelle Visuel/Senior/Assisté + Android/desktop reste distincte.
+
+---
+
 ## CURRENT OVERRIDE — 1.5.0 AUDIT COMPLETE DEPLOYED (2026-09-23)
 
 Production publique : `https://eco-system.sergemimf.workers.dev/`.

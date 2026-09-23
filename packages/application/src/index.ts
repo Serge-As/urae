@@ -227,7 +227,7 @@ export class ConnectedApplication {
   async groupMe():Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/me`);}
   async globalRecap():Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/recap/global`);}
   async memberOperationalSheet(membershipId:string):Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/members/${encodeURIComponent(membershipId)}/operational-sheet`);}
-  async authenticate(mode:'login'|'register',input:{username:string;password:string;displayName?:string}):Promise<void>{
+  async authenticate(mode:'login'|'register',input:{username:string;password:string;displayName?:string;rememberDevice?:boolean}):Promise<void>{
     const localFlow=async()=>{
       if(!IndexedDbLocalAuthAdapter.supported())throw Error('LOCAL_AUTH_UNAVAILABLE');
       const local=mode==='register'
@@ -683,14 +683,26 @@ export class ConnectedApplication {
   async endBusinessMandate(id:string,reason:string):Promise<any>{return this.request('/api/v1/business/mandates/'+encodeURIComponent(id)+'/end',{method:'POST',body:JSON.stringify({reason})});}
   async createBusinessClient(input:any):Promise<any>{return this.request('/api/v1/business/clients',{method:'POST',body:JSON.stringify(input)});}
   async setBusinessClientState(id:string,state:string):Promise<any>{return this.request('/api/v1/business/clients/'+encodeURIComponent(id)+'/state',{method:'POST',body:JSON.stringify({state})});}
+  async createBusinessOffer(input:any):Promise<any>{return this.request('/api/v1/business/offers',{method:'POST',body:JSON.stringify(input)});}
+  async setBusinessOfferState(id:string,state:string):Promise<any>{return this.request('/api/v1/business/offers/'+encodeURIComponent(id)+'/state',{method:'POST',body:JSON.stringify({state})});}
+  async createBusinessRequest(input:any):Promise<any>{return this.request('/api/v1/business/requests',{method:'POST',body:JSON.stringify(input)});}
+  async setBusinessRequestState(id:string,state:string):Promise<any>{return this.request('/api/v1/business/requests/'+encodeURIComponent(id)+'/state',{method:'POST',body:JSON.stringify({state})});}
   async createBusinessQuote(input:any):Promise<any>{return this.request('/api/v1/business/quotes',{method:'POST',body:JSON.stringify(input)});}
   async decideBusinessQuote(id:string,state:string):Promise<any>{return this.request('/api/v1/business/quotes/'+encodeURIComponent(id)+'/decision',{method:'POST',body:JSON.stringify({state})});}
+  async createBusinessOrder(input:any):Promise<any>{return this.request('/api/v1/business/orders',{method:'POST',body:JSON.stringify(input)});}
+  async setBusinessOrderState(id:string,state:string):Promise<any>{return this.request('/api/v1/business/orders/'+encodeURIComponent(id)+'/state',{method:'POST',body:JSON.stringify({state})});}
   async createBusinessContract(input:any):Promise<any>{return this.request('/api/v1/business/contracts',{method:'POST',body:JSON.stringify(input)});}
   async issueBusinessInvoice(input:any):Promise<any>{return this.request('/api/v1/business/invoices',{method:'POST',body:JSON.stringify(input)});}
   async recordBusinessPayment(input:any):Promise<any>{return this.request('/api/v1/business/payments',{method:'POST',body:JSON.stringify(input)});}
   async recordBusinessExpense(input:any):Promise<any>{return this.request('/api/v1/business/expenses',{method:'POST',body:JSON.stringify(input)});}
+  async recordBusinessRevenue(input:any):Promise<any>{return this.request('/api/v1/business/revenues',{method:'POST',body:JSON.stringify(input)});}
+  async logBusinessCommunication(input:any):Promise<any>{return this.request('/api/v1/business/communications',{method:'POST',body:JSON.stringify(input)});}
+  async createBusinessAction(input:any):Promise<any>{return this.request('/api/v1/business/actions',{method:'POST',body:JSON.stringify(input)});}
+  async completeBusinessAction(id:string):Promise<any>{return this.request('/api/v1/business/actions/'+encodeURIComponent(id)+'/complete',{method:'POST',body:'{}'});}
   async recordBusinessTime(input:any):Promise<any>{return this.request('/api/v1/business/time',{method:'POST',body:JSON.stringify(input)});}
   async createBusinessScenario(input:any):Promise<any>{return this.request('/api/v1/business/scenarios',{method:'POST',body:JSON.stringify(input)});}
+  async businessProfitability():Promise<any[]>{const r=await this.request('/api/v1/business/profitability') as any;return r.items??[];}
+  async businessOperatingBrief():Promise<any>{return this.request('/api/v1/business/brief');}
 
   async externalPrograms(kind?:'PARTNER'|'NGO'):Promise<any[]>{if(!this.activeGroupId)return[];const q=kind?'?kind='+encodeURIComponent(kind):'';return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/external-programs'+q);}
   async createExternalProgram(input:{kind:'PARTNER'|'NGO';partyName:string;programName:string;purpose:string;localities?:string[];tags?:string[];dataAccess?:'NONE'|'GROUP_AGGREGATE_ECONOMIC'}):Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/external-programs',{method:'POST',body:JSON.stringify(input)});}

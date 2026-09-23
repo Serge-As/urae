@@ -21,7 +21,7 @@ const trashLifecycle=fs.readFileSync('packages/trash-lifecycle/src/index.ts','ut
 const repositories=fs.readFileSync('packages/repositories/src/index.ts','utf8');
 
 test('Android 6 offline shell remains fast offline and never force-reloads on worker takeover',()=>{
-  assert.match(sw,/eco-system-v1451-field-corrections-20260922/);
+  assert.match(sw,/eco-system-v152-unified-ux-blueprint-20260923/);
   assert.match(sw,/Offline \/ unstable 2G: fall back quickly/);
   assert.match(sw,/Scripts\/styles\/assets are cache-first/);
   assert.doesNotMatch(sw,/skipWaiting\(/);
@@ -69,7 +69,7 @@ test('multi-manager correction compares with canonical baseline and requires rea
 test('Sessions defaults to cumulative sheet and exact selected session is carried into canonical entry',()=>{
   assert.match(sessions,/★ Feuille récapitulative/);
   assert.match(sessions,/select\.value=.*'__cumulative__'/);
-  assert.match(sessions,/matrixMeetingId:meeting\.id/);
+  assert.match(sessions,/host\.dataset\.meetingId=meeting\.id/);assert.match(sessions,/eco:render-canonical-financial-table/);
   assert.match(sessions,/Saisir \/ corriger cette séance/);
   assert.match(sessions,/Autres séances/);
   assert.match(sessions,/\+ Nouvelle séance/);
@@ -110,7 +110,7 @@ test('closed sessions can be edited with manager alert and financial member aler
 test('individual sheets are restored and manager can edit exact member-session-rubric cells',()=>{
   assert.match(html,/id="individualSheetMatrix"/);
   assert.match(main,/renderIndividualSheetMatrix/);
-  assert.match(main,/makeFinancialEntryCell\(\{member,rubric,meetingId:meeting\.id,editable:true\}\)/);
+  assert.match(main,/makeFinancialEntryCell\(\{member,rubric:r,meetingId:meeting\.id/);assert.match(main,/TOTAL COLONNES/);
   assert.match(main,/financeIndividualSheetBtn/);
 });
 
@@ -123,10 +123,13 @@ test('member management removes inline trash risk and supports rename and orderi
   assert.doesNotMatch(main,/li\.append\(remove\)/);
 });
 
-test('detail-sheet inline entry replaces totals instead of adding deltas',()=>{
-  assert.match(detail,/setFinancialCellTarget/);
-  assert.match(detail,/Nouvelle valeur totale de la cellule/);
-  assert.doesNotMatch(detail,/input\.placeholder='Ajouter…'/);
+test('detail sheet delegates financial editing to the one canonical table owner',()=>{
+  assert.match(detail,/canonical-financial-table-host/);
+  assert.match(detail,/eco:render-canonical-financial-table/);
+  assert.match(detail,/même remplacement exact/);
+  assert.doesNotMatch(detail,/setFinancialCellTarget/);
+  assert.match(main,/setFinancialCellTarget/);
+  assert.match(main,/Nouvelle valeur totale/);
   assert.match(detail,/Prêts \/ capital dû/);
 });
 
@@ -193,10 +196,10 @@ test('loan is a negative member position and simulation is available to member a
   assert.match(app,/loanHistory/);
 });
 
-test('stale cached html no longer crashes on optional local-account control and 1.5.0 cache keeps previous coherent release',()=>{
+test('stale cached html no longer crashes and 1.5.2 keeps the previous coherent release',()=>{
   assert.match(main,/document\.querySelector\('#claimLocalAccountBtn'\)\?\.addEventListener/);
   assert.doesNotMatch(main,/\$\('#claimLocalAccountBtn'\)\.addEventListener/);
-  assert.match(sw,/eco-system-v1451-field-corrections-20260922/);
-  assert.match(html,/ECO-SYSTEM · 1\.5\.0/);
-  assert.match(html,/main\.js\?v=1451/);
+  assert.match(sw,/eco-system-v152-unified-ux-blueprint-20260923/);
+  assert.match(html,/ECO-SYSTEM · 1\.5\.2/);
+  assert.match(html,/main\.js\?v=152/);assert.match(sw,/PREVIOUS_CACHE = 'eco-system-v150-audit-complete-20260923'/);
 });

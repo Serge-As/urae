@@ -5,7 +5,7 @@ import { PRODUCT_MODULES, PRODUCT_CAPABILITY_COUNT } from '../.build/packages/mo
 import { InMemoryPlatformRepository } from '../.build/packages/repositories/src/index.js';
 import { createApiHandler } from '../.build/workers/api/src/index.js';
 
-const RELEASE_VERSION='1.5.0-audit-complete';
+const RELEASE_VERSION='1.5.2-unified-ux-blueprint';
 
 test('Complete App catalog exposes more than 100 unique A-J capabilities',()=>{
   assert.ok(PRODUCT_CAPABILITY_COUNT>=100,`catalog too small: ${PRODUCT_CAPABILITY_COUNT}`);
