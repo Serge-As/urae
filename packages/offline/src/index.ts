@@ -47,6 +47,18 @@ export class Outbox {
 
   list(): OutboxItem[] { return [...this.items.values()].sort((a,b)=>a.createdAt.localeCompare(b.createdAt)).map(x => structuredClone(x)); }
 
+  markConfirmedByKey(tenantId:Id,actorId:Id,idempotencyKey:string):OutboxItem|undefined{
+    const id=this.byKey.get(this.scopeKey(tenantId,actorId,idempotencyKey)),current=id?this.items.get(id):undefined;
+    if(!id||!current)return undefined;
+    const next={...current,status:'CONFIRMED' as const,updatedAt:new Date().toISOString()};this.items.set(id,next);return structuredClone(next);
+  }
+
+  markConflictByKey(tenantId:Id,actorId:Id,idempotencyKey:string):OutboxItem|undefined{
+    const id=this.byKey.get(this.scopeKey(tenantId,actorId,idempotencyKey)),current=id?this.items.get(id):undefined;
+    if(!id||!current)return undefined;
+    const next={...current,status:'CONFLICT' as const,updatedAt:new Date().toISOString()};this.items.set(id,next);return structuredClone(next);
+  }
+
   retry(id:Id):OutboxItem|undefined{
     const current=this.items.get(id);if(!current||current.status==='CONFIRMED'||current.status==='CANCELLED'||current.status==='CONFLICT')return current?structuredClone(current):undefined;
     const reset={...current,status:'PENDING' as const,attempts:0,updatedAt:new Date().toISOString()};this.items.set(id,reset);return structuredClone(reset);
