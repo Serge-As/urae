@@ -1,5 +1,54 @@
 # ECO-SYSTEM — CURRENT TRUTH
 
+## CURRENT OVERRIDE — 1.5.3 VALUE MARKET CLOSURE — CI QUALIFIED FUNCTIONAL CHECKPOINT (2026-09-23)
+
+**Production publique actuellement vérifiée : 1.5.2.1. Candidate suivante : 1.5.3.**
+
+### Production 1.5.2.1 vérifiée
+- URL : `https://eco-system.sergemimf.workers.dev/`.
+- version : `1.5.2.1-field-finance-debt-ux`.
+- source : `109078c84374dddf5f64d8d836a2a726fd4a92ea`.
+- workflow qualification + sauvegarde + déploiement + smoke + restauration : **35870745271 — SUCCESS**.
+- D1 : `eco-system-db` réutilisée.
+- R2 : `eco-system-backups` réutilisé.
+- argent réel : **OFF**.
+- corrections terrain acquises : saisie ✓ effective dans les deux feuilles ; prêt négatif/sortie ; dette = capital + intérêts + obligations ; intérêt de clôture porté à la séance suivante ; scroll vertical sur matrices ; Membres lisibles ; restauration signalée 72 h ; Accueil max 5 alertes + Centre d’alertes ; mode Visuel renforcé.
+
+### Candidate 1.5.3
+- branche : `finish/1.5.3-value-market-closure-20260923`.
+- version : `1.5.3-value-market-closure`.
+- build : `eco-system-1.5.3-20260923`.
+- cache : `eco-system-v153-value-market-closure-20260923`.
+- rollback cache : `eco-system-v1521-field-finance-debt-ux-20260923`.
+- catalogue : **160 capacités uniques**.
+- checkpoint fonctionnel : `bb4036906f28438831ea5faa6e22a8f9e2758656`.
+- CI du checkpoint fonctionnel : **35890924444 — SUCCESS**.
+- document de fermeture : `docs/implementation/ECO_SYSTEM_1.5.3_VALUE_MARKET_CLOSURE_2026-09-23.md`.
+
+### Acquis nouveaux 1.5.3
+1. **Étape 14** : NOW Liquidation / Surplus NOW / Rescue Deal opérationnels sur le stock canonique, rabais et état obligatoirement transparents, réservation → commande canonique.
+2. **Étape 15** : Predicted Demand exige une anticipation `GROUP.ANTICIPATION` déjà validée humainement.
+3. **Étape 16** : Reverse Market complet : OPEN → RESPONSES → SHORTLIST → SELECTED → PROCUREMENT/FULFILLMENT → CLOSED/DISPUTED.
+4. **Étape 17** : Eco Deals avec vrais seuils/paliers, termes publics véridiques, termes internes confidentiels, engagements réels sans débit, matérialisation vers `MARKET_ORDER`.
+5. **Étape 19** : Eco Live Market niveaux 0–3, produit/Deal/Hub épinglés, présence unique, compteur réel, Q&A, CTA Deal, réutilisation du Forum/Hub et GroupLiveHub existants.
+6. **Blueprint sans duplication** : Demand Exchange, Procurement et Eco NOW sont désormais handoff vers le Value Market canonique au lieu de créer un workspace générique parallèle.
+7. **Kit prêt à l’emploi et Business Studio** : owners existants conservés, non dupliqués.
+
+### Garde-fous
+- aucun second Ledger ;
+- aucun second stock/commande/Forum ;
+- migrations additives uniquement ;
+- D1/R2 acquis jamais recréés ;
+- aucun faux seuil, faux rabais, faux compteur ou faux participant ;
+- prédiction ≠ validation humaine ≠ demande ≠ engagement ≠ transaction ;
+- engagement Deal / réservation ≠ paiement réel ;
+- `realMoneyEnabled=false`.
+
+### Point de reprise exact
+Les commits documentaires postérieurs à `bb403690…` doivent repasser la CI complète avant merge. Ensuite : PR vers `release/1.5.2-unified-ux-blueprint-20260923`, merge du HEAD exact vert, mise à jour du workflow production pour 1.5.3, BIR/snapshot pré, déploiement, smoke exact, snapshot post + restauration. Ne déclarer 1.5.3 **DEPLOYED** qu’après ces preuves.
+
+---
+
 ## CURRENT OVERRIDE — 1.5.0 AUDIT COMPLETE DEPLOYED (2026-09-23)
 
 Production publique : `https://eco-system.sergemimf.workers.dev/`.
