@@ -227,7 +227,7 @@ export class ConnectedApplication {
   async groupMe():Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/me`);}
   async globalRecap():Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/recap/global`);}
   async memberOperationalSheet(membershipId:string):Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/members/${encodeURIComponent(membershipId)}/operational-sheet`);}
-  async authenticate(mode:'login'|'register',input:{username:string;password:string;displayName?:string}):Promise<void>{
+  async authenticate(mode:'login'|'register',input:{username:string;password:string;displayName?:string;rememberDevice?:boolean}):Promise<void>{
     const localFlow=async()=>{
       if(!IndexedDbLocalAuthAdapter.supported())throw Error('LOCAL_AUTH_UNAVAILABLE');
       const local=mode==='register'
