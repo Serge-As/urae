@@ -4,7 +4,7 @@ import type {
   Money, Obligation, User, CaseRecord, EvidenceRecord, GroupOperatingPolicy, ProjectCapability, ProjectAccessGrant, LatePostingTrace, MemberStatement, GroupProjectLaunchProfile, WorkspaceRecord
 } from '../../contracts/src/index.js';
 import { makeId } from '../../contracts/src/index.js';
-import type { PlatformRepository } from '../../repositories/src/index.js';
+import type { PlatformRepository, FinancialCorrectionPlan } from '../../repositories/src/index.js';
 import { PlatformKernel } from '../../platform-kernel/src/index.js';
 import type {LaunchRubricPlan} from '../../contracts/src/index.js';
 import {validateLaunchRubrics,simulateRubricPlan} from '../../rubrics/src/launch-config.js';
@@ -548,6 +548,88 @@ export class LedgerService {
     if(committed.entry.id!==entry.id)return committed.receipt;
     this.kernel.events.publish({id:makeId('event'),type:'CASH_CONTRIBUTION_POSTED',occurredAt:now(),tenantId:input.tenantId,actorId:ctx.actorId,aggregateType:'group',aggregateId:input.groupId,payload:{membershipId:membership.id,amount:input.amount,currency,receiptId:receipt.id},idempotencyKey:input.idempotencyKey});
     return receipt;
+  }
+
+  async replaceCashContributionCell(input:{
+    tenantId:Id;groupId:Id;meetingId:Id;membershipId:Id;rubricId:Id;
+    targetAmount:number;expectedCurrentAmount?:number;currency?:Currency;
+    reason?:string;idempotencyKey:string;
+  },requestId=makeId('req')):Promise<{status:'APPLIED'|'NO_CHANGE';previousAmount:number;newAmount:number;operationId?:Id;receipt?:ContributionReceipt;evidenceEntry?:LedgerEntry}>{
+    assertIntNonNegative('contributionAmount',input.targetAmount);
+    if(!input.idempotencyKey.trim())throw new Error('IDEMPOTENCY_KEY_REQUIRED');
+    const ctx=this.kernel.context.get();
+    await assertCanManageGroup(this.repo,ctx,input.tenantId,input.groupId);
+    const meeting=await this.repo.getMeeting(input.tenantId,input.groupId,input.meetingId);
+    if(!meeting||meeting.status==='cancelled')throw new Error('MEETING_NOT_FOUND');
+    const membership=await this.repo.getMembership(input.tenantId,input.groupId,input.membershipId);
+    if(!membership||membership.status!=='active')throw new Error('MEMBERSHIP_NOT_FOUND');
+    if(!(await this.repo.getRubricDefinition(input.tenantId,input.groupId,input.rubricId)))throw new Error('RUBRIC_NOT_FOUND');
+    const positions=(await this.receiptPositions(input.tenantId,input.groupId))
+      .filter(r=>r.meetingId===input.meetingId&&r.membershipId===input.membershipId&&r.rubricId===input.rubricId&&r.netAmount!==0);
+    const current=positions.reduce((n,r)=>n+r.netAmount,0);
+    if(input.expectedCurrentAmount!==undefined&&current!==input.expectedCurrentAmount)throw new Error('CELL_VALUE_CONFLICT');
+    if(current===input.targetAmount)return{status:'NO_CHANGE',previousAmount:current,newAmount:input.targetAmount};
+    const reason=(input.reason??'').trim();
+    if((current>0||meeting.status==='closed')&&!reason)throw new Error('REVERSAL_REASON_REQUIRED');
+    const currency=input.currency??'XAF',commitAt=now(),operationId=makeId('cellcorr');
+    const reversalEntries:LedgerEntry[]=[],audits:AuditEvent[]=[];
+    for(const row of positions.filter(r=>r.netAmount>0)){
+      const original=await this.repo.getLedgerEntry(input.tenantId,input.groupId,row.ledgerEntryId);
+      if(!original)throw new Error('LEDGER_ENTRY_NOT_FOUND');
+      const reversal:LedgerEntry={
+        id:makeId('ledger'),tenantId:input.tenantId,groupId:input.groupId,currency:original.currency,
+        descriptionCode:'LEDGER_REVERSAL',sourceType:'ledger_reversal',sourceId:original.id,
+        idempotencyKey:`${input.idempotencyKey}:reversal:${original.id}`,createdAt:commitAt,createdBy:ctx.actorId,
+        meetingId:original.meetingId,reversalOfEntryId:original.id,
+        lines:original.lines.map(line=>({accountId:line.accountId,debit:line.credit,credit:line.debit,memoCode:'LEDGER_REVERSAL'}))
+      };
+      this.validateBalanced(reversal);reversalEntries.push(reversal);
+      audits.push(this.kernel.audit.append({tenantId:input.tenantId,actorId:ctx.actorId,action:'LEDGER_ENTRY_REVERSED',targetType:'ledger_entry',targetId:reversal.id,requestId,metadata:{originalEntryId:original.id,reason:reason||'Cell target replacement',operationId},after:reversal}));
+    }
+    const accounts=input.targetAmount>0?await this.ensureStandardAccounts(input.tenantId,input.groupId,currency):undefined;
+    let replacement:LedgerEntry|undefined,receipt:ContributionReceipt|undefined;
+    if(input.targetAmount>0&&accounts){
+      replacement={
+        id:makeId('ledger'),tenantId:input.tenantId,groupId:input.groupId,currency,
+        descriptionCode:'LEDGER_CASH_CONTRIBUTION',sourceType:'membership_contribution',sourceId:membership.id,
+        idempotencyKey:`${input.idempotencyKey}:replacement`,meetingId:input.meetingId,createdAt:commitAt,createdBy:ctx.actorId,
+        lines:[
+          {accountId:accounts.cash.id,debit:input.targetAmount,credit:0,memoCode:'LEDGER_CASH_RECEIVED'},
+          {accountId:accounts.memberFunds.id,debit:0,credit:input.targetAmount,memoCode:'LEDGER_MEMBER_FUNDS_CREDITED'}
+        ]
+      };
+      this.validateBalanced(replacement);
+      receipt={id:makeId('receipt'),tenantId:input.tenantId,groupId:input.groupId,membershipId:membership.id,
+        amount:{currency,amount:input.targetAmount},paymentMethod:'cash',ledgerEntryId:replacement.id,
+        meetingId:input.meetingId,rubricId:input.rubricId,
+        latePosting:meeting.status==='closed'?{isLate:true,reason:reason||'Correction après clôture',approvedBy:[ctx.actorId],meetingClosedAt:meeting.closedAt}:undefined,
+        receivedAt:commitAt,receivedBy:ctx.actorId,idempotencyKey:replacement.idempotencyKey};
+    }
+    const entries=[...reversalEntries,...(replacement?[replacement]:[])];
+    const primaryEntry=entries.at(-1);if(!primaryEntry)throw new Error('FINANCIAL_CORRECTION_EMPTY_PLAN');
+    const correctionAudit=this.kernel.audit.append({tenantId:input.tenantId,actorId:ctx.actorId,action:'FINANCIAL_CELL_CORRECTED',
+      targetType:'financial_cell',targetId:encodeURIComponent(JSON.stringify([input.groupId,input.meetingId,input.membershipId,input.rubricId,currency])),
+      requestId,metadata:{operationId,meetingId:input.meetingId,membershipId:input.membershipId,rubricId:input.rubricId,previousAmount:current,newAmount:input.targetAmount,reason},
+      after:{entryIds:entries.map(e=>e.id),receiptId:receipt?.id??null}});
+    audits.push(correctionAudit);
+    const outbox:WorkspaceRecord={
+      id:`financial_correction_outbox_${operationId}`,tenantId:input.tenantId,groupId:input.groupId,moduleId:'FINANCE.CORRECTION_OUTBOX',
+      title:'Correction financière à diffuser',summary:'Événements et notifications à diffuser après commit atomique.',
+      status:'ACTIVE',tags:['financial-correction','pending'],
+      data:{operationId,meetingId:input.meetingId,membershipId:input.membershipId,rubricId:input.rubricId,previousAmount:current,newAmount:input.targetAmount,reason},
+      createdBy:ctx.actorId,createdAt:commitAt,updatedAt:commitAt
+    };
+    const intentFingerprint=JSON.stringify([input.tenantId,input.groupId,input.meetingId,input.membershipId,input.rubricId,currency,current,input.targetAmount,reason]);
+    const plan:FinancialCorrectionPlan={kind:'cell_correction',operationId,idempotencyKey:input.idempotencyKey,intentFingerprint,
+      tenantId:input.tenantId,groupId:input.groupId,primaryEntryId:primaryEntry.id,entries,receipt,
+      accounts:accounts?[accounts.cash,accounts.memberFunds]:[],audits,outboxRecords:[outbox]};
+    const committed=await this.repo.commitFinancialCorrection(plan);
+    const evidenceEntry=committed.entries.find(e=>e.id===committed.primaryEntryId)??committed.entries.at(-1);
+    if(committed.operationId===operationId)this.kernel.events.publish({id:makeId('event'),type:'FINANCIAL_CELL_CORRECTED',occurredAt:commitAt,
+      tenantId:input.tenantId,actorId:ctx.actorId,aggregateType:'group',aggregateId:input.groupId,
+      payload:{operationId,meetingId:input.meetingId,membershipId:input.membershipId,rubricId:input.rubricId,previousAmount:current,newAmount:input.targetAmount},
+      idempotencyKey:input.idempotencyKey});
+    return{status:'APPLIED',previousAmount:current,newAmount:input.targetAmount,operationId:committed.operationId,receipt:committed.receipt,evidenceEntry};
   }
 
   private async ensureNamedAccount(tenantId:Id,groupId:Id,currency:Currency,code:string,type:LedgerAccount['type']):Promise<LedgerAccount>{
