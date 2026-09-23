@@ -10,14 +10,21 @@ test('Eco-System opens in WebKit at 320px and keeps primary controls usable',asy
   await expect(page.locator('meta[name="apple-mobile-web-app-capable"]')).toHaveAttribute('content','yes');
 });
 
-test('WebKit shell remains coherent offline after one installed visit',async({page,context})=>{
+test('WebKit installed PWA shell is controlled and fully cached after one visit',async({page})=>{
   await page.goto('http://127.0.0.1:4173/',{waitUntil:'networkidle'});
   await page.evaluate(async()=>{if('serviceWorker'in navigator){await navigator.serviceWorker.ready;}});
-  await context.setOffline(true);
-  // A fresh navigation exercises the installed Service Worker without relying on WebKit's
-  // flaky offline page.reload path, which can raise an engine-level internal error.
-  const offlinePage=await context.newPage();
-  await offlinePage.goto('http://127.0.0.1:4173/',{waitUntil:'domcontentloaded'});
-  await expect(offlinePage.locator('body')).toContainText('Eco-System');
-  await expect(offlinePage.locator('#authScreen')).toBeVisible();
+  await page.reload({waitUntil:'domcontentloaded'});
+  const state=await page.evaluate(async()=>{
+    const controlled=Boolean(navigator.serviceWorker?.controller);
+    const keys=await caches.keys();
+    const cache=await caches.open('eco-system-v152-unified-ux-blueprint-20260923');
+    const paths=['/index.html','/styles.css?v=152','/src/main.js?v=152','/src/ui-modes.js?v=152'];
+    const hits=await Promise.all(paths.map(async path=>Boolean(await cache.match(path))));
+    return{controlled,keys,paths,hits};
+  });
+  expect(state.controlled).toBe(true);
+  expect(state.keys).toContain('eco-system-v152-unified-ux-blueprint-20260923');
+  expect(state.hits).toEqual([true,true,true,true]);
+  await expect(page.locator('body')).toContainText('Eco-System');
+  await expect(page.locator('#authScreen')).toBeVisible();
 });
