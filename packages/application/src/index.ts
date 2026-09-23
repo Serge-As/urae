@@ -682,6 +682,7 @@ export class ConnectedApplication {
   async createReferralShare(input:any):Promise<any>{return this.request('/api/v1/growth/referral-shares',{method:'POST',body:JSON.stringify(input)});}
   async registerReferralLanding(code:string):Promise<any>{return this.request('/api/v1/growth/referral-landings',{method:'POST',body:JSON.stringify({code})});}
   async registerReferralConversion(input:any):Promise<any>{return this.request('/api/v1/growth/referral-conversions',{method:'POST',body:JSON.stringify(input)});}
+  async verifyReferralConversion(campaignId:string,conversionId:string,input:any):Promise<any>{return this.request('/api/v1/growth/referral-campaigns/'+encodeURIComponent(campaignId)+'/conversions/'+encodeURIComponent(conversionId)+'/verify',{method:'POST',body:JSON.stringify(input)});}
   async approveReferralReward(campaignId:string,conversionId:string):Promise<any>{return this.request('/api/v1/growth/referral-campaigns/'+encodeURIComponent(campaignId)+'/rewards/'+encodeURIComponent(conversionId)+'/approve',{method:'POST',body:'{}'});}
 
   async businessSummary():Promise<any>{return this.request('/api/v1/business/summary');}
