@@ -567,7 +567,7 @@ const renderIndividualSheetMatrix=()=>{
     renderCanonicalFinancialTable({root,mode:'individual',membershipId:select.value,showToolbar:false,editable:isManager()});
 };
 const renderAllCanonicalFinancialHosts=scope=>{
-  const roots=[...(scope??document).querySelectorAll?.('[data-canonical-financial-host="1"]')??[]];
+  const provider=scope??document,roots=provider.querySelectorAll?[...provider.querySelectorAll('[data-canonical-financial-host="1"]')]:[];
   for(const root of roots){if(root.id==='meetingMatrix'||root.id==='individualSheetMatrix')continue;renderCanonicalFinancialTable({root,mode:root.dataset.financialMode||'meeting',meetingId:root.dataset.meetingId||'',membershipId:root.dataset.membershipId||'',showToolbar:root.dataset.showToolbar!=='false',editable:root.dataset.editable!=='false'});}
 };
 window.addEventListener('eco:render-canonical-financial-table',event=>{
