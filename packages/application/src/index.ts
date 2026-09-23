@@ -534,13 +534,22 @@ export class ConnectedApplication {
   async setFinancialCellTarget(input:{meetingId:string;membershipId:string;rubricId:string;targetAmount:number;currentAmount?:number;reason?:string}):Promise<any>{
     if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');
     if(!Number.isSafeInteger(input.targetAmount)||input.targetAmount<0)throw Error('INVALID_CONTRIBUTION_AMOUNT');
-    const current=Number(input.currentAmount??0);
-    if(this.isOffline()){
-      if(current===0&&input.targetAmount>0)return this.recordCashContribution({membershipId:input.membershipId,amount:input.targetAmount,meetingId:input.meetingId,rubricId:input.rubricId});
-      const item=await this.queueLocal('FINANCIAL_CELL_CORRECTION_PROPOSAL_V1',{groupId:this.activeGroupId,meetingId:input.meetingId,membershipId:input.membershipId,rubricId:input.rubricId,targetAmount:input.targetAmount,baselineValue:current,reason:input.reason??''},'cell-proposal:'+input.meetingId+':'+input.membershipId+':'+input.rubricId+':'+makeId('op'));
-      return{status:'QUEUED_CONSENSUS',current,target:input.targetAmount,outbox:item};
+    const current=Number(input.currentAmount??0),operationKey='cell-target:'+makeId('op');
+    const payload={groupId:this.activeGroupId,meetingId:input.meetingId,membershipId:input.membershipId,rubricId:input.rubricId,targetAmount:input.targetAmount,baselineValue:current,reason:input.reason??''};
+    // Persist the exact target command before attempting transport. If the HTTP
+    // response is lost after commit, the same idempotency key is replayed later.
+    const item=await this.queueLocal('FINANCIAL_CELL_CORRECTION_PROPOSAL_V1',payload,operationKey);
+    if(this.isOffline())return{status:'QUEUED_CONSENSUS',current,target:input.targetAmount,outbox:item};
+    try{
+      const result=await this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/meetings/${encodeURIComponent(input.meetingId)}/financial-cells`,{
+        method:'POST',headers:{'x-idempotency-key':operationKey},
+        body:JSON.stringify({membershipId:input.membershipId,rubricId:input.rubricId,targetAmount:input.targetAmount,expectedCurrentAmount:current,reason:input.reason??''})
+      });
+      this.outbox.markConfirmedByKey(this.tenantId,this.actorId,operationKey);await this.persistOutbox();return result;
+    }catch(error){
+      if(error instanceof Error&&error.message==='CELL_VALUE_CONFLICT'){this.outbox.markConflictByKey(this.tenantId,this.actorId,operationKey);await this.persistOutbox();}
+      throw error;
     }
-    return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/meetings/${encodeURIComponent(input.meetingId)}/financial-cells`,{method:'POST',body:JSON.stringify({membershipId:input.membershipId,rubricId:input.rubricId,targetAmount:input.targetAmount,reason:input.reason??''})});
   }
   async applyFinancialCellConsensus(meetingId:string,cellKey:string,reason='Valeur retenue après confrontation des gestionnaires'):Promise<any>{
     if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');
