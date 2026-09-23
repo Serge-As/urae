@@ -40,6 +40,7 @@ import { NotificationService } from '../../../packages/notifications/src/index.j
 import { OperationalCockpitService } from '../../../packages/operational-cockpit/src/index.js';
 import { simulatePeriodicLoan, summarizePeriodicLoan } from '../../../packages/loan-simulator/src/index.js';
 import { TrashLifecycleMaintenance, addCalendarMonthsClamped } from '../../../packages/trash-lifecycle/src/index.js';
+import { BusinessStudioService } from '../../../packages/business-studio/src/index.js';
 import { authenticatedApi } from './authenticated.js';
 export { GroupLiveHub } from './group-live-hub.js';
 
@@ -112,10 +113,11 @@ const createRequestScope = (request:Request,repo:PlatformRepository,artifacts?:A
   const economicIntelligence=new EconomicIntelligenceService(repo,kernel);
   const externalPrograms=new ExternalProgramsService(repo,kernel);
   const operationalCockpit=new OperationalCockpitService(repo,kernel,ledger);
+  const businessStudio=new BusinessStudioService(repo,kernel);
   const tenantId=request.headers.get('x-tenant-id')??'tenant_demo'; const actorId=request.headers.get('x-actor-id')??'user_founder';
   const groupRoles=(request.headers.get('x-group-roles')??'founder,manager').split(',').map(x=>x.trim()).filter(Boolean);
   kernel.context.set({actorId,tenantId,activeGroupId:request.headers.get('x-active-group-id')??undefined,groupRoles,mandateIds:[],deviceId:request.headers.get('x-device-id')??'device_web_demo',sessionId:request.headers.get('x-session-id')??'session_demo',locale:request.headers.get('accept-language')?.toLowerCase().startsWith('en')?'en':'fr',timezone:request.headers.get('x-timezone')??'Africa/Douala',connectivity:'online',requestId:request.headers.get('x-request-id')??makeId('req')});
-  return {kernel,foundation,ledger,meetings,discovery,membershipGateway,rubrics,completion,explainability,documents,receivables,treasury,riskFinance,market,community,imports,artifactStore,memberControl,groupIdentity,conciergeLearning,miscRubrics,adManager,economicIntelligence,externalPrograms,operationalCockpit};
+  return {kernel,foundation,ledger,meetings,discovery,membershipGateway,rubrics,completion,explainability,documents,receivables,treasury,riskFinance,market,community,imports,artifactStore,memberControl,groupIdentity,conciergeLearning,miscRubrics,adManager,economicIntelligence,externalPrograms,operationalCockpit,businessStudio};
 };
 
 const inboxFor = async (repo:PlatformRepository,tenantId:string,actorId:string) => {
@@ -130,7 +132,7 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
     const allowed=Boolean((cors as Record<string,string>)['access-control-allow-origin']);
     return new Response(null,{status:allowed?204:403,headers:{...baseSecurityHeaders,...cors,'access-control-allow-methods':'GET,POST,PUT,OPTIONS','access-control-allow-headers':'content-type,x-tenant-id,x-actor-id,x-group-roles,x-active-group-id,x-device-id,x-session-id,x-request-id,x-timezone'}});
   }
-  const {kernel,foundation,ledger,meetings,discovery,membershipGateway,rubrics,completion,explainability,documents,receivables,treasury,riskFinance,market,community,imports,artifactStore,memberControl,groupIdentity,conciergeLearning,miscRubrics,adManager,economicIntelligence,externalPrograms,operationalCockpit}=createRequestScope(request,repo,options.artifacts,options.dataUseDefaultMode??'BETA_OPEN',options.documentAI); const ctx=kernel.context.get();
+  const {kernel,foundation,ledger,meetings,discovery,membershipGateway,rubrics,completion,explainability,documents,receivables,treasury,riskFinance,market,community,imports,artifactStore,memberControl,groupIdentity,conciergeLearning,miscRubrics,adManager,economicIntelligence,externalPrograms,operationalCockpit,businessStudio}=createRequestScope(request,repo,options.artifacts,options.dataUseDefaultMode??'BETA_OPEN',options.documentAI); const ctx=kernel.context.get();
   const governanceVotes=new GovernanceVoteService(repo,kernel,options.governanceSecret??'eco-system-nonproduction-governance-secret');
   const notifications=new NotificationService(repo,kernel);
   if(options.premiumLive)kernel.features.set('premium_live_ledger',true);
@@ -398,6 +400,25 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
       return json({error:'METHOD_NOT_ALLOWED'},405,cors);
     }
     if(request.method==='GET'&&url.pathname==='/health') return json({ok:true,service:'tontine-api',version:'1.4.0-master-2.3.4-closure',now:new Date().toISOString(),realMoneyEnabled:kernel.features.enabled('financial-real-money'),manualCashLedgerEnabled:true,premiumLiveEnabled:options.premiumLive===true&&Boolean(options.liveNamespace),founderControlBound:Boolean(options.founderControl),communityRealtimeBound:Boolean(options.communityRealtime),artifactStorageBound:true,artifactStorageMode:options.artifacts?'R2':'D1_FALLBACK',contextScope:'request'},200,cors);
+    if(request.method==='GET'&&url.pathname==='/api/v1/business/summary')return json(await businessStudio.summary(),200,cors);
+    if(request.method==='GET'&&url.pathname==='/api/v1/business/records')return json({items:await businessStudio.records()},200,cors);
+    if(request.method==='PUT'&&url.pathname==='/api/v1/business/workspace'){const body=await readJson<any>(request);return json(await businessStudio.configure(body),200,cors);}
+    if(request.method==='POST'&&url.pathname==='/api/v1/business/mandates'){const body=await readJson<any>(request);return json(await businessStudio.createMandate(body),201,cors);}
+    const businessMandate=url.pathname.match(/^\/api\/v1\/business\/mandates\/([^/]+)\/(activate|end)$/);
+    if(businessMandate&&request.method==='POST'){const body=await readJson<any>(request);return json(businessMandate[2]==='activate'?await businessStudio.activateMandate(businessMandate[1]!):await businessStudio.endMandate(businessMandate[1]!,String(body.reason??'')),200,cors);}
+    if(request.method==='POST'&&url.pathname==='/api/v1/business/clients'){const body=await readJson<any>(request);return json(await businessStudio.createClient(body),201,cors);}
+    const businessClient=url.pathname.match(/^\/api\/v1\/business\/clients\/([^/]+)\/state$/);
+    if(businessClient&&request.method==='POST'){const body=await readJson<any>(request);return json(await businessStudio.setClientState(businessClient[1]!,String(body.state??'PROSPECT') as any),200,cors);}
+    if(request.method==='POST'&&url.pathname==='/api/v1/business/quotes'){const body=await readJson<any>(request);return json(await businessStudio.createQuote(body),201,cors);}
+    const businessQuote=url.pathname.match(/^\/api\/v1\/business\/quotes\/([^/]+)\/decision$/);
+    if(businessQuote&&request.method==='POST'){const body=await readJson<any>(request);return json(await businessStudio.quoteDecision(businessQuote[1]!,String(body.state??'SENT') as any),200,cors);}
+    if(request.method==='POST'&&url.pathname==='/api/v1/business/contracts'){const body=await readJson<any>(request);return json(await businessStudio.createContract(body),201,cors);}
+    if(request.method==='POST'&&url.pathname==='/api/v1/business/invoices'){const body=await readJson<any>(request);return json(await businessStudio.issueInvoice(body),201,cors);}
+    if(request.method==='POST'&&url.pathname==='/api/v1/business/payments'){const body=await readJson<any>(request);return json(await businessStudio.recordPayment(body),201,cors);}
+    if(request.method==='POST'&&url.pathname==='/api/v1/business/expenses'){const body=await readJson<any>(request);return json(await businessStudio.recordExpense(body),201,cors);}
+    if(request.method==='POST'&&url.pathname==='/api/v1/business/time'){const body=await readJson<any>(request);return json(await businessStudio.recordTime(body),201,cors);}
+    if(request.method==='POST'&&url.pathname==='/api/v1/business/scenarios'){const body=await readJson<any>(request);return json(await businessStudio.scenario(body),201,cors);}
+
     if(request.method==='GET'&&url.pathname==='/api/v1/kernel') return json({services:['context','policy','workflow','events','audit','obligations','evidence','reconciliation','cases','inbox','notifications','configuration','features','data-governance','compatibility','resource-governor'],features:{groupLaunch:kernel.features.enabled('group-launch-studio'),meetingSync:kernel.features.enabled('meeting-sync-core'),realMoney:kernel.features.enabled('financial-real-money'),manualCashLedger:true}},200,cors);
 
     if(request.method==='GET'&&url.pathname==='/api/v1/product/capabilities'){
