@@ -13,9 +13,12 @@ const loanSimulator=fs.readFileSync('packages/loan-simulator/src/index.ts','utf8
 const recap=fs.readFileSync('apps/web/src/recap-ui.js','utf8');
 const app=fs.readFileSync('packages/application/src/index.ts','utf8');
 const api=fs.readFileSync('workers/api/src/index.ts','utf8');
+const domain=fs.readFileSync('packages/domain/src/index.ts','utf8');
 const consensus=fs.readFileSync('packages/meeting-live-consensus/src/index.ts','utf8');
 const relay=fs.readFileSync('packages/relay/src/index.ts','utf8');
 const resilience=fs.readFileSync('apps/web/src/resilience-ui.js','utf8');
+const trashLifecycle=fs.readFileSync('packages/trash-lifecycle/src/index.ts','utf8');
+const repositories=fs.readFileSync('packages/repositories/src/index.ts','utf8');
 
 test('Android 6 offline shell remains fast offline and never force-reloads on worker takeover',()=>{
   assert.match(sw,/eco-system-v1451-field-corrections-20260922/);
@@ -99,8 +102,9 @@ test('closed sessions can be edited with manager alert and financial member aler
   assert.match(sessions,/Modifier la séance clôturée/);
   assert.match(api,/Séance clôturée modifiée/);
   assert.match(api,/CLOSED_MEETING_CONTEXT_CHANGED/);
-  assert.match(api,/governedCorrectionReason/);
+  assert.match(api,/replaceCashContributionCell/);
   assert.match(api,/meeting\.status==='closed'/);
+  assert.match(domain,/Correction après clôture/);
 });
 
 test('individual sheets are restored and manager can edit exact member-session-rubric cells',()=>{
@@ -136,21 +140,25 @@ test('member and session histories expose human-readable financial provenance',(
   assert.match(api,/meetingHistoryRoute/);
 });
 
-test('six month trash is reversible and exposes no manual permanent-delete route',()=>{
+test('six month trash is calendar-correct reversible and final purge is system-owned',()=>{
   assert.match(html,/id="view-trash"/);
-  assert.match(api,/restoreUntil\.setUTCMonth\(restoreUntil\.getUTCMonth\(\)\+6\)/);
+  assert.match(api,/addCalendarMonthsClamped\(now,6\)/);
   assert.match(api,/ENTITY_MOVED_TO_TRASH/);
   assert.match(api,/ENTITY_RESTORED_FROM_TRASH/);
   assert.match(api,/snapshotJson/);
-  assert.match(api,/TRASH_RETENTION_EXPIRED/);
-  assert.match(api,/delete safeData\.snapshotJson/);
+  assert.match(api,/commitTrashLifecycle/);
   assert.doesNotMatch(api,/trash[^\n]{0,120}request\.method==='DELETE'/);
+  assert.match(trashLifecycle,/PURGE_PENDING/);
+  assert.match(trashLifecycle,/captureGroupPurgeManifest/);
+  assert.match(trashLifecycle,/purgeGroupData/);
+  assert.match(trashLifecycle,/Rappel · groupe dans la corbeille/);
+  assert.match(repositories,/purged_group_tombstones/);
+  assert.match(repositories,/DELETE FROM platform_records WHERE tenant_id=\? AND group_id=\?/);
   assert.match(main,/Restaurer intégralement/);
   assert.match(api,/kind==='GROUP'/);
-  assert.match(api,/Rappel · groupe dans la corbeille/);
   assert.match(api,/remindersEnabled/);
   assert.match(app,/groupTrashItems/);
-  assert.match(main,/Ne plus rappeler chaque mois/);
+  assert.match(main,/Ne plus me rappeler chaque mois/);
 });
 
 test('Eco Relay uses authenticated encryption random nonce expiry and anti-replay while preserving original actor',()=>{
@@ -185,10 +193,10 @@ test('loan is a negative member position and simulation is available to member a
   assert.match(app,/loanHistory/);
 });
 
-test('stale cached html no longer crashes on optional local-account control and 1.4.5.1 cache is isolated',()=>{
+test('stale cached html no longer crashes on optional local-account control and 1.5.0 cache keeps previous coherent release',()=>{
   assert.match(main,/document\.querySelector\('#claimLocalAccountBtn'\)\?\.addEventListener/);
   assert.doesNotMatch(main,/\$\('#claimLocalAccountBtn'\)\.addEventListener/);
   assert.match(sw,/eco-system-v1451-field-corrections-20260922/);
-  assert.match(html,/ECO-SYSTEM · 1\.4\.5\.1/);
+  assert.match(html,/ECO-SYSTEM · 1\.5\.0/);
   assert.match(html,/main\.js\?v=1451/);
 });

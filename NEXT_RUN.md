@@ -1,5 +1,22 @@
 # ECO-SYSTEM — NEXT RUN
 
+## CURRENT OVERRIDE — 1.5.0 audit implementation (2026-09-23)
+
+Branche : `next/1.5.0-audit-complete-platform-20260923`. Production 1.4.5 reste inchangée.
+
+Reprise obligatoire :
+1. lire `docs/implementation/ECO_SYSTEM_1.5.0_FULL_IMPLEMENTATION_SCOPE_2026-09-23.md` ;
+2. relever le HEAD distant 1.5.0 et la dernière CI ;
+3. corriger toute erreur CI avant nouveau lot ;
+4. poursuivre L1 : CAS/version de cellule + concurrence D1 + revue après clôture ;
+5. ne pas déployer avant qualification complète + BIR+ pré ;
+6. préserver tous les acquis indiqués dans AGENTS/CURRENT_TRUTH et `realMoneyEnabled=false`.
+
+Commits acquis de ce démarrage : correction intérêts après capital nul ; tests runtime prêt ; contrat correction financière atomique ; branchement Worker ; persistance outbox avant transport ; confrontation offline sur baseline ; tests/CI 1.5.0.
+
+---
+
+
 ## CURRENT OVERRIDE — Reprise après production 1.4.5 (2026-09-22)
 
 Production actuelle :

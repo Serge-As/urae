@@ -4,6 +4,7 @@ export type CapabilityHealth='UNKNOWN'|'PASS'|'DEGRADED'|'FAIL';
 export interface ControlCapability {
   id:string; labelFr:string; labelEn:string; declaredStatus:string; lot:string; workspace:string;
   health:CapabilityHealth; healthNote?:string; lastCheckedAt?:string; updatedAt:string;
+  monitoringState:'TO_CONFIGURE'|'ACTIVE'; codeStage:'SPECIFIED'|'IMPLEMENTED'; deploymentStage:'UNKNOWN'|'DEPLOYED'; fieldStage:'NOT_VERIFIED'|'FIELD_ACCEPTED';
 }
 export interface ControlItem {
   id:string; type:'CONTENT'|'INCIDENT'; key:string; title:string; status:string; priority:'LOW'|'NORMAL'|'HIGH'|'CRITICAL';
@@ -60,12 +61,14 @@ export class FounderControlStore{
     await this.db.prepare("INSERT INTO founder_control_items(id,item_type,item_key,title,status,priority,data_json,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?)").bind(id,type,key,title,clean(status,60),p,JSON.stringify(data),stamp,stamp).run();
     return{id,type,key,title,status:clean(status,60),priority:p,data,createdAt:stamp,updatedAt:stamp};
   }
-  async transition(id:string,status:string,note=''):Promise<ControlItem>{
+  async transition(id:string,status:string,note='',evidenceRef=''):Promise<ControlItem>{
     const row=await this.db.prepare("SELECT * FROM founder_control_items WHERE id=? AND item_type IN ('CONTENT','INCIDENT')").bind(id).first<Row>();
     if(!row)throw new Error('CONTROL_ITEM_NOT_FOUND');
-    const data=JSON.parse(String(row.data_json??'{}')) as Record<string,unknown>; data.transitionNote=clean(note,2000); data.transitionedAt=now();
-    const stamp=now(); await this.db.prepare("UPDATE founder_control_items SET status=?,data_json=?,updated_at=? WHERE id=?").bind(clean(status,60),JSON.stringify(data),stamp,id).run();
-    return{id:String(row.id),type:String(row.item_type) as 'CONTENT'|'INCIDENT',key:String(row.item_key),title:String(row.title),status:clean(status,60),priority:validPriority(String(row.priority)),data,createdAt:String(row.created_at),updatedAt:stamp};
+    const nextStatus=clean(status,60),transitionNote=clean(note,2000),proof=clean(evidenceRef,500);
+    if(['RESOLVED','CLOSED'].includes(nextStatus)&&(!transitionNote||!proof))throw new Error('RESOLUTION_EVIDENCE_REQUIRED');
+    const data=JSON.parse(String(row.data_json??'{}')) as Record<string,unknown>; data.transitionNote=transitionNote; data.transitionedAt=now();if(proof)data.resolutionEvidenceRef=proof;
+    const stamp=now(); await this.db.prepare("UPDATE founder_control_items SET status=?,data_json=?,updated_at=? WHERE id=?").bind(nextStatus,JSON.stringify(data),stamp,id).run();
+    return{id:String(row.id),type:String(row.item_type) as 'CONTENT'|'INCIDENT',key:String(row.item_key),title:String(row.title),status:nextStatus,priority:validPriority(String(row.priority)),data,createdAt:String(row.created_at),updatedAt:stamp};
   }
 
   async snapshot(capabilities:Array<{id:string;labelFr:string;labelEn:string;status:string;lot:string;workspace:string}>):Promise<FounderControlSnapshot>{
@@ -77,7 +80,7 @@ export class FounderControlStore{
       this.db.prepare('SELECT * FROM founder_control_items ORDER BY updated_at DESC LIMIT 2000').all<Row>()
     ]);
     const complaints=caseRows.results.map(r=>{const d=JSON.parse(String(r.data_json??'{}')) as Record<string,unknown>;return{id:String(r.record_id),tenantId:r.tenant_id?String(r.tenant_id):undefined,groupId:r.group_id?String(r.group_id):undefined,status:String(d.status??'OPEN'),summary:String(d.summary??''),openedAt:String(d.openedAt??''),openedBy:String(d.openedBy??'')};}).filter(x=>!['CLOSED','RESOLVED'].includes(x.status));
-    const capabilitiesOut:ControlCapability[]=controlRows.results.filter(r=>r.item_type==='CAPABILITY').map(r=>{const d=JSON.parse(String(r.data_json??'{}')) as Record<string,unknown>;return{id:String(r.item_key),labelFr:String(d.labelFr??r.title),labelEn:String(d.labelEn??''),declaredStatus:String(d.declaredStatus??''),lot:String(d.lot??''),workspace:String(d.workspace??''),health:validHealth(String(d.health??'UNKNOWN')),healthNote:d.healthNote?String(d.healthNote):undefined,lastCheckedAt:d.lastCheckedAt?String(d.lastCheckedAt):undefined,updatedAt:String(r.updated_at)};}).sort((a,b)=>a.id.localeCompare(b.id));
+    const capabilitiesOut:ControlCapability[]=controlRows.results.filter(r=>r.item_type==='CAPABILITY').map(r=>{const d=JSON.parse(String(r.data_json??'{}')) as Record<string,unknown>;const health=validHealth(String(d.health??'UNKNOWN')),declaredStatus=String(d.declaredStatus??'');return{id:String(r.item_key),labelFr:String(d.labelFr??r.title),labelEn:String(d.labelEn??''),declaredStatus,lot:String(d.lot??''),workspace:String(d.workspace??''),health,healthNote:d.healthNote?String(d.healthNote):undefined,lastCheckedAt:d.lastCheckedAt?String(d.lastCheckedAt):undefined,updatedAt:String(r.updated_at),monitoringState:(health==='UNKNOWN'?'TO_CONFIGURE':'ACTIVE') as 'TO_CONFIGURE'|'ACTIVE',codeStage:(['FOUNDATION_ACTIVE','STRUCTURAL_V1'].includes(declaredStatus)?'IMPLEMENTED':'SPECIFIED') as 'SPECIFIED'|'IMPLEMENTED',deploymentStage:'UNKNOWN' as const,fieldStage:'NOT_VERIFIED' as const};}).sort((a,b)=>a.id.localeCompare(b.id));
     const items=(type:'CONTENT'|'INCIDENT'):ControlItem[]=>controlRows.results.filter(r=>r.item_type===type).map(r=>({id:String(r.id),type,key:String(r.item_key),title:String(r.title),status:String(r.status),priority:validPriority(String(r.priority)),data:JSON.parse(String(r.data_json??'{}')),createdAt:String(r.created_at),updatedAt:String(r.updated_at)}));
     return{generatedAt:now(),platform:{groups,memberships,workspaceRecords,openComplaints:complaints.length,audits},capabilities:capabilitiesOut,content:items('CONTENT'),incidents:items('INCIDENT'),complaints,supervisionRule:'CATALOG_AUTO_REGISTER'};
   }

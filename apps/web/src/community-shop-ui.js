@@ -103,16 +103,62 @@ export function mountCommunityShopUI({app,notify=()=>{},showError=console.error,
       if(name)name.value=data.shop.name??'';if(tag)tag.value=data.shop.tagline??'';if(vis)vis.value=data.shop.visibility??'GROUP_ONLY';if(loc)loc.value=data.shop.locality??'';if(cats)cats.value=(data.shop.categories??[]).join(', ');
     }else storefront.append(el('p','La boutique n’est pas encore configurée.','hint'));
     for(const item of data.items??[]){
-      const card=el('article',undefined,'item');card.append(el('strong',item.name),row('SKU',item.sku),row('Disponible',item.available+' '+item.unit),row('Prix',fmt(item.unitPrice)),row('Description',item.description||'—'));storefront.append(card);
+      const card=el('article',undefined,'item');card.append(el('strong',item.name),row('SKU',item.sku),row('Nature',item.ownership==='POT_RESERVED'?'Réservé pot / tontine':item.ownership==='CONSIGNMENT'?'Consignation':item.ownership==='DEPOSIT_SALE'?'Dépôt-vente':'Commercial'),row('Disponible',item.available+' '+item.unit),row('Prix',fmt(item.unitPrice)),row('Description',item.description||'—'));storefront.append(card);
     }
     if(isManager()){
       const records=await app.listWorkspaceRecords('MARKETPLACE.CORE',app.activeGroup());
       const stocks=records.filter(x=>x.data?.marketKind==='STOCK_ITEM');
       if(stocks.length){const manage=el('section',undefined,'stack');manage.append(el('h4','Publication des articles du stock'));for(const item of stocks){
-        const card=el('article',undefined,'item');card.append(el('strong',item.title),row('Stock',Number(item.data.quantity)-Number(item.data.reserved??0)),row('Vitrine',item.data.published?'Publié':'Masqué'));
-        const toggle=el('button',item.data.published?'Retirer de la vitrine':'Publier dans la vitrine',item.data.published?'secondary':'primary');toggle.type='button';
-        toggle.onclick=()=>void(async()=>{try{let price=Number(item.data.unitPrice??0);if(!item.data.published){const raw=window.prompt('Prix unitaire XAF :',String(price||0));if(raw===null)return;price=Math.max(0,Math.trunc(Number(raw)||0));}await app.setStockListing(item.id,{published:!Boolean(item.data.published),unitPrice:price,description:String(item.data.description??'')});notify('Vitrine mise à jour.');await renderStorefront();}catch(e){showError(e);}})();card.append(toggle);manage.append(card);
+        const ownership=String(item.data.ownership??'COMMERCIAL'),card=el('article',undefined,'item');card.append(el('strong',item.title),row('Stock',Number(item.data.quantity)-Number(item.data.reserved??0)),row('Nature',ownership==='POT_RESERVED'?'Réservé pot / tontine':ownership==='CONSIGNMENT'?'Consignation':ownership==='DEPOSIT_SALE'?'Dépôt-vente':'Commercial'),row('Vitrine',item.data.published?'Publié':'Masqué'));
+        if(ownership!=='POT_RESERVED'){const toggle=el('button',item.data.published?'Retirer de la vitrine':'Publier dans la vitrine',item.data.published?'secondary':'primary');toggle.type='button';
+          toggle.onclick=()=>void(async()=>{try{let price=Number(item.data.unitPrice??0);if(!item.data.published){const raw=window.prompt('Prix unitaire XAF :',String(price||0));if(raw===null)return;price=Math.max(0,Math.trunc(Number(raw)||0));}await app.setStockListing(item.id,{published:!Boolean(item.data.published),unitPrice:price,description:String(item.data.description??'')});notify('Vitrine mise à jour.');await renderStorefront();}catch(e){showError(e);}})();card.append(toggle);
+        }else card.append(el('p','Ce stock appartient au pot/tontine : la vente commerciale est bloquée par le moteur.','truth-notice'));
+        manage.append(card);
       }storefront.append(manage);}
+
+      const supply=el('section',undefined,'stack');supply.append(el('h4','Fournisseurs · approvisionnement · crédit'));
+      supply.append(el('p','Le coût rendu = marchandises + transport + autres coûts. Le débiteur est toujours identifié. Une dette du groupe ne peut être marquée payée sans référence à une écriture du Ledger.','truth-notice'));
+      const toolbar=el('div',undefined,'actions');
+      const addSupplier=el('button','Ajouter un fournisseur','secondary');addSupplier.type='button';addSupplier.onclick=()=>void(async()=>{try{
+        const name=window.prompt('Nom du fournisseur :')?.trim();if(!name)return;const locality=window.prompt('Localité :')?.trim()??'',terms=window.prompt('Conditions de paiement :')?.trim()??'';
+        await app.registerMarketSupplier({name,locality,paymentTerms:terms});notify('Fournisseur enregistré.');await renderStorefront();
+      }catch(e){showError(e);}})();toolbar.append(addSupplier);supply.append(toolbar);
+      try{
+        const state=await app.marketProcurement();
+        for(const supplier of state.suppliers??[]){
+          const card=el('article',undefined,'item');card.append(el('strong',supplier.title),row('Localité',supplier.data.locality||'—'),row('Conditions',supplier.data.paymentTerms||'—'));
+          const order=el('button','Créer un approvisionnement','primary');order.type='button';order.onclick=()=>void(async()=>{try{
+            const label=window.prompt('Produit / service acheté :')?.trim();if(!label)return;
+            const quantity=Math.max(1,Math.trunc(Number(window.prompt('Quantité :','1')??1))),unitCost=Math.max(0,Math.trunc(Number(window.prompt('Coût unitaire XAF :','0')??0)));
+            const freight=Math.max(0,Math.trunc(Number(window.prompt('Transport XAF :','0')??0))),otherCosts=Math.max(0,Math.trunc(Number(window.prompt('Autres coûts XAF :','0')??0)));
+            const due=window.prompt('Échéance crédit fournisseur (AAAA-MM-JJ, vide si paiement comptant) :')?.trim()??'';
+            await app.createMarketProcurement({supplierId:supplier.id,debtorType:'GROUP',debtorRef:app.activeGroup(),lines:[{label,quantity,unitCost}],freight,otherCosts,currency:'XAF',creditDueAt:due?new Date(due+'T12:00:00Z').toISOString():undefined});
+            notify('Approvisionnement créé.');await renderStorefront();
+          }catch(e){showError(e);}})();card.append(order);supply.append(card);
+        }
+        for(const p of state.procurements??[]){
+          const card=el('article',undefined,'item');card.append(el('strong',p.title),row('État',p.data.state),row('Coût marchandises',fmt(Number(p.data.goodsCost??0))),row('Transport + autres',fmt(Number(p.data.freight??0)+Number(p.data.otherCosts??0))),row('Coût rendu',fmt(Number(p.data.landedCost??0))),row('Débiteur',String(p.data.debtorType)+' · '+String(p.data.debtorRef)));
+          if(['ORDERED','PARTIAL_RECEIPT'].includes(String(p.data.state))){
+            const receive=el('button','Constater la réception restante','secondary');receive.type='button';receive.onclick=()=>void(async()=>{try{
+              const lines=JSON.parse(String(p.data.linesJson??'[]')),received=JSON.parse(String(p.data.receivedLinesJson??'[]')),todo=[];
+              for(let i=0;i<lines.length;i++){const done=received.filter(x=>Number(x.lineIndex)===i).reduce((n,x)=>n+Number(x.quantity),0),left=Number(lines[i].quantity)-done;if(left>0)todo.push({lineIndex:i,quantity:left});}
+              if(!todo.length)return notify('Toutes les quantités sont déjà reçues.');
+              const ownership=window.prompt('Nature du stock reçu : COMMERCIAL, POT_RESERVED, CONSIGNMENT ou DEPOSIT_SALE','COMMERCIAL')?.trim().toUpperCase()||'COMMERCIAL';
+              await app.receiveMarketProcurement(p.id,{lines:todo,stockOwnership:ownership});notify('Réception enregistrée et stock mis à jour.');await renderStorefront();
+            }catch(e){showError(e);}})();card.append(receive);
+          }
+          supply.append(card);
+        }
+        for(const c of state.credits??[]){
+          const remaining=Number(c.data.principal??0)-Number(c.data.paidAmount??0),card=el('article',undefined,'item');card.append(el('strong',c.title),row('Débiteur',String(c.data.debtorType)+' · '+String(c.data.debtorRef)),row('Principal',fmt(Number(c.data.principal??0))),row('Reste',fmt(remaining)),row('Échéance',String(c.data.dueAt??'—')),row('État',String(c.data.state)));
+          if(remaining>0){const pay=el('button','Enregistrer un règlement','secondary');pay.type='button';pay.onclick=()=>void(async()=>{try{
+            const amount=Math.max(1,Math.trunc(Number(window.prompt('Montant réglé XAF :',String(remaining))??0)));
+            const ledgerEntryId=String(c.data.debtorType)==='GROUP'?(window.prompt('ID de l’écriture Ledger correspondant au décaissement :')?.trim()??''):'';
+            await app.paySupplierCredit(c.id,{amount,ledgerEntryId:ledgerEntryId||undefined,reference:window.prompt('Référence / reçu :')?.trim()??''});notify('Règlement fournisseur rapproché.');await renderStorefront();
+          }catch(e){showError(e);}})();card.append(pay);}supply.append(card);
+        }
+      }catch(e){supply.append(el('p','Approvisionnement indisponible : '+String(e?.message??e),'hint'));}
+      storefront.append(supply);
     }
   };
 

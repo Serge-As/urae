@@ -1,5 +1,50 @@
 # ECO-SYSTEM — CURRENT TRUTH
 
+## CURRENT OVERRIDE — 1.5.0 AUDIT COMPLETE DEPLOYED (2026-09-23)
+
+Production publique : `https://eco-system.sergemimf.workers.dev/`.
+Version runtime : **1.5.0-audit-complete**.
+Source déployée : `8283c5383db99d26a14f388a0890d15251b4dd87`.
+Build ID : `eco-system-1.5.0-20260923`.
+PWA cache : `eco-system-v150-audit-complete-20260923`.
+Catalogue production : **158 capacités**.
+Stockage artefacts : **R2**.
+Argent réel : **DÉSACTIVÉ**.
+
+Preuve production : workflow `35832177188` — **SUCCESS**. Le workflow a exécuté la CI complète avant mutation, résolu la D1 existante et le R2 existant, exporté la D1 avant déploiement, appliqué uniquement les migrations additives, déployé Worker/PWA/cron puis vérifié root + /health + catalogue + SHA exact. Artifact de récupération : `eco-system-pre-1.5.0-8283c5383db99d26a14f388a0890d15251b4dd87`, ID `10738091343`.
+
+Acquis 1.5.0 à préserver : correction financière atomique/versionnée/idempotente ; séance explicite ; consensus multi-gestionnaires ; prêt séparé et intérêts stoppés après extinction du capital ; historique membre paginé ; compte local et migration d’identité reprenable ; shell PWA atomique ; corbeille six mois + maintenance serveur ; pétition/reconstitution 2/3 sans transfert automatique ; Value Network ; Business Studio ; Marketplace stock/fournisseur/crédit ; Referral ; Knowledge/Encyclopédie ; Academy ; Control Center à preuve ; ergonomie senior/mobile.
+
+Décisions fondateur : le groupe successeur décide de ses actions sur actifs/dettes/contestations et peut ouvrir un dossier/plainte ; après six mois la purge vise la disparition des données métier, avec seules traces techniques/statistiques minimales non reconstructives.
+
+Garde-fous : D1 `eco-system-db` jamais recréée ; migrations additives ; Ledger unique ; argent réel OFF ; dix étapes ; Collation ; multi-tontines ; RECAP ; Community/Forum/Live ; historique conservé ; aucune capacité déclarée terrain-acquise sans preuve terrain.
+
+Validation distincte : la CI générale 1.5.0 est verte. Le smoke WebKit automatisé est une preuve navigateur séparée et ne remplace jamais une recette iPhone/iPad physique installée depuis l’écran d’accueil.
+
+Point de reprise : branche `next/1.5.0-audit-complete-platform-20260923`, PR #13. Toujours relire le HEAD distant, cette vérité et la dernière CI avant toute nouvelle modification. La production doit être comparée au SHA déployé ci-dessus, pas supposée égale au HEAD documentaire ultérieur.
+
+---
+
+
+## CURRENT OVERRIDE — 1.5.0 AUDIT IMPLEMENTATION IN PROGRESS (2026-09-23)
+
+Production reste `1.4.5-final-mega-offline-governance` source `463035adab2303874878c8e72f1965475ac0b209`. Aucun déploiement 1.5.0 n’est encore déclaré.
+
+Branche de travail : `next/1.5.0-audit-complete-platform-20260923`, créée depuis le SHA audité 1.4.5.1 `57b99f5249535cef2edc90a3635b2a26fc7ebf12`.
+
+Autorisation fondateur : implémentation complète de l’audit du 22/09, avec réintégration des contours historiques Chat originel/Conversation originelle et sans régression.
+
+Décisions nouvelles : groupe successeur décide de ses actions sur actifs/dettes/contestations ; purge cible après six mois = suppression des données métier de la plateforme, traces techniques/statistiques minimales non reconstructives seulement, avec non-résurrection par sauvegarde.
+
+P0 déjà engagés sur la branche : bug intérêt INITIAL corrigé et testé ; correction de cellule déplacée vers un plan repository atomique ; commande cible persistée localement avant réseau ; première saisie 0→X n’utilise plus le raccourci direct ; conflit offline compare sa valeur de base.
+
+Document de portée canonique de ce chantier : `docs/implementation/ECO_SYSTEM_1.5.0_FULL_IMPLEMENTATION_SCOPE_2026-09-23.md`.
+
+Prochaine étape : CI 1.5.0, puis CAS/version de cellule et tests D1 de concurrence avant toute production.
+
+---
+
+
 ## CURRENT OVERRIDE — 1.4.5 VERIFIED_REMOTE (2026-09-22)
 
 Production vérifiée : `1.4.5-final-mega-offline-governance` sur `eco-system`, source `463035adab2303874878c8e72f1965475ac0b209`, Worker Version ID `29c8f0e2-1cb1-4361-8481-27b514906fcf`. Run production `35713621388 SUCCESS`, **298/298 tests PASS**, smoke 1.4.5 PASS, D1 existante sans migration, Premium Live/Founder Control/Community Realtime/R2 actifs, argent réel OFF. BIR+ pré `10688266480`, post `10688236533`, restauration SQLite/integrity/SHA256 et miroirs R2 PASS.

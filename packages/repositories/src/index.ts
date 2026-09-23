@@ -14,8 +14,74 @@ export interface FinancialOperation {
   outboxRecords?: WorkspaceRecord[];
 }
 
+export interface FinancialCellRevision {
+  tenantId: Id;
+  groupId: Id;
+  meetingId: Id;
+  membershipId: Id;
+  rubricId: Id;
+  currency: string;
+  version: number;
+  lastOperationId: Id;
+  updatedAt: string;
+}
+
+export interface FinancialCellRevisionCAS {
+  meetingId: Id;
+  membershipId: Id;
+  rubricId: Id;
+  currency: string;
+  expectedVersion: number;
+  nextVersion: number;
+}
+
+export interface GroupPurgeManifest {
+  tenantId: Id;
+  groupId: Id;
+  entityIds: Id[];
+  artifactKeys: string[];
+}
+export interface GroupPurgeResult {
+  purged: true;
+  scopeHash: string;
+  purgedAt: string;
+}
+
+export type TrashEntityRecord = Group | Membership | MeetingSession | RubricDefinition;
+export interface TrashLifecyclePlan {
+  entityRecordType: 'group'|'membership'|'meeting'|'rubric_definition';
+  entity: TrashEntityRecord;
+  trashRecord: WorkspaceRecord;
+  audit: AuditEvent;
+}
+
+export interface FinancialCorrectionPlan {
+  kind: 'cell_correction';
+  operationId: Id;
+  idempotencyKey: string;
+  intentFingerprint: string;
+  tenantId: Id;
+  groupId: Id;
+  primaryEntryId: Id;
+  entries: LedgerEntry[];
+  receipt?: ContributionReceipt;
+  accounts: LedgerAccount[];
+  audits: AuditEvent[];
+  cellRevision: FinancialCellRevisionCAS;
+  /** Durable records created with the correction; delivery happens only after commit. */
+  outboxRecords?: WorkspaceRecord[];
+}
+
 export interface PlatformRepository {
   commitFinancialOperation(operation: FinancialOperation): FinancialOperation | Promise<FinancialOperation>;
+  commitFinancialCorrection(plan: FinancialCorrectionPlan): FinancialCorrectionPlan | Promise<FinancialCorrectionPlan>;
+  getFinancialCellRevision(tenantId:Id,groupId:Id,meetingId:Id,membershipId:Id,rubricId:Id,currency:string): FinancialCellRevision | undefined | Promise<FinancialCellRevision | undefined>;
+  listFinancialCellRevisions(tenantId:Id,groupId:Id): FinancialCellRevision[] | Promise<FinancialCellRevision[]>;
+  captureGroupPurgeManifest(tenantId:Id,groupId:Id): GroupPurgeManifest | Promise<GroupPurgeManifest>;
+  purgeGroupData(manifest:GroupPurgeManifest,deletionId:string,purgedAt:string): GroupPurgeResult | Promise<GroupPurgeResult>;
+  isGroupPurged(tenantId:Id,groupId:Id): boolean | Promise<boolean>;
+  commitTrashLifecycle(plan:TrashLifecyclePlan): TrashLifecyclePlan | Promise<TrashLifecyclePlan>;
+  listTrashMaintenanceItems(): WorkspaceRecord[] | Promise<WorkspaceRecord[]>;
   getGroupById(id:Id):Group|undefined|Promise<Group|undefined>;
   listMembershipsForUser(userId:Id):Membership[]|Promise<Membership[]>;
   saveUser(user: User): void | Promise<void>;
@@ -103,6 +169,40 @@ export class InMemoryPlatformRepository implements PlatformRepository {
     this.financialOperations.set(key,copy);
     return structuredClone(copy);
   }
+  private financialCorrections = new Map<string, FinancialCorrectionPlan>();
+  private financialCellRevisions = new Map<string, FinancialCellRevision>();
+  private financialCellRevisionKey(t:Id,g:Id,m:Id,member:Id,rubric:Id,currency:string):string{return JSON.stringify([t,g,m,member,rubric,currency]);}
+  commitFinancialCorrection(plan: FinancialCorrectionPlan): FinancialCorrectionPlan {
+    const key=JSON.stringify([plan.tenantId,plan.groupId,plan.kind,plan.idempotencyKey]);
+    const existing=this.financialCorrections.get(key);
+    if(existing){
+      if(existing.intentFingerprint!==plan.intentFingerprint)throw new Error('IDEMPOTENCY_CONFLICT');
+      return structuredClone(existing);
+    }
+    const c=plan.cellRevision,revisionKey=this.financialCellRevisionKey(plan.tenantId,plan.groupId,c.meetingId,c.membershipId,c.rubricId,c.currency);
+    const current=this.financialCellRevisions.get(revisionKey),currentVersion=current?.version??0;
+    if(currentVersion!==c.expectedVersion)throw new Error('CELL_VERSION_CONFLICT');
+    const copy=structuredClone(plan),at=copy.entries.at(-1)?.createdAt??new Date().toISOString();
+    // One synchronous commit boundary: CAS, reversals, replacement, audit and
+    // durable delivery records become visible together.
+    this.financialCellRevisions.set(revisionKey,{tenantId:plan.tenantId,groupId:plan.groupId,meetingId:c.meetingId,membershipId:c.membershipId,rubricId:c.rubricId,currency:c.currency,version:c.nextVersion,lastOperationId:plan.operationId,updatedAt:at});
+    for(const a of copy.accounts)this.ledgerAccounts.set(a.id,a);
+    for(const entry of copy.entries)this.ledgerEntries.set(entry.id,entry);
+    if(copy.receipt)this.receipts.set(copy.receipt.id,copy.receipt);
+    for(const audit of copy.audits)this.audits.set(audit.id,audit);
+    for(const record of copy.outboxRecords??[])this.workspaceRecords.set(record.id,record);
+    this.financialCorrections.set(key,copy);
+    return structuredClone(copy);
+  }
+  getFinancialCellRevision(tenantId:Id,groupId:Id,meetingId:Id,membershipId:Id,rubricId:Id,currency:string):FinancialCellRevision|undefined{
+    const x=this.financialCellRevisions.get(this.financialCellRevisionKey(tenantId,groupId,meetingId,membershipId,rubricId,currency));
+    return x?structuredClone(x):undefined;
+  }
+  listFinancialCellRevisions(tenantId:Id,groupId:Id):FinancialCellRevision[]{
+    return [...this.financialCellRevisions.values()].filter(x=>x.tenantId===tenantId&&x.groupId===groupId).map(x=>structuredClone(x));
+  }
+
+  private purgedGroupScopes = new Set<string>();
   private users = new Map<Id, User>();
   private projects = new Map<Id, GroupProject>();
   private groups = new Map<Id, Group>();
@@ -121,6 +221,53 @@ export class InMemoryPlatformRepository implements PlatformRepository {
   private rubricDefinitions = new Map<Id, RubricDefinition>();
   private governanceKnowledgeClaims = new Map<Id, GovernanceKnowledgeClaim>();
   private workspaceRecords = new Map<Id, WorkspaceRecord>();
+
+  commitTrashLifecycle(plan:TrashLifecyclePlan):TrashLifecyclePlan{
+    const copy=structuredClone(plan),x=copy.entity as any;
+    if(plan.entityRecordType==='group')this.groups.set(x.id,x);
+    else if(plan.entityRecordType==='membership')this.memberships.set(x.id,x);
+    else if(plan.entityRecordType==='meeting')this.meetings.set(x.id,x);
+    else this.rubricDefinitions.set(x.id,x);
+    this.workspaceRecords.set(copy.trashRecord.id,copy.trashRecord);this.audits.set(copy.audit.id,copy.audit);
+    return structuredClone(copy);
+  }
+  listTrashMaintenanceItems():WorkspaceRecord[]{return [...this.workspaceRecords.values()].filter(x=>x.moduleId==='TRASH.ITEM').map(x=>structuredClone(x));}
+
+  captureGroupPurgeManifest(tenantId:Id,groupId:Id):GroupPurgeManifest{
+    const ids=new Set<Id>([groupId]),artifacts=new Set<string>();
+    const collect=(value:unknown)=>{
+      if(typeof value==='string'&&value.includes('/'+tenantId+'/'+groupId+'/'))artifacts.add(value);
+      else if(Array.isArray(value))for(const x of value)collect(x);
+      else if(value&&typeof value==='object')for(const x of Object.values(value as Record<string,unknown>))collect(x);
+    };
+    const addScoped=<T extends {id:Id;tenantId?:Id;groupId?:Id}>(items:Iterable<T>)=>{
+      for(const x of items)if(x.tenantId===tenantId&&x.groupId===groupId){ids.add(x.id);collect(x);}
+    };
+    addScoped(this.memberships.values());addScoped(this.obligations.values());addScoped(this.cases.values());
+    addScoped(this.meetings.values());addScoped(this.ledgerAccounts.values());addScoped(this.ledgerEntries.values());
+    addScoped(this.receipts.values());addScoped(this.cashboxReconciliations.values());addScoped(this.rubricDefinitions.values());
+    addScoped(this.governanceKnowledgeClaims.values());addScoped(this.workspaceRecords.values());
+    for(const x of this.publicGroupListings.values())if(x.groupId===groupId){ids.add(x.id);collect(x);}
+    for(const x of this.membershipApplications.values())if(x.groupId===groupId){ids.add(x.id);collect(x);}
+    return{tenantId,groupId,entityIds:[...ids],artifactKeys:[...artifacts]};
+  }
+  purgeGroupData(manifest:GroupPurgeManifest,deletionId:string,purgedAt:string):GroupPurgeResult{
+    const {tenantId,groupId}=manifest,ids=new Set(manifest.entityIds),scope=JSON.stringify([tenantId,groupId]);
+    const delScoped=<T extends {id:Id;tenantId?:Id;groupId?:Id}>(map:Map<Id,T>)=>{for(const [id,x] of map)if(x.tenantId===tenantId&&x.groupId===groupId)map.delete(id);};
+    delScoped(this.memberships);delScoped(this.obligations);delScoped(this.cases);delScoped(this.meetings);
+    delScoped(this.ledgerAccounts);delScoped(this.ledgerEntries);delScoped(this.receipts);delScoped(this.cashboxReconciliations);
+    delScoped(this.rubricDefinitions);delScoped(this.governanceKnowledgeClaims);delScoped(this.workspaceRecords);
+    for(const [id,x] of this.publicGroupListings)if(x.groupId===groupId)this.publicGroupListings.delete(id);
+    for(const [id,x] of this.membershipApplications)if(x.groupId===groupId)this.membershipApplications.delete(id);
+    for(const [id,x] of this.audits)if(x.tenantId===tenantId&&ids.has(x.targetId))this.audits.delete(id);
+    for(const [id,x] of this.evidences)if(x.tenantId===tenantId&&ids.has(x.subjectId))this.evidences.delete(id);
+    for(const [key,x] of this.financialOperations)if(x.entry.tenantId===tenantId&&x.entry.groupId===groupId)this.financialOperations.delete(key);
+    for(const [key,x] of this.financialCorrections)if(x.tenantId===tenantId&&x.groupId===groupId)this.financialCorrections.delete(key);
+    for(const [key,x] of this.financialCellRevisions)if(x.tenantId===tenantId&&x.groupId===groupId)this.financialCellRevisions.delete(key);
+    this.groups.delete(groupId);this.purgedGroupScopes.add(scope);
+    return{purged:true,scopeHash:scope,purgedAt};
+  }
+  isGroupPurged(tenantId:Id,groupId:Id):boolean{return this.purgedGroupScopes.has(JSON.stringify([tenantId,groupId]));}
 
   saveUser(user: User): void { this.users.set(user.id, structuredClone(user)); }
   getUser(id: Id): User | undefined { const x = this.users.get(id); return x ? structuredClone(x) : undefined; }
@@ -226,6 +373,16 @@ type RecordScope={tenantId?:Id;groupId?:Id;assigneeId?:Id;idempotencyKey?:string
  * is still evolving; financial-critical persistence still needs a dedicated
  * atomic repository contract before real-money approval.
  */
+const purgeScopeHash=async(tenantId:Id,groupId:Id)=>{
+  const bytes=new TextEncoder().encode('eco-system-purge-v1|'+tenantId+'|'+groupId);
+  const digest=await crypto.subtle.digest('SHA-256',bytes);
+  return [...new Uint8Array(digest)].map(x=>x.toString(16).padStart(2,'0')).join('');
+};
+const deletionHash=async(deletionId:string)=>{
+  const digest=await crypto.subtle.digest('SHA-256',new TextEncoder().encode('eco-system-deletion-v1|'+deletionId));
+  return [...new Uint8Array(digest)].map(x=>x.toString(16).padStart(2,'0')).join('');
+};
+
 export class D1PlatformRepository implements PlatformRepository {
   constructor(private readonly db:D1DatabaseLike){}
   getGroupById(id:Id){return this.byId<Group>('group',id);}
@@ -260,6 +417,207 @@ export class D1PlatformRepository implements PlatformRepository {
       .bind(...scope).first<{operation_json:string}>();
     if(!winner)throw new Error('FINANCIAL_COMMIT_NOT_CONFIRMED');
     return JSON.parse(winner.operation_json) as FinancialOperation;
+  }
+
+  async commitFinancialCorrection(plan:FinancialCorrectionPlan):Promise<FinancialCorrectionPlan>{
+    const c=plan.cellRevision,at=plan.entries.at(-1)?.createdAt??new Date().toISOString();
+    const key=[plan.tenantId,plan.groupId,c.meetingId,c.membershipId,c.rubricId,c.currency];
+    const cas=c.expectedVersion===0
+      ? this.db.prepare(`INSERT INTO financial_cell_revisions
+          (tenant_id,group_id,meeting_id,membership_id,rubric_id,currency,version,last_operation_id,updated_at)
+          VALUES(?,?,?,?,?,?,?,?,?)
+          ON CONFLICT(tenant_id,group_id,meeting_id,membership_id,rubric_id,currency)
+          DO UPDATE SET version=excluded.version,last_operation_id=excluded.last_operation_id,updated_at=excluded.updated_at
+          WHERE financial_cell_revisions.version=0`)
+          .bind(...key,c.nextVersion,plan.operationId,at)
+      : this.db.prepare(`UPDATE financial_cell_revisions
+          SET version=?,last_operation_id=?,updated_at=?
+          WHERE tenant_id=? AND group_id=? AND meeting_id=? AND membership_id=? AND rubric_id=? AND currency=? AND version=?`)
+          .bind(c.nextVersion,plan.operationId,at,...key,c.expectedVersion);
+    const operation=this.db.prepare(`INSERT INTO financial_correction_operations
+      (tenant_id,group_id,idempotency_key,operation_id,primary_entry_id,operation_json,created_at)
+      SELECT ?,?,?,?,?,?,? WHERE EXISTS (
+        SELECT 1 FROM financial_cell_revisions WHERE tenant_id=? AND group_id=? AND meeting_id=? AND membership_id=? AND rubric_id=? AND currency=? AND version=? AND last_operation_id=?
+      ) ON CONFLICT(tenant_id,group_id,idempotency_key) DO NOTHING`)
+      .bind(plan.tenantId,plan.groupId,plan.idempotencyKey,plan.operationId,plan.primaryEntryId,JSON.stringify(plan),at,...key,c.nextVersion,plan.operationId);
+    const statements:D1PreparedStatementLike[]=[cas,operation];
+    // If the CAS lost and this is not an idempotent replay, the scalar subquery
+    // is NULL and the NOT NULL guard aborts the whole D1 batch.
+    statements.push(this.db.prepare(`INSERT INTO financial_correction_commit_guards
+      (tenant_id,group_id,idempotency_key,operation_id,created_at)
+      VALUES(?,?,?,(SELECT operation_id FROM financial_correction_operations WHERE tenant_id=? AND group_id=? AND idempotency_key=?),?)
+      ON CONFLICT(tenant_id,group_id,idempotency_key) DO NOTHING`)
+      .bind(plan.tenantId,plan.groupId,plan.idempotencyKey,plan.tenantId,plan.groupId,plan.idempotencyKey,at));
+    const rows:Array<[string,{id:Id},string|null,string]>=[
+      ...plan.accounts.map(a=>['ledger_account',a,null,at] as [string,LedgerAccount,null,string]),
+      ...plan.entries.map(e=>['ledger_entry',e,e.idempotencyKey,e.createdAt] as [string,LedgerEntry,string,string]),
+      ...plan.audits.map(a=>['audit',a,null,a.at] as [string,AuditEvent,null,string])
+    ];
+    if(plan.receipt)rows.push(['contribution_receipt',plan.receipt,plan.receipt.idempotencyKey,plan.receipt.receivedAt]);
+    for(const record of plan.outboxRecords??[])rows.push(['workspace_record',record,null,record.updatedAt]);
+    for(const [type,value,idempotency,updatedAt] of rows){
+      statements.push(this.db.prepare(`INSERT INTO platform_records
+        (record_type,record_id,tenant_id,group_id,assignee_id,idempotency_key,data_json,updated_at)
+        SELECT ?,?,?,?,?,?,?,? WHERE EXISTS (
+          SELECT 1 FROM financial_correction_operations
+          WHERE tenant_id=? AND group_id=? AND idempotency_key=? AND operation_id=? AND primary_entry_id=?
+        ) ON CONFLICT(record_type,record_id) DO NOTHING`)
+        .bind(type,value.id,plan.tenantId,plan.groupId,null,idempotency,JSON.stringify(value),updatedAt,plan.tenantId,plan.groupId,plan.idempotencyKey,plan.operationId,plan.primaryEntryId));
+    }
+    try{await this.db.batch(statements);}catch(error){
+      const current=await this.getFinancialCellRevision(plan.tenantId,plan.groupId,c.meetingId,c.membershipId,c.rubricId,c.currency);
+      if((current?.version??0)!==c.expectedVersion)throw new Error('CELL_VERSION_CONFLICT',{cause:error});
+      throw error;
+    }
+    const winner=await this.db.prepare(`SELECT operation_json FROM financial_correction_operations
+      WHERE tenant_id=? AND group_id=? AND idempotency_key=?`).bind(plan.tenantId,plan.groupId,plan.idempotencyKey).first<{operation_json:string}>();
+    if(!winner)throw new Error('FINANCIAL_CORRECTION_COMMIT_NOT_CONFIRMED');
+    const stored=JSON.parse(winner.operation_json) as FinancialCorrectionPlan;
+    if(stored.intentFingerprint!==plan.intentFingerprint)throw new Error('IDEMPOTENCY_CONFLICT');
+    return stored;
+  }
+
+  async getFinancialCellRevision(tenantId:Id,groupId:Id,meetingId:Id,membershipId:Id,rubricId:Id,currency:string):Promise<FinancialCellRevision|undefined>{
+    const row=await this.db.prepare(`SELECT tenant_id,group_id,meeting_id,membership_id,rubric_id,currency,version,last_operation_id,updated_at
+      FROM financial_cell_revisions WHERE tenant_id=? AND group_id=? AND meeting_id=? AND membership_id=? AND rubric_id=? AND currency=?`)
+      .bind(tenantId,groupId,meetingId,membershipId,rubricId,currency)
+      .first<{tenant_id:string;group_id:string;meeting_id:string;membership_id:string;rubric_id:string;currency:string;version:number;last_operation_id:string;updated_at:string}>();
+    return row?{tenantId:row.tenant_id,groupId:row.group_id,meetingId:row.meeting_id,membershipId:row.membership_id,rubricId:row.rubric_id,currency:row.currency,version:Number(row.version),lastOperationId:row.last_operation_id,updatedAt:row.updated_at}:undefined;
+  }
+  async listFinancialCellRevisions(tenantId:Id,groupId:Id):Promise<FinancialCellRevision[]>{
+    const rows=await this.db.prepare(`SELECT tenant_id,group_id,meeting_id,membership_id,rubric_id,currency,version,last_operation_id,updated_at
+      FROM financial_cell_revisions WHERE tenant_id=? AND group_id=?`).bind(tenantId,groupId)
+      .all<{tenant_id:string;group_id:string;meeting_id:string;membership_id:string;rubric_id:string;currency:string;version:number;last_operation_id:string;updated_at:string}>();
+    return rows.results.map(row=>({tenantId:row.tenant_id,groupId:row.group_id,meetingId:row.meeting_id,membershipId:row.membership_id,rubricId:row.rubric_id,currency:row.currency,version:Number(row.version),lastOperationId:row.last_operation_id,updatedAt:row.updated_at}));
+  }
+
+  async commitTrashLifecycle(plan:TrashLifecyclePlan):Promise<TrashLifecyclePlan>{
+    const entity=plan.entity as any,scopeGroup=plan.entityRecordType==='group'?entity.id:entity.groupId;
+    const statements=[
+      this.db.prepare(`INSERT INTO platform_records(record_type,record_id,tenant_id,group_id,assignee_id,idempotency_key,data_json,updated_at)
+        VALUES(?,?,?,?,?,?,?,?)
+        ON CONFLICT(record_type,record_id) DO UPDATE SET tenant_id=excluded.tenant_id,group_id=excluded.group_id,assignee_id=excluded.assignee_id,idempotency_key=excluded.idempotency_key,data_json=excluded.data_json,updated_at=excluded.updated_at`)
+        .bind(plan.entityRecordType,entity.id,entity.tenantId,scopeGroup,plan.entityRecordType==='membership'?entity.userId:null,null,JSON.stringify(entity),new Date().toISOString()),
+      this.db.prepare(`INSERT INTO platform_records(record_type,record_id,tenant_id,group_id,assignee_id,idempotency_key,data_json,updated_at)
+        VALUES('workspace_record',?,?,?,?,?,?,?)
+        ON CONFLICT(record_type,record_id) DO UPDATE SET tenant_id=excluded.tenant_id,group_id=excluded.group_id,assignee_id=excluded.assignee_id,idempotency_key=excluded.idempotency_key,data_json=excluded.data_json,updated_at=excluded.updated_at`)
+        .bind(plan.trashRecord.id,plan.trashRecord.tenantId,plan.trashRecord.groupId??null,plan.trashRecord.createdBy,null,JSON.stringify(plan.trashRecord),plan.trashRecord.updatedAt),
+      this.db.prepare(`INSERT INTO platform_records(record_type,record_id,tenant_id,group_id,assignee_id,idempotency_key,data_json,updated_at)
+        VALUES('audit',?,?,?,?,?,?,?)
+        ON CONFLICT(record_type,record_id) DO UPDATE SET data_json=excluded.data_json,updated_at=excluded.updated_at`)
+        .bind(plan.audit.id,plan.audit.tenantId,null,plan.audit.actorId??null,null,JSON.stringify(plan.audit),plan.audit.at)
+    ];
+    await this.db.batch(statements);return structuredClone(plan);
+  }
+  async listTrashMaintenanceItems():Promise<WorkspaceRecord[]>{
+    const rows=await this.db.prepare(`SELECT data_json FROM platform_records WHERE record_type='workspace_record' AND json_extract(data_json,'$.moduleId')='TRASH.ITEM'`).all<PlatformRecordRow>();
+    return rows.results.map(r=>JSON.parse(r.data_json) as WorkspaceRecord);
+  }
+
+  async captureGroupPurgeManifest(tenantId:Id,groupId:Id):Promise<GroupPurgeManifest>{
+    const modern=await this.db.prepare('SELECT record_id,data_json FROM platform_records WHERE tenant_id=? AND group_id=?').bind(tenantId,groupId).all<{record_id:string;data_json:string}>();
+    const legacy=await this.db.prepare(`
+      SELECT id FROM tenant_group WHERE tenant_id=? AND id=?
+      UNION SELECT id FROM membership WHERE tenant_id=? AND group_id=?
+      UNION SELECT id FROM mandate WHERE tenant_id=? AND group_id=?
+      UNION SELECT id FROM obligation WHERE tenant_id=? AND group_id=?
+      UNION SELECT id FROM case_record WHERE tenant_id=? AND group_id=?
+      UNION SELECT id FROM meeting_session WHERE tenant_id=? AND group_id=?
+      UNION SELECT id FROM ledger_account WHERE tenant_id=? AND group_id=?
+      UNION SELECT id FROM ledger_entry WHERE tenant_id=? AND group_id=?
+      UNION SELECT id FROM contribution_receipt WHERE tenant_id=? AND group_id=?
+      UNION SELECT id FROM cashbox_reconciliation WHERE tenant_id=? AND group_id=?`)
+      .bind(tenantId,groupId,tenantId,groupId,tenantId,groupId,tenantId,groupId,tenantId,groupId,tenantId,groupId,tenantId,groupId,tenantId,groupId,tenantId,groupId,tenantId,groupId)
+      .all<{id:string}>();
+    const ids=new Set<string>([groupId,...modern.results.map(x=>x.record_id),...legacy.results.map(x=>x.id)]),artifacts=new Set<string>();
+    const collect=(value:unknown)=>{
+      if(typeof value==='string'&&value.includes('/'+tenantId+'/'+groupId+'/'))artifacts.add(value);
+      else if(Array.isArray(value))for(const x of value)collect(x);
+      else if(value&&typeof value==='object')for(const x of Object.values(value as Record<string,unknown>))collect(x);
+    };
+    for(const row of modern.results){try{collect(JSON.parse(row.data_json));}catch{}}
+    return{tenantId,groupId,entityIds:[...ids],artifactKeys:[...artifacts]};
+  }
+
+  async purgeGroupData(manifest:GroupPurgeManifest,deletionId:string,purgedAt:string):Promise<GroupPurgeResult>{
+    const {tenantId,groupId}=manifest,scopeHash=await purgeScopeHash(tenantId,groupId),dHash=await deletionHash(deletionId);
+    const q=(sql:string,...values:unknown[])=>this.db.prepare(sql).bind(...values);
+    const statements:D1PreparedStatementLike[]=[
+      // Arbitration happens inside the same D1 batch as deletion. If the final
+      // qualifying petition signature already exists, the scalar subquery is
+      // NULL, the NOT NULL guard fails, and the entire purge is rolled back.
+      q(`INSERT INTO group_purge_execution_guards(scope_hash,allowed,created_at)
+         VALUES(?,(SELECT 1 FROM platform_records trash
+           WHERE trash.record_type='workspace_record' AND trash.record_id=?
+             AND json_extract(trash.data_json,'$.moduleId')='TRASH.ITEM'
+             AND (
+               CAST(COALESCE(json_extract(trash.data_json,'$.data.petitionThreshold'),0) AS INTEGER)=0
+               OR (SELECT COUNT(*) FROM platform_records sig
+                   WHERE sig.record_type='workspace_record' AND sig.tenant_id=? AND sig.group_id=?
+                     AND json_extract(sig.data_json,'$.moduleId')='TRASH.PETITION_SIGNATURE'
+                     AND json_extract(sig.data_json,'$.status')!='ARCHIVED'
+                     AND json_extract(sig.data_json,'$.data.trashId')=?)
+                  < CAST(COALESCE(json_extract(trash.data_json,'$.data.petitionThreshold'),0) AS INTEGER)
+             )
+         ),?)
+         ON CONFLICT(scope_hash) DO UPDATE SET allowed=excluded.allowed,created_at=excluded.created_at`,
+         scopeHash,deletionId,tenantId,groupId,deletionId,purgedAt),
+      // Remove non-group-scoped audit/evidence while the entity graph is still queryable.
+      q(`DELETE FROM platform_records WHERE tenant_id=? AND record_type IN ('audit','evidence') AND (
+          json_extract(data_json,'$.targetId')=? OR json_extract(data_json,'$.subjectId')=? OR
+          json_extract(data_json,'$.targetId') IN (SELECT record_id FROM platform_records WHERE tenant_id=? AND group_id=?) OR
+          json_extract(data_json,'$.subjectId') IN (SELECT record_id FROM platform_records WHERE tenant_id=? AND group_id=?)
+        )`,tenantId,groupId,groupId,tenantId,groupId,tenantId,groupId),
+      q(`DELETE FROM audit_event WHERE tenant_id=? AND (
+          target_id=? OR target_id IN (SELECT id FROM membership WHERE tenant_id=? AND group_id=?) OR
+          target_id IN (SELECT id FROM meeting_session WHERE tenant_id=? AND group_id=?) OR
+          target_id IN (SELECT id FROM ledger_entry WHERE tenant_id=? AND group_id=?) OR
+          target_id IN (SELECT id FROM contribution_receipt WHERE tenant_id=? AND group_id=?)
+        )`,tenantId,groupId,tenantId,groupId,tenantId,groupId,tenantId,groupId,tenantId,groupId),
+      q(`DELETE FROM evidence_record WHERE tenant_id=? AND (
+          subject_id=? OR subject_id IN (SELECT id FROM membership WHERE tenant_id=? AND group_id=?) OR
+          subject_id IN (SELECT id FROM meeting_session WHERE tenant_id=? AND group_id=?) OR
+          subject_id IN (SELECT id FROM ledger_entry WHERE tenant_id=? AND group_id=?)
+        )`,tenantId,groupId,tenantId,groupId,tenantId,groupId,tenantId,groupId),
+      q('DELETE FROM community_reactions WHERE message_id IN (SELECT id FROM community_messages WHERE tenant_id=? AND group_id=?)',tenantId,groupId),
+      q('DELETE FROM community_user_state WHERE tenant_id=? AND group_id=?',tenantId,groupId),
+      q('DELETE FROM community_messages WHERE tenant_id=? AND group_id=?',tenantId,groupId),
+      q('DELETE FROM historical_identity_hints WHERE tenant_id=? AND group_id=?',tenantId,groupId),
+      q('DELETE FROM historical_pairing_requests WHERE tenant_id=? AND group_id=?',tenantId,groupId),
+      q('DELETE FROM group_join_links WHERE tenant_id=? AND group_id=?',tenantId,groupId),
+      q('DELETE FROM commercial_preference_tokens WHERE group_id=?',groupId),
+      q('DELETE FROM commercial_preference_consents WHERE group_id=?',groupId),
+      q('DELETE FROM engagement_events WHERE group_id=?',groupId),
+      q(`DELETE FROM founder_control_items WHERE json_extract(data_json,'$.groupId')=? OR item_key=?`,groupId,groupId),
+      q('DELETE FROM financial_correction_commit_guards WHERE tenant_id=? AND group_id=?',tenantId,groupId),
+      q('DELETE FROM financial_correction_operations WHERE tenant_id=? AND group_id=?',tenantId,groupId),
+      q('DELETE FROM financial_cell_revisions WHERE tenant_id=? AND group_id=?',tenantId,groupId),
+      q('DELETE FROM financial_operations WHERE tenant_id=? AND group_id=?',tenantId,groupId),
+      q('DELETE FROM platform_records WHERE tenant_id=? AND group_id=?',tenantId,groupId),
+      // Legacy normalized tables may still contain historical rows from pre-platform_records releases.
+      q('DELETE FROM contribution_receipt WHERE tenant_id=? AND group_id=?',tenantId,groupId),
+      q('DELETE FROM cashbox_reconciliation WHERE tenant_id=? AND group_id=?',tenantId,groupId),
+      q('DELETE FROM ledger_line WHERE entry_id IN (SELECT id FROM ledger_entry WHERE tenant_id=? AND group_id=?)',tenantId,groupId),
+      q('DELETE FROM ledger_entry WHERE tenant_id=? AND group_id=?',tenantId,groupId),
+      q('DELETE FROM ledger_account WHERE tenant_id=? AND group_id=?',tenantId,groupId),
+      q('DELETE FROM meeting_session WHERE tenant_id=? AND group_id=?',tenantId,groupId),
+      q('DELETE FROM mandate WHERE tenant_id=? AND group_id=?',tenantId,groupId),
+      q('DELETE FROM obligation WHERE tenant_id=? AND group_id=?',tenantId,groupId),
+      q('DELETE FROM case_record WHERE tenant_id=? AND group_id=?',tenantId,groupId),
+      q('DELETE FROM membership WHERE tenant_id=? AND group_id=?',tenantId,groupId),
+      q('DELETE FROM tenant_group WHERE tenant_id=? AND id=?',tenantId,groupId),
+      q('DELETE FROM group_purge_execution_guards WHERE scope_hash=?',scopeHash),
+      q(`INSERT INTO purged_group_tombstones(scope_hash,purged_at,deletion_hash,purge_policy_version)
+         VALUES(?,?,?,'PURGE_V1_COMPLETE_BUSINESS_DATA')
+         ON CONFLICT(scope_hash) DO UPDATE SET purged_at=excluded.purged_at,deletion_hash=excluded.deletion_hash,purge_policy_version=excluded.purge_policy_version`,scopeHash,purgedAt,dHash)
+    ];
+    await this.db.batch(statements);
+    return{purged:true,scopeHash,purgedAt};
+  }
+
+  async isGroupPurged(tenantId:Id,groupId:Id):Promise<boolean>{
+    const scopeHash=await purgeScopeHash(tenantId,groupId);
+    return Boolean(await this.db.prepare('SELECT scope_hash FROM purged_group_tombstones WHERE scope_hash=? LIMIT 1').bind(scopeHash).first<{scope_hash:string}>());
   }
 
   private async saveRecord<T extends {id:Id}>(type:string,value:T,scope:RecordScope={}):Promise<void>{

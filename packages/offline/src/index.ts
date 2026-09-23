@@ -47,6 +47,18 @@ export class Outbox {
 
   list(): OutboxItem[] { return [...this.items.values()].sort((a,b)=>a.createdAt.localeCompare(b.createdAt)).map(x => structuredClone(x)); }
 
+  markConfirmedByKey(tenantId:Id,actorId:Id,idempotencyKey:string):OutboxItem|undefined{
+    const id=this.byKey.get(this.scopeKey(tenantId,actorId,idempotencyKey)),current=id?this.items.get(id):undefined;
+    if(!id||!current)return undefined;
+    const next={...current,status:'CONFIRMED' as const,updatedAt:new Date().toISOString()};this.items.set(id,next);return structuredClone(next);
+  }
+
+  markConflictByKey(tenantId:Id,actorId:Id,idempotencyKey:string):OutboxItem|undefined{
+    const id=this.byKey.get(this.scopeKey(tenantId,actorId,idempotencyKey)),current=id?this.items.get(id):undefined;
+    if(!id||!current)return undefined;
+    const next={...current,status:'CONFLICT' as const,updatedAt:new Date().toISOString()};this.items.set(id,next);return structuredClone(next);
+  }
+
   retry(id:Id):OutboxItem|undefined{
     const current=this.items.get(id);if(!current||current.status==='CONFIRMED'||current.status==='CANCELLED'||current.status==='CONFLICT')return current?structuredClone(current):undefined;
     const reset={...current,status:'PENDING' as const,attempts:0,updatedAt:new Date().toISOString()};this.items.set(id,reset);return structuredClone(reset);
@@ -342,5 +354,50 @@ export class IndexedDbLocalAuthAdapter{
       const updated:LocalAccountRecord={...current,registrationState:'SERVER_CLAIMED',serverActorId:server.id,serverTenantId:server.tenantId,claimedAt:new Date().toISOString()};
       await new Promise<void>((resolve,reject)=>{const tx=db.transaction([LOCAL_ACCOUNT_STORE,LOCAL_META_STORE],'readwrite');tx.objectStore(LOCAL_ACCOUNT_STORE).put(updated);tx.objectStore(LOCAL_META_STORE).put({key:'current',value:localId});tx.oncomplete=()=>resolve();tx.onerror=()=>reject(tx.error??new Error('INDEXEDDB_WRITE_FAILED'));});return jsonClone(updated);
     }finally{db.close();}
+  }
+}
+
+
+export type IdentityMigrationStep='SERVER_IDENTITY_VERIFIED'|'SNAPSHOTS_MIGRATED'|'OUTBOX_MIGRATED'|'LOCAL_ACCOUNT_BOUND'|'SESSION_ADOPTED'|'COMPLETED';
+export interface IdentityMigrationJournalRecord{
+  id:string;oldActorId:string;oldTenantId:string;newActorId:string;newTenantId:string;
+  steps:IdentityMigrationStep[];startedAt:string;updatedAt:string;completedAt?:string;lastError?:string;
+}
+const MIGRATION_DB='eco-system-identity-migration-v1',MIGRATION_DB_VERSION=1,MIGRATION_STORE='journal';
+
+export class IndexedDbIdentityMigrationJournal{
+  static supported():boolean{return typeof indexedDB!=='undefined';}
+  private async open():Promise<IDBDatabase>{
+    if(!IndexedDbIdentityMigrationJournal.supported())throw Error('INDEXEDDB_UNAVAILABLE');
+    return new Promise((resolve,reject)=>{
+      const request=indexedDB.open(MIGRATION_DB,MIGRATION_DB_VERSION);
+      request.onupgradeneeded=()=>{const db=request.result;if(!db.objectStoreNames.contains(MIGRATION_STORE))db.createObjectStore(MIGRATION_STORE,{keyPath:'id'});};
+      request.onsuccess=()=>resolve(request.result);request.onerror=()=>reject(request.error??new Error('INDEXEDDB_OPEN_FAILED'));
+    });
+  }
+  private id(oldActorId:string,oldTenantId:string){return JSON.stringify([oldActorId,oldTenantId]);}
+  async get(oldActorId:string,oldTenantId:string):Promise<IdentityMigrationJournalRecord|undefined>{
+    if(!IndexedDbIdentityMigrationJournal.supported())return undefined;const db=await this.open();
+    try{return await new Promise((resolve,reject)=>{const r=db.transaction(MIGRATION_STORE,'readonly').objectStore(MIGRATION_STORE).get(this.id(oldActorId,oldTenantId));r.onsuccess=()=>resolve(r.result as IdentityMigrationJournalRecord|undefined);r.onerror=()=>reject(r.error??new Error('INDEXEDDB_READ_FAILED'));});}
+    finally{db.close();}
+  }
+  async begin(input:{oldActorId:string;oldTenantId:string;newActorId:string;newTenantId:string}):Promise<IdentityMigrationJournalRecord>{
+    const existing=await this.get(input.oldActorId,input.oldTenantId);
+    if(existing){
+      if(existing.newActorId!==input.newActorId||existing.newTenantId!==input.newTenantId)throw Error('IDENTITY_MIGRATION_TARGET_CONFLICT');
+      return structuredClone(existing);
+    }
+    const at=new Date().toISOString(),record:IdentityMigrationJournalRecord={id:this.id(input.oldActorId,input.oldTenantId),...input,steps:['SERVER_IDENTITY_VERIFIED'],startedAt:at,updatedAt:at};
+    const db=await this.open();try{await new Promise<void>((resolve,reject)=>{const tx=db.transaction(MIGRATION_STORE,'readwrite');tx.objectStore(MIGRATION_STORE).put(record);tx.oncomplete=()=>resolve();tx.onerror=()=>reject(tx.error??new Error('INDEXEDDB_WRITE_FAILED'));tx.onabort=()=>reject(tx.error??new Error('INDEXEDDB_WRITE_ABORTED'));});return structuredClone(record);}finally{db.close();}
+  }
+  async mark(oldActorId:string,oldTenantId:string,step:IdentityMigrationStep,lastError?:string):Promise<IdentityMigrationJournalRecord>{
+    const current=await this.get(oldActorId,oldTenantId);if(!current)throw Error('IDENTITY_MIGRATION_JOURNAL_NOT_FOUND');
+    const at=new Date().toISOString(),steps=current.steps.includes(step)?current.steps:[...current.steps,step],next:IdentityMigrationJournalRecord={...current,steps,updatedAt:at,lastError:lastError?.slice(0,500),completedAt:step==='COMPLETED'?at:current.completedAt};
+    const db=await this.open();try{await new Promise<void>((resolve,reject)=>{const tx=db.transaction(MIGRATION_STORE,'readwrite');tx.objectStore(MIGRATION_STORE).put(next);tx.oncomplete=()=>resolve();tx.onerror=()=>reject(tx.error??new Error('INDEXEDDB_WRITE_FAILED'));tx.onabort=()=>reject(tx.error??new Error('INDEXEDDB_WRITE_ABORTED'));});return structuredClone(next);}finally{db.close();}
+  }
+  async fail(oldActorId:string,oldTenantId:string,error:unknown):Promise<void>{
+    const current=await this.get(oldActorId,oldTenantId);if(!current)return;
+    const message=error instanceof Error?error.message:String(error);const db=await this.open(),next={...current,lastError:message.slice(0,500),updatedAt:new Date().toISOString()};
+    try{await new Promise<void>((resolve,reject)=>{const tx=db.transaction(MIGRATION_STORE,'readwrite');tx.objectStore(MIGRATION_STORE).put(next);tx.oncomplete=()=>resolve();tx.onerror=()=>reject(tx.error??new Error('INDEXEDDB_WRITE_FAILED'));});}finally{db.close();}
   }
 }

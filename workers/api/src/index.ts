@@ -39,6 +39,12 @@ import { GovernanceVoteService } from '../../../packages/governance-vote/src/ind
 import { NotificationService } from '../../../packages/notifications/src/index.js';
 import { OperationalCockpitService } from '../../../packages/operational-cockpit/src/index.js';
 import { simulatePeriodicLoan, summarizePeriodicLoan } from '../../../packages/loan-simulator/src/index.js';
+import { TrashLifecycleMaintenance, addCalendarMonthsClamped } from '../../../packages/trash-lifecycle/src/index.js';
+import { BusinessStudioService } from '../../../packages/business-studio/src/index.js';
+import { GrowthReferralService, InMemoryReferralBudgetStore, D1ReferralBudgetStore, type ReferralBudgetStore } from '../../../packages/growth-referral/src/index.js';
+import { KnowledgeAcademyService } from '../../../packages/knowledge-academy/src/index.js';
+import { ValueNetworkService } from '../../../packages/value-network/src/index.js';
+import { GroupReconstitutionService } from '../../../packages/group-reconstitution/src/index.js';
 import { authenticatedApi } from './authenticated.js';
 export { GroupLiveHub } from './group-live-hub.js';
 
@@ -50,7 +56,14 @@ interface WorkersAILike {
   run?(model:string,input:Record<string,unknown>,options?:Record<string,unknown>):Promise<unknown>;
 }
 
+const RELEASE_VERSION='1.5.0-audit-complete';
+const RELEASE_BUILD_ID='eco-system-1.5.0-20260923';
+const RELEASE_SCHEMA_VERSION='d1-additive-20260923';
+const RELEASE_POLICY_VERSION='audit-20260923';
+const RELEASE_PWA_CACHE='eco-system-v150-audit-complete-20260923';
+
 const defaultRepo = new InMemoryPlatformRepository();
+const defaultReferralBudgets = new InMemoryReferralBudgetStore();
 
 const baseSecurityHeaders: HeadersInit = {
   'x-content-type-options': 'nosniff',
@@ -73,6 +86,7 @@ const json = (data: unknown, status = 200, headers: HeadersInit = {}): Response 
 });
 
 const readJson = async <T>(request: Request): Promise<T> => { try { return await request.json() as T; } catch { throw new Error('INVALID_JSON'); } };
+const jsonArraySafe=(value:string):string[]=>{try{const x=JSON.parse(value);return Array.isArray(x)?x.map(String):[];}catch{return[];}};
 const strArray=(value:unknown):string[]=>Array.isArray(value)?value.map(String).map(x=>x.trim()).filter(Boolean):typeof value==='string'?value.split(',').map(x=>x.trim()).filter(Boolean):[];
 const finite = (value: unknown, fallback?: number): number => {
   if ((value === undefined || value === null || value === '') && fallback !== undefined) return fallback;
@@ -110,10 +124,13 @@ const createRequestScope = (request:Request,repo:PlatformRepository,artifacts?:A
   const economicIntelligence=new EconomicIntelligenceService(repo,kernel);
   const externalPrograms=new ExternalProgramsService(repo,kernel);
   const operationalCockpit=new OperationalCockpitService(repo,kernel,ledger);
+  const businessStudio=new BusinessStudioService(repo,kernel);
+  const knowledgeAcademy=new KnowledgeAcademyService(repo,kernel);
+  const valueNetwork=new ValueNetworkService(repo,kernel);
   const tenantId=request.headers.get('x-tenant-id')??'tenant_demo'; const actorId=request.headers.get('x-actor-id')??'user_founder';
   const groupRoles=(request.headers.get('x-group-roles')??'founder,manager').split(',').map(x=>x.trim()).filter(Boolean);
   kernel.context.set({actorId,tenantId,activeGroupId:request.headers.get('x-active-group-id')??undefined,groupRoles,mandateIds:[],deviceId:request.headers.get('x-device-id')??'device_web_demo',sessionId:request.headers.get('x-session-id')??'session_demo',locale:request.headers.get('accept-language')?.toLowerCase().startsWith('en')?'en':'fr',timezone:request.headers.get('x-timezone')??'Africa/Douala',connectivity:'online',requestId:request.headers.get('x-request-id')??makeId('req')});
-  return {kernel,foundation,ledger,meetings,discovery,membershipGateway,rubrics,completion,explainability,documents,receivables,treasury,riskFinance,market,community,imports,artifactStore,memberControl,groupIdentity,conciergeLearning,miscRubrics,adManager,economicIntelligence,externalPrograms,operationalCockpit};
+  return {kernel,foundation,ledger,meetings,discovery,membershipGateway,rubrics,completion,explainability,documents,receivables,treasury,riskFinance,market,community,imports,artifactStore,memberControl,groupIdentity,conciergeLearning,miscRubrics,adManager,economicIntelligence,externalPrograms,operationalCockpit,businessStudio,knowledgeAcademy,valueNetwork};
 };
 
 const inboxFor = async (repo:PlatformRepository,tenantId:string,actorId:string) => {
@@ -122,15 +139,17 @@ const inboxFor = async (repo:PlatformRepository,tenantId:string,actorId:string) 
   return [...obligations,...cases];
 };
 
-export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{artifacts?:ArtifactStoreLike;documentAI?:WorkersAILike;liveNamespace?:DurableObjectNamespaceLike;premiumLive?:boolean;founderLearning?:FounderLearningStore;founderControl?:FounderControlStore;communityRealtime?:CommunityRealtimeStore;founderTeamActors?:Set<string>;commercialPreferences?:CommercialPreferenceService;groupPairing?:GroupPairingService;interestCommunities?:InterestCommunityService;ecoPulse?:EcoPulseService;identityProof?:IdentityProofService;dataUseDefaultMode?:DataUseDefaultMode;governanceSecret?:string}={}) => async (request:Request):Promise<Response> => {
+export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{artifacts?:ArtifactStoreLike;documentAI?:WorkersAILike;liveNamespace?:DurableObjectNamespaceLike;premiumLive?:boolean;referralBudgets?:ReferralBudgetStore;founderLearning?:FounderLearningStore;founderControl?:FounderControlStore;communityRealtime?:CommunityRealtimeStore;founderTeamActors?:Set<string>;commercialPreferences?:CommercialPreferenceService;groupPairing?:GroupPairingService;interestCommunities?:InterestCommunityService;ecoPulse?:EcoPulseService;identityProof?:IdentityProofService;dataUseDefaultMode?:DataUseDefaultMode;governanceSecret?:string;releaseCommitSha?:string}={}) => async (request:Request):Promise<Response> => {
   const url=new URL(request.url); const cors=corsHeaders(request);
   if(request.method==='OPTIONS'){
     const allowed=Boolean((cors as Record<string,string>)['access-control-allow-origin']);
     return new Response(null,{status:allowed?204:403,headers:{...baseSecurityHeaders,...cors,'access-control-allow-methods':'GET,POST,PUT,OPTIONS','access-control-allow-headers':'content-type,x-tenant-id,x-actor-id,x-group-roles,x-active-group-id,x-device-id,x-session-id,x-request-id,x-timezone'}});
   }
-  const {kernel,foundation,ledger,meetings,discovery,membershipGateway,rubrics,completion,explainability,documents,receivables,treasury,riskFinance,market,community,imports,artifactStore,memberControl,groupIdentity,conciergeLearning,miscRubrics,adManager,economicIntelligence,externalPrograms,operationalCockpit}=createRequestScope(request,repo,options.artifacts,options.dataUseDefaultMode??'BETA_OPEN',options.documentAI); const ctx=kernel.context.get();
+  const {kernel,foundation,ledger,meetings,discovery,membershipGateway,rubrics,completion,explainability,documents,receivables,treasury,riskFinance,market,community,imports,artifactStore,memberControl,groupIdentity,conciergeLearning,miscRubrics,adManager,economicIntelligence,externalPrograms,operationalCockpit,businessStudio,knowledgeAcademy,valueNetwork}=createRequestScope(request,repo,options.artifacts,options.dataUseDefaultMode??'BETA_OPEN',options.documentAI); const ctx=kernel.context.get();
   const governanceVotes=new GovernanceVoteService(repo,kernel,options.governanceSecret??'eco-system-nonproduction-governance-secret');
   const notifications=new NotificationService(repo,kernel);
+  const growthReferral=new GrowthReferralService(repo,kernel,options.referralBudgets??defaultReferralBudgets);
+  const reconstitution=new GroupReconstitutionService(repo,kernel);
   if(options.premiumLive)kernel.features.set('premium_live_ledger',true);
   const isFounderTeamActor=async()=>Boolean(options.founderTeamActors?.has(ctx.actorId))||Boolean(options.founderControl&&await options.founderControl.isPlatformOwner(ctx.actorId));
   const requireGroup=async(groupId:string,manage=false)=>{
@@ -190,24 +209,22 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
   };
   const financialCellState=async(groupId:string,meetingId:string,membershipId:string,rubricId:string)=>{
     const rows=(await ledger.receiptPositions(ctx.tenantId,groupId)).filter(x=>x.meetingId===meetingId&&x.membershipId===membershipId&&x.rubricId===rubricId&&x.netAmount!==0);
-    return{rows,current:rows.reduce((n,x)=>n+x.netAmount,0),baselineActorId:rows.slice().reverse().find(x=>x.netAmount>0)?.receivedBy};
+    const revision=await repo.getFinancialCellRevision(ctx.tenantId,groupId,meetingId,membershipId,rubricId,'XAF');
+    return{rows,current:rows.reduce((n,x)=>n+x.netAmount,0),cellVersion:revision?.version??0,baselineActorId:rows.slice().reverse().find(x=>x.netAmount>0)?.receivedBy};
   };
-  const applyFinancialCellTarget=async(input:{groupId:string;meetingId:string;membershipId:string;rubricId:string;targetAmount:number;reason:string;idempotencyKey:string;consensusId?:string;consensusVersion?:number})=>{
+  const applyFinancialCellTarget=async(input:{groupId:string;meetingId:string;membershipId:string;rubricId:string;targetAmount:number;expectedCurrentAmount?:number;expectedCellVersion?:number;reason:string;idempotencyKey:string;consensusId?:string;consensusVersion?:number})=>{
     const group=await requireGroup(input.groupId,true),meeting=await repo.getMeeting(ctx.tenantId,input.groupId,input.meetingId);if(!meeting||meeting.status==='cancelled')throw Error('MEETING_NOT_FOUND');
     if(!Number.isSafeInteger(input.targetAmount)||input.targetAmount<0)throw Error('INVALID_CONTRIBUTION_AMOUNT');
     const beforeAll=await ledger.receiptPositions(ctx.tenantId,input.groupId),beforeSituation=beforeAll.filter(x=>x.membershipId===input.membershipId).reduce((n,x)=>n+x.netAmount,0);
     const state=await financialCellState(input.groupId,input.meetingId,input.membershipId,input.rubricId);
     if(state.current===input.targetAmount)return{status:'NO_CHANGE',current:state.current,target:input.targetAmount};
     const reason=input.reason.trim()||'Correction de cellule financière';
-    let evidenceEntry:import('../../../packages/contracts/src/index.js').LedgerEntry|undefined;
-    for(const row of state.rows.filter(x=>x.netAmount>0)){
-      evidenceEntry=await ledger.reverseEntry({tenantId:ctx.tenantId,groupId:input.groupId,entryId:row.ledgerEntryId,reason},ctx.requestId);
-    }
-    let receipt:import('../../../packages/contracts/src/index.js').ContributionReceipt|undefined;
-    if(input.targetAmount>0){
-      receipt=await ledger.recordCashContribution({tenantId:ctx.tenantId,groupId:input.groupId,membershipId:input.membershipId,amount:input.targetAmount,currency:'XAF',meetingId:input.meetingId,rubricId:input.rubricId,idempotencyKey:input.idempotencyKey,governedCorrectionReason:meeting.status==='closed'?reason:undefined},ctx.requestId);
-      evidenceEntry=await repo.getLedgerEntry(ctx.tenantId,input.groupId,receipt.ledgerEntryId);
-    }
+    const correction=await ledger.replaceCashContributionCell({
+      tenantId:ctx.tenantId,groupId:input.groupId,meetingId:input.meetingId,membershipId:input.membershipId,rubricId:input.rubricId,
+      targetAmount:input.targetAmount,expectedCurrentAmount:input.expectedCurrentAmount??state.current,expectedCellVersion:input.expectedCellVersion??state.cellVersion,currency:'XAF',
+      reason,idempotencyKey:input.idempotencyKey
+    },ctx.requestId);
+    const receipt=correction.receipt,evidenceEntry=correction.evidenceEntry;
     if(!evidenceEntry)throw Error('FINANCIAL_CORRECTION_NOT_APPLIED');
     const afterAll=await ledger.receiptPositions(ctx.tenantId,input.groupId),newSituation=afterAll.filter(x=>x.membershipId===input.membershipId).reduce((n,x)=>n+x.netAmount,0),targetMember=await repo.getMembership(ctx.tenantId,input.groupId,input.membershipId);
     const notice=await memberControl.create({groupId:input.groupId,membershipId:input.membershipId,entry:evidenceEntry,operationType:'FINANCIAL_CELL_CORRECTION',amount:input.targetAmount,currency:'XAF',rubricId:input.rubricId,meetingId:input.meetingId,previousSituation:beforeSituation,newSituation,previousAmount:state.current,newAmount:input.targetAmount,correctionReason:reason,selfBenefit:targetMember?.userId===ctx.actorId,requiresIndependentReview:false});
@@ -216,75 +233,100 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
     await notifications.publish(input.groupId,{title:meeting.status==='closed'?'Votre compte a été corrigé après clôture':'Votre compte a été corrigé',message:`${correctionRubric} · ${meetingWhen} : ${state.current} → ${input.targetAmount} F CFA. Auteur : ${correctionActor}. Modification : ${changeWhen}. Motif : ${reason}. Vous pouvez valider ou émettre une réserve.`,channels:['IN_APP','WEB_PUSH'],audience:'SELECTED',selectedMembershipIds:[input.membershipId],priority:meeting.status==='closed'?'CRITICAL':'HIGH',action});
     if(targetMember)await publishLive(input.groupId,'FINANCIAL_NOTICE','financial-cell-correction:'+evidenceEntry.id,{noticeId:notice.id,ledgerEntryId:evidenceEntry.id,operationType:'FINANCIAL_CELL_CORRECTION',amount:input.targetAmount,currency:'XAF',previousAmount:state.current,newAmount:input.targetAmount,meetingClosed:meeting.status==='closed',alertLevel:meeting.status==='closed'?'closed':'correction'},targetMember.userId);
     await publishLive(input.groupId,'MEETING_UPDATE','financial-cell-managers:'+evidenceEntry.id,{meetingId:input.meetingId,kind:'FINANCIAL_CELL_CORRECTION',membershipId:input.membershipId,rubricId:input.rubricId,previousAmount:state.current,newAmount:input.targetAmount,meetingClosed:meeting.status==='closed'});
-    return{status:'APPLIED',previousAmount:state.current,newAmount:input.targetAmount,receipt,notice,groupId:group.id};
+    return{status:'APPLIED',current:state.current,target:input.targetAmount,previousAmount:state.current,newAmount:input.targetAmount,cellVersion:correction.cellVersion,receipt,notice,groupId:group.id};
   };
 
   const trashEntity=async(groupId:string,kind:string,entityId:string)=>{
-    await requireGroup(groupId,true);const now=new Date(),restoreUntil=new Date(now);restoreUntil.setUTCMonth(restoreUntil.getUTCMonth()+6);
-    let snapshot:unknown,label=entityId;
+    await requireGroup(groupId,true);const now=new Date(),restoreUntil=addCalendarMonthsClamped(now,6);
+    let snapshot:any,label=entityId,retired:any,recordType:'group'|'meeting'|'membership'|'rubric_definition';
     if(kind==='MEETING'){
-      const entity=await repo.getMeeting(ctx.tenantId,groupId,entityId);if(!entity)throw Error('MEETING_NOT_FOUND');snapshot=entity;label=entity.title;
-      await repo.saveMeeting({...entity,status:'cancelled'});
+      const entity=await repo.getMeeting(ctx.tenantId,groupId,entityId);if(!entity)throw Error('MEETING_NOT_FOUND');snapshot=entity;label=entity.title;retired={...entity,status:'cancelled'};recordType='meeting';
     }else if(kind==='MEMBER'){
       const entity=await repo.getMembership(ctx.tenantId,groupId,entityId);if(!entity)throw Error('MEMBERSHIP_NOT_FOUND');snapshot=entity;
-      const user=await repo.getUser(entity.userId);label=user?.displayName??entity.userId;await repo.saveMembership({...entity,status:'left'});
+      const user=await repo.getUser(entity.userId);label=user?.displayName??entity.userId;retired={...entity,status:'left'};recordType='membership';
     }else if(kind==='RUBRIC'){
       const entity=await repo.getRubricDefinition(ctx.tenantId,groupId,entityId);if(!entity)throw Error('RUBRIC_NOT_FOUND');snapshot=entity;label=entity.name;
-      await repo.saveRubricDefinition({...entity,status:'ARCHIVED',updatedAt:now.toISOString(),version:entity.version+1});
+      retired={...entity,status:'ARCHIVED',updatedAt:now.toISOString(),version:entity.version+1};recordType='rubric_definition';
     }else if(kind==='GROUP'){
-      if(entityId!==groupId)throw Error('GROUP_SCOPE_MISMATCH');const entity=await repo.getGroup(ctx.tenantId,groupId);if(!entity)throw Error('GROUP_NOT_FOUND');snapshot=entity;label=entity.name;
-      await repo.saveGroup({...entity,status:'archived'});
+      if(entityId!==groupId)throw Error('GROUP_SCOPE_MISMATCH');const entity=await repo.getGroup(ctx.tenantId,groupId);if(!entity)throw Error('GROUP_NOT_FOUND');snapshot=entity;label=entity.name;retired={...entity,status:'archived'};recordType='group';
     }else throw Error('TRASH_KIND_UNSUPPORTED');
+
+    const activeMemberships=kind==='GROUP'?(await repo.listMemberships(ctx.tenantId,groupId)).filter(m=>m.status==='active'):[];
+    const eligibleMembershipIds=activeMemberships.map(m=>m.id),eligibleUserIds=[...new Set(activeMemberships.map(m=>m.userId))];
+    const petitionThreshold=kind==='GROUP'?Math.ceil(2*eligibleMembershipIds.length/3):0;
+    const founderId=kind==='GROUP'?String(snapshot?.createdBy??''):'';
+    const reminderRecipients=[...new Set([founderId,ctx.actorId].filter(Boolean))];
     const id='trash_'+encodeURIComponent(JSON.stringify([groupId,kind,entityId])),existing=await repo.getWorkspaceRecord(ctx.tenantId,id);
-    const record:WorkspaceRecord={id,tenantId:ctx.tenantId,groupId,moduleId:'TRASH.ITEM',title:label,summary:'Restaurable pendant six mois',status:'ACTIVE',tags:['trash',kind.toLowerCase()],data:{kind,entityId,deletedAt:now.toISOString(),restoreUntil:restoreUntil.toISOString(),snapshotJson:JSON.stringify(snapshot),deletedBy:ctx.actorId,founderId:kind==='GROUP'?String((snapshot as any)?.createdBy??''):null,remindersEnabled:kind==='GROUP',nextReminderAt:kind==='GROUP'?new Date(Date.UTC(now.getUTCFullYear(),now.getUTCMonth()+1,Math.min(now.getUTCDate(),28),9,0,0)).toISOString():null},createdBy:existing?.createdBy??ctx.actorId,createdAt:existing?.createdAt??now.toISOString(),updatedAt:now.toISOString()};
-    await repo.saveWorkspaceRecord(record);await repo.saveAudit(kernel.audit.append({tenantId:ctx.tenantId,actorId:ctx.actorId,action:'ENTITY_MOVED_TO_TRASH',targetType:kind.toLowerCase(),targetId:entityId,requestId:ctx.requestId,metadata:{trashId:id,restoreUntil:restoreUntil.toISOString()}}));
+    const record:WorkspaceRecord={id,tenantId:ctx.tenantId,groupId,moduleId:'TRASH.ITEM',title:label,summary:'Restaurable pendant six mois',status:'ACTIVE',tags:['trash',kind.toLowerCase()],data:{
+      kind,entityId,deletedAt:now.toISOString(),restoreUntil:restoreUntil.toISOString(),snapshotJson:JSON.stringify(snapshot),deletedBy:ctx.actorId,founderId:founderId||null,
+      lifecycleState:'TRASHED',remindersEnabled:kind==='GROUP',nextReminderAt:kind==='GROUP'?addCalendarMonthsClamped(now,1).toISOString():null,
+      reminderRecipientUserIdsJson:JSON.stringify(reminderRecipients),reminderOptOutUserIdsJson:'[]',
+      eligibleMembershipIdsJson:kind==='GROUP'?JSON.stringify(eligibleMembershipIds):'[]',eligibleUserIdsJson:kind==='GROUP'?JSON.stringify(eligibleUserIds):'[]',
+      petitionState:kind==='GROUP'?'OPEN':null,petitionThreshold:kind==='GROUP'?petitionThreshold:0,petitionSignatureUserIdsJson:'[]'
+    },createdBy:existing?.createdBy??ctx.actorId,createdAt:existing?.createdAt??now.toISOString(),updatedAt:now.toISOString()};
+    const audit=kernel.audit.append({tenantId:ctx.tenantId,actorId:ctx.actorId,action:'ENTITY_MOVED_TO_TRASH',targetType:kind.toLowerCase(),targetId:entityId,requestId:ctx.requestId,metadata:{trashId:id,restoreUntil:restoreUntil.toISOString(),petitionThreshold}});
+    await repo.commitTrashLifecycle({entityRecordType:recordType,entity:retired,trashRecord:record,audit});
+
     const actor=await actorLabel(),kindLabel=kind==='MEETING'?'Séance':kind==='MEMBER'?'Membre':kind==='GROUP'?'Groupe':'Rubrique',action={view:'trash',entityKind:kind,entityId,id,label:'Voir la corbeille'};
-    if(kind==='GROUP'){const founderId=String((snapshot as any)?.createdBy??''),selectedUserIds=[...new Set([founderId,ctx.actorId].filter(Boolean))];await notifications.publish(groupId,{title:'Groupe placé à la corbeille',message:`${actor} a placé « ${label} » à la corbeille. Restauration intégrale possible jusqu’au ${restoreUntil.toLocaleDateString('fr-FR')}. Un rappel mensuel restera actif sauf désactivation.`,channels:['IN_APP','WEB_PUSH'],audience:'SELECTED_USERS',selectedUserIds,priority:'CRITICAL',action});}
-    else await notifications.publish(groupId,{title:kindLabel+' placé(e) à la corbeille',message:`${actor} a placé « ${label} » à la corbeille. Restauration possible jusqu’au ${restoreUntil.toLocaleDateString('fr-FR')}.`,channels:['IN_APP','WEB_PUSH'],audience:'MANAGERS',priority:'HIGH',action});
+    if(kind==='GROUP'){
+      await notifications.publish(groupId,{title:'Groupe placé à la corbeille',message:`${actor} a placé « ${label} » à la corbeille. Restauration possible jusqu’au ${restoreUntil.toLocaleDateString('fr-FR')}. Les membres inscrits au moment du retrait disposent du mécanisme de pétition prévu par la gouvernance.`,channels:['IN_APP','WEB_PUSH'],audience:'SELECTED_USERS',selectedUserIds:[...new Set([...eligibleUserIds,...reminderRecipients])],priority:'CRITICAL',action});
+    }else await notifications.publish(groupId,{title:kindLabel+' placé(e) à la corbeille',message:`${actor} a placé « ${label} » à la corbeille. Restauration possible jusqu’au ${restoreUntil.toLocaleDateString('fr-FR')}.`,channels:['IN_APP','WEB_PUSH'],audience:'MANAGERS',priority:'HIGH',action});
     if(kind==='MEMBER')await notifications.publish(groupId,{title:'Votre dossier a été placé à la corbeille',message:`${actor} a retiré temporairement votre dossier du groupe. La restauration reste possible pendant six mois.`,channels:['IN_APP','WEB_PUSH'],audience:'SELECTED',selectedMembershipIds:[entityId],priority:'HIGH',action});
     return record;
   };
+
   const listTrash=async(groupId:string)=>{
-    await requireGroup(groupId,true);const now=Date.now(),items=await repo.listWorkspaceRecords(ctx.tenantId,'TRASH.ITEM',groupId);
-    const result=[] as WorkspaceRecord[];
-    for(const item of items){const expired=Date.parse(String(item.data.restoreUntil??''))<now;if(expired&&item.status==='ACTIVE'){const safeData={...item.data};delete safeData.snapshotJson;const updated={...item,status:'ARCHIVED' as WorkspaceStatus,data:{...safeData,expired:true,permanentlyRemovedAt:new Date().toISOString()},updatedAt:new Date().toISOString()};await repo.saveWorkspaceRecord(updated);await repo.saveAudit(kernel.audit.append({tenantId:ctx.tenantId,actorId:ctx.actorId,action:'TRASH_RETENTION_EXPIRED',targetType:String(item.data.kind??'entity').toLowerCase(),targetId:String(item.data.entityId??''),requestId:ctx.requestId,metadata:{trashId:item.id}}));result.push(updated);}else result.push(item);}
-    return result.sort((a,b)=>String(b.data.deletedAt??b.createdAt).localeCompare(String(a.data.deletedAt??a.createdAt)));
+    await requireGroup(groupId,true);const items=await repo.listWorkspaceRecords(ctx.tenantId,'TRASH.ITEM',groupId);
+    return items.sort((a,b)=>String(b.data.deletedAt??b.createdAt).localeCompare(String(a.data.deletedAt??a.createdAt)));
   };
+
   const restoreTrash=async(groupId:string,trashId:string)=>{
     await requireGroup(groupId,true);const record=await repo.getWorkspaceRecord(ctx.tenantId,trashId);if(!record||record.groupId!==groupId||record.moduleId!=='TRASH.ITEM')throw Error('TRASH_ITEM_NOT_FOUND');
-    if(record.status!=='ACTIVE'||Date.parse(String(record.data.restoreUntil??''))<Date.now())throw Error('TRASH_RETENTION_EXPIRED');
+    if(record.status!=='ACTIVE'||String(record.data.lifecycleState??'TRASHED')==='PURGE_PENDING'||Date.parse(String(record.data.restoreUntil??''))<Date.now())throw Error('TRASH_RETENTION_EXPIRED');
     const snapshot=JSON.parse(String(record.data.snapshotJson??'{}')),kind=String(record.data.kind??'');
-    if(kind==='MEETING')await repo.saveMeeting(snapshot);
-    else if(kind==='MEMBER')await repo.saveMembership(snapshot);
-    else if(kind==='RUBRIC')await repo.saveRubricDefinition(snapshot);
-    else if(kind==='GROUP')await repo.saveGroup(snapshot);
-    else throw Error('TRASH_KIND_UNSUPPORTED');
-    const restored={...record,status:'DONE' as WorkspaceStatus,data:{...record.data,restoredAt:new Date().toISOString(),restoredBy:ctx.actorId},updatedAt:new Date().toISOString()};await repo.saveWorkspaceRecord(restored);
-    await repo.saveAudit(kernel.audit.append({tenantId:ctx.tenantId,actorId:ctx.actorId,action:'ENTITY_RESTORED_FROM_TRASH',targetType:kind.toLowerCase(),targetId:String(record.data.entityId??''),requestId:ctx.requestId,metadata:{trashId}}));
+    const recordType=kind==='MEETING'?'meeting':kind==='MEMBER'?'membership':kind==='RUBRIC'?'rubric_definition':kind==='GROUP'?'group':null;
+    if(!recordType)throw Error('TRASH_KIND_UNSUPPORTED');
+    const restored={...record,status:'DONE' as WorkspaceStatus,data:{...record.data,lifecycleState:'RESTORED',restoredAt:new Date().toISOString(),restoredBy:ctx.actorId},updatedAt:new Date().toISOString()};
+    const audit=kernel.audit.append({tenantId:ctx.tenantId,actorId:ctx.actorId,action:'ENTITY_RESTORED_FROM_TRASH',targetType:kind.toLowerCase(),targetId:String(record.data.entityId??''),requestId:ctx.requestId,metadata:{trashId}});
+    await repo.commitTrashLifecycle({entityRecordType:recordType,entity:snapshot,trashRecord:restored,audit});
     const actor=await actorLabel(),entityId=String(record.data.entityId??''),kindLabel=kind==='MEETING'?'Séance':kind==='MEMBER'?'Membre':kind==='GROUP'?'Groupe':'Rubrique';
-    await notifications.publish(groupId,{title:kindLabel+' restauré(e)',message:`${actor} a restauré intégralement « ${record.title} » depuis la corbeille.`,channels:['IN_APP','WEB_PUSH'],audience:'MANAGERS',priority:'HIGH',action:{view:kind==='MEETING'?'sessions':kind==='MEMBER'?'members':kind==='GROUP'?'launch':'operations',anchor:kind==='RUBRIC'?'rubricsManagementPanel':undefined,meetingId:kind==='MEETING'?entityId:undefined,membershipId:kind==='MEMBER'?entityId:undefined,rubricId:kind==='RUBRIC'?entityId:undefined,entityKind:kind,entityId,label:'Voir l’élément restauré'}});
+    await notifications.publish(groupId,{title:kindLabel+' restauré(e)',message:`${actor} a restauré « ${record.title} » depuis la corbeille.`,channels:['IN_APP','WEB_PUSH'],audience:'MANAGERS',priority:'HIGH',action:{view:kind==='MEETING'?'sessions':kind==='MEMBER'?'members':kind==='GROUP'?'launch':'operations',anchor:kind==='RUBRIC'?'rubricsManagementPanel':undefined,meetingId:kind==='MEETING'?entityId:undefined,membershipId:kind==='MEMBER'?entityId:undefined,rubricId:kind==='RUBRIC'?entityId:undefined,entityKind:kind,entityId,label:'Voir l’élément restauré'}});
     return restored;
   };
-  const groupTrashVisible=async(record:WorkspaceRecord)=>{if(String(record.data.kind??'')!=='GROUP')return false;const groupId=String(record.data.entityId??record.groupId??''),group=await repo.getGroup(ctx.tenantId,groupId);if(!group)return false;if(group.createdBy===ctx.actorId||String(record.data.deletedBy??'')===ctx.actorId)return true;const member=(await repo.listMemberships(ctx.tenantId,groupId)).find(m=>m.userId===ctx.actorId&&m.status==='active');return Boolean(member?.roles.some(r=>['founder','manager','admin','president','treasurer'].includes(r)));};
+
+  const groupTrashVisible=async(record:WorkspaceRecord)=>{
+    if(String(record.data.kind??'')!=='GROUP')return false;const groupId=String(record.data.entityId??record.groupId??''),group=await repo.getGroup(ctx.tenantId,groupId);if(!group)return false;
+    if(group.createdBy===ctx.actorId||String(record.data.deletedBy??'')===ctx.actorId)return true;
+    const eligible=jsonArraySafe(String(record.data.eligibleUserIdsJson??'[]'));if(eligible.includes(ctx.actorId))return true;
+    const member=(await repo.listMemberships(ctx.tenantId,groupId)).find(m=>m.userId===ctx.actorId);return Boolean(member);
+  };
   const listGroupTrash=async()=>{
     const rows=(await repo.listWorkspaceRecords(ctx.tenantId,'TRASH.ITEM')).filter(x=>String(x.data.kind??'')==='GROUP'),out=[] as WorkspaceRecord[];
-    for(let item of rows){if(!await groupTrashVisible(item))continue;const expired=Date.parse(String(item.data.restoreUntil??''))<Date.now();
-      if(expired&&item.status==='ACTIVE'){const safe={...item.data};delete safe.snapshotJson;item={...item,status:'ARCHIVED' as WorkspaceStatus,data:{...safe,expired:true,permanentlyRemovedAt:new Date().toISOString()},updatedAt:new Date().toISOString()};await repo.saveWorkspaceRecord(item);await repo.saveAudit(kernel.audit.append({tenantId:ctx.tenantId,actorId:ctx.actorId,action:'TRASH_RETENTION_EXPIRED',targetType:'group',targetId:String(item.data.entityId??''),requestId:ctx.requestId,metadata:{trashId:item.id}}));}
-      const due=item.status==='ACTIVE'&&item.data.remindersEnabled!==false&&Date.parse(String(item.data.nextReminderAt??''))<=Date.now();
-      if(due){const groupId=String(item.data.entityId??''),founderId=String(item.data.founderId??''),deletedBy=String(item.data.deletedBy??''),next=new Date();next.setUTCMonth(next.getUTCMonth()+1);try{await notifications.publish(groupId,{title:'Rappel · groupe dans la corbeille',message:`« ${item.title} » est toujours dans la corbeille. Restauration possible jusqu’au ${new Date(String(item.data.restoreUntil)).toLocaleDateString('fr-FR')}. Vous pouvez désactiver ce rappel mensuel.`,channels:['IN_APP','WEB_PUSH'],audience:'SELECTED_USERS',selectedUserIds:[...new Set([founderId,deletedBy].filter(Boolean))],priority:'HIGH',action:{view:'trash',entityKind:'GROUP',entityId:groupId,label:'Voir le groupe supprimé'}});item={...item,data:{...item.data,lastReminderAt:new Date().toISOString(),nextReminderAt:next.toISOString()},updatedAt:new Date().toISOString()};await repo.saveWorkspaceRecord(item);}catch{}}
-      out.push(item);
-    }return out.sort((a,b)=>String(b.data.deletedAt??b.createdAt).localeCompare(String(a.data.deletedAt??a.createdAt)));
+    for(const item of rows)if(await groupTrashVisible(item))out.push(item);
+    return out.sort((a,b)=>String(b.data.deletedAt??b.createdAt).localeCompare(String(a.data.deletedAt??a.createdAt)));
   };
   const visibleWorkspace=async(record:WorkspaceRecord)=>{
     if(!record.groupId)return record.createdBy===ctx.actorId;
     try{await requireGroup(record.groupId,true);return true;}catch{return false;}
   };
   try {
+    const petitionStatus=url.pathname.match(/^\/api\/v1\/trash\/groups\/([^/]+)\/petition$/);
+    if(petitionStatus&&request.method==='GET')return json(await reconstitution.status(decodeURIComponent(petitionStatus[1]!)),200,cors);
+    if(petitionStatus&&request.method==='POST')return json(await reconstitution.sign(decodeURIComponent(petitionStatus[1]!)),200,cors);
+    const petitionWithdraw=url.pathname.match(/^\/api\/v1\/trash\/groups\/([^/]+)\/petition\/withdraw$/);
+    if(petitionWithdraw&&request.method==='POST')return json(await reconstitution.withdraw(decodeURIComponent(petitionWithdraw[1]!)),200,cors);
+    const successorCreate=url.pathname.match(/^\/api\/v1\/trash\/groups\/([^/]+)\/successor$/);
+    if(successorCreate&&request.method==='POST'){const body=await readJson<any>(request);return json(await reconstitution.createSuccessor(decodeURIComponent(successorCreate[1]!),body),201,cors);}
+    const successorDecision=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/succession\/decisions$/);
+    if(successorDecision&&request.method==='POST'){const body=await readJson<any>(request);return json(await reconstitution.recordDecision(successorDecision[1]!,body),201,cors);}
+    const successorDispute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/succession\/disputes$/);
+    if(successorDispute&&request.method==='POST'){const body=await readJson<any>(request);return json(await reconstitution.openDispute(successorDispute[1]!,body),201,cors);}
+
     if(url.pathname==='/api/v1/trash/groups'&&request.method==='GET')return json(await listGroupTrash(),200,cors);
     const globalGroupTrashRestore=url.pathname.match(/^\/api\/v1\/trash\/groups\/([^/]+)\/restore$/);
     if(globalGroupTrashRestore&&request.method==='POST'){const id=decodeURIComponent(globalGroupTrashRestore[1]!),record=await repo.getWorkspaceRecord(ctx.tenantId,id);if(!record||!await groupTrashVisible(record))throw Error('TRASH_ITEM_NOT_FOUND');return json(await restoreTrash(String(record.data.entityId??record.groupId??''),id),200,cors);}
     const globalGroupTrashReminders=url.pathname.match(/^\/api\/v1\/trash\/groups\/([^/]+)\/reminders$/);
-    if(globalGroupTrashReminders&&request.method==='PUT'){const id=decodeURIComponent(globalGroupTrashReminders[1]!),record=await repo.getWorkspaceRecord(ctx.tenantId,id);if(!record||!await groupTrashVisible(record))throw Error('TRASH_ITEM_NOT_FOUND');const body=await readJson<Record<string,unknown>>(request),enabled=body.enabled!==false,updated={...record,data:{...record.data,remindersEnabled:enabled},updatedAt:new Date().toISOString()};await repo.saveWorkspaceRecord(updated);return json(updated,200,cors);}
+    if(globalGroupTrashReminders&&request.method==='PUT'){const id=decodeURIComponent(globalGroupTrashReminders[1]!),record=await repo.getWorkspaceRecord(ctx.tenantId,id);if(!record||!await groupTrashVisible(record))throw Error('TRASH_ITEM_NOT_FOUND');const body=await readJson<Record<string,unknown>>(request),enabled=body.enabled!==false,optOut=new Set(jsonArraySafe(String(record.data.reminderOptOutUserIdsJson??'[]')));if(enabled)optOut.delete(ctx.actorId);else optOut.add(ctx.actorId);const updated={...record,data:{...record.data,reminderOptOutUserIdsJson:JSON.stringify([...optOut])},updatedAt:new Date().toISOString()};await repo.saveWorkspaceRecord(updated);return json(updated,200,cors);}
     const scopedGroup=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)/)?.[1];
     if(scopedGroup)await requireGroup(scopedGroup);
     const trashRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/trash$/);
@@ -296,15 +338,17 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
     const financialCellApply=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/meetings\/([^/]+)\/financial-cells\/([^/]+)\/apply$/);
     if(financialCellBase&&request.method==='POST'){
       const groupId=financialCellBase[1]!,meetingId=financialCellBase[2]!;await requireGroup(groupId,true);
-      const body=await readJson<Record<string,unknown>>(request),membershipId=String(body.membershipId??''),rubricId=String(body.rubricId??''),targetAmount=finite(body.targetAmount),reason=String(body.reason??'').trim();
+      const body=await readJson<Record<string,unknown>>(request),membershipId=String(body.membershipId??''),rubricId=String(body.rubricId??''),targetAmount=finite(body.targetAmount),expectedCurrentAmount=body.expectedCurrentAmount===undefined?undefined:finite(body.expectedCurrentAmount),expectedCellVersion=body.expectedCellVersion===undefined?undefined:finite(body.expectedCellVersion),reason=String(body.reason??'').trim();
       if(!membershipId||!rubricId)throw Error('FINANCIAL_CELL_REQUIRED');
       if(!Number.isSafeInteger(targetAmount)||targetAmount<0)throw Error('INVALID_CONTRIBUTION_AMOUNT');
       const state=await financialCellState(groupId,meetingId,membershipId,rubricId),meeting=await repo.getMeeting(ctx.tenantId,groupId,meetingId);if(!meeting||meeting.status==='cancelled')throw Error('MEETING_NOT_FOUND');
       if(state.current===targetAmount)return json({status:'NO_CHANGE',current:state.current,target:targetAmount},200,cors);
+      if(expectedCurrentAmount!==undefined&&expectedCurrentAmount!==state.current)throw Error('CELL_VALUE_CONFLICT');
+      if(expectedCellVersion!==undefined&&expectedCellVersion!==state.cellVersion)throw Error('CELL_VERSION_CONFLICT');
       const managers=await managerUserIds(groupId);
-      const needsConsensus=state.current>0&&(managers.length>1||Boolean(state.baselineActorId&&state.baselineActorId!==ctx.actorId));
+      const needsConsensus=meeting.status==='closed'||(state.current>0&&(managers.length>1||Boolean(state.baselineActorId&&state.baselineActorId!==ctx.actorId)));
       if(needsConsensus){
-        const item=await new MeetingLiveConsensusService(repo,kernel).proposeAgainstBaseline({groupId,meetingId,cellKey:membershipId+':'+rubricId,value:targetAmount,baselineValue:state.current,baselineActorId:state.baselineActorId,label:'Proposition de correction',membershipId,rubricId});
+        const item=await new MeetingLiveConsensusService(repo,kernel).proposeAgainstBaseline({groupId,meetingId,cellKey:membershipId+':'+rubricId,value:targetAmount,baselineValue:state.current,baselineCellVersion:state.cellVersion,baselineActorId:state.baselineActorId,label:'Proposition de correction',membershipId,rubricId});
         const proposer=await actorLabel(),originalActor=state.baselineActorId?await actorLabelFor(state.baselineActorId):'auteur antérieur',mName=await memberLabel(groupId,membershipId),rName=await rubricLabel(groupId,rubricId),action={view:'operations',anchor:'twoSheetWorkspace',meetingId,membershipId,rubricId,label:'Voir et confronter la cellule'};
         const sessionWhen=new Intl.DateTimeFormat('fr-FR',{dateStyle:'medium',timeStyle:'short'}).format(new Date(meeting.scheduledAt??meeting.openedAt)),proposalWhen=new Intl.DateTimeFormat('fr-FR',{dateStyle:'medium',timeStyle:'short'}).format(new Date());
         await notifications.publish(groupId,{title:'Donnée financière à confronter',message:`${mName} · ${rName} · séance ${sessionWhen} : ${proposer} propose ${state.current} → ${targetAmount} F CFA (saisie précédente : ${originalActor}). Proposition : ${proposalWhen}. Motif : ${reason||'non précisé'}. La valeur canonique reste inchangée avant décision du Bureau.`,channels:['IN_APP','WEB_PUSH'],audience:'MANAGERS',priority:'HIGH',action});
@@ -312,14 +356,9 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
         await publishLive(groupId,'CONSENSUS_REQUIRED','financial-cell-proposal:'+item.id+':'+item.version,{meetingId,cellKey:item.cellKey,state:item.state,version:item.version,baselineValue:state.current,proposedValue:targetAmount,membershipId,rubricId,proposedBy:ctx.actorId});
         return json({status:'CONSENSUS_REQUIRED',current:state.current,target:targetAmount,consensus:item},202,cors);
       }
-      if(state.current===0&&meeting.status==='open'&&targetAmount>0){
-        const key=String(request.headers.get('x-idempotency-key')??makeId('cell'));
-        const receipt=await ledger.recordCashContribution({tenantId:ctx.tenantId,groupId,membershipId,amount:targetAmount,currency:'XAF',meetingId,rubricId,idempotencyKey:key},ctx.requestId);
-        const entry=await repo.getLedgerEntry(ctx.tenantId,groupId,receipt.ledgerEntryId);if(entry)await dispatchContributionProjection(groupId,receipt,entry);
-        return json({status:'POSTED',current:0,target:targetAmount,receipt},201,cors);
-      }
-      const applied=await applyFinancialCellTarget({groupId,meetingId,membershipId,rubricId,targetAmount,reason:reason||'Correction explicite de la feuille de séance',idempotencyKey:String(request.headers.get('x-idempotency-key')??makeId('cell-correction'))});
-      return json(applied,200,cors);
+      const creatingCell=state.current===0;
+      const applied=await applyFinancialCellTarget({groupId,meetingId,membershipId,rubricId,targetAmount,expectedCurrentAmount:expectedCurrentAmount??state.current,expectedCellVersion:expectedCellVersion??state.cellVersion,reason:reason||'Correction explicite de la feuille de séance',idempotencyKey:String(request.headers.get('x-idempotency-key')??makeId('cell-correction'))});
+      return json(applied,creatingCell?201:200,cors);
     }
     if(financialCellApply&&request.method==='POST'){
       const groupId=financialCellApply[1]!,meetingId=financialCellApply[2]!,cellKey=decodeURIComponent(financialCellApply[3]!);await requireGroup(groupId,true);
@@ -327,7 +366,9 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
       if(!item||!item.selectedValue||!['MAJORITY_SELECTED','UNANIMOUS','RESERVE_OPEN'].includes(item.state))throw Error('CONSENSUS_SELECTION_REQUIRED');
       if(!item.membershipId||!item.rubricId)throw Error('FINANCIAL_CELL_REQUIRED');
       const targetAmount=Number(item.selectedValue);if(!Number.isSafeInteger(targetAmount)||targetAmount<0)throw Error('INVALID_CONTRIBUTION_AMOUNT');
-      const applied=await applyFinancialCellTarget({groupId,meetingId,membershipId:item.membershipId,rubricId:item.rubricId,targetAmount,reason:String(body.reason??'Valeur retenue après confrontation des gestionnaires'),idempotencyKey:'cell-consensus:'+item.id+':v'+item.version,consensusId:item.id,consensusVersion:item.version});
+      const currentState=await financialCellState(groupId,meetingId,item.membershipId,item.rubricId);
+      if(item.baselineCellVersion!==undefined&&currentState.cellVersion!==item.baselineCellVersion)throw Error('CELL_VERSION_CONFLICT');
+      const applied=await applyFinancialCellTarget({groupId,meetingId,membershipId:item.membershipId,rubricId:item.rubricId,targetAmount,expectedCurrentAmount:currentState.current,expectedCellVersion:item.baselineCellVersion??currentState.cellVersion,reason:String(body.reason??'Valeur retenue après confrontation des gestionnaires'),idempotencyKey:'cell-consensus:'+item.id+':v'+item.version,consensusId:item.id,consensusVersion:item.version});
       return json({...applied,consensusState:item.state},200,cors);
     }
     const consensusBase=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/meetings\/([^/]+)\/live-consensus$/);
@@ -385,11 +426,69 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
       }
       return json({error:'METHOD_NOT_ALLOWED'},405,cors);
     }
-    if(request.method==='GET'&&url.pathname==='/health') return json({ok:true,service:'tontine-api',version:'1.4.0-master-2.3.4-closure',now:new Date().toISOString(),realMoneyEnabled:kernel.features.enabled('financial-real-money'),manualCashLedgerEnabled:true,premiumLiveEnabled:options.premiumLive===true&&Boolean(options.liveNamespace),founderControlBound:Boolean(options.founderControl),communityRealtimeBound:Boolean(options.communityRealtime),artifactStorageBound:true,artifactStorageMode:options.artifacts?'R2':'D1_FALLBACK',contextScope:'request'},200,cors);
+    if(request.method==='GET'&&url.pathname==='/health') return json({ok:true,service:'tontine-api',version:RELEASE_VERSION,buildId:RELEASE_BUILD_ID,commitSha:options.releaseCommitSha??'UNBOUND_LOCAL_BUILD',schemaVersion:RELEASE_SCHEMA_VERSION,policyVersion:RELEASE_POLICY_VERSION,pwaCache:RELEASE_PWA_CACHE,now:new Date().toISOString(),realMoneyEnabled:kernel.features.enabled('financial-real-money'),manualCashLedgerEnabled:true,premiumLiveEnabled:options.premiumLive===true&&Boolean(options.liveNamespace),founderControlBound:Boolean(options.founderControl),communityRealtimeBound:Boolean(options.communityRealtime),artifactStorageBound:true,artifactStorageMode:options.artifacts?'R2':'D1_FALLBACK',contextScope:'request'},200,cors);
+    if(request.method==='POST'&&url.pathname==='/api/v1/value/offers'){const body=await readJson<any>(request);return json(await valueNetwork.createOffer(body),201,cors);}
+    if(request.method==='GET'&&url.pathname==='/api/v1/value/offers')return json({items:await valueNetwork.listOffers()},200,cors);
+    const valueNeeds=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/value\/needs$/);
+    if(valueNeeds&&request.method==='GET')return json({items:await valueNetwork.listNeeds(valueNeeds[1]!)},200,cors);
+    if(valueNeeds&&request.method==='POST'){const body=await readJson<any>(request);return json(await valueNetwork.createNeed({groupId:valueNeeds[1]!,...body}),201,cors);}
+    const valueNeedAction=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/value\/needs\/([^/]+)\/(validate|publish|matches|procurement)$/);
+    if(valueNeedAction){
+      const groupId=valueNeedAction[1]!,needId=valueNeedAction[2]!,action=valueNeedAction[3]!;await requireGroup(groupId,action!=='matches');
+      if(action==='validate'&&request.method==='POST')return json(await valueNetwork.validateNeed(needId),200,cors);
+      if(action==='publish'&&request.method==='POST')return json(await valueNetwork.publishNeed(needId),200,cors);
+      if(action==='matches'&&request.method==='GET')return json({items:await valueNetwork.matchNeed(needId)},200,cors);
+      if(action==='procurement'&&request.method==='POST'){const body=await readJson<any>(request);return json(await valueNetwork.prepareProcurement(needId,String(body.offerId??'')),201,cors);}
+    }
+
+    if(request.method==='GET'&&url.pathname==='/api/v1/knowledge'){return json({items:await knowledgeAcademy.searchKnowledge(url.searchParams.get('q')??'',url.searchParams.get('groupId')??undefined)},200,cors);}
+    if(request.method==='POST'&&url.pathname==='/api/v1/knowledge'){const body=await readJson<any>(request);return json(await knowledgeAcademy.createKnowledge(body),201,cors);}
+    const knowledgeRevision=url.pathname.match(/^\/api\/v1\/knowledge\/([^/]+)\/revisions$/);
+    if(knowledgeRevision&&request.method==='POST'){const body=await readJson<any>(request);return json(await knowledgeAcademy.reviseKnowledge(knowledgeRevision[1]!,body),201,cors);}
+    const knowledgeReview=url.pathname.match(/^\/api\/v1\/knowledge\/([^/]+)\/review$/);
+    if(knowledgeReview&&request.method==='POST'){const body=await readJson<any>(request);return json(await knowledgeAcademy.reviewKnowledge(knowledgeReview[1]!,String(body.state??'TO_REVALIDATE') as any,String(body.note??'')),200,cors);}
+    if(request.method==='GET'&&url.pathname==='/api/v1/encyclopedia')return json({items:knowledgeAcademy.encyclopedia(url.searchParams.get('q')??'')},200,cors);
+    if(request.method==='GET'&&url.pathname==='/api/v1/founder-ai/context')return json(await knowledgeAcademy.founderContext(url.searchParams.get('q')??''),200,cors);
+    if(request.method==='GET'&&url.pathname==='/api/v1/academy')return json(await knowledgeAcademy.academy(),200,cors);
+    if(request.method==='POST'&&url.pathname==='/api/v1/academy/courses'){const body=await readJson<any>(request);return json(await knowledgeAcademy.createCourse(body),201,cors);}
+    const academyEnroll=url.pathname.match(/^\/api\/v1\/academy\/courses\/([^/]+)\/enroll$/);
+    if(academyEnroll&&request.method==='POST')return json(await knowledgeAcademy.enroll(academyEnroll[1]!),201,cors);
+    const academyLesson=url.pathname.match(/^\/api\/v1\/academy\/enrollments\/([^/]+)\/lessons$/);
+    if(academyLesson&&request.method==='POST'){const body=await readJson<any>(request);return json(await knowledgeAcademy.submitLesson(academyLesson[1]!,body),200,cors);}
+
+    if(request.method==='GET'&&url.pathname==='/api/v1/growth/referrals')return json(await growthReferral.dashboard(),200,cors);
+    if(request.method==='POST'&&url.pathname==='/api/v1/growth/referral-campaigns'){const body=await readJson<any>(request);return json(await growthReferral.createCampaign(body),201,cors);}
+    const referralCampaign=url.pathname.match(/^\/api\/v1\/growth\/referral-campaigns\/([^/]+)\/state$/);
+    if(referralCampaign&&request.method==='POST'){const body=await readJson<any>(request);return json(await growthReferral.setCampaignState(referralCampaign[1]!,String(body.state??'ACTIVE') as any),200,cors);}
+    if(request.method==='POST'&&url.pathname==='/api/v1/growth/referral-shares'){const body=await readJson<any>(request);return json(await growthReferral.createShare(body),201,cors);}
+    if(request.method==='POST'&&url.pathname==='/api/v1/growth/referral-landings'){const body=await readJson<any>(request);return json(await growthReferral.registerLanding(String(body.code??'')),201,cors);}
+    if(request.method==='POST'&&url.pathname==='/api/v1/growth/referral-conversions'){const body=await readJson<any>(request);return json(await growthReferral.registerConversion(body),201,cors);}
+    const referralReward=url.pathname.match(/^\/api\/v1\/growth\/referral-campaigns\/([^/]+)\/rewards\/([^/]+)\/approve$/);
+    if(referralReward&&request.method==='POST')return json(await growthReferral.approveReward(referralReward[1]!,referralReward[2]!),200,cors);
+
+    if(request.method==='GET'&&url.pathname==='/api/v1/business/summary')return json(await businessStudio.summary(),200,cors);
+    if(request.method==='GET'&&url.pathname==='/api/v1/business/records')return json({items:await businessStudio.records()},200,cors);
+    if(request.method==='PUT'&&url.pathname==='/api/v1/business/workspace'){const body=await readJson<any>(request);return json(await businessStudio.configure(body),200,cors);}
+    if(request.method==='POST'&&url.pathname==='/api/v1/business/mandates'){const body=await readJson<any>(request);return json(await businessStudio.createMandate(body),201,cors);}
+    const businessMandate=url.pathname.match(/^\/api\/v1\/business\/mandates\/([^/]+)\/(activate|end)$/);
+    if(businessMandate&&request.method==='POST'){const body=await readJson<any>(request);return json(businessMandate[2]==='activate'?await businessStudio.activateMandate(businessMandate[1]!):await businessStudio.endMandate(businessMandate[1]!,String(body.reason??'')),200,cors);}
+    if(request.method==='POST'&&url.pathname==='/api/v1/business/clients'){const body=await readJson<any>(request);return json(await businessStudio.createClient(body),201,cors);}
+    const businessClient=url.pathname.match(/^\/api\/v1\/business\/clients\/([^/]+)\/state$/);
+    if(businessClient&&request.method==='POST'){const body=await readJson<any>(request);return json(await businessStudio.setClientState(businessClient[1]!,String(body.state??'PROSPECT') as any),200,cors);}
+    if(request.method==='POST'&&url.pathname==='/api/v1/business/quotes'){const body=await readJson<any>(request);return json(await businessStudio.createQuote(body),201,cors);}
+    const businessQuote=url.pathname.match(/^\/api\/v1\/business\/quotes\/([^/]+)\/decision$/);
+    if(businessQuote&&request.method==='POST'){const body=await readJson<any>(request);return json(await businessStudio.quoteDecision(businessQuote[1]!,String(body.state??'SENT') as any),200,cors);}
+    if(request.method==='POST'&&url.pathname==='/api/v1/business/contracts'){const body=await readJson<any>(request);return json(await businessStudio.createContract(body),201,cors);}
+    if(request.method==='POST'&&url.pathname==='/api/v1/business/invoices'){const body=await readJson<any>(request);return json(await businessStudio.issueInvoice(body),201,cors);}
+    if(request.method==='POST'&&url.pathname==='/api/v1/business/payments'){const body=await readJson<any>(request);return json(await businessStudio.recordPayment(body),201,cors);}
+    if(request.method==='POST'&&url.pathname==='/api/v1/business/expenses'){const body=await readJson<any>(request);return json(await businessStudio.recordExpense(body),201,cors);}
+    if(request.method==='POST'&&url.pathname==='/api/v1/business/time'){const body=await readJson<any>(request);return json(await businessStudio.recordTime(body),201,cors);}
+    if(request.method==='POST'&&url.pathname==='/api/v1/business/scenarios'){const body=await readJson<any>(request);return json(await businessStudio.scenario(body),201,cors);}
+
     if(request.method==='GET'&&url.pathname==='/api/v1/kernel') return json({services:['context','policy','workflow','events','audit','obligations','evidence','reconciliation','cases','inbox','notifications','configuration','features','data-governance','compatibility','resource-governor'],features:{groupLaunch:kernel.features.enabled('group-launch-studio'),meetingSync:kernel.features.enabled('meeting-sync-core'),realMoney:kernel.features.enabled('financial-real-money'),manualCashLedger:true}},200,cors);
 
     if(request.method==='GET'&&url.pathname==='/api/v1/product/capabilities'){
-      return json({version:'1.4.0-master-2.3.4-closure',count:PRODUCT_CAPABILITY_COUNT,capabilities:PRODUCT_MODULES,readiness:buildProductReadinessReport(PRODUCT_MODULES)},200,cors);
+      return json({version:RELEASE_VERSION,count:PRODUCT_CAPABILITY_COUNT,capabilities:PRODUCT_MODULES,readiness:buildProductReadinessReport(PRODUCT_MODULES)},200,cors);
     }
 
 
@@ -1044,7 +1143,7 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
     }
 
     const ledgerRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/ledger$/);
-    if(ledgerRoute&&request.method==='GET') return json({summary:await ledger.summary(ctx.tenantId,ledgerRoute[1]!),entries:await repo.listLedgerEntries(ctx.tenantId,ledgerRoute[1]!),receipts:await ledger.receiptPositions(ctx.tenantId,ledgerRoute[1]!)},200,cors);
+    if(ledgerRoute&&request.method==='GET') return json({summary:await ledger.summary(ctx.tenantId,ledgerRoute[1]!),entries:await repo.listLedgerEntries(ctx.tenantId,ledgerRoute[1]!),receipts:await ledger.receiptPositions(ctx.tenantId,ledgerRoute[1]!),cellRevisions:await repo.listFinancialCellRevisions(ctx.tenantId,ledgerRoute[1]!)},200,cors);
     const reverseRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/ledger\/([^/]+)\/reverse$/);
     if(reverseRoute&&request.method==='POST'){
       const groupId=reverseRoute[1]!,entryId=decodeURIComponent(reverseRoute[2]!),body=await readJson<Record<string,unknown>>(request),reason=String(body.reason??'').trim();
@@ -1233,7 +1332,7 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
     if(controlTransition&&request.method==='POST'){
       if(!options.founderControl||!(await isFounderTeamActor()))throw new Error('FOUNDER_TEAM_ONLY');
       const body=await readJson<Record<string,unknown>>(request);
-      return json(await options.founderControl.transition(decodeURIComponent(controlTransition[1]!),String(body.status??''),String(body.note??'')),200,cors);
+      return json(await options.founderControl.transition(decodeURIComponent(controlTransition[1]!),String(body.status??''),String(body.note??''),String(body.evidenceRef??'')),200,cors);
     }
     const capabilityCheck=url.pathname.match(/^\/api\/v1\/founder\/control\/capabilities\/(.+)\/check$/);
     if(capabilityCheck&&request.method==='POST'){
@@ -1316,7 +1415,7 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
     }
 
     if(request.method==='GET'&&url.pathname==='/api/v1/completion/workflows'){
-      return json({version:'1.4.0-master-2.3.4-closure',workflows:COMPLETION_WORKFLOWS},200,cors);
+      return json({version:RELEASE_VERSION,workflows:COMPLETION_WORKFLOWS},200,cors);
     }
 
     const expectedRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/receivables\/expected$/);
@@ -1416,7 +1515,7 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
     if(stockListing&&request.method==='POST'){const body=await readJson<Record<string,unknown>>(request);return json(await market.setStockListing(stockListing[1]!,stockListing[2]!,{published:Boolean(body.published),unitPrice:body.unitPrice===undefined?undefined:finite(body.unitPrice),description:body.description?String(body.description):undefined}),200,cors);}
 
     const stockRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/market\/stock$/);
-    if(stockRoute&&request.method==='POST'){const body=await readJson<Record<string,unknown>>(request);return json(await market.createStock(stockRoute[1]!,{sku:String(body.sku??''),name:String(body.name??''),quantity:finite(body.quantity),unit:body.unit?String(body.unit):undefined,unitPrice:body.unitPrice===undefined?undefined:finite(body.unitPrice),description:body.description?String(body.description):undefined,published:Boolean(body.published)}),201,cors);}
+    if(stockRoute&&request.method==='POST'){const body=await readJson<Record<string,unknown>>(request);return json(await market.createStock(stockRoute[1]!,{sku:String(body.sku??''),name:String(body.name??''),quantity:finite(body.quantity),unit:body.unit?String(body.unit):undefined,unitPrice:body.unitPrice===undefined?undefined:finite(body.unitPrice),description:body.description?String(body.description):undefined,published:Boolean(body.published),ownership:body.ownership?String(body.ownership) as any:undefined,ownerRef:body.ownerRef?String(body.ownerRef):undefined}),201,cors);}
     const stockAdjust=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/market\/stock\/([^/]+)\/adjust$/);
     if(stockAdjust&&request.method==='POST'){const body=await readJson<Record<string,unknown>>(request);return json(await market.adjustStock(stockAdjust[1]!,stockAdjust[2]!,finite(body.delta),String(body.reason??'')),200,cors);}
     const orderRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/market\/orders$/);
@@ -1427,6 +1526,18 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
     if(returnRoute&&request.method==='POST'){const body=await readJson<Record<string,unknown>>(request);return json(await market.returnItems(returnRoute[1]!,returnRoute[2]!,finite(body.quantity),String(body.reason??'')),200,cors);}
     const disputeRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/market\/orders\/([^/]+)\/dispute$/);
     if(disputeRoute&&request.method==='POST'){const body=await readJson<Record<string,unknown>>(request);return json(await market.dispute(disputeRoute[1]!,disputeRoute[2]!,String(body.summary??'')),200,cors);}
+    const supplierRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/market\/suppliers$/);
+    if(supplierRoute&&request.method==='GET')return json({items:await market.suppliers(supplierRoute[1]!)},200,cors);
+    if(supplierRoute&&request.method==='POST'){const body=await readJson<any>(request);return json(await market.registerSupplier(supplierRoute[1]!,body),201,cors);}
+    const procurementRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/market\/procurements$/);
+    if(procurementRoute&&request.method==='GET')return json(await market.procurement(procurementRoute[1]!),200,cors);
+    if(procurementRoute&&request.method==='POST'){const body=await readJson<any>(request);return json(await market.createProcurement(procurementRoute[1]!,body),201,cors);}
+    const procurementReceive=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/market\/procurements\/([^/]+)\/receive$/);
+    if(procurementReceive&&request.method==='POST'){const body=await readJson<any>(request);return json(await market.receiveProcurement(procurementReceive[1]!,procurementReceive[2]!,body),200,cors);}
+    const procurementReturn=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/market\/procurements\/([^/]+)\/return$/);
+    if(procurementReturn&&request.method==='POST'){const body=await readJson<any>(request);return json(await market.returnProcurement(procurementReturn[1]!,procurementReturn[2]!,body),200,cors);}
+    const supplierCreditPayment=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/market\/supplier-credits\/([^/]+)\/payments$/);
+    if(supplierCreditPayment&&request.method==='POST'){const body=await readJson<any>(request);return json(await market.paySupplierCredit(supplierCreditPayment[1]!,supplierCreditPayment[2]!,body),200,cors);}
     const groupBuyRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/market\/group-buys$/);
     if(groupBuyRoute&&request.method==='POST'){const body=await readJson<Record<string,unknown>>(request);return json(await market.createGroupBuy(groupBuyRoute[1]!,{title:String(body.title??''),stockItemId:body.stockItemId?String(body.stockItemId):undefined,thresholdQuantity:finite(body.thresholdQuantity),deadline:String(body.deadline??'')}),201,cors);}
     const groupBuyCommit=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/market\/group-buys\/([^/]+)\/commit$/);
@@ -1884,14 +1995,19 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
       if(item.type==='FINANCIAL_CELL_CORRECTION_PROPOSAL_V1'){
         const p=item.payload,groupId=String(p.groupId??''),meetingId=String(p.meetingId??''),membershipId=String(p.membershipId??''),rubricId=String(p.rubricId??''),targetAmount=finite(p.targetAmount),reason=String(p.reason??'');
         await requireGroup(groupId,true);
-        const state=await financialCellState(groupId,meetingId,membershipId,rubricId),managers=await managerUserIds(groupId);
+        const state=await financialCellState(groupId,meetingId,membershipId,rubricId),baselineValue=finite(p.baselineValue,state.current),baselineVersion=finite(p.baselineVersion,state.cellVersion),managers=await managerUserIds(groupId),meeting=await repo.getMeeting(ctx.tenantId,groupId,meetingId);
+        if(!meeting||meeting.status==='cancelled')throw Error('MEETING_NOT_FOUND');
+        // A replay after an ambiguous network response is already satisfied when
+        // the canonical value equals the requested target.
         if(state.current===targetAmount){await markApplied();return json({accepted:true,stored:true,status:'NO_CHANGE'},200,cors);}
-        if(state.current>0&&managers.length>1){
-          const consensus=await new MeetingLiveConsensusService(repo,kernel).proposeAgainstBaseline({groupId,meetingId,cellKey:membershipId+':'+rubricId,value:targetAmount,baselineValue:state.current,baselineActorId:state.baselineActorId,label:'Proposition reçue hors ligne',membershipId,rubricId});
-          await notifications.publish(groupId,{title:'Correction offline à confronter',message:`Une proposition hors ligne demande ${targetAmount} F CFA au lieu de ${state.current}. La valeur canonique reste inchangée avant décision du Bureau.`,channels:['IN_APP','WEB_PUSH'],audience:'MANAGERS',priority:'HIGH'});
-          await markApplied();return json({accepted:true,stored:true,status:'CONSENSUS_REQUIRED',consensus},200,cors);
+        const staleBaseline=baselineValue!==state.current||baselineVersion!==state.cellVersion;
+        const needsConsensus=staleBaseline||meeting.status==='closed'||(state.current>0&&managers.length>1);
+        if(needsConsensus){
+          const consensus=await new MeetingLiveConsensusService(repo,kernel).proposeAgainstBaseline({groupId,meetingId,cellKey:membershipId+':'+rubricId,value:targetAmount,baselineValue:state.current,baselineCellVersion:state.cellVersion,baselineActorId:state.baselineActorId,label:staleBaseline?'Conflit de base hors ligne':'Proposition reçue hors ligne',membershipId,rubricId});
+          await notifications.publish(groupId,{title:staleBaseline?'Conflit de saisie hors ligne':'Correction offline à confronter',message:`La saisie hors ligne partait de ${baselineValue} F CFA (version ${baselineVersion}) ; la valeur canonique est maintenant ${state.current} F CFA (version ${state.cellVersion}) et la proposition demande ${targetAmount} F CFA. La valeur canonique reste inchangée avant décision du Bureau.`,channels:['IN_APP','WEB_PUSH'],audience:'MANAGERS',priority:staleBaseline?'CRITICAL':'HIGH'});
+          await markApplied();return json({accepted:true,stored:true,status:'CONSENSUS_REQUIRED',staleBaseline,consensus},200,cors);
         }
-        const result=await applyFinancialCellTarget({groupId,meetingId,membershipId,rubricId,targetAmount,reason:reason||'Correction saisie hors ligne puis synchronisée',idempotencyKey:'offline-cell:'+item.idempotencyKey});
+        const result=await applyFinancialCellTarget({groupId,meetingId,membershipId,rubricId,targetAmount,expectedCurrentAmount:baselineValue,expectedCellVersion:baselineVersion,reason:reason||'Correction saisie hors ligne puis synchronisée',idempotencyKey:item.idempotencyKey});
         await markApplied();return json({accepted:true,stored:true,...result},200,cors);
       }
 
@@ -1946,6 +2062,20 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
       return json({rows,summary:summarizePeriodicLoan(input,rows),simulationOnly:true,noInterestOnInterest:true,interestBasis:'OUTSTANDING_PRINCIPAL'},200,cors);
     }
 
+    const memberHistoryRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/members\/([^/]+)\/financial-history$/);
+    if(memberHistoryRoute&&request.method==='GET'){
+      const groupId=memberHistoryRoute[1]!,membershipId=memberHistoryRoute[2]!,group=await requireGroup(groupId),target=await repo.getMembership(ctx.tenantId,groupId,membershipId);if(!target)throw new Error('MEMBERSHIP_NOT_FOUND');
+      const viewer=(await repo.listMemberships(ctx.tenantId,groupId)).find(x=>x.userId===ctx.actorId&&x.status==='active'),manager=group.createdBy===ctx.actorId||Boolean(viewer?.roles.some(r=>['founder','manager','admin','president','treasurer','auditor'].includes(r)));
+      if(!manager&&target.userId!==ctx.actorId)throw new Error('FORBIDDEN_SCOPE');
+      const limit=Math.min(100,Math.max(10,Math.trunc(finite(url.searchParams.get('limit'),50)))),cursorRaw=url.searchParams.get('cursor')??'';
+      let cursor:{at:string;id:string}|undefined;if(cursorRaw){try{const x=JSON.parse(decodeURIComponent(cursorRaw));if(Array.isArray(x)&&x.length===2)cursor={at:String(x[0]),id:String(x[1])};}catch{throw new Error('INVALID_CURSOR');}}
+      const statement=await ledger.memberStatement(ctx.tenantId,groupId,membershipId,url.searchParams.get('asOf')??undefined);
+      const sorted=statement.receipts.slice().sort((a,b)=>String(b.receivedAt).localeCompare(String(a.receivedAt))||String(b.id??b.ledgerEntryId).localeCompare(String(a.id??a.ledgerEntryId)));
+      const filtered=cursor?sorted.filter(r=>String(r.receivedAt)<cursor!.at||(String(r.receivedAt)===cursor!.at&&String(r.id??r.ledgerEntryId)<cursor!.id)):sorted;
+      const page=filtered.slice(0,limit),last=page.at(-1),nextCursor=filtered.length>page.length&&last?encodeURIComponent(JSON.stringify([last.receivedAt,String(last.id??last.ledgerEntryId)])):null;
+      return json({items:page,nextCursor,hasMore:Boolean(nextCursor),pageSize:page.length,total:sorted.length,groupId,membershipId},200,cors);
+    }
+
     const notebookRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/members\/([^/]+)\/notebook$/);
     if(notebookRoute&&request.method==='GET'){
       const groupId=notebookRoute[1]!,membershipId=notebookRoute[2]!,group=await requireGroup(groupId),target=await repo.getMembership(ctx.tenantId,groupId,membershipId);if(!target)throw new Error('MEMBERSHIP_NOT_FOUND');
@@ -1961,12 +2091,12 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
     }
 
     return json({error:'NOT_FOUND'},404,cors);
-  } catch(error){const message=error instanceof Error?error.message:'UNKNOWN_ERROR';const status=['FORBIDDEN_SCOPE','FOUNDER_TEAM_ONLY'].includes(message)?403:message==='IDEMPOTENCY_CONFLICT'?409:message.endsWith('_NOT_FOUND')?404:400;return json({error:message,requestId:ctx.requestId},status,cors);}
+  } catch(error){const message=error instanceof Error?error.message:'UNKNOWN_ERROR';const status=['FORBIDDEN_SCOPE','FOUNDER_TEAM_ONLY'].includes(message)?403:['IDEMPOTENCY_CONFLICT','CELL_VALUE_CONFLICT','CELL_VERSION_CONFLICT'].includes(message)?409:message.endsWith('_NOT_FOUND')?404:400;return json({error:message,requestId:ctx.requestId},status,cors);}
 };
 
 export const handleRequest=createApiHandler(defaultRepo);
 export interface AssetsFetcherLike { fetch(request: Request): Promise<Response> }
-export interface WorkerEnv { DB?: D1DatabaseLike; ASSETS?: AssetsFetcherLike; ARTIFACTS?: ArtifactStoreLike; AI?: WorkersAILike; GROUP_LIVE_HUB?: DurableObjectNamespaceLike; PREMIUM_LIVE_LEDGER?: string; DATA_USE_PROFILE?: string; COLLECTIVE_LEARNING_PEPPER?: string; IDENTITY_MATCH_PEPPER?: string; FOUNDER_TEAM_ACTORS?: string }
+export interface WorkerEnv { RELEASE_COMMIT_SHA?: string; DB?: D1DatabaseLike; ASSETS?: AssetsFetcherLike; ARTIFACTS?: ArtifactStoreLike; AI?: WorkersAILike; GROUP_LIVE_HUB?: DurableObjectNamespaceLike; PREMIUM_LIVE_LEDGER?: string; DATA_USE_PROFILE?: string; COLLECTIVE_LEARNING_PEPPER?: string; IDENTITY_MATCH_PEPPER?: string; FOUNDER_TEAM_ACTORS?: string }
 export default {async fetch(request:Request,env:WorkerEnv={}){
   const url=new URL(request.url);
   if(request.method==='GET' && env.ASSETS && url.pathname!=='/health' && !url.pathname.startsWith('/api/')){
@@ -1998,7 +2128,14 @@ export default {async fetch(request:Request,env:WorkerEnv={}){
   return authenticatedApi(repository,env.DB,async authenticatedRequest=>{
     const h=authenticatedRequest.headers;
     pairingKernel.context.set({actorId:h.get('x-actor-id')??'unknown',tenantId:h.get('x-tenant-id')??'unknown',activeGroupId:h.get('x-active-group-id')||undefined,groupRoles:(h.get('x-group-roles')??'').split(',').filter(Boolean),mandateIds:[],deviceId:h.get('x-device-id')??'device_web',sessionId:h.get('x-session-id')??'server-authenticated',locale:h.get('accept-language')?.toLowerCase().startsWith('en')?'en':'fr',timezone:h.get('x-timezone')??'Africa/Douala',connectivity:'online',requestId:h.get('x-request-id')??crypto.randomUUID()});
-    return createApiHandler(repository,{artifacts:env.ARTIFACTS,documentAI:env.AI,liveNamespace:env.GROUP_LIVE_HUB,premiumLive:env.PREMIUM_LIVE_LEDGER==='true',founderLearning,founderControl,communityRealtime,founderTeamActors,commercialPreferences,groupPairing,interestCommunities,ecoPulse,identityProof,dataUseDefaultMode,governanceSecret:env.COLLECTIVE_LEARNING_PEPPER??env.IDENTITY_MATCH_PEPPER})(authenticatedRequest);
+    return createApiHandler(repository,{artifacts:env.ARTIFACTS,documentAI:env.AI,liveNamespace:env.GROUP_LIVE_HUB,premiumLive:env.PREMIUM_LIVE_LEDGER==='true',referralBudgets:new D1ReferralBudgetStore(env.DB!),founderLearning,founderControl,communityRealtime,founderTeamActors,commercialPreferences,groupPairing,interestCommunities,ecoPulse,identityProof,dataUseDefaultMode,governanceSecret:env.COLLECTIVE_LEARNING_PEPPER??env.IDENTITY_MATCH_PEPPER,releaseCommitSha:env.RELEASE_COMMIT_SHA})(authenticatedRequest);
   })(request);
-}};
+},
+async scheduled(controller:{scheduledTime?:number},env:WorkerEnv,executionCtx?:{waitUntil?(promise:Promise<unknown>):void}){
+  if(!env.DB)return;
+  const maintenance=new TrashLifecycleMaintenance(new D1PlatformRepository(env.DB),env.ARTIFACTS);
+  const task=maintenance.run(new Date(controller.scheduledTime??Date.now()));
+  if(executionCtx?.waitUntil)executionCtx.waitUntil(task);else await task;
+}
+};
 export {defaultRepo as repo};

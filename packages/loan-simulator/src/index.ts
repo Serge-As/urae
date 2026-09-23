@@ -69,7 +69,10 @@ export function simulatePeriodicLoan(input:PeriodicLoanInput):PeriodicLoanLine[]
   for(let period=1;period<=input.periods;period++){
     const principalBefore=capital,interestOpening=interestDue;
     // No interest on interest: the taxable basis never includes interestDue.
-    const taxable=basis==='INITIAL'?principal:capital;
+    // Once principal is extinguished, no new interest is generated even when the
+    // contract basis is INITIAL. Existing unpaid interest remains due separately
+    // and never becomes an interest-bearing principal in the current model.
+    const taxable=capital<=0?0:(basis==='INITIAL'?principal:capital);
     const interestNew=Math.round(taxable*input.ratePercentPerPeriod/100);
     interestDue+=interestNew;
     const payment=payments[period-1]??0;let available=payment,principalPaid=0,interestPaid=0;

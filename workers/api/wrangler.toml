@@ -18,9 +18,15 @@ not_found_handling = "single-page-application"
 html_handling = "auto-trailing-slash"
 
 
+[triggers]
+# Daily server maintenance: reminders, retention transitions and final purge checks.
+# 07:15 UTC = 08:15 Cameroon (Africa/Douala).
+crons = ["15 7 * * *"]
+
 [vars]
 PREMIUM_LIVE_LEDGER = "false"
 DATA_USE_PROFILE = "BETA_OPEN"
+RELEASE_COMMIT_SHA = "UNBOUND_DEPLOY"
 
 [[durable_objects.bindings]]
 name = "GROUP_LIVE_HUB"

@@ -31,7 +31,7 @@ test('Founder Control Center tracks editorial work and incidents to resolution',
     const content=await store.createContent({key:'HELP-1',title:'Guide Épargne',priority:'HIGH',note:'À reprendre'});
     const incident=await store.createIncident({key:'BUG-1',title:'Forum indisponible',priority:'CRITICAL',note:'Diagnostic'});
     await store.transition(content.id,'NEEDS_REVIEW','Premier brouillon prêt');
-    await store.transition(incident.id,'RESOLVED','Correctif qualifié');
+    await store.transition(incident.id,'RESOLVED','Correctif qualifié','ci:founder-control-1.3.2');
     const snap=await store.snapshot([]);
     assert.equal(snap.content[0].status,'NEEDS_REVIEW');
     assert.equal(snap.incidents[0].status,'RESOLVED');
