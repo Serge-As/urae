@@ -86,6 +86,45 @@ export function mountLaunchStudio({app,getGroups,getRubrics,addRubric,invalidate
       return{name:r.name,kind:p.kind||'OTHER',participation:p.participationMode||'RULE_BASED',amount,units,count,nominalCycle,fees,external,fixed,mode:p.contributionMode||'MONEY'};
     });
     const monetaryVolume=rubricRows.reduce((n,r)=>n+r.nominalCycle,0),managerFees=rubricRows.reduce((n,r)=>n+r.fees,0),estimatedExternal=rubricRows.reduce((n,r)=>n+r.external,0),fixedCosts=rubricRows.reduce((n,r)=>n+r.fixed,0),estimatedMargin=managerFees-estimatedExternal-fixedCosts;
+    const monetaryAmounts=rubricRows.filter(r=>r.mode!=='IN_KIND'&&r.amount>0).map(r=>r.amount).sort((a,b)=>a-b);
+    const indicativeAmount=monetaryAmounts.length?monetaryAmounts[Math.floor((monetaryAmounts.length-1)/2)]:0;
+    const tontineRows=rubricRows.filter(r=>String(r.kind).toUpperCase()==='TONTINE');
+    const recommendedModel=tontineRows.length
+      ? 'Tontine rotative multi-rubriques : chaque tontine garde ses propres participants, parts, ordre/bénéficiaire et calendrier. Proposition à valider par le groupe.'
+      : family==='association'
+        ? 'Association à rubriques multiples : les cotisations, secours, épargne, prêts et autres rubriques restent séparés et gouvernés par leurs règles propres. Proposition à valider par le groupe.'
+        : 'Groupe à règles vivantes : démarrer avec les seules rubriques réellement utilisées et compléter après validation du RI et des pratiques. Proposition à valider par le groupe.';
+    const paymentUnits=rubricRows.reduce((n,r)=>n+(r.mode==='IN_KIND'?0:Math.max(0,r.units*r.count)),0);
+    const feeExample={
+      perPayment:paymentUnits>0?Math.round(managerFees/paymentUnits):0,
+      estimatedExternal:estimatedExternal+fixedCosts,
+      managerFees,
+      indicativeMargin:estimatedMargin,
+      explanation:'Exemple indicatif uniquement : cotisation collective, coûts externes, honoraires de gestion et marge éventuelle restent quatre notions distinctes.'
+    };
+    const orderPolicy=tontineRows.length
+      ? 'Ordre / tirage à définir et valider séparément pour chaque rubrique de tontine. Eco-System ne désigne jamais automatiquement un bénéficiaire sans règle ou décision du groupe.'
+      : 'Aucun ordre de bénéficiaire imposé. Si une rubrique rotative est ajoutée plus tard, son ordre/tirage sera défini dans cette rubrique.';
+    const latePolicy={
+      mode:'À décider selon le RI et la pratique validée',
+      automaticPenalty:false,
+      text:'Aucune pénalité n’est créée automatiquement par le Kit. Définir délai, grâce, preuve, montant/plafond éventuel, autorité de décision, procédure de réserve et date d’effet avant activation.'
+    };
+    const scenario=(feeFactor,costFactor,label)=>{const revenue=Math.max(0,Math.round(managerFees*feeFactor)),cost=Math.max(0,Math.round((estimatedExternal+fixedCosts)*costFactor));return{label,revenue,cost,indicativeMargin:revenue-cost};};
+    const simulation={
+      collectiveVolume:monetaryVolume,
+      prudent:scenario(.85,1.15,'Prudent'),
+      central:scenario(1,1,'Central'),
+      optimistic:scenario(1.1,.95,'Optimiste'),
+      warning:'Simulation de préparation, sans transaction ni promesse de revenu. Les montants réels doivent provenir du Ledger et des coûts constatés.'
+    };
+    const advice=[
+      'Avant le lancement, faire relire le RI, les rubriques et les frais par les responsables habilités puis conserver la version validée.',
+      'Faire une répétition de la première séance avec la feuille canonique et vérifier les totaux de chaque colonne avant d’utiliser des données réelles.',
+      'Préparer un plan B hors ligne : feuille papier, fiches individuelles, émargement et procédure de réconciliation.',
+      'Ne jamais présenter la cotisation collective comme le chiffre d’affaires du gestionnaire ; suivre séparément coûts, honoraires et marge dans Business Studio.',
+      tontineRows.length?'Valider pour chaque tontine ses participants, parts, ordre/tirage, bénéficiaires et règle de remplacement avant la première échéance.':'Ajouter une tontine uniquement si le groupe en a réellement besoin ; chaque future tontine aura ses propres participants et règles.'
+    ];
     const risks=[];
     if(!groupName||groupName==='Votre groupe')risks.push('Nom du groupe à confirmer avant diffusion du kit.');
     if(!members)risks.push('Effectif cible non renseigné : impossible de calculer correctement les volumes et la faisabilité.');
@@ -123,12 +162,12 @@ export function mountLaunchStudio({app,getGroups,getRubrics,addRubric,invalidate
       'Archives / Paper Bridge / offline : supports papier et numérique réconciliés sans double comptabilité.',
       'Modification des règles : version, date d’effet, décideur et historique.'
     ];
-    return{groupName,family,governance,members,sessions,rubricRows,monetaryVolume,managerFees,estimatedExternal,fixedCosts,estimatedMargin,risks,checklist,calendar,invitation,minutes,rules,profile};
+    return{groupName,family,governance,members,sessions,rubricRows,monetaryVolume,managerFees,estimatedExternal,fixedCosts,estimatedMargin,recommendedModel,indicativeAmount,feeExample,orderPolicy,latePolicy,simulation,advice,risks,checklist,calendar,invitation,minutes,rules,profile};
   };
   const printStarterKit=kit=>{
     const w=window.open('','_blank','noopener,noreferrer,width=900,height=800');if(!w){toast('Autorisez les fenêtres contextuelles pour imprimer le Kit.');return;}
     const section=(title,rows)=>'<h2>'+escapeHtml(title)+'</h2><ul>'+rows.map(x=>'<li>'+escapeHtml(x)+'</li>').join('')+'</ul>';
-    const html='<!doctype html><meta charset="utf-8"><title>Starter Kit - '+escapeHtml(kit.groupName)+'</title><style>body{font-family:system-ui,sans-serif;max-width:900px;margin:30px auto;padding:0 20px;line-height:1.45}h1,h2{margin-top:1.4em}table{border-collapse:collapse;width:100%;font-size:13px}th,td{border:1px solid #bbb;padding:7px;text-align:left}.tag{font-weight:700}pre{white-space:pre-wrap;border:1px solid #ccc;padding:12px}@media print{button{display:none}}</style><h1>Kit prêt à l\'emploi — '+escapeHtml(kit.groupName)+'</h1><p>Famille : '+escapeHtml(kit.family)+' · Gouvernance : '+escapeHtml(kit.governance)+' · Membres : '+escapeHtml(kit.members||'—')+' · Séances : '+escapeHtml(kit.sessions||'—')+'</p>'+section('Checklist',kit.checklist.map(x=>'['+x[0]+'] '+x[1]))+section('Règlement type — clauses à adapter',kit.rules)+'<h2>Rubriques et chiffrage</h2><table><tr><th>Rubrique</th><th>Mode</th><th>Montant</th><th>Cycle collectif</th><th>Frais gestion</th></tr>'+kit.rubricRows.map(r=>'<tr><td>'+escapeHtml(r.name)+'</td><td>'+escapeHtml(r.mode)+'</td><td>'+escapeHtml(r.amount)+'</td><td>'+escapeHtml(r.nominalCycle)+'</td><td>'+escapeHtml(r.fees)+'</td></tr>').join('')+'</table><h2>Calendrier</h2><table><tr><th>#</th><th>Date</th></tr>'+kit.calendar.map(x=>'<tr><td>'+x.index+'</td><td>'+escapeHtml(x.date)+'</td></tr>').join('')+'</table>'+section('Risques / points à compléter',kit.risks.length?kit.risks:['Aucun point bloquant détecté par le kit ; relire néanmoins le RI et la simulation.'])+'<h2>Message d\'invitation</h2><pre>'+escapeHtml(kit.invitation)+'</pre><h2>Modèle de PV</h2><pre>'+escapeHtml(kit.minutes)+'</pre>'+section('Guide première réunion',['Vérifier la liste des membres et les rôles.','Présenter les rubriques et confirmer qui participe à quoi.','Relire frais, calendrier, retards, prêts et règles de correction.','Faire les saisies dans la feuille canonique puis vérifier les totaux de colonnes.','Rapprocher caisse / Ledger / preuves avant clôture.','Émettre et conserver le PV ; distribuer le résumé aux membres.'])+section('Guide trésorerie',['Ne jamais confondre cotisation, frais externes, honoraires et marge.','Compter la caisse physique avant et après séance.','Conserver la preuve de chaque sortie et identifier le bénéficiaire.','Traiter une correction par remplacement exact, jamais par addition implicite.','Séparer argent privé du gestionnaire et argent collectif.'])+section('Paper Bridge — modèles à préparer',['Feuille mensuelle / feuille de séance membres × rubriques.','Fiches individuelles par membre.','Feuille d’émargement.','Registre Président / Secrétaire / Trésorier / Commissaire aux comptes selon le RI.','Registre prêts / remboursements / intérêts.','Registre assistances / secours.','Cartes ou fiches membres.','PV et dossier des preuves.'])+'<button onclick="print()">Imprimer / Enregistrer en PDF</button>';
+    const html='<!doctype html><meta charset="utf-8"><title>Starter Kit - '+escapeHtml(kit.groupName)+'</title><style>body{font-family:system-ui,sans-serif;max-width:900px;margin:30px auto;padding:0 20px;line-height:1.45}h1,h2{margin-top:1.4em}table{border-collapse:collapse;width:100%;font-size:13px}th,td{border:1px solid #bbb;padding:7px;text-align:left}.tag{font-weight:700}pre{white-space:pre-wrap;border:1px solid #ccc;padding:12px}@media print{button{display:none}}</style><h1>Kit prêt à l\'emploi — '+escapeHtml(kit.groupName)+'</h1><p>Famille : '+escapeHtml(kit.family)+' · Gouvernance : '+escapeHtml(kit.governance)+' · Membres : '+escapeHtml(kit.members||'—')+' · Séances : '+escapeHtml(kit.sessions||'—')+'</p>'+'<h2>Modèle recommandé — à valider</h2><p>'+escapeHtml(kit.recommendedModel)+'</p><p><strong>Montant indicatif :</strong> '+escapeHtml(kit.indicativeAmount?kit.indicativeAmount+' XAF':'À définir par rubrique')+'</p><p><strong>Ordre / tirage :</strong> '+escapeHtml(kit.orderPolicy)+'</p><p><strong>Retard :</strong> '+escapeHtml(kit.latePolicy.text)+'</p>'+section('Conseils de démarrage',kit.advice)+section('Checklist',kit.checklist.map(x=>'['+x[0]+'] '+x[1]))+section('Règlement type — clauses à adapter',kit.rules)+'<h2>Rubriques et chiffrage</h2><table><tr><th>Rubrique</th><th>Mode</th><th>Montant</th><th>Cycle collectif</th><th>Frais gestion</th></tr>'+kit.rubricRows.map(r=>'<tr><td>'+escapeHtml(r.name)+'</td><td>'+escapeHtml(r.mode)+'</td><td>'+escapeHtml(r.amount)+'</td><td>'+escapeHtml(r.nominalCycle)+'</td><td>'+escapeHtml(r.fees)+'</td></tr>').join('')+'</table><h2>Calendrier</h2><table><tr><th>#</th><th>Date</th></tr>'+kit.calendar.map(x=>'<tr><td>'+x.index+'</td><td>'+escapeHtml(x.date)+'</td></tr>').join('')+'</table>'+section('Risques / points à compléter',kit.risks.length?kit.risks:['Aucun point bloquant détecté par le kit ; relire néanmoins le RI et la simulation.'])+'<h2>Message d\'invitation</h2><pre>'+escapeHtml(kit.invitation)+'</pre><h2>Modèle de PV</h2><pre>'+escapeHtml(kit.minutes)+'</pre>'+section('Guide première réunion',['Vérifier la liste des membres et les rôles.','Présenter les rubriques et confirmer qui participe à quoi.','Relire frais, calendrier, retards, prêts et règles de correction.','Faire les saisies dans la feuille canonique puis vérifier les totaux de colonnes.','Rapprocher caisse / Ledger / preuves avant clôture.','Émettre et conserver le PV ; distribuer le résumé aux membres.'])+section('Guide trésorerie',['Ne jamais confondre cotisation, frais externes, honoraires et marge.','Compter la caisse physique avant et après séance.','Conserver la preuve de chaque sortie et identifier le bénéficiaire.','Traiter une correction par remplacement exact, jamais par addition implicite.','Séparer argent privé du gestionnaire et argent collectif.'])+section('Paper Bridge — modèles à préparer',['Feuille mensuelle / feuille de séance membres × rubriques.','Fiches individuelles par membre.','Feuille d’émargement.','Registre Président / Secrétaire / Trésorier / Commissaire aux comptes selon le RI.','Registre prêts / remboursements / intérêts.','Registre assistances / secours.','Cartes ou fiches membres.','PV et dossier des preuves.'])+'<button onclick="print()">Imprimer / Enregistrer en PDF</button>';
     w.document.open();w.document.write(html);w.document.close();
   };
   const persistStarterKit=async(groupId)=>{
@@ -151,6 +190,13 @@ export function mountLaunchStudio({app,getGroups,getRubrics,addRubric,invalidate
       calendarJson:JSON.stringify(kit.calendar??[]),
       risksJson:JSON.stringify(kit.risks??[]),
       rulesJson:JSON.stringify(kit.rules??[]),
+      recommendedModel:String(kit.recommendedModel??'').slice(0,4000),
+      indicativeAmount:Number(kit.indicativeAmount??0),
+      feeExampleJson:JSON.stringify(kit.feeExample??{}),
+      orderPolicy:String(kit.orderPolicy??'').slice(0,4000),
+      latePolicyJson:JSON.stringify(kit.latePolicy??{}),
+      simulationJson:JSON.stringify(kit.simulation??{}),
+      adviceJson:JSON.stringify(kit.advice??[]),
       invitation:String(kit.invitation??'').slice(0,12000),
       minutes:String(kit.minutes??'').slice(0,20000),
       profileJson:JSON.stringify(kit.profile??{}).slice(0,50000)
@@ -164,6 +210,10 @@ export function mountLaunchStudio({app,getGroups,getRubrics,addRubric,invalidate
     const d=document.createElement('details');d.className='panel starter-kit-panel';d.open=true;const sm=document.createElement('summary');sm.append(document.createTextNode('Kit prêt à l’emploi · réellement généré pour ce brouillon'));d.append(sm);
     const intro=document.createElement('p');intro.className='truth-notice';intro.textContent='Le Kit n’est pas un exemple générique : il reprend le cycle, les rubriques, l’effectif, les coûts/frais et les choix de ce brouillon. Il distingue ce qui est nécessaire au fonctionnement, recommandé et librement configurable.';d.append(intro);
     const metrics=document.createElement('div');metrics.className='metrics small';for(const [l,v] of [['Volume collectif simulé',kit.monetaryVolume.toLocaleString('fr-FR')+' XAF'],['Frais de gestion simulés',kit.managerFees.toLocaleString('fr-FR')+' XAF'],['Coûts externes estimés',(kit.estimatedExternal+kit.fixedCosts).toLocaleString('fr-FR')+' XAF'],['Marge de gestion indicative',kit.estimatedMargin.toLocaleString('fr-FR')+' XAF']]){const a=document.createElement('article');a.className='metric';a.append(Object.assign(document.createElement('span'),{textContent:l}),Object.assign(document.createElement('strong'),{textContent:v}));metrics.append(a);}d.append(metrics);
+    const model=document.createElement('section');model.className='item';model.append(Object.assign(document.createElement('h3'),{textContent:'Modèle recommandé — à valider'}));textLine(model,'Proposition',kit.recommendedModel);textLine(model,'Montant indicatif de référence',kit.indicativeAmount?kit.indicativeAmount.toLocaleString('fr-FR')+' XAF':'À définir selon chaque rubrique');textLine(model,'Ordre / tirage',kit.orderPolicy);textLine(model,'Politique de retard',kit.latePolicy.text);d.append(model);
+    const sim=document.createElement('details');sim.open=true;sim.append(Object.assign(document.createElement('summary'),{textContent:'Simulation de préparation · prudent / central / optimiste'}));const sg=document.createElement('div');sg.className='three-col';for(const x of [kit.simulation.prudent,kit.simulation.central,kit.simulation.optimistic]){const a=document.createElement('article');a.className='item';a.append(Object.assign(document.createElement('strong'),{textContent:x.label}));textLine(a,'Honoraires/frais gestion simulés',x.revenue.toLocaleString('fr-FR')+' XAF');textLine(a,'Coûts simulés',x.cost.toLocaleString('fr-FR')+' XAF');textLine(a,'Marge indicative',x.indicativeMargin.toLocaleString('fr-FR')+' XAF');sg.append(a);}sim.append(sg,Object.assign(document.createElement('p'),{className:'hint',textContent:kit.simulation.warning}));d.append(sim);
+    const fee=document.createElement('details');fee.append(Object.assign(document.createElement('summary'),{textContent:'Exemple de frais et séparation des montants'}));textLine(fee,'Frais de gestion moyens par paiement simulé',kit.feeExample.perPayment.toLocaleString('fr-FR')+' XAF');textLine(fee,'Coûts externes + fixes estimés',kit.feeExample.estimatedExternal.toLocaleString('fr-FR')+' XAF');textLine(fee,'Honoraires/frais de gestion simulés',kit.feeExample.managerFees.toLocaleString('fr-FR')+' XAF');textLine(fee,'Marge indicative',kit.feeExample.indicativeMargin.toLocaleString('fr-FR')+' XAF');fee.append(Object.assign(document.createElement('p'),{className:'truth-notice',textContent:kit.feeExample.explanation}));d.append(fee);
+    const advice=document.createElement('details');advice.open=true;advice.append(Object.assign(document.createElement('summary'),{textContent:'Conseils de démarrage et plan d’action'}));const au=document.createElement('ol');for(const x of kit.advice)au.append(Object.assign(document.createElement('li'),{textContent:x}));advice.append(au);d.append(advice);
     const actions=document.createElement('div');actions.className='actions';
     const print=document.createElement('button');print.type='button';print.className='primary';print.textContent='Imprimer / Enregistrer le Kit en PDF';print.onclick=()=>printStarterKit(kit);
     const copyInvite=document.createElement('button');copyInvite.type='button';copyInvite.className='secondary';copyInvite.textContent='Copier l’invitation';copyInvite.onclick=()=>navigator.clipboard?.writeText(kit.invitation).then(()=>toast('Invitation copiée.')).catch(()=>toast(kit.invitation));
