@@ -3,7 +3,7 @@ import type {PlatformKernel} from '../../platform-kernel/src/index.js';
 import type {Id,WorkspaceRecord} from '../../contracts/src/index.js';
 import {makeId} from '../../contracts/src/index.js';
 
-type BusinessKind='WORKSPACE'|'MANDATE'|'CLIENT'|'QUOTE'|'CONTRACT'|'INVOICE'|'EXPENSE'|'PAYMENT'|'TIME'|'SCENARIO';
+type BusinessKind='WORKSPACE'|'MANDATE'|'CLIENT'|'QUOTE'|'CONTRACT'|'INVOICE'|'EXPENSE'|'PAYMENT'|'REVENUE'|'TIME'|'SCENARIO';
 type Money={amount:number;currency:string};
 const now=()=>new Date().toISOString();
 const managerRoles=new Set(['founder','manager','admin','president','treasurer']);
@@ -12,8 +12,9 @@ const required=(v:unknown,name:string,max=240)=>{const s=String(v??'').trim();if
 const json=<T>(v:unknown,fallback:T):T=>{try{return JSON.parse(String(v??'')) as T;}catch{return fallback;}};
 
 export interface BusinessSummary{
-  currency:string;quoted:number;invoiced:number;received:number;expenses:number;outstanding:number;margin:number;
-  activeMandates:number;activeClients:number;hours:number;breakEvenRevenue:number;
+  currency:string;quoted:number;invoiced:number;received:number;invoicePayments:number;directRevenue:number;expenses:number;outstanding:number;margin:number;
+  activeMandates:number;activeClients:number;prospects:number;hours:number;breakEvenRevenue:number;netMarginPerHour:number;
+  overdueInvoices:number;openQuotes:number;revenueBySource:Record<string,number>;expenseByCategory:Record<string,number>;
 }
 
 export class BusinessStudioService{
@@ -98,10 +99,20 @@ export class BusinessStudioService{
     await this.mutate(invoice.id,{receivedAmount:received+amount,invoiceState:received+amount===total?'PAID':'PARTIAL'},received+amount===total?'DONE':'ACTIVE');return payment;
   }
 
-  async recordExpense(input:{label:string;amount:number;currency?:string;category:'TRAVEL'|'SUPPLIES'|'TRAINING'|'COMMUNICATION'|'LABOUR'|'OTHER';clientId?:Id;groupId?:Id;collectiveLedgerEntryId?:Id}){
+  async recordExpense(input:{label:string;amount:number;currency?:string;category:'TRAVEL'|'TRANSPORT'|'SUPPLIES'|'TRAINING'|'COMMUNICATION'|'INTERNET_DATA'|'LABOUR'|'PERSONNEL'|'RENT'|'ADVERTISING'|'PROCUREMENT'|'LOSS'|'FEES'|'OTHER';clientId?:Id;groupId?:Id;collectiveLedgerEntryId?:Id}){
     if(input.clientId&&!(await this.owned('CLIENT')).some(x=>x.id===input.clientId))throw new Error('CLIENT_NOT_FOUND');
     if(input.groupId){await this.groupManager(input.groupId);if(input.collectiveLedgerEntryId&&!await this.repo.getLedgerEntry(this.kernel.context.get().tenantId,input.groupId,input.collectiveLedgerEntryId))throw new Error('LEDGER_ENTRY_NOT_FOUND');}
     return this.save('EXPENSE',required(input.label,'expense_label'),{amount:int(input.amount,'expense_amount',false),currency:input.currency??'XAF',category:input.category,clientId:input.clientId??'',groupId:input.groupId??'',collectiveLedgerEntryId:input.collectiveLedgerEntryId??'',occurredAt:now()});
+  }
+
+  async recordRevenue(input:{label:string;amount:number;currency?:string;source:'MANAGEMENT_FEE'|'HONORARIUM'|'COMMISSION'|'SUPPLIER_DISCOUNT'|'SERVICE'|'OTHER';clientId?:Id;groupId?:Id;collectiveLedgerEntryId?:Id;reference?:string}){
+    if(input.clientId&&!(await this.owned('CLIENT')).some(x=>x.id===input.clientId))throw new Error('CLIENT_NOT_FOUND');
+    if(input.groupId){
+      await this.groupManager(input.groupId);
+      if(!input.collectiveLedgerEntryId)throw new Error('COLLECTIVE_REVENUE_LEDGER_REFERENCE_REQUIRED');
+      if(!await this.repo.getLedgerEntry(this.kernel.context.get().tenantId,input.groupId,input.collectiveLedgerEntryId))throw new Error('LEDGER_ENTRY_NOT_FOUND');
+    }
+    return this.save('REVENUE',required(input.label,'revenue_label'),{amount:int(input.amount,'revenue_amount',false),currency:input.currency??'XAF',source:input.source,clientId:input.clientId??'',groupId:input.groupId??'',collectiveLedgerEntryId:input.collectiveLedgerEntryId??'',reference:input.reference?.trim().slice(0,240)??'',receivedAt:now()});
   }
 
   async recordTime(input:{clientId?:Id;mandateId?:Id;minutes:number;workDate:string;note?:string}){
@@ -111,16 +122,57 @@ export class BusinessStudioService{
     return this.save('TIME','Temps de travail',{clientId:input.clientId??'',mandateId:input.mandateId??'',minutes:int(input.minutes,'minutes',false),workDate:new Date(input.workDate).toISOString(),note:input.note?.trim().slice(0,500)??''});
   }
 
-  async scenario(input:{name:string;monthlyRevenue:number;monthlyVariableCosts:number;monthlyFixedCosts:number;months:number}){
-    const revenue=int(input.monthlyRevenue,'monthly_revenue'),variable=int(input.monthlyVariableCosts,'monthly_variable_costs'),fixed=int(input.monthlyFixedCosts,'monthly_fixed_costs'),months=int(input.months,'months',false);
-    return this.save('SCENARIO',required(input.name,'scenario_name'),{monthlyRevenue:revenue,monthlyVariableCosts:variable,monthlyFixedCosts:fixed,months,projectedProfit:(revenue-variable-fixed)*months,simulationOnly:true});
+  async scenario(input:{
+    name:string;months?:number;monthlyRevenue?:number;monthlyVariableCosts?:number;monthlyFixedCosts?:number;
+    nominalContribution?:number;addedFeePerMemberSession?:number;members?:number;sessions?:number;pots?:number;durationMonths?:number;
+    transferFees?:number;withdrawalFees?:number;transport?:number;internet?:number;communication?:number;personnel?:number;rent?:number;advertising?:number;
+    purchases?:number;supplierDiscounts?:number;commissions?:number;managementFees?:number;otherRevenue?:number;losses?:number;expectedDefaultRate?:number;
+  }){
+    const v=(x:unknown,name:string)=>int(x??0,name),months=int(input.durationMonths??input.months??1,'months',false),members=int(input.members??1,'members',false),sessions=int(input.sessions??1,'sessions',false),pots=int(input.pots??1,'pots',false);
+    const nominal=v(input.nominalContribution,'nominal_contribution'),added=v(input.addedFeePerMemberSession,'added_fee'),defaultRate=Number(input.expectedDefaultRate??0);if(!Number.isFinite(defaultRate)||defaultRate<0||defaultRate>100)throw new Error('INVALID_EXPECTED_DEFAULT_RATE');
+    const collectiveContributionVolume=nominal*members*sessions;
+    const memberFeePotential=added*members*sessions+v(input.managementFees,'management_fees');
+    const collectionRate=(100-defaultRate)/100;
+    const memberFeeCollected=Math.round(memberFeePotential*collectionRate);
+    const invoiceLikeRevenue=v(input.monthlyRevenue,'monthly_revenue')*months;
+    const otherRevenue=v(input.commissions,'commissions')+v(input.supplierDiscounts,'supplier_discounts')+v(input.otherRevenue,'other_revenue')+invoiceLikeRevenue;
+    const revenuePotential=memberFeePotential+otherRevenue,realizedRevenue=memberFeeCollected+otherRevenue;
+    const variableCosts=v(input.monthlyVariableCosts,'monthly_variable_costs')*months+v(input.transferFees,'transfer_fees')+v(input.withdrawalFees,'withdrawal_fees')+v(input.transport,'transport')+v(input.internet,'internet')+v(input.communication,'communication')+v(input.purchases,'purchases')+v(input.losses,'losses');
+    const fixedCosts=v(input.monthlyFixedCosts,'monthly_fixed_costs')*months+v(input.personnel,'personnel')+v(input.rent,'rent')+v(input.advertising,'advertising');
+    const totalCosts=variableCosts+fixedCosts,grossMargin=realizedRevenue-variableCosts,netMargin=grossMargin-fixedCosts;
+    const unitFeeAfterDefaults=added*collectionRate;
+    const fixedRevenueWithoutMemberFees=otherRevenue+Math.round(v(input.managementFees,'management_fees')*collectionRate);
+    const memberContributionToMarginPerCycle=Math.max(0,unitFeeAfterDefaults*sessions);
+    const breakEvenMembers=memberContributionToMarginPerCycle>0?Math.max(0,Math.ceil((totalCosts-fixedRevenueWithoutMemberFees)/memberContributionToMarginPerCycle)):null;
+    const breakEvenRevenue=totalCosts;
+    const project=(revenueFactor:number,costFactor:number,defaultDelta:number)=>{
+      const dr=Math.min(100,Math.max(0,defaultRate+defaultDelta)),cr=(100-dr)/100;
+      const rev=Math.round((memberFeePotential*cr+otherRevenue)*revenueFactor),cost=Math.round(totalCosts*costFactor);
+      return{revenue:rev,costs:cost,netMargin:rev-cost,defaultRate:dr};
+    };
+    const prudent=project(.9,1.1,5),central=project(1,1,0),optimistic=project(1.1,.95,-5);
+    const late5=project(1,1,5),late10=project(1,1,10);
+    return this.save('SCENARIO',required(input.name,'scenario_name'),{
+      months,members,sessions,pots,nominalContribution:nominal,addedFeePerMemberSession:added,collectiveContributionVolume,revenuePotential,realizedRevenue,
+      variableCosts,fixedCosts,totalCosts,grossMargin,netMargin,marginPerMember:Math.round(netMargin/members),marginPerSession:Math.round(netMargin/sessions),marginPerCycle:netMargin,
+      monthlyNetMargin:Math.round(netMargin/months),annualizedNetMargin:Math.round(netMargin/months*12),breakEvenRevenue,breakEvenMembers:breakEvenMembers??-1,
+      expectedDefaultRate:defaultRate,memberValueAtRisk:Math.round(collectiveContributionVolume*defaultRate/100),
+      prudentJson:JSON.stringify(prudent),centralJson:JSON.stringify(central),optimisticJson:JSON.stringify(optimistic),late5Json:JSON.stringify(late5),late10Json:JSON.stringify(late10),
+      transferFees:v(input.transferFees,'transfer_fees'),withdrawalFees:v(input.withdrawalFees,'withdrawal_fees'),transport:v(input.transport,'transport'),internet:v(input.internet,'internet'),communication:v(input.communication,'communication'),
+      personnel:v(input.personnel,'personnel'),rent:v(input.rent,'rent'),advertising:v(input.advertising,'advertising'),purchases:v(input.purchases,'purchases'),supplierDiscounts:v(input.supplierDiscounts,'supplier_discounts'),
+      commissions:v(input.commissions,'commissions'),managementFees:v(input.managementFees,'management_fees'),otherRevenue:v(input.otherRevenue,'other_revenue'),losses:v(input.losses,'losses'),
+      simulationOnly:true,assumptionNote:'Cotisations collectives exclues du revenu privé ; scénarios prudent/central/optimiste explicitent uniquement des hypothèses de sensibilité.'
+    });
   }
 
   async summary():Promise<BusinessSummary>{
     const rows=await this.owned(),workspace=rows.find(x=>x.data.businessKind==='WORKSPACE'),currency=String(workspace?.data.currency??'XAF');
-    const sum=(kind:BusinessKind,field:string)=>rows.filter(x=>x.data.businessKind===kind&&String(x.data.currency??currency)===currency).reduce((n,x)=>n+Number(x.data[field]??0),0);
-    const quoted=sum('QUOTE','total'),invoiced=sum('INVOICE','amount'),received=sum('PAYMENT','amount'),expenses=sum('EXPENSE','amount'),fixed=Number(workspace?.data.monthlyFixedCosts??0);
-    return{currency,quoted,invoiced,received,expenses,outstanding:Math.max(0,invoiced-received),margin:received-expenses,activeMandates:rows.filter(x=>x.data.businessKind==='MANDATE'&&x.data.mandateState==='ACTIVE').length,activeClients:rows.filter(x=>x.data.businessKind==='CLIENT'&&x.data.clientState==='ACTIVE').length,hours:rows.filter(x=>x.data.businessKind==='TIME').reduce((n,x)=>n+Number(x.data.minutes??0),0)/60,breakEvenRevenue:fixed+expenses};
+    const by=(kind:BusinessKind)=>rows.filter(x=>x.data.businessKind===kind&&String(x.data.currency??currency)===currency),sum=(kind:BusinessKind,field:string)=>by(kind).reduce((n,x)=>n+Number(x.data[field]??0),0);
+    const quoted=sum('QUOTE','total'),invoiced=sum('INVOICE','amount'),invoicePayments=sum('PAYMENT','amount'),directRevenue=sum('REVENUE','amount'),received=invoicePayments+directRevenue,expenses=sum('EXPENSE','amount'),fixed=Number(workspace?.data.monthlyFixedCosts??0),hours=by('TIME').reduce((n,x)=>n+Number(x.data.minutes??0),0)/60;
+    const revenueBySource:Record<string,number>={};for(const x of by('REVENUE')){const k=String(x.data.source??'OTHER');revenueBySource[k]=(revenueBySource[k]??0)+Number(x.data.amount??0);}
+    const expenseByCategory:Record<string,number>={};for(const x of by('EXPENSE')){const k=String(x.data.category??'OTHER');expenseByCategory[k]=(expenseByCategory[k]??0)+Number(x.data.amount??0);}
+    const nowMs=Date.now(),overdueInvoices=by('INVOICE').filter(x=>Number(x.data.receivedAmount??0)<Number(x.data.amount??0)&&Date.parse(String(x.data.dueAt??''))<nowMs).length;
+    return{currency,quoted,invoiced,received,invoicePayments,directRevenue,expenses,outstanding:Math.max(0,invoiced-invoicePayments),margin:received-expenses,activeMandates:rows.filter(x=>x.data.businessKind==='MANDATE'&&x.data.mandateState==='ACTIVE').length,activeClients:rows.filter(x=>x.data.businessKind==='CLIENT'&&x.data.clientState==='ACTIVE').length,prospects:rows.filter(x=>x.data.businessKind==='CLIENT'&&x.data.clientState==='PROSPECT').length,hours,breakEvenRevenue:fixed+expenses,netMarginPerHour:hours>0?Math.round((received-expenses)/hours):0,overdueInvoices,openQuotes:rows.filter(x=>x.data.businessKind==='QUOTE'&&['DRAFT','SENT'].includes(String(x.data.quoteState??''))).length,revenueBySource,expenseByCategory};
   }
 
   async records(){return this.owned();}
