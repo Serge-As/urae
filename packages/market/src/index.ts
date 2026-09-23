@@ -24,8 +24,8 @@ export class MarketService{
     await this.access(groupId,false);const ctx=this.kernel.context.get();
     return (await this.repo.listWorkspaceRecords(ctx.tenantId,undefined,groupId)).filter(r=>r.tags.includes('market-engine')&&(!kind||r.data.marketKind===kind)) as MarketRecord[];
   }
-  private async save(groupId:Id,kind:MarketKind,title:string,data:Record<string,string|number|boolean|null>,status:WorkspaceRecord['status']='ACTIVE'){
-    await this.access(groupId,true);const ctx=this.kernel.context.get(),stamp=now();
+  private async save(groupId:Id,kind:MarketKind,title:string,data:Record<string,string|number|boolean|null>,status:WorkspaceRecord['status']='ACTIVE',manage=true){
+    await this.access(groupId,manage);const ctx=this.kernel.context.get(),stamp=now();
     const moduleId=kind==='GROUP_BUY'?'MARKETPLACE.GROUP_BUY'
       :kind==='FLASH_OFFER'?'MARKETPLACE.ECO_NOW'
       :kind==='MARKET_REQUEST'||kind==='MARKET_RESPONSE'?'MARKETPLACE.DEMAND_EXCHANGE'
@@ -71,13 +71,13 @@ export class MarketService{
     const next=Number(item.data.quantity)+delta,reserved=Number(item.data.reserved??0);if(next<reserved||next<0)throw Error('INSUFFICIENT_STOCK');
     return this.update(item,{quantity:next,lastAdjustmentReason:reason.trim()});
   }
-  async createOrder(groupId:Id,input:{stockItemId:Id;quantity:number;customerRef:string;unitPrice?:number}){
+  async createOrder(groupId:Id,input:{stockItemId:Id;quantity:number;customerRef:string;unitPrice?:number},allowMember=false){
     qty(input.quantity);const item=(await this.list(groupId,'STOCK_ITEM')).find(x=>x.id===input.stockItemId);if(!item)throw Error('STOCK_ITEM_NOT_FOUND');
     if(String(item.data.ownership??'COMMERCIAL')==='POT_RESERVED')throw Error('POT_STOCK_NOT_SELLABLE');
     const available=Number(item.data.quantity)-Number(item.data.reserved??0);if(available<input.quantity)throw Error('INSUFFICIENT_STOCK');
     const customerRef=input.customerRef.trim();if(!customerRef)throw Error('CUSTOMER_REFERENCE_REQUIRED');
     const order=await this.save(groupId,'MARKET_ORDER','Order '+String(item.data.sku),{stockItemId:item.id,quantity:input.quantity,customerRef,unitPrice:input.unitPrice??0,
-      state:'CONFIRMED',deliveredQuantity:0,returnedQuantity:0,disputed:false});
+      state:'CONFIRMED',deliveredQuantity:0,returnedQuantity:0,disputed:false},'ACTIVE',!allowMember);
     await this.update(item,{reserved:Number(item.data.reserved??0)+input.quantity});
     return order;
   }
@@ -187,7 +187,7 @@ export class MarketService{
     const offer=(await this.list(groupId,'FLASH_OFFER')).find(x=>x.id===id);if(!offer)throw Error('FLASH_OFFER_NOT_FOUND');
     if(String(offer.data.state)!=='OPEN'||Date.parse(String(offer.data.expiresAt??''))<=Date.now())throw Error('FLASH_OFFER_CLOSED');
     const claimed=Number(offer.data.claimedQuantity??0),total=Number(offer.data.quantity??0);if(claimed+value>total)throw Error('FLASH_OFFER_QUANTITY_EXCEEDED');
-    const order=await this.createOrder(groupId,{stockItemId:String(offer.data.stockItemId??''),quantity:value,customerRef:'membership:'+membershipId,unitPrice:Number(offer.data.offerPrice??0)});
+    const order=await this.createOrder(groupId,{stockItemId:String(offer.data.stockItemId??''),quantity:value,customerRef:'membership:'+membershipId,unitPrice:Number(offer.data.offerPrice??0)},true);
     const linked=await this.update(order,{flashOfferId:offer.id,membershipId});
     const nextClaimed=claimed+value;await this.update(offer,{claimedQuantity:nextClaimed,state:nextClaimed===total?'SOLD_OUT':'OPEN'},nextClaimed===total?'DONE':'ACTIVE');
     return{offer:await (async()=>{const rows=await this.list(groupId,'FLASH_OFFER');return rows.find(x=>x.id===offer.id);})(),order:linked};
