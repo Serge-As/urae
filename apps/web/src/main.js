@@ -47,6 +47,7 @@ let members = [];
 let meetings = [];
 let rubrics = [];
 let receiptPositions = [];
+let financialSheetEvents = [];
 let financialCellVersions = new Map();
 let matrixMeetingId = '';
 let memberSortMode = 'chronological';
@@ -96,6 +97,11 @@ const fail = (e) => {
         FORBIDDEN_SCOPE: 'Votre compte ne dispose pas de l’autorisation nécessaire pour ce groupe.',
         DURABLE_STORAGE_REQUIRED: 'Le stockage local est indisponible. Cette opération n’a pas été envoyée.',
         INVALID_CONTRIBUTION_AMOUNT: 'Le montant doit être un entier positif en F CFA.',
+        SPECIALIZED_FINANCIAL_CORRECTION_REQUIRED: 'Cette cellule correspond à un prêt, un remboursement ou une sortie. Pour modifier une opération déjà comptabilisée, ouvrez son dossier spécialisé afin de conserver la dette, la caisse et les preuves cohérentes.',
+        LOAN_POLICY_REQUIRED: 'Configurez d’abord les règles de la rubrique Prêt avant le décaissement.',
+        LOAN_RATE_REQUIRED: 'Le taux par période du prêt doit être défini avant le décaissement.',
+        MULTIPLE_LOANS: 'Ce membre a plusieurs prêts actifs. Ouvrez le dossier Prêts pour choisir exactement celui à rembourser.',
+        LOAN_REQUIRED: 'Aucun prêt actif correspondant n’a été trouvé pour ce membre.',
         ACTIVE_GROUP_REQUIRED: "Sélectionnez d'abord un groupe.",
         GROUP_NAME_REQUIRED: "Le nom du groupe est obligatoire.",
         MEMBER_NAME_REQUIRED: "Le nom du membre est obligatoire.",
@@ -421,34 +427,59 @@ const activeMeeting = () => {
     if(sessionSelected&&sessionSelected!=='__cumulative__'&&meetings.some(x=>x.id===sessionSelected))return sessionSelected;
     return meetings.find(x=>x.status==='open')?.id??meetings.at(-1)?.id;
 };
+const financialNatureForRubric=rubric=>{
+    const kind=String(rubric?.activityPlan?.kind??'').toUpperCase(),name=String(rubric?.name??'').normalize('NFKD').replace(/[\u0300-\u036f]/g,'').toLowerCase(),systemKey=String(rubric?.facets?.custom?.systemKey??'').toUpperCase();
+    if(kind==='LOAN'||systemKey==='LOAN'||/^prets?$|^loans?$/.test(name))return'LOAN';
+    if(kind==='REPAYMENT'||/remboursement|repayment/.test(name))return'REPAYMENT';
+    if(rubric?.facets?.direction==='OUTFLOW')return'OUTFLOW';
+    return'CONTRIBUTION';
+};
 const exactCellRows=(membershipId,rubricId,meetingId)=>receiptPositions.filter(x=>x.membershipId===membershipId&&x.rubricId===rubricId&&x.meetingId===meetingId);
-const exactCellAmount=(membershipId,rubricId,meetingId)=>exactCellRows(membershipId,rubricId,meetingId).reduce((n,x)=>n+Number(x.netAmount??0),0);
+const exactCellEvents=(membershipId,rubricId,meetingId)=>financialSheetEvents.filter(x=>String(x.data?.membershipId??'')===membershipId&&String(x.data?.rubricId??'')===rubricId&&String(x.data?.meetingId??'')===meetingId);
+const exactCellAmount=(membershipId,rubricId,meetingId)=>{
+    const rubric=rubrics.find(x=>x.id===rubricId),nature=financialNatureForRubric(rubric);
+    if(nature!=='CONTRIBUTION'){
+      return exactCellEvents(membershipId,rubricId,meetingId).reduce((sum,event)=>sum+(String(event.data?.direction??'IN')==='OUT'?-1:1)*Number(event.data?.amount??0),0);
+    }
+    return exactCellRows(membershipId,rubricId,meetingId).reduce((n,x)=>n+Number(x.netAmount??0),0);
+};
 const exactCellVersion=(membershipId,rubricId,meetingId)=>Number(financialCellVersions.get(JSON.stringify([meetingId,membershipId,rubricId,'XAF']))??0);
 
 const makeFinancialEntryCell=({member,rubric,meetingId,editable=true})=>{
     const holder=document.createElement('div');holder.className='matrix-cell matrix-cell-entry';holder.dataset.membershipId=member.id;holder.dataset.rubricId=rubric.id;holder.dataset.meetingId=meetingId;holder.tabIndex=-1;
-    const current=exactCellAmount(member.id,rubric.id,meetingId),currentLabel=document.createElement('strong');currentLabel.className='cell-current';currentLabel.textContent=fmt(current);holder.append(currentLabel);
+    const nature=financialNatureForRubric(rubric),signedCurrent=exactCellAmount(member.id,rubric.id,meetingId),current=Math.abs(signedCurrent),currentLabel=document.createElement('strong');
+    currentLabel.className='cell-current'+(signedCurrent<0?' is-negative':'');currentLabel.textContent=fmt(signedCurrent);holder.append(currentLabel);
+    if(nature==='LOAN'){const badge=document.createElement('small');badge.className='cell-nature negative';badge.textContent=tx('Sortie / dette','Outflow / debt');holder.append(badge);}
     if(!editable)return holder;
     const input=document.createElement('input');input.type='number';input.min='0';input.step='1';input.inputMode='numeric';input.className='cell-target-input';input.placeholder=current>0?tx('Modifier…','Change…'):tx('Saisir…','Enter…');input.setAttribute('aria-label',tx('Nouvelle valeur totale','New total value'));
     const validate=document.createElement('button');validate.type='button';validate.className='cell-validate';validate.textContent='✓';validate.title=tx('Valider la valeur totale','Confirm total value');
     const submit=()=>void(async()=>{
-      const raw=input.value.trim();if(raw==='')return;const target=Number(raw);if(!Number.isSafeInteger(target)||target<0){fail(new Error('INVALID_CONTRIBUTION_AMOUNT'));return;}
+      clearFail();const raw=input.value.trim();if(raw==='')return;const target=Number(raw);if(!Number.isSafeInteger(target)||target<0){fail(new Error('INVALID_CONTRIBUTION_AMOUNT'));return;}
       if(target===current){input.value='';toast(tx('Aucun changement : cette valeur est déjà enregistrée.','No change: this value is already recorded.'));return;}
       const meeting=meetings.find(x=>x.id===meetingId);let reason='';
       if(current>0||meeting?.status==='closed'){
         reason=prompt(tx(`Motif de la modification ${fmt(current)} → ${fmt(target)} :`,`Reason for change ${fmt(current)} → ${fmt(target)}:`),tx('Correction de la valeur de la cellule','Cell value correction'))??'';
         if(!reason.trim())return;
       }
-      validate.disabled=true;input.disabled=true;
+      validate.disabled=true;input.disabled=true;const previousIcon=validate.textContent;validate.textContent='…';holder.classList.add('is-saving');
       try{
-        const result=await app.setFinancialCellTarget({meetingId,membershipId:member.id,rubricId:rubric.id,targetAmount:target,currentAmount:current,currentVersion:exactCellVersion(member.id,rubric.id,meetingId),reason:reason.trim()});
+        let result;
+        // A first entry in an open meeting follows the business engine for that rubric.
+        // This prevents a Loan from ever being posted as a positive contribution.
+        if(current===0&&meeting?.status==='open'){
+          if(target===0){input.value='';return;}
+          result=await app.recordFinancialSheetEntry({membershipId:member.id,meetingId,rubric,amount:target});
+        }else{
+          if(nature!=='CONTRIBUTION')throw Error('SPECIALIZED_FINANCIAL_CORRECTION_REQUIRED');
+          result=await app.setFinancialCellTarget({meetingId,membershipId:member.id,rubricId:rubric.id,targetAmount:target,currentAmount:current,currentVersion:exactCellVersion(member.id,rubric.id,meetingId),reason:reason.trim()});
+        }
         if(result?.status==='CONSENSUS_REQUIRED'){holder.classList.add('pending-consensus');toast(tx('Modification proposée : la valeur reste inchangée jusqu’à la décision des gestionnaires.','Change proposed: the value remains unchanged until managers decide.'));}
-        else if(result?.status==='QUEUED_CONSENSUS'||result?.queued)toast(tx('Modification conservée hors ligne pour confrontation à la reconnexion.','Change saved offline for reconciliation when reconnected.'));
+        else if(result?.status==='QUEUED_CONSENSUS'||result?.queued)toast(tx('Saisie conservée et mise en attente de synchronisation.','Entry saved and queued for synchronization.'));
         else if(result?.selfBenefit)toast(tx('⚠ Correction de votre propre situation : ancienne valeur, contrepassation et nouvelle valeur sont tracées. Un autre responsable habilité doit la vérifier.','⚠ Correction of your own situation: previous value, reversal and new value are traced. Another authorized manager must review it.'));
         else if(result?.requiresIndependentReview)toast(tx('Correction enregistrée avec ancienne valeur, contrepassation et nouvelle valeur. Un autre responsable habilité doit la vérifier avant validation institutionnelle.','Correction recorded with previous value, reversal and new value. Another authorized manager must review it before institutional confirmation.'));
-        else toast(tx('Valeur enregistrée avec traçabilité de la valeur cible.','Target value saved with an audit trail.'));
+        else toast(nature==='LOAN'?tx('Prêt décaissé : la caisse diminue et la dette du membre est créée.','Loan disbursed: cash decreases and the member debt is created.'):tx('Valeur enregistrée.','Value saved.'));
         input.value='';await renderLedger();window.dispatchEvent(new CustomEvent('eco:financial-data-changed',{detail:{meetingId,membershipId:member.id,rubricId:rubric.id}}));await sessionsUI.refresh?.();renderIndividualSheetMatrix();
-      }catch(e){fail(e);}finally{validate.disabled=false;input.disabled=false;}
+      }catch(e){fail(e);}finally{validate.disabled=false;input.disabled=false;validate.textContent=previousIcon;holder.classList.remove('is-saving');}
     });
     validate.onclick=submit;input.addEventListener('keydown',event=>{if(event.key==='Enter'){event.preventDefault();submit();}});
     holder.append(input,validate);return holder;
@@ -643,8 +674,8 @@ const renderLedger = async () => {
     receipts.replaceChildren();
     if (!app.activeGroup())
         return;
-    const l = await app.ledger();
-    receiptPositions=l.receipts;financialCellVersions=new Map((l.cellRevisions??[]).map(r=>[JSON.stringify([r.meetingId,r.membershipId,r.rubricId,r.currency??'XAF']),Number(r.version??0)]));renderMeetingMatrix();renderIndividualSheetMatrix();
+    const [l,sheetEvents] = await Promise.all([app.ledger(),app.listWorkspaceRecords('FINANCE.SHEET_EVENT',app.activeGroup()).catch(()=>[])]);
+    receiptPositions=l.receipts;financialSheetEvents=sheetEvents;financialCellVersions=new Map((l.cellRevisions??[]).map(r=>[JSON.stringify([r.meetingId,r.membershipId,r.rubricId,r.currency??'XAF']),Number(r.version??0)]));renderMeetingMatrix();renderIndividualSheetMatrix();
     for (const [n, label] of [[l.summary.cashBalance, 'Solde caisse'], [l.summary.memberFundsLiability, 'Engagement membres'], [l.summary.entryCount, 'Écritures']]) {
         const d = document.createElement('div');
         d.className = 'metric';
