@@ -34,6 +34,7 @@ import { mountBlueprintExecutableUI } from './blueprint-executable-ui.js';
 import { mountCommunityBlueprintPresets } from './community-blueprint-presets.js';
 import { mountFinancialLabUI } from './financial-lab-ui.js';
 import { mountBusinessStudioUI } from './business-studio-ui.js';
+import { mountCoreEconomicLearningUI } from './core-economic-learning-ui.js';
 import { mountResilienceUI } from './resilience-ui.js';
 let uiLocale = 'fr';
 try { uiLocale = localStorage.getItem('tontine.locale') === 'en' ? 'en' : 'fr'; } catch {}
@@ -215,6 +216,7 @@ const tontineManagerUI = mountTontineManagerUI({ app, getRubrics: () => rubrics,
 const savingsYieldUI = mountSavingsYieldUI({ app, getMembers: () => members, notify: toast, showError: fail, fmt, isManager });
 const externalProgramsUI = mountExternalProgramsUI({ app, notify: toast, showError: fail, isManager, fmt });
 const businessStudioUI = mountBusinessStudioUI({app,notify:toast,showError:fail});
+const coreEconomicLearningUI = mountCoreEconomicLearningUI({app,notify:toast,showError:fail,isManager});
 const founderControlUI = mountFounderControlUI({ app, notify: toast, showError: fail });
 const assistanceRulebookUI = mountAssistanceRulebookUI({ app, notify: toast, showError: fail, isManager });
 const groupHomeUI = mountGroupHomeUI({ app, getGroups:()=>groups, getMembers:()=>members, getMeetings:()=>meetings, navigate:go, fmt });
