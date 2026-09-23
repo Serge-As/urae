@@ -194,6 +194,12 @@ export class MarketService{
   }){
     await this.access(groupId,true);const title=input.title.trim(),category=input.category.trim();if(!title||!category)throw Error('MARKET_REQUEST_REQUIRED');
     qty(input.quantity);if(!['EXPLICIT','PREDICTED'].includes(input.origin))throw Error('INVALID_MARKET_REQUEST_ORIGIN');
+    if(input.origin==='PREDICTED'){
+      const ref=input.predictionRef?.trim();if(!ref)throw Error('PREDICTION_REF_REQUIRED');
+      const prediction=await this.repo.getWorkspaceRecord(this.kernel.context.get().tenantId,ref);
+      if(!prediction||prediction.groupId!==groupId||prediction.moduleId!=='GROUP.ANTICIPATION')throw Error('PREDICTION_NOT_FOUND');
+      if(!['ACTIVE','DONE'].includes(prediction.status)||prediction.data?.humanValidated!==true)throw Error('PREDICTION_NOT_HUMAN_ACCEPTED');
+    }
     const budget=input.budgetMax===undefined?0:Number(input.budgetMax);if(!Number.isSafeInteger(budget)||budget<0)throw Error('INVALID_BUDGET');
     if(input.neededBy&&!Number.isFinite(Date.parse(input.neededBy)))throw Error('INVALID_NEEDED_BY');
     const state=input.origin==='PREDICTED'?'PREDICTED':'DRAFT';
