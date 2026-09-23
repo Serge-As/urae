@@ -56,9 +56,9 @@ for (const target of ['.build/workers/api/src/index.js']) {
 }
 for (const target of ['.build/apps/web/src/main.js','.build/src/main.js']) {
   let source=await readFile(target,'utf8');
-  source=source.replace("const CAHIER_VERSION = '1.3.2-savings-control-forum-live';",`const CAHIER_VERSION = '${RELEASE_VERSION}';`);
+  source=source.replace(/const CAHIER_VERSION = '[^']+';/,`const CAHIER_VERSION = '${RELEASE_VERSION}';`);
   await writeFile(target,source,'utf8');
 }
-console.log(`Build OK: .build/ (Eco-System ${RELEASE_VERSION}; 1.5.1 canonical financial tables + starter kit + Business Studio`);
+console.log(`Build OK: .build/ (Eco-System ${RELEASE_VERSION}; 1.5.3 canonical finance + Starter Kit + Business Studio + Value Market`);
 
 await import('./public-assets.mjs');
