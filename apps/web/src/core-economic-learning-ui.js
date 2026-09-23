@@ -91,6 +91,26 @@ export function mountCoreEconomicLearningUI({app,notify=()=>{},showError=console
     }catch(err){showError(err);}
   };
 
+  const safetyPanel=el('details',undefined,'panel');safetyPanel.id='safetyOperational';
+  safetyPanel.append(el('summary','Sécurité · anti-arnaque · anti-pyramide / Ponzi'));
+  safetyPanel.append(el('p','Eco-System distingue un signal, un soupçon et une décision examinée. Une détection automatique ouvre un dossier de sécurité ; elle ne publie jamais une accusation contre une personne. Le parrainage rémunéré reste direct : aucun niveau, downline ou commission sur les recrues des recrues.','truth-notice'));
+  const safetyActions=el('div',undefined,'actions'),safetyList=el('div',undefined,'stack');safetyPanel.append(safetyActions,safetyList);valuePanel.insertAdjacentElement('afterend',safetyPanel);
+  const screenBtn=el('button','Analyser un texte / une offre','secondary');screenBtn.type='button';screenBtn.onclick=()=>void(async()=>{try{
+    const value=prompt('Collez le texte à examiner (offre, message, campagne, promesse) :')?.trim();if(!value)return;
+    const result=await app.screenSafety({text:value,title:'Analyse manuelle',groupId:app.activeGroup()||undefined,entityType:'MANUAL_REVIEW'});
+    notify(result.assessment.flagged?'Signal détecté : dossier de sécurité ouvert.':'Aucun des signaux déterministes configurés n’a été détecté.');await renderSafety();
+  }catch(err){showError(err);}})();safetyActions.append(screenBtn);
+  const renderSafety=async()=>{safetyList.replaceChildren();try{
+    const cases=await app.safetyCases(app.activeGroup()||undefined);if(!cases.length)safetyList.append(el('p','Aucun dossier de sécurité pour ce périmètre.','hint'));
+    for(const c of cases.slice(0,30)){const card=el('article',undefined,'item'),state=String(c.data?.caseState??c.status),severity=String(c.data?.severity??'MEDIUM');card.append(el('strong',c.title),el('span',severity+' · '+state,'pill'),el('p',c.summary||'','hint'),el('small','Signaux : '+((c.data?.signals??[]).join(', ')||'—')));
+      const actions=el('div',undefined,'actions');
+      if(isManager()&&!['CLOSED','CLEARED'].includes(state)){for(const [decision,label] of [['TRIAGE','Prendre en revue'],['RESTRICT','Restreindre'],['CLEAR','Lever le signal'],['CLOSE','Clôturer']]){const b=el('button',label,decision==='RESTRICT'?'secondary':'link-btn');b.type='button';b.onclick=()=>void(async()=>{const note=prompt('Motif / preuve de la décision :')?.trim();if(!note)return;try{await app.reviewSafetyCase(c.id,{decision,note});await renderSafety();}catch(e){showError(e);}})();actions.append(b);}}
+      if(['RESTRICTED','TRIAGED'].includes(state)){const appeal=el('button','Émettre un recours','link-btn');appeal.type='button';appeal.onclick=()=>void(async()=>{const note=prompt('Expliquez le recours :')?.trim();if(!note)return;try{await app.appealSafetyCase(c.id,note);await renderSafety();}catch(e){showError(e);}})();actions.append(appeal);}
+      card.append(actions);safetyList.append(card);
+    }
+  }catch(err){showError(err);}};
+  safetyPanel.addEventListener('toggle',()=>{if(safetyPanel.open)void renderSafety();});
+
   const referralPanel=el('details',undefined,'panel');referralPanel.id='referralOperational';
   referralPanel.append(el('summary','Bouche-à-oreille · recommandation directe'));
   referralPanel.append(el('p','Un partage est volontaire et mesuré comme « lancé ». Il ne devient « reçu », « lead » ou « conversion » qu’après événement distinct. Aucun parrainage multiniveau.','truth-notice'));
@@ -157,7 +177,7 @@ export function mountCoreEconomicLearningUI({app,notify=()=>{},showError=console
     for(const cert of d.myCertificates??[]){const c=el('article',undefined,'item');c.append(el('strong',cert.title),el('span','Attestation','pill'),el('p','Aucun pouvoir financier ou administratif automatique.','hint'));academyList.append(c);}
   }catch(err){showError(err);}};
 
-  const refresh=async()=>{await Promise.allSettled([renderNeeds(),renderOffers(),renderReferral(),renderAcademy()]);};
+  const refresh=async()=>{await Promise.allSettled([renderNeeds(),renderOffers(),renderSafety(),renderReferral(),renderAcademy()]);};
   valuePanel.addEventListener('toggle',()=>{if(valuePanel.open)void renderNeeds();});
   referralPanel.addEventListener('toggle',()=>{if(referralPanel.open)void renderReferral();});
   academyPanel.addEventListener('toggle',()=>{if(academyPanel.open)void renderAcademy();});
