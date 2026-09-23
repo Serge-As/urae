@@ -111,11 +111,13 @@ const fail = (e) => {
         LATE_POSTING_NOT_ALLOWED: "Ce groupe interdit actuellement les opérations après clôture. Modifiez la politique seulement si les responsables habilités le décident.",
         LATE_POSTING_WINDOW_EXPIRED: "Le délai autorisé après clôture est dépassé. Une régularisation distincte est nécessaire.",
         WORKSPACE_TITLE_REQUIRED: "Donnez un titre au dossier.",
-        INVALID_MODULE_ID: "Le service sélectionné n'est pas reconnu.",\n        TRASH_RETENTION_EXPIRED: 'Cet élément n’est plus restaurable ou a déjà été restauré. La corbeille a été actualisée.'
+        INVALID_MODULE_ID: "Le service sélectionné n'est pas reconnu.",
+        TRASH_RETENTION_EXPIRED: 'Cet élément n’est plus restaurable ou a déjà été restauré. La corbeille a été actualisée.'
     };
     box.textContent = friendly[code] ?? `Action non terminée : ${code}`;
     box.hidden = false;
     if(code==='AUTHENTICATION_REQUIRED')showAuth('Reconnectez-vous : votre saisie en cours reste conservée dans cette page.');
+    else { const displayedError=box.textContent; window.setTimeout(()=>{if(box.textContent===displayedError)clearFail();},9000); }
 };
 
 function onSubmit(selector, handler) {
@@ -166,7 +168,8 @@ const restoreNavState=state=>{
     });
 };
 const updateBackButton=()=>{const b=document.querySelector('#appBackBtn');if(b)b.hidden=navDepth<=0;};
-const showView=(name,state)=>{\n    clearFail();
+const showView=(name,state)=>{
+    clearFail();
     const target=document.querySelector(`#view-${name}`);if(!target)return false;
     document.querySelectorAll('.view').forEach(x=>x.classList.remove('active'));
     document.querySelectorAll('.nav-btn').forEach(x=>x.classList.remove('active'));
