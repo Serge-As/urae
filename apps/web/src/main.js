@@ -877,16 +877,59 @@ catch (e) {
 } };
 const renderTrash=async()=>{
     const root=document.querySelector('#trashList');if(!root)return;root.replaceChildren();
+    const parseJsonArray=value=>{try{const x=JSON.parse(String(value??'[]'));return Array.isArray(x)?x.map(String):[];}catch{return[];}};
     try{
       const groupItems=await app.groupTrashItems().catch(()=>[]),scoped=app.activeGroup()?await app.trashItems().catch(()=>[]):[],seen=new Set(),items=[...groupItems,...scoped].filter(x=>!seen.has(x.id)&&seen.add(x.id));
       if(!items.length){root.innerHTML='<div class="empty-state">'+tx('Corbeille vide.','Trash is empty.')+'</div>';return;}
-      for(const item of items){const expired=item.status!=='ACTIVE'||Boolean(item.data?.expired),a=document.createElement('article');a.className='item '+(expired?'trash-expired':'');
+      for(const item of items){
+        const expired=item.status!=='ACTIVE'||Boolean(item.data?.expired),a=document.createElement('article');a.className='item '+(expired?'trash-expired':'');
         const kind={MEETING:tx('Séance','Meeting'),MEMBER:tx('Membre','Member'),RUBRIC:tx('Rubrique','Rubric'),GROUP:tx('Groupe','Group')}[item.data?.kind]??String(item.data?.kind??'Élément');
-        const h=document.createElement('strong');h.textContent=kind+' · '+item.title;const p=document.createElement('p');p.textContent=expired?tx('Délai de restauration expiré. Les données opérationnelles restaurables ont été supprimées définitivement ; les preuves d’audit restent conservées.','Restore period expired. Restorable operational data was permanently removed; audit evidence remains preserved.'):tx('Restaurable jusqu’au ','Restorable until ')+date(String(item.data?.restoreUntil??''));a.append(h,p);
-        if(item.data?.kind==='GROUP'&&!expired){const reminder=document.createElement('p');reminder.className='hint';reminder.textContent=item.data?.remindersEnabled===false?tx('Rappel mensuel désactivé.','Monthly reminder disabled.'):tx('Rappel mensuel actif pour le fondateur et le gestionnaire ayant supprimé le groupe.','Monthly reminder active for the founder and the manager who deleted the group.');a.append(reminder);}
-        if(!expired){const restore=document.createElement('button');restore.type='button';restore.className='primary';restore.textContent=tx('Restaurer intégralement','Restore fully');restore.onclick=()=>void(async()=>{try{if(item.data?.kind==='GROUP')await app.restoreGroupTrashItem(item.id);else await app.restoreTrashItem(item.id);await renderGroups();await refreshGroupContext();toast(tx('Élément restauré.','Item restored.'));}catch(e){fail(e);}})();a.append(restore);
-          if(item.data?.kind==='GROUP'&&item.data?.remindersEnabled!==false){const mute=document.createElement('button');mute.type='button';mute.className='secondary';mute.textContent=tx('Ne plus rappeler chaque mois','Stop monthly reminders');mute.onclick=()=>void(async()=>{try{await app.setGroupTrashReminders(item.id,false);await renderTrash();toast(tx('Rappels mensuels désactivés.','Monthly reminders disabled.'));}catch(e){fail(e);}})();a.append(mute);}
-        }root.append(a);
+        const h=document.createElement('strong');h.textContent=kind+' · '+item.title;
+        const p=document.createElement('p');p.textContent=expired
+          ?tx('Délai expiré : les données métier restaurables ont été purgées. Seules des traces techniques/statistiques minimales non reconstructives peuvent subsister.','Retention expired: restorable business data was purged. Only minimal non-reconstructive technical/statistical traces may remain.')
+          :tx('Restaurable jusqu’au ','Restorable until ')+date(String(item.data?.restoreUntil??''));
+        a.append(h,p);
+
+        if(item.data?.kind==='GROUP'&&!expired){
+          const optedOut=parseJsonArray(item.data?.reminderOptOutUserIdsJson).includes(app.currentActor());
+          const reminder=document.createElement('p');reminder.className='hint';reminder.textContent=optedOut
+            ?tx('Vous avez désactivé votre rappel mensuel.','You disabled your monthly reminder.')
+            :tx('Votre rappel mensuel est actif tant que ce groupe reste restaurable.','Your monthly reminder stays active while this group can be restored.');
+          a.append(reminder);
+          try{
+            const petition=await app.groupPetitionStatus(item.id),box=document.createElement('div');box.className='truth-notice';
+            const status=document.createElement('strong');status.textContent=tx('Pétition de reconstitution : ','Reconstitution petition: ')+petition.signatureCount+' / '+petition.threshold;
+            const detail=document.createElement('p');detail.textContent=petition.reached
+              ?tx('Seuil des 2/3 atteint. Les signataires peuvent constituer un nouveau groupe sans transfert automatique de l’argent, des dettes ou des créances.','Two-thirds threshold reached. Signatories can form a new group without automatic transfer of money, debts or receivables.')
+              :tx('Électorat figé au moment du retrait : ','Electorate frozen at deletion: ')+petition.electorateCount+tx(' membres.',' members.');
+            box.append(status,detail);
+            const actions=document.createElement('div');actions.className='actions';
+            const sign=document.createElement('button');sign.type='button';sign.className='secondary';sign.textContent=petition.signedByMe?tx('Retirer ma signature','Withdraw my signature'):tx('Signer la pétition','Sign the petition');
+            sign.onclick=()=>void(async()=>{try{petition.signedByMe?await app.withdrawGroupPetition(item.id):await app.signGroupPetition(item.id);await renderTrash();toast(petition.signedByMe?tx('Signature retirée.','Signature withdrawn.'):tx('Signature enregistrée.','Signature recorded.'));}catch(e){fail(e);}})();actions.append(sign);
+            if(petition.reached&&!petition.successorGroupId){
+              const successor=document.createElement('button');successor.type='button';successor.className='primary';successor.textContent=tx('Créer le nouveau groupe','Create successor group');
+              successor.onclick=()=>void(async()=>{try{
+                const name=prompt(tx('Nom du nouveau groupe (laisser vide pour reprendre le nom avec « reconstitué ») :','New group name (leave empty to reuse the name with “reconstituted”):'))??'';
+                const purpose=prompt(tx('Objet ou motif de la reconstitution :','Purpose of reconstitution:'))??'';
+                const result=await app.createSuccessorGroup(item.id,{name:name.trim()||undefined,purpose:purpose.trim()||undefined});
+                toast(tx('Nouveau groupe créé. Aucun transfert financier automatique n’a été effectué.','Successor group created. No automatic financial transfer was made.'));
+                await renderGroups();await renderTrash();
+              }catch(e){fail(e);}})();actions.append(successor);
+            }
+            if(petition.successorGroupId){const done=document.createElement('span');done.className='pill';done.textContent=tx('Groupe successeur créé','Successor group created');actions.append(done);}
+            box.append(actions);a.append(box);
+          }catch(error){if(error instanceof Error&&!['FORBIDDEN_SCOPE','PETITION_ELECTORATE_REQUIRED'].includes(error.message))console.warn(error);}
+        }
+
+        if(!expired){
+          const restore=document.createElement('button');restore.type='button';restore.className='primary';restore.textContent=tx('Restaurer intégralement','Restore fully');
+          restore.onclick=()=>void(async()=>{try{if(item.data?.kind==='GROUP')await app.restoreGroupTrashItem(item.id);else await app.restoreTrashItem(item.id);await renderGroups();await refreshGroupContext();toast(tx('Élément restauré.','Item restored.'));}catch(e){fail(e);}})();a.append(restore);
+          if(item.data?.kind==='GROUP'){
+            const optedOut=parseJsonArray(item.data?.reminderOptOutUserIdsJson).includes(app.currentActor()),mute=document.createElement('button');mute.type='button';mute.className='secondary';mute.textContent=optedOut?tx('Réactiver mon rappel mensuel','Enable my monthly reminder'):tx('Ne plus me rappeler chaque mois','Stop my monthly reminder');
+            mute.onclick=()=>void(async()=>{try{await app.setGroupTrashReminders(item.id,optedOut);await renderTrash();toast(optedOut?tx('Rappel réactivé.','Reminder enabled.'):tx('Votre rappel a été désactivé.','Your reminder was disabled.'));}catch(e){fail(e);}})();a.append(mute);
+          }
+        }
+        root.append(a);
       }
     }catch(e){fail(e);}
 };
