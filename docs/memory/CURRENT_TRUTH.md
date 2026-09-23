@@ -1,5 +1,24 @@
 # ECO-SYSTEM — CURRENT TRUTH
 
+## CURRENT OVERRIDE — 1.5.0 AUDIT IMPLEMENTATION IN PROGRESS (2026-09-23)
+
+Production reste `1.4.5-final-mega-offline-governance` source `463035adab2303874878c8e72f1965475ac0b209`. Aucun déploiement 1.5.0 n’est encore déclaré.
+
+Branche de travail : `next/1.5.0-audit-complete-platform-20260923`, créée depuis le SHA audité 1.4.5.1 `57b99f5249535cef2edc90a3635b2a26fc7ebf12`.
+
+Autorisation fondateur : implémentation complète de l’audit du 22/09, avec réintégration des contours historiques Chat originel/Conversation originelle et sans régression.
+
+Décisions nouvelles : groupe successeur décide de ses actions sur actifs/dettes/contestations ; purge cible après six mois = suppression des données métier de la plateforme, traces techniques/statistiques minimales non reconstructives seulement, avec non-résurrection par sauvegarde.
+
+P0 déjà engagés sur la branche : bug intérêt INITIAL corrigé et testé ; correction de cellule déplacée vers un plan repository atomique ; commande cible persistée localement avant réseau ; première saisie 0→X n’utilise plus le raccourci direct ; conflit offline compare sa valeur de base.
+
+Document de portée canonique de ce chantier : `docs/implementation/ECO_SYSTEM_1.5.0_FULL_IMPLEMENTATION_SCOPE_2026-09-23.md`.
+
+Prochaine étape : CI 1.5.0, puis CAS/version de cellule et tests D1 de concurrence avant toute production.
+
+---
+
+
 ## CURRENT OVERRIDE — 1.4.5 VERIFIED_REMOTE (2026-09-22)
 
 Production vérifiée : `1.4.5-final-mega-offline-governance` sur `eco-system`, source `463035adab2303874878c8e72f1965475ac0b209`, Worker Version ID `29c8f0e2-1cb1-4361-8481-27b514906fcf`. Run production `35713621388 SUCCESS`, **298/298 tests PASS**, smoke 1.4.5 PASS, D1 existante sans migration, Premium Live/Founder Control/Community Realtime/R2 actifs, argent réel OFF. BIR+ pré `10688266480`, post `10688236533`, restauration SQLite/integrity/SHA256 et miroirs R2 PASS.
