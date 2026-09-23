@@ -2065,8 +2065,8 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
       let cursor:{at:string;id:string}|undefined;if(cursorRaw){try{const x=JSON.parse(decodeURIComponent(cursorRaw));if(Array.isArray(x)&&x.length===2)cursor={at:String(x[0]),id:String(x[1])};}catch{throw new Error('INVALID_CURSOR');}}
       const statement=await ledger.memberStatement(ctx.tenantId,groupId,membershipId,url.searchParams.get('asOf')??undefined);
       const sorted=statement.receipts.slice().sort((a,b)=>String(b.receivedAt).localeCompare(String(a.receivedAt))||String(b.receiptId??b.ledgerEntryId).localeCompare(String(a.receiptId??a.ledgerEntryId)));
-      const filtered=cursor?sorted.filter(r=>String(r.receivedAt)<cursor!.at||(String(r.receivedAt)===cursor!.at&&String(r.receiptId??r.ledgerEntryId)<cursor!.id)):sorted;
-      const page=filtered.slice(0,limit),last=page.at(-1),nextCursor=filtered.length>page.length&&last?encodeURIComponent(JSON.stringify([last.receivedAt,String(last.receiptId??last.ledgerEntryId)])):null;
+      const filtered=cursor?sorted.filter(r=>String(r.receivedAt)<cursor!.at||(String(r.receivedAt)===cursor!.at&&String(r.id??r.ledgerEntryId)<cursor!.id)):sorted;
+      const page=filtered.slice(0,limit),last=page.at(-1),nextCursor=filtered.length>page.length&&last?encodeURIComponent(JSON.stringify([last.receivedAt,String(last.id??last.ledgerEntryId)])):null;
       return json({items:page,nextCursor,hasMore:Boolean(nextCursor),pageSize:page.length,total:sorted.length,groupId,membershipId},200,cors);
     }
 
