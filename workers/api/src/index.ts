@@ -29,7 +29,7 @@ import { AdManagerService, AD_PLACEMENT_CATALOG, HOUSE_AD_CATALOG, selectAdDeliv
 import { diagnoseGroup } from '../../../packages/group-doctor/src/index.js';
 import { prepareMeetingAutopilot } from '../../../packages/meeting-autopilot/src/index.js';
 import { EconomicIntelligenceService } from '../../../packages/economic-intelligence/src/index.js';
-import { ExternalProgramsService, type ExternalProgramKind, type ExternalProgramState, type AggregateDataAccess } from '../../../packages/external-programs/src/index.js';
+import { ExternalProgramsService, type ExternalProgramKind, type ExternalProgramState, type AggregateDataAccess, type SupportActionKind, type FundingState, type HandoverStage } from '../../../packages/external-programs/src/index.js';
 import { IdentityProofService } from '../../../packages/identity-proof/src/index.js';
 import { GroupPairingService } from '../../../packages/group-pairing/src/index.js';
 import { InterestCommunityService } from '../../../packages/interest-communities/src/index.js';
@@ -1274,6 +1274,35 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
       const body=await readJson<Record<string,unknown>>(request);
       return json(await externalPrograms.transition(externalTransition[1]!,externalTransition[2]!,String(body.state??'') as ExternalProgramState),200,cors);
     }
+    const programEnrollments=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/external-programs\/([^/]+)\/enrollments$/);
+    if(programEnrollments&&request.method==='GET')return json(await externalPrograms.enrollments(programEnrollments[1]!,programEnrollments[2]!),200,cors);
+    if(programEnrollments&&request.method==='POST'){
+      const body=await readJson<Record<string,unknown>>(request);
+      return json(await externalPrograms.createEnrollment(programEnrollments[1]!,programEnrollments[2]!,{
+        consentRef:String(body.consentRef??''),purpose:String(body.purpose??''),scopes:strArray(body.scopes),
+        startsAt:body.startsAt?String(body.startsAt):undefined,endsAt:String(body.endsAt??''),facilitatorRef:body.facilitatorRef?String(body.facilitatorRef):undefined
+      }),201,cors);
+    }
+    const enrollmentRevoke=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/program-enrollments\/([^/]+)\/revoke$/);
+    if(enrollmentRevoke&&request.method==='POST'){const body=await readJson<Record<string,unknown>>(request);return json(await externalPrograms.revokeEnrollment(enrollmentRevoke[1]!,enrollmentRevoke[2]!,String(body.reason??'')),200,cors);}
+    const supportActions=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/program-enrollments\/([^/]+)\/support-actions$/);
+    if(supportActions&&request.method==='GET')return json(await externalPrograms.supportActions(supportActions[1]!,supportActions[2]!),200,cors);
+    if(supportActions&&request.method==='POST'){const body=await readJson<Record<string,unknown>>(request);return json(await externalPrograms.recordSupportAction(supportActions[1]!,supportActions[2]!,{
+      kind:String(body.kind??'OTHER') as SupportActionKind,summary:String(body.summary??''),evidenceRef:body.evidenceRef?String(body.evidenceRef):undefined,performedAt:body.performedAt?String(body.performedAt):undefined
+    }),201,cors);}
+    const programFunding=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/program-enrollments\/([^/]+)\/funding$/);
+    if(programFunding&&request.method==='GET')return json(await externalPrograms.fundingEvidence(programFunding[1]!,programFunding[2]!),200,cors);
+    if(programFunding&&request.method==='POST'){const body=await readJson<Record<string,unknown>>(request);return json(await externalPrograms.recordFundingEvidence(programFunding[1]!,programFunding[2]!,{
+      state:String(body.state??'PROMISED') as FundingState,amount:finite(body.amount,0),currency:body.currency?String(body.currency):undefined,evidenceRef:String(body.evidenceRef??''),ledgerEntryId:body.ledgerEntryId?String(body.ledgerEntryId):undefined,note:body.note?String(body.note):undefined
+    }),201,cors);}
+    const handovers=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/program-enrollments\/([^/]+)\/handovers$/);
+    if(handovers&&request.method==='GET')return json(await externalPrograms.handoverPlans(handovers[1]!,handovers[2]!),200,cors);
+    if(handovers&&request.method==='POST'){const body=await readJson<Record<string,unknown>>(request);return json(await externalPrograms.createHandoverPlan(handovers[1]!,handovers[2]!,{
+      localOwnerRef:String(body.localOwnerRef??''),note:body.note?String(body.note):undefined,authorizationRef:body.authorizationRef?String(body.authorizationRef):undefined
+    }),201,cors);}
+    const handoverTransition=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/program-handovers\/([^/]+)\/transition$/);
+    if(handoverTransition&&request.method==='POST'){const body=await readJson<Record<string,unknown>>(request);return json(await externalPrograms.transitionHandover(handoverTransition[1]!,handoverTransition[2]!,String(body.state??'') as HandoverStage,{authorizationRef:body.authorizationRef?String(body.authorizationRef):undefined,note:body.note?String(body.note):undefined}),200,cors);}
+
     const externalShare=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/external-programs\/([^/]+)\/share-packs$/);
     if(externalShare&&request.method==='GET')return json(await externalPrograms.sharePacks(externalShare[1]!,externalShare[2]!),200,cors);
     if(externalShare&&request.method==='POST'){
