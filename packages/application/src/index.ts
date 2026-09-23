@@ -626,6 +626,23 @@ export class ConnectedApplication {
   async previewSessionRecap(meetingId:string,input:any):Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/meetings/'+encodeURIComponent(meetingId)+'/recap-preview',{method:'POST',body:JSON.stringify(input)});}
   async previewClosingCarryover(input:any):Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/closing/carryover-preview',{method:'POST',body:JSON.stringify(input)});}
 
+  async businessSummary():Promise<any>{return this.request('/api/v1/business/summary');}
+  async businessRecords():Promise<any[]>{const r=await this.request('/api/v1/business/records') as any;return r.items??[];}
+  async configureBusiness(input:{name:string;currency?:string;services?:string[];locality?:string;monthlyFixedCosts?:number}):Promise<any>{return this.request('/api/v1/business/workspace',{method:'PUT',body:JSON.stringify(input)});}
+  async createBusinessMandate(input:any):Promise<any>{return this.request('/api/v1/business/mandates',{method:'POST',body:JSON.stringify(input)});}
+  async activateBusinessMandate(id:string):Promise<any>{return this.request('/api/v1/business/mandates/'+encodeURIComponent(id)+'/activate',{method:'POST',body:'{}'});}
+  async endBusinessMandate(id:string,reason:string):Promise<any>{return this.request('/api/v1/business/mandates/'+encodeURIComponent(id)+'/end',{method:'POST',body:JSON.stringify({reason})});}
+  async createBusinessClient(input:any):Promise<any>{return this.request('/api/v1/business/clients',{method:'POST',body:JSON.stringify(input)});}
+  async setBusinessClientState(id:string,state:string):Promise<any>{return this.request('/api/v1/business/clients/'+encodeURIComponent(id)+'/state',{method:'POST',body:JSON.stringify({state})});}
+  async createBusinessQuote(input:any):Promise<any>{return this.request('/api/v1/business/quotes',{method:'POST',body:JSON.stringify(input)});}
+  async decideBusinessQuote(id:string,state:string):Promise<any>{return this.request('/api/v1/business/quotes/'+encodeURIComponent(id)+'/decision',{method:'POST',body:JSON.stringify({state})});}
+  async createBusinessContract(input:any):Promise<any>{return this.request('/api/v1/business/contracts',{method:'POST',body:JSON.stringify(input)});}
+  async issueBusinessInvoice(input:any):Promise<any>{return this.request('/api/v1/business/invoices',{method:'POST',body:JSON.stringify(input)});}
+  async recordBusinessPayment(input:any):Promise<any>{return this.request('/api/v1/business/payments',{method:'POST',body:JSON.stringify(input)});}
+  async recordBusinessExpense(input:any):Promise<any>{return this.request('/api/v1/business/expenses',{method:'POST',body:JSON.stringify(input)});}
+  async recordBusinessTime(input:any):Promise<any>{return this.request('/api/v1/business/time',{method:'POST',body:JSON.stringify(input)});}
+  async createBusinessScenario(input:any):Promise<any>{return this.request('/api/v1/business/scenarios',{method:'POST',body:JSON.stringify(input)});}
+
   async externalPrograms(kind?:'PARTNER'|'NGO'):Promise<any[]>{if(!this.activeGroupId)return[];const q=kind?'?kind='+encodeURIComponent(kind):'';return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/external-programs'+q);}
   async createExternalProgram(input:{kind:'PARTNER'|'NGO';partyName:string;programName:string;purpose:string;localities?:string[];tags?:string[];dataAccess?:'NONE'|'GROUP_AGGREGATE_ECONOMIC'}):Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/external-programs',{method:'POST',body:JSON.stringify(input)});}
   async transitionExternalProgram(id:string,state:'ACTIVE'|'PAUSED'|'COMPLETED'):Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/external-programs/'+encodeURIComponent(id)+'/transition',{method:'POST',body:JSON.stringify({state})});}
