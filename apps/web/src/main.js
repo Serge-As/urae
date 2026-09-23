@@ -16,6 +16,7 @@ import { mountCompletionUI } from './completion-ui.js';
 import { mountAdvancedUI } from './advanced-ui.js';
 import { mountIdentityLiveUI } from './identity-live-ui.js';
 import { mountCommunityShopUI } from './community-shop-ui.js';
+import { mountValueMarketUI } from './value-market-ui.js';
 import { mountMiscRubricUI } from './misc-rubrics-ui.js';
 import { mountPairingUI } from './pairing-ui.js';
 import { mountDetailUI } from './detail-ui.js';
@@ -137,6 +138,7 @@ const advancedUI = mountAdvancedUI({
 });
 const identityLiveUI = mountIdentityLiveUI({ app, notify: toast, showError: fail });
 const communityShopUI = mountCommunityShopUI({ app, notify: toast, showError: fail, isManager, fmt });
+const valueMarketUI = mountValueMarketUI({ app, notify: toast, showError: fail, isManager, fmt, getMembers:()=>members, navigate:(view)=>go(view) });
 const miscRubricUI = mountMiscRubricUI({ app, notify: toast, showError: fail, getMembers: () => members, getMeetings: () => meetings, isManager, fmt });
 const pairingUI = mountPairingUI({ app, notify: toast, showError: fail, getMembers: () => members, isManager, afterMembershipChanged: async groupId => { await renderGroups(); if(groupId){ app.selectGroup(groupId); await refreshGroupContext(); } } });
 const clearFail = () => { $('#errorBox').hidden = true; $('#errorBox').textContent = ''; };
@@ -1102,6 +1104,7 @@ const refreshGroupContext = async () => {
     await refreshOptionalOfflineSafe('urgent-notifications',renderUrgentNotifications);
     await refreshOptionalOfflineSafe('notification-center',renderNotificationCenter);
     await refreshOptionalOfflineSafe('community-shop',()=>communityShopUI.refresh());
+    await refreshOptionalOfflineSafe('value-market',()=>valueMarketUI.refresh());
     await refreshOptionalOfflineSafe('misc-rubrics',()=>miscRubricUI.refresh());
     await refreshOptionalOfflineSafe('pairing',()=>pairingUI.refresh());
     await refreshOptionalOfflineSafe('personal-cockpit',()=>personalCockpitUI.refresh());
