@@ -29,7 +29,7 @@ import { AdManagerService, AD_PLACEMENT_CATALOG, HOUSE_AD_CATALOG, selectAdDeliv
 import { diagnoseGroup } from '../../../packages/group-doctor/src/index.js';
 import { prepareMeetingAutopilot } from '../../../packages/meeting-autopilot/src/index.js';
 import { EconomicIntelligenceService } from '../../../packages/economic-intelligence/src/index.js';
-import { ExternalProgramsService, type ExternalProgramKind, type ExternalProgramState, type AggregateDataAccess } from '../../../packages/external-programs/src/index.js';
+import { ExternalProgramsService, type ExternalProgramKind, type ExternalProgramState, type AggregateDataAccess, type SupportActionKind, type FundingState, type HandoverStage } from '../../../packages/external-programs/src/index.js';
 import { IdentityProofService } from '../../../packages/identity-proof/src/index.js';
 import { GroupPairingService } from '../../../packages/group-pairing/src/index.js';
 import { InterestCommunityService } from '../../../packages/interest-communities/src/index.js';
@@ -45,6 +45,7 @@ import { GrowthReferralService, InMemoryReferralBudgetStore, D1ReferralBudgetSto
 import { KnowledgeAcademyService } from '../../../packages/knowledge-academy/src/index.js';
 import { ValueNetworkService } from '../../../packages/value-network/src/index.js';
 import { GroupReconstitutionService } from '../../../packages/group-reconstitution/src/index.js';
+import { SafetyCaseService, assessReferralStructure, type SafetyCategory, type SafetyCaseState, type SafetyAction } from '../../../packages/trust/src/index.js';
 import { authenticatedApi } from './authenticated.js';
 export { GroupLiveHub } from './group-live-hub.js';
 
@@ -150,6 +151,7 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
   const notifications=new NotificationService(repo,kernel);
   const growthReferral=new GrowthReferralService(repo,kernel,options.referralBudgets??defaultReferralBudgets);
   const reconstitution=new GroupReconstitutionService(repo,kernel);
+  const safety=new SafetyCaseService(repo,kernel);
   if(options.premiumLive)kernel.features.set('premium_live_ledger',true);
   const isFounderTeamActor=async()=>Boolean(options.founderTeamActors?.has(ctx.actorId))||Boolean(options.founderControl&&await options.founderControl.isPlatformOwner(ctx.actorId));
   const requireGroup=async(groupId:string,manage=false)=>{
@@ -441,6 +443,26 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
       if(action==='procurement'&&request.method==='POST'){const body=await readJson<any>(request);return json(await valueNetwork.prepareProcurement(needId,String(body.offerId??'')),201,cors);}
     }
 
+    if(request.method==='GET'&&url.pathname==='/api/v1/safety/cases'){
+      const groupId=url.searchParams.get('groupId')??undefined;return json({items:await safety.list(groupId)},200,cors);
+    }
+    if(request.method==='POST'&&url.pathname==='/api/v1/safety/reports'){
+      const body=await readJson<Record<string,unknown>>(request);return json(await safety.report({
+        groupId:body.groupId?String(body.groupId):undefined,subjectType:String(body.subjectType??''),subjectRef:String(body.subjectRef??''),category:String(body.category??'OTHER') as SafetyCategory,
+        summary:String(body.summary??''),evidenceRef:body.evidenceRef?String(body.evidenceRef):undefined,source:body.source?String(body.source):undefined
+      }),201,cors);
+    }
+    const safetyTransition=url.pathname.match(/^\/api\/v1\/safety\/cases\/([^/]+)\/transition$/);
+    if(safetyTransition&&request.method==='POST'){const body=await readJson<Record<string,unknown>>(request);return json(await safety.transition(safetyTransition[1]!,String(body.state??'') as SafetyCaseState,String(body.note??''),String(body.evidenceRef??'')),200,cors);}
+    const safetyEvidence=url.pathname.match(/^\/api\/v1\/safety\/cases\/([^/]+)\/evidence$/);
+    if(safetyEvidence&&request.method==='GET')return json({items:await safety.evidence(safetyEvidence[1]!)},200,cors);
+    if(safetyEvidence&&request.method==='POST'){const body=await readJson<Record<string,unknown>>(request);return json(await safety.addEvidence(safetyEvidence[1]!,{summary:String(body.summary??''),ref:String(body.ref??''),source:body.source?String(body.source):undefined}),201,cors);}
+    const safetyDecision=url.pathname.match(/^\/api\/v1\/safety\/cases\/([^/]+)\/decision$/);
+    if(safetyDecision&&request.method==='POST'){const body=await readJson<Record<string,unknown>>(request);return json(await safety.decide(safetyDecision[1]!,{action:String(body.action??'NO_ACTION') as SafetyAction,reason:String(body.reason??''),evidenceRef:body.evidenceRef?String(body.evidenceRef):undefined,findingStatus:body.findingStatus as any}),200,cors);}
+    const safetyAppeal=url.pathname.match(/^\/api\/v1\/safety\/cases\/([^/]+)\/appeal$/);
+    if(safetyAppeal&&request.method==='POST'){const body=await readJson<Record<string,unknown>>(request);return json(await safety.appeal(safetyAppeal[1]!,{reason:String(body.reason??''),evidenceRef:body.evidenceRef?String(body.evidenceRef):undefined}),201,cors);}
+    if(request.method==='POST'&&url.pathname==='/api/v1/safety/referral-structure-assessment'){const body=await readJson<Record<string,unknown>>(request);return json(assessReferralStructure({levels:finite(body.levels,1),fundingSource:String(body.fundingSource??''),rewardForRecruitingRecruiters:Boolean(body.rewardForRecruitingRecruiters),promisedReturnLinkedToRecruitment:Boolean(body.promisedReturnLinkedToRecruitment),realProductOrServiceEvidence:body.realProductOrServiceEvidence===undefined?undefined:Boolean(body.realProductOrServiceEvidence)}),200,cors);}
+
     if(request.method==='GET'&&url.pathname==='/api/v1/knowledge'){return json({items:await knowledgeAcademy.searchKnowledge(url.searchParams.get('q')??'',url.searchParams.get('groupId')??undefined)},200,cors);}
     if(request.method==='POST'&&url.pathname==='/api/v1/knowledge'){const body=await readJson<any>(request);return json(await knowledgeAcademy.createKnowledge(body),201,cors);}
     const knowledgeRevision=url.pathname.match(/^\/api\/v1\/knowledge\/([^/]+)\/revisions$/);
@@ -463,6 +485,8 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
     if(request.method==='POST'&&url.pathname==='/api/v1/growth/referral-shares'){const body=await readJson<any>(request);return json(await growthReferral.createShare(body),201,cors);}
     if(request.method==='POST'&&url.pathname==='/api/v1/growth/referral-landings'){const body=await readJson<any>(request);return json(await growthReferral.registerLanding(String(body.code??'')),201,cors);}
     if(request.method==='POST'&&url.pathname==='/api/v1/growth/referral-conversions'){const body=await readJson<any>(request);return json(await growthReferral.registerConversion(body),201,cors);}
+    const referralVerify=url.pathname.match(/^\/api\/v1\/growth\/referral-campaigns\/([^/]+)\/conversions\/([^/]+)\/verify$/);
+    if(referralVerify&&request.method==='POST'){const body=await readJson<Record<string,unknown>>(request);return json(await growthReferral.verifyConversion(referralVerify[1]!,referralVerify[2]!,{accepted:Boolean(body.accepted),reason:String(body.reason??''),reviewEvidenceRef:body.reviewEvidenceRef?String(body.reviewEvidenceRef):undefined}),200,cors);}
     const referralReward=url.pathname.match(/^\/api\/v1\/growth\/referral-campaigns\/([^/]+)\/rewards\/([^/]+)\/approve$/);
     if(referralReward&&request.method==='POST')return json(await growthReferral.approveReward(referralReward[1]!,referralReward[2]!),200,cors);
 
@@ -1274,6 +1298,35 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
       const body=await readJson<Record<string,unknown>>(request);
       return json(await externalPrograms.transition(externalTransition[1]!,externalTransition[2]!,String(body.state??'') as ExternalProgramState),200,cors);
     }
+    const programEnrollments=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/external-programs\/([^/]+)\/enrollments$/);
+    if(programEnrollments&&request.method==='GET')return json(await externalPrograms.enrollments(programEnrollments[1]!,programEnrollments[2]!),200,cors);
+    if(programEnrollments&&request.method==='POST'){
+      const body=await readJson<Record<string,unknown>>(request);
+      return json(await externalPrograms.createEnrollment(programEnrollments[1]!,programEnrollments[2]!,{
+        consentRef:String(body.consentRef??''),purpose:String(body.purpose??''),scopes:strArray(body.scopes),
+        startsAt:body.startsAt?String(body.startsAt):undefined,endsAt:String(body.endsAt??''),facilitatorRef:body.facilitatorRef?String(body.facilitatorRef):undefined
+      }),201,cors);
+    }
+    const enrollmentRevoke=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/program-enrollments\/([^/]+)\/revoke$/);
+    if(enrollmentRevoke&&request.method==='POST'){const body=await readJson<Record<string,unknown>>(request);return json(await externalPrograms.revokeEnrollment(enrollmentRevoke[1]!,enrollmentRevoke[2]!,String(body.reason??'')),200,cors);}
+    const supportActions=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/program-enrollments\/([^/]+)\/support-actions$/);
+    if(supportActions&&request.method==='GET')return json(await externalPrograms.supportActions(supportActions[1]!,supportActions[2]!),200,cors);
+    if(supportActions&&request.method==='POST'){const body=await readJson<Record<string,unknown>>(request);return json(await externalPrograms.recordSupportAction(supportActions[1]!,supportActions[2]!,{
+      kind:String(body.kind??'OTHER') as SupportActionKind,summary:String(body.summary??''),evidenceRef:body.evidenceRef?String(body.evidenceRef):undefined,performedAt:body.performedAt?String(body.performedAt):undefined
+    }),201,cors);}
+    const programFunding=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/program-enrollments\/([^/]+)\/funding$/);
+    if(programFunding&&request.method==='GET')return json(await externalPrograms.fundingEvidence(programFunding[1]!,programFunding[2]!),200,cors);
+    if(programFunding&&request.method==='POST'){const body=await readJson<Record<string,unknown>>(request);return json(await externalPrograms.recordFundingEvidence(programFunding[1]!,programFunding[2]!,{
+      state:String(body.state??'PROMISED') as FundingState,amount:finite(body.amount,0),currency:body.currency?String(body.currency):undefined,evidenceRef:String(body.evidenceRef??''),ledgerEntryId:body.ledgerEntryId?String(body.ledgerEntryId):undefined,note:body.note?String(body.note):undefined
+    }),201,cors);}
+    const handovers=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/program-enrollments\/([^/]+)\/handovers$/);
+    if(handovers&&request.method==='GET')return json(await externalPrograms.handoverPlans(handovers[1]!,handovers[2]!),200,cors);
+    if(handovers&&request.method==='POST'){const body=await readJson<Record<string,unknown>>(request);return json(await externalPrograms.createHandoverPlan(handovers[1]!,handovers[2]!,{
+      localOwnerRef:String(body.localOwnerRef??''),note:body.note?String(body.note):undefined,authorizationRef:body.authorizationRef?String(body.authorizationRef):undefined
+    }),201,cors);}
+    const handoverTransition=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/program-handovers\/([^/]+)\/transition$/);
+    if(handoverTransition&&request.method==='POST'){const body=await readJson<Record<string,unknown>>(request);return json(await externalPrograms.transitionHandover(handoverTransition[1]!,handoverTransition[2]!,String(body.state??'') as HandoverStage,{authorizationRef:body.authorizationRef?String(body.authorizationRef):undefined,note:body.note?String(body.note):undefined}),200,cors);}
+
     const externalShare=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/external-programs\/([^/]+)\/share-packs$/);
     if(externalShare&&request.method==='GET')return json(await externalPrograms.sharePacks(externalShare[1]!,externalShare[2]!),200,cors);
     if(externalShare&&request.method==='POST'){
