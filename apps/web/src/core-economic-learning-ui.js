@@ -6,7 +6,7 @@ const makeForm=(fields,submit)=>{
   for(const spec of fields){
     const l=el('label',spec.label),i=spec.type==='select'?document.createElement('select'):document.createElement('input');
     i.name=spec.name;if(spec.type&&spec.type!=='select')i.type=spec.type;if(spec.placeholder)i.placeholder=spec.placeholder;
-    if(spec.required)i.required=true;if(spec.min!==undefined)i.min=String(spec.min);
+    if(spec.required)i.required=true;if(spec.min!==undefined)i.min=String(spec.min);if(spec.type==='checkbox')i.checked=Boolean(spec.checked);
     if(spec.options)for(const [v,t] of spec.options){const o=document.createElement('option');o.value=v;o.textContent=t;i.append(o);}
     l.append(i);f.append(l);
   }
@@ -26,14 +26,45 @@ export function mountCoreEconomicLearningUI({app,notify=()=>{},showError=console
     {label:'Catégorie',name:'category',required:true,placeholder:'savons'},
     {label:'Quantité',name:'quantity',type:'number',min:1,required:true},
     {label:'Unité',name:'unit',required:true,placeholder:'carton'},
+    {label:'Spécification',name:'specification',placeholder:'Ex. savon 400 g, parfum neutre'},
+    {label:'Qualité exigée',name:'quality',placeholder:'Ex. standard A'},
     {label:'Localité',name:'locality',placeholder:'Yaoundé'},
-    {label:'Date limite',name:'neededBy',type:'date'}
+    {label:'Date limite',name:'neededBy',type:'date'},
+    {label:'Budget maximum rendu (XAF)',name:'budgetMax',type:'number',min:0},
+    {label:'Accepter des substitutions à confirmer',name:'substitutionsAllowed',type:'checkbox'},
+    {label:'J’autorise la publication de ce besoin après validation',name:'publicationConsent',type:'checkbox'}
   ],'Créer le besoin en brouillon');
-  const needs=el('div',undefined,'stack');valuePanel.append(valueIntro,needForm,needs);
+  const offerForm=makeForm([
+    {label:'Offre / produit / service',name:'title',required:true,placeholder:'Ex. Cartons de savon disponibles'},
+    {label:'Type',name:'kind',type:'select',options:[['SUPPLIER','Fournisseur'],['NOW','Disponible maintenant'],['HARVEST','Récolte'],['FRESH_DROP','Arrivage frais'],['PICKUP','Point de retrait'],['SERVICE','Service']]},
+    {label:'Catégorie',name:'category',required:true,placeholder:'savons'},
+    {label:'Quantité disponible',name:'availableQuantity',type:'number',min:1,required:true},
+    {label:'Unité',name:'unit',required:true,placeholder:'carton, kg, litre…'},
+    {label:'Spécification',name:'specification',placeholder:'Ex. savon 400 g'},
+    {label:'Qualité',name:'quality',placeholder:'Ex. standard A'},
+    {label:'Localité',name:'locality',placeholder:'Yaoundé'},
+    {label:'Autres zones desservies',name:'serviceZones',placeholder:'Mbalmayo, Obala'},
+    {label:'Disponible au plus tard',name:'availableBy',type:'date'},
+    {label:'Offre valable jusqu’au',name:'expiresAt',type:'date',required:true},
+    {label:'Prix unitaire XAF — vide = sur devis',name:'unitPrice',type:'number',min:0},
+    {label:'Transport rendu XAF — vide = inconnu',name:'transportCost',type:'number',min:0},
+    {label:'Autres coûts XAF — vide = inconnu',name:'otherCosts',type:'number',min:0},
+    {label:'Remise XAF',name:'discount',type:'number',min:0},
+    {label:'Livraisons documentées',name:'documentedDeliveries',type:'number',min:0},
+    {label:'Litiges confirmés',name:'confirmedDisputes',type:'number',min:0},
+    {label:'Offre sponsorisée — affichage séparé du score',name:'sponsored',type:'checkbox'}
+  ],'Publier / actualiser l’offre');
+  const needs=el('div',undefined,'stack'),offerBox=document.createElement('details');offerBox.append(el('summary','Proposer une offre compatible'),el('p','Le sponsoring est signalé mais ne peut pas améliorer le score de confiance ou de pertinence. Les coûts inconnus restent inconnus.','truth-notice'),offerForm);
+  valuePanel.append(valueIntro,needForm,offerBox,needs);
   marketHub.closest('section')?.insertAdjacentElement('afterend',valuePanel);
+  offerForm.addEventListener('submit',e=>void(async()=>{e.preventDefault();try{
+    const dateEnd=val(offerForm,'expiresAt'),available=val(offerForm,'availableBy');
+    await app.createValueOffer({title:val(offerForm,'title'),kind:val(offerForm,'kind'),category:val(offerForm,'category'),availableQuantity:num(offerForm,'availableQuantity'),unit:val(offerForm,'unit'),specification:val(offerForm,'specification'),quality:val(offerForm,'quality'),locality:val(offerForm,'locality'),serviceZones:val(offerForm,'serviceZones').split(',').map(x=>x.trim()).filter(Boolean),availableBy:available?new Date(available+'T12:00:00').toISOString():undefined,expiresAt:new Date(dateEnd+'T23:59:59').toISOString(),unitPrice:val(offerForm,'unitPrice')?num(offerForm,'unitPrice'):undefined,transportCost:val(offerForm,'transportCost')?num(offerForm,'transportCost'):undefined,otherCosts:val(offerForm,'otherCosts')?num(offerForm,'otherCosts'):undefined,discount:val(offerForm,'discount')?num(offerForm,'discount'):0,documentedDeliveries:val(offerForm,'documentedDeliveries')?num(offerForm,'documentedDeliveries'):0,confirmedDisputes:val(offerForm,'confirmedDisputes')?num(offerForm,'confirmedDisputes'):0,sponsored:Boolean(offerForm.elements.sponsored?.checked),currency:'XAF'});
+    offerForm.reset();notify('Offre enregistrée. Elle sera comparée avec des raisons explicables.');await renderNeeds();
+  }catch(err){showError(err);}})());
 
   needForm.addEventListener('submit',e=>void(async()=>{e.preventDefault();try{
-    await app.createValueNeed({title:val(needForm,'title'),category:val(needForm,'category'),quantity:num(needForm,'quantity'),unit:val(needForm,'unit'),locality:val(needForm,'locality'),neededBy:val(needForm,'neededBy')||undefined,sourceType:'MANUAL'});
+    await app.createValueNeed({title:val(needForm,'title'),category:val(needForm,'category'),quantity:num(needForm,'quantity'),unit:val(needForm,'unit'),specification:val(needForm,'specification'),quality:val(needForm,'quality'),locality:val(needForm,'locality'),neededBy:val(needForm,'neededBy')||undefined,budgetMax:val(needForm,'budgetMax')?num(needForm,'budgetMax'):undefined,substitutionsAllowed:Boolean(needForm.elements.substitutionsAllowed?.checked),publicationConsent:Boolean(needForm.elements.publicationConsent?.checked),currency:'XAF',sourceType:'MANUAL'});
     needForm.reset();notify('Besoin créé en brouillon.');await renderNeeds();
   }catch(err){showError(err);}})());
 
@@ -51,7 +82,10 @@ export function mountCoreEconomicLearningUI({app,notify=()=>{},showError=console
           const b=el('button','Chercher des offres compatibles','link-btn');b.type='button';b.onclick=()=>void(async()=>{try{
             const matches=await app.valueNeedMatches(r.id),box=el('div',undefined,'stack');
             if(!matches.length)box.append(el('p','Aucune offre éligible : quantité, zone, catégorie et validité sont vérifiées avant classement.','hint'));
-            for(const m of matches.slice(0,10)){const row=el('article',undefined,'item');row.append(el('strong',m.offer.title),el('span','score '+Math.round(m.score),'pill'),el('p',String(m.offer.data.availableQuantity)+' '+String(m.offer.data.unit)+' · '+Number(m.offer.data.unitPrice||0).toLocaleString('fr-FR')+' '+String(m.offer.data.currency||'XAF'),'hint'));
+            for(const m of matches.slice(0,10)){const row=el('article',undefined,'item'),head=el('div',undefined,'actions');head.append(el('strong',m.offer.title),el('span','pertinence '+Math.round(m.score)+'/100','pill'));if(m.sponsored)head.append(el('span','Sponsorisé','pill'));row.append(head);
+              row.append(el('p',String(m.offer.data.availableQuantity)+' '+String(m.offer.data.unit)+' · '+(m.landedTotal===null?'coût rendu inconnu':Number(m.landedTotal).toLocaleString('fr-FR')+' '+String(m.offer.data.currency||'XAF')+' rendu'),'hint'));
+              if(m.explanations?.length){const why=el('ul',undefined,'match-reasons');for(const x of m.explanations)why.append(el('li',x));row.append(why);}
+              if(m.warnings?.length){const warn=el('p','À vérifier : '+m.warnings.join(' · '),'truth-notice');row.append(warn);}
               if(isManager()){const p=el('button','Préparer l’approvisionnement','secondary');p.type='button';p.onclick=()=>void app.prepareValueProcurement(r.id,m.offer.id).then(()=>{notify('Brouillon d’approvisionnement créé. Aucune commande ni dette n’a été créée.');return renderNeeds();}).catch(showError);row.append(p);}box.append(row);}
             card.append(box);
           }catch(err){showError(err);}})();actions.append(b);
