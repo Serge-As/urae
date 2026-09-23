@@ -88,7 +88,7 @@ export function mountDetailUI({app,navigate,getGroups,getMembers,getMeetings,get
     const m=getMembers().find(x=>x.id===id);if(!m)throw Error('MEMBERSHIP_NOT_FOUND');
     title.textContent=m.displayName;subtitle.textContent='Fiche individuelle · exercice en cours · même vérité que la feuille de séance.';
     metrics.replaceChildren(metric((m.roles??[]).join(', ')||'member','Rôle'),metric(m.status,'État'));
-    const identity=card('Identité dans ce groupe');identity.append(row('Nom',m.displayName),row('Fiche membre',m.id),row('Année / ancienneté',m.historicalJoinedAt?date(m.historicalJoinedAt):m.joinedAt?date(m.joinedAt):'—'));
+    const identity=card('Identité dans ce groupe'),tech=document.createElement('details');tech.append(el('summary','Référence technique (support)'),el('code',m.id,'technical-id'));identity.append(row('Nom',m.displayName),row('N° dossier','…'+String(m.id).slice(-8).toUpperCase()),row('Année / ancienneté',m.historicalJoinedAt?date(m.historicalJoinedAt):m.joinedAt?date(m.joinedAt):'—'),tech);
     body.replaceChildren(identity);if(!managerOrSelf(m))return;
     let statement,operational;try{[statement,operational]=await Promise.all([app.memberStatement(m.id),app.memberOperationalSheet(m.id)]);}catch(e){showError(e);return;}
     metrics.append(metric(fmt(statement.totalNetContributions),'Cotisations nettes'),metric(fmt(statement.debtPrincipal??0),'Prêts / capital dû'),metric(fmt(statement.debtInterest??0),'Intérêts dus'),metric(fmt(statement.totalDebt??0),'Dette totale'),metric((operational?.rubrics??[]).length,'Rubriques de ma fiche'));
