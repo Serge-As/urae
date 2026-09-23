@@ -42,6 +42,12 @@ export class SafetyService{
     const m=(await this.repo.listMemberships(c.tenantId,groupId)).find(x=>x.userId===c.actorId&&x.status==='active');
     if(!m||manage&&!m.roles.some(r=>managers.has(r)))throw new Error('FORBIDDEN_SCOPE');
   }
+  private async canManage(groupId?:Id){
+    if(!groupId)return false;const c=this.ctx(),g=await this.repo.getGroup(c.tenantId,groupId);if(!g)return false;
+    if(g.createdBy===c.actorId)return true;
+    const m=(await this.repo.listMemberships(c.tenantId,groupId)).find(x=>x.userId===c.actorId&&x.status==='active');
+    return Boolean(m?.roles.some(r=>managers.has(r)));
+  }
   private async record(title:string,kind:string,data:Record<string,string|number|boolean|null>,groupId?:Id,status:WorkspaceRecord['status']='ACTIVE',tags:string[]=[]){
     const c=this.ctx(),stamp=now(),r:WorkspaceRecord={id:makeId('safety'),tenantId:c.tenantId,groupId,moduleId:MODULE,title:clean(title,240)||'Dossier sécurité',status,tags:['safety',kind,...tags],data:{kind,...data},createdBy:c.actorId,createdAt:stamp,updatedAt:stamp};
     await this.repo.saveWorkspaceRecord(r);
@@ -102,11 +108,8 @@ export class SafetyService{
   }
 
   async cases(groupId?:Id){
-    await this.access(groupId,false);const c=this.ctx(),rows=await this.repo.listWorkspaceRecords(c.tenantId,MODULE,groupId);
-    return rows.filter(x=>x.tags.includes('case')).filter(x=>{
-      if(groupId)return true;
-      return x.createdBy===c.actorId;
-    }).sort((a,b)=>b.updatedAt.localeCompare(a.updatedAt));
+    await this.access(groupId,false);const c=this.ctx(),rows=await this.repo.listWorkspaceRecords(c.tenantId,MODULE,groupId),manager=await this.canManage(groupId);
+    return rows.filter(x=>x.tags.includes('case')).filter(x=>manager||x.createdBy===c.actorId).sort((a,b)=>b.updatedAt.localeCompare(a.updatedAt));
   }
   async analyses(groupId?:Id){
     await this.access(groupId,false);const c=this.ctx(),rows=await this.repo.listWorkspaceRecords(c.tenantId,MODULE,groupId);
