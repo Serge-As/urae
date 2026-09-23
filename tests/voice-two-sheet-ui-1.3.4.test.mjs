@@ -42,11 +42,13 @@ test('two-sheet workspace uses compact anchored entry instead of redirecting cel
 test('targeted tranche 7 keeps canonical matrix ownership and audited replacement workflow',async()=>{
   const source=await readFile('.build/src/voice-entry-ui.js','utf8');
   const main=await readFile('apps/web/src/main.js','utf8');
-  assert.match(source,/eco:render-two-sheets/);assert.match(source,/\/contributions\/.+\/correct/);
+  assert.match(source,/\/contributions\/.+\/correct/);
   assert.match(source,/Cette réunion est clôturée|This meeting is closed/);
   assert.match(source,/Réunion du|Meeting on/);
   assert.match(source,/ancien — ne plus utiliser/);assert.match(source,/Timbre de prêt/);
-  assert.match(main,/eco:render-two-sheets/);assert.doesNotMatch(main,/\#matrixViewBtn[^\n]+renderMeetingMatrix\(\)/);
+  const mount=source.slice(source.indexOf('function mountVoiceEntryUI'));
+  assert.doesNotMatch(mount,/hardenLegacyMatrix\(\)|watchDetailSheets\(\)|installTwoSheetChooser\(\)|renderCanonicalMeetingMatrix\(/);
+  assert.match(main,/eco:render-canonical-financial-table/);assert.match(main,/renderCanonicalFinancialTable/);
 });
 
 
