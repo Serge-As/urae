@@ -43,7 +43,7 @@ test('legacy voice layer no longer mounts any competing matrix owner',()=>{
 test('ready-to-use kit is a real generated pack rather than a catalog card',()=>{
   for(const token of [
     'Kit prêt à l’emploi · réellement généré pour ce brouillon','Checklist de lancement','Règlement type adaptable',
-    'Calendrier de démarrage',"Message d'invitation",'Modèle de PV','Guide première réunion','Guide trésorerie',
+    'Calendrier de démarrage','Message d’invitation','Modèle de PV','Guide première réunion','Guide trésorerie',
     'Paper Bridge · pack papier/hybride/numérique','OBLIGATOIRE','RECOMMANDÉ','CONFIGURABLE','TOTAL'
   ]) assert.ok(launch.includes(token),token);
   for(const token of ['Feuille mensuelle / feuille de séance membres × rubriques','Fiches individuelles','Émargement','Prêts / remboursements / intérêts','Assistances / secours','Cartes ou fiches membres'])
