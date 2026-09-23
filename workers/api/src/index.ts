@@ -45,6 +45,7 @@ import { GrowthReferralService, InMemoryReferralBudgetStore, D1ReferralBudgetSto
 import { KnowledgeAcademyService } from '../../../packages/knowledge-academy/src/index.js';
 import { ValueNetworkService } from '../../../packages/value-network/src/index.js';
 import { GroupReconstitutionService } from '../../../packages/group-reconstitution/src/index.js';
+import { SafetyCaseService, assessReferralStructure, type SafetyCategory, type SafetyCaseState, type SafetyAction } from '../../../packages/trust/src/index.js';
 import { authenticatedApi } from './authenticated.js';
 export { GroupLiveHub } from './group-live-hub.js';
 
@@ -150,6 +151,7 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
   const notifications=new NotificationService(repo,kernel);
   const growthReferral=new GrowthReferralService(repo,kernel,options.referralBudgets??defaultReferralBudgets);
   const reconstitution=new GroupReconstitutionService(repo,kernel);
+  const safety=new SafetyCaseService(repo,kernel);
   if(options.premiumLive)kernel.features.set('premium_live_ledger',true);
   const isFounderTeamActor=async()=>Boolean(options.founderTeamActors?.has(ctx.actorId))||Boolean(options.founderControl&&await options.founderControl.isPlatformOwner(ctx.actorId));
   const requireGroup=async(groupId:string,manage=false)=>{
@@ -440,6 +442,26 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
       if(action==='matches'&&request.method==='GET')return json({items:await valueNetwork.matchNeed(needId)},200,cors);
       if(action==='procurement'&&request.method==='POST'){const body=await readJson<any>(request);return json(await valueNetwork.prepareProcurement(needId,String(body.offerId??'')),201,cors);}
     }
+
+    if(request.method==='GET'&&url.pathname==='/api/v1/safety/cases'){
+      const groupId=url.searchParams.get('groupId')??undefined;return json({items:await safety.list(groupId)},200,cors);
+    }
+    if(request.method==='POST'&&url.pathname==='/api/v1/safety/reports'){
+      const body=await readJson<Record<string,unknown>>(request);return json(await safety.report({
+        groupId:body.groupId?String(body.groupId):undefined,subjectType:String(body.subjectType??''),subjectRef:String(body.subjectRef??''),category:String(body.category??'OTHER') as SafetyCategory,
+        summary:String(body.summary??''),evidenceRef:body.evidenceRef?String(body.evidenceRef):undefined,source:body.source?String(body.source):undefined
+      }),201,cors);
+    }
+    const safetyTransition=url.pathname.match(/^\/api\/v1\/safety\/cases\/([^/]+)\/transition$/);
+    if(safetyTransition&&request.method==='POST'){const body=await readJson<Record<string,unknown>>(request);return json(await safety.transition(safetyTransition[1]!,String(body.state??'') as SafetyCaseState,String(body.note??''),String(body.evidenceRef??'')),200,cors);}
+    const safetyEvidence=url.pathname.match(/^\/api\/v1\/safety\/cases\/([^/]+)\/evidence$/);
+    if(safetyEvidence&&request.method==='GET')return json({items:await safety.evidence(safetyEvidence[1]!)},200,cors);
+    if(safetyEvidence&&request.method==='POST'){const body=await readJson<Record<string,unknown>>(request);return json(await safety.addEvidence(safetyEvidence[1]!,{summary:String(body.summary??''),ref:String(body.ref??''),source:body.source?String(body.source):undefined}),201,cors);}
+    const safetyDecision=url.pathname.match(/^\/api\/v1\/safety\/cases\/([^/]+)\/decision$/);
+    if(safetyDecision&&request.method==='POST'){const body=await readJson<Record<string,unknown>>(request);return json(await safety.decide(safetyDecision[1]!,{action:String(body.action??'NO_ACTION') as SafetyAction,reason:String(body.reason??''),evidenceRef:body.evidenceRef?String(body.evidenceRef):undefined,findingStatus:body.findingStatus as any}),200,cors);}
+    const safetyAppeal=url.pathname.match(/^\/api\/v1\/safety\/cases\/([^/]+)\/appeal$/);
+    if(safetyAppeal&&request.method==='POST'){const body=await readJson<Record<string,unknown>>(request);return json(await safety.appeal(safetyAppeal[1]!,{reason:String(body.reason??''),evidenceRef:body.evidenceRef?String(body.evidenceRef):undefined}),201,cors);}
+    if(request.method==='POST'&&url.pathname==='/api/v1/safety/referral-structure-assessment'){const body=await readJson<Record<string,unknown>>(request);return json(assessReferralStructure({levels:finite(body.levels,1),fundingSource:String(body.fundingSource??''),rewardForRecruitingRecruiters:Boolean(body.rewardForRecruitingRecruiters),promisedReturnLinkedToRecruitment:Boolean(body.promisedReturnLinkedToRecruitment),realProductOrServiceEvidence:body.realProductOrServiceEvidence===undefined?undefined:Boolean(body.realProductOrServiceEvidence)}),200,cors);}
 
     if(request.method==='GET'&&url.pathname==='/api/v1/knowledge'){return json({items:await knowledgeAcademy.searchKnowledge(url.searchParams.get('q')??'',url.searchParams.get('groupId')??undefined)},200,cors);}
     if(request.method==='POST'&&url.pathname==='/api/v1/knowledge'){const body=await readJson<any>(request);return json(await knowledgeAcademy.createKnowledge(body),201,cors);}
