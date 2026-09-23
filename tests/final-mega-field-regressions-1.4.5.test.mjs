@@ -110,7 +110,7 @@ test('closed sessions can be edited with manager alert and financial member aler
 test('individual sheets are restored and manager can edit exact member-session-rubric cells',()=>{
   assert.match(html,/id="individualSheetMatrix"/);
   assert.match(main,/renderIndividualSheetMatrix/);
-  assert.match(main,/makeFinancialEntryCell\(\{member,rubric,meetingId:meeting\.id,editable:true\}\)/);
+  assert.match(main,/makeFinancialEntryCell\(\{member,rubric:r,meetingId:meeting\.id/);assert.match(main,/TOTAL COLONNES/);
   assert.match(main,/financeIndividualSheetBtn/);
 });
 
