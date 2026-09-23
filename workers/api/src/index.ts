@@ -44,6 +44,7 @@ import { BusinessStudioService } from '../../../packages/business-studio/src/ind
 import { GrowthReferralService, InMemoryReferralBudgetStore, D1ReferralBudgetStore, type ReferralBudgetStore } from '../../../packages/growth-referral/src/index.js';
 import { KnowledgeAcademyService } from '../../../packages/knowledge-academy/src/index.js';
 import { ValueNetworkService } from '../../../packages/value-network/src/index.js';
+import { GroupReconstitutionService } from '../../../packages/group-reconstitution/src/index.js';
 import { authenticatedApi } from './authenticated.js';
 export { GroupLiveHub } from './group-live-hub.js';
 
@@ -142,6 +143,7 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
   const governanceVotes=new GovernanceVoteService(repo,kernel,options.governanceSecret??'eco-system-nonproduction-governance-secret');
   const notifications=new NotificationService(repo,kernel);
   const growthReferral=new GrowthReferralService(repo,kernel,options.referralBudgets??defaultReferralBudgets);
+  const reconstitution=new GroupReconstitutionService(repo,kernel);
   if(options.premiumLive)kernel.features.set('premium_live_ledger',true);
   const isFounderTeamActor=async()=>Boolean(options.founderTeamActors?.has(ctx.actorId))||Boolean(options.founderControl&&await options.founderControl.isPlatformOwner(ctx.actorId));
   const requireGroup=async(groupId:string,manage=false)=>{
@@ -302,6 +304,18 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
     try{await requireGroup(record.groupId,true);return true;}catch{return false;}
   };
   try {
+    const petitionStatus=url.pathname.match(/^\/api\/v1\/trash\/groups\/([^/]+)\/petition$/);
+    if(petitionStatus&&request.method==='GET')return json(await reconstitution.status(decodeURIComponent(petitionStatus[1]!)),200,cors);
+    if(petitionStatus&&request.method==='POST')return json(await reconstitution.sign(decodeURIComponent(petitionStatus[1]!)),200,cors);
+    const petitionWithdraw=url.pathname.match(/^\/api\/v1\/trash\/groups\/([^/]+)\/petition\/withdraw$/);
+    if(petitionWithdraw&&request.method==='POST')return json(await reconstitution.withdraw(decodeURIComponent(petitionWithdraw[1]!)),200,cors);
+    const successorCreate=url.pathname.match(/^\/api\/v1\/trash\/groups\/([^/]+)\/successor$/);
+    if(successorCreate&&request.method==='POST'){const body=await readJson<any>(request);return json(await reconstitution.createSuccessor(decodeURIComponent(successorCreate[1]!),body),201,cors);}
+    const successorDecision=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/succession\/decisions$/);
+    if(successorDecision&&request.method==='POST'){const body=await readJson<any>(request);return json(await reconstitution.recordDecision(successorDecision[1]!,body),201,cors);}
+    const successorDispute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/succession\/disputes$/);
+    if(successorDispute&&request.method==='POST'){const body=await readJson<any>(request);return json(await reconstitution.openDispute(successorDispute[1]!,body),201,cors);}
+
     if(url.pathname==='/api/v1/trash/groups'&&request.method==='GET')return json(await listGroupTrash(),200,cors);
     const globalGroupTrashRestore=url.pathname.match(/^\/api\/v1\/trash\/groups\/([^/]+)\/restore$/);
     if(globalGroupTrashRestore&&request.method==='POST'){const id=decodeURIComponent(globalGroupTrashRestore[1]!),record=await repo.getWorkspaceRecord(ctx.tenantId,id);if(!record||!await groupTrashVisible(record))throw Error('TRASH_ITEM_NOT_FOUND');return json(await restoreTrash(String(record.data.entityId??record.groupId??''),id),200,cors);}
