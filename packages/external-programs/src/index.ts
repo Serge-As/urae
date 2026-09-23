@@ -6,11 +6,21 @@ import type {GroupEconomicProfile} from '../../economic-intelligence/src/index.j
 
 export type ExternalProgramKind='PARTNER'|'NGO';
 export type ExternalProgramState='DRAFT'|'ACTIVE'|'PAUSED'|'COMPLETED';
+export type ExternalProgramTrack='GENERAL'|'WOMEN_LEADERSHIP'|'YOUTH'|'DIGITAL_LITERACY'|'ENTREPRENEURSHIP';
+export const STRUCTURAL_INCLUSION_CHARTER={
+  accessToOwnData:true,
+  sharedPhoneSafe:true,
+  equalRoleEligibility:true,
+  equalMarketplaceAccess:true,
+  voluntaryTargetedPrograms:true,
+  protectedAttributesExcludedFromFinancialAndTrustScoring:true,
+  complaintAndAppealAccess:true
+} as const;
 export type AggregateDataAccess='NONE'|'GROUP_AGGREGATE_ECONOMIC';
 
 export interface ExternalProgram {
   id:string;groupId:string;kind:ExternalProgramKind;partyName:string;programName:string;
-  purpose:string;localities:string[];tags:string[];state:ExternalProgramState;
+  purpose:string;localities:string[];tags:string[];track:ExternalProgramTrack;state:ExternalProgramState;
   dataAccess:AggregateDataAccess;createdAt:string;updatedAt:string;createdBy:string;
 }
 export interface AggregateSharePack {
@@ -30,6 +40,7 @@ const decodeProgram=(r:WorkspaceRecord):ExternalProgram=>({
   id:r.id,groupId:String(r.groupId??''),kind:String(r.data.kind) as ExternalProgramKind,
   partyName:String(r.data.partyName??''),programName:r.title,purpose:String(r.data.purpose??''),
   localities:JSON.parse(String(r.data.localitiesJson??'[]')),tags:JSON.parse(String(r.data.tagsJson??'[]')),
+  track:String(r.data.track??'GENERAL') as ExternalProgramTrack,
   state:String(r.data.state??'DRAFT') as ExternalProgramState,
   dataAccess:String(r.data.dataAccess??'NONE') as AggregateDataAccess,
   createdAt:r.createdAt,updatedAt:r.updatedAt,createdBy:r.createdBy
@@ -53,14 +64,15 @@ export class ExternalProgramsService{
     await this.requireManager(groupId);const ctx=this.kernel.context.get();
     return (await this.repo.listWorkspaceRecords(ctx.tenantId,PROGRAM_MODULE,groupId)).map(decodeProgram).filter(x=>!kind||x.kind===kind).sort((a,b)=>b.updatedAt.localeCompare(a.updatedAt));
   }
-  async create(groupId:string,input:{kind:ExternalProgramKind;partyName:string;programName:string;purpose:string;localities?:string[];tags?:string[];dataAccess?:AggregateDataAccess}):Promise<ExternalProgram>{
+  async create(groupId:string,input:{kind:ExternalProgramKind;partyName:string;programName:string;purpose:string;localities?:string[];tags?:string[];track?:ExternalProgramTrack;dataAccess?:AggregateDataAccess}):Promise<ExternalProgram>{
     await this.requireManager(groupId);const ctx=this.kernel.context.get(),stamp=now();
     if(!['PARTNER','NGO'].includes(input.kind))throw new Error('INVALID_EXTERNAL_PROGRAM_KIND');
     const partyName=clean(input.partyName,160),programName=clean(input.programName,180),purpose=clean(input.purpose,1000);
     if(!partyName||!programName||!purpose)throw new Error('EXTERNAL_PROGRAM_FIELDS_REQUIRED');
     const dataAccess=input.dataAccess??'NONE';if(!['NONE','GROUP_AGGREGATE_ECONOMIC'].includes(dataAccess))throw new Error('INVALID_EXTERNAL_DATA_ACCESS');
-    const program:ExternalProgram={id:makeId(input.kind==='NGO'?'ngo_program':'partner_program'),groupId,kind:input.kind,partyName,programName,purpose,localities:strings(input.localities),tags:strings(input.tags),state:'DRAFT',dataAccess,createdAt:stamp,updatedAt:stamp,createdBy:ctx.actorId};
-    const record:WorkspaceRecord={id:program.id,tenantId:ctx.tenantId,groupId,moduleId:PROGRAM_MODULE,title:programName,summary:purpose.slice(0,500),status:'DRAFT',tags:['external-program',input.kind.toLowerCase(),...program.tags.map(x=>'topic:'+x)],data:{kind:program.kind,partyName:program.partyName,purpose:program.purpose,localitiesJson:JSON.stringify(program.localities),tagsJson:JSON.stringify(program.tags),state:program.state,dataAccess:program.dataAccess},createdBy:ctx.actorId,createdAt:stamp,updatedAt:stamp};
+    const track=input.track??'GENERAL';if(!['GENERAL','WOMEN_LEADERSHIP','YOUTH','DIGITAL_LITERACY','ENTREPRENEURSHIP'].includes(track))throw new Error('INVALID_EXTERNAL_PROGRAM_TRACK');
+    const program:ExternalProgram={id:makeId(input.kind==='NGO'?'ngo_program':'partner_program'),groupId,kind:input.kind,partyName,programName,purpose,localities:strings(input.localities),tags:strings(input.tags),track,state:'DRAFT',dataAccess,createdAt:stamp,updatedAt:stamp,createdBy:ctx.actorId};
+    const record:WorkspaceRecord={id:program.id,tenantId:ctx.tenantId,groupId,moduleId:PROGRAM_MODULE,title:programName,summary:purpose.slice(0,500),status:'DRAFT',tags:['external-program',input.kind.toLowerCase(),...program.tags.map(x=>'topic:'+x)],data:{kind:program.kind,partyName:program.partyName,purpose:program.purpose,localitiesJson:JSON.stringify(program.localities),tagsJson:JSON.stringify(program.tags),track:program.track,state:program.state,dataAccess:program.dataAccess,inclusionCharterJson:JSON.stringify(STRUCTURAL_INCLUSION_CHARTER)},createdBy:ctx.actorId,createdAt:stamp,updatedAt:stamp};
     await this.repo.saveWorkspaceRecord(record);
     await this.repo.saveAudit(this.kernel.audit.append({tenantId:ctx.tenantId,actorId:ctx.actorId,action:'EXTERNAL_PROGRAM_CREATED',targetType:'external_program',targetId:program.id,requestId:ctx.requestId,metadata:{groupId,kind:program.kind,dataAccess:program.dataAccess}}));
     return program;
