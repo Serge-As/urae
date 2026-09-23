@@ -27,13 +27,43 @@ export function mountCoreEconomicLearningUI({app,notify=()=>{},showError=console
     {label:'Quantité',name:'quantity',type:'number',min:1,required:true},
     {label:'Unité',name:'unit',required:true,placeholder:'carton'},
     {label:'Localité',name:'locality',placeholder:'Yaoundé'},
-    {label:'Date limite',name:'neededBy',type:'date'}
+    {label:'Date limite',name:'neededBy',type:'date'},
+    {label:'Prix unitaire maximum (facultatif)',name:'maxUnitPrice',type:'number',min:0,placeholder:'0 = non précisé'},
+    {label:'Budget total rendu maximum (facultatif)',name:'maxTotalBudget',type:'number',min:0,placeholder:'produit + livraison'},
+    {label:'Qualité / spécification attendue',name:'qualityRequirement',placeholder:'Ex. A / premium / 72%'},
+    {label:'Localité obligatoire',name:'localOnly',type:'select',options:[['false','Non'],['true','Oui']]}
   ],'Créer le besoin en brouillon');
-  const needs=el('div',undefined,'stack');valuePanel.append(valueIntro,needForm,needs);
+  const offerForm=makeForm([
+    {label:'Offre',name:'title',required:true,placeholder:'Ex. Savon carton 24'},
+    {label:'Type',name:'kind',type:'select',options:[['SUPPLIER','Fournisseur'],['NOW','Eco NOW'],['HARVEST','Harvest'],['FRESH_DROP','Fresh Drop'],['PICKUP','Pickup'],['SERVICE','Service']]},
+    {label:'Catégorie',name:'category',required:true,placeholder:'savons'},
+    {label:'Quantité disponible',name:'availableQuantity',type:'number',min:1,required:true},
+    {label:'Unité',name:'unit',required:true,placeholder:'carton'},
+    {label:'Prix unitaire',name:'unitPrice',type:'number',min:0,placeholder:'0 = inconnu'},
+    {label:'Coût livraison total',name:'deliveryCost',type:'number',min:0,placeholder:'0 = inconnu / inclus'},
+    {label:'Localité',name:'locality',placeholder:'Yaoundé'},
+    {label:'Disponible à partir du',name:'availableFrom',type:'date'},
+    {label:'Délai livraison (jours)',name:'leadTimeDays',type:'number',min:0},
+    {label:'Qualité / spécification',name:'qualityGrade',placeholder:'Ex. A / premium'},
+    {label:'Fiabilité documentée (0–100)',name:'supplierReliability',type:'number',min:0},
+    {label:'Offre valable jusqu’au',name:'expiresAt',type:'date',required:true}
+  ],'Publier une offre disponible');
+  const offers=el('div',undefined,'stack');
+  const offerDetails=el('details');offerDetails.append(el('summary','Je propose une offre / capacité disponible'));offerDetails.append(offerForm,offers);
+  const needs=el('div',undefined,'stack');valuePanel.append(valueIntro,needForm,offerDetails,needs);
   marketHub.closest('section')?.insertAdjacentElement('afterend',valuePanel);
 
+  offerForm.addEventListener('submit',e=>void(async()=>{e.preventDefault();try{
+    const expiresRaw=val(offerForm,'expiresAt'),expiresAt=expiresRaw?new Date(expiresRaw+'T23:59:59').toISOString():'';
+    await app.createValueOffer({title:val(offerForm,'title'),kind:val(offerForm,'kind')||'SUPPLIER',category:val(offerForm,'category'),availableQuantity:num(offerForm,'availableQuantity'),unit:val(offerForm,'unit'),unitPrice:num(offerForm,'unitPrice')||0,deliveryCost:num(offerForm,'deliveryCost')||0,locality:val(offerForm,'locality'),availableFrom:val(offerForm,'availableFrom')||undefined,leadTimeDays:num(offerForm,'leadTimeDays')||0,qualityGrade:val(offerForm,'qualityGrade'),supplierReliability:num(offerForm,'supplierReliability')||0,currency:'XAF',expiresAt});
+    offerForm.reset();notify('Offre publiée. Les champs inconnus restent signalés comme inconnus dans le matching.');await renderOffers();
+  }catch(err){showError(err);}})());
+
+  const renderOffers=async()=>{offers.replaceChildren();try{const rows=await app.valueOffers();for(const r of rows.slice().reverse().slice(0,12)){const card=el('article',undefined,'item');card.append(el('strong',r.title),el('span',String(r.data.kind??'OFFER'),'pill'),el('p',String(r.data.availableQuantity)+' '+String(r.data.unit)+' · '+(Number(r.data.unitPrice)>0?Number(r.data.unitPrice).toLocaleString('fr-FR')+' '+String(r.data.currency||'XAF'):'prix inconnu')+(r.data.locality?' · '+r.data.locality:''),'hint'));offers.append(card);}if(!rows.length)offers.append(el('p','Aucune offre disponible.','hint'));}catch(err){showError(err);}};
+  offerDetails.addEventListener('toggle',()=>{if(offerDetails.open)void renderOffers();});
+
   needForm.addEventListener('submit',e=>void(async()=>{e.preventDefault();try{
-    await app.createValueNeed({title:val(needForm,'title'),category:val(needForm,'category'),quantity:num(needForm,'quantity'),unit:val(needForm,'unit'),locality:val(needForm,'locality'),neededBy:val(needForm,'neededBy')||undefined,sourceType:'MANUAL'});
+    await app.createValueNeed({title:val(needForm,'title'),category:val(needForm,'category'),quantity:num(needForm,'quantity'),unit:val(needForm,'unit'),locality:val(needForm,'locality'),neededBy:val(needForm,'neededBy')||undefined,maxUnitPrice:num(needForm,'maxUnitPrice')||undefined,maxTotalBudget:num(needForm,'maxTotalBudget')||undefined,qualityRequirement:val(needForm,'qualityRequirement')||undefined,localOnly:val(needForm,'localOnly')==='true',currency:'XAF',sourceType:'MANUAL'});
     needForm.reset();notify('Besoin créé en brouillon.');await renderNeeds();
   }catch(err){showError(err);}})());
 
@@ -51,7 +81,7 @@ export function mountCoreEconomicLearningUI({app,notify=()=>{},showError=console
           const b=el('button','Chercher des offres compatibles','link-btn');b.type='button';b.onclick=()=>void(async()=>{try{
             const matches=await app.valueNeedMatches(r.id),box=el('div',undefined,'stack');
             if(!matches.length)box.append(el('p','Aucune offre éligible : quantité, zone, catégorie et validité sont vérifiées avant classement.','hint'));
-            for(const m of matches.slice(0,10)){const row=el('article',undefined,'item');row.append(el('strong',m.offer.title),el('span','score '+Math.round(m.score),'pill'),el('p',String(m.offer.data.availableQuantity)+' '+String(m.offer.data.unit)+' · '+Number(m.offer.data.unitPrice||0).toLocaleString('fr-FR')+' '+String(m.offer.data.currency||'XAF'),'hint'));
+            for(const m of matches.slice(0,10)){const row=el('article',undefined,'item'),x=m.explanation??{},landed=x.landedTotal===null||x.landedTotal===undefined?'coût rendu inconnu':Number(x.landedTotal).toLocaleString('fr-FR')+' '+String(m.offer.data.currency||'XAF');row.append(el('strong',m.offer.title),el('span','score '+Math.round(m.score),'pill'),el('p',String(m.offer.data.availableQuantity)+' '+String(m.offer.data.unit)+' · coût rendu '+landed,'hint'),el('small','Atouts : '+(m.advantages??[]).join(', ')+' · Inconnus : '+((m.unknowns??[]).join(', ')||'aucun')));
               if(isManager()){const p=el('button','Préparer l’approvisionnement','secondary');p.type='button';p.onclick=()=>void app.prepareValueProcurement(r.id,m.offer.id).then(()=>{notify('Brouillon d’approvisionnement créé. Aucune commande ni dette n’a été créée.');return renderNeeds();}).catch(showError);row.append(p);}box.append(row);}
             card.append(box);
           }catch(err){showError(err);}})();actions.append(b);
@@ -127,7 +157,7 @@ export function mountCoreEconomicLearningUI({app,notify=()=>{},showError=console
     for(const cert of d.myCertificates??[]){const c=el('article',undefined,'item');c.append(el('strong',cert.title),el('span','Attestation','pill'),el('p','Aucun pouvoir financier ou administratif automatique.','hint'));academyList.append(c);}
   }catch(err){showError(err);}};
 
-  const refresh=async()=>{await Promise.allSettled([renderNeeds(),renderReferral(),renderAcademy()]);};
+  const refresh=async()=>{await Promise.allSettled([renderNeeds(),renderOffers(),renderReferral(),renderAcademy()]);};
   valuePanel.addEventListener('toggle',()=>{if(valuePanel.open)void renderNeeds();});
   referralPanel.addEventListener('toggle',()=>{if(referralPanel.open)void renderReferral();});
   academyPanel.addEventListener('toggle',()=>{if(academyPanel.open)void renderAcademy();});
