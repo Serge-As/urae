@@ -215,7 +215,7 @@ const adManagerUI = mountAdManagerUI({ app, notify: toast, showError: fail, isMa
 const tontineManagerUI = mountTontineManagerUI({ app, getRubrics: () => rubrics, getMembers: () => members, notify: toast, showError: fail, fmt, isManager });
 const savingsYieldUI = mountSavingsYieldUI({ app, getMembers: () => members, notify: toast, showError: fail, fmt, isManager });
 const externalProgramsUI = mountExternalProgramsUI({ app, notify: toast, showError: fail, isManager, fmt });
-const businessStudioUI = mountBusinessStudioUI({app,notify:toast,showError:fail});
+const businessStudioUI = mountBusinessStudioUI({app,navigate:go,notify:toast,showError:fail});
 const coreEconomicLearningUI = mountCoreEconomicLearningUI({app,notify:toast,showError:fail,isManager});
 const founderControlUI = mountFounderControlUI({ app, notify: toast, showError: fail });
 const assistanceRulebookUI = mountAssistanceRulebookUI({ app, notify: toast, showError: fail, isManager });
