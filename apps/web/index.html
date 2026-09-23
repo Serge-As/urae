@@ -89,6 +89,23 @@
 
     <main class="content">
       <section id="view-dashboard" class="view active">
+        <section id="uiModePanel" class="ui-mode-panel" aria-labelledby="uiModeTitle">
+          <div class="ui-mode-copy"><span class="eyebrow">Confort d’utilisation</span><h2 id="uiModeTitle">Choisissez votre mode</h2><p id="uiModeHelp">Présentation moderne et visuelle, densité normale et accès rapides.</p></div>
+          <div class="ui-mode-controls">
+            <label for="uiModeSelect">Mode d’interface</label>
+            <select id="uiModeSelect" aria-describedby="uiModeHelp">
+              <option value="visual">✨ Visuel</option>
+              <option value="senior">👓 Senior</option>
+              <option value="assisted">🎙️ Assisté / Dictée</option>
+            </select>
+            <div class="ui-mode-buttons" role="group" aria-label="Choix rapide du mode">
+              <button type="button" data-ui-mode-button="visual" aria-pressed="true">✨ Visuel</button>
+              <button type="button" data-ui-mode-button="senior" aria-pressed="false">👓 Senior</button>
+              <button type="button" data-ui-mode-button="assisted" aria-pressed="false">🎙️ Assisté</button>
+            </div>
+            <button id="openAssistedModeBtn" type="button" class="secondary">Ouvrir la dictée financière</button>
+          </div>
+        </section>
         <div class="cahier-banner"><div><strong>Votre cockpit Eco-System</strong><p>Groupes, communautés, séances, situation personnelle, activités Live et actions utiles dans un seul espace.</p></div><span class="cahier-code">1.5.2 · UX UNIFIÉE · TABLEAUX CANONIQUES · KIT · BUSINESS · BLUEPRINT 5.0.0</span></div>
         <div class="hero">
           <div>
@@ -1229,7 +1246,7 @@
     </main>
   </div>
 
-  <footer class="footer">Eco-System 1.4.5.1 · Cahier Maître 2.3.4 + additifs 3.2.0 · corrections terrain qualifiées</footer>
-  <script type="module" src="/src/main.js?v=151"></script>
+  <footer class="footer">Eco-System 1.5.2 · Cahier Maître 2.3.4 + Blueprint 5.0.0 · UX unifiée</footer>
+  <script type="module" src="/src/ui-modes.js?v=152"></script>\n  <script type="module" src="/src/main.js?v=152"></script>
 </body>
 </html>
