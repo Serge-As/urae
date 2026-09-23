@@ -1509,7 +1509,7 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
     if(stockListing&&request.method==='POST'){const body=await readJson<Record<string,unknown>>(request);return json(await market.setStockListing(stockListing[1]!,stockListing[2]!,{published:Boolean(body.published),unitPrice:body.unitPrice===undefined?undefined:finite(body.unitPrice),description:body.description?String(body.description):undefined}),200,cors);}
 
     const stockRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/market\/stock$/);
-    if(stockRoute&&request.method==='POST'){const body=await readJson<Record<string,unknown>>(request);return json(await market.createStock(stockRoute[1]!,{sku:String(body.sku??''),name:String(body.name??''),quantity:finite(body.quantity),unit:body.unit?String(body.unit):undefined,unitPrice:body.unitPrice===undefined?undefined:finite(body.unitPrice),description:body.description?String(body.description):undefined,published:Boolean(body.published)}),201,cors);}
+    if(stockRoute&&request.method==='POST'){const body=await readJson<Record<string,unknown>>(request);return json(await market.createStock(stockRoute[1]!,{sku:String(body.sku??''),name:String(body.name??''),quantity:finite(body.quantity),unit:body.unit?String(body.unit):undefined,unitPrice:body.unitPrice===undefined?undefined:finite(body.unitPrice),description:body.description?String(body.description):undefined,published:Boolean(body.published),ownership:body.ownership?String(body.ownership) as any:undefined,ownerRef:body.ownerRef?String(body.ownerRef):undefined}),201,cors);}
     const stockAdjust=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/market\/stock\/([^/]+)\/adjust$/);
     if(stockAdjust&&request.method==='POST'){const body=await readJson<Record<string,unknown>>(request);return json(await market.adjustStock(stockAdjust[1]!,stockAdjust[2]!,finite(body.delta),String(body.reason??'')),200,cors);}
     const orderRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/market\/orders$/);
@@ -1520,6 +1520,18 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
     if(returnRoute&&request.method==='POST'){const body=await readJson<Record<string,unknown>>(request);return json(await market.returnItems(returnRoute[1]!,returnRoute[2]!,finite(body.quantity),String(body.reason??'')),200,cors);}
     const disputeRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/market\/orders\/([^/]+)\/dispute$/);
     if(disputeRoute&&request.method==='POST'){const body=await readJson<Record<string,unknown>>(request);return json(await market.dispute(disputeRoute[1]!,disputeRoute[2]!,String(body.summary??'')),200,cors);}
+    const supplierRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/market\/suppliers$/);
+    if(supplierRoute&&request.method==='GET')return json({items:await market.suppliers(supplierRoute[1]!)},200,cors);
+    if(supplierRoute&&request.method==='POST'){const body=await readJson<any>(request);return json(await market.registerSupplier(supplierRoute[1]!,body),201,cors);}
+    const procurementRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/market\/procurements$/);
+    if(procurementRoute&&request.method==='GET')return json(await market.procurement(procurementRoute[1]!),200,cors);
+    if(procurementRoute&&request.method==='POST'){const body=await readJson<any>(request);return json(await market.createProcurement(procurementRoute[1]!,body),201,cors);}
+    const procurementReceive=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/market\/procurements\/([^/]+)\/receive$/);
+    if(procurementReceive&&request.method==='POST'){const body=await readJson<any>(request);return json(await market.receiveProcurement(procurementReceive[1]!,procurementReceive[2]!,body),200,cors);}
+    const procurementReturn=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/market\/procurements\/([^/]+)\/return$/);
+    if(procurementReturn&&request.method==='POST'){const body=await readJson<any>(request);return json(await market.returnProcurement(procurementReturn[1]!,procurementReturn[2]!,body),200,cors);}
+    const supplierCreditPayment=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/market\/supplier-credits\/([^/]+)\/payments$/);
+    if(supplierCreditPayment&&request.method==='POST'){const body=await readJson<any>(request);return json(await market.paySupplierCredit(supplierCreditPayment[1]!,supplierCreditPayment[2]!,body),200,cors);}
     const groupBuyRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/market\/group-buys$/);
     if(groupBuyRoute&&request.method==='POST'){const body=await readJson<Record<string,unknown>>(request);return json(await market.createGroupBuy(groupBuyRoute[1]!,{title:String(body.title??''),stockItemId:body.stockItemId?String(body.stockItemId):undefined,thresholdQuantity:finite(body.thresholdQuantity),deadline:String(body.deadline??'')}),201,cors);}
     const groupBuyCommit=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/market\/group-buys\/([^/]+)\/commit$/);
