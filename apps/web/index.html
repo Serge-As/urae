@@ -10,10 +10,10 @@
   <meta name="format-detection" content="telephone=no">
   <meta id="metaDescription" name="description" content="Eco-System — plateforme de gestion de tontines, associations et communautés">
   <link rel="manifest" href="/manifest.webmanifest">
-  <link rel="stylesheet" href="/styles.css?v=151">
-  <title>Eco-System — 1.5.1 · Tableaux canoniques · Kit · Business</title>
+  <link rel="stylesheet" href="/styles.css?v=152">
+  <title>Eco-System — 1.5.2 · UX unifiée · Tableaux canoniques · Blueprint</title>
 </head>
-<body class="signed-out">
+<body class="auth-restoring ui-mode-visual">\n  <section id="sessionRestoreScreen" class="session-restore-screen" aria-live="polite"><div class="session-restore-card"><span class="auth-logo">E</span><strong>Eco-System</strong><p>Restauration sécurisée de votre session…</p></div></section>
   <section id="authScreen" class="auth-screen" aria-label="Connexion à Eco-System">
   <div class="auth-brand"><span class="auth-logo">E</span><strong>Eco-System</strong><p>Vos groupes, vos comptes, vos décisions.</p></div>
   <div class="auth-card">
@@ -23,7 +23,7 @@
       <label id="authNameLabel" hidden>Votre nom d’affichage<input id="authName" autocomplete="name" maxlength="80"></label>
       <label>Identifiant<input id="authUsername" autocomplete="username" pattern="[a-zA-Z0-9][a-zA-Z0-9._-]{2,49}" minlength="3" maxlength="50" required><small>Lettres, chiffres, point, tiret ou underscore.</small></label>
       <label>Mot de passe<input id="authPassword" type="password" autocomplete="current-password" minlength="12" maxlength="128" required><small>12 caractères minimum.</small><span class="inline-check"><input id="authShowPassword" type="checkbox"> Afficher le mot de passe</span></label>
-      <p id="authError" role="alert"></p><button id="authSubmit" type="submit" class="primary">Me connecter</button>
+      <label class="inline-check auth-private-device"><input id="authRememberDevice" type="checkbox"> Cet appareil est privé · garder ma session plus longtemps</label><p id="authError" role="alert"></p><button id="authSubmit" type="submit" class="primary">Me connecter</button>
     </form>
     <p id="offlineFirstUseNote" class="truth-notice"><strong>Première utilisation hors ligne :</strong> « Créer un compte » fonctionne désormais sans session Internet préalable sur un appareil où Eco-System est déjà installé. Le compte reste local et sera rapproché du serveur seulement lorsque vous déciderez de le finaliser avec Internet.</p>
     <p class="auth-footnote">Le mot de passe du compte local n’est pas stocké en clair. Vos groupes et saisies restent sur l’appareil et les intentions de synchronisation conservent leur auteur d’origine.</p>
@@ -32,7 +32,7 @@
 <header class="topbar">
     <div class="brand">
       <div class="logo">E</div>
-      <div><strong>Eco-System</strong><small>Plateforme Tontines · Associations · Communautés</small><span class="version-badge">ECO-SYSTEM · 1.5.1</span></div>
+      <div><strong>Eco-System</strong><small>Plateforme Tontines · Associations · Communautés</small><span class="version-badge">ECO-SYSTEM · 1.5.2</span></div>
     </div>
     <div class="top-context">
       <select id="activeGroupSelect" aria-label="Groupe actif"><option value="">Aucun groupe actif</option></select>
@@ -89,7 +89,7 @@
 
     <main class="content">
       <section id="view-dashboard" class="view active">
-        <div class="cahier-banner"><div><strong>Votre cockpit Eco-System</strong><p>Groupes, communautés, séances, situation personnelle, activités Live et actions utiles dans un seul espace.</p></div><span class="cahier-code">1.5.1 · TABLEAUX CANONIQUES · KIT · BUSINESS · OFFLINE · BLUEPRINT 5.0.0</span></div>
+        <div class="cahier-banner"><div><strong>Votre cockpit Eco-System</strong><p>Groupes, communautés, séances, situation personnelle, activités Live et actions utiles dans un seul espace.</p></div><span class="cahier-code">1.5.2 · UX UNIFIÉE · TABLEAUX CANONIQUES · KIT · BUSINESS · BLUEPRINT 5.0.0</span></div>
         <div class="hero">
           <div>
             <span class="eyebrow">Eco-System · Cahier Maître 2.3.4 + additifs 3.2.0</span>
