@@ -633,6 +633,15 @@ export class ConnectedApplication {
   async previewSessionRecap(meetingId:string,input:any):Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/meetings/'+encodeURIComponent(meetingId)+'/recap-preview',{method:'POST',body:JSON.stringify(input)});}
   async previewClosingCarryover(input:any):Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/closing/carryover-preview',{method:'POST',body:JSON.stringify(input)});}
 
+  async valueNeeds():Promise<any[]>{if(!this.activeGroupId)return[];const r=await this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/value/needs') as any;return r.items??[];}
+  async createValueNeed(input:any):Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/value/needs',{method:'POST',body:JSON.stringify(input)});}
+  async validateValueNeed(id:string):Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/value/needs/'+encodeURIComponent(id)+'/validate',{method:'POST',body:'{}'});}
+  async publishValueNeed(id:string):Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/value/needs/'+encodeURIComponent(id)+'/publish',{method:'POST',body:'{}'});}
+  async valueNeedMatches(id:string):Promise<any[]>{if(!this.activeGroupId)return[];const r=await this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/value/needs/'+encodeURIComponent(id)+'/matches') as any;return r.items??[];}
+  async prepareValueProcurement(id:string,offerId:string):Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/value/needs/'+encodeURIComponent(id)+'/procurement',{method:'POST',body:JSON.stringify({offerId})});}
+  async valueOffers():Promise<any[]>{const r=await this.request('/api/v1/value/offers') as any;return r.items??[];}
+  async createValueOffer(input:any):Promise<any>{return this.request('/api/v1/value/offers',{method:'POST',body:JSON.stringify(input)});}
+
   async searchKnowledge(q='',groupId?:string):Promise<any[]>{const p=new URLSearchParams();if(q)p.set('q',q);if(groupId)p.set('groupId',groupId);const r=await this.request('/api/v1/knowledge?'+p) as any;return r.items??[];}
   async createKnowledge(input:any):Promise<any>{return this.request('/api/v1/knowledge',{method:'POST',body:JSON.stringify(input)});}
   async reviseKnowledge(id:string,input:any):Promise<any>{return this.request('/api/v1/knowledge/'+encodeURIComponent(id)+'/revisions',{method:'POST',body:JSON.stringify(input)});}
