@@ -45,6 +45,7 @@ import { GrowthReferralService, InMemoryReferralBudgetStore, D1ReferralBudgetSto
 import { KnowledgeAcademyService } from '../../../packages/knowledge-academy/src/index.js';
 import { ValueNetworkService } from '../../../packages/value-network/src/index.js';
 import { GroupReconstitutionService } from '../../../packages/group-reconstitution/src/index.js';
+import { SafetyCenterService } from '../../../packages/safety-center/src/index.js';
 import { authenticatedApi } from './authenticated.js';
 export { GroupLiveHub } from './group-live-hub.js';
 
@@ -127,10 +128,11 @@ const createRequestScope = (request:Request,repo:PlatformRepository,artifacts?:A
   const businessStudio=new BusinessStudioService(repo,kernel);
   const knowledgeAcademy=new KnowledgeAcademyService(repo,kernel);
   const valueNetwork=new ValueNetworkService(repo,kernel);
+  const safetyCenter=new SafetyCenterService(repo,kernel);
   const tenantId=request.headers.get('x-tenant-id')??'tenant_demo'; const actorId=request.headers.get('x-actor-id')??'user_founder';
   const groupRoles=(request.headers.get('x-group-roles')??'founder,manager').split(',').map(x=>x.trim()).filter(Boolean);
   kernel.context.set({actorId,tenantId,activeGroupId:request.headers.get('x-active-group-id')??undefined,groupRoles,mandateIds:[],deviceId:request.headers.get('x-device-id')??'device_web_demo',sessionId:request.headers.get('x-session-id')??'session_demo',locale:request.headers.get('accept-language')?.toLowerCase().startsWith('en')?'en':'fr',timezone:request.headers.get('x-timezone')??'Africa/Douala',connectivity:'online',requestId:request.headers.get('x-request-id')??makeId('req')});
-  return {kernel,foundation,ledger,meetings,discovery,membershipGateway,rubrics,completion,explainability,documents,receivables,treasury,riskFinance,market,community,imports,artifactStore,memberControl,groupIdentity,conciergeLearning,miscRubrics,adManager,economicIntelligence,externalPrograms,operationalCockpit,businessStudio,knowledgeAcademy,valueNetwork};
+  return {kernel,foundation,ledger,meetings,discovery,membershipGateway,rubrics,completion,explainability,documents,receivables,treasury,riskFinance,market,community,imports,artifactStore,memberControl,groupIdentity,conciergeLearning,miscRubrics,adManager,economicIntelligence,externalPrograms,operationalCockpit,businessStudio,knowledgeAcademy,valueNetwork,safetyCenter};
 };
 
 const inboxFor = async (repo:PlatformRepository,tenantId:string,actorId:string) => {
@@ -145,7 +147,7 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
     const allowed=Boolean((cors as Record<string,string>)['access-control-allow-origin']);
     return new Response(null,{status:allowed?204:403,headers:{...baseSecurityHeaders,...cors,'access-control-allow-methods':'GET,POST,PUT,OPTIONS','access-control-allow-headers':'content-type,x-tenant-id,x-actor-id,x-group-roles,x-active-group-id,x-device-id,x-session-id,x-request-id,x-timezone'}});
   }
-  const {kernel,foundation,ledger,meetings,discovery,membershipGateway,rubrics,completion,explainability,documents,receivables,treasury,riskFinance,market,community,imports,artifactStore,memberControl,groupIdentity,conciergeLearning,miscRubrics,adManager,economicIntelligence,externalPrograms,operationalCockpit,businessStudio,knowledgeAcademy,valueNetwork}=createRequestScope(request,repo,options.artifacts,options.dataUseDefaultMode??'BETA_OPEN',options.documentAI); const ctx=kernel.context.get();
+  const {kernel,foundation,ledger,meetings,discovery,membershipGateway,rubrics,completion,explainability,documents,receivables,treasury,riskFinance,market,community,imports,artifactStore,memberControl,groupIdentity,conciergeLearning,miscRubrics,adManager,economicIntelligence,externalPrograms,operationalCockpit,businessStudio,knowledgeAcademy,valueNetwork,safetyCenter}=createRequestScope(request,repo,options.artifacts,options.dataUseDefaultMode??'BETA_OPEN',options.documentAI); const ctx=kernel.context.get();
   const governanceVotes=new GovernanceVoteService(repo,kernel,options.governanceSecret??'eco-system-nonproduction-governance-secret');
   const notifications=new NotificationService(repo,kernel);
   const growthReferral=new GrowthReferralService(repo,kernel,options.referralBudgets??defaultReferralBudgets);
@@ -468,7 +470,12 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
       return json({error:'METHOD_NOT_ALLOWED'},405,cors);
     }
     if(request.method==='GET'&&url.pathname==='/health') return json({ok:true,service:'tontine-api',version:RELEASE_VERSION,buildId:RELEASE_BUILD_ID,commitSha:options.releaseCommitSha??'UNBOUND_LOCAL_BUILD',schemaVersion:RELEASE_SCHEMA_VERSION,policyVersion:RELEASE_POLICY_VERSION,pwaCache:RELEASE_PWA_CACHE,now:new Date().toISOString(),realMoneyEnabled:kernel.features.enabled('financial-real-money'),manualCashLedgerEnabled:true,premiumLiveEnabled:options.premiumLive===true&&Boolean(options.liveNamespace),founderControlBound:Boolean(options.founderControl),communityRealtimeBound:Boolean(options.communityRealtime),artifactStorageBound:true,artifactStorageMode:options.artifacts?'R2':'D1_FALLBACK',contextScope:'request'},200,cors);
-    if(request.method==='POST'&&url.pathname==='/api/v1/value/offers'){const body=await readJson<any>(request);return json(await valueNetwork.createOffer(body),201,cors);}
+
+    if(request.method==='GET'&&url.pathname==='/api/v1/safety/cases')return json({items:await safetyCenter.list(url.searchParams.get('groupId')??undefined)},200,cors);
+    if(request.method==='POST'&&url.pathname==='/api/v1/safety/screen'){const body=await readJson<any>(request);return json(await safetyCenter.screenAndOpen({text:String(body.text??''),title:body.title,groupId:body.groupId,entityType:body.entityType,entityId:body.entityId,evidenceRefs:Array.isArray(body.evidenceRefs)?body.evidenceRefs.map(String):[]}),201,cors);}
+    const safetyAction=url.pathname.match(/^\/api\/v1\/safety\/cases\/([^/]+)\/(review|appeal)$/);
+    if(safetyAction&&request.method==='POST'){const body=await readJson<any>(request);return json(safetyAction[2]==='review'?await safetyCenter.review(safetyAction[1]!,{decision:String(body.decision??'TRIAGE') as any,note:String(body.note??''),evidenceRefs:Array.isArray(body.evidenceRefs)?body.evidenceRefs.map(String):[]}):await safetyCenter.appeal(safetyAction[1]!,String(body.note??''),Array.isArray(body.evidenceRefs)?body.evidenceRefs.map(String):[]),200,cors);}
+    if(request.method==='POST'&&url.pathname==='/api/v1/value/offers'){const body=await readJson<any>(request),screen=await safetyCenter.screenAndOpen({text:[body.title,body.category,body.note,body.description].filter(Boolean).join(' · '),title:'Contrôle sécurité offre',entityType:'VALUE_OFFER'});if(screen.assessment.blocked)return json({error:'SAFETY_REVIEW_REQUIRED',safety:screen},409,cors);return json({...await valueNetwork.createOffer(body),safety:screen.assessment},201,cors);}
     if(request.method==='GET'&&url.pathname==='/api/v1/value/offers')return json({items:await valueNetwork.listOffers()},200,cors);
     const valueNeeds=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/value\/needs$/);
     if(valueNeeds&&request.method==='GET')return json({items:await valueNetwork.listNeeds(valueNeeds[1]!)},200,cors);
@@ -498,9 +505,9 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
     if(academyLesson&&request.method==='POST'){const body=await readJson<any>(request);return json(await knowledgeAcademy.submitLesson(academyLesson[1]!,body),200,cors);}
 
     if(request.method==='GET'&&url.pathname==='/api/v1/growth/referrals')return json(await growthReferral.dashboard(),200,cors);
-    if(request.method==='POST'&&url.pathname==='/api/v1/growth/referral-campaigns'){const body=await readJson<any>(request);return json(await growthReferral.createCampaign(body),201,cors);}
+    if(request.method==='POST'&&url.pathname==='/api/v1/growth/referral-campaigns'){const body=await readJson<any>(request);if(Number(body.levels??1)>1||body.multiLevel===true||body.uplineReward!==undefined||body.downlineReward!==undefined)return json({error:'MULTI_LEVEL_REFERRAL_FORBIDDEN'},409,cors);const screen=await safetyCenter.screenAndOpen({text:[body.title,body.description,body.rewardDescription].filter(Boolean).join(' · '),title:'Contrôle anti-pyramide campagne',groupId:body.targetKind==='GROUP'?String(body.targetId??''):undefined,entityType:'REFERRAL_CAMPAIGN'});if(screen.assessment.blocked)return json({error:'SAFETY_REVIEW_REQUIRED',safety:screen},409,cors);return json({...await growthReferral.createCampaign(body),safety:screen.assessment},201,cors);}
     const referralCampaign=url.pathname.match(/^\/api\/v1\/growth\/referral-campaigns\/([^/]+)\/state$/);
-    if(referralCampaign&&request.method==='POST'){const body=await readJson<any>(request);return json(await growthReferral.setCampaignState(referralCampaign[1]!,String(body.state??'ACTIVE') as any),200,cors);}
+    if(referralCampaign&&request.method==='POST'){const body=await readJson<any>(request),state=String(body.state??'ACTIVE') as any;if(state==='ACTIVE'){const dashboard=await growthReferral.dashboard(),campaign=(dashboard.campaigns??[]).find((x:any)=>x.record?.id===referralCampaign[1]);if(campaign){const screen=await safetyCenter.screenAndOpen({text:[campaign.record.title,campaign.record.summary,campaign.record.data?.description].filter(Boolean).join(' · '),title:'Contrôle activation campagne',groupId:campaign.record.groupId,entityType:'REFERRAL_CAMPAIGN',entityId:campaign.record.id});if(screen.assessment.blocked)return json({error:'SAFETY_REVIEW_REQUIRED',safety:screen},409,cors);}}return json(await growthReferral.setCampaignState(referralCampaign[1]!,state),200,cors);}
     if(request.method==='POST'&&url.pathname==='/api/v1/growth/referral-shares'){const body=await readJson<any>(request);return json(await growthReferral.createShare(body),201,cors);}
     if(request.method==='POST'&&url.pathname==='/api/v1/growth/referral-landings'){const body=await readJson<any>(request);return json(await growthReferral.registerLanding(String(body.code??'')),201,cors);}
     if(request.method==='POST'&&url.pathname==='/api/v1/growth/referral-conversions'){const body=await readJson<any>(request);return json(await growthReferral.registerConversion(body),201,cors);}
