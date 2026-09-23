@@ -7,7 +7,7 @@ const v=id=>String(byId(id)?.value??'').trim();
 const row=(label,value)=>{const d=el('div',undefined,'result-row');d.append(el('span',label),el('strong',value));return d;};
 
 export function mountFinancialLabUI({app,notify,showError}){
-  const form=byId('financialLabForm'),result=byId('financialLabResult'),history=byId('financialLabHistory');
+  const form=byId('financialLabForm'),result=byId('financialLabResult'),history=byId('financialLabHistory'),safetyForm=byId('safetyReportForm'),safetyList=byId('safetyCasesList');
 
   const compute=()=>{
     const participants=Math.max(1,Math.trunc(n('financialLabParticipants'))),deposit=Math.max(0,n('financialLabDeposit')),rate=Math.max(0,n('financialLabRate'))/100,months=Math.max(1,Math.trunc(n('financialLabMonths'))),documentedRevenue=Math.max(0,n('financialLabExternalRevenue')),newDeposits=Math.max(0,n('financialLabNewDeposits')),mode=v('financialLabMode')||'COMPOUND';
@@ -71,5 +71,49 @@ export function mountFinancialLabUI({app,notify,showError}){
     }catch(e){showError(e);}
   })());
   byId('financialLabRefreshBtn')?.addEventListener('click',()=>void refreshHistory());
-  return{refresh:refreshHistory};
+
+  const renderSafetyCases=async()=>{
+    if(!safetyList)return;safetyList.replaceChildren();
+    try{
+      const cases=await app.safetyCases(app.activeGroup()||undefined);
+      if(!cases.length){safetyList.append(el('p',t('Aucun dossier de sécurité accessible.','No accessible safety case.'),'hint'));return;}
+      for(const c of cases){
+        const state=String(c.data?.caseState??'DETECTED'),card=el('article',undefined,'item');
+        const top=el('div',undefined,'actions');top.append(el('strong',String(c.data?.category??'OTHER')+' · '+String(c.data?.subjectType??'')),el('span',state,'pill'));card.append(top);
+        card.append(el('p',String(c.data?.summary??c.summary??'')),el('p',t('Statut de constat : ','Finding status: ')+String(c.data?.findingStatus??'UNVERIFIED_SUSPICION')+t(' · accusation publique : NON · effet automatique sur score financier : NON',' · public accusation: NO · automatic financial score effect: NO'),'truth-notice'));
+        const actions=el('div',undefined,'actions');
+        const transition=(label,to)=>{const b=el('button',label,'secondary');b.type='button';b.onclick=()=>void app.transitionSafetyCase(c.id,to).then(()=>{notify(t('Dossier mis à jour.','Case updated.'));return renderSafetyCases();}).catch(showError);actions.append(b);};
+        if(state==='DETECTED'){transition(t('Qualifier','Triage'),'TRIAGED');transition(t('Clore sans suite','Close'),'RESOLVED');}
+        if(state==='TRIAGED'){transition(t('Ouvrir l’enquête','Investigate'),'INVESTIGATING');transition(t('Clore','Close'),'RESOLVED');}
+        if(state==='INVESTIGATING'){
+          const decision=document.createElement('form');decision.className='form-grid safety-decision-form';
+          const a=document.createElement('select');a.name='action';for(const [v,l] of [['NO_ACTION',t('Aucune action','No action')],['WARN',t('Avertissement','Warning')],['LIMIT',t('Limiter','Limit')],['SUSPEND',t('Suspendre','Suspend')],['RESTORE',t('Restaurer','Restore')]])a.append(new Option(l,v));
+          const finding=document.createElement('select');finding.name='findingStatus';for(const [v,l] of [['UNVERIFIED_SUSPICION',t('Soupçon non vérifié','Unverified suspicion')],['SUPPORTED_BY_REVIEW',t('Étayé par revue','Supported by review')],['NOT_SUPPORTED',t('Non étayé','Not supported')]])finding.append(new Option(l,v));
+          const reason=document.createElement('input');reason.name='reason';reason.required=true;reason.placeholder=t('Motif factuel de la décision','Factual reason for decision');
+          const evidence=document.createElement('input');evidence.name='evidenceRef';evidence.placeholder=t('Preuve de décision','Decision evidence');
+          const b=el('button',t('Enregistrer la décision','Record decision'),'primary');b.type='submit';
+          const wrap=(label,node)=>{const l=el('label',label);l.append(node);return l;};decision.append(wrap(t('Action','Action'),a),wrap(t('Constat','Finding'),finding),wrap(t('Motif','Reason'),reason),wrap(t('Preuve','Evidence'),evidence),b);
+          decision.onsubmit=e=>void(async()=>{e.preventDefault();try{b.disabled=true;const d=Object.fromEntries(new FormData(decision).entries());await app.decideSafetyCase(c.id,d);notify(t('Décision de revue enregistrée sans verdict légal automatique.','Review decision recorded without automatic legal verdict.'));await renderSafetyCases();}catch(err){showError(err);}finally{b.disabled=false;}})();card.append(decision);
+        }
+        if(state==='ACTIONED'){
+          const appeal=el('button',t('Déposer un recours','Appeal'),'link-btn');appeal.type='button';appeal.onclick=()=>void(async()=>{const reason=window.prompt(t('Motif du recours :','Appeal reason:'))?.trim();if(!reason)return;try{await app.appealSafetyCase(c.id,{reason});notify(t('Recours enregistré.','Appeal recorded.'));await renderSafetyCases();}catch(err){showError(err);}})();actions.append(appeal);
+        }
+        if(state==='APPEALED')transition(t('Réexaminer','Re-investigate'),'INVESTIGATING');
+        const evidence=el('button',t('Ajouter une preuve','Add evidence'),'link-btn');evidence.type='button';evidence.onclick=()=>void(async()=>{const ref=window.prompt(t('Référence de la preuve :','Evidence reference:'))?.trim();if(!ref)return;const summary=window.prompt(t('Décrivez brièvement la preuve :','Briefly describe the evidence:'))?.trim();if(!summary)return;try{await app.addSafetyEvidence(c.id,{ref,summary,source:'SAFETY_CENTER'});notify(t('Preuve ajoutée séparément au dossier.','Evidence added separately to the case.'));}catch(err){showError(err);}})();actions.append(evidence);
+        card.append(actions);safetyList.append(card);
+      }
+    }catch(err){
+      safetyList.append(el('p',t('Les dossiers détaillés sont réservés aux responsables habilités. Vous pouvez néanmoins transmettre un signalement ci-dessus.','Detailed cases are restricted to authorized managers. You can still submit a report above.'),'hint'));
+    }
+  };
+
+  safetyForm?.addEventListener('submit',event=>void(async()=>{
+    event.preventDefault();try{
+      const subjectType=v('safetySubjectType'),subjectRef=v('safetySubjectRef'),category=v('safetyCategory'),summary=v('safetySummary'),evidenceRef=v('safetyEvidenceRef');
+      await app.reportSafety({groupId:app.activeGroup()||undefined,subjectType,subjectRef,category,summary,evidenceRef:evidenceRef||undefined,source:'SAFETY_CENTER'});
+      notify(t('Signalement privé créé comme soupçon non vérifié.','Private report created as an unverified suspicion.'));safetyForm.reset();await renderSafetyCases();
+    }catch(err){showError(err);}
+  })());
+  byId('safetyCasesRefreshBtn')?.addEventListener('click',()=>void renderSafetyCases());
+  return{refresh:async()=>{await refreshHistory();await renderSafetyCases();}};
 }
