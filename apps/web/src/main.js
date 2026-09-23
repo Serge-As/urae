@@ -914,18 +914,27 @@ const renderTrash=async()=>{
     const root=document.querySelector('#trashList');if(!root)return;root.replaceChildren();
     const parseJsonArray=value=>{try{const x=JSON.parse(String(value??'[]'));return Array.isArray(x)?x.map(String):[];}catch{return[];}};
     try{
-      const groupItems=await app.groupTrashItems().catch(()=>[]),scoped=app.activeGroup()?await app.trashItems().catch(()=>[]):[],seen=new Set(),items=[...groupItems,...scoped].filter(x=>!seen.has(x.id)&&seen.add(x.id));
+      const groupItems=await app.groupTrashItems().catch(()=>[]),scoped=app.activeGroup()?await app.trashItems().catch(()=>[]):[],seen=new Set(),now=Date.now(),restoredWindow=72*60*60*1000;
+      const items=[...groupItems,...scoped].filter(x=>{
+        if(seen.has(x.id))return false;seen.add(x.id);
+        const restored=String(x.data?.lifecycleState??'')==='RESTORED'||x.status==='DONE';
+        if(!restored)return true;
+        const restoredAt=Date.parse(String(x.data?.restoredAt??x.updatedAt??''));return Number.isFinite(restoredAt)&&now-restoredAt<=restoredWindow;
+      });
       if(!items.length){root.innerHTML='<div class="empty-state">'+tx('Corbeille vide.','Trash is empty.')+'</div>';return;}
       for(const item of items){
-        const expired=item.status!=='ACTIVE'||Boolean(item.data?.expired),a=document.createElement('article');a.className='item '+(expired?'trash-expired':'');
+        const restored=String(item.data?.lifecycleState??'')==='RESTORED'||item.status==='DONE',expired=!restored&&(item.status!=='ACTIVE'||Boolean(item.data?.expired)),a=document.createElement('article');a.className='item '+(restored?'trash-restored ':expired?'trash-expired ':'');
         const kind={MEETING:tx('Séance','Meeting'),MEMBER:tx('Membre','Member'),RUBRIC:tx('Rubrique','Rubric'),GROUP:tx('Groupe','Group')}[item.data?.kind]??String(item.data?.kind??'Élément');
         const h=document.createElement('strong');h.textContent=kind+' · '+item.title;
-        const p=document.createElement('p');p.textContent=expired
-          ?tx('Délai expiré : les données métier restaurables ont été purgées. Seules des traces techniques/statistiques minimales non reconstructives peuvent subsister.','Retention expired: restorable business data was purged. Only minimal non-reconstructive technical/statistical traces may remain.')
-          :tx('Restaurable jusqu’au ','Restorable until ')+date(String(item.data?.restoreUntil??''));
+        const restoredAt=Date.parse(String(item.data?.restoredAt??item.updatedAt??'')),visibleUntil=Number.isFinite(restoredAt)?new Date(restoredAt+restoredWindow).toISOString():'';
+        const p=document.createElement('p');p.textContent=restored
+          ?tx('Restauré avec succès · ce message disparaît automatiquement après 72 h. Visible jusqu’au ','Restored successfully · this message disappears automatically after 72 h. Visible until ')+date(visibleUntil)
+          :expired
+            ?tx('Délai expiré : les données métier restaurables ont été purgées. Seules des traces techniques/statistiques minimales non reconstructives peuvent subsister.','Retention expired: restorable business data was purged. Only minimal non-reconstructive technical/statistical traces may remain.')
+            :tx('Restaurable jusqu’au ','Restorable until ')+date(String(item.data?.restoreUntil??''));
         a.append(h,p);
 
-        if(item.data?.kind==='GROUP'&&!expired){
+        if(item.data?.kind==='GROUP'&&!expired&&!restored){
           const optedOut=parseJsonArray(item.data?.reminderOptOutUserIdsJson).includes(app.currentActor());
           const reminder=document.createElement('p');reminder.className='hint';reminder.textContent=optedOut
             ?tx('Vous avez désactivé votre rappel mensuel.','You disabled your monthly reminder.')
@@ -956,9 +965,9 @@ const renderTrash=async()=>{
           }catch(error){if(error instanceof Error&&!['FORBIDDEN_SCOPE','PETITION_ELECTORATE_REQUIRED'].includes(error.message))console.warn(error);}
         }
 
-        if(!expired){
+        if(!expired&&!restored){
           const restore=document.createElement('button');restore.type='button';restore.className='primary';restore.textContent=tx('Restaurer intégralement','Restore fully');
-          restore.onclick=()=>void(async()=>{try{if(item.data?.kind==='GROUP')await app.restoreGroupTrashItem(item.id);else await app.restoreTrashItem(item.id);await renderGroups();await refreshGroupContext();toast(tx('Élément restauré.','Item restored.'));}catch(e){fail(e);}})();a.append(restore);
+          restore.onclick=()=>void(async()=>{try{if(item.data?.kind==='GROUP')await app.restoreGroupTrashItem(item.id);else await app.restoreTrashItem(item.id);clearFail();await renderGroups();await refreshGroupContext();await renderTrash();toast(tx('Élément restauré. Il restera signalé ici pendant 72 h.','Item restored. It will remain noted here for 72 hours.'));}catch(e){fail(e);}})();a.append(restore);
           if(item.data?.kind==='GROUP'){
             const optedOut=parseJsonArray(item.data?.reminderOptOutUserIdsJson).includes(app.currentActor()),mute=document.createElement('button');mute.type='button';mute.className='secondary';mute.textContent=optedOut?tx('Réactiver mon rappel mensuel','Enable my monthly reminder'):tx('Ne plus me rappeler chaque mois','Stop my monthly reminder');
             mute.onclick=()=>void(async()=>{try{await app.setGroupTrashReminders(item.id,optedOut);await renderTrash();toast(optedOut?tx('Rappel réactivé.','Reminder enabled.'):tx('Votre rappel a été désactivé.','Your reminder was disabled.'));}catch(e){fail(e);}})();a.append(mute);
@@ -992,7 +1001,8 @@ const renderUrgentNotifications=async()=>{
     root.replaceChildren();
     if(!app.activeGroup()){root.innerHTML='<div class="empty-state">'+tx('Sélectionnez un groupe pour voir ses alertes.','Select a group to see its alerts.')+'</div>';return;}
     try{
-      const notices=await app.groupNotifications(),urgent=notices.filter(x=>!x.read&&['HIGH','CRITICAL'].includes(String(x.priority))).slice(0,12);
+      const notices=await app.groupNotifications(),rank={CRITICAL:4,HIGH:3,NORMAL:2,LOW:1},unread=notices.filter(x=>!x.read).sort((a,b)=>(rank[String(b.priority)]??0)-(rank[String(a.priority)]??0)||String(b.createdAt??'').localeCompare(String(a.createdAt??''))),urgent=unread.filter(x=>['HIGH','CRITICAL'].includes(String(x.priority))).slice(0,5);
+      const allButton=document.querySelector('#urgentNotificationsAllBtn');if(allButton)allButton.textContent=tx('Toutes les alertes','All alerts')+(unread.length?' · '+unread.length:'');
       if(!urgent.length){root.innerHTML='<div class="empty-state">'+tx('Aucune notification urgente.','No urgent notification.')+'</div>';return;}
       for(const n of urgent){
         const article=document.createElement('article');article.className='item '+(n.priority==='CRITICAL'?'urgent-critical':'urgent-high');
@@ -1006,6 +1016,26 @@ const renderUrgentNotifications=async()=>{
     }catch(error){if(navigator.onLine)fail(error);else root.innerHTML='<div class="empty-state">'+tx('Alertes non synchronisées hors ligne. Les alertes déjà chargées restent disponibles dans les copies locales.','Alerts not synchronized offline. Previously loaded alerts remain in local copies.')+'</div>';}
 };
 document.querySelector('#urgentNotificationsRefreshBtn')?.addEventListener('click',()=>void renderUrgentNotifications());
+document.querySelector('#urgentNotificationsAllBtn')?.addEventListener('click',()=>{go('inbox',{anchor:'notificationCenterPanel',force:true});setTimeout(()=>document.querySelector('#notificationCenterPanel')?.scrollIntoView({behavior:'smooth',block:'start'}),120);});
+const renderNotificationCenter=async()=>{
+  const root=document.querySelector('#notificationCenterList'),meta=document.querySelector('#notificationCenterMeta');if(!root)return;
+  root.replaceChildren();if(!app.activeGroup()){root.innerHTML='<div class="empty-state">'+tx('Sélectionnez un groupe pour consulter ses alertes.','Select a group to view its alerts.')+'</div>';return;}
+  try{
+    const rank={CRITICAL:4,HIGH:3,NORMAL:2,LOW:1},notices=(await app.groupNotifications()).slice().sort((a,b)=>Number(Boolean(a.read))-Number(Boolean(b.read))||(rank[String(b.priority)]??0)-(rank[String(a.priority)]??0)||String(b.createdAt??'').localeCompare(String(a.createdAt??'')));
+    const visible=notices.slice(0,100);if(meta)meta.textContent=tx(`${notices.filter(x=>!x.read).length} non lue(s) · ${notices.length} alerte(s) connues · affichage des 100 plus pertinentes au maximum.`,`${notices.filter(x=>!x.read).length} unread · ${notices.length} known alerts · showing at most the 100 most relevant.`);
+    if(!visible.length){root.innerHTML='<div class="empty-state">'+tx('Aucune alerte pour ce groupe.','No alerts for this group.')+'</div>';return;}
+    for(const n of visible){
+      const article=document.createElement('article');article.className='item notification-center-item '+(n.read?'is-read':'is-unread')+' priority-'+String(n.priority??'NORMAL').toLowerCase();
+      const h=document.createElement('strong');h.textContent=(n.priority==='CRITICAL'?'🔴 ':n.priority==='HIGH'?'🟠 ':n.priority==='LOW'?'⚪ ':'🔵 ')+String(n.title??tx('Notification','Notification'));
+      const p=document.createElement('p');p.textContent=String(n.message??'');const small=document.createElement('small');small.textContent=date(n.createdAt);
+      const actions=document.createElement('div');actions.className='actions';
+      if(n.action?.view){const open=document.createElement('button');open.type='button';open.className='primary';open.textContent=n.action.label||tx('Ouvrir','Open');open.onclick=()=>openNoticeAction(n.action);actions.append(open);}
+      if(!n.read){const seen=document.createElement('button');seen.type='button';seen.className='secondary';seen.textContent=tx('Marquer comme lu','Mark as read');seen.onclick=()=>void(async()=>{try{await app.markGroupNotificationRead(n.id);await renderNotificationCenter();await renderUrgentNotifications();await renderFinancialAlerts();}catch(e){fail(e);}})();actions.append(seen);}
+      article.append(h,p,small,actions);root.append(article);
+    }
+  }catch(error){if(navigator.onLine)fail(error);else root.innerHTML='<div class="empty-state">'+tx('Centre d’alertes indisponible hors ligne tant qu’aucune copie locale n’existe.','Alert center unavailable offline until a local copy exists.')+'</div>';}
+};
+document.querySelector('#notificationCenterRefreshBtn')?.addEventListener('click',()=>void renderNotificationCenter());
 
 const showFinancialAlert=(input={})=>{
     const bar=document.querySelector('#financialAlertBar');if(!bar)return;
@@ -1068,6 +1098,7 @@ const refreshGroupContext = async () => {
     await refreshOptionalOfflineSafe('identity-live',()=>identityLiveUI.refresh());
     await refreshOptionalOfflineSafe('financial-alerts',renderFinancialAlerts);
     await refreshOptionalOfflineSafe('urgent-notifications',renderUrgentNotifications);
+    await refreshOptionalOfflineSafe('notification-center',renderNotificationCenter);
     await refreshOptionalOfflineSafe('community-shop',()=>communityShopUI.refresh());
     await refreshOptionalOfflineSafe('misc-rubrics',()=>miscRubricUI.refresh());
     await refreshOptionalOfflineSafe('pairing',()=>pairingUI.refresh());
