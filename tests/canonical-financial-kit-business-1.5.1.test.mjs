@@ -11,6 +11,7 @@ const detail=fs.readFileSync('apps/web/src/detail-ui.js','utf8');
 const voice=fs.readFileSync('apps/web/src/voice-entry-ui.ts','utf8');
 const launch=fs.readFileSync('apps/web/src/launch-studio.js','utf8');
 const businessUi=fs.readFileSync('apps/web/src/business-studio-ui.js','utf8');
+const groupHome=fs.readFileSync('apps/web/src/group-home-ui.js','utf8');
 
 test('one canonical financial table owns meeting individual and member-detail entry',()=>{
   assert.match(main,/const renderCanonicalFinancialTable=/);
@@ -92,6 +93,17 @@ test('Business Studio records private income but rejects undocumented extraction
   assert.equal(summary.revenueBySource.SERVICE,10000);
   assert.equal(summary.expenseByCategory.COMMUNICATION,2000);
   await assert.rejects(()=>service.recordRevenue({label:'Frais du groupe',amount:5000,source:'MANAGEMENT_FEE',groupId:'group_151'}),/COLLECTIVE_REVENUE_LEDGER_REFERENCE_REQUIRED/);
+});
+
+test('starter kit is persisted with the created group and surfaced from group home',()=>{
+  assert.match(launch,/const persistStarterKit=async\(groupId\)=>/);
+  assert.match(launch,/GROUP\.STARTER_KIT/);
+  assert.match(launch,/starter-kit:canonical/);
+  assert.match(main,/launchStudio\.persistStarterKit\?\.\(group\.id\)/);
+  assert.match(groupHome,/GROUP\.STARTER_KIT/);
+  assert.match(groupHome,/Kit prêt à l’emploi du groupe/);
+  assert.match(groupHome,/Ouvrir \/ imprimer le Kit/);
+  assert.match(groupHome,/Ouvrir Business Studio/);
 });
 
 test('Business Studio UI exposes a complete prospect-to-cash operating path',()=>{
