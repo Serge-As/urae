@@ -193,10 +193,10 @@ test('loan is a negative member position and simulation is available to member a
   assert.match(app,/loanHistory/);
 });
 
-test('stale cached html no longer crashes on optional local-account control and 1.4.5.1 cache is isolated',()=>{
+test('stale cached html no longer crashes on optional local-account control and 1.5.0 cache keeps previous coherent release',()=>{
   assert.match(main,/document\.querySelector\('#claimLocalAccountBtn'\)\?\.addEventListener/);
   assert.doesNotMatch(main,/\$\('#claimLocalAccountBtn'\)\.addEventListener/);
   assert.match(sw,/eco-system-v1451-field-corrections-20260922/);
-  assert.match(html,/ECO-SYSTEM · 1\.4\.5\.1/);
+  assert.match(html,/ECO-SYSTEM · 1\.5\.0/);
   assert.match(html,/main\.js\?v=1451/);
 });
