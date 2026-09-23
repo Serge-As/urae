@@ -1,0 +1,2 @@
+Eco-System 1.5.0 audit-complete authorized delivery marker.
+Created after repeated green 1.5.0 qualification checkpoints. The deployment workflow re-runs full CI, exports D1, applies additive migrations only, deploys, and smokes release identity.
