@@ -68,9 +68,11 @@ export class KnowledgeAcademyService{
       return true;
     });
     return scoped.filter(r=>{const h=toks([r.title,String(r.data.body??''),String(r.data.sourceRef??''),...r.tags].join(' '));return !query.length||query.every(t=>h.some(x=>x.includes(t)));})
-      .map(r=>{
+      .map((r):WorkspaceRecord=>{
         const expired=Boolean(r.data.validUntil&&Date.parse(String(r.data.validUntil))<=Date.now()),reviewDue=Boolean(r.data.nextReviewAt&&Date.parse(String(r.data.nextReviewAt))<=Date.now());
-        return expired||reviewDue?{...r,data:{...r.data,knowledgeState:'TO_REVALIDATE',stale:true}}:{...r,data:{...r.data,stale:false}};
+        const data:WorkspaceRecord['data']={...r.data,stale:expired||reviewDue};
+        if(expired||reviewDue)data.knowledgeState='TO_REVALIDATE';
+        return{...r,data};
       }).sort((a,b)=>Number(b.data.version??1)-Number(a.data.version??1)||b.updatedAt.localeCompare(a.updatedAt));
   }
   encyclopedia(q=''){
