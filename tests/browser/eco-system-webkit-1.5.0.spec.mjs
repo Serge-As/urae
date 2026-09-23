@@ -17,13 +17,13 @@ test('WebKit installed PWA shell is controlled and fully cached after one visit'
   const state=await page.evaluate(async()=>{
     const controlled=Boolean(navigator.serviceWorker?.controller);
     const keys=await caches.keys();
-    const cache=await caches.open('eco-system-v152-unified-ux-blueprint-20260923');
-    const paths=['/index.html','/styles.css?v=152','/src/main.js?v=152','/src/ui-modes.js?v=152'];
+    const cache=await caches.open('eco-system-v1522-governed-field-feedback-20260923');
+    const paths=['/index.html','/styles.css?v=1522','/src/main.js?v=1522','/src/ui-modes.js?v=1522'];
     const hits=await Promise.all(paths.map(async path=>Boolean(await cache.match(path))));
     return{controlled,keys,paths,hits};
   });
   expect(state.controlled).toBe(true);
-  expect(state.keys).toContain('eco-system-v152-unified-ux-blueprint-20260923');
+  expect(state.keys).toContain('eco-system-v1522-governed-field-feedback-20260923');
   expect(state.hits).toEqual([true,true,true,true]);
   await expect(page.locator('body')).toContainText('Eco-System');
   await expect(page.locator('#authScreen')).toBeVisible();
