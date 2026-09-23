@@ -346,3 +346,99 @@ body.ui-mode-visual .primary:hover{filter:saturate(1.08) brightness(1.03);transf
   .member-management-toolbar{grid-template-columns:1fr}
   .member-management-toolbar button{min-height:48px}
 }
+
+
+/* 1.5.2.1 terrain — saisie réellement lisible, scroll vertical et page Membres */
+.canonical-financial-wrap{
+  overflow-x:auto;
+  overflow-y:clip;
+  overscroll-behavior-x:contain;
+  overscroll-behavior-y:auto;
+}
+.matrix-cell-entry .cell-write-state{
+  grid-column:1/-1;
+  display:block;
+  margin-top:2px;
+  padding:4px 7px;
+  border-radius:8px;
+  font-size:11px;
+  font-weight:850;
+  line-height:1.25;
+}
+.matrix-cell-entry .cell-write-state.consensus{background:#fff2d8;color:#7c5200;border:1px solid #eac27c}
+.matrix-cell-entry .cell-write-state.queued{background:#eef3ff;color:#33588d;border:1px solid #b8cae8}
+.matrix-cell-entry .cell-validate{touch-action:manipulation}
+
+#view-members .two-col{
+  grid-template-columns:minmax(620px,1.2fr) minmax(360px,.8fr);
+  align-items:start;
+}
+#view-members .member-management-toolbar{
+  display:grid!important;
+  grid-template-columns:minmax(220px,1fr) minmax(220px,1fr)!important;
+  gap:10px!important;
+}
+#view-members .member-management-toolbar>label,
+#view-members .member-management-toolbar>button{min-width:0!important;width:100%!important}
+#view-members .member-management-toolbar>button{
+  white-space:normal!important;
+  word-break:normal!important;
+  overflow-wrap:normal!important;
+  line-height:1.25!important;
+  padding-inline:14px!important;
+}
+#memberList>li{
+  display:flex;
+  flex-wrap:wrap;
+  align-items:center;
+  gap:8px;
+  padding:10px 0;
+}
+#memberList>li>details{flex:1 1 100%;min-width:0}
+#memberList>li>.link-btn{flex:0 1 auto;max-width:100%}
+
+@media(max-width:1180px){
+  #view-members .two-col{grid-template-columns:1fr}
+}
+@media(max-width:700px){
+  #view-members .member-management-toolbar{grid-template-columns:1fr!important}
+}
+
+/* Le mode Visuel est le mode phare : profondeur, hiérarchie et contraste sans
+   changer le métier ni masquer des informations. */
+body.ui-mode-visual .content{max-width:1600px}
+body.ui-mode-visual .page-head{
+  padding:18px 20px;
+  border:1px solid rgba(46,104,82,.12);
+  border-radius:20px;
+  background:linear-gradient(135deg,rgba(255,255,255,.95),rgba(244,250,247,.92) 55%,rgba(252,244,249,.9));
+  box-shadow:0 12px 32px rgba(32,69,54,.07);
+}
+body.ui-mode-visual .panel{
+  transition:transform .18s ease,box-shadow .18s ease,border-color .18s ease;
+}
+body.ui-mode-visual .panel:hover{
+  border-color:rgba(38,126,91,.22);
+  box-shadow:0 18px 42px rgba(31,71,55,.09);
+}
+body.ui-mode-visual .meeting-matrix{
+  background:linear-gradient(180deg,#fff,#fbfdfc);
+}
+body.ui-mode-visual .canonical-financial-matrix thead th{
+  background:linear-gradient(180deg,#f0f8f4,#e8f3ee);
+  color:#163c2f;
+}
+body.ui-mode-visual .canonical-financial-matrix tbody>tr:hover>td,
+body.ui-mode-visual .canonical-financial-matrix tbody>tr:hover>th{
+  background-color:#f7fbf9;
+}
+body.ui-mode-visual .cell-validate{
+  border:1px solid rgba(24,105,75,.28);
+  background:linear-gradient(180deg,#f4fff9,#e3f4ea);
+  color:#155c3f;
+  box-shadow:0 4px 12px rgba(28,104,77,.10);
+}
+body.ui-mode-visual .cell-target-input:focus{
+  border-color:#338d69;
+  box-shadow:0 0 0 4px rgba(51,141,105,.13);
+}
