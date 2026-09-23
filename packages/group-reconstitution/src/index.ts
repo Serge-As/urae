@@ -18,7 +18,7 @@ export class GroupReconstitutionService{
   private eligible(r:WorkspaceRecord,userId:Id){return arr(r.data.eligibleUserIdsJson).includes(userId);}
   private async signatures(r:WorkspaceRecord){
     const rows=await this.repo.listWorkspaceRecords(r.tenantId,'TRASH.PETITION_SIGNATURE',r.groupId);
-    return rows.filter(x=>String(x.data.trashId)===r.id);
+    return rows.filter(x=>String(x.data.trashId)===r.id&&x.status!=='ARCHIVED');
   }
   async status(trashId:Id){
     const c=this.ctx(),r=await this.trash(trashId);if(!this.eligible(r,c.actorId)&&r.createdBy!==c.actorId&&String(r.data.deletedBy)!==c.actorId)throw new Error('FORBIDDEN_SCOPE');
@@ -29,8 +29,8 @@ export class GroupReconstitutionService{
     const c=this.ctx(),r=await this.trash(trashId);if(!this.eligible(r,c.actorId))throw new Error('PETITION_ELECTORATE_REQUIRED');
     if(String(r.data.lifecycleState)==='RESTORED')throw new Error('PETITION_CLOSED_BY_RESTORE');
     if(await this.repo.isGroupPurged(c.tenantId,String(r.data.entityId??r.groupId??'')))throw new Error('GROUP_ALREADY_PURGED');
-    const id='petition_sig_'+encodeURIComponent(r.id+'|'+c.actorId),existing=await this.repo.getWorkspaceRecord(c.tenantId,id);
-    if(!existing){const at=now(),sig:WorkspaceRecord={id,tenantId:c.tenantId,groupId:r.groupId,moduleId:'TRASH.PETITION_SIGNATURE',title:'Signature de reconstitution',status:'DONE',tags:['petition','reconstitution','frozen-electorate'],data:{trashId:r.id,userId:c.actorId,signedAt:at},createdBy:c.actorId,createdAt:at,updatedAt:at};await this.repo.saveWorkspaceRecord(sig);}
+    const id='petition_sig_'+encodeURIComponent(r.id+'|'+c.actorId),existing=await this.repo.getWorkspaceRecord(c.tenantId,id),at=now();
+    if(!existing){const sig:WorkspaceRecord={id,tenantId:c.tenantId,groupId:r.groupId,moduleId:'TRASH.PETITION_SIGNATURE',title:'Signature de reconstitution',status:'DONE',tags:['petition','reconstitution','frozen-electorate'],data:{trashId:r.id,userId:c.actorId,signedAt:at},createdBy:c.actorId,createdAt:at,updatedAt:at};await this.repo.saveWorkspaceRecord(sig);}else if(existing.status==='ARCHIVED'){await this.repo.saveWorkspaceRecord({...existing,status:'DONE',data:{...existing.data,signedAt:at,withdrawnAt:''},updatedAt:at});}
     const signatures=await this.signatures(r),threshold=Number(r.data.petitionThreshold??0),reached=threshold>0&&signatures.length>=threshold,next={...r,data:{...r.data,petitionState:reached?'RECONSTITUTION_READY':'OPEN',petitionSignatureCount:signatures.length},updatedAt:now()};await this.repo.saveWorkspaceRecord(next);
     return this.status(trashId);
   }
@@ -39,7 +39,7 @@ export class GroupReconstitutionService{
     if(!sig) return this.status(trashId);
     // Workspace records are append/update oriented: withdrawal is explicit, not deletion.
     await this.repo.saveWorkspaceRecord({...sig,status:'ARCHIVED',data:{...sig.data,withdrawnAt:now()},updatedAt:now()});
-    const active=(await this.signatures(r)).filter(x=>x.status!=='ARCHIVED'),threshold=Number(r.data.petitionThreshold??0),reached=threshold>0&&active.length>=threshold;
+    const active=await this.signatures(r),threshold=Number(r.data.petitionThreshold??0),reached=threshold>0&&active.length>=threshold;
     await this.repo.saveWorkspaceRecord({...r,data:{...r.data,petitionState:reached?'RECONSTITUTION_READY':'OPEN',petitionSignatureCount:active.length},updatedAt:now()});
     return this.status(trashId);
   }
