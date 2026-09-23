@@ -552,9 +552,9 @@ export class LedgerService {
 
   async replaceCashContributionCell(input:{
     tenantId:Id;groupId:Id;meetingId:Id;membershipId:Id;rubricId:Id;
-    targetAmount:number;expectedCurrentAmount?:number;currency?:Currency;
+    targetAmount:number;expectedCurrentAmount?:number;expectedCellVersion?:number;currency?:Currency;
     reason?:string;idempotencyKey:string;
-  },requestId=makeId('req')):Promise<{status:'APPLIED'|'NO_CHANGE';previousAmount:number;newAmount:number;operationId?:Id;receipt?:ContributionReceipt;evidenceEntry?:LedgerEntry}>{
+  },requestId=makeId('req')):Promise<{status:'APPLIED'|'NO_CHANGE';previousAmount:number;newAmount:number;cellVersion:number;operationId?:Id;receipt?:ContributionReceipt;evidenceEntry?:LedgerEntry}>{
     assertIntNonNegative('contributionAmount',input.targetAmount);
     if(!input.idempotencyKey.trim())throw new Error('IDEMPOTENCY_KEY_REQUIRED');
     const ctx=this.kernel.context.get();
@@ -567,8 +567,11 @@ export class LedgerService {
     const positions=(await this.receiptPositions(input.tenantId,input.groupId))
       .filter(r=>r.meetingId===input.meetingId&&r.membershipId===input.membershipId&&r.rubricId===input.rubricId&&r.netAmount!==0);
     const current=positions.reduce((n,r)=>n+r.netAmount,0);
+    const revision=await this.repo.getFinancialCellRevision(input.tenantId,input.groupId,input.meetingId,input.membershipId,input.rubricId,input.currency??'XAF');
+    const currentVersion=revision?.version??0;
     if(input.expectedCurrentAmount!==undefined&&current!==input.expectedCurrentAmount)throw new Error('CELL_VALUE_CONFLICT');
-    if(current===input.targetAmount)return{status:'NO_CHANGE',previousAmount:current,newAmount:input.targetAmount};
+    if(input.expectedCellVersion!==undefined&&currentVersion!==input.expectedCellVersion)throw new Error('CELL_VERSION_CONFLICT');
+    if(current===input.targetAmount)return{status:'NO_CHANGE',previousAmount:current,newAmount:input.targetAmount,cellVersion:currentVersion};
     const reason=(input.reason??'').trim();
     if((current>0||meeting.status==='closed')&&!reason)throw new Error('REVERSAL_REASON_REQUIRED');
     const currency=input.currency??'XAF',commitAt=now(),operationId=makeId('cellcorr');
@@ -619,17 +622,19 @@ export class LedgerService {
       data:{operationId,meetingId:input.meetingId,membershipId:input.membershipId,rubricId:input.rubricId,previousAmount:current,newAmount:input.targetAmount,reason},
       createdBy:ctx.actorId,createdAt:commitAt,updatedAt:commitAt
     };
-    const intentFingerprint=JSON.stringify([input.tenantId,input.groupId,input.meetingId,input.membershipId,input.rubricId,currency,current,input.targetAmount,reason]);
+    const expectedVersion=input.expectedCellVersion??currentVersion,nextVersion=expectedVersion+1;
+    const intentFingerprint=JSON.stringify([input.tenantId,input.groupId,input.meetingId,input.membershipId,input.rubricId,currency,current,expectedVersion,input.targetAmount,reason]);
     const plan:FinancialCorrectionPlan={kind:'cell_correction',operationId,idempotencyKey:input.idempotencyKey,intentFingerprint,
       tenantId:input.tenantId,groupId:input.groupId,primaryEntryId:primaryEntry.id,entries,receipt,
-      accounts:accounts?[accounts.cash,accounts.memberFunds]:[],audits,outboxRecords:[outbox]};
+      accounts:accounts?[accounts.cash,accounts.memberFunds]:[],audits,
+      cellRevision:{meetingId:input.meetingId,membershipId:input.membershipId,rubricId:input.rubricId,currency,expectedVersion,nextVersion},outboxRecords:[outbox]};
     const committed=await this.repo.commitFinancialCorrection(plan);
     const evidenceEntry=committed.entries.find(e=>e.id===committed.primaryEntryId)??committed.entries.at(-1);
     if(committed.operationId===operationId)this.kernel.events.publish({id:makeId('event'),type:'FINANCIAL_CELL_CORRECTED',occurredAt:commitAt,
       tenantId:input.tenantId,actorId:ctx.actorId,aggregateType:'group',aggregateId:input.groupId,
       payload:{operationId,meetingId:input.meetingId,membershipId:input.membershipId,rubricId:input.rubricId,previousAmount:current,newAmount:input.targetAmount},
       idempotencyKey:input.idempotencyKey});
-    return{status:'APPLIED',previousAmount:current,newAmount:input.targetAmount,operationId:committed.operationId,receipt:committed.receipt,evidenceEntry};
+    return{status:'APPLIED',previousAmount:current,newAmount:input.targetAmount,cellVersion:committed.cellRevision.nextVersion,operationId:committed.operationId,receipt:committed.receipt,evidenceEntry};
   }
 
   private async ensureNamedAccount(tenantId:Id,groupId:Id,currency:Currency,code:string,type:LedgerAccount['type']):Promise<LedgerAccount>{
