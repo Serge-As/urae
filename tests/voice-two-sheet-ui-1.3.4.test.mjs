@@ -26,8 +26,11 @@ test('two-sheet UI explicitly supports French English and honest local-language 
   assert.match(source,/ne maîtrise pas|unsupported language/);
 });
 
-test('matrix interception prevents old click-to-Finance behavior from owning sheet cells',async()=>{
-  const source=await readFile('.build/src/voice-entry-ui.js','utf8');assert.match(source,/stopImmediatePropagation/);assert.match(source,/canonical-two-sheet/);assert.match(source,/sheet-cell-edit-trigger/);assert.match(source,/sheet-cell-popover/);assert.match(source,/individualSheetMatrix/);
+test('voice layer no longer owns matrices while canonical main prevents old click-to-Finance behavior',async()=>{
+  const source=await readFile('.build/src/voice-entry-ui.js','utf8'),main=await readFile('apps/web/src/main.js','utf8');
+  assert.doesNotMatch(source,/renderCanonicalMeetingMatrix|installTwoSheetChooser|sheet-cell-popover/);
+  assert.match(main,/renderCanonicalFinancialTable/);assert.match(main,/matrix-cell-entry/);assert.match(main,/cell-target-input/);assert.match(main,/individualSheetMatrix/);
+  assert.doesNotMatch(main,/go\('finance'\); \$\('#contributionAmount'\)\.focus\(\)/);
 });
 
 
@@ -47,7 +50,7 @@ test('targeted tranche 7 keeps canonical matrix ownership and audited replacemen
   assert.match(main,/setFinancialCellTarget/);
   assert.match(main,/clôturée|closed/);
   assert.match(main,/Réunion du|Meeting on/);
-  assert.match(source,/ancien — ne plus utiliser/);assert.match(source,/Timbre de prêt/);
+  assert.match(main,/isLegacyStampDuplicate/);assert.match(source,/Timbre de prêt/);
   const mount=source.slice(source.indexOf('function mountVoiceEntryUI'));
   assert.doesNotMatch(mount,/hardenLegacyMatrix\(\)|watchDetailSheets\(\)|installTwoSheetChooser\(\)|renderCanonicalMeetingMatrix\(/);
   assert.match(main,/eco:render-canonical-financial-table/);assert.match(main,/renderCanonicalFinancialTable/);
