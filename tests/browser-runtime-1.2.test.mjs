@@ -31,12 +31,12 @@ test('runtime bilingual dictionary covers critical current shell journeys',()=>{
 test('PWA cache contains current field-integrity and bilingual transitive modules',()=>{
   const sw=fs.readFileSync('apps/web/sw.js','utf8');
   for(const path of ['/src/field-hardening.js','/src/voice-entry-bootstrap.js','/src/voice-entry-ui.js','/src/expense-recap-ui.js','/src/member-dossier-ui.js','/src/documents-ui.js','/src/contextual-group-ui.js','/src/runtime-i18n.js','/src/completion-ui.js','/src/advanced-ui.js','/src/offline-snapshot.js','/packages/completion/src/index.js'])assert.ok(sw.includes(path),path);
-  assert.match(sw,/eco-system-v14(?:3-blueprint-5-0-0-finalized|4-offline-ios-safe|5-final-mega-offline-safe)-20260921|eco-system-v1451-field-corrections-20260922/);
+  assert.match(sw,/eco-system-v14(?:3-blueprint-5-0-0-finalized|4-offline-ios-safe|5-final-mega-offline-safe)-20260921|eco-system-v1451-field-corrections-20260922|eco-system-v152-unified-ui-modes-auth-pwa-20260923/);
 });
 
 test('current shell identifies 1.4 instead of stale copies',()=>{
   const html=fs.readFileSync('apps/web/index.html','utf8');
-  assert.match(html,/1\.4\.5/);assert.match(html,/BLUEPRINT(?: EXÉCUTABLE)? 5\.0\.0/);assert.doesNotMatch(html,/1\.1\.2/);
+  assert.match(html,/1\.(?:4\.5|5\.2)/);assert.match(html,/BLUEPRINT(?: EXÉCUTABLE)? 5\.0\.0/);assert.doesNotMatch(html,/1\.1\.2/);
   assert.match(html,/view-tontines/);assert.match(html,/tontineRubricCatalog/);assert.match(html,/view-members/);assert.match(html,/view-backoffice/);assert.match(html,/loanCompletionPanel/);assert.match(html,/completionLab/);
 });
 
