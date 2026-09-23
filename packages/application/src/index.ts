@@ -218,6 +218,11 @@ export class ConnectedApplication {
     await this.queueLocal('FINANCIAL_NOTICE_MEMBER_REVIEW_V1',{groupId:this.activeGroupId,noticeId,membershipId,decision,note:clean},'notice-member-review:'+noticeId+':'+decision+':'+await this.sha256Hex(clean));return updated;
   }
 
+  async memberFinancialHistory(membershipId:string,cursor?:string,limit=50):Promise<{items:any[];nextCursor?:string|null;hasMore:boolean;pageSize:number;total:number}>{
+    if(!this.activeGroupId)return{items:[],nextCursor:null,hasMore:false,pageSize:0,total:0};
+    const p=new URLSearchParams({limit:String(limit)});if(cursor)p.set('cursor',cursor);
+    return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/members/'+encodeURIComponent(membershipId)+'/financial-history?'+p.toString());
+  }
   async memberStatement(membershipId:string):Promise<import('../../contracts/src/index.js').MemberStatement>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/members/${encodeURIComponent(membershipId)}/statement`);}
   async groupMe():Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/me`);}
   async globalRecap():Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/recap/global`);}
