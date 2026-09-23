@@ -26,6 +26,7 @@ crons = ["15 7 * * *"]
 [vars]
 PREMIUM_LIVE_LEDGER = "false"
 DATA_USE_PROFILE = "BETA_OPEN"
+RELEASE_COMMIT_SHA = "UNBOUND_DEPLOY"
 
 [[durable_objects.bindings]]
 name = "GROUP_LIVE_HUB"
