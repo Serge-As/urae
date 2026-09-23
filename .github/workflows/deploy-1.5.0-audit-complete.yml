@@ -2,6 +2,9 @@ name: Eco-System 1.5.0 — Qualified Cloudflare Delivery
 
 on:
   workflow_dispatch:
+  push:
+    branches: ['next/1.5.0-audit-complete-platform-20260923']
+    paths: ['.github/DEPLOY_ECO_SYSTEM_1_5_ONCE']
 
 permissions:
   contents: read
