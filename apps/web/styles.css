@@ -227,3 +227,71 @@ details>summary{min-height:var(--tap);display:flex;align-items:center;cursor:poi
   .matrix-cell-entry{grid-template-columns:minmax(78px,1fr) 48px;min-width:132px}
   .matrix-cell-entry .cell-target-input,.matrix-cell-entry .cell-validate{min-height:48px}
 }
+
+
+/* 1.5.2 — unified experience modes */
+.session-restore-screen{position:fixed;inset:0;z-index:20000;display:grid;place-items:center;background:linear-gradient(135deg,#0e1626,#13233d 48%,#0f2f2b);padding:24px}
+.session-restore-card{max-width:430px;width:min(92vw,430px);padding:30px;border-radius:24px;background:rgba(255,255,255,.96);box-shadow:0 24px 80px rgba(0,0,0,.34);text-align:center;color:#172033}
+.session-restore-card .auth-logo{margin:0 auto 14px}
+body:not(.auth-restoring) .session-restore-screen{display:none}
+body.auth-restoring>#authScreen,body.auth-restoring>.topbar,body.auth-restoring>.app-shell,body.auth-restoring>.footer{visibility:hidden}
+
+.ui-mode-panel{position:relative;display:grid;grid-template-columns:minmax(0,1.2fr) minmax(280px,.8fr);gap:20px;align-items:center;margin:0 0 18px;padding:20px;border:1px solid rgba(113,130,163,.22);border-radius:22px;background:linear-gradient(135deg,rgba(255,255,255,.96),rgba(244,248,255,.92));box-shadow:0 12px 34px rgba(26,44,80,.08)}
+.ui-mode-copy h2{margin:.2rem 0 .4rem;font-size:clamp(1.25rem,2.4vw,1.85rem)}
+.ui-mode-copy p{margin:0;max-width:66ch;line-height:1.5}
+.ui-mode-controls{display:grid;gap:10px}
+.ui-mode-controls>label{font-weight:800}
+.ui-mode-controls select{min-height:48px;font-size:1rem;border-radius:14px}
+.ui-mode-buttons{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.ui-mode-buttons button{min-height:48px;border-radius:14px;font-weight:800;white-space:normal;line-height:1.2}
+.ui-mode-buttons button.active{outline:3px solid rgba(45,96,196,.18);transform:translateY(-1px)}
+
+body.ui-mode-visual .hero{border-radius:26px;overflow:hidden;box-shadow:0 20px 60px rgba(27,58,111,.12)}
+body.ui-mode-visual .panel{border-radius:20px}
+body.ui-mode-visual .quick,body.ui-mode-visual .module-card,body.ui-mode-visual .hub-card{transition:transform .16s ease,box-shadow .16s ease}
+body.ui-mode-visual .quick:hover,body.ui-mode-visual .module-card:hover,body.ui-mode-visual .hub-card:hover{transform:translateY(-2px);box-shadow:0 12px 28px rgba(24,45,84,.12)}
+
+body.ui-mode-senior{font-size:18px;line-height:1.55}
+body.ui-mode-senior .view{max-width:1500px}
+body.ui-mode-senior .panel,body.ui-mode-senior .item,body.ui-mode-senior .quick{font-size:1rem}
+body.ui-mode-senior button,body.ui-mode-senior input,body.ui-mode-senior select,body.ui-mode-senior textarea{min-height:52px;font-size:1rem}
+body.ui-mode-senior .nav-btn{min-height:56px;font-size:1rem;line-height:1.25;white-space:normal}
+body.ui-mode-senior .nav-btn b{font-size:1rem;line-height:1.25;overflow-wrap:normal;word-break:normal}
+body.ui-mode-senior .hint,body.ui-mode-senior small{font-size:.92rem;line-height:1.45}
+body.ui-mode-senior .meeting-matrix th,body.ui-mode-senior .meeting-matrix td{min-width:128px;padding:11px 10px}
+body.ui-mode-senior .meeting-matrix th:first-child{min-width:170px}
+body.ui-mode-senior .cell-target-input{min-width:92px;font-size:1rem}
+body.ui-mode-senior .cell-validate{min-width:50px;min-height:50px;font-size:1.3rem}
+
+body.ui-mode-assisted{font-size:17px}
+body.ui-mode-assisted button,body.ui-mode-assisted input,body.ui-mode-assisted select,body.ui-mode-assisted textarea{min-height:52px}
+body.ui-mode-assisted .focused-field-dictation{width:62px;height:62px;font-size:1.45rem}
+body.ui-mode-assisted .voice-financial-panel{border:2px solid rgba(46,116,96,.38);box-shadow:0 14px 38px rgba(20,85,68,.11)}
+body.ui-mode-assisted .voice-financial-panel h2:before{content:"🎙️ ";font-size:1.15em}
+body.ui-mode-assisted .voice-command-grid textarea{font-size:1.06rem;line-height:1.5;min-height:96px}
+body.ui-mode-assisted .voice-entry-row{gap:12px;padding:14px}
+body.ui-mode-assisted .primary,body.ui-mode-assisted .secondary{font-weight:800}
+body.ui-mode-assisted .nav-btn b{overflow-wrap:normal;word-break:normal}
+
+.canonical-financial-wrap{overflow-x:auto;overscroll-behavior-inline:contain;max-width:100%}
+.canonical-financial-matrix{width:max-content;min-width:100%}
+.canonical-financial-matrix thead th{position:sticky;top:0;z-index:3}
+.canonical-financial-matrix th:first-child{position:sticky;left:0;z-index:2}
+.canonical-financial-matrix thead th:first-child{z-index:4}
+.matrix-cell-entry{min-width:132px}
+.cell-target-input{min-width:78px}
+.cell-validate{min-width:46px;min-height:46px}
+
+#view-members .item,#memberList .item{line-height:1.4}
+#view-members .item strong,#memberList .item strong,#view-members .item p,#memberList .item p{overflow-wrap:break-word;word-break:normal}
+#view-members .actions,#memberList .actions{gap:10px;flex-wrap:wrap}
+
+@media(max-width:760px){
+  .ui-mode-panel{grid-template-columns:1fr;padding:16px;border-radius:18px}
+  .ui-mode-buttons{grid-template-columns:1fr}
+  .ui-mode-buttons button{min-height:52px}
+  body.ui-mode-senior{font-size:17px}
+  body.ui-mode-senior .side-nav .nav-btn{min-width:138px}
+  .side-nav .nav-btn b{line-height:1.22;overflow-wrap:normal;word-break:normal}
+  .matrix-cell-entry{min-width:124px}
+}
