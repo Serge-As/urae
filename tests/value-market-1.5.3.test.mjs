@@ -76,7 +76,7 @@ test('step 19: Live Market has progressive capability, pinned product/deal, uniq
   const {kernel,market,stock,supplier}=await seed();
   const deal=await market.createDeal(groupId,{title:'Deal live',dealType:'PUBLIC_DEAL',supplierId:supplier.id,stockItemId:stock.id,publicPrice:1000,supplierMinimum:2,maxQuantity:8,delivery:'24 h',quality:'Neuf',deadline:new Date(Date.now()+86400000).toISOString(),tiers:[]});
   const live=await market.createLiveMarket(groupId,{title:'Mercredi marché',theme:'Savons et bons plans',scheduledAt:new Date(Date.now()+3600000).toISOString(),capabilityLevel:3,dealId:deal.id,stockItemId:stock.id,mediaRef:'stream:community-value'});
-  assert.equal(live.data.capabilityLevel,3);assert.equal(live.data.realCounter,true);assert.equal(live.data.dealId,deal.id);assert.equal(live.data.stockItemId,stock.id);
+  assert.equal(live.data.capabilityLevel,3);assert.equal(live.data.realCounter,true);assert.equal(live.data.dealId,deal.id);assert.equal(live.data.stockItemId,stock.id);assert.equal(live.data.stockTitle,'Carton savon');
   let current=await market.transitionLiveMarket(groupId,live.id,'LIVE');assert.equal(current.data.state,'LIVE');
   setCtx(kernel,memberUser,['member']);await market.joinLiveMarket(groupId,live.id);current=await market.joinLiveMarket(groupId,live.id);assert.equal(current.data.viewerCount,1);
   current=await market.askLiveMarket(groupId,live.id,'Le prix baisse-t-il au seuil ?');const questions=JSON.parse(String(current.data.questionsJson));assert.equal(questions.length,1);assert.match(questions[0].text,/prix baisse/);
@@ -87,8 +87,10 @@ test('Value Market capabilities and UI are first-class rather than Blueprint-onl
   for(const id of ['MARKETPLACE.DEMAND_EXCHANGE','MARKETPLACE.ECO_NOW','MARKETPLACE.DEALS','MARKETPLACE.LIVE_MARKET']){
     const capability=PRODUCT_MODULES.find(x=>x.id===id);assert.ok(capability,id);assert.equal(capability.status,'FOUNDATION_ACTIVE');
   }
-  const ui=fs.readFileSync('apps/web/src/value-market-ui.js','utf8'),html=fs.readFileSync('apps/web/index.html','utf8'),market=fs.readFileSync('packages/market/src/index.ts','utf8');
+  const ui=fs.readFileSync('apps/web/src/value-market-ui.js','utf8'),html=fs.readFileSync('apps/web/index.html','utf8'),market=fs.readFileSync('packages/market/src/index.ts','utf8'),blueprint=fs.readFileSync('apps/web/src/blueprint-executable-ui.js','utf8');
   for(const phrase of ['NOW Liquidation','Predictive Demand Exchange','Eco Reverse Market','Eco Deals','Eco Live Market','Aucun paiement réel'])assert.ok(ui.includes(phrase),phrase);
   assert.match(html,/id="valueMarketPanel"/);assert.match(html,/id="valueMarketRoot"/);
   assert.match(market,/materializeMarketRequestProcurement/);assert.match(market,/claimFlashOffer/);assert.match(market,/materializeDealOrders/);
+  assert.match(blueprint,/MARKETPLACE\.DEMAND_EXCHANGE/);assert.match(blueprint,/MARKETPLACE\.PROCUREMENT/);assert.match(blueprint,/MARKETPLACE\.ECO_NOW/);assert.match(blueprint,/valueMarketPanel/);
+  assert.match(blueprint,/ne crée plus de dossier parallèle/);
 });
