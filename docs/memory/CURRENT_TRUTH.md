@@ -1,5 +1,72 @@
 # ECO-SYSTEM — CURRENT TRUTH
 
+## CURRENT OVERRIDE — 1.5.2 UNIFIED UX / CANONICAL CORE — PRODUCTION QUALIFIED (2026-09-23)
+
+**Production publique : `1.5.2-unified-ux-blueprint`.**
+**Statut : DEPLOYED + SMOKE_VERIFIED. FIELD_ACCEPTED reste distinct et exige la recette réelle du fondateur/appareils.**
+
+### Preuves de livraison
+- URL : `https://eco-system.sergemimf.workers.dev/`
+- source déployée exacte : `c89a8be935f018b5d12de6cdacb7d45b013f7ccf`
+- workflow de livraison : **35858671394 — SUCCESS**
+- qualification dans le workflow : **337 / 337 tests PASS**
+- Architecture fitness : PASS (115 fichiers source)
+- Shared Governance : PASS — 23 garde-fous + 2 conventions fondatrices
+- Constitution : PASS — 9 capacités requises, 31 enregistrements financiers critiques, 11 domaines mémorisés
+- Project Truth : PASS
+- Memory Index : PASS — 360 requirement IDs, 1541 titres historiques
+- Source Coverage : PASS — 4 sources majeures, 26 entrées RAR profondes, 14 mappings domaines
+- Worker Version ID : `8df73d6a-c51b-4e33-a752-e40185c1ec5e`
+- version runtime : `1.5.2-unified-ux-blueprint`
+- build ID : `eco-system-1.5.2-20260923`
+- PWA cache : `eco-system-v152-unified-ux-blueprint-20260923`
+- catalogue : **158 capacités**
+- argent réel : **false / OFF**
+- stockage artefacts : **R2**
+- D1 canonique : `eco-system-db`, réutilisée
+- R2 canonique : `eco-system-backups`, réutilisé
+- migrations : **No migrations to apply**
+- sauvegarde pré-déploiement : artifact **10748790771**
+- sauvegarde post-déploiement : artifact **10748825795**
+- restauration post-déploiement SQLite : **PASS**, `PRAGMA integrity_check=ok`
+
+### Acquis 1.5.2
+1. **Un seul owner des tableaux financiers** : feuille de séance + fiches individuelles utilisent le même renderer canonique, montant + ✓, valeur cible et remplacement exact, totaux par ligne/colonne/global, consensus et revue indépendante.
+2. **Retour de l'ancien tableau corrigé à la racine** : les assets PWA versionnés ne peuvent plus retomber sur un asset non versionné d'une release précédente. Le cache 1.5.2 est cohérent et conserve 1.5.0 comme rollback.
+3. **Rafraîchissement/authentification stabilisés** : restauration de session avant affichage de Connexion ; session normale moins agressive ; option volontaire « appareil privé » pour une session plus durable, sans ajout de droits métier.
+4. **Trois modes visibles en haut de l'Accueil** :
+   - **Visuel** : présentation moderne et attractive ;
+   - **Senior** : typographie/contrôles/cibles tactiles plus grands, navigation lisible ;
+   - **Assisté / Dictée** : gros contrôles et accès prioritaire à la dictée, avec validation humaine conservée.
+   Ces modes partagent strictement les mêmes services, permissions, Ledger, rubriques et calculs.
+5. **Ergonomie** : libellés Membres/navigation moins comprimés, mots non cassés arbitrairement, scroll horizontal local des tableaux, en-têtes et première colonne collants.
+6. **Chantier 1.5.1 consolidé** : Kit prêt à l'emploi / Launch Studio, Business Studio, owners Marketplace/Value/Referral/Knowledge/Academy/Control Center/Blueprint préservés et dédupliqués selon leurs contrats existants.
+7. **Circuit de livraison renforcé** : CI complète, sauvegarde avant mutation, D1/R2 existants uniquement, migrations additives, smoke exact version/SHA/build/cache, sauvegarde post-déploiement restaurée et vérifiée.
+
+### Incident de livraison résolu
+Le premier run 1.5.2 (`35858399976`) avait bien déployé les nouveaux assets et un nouveau Worker, mais son smoke s'arrêtait trop tôt sur un `/health` encore servi par l'ancienne release pendant la propagation. Il a donc échoué honnêtement avec `VERSION_MISMATCH:1.5.0-audit-complete`.
+Le smoke a été durci pour attendre **version + SHA + buildId + PWA cache exacts** avant de conclure. La relance idempotente `35858671394` a ensuite réussi entièrement, y compris la preuve post-déploiement.
+
+### Limites / prochaine vérité
+- `DEPLOYED` et `SMOKE_VERIFIED` sont prouvés.
+- **FIELD_ACCEPTED n'est pas encore déclaré** : il faut tester réellement sur les appareils du fondateur, notamment :
+  - changement Visuel / Senior / Assisté ;
+  - feuille de séance après > 5 secondes et après actualisation ;
+  - fiche individuelle ;
+  - saisie montant + ✓ et correction d'une valeur ;
+  - totaux ligne/colonne/global ;
+  - rafraîchissement avec session normale et « appareil privé » ;
+  - lisibilité Membres/navigation sur téléphone ;
+  - dictée et confirmation humaine.
+- Les capacités encore `STRUCTURAL_V1` ou `FUNCTIONAL_BETA` gardent ce statut jusqu'à leur preuve métier/terrain propre ; la livraison 1.5.2 ne transforme pas leur simple présence en acquisition terrain.
+
+Document d'implémentation :
+`docs/implementation/ECO_SYSTEM_1.5.2_UNIFIED_UX_BLUEPRINT_2026-09-23.md`.
+
+**Point de reprise : production 1.5.2 au SHA `c89a8be935f018b5d12de6cdacb7d45b013f7ccf`. Toute correction suivante part de la production prouvée et préserve D1/R2, Ledger unique, dix étapes, multi-tontines, Collation, RECAP, offline/outbox, Community/Forum/Live, Control Center et argent réel OFF.**
+
+---
+
 ## CURRENT OVERRIDE — 1.5.2 UNIFIED UX / CANONICAL CORE — CI QUALIFIED (2026-09-23)
 
 **Statut : CI_QUALIFIED sur branche ; PAS ENCORE DÉPLOYÉ ; PAS FIELD_ACCEPTED.**
