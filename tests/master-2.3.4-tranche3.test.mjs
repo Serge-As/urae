@@ -159,7 +159,7 @@ test('web shell locks the two-sheet UX contract and does not auto-inject the thr
   const misc=fs.readFileSync('apps/web/src/misc-rubrics-ui.js','utf8');
   const gov=fs.readFileSync('apps/web/src/master-governance-ui.ts','utf8');
   const html=fs.readFileSync('apps/web/index.html','utf8');
-  assert.match(voice,/postLoanFromSheet/);assert.match(voice,/x\.status!=='ARCHIVED'/);assert.match(voice,/FINANCE\.SHEET_EVENT/);
+  assert.match(voice,/postLoanFromSheet/);assert.match(voice,/x\.status!=='ARCHIVED'/);assert.match(fs.readFileSync('workers/api/src/index.ts','utf8'),/FINANCE\.SHEET_EVENT/);
   assert.doesNotMatch(misc,/await app\.ensureMiscRubricStarters\(\)/);
   assert.match(html,/Votre feuille de séance/);assert.match(html,/Vos fiches individuelles/);assert.match(html,/Utilisez les deux feuilles/);
   assert.match(gov,/id="mgLoanPeriods" type="number" min="1" max="120" value="9"/);
