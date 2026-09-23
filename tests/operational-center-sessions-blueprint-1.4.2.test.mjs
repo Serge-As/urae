@@ -31,7 +31,7 @@ test('dedicated Sessions exposes the founder minimum frame and keeps canonical o
   assert.match(ui,/app\.reconcileCashbox\(/);
   assert.match(ui,/app\.arrears\(/);
   assert.match(ui,/app\.ledger\(/);
-  assert.match(ui,/saisie\/correction reste dans le composant canonique/i);
+  assert.match(ui,/canonical-financial-table-host/);assert.match(ui,/eco:render-canonical-financial-table/);
 });
 
 test('Operational Center no longer writes attendance through a generic workspace duplicate',async()=>{
