@@ -2056,6 +2056,20 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
       return json({rows,summary:summarizePeriodicLoan(input,rows),simulationOnly:true,noInterestOnInterest:true,interestBasis:'OUTSTANDING_PRINCIPAL'},200,cors);
     }
 
+    const memberHistoryRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/members\/([^/]+)\/financial-history$/);
+    if(memberHistoryRoute&&request.method==='GET'){
+      const groupId=memberHistoryRoute[1]!,membershipId=memberHistoryRoute[2]!,group=await requireGroup(groupId),target=await repo.getMembership(ctx.tenantId,groupId,membershipId);if(!target)throw new Error('MEMBERSHIP_NOT_FOUND');
+      const viewer=(await repo.listMemberships(ctx.tenantId,groupId)).find(x=>x.userId===ctx.actorId&&x.status==='active'),manager=group.createdBy===ctx.actorId||Boolean(viewer?.roles.some(r=>['founder','manager','admin','president','treasurer','auditor'].includes(r)));
+      if(!manager&&target.userId!==ctx.actorId)throw new Error('FORBIDDEN_SCOPE');
+      const limit=Math.min(100,Math.max(10,Math.trunc(finite(url.searchParams.get('limit'),50)))),cursorRaw=url.searchParams.get('cursor')??'';
+      let cursor:{at:string;id:string}|undefined;if(cursorRaw){try{const x=JSON.parse(decodeURIComponent(cursorRaw));if(Array.isArray(x)&&x.length===2)cursor={at:String(x[0]),id:String(x[1])};}catch{throw new Error('INVALID_CURSOR');}}
+      const statement=await ledger.memberStatement(ctx.tenantId,groupId,membershipId,url.searchParams.get('asOf')??undefined);
+      const sorted=statement.receipts.slice().sort((a,b)=>String(b.receivedAt).localeCompare(String(a.receivedAt))||String(b.receiptId??b.ledgerEntryId).localeCompare(String(a.receiptId??a.ledgerEntryId)));
+      const filtered=cursor?sorted.filter(r=>String(r.receivedAt)<cursor!.at||(String(r.receivedAt)===cursor!.at&&String(r.receiptId??r.ledgerEntryId)<cursor!.id)):sorted;
+      const page=filtered.slice(0,limit),last=page.at(-1),nextCursor=filtered.length>page.length&&last?encodeURIComponent(JSON.stringify([last.receivedAt,String(last.receiptId??last.ledgerEntryId)])):null;
+      return json({items:page,nextCursor,hasMore:Boolean(nextCursor),pageSize:page.length,total:sorted.length,groupId,membershipId},200,cors);
+    }
+
     const notebookRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/members\/([^/]+)\/notebook$/);
     if(notebookRoute&&request.method==='GET'){
       const groupId=notebookRoute[1]!,membershipId=notebookRoute[2]!,group=await requireGroup(groupId),target=await repo.getMembership(ctx.tenantId,groupId,membershipId);if(!target)throw new Error('MEMBERSHIP_NOT_FOUND');
