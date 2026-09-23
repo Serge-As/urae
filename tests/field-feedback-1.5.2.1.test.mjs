@@ -24,7 +24,7 @@ test('field feedback: loan close accrual is one canonical flow for online and ou
   assert.match(worker,/preparedInterestMeetingIdsJson/);
   assert.match(worker,/interestAppliesToMeetingId/);
   assert.match(worker,/interestAppliesToLabel/);
-  assert.match(worker,/appliesTo:['"]NEXT_SESSION['"]/);
+  assert.match(worker,/appliesTo\s*:\s*['"]NEXT_SESSION['"]/);
   assert.match(worker,/totalDebt:principal\+interestAfter/);
   assert.match(worker,/loanDebts/);
 });
@@ -32,8 +32,8 @@ test('field feedback: loan close accrual is one canonical flow for online and ou
 test('field feedback: prepared next-session interest is consumed without double accrual',async()=>{
   const worker=await readFile('.build/workers/api/src/index.js','utf8');
   assert.match(worker,/preparedInterestMeetingIds\.includes\(meetingId\)/);
-  assert.match(worker,/usedPreparedInterest=true/);
-  assert.match(worker,/preparedInterestPending=false/);
+  assert.match(worker,/usedPreparedInterest\s*=\s*true/);
+  assert.match(worker,/preparedInterestPending\s*=\s*false/);
 });
 
 test('field feedback: financial matrix allows page wheel scrolling while keeping horizontal table scroll',async()=>{
@@ -51,7 +51,7 @@ test('field feedback: member actions never collapse into vertical letters',async
 
 test('field feedback: restored trash notice expires visually after 72h and Home stays capped at five urgent alerts',async()=>{
   const main=await readFile('.build/src/main.js','utf8');
-  assert.match(main,/restoredWindow=72\*60\*60\*1000/);
+  assert.match(main,/restoredWindow\s*=\s*72\s*\*\s*60\s*\*\s*60\s*\*\s*1000/);
   assert.match(main,/slice\(0,5\)/);
   assert.match(main,/renderNotificationCenter/);
   assert.match(main,/notificationCenterList/);
