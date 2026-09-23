@@ -1,0 +1,4 @@
+Eco-System 1.5.2.2 governed field-feedback production delivery requested after PR #19 merge.
+Qualified PR head: 90462085578f96db87a8c3c3ee2e6e64949c6a44
+Requested: 2026-09-23
+Guardrails: full CI, existing eco-system-db + eco-system-backups only, pre/post D1 recovery snapshots, additive migrations only, exact release smoke, realMoneyEnabled=false.
