@@ -335,9 +335,9 @@ export class MarketService{
     if(![0,1,2,3].includes(input.capabilityLevel))throw Error('INVALID_LIVE_CAPABILITY');
     if(!Number.isFinite(Date.parse(input.scheduledAt)))throw Error('INVALID_LIVE_DATE');
     if(input.dealId&&!(await this.list(groupId,'DEAL')).some(x=>x.id===input.dealId))throw Error('DEAL_NOT_FOUND');
-    if(input.stockItemId){const item=(await this.list(groupId,'STOCK_ITEM')).find(x=>x.id===input.stockItemId);if(!item)throw Error('STOCK_ITEM_NOT_FOUND');if(String(item.data.ownership??'COMMERCIAL')==='POT_RESERVED')throw Error('POT_STOCK_NOT_SELLABLE');}
+    let stockTitle='';if(input.stockItemId){const item=(await this.list(groupId,'STOCK_ITEM')).find(x=>x.id===input.stockItemId);if(!item)throw Error('STOCK_ITEM_NOT_FOUND');if(String(item.data.ownership??'COMMERCIAL')==='POT_RESERVED')throw Error('POT_STOCK_NOT_SELLABLE');stockTitle=item.title;}
     const mediaRef=input.mediaRef?.trim()??'';if(mediaRef.length>2000)throw Error('INVALID_MEDIA_REF');
-    return this.save(groupId,'LIVE_MARKET',input.title.trim(),{theme:input.theme.trim(),scheduledAt:new Date(input.scheduledAt).toISOString(),capabilityLevel:input.capabilityLevel,dealId:input.dealId??'',stockItemId:input.stockItemId??'',communityHubId:input.communityHubId??'',mediaRef,state:'SCHEDULED',participantsJson:'[]',questionsJson:'[]',viewerCount:0,realCounter:true});
+    return this.save(groupId,'LIVE_MARKET',input.title.trim(),{theme:input.theme.trim(),scheduledAt:new Date(input.scheduledAt).toISOString(),capabilityLevel:input.capabilityLevel,dealId:input.dealId??'',stockItemId:input.stockItemId??'',stockTitle,communityHubId:input.communityHubId??'',mediaRef,state:'SCHEDULED',participantsJson:'[]',questionsJson:'[]',viewerCount:0,realCounter:true});
   }
   async liveMarkets(groupId:Id){return this.list(groupId,'LIVE_MARKET');}
   async transitionLiveMarket(groupId:Id,id:Id,to:'LIVE'|'ENDED'){
@@ -359,7 +359,7 @@ export class MarketService{
   async valueMarketSnapshot(groupId:Id){
     await this.access(groupId,false);return{
       flashOffers:await this.flashOffers(groupId),requests:await this.marketRequests(groupId),responses:await this.marketResponses(groupId),
-      deals:await this.deals(groupId,true),liveMarkets:await this.liveMarkets(groupId)
+      deals:await this.deals(groupId,false),liveMarkets:await this.liveMarkets(groupId)
     };
   }
 
