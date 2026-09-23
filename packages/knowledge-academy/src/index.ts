@@ -56,8 +56,9 @@ export class KnowledgeAcademyService{
   }
   async submitLesson(enrollmentId:Id,input:{lessonId:string;score?:number;evidenceRef?:string;reflection?:string}){
     const c=this.ctx(),en=await this.repo.getWorkspaceRecord(c.tenantId,enrollmentId);if(!en||en.createdBy!==c.actorId||en.data.kind!=='ENROLLMENT')throw new Error('ACADEMY_ENROLLMENT_NOT_FOUND');
-    const course=await this.repo.getWorkspaceRecord(c.tenantId,String(en.data.courseId));if(!course)throw new Error('ACADEMY_COURSE_NOT_FOUND'),lessons=JSON.parse(String(course.data.lessonsJson??'[]')) as Array<{id:string}>;
-    if(!lessons.some(x=>x.id===input.lessonId))throw new Error('ACADEMY_LESSON_NOT_FOUND');const score=input.score===undefined?null:Number(input.score);if(score!==null&&(!Number.isFinite(score)||score<0||score>100))throw new Error('INVALID_SCORE');
+    const course=await this.repo.getWorkspaceRecord(c.tenantId,String(en.data.courseId));if(!course)throw new Error('ACADEMY_COURSE_NOT_FOUND');
+    const lessons=JSON.parse(String(course.data.lessonsJson??'[]')) as Array<{id:string}>;
+    if(!lessons.some((x:{id:string})=>x.id===input.lessonId))throw new Error('ACADEMY_LESSON_NOT_FOUND');const score=input.score===undefined?null:Number(input.score);if(score!==null&&(!Number.isFinite(score)||score<0||score>100))throw new Error('INVALID_SCORE');
     const progress=JSON.parse(String(en.data.progressJson??'{}')) as Record<string,unknown>;progress[input.lessonId]={completedAt:now(),score,reflection:clean(input.reflection,1000)};
     const evidence=JSON.parse(String(en.data.evidenceJson??'[]')) as string[];if(input.evidenceRef&&!evidence.includes(input.evidenceRef))evidence.push(clean(input.evidenceRef,500));
     const done=lessons.every(x=>Boolean(progress[x.id])),required=Number(course.data.requiredEvidenceCount??0),complete=done&&evidence.length>=required;
