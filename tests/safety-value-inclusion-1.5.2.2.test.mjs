@@ -7,6 +7,7 @@ import {ValueNetworkService} from '../.build/packages/value-network/src/index.js
 import {STRUCTURAL_INCLUSION_CHARTER} from '../.build/packages/external-programs/src/index.js';
 
 const context=kernel=>kernel.context.set({actorId:'user_test',tenantId:'tenant_test',activeGroupId:'group_test',groupRoles:['founder','manager'],mandateIds:[],deviceId:'device_test',sessionId:'session_test',locale:'fr',timezone:'Africa/Douala',connectivity:'online',requestId:'req_test'});
+const seedGroup=async repo=>repo.saveGroup({id:'group_test',tenantId:'tenant_test',name:'Groupe test',kind:'association',governanceModel:'founder_managed',status:'active',createdBy:'user_test',createdAt:new Date().toISOString()});
 
 test('anti-Ponzi safety engine blocks multi-level recruitment and keeps a reviewable case',async()=>{
   const repo=new InMemoryPlatformRepository(),kernel=new PlatformKernel();context(kernel);const safety=new SafetyCenterService(repo,kernel);
@@ -27,7 +28,7 @@ test('safety distinguishes a signal from a proven accusation',()=>{
 });
 
 test('value matching rejects wrong units and explains landed cost without inventing unknowns',async()=>{
-  const repo=new InMemoryPlatformRepository(),kernel=new PlatformKernel();context(kernel);const value=new ValueNetworkService(repo,kernel);
+  const repo=new InMemoryPlatformRepository(),kernel=new PlatformKernel();context(kernel);await seedGroup(repo);const value=new ValueNetworkService(repo,kernel);
   const need=await value.createNeed({groupId:'group_test',title:'100 cartons savon',category:'savon',quantity:100,unit:'carton',locality:'Yaoundé',maxTotalBudget:550000,currency:'XAF'});
   await value.validateNeed(need.id);
   await value.createOffer({kind:'SUPPLIER',title:'Bon fournisseur',category:'savon',availableQuantity:120,unit:'carton',locality:'Yaoundé',unitPrice:5000,deliveryCost:20000,currency:'XAF',expiresAt:new Date(Date.now()+7*86400000).toISOString(),supplierReliability:80});
@@ -36,7 +37,7 @@ test('value matching rejects wrong units and explains landed cost without invent
 });
 
 test('value matching fails closed on a hard budget ceiling but leaves missing optional facts explicitly unknown',async()=>{
-  const repo=new InMemoryPlatformRepository(),kernel=new PlatformKernel();context(kernel);const value=new ValueNetworkService(repo,kernel);
+  const repo=new InMemoryPlatformRepository(),kernel=new PlatformKernel();context(kernel);await seedGroup(repo);const value=new ValueNetworkService(repo,kernel);
   const need=await value.createNeed({groupId:'group_test',title:'Besoin huile',category:'huile',quantity:10,unit:'bidon',maxUnitPrice:5000});
   await value.validateNeed(need.id);
   await value.createOffer({kind:'SUPPLIER',title:'Trop cher',category:'huile',availableQuantity:20,unit:'bidon',unitPrice:6000,currency:'XAF',expiresAt:new Date(Date.now()+7*86400000).toISOString()});
