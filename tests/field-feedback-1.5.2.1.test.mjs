@@ -25,7 +25,7 @@ test('field feedback: loan close accrual is one canonical flow for online and ou
   assert.match(worker,/interestAppliesToMeetingId/);
   assert.match(worker,/interestAppliesToLabel/);
   assert.match(worker,/appliesTo\s*:\s*['"]NEXT_SESSION['"]/);
-  assert.match(worker,/totalDebt\s*:\s*principal\s*\+\s*interestAfter/);
+  assert.match(worker,/totalDebt(?:After)?\s*:\s*(?:currentPrincipal|principal)\s*\+\s*interestAfter/);
   assert.match(worker,/loanDebts/);
 });
 
