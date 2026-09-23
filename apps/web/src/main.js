@@ -12,6 +12,7 @@ if(typeof structuredClone!=='function'){
 }
 import { ConnectedApplication } from '../../../packages/application/src/index.js';
 import { captureRuntimeI18n, applyRuntimeLocale, localeTag, runtimeTranslate } from './runtime-i18n.js';
+import { mountExperienceMode } from './experience-mode.js';
 import { mountCompletionUI } from './completion-ui.js';
 import { mountAdvancedUI } from './advanced-ui.js';
 import { mountIdentityLiveUI } from './identity-live-ui.js';
@@ -60,7 +61,7 @@ let launchStudio;
 let modules = [];
 let selectedLot = 'ALL';
 let deferredInstallPrompt;
-const CAHIER_VERSION = '1.5.1-canonical-financial-tables-kit-business';
+const CAHIER_VERSION = '1.5.2-unified-ui-modes-auth-pwa';
 const $ = (s) => { const e = document.querySelector(s); if (!e)
     throw new Error(`UI_ELEMENT_NOT_FOUND:${s}`); return e; };
 const val = (id) => document.getElementById(id).value.trim();
@@ -134,6 +135,7 @@ const communityShopUI = mountCommunityShopUI({ app, notify: toast, showError: fa
 const miscRubricUI = mountMiscRubricUI({ app, notify: toast, showError: fail, getMembers: () => members, getMeetings: () => meetings, isManager, fmt });
 const pairingUI = mountPairingUI({ app, notify: toast, showError: fail, getMembers: () => members, isManager, afterMembershipChanged: async groupId => { await renderGroups(); if(groupId){ app.selectGroup(groupId); await refreshGroupContext(); } } });
 const clearFail = () => { $('#errorBox').hidden = true; $('#errorBox').textContent = ''; };
+const experienceMode=mountExperienceMode({toast,translate:(fr,en)=>tx(fr,en)});
 let navDepth=Number(history.state?.ecoDepth??0);
 const activeViewName=()=>document.querySelector('.view.active')?.id?.replace(/^view-/,'')||'dashboard';
 const captureNavState=()=>{
@@ -429,8 +431,8 @@ const makeFinancialEntryCell=({member,rubric,meetingId,editable=true})=>{
     const holder=document.createElement('div');holder.className='matrix-cell matrix-cell-entry';holder.dataset.membershipId=member.id;holder.dataset.rubricId=rubric.id;holder.dataset.meetingId=meetingId;holder.tabIndex=-1;
     const current=exactCellAmount(member.id,rubric.id,meetingId),currentLabel=document.createElement('strong');currentLabel.className='cell-current';currentLabel.textContent=fmt(current);holder.append(currentLabel);
     if(!editable)return holder;
-    const input=document.createElement('input');input.type='number';input.min='0';input.step='1';input.inputMode='numeric';input.className='cell-target-input';input.placeholder=current>0?tx('Modifier…','Change…'):tx('Saisir…','Enter…');input.setAttribute('aria-label',tx('Nouvelle valeur totale','New total value'));
-    const validate=document.createElement('button');validate.type='button';validate.className='cell-validate';validate.textContent='✓';validate.title=tx('Valider la valeur totale','Confirm total value');
+    const input=document.createElement('input');input.type='number';input.min='0';input.step='1';input.inputMode='numeric';input.className='cell-target-input';input.placeholder=tx('Saisir / corriger…','Enter / correct…');input.setAttribute('aria-label',tx('Saisir / corriger la valeur totale','Enter / correct the total value'));
+    const validate=document.createElement('button');validate.type='button';validate.className='cell-validate';validate.textContent='✓';validate.title=tx('Saisir / corriger · valider la valeur totale','Enter / correct · confirm total value');
     const submit=()=>void(async()=>{
       const raw=input.value.trim();if(raw==='')return;const target=Number(raw);if(!Number.isSafeInteger(target)||target<0){fail(new Error('INVALID_CONTRIBUTION_AMOUNT'));return;}
       if(target===current){input.value='';toast(tx('Aucun changement : cette valeur est déjà enregistrée.','No change: this value is already recorded.'));return;}
@@ -444,7 +446,9 @@ const makeFinancialEntryCell=({member,rubric,meetingId,editable=true})=>{
         const result=await app.setFinancialCellTarget({meetingId,membershipId:member.id,rubricId:rubric.id,targetAmount:target,currentAmount:current,currentVersion:exactCellVersion(member.id,rubric.id,meetingId),reason:reason.trim()});
         if(result?.status==='CONSENSUS_REQUIRED'){holder.classList.add('pending-consensus');toast(tx('Modification proposée : la valeur reste inchangée jusqu’à la décision des gestionnaires.','Change proposed: the value remains unchanged until managers decide.'));}
         else if(result?.status==='QUEUED_CONSENSUS'||result?.queued)toast(tx('Modification conservée hors ligne pour confrontation à la reconnexion.','Change saved offline for reconciliation when reconnected.'));
-        else toast(tx('Valeur enregistrée.','Value saved.'));
+        else if(result?.selfBenefit||result?.notice?.selfBenefit)toast(tx('Correction enregistrée sur votre propre situation : ancienne valeur, contrepassation et nouvelle valeur sont tracées. Un autre responsable habilité doit la vérifier avant validation institutionnelle.','Correction recorded on your own situation: previous value, reversal and new value are traced. Another authorized manager must review it before institutional confirmation.'));
+        else if(result?.requiresIndependentReview||result?.notice?.requiresIndependentReview)toast(tx('Correction enregistrée avec ancienne valeur, contrepassation et nouvelle valeur. Un autre responsable habilité doit la vérifier avant validation institutionnelle.','Correction recorded with previous value, reversal and new value. Another authorized manager must review it before institutional confirmation.'));
+        else toast(tx('Valeur enregistrée avec historique de remplacement.','Value saved with replacement history.'));
         input.value='';await renderLedger();window.dispatchEvent(new CustomEvent('eco:financial-data-changed',{detail:{meetingId,membershipId:member.id,rubricId:rubric.id}}));await sessionsUI.refresh?.();renderIndividualSheetMatrix();
       }catch(e){fail(e);}finally{validate.disabled=false;input.disabled=false;}
     });
@@ -1388,10 +1392,12 @@ async function ensureCurrentServiceWorker(){
 async function start() {
     renderConnectivity();
     renderKernel();
+    const restore=document.getElementById('sessionRestoreScreen');if(restore)restore.hidden=false;
+    $('#authScreen').hidden=true;
     try {
         const session=await app.authStatus();
         if(!session.authenticated||!session.account){showAuth(session.offline?tx('Aucun compte local n’existe encore. Créez votre compte maintenant : Internet n’est pas nécessaire.','No local account exists yet. Create your account now: Internet is not required.'):undefined,session.offline?'register':undefined);return;}
-        $('#authScreen').hidden=true;document.body.classList.remove('signed-out');
+        if(restore)restore.hidden=true;$('#authScreen').hidden=true;document.body.classList.remove('signed-out');
         $('#accountName').textContent=session.account.displayName+(session.registrationState==='LOCAL_PENDING_REGISTRATION'?tx(' · local',' · local'):'');
         const claim=document.querySelector('#claimLocalAccountBtn');
         if(claim){
@@ -1409,6 +1415,7 @@ async function start() {
         await loadWorkspaces();
     }
     catch (e) {
+        if(restore)restore.hidden=true;
         if(e instanceof Error&&e.message==='NETWORK_UNAVAILABLE'){showAuth(tx('Mode hors ligne disponible : créez votre premier compte local maintenant.','Offline mode is available: create your first local account now.'),'register');return;}
         fail(e);
     }
@@ -1453,14 +1460,14 @@ const setAuthMode=mode=>{
     $('#authSubmit').textContent=authMode==='register'?'Créer mon compte hors ligne ou en ligne':'Me connecter';
     $('#authPassword').autocomplete=authMode==='register'?'new-password':'current-password';
 };
-function showAuth(message='',preferredMode){document.body.classList.add('signed-out');$('#authScreen').hidden=false;if(preferredMode)setAuthMode(preferredMode);if(message)$('#authError').textContent=message;$('#authUsername').focus();}
+function showAuth(message='',preferredMode){document.getElementById('sessionRestoreScreen')?.setAttribute('hidden','');document.body.classList.add('signed-out');$('#authScreen').hidden=false;if(preferredMode)setAuthMode(preferredMode);if(message)$('#authError').textContent=message;$('#authUsername').focus();}
 document.querySelectorAll('[data-auth-mode]').forEach(button=>button.addEventListener('click',()=>setAuthMode(button.dataset.authMode)));
 document.querySelector('#authShowPassword')?.addEventListener('change',event=>{const input=document.querySelector('#authPassword');if(input)input.type=event.target.checked?'text':'password';});
 
 $('#authForm').addEventListener('submit',async event=>{
     event.preventDefault();const button=$('#authSubmit');button.disabled=true;$('#authError').textContent='';
     try{
-        await app.authenticate(authMode,{username:val('authUsername'),password:document.getElementById('authPassword').value,displayName:val('authName')});
+        await app.authenticate(authMode,{username:val('authUsername'),password:document.getElementById('authPassword').value,displayName:val('authName'),remember:Boolean(document.getElementById('authRemember')?.checked)});
         $('#authPassword').value='';clearFail();await start();
         if(!navigator.onLine&&authMode==='register')toast(tx('Compte créé sur ce téléphone. Vous pouvez commencer sans Internet.','Account created on this phone. You can start without Internet.'));
     }
