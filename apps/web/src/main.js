@@ -236,7 +236,7 @@ const sessionsUI = mountSessionsUI({
 });
 const blueprintExecutableUI = mountBlueprintExecutableUI({app,getGroups:()=>groups,getMeetings:()=>meetings,navigate:go,notify:toast,showError:fail});
 mountCommunityBlueprintPresets();
-const financialLabUI = mountFinancialLabUI({app,notify:toast,showError:fail});
+const financialLabUI = mountFinancialLabUI({app,notify:toast,showError:fail,isManager});
 const resilienceUI = mountResilienceUI({app,notify:toast,showError:fail});
 const renderConnectivity = () => { const online = navigator.onLine; const e = $('#connectivity'); e.textContent = `● ${online ? tx('En ligne','Online') : tx('Hors ligne','Offline')}`; e.className = `pill ${online ? 'online' : 'offline'}`; app.setConnectivity(online ? 'online' : 'offline'); };
 let lastOfflineSnapshotNotice=0;
