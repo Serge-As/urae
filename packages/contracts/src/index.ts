@@ -592,6 +592,10 @@ export interface RubricSpecialLoanRule {
 export interface RubricLoanPolicy {
   allowed:boolean;
   rateBasisPointsPerPeriod?:number;
+  /** Where the cash for a new loan is authorized to come from. Physical cash still posts once in the canonical Ledger; this field earmarks the governing fund source. */
+  fundingSource?:'GENERAL_CASH'|'SAVINGS'|'REPAYMENTS'|'SAVINGS_AND_REPAYMENTS'|'CUSTOM_RUBRICS';
+  fundingSourceRubricIds?:Id[];
+  enforceFundingPool?:boolean;
   interestBase:'PRINCIPAL_ONLY';
   paymentPriority?:'CAPITAL_FIRST'|'INTEREST_FIRST'|'EXPLICIT_ALLOCATION';
   noInterestOnInterest:true;
