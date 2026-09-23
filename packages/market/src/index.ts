@@ -176,7 +176,21 @@ export class MarketService{
     if(!Number.isSafeInteger(offerPrice)||offerPrice<0||!Number.isSafeInteger(originalPrice)||originalPrice<=0||offerPrice>originalPrice)throw Error('INVALID_FLASH_PRICE');
     const reason=input.reason.trim(),condition=input.condition.trim(),disclosure=input.disclosure.trim();if(!reason||!condition||!disclosure)throw Error('FLASH_DISCLOSURE_REQUIRED');
     const observedAt=Date.parse(input.observedAt),expiresAt=Date.parse(input.expiresAt);if(!Number.isFinite(observedAt)||!Number.isFinite(expiresAt)||observedAt>Date.now()+300000||expiresAt<=Date.now()||expiresAt<=observedAt)throw Error('INVALID_FLASH_DATES');
-    return this.save(groupId,'FLASH_OFFER',input.type+' · '+item.title,{flashType:input.type,stockItemId:item.id,sku:String(item.data.sku??''),quantity:input.quantity,offerPrice,originalPrice,reason,condition,observedAt:new Date(observedAt).toISOString(),expiresAt:new Date(expiresAt).toISOString(),disclosure,state:'OPEN',noHiddenDefectConfirmed:true});
+    return this.save(groupId,'FLASH_OFFER',input.type+' · '+item.title,{flashType:input.type,stockItemId:item.id,sku:String(item.data.sku??''),quantity:input.quantity,claimedQuantity:0,offerPrice,originalPrice,reason,condition,observedAt:new Date(observedAt).toISOString(),expiresAt:new Date(expiresAt).toISOString(),disclosure,state:'OPEN',noHiddenDefectConfirmed:true});
+  }
+  async claimFlashOffer(groupId:Id,id:Id,membershipId:Id,value:number){
+    qty(value);await this.access(groupId,false);const ctx=this.kernel.context.get(),member=await this.repo.getMembership(ctx.tenantId,groupId,membershipId);
+    if(!member||member.status!=='active')throw Error('MEMBERSHIP_NOT_FOUND');
+    const viewer=(await this.repo.listMemberships(ctx.tenantId,groupId)).find(x=>x.userId===ctx.actorId&&x.status==='active');
+    const group=await this.repo.getGroup(ctx.tenantId,groupId),manager=group?.createdBy===ctx.actorId||Boolean(viewer?.roles.some(r=>managers.has(r)));
+    if(!manager&&viewer?.id!==membershipId)throw Error('FORBIDDEN_SCOPE');
+    const offer=(await this.list(groupId,'FLASH_OFFER')).find(x=>x.id===id);if(!offer)throw Error('FLASH_OFFER_NOT_FOUND');
+    if(String(offer.data.state)!=='OPEN'||Date.parse(String(offer.data.expiresAt??''))<=Date.now())throw Error('FLASH_OFFER_CLOSED');
+    const claimed=Number(offer.data.claimedQuantity??0),total=Number(offer.data.quantity??0);if(claimed+value>total)throw Error('FLASH_OFFER_QUANTITY_EXCEEDED');
+    const order=await this.createOrder(groupId,{stockItemId:String(offer.data.stockItemId??''),quantity:value,customerRef:'membership:'+membershipId,unitPrice:Number(offer.data.offerPrice??0)});
+    const linked=await this.update(order,{flashOfferId:offer.id,membershipId});
+    const nextClaimed=claimed+value;await this.update(offer,{claimedQuantity:nextClaimed,state:nextClaimed===total?'SOLD_OUT':'OPEN'},nextClaimed===total?'DONE':'ACTIVE');
+    return{offer:await (async()=>{const rows=await this.list(groupId,'FLASH_OFFER');return rows.find(x=>x.id===offer.id);})(),order:linked};
   }
   async flashOffers(groupId:Id){
     const rows=await this.list(groupId,'FLASH_OFFER'),nowMs=Date.now(),out=[];
@@ -237,6 +251,17 @@ export class MarketService{
     for(const r of responses)if(r.id!==response.id&&String(r.data.responseState)==='SELECTED')await this.update(r,{responseState:'NOT_SELECTED'});
     await this.update(response,{responseState:'SELECTED',selectedAt:now()});
     return this.update(request,{state:'SELECTED',selectedResponseId:response.id,selectedSupplierId:String(response.data.supplierId??''),selectedLandedCost:Number(response.data.landedCost??0)});
+  }
+  async materializeMarketRequestProcurement(groupId:Id,id:Id){
+    await this.access(groupId,true);const request=(await this.list(groupId,'MARKET_REQUEST')).find(x=>x.id===id);if(!request)throw Error('MARKET_REQUEST_NOT_FOUND');
+    if(String(request.data.state)!=='SELECTED')throw Error('MARKET_REQUEST_NOT_SELECTED');
+    const existing=(await this.list(groupId,'PROCUREMENT')).find(x=>String(x.data.marketRequestId??'')===request.id);if(existing)return existing;
+    const response=(await this.list(groupId,'MARKET_RESPONSE')).find(x=>x.id===String(request.data.selectedResponseId??''));if(!response)throw Error('MARKET_RESPONSE_NOT_FOUND');
+    const supplierId=String(response.data.supplierId??''),quantity=Number(response.data.quantity??request.data.quantity??0),unitCost=Number(response.data.unitPrice??0),freight=Number(response.data.deliveryCost??0);
+    const procurement=await this.createProcurement(groupId,{supplierId,debtorType:'GROUP',debtorRef:groupId,lines:[{label:request.title,quantity,unitCost}],freight,otherCosts:0,currency:'XAF'});
+    const linked=await this.update(procurement,{marketRequestId:request.id,marketResponseId:response.id,source:'REVERSE_MARKET'});
+    await this.update(request,{state:'FULFILLMENT',procurementId:linked.id,fulfillmentStartedAt:now()});
+    return linked;
   }
   async transitionMarketRequest(groupId:Id,id:Id,to:'FULFILLMENT'|'CLOSED'|'DISPUTED',note=''){
     await this.access(groupId,true);const row=(await this.list(groupId,'MARKET_REQUEST')).find(x=>x.id===id);if(!row)throw Error('MARKET_REQUEST_NOT_FOUND');
@@ -305,12 +330,14 @@ export class MarketService{
     return this.update(deal,{state:'CLOSED',closedAt:now()},'DONE');
   }
 
-  async createLiveMarket(groupId:Id,input:{title:string;theme:string;scheduledAt:string;capabilityLevel:0|1|2|3;dealId?:Id;communityHubId?:Id}){
+  async createLiveMarket(groupId:Id,input:{title:string;theme:string;scheduledAt:string;capabilityLevel:0|1|2|3;dealId?:Id;stockItemId?:Id;communityHubId?:Id;mediaRef?:string}){
     await this.access(groupId,true);if(!input.title.trim()||!input.theme.trim())throw Error('LIVE_MARKET_REQUIRED');
     if(![0,1,2,3].includes(input.capabilityLevel))throw Error('INVALID_LIVE_CAPABILITY');
     if(!Number.isFinite(Date.parse(input.scheduledAt)))throw Error('INVALID_LIVE_DATE');
     if(input.dealId&&!(await this.list(groupId,'DEAL')).some(x=>x.id===input.dealId))throw Error('DEAL_NOT_FOUND');
-    return this.save(groupId,'LIVE_MARKET',input.title.trim(),{theme:input.theme.trim(),scheduledAt:new Date(input.scheduledAt).toISOString(),capabilityLevel:input.capabilityLevel,dealId:input.dealId??'',communityHubId:input.communityHubId??'',state:'SCHEDULED',participantsJson:'[]',questionsJson:'[]',viewerCount:0,realCounter:true});
+    if(input.stockItemId){const item=(await this.list(groupId,'STOCK_ITEM')).find(x=>x.id===input.stockItemId);if(!item)throw Error('STOCK_ITEM_NOT_FOUND');if(String(item.data.ownership??'COMMERCIAL')==='POT_RESERVED')throw Error('POT_STOCK_NOT_SELLABLE');}
+    const mediaRef=input.mediaRef?.trim()??'';if(mediaRef.length>2000)throw Error('INVALID_MEDIA_REF');
+    return this.save(groupId,'LIVE_MARKET',input.title.trim(),{theme:input.theme.trim(),scheduledAt:new Date(input.scheduledAt).toISOString(),capabilityLevel:input.capabilityLevel,dealId:input.dealId??'',stockItemId:input.stockItemId??'',communityHubId:input.communityHubId??'',mediaRef,state:'SCHEDULED',participantsJson:'[]',questionsJson:'[]',viewerCount:0,realCounter:true});
   }
   async liveMarkets(groupId:Id){return this.list(groupId,'LIVE_MARKET');}
   async transitionLiveMarket(groupId:Id,id:Id,to:'LIVE'|'ENDED'){
