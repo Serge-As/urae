@@ -54,16 +54,17 @@ export const assessReferralStructure=(input:{levels?:number;fundingSource?:strin
 export class SafetyCaseService{
   constructor(public repo:PlatformRepository,public kernel:PlatformKernel){}
   private ctx(){return this.kernel.context.get();}
-  private async canManage(groupId?:Id){
+  private async access(groupId?:Id,manage=false){
     if(!groupId)return true;const c=this.ctx(),g=await this.repo.getGroup(c.tenantId,groupId);if(!g)throw new Error('GROUP_NOT_FOUND');
     if(g.createdBy===c.actorId)return true;const m=(await this.repo.listMemberships(c.tenantId,groupId)).find(x=>x.userId===c.actorId&&x.status==='active');
-    if(!m?.roles.some(r=>managerRoles.has(r)))throw new Error('FORBIDDEN_SCOPE');return true;
+    if(!m||manage&&!m.roles.some(r=>managerRoles.has(r)))throw new Error('FORBIDDEN_SCOPE');return true;
   }
+  private canManage(groupId?:Id){return this.access(groupId,true);}
   private async get(id:Id){
     const r=await this.repo.getWorkspaceRecord(this.ctx().tenantId,id);if(!r||r.moduleId!=='SAFETY.ANTISCAM'||r.data.kind!=='SAFETY_CASE')throw new Error('SAFETY_CASE_NOT_FOUND');return r;
   }
   async report(input:{groupId?:Id;subjectType:string;subjectRef:string;category:SafetyCategory;summary:string;evidenceRef?:string;source?:string}){
-    if(input.groupId)await this.canManage(input.groupId);
+    if(input.groupId)await this.access(input.groupId,false);
     const subjectType=clean(input.subjectType,80).toUpperCase(),subjectRef=clean(input.subjectRef,240),summary=clean(input.summary,1800);
     if(!subjectType||!subjectRef||!summary)throw new Error('SAFETY_REPORT_FIELDS_REQUIRED');
     const allowed:SafetyCategory[]=['IMPERSONATION','FAKE_SUPPLIER','MISLEADING_PROMISE','REPUTATION_MANIPULATION','CREDIT_FRAUD','PHISHING','PYRAMID_PONZI','PUBLIC_CONTENT','OTHER'];
