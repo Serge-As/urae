@@ -1,0 +1,14 @@
+Eco-System 1.5.2.1 field finance/debt/UX production trigger
+Qualified parent SHA: 65eada0184c991a8db4629dbcfbe89e56a1c6825
+Qualification run: 35886437618 SUCCESS
+Requested scope:
+- canonical financial cell commit feedback
+- page wheel over financial tables
+- loan outflow/debt + next-session interest
+- member layout
+- trash/alerts lifecycle
+- flagship Visual mode
+- independent review for self-benefit corrections
+Real money: OFF
+D1: preserve eco-system-db
+R2: preserve eco-system-backups
