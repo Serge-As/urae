@@ -111,7 +111,7 @@ const fail = (e) => {
         LATE_POSTING_NOT_ALLOWED: "Ce groupe interdit actuellement les opérations après clôture. Modifiez la politique seulement si les responsables habilités le décident.",
         LATE_POSTING_WINDOW_EXPIRED: "Le délai autorisé après clôture est dépassé. Une régularisation distincte est nécessaire.",
         WORKSPACE_TITLE_REQUIRED: "Donnez un titre au dossier.",
-        INVALID_MODULE_ID: "Le service sélectionné n'est pas reconnu."
+        INVALID_MODULE_ID: "Le service sélectionné n'est pas reconnu.",\n        TRASH_RETENTION_EXPIRED: 'Cet élément n’est plus restaurable ou a déjà été restauré. La corbeille a été actualisée.'
     };
     box.textContent = friendly[code] ?? `Action non terminée : ${code}`;
     box.hidden = false;
@@ -166,7 +166,7 @@ const restoreNavState=state=>{
     });
 };
 const updateBackButton=()=>{const b=document.querySelector('#appBackBtn');if(b)b.hidden=navDepth<=0;};
-const showView=(name,state)=>{
+const showView=(name,state)=>{\n    clearFail();
     const target=document.querySelector(`#view-${name}`);if(!target)return false;
     document.querySelectorAll('.view').forEach(x=>x.classList.remove('active'));
     document.querySelectorAll('.nav-btn').forEach(x=>x.classList.remove('active'));
@@ -453,6 +453,12 @@ const makeFinancialEntryCell=({member,rubric,meetingId,editable=true})=>{
     if(!editable)return holder;
     const input=document.createElement('input');input.type='number';input.min='0';input.step='1';input.inputMode='numeric';input.className='cell-target-input';input.placeholder=current>0?tx('Modifier…','Change…'):tx('Saisir…','Enter…');input.setAttribute('aria-label',tx('Nouvelle valeur totale','New total value'));
     const validate=document.createElement('button');validate.type='button';validate.className='cell-validate';validate.textContent='✓';validate.title=tx('Valider la valeur totale','Confirm total value');
+    const showPending=(kind,target)=>{
+      holder.querySelector('.cell-write-state')?.remove();
+      const state=document.createElement('small');state.className='cell-write-state '+kind;
+      state.textContent=kind==='consensus'?tx('Proposé : ','Proposed: ')+fmt(target):tx('À synchroniser : ','To sync: ')+fmt(target);
+      holder.append(state);
+    };
     const submit=()=>void(async()=>{
       clearFail();const raw=input.value.trim();if(raw==='')return;const target=Number(raw);if(!Number.isSafeInteger(target)||target<0){fail(new Error('INVALID_CONTRIBUTION_AMOUNT'));return;}
       if(target===current){input.value='';toast(tx('Aucun changement : cette valeur est déjà enregistrée.','No change: this value is already recorded.'));return;}
@@ -462,24 +468,45 @@ const makeFinancialEntryCell=({member,rubric,meetingId,editable=true})=>{
         if(!reason.trim())return;
       }
       validate.disabled=true;input.disabled=true;const previousIcon=validate.textContent;validate.textContent='…';holder.classList.add('is-saving');
+      let result;
       try{
-        let result;
-        // A first entry in an open meeting follows the business engine for that rubric.
-        // This prevents a Loan from ever being posted as a positive contribution.
-        if(current===0&&meeting?.status==='open'){
+        // Contributions always use the canonical target-value endpoint. This gives
+        // an immediate server-confirmed write instead of depending on a later
+        // outbox refresh. Specialized natures keep their own business engines.
+        if(nature==='CONTRIBUTION'){
+          result=await app.setFinancialCellTarget({meetingId,membershipId:member.id,rubricId:rubric.id,targetAmount:target,currentAmount:current,currentVersion:exactCellVersion(member.id,rubric.id,meetingId),reason:reason.trim()||tx('Saisie depuis la feuille financière canonique','Entry from canonical financial sheet')});
+        }else if(current===0&&meeting?.status==='open'){
           if(target===0){input.value='';return;}
           result=await app.recordFinancialSheetEntry({membershipId:member.id,meetingId,rubric,amount:target});
+        }else throw Error('SPECIALIZED_FINANCIAL_CORRECTION_REQUIRED');
+
+        if(result?.status==='CONSENSUS_REQUIRED'){
+          holder.classList.add('pending-consensus');showPending('consensus',target);
+          toast(tx('Modification proposée : elle est visible comme proposition mais la valeur canonique attend la décision des gestionnaires.','Change proposed: it is visible as a proposal while the canonical value waits for managers’ decision.'));
+        }else if(result?.status==='QUEUED_CONSENSUS'||result?.queued){
+          showPending('queued',target);
+          toast(tx('Saisie conservée sur cet appareil et mise en attente de synchronisation.','Entry saved on this device and queued for synchronization.'));
         }else{
-          if(nature!=='CONTRIBUTION')throw Error('SPECIALIZED_FINANCIAL_CORRECTION_REQUIRED');
-          result=await app.setFinancialCellTarget({meetingId,membershipId:member.id,rubricId:rubric.id,targetAmount:target,currentAmount:current,currentVersion:exactCellVersion(member.id,rubric.id,meetingId),reason:reason.trim()});
+          holder.classList.remove('pending-consensus');holder.querySelector('.cell-write-state')?.remove();
+          const signedTarget=nature==='LOAN'?-target:target;
+          currentLabel.textContent=fmt(signedTarget);currentLabel.classList.toggle('is-negative',signedTarget<0);
+          toast(nature==='LOAN'?tx('Prêt décaissé : la caisse diminue et la dette du membre est créée.','Loan disbursed: cash decreases and the member debt is created.'):tx('Valeur enregistrée et confirmée.','Value saved and confirmed.'));
         }
-        if(result?.status==='CONSENSUS_REQUIRED'){holder.classList.add('pending-consensus');toast(tx('Modification proposée : la valeur reste inchangée jusqu’à la décision des gestionnaires.','Change proposed: the value remains unchanged until managers decide.'));}
-        else if(result?.status==='QUEUED_CONSENSUS'||result?.queued)toast(tx('Saisie conservée et mise en attente de synchronisation.','Entry saved and queued for synchronization.'));
-        else if(result?.selfBenefit)toast(tx('⚠ Correction de votre propre situation : ancienne valeur, contrepassation et nouvelle valeur sont tracées. Un autre responsable habilité doit la vérifier.','⚠ Correction of your own situation: previous value, reversal and new value are traced. Another authorized manager must review it.'));
-        else if(result?.requiresIndependentReview)toast(tx('Correction enregistrée avec ancienne valeur, contrepassation et nouvelle valeur. Un autre responsable habilité doit la vérifier avant validation institutionnelle.','Correction recorded with previous value, reversal and new value. Another authorized manager must review it before institutional confirmation.'));
-        else toast(nature==='LOAN'?tx('Prêt décaissé : la caisse diminue et la dette du membre est créée.','Loan disbursed: cash decreases and the member debt is created.'):tx('Valeur enregistrée.','Value saved.'));
-        input.value='';await renderLedger();window.dispatchEvent(new CustomEvent('eco:financial-data-changed',{detail:{meetingId,membershipId:member.id,rubricId:rubric.id}}));await sessionsUI.refresh?.();renderIndividualSheetMatrix();
-      }catch(e){fail(e);}finally{validate.disabled=false;input.disabled=false;validate.textContent=previousIcon;holder.classList.remove('is-saving');}
+        input.value='';
+      }catch(e){fail(e);return;}
+      finally{validate.disabled=false;input.disabled=false;validate.textContent=previousIcon;holder.classList.remove('is-saving');}
+
+      // A committed write must never be reported as failed merely because a
+      // secondary screen refresh was temporarily unavailable.
+      try{
+        await renderLedger();
+        window.dispatchEvent(new CustomEvent('eco:financial-data-changed',{detail:{meetingId,membershipId:member.id,rubricId:rubric.id}}));
+        await sessionsUI.refresh?.();
+        renderIndividualSheetMatrix();
+      }catch(refreshError){
+        console.warn('FINANCIAL_WRITE_COMMITTED_REFRESH_PENDING',refreshError);
+        toast(tx('Valeur enregistrée. L’écran se resynchronisera automatiquement.','Value saved. The screen will resynchronize automatically.'));
+      }
     });
     validate.onclick=submit;input.addEventListener('keydown',event=>{if(event.key==='Enter'){event.preventDefault();submit();}});
     holder.append(input,validate);return holder;
@@ -519,6 +546,16 @@ const protectCanonicalFinancialHost=root=>{
     observer.observe(root,{childList:true});
     canonicalFinancialObservers.set(root,observer);
 };
+const enableMatrixWheelPassThrough=wrap=>{
+    if(!wrap||wrap.dataset.wheelPassThrough==='1')return;
+    wrap.dataset.wheelPassThrough='1';
+    wrap.addEventListener('wheel',event=>{
+      if(event.ctrlKey||Math.abs(event.deltaY)<=Math.abs(event.deltaX))return;
+      const before=window.scrollY;
+      window.scrollBy({top:event.deltaY,left:0,behavior:'auto'});
+      if(window.scrollY!==before)event.preventDefault();
+    },{passive:false});
+};
 const renderCanonicalFinancialTable=({root,mode='meeting',meetingId='',membershipId='',showToolbar=true,editable=isManager()})=>{
     if(!root)return;
     protectCanonicalFinancialHost(root);
@@ -526,7 +563,7 @@ const renderCanonicalFinancialTable=({root,mode='meeting',meetingId='',membershi
     root.replaceChildren();
     const activeRubrics=activeFinancialRubrics(),activeMembers=activeFinancialMembers();
     if(!activeRubrics.length||!activeMembers.length){root.innerHTML='<div class="empty-state">'+tx('Ajoutez au moins un membre et une rubrique active.','Add at least one member and one active rubric.')+'</div>';return;}
-    const wrap=document.createElement('div');wrap.className='matrix-wrap canonical-financial-wrap';
+    const wrap=document.createElement('div');wrap.className='matrix-wrap canonical-financial-wrap';enableMatrixWheelPassThrough(wrap);
     const table=document.createElement('table');table.className='meeting-matrix canonical-financial-matrix';
     const head=document.createElement('thead'),hr=document.createElement('tr'),body=document.createElement('tbody');
     if(mode==='meeting'){
