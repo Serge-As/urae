@@ -1,9 +1,9 @@
 {
   "name": "tontine-platform",
-  "version": "1.5.2-1",
+  "version": "1.5.3",
   "private": true,
   "type": "module",
-  "description": "Eco-System 1.5.2.1: unified canonical finance, stable PWA/session restoration, three user experience modes, Ready-to-Use Kit, Business Studio and Blueprint 5.0.0 consolidation.",
+  "description": "Eco-System 1.5.3: canonical finance plus an operational Community & Value Network (Eco NOW, Demand Exchange, Reverse Market, Eco Deals and Eco Live Market), Ready-to-Use Kit, Business Studio and Blueprint 5.0.0.",
   "engines": {
     "node": ">=24"
   },
