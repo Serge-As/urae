@@ -1,0 +1,42 @@
+name: Eco-System 1.5.0 — WebKit PWA Smoke
+
+on:
+  workflow_dispatch:
+  push:
+    branches: ['next/1.5.0-audit-complete-platform-20260923']
+
+permissions:
+  contents: read
+
+jobs:
+  webkit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - run: npm install --ignore-scripts
+      - run: npm run build
+      - name: Install WebKit runner
+        run: npx --yes playwright@1.55.0 install --with-deps webkit
+      - name: Start local Eco-System
+        run: |
+          OPEN_BROWSER=0 PORT=4173 node scripts/dev-server.mjs > /tmp/eco-webkit.log 2>&1 &
+          echo $! > /tmp/eco-webkit.pid
+          for i in {1..30}; do curl -fsS http://127.0.0.1:4173/health >/dev/null && exit 0; sleep 1; done
+          cat /tmp/eco-webkit.log
+          exit 1
+      - name: WebKit PWA smoke
+        run: npx --yes -p @playwright/test@1.55.0 playwright test tests/browser/eco-system-webkit-1.5.0.spec.mjs --project=webkit --workers=1
+      - name: Upload WebKit report on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: webkit-1.5.0-report-${{ github.sha }}
+          path: |
+            playwright-report/
+            test-results/
+            /tmp/eco-webkit.log
+          if-no-files-found: ignore
