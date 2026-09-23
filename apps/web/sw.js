@@ -1,5 +1,5 @@
-const CACHE = 'eco-system-v150-audit-complete-20260923';
-const PREVIOUS_CACHE = 'eco-system-v1451-field-corrections-20260922';
+const CACHE = 'eco-system-v152-unified-ui-modes-auth-pwa-20260923';
+const PREVIOUS_CACHE = 'eco-system-v150-audit-complete-20260923';
 const RELEASE_READY = '/__eco_release_ready__';
 
 // Authentication, navigation and canonical application owners must be complete
@@ -7,7 +7,7 @@ const RELEASE_READY = '/__eco_release_ready__';
 // independently without replacing an already-working release.
 const ESSENTIAL_SHELL = [
   '/', '/index.html', '/styles.css', '/manifest.webmanifest',
-  '/src/field-hardening.js', '/src/main.js', '/src/i18n.js', '/src/runtime-i18n.js',
+  '/src/field-hardening.js', '/src/main.js', '/src/experience-mode.js', '/src/i18n.js', '/src/runtime-i18n.js',
   '/src/resilience-ui.js', '/src/group-home-ui.js', '/src/sessions-ui.js',
   '/src/detail-ui.js', '/src/member-control-ui.js', '/src/loan-simulation-ui.js', '/src/business-studio-ui.js', '/src/core-economic-learning-ui.js',
   '/packages/application/src/index.js', '/packages/contracts/src/index.js',
@@ -76,7 +76,9 @@ self.addEventListener('activate', event => {
 const cachedShell = async request => {
   const cache = await caches.open(CACHE);
   const url = new URL(request.url);
-  return await cache.match(request) || await cache.match(url.pathname);
+  // Query normalization is allowed only inside this release-isolated cache.
+  // Therefore /main.js?v=152 can never resolve to an asset from v1.5.0/v1.5.1.
+  return await cache.match(request) || await cache.match(url.pathname,{ignoreSearch:false});
 };
 
 self.addEventListener('fetch', event => {
