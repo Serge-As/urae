@@ -1591,6 +1591,102 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
     if(groupBuyRoute&&request.method==='POST'){const body=await readJson<Record<string,unknown>>(request);return json(await market.createGroupBuy(groupBuyRoute[1]!,{title:String(body.title??''),stockItemId:body.stockItemId?String(body.stockItemId):undefined,thresholdQuantity:finite(body.thresholdQuantity),deadline:String(body.deadline??'')}),201,cors);}
     const groupBuyCommit=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/market\/group-buys\/([^/]+)\/commit$/);
     if(groupBuyCommit&&request.method==='POST'){const body=await readJson<Record<string,unknown>>(request);return json(await market.commitGroupBuy(groupBuyCommit[1]!,groupBuyCommit[2]!,String(body.membershipId??''),finite(body.quantity)),200,cors);}
+    // Value Market — Community & Value Network steps 14–17 and 19.
+    // These routes reuse the canonical MarketService; no second inventory, order or payment engine is introduced.
+    const valueMarketSnapshot=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/market\/value-network$/);
+    if(valueMarketSnapshot&&request.method==='GET'){
+      const groupId=valueMarketSnapshot[1]!;
+      return json({
+        flashOffers:await market.flashOffers(groupId),
+        requests:await market.marketRequests(groupId),
+        responses:await market.marketResponses(groupId),
+        deals:await market.deals(groupId,false),
+        liveMarkets:await market.liveMarkets(groupId)
+      },200,cors);
+    }
+
+    const flashOffers=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/market\/flash-offers$/);
+    if(flashOffers&&request.method==='GET')return json(await market.flashOffers(flashOffers[1]!),200,cors);
+    if(flashOffers&&request.method==='POST'){
+      const body=await readJson<any>(request);
+      return json(await market.createFlashOffer(flashOffers[1]!,{
+        type:String(body.type??'') as any,stockItemId:String(body.stockItemId??''),quantity:finite(body.quantity),offerPrice:finite(body.offerPrice),
+        originalPrice:body.originalPrice===undefined?undefined:finite(body.originalPrice),reason:String(body.reason??''),condition:String(body.condition??''),
+        observedAt:String(body.observedAt??''),expiresAt:String(body.expiresAt??''),disclosure:String(body.disclosure??'')
+      }),201,cors);
+    }
+    const flashOfferClose=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/market\/flash-offers\/([^/]+)\/close$/);
+    if(flashOfferClose&&request.method==='POST'){const body=await readJson<any>(request);return json(await market.closeFlashOffer(flashOfferClose[1]!,flashOfferClose[2]!,String(body.reason??'')),200,cors);}
+
+    const marketRequests=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/market\/requests$/);
+    if(marketRequests&&request.method==='GET')return json(await market.marketRequests(marketRequests[1]!),200,cors);
+    if(marketRequests&&request.method==='POST'){
+      const body=await readJson<any>(request);
+      return json(await market.createMarketRequest(marketRequests[1]!,{
+        title:String(body.title??''),origin:String(body.origin??'EXPLICIT') as any,category:String(body.category??''),quantity:finite(body.quantity),
+        unit:body.unit?String(body.unit):undefined,locality:body.locality?String(body.locality):undefined,budgetMax:body.budgetMax===undefined?undefined:finite(body.budgetMax),
+        neededBy:body.neededBy?String(body.neededBy):undefined,deliveryMode:body.deliveryMode?String(body.deliveryMode):undefined,
+        constraints:body.constraints?String(body.constraints):undefined,predictionRef:body.predictionRef?String(body.predictionRef):undefined
+      }),201,cors);
+    }
+    const marketRequestValidate=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/market\/requests\/([^/]+)\/validate$/);
+    if(marketRequestValidate&&request.method==='POST')return json(await market.validateMarketRequest(marketRequestValidate[1]!,marketRequestValidate[2]!),200,cors);
+    const marketRequestResponses=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/market\/requests\/([^/]+)\/responses$/);
+    if(marketRequestResponses&&request.method==='GET')return json(await market.marketResponses(marketRequestResponses[1]!,marketRequestResponses[2]!),200,cors);
+    if(marketRequestResponses&&request.method==='POST'){
+      const body=await readJson<any>(request);
+      return json(await market.respondMarketRequest(marketRequestResponses[1]!,marketRequestResponses[2]!,{
+        supplierId:String(body.supplierId??''),unitPrice:finite(body.unitPrice),quantity:finite(body.quantity),
+        deliveryCost:body.deliveryCost===undefined?undefined:finite(body.deliveryCost),delayText:String(body.delayText??''),conditions:String(body.conditions??''),
+        availability:String(body.availability??''),evidenceRef:body.evidenceRef?String(body.evidenceRef):undefined,variant:body.variant?String(body.variant):undefined
+      }),201,cors);
+    }
+    const marketResponseShortlist=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/market\/responses\/([^/]+)\/shortlist$/);
+    if(marketResponseShortlist&&request.method==='POST')return json(await market.shortlistMarketResponse(marketResponseShortlist[1]!,marketResponseShortlist[2]!),200,cors);
+    const marketResponseSelect=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/market\/responses\/([^/]+)\/select$/);
+    if(marketResponseSelect&&request.method==='POST')return json(await market.selectMarketResponse(marketResponseSelect[1]!,marketResponseSelect[2]!),200,cors);
+    const marketRequestTransition=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/market\/requests\/([^/]+)\/transition$/);
+    if(marketRequestTransition&&request.method==='POST'){const body=await readJson<any>(request);return json(await market.transitionMarketRequest(marketRequestTransition[1]!,marketRequestTransition[2]!,String(body.to??'') as any,String(body.note??'')),200,cors);}
+
+    const dealRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/market\/deals$/);
+    if(dealRoute&&request.method==='GET')return json(await market.deals(dealRoute[1]!,false),200,cors);
+    if(dealRoute&&request.method==='POST'){
+      const body=await readJson<any>(request);
+      const tiers=Array.isArray(body.tiers)?body.tiers.map((x:any)=>({minQty:finite(x?.minQty),price:finite(x?.price)})):[];
+      return json(await market.createDeal(dealRoute[1]!,{
+        title:String(body.title??''),dealType:String(body.dealType??'') as any,supplierId:body.supplierId?String(body.supplierId):undefined,
+        stockItemId:body.stockItemId?String(body.stockItemId):undefined,publicPrice:finite(body.publicPrice),
+        supplierPrice:body.supplierPrice===undefined?undefined:finite(body.supplierPrice),supplierMinimum:finite(body.supplierMinimum),maxQuantity:finite(body.maxQuantity),
+        delivery:String(body.delivery??''),quality:String(body.quality??''),commission:body.commission===undefined?undefined:finite(body.commission),
+        promotion:body.promotion?String(body.promotion):undefined,volumeBonus:body.volumeBonus?String(body.volumeBonus):undefined,
+        deadline:String(body.deadline??''),tiers
+      }),201,cors);
+    }
+    const dealCommit=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/market\/deals\/([^/]+)\/commit$/);
+    if(dealCommit&&request.method==='POST'){const body=await readJson<any>(request);return json(await market.commitDeal(dealCommit[1]!,dealCommit[2]!,String(body.membershipId??''),finite(body.quantity)),200,cors);}
+    const dealActivate=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/market\/deals\/([^/]+)\/activate$/);
+    if(dealActivate&&request.method==='POST')return json(await market.activateDeal(dealActivate[1]!,dealActivate[2]!),200,cors);
+    const dealOrders=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/market\/deals\/([^/]+)\/materialize-orders$/);
+    if(dealOrders&&request.method==='POST')return json(await market.materializeDealOrders(dealOrders[1]!,dealOrders[2]!),200,cors);
+    const dealClose=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/market\/deals\/([^/]+)\/close$/);
+    if(dealClose&&request.method==='POST')return json(await market.closeDeal(dealClose[1]!,dealClose[2]!),200,cors);
+
+    const liveMarketRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/market\/live$/);
+    if(liveMarketRoute&&request.method==='GET')return json(await market.liveMarkets(liveMarketRoute[1]!),200,cors);
+    if(liveMarketRoute&&request.method==='POST'){
+      const body=await readJson<any>(request);
+      return json(await market.createLiveMarket(liveMarketRoute[1]!,{
+        title:String(body.title??''),theme:String(body.theme??''),scheduledAt:String(body.scheduledAt??''),capabilityLevel:finite(body.capabilityLevel) as 0|1|2|3,
+        dealId:body.dealId?String(body.dealId):undefined,communityHubId:body.communityHubId?String(body.communityHubId):undefined
+      }),201,cors);
+    }
+    const liveMarketTransition=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/market\/live\/([^/]+)\/transition$/);
+    if(liveMarketTransition&&request.method==='POST'){const body=await readJson<any>(request);return json(await market.transitionLiveMarket(liveMarketTransition[1]!,liveMarketTransition[2]!,String(body.to??'') as any),200,cors);}
+    const liveMarketJoin=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/market\/live\/([^/]+)\/join$/);
+    if(liveMarketJoin&&request.method==='POST')return json(await market.joinLiveMarket(liveMarketJoin[1]!,liveMarketJoin[2]!),200,cors);
+    const liveMarketQuestions=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/market\/live\/([^/]+)\/questions$/);
+    if(liveMarketQuestions&&request.method==='POST'){const body=await readJson<any>(request);return json(await market.askLiveMarket(liveMarketQuestions[1]!,liveMarketQuestions[2]!,String(body.question??'')),200,cors);}
+
     const completionCollection=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/completion$/);
     if(completionCollection&&request.method==='GET'){
       const kind=url.searchParams.get('kind') as CompletionKind|null;
