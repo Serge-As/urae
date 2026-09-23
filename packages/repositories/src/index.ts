@@ -35,6 +35,18 @@ export interface FinancialCellRevisionCAS {
   nextVersion: number;
 }
 
+export interface GroupPurgeManifest {
+  tenantId: Id;
+  groupId: Id;
+  entityIds: Id[];
+  artifactKeys: string[];
+}
+export interface GroupPurgeResult {
+  purged: true;
+  scopeHash: string;
+  purgedAt: string;
+}
+
 export interface FinancialCorrectionPlan {
   kind: 'cell_correction';
   operationId: Id;
@@ -57,6 +69,9 @@ export interface PlatformRepository {
   commitFinancialCorrection(plan: FinancialCorrectionPlan): FinancialCorrectionPlan | Promise<FinancialCorrectionPlan>;
   getFinancialCellRevision(tenantId:Id,groupId:Id,meetingId:Id,membershipId:Id,rubricId:Id,currency:string): FinancialCellRevision | undefined | Promise<FinancialCellRevision | undefined>;
   listFinancialCellRevisions(tenantId:Id,groupId:Id): FinancialCellRevision[] | Promise<FinancialCellRevision[]>;
+  captureGroupPurgeManifest(tenantId:Id,groupId:Id): GroupPurgeManifest | Promise<GroupPurgeManifest>;
+  purgeGroupData(manifest:GroupPurgeManifest,deletionId:string,purgedAt:string): GroupPurgeResult | Promise<GroupPurgeResult>;
+  isGroupPurged(tenantId:Id,groupId:Id): boolean | Promise<boolean>;
   getGroupById(id:Id):Group|undefined|Promise<Group|undefined>;
   listMembershipsForUser(userId:Id):Membership[]|Promise<Membership[]>;
   saveUser(user: User): void | Promise<void>;
@@ -177,6 +192,7 @@ export class InMemoryPlatformRepository implements PlatformRepository {
     return [...this.financialCellRevisions.values()].filter(x=>x.tenantId===tenantId&&x.groupId===groupId).map(x=>structuredClone(x));
   }
 
+  private purgedGroupScopes = new Set<string>();
   private users = new Map<Id, User>();
   private projects = new Map<Id, GroupProject>();
   private groups = new Map<Id, Group>();
@@ -195,6 +211,42 @@ export class InMemoryPlatformRepository implements PlatformRepository {
   private rubricDefinitions = new Map<Id, RubricDefinition>();
   private governanceKnowledgeClaims = new Map<Id, GovernanceKnowledgeClaim>();
   private workspaceRecords = new Map<Id, WorkspaceRecord>();
+
+  captureGroupPurgeManifest(tenantId:Id,groupId:Id):GroupPurgeManifest{
+    const ids=new Set<Id>([groupId]),artifacts=new Set<string>();
+    const collect=(value:unknown)=>{
+      if(typeof value==='string'&&value.includes('/'+tenantId+'/'+groupId+'/'))artifacts.add(value);
+      else if(Array.isArray(value))for(const x of value)collect(x);
+      else if(value&&typeof value==='object')for(const x of Object.values(value as Record<string,unknown>))collect(x);
+    };
+    const addScoped=<T extends {id:Id;tenantId?:Id;groupId?:Id}>(items:Iterable<T>)=>{
+      for(const x of items)if(x.tenantId===tenantId&&x.groupId===groupId){ids.add(x.id);collect(x);}
+    };
+    addScoped(this.memberships.values());addScoped(this.obligations.values());addScoped(this.cases.values());
+    addScoped(this.meetings.values());addScoped(this.ledgerAccounts.values());addScoped(this.ledgerEntries.values());
+    addScoped(this.receipts.values());addScoped(this.cashboxReconciliations.values());addScoped(this.rubricDefinitions.values());
+    addScoped(this.governanceKnowledgeClaims.values());addScoped(this.workspaceRecords.values());
+    for(const x of this.publicGroupListings.values())if(x.groupId===groupId){ids.add(x.id);collect(x);}
+    for(const x of this.membershipApplications.values())if(x.groupId===groupId){ids.add(x.id);collect(x);}
+    return{tenantId,groupId,entityIds:[...ids],artifactKeys:[...artifacts]};
+  }
+  purgeGroupData(manifest:GroupPurgeManifest,deletionId:string,purgedAt:string):GroupPurgeResult{
+    const {tenantId,groupId}=manifest,ids=new Set(manifest.entityIds),scope=JSON.stringify([tenantId,groupId]);
+    const delScoped=<T extends {id:Id;tenantId?:Id;groupId?:Id}>(map:Map<Id,T>)=>{for(const [id,x] of map)if(x.tenantId===tenantId&&x.groupId===groupId)map.delete(id);};
+    delScoped(this.memberships);delScoped(this.obligations);delScoped(this.cases);delScoped(this.meetings);
+    delScoped(this.ledgerAccounts);delScoped(this.ledgerEntries);delScoped(this.receipts);delScoped(this.cashboxReconciliations);
+    delScoped(this.rubricDefinitions);delScoped(this.governanceKnowledgeClaims);delScoped(this.workspaceRecords);
+    for(const [id,x] of this.publicGroupListings)if(x.groupId===groupId)this.publicGroupListings.delete(id);
+    for(const [id,x] of this.membershipApplications)if(x.groupId===groupId)this.membershipApplications.delete(id);
+    for(const [id,x] of this.audits)if(x.tenantId===tenantId&&ids.has(x.targetId))this.audits.delete(id);
+    for(const [id,x] of this.evidences)if(x.tenantId===tenantId&&ids.has(x.subjectId))this.evidences.delete(id);
+    for(const [key,x] of this.financialOperations)if(x.entry.tenantId===tenantId&&x.entry.groupId===groupId)this.financialOperations.delete(key);
+    for(const [key,x] of this.financialCorrections)if(x.tenantId===tenantId&&x.groupId===groupId)this.financialCorrections.delete(key);
+    for(const [key,x] of this.financialCellRevisions)if(x.tenantId===tenantId&&x.groupId===groupId)this.financialCellRevisions.delete(key);
+    this.groups.delete(groupId);this.purgedGroupScopes.add(scope);
+    return{purged:true,scopeHash:scope,purgedAt};
+  }
+  isGroupPurged(tenantId:Id,groupId:Id):boolean{return this.purgedGroupScopes.has(JSON.stringify([tenantId,groupId]));}
 
   saveUser(user: User): void { this.users.set(user.id, structuredClone(user)); }
   getUser(id: Id): User | undefined { const x = this.users.get(id); return x ? structuredClone(x) : undefined; }
@@ -300,6 +352,16 @@ type RecordScope={tenantId?:Id;groupId?:Id;assigneeId?:Id;idempotencyKey?:string
  * is still evolving; financial-critical persistence still needs a dedicated
  * atomic repository contract before real-money approval.
  */
+const purgeScopeHash=async(tenantId:Id,groupId:Id)=>{
+  const bytes=new TextEncoder().encode('eco-system-purge-v1|'+tenantId+'|'+groupId);
+  const digest=await crypto.subtle.digest('SHA-256',bytes);
+  return [...new Uint8Array(digest)].map(x=>x.toString(16).padStart(2,'0')).join('');
+};
+const deletionHash=async(deletionId:string)=>{
+  const digest=await crypto.subtle.digest('SHA-256',new TextEncoder().encode('eco-system-deletion-v1|'+deletionId));
+  return [...new Uint8Array(digest)].map(x=>x.toString(16).padStart(2,'0')).join('');
+};
+
 export class D1PlatformRepository implements PlatformRepository {
   constructor(private readonly db:D1DatabaseLike){}
   getGroupById(id:Id){return this.byId<Group>('group',id);}
@@ -406,6 +468,92 @@ export class D1PlatformRepository implements PlatformRepository {
       FROM financial_cell_revisions WHERE tenant_id=? AND group_id=?`).bind(tenantId,groupId)
       .all<{tenant_id:string;group_id:string;meeting_id:string;membership_id:string;rubric_id:string;currency:string;version:number;last_operation_id:string;updated_at:string}>();
     return rows.results.map(row=>({tenantId:row.tenant_id,groupId:row.group_id,meetingId:row.meeting_id,membershipId:row.membership_id,rubricId:row.rubric_id,currency:row.currency,version:Number(row.version),lastOperationId:row.last_operation_id,updatedAt:row.updated_at}));
+  }
+
+  async captureGroupPurgeManifest(tenantId:Id,groupId:Id):Promise<GroupPurgeManifest>{
+    const modern=await this.db.prepare('SELECT record_id,data_json FROM platform_records WHERE tenant_id=? AND group_id=?').bind(tenantId,groupId).all<{record_id:string;data_json:string}>();
+    const legacy=await this.db.prepare(`
+      SELECT id FROM tenant_group WHERE tenant_id=? AND id=?
+      UNION SELECT id FROM membership WHERE tenant_id=? AND group_id=?
+      UNION SELECT id FROM mandate WHERE tenant_id=? AND group_id=?
+      UNION SELECT id FROM obligation WHERE tenant_id=? AND group_id=?
+      UNION SELECT id FROM case_record WHERE tenant_id=? AND group_id=?
+      UNION SELECT id FROM meeting_session WHERE tenant_id=? AND group_id=?
+      UNION SELECT id FROM ledger_account WHERE tenant_id=? AND group_id=?
+      UNION SELECT id FROM ledger_entry WHERE tenant_id=? AND group_id=?
+      UNION SELECT id FROM contribution_receipt WHERE tenant_id=? AND group_id=?
+      UNION SELECT id FROM cashbox_reconciliation WHERE tenant_id=? AND group_id=?`)
+      .bind(tenantId,groupId,tenantId,groupId,tenantId,groupId,tenantId,groupId,tenantId,groupId,tenantId,groupId,tenantId,groupId,tenantId,groupId,tenantId,groupId,tenantId,groupId)
+      .all<{id:string}>();
+    const ids=new Set<string>([groupId,...modern.results.map(x=>x.record_id),...legacy.results.map(x=>x.id)]),artifacts=new Set<string>();
+    const collect=(value:unknown)=>{
+      if(typeof value==='string'&&value.includes('/'+tenantId+'/'+groupId+'/'))artifacts.add(value);
+      else if(Array.isArray(value))for(const x of value)collect(x);
+      else if(value&&typeof value==='object')for(const x of Object.values(value as Record<string,unknown>))collect(x);
+    };
+    for(const row of modern.results){try{collect(JSON.parse(row.data_json));}catch{}}
+    return{tenantId,groupId,entityIds:[...ids],artifactKeys:[...artifacts]};
+  }
+
+  async purgeGroupData(manifest:GroupPurgeManifest,deletionId:string,purgedAt:string):Promise<GroupPurgeResult>{
+    const {tenantId,groupId}=manifest,scopeHash=await purgeScopeHash(tenantId,groupId),dHash=await deletionHash(deletionId);
+    const q=(sql:string,...values:unknown[])=>this.db.prepare(sql).bind(...values);
+    const statements:D1PreparedStatementLike[]=[
+      // Remove non-group-scoped audit/evidence while the entity graph is still queryable.
+      q(`DELETE FROM platform_records WHERE tenant_id=? AND record_type IN ('audit','evidence') AND (
+          json_extract(data_json,'$.targetId')=? OR json_extract(data_json,'$.subjectId')=? OR
+          json_extract(data_json,'$.targetId') IN (SELECT record_id FROM platform_records WHERE tenant_id=? AND group_id=?) OR
+          json_extract(data_json,'$.subjectId') IN (SELECT record_id FROM platform_records WHERE tenant_id=? AND group_id=?)
+        )`,tenantId,groupId,groupId,tenantId,groupId,tenantId,groupId),
+      q(`DELETE FROM audit_event WHERE tenant_id=? AND (
+          target_id=? OR target_id IN (SELECT id FROM membership WHERE tenant_id=? AND group_id=?) OR
+          target_id IN (SELECT id FROM meeting_session WHERE tenant_id=? AND group_id=?) OR
+          target_id IN (SELECT id FROM ledger_entry WHERE tenant_id=? AND group_id=?) OR
+          target_id IN (SELECT id FROM contribution_receipt WHERE tenant_id=? AND group_id=?)
+        )`,tenantId,groupId,tenantId,groupId,tenantId,groupId,tenantId,groupId,tenantId,groupId),
+      q(`DELETE FROM evidence_record WHERE tenant_id=? AND (
+          subject_id=? OR subject_id IN (SELECT id FROM membership WHERE tenant_id=? AND group_id=?) OR
+          subject_id IN (SELECT id FROM meeting_session WHERE tenant_id=? AND group_id=?) OR
+          subject_id IN (SELECT id FROM ledger_entry WHERE tenant_id=? AND group_id=?)
+        )`,tenantId,groupId,tenantId,groupId,tenantId,groupId,tenantId,groupId),
+      q('DELETE FROM community_reactions WHERE message_id IN (SELECT id FROM community_messages WHERE tenant_id=? AND group_id=?)',tenantId,groupId),
+      q('DELETE FROM community_user_state WHERE tenant_id=? AND group_id=?',tenantId,groupId),
+      q('DELETE FROM community_messages WHERE tenant_id=? AND group_id=?',tenantId,groupId),
+      q('DELETE FROM historical_identity_hints WHERE tenant_id=? AND group_id=?',tenantId,groupId),
+      q('DELETE FROM historical_pairing_requests WHERE tenant_id=? AND group_id=?',tenantId,groupId),
+      q('DELETE FROM group_join_links WHERE tenant_id=? AND group_id=?',tenantId,groupId),
+      q('DELETE FROM commercial_preference_tokens WHERE group_id=?',groupId),
+      q('DELETE FROM commercial_preference_consents WHERE group_id=?',groupId),
+      q('DELETE FROM engagement_events WHERE group_id=?',groupId),
+      q(`DELETE FROM founder_control_items WHERE json_extract(data_json,'$.groupId')=? OR item_key=?`,groupId,groupId),
+      q('DELETE FROM financial_correction_commit_guards WHERE tenant_id=? AND group_id=?',tenantId,groupId),
+      q('DELETE FROM financial_correction_operations WHERE tenant_id=? AND group_id=?',tenantId,groupId),
+      q('DELETE FROM financial_cell_revisions WHERE tenant_id=? AND group_id=?',tenantId,groupId),
+      q('DELETE FROM financial_operations WHERE tenant_id=? AND group_id=?',tenantId,groupId),
+      q('DELETE FROM platform_records WHERE tenant_id=? AND group_id=?',tenantId,groupId),
+      // Legacy normalized tables may still contain historical rows from pre-platform_records releases.
+      q('DELETE FROM contribution_receipt WHERE tenant_id=? AND group_id=?',tenantId,groupId),
+      q('DELETE FROM cashbox_reconciliation WHERE tenant_id=? AND group_id=?',tenantId,groupId),
+      q('DELETE FROM ledger_line WHERE entry_id IN (SELECT id FROM ledger_entry WHERE tenant_id=? AND group_id=?)',tenantId,groupId),
+      q('DELETE FROM ledger_entry WHERE tenant_id=? AND group_id=?',tenantId,groupId),
+      q('DELETE FROM ledger_account WHERE tenant_id=? AND group_id=?',tenantId,groupId),
+      q('DELETE FROM meeting_session WHERE tenant_id=? AND group_id=?',tenantId,groupId),
+      q('DELETE FROM mandate WHERE tenant_id=? AND group_id=?',tenantId,groupId),
+      q('DELETE FROM obligation WHERE tenant_id=? AND group_id=?',tenantId,groupId),
+      q('DELETE FROM case_record WHERE tenant_id=? AND group_id=?',tenantId,groupId),
+      q('DELETE FROM membership WHERE tenant_id=? AND group_id=?',tenantId,groupId),
+      q('DELETE FROM tenant_group WHERE tenant_id=? AND id=?',tenantId,groupId),
+      q(`INSERT INTO purged_group_tombstones(scope_hash,purged_at,deletion_hash,purge_policy_version)
+         VALUES(?,?,?,'PURGE_V1_COMPLETE_BUSINESS_DATA')
+         ON CONFLICT(scope_hash) DO UPDATE SET purged_at=excluded.purged_at,deletion_hash=excluded.deletion_hash,purge_policy_version=excluded.purge_policy_version`,scopeHash,purgedAt,dHash)
+    ];
+    await this.db.batch(statements);
+    return{purged:true,scopeHash,purgedAt};
+  }
+
+  async isGroupPurged(tenantId:Id,groupId:Id):Promise<boolean>{
+    const scopeHash=await purgeScopeHash(tenantId,groupId);
+    return Boolean(await this.db.prepare('SELECT scope_hash FROM purged_group_tombstones WHERE scope_hash=? LIMIT 1').bind(scopeHash).first<{scope_hash:string}>());
   }
 
   private async saveRecord<T extends {id:Id}>(type:string,value:T,scope:RecordScope={}):Promise<void>{
