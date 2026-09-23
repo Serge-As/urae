@@ -26,29 +26,40 @@ test('two-sheet UI explicitly supports French English and honest local-language 
   assert.match(source,/ne maîtrise pas|unsupported language/);
 });
 
-test('matrix interception prevents old click-to-Finance behavior from owning sheet cells',async()=>{
-  const source=await readFile('.build/src/voice-entry-ui.js','utf8');assert.match(source,/stopImmediatePropagation/);assert.match(source,/canonical-two-sheet/);assert.match(source,/sheet-cell-edit-trigger/);assert.match(source,/sheet-cell-popover/);assert.match(source,/individualSheetMatrix/);
+test('voice layer never owns financial matrices; main keeps the single canonical renderer',async()=>{
+  const voice=await readFile('.build/src/voice-entry-ui.js','utf8');
+  const main=await readFile('.build/src/main.js','utf8');
+  assert.doesNotMatch(voice,/renderCanonicalMeetingMatrix|hardenLegacyMatrix|watchDetailSheets/);
+  assert.match(main,/renderCanonicalFinancialTable/);
+  assert.match(main,/canonical-financial-matrix/);
+  assert.match(main,/individualSheetMatrix/);
 });
 
 
-test('two-sheet workspace uses compact anchored entry instead of redirecting cells to Finance',async()=>{
-  const source=await readFile('.build/src/voice-entry-ui.js','utf8');
-  const main=await readFile('apps/web/src/main.js','utf8');
-  assert.match(source,/Saisir \/ corriger/);assert.match(source,/sheetCellPopover/);assert.match(source,/renderIndividualSheetWorkspace/);
+test('two-sheet workspace uses one inline target-value editor instead of redirecting cells to Finance',async()=>{
+  const main=await readFile('.build/src/main.js','utf8');
+  assert.match(main,/Saisir \/ corriger/);
+  assert.match(main,/cell-target-input/);
+  assert.match(main,/setFinancialCellTarget/);
+  assert.match(main,/TOTAL COLONNES/);
   assert.doesNotMatch(main,/go\('finance'\); \$\('#contributionAmount'\)\.focus\(\)/);
 });
 
 
-test('targeted tranche 7 keeps canonical matrix ownership and audited replacement workflow',async()=>{
-  const source=await readFile('.build/src/voice-entry-ui.js','utf8');
-  const main=await readFile('apps/web/src/main.js','utf8');
-  assert.match(source,/\/contributions\/.+\/correct/);
-  assert.match(source,/Cette réunion est clôturée|This meeting is closed/);
-  assert.match(source,/Réunion du|Meeting on/);
-  assert.match(source,/ancien — ne plus utiliser/);assert.match(source,/Timbre de prêt/);
-  const mount=source.slice(source.indexOf('function mountVoiceEntryUI'));
-  assert.doesNotMatch(mount,/hardenLegacyMatrix\(\)|watchDetailSheets\(\)|installTwoSheetChooser\(\)|renderCanonicalMeetingMatrix\(/);
-  assert.match(main,/eco:render-canonical-financial-table/);assert.match(main,/renderCanonicalFinancialTable/);
+test('targeted tranche 7 keeps canonical ownership, target replacement and independent review',async()=>{
+  const voice=await readFile('.build/src/voice-entry-ui.js','utf8');
+  const main=await readFile('.build/src/main.js','utf8');
+  const app=await readFile('.build/packages/application/src/index.js','utf8');
+  const worker=await readFile('.build/workers/api/src/index.js','utf8');
+  assert.match(main,/Saisir \/ corriger/);
+  assert.match(main,/setFinancialCellTarget/);
+  assert.match(app,/financial-cells/);
+  assert.match(worker,/selfBenefit/);
+  assert.match(worker,/requiresIndependentReview/);
+  assert.match(main,/Réunion du|Meeting on/);
+  assert.match(main,/isLegacyStampDuplicate/);
+  assert.doesNotMatch(voice,/renderCanonicalFinancialTable|renderCanonicalMeetingMatrix/);
+  assert.match(main,/eco:render-canonical-financial-table/);
 });
 
 
@@ -65,8 +76,8 @@ test('financial dictation is confidence-aware and never treats noise robustness 
 
 
 test('sheet correction copy distinguishes self-benefit from ordinary independent review',async()=>{
-  const source=await readFile('.build/src/voice-entry-ui.js','utf8');
-  assert.match(source,/result\.selfBenefit/);
+  const source=await readFile('.build/src/main.js','utf8');
+  assert.match(source,/result\?\.selfBenefit/);
   assert.match(source,/votre propre situation|your own situation/);
   assert.match(source,/autre responsable habilité doit la vérifier avant validation institutionnelle|authorized manager must review it before institutional confirmation/);
   assert.match(source,/ancienne valeur, contrepassation et nouvelle valeur|previous value, reversal and new value/);
