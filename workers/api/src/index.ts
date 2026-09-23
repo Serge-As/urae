@@ -56,11 +56,11 @@ interface WorkersAILike {
   run?(model:string,input:Record<string,unknown>,options?:Record<string,unknown>):Promise<unknown>;
 }
 
-const RELEASE_VERSION='1.5.2.1-field-finance-debt-ux';
-const RELEASE_BUILD_ID='eco-system-1.5.2.1-20260923';
+const RELEASE_VERSION='1.5.2.2-loan-funding-page-frame';
+const RELEASE_BUILD_ID='eco-system-1.5.2.2-20260923';
 const RELEASE_SCHEMA_VERSION='d1-additive-20260923';
-const RELEASE_POLICY_VERSION='field-finance-debt-ux-20260923';
-const RELEASE_PWA_CACHE='eco-system-v1521-field-finance-debt-ux-20260923';
+const RELEASE_POLICY_VERSION='loan-funding-page-frame-20260923';
+const RELEASE_PWA_CACHE='eco-system-v1522-loan-funding-page-frame-20260923';
 
 const defaultRepo = new InMemoryPlatformRepository();
 const defaultReferralBudgets = new InMemoryReferralBudgetStore();
