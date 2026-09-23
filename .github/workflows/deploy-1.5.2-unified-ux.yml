@@ -1,10 +1,10 @@
-name: Eco-System 1.5.2 — Unified UX Qualified Cloudflare Delivery
+name: Eco-System 1.5.2.1 — Field Finance Debt UX Qualified Cloudflare Delivery
 
 on:
   workflow_dispatch:
   push:
-    branches: ['next/1.5.0-audit-complete-platform-20260923']
-    paths: ['.github/DEPLOY_ECO_SYSTEM_1_5_2_ONCE']
+    branches: ['hotfix/1.5.2.1-field-finance-debt-ux-20260923']
+    paths: ['.github/DEPLOY_ECO_SYSTEM_1_5_2_1_ONCE']
 
 permissions:
   contents: read
@@ -19,7 +19,7 @@ env:
   ECO_SYSTEM_ROOT: https://eco-system.sergemimf.workers.dev/
   ECO_SYSTEM_HEALTH: https://eco-system.sergemimf.workers.dev/health
   ECO_SYSTEM_CATALOG: https://eco-system.sergemimf.workers.dev/api/v1/product/capabilities
-  EXPECTED_VERSION: 1.5.2-unified-ux-blueprint
+  EXPECTED_VERSION: 1.5.2.1-field-finance-debt-ux
   MIN_CAPABILITIES: 139
 
 jobs:
@@ -42,7 +42,7 @@ jobs:
           set -euo pipefail
           test -n "${CLOUDFLARE_ACCOUNT_ID:-}"
           test -n "${CLOUDFLARE_API_TOKEN:-}"
-      - name: Full 1.5.2 qualification before production mutation
+      - name: Full 1.5.2.1 qualification before production mutation
         run: npm run ci
       - name: Build coherent PWA and Worker
         run: npm run build
@@ -71,12 +71,12 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p recovery
-          npx --yes wrangler@4 d1 export "${ECO_SYSTEM_DB}" --remote --output "recovery/eco-system-pre-1.5.2-${GITHUB_SHA}.sql" --config workers/api/wrangler.ci.toml
+          npx --yes wrangler@4 d1 export "${ECO_SYSTEM_DB}" --remote --output "recovery/eco-system-pre-1.5.2.1-${GITHUB_SHA}.sql" --config workers/api/wrangler.ci.toml
           sha256sum recovery/*.sql > recovery/SHA256SUMS.txt
       - name: Upload recovery proof
         uses: actions/upload-artifact@v4
         with:
-          name: eco-system-pre-1.5.2-${{ github.sha }}
+          name: eco-system-pre-1.5.2.1-${{ github.sha }}
           path: recovery/
           retention-days: 30
       - name: Apply additive D1 migrations only
@@ -104,8 +104,8 @@ jobs:
           if(health.ok!==true) throw new Error('HEALTH_NOT_OK');
           if(health.version!==process.env.EXPECTED_VERSION) throw new Error('VERSION_MISMATCH:'+health.version);
           if(health.commitSha!==process.env.GITHUB_SHA) throw new Error('COMMIT_MISMATCH:'+health.commitSha);
-          if(health.buildId!=='eco-system-1.5.2-20260923') throw new Error('BUILD_ID_MISMATCH:'+health.buildId);
-          if(health.pwaCache!=='eco-system-v152-unified-ux-blueprint-20260923') throw new Error('PWA_CACHE_MISMATCH:'+health.pwaCache);
+          if(health.buildId!=='eco-system-1.5.2.1-20260923') throw new Error('BUILD_ID_MISMATCH:'+health.buildId);
+          if(health.pwaCache!=='eco-system-v1521-field-finance-debt-ux-20260923') throw new Error('PWA_CACHE_MISMATCH:'+health.pwaCache);
           if(health.realMoneyEnabled!==false) throw new Error('REAL_MONEY_MUST_REMAIN_DISABLED');
           if(health.artifactStorageBound!==true) throw new Error('ARTIFACT_STORAGE_NOT_ACTIVE');
           if(catalog.version!==process.env.EXPECTED_VERSION) throw new Error('CATALOG_VERSION_MISMATCH:'+catalog.version);
@@ -118,13 +118,13 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p recovery-post
-          npx --yes wrangler@4 d1 export "${ECO_SYSTEM_DB}" --remote --output "recovery-post/eco-system-post-1.5.2-${GITHUB_SHA}.sql" --config workers/api/wrangler.ci.toml
-          sqlite3 /tmp/eco-system-restore-1.5.2.db < "recovery-post/eco-system-post-1.5.2-${GITHUB_SHA}.sql"
-          test "$(sqlite3 /tmp/eco-system-restore-1.5.2.db 'PRAGMA integrity_check;')" = "ok"
+          npx --yes wrangler@4 d1 export "${ECO_SYSTEM_DB}" --remote --output "recovery-post/eco-system-post-1.5.2.1-${GITHUB_SHA}.sql" --config workers/api/wrangler.ci.toml
+          sqlite3 /tmp/eco-system-restore-1.5.2.1.db < "recovery-post/eco-system-post-1.5.2.1-${GITHUB_SHA}.sql"
+          test "$(sqlite3 /tmp/eco-system-restore-1.5.2.1.db 'PRAGMA integrity_check;')" = "ok"
           sha256sum recovery-post/*.sql > recovery-post/SHA256SUMS.txt
       - name: Upload post-deploy recovery proof
         uses: actions/upload-artifact@v4
         with:
-          name: eco-system-post-1.5.2-${{ github.sha }}
+          name: eco-system-post-1.5.2.1-${{ github.sha }}
           path: recovery-post/
           retention-days: 30
