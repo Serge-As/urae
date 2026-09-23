@@ -835,6 +835,20 @@
           </form>
           <div id="financialLabResult" class="stack"></div>
           <div id="financialLabHistory" class="stack"></div>
+          <details id="safetyCaseCenter" class="safety-case-center" open>
+            <summary><strong>Centre de signalement et de revue anti-arnaque</strong></summary>
+            <p class="truth-notice">Un signalement démarre comme un soupçon non vérifié. Il ne modifie aucun score financier et n’accuse publiquement personne. Les responsables habilités examinent les preuves, décident et la personne concernée peut faire recours.</p>
+            <form id="safetyReportForm" class="form-grid">
+              <label>Type concerné<select id="safetySubjectType"><option value="SUPPLIER">Fournisseur</option><option value="GROUP">Groupe</option><option value="MANAGER">Gestionnaire</option><option value="OFFER">Offre / annonce</option><option value="REFERRAL_CAMPAIGN">Campagne de recommandation</option><option value="CREDIT">Crédit</option><option value="PUBLIC_CONTENT">Contenu public</option><option value="OTHER">Autre</option></select></label>
+              <label>Référence<input id="safetySubjectRef" required placeholder="Nom public, identifiant d’offre, référence…"></label>
+              <label>Catégorie<select id="safetyCategory"><option value="IMPERSONATION">Usurpation / faux profil</option><option value="FAKE_SUPPLIER">Faux fournisseur</option><option value="MISLEADING_PROMISE">Promesse trompeuse</option><option value="REPUTATION_MANIPULATION">Réputation manipulée</option><option value="CREDIT_FRAUD">Crédit / remboursement douteux</option><option value="PHISHING">Phishing / PIN / OTP</option><option value="PYRAMID_PONZI">Pyramide / Ponzi suspecté</option><option value="PUBLIC_CONTENT">Contenu public</option><option value="OTHER">Autre</option></select></label>
+              <label>Preuve / référence<input id="safetyEvidenceRef" placeholder="Capture, document, transaction…"></label>
+              <label class="full">Ce que vous avez observé<textarea id="safetySummary" rows="3" required placeholder="Décrivez les faits observables sans conclure vous-même à une fraude."></textarea></label>
+              <button class="primary">Créer un signalement privé</button>
+            </form>
+            <div class="actions"><button id="safetyCasesRefreshBtn" type="button" class="secondary">Actualiser les dossiers</button></div>
+            <div id="safetyCasesList" class="stack"></div>
+          </details>
         </section>
 
         <section class="panel" id="interestCommunityPanel">
