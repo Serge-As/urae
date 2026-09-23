@@ -496,7 +496,9 @@ const makeFinancialEntryCell=({member,rubric,meetingId,editable=true})=>{
           holder.classList.remove('pending-consensus');holder.querySelector('.cell-write-state')?.remove();
           const signedTarget=nature==='LOAN'?-target:target;
           currentLabel.textContent=fmt(signedTarget);currentLabel.classList.toggle('is-negative',signedTarget<0);
-          toast(nature==='LOAN'?tx('Prêt décaissé : la caisse diminue et la dette du membre est créée.','Loan disbursed: cash decreases and the member debt is created.'):tx('Valeur enregistrée et confirmée.','Value saved and confirmed.'));
+          if(result?.selfBenefit)toast(tx('⚠ Modification de votre propre situation : ancienne valeur, contrepassation et nouvelle valeur sont tracées. Un autre responsable habilité doit la vérifier avant validation institutionnelle.','⚠ Change to your own situation: previous value, reversal and new value are traced. Another authorized manager must review it before institutional confirmation.'));
+          else if(result?.requiresIndependentReview)toast(tx('Correction enregistrée : ancienne valeur, contrepassation et nouvelle valeur sont tracées. Un autre responsable habilité doit la vérifier avant validation institutionnelle.','Correction recorded: previous value, reversal and new value are traced. Another authorized manager must review it before institutional confirmation.'));
+          else toast(nature==='LOAN'?tx('Prêt décaissé : la caisse diminue et la dette du membre est créée.','Loan disbursed: cash decreases and the member debt is created.'):tx('Valeur enregistrée et confirmée.','Value saved and confirmed.'));
         }
         input.value='';
       }catch(e){fail(e);return;}
