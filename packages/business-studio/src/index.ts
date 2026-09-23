@@ -74,9 +74,9 @@ export class BusinessStudioService{
     return this.save('OFFER',required(input.name,'offer_name'),{
       description:input.description?.trim().slice(0,2000)??'',category:input.category?.trim().slice(0,120)??'SERVICE',
       unitPrice:int(input.unitPrice??0,'unit_price'),currency:input.currency??'XAF',offerState:input.active===false?'PAUSED':'ACTIVE'
-    },input.active===false?'PAUSED':'ACTIVE');
+    },'ACTIVE');
   }
-  async setOfferState(id:Id,state:'ACTIVE'|'PAUSED'|'ARCHIVED'){return this.mutate(id,{offerState:state},state==='ARCHIVED'?'ARCHIVED':state==='PAUSED'?'PAUSED':'ACTIVE');}
+  async setOfferState(id:Id,state:'ACTIVE'|'PAUSED'|'ARCHIVED'){return this.mutate(id,{offerState:state},state==='ARCHIVED'?'ARCHIVED':'ACTIVE');}
 
   async createRequest(input:{title:string;need:string;clientId?:Id;estimatedBudget?:number;dueAt?:string;source?:string}){
     if(input.clientId&&!(await this.owned('CLIENT')).some(x=>x.id===input.clientId))throw new Error('CLIENT_NOT_FOUND');
