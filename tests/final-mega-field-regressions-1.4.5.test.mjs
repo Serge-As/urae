@@ -13,6 +13,7 @@ const loanSimulator=fs.readFileSync('packages/loan-simulator/src/index.ts','utf8
 const recap=fs.readFileSync('apps/web/src/recap-ui.js','utf8');
 const app=fs.readFileSync('packages/application/src/index.ts','utf8');
 const api=fs.readFileSync('workers/api/src/index.ts','utf8');
+const domain=fs.readFileSync('packages/domain/src/index.ts','utf8');
 const consensus=fs.readFileSync('packages/meeting-live-consensus/src/index.ts','utf8');
 const relay=fs.readFileSync('packages/relay/src/index.ts','utf8');
 const resilience=fs.readFileSync('apps/web/src/resilience-ui.js','utf8');
@@ -99,8 +100,9 @@ test('closed sessions can be edited with manager alert and financial member aler
   assert.match(sessions,/Modifier la séance clôturée/);
   assert.match(api,/Séance clôturée modifiée/);
   assert.match(api,/CLOSED_MEETING_CONTEXT_CHANGED/);
-  assert.match(api,/governedCorrectionReason/);
+  assert.match(api,/replaceCashContributionCell/);
   assert.match(api,/meeting\.status==='closed'/);
+  assert.match(domain,/Correction après clôture/);
 });
 
 test('individual sheets are restored and manager can edit exact member-session-rubric cells',()=>{
