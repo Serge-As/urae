@@ -351,9 +351,10 @@ body.ui-mode-visual .primary:hover{filter:saturate(1.08) brightness(1.03);transf
 /* 1.5.2.1 terrain — saisie réellement lisible, scroll vertical et page Membres */
 .canonical-financial-wrap{
   overflow-x:auto;
-  overflow-y:clip;
+  overflow-y:visible;
   overscroll-behavior-x:contain;
   overscroll-behavior-y:auto;
+  touch-action:pan-x pan-y;
 }
 .matrix-cell-entry .cell-write-state{
   grid-column:1/-1;
