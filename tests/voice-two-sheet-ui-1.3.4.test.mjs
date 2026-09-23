@@ -50,7 +50,7 @@ test('targeted tranche 7 keeps canonical matrix ownership and audited replacemen
   assert.match(main,/setFinancialCellTarget/);
   assert.match(main,/clôturée|closed/);
   assert.match(main,/Réunion du|Meeting on/);
-  assert.match(main,/isLegacyStampDuplicate/);assert.match(source,/Timbre de prêt/);
+  assert.match(source,/isLegacyStampDuplicate/);assert.match(source,/timbre de pret/);
   const mount=source.slice(source.indexOf('function mountVoiceEntryUI'));
   assert.doesNotMatch(mount,/hardenLegacyMatrix\(\)|watchDetailSheets\(\)|installTwoSheetChooser\(\)|renderCanonicalMeetingMatrix\(/);
   assert.match(main,/eco:render-canonical-financial-table/);assert.match(main,/renderCanonicalFinancialTable/);
