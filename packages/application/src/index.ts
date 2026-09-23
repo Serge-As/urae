@@ -626,6 +626,14 @@ export class ConnectedApplication {
   async previewSessionRecap(meetingId:string,input:any):Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/meetings/'+encodeURIComponent(meetingId)+'/recap-preview',{method:'POST',body:JSON.stringify(input)});}
   async previewClosingCarryover(input:any):Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/closing/carryover-preview',{method:'POST',body:JSON.stringify(input)});}
 
+  async referralDashboard():Promise<any>{return this.request('/api/v1/growth/referrals');}
+  async createReferralCampaign(input:any):Promise<any>{return this.request('/api/v1/growth/referral-campaigns',{method:'POST',body:JSON.stringify(input)});}
+  async setReferralCampaignState(id:string,state:'ACTIVE'|'PAUSED'|'DONE'):Promise<any>{return this.request('/api/v1/growth/referral-campaigns/'+encodeURIComponent(id)+'/state',{method:'POST',body:JSON.stringify({state})});}
+  async createReferralShare(input:any):Promise<any>{return this.request('/api/v1/growth/referral-shares',{method:'POST',body:JSON.stringify(input)});}
+  async registerReferralLanding(code:string):Promise<any>{return this.request('/api/v1/growth/referral-landings',{method:'POST',body:JSON.stringify({code})});}
+  async registerReferralConversion(input:any):Promise<any>{return this.request('/api/v1/growth/referral-conversions',{method:'POST',body:JSON.stringify(input)});}
+  async approveReferralReward(campaignId:string,conversionId:string):Promise<any>{return this.request('/api/v1/growth/referral-campaigns/'+encodeURIComponent(campaignId)+'/rewards/'+encodeURIComponent(conversionId)+'/approve',{method:'POST',body:'{}'});}
+
   async businessSummary():Promise<any>{return this.request('/api/v1/business/summary');}
   async businessRecords():Promise<any[]>{const r=await this.request('/api/v1/business/records') as any;return r.items??[];}
   async configureBusiness(input:{name:string;currency?:string;services?:string[];locality?:string;monthlyFixedCosts?:number}):Promise<any>{return this.request('/api/v1/business/workspace',{method:'PUT',body:JSON.stringify(input)});}
