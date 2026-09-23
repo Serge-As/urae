@@ -1326,7 +1326,7 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
     if(controlTransition&&request.method==='POST'){
       if(!options.founderControl||!(await isFounderTeamActor()))throw new Error('FOUNDER_TEAM_ONLY');
       const body=await readJson<Record<string,unknown>>(request);
-      return json(await options.founderControl.transition(decodeURIComponent(controlTransition[1]!),String(body.status??''),String(body.note??'')),200,cors);
+      return json(await options.founderControl.transition(decodeURIComponent(controlTransition[1]!),String(body.status??''),String(body.note??''),String(body.evidenceRef??'')),200,cors);
     }
     const capabilityCheck=url.pathname.match(/^\/api\/v1\/founder\/control\/capabilities\/(.+)\/check$/);
     if(capabilityCheck&&request.method==='POST'){
