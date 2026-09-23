@@ -339,13 +339,18 @@ export class D1PlatformRepository implements PlatformRepository {
   async commitFinancialCorrection(plan:FinancialCorrectionPlan):Promise<FinancialCorrectionPlan>{
     const c=plan.cellRevision,at=plan.entries.at(-1)?.createdAt??new Date().toISOString();
     const key=[plan.tenantId,plan.groupId,c.meetingId,c.membershipId,c.rubricId,c.currency];
-    const cas=this.db.prepare(`INSERT INTO financial_cell_revisions
-      (tenant_id,group_id,meeting_id,membership_id,rubric_id,currency,version,last_operation_id,updated_at)
-      SELECT ?,?,?,?,?,?,?,?,? WHERE ?=0
-      ON CONFLICT(tenant_id,group_id,meeting_id,membership_id,rubric_id,currency)
-      DO UPDATE SET version=excluded.version,last_operation_id=excluded.last_operation_id,updated_at=excluded.updated_at
-      WHERE financial_cell_revisions.version=?`)
-      .bind(...key,c.nextVersion,plan.operationId,at,c.expectedVersion,c.expectedVersion);
+    const cas=c.expectedVersion===0
+      ? this.db.prepare(`INSERT INTO financial_cell_revisions
+          (tenant_id,group_id,meeting_id,membership_id,rubric_id,currency,version,last_operation_id,updated_at)
+          VALUES(?,?,?,?,?,?,?,?,?)
+          ON CONFLICT(tenant_id,group_id,meeting_id,membership_id,rubric_id,currency)
+          DO UPDATE SET version=excluded.version,last_operation_id=excluded.last_operation_id,updated_at=excluded.updated_at
+          WHERE financial_cell_revisions.version=0`)
+          .bind(...key,c.nextVersion,plan.operationId,at)
+      : this.db.prepare(`UPDATE financial_cell_revisions
+          SET version=?,last_operation_id=?,updated_at=?
+          WHERE tenant_id=? AND group_id=? AND meeting_id=? AND membership_id=? AND rubric_id=? AND currency=? AND version=?`)
+          .bind(c.nextVersion,plan.operationId,at,...key,c.expectedVersion);
     const operation=this.db.prepare(`INSERT INTO financial_correction_operations
       (tenant_id,group_id,idempotency_key,operation_id,primary_entry_id,operation_json,created_at)
       SELECT ?,?,?,?,?,?,? WHERE EXISTS (
