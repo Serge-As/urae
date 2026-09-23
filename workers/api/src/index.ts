@@ -192,22 +192,19 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
     const rows=(await ledger.receiptPositions(ctx.tenantId,groupId)).filter(x=>x.meetingId===meetingId&&x.membershipId===membershipId&&x.rubricId===rubricId&&x.netAmount!==0);
     return{rows,current:rows.reduce((n,x)=>n+x.netAmount,0),baselineActorId:rows.slice().reverse().find(x=>x.netAmount>0)?.receivedBy};
   };
-  const applyFinancialCellTarget=async(input:{groupId:string;meetingId:string;membershipId:string;rubricId:string;targetAmount:number;reason:string;idempotencyKey:string;consensusId?:string;consensusVersion?:number})=>{
+  const applyFinancialCellTarget=async(input:{groupId:string;meetingId:string;membershipId:string;rubricId:string;targetAmount:number;expectedCurrentAmount?:number;reason:string;idempotencyKey:string;consensusId?:string;consensusVersion?:number})=>{
     const group=await requireGroup(input.groupId,true),meeting=await repo.getMeeting(ctx.tenantId,input.groupId,input.meetingId);if(!meeting||meeting.status==='cancelled')throw Error('MEETING_NOT_FOUND');
     if(!Number.isSafeInteger(input.targetAmount)||input.targetAmount<0)throw Error('INVALID_CONTRIBUTION_AMOUNT');
     const beforeAll=await ledger.receiptPositions(ctx.tenantId,input.groupId),beforeSituation=beforeAll.filter(x=>x.membershipId===input.membershipId).reduce((n,x)=>n+x.netAmount,0);
     const state=await financialCellState(input.groupId,input.meetingId,input.membershipId,input.rubricId);
     if(state.current===input.targetAmount)return{status:'NO_CHANGE',current:state.current,target:input.targetAmount};
     const reason=input.reason.trim()||'Correction de cellule financière';
-    let evidenceEntry:import('../../../packages/contracts/src/index.js').LedgerEntry|undefined;
-    for(const row of state.rows.filter(x=>x.netAmount>0)){
-      evidenceEntry=await ledger.reverseEntry({tenantId:ctx.tenantId,groupId:input.groupId,entryId:row.ledgerEntryId,reason},ctx.requestId);
-    }
-    let receipt:import('../../../packages/contracts/src/index.js').ContributionReceipt|undefined;
-    if(input.targetAmount>0){
-      receipt=await ledger.recordCashContribution({tenantId:ctx.tenantId,groupId:input.groupId,membershipId:input.membershipId,amount:input.targetAmount,currency:'XAF',meetingId:input.meetingId,rubricId:input.rubricId,idempotencyKey:input.idempotencyKey,governedCorrectionReason:meeting.status==='closed'?reason:undefined},ctx.requestId);
-      evidenceEntry=await repo.getLedgerEntry(ctx.tenantId,input.groupId,receipt.ledgerEntryId);
-    }
+    const correction=await ledger.replaceCashContributionCell({
+      tenantId:ctx.tenantId,groupId:input.groupId,meetingId:input.meetingId,membershipId:input.membershipId,rubricId:input.rubricId,
+      targetAmount:input.targetAmount,expectedCurrentAmount:input.expectedCurrentAmount??state.current,currency:'XAF',
+      reason,idempotencyKey:input.idempotencyKey
+    },ctx.requestId);
+    const receipt=correction.receipt,evidenceEntry=correction.evidenceEntry;
     if(!evidenceEntry)throw Error('FINANCIAL_CORRECTION_NOT_APPLIED');
     const afterAll=await ledger.receiptPositions(ctx.tenantId,input.groupId),newSituation=afterAll.filter(x=>x.membershipId===input.membershipId).reduce((n,x)=>n+x.netAmount,0),targetMember=await repo.getMembership(ctx.tenantId,input.groupId,input.membershipId);
     const notice=await memberControl.create({groupId:input.groupId,membershipId:input.membershipId,entry:evidenceEntry,operationType:'FINANCIAL_CELL_CORRECTION',amount:input.targetAmount,currency:'XAF',rubricId:input.rubricId,meetingId:input.meetingId,previousSituation:beforeSituation,newSituation,previousAmount:state.current,newAmount:input.targetAmount,correctionReason:reason,selfBenefit:targetMember?.userId===ctx.actorId,requiresIndependentReview:false});
@@ -296,13 +293,14 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
     const financialCellApply=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/meetings\/([^/]+)\/financial-cells\/([^/]+)\/apply$/);
     if(financialCellBase&&request.method==='POST'){
       const groupId=financialCellBase[1]!,meetingId=financialCellBase[2]!;await requireGroup(groupId,true);
-      const body=await readJson<Record<string,unknown>>(request),membershipId=String(body.membershipId??''),rubricId=String(body.rubricId??''),targetAmount=finite(body.targetAmount),reason=String(body.reason??'').trim();
+      const body=await readJson<Record<string,unknown>>(request),membershipId=String(body.membershipId??''),rubricId=String(body.rubricId??''),targetAmount=finite(body.targetAmount),expectedCurrentAmount=body.expectedCurrentAmount===undefined?undefined:finite(body.expectedCurrentAmount),reason=String(body.reason??'').trim();
       if(!membershipId||!rubricId)throw Error('FINANCIAL_CELL_REQUIRED');
       if(!Number.isSafeInteger(targetAmount)||targetAmount<0)throw Error('INVALID_CONTRIBUTION_AMOUNT');
       const state=await financialCellState(groupId,meetingId,membershipId,rubricId),meeting=await repo.getMeeting(ctx.tenantId,groupId,meetingId);if(!meeting||meeting.status==='cancelled')throw Error('MEETING_NOT_FOUND');
       if(state.current===targetAmount)return json({status:'NO_CHANGE',current:state.current,target:targetAmount},200,cors);
+      if(expectedCurrentAmount!==undefined&&expectedCurrentAmount!==state.current)throw Error('CELL_VALUE_CONFLICT');
       const managers=await managerUserIds(groupId);
-      const needsConsensus=state.current>0&&(managers.length>1||Boolean(state.baselineActorId&&state.baselineActorId!==ctx.actorId));
+      const needsConsensus=meeting.status==='closed'||(state.current>0&&(managers.length>1||Boolean(state.baselineActorId&&state.baselineActorId!==ctx.actorId)));
       if(needsConsensus){
         const item=await new MeetingLiveConsensusService(repo,kernel).proposeAgainstBaseline({groupId,meetingId,cellKey:membershipId+':'+rubricId,value:targetAmount,baselineValue:state.current,baselineActorId:state.baselineActorId,label:'Proposition de correction',membershipId,rubricId});
         const proposer=await actorLabel(),originalActor=state.baselineActorId?await actorLabelFor(state.baselineActorId):'auteur antérieur',mName=await memberLabel(groupId,membershipId),rName=await rubricLabel(groupId,rubricId),action={view:'operations',anchor:'twoSheetWorkspace',meetingId,membershipId,rubricId,label:'Voir et confronter la cellule'};
@@ -312,13 +310,7 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
         await publishLive(groupId,'CONSENSUS_REQUIRED','financial-cell-proposal:'+item.id+':'+item.version,{meetingId,cellKey:item.cellKey,state:item.state,version:item.version,baselineValue:state.current,proposedValue:targetAmount,membershipId,rubricId,proposedBy:ctx.actorId});
         return json({status:'CONSENSUS_REQUIRED',current:state.current,target:targetAmount,consensus:item},202,cors);
       }
-      if(state.current===0&&meeting.status==='open'&&targetAmount>0){
-        const key=String(request.headers.get('x-idempotency-key')??makeId('cell'));
-        const receipt=await ledger.recordCashContribution({tenantId:ctx.tenantId,groupId,membershipId,amount:targetAmount,currency:'XAF',meetingId,rubricId,idempotencyKey:key},ctx.requestId);
-        const entry=await repo.getLedgerEntry(ctx.tenantId,groupId,receipt.ledgerEntryId);if(entry)await dispatchContributionProjection(groupId,receipt,entry);
-        return json({status:'POSTED',current:0,target:targetAmount,receipt},201,cors);
-      }
-      const applied=await applyFinancialCellTarget({groupId,meetingId,membershipId,rubricId,targetAmount,reason:reason||'Correction explicite de la feuille de séance',idempotencyKey:String(request.headers.get('x-idempotency-key')??makeId('cell-correction'))});
+      const applied=await applyFinancialCellTarget({groupId,meetingId,membershipId,rubricId,targetAmount,expectedCurrentAmount:expectedCurrentAmount??state.current,reason:reason||'Correction explicite de la feuille de séance',idempotencyKey:String(request.headers.get('x-idempotency-key')??makeId('cell-correction'))});
       return json(applied,200,cors);
     }
     if(financialCellApply&&request.method==='POST'){
