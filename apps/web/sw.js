@@ -1,13 +1,13 @@
-const CACHE = 'eco-system-v152-unified-ux-blueprint-20260923';
-const PREVIOUS_CACHE = 'eco-system-v150-audit-complete-20260923';
+const CACHE = 'eco-system-v1522-governed-field-feedback-20260923';
+const PREVIOUS_CACHE = 'eco-system-v152-unified-ux-blueprint-20260923';
 const RELEASE_READY = '/__eco_release_ready__';
 
 // Authentication, navigation and canonical application owners must be complete
 // before this worker may install. Optional business/community panels can fail
 // independently without replacing an already-working release.
 const ESSENTIAL_SHELL = [
-  '/', '/index.html', '/styles.css?v=152', '/manifest.webmanifest',
-  '/src/ui-modes.js?v=152', '/src/field-hardening.js', '/src/main.js?v=152', '/src/i18n.js', '/src/runtime-i18n.js',
+  '/', '/index.html', '/styles.css?v=1522', '/manifest.webmanifest',
+  '/src/ui-modes.js?v=1522', '/src/field-hardening.js', '/src/main.js?v=1522', '/src/i18n.js', '/src/runtime-i18n.js',
   '/src/resilience-ui.js', '/src/group-home-ui.js', '/src/sessions-ui.js',
   '/src/detail-ui.js', '/src/member-control-ui.js', '/src/loan-simulation-ui.js', '/src/business-studio-ui.js', '/src/core-economic-learning-ui.js',
   '/packages/application/src/index.js', '/packages/contracts/src/index.js',
@@ -77,7 +77,7 @@ const cachedShell = async request => {
   const cache = await caches.open(CACHE);
   const url = new URL(request.url);
   // A versioned request must only match that exact version. Falling back from
-  // main.js?v=152 to an older /main.js was the source of mixed-release UI.
+  // main.js?v=1522 to an older /main.js was the source of mixed-release UI.
   if(url.search)return await cache.match(request);
   return await cache.match(url.pathname);
 };
