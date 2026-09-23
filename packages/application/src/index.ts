@@ -563,6 +563,13 @@ export class ConnectedApplication {
   async groupTrashItems():Promise<any[]>{return this.request('/api/v1/trash/groups');}
   async restoreGroupTrashItem(trashId:string):Promise<any>{return this.request('/api/v1/trash/groups/'+encodeURIComponent(trashId)+'/restore',{method:'POST',body:'{}'});}
   async setGroupTrashReminders(trashId:string,enabled:boolean):Promise<any>{return this.request('/api/v1/trash/groups/'+encodeURIComponent(trashId)+'/reminders',{method:'PUT',body:JSON.stringify({enabled})});}
+  async groupPetitionStatus(trashId:string):Promise<any>{return this.request('/api/v1/trash/groups/'+encodeURIComponent(trashId)+'/petition');}
+  async signGroupPetition(trashId:string):Promise<any>{return this.request('/api/v1/trash/groups/'+encodeURIComponent(trashId)+'/petition',{method:'POST',body:'{}'});}
+  async withdrawGroupPetition(trashId:string):Promise<any>{return this.request('/api/v1/trash/groups/'+encodeURIComponent(trashId)+'/petition/withdraw',{method:'POST',body:'{}'});}
+  async createSuccessorGroup(trashId:string,input:{name?:string;purpose?:string}={}):Promise<any>{return this.request('/api/v1/trash/groups/'+encodeURIComponent(trashId)+'/successor',{method:'POST',body:JSON.stringify(input)});}
+  async recordSuccessionDecision(groupId:string,input:{decision:string;reason:string;nextAction?:string}):Promise<any>{return this.request('/api/v1/groups/'+encodeURIComponent(groupId)+'/succession/decisions',{method:'POST',body:JSON.stringify(input)});}
+  async openSuccessionDispute(groupId:string,input:{reviewDossierId:string;summary:string;evidenceRefs?:string[]}):Promise<any>{return this.request('/api/v1/groups/'+encodeURIComponent(groupId)+'/succession/disputes',{method:'POST',body:JSON.stringify(input)});}
+
   async markGroupNotificationRead(id:string):Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/notifications/${encodeURIComponent(id)}/read`,{method:'POST',body:'{}'});}
   async distributeMeetingSummary(meetingId:string):Promise<{queued:boolean;outbox:OutboxItem}>{
     if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');
