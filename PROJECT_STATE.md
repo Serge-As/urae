@@ -1,5 +1,43 @@
 # ECO-SYSTEM — PROJECT STATE
 
+## CURRENT OVERRIDE — Production 1.5.2.1 Field Finance / Debt / UX (2026-09-23)
+
+### Production vérifiée
+- version : **1.5.2.1-field-finance-debt-ux**
+- URL : `https://eco-system.sergemimf.workers.dev/`
+- source déployée : **109078c84374dddf5f64d8d836a2a726fd4a92ea**
+- Worker Version ID : **ca489d19-f8ae-4baa-b3d7-3ff99df67d0c**
+- branche : `release/1.5.2-unified-ux-blueprint-20260923`
+- PR hotfix : **#15 fusionnée**
+- workflow production : **35870745271 SUCCESS**
+- qualification hotfix : **35870359776 SUCCESS**
+- catalogue : **158 capacités**
+- D1 : `eco-system-db` réutilisée ; **No migrations to apply**
+- R2 : `eco-system-backups` ; **artifactStorageMode=R2**
+- snapshot pré : artifact **10754976768**
+- snapshot post : artifact **10755136726** ; restauration SQLite / `PRAGMA integrity_check=ok`
+- `realMoneyEnabled=false`
+
+### Vérité fonctionnelle de ce hotfix
+- ✓ des deux tableaux financiers est relié aux owners canoniques et ne traite plus toutes les cellules comme des contributions.
+- Prêt = sortie de caisse + créance membre ; dette = capital + intérêts + autres obligations.
+- À la clôture de la séance N, l'intérêt est rendu exigible pour N+1, visible immédiatement, idempotent et sans intérêt sur intérêt.
+- Accueil/Séances/Fiche membre exposent capital, intérêts et dette totale.
+- roue verticale au-dessus du tableau = scroll de page ; horizontal local conservé.
+- Membres ne casse plus les boutons en lettres verticales.
+- message de restauration Corbeille : fenêtre d'affichage 72 h.
+- Accueil : 5 alertes prioritaires maximum ; Centre d'alertes pour le reste.
+- mode Visuel renforcé, modes Senior/Assisté et logique métier partagée conservés.
+- PWA 1.5.2.1 atomique ; rollback immédiat cohérent = 1.5.2.
+
+### Limite volontaire
+**FIELD_ACCEPTED reste faux** tant que le fondateur n'a pas retesté ces scénarios sur ses appareils réels. Aucun smoke distant ne remplace cette recette.
+
+### Point de reprise
+Ne pas redéployer sans défaut reproductible. Refaire les scénarios terrain ci-dessus sur production ; toute correction future commence par un test permanent et relit CURRENT_TRUTH + HEAD distant + dernière CI.
+
+---
+
 ## CURRENT OVERRIDE — Production 1.4.5 Offline/Gouvernance (2026-09-22)
 
 ### Production vérifiée
