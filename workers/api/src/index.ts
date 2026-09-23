@@ -56,6 +56,12 @@ interface WorkersAILike {
   run?(model:string,input:Record<string,unknown>,options?:Record<string,unknown>):Promise<unknown>;
 }
 
+const RELEASE_VERSION='1.5.0-audit-complete';
+const RELEASE_BUILD_ID='eco-system-1.5.0-20260923';
+const RELEASE_SCHEMA_VERSION='d1-additive-20260923';
+const RELEASE_POLICY_VERSION='audit-20260923';
+const RELEASE_PWA_CACHE='eco-system-v150-audit-complete-20260923';
+
 const defaultRepo = new InMemoryPlatformRepository();
 const defaultReferralBudgets = new InMemoryReferralBudgetStore();
 
@@ -133,7 +139,7 @@ const inboxFor = async (repo:PlatformRepository,tenantId:string,actorId:string) 
   return [...obligations,...cases];
 };
 
-export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{artifacts?:ArtifactStoreLike;documentAI?:WorkersAILike;liveNamespace?:DurableObjectNamespaceLike;premiumLive?:boolean;referralBudgets?:ReferralBudgetStore;founderLearning?:FounderLearningStore;founderControl?:FounderControlStore;communityRealtime?:CommunityRealtimeStore;founderTeamActors?:Set<string>;commercialPreferences?:CommercialPreferenceService;groupPairing?:GroupPairingService;interestCommunities?:InterestCommunityService;ecoPulse?:EcoPulseService;identityProof?:IdentityProofService;dataUseDefaultMode?:DataUseDefaultMode;governanceSecret?:string}={}) => async (request:Request):Promise<Response> => {
+export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{artifacts?:ArtifactStoreLike;documentAI?:WorkersAILike;liveNamespace?:DurableObjectNamespaceLike;premiumLive?:boolean;referralBudgets?:ReferralBudgetStore;founderLearning?:FounderLearningStore;founderControl?:FounderControlStore;communityRealtime?:CommunityRealtimeStore;founderTeamActors?:Set<string>;commercialPreferences?:CommercialPreferenceService;groupPairing?:GroupPairingService;interestCommunities?:InterestCommunityService;ecoPulse?:EcoPulseService;identityProof?:IdentityProofService;dataUseDefaultMode?:DataUseDefaultMode;governanceSecret?:string;releaseCommitSha?:string}={}) => async (request:Request):Promise<Response> => {
   const url=new URL(request.url); const cors=corsHeaders(request);
   if(request.method==='OPTIONS'){
     const allowed=Boolean((cors as Record<string,string>)['access-control-allow-origin']);
@@ -420,7 +426,7 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
       }
       return json({error:'METHOD_NOT_ALLOWED'},405,cors);
     }
-    if(request.method==='GET'&&url.pathname==='/health') return json({ok:true,service:'tontine-api',version:'1.4.0-master-2.3.4-closure',now:new Date().toISOString(),realMoneyEnabled:kernel.features.enabled('financial-real-money'),manualCashLedgerEnabled:true,premiumLiveEnabled:options.premiumLive===true&&Boolean(options.liveNamespace),founderControlBound:Boolean(options.founderControl),communityRealtimeBound:Boolean(options.communityRealtime),artifactStorageBound:true,artifactStorageMode:options.artifacts?'R2':'D1_FALLBACK',contextScope:'request'},200,cors);
+    if(request.method==='GET'&&url.pathname==='/health') return json({ok:true,service:'tontine-api',version:RELEASE_VERSION,buildId:RELEASE_BUILD_ID,commitSha:options.releaseCommitSha??'UNBOUND_LOCAL_BUILD',schemaVersion:RELEASE_SCHEMA_VERSION,policyVersion:RELEASE_POLICY_VERSION,pwaCache:RELEASE_PWA_CACHE,now:new Date().toISOString(),realMoneyEnabled:kernel.features.enabled('financial-real-money'),manualCashLedgerEnabled:true,premiumLiveEnabled:options.premiumLive===true&&Boolean(options.liveNamespace),founderControlBound:Boolean(options.founderControl),communityRealtimeBound:Boolean(options.communityRealtime),artifactStorageBound:true,artifactStorageMode:options.artifacts?'R2':'D1_FALLBACK',contextScope:'request'},200,cors);
     if(request.method==='POST'&&url.pathname==='/api/v1/value/offers'){const body=await readJson<any>(request);return json(await valueNetwork.createOffer(body),201,cors);}
     if(request.method==='GET'&&url.pathname==='/api/v1/value/offers')return json({items:await valueNetwork.listOffers()},200,cors);
     const valueNeeds=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/value\/needs$/);
@@ -482,7 +488,7 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
     if(request.method==='GET'&&url.pathname==='/api/v1/kernel') return json({services:['context','policy','workflow','events','audit','obligations','evidence','reconciliation','cases','inbox','notifications','configuration','features','data-governance','compatibility','resource-governor'],features:{groupLaunch:kernel.features.enabled('group-launch-studio'),meetingSync:kernel.features.enabled('meeting-sync-core'),realMoney:kernel.features.enabled('financial-real-money'),manualCashLedger:true}},200,cors);
 
     if(request.method==='GET'&&url.pathname==='/api/v1/product/capabilities'){
-      return json({version:'1.4.0-master-2.3.4-closure',count:PRODUCT_CAPABILITY_COUNT,capabilities:PRODUCT_MODULES,readiness:buildProductReadinessReport(PRODUCT_MODULES)},200,cors);
+      return json({version:RELEASE_VERSION,count:PRODUCT_CAPABILITY_COUNT,capabilities:PRODUCT_MODULES,readiness:buildProductReadinessReport(PRODUCT_MODULES)},200,cors);
     }
 
 
@@ -1409,7 +1415,7 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
     }
 
     if(request.method==='GET'&&url.pathname==='/api/v1/completion/workflows'){
-      return json({version:'1.4.0-master-2.3.4-closure',workflows:COMPLETION_WORKFLOWS},200,cors);
+      return json({version:RELEASE_VERSION,workflows:COMPLETION_WORKFLOWS},200,cors);
     }
 
     const expectedRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/receivables\/expected$/);
@@ -2090,7 +2096,7 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
 
 export const handleRequest=createApiHandler(defaultRepo);
 export interface AssetsFetcherLike { fetch(request: Request): Promise<Response> }
-export interface WorkerEnv { DB?: D1DatabaseLike; ASSETS?: AssetsFetcherLike; ARTIFACTS?: ArtifactStoreLike; AI?: WorkersAILike; GROUP_LIVE_HUB?: DurableObjectNamespaceLike; PREMIUM_LIVE_LEDGER?: string; DATA_USE_PROFILE?: string; COLLECTIVE_LEARNING_PEPPER?: string; IDENTITY_MATCH_PEPPER?: string; FOUNDER_TEAM_ACTORS?: string }
+export interface WorkerEnv { RELEASE_COMMIT_SHA?: string; DB?: D1DatabaseLike; ASSETS?: AssetsFetcherLike; ARTIFACTS?: ArtifactStoreLike; AI?: WorkersAILike; GROUP_LIVE_HUB?: DurableObjectNamespaceLike; PREMIUM_LIVE_LEDGER?: string; DATA_USE_PROFILE?: string; COLLECTIVE_LEARNING_PEPPER?: string; IDENTITY_MATCH_PEPPER?: string; FOUNDER_TEAM_ACTORS?: string }
 export default {async fetch(request:Request,env:WorkerEnv={}){
   const url=new URL(request.url);
   if(request.method==='GET' && env.ASSETS && url.pathname!=='/health' && !url.pathname.startsWith('/api/')){
@@ -2122,7 +2128,7 @@ export default {async fetch(request:Request,env:WorkerEnv={}){
   return authenticatedApi(repository,env.DB,async authenticatedRequest=>{
     const h=authenticatedRequest.headers;
     pairingKernel.context.set({actorId:h.get('x-actor-id')??'unknown',tenantId:h.get('x-tenant-id')??'unknown',activeGroupId:h.get('x-active-group-id')||undefined,groupRoles:(h.get('x-group-roles')??'').split(',').filter(Boolean),mandateIds:[],deviceId:h.get('x-device-id')??'device_web',sessionId:h.get('x-session-id')??'server-authenticated',locale:h.get('accept-language')?.toLowerCase().startsWith('en')?'en':'fr',timezone:h.get('x-timezone')??'Africa/Douala',connectivity:'online',requestId:h.get('x-request-id')??crypto.randomUUID()});
-    return createApiHandler(repository,{artifacts:env.ARTIFACTS,documentAI:env.AI,liveNamespace:env.GROUP_LIVE_HUB,premiumLive:env.PREMIUM_LIVE_LEDGER==='true',referralBudgets:new D1ReferralBudgetStore(env.DB!),founderLearning,founderControl,communityRealtime,founderTeamActors,commercialPreferences,groupPairing,interestCommunities,ecoPulse,identityProof,dataUseDefaultMode,governanceSecret:env.COLLECTIVE_LEARNING_PEPPER??env.IDENTITY_MATCH_PEPPER})(authenticatedRequest);
+    return createApiHandler(repository,{artifacts:env.ARTIFACTS,documentAI:env.AI,liveNamespace:env.GROUP_LIVE_HUB,premiumLive:env.PREMIUM_LIVE_LEDGER==='true',referralBudgets:new D1ReferralBudgetStore(env.DB!),founderLearning,founderControl,communityRealtime,founderTeamActors,commercialPreferences,groupPairing,interestCommunities,ecoPulse,identityProof,dataUseDefaultMode,governanceSecret:env.COLLECTIVE_LEARNING_PEPPER??env.IDENTITY_MATCH_PEPPER,releaseCommitSha:env.RELEASE_COMMIT_SHA})(authenticatedRequest);
   })(request);
 },
 async scheduled(controller:{scheduledTime?:number},env:WorkerEnv,executionCtx?:{waitUntil?(promise:Promise<unknown>):void}){
