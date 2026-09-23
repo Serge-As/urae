@@ -1,5 +1,41 @@
 # ECO-SYSTEM — NEXT RUN
 
+## CURRENT OVERRIDE — Reprise après production 1.5.2.1 (2026-09-23)
+
+Production actuelle :
+- version `1.5.2.1-field-finance-debt-ux`
+- source déployée `109078c84374dddf5f64d8d836a2a726fd4a92ea`
+- branche `release/1.5.2-unified-ux-blueprint-20260923`
+- Worker Version ID `ca489d19-f8ae-4baa-b3d7-3ff99df67d0c`
+- PR hotfix #15 fusionnée
+- qualification hotfix `35870359776 SUCCESS`
+- déploiement + smoke + snapshots D1 pré/post `35870745271 SUCCESS`
+- D1 `eco-system-db` réutilisée ; aucune migration
+- R2 `eco-system-backups` actif
+- catalogue 158 capacités
+- `realMoneyEnabled=false`
+
+Ordre obligatoire de la prochaine reprise :
+1. lire `docs/memory/CURRENT_TRUTH.md` et `docs/recovery/ECO_SYSTEM_1.5.2.1_FIELD_FEEDBACK_CURRENT_TRUTH_2026-09-23.md` ;
+2. relever le HEAD distant réel et la dernière CI avant modification ;
+3. ne pas redéployer seulement parce que les documents ont changé ;
+4. faire la recette terrain de la production déjà livrée :
+   - feuille de séance : montant + ✓ ;
+   - fiche individuelle : montant + ✓ ;
+   - prêt : sortie de caisse + dette ;
+   - clôture N : intérêt visible mais attribué à N+1 ;
+   - roue souris au-dessus du tableau ;
+   - page Membres ;
+   - Corbeille/restauration ;
+   - Accueil 5 alertes + Centre d'alertes ;
+   - modes Visuel/Senior/Assisté ;
+5. tout défaut reproductible devient un test permanent avant correction ;
+6. préserver Ledger unique, D1/R2 existants, migrations additives et argent réel OFF.
+
+Ne pas déclarer FIELD_ACCEPTED tant que ces parcours n'ont pas été retestés par le fondateur sur ses appareils réels.
+
+---
+
 ## CURRENT OVERRIDE — 1.5.0 audit implementation (2026-09-23)
 
 Branche : `next/1.5.0-audit-complete-platform-20260923`. Production 1.4.5 reste inchangée.
