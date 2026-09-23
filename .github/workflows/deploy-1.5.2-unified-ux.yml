@@ -92,7 +92,14 @@ jobs:
             root="$(curl --fail --silent --show-error --location --max-time 20 "${ECO_SYSTEM_ROOT}" || true)"
             health="$(curl --fail --silent --show-error --location --max-time 20 "${ECO_SYSTEM_HEALTH}" || true)"
             catalog="$(curl --fail --silent --show-error --location --max-time 20 "${ECO_SYSTEM_CATALOG}" || true)"
-            if grep -qi '<!doctype html>' <<<"${root}" && grep -q '"ok": true' <<<"${health}" && grep -q '"capabilities"' <<<"${catalog}"; then break; fi
+            if grep -qi '<!doctype html>' <<<"${root}" \
+              && grep -q '"ok": true' <<<"${health}" \
+              && grep -Fq "\"version\": \"${EXPECTED_VERSION}\"" <<<"${health}" \
+              && grep -Fq "\"commitSha\": \"${GITHUB_SHA}\"" <<<"${health}" \
+              && grep -q '"capabilities"' <<<"${catalog}"; then
+              break
+            fi
+            echo "Waiting for Cloudflare propagation (attempt ${attempt}/8)…"
             sleep 4
           done
           printf '%s' "${health}" > /tmp/health.json
