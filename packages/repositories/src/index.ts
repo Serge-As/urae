@@ -14,6 +14,27 @@ export interface FinancialOperation {
   outboxRecords?: WorkspaceRecord[];
 }
 
+export interface FinancialCellRevision {
+  tenantId: Id;
+  groupId: Id;
+  meetingId: Id;
+  membershipId: Id;
+  rubricId: Id;
+  currency: string;
+  version: number;
+  lastOperationId: Id;
+  updatedAt: string;
+}
+
+export interface FinancialCellRevisionCAS {
+  meetingId: Id;
+  membershipId: Id;
+  rubricId: Id;
+  currency: string;
+  expectedVersion: number;
+  nextVersion: number;
+}
+
 export interface FinancialCorrectionPlan {
   kind: 'cell_correction';
   operationId: Id;
@@ -26,6 +47,7 @@ export interface FinancialCorrectionPlan {
   receipt?: ContributionReceipt;
   accounts: LedgerAccount[];
   audits: AuditEvent[];
+  cellRevision: FinancialCellRevisionCAS;
   /** Durable records created with the correction; delivery happens only after commit. */
   outboxRecords?: WorkspaceRecord[];
 }
@@ -33,6 +55,8 @@ export interface FinancialCorrectionPlan {
 export interface PlatformRepository {
   commitFinancialOperation(operation: FinancialOperation): FinancialOperation | Promise<FinancialOperation>;
   commitFinancialCorrection(plan: FinancialCorrectionPlan): FinancialCorrectionPlan | Promise<FinancialCorrectionPlan>;
+  getFinancialCellRevision(tenantId:Id,groupId:Id,meetingId:Id,membershipId:Id,rubricId:Id,currency:string): FinancialCellRevision | undefined | Promise<FinancialCellRevision | undefined>;
+  listFinancialCellRevisions(tenantId:Id,groupId:Id): FinancialCellRevision[] | Promise<FinancialCellRevision[]>;
   getGroupById(id:Id):Group|undefined|Promise<Group|undefined>;
   listMembershipsForUser(userId:Id):Membership[]|Promise<Membership[]>;
   saveUser(user: User): void | Promise<void>;
@@ -121,6 +145,8 @@ export class InMemoryPlatformRepository implements PlatformRepository {
     return structuredClone(copy);
   }
   private financialCorrections = new Map<string, FinancialCorrectionPlan>();
+  private financialCellRevisions = new Map<string, FinancialCellRevision>();
+  private financialCellRevisionKey(t:Id,g:Id,m:Id,member:Id,rubric:Id,currency:string):string{return JSON.stringify([t,g,m,member,rubric,currency]);}
   commitFinancialCorrection(plan: FinancialCorrectionPlan): FinancialCorrectionPlan {
     const key=JSON.stringify([plan.tenantId,plan.groupId,plan.kind,plan.idempotencyKey]);
     const existing=this.financialCorrections.get(key);
@@ -128,9 +154,13 @@ export class InMemoryPlatformRepository implements PlatformRepository {
       if(existing.intentFingerprint!==plan.intentFingerprint)throw new Error('IDEMPOTENCY_CONFLICT');
       return structuredClone(existing);
     }
-    const copy=structuredClone(plan);
-    // One synchronous commit boundary: callers can never observe reversals without
-    // the replacement (or vice versa) through this repository.
+    const c=plan.cellRevision,revisionKey=this.financialCellRevisionKey(plan.tenantId,plan.groupId,c.meetingId,c.membershipId,c.rubricId,c.currency);
+    const current=this.financialCellRevisions.get(revisionKey),currentVersion=current?.version??0;
+    if(currentVersion!==c.expectedVersion)throw new Error('CELL_VERSION_CONFLICT');
+    const copy=structuredClone(plan),at=copy.entries.at(-1)?.createdAt??new Date().toISOString();
+    // One synchronous commit boundary: CAS, reversals, replacement, audit and
+    // durable delivery records become visible together.
+    this.financialCellRevisions.set(revisionKey,{tenantId:plan.tenantId,groupId:plan.groupId,meetingId:c.meetingId,membershipId:c.membershipId,rubricId:c.rubricId,currency:c.currency,version:c.nextVersion,lastOperationId:plan.operationId,updatedAt:at});
     for(const a of copy.accounts)this.ledgerAccounts.set(a.id,a);
     for(const entry of copy.entries)this.ledgerEntries.set(entry.id,entry);
     if(copy.receipt)this.receipts.set(copy.receipt.id,copy.receipt);
@@ -138,6 +168,13 @@ export class InMemoryPlatformRepository implements PlatformRepository {
     for(const record of copy.outboxRecords??[])this.workspaceRecords.set(record.id,record);
     this.financialCorrections.set(key,copy);
     return structuredClone(copy);
+  }
+  getFinancialCellRevision(tenantId:Id,groupId:Id,meetingId:Id,membershipId:Id,rubricId:Id,currency:string):FinancialCellRevision|undefined{
+    const x=this.financialCellRevisions.get(this.financialCellRevisionKey(tenantId,groupId,meetingId,membershipId,rubricId,currency));
+    return x?structuredClone(x):undefined;
+  }
+  listFinancialCellRevisions(tenantId:Id,groupId:Id):FinancialCellRevision[]{
+    return [...this.financialCellRevisions.values()].filter(x=>x.tenantId===tenantId&&x.groupId===groupId).map(x=>structuredClone(x));
   }
 
   private users = new Map<Id, User>();
@@ -300,34 +337,70 @@ export class D1PlatformRepository implements PlatformRepository {
   }
 
   async commitFinancialCorrection(plan:FinancialCorrectionPlan):Promise<FinancialCorrectionPlan>{
-    const scope=[plan.tenantId,plan.groupId,plan.kind,plan.idempotencyKey];
-    const statements=[this.db.prepare(`INSERT INTO financial_operations
-      (tenant_id,group_id,operation_kind,idempotency_key,entry_id,operation_json)
-      VALUES(?,?,?,?,?,?) ON CONFLICT(tenant_id,group_id,operation_kind,idempotency_key) DO NOTHING`)
-      .bind(...scope,plan.primaryEntryId,JSON.stringify(plan))];
+    const c=plan.cellRevision,at=plan.entries.at(-1)?.createdAt??new Date().toISOString();
+    const key=[plan.tenantId,plan.groupId,c.meetingId,c.membershipId,c.rubricId,c.currency];
+    const cas=this.db.prepare(`INSERT INTO financial_cell_revisions
+      (tenant_id,group_id,meeting_id,membership_id,rubric_id,currency,version,last_operation_id,updated_at)
+      SELECT ?,?,?,?,?,?,?,?,? WHERE ?=0
+      ON CONFLICT(tenant_id,group_id,meeting_id,membership_id,rubric_id,currency)
+      DO UPDATE SET version=excluded.version,last_operation_id=excluded.last_operation_id,updated_at=excluded.updated_at
+      WHERE financial_cell_revisions.version=?`)
+      .bind(...key,c.nextVersion,plan.operationId,at,c.expectedVersion,c.expectedVersion);
+    const operation=this.db.prepare(`INSERT INTO financial_correction_operations
+      (tenant_id,group_id,idempotency_key,operation_id,primary_entry_id,operation_json,created_at)
+      SELECT ?,?,?,?,?,?,? WHERE EXISTS (
+        SELECT 1 FROM financial_cell_revisions WHERE tenant_id=? AND group_id=? AND meeting_id=? AND membership_id=? AND rubric_id=? AND currency=? AND version=? AND last_operation_id=?
+      ) ON CONFLICT(tenant_id,group_id,idempotency_key) DO NOTHING`)
+      .bind(plan.tenantId,plan.groupId,plan.idempotencyKey,plan.operationId,plan.primaryEntryId,JSON.stringify(plan),at,...key,c.nextVersion,plan.operationId);
+    const statements:D1PreparedStatementLike[]=[cas,operation];
+    // If the CAS lost and this is not an idempotent replay, the scalar subquery
+    // is NULL and the NOT NULL guard aborts the whole D1 batch.
+    statements.push(this.db.prepare(`INSERT INTO financial_correction_commit_guards
+      (tenant_id,group_id,idempotency_key,operation_id,created_at)
+      VALUES(?,?,?,(SELECT operation_id FROM financial_correction_operations WHERE tenant_id=? AND group_id=? AND idempotency_key=?),?)
+      ON CONFLICT(tenant_id,group_id,idempotency_key) DO NOTHING`)
+      .bind(plan.tenantId,plan.groupId,plan.idempotencyKey,plan.tenantId,plan.groupId,plan.idempotencyKey,at));
     const rows:Array<[string,{id:Id},string|null,string]>=[
-      ...plan.accounts.map(a=>['ledger_account',a,null,new Date().toISOString()] as [string,LedgerAccount,null,string]),
+      ...plan.accounts.map(a=>['ledger_account',a,null,at] as [string,LedgerAccount,null,string]),
       ...plan.entries.map(e=>['ledger_entry',e,e.idempotencyKey,e.createdAt] as [string,LedgerEntry,string,string]),
       ...plan.audits.map(a=>['audit',a,null,a.at] as [string,AuditEvent,null,string])
     ];
     if(plan.receipt)rows.push(['contribution_receipt',plan.receipt,plan.receipt.idempotencyKey,plan.receipt.receivedAt]);
     for(const record of plan.outboxRecords??[])rows.push(['workspace_record',record,null,record.updatedAt]);
-    for(const [type,value,key,updatedAt] of rows){
+    for(const [type,value,idempotency,updatedAt] of rows){
       statements.push(this.db.prepare(`INSERT INTO platform_records
         (record_type,record_id,tenant_id,group_id,assignee_id,idempotency_key,data_json,updated_at)
-        SELECT ?,?,?,?,?,?,?,? WHERE EXISTS (SELECT 1 FROM financial_operations
-          WHERE tenant_id=? AND group_id=? AND operation_kind=? AND idempotency_key=? AND entry_id=?)
-        ON CONFLICT(record_type,record_id) DO NOTHING`)
-        .bind(type,value.id,plan.tenantId,plan.groupId,null,key,JSON.stringify(value),updatedAt,...scope,plan.primaryEntryId));
+        SELECT ?,?,?,?,?,?,?,? WHERE EXISTS (
+          SELECT 1 FROM financial_correction_operations
+          WHERE tenant_id=? AND group_id=? AND idempotency_key=? AND operation_id=? AND primary_entry_id=?
+        ) ON CONFLICT(record_type,record_id) DO NOTHING`)
+        .bind(type,value.id,plan.tenantId,plan.groupId,null,idempotency,JSON.stringify(value),updatedAt,plan.tenantId,plan.groupId,plan.idempotencyKey,plan.operationId,plan.primaryEntryId));
     }
-    await this.db.batch(statements);
-    const winner=await this.db.prepare(`SELECT operation_json FROM financial_operations
-      WHERE tenant_id=? AND group_id=? AND operation_kind=? AND idempotency_key=?`)
-      .bind(...scope).first<{operation_json:string}>();
+    try{await this.db.batch(statements);}catch(error){
+      const current=await this.getFinancialCellRevision(plan.tenantId,plan.groupId,c.meetingId,c.membershipId,c.rubricId,c.currency);
+      if((current?.version??0)!==c.expectedVersion)throw new Error('CELL_VERSION_CONFLICT',{cause:error});
+      throw error;
+    }
+    const winner=await this.db.prepare(`SELECT operation_json FROM financial_correction_operations
+      WHERE tenant_id=? AND group_id=? AND idempotency_key=?`).bind(plan.tenantId,plan.groupId,plan.idempotencyKey).first<{operation_json:string}>();
     if(!winner)throw new Error('FINANCIAL_CORRECTION_COMMIT_NOT_CONFIRMED');
     const stored=JSON.parse(winner.operation_json) as FinancialCorrectionPlan;
     if(stored.intentFingerprint!==plan.intentFingerprint)throw new Error('IDEMPOTENCY_CONFLICT');
     return stored;
+  }
+
+  async getFinancialCellRevision(tenantId:Id,groupId:Id,meetingId:Id,membershipId:Id,rubricId:Id,currency:string):Promise<FinancialCellRevision|undefined>{
+    const row=await this.db.prepare(`SELECT tenant_id,group_id,meeting_id,membership_id,rubric_id,currency,version,last_operation_id,updated_at
+      FROM financial_cell_revisions WHERE tenant_id=? AND group_id=? AND meeting_id=? AND membership_id=? AND rubric_id=? AND currency=?`)
+      .bind(tenantId,groupId,meetingId,membershipId,rubricId,currency)
+      .first<{tenant_id:string;group_id:string;meeting_id:string;membership_id:string;rubric_id:string;currency:string;version:number;last_operation_id:string;updated_at:string}>();
+    return row?{tenantId:row.tenant_id,groupId:row.group_id,meetingId:row.meeting_id,membershipId:row.membership_id,rubricId:row.rubric_id,currency:row.currency,version:Number(row.version),lastOperationId:row.last_operation_id,updatedAt:row.updated_at}:undefined;
+  }
+  async listFinancialCellRevisions(tenantId:Id,groupId:Id):Promise<FinancialCellRevision[]>{
+    const rows=await this.db.prepare(`SELECT tenant_id,group_id,meeting_id,membership_id,rubric_id,currency,version,last_operation_id,updated_at
+      FROM financial_cell_revisions WHERE tenant_id=? AND group_id=?`).bind(tenantId,groupId)
+      .all<{tenant_id:string;group_id:string;meeting_id:string;membership_id:string;rubric_id:string;currency:string;version:number;last_operation_id:string;updated_at:string}>();
+    return rows.results.map(row=>({tenantId:row.tenant_id,groupId:row.group_id,meetingId:row.meeting_id,membershipId:row.membership_id,rubricId:row.rubric_id,currency:row.currency,version:Number(row.version),lastOperationId:row.last_operation_id,updatedAt:row.updated_at}));
   }
 
   private async saveRecord<T extends {id:Id}>(type:string,value:T,scope:RecordScope={}):Promise<void>{
