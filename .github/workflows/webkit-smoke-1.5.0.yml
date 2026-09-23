@@ -29,7 +29,7 @@ jobs:
           cat /tmp/eco-webkit.log
           exit 1
       - name: WebKit PWA smoke
-        run: npx --yes -p @playwright/test@1.55.0 playwright test tests/browser/eco-system-webkit-1.5.0.spec.mjs --project=webkit --workers=1
+        run: npx --yes -p @playwright/test@1.55.0 playwright test tests/browser/eco-system-webkit-1.5.0.spec.mjs --browser=webkit --workers=1
       - name: Upload WebKit report on failure
         if: failure()
         uses: actions/upload-artifact@v4
