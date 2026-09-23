@@ -656,6 +656,15 @@ export class ConnectedApplication {
   async valueOffers():Promise<any[]>{const r=await this.request('/api/v1/value/offers') as any;return r.items??[];}
   async createValueOffer(input:any):Promise<any>{return this.request('/api/v1/value/offers',{method:'POST',body:JSON.stringify(input)});}
 
+  async safetyCases(groupId?:string):Promise<any[]>{const p=new URLSearchParams();if(groupId)p.set('groupId',groupId);const r=await this.request('/api/v1/safety/cases?'+p) as any;return r.items??[];}
+  async reportSafety(input:any):Promise<any>{return this.request('/api/v1/safety/reports',{method:'POST',body:JSON.stringify(input)});}
+  async transitionSafetyCase(id:string,state:string,note='',evidenceRef=''):Promise<any>{return this.request('/api/v1/safety/cases/'+encodeURIComponent(id)+'/transition',{method:'POST',body:JSON.stringify({state,note,evidenceRef})});}
+  async safetyEvidence(id:string):Promise<any[]>{const r=await this.request('/api/v1/safety/cases/'+encodeURIComponent(id)+'/evidence') as any;return r.items??[];}
+  async addSafetyEvidence(id:string,input:any):Promise<any>{return this.request('/api/v1/safety/cases/'+encodeURIComponent(id)+'/evidence',{method:'POST',body:JSON.stringify(input)});}
+  async decideSafetyCase(id:string,input:any):Promise<any>{return this.request('/api/v1/safety/cases/'+encodeURIComponent(id)+'/decision',{method:'POST',body:JSON.stringify(input)});}
+  async appealSafetyCase(id:string,input:any):Promise<any>{return this.request('/api/v1/safety/cases/'+encodeURIComponent(id)+'/appeal',{method:'POST',body:JSON.stringify(input)});}
+  async assessReferralStructure(input:any):Promise<any>{return this.request('/api/v1/safety/referral-structure-assessment',{method:'POST',body:JSON.stringify(input)});}
+
   async searchKnowledge(q='',groupId?:string):Promise<any[]>{const p=new URLSearchParams();if(q)p.set('q',q);if(groupId)p.set('groupId',groupId);const r=await this.request('/api/v1/knowledge?'+p) as any;return r.items??[];}
   async createKnowledge(input:any):Promise<any>{return this.request('/api/v1/knowledge',{method:'POST',body:JSON.stringify(input)});}
   async reviseKnowledge(id:string,input:any):Promise<any>{return this.request('/api/v1/knowledge/'+encodeURIComponent(id)+'/revisions',{method:'POST',body:JSON.stringify(input)});}
@@ -673,6 +682,7 @@ export class ConnectedApplication {
   async createReferralShare(input:any):Promise<any>{return this.request('/api/v1/growth/referral-shares',{method:'POST',body:JSON.stringify(input)});}
   async registerReferralLanding(code:string):Promise<any>{return this.request('/api/v1/growth/referral-landings',{method:'POST',body:JSON.stringify({code})});}
   async registerReferralConversion(input:any):Promise<any>{return this.request('/api/v1/growth/referral-conversions',{method:'POST',body:JSON.stringify(input)});}
+  async verifyReferralConversion(campaignId:string,conversionId:string,input:any):Promise<any>{return this.request('/api/v1/growth/referral-campaigns/'+encodeURIComponent(campaignId)+'/conversions/'+encodeURIComponent(conversionId)+'/verify',{method:'POST',body:JSON.stringify(input)});}
   async approveReferralReward(campaignId:string,conversionId:string):Promise<any>{return this.request('/api/v1/growth/referral-campaigns/'+encodeURIComponent(campaignId)+'/rewards/'+encodeURIComponent(conversionId)+'/approve',{method:'POST',body:'{}'});}
 
   async businessSummary():Promise<any>{return this.request('/api/v1/business/summary');}
@@ -710,6 +720,16 @@ export class ConnectedApplication {
   async externalSharePacks(programId:string):Promise<any[]>{if(!this.activeGroupId)return[];return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/external-programs/'+encodeURIComponent(programId)+'/share-packs');}
   async issueExternalSharePack(programId:string,purpose:string,ttlDays=30):Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/external-programs/'+encodeURIComponent(programId)+'/share-packs',{method:'POST',body:JSON.stringify({purpose,ttlDays})});}
   async revokeExternalSharePack(shareId:string):Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/external-share-packs/'+encodeURIComponent(shareId)+'/revoke',{method:'POST',body:'{}'});}
+  async programEnrollments(programId:string):Promise<any[]>{if(!this.activeGroupId)return[];return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/external-programs/'+encodeURIComponent(programId)+'/enrollments');}
+  async createProgramEnrollment(programId:string,input:any):Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/external-programs/'+encodeURIComponent(programId)+'/enrollments',{method:'POST',body:JSON.stringify(input)});}
+  async revokeProgramEnrollment(enrollmentId:string,reason:string):Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/program-enrollments/'+encodeURIComponent(enrollmentId)+'/revoke',{method:'POST',body:JSON.stringify({reason})});}
+  async programSupportActions(enrollmentId:string):Promise<any[]>{if(!this.activeGroupId)return[];return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/program-enrollments/'+encodeURIComponent(enrollmentId)+'/support-actions');}
+  async recordProgramSupportAction(enrollmentId:string,input:any):Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/program-enrollments/'+encodeURIComponent(enrollmentId)+'/support-actions',{method:'POST',body:JSON.stringify(input)});}
+  async programFundingEvidence(enrollmentId:string):Promise<any[]>{if(!this.activeGroupId)return[];return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/program-enrollments/'+encodeURIComponent(enrollmentId)+'/funding');}
+  async recordProgramFundingEvidence(enrollmentId:string,input:any):Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/program-enrollments/'+encodeURIComponent(enrollmentId)+'/funding',{method:'POST',body:JSON.stringify(input)});}
+  async programHandoverPlans(enrollmentId:string):Promise<any[]>{if(!this.activeGroupId)return[];return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/program-enrollments/'+encodeURIComponent(enrollmentId)+'/handovers');}
+  async createProgramHandover(enrollmentId:string,input:any):Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/program-enrollments/'+encodeURIComponent(enrollmentId)+'/handovers',{method:'POST',body:JSON.stringify(input)});}
+  async transitionProgramHandover(planId:string,state:string,input:any={}):Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/program-handovers/'+encodeURIComponent(planId)+'/transition',{method:'POST',body:JSON.stringify({state,...input})});}
   async economicProfile():Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/economic-profile');}
 
   async createStockItem(input:{sku:string;name:string;quantity:number;unit?:string;unitPrice?:number;description?:string;published?:boolean;ownership?:'COMMERCIAL'|'POT_RESERVED'|'CONSIGNMENT'|'DEPOSIT_SALE';ownerRef?:string}):Promise<unknown>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/market/stock',{method:'POST',body:JSON.stringify(input)});}
