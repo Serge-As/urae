@@ -57,11 +57,11 @@ interface WorkersAILike {
   run?(model:string,input:Record<string,unknown>,options?:Record<string,unknown>):Promise<unknown>;
 }
 
-const RELEASE_VERSION='1.5.2-unified-ux-blueprint';
-const RELEASE_BUILD_ID='eco-system-1.5.2-20260923';
+const RELEASE_VERSION='1.5.2.2-governed-field-feedback';
+const RELEASE_BUILD_ID='eco-system-1.5.2.2-20260923';
 const RELEASE_SCHEMA_VERSION='d1-additive-20260923';
-const RELEASE_POLICY_VERSION='blueprint-ux-20260923';
-const RELEASE_PWA_CACHE='eco-system-v152-unified-ux-blueprint-20260923';
+const RELEASE_POLICY_VERSION='governed-field-feedback-20260923';
+const RELEASE_PWA_CACHE='eco-system-v1522-governed-field-feedback-20260923';
 
 const defaultRepo = new InMemoryPlatformRepository();
 const defaultReferralBudgets = new InMemoryReferralBudgetStore();
