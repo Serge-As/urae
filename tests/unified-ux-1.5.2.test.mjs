@@ -31,11 +31,11 @@ test('senior mode increases control sizes and prevents crushed navigation labels
 
 test('service worker never falls back a versioned request to an unversioned stale asset',async()=>{
   const sw=await readFile('.build/sw.js','utf8');
-  assert.match(sw,/eco-system-v152-unified-ux-blueprint-20260923/);
+  assert.match(sw,/eco-system-v1521-field-finance-debt-ux-20260923/);
   assert.match(sw,/if\(url\.search\)return await cache\.match\(request\)/);
   assert.doesNotMatch(sw,/cache\.match\(request\) \|\| await cache\.match\(url\.pathname\)/);
-  assert.match(sw,/\/src\/main\.js\?v=152/);
-  assert.match(sw,/\/src\/ui-modes\.js\?v=152/);
+  assert.match(sw,/\/src\/main\.js\?v=1521/);
+  assert.match(sw,/\/src\/ui-modes\.js\?v=1521/);
 });
 
 test('authentication restores before showing login and supports a private-device session',async()=>{
