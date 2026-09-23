@@ -1,0 +1,3 @@
+Eco-System 1.5.2 production delivery trigger
+Generated after PR #14 merge.
+Required pipeline: full CI -> existing D1/R2 -> pre-recovery snapshot -> additive migrations only -> deploy same SHA -> smoke version/build/cache/realMoney=false -> post-recovery restore integrity.
