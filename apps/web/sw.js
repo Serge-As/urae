@@ -9,7 +9,7 @@ const ESSENTIAL_SHELL = [
   '/', '/index.html', '/styles.css', '/manifest.webmanifest',
   '/src/field-hardening.js', '/src/main.js', '/src/i18n.js', '/src/runtime-i18n.js',
   '/src/resilience-ui.js', '/src/group-home-ui.js', '/src/sessions-ui.js',
-  '/src/detail-ui.js', '/src/member-control-ui.js', '/src/loan-simulation-ui.js', '/src/business-studio-ui.js',
+  '/src/detail-ui.js', '/src/member-control-ui.js', '/src/loan-simulation-ui.js', '/src/business-studio-ui.js', '/src/core-economic-learning-ui.js',
   '/packages/application/src/index.js', '/packages/contracts/src/index.js',
   '/packages/domain/src/index.js', '/packages/offline/src/index.js',
   '/packages/platform-kernel/src/index.js', '/packages/relay/src/index.js',
