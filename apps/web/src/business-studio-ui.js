@@ -7,7 +7,7 @@ const parse=j=>{try{return JSON.parse(String(j??''));}catch{return null;}};
 const metric=(label,value,note)=>{const c=el('article',undefined,'metric');c.append(el('span',label),el('strong',value));if(note)c.append(el('small',note));return c;};
 const row=(label,value)=>{const p=el('p',undefined,'result-row');p.append(el('span',label),el('strong',value));return p;};
 
-export function mountBusinessStudioUI({app,notify=()=>{},showError=console.error}){
+export function mountBusinessStudioUI({app,navigate=()=>{},notify=()=>{},showError=console.error}){
   const marketHub=document.getElementById('marketHub');if(!marketHub)return{refresh:async()=>{}};
   const root=el('details',undefined,'panel');root.id='businessStudioOperational';root.open=false;
   const summary=document.createElement('summary');summary.append(el('strong','Business Studio · gestionnaire entrepreneur'),el('span',' Rentabilité · mandats · clients · fournisseurs · coûts · temps · marge','hint'));root.append(summary);
@@ -29,6 +29,47 @@ export function mountBusinessStudioUI({app,notify=()=>{},showError=console.error
     const d=await dialogForm('Configurer Business Studio',[n,loc,services,fixed]);if(!d)return;
     await app.configureBusiness({name:d.name,locality:d.locality,services:String(d.services).split(',').map(x=>x.trim()).filter(Boolean),monthlyFixedCosts:num(d.monthlyFixedCosts)});notify('Activité professionnelle mise à jour.');await refresh();
   },'primary');
+
+  button('Ajouter une offre au catalogue',async()=>{
+    const name=field('Nom du service / offre','text','name'),category=field('Catégorie','text','category'),price=field('Prix validé / unité','number','unitPrice'),description=field('Périmètre et conditions','text','description');
+    const d=await dialogForm('Catalogue Business Studio',[name,category,price,description]);if(!d)return;
+    await app.createBusinessOffer({name:d.name,category:d.category,unitPrice:num(d.unitPrice),description:d.description,currency:'XAF',active:true});notify('Offre ajoutée au catalogue privé du gestionnaire.');await refresh();
+  });
+
+  button('Enregistrer une demande client',async()=>{
+    const records=await app.businessRecords(),clients=records.filter(x=>x.data.businessKind==='CLIENT'&&x.data.clientState!=='CLOSED');
+    const client=selectField('Client (facultatif)','clientId',[['','Non encore identifié'],...clients.map(x=>[x.id,x.title])]),title=field('Objet de la demande','text','title'),need=field('Besoin exprimé','text','need'),budget=field('Budget indicatif (facultatif)','number','estimatedBudget'),due=field('Échéance souhaitée','date','dueAt');
+    const d=await dialogForm('Qualifier une demande',[client,title,need,budget,due]);if(!d)return;
+    await app.createBusinessRequest({clientId:d.clientId||undefined,title:d.title,need:d.need,estimatedBudget:num(d.estimatedBudget),dueAt:d.dueAt?new Date(String(d.dueAt)+'T12:00:00').toISOString():undefined,source:'BUSINESS_STUDIO'});notify('Demande qualifiée. Elle ne devient ni commande ni facture sans validation.');await refresh();
+  });
+
+  button('Créer une commande',async()=>{
+    const records=await app.businessRecords(),clients=records.filter(x=>x.data.businessKind==='CLIENT'&&x.data.clientState!=='CLOSED'),quotes=records.filter(x=>x.data.businessKind==='QUOTE'&&x.data.quoteState==='ACCEPTED'),contracts=records.filter(x=>x.data.businessKind==='CONTRACT'&&x.data.contractState==='ACTIVE');if(!clients.length)throw new Error('CLIENT_REQUIRED');
+    const client=selectField('Client','clientId',clients.map(x=>[x.id,x.title])),quote=selectField('Devis accepté (facultatif)','quoteId',[['','Aucun'],...quotes.map(x=>[x.id,x.title])]),contract=selectField('Contrat (facultatif)','contractId',[['','Aucun'],...contracts.map(x=>[x.id,x.title])]),title=field('Objet de la commande','text','title'),amount=field('Montant validé','number','amount'),due=field('Date attendue','date','dueAt');
+    const d=await dialogForm('Créer une commande privée',[client,quote,contract,title,amount,due]);if(!d)return;
+    await app.createBusinessOrder({clientId:d.clientId,quoteId:d.quoteId||undefined,contractId:d.contractId||undefined,title:d.title,amount:num(d.amount),currency:'XAF',dueAt:d.dueAt?new Date(String(d.dueAt)+'T12:00:00').toISOString():undefined});notify('Commande créée en brouillon. Confirmez-la explicitement avant exécution.');await refresh();
+  });
+
+  button('Journaliser un échange / une relance',async()=>{
+    const records=await app.businessRecords(),clients=records.filter(x=>x.data.businessKind==='CLIENT'&&x.data.clientState!=='CLOSED');
+    const client=selectField('Client (facultatif)','clientId',[['','Aucun'],...clients.map(x=>[x.id,x.title])]),channel=selectField('Canal','channel',[['CALL','Appel'],['WHATSAPP','WhatsApp'],['SMS','SMS'],['EMAIL','Email'],['IN_PERSON','En personne'],['OTHER','Autre']]),direction=selectField('Sens','direction',[['OUTBOUND','Sortant'],['INBOUND','Entrant']]),subject=field('Objet','text','subject'),note=field('Résumé / engagement','text','note'),next=field('Prochaine action','datetime-local','nextActionAt');
+    const d=await dialogForm('Journal de communication',[client,channel,direction,subject,note,next]);if(!d)return;
+    await app.logBusinessCommunication({clientId:d.clientId||undefined,channel:d.channel,direction:d.direction,subject:d.subject,note:d.note,nextActionAt:d.nextActionAt?new Date(String(d.nextActionAt)).toISOString():undefined});notify('Échange enregistré avec sa prochaine relance.');await refresh();
+  });
+
+  button('Créer une action de pilotage',async()=>{
+    const records=await app.businessRecords(),clients=records.filter(x=>x.data.businessKind==='CLIENT'&&x.data.clientState!=='CLOSED');
+    const client=selectField('Client (facultatif)','clientId',[['','Aucun'],...clients.map(x=>[x.id,x.title])]),title=field('Action à faire','text','title'),priority=selectField('Priorité','priority',[['NORMAL','Normale'],['HIGH','Haute'],['URGENT','Urgente'],['LOW','Basse']]),due=field('Échéance','datetime-local','dueAt'),note=field('Résultat attendu','text','note');
+    const d=await dialogForm('Action de pilotage',[client,title,priority,due,note]);if(!d)return;
+    await app.createBusinessAction({clientId:d.clientId||undefined,groupId:app.activeGroup()||undefined,title:d.title,priority:d.priority,dueAt:d.dueAt?new Date(String(d.dueAt)).toISOString():undefined,note:d.note});notify('Action ajoutée au plan de pilotage.');await refresh();
+  });
+
+  button('Business Agent · plan d’action',async()=>{
+    const brief=await app.businessOperatingBrief(),box=el('article',undefined,'item');box.append(el('strong','Business Agent · recommandations déterministes'));for(const x of brief.actions??[])box.append(el('p','• '+x));const rules=el('details');rules.append(el('summary','Limites du Business Agent'));for(const x of brief.guardrails??[])rules.append(el('p','• '+x,'hint'));box.append(rules);guidance.prepend(box);notify('Plan d’action recalculé à partir des données Business Studio.');
+  },'primary');
+
+  button('Visibilité / publicité',async()=>{navigate('ecosystem',{anchor:'adManagerPanel',force:true});});
+  button('Fournisseurs / approvisionnements',async()=>{marketHub.scrollIntoView({behavior:'smooth',block:'start'});});
 
   button('Nouveau mandat',async()=>{
     if(!app.activeGroup())throw new Error('ACTIVE_GROUP_REQUIRED');
@@ -126,7 +167,7 @@ export function mountBusinessStudioUI({app,notify=()=>{},showError=console.error
   const refresh=async()=>{
     metrics.replaceChildren();guidance.querySelectorAll(':scope > :not(h3)').forEach(x=>x.remove());list.replaceChildren();
     try{
-      const [s,records,proc]=await Promise.all([app.businessSummary(),app.businessRecords(),app.activeGroup()?app.marketProcurement().catch(()=>({procurements:[],credits:[],suppliers:[]})):Promise.resolve({procurements:[],credits:[],suppliers:[]})]);
+      const [s,records,proc,profitability,brief]=await Promise.all([app.businessSummary(),app.businessRecords(),app.activeGroup()?app.marketProcurement().catch(()=>({procurements:[],credits:[],suppliers:[]})):Promise.resolve({procurements:[],credits:[],suppliers:[]}),app.businessProfitability().catch(()=>[]),app.businessOperatingBrief().catch(()=>({actions:[],guardrails:[]}))]);
       for(const [label,value,note] of [
         ['Recettes encaissées',money(s.received),'factures encaissées + revenus privés'],
         ['Revenus privés directs',money(s.directRevenue),'hors cotisations collectives'],
@@ -137,6 +178,10 @@ export function mountBusinessStudioUI({app,notify=()=>{},showError=console.error
         ['Clients actifs',String(s.activeClients),'relations actives'],
         ['Mandats actifs',String(s.activeMandates),'groupes / clients servis'],
         ['Temps saisi',Number(s.hours||0).toFixed(1)+' h','marge/h '+money(s.netMarginPerHour)],
+        ['Offres catalogue',String(s.catalogOffers??0),'services/produits actifs'],
+        ['Demandes ouvertes',String(s.openRequests??0),'à qualifier / deviser'],
+        ['Commandes en cours',String(s.openOrders??0),(s.deliveredOrders??0)+' livrée(s)'],
+        ['Relances dues',String(s.followUpsDue??0),'journal de communication'],
         ['Fournisseurs connus',String(proc.suppliers?.length??0),'groupe actif'],
         ['Approvisionnements',String(proc.procurements?.length??0),'groupe actif']
       ])metrics.append(metric(label,value,note));
@@ -147,8 +192,12 @@ export function mountBusinessStudioUI({app,notify=()=>{},showError=console.error
       if(s.prospects>0)alerts.push(['VENTE',s.prospects+' prospect(s) attendent une action commerciale : qualifier, proposer puis suivre un devis.']);
       if((proc.credits??[]).some(x=>Number(x.data?.outstandingAmount??x.outstandingAmount??0)>0))alerts.push(['FOURNISSEUR','Un crédit fournisseur reste ouvert : distinguer la dette du groupe de la dette privée et planifier son règlement.']);
       if(!records.some(x=>x.data.businessKind==='SCENARIO'))alerts.push(['PLAN','Aucune étude de faisabilité complète : calculez prudent / central / optimiste avant de fixer les frais.']);
+      if((s.followUpsDue??0)>0)alerts.push(['RELANCE',(s.followUpsDue??0)+' relance(s) client sont arrivées à échéance.']);
+      if((s.openOrders??0)>0)alerts.push(['LIVRAISON',(s.openOrders??0)+' commande(s) doivent être suivies jusqu’à livraison, preuve et facturation.']);
       if(!alerts.length)alerts.push(['SUIVI','Aucune alerte prioritaire détectée. Continuez à suivre prospects, impayés, coûts, fournisseurs et marge.']);
       for(const [tag,msg] of alerts){const a=el('article',undefined,'item');a.append(el('span',tag,'pill'),el('p',msg));guidance.append(a);}
+      if((brief.actions??[]).length){const agent=el('details');agent.open=true;agent.append(el('summary','Business Agent · prochaine meilleure action'));for(const x of brief.actions)agent.append(el('p','• '+x));const g=el('p','Assistant borné : aucun prix inventé, aucun paiement supposé, aucun engagement sans validation humaine.','truth-notice');agent.append(g);guidance.append(agent);}
+      if(profitability.length){const pro=el('details');pro.append(el('summary','Rentabilité réelle par client / groupe'));for(const x of profitability.slice(0,20)){const label=[records.find(r=>r.id===x.clientId)?.title,x.groupId?'Groupe '+String(x.groupId).slice(-8):''].filter(Boolean).join(' · ')||'Activité générale';const a=el('article',undefined,'item');a.append(el('strong',label),row('Recettes',money(x.revenue)),row('Dépenses',money(x.expenses)),row('Marge',money(x.margin)),row('Temps',Number(x.hours||0).toFixed(1)+' h'),row('Marge / heure',money(x.marginPerHour)));pro.append(a);}guidance.append(pro);}
 
       const breakdown=el('details');breakdown.append(el('summary','Lire la structure des recettes et dépenses'));const b=el('div',undefined,'two-col'),rev=el('div'),exp=el('div');rev.append(el('h4','Recettes privées par origine'));exp.append(el('h4','Dépenses par catégorie'));for(const [k,v] of Object.entries(s.revenueBySource??{}))rev.append(row(k,money(v)));for(const [k,v] of Object.entries(s.expenseByCategory??{}))exp.append(row(k,money(v)));if(!(Object.keys(s.revenueBySource??{}).length))rev.append(el('p','Aucune recette directe.','hint'));if(!(Object.keys(s.expenseByCategory??{}).length))exp.append(el('p','Aucune dépense.','hint'));b.append(rev,exp);breakdown.append(b);guidance.append(breakdown);
 
@@ -158,8 +207,13 @@ export function mountBusinessStudioUI({app,notify=()=>{},showError=console.error
         const c=el('article',undefined,'item'),kind=String(r.data.businessKind??'DOSSIER');c.append(el('strong',r.title),el('span',kind+' · '+String(r.status),'pill'));
         if(kind==='MANDATE'){c.append(el('p','État : '+String(r.data.mandateState??'DRAFT')+' · honoraires '+money(r.data.feeAmount),'hint'));if(r.data.mandateState==='DRAFT'){const b=el('button','Activer le mandat','secondary');b.type='button';b.onclick=()=>void app.activateBusinessMandate(r.id).then(()=>{notify('Mandat activé.');return refresh();}).catch(showError);c.append(b);}}
         if(kind==='CLIENT')c.append(el('p','Relation : '+String(r.data.clientState??'PROSPECT'),'hint'));
+        if(kind==='OFFER'){c.append(el('p','Catalogue : '+money(r.data.unitPrice)+' · '+String(r.data.offerState??'ACTIVE'),'hint'));}
+        if(kind==='REQUEST')c.append(el('p','Demande : '+String(r.data.requestState??'OPEN')+' · budget '+money(r.data.estimatedBudget),'hint'));
         if(kind==='QUOTE'){c.append(el('p','Devis : '+money(r.data.total)+' · '+String(r.data.quoteState),'hint'));if(r.data.quoteState==='DRAFT'){const sent=el('button','Marquer envoyé','secondary');sent.type='button';sent.onclick=()=>void app.decideBusinessQuote(r.id,'SENT').then(refresh).catch(showError);c.append(sent);}if(['DRAFT','SENT'].includes(String(r.data.quoteState))){const accept=el('button','Accepté','primary'),reject=el('button','Refusé','link-btn');accept.type=reject.type='button';accept.onclick=()=>void app.decideBusinessQuote(r.id,'ACCEPTED').then(refresh).catch(showError);reject.onclick=()=>void app.decideBusinessQuote(r.id,'REJECTED').then(refresh).catch(showError);c.append(accept,reject);}}
+        if(kind==='ORDER'){c.append(el('p','Commande : '+money(r.data.amount)+' · '+String(r.data.orderState),'hint'));const st=String(r.data.orderState);const next=st==='DRAFT'?'CONFIRMED':st==='CONFIRMED'?'IN_PROGRESS':st==='IN_PROGRESS'?'DELIVERED':'';if(next){const b=el('button',next==='CONFIRMED'?'Confirmer la commande':next==='IN_PROGRESS'?'Démarrer':'Marquer livrée',next==='DELIVERED'?'primary':'secondary');b.type='button';b.onclick=()=>void app.setBusinessOrderState(r.id,next).then(refresh).catch(showError);c.append(b);}}
         if(kind==='INVOICE')c.append(el('p','Facture : '+money(r.data.amount)+' · reçu '+money(r.data.receivedAmount)+' · '+String(r.data.invoiceState),'hint'));
+        if(kind==='COMMUNICATION')c.append(el('p','Échange '+String(r.data.channel)+' · prochaine action '+(r.data.nextActionAt?new Date(String(r.data.nextActionAt)).toLocaleString():'—'),'hint'));
+        if(kind==='ACTION'){c.append(el('p','Action : '+String(r.data.priority??'NORMAL')+' · '+String(r.data.actionState??'OPEN'),'hint'));if(r.data.actionState!=='DONE'){const done=el('button','Marquer faite','secondary');done.type='button';done.onclick=()=>void app.completeBusinessAction(r.id).then(refresh).catch(showError);c.append(done);}}
         if(kind==='EXPENSE')c.append(el('p','Coût : '+money(r.data.amount)+' · '+String(r.data.category),'hint'));
         if(kind==='REVENUE')c.append(el('p','Recette privée : '+money(r.data.amount)+' · '+String(r.data.source),'hint'));
         if(kind==='TIME')c.append(el('p','Temps : '+(Number(r.data.minutes||0)/60).toFixed(1)+' h','hint'));
