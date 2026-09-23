@@ -40,9 +40,18 @@ export function mountDetailUI({app,navigate,getGroups,getMembers,getMeetings,get
     let statement,operational;try{[statement,operational]=await Promise.all([app.memberStatement(m.id),app.memberOperationalSheet(m.id)]);}catch(e){showError(e);return;}
     metrics.append(metric(fmt(statement.totalNetContributions),'Cotisations nettes'),metric(fmt(statement.debtPrincipal??0),'Prêts / capital dû'),metric(fmt(statement.debtInterest??0),'Intérêts dus'),metric(fmt(statement.totalDebt??0),'Dette totale'),metric((operational?.rubrics??[]).length,'Rubriques de ma fiche'));
     const sheet=card('Votre fiche individuelle'),host=el('div',undefined,'canonical-financial-table-host');host.dataset.canonicalFinancialHost='1';host.dataset.financialMode='individual';host.dataset.membershipId=m.id;host.dataset.showToolbar='false';host.dataset.editable=isManager()?'true':'false';sheet.append(el('p','Chaque rubrique créée et non archivée du groupe apparaît ici. Cette fiche utilise le même tableau canonique que la feuille de séance : même saisie montant + ✓, même remplacement exact et mêmes totaux par colonne.','truth-notice'),host);body.append(sheet);window.dispatchEvent(new CustomEvent('eco:render-canonical-financial-table',{detail:{root:host,mode:'individual',membershipId:m.id,showToolbar:false,editable:isManager()}}));
-    try{
-      const loans=(await app.listCompletion('LOAN')).filter(x=>String(x.data?.borrowerMembershipId??'')===m.id);if(loans.length){const loanCard=card('Prêts / dettes');for(const loan of loans){const a=el('article',undefined,'item');a.append(el('strong',loan.title),row('État',loan.data?.completionState??'—'),row('Capital initial',fmt(Number(loan.data?.principal??0))),row('Capital restant',fmt(Number(loan.data?.outstandingPrincipal??0))));loanCard.append(a);}body.append(loanCard);}
-    }catch{}
+    if(Array.isArray(statement.loanDebts)&&statement.loanDebts.length){
+      const loanCard=card('Prêts / dettes');
+      loanCard.append(el('p','Dette totale = capital restant + intérêts dus + autres obligations. Les intérêts générés à la clôture d’une séance sont signalés comme concernant la séance suivante.','truth-notice'));
+      for(const loan of statement.loanDebts){
+        const a=el('article',undefined,'item debt-loan-card');
+        a.append(el('strong',loan.title??'Prêt'),row('Capital restant',fmt(Number(loan.outstandingPrincipal??0))),row('Intérêts dus',fmt(Number(loan.unpaidInterest??0))),row('Dette du prêt',fmt(Number(loan.totalDebt??0))));
+        if(Number(loan.lastAccruedInterest??0)>0)a.append(row('Dernier intérêt ajouté',fmt(Number(loan.lastAccruedInterest??0))),row('Concerne',loan.interestAppliesToLabel??'Séance suivante'));
+        if(loan.interestAppliesToMeetingId)a.append(link('Ouvrir la séance concernée','meeting',String(loan.interestAppliesToMeetingId)));
+        loanCard.append(a);
+      }
+      body.append(loanCard);
+    }
     try{const misc=await app.miscPostings({membershipId:m.id});if(misc.length){const other=card('Inscription · amendes · timbres · autres');for(const p of misc.slice(0,50)){const a=el('article',undefined,'item');a.append(el('strong',p.title),row('Montant',fmt(Number(p.data?.amount??0))));if(p.data?.meetingId)a.append(link('Voir la séance','meeting',String(p.data.meetingId)));other.append(a);}body.append(other);}}catch{}
     try{const notices=await app.financialNotices(m.id);if(notices.length){const n=card('Modifications, avis et validations');for(const x of notices.slice(0,30)){const a=el('article',undefined,'item');a.append(el('strong',x.operationType??'Opération'),row('État',x.status),row('Montant',fmt(Number(x.amount??0))));n.append(a);}body.append(n);}}catch{}
     const history=card('Historique des contributions et modifications'),historyRows=[],historyList=el('div',undefined,'stack'),historyMeta=el('p','Chargement de l’historique…','hint'),more=el('button','Charger la suite','secondary');more.type='button';more.hidden=true;history.append(historyMeta,historyList,more);body.append(history);

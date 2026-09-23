@@ -57,11 +57,11 @@ interface WorkersAILike {
   run?(model:string,input:Record<string,unknown>,options?:Record<string,unknown>):Promise<unknown>;
 }
 
-const RELEASE_VERSION='1.5.2-unified-ux-blueprint';
-const RELEASE_BUILD_ID='eco-system-1.5.2-20260923';
+const RELEASE_VERSION='1.5.2.2-governed-field-feedback';
+const RELEASE_BUILD_ID='eco-system-1.5.2.2-20260923';
 const RELEASE_SCHEMA_VERSION='d1-additive-20260923';
-const RELEASE_POLICY_VERSION='blueprint-ux-20260923';
-const RELEASE_PWA_CACHE='eco-system-v152-unified-ux-blueprint-20260923';
+const RELEASE_POLICY_VERSION='governed-field-feedback-20260923';
+const RELEASE_PWA_CACHE='eco-system-v1522-governed-field-feedback-20260923';
 
 const defaultRepo = new InMemoryPlatformRepository();
 const defaultReferralBudgets = new InMemoryReferralBudgetStore();
@@ -236,6 +236,32 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
     if(targetMember)await publishLive(input.groupId,'FINANCIAL_NOTICE','financial-cell-correction:'+evidenceEntry.id,{noticeId:notice.id,ledgerEntryId:evidenceEntry.id,operationType:'FINANCIAL_CELL_CORRECTION',amount:input.targetAmount,currency:'XAF',previousAmount:state.current,newAmount:input.targetAmount,meetingClosed:meeting.status==='closed',alertLevel:meeting.status==='closed'?'closed':'correction'},targetMember.userId);
     await publishLive(input.groupId,'MEETING_UPDATE','financial-cell-managers:'+evidenceEntry.id,{meetingId:input.meetingId,kind:'FINANCIAL_CELL_CORRECTION',membershipId:input.membershipId,rubricId:input.rubricId,previousAmount:state.current,newAmount:input.targetAmount,meetingClosed:meeting.status==='closed'});
     return{status:'APPLIED',current:state.current,target:input.targetAmount,previousAmount:state.current,newAmount:input.targetAmount,cellVersion:correction.cellVersion,receipt,notice,groupId:group.id};
+  };
+
+  const jsonStringArray=(value:unknown):string[]=>{try{const parsed=JSON.parse(String(value??'[]'));return Array.isArray(parsed)?parsed.map(String):[];}catch{return[];}};
+  const meetingMoment=(meeting:any)=>Date.parse(String(meeting?.scheduledAt??meeting?.openedAt??meeting?.createdAt??''))||0;
+  const accrueLoanInterestAfterMeetingClose=async(groupId:string,closedMeeting:any)=>{
+    const meetingRows=(await repo.listMeetings(ctx.tenantId,groupId)).filter(x=>x.status!=='cancelled').slice().sort((a,b)=>meetingMoment(a)-meetingMoment(b)||String(a.id).localeCompare(String(b.id)));
+    const closedIndex=meetingRows.findIndex(x=>x.id===closedMeeting.id),nextMeeting=closedIndex>=0?meetingRows.slice(closedIndex+1).find(x=>meetingMoment(x)>=meetingMoment(closedMeeting)):undefined;
+    const activeLoans=(await completion.list(groupId,'LOAN')).filter(x=>['DISBURSED','REPAYING'].includes(String(x.data.completionState))&&finite(x.data.outstandingPrincipal,0)>0);
+    const updates=[] as any[];
+    for(const loan of activeLoans){
+      const sourceCloseIds=jsonStringArray(loan.data.interestCloseSourceIdsJson),legacyAccrued=jsonStringArray(loan.data.accruedMeetingIdsJson);
+      if(sourceCloseIds.includes(closedMeeting.id)||(String(loan.data.lastAccruedMeetingId??'')===closedMeeting.id&&legacyAccrued.includes(closedMeeting.id)))continue;
+      const principal=finite(loan.data.outstandingPrincipal,0),interestOpening=finite(loan.data.unpaidInterest,0),perYear=Math.max(1,finite(loan.data.installmentsPerYear,12));
+      const rate=finite(loan.data.rateBasisPointsPerPeriod,Math.round(finite(loan.data.annualRateBasisPoints,0)/perYear)),interestNew=Math.round(principal*rate/10000),interestAfter=interestOpening+interestNew;
+      sourceCloseIds.push(closedMeeting.id);
+      const preparedMeetingIds=jsonStringArray(loan.data.preparedInterestMeetingIdsJson);if(nextMeeting&&!preparedMeetingIds.includes(nextMeeting.id))preparedMeetingIds.push(nextMeeting.id);
+      const targetState=String(loan.data.completionState)==='DISBURSED'?'REPAYING':String(loan.data.completionState);
+      const patch:any={unpaidInterest:interestAfter,interestCloseSourceIdsJson:JSON.stringify(sourceCloseIds),preparedInterestMeetingIdsJson:JSON.stringify(preparedMeetingIds),preparedInterestPending:!nextMeeting,interestAppliesToMeetingId:nextMeeting?.id??'',interestAppliesToLabel:nextMeeting?('Réunion du '+new Intl.DateTimeFormat('fr-FR',{dateStyle:'long'}).format(new Date(nextMeeting.scheduledAt??nextMeeting.openedAt))):'Séance suivante',interestSourceClosedMeetingId:closedMeeting.id,lastAccruedInterest:interestNew,lastAccruedAt:new Date().toISOString()};
+      await completion.transition(groupId,loan.id,targetState,{expectedVersion:finite(loan.data.completionVersion),patch});
+      const periodKey=nextMeeting?.id??('next-after-'+closedMeeting.id),periodId='loan_period_'+encodeURIComponent(loan.id+'|'+periodKey),stamp=new Date().toISOString(),nextInterest=Math.round(principal*rate/10000),existing=await repo.getWorkspaceRecord(ctx.tenantId,periodId);
+      await repo.saveWorkspaceRecord({id:periodId,tenantId:ctx.tenantId,groupId,moduleId:'FINANCE.LOAN_PERIOD',title:'Intérêt dû · '+(nextMeeting?.title??'séance suivante'),summary:'Intérêt devenu exigible à la clôture de la séance précédente et rattaché à la séance suivante, sans intérêt sur intérêt.',status:'DONE',tags:['loan-period','loan:'+loan.id,'source-close:'+closedMeeting.id,nextMeeting?'meeting:'+nextMeeting.id:'next-session-pending'],data:{loanId:loan.id,membershipId:String(loan.data.borrowerMembershipId??''),meetingId:nextMeeting?.id??'',sourceClosedMeetingId:closedMeeting.id,appliesTo:'NEXT_SESSION',principalBefore:principal,interestOpening,interestNew,paymentAmount:Number(existing?.data.paymentAmount??0),principalPaid:Number(existing?.data.principalPaid??0),interestPaid:Number(existing?.data.interestPaid??0),principalAfter:principal,interestAfter,totalDebtAfter:principal+interestAfter,nextInterestProjected:nextInterest,nextTotalDueProjected:principal+interestAfter+nextInterest,priority:String(loan.data.paymentPriority??'CAPITAL_FIRST'),rateBasisPointsPerPeriod:rate},createdBy:existing?.createdBy??ctx.actorId,createdAt:existing?.createdAt??stamp,updatedAt:stamp});
+      updates.push({loanId:loan.id,interestNew,interestAfter,totalDebt:principal+interestAfter,sourceClosedMeetingId:closedMeeting.id,appliesToMeetingId:nextMeeting?.id??null,appliesToLabel:patch.interestAppliesToLabel});
+      const membershipId=String(loan.data.borrowerMembershipId??'');
+      if(membershipId&&interestNew>0)await notifications.publish(groupId,{title:'Intérêt de prêt comptabilisé pour la prochaine séance',message:`${interestNew} F CFA d’intérêt ont été ajoutés à la dette après clôture de « ${closedMeeting.title} ». Dette actuelle : ${principal+interestAfter} F CFA. Cet intérêt concerne ${patch.interestAppliesToLabel}, pas la séance clôturée.`,channels:['IN_APP','WEB_PUSH'],audience:'SELECTED',selectedMembershipIds:[membershipId],priority:'HIGH',action:{view:'sessions',meetingId:nextMeeting?.id??closedMeeting.id,label:'Voir la dette'}});
+    }
+    return{closedMeetingId:closedMeeting.id,nextMeetingId:nextMeeting?.id??null,updates};
   };
 
   const trashEntity=async(groupId:string,kind:string,entityId:string)=>{
@@ -861,7 +887,8 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
       for(const r of base.receipts){const meeting=r.meetingId?meetingMap.get(r.meetingId):undefined,rubric=r.rubricId?rubricMap.get(r.rubricId):undefined,author=await actorLabelFor(r.receivedBy),reversals=entries.filter(e=>e.reversalOfEntryId===r.ledgerEntryId),corrections=[] as any[];for(const rev of reversals){const audit=audits.find(a=>a.action==='LEDGER_ENTRY_REVERSED'&&a.targetId===rev.id);corrections.push({at:rev.createdAt,authorId:rev.createdBy,authorName:await actorLabelFor(rev.createdBy),reason:String(audit?.metadata?.reason??''),entryId:rev.id});}enriched.push({...r,meetingTitle:meeting?('Réunion du '+new Intl.DateTimeFormat('fr-FR',{dateStyle:'long'}).format(new Date(meeting.scheduledAt??meeting.openedAt))):'Sans séance',rubricName:rubric?.name??'Sans rubrique',receivedByName:author,isModified:corrections.length>0||r.netAmount!==r.amount.amount,corrections,financialNature:isLoanRubric(r.rubricId)?'LOAN_DEBT':isPositiveContribution(r.rubricId)?'CONTRIBUTION':'OUTFLOW'});}
       const totalNetContributions=base.receipts.filter(r=>isPositiveContribution(r.rubricId)).reduce((n,r)=>n+r.netAmount,0),legacyLoanPrincipal=base.receipts.filter(r=>isLoanRubric(r.rubricId)).reduce((n,r)=>n+Math.max(0,r.netAmount),0);
       const memberLoans=loans.filter(x=>String(x.data?.borrowerMembershipId??'')===membershipId&&['DISBURSED','REPAYING'].includes(String(x.data?.completionState??''))),canonicalPrincipal=memberLoans.reduce((n,x)=>n+Number(x.data?.outstandingPrincipal??0),0),debtInterest=memberLoans.reduce((n,x)=>n+Number(x.data?.unpaidInterest??0),0),otherDebt=membership?obligations.filter(x=>x.groupId===groupId&&x.assigneeId===membership.userId&&(x.status==='open'||x.status==='overdue')).reduce((n,x)=>n+Number(x.amount?.amount??0),0):0,debtPrincipal=legacyLoanPrincipal+canonicalPrincipal,totalDebt=debtPrincipal+debtInterest+otherDebt;
-      return json({...base,totalNetContributions,receipts:enriched,debtPrincipal,debtInterest,otherDebt,totalDebt},200,cors);
+      const loanDebts=memberLoans.map(x=>({loanId:x.id,title:x.title,outstandingPrincipal:Number(x.data?.outstandingPrincipal??0),unpaidInterest:Number(x.data?.unpaidInterest??0),totalDebt:Number(x.data?.outstandingPrincipal??0)+Number(x.data?.unpaidInterest??0),lastAccruedInterest:Number(x.data?.lastAccruedInterest??0),interestAppliesToMeetingId:String(x.data?.interestAppliesToMeetingId??'')||null,interestAppliesToLabel:String(x.data?.interestAppliesToLabel??'')||null,interestSourceClosedMeetingId:String(x.data?.interestSourceClosedMeetingId??'')||null}));
+      return json({...base,totalNetContributions,receipts:enriched,debtPrincipal,debtInterest,otherDebt,totalDebt,loanDebts},200,cors);
     }
     const meetingHistoryRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/meetings\/([^/]+)\/history$/);
     if(meetingHistoryRoute&&request.method==='GET'){
@@ -993,17 +1020,8 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
     const closeMeeting=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/meetings\/([^/]+)\/close$/);
     if(closeMeeting&&request.method==='POST'){
       const groupId=closeMeeting[1]!,meetingId=closeMeeting[2]!,closed=await meetings.closeMeeting(ctx.tenantId,groupId,meetingId);
-      const activeLoans=(await completion.list(groupId,'LOAN')).filter(x=>['DISBURSED','REPAYING'].includes(String(x.data.completionState))&&finite(x.data.outstandingPrincipal,0)>0);
-      for(const loan of activeLoans){
-        let accruedMeetingIds:string[]=[];try{accruedMeetingIds=JSON.parse(String(loan.data.accruedMeetingIdsJson??'[]'));if(!Array.isArray(accruedMeetingIds))accruedMeetingIds=[];}catch{accruedMeetingIds=[];}
-        if(accruedMeetingIds.includes(meetingId))continue;
-        const principal=finite(loan.data.outstandingPrincipal,0),interestOpening=finite(loan.data.unpaidInterest,0),perYear=Math.max(1,finite(loan.data.installmentsPerYear,12)),rate=finite(loan.data.rateBasisPointsPerPeriod,Math.round(finite(loan.data.annualRateBasisPoints,0)/perYear)),interestNew=Math.round(principal*rate/10000),interestAfter=interestOpening+interestNew;
-        accruedMeetingIds.push(meetingId);
-        await completion.transition(groupId,loan.id,'REPAYING',{expectedVersion:finite(loan.data.completionVersion),patch:{unpaidInterest:interestAfter,accruedMeetingIdsJson:JSON.stringify(accruedMeetingIds),lastAccruedMeetingId:meetingId,lastAccruedInterest:interestNew}});
-        const periodId='loan_period_'+encodeURIComponent(loan.id+'|'+meetingId),stamp=new Date().toISOString(),nextInterest=Math.round(principal*rate/10000);
-        await repo.saveWorkspaceRecord({id:periodId,tenantId:ctx.tenantId,groupId,moduleId:'FINANCE.LOAN_PERIOD',title:'Période de prêt · '+closed.title,summary:'Intérêt mensuel exigible calculé sur le capital restant, sans intérêt sur intérêt.',status:'DONE',tags:['loan-period','loan:'+loan.id,'meeting:'+meetingId],data:{loanId:loan.id,membershipId:String(loan.data.borrowerMembershipId??''),meetingId,principalBefore:principal,interestOpening,interestNew,paymentAmount:0,principalPaid:0,interestPaid:0,principalAfter:principal,interestAfter,totalDebtAfter:principal+interestAfter,nextInterestProjected:nextInterest,nextTotalDueProjected:principal+interestAfter+nextInterest,priority:String(loan.data.paymentPriority??'CAPITAL_FIRST'),rateBasisPointsPerPeriod:rate},createdBy:ctx.actorId,createdAt:stamp,updatedAt:stamp});
-      }
-      return json(closed,200,cors);
+      const debtUpdate=await accrueLoanInterestAfterMeetingClose(groupId,closed);
+      return json({...closed,debtUpdate},200,cors);
     }
 
     const miscCatalog=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/misc-rubrics$/);
@@ -1789,10 +1807,12 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
       if(!['DISBURSED','REPAYING'].includes(String(loan.data.completionState)))throw new Error('LOAN_NOT_REPAYABLE');
       const outstanding=finite(loan.data.outstandingPrincipal),unpaidInterest=finite(loan.data.unpaidInterest,0),meetingId=body.meetingId?String(body.meetingId):undefined;
       const repaymentPeriodsPerYear=Math.max(1,finite(loan.data.installmentsPerYear,12)),rateBasisPointsPerPeriod=finite(body.rateBasisPointsPerPeriod??loan.data.rateBasisPointsPerPeriod??Math.round(finite(loan.data.annualRateBasisPoints,0)/repaymentPeriodsPerYear),0);
-      let accruedMeetingIds:string[]=[];try{accruedMeetingIds=JSON.parse(String(loan.data.accruedMeetingIdsJson??'[]'));if(!Array.isArray(accruedMeetingIds))accruedMeetingIds=[];}catch{accruedMeetingIds=[];}
-      let periodInterest=0,interestDue=unpaidInterest;
-      if(meetingId&&!accruedMeetingIds.includes(meetingId)){
-        periodInterest=Math.round(outstanding*rateBasisPointsPerPeriod/10000);interestDue+=periodInterest;accruedMeetingIds.push(meetingId);
+      let accruedMeetingIds=jsonStringArray(loan.data.accruedMeetingIdsJson),preparedInterestMeetingIds=jsonStringArray(loan.data.preparedInterestMeetingIdsJson),preparedInterestPending=loan.data.preparedInterestPending===true||String(loan.data.preparedInterestPending)==='true';
+      let periodInterest=0,interestDue=unpaidInterest,usedPreparedInterest=false;
+      if(meetingId){
+        if(preparedInterestMeetingIds.includes(meetingId)){preparedInterestMeetingIds=preparedInterestMeetingIds.filter(id=>id!==meetingId);usedPreparedInterest=true;}
+        else if(preparedInterestPending){preparedInterestPending=false;usedPreparedInterest=true;}
+        else if(!accruedMeetingIds.includes(meetingId)){periodInterest=Math.round(outstanding*rateBasisPointsPerPeriod/10000);interestDue+=periodInterest;accruedMeetingIds.push(meetingId);}
       }
       const explicitAllocation=body.principalAmount!==undefined||body.interestAmount!==undefined;
       const allocation=explicitAllocation
@@ -1806,7 +1826,7 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
       });
       const target=allocation.remainingPrincipal===0&&allocation.unpaidInterestAfter===0?'CLOSED':'REPAYING';
       const updatedLoan=await completion.transition(loanRepay[1]!,loan.id,target,{
-        expectedVersion:finite(body.expectedVersion),patch:{outstandingPrincipal:allocation.remainingPrincipal,unpaidInterest:allocation.unpaidInterestAfter,lastRepaymentLedgerEntryId:entry.id,paymentPriority:allocation.priority,accruedMeetingIdsJson:JSON.stringify(accruedMeetingIds)}
+        expectedVersion:finite(body.expectedVersion),patch:{outstandingPrincipal:allocation.remainingPrincipal,unpaidInterest:allocation.unpaidInterestAfter,lastRepaymentLedgerEntryId:entry.id,paymentPriority:allocation.priority,accruedMeetingIdsJson:JSON.stringify(accruedMeetingIds),preparedInterestMeetingIdsJson:JSON.stringify(preparedInterestMeetingIds),preparedInterestPending,interestAppliesToMeetingId:usedPreparedInterest&&meetingId?meetingId:loan.data.interestAppliesToMeetingId}
       });
       if(meetingId){
         const periodId='loan_period_'+encodeURIComponent(loan.id+'|'+meetingId),oldPeriod=await repo.getWorkspaceRecord(ctx.tenantId,periodId),stamp=entry.createdAt,nextInterest=Math.round(allocation.remainingPrincipal*rateBasisPointsPerPeriod/10000);
@@ -2015,8 +2035,9 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
       if(item.type==='MEETING_CLOSE_V1'){
         const p=item.payload,groupId=String(p.groupId??'');await requireGroup(groupId,true);
         const meeting=await meetings.closeMeeting(ctx.tenantId,groupId,String(p.meetingId??''),item.idempotencyKey);
+        const debtUpdate=await accrueLoanInterestAfterMeetingClose(groupId,meeting);
         await markApplied();
-        return json({accepted:true,stored:true,meeting},200,cors);
+        return json({accepted:true,stored:true,meeting,debtUpdate},200,cors);
       }
       if(item.type==='CASHBOX_RECONCILE_V1'){
         const p=item.payload,groupId=String(p.groupId??'');await requireGroup(groupId,true);

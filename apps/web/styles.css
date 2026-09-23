@@ -295,3 +295,54 @@ body.ui-mode-assisted .nav-btn b{overflow-wrap:normal;word-break:normal}
   .side-nav .nav-btn b{line-height:1.22;overflow-wrap:normal;word-break:normal}
   .matrix-cell-entry{min-width:124px}
 }
+
+
+/* 1.5.2.2 governed field feedback — wheel, debt state, members, alerts, flagship */
+.matrix-wrap{overflow-x:auto;overflow-y:visible;overscroll-behavior-x:contain;overscroll-behavior-y:auto;touch-action:pan-x pan-y}
+.canonical-financial-wrap{max-width:100%;overflow-x:auto;overflow-y:visible;overscroll-behavior-x:contain;overscroll-behavior-y:auto;touch-action:pan-x pan-y;scrollbar-gutter:stable both-edges}
+.matrix-cell-entry.is-saving{opacity:.76}
+.matrix-cell-entry .cell-current.is-negative{color:#a43a2f}
+.matrix-cell-entry .cell-nature{grid-column:1/-1;font-size:11px;font-weight:850;line-height:1.2}
+.matrix-cell-entry .cell-nature.negative{color:#8d2f28;background:#fff1ed;border:1px solid #f0c0b6;border-radius:999px;padding:3px 7px;justify-self:start}
+.member-management-toolbar{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;align-items:end;margin:12px 0}
+.member-management-toolbar button{width:100%;min-width:0;white-space:normal;overflow-wrap:normal;word-break:normal;line-height:1.25}
+.member-management-toolbar select{width:100%;min-width:0}
+.trash-restored{border-color:#9fd0b5;background:#f1fbf5}
+.notification-center-item.is-unread{border-width:2px}
+.notification-center-item.priority-critical{border-color:#d66a6a;background:#fff6f6}
+.notification-center-item.priority-high{border-color:#d6aa62;background:#fffaf0}
+.notification-center-item.priority-normal{border-color:#8fb1d7}
+.notification-center-item.is-read{opacity:.78}
+
+body.ui-mode-visual{background:
+  radial-gradient(circle at 12% 12%,rgba(53,139,108,.10),transparent 30%),
+  radial-gradient(circle at 88% 8%,rgba(144,82,123,.10),transparent 28%),
+  linear-gradient(180deg,#f8f6f1 0%,#f3f7f5 48%,#f8f4f7 100%)}
+body.ui-mode-visual .topbar{background:rgba(255,253,249,.88);backdrop-filter:blur(18px) saturate(1.18);box-shadow:0 8px 28px rgba(25,45,38,.08)}
+body.ui-mode-visual .side-nav{background:linear-gradient(180deg,#f1eee7 0%,#edf4f0 58%,#f3edf1 100%)}
+body.ui-mode-visual .nav-btn{transition:transform .16s ease,background .16s ease,box-shadow .16s ease}
+body.ui-mode-visual .nav-btn:hover{transform:translateX(2px);background:rgba(255,255,255,.88)}
+body.ui-mode-visual .nav-btn.active{background:linear-gradient(135deg,#ffffff,#edf8f2 62%,#f7eef4);box-shadow:0 10px 24px rgba(34,86,65,.10);outline:1px solid rgba(42,114,85,.10)}
+body.ui-mode-visual .ui-mode-panel{overflow:hidden;border:1px solid rgba(41,105,82,.18);background:
+  radial-gradient(circle at 90% 20%,rgba(255,255,255,.96),rgba(255,255,255,.10) 36%),
+  linear-gradient(135deg,#f8fff9 0%,#f6f4ff 48%,#fff5f8 100%);box-shadow:0 18px 48px rgba(35,67,90,.10)}
+body.ui-mode-visual .ui-mode-panel::before{content:"";position:absolute;inset:-80px auto auto -60px;width:220px;height:220px;border-radius:50%;background:radial-gradient(circle,rgba(49,143,104,.15),transparent 68%);pointer-events:none}
+body.ui-mode-visual .hero{position:relative;background:
+  radial-gradient(circle at 82% 20%,rgba(255,255,255,.18),transparent 27%),
+  radial-gradient(circle at 18% 100%,rgba(198,131,160,.22),transparent 36%),
+  linear-gradient(125deg,#102c25 0%,#176248 48%,#6e3f5b 115%);border:1px solid rgba(255,255,255,.14);box-shadow:0 28px 70px rgba(27,59,47,.24)}
+body.ui-mode-visual .hero::before{content:"";position:absolute;width:210px;height:210px;border-radius:44% 56% 60% 40%;left:44%;bottom:-140px;background:rgba(255,255,255,.06);transform:rotate(22deg)}
+body.ui-mode-visual .panel{background:rgba(255,255,255,.91);border-color:rgba(56,85,74,.13);box-shadow:0 12px 34px rgba(26,52,43,.065);backdrop-filter:blur(8px)}
+body.ui-mode-visual .metric{position:relative;overflow:hidden;background:linear-gradient(145deg,rgba(255,255,255,.98),rgba(247,251,249,.94));border-color:rgba(57,103,85,.14);box-shadow:0 10px 26px rgba(37,66,55,.07)}
+body.ui-mode-visual .metric::before{content:"";position:absolute;inset:0 auto 0 0;width:4px;background:linear-gradient(#23805b,#a05b7b)}
+body.ui-mode-visual .quick{position:relative;overflow:hidden;background:linear-gradient(145deg,#fff 0%,#f7fbf9 62%,#fbf5f9 100%);border-color:rgba(45,104,81,.14)}
+body.ui-mode-visual .quick::after{content:"↗";position:absolute;right:13px;top:11px;opacity:.24;font-weight:900;font-size:18px}
+body.ui-mode-visual .quick:hover{border-color:rgba(38,126,91,.32);box-shadow:0 16px 34px rgba(32,79,61,.12)}
+body.ui-mode-visual .cahier-banner{border-radius:16px;background:linear-gradient(90deg,rgba(236,248,241,.95),rgba(249,240,246,.95));box-shadow:0 8px 20px rgba(46,76,65,.06)}
+body.ui-mode-visual .financial-alert-bar{box-shadow:0 10px 28px rgba(109,52,61,.14)}
+body.ui-mode-visual .primary{box-shadow:0 7px 18px rgba(31,107,79,.16)}
+body.ui-mode-visual .primary:hover{filter:saturate(1.08) brightness(1.03);transform:translateY(-1px)}
+@media(max-width:620px){
+  .member-management-toolbar{grid-template-columns:1fr}
+  .member-management-toolbar button{min-height:48px}
+}
