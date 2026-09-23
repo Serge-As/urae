@@ -91,6 +91,15 @@ export function mountBlueprintExecutableUI({app,getGroups,getMeetings,navigate,n
 
   const workflowForm=(def,context)=>{
     const [moduleId,fr,en,phFr,phEn]=def,box=el('article',undefined,'blueprint-workflow-card');box.append(el('span',moduleId,'blueprint-state'),el('h3',t(fr,en)),el('p',t(phFr,phEn),'hint'));
+    if(['MARKETPLACE.DEMAND_EXCHANGE','MARKETPLACE.PROCUREMENT','MARKETPLACE.ECO_NOW'].includes(moduleId)){
+      const labels={
+        'MARKETPLACE.DEMAND_EXCHANGE':t('Demand Exchange / Reverse Market','Demand Exchange / Reverse Market'),
+        'MARKETPLACE.PROCUREMENT':t('Smart Procurement','Smart Procurement'),
+        'MARKETPLACE.ECO_NOW':t('Eco NOW / Liquidation / Surplus / Rescue','Eco NOW / Liquidation / Surplus / Rescue')
+      };
+      const notice=el('p',t('Cette capacité possède maintenant un moteur canonique opérationnel. Le Blueprint ne crée plus de dossier parallèle : il vous transmet au Marché de valeur, qui réutilise stock, fournisseurs, commandes et preuves existants.','This capability now has an operational canonical engine. Blueprint no longer creates a parallel record and hands off to Value Market, which reuses the existing stock, suppliers, orders and evidence.'),'truth-notice');
+      const go=button(t('Ouvrir ','Open ')+labels[moduleId],'primary');go.onclick=()=>{navigate('ecosystem');setTimeout(()=>byId('valueMarketPanel')?.scrollIntoView({behavior:'smooth',block:'start'}),100);};box.append(notice,go);return box;
+    }
     if(moduleId==='MARKETPLACE.GROUP_BUY'){
       const notice=el('p',t('Cette activité possède déjà un moteur canonique d’achats groupés. Le Blueprint ne crée donc aucun second enregistrement : il vous transmet vers le Marketplace existant.','This activity already has a canonical group-buy engine. Blueprint therefore creates no second record and hands off to the existing Marketplace.'),'truth-notice');
       const go=button(t('Ouvrir les achats groupés canoniques','Open canonical group buying'),'primary');go.onclick=()=>{navigate('ecosystem');setTimeout(()=>byId('marketEnginePanel')?.scrollIntoView({behavior:'smooth',block:'start'}),100);};box.append(notice,go);return box;
