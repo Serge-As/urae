@@ -2,7 +2,7 @@ import { rm, mkdir, cp, access, readFile, writeFile } from 'node:fs/promises';
 import { spawnSync } from 'node:child_process';
 import path from 'node:path';
 
-const RELEASE_VERSION='1.5.1-canonical-financial-tables-kit-business';
+const RELEASE_VERSION='1.5.2-unified-ui-modes-auth-pwa';
 const compiler=path.resolve('node_modules/typescript/bin/tsc');
 try{await access(compiler);}catch{await import('./build-portable.mjs');process.exit(0);}
 const output=path.resolve('.build');
@@ -59,6 +59,6 @@ for (const target of ['.build/apps/web/src/main.js','.build/src/main.js']) {
   source=source.replace("const CAHIER_VERSION = '1.3.2-savings-control-forum-live';",`const CAHIER_VERSION = '${RELEASE_VERSION}';`);
   await writeFile(target,source,'utf8');
 }
-console.log(`Build OK: .build/ (Eco-System ${RELEASE_VERSION}; 1.5.1 canonical financial tables + starter kit + Business Studio`);
+console.log(`Build OK: .build/ (Eco-System ${RELEASE_VERSION}; 1.5.2 unified financial tables + experience modes + durable auth + Kit + Business Studio`);
 
 await import('./public-assets.mjs');
