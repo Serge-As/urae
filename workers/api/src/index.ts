@@ -238,17 +238,32 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
 
   const jsonStringArray=(value:unknown):string[]=>{try{const parsed=JSON.parse(String(value??'[]'));return Array.isArray(parsed)?parsed.map(String):[];}catch{return[];}};
   const meetingMoment=(meeting:any)=>Date.parse(String(meeting?.scheduledAt??meeting?.openedAt??meeting?.createdAt??''))||0;
-  const accrueLoanInterestAfterMeetingClose=async(groupId:string,closedMeeting:any)=>{
+  const meetingClosedMoment=(meeting:any)=>Date.parse(String(meeting?.closedAt??meeting?.scheduledAt??meeting?.openedAt??meeting?.createdAt??''))||0;
+
+  const principalAtClosedMeeting=async(groupId:string,loan:any,closedMeeting:any)=>{
+    const initial=Math.max(0,finite(loan.data.principal,finite(loan.data.outstandingPrincipal,0)));
+    const closedAt=meetingClosedMoment(closedMeeting);
+    const events=(await repo.listWorkspaceRecords(ctx.tenantId,'FINANCE.SHEET_EVENT',groupId))
+      .filter(x=>String(x.data.loanId??'')===loan.id&&String(x.data.direction??'')==='IN'&&Number(x.data.principalPaid??0)>0)
+      .filter(x=>(Date.parse(String(x.createdAt??x.updatedAt??''))||0)<=closedAt);
+    const repaid=events.reduce((sum,x)=>sum+Math.max(0,Number(x.data.principalPaid??0)),0);
+    return Math.max(0,initial-repaid);
+  };
+
+  const accrueLoanInterestAfterMeetingClose=async(groupId:string,closedMeeting:any,options:{notify?:boolean}={notify:true})=>{
     const meetingRows=(await repo.listMeetings(ctx.tenantId,groupId)).filter(x=>x.status!=='cancelled').slice().sort((a,b)=>meetingMoment(a)-meetingMoment(b)||String(a.id).localeCompare(String(b.id)));
     const closedIndex=meetingRows.findIndex(x=>x.id===closedMeeting.id),nextMeeting=closedIndex>=0?meetingRows.slice(closedIndex+1).find(x=>meetingMoment(x)>=meetingMoment(closedMeeting)):undefined;
     const activeLoans=(await completion.list(groupId,'LOAN')).filter(x=>['DISBURSED','REPAYING'].includes(String(x.data.completionState))&&finite(x.data.outstandingPrincipal,0)>0);
     const updates=[] as any[];
     for(const loan of activeLoans){
+      const disbursedAt=Date.parse(String(loan.data.disbursedAt??'')),closedAt=meetingClosedMoment(closedMeeting);
+      if(Number.isFinite(disbursedAt)&&closedAt&&disbursedAt>closedAt)continue;
       const sourceCloseIds=jsonStringArray(loan.data.interestCloseSourceIdsJson);
       const legacyAccrued=jsonStringArray(loan.data.accruedMeetingIdsJson);
-      // Backward compatibility: old releases used the closed session id itself.
-      if(sourceCloseIds.includes(closedMeeting.id)||(String(loan.data.lastAccruedMeetingId??'')===closedMeeting.id&&legacyAccrued.includes(closedMeeting.id)))continue;
-      const principal=finite(loan.data.outstandingPrincipal,0),interestOpening=finite(loan.data.unpaidInterest,0),perYear=Math.max(1,finite(loan.data.installmentsPerYear,12));
+      if(sourceCloseIds.includes(closedMeeting.id)||legacyAccrued.includes(closedMeeting.id))continue;
+      const principal=await principalAtClosedMeeting(groupId,loan,closedMeeting);
+      if(principal<=0)continue;
+      const interestOpening=finite(loan.data.unpaidInterest,0),perYear=Math.max(1,finite(loan.data.installmentsPerYear,12));
       const rate=finite(loan.data.rateBasisPointsPerPeriod,Math.round(finite(loan.data.annualRateBasisPoints,0)/perYear)),interestNew=Math.round(principal*rate/10000),interestAfter=interestOpening+interestNew;
       sourceCloseIds.push(closedMeeting.id);
       const preparedMeetingIds=jsonStringArray(loan.data.preparedInterestMeetingIdsJson);
@@ -266,15 +281,25 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
         lastAccruedAt:new Date().toISOString()
       };
       const updated=await completion.transition(groupId,loan.id,targetState,{expectedVersion:finite(loan.data.completionVersion),patch});
-      const periodKey=nextMeeting?.id??('next-after-'+closedMeeting.id),periodId='loan_period_'+encodeURIComponent(loan.id+'|'+periodKey),stamp=new Date().toISOString(),nextInterest=Math.round(principal*rate/10000);
+      const currentPrincipal=finite(updated.data.outstandingPrincipal,principal);
+      const periodKey=nextMeeting?.id??('next-after-'+closedMeeting.id),periodId='loan_period_'+encodeURIComponent(loan.id+'|'+periodKey),stamp=new Date().toISOString(),nextInterest=Math.round(currentPrincipal*rate/10000);
       const existing=await repo.getWorkspaceRecord(ctx.tenantId,periodId);
-      await repo.saveWorkspaceRecord({id:periodId,tenantId:ctx.tenantId,groupId,moduleId:'FINANCE.LOAN_PERIOD',title:'Intérêt dû · '+(nextMeeting?.title??'séance suivante'),summary:'Intérêt devenu exigible à la clôture de la séance précédente et rattaché à la séance suivante, sans intérêt sur intérêt.',status:'DONE',tags:['loan-period','loan:'+loan.id,'source-close:'+closedMeeting.id,nextMeeting?'meeting:'+nextMeeting.id:'next-session-pending'],data:{loanId:loan.id,membershipId:String(loan.data.borrowerMembershipId??''),meetingId:nextMeeting?.id??'',sourceClosedMeetingId:closedMeeting.id,appliesTo:'NEXT_SESSION',principalBefore:principal,interestOpening,interestNew,paymentAmount:Number(existing?.data.paymentAmount??0),principalPaid:Number(existing?.data.principalPaid??0),interestPaid:Number(existing?.data.interestPaid??0),principalAfter:principal,interestAfter,totalDebtAfter:principal+interestAfter,nextInterestProjected:nextInterest,nextTotalDueProjected:principal+interestAfter+nextInterest,priority:String(loan.data.paymentPriority??'CAPITAL_FIRST'),rateBasisPointsPerPeriod:rate},createdBy:existing?.createdBy??ctx.actorId,createdAt:existing?.createdAt??stamp,updatedAt:stamp});
-      updates.push({loanId:loan.id,interestNew,interestAfter,totalDebt:principal+interestAfter,sourceClosedMeetingId:closedMeeting.id,appliesToMeetingId:nextMeeting?.id??null,appliesToLabel:patch.interestAppliesToLabel});
+      await repo.saveWorkspaceRecord({id:periodId,tenantId:ctx.tenantId,groupId,moduleId:'FINANCE.LOAN_PERIOD',title:'Intérêt dû · '+(nextMeeting?.title??'séance suivante'),summary:'Intérêt devenu exigible à la clôture de la séance précédente et rattaché à la séance suivante, sans intérêt sur intérêt.',status:'DONE',tags:['loan-period','loan:'+loan.id,'source-close:'+closedMeeting.id,nextMeeting?'meeting:'+nextMeeting.id:'next-session-pending'],data:{loanId:loan.id,membershipId:String(loan.data.borrowerMembershipId??''),meetingId:nextMeeting?.id??'',sourceClosedMeetingId:closedMeeting.id,appliesTo:'NEXT_SESSION',principalBefore:principal,interestOpening,interestNew,paymentAmount:Number(existing?.data.paymentAmount??0),principalPaid:Number(existing?.data.principalPaid??0),interestPaid:Number(existing?.data.interestPaid??0),principalAfter:currentPrincipal,interestAfter,totalDebtAfter:currentPrincipal+interestAfter,nextInterestProjected:nextInterest,nextTotalDueProjected:currentPrincipal+interestAfter+nextInterest,priority:String(loan.data.paymentPriority??'CAPITAL_FIRST'),rateBasisPointsPerPeriod:rate},createdBy:existing?.createdBy??ctx.actorId,createdAt:existing?.createdAt??stamp,updatedAt:stamp});
+      updates.push({loanId:loan.id,interestNew,interestAfter,totalDebt:currentPrincipal+interestAfter,sourceClosedMeetingId:closedMeeting.id,appliesToMeetingId:nextMeeting?.id??null,appliesToLabel:patch.interestAppliesToLabel});
       const membershipId=String(loan.data.borrowerMembershipId??'');
-      if(membershipId&&interestNew>0)await notifications.publish(groupId,{title:'Intérêt de prêt comptabilisé pour la prochaine séance',message:`${interestNew} F CFA d’intérêt ont été ajoutés à la dette après clôture de « ${closedMeeting.title} ». Dette actuelle : ${principal+interestAfter} F CFA. Cet intérêt concerne ${patch.interestAppliesToLabel}, pas la séance clôturée.`,channels:['IN_APP','WEB_PUSH'],audience:'SELECTED',selectedMembershipIds:[membershipId],priority:'HIGH',action:{view:'sessions',meetingId:nextMeeting?.id??closedMeeting.id,label:'Voir la dette'}});
-      void updated;
+      if(options.notify!==false&&membershipId&&interestNew>0)await notifications.publish(groupId,{title:'Intérêt de prêt comptabilisé pour la prochaine séance',message:`${interestNew} F CFA d’intérêt ont été ajoutés à la dette après clôture de « ${closedMeeting.title} ». Dette actuelle : ${currentPrincipal+interestAfter} F CFA. Cet intérêt concerne ${patch.interestAppliesToLabel}, pas la séance clôturée.`,channels:['IN_APP','WEB_PUSH'],audience:'SELECTED',selectedMembershipIds:[membershipId],priority:'HIGH',action:{view:'sessions',meetingId:nextMeeting?.id??closedMeeting.id,label:'Voir la dette'}});
     }
     return{closedMeetingId:closedMeeting.id,nextMeetingId:nextMeeting?.id??null,updates};
+  };
+
+  const reconcileClosedMeetingLoanInterest=async(groupId:string)=>{
+    const closed=(await repo.listMeetings(ctx.tenantId,groupId)).filter(x=>x.status==='closed').slice().sort((a,b)=>meetingClosedMoment(a)-meetingClosedMoment(b)||String(a.id).localeCompare(String(b.id)));
+    const updates=[] as any[];
+    for(const meeting of closed){
+      const result=await accrueLoanInterestAfterMeetingClose(groupId,meeting,{notify:false});
+      updates.push(...result.updates);
+    }
+    return updates;
   };
 
   const trashEntity=async(groupId:string,kind:string,entityId:string)=>{
@@ -869,7 +894,7 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
 
     const statement=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/members\/([^/]+)\/statement$/);
     if(statement&&request.method==='GET'){
-      const groupId=statement[1]!,membershipId=statement[2]!,base=await ledger.memberStatement(ctx.tenantId,groupId,membershipId,url.searchParams.get('asOf')??undefined);
+      const groupId=statement[1]!,membershipId=statement[2]!;\n      try{await requireGroup(groupId,true);await reconcileClosedMeetingLoanInterest(groupId);}catch(error){if(!(error instanceof Error)||error.message!=='FORBIDDEN_SCOPE')throw error;}\n      const base=await ledger.memberStatement(ctx.tenantId,groupId,membershipId,url.searchParams.get('asOf')??undefined);
       const [defs,meetingRows,entries,audits,loans,obligations]=await Promise.all([repo.listRubricDefinitions(ctx.tenantId,groupId),repo.listMeetings(ctx.tenantId,groupId),repo.listLedgerEntries(ctx.tenantId,groupId),repo.listAudit(ctx.tenantId),completion.list(groupId,'LOAN').catch(()=>[]),repo.listObligations(ctx.tenantId)]);
       const membership=await repo.getMembership(ctx.tenantId,groupId,membershipId),rubricMap=new Map(defs.map(r=>[r.id,r])),meetingMap=new Map(meetingRows.map(m=>[m.id,m]));
       const isLoanRubric=(rubricId?:string)=>{const r=rubricId?rubricMap.get(rubricId):undefined,n=String(r?.name??'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();return String(r?.facets?.custom?.systemKey??'')==='LOAN'||/^prets?$|^loans?$/.test(n);};
@@ -1593,8 +1618,9 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
     if(groupBuyCommit&&request.method==='POST'){const body=await readJson<Record<string,unknown>>(request);return json(await market.commitGroupBuy(groupBuyCommit[1]!,groupBuyCommit[2]!,String(body.membershipId??''),finite(body.quantity)),200,cors);}
     const completionCollection=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/completion$/);
     if(completionCollection&&request.method==='GET'){
-      const kind=url.searchParams.get('kind') as CompletionKind|null;
-      return json(await completion.list(completionCollection[1]!,kind??undefined),200,cors);
+      const groupId=completionCollection[1]!,kind=url.searchParams.get('kind') as CompletionKind|null;
+      if(kind==='LOAN')try{await requireGroup(groupId,true);await reconcileClosedMeetingLoanInterest(groupId);}catch(error){if(!(error instanceof Error)||error.message!=='FORBIDDEN_SCOPE')throw error;}
+      return json(await completion.list(groupId,kind??undefined),200,cors);
     }
     if(completionCollection&&request.method==='POST'){
       const body=await readJson<Record<string,unknown>>(request);
