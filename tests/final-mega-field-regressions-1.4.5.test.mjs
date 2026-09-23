@@ -69,7 +69,7 @@ test('multi-manager correction compares with canonical baseline and requires rea
 test('Sessions defaults to cumulative sheet and exact selected session is carried into canonical entry',()=>{
   assert.match(sessions,/★ Feuille récapitulative/);
   assert.match(sessions,/select\.value=.*'__cumulative__'/);
-  assert.match(sessions,/matrixMeetingId:meeting\.id/);
+  assert.match(sessions,/host\.dataset\.meetingId=meeting\.id/);assert.match(sessions,/eco:render-canonical-financial-table/);
   assert.match(sessions,/Saisir \/ corriger cette séance/);
   assert.match(sessions,/Autres séances/);
   assert.match(sessions,/\+ Nouvelle séance/);
