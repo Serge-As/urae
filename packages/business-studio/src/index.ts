@@ -3,7 +3,7 @@ import type {PlatformKernel} from '../../platform-kernel/src/index.js';
 import type {Id,WorkspaceRecord} from '../../contracts/src/index.js';
 import {makeId} from '../../contracts/src/index.js';
 
-type BusinessKind='WORKSPACE'|'MANDATE'|'CLIENT'|'QUOTE'|'CONTRACT'|'INVOICE'|'EXPENSE'|'PAYMENT'|'REVENUE'|'TIME'|'SCENARIO';
+type BusinessKind='WORKSPACE'|'MANDATE'|'CLIENT'|'OFFER'|'REQUEST'|'QUOTE'|'ORDER'|'CONTRACT'|'INVOICE'|'EXPENSE'|'PAYMENT'|'REVENUE'|'TIME'|'COMMUNICATION'|'ACTION'|'SCENARIO';
 type Money={amount:number;currency:string};
 const now=()=>new Date().toISOString();
 const managerRoles=new Set(['founder','manager','admin','president','treasurer']);
@@ -14,7 +14,7 @@ const json=<T>(v:unknown,fallback:T):T=>{try{return JSON.parse(String(v??'')) as
 export interface BusinessSummary{
   currency:string;quoted:number;invoiced:number;received:number;invoicePayments:number;directRevenue:number;expenses:number;outstanding:number;margin:number;
   activeMandates:number;activeClients:number;prospects:number;hours:number;breakEvenRevenue:number;netMarginPerHour:number;
-  overdueInvoices:number;openQuotes:number;revenueBySource:Record<string,number>;expenseByCategory:Record<string,number>;
+  overdueInvoices:number;openQuotes:number;catalogOffers:number;openRequests:number;openOrders:number;deliveredOrders:number;followUpsDue:number;revenueBySource:Record<string,number>;expenseByCategory:Record<string,number>;
 }
 
 export class BusinessStudioService{
@@ -70,6 +70,24 @@ export class BusinessStudioService{
   }
   async setClientState(id:Id,state:'PROSPECT'|'ACTIVE'|'PAUSED'|'CLOSED'){return this.mutate(id,{clientState:state},state==='CLOSED'?'DONE':'ACTIVE');}
 
+  async createOffer(input:{name:string;description?:string;category?:string;unitPrice?:number;currency?:string;active?:boolean}){
+    return this.save('OFFER',required(input.name,'offer_name'),{
+      description:input.description?.trim().slice(0,2000)??'',category:input.category?.trim().slice(0,120)??'SERVICE',
+      unitPrice:int(input.unitPrice??0,'unit_price'),currency:input.currency??'XAF',offerState:input.active===false?'PAUSED':'ACTIVE'
+    },input.active===false?'PAUSED':'ACTIVE');
+  }
+  async setOfferState(id:Id,state:'ACTIVE'|'PAUSED'|'ARCHIVED'){return this.mutate(id,{offerState:state},state==='ARCHIVED'?'ARCHIVED':state==='PAUSED'?'PAUSED':'ACTIVE');}
+
+  async createRequest(input:{title:string;need:string;clientId?:Id;estimatedBudget?:number;dueAt?:string;source?:string}){
+    if(input.clientId&&!(await this.owned('CLIENT')).some(x=>x.id===input.clientId))throw new Error('CLIENT_NOT_FOUND');
+    if(input.dueAt&&!Number.isFinite(Date.parse(input.dueAt)))throw new Error('INVALID_DUE_AT');
+    return this.save('REQUEST',required(input.title,'request_title'),{
+      need:required(input.need,'need',3000),clientId:input.clientId??'',estimatedBudget:int(input.estimatedBudget??0,'estimated_budget'),
+      dueAt:input.dueAt?new Date(input.dueAt).toISOString():'',source:input.source?.trim().slice(0,120)??'DIRECT',requestState:'OPEN'
+    });
+  }
+  async setRequestState(id:Id,state:'OPEN'|'QUALIFIED'|'QUOTED'|'WON'|'LOST'|'CLOSED'){return this.mutate(id,{requestState:state},['LOST','CLOSED'].includes(state)?'DONE':'ACTIVE');}
+
   async createQuote(input:{clientId:Id;title:string;items:Array<{label:string;quantity:number;unitPrice:number}>;currency?:string;validUntil?:string}){
     const client=(await this.owned('CLIENT')).find(x=>x.id===input.clientId);if(!client)throw new Error('CLIENT_NOT_FOUND');
     const items=input.items.map(x=>({label:required(x.label,'item_label'),quantity:int(x.quantity,'quantity',false),unitPrice:int(x.unitPrice,'unit_price')}));if(!items.length)throw new Error('QUOTE_ITEMS_REQUIRED');
@@ -77,6 +95,23 @@ export class BusinessStudioService{
     return this.save('QUOTE',required(input.title,'quote_title'),{clientId:client.id,itemsJson:JSON.stringify(items),total,currency:input.currency??'XAF',validUntil:input.validUntil??'',quoteState:'DRAFT'});
   }
   async quoteDecision(id:Id,state:'SENT'|'ACCEPTED'|'REJECTED'|'EXPIRED'){return this.mutate(id,{quoteState:state,decisionAt:now()},state==='REJECTED'||state==='EXPIRED'?'DONE':'ACTIVE');}
+
+  async createOrder(input:{clientId:Id;title:string;amount:number;currency?:string;quoteId?:Id;contractId?:Id;dueAt?:string}){
+    const client=(await this.owned('CLIENT')).find(x=>x.id===input.clientId);if(!client)throw new Error('CLIENT_NOT_FOUND');
+    if(input.quoteId&&!(await this.owned('QUOTE')).some(x=>x.id===input.quoteId))throw new Error('QUOTE_NOT_FOUND');
+    if(input.contractId&&!(await this.owned('CONTRACT')).some(x=>x.id===input.contractId))throw new Error('CONTRACT_NOT_FOUND');
+    if(input.dueAt&&!Number.isFinite(Date.parse(input.dueAt)))throw new Error('INVALID_DUE_AT');
+    return this.save('ORDER',required(input.title,'order_title'),{
+      clientId:client.id,quoteId:input.quoteId??'',contractId:input.contractId??'',amount:int(input.amount,'order_amount',false),currency:input.currency??'XAF',
+      dueAt:input.dueAt?new Date(input.dueAt).toISOString():'',orderState:'DRAFT'
+    });
+  }
+  async setOrderState(id:Id,state:'DRAFT'|'CONFIRMED'|'IN_PROGRESS'|'DELIVERED'|'CANCELLED'){
+    const r=(await this.owned('ORDER')).find(x=>x.id===id);if(!r)throw new Error('ORDER_NOT_FOUND');
+    const current=String(r.data.orderState??'DRAFT'),allowed:Record<string,string[]>={DRAFT:['CONFIRMED','CANCELLED'],CONFIRMED:['IN_PROGRESS','CANCELLED'],IN_PROGRESS:['DELIVERED','CANCELLED'],DELIVERED:[],CANCELLED:[]};
+    if(current!==state&&!allowed[current]?.includes(state))throw new Error('INVALID_ORDER_TRANSITION');
+    return this.mutate(id,{orderState:state,stateChangedAt:now()},['DELIVERED','CANCELLED'].includes(state)?'DONE':'ACTIVE');
+  }
 
   async createContract(input:{clientId:Id;quoteId?:Id;title:string;startsAt:string;endsAt?:string;scope:string}){
     const client=(await this.owned('CLIENT')).find(x=>x.id===input.clientId);if(!client)throw new Error('CLIENT_NOT_FOUND');
@@ -114,6 +149,26 @@ export class BusinessStudioService{
     }
     return this.save('REVENUE',required(input.label,'revenue_label'),{amount:int(input.amount,'revenue_amount',false),currency:input.currency??'XAF',source:input.source,clientId:input.clientId??'',groupId:input.groupId??'',collectiveLedgerEntryId:input.collectiveLedgerEntryId??'',reference:input.reference?.trim().slice(0,240)??'',receivedAt:now()});
   }
+
+  async logCommunication(input:{clientId?:Id;channel:'CALL'|'WHATSAPP'|'SMS'|'EMAIL'|'IN_PERSON'|'OTHER';direction:'OUTBOUND'|'INBOUND';subject:string;note?:string;nextActionAt?:string}){
+    if(input.clientId&&!(await this.owned('CLIENT')).some(x=>x.id===input.clientId))throw new Error('CLIENT_NOT_FOUND');
+    if(input.nextActionAt&&!Number.isFinite(Date.parse(input.nextActionAt)))throw new Error('INVALID_NEXT_ACTION_AT');
+    return this.save('COMMUNICATION','Échange · '+required(input.subject,'subject'),{
+      clientId:input.clientId??'',channel:input.channel,direction:input.direction,note:input.note?.trim().slice(0,3000)??'',
+      nextActionAt:input.nextActionAt?new Date(input.nextActionAt).toISOString():'',contactedAt:now()
+    });
+  }
+
+  async createAction(input:{title:string;clientId?:Id;groupId?:Id;dueAt?:string;priority?:'LOW'|'NORMAL'|'HIGH'|'URGENT';note?:string}){
+    if(input.clientId&&!(await this.owned('CLIENT')).some(x=>x.id===input.clientId))throw new Error('CLIENT_NOT_FOUND');
+    if(input.groupId)await this.groupManager(input.groupId);
+    if(input.dueAt&&!Number.isFinite(Date.parse(input.dueAt)))throw new Error('INVALID_DUE_AT');
+    return this.save('ACTION',required(input.title,'action_title'),{
+      clientId:input.clientId??'',groupId:input.groupId??'',dueAt:input.dueAt?new Date(input.dueAt).toISOString():'',
+      priority:input.priority??'NORMAL',note:input.note?.trim().slice(0,2000)??'',actionState:'OPEN'
+    });
+  }
+  async completeAction(id:Id){return this.mutate(id,{actionState:'DONE',completedAt:now()},'DONE');}
 
   async recordTime(input:{clientId?:Id;mandateId?:Id;minutes:number;workDate:string;note?:string}){
     if(input.clientId&&!(await this.owned('CLIENT')).some(x=>x.id===input.clientId))throw new Error('CLIENT_NOT_FOUND');
@@ -165,6 +220,40 @@ export class BusinessStudioService{
     });
   }
 
+  async profitability(){
+    const rows=await this.owned(),payments=rows.filter(x=>x.data.businessKind==='PAYMENT'),invoices=new Map(rows.filter(x=>x.data.businessKind==='INVOICE').map(x=>[x.id,x]));
+    const buckets=new Map<string,{clientId:string;groupId:string;revenue:number;expenses:number;minutes:number}>();
+    const bucket=(clientId='',groupId='')=>{const key=clientId+'|'+groupId;let b=buckets.get(key);if(!b){b={clientId,groupId,revenue:0,expenses:0,minutes:0};buckets.set(key,b);}return b;};
+    for(const p of payments){const invoice=invoices.get(String(p.data.invoiceId??''));const b=bucket(String(invoice?.data.clientId??''),String(invoice?.data.groupId??''));b.revenue+=Number(p.data.amount??0);}
+    for(const r of rows.filter(x=>x.data.businessKind==='REVENUE'))bucket(String(r.data.clientId??''),String(r.data.groupId??'')).revenue+=Number(r.data.amount??0);
+    for(const x of rows.filter(x=>x.data.businessKind==='EXPENSE'))bucket(String(x.data.clientId??''),String(x.data.groupId??'')).expenses+=Number(x.data.amount??0);
+    for(const x of rows.filter(x=>x.data.businessKind==='TIME'))bucket(String(x.data.clientId??''),'').minutes+=Number(x.data.minutes??0);
+    return [...buckets.values()].map(x=>({...x,margin:x.revenue-x.expenses,hours:Math.round(x.minutes/6)/10,marginPerHour:x.minutes>0?Math.round((x.revenue-x.expenses)/(x.minutes/60)):0})).sort((a,b)=>b.margin-a.margin);
+  }
+
+  async operatingBrief(){
+    const [summary,rows,profitability]=await Promise.all([this.summary(),this.owned(),this.profitability()]),actions:string[]=[];
+    if(summary.overdueInvoices>0)actions.push('Relancer les factures en retard avant d’engager de nouvelles dépenses non essentielles.');
+    if(summary.prospects>0)actions.push('Qualifier les prospects ouverts puis préparer un devis avec prix validé.');
+    if(summary.openQuotes>0)actions.push('Suivre les devis ouverts : relance, décision client et prochaine action datée.');
+    if(summary.openOrders>0)actions.push('Suivre les commandes confirmées/en cours jusqu’à livraison, preuve et facturation.');
+    if(summary.followUpsDue>0)actions.push('Traiter les relances arrivées à échéance dans le journal de communication.');
+    if(summary.margin<0)actions.push('Analyser les catégories de coûts dominantes et la tarification : la marge réelle est négative.');
+    if(!rows.some(x=>x.data.businessKind==='SCENARIO'))actions.push('Créer un scénario prudent / central / optimiste avant de fixer durablement les frais ou honoraires.');
+    if(!rows.some(x=>x.data.businessKind==='OFFER'&&x.data.offerState==='ACTIVE'))actions.push('Formaliser au moins une offre/service du catalogue avec périmètre et prix validé.');
+    if(!actions.length)actions.push('Aucune urgence déterministe détectée : poursuivre le suivi clients, fournisseurs, coûts, trésorerie privée et qualité de service.');
+    return{
+      generatedAt:now(),actions,profitability,
+      guardrails:[
+        'Le Business Agent prépare et explique ; il ne confirme jamais un paiement non enregistré.',
+        'Il n’invente jamais un prix : un devis ou une offre doit contenir un prix saisi/validé par le gestionnaire.',
+        'Les cotisations collectives ne sont jamais du chiffre d’affaires privé.',
+        'Toute recette privée provenant d’un groupe exige une référence Ledger collective immuable.',
+        'Aucune suggestion ne crée de transaction ni n’engage un client sans validation humaine.'
+      ]
+    };
+  }
+
   async summary():Promise<BusinessSummary>{
     const rows=await this.owned(),workspace=rows.find(x=>x.data.businessKind==='WORKSPACE'),currency=String(workspace?.data.currency??'XAF');
     const by=(kind:BusinessKind)=>rows.filter(x=>x.data.businessKind===kind&&String(x.data.currency??currency)===currency),sum=(kind:BusinessKind,field:string)=>by(kind).reduce((n,x)=>n+Number(x.data[field]??0),0);
@@ -172,7 +261,8 @@ export class BusinessStudioService{
     const revenueBySource:Record<string,number>={};for(const x of by('REVENUE')){const k=String(x.data.source??'OTHER');revenueBySource[k]=(revenueBySource[k]??0)+Number(x.data.amount??0);}
     const expenseByCategory:Record<string,number>={};for(const x of by('EXPENSE')){const k=String(x.data.category??'OTHER');expenseByCategory[k]=(expenseByCategory[k]??0)+Number(x.data.amount??0);}
     const nowMs=Date.now(),overdueInvoices=by('INVOICE').filter(x=>Number(x.data.receivedAmount??0)<Number(x.data.amount??0)&&Date.parse(String(x.data.dueAt??''))<nowMs).length;
-    return{currency,quoted,invoiced,received,invoicePayments,directRevenue,expenses,outstanding:Math.max(0,invoiced-invoicePayments),margin:received-expenses,activeMandates:rows.filter(x=>x.data.businessKind==='MANDATE'&&x.data.mandateState==='ACTIVE').length,activeClients:rows.filter(x=>x.data.businessKind==='CLIENT'&&x.data.clientState==='ACTIVE').length,prospects:rows.filter(x=>x.data.businessKind==='CLIENT'&&x.data.clientState==='PROSPECT').length,hours,breakEvenRevenue:fixed+expenses,netMarginPerHour:hours>0?Math.round((received-expenses)/hours):0,overdueInvoices,openQuotes:rows.filter(x=>x.data.businessKind==='QUOTE'&&['DRAFT','SENT'].includes(String(x.data.quoteState??''))).length,revenueBySource,expenseByCategory};
+    const current=Date.now();
+    return{currency,quoted,invoiced,received,invoicePayments,directRevenue,expenses,outstanding:Math.max(0,invoiced-invoicePayments),margin:received-expenses,activeMandates:rows.filter(x=>x.data.businessKind==='MANDATE'&&x.data.mandateState==='ACTIVE').length,activeClients:rows.filter(x=>x.data.businessKind==='CLIENT'&&x.data.clientState==='ACTIVE').length,prospects:rows.filter(x=>x.data.businessKind==='CLIENT'&&x.data.clientState==='PROSPECT').length,hours,breakEvenRevenue:fixed+expenses,netMarginPerHour:hours>0?Math.round((received-expenses)/hours):0,overdueInvoices,openQuotes:rows.filter(x=>x.data.businessKind==='QUOTE'&&['DRAFT','SENT'].includes(String(x.data.quoteState??''))).length,catalogOffers:rows.filter(x=>x.data.businessKind==='OFFER'&&x.data.offerState==='ACTIVE').length,openRequests:rows.filter(x=>x.data.businessKind==='REQUEST'&&!['WON','LOST','CLOSED'].includes(String(x.data.requestState??''))).length,openOrders:rows.filter(x=>x.data.businessKind==='ORDER'&&['CONFIRMED','IN_PROGRESS'].includes(String(x.data.orderState??''))).length,deliveredOrders:rows.filter(x=>x.data.businessKind==='ORDER'&&x.data.orderState==='DELIVERED').length,followUpsDue:rows.filter(x=>x.data.businessKind==='COMMUNICATION'&&x.data.nextActionAt&&Date.parse(String(x.data.nextActionAt))<=current).length,revenueBySource,expenseByCategory};
   }
 
   async records(){return this.owned();}
