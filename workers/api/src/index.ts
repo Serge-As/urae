@@ -45,6 +45,7 @@ import { GrowthReferralService, InMemoryReferralBudgetStore, D1ReferralBudgetSto
 import { KnowledgeAcademyService } from '../../../packages/knowledge-academy/src/index.js';
 import { ValueNetworkService } from '../../../packages/value-network/src/index.js';
 import { GroupReconstitutionService } from '../../../packages/group-reconstitution/src/index.js';
+import { SafetyService } from '../../../packages/safety/src/index.js';
 import { authenticatedApi } from './authenticated.js';
 export { GroupLiveHub } from './group-live-hub.js';
 
@@ -125,12 +126,13 @@ const createRequestScope = (request:Request,repo:PlatformRepository,artifacts?:A
   const externalPrograms=new ExternalProgramsService(repo,kernel);
   const operationalCockpit=new OperationalCockpitService(repo,kernel,ledger);
   const businessStudio=new BusinessStudioService(repo,kernel);
+  const safety=new SafetyService(repo,kernel);
   const knowledgeAcademy=new KnowledgeAcademyService(repo,kernel);
   const valueNetwork=new ValueNetworkService(repo,kernel);
   const tenantId=request.headers.get('x-tenant-id')??'tenant_demo'; const actorId=request.headers.get('x-actor-id')??'user_founder';
   const groupRoles=(request.headers.get('x-group-roles')??'founder,manager').split(',').map(x=>x.trim()).filter(Boolean);
   kernel.context.set({actorId,tenantId,activeGroupId:request.headers.get('x-active-group-id')??undefined,groupRoles,mandateIds:[],deviceId:request.headers.get('x-device-id')??'device_web_demo',sessionId:request.headers.get('x-session-id')??'session_demo',locale:request.headers.get('accept-language')?.toLowerCase().startsWith('en')?'en':'fr',timezone:request.headers.get('x-timezone')??'Africa/Douala',connectivity:'online',requestId:request.headers.get('x-request-id')??makeId('req')});
-  return {kernel,foundation,ledger,meetings,discovery,membershipGateway,rubrics,completion,explainability,documents,receivables,treasury,riskFinance,market,community,imports,artifactStore,memberControl,groupIdentity,conciergeLearning,miscRubrics,adManager,economicIntelligence,externalPrograms,operationalCockpit,businessStudio,knowledgeAcademy,valueNetwork};
+  return {kernel,foundation,ledger,meetings,discovery,membershipGateway,rubrics,completion,explainability,documents,receivables,treasury,riskFinance,market,community,imports,artifactStore,memberControl,groupIdentity,conciergeLearning,miscRubrics,adManager,economicIntelligence,externalPrograms,operationalCockpit,businessStudio,knowledgeAcademy,valueNetwork,safety};
 };
 
 const inboxFor = async (repo:PlatformRepository,tenantId:string,actorId:string) => {
@@ -145,7 +147,7 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
     const allowed=Boolean((cors as Record<string,string>)['access-control-allow-origin']);
     return new Response(null,{status:allowed?204:403,headers:{...baseSecurityHeaders,...cors,'access-control-allow-methods':'GET,POST,PUT,OPTIONS','access-control-allow-headers':'content-type,x-tenant-id,x-actor-id,x-group-roles,x-active-group-id,x-device-id,x-session-id,x-request-id,x-timezone'}});
   }
-  const {kernel,foundation,ledger,meetings,discovery,membershipGateway,rubrics,completion,explainability,documents,receivables,treasury,riskFinance,market,community,imports,artifactStore,memberControl,groupIdentity,conciergeLearning,miscRubrics,adManager,economicIntelligence,externalPrograms,operationalCockpit,businessStudio,knowledgeAcademy,valueNetwork}=createRequestScope(request,repo,options.artifacts,options.dataUseDefaultMode??'BETA_OPEN',options.documentAI); const ctx=kernel.context.get();
+  const {kernel,foundation,ledger,meetings,discovery,membershipGateway,rubrics,completion,explainability,documents,receivables,treasury,riskFinance,market,community,imports,artifactStore,memberControl,groupIdentity,conciergeLearning,miscRubrics,adManager,economicIntelligence,externalPrograms,operationalCockpit,businessStudio,knowledgeAcademy,valueNetwork,safety}=createRequestScope(request,repo,options.artifacts,options.dataUseDefaultMode??'BETA_OPEN',options.documentAI); const ctx=kernel.context.get();
   const governanceVotes=new GovernanceVoteService(repo,kernel,options.governanceSecret??'eco-system-nonproduction-governance-secret');
   const notifications=new NotificationService(repo,kernel);
   const growthReferral=new GrowthReferralService(repo,kernel,options.referralBudgets??defaultReferralBudgets);
@@ -507,6 +509,23 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
       if(action==='matches'&&request.method==='GET')return json({items:await valueNetwork.matchNeed(needId)},200,cors);
       if(action==='procurement'&&request.method==='POST'){const body=await readJson<any>(request);return json(await valueNetwork.prepareProcurement(needId,String(body.offerId??'')),201,cors);}
     }
+
+    const safetyLab=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/safety\/financial-lab$/);
+    if(safetyLab&&request.method==='POST'){const body=await readJson<any>(request);return json(await safety.financialLab({groupId:safetyLab[1]!,title:String(body.title??''),participants:finite(body.participants,1),deposit:finite(body.deposit,0),ratePercent:finite(body.ratePercent,0),months:finite(body.months,1),documentedRevenue:finite(body.documentedRevenue,0),newDeposits:finite(body.newDeposits,0),mode:String(body.mode??'COMPOUND') as any,mechanism:body.mechanism?String(body.mechanism):undefined,evidenceRef:body.evidenceRef?String(body.evidenceRef):undefined}),201,cors);}
+    if(request.method==='POST'&&url.pathname==='/api/v1/safety/financial-lab'){const body=await readJson<any>(request);return json(await safety.financialLab({title:String(body.title??''),participants:finite(body.participants,1),deposit:finite(body.deposit,0),ratePercent:finite(body.ratePercent,0),months:finite(body.months,1),documentedRevenue:finite(body.documentedRevenue,0),newDeposits:finite(body.newDeposits,0),mode:String(body.mode??'COMPOUND') as any,mechanism:body.mechanism?String(body.mechanism):undefined,evidenceRef:body.evidenceRef?String(body.evidenceRef):undefined}),201,cors);}
+    const safetyAnalyses=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/safety\/analyses$/);
+    if(safetyAnalyses&&request.method==='GET')return json({items:await safety.analyses(safetyAnalyses[1]!)},200,cors);
+    if(request.method==='GET'&&url.pathname==='/api/v1/safety/analyses')return json({items:await safety.analyses()},200,cors);
+    const safetyReports=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/safety\/reports$/);
+    if(safetyReports&&request.method==='POST'){const body=await readJson<any>(request);return json(await safety.report({groupId:safetyReports[1]!,title:String(body.title??''),targetType:String(body.targetType??'OTHER'),targetId:body.targetId?String(body.targetId):undefined,summary:String(body.summary??''),evidenceRef:body.evidenceRef?String(body.evidenceRef):undefined,channel:body.channel?String(body.channel):undefined,contextText:body.contextText?String(body.contextText):undefined}),201,cors);}
+    if(request.method==='POST'&&url.pathname==='/api/v1/safety/reports'){const body=await readJson<any>(request);return json(await safety.report({title:String(body.title??''),targetType:String(body.targetType??'OTHER'),targetId:body.targetId?String(body.targetId):undefined,summary:String(body.summary??''),evidenceRef:body.evidenceRef?String(body.evidenceRef):undefined,channel:body.channel?String(body.channel):undefined,contextText:body.contextText?String(body.contextText):undefined}),201,cors);}
+    const safetyCases=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/safety\/cases$/);
+    if(safetyCases&&request.method==='GET')return json({items:await safety.cases(safetyCases[1]!)},200,cors);
+    if(request.method==='GET'&&url.pathname==='/api/v1/safety/cases')return json({items:await safety.cases()},200,cors);
+    const safetyReview=url.pathname.match(/^\/api\/v1\/safety\/cases\/([^/]+)\/reviews$/);
+    if(safetyReview&&request.method==='POST'){const body=await readJson<any>(request);return json(await safety.review(safetyReview[1]!,{state:String(body.state??'TRIAGED') as any,restriction:body.restriction?String(body.restriction) as any:undefined,note:String(body.note??''),evidenceRef:body.evidenceRef?String(body.evidenceRef):undefined}),200,cors);}
+    const safetyAppeal=url.pathname.match(/^\/api\/v1\/safety\/cases\/([^/]+)\/appeals$/);
+    if(safetyAppeal&&request.method==='POST'){const body=await readJson<any>(request);return json(await safety.appeal(safetyAppeal[1]!,String(body.summary??'')),201,cors);}
 
     if(request.method==='GET'&&url.pathname==='/api/v1/knowledge'){return json({items:await knowledgeAcademy.searchKnowledge(url.searchParams.get('q')??'',url.searchParams.get('groupId')??undefined)},200,cors);}
     if(request.method==='POST'&&url.pathname==='/api/v1/knowledge'){const body=await readJson<any>(request);return json(await knowledgeAcademy.createKnowledge(body),201,cors);}
