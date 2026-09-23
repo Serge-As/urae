@@ -173,9 +173,9 @@ export class MarketService{
     if(String(item.data.ownership??'COMMERCIAL')==='POT_RESERVED')throw Error('POT_STOCK_NOT_SELLABLE');
     const available=Math.max(0,Number(item.data.quantity)-Number(item.data.reserved??0));if(input.quantity>available)throw Error('INSUFFICIENT_STOCK');
     const offerPrice=Number(input.offerPrice),originalPrice=input.originalPrice===undefined?Number(item.data.unitPrice??0):Number(input.originalPrice);
-    if(!Number.isSafeInteger(offerPrice)||offerPrice<0||!Number.isSafeInteger(originalPrice)||originalPrice<0||offerPrice>originalPrice&&originalPrice>0)throw Error('INVALID_FLASH_PRICE');
+    if(!Number.isSafeInteger(offerPrice)||offerPrice<0||!Number.isSafeInteger(originalPrice)||originalPrice<=0||offerPrice>originalPrice)throw Error('INVALID_FLASH_PRICE');
     const reason=input.reason.trim(),condition=input.condition.trim(),disclosure=input.disclosure.trim();if(!reason||!condition||!disclosure)throw Error('FLASH_DISCLOSURE_REQUIRED');
-    const observedAt=Date.parse(input.observedAt),expiresAt=Date.parse(input.expiresAt);if(!Number.isFinite(observedAt)||!Number.isFinite(expiresAt)||expiresAt<=Date.now())throw Error('INVALID_FLASH_DATES');
+    const observedAt=Date.parse(input.observedAt),expiresAt=Date.parse(input.expiresAt);if(!Number.isFinite(observedAt)||!Number.isFinite(expiresAt)||observedAt>Date.now()+300000||expiresAt<=Date.now()||expiresAt<=observedAt)throw Error('INVALID_FLASH_DATES');
     return this.save(groupId,'FLASH_OFFER',input.type+' · '+item.title,{flashType:input.type,stockItemId:item.id,sku:String(item.data.sku??''),quantity:input.quantity,offerPrice,originalPrice,reason,condition,observedAt:new Date(observedAt).toISOString(),expiresAt:new Date(expiresAt).toISOString(),disclosure,state:'OPEN',noHiddenDefectConfirmed:true});
   }
   async flashOffers(groupId:Id){
@@ -270,7 +270,8 @@ export class MarketService{
     for(const tier of tiers)if(quantity>=tier.minQty)price=tier.price;return price;
   }
   async deals(groupId:Id,includeInternal=true){
-    const rows=await this.list(groupId,'DEAL'),nowMs=Date.now(),out=[] as any[];
+    if(includeInternal)await this.access(groupId,true);else await this.access(groupId,false);
+    const rows=(await this.list(groupId,'DEAL')),nowMs=Date.now(),out=[] as any[];
     for(const r0 of rows){let r=r0;if(['OPEN','THRESHOLD_MET'].includes(String(r.data.state))&&Date.parse(String(r.data.deadline??''))<=nowMs)r=await this.update(r,{state:'EXPIRED'},'DONE');
       if(includeInternal)out.push(r);else{const {supplierPrice,commission,promotion,volumeBonus,...publicData}=r.data as any;out.push({...r,data:publicData});}}
     return out;
