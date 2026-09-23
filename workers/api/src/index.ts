@@ -41,6 +41,7 @@ import { OperationalCockpitService } from '../../../packages/operational-cockpit
 import { simulatePeriodicLoan, summarizePeriodicLoan } from '../../../packages/loan-simulator/src/index.js';
 import { TrashLifecycleMaintenance, addCalendarMonthsClamped } from '../../../packages/trash-lifecycle/src/index.js';
 import { BusinessStudioService } from '../../../packages/business-studio/src/index.js';
+import { GrowthReferralService, InMemoryReferralBudgetStore, D1ReferralBudgetStore, type ReferralBudgetStore } from '../../../packages/growth-referral/src/index.js';
 import { authenticatedApi } from './authenticated.js';
 export { GroupLiveHub } from './group-live-hub.js';
 
@@ -53,6 +54,7 @@ interface WorkersAILike {
 }
 
 const defaultRepo = new InMemoryPlatformRepository();
+const defaultReferralBudgets = new InMemoryReferralBudgetStore();
 
 const baseSecurityHeaders: HeadersInit = {
   'x-content-type-options': 'nosniff',
@@ -126,7 +128,7 @@ const inboxFor = async (repo:PlatformRepository,tenantId:string,actorId:string) 
   return [...obligations,...cases];
 };
 
-export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{artifacts?:ArtifactStoreLike;documentAI?:WorkersAILike;liveNamespace?:DurableObjectNamespaceLike;premiumLive?:boolean;founderLearning?:FounderLearningStore;founderControl?:FounderControlStore;communityRealtime?:CommunityRealtimeStore;founderTeamActors?:Set<string>;commercialPreferences?:CommercialPreferenceService;groupPairing?:GroupPairingService;interestCommunities?:InterestCommunityService;ecoPulse?:EcoPulseService;identityProof?:IdentityProofService;dataUseDefaultMode?:DataUseDefaultMode;governanceSecret?:string}={}) => async (request:Request):Promise<Response> => {
+export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{artifacts?:ArtifactStoreLike;documentAI?:WorkersAILike;liveNamespace?:DurableObjectNamespaceLike;premiumLive?:boolean;referralBudgets?:ReferralBudgetStore;founderLearning?:FounderLearningStore;founderControl?:FounderControlStore;communityRealtime?:CommunityRealtimeStore;founderTeamActors?:Set<string>;commercialPreferences?:CommercialPreferenceService;groupPairing?:GroupPairingService;interestCommunities?:InterestCommunityService;ecoPulse?:EcoPulseService;identityProof?:IdentityProofService;dataUseDefaultMode?:DataUseDefaultMode;governanceSecret?:string}={}) => async (request:Request):Promise<Response> => {
   const url=new URL(request.url); const cors=corsHeaders(request);
   if(request.method==='OPTIONS'){
     const allowed=Boolean((cors as Record<string,string>)['access-control-allow-origin']);
@@ -135,6 +137,7 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
   const {kernel,foundation,ledger,meetings,discovery,membershipGateway,rubrics,completion,explainability,documents,receivables,treasury,riskFinance,market,community,imports,artifactStore,memberControl,groupIdentity,conciergeLearning,miscRubrics,adManager,economicIntelligence,externalPrograms,operationalCockpit,businessStudio}=createRequestScope(request,repo,options.artifacts,options.dataUseDefaultMode??'BETA_OPEN',options.documentAI); const ctx=kernel.context.get();
   const governanceVotes=new GovernanceVoteService(repo,kernel,options.governanceSecret??'eco-system-nonproduction-governance-secret');
   const notifications=new NotificationService(repo,kernel);
+  const growthReferral=new GrowthReferralService(repo,kernel,options.referralBudgets??defaultReferralBudgets);
   if(options.premiumLive)kernel.features.set('premium_live_ledger',true);
   const isFounderTeamActor=async()=>Boolean(options.founderTeamActors?.has(ctx.actorId))||Boolean(options.founderControl&&await options.founderControl.isPlatformOwner(ctx.actorId));
   const requireGroup=async(groupId:string,manage=false)=>{
@@ -400,6 +403,16 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
       return json({error:'METHOD_NOT_ALLOWED'},405,cors);
     }
     if(request.method==='GET'&&url.pathname==='/health') return json({ok:true,service:'tontine-api',version:'1.4.0-master-2.3.4-closure',now:new Date().toISOString(),realMoneyEnabled:kernel.features.enabled('financial-real-money'),manualCashLedgerEnabled:true,premiumLiveEnabled:options.premiumLive===true&&Boolean(options.liveNamespace),founderControlBound:Boolean(options.founderControl),communityRealtimeBound:Boolean(options.communityRealtime),artifactStorageBound:true,artifactStorageMode:options.artifacts?'R2':'D1_FALLBACK',contextScope:'request'},200,cors);
+    if(request.method==='GET'&&url.pathname==='/api/v1/growth/referrals')return json(await growthReferral.dashboard(),200,cors);
+    if(request.method==='POST'&&url.pathname==='/api/v1/growth/referral-campaigns'){const body=await readJson<any>(request);return json(await growthReferral.createCampaign(body),201,cors);}
+    const referralCampaign=url.pathname.match(/^\/api\/v1\/growth\/referral-campaigns\/([^/]+)\/state$/);
+    if(referralCampaign&&request.method==='POST'){const body=await readJson<any>(request);return json(await growthReferral.setCampaignState(referralCampaign[1]!,String(body.state??'ACTIVE') as any),200,cors);}
+    if(request.method==='POST'&&url.pathname==='/api/v1/growth/referral-shares'){const body=await readJson<any>(request);return json(await growthReferral.createShare(body),201,cors);}
+    if(request.method==='POST'&&url.pathname==='/api/v1/growth/referral-landings'){const body=await readJson<any>(request);return json(await growthReferral.registerLanding(String(body.code??'')),201,cors);}
+    if(request.method==='POST'&&url.pathname==='/api/v1/growth/referral-conversions'){const body=await readJson<any>(request);return json(await growthReferral.registerConversion(body),201,cors);}
+    const referralReward=url.pathname.match(/^\/api\/v1\/growth\/referral-campaigns\/([^/]+)\/rewards\/([^/]+)\/approve$/);
+    if(referralReward&&request.method==='POST')return json(await growthReferral.approveReward(referralReward[1]!,referralReward[2]!),200,cors);
+
     if(request.method==='GET'&&url.pathname==='/api/v1/business/summary')return json(await businessStudio.summary(),200,cors);
     if(request.method==='GET'&&url.pathname==='/api/v1/business/records')return json({items:await businessStudio.records()},200,cors);
     if(request.method==='PUT'&&url.pathname==='/api/v1/business/workspace'){const body=await readJson<any>(request);return json(await businessStudio.configure(body),200,cors);}
@@ -2036,7 +2049,7 @@ export default {async fetch(request:Request,env:WorkerEnv={}){
   return authenticatedApi(repository,env.DB,async authenticatedRequest=>{
     const h=authenticatedRequest.headers;
     pairingKernel.context.set({actorId:h.get('x-actor-id')??'unknown',tenantId:h.get('x-tenant-id')??'unknown',activeGroupId:h.get('x-active-group-id')||undefined,groupRoles:(h.get('x-group-roles')??'').split(',').filter(Boolean),mandateIds:[],deviceId:h.get('x-device-id')??'device_web',sessionId:h.get('x-session-id')??'server-authenticated',locale:h.get('accept-language')?.toLowerCase().startsWith('en')?'en':'fr',timezone:h.get('x-timezone')??'Africa/Douala',connectivity:'online',requestId:h.get('x-request-id')??crypto.randomUUID()});
-    return createApiHandler(repository,{artifacts:env.ARTIFACTS,documentAI:env.AI,liveNamespace:env.GROUP_LIVE_HUB,premiumLive:env.PREMIUM_LIVE_LEDGER==='true',founderLearning,founderControl,communityRealtime,founderTeamActors,commercialPreferences,groupPairing,interestCommunities,ecoPulse,identityProof,dataUseDefaultMode,governanceSecret:env.COLLECTIVE_LEARNING_PEPPER??env.IDENTITY_MATCH_PEPPER})(authenticatedRequest);
+    return createApiHandler(repository,{artifacts:env.ARTIFACTS,documentAI:env.AI,liveNamespace:env.GROUP_LIVE_HUB,premiumLive:env.PREMIUM_LIVE_LEDGER==='true',referralBudgets:new D1ReferralBudgetStore(env.DB),founderLearning,founderControl,communityRealtime,founderTeamActors,commercialPreferences,groupPairing,interestCommunities,ecoPulse,identityProof,dataUseDefaultMode,governanceSecret:env.COLLECTIVE_LEARNING_PEPPER??env.IDENTITY_MATCH_PEPPER})(authenticatedRequest);
   })(request);
 }};
 export {defaultRepo as repo};
