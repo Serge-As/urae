@@ -836,6 +836,21 @@
           </form>
           <div id="financialLabResult" class="stack"></div>
           <div id="financialLabHistory" class="stack"></div>
+          <details class="safety-case-workspace">
+            <summary><strong>Signaler une situation à vérifier · ouvrir un dossier privé</strong></summary>
+            <p class="hint">Un signalement n’est jamais publié comme accusation. Il ouvre un dossier traçable, révisable et contestable.</p>
+            <form id="safetyReportForm" class="form-grid">
+              <label>Titre<input id="safetyReportTitle" required placeholder="Ex. Offre demandant un PIN MoMo"></label>
+              <label>Type de cible<select id="safetyReportTargetType"><option value="OFFER">Offre</option><option value="SUPPLIER">Fournisseur</option><option value="GROUP">Groupe</option><option value="CAMPAIGN">Campagne</option><option value="CREDIT">Crédit</option><option value="MESSAGE">Message / lien</option><option value="OTHER">Autre</option></select></label>
+              <label>Référence de la cible<input id="safetyReportTargetId" placeholder="Identifiant, lien ou référence"></label>
+              <label>Canal<input id="safetyReportChannel" placeholder="Marketplace, WhatsApp, MoMo…"></label>
+              <label class="full">Ce qui doit être vérifié<textarea id="safetyReportSummary" rows="4" required></textarea></label>
+              <label class="full">Preuve / source / document<textarea id="safetyReportEvidence" rows="2" placeholder="Référence de pièce, capture, contrat, URL…"></textarea></label>
+              <button class="primary">Créer le dossier privé</button>
+            </form>
+          </details>
+          <div class="panel-head"><div><h3>Dossiers sécurité</h3><p>États, signaux explicables, restrictions et recours. Un cas non résolu n’est pas un verdict.</p></div><button id="safetyCasesRefreshBtn" type="button" class="secondary">Actualiser</button></div>
+          <div id="safetyCaseList" class="stack"></div>
         </section>
 
         <section class="panel" id="interestCommunityPanel">
