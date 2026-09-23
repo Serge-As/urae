@@ -680,6 +680,11 @@ export class ConnectedApplication {
   async previewSessionRecap(meetingId:string,input:any):Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/meetings/'+encodeURIComponent(meetingId)+'/recap-preview',{method:'POST',body:JSON.stringify(input)});}
   async previewClosingCarryover(input:any):Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/closing/carryover-preview',{method:'POST',body:JSON.stringify(input)});}
 
+  async safetyCases(groupId?:string):Promise<any[]>{const p=new URLSearchParams();if(groupId)p.set('groupId',groupId);const r=await this.request('/api/v1/safety/cases?'+p.toString()) as any;return r.items??[];}
+  async screenSafety(input:{text:string;title?:string;groupId?:string;entityType?:string;entityId?:string;evidenceRefs?:string[]}):Promise<any>{return this.request('/api/v1/safety/screen',{method:'POST',body:JSON.stringify(input)});}
+  async reviewSafetyCase(id:string,input:{decision:'TRIAGE'|'RESTRICT'|'CLEAR'|'CLOSE';note:string;evidenceRefs?:string[]}):Promise<any>{return this.request('/api/v1/safety/cases/'+encodeURIComponent(id)+'/review',{method:'POST',body:JSON.stringify(input)});}
+  async appealSafetyCase(id:string,note:string,evidenceRefs:string[]=[]):Promise<any>{return this.request('/api/v1/safety/cases/'+encodeURIComponent(id)+'/appeal',{method:'POST',body:JSON.stringify({note,evidenceRefs})});}
+
   async valueNeeds():Promise<any[]>{if(!this.activeGroupId)return[];const r=await this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/value/needs') as any;return r.items??[];}
   async createValueNeed(input:any):Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/value/needs',{method:'POST',body:JSON.stringify(input)});}
   async validateValueNeed(id:string):Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/value/needs/'+encodeURIComponent(id)+'/validate',{method:'POST',body:'{}'});}
