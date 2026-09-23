@@ -1,0 +1,4 @@
+Eco-System 1.5.2.1 production delivery marker.
+Source: PR #15 merged into release/1.5.2-unified-ux-blueprint-20260923.
+Field hotfix qualification: GitHub Actions run 35870359776 SUCCESS.
+Guardrails: preserve eco-system-db, preserve eco-system-backups, additive migrations only, realMoneyEnabled=false, pre/post recovery exports required.
