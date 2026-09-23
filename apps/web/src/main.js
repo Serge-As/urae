@@ -452,46 +452,6 @@ const makeFinancialEntryCell=({member,rubric,meetingId,editable=true})=>{
     holder.append(input,validate);return holder;
 };
 
-const openFinancialCellEditor=({member,rubric,meetingId})=>{
-    const meeting=meetings.find(x=>x.id===meetingId);if(!meeting){fail(new Error('MEETING_NOT_FOUND'));return;}
-    if(!isManager()){fail(new Error('FORBIDDEN_SCOPE'));return;}
-    const current=exactCellAmount(member.id,rubric.id,meetingId);
-    document.getElementById('financialCellEditor')?.remove();
-    const dialog=document.createElement('dialog');dialog.id='financialCellEditor';dialog.className='financial-cell-editor';
-    const h=document.createElement('h2');h.textContent=tx('Saisir / corriger la valeur','Enter / correct value');
-    const context=document.createElement('p');context.textContent=`${member.displayName} · ${rubric.name} · ${meetingLabel(meeting)}`;
-    const currentLine=document.createElement('p');currentLine.className='current-value';currentLine.textContent=tx('Valeur actuelle : ','Current value: ')+fmt(current);
-    const warning=document.createElement('p');warning.className=meeting.status==='closed'?'truth-notice danger':'hint';
-    warning.textContent=meeting.status==='closed'
-      ? tx('Séance clôturée : toute correction reste tracée et déclenche une alerte aux gestionnaires et au membre.','Closed meeting: every correction remains audited and alerts managers and the member.')
-      : current>0
-        ? tx('Vous indiquez la nouvelle valeur totale de cette cellule. Eco-System ne l’ajoutera pas à l’ancienne valeur. Si un autre gestionnaire avait saisi la donnée, une confrontation sera ouverte.','Enter the new total value for this cell. Eco-System will not add it to the old value. If another manager entered it, reconciliation will open.')
-        : tx('Nouvelle saisie pendant une séance ouverte : le membre recevra une alerte verte.','New entry during an open meeting: the member will receive a green alert.');
-    const form=document.createElement('form');form.method='dialog';form.className='form-grid';
-    const amount=document.createElement('input');amount.type='number';amount.min='0';amount.step='1';amount.inputMode='numeric';amount.required=true;amount.value=String(current);
-    const amountLabel=document.createElement('label');amountLabel.textContent=tx('Nouvelle valeur totale (F CFA)','New total value (XAF)');amountLabel.append(amount);
-    const reason=document.createElement('textarea');reason.rows=3;reason.placeholder=tx('Motif de la correction / précision utile','Reason for correction / useful note');if(current>0||meeting.status==='closed')reason.required=true;
-    const reasonLabel=document.createElement('label');reasonLabel.className='full';reasonLabel.textContent=tx('Motif','Reason');reasonLabel.append(reason);
-    const actions=document.createElement('div');actions.className='actions full';
-    const save=document.createElement('button');save.type='submit';save.className='primary';save.textContent=current>0?tx('Proposer / enregistrer cette valeur','Propose / save this value'):tx('Enregistrer cette valeur','Save this value');
-    const cancel=document.createElement('button');cancel.type='button';cancel.className='secondary';cancel.textContent=tx('Annuler','Cancel');cancel.onclick=()=>dialog.close();
-    actions.append(save,cancel);form.append(amountLabel,reasonLabel,actions);dialog.append(h,context,currentLine,warning,form);document.body.append(dialog);
-    form.onsubmit=e=>void(async()=>{
-        e.preventDefault();const target=Number(amount.value);
-        if(!Number.isSafeInteger(target)||target<0){fail(new Error('INVALID_CONTRIBUTION_AMOUNT'));return;}
-        if(target===current){dialog.close();toast(tx('Aucun changement : la valeur est déjà celle-ci.','No change: this is already the current value.'));return;}
-        try{
-            save.disabled=true;
-            const result=await app.setFinancialCellTarget({meetingId,membershipId:member.id,rubricId:rubric.id,targetAmount:target,currentAmount:current,currentVersion:exactCellVersion(member.id,rubric.id,meetingId),reason:reason.value.trim()});
-            if(result?.status==='CONSENSUS_REQUIRED')toast(tx('La valeur n’a pas été modifiée : confrontation ouverte entre gestionnaires.','Value not changed: manager reconciliation opened.'));
-            else if(result?.status==='QUEUED_CONSENSUS'||result?.queued)toast(tx('Opération conservée hors ligne. La correction sera confrontée / synchronisée à la reconnexion.','Operation saved offline. The correction will be reconciled / synchronized on reconnection.'));
-            else toast(tx('Valeur enregistrée avec traçabilité.','Value saved with audit trail.'));
-            dialog.close();await renderLedger();window.dispatchEvent(new CustomEvent('eco:financial-data-changed',{detail:{meetingId,membershipId:member.id,rubricId:rubric.id}}));await sessionsUI.refresh?.();renderIndividualSheetMatrix();
-        }catch(err){fail(err);}finally{save.disabled=false;}
-    });
-    dialog.addEventListener('close',()=>dialog.remove(),{once:true});dialog.showModal();amount.focus();amount.select();
-};
-
 const ensureMatrixMeeting=()=>{
     if(matrixMeetingId&&meetings.some(x=>x.id===matrixMeetingId&&x.status!=='cancelled'))return matrixMeetingId;
     try{const saved=sessionStorage.getItem('eco.matrixMeetingId');if(saved&&meetings.some(x=>x.id===saved&&x.status!=='cancelled')){matrixMeetingId=saved;return matrixMeetingId;}}catch{}
@@ -500,9 +460,33 @@ const ensureMatrixMeeting=()=>{
 };
 const activeFinancialRubrics=()=>rubrics.filter(x=>x.status!=='ARCHIVED');
 const activeFinancialMembers=()=>members.filter(x=>x.status!=='left');
+const canonicalFinancialObservers=new WeakMap();
+const protectCanonicalFinancialHost=root=>{
+    if(!root||canonicalFinancialObservers.has(root))return;
+    const observer=new MutationObserver(()=>{
+      if(root.dataset.canonicalTableReady!=='1'||root.dataset.canonicalRepairQueued==='1')return;
+      if(root.querySelector('.canonical-financial-matrix'))return;
+      root.dataset.canonicalRepairQueued='1';
+      queueMicrotask(()=>{
+        delete root.dataset.canonicalRepairQueued;
+        if(!root.isConnected||root.dataset.canonicalTableReady!=='1'||root.querySelector('.canonical-financial-matrix'))return;
+        renderCanonicalFinancialTable({
+          root,
+          mode:root.dataset.financialMode||'meeting',
+          meetingId:root.dataset.meetingId||'',
+          membershipId:root.dataset.membershipId||'',
+          showToolbar:root.dataset.showToolbar!=='false',
+          editable:root.dataset.editable!=='false'
+        });
+      });
+    });
+    observer.observe(root,{childList:true});
+    canonicalFinancialObservers.set(root,observer);
+};
 const renderCanonicalFinancialTable=({root,mode='meeting',meetingId='',membershipId='',showToolbar=true,editable=isManager()})=>{
     if(!root)return;
-    root.dataset.canonicalFinancialHost='1';root.dataset.financialMode=mode;root.dataset.meetingId=meetingId||'';root.dataset.membershipId=membershipId||'';
+    protectCanonicalFinancialHost(root);
+    root.dataset.canonicalFinancialHost='1';root.dataset.canonicalFinancialOwner='main-v151';root.dataset.canonicalTableReady='0';root.dataset.financialMode=mode;root.dataset.meetingId=meetingId||'';root.dataset.membershipId=membershipId||'';root.dataset.showToolbar=showToolbar===false?'false':'true';root.dataset.editable=editable===false?'false':'true';
     root.replaceChildren();
     const activeRubrics=activeFinancialRubrics(),activeMembers=activeFinancialMembers();
     if(!activeRubrics.length||!activeMembers.length){root.innerHTML='<div class="empty-state">'+tx('Ajoutez au moins un membre et une rubrique active.','Add at least one member and one active rubric.')+'</div>';return;}
@@ -539,7 +523,7 @@ const renderCanonicalFinancialTable=({root,mode='meeting',meetingId='',membershi
         const add=document.createElement('button');add.type='button';add.className='secondary';add.textContent=tx('+ Nouvelle séance','+ New meeting');add.onclick=()=>go('sessions',{anchor:'sessionsCreateForm',force:true});
         toolbar.append(label,other,add);root.append(toolbar);
       }
-      root.append(note,wrap);return;
+      root.append(note,wrap);root.dataset.canonicalTableReady='1';return;
     }
     const member=activeMembers.find(x=>x.id===membershipId);
     if(!member){root.innerHTML='<div class="empty-state">'+tx('Aucune fiche individuelle accessible.','No individual sheet available.')+'</div>';return;}
@@ -556,7 +540,7 @@ const renderCanonicalFinancialTable=({root,mode='meeting',meetingId='',membershi
     for(const r of activeRubrics){const amount=activeMeetings.reduce((sum,meeting)=>sum+exactCellAmount(member.id,r.id,meeting.id),0);grand+=amount;const td=document.createElement('td');td.textContent=fmt(amount);totalRow.append(td);}
     const grandTd=document.createElement('td');grandTd.className='table-grand-total';grandTd.textContent=fmt(grand);totalRow.append(grandTd);body.append(totalRow);table.append(body);wrap.append(table);
     const note=document.createElement('p');note.className='truth-notice';note.textContent=tx('Cette fiche utilise exactement le même éditeur financier que la feuille de séance. Les totaux de chaque rubrique figurent sur la dernière ligne.','This sheet uses exactly the same financial editor as the meeting sheet. Totals for every rubric appear on the last row.');
-    root.append(note,wrap);
+    root.append(note,wrap);root.dataset.canonicalTableReady='1';
 };
 const renderMeetingMatrix=()=>renderCanonicalFinancialTable({root:document.querySelector('#meetingMatrix'),mode:'meeting',meetingId:ensureMatrixMeeting(),showToolbar:true,editable:isManager()});
 const renderIndividualSheetMatrix=()=>{
