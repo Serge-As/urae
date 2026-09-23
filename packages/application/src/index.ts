@@ -684,6 +684,22 @@ export class ConnectedApplication {
   async valueOffers():Promise<any[]>{const r=await this.request('/api/v1/value/offers') as any;return r.items??[];}
   async createValueOffer(input:any):Promise<any>{return this.request('/api/v1/value/offers',{method:'POST',body:JSON.stringify(input)});}
 
+  async runFinancialSafetyLab(input:any):Promise<any>{
+    const groupId=this.activeGroupId;
+    return this.request(groupId?'/api/v1/groups/'+encodeURIComponent(groupId)+'/safety/financial-lab':'/api/v1/safety/financial-lab',{method:'POST',body:JSON.stringify(input)});
+  }
+  async safetyAnalyses():Promise<any[]>{
+    const groupId=this.activeGroupId;const r=await this.request(groupId?'/api/v1/groups/'+encodeURIComponent(groupId)+'/safety/analyses':'/api/v1/safety/analyses') as any;return r.items??[];
+  }
+  async reportSafety(input:any):Promise<any>{
+    const groupId=this.activeGroupId;return this.request(groupId?'/api/v1/groups/'+encodeURIComponent(groupId)+'/safety/reports':'/api/v1/safety/reports',{method:'POST',body:JSON.stringify(input)});
+  }
+  async safetyCases():Promise<any[]>{
+    const groupId=this.activeGroupId;const r=await this.request(groupId?'/api/v1/groups/'+encodeURIComponent(groupId)+'/safety/cases':'/api/v1/safety/cases') as any;return r.items??[];
+  }
+  async reviewSafetyCase(id:string,input:any):Promise<any>{return this.request('/api/v1/safety/cases/'+encodeURIComponent(id)+'/reviews',{method:'POST',body:JSON.stringify(input)});}
+  async appealSafetyCase(id:string,summary:string):Promise<any>{return this.request('/api/v1/safety/cases/'+encodeURIComponent(id)+'/appeals',{method:'POST',body:JSON.stringify({summary})});}
+
   async searchKnowledge(q='',groupId?:string):Promise<any[]>{const p=new URLSearchParams();if(q)p.set('q',q);if(groupId)p.set('groupId',groupId);const r=await this.request('/api/v1/knowledge?'+p) as any;return r.items??[];}
   async createKnowledge(input:any):Promise<any>{return this.request('/api/v1/knowledge',{method:'POST',body:JSON.stringify(input)});}
   async reviseKnowledge(id:string,input:any):Promise<any>{return this.request('/api/v1/knowledge/'+encodeURIComponent(id)+'/revisions',{method:'POST',body:JSON.stringify(input)});}
