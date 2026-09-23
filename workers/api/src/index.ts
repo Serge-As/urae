@@ -43,6 +43,7 @@ import { TrashLifecycleMaintenance, addCalendarMonthsClamped } from '../../../pa
 import { BusinessStudioService } from '../../../packages/business-studio/src/index.js';
 import { GrowthReferralService, InMemoryReferralBudgetStore, D1ReferralBudgetStore, type ReferralBudgetStore } from '../../../packages/growth-referral/src/index.js';
 import { KnowledgeAcademyService } from '../../../packages/knowledge-academy/src/index.js';
+import { ValueNetworkService } from '../../../packages/value-network/src/index.js';
 import { authenticatedApi } from './authenticated.js';
 export { GroupLiveHub } from './group-live-hub.js';
 
@@ -118,10 +119,11 @@ const createRequestScope = (request:Request,repo:PlatformRepository,artifacts?:A
   const operationalCockpit=new OperationalCockpitService(repo,kernel,ledger);
   const businessStudio=new BusinessStudioService(repo,kernel);
   const knowledgeAcademy=new KnowledgeAcademyService(repo,kernel);
+  const valueNetwork=new ValueNetworkService(repo,kernel);
   const tenantId=request.headers.get('x-tenant-id')??'tenant_demo'; const actorId=request.headers.get('x-actor-id')??'user_founder';
   const groupRoles=(request.headers.get('x-group-roles')??'founder,manager').split(',').map(x=>x.trim()).filter(Boolean);
   kernel.context.set({actorId,tenantId,activeGroupId:request.headers.get('x-active-group-id')??undefined,groupRoles,mandateIds:[],deviceId:request.headers.get('x-device-id')??'device_web_demo',sessionId:request.headers.get('x-session-id')??'session_demo',locale:request.headers.get('accept-language')?.toLowerCase().startsWith('en')?'en':'fr',timezone:request.headers.get('x-timezone')??'Africa/Douala',connectivity:'online',requestId:request.headers.get('x-request-id')??makeId('req')});
-  return {kernel,foundation,ledger,meetings,discovery,membershipGateway,rubrics,completion,explainability,documents,receivables,treasury,riskFinance,market,community,imports,artifactStore,memberControl,groupIdentity,conciergeLearning,miscRubrics,adManager,economicIntelligence,externalPrograms,operationalCockpit,businessStudio,knowledgeAcademy};
+  return {kernel,foundation,ledger,meetings,discovery,membershipGateway,rubrics,completion,explainability,documents,receivables,treasury,riskFinance,market,community,imports,artifactStore,memberControl,groupIdentity,conciergeLearning,miscRubrics,adManager,economicIntelligence,externalPrograms,operationalCockpit,businessStudio,knowledgeAcademy,valueNetwork};
 };
 
 const inboxFor = async (repo:PlatformRepository,tenantId:string,actorId:string) => {
@@ -136,7 +138,7 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
     const allowed=Boolean((cors as Record<string,string>)['access-control-allow-origin']);
     return new Response(null,{status:allowed?204:403,headers:{...baseSecurityHeaders,...cors,'access-control-allow-methods':'GET,POST,PUT,OPTIONS','access-control-allow-headers':'content-type,x-tenant-id,x-actor-id,x-group-roles,x-active-group-id,x-device-id,x-session-id,x-request-id,x-timezone'}});
   }
-  const {kernel,foundation,ledger,meetings,discovery,membershipGateway,rubrics,completion,explainability,documents,receivables,treasury,riskFinance,market,community,imports,artifactStore,memberControl,groupIdentity,conciergeLearning,miscRubrics,adManager,economicIntelligence,externalPrograms,operationalCockpit,businessStudio,knowledgeAcademy}=createRequestScope(request,repo,options.artifacts,options.dataUseDefaultMode??'BETA_OPEN',options.documentAI); const ctx=kernel.context.get();
+  const {kernel,foundation,ledger,meetings,discovery,membershipGateway,rubrics,completion,explainability,documents,receivables,treasury,riskFinance,market,community,imports,artifactStore,memberControl,groupIdentity,conciergeLearning,miscRubrics,adManager,economicIntelligence,externalPrograms,operationalCockpit,businessStudio,knowledgeAcademy,valueNetwork}=createRequestScope(request,repo,options.artifacts,options.dataUseDefaultMode??'BETA_OPEN',options.documentAI); const ctx=kernel.context.get();
   const governanceVotes=new GovernanceVoteService(repo,kernel,options.governanceSecret??'eco-system-nonproduction-governance-secret');
   const notifications=new NotificationService(repo,kernel);
   const growthReferral=new GrowthReferralService(repo,kernel,options.referralBudgets??defaultReferralBudgets);
@@ -405,6 +407,20 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
       return json({error:'METHOD_NOT_ALLOWED'},405,cors);
     }
     if(request.method==='GET'&&url.pathname==='/health') return json({ok:true,service:'tontine-api',version:'1.4.0-master-2.3.4-closure',now:new Date().toISOString(),realMoneyEnabled:kernel.features.enabled('financial-real-money'),manualCashLedgerEnabled:true,premiumLiveEnabled:options.premiumLive===true&&Boolean(options.liveNamespace),founderControlBound:Boolean(options.founderControl),communityRealtimeBound:Boolean(options.communityRealtime),artifactStorageBound:true,artifactStorageMode:options.artifacts?'R2':'D1_FALLBACK',contextScope:'request'},200,cors);
+    if(request.method==='POST'&&url.pathname==='/api/v1/value/offers'){const body=await readJson<any>(request);return json(await valueNetwork.createOffer(body),201,cors);}
+    if(request.method==='GET'&&url.pathname==='/api/v1/value/offers')return json({items:await valueNetwork.listOffers()},200,cors);
+    const valueNeeds=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/value\/needs$/);
+    if(valueNeeds&&request.method==='GET')return json({items:await valueNetwork.listNeeds(valueNeeds[1]!)},200,cors);
+    if(valueNeeds&&request.method==='POST'){const body=await readJson<any>(request);return json(await valueNetwork.createNeed({groupId:valueNeeds[1]!,...body}),201,cors);}
+    const valueNeedAction=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/value\/needs\/([^/]+)\/(validate|publish|matches|procurement)$/);
+    if(valueNeedAction){
+      const groupId=valueNeedAction[1]!,needId=valueNeedAction[2]!,action=valueNeedAction[3]!;await requireGroup(groupId,action!=='matches');
+      if(action==='validate'&&request.method==='POST')return json(await valueNetwork.validateNeed(needId),200,cors);
+      if(action==='publish'&&request.method==='POST')return json(await valueNetwork.publishNeed(needId),200,cors);
+      if(action==='matches'&&request.method==='GET')return json({items:await valueNetwork.matchNeed(needId)},200,cors);
+      if(action==='procurement'&&request.method==='POST'){const body=await readJson<any>(request);return json(await valueNetwork.prepareProcurement(needId,String(body.offerId??'')),201,cors);}
+    }
+
     if(request.method==='GET'&&url.pathname==='/api/v1/knowledge'){return json({items:await knowledgeAcademy.searchKnowledge(url.searchParams.get('q')??'',url.searchParams.get('groupId')??undefined)},200,cors);}
     if(request.method==='POST'&&url.pathname==='/api/v1/knowledge'){const body=await readJson<any>(request);return json(await knowledgeAcademy.createKnowledge(body),201,cors);}
     const knowledgeRevision=url.pathname.match(/^\/api\/v1\/knowledge\/([^/]+)\/revisions$/);
