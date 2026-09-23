@@ -1,9 +1,9 @@
 {
   "name": "tontine-platform",
-  "version": "1.5.2-unified-ux-blueprint",
+  "version": "1.5.2-1",
   "private": true,
   "type": "module",
-  "description": "Eco-System 1.5.2: unified canonical finance, stable PWA/session restoration, three user experience modes, Ready-to-Use Kit, Business Studio and Blueprint 5.0.0 consolidation.",
+  "description": "Eco-System 1.5.2.1: unified canonical finance, stable PWA/session restoration, three user experience modes, Ready-to-Use Kit, Business Studio and Blueprint 5.0.0 consolidation.",
   "engines": {
     "node": ">=24"
   },
