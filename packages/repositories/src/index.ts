@@ -47,6 +47,14 @@ export interface GroupPurgeResult {
   purgedAt: string;
 }
 
+export type TrashEntityRecord = Group | Membership | MeetingSession | RubricDefinition;
+export interface TrashLifecyclePlan {
+  entityRecordType: 'group'|'membership'|'meeting'|'rubric_definition';
+  entity: TrashEntityRecord;
+  trashRecord: WorkspaceRecord;
+  audit: AuditEvent;
+}
+
 export interface FinancialCorrectionPlan {
   kind: 'cell_correction';
   operationId: Id;
@@ -72,6 +80,8 @@ export interface PlatformRepository {
   captureGroupPurgeManifest(tenantId:Id,groupId:Id): GroupPurgeManifest | Promise<GroupPurgeManifest>;
   purgeGroupData(manifest:GroupPurgeManifest,deletionId:string,purgedAt:string): GroupPurgeResult | Promise<GroupPurgeResult>;
   isGroupPurged(tenantId:Id,groupId:Id): boolean | Promise<boolean>;
+  commitTrashLifecycle(plan:TrashLifecyclePlan): TrashLifecyclePlan | Promise<TrashLifecyclePlan>;
+  listTrashMaintenanceItems(): WorkspaceRecord[] | Promise<WorkspaceRecord[]>;
   getGroupById(id:Id):Group|undefined|Promise<Group|undefined>;
   listMembershipsForUser(userId:Id):Membership[]|Promise<Membership[]>;
   saveUser(user: User): void | Promise<void>;
@@ -211,6 +221,17 @@ export class InMemoryPlatformRepository implements PlatformRepository {
   private rubricDefinitions = new Map<Id, RubricDefinition>();
   private governanceKnowledgeClaims = new Map<Id, GovernanceKnowledgeClaim>();
   private workspaceRecords = new Map<Id, WorkspaceRecord>();
+
+  commitTrashLifecycle(plan:TrashLifecyclePlan):TrashLifecyclePlan{
+    const copy=structuredClone(plan),x=copy.entity as any;
+    if(plan.entityRecordType==='group')this.groups.set(x.id,x);
+    else if(plan.entityRecordType==='membership')this.memberships.set(x.id,x);
+    else if(plan.entityRecordType==='meeting')this.meetings.set(x.id,x);
+    else this.rubricDefinitions.set(x.id,x);
+    this.workspaceRecords.set(copy.trashRecord.id,copy.trashRecord);this.audits.set(copy.audit.id,copy.audit);
+    return structuredClone(copy);
+  }
+  listTrashMaintenanceItems():WorkspaceRecord[]{return [...this.workspaceRecords.values()].filter(x=>x.moduleId==='TRASH.ITEM').map(x=>structuredClone(x));}
 
   captureGroupPurgeManifest(tenantId:Id,groupId:Id):GroupPurgeManifest{
     const ids=new Set<Id>([groupId]),artifacts=new Set<string>();
@@ -468,6 +489,29 @@ export class D1PlatformRepository implements PlatformRepository {
       FROM financial_cell_revisions WHERE tenant_id=? AND group_id=?`).bind(tenantId,groupId)
       .all<{tenant_id:string;group_id:string;meeting_id:string;membership_id:string;rubric_id:string;currency:string;version:number;last_operation_id:string;updated_at:string}>();
     return rows.results.map(row=>({tenantId:row.tenant_id,groupId:row.group_id,meetingId:row.meeting_id,membershipId:row.membership_id,rubricId:row.rubric_id,currency:row.currency,version:Number(row.version),lastOperationId:row.last_operation_id,updatedAt:row.updated_at}));
+  }
+
+  async commitTrashLifecycle(plan:TrashLifecyclePlan):Promise<TrashLifecyclePlan>{
+    const entity=plan.entity as any,scopeGroup=plan.entityRecordType==='group'?entity.id:entity.groupId;
+    const statements=[
+      this.db.prepare(`INSERT INTO platform_records(record_type,record_id,tenant_id,group_id,assignee_id,idempotency_key,data_json,updated_at)
+        VALUES(?,?,?,?,?,?,?,?)
+        ON CONFLICT(record_type,record_id) DO UPDATE SET tenant_id=excluded.tenant_id,group_id=excluded.group_id,assignee_id=excluded.assignee_id,idempotency_key=excluded.idempotency_key,data_json=excluded.data_json,updated_at=excluded.updated_at`)
+        .bind(plan.entityRecordType,entity.id,entity.tenantId,scopeGroup,plan.entityRecordType==='membership'?entity.userId:null,null,JSON.stringify(entity),new Date().toISOString()),
+      this.db.prepare(`INSERT INTO platform_records(record_type,record_id,tenant_id,group_id,assignee_id,idempotency_key,data_json,updated_at)
+        VALUES('workspace_record',?,?,?,?,?,?,?)
+        ON CONFLICT(record_type,record_id) DO UPDATE SET tenant_id=excluded.tenant_id,group_id=excluded.group_id,assignee_id=excluded.assignee_id,idempotency_key=excluded.idempotency_key,data_json=excluded.data_json,updated_at=excluded.updated_at`)
+        .bind(plan.trashRecord.id,plan.trashRecord.tenantId,plan.trashRecord.groupId??null,plan.trashRecord.createdBy,null,JSON.stringify(plan.trashRecord),plan.trashRecord.updatedAt),
+      this.db.prepare(`INSERT INTO platform_records(record_type,record_id,tenant_id,group_id,assignee_id,idempotency_key,data_json,updated_at)
+        VALUES('audit',?,?,?,?,?,?,?)
+        ON CONFLICT(record_type,record_id) DO UPDATE SET data_json=excluded.data_json,updated_at=excluded.updated_at`)
+        .bind(plan.audit.id,plan.audit.tenantId,null,plan.audit.actorId??null,null,JSON.stringify(plan.audit),plan.audit.at)
+    ];
+    await this.db.batch(statements);return structuredClone(plan);
+  }
+  async listTrashMaintenanceItems():Promise<WorkspaceRecord[]>{
+    const rows=await this.db.prepare(`SELECT data_json FROM platform_records WHERE record_type='workspace_record' AND json_extract(data_json,'$.moduleId')='TRASH.ITEM'`).all<PlatformRecordRow>();
+    return rows.results.map(r=>JSON.parse(r.data_json) as WorkspaceRecord);
   }
 
   async captureGroupPurgeManifest(tenantId:Id,groupId:Id):Promise<GroupPurgeManifest>{
