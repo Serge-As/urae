@@ -47,6 +47,7 @@ let members = [];
 let meetings = [];
 let rubrics = [];
 let receiptPositions = [];
+let financialSheetEvents = [];
 let financialCellVersions = new Map();
 let matrixMeetingId = '';
 let memberSortMode = 'chronological';
@@ -96,6 +97,11 @@ const fail = (e) => {
         FORBIDDEN_SCOPE: 'Votre compte ne dispose pas de l’autorisation nécessaire pour ce groupe.',
         DURABLE_STORAGE_REQUIRED: 'Le stockage local est indisponible. Cette opération n’a pas été envoyée.',
         INVALID_CONTRIBUTION_AMOUNT: 'Le montant doit être un entier positif en F CFA.',
+        SPECIALIZED_FINANCIAL_CORRECTION_REQUIRED: 'Cette cellule correspond à un prêt, un remboursement ou une sortie. Pour modifier une opération déjà comptabilisée, ouvrez son dossier spécialisé afin de conserver la dette, la caisse et les preuves cohérentes.',
+        LOAN_POLICY_REQUIRED: 'Configurez d’abord les règles de la rubrique Prêt avant le décaissement.',
+        LOAN_RATE_REQUIRED: 'Le taux par période du prêt doit être défini avant le décaissement.',
+        MULTIPLE_LOANS: 'Ce membre a plusieurs prêts actifs. Ouvrez le dossier Prêts pour choisir exactement celui à rembourser.',
+        LOAN_REQUIRED: 'Aucun prêt actif correspondant n’a été trouvé pour ce membre.',
         ACTIVE_GROUP_REQUIRED: "Sélectionnez d'abord un groupe.",
         GROUP_NAME_REQUIRED: "Le nom du groupe est obligatoire.",
         MEMBER_NAME_REQUIRED: "Le nom du membre est obligatoire.",
@@ -421,34 +427,55 @@ const activeMeeting = () => {
     if(sessionSelected&&sessionSelected!=='__cumulative__'&&meetings.some(x=>x.id===sessionSelected))return sessionSelected;
     return meetings.find(x=>x.status==='open')?.id??meetings.at(-1)?.id;
 };
+const financialNatureForRubric=rubric=>{
+    const kind=String(rubric?.activityPlan?.kind??'').toUpperCase(),name=String(rubric?.name??'').normalize('NFKD').replace(/[\u0300-\u036f]/g,'').toLowerCase(),systemKey=String(rubric?.facets?.custom?.systemKey??'').toUpperCase();
+    if(kind==='LOAN'||systemKey==='LOAN'||/^prets?$|^loans?$/.test(name))return'LOAN';
+    if(kind==='REPAYMENT'||/remboursement|repayment/.test(name))return'REPAYMENT';
+    if(rubric?.facets?.direction==='OUTFLOW')return'OUTFLOW';
+    return'CONTRIBUTION';
+};
 const exactCellRows=(membershipId,rubricId,meetingId)=>receiptPositions.filter(x=>x.membershipId===membershipId&&x.rubricId===rubricId&&x.meetingId===meetingId);
-const exactCellAmount=(membershipId,rubricId,meetingId)=>exactCellRows(membershipId,rubricId,meetingId).reduce((n,x)=>n+Number(x.netAmount??0),0);
+const exactCellEvents=(membershipId,rubricId,meetingId)=>financialSheetEvents.filter(x=>String(x.data?.membershipId??'')===membershipId&&String(x.data?.rubricId??'')===rubricId&&String(x.data?.meetingId??'')===meetingId);
+const exactCellAmount=(membershipId,rubricId,meetingId)=>{
+    const rubric=rubrics.find(x=>x.id===rubricId),nature=financialNatureForRubric(rubric);
+    if(nature!=='CONTRIBUTION')return exactCellEvents(membershipId,rubricId,meetingId).reduce((sum,event)=>sum+(String(event.data?.direction??'IN')==='OUT'?-1:1)*Number(event.data?.amount??0),0);
+    return exactCellRows(membershipId,rubricId,meetingId).reduce((n,x)=>n+Number(x.netAmount??0),0);
+};
 const exactCellVersion=(membershipId,rubricId,meetingId)=>Number(financialCellVersions.get(JSON.stringify([meetingId,membershipId,rubricId,'XAF']))??0);
 
 const makeFinancialEntryCell=({member,rubric,meetingId,editable=true})=>{
     const holder=document.createElement('div');holder.className='matrix-cell matrix-cell-entry';holder.dataset.membershipId=member.id;holder.dataset.rubricId=rubric.id;holder.dataset.meetingId=meetingId;holder.tabIndex=-1;
-    const current=exactCellAmount(member.id,rubric.id,meetingId),currentLabel=document.createElement('strong');currentLabel.className='cell-current';currentLabel.textContent=fmt(current);holder.append(currentLabel);
+    const nature=financialNatureForRubric(rubric),signedCurrent=exactCellAmount(member.id,rubric.id,meetingId),current=Math.abs(signedCurrent),currentLabel=document.createElement('strong');
+    currentLabel.className='cell-current'+(signedCurrent<0?' is-negative':'');currentLabel.textContent=fmt(signedCurrent);holder.append(currentLabel);
+    if(nature==='LOAN'){const badge=document.createElement('small');badge.className='cell-nature negative';badge.textContent=tx('Sortie / dette','Outflow / debt');holder.append(badge);}
     if(!editable)return holder;
     const input=document.createElement('input');input.type='number';input.min='0';input.step='1';input.inputMode='numeric';input.className='cell-target-input';input.placeholder=current>0?tx('Modifier…','Change…'):tx('Saisir…','Enter…');input.setAttribute('aria-label',tx('Nouvelle valeur totale','New total value'));
     const validate=document.createElement('button');validate.type='button';validate.className='cell-validate';validate.textContent='✓';validate.title=tx('Valider la valeur totale','Confirm total value');
     const submit=()=>void(async()=>{
-      const raw=input.value.trim();if(raw==='')return;const target=Number(raw);if(!Number.isSafeInteger(target)||target<0){fail(new Error('INVALID_CONTRIBUTION_AMOUNT'));return;}
+      clearFail();const raw=input.value.trim();if(raw==='')return;const target=Number(raw);if(!Number.isSafeInteger(target)||target<0){fail(new Error('INVALID_CONTRIBUTION_AMOUNT'));return;}
       if(target===current){input.value='';toast(tx('Aucun changement : cette valeur est déjà enregistrée.','No change: this value is already recorded.'));return;}
       const meeting=meetings.find(x=>x.id===meetingId);let reason='';
       if(current>0||meeting?.status==='closed'){
         reason=prompt(tx(`Motif de la modification ${fmt(current)} → ${fmt(target)} :`,`Reason for change ${fmt(current)} → ${fmt(target)}:`),tx('Correction de la valeur de la cellule','Cell value correction'))??'';
         if(!reason.trim())return;
       }
-      validate.disabled=true;input.disabled=true;
+      validate.disabled=true;input.disabled=true;const previousIcon=validate.textContent;validate.textContent='…';holder.classList.add('is-saving');
       try{
-        const result=await app.setFinancialCellTarget({meetingId,membershipId:member.id,rubricId:rubric.id,targetAmount:target,currentAmount:current,currentVersion:exactCellVersion(member.id,rubric.id,meetingId),reason:reason.trim()});
+        let result;
+        if(current===0&&meeting?.status==='open'){
+          if(target===0){input.value='';return;}
+          result=await app.recordFinancialSheetEntry({membershipId:member.id,meetingId,rubric,amount:target});
+        }else{
+          if(nature!=='CONTRIBUTION')throw Error('SPECIALIZED_FINANCIAL_CORRECTION_REQUIRED');
+          result=await app.setFinancialCellTarget({meetingId,membershipId:member.id,rubricId:rubric.id,targetAmount:target,currentAmount:current,currentVersion:exactCellVersion(member.id,rubric.id,meetingId),reason:reason.trim()});
+        }
         if(result?.status==='CONSENSUS_REQUIRED'){holder.classList.add('pending-consensus');toast(tx('Modification proposée : la valeur reste inchangée jusqu’à la décision des gestionnaires.','Change proposed: the value remains unchanged until managers decide.'));}
-        else if(result?.status==='QUEUED_CONSENSUS'||result?.queued)toast(tx('Modification conservée hors ligne pour confrontation à la reconnexion.','Change saved offline for reconciliation when reconnected.'));
+        else if(result?.status==='QUEUED_CONSENSUS'||result?.queued)toast(tx('Saisie conservée et mise en attente de synchronisation.','Entry saved and queued for synchronization.'));
         else if(result?.selfBenefit)toast(tx('⚠ Correction de votre propre situation : ancienne valeur, contrepassation et nouvelle valeur sont tracées. Un autre responsable habilité doit la vérifier.','⚠ Correction of your own situation: previous value, reversal and new value are traced. Another authorized manager must review it.'));
         else if(result?.requiresIndependentReview)toast(tx('Correction enregistrée avec ancienne valeur, contrepassation et nouvelle valeur. Un autre responsable habilité doit la vérifier avant validation institutionnelle.','Correction recorded with previous value, reversal and new value. Another authorized manager must review it before institutional confirmation.'));
-        else toast(tx('Valeur enregistrée avec traçabilité de la valeur cible.','Target value saved with an audit trail.'));
+        else toast(nature==='LOAN'?tx('Prêt décaissé : la caisse diminue et la dette du membre est créée.','Loan disbursed: cash decreases and the member debt is created.'):tx('Valeur enregistrée.','Value saved.'));
         input.value='';await renderLedger();window.dispatchEvent(new CustomEvent('eco:financial-data-changed',{detail:{meetingId,membershipId:member.id,rubricId:rubric.id}}));await sessionsUI.refresh?.();renderIndividualSheetMatrix();
-      }catch(e){fail(e);}finally{validate.disabled=false;input.disabled=false;}
+      }catch(e){fail(e);}finally{validate.disabled=false;input.disabled=false;validate.textContent=previousIcon;holder.classList.remove('is-saving');}
     });
     validate.onclick=submit;input.addEventListener('keydown',event=>{if(event.key==='Enter'){event.preventDefault();submit();}});
     holder.append(input,validate);return holder;
@@ -643,8 +670,10 @@ const renderLedger = async () => {
     receipts.replaceChildren();
     if (!app.activeGroup())
         return;
-    const l = await app.ledger();
-    receiptPositions=l.receipts;financialCellVersions=new Map((l.cellRevisions??[]).map(r=>[JSON.stringify([r.meetingId,r.membershipId,r.rubricId,r.currency??'XAF']),Number(r.version??0)]));renderMeetingMatrix();renderIndividualSheetMatrix();
+    const [l,sheetEvents,sheetExpenses] = await Promise.all([app.ledger(),app.listWorkspaceRecords('FINANCE.SHEET_EVENT',app.activeGroup()).catch(()=>[]),app.expenses({scope:'SHEET'}).catch(()=>[])]);
+    receiptPositions=l.receipts;
+    financialSheetEvents=[...sheetEvents,...sheetExpenses.map(x=>({id:x.id,data:{membershipId:x.membershipId,meetingId:x.meetingId,rubricId:x.rubricId,amount:x.amount,direction:'OUT',ledgerEntryId:x.ledgerEntryId}}))];
+    financialCellVersions=new Map((l.cellRevisions??[]).map(r=>[JSON.stringify([r.meetingId,r.membershipId,r.rubricId,r.currency??'XAF']),Number(r.version??0)]));renderMeetingMatrix();renderIndividualSheetMatrix();
     for (const [n, label] of [[l.summary.cashBalance, 'Solde caisse'], [l.summary.memberFundsLiability, 'Engagement membres'], [l.summary.entryCount, 'Écritures']]) {
         const d = document.createElement('div');
         d.className = 'metric';
@@ -883,18 +912,27 @@ const renderTrash=async()=>{
     const root=document.querySelector('#trashList');if(!root)return;root.replaceChildren();
     const parseJsonArray=value=>{try{const x=JSON.parse(String(value??'[]'));return Array.isArray(x)?x.map(String):[];}catch{return[];}};
     try{
-      const groupItems=await app.groupTrashItems().catch(()=>[]),scoped=app.activeGroup()?await app.trashItems().catch(()=>[]):[],seen=new Set(),items=[...groupItems,...scoped].filter(x=>!seen.has(x.id)&&seen.add(x.id));
+      const groupItems=await app.groupTrashItems().catch(()=>[]),scoped=app.activeGroup()?await app.trashItems().catch(()=>[]):[],seen=new Set(),now=Date.now(),restoredWindow=72*60*60*1000;
+      const items=[...groupItems,...scoped].filter(x=>{
+        if(seen.has(x.id))return false;seen.add(x.id);
+        const restored=String(x.data?.lifecycleState??'')==='RESTORED'||x.status==='DONE';
+        if(!restored)return true;
+        const restoredAt=Date.parse(String(x.data?.restoredAt??x.updatedAt??''));return Number.isFinite(restoredAt)&&now-restoredAt<=restoredWindow;
+      });
       if(!items.length){root.innerHTML='<div class="empty-state">'+tx('Corbeille vide.','Trash is empty.')+'</div>';return;}
       for(const item of items){
-        const expired=item.status!=='ACTIVE'||Boolean(item.data?.expired),a=document.createElement('article');a.className='item '+(expired?'trash-expired':'');
+        const restored=String(item.data?.lifecycleState??'')==='RESTORED'||item.status==='DONE',expired=!restored&&(item.status!=='ACTIVE'||Boolean(item.data?.expired)),a=document.createElement('article');a.className='item '+(restored?'trash-restored ':expired?'trash-expired ':'');
         const kind={MEETING:tx('Séance','Meeting'),MEMBER:tx('Membre','Member'),RUBRIC:tx('Rubrique','Rubric'),GROUP:tx('Groupe','Group')}[item.data?.kind]??String(item.data?.kind??'Élément');
         const h=document.createElement('strong');h.textContent=kind+' · '+item.title;
-        const p=document.createElement('p');p.textContent=expired
-          ?tx('Délai expiré : les données métier restaurables ont été purgées. Seules des traces techniques/statistiques minimales non reconstructives peuvent subsister.','Retention expired: restorable business data was purged. Only minimal non-reconstructive technical/statistical traces may remain.')
-          :tx('Restaurable jusqu’au ','Restorable until ')+date(String(item.data?.restoreUntil??''));
+        const restoredAt=Date.parse(String(item.data?.restoredAt??item.updatedAt??'')),visibleUntil=Number.isFinite(restoredAt)?new Date(restoredAt+restoredWindow).toISOString():'';
+        const p=document.createElement('p');p.textContent=restored
+          ?tx('Restauré avec succès · ce message disparaît automatiquement après 72 h. Visible jusqu’au ','Restored successfully · this message disappears automatically after 72 h. Visible until ')+date(visibleUntil)
+          :expired
+            ?tx('Délai expiré : les données métier restaurables ont été purgées. Seules des traces techniques/statistiques minimales non reconstructives peuvent subsister.','Retention expired: restorable business data was purged. Only minimal non-reconstructive technical/statistical traces may remain.')
+            :tx('Restaurable jusqu’au ','Restorable until ')+date(String(item.data?.restoreUntil??''));
         a.append(h,p);
 
-        if(item.data?.kind==='GROUP'&&!expired){
+        if(item.data?.kind==='GROUP'&&!expired&&!restored){
           const optedOut=parseJsonArray(item.data?.reminderOptOutUserIdsJson).includes(app.currentActor());
           const reminder=document.createElement('p');reminder.className='hint';reminder.textContent=optedOut
             ?tx('Vous avez désactivé votre rappel mensuel.','You disabled your monthly reminder.')
@@ -925,9 +963,9 @@ const renderTrash=async()=>{
           }catch(error){if(error instanceof Error&&!['FORBIDDEN_SCOPE','PETITION_ELECTORATE_REQUIRED'].includes(error.message))console.warn(error);}
         }
 
-        if(!expired){
+        if(!expired&&!restored){
           const restore=document.createElement('button');restore.type='button';restore.className='primary';restore.textContent=tx('Restaurer intégralement','Restore fully');
-          restore.onclick=()=>void(async()=>{try{if(item.data?.kind==='GROUP')await app.restoreGroupTrashItem(item.id);else await app.restoreTrashItem(item.id);await renderGroups();await refreshGroupContext();toast(tx('Élément restauré.','Item restored.'));}catch(e){fail(e);}})();a.append(restore);
+          restore.onclick=()=>void(async()=>{try{if(item.data?.kind==='GROUP')await app.restoreGroupTrashItem(item.id);else await app.restoreTrashItem(item.id);clearFail();await renderGroups();await refreshGroupContext();await renderTrash();toast(tx('Élément restauré. Il restera signalé ici pendant 72 h.','Item restored. It will remain noted here for 72 hours.'));}catch(e){fail(e);}})();a.append(restore);
           if(item.data?.kind==='GROUP'){
             const optedOut=parseJsonArray(item.data?.reminderOptOutUserIdsJson).includes(app.currentActor()),mute=document.createElement('button');mute.type='button';mute.className='secondary';mute.textContent=optedOut?tx('Réactiver mon rappel mensuel','Enable my monthly reminder'):tx('Ne plus me rappeler chaque mois','Stop my monthly reminder');
             mute.onclick=()=>void(async()=>{try{await app.setGroupTrashReminders(item.id,optedOut);await renderTrash();toast(optedOut?tx('Rappel réactivé.','Reminder enabled.'):tx('Votre rappel a été désactivé.','Your reminder was disabled.'));}catch(e){fail(e);}})();a.append(mute);
@@ -961,7 +999,8 @@ const renderUrgentNotifications=async()=>{
     root.replaceChildren();
     if(!app.activeGroup()){root.innerHTML='<div class="empty-state">'+tx('Sélectionnez un groupe pour voir ses alertes.','Select a group to see its alerts.')+'</div>';return;}
     try{
-      const notices=await app.groupNotifications(),urgent=notices.filter(x=>!x.read&&['HIGH','CRITICAL'].includes(String(x.priority))).slice(0,12);
+      const notices=await app.groupNotifications(),rank={CRITICAL:4,HIGH:3,NORMAL:2,LOW:1},unread=notices.filter(x=>!x.read).sort((a,b)=>(rank[String(b.priority)]??0)-(rank[String(a.priority)]??0)||String(b.createdAt??'').localeCompare(String(a.createdAt??''))),urgent=unread.filter(x=>['HIGH','CRITICAL'].includes(String(x.priority))).slice(0,5);
+      const allButton=document.querySelector('#urgentNotificationsAllBtn');if(allButton)allButton.textContent=tx('Toutes les alertes','All alerts')+(unread.length?' · '+unread.length:'');
       if(!urgent.length){root.innerHTML='<div class="empty-state">'+tx('Aucune notification urgente.','No urgent notification.')+'</div>';return;}
       for(const n of urgent){
         const article=document.createElement('article');article.className='item '+(n.priority==='CRITICAL'?'urgent-critical':'urgent-high');
@@ -975,6 +1014,26 @@ const renderUrgentNotifications=async()=>{
     }catch(error){if(navigator.onLine)fail(error);else root.innerHTML='<div class="empty-state">'+tx('Alertes non synchronisées hors ligne. Les alertes déjà chargées restent disponibles dans les copies locales.','Alerts not synchronized offline. Previously loaded alerts remain in local copies.')+'</div>';}
 };
 document.querySelector('#urgentNotificationsRefreshBtn')?.addEventListener('click',()=>void renderUrgentNotifications());
+document.querySelector('#urgentNotificationsAllBtn')?.addEventListener('click',()=>{go('inbox',{anchor:'notificationCenterPanel',force:true});setTimeout(()=>document.querySelector('#notificationCenterPanel')?.scrollIntoView({behavior:'smooth',block:'start'}),120);});
+const renderNotificationCenter=async()=>{
+  const root=document.querySelector('#notificationCenterList'),meta=document.querySelector('#notificationCenterMeta');if(!root)return;
+  root.replaceChildren();if(!app.activeGroup()){root.innerHTML='<div class="empty-state">'+tx('Sélectionnez un groupe pour consulter ses alertes.','Select a group to view its alerts.')+'</div>';return;}
+  try{
+    const rank={CRITICAL:4,HIGH:3,NORMAL:2,LOW:1},notices=(await app.groupNotifications()).slice().sort((a,b)=>Number(Boolean(a.read))-Number(Boolean(b.read))||(rank[String(b.priority)]??0)-(rank[String(a.priority)]??0)||String(b.createdAt??'').localeCompare(String(a.createdAt??'')));
+    const visible=notices.slice(0,100);if(meta)meta.textContent=tx(`${notices.filter(x=>!x.read).length} non lue(s) · ${notices.length} alerte(s) connues · affichage des 100 plus pertinentes au maximum.`,`${notices.filter(x=>!x.read).length} unread · ${notices.length} known alerts · showing at most the 100 most relevant.`);
+    if(!visible.length){root.innerHTML='<div class="empty-state">'+tx('Aucune alerte pour ce groupe.','No alerts for this group.')+'</div>';return;}
+    for(const n of visible){
+      const article=document.createElement('article');article.className='item notification-center-item '+(n.read?'is-read':'is-unread')+' priority-'+String(n.priority??'NORMAL').toLowerCase();
+      const h=document.createElement('strong');h.textContent=(n.priority==='CRITICAL'?'🔴 ':n.priority==='HIGH'?'🟠 ':n.priority==='LOW'?'⚪ ':'🔵 ')+String(n.title??tx('Notification','Notification'));
+      const p=document.createElement('p');p.textContent=String(n.message??'');const small=document.createElement('small');small.textContent=date(n.createdAt);
+      const actions=document.createElement('div');actions.className='actions';
+      if(n.action?.view){const open=document.createElement('button');open.type='button';open.className='primary';open.textContent=n.action.label||tx('Ouvrir','Open');open.onclick=()=>openNoticeAction(n.action);actions.append(open);}
+      if(!n.read){const seen=document.createElement('button');seen.type='button';seen.className='secondary';seen.textContent=tx('Marquer comme lu','Mark as read');seen.onclick=()=>void(async()=>{try{await app.markGroupNotificationRead(n.id);await renderNotificationCenter();await renderUrgentNotifications();await renderFinancialAlerts();}catch(e){fail(e);}})();actions.append(seen);}
+      article.append(h,p,small,actions);root.append(article);
+    }
+  }catch(error){if(navigator.onLine)fail(error);else root.innerHTML='<div class="empty-state">'+tx('Centre d’alertes indisponible hors ligne tant qu’aucune copie locale n’existe.','Alert center unavailable offline until a local copy exists.')+'</div>';}
+};
+document.querySelector('#notificationCenterRefreshBtn')?.addEventListener('click',()=>void renderNotificationCenter());
 
 const showFinancialAlert=(input={})=>{
     const bar=document.querySelector('#financialAlertBar');if(!bar)return;
@@ -1027,7 +1086,7 @@ const refreshGroupContext = async () => {
         await groupHomeUI.refresh();
         await sessionsUI.refresh();
         if(manage)await renderLedger();
-        else{receiptPositions=[];financialCellVersions=new Map();$('#ledgerMetrics').replaceChildren();$('#receiptList').textContent='Votre relevé individuel est accessible depuis la liste des membres.';}
+        else{receiptPositions=[];financialSheetEvents=[];financialCellVersions=new Map();$('#ledgerMetrics').replaceChildren();$('#receiptList').textContent='Votre relevé individuel est accessible depuis la liste des membres.';}
     }
     if(!active || manage)await refreshOptionalOfflineSafe('applications',renderApplications);else $('#applicationsBox').textContent='Les candidatures sont gérées par les responsables du groupe.';
     await refreshOptionalOfflineSafe('universe',renderUniverse);
@@ -1037,6 +1096,7 @@ const refreshGroupContext = async () => {
     await refreshOptionalOfflineSafe('identity-live',()=>identityLiveUI.refresh());
     await refreshOptionalOfflineSafe('financial-alerts',renderFinancialAlerts);
     await refreshOptionalOfflineSafe('urgent-notifications',renderUrgentNotifications);
+    await refreshOptionalOfflineSafe('notification-center',renderNotificationCenter);
     await refreshOptionalOfflineSafe('community-shop',()=>communityShopUI.refresh());
     await refreshOptionalOfflineSafe('misc-rubrics',()=>miscRubricUI.refresh());
     await refreshOptionalOfflineSafe('pairing',()=>pairingUI.refresh());
