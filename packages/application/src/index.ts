@@ -85,8 +85,8 @@ export class ConnectedApplication {
     const existing=await this.cached<Group[]>('/api/v1/groups');if(!existing)await this.saveCached('/api/v1/groups',[]);
     return projected;
   }
-  private async serverAuthenticate(mode:'login'|'register',input:{username:string;password:string;displayName?:string}):Promise<{authenticated:boolean;account:SessionAccount}>{
-    return this.request(`/api/v1/auth/${mode}`,{method:'POST',body:JSON.stringify({...input,locale:this.locale})});
+  private async serverAuthenticate(mode:'login'|'register',input:{username:string;password:string;displayName?:string;remember?:boolean}):Promise<{authenticated:boolean;account:SessionAccount}>{
+    return this.request(`/api/v1/auth/${mode}`,{method:'POST',body:JSON.stringify({...input,locale:this.locale,remember:input.remember===true})});
   }
 
   private headers(extra:Record<string,string>={}):HeadersInit{return{'content-type':'application/json','accept-language':this.locale,'x-active-group-id':this.activeGroupId??'','x-timezone':'Africa/Douala',...extra};}
@@ -227,7 +227,7 @@ export class ConnectedApplication {
   async groupMe():Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/me`);}
   async globalRecap():Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/recap/global`);}
   async memberOperationalSheet(membershipId:string):Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/members/${encodeURIComponent(membershipId)}/operational-sheet`);}
-  async authenticate(mode:'login'|'register',input:{username:string;password:string;displayName?:string}):Promise<void>{
+  async authenticate(mode:'login'|'register',input:{username:string;password:string;displayName?:string;remember?:boolean}):Promise<void>{
     const localFlow=async()=>{
       if(!IndexedDbLocalAuthAdapter.supported())throw Error('LOCAL_AUTH_UNAVAILABLE');
       const local=mode==='register'
@@ -254,10 +254,10 @@ export class ConnectedApplication {
     const local=await this.localAuth.current();if(!local||local.registrationState!=='LOCAL_PENDING_REGISTRATION')throw Error('LOCAL_ACCOUNT_NOT_PENDING');
     if(typeof navigator!=='undefined'&&navigator.onLine===false)throw Error('NETWORK_UNAVAILABLE');
     let server:{authenticated:boolean;account:SessionAccount};
-    try{server=await this.serverAuthenticate('register',{username:local.username,password,displayName:local.displayName});}
+    try{server=await this.serverAuthenticate('register',{username:local.username,password,displayName:local.displayName,remember:true});}
     catch(error){
       if(!(error instanceof Error)||error.message!=='ACCOUNT_UNAVAILABLE')throw error;
-      server=await this.serverAuthenticate('login',{username:local.username,password});
+      server=await this.serverAuthenticate('login',{username:local.username,password,remember:true});
     }
     if(!server.authenticated||!server.account)throw Error('AUTHENTICATION_REQUIRED');
     const oldActor=local.id,oldTenant=local.tenantId,next=server.account;
