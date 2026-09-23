@@ -459,6 +459,34 @@ export class ConnectedApplication {
     return membership;
   }
 
+  async recordFinancialSheetEntry(input:{membershipId:string;meetingId:string;rubric:any;amount:number}):Promise<any>{
+    if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');
+    if(!Number.isSafeInteger(input.amount)||input.amount<=0)throw Error('INVALID_CONTRIBUTION_AMOUNT');
+    const rubric=input.rubric??{},kind=String(rubric.activityPlan?.kind??'').toUpperCase();
+    const normalized=String(rubric.name??'').normalize('NFKD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
+    const systemKey=String(rubric.facets?.custom?.systemKey??'').toUpperCase();
+    const nature=kind==='LOAN'||systemKey==='LOAN'||/^prets?$|^loans?$/.test(normalized)?'LOAN'
+      :kind==='REPAYMENT'||/remboursement|repayment/.test(normalized)?'REPAYMENT'
+      :rubric.facets?.direction==='OUTFLOW'?'OUTFLOW':'CONTRIBUTION';
+    if(nature==='CONTRIBUTION')return this.recordCashContribution({membershipId:input.membershipId,meetingId:input.meetingId,rubricId:rubric.id,amount:input.amount});
+    if(nature==='OUTFLOW')return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/expenses`,{method:'POST',body:JSON.stringify({membershipId:input.membershipId,rubricId:rubric.id,meetingId:input.meetingId,amount:input.amount,label:rubric.name??'Dépense de séance',scope:'SHEET',note:'Saisie depuis la feuille financière canonique',idempotencyKey:makeId('sheet_out')})});
+    if(nature==='LOAN'){
+      const policy=rubric.policies?.loan;if(!policy?.allowed)throw Error('LOAN_POLICY_REQUIRED');
+      const special=/special/.test(normalized)?policy.specialLoans?.[0]:undefined;
+      const rawRate=special?.rateBasisPointsPerPeriod??policy.rateBasisPointsPerPeriod;if(rawRate===undefined||rawRate===null)throw Error('LOAN_RATE_REQUIRED');
+      const rateBasisPointsPerPeriod=Number(rawRate),paymentPriority=special?.paymentPriority??policy.paymentPriority??'CAPITAL_FIRST';
+      const periods=Number(special?.maxDurationPeriods??policy.overdue?.maxDurationPeriods??6),key=makeId('sheet_loan');
+      let loan=await this.createCompletion('LOAN',{title:String(rubric.name??'Prêt'),data:{principal:input.amount,currency:'XAF',borrowerMembershipId:input.membershipId,rubricId:rubric.id,rateBasisPointsPerPeriod,paymentPriority,noInterestOnInterest:true,periods,outstandingPrincipal:0,unpaidInterest:0,loanClass:special?'SPECIAL':'STANDARD',sourceSurface:'TWO_SHEETS',sheetEntryKey:key}});
+      loan=await this.transitionCompletion(loan.id,'SUBMITTED',Number(loan.data?.completionVersion??1),{submittedFromSheet:true,meetingId:input.meetingId});
+      loan=await this.transitionCompletion(loan.id,'APPROVED',Number(loan.data?.completionVersion??2),{approvedAt:new Date().toISOString(),approvedFromSheet:true});
+      return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/loans/${encodeURIComponent(loan.id)}/disburse`,{method:'POST',body:JSON.stringify({amount:input.amount,expectedVersion:Number(loan.data?.completionVersion??3),meetingId:input.meetingId,rubricId:rubric.id,idempotencyKey:key+':disburse'})});
+    }
+    const active=(await this.listCompletion('LOAN')).filter(l=>String(l.data?.borrowerMembershipId??'')===input.membershipId&&['DISBURSED','REPAYING'].includes(String(l.data?.completionState??''))&&(Number(l.data?.outstandingPrincipal??0)>0||Number(l.data?.unpaidInterest??0)>0));
+    if(active.length!==1)throw Error(active.length>1?'MULTIPLE_LOANS':'LOAN_REQUIRED');
+    const loan=active[0]!,component=String(rubric.facets?.custom?.repaymentComponent??'').toUpperCase()==='INTEREST'||/interet|interest/.test(normalized)?'INTEREST':'PRINCIPAL';
+    return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/loans/${encodeURIComponent(loan.id)}/repay`,{method:'POST',body:JSON.stringify({principalAmount:component==='PRINCIPAL'?input.amount:0,interestAmount:component==='INTEREST'?input.amount:0,expectedVersion:Number(loan.data?.completionVersion??0),meetingId:input.meetingId,rubricId:rubric.id,idempotencyKey:makeId('sheet_repayment')})});
+  }
+
   async recordCashContribution(input:{membershipId:string;amount:number;meetingId?:string;rubricId?:string;lateReason?:string;approverIds?:string[]}):Promise<{queued:boolean;receipt?:ContributionReceipt;outbox?:OutboxItem}>{
     if(!this.activeGroupId)throw new Error('ACTIVE_GROUP_REQUIRED'); const key=makeId('cash');
     if(!Number.isSafeInteger(input.amount)||input.amount<=0)throw Error('INVALID_CONTRIBUTION_AMOUNT');
