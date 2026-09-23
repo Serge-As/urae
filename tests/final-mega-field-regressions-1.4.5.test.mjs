@@ -21,7 +21,7 @@ const trashLifecycle=fs.readFileSync('packages/trash-lifecycle/src/index.ts','ut
 const repositories=fs.readFileSync('packages/repositories/src/index.ts','utf8');
 
 test('Android 6 offline shell remains fast offline and never force-reloads on worker takeover',()=>{
-  assert.match(sw,/eco-system-v1521-field-finance-debt-ux-20260923/);
+  assert.match(sw,/eco-system-v153-value-market-closure-20260923/);
   assert.match(sw,/Offline \/ unstable 2G: fall back quickly/);
   assert.match(sw,/Scripts\/styles\/assets are cache-first/);
   assert.doesNotMatch(sw,/skipWaiting\(/);
@@ -196,10 +196,10 @@ test('loan is a negative member position and simulation is available to member a
   assert.match(app,/loanHistory/);
 });
 
-test('stale cached html no longer crashes and 1.5.2.1 keeps the previous coherent release',()=>{
+test('stale cached html no longer crashes and 1.5.3 keeps the previous coherent release',()=>{
   assert.match(main,/document\.querySelector\('#claimLocalAccountBtn'\)\?\.addEventListener/);
   assert.doesNotMatch(main,/\$\('#claimLocalAccountBtn'\)\.addEventListener/);
-  assert.match(sw,/eco-system-v1521-field-finance-debt-ux-20260923/);
-  assert.match(html,/ECO-SYSTEM · 1\.5\.2\.1/);
-  assert.match(html,/main\.js\?v=1521/);assert.match(sw,/PREVIOUS_CACHE = 'eco-system-v152-unified-ux-blueprint-20260923'/);
+  assert.match(sw,/eco-system-v153-value-market-closure-20260923/);
+  assert.match(html,/ECO-SYSTEM · 1\.5\.3/);
+  assert.match(html,/main\.js\?v=153/);assert.match(sw,/PREVIOUS_CACHE = 'eco-system-v1521-field-finance-debt-ux-20260923'/);
 });
