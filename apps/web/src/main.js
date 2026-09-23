@@ -45,6 +45,7 @@ let members = [];
 let meetings = [];
 let rubrics = [];
 let receiptPositions = [];
+let financialCellVersions = new Map();
 let matrixMeetingId = '';
 let memberSortMode = 'chronological';
 const MANAGER_ROLE_IDS=new Set(['founder','manager','admin','president','treasurer','secretary','auditor']);
@@ -418,6 +419,7 @@ const activeMeeting = () => {
 };
 const exactCellRows=(membershipId,rubricId,meetingId)=>receiptPositions.filter(x=>x.membershipId===membershipId&&x.rubricId===rubricId&&x.meetingId===meetingId);
 const exactCellAmount=(membershipId,rubricId,meetingId)=>exactCellRows(membershipId,rubricId,meetingId).reduce((n,x)=>n+Number(x.netAmount??0),0);
+const exactCellVersion=(membershipId,rubricId,meetingId)=>Number(financialCellVersions.get(JSON.stringify([meetingId,membershipId,rubricId,'XAF']))??0);
 
 const makeFinancialEntryCell=({member,rubric,meetingId,editable=true})=>{
     const holder=document.createElement('div');holder.className='matrix-cell matrix-cell-entry';holder.dataset.membershipId=member.id;holder.dataset.rubricId=rubric.id;holder.dataset.meetingId=meetingId;holder.tabIndex=-1;
@@ -435,7 +437,7 @@ const makeFinancialEntryCell=({member,rubric,meetingId,editable=true})=>{
       }
       validate.disabled=true;input.disabled=true;
       try{
-        const result=await app.setFinancialCellTarget({meetingId,membershipId:member.id,rubricId:rubric.id,targetAmount:target,currentAmount:current,reason:reason.trim()});
+        const result=await app.setFinancialCellTarget({meetingId,membershipId:member.id,rubricId:rubric.id,targetAmount:target,currentAmount:current,currentVersion:exactCellVersion(member.id,rubric.id,meetingId),reason:reason.trim()});
         if(result?.status==='CONSENSUS_REQUIRED'){holder.classList.add('pending-consensus');toast(tx('Modification proposée : la valeur reste inchangée jusqu’à la décision des gestionnaires.','Change proposed: the value remains unchanged until managers decide.'));}
         else if(result?.status==='QUEUED_CONSENSUS'||result?.queued)toast(tx('Modification conservée hors ligne pour confrontation à la reconnexion.','Change saved offline for reconciliation when reconnected.'));
         else toast(tx('Valeur enregistrée.','Value saved.'));
@@ -476,7 +478,7 @@ const openFinancialCellEditor=({member,rubric,meetingId})=>{
         if(target===current){dialog.close();toast(tx('Aucun changement : la valeur est déjà celle-ci.','No change: this is already the current value.'));return;}
         try{
             save.disabled=true;
-            const result=await app.setFinancialCellTarget({meetingId,membershipId:member.id,rubricId:rubric.id,targetAmount:target,currentAmount:current,reason:reason.value.trim()});
+            const result=await app.setFinancialCellTarget({meetingId,membershipId:member.id,rubricId:rubric.id,targetAmount:target,currentAmount:current,currentVersion:exactCellVersion(member.id,rubric.id,meetingId),reason:reason.value.trim()});
             if(result?.status==='CONSENSUS_REQUIRED')toast(tx('La valeur n’a pas été modifiée : confrontation ouverte entre gestionnaires.','Value not changed: manager reconciliation opened.'));
             else if(result?.status==='QUEUED_CONSENSUS'||result?.queued)toast(tx('Opération conservée hors ligne. La correction sera confrontée / synchronisée à la reconnexion.','Operation saved offline. The correction will be reconciled / synchronized on reconnection.'));
             else toast(tx('Valeur enregistrée avec traçabilité.','Value saved with audit trail.'));
@@ -636,7 +638,7 @@ const renderLedger = async () => {
     if (!app.activeGroup())
         return;
     const l = await app.ledger();
-    receiptPositions=l.receipts;renderMeetingMatrix();renderIndividualSheetMatrix();
+    receiptPositions=l.receipts;financialCellVersions=new Map((l.cellRevisions??[]).map(r=>[JSON.stringify([r.meetingId,r.membershipId,r.rubricId,r.currency??'XAF']),Number(r.version??0)]));renderMeetingMatrix();renderIndividualSheetMatrix();
     for (const [n, label] of [[l.summary.cashBalance, 'Solde caisse'], [l.summary.memberFundsLiability, 'Engagement membres'], [l.summary.entryCount, 'Écritures']]) {
         const d = document.createElement('div');
         d.className = 'metric';
@@ -976,7 +978,7 @@ const refreshGroupContext = async () => {
         await groupHomeUI.refresh();
         await sessionsUI.refresh();
         if(manage)await renderLedger();
-        else{receiptPositions=[];$('#ledgerMetrics').replaceChildren();$('#receiptList').textContent='Votre relevé individuel est accessible depuis la liste des membres.';}
+        else{receiptPositions=[];financialCellVersions=new Map();$('#ledgerMetrics').replaceChildren();$('#receiptList').textContent='Votre relevé individuel est accessible depuis la liste des membres.';}
     }
     if(!active || manage)await refreshOptionalOfflineSafe('applications',renderApplications);else $('#applicationsBox').textContent='Les candidatures sont gérées par les responsables du groupe.';
     await refreshOptionalOfflineSafe('universe',renderUniverse);
