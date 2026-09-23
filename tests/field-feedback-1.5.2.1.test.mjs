@@ -79,5 +79,5 @@ test('field feedback: member debt surfaces include interest and next-session att
 test('field feedback: application shell contains no escaped newline artifact',async()=>{
   const html=await readFile('.build/index.html','utf8');
   assert.doesNotMatch(html,/<body[^>]*>\\n\s*<section/);
-  assert.match(html,/ECO-SYSTEM · 1\.5\.2\.1/);
+  assert.match(html,/ECO-SYSTEM · 1\.5\.3/);
 });
