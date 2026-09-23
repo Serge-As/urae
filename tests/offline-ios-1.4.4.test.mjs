@@ -46,7 +46,7 @@ test('offline loss of an optional section does not block Group Core',()=>{
 });
 
 test('service worker keeps full app shell and uses a new isolated cache version',()=>{
-  assert.match(sw,/eco-system-v1522-loan-funding-page-frame-20260923/);assert.match(sw,/PREVIOUS_CACHE = 'eco-system-v1522-loan-funding-page-frame-20260923'/);
+  assert.match(sw,/eco-system-v1522-loan-funding-page-frame-20260923/);assert.match(sw,/PREVIOUS_CACHE = 'eco-system-v1521-field-finance-debt-ux-20260923'/);
   for(const asset of ['/index.html','/styles.css','/src/main.js','/src/sessions-ui.js','/packages/application/src/index.js','/packages/offline/src/index.js'])assert.ok(sw.includes(asset),asset);
   assert.match(sw,/event\.request\.mode === 'navigate'/);
   assert.match(sw,/cache\.match\('\/index\.html'\)/);
