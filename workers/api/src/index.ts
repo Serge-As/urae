@@ -894,7 +894,9 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
 
     const statement=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/members\/([^/]+)\/statement$/);
     if(statement&&request.method==='GET'){
-      const groupId=statement[1]!,membershipId=statement[2]!;\n      try{await requireGroup(groupId,true);await reconcileClosedMeetingLoanInterest(groupId);}catch(error){if(!(error instanceof Error)||error.message!=='FORBIDDEN_SCOPE')throw error;}\n      const base=await ledger.memberStatement(ctx.tenantId,groupId,membershipId,url.searchParams.get('asOf')??undefined);
+      const groupId=statement[1]!,membershipId=statement[2]!;
+      try{await requireGroup(groupId,true);await reconcileClosedMeetingLoanInterest(groupId);}catch(error){if(!(error instanceof Error)||error.message!=='FORBIDDEN_SCOPE')throw error;}
+      const base=await ledger.memberStatement(ctx.tenantId,groupId,membershipId,url.searchParams.get('asOf')??undefined);
       const [defs,meetingRows,entries,audits,loans,obligations]=await Promise.all([repo.listRubricDefinitions(ctx.tenantId,groupId),repo.listMeetings(ctx.tenantId,groupId),repo.listLedgerEntries(ctx.tenantId,groupId),repo.listAudit(ctx.tenantId),completion.list(groupId,'LOAN').catch(()=>[]),repo.listObligations(ctx.tenantId)]);
       const membership=await repo.getMembership(ctx.tenantId,groupId,membershipId),rubricMap=new Map(defs.map(r=>[r.id,r])),meetingMap=new Map(meetingRows.map(m=>[m.id,m]));
       const isLoanRubric=(rubricId?:string)=>{const r=rubricId?rubricMap.get(rubricId):undefined,n=String(r?.name??'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();return String(r?.facets?.custom?.systemKey??'')==='LOAN'||/^prets?$|^loans?$/.test(n);};
