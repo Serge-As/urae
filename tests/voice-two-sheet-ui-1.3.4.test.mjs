@@ -34,7 +34,7 @@ test('matrix interception prevents old click-to-Finance behavior from owning she
 test('two-sheet workspace uses compact anchored entry instead of redirecting cells to Finance',async()=>{
   const source=await readFile('.build/src/voice-entry-ui.js','utf8');
   const main=await readFile('apps/web/src/main.js','utf8');
-  assert.match(source,/Saisir \/ corriger/);assert.match(source,/sheetCellPopover/);assert.match(source,/renderIndividualSheetWorkspace/);
+  assert.match(main,/Saisir \/ corriger/);assert.match(main,/renderCanonicalFinancialTable/);assert.match(main,/individualSheetMatrix/);
   assert.doesNotMatch(main,/go\('finance'\); \$\('#contributionAmount'\)\.focus\(\)/);
 });
 
@@ -42,9 +42,11 @@ test('two-sheet workspace uses compact anchored entry instead of redirecting cel
 test('targeted tranche 7 keeps canonical matrix ownership and audited replacement workflow',async()=>{
   const source=await readFile('.build/src/voice-entry-ui.js','utf8');
   const main=await readFile('apps/web/src/main.js','utf8');
-  assert.match(source,/\/contributions\/.+\/correct/);
-  assert.match(source,/Cette réunion est clôturée|This meeting is closed/);
-  assert.match(source,/Réunion du|Meeting on/);
+  const application=await readFile('packages/application/src/index.ts','utf8');
+  assert.match(application,/\/financial-cells/);
+  assert.match(main,/setFinancialCellTarget/);
+  assert.match(main,/clôturée|closed/);
+  assert.match(main,/Réunion du|Meeting on/);
   assert.match(source,/ancien — ne plus utiliser/);assert.match(source,/Timbre de prêt/);
   const mount=source.slice(source.indexOf('function mountVoiceEntryUI'));
   assert.doesNotMatch(mount,/hardenLegacyMatrix\(\)|watchDetailSheets\(\)|installTwoSheetChooser\(\)|renderCanonicalMeetingMatrix\(/);
@@ -65,9 +67,11 @@ test('financial dictation is confidence-aware and never treats noise robustness 
 
 
 test('sheet correction copy distinguishes self-benefit from ordinary independent review',async()=>{
-  const source=await readFile('.build/src/voice-entry-ui.js','utf8');
-  assert.match(source,/result\.selfBenefit/);
-  assert.match(source,/votre propre situation|your own situation/);
-  assert.match(source,/autre responsable habilité doit la vérifier avant validation institutionnelle|authorized manager must review it before institutional confirmation/);
-  assert.match(source,/ancienne valeur, contrepassation et nouvelle valeur|previous value, reversal and new value/);
+  const main=await readFile('apps/web/src/main.js','utf8');
+  const worker=await readFile('workers/api/src/index.ts','utf8');
+  assert.match(main,/result\?\.selfBenefit|result\?\.notice\?\.selfBenefit/);
+  assert.match(main,/votre propre situation|your own situation/);
+  assert.match(main,/autre responsable habilité doit la vérifier avant validation institutionnelle|authorized manager must review it before institutional confirmation/);
+  assert.match(main,/ancienne valeur, contrepassation et nouvelle valeur|previous value, reversal and new value/);
+  assert.match(worker,/requiresIndependentReview:targetMember\?\.userId===ctx\.actorId\|\|meeting\.status==='closed'/);
 });
