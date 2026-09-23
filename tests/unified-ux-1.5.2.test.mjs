@@ -14,7 +14,7 @@ test('home exposes visual senior and assisted modes before financial content',as
 
 test('mode controller persists only the three supported modes and assisted mode opens voice entry',async()=>{
   const source=await readFile('.build/src/ui-modes.js','utf8');
-  assert.match(source,/new Set\(\['visual','senior','assisted'\]\)/);
+  assert.match(source,/new Set\(\[\s*['"]visual['"]\s*,\s*['"]senior['"]\s*,\s*['"]assisted['"]\s*\]\)/);
   assert.match(source,/eco\.uiMode/);
   assert.match(source,/voiceFinancialPanel/);
   assert.match(source,/eco:ui-mode-changed/);
