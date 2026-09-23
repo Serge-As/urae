@@ -142,9 +142,11 @@ export function mountSessionsUI({app,getGroups,getMembers,getMeetings,getRubrics
     const notice=el('p',t('Cette page utilise maintenant le même tableau de saisie canonique que les fiches individuelles : montant + ✓, remplacement exact de la valeur et totaux par colonne et par membre. Aucun ancien tableau ne peut reprendre la main après le rafraîchissement.','This page now uses the same canonical entry table as individual sheets: amount + ✓, exact replacement, and totals by column and member. No legacy table can take over after refresh.'),'truth-notice');
     const host=el('div',undefined,'canonical-financial-table-host');host.dataset.canonicalFinancialHost='1';host.dataset.financialMode='meeting';host.dataset.meetingId=meeting.id;host.dataset.showToolbar='false';host.dataset.editable='true';
     const actions=el('div',undefined,'actions');
-    const other=button(t('Choisir une autre séance','Choose another meeting'));other.onclick=()=>select?.scrollIntoView({behavior:'smooth',block:'center'});
+    const focus=button(t('Saisir / corriger cette séance','Enter / correct this meeting'),'primary');focus.onclick=()=>setTimeout(()=>host.querySelector('input.cell-target-input')?.focus(),0);
+    const other=button(t('Autres séances','Other meetings'));other.onclick=()=>select?.scrollIntoView({behavior:'smooth',block:'center'});
+    const add=button(t('+ Nouvelle séance','+ New meeting'));add.onclick=()=>navigate('sessions',{anchor:'sessionsCreateForm',force:true});
     const individual=button(t('Fiches individuelles','Individual sheets'));individual.onclick=()=>navigate('operations',{anchor:'twoSheetWorkspace',sheetMode:'individual',force:true});
-    actions.append(other,individual);section.append(notice,host,actions);return section;
+    actions.append(focus,other,add,individual);section.append(notice,host,actions);return section;
   };
 
   const renderCumulative=async(c)=>{
