@@ -14,8 +14,25 @@ export interface FinancialOperation {
   outboxRecords?: WorkspaceRecord[];
 }
 
+export interface FinancialCorrectionPlan {
+  kind: 'cell_correction';
+  operationId: Id;
+  idempotencyKey: string;
+  intentFingerprint: string;
+  tenantId: Id;
+  groupId: Id;
+  primaryEntryId: Id;
+  entries: LedgerEntry[];
+  receipt?: ContributionReceipt;
+  accounts: LedgerAccount[];
+  audits: AuditEvent[];
+  /** Durable records created with the correction; delivery happens only after commit. */
+  outboxRecords?: WorkspaceRecord[];
+}
+
 export interface PlatformRepository {
   commitFinancialOperation(operation: FinancialOperation): FinancialOperation | Promise<FinancialOperation>;
+  commitFinancialCorrection(plan: FinancialCorrectionPlan): FinancialCorrectionPlan | Promise<FinancialCorrectionPlan>;
   getGroupById(id:Id):Group|undefined|Promise<Group|undefined>;
   listMembershipsForUser(userId:Id):Membership[]|Promise<Membership[]>;
   saveUser(user: User): void | Promise<void>;
@@ -103,6 +120,26 @@ export class InMemoryPlatformRepository implements PlatformRepository {
     this.financialOperations.set(key,copy);
     return structuredClone(copy);
   }
+  private financialCorrections = new Map<string, FinancialCorrectionPlan>();
+  commitFinancialCorrection(plan: FinancialCorrectionPlan): FinancialCorrectionPlan {
+    const key=JSON.stringify([plan.tenantId,plan.groupId,plan.kind,plan.idempotencyKey]);
+    const existing=this.financialCorrections.get(key);
+    if(existing){
+      if(existing.intentFingerprint!==plan.intentFingerprint)throw new Error('IDEMPOTENCY_CONFLICT');
+      return structuredClone(existing);
+    }
+    const copy=structuredClone(plan);
+    // One synchronous commit boundary: callers can never observe reversals without
+    // the replacement (or vice versa) through this repository.
+    for(const a of copy.accounts)this.ledgerAccounts.set(a.id,a);
+    for(const entry of copy.entries)this.ledgerEntries.set(entry.id,entry);
+    if(copy.receipt)this.receipts.set(copy.receipt.id,copy.receipt);
+    for(const audit of copy.audits)this.audits.set(audit.id,audit);
+    for(const record of copy.outboxRecords??[])this.workspaceRecords.set(record.id,record);
+    this.financialCorrections.set(key,copy);
+    return structuredClone(copy);
+  }
+
   private users = new Map<Id, User>();
   private projects = new Map<Id, GroupProject>();
   private groups = new Map<Id, Group>();
@@ -260,6 +297,37 @@ export class D1PlatformRepository implements PlatformRepository {
       .bind(...scope).first<{operation_json:string}>();
     if(!winner)throw new Error('FINANCIAL_COMMIT_NOT_CONFIRMED');
     return JSON.parse(winner.operation_json) as FinancialOperation;
+  }
+
+  async commitFinancialCorrection(plan:FinancialCorrectionPlan):Promise<FinancialCorrectionPlan>{
+    const scope=[plan.tenantId,plan.groupId,plan.kind,plan.idempotencyKey];
+    const statements=[this.db.prepare(`INSERT INTO financial_operations
+      (tenant_id,group_id,operation_kind,idempotency_key,entry_id,operation_json)
+      VALUES(?,?,?,?,?,?) ON CONFLICT(tenant_id,group_id,operation_kind,idempotency_key) DO NOTHING`)
+      .bind(...scope,plan.primaryEntryId,JSON.stringify(plan))];
+    const rows:Array<[string,{id:Id},string|null,string]>=[
+      ...plan.accounts.map(a=>['ledger_account',a,null,new Date().toISOString()] as [string,LedgerAccount,null,string]),
+      ...plan.entries.map(e=>['ledger_entry',e,e.idempotencyKey,e.createdAt] as [string,LedgerEntry,string,string]),
+      ...plan.audits.map(a=>['audit',a,null,a.at] as [string,AuditEvent,null,string])
+    ];
+    if(plan.receipt)rows.push(['contribution_receipt',plan.receipt,plan.receipt.idempotencyKey,plan.receipt.receivedAt]);
+    for(const record of plan.outboxRecords??[])rows.push(['workspace_record',record,null,record.updatedAt]);
+    for(const [type,value,key,updatedAt] of rows){
+      statements.push(this.db.prepare(`INSERT INTO platform_records
+        (record_type,record_id,tenant_id,group_id,assignee_id,idempotency_key,data_json,updated_at)
+        SELECT ?,?,?,?,?,?,?,? WHERE EXISTS (SELECT 1 FROM financial_operations
+          WHERE tenant_id=? AND group_id=? AND operation_kind=? AND idempotency_key=? AND entry_id=?)
+        ON CONFLICT(record_type,record_id) DO NOTHING`)
+        .bind(type,value.id,plan.tenantId,plan.groupId,null,key,JSON.stringify(value),updatedAt,...scope,plan.primaryEntryId));
+    }
+    await this.db.batch(statements);
+    const winner=await this.db.prepare(`SELECT operation_json FROM financial_operations
+      WHERE tenant_id=? AND group_id=? AND operation_kind=? AND idempotency_key=?`)
+      .bind(...scope).first<{operation_json:string}>();
+    if(!winner)throw new Error('FINANCIAL_CORRECTION_COMMIT_NOT_CONFIRMED');
+    const stored=JSON.parse(winner.operation_json) as FinancialCorrectionPlan;
+    if(stored.intentFingerprint!==plan.intentFingerprint)throw new Error('IDEMPOTENCY_CONFLICT');
+    return stored;
   }
 
   private async saveRecord<T extends {id:Id}>(type:string,value:T,scope:RecordScope={}):Promise<void>{
