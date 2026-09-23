@@ -42,6 +42,7 @@ import { simulatePeriodicLoan, summarizePeriodicLoan } from '../../../packages/l
 import { TrashLifecycleMaintenance, addCalendarMonthsClamped } from '../../../packages/trash-lifecycle/src/index.js';
 import { BusinessStudioService } from '../../../packages/business-studio/src/index.js';
 import { GrowthReferralService, InMemoryReferralBudgetStore, D1ReferralBudgetStore, type ReferralBudgetStore } from '../../../packages/growth-referral/src/index.js';
+import { KnowledgeAcademyService } from '../../../packages/knowledge-academy/src/index.js';
 import { authenticatedApi } from './authenticated.js';
 export { GroupLiveHub } from './group-live-hub.js';
 
@@ -116,10 +117,11 @@ const createRequestScope = (request:Request,repo:PlatformRepository,artifacts?:A
   const externalPrograms=new ExternalProgramsService(repo,kernel);
   const operationalCockpit=new OperationalCockpitService(repo,kernel,ledger);
   const businessStudio=new BusinessStudioService(repo,kernel);
+  const knowledgeAcademy=new KnowledgeAcademyService(repo,kernel);
   const tenantId=request.headers.get('x-tenant-id')??'tenant_demo'; const actorId=request.headers.get('x-actor-id')??'user_founder';
   const groupRoles=(request.headers.get('x-group-roles')??'founder,manager').split(',').map(x=>x.trim()).filter(Boolean);
   kernel.context.set({actorId,tenantId,activeGroupId:request.headers.get('x-active-group-id')??undefined,groupRoles,mandateIds:[],deviceId:request.headers.get('x-device-id')??'device_web_demo',sessionId:request.headers.get('x-session-id')??'session_demo',locale:request.headers.get('accept-language')?.toLowerCase().startsWith('en')?'en':'fr',timezone:request.headers.get('x-timezone')??'Africa/Douala',connectivity:'online',requestId:request.headers.get('x-request-id')??makeId('req')});
-  return {kernel,foundation,ledger,meetings,discovery,membershipGateway,rubrics,completion,explainability,documents,receivables,treasury,riskFinance,market,community,imports,artifactStore,memberControl,groupIdentity,conciergeLearning,miscRubrics,adManager,economicIntelligence,externalPrograms,operationalCockpit,businessStudio};
+  return {kernel,foundation,ledger,meetings,discovery,membershipGateway,rubrics,completion,explainability,documents,receivables,treasury,riskFinance,market,community,imports,artifactStore,memberControl,groupIdentity,conciergeLearning,miscRubrics,adManager,economicIntelligence,externalPrograms,operationalCockpit,businessStudio,knowledgeAcademy};
 };
 
 const inboxFor = async (repo:PlatformRepository,tenantId:string,actorId:string) => {
@@ -134,7 +136,7 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
     const allowed=Boolean((cors as Record<string,string>)['access-control-allow-origin']);
     return new Response(null,{status:allowed?204:403,headers:{...baseSecurityHeaders,...cors,'access-control-allow-methods':'GET,POST,PUT,OPTIONS','access-control-allow-headers':'content-type,x-tenant-id,x-actor-id,x-group-roles,x-active-group-id,x-device-id,x-session-id,x-request-id,x-timezone'}});
   }
-  const {kernel,foundation,ledger,meetings,discovery,membershipGateway,rubrics,completion,explainability,documents,receivables,treasury,riskFinance,market,community,imports,artifactStore,memberControl,groupIdentity,conciergeLearning,miscRubrics,adManager,economicIntelligence,externalPrograms,operationalCockpit,businessStudio}=createRequestScope(request,repo,options.artifacts,options.dataUseDefaultMode??'BETA_OPEN',options.documentAI); const ctx=kernel.context.get();
+  const {kernel,foundation,ledger,meetings,discovery,membershipGateway,rubrics,completion,explainability,documents,receivables,treasury,riskFinance,market,community,imports,artifactStore,memberControl,groupIdentity,conciergeLearning,miscRubrics,adManager,economicIntelligence,externalPrograms,operationalCockpit,businessStudio,knowledgeAcademy}=createRequestScope(request,repo,options.artifacts,options.dataUseDefaultMode??'BETA_OPEN',options.documentAI); const ctx=kernel.context.get();
   const governanceVotes=new GovernanceVoteService(repo,kernel,options.governanceSecret??'eco-system-nonproduction-governance-secret');
   const notifications=new NotificationService(repo,kernel);
   const growthReferral=new GrowthReferralService(repo,kernel,options.referralBudgets??defaultReferralBudgets);
@@ -403,6 +405,21 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
       return json({error:'METHOD_NOT_ALLOWED'},405,cors);
     }
     if(request.method==='GET'&&url.pathname==='/health') return json({ok:true,service:'tontine-api',version:'1.4.0-master-2.3.4-closure',now:new Date().toISOString(),realMoneyEnabled:kernel.features.enabled('financial-real-money'),manualCashLedgerEnabled:true,premiumLiveEnabled:options.premiumLive===true&&Boolean(options.liveNamespace),founderControlBound:Boolean(options.founderControl),communityRealtimeBound:Boolean(options.communityRealtime),artifactStorageBound:true,artifactStorageMode:options.artifacts?'R2':'D1_FALLBACK',contextScope:'request'},200,cors);
+    if(request.method==='GET'&&url.pathname==='/api/v1/knowledge'){return json({items:await knowledgeAcademy.searchKnowledge(url.searchParams.get('q')??'',url.searchParams.get('groupId')??undefined)},200,cors);}
+    if(request.method==='POST'&&url.pathname==='/api/v1/knowledge'){const body=await readJson<any>(request);return json(await knowledgeAcademy.createKnowledge(body),201,cors);}
+    const knowledgeRevision=url.pathname.match(/^\/api\/v1\/knowledge\/([^/]+)\/revisions$/);
+    if(knowledgeRevision&&request.method==='POST'){const body=await readJson<any>(request);return json(await knowledgeAcademy.reviseKnowledge(knowledgeRevision[1]!,body),201,cors);}
+    const knowledgeReview=url.pathname.match(/^\/api\/v1\/knowledge\/([^/]+)\/review$/);
+    if(knowledgeReview&&request.method==='POST'){const body=await readJson<any>(request);return json(await knowledgeAcademy.reviewKnowledge(knowledgeReview[1]!,String(body.state??'TO_REVALIDATE') as any,String(body.note??'')),200,cors);}
+    if(request.method==='GET'&&url.pathname==='/api/v1/encyclopedia')return json({items:knowledgeAcademy.encyclopedia(url.searchParams.get('q')??'')},200,cors);
+    if(request.method==='GET'&&url.pathname==='/api/v1/founder-ai/context')return json(await knowledgeAcademy.founderContext(url.searchParams.get('q')??''),200,cors);
+    if(request.method==='GET'&&url.pathname==='/api/v1/academy')return json(await knowledgeAcademy.academy(),200,cors);
+    if(request.method==='POST'&&url.pathname==='/api/v1/academy/courses'){const body=await readJson<any>(request);return json(await knowledgeAcademy.createCourse(body),201,cors);}
+    const academyEnroll=url.pathname.match(/^\/api\/v1\/academy\/courses\/([^/]+)\/enroll$/);
+    if(academyEnroll&&request.method==='POST')return json(await knowledgeAcademy.enroll(academyEnroll[1]!),201,cors);
+    const academyLesson=url.pathname.match(/^\/api\/v1\/academy\/enrollments\/([^/]+)\/lessons$/);
+    if(academyLesson&&request.method==='POST'){const body=await readJson<any>(request);return json(await knowledgeAcademy.submitLesson(academyLesson[1]!,body),200,cors);}
+
     if(request.method==='GET'&&url.pathname==='/api/v1/growth/referrals')return json(await growthReferral.dashboard(),200,cors);
     if(request.method==='POST'&&url.pathname==='/api/v1/growth/referral-campaigns'){const body=await readJson<any>(request);return json(await growthReferral.createCampaign(body),201,cors);}
     const referralCampaign=url.pathname.match(/^\/api\/v1\/growth\/referral-campaigns\/([^/]+)\/state$/);
