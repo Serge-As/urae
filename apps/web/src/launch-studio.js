@@ -131,6 +131,35 @@ export function mountLaunchStudio({app,getGroups,getRubrics,addRubric,invalidate
     const html='<!doctype html><meta charset="utf-8"><title>Starter Kit - '+escapeHtml(kit.groupName)+'</title><style>body{font-family:system-ui,sans-serif;max-width:900px;margin:30px auto;padding:0 20px;line-height:1.45}h1,h2{margin-top:1.4em}table{border-collapse:collapse;width:100%;font-size:13px}th,td{border:1px solid #bbb;padding:7px;text-align:left}.tag{font-weight:700}pre{white-space:pre-wrap;border:1px solid #ccc;padding:12px}@media print{button{display:none}}</style><h1>Kit prêt à l\'emploi — '+escapeHtml(kit.groupName)+'</h1><p>Famille : '+escapeHtml(kit.family)+' · Gouvernance : '+escapeHtml(kit.governance)+' · Membres : '+escapeHtml(kit.members||'—')+' · Séances : '+escapeHtml(kit.sessions||'—')+'</p>'+section('Checklist',kit.checklist.map(x=>'['+x[0]+'] '+x[1]))+section('Règlement type — clauses à adapter',kit.rules)+'<h2>Rubriques et chiffrage</h2><table><tr><th>Rubrique</th><th>Mode</th><th>Montant</th><th>Cycle collectif</th><th>Frais gestion</th></tr>'+kit.rubricRows.map(r=>'<tr><td>'+escapeHtml(r.name)+'</td><td>'+escapeHtml(r.mode)+'</td><td>'+escapeHtml(r.amount)+'</td><td>'+escapeHtml(r.nominalCycle)+'</td><td>'+escapeHtml(r.fees)+'</td></tr>').join('')+'</table><h2>Calendrier</h2><table><tr><th>#</th><th>Date</th></tr>'+kit.calendar.map(x=>'<tr><td>'+x.index+'</td><td>'+escapeHtml(x.date)+'</td></tr>').join('')+'</table>'+section('Risques / points à compléter',kit.risks.length?kit.risks:['Aucun point bloquant détecté par le kit ; relire néanmoins le RI et la simulation.'])+'<h2>Message d\'invitation</h2><pre>'+escapeHtml(kit.invitation)+'</pre><h2>Modèle de PV</h2><pre>'+escapeHtml(kit.minutes)+'</pre>'+section('Guide première réunion',['Vérifier la liste des membres et les rôles.','Présenter les rubriques et confirmer qui participe à quoi.','Relire frais, calendrier, retards, prêts et règles de correction.','Faire les saisies dans la feuille canonique puis vérifier les totaux de colonnes.','Rapprocher caisse / Ledger / preuves avant clôture.','Émettre et conserver le PV ; distribuer le résumé aux membres.'])+section('Guide trésorerie',['Ne jamais confondre cotisation, frais externes, honoraires et marge.','Compter la caisse physique avant et après séance.','Conserver la preuve de chaque sortie et identifier le bénéficiaire.','Traiter une correction par remplacement exact, jamais par addition implicite.','Séparer argent privé du gestionnaire et argent collectif.'])+section('Paper Bridge — modèles à préparer',['Feuille mensuelle / feuille de séance membres × rubriques.','Fiches individuelles par membre.','Feuille d’émargement.','Registre Président / Secrétaire / Trésorier / Commissaire aux comptes selon le RI.','Registre prêts / remboursements / intérêts.','Registre assistances / secours.','Cartes ou fiches membres.','PV et dossier des preuves.'])+'<button onclick="print()">Imprimer / Enregistrer en PDF</button>';
     w.document.open();w.document.write(html);w.document.close();
   };
+  const persistStarterKit=async(groupId)=>{
+    if(!lastStarterKit||!groupId)return null;
+    const kit=lastStarterKit;
+    const data={
+      kitVersion:'1.5.1',
+      generatedAt:new Date().toISOString(),
+      family:String(kit.family??''),
+      governance:String(kit.governance??''),
+      members:Number(kit.members??0),
+      sessions:Number(kit.sessions??0),
+      monetaryVolume:Number(kit.monetaryVolume??0),
+      managerFees:Number(kit.managerFees??0),
+      estimatedExternal:Number(kit.estimatedExternal??0),
+      fixedCosts:Number(kit.fixedCosts??0),
+      estimatedMargin:Number(kit.estimatedMargin??0),
+      rubricRowsJson:JSON.stringify(kit.rubricRows??[]),
+      checklistJson:JSON.stringify(kit.checklist??[]),
+      calendarJson:JSON.stringify(kit.calendar??[]),
+      risksJson:JSON.stringify(kit.risks??[]),
+      rulesJson:JSON.stringify(kit.rules??[]),
+      invitation:String(kit.invitation??'').slice(0,12000),
+      minutes:String(kit.minutes??'').slice(0,20000),
+      profileJson:JSON.stringify(kit.profile??{}).slice(0,50000)
+    };
+    const existing=(await app.listWorkspaceRecords('GROUP.STARTER_KIT',groupId).catch(()=>[])).find(x=>x.tags?.includes('starter-kit:canonical'));
+    if(existing)return app.updateWorkspaceRecord(existing.id,{title:'Kit prêt à l’emploi · '+kit.groupName,summary:'Pack opérationnel de démarrage du groupe : règles, checklist, calendrier, Paper Bridge, réunion, trésorerie et risques.',status:'ACTIVE',tags:['starter-kit','starter-kit:canonical','paper-bridge','launch'],data});
+    return app.createWorkspaceRecord({moduleId:'GROUP.STARTER_KIT',groupId,title:'Kit prêt à l’emploi · '+kit.groupName,summary:'Pack opérationnel de démarrage du groupe : règles, checklist, calendrier, Paper Bridge, réunion, trésorerie et risques.',status:'ACTIVE',tags:['starter-kit','starter-kit:canonical','paper-bridge','launch'],data});
+  };
+
   const renderStarterKit=(root,kit)=>{
     const d=document.createElement('details');d.className='panel starter-kit-panel';d.open=true;const sm=document.createElement('summary');sm.append(document.createTextNode('Kit prêt à l’emploi · réellement généré pour ce brouillon'));d.append(sm);
     const intro=document.createElement('p');intro.className='truth-notice';intro.textContent='Le Kit n’est pas un exemple générique : il reprend le cycle, les rubriques, l’effectif, les coûts/frais et les choix de ce brouillon. Il distingue ce qui est nécessaire au fonctionnement, recommandé et librement configurable.';d.append(intro);
@@ -345,5 +374,5 @@ export function mountLaunchStudio({app,getGroups,getRubrics,addRubric,invalidate
   byId('previewConfirmed')?.addEventListener('change',renderPreview);
   for(const p of panels)p.addEventListener('input',()=>{invalidate();if(step===10)renderPreview();});
   refreshGroups();syncOrigin();showStep(1);
-  return{readProfile,refreshGroups,showStep,renderPreview,afterSimulation:()=>{window.__ecoLastProjectReady=true;renderPreview();},invalidateSimulation:()=>{window.__ecoLastProjectReady=false;if(byId('createGroupBtn'))byId('createGroupBtn').disabled=true;}};
+  return{readProfile,refreshGroups,showStep,renderPreview,persistStarterKit,starterKitSnapshot:()=>lastStarterKit?structuredClone(lastStarterKit):null,afterSimulation:()=>{window.__ecoLastProjectReady=true;renderPreview();},invalidateSimulation:()=>{window.__ecoLastProjectReady=false;if(byId('createGroupBtn'))byId('createGroupBtn').disabled=true;}};
 }
