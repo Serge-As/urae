@@ -57,6 +57,48 @@ export function mountBusinessStudioUI({app,notify=()=>{},showError=console.error
     await app.recordBusinessExpense({label:d.label,amount:num(d.amount),category:d.category,currency:'XAF'});notify('Dépense enregistrée.');await refresh();
   });
 
+  button('Créer un devis',async()=>{
+    const records=await app.businessRecords(),clients=records.filter(x=>x.data.businessKind==='CLIENT'&&x.data.clientState!=='CLOSED');if(!clients.length)throw new Error('Créez d’abord un prospect / client.');
+    const client=selectField('Client','clientId',clients.map(x=>[x.id,x.title])),title=field('Objet du devis','text','title'),label=field('Ligne / service','text','itemLabel'),qty=field('Quantité','number','quantity','1'),unit=field('Prix unitaire','number','unitPrice'),valid=field('Valable jusqu’au','date','validUntil');
+    const d=await dialogForm('Créer un devis',[client,title,label,qty,unit,valid]);if(!d)return;
+    await app.createBusinessQuote({clientId:d.clientId,title:d.title,items:[{label:d.itemLabel,quantity:num(d.quantity)||1,unitPrice:num(d.unitPrice)}],currency:'XAF',validUntil:d.validUntil||undefined});notify('Devis créé. Il reste à l’envoyer puis à enregistrer la décision du client.');await refresh();
+  });
+
+  button('Créer un contrat',async()=>{
+    const records=await app.businessRecords(),clients=records.filter(x=>x.data.businessKind==='CLIENT'&&x.data.clientState!=='CLOSED'),quotes=records.filter(x=>x.data.businessKind==='QUOTE'&&x.data.quoteState==='ACCEPTED');if(!clients.length)throw new Error('CLIENT_REQUIRED');
+    const client=selectField('Client','clientId',clients.map(x=>[x.id,x.title])),quote=selectField('Devis accepté (facultatif)','quoteId',[['','Aucun'],...quotes.map(x=>[x.id,x.title])]),title=field('Titre du contrat','text','title'),start=field('Début','date','startsAt'),end=field('Fin facultative','date','endsAt'),scope=field('Périmètre / livrables','text','scope');
+    const d=await dialogForm('Créer un contrat',[client,quote,title,start,end,scope]);if(!d)return;
+    await app.createBusinessContract({clientId:d.clientId,quoteId:d.quoteId||undefined,title:d.title,startsAt:d.startsAt,endsAt:d.endsAt||undefined,scope:d.scope});notify('Contrat enregistré.');await refresh();
+  });
+
+  button('Émettre une facture',async()=>{
+    const records=await app.businessRecords(),clients=records.filter(x=>x.data.businessKind==='CLIENT'&&x.data.clientState!=='CLOSED'),contracts=records.filter(x=>x.data.businessKind==='CONTRACT'&&x.data.contractState==='ACTIVE');if(!clients.length)throw new Error('CLIENT_REQUIRED');
+    const client=selectField('Client','clientId',clients.map(x=>[x.id,x.title])),contract=selectField('Contrat (facultatif)','contractId',[['','Aucun'],...contracts.map(x=>[x.id,x.title])]),amount=field('Montant','number','amount'),due=field('Échéance','date','dueAt');
+    const d=await dialogForm('Émettre une facture',[client,contract,amount,due]);if(!d)return;
+    await app.issueBusinessInvoice({clientId:d.clientId,contractId:d.contractId||undefined,amount:num(d.amount),currency:'XAF',dueAt:new Date(String(d.dueAt)+'T12:00:00').toISOString()});notify('Facture émise et suivie dans Business Studio.');await refresh();
+  });
+
+  button('Encaisser une facture',async()=>{
+    const records=await app.businessRecords(),invoices=records.filter(x=>x.data.businessKind==='INVOICE'&&Number(x.data.receivedAmount||0)<Number(x.data.amount||0));if(!invoices.length)throw new Error('Aucune facture ouverte.');
+    const invoice=selectField('Facture','invoiceId',invoices.map(x=>[x.id,x.title+' · reste '+money(Number(x.data.amount||0)-Number(x.data.receivedAmount||0))])),amount=field('Montant reçu','number','amount'),method=selectField('Mode','method',[['CASH','Espèces'],['MOMO','Mobile Money'],['OM','Orange Money'],['BANK','Banque'],['OTHER','Autre']]),ref=field('Référence','text','reference');
+    const d=await dialogForm('Encaisser une facture',[invoice,amount,method,ref]);if(!d)return;
+    await app.recordBusinessPayment({invoiceId:d.invoiceId,amount:num(d.amount),method:d.method,reference:d.reference||undefined});notify('Paiement enregistré.');await refresh();
+  });
+
+  button('Saisir mon temps',async()=>{
+    const records=await app.businessRecords(),clients=records.filter(x=>x.data.businessKind==='CLIENT'&&x.data.clientState!=='CLOSED'),mandates=records.filter(x=>x.data.businessKind==='MANDATE'&&x.data.mandateState==='ACTIVE');
+    const client=selectField('Client (facultatif)','clientId',[['','Aucun'],...clients.map(x=>[x.id,x.title])]),mandate=selectField('Mandat (facultatif)','mandateId',[['','Aucun'],...mandates.map(x=>[x.id,x.title])]),minutes=field('Minutes travaillées','number','minutes'),date=field('Date','date','workDate'),note=field('Travail effectué','text','note');
+    const d=await dialogForm('Saisir le temps de travail',[client,mandate,minutes,date,note]);if(!d)return;
+    await app.recordBusinessTime({clientId:d.clientId||undefined,mandateId:d.mandateId||undefined,minutes:num(d.minutes),workDate:new Date(String(d.workDate)+'T12:00:00').toISOString(),note:d.note||undefined});notify('Temps de travail enregistré.');await refresh();
+  });
+
+  button('Importer un honoraire validé du groupe',async()=>{
+    const groupId=app.activeGroup();if(!groupId)throw new Error('ACTIVE_GROUP_REQUIRED');const ledger=await app.ledger(),entries=(ledger.entries??[]).filter(x=>x.status!=='reversed');if(!entries.length)throw new Error('Aucune écriture Ledger disponible à référencer.');
+    const entry=selectField('Écriture collective de référence','collectiveLedgerEntryId',entries.slice(-100).reverse().map(x=>[x.id,String(x.memo??x.kind??'Écriture')+' · '+String(x.id).slice(-8)])),label=field('Libellé de la recette privée autorisée','text','label'),amount=field('Montant autorisé','number','amount'),source=selectField('Nature','source',[['MANAGEMENT_FEE','Frais de gestion'],['HONORARIUM','Honoraires'],['COMMISSION','Commission'],['OTHER','Autre']]);
+    const d=await dialogForm('Importer une recette autorisée depuis le groupe',[entry,label,amount,source]);if(!d)return;
+    await app.recordBusinessRevenue({label:d.label,amount:num(d.amount),source:d.source,currency:'XAF',groupId,collectiveLedgerEntryId:d.collectiveLedgerEntryId,reference:'Import Ledger collectif autorisé'});notify('Recette privée référencée au Ledger collectif sans modifier ses écritures.');await refresh();
+  });
+
   button('Plan de rentabilité complet',async()=>{
     const fs=[
       field('Nom du scénario','text','name'),field('Cotisation nominale par membre/séance','number','nominalContribution'),field('Frais ajoutés par membre/séance','number','addedFeePerMemberSession'),
@@ -116,7 +158,7 @@ export function mountBusinessStudioUI({app,notify=()=>{},showError=console.error
         const c=el('article',undefined,'item'),kind=String(r.data.businessKind??'DOSSIER');c.append(el('strong',r.title),el('span',kind+' · '+String(r.status),'pill'));
         if(kind==='MANDATE'){c.append(el('p','État : '+String(r.data.mandateState??'DRAFT')+' · honoraires '+money(r.data.feeAmount),'hint'));if(r.data.mandateState==='DRAFT'){const b=el('button','Activer le mandat','secondary');b.type='button';b.onclick=()=>void app.activateBusinessMandate(r.id).then(()=>{notify('Mandat activé.');return refresh();}).catch(showError);c.append(b);}}
         if(kind==='CLIENT')c.append(el('p','Relation : '+String(r.data.clientState??'PROSPECT'),'hint'));
-        if(kind==='QUOTE')c.append(el('p','Devis : '+money(r.data.total)+' · '+String(r.data.quoteState),'hint'));
+        if(kind==='QUOTE'){c.append(el('p','Devis : '+money(r.data.total)+' · '+String(r.data.quoteState),'hint'));if(r.data.quoteState==='DRAFT'){const sent=el('button','Marquer envoyé','secondary');sent.type='button';sent.onclick=()=>void app.decideBusinessQuote(r.id,'SENT').then(refresh).catch(showError);c.append(sent);}if(['DRAFT','SENT'].includes(String(r.data.quoteState))){const accept=el('button','Accepté','primary'),reject=el('button','Refusé','link-btn');accept.type=reject.type='button';accept.onclick=()=>void app.decideBusinessQuote(r.id,'ACCEPTED').then(refresh).catch(showError);reject.onclick=()=>void app.decideBusinessQuote(r.id,'REJECTED').then(refresh).catch(showError);c.append(accept,reject);}}
         if(kind==='INVOICE')c.append(el('p','Facture : '+money(r.data.amount)+' · reçu '+money(r.data.receivedAmount)+' · '+String(r.data.invoiceState),'hint'));
         if(kind==='EXPENSE')c.append(el('p','Coût : '+money(r.data.amount)+' · '+String(r.data.category),'hint'));
         if(kind==='REVENUE')c.append(el('p','Recette privée : '+money(r.data.amount)+' · '+String(r.data.source),'hint'));
