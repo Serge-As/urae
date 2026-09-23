@@ -479,12 +479,17 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
     if(academyLesson&&request.method==='POST'){const body=await readJson<any>(request);return json(await knowledgeAcademy.submitLesson(academyLesson[1]!,body),200,cors);}
 
     if(request.method==='GET'&&url.pathname==='/api/v1/growth/referrals')return json(await growthReferral.dashboard(),200,cors);
-    if(request.method==='POST'&&url.pathname==='/api/v1/growth/referral-campaigns'){const body=await readJson<any>(request);return json(await growthReferral.createCampaign(body),201,cors);}
+    if(request.method==='POST'&&url.pathname==='/api/v1/growth/referral-campaigns'){
+      const body=await readJson<any>(request);
+      return json(await growthReferral.createCampaign({...body,eligibleConversionKinds:strArray(body.eligibleConversionKinds) as any}),201,cors);
+    }
     const referralCampaign=url.pathname.match(/^\/api\/v1\/growth\/referral-campaigns\/([^/]+)\/state$/);
     if(referralCampaign&&request.method==='POST'){const body=await readJson<any>(request);return json(await growthReferral.setCampaignState(referralCampaign[1]!,String(body.state??'ACTIVE') as any),200,cors);}
     if(request.method==='POST'&&url.pathname==='/api/v1/growth/referral-shares'){const body=await readJson<any>(request);return json(await growthReferral.createShare(body),201,cors);}
     if(request.method==='POST'&&url.pathname==='/api/v1/growth/referral-landings'){const body=await readJson<any>(request);return json(await growthReferral.registerLanding(String(body.code??'')),201,cors);}
     if(request.method==='POST'&&url.pathname==='/api/v1/growth/referral-conversions'){const body=await readJson<any>(request);return json(await growthReferral.registerConversion(body),201,cors);}
+    const referralVerify=url.pathname.match(/^\/api\/v1\/growth\/referral-campaigns\/([^/]+)\/conversions\/([^/]+)\/verify$/);
+    if(referralVerify&&request.method==='POST'){const body=await readJson<Record<string,unknown>>(request);return json(await growthReferral.verifyConversion(referralVerify[1]!,referralVerify[2]!,{accepted:Boolean(body.accepted),reason:String(body.reason??''),reviewEvidenceRef:body.reviewEvidenceRef?String(body.reviewEvidenceRef):undefined}),200,cors);}
     const referralReward=url.pathname.match(/^\/api\/v1\/growth\/referral-campaigns\/([^/]+)\/rewards\/([^/]+)\/approve$/);
     if(referralReward&&request.method==='POST')return json(await growthReferral.approveReward(referralReward[1]!,referralReward[2]!),200,cors);
 
