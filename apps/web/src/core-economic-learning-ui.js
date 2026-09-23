@@ -1,0 +1,136 @@
+const el=(tag,text,cls)=>{const n=document.createElement(tag);if(text!==undefined)n.textContent=text;if(cls)n.className=cls;return n;};
+const val=(form,name)=>String(new FormData(form).get(name)??'').trim();
+const num=(form,name)=>Number(new FormData(form).get(name)??0);
+const makeForm=(fields,submit)=>{
+  const f=el('form',undefined,'form-grid');
+  for(const spec of fields){
+    const l=el('label',spec.label),i=spec.type==='select'?document.createElement('select'):document.createElement('input');
+    i.name=spec.name;if(spec.type&&spec.type!=='select')i.type=spec.type;if(spec.placeholder)i.placeholder=spec.placeholder;
+    if(spec.required)i.required=true;if(spec.min!==undefined)i.min=String(spec.min);
+    if(spec.options)for(const [v,t] of spec.options){const o=document.createElement('option');o.value=v;o.textContent=t;i.append(o);}
+    l.append(i);f.append(l);
+  }
+  const b=el('button',submit,'primary');b.type='submit';f.append(b);return f;
+};
+const safeDate=v=>{try{return new Date(v).toLocaleDateString('fr-FR')}catch{return String(v??'')}};
+
+export function mountCoreEconomicLearningUI({app,notify=()=>{},showError=console.error,isManager=()=>false}){
+  const marketHub=document.getElementById('marketHub'),guidanceHub=document.getElementById('guidanceHub');
+  if(!marketHub||!guidanceHub)return{refresh:async()=>{}};
+
+  const valuePanel=el('details',undefined,'panel');valuePanel.id='valueNetworkOperational';
+  valuePanel.append(el('summary','Besoins · offres · approvisionnement gouverné'));
+  const valueIntro=el('p','Un besoin vient d’une séance, d’un forum, d’une prévision ou d’une saisie manuelle. Il doit être validé avant publication. Un rapprochement d’offre ne crée jamais de commande ni de dette.','truth-notice');
+  const needForm=makeForm([
+    {label:'Besoin',name:'title',required:true,placeholder:'Ex. 100 cartons de savons'},
+    {label:'Catégorie',name:'category',required:true,placeholder:'savons'},
+    {label:'Quantité',name:'quantity',type:'number',min:1,required:true},
+    {label:'Unité',name:'unit',required:true,placeholder:'carton'},
+    {label:'Localité',name:'locality',placeholder:'Yaoundé'},
+    {label:'Date limite',name:'neededBy',type:'date'}
+  ],'Créer le besoin en brouillon');
+  const needs=el('div',undefined,'stack');valuePanel.append(valueIntro,needForm,needs);
+  marketHub.closest('section')?.insertAdjacentElement('afterend',valuePanel);
+
+  needForm.addEventListener('submit',e=>void(async()=>{e.preventDefault();try{
+    await app.createValueNeed({title:val(needForm,'title'),category:val(needForm,'category'),quantity:num(needForm,'quantity'),unit:val(needForm,'unit'),locality:val(needForm,'locality'),neededBy:val(needForm,'neededBy')||undefined,sourceType:'MANUAL'});
+    needForm.reset();notify('Besoin créé en brouillon.');await renderNeeds();
+  }catch(err){showError(err);}})());
+
+  const renderNeeds=async()=>{
+    needs.replaceChildren();if(!app.activeGroup()){needs.append(el('p','Sélectionnez un groupe pour gérer ses besoins.','hint'));return;}
+    try{
+      const rows=await app.valueNeeds();if(!rows.length)needs.append(el('p','Aucun besoin collectif.','hint'));
+      for(const r of rows){
+        const card=el('article',undefined,'item'),state=String(r.data.state??'DRAFT');
+        card.append(el('strong',r.title),el('span',state,'pill'),el('p',String(r.data.quantity)+' '+String(r.data.unit)+' · '+String(r.data.category)+(r.data.locality?' · '+r.data.locality:''),'hint'));
+        const actions=el('div',undefined,'actions');
+        if(state==='DRAFT'&&isManager()){const b=el('button','Valider','secondary');b.type='button';b.onclick=()=>void app.validateValueNeed(r.id).then(()=>{notify('Besoin validé.');return renderNeeds();}).catch(showError);actions.append(b);}
+        if(['VALIDATED','MATCHED'].includes(state)&&isManager()){const b=el('button','Publier','secondary');b.type='button';b.onclick=()=>void app.publishValueNeed(r.id).then(()=>{notify('Besoin publié.');return renderNeeds();}).catch(showError);actions.append(b);}
+        if(['VALIDATED','PUBLISHED','MATCHED'].includes(state)){
+          const b=el('button','Chercher des offres compatibles','link-btn');b.type='button';b.onclick=()=>void(async()=>{try{
+            const matches=await app.valueNeedMatches(r.id),box=el('div',undefined,'stack');
+            if(!matches.length)box.append(el('p','Aucune offre éligible : quantité, zone, catégorie et validité sont vérifiées avant classement.','hint'));
+            for(const m of matches.slice(0,10)){const row=el('article',undefined,'item');row.append(el('strong',m.offer.title),el('span','score '+Math.round(m.score),'pill'),el('p',String(m.offer.data.availableQuantity)+' '+String(m.offer.data.unit)+' · '+Number(m.offer.data.unitPrice||0).toLocaleString('fr-FR')+' '+String(m.offer.data.currency||'XAF'),'hint'));
+              if(isManager()){const p=el('button','Préparer l’approvisionnement','secondary');p.type='button';p.onclick=()=>void app.prepareValueProcurement(r.id,m.offer.id).then(()=>{notify('Brouillon d’approvisionnement créé. Aucune commande ni dette n’a été créée.');return renderNeeds();}).catch(showError);row.append(p);}box.append(row);}
+            card.append(box);
+          }catch(err){showError(err);}})();actions.append(b);
+        }
+        card.append(actions);needs.append(card);
+      }
+    }catch(err){showError(err);}
+  };
+
+  const referralPanel=el('details',undefined,'panel');referralPanel.id='referralOperational';
+  referralPanel.append(el('summary','Bouche-à-oreille · recommandation directe'));
+  referralPanel.append(el('p','Un partage est volontaire et mesuré comme « lancé ». Il ne devient « reçu », « lead » ou « conversion » qu’après événement distinct. Aucun parrainage multiniveau.','truth-notice'));
+  const referralActions=el('div',undefined,'actions'),referralList=el('div',undefined,'stack');referralPanel.append(referralActions,referralList);
+  guidanceHub.closest('section')?.insertAdjacentElement('beforebegin',referralPanel);
+
+  const shareBtn=el('button','Recommander le groupe actif','primary');shareBtn.type='button';shareBtn.onclick=()=>void(async()=>{try{
+    if(!app.activeGroup())throw new Error('ACTIVE_GROUP_REQUIRED');
+    const share=await app.createReferralShare({targetKind:'GROUP',targetId:app.activeGroup(),channel:navigator.share?'SYSTEM_SHARE':'LINK'});
+    const text='Eco-System · recommandation volontaire\nCode : '+share.code;
+    if(navigator.share){await navigator.share({title:'Recommandation Eco-System',text}).catch(()=>{});}else if(navigator.clipboard){await navigator.clipboard.writeText(text);}
+    notify('Partage enregistré comme lancé. Il n’est pas compté comme reçu.');
+    await renderReferral();
+  }catch(err){showError(err);}})();referralActions.append(shareBtn);
+
+  const campaignBtn=el('button','Créer une campagne bornée','secondary');campaignBtn.type='button';campaignBtn.onclick=()=>void(async()=>{try{
+    if(!app.activeGroup())throw new Error('ACTIVE_GROUP_REQUIRED');
+    const title=prompt('Nom de la campagne :')?.trim();if(!title)return;
+    const budget=Number(prompt('Budget sandbox maximum (XAF) :')??0),reward=Number(prompt('Récompense sandbox par conversion vérifiée :')??0);
+    await app.createReferralCampaign({title,targetKind:'GROUP',targetId:app.activeGroup(),budgetTotal:budget,rewardPerConversion:reward,rewardMode:'SANDBOX_CREDIT'});
+    notify('Campagne créée en brouillon.');await renderReferral();
+  }catch(err){showError(err);}})();referralActions.append(campaignBtn);
+
+  const renderReferral=async()=>{
+    referralList.replaceChildren();try{
+      const d=await app.referralDashboard(),summary=el('article',undefined,'item');
+      summary.append(el('strong','Mesures honnêtes'),el('p',(d.shares?.length??0)+' partage(s) lancé(s) · '+(d.leads?.length??0)+' lead(s) · '+(d.conversions?.length??0)+' conversion(s) vérifiée(s)','hint'));referralList.append(summary);
+      for(const c of d.campaigns??[]){const card=el('article',undefined,'item'),b=c.budget??{};card.append(el('strong',c.record.title),el('span',String(b.state??c.record.data.state),'pill'),el('p','Budget '+Number(b.budgetTotal||0).toLocaleString('fr-FR')+' · réservé '+Number(b.reservedAmount||0).toLocaleString('fr-FR')+' · validé '+Number(b.spentAmount||0).toLocaleString('fr-FR'),'hint'));
+        if(String(b.state)==='DRAFT'){const activate=el('button','Activer','secondary');activate.type='button';activate.onclick=()=>void app.setReferralCampaignState(c.record.id,'ACTIVE').then(renderReferral).catch(showError);card.append(activate);}referralList.append(card);}
+    }catch(err){showError(err);}
+  };
+
+  const knowledgePanel=el('details',undefined,'panel');knowledgePanel.id='knowledgeOperational';
+  knowledgePanel.append(el('summary','Knowledge Bank · Encyclopédie fonctionnelle · Founder AI'));
+  const search=makeForm([{label:'Rechercher',name:'q',placeholder:'prêt, ONG, papier, publicité…'}],'Rechercher');
+  const kResults=el('div',undefined,'stack');knowledgePanel.append(el('p','La Knowledge Bank versionne les observations, règles validées, cas et sources. L’IA peut expliquer et proposer, jamais activer une règle ni écrire dans le Ledger.','truth-notice'),search,kResults);
+  guidanceHub.closest('section')?.insertAdjacentElement('afterend',knowledgePanel);
+  search.addEventListener('submit',e=>void(async()=>{e.preventDefault();try{
+    const q=val(search,'q'),[knowledge,ency,ctx]=await Promise.all([app.searchKnowledge(q,app.activeGroup()||undefined),app.encyclopedia(q),app.founderAiContext(q)]);
+    kResults.replaceChildren();
+    const cap=el('article',undefined,'item');cap.append(el('strong','Encyclopédie · '+ency.length+' capacité(s)'),el('p','Founder AI : '+(ctx.guardrails?.canWriteLedger?'écriture autorisée':'aucune écriture Ledger')+' · '+(ctx.guardrails?.canActivateRules?'activation règles autorisée':'aucune activation autonome'),'hint'));kResults.append(cap);
+    for(const x of ency.slice(0,15)){const c=el('article',undefined,'item');c.append(el('strong',x.labelFr+' · '+x.id),el('span',String(x.truth),'pill'),el('p','Owner/dépendances : '+(x.canonicalDependencies??[]).join(', '),'hint'));kResults.append(c);}
+    for(const x of knowledge.slice(0,10)){const c=el('article',undefined,'item');c.append(el('strong',x.title),el('span',String(x.data.knowledgeState??x.status),'pill'),el('p',String(x.data.body??'').slice(0,500),'hint'));kResults.append(c);}
+  }catch(err){showError(err);}})());
+
+  const addKnowledge=el('button','Ajouter une connaissance','secondary');addKnowledge.type='button';addKnowledge.onclick=()=>void(async()=>{try{
+    const title=prompt('Titre :')?.trim(),body=prompt('Contenu / règle / observation :')?.trim();if(!title||!body)return;
+    await app.createKnowledge({title,body,kind:'OBSERVATION',groupId:app.activeGroup()||undefined,tags:[]});notify('Connaissance créée en brouillon et à valider.');
+  }catch(err){showError(err);}})();knowledgePanel.append(addKnowledge);
+
+  const academyPanel=el('details',undefined,'panel');academyPanel.id='academyOperational';
+  academyPanel.append(el('summary','Academy · apprendre → prouver → exercer'));
+  academyPanel.append(el('p','Une attestation prouve un parcours. Elle ne donne jamais automatiquement un rôle de président, trésorier, gestionnaire ou un droit financier.','truth-notice'));
+  const academyList=el('div',undefined,'stack'),academyActions=el('div',undefined,'actions');academyPanel.append(academyActions,academyList);knowledgePanel.insertAdjacentElement('afterend',academyPanel);
+
+  const courseBtn=el('button','Créer un parcours','secondary');courseBtn.type='button';courseBtn.onclick=()=>void(async()=>{try{
+    const title=prompt('Titre du parcours :')?.trim(),audience=prompt('Public : ex. Trésoriers débutants')?.trim(),lesson=prompt('Première leçon / objectif :')?.trim();if(!title||!lesson)return;
+    await app.createAcademyCourse({title,audience:audience||'Tous',description:'Parcours créé dans Eco-System.',lessons:[{id:'lesson-1',title:lesson,objective:lesson}],requiredEvidenceCount:0});notify('Parcours Academy créé.');await renderAcademy();
+  }catch(err){showError(err);}})();academyActions.append(courseBtn);
+
+  const renderAcademy=async()=>{academyList.replaceChildren();try{
+    const d=await app.academy();if(!(d.courses?.length))academyList.append(el('p','Aucun parcours publié.','hint'));
+    for(const c of d.courses??[]){const card=el('article',undefined,'item');card.append(el('strong',c.title),el('p',String(c.data.audience??'Tous'),'hint'));const enrolled=(d.myEnrollments??[]).some(x=>String(x.data.courseId)===c.id);if(!enrolled){const b=el('button','M’inscrire','primary');b.type='button';b.onclick=()=>void app.enrollAcademy(c.id).then(()=>{notify('Inscription enregistrée.');return renderAcademy();}).catch(showError);card.append(b);}academyList.append(card);}
+    for(const cert of d.myCertificates??[]){const c=el('article',undefined,'item');c.append(el('strong',cert.title),el('span','Attestation','pill'),el('p','Aucun pouvoir financier ou administratif automatique.','hint'));academyList.append(c);}
+  }catch(err){showError(err);}};
+
+  const refresh=async()=>{await Promise.allSettled([renderNeeds(),renderReferral(),renderAcademy()]);};
+  valuePanel.addEventListener('toggle',()=>{if(valuePanel.open)void renderNeeds();});
+  referralPanel.addEventListener('toggle',()=>{if(referralPanel.open)void renderReferral();});
+  academyPanel.addEventListener('toggle',()=>{if(academyPanel.open)void renderAcademy();});
+  document.addEventListener('eco:group-context-changed',()=>void refresh());
+  return{refresh};
+}
