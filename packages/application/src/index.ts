@@ -2,7 +2,7 @@ import type {LaunchRubricPlan, GroupProjectLaunchProfile} from '../../contracts/
 import { PlatformKernel, type DeviceCapabilities } from '../../platform-kernel/src/index.js';
 import { InMemoryPlatformRepository } from '../../repositories/src/index.js';
 import { FoundationService, GroupLaunchSimulator, starterGroupOperatingPolicy } from '../../domain/src/index.js';
-import { IndexedDbLocalAuthAdapter, IndexedDbOutboxAdapter, IndexedDbReadSnapshotAdapter, Outbox, type LocalAccountRecord } from '../../offline/src/index.js';
+import { IndexedDbIdentityMigrationJournal, IndexedDbLocalAuthAdapter, IndexedDbOutboxAdapter, IndexedDbReadSnapshotAdapter, Outbox, type LocalAccountRecord } from '../../offline/src/index.js';
 import { LoopbackRelayTransport, envelopeForOutbox } from '../../relay/src/index.js';
 import { PRODUCT_MODULES } from '../../module-registry/src/index.js';
 import { makeId, type CashboxReconciliationRecord, type CashboxSnapshot, type CaseRecord, type ContributionReceipt, type EvidenceRecord, type FeasibilityResult, type Group, type LedgerEntry, type LedgerSummary, type MeetingSession, type Membership, type MembershipView, type OutboxItem, type GroupOperatingPolicy, type RubricDefinition, type RubricOperatingModel, type RubricCyclePreview, type GroupDiscoveryMatch, type PublicGroupListing, type MembershipApplication, type WorkspaceRecord, type WorkspaceStatus } from '../../contracts/src/index.js';
@@ -61,6 +61,7 @@ export class ConnectedApplication {
   private readonly outboxStorage = new IndexedDbOutboxAdapter();
   private readonly readSnapshots = new IndexedDbReadSnapshotAdapter();
   private readonly localAuth = new IndexedDbLocalAuthAdapter();
+  private readonly identityMigration = new IndexedDbIdentityMigrationJournal();
   private usingOfflineSnapshot=false;
   private actorId:string; private tenantId:string; private displayName:string; private locale:string; private activeGroupId?:string;
   private readonly baseUrl:string;
@@ -255,13 +256,21 @@ export class ConnectedApplication {
     }
     if(!server.authenticated||!server.account)throw Error('AUTHENTICATION_REQUIRED');
     const oldActor=local.id,oldTenant=local.tenantId,next=server.account;
-    await this.readSnapshots.migrateIdentity(oldActor,oldTenant,next.id,next.tenantId);
-    const migrated=await this.outboxStorage.migrateIdentity(oldActor,oldTenant,next.id,next.tenantId);
-    await this.localAuth.markClaimed(local.id,{id:next.id,tenantId:next.tenantId});
-    this.actorId=next.id;this.homeTenantId=next.tenantId;this.tenantId=next.tenantId;this.displayName=next.displayName;this.locale=next.locale;this.usingOfflineSnapshot=false;
-    this.outbox.restore(migrated);await this.saveCached('/api/v1/auth/session',{authenticated:true,account:next,local:true,registrationState:'SERVER_CLAIMED'});
-    const syncedRows=await this.syncOutbox(),pending=syncedRows.filter(x=>x.status!=='CONFIRMED').length;
-    return{account:next,synced:syncedRows.length-pending,pending};
+    let journal=await this.identityMigration.begin({oldActorId:oldActor,oldTenantId:oldTenant,newActorId:next.id,newTenantId:next.tenantId});
+    const done=(step:string)=>journal.steps.includes(step as any);
+    try{
+      if(!done('SNAPSHOTS_MIGRATED')){await this.readSnapshots.migrateIdentity(oldActor,oldTenant,next.id,next.tenantId);journal=await this.identityMigration.mark(oldActor,oldTenant,'SNAPSHOTS_MIGRATED');}
+      let migrated=await this.outboxStorage.load();
+      if(!done('OUTBOX_MIGRATED')){migrated=await this.outboxStorage.migrateIdentity(oldActor,oldTenant,next.id,next.tenantId);journal=await this.identityMigration.mark(oldActor,oldTenant,'OUTBOX_MIGRATED');}
+      else migrated=migrated.filter(x=>x.actorId===next.id&&x.tenantId===next.tenantId);
+      if(!done('LOCAL_ACCOUNT_BOUND')){await this.localAuth.markClaimed(local.id,{id:next.id,tenantId:next.tenantId});journal=await this.identityMigration.mark(oldActor,oldTenant,'LOCAL_ACCOUNT_BOUND');}
+      this.actorId=next.id;this.homeTenantId=next.tenantId;this.tenantId=next.tenantId;this.displayName=next.displayName;this.locale=next.locale;this.usingOfflineSnapshot=false;
+      this.outbox.restore(migrated);await this.saveCached('/api/v1/auth/session',{authenticated:true,account:next,local:true,registrationState:'SERVER_CLAIMED'});
+      if(!done('SESSION_ADOPTED'))journal=await this.identityMigration.mark(oldActor,oldTenant,'SESSION_ADOPTED');
+      const syncedRows=await this.syncOutbox(),pending=syncedRows.filter(x=>x.status!=='CONFIRMED').length;
+      await this.identityMigration.mark(oldActor,oldTenant,'COMPLETED');
+      return{account:next,synced:syncedRows.length-pending,pending};
+    }catch(error){await this.identityMigration.fail(oldActor,oldTenant,error).catch(()=>{});throw error;}
   }
   async localAccountInfo():Promise<{username:string;displayName:string;registrationState:string}|undefined>{const local=await this.localAuth.current();return local?{username:local.username,displayName:local.displayName,registrationState:local.registrationState}:undefined;}
   async logout():Promise<void>{
