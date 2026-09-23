@@ -444,7 +444,9 @@ const makeFinancialEntryCell=({member,rubric,meetingId,editable=true})=>{
         const result=await app.setFinancialCellTarget({meetingId,membershipId:member.id,rubricId:rubric.id,targetAmount:target,currentAmount:current,currentVersion:exactCellVersion(member.id,rubric.id,meetingId),reason:reason.trim()});
         if(result?.status==='CONSENSUS_REQUIRED'){holder.classList.add('pending-consensus');toast(tx('Modification proposée : la valeur reste inchangée jusqu’à la décision des gestionnaires.','Change proposed: the value remains unchanged until managers decide.'));}
         else if(result?.status==='QUEUED_CONSENSUS'||result?.queued)toast(tx('Modification conservée hors ligne pour confrontation à la reconnexion.','Change saved offline for reconciliation when reconnected.'));
-        else toast(tx('Valeur enregistrée.','Value saved.'));
+        else if(result?.selfBenefit)toast(tx('⚠ Correction de votre propre situation : ancienne valeur, contrepassation et nouvelle valeur sont tracées. Un autre responsable habilité doit la vérifier.','⚠ Correction of your own situation: previous value, reversal and new value are traced. Another authorized manager must review it.'));
+        else if(result?.requiresIndependentReview)toast(tx('Correction enregistrée avec ancienne valeur, contrepassation et nouvelle valeur. Un autre responsable habilité doit la vérifier avant validation institutionnelle.','Correction recorded with previous value, reversal and new value. Another authorized manager must review it before institutional confirmation.'));
+        else toast(tx('Valeur enregistrée avec traçabilité de la valeur cible.','Target value saved with an audit trail.'));
         input.value='';await renderLedger();window.dispatchEvent(new CustomEvent('eco:financial-data-changed',{detail:{meetingId,membershipId:member.id,rubricId:rubric.id}}));await sessionsUI.refresh?.();renderIndividualSheetMatrix();
       }catch(e){fail(e);}finally{validate.disabled=false;input.disabled=false;}
     });
@@ -458,7 +460,10 @@ const ensureMatrixMeeting=()=>{
     matrixMeetingId=meetings.find(x=>x.status==='open')?.id??meetings.filter(x=>x.status!=='cancelled').at(-1)?.id??'';
     return matrixMeetingId;
 };
-const activeFinancialRubrics=()=>rubrics.filter(x=>x.status!=='ARCHIVED');
+const normalizeFinancialLabel=value=>String(value??'').normalize('NFKD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim();
+const hasCanonicalLoanStamp=()=>rubrics.some(r=>r.status!=='ARCHIVED'&&normalizeFinancialLabel(r.name)==='timbre de pret');
+const isLegacyStampDuplicate=r=>hasCanonicalLoanStamp()&&normalizeFinancialLabel(r?.name)==='timbre';
+const activeFinancialRubrics=()=>rubrics.filter(x=>x.status!=='ARCHIVED'&&!isLegacyStampDuplicate(x));
 const activeFinancialMembers=()=>members.filter(x=>x.status!=='left');
 const canonicalFinancialObservers=new WeakMap();
 const protectCanonicalFinancialHost=root=>{
@@ -1386,12 +1391,13 @@ async function ensureCurrentServiceWorker(){
 }
 
 async function start() {
+    document.body.classList.add('auth-restoring');
     renderConnectivity();
     renderKernel();
     try {
         const session=await app.authStatus();
         if(!session.authenticated||!session.account){showAuth(session.offline?tx('Aucun compte local n’existe encore. Créez votre compte maintenant : Internet n’est pas nécessaire.','No local account exists yet. Create your account now: Internet is not required.'):undefined,session.offline?'register':undefined);return;}
-        $('#authScreen').hidden=true;document.body.classList.remove('signed-out');
+        $('#authScreen').hidden=true;document.body.classList.remove('signed-out','auth-restoring');
         $('#accountName').textContent=session.account.displayName+(session.registrationState==='LOCAL_PENDING_REGISTRATION'?tx(' · local',' · local'):'');
         const claim=document.querySelector('#claimLocalAccountBtn');
         if(claim){
@@ -1453,14 +1459,14 @@ const setAuthMode=mode=>{
     $('#authSubmit').textContent=authMode==='register'?'Créer mon compte hors ligne ou en ligne':'Me connecter';
     $('#authPassword').autocomplete=authMode==='register'?'new-password':'current-password';
 };
-function showAuth(message='',preferredMode){document.body.classList.add('signed-out');$('#authScreen').hidden=false;if(preferredMode)setAuthMode(preferredMode);if(message)$('#authError').textContent=message;$('#authUsername').focus();}
+function showAuth(message='',preferredMode){document.body.classList.remove('auth-restoring');document.body.classList.add('signed-out');$('#authScreen').hidden=false;if(preferredMode)setAuthMode(preferredMode);if(message)$('#authError').textContent=message;$('#authUsername').focus();}
 document.querySelectorAll('[data-auth-mode]').forEach(button=>button.addEventListener('click',()=>setAuthMode(button.dataset.authMode)));
 document.querySelector('#authShowPassword')?.addEventListener('change',event=>{const input=document.querySelector('#authPassword');if(input)input.type=event.target.checked?'text':'password';});
 
 $('#authForm').addEventListener('submit',async event=>{
     event.preventDefault();const button=$('#authSubmit');button.disabled=true;$('#authError').textContent='';
     try{
-        await app.authenticate(authMode,{username:val('authUsername'),password:document.getElementById('authPassword').value,displayName:val('authName')});
+        await app.authenticate(authMode,{username:val('authUsername'),password:document.getElementById('authPassword').value,displayName:val('authName'),rememberDevice:Boolean(document.getElementById('authRememberDevice')?.checked)});
         $('#authPassword').value='';clearFail();await start();
         if(!navigator.onLine&&authMode==='register')toast(tx('Compte créé sur ce téléphone. Vous pouvez commencer sans Internet.','Account created on this phone. You can start without Internet.'));
     }
