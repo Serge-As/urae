@@ -89,6 +89,11 @@
     </nav>
 
     <main class="content">
+      <section id="pageContextBar" class="page-context-bar" aria-label="Contexte de la page">
+        <div class="page-context-main"><span id="pageContextView" class="eyebrow">Accueil</span><strong id="pageContextGroup">Aucun groupe actif</strong><small id="pageContextExercise">Contexte général</small></div>
+        <div class="page-context-live"><span id="pageContextMeeting" class="pill">Aucune séance ouverte</span><span id="pageContextDebt" class="pill">Dette : —</span></div>
+        <div class="page-context-actions"><button id="pageContextHomeBtn" type="button" class="ghost">⌂ Accueil</button><button id="pageContextAlertsBtn" type="button" class="ghost">⚑ Alertes</button></div>
+      </section>
       <section id="view-dashboard" class="view active">
         <section id="uiModePanel" class="ui-mode-panel" aria-labelledby="uiModeTitle">
           <div class="ui-mode-copy"><span class="eyebrow">Confort d’utilisation</span><h2 id="uiModeTitle">Choisissez votre mode</h2><p id="uiModeHelp">Présentation moderne et visuelle, densité normale et accès rapides.</p></div>
@@ -105,6 +110,19 @@
               <button type="button" data-ui-mode-button="assisted" aria-pressed="false">🎙️ Assisté</button>
             </div>
             <button id="openAssistedModeBtn" type="button" class="secondary">Ouvrir la dictée financière</button>
+          </div>
+        </section>
+        <section id="advancedServicesHome" class="advanced-services-home">
+          <div class="panel-head"><div><span class="eyebrow">Eco-System complet</span><h2>Outils avancés déjà opérationnels</h2><p>Accès direct aux moteurs spécialisés. Un bouton n’ouvre pas un doublon : il vous conduit vers le propriétaire canonique de la fonction.</p></div><button type="button" class="link-btn" data-go="services">Voir les 158 capacités</button></div>
+          <div class="advanced-services-grid">
+            <button class="quick" data-go="ecosystem" data-anchor="businessStudioOperational"><b>Business Studio</b><span>Clients · devis · commandes · factures · marge · temps</span></button>
+            <button class="quick" data-go="ecosystem" data-anchor="valueNetworkOperational"><b>Matching besoins / offres</b><span>Besoins validés · offres · approvisionnement</span></button>
+            <button class="quick" data-go="ecosystem" data-anchor="marketEnginePanel"><b>Boutique & fournisseurs</b><span>Stock · commandes · achats · crédit fournisseur</span></button>
+            <button class="quick" data-go="ecosystem" data-anchor="referralOperational"><b>Bouche-à-oreille</b><span>Partage direct · campagnes bornées · conversions vérifiées</span></button>
+            <button class="quick" data-go="ecosystem" data-anchor="knowledgeOperational"><b>Knowledge Bank</b><span>Mémoire versionnée · sources · validation humaine</span></button>
+            <button class="quick" data-go="ecosystem" data-anchor="academyOperational"><b>Academy</b><span>Apprendre · prouver · attestation sans pouvoir automatique</span></button>
+            <button class="quick" data-go="ecosystem" data-anchor="externalProgramsPanel"><b>ONG & programmes</b><span>Accompagnement traçable · données agrégées seulement</span></button>
+            <button class="quick" data-go="control"><b>Control Center</b><span>Capacités · incidents · supervision · preuves</span></button>
           </div>
         </section>
         <div class="cahier-banner"><div><strong>Votre cockpit Eco-System</strong><p>Groupes, communautés, séances, situation personnelle, activités Live et actions utiles dans un seul espace.</p></div><span class="cahier-code">1.5.2.1 · UX UNIFIÉE · TABLEAUX CANONIQUES · KIT · BUSINESS · BLUEPRINT 5.0.0</span></div>
@@ -1139,7 +1157,7 @@
         <div class="page-head"><div><span class="eyebrow">Transversal</span><h1>Inbox · Support · Offline</h1><p>Une interdiction raisonnable doit proposer une voie d'autorisation, de recours ou de régularisation lorsque c'est possible.</p></div></div>
         <div class="two-col">
           <section class="panel"><h2>Boîte universelle</h2><ul id="inboxList" class="list"></ul></section>
-          <section class="panel" id="notificationCenterPanel"><div class="panel-head"><div><h2>Centre d’alertes</h2><p id="notificationCenterMeta">Notifications du groupe actif, triées par priorité et fraîcheur.</p></div><button id="notificationCenterRefreshBtn" type="button" class="secondary">Actualiser</button></div><div id="notificationCenterList" class="stack"></div></section>
+          <section class="panel" id="notificationCenterPanel"><div class="panel-head"><div><h2>Centre d’alertes</h2><p id="notificationCenterMeta">Notifications du groupe actif, triées par priorité et fraîcheur.</p></div><div class="actions"><button id="notificationCenterPrevBtn" type="button" class="ghost">← Précédentes</button><button id="notificationCenterNextBtn" type="button" class="ghost">Suivantes →</button><button id="notificationCenterRefreshBtn" type="button" class="secondary">Actualiser</button></div></div><div class="notification-center-filters"><label>Filtrer <select id="notificationCenterPriority"><option value="ALL">Toutes priorités</option><option value="CRITICAL">Critiques</option><option value="HIGH">Importantes</option><option value="NORMAL">Normales</option><option value="LOW">Faibles</option></select></label><label>Rechercher <input id="notificationCenterSearch" type="search" placeholder="Titre, message…"></label></div><div id="notificationCenterList" class="stack"></div></section>
           <section class="panel"><h2>Support / litige / recours</h2><form id="supportForm"><textarea id="supportSummary" rows="4" required placeholder="Décrivez la situation…"></textarea><button class="primary">Ouvrir un dossier</button></form><p id="caseLog" class="hint"></p></section>
         </div>
         <section class="panel"><h2>File offline</h2><div class="actions"><button id="queueBtn">Ajouter une note de test</button><button id="syncBtn" class="primary">Synchroniser</button></div><ul id="outboxList" class="list"></ul></section>
