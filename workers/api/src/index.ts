@@ -207,6 +207,9 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
     const actor=await actorLabel();
     return notifications.publish(groupId,{title:input.title,message:`${input.message} · Auteur : ${actor}`,channels:['IN_APP','WEB_PUSH'],audience:'MANAGERS',priority:input.priority??'HIGH',action:input.action});
   };
+  const publishValueMarketEvent=async(groupId:string,event:string,recordId:string,state?:string)=>{
+    try{await publishLive(groupId,'COMMUNITY_EVENT','value-market:'+event+':'+recordId+':'+Date.now(),{domain:'VALUE_MARKET',event,recordId,state:state??''});}catch{}
+  };
   const financialCellState=async(groupId:string,meetingId:string,membershipId:string,rubricId:string)=>{
     const rows=(await ledger.receiptPositions(ctx.tenantId,groupId)).filter(x=>x.meetingId===meetingId&&x.membershipId===membershipId&&x.rubricId===rubricId&&x.netAmount!==0);
     const revision=await repo.getFinancialCellRevision(ctx.tenantId,groupId,meetingId,membershipId,rubricId,'XAF');
@@ -1617,6 +1620,8 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
     }
     const flashOfferClose=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/market\/flash-offers\/([^/]+)\/close$/);
     if(flashOfferClose&&request.method==='POST'){const body=await readJson<any>(request);return json(await market.closeFlashOffer(flashOfferClose[1]!,flashOfferClose[2]!,String(body.reason??'')),200,cors);}
+    const flashOfferClaim=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/market\/flash-offers\/([^/]+)\/claim$/);
+    if(flashOfferClaim&&request.method==='POST'){const body=await readJson<any>(request),result=await market.claimFlashOffer(flashOfferClaim[1]!,flashOfferClaim[2]!,String(body.membershipId??''),finite(body.quantity));await publishValueMarketEvent(flashOfferClaim[1]!,'FLASH_CLAIMED',flashOfferClaim[2]!,String(result.offer?.data?.state??''));return json(result,201,cors);}
 
     const marketRequests=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/market\/requests$/);
     if(marketRequests&&request.method==='GET')return json(await market.marketRequests(marketRequests[1]!),200,cors);
@@ -1645,6 +1650,8 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
     if(marketResponseShortlist&&request.method==='POST')return json(await market.shortlistMarketResponse(marketResponseShortlist[1]!,marketResponseShortlist[2]!),200,cors);
     const marketResponseSelect=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/market\/responses\/([^/]+)\/select$/);
     if(marketResponseSelect&&request.method==='POST')return json(await market.selectMarketResponse(marketResponseSelect[1]!,marketResponseSelect[2]!),200,cors);
+    const marketRequestProcurement=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/market\/requests\/([^/]+)\/procurement$/);
+    if(marketRequestProcurement&&request.method==='POST'){const p=await market.materializeMarketRequestProcurement(marketRequestProcurement[1]!,marketRequestProcurement[2]!);await publishValueMarketEvent(marketRequestProcurement[1]!,'REQUEST_FULFILLMENT',marketRequestProcurement[2]!,'FULFILLMENT');return json(p,201,cors);}
     const marketRequestTransition=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/market\/requests\/([^/]+)\/transition$/);
     if(marketRequestTransition&&request.method==='POST'){const body=await readJson<any>(request);return json(await market.transitionMarketRequest(marketRequestTransition[1]!,marketRequestTransition[2]!,String(body.to??'') as any,String(body.note??'')),200,cors);}
 
@@ -1665,7 +1672,7 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
       }),201,cors);
     }
     const dealCommit=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/market\/deals\/([^/]+)\/commit$/);
-    if(dealCommit&&request.method==='POST'){const body=await readJson<any>(request);return json(await market.commitDeal(dealCommit[1]!,dealCommit[2]!,String(body.membershipId??''),finite(body.quantity)),200,cors);}
+    if(dealCommit&&request.method==='POST'){const body=await readJson<any>(request),record=await market.commitDeal(dealCommit[1]!,dealCommit[2]!,String(body.membershipId??''),finite(body.quantity));await publishValueMarketEvent(dealCommit[1]!,'DEAL_PROGRESS',record.id,String(record.data?.state??''));return json(record,200,cors);}
     const dealActivate=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/market\/deals\/([^/]+)\/activate$/);
     if(dealActivate&&request.method==='POST')return json(await market.activateDeal(dealActivate[1]!,dealActivate[2]!),200,cors);
     const dealOrders=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/market\/deals\/([^/]+)\/materialize-orders$/);
@@ -1679,15 +1686,16 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
       const body=await readJson<any>(request);
       return json(await market.createLiveMarket(liveMarketRoute[1]!,{
         title:String(body.title??''),theme:String(body.theme??''),scheduledAt:String(body.scheduledAt??''),capabilityLevel:finite(body.capabilityLevel) as 0|1|2|3,
-        dealId:body.dealId?String(body.dealId):undefined,communityHubId:body.communityHubId?String(body.communityHubId):undefined
+        dealId:body.dealId?String(body.dealId):undefined,stockItemId:body.stockItemId?String(body.stockItemId):undefined,
+        communityHubId:body.communityHubId?String(body.communityHubId):undefined,mediaRef:body.mediaRef?String(body.mediaRef):undefined
       }),201,cors);
     }
     const liveMarketTransition=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/market\/live\/([^/]+)\/transition$/);
-    if(liveMarketTransition&&request.method==='POST'){const body=await readJson<any>(request);return json(await market.transitionLiveMarket(liveMarketTransition[1]!,liveMarketTransition[2]!,String(body.to??'') as any),200,cors);}
+    if(liveMarketTransition&&request.method==='POST'){const body=await readJson<any>(request),record=await market.transitionLiveMarket(liveMarketTransition[1]!,liveMarketTransition[2]!,String(body.to??'') as any);await publishValueMarketEvent(liveMarketTransition[1]!,'LIVE_STATE',record.id,String(record.data?.state??''));return json(record,200,cors);}
     const liveMarketJoin=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/market\/live\/([^/]+)\/join$/);
-    if(liveMarketJoin&&request.method==='POST')return json(await market.joinLiveMarket(liveMarketJoin[1]!,liveMarketJoin[2]!),200,cors);
+    if(liveMarketJoin&&request.method==='POST'){const record=await market.joinLiveMarket(liveMarketJoin[1]!,liveMarketJoin[2]!);await publishValueMarketEvent(liveMarketJoin[1]!,'LIVE_JOIN',record.id,String(record.data?.state??''));return json(record,200,cors);}
     const liveMarketQuestions=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/market\/live\/([^/]+)\/questions$/);
-    if(liveMarketQuestions&&request.method==='POST'){const body=await readJson<any>(request);return json(await market.askLiveMarket(liveMarketQuestions[1]!,liveMarketQuestions[2]!,String(body.question??'')),200,cors);}
+    if(liveMarketQuestions&&request.method==='POST'){const body=await readJson<any>(request),record=await market.askLiveMarket(liveMarketQuestions[1]!,liveMarketQuestions[2]!,String(body.question??''));await publishValueMarketEvent(liveMarketQuestions[1]!,'LIVE_QUESTION',record.id,String(record.data?.state??''));return json(record,200,cors);}
 
     const completionCollection=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/completion$/);
     if(completionCollection&&request.method==='GET'){
