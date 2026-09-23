@@ -1,13 +1,13 @@
-const CACHE = 'eco-system-v1521-field-finance-debt-ux-20260923';
-const PREVIOUS_CACHE = 'eco-system-v152-unified-ux-blueprint-20260923';
+const CACHE = 'eco-system-v153-value-market-closure-20260923';
+const PREVIOUS_CACHE = 'eco-system-v1521-field-finance-debt-ux-20260923';
 const RELEASE_READY = '/__eco_release_ready__';
 
 // Authentication, navigation and canonical application owners must be complete
 // before this worker may install. Optional business/community panels can fail
 // independently without replacing an already-working release.
 const ESSENTIAL_SHELL = [
-  '/', '/index.html', '/styles.css?v=1521', '/manifest.webmanifest',
-  '/src/ui-modes.js?v=1521', '/src/field-hardening.js', '/src/main.js?v=1521', '/src/i18n.js', '/src/runtime-i18n.js',
+  '/', '/index.html', '/styles.css?v=153', '/manifest.webmanifest',
+  '/src/ui-modes.js?v=153', '/src/field-hardening.js', '/src/main.js?v=153', '/src/i18n.js', '/src/runtime-i18n.js',
   '/src/resilience-ui.js', '/src/group-home-ui.js', '/src/sessions-ui.js',
   '/src/detail-ui.js', '/src/member-control-ui.js', '/src/loan-simulation-ui.js', '/src/business-studio-ui.js', '/src/core-economic-learning-ui.js',
   '/packages/application/src/index.js', '/packages/contracts/src/index.js',
@@ -22,7 +22,7 @@ const OPTIONAL_SHELL = [
   '/src/blueprint-executable-ui.js', '/src/community-blueprint-presets.js',
   '/src/financial-lab-ui.js', '/src/completion-ui.js', '/src/advanced-ui.js',
   '/src/offline-snapshot.js', '/src/launch-rubrics.js', '/src/launch-studio.js',
-  '/src/identity-live-ui.js', '/src/community-shop-ui.js', '/src/misc-rubrics-ui.js',
+  '/src/identity-live-ui.js', '/src/community-shop-ui.js', '/src/value-market-ui.js', '/src/misc-rubrics-ui.js',
   '/src/pairing-ui.js', '/src/personal-cockpit-ui.js', '/src/recap-ui.js',
   '/src/interest-community-ui.js', '/src/ad-manager-ui.js', '/src/tontine-manager-ui.js',
   '/src/savings-yield-ui.js', '/src/external-programs-ui.js', '/src/founder-control-ui.js',
@@ -77,7 +77,7 @@ const cachedShell = async request => {
   const cache = await caches.open(CACHE);
   const url = new URL(request.url);
   // A versioned request must only match that exact version. Falling back from
-  // main.js?v=1521 to an older /main.js was the source of mixed-release UI.
+  // main.js?v=153 to an older /main.js was the source of mixed-release UI.
   if(url.search)return await cache.match(request);
   return await cache.match(url.pathname);
 };
