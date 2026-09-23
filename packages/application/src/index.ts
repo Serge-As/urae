@@ -402,7 +402,7 @@ export class ConnectedApplication {
     const updated:MeetingSession={...current,scheduledAt:input.scheduledAt===undefined?current.scheduledAt:input.scheduledAt===null?undefined:new Date(input.scheduledAt).toISOString(),location:clean(input.location,current.location),theme:clean(input.theme,current.theme),dressCode:clean(input.dressCode,current.dressCode)};
     await this.saveCached(path,rows.map(x=>x.id===meetingId?updated:x));await this.queueLocal('MEETING_CONTEXT_V1',{groupId:this.activeGroupId,meetingId,...input});return updated;
   }
-  async closeMeeting(meetingId:string):Promise<MeetingSession>{
+  async closeMeeting(meetingId:string):Promise<MeetingSession & {debtUpdate?:{closedMeetingId:string;nextMeetingId?:string|null;updates?:Array<{loanId:string;interestNew:number;interestAfter:number;totalDebt:number;appliesToLabel?:string}>}}>{
     if(!this.activeGroupId)throw new Error('ACTIVE_GROUP_REQUIRED');
     if(!this.isOffline())try{return await this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/meetings/${encodeURIComponent(meetingId)}/close`,{method:'POST',body:'{}'});}catch(error){if(!(error instanceof Error)||error.message!=='NETWORK_UNAVAILABLE')throw error;}
     const path=`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/meetings`,rows=await this.cached<MeetingSession[]>(path)??[],current=rows.find(x=>x.id===meetingId);if(!current)throw Error('MEETING_NOT_FOUND');if(current.status==='closed')return current;if(current.status!=='open')throw Error('MEETING_NOT_OPEN');
