@@ -48,8 +48,8 @@ export function mountFinancialLabUI({app,notify,showError}){
   };
 
   const refreshHistory=async()=>{
-    if(!history)return;history.replaceChildren();const rows=await app.listWorkspaceRecords('SAFETY.ANTISCAM',app.activeGroup()||undefined).catch(()=>[]);
-    const mine=rows.filter(x=>x.tags?.includes('financial-lab-analysis')).slice().reverse().slice(0,12);
+    if(!history)return;history.replaceChildren();const rows=await app.safetyAnalyses().catch(()=>[]);
+    const mine=rows.slice(0,12);
     if(!mine.length){history.append(el('p',t('Aucune analyse enregistrée.','No saved analysis.'),'hint'));return;}
     history.append(el('h3',t('Analyses enregistrées','Saved analyses')));
     for(const r of mine){const item=el('article',undefined,'item');item.append(el('strong',r.title),el('p',r.summary??''),row(t('Valeur promise','Promised value'),money(r.data?.promisedTotal)),row(t('Écart sans nouveaux dépôts','Gap without new deposits'),money(r.data?.gapWithoutNew)),el('small',new Date(r.updatedAt).toLocaleString()));history.append(item);}
@@ -60,13 +60,13 @@ export function mountFinancialLabUI({app,notify,showError}){
     try{
       const a=compute();renderAnalysis(a);
       const title=v('financialLabTitle');if(!title)throw Error(t('Nom du scénario requis.','Scenario name required.'));
-      await app.createWorkspaceRecord({
-        moduleId:'SAFETY.ANTISCAM',groupId:app.activeGroup()||undefined,title,
-        summary:t('Analyse pédagogique : valeur promise ','Educational analysis: promised value ')+money(a.promisedTotal)+t(' · écart sans nouveaux dépôts ',' · gap without new deposits ')+money(a.gapWithoutNew),
-        status:'DONE',tags:['financial-lab-analysis','educational','not-legal-verdict'],
-        data:{participants:a.participants,deposit:a.deposit,ratePercent:a.ratePercent,months:a.months,documentedRevenue:a.documentedRevenue,newDeposits:a.newDeposits,mode:a.mode,initial:a.initial,promisedTotal:Math.round(a.promisedTotal),documentedResources:Math.round(a.documentedResources),gapWithoutNew:Math.round(a.gapWithoutNew),gapWithNew:Math.round(a.gapWithNew),mechanism:v('financialLabMechanism'),evidenceRef:v('financialLabEvidence'),legalVerdict:false,realMoney:false}
-      });
-      notify(t('Analyse enregistrée. Aucun verdict légal ni transaction n’a été produit.','Analysis saved. No legal verdict or transaction was produced.'));
+      const saved=await app.runFinancialSafetyLab({title,participants:a.participants,deposit:a.deposit,ratePercent:a.ratePercent,months:a.months,documentedRevenue:a.documentedRevenue,newDeposits:a.newDeposits,mode:a.mode,mechanism:v('financialLabMechanism'),evidenceRef:v('financialLabEvidence')});
+      const analysis=saved?.analysis;
+      if(analysis?.signals?.length){
+        const box=el('article',undefined,'truth-notice safety-signal-box');box.append(el('strong',t('Signaux à vérifier — pas un verdict','Signals to review — not a verdict')));
+        const ul=el('ul');for(const sig of analysis.signals){const li=el('li');li.append(el('strong',sig.code+' · '+sig.severity),document.createTextNode(' — '+sig.reason));ul.append(li);}box.append(ul);result.append(box);
+      }
+      notify(t('Analyse enregistrée par le moteur Safety canonique. Aucun verdict légal ni transaction n’a été produit.','Analysis saved by the canonical Safety engine. No legal verdict or transaction was produced.'));
       await refreshHistory();
     }catch(e){showError(e);}
   })());
