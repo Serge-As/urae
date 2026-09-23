@@ -191,3 +191,19 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 .loan-evolution-dialog .loan-simulation-result{margin-top:12px}
 .loan-evolution-dialog .matrix-wrap{max-height:52vh;overflow:auto}
 .loan-evolution-dialog table{min-width:880px}
+
+
+/* 1.5.0 senior/mobile hardening: every actionable control remains finger-sized,
+   technical identifiers stay secondary, and 200% zoom degrades to one column. */
+a.link-btn{display:inline-flex;align-items:center;justify-content:center;min-height:var(--tap);text-decoration:none}
+details>summary{min-height:var(--tap);display:flex;align-items:center;cursor:pointer;gap:8px;overflow-wrap:anywhere}
+.technical-id{display:block;max-width:100%;margin-top:8px;padding:9px 11px;border-radius:9px;background:var(--surface-2);font-size:12px;overflow-wrap:anywhere;user-select:all}
+.item,.panel,.metric,.truth-notice{overflow-wrap:anywhere}
+.actions>button,.actions>a{max-width:100%}
+@media (max-width:520px){
+  .actions>button,.actions>a.link-btn{flex:1 1 100%;width:100%}
+  dialog{width:calc(100vw - 16px);max-width:none;padding:14px}
+  dialog .form-grid{grid-template-columns:1fr}
+  .matrix-wrap{max-width:100vw}
+  .result-row{align-items:flex-start;flex-direction:column;gap:2px}
+}
