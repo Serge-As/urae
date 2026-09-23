@@ -158,7 +158,7 @@ test('six month trash is calendar-correct reversible and final purge is system-o
   assert.match(api,/kind==='GROUP'/);
   assert.match(api,/remindersEnabled/);
   assert.match(app,/groupTrashItems/);
-  assert.match(main,/Ne plus rappeler chaque mois/);
+  assert.match(main,/Ne plus me rappeler chaque mois/);
 });
 
 test('Eco Relay uses authenticated encryption random nonce expiry and anti-replay while preserving original actor',()=>{
