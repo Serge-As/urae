@@ -1189,8 +1189,10 @@ $('#createGroupBtn').addEventListener('click',async()=>{
     say('2/3 · Création du groupe et de ses rubriques…');
     const group=await app.createGroupFromProject(project);
     lastProjectId=undefined;window.__ecoLastProjectReady=false;
-    say('3/3 · Synchronisation du groupe…');
-    await refreshGroupContext();toast(`Groupe créé : ${group.name}`);go('operations');
+    say('3/4 · Enregistrement du Kit prêt à l’emploi…');
+    await launchStudio.persistStarterKit?.(group.id);
+    say('4/4 · Synchronisation du groupe…');
+    await refreshGroupContext();toast(`Groupe créé : ${group.name} · Kit prêt à l’emploi archivé avec le groupe.`);go('operations');
   }catch(error){
     launchStudio.renderPreview();fail(Error(launchError(error)));
   }finally{$('#projectForm').inert=false;button.textContent=originalLabel;}
