@@ -190,9 +190,10 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
   };
   const financialCellState=async(groupId:string,meetingId:string,membershipId:string,rubricId:string)=>{
     const rows=(await ledger.receiptPositions(ctx.tenantId,groupId)).filter(x=>x.meetingId===meetingId&&x.membershipId===membershipId&&x.rubricId===rubricId&&x.netAmount!==0);
-    return{rows,current:rows.reduce((n,x)=>n+x.netAmount,0),baselineActorId:rows.slice().reverse().find(x=>x.netAmount>0)?.receivedBy};
+    const revision=await repo.getFinancialCellRevision(ctx.tenantId,groupId,meetingId,membershipId,rubricId,'XAF');
+    return{rows,current:rows.reduce((n,x)=>n+x.netAmount,0),cellVersion:revision?.version??0,baselineActorId:rows.slice().reverse().find(x=>x.netAmount>0)?.receivedBy};
   };
-  const applyFinancialCellTarget=async(input:{groupId:string;meetingId:string;membershipId:string;rubricId:string;targetAmount:number;expectedCurrentAmount?:number;reason:string;idempotencyKey:string;consensusId?:string;consensusVersion?:number})=>{
+  const applyFinancialCellTarget=async(input:{groupId:string;meetingId:string;membershipId:string;rubricId:string;targetAmount:number;expectedCurrentAmount?:number;expectedCellVersion?:number;reason:string;idempotencyKey:string;consensusId?:string;consensusVersion?:number})=>{
     const group=await requireGroup(input.groupId,true),meeting=await repo.getMeeting(ctx.tenantId,input.groupId,input.meetingId);if(!meeting||meeting.status==='cancelled')throw Error('MEETING_NOT_FOUND');
     if(!Number.isSafeInteger(input.targetAmount)||input.targetAmount<0)throw Error('INVALID_CONTRIBUTION_AMOUNT');
     const beforeAll=await ledger.receiptPositions(ctx.tenantId,input.groupId),beforeSituation=beforeAll.filter(x=>x.membershipId===input.membershipId).reduce((n,x)=>n+x.netAmount,0);
@@ -201,7 +202,7 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
     const reason=input.reason.trim()||'Correction de cellule financière';
     const correction=await ledger.replaceCashContributionCell({
       tenantId:ctx.tenantId,groupId:input.groupId,meetingId:input.meetingId,membershipId:input.membershipId,rubricId:input.rubricId,
-      targetAmount:input.targetAmount,expectedCurrentAmount:input.expectedCurrentAmount??state.current,currency:'XAF',
+      targetAmount:input.targetAmount,expectedCurrentAmount:input.expectedCurrentAmount??state.current,expectedCellVersion:input.expectedCellVersion??state.cellVersion,currency:'XAF',
       reason,idempotencyKey:input.idempotencyKey
     },ctx.requestId);
     const receipt=correction.receipt,evidenceEntry=correction.evidenceEntry;
@@ -293,12 +294,13 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
     const financialCellApply=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/meetings\/([^/]+)\/financial-cells\/([^/]+)\/apply$/);
     if(financialCellBase&&request.method==='POST'){
       const groupId=financialCellBase[1]!,meetingId=financialCellBase[2]!;await requireGroup(groupId,true);
-      const body=await readJson<Record<string,unknown>>(request),membershipId=String(body.membershipId??''),rubricId=String(body.rubricId??''),targetAmount=finite(body.targetAmount),expectedCurrentAmount=body.expectedCurrentAmount===undefined?undefined:finite(body.expectedCurrentAmount),reason=String(body.reason??'').trim();
+      const body=await readJson<Record<string,unknown>>(request),membershipId=String(body.membershipId??''),rubricId=String(body.rubricId??''),targetAmount=finite(body.targetAmount),expectedCurrentAmount=body.expectedCurrentAmount===undefined?undefined:finite(body.expectedCurrentAmount),expectedCellVersion=body.expectedCellVersion===undefined?undefined:finite(body.expectedCellVersion),reason=String(body.reason??'').trim();
       if(!membershipId||!rubricId)throw Error('FINANCIAL_CELL_REQUIRED');
       if(!Number.isSafeInteger(targetAmount)||targetAmount<0)throw Error('INVALID_CONTRIBUTION_AMOUNT');
       const state=await financialCellState(groupId,meetingId,membershipId,rubricId),meeting=await repo.getMeeting(ctx.tenantId,groupId,meetingId);if(!meeting||meeting.status==='cancelled')throw Error('MEETING_NOT_FOUND');
       if(state.current===targetAmount)return json({status:'NO_CHANGE',current:state.current,target:targetAmount},200,cors);
       if(expectedCurrentAmount!==undefined&&expectedCurrentAmount!==state.current)throw Error('CELL_VALUE_CONFLICT');
+      if(expectedCellVersion!==undefined&&expectedCellVersion!==state.cellVersion)throw Error('CELL_VERSION_CONFLICT');
       const managers=await managerUserIds(groupId);
       const needsConsensus=meeting.status==='closed'||(state.current>0&&(managers.length>1||Boolean(state.baselineActorId&&state.baselineActorId!==ctx.actorId)));
       if(needsConsensus){
@@ -310,7 +312,7 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
         await publishLive(groupId,'CONSENSUS_REQUIRED','financial-cell-proposal:'+item.id+':'+item.version,{meetingId,cellKey:item.cellKey,state:item.state,version:item.version,baselineValue:state.current,proposedValue:targetAmount,membershipId,rubricId,proposedBy:ctx.actorId});
         return json({status:'CONSENSUS_REQUIRED',current:state.current,target:targetAmount,consensus:item},202,cors);
       }
-      const applied=await applyFinancialCellTarget({groupId,meetingId,membershipId,rubricId,targetAmount,expectedCurrentAmount:expectedCurrentAmount??state.current,reason:reason||'Correction explicite de la feuille de séance',idempotencyKey:String(request.headers.get('x-idempotency-key')??makeId('cell-correction'))});
+      const applied=await applyFinancialCellTarget({groupId,meetingId,membershipId,rubricId,targetAmount,expectedCurrentAmount:expectedCurrentAmount??state.current,expectedCellVersion:expectedCellVersion??state.cellVersion,reason:reason||'Correction explicite de la feuille de séance',idempotencyKey:String(request.headers.get('x-idempotency-key')??makeId('cell-correction'))});
       return json(applied,200,cors);
     }
     if(financialCellApply&&request.method==='POST'){
@@ -1036,7 +1038,7 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
     }
 
     const ledgerRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/ledger$/);
-    if(ledgerRoute&&request.method==='GET') return json({summary:await ledger.summary(ctx.tenantId,ledgerRoute[1]!),entries:await repo.listLedgerEntries(ctx.tenantId,ledgerRoute[1]!),receipts:await ledger.receiptPositions(ctx.tenantId,ledgerRoute[1]!)},200,cors);
+    if(ledgerRoute&&request.method==='GET') return json({summary:await ledger.summary(ctx.tenantId,ledgerRoute[1]!),entries:await repo.listLedgerEntries(ctx.tenantId,ledgerRoute[1]!),receipts:await ledger.receiptPositions(ctx.tenantId,ledgerRoute[1]!),cellRevisions:await repo.listFinancialCellRevisions(ctx.tenantId,ledgerRoute[1]!)},200,cors);
     const reverseRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/ledger\/([^/]+)\/reverse$/);
     if(reverseRoute&&request.method==='POST'){
       const groupId=reverseRoute[1]!,entryId=decodeURIComponent(reverseRoute[2]!),body=await readJson<Record<string,unknown>>(request),reason=String(body.reason??'').trim();
@@ -1876,19 +1878,19 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
       if(item.type==='FINANCIAL_CELL_CORRECTION_PROPOSAL_V1'){
         const p=item.payload,groupId=String(p.groupId??''),meetingId=String(p.meetingId??''),membershipId=String(p.membershipId??''),rubricId=String(p.rubricId??''),targetAmount=finite(p.targetAmount),reason=String(p.reason??'');
         await requireGroup(groupId,true);
-        const state=await financialCellState(groupId,meetingId,membershipId,rubricId),baselineValue=finite(p.baselineValue,state.current),managers=await managerUserIds(groupId),meeting=await repo.getMeeting(ctx.tenantId,groupId,meetingId);
+        const state=await financialCellState(groupId,meetingId,membershipId,rubricId),baselineValue=finite(p.baselineValue,state.current),baselineVersion=finite(p.baselineVersion,state.cellVersion),managers=await managerUserIds(groupId),meeting=await repo.getMeeting(ctx.tenantId,groupId,meetingId);
         if(!meeting||meeting.status==='cancelled')throw Error('MEETING_NOT_FOUND');
         // A replay after an ambiguous network response is already satisfied when
         // the canonical value equals the requested target.
         if(state.current===targetAmount){await markApplied();return json({accepted:true,stored:true,status:'NO_CHANGE'},200,cors);}
-        const staleBaseline=baselineValue!==state.current;
+        const staleBaseline=baselineValue!==state.current||baselineVersion!==state.cellVersion;
         const needsConsensus=staleBaseline||meeting.status==='closed'||(state.current>0&&managers.length>1);
         if(needsConsensus){
           const consensus=await new MeetingLiveConsensusService(repo,kernel).proposeAgainstBaseline({groupId,meetingId,cellKey:membershipId+':'+rubricId,value:targetAmount,baselineValue:state.current,baselineActorId:state.baselineActorId,label:staleBaseline?'Conflit de base hors ligne':'Proposition reçue hors ligne',membershipId,rubricId});
-          await notifications.publish(groupId,{title:staleBaseline?'Conflit de saisie hors ligne':'Correction offline à confronter',message:`La saisie hors ligne partait de ${baselineValue} F CFA ; la valeur canonique est maintenant ${state.current} F CFA et la proposition demande ${targetAmount} F CFA. La valeur canonique reste inchangée avant décision du Bureau.`,channels:['IN_APP','WEB_PUSH'],audience:'MANAGERS',priority:staleBaseline?'CRITICAL':'HIGH'});
+          await notifications.publish(groupId,{title:staleBaseline?'Conflit de saisie hors ligne':'Correction offline à confronter',message:`La saisie hors ligne partait de ${baselineValue} F CFA (version ${baselineVersion}) ; la valeur canonique est maintenant ${state.current} F CFA (version ${state.cellVersion}) et la proposition demande ${targetAmount} F CFA. La valeur canonique reste inchangée avant décision du Bureau.`,channels:['IN_APP','WEB_PUSH'],audience:'MANAGERS',priority:staleBaseline?'CRITICAL':'HIGH'});
           await markApplied();return json({accepted:true,stored:true,status:'CONSENSUS_REQUIRED',staleBaseline,consensus},200,cors);
         }
-        const result=await applyFinancialCellTarget({groupId,meetingId,membershipId,rubricId,targetAmount,expectedCurrentAmount:baselineValue,reason:reason||'Correction saisie hors ligne puis synchronisée',idempotencyKey:item.idempotencyKey});
+        const result=await applyFinancialCellTarget({groupId,meetingId,membershipId,rubricId,targetAmount,expectedCurrentAmount:baselineValue,expectedCellVersion:baselineVersion,reason:reason||'Correction saisie hors ligne puis synchronisée',idempotencyKey:item.idempotencyKey});
         await markApplied();return json({accepted:true,stored:true,...result},200,cors);
       }
 
