@@ -45,7 +45,7 @@ export function mountDetailUI({app,navigate,getGroups,getMembers,getMeetings,get
       loanCard.append(el('p','Dette totale = capital restant + intérêts dus + autres obligations. Les intérêts générés à la clôture d’une séance sont signalés comme concernant la séance suivante.','truth-notice'));
       for(const loan of statement.loanDebts){
         const a=el('article',undefined,'item debt-loan-card');
-        a.append(el('strong',loan.title??'Prêt'),row('Capital restant',fmt(Number(loan.outstandingPrincipal??0))),row('Intérêts dus',fmt(Number(loan.unpaidInterest??0))),row('Dette du prêt',fmt(Number(loan.totalDebt??0))));
+        a.append(el('strong',loan.title??'Prêt'),row('Capital restant',fmt(Number(loan.outstandingPrincipal??0))),row('Intérêts dus',fmt(Number(loan.unpaidInterest??0))),row('Dette du prêt',fmt(Number(loan.totalDebt??0))),row('Source du prêt',String(loan.fundingSource??'GENERAL_CASH')));
         if(Number(loan.lastAccruedInterest??0)>0)a.append(row('Dernier intérêt ajouté',fmt(Number(loan.lastAccruedInterest??0))),row('Concerne',loan.interestAppliesToLabel??'Séance suivante'));
         if(loan.interestAppliesToMeetingId)a.append(link('Ouvrir la séance concernée','meeting',String(loan.interestAppliesToMeetingId)));
         loanCard.append(a);
