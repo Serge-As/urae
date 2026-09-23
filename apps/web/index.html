@@ -133,7 +133,7 @@
         </div>
 
         <section class="panel urgent-home-panel" id="urgentNotificationsPanel">
-          <div class="panel-head"><div><span class="eyebrow">Alertes prioritaires</span><h2>Notifications urgentes</h2><p>Modifications importantes du groupe, corrections financières, séance clôturée, membres et rubriques.</p></div><button id="urgentNotificationsRefreshBtn" type="button" class="link-btn">Actualiser</button></div>
+          <div class="panel-head"><div><span class="eyebrow">Alertes prioritaires</span><h2>Notifications urgentes</h2><p>Les 5 alertes les plus prioritaires seulement. Toutes les autres restent dans le Centre d’alertes.</p></div><div class="actions"><button id="urgentNotificationsAllBtn" type="button" class="secondary">Toutes les alertes</button><button id="urgentNotificationsRefreshBtn" type="button" class="link-btn">Actualiser</button></div></div>
           <div id="urgentNotificationsList" class="stack"><div class="empty-state">Aucune notification urgente.</div></div>
         </section>
 
@@ -1138,6 +1138,7 @@
         <div class="page-head"><div><span class="eyebrow">Transversal</span><h1>Inbox · Support · Offline</h1><p>Une interdiction raisonnable doit proposer une voie d'autorisation, de recours ou de régularisation lorsque c'est possible.</p></div></div>
         <div class="two-col">
           <section class="panel"><h2>Boîte universelle</h2><ul id="inboxList" class="list"></ul></section>
+          <section class="panel" id="notificationCenterPanel"><div class="panel-head"><div><h2>Centre d’alertes</h2><p id="notificationCenterMeta">Notifications du groupe actif, triées par priorité et fraîcheur.</p></div><button id="notificationCenterRefreshBtn" type="button" class="secondary">Actualiser</button></div><div id="notificationCenterList" class="stack"></div></section>
           <section class="panel"><h2>Support / litige / recours</h2><form id="supportForm"><textarea id="supportSummary" rows="4" required placeholder="Décrivez la situation…"></textarea><button class="primary">Ouvrir un dossier</button></form><p id="caseLog" class="hint"></p></section>
         </div>
         <section class="panel"><h2>File offline</h2><div class="actions"><button id="queueBtn">Ajouter une note de test</button><button id="syncBtn" class="primary">Synchroniser</button></div><ul id="outboxList" class="list"></ul></section>
