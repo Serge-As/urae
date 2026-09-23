@@ -555,6 +555,7 @@ export class D1PlatformRepository implements PlatformRepository {
                OR (SELECT COUNT(*) FROM platform_records sig
                    WHERE sig.record_type='workspace_record' AND sig.tenant_id=? AND sig.group_id=?
                      AND json_extract(sig.data_json,'$.moduleId')='TRASH.PETITION_SIGNATURE'
+                     AND json_extract(sig.data_json,'$.status')!='ARCHIVED'
                      AND json_extract(sig.data_json,'$.data.trashId')=?)
                   < CAST(COALESCE(json_extract(trash.data_json,'$.data.petitionThreshold'),0) AS INTEGER)
              )
