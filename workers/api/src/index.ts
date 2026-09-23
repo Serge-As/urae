@@ -1769,10 +1769,17 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
       if(!['DISBURSED','REPAYING'].includes(String(loan.data.completionState)))throw new Error('LOAN_NOT_REPAYABLE');
       const outstanding=finite(loan.data.outstandingPrincipal),unpaidInterest=finite(loan.data.unpaidInterest,0),meetingId=body.meetingId?String(body.meetingId):undefined;
       const repaymentPeriodsPerYear=Math.max(1,finite(loan.data.installmentsPerYear,12)),rateBasisPointsPerPeriod=finite(body.rateBasisPointsPerPeriod??loan.data.rateBasisPointsPerPeriod??Math.round(finite(loan.data.annualRateBasisPoints,0)/repaymentPeriodsPerYear),0);
-      let accruedMeetingIds:string[]=[];try{accruedMeetingIds=JSON.parse(String(loan.data.accruedMeetingIdsJson??'[]'));if(!Array.isArray(accruedMeetingIds))accruedMeetingIds=[];}catch{accruedMeetingIds=[];}
-      let periodInterest=0,interestDue=unpaidInterest;
-      if(meetingId&&!accruedMeetingIds.includes(meetingId)){
-        periodInterest=Math.round(outstanding*rateBasisPointsPerPeriod/10000);interestDue+=periodInterest;accruedMeetingIds.push(meetingId);
+      let accruedMeetingIds=jsonStringArray(loan.data.accruedMeetingIdsJson),preparedInterestMeetingIds=jsonStringArray(loan.data.preparedInterestMeetingIdsJson),preparedInterestPending=loan.data.preparedInterestPending===true||String(loan.data.preparedInterestPending)==='true';
+      let periodInterest=0,interestDue=unpaidInterest,usedPreparedInterest=false;
+      if(meetingId){
+        if(preparedInterestMeetingIds.includes(meetingId)){
+          preparedInterestMeetingIds=preparedInterestMeetingIds.filter(id=>id!==meetingId);usedPreparedInterest=true;
+        }else if(preparedInterestPending){
+          preparedInterestPending=false;usedPreparedInterest=true;
+        }else if(!accruedMeetingIds.includes(meetingId)){
+          // Compatibility path for loans created before the post-close accrual model.
+          periodInterest=Math.round(outstanding*rateBasisPointsPerPeriod/10000);interestDue+=periodInterest;accruedMeetingIds.push(meetingId);
+        }
       }
       const explicitAllocation=body.principalAmount!==undefined||body.interestAmount!==undefined;
       const allocation=explicitAllocation
@@ -1786,7 +1793,7 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
       });
       const target=allocation.remainingPrincipal===0&&allocation.unpaidInterestAfter===0?'CLOSED':'REPAYING';
       const updatedLoan=await completion.transition(loanRepay[1]!,loan.id,target,{
-        expectedVersion:finite(body.expectedVersion),patch:{outstandingPrincipal:allocation.remainingPrincipal,unpaidInterest:allocation.unpaidInterestAfter,lastRepaymentLedgerEntryId:entry.id,paymentPriority:allocation.priority,accruedMeetingIdsJson:JSON.stringify(accruedMeetingIds)}
+        expectedVersion:finite(body.expectedVersion),patch:{outstandingPrincipal:allocation.remainingPrincipal,unpaidInterest:allocation.unpaidInterestAfter,lastRepaymentLedgerEntryId:entry.id,paymentPriority:allocation.priority,accruedMeetingIdsJson:JSON.stringify(accruedMeetingIds),preparedInterestMeetingIdsJson:JSON.stringify(preparedInterestMeetingIds),preparedInterestPending,interestAppliesToMeetingId:usedPreparedInterest&&meetingId?meetingId:loan.data.interestAppliesToMeetingId}
       });
       if(meetingId){
         const periodId='loan_period_'+encodeURIComponent(loan.id+'|'+meetingId),oldPeriod=await repo.getWorkspaceRecord(ctx.tenantId,periodId),stamp=entry.createdAt,nextInterest=Math.round(allocation.remainingPrincipal*rateBasisPointsPerPeriod/10000);
