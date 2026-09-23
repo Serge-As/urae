@@ -36,7 +36,7 @@ export class SafetyCenterService{
   }
   async openCase(input:{title:string;summary:string;riskKind:SafetyRiskKind;severity:SafetySeverity;groupId?:string;entityType?:string;entityId?:string;evidenceRefs?:string[];signals?:string[];rationale?:string[]}):Promise<WorkspaceRecord>{
     const c=this.ctx(),now=new Date().toISOString(),id=makeId('safety_case');
-    const record:WorkspaceRecord={id,tenantId:c.tenantId,groupId:input.groupId,moduleId:'SAFETY.CASE',title:text(input.title,240)||'Signal de sécurité',summary:text(input.summary,1200),status:'OPEN',tags:['safety-case','risk:'+input.riskKind.toLowerCase(),'severity:'+input.severity.toLowerCase()],data:{caseState:'SIGNAL',riskKind:input.riskKind,severity:input.severity,entityType:text(input.entityType,80),entityId:text(input.entityId,200),evidenceRefs:input.evidenceRefs??[],signals:input.signals??[],rationale:input.rationale??[],openedBy:c.actorId,openedAt:now,reviewHistory:[]},createdBy:c.actorId,createdAt:now,updatedAt:now};
+    const record:WorkspaceRecord={id,tenantId:c.tenantId,groupId:input.groupId,moduleId:'SAFETY.CASE',title:text(input.title,240)||'Signal de sécurité',summary:text(input.summary,1200),status:'ACTIVE',tags:['safety-case','risk:'+input.riskKind.toLowerCase(),'severity:'+input.severity.toLowerCase()],data:{caseState:'SIGNAL',riskKind:input.riskKind,severity:input.severity,entityType:text(input.entityType,80),entityId:text(input.entityId,200),evidenceRefsJson:JSON.stringify(input.evidenceRefs??[]),signalsJson:JSON.stringify(input.signals??[]),rationaleJson:JSON.stringify(input.rationale??[]),openedBy:c.actorId,openedAt:now,reviewHistoryJson:'[]'},createdBy:c.actorId,createdAt:now,updatedAt:now};
     await this.repo.saveWorkspaceRecord(record);return record;
   }
   async screenAndOpen(input:{text:string;title?:string;groupId?:string;entityType?:string;entityId?:string;evidenceRefs?:string[]}):Promise<{assessment:SafetyAssessment;case?:WorkspaceRecord}>{
@@ -49,14 +49,14 @@ export class SafetyCenterService{
   }
   async review(id:string,input:{decision:'TRIAGE'|'RESTRICT'|'CLEAR'|'CLOSE';note:string;evidenceRefs?:string[]}):Promise<WorkspaceRecord>{
     const c=this.ctx(),record=await this.repo.getWorkspaceRecord(c.tenantId,id);if(!record||record.moduleId!=='SAFETY.CASE')throw Error('SAFETY_CASE_NOT_FOUND');
-    const map={TRIAGE:'TRIAGED',RESTRICT:'RESTRICTED',CLEAR:'CLEARED',CLOSE:'CLOSED'} as const,state=map[input.decision],now=new Date().toISOString(),history=Array.isArray(record.data.reviewHistory)?record.data.reviewHistory as any[]:[];
-    const next={...record,status:state==='CLOSED'||state==='CLEARED'?'DONE':'OPEN',summary:record.summary,updatedAt:now,data:{...record.data,caseState:state,reviewHistory:[...history,{at:now,by:c.actorId,decision:input.decision,note:text(input.note,1200),evidenceRefs:input.evidenceRefs??[]}]}};
+    const map={TRIAGE:'TRIAGED',RESTRICT:'RESTRICTED',CLEAR:'CLEARED',CLOSE:'CLOSED'} as const,state=map[input.decision],now=new Date().toISOString();let history:any[]=[];try{history=JSON.parse(String(record.data.reviewHistoryJson??'[]'));if(!Array.isArray(history))history=[];}catch{history=[];}
+    const next:WorkspaceRecord={...record,status:state==='CLOSED'||state==='CLEARED'?'DONE':'ACTIVE',summary:record.summary,updatedAt:now,data:{...record.data,caseState:state,reviewHistoryJson:JSON.stringify([...history,{at:now,by:c.actorId,decision:input.decision,note:text(input.note,1200),evidenceRefs:input.evidenceRefs??[]}])}};
     await this.repo.saveWorkspaceRecord(next);return next;
   }
   async appeal(id:string,note:string,evidenceRefs:string[]=[]):Promise<WorkspaceRecord>{
     const c=this.ctx(),record=await this.repo.getWorkspaceRecord(c.tenantId,id);if(!record||record.moduleId!=='SAFETY.CASE')throw Error('SAFETY_CASE_NOT_FOUND');
-    const now=new Date().toISOString(),history=Array.isArray(record.data.reviewHistory)?record.data.reviewHistory as any[]:[];
-    const next={...record,status:'OPEN' as const,updatedAt:now,data:{...record.data,caseState:'APPEALED',reviewHistory:[...history,{at:now,by:c.actorId,decision:'APPEAL',note:text(note,1200),evidenceRefs}]}};
+    const now=new Date().toISOString();let history:any[]=[];try{history=JSON.parse(String(record.data.reviewHistoryJson??'[]'));if(!Array.isArray(history))history=[];}catch{history=[];}
+    const next:WorkspaceRecord={...record,status:'ACTIVE',updatedAt:now,data:{...record.data,caseState:'APPEALED',reviewHistoryJson:JSON.stringify([...history,{at:now,by:c.actorId,decision:'APPEAL',note:text(note,1200),evidenceRefs}])}};
     await this.repo.saveWorkspaceRecord(next);return next;
   }
 }
