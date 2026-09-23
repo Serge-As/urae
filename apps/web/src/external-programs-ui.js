@@ -5,6 +5,7 @@ const split=v=>v.split(',').map(x=>x.trim()).filter(Boolean);
 export function mountExternalProgramsUI({app,notify=()=>{},showError=console.error,isManager=()=>false,fmt=n=>String(n)}){
   const form=document.getElementById('externalProgramForm'),root=document.getElementById('externalProgramList'),profileRoot=document.getElementById('economicProfilePreview');
   if(!form||!root||!profileRoot)return{refresh:async()=>{}};
+  const leadershipPreset=el('button','Préparer un programme Leadership féminin','secondary');leadershipPreset.type='button';leadershipPreset.onclick=()=>{document.getElementById('externalProgramKind').value='NGO';document.getElementById('externalProgramTrack').value='WOMEN_LEADERSHIP';document.getElementById('externalProgramName').value='Leadership féminin & autonomie économique';document.getElementById('externalProgramPurpose').value='Accompagnement volontaire des fondatrices, responsables, entrepreneures et fournisseurs, sans modifier les règles financières ni les scores de confiance.';document.getElementById('externalProgramTags').value='leadership féminin, entrepreneuriat, formation, inclusion';};form.prepend(leadershipPreset);
   const renderProfile=async()=>{
     profileRoot.replaceChildren();
     if(!app.activeGroup()||!isManager())return;
@@ -27,7 +28,7 @@ export function mountExternalProgramsUI({app,notify=()=>{},showError=console.err
     if(!programs.length)root.append(el('p','Aucun partenariat ou programme ONG enregistré.','hint'));
     for(const p of programs){
       const card=el('article',undefined,'item');
-      card.append(el('strong',p.partyName+' · '+p.programName),el('span',p.kind+' · '+p.state,'pill'),el('p',p.purpose),el('small',[...(p.localities??[]),...(p.tags??[])].join(' · ')));
+      card.append(el('strong',p.partyName+' · '+p.programName),el('span',p.kind+' · '+p.state,'pill'),el('p',p.purpose),el('small',[p.track??'GENERAL',...(p.localities??[]),...(p.tags??[])].join(' · ')));
       card.append(el('p','Accès données : '+(p.dataAccess==='GROUP_AGGREGATE_ECONOMIC'?'profil financier agrégé et pseudonymisé':'aucun partage financier'),'hint'));
       const actions=el('div',undefined,'actions');
       if(p.state==='DRAFT'){const b=el('button','Activer le programme','primary');b.type='button';b.onclick=()=>void(async()=>{try{await app.transitionExternalProgram(p.id,'ACTIVE');notify('Programme activé.');await render();}catch(e){showError(e);}})();actions.append(b);}
@@ -49,7 +50,7 @@ export function mountExternalProgramsUI({app,notify=()=>{},showError=console.err
     await renderProfile();
   };
   form.addEventListener('submit',e=>{e.preventDefault();void(async()=>{try{
-    await app.createExternalProgram({kind:value('externalProgramKind'),partyName:value('externalPartyName'),programName:value('externalProgramName'),purpose:value('externalProgramPurpose'),localities:split(value('externalProgramLocalities')),tags:split(value('externalProgramTags')),dataAccess:value('externalProgramDataAccess')});
+    await app.createExternalProgram({kind:value('externalProgramKind'),partyName:value('externalPartyName'),programName:value('externalProgramName'),purpose:value('externalProgramPurpose'),localities:split(value('externalProgramLocalities')),tags:split(value('externalProgramTags')),track:value('externalProgramTrack')||'GENERAL',dataAccess:value('externalProgramDataAccess')});
     notify('Programme créé en brouillon.');form.reset();document.getElementById('externalProgramDataAccess').value='NONE';await render();
   }catch(err){showError(err);}})();});
   document.addEventListener('eco:group-context-changed',()=>void render().catch(showError));
