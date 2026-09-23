@@ -137,7 +137,12 @@ export function mountGroupHomeUI({app,getGroups,getMembers,getMeetings,navigate,
         const metrics=make('div','metrics small');for(const [label,value] of [[t('Recettes / cotisations','Inflows / contributions'),fmt(inflow)],[t('Dépenses / bénéfices reçus','Outflows / benefits'),fmt(outflow)]]){const c=make('div','metric');c.append(make('span','',label),make('strong','',value));metrics.append(c);}metrics.append(balanceCard(t('Ma balance connue','My known balance'),net));finance.append(metrics);
         const debt=make('div','stack');debt.append(make('h4','',t('Mes dettes / échéances','My debts / due items')));
         if(statement&&Number(statement.totalDebt??0)>0){
-          const summary=make('article','item debt-summary-card');summary.append(make('strong','',t('Dette totale : ','Total debt: ')+fmt(Number(statement.totalDebt??0))),make('p','',t('Capital prêts : ','Loan principal: ')+fmt(Number(statement.debtPrincipal??0))+' · '+t('Intérêts dus : ','Interest due: ')+fmt(Number(statement.debtInterest??0))+' · '+t('Autres : ','Other: ')+fmt(Number(statement.otherDebt??0)));debt.append(summary);
+          const summary=make('article','item debt-summary-card');
+          summary.append(
+            make('strong','',t('Dette totale : ','Total debt: ')+fmt(Number(statement.totalDebt??0))),
+            make('p','',t('Capital prêts : ','Loan principal: ')+fmt(Number(statement.debtPrincipal??0))+' · '+t('Intérêts dus : ','Interest due: ')+fmt(Number(statement.debtInterest??0))+' · '+t('Autres : ','Other: ')+fmt(Number(statement.otherDebt??0)))
+          );
+          debt.append(summary);
           for(const loan of statement.loanDebts??[]){if(Number(loan.totalDebt??0)<=0)continue;const a=make('article','item');a.append(make('strong','',loan.title??t('Prêt','Loan')),make('p','',t('Capital restant : ','Outstanding principal: ')+fmt(Number(loan.outstandingPrincipal??0))+' · '+t('Intérêts : ','Interest: ')+fmt(Number(loan.unpaidInterest??0))));if(Number(loan.lastAccruedInterest??0)>0)a.append(make('small','',t('Dernier intérêt ajouté : ','Latest accrued interest: ')+fmt(Number(loan.lastAccruedInterest??0))+' · '+t('concerne ','applies to ')+(loan.interestAppliesToLabel??t('séance suivante','next session'))));debt.append(a);}
         }
         for(const row of arrears){const a=make('article','item');a.append(make('strong','',row.title),make('p','',amount(row,fmt)+' · '+(row.dueAt?humanDate(row.dueAt):t('sans échéance','no due date'))+' · '+row.status));debt.append(a);}
