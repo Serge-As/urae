@@ -656,6 +656,15 @@ export class ConnectedApplication {
   async valueOffers():Promise<any[]>{const r=await this.request('/api/v1/value/offers') as any;return r.items??[];}
   async createValueOffer(input:any):Promise<any>{return this.request('/api/v1/value/offers',{method:'POST',body:JSON.stringify(input)});}
 
+  async safetyCases(groupId?:string):Promise<any[]>{const p=new URLSearchParams();if(groupId)p.set('groupId',groupId);const r=await this.request('/api/v1/safety/cases?'+p) as any;return r.items??[];}
+  async reportSafety(input:any):Promise<any>{return this.request('/api/v1/safety/reports',{method:'POST',body:JSON.stringify(input)});}
+  async transitionSafetyCase(id:string,state:string,note='',evidenceRef=''):Promise<any>{return this.request('/api/v1/safety/cases/'+encodeURIComponent(id)+'/transition',{method:'POST',body:JSON.stringify({state,note,evidenceRef})});}
+  async safetyEvidence(id:string):Promise<any[]>{const r=await this.request('/api/v1/safety/cases/'+encodeURIComponent(id)+'/evidence') as any;return r.items??[];}
+  async addSafetyEvidence(id:string,input:any):Promise<any>{return this.request('/api/v1/safety/cases/'+encodeURIComponent(id)+'/evidence',{method:'POST',body:JSON.stringify(input)});}
+  async decideSafetyCase(id:string,input:any):Promise<any>{return this.request('/api/v1/safety/cases/'+encodeURIComponent(id)+'/decision',{method:'POST',body:JSON.stringify(input)});}
+  async appealSafetyCase(id:string,input:any):Promise<any>{return this.request('/api/v1/safety/cases/'+encodeURIComponent(id)+'/appeal',{method:'POST',body:JSON.stringify(input)});}
+  async assessReferralStructure(input:any):Promise<any>{return this.request('/api/v1/safety/referral-structure-assessment',{method:'POST',body:JSON.stringify(input)});}
+
   async searchKnowledge(q='',groupId?:string):Promise<any[]>{const p=new URLSearchParams();if(q)p.set('q',q);if(groupId)p.set('groupId',groupId);const r=await this.request('/api/v1/knowledge?'+p) as any;return r.items??[];}
   async createKnowledge(input:any):Promise<any>{return this.request('/api/v1/knowledge',{method:'POST',body:JSON.stringify(input)});}
   async reviseKnowledge(id:string,input:any):Promise<any>{return this.request('/api/v1/knowledge/'+encodeURIComponent(id)+'/revisions',{method:'POST',body:JSON.stringify(input)});}
