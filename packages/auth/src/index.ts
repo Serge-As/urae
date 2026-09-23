@@ -4,8 +4,9 @@ import type { D1DatabaseLike } from '../../repositories/src/index.js';
 export interface Account { id:string; username:string; displayName:string; tenantId:string; locale:string; createdAt:string }
 interface AccountRow { id:string; username:string; display_name:string; tenant_id:string; locale:string; created_at:string; salt:string; password_hash:string }
 interface SessionRow { account_id:string; expires_at:number; last_seen:number }
-const SESSION_SECONDS=8*60*60;
-const IDLE_SECONDS=30*60;
+const SHORT_SESSION_SECONDS=8*60*60;
+const REMEMBER_SESSION_SECONDS=30*24*60*60;
+const IDLE_SECONDS=7*24*60*60;
 const json=(data:unknown,status=200,headers:HeadersInit={})=>new Response(JSON.stringify(data),{status,headers:{'content-type':'application/json','cache-control':'no-store',...headers}});
 const sha256=async(value:string)=>Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(value)))).map(x=>x.toString(16).padStart(2,'0')).join('');
 const bytes=(hex:string)=>Uint8Array.from(hex.match(/../g)??[],x=>parseInt(x,16));
@@ -13,7 +14,7 @@ const passwordKey=(password:string,salt:string):Promise<Uint8Array>=>new Promise
 const hex=(value:Uint8Array)=>Array.from(value,x=>x.toString(16).padStart(2,'0')).join('');
 const project=(r:AccountRow):Account=>({id:r.id,username:r.username,displayName:r.display_name,tenantId:r.tenant_id,locale:r.locale,createdAt:r.created_at});
 const cookieName=(url:URL)=>url.protocol==='https:'?'__Host-eco_session':'eco_local_session';
-const cookie=(url:URL,value:string,age=SESSION_SECONDS)=>`${cookieName(url)}=${value}; Path=/; HttpOnly; SameSite=Strict; Max-Age=${age}${url.protocol==='https:'?'; Secure':''}`;
+const cookie=(url:URL,value:string,age=SHORT_SESSION_SECONDS)=>`${cookieName(url)}=${value}; Path=/; HttpOnly; SameSite=Strict; Max-Age=${age}${url.protocol==='https:'?'; Secure':''}`;
 
 /** Server-owned identities and opaque, revocable sessions. No client role/tenant is trusted. */
 export class SessionService {
@@ -40,11 +41,11 @@ export class SessionService {
   if(now-session.last_seen>60)await this.db.prepare('UPDATE auth_sessions SET last_seen=? WHERE token_hash=?').bind(now,key).run();
   return project(account);
  }
- private async issue(account:Account,url:URL):Promise<Response>{
-  const token=randomBytes(32).toString('base64url'),now=Math.floor(Date.now()/1000);
+ private async issue(account:Account,url:URL,remember=false):Promise<Response>{
+  const token=randomBytes(32).toString('base64url'),now=Math.floor(Date.now()/1000),ttl=remember?REMEMBER_SESSION_SECONDS:SHORT_SESSION_SECONDS;
   await this.db.prepare('INSERT INTO auth_sessions(token_hash,account_id,created_at,last_seen,expires_at) VALUES(?,?,?,?,?)')
-   .bind(await sha256(token),account.id,now,now,now+SESSION_SECONDS).run();
-  return json({authenticated:true,account},200,{'set-cookie':cookie(url,token)});
+   .bind(await sha256(token),account.id,now,now,now+ttl).run();
+  return json({authenticated:true,account,remembered:remember},200,{'set-cookie':cookie(url,token,ttl)});
  }
  async handle(request:Request):Promise<Response>{
   const url=new URL(request.url);
@@ -61,7 +62,7 @@ export class SessionService {
    if(!['/api/v1/auth/register','/api/v1/auth/login'].includes(url.pathname))return json({error:'NOT_FOUND'},404);
    const content=await request.text();if(content.length>4096)return json({error:'REQUEST_TOO_LARGE'},413);
    const body=JSON.parse(content) as Record<string,unknown>;
-   const username=String(body.username??'').trim().toLowerCase(),password=String(body.password??'');
+   const username=String(body.username??'').trim().toLowerCase(),password=String(body.password??''),remember=body.remember===true;
    if(!/^[a-z0-9][a-z0-9._-]{2,49}$/.test(username) || password.length<12 || password.length>128)return json({error:'INVALID_CREDENTIAL_FORMAT'},400);
    const ip=request.headers.get('cf-connecting-ip')??'local';
    await this.rateLimit('ip:'+await sha256(ip),30,600);
@@ -73,13 +74,13 @@ export class SessionService {
     try{await this.db.prepare('INSERT INTO auth_accounts(id,username,display_name,tenant_id,locale,created_at,salt,password_hash) VALUES(?,?,?,?,?,?,?,?)')
       .bind(account.id,username,displayName,account.tenantId,account.locale,account.createdAt,salt,hash).run();}
     catch(error){if(/unique|constraint/i.test(String(error)))return json({error:'ACCOUNT_UNAVAILABLE'},409);throw error;}
-    return this.issue(account,url);
+    return this.issue(account,url,remember);
    }
    const found=await this.db.prepare('SELECT * FROM auth_accounts WHERE username=?').bind(username).first<AccountRow>();
    const candidate=await passwordKey(password,found?.salt??'ec000000000000000000000000000000');
    const expected=found?bytes(found.password_hash):new Uint8Array(64);
    if(!found || !timingSafeEqual(candidate,expected))return json({error:'INVALID_CREDENTIALS'},401);
-   return this.issue(project(found),url);
+   return this.issue(project(found),url,remember);
   }catch(error){
    if(error instanceof SyntaxError)return json({error:'INVALID_JSON'},400);
    if(error instanceof Error && error.message==='RATE_LIMITED')return json({error:'RATE_LIMITED'},429,{'retry-after':'600'});
