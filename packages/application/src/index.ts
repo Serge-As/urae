@@ -470,7 +470,7 @@ export class ConnectedApplication {
   async createMiscRubric(input:{name:string;description?:string;lifecycle?:'EPHEMERAL'|'PERSISTENT'|'SESSION_ONLY';amountMode?:'FIXED'|'VARIABLE';defaultAmount?:number;activeFirstSessions?:number}):Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/misc-rubrics`,{method:'POST',body:JSON.stringify({action:'create_custom',...input})});}
   async postMiscRubrics(input:{membershipId:string;meetingId?:string;items:Array<{templateId:string;amount:number;note?:string}>}):Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/misc-rubrics/postings`,{method:'POST',body:JSON.stringify({...input,idempotencyKey:makeId('misc_batch')})});}
   async miscPostings(filters:{meetingId?:string;membershipId?:string}={}):Promise<any[]>{if(!this.activeGroupId)return[];const p=new URLSearchParams();if(filters.meetingId)p.set('meetingId',filters.meetingId);if(filters.membershipId)p.set('membershipId',filters.membershipId);return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/misc-rubrics/postings?${p}`);}
-  async ledger():Promise<{summary:LedgerSummary;entries:LedgerEntry[];receipts:ContributionReceipt[]}>{if(!this.activeGroupId)return{summary:{currency:'XAF',cashBalance:0,memberFundsLiability:0,entryCount:0},entries:[],receipts:[]};return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/ledger`);}
+  async ledger():Promise<{summary:LedgerSummary;entries:LedgerEntry[];receipts:ContributionReceipt[];cellRevisions:Array<{meetingId:string;membershipId:string;rubricId:string;currency:string;version:number}>}>{if(!this.activeGroupId)return{summary:{currency:'XAF',cashBalance:0,memberFundsLiability:0,entryCount:0},entries:[],receipts:[],cellRevisions:[]};return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/ledger`);}
   async reverseLedgerEntry(entryId:string,reason:string):Promise<LedgerEntry>{if(!this.activeGroupId)throw new Error('ACTIVE_GROUP_REQUIRED');return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/ledger/${encodeURIComponent(entryId)}/reverse`,{method:'POST',body:JSON.stringify({reason})});}
 
   async cashboxReconciliations():Promise<CashboxReconciliationRecord[]>{if(!this.activeGroupId)return[];return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/cashbox/reconciliations`);}
@@ -531,11 +531,11 @@ export class ConnectedApplication {
   async submitLiveConsensus(meetingId:string,input:{cellKey:string;value:string|number;label?:string;membershipId?:string;rubricId?:string}):Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/meetings/${encodeURIComponent(meetingId)}/live-consensus`,{method:'POST',body:JSON.stringify(input)});}
   async voteLiveConsensus(meetingId:string,cellKey:string,proposalActorId:string):Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/meetings/${encodeURIComponent(meetingId)}/live-consensus/${encodeURIComponent(cellKey)}/vote`,{method:'POST',body:JSON.stringify({proposalActorId})});}
   async reserveLiveConsensus(meetingId:string,cellKey:string,reason:string):Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/meetings/${encodeURIComponent(meetingId)}/live-consensus/${encodeURIComponent(cellKey)}/reserve`,{method:'POST',body:JSON.stringify({reason})});}
-  async setFinancialCellTarget(input:{meetingId:string;membershipId:string;rubricId:string;targetAmount:number;currentAmount?:number;reason?:string}):Promise<any>{
+  async setFinancialCellTarget(input:{meetingId:string;membershipId:string;rubricId:string;targetAmount:number;currentAmount?:number;currentVersion?:number;reason?:string}):Promise<any>{
     if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');
     if(!Number.isSafeInteger(input.targetAmount)||input.targetAmount<0)throw Error('INVALID_CONTRIBUTION_AMOUNT');
-    const current=Number(input.currentAmount??0),operationKey='cell-target:'+makeId('op');
-    const payload={groupId:this.activeGroupId,meetingId:input.meetingId,membershipId:input.membershipId,rubricId:input.rubricId,targetAmount:input.targetAmount,baselineValue:current,reason:input.reason??''};
+    const current=Number(input.currentAmount??0),currentVersion=Number(input.currentVersion??0),operationKey='cell-target:'+makeId('op');
+    const payload={groupId:this.activeGroupId,meetingId:input.meetingId,membershipId:input.membershipId,rubricId:input.rubricId,targetAmount:input.targetAmount,baselineValue:current,baselineVersion:currentVersion,reason:input.reason??''};
     // Persist the exact target command before attempting transport. If the HTTP
     // response is lost after commit, the same idempotency key is replayed later.
     const item=await this.queueLocal('FINANCIAL_CELL_CORRECTION_PROPOSAL_V1',payload,operationKey);
@@ -543,7 +543,7 @@ export class ConnectedApplication {
     try{
       const result=await this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/meetings/${encodeURIComponent(input.meetingId)}/financial-cells`,{
         method:'POST',headers:{'x-idempotency-key':operationKey},
-        body:JSON.stringify({membershipId:input.membershipId,rubricId:input.rubricId,targetAmount:input.targetAmount,expectedCurrentAmount:current,reason:input.reason??''})
+        body:JSON.stringify({membershipId:input.membershipId,rubricId:input.rubricId,targetAmount:input.targetAmount,expectedCurrentAmount:current,expectedCellVersion:currentVersion,reason:input.reason??''})
       });
       this.outbox.markConfirmedByKey(this.tenantId,this.actorId,operationKey);await this.persistOutbox();return result;
     }catch(error){
