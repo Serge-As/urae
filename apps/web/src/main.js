@@ -401,9 +401,12 @@ const renderMeetings = async () => {
             b.textContent = tx('Clôturer','Close');
             b.onclick = async () => { try {
                 clearFail();
-                await app.closeMeeting(m.id);
+                const closed=await app.closeMeeting(m.id);
                 await renderMeetings();
-                toast(tx('Clôture enregistrée comme checkpoint.','Closing recorded as a checkpoint.'));
+                const debtUpdates=closed?.debtUpdate?.updates??[],interestAdded=debtUpdates.reduce((n,x)=>n+Number(x.interestNew??0),0);
+                if(interestAdded>0){
+                  toast(tx(`Séance clôturée · ${fmt(interestAdded)} d’intérêts de prêt comptabilisés pour la séance suivante.`,`Session closed · ${fmt(interestAdded)} loan interest accrued for the next session.`));
+                }else toast(tx('Clôture enregistrée. Les dettes sont à jour pour la séance suivante.','Session closed. Debts are current for the next session.'));
             }
             catch (e) {
                 fail(e);
@@ -1531,6 +1534,23 @@ async function showStatement(membershipId){
     metrics.append(metric(statement.totalNetContributions,tx('Cotisations nettes','Net contributions')),metric(statement.debtPrincipal,tx('Capital prêts / dettes','Loan principal / debt')),metric(statement.debtInterest,tx('Intérêts dus','Interest due')),metric(statement.totalDebt,tx('Dette totale','Total debt')));
     dialog.append(metrics);
     const note=document.createElement('p');note.className='truth-notice';note.textContent=tx('Les prêts et autres sorties ne sont pas comptés comme des cotisations positives. Ils sont présentés séparément dans les dettes.','Loans and other outflows are not counted as positive contributions. They are shown separately under debts.');dialog.append(note);
+    if(Array.isArray(statement.loanDebts)&&statement.loanDebts.length){
+      const debtBox=document.createElement('section');debtBox.className='statement-loan-debts stack';
+      const h=document.createElement('h3');h.textContent=tx('Détail des prêts et des intérêts','Loan and interest details');debtBox.append(h);
+      for(const loan of statement.loanDebts){
+        if(Number(loan.totalDebt??0)<=0)continue;
+        const a=document.createElement('article');a.className='item debt-loan-card';
+        const title=document.createElement('strong');title.textContent=String(loan.title??tx('Prêt','Loan'));
+        const values=document.createElement('p');values.textContent=tx('Capital restant : ','Outstanding principal: ')+fmt(Number(loan.outstandingPrincipal??0))+' · '+tx('Intérêts dus : ','Interest due: ')+fmt(Number(loan.unpaidInterest??0))+' · '+tx('Dette du prêt : ','Loan debt: ')+fmt(Number(loan.totalDebt??0));
+        a.append(title,values);
+        if(Number(loan.lastAccruedInterest??0)>0){
+          const period=document.createElement('p');period.className='truth-notice loan-interest-period';period.textContent=tx('Dernier intérêt ajouté : ','Latest accrued interest: ')+fmt(Number(loan.lastAccruedInterest??0))+' · '+tx('compté pour ','counted for ')+(loan.interestAppliesToLabel??tx('la séance suivante','the next session'))+tx(' — jamais rétroactivement dans la séance clôturée.',' — never retroactively in the closed session.');
+          a.append(period);
+        }
+        debtBox.append(a);
+      }
+      if(debtBox.children.length>1)dialog.append(debtBox);
+    }
     const groupsMap=new Map();
     for(const r of statement.receipts){const key=JSON.stringify([r.meetingId??'',r.rubricId??'']);if(!groupsMap.has(key))groupsMap.set(key,{title:(r.meetingTitle??tx('Sans séance','No meeting'))+' · '+(r.rubricName??tx('Sans rubrique','No rubric')),rows:[]});groupsMap.get(key).rows.push(r);}
     const history=document.createElement('div');history.className='statement-history-groups';const heading=document.createElement('h3');heading.textContent=tx('Historique des contributions et modifications','Contribution and change history');history.append(heading);
