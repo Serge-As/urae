@@ -1,5 +1,4 @@
-Eco-System 1.5.2 production delivery trigger
-Generated after PR #14 merge.
-Required pipeline: full CI -> existing D1/R2 -> pre-recovery snapshot -> additive migrations only -> deploy same SHA -> smoke version/build/cache/realMoney=false -> post-recovery restore integrity.
-
-Retry after exact-release smoke propagation fix. Previous deployment created Worker Version ID 9bdb2026-cd55-4c60-a277-93af890f4963 but smoke observed transient 1.5.0 health.
+Eco-System 1.5.2 production delivery requested after PR #18 governed Blueprint merge.
+Qualified merge commit: 021497fd5ab2741c7d91914b0489b5bc15c92e67
+Requested: 2026-09-23
+Guardrails: full CI, pre/post D1 recovery snapshots, additive migrations only, exact release smoke tests.
