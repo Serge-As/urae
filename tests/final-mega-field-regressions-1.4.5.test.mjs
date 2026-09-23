@@ -201,5 +201,5 @@ test('stale cached html no longer crashes and 1.5.2.2 keeps the previous coheren
   assert.doesNotMatch(main,/\$\('#claimLocalAccountBtn'\)\.addEventListener/);
   assert.match(sw,/eco-system-v1522-loan-funding-page-frame-20260923/);
   assert.match(html,/ECO-SYSTEM · 1\.5\.2\.1/);
-  assert.match(html,/main\.js\?v=1522/);assert.match(sw,/PREVIOUS_CACHE = 'eco-system-v1522-loan-funding-page-frame-20260923'/);
+  assert.match(html,/main\.js\?v=1522/);assert.match(sw,/PREVIOUS_CACHE = 'eco-system-v1521-field-finance-debt-ux-20260923'/);
 });
