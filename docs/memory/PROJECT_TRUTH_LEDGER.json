@@ -1139,6 +1139,73 @@
       "note": "Exact 1.4.5 source and production D1 were archived/restored/checksummed and mirrored to private R2 before mutation; post-deploy D1 and deployment truth were archived the same way.",
       "next": "Keep these checkpoints immutable; no redeploy is required for truth-document updates.",
       "currentProductLine": true
+    },
+    {
+      "id": "github.branch.1.5.2.1.field_finance_debt_ux",
+      "status": "VERIFIED_REMOTE",
+      "scope": "git-branch",
+      "observedOn": "2026-09-23",
+      "evidence": [
+        "github:release/1.5.2-unified-ux-blueprint-20260923",
+        "github:PR #15 merged",
+        "github-actions:35870359776 SUCCESS",
+        "github-actions:35870603766 SUCCESS"
+      ],
+      "note": "1.5.2.1 hotfix was built from founder field feedback without creating parallel financial owners. It repairs canonical sheet submission, debt semantics, scrolling, alerts, trash feedback, member toolbar and flagship visual mode.",
+      "next": "Use the deployed production as the only field-test target; any further defect must be reproducible and protected by a permanent test.",
+      "currentProductLine": true
+    },
+    {
+      "id": "cloudflare.production.1.5.2.1.field_finance_debt_ux",
+      "status": "VERIFIED_REMOTE",
+      "scope": "cloudflare-production",
+      "observedOn": "2026-09-23",
+      "evidence": [
+        "github-actions:35870745271 SUCCESS",
+        "source-deployed:109078c84374dddf5f64d8d836a2a726fd4a92ea",
+        "worker-version:ca489d19-f8ae-4baa-b3d7-3ff99df67d0c",
+        "health-version:1.5.2.1-field-finance-debt-ux",
+        "build-id:eco-system-1.5.2.1-20260923",
+        "pwa-cache:eco-system-v1521-field-finance-debt-ux-20260923",
+        "catalog:158",
+        "realMoneyEnabled:false"
+      ],
+      "note": "Production smoke verified root, health, exact commit/version/build/cache identity, 158-capability catalog, R2 binding and real money disabled.",
+      "next": "Founder field reception remains required; VERIFIED_REMOTE is not FIELD_ACCEPTED.",
+      "currentProductLine": true
+    },
+    {
+      "id": "backup.deploy.1.5.2.1",
+      "status": "VERIFIED_REMOTE",
+      "scope": "backup-recovery",
+      "observedOn": "2026-09-23",
+      "evidence": [
+        "github-actions:35870745271 SUCCESS",
+        "artifact-predeploy:10754976768",
+        "artifact-postdeploy:10755136726",
+        "d1:eco-system-db reused",
+        "migrations:No migrations to apply",
+        "artifactStorageMode:R2",
+        "restore:SQLite PRAGMA integrity_check=ok"
+      ],
+      "note": "D1 was exported before and after deployment. The post-deploy export was restored and integrity-checked. Existing R2 was bound; no replacement D1/R2 was created.",
+      "next": "After truth-document commits, create a closure source/D1 checkpoint without changing production code.",
+      "currentProductLine": true
+    },
+    {
+      "id": "finance.field_feedback.1.5.2.1",
+      "status": "VERIFIED_REMOTE",
+      "scope": "finance/ux",
+      "observedOn": "2026-09-23",
+      "evidence": [
+        "tests:field-feedback-1.5.2.1 PASS",
+        "tests:master-2.3.4-tranche3 next-session interest PASS",
+        "github-actions:35870359776 SUCCESS",
+        "production-deploy-smoke:35870745271 SUCCESS"
+      ],
+      "note": "Canonical financial cells now dispatch according to rubric nature; loans are outflows and debts. Closing meeting N accrues interest once and assigns it to meeting N+1. Debt surfaces expose principal + interest + other obligations. Page wheel scrolling, member toolbar, 72h restored notice, five-alert Home cap and dedicated alert center are regression-protected.",
+      "next": "Field-test exact founder scenarios on desktop and phone before any FIELD_ACCEPTED claim.",
+      "currentProductLine": true
     }
   ]
 }
