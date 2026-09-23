@@ -1731,27 +1731,67 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
     }
     const loanDisburse=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/loans\/([^/]+)\/disburse$/);
     if(loanDisburse&&request.method==='POST'){
-      const body=await readJson<Record<string,unknown>>(request);
-      const loan=(await completion.list(loanDisburse[1]!,'LOAN')).find(x=>x.id===loanDisburse[2]!);
+      const body=await readJson<Record<string,unknown>>(request),groupId=loanDisburse[1]!;
+      const loan=(await completion.list(groupId,'LOAN')).find(x=>x.id===loanDisburse[2]!);
       if(!loan)throw new Error('LOAN_NOT_FOUND');
       if(String(loan.data.completionState)!=='APPROVED')throw new Error('LOAN_NOT_APPROVED');
-      const principal=finite(body.amount??loan.data.principal);
+      const principal=finite(body.amount??loan.data.principal),fundingSource=String(body.fundingSource??loan.data.fundingSource??'GENERAL_CASH');
+      const sourceIds=Array.isArray(body.fundingSourceRubricIds)?[...new Set((body.fundingSourceRubricIds as unknown[]).map(String).filter(Boolean))]:jsonStringArray(loan.data.fundingSourceRubricIdsJson);
+      const enforceFundingPool=body.enforceFundingPool===undefined?loan.data.enforceFundingPool!==false:Boolean(body.enforceFundingPool);
+      if(fundingSource!=='GENERAL_CASH'&&!sourceIds.length)throw new Error('LOAN_FUNDING_SOURCE_EMPTY');
+
+      // Physical cash leaves the canonical CASH account exactly once. These
+      // allocations are a governed earmark showing which rubric fund financed
+      // the loan; they never create a second cash ledger.
+      const allocations:Array<{sourceRubricId:string;availableBefore:number;amount:number}>=[];
+      let poolAvailableBefore=0,fallbackGeneralCash=0;
+      if(fundingSource!=='GENERAL_CASH'){
+        const [positions,sheetEvents,oldFundings]=await Promise.all([
+          ledger.receiptPositions(ctx.tenantId,groupId),
+          repo.listWorkspaceRecords(ctx.tenantId,'FINANCE.SHEET_EVENT',groupId),
+          repo.listWorkspaceRecords(ctx.tenantId,'FINANCE.LOAN_FUNDING',groupId)
+        ]);
+        const inflowByRubric=new Map<string,number>();
+        for(const id of sourceIds)inflowByRubric.set(id,0);
+        for(const receipt of positions)if(receipt.rubricId&&inflowByRubric.has(receipt.rubricId))inflowByRubric.set(receipt.rubricId,(inflowByRubric.get(receipt.rubricId)??0)+Number(receipt.netAmount??0));
+        for(const event of sheetEvents){
+          const id=String(event.data.rubricId??'');if(!inflowByRubric.has(id)||String(event.data.direction??'IN')!=='IN')continue;
+          // Repayment events are not contribution receipts; include them once.
+          if(event.tags.includes('loan-repayment'))inflowByRubric.set(id,(inflowByRubric.get(id)??0)+Number(event.data.amount??0));
+        }
+        const usedByRubric=new Map<string,number>();for(const id of sourceIds)usedByRubric.set(id,0);
+        for(const funding of oldFundings){
+          let xs:any[]=[];try{xs=JSON.parse(String(funding.data.allocationsJson??'[]'));}catch{}
+          for(const x of xs){const id=String(x.sourceRubricId??'');if(usedByRubric.has(id))usedByRubric.set(id,(usedByRubric.get(id)??0)+Number(x.amount??0));}
+        }
+        let remaining=principal;
+        for(const id of sourceIds){
+          const available=Math.max(0,(inflowByRubric.get(id)??0)-(usedByRubric.get(id)??0));poolAvailableBefore+=available;
+          const amount=Math.min(remaining,available);if(amount>0){allocations.push({sourceRubricId:id,availableBefore:available,amount});remaining-=amount;}
+          if(remaining<=0)break;
+        }
+        if(remaining>0&&enforceFundingPool)throw new Error('LOAN_FUNDING_POOL_INSUFFICIENT');
+        fallbackGeneralCash=Math.max(0,remaining);
+      }else fallbackGeneralCash=principal;
+
       const entry=await ledger.recordCashMovement({
-        tenantId:ctx.tenantId,groupId:loanDisburse[1]!,amount:principal,currency:String(loan.data.currency??'XAF'),
+        tenantId:ctx.tenantId,groupId,amount:principal,currency:String(loan.data.currency??'XAF'),
         direction:'out',counterAccountCode:'LOAN_RECEIVABLE',counterAccountType:'asset',
         descriptionCode:'LEDGER_LOAN_DISBURSEMENT',sourceType:'loan',sourceId:loan.id,
         meetingId:body.meetingId?String(body.meetingId):undefined,
         idempotencyKey:String(body.idempotencyKey??request.headers.get('x-idempotency-key')??makeId('loan_disbursement')),kind:'loan_disbursement'
       });
-      const updatedLoan=await completion.transition(loanDisburse[1]!,loan.id,'DISBURSED',{
-        expectedVersion:finite(body.expectedVersion),patch:{ledgerEntryId:entry.id,outstandingPrincipal:principal,unpaidInterest:0,accruedMeetingIdsJson:'[]',disbursedAt:new Date().toISOString()}
+      const fundingId='loan_funding_'+entry.id,stamp=entry.createdAt;
+      await repo.saveWorkspaceRecord({id:fundingId,tenantId:ctx.tenantId,groupId,moduleId:'FINANCE.LOAN_FUNDING',title:'Source de financement · '+loan.title,summary:'Traçabilité du fonds qui a financé le prêt. La sortie de caisse reste comptabilisée une seule fois dans le Ledger canonique.',status:'DONE',tags:['loan-funding','loan:'+loan.id,'ledger:'+entry.id,'source:'+fundingSource.toLowerCase()],data:{loanId:loan.id,ledgerEntryId:entry.id,fundingSource,sourceRubricIdsJson:JSON.stringify(sourceIds),allocationsJson:JSON.stringify(allocations),poolAvailableBefore,fallbackGeneralCash,enforceFundingPool,amount:principal},createdBy:ctx.actorId,createdAt:stamp,updatedAt:stamp});
+      const updatedLoan=await completion.transition(groupId,loan.id,'DISBURSED',{
+        expectedVersion:finite(body.expectedVersion),patch:{ledgerEntryId:entry.id,outstandingPrincipal:principal,unpaidInterest:0,accruedMeetingIdsJson:'[]',disbursedAt:new Date().toISOString(),fundingSource,fundingSourceRubricIdsJson:JSON.stringify(sourceIds),fundingAllocationsJson:JSON.stringify(allocations),fundingPoolAvailableBefore:poolAvailableBefore,fallbackGeneralCash,fundingRecordId:fundingId}
       });
       const rubricId=body.rubricId?String(body.rubricId):String(loan.data.rubricId??'');
       if(rubricId&&body.meetingId){
         const eventId='sheet_loan_event_'+entry.id,meetingId=String(body.meetingId),existing=await repo.getWorkspaceRecord(ctx.tenantId,eventId);
-        if(!existing)await repo.saveWorkspaceRecord({id:eventId,tenantId:ctx.tenantId,groupId:loanDisburse[1]!,moduleId:'FINANCE.SHEET_EVENT',title:'Prêt décaissé',summary:'Projection de feuille liée à l’écriture canonique du prêt.',status:'DONE',tags:['sheet-event','loan-disbursement','ledger:'+entry.id],data:{membershipId:String(loan.data.borrowerMembershipId??''),meetingId,rubricId,loanId:loan.id,ledgerEntryId:entry.id,amount:principal,direction:'OUT'},createdBy:ctx.actorId,createdAt:entry.createdAt,updatedAt:entry.createdAt});
+        if(!existing)await repo.saveWorkspaceRecord({id:eventId,tenantId:ctx.tenantId,groupId,moduleId:'FINANCE.SHEET_EVENT',title:'Prêt décaissé',summary:'Projection de feuille liée à l’écriture canonique du prêt.',status:'DONE',tags:['sheet-event','loan-disbursement','ledger:'+entry.id],data:{membershipId:String(loan.data.borrowerMembershipId??''),meetingId,rubricId,loanId:loan.id,ledgerEntryId:entry.id,amount:principal,direction:'OUT',fundingSource},createdBy:ctx.actorId,createdAt:entry.createdAt,updatedAt:entry.createdAt});
       }
-      return json({entry,loan:updatedLoan},201,cors);
+      return json({entry,loan:updatedLoan,funding:{recordId:fundingId,fundingSource,sourceRubricIds:sourceIds,allocations,poolAvailableBefore,fallbackGeneralCash,enforceFundingPool}},201,cors);
     }
     const loanAllocation=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/loans\/allocation-preview$/);
     if(loanAllocation&&request.method==='POST'){
