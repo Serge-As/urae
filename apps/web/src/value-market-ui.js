@@ -182,7 +182,7 @@ export function mountValueMarketUI({app,getMembers=()=>[],isManager=()=>false,no
     if(!rows.length)list.append(el('p','Aucun rendez-vous Eco Live Market.','empty-state'));
     for(const live of rows){
       const card=el('article',undefined,'item value-market-card live-market-card'),state=String(live.data?.state),deal=byDeal(String(live.data?.dealId??'')),head=el('div',undefined,'actions');head.append(el('strong',live.title),statePill(state));card.append(head,row('Thème',live.data?.theme),row('Rendez-vous',dateLabel(live.data?.scheduledAt)),row('Capacité',levelLabel(live.data?.capabilityLevel)),row('Participants réels',Number(live.data?.viewerCount??0)));
-      const pinnedStock=stocks().find(x=>x.id===String(live.data?.stockItemId??''));if(pinnedStock)card.append(row('Produit épinglé',pinnedStock.title));
+      const pinnedStock=stocks().find(x=>x.id===String(live.data?.stockItemId??'')),pinnedStockLabel=pinnedStock?.title||String(live.data?.stockTitle??'');if(pinnedStockLabel)card.append(row('Produit épinglé',pinnedStockLabel));
       if(live.data?.mediaRef)card.append(row('Média / stream',live.data.mediaRef));
       if(deal){
         card.append(row('Deal épinglé',deal.title),row('Progression Deal',String(deal.data?.committedQuantity??0)+' / '+String(deal.data?.maxQuantity??0)),row('Prix public',money(deal.data?.currentPublicPrice??deal.data?.publicPrice,fmt)));
