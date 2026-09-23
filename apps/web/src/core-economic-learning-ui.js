@@ -110,20 +110,33 @@ export function mountCoreEconomicLearningUI({app,notify=()=>{},showError=console
     await renderReferral();
   }catch(err){showError(err);}})();referralActions.append(shareBtn);
 
-  const campaignBtn=el('button','Créer une campagne bornée','secondary');campaignBtn.type='button';campaignBtn.onclick=()=>void(async()=>{try{
+  const campaignDetails=el('details',undefined,'referral-campaign-builder');campaignDetails.append(el('summary','Créer une campagne rémunérée bornée'));
+  const campaignForm=makeForm([
+    {label:'Nom de la campagne',name:'title',required:true,placeholder:'Ex. Ambassadeurs du groupe'},
+    {label:'Budget maximum sandbox XAF',name:'budgetTotal',type:'number',min:0,required:true},
+    {label:'Prime par conversion vérifiée XAF',name:'rewardPerConversion',type:'number',min:0,required:true},
+    {label:'Fin de campagne',name:'endsAt',type:'date'},
+    {label:'Plafond de primes par ambassadeur (0 = budget seul)',name:'maxRewardsPerBeneficiary',type:'number',min:0},
+    {label:'Source du budget',name:'fundingSource',type:'select',options:[['SANDBOX_BUDGET','Sandbox — aucun argent réel'],['PRIVATE_BUSINESS','Budget privé Business Studio'],['GROUP_APPROVED_BUDGET','Budget groupe approuvé'],['SPONSOR','Sponsor documenté']]},
+    {label:'Preuve de financement si hors sandbox',name:'fundingEvidenceRef',placeholder:'PV, mandat, contrat sponsor…'},
+    {label:'Conversions admissibles',name:'eligibleConversionKinds',placeholder:'MEMBERSHIP_APPROVED, LEAD_QUALIFIED, ORDER_CONFIRMED'}
+  ],'Créer la campagne en brouillon');
+  campaignDetails.append(el('p','Un seul niveau direct. Aucun rendement lié au recrutement. Les cotisations et l’épargne ne financent pas les primes. Argent réel désactivé : les primes restent sandbox/non-cash tant qu’un partenaire qualifié n’est pas activé.','truth-notice'),campaignForm);referralPanel.append(campaignDetails);
+  campaignForm.addEventListener('submit',e=>void(async()=>{e.preventDefault();try{
     if(!app.activeGroup())throw new Error('ACTIVE_GROUP_REQUIRED');
-    const title=prompt('Nom de la campagne :')?.trim();if(!title)return;
-    const budget=Number(prompt('Budget sandbox maximum (XAF) :')??0),reward=Number(prompt('Récompense sandbox par conversion vérifiée :')??0);
-    await app.createReferralCampaign({title,targetKind:'GROUP',targetId:app.activeGroup(),budgetTotal:budget,rewardPerConversion:reward,rewardMode:'SANDBOX_CREDIT'});
-    notify('Campagne créée en brouillon.');await renderReferral();
-  }catch(err){showError(err);}})();referralActions.append(campaignBtn);
+    const payload={title:val(campaignForm,'title'),targetKind:'GROUP',targetId:app.activeGroup(),budgetTotal:num(campaignForm,'budgetTotal'),rewardPerConversion:num(campaignForm,'rewardPerConversion'),rewardMode:'SANDBOX_CREDIT',endsAt:val(campaignForm,'endsAt')?new Date(val(campaignForm,'endsAt')+'T23:59:59').toISOString():undefined,maxRewardsPerBeneficiary:num(campaignForm,'maxRewardsPerBeneficiary'),fundingSource:val(campaignForm,'fundingSource'),fundingEvidenceRef:val(campaignForm,'fundingEvidenceRef')||undefined,eligibleConversionKinds:val(campaignForm,'eligibleConversionKinds').split(',').map(x=>x.trim()).filter(Boolean),levels:1,rewardForRecruitingRecruiters:false,promisedReturnLinkedToRecruitment:false};
+    await app.createReferralCampaign(payload);campaignForm.reset();notify('Campagne créée en brouillon avec garde-fou anti-pyramide.');await renderReferral();
+  }catch(err){showError(err);}})());
 
   const renderReferral=async()=>{
     referralList.replaceChildren();try{
       const d=await app.referralDashboard(),summary=el('article',undefined,'item');
-      summary.append(el('strong','Mesures honnêtes'),el('p',(d.shares?.length??0)+' partage(s) lancé(s) · '+(d.leads?.length??0)+' lead(s) · '+(d.conversions?.length??0)+' conversion(s) vérifiée(s)','hint'));referralList.append(summary);
-      for(const c of d.campaigns??[]){const card=el('article',undefined,'item'),b=c.budget??{};card.append(el('strong',c.record.title),el('span',String(b.state??c.record.data.state),'pill'),el('p','Budget '+Number(b.budgetTotal||0).toLocaleString('fr-FR')+' · réservé '+Number(b.reservedAmount||0).toLocaleString('fr-FR')+' · validé '+Number(b.spentAmount||0).toLocaleString('fr-FR'),'hint'));
-        if(String(b.state)==='DRAFT'){const activate=el('button','Activer','secondary');activate.type='button';activate.onclick=()=>void app.setReferralCampaignState(c.record.id,'ACTIVE').then(renderReferral).catch(showError);card.append(activate);}referralList.append(card);}
+      const verified=(d.conversions??[]).filter(x=>x.data?.verificationState==='VERIFIED').length,pending=(d.conversions??[]).filter(x=>x.data?.verificationState==='PENDING_VERIFICATION').length;
+      summary.append(el('strong','Mesures honnêtes'),el('p',(d.shares?.length??0)+' partage(s) lancé(s) · '+(d.leads?.length??0)+' lead(s) · '+(d.conversions?.length??0)+' conversion(s) déclarée(s) · '+verified+' vérifiée(s) · '+pending+' à examiner','hint'));referralList.append(summary);
+      for(const c of d.campaigns??[]){const card=el('article',undefined,'item'),b=c.budget??{};card.append(el('strong',c.record.title),el('span',String(b.state??c.record.data.state),'pill'),el('p','Budget '+Number(b.budgetTotal||0).toLocaleString('fr-FR')+' · réservé '+Number(b.reservedAmount||0).toLocaleString('fr-FR')+' · approuvé sandbox '+Number(b.spentAmount||0).toLocaleString('fr-FR'),'hint'),el('p','1 niveau direct · argent réel OFF · source : '+String(c.record.data?.fundingSource??'SANDBOX_BUDGET'),'truth-notice'));
+        if(String(b.state)==='DRAFT'){const activate=el('button','Activer après revue','secondary');activate.type='button';activate.onclick=()=>void app.setReferralCampaignState(c.record.id,'ACTIVE').then(renderReferral).catch(showError);card.append(activate);}
+        for(const conv of c.pendingConversions??[]){const row=el('article',undefined,'item');row.append(el('strong','Conversion à vérifier · '+String(conv.data?.eventKind??'')),el('p',String(conv.data?.evidenceSummary??''),'hint'));const acts=el('div',undefined,'actions'),accept=el('button','Vérifier et réserver la prime','primary'),reject=el('button','Rejeter','link-btn');accept.type=reject.type='button';accept.onclick=()=>void app.verifyReferralConversion(c.record.id,conv.id,{accepted:true,reason:'Événement vérifié par le propriétaire de campagne',reviewEvidenceRef:String(conv.data?.eventRef??'')}).then(renderReferral).catch(showError);reject.onclick=()=>void app.verifyReferralConversion(c.record.id,conv.id,{accepted:false,reason:'Preuve insuffisante ou événement non admissible'}).then(renderReferral).catch(showError);acts.append(accept,reject);row.append(acts);card.append(row);}
+        referralList.append(card);}
     }catch(err){showError(err);}
   };
 
