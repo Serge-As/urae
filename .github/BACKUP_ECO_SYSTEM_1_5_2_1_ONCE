@@ -1,0 +1,4 @@
+Eco-System 1.5.2.1 closure BIR+ trigger.
+Production source remains 109078c84374dddf5f64d8d836a2a726fd4a92ea.
+This marker archives the post-deployment truth/recovery source HEAD plus current production D1 and mirrors both to existing R2.
+No production deploy is performed by this workflow.
