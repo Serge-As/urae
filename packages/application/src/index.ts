@@ -626,6 +626,17 @@ export class ConnectedApplication {
   async previewSessionRecap(meetingId:string,input:any):Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/meetings/'+encodeURIComponent(meetingId)+'/recap-preview',{method:'POST',body:JSON.stringify(input)});}
   async previewClosingCarryover(input:any):Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/closing/carryover-preview',{method:'POST',body:JSON.stringify(input)});}
 
+  async searchKnowledge(q='',groupId?:string):Promise<any[]>{const p=new URLSearchParams();if(q)p.set('q',q);if(groupId)p.set('groupId',groupId);const r=await this.request('/api/v1/knowledge?'+p) as any;return r.items??[];}
+  async createKnowledge(input:any):Promise<any>{return this.request('/api/v1/knowledge',{method:'POST',body:JSON.stringify(input)});}
+  async reviseKnowledge(id:string,input:any):Promise<any>{return this.request('/api/v1/knowledge/'+encodeURIComponent(id)+'/revisions',{method:'POST',body:JSON.stringify(input)});}
+  async reviewKnowledge(id:string,state:'VALIDATED'|'TO_REVALIDATE',note=''):Promise<any>{return this.request('/api/v1/knowledge/'+encodeURIComponent(id)+'/review',{method:'POST',body:JSON.stringify({state,note})});}
+  async encyclopedia(q=''):Promise<any[]>{const r=await this.request('/api/v1/encyclopedia?q='+encodeURIComponent(q)) as any;return r.items??[];}
+  async founderAiContext(q=''):Promise<any>{return this.request('/api/v1/founder-ai/context?q='+encodeURIComponent(q));}
+  async academy():Promise<any>{return this.request('/api/v1/academy');}
+  async createAcademyCourse(input:any):Promise<any>{return this.request('/api/v1/academy/courses',{method:'POST',body:JSON.stringify(input)});}
+  async enrollAcademy(courseId:string):Promise<any>{return this.request('/api/v1/academy/courses/'+encodeURIComponent(courseId)+'/enroll',{method:'POST',body:'{}'});}
+  async submitAcademyLesson(enrollmentId:string,input:any):Promise<any>{return this.request('/api/v1/academy/enrollments/'+encodeURIComponent(enrollmentId)+'/lessons',{method:'POST',body:JSON.stringify(input)});}
+
   async referralDashboard():Promise<any>{return this.request('/api/v1/growth/referrals');}
   async createReferralCampaign(input:any):Promise<any>{return this.request('/api/v1/growth/referral-campaigns',{method:'POST',body:JSON.stringify(input)});}
   async setReferralCampaignState(id:string,state:'ACTIVE'|'PAUSED'|'DONE'):Promise<any>{return this.request('/api/v1/growth/referral-campaigns/'+encodeURIComponent(id)+'/state',{method:'POST',body:JSON.stringify({state})});}
