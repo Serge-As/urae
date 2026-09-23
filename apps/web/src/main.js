@@ -60,8 +60,10 @@ const launchEditors=[];
 let launchStudio;
 let modules = [];
 let selectedLot = 'ALL';
+let notificationCenterPage=0;
+const NOTIFICATION_CENTER_PAGE_SIZE=50;
 let deferredInstallPrompt;
-const CAHIER_VERSION = '1.5.1-canonical-financial-tables-kit-business';
+const CAHIER_VERSION = '1.5.2.2-loan-funding-page-frame';
 const $ = (s) => { const e = document.querySelector(s); if (!e)
     throw new Error(`UI_ELEMENT_NOT_FOUND:${s}`); return e; };
 const val = (id) => document.getElementById(id).value.trim();
@@ -166,6 +168,26 @@ const restoreNavState=state=>{
     });
 };
 const updateBackButton=()=>{const b=document.querySelector('#appBackBtn');if(b)b.hidden=navDepth<=0;};
+const VIEW_LABELS={dashboard:'Accueil',inbox:'À faire & alertes',discovery:'Découvrir',launch:'Créer / intégrer',operations:'Centre opérationnel',sessions:'Séances',members:'Membres',finance:'Finances',tontines:'Tontines',recap:'Récap',backoffice:'Back-office',ecosystem:'Écosystème',services:'Tous les services',relay:'Eco Relay / Local',control:'Control Center',settings:'Sécurité & réglages',trash:'Corbeille',detail:'Fiche détaillée'};
+const renderPageContextBar=async(viewName)=>{
+    const bar=document.querySelector('#pageContextBar'),group=groups.find(g=>g.id===app.activeGroup());if(!bar)return;
+    document.querySelector('#pageContextView').textContent=tx(VIEW_LABELS[viewName]??viewName,VIEW_LABELS[viewName]??viewName);
+    const groupNode=document.querySelector('#pageContextGroup'),exercise=document.querySelector('#pageContextExercise'),meetingNode=document.querySelector('#pageContextMeeting'),debtNode=document.querySelector('#pageContextDebt');
+    if(!group){
+      groupNode.textContent=tx('Aucun groupe actif','No active group');exercise.textContent=tx('Contexte personnel / plateforme','Personal / platform context');meetingNode.textContent=tx('Aucune séance ouverte','No open meeting');debtNode.textContent=tx('Dette : —','Debt: —');return;
+    }
+    groupNode.textContent=group.name;exercise.textContent=String(group.kind??'')+' · '+String(group.governanceModel??'');
+    const open=meetings.find(m=>m.status==='open');meetingNode.textContent=open?tx('Séance ouverte · ','Open meeting · ')+meetingLabel(open):tx('Aucune séance ouverte','No open meeting');
+    debtNode.textContent=tx('Dette : chargement…','Debt: loading…');
+    try{
+      const mine=members.find(m=>m.userId===app.currentActor()&&m.status!=='left');
+      if(mine){const statement=await app.memberStatement(mine.id);debtNode.textContent=tx('Ma dette · ','My debt · ')+fmt(Number(statement.totalDebt??0));}
+      else if(isManager()){const loans=await app.listCompletion('LOAN'),total=loans.filter(x=>['DISBURSED','REPAYING'].includes(String(x.data?.completionState))).reduce((n,x)=>n+Number(x.data?.outstandingPrincipal??0)+Number(x.data?.unpaidInterest??0),0);debtNode.textContent=tx('Dettes prêts · ','Loan debt · ')+fmt(total);}
+      else debtNode.textContent=tx('Dette : consulter ma fiche','Debt: open my sheet');
+    }catch{debtNode.textContent=tx('Dette : indisponible','Debt: unavailable');}
+};
+document.querySelector('#pageContextHomeBtn')?.addEventListener('click',()=>go('dashboard',{force:true}));
+document.querySelector('#pageContextAlertsBtn')?.addEventListener('click',()=>{go('inbox',{anchor:'notificationCenterPanel',force:true});setTimeout(()=>document.querySelector('#notificationCenterPanel')?.scrollIntoView({behavior:'smooth',block:'start'}),100);});
 const showView=(name,state)=>{
     const target=document.querySelector(`#view-${name}`);if(!target)return false;
     document.querySelectorAll('.view').forEach(x=>x.classList.remove('active'));
@@ -177,6 +199,7 @@ const showView=(name,state)=>{
     document.querySelector('#globalSearchResults')?.replaceChildren();
     restoreNavState(state??{view:name,scrollY:0});
     updateBackButton();
+    void renderPageContextBar(name);
     return true;
 };
 const go=(name,options={})=>{
@@ -1020,12 +1043,17 @@ const renderUrgentNotifications=async()=>{
 document.querySelector('#urgentNotificationsRefreshBtn')?.addEventListener('click',()=>void renderUrgentNotifications());
 document.querySelector('#urgentNotificationsAllBtn')?.addEventListener('click',()=>{go('inbox',{anchor:'notificationCenterPanel',force:true});setTimeout(()=>document.querySelector('#notificationCenterPanel')?.scrollIntoView({behavior:'smooth',block:'start'}),120);});
 const renderNotificationCenter=async()=>{
-  const root=document.querySelector('#notificationCenterList'),meta=document.querySelector('#notificationCenterMeta');if(!root)return;
+  const root=document.querySelector('#notificationCenterList'),meta=document.querySelector('#notificationCenterMeta'),prev=document.querySelector('#notificationCenterPrevBtn'),next=document.querySelector('#notificationCenterNextBtn');if(!root)return;
   root.replaceChildren();if(!app.activeGroup()){root.innerHTML='<div class="empty-state">'+tx('Sélectionnez un groupe pour consulter ses alertes.','Select a group to view its alerts.')+'</div>';return;}
   try{
-    const rank={CRITICAL:4,HIGH:3,NORMAL:2,LOW:1},notices=(await app.groupNotifications()).slice().sort((a,b)=>Number(Boolean(a.read))-Number(Boolean(b.read))||(rank[String(b.priority)]??0)-(rank[String(a.priority)]??0)||String(b.createdAt??'').localeCompare(String(a.createdAt??'')));
-    const visible=notices.slice(0,100);if(meta)meta.textContent=tx(`${notices.filter(x=>!x.read).length} non lue(s) · ${notices.length} alerte(s) connues · affichage des 100 plus pertinentes au maximum.`,`${notices.filter(x=>!x.read).length} unread · ${notices.length} known alerts · showing at most the 100 most relevant.`);
-    if(!visible.length){root.innerHTML='<div class="empty-state">'+tx('Aucune alerte pour ce groupe.','No alerts for this group.')+'</div>';return;}
+    const rank={CRITICAL:4,HIGH:3,NORMAL:2,LOW:1},priority=String(document.querySelector('#notificationCenterPriority')?.value??'ALL'),q=String(document.querySelector('#notificationCenterSearch')?.value??'').trim().toLowerCase();
+    const all=(await app.groupNotifications()).slice().sort((a,b)=>Number(Boolean(a.read))-Number(Boolean(b.read))||(rank[String(b.priority)]??0)-(rank[String(a.priority)]??0)||String(b.createdAt??'').localeCompare(String(a.createdAt??'')));
+    const notices=all.filter(n=>(priority==='ALL'||String(n.priority)===priority)&&(!q||String(n.title??'').toLowerCase().includes(q)||String(n.message??'').toLowerCase().includes(q)));
+    const pages=Math.max(1,Math.ceil(notices.length/NOTIFICATION_CENTER_PAGE_SIZE));notificationCenterPage=Math.min(notificationCenterPage,pages-1);
+    const begin=notificationCenterPage*NOTIFICATION_CENTER_PAGE_SIZE,visible=notices.slice(begin,begin+NOTIFICATION_CENTER_PAGE_SIZE);
+    if(meta)meta.textContent=tx(`${all.filter(x=>!x.read).length} non lue(s) · ${all.length} au total · ${notices.length} après filtre · page ${notificationCenterPage+1}/${pages}.`,`${all.filter(x=>!x.read).length} unread · ${all.length} total · ${notices.length} after filter · page ${notificationCenterPage+1}/${pages}.`);
+    if(prev){prev.disabled=notificationCenterPage<=0;}if(next){next.disabled=notificationCenterPage>=pages-1;}
+    if(!visible.length){root.innerHTML='<div class="empty-state">'+tx('Aucune alerte correspondant au filtre.','No alerts match the filter.')+'</div>';return;}
     for(const n of visible){
       const article=document.createElement('article');article.className='item notification-center-item '+(n.read?'is-read':'is-unread')+' priority-'+String(n.priority??'NORMAL').toLowerCase();
       const h=document.createElement('strong');h.textContent=(n.priority==='CRITICAL'?'🔴 ':n.priority==='HIGH'?'🟠 ':n.priority==='LOW'?'⚪ ':'🔵 ')+String(n.title??tx('Notification','Notification'));
@@ -1038,6 +1066,10 @@ const renderNotificationCenter=async()=>{
   }catch(error){if(navigator.onLine)fail(error);else root.innerHTML='<div class="empty-state">'+tx('Centre d’alertes indisponible hors ligne tant qu’aucune copie locale n’existe.','Alert center unavailable offline until a local copy exists.')+'</div>';}
 };
 document.querySelector('#notificationCenterRefreshBtn')?.addEventListener('click',()=>void renderNotificationCenter());
+document.querySelector('#notificationCenterPrevBtn')?.addEventListener('click',()=>{notificationCenterPage=Math.max(0,notificationCenterPage-1);void renderNotificationCenter();});
+document.querySelector('#notificationCenterNextBtn')?.addEventListener('click',()=>{notificationCenterPage+=1;void renderNotificationCenter();});
+document.querySelector('#notificationCenterPriority')?.addEventListener('change',()=>{notificationCenterPage=0;void renderNotificationCenter();});
+document.querySelector('#notificationCenterSearch')?.addEventListener('input',()=>{notificationCenterPage=0;void renderNotificationCenter();});
 
 const showFinancialAlert=(input={})=>{
     const bar=document.querySelector('#financialAlertBar');if(!bar)return;
@@ -1477,6 +1509,7 @@ async function start() {
         renderDomainHubs();
         await refreshAll();
         await loadWorkspaces();
+        void renderPageContextBar(captureNavState().view);
     }
     catch (e) {
         if(e instanceof Error&&e.message==='NETWORK_UNAVAILABLE'){showAuth(tx('Mode hors ligne disponible : créez votre premier compte local maintenant.','Offline mode is available: create your first local account now.'),'register');return;}
