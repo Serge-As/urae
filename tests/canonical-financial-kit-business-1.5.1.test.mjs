@@ -27,16 +27,18 @@ test('one canonical financial table owns meeting individual and member-detail en
   assert.doesNotMatch(sessions,/const sessionNet=/);
   assert.match(detail,/dataset\.canonicalFinancialHost='1'/);
   assert.match(detail,/eco:render-canonical-financial-table/);
-  assert.doesNotMatch(detail,/buildExerciseMatrix\(\{member:m,statement,operational,editable:isManager\(\)\}\)/);
+  assert.doesNotMatch(detail,/buildExerciseMatrix/);
+  assert.doesNotMatch(detail,/buildMeetingMatrix/);
+  assert.doesNotMatch(detail,/quickEntry/);
+  assert.match(main,/canonicalFinancialObservers=new WeakMap/);
+  assert.match(main,/protectCanonicalFinancialHost/);
+  assert.match(main,/canonicalFinancialOwner='main-v151'/);
 });
 
 test('legacy voice layer no longer mounts any competing matrix owner',()=>{
   const mount=voice.slice(voice.indexOf('export function mountVoiceEntryUI()'));
   assert.match(mount,/voice augments inputs but never owns\/re-renders/);
-  assert.doesNotMatch(mount,/hardenLegacyMatrix\(\)/);
-  assert.doesNotMatch(mount,/watchDetailSheets\(\)/);
-  assert.doesNotMatch(mount,/installTwoSheetChooser\(\)/);
-  assert.doesNotMatch(mount,/renderCanonicalMeetingMatrix\(/);
+  for(const forbidden of ['hardenLegacyMatrix','watchDetailSheets','installTwoSheetChooser','renderCanonicalMeetingMatrix','renderIndividualSheetWorkspace','buildSheetCellEditor']) assert.ok(!voice.includes(forbidden),forbidden);
   assert.match(mount,/installFinancialVoicePanel\(\)/);
   assert.match(mount,/installFocusedFieldDictation\(\)/);
 });
@@ -45,12 +47,13 @@ test('ready-to-use kit is a real generated pack rather than a catalog card',()=>
   for(const token of [
     'Kit prêt à l’emploi · réellement généré pour ce brouillon','Checklist de lancement','Règlement type adaptable',
     'Calendrier de démarrage','Message d’invitation','Modèle de PV','Guide première réunion','Guide trésorerie',
-    'Paper Bridge · pack papier/hybride/numérique','OBLIGATOIRE','RECOMMANDÉ','CONFIGURABLE','TOTAL'
+    'Paper Bridge · pack papier/hybride/numérique','Modèle recommandé — à valider','Montant indicatif de référence','Ordre / tirage','Politique de retard','Simulation de préparation · prudent / central / optimiste','Conseils de démarrage et plan d’action','Exemple de frais et séparation des montants','OBLIGATOIRE','RECOMMANDÉ','CONFIGURABLE','TOTAL'
   ]) assert.ok(launch.includes(token),token);
   for(const token of ['Feuille mensuelle / feuille de séance membres × rubriques','Fiches individuelles','Émargement','Prêts / remboursements / intérêts','Assistances / secours','Cartes ou fiches membres'])
     assert.ok(launch.includes(token),token);
   assert.match(launch,/localStorage\.setItem\(key,JSON\.stringify\(saved\)\)/);
   assert.match(launch,/printStarterKit/);
+  for(const token of ['recommendedModel','indicativeAmount','feeExampleJson','orderPolicy','latePolicyJson','simulationJson','adviceJson']) assert.ok(launch.includes(token),token);
 });
 
 const ctx=()=>({tenantId:'tenant_biz151',actorId:'manager_151',activeGroupId:'group_151',groupRoles:['founder','manager'],mandateIds:[],deviceId:'d',sessionId:'s',locale:'fr',timezone:'Africa/Douala',connectivity:'online',requestId:'req-biz151'});
@@ -106,9 +109,30 @@ test('starter kit is persisted with the created group and surfaced from group ho
   assert.match(groupHome,/Ouvrir Business Studio/);
 });
 
+test('Business Studio supports catalog demand order communication actions and bounded agent',async()=>{
+  const {service}=await setupBusiness();
+  const client=await service.createClient({name:'Client A',type:'BUSINESS'});
+  const offer=await service.createOffer({name:'Gestion mensuelle',unitPrice:25000,category:'GESTION'});
+  assert.equal(offer.data.offerState,'ACTIVE');
+  const request=await service.createRequest({title:'Besoin de gestion',need:'Structurer un nouveau groupe',clientId:client.id,estimatedBudget:30000});
+  assert.equal(request.data.requestState,'OPEN');
+  const quote=await service.createQuote({clientId:client.id,title:'Devis gestion',items:[{label:'Gestion',quantity:1,unitPrice:25000}]});
+  await service.quoteDecision(quote.id,'ACCEPTED');
+  const order=await service.createOrder({clientId:client.id,quoteId:quote.id,title:'Commande gestion',amount:25000});
+  await service.setOrderState(order.id,'CONFIRMED');await service.setOrderState(order.id,'IN_PROGRESS');await service.setOrderState(order.id,'DELIVERED');
+  await service.logCommunication({clientId:client.id,channel:'WHATSAPP',direction:'OUTBOUND',subject:'Relance devis',nextActionAt:'2026-09-22T10:00:00Z'});
+  const action=await service.createAction({title:'Préparer réunion',clientId:client.id,priority:'HIGH'});await service.completeAction(action.id);
+  const summary=await service.summary();
+  assert.equal(summary.catalogOffers,1);assert.equal(summary.deliveredOrders,1);assert.ok(summary.followUpsDue>=1);
+  const brief=await service.operatingBrief();
+  assert.ok(Array.isArray(brief.actions)&&brief.actions.length>0);
+  assert.ok(brief.guardrails.some(x=>/n’invente jamais un prix/.test(x)));
+  assert.ok(brief.guardrails.some(x=>/paiement non enregistré/.test(x)));
+});
+
 test('Business Studio UI exposes a complete prospect-to-cash operating path',()=>{
-  for(const token of ['Créer un devis','Créer un contrat','Émettre une facture','Encaisser une facture','Saisir mon temps','Importer un honoraire validé du groupe','Plan de rentabilité complet'])
+  for(const token of ['Ajouter une offre au catalogue','Enregistrer une demande client','Créer une commande','Journaliser un échange / une relance','Créer une action de pilotage','Business Agent · plan d’action','Visibilité / publicité','Fournisseurs / approvisionnements','Créer un devis','Créer un contrat','Émettre une facture','Encaisser une facture','Saisir mon temps','Importer un honoraire validé du groupe','Plan de rentabilité complet'])
     assert.ok(businessUi.includes(token),token);
-  for(const token of ['Taux d’impayés estimé','Membres minimum','Marge nette réelle','Fournisseurs connus','Approvisionnements','Prudent','Central','Optimiste'])
+  for(const token of ['Taux d’impayés estimé','Membres minimum','Marge nette réelle','Offres catalogue','Demandes ouvertes','Commandes en cours','Relances dues','Rentabilité réelle par client / groupe','Fournisseurs connus','Approvisionnements','Prudent','Central','Optimiste'])
     assert.ok(businessUi.includes(token),token);
 });
