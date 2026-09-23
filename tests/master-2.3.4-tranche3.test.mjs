@@ -198,13 +198,16 @@ test('rubric count is group-defined: one rubric and forty rubrics both convert w
 });
 
 
-test('closing a monthly meeting accrues interest once on remaining principal even without payment',async()=>{
+test('closing a monthly meeting accrues interest once and assigns it to the next session debt even without payment',async()=>{
   const {repo,handler}=await seed();
   await repo.saveWorkspaceRecord({id:'loan_close_t3',tenantId:'tenant_t3',groupId:'group_t3',moduleId:'FINANCE.LOANS',title:'Prêt 50 000',status:'ACTIVE',tags:['completion','kind:LOAN','state:DISBURSED'],data:{completionKind:'LOAN',completionState:'DISBURSED',completionVersion:4,borrowerMembershipId:'mm_t3',principal:50000,outstandingPrincipal:50000,unpaidInterest:0,rateBasisPointsPerPeriod:500,paymentPriority:'CAPITAL_FIRST',ledgerEntryId:'ledger_disbursement_close',currency:'XAF',accruedMeetingIdsJson:'[]'},createdBy:'founder_t3',createdAt:'2026-01-10T09:00:00Z',updatedAt:'2026-01-10T09:00:00Z'});
   let r=await handler(new Request('http://local/api/v1/groups/group_t3/meetings/meeting_t3/close',{method:'POST',headers:founder,body:'{}'}));assert.equal(r.status,200);
+  const closed=await r.json();assert.equal(closed.debtUpdate.closedMeetingId,'meeting_t3');
   let loan=await repo.getWorkspaceRecord('tenant_t3','loan_close_t3');assert.equal(Number(loan.data.unpaidInterest),2500);assert.equal(Number(loan.data.outstandingPrincipal),50000);
-  assert.deepEqual(JSON.parse(String(loan.data.accruedMeetingIdsJson)),['meeting_t3']);
-  let periods=await repo.listWorkspaceRecords('tenant_t3','FINANCE.LOAN_PERIOD','group_t3');assert.equal(periods.length,1);assert.equal(Number(periods[0].data.interestNew),2500);assert.equal(Number(periods[0].data.nextTotalDueProjected),55000);
+  assert.deepEqual(JSON.parse(String(loan.data.accruedMeetingIdsJson??'[]')),[]);
+  assert.deepEqual(JSON.parse(String(loan.data.interestCloseSourceIdsJson)),['meeting_t3']);
+  assert.equal(loan.data.preparedInterestPending,true);assert.equal(String(loan.data.interestAppliesToLabel),'Séance suivante');
+  let periods=await repo.listWorkspaceRecords('tenant_t3','FINANCE.LOAN_PERIOD','group_t3');assert.equal(periods.length,1);assert.equal(Number(periods[0].data.interestNew),2500);assert.equal(Number(periods[0].data.nextTotalDueProjected),55000);assert.equal(periods[0].data.appliesTo,'NEXT_SESSION');assert.equal(periods[0].data.sourceClosedMeetingId,'meeting_t3');assert.equal(String(periods[0].data.meetingId),'');
   r=await handler(new Request('http://local/api/v1/groups/group_t3/meetings/meeting_t3/close',{method:'POST',headers:founder,body:'{}'}));assert.equal(r.status,200);
   loan=await repo.getWorkspaceRecord('tenant_t3','loan_close_t3');assert.equal(Number(loan.data.unpaidInterest),2500);periods=await repo.listWorkspaceRecords('tenant_t3','FINANCE.LOAN_PERIOD','group_t3');assert.equal(periods.length,1);
 });
