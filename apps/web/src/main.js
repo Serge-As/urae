@@ -674,8 +674,10 @@ const renderLedger = async () => {
     receipts.replaceChildren();
     if (!app.activeGroup())
         return;
-    const [l,sheetEvents] = await Promise.all([app.ledger(),app.listWorkspaceRecords('FINANCE.SHEET_EVENT',app.activeGroup()).catch(()=>[])]);
-    receiptPositions=l.receipts;financialSheetEvents=sheetEvents;financialCellVersions=new Map((l.cellRevisions??[]).map(r=>[JSON.stringify([r.meetingId,r.membershipId,r.rubricId,r.currency??'XAF']),Number(r.version??0)]));renderMeetingMatrix();renderIndividualSheetMatrix();
+    const [l,sheetEvents,sheetExpenses] = await Promise.all([app.ledger(),app.listWorkspaceRecords('FINANCE.SHEET_EVENT',app.activeGroup()).catch(()=>[]),app.expenses({scope:'SHEET'}).catch(()=>[])]);
+    receiptPositions=l.receipts;
+    financialSheetEvents=[...sheetEvents,...sheetExpenses.map(x=>({id:x.id,data:{membershipId:x.membershipId,meetingId:x.meetingId,rubricId:x.rubricId,amount:x.amount,direction:'OUT',ledgerEntryId:x.ledgerEntryId}}))];
+    financialCellVersions=new Map((l.cellRevisions??[]).map(r=>[JSON.stringify([r.meetingId,r.membershipId,r.rubricId,r.currency??'XAF']),Number(r.version??0)]));renderMeetingMatrix();renderIndividualSheetMatrix();
     for (const [n, label] of [[l.summary.cashBalance, 'Solde caisse'], [l.summary.memberFundsLiability, 'Engagement membres'], [l.summary.entryCount, 'Écritures']]) {
         const d = document.createElement('div');
         d.className = 'metric';
