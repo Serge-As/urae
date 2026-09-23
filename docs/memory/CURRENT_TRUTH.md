@@ -1,5 +1,72 @@
 # ECO-SYSTEM — CURRENT TRUTH
 
+## CURRENT OVERRIDE — 1.5.2 GOVERNED BLUEPRINT — PRODUCTION VERIFIED (2026-09-23 · FINAL LOT)
+
+**Production publique : `1.5.2-unified-ux-blueprint`.**
+**Statut : MERGED + DEPLOYED + SMOKE_VERIFIED. FIELD_ACCEPTED reste distinct et requiert la recette réelle fondateur/appareils.**
+
+### Livraison exacte
+- URL : `https://eco-system.sergemimf.workers.dev/`
+- PR finale : **#18 — MERGED**
+- branche d'intégration : `final/1.5.2-blueprint-governed-20260923`
+- merge code qualifié : `021497fd5ab2741c7d91914b0489b5bc15c92e67`
+- commit exact déployé : `193dee0d5e5a4298aaf96d098a2fc2e01a522ed1`
+- workflow production : **35893002960 — SUCCESS**
+- qualification production : **353 / 353 tests PASS**
+- workflow qualification générale du commit de déploiement : **35893003001 — SUCCESS**
+- Worker Version ID : `3b017204-c848-4731-83eb-681f95ea0ff5`
+- version runtime : `1.5.2-unified-ux-blueprint`
+- build ID : `eco-system-1.5.2-20260923`
+- PWA cache : `eco-system-v152-unified-ux-blueprint-20260923`
+- catalogue production : **158 capacités**
+- argent réel : **false / OFF**
+- stockage artefacts : **R2**
+- D1 canonique : `eco-system-db` réutilisée ; aucune recréation
+- R2 canonique : `eco-system-backups` réutilisé
+- sauvegarde pré-déploiement : artifact **10765009378**
+- sauvegarde post-déploiement : artifact **10764894619**
+- restauration post-déploiement : **PASS**, SQLite + `PRAGMA integrity_check=ok`
+
+### Acquis fonctionnels consolidés dans ce lot
+1. **UX 1.5.2 unique conservée** : choix visible tout en haut de l'Accueil entre **Visuel**, **Senior** et **Assisté / Dictée**. Les trois modes utilisent les mêmes services, mêmes permissions, mêmes règles, même Ledger et mêmes calculs.
+2. **Tableaux financiers canoniques préservés** : feuille de séance et fiches individuelles gardent le même owner ; saisie montant + ✓, correction/remplacement exact, totaux et garde-fous de revue indépendante restent acquis.
+3. **Auth/PWA conservées** : restauration de session avant écran Connexion, appareil privé optionnel, cache versionné sans retour silencieux vers une ancienne interface.
+4. **Matching besoins/offres réellement enrichi** : comparaison explicable sur catégorie, quantité, unités compatibles, spécification, qualité, zone, disponibilité/délai, coût rendu, budget, fraîcheur et preuves. Les coûts inconnus restent inconnus ; le sponsoring ne bonifie pas le score.
+5. **Knowledge Bank gouvernée** : identité stable d'une connaissance, versions successives, validité, prochaine revue, sensibilité/portée et revalidation. Une ancienne version supersédée n'est pas réutilisée comme vérité courante.
+6. **ONG / Partenaires opérationnels** : mandat d'accompagnement explicitement consenti et borné ; actions d'accompagnement ; preuves de financement ; plan de transfert vers les responsables locaux. Aucun animateur/ONG ne reçoit automatiquement un rôle financier ni un accès aux finances individuelles.
+7. **Financement ONG** : une promesse reste une promesse. À partir de l'état « Reçu », une référence Ledger canonique est exigée ; le module programme ne crée pas une seconde vérité financière.
+8. **Referral gouverné** : recommandation directe seulement ; structure multi-niveaux / rémunération du recrutement de recruteurs / financement secret par argent des membres sont bloqués ; une conversion signalée ne réserve pas de récompense avant vérification.
+9. **Trust / anti-arnaque** : signalement commence comme suspicion non vérifiée ; preuves, triage, investigation, décision et recours sont séparés ; aucun verdict légal automatique et aucune modification automatique d'un score financier.
+10. **Financial Lab** : outil pédagogique renforcé pour confronter promesses, ressources documentées et dépendance aux nouveaux dépôts, sans déclarer automatiquement « Ponzi » ou « arnaque ».
+
+### Garde-fous permanents confirmés
+- Ledger = vérité financière unique.
+- D1 `eco-system-db` jamais recréée ; migrations additives uniquement.
+- R2 `eco-system-backups` préservé.
+- argent réel **OFF**.
+- aucune finance individuelle/CNI/téléphone/biométrie partagée avec partenaires/ONG.
+- sponsoring ≠ confiance.
+- promesse ≠ argent reçu.
+- programme/ONG ≠ rôle financier.
+- décision de sécurité ≠ verdict légal automatique.
+- dix étapes, multi-tontines, Collation, RECAP, offline/outbox, Community/Forum/Live, Control Center et historique restent des acquis de non-régression.
+
+### Limite vraie / recette terrain
+La livraison technique et le smoke distant sont prouvés. **FIELD_ACCEPTED n'est pas déclaré automatiquement.** La prochaine action utilisateur utile est uniquement la recette réelle :
+- changer Visuel / Senior / Assisté sur desktop et téléphone ;
+- vérifier la feuille de séance > 5 secondes puis après actualisation ;
+- vérifier une fiche individuelle ;
+- saisir montant + ✓, corriger une valeur et vérifier les totaux ;
+- tester session normale / appareil privé ;
+- tester dictée puis confirmation humaine ;
+- tester création d'un besoin + offre et lire les raisons du matching ;
+- tester un programme ONG en brouillon/actif puis un mandat borné.
+
+**Point de reprise obligatoire :** partir de la branche `next/1.5.0-audit-complete-platform-20260923` au HEAD distant, en considérant la production vérifiée au commit `193dee0d5e5a4298aaf96d098a2fc2e01a522ed1`. Ne jamais repartir de la branche divergente fermée de la PR #17.
+
+---
+
+
 ## CURRENT OVERRIDE — 1.5.2 UNIFIED UX / CANONICAL CORE — PRODUCTION QUALIFIED (2026-09-23)
 
 **Production publique : `1.5.2-unified-ux-blueprint`.**
