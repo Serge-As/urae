@@ -431,7 +431,7 @@ const makeFinancialEntryCell=({member,rubric,meetingId,editable=true})=>{
     const holder=document.createElement('div');holder.className='matrix-cell matrix-cell-entry';holder.dataset.membershipId=member.id;holder.dataset.rubricId=rubric.id;holder.dataset.meetingId=meetingId;holder.tabIndex=-1;
     const current=exactCellAmount(member.id,rubric.id,meetingId),currentLabel=document.createElement('strong');currentLabel.className='cell-current';currentLabel.textContent=fmt(current);holder.append(currentLabel);
     if(!editable)return holder;
-    const input=document.createElement('input');input.type='number';input.min='0';input.step='1';input.inputMode='numeric';input.className='cell-target-input';input.placeholder=tx('Saisir / corriger…','Enter / correct…');input.setAttribute('aria-label',tx('Saisir / corriger la valeur totale','Enter / correct the total value'));
+    const input=document.createElement('input');input.type='number';input.min='0';input.step='1';input.inputMode='numeric';input.className='cell-target-input';input.placeholder=tx('Saisir / corriger…','Enter / correct…');input.setAttribute('aria-label',tx('Nouvelle valeur totale · Saisir / corriger','New total value · Enter / correct'));
     const validate=document.createElement('button');validate.type='button';validate.className='cell-validate';validate.textContent='✓';validate.title=tx('Saisir / corriger · valider la valeur totale','Enter / correct · confirm total value');
     const submit=()=>void(async()=>{
       const raw=input.value.trim();if(raw==='')return;const target=Number(raw);if(!Number.isSafeInteger(target)||target<0){fail(new Error('INVALID_CONTRIBUTION_AMOUNT'));return;}
