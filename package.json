@@ -1,9 +1,9 @@
 {
   "name": "tontine-platform",
-  "version": "1.4.5-final-mega-offline-governance",
+  "version": "1.5.0-audit-complete",
   "private": true,
   "type": "module",
-  "description": "Eco-System 1.4.5: true offline first account, Android 6 cache hardening, restored sheets/menus, governed multi-manager financial corrections, alerts, trash and relay.",
+  "description": "Eco-System 1.5.0: audit-complete hardening of finance, offline identity, governance, trash/reconstitution, Value Network, Business, Marketplace, Knowledge, Academy and supervision.",
   "engines": {
     "node": ">=24"
   },
