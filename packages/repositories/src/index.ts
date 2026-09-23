@@ -543,6 +543,24 @@ export class D1PlatformRepository implements PlatformRepository {
     const {tenantId,groupId}=manifest,scopeHash=await purgeScopeHash(tenantId,groupId),dHash=await deletionHash(deletionId);
     const q=(sql:string,...values:unknown[])=>this.db.prepare(sql).bind(...values);
     const statements:D1PreparedStatementLike[]=[
+      // Arbitration happens inside the same D1 batch as deletion. If the final
+      // qualifying petition signature already exists, the scalar subquery is
+      // NULL, the NOT NULL guard fails, and the entire purge is rolled back.
+      q(`INSERT INTO group_purge_execution_guards(scope_hash,allowed,created_at)
+         VALUES(?,(SELECT 1 FROM platform_records trash
+           WHERE trash.record_type='workspace_record' AND trash.record_id=?
+             AND json_extract(trash.data_json,'$.moduleId')='TRASH.ITEM'
+             AND (
+               CAST(COALESCE(json_extract(trash.data_json,'$.data.petitionThreshold'),0) AS INTEGER)=0
+               OR (SELECT COUNT(*) FROM platform_records sig
+                   WHERE sig.record_type='workspace_record' AND sig.tenant_id=? AND sig.group_id=?
+                     AND json_extract(sig.data_json,'$.moduleId')='TRASH.PETITION_SIGNATURE'
+                     AND json_extract(sig.data_json,'$.data.trashId')=?)
+                  < CAST(COALESCE(json_extract(trash.data_json,'$.data.petitionThreshold'),0) AS INTEGER)
+             )
+         ),?)
+         ON CONFLICT(scope_hash) DO UPDATE SET allowed=excluded.allowed,created_at=excluded.created_at`,
+         scopeHash,deletionId,tenantId,groupId,deletionId,purgedAt),
       // Remove non-group-scoped audit/evidence while the entity graph is still queryable.
       q(`DELETE FROM platform_records WHERE tenant_id=? AND record_type IN ('audit','evidence') AND (
           json_extract(data_json,'$.targetId')=? OR json_extract(data_json,'$.subjectId')=? OR
@@ -587,6 +605,7 @@ export class D1PlatformRepository implements PlatformRepository {
       q('DELETE FROM case_record WHERE tenant_id=? AND group_id=?',tenantId,groupId),
       q('DELETE FROM membership WHERE tenant_id=? AND group_id=?',tenantId,groupId),
       q('DELETE FROM tenant_group WHERE tenant_id=? AND id=?',tenantId,groupId),
+      q('DELETE FROM group_purge_execution_guards WHERE scope_hash=?',scopeHash),
       q(`INSERT INTO purged_group_tombstones(scope_hash,purged_at,deletion_hash,purge_policy_version)
          VALUES(?,?,?,'PURGE_V1_COMPLETE_BUSINESS_DATA')
          ON CONFLICT(scope_hash) DO UPDATE SET purged_at=excluded.purged_at,deletion_hash=excluded.deletion_hash,purge_policy_version=excluded.purge_policy_version`,scopeHash,purgedAt,dHash)
