@@ -1648,6 +1648,8 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
     const marketRequestTransition=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/market\/requests\/([^/]+)\/transition$/);
     if(marketRequestTransition&&request.method==='POST'){const body=await readJson<any>(request);return json(await market.transitionMarketRequest(marketRequestTransition[1]!,marketRequestTransition[2]!,String(body.to??'') as any,String(body.note??'')),200,cors);}
 
+    const dealInternalRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/market\/deals\/internal$/);
+    if(dealInternalRoute&&request.method==='GET')return json(await market.deals(dealInternalRoute[1]!,true),200,cors);
     const dealRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/market\/deals$/);
     if(dealRoute&&request.method==='GET')return json(await market.deals(dealRoute[1]!,false),200,cors);
     if(dealRoute&&request.method==='POST'){
