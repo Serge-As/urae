@@ -1,5 +1,55 @@
 # ECO-SYSTEM — CURRENT TRUTH
 
+## CURRENT OVERRIDE — 1.5.2.1 FIELD FINANCE / DEBT / UX — DEPLOYED & REMOTE VERIFIED (2026-09-23)
+
+**Statut : VERIFIED_REMOTE en production ; CI + smoke + sauvegardes pré/post verts ; PAS ENCORE FIELD_ACCEPTED.**
+
+- URL production : `https://eco-system.sergemimf.workers.dev/`.
+- Version runtime : **`1.5.2.1-field-finance-debt-ux`**.
+- Build ID : **`eco-system-1.5.2.1-20260923`**.
+- PWA cache : **`eco-system-v1521-field-finance-debt-ux-20260923`**.
+- Source déployée : **`109078c84374dddf5f64d8d836a2a726fd4a92ea`**.
+- Worker Version ID : **`ca489d19-f8ae-4baa-b3d7-3ff99df67d0c`**.
+- Branche : `release/1.5.2-unified-ux-blueprint-20260923`.
+- PR terrain : **#15**, fusionnée dans la branche release.
+- Qualification hotfix avant merge : **35870359776 SUCCESS**.
+- Qualification après merge : **35870603766 SUCCESS**.
+- Qualification du gate de déploiement : **35870652283 SUCCESS**.
+- Workflow production complet : **35870745271 SUCCESS**.
+- Catalogue production : **158 capacités**.
+- D1 : `eco-system-db` réutilisée ; **No migrations to apply**.
+- R2 : `eco-system-backups` actif ; `artifactStorageMode=R2`.
+- Argent réel : **DÉSACTIVÉ** (`realMoneyEnabled=false`).
+- Snapshot D1 pré-déploiement : artifact **10754976768**.
+- Snapshot D1 post-déploiement : artifact **10755136726** ; restauration SQLite + `PRAGMA integrity_check=ok`.
+
+### Correctifs terrain 1.5.2.1 déployés
+1. **Deux feuilles financières réellement écrites** : le bouton ✓ appelle désormais le moteur métier canonique. Une contribution reste une contribution ; une sortie reste une sortie ; un prêt n'est plus traité comme une recette ; un remboursement passe par le circuit prêt.
+2. **Prêt = rubrique négative / décaissement** : le prêt diminue la caisse au décaissement et crée la créance membre ; il n'est pas additionné aux rubriques positives.
+3. **Dette complète** : capital restant + intérêts dus + autres obligations. Cette décomposition est projetée dans Accueil, Séances et la fiche membre.
+4. **Intérêt après clôture** : la clôture de la séance N ajoute l'intérêt dû une seule fois et le rattache explicitement à la **séance N+1**. L'intérêt est visible immédiatement après la clôture de N, sans être attribué à N et sans intérêt sur intérêt.
+5. **Anti-double accrual** : l'intérêt déjà préparé pour la séance suivante est consommé au remboursement sans être recréé une seconde fois.
+6. **Défilement des tableaux** : la roue verticale fait défiler la page même lorsque le pointeur est au-dessus de la matrice ; le défilement horizontal local du tableau reste disponible.
+7. **Page Membres** : la barre de gestion ne s'écrase plus en colonnes de lettres ; boutons et sélecteurs restent lisibles.
+8. **Corbeille** : après restauration, la confirmation reste visible **72 h**, puis disparaît automatiquement de la Corbeille ; la règle métier de rétention/restauration six mois reste inchangée pour les éléments encore supprimés.
+9. **Alertes scalables** : l'Accueil montre au maximum **5 alertes prioritaires** ; le reste est consultable dans un **Centre d'alertes** dédié avec navigation vers l'action concernée.
+10. **Mode Visuel phare** : langage visuel renforcé (hero, panneaux, métriques, navigation, profondeur) sans créer de logique métier différente des modes Senior/Assisté.
+11. **Shell PWA** : suppression du `\n` littéral visible en haut de l'application ; cache version-exact 1.5.2.1 ; 1.5.2 conservée comme rollback cohérent immédiat.
+
+### Garde-fous confirmés par le déploiement
+- Ledger unique ; aucune seconde comptabilité.
+- D1 existante préservée ; aucune migration destructive.
+- R2 existant réutilisé.
+- `realMoneyEnabled=false`.
+- Les 10 étapes, Collation, multi-tontines, RI/Living Rules, RECAP, Community/Forum/Live, Marketplace, Business Studio, Control Center et les autres acquis ne sont pas supprimés.
+- Déployé + smoke **ne vaut pas recette terrain exhaustive**. Les correctifs ci-dessus sont VERIFIED_REMOTE ; le fondateur doit encore les accepter sur PC/téléphone par usage réel.
+
+**Point de reprise :** tester la production 1.5.2.1 sur les scénarios terrain exacts : saisir + ✓ dans feuille de séance et fiche individuelle, vérifier le changement immédiat ; décaisser un prêt et constater caisse négative/dette ; clôturer une séance puis vérifier l'intérêt porté sur la suivante ; utiliser la roue au-dessus du tableau ; tester Membres, Corbeille après restauration, Centre d'alertes et les trois modes. Toute anomalie reproductible devient d'abord un test permanent.
+
+Document terrain : `docs/recovery/ECO_SYSTEM_1.5.2.1_FIELD_FEEDBACK_CURRENT_TRUTH_2026-09-23.md`.
+
+---
+
 ## CURRENT OVERRIDE — 1.5.2 UNIFIED UX / CANONICAL CORE — CI QUALIFIED (2026-09-23)
 
 **Statut : CI_QUALIFIED sur branche ; PAS ENCORE DÉPLOYÉ ; PAS FIELD_ACCEPTED.**
