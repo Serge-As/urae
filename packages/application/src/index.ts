@@ -689,6 +689,7 @@ export class ConnectedApplication {
   async issueBusinessInvoice(input:any):Promise<any>{return this.request('/api/v1/business/invoices',{method:'POST',body:JSON.stringify(input)});}
   async recordBusinessPayment(input:any):Promise<any>{return this.request('/api/v1/business/payments',{method:'POST',body:JSON.stringify(input)});}
   async recordBusinessExpense(input:any):Promise<any>{return this.request('/api/v1/business/expenses',{method:'POST',body:JSON.stringify(input)});}
+  async recordBusinessRevenue(input:any):Promise<any>{return this.request('/api/v1/business/revenues',{method:'POST',body:JSON.stringify(input)});}
   async recordBusinessTime(input:any):Promise<any>{return this.request('/api/v1/business/time',{method:'POST',body:JSON.stringify(input)});}
   async createBusinessScenario(input:any):Promise<any>{return this.request('/api/v1/business/scenarios',{method:'POST',body:JSON.stringify(input)});}
 
