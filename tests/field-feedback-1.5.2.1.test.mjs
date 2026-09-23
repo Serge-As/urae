@@ -7,12 +7,12 @@ test('field feedback: canonical sheet entry uses business semantics instead of t
   const main=await readFile('.build/src/main.js','utf8');
   assert.match(app,/recordFinancialSheetEntry/);
   assert.match(app,/recordCashContribution/);
-  assert.match(app,/\/loans\/.*\/disburse/);
+  assert.match(app,/\/loans\/[^`'\"]*\/disburse/);
   assert.match(app,/scope:\s*['"]SHEET['"]/);
   assert.match(main,/financialNatureForRubric/);
   assert.match(main,/recordFinancialSheetEntry/);
   assert.match(main,/FINANCE\.SHEET_EVENT/);
-  assert.match(main,/app\.expenses\(\{scope:['"]SHEET['"]\}\)/);
+  assert.match(main,/app\.expenses\(\{\s*scope\s*:\s*['"]SHEET['"]\s*\}\)/);
   assert.match(main,/Sortie \/ dette|Outflow \/ debt/);
 });
 
@@ -25,7 +25,7 @@ test('field feedback: loan close accrual is one canonical flow for online and ou
   assert.match(worker,/interestAppliesToMeetingId/);
   assert.match(worker,/interestAppliesToLabel/);
   assert.match(worker,/appliesTo\s*:\s*['"]NEXT_SESSION['"]/);
-  assert.match(worker,/totalDebt:principal\+interestAfter/);
+  assert.match(worker,/totalDebt\s*:\s*principal\s*\+\s*interestAfter/);
   assert.match(worker,/loanDebts/);
 });
 
@@ -52,7 +52,7 @@ test('field feedback: member actions never collapse into vertical letters',async
 test('field feedback: restored trash notice expires visually after 72h and Home stays capped at five urgent alerts',async()=>{
   const main=await readFile('.build/src/main.js','utf8');
   assert.match(main,/restoredWindow\s*=\s*72\s*\*\s*60\s*\*\s*60\s*\*\s*1000/);
-  assert.match(main,/slice\(0,5\)/);
+  assert.match(main,/slice\(\s*0\s*,\s*5\s*\)/);
   assert.match(main,/renderNotificationCenter/);
   assert.match(main,/notificationCenterList/);
 });
