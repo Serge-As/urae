@@ -1,9 +1,9 @@
 {
   "name": "tontine-platform",
-  "version": "1.5.1-canonical-financial-tables-kit-business",
+  "version": "1.5.2-unified-ux-blueprint",
   "private": true,
   "type": "module",
-  "description": "Eco-System 1.5.1: one canonical financial table across session/member entry, persistent Ready-to-Use Kit, and complete manager Business Studio profitability cockpit.",
+  "description": "Eco-System 1.5.2: unified canonical finance, stable PWA/session restoration, three user experience modes, Ready-to-Use Kit, Business Studio and Blueprint 5.0.0 consolidation.",
   "engines": {
     "node": ">=24"
   },
