@@ -145,12 +145,24 @@ jobs:
           }
           [System.IO.File]::WriteAllLines((Join-Path (Resolve-Path recovery) 'SHA256SUMS.txt'), $lines)
 
-      - name: Upload recovery proof
-        uses: actions/upload-artifact@v4
-        with:
-          name: eco-system-pre-1.5.2.2-${{ github.sha }}
-          path: recovery/
-          retention-days: 30
+      - name: Persist pre-deploy recovery proof without artifact action
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $persistentRoot = Join-Path $env:USERPROFILE 'EcoSystemRecovery'
+          $persistentDir = Join-Path $persistentRoot "$env:GITHUB_SHA\pre"
+          New-Item -ItemType Directory -Force -Path $persistentDir | Out-Null
+          Copy-Item -Path 'recovery\*' -Destination $persistentDir -Recurse -Force
+
+          if ($env:R2_MODE -eq 'R2') {
+            Get-ChildItem recovery -File | ForEach-Object {
+              $key = "$env:R2_BUCKET/recovery/1.5.2.2/$env:GITHUB_SHA/pre/$($_.Name)"
+              & npx --yes wrangler@4 r2 object put $key --file $_.FullName --remote
+              if ($LASTEXITCODE -ne 0) { throw "Failed to persist pre-deploy recovery proof to existing R2 bucket: $key" }
+            }
+          } else {
+            Write-Warning "R2 unavailable to token; pre-deploy recovery proof retained locally at $persistentDir"
+          }
 
       - name: Apply additive D1 migrations only
         shell: powershell
@@ -253,9 +265,21 @@ jobs:
           }
           [System.IO.File]::WriteAllLines((Join-Path (Resolve-Path recovery-post) 'SHA256SUMS.txt'), $lines)
 
-      - name: Upload post-deploy recovery proof
-        uses: actions/upload-artifact@v4
-        with:
-          name: eco-system-post-1.5.2.2-${{ github.sha }}
-          path: recovery-post/
-          retention-days: 30
+      - name: Persist post-deploy recovery proof without artifact action
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $persistentRoot = Join-Path $env:USERPROFILE 'EcoSystemRecovery'
+          $persistentDir = Join-Path $persistentRoot "$env:GITHUB_SHA\post"
+          New-Item -ItemType Directory -Force -Path $persistentDir | Out-Null
+          Copy-Item -Path 'recovery-post\*' -Destination $persistentDir -Recurse -Force
+
+          if ($env:R2_MODE -eq 'R2') {
+            Get-ChildItem recovery-post -File | ForEach-Object {
+              $key = "$env:R2_BUCKET/recovery/1.5.2.2/$env:GITHUB_SHA/post/$($_.Name)"
+              & npx --yes wrangler@4 r2 object put $key --file $_.FullName --remote
+              if ($LASTEXITCODE -ne 0) { throw "Failed to persist post-deploy recovery proof to existing R2 bucket: $key" }
+            }
+          } else {
+            Write-Warning "R2 unavailable to token; post-deploy recovery proof retained locally at $persistentDir"
+          }
