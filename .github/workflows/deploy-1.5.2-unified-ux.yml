@@ -24,112 +24,206 @@ env:
 
 jobs:
   qualify-backup-deploy-smoke:
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, Windows, X64]
     timeout-minutes: 40
     env:
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-node@v4
         with:
           node-version: '24'
+
       - name: Install dependencies
+        shell: powershell
         run: npm install --ignore-scripts
+
       - name: Verify Cloudflare credentials
-        shell: bash
+        shell: powershell
         run: |
-          set -euo pipefail
-          test -n "${CLOUDFLARE_ACCOUNT_ID:-}"
-          test -n "${CLOUDFLARE_API_TOKEN:-}"
+          $ErrorActionPreference = 'Stop'
+          if ([string]::IsNullOrWhiteSpace($env:CLOUDFLARE_ACCOUNT_ID)) {
+            throw 'CLOUDFLARE_ACCOUNT_ID is missing.'
+          }
+          if ([string]::IsNullOrWhiteSpace($env:CLOUDFLARE_API_TOKEN)) {
+            throw 'CLOUDFLARE_API_TOKEN is missing.'
+          }
+
       - name: Full 1.5.2.2 qualification before production mutation
+        shell: powershell
         run: npm run ci
+
       - name: Build coherent PWA and Worker
+        shell: powershell
         run: npm run build
+
       - name: Resolve acquired D1 and R2 without replacement
-        shell: bash
+        shell: powershell
         run: |
-          set -euo pipefail
-          npx --yes wrangler@4 d1 list --json > /tmp/d1-list.json
-          DB_ID="$(node scripts/cloudflare-d1-id.mjs /tmp/d1-list.json "${ECO_SYSTEM_DB}" || true)"
-          if [ -z "${DB_ID}" ]; then
-            echo "::error::Acquired D1 ${ECO_SYSTEM_DB} not found; refusing to create a replacement."
-            exit 1
-          fi
-          if npx --yes wrangler@4 r2 bucket list > /tmp/r2-list.txt 2>/tmp/r2-error.txt && grep -Fq "${R2_BUCKET}" /tmp/r2-list.txt; then
-            node scripts/render-wrangler-storage.mjs "${DB_ID}" "${R2_BUCKET}" workers/api/wrangler.ci.toml
-            echo "R2_MODE=R2" >> "${GITHUB_ENV}"
-          else
-            cat /tmp/r2-error.txt || true
-            echo "::warning::Existing R2 bucket unavailable to token; using bounded D1 fallback without creating a replacement bucket."
-            node scripts/render-wrangler-d1.mjs "${DB_ID}" workers/api/wrangler.ci.toml
-            echo "R2_MODE=D1_FALLBACK" >> "${GITHUB_ENV}"
-          fi
-          sed -i "s/RELEASE_COMMIT_SHA = \"UNBOUND_DEPLOY\"/RELEASE_COMMIT_SHA = \"${GITHUB_SHA}\"/" workers/api/wrangler.ci.toml
+          $ErrorActionPreference = 'Stop'
+          $utf8NoBom = New-Object System.Text.UTF8Encoding($false)
+          $d1List = Join-Path $env:RUNNER_TEMP 'd1-list.json'
+          $r2List = Join-Path $env:RUNNER_TEMP 'r2-list.txt'
+          $r2Error = Join-Path $env:RUNNER_TEMP 'r2-error.txt'
+
+          $d1Json = & npx --yes wrangler@4 d1 list --json
+          if ($LASTEXITCODE -ne 0) { throw 'Unable to list existing D1 databases.' }
+          [System.IO.File]::WriteAllText($d1List, ($d1Json -join [Environment]::NewLine), $utf8NoBom)
+
+          $dbId = & node scripts/cloudflare-d1-id.mjs $d1List $env:ECO_SYSTEM_DB
+          if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace(($dbId -join ''))) {
+            throw "Acquired D1 $env:ECO_SYSTEM_DB not found; refusing to create a replacement."
+          }
+          $dbId = ($dbId -join '').Trim()
+
+          & npx --yes wrangler@4 r2 bucket list 1> $r2List 2> $r2Error
+          $r2Exit = $LASTEXITCODE
+          $r2Found = $false
+          if ($r2Exit -eq 0 -and (Test-Path $r2List)) {
+            $r2Found = Select-String -Path $r2List -Pattern $env:R2_BUCKET -SimpleMatch -Quiet
+          }
+
+          if ($r2Found) {
+            & node scripts/render-wrangler-storage.mjs $dbId $env:R2_BUCKET workers/api/wrangler.ci.toml
+            if ($LASTEXITCODE -ne 0) { throw 'Failed to render D1 + R2 deployment config.' }
+            Add-Content -Path $env:GITHUB_ENV -Value 'R2_MODE=R2'
+          } else {
+            if (Test-Path $r2Error) { Get-Content $r2Error | Write-Host }
+            Write-Warning 'Existing R2 bucket unavailable to token; using bounded D1 fallback without creating a replacement bucket.'
+            & node scripts/render-wrangler-d1.mjs $dbId workers/api/wrangler.ci.toml
+            if ($LASTEXITCODE -ne 0) { throw 'Failed to render bounded D1 fallback config.' }
+            Add-Content -Path $env:GITHUB_ENV -Value 'R2_MODE=D1_FALLBACK'
+          }
+
+          $wranglerPath = 'workers/api/wrangler.ci.toml'
+          $wrangler = [System.IO.File]::ReadAllText($wranglerPath)
+          $wrangler = $wrangler.Replace('RELEASE_COMMIT_SHA = "UNBOUND_DEPLOY"', ('RELEASE_COMMIT_SHA = "' + $env:GITHUB_SHA + '"'))
+          [System.IO.File]::WriteAllText($wranglerPath, $wrangler, $utf8NoBom)
+
       - name: Export pre-deploy D1 recovery snapshot
-        shell: bash
+        shell: powershell
         run: |
-          set -euo pipefail
-          mkdir -p recovery
-          npx --yes wrangler@4 d1 export "${ECO_SYSTEM_DB}" --remote --output "recovery/eco-system-pre-1.5.2.2-${GITHUB_SHA}.sql" --config workers/api/wrangler.ci.toml
-          sha256sum recovery/*.sql > recovery/SHA256SUMS.txt
+          $ErrorActionPreference = 'Stop'
+          New-Item -ItemType Directory -Force -Path recovery | Out-Null
+          $snapshot = "recovery/eco-system-pre-1.5.2.2-$env:GITHUB_SHA.sql"
+          & npx --yes wrangler@4 d1 export $env:ECO_SYSTEM_DB --remote --output $snapshot --config workers/api/wrangler.ci.toml
+          if ($LASTEXITCODE -ne 0) { throw 'Pre-deploy D1 export failed; deployment is blocked.' }
+          $lines = Get-ChildItem recovery -Filter '*.sql' | ForEach-Object {
+            $hash = (Get-FileHash -Algorithm SHA256 -Path $_.FullName).Hash.ToLowerInvariant()
+            "$hash  $($_.Name)"
+          }
+          [System.IO.File]::WriteAllLines((Join-Path (Resolve-Path recovery) 'SHA256SUMS.txt'), $lines)
+
       - name: Upload recovery proof
         uses: actions/upload-artifact@v4
         with:
           name: eco-system-pre-1.5.2.2-${{ github.sha }}
           path: recovery/
           retention-days: 30
+
       - name: Apply additive D1 migrations only
-        run: npx --yes wrangler@4 d1 migrations apply "${ECO_SYSTEM_DB}" --remote --config workers/api/wrangler.ci.toml
-      - name: Deploy Worker PWA R2 and daily maintenance trigger
-        run: npx --yes wrangler@4 deploy --config workers/api/wrangler.ci.toml
-      - name: Smoke root health catalog and release identity
-        shell: bash
+        shell: powershell
         run: |
-          set -euo pipefail
-          root=''; health=''; catalog=''
-          for attempt in 1 2 3 4 5 6 7 8; do
-            root="$(curl --fail --silent --show-error --location --max-time 20 "${ECO_SYSTEM_ROOT}" || true)"
-            health="$(curl --fail --silent --show-error --location --max-time 20 "${ECO_SYSTEM_HEALTH}" || true)"
-            catalog="$(curl --fail --silent --show-error --location --max-time 20 "${ECO_SYSTEM_CATALOG}" || true)"
-            if grep -qi '<!doctype html>' <<<"${root}" \
-              && grep -q '"ok": true' <<<"${health}" \
-              && grep -Fq "\"version\": \"${EXPECTED_VERSION}\"" <<<"${health}" \
-              && grep -Fq "\"commitSha\": \"${GITHUB_SHA}\"" <<<"${health}" \
-              && grep -Fq "\"buildId\": \"eco-system-1.5.2.2-20260923\"" <<<"${health}" \
-              && grep -Fq "\"pwaCache\": \"eco-system-v1522-governed-field-feedback-20260923\"" <<<"${health}" \
-              && grep -q '"capabilities"' <<<"${catalog}" \
-              && grep -Fq "\"version\": \"${EXPECTED_VERSION}\"" <<<"${catalog}"; then break; fi
-            echo "Waiting for exact 1.5.2.2 release propagation (attempt ${attempt}/8)…"
-            sleep 4
-          done
-          printf '%s' "${health}" > /tmp/health.json
-          printf '%s' "${catalog}" > /tmp/catalog.json
-          node --input-type=module - <<'NODE'
-          import fs from 'node:fs';
-          const health=JSON.parse(fs.readFileSync('/tmp/health.json','utf8'));
-          const catalog=JSON.parse(fs.readFileSync('/tmp/catalog.json','utf8'));
-          if(health.ok!==true) throw new Error('HEALTH_NOT_OK');
-          if(health.version!==process.env.EXPECTED_VERSION) throw new Error('VERSION_MISMATCH:'+health.version);
-          if(health.commitSha!==process.env.GITHUB_SHA) throw new Error('COMMIT_MISMATCH:'+health.commitSha);
-          if(health.buildId!=='eco-system-1.5.2.2-20260923') throw new Error('BUILD_ID_MISMATCH:'+health.buildId);
-          if(health.pwaCache!=='eco-system-v1522-governed-field-feedback-20260923') throw new Error('PWA_CACHE_MISMATCH:'+health.pwaCache);
-          if(health.realMoneyEnabled!==false) throw new Error('REAL_MONEY_MUST_REMAIN_DISABLED');
-          if(health.artifactStorageBound!==true) throw new Error('ARTIFACT_STORAGE_NOT_ACTIVE');
-          if(catalog.version!==process.env.EXPECTED_VERSION) throw new Error('CATALOG_VERSION_MISMATCH:'+catalog.version);
-          if(!Array.isArray(catalog.capabilities)||catalog.count<Number(process.env.MIN_CAPABILITIES)||catalog.capabilities.length!==catalog.count) throw new Error('CAPABILITY_CATALOG_INCOMPLETE:'+catalog.count);
-          console.log(JSON.stringify({version:health.version,commitSha:health.commitSha,buildId:health.buildId,pwaCache:health.pwaCache,capabilities:catalog.count,realMoneyEnabled:health.realMoneyEnabled,artifactStorageMode:health.artifactStorageMode}));
-          NODE
+          $ErrorActionPreference = 'Stop'
+          & npx --yes wrangler@4 d1 migrations apply $env:ECO_SYSTEM_DB --remote --config workers/api/wrangler.ci.toml
+          if ($LASTEXITCODE -ne 0) { throw 'Additive D1 migration step failed.' }
+
+      - name: Deploy Worker PWA R2 and daily maintenance trigger
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          & npx --yes wrangler@4 deploy --config workers/api/wrangler.ci.toml
+          if ($LASTEXITCODE -ne 0) { throw 'Cloudflare deployment failed.' }
+
+      - name: Smoke root health catalog and release identity
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $health = $null
+          $catalog = $null
+          $rootOk = $false
+
+          for ($attempt = 1; $attempt -le 8; $attempt++) {
+            try {
+              $rootResponse = Invoke-WebRequest -UseBasicParsing -Uri $env:ECO_SYSTEM_ROOT -TimeoutSec 20
+              $healthResponse = Invoke-WebRequest -UseBasicParsing -Uri $env:ECO_SYSTEM_HEALTH -TimeoutSec 20
+              $catalogResponse = Invoke-WebRequest -UseBasicParsing -Uri $env:ECO_SYSTEM_CATALOG -TimeoutSec 20
+              $rootOk = $rootResponse.Content -match '(?i)<!doctype html>'
+              $health = $healthResponse.Content | ConvertFrom-Json
+              $catalog = $catalogResponse.Content | ConvertFrom-Json
+
+              $exact = (
+                $rootOk -and
+                $health.ok -eq $true -and
+                $health.version -eq $env:EXPECTED_VERSION -and
+                $health.commitSha -eq $env:GITHUB_SHA -and
+                $health.buildId -eq 'eco-system-1.5.2.2-20260923' -and
+                $health.pwaCache -eq 'eco-system-v1522-governed-field-feedback-20260923' -and
+                $catalog.version -eq $env:EXPECTED_VERSION
+              )
+
+              if ($exact) { break }
+            } catch {
+              Write-Host "Smoke attempt $attempt failed: $($_.Exception.Message)"
+            }
+
+            Write-Host "Waiting for exact 1.5.2.2 release propagation (attempt $attempt/8)…"
+            Start-Sleep -Seconds 4
+          }
+
+          if (-not $rootOk) { throw 'ROOT_HTML_NOT_AVAILABLE' }
+          if ($null -eq $health -or $health.ok -ne $true) { throw 'HEALTH_NOT_OK' }
+          if ($health.version -ne $env:EXPECTED_VERSION) { throw "VERSION_MISMATCH:$($health.version)" }
+          if ($health.commitSha -ne $env:GITHUB_SHA) { throw "COMMIT_MISMATCH:$($health.commitSha)" }
+          if ($health.buildId -ne 'eco-system-1.5.2.2-20260923') { throw "BUILD_ID_MISMATCH:$($health.buildId)" }
+          if ($health.pwaCache -ne 'eco-system-v1522-governed-field-feedback-20260923') { throw "PWA_CACHE_MISMATCH:$($health.pwaCache)" }
+          if ($health.realMoneyEnabled -ne $false) { throw 'REAL_MONEY_MUST_REMAIN_DISABLED' }
+          if ($health.artifactStorageBound -ne $true) { throw 'ARTIFACT_STORAGE_NOT_ACTIVE' }
+          if ($null -eq $catalog -or $catalog.version -ne $env:EXPECTED_VERSION) { throw "CATALOG_VERSION_MISMATCH:$($catalog.version)" }
+          $capabilities = @($catalog.capabilities)
+          if ($catalog.count -lt [int]$env:MIN_CAPABILITIES -or $capabilities.Count -ne [int]$catalog.count) {
+            throw "CAPABILITY_CATALOG_INCOMPLETE:$($catalog.count)"
+          }
+
+          [pscustomobject]@{
+            version = $health.version
+            commitSha = $health.commitSha
+            buildId = $health.buildId
+            pwaCache = $health.pwaCache
+            capabilities = $catalog.count
+            realMoneyEnabled = $health.realMoneyEnabled
+            artifactStorageMode = $health.artifactStorageMode
+          } | ConvertTo-Json -Compress | Write-Host
 
       - name: Export post-deploy D1 recovery snapshot and verify restoration
-        shell: bash
+        shell: powershell
         run: |
-          set -euo pipefail
-          mkdir -p recovery-post
-          npx --yes wrangler@4 d1 export "${ECO_SYSTEM_DB}" --remote --output "recovery-post/eco-system-post-1.5.2.2-${GITHUB_SHA}.sql" --config workers/api/wrangler.ci.toml
-          sqlite3 /tmp/eco-system-restore-1.5.2.2.db < "recovery-post/eco-system-post-1.5.2.2-${GITHUB_SHA}.sql"
-          test "$(sqlite3 /tmp/eco-system-restore-1.5.2.2.db 'PRAGMA integrity_check;')" = "ok"
-          sha256sum recovery-post/*.sql > recovery-post/SHA256SUMS.txt
+          $ErrorActionPreference = 'Stop'
+          New-Item -ItemType Directory -Force -Path recovery-post | Out-Null
+          New-Item -ItemType Directory -Force -Path recovery-verify | Out-Null
+          $snapshot = "recovery-post/eco-system-post-1.5.2.2-$env:GITHUB_SHA.sql"
+
+          & npx --yes wrangler@4 d1 export $env:ECO_SYSTEM_DB --remote --output $snapshot --config workers/api/wrangler.ci.toml
+          if ($LASTEXITCODE -ne 0) { throw 'Post-deploy D1 export failed.' }
+
+          & npx --yes wrangler@4 d1 execute $env:ECO_SYSTEM_DB --local --file $snapshot --config workers/api/wrangler.ci.toml --persist-to recovery-verify
+          if ($LASTEXITCODE -ne 0) { throw 'Recovery snapshot could not be restored into an isolated local D1 database.' }
+
+          $integrityRaw = & npx --yes wrangler@4 d1 execute $env:ECO_SYSTEM_DB --local --command 'PRAGMA integrity_check;' --config workers/api/wrangler.ci.toml --persist-to recovery-verify --json
+          if ($LASTEXITCODE -ne 0) { throw 'Recovery integrity query failed.' }
+          $integrityText = ($integrityRaw -join [Environment]::NewLine)
+          if ($integrityText -notmatch '"integrity_check"\s*:\s*"ok"') {
+            throw 'Recovery snapshot integrity_check did not return ok.'
+          }
+
+          $lines = Get-ChildItem recovery-post -Filter '*.sql' | ForEach-Object {
+            $hash = (Get-FileHash -Algorithm SHA256 -Path $_.FullName).Hash.ToLowerInvariant()
+            "$hash  $($_.Name)"
+          }
+          [System.IO.File]::WriteAllLines((Join-Path (Resolve-Path recovery-post) 'SHA256SUMS.txt'), $lines)
+
       - name: Upload post-deploy recovery proof
         uses: actions/upload-artifact@v4
         with:
