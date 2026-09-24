@@ -1,5 +1,6 @@
 Eco-System 1.5.2.2 governed field-feedback production delivery requested after PR #19 merge.
 Qualified PR head: 90462085578f96db87a8c3c3ee2e6e64949c6a44
 Windows self-hosted runner adaptation commit: ea667fd6bfe49532a101d730142ce4772f840fa4
-Requested: 2026-09-24
+Node 24 direct verified bootstrap commit: 44ee75717c87d083e6a4e3b01b9f2a1d6518ba27
+Retry requested: 2026-09-24
 Guardrails: full CI, existing eco-system-db + eco-system-backups only, pre/post D1 recovery snapshots, additive migrations only, exact release smoke, realMoneyEnabled=false.
