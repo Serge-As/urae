@@ -1,3 +1,52 @@
+## CURRENT OVERRIDE — 1.5.2.2 GOVERNED FIELD FEEDBACK — PRODUCTION VERIFIED (2026-09-25)
+
+**Repository opérationnel : `SergeDelor/tontine-platform`.**
+**Production publique : `1.5.2.2-governed-field-feedback`.**
+**Statut : DEPLOYED + SMOKE_VERIFIED. FIELD_ACCEPTED reste distinct et requiert la recette réelle fondateur/appareils.**
+
+### Livraison exacte
+- branche : `next/1.5.0-audit-complete-platform-20260923`
+- commit exact déployé : `8d4bbee39cdf519f7c6c18296f840ef49313df6a`
+- workflow production : **36144883224 — SUCCESS**
+- GitHub-hosted Actions : **rétabli après transfert du dépôt vers SergeDelor**
+- qualification hébergée préalable : **36144754009 — SUCCESS**
+- version runtime : `1.5.2.2-governed-field-feedback`
+- build ID : `eco-system-1.5.2.2-20260923`
+- PWA cache : `eco-system-v1522-governed-field-feedback-20260923`
+- catalogue : **158 capacités**
+- argent réel : **false / OFF**
+- Worker Version ID : `c3f78192-2b09-45e2-abb7-324978a0dd90`
+- D1 canonique : `eco-system-db` réutilisée ; **No migrations to apply**
+- R2 canonique : `eco-system-backups` réutilisé
+- sauvegarde pré-déploiement : artifact **10868773224**, digest `sha256:efaa765f4a3d81b70352da8a9dc094d25608bbe1367466239e2440149c7b725b`
+- sauvegarde post-déploiement : artifact **10868703315**, digest `sha256:e1fb14b8022fc67391565552452e217dc682a23533b2b9e9fb30aa120bee0715`
+- restauration post-déploiement : **PASS**, SQLite + `PRAGMA integrity_check=ok`
+
+### Corrections terrain désormais déployées
+- saisie montant + ✓ réellement prise en compte dans les tableaux financiers canoniques ;
+- prêt traité comme sortie/dépense et non comme rubrique positive ;
+- dette totale = capital restant + intérêts dus + autres obligations ;
+- intérêt calculé à la clôture N et attribué à N+1 sans double comptage ;
+- dette visible dans les surfaces groupe/session/membre ;
+- scroll souris restauré sur les tableaux ;
+- UX Membres corrigée ;
+- restauration Corbeille signalée 72 h ;
+- Accueil limité à 5 alertes urgentes + Centre d'alertes ;
+- mode Visuel renforcé ;
+- isolation PWA/cache 1.5.2.2.
+
+### Mapping de propriété GitHub
+- Eco-System : `SergeDelor/tontine-platform`
+- Beauty : `Delor85/as-beauty` tant qu'il n'est pas transféré
+- Blue Magic : `Delor85/BlueAuto` tant qu'il n'est pas transféré
+- auteurs historiques, commits, anciennes issues et PR signés `Delor85` : **ne pas réécrire**
+- références opérationnelles du dépôt Eco actuel : utiliser `SergeDelor/tontine-platform`
+
+### Point de reprise
+La prochaine tranche est la fermeture fonctionnelle **L7–L12** (issue #21), en partant de cette production 1.5.2.2 prouvée et sans réintroduire de moteur parallèle.
+
+---
+
 # ECO-SYSTEM — CURRENT TRUTH
 
 ## CURRENT OVERRIDE — 1.5.0 AUDIT COMPLETE DEPLOYED (2026-09-23)
