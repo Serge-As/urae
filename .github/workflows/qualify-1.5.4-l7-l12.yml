@@ -1,0 +1,19 @@
+name: Eco-System 1.5.4 — L7-L12 Closure Qualification
+on:
+  push:
+    branches: ['finish/1.5.4-l7-l12-closure-20260925']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  qualify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: npm run ci
