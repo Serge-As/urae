@@ -1,14 +1,11 @@
-const CACHE = 'eco-system-v1525-core-abc-20260925';
-const PREVIOUS_CACHE = 'eco-system-v1523-financial-entry-offline-20260925';
+const CACHE = 'eco-system-v1523-financial-entry-offline-20260925';
+const PREVIOUS_CACHE = 'eco-system-v1522-governed-field-feedback-20260923';
 const RELEASE_READY = '/__eco_release_ready__';
-const BUILD_STARTUP_SHELL = [];
-const RELEASE_FETCH_TIMEOUT_MS = 10000;
-const RELEASE_FETCH_CONCURRENCY = 4;
 
 // Authentication, navigation and canonical application owners must be complete
 // before this worker may install. Optional business/community panels can fail
 // independently without replacing an already-working release.
-const ESSENTIAL_SHELL = Array.from(new Set([
+const ESSENTIAL_SHELL = [
   '/', '/index.html', '/styles.css?v=1523', '/manifest.webmanifest',
   '/src/ui-modes.js?v=1523', '/src/field-hardening.js?v=1523', '/src/main.js?v=1523', '/src/i18n.js', '/src/runtime-i18n.js',
   '/src/resilience-ui.js', '/src/group-home-ui.js', '/src/sessions-ui.js',
@@ -16,9 +13,8 @@ const ESSENTIAL_SHELL = Array.from(new Set([
   '/packages/application/src/index.js', '/packages/contracts/src/index.js',
   '/packages/domain/src/index.js', '/packages/offline/src/index.js',
   '/packages/platform-kernel/src/index.js', '/packages/relay/src/index.js',
-  '/packages/repositories/src/index.js',
-  ...BUILD_STARTUP_SHELL
-]));
+  '/packages/repositories/src/index.js'
+];
 
 const OPTIONAL_SHELL = [
   '/src/voice-entry-bootstrap.js?v=1523', '/src/voice-entry-ui.js', '/src/expense-recap-ui.js',
@@ -37,67 +33,27 @@ const OPTIONAL_SHELL = [
 ];
 const APP_SHELL = [...ESSENTIAL_SHELL, ...OPTIONAL_SHELL];
 
-const cacheReleaseAsset = async (cache, path) => {
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), RELEASE_FETCH_TIMEOUT_MS);
-  try {
-    const response = await fetch(path, { cache: 'no-store', signal: controller.signal });
-    if (!response || !response.ok) throw new Error('RELEASE_ASSET_MISSING:' + path + ':' + (response?.status ?? 'NO_RESPONSE'));
-    // Consume the complete body before starting more work. Keeping many
-    // unconsumed responses open can exhaust the per-origin connection pool and
-    // leave an install event stuck forever on weak or constrained networks.
-    const body = await response.arrayBuffer();
-    const stored = new Response(body, {
-      status: response.status,
-      statusText: response.statusText,
-      headers: new Headers(response.headers)
-    });
-    await cache.put(path, stored);
-  } catch (error) {
-    if (controller.signal.aborted) throw new Error('RELEASE_ASSET_TIMEOUT:' + path);
-    throw error;
-  } finally {
-    clearTimeout(timer);
-  }
-};
-
-const cacheReleaseAssets = async (cache, paths, { optional = false } = {}) => {
-  let cursor = 0;
-  const worker = async () => {
-    while (true) {
-      const index = cursor++;
-      if (index >= paths.length) return;
-      const path = paths[index];
-      try {
-        await cacheReleaseAsset(cache, path);
-      } catch (error) {
-        if (!optional) throw error;
-      }
-    }
-  };
-  const workers = Array.from(
-    { length: Math.min(RELEASE_FETCH_CONCURRENCY, Math.max(paths.length, 1)) },
-    () => worker()
-  );
-  await Promise.all(workers);
+const fetchReleaseAsset = async path => {
+  const response = await fetch(path, { cache: 'no-store' });
+  if (!response || !response.ok) throw new Error('RELEASE_ASSET_MISSING:' + path);
+  return response;
 };
 
 self.addEventListener('install', event => {
   event.waitUntil((async () => {
     const cache = await caches.open(CACHE);
-    // Cache required startup assets with bounded concurrency. Each response body
-    // is fully consumed and written before the worker takes another URL.
-    // RELEASE_READY is still written last, so a partial install can never be
-    // activated as a coherent release.
-    await cache.delete(RELEASE_READY);
-    await cacheReleaseAssets(cache, ESSENTIAL_SHELL);
-    await cacheReleaseAssets(cache, OPTIONAL_SHELL, { optional: true });
+    // Atomic essential shell: if one required asset is absent, installation
+    // rejects and the previous active worker/cache remains in charge.
+    const essentials = await Promise.all(ESSENTIAL_SHELL.map(async path => [path, await fetchReleaseAsset(path)]));
+    for (const [path,response] of essentials) await cache.put(path, response.clone());
+
+    // Optional surfaces may be unavailable without invalidating Group Core.
+    for (const path of OPTIONAL_SHELL) {
+      try { const response = await fetchReleaseAsset(path); await cache.put(path, response.clone()); } catch (_) {}
+    }
     await cache.put(RELEASE_READY, new Response(JSON.stringify({cache:CACHE,installedAt:new Date().toISOString()}), {
       headers:{'content-type':'application/json; charset=utf-8'}
     }));
-    // The complete coherent shell is now cached. Promote this worker immediately
-    // so a stale Chrome/Opera tab cannot pin an older release indefinitely.
-    await self.skipWaiting();
   })());
 });
 
