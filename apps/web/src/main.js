@@ -49,6 +49,7 @@ let rubrics = [];
 let receiptPositions = [];
 let financialSheetEvents = [];
 let financialCellVersions = new Map();
+let financialPendingTargets = new Map();
 let matrixMeetingId = '';
 let memberSortMode = 'chronological';
 const MANAGER_ROLE_IDS=new Set(['founder','manager','admin','president','treasurer','secretary','auditor']);
@@ -436,9 +437,18 @@ const financialNatureForRubric=rubric=>{
 };
 const exactCellRows=(membershipId,rubricId,meetingId)=>receiptPositions.filter(x=>x.membershipId===membershipId&&x.rubricId===rubricId&&x.meetingId===meetingId);
 const exactCellEvents=(membershipId,rubricId,meetingId)=>financialSheetEvents.filter(x=>String(x.data?.membershipId??'')===membershipId&&String(x.data?.rubricId??'')===rubricId&&String(x.data?.meetingId??'')===meetingId);
+const financialCellKey=(membershipId,rubricId,meetingId)=>JSON.stringify([meetingId,membershipId,rubricId]);
+const exactCellPendingState=(membershipId,rubricId,meetingId)=>{
+    const correction=financialPendingTargets.get(financialCellKey(membershipId,rubricId,meetingId));
+    if(correction)return{pending:true,status:correction.status,kind:'CORRECTION'};
+    const receipt=exactCellRows(membershipId,rubricId,meetingId).find(x=>x.localPending===true);
+    return receipt?{pending:true,status:String(receipt.localPendingStatus??'PENDING'),kind:'ENTRY'}:{pending:false,status:'',kind:''};
+};
 const exactCellAmount=(membershipId,rubricId,meetingId)=>{
     const rubric=rubrics.find(x=>x.id===rubricId),nature=financialNatureForRubric(rubric);
     if(nature!=='CONTRIBUTION')return exactCellEvents(membershipId,rubricId,meetingId).reduce((sum,event)=>sum+(String(event.data?.direction??'IN')==='OUT'?-1:1)*Number(event.data?.amount??0),0);
+    const pending=financialPendingTargets.get(financialCellKey(membershipId,rubricId,meetingId));
+    if(pending&&Number.isSafeInteger(Number(pending.targetAmount))&&Number(pending.targetAmount)>=0)return Number(pending.targetAmount);
     return exactCellRows(membershipId,rubricId,meetingId).reduce((n,x)=>n+Number(x.netAmount??0),0);
 };
 const exactCellVersion=(membershipId,rubricId,meetingId)=>Number(financialCellVersions.get(JSON.stringify([meetingId,membershipId,rubricId,'XAF']))??0);
@@ -447,37 +457,45 @@ const makeFinancialEntryCell=({member,rubric,meetingId,editable=true})=>{
     const holder=document.createElement('div');holder.className='matrix-cell matrix-cell-entry';holder.dataset.membershipId=member.id;holder.dataset.rubricId=rubric.id;holder.dataset.meetingId=meetingId;holder.tabIndex=-1;
     const nature=financialNatureForRubric(rubric),signedCurrent=exactCellAmount(member.id,rubric.id,meetingId),current=Math.abs(signedCurrent),currentLabel=document.createElement('strong');
     currentLabel.className='cell-current'+(signedCurrent<0?' is-negative':'');currentLabel.textContent=fmt(signedCurrent);holder.append(currentLabel);
+    const pendingState=exactCellPendingState(member.id,rubric.id,meetingId);
+    if(pendingState.pending){const pendingBadge=document.createElement('small');pendingBadge.className='cell-sync-state pending';pendingBadge.textContent=tx('Enregistré hors ligne · synchro en attente','Saved offline · pending sync');holder.append(pendingBadge);holder.classList.add('has-local-pending');}
     if(nature==='LOAN'){const badge=document.createElement('small');badge.className='cell-nature negative';badge.textContent=tx('Sortie / dette','Outflow / debt');holder.append(badge);}
     if(!editable)return holder;
     const input=document.createElement('input');input.type='number';input.min='0';input.step='1';input.inputMode='numeric';input.className='cell-target-input';input.placeholder=current>0?tx('Modifier…','Change…'):tx('Saisir…','Enter…');input.setAttribute('aria-label',tx('Nouvelle valeur totale','New total value'));
-    const validate=document.createElement('button');validate.type='button';validate.className='cell-validate';validate.textContent='✓';validate.title=tx('Valider la valeur totale','Confirm total value');
+    const validate=document.createElement('button');validate.type='button';validate.className='cell-validate';validate.textContent='✓';validate.title=tx('Valider la valeur totale','Confirm total value');validate.setAttribute('aria-label',tx('Valider la saisie','Confirm entry'));
+    let submitting=false;
     const submit=()=>void(async()=>{
-      clearFail();const raw=input.value.trim();if(raw==='')return;const target=Number(raw);if(!Number.isSafeInteger(target)||target<0){fail(new Error('INVALID_CONTRIBUTION_AMOUNT'));return;}
-      if(target===current){input.value='';toast(tx('Aucun changement : cette valeur est déjà enregistrée.','No change: this value is already recorded.'));return;}
+      if(submitting)return;submitting=true;
+      clearFail();const raw=input.value.trim();if(raw===''){submitting=false;return;}const target=Number(raw);if(!Number.isSafeInteger(target)||target<0){submitting=false;fail(new Error('INVALID_CONTRIBUTION_AMOUNT'));return;}
+      if(target===current){input.value='';submitting=false;toast(tx('Aucun changement : cette valeur est déjà enregistrée.','No change: this value is already recorded.'));return;}
       const meeting=meetings.find(x=>x.id===meetingId);let reason='';
       if(current>0||meeting?.status==='closed'){
         reason=prompt(tx(`Motif de la modification ${fmt(current)} → ${fmt(target)} :`,`Reason for change ${fmt(current)} → ${fmt(target)}:`),tx('Correction de la valeur de la cellule','Cell value correction'))??'';
-        if(!reason.trim())return;
+        if(!reason.trim()){submitting=false;return;}
       }
       validate.disabled=true;input.disabled=true;const previousIcon=validate.textContent;validate.textContent='…';holder.classList.add('is-saving');
       try{
         let result;
         if(current===0&&meeting?.status==='open'){
-          if(target===0){input.value='';return;}
+          if(target===0){input.value='';submitting=false;return;}
           result=await app.recordFinancialSheetEntry({membershipId:member.id,meetingId,rubric,amount:target});
         }else{
           if(nature!=='CONTRIBUTION')throw Error('SPECIALIZED_FINANCIAL_CORRECTION_REQUIRED');
           result=await app.setFinancialCellTarget({meetingId,membershipId:member.id,rubricId:rubric.id,targetAmount:target,currentAmount:current,currentVersion:exactCellVersion(member.id,rubric.id,meetingId),reason:reason.trim()});
         }
         if(result?.status==='CONSENSUS_REQUIRED'){holder.classList.add('pending-consensus');toast(tx('Modification proposée : la valeur reste inchangée jusqu’à la décision des gestionnaires.','Change proposed: the value remains unchanged until managers decide.'));}
-        else if(result?.status==='QUEUED_CONSENSUS'||result?.queued)toast(tx('Saisie conservée et mise en attente de synchronisation.','Entry saved and queued for synchronization.'));
+        else if(result?.status==='QUEUED_CONSENSUS'||result?.queued)toast(tx('✓ Valeur enregistrée sur cet appareil · synchronisation automatique en attente.','✓ Value saved on this device · automatic sync pending.'));
         else if(result?.selfBenefit)toast(tx('⚠ Correction de votre propre situation : ancienne valeur, contrepassation et nouvelle valeur sont tracées. Un autre responsable habilité doit la vérifier.','⚠ Correction of your own situation: previous value, reversal and new value are traced. Another authorized manager must review it.'));
         else if(result?.requiresIndependentReview)toast(tx('Correction enregistrée avec ancienne valeur, contrepassation et nouvelle valeur. Un autre responsable habilité doit la vérifier avant validation institutionnelle.','Correction recorded with previous value, reversal and new value. Another authorized manager must review it before institutional confirmation.'));
         else toast(nature==='LOAN'?tx('Prêt décaissé : la caisse diminue et la dette du membre est créée.','Loan disbursed: cash decreases and the member debt is created.'):tx('Valeur enregistrée.','Value saved.'));
-        input.value='';await renderLedger();window.dispatchEvent(new CustomEvent('eco:financial-data-changed',{detail:{meetingId,membershipId:member.id,rubricId:rubric.id}}));await sessionsUI.refresh?.();renderIndividualSheetMatrix();
-      }catch(e){fail(e);}finally{validate.disabled=false;input.disabled=false;validate.textContent=previousIcon;holder.classList.remove('is-saving');}
+        input.value='';await renderLedger();renderOutbox();window.dispatchEvent(new CustomEvent('eco:financial-data-changed',{detail:{meetingId,membershipId:member.id,rubricId:rubric.id}}));await sessionsUI.refresh?.();renderIndividualSheetMatrix();
+      }catch(e){fail(e);}finally{submitting=false;validate.disabled=false;input.disabled=false;validate.textContent=previousIcon;holder.classList.remove('is-saving');}
     });
-    validate.onclick=submit;input.addEventListener('keydown',event=>{if(event.key==='Enter'){event.preventDefault();submit();}});
+    validate.addEventListener('click',submit);
+    input.addEventListener('keydown',event=>{
+      if(event.isComposing)return;
+      if(event.key==='Enter'||event.code==='Enter'||event.keyCode===13){event.preventDefault();event.stopPropagation();submit();}
+    });
     holder.append(input,validate);return holder;
 };
 
@@ -672,6 +690,7 @@ const renderLedger = async () => {
         return;
     const [l,sheetEvents,sheetExpenses] = await Promise.all([app.ledger(),app.listWorkspaceRecords('FINANCE.SHEET_EVENT',app.activeGroup()).catch(()=>[]),app.expenses({scope:'SHEET'}).catch(()=>[])]);
     receiptPositions=l.receipts;
+    financialPendingTargets=new Map((app.pendingFinancialCellTargets?.()??[]).map(x=>[financialCellKey(x.membershipId,x.rubricId,x.meetingId),x]));
     financialSheetEvents=[...sheetEvents,...sheetExpenses.map(x=>({id:x.id,data:{membershipId:x.membershipId,meetingId:x.meetingId,rubricId:x.rubricId,amount:x.amount,direction:'OUT',ledgerEntryId:x.ledgerEntryId}}))];
     financialCellVersions=new Map((l.cellRevisions??[]).map(r=>[JSON.stringify([r.meetingId,r.membershipId,r.rubricId,r.currency??'XAF']),Number(r.version??0)]));renderMeetingMatrix();renderIndividualSheetMatrix();
     for (const [n, label] of [[l.summary.cashBalance, 'Solde caisse'], [l.summary.memberFundsLiability, 'Engagement membres'], [l.summary.entryCount, 'Écritures']]) {

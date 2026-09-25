@@ -512,7 +512,52 @@ export class ConnectedApplication {
   async createMiscRubric(input:{name:string;description?:string;lifecycle?:'EPHEMERAL'|'PERSISTENT'|'SESSION_ONLY';amountMode?:'FIXED'|'VARIABLE';defaultAmount?:number;activeFirstSessions?:number}):Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/misc-rubrics`,{method:'POST',body:JSON.stringify({action:'create_custom',...input})});}
   async postMiscRubrics(input:{membershipId:string;meetingId?:string;items:Array<{templateId:string;amount:number;note?:string}>}):Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/misc-rubrics/postings`,{method:'POST',body:JSON.stringify({...input,idempotencyKey:makeId('misc_batch')})});}
   async miscPostings(filters:{meetingId?:string;membershipId?:string}={}):Promise<any[]>{if(!this.activeGroupId)return[];const p=new URLSearchParams();if(filters.meetingId)p.set('meetingId',filters.meetingId);if(filters.membershipId)p.set('membershipId',filters.membershipId);return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/misc-rubrics/postings?${p}`);}
-  async ledger():Promise<{summary:LedgerSummary;entries:LedgerEntry[];receipts:ContributionReceipt[];cellRevisions:Array<{meetingId:string;membershipId:string;rubricId:string;currency:string;version:number}>}>{if(!this.activeGroupId)return{summary:{currency:'XAF',cashBalance:0,memberFundsLiability:0,entryCount:0},entries:[],receipts:[],cellRevisions:[]};return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/ledger`);}
+  pendingFinancialCellTargets():Array<{meetingId:string;membershipId:string;rubricId:string;targetAmount:number;baselineValue:number;baselineVersion:number;status:string;idempotencyKey:string;createdAt:string}>{
+    if(!this.activeGroupId)return[];
+    return this.outbox.list().filter(item=>{
+      const payload=item.payload as Record<string,unknown>;
+      return item.tenantId===this.tenantId&&item.actorId===this.actorId&&item.type==='FINANCIAL_CELL_CORRECTION_PROPOSAL_V1'&&
+        String(payload.groupId??'')===this.activeGroupId&&!['CONFIRMED','CONFLICT','CANCELLED'].includes(item.status);
+    }).map(item=>{
+      const payload=item.payload as Record<string,unknown>;
+      return{meetingId:String(payload.meetingId??''),membershipId:String(payload.membershipId??''),rubricId:String(payload.rubricId??''),
+        targetAmount:Number(payload.targetAmount??0),baselineValue:Number(payload.baselineValue??0),baselineVersion:Number(payload.baselineVersion??0),
+        status:item.status,idempotencyKey:item.idempotencyKey,createdAt:item.createdAt};
+    }).filter(x=>x.meetingId&&x.membershipId&&x.rubricId&&Number.isSafeInteger(x.targetAmount)&&x.targetAmount>=0);
+  }
+
+  async ledger():Promise<{summary:LedgerSummary;entries:LedgerEntry[];receipts:Array<ContributionReceipt & {netAmount?:number;localPending?:boolean;localPendingStatus?:string}>;cellRevisions:Array<{meetingId:string;membershipId:string;rubricId:string;currency:string;version:number}>}>{
+    if(!this.activeGroupId)return{summary:{currency:'XAF',cashBalance:0,memberFundsLiability:0,entryCount:0},entries:[],receipts:[],cellRevisions:[]};
+    const path=`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/ledger`;
+    let base:{summary:LedgerSummary;entries:LedgerEntry[];receipts:Array<ContributionReceipt & {netAmount?:number;localPending?:boolean;localPendingStatus?:string}>;cellRevisions:Array<{meetingId:string;membershipId:string;rubricId:string;currency:string;version:number}>};
+    try{base=await this.request(path);}
+    catch(error){
+      if(!(error instanceof Error)||error.message!=='NETWORK_UNAVAILABLE')throw error;
+      base=await this.cached<typeof base>(path)??{summary:{currency:'XAF',cashBalance:0,memberFundsLiability:0,entryCount:0},entries:[],receipts:[],cellRevisions:[]};
+    }
+
+    const receipts=[...(base.receipts??[])],summary={...base.summary};
+    const seen=new Set(receipts.map(r=>String(r.idempotencyKey??'')));
+    const pending=this.outbox.list().filter(item=>{
+      const payload=item.payload as Record<string,unknown>;
+      return item.tenantId===this.tenantId&&item.actorId===this.actorId&&item.type==='CONTRIBUTION_CASH_RECORDED'&&
+        String(payload.groupId??'')===this.activeGroupId&&!['CONFIRMED','CONFLICT','CANCELLED'].includes(item.status);
+    });
+    for(const item of pending){
+      if(seen.has(item.idempotencyKey))continue;
+      const payload=item.payload as Record<string,unknown>,amount=Number(payload.amount??0);
+      if(!Number.isSafeInteger(amount)||amount<=0)continue;
+      const receipt:any={id:'local_receipt_'+item.id,tenantId:this.tenantId,groupId:this.activeGroupId,membershipId:String(payload.membershipId??''),
+        amount:{currency:String(payload.currency??'XAF'),amount},paymentMethod:'cash',ledgerEntryId:'local_pending_'+item.id,
+        meetingId:payload.meetingId?String(payload.meetingId):undefined,receivedAt:item.createdAt,receivedBy:this.actorId,idempotencyKey:item.idempotencyKey,
+        rubricId:payload.rubricId?String(payload.rubricId):undefined,netAmount:amount,localPending:true,localPendingStatus:item.status};
+      receipts.push(receipt);seen.add(item.idempotencyKey);
+      summary.cashBalance=Number(summary.cashBalance??0)+amount;
+      summary.memberFundsLiability=Number(summary.memberFundsLiability??0)+amount;
+      summary.entryCount=Number(summary.entryCount??0)+1;
+    }
+    return{...base,summary,receipts,cellRevisions:base.cellRevisions??[]};
+  }
   async reverseLedgerEntry(entryId:string,reason:string):Promise<LedgerEntry>{if(!this.activeGroupId)throw new Error('ACTIVE_GROUP_REQUIRED');return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/ledger/${encodeURIComponent(entryId)}/reverse`,{method:'POST',body:JSON.stringify({reason})});}
 
   async cashboxReconciliations():Promise<CashboxReconciliationRecord[]>{if(!this.activeGroupId)return[];return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/cashbox/reconciliations`);}
@@ -581,7 +626,7 @@ export class ConnectedApplication {
     // Persist the exact target command before attempting transport. If the HTTP
     // response is lost after commit, the same idempotency key is replayed later.
     const item=await this.queueLocal('FINANCIAL_CELL_CORRECTION_PROPOSAL_V1',payload,operationKey);
-    if(this.isOffline())return{status:'QUEUED_CONSENSUS',current,target:input.targetAmount,outbox:item};
+    if(this.isOffline())return{status:'QUEUED_CONSENSUS',queued:true,current,target:input.targetAmount,outbox:item};
     try{
       const result=await this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/meetings/${encodeURIComponent(input.meetingId)}/financial-cells`,{
         method:'POST',headers:{'x-idempotency-key':operationKey},
@@ -589,7 +634,11 @@ export class ConnectedApplication {
       });
       this.outbox.markConfirmedByKey(this.tenantId,this.actorId,operationKey);await this.persistOutbox();return result;
     }catch(error){
-      if(error instanceof Error&&error.message==='CELL_VALUE_CONFLICT'){this.outbox.markConflictByKey(this.tenantId,this.actorId,operationKey);await this.persistOutbox();}
+      if(error instanceof Error&&error.message==='CELL_VALUE_CONFLICT'){this.outbox.markConflictByKey(this.tenantId,this.actorId,operationKey);await this.persistOutbox();throw error;}
+      if(error instanceof Error&&(error.message==='NETWORK_UNAVAILABLE'||/^HTTP_5\d\d$/.test(error.message))){
+        await this.persistOutbox();
+        return{status:'QUEUED_CONSENSUS',queued:true,current,target:input.targetAmount,outbox:item};
+      }
       throw error;
     }
   }

@@ -7,7 +7,7 @@ import { FoundationService } from '../.build/packages/domain/src/index.js';
 import { DiscoveryService } from '../.build/packages/discovery/src/index.js';
 import worker, {createApiHandler} from '../.build/workers/api/src/index.js';
 
-const RELEASE_VERSION='1.5.2.2-governed-field-feedback';
+const RELEASE_VERSION='1.5.2.3-financial-entry-offline';
 class FakeStatement {
   constructor(db,sql){this.db=db;this.sql=sql;this.values=[];}
   bind(...values){this.values=values;return this;}

@@ -113,8 +113,8 @@ test('PWA shell refresh remains versioned without forced offline reload',async()
     readFile('apps/web/index.html','utf8')
   ]);
   assert.match(main,/void ensureCurrentServiceWorker\(\);[\s\S]*?void start\(\);/);
-  assert.match(sw,/eco-system-v152-unified-ux-blueprint-20260923/);
-  assert.match(html,/\/styles\.css\?v=(?:143|145|1451|152)/);
-  assert.match(html,/\/src\/main\.js\?v=(?:143|145|1451|152)/);
-  assert.match(html,/ECO-SYSTEM · 1\.(?:4\.(?:3|5(?:\.1| RC)?)|5\.(?:0|2))/);
+  assert.match(sw,/eco-system-v1523-financial-entry-offline-20260925/);
+  assert.match(html,/\/styles\.css\?v=(?:143|145|1451|152|1523)/);
+  assert.match(html,/\/src\/main\.js\?v=(?:143|145|1451|152|1523)/);
+  assert.match(html,/ECO-SYSTEM · 1\.(?:4\.(?:3|5(?:\.1| RC)?)|5\.(?:0|2(?:\.3)?))/);
 });
