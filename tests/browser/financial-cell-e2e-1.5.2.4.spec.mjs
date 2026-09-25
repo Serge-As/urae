@@ -176,6 +176,7 @@ test('real financial matrix validates click, Enter, closed-session first entry a
   await expect(cell(ids.rubricIds[3],ids.meetingId)).toContainText(/Enregistré sur cet appareil|synchro en attente/i);
 
   await page.reload({waitUntil:'domcontentloaded'});
+  await page.waitForTimeout(2000);
   const offlineOperations=page.locator('button[data-view="operations"]').first();
   if(!await offlineOperations.isVisible().catch(()=>false)){
     const diagnostics=await page.evaluate(async()=>{
