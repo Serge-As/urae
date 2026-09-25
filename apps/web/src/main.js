@@ -585,6 +585,13 @@ const protectCanonicalFinancialHost=root=>{
 };
 const renderCanonicalFinancialTable=({root,mode='meeting',meetingId='',membershipId='',showToolbar=true,editable=isManager()})=>{
     if(!root)return;
+    const activeEditor=root.querySelector?.('.cell-target-input:focus');
+    if(root.dataset.canonicalTableReady==='1'&&activeEditor&&String(activeEditor.value??'').trim()!==''){
+      root.dataset.canonicalRenderDeferred='1';
+      traceFinancialCell('CELL_RENDER_DEFERRED',{meetingId:root.dataset.meetingId??'',membershipId:activeEditor.closest('.matrix-cell-entry')?.dataset.membershipId??'',rubricId:activeEditor.closest('.matrix-cell-entry')?.dataset.rubricId??''});
+      return;
+    }
+    delete root.dataset.canonicalRenderDeferred;
     protectCanonicalFinancialHost(root);
     root.dataset.canonicalFinancialHost='1';root.dataset.canonicalFinancialOwner='main-v151';root.dataset.canonicalTableReady='0';root.dataset.financialMode=mode;root.dataset.meetingId=meetingId||'';root.dataset.membershipId=membershipId||'';root.dataset.showToolbar=showToolbar===false?'false':'true';root.dataset.editable=editable===false?'false':'true';
     root.replaceChildren();
