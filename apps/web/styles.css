@@ -346,3 +346,46 @@ body.ui-mode-visual .primary:hover{filter:saturate(1.08) brightness(1.03);transf
   .member-management-toolbar{grid-template-columns:1fr}
   .member-management-toolbar button{min-height:48px}
 }
+
+/* 1.5.3 — Community & Value Network operational surfaces */
+.value-market-shell{scroll-margin-top:92px}
+#valueMarketRoot{gap:18px}
+.value-market-hero,.value-market-block{position:relative;border:1px solid var(--line);border-radius:18px;padding:18px;background:var(--surface,#fff);overflow:hidden}
+.value-market-hero{background:linear-gradient(135deg,#f5fbf7 0%,#fff 45%,#fbf5f8 100%)}
+.value-market-block>h3{margin:0 0 6px}
+.value-market-form{margin:14px 0;padding:14px;border:1px solid var(--line);border-radius:14px;background:rgba(250,249,246,.82)}
+.value-market-form .full,.compact-form .full{grid-column:1/-1}
+.value-market-list{margin-top:12px}
+.value-market-card{border-left:4px solid rgba(31,116,84,.42);box-shadow:0 7px 22px rgba(31,56,47,.045)}
+.value-market-card>.actions:first-child{justify-content:space-between;align-items:center}
+.value-market-state{font-weight:850}
+.value-market-state.state-open,.value-market-state.state-live,.value-market-state.state-threshold-met,.value-market-state.state-selected{background:#e8f8ef;color:#176342}
+.value-market-state.state-predicted,.value-market-state.state-draft,.value-market-state.state-responses,.value-market-state.state-shortlist,.value-market-state.state-scheduled{background:#fff5dc;color:#74520b}
+.value-market-state.state-disputed,.value-market-state.state-expired{background:#fff0ee;color:#8d342a}
+.value-market-state.state-closed,.value-market-state.state-ended{background:#eff1f2;color:#566066}
+.market-response-stack{margin-top:10px;border-top:1px dashed var(--line);padding-top:8px}
+.market-response-card{margin-top:8px;background:#fbfcfb}
+.compact-form{margin-top:10px;padding:10px;border-radius:12px;background:#f8f8f5}
+.deal-public-terms{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;border:1px solid var(--line);border-radius:12px;padding:12px}
+.deal-public-terms legend{font-weight:900;padding:0 7px}
+.deal-internal-terms,.deal-confidential{border:1px dashed #b994a7;border-radius:12px;padding:10px;background:#fff8fc}
+.deal-internal-terms>summary,.deal-confidential>summary{font-weight:850;cursor:pointer}
+.deal-progress{width:100%;height:16px;margin-top:8px}
+.inline-number{width:100px;min-width:84px}
+.live-question-form input{flex:1;min-width:180px}
+.live-questions{margin-top:10px}
+.value-market-block textarea{resize:vertical;min-height:62px}
+body.ui-mode-visual .value-market-hero{background:
+  radial-gradient(circle at 88% 14%,rgba(170,86,131,.12),transparent 30%),
+  radial-gradient(circle at 8% 82%,rgba(37,132,94,.13),transparent 32%),
+  linear-gradient(135deg,#f5fff8,#fff 46%,#fff6fb);box-shadow:0 18px 48px rgba(38,71,59,.09)}
+body.ui-mode-visual .value-market-block{background:rgba(255,255,255,.94);box-shadow:0 13px 34px rgba(35,63,53,.065)}
+body.ui-mode-visual .value-market-card{background:linear-gradient(145deg,#fff,#f8fcfa 68%,#fff9fc)}
+@media(max-width:860px){
+  .deal-public-terms{grid-template-columns:1fr 1fr}
+}
+@media(max-width:620px){
+  .deal-public-terms{grid-template-columns:1fr}
+  .value-market-hero,.value-market-block{padding:13px}
+  .live-question-form{align-items:stretch}.live-question-form input{width:100%}
+}
