@@ -59,7 +59,9 @@ const clearFinancialCellDraft=key=>{financialCellDrafts.delete(key);persistFinan
 const financialSubmitHandlers=new WeakMap();
 document.addEventListener('click',event=>{
     const target=event.target instanceof Element?event.target.closest('.cell-validate'):null;
-    const submit=target?financialSubmitHandlers.get(target):undefined;
+    if(!target)return;
+    traceFinancialCell?.('CELL_CLICK_CAPTURE',{bound:target.dataset.ecoSubmitBound||'',membershipId:target.closest('.matrix-cell-entry')?.dataset.membershipId||'',rubricId:target.closest('.matrix-cell-entry')?.dataset.rubricId||'',meetingId:target.closest('.matrix-cell-entry')?.dataset.meetingId||''});
+    const submit=financialSubmitHandlers.get(target)||target.__ecoFinancialSubmit;
     if(!submit)return;
     event.preventDefault();submit();
 },true);
@@ -557,9 +559,12 @@ const makeFinancialEntryCell=({member,rubric,meetingId,editable=true})=>{
       }catch(e){const code=e instanceof Error?e.message:String(e);setCellState('FAILED',tx('Échec : ','Failed: ')+code);traceFinancialCell('CELL_FAIL',{cellKey:financialCellKey(member.id,rubric.id,meetingId),target:Number(input.value||0),current,error:code});fail(e);}finally{submitting=false;validate.disabled=false;input.disabled=false;validate.textContent=previousIcon;holder.classList.remove('is-saving');}
     });
     financialSubmitHandlers.set(validate,submit);
+    validate.__ecoFinancialSubmit=submit;
+    validate.dataset.ecoSubmitBound='1';
     // Keep both delegated and direct bindings. The delegated capture handler survives
     // surrounding UI refreshes; the direct handlers guarantee that the exact live
     // controls still commit even if another listener interferes with bubbling.
+    validate.onclick=submit;
     validate.addEventListener('click',submit);
     input.addEventListener('keydown',event=>{
       if(event.isComposing)return;
