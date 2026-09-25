@@ -3,7 +3,7 @@
 Version : 1.0 — 2026-09-11
 
 ## But
-Tous les projets Delor85 doivent pouvoir bénéficier des règles, innovations, patterns techniques et procédures qui ont déjà fait leurs preuves dans un autre projet, sans recopier aveuglément le métier ou les données de ce projet.
+Tous les projets Delor85 et SergeDelor doivent pouvoir bénéficier des règles, innovations, patterns techniques et procédures qui ont déjà fait leurs preuves dans un autre projet, sans recopier aveuglément le métier ou les données de ce projet.
 
 ## Éléments mutualisables
 - garde-fous universels ;
@@ -52,6 +52,6 @@ Une règle commune n’écrase jamais CURRENT_TRUTH d’un projet. Le projet loc
 ## Projets actuellement concernés
 - Delor85/as-beauty
 - Delor85/BlueAuto
-- Delor85/tontine-platform / Eco-System et plateformes associées
+- SergeDelor/tontine-platform / Eco-System et plateformes associées
 
-Tout nouveau dépôt Delor85 doit évaluer cette politique lors de son bootstrap.
+Tout nouveau dépôt Delor85 et SergeDelor doit évaluer cette politique lors de son bootstrap.
