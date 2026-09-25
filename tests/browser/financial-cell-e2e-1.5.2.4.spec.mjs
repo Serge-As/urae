@@ -23,11 +23,16 @@ test('real financial matrix validates click, Enter, closed-session first entry a
 
   const ids=await page.evaluate(async({password})=>{
     const json=async(path,method='GET',body,groupId)=>{
-      const response=await fetch(path,{
-        method,
-        headers:{...(body===undefined?{}:{'content-type':'application/json'}),...(groupId?{'x-active-group-id':groupId}:{})},
-        body:body===undefined?undefined:JSON.stringify(body)
-      });
+      let response;
+      try{
+        response=await fetch(path,{
+          method,
+          headers:{...(body===undefined?{}:{'content-type':'application/json'}),...(groupId?{'x-active-group-id':groupId}:{})},
+          body:body===undefined?undefined:JSON.stringify(body)
+        });
+      }catch(error){
+        throw new Error(method+' '+path+' -> FETCH_FAILED '+String(error));
+      }
       const text=await response.text();
       let data;try{data=JSON.parse(text);}catch{data=text;}
       if(!response.ok)throw new Error(method+' '+path+' -> '+response.status+' '+text);

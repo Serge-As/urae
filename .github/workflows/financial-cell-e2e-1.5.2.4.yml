@@ -52,6 +52,13 @@ jobs:
           exit 1
       - name: Real click Enter closed-session and offline financial flow
         run: npx playwright test tests/browser/financial-cell-e2e-1.5.2.4.spec.mjs --browser=chromium --workers=1
+      - name: Print isolated server log on failure
+        if: failure()
+        run: |
+          echo "===== isolated Eco-System server ====="
+          cat /tmp/eco-financial-e2e.log || true
+          echo "===== server process ====="
+          if [ -f /tmp/eco-financial-e2e.pid ]; then ps -fp "$(cat /tmp/eco-financial-e2e.pid)" || true; fi
       - name: Upload diagnostic report on failure
         if: failure()
         uses: actions/upload-artifact@v4
