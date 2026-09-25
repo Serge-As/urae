@@ -509,26 +509,42 @@ const makeFinancialEntryCell=({member,rubric,meetingId,editable=true})=>{
     const setCellState=(state,message='')=>{holder.dataset.saveState=state;holder.classList.toggle('is-failed',state==='FAILED');holder.classList.toggle('is-confirmed',state==='CONFIRMED');stateLine.hidden=!message;stateLine.textContent=message;};
     let submitting=false;
     const submit=()=>void(async()=>{
-      if(submitting)return;submitting=true;
-      clearFail();const raw=input.value.trim();if(raw===''){submitting=false;return;}const target=Number(raw);if(!Number.isSafeInteger(target)||target<0){submitting=false;fail(new Error('INVALID_CONTRIBUTION_AMOUNT'));return;}
-      const cellKey=persistentCellKey;
-      setCellState('SAVING_LOCAL',tx('Enregistrement…','Saving…'));traceFinancialCell('CELL_SUBMIT',{cellKey,membershipId:member.id,rubricId:rubric.id,meetingId,target,current,nature});
-      if(target===current){input.value='';clearFinancialCellDraft(cellKey);submitting=false;setCellState('IDLE');toast(tx('Aucun changement : cette valeur est déjà enregistrée.','No change: this value is already recorded.'));return;}
-      const meeting=meetings.find(x=>x.id===meetingId);let reason='';
-      if(current>0||meeting?.status==='closed'){
-        reason=prompt(tx(`Motif de la modification ${fmt(current)} → ${fmt(target)} :`,`Reason for change ${fmt(current)} → ${fmt(target)}:`),tx('Correction de la valeur de la cellule','Cell value correction'))??'';
-        if(!reason.trim()){submitting=false;return;}
-      }
-      validate.disabled=true;input.disabled=true;const previousIcon=validate.textContent;validate.textContent='…';holder.classList.add('is-saving');
+      traceFinancialCell('CELL_SUBMIT_INVOKED',{cellKey:persistentCellKey,membershipId:member.id,rubricId:rubric.id,meetingId,busy:submitting,inputValue:input.value});
+      if(submitting){traceFinancialCell('CELL_SUBMIT_BUSY',{cellKey:persistentCellKey});return;}
+      submitting=true;
+      const cellKey=persistentCellKey,previousIcon=validate.textContent;
+      let target=Number.NaN;
       try{
+        clearFail();
+        const raw=input.value.trim();
+        if(raw===''){setCellState('IDLE');return;}
+        target=Number(raw);
+        if(!Number.isSafeInteger(target)||target<0)throw new Error('INVALID_CONTRIBUTION_AMOUNT');
+
+        setCellState('SAVING_LOCAL',tx('Enregistrement…','Saving…'));
+        traceFinancialCell('CELL_SUBMIT',{cellKey,membershipId:member.id,rubricId:rubric.id,meetingId,target,current,nature});
+        if(target===current){
+          input.value='';clearFinancialCellDraft(cellKey);setCellState('IDLE');
+          toast(tx('Aucun changement : cette valeur est déjà enregistrée.','No change: this value is already recorded.'));
+          return;
+        }
+
+        const meeting=meetings.find(x=>x.id===meetingId);let reason='';
+        if(current>0||meeting?.status==='closed'){
+          reason=prompt(tx(`Motif de la modification ${fmt(current)} → ${fmt(target)} :`,`Reason for change ${fmt(current)} → ${fmt(target)}:`),tx('Correction de la valeur de la cellule','Cell value correction'))??'';
+          if(!reason.trim()){setCellState('IDLE');return;}
+        }
+
+        validate.disabled=true;input.disabled=true;validate.textContent='…';holder.classList.add('is-saving');
         let result;
         if(current===0){
-          if(target===0){input.value='';clearFinancialCellDraft(cellKey);submitting=false;setCellState('IDLE');return;}
+          if(target===0){input.value='';clearFinancialCellDraft(cellKey);setCellState('IDLE');return;}
           result=await app.recordFinancialSheetEntry({membershipId:member.id,meetingId,rubric,amount:target,reason:reason.trim()||undefined});
         }else{
           if(nature!=='CONTRIBUTION')throw Error('SPECIALIZED_FINANCIAL_CORRECTION_REQUIRED');
           result=await app.setFinancialCellTarget({meetingId,membershipId:member.id,rubricId:rubric.id,targetAmount:target,currentAmount:current,currentVersion:exactCellVersion(member.id,rubric.id,meetingId),reason:reason.trim()});
         }
+
         if(result?.status==='CONSENSUS_REQUIRED'){
           financialReviewTargets.set(cellKey,{targetAmount:target,meetingId,membershipId:member.id,rubricId:rubric.id,at:new Date().toISOString()});
           holder.classList.add('pending-consensus');setCellState('REVIEW_REQUIRED',tx('Proposition enregistrée · validation d’un second responsable requise','Proposal saved · second manager approval required'));
@@ -555,8 +571,19 @@ const makeFinancialEntryCell=({member,rubric,meetingId,editable=true})=>{
           financialReviewTargets.delete(cellKey);currentLabel.textContent=fmt(target);setCellState('CONFIRMED',tx('✓ Validé','✓ Confirmed'));traceFinancialCell('CELL_ACK',{cellKey,target,current});
           toast(nature==='LOAN'?tx('Prêt décaissé : la caisse diminue et la dette du membre est créée.','Loan disbursed: cash decreases and the member debt is created.'):tx('Valeur enregistrée.','Value saved.'));
         }
-        input.value='';clearFinancialCellDraft(cellKey);await renderLedger();renderOutbox();window.dispatchEvent(new CustomEvent('eco:financial-data-changed',{detail:{meetingId,membershipId:member.id,rubricId:rubric.id}}));await sessionsUI.refresh?.();renderIndividualSheetMatrix();
-      }catch(e){const code=e instanceof Error?e.message:String(e);setCellState('FAILED',tx('Échec : ','Failed: ')+code);traceFinancialCell('CELL_FAIL',{cellKey:financialCellKey(member.id,rubric.id,meetingId),target:Number(input.value||0),current,error:code});fail(e);}finally{submitting=false;validate.disabled=false;input.disabled=false;validate.textContent=previousIcon;holder.classList.remove('is-saving');}
+
+        input.value='';clearFinancialCellDraft(cellKey);
+        await renderLedger();renderOutbox();
+        window.dispatchEvent(new CustomEvent('eco:financial-data-changed',{detail:{meetingId,membershipId:member.id,rubricId:rubric.id}}));
+        await sessionsUI.refresh?.();renderIndividualSheetMatrix();
+      }catch(e){
+        const code=e instanceof Error?e.message:String(e);
+        setCellState('FAILED',tx('Échec : ','Failed: ')+code);
+        traceFinancialCell('CELL_FAIL',{cellKey,target:Number.isFinite(target)?target:Number(input.value||0),current,error:code});
+        fail(e);
+      }finally{
+        submitting=false;validate.disabled=false;input.disabled=false;validate.textContent=previousIcon;holder.classList.remove('is-saving');
+      }
     });
     financialSubmitHandlers.set(validate,submit);
     validate.__ecoFinancialSubmit=submit;
