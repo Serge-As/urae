@@ -45,12 +45,14 @@ test('offline loss of an optional section does not block Group Core',()=>{
   assert.match(main,/NETWORK_UNAVAILABLE/);
 });
 
-test('service worker keeps full app shell and uses a new isolated cache version',()=>{
-  assert.match(sw,/eco-system-v1523-financial-entry-offline-20260925/);assert.match(sw,/PREVIOUS_CACHE = 'eco-system-v1522-governed-field-feedback-20260923'/);
-  for(const asset of ['/index.html','/styles.css','/src/main.js','/src/sessions-ui.js','/packages/application/src/index.js','/packages/offline/src/index.js'])assert.ok(sw.includes(asset),asset);
+test('service worker keeps a complete coherent shell and preserves one previous release',()=>{
+  assert.match(sw,/eco-system-v1526-field-persistence-pc-mobile-20260925/);
+  assert.match(sw,/PREVIOUS_CACHE = 'eco-system-v1523-financial-entry-offline-20260925'/);
+  for(const asset of ['/index.html','/styles.css?v=1526','/src/main.js?v=1526','/src/sessions-ui.js','/packages/application/src/index.js','/packages/offline/src/index.js'])assert.ok(sw.includes(asset),asset);
   assert.match(sw,/event\.request\.mode === 'navigate'/);
+  assert.match(sw,/fetch\(event\.request, \{ cache:'no-store' \}\)/);
   assert.match(sw,/cache\.match\('\/index\.html'\)/);
-  assert.match(sw,/cache-first/i);
+  assert.match(sw,/RELEASE_READY/);
+  assert.match(sw,/skipWaiting\(/);
   assert.doesNotMatch(main,/controllerchange[\s\S]{0,500}location\.reload\(/);
-  assert.doesNotMatch(sw,/skipWaiting\(/);
 });
