@@ -103,15 +103,15 @@ self.addEventListener('fetch', event => {
     event.respondWith((async () => {
       const cache = await caches.open(CACHE);
       const cached = await cache.match('/index.html') || await cache.match('/');
-      if (self.navigator?.onLine !== false) {
-        try {
-          const fresh = await Promise.race([
-            fetch(event.request, { cache:'no-store' }),
-            new Promise((_,reject)=>setTimeout(()=>reject(new Error('NAVIGATION_TIMEOUT')),6000))
-          ]);
-          if (fresh && fresh.ok) return fresh;
-        } catch (_) {}
-      }
+      // Always try the network first; navigator.onLine is not a reliable
+      // connectivity oracle in workers. The bounded timeout preserves 2G/offline fallback.
+      try {
+        const fresh = await Promise.race([
+          fetch(event.request, { cache:'no-store' }),
+          new Promise((_,reject)=>setTimeout(()=>reject(new Error('NAVIGATION_TIMEOUT')),6000))
+        ]);
+        if (fresh && fresh.ok) return fresh;
+      } catch (_) {}
       if (cached) return cached;
       try {
         const fresh = await fetch(event.request, { cache:'no-store' });
