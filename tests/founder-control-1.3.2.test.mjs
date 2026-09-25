@@ -30,11 +30,17 @@ test('Founder Control Center tracks editorial work and incidents to resolution',
     const store=new FounderControlStore(db);
     const content=await store.createContent({key:'HELP-1',title:'Guide Épargne',priority:'HIGH',note:'À reprendre'});
     const incident=await store.createIncident({key:'BUG-1',title:'Forum indisponible',priority:'CRITICAL',note:'Diagnostic'});
+    assert.equal(incident.status,'DETECTED');
     await store.transition(content.id,'NEEDS_REVIEW','Premier brouillon prêt');
-    await store.transition(incident.id,'RESOLVED','Correctif qualifié','ci:founder-control-1.3.2');
+    await store.transition(incident.id,'TRIAGED','Impact et propriétaire qualifiés');
+    await store.transition(incident.id,'CONTAINED','Contournement actif');
+    await store.transition(incident.id,'FIXED','Correctif appliqué');
+    await assert.rejects(()=>store.transition(incident.id,'VERIFIED','Correctif testé'),/INCIDENT_EVIDENCE_REQUIRED/);
+    await store.transition(incident.id,'VERIFIED','Correctif qualifié','ci:founder-control-1.3.2');
+    await store.transition(incident.id,'CLOSED','Preuve finale conservée','ci:founder-control-1.3.2');
     const snap=await store.snapshot([]);
     assert.equal(snap.content[0].status,'NEEDS_REVIEW');
-    assert.equal(snap.incidents[0].status,'RESOLVED');
+    assert.equal(snap.incidents[0].status,'CLOSED');
   }finally{db.close();}
 });
 
@@ -49,5 +55,34 @@ test('first existing account becomes durable platform owner while later accounts
     const store=new FounderControlStore(db);
     assert.equal(await store.isPlatformOwner('user_first'),true);
     assert.equal(await store.isPlatformOwner('user_later'),false);
+  }finally{db.close();}
+});
+
+
+test('Founder Control Center keeps KPI truth explicit and never turns an outage into a fake zero',async()=>{
+  const db=new SQLiteD1(':memory:');db.migrate();
+  try{
+    const store=new FounderControlStore(db);
+    await assert.rejects(()=>store.recordKpi({key:'api-availability',title:'Disponibilité API',source:'health',formula:'successful / total',period:'5m',actual:0,asOf:new Date().toISOString(),freshness:'5m',right:'FOUNDER',proof:'health:unavailable',availability:'UNAVAILABLE'}),/KPI_UNAVAILABLE_MUST_NOT_FAKE_ZERO/);
+    const unavailable=await store.recordKpi({key:'api-availability',title:'Disponibilité API',source:'health',formula:'successful / total',period:'5m',asOf:new Date().toISOString(),freshness:'5m',right:'FOUNDER',proof:'health:unavailable',availability:'UNAVAILABLE'});
+    assert.equal(unavailable.actual,undefined);
+    const observed=await store.recordKpi({key:'d1-latency',title:'Latence D1',source:'worker-metrics',formula:'p95(query_ms)',period:'15m',actual:42,forecast:50,asOf:new Date().toISOString(),freshness:'15m',right:'FOUNDER',proof:'run:control-kpi',availability:'OBSERVED'});
+    assert.equal(observed.actual,42);
+    const snap=await store.snapshot([]);
+    assert.equal(snap.kpis.length,2);
+    assert.equal(snap.kpis.find(x=>x.key==='api-availability')?.availability,'UNAVAILABLE');
+  }finally{db.close();}
+});
+
+test('capability deployment and field stages require evidence',async()=>{
+  const db=new SQLiteD1(':memory:');db.migrate();
+  try{
+    const store=new FounderControlStore(db);
+    await store.snapshot([{id:'MARKETPLACE.ECO_NOW',labelFr:'Eco NOW',labelEn:'Eco NOW',status:'FOUNDATION_ACTIVE',lot:'F',workspace:'UNIVERSAL'}]);
+    await assert.rejects(()=>store.recordCapabilityProof('MARKETPLACE.ECO_NOW',{deploymentStage:'DEPLOYED',evidenceRef:''}),/CAPABILITY_PROOF_REQUIRED/);
+    await store.recordCapabilityProof('MARKETPLACE.ECO_NOW',{deploymentStage:'DEPLOYED',fieldStage:'FIELD_ACCEPTED',evidenceRef:'field:eco-now-acceptance'});
+    const snap=await store.snapshot([{id:'MARKETPLACE.ECO_NOW',labelFr:'Eco NOW',labelEn:'Eco NOW',status:'FOUNDATION_ACTIVE',lot:'F',workspace:'UNIVERSAL'}]);
+    assert.equal(snap.capabilities[0].deploymentStage,'DEPLOYED');
+    assert.equal(snap.capabilities[0].fieldStage,'FIELD_ACCEPTED');
   }finally{db.close();}
 });
