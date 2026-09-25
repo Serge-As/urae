@@ -512,17 +512,18 @@ export class ConnectedApplication {
   async createMiscRubric(input:{name:string;description?:string;lifecycle?:'EPHEMERAL'|'PERSISTENT'|'SESSION_ONLY';amountMode?:'FIXED'|'VARIABLE';defaultAmount?:number;activeFirstSessions?:number}):Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/misc-rubrics`,{method:'POST',body:JSON.stringify({action:'create_custom',...input})});}
   async postMiscRubrics(input:{membershipId:string;meetingId?:string;items:Array<{templateId:string;amount:number;note?:string}>}):Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/misc-rubrics/postings`,{method:'POST',body:JSON.stringify({...input,idempotencyKey:makeId('misc_batch')})});}
   async miscPostings(filters:{meetingId?:string;membershipId?:string}={}):Promise<any[]>{if(!this.activeGroupId)return[];const p=new URLSearchParams();if(filters.meetingId)p.set('meetingId',filters.meetingId);if(filters.membershipId)p.set('membershipId',filters.membershipId);return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/misc-rubrics/postings?${p}`);}
-  pendingFinancialCellTargets():Array<{meetingId:string;membershipId:string;rubricId:string;targetAmount:number;baselineValue:number;baselineVersion:number;status:string;idempotencyKey:string;createdAt:string}>{
+  pendingFinancialCellTargets():Array<{meetingId:string;membershipId:string;rubricId:string;targetAmount:number;baselineValue:number;baselineVersion:number;status:string;businessStatus?:string;idempotencyKey:string;createdAt:string}>{
     if(!this.activeGroupId)return[];
     return this.outbox.list().filter(item=>{
-      const payload=item.payload as Record<string,unknown>;
+      const payload=item.payload as Record<string,unknown>,businessStatus=String(item.lastResult?.status??'');
       return item.tenantId===this.tenantId&&item.actorId===this.actorId&&item.type==='FINANCIAL_CELL_CORRECTION_PROPOSAL_V1'&&
-        String(payload.groupId??'')===this.activeGroupId&&!['CONFIRMED','CONFLICT','CANCELLED'].includes(item.status);
+        String(payload.groupId??'')===this.activeGroupId&&!['CONFLICT','CANCELLED'].includes(item.status)&&
+        (item.status!=='CONFIRMED'||businessStatus==='CONSENSUS_REQUIRED');
     }).map(item=>{
       const payload=item.payload as Record<string,unknown>;
       return{meetingId:String(payload.meetingId??''),membershipId:String(payload.membershipId??''),rubricId:String(payload.rubricId??''),
         targetAmount:Number(payload.targetAmount??0),baselineValue:Number(payload.baselineValue??0),baselineVersion:Number(payload.baselineVersion??0),
-        status:item.status,idempotencyKey:item.idempotencyKey,createdAt:item.createdAt};
+        status:item.status,businessStatus:String(item.lastResult?.status??'')||undefined,idempotencyKey:item.idempotencyKey,createdAt:item.createdAt};
     }).filter(x=>x.meetingId&&x.membershipId&&x.rubricId&&Number.isSafeInteger(x.targetAmount)&&x.targetAmount>=0);
   }
 
@@ -879,7 +880,7 @@ export class ConnectedApplication {
   async updateWorkspaceRecord(id:string,input:Partial<Pick<WorkspaceRecord,'title'|'summary'|'status'|'tags'|'data'>>):Promise<WorkspaceRecord>{return this.request(`/api/v1/workspaces/${encodeURIComponent(id)}`,{method:'PUT',body:JSON.stringify(input)});}
 
   async syncOutbox():Promise<OutboxItem[]>{
-    const result=await this.outbox.sync(async item=>{try{const groupId=(item.payload as {groupId?:string}).groupId;const r=await this.request<{accepted:boolean;stored?:boolean}>('/api/v1/outbox/apply',{method:'POST',headers:{'x-active-group-id':groupId??''},body:JSON.stringify(item)});return{ok:r.accepted&&r.stored!==false};}catch(e){return{ok:false,conflict:e instanceof Error&&['IDEMPOTENCY_CONFLICT','FORBIDDEN_SCOPE'].includes(e.message)};}});await this.persistOutbox();return result;
+    const result=await this.outbox.sync(async item=>{try{const groupId=(item.payload as {groupId?:string}).groupId;const r=await this.request<Record<string,unknown>&{accepted:boolean;stored?:boolean}>('/api/v1/outbox/apply',{method:'POST',headers:{'x-active-group-id':groupId??''},body:JSON.stringify(item)});return{ok:r.accepted&&r.stored!==false,result:r};}catch(e){const message=e instanceof Error?e.message:String(e);return{ok:false,conflict:['IDEMPOTENCY_CONFLICT','FORBIDDEN_SCOPE','CELL_VALUE_CONFLICT','CELL_VERSION_CONFLICT'].includes(message),error:message};}});await this.persistOutbox();return result;
   }
   async queueDemoIntent(note='Local note'):Promise<OutboxItem>{const item=this.outbox.enqueue({tenantId:this.tenantId,actorId:this.actorId,type:'MEETING_NOTE_UPDATED',payload:{groupId:this.activeGroupId,note},idempotencyKey:`note-${this.activeGroupId??'none'}-${Date.now()}`});await this.persistOutbox();return item;}
   async retryOutboxItem(id:string):Promise<OutboxItem|undefined>{const item=this.outbox.retry(id);await this.persistOutbox();return item;}
