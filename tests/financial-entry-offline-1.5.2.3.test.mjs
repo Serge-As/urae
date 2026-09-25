@@ -72,10 +72,10 @@ test('1.5.2.3 offline correction exposes the exact pending target for immediate 
 
 test('1.5.2.3 financial matrix validates both click and Enter and shows durable local pending state',async()=>{
   const main=await readFile('.build/src/main.js','utf8');
-  assert.match(main,/validate\.addEventListener\('click',\s*submit\)/);
-  assert.match(main,/event\.key\s*===\s*['"]Enter['"][\s\S]{0,120}event\.code\s*===\s*['"]Enter['"][\s\S]{0,120}event\.keyCode\s*===\s*13/);
-  assert.match(main,/event\.preventDefault\(\);[\s\S]{0,120}event\.stopPropagation\(\);[\s\S]{0,120}submit\(\)/);
+  assert.match(main,/document\.addEventListener\('click',[\s\S]{0,900}\.cell-validate[\s\S]{0,900}void submitFinancialCellElement\(target\)/);
+  assert.match(main,/document\.addEventListener\('keydown',[\s\S]{0,900}event\.key\s*===\s*['"]Enter['"][\s\S]{0,240}event\.code\s*===\s*['"]Enter['"][\s\S]{0,240}event\.keyCode\s*===\s*13/);
+  assert.match(main,/document\.addEventListener\('keydown',[\s\S]{0,1400}event\.preventDefault\(\);[\s\S]{0,240}event\.stopPropagation\(\);[\s\S]{0,240}void submitFinancialCellElement\(button\)/);
   assert.match(main,/financialPendingTargets\s*=\s*new Map/);
-  assert.match(main,/Enregistré hors ligne · synchro en attente/);
+  assert.match(main,/Enregistré sur cet appareil · synchro en attente/);
   assert.match(main,/✓ Valeur enregistrée sur cet appareil/);
 });
