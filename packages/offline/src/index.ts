@@ -18,7 +18,7 @@ const replaceIdentity=(value:unknown,oldActorId:string,oldTenantId:string,newAct
   return value;
 };
 
-export type SyncHandler = (item: OutboxItem) => Promise<{ ok: boolean; conflict?: boolean }>;
+export type SyncHandler = (item: OutboxItem) => Promise<{ ok: boolean; conflict?: boolean; result?: Record<string,unknown>; error?: string }>;
 
 export class Outbox {
   private items = new Map<Id, OutboxItem>();
@@ -77,9 +77,9 @@ export class Outbox {
       try {
         const result = await handler(structuredClone(syncing));
         const status = result.conflict ? 'CONFLICT' : result.ok ? 'CONFIRMED' : 'FAILED';
-        this.items.set(current.id, { ...syncing, status, updatedAt: new Date().toISOString() });
-      } catch {
-        this.items.set(current.id, { ...syncing, status: 'FAILED', updatedAt: new Date().toISOString() });
+        this.items.set(current.id, { ...syncing, status, lastResult: result.result, lastError: result.error, updatedAt: new Date().toISOString() });
+      } catch (error) {
+        this.items.set(current.id, { ...syncing, status: 'FAILED', lastError: error instanceof Error ? error.message : String(error), updatedAt: new Date().toISOString() });
       }
     }
     return this.list();
