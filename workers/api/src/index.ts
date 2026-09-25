@@ -1406,7 +1406,8 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
 
     if(request.method==='GET'&&url.pathname==='/api/v1/founder/control'){
       if(!options.founderControl||!(await isFounderTeamActor()))throw new Error('FOUNDER_TEAM_ONLY');
-      return json(await options.founderControl.snapshot(PRODUCT_MODULES.map(x=>({id:x.id,labelFr:x.labelFr,labelEn:x.labelEn,status:x.status,lot:x.lot,workspace:x.workspace}))),200,cors);
+      const snapshot=await options.founderControl.snapshot(PRODUCT_MODULES.map(x=>({id:x.id,labelFr:x.labelFr,labelEn:x.labelEn,status:x.status,lot:x.lot,workspace:x.workspace})));
+      return json({...snapshot,runtimeEvidence:{version:RELEASE_VERSION,buildId:RELEASE_BUILD_ID,commitSha:options.releaseCommitSha??'UNBOUND_LOCAL_BUILD',pwaCache:RELEASE_PWA_CACHE,d1Bound:true,r2Bound:Boolean(options.artifacts),premiumLiveBound:Boolean(options.premiumLive&&options.liveNamespace),realMoneyEnabled:kernel.features.enabled('financial-real-money'),asOf:new Date().toISOString()}},200,cors);
     }
     if(request.method==='POST'&&url.pathname==='/api/v1/founder/control/content'){
       if(!options.founderControl||!(await isFounderTeamActor()))throw new Error('FOUNDER_TEAM_ONLY');
@@ -1429,6 +1430,18 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
       if(!options.founderControl||!(await isFounderTeamActor()))throw new Error('FOUNDER_TEAM_ONLY');
       const body=await readJson<Record<string,unknown>>(request);
       await options.founderControl.recordCapabilityCheck(decodeURIComponent(capabilityCheck[1]!),String(body.health??'UNKNOWN') as CapabilityHealth,String(body.note??''));
+      return json({ok:true},200,cors);
+    }
+    if(request.method==='POST'&&url.pathname==='/api/v1/founder/control/kpis'){
+      if(!options.founderControl||!(await isFounderTeamActor()))throw new Error('FOUNDER_TEAM_ONLY');
+      const body=await readJson<any>(request);
+      return json(await options.founderControl.recordKpi({key:String(body.key??''),title:String(body.title??''),source:String(body.source??''),formula:String(body.formula??''),period:String(body.period??''),actual:body.actual===undefined?undefined:Number(body.actual),forecast:body.forecast===undefined?undefined:Number(body.forecast),asOf:String(body.asOf??''),freshness:String(body.freshness??''),right:String(body.right??''),proof:String(body.proof??''),availability:body.availability?String(body.availability) as any:undefined}),201,cors);
+    }
+    const capabilityProof=url.pathname.match(/^\/api\/v1\/founder\/control\/capabilities\/(.+)\/proof$/);
+    if(capabilityProof&&request.method==='POST'){
+      if(!options.founderControl||!(await isFounderTeamActor()))throw new Error('FOUNDER_TEAM_ONLY');
+      const body=await readJson<any>(request);
+      await options.founderControl.recordCapabilityProof(decodeURIComponent(capabilityProof[1]!),{deploymentStage:body.deploymentStage?String(body.deploymentStage) as any:undefined,fieldStage:body.fieldStage?String(body.fieldStage) as any:undefined,evidenceRef:String(body.evidenceRef??'')});
       return json({ok:true},200,cors);
     }
 
