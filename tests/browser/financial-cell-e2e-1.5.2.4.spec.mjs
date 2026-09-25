@@ -135,7 +135,24 @@ test('real financial matrix validates click, Enter, closed-session first entry a
   await expect(page.locator('#meetingMatrix .canonical-financial-matrix')).toBeVisible();
   await expect(cell(ids.rubricIds[3],ids.meetingId)).toBeVisible();
 
-  await page.evaluate(async()=>{if('serviceWorker' in navigator)await navigator.serviceWorker.ready;});
+  const swState=await page.evaluate(async()=>{
+    if(!('serviceWorker' in navigator))return{supported:false};
+    let registrationError='';
+    try{await navigator.serviceWorker.register('/sw.js',{scope:'/',updateViaCache:'none'});}catch(e){registrationError=String(e);}
+    const started=Date.now();
+    while(Date.now()-started<12000){
+      const reg=await navigator.serviceWorker.getRegistration('/');
+      if(reg?.active)return{supported:true,ready:true,controller:Boolean(navigator.serviceWorker.controller),active:reg.active.state,waiting:reg.waiting?.state??'',installing:reg.installing?.state??'',registrationError,caches:await caches.keys()};
+      await new Promise(resolve=>setTimeout(resolve,250));
+    }
+    const reg=await navigator.serviceWorker.getRegistration('/');
+    const probes={};
+    for(const url of ['/sw.js','/index.html','/src/main.js?v=1523','/src/field-hardening.js?v=1523','/packages/application/src/index.js']){
+      try{const response=await fetch(url,{cache:'no-store'});probes[url]={status:response.status,ok:response.ok,type:response.headers.get('content-type')??''};}catch(e){probes[url]={error:String(e)};}
+    }
+    return{supported:true,ready:false,controller:Boolean(navigator.serviceWorker.controller),active:reg?.active?.state??'',waiting:reg?.waiting?.state??'',installing:reg?.installing?.state??'',registrationError,caches:await caches.keys(),probes};
+  });
+  if(!swState.ready)throw new Error('SERVICE_WORKER_NOT_READY '+JSON.stringify(swState));
   await context.setOffline(true);
   const offlineCell=cell(ids.rubricIds[3],ids.meetingId);
   await offlineCell.locator('.cell-target-input').fill('3000');
