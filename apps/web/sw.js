@@ -34,24 +34,29 @@ const OPTIONAL_SHELL = [
 const APP_SHELL = [...ESSENTIAL_SHELL, ...OPTIONAL_SHELL];
 
 const fetchReleaseAsset = async path => {
-  const response = await fetch(path, { cache: 'no-store' });
+  const response = await Promise.race([
+    fetch(path, { cache: 'no-store' }),
+    new Promise((_,reject)=>setTimeout(()=>reject(new Error('RELEASE_ASSET_TIMEOUT:' + path)),8000))
+  ]);
   if (!response || !response.ok) throw new Error('RELEASE_ASSET_MISSING:' + path);
+  // Consume a clone now so an incomplete/aborted body cannot masquerade as cached.
+  await response.clone().arrayBuffer();
   return response;
 };
 
 self.addEventListener('install', event => {
   event.waitUntil((async () => {
     const cache = await caches.open(CACHE);
-    // Atomic essential shell: if one required asset is absent, installation
-    // rejects and the previous active worker/cache remains in charge.
-    const essentials = await Promise.all(ESSENTIAL_SHELL.map(async path => [path, await fetchReleaseAsset(path)]));
-    for (const [path,response] of essentials) await cache.put(path, response.clone());
-
-    // Optional surfaces may be unavailable without invalidating Group Core.
-    for (const path of OPTIONAL_SHELL) {
-      try { const response = await fetchReleaseAsset(path); await cache.put(path, response.clone()); } catch (_) {}
+    // main.js statically imports several modules historically labelled optional.
+    // A release is therefore coherent only after the whole declared shell is
+    // fetched and stored. Download in bounded parallel batches for slow links.
+    for (let offset=0; offset<APP_SHELL.length; offset+=6) {
+      const batch=APP_SHELL.slice(offset,offset+6);
+      const fetched=await Promise.all(batch.map(async path=>[path,await fetchReleaseAsset(path)]));
+      for(const [path,response] of fetched)await cache.put(path,response.clone());
     }
-    await cache.put(RELEASE_READY, new Response(JSON.stringify({cache:CACHE,installedAt:new Date().toISOString()}), {
+    // Written strictly last: activation is forbidden for a partial shell.
+    await cache.put(RELEASE_READY, new Response(JSON.stringify({cache:CACHE,installedAt:new Date().toISOString(),assets:APP_SHELL.length}), {
       headers:{'content-type':'application/json; charset=utf-8'}
     }));
     // Installation is atomic above; only now may this complete release replace a stale controller.
