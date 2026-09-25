@@ -557,6 +557,16 @@ const makeFinancialEntryCell=({member,rubric,meetingId,editable=true})=>{
       }catch(e){const code=e instanceof Error?e.message:String(e);setCellState('FAILED',tx('Échec : ','Failed: ')+code);traceFinancialCell('CELL_FAIL',{cellKey:financialCellKey(member.id,rubric.id,meetingId),target:Number(input.value||0),current,error:code});fail(e);}finally{submitting=false;validate.disabled=false;input.disabled=false;validate.textContent=previousIcon;holder.classList.remove('is-saving');}
     });
     financialSubmitHandlers.set(validate,submit);
+    // Keep both delegated and direct bindings. The delegated capture handler survives
+    // surrounding UI refreshes; the direct handlers guarantee that the exact live
+    // controls still commit even if another listener interferes with bubbling.
+    validate.addEventListener('click',submit);
+    input.addEventListener('keydown',event=>{
+      if(event.isComposing)return;
+      if(event.key==='Enter'||event.code==='Enter'||event.keyCode===13){
+        event.preventDefault();event.stopPropagation();submit();
+      }
+    });
     holder.append(input,validate,stateLine);return holder;
 };
 
