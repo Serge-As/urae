@@ -57,11 +57,11 @@ interface WorkersAILike {
   run?(model:string,input:Record<string,unknown>,options?:Record<string,unknown>):Promise<unknown>;
 }
 
-const RELEASE_VERSION='1.5.2.3-financial-entry-offline';
-const RELEASE_BUILD_ID='eco-system-1.5.2.3-20260925';
+const RELEASE_VERSION='1.5.2.6-field-persistence-pc-mobile';
+const RELEASE_BUILD_ID='eco-system-1.5.2.6-20260925';
 const RELEASE_SCHEMA_VERSION='d1-additive-20260923';
-const RELEASE_POLICY_VERSION='financial-entry-offline-20260925';
-const RELEASE_PWA_CACHE='eco-system-v1523-financial-entry-offline-20260925';
+const RELEASE_POLICY_VERSION='field-persistence-pc-mobile-20260925';
+const RELEASE_PWA_CACHE='eco-system-v1526-field-persistence-pc-mobile-20260925';
 
 const defaultRepo = new InMemoryPlatformRepository();
 const defaultReferralBudgets = new InMemoryReferralBudgetStore();
