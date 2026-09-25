@@ -50,7 +50,7 @@ export function mountFounderControlUI({app,notify=()=>{},showError=console.error
         let evidenceRef='';
         if(['VERIFIED','CLOSED'].includes(next)){
           evidenceRef=window.prompt('Preuve obligatoire (run CI, test, commit, artefact ou recette vérifiée) :')?.trim()??'';
-          if(!evidenceRef)throw new Error('INCIDENT_EVIDENCE_REQUIRED');
+          if(!evidenceRef)throw new Error('RESOLUTION_EVIDENCE_REQUIRED');
         }
         await app.transitionFounderControlItem(x.id,next,note,evidenceRef);await render();
       },next==='VERIFIED'||next==='CLOSED'?'primary':'secondary'));
