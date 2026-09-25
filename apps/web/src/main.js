@@ -1100,6 +1100,7 @@ const refreshGroupContext = async () => {
     await refreshOptionalOfflineSafe('urgent-notifications',renderUrgentNotifications);
     await refreshOptionalOfflineSafe('notification-center',renderNotificationCenter);
     await refreshOptionalOfflineSafe('community-shop',()=>communityShopUI.refresh());
+    await refreshOptionalOfflineSafe('value-market',()=>valueMarketUI.refresh());
     await refreshOptionalOfflineSafe('misc-rubrics',()=>miscRubricUI.refresh());
     await refreshOptionalOfflineSafe('pairing',()=>pairingUI.refresh());
     await refreshOptionalOfflineSafe('personal-cockpit',()=>personalCockpitUI.refresh());
