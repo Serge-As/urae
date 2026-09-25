@@ -75,7 +75,7 @@ test('1.5.2.3 financial matrix validates both click and Enter and shows durable 
   assert.match(main,/validate\.addEventListener\('click',\s*submit\)/);
   assert.match(main,/event\.key\s*===\s*['"]Enter['"][\s\S]{0,120}event\.code\s*===\s*['"]Enter['"][\s\S]{0,120}event\.keyCode\s*===\s*13/);
   assert.match(main,/event\.preventDefault\(\);[\s\S]{0,120}event\.stopPropagation\(\);[\s\S]{0,120}submit\(\)/);
-  assert.match(main,/financialPendingTargets=new Map/);
+  assert.match(main,/financialPendingTargets\s*=\s*new Map/);
   assert.match(main,/Enregistré hors ligne · synchro en attente/);
   assert.match(main,/✓ Valeur enregistrée sur cet appareil/);
 });
