@@ -1,0 +1,49 @@
+name: Eco-System P0 — Real Financial Cell Browser E2E
+
+on:
+  push:
+    branches: ['fix/1.5.2.4-financial-entry-e2e-20260925']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: eco-system-financial-cell-e2e
+  cancel-in-progress: true
+
+jobs:
+  chromium-financial-cell:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - run: npm ci --ignore-scripts
+      - run: npm run build
+      - name: Install Chromium runner
+        run: |
+          npm install --no-save --ignore-scripts @playwright/test@1.55.0
+          npx playwright install --with-deps chromium
+      - name: Start isolated local Eco-System
+        run: |
+          rm -f /tmp/eco-financial-e2e.sqlite
+          ECO_DATA_FILE=/tmp/eco-financial-e2e.sqlite OPEN_BROWSER=0 PORT=4173 node scripts/dev-server.mjs > /tmp/eco-financial-e2e.log 2>&1 &
+          echo $! > /tmp/eco-financial-e2e.pid
+          for i in {1..40}; do curl -fsS http://127.0.0.1:4173/health >/dev/null && exit 0; sleep 1; done
+          cat /tmp/eco-financial-e2e.log
+          exit 1
+      - name: Real click Enter closed-session and offline financial flow
+        run: npx playwright test tests/browser/financial-cell-e2e-1.5.2.4.spec.mjs --browser=chromium --workers=1
+      - name: Upload diagnostic report on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: financial-cell-e2e-${{ github.sha }}
+          path: |
+            playwright-report/
+            test-results/
+            /tmp/eco-financial-e2e.log
+          if-no-files-found: ignore
