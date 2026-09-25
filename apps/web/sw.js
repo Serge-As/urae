@@ -1,13 +1,13 @@
-const CACHE = 'eco-system-v1523-financial-entry-offline-20260925';
-const PREVIOUS_CACHE = 'eco-system-v1522-governed-field-feedback-20260923';
+const CACHE = 'eco-system-v1526-field-persistence-pc-mobile-20260925';
+const PREVIOUS_CACHE = 'eco-system-v1523-financial-entry-offline-20260925';
 const RELEASE_READY = '/__eco_release_ready__';
 
 // Authentication, navigation and canonical application owners must be complete
 // before this worker may install. Optional business/community panels can fail
 // independently without replacing an already-working release.
 const ESSENTIAL_SHELL = [
-  '/', '/index.html', '/styles.css?v=1523', '/manifest.webmanifest',
-  '/src/ui-modes.js?v=1523', '/src/field-hardening.js?v=1523', '/src/main.js?v=1523', '/src/i18n.js', '/src/runtime-i18n.js',
+  '/', '/index.html', '/styles.css?v=1526', '/manifest.webmanifest',
+  '/src/ui-modes.js?v=1526', '/src/field-hardening.js?v=1526', '/src/main.js?v=1526', '/src/i18n.js', '/src/runtime-i18n.js',
   '/src/resilience-ui.js', '/src/group-home-ui.js', '/src/sessions-ui.js',
   '/src/detail-ui.js', '/src/member-control-ui.js', '/src/loan-simulation-ui.js', '/src/business-studio-ui.js', '/src/core-economic-learning-ui.js',
   '/packages/application/src/index.js', '/packages/contracts/src/index.js',
@@ -17,7 +17,7 @@ const ESSENTIAL_SHELL = [
 ];
 
 const OPTIONAL_SHELL = [
-  '/src/voice-entry-bootstrap.js?v=1523', '/src/voice-entry-ui.js', '/src/expense-recap-ui.js',
+  '/src/voice-entry-bootstrap.js?v=1526', '/src/voice-entry-ui.js', '/src/expense-recap-ui.js',
   '/src/member-dossier-ui.js', '/src/documents-ui.js', '/src/contextual-group-ui.js',
   '/src/blueprint-executable-ui.js', '/src/community-blueprint-presets.js',
   '/src/financial-lab-ui.js', '/src/completion-ui.js', '/src/advanced-ui.js',
@@ -54,6 +54,8 @@ self.addEventListener('install', event => {
     await cache.put(RELEASE_READY, new Response(JSON.stringify({cache:CACHE,installedAt:new Date().toISOString()}), {
       headers:{'content-type':'application/json; charset=utf-8'}
     }));
+    // Installation is atomic above; only now may this complete release replace a stale controller.
+    await self.skipWaiting();
   })());
 });
 
@@ -77,7 +79,7 @@ const cachedShell = async request => {
   const cache = await caches.open(CACHE);
   const url = new URL(request.url);
   // A versioned request must only match that exact version. Falling back from
-  // main.js?v=1523 to an older /main.js was the source of mixed-release UI.
+  // main.js?v=1526 to an older /main.js was the source of mixed-release UI.
   if(url.search)return await cache.match(request);
   return await cache.match(url.pathname);
 };
@@ -94,13 +96,22 @@ self.addEventListener('fetch', event => {
     return;
   }
 
-  // Offline / unstable 2G: fall back quickly to the complete local shell.
-  // Navigation is release-cache first even while online: fresh HTML must never
-  // be combined with JavaScript from a different active worker release.
+  // Online navigation is network-first so Chrome/Opera profiles controlled by
+  // an older worker can recover without deleting IndexedDB/outbox/site data.
+  // Offline falls back to the complete cache of this exact release.
   if (event.request.mode === 'navigate') {
     event.respondWith((async () => {
       const cache = await caches.open(CACHE);
       const cached = await cache.match('/index.html') || await cache.match('/');
+      if (self.navigator?.onLine !== false) {
+        try {
+          const fresh = await Promise.race([
+            fetch(event.request, { cache:'no-store' }),
+            new Promise((_,reject)=>setTimeout(()=>reject(new Error('NAVIGATION_TIMEOUT')),6000))
+          ]);
+          if (fresh && fresh.ok) return fresh;
+        } catch (_) {}
+      }
       if (cached) return cached;
       try {
         const fresh = await fetch(event.request, { cache:'no-store' });
