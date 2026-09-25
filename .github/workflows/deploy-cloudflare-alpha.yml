@@ -1,0 +1,129 @@
+name: Eco-System Alpha Cloudflare — Recovery
+
+on:
+  workflow_dispatch:
+  push:
+    branches: ['recovery/0.5.1-memory-discovery-rubric-trust']
+    paths: ['.github/DEPLOY_ECO_SYSTEM_ALPHA_ONCE']
+
+permissions:
+  contents: read
+
+concurrency:
+  group: eco-system-alpha-cloudflare
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      ECO_SYSTEM_DB: eco-system-db
+      ECO_SYSTEM_HEALTH_URL: https://eco-system.sergemimf.workers.dev/health
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Verify segmented transport and extract exact runtime source
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat > /tmp/chunks.sha256 <<'EOF'
+          bd0b7c50d6546a7158aa6dba3120895f5aaa16504830f9d67792381ca60e8d54  .recovery/runtime-v2/00.b64
+          a10bc4c6662a8d7cbbcd4468f812705a9def32260db67261b02a8d9e7f9ff13f  .recovery/runtime-v2/01.b64
+          b2c14df0549b59c46d3060e0b2cee3dd713a267bc7eb6b1d6c499de91521e3a2  .recovery/runtime-v2/02.b64
+          51936100a00b72b34539b3d7af2ffa2de0da346442924d1f42456081b254ecb0  .recovery/runtime-v2/03.b64
+          afa923a9eb1d55b6765667a35e3509cb68e65cebfee89d3fd8047bbc0d81d1eb  .recovery/runtime-v2/04.b64
+          af37de3f97c7539b1cb28ba494e84b9631e758566a39e4f5f5eec682208f94bd  .recovery/runtime-v2/05.b64
+          222fae4a4a5b1b56d19b3602c70ed54aae4b67250fd356d1baf6d357df36b85e  .recovery/runtime-v2/06.b64
+          b2dd7966e50a29656345e23a935bfb87e82c45b95f918d7e4a5e6e906f1fa27d  .recovery/runtime-v2/07.b64
+          EOF
+          sha256sum --check /tmp/chunks.sha256
+          cat .recovery/runtime-v2/{00,01,02,03,04,05,06,07}.b64 > /tmp/eco-runtime.b64
+          base64 --decode /tmp/eco-runtime.b64 > /tmp/eco-runtime.tar.xz
+          echo '2d2fbeab6f34ef0b84d9c9278796259c0bfc4ebe5197e33deb2a687e16ce6a67  /tmp/eco-runtime.tar.xz' | sha256sum --check
+          mkdir recovered
+          tar -xJf /tmp/eco-runtime.tar.xz -C recovered
+          test -f recovered/docs/governance/ECO_SYSTEM_PROCEDURE_OBLIGATOIRE_SAUVEGARDE_REPRISE_1.0.0.md
+          test -f recovered/packages/module-registry/src/service-capabilities.ts
+          test -f recovered/workers/api/src/index.ts
+
+      - name: Install development dependency
+        working-directory: recovered
+        run: npm install --ignore-scripts
+
+      - name: Qualification before deployment
+        working-directory: recovered
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p .github/workflows
+          cp ../.github/workflows/deploy-cloudflare-alpha.yml .github/workflows/deploy-cloudflare-alpha.yml
+          npm run typecheck
+          npm run lint:architecture
+          npm run lint:shared-governance
+          npm test
+
+      - name: Verify and normalize deployment credentials
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${CLOUDFLARE_ACCOUNT_ID}" || { echo '::error::Missing CLOUDFLARE_ACCOUNT_ID secret'; exit 1; }
+          test -n "${CLOUDFLARE_API_TOKEN}" || { echo '::error::Missing CLOUDFLARE_API_TOKEN secret'; exit 1; }
+          python - <<'PY'
+          import os, re, sys
+          token = os.environ.get('CLOUDFLARE_API_TOKEN', '')
+          token = token.replace('\r', '').replace('\n', '').strip()
+          for _ in range(4):
+              if len(token) >= 2 and token[0] == token[-1] and token[0] in {'"', "'"}:
+                  token = token[1:-1].strip()
+              token = re.sub(r'(?i)^CLOUDFLARE_API_TOKEN\s*=\s*', '', token).strip()
+              token = re.sub(r'(?i)^Authorization\s*:\s*', '', token).strip()
+              token = re.sub(r'(?i)^Bearer(?:\s+|[:=]+)?', '', token).strip()
+          if not token:
+              print('::error::Cloudflare API token became empty after normalization')
+              sys.exit(1)
+          if not re.fullmatch(r'[A-Za-z0-9_-]+', token):
+              print('::error::Cloudflare API token contains characters incompatible with a bare API token; update the existing GitHub Secret with the raw token only.')
+              sys.exit(1)
+          print('::add-mask::' + token)
+          with open(os.environ['GITHUB_ENV'], 'a', encoding='utf-8') as fh:
+              fh.write('CLOUDFLARE_API_TOKEN<<ECO_TOKEN_EOF\n')
+              fh.write(token + '\n')
+              fh.write('ECO_TOKEN_EOF\n')
+          PY
+
+      - name: Resolve or create D1 database
+        working-directory: recovered
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes wrangler@4 d1 list --json > /tmp/d1-list.json
+          DB_ID="$(node scripts/cloudflare-d1-id.mjs /tmp/d1-list.json "${ECO_SYSTEM_DB}" || true)"
+          if [ -z "${DB_ID}" ]; then
+            npx --yes wrangler@4 d1 create "${ECO_SYSTEM_DB}" --location=weur --update-config=false > /tmp/d1-create.txt
+            npx --yes wrangler@4 d1 list --json > /tmp/d1-list-after-create.json
+            DB_ID="$(node scripts/cloudflare-d1-id.mjs /tmp/d1-list-after-create.json "${ECO_SYSTEM_DB}")"
+          fi
+          test -n "${DB_ID}"
+          node scripts/render-wrangler-d1.mjs "${DB_ID}" workers/api/wrangler.ci.toml
+
+      - name: Apply additive D1 migrations
+        working-directory: recovered
+        run: npx --yes wrangler@4 d1 migrations apply "${ECO_SYSTEM_DB}" --remote --config workers/api/wrangler.ci.toml
+
+      - name: Deploy alpha Worker
+        working-directory: recovered
+        run: npx --yes wrangler@4 deploy --config workers/api/wrangler.ci.toml
+
+      - name: Smoke test health
+        shell: bash
+        run: |
+          set -euo pipefail
+          body="$(curl --fail --silent --show-error --retry 5 --retry-all-errors --retry-delay 3 "${ECO_SYSTEM_HEALTH_URL}")"
+          printf '%s' "$body" > /tmp/health.json
+          node -e 'const h=JSON.parse(require("fs").readFileSync("/tmp/health.json","utf8")); if(h.ok!==true||h.realMoneyEnabled!==false||h.version!=="0.5.1-recovered-unified-alpha") process.exit(1); console.log(`Health PASS: ${h.version}; realMoneyEnabled=${h.realMoneyEnabled}`)'

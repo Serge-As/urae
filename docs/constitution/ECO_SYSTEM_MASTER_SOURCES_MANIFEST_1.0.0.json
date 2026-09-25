@@ -1,0 +1,35 @@
+{
+  "schemaVersion": 1,
+  "generatedOn": "2026-09-10",
+  "policy": "Full historical masters are immutable source artifacts kept in BIR+/Library; GitHub keeps cryptographic fingerprints plus the executable supplement, digests and capability index to avoid multi-megabyte source duplication.",
+  "authoritativeCurrent": "2.3.4",
+  "masters": [
+    {
+      "version": "2.3.2",
+      "filename": "ECO_SYSTEM_Cahier_des_Charges_Maitre_Exhaustif_Sauvegarde_2.3.2_2026-09-05.md",
+      "sha256": "cd5c60fde9bb2a2b4053051a2ce206d7c89f1f15c774e7b8b1178b859c82d893",
+      "sizeBytes": 2202570,
+      "preservedExternally": true
+    },
+    {
+      "version": "2.3.3",
+      "filename": "ECO_SYSTEM_Cahier_des_Charges_Maitre_Exhaustif_Sauvegarde_2.3.3_2026-09-05.md",
+      "sha256": "b253d90ac334b4f30f580b45b09f69ade30805239d5f41f5e7e52501eb9930de",
+      "sizeBytes": 2225260,
+      "preservedExternally": true
+    },
+    {
+      "version": "2.3.4",
+      "filename": "ECO_SYSTEM_Cahier_des_Charges_Maitre_Exhaustif_Sauvegarde_2.3.4_2026-09-05.md",
+      "sha256": "1b38e16e5f625d6d591c713f31499445c2400c2686702e1247a13a083cafae07",
+      "sizeBytes": 2227673,
+      "preservedExternally": true
+    }
+  ],
+  "requiredCompanions": [
+    "docs/constitution/ECO_SYSTEM_COMPLETE_APP_EXECUTION_SUPPLEMENT_1.0.0_2026-09-10.md",
+    "docs/memory/SOURCE_DEEP_DIGEST_2.3.3.json",
+    "docs/memory/SOURCE_TO_CAPABILITY_COVERAGE_2.3.3.json",
+    "docs/memory/MASTER_CAPABILITY_INDEX.json"
+  ]
+}

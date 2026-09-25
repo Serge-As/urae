@@ -1,0 +1,51 @@
+name: Eco-System Verified Runtime Export
+
+on:
+  workflow_dispatch:
+  push:
+    branches: ['recovery/0.5.1-memory-discovery-rubric-trust']
+    paths: ['.github/EXPORT_ECO_SYSTEM_RUNTIME_ONCE']
+
+permissions:
+  contents: read
+
+jobs:
+  export:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify and reconstruct runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat > /tmp/chunks.sha256 <<'EOF'
+          bd0b7c50d6546a7158aa6dba3120895f5aaa16504830f9d67792381ca60e8d54  .recovery/runtime-v2/00.b64
+          a10bc4c6662a8d7cbbcd4468f812705a9def32260db67261b02a8d9e7f9ff13f  .recovery/runtime-v2/01.b64
+          b2c14df0549b59c46d3060e0b2cee3dd713a267bc7eb6b1d6c499de91521e3a2  .recovery/runtime-v2/02.b64
+          51936100a00b72b34539b3d7af2ffa2de0da346442924d1f42456081b254ecb0  .recovery/runtime-v2/03.b64
+          afa923a9eb1d55b6765667a35e3509cb68e65cebfee89d3fd8047bbc0d81d1eb  .recovery/runtime-v2/04.b64
+          af37de3f97c7539b1cb28ba494e84b9631e758566a39e4f5f5eec682208f94bd  .recovery/runtime-v2/05.b64
+          222fae4a4a5b1b56d19b3602c70ed54aae4b67250fd356d1baf6d357df36b85e  .recovery/runtime-v2/06.b64
+          b2dd7966e50a29656345e23a935bfb87e82c45b95f918d7e4a5e6e906f1fa27d  .recovery/runtime-v2/07.b64
+          EOF
+          sha256sum --check /tmp/chunks.sha256
+          cat .recovery/runtime-v2/{00,01,02,03,04,05,06,07}.b64 > /tmp/eco-runtime.b64
+          base64 --decode /tmp/eco-runtime.b64 > eco-runtime.tar.xz
+          echo '2d2fbeab6f34ef0b84d9c9278796259c0bfc4ebe5197e33deb2a687e16ce6a67  eco-runtime.tar.xz' | sha256sum --check
+          mkdir recovered
+          tar -xJf eco-runtime.tar.xz -C recovered
+          test -f recovered/workers/api/src/index.ts
+          test -f recovered/packages/domain/src/index.ts
+          test -f recovered/apps/web/src/main.ts
+          sha256sum eco-runtime.tar.xz > RUNTIME_SHA256.txt
+      - name: Upload verified runtime backup
+        uses: actions/upload-artifact@v4
+        with:
+          name: eco-system-verified-runtime
+          path: |
+            recovered/
+            eco-runtime.tar.xz
+            RUNTIME_SHA256.txt
+          retention-days: 7
+          if-no-files-found: error

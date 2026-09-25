@@ -1,0 +1,110 @@
+import type { GovernanceKnowledgeClaim, Id, RubricDefinition, RubricFacets, RubricOperatingModel, RubricCyclePreview } from '../../contracts/src/index.js';
+import { makeId } from '../../contracts/src/index.js';
+import type { PlatformRepository } from '../../repositories/src/index.js';
+import { PlatformKernel } from '../../platform-kernel/src/index.js';
+
+const now=()=>new Date().toISOString();
+const MANAGER_ROLES=new Set(['founder','manager','admin','president','treasurer']);
+const normalize=(v:string)=>v.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
+const requireManager=async(repo:PlatformRepository,kernel:PlatformKernel,tenantId:Id,groupId:Id)=>{const ctx=kernel.context.get();if(ctx.tenantId!==tenantId)throw new Error('FORBIDDEN_SCOPE');const g=await repo.getGroup(tenantId,groupId);if(!g)throw new Error('GROUP_NOT_FOUND');if(g.createdBy===ctx.actorId)return;const m=(await repo.listMemberships(tenantId,groupId)).find(x=>x.userId===ctx.actorId&&x.status==='active');if(!m||!m.roles.some(r=>MANAGER_ROLES.has(r)))throw new Error('FORBIDDEN_SCOPE');};
+
+export interface GovernanceClaimSuggestion { subject:string; predicate:string; value:string; confidence:number; evidenceHint:string; }
+
+export const STARTER_RUBRIC_FACETS:Record<string,RubricFacets>={
+  secours:{direction:'BIDIRECTIONAL',obligation:'CUSTOM',medium:'CASH',refundability:'CONDITIONAL',replenishment:'CUSTOM',interestMode:'NONE',eligibilityMode:'EVENT_BASED'},
+  epargne:{direction:'BIDIRECTIONAL',obligation:'CUSTOM',medium:'CASH',refundability:'FULLY_REFUNDABLE',replenishment:'NONE',interestMode:'CUSTOM',eligibilityMode:'RULE_BASED'},
+  tontine:{direction:'BIDIRECTIONAL',obligation:'MANDATORY',medium:'HYBRID',refundability:'CONDITIONAL',replenishment:'NONE',interestMode:'NONE',eligibilityMode:'RULE_BASED'},
+  pret:{direction:'OUTFLOW',obligation:'OPTIONAL',medium:'CASH',refundability:'FULLY_REFUNDABLE',replenishment:'NONE',interestMode:'CUSTOM',eligibilityMode:'RULE_BASED'},
+  main_levee:{direction:'MIXED',obligation:'EVENT_DRIVEN',medium:'HYBRID',refundability:'CUSTOM',replenishment:'CUSTOM',interestMode:'NONE',eligibilityMode:'EVENT_BASED'}
+};
+
+export class RubricKnowledgeService {
+  constructor(private readonly repo:PlatformRepository,private readonly kernel:PlatformKernel){}
+
+  starterCandidates(){return Object.entries(STARTER_RUBRIC_FACETS).map(([code,facets])=>({code,facets:structuredClone(facets),requiresGroupConfirmation:true}));}
+
+  async createRubric(input:{tenantId:Id;groupId:Id;name:string;aliases?:string[];purpose?:string;facets:RubricFacets;source?:RubricDefinition['source'];operatingModel?:RubricOperatingModel}):Promise<RubricDefinition>{
+    await requireManager(this.repo,this.kernel,input.tenantId,input.groupId); const timestamp=now(); const name=input.name.trim(); if(!name)throw new Error('RUBRIC_NAME_REQUIRED');
+    const rubric:RubricDefinition={id:makeId('rubric'),tenantId:input.tenantId,groupId:input.groupId,name,aliases:[...new Set((input.aliases??[]).map(x=>x.trim()).filter(Boolean))],purpose:input.purpose?.trim()||undefined,facets:structuredClone(input.facets),operatingModel:input.operatingModel?structuredClone(input.operatingModel):undefined,status:'DRAFT',source:input.source??'GROUP_CUSTOM',version:1,createdAt:timestamp,updatedAt:timestamp};
+    await this.repo.saveRubricDefinition(rubric); const audit=this.kernel.audit.append({tenantId:input.tenantId,actorId:this.kernel.context.get().actorId,action:'RUBRIC_CREATED',targetType:'rubric',targetId:rubric.id,after:rubric,requestId:this.kernel.context.get().requestId});await this.repo.saveAudit(audit);return structuredClone(rubric);
+  }
+
+  async listRubrics(tenantId:Id,groupId:Id):Promise<RubricDefinition[]>{
+    await requireManager(this.repo,this.kernel,tenantId,groupId);
+    return this.repo.listRubricDefinitions(tenantId,groupId);
+  }
+
+  async updateOperatingModel(input:{tenantId:Id;groupId:Id;rubricId:Id;model:RubricOperatingModel}):Promise<RubricDefinition>{
+    await requireManager(this.repo,this.kernel,input.tenantId,input.groupId);
+    const current=await this.repo.getRubricDefinition(input.tenantId,input.groupId,input.rubricId); if(!current) throw new Error('RUBRIC_NOT_FOUND');
+    const model=structuredClone(input.model);
+    if(!['UNKNOWN','ALIGNED','DIFFERS','MIXED'].includes(model.ruleRealityStatus)) throw new Error('INVALID_RULE_REALITY_STATUS');
+    if(!['OPEN','FIXED_TOTAL','PER_MEMBER_FIXED','CUSTOM'].includes(model.targetMode)) throw new Error('INVALID_RUBRIC_TARGET_MODE');
+    if(!['LEAVE_SHORT','SOLIDARITY_COVERAGE','CONDITIONAL_SOLIDARITY','CUSTOM'].includes(model.shortfallHandling)) throw new Error('INVALID_SHORTFALL_HANDLING');
+    if(!['COLLECTED_ONLY','FIXED_TARGET_IF_COVERED','CUSTOM'].includes(model.payoutMode)) throw new Error('INVALID_PAYOUT_MODE');
+    const values=[model.targetAmount,model.perMemberAmount].filter(Boolean) as Array<{currency:string;amount:number}>;
+    for(const money of values){if(!Number.isFinite(money.amount)||money.amount<0||(money.currency==='XAF'&&!Number.isInteger(money.amount)))throw new Error('INVALID_RUBRIC_MONEY');}
+    const updated:RubricDefinition={...current,operatingModel:{...model,confirmedAt:now(),confirmedBy:this.kernel.context.get().actorId},version:current.version+1,updatedAt:now()};
+    await this.repo.saveRubricDefinition(updated);
+    const audit=this.kernel.audit.append({tenantId:input.tenantId,actorId:this.kernel.context.get().actorId,action:'RUBRIC_OPERATING_MODEL_UPDATED',targetType:'rubric',targetId:current.id,before:current.operatingModel,after:updated.operatingModel,requestId:this.kernel.context.get().requestId}); await this.repo.saveAudit(audit);
+    return structuredClone(updated);
+  }
+
+  async previewCycle(input:{tenantId:Id;groupId:Id;rubricId:Id;memberCount:number;collectedFromMembers:number;solidarityCoverageAmount?:number;beneficiaryDisbursement?:number}):Promise<RubricCyclePreview>{
+    await requireManager(this.repo,this.kernel,input.tenantId,input.groupId);
+    const rubric=await this.repo.getRubricDefinition(input.tenantId,input.groupId,input.rubricId); if(!rubric) throw new Error('RUBRIC_NOT_FOUND');
+    const model=rubric.operatingModel; if(!model) throw new Error('RUBRIC_OPERATING_MODEL_REQUIRED');
+    if(!Number.isInteger(input.memberCount)||input.memberCount<0) throw new Error('INVALID_MEMBER_COUNT');
+    if(!Number.isFinite(input.collectedFromMembers)||input.collectedFromMembers<0) throw new Error('INVALID_COLLECTED_AMOUNT');
+    const currency=model.targetAmount?.currency??model.perMemberAmount?.currency??'XAF';
+    if(currency==='XAF'&&!Number.isInteger(input.collectedFromMembers)) throw new Error('INVALID_COLLECTED_AMOUNT');
+    let expectedTotal=input.collectedFromMembers;
+    if(model.targetMode==='FIXED_TOTAL') expectedTotal=model.targetAmount?.amount??0;
+    else if(model.targetMode==='PER_MEMBER_FIXED') expectedTotal=(model.perMemberAmount?.amount??0)*input.memberCount;
+    else if(model.targetMode==='CUSTOM'&&model.targetAmount) expectedTotal=model.targetAmount.amount;
+    const memberShortfall=Math.max(0,expectedTotal-input.collectedFromMembers);
+    let solidarityCoverage=0;
+    if(model.shortfallHandling==='SOLIDARITY_COVERAGE') solidarityCoverage=memberShortfall;
+    else if(model.shortfallHandling==='CONDITIONAL_SOLIDARITY'||model.shortfallHandling==='CUSTOM') solidarityCoverage=Math.max(0,input.solidarityCoverageAmount??0);
+    if(currency==='XAF'&&!Number.isInteger(solidarityCoverage)) throw new Error('INVALID_SOLIDARITY_COVERAGE');
+    const availableForBeneficiary=input.collectedFromMembers+solidarityCoverage;
+    let beneficiaryDisbursement=0;
+    if(model.payoutMode==='COLLECTED_ONLY') beneficiaryDisbursement=input.collectedFromMembers;
+    else if(model.payoutMode==='FIXED_TARGET_IF_COVERED') beneficiaryDisbursement=Math.min(expectedTotal,availableForBeneficiary);
+    else beneficiaryDisbursement=Math.max(0,input.beneficiaryDisbursement??Math.min(expectedTotal,availableForBeneficiary));
+    if(beneficiaryDisbursement>availableForBeneficiary) throw new Error('DISBURSEMENT_EXCEEDS_AVAILABLE');
+    if(currency==='XAF'&&!Number.isInteger(beneficiaryDisbursement)) throw new Error('INVALID_BENEFICIARY_DISBURSEMENT');
+    const notes:string[]=[];
+    if(model.writtenRule&&model.observedPractice&&model.ruleRealityStatus!=='ALIGNED') notes.push('WRITTEN_RULE_DIFFERS_FROM_OBSERVED_PRACTICE');
+    if(memberShortfall>0) notes.push('MEMBER_SHORTFALL_RECORDED_SEPARATELY');
+    if(solidarityCoverage>0) notes.push('GROUP_SOLIDARITY_COVERAGE_RECORDED_SEPARATELY');
+    if(model.immediateFullPayout) notes.push('IMMEDIATE_FULL_PAYOUT_CONFIGURED');
+    return {rubricId:rubric.id,currency,memberCount:input.memberCount,expectedTotal,collectedFromMembers:input.collectedFromMembers,memberShortfall,memberPositionDisplay:-memberShortfall,solidarityCoverage,availableForBeneficiary,beneficiaryDisbursement,remainingRubricBalance:availableForBeneficiary-beneficiaryDisbursement,memberDebtAfterCoverage:memberShortfall,notes};
+  }
+
+  suggestClaimsFromGovernanceText(text:string):GovernanceClaimSuggestion[]{
+    const t=normalize(text); const out:GovernanceClaimSuggestion[]=[]; const add=(subject:string,predicate:string,value:string,confidence:number,evidenceHint:string)=>{if(!out.some(x=>x.subject===subject&&x.predicate===predicate&&x.value===value))out.push({subject,predicate,value,confidence,evidenceHint});};
+    if(/secours|solidarit|fonds social/.test(t)) add('SECOURS','RUBRIC_PRESENT','true',0.8,'TERM_MATCH');
+    if(/main levee|assistance/.test(t)) add('ASSISTANCE','RUBRIC_PRESENT','true',0.75,'TERM_MATCH');
+    if(/pret|emprunt|credit/.test(t)) add('PRET','RUBRIC_PRESENT','true',0.8,'TERM_MATCH');
+    if(/interet|taux de/.test(t)) add('PRET','INTEREST_MODE','PRESENT_OR_CONFIGURED',0.65,'INTEREST_TERM');
+    if(/rembours/.test(t)) add('UNKNOWN_RUBRIC','REFUNDABILITY','REFUND_OR_REPAYMENT_RULE_PRESENT',0.65,'REFUND_TERM');
+    if(/prorata|au prorata|reconstit|combler|renflou/.test(t)) add('UNKNOWN_RUBRIC','REPLENISHMENT','PRO_RATA_OR_REPLENISHMENT_RULE_POSSIBLE',0.7,'REPLENISHMENT_TERM');
+    if(/avaliste|garant/.test(t)) add('PRET','GUARANTEE_RULE','GUARANTOR_REQUIRED_OR_REFERENCED',0.8,'GUARANTOR_TERM');
+    if(/epargne/.test(t)) add('EPARGNE','RUBRIC_PRESENT','true',0.8,'TERM_MATCH');
+    if(/tontine/.test(t)) add('TONTINE','RUBRIC_PRESENT','true',0.8,'TERM_MATCH');
+    if(/nature|huile|savon|produit/.test(t)) add('UNKNOWN_RUBRIC','MEDIUM','IN_KIND_POSSIBLE',0.55,'IN_KIND_TERM');
+    return out;
+  }
+
+  async recordClaim(input:{tenantId:Id;groupId?:Id;sourceFingerprint:string;sourceKind:GovernanceKnowledgeClaim['sourceKind'];suggestion:GovernanceClaimSuggestion}):Promise<GovernanceKnowledgeClaim>{
+    if(input.groupId) await requireManager(this.repo,this.kernel,input.tenantId,input.groupId); else if(this.kernel.context.get().tenantId!==input.tenantId) throw new Error('FORBIDDEN_SCOPE');
+    const claim:GovernanceKnowledgeClaim={id:makeId('claim'),tenantId:input.tenantId,groupId:input.groupId,sourceFingerprint:input.sourceFingerprint,sourceKind:input.sourceKind,subject:input.suggestion.subject,predicate:input.suggestion.predicate,value:input.suggestion.value,confidence:Math.max(0,Math.min(1,input.suggestion.confidence)),status:'OBSERVED',evidenceHint:input.suggestion.evidenceHint,createdAt:now()};
+    await this.repo.saveGovernanceKnowledgeClaim(claim); return structuredClone(claim);
+  }
+
+  async reviewClaim(claimId:Id,status:'VALIDATED'|'REJECTED'):Promise<GovernanceKnowledgeClaim>{
+    const all=await this.repo.listGovernanceKnowledgeClaims(this.kernel.context.get().tenantId); const claim=all.find(x=>x.id===claimId); if(!claim)throw new Error('CLAIM_NOT_FOUND'); if(claim.groupId)await requireManager(this.repo,this.kernel,claim.tenantId,claim.groupId);
+    const updated={...claim,status,reviewedAt:now(),reviewedBy:this.kernel.context.get().actorId} satisfies GovernanceKnowledgeClaim; await this.repo.saveGovernanceKnowledgeClaim(updated);return structuredClone(updated);
+  }
+}

@@ -1,0 +1,31 @@
+{
+  "name": "tontine-platform",
+  "version": "1.0.0-complete-app",
+  "private": true,
+  "type": "module",
+  "description": "Eco-System Complete App — full mobile-first product shell with canonical domain services, living rules, discovery, finance and extensible persistent workspaces",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "typecheck": "tsc --noEmit",
+    "test": "node scripts/build.mjs && node --test tests/*.test.mjs",
+    "lint:architecture": "node scripts/architecture-fitness.mjs",
+    "lint:constitution": "node scripts/constitution-lint.mjs",
+    "ci": "npm run typecheck && npm run lint:architecture && npm run lint:shared-governance && npm run lint:constitution && npm run lint:truth && npm run lint:memory && npm run lint:memory-index && npm run lint:source-coverage && npm run test",
+    "demo": "node scripts/dev-server.mjs",
+    "demo:rebuild": "node scripts/build.mjs && node scripts/dev-server.mjs",
+    "start": "node scripts/dev-server.mjs",
+    "memory:recall": "node scripts/memory-recall.mjs",
+    "lint:memory": "node scripts/memory-gate.mjs",
+    "memory:index": "node scripts/build-memory-index.mjs",
+    "lint:memory-index": "node scripts/build-memory-index.mjs --check",
+    "lint:source-coverage": "node scripts/source-coverage-lint.mjs",
+    "lint:truth": "node scripts/project-truth-gate.mjs",
+    "lint:shared-governance": "node scripts/shared-governance-lint.mjs && node scripts/service-solidarity-lint.mjs"
+  },
+  "devDependencies": {
+    "typescript": "^5.8.3"
+  }
+}

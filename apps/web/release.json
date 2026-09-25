@@ -1,0 +1,11 @@
+{
+  "product": "Eco-System",
+  "release": "master-cockpit-20260913-r2",
+  "productVersion": "1.0.0-complete-app",
+  "cahier": "2.3.4 + validations postérieures Living Rules",
+  "releasedOn": "2026-09-13",
+  "publicRoot": "https://eco-system.sergemimf.workers.dev/",
+  "expectedUi": "Master Cockpit",
+  "capabilityCatalogMinimum": 139,
+  "realMoneyEnabled": false
+}

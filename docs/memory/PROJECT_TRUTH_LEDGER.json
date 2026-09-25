@@ -1,0 +1,466 @@
+{
+  "schemaVersion": 1,
+  "generatedOn": "2026-09-11",
+  "purpose": "Anti-regression operational truth. Read before asking founder to recreate/configure anything.",
+  "allowedStatuses": [
+    "ACQUIRED",
+    "VERIFIED_LOCAL",
+    "IMPLEMENTED_UNVERIFIED",
+    "VERIFIED_REMOTE",
+    "IN_PROGRESS",
+    "PLANNED",
+    "DORMANT",
+    "SUPERSEDED",
+    "ABANDONED_WITH_REASON",
+    "TO_VERIFY",
+    "MEMORY_ONLY"
+  ],
+  "rules": [
+    "No secret values are stored here.",
+    "ACQUIRED means the prerequisite exists; do not ask to recreate it.",
+    "VERIFIED_LOCAL never implies DEPLOYED/remote success.",
+    "VERIFIED_REMOTE requires direct remote evidence.",
+    "MEMORY_ONLY never proves implementation.",
+    "SUPERSEDED/ABANDONED records are retained with reason.",
+    "Update this ledger whenever a remote verification, deployment, abandonment or supersession changes project truth."
+  ],
+  "records": [
+    {
+      "id": "constitution.master.2.3.3",
+      "status": "VERIFIED_LOCAL",
+      "scope": "documentation/memory",
+      "observedOn": "2026-09-05",
+      "evidence": [
+        "repo:docs/constitution/ECO_SYSTEM_Cahier_des_Charges_Maitre_Exhaustif_Sauvegarde_2.3.3_2026-09-05.md",
+        "local-git:433f3df8a9406dd555d69de642c6a70f237c63bf",
+        "local-ci:31/31 PASS; truth/source/index gates PASS"
+      ],
+      "note": "2.3.3 preserves 2.3.2 content, adds deep forensic source semantics and anti-regression truth rules; qualified by local CI.",
+      "next": "Run CI and publish through recovery PR."
+    },
+    {
+      "id": "memory.deep_source_ingestion",
+      "status": "VERIFIED_LOCAL",
+      "scope": "project-memory",
+      "observedOn": "2026-09-05",
+      "evidence": [
+        "repo:docs/memory/SOURCE_DEEP_DIGEST_2.3.3.json",
+        "repo:docs/memory/SOURCE_TO_CAPABILITY_COVERAGE_2.3.3.json"
+      ],
+      "note": "26 RAR entries are structurally/semantically digested without raw PII/secrets.",
+      "next": "Use deep digest as first forensic reference before reopening raw archives."
+    },
+    {
+      "id": "memory.previous_chat_0.5_claims",
+      "status": "MEMORY_ONLY",
+      "scope": "recovery",
+      "observedOn": "2026-09-05",
+      "evidence": [
+        "source:Fichier markdown(20260905-013911).md collé"
+      ],
+      "note": "Previous chat described 0.5 work, but no persisted 0.5 source was recovered from bundle/archives/GitHub. Treat described features as requirements/memory unless current code/tests prove them.",
+      "next": "Map any useful claim to Feature Registry rather than pretending old code exists."
+    },
+    {
+      "id": "git.recovered_history.0.1_to_0.3",
+      "status": "VERIFIED_LOCAL",
+      "scope": "git-history",
+      "observedOn": "2026-09-05",
+      "evidence": [
+        "local-git:3ea6fba9e62e4d748cc195d2f238fd40b98c4ad9",
+        "local-git:a424193db58c15b51692e5958d08dc4bb793e4ec"
+      ],
+      "note": "Exact historical local Git chain recovered from supplied bundle.",
+      "next": "Preserve exact history in a new bundle and provenance file before remote import."
+    },
+    {
+      "id": "github.repo",
+      "status": "VERIFIED_REMOTE",
+      "scope": "github",
+      "observedOn": "2026-09-05",
+      "evidence": [
+        "github:Delor85/tontine-platform"
+      ],
+      "note": "Private repo observed; connector has admin/maintain/push permissions.",
+      "next": "Import recovery branch without force-pushing main."
+    },
+    {
+      "id": "github.main.ref",
+      "status": "VERIFIED_REMOTE",
+      "scope": "github",
+      "observedOn": "2026-09-05",
+      "evidence": [
+        "github-ref:main@3664e4fa4d0c01cfd52590df2b095ce82f96691d"
+      ],
+      "note": "Remote main still points to initial Create README.md commit at time of observation.",
+      "next": "Do not infer recovered code on main."
+    },
+    {
+      "id": "github.release_0.5.0.ref",
+      "status": "VERIFIED_REMOTE",
+      "scope": "github",
+      "observedOn": "2026-09-05",
+      "evidence": [
+        "github-ref:release/0.5.0-eco-system-unified@3664e4fa4d0c01cfd52590df2b095ce82f96691d"
+      ],
+      "note": "Branch name exists but points to same initial commit; name alone is not evidence of 0.5 implementation.",
+      "next": "Keep as historical remote ref unless deliberately superseded."
+    },
+    {
+      "id": "github.actions.runs",
+      "status": "VERIFIED_REMOTE",
+      "scope": "github-actions",
+      "observedOn": "2026-09-05",
+      "evidence": [
+        "github-api:/repos/Delor85/tontine-platform/actions/runs total_count=0"
+      ],
+      "note": "No workflow run existed in the remote repo at time of observation.",
+      "next": "After recovery push, trigger qualified CI/deploy workflow and record run URL/id."
+    },
+    {
+      "id": "github.recovery_branch",
+      "status": "VERIFIED_LOCAL",
+      "scope": "git-branch",
+      "observedOn": "2026-09-05",
+      "evidence": [
+        "local-branch:recovery/0.5.1-memory-discovery-rubric-trust",
+        "local-git:433f3df8a9406dd555d69de642c6a70f237c63bf"
+      ],
+      "note": "Recovery branch exists locally; not yet observed on GitHub at the time this ledger entry was created.",
+      "next": "Push/import branch and then update status to VERIFIED_REMOTE."
+    },
+    {
+      "id": "cloudflare.api_token.tontine_platform_github_actions_deploy",
+      "status": "VERIFIED_REMOTE",
+      "scope": "cloudflare-auth",
+      "observedOn": "2026-09-10",
+      "evidence": [
+        "github-actions:Cloudflare Auth Diagnostic run 34426666080 SUCCESS",
+        "cloudflare:Account API Token valid and active"
+      ],
+      "note": "Account-owned token is verified active. Secret value is not stored.",
+      "valueStored": false,
+      "next": "Reuse existing GitHub Secret; never disclose or recreate without evidence."
+    },
+    {
+      "id": "github.secret.CLOUDFLARE_ACCOUNT_ID",
+      "status": "ACQUIRED",
+      "scope": "github-actions-secret",
+      "observedOn": "2026-09-05",
+      "evidence": [
+        "founder-screenshot:GitHub repository secrets"
+      ],
+      "note": "Secret name visibly exists in repository Actions secrets. Secret VALUE is inaccessible/intentionally not stored.",
+      "valueStored": false,
+      "next": "Do not ask founder to recreate or disclose value."
+    },
+    {
+      "id": "github.secret.CLOUDFLARE_API_TOKEN",
+      "status": "ACQUIRED",
+      "scope": "github-actions-secret",
+      "observedOn": "2026-09-05",
+      "evidence": [
+        "founder-screenshot:GitHub repository secrets"
+      ],
+      "note": "Secret name visibly exists in repository Actions secrets. Secret VALUE is inaccessible/intentionally not stored.",
+      "valueStored": false,
+      "next": "Do not ask founder to recreate or disclose value."
+    },
+    {
+      "id": "cloudflare.deploy_workflow.local",
+      "status": "VERIFIED_LOCAL",
+      "scope": "cloudflare-delivery",
+      "observedOn": "2026-09-05",
+      "evidence": [
+        "repo:.github/workflows/deploy-cloudflare-alpha.yml",
+        "local-ci:31/31 pass before 2.3.3 update",
+        "local-ci:31/31 PASS after Project Truth Gate 2.3.3"
+      ],
+      "note": "Manual alpha workflow is prepared to reuse/create eco-system-db, resolve UUID without committing it, apply additive migrations, deploy eco-system and smoke /health.",
+      "next": "Publish branch then execute workflow."
+    },
+    {
+      "id": "cloudflare.d1.eco-system-db",
+      "status": "VERIFIED_REMOTE",
+      "scope": "cloudflare-d1",
+      "observedOn": "2026-09-11",
+      "evidence": [
+        "github-actions:deploy run 34645341363 SUCCESS",
+        "cloudflare:env.DB (eco-system-db)",
+        "cloudflare:migrations No migrations to apply"
+      ],
+      "note": "Master Cockpit reused the existing eco-system-db exclusively; no replacement database was created.",
+      "next": "Apply only additive migrations later."
+    },
+    {
+      "id": "cloudflare.worker.eco-system",
+      "status": "VERIFIED_REMOTE",
+      "scope": "cloudflare-worker",
+      "observedOn": "2026-09-11",
+      "evidence": [
+        "github-actions:Eco-System 1.0 Complete App — Cloudflare run 34645341363 SUCCESS",
+        "cloudflare:worker eco-system version 9ce22308-db14-4da7-9e6f-c2908b6db20c",
+        "smoke:root Master Cockpit/Cahier 2.3.4 PASS",
+        "smoke:/health PASS",
+        "smoke:/api/v1/product/capabilities PASS"
+      ],
+      "note": "Worker serves the post-field-feedback Master Cockpit and cache-busted PWA assets.",
+      "next": "Preserve network-first navigation and old-cache purge in later PWA releases."
+    },
+    {
+      "id": "cloudflare.d1.repository_adapter",
+      "status": "VERIFIED_LOCAL",
+      "scope": "code",
+      "observedOn": "2026-09-05",
+      "evidence": [
+        "repo:D1PlatformRepository",
+        "tests:D1 repository persists across instances"
+      ],
+      "note": "D1 adapter exists behind PlatformRepository and is locally tested.",
+      "next": "Qualify against actual remote D1."
+    },
+    {
+      "id": "cloudflare.migration.0003_platform_records",
+      "status": "VERIFIED_LOCAL",
+      "scope": "database-migration",
+      "observedOn": "2026-09-05",
+      "evidence": [
+        "repo:cloudflare/migrations/0003_platform_records.sql",
+        "sqlite-replay:additive/idempotent"
+      ],
+      "note": "Additive migration locally replayed; no destructive statements.",
+      "next": "Apply via remote workflow and verify."
+    },
+    {
+      "id": "safety.realMoneyEnabled",
+      "status": "VERIFIED_REMOTE",
+      "scope": "safety-guardrail",
+      "observedOn": "2026-09-11",
+      "evidence": [
+        "github-actions:deploy run 34645341363 SUCCESS",
+        "smoke:realMoneyEnabled=false"
+      ],
+      "note": "Master Cockpit deployment preserved the mandatory real-money-off invariant.",
+      "next": "Fail closed on any future unauthorized enablement."
+    },
+    {
+      "id": "feature.discovery.group_public_projection",
+      "status": "VERIFIED_LOCAL",
+      "scope": "product",
+      "observedOn": "2026-09-05",
+      "evidence": [
+        "repo:packages/discovery",
+        "tests:public projection/secret exclusion"
+      ],
+      "note": "Initial group discovery functional alpha exists.",
+      "next": "Extend toward full mutual graph, geo consent, ranking, invitations and saved searches."
+    },
+    {
+      "id": "feature.discovery.mutual_graph",
+      "status": "PLANNED",
+      "scope": "product",
+      "observedOn": "2026-09-05",
+      "evidence": [
+        "master:7D.3-7D.6",
+        "master:7E.13"
+      ],
+      "note": "Full Meetup/Facebook/Telegram-style mutual discovery is validated but only partially implemented.",
+      "next": "Implement incrementally after Cloud Lot A remote qualification."
+    },
+    {
+      "id": "feature.membership.gateway",
+      "status": "VERIFIED_LOCAL",
+      "scope": "product",
+      "observedOn": "2026-09-05",
+      "evidence": [
+        "repo:packages/discovery MembershipGatewayService",
+        "tests:cross-tenant application approval"
+      ],
+      "note": "Cross-tenant application and canonical membership approval path locally verified.",
+      "next": "Add invitations, custom application questions, portfolio and referrals without duplicating membership engine."
+    },
+    {
+      "id": "feature.trust.contextual_reliability",
+      "status": "VERIFIED_LOCAL",
+      "scope": "product",
+      "observedOn": "2026-09-05",
+      "evidence": [
+        "repo:packages/trust",
+        "tests:no cross-band extrapolation"
+      ],
+      "note": "Reliability is contextual/advisory and does not use wealth/appearance/prestige.",
+      "next": "Add evidence governance, group reliability, appeals and anti-gaming."
+    },
+    {
+      "id": "feature.rubric.faceted_model",
+      "status": "VERIFIED_LOCAL",
+      "scope": "product",
+      "observedOn": "2026-09-05",
+      "evidence": [
+        "repo:packages/rubrics",
+        "tests:mixed rubrics/governance claims"
+      ],
+      "note": "Faceted rubric model locally verified; governance extraction remains human-reviewed.",
+      "next": "Extend templates/reconstitution/visibility/rulebook mapping."
+    },
+    {
+      "id": "architecture.nestjs_postgres_redis_kubernetes",
+      "status": "SUPERSEDED",
+      "scope": "architecture-history",
+      "observedOn": "2026-09-05",
+      "evidence": [
+        "source:Serge Cahier des charges 2025",
+        "master:7D.25"
+      ],
+      "note": "Historical technologies preserved as options; current canonical alpha is modular monorepo + Cloudflare Worker + D1 unless ADR changes it.",
+      "supersededBy": "architecture.cloudflare_worker_d1",
+      "reason": "Lower operational cost/complexity for current scale; historical principles retained."
+    },
+    {
+      "id": "architecture.cloudflare_worker_d1",
+      "status": "VERIFIED_REMOTE",
+      "scope": "architecture",
+      "observedOn": "2026-09-11",
+      "evidence": [
+        "github-actions:deploy run 34640991448 SUCCESS",
+        "cloudflare:eco-system Worker + eco-system-db D1 binding",
+        "smoke:root/health/capability catalog PASS"
+      ],
+      "note": "Canonical Worker + D1 architecture is now remotely qualified on the 1.0 Complete App line.",
+      "next": "Preserve the canonical authority model and avoid parallel business engines."
+    },
+    {
+      "id": "product.complete_app_1.0",
+      "status": "VERIFIED_REMOTE",
+      "scope": "product-line",
+      "observedOn": "2026-09-11",
+      "evidence": [
+        "field-feedback:previous visible shell judged stale/incomplete relative to Cahier 2.3.4",
+        "github:Master Cockpit commit 9d9c0b117e80927edc02dfcd7ea899e4f2c34f08",
+        "github-actions:deploy run 34645341363 SUCCESS",
+        "ci:52/52 PASS",
+        "smoke:Master Cockpit + Cahier Maître 2.3.4 root PASS",
+        "smoke:139 capabilities; realMoneyEnabled=false"
+      ],
+      "note": "Complete App 1.0 now exposes the Cahier 2.3.4 Master Cockpit rather than the earlier incremental shell. Catalog presence alone is not treated as specialized-engine completeness.",
+      "next": "Use field-visible conformity plus canonical status evidence for future qualification."
+    },
+    {
+      "id": "product.alpha_line",
+      "status": "SUPERSEDED",
+      "scope": "product-line",
+      "observedOn": "2026-09-10",
+      "evidence": [
+        "founder-decision:leave Alpha and move to complete app",
+        "recovery branches retained"
+      ],
+      "note": "0.5.1/0.6 remain recovery/reference checkpoints, not current visible product target.",
+      "supersededBy": "product.complete_app_1.0",
+      "next": "Do not delete fallback artifacts."
+    },
+    {
+      "id": "github.branch.next_1.0",
+      "status": "VERIFIED_REMOTE",
+      "scope": "github",
+      "observedOn": "2026-09-10",
+      "evidence": [
+        "github:branch next/1.0.0-complete-app created from 988b42dda972539c17704654f92c38d2e181eeb4"
+      ],
+      "note": "Dedicated Complete App branch exists; main is not modified.",
+      "next": "Publish qualified Complete App commit without force push."
+    },
+    {
+      "id": "github.pr.complete_app_1.0",
+      "status": "VERIFIED_REMOTE",
+      "scope": "github-pr",
+      "observedOn": "2026-09-11",
+      "evidence": [
+        "github:PR #3 https://github.com/Delor85/tontine-platform/pull/3",
+        "github:head next/1.0.0-complete-app",
+        "github:base main",
+        "github:state OPEN non-draft"
+      ],
+      "note": "Complete App delivery PR is open and intentionally not merged. Merge remains a separate founder decision.",
+      "next": "Do not merge automatically."
+    },
+    {
+      "id": "delivery.complete_app_payload",
+      "status": "VERIFIED_REMOTE",
+      "scope": "delivery-integrity",
+      "observedOn": "2026-09-11",
+      "evidence": [
+        "sha256:69380f1dde05b02721ff1d1dee6774fab0a7ec2c5738c6439073f74fc36456ec",
+        "github-actions:materialize run 34640865092 SUCCESS",
+        "runner:Payload verified exact SHA before npm run ci"
+      ],
+      "note": "The exact qualified payload was reconstructed remotely before materialization; no approximate payload was accepted.",
+      "next": "Preserve this hash as the 1.0 source-materialization checkpoint."
+    },
+    {
+      "id": "backup.birplus.complete_app_1.0",
+      "status": "VERIFIED_REMOTE",
+      "scope": "backup-recovery",
+      "observedOn": "2026-09-11",
+      "evidence": [
+        "github-actions:Eco-System 1.0 — BIR+ Verified Source Backup run 34641572552 SUCCESS",
+        "github-actions:artifact eco-system-1.0-complete-app-birplus id 10280162568",
+        "artifact-zip-sha256:21970e60e5d7a71a434c131a03904f5d72821d8cb449b0ec06db98d50bb0417f",
+        "source-archive-sha256:6707d2228bd9d396ef104357da674ac15ad8d5eeb7e73990f4fe1e6ec6b34ed3",
+        "manifest-head:eb6bd1c71654534f20c60c936567c102088ca333",
+        "local-download:artifact ZIP digest matched GitHub digest",
+        "local-check:portable sha256sum --check PASS",
+        "local-check:tar.xz readable; 199 archive entries",
+        "library:/Eco-System/ECO_SYSTEM_1.0_COMPLETE_APP_BIR_PLUS_FINAL_2026-09-11.zip"
+      ],
+      "note": "Final portable BIR+ backup was generated from the Complete App branch, downloaded, independently checksum-verified, archive-listed and saved in the user's /Eco-System/ Library folder. This artifact predates the Master Cockpit field correction and is retained as historical fallback.",
+      "next": "Prefer backup.birplus.master_cockpit_1.0 for current reconstruction; do not delete this historical fallback."
+    },
+    {
+      "id": "ui.master_cockpit.cahier_2_3_4",
+      "status": "VERIFIED_REMOTE",
+      "scope": "product-ui",
+      "observedOn": "2026-09-11",
+      "evidence": [
+        "github:9d9c0b117e80927edc02dfcd7ea899e4f2c34f08",
+        "tests:10-step launch cockpit",
+        "tests:dedicated validated domain views",
+        "tests:service-worker fresh navigation + old-cache purge",
+        "github-actions:deploy run 34645341363 SUCCESS",
+        "cloudflare:worker version 9ce22308-db14-4da7-9e6f-c2908b6db20c"
+      ],
+      "note": "Visible app was rebuilt to follow the Cahier Maître 2.3.4 structure: 10-step creation cockpit, meeting matrix, dedicated domain workbenches and honest capability statuses.",
+      "next": "Field-test on Android/desktop and convert priority structural workspaces into specialized engines without UI regression."
+    },
+    {
+      "id": "pwa.cache.master_cockpit_20260911",
+      "status": "VERIFIED_REMOTE",
+      "scope": "pwa-delivery",
+      "observedOn": "2026-09-11",
+      "evidence": [
+        "repo:apps/web/sw.js cache eco-system-master-cockpit-20260911-v1",
+        "tests:network-first critical navigation and old-cache purge PASS",
+        "deploy:root smoke with ?v=master-20260911 PASS"
+      ],
+      "note": "New service worker prevents the old cache-first shell from indefinitely masking the Master Cockpit after deployment.",
+      "next": "Keep cache versioning and navigation freshness tests for every visible app release."
+    },
+    {
+      "id": "backup.birplus.master_cockpit_1.0",
+      "status": "VERIFIED_REMOTE",
+      "scope": "backup-recovery",
+      "observedOn": "2026-09-11",
+      "evidence": [
+        "github-actions:Eco-System 1.0 — BIR+ Verified Source Backup run 34645606625 SUCCESS",
+        "github-actions:artifact id 10281862797",
+        "artifact-zip-sha256:1b9525e3a994d5ebfd3dd6922691c25ce0a2413bbba283de3a2df1da70aaf04b",
+        "source-archive-sha256:578596a697781f99d8c70d80881a61a03426366cb9cd50df6f96859a68eba52c",
+        "manifest-head:6382e7ba19c334bb8ac4d4df2c5f16221ababb61",
+        "local-check:sha256sum --check OK",
+        "local-check:tar.xz readable; 200 entries; Master Cockpit and truth files present",
+        "library:/Eco-System/ECO_SYSTEM_1.0_MASTER_COCKPIT_BIR_PLUS_2026-09-11.zip"
+      ],
+      "note": "Post-field-correction Master Cockpit source is preserved as a reconstructible BIR+ archive and independently verified after download.",
+      "next": "Regenerate BIR+ after every meaningful product/runtime release; retain earlier backups as historical fallbacks."
+    }
+  ]
+}

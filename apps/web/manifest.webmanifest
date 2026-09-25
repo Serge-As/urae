@@ -1,0 +1,18 @@
+{
+  "name": "Eco-System — Tontines, Associations & Communautés",
+  "short_name": "Eco-System",
+  "description": "Master Cockpit Eco-System selon le Cahier Maître 2.3.4 et les validations Living Rules",
+  "start_url": "/?release=master-cockpit-20260913-r2",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#f6f0e4",
+  "theme_color": "#17352c",
+  "lang": "fr",
+  "orientation": "any",
+  "categories": [
+    "finance",
+    "business",
+    "social",
+    "productivity"
+  ]
+}

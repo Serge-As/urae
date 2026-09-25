@@ -1,0 +1,13 @@
+import fs from 'node:fs';
+const dest='docs/memory/MASTER_CAPABILITY_INDEX.json';
+if(!fs.existsSync(dest)) throw new Error(`Missing ${dest}`);
+const d=JSON.parse(fs.readFileSync(dest,'utf8'));
+if(!d.rules?.missingFromIndexDoesNotMeanRemoved) throw new Error('Memory index must preserve absence != deletion rule');
+if((d.counts?.uniqueRequirementIds||0)<360) throw new Error(`Memory index requirement count too low: ${d.counts?.uniqueRequirementIds||0}`);
+if((d.counts?.uniqueHeadings||0)<1536) throw new Error(`Memory index historical heading count too low: ${d.counts?.uniqueHeadings||0}`);
+if(!Array.isArray(d.requirements)||d.requirements.length<360) throw new Error(`Memory index requirements missing: ${d.requirements?.length||0}`);
+const ids=new Set(d.requirements.map(x=>x.id));
+if(ids.size!==d.requirements.length) throw new Error('Memory index duplicate requirement IDs');
+for(const id of ['CORE.ASSOCIATIONS','CORE.ROTATING_TONTINE','FINANCE.LOANS','COMMUNITY.FORUM','MARKETPLACE.CORE']) if(!ids.has(id)) throw new Error(`Memory index missing ${id}`);
+if(process.argv.includes('--check')) console.log(`Memory index OK: ${ids.size} requirement IDs, ${d.counts.uniqueHeadings} historical headings indexed`);
+else console.log(`Memory index retained: ${ids.size} requirement IDs. Rebuild from full master only during forensic/source-ingestion maintenance.`);

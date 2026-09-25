@@ -1,0 +1,2178 @@
+{
+  "schemaVersion": 1,
+  "generatedOn": "2026-09-05",
+  "source": {
+    "path": "docs/constitution/ECO_SYSTEM_Cahier_des_Charges_Maitre_Exhaustif_Sauvegarde_2.3.4_2026-09-05.md",
+    "lines": 39857
+  },
+  "rules": {
+    "purpose": "Navigation index only; source text remains authoritative.",
+    "missingFromIndexDoesNotMeanRemoved": true
+  },
+  "counts": {
+    "uniqueRequirementIds": 360,
+    "uniqueHeadings": 1541
+  },
+  "requirements": [
+    {
+      "id": "GARDE-FOU",
+      "status": null,
+      "summary": "— L'IA peut proposer « Solidarité ressemble à Secours », mais le classement effectif d'une rubrique existante n'est jamais modifié sans validation d'un responsable habilité.",
+      "line": 925
+    },
+    {
+      "id": "RUB-TAX-001",
+      "status": "VALIDÉ MÉTIER",
+      "summary": "Classification par défaut A/B/C du fondateur",
+      "line": 1872
+    },
+    {
+      "id": "RUB-TAX-002",
+      "status": "PROPOSITION D'INGÉNIERIE",
+      "summary": "Facettes indépendantes de classification",
+      "line": 1873
+    },
+    {
+      "id": "RUB-TAX-003",
+      "status": "VALIDÉ CONCEPTION",
+      "summary": "Alias local -> type canonique",
+      "line": 1874
+    },
+    {
+      "id": "RUB-TAX-004",
+      "status": "PROPOSITION D'INGÉNIERIE",
+      "summary": "Versionnement des taxonomies",
+      "line": 1875
+    },
+    {
+      "id": "RUB-ORD-001",
+      "status": "VALIDÉ MÉTIER",
+      "summary": "Objectif annuel avec rythme indicatif et échéance dure",
+      "line": 1876
+    },
+    {
+      "id": "RUB-ORD-002",
+      "status": "VALIDÉ MÉTIER",
+      "summary": "Prépaiement, rattrapage, saut de période",
+      "line": 1877
+    },
+    {
+      "id": "RUB-ORD-003",
+      "status": "VALIDÉ MÉTIER + GARDE-FOU",
+      "summary": "Affectation future d'un bénéfice de tontine",
+      "line": 1878
+    },
+    {
+      "id": "SOL-ELIG-001",
+      "status": "VALIDÉ MÉTIER",
+      "summary": "Statut secourable configurable et explicable",
+      "line": 1879
+    },
+    {
+      "id": "SOL-ELIG-002",
+      "status": "VALIDÉ MÉTIER",
+      "summary": "Dérogation autorisée et auditée",
+      "line": 1880
+    },
+    {
+      "id": "CASH-001",
+      "status": "VALIDÉ CONCEPTION",
+      "summary": "Séparer fonds logique et contenant financier",
+      "line": 1881
+    },
+    {
+      "id": "CASH-002",
+      "status": "VALIDÉ MÉTIER",
+      "summary": "Registre banque/microfinance/caisse/MoMo",
+      "line": 1882
+    },
+    {
+      "id": "CASH-003",
+      "status": "PROPOSITION D'INGÉNIERIE",
+      "summary": "Passation de caisse et dépositaire",
+      "line": 1883
+    },
+    {
+      "id": "CASH-004",
+      "status": "DÉJÀ COUVERT — À RENFORCER",
+      "summary": "Rapprochement multi-contenants",
+      "line": 1884
+    },
+    {
+      "id": "RISK-001",
+      "status": "VALIDÉ MÉTIER",
+      "summary": "Bibliothèque de risques de gouvernance",
+      "line": 1885
+    },
+    {
+      "id": "RISK-002",
+      "status": "GARDE-FOU",
+      "summary": "Alertes d'écarts sans accusation automatique",
+      "line": 1886
+    },
+    {
+      "id": "KB-001",
+      "status": "VALIDÉ MÉTIER",
+      "summary": "Banque de connaissances multi-sources",
+      "line": 1887
+    },
+    {
+      "id": "KB-002",
+      "status": "VALIDÉ MÉTIER",
+      "summary": "Encyclopédie par rubrique",
+      "line": 1888
+    },
+    {
+      "id": "KB-003",
+      "status": "PROPOSITION D'INGÉNIERIE",
+      "summary": "Provenance, confiance, juridiction, date",
+      "line": 1889
+    },
+    {
+      "id": "AI-F-001",
+      "status": "VALIDÉ MÉTIER",
+      "summary": "Grande IA Fondateur",
+      "line": 1890
+    },
+    {
+      "id": "AI-G-001",
+      "status": "VALIDÉ MÉTIER + GARDE-FOU",
+      "summary": "IA de service groupe isolée par tenant",
+      "line": 1891
+    },
+    {
+      "id": "AI-BRIEF-001",
+      "status": "VALIDÉ MÉTIER",
+      "summary": "Brief stratégique lundi/jeudi",
+      "line": 1892
+    },
+    {
+      "id": "AI-GATE-001",
+      "status": "GARDE-FOU",
+      "summary": "Aucune modification automatique depuis l'IA",
+      "line": 1893
+    },
+    {
+      "id": "DOC-GOV-001",
+      "status": "VALIDÉ MÉTIER",
+      "summary": "Générateur de statuts/RI/résolutions",
+      "line": 1894
+    },
+    {
+      "id": "DOC-SPON-001",
+      "status": "VALIDÉ MÉTIER",
+      "summary": "Financement de documents/formations par ONG",
+      "line": 1895
+    },
+    {
+      "id": "PAPER-001",
+      "status": "VALIDÉ MÉTIER",
+      "summary": "Fiche mensuelle recto financier",
+      "line": 1896
+    },
+    {
+      "id": "PAPER-002",
+      "status": "VALIDÉ MÉTIER",
+      "summary": "Verso émargement/séance",
+      "line": 1897
+    },
+    {
+      "id": "PAPER-003",
+      "status": "VALIDÉ MÉTIER",
+      "summary": "Registre Président",
+      "line": 1898
+    },
+    {
+      "id": "PAPER-004",
+      "status": "VALIDÉ MÉTIER",
+      "summary": "Registre Secrétaire",
+      "line": 1899
+    },
+    {
+      "id": "PAPER-005",
+      "status": "VALIDÉ MÉTIER",
+      "summary": "Registre Trésorier",
+      "line": 1900
+    },
+    {
+      "id": "PAPER-006",
+      "status": "VALIDÉ MÉTIER",
+      "summary": "Registre Commissaire aux comptes",
+      "line": 1901
+    },
+    {
+      "id": "PAPER-007",
+      "status": "VALIDÉ MÉTIER",
+      "summary": "Registre responsable de rubrique",
+      "line": 1902
+    },
+    {
+      "id": "PAPER-008",
+      "status": "VALIDÉ MÉTIER",
+      "summary": "Carte membre personnalisée",
+      "line": 1903
+    },
+    {
+      "id": "PAPER-009",
+      "status": "VALIDÉ MÉTIER",
+      "summary": "Templates imprimables par exercice/groupe",
+      "line": 1904
+    },
+    {
+      "id": "TRAIN-001",
+      "status": "VALIDÉ MÉTIER",
+      "summary": "Academy gratuite/premium/sponsorisée",
+      "line": 1905
+    },
+    {
+      "id": "TAX-LAB-001",
+      "status": "VALIDÉ MÉTIER",
+      "summary": "Laboratoire de future normalisation",
+      "line": 1906
+    },
+    {
+      "id": "GF-001",
+      "status": "GARDE-FOU",
+      "summary": "Ne jamais supprimer une fonctionnalité historique simplement parce qu’elle complique une refonte ; d’abord vérifier si elle est encore voulue, puis documenter explicitement son remplacement.",
+      "line": 3456
+    },
+    {
+      "id": "GF-002",
+      "status": "GARDE-FOU",
+      "summary": "Une amélioration visuelle ne peut pas changer le sens d’une écriture financière, d’un vote, d’un rôle ou d’une règle de prêt.",
+      "line": 3457
+    },
+    {
+      "id": "GF-003",
+      "status": "GARDE-FOU",
+      "summary": "Une donnée absente ne doit pas être affichée comme zéro ; une opération en attente ne doit pas devenir réussie ; une estimation doit rester identifiée comme estimation.",
+      "line": 3458
+    },
+    {
+      "id": "GF-004",
+      "status": "GARDE-FOU",
+      "summary": "Les écritures financières historiques ne se modifient pas silencieusement : correction par contre-écriture ou ajustement audité.",
+      "line": 3459
+    },
+    {
+      "id": "GF-005",
+      "status": "GARDE-FOU",
+      "summary": "Le mode hors-ligne n’autorise jamais une fausse confirmation de paiement.",
+      "line": 3460
+    },
+    {
+      "id": "GF-006",
+      "status": "GARDE-FOU",
+      "summary": "Les droits de plateforme 0–8 et les rôles internes de groupe sont deux axes séparés.",
+      "line": 3461
+    },
+    {
+      "id": "GF-007",
+      "status": "GARDE-FOU",
+      "summary": "L’IA conseille, explique et prépare ; elle ne décide pas seule d’un mouvement d’argent, d’une sanction, d’un vote ou de la culpabilité d’une personne.",
+      "line": 3462
+    },
+    {
+      "id": "GF-008",
+      "status": "GARDE-FOU",
+      "summary": "Les secrets, mots de passe, clés, tokens, codes de récupération et données hautement sensibles ne doivent jamais être écrits dans le cahier ou le dépôt.",
+      "line": 3463
+    },
+    {
+      "id": "GF-009",
+      "status": "GARDE-FOU",
+      "summary": "Toute dépendance payante doit avoir un fallback ou une phase de dégradation lorsque cela est raisonnable.",
+      "line": 3464
+    },
+    {
+      "id": "GF-010",
+      "status": "GARDE-FOU",
+      "summary": "Le projet est construit pour le coût minimal : pas de Kubernetes, microservices, moteur IA coûteux ou cartographie payante au lancement sans preuve du besoin.",
+      "line": 3465
+    },
+    {
+      "id": "VISION-001",
+      "status": "VALIDÉ MÉTIER",
+      "summary": "La technologie doit s’adapter aux pratiques des associations, pas l’inverse.",
+      "line": 3486
+    },
+    {
+      "id": "VISION-002",
+      "status": "VALIDÉ MÉTIER",
+      "summary": "Une personne âgée ou peu familière avec le numérique doit pouvoir accomplir l’essentiel sans formation complexe.",
+      "line": 3487
+    },
+    {
+      "id": "VISION-003",
+      "status": "VALIDÉ MÉTIER",
+      "summary": "La discipline financière doit coexister avec l’entraide et les cas humains exceptionnels.",
+      "line": 3488
+    },
+    {
+      "id": "VISION-004",
+      "status": "VALIDÉ MÉTIER",
+      "summary": "La transparence ne signifie pas exposition publique : chaque donnée a un périmètre de confidentialité.",
+      "line": 3489
+    },
+    {
+      "id": "VISION-005",
+      "status": "VALIDÉ MÉTIER",
+      "summary": "Le produit doit expliquer ses calculs et recommandations.",
+      "line": 3490
+    },
+    {
+      "id": "VISION-006",
+      "status": "VALIDÉ MÉTIER",
+      "summary": "L’automatisation doit réduire les tâches répétitives, pas retirer le contrôle aux responsables élus.",
+      "line": 3491
+    },
+    {
+      "id": "VISION-007",
+      "status": "VALIDÉ MÉTIER",
+      "summary": "Le système doit rester utilisable quand Internet est mauvais et compréhensible quand il n’a pas pu synchroniser.",
+      "line": 3492
+    },
+    {
+      "id": "RBAC-001",
+      "status": "VALIDÉ MÉTIER",
+      "summary": "RBAC pour les rôles stables + ABAC pour conditions dynamiques (groupe, rubrique, montant, seuil, statut, mandat, date).",
+      "line": 3538
+    },
+    {
+      "id": "RBAC-002",
+      "status": "VALIDÉ MÉTIER",
+      "summary": "Un utilisateur peut cumuler plusieurs rôles uniquement si les statuts l’autorisent.",
+      "line": 3539
+    },
+    {
+      "id": "RBAC-003",
+      "status": "VALIDÉ MÉTIER",
+      "summary": "Les permissions sensibles ont des scopes explicites : groupe, rubrique, opération et période.",
+      "line": 3540
+    },
+    {
+      "id": "RBAC-004",
+      "status": "VALIDÉ MÉTIER",
+      "summary": "Les délégations temporaires comportent début, fin, motif, donneur et révocation.",
+      "line": 3541
+    },
+    {
+      "id": "RBAC-005",
+      "status": "VALIDÉ MÉTIER",
+      "summary": "Le mode Observateur est lecture seule ; aucune fonction de modification ne doit être seulement “cachée” côté interface : le serveur refuse aussi.",
+      "line": 3542
+    },
+    {
+      "id": "FR-31-0001",
+      "status": "VALIDÉ MÉTIER",
+      "summary": "Créer plusieurs groupes sous un même compte utilisateur",
+      "line": 3623
+    },
+    {
+      "id": "FR-31-0002",
+      "status": "VALIDÉ MÉTIER",
+      "summary": "Distinguer tontine rotative, association à accumulation, groupe mixte et sous-groupes",
+      "line": 3624
+    },
+    {
+      "id": "FR-31-0003",
+      "status": "VALIDÉ MÉTIER",
+      "summary": "Paramétrer identité, devise, localisation, langue, calendrier, statuts, gouvernance et règles financières",
+      "line": 3625
+    },
+    {
+      "id": "FR-31-0004",
+      "status": "VALIDÉ MÉTIER",
+      "summary": "Gérer cycles successifs sans perdre l’historique",
+      "line": 3626
+    },
+    {
+      "id": "FR-32-0005",
+      "status": "VALIDÉ MÉTIER",
+      "summary": "Créer, renommer, ordonner, activer, suspendre ou archiver une rubrique",
+      "line": 3674
+    },
+    {
+      "id": "FR-32-0006",
+      "status": "VALIDÉ MÉTIER",
+      "summary": "Définir nature : cotisation, épargne, tontine, prêt, assistance, collation, caisse, pénalité, investissement, bien non financier, personnalisée",
+      "line": 3675
+    },
+    {
+      "id": "FR-32-0007",
+      "status": "VALIDÉ MÉTIER",
+      "summary": "Définir périodicité : réunion, jour, semaine, quinzaine, mois, trimestre, année, échéancier personnalisé",
+      "line": 3676
+    },
+    {
+      "id": "FR-32-0008",
+      "status": "VALIDÉ MÉTIER",
+      "summary": "Définir montant fixe, variable, minimum, plafond, pourcentage ou formule",
+      "line": 3677
+    },
+    {
+      "id": "FR-33-0009",
+      "status": "VALIDÉ MÉTIER",
+      "summary": "Détecter automatiquement les échéances manquées",
+      "line": 3726
+    },
+    {
+      "id": "FR-33-0010",
+      "status": "VALIDÉ MÉTIER",
+      "summary": "Classer retard par ancienneté, montant, rubrique, fréquence et criticité",
+      "line": 3727
+    },
+    {
+      "id": "FR-33-0011",
+      "status": "VALIDÉ MÉTIER",
+      "summary": "Relance progressive et personnalisable",
+      "line": 3728
+    },
+    {
+      "id": "FR-33-0012",
+      "status": "VALIDÉ MÉTIER",
+      "summary": "Promesse de paiement et échéancier de régularisation",
+      "line": 3729
+    },
+    {
+      "id": "FR-34-0013",
+      "status": "VALIDÉ MÉTIER",
+      "summary": "Score global 0–100 et sous-scores optionnels : paiements, présence, prêts, solidarité, gouvernance",
+      "line": 3777
+    },
+    {
+      "id": "FR-34-0014",
+      "status": "VALIDÉ MÉTIER",
+      "summary": "Explication détaillée de chaque variation",
+      "line": 3778
+    },
+    {
+      "id": "FR-34-0015",
+      "status": "VALIDÉ MÉTIER",
+      "summary": "Simulation : impact d’un retard ou d’une régularisation",
+      "line": 3779
+    },
+    {
+      "id": "FR-34-0016",
+      "status": "VALIDÉ MÉTIER",
+      "summary": "Version de la formule et date de calcul",
+      "line": 3780
+    },
+    {
+      "id": "FR-35-0017",
+      "status": "VALIDÉ MÉTIER",
+      "summary": "Demande, étude, approbation, décaissement, échéancier, remboursement partiel/total",
+      "line": 3830
+    },
+    {
+      "id": "FR-35-0018",
+      "status": "VALIDÉ MÉTIER",
+      "summary": "Intérêt fixe, dégressif ou paramétrable ; frais séparés",
+      "line": 3831
+    },
+    {
+      "id": "FR-35-0019",
+      "status": "VALIDÉ MÉTIER",
+      "summary": "Garanties/cautions membres ou documents",
+      "line": 3832
+    },
+    {
+      "id": "FR-35-0020",
+      "status": "VALIDÉ MÉTIER",
+      "summary": "Plafond par épargne, score, ancienneté ou règle personnalisée",
+      "line": 3833
+    },
+    {
+      "id": "FR-36-0021",
+      "status": "VALIDÉ MÉTIER",
+      "summary": "Solde global informatif et soldes par rubrique",
+      "line": 3882
+    },
+    {
+      "id": "FR-36-0022",
+      "status": "VALIDÉ MÉTIER",
+      "summary": "Ledger immuable avec débit/crédit, avant/après et source",
+      "line": 3883
+    },
+    {
+      "id": "FR-36-0023",
+      "status": "VALIDÉ MÉTIER",
+      "summary": "Réservations temporaires pour opérations en cours",
+      "line": 3884
+    },
+    {
+      "id": "FR-36-0024",
+      "status": "VALIDÉ MÉTIER",
+      "summary": "Transferts internes autorisés entre rubriques selon règles",
+      "line": 3885
+    },
+    {
+      "id": "FR-37-0025",
+      "status": "VALIDÉ MÉTIER",
+      "summary": "Déclaration d’événement : maladie, décès, naissance, accident, sinistre, urgence, autre",
+      "line": 3934
+    },
+    {
+      "id": "FR-37-0026",
+      "status": "VALIDÉ MÉTIER",
+      "summary": "Règles d’éligibilité par ancienneté/cotisation/statut",
+      "line": 3935
+    },
+    {
+      "id": "FR-37-0027",
+      "status": "VALIDÉ MÉTIER",
+      "summary": "Collecte exceptionnelle et suivi en temps réel",
+      "line": 3936
+    },
+    {
+      "id": "FR-37-0028",
+      "status": "VALIDÉ MÉTIER",
+      "summary": "Cagnotte interne dédiée",
+      "line": 3937
+    },
+    {
+      "id": "FR-38-0029",
+      "status": "VALIDÉ MÉTIER",
+      "summary": "Forum public plateforme et forums privés par groupe",
+      "line": 3986
+    },
+    {
+      "id": "FR-38-0030",
+      "status": "VALIDÉ MÉTIER",
+      "summary": "Catégories : annonces, entraide, questions, projets, débats, opportunités, litiges encadrés",
+      "line": 3987
+    },
+    {
+      "id": "FR-38-0031",
+      "status": "VALIDÉ MÉTIER",
+      "summary": "Marquer une réponse comme solution",
+      "line": 3988
+    },
+    {
+      "id": "FR-38-0032",
+      "status": "VALIDÉ MÉTIER",
+      "summary": "Micro-annonces “je cherche / je propose” reliables au marketplace",
+      "line": 3989
+    },
+    {
+      "id": "FR-39-0033",
+      "status": "VALIDÉ MÉTIER",
+      "summary": "Boutiques partenaires et ventes membre-à-membre",
+      "line": 4039
+    },
+    {
+      "id": "FR-39-0034",
+      "status": "VALIDÉ MÉTIER",
+      "summary": "Produits, services, disponibilité, zone, prix, promotion",
+      "line": 4040
+    },
+    {
+      "id": "FR-39-0035",
+      "status": "VALIDÉ MÉTIER",
+      "summary": "Annuaire géographique par proximité et catégorie",
+      "line": 4041
+    },
+    {
+      "id": "FR-39-0036",
+      "status": "VALIDÉ MÉTIER",
+      "summary": "Commande simple, réservation, retrait/livraison",
+      "line": 4042
+    },
+    {
+      "id": "FR-310-0037",
+      "status": "VALIDÉ MÉTIER",
+      "summary": "Cashback par partenaire, campagne, produit, groupe ou niveau",
+      "line": 4089
+    },
+    {
+      "id": "FR-310-0038",
+      "status": "VALIDÉ MÉTIER",
+      "summary": "Répartition possible entre membre, association et plateforme",
+      "line": 4090
+    },
+    {
+      "id": "FR-310-0039",
+      "status": "VALIDÉ MÉTIER",
+      "summary": "Plafonds quotidien/mensuel",
+      "line": 4091
+    },
+    {
+      "id": "FR-310-0040",
+      "status": "VALIDÉ MÉTIER",
+      "summary": "Période d’attente avant acquisition définitive en cas de remboursement",
+      "line": 4092
+    },
+    {
+      "id": "FR-311-0041",
+      "status": "VALIDÉ MÉTIER",
+      "summary": "Niveaux Bronze, Silver, Gold, Elite configurables",
+      "line": 4138
+    },
+    {
+      "id": "FR-311-0042",
+      "status": "VALIDÉ MÉTIER",
+      "summary": "Points d’activité séparés du wallet monétaire",
+      "line": 4139
+    },
+    {
+      "id": "FR-311-0043",
+      "status": "VALIDÉ MÉTIER",
+      "summary": "Badges, avantages partenaires, accès anticipé, réductions",
+      "line": 4140
+    },
+    {
+      "id": "FR-311-0044",
+      "status": "VALIDÉ MÉTIER",
+      "summary": "Progression visible et règles publiées",
+      "line": 4141
+    },
+    {
+      "id": "FR-312-0045",
+      "status": "VALIDÉ MÉTIER",
+      "summary": "Votes oui/non, choix multiples, classement, résolution",
+      "line": 4190
+    },
+    {
+      "id": "FR-312-0046",
+      "status": "VALIDÉ MÉTIER",
+      "summary": "Vote secret ou nominatif",
+      "line": 4191
+    },
+    {
+      "id": "FR-312-0047",
+      "status": "VALIDÉ MÉTIER",
+      "summary": "Quorum, majorité simple/qualifiée/unanimité",
+      "line": 4192
+    },
+    {
+      "id": "FR-312-0048",
+      "status": "VALIDÉ MÉTIER",
+      "summary": "Délégation/procuration si autorisée",
+      "line": 4193
+    },
+    {
+      "id": "FR-313-0049",
+      "status": "VALIDÉ MÉTIER",
+      "summary": "Chronologie complète par membre",
+      "line": 4241
+    },
+    {
+      "id": "FR-313-0050",
+      "status": "VALIDÉ MÉTIER",
+      "summary": "Filtres groupe/rubrique/date/type",
+      "line": 4242
+    },
+    {
+      "id": "FR-313-0051",
+      "status": "VALIDÉ MÉTIER",
+      "summary": "Relevé avant/après de chaque opération",
+      "line": 4243
+    },
+    {
+      "id": "FR-313-0052",
+      "status": "VALIDÉ MÉTIER",
+      "summary": "Documents et reçus",
+      "line": 4244
+    },
+    {
+      "id": "FR-314-0053",
+      "status": "VALIDÉ MÉTIER",
+      "summary": "Détection adaptative de qualité réseau + réglage manuel Économiseur",
+      "line": 4292
+    },
+    {
+      "id": "FR-314-0054",
+      "status": "VALIDÉ MÉTIER",
+      "summary": "Critical Text First",
+      "line": 4293
+    },
+    {
+      "id": "FR-314-0055",
+      "status": "VALIDÉ MÉTIER",
+      "summary": "Images lazy, miniatures compressées, média à la demande",
+      "line": 4294
+    },
+    {
+      "id": "FR-314-0056",
+      "status": "VALIDÉ MÉTIER",
+      "summary": "Payloads compacts/field selection/delta sync",
+      "line": 4295
+    },
+    {
+      "id": "FR-315-0057",
+      "status": "VALIDÉ MÉTIER",
+      "summary": "Cache Service Worker + IndexedDB",
+      "line": 4346
+    },
+    {
+      "id": "FR-315-0058",
+      "status": "VALIDÉ MÉTIER",
+      "summary": "Outbox locale durable",
+      "line": 4347
+    },
+    {
+      "id": "FR-315-0059",
+      "status": "VALIDÉ MÉTIER",
+      "summary": "États DRAFT/PENDING_SYNC/SYNCING/SUCCEEDED/FAILED/CONFLICT/CANCELLED",
+      "line": 4348
+    },
+    {
+      "id": "FR-315-0060",
+      "status": "VALIDÉ MÉTIER",
+      "summary": "UUID/idempotency key par intention",
+      "line": 4349
+    },
+    {
+      "id": "FR-316-0061",
+      "status": "VALIDÉ MÉTIER",
+      "summary": "Dashboard Membre",
+      "line": 4399
+    },
+    {
+      "id": "FR-316-0062",
+      "status": "VALIDÉ MÉTIER",
+      "summary": "Dashboard Gestionnaire/Admin de groupe",
+      "line": 4400
+    },
+    {
+      "id": "FR-316-0063",
+      "status": "VALIDÉ MÉTIER",
+      "summary": "Dashboard Partenaire",
+      "line": 4401
+    },
+    {
+      "id": "FR-316-0064",
+      "status": "VALIDÉ MÉTIER",
+      "summary": "Dashboard Advertiser",
+      "line": 4402
+    },
+    {
+      "id": "LEDGER-001",
+      "status": "GARDE-FOU",
+      "summary": "Ledger append-only : pas d’UPDATE destructeur sur une écriture validée.",
+      "line": 4924
+    },
+    {
+      "id": "LEDGER-002",
+      "status": "GARDE-FOU",
+      "summary": "Idempotency key obligatoire pour chaque intention de paiement synchronisée.",
+      "line": 4925
+    },
+    {
+      "id": "LEDGER-003",
+      "status": "GARDE-FOU",
+      "summary": "Réservation distincte du débit final.",
+      "line": 4926
+    },
+    {
+      "id": "LEDGER-004",
+      "status": "GARDE-FOU",
+      "summary": "Écriture de correction avec lien vers écriture corrigée.",
+      "line": 4927
+    },
+    {
+      "id": "LEDGER-005",
+      "status": "GARDE-FOU",
+      "summary": "Solde matérialisé possible pour performance, mais toujours recalculable/auditable depuis le ledger.",
+      "line": 4928
+    },
+    {
+      "id": "LEDGER-006",
+      "status": "GARDE-FOU",
+      "summary": "Séparer argent, points de fidélité, cashback en attente et cashback acquis.",
+      "line": 4929
+    },
+    {
+      "id": "LEDGER-007",
+      "status": "GARDE-FOU",
+      "summary": "Séparer argent du groupe et argent personnel du membre.",
+      "line": 4930
+    },
+    {
+      "id": "LEDGER-008",
+      "status": "GARDE-FOU",
+      "summary": "Séparer dette/échéance de prêt et paiement effectivement reçu.",
+      "line": 4931
+    },
+    {
+      "id": "AUTH_REQUIRED",
+      "status": "Reconnecter sans perdre le brouillon local",
+      "summary": "Session absente/expirée",
+      "line": 5800
+    },
+    {
+      "id": "FORBIDDEN_SCOPE",
+      "status": "Expliquer le rôle requis sans révéler données cachées",
+      "summary": "Droit insuffisant",
+      "line": 5801
+    },
+    {
+      "id": "TENANT_MISMATCH",
+      "status": "Bloquer et auditer",
+      "summary": "Accès inter-groupe interdit",
+      "line": 5802
+    },
+    {
+      "id": "VALIDATION_ERROR",
+      "status": "Pointer champs",
+      "summary": "Données invalides",
+      "line": 5803
+    },
+    {
+      "id": "IDEMPOTENCY_CONFLICT",
+      "status": "Afficher résultat existant",
+      "summary": "Intention déjà traitée",
+      "line": 5804
+    },
+    {
+      "id": "OFFLINE_PENDING",
+      "status": "Ne pas afficher succès serveur",
+      "summary": "Action conservée localement",
+      "line": 5805
+    },
+    {
+      "id": "SYNC_CONFLICT",
+      "status": "Proposer résolution contrôlée",
+      "summary": "Version serveur différente",
+      "line": 5806
+    },
+    {
+      "id": "INSUFFICIENT_FUNDS",
+      "status": "Ne créer aucun débit final",
+      "summary": "Solde interne insuffisant",
+      "line": 5807
+    },
+    {
+      "id": "QUORUM_NOT_MET",
+      "status": "Afficher quorum/règle",
+      "summary": "Vote non valide",
+      "line": 5808
+    },
+    {
+      "id": "LOAN_POLICY_REJECTED",
+      "status": "Expliquer critère",
+      "summary": "Règle prêt non satisfaite",
+      "line": 5809
+    },
+    {
+      "id": "RATE_LIMITED",
+      "status": "Backoff + mode local",
+      "summary": "Trop de requêtes",
+      "line": 5810
+    },
+    {
+      "id": "STORAGE_LIMIT",
+      "status": "Dégrader média, protéger finance",
+      "summary": "Quota atteint",
+      "line": 5811
+    },
+    {
+      "id": "EXTERNAL_PROVIDER_DOWN",
+      "status": "Conserver intention, ne pas dupliquer",
+      "summary": "Prestataire indisponible",
+      "line": 5812
+    },
+    {
+      "id": "UNKNOWN_PAYMENT_RESULT",
+      "status": "Rapprochement avant retry",
+      "summary": "Issue externe incertaine",
+      "line": 5813
+    },
+    {
+      "id": "DOCUMENT_ACCESS_DENIED",
+      "status": "Aucune fuite de métadonnées sensibles",
+      "summary": "Pièce protégée",
+      "line": 5814
+    },
+    {
+      "id": "AUD-001",
+      "status": "VALIDÉ CONCEPTION",
+      "summary": "AUTH_LOGIN : enregistrer actor, tenant, target, timestamp, request_id, résultat, motif si sensible, sans secret.",
+      "line": 10292
+    },
+    {
+      "id": "AUD-002",
+      "status": "VALIDÉ CONCEPTION",
+      "summary": "AUTH_FAILED : enregistrer actor, tenant, target, timestamp, request_id, résultat, motif si sensible, sans secret.",
+      "line": 10293
+    },
+    {
+      "id": "AUD-003",
+      "status": "VALIDÉ CONCEPTION",
+      "summary": "DEVICE_ADDED : enregistrer actor, tenant, target, timestamp, request_id, résultat, motif si sensible, sans secret.",
+      "line": 10294
+    },
+    {
+      "id": "AUD-004",
+      "status": "VALIDÉ CONCEPTION",
+      "summary": "DEVICE_REVOKED : enregistrer actor, tenant, target, timestamp, request_id, résultat, motif si sensible, sans secret.",
+      "line": 10295
+    },
+    {
+      "id": "AUD-005",
+      "status": "VALIDÉ CONCEPTION",
+      "summary": "GROUP_CREATED : enregistrer actor, tenant, target, timestamp, request_id, résultat, motif si sensible, sans secret.",
+      "line": 10296
+    },
+    {
+      "id": "AUD-006",
+      "status": "VALIDÉ CONCEPTION",
+      "summary": "GROUP_SETTINGS_CHANGED : enregistrer actor, tenant, target, timestamp, request_id, résultat, motif si sensible, sans secret.",
+      "line": 10297
+    },
+    {
+      "id": "AUD-007",
+      "status": "VALIDÉ CONCEPTION",
+      "summary": "MEMBER_INVITED : enregistrer actor, tenant, target, timestamp, request_id, résultat, motif si sensible, sans secret.",
+      "line": 10298
+    },
+    {
+      "id": "AUD-008",
+      "status": "VALIDÉ CONCEPTION",
+      "summary": "MEMBER_JOINED : enregistrer actor, tenant, target, timestamp, request_id, résultat, motif si sensible, sans secret.",
+      "line": 10299
+    },
+    {
+      "id": "AUD-009",
+      "status": "VALIDÉ CONCEPTION",
+      "summary": "MEMBER_ROLE_CHANGED : enregistrer actor, tenant, target, timestamp, request_id, résultat, motif si sensible, sans secret.",
+      "line": 10300
+    },
+    {
+      "id": "AUD-010",
+      "status": "VALIDÉ CONCEPTION",
+      "summary": "MEMBER_SUSPENDED : enregistrer actor, tenant, target, timestamp, request_id, résultat, motif si sensible, sans secret.",
+      "line": 10301
+    },
+    {
+      "id": "AUD-011",
+      "status": "VALIDÉ CONCEPTION",
+      "summary": "RUBRIC_CREATED : enregistrer actor, tenant, target, timestamp, request_id, résultat, motif si sensible, sans secret.",
+      "line": 10302
+    },
+    {
+      "id": "AUD-012",
+      "status": "VALIDÉ CONCEPTION",
+      "summary": "RUBRIC_RULE_VERSIONED : enregistrer actor, tenant, target, timestamp, request_id, résultat, motif si sensible, sans secret.",
+      "line": 10303
+    },
+    {
+      "id": "AUD-013",
+      "status": "VALIDÉ CONCEPTION",
+      "summary": "MEETING_CLOSED : enregistrer actor, tenant, target, timestamp, request_id, résultat, motif si sensible, sans secret.",
+      "line": 10304
+    },
+    {
+      "id": "AUD-014",
+      "status": "VALIDÉ CONCEPTION",
+      "summary": "OBLIGATION_CREATED : enregistrer actor, tenant, target, timestamp, request_id, résultat, motif si sensible, sans secret.",
+      "line": 10305
+    },
+    {
+      "id": "AUD-015",
+      "status": "VALIDÉ CONCEPTION",
+      "summary": "PAYMENT_INTENT_CREATED : enregistrer actor, tenant, target, timestamp, request_id, résultat, motif si sensible, sans secret.",
+      "line": 10306
+    },
+    {
+      "id": "AUD-016",
+      "status": "VALIDÉ CONCEPTION",
+      "summary": "PAYMENT_PROOF_ADDED : enregistrer actor, tenant, target, timestamp, request_id, résultat, motif si sensible, sans secret.",
+      "line": 10307
+    },
+    {
+      "id": "AUD-017",
+      "status": "VALIDÉ CONCEPTION",
+      "summary": "PAYMENT_CONFIRMED : enregistrer actor, tenant, target, timestamp, request_id, résultat, motif si sensible, sans secret.",
+      "line": 10308
+    },
+    {
+      "id": "AUD-018",
+      "status": "VALIDÉ CONCEPTION",
+      "summary": "PAYMENT_REVERSED : enregistrer actor, tenant, target, timestamp, request_id, résultat, motif si sensible, sans secret.",
+      "line": 10309
+    },
+    {
+      "id": "AUD-019",
+      "status": "VALIDÉ CONCEPTION",
+      "summary": "LEDGER_ADJUSTMENT : enregistrer actor, tenant, target, timestamp, request_id, résultat, motif si sensible, sans secret.",
+      "line": 10310
+    },
+    {
+      "id": "AUD-020",
+      "status": "VALIDÉ CONCEPTION",
+      "summary": "LOAN_SUBMITTED : enregistrer actor, tenant, target, timestamp, request_id, résultat, motif si sensible, sans secret.",
+      "line": 10311
+    },
+    {
+      "id": "AUD-021",
+      "status": "VALIDÉ CONCEPTION",
+      "summary": "LOAN_APPROVED : enregistrer actor, tenant, target, timestamp, request_id, résultat, motif si sensible, sans secret.",
+      "line": 10312
+    },
+    {
+      "id": "AUD-022",
+      "status": "VALIDÉ CONCEPTION",
+      "summary": "LOAN_REJECTED : enregistrer actor, tenant, target, timestamp, request_id, résultat, motif si sensible, sans secret.",
+      "line": 10313
+    },
+    {
+      "id": "AUD-023",
+      "status": "VALIDÉ CONCEPTION",
+      "summary": "LOAN_DISBURSED : enregistrer actor, tenant, target, timestamp, request_id, résultat, motif si sensible, sans secret.",
+      "line": 10314
+    },
+    {
+      "id": "AUD-024",
+      "status": "VALIDÉ CONCEPTION",
+      "summary": "LOAN_RESTRUCTURED : enregistrer actor, tenant, target, timestamp, request_id, résultat, motif si sensible, sans secret.",
+      "line": 10315
+    },
+    {
+      "id": "AUD-025",
+      "status": "VALIDÉ CONCEPTION",
+      "summary": "SOLIDARITY_APPROVED : enregistrer actor, tenant, target, timestamp, request_id, résultat, motif si sensible, sans secret.",
+      "line": 10316
+    },
+    {
+      "id": "AUD-026",
+      "status": "VALIDÉ CONCEPTION",
+      "summary": "VOTE_OPENED : enregistrer actor, tenant, target, timestamp, request_id, résultat, motif si sensible, sans secret.",
+      "line": 10317
+    },
+    {
+      "id": "AUD-027",
+      "status": "VALIDÉ CONCEPTION",
+      "summary": "VOTE_CLOSED : enregistrer actor, tenant, target, timestamp, request_id, résultat, motif si sensible, sans secret.",
+      "line": 10318
+    },
+    {
+      "id": "AUD-028",
+      "status": "VALIDÉ CONCEPTION",
+      "summary": "VOTE_CANCELLED : enregistrer actor, tenant, target, timestamp, request_id, résultat, motif si sensible, sans secret.",
+      "line": 10319
+    },
+    {
+      "id": "AUD-029",
+      "status": "VALIDÉ CONCEPTION",
+      "summary": "DOCUMENT_ACCESSED_SENSITIVE : enregistrer actor, tenant, target, timestamp, request_id, résultat, motif si sensible, sans secret.",
+      "line": 10320
+    },
+    {
+      "id": "AUD-030",
+      "status": "VALIDÉ CONCEPTION",
+      "summary": "PARTNER_VERIFIED : enregistrer actor, tenant, target, timestamp, request_id, résultat, motif si sensible, sans secret.",
+      "line": 10321
+    },
+    {
+      "id": "AUD-031",
+      "status": "VALIDÉ CONCEPTION",
+      "summary": "CASHBACK_RULE_CHANGED : enregistrer actor, tenant, target, timestamp, request_id, résultat, motif si sensible, sans secret.",
+      "line": 10322
+    },
+    {
+      "id": "AUD-032",
+      "status": "VALIDÉ CONCEPTION",
+      "summary": "MODERATION_ACTION : enregistrer actor, tenant, target, timestamp, request_id, résultat, motif si sensible, sans secret.",
+      "line": 10323
+    },
+    {
+      "id": "AUD-033",
+      "status": "VALIDÉ CONCEPTION",
+      "summary": "RISK_ALERT_PUBLISHED : enregistrer actor, tenant, target, timestamp, request_id, résultat, motif si sensible, sans secret.",
+      "line": 10324
+    },
+    {
+      "id": "AUD-034",
+      "status": "VALIDÉ CONCEPTION",
+      "summary": "ONG_SCOPE_GRANTED : enregistrer actor, tenant, target, timestamp, request_id, résultat, motif si sensible, sans secret.",
+      "line": 10325
+    },
+    {
+      "id": "AUD-035",
+      "status": "VALIDÉ CONCEPTION",
+      "summary": "ONG_SCOPE_REVOKED : enregistrer actor, tenant, target, timestamp, request_id, résultat, motif si sensible, sans secret.",
+      "line": 10326
+    },
+    {
+      "id": "AUD-036",
+      "status": "VALIDÉ CONCEPTION",
+      "summary": "EXPORT_GENERATED : enregistrer actor, tenant, target, timestamp, request_id, résultat, motif si sensible, sans secret.",
+      "line": 10327
+    },
+    {
+      "id": "AUD-037",
+      "status": "VALIDÉ CONCEPTION",
+      "summary": "IMPORT_COMMITTED : enregistrer actor, tenant, target, timestamp, request_id, résultat, motif si sensible, sans secret.",
+      "line": 10328
+    },
+    {
+      "id": "AUD-038",
+      "status": "VALIDÉ CONCEPTION",
+      "summary": "ADMIN_ACTION : enregistrer actor, tenant, target, timestamp, request_id, résultat, motif si sensible, sans secret.",
+      "line": 10329
+    },
+    {
+      "id": "AUD-039",
+      "status": "VALIDÉ CONCEPTION",
+      "summary": "SECURITY_POLICY_CHANGED : enregistrer actor, tenant, target, timestamp, request_id, résultat, motif si sensible, sans secret.",
+      "line": 10330
+    },
+    {
+      "id": "ACC-001",
+      "status": "VALIDÉ CONCEPTION",
+      "summary": "Créer un groupe, rubriques et rôles sans intervention développeur.",
+      "line": 10356
+    },
+    {
+      "id": "ACC-002",
+      "status": "VALIDÉ CONCEPTION",
+      "summary": "Importer des membres Excel/CSV avec preview et doublons signalés.",
+      "line": 10357
+    },
+    {
+      "id": "ACC-003",
+      "status": "VALIDÉ CONCEPTION",
+      "summary": "Un membre voit ses groupes et son calendrier consolidé.",
+      "line": 10358
+    },
+    {
+      "id": "ACC-004",
+      "status": "VALIDÉ CONCEPTION",
+      "summary": "Enregistrer cotisation espèces/Mobile Money externe avec preuve et reçu.",
+      "line": 10359
+    },
+    {
+      "id": "ACC-005",
+      "status": "VALIDÉ CONCEPTION",
+      "summary": "Ledger affiche avant/après et aucune duplication au double clic.",
+      "line": 10360
+    },
+    {
+      "id": "ACC-006",
+      "status": "VALIDÉ CONCEPTION",
+      "summary": "Coupure réseau conserve une action en PENDING_SYNC sans faux succès.",
+      "line": 10361
+    },
+    {
+      "id": "ACC-007",
+      "status": "VALIDÉ CONCEPTION",
+      "summary": "Tontine rotative calcule tours et bénéficiaires.",
+      "line": 10362
+    },
+    {
+      "id": "ACC-008",
+      "status": "VALIDÉ CONCEPTION",
+      "summary": "Prêt simple est simulé, approuvé et remboursé.",
+      "line": 10363
+    },
+    {
+      "id": "ACC-009",
+      "status": "VALIDÉ CONCEPTION",
+      "summary": "Vote respecte quorum et secret configuré.",
+      "line": 10364
+    },
+    {
+      "id": "ACC-010",
+      "status": "VALIDÉ CONCEPTION",
+      "summary": "Forum texte fonctionne faible connexion.",
+      "line": 10365
+    },
+    {
+      "id": "ACC-011",
+      "status": "VALIDÉ CONCEPTION",
+      "summary": "Mode Ultra Simple permet payer/voir argent/problème.",
+      "line": 10366
+    },
+    {
+      "id": "ACC-012",
+      "status": "VALIDÉ CONCEPTION",
+      "summary": "PDF/CSV de base exportable.",
+      "line": 10367
+    },
+    {
+      "id": "ACC-013",
+      "status": "VALIDÉ CONCEPTION",
+      "summary": "Gestionnaire voit Santé du groupe et impayés.",
+      "line": 10368
+    },
+    {
+      "id": "ACC-014",
+      "status": "VALIDÉ CONCEPTION",
+      "summary": "Permissions empêchent accès cross-groupe.",
+      "line": 10369
+    },
+    {
+      "id": "ACC-015",
+      "status": "VALIDÉ CONCEPTION",
+      "summary": "PWA installable et mise à jour contrôlée.",
+      "line": 10370
+    },
+    {
+      "id": "ACC-016",
+      "status": "VALIDÉ CONCEPTION",
+      "summary": "FR/EN fonctionnels.",
+      "line": 10371
+    },
+    {
+      "id": "ACC-017",
+      "status": "VALIDÉ CONCEPTION",
+      "summary": "TechOps montre erreurs/quota/sync.",
+      "line": 10372
+    },
+    {
+      "id": "ACC-018",
+      "status": "VALIDÉ CONCEPTION",
+      "summary": "CI verte et migrations reproductibles.",
+      "line": 10373
+    },
+    {
+      "id": "ACC-019",
+      "status": "VALIDÉ CONCEPTION",
+      "summary": "Aucune dépendance payante obligatoire pour ce périmètre pilote.",
+      "line": 10374
+    },
+    {
+      "id": "ACE-001",
+      "status": "Chaque nouveau service doit déclarer comment il se rattache au modèle métier, aux données, aux permissions, à l’offline, aux événements et aux écrans existants. Une couche posée « au-dessus » sans contrat d’intégration est interdite.",
+      "summary": "Principe d’homogénéité",
+      "line": 10899
+    },
+    {
+      "id": "ACE-002",
+      "status": "Pour une même activité métier, une seule capacité canonique est source de vérité. Plusieurs interfaces peuvent l’appeler, mais elles ne doivent pas maintenir des règles concurrentes.",
+      "summary": "Une activité, une autorité métier",
+      "line": 10901
+    },
+    {
+      "id": "ACE-003",
+      "status": "Si deux services se complètent, définir explicitement leur frontière et leur protocole. S’ils font la même chose, fusionner ou choisir un service canonique et transformer l’autre en adaptateur/façade.",
+      "summary": "Complémentarité avant duplication",
+      "line": 10903
+    },
+    {
+      "id": "ACE-004",
+      "status": "Avant implémentation, inventorier les fonctions, dépendances, états, API, tables, événements, jobs, permissions, tests et écrans touchés directement ou indirectement.",
+      "summary": "Aucune nouveauté ne doit ignorer l’existant",
+      "line": 10905
+    },
+    {
+      "id": "ACE-005",
+      "status": "Un service existant ne peut être supprimé que si le remplaçant couvre ses responsabilités nécessaires, ses cas limites, ses données historiques, ses droits, ses chemins offline et ses tests, ou si les différences sont explicitement acceptées.",
+      "summary": "Parité fonctionnelle avant remplacement",
+      "line": 10907
+    },
+    {
+      "id": "ACE-006",
+      "status": "Si la nouveauté améliore seulement une partie du service existant, extraire cette plus-value et l’intégrer au service canonique plutôt que de dupliquer tout le moteur.",
+      "summary": "Fusion de valeur",
+      "line": 10909
+    },
+    {
+      "id": "ACE-007",
+      "status": "Une amélioration ayant un bénéfice élevé et un coût/nuisance résiduel peut être acceptée si la nuisance est mesurée, contenue, documentée et inférieure au gain global. Aucun seuil rigide 5 %/35 % ne remplace le jugement.",
+      "summary": "Nuisance minimale",
+      "line": 10911
+    },
+    {
+      "id": "ACE-008",
+      "status": "Une nouveauté ne peut pas sacrifier intégrité financière, isolation multi-tenant, droits, audit, idempotence, reprise offline, sécurité des secrets ou possibilité d’export sans arbitrage explicite et solution compensatoire.",
+      "summary": "Régression critique = zéro tolérance par défaut",
+      "line": 10913
+    },
+    {
+      "id": "ACE-009",
+      "status": "Une petite régression mesurable de performance, taille, complexité ou UX peut être tolérée si elle débloque une valeur supérieure et qu’un budget/plan de correction est inscrit.",
+      "summary": "Régression non critique = budget explicite",
+      "line": 10915
+    },
+    {
+      "id": "ACE-010",
+      "status": "Lorsque trois couches ou wrappers successifs servent à corriger/étendre la même responsabilité, déclencher une revue de consolidation. La solution n’est pas automatiquement une quatrième couche.",
+      "summary": "Pas de pile infinie de couches",
+      "line": 10917
+    },
+    {
+      "id": "ACE-011",
+      "status": "Si le nouveau besoin révèle que l’ancienne structure est trop étroite, préférer un refactoring contrôlé avec tests de caractérisation plutôt qu’un contournement qui duplique état et logique.",
+      "summary": "Refactoriser avant de recouvrir",
+      "line": 10919
+    },
+    {
+      "id": "ACE-012",
+      "status": "Une fonction ancienne peut sembler mineure mais être la dépendance d’un rapport, d’un écran, d’un workflow offline ou d’une règle. La suppression nécessite une recherche d’usage et une cartographie de dépendances.",
+      "summary": "Conserver les dépendances utiles",
+      "line": 10921
+    },
+    {
+      "id": "ACE-013",
+      "status": "Le domaine, les événements et contrats publics sont stabilisés autant que possible ; stockage, UI ou fournisseur externe peuvent évoluer derrière des interfaces.",
+      "summary": "Contrats stables, implémentations remplaçables",
+      "line": 10923
+    },
+    {
+      "id": "ACE-014",
+      "status": "Le mode Ultra Simple, dashboard, assistant IA, forum ou écran admin ne doivent pas réimplémenter des calculs financiers divergents.",
+      "summary": "Pas de logique métier dupliquée dans l’UI",
+      "line": 10925
+    },
+    {
+      "id": "ACE-015",
+      "status": "Une valeur critique possède un propriétaire canonique. Cache, index de recherche, dashboard ou export ne deviennent jamais une seconde vérité.",
+      "summary": "Une source de vérité par donnée",
+      "line": 10927
+    },
+    {
+      "id": "ACE-016",
+      "status": "Ajouter une fonctionnalité ne doit pas déclencher automatiquement un paiement, une pénalité, un vote, un SMS payant, un appel IA ou une mutation d’un autre module sans contrat explicite.",
+      "summary": "Éviter les effets de bord cachés",
+      "line": 10929
+    },
+    {
+      "id": "ACE-017",
+      "status": "Interopération via interfaces, événements documentés ou services de domaine ; éviter imports circulaires et lecture directe des tables d’un module par un autre sans couche prévue.",
+      "summary": "Les services doivent se connaître par contrat, pas par dépendances sauvages",
+      "line": 10931
+    },
+    {
+      "id": "ACE-018",
+      "status": "Pour les flux transversaux, préférer événements et responsabilités locales quand possible ; conserver un orchestrateur explicite seulement quand l’ordre transactionnel l’exige.",
+      "summary": "Chorégraphie avant orchestration géante",
+      "line": 10933
+    },
+    {
+      "id": "ACE-019",
+      "status": "Finance, authentification, sauvegarde et actions essentielles passent avant média, analytics décoratif, IA cloud et publicité lorsque CPU, réseau, stockage ou quota sont contraints.",
+      "summary": "Ordre des priorités de ressources",
+      "line": 10935
+    },
+    {
+      "id": "ACE-020",
+      "status": "Une fonction qui rend l’application inutilisable sur téléphone modeste ou réseau faible est fonctionnellement régressive même si elle fonctionne sur un PC puissant.",
+      "summary": "Performance comme dépendance fonctionnelle",
+      "line": 10937
+    },
+    {
+      "id": "ACE-021",
+      "status": "Toute mutation doit déclarer si elle est interdite offline, préparée offline, mise en file ou totalement locale. Aucun module ne doit inventer son propre système de synchronisation concurrent.",
+      "summary": "Offline comme contrat transversal",
+      "line": 10939
+    },
+    {
+      "id": "ACE-022",
+      "status": "Un nouveau module ne peut contourner RBAC/ABAC, audit, chiffrement, consentement, isolation ou gestion des secrets au motif qu’il est expérimental.",
+      "summary": "Sécurité comme propriété globale",
+      "line": 10941
+    },
+    {
+      "id": "ACE-023",
+      "status": "Une évolution visuelle doit être testée en Mode Ultra Simple, clavier, lecteur d’écran quand pertinent, zoom, cible tactile et petit écran.",
+      "summary": "Accessibilité non sacrifiable sans raison",
+      "line": 10943
+    },
+    {
+      "id": "ACE-024",
+      "status": "Toute capacité importante produit des métriques/événements suffisants pour déterminer si elle est la cause d’un plantage, ralentissement ou incohérence.",
+      "summary": "Observabilité obligatoire des nouvelles couches",
+      "line": 10945
+    },
+    {
+      "id": "ACE-025",
+      "status": "Avant de remplacer un service qui marche, écrire des tests qui capturent son comportement utile actuel. Ils deviennent la ceinture de sécurité de la refonte.",
+      "summary": "Test de caractérisation avant grosse modification",
+      "line": 10947
+    },
+    {
+      "id": "ACE-026",
+      "status": "Une nouvelle capacité est testée non seulement seule mais avec ses voisins : permissions, offline, imports, exports, notifications, dashboard, clôture de cycle et multi-appareil selon pertinence.",
+      "summary": "Tests d’intégration croisés",
+      "line": 10949
+    },
+    {
+      "id": "ACE-027",
+      "status": "La version considérée validée est celle réellement testée. Ne pas corriger après test puis livrer sans requalification.",
+      "summary": "Même binaire / même commit pour la qualification",
+      "line": 10951
+    },
+    {
+      "id": "ACE-028",
+      "status": "Une capacité risquée peut être activée par groupe/pilote et désactivée sans désinstaller ou casser les données.",
+      "summary": "Feature flags pour changements risqués",
+      "line": 10953
+    },
+    {
+      "id": "ACE-029",
+      "status": "Toute migration de données destructive ou difficile à annuler nécessite backup, dry-run, vérification et plan de restauration.",
+      "summary": "Migration réversible ou stratégie de retour",
+      "line": 10955
+    },
+    {
+      "id": "ACE-030",
+      "status": "Ancien service : marquer déprécié → mesurer usages/dépendances → migrer consommateurs/données → période de coexistence bornée → suppression avec preuve.",
+      "summary": "Dépréciation en étapes",
+      "line": 10957
+    },
+    {
+      "id": "ACE-031",
+      "status": "La coexistence temporaire de deux moteurs similaires est autorisée pour migration, jamais comme état permanent non gouverné.",
+      "summary": "Pas de coexistence éternelle",
+      "line": 10959
+    },
+    {
+      "id": "ACE-032",
+      "status": "Demander au propriétaire d’arbitrer lorsque le choix change une règle de tontine, une expérience essentielle, un coût récurrent, une politique de données ou sacrifie une capacité importante pour une autre.",
+      "summary": "Arbitrage utilisateur lorsque le compromis est métier",
+      "line": 10961
+    },
+    {
+      "id": "ACE-033",
+      "status": "Codex/assistant doit décider seul des détails techniques réversibles lorsque les garde-fous et objectifs rendent une solution clairement préférable, en documentant le choix.",
+      "summary": "Pas d’arbitrage inutile",
+      "line": 10963
+    },
+    {
+      "id": "ACE-034",
+      "status": "Une imperfection peut être acceptée si aucune alternative réaliste n’offre le même bénéfice, si le risque est connu, limité, observable et réversible ou compensé.",
+      "summary": "Maux nécessaires encadrés",
+      "line": 10965
+    },
+    {
+      "id": "ACE-035",
+      "status": "Le succès d’une évolution est évalué sur l’application complète : valeur métier + fiabilité + performance + sécurité + accessibilité + coût + maintenabilité + compatibilité.",
+      "summary": "Le progrès se mesure à l’ensemble",
+      "line": 10967
+    },
+    {
+      "id": "ACE-036",
+      "status": "Simplifier l’interface peut masquer une fonction dans un parcours avancé ; elle ne doit pas supprimer le moteur ou la donnée si elle reste utile.",
+      "summary": "Ne pas confondre simplification et suppression",
+      "line": 10969
+    },
+    {
+      "id": "ACE-037",
+      "status": "Fusionner des services doit réutiliser les preuves et données existantes ; une réécriture from scratch n’est justifiée qu’avec analyse de coût/risque et tests de migration.",
+      "summary": "Ne pas confondre consolidation et réécriture totale",
+      "line": 10971
+    },
+    {
+      "id": "ACE-038",
+      "status": "L’homogénéité ne signifie pas uniformité : un module critique peut avoir plus de ressources, de tests et de visibilité qu’un module secondaire. La cohérence vient des contrats et objectifs communs.",
+      "summary": "Les doigts ne sont pas tous de même taille",
+      "line": 10973
+    },
+    {
+      "id": "ACE-039",
+      "status": "Une nouveauté sans utilisateur, décision, métrique ou problème réel entre en laboratoire, pas dans le cœur produit.",
+      "summary": "Chaque capacité doit avoir une raison d’être",
+      "line": 10975
+    },
+    {
+      "id": "ACE-040",
+      "status": "Avant fusion, livraison ou activation, l’équipe doit prouver qu’elle a considéré le contexte complet et les dépendances raisonnablement découvrables ; l’ignorance de l’existant n’est pas une justification de régression.",
+      "summary": "Aucun avantage ne doit devenir négatif par absence de contexte",
+      "line": 10977
+    },
+    {
+      "id": "CORE.IDENTITY",
+      "status": "Lifetime identity, profiles & multi-group access",
+      "summary": "Identité durable, profils et multi-groupes",
+      "line": 37598
+    },
+    {
+      "id": "CORE.DISCOVERY",
+      "status": "Group search & discovery",
+      "summary": "Recherche et découverte de groupes",
+      "line": 37599
+    },
+    {
+      "id": "CORE.MEMBERSHIP_GATEWAY",
+      "status": "Membership linking, joining & invitations",
+      "summary": "Adhésion, connexion au groupe et invitations",
+      "line": 37600
+    },
+    {
+      "id": "CORE.GROUP_RECRUITMENT",
+      "status": "Member recruiting & talent search",
+      "summary": "Recrutement et recherche de membres",
+      "line": 37601
+    },
+    {
+      "id": "CORE.ASSOCIATIONS",
+      "status": "Multi-purpose associations",
+      "summary": "Associations multi-rubriques",
+      "line": 37602
+    },
+    {
+      "id": "CORE.ROTATING_TONTINE",
+      "status": "Rotating tontines",
+      "summary": "Tontines rotatives",
+      "line": 37603
+    },
+    {
+      "id": "CORE.RUBRICS",
+      "status": "Configurable funds/categories & rubric encyclopedia",
+      "summary": "Rubriques configurables et encyclopédie",
+      "line": 37604
+    },
+    {
+      "id": "GROUP.LAUNCH_STUDIO",
+      "status": "Group launch, onboarding & feasibility studio",
+      "summary": "Studio de création, intégration et faisabilité",
+      "line": 37605
+    },
+    {
+      "id": "GROUP.MODEL_REGISTRY",
+      "status": "Group model registry",
+      "summary": "Registre des modèles de groupes",
+      "line": 37606
+    },
+    {
+      "id": "GROUP.CASE_LAW",
+      "status": "Operational case-law & emerging practices",
+      "summary": "Jurisprudence métier et pratiques émergentes",
+      "line": 37607
+    },
+    {
+      "id": "GROUP.EVOLUTION",
+      "status": "Tontine → Association evolution",
+      "summary": "Évolution Tontine → Association",
+      "line": 37608
+    },
+    {
+      "id": "FINANCE.LEDGER",
+      "status": "Canonical ledger & financial source of truth",
+      "summary": "Ledger et vérité financière",
+      "line": 37609
+    },
+    {
+      "id": "FINANCE.CASHBOX",
+      "status": "Physical cashbox & reconciliation",
+      "summary": "Caisse physique et rapprochement",
+      "line": 37610
+    },
+    {
+      "id": "FINANCE.FUND_CUSTODY",
+      "status": "Logical funds, containers & custodians",
+      "summary": "Fonds logiques, contenants et dépositaires",
+      "line": 37611
+    },
+    {
+      "id": "FINANCE.LOANS",
+      "status": "Loans, guarantors & schedules",
+      "summary": "Prêts, avalistes et échéanciers",
+      "line": 37612
+    },
+    {
+      "id": "FINANCE.ARREARS",
+      "status": "Arrears & payment recovery",
+      "summary": "Impayés et régularisation",
+      "line": 37613
+    },
+    {
+      "id": "FINANCE.TRUST_SCORE",
+      "status": "Explainable trust score",
+      "summary": "Score de confiance explicable",
+      "line": 37614
+    },
+    {
+      "id": "FINANCE.WALLET",
+      "status": "Internal multi-category wallet",
+      "summary": "Wallet interne multi-rubriques",
+      "line": 37615
+    },
+    {
+      "id": "SOLIDARITY.EXPRESS",
+      "status": "Rapid solidarity assistance",
+      "summary": "Solidarité Express",
+      "line": 37616
+    },
+    {
+      "id": "MEETING.COMMAND_CENTER",
+      "status": "Meeting Command Center / session matrix",
+      "summary": "Cockpit de réunion / feuille de séance",
+      "line": 37617
+    },
+    {
+      "id": "MEETING.CYCLE_PLANNING",
+      "status": "Cycle planning & beneficiaries",
+      "summary": "Planning de cycle et bénéficiaires",
+      "line": 37618
+    },
+    {
+      "id": "GOVERNANCE.VOTE",
+      "status": "Voting, decisions & quorum",
+      "summary": "Votes, décisions et quorum",
+      "line": 37619
+    },
+    {
+      "id": "GOVERNANCE.MANDATE",
+      "status": "Mandates, delegation & delegated authority",
+      "summary": "Mandats, délégations et pouvoirs",
+      "line": 37620
+    },
+    {
+      "id": "GOVERNANCE.TENDER",
+      "status": "Tenders & applications",
+      "summary": "Appels d’offres et candidatures",
+      "line": 37621
+    },
+    {
+      "id": "GOVERNANCE.QUIET_WATCH",
+      "status": "Quiet Watch & negotiated governance assistance",
+      "summary": "Veille discrète et accompagnement négocié",
+      "line": 37622
+    },
+    {
+      "id": "GOVERNANCE.DOCUMENT_STUDIO",
+      "status": "Governance document studio",
+      "summary": "Statuts, RI et documents de gouvernance",
+      "line": 37623
+    },
+    {
+      "id": "COMMUNITY.FORUM",
+      "status": "Solution-oriented public/private forum",
+      "summary": "Forum public/privé orienté solutions",
+      "line": 37624
+    },
+    {
+      "id": "COMMUNITY.PROFESSIONAL_HUBS",
+      "status": "Automatic manager & partner hubs",
+      "summary": "Forums automatiques gestionnaires & partenaires",
+      "line": 37625
+    },
+    {
+      "id": "COMMUNITY.CHAT",
+      "status": "Chat & communication",
+      "summary": "Chat et communication",
+      "line": 37626
+    },
+    {
+      "id": "COMMUNITY.MICRO_ADS",
+      "status": "Community micro-listings",
+      "summary": "Micro-annonces communautaires",
+      "line": 37627
+    },
+    {
+      "id": "MARKETPLACE.CORE",
+      "status": "Useful local marketplace",
+      "summary": "Marketplace utile et locale",
+      "line": 37628
+    },
+    {
+      "id": "MARKETPLACE.SUPPLIERS",
+      "status": "Suppliers, sourcing & quotes",
+      "summary": "Fournisseurs, sourcing et devis",
+      "line": 37629
+    },
+    {
+      "id": "MARKETPLACE.GROUP_PURCHASE",
+      "status": "Group purchasing & demand aggregation",
+      "summary": "Achats groupés et demande agrégée",
+      "line": 37630
+    },
+    {
+      "id": "MARKETPLACE.SUPPLIER_CREDIT",
+      "status": "Supplier trade credit",
+      "summary": "Crédit commercial fournisseur",
+      "line": 37631
+    },
+    {
+      "id": "MARKETPLACE.REWARDS",
+      "status": "Cashback, points & loyalty",
+      "summary": "Cashback, points et fidélité",
+      "line": 37632
+    },
+    {
+      "id": "MARKETPLACE.DIRECTORY",
+      "status": "Partner & service directory",
+      "summary": "Annuaire partenaires et services",
+      "line": 37633
+    },
+    {
+      "id": "MANAGER.BUSINESS_STUDIO",
+      "status": "Private profitability cockpit",
+      "summary": "Cockpit privé de rentabilité",
+      "line": 37634
+    },
+    {
+      "id": "MANAGER.PUBLIC_PROFILE",
+      "status": "Manager public profile & reputation",
+      "summary": "Profil public et réputation gestionnaire",
+      "line": 37635
+    },
+    {
+      "id": "GROWTH.REFERRAL",
+      "status": "Word-of-mouth, referrals & rewarded advocacy",
+      "summary": "Bouche-à-oreille et parrainage rémunéré",
+      "line": 37636
+    },
+    {
+      "id": "ADS.ADMANAGER",
+      "status": "Professional AdManager & useful sponsorship",
+      "summary": "AdManager professionnel & sponsoring utile",
+      "line": 37637
+    },
+    {
+      "id": "LEARNING.MANAGER_ACADEMY",
+      "status": "Manager Academy",
+      "summary": "Manager Academy",
+      "line": 37638
+    },
+    {
+      "id": "LEARNING.NGO",
+      "status": "NGOs, facilitators & impact",
+      "summary": "ONG, animateurs et mesure d’impact",
+      "line": 37639
+    },
+    {
+      "id": "LEARNING.KNOWLEDGE_BANK",
+      "status": "Group-practice knowledge bank",
+      "summary": "Banque de connaissances des pratiques",
+      "line": 37640
+    },
+    {
+      "id": "AI.FOUNDER",
+      "status": "Founder strategic AI",
+      "summary": "Grande IA Fondateur",
+      "line": 37641
+    },
+    {
+      "id": "AI.ASSISTANT",
+      "status": "Hybrid/local AI assistant",
+      "summary": "Assistant IA hybride/local",
+      "line": 37642
+    },
+    {
+      "id": "SAFETY.ANTISCAM",
+      "status": "Anti-scam & crypto safety center",
+      "summary": "Centre anti-arnaque et crypto",
+      "line": 37643
+    },
+    {
+      "id": "OFFLINE.OUTBOX",
+      "status": "Offline & intelligent outbox",
+      "summary": "Offline et file d’attente intelligente",
+      "line": 37644
+    },
+    {
+      "id": "RELAY.COMMUNITY",
+      "status": "Meeting Sync / Community Relay",
+      "summary": "Meeting Sync / Community Relay",
+      "line": 37645
+    },
+    {
+      "id": "EXPERIENCE.HOME_COCKPIT",
+      "status": "Home command cockpit",
+      "summary": "Accueil / poste de commandement",
+      "line": 37646
+    },
+    {
+      "id": "EXPERIENCE.ULTRA_SIMPLE",
+      "status": "Ultra Simple Mode",
+      "summary": "Mode Ultra Simple",
+      "line": 37647
+    },
+    {
+      "id": "EXPERIENCE.ORAL",
+      "status": "Voice/guided mode",
+      "summary": "Mode Oral / guidé",
+      "line": 37648
+    },
+    {
+      "id": "EXPERIENCE.DISCRETION",
+      "status": "Discretion mode & shared phone",
+      "summary": "Mode discrétion et téléphone partagé",
+      "line": 37649
+    },
+    {
+      "id": "USER.UNIVERSAL.INBOX",
+      "status": "Universal task inbox",
+      "summary": "Boîte de travail universelle",
+      "line": 37650
+    },
+    {
+      "id": "SUPPORT.CENTER",
+      "status": "Support, disputes & appeals",
+      "summary": "Support, litiges et recours",
+      "line": 37651
+    },
+    {
+      "id": "TRUST.VERIFICATION",
+      "status": "Verification & evidence center",
+      "summary": "Centre de vérification et preuves",
+      "line": 37652
+    },
+    {
+      "id": "DATA.QUALITY",
+      "status": "Data quality & imports",
+      "summary": "Qualité des données et imports",
+      "line": 37653
+    },
+    {
+      "id": "DATA.TIME_MACHINE",
+      "status": "Historical state / Time Machine",
+      "summary": "Historique / Time Machine",
+      "line": 37654
+    },
+    {
+      "id": "PAPER.BRIDGE",
+      "status": "Paper Bridge — registers, sheets & cards",
+      "summary": "Paper Bridge — registres, fiches et cartes",
+      "line": 37655
+    },
+    {
+      "id": "REPORTING.EXPORTS",
+      "status": "PDF, Excel, Word, CSV, JSON",
+      "summary": "PDF, Excel, Word, CSV, JSON",
+      "line": 37656
+    },
+    {
+      "id": "NOTIFY.MULTICHANNEL",
+      "status": "Multichannel notifications",
+      "summary": "Notifications multicanales",
+      "line": 37657
+    },
+    {
+      "id": "DASHBOARDS.ALL",
+      "status": "Role-based dashboards",
+      "summary": "Dashboards par profil",
+      "line": 37658
+    },
+    {
+      "id": "FEDERATION.GROUP_NETWORK",
+      "status": "Federations / group networks",
+      "summary": "Fédérations / réseaux de groupes",
+      "line": 37659
+    },
+    {
+      "id": "SUCCESSION.NEXT_OF_KIN",
+      "status": "Succession & next of kin",
+      "summary": "Succession et ayants droit",
+      "line": 37660
+    },
+    {
+      "id": "COMPATIBILITY.LEGACY",
+      "status": "Legacy-device compatibility",
+      "summary": "Compatibilité téléphones anciens",
+      "line": 37661
+    },
+    {
+      "id": "PROJECT.MEMORY",
+      "status": "Project Memory Vault & Memory Before Code",
+      "summary": "Project Memory Vault & Memory Before Code",
+      "line": 37662
+    },
+    {
+      "id": "DISCOVERY.UNIVERSAL_SEARCH",
+      "status": "VALIDATED",
+      "summary": "recherche universelle multi-index avec Policy",
+      "line": 39259
+    },
+    {
+      "id": "DISCOVERY.GROUP.HANDLE_CODE",
+      "status": "VALIDATED",
+      "summary": "handle/code/lien/QR de groupe",
+      "line": 39260
+    },
+    {
+      "id": "DISCOVERY.GROUP.FILTERS",
+      "status": "VALIDATED",
+      "summary": "filtres mission/localité/calendrier/engagement/règles",
+      "line": 39261
+    },
+    {
+      "id": "DISCOVERY.GROUP.FIT_SIMULATOR",
+      "status": "VALIDATED",
+      "summary": "simulation privée d'adéquation",
+      "line": 39262
+    },
+    {
+      "id": "DISCOVERY.GROUP.PREVIEW",
+      "status": "VALIDATED",
+      "summary": "aperçu/transparence graduée avant adhésion",
+      "line": 39263
+    },
+    {
+      "id": "DISCOVERY.SAVED_SEARCH",
+      "status": "VALIDATED",
+      "summary": "recherches/favoris/alertes opt-in",
+      "line": 39264
+    },
+    {
+      "id": "DISCOVERY.RANKING.EXPLAINABLE",
+      "status": "VALIDATED",
+      "summary": "ranking explicable, sans domination popularité/richesse",
+      "line": 39265
+    },
+    {
+      "id": "DISCOVERY.MEMBER.OPT_IN",
+      "status": "VALIDATED",
+      "summary": "recherche de candidats uniquement opt-in",
+      "line": 39266
+    },
+    {
+      "id": "DISCOVERY.RECRUITMENT.CAMPAIGN",
+      "status": "VALIDATED",
+      "summary": "campagnes de recrutement",
+      "line": 39267
+    },
+    {
+      "id": "DISCOVERY.CANDIDATE.PORTFOLIO",
+      "status": "VALIDATED",
+      "summary": "portfolio sélectif de candidature",
+      "line": 39268
+    },
+    {
+      "id": "TRUST.COMMITMENT_RELIABILITY",
+      "status": "VALIDATED",
+      "summary": "fiabilité contextualisée par niveau d'engagement",
+      "line": 39269
+    },
+    {
+      "id": "TRUST.GROUP_RELIABILITY",
+      "status": "VALIDATED",
+      "summary": "fiabilité/transparence du groupe",
+      "line": 39270
+    },
+    {
+      "id": "TRUST.APPEAL.REHABILITATION",
+      "status": "VALIDATED",
+      "summary": "recours, correction, vieillissement, réhabilitation",
+      "line": 39271
+    },
+    {
+      "id": "TRUST.ANTI_GAMING",
+      "status": "VALIDATED",
+      "summary": "anti-manipulation des preuves de réputation",
+      "line": 39272
+    },
+    {
+      "id": "RUBRIC.ONTOLOGY.FACETS",
+      "status": "VALIDATED",
+      "summary": "ontologie multi-facettes et syncrétique",
+      "line": 39273
+    },
+    {
+      "id": "RUBRIC.RECONSTITUTION",
+      "status": "VALIDATED",
+      "summary": "mécanismes de reconstitution d'un fonds",
+      "line": 39274
+    },
+    {
+      "id": "RUBRIC.VISIBILITY_POLICY",
+      "status": "VALIDATED",
+      "summary": "visibilité différée/conditionnelle des données dérivées",
+      "line": 39275
+    },
+    {
+      "id": "MEETING.IN_SESSION_DECISION",
+      "status": "VALIDATED",
+      "summary": "valeurs décidées séance tenante avec preuve",
+      "line": 39276
+    },
+    {
+      "id": "MEETING.BENEFICIARY.EVIDENCE",
+      "status": "VALIDATED",
+      "summary": "bénéficiaires et preuve de sortie",
+      "line": 39277
+    },
+    {
+      "id": "MEETING.COLLECTED_DISBURSED_VARIANCE",
+      "status": "VALIDATED",
+      "summary": "collecte ≠ décaissement expliquable",
+      "line": 39278
+    },
+    {
+      "id": "SCHEDULER.ADVANCED_RECURRENCE",
+      "status": "VALIDATED",
+      "summary": "calendrier de versements flexible",
+      "line": 39279
+    },
+    {
+      "id": "TONTINE.MULTI_SHARE",
+      "status": "VALIDATED",
+      "summary": "plusieurs parts/noms par membre",
+      "line": 39280
+    },
+    {
+      "id": "TONTINE.IN_KIND",
+      "status": "VALIDATED",
+      "summary": "tontines en nature",
+      "line": 39281
+    },
+    {
+      "id": "TONTINE.MID_CYCLE_CATCHUP",
+      "status": "VALIDATED",
+      "summary": "arrivée/rattrapage en cours de cycle",
+      "line": 39282
+    },
+    {
+      "id": "LEDGER.EXERCISE.CARRYOVER",
+      "status": "VALIDATED",
+      "summary": "report de caisses/dettes vers nouvel exercice",
+      "line": 39283
+    },
+    {
+      "id": "LOAN.GUARANTOR",
+      "status": "VALIDATED",
+      "summary": "avalistes/garants",
+      "line": 39284
+    },
+    {
+      "id": "SAVINGS.INTEREST.VISIBILITY",
+      "status": "VALIDATED",
+      "summary": "intérêt provisoire/final et politique de publication",
+      "line": 39285
+    },
+    {
+      "id": "REPORTING.CUBE",
+      "status": "VALIDATED",
+      "summary": "cube de reporting commun",
+      "line": 39286
+    },
+    {
+      "id": "REPORTING.PUBLISH_TO_MEMBERS",
+      "status": "VALIDATED",
+      "summary": "publication contrôlée des relevés",
+      "line": 39287
+    },
+    {
+      "id": "GOVERNANCE.READ_ONLY.PROFILES",
+      "status": "VALIDATED",
+      "summary": "lecture seule graduée, candidats inclus",
+      "line": 39288
+    },
+    {
+      "id": "COMMUNITY.MICRO_ADS.LOCAL",
+      "status": "VALIDATED",
+      "summary": "« Je cherche / Je propose » local",
+      "line": 39289
+    },
+    {
+      "id": "PARTNER.REPUTATION.TRANSACTIONAL",
+      "status": "VALIDATED",
+      "summary": "réputation partenaire basée sur transactions/preuves",
+      "line": 39290
+    },
+    {
+      "id": "MEMORY.SOURCE_TO_CAPABILITY",
+      "status": "VALIDATED",
+      "summary": "couverture source→capacité obligatoire",
+      "line": 39291
+    },
+    {
+      "id": "MEMORY.DEEP_SOURCE_DIGEST",
+      "status": "VALIDATED",
+      "summary": "— Un digest machine anonymisé des sources historiques doit exister et être contrôlé en CI. Un fichier marqué « ingéré » sans empreinte, structure ou synthèse de capacités constitue une erreur de mémoire.",
+      "line": 39432
+    },
+    {
+      "id": "MEETING.SESSION.START",
+      "status": "VALIDATED",
+      "summary": "— Le système moderne doit permettre d'ouvrir une séance identifiable, datée, reliée à l'exercice et au groupe, puis de capturer les opérations « séance tenante » dans ce contexte. L'ouverture de séance ne doit pas créer une deuxième autorité financière : elle fournit le contexte au Meeting/Command Center, au Ledger et à l'Audit.",
+      "line": 39445
+    },
+    {
+      "id": "SIMULATION.CONTRIBUTION",
+      "status": "VALIDATED",
+      "summary": "— Les simulateurs d'association/tontine sont des fonctions de préparation et de décision. Une simulation n'est jamais une transaction ni une promesse financière.",
+      "line": 39447
+    },
+    {
+      "id": "MEMBERSHIP.LEGACY_COHORT_IMPORT",
+      "status": "VALIDATED",
+      "summary": "— Lors d'une migration, les catégories historiques d'ancienneté/cohorte sont importées comme faits sourcés ou tags de migration, pas comme classes sociales permanentes.",
+      "line": 39463
+    },
+    {
+      "id": "MEMBERSHIP.REGISTRATION_FEE_POLICY",
+      "status": "VALIDATED",
+      "summary": "— Les frais d'adhésion/inscription peuvent dépendre de la période, de la catégorie de membre, d'une décision du groupe ou d'une règle versionnée. Aucun montant « ancien/nouveau membre » ne doit être codé en dur.",
+      "line": 39465
+    },
+    {
+      "id": "IDENTITY.PRIVATE_OBSERVATIONS",
+      "status": "VALIDATED",
+      "summary": "— Les observations d'assistance ou notes privées exigent un scope d'accès dédié, une finalité explicite et une politique de conservation. Elles ne participent jamais au Discovery public ou à un score de richesse.",
+      "line": 39467
+    },
+    {
+      "id": "SCHEDULER.RECURRENCE.GRAMMAR",
+      "status": "VALIDATED",
+      "summary": "doit pouvoir représenter, selon besoin :",
+      "line": 39473
+    },
+    {
+      "id": "MEETING.BENEFICIARY_REGISTER",
+      "status": "VALIDATED",
+      "summary": "— Les sorties associées à un bénéficiaire doivent permettre d'identifier le bénéficiaire, le type de bénéfice, la rubrique, la date/session, le montant ou quantité, la preuve/accusé si requis et le lien ledger.",
+      "line": 39526
+    },
+    {
+      "id": "MEETING.PERIOD_CARRY",
+      "status": "VALIDATED",
+      "summary": "— Le solde de début de période peut provenir du mois/exercice précédent ; le report est explicite et auditable, jamais une cellule magique.",
+      "line": 39528
+    },
+    {
+      "id": "LOAN.RATE.SCHEDULE",
+      "status": "VALIDATED",
+      "summary": ":",
+      "line": 39571
+    },
+    {
+      "id": "LOAN.INTEREST.METHOD",
+      "status": "VALIDATED",
+      "summary": "doit notamment supporter/configurer quand le groupe l'autorise :",
+      "line": 39579
+    },
+    {
+      "id": "SAVINGS.YIELD.ALLOCATION",
+      "status": "VALIDATED",
+      "summary": "— Le moteur doit pouvoir calculer une clé de répartition versionnée et explicable fondée sur le capital et/ou la durée/poids de présence selon la règle du groupe.",
+      "line": 39603
+    },
+    {
+      "id": "SAVINGS.YIELD.CHARGES_SEPARATION",
+      "status": "VALIDATED",
+      "summary": "— Les indemnités de bureau, prélèvements, charges ou autres affectations ne doivent pas être confondus avec le rendement net du membre. Toute ventilation est traçable.",
+      "line": 39605
+    },
+    {
+      "id": "REPORTING.AS_OF_SESSION",
+      "status": "VALIDATED",
+      "summary": "— Un rapport membre/groupe doit pouvoir dire « situation à la date/session X » et reproduire exactement le snapshot correspondant.",
+      "line": 39627
+    },
+    {
+      "id": "REPORTING.CLAIM_WORKFLOW",
+      "status": "VALIDATED",
+      "summary": "— Un relevé peut indiquer un canal de réclamation. Toute contestation doit pouvoir devenir un Case/Workflow relié au snapshot et aux preuves, sans modifier silencieusement l'histoire du rapport.",
+      "line": 39629
+    },
+    {
+      "id": "MIGRATION.LEGACY_FORENSICS",
+      "status": "VALIDATED",
+      "summary": "— Toute migration réelle produit un rapport : source, feuille, règle comprise, ambiguïtés, erreurs, données rejetées, mapping canonique, contrôles de totaux et preuve de validation.",
+      "line": 39643
+    },
+    {
+      "id": "DISCOVERY.MUTUAL_GRAPH",
+      "status": "VALIDATED",
+      "summary": "— L'objet canonique est un graphe de découverte/adhésion à deux sens, gouverné par Consent/Policy, pas une simple barre de recherche.",
+      "line": 39711
+    },
+    {
+      "id": "MEMORY.PROJECT_TRUTH_LEDGER",
+      "status": "VALIDATED",
+      "summary": "— Le dépôt doit contenir un registre machine-lisible des faits de projet, distinct du Feature Registry.",
+      "line": 39717
+    },
+    {
+      "id": "ACQUIRED",
+      "status": null,
+      "summary": "; elle ne prouve pas à elle seule le déploiement D1/Worker.",
+      "line": 39786
+    }
+  ]
+}

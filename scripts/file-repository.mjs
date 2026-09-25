@@ -1,0 +1,95 @@
+import { mkdir, readFile, writeFile, rename, rm } from 'node:fs/promises';
+import path from 'node:path';
+
+const empty = () => ({
+  version: 1,
+  users: {}, projects: {}, groups: {}, memberships: {}, obligations: {}, cases: {}, audits: {}, meetings: {},
+  ledgerAccounts: {}, ledgerEntries: {}, receipts: {}, cashboxReconciliations: {},
+  publicGroupListings: {}, membershipApplications: {}, rubricDefinitions: {}, governanceKnowledgeClaims: {}
+});
+
+const clone = value => value === undefined ? undefined : structuredClone(value);
+
+export class FilePlatformRepository {
+  constructor(filePath = '.data/local-db.json') {
+    this.filePath = path.resolve(filePath);
+    this.data = empty();
+    this.ready = this.#load();
+    this.writeChain = Promise.resolve();
+  }
+
+  async #load() {
+    await mkdir(path.dirname(this.filePath), { recursive: true });
+    try {
+      const parsed = JSON.parse(await readFile(this.filePath, 'utf8'));
+      this.data = { ...empty(), ...parsed };
+    } catch (error) {
+      if (error?.code !== 'ENOENT') throw error;
+      await this.#persist();
+    }
+  }
+
+  async #persist() {
+    const tmp = `${this.filePath}.tmp`;
+    await writeFile(tmp, JSON.stringify(this.data, null, 2), 'utf8');
+    try { await rename(tmp, this.filePath); }
+    catch {
+      await rm(this.filePath, { force: true });
+      await rename(tmp, this.filePath);
+    }
+  }
+
+  async #write(mutator) {
+    await this.ready;
+    let result;
+    this.writeChain = this.writeChain.then(async () => { result = mutator(); await this.#persist(); });
+    await this.writeChain;
+    return clone(result);
+  }
+
+  async #read(reader) { await this.ready; await this.writeChain; return clone(reader()); }
+  #upsert(bucket, value) { this.data[bucket][value.id] = clone(value); return value; }
+  #values(bucket) { return Object.values(this.data[bucket]); }
+
+  saveUser(v){return this.#write(()=>this.#upsert('users',v));}
+  getUser(id){return this.#read(()=>this.data.users[id]);}
+  saveProject(v){return this.#write(()=>this.#upsert('projects',v));}
+  getProject(t,id){return this.#read(()=>{const x=this.data.projects[id];return x?.tenantId===t?x:undefined;});}
+  saveGroup(v){return this.#write(()=>this.#upsert('groups',v));}
+  getGroup(t,id){return this.#read(()=>{const x=this.data.groups[id];return x?.tenantId===t?x:undefined;});}
+  listGroups(t){return this.#read(()=>this.#values('groups').filter(x=>x.tenantId===t));}
+  saveMembership(v){return this.#write(()=>this.#upsert('memberships',v));}
+  getMembership(t,g,id){return this.#read(()=>{const x=this.data.memberships[id];return x?.tenantId===t&&x.groupId===g?x:undefined;});}
+  listMemberships(t,g){return this.#read(()=>this.#values('memberships').filter(x=>x.tenantId===t&&x.groupId===g));}
+  saveObligation(v){return this.#write(()=>this.#upsert('obligations',v));}
+  listObligations(t,a){return this.#read(()=>this.#values('obligations').filter(x=>x.tenantId===t&&(!a||x.assigneeId===a)));}
+  saveCase(v){return this.#write(()=>this.#upsert('cases',v));}
+  listCases(t,a){return this.#read(()=>this.#values('cases').filter(x=>x.tenantId===t&&(!a||x.openedBy===a)));}
+  saveAudit(v){return this.#write(()=>this.#upsert('audits',v));}
+  listAudit(t){return this.#read(()=>this.#values('audits').filter(x=>x.tenantId===t));}
+  saveMeeting(v){return this.#write(()=>this.#upsert('meetings',v));}
+  getMeeting(t,g,id){return this.#read(()=>{const x=this.data.meetings[id];return x?.tenantId===t&&x.groupId===g?x:undefined;});}
+  listMeetings(t,g){return this.#read(()=>this.#values('meetings').filter(x=>x.tenantId===t&&x.groupId===g));}
+  saveLedgerAccount(v){return this.#write(()=>this.#upsert('ledgerAccounts',v));}
+  listLedgerAccounts(t,g){return this.#read(()=>this.#values('ledgerAccounts').filter(x=>x.tenantId===t&&x.groupId===g));}
+  saveLedgerEntry(v){return this.#write(()=>this.#upsert('ledgerEntries',v));}
+  getLedgerEntry(t,g,id){return this.#read(()=>{const x=this.data.ledgerEntries[id];return x?.tenantId===t&&x.groupId===g?x:undefined;});}
+  findLedgerEntryByIdempotency(t,g,k){return this.#read(()=>this.#values('ledgerEntries').find(x=>x.tenantId===t&&x.groupId===g&&x.idempotencyKey===k));}
+  listLedgerEntries(t,g){return this.#read(()=>this.#values('ledgerEntries').filter(x=>x.tenantId===t&&x.groupId===g));}
+  saveContributionReceipt(v){return this.#write(()=>this.#upsert('receipts',v));}
+  findContributionReceiptByIdempotency(t,g,k){return this.#read(()=>this.#values('receipts').find(x=>x.tenantId===t&&x.groupId===g&&x.idempotencyKey===k));}
+  listContributionReceipts(t,g){return this.#read(()=>this.#values('receipts').filter(x=>x.tenantId===t&&x.groupId===g));}
+  saveCashboxReconciliation(v){return this.#write(()=>this.#upsert('cashboxReconciliations',v));}
+  listCashboxReconciliations(t,g){return this.#read(()=>this.#values('cashboxReconciliations').filter(x=>x.tenantId===t&&x.groupId===g));}
+  savePublicGroupListing(v){return this.#write(()=>{this.data.publicGroupListings[v.groupId]=clone(v);return v;});}
+  getPublicGroupListing(groupId){return this.#read(()=>this.data.publicGroupListings[groupId]);}
+  listPublicGroupListings(){return this.#read(()=>this.#values('publicGroupListings'));}
+  saveMembershipApplication(v){return this.#write(()=>this.#upsert('membershipApplications',v));}
+  getMembershipApplication(id){return this.#read(()=>this.data.membershipApplications[id]);}
+  listMembershipApplicationsForGroup(t,g){return this.#read(()=>this.#values('membershipApplications').filter(x=>x.targetTenantId===t&&x.groupId===g));}
+  saveRubricDefinition(v){return this.#write(()=>this.#upsert('rubricDefinitions',v));}
+  getRubricDefinition(t,g,id){return this.#read(()=>{const x=this.data.rubricDefinitions[id];return x?.tenantId===t&&x.groupId===g?x:undefined;});}
+  listRubricDefinitions(t,g){return this.#read(()=>this.#values('rubricDefinitions').filter(x=>x.tenantId===t&&x.groupId===g));}
+  saveGovernanceKnowledgeClaim(v){return this.#write(()=>this.#upsert('governanceKnowledgeClaims',v));}
+  listGovernanceKnowledgeClaims(t,g){return this.#read(()=>this.#values('governanceKnowledgeClaims').filter(x=>x.tenantId===t&&(!g||x.groupId===g)));}
+}

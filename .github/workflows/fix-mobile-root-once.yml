@@ -1,0 +1,60 @@
+name: Eco-System 0.6 — Fix Mobile Root Once
+
+on:
+  workflow_dispatch:
+  push:
+    branches: ['next/0.6.0-mobile-living-rules']
+    paths: ['.github/workflows/fix-mobile-root-once.yml']
+
+permissions:
+  contents: write
+
+jobs:
+  fix-root:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Apply explicit root asset routing and regression test
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+          worker=Path('workers/api/src/index.ts')
+          s=worker.read_text()
+          old="""export default {async fetch(request:Request,env:WorkerEnv={}){\n  const url=new URL(request.url);\n  if(request.method==='GET' && env.ASSETS && url.pathname!=='/health' && !url.pathname.startsWith('/api/')){\n    const asset=await env.ASSETS.fetch(request);\n    if(asset.status!==404 || url.pathname==='/' || url.pathname==='/index.html') return asset;\n  }\n  return createApiHandler(env.DB?new D1PlatformRepository(env.DB):defaultRepo)(request);\n}};\n"""
+          new="""export default {async fetch(request:Request,env:WorkerEnv={}){\n  const url=new URL(request.url);\n  if(request.method==='GET' && env.ASSETS && url.pathname!=='/health' && !url.pathname.startsWith('/api/')){\n    // In Worker-first assets mode, make the public mobile entry point explicit.\n    // `/` must always remain a usable PWA door instead of falling through to JSON 404.\n    const assetUrl=new URL(request.url);\n    if(assetUrl.pathname==='/') assetUrl.pathname='/index.html';\n    const assetRequest=assetUrl.href===request.url?request:new Request(assetUrl.href,request);\n    const asset=await env.ASSETS.fetch(assetRequest);\n    if(asset.status!==404 || url.pathname==='/' || url.pathname==='/index.html') return asset;\n  }\n  return createApiHandler(env.DB?new D1PlatformRepository(env.DB):defaultRepo)(request);\n}};\n"""
+          if old not in s:
+              raise SystemExit('EXPECTED_WORKER_BLOCK_NOT_FOUND')
+          worker.write_text(s.replace(old,new))
+
+          test=Path('tests/api.test.mjs')
+          t=test.read_text()
+          t=t.replace("import { handleRequest } from '../.build/workers/api/src/index.js';", "import worker, { handleRequest } from '../.build/workers/api/src/index.js';")
+          marker="mobile root explicitly resolves to index.html through Cloudflare assets binding"
+          if marker not in t:
+              t += """\n\ntest('mobile root explicitly resolves to index.html through Cloudflare assets binding', async () => {\n  const requested=[];\n  const env={ASSETS:{fetch:async request=>{\n    requested.push(new URL(request.url).pathname);\n    return new Response('<!doctype html><html><title>Eco-System</title></html>',{status:200,headers:{'content-type':'text/html; charset=utf-8'}});\n  }}};\n  const response=await worker.fetch(new Request('https://example.test/'),env);\n  assert.equal(response.status,200);\n  assert.equal(requested[0],'/index.html');\n  assert.match(await response.text(),/Eco-System/);\n});\n"""
+          test.write_text(t)
+          PY
+      - name: Qualify fix
+        run: |
+          npm install --ignore-scripts
+          npm run typecheck
+          npm run lint:architecture
+          npm run lint:shared-governance
+          npm test
+      - name: Commit root fix
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'Delor85 Eco-System Bot'
+          git config user.email 'actions@users.noreply.github.com'
+          git add workers/api/src/index.ts tests/api.test.mjs
+          git commit -m 'fix: serve mobile PWA at public root'
+          git push origin HEAD:next/0.6.0-mobile-living-rules

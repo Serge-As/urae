@@ -1,0 +1,6 @@
+backup=true
+version=1.0.0-complete-app
+date=2026-09-13
+revision=5
+ui=master-cockpit-20260913-r2
+include=current-truth,project-state,next-run,truth-ledger,truth-ledger-r2,complete-app-source,backup-procedure,handoff-prompt

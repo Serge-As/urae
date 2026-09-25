@@ -1,0 +1,107 @@
+name: Eco-System 0.6 Mobile Preview — Cloudflare
+
+on:
+  workflow_dispatch:
+  push:
+    branches: ['next/0.6.0-mobile-living-rules']
+    paths:
+      - 'apps/**'
+      - 'packages/**'
+      - 'workers/**'
+      - 'cloudflare/**'
+      - 'scripts/**'
+      - 'tests/**'
+      - 'package.json'
+      - 'tsconfig.json'
+      - '.github/workflows/deploy-cloudflare-mobile-preview.yml'
+
+permissions:
+  contents: read
+
+env:
+  ECO_SYSTEM_DB: eco-system-db
+  ECO_SYSTEM_ROOT: https://eco-system.sergemimf.workers.dev/
+  ECO_SYSTEM_HEALTH: https://eco-system.sergemimf.workers.dev/health
+  EXPECTED_VERSION: 0.6.0-mobile-living-rules
+
+jobs:
+  qualify-and-deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+    steps:
+      - name: Checkout normal source branch
+        uses: actions/checkout@v4
+
+      - name: Use Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install development dependency
+        run: npm install --ignore-scripts
+
+      - name: Verify deployment credentials exist
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${CLOUDFLARE_ACCOUNT_ID:-}"
+          test -n "${CLOUDFLARE_API_TOKEN:-}"
+
+      - name: Qualify mobile living-rules source
+        run: |
+          npm run typecheck
+          npm run lint:architecture
+          npm run lint:shared-governance
+          npm test
+
+      - name: Build PWA and Worker assets
+        run: npm run build
+
+      - name: Resolve or create D1 database
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes wrangler@4 d1 list --json > /tmp/d1-list.json
+          DB_ID="$(node scripts/cloudflare-d1-id.mjs /tmp/d1-list.json "${ECO_SYSTEM_DB}" || true)"
+          if [ -z "${DB_ID}" ]; then
+            npx --yes wrangler@4 d1 create "${ECO_SYSTEM_DB}" --location=weur --update-config=false
+            npx --yes wrangler@4 d1 list --json > /tmp/d1-list-after-create.json
+            DB_ID="$(node scripts/cloudflare-d1-id.mjs /tmp/d1-list-after-create.json "${ECO_SYSTEM_DB}" || true)"
+          fi
+          test -n "${DB_ID}"
+          node scripts/render-wrangler-d1.mjs "${DB_ID}" workers/api/wrangler.ci.toml
+
+      - name: Apply additive D1 migrations
+        run: npx --yes wrangler@4 d1 migrations apply "${ECO_SYSTEM_DB}" --remote --config workers/api/wrangler.ci.toml
+
+      - name: Deploy mobile preview Worker + PWA assets
+        run: npx --yes wrangler@4 deploy --config workers/api/wrangler.ci.toml
+
+      - name: Smoke test mobile root and health
+        shell: bash
+        run: |
+          set -euo pipefail
+          root=''
+          health=''
+          for attempt in 1 2 3 4 5; do
+            root="$(curl --fail --silent --show-error --location --max-time 20 "${ECO_SYSTEM_ROOT}" || true)"
+            health="$(curl --fail --silent --show-error --location --max-time 20 "${ECO_SYSTEM_HEALTH}" || true)"
+            if printf '%s' "${root}" | grep -qi '<!doctype html>' && printf '%s' "${root}" | grep -q 'Plateforme Tontines & Associations' && printf '%s' "${health}" | grep -q '"ok": true'; then
+              break
+            fi
+            sleep 3
+          done
+          printf '%s' "${root}" | grep -qi '<!doctype html>'
+          printf '%s' "${root}" | grep -q 'Plateforme Tontines & Associations'
+          printf '%s' "${health}" > /tmp/health.json
+          node --input-type=module - <<'NODE'
+          import fs from 'node:fs';
+          const health=JSON.parse(fs.readFileSync('/tmp/health.json','utf8'));
+          if(health.ok!==true) throw new Error('HEALTH_NOT_OK');
+          if(health.version!==process.env.EXPECTED_VERSION) throw new Error(`VERSION_MISMATCH:${health.version}`);
+          if(health.realMoneyEnabled!==false) throw new Error('REAL_MONEY_MUST_REMAIN_DISABLED');
+          console.log(`Mobile root + health PASS: ${health.version}; realMoneyEnabled=${health.realMoneyEnabled}`);
+          NODE

@@ -1,0 +1,94 @@
+name: Eco-System 1.0 Complete App — Cloudflare
+
+on:
+  workflow_dispatch:
+  push:
+    branches: ['next/1.0.0-complete-app']
+    paths: ['.github/DEPLOY_ECO_SYSTEM_COMPLETE_ONCE']
+
+permissions:
+  contents: read
+
+concurrency:
+  group: eco-system-complete-app
+  cancel-in-progress: false
+
+env:
+  ECO_SYSTEM_DB: eco-system-db
+  ECO_SYSTEM_ROOT: https://eco-system.sergemimf.workers.dev/
+  ECO_SYSTEM_HEALTH: https://eco-system.sergemimf.workers.dev/health
+  ECO_SYSTEM_CATALOG: https://eco-system.sergemimf.workers.dev/api/v1/product/capabilities
+  EXPECTED_VERSION: 1.0.0-complete-app
+  MIN_CAPABILITIES: 100
+
+jobs:
+  qualify-and-deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install development dependencies
+        run: npm install --ignore-scripts
+      - name: Verify deployment credentials exist
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${CLOUDFLARE_ACCOUNT_ID:-}"
+          test -n "${CLOUDFLARE_API_TOKEN:-}"
+      - name: Complete App full qualification
+        run: npm run ci
+      - name: Build PWA and Worker assets
+        run: npm run build
+      - name: Resolve existing D1 database
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes wrangler@4 d1 list --json > /tmp/d1-list.json
+          DB_ID="$(node scripts/cloudflare-d1-id.mjs /tmp/d1-list.json "${ECO_SYSTEM_DB}" || true)"
+          if [ -z "${DB_ID}" ]; then
+            echo "::error::Acquired D1 database ${ECO_SYSTEM_DB} was not found. Refusing to silently create a replacement."
+            exit 1
+          fi
+          node scripts/render-wrangler-d1.mjs "${DB_ID}" workers/api/wrangler.ci.toml
+      - name: Apply additive D1 migrations only
+        run: npx --yes wrangler@4 d1 migrations apply "${ECO_SYSTEM_DB}" --remote --config workers/api/wrangler.ci.toml
+      - name: Deploy Complete App Worker + PWA
+        run: npx --yes wrangler@4 deploy --config workers/api/wrangler.ci.toml
+      - name: Smoke root health and capability catalog
+        shell: bash
+        run: |
+          set -euo pipefail
+          : > /tmp/root.html
+          : > /tmp/health.json
+          : > /tmp/catalog.json
+          for attempt in 1 2 3 4 5 6; do
+            curl --fail --silent --show-error --location --max-time 20 "${ECO_SYSTEM_ROOT}?v=master-20260911" -o /tmp/root.html || true
+            curl --fail --silent --show-error --location --max-time 20 "${ECO_SYSTEM_HEALTH}" -o /tmp/health.json || true
+            curl --fail --silent --show-error --location --max-time 20 "${ECO_SYSTEM_CATALOG}" -o /tmp/catalog.json || true
+            if grep -qi '<!doctype html>' /tmp/root.html && grep -q 'Master Cockpit' /tmp/root.html && grep -q 'Cahier Maître 2.3.4' /tmp/root.html && grep -q '"ok": true' /tmp/health.json && grep -q '"capabilities"' /tmp/catalog.json; then break; fi
+            sleep 4
+          done
+          grep -qi '<!doctype html>' /tmp/root.html
+          grep -q 'Master Cockpit' /tmp/root.html
+          grep -q 'Cahier Maître 2.3.4' /tmp/root.html
+          node --input-type=module - <<'NODE'
+          import fs from 'node:fs';
+          const health=JSON.parse(fs.readFileSync('/tmp/health.json','utf8'));
+          const catalog=JSON.parse(fs.readFileSync('/tmp/catalog.json','utf8'));
+          if(health.ok!==true) throw new Error('HEALTH_NOT_OK');
+          if(health.version!==process.env.EXPECTED_VERSION) throw new Error(`VERSION_MISMATCH:${health.version}`);
+          if(health.realMoneyEnabled!==false) throw new Error('REAL_MONEY_MUST_REMAIN_DISABLED');
+          if(catalog.version!==process.env.EXPECTED_VERSION) throw new Error(`CATALOG_VERSION_MISMATCH:${catalog.version}`);
+          if(!Array.isArray(catalog.capabilities)||catalog.count<Number(process.env.MIN_CAPABILITIES)||catalog.capabilities.length!==catalog.count) throw new Error(`CAPABILITY_CATALOG_INCOMPLETE:${catalog.count}`);
+          const ids=new Set(catalog.capabilities.map(x=>x.id));
+          for(const required of ['DISCOVERY.GROUP_SEARCH','MEMBERSHIP.APPLICATION','GROUP.LAUNCH_STUDIO','RUBRIC.LIVING_RULES','MEETING.COMMAND_CENTER','LEDGER.CANONICAL','FINANCE.LOANS','COMMUNITY.FORUM','MARKETPLACE.CORE','ADS.MANAGER','LEARNING.MANAGER_ACADEMY','AI.ASSISTANT','PAPER.BRIDGE','REPORTING.EXPORTS','BACKUP.BIR_PLUS']){
+            if(!ids.has(required)) throw new Error(`CATALOG_REQUIRED_CAPABILITY_MISSING:${required}`);
+          }
+          console.log(`Master Cockpit PASS: ${health.version}; ${catalog.count} capabilities; realMoneyEnabled=${health.realMoneyEnabled}`);
+          NODE

@@ -1,0 +1,53 @@
+name: Eco-System 0.6 — BIR+ Verified Source Backup
+
+on:
+  workflow_dispatch:
+  push:
+    branches: ['next/0.6.0-mobile-living-rules']
+    paths: ['.github/workflows/backup-birplus-060.yml']
+
+permissions:
+  contents: read
+
+env:
+  PRODUCT_VERSION: 0.6.0-mobile-living-rules
+  DEPLOY_RUN_ID: '34431427752'
+  MOBILE_URL: https://eco-system.sergemimf.workers.dev/
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout exact normal source
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Build reproducible BIR+ source archive and manifest
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/eco-backup
+          HEAD_SHA="$(git rev-parse HEAD)"
+          printf '%s\n' \
+            "project=Eco-System" \
+            "version=${PRODUCT_VERSION}" \
+            "branch=next/0.6.0-mobile-living-rules" \
+            "head=${HEAD_SHA}" \
+            "cloudflare_deploy_run=${DEPLOY_RUN_ID}" \
+            "mobile_url=${MOBILE_URL}" \
+            "realMoneyEnabled=false" \
+            > /tmp/eco-backup/MANIFEST.txt
+          git archive --format=tar HEAD | xz -T0 -9e > /tmp/eco-backup/eco-system-0.6-source.tar.xz
+          sha256sum /tmp/eco-backup/eco-system-0.6-source.tar.xz > /tmp/eco-backup/SHA256SUMS.txt
+          cat /tmp/eco-backup/SHA256SUMS.txt
+          test -s /tmp/eco-backup/eco-system-0.6-source.tar.xz
+
+      - name: Upload BIR+ verified source artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: eco-system-0.6-birplus-source
+          path: /tmp/eco-backup/
+          retention-days: 30
+          if-no-files-found: error

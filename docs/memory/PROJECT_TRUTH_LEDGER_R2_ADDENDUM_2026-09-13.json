@@ -1,0 +1,67 @@
+{
+  "schemaVersion": 1,
+  "generatedOn": "2026-09-13",
+  "extends": "docs/memory/PROJECT_TRUTH_LEDGER.json",
+  "purpose": "Additive remote truth for Master Cockpit R2 delivery; never supersedes historical records silently.",
+  "records": [
+    {
+      "id": "product.master_cockpit_r2",
+      "status": "VERIFIED_REMOTE",
+      "scope": "product-line/pwa",
+      "observedOn": "2026-09-13",
+      "evidence": [
+        "release:master-cockpit-20260913-r2",
+        "github-actions:deploy run 34739971297 SUCCESS",
+        "github-actions:Recovery CI run 34739973185 SUCCESS",
+        "ci:53/53 PASS",
+        "smoke:root Master Cockpit + Cahier Maître 2.3.4 PASS",
+        "cloudflare:worker version ad5ee04e-3882-4f24-bc45-ebb56545e29a",
+        "smoke:139 capabilities; realMoneyEnabled=false"
+      ],
+      "note": "R2 forces stale PWA clients off the legacy cache using a new cache namespace, network-first reload, skipWaiting, clients.claim, old-cache purge, versioned install URL and public release sentinel.",
+      "next": "Treat R2 as the visible field-test reference and keep capability status honest."
+    },
+    {
+      "id": "cloudflare.d1.eco-system-db.r2",
+      "status": "VERIFIED_REMOTE",
+      "scope": "cloudflare-d1",
+      "observedOn": "2026-09-13",
+      "evidence": [
+        "github-actions:deploy run 34739971297 SUCCESS",
+        "cloudflare:env.DB eco-system-db",
+        "cloudflare:migrations No migrations to apply"
+      ],
+      "note": "R2 reused the existing eco-system-db exclusively; no replacement database was created.",
+      "next": "Continue additive migrations only."
+    },
+    {
+      "id": "safety.realMoneyEnabled.r2",
+      "status": "VERIFIED_REMOTE",
+      "scope": "safety",
+      "observedOn": "2026-09-13",
+      "evidence": [
+        "github-actions:deploy run 34739971297 SUCCESS",
+        "smoke:realMoneyEnabled=false"
+      ],
+      "note": "Real money remains disabled on R2.",
+      "next": "Fail closed unless explicitly authorized separately."
+    },
+    {
+      "id": "backup.birplus.master_cockpit_r2",
+      "status": "VERIFIED_REMOTE",
+      "scope": "backup-recovery",
+      "observedOn": "2026-09-13",
+      "evidence": [
+        "github-actions:backup run 34740177562 SUCCESS",
+        "artifact-id:10312268250",
+        "artifact-zip-sha256:779910d6471d5c979c9b3dea1856319fc010027c390f7fecf71a758f86bd26e4",
+        "source-archive-sha256:255268e3a6c613261acfd6d2541b6e14bb33a91f28f2e79ae79b8dc4721e3a01",
+        "manifest-head:e2c79af771b8888741b73acf421e145045746303",
+        "download-verification:ZIP digest matches GitHub; sha256sum --check OK; tar.xz readable; 205 entries",
+        "required-files:apps/web/index.html, apps/web/sw.js, apps/web/release.json, CURRENT_TRUTH, PROJECT_TRUTH_LEDGER, backup procedure, handoff prompt"
+      ],
+      "note": "R2 BIR+ archive was downloaded and independently verified after generation.",
+      "next": "Preserve this artifact and make a persistent /Eco-System/ copy when Library mutation is available."
+    }
+  ]
+}

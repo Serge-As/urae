@@ -1,0 +1,707 @@
+registry_version: 1
+project_version: 1.0.0-complete-app
+source_of_truth: docs/constitution + verified_code
+
+capabilities:
+  - id: KERNEL.CONTEXT
+    domain: platform-kernel
+    status: ACQUIRED_FOUNDATION
+    risk_class: security_critical
+    offline_policy: local_context_allowed_server_reauthorizes
+    audit_event: CONTEXT_NOT_AUDITED_BY_DEFAULT
+    tests: [kernel-context-policy]
+  - id: KERNEL.POLICY
+    domain: platform-kernel
+    status: ACQUIRED_FOUNDATION
+    risk_class: security_critical
+    offline_policy: client_advisory_server_authoritative
+    audit_event: POLICY_DECISIONS_ON_SENSITIVE_MUTATIONS
+    tests: [kernel-context-policy]
+  - id: KERNEL.WORKFLOW
+    domain: platform-kernel
+    status: ACQUIRED_FOUNDATION
+    risk_class: medium
+    offline_policy: transition_preparation_only_when_server_required
+    audit_event: WORKFLOW_TRANSITION
+    tests: [workflow-transition]
+  - id: KERNEL.OBLIGATIONS
+    domain: platform-kernel
+    status: ACQUIRED_FOUNDATION
+    risk_class: medium
+    offline_policy: cache_and_local_completion_intent
+    audit_event: OBLIGATION_CHANGED
+    tests: [obligation-inbox]
+  - id: KERNEL.EVENT_BACKBONE
+    domain: platform-kernel
+    status: ACQUIRED_FOUNDATION
+    risk_class: high
+    offline_policy: durable_outbox_for_remote_delivery
+    audit_event: DOMAIN_EVENTS_CORRELATED
+    tests: [event-backbone]
+  - id: KERNEL.EVIDENCE
+    domain: platform-kernel
+    status: ACQUIRED_FOUNDATION
+    risk_class: high
+    offline_policy: local_evidence_draft_never_server_verified
+    audit_event: EVIDENCE_RECORDED
+    tests: [evidence]
+  - id: KERNEL.RECONCILIATION
+    domain: platform-kernel
+    status: ACQUIRED_FOUNDATION
+    risk_class: financial_critical
+    offline_policy: compare_local_but_resolution_server_authoritative
+    audit_event: RECONCILIATION_RESULT
+    tests: [cashbox-reconciliation]
+  - id: KERNEL.INBOX
+    domain: platform-kernel
+    status: ACQUIRED_FOUNDATION
+    risk_class: low
+    offline_policy: cached_read
+    audit_event: NONE
+    tests: [obligation-inbox]
+  - id: KERNEL.CASES
+    domain: platform-kernel
+    status: ACQUIRED_FOUNDATION
+    risk_class: medium
+    offline_policy: draft_allowed_submission_pending
+    audit_event: CASE_STATE_CHANGED
+    tests: [case-open]
+  - id: KERNEL.NOTIFICATIONS
+    domain: platform-kernel
+    status: ACQUIRED_FOUNDATION
+    risk_class: medium
+    offline_policy: local_only_when_offline
+    audit_event: NOTIFICATION_QUEUED
+    tests: []
+  - id: KERNEL.CONFIGURATION
+    domain: platform-kernel
+    status: ACQUIRED_FOUNDATION
+    risk_class: high
+    offline_policy: cached_read_server_write
+    audit_event: CONFIG_CHANGED
+    tests: []
+  - id: KERNEL.FEATURES
+    domain: platform-kernel
+    status: ACQUIRED_FOUNDATION
+    risk_class: high
+    offline_policy: cached_flags_with_safe_defaults
+    audit_event: FEATURE_FLAG_CHANGED
+    tests: [feature-defaults]
+  - id: KERNEL.DATA_GOVERNANCE
+    domain: platform-kernel
+    status: ACQUIRED_FOUNDATION
+    risk_class: privacy_critical
+    offline_policy: cached_consent_read_server_authoritative_write
+    audit_event: CONSENT_RECORDED
+    tests: []
+  - id: KERNEL.COMPATIBILITY
+    domain: platform-kernel
+    status: ACQUIRED_FOUNDATION
+    risk_class: medium
+    offline_policy: local
+    audit_event: NONE
+    tests: [compatibility-classification]
+  - id: KERNEL.RESOURCE_GOVERNOR
+    domain: platform-kernel
+    status: ACQUIRED_FOUNDATION
+    risk_class: medium
+    offline_policy: local_budget_plus_server_metrics
+    audit_event: RESOURCE_LIMIT_ACTION
+    tests: [resource-budget]
+  - id: OFFLINE.OUTBOX
+    domain: offline
+    status: ACQUIRED_FOUNDATION
+    risk_class: financial_critical
+    offline_policy: canonical_pending_queue
+    audit_event: OUTBOX_SYNC_RESULT
+    tests: [outbox-idempotence]
+  - id: RELAY.TRANSPORT.CORE
+    domain: relay
+    status: ACQUIRED_FOUNDATION
+    risk_class: security_critical
+    offline_policy: local_transport_abstraction
+    audit_event: RELAY_RECEIPT
+    tests: [relay-loopback]
+  - id: GROUP.LAUNCH.PROJECT
+    domain: group-launch
+    status: ACQUIRED_FOUNDATION
+    risk_class: low
+    offline_policy: draft_allowed
+    audit_event: GROUP_PROJECT_CREATED
+    tests: [group-project-flow]
+  - id: GROUP.LAUNCH.SIMULATION
+    domain: simulation
+    status: ACQUIRED_FOUNDATION
+    risk_class: financial_advisory
+    offline_policy: deterministic_local_possible
+    audit_event: GROUP_PROJECT_SIMULATED
+    tests: [group-launch-simulation]
+  - id: GROUP.CREATE.FROM_PROJECT
+    domain: groups
+    status: ACQUIRED_FOUNDATION
+    risk_class: high
+    offline_policy: creation_requires_server_confirmation_in_production
+    audit_event: GROUP_CREATED_FROM_PROJECT
+    tests: [group-project-flow,tenant-isolation]
+  - id: GROUP.MEMBER.ADD
+    domain: memberships
+    status: ACQUIRED_FOUNDATION
+    risk_class: high
+    offline_policy: invitation_or_intent_pending
+    audit_event: MEMBER_ADDED
+    tests: [group-project-flow,tenant-isolation]
+  - id: MEETING.CASHBOX.RECONCILE
+    domain: meetings
+    status: ACQUIRED_FUNCTIONAL_ALPHA
+    risk_class: financial_critical
+    offline_policy: local_count_allowed_server_persists_record
+    audit_event: CASHBOX_RECONCILED
+    tests: [cashbox-reconciliation,api-operational-slice,file-persistence]
+  - id: MEETING.COMMAND_CENTER
+    domain: meetings
+    status: STRUCTURAL_V1
+    risk_class: high
+    offline_policy: offline_first_with_sync
+    audit_event: MEETING_EVENTS
+    tests: []
+  - id: LEDGER.CANONICAL
+    domain: ledger
+    status: ACQUIRED_P2_FOUNDATION
+    risk_class: financial_critical
+    offline_policy: no_final_financial_confirmation_offline
+    audit_event: CASH_CONTRIBUTION_POSTED_LEDGER_ENTRY_REVERSED
+    tests: [ledger-cash-double-entry,ledger-idempotence,ledger-reversal]
+  - id: GROUP.MODEL.REGISTRY
+    domain: configuration
+    status: STRUCTURAL_V1
+    risk_class: high
+    offline_policy: cached_read_draft_customization
+    audit_event: GROUP_MODEL_VERSIONED
+    tests: []
+  - id: GROUP.CASE_LAW.REGISTRY
+    domain: learning
+    status: STRUCTURAL_V1
+    risk_class: medium
+    offline_policy: cached_read_draft_observation
+    audit_event: CASE_LAW_CHANGED
+    tests: []
+  - id: MANAGER.MANDATE
+    domain: mandates
+    status: STRUCTURAL_V1
+    risk_class: security_critical
+    offline_policy: read_cached_mutation_server_only
+    audit_event: MANDATE_CHANGED
+    tests: []
+  - id: USER.UNIVERSAL.INBOX
+    domain: experience
+    status: ACQUIRED_FOUNDATION
+    risk_class: low
+    offline_policy: cached_read
+    audit_event: NONE
+    tests: [obligation-inbox]
+  - id: SUPPORT.CASE.CENTER
+    domain: support
+    status: ACQUIRED_FOUNDATION
+    risk_class: medium
+    offline_policy: draft_ticket_allowed
+    audit_event: CASE_STATE_CHANGED
+    tests: [support-case-inbox]
+  - id: COMPATIBILITY.MODE
+    domain: compatibility
+    status: ACQUIRED_FOUNDATION
+    risk_class: medium
+    offline_policy: local
+    audit_event: NONE
+    tests: [compatibility-classification]
+  - id: EXPERIENCE.I18N.FR_EN
+    domain: experience
+    status: ACQUIRED_FOUNDATION
+    risk_class: medium
+    offline_policy: dictionaries_precached_with_app_shell
+    audit_event: NONE
+    tests: [i18n-key-parity,html-i18n-coverage]
+  - id: PWA.OFFLINE.SHELL
+    domain: offline
+    status: ACQUIRED_FOUNDATION
+    risk_class: high
+    offline_policy: root_service_worker_precaches_transitive_foundation_modules
+    audit_event: NONE
+    tests: [pwa-transitive-precache]
+  - id: SECURITY.REQUEST_SCOPE
+    domain: security
+    status: ACQUIRED_FOUNDATION
+    risk_class: security_critical
+    offline_policy: server_only
+    audit_event: REQUEST_ID_CORRELATION
+    tests: [concurrent-tenant-request-isolation]
+  - id: EXPERIENCE.ACCESSIBILITY.FOUNDATION
+    domain: experience
+    status: ACQUIRED_FOUNDATION
+    risk_class: medium
+    offline_policy: local_ui
+    audit_event: NONE
+    tests: [html-i18n-coverage]
+
+  - id: DATA.LOCAL.FILE_PERSISTENCE
+    domain: repositories
+    status: ACQUIRED_FUNCTIONAL_ALPHA
+    risk_class: high
+    offline_policy: local_server_only_not_cloud_production
+    audit_event: PERSISTED_DOMAIN_EVENTS
+    tests: [file-persistence,restart-persistence]
+  - id: MEETING.SESSION.PERSISTENT
+    domain: meetings
+    status: ACQUIRED_FUNCTIONAL_ALPHA
+    risk_class: high
+    offline_policy: creation_server_confirmed
+    audit_event: MEETING_OPENED_MEETING_CLOSED
+    tests: [api-operational-slice]
+  - id: LEDGER.CASH.CONTRIBUTION
+    domain: ledger
+    status: ACQUIRED_P2_FOUNDATION
+    risk_class: financial_critical
+    offline_policy: queued_offline_but_confirmation_server_only
+    audit_event: CASH_CONTRIBUTION_POSTED
+    tests: [ledger-cash-double-entry,ledger-idempotence,api-operational-slice]
+  - id: LEDGER.REVERSAL
+    domain: ledger
+    status: ACQUIRED_P2_FOUNDATION
+    risk_class: financial_critical
+    offline_policy: server_only
+    audit_event: LEDGER_ENTRY_REVERSED
+    tests: [ledger-reversal]
+  - id: SECURITY.GROUP.SOVEREIGNTY
+    domain: security
+    status: ACQUIRED_FUNCTIONAL_ALPHA
+    risk_class: security_critical
+    offline_policy: server_authoritative
+    audit_event: FORBIDDEN_SCOPE_ON_REJECTED_MUTATIONS
+    tests: [outsider-cannot-self-assign-manager]
+  - id: EXPERIENCE.RUNNABLE.ZERO_INSTALL
+    domain: developer-experience
+    status: ACQUIRED_FUNCTIONAL_ALPHA
+    risk_class: low
+    offline_policy: local
+    audit_event: NONE
+    tests: [runnable-demo-no-tsc]
+  - id: DEVSERVER.PORT.AUTO_FALLBACK
+    domain: developer-experience
+    status: ACQUIRED_FUNCTIONAL_ALPHA
+    risk_class: low
+    offline_policy: local
+    audit_event: NONE
+    tests: [manual-port-collision-verification]
+
+  - id: MEMORY.SOURCE_INGESTION
+    domain: project-memory
+    status: STRUCTURAL_V1
+    risk_class: privacy_critical
+    offline_policy: local_tooling
+    audit_event: SOURCE_FINGERPRINT_RECORDED
+    tests: [memory-gate,memory-index]
+  - id: MEMORY.RECALL.GATE
+    domain: project-memory
+    status: FUNCTIONAL_ALPHA
+    risk_class: high
+    offline_policy: local_ci
+    audit_event: NONE
+    tests: [memory-gate]
+  - id: MEMORY.MASTER.CAPABILITY_INDEX
+    domain: project-memory
+    status: FUNCTIONAL_ALPHA
+    risk_class: medium
+    offline_policy: versioned_static_index
+    audit_event: NONE
+    tests: [memory-index,source-coverage]
+  - id: MEMORY.IDEA_CAVERN
+    domain: project-memory
+    status: STRUCTURAL_V1
+    risk_class: low
+    offline_policy: versioned_static_registry
+    audit_event: IDEA_STATUS_CHANGED
+    tests: []
+  - id: MEMORY.AI_IDEA_LAB
+    domain: ai-governance
+    status: STRUCTURAL_V1
+    risk_class: high
+    offline_policy: proposals_local_or_cloud_never_auto_activate
+    audit_event: AI_IDEA_PROPOSED_REVIEWED
+    tests: []
+  - id: DISCOVERY.GROUP.PUBLIC_PROJECTION
+    domain: discovery
+    status: FUNCTIONAL_ALPHA
+    risk_class: privacy_critical
+    offline_policy: cached_public_projection_only
+    audit_event: GROUP_DISCOVERY_LISTING_CHANGED
+    tests: [discovery-safe-public-projection,api-discovery]
+  - id: DISCOVERY.GROUP.MATCHING
+    domain: discovery
+    status: FUNCTIONAL_ALPHA
+    risk_class: medium
+    offline_policy: cached_public_index_when_available
+    audit_event: NONE
+    tests: [discovery-safe-public-projection,api-discovery]
+  - id: MEMBERSHIP.APPLICATION.GATEWAY
+    domain: memberships
+    status: FUNCTIONAL_ALPHA
+    risk_class: high
+    offline_policy: application_intent_may_queue_membership_requires_server_approval
+    audit_event: MEMBERSHIP_APPLICATION_SUBMITTED_MEMBERSHIP_APPLICATION_DECIDED
+    tests: [membership-application-gateway,api-invalid-membership-decision]
+  - id: TRUST.COMMITMENT_RELIABILITY
+    domain: trust
+    status: FUNCTIONAL_ALPHA
+    risk_class: fairness_critical
+    offline_policy: advisory_cached_evidence_only
+    audit_event: NONE
+    tests: [contextual-commitment-reliability]
+  - id: RUBRIC.FACETED_MODEL
+    domain: rubrics
+    status: FUNCTIONAL_ALPHA
+    risk_class: financial_advisory
+    offline_policy: draft_allowed_rule_activation_server_authoritative
+    audit_event: RUBRIC_DEFINITION_CREATED
+    tests: [rubric-faceted-model]
+  - id: GOVERNANCE.DOCUMENT.KNOWLEDGE
+    domain: governance-knowledge
+    status: FUNCTIONAL_ALPHA
+    risk_class: high
+    offline_policy: extraction_draft_allowed_activation_never_automatic
+    audit_event: GOVERNANCE_KNOWLEDGE_CLAIM_RECORDED_GOVERNANCE_KNOWLEDGE_CLAIM_REVIEWED
+    tests: [governance-claim-review,api-governance-suggestions-no-auto-activation]
+  - id: DATA.D1.PLATFORM_REPOSITORY
+    domain: repositories
+    status: FUNCTIONAL_ALPHA
+    risk_class: high
+    offline_policy: server_cloud_persistence
+    audit_event: DOMAIN_EVENTS_AS_BEFORE
+    tests: [d1-repository-persistence,worker-env-db-selection]
+  - id: CLOUD.D1.MIGRATIONS
+    domain: cloud-operations
+    status: FUNCTIONAL_ALPHA
+    risk_class: high
+    offline_policy: server_only
+    audit_event: DEPLOYMENT_PIPELINE
+    tests: [d1-migration-additive,sqlite-migration-replay]
+  - id: CLOUD.WORKER.ALPHA.DEPLOY_PIPELINE
+    domain: cloud-operations
+    status: STRUCTURAL_V1
+    risk_class: security_critical
+    offline_policy: server_only
+    audit_event: GITHUB_ACTIONS_DEPLOYMENT
+    tests: [cloudflare-config-no-secrets,wrangler-ci-renderer]
+  - id: DISCOVERY.GROUP.ACCESS_POLICY
+    domain: discovery
+    status: STRUCTURAL_V1
+    risk_class: privacy_critical
+    offline_policy: cached_public_policy_only
+    audit_event: GROUP_DISCOVERY_POLICY_CHANGED
+    tests: []
+  - id: DISCOVERY.GROUP.HANDLE_CODE
+    domain: discovery
+    status: STRUCTURAL_V1
+    risk_class: medium
+    offline_policy: cached_public_handle_and_deep_link
+    audit_event: GROUP_DISCOVERY_HANDLE_CHANGED
+    tests: []
+  - id: DISCOVERY.GROUP.PREVIEW
+    domain: discovery
+    status: STRUCTURAL_V1
+    risk_class: privacy_critical
+    offline_policy: cached_authorized_projection_only
+    audit_event: DISCOVERY_PREVIEW_ACCESSED_WHEN_SENSITIVE
+    tests: []
+  - id: DISCOVERY.GROUP.FIT_SIMULATOR
+    domain: simulation
+    status: PLANNED_DOMAIN
+    risk_class: financial_advisory
+    offline_policy: local_private_simulation_preferred
+    audit_event: NONE
+    tests: []
+  - id: DISCOVERY.MEMBER.OPT_IN
+    domain: discovery
+    status: STRUCTURAL_V1
+    risk_class: fairness_critical
+    offline_policy: cached_own_consent_only
+    audit_event: MEMBER_DISCOVERABILITY_CHANGED
+    tests: []
+  - id: DISCOVERY.RECRUITMENT.CAMPAIGN
+    domain: memberships
+    status: STRUCTURAL_V1
+    risk_class: high
+    offline_policy: draft_allowed_publication_server_authoritative
+    audit_event: RECRUITMENT_CAMPAIGN_CHANGED
+    tests: []
+  - id: DISCOVERY.CANDIDATE.PORTFOLIO
+    domain: memberships
+    status: STRUCTURAL_V1
+    risk_class: privacy_critical
+    offline_policy: private_draft_allowed_sharing_server_authoritative
+    audit_event: CANDIDATE_PORTFOLIO_SHARED
+    tests: []
+  - id: TRUST.GROUP_RELIABILITY
+    domain: trust
+    status: STRUCTURAL_V1
+    risk_class: fairness_critical
+    offline_policy: cached_aggregated_evidence_only
+    audit_event: NONE
+    tests: []
+  - id: TRUST.APPEAL.REHABILITATION
+    domain: trust
+    status: STRUCTURAL_V1
+    risk_class: fairness_critical
+    offline_policy: appeal_draft_allowed_resolution_server_authoritative
+    audit_event: TRUST_EVIDENCE_APPEALED_RESOLVED
+    tests: []
+  - id: TONTINE.MULTI_SHARE
+    domain: rotating-tontine
+    status: STRUCTURAL_V1
+    risk_class: high
+    offline_policy: cached_schedule_draft_only
+    audit_event: TONTINE_SHARE_CHANGED
+    tests: []
+  - id: TONTINE.IN_KIND
+    domain: rotating-tontine
+    status: STRUCTURAL_V1
+    risk_class: high
+    offline_policy: quantity_intent_pending_proof_server_authoritative
+    audit_event: IN_KIND_TURN_RECORDED
+    tests: []
+  - id: TONTINE.MID_CYCLE_CATCHUP
+    domain: rotating-tontine
+    status: STRUCTURAL_V1
+    risk_class: financial_critical
+    offline_policy: simulation_allowed_activation_server_authoritative
+    audit_event: MID_CYCLE_CATCHUP_APPROVED
+    tests: []
+  - id: MEETING.IN_SESSION_DECISION
+    domain: meetings
+    status: STRUCTURAL_V1
+    risk_class: high
+    offline_policy: decision_draft_allowed_final_authority_per_policy
+    audit_event: MEETING_IN_SESSION_VALUE_DECIDED
+    tests: []
+  - id: MEETING.COLLECTED_DISBURSED_VARIANCE
+    domain: meetings
+    status: STRUCTURAL_V1
+    risk_class: financial_critical
+    offline_policy: reconciliation_required
+    audit_event: MEETING_VARIANCE_EXPLAINED
+    tests: []
+  - id: LEDGER.EXERCISE.CARRYOVER
+    domain: ledger
+    status: STRUCTURAL_V1
+    risk_class: financial_critical
+    offline_policy: simulation_only_closing_server_authoritative
+    audit_event: EXERCISE_CARRYOVER_POSTED
+    tests: []
+  - id: LOAN.GUARANTOR
+    domain: loans
+    status: PLANNED_DOMAIN
+    risk_class: financial_critical
+    offline_policy: consent_draft_allowed_activation_server_authoritative
+    audit_event: LOAN_GUARANTEE_ACCEPTED_RELEASED_CALLED
+    tests: []
+  - id: SAVINGS.INTEREST.VISIBILITY
+    domain: savings
+    status: STRUCTURAL_V1
+    risk_class: high
+    offline_policy: cached_projection_per_rule
+    audit_event: SAVINGS_INTEREST_VISIBILITY_CHANGED
+    tests: []
+  - id: REPORTING.CUBE
+    domain: reporting
+    status: STRUCTURAL_V1
+    risk_class: high
+    offline_policy: cached_read_projections_only
+    audit_event: REPORT_SNAPSHOT_PUBLISHED
+    tests: []
+  - id: REPORTING.PUBLISH_TO_MEMBERS
+    domain: reporting
+    status: STRUCTURAL_V1
+    risk_class: privacy_critical
+    offline_policy: paper_local_or_queued_digital_delivery
+    audit_event: MEMBER_STATEMENT_PUBLISHED
+    tests: []
+  - id: GOVERNANCE.READ_ONLY.PROFILES
+    domain: governance
+    status: STRUCTURAL_V1
+    risk_class: privacy_critical
+    offline_policy: cached_authorized_projection_only
+    audit_event: SENSITIVE_READ_ACCESS_WHEN_REQUIRED
+    tests: []
+  - id: MEMORY.SOURCE_TO_CAPABILITY
+    domain: project-memory
+    status: STRUCTURAL_V1
+    risk_class: medium
+    offline_policy: versioned_static_registry
+    audit_event: NONE
+    tests: [memory-index,source-coverage]
+
+  - id: MEMORY.DEEP_SOURCE_DIGEST
+    domain: project-memory
+    status: STRUCTURAL_V1
+    risk_class: privacy_critical
+    offline_policy: versioned_anonymized_digest_only
+    audit_event: NONE
+    tests: [source-coverage,project-truth]
+  - id: MEMORY.PROJECT_TRUTH_LEDGER
+    domain: project-memory
+    status: STRUCTURAL_V1
+    risk_class: high
+    offline_policy: versioned_static_registry
+    audit_event: PROJECT_TRUTH_CHANGED
+    tests: [project-truth]
+  - id: MEETING.SESSION.START
+    domain: meetings
+    status: STRUCTURAL_V1
+    risk_class: high
+    offline_policy: local_session_draft_server_reauthorizes_sensitive_mutations
+    audit_event: MEETING_SESSION_STARTED
+    tests: []
+  - id: SIMULATION.CONTRIBUTION
+    domain: simulation
+    status: STRUCTURAL_V1
+    risk_class: medium
+    offline_policy: fully_local_non_transactional
+    audit_event: NONE
+    tests: []
+  - id: MEMBERSHIP.LEGACY_COHORT_IMPORT
+    domain: membership
+    status: STRUCTURAL_V1
+    risk_class: privacy_critical
+    offline_policy: import_draft_only_server_validates
+    audit_event: LEGACY_MEMBERSHIP_FACT_IMPORTED
+    tests: []
+  - id: MEMBERSHIP.REGISTRATION_FEE_POLICY
+    domain: membership
+    status: STRUCTURAL_V1
+    risk_class: financial_critical
+    offline_policy: simulation_allowed_activation_server_authoritative
+    audit_event: REGISTRATION_FEE_POLICY_CHANGED
+    tests: []
+  - id: IDENTITY.PRIVATE_OBSERVATIONS
+    domain: identity
+    status: STRUCTURAL_V1
+    risk_class: privacy_critical
+    offline_policy: never_public_cache_only_when_explicitly_authorized
+    audit_event: PRIVATE_OBSERVATION_ACCESSED_CHANGED
+    tests: []
+  - id: SCHEDULER.RECURRENCE.GRAMMAR
+    domain: scheduler
+    status: STRUCTURAL_V1
+    risk_class: high
+    offline_policy: cached_schedule_and_draft_changes_server_authoritative
+    audit_event: RECURRENCE_RULE_CHANGED
+    tests: []
+  - id: MEETING.BENEFICIARY_REGISTER
+    domain: meetings
+    status: STRUCTURAL_V1
+    risk_class: financial_critical
+    offline_policy: beneficiary_intent_pending_server_evidence
+    audit_event: BENEFICIARY_EVIDENCE_RECORDED
+    tests: []
+  - id: MEETING.PERIOD_CARRY
+    domain: meetings
+    status: STRUCTURAL_V1
+    risk_class: financial_critical
+    offline_policy: projection_only_server_authoritative_posting
+    audit_event: PERIOD_CARRY_RECONCILED
+    tests: []
+  - id: LOAN.RATE.SCHEDULE
+    domain: loans
+    status: PLANNED_DOMAIN
+    risk_class: financial_critical
+    offline_policy: simulation_only_rate_activation_server_authoritative
+    audit_event: LOAN_RATE_SCHEDULE_CHANGED
+    tests: []
+  - id: LOAN.INTEREST.METHOD
+    domain: loans
+    status: PLANNED_DOMAIN
+    risk_class: financial_critical
+    offline_policy: simulation_only_method_activation_server_authoritative
+    audit_event: LOAN_INTEREST_METHOD_CHANGED
+    tests: []
+  - id: SAVINGS.YIELD.ALLOCATION
+    domain: savings
+    status: PLANNED_DOMAIN
+    risk_class: financial_critical
+    offline_policy: projection_only_final_allocation_server_authoritative
+    audit_event: SAVINGS_YIELD_ALLOCATED
+    tests: []
+  - id: SAVINGS.YIELD.CHARGES_SEPARATION
+    domain: savings
+    status: STRUCTURAL_V1
+    risk_class: financial_critical
+    offline_policy: read_projection_only_posting_server_authoritative
+    audit_event: SAVINGS_YIELD_CHARGE_SPLIT_POSTED
+    tests: []
+  - id: REPORTING.AS_OF_SESSION
+    domain: reporting
+    status: STRUCTURAL_V1
+    risk_class: high
+    offline_policy: cached_immutable_snapshot_when_authorized
+    audit_event: REPORT_AS_OF_SNAPSHOT_PUBLISHED
+    tests: []
+  - id: REPORTING.CLAIM_WORKFLOW
+    domain: reporting
+    status: STRUCTURAL_V1
+    risk_class: high
+    offline_policy: claim_draft_queued_server_case_authoritative
+    audit_event: REPORT_CLAIM_OPENED_RESOLVED
+    tests: []
+  - id: MIGRATION.LEGACY_FORENSICS
+    domain: migration
+    status: STRUCTURAL_V1
+    risk_class: financial_critical
+    offline_policy: dry_run_only_before_server_import
+    audit_event: LEGACY_MIGRATION_RECONCILED
+    tests: []
+  - id: DISCOVERY.MUTUAL_GRAPH
+    domain: discovery
+    status: STRUCTURAL_V1
+    risk_class: privacy_critical
+    offline_policy: cached_public_opt_in_projections_only
+    audit_event: DISCOVERY_CONSENT_OR_PUBLICATION_CHANGED
+    tests: []
+
+  - id: PRODUCT.COMPLETE_APP
+    domain: product-shell
+    status: IMPLEMENTED_UNVERIFIED
+    risk_class: medium
+    offline_policy: app_shell_cached_workspace_mutations_server_authoritative
+    audit_event: COMPLETE_APP_NAVIGATION
+    tests: [complete-app-catalog, complete-app-root]
+
+  - id: PRODUCT.CAPABILITY_CATALOG
+    domain: product-shell
+    status: IMPLEMENTED_UNVERIFIED
+    risk_class: low
+    offline_policy: cached_read
+    audit_event: NONE
+    tests: [complete-app-catalog]
+
+  - id: PRODUCT.UNIVERSAL_WORKSPACE
+    domain: application
+    status: IMPLEMENTED_UNVERIFIED
+    risk_class: medium
+    offline_policy: cached_read_server_write
+    audit_event: WORKSPACE_RECORD_CREATED
+    tests: [workspace-persistence]
+
+  - id: DISCOVERY.MUTUAL
+    domain: discovery-membership
+    status: IMPLEMENTED_UNVERIFIED
+    risk_class: privacy_critical
+    offline_policy: cached_public_results_no_private_enumeration
+    audit_event: MEMBERSHIP_APPLICATION_SUBMITTED
+    tests: [discovery-membership]
+
+  - id: RUBRIC.LIVING_RULES
+    domain: rubrics
+    status: IMPLEMENTED_UNVERIFIED
+    risk_class: financial_critical
+    offline_policy: cached_read_server_authoritative_activation
+    audit_event: RUBRIC_UPDATED
+    tests: [living-rules, late-posting, solidarity-preview]
+
