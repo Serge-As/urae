@@ -54,6 +54,9 @@ self.addEventListener('install', event => {
     await cache.put(RELEASE_READY, new Response(JSON.stringify({cache:CACHE,installedAt:new Date().toISOString()}), {
       headers:{'content-type':'application/json; charset=utf-8'}
     }));
+    // The complete coherent shell is now cached. Promote this worker immediately
+    // so a stale Chrome/Opera tab cannot pin an older release indefinitely.
+    await self.skipWaiting();
   })());
 });
 
