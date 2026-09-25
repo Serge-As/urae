@@ -173,6 +173,15 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 .matrix-cell-entry .cell-current{grid-column:1/-1;display:block;font-size:12px;line-height:1.2;white-space:normal}
 .matrix-cell-entry .cell-target-input{width:100%;min-width:0;min-height:44px;padding:7px 8px;border:1px solid var(--line);border-radius:12px;background:#fff;font:inherit}
 .matrix-cell-entry .cell-validate{min-width:44px;min-height:44px;padding:4px;border-radius:8px;font-size:20px;font-weight:900}
+.matrix-cell-entry .cell-save-state,.matrix-cell-entry .cell-sync-state,.matrix-cell-entry .cell-proposed-value{grid-column:1/-1;display:block;font-size:11px;line-height:1.25;font-weight:750}
+.matrix-cell-entry .cell-save-state{min-height:14px}
+.matrix-cell-entry .cell-sync-state.pending{color:#7a5700}
+.matrix-cell-entry .cell-sync-state.review,.matrix-cell-entry .cell-proposed-value{color:#8a4d00}
+.matrix-cell-entry[data-save-state="SAVING_LOCAL"]{outline:2px dashed #5076b8;outline-offset:1px;border-radius:10px}
+.matrix-cell-entry[data-save-state="QUEUED_OFFLINE"],.matrix-cell-entry.has-local-pending{outline:2px solid #c49a32;outline-offset:1px;border-radius:10px}
+.matrix-cell-entry[data-save-state="CONFIRMED"],.matrix-cell-entry.is-confirmed{outline:2px solid #2f8a57;outline-offset:1px;border-radius:10px}
+.matrix-cell-entry[data-save-state="FAILED"],.matrix-cell-entry.is-failed{outline:3px solid #b63e47;outline-offset:1px;border-radius:10px}
+.matrix-cell-entry[data-save-state="REVIEW_REQUIRED"],.matrix-cell-entry.has-review-pending{outline:3px solid #e4a74b;outline-offset:1px;border-radius:10px}
 .matrix-cell-entry.pending-consensus{outline:3px solid #e4a74b;outline-offset:1px;border-radius:10px}
 .member-management-toolbar{display:grid;grid-template-columns:minmax(180px,1fr) minmax(180px,1fr) auto auto;gap:8px;align-items:end;margin:12px 0}
 .member-management-toolbar label{display:grid;gap:5px;font-size:12px;font-weight:750}
