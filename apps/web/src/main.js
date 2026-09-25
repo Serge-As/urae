@@ -1538,6 +1538,15 @@ $('#installBtn').addEventListener('click', async () => {
 async function ensureCurrentServiceWorker(){
     if(!('serviceWorker' in navigator))return;
     try{
+        const reloadKey='eco.sw.controller-reload:'+CAHIER_VERSION;
+        navigator.serviceWorker.addEventListener('controllerchange',()=>{
+            if(!navigator.onLine)return;
+            try{
+              if(sessionStorage.getItem(reloadKey)==='1')return;
+              sessionStorage.setItem(reloadKey,'1');
+            }catch{}
+            location.reload();
+        },{once:false});
         const reg=await navigator.serviceWorker.register('/sw.js',{scope:'/',updateViaCache:'none'});
         try{if(navigator.storage&&navigator.storage.persist)await navigator.storage.persist();}catch{}
         try{
