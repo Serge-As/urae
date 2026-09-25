@@ -1,0 +1,114 @@
+name: Eco-System Apply Focused Hardening
+
+on:
+  push:
+    branches: ['recovery/0.5.1-memory-discovery-rubric-trust']
+    paths: ['.github/APPLY_FOCUSED_HARDENING_ONCE']
+
+permissions:
+  contents: write
+
+concurrency:
+  group: eco-system-focused-hardening
+  cancel-in-progress: false
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Reconstruct exact qualified runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat > /tmp/chunks.sha256 <<'EOF'
+          89c542751e5e845f30083d0df0f16bf8acb8436aa6937bf683ecd312214a11e5  .recovery/runtime-v2/00.b64
+          5d726d9abeb92e53715cd94f510bf6cc852a901071c7c594f90360097ad16ea5  .recovery/runtime-v2/01.b64
+          821a08952072da41e40de1e3b0a5c2c717287102cefa440849e4ce420a8be669  .recovery/runtime-v2/02.b64
+          fe83b9d967ed75f18cd6555531eb11b54ca53d91bfad243894d73d9bf7f87d9d  .recovery/runtime-v2/03.b64
+          8f834e062e455c89dbd6e3bf43a5ac684f5a9e1cdddc4669616df4b5364addc9  .recovery/runtime-v2/04.b64
+          91b8112d9c750760a412789304318513a77629718b7cc113e2bc589546a1d763  .recovery/runtime-v2/05.b64
+          cf608885a29ad10f40d023252620af483fa12c4625f168c5736841f2dadacb33  .recovery/runtime-v2/06.b64
+          4d1e5195f876ec2101d7724741bdd18029a9317b76e3d7cc21d004063365ffe7  .recovery/runtime-v2/07.b64
+          EOF
+          sha256sum --check /tmp/chunks.sha256
+          cat .recovery/runtime-v2/{00,01,02,03,04,05,06,07}.b64 > /tmp/eco-runtime.b64
+          base64 --decode /tmp/eco-runtime.b64 > /tmp/eco-runtime.tar.xz
+          echo '7b423f1494bfdaf8d200e3ae2fd09e4a866bc109fe1b542eb1a78babfb9bfff6  /tmp/eco-runtime.tar.xz' | sha256sum --check
+          mkdir recovered
+          tar -xJf /tmp/eco-runtime.tar.xz -C recovered
+
+      - name: Apply only the audited business, UI and validation patch
+        shell: bash
+        run: |
+          set -euo pipefail
+          base64 --decode .recovery/patches/2026-09-10-focused-hardening.patch.gz.b64 | gzip -dc > /tmp/focused-hardening.patch
+          git apply --directory=recovered --check /tmp/focused-hardening.patch
+          git apply --directory=recovered /tmp/focused-hardening.patch
+
+      - name: Qualify patched runtime before publishing it
+        working-directory: recovered
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p .github/workflows
+          cp ../.github/workflows/deploy-cloudflare-alpha.yml .github/workflows/deploy-cloudflare-alpha.yml
+          npm install --ignore-scripts --no-package-lock
+          npm run typecheck
+          npm run lint:architecture
+          npm run lint:shared-governance
+          npm test
+
+      - name: Repack and verify patched runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf recovered/node_modules recovered/.build recovered/.github
+          rm -f recovered/package-lock.json
+          tar --sort=name --mtime='UTC 2026-09-10 00:30:00' --owner=0 --group=0 --numeric-owner -cJf /tmp/eco-runtime-new.tar.xz -C recovered .
+          base64 -w0 /tmp/eco-runtime-new.tar.xz > /tmp/runtime-new.b64
+          python - <<'PY'
+          from pathlib import Path
+          import hashlib
+          data=Path('/tmp/runtime-new.b64').read_bytes(); n=8; base=len(data)//n; rem=len(data)%n; pos=0
+          for i in range(n):
+              size=base+(1 if i<rem else 0); chunk=data[pos:pos+size]; pos+=size
+              p=Path(f'.recovery/runtime-v2/{i:02d}.b64'); p.write_bytes(chunk)
+              print(f'{p.name}={hashlib.sha256(chunk).hexdigest()}')
+          assert pos==len(data)
+          print('NEW_ARCHIVE_SHA='+hashlib.sha256(Path('/tmp/eco-runtime-new.tar.xz').read_bytes()).hexdigest())
+          PY
+          cat .recovery/runtime-v2/{00,01,02,03,04,05,06,07}.b64 | base64 --decode > /tmp/rebuilt.tar.xz
+          cmp /tmp/eco-runtime-new.tar.xz /tmp/rebuilt.tar.xz
+          sha256sum /tmp/rebuilt.tar.xz
+          cp /tmp/eco-runtime-new.tar.xz focused-runtime.tar.xz
+          sha256sum focused-runtime.tar.xz > focused-runtime.sha256
+
+      - name: Upload exact candidate backup
+        uses: actions/upload-artifact@v4
+        with:
+          name: eco-system-focused-hardening-candidate
+          path: |
+            focused-runtime.tar.xz
+            focused-runtime.sha256
+            .recovery/runtime-v2/
+          retention-days: 7
+          if-no-files-found: error
+
+      - name: Publish hardened runtime to the existing PR branch
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'Delor85 Eco-System CI'
+          git config user.email 'actions@users.noreply.github.com'
+          git add .recovery/runtime-v2
+          git diff --cached --quiet && { echo '::error::No runtime change produced'; exit 1; }
+          git commit -m 'fix: harden tontine business validation and UI guardrails'
+          git push origin HEAD:recovery/0.5.1-memory-discovery-rubric-trust

@@ -1,0 +1,7 @@
+Eco-System alpha deployment authorization checkpoint
+Date: 2026-09-10
+Branch: recovery/0.5.1-memory-discovery-rubric-trust
+Base qualified HEAD: fa39a266801196c7120c7adf4e99d5b775a97232
+Authorization: explicit user instruction to launch the app after focused hardening.
+Trigger nonce: hardened-alpha-launch-2026-09-10T01-40-CMR
+Constraints: additive D1 migrations only; realMoneyEnabled=false; no merge of main; reuse verified account-owned Cloudflare API Token; verify /health before qualification.

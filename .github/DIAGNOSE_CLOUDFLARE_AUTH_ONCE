@@ -1,0 +1,4 @@
+Eco-System Cloudflare auth diagnostic trigger
+Date: 2026-09-10
+Purpose: fresh verification requested by the user; verify the existing account-owned GitHub Secret directly against Cloudflare without revealing it.
+Trigger nonce: fresh-account-token-check-2026-09-10T02-39-CMR
