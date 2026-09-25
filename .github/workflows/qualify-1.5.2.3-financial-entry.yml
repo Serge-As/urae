@@ -1,0 +1,26 @@
+name: Eco-System 1.5.2.3 — Financial Entry Offline Hotfix Qualification
+
+on:
+  push:
+    branches: ['hotfix/1.5.2.3-financial-entry-offline-20260925']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: eco-system-1-5-2-3-financial-entry-qualification
+  cancel-in-progress: true
+
+jobs:
+  qualify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: npm run ci

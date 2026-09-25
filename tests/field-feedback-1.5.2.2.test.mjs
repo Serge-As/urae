@@ -67,12 +67,12 @@ test('1.5.2.2 flagship visual mode is materially richer while Senior and Assiste
   assert.match(modes,/visual/);assert.match(modes,/senior/);assert.match(modes,/assisted/);
 });
 
-test('1.5.2.2 shell is version isolated and has no escaped newline artifact',async()=>{
+test('1.5.2.3 hotfix shell is version isolated and has no escaped newline artifact',async()=>{
   const html=await readFile('.build/index.html','utf8');
   const sw=await readFile('.build/sw.js','utf8');
-  assert.match(html,/ECO-SYSTEM · 1\.5\.2\.2/);
-  assert.match(html,/main\.js\?v=1522/);
-  assert.match(sw,/eco-system-v1522-governed-field-feedback-20260923/);
-  assert.match(sw,/PREVIOUS_CACHE = 'eco-system-v152-unified-ux-blueprint-20260923'/);
+  assert.match(html,/ECO-SYSTEM · 1\.5\.2\.3/);
+  assert.match(html,/main\.js\?v=1523/);
+  assert.match(sw,/eco-system-v1523-financial-entry-offline-20260925/);
+  assert.match(sw,/PREVIOUS_CACHE = 'eco-system-v1522-governed-field-feedback-20260923'/);
   assert.doesNotMatch(html,/<body[^>]*>\\n\s*<section/);
 });
