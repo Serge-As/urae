@@ -19,6 +19,8 @@ const ledgerCellTotal=async(page,{groupId,meetingId,membershipId,rubricId})=>pag
 
 test('real financial matrix validates click, Enter, closed-session first entry and offline replay',async({page,context})=>{
   test.setTimeout(120_000);
+  const pageErrors=[];
+  page.on('pageerror',error=>pageErrors.push(String(error)));
   await page.goto(base+'/',{waitUntil:'domcontentloaded'});
 
   const ids=await page.evaluate(async({password})=>{
@@ -174,7 +176,29 @@ test('real financial matrix validates click, Enter, closed-session first entry a
   await expect(cell(ids.rubricIds[3],ids.meetingId)).toContainText(/Enregistré sur cet appareil|synchro en attente/i);
 
   await page.reload({waitUntil:'domcontentloaded'});
-  await page.locator('button[data-view="operations"]').first().click();
+  const offlineOperations=page.locator('button[data-view="operations"]').first();
+  if(!await offlineOperations.isVisible().catch(()=>false)){
+    const diagnostics=await page.evaluate(async()=>{
+      const reg=await navigator.serviceWorker.getRegistration('/');
+      const cacheNames=await caches.keys();
+      return{
+        online:navigator.onLine,
+        bodyClass:document.body.className,
+        authHidden:document.querySelector('#authScreen')?.hidden??null,
+        restoreHidden:document.querySelector('#sessionRestoreScreen')?.hidden??null,
+        errorHidden:document.querySelector('#errorBox')?.hidden??null,
+        errorText:document.querySelector('#errorBox')?.textContent??'',
+        accountName:document.querySelector('#accountName')?.textContent??'',
+        controller:Boolean(navigator.serviceWorker.controller),
+        active:reg?.active?.state??'',
+        waiting:reg?.waiting?.state??'',
+        installing:reg?.installing?.state??'',
+        caches:cacheNames
+      };
+    });
+    throw new Error('OFFLINE_RELOAD_UI_NOT_READY '+JSON.stringify({diagnostics,pageErrors}));
+  }
+  await offlineOperations.click();
   await expect(page.locator('#meetingMatrix .canonical-financial-matrix')).toBeVisible();
   await expect.poll(()=>moneyValue(cell(ids.rubricIds[3],ids.meetingId))).toBe(3000);
 
