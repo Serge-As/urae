@@ -1,4 +1,4 @@
-import type {Id,Membership,WorkspaceRecord} from '../../contracts/src/index.js';
+import type {EvidenceRecord,Id,Membership,WorkspaceRecord} from '../../contracts/src/index.js';
 import {makeId} from '../../contracts/src/index.js';
 import type {PlatformRepository} from '../../repositories/src/index.js';
 import type {PlatformKernel} from '../../platform-kernel/src/index.js';
@@ -6,7 +6,7 @@ import type {PlatformKernel} from '../../platform-kernel/src/index.js';
 const managers=new Set(['founder','manager','admin','president','treasurer']);
 const now=()=>new Date().toISOString();
 const qty=(v:number)=>{if(!Number.isSafeInteger(v)||v<=0)throw Error('INVALID_QUANTITY');return v;};
-type MarketKind='SHOP'|'STOCK_ITEM'|'MARKET_ORDER'|'GROUP_BUY'|'SUPPLIER'|'PROCUREMENT'|'SUPPLIER_CREDIT';
+type MarketKind='SHOP'|'STOCK_ITEM'|'MARKET_ORDER'|'GROUP_BUY'|'SUPPLIER'|'PROCUREMENT'|'SUPPLIER_INVOICE'|'PROCUREMENT_RECONCILIATION'|'SUPPLIER_CREDIT_NOTE'|'SUPPLIER_CREDIT'|'FLASH_OFFER'|'MARKET_REQUEST'|'MARKET_RESPONSE'|'DEAL'|'LIVE_MARKET';
 type StockOwnership='COMMERCIAL'|'POT_RESERVED'|'CONSIGNMENT'|'DEPOSIT_SALE';
 export interface MarketRecord extends WorkspaceRecord{data:WorkspaceRecord['data']&{marketKind:MarketKind;version:number};}
 
@@ -33,6 +33,16 @@ export class MarketService{
   private async update(record:MarketRecord,patch:Record<string,string|number|boolean|null>,status?:WorkspaceRecord['status']){
     const next:MarketRecord={...record,status:status??record.status,data:{...record.data,...patch,version:Number(record.data.version??1)+1},updatedAt:now()};
     await this.repo.saveWorkspaceRecord(next);return next;
+  }
+  private async stockMovement(groupId:Id,itemId:Id,input:{kind:'INITIAL'|'ADJUSTMENT'|'RESERVATION'|'DELIVERY'|'CUSTOMER_RETURN'|'PROCUREMENT_RECEIPT'|'SUPPLIER_RETURN';quantityDelta:number;reservedDelta:number;sourceType:string;sourceId:string;note?:string;operationId?:string}
+  async stockMovements(groupId:Id,itemId?:Id){
+    await this.access(groupId,false);const ctx=this.kernel.context.get(),rows=await this.repo.listEvidence(ctx.tenantId,'MARKET_STOCK_ITEM');
+    return rows.filter(x=>String(x.data.groupId??'')===groupId&&(!itemId||x.subjectId===itemId)).sort((a,b)=>a.createdAt.localeCompare(b.createdAt));
+  }
+  async stockProjection(groupId:Id,itemId:Id){
+    const item=(await this.list(groupId,'STOCK_ITEM')).find(x=>x.id===itemId);if(!item)throw Error('STOCK_ITEM_NOT_FOUND');
+    const movements=await this.stockMovements(groupId,itemId),projected=movements.reduce((acc,x)=>({quantity:acc.quantity+Number(x.data.quantityDelta??0),reserved:acc.reserved+Number(x.data.reservedDelta??0)}),{quantity:0,reserved:0});
+    return{itemId,current:{quantity:Number(item.data.quantity??0),reserved:Number(item.data.reserved??0)},projected,complete:movements.some(x=>String(x.data.kind)==='INITIAL'),movementCount:movements.length,matchesCurrent:projected.quantity===Number(item.data.quantity??0)&&projected.reserved===Number(item.data.reserved??0)};
   }
   async createOrUpdateShop(groupId:Id,input:{name:string;tagline?:string;visibility?:'GROUP_ONLY'|'PUBLIC';locality?:string;categories?:string[]}){
     await this.access(groupId,true);const ctx=this.kernel.context.get(),name=input.name.trim();if(!name)throw Error('SHOP_NAME_REQUIRED');
@@ -63,7 +73,9 @@ export class MarketService{
     await this.access(groupId,true);if(!Number.isSafeInteger(delta)||delta===0)throw Error('INVALID_STOCK_DELTA');if(!reason.trim())throw Error('REASON_REQUIRED');
     const item=(await this.list(groupId,'STOCK_ITEM')).find(x=>x.id===itemId);if(!item)throw Error('STOCK_ITEM_NOT_FOUND');
     const next=Number(item.data.quantity)+delta,reserved=Number(item.data.reserved??0);if(next<reserved||next<0)throw Error('INSUFFICIENT_STOCK');
-    return this.update(item,{quantity:next,lastAdjustmentReason:reason.trim()});
+    const updated=await this.update(item,{quantity:next,lastAdjustmentReason:reason.trim()});
+    await this.stockMovement(groupId,item.id,{kind:'ADJUSTMENT',quantityDelta:delta,reservedDelta:0,sourceType:'STOCK_ADJUSTMENT',sourceId:updated.id,note:reason.trim()});
+    return updated;
   }
   async createOrder(groupId:Id,input:{stockItemId:Id;quantity:number;customerRef:string;unitPrice?:number}){
     qty(input.quantity);const item=(await this.list(groupId,'STOCK_ITEM')).find(x=>x.id===input.stockItemId);if(!item)throw Error('STOCK_ITEM_NOT_FOUND');
@@ -82,6 +94,7 @@ export class MarketService{
     const item=(await this.list(groupId,'STOCK_ITEM')).find(x=>x.id===order.data.stockItemId);if(!item)throw Error('STOCK_ITEM_NOT_FOUND');
     if(Number(item.data.quantity)<value||Number(item.data.reserved)<value)throw Error('INSUFFICIENT_STOCK');
     await this.update(item,{quantity:Number(item.data.quantity)-value,reserved:Number(item.data.reserved)-value});
+    await this.stockMovement(groupId,item.id,{kind:'DELIVERY',quantityDelta:-value,reservedDelta:-value,sourceType:'MARKET_ORDER',sourceId:order.id,note:'Livraison client'});
     const nextDelivered=delivered+value;return this.update(order,{deliveredQuantity:nextDelivered,state:nextDelivered===ordered?'DELIVERED':'PARTIAL',returnedQuantity:returned});
   }
   async returnItems(groupId:Id,orderId:Id,value:number,reason:string){
@@ -89,6 +102,7 @@ export class MarketService{
     const delivered=Number(order.data.deliveredQuantity??0),returned=Number(order.data.returnedQuantity??0);if(returned+value>delivered)throw Error('RETURN_EXCEEDS_DELIVERY');
     const item=(await this.list(groupId,'STOCK_ITEM')).find(x=>x.id===order.data.stockItemId);if(!item)throw Error('STOCK_ITEM_NOT_FOUND');
     await this.update(item,{quantity:Number(item.data.quantity)+value});
+    await this.stockMovement(groupId,item.id,{kind:'CUSTOMER_RETURN',quantityDelta:value,reservedDelta:0,sourceType:'MARKET_ORDER',sourceId:order.id,note:reason.trim()});
     return this.update(order,{returnedQuantity:returned+value,state:'RETURNED',returnReason:reason.trim()});
   }
   async dispute(groupId:Id,orderId:Id,summary:string){
@@ -149,7 +163,16 @@ export class MarketService{
     await this.access(groupId,true);const p=(await this.list(groupId,'PROCUREMENT')).find(x=>x.id===input.procurementId);if(!p)throw Error('PROCUREMENT_NOT_FOUND');if(!Number.isSafeInteger(input.amount)||input.amount<=0||input.amount>Number(p.data.landedCost))throw Error('INVALID_SUPPLIER_CREDIT_AMOUNT');if(!Number.isFinite(Date.parse(input.dueAt)))throw Error('INVALID_CREDIT_DUE_AT');
     return this.save(groupId,'SUPPLIER_CREDIT','Crédit fournisseur · '+p.title,{procurementId:p.id,supplierId:String(p.data.supplierId),debtorType:String(p.data.debtorType),debtorRef:String(p.data.debtorRef),principal:input.amount,paidAmount:0,currency:String(p.data.currency??'XAF'),dueAt:new Date(input.dueAt).toISOString(),state:'OPEN'});
   }
-  async paySupplierCredit(groupId:Id,creditId:Id,input:{amount:number;ledgerEntryId?:Id;reference?:string}){
+  async paySupplierCredit(groupId:Id,creditId:Id,input:{amount:number;ledgerEntryId?:Id;reference?:string}
+
+  async recordSupplierInvoice(groupId:Id,input:{procurementId:Id;invoiceRef:string;amount:number;currency?:string;evidenceRef:string;issuedAt?:string}
+  async reconcileSupplierInvoice(groupId:Id,input:{procurementId:Id;invoiceId:Id;note?:string}
+  async issueSupplierCreditNote(groupId:Id,input:{procurementId:Id;invoiceId?:Id;amount:number;reason:string;evidenceRef:string}
+  async procurementLifecycle(groupId:Id,procurementId:Id){
+    const procurement=(await this.list(groupId,'PROCUREMENT')).find(x=>x.id===procurementId);if(!procurement)throw Error('PROCUREMENT_NOT_FOUND');
+    const [invoices,reconciliations,creditNotes,credits]=await Promise.all([this.list(groupId,'SUPPLIER_INVOICE'),this.list(groupId,'PROCUREMENT_RECONCILIATION'),this.list(groupId,'SUPPLIER_CREDIT_NOTE'),this.list(groupId,'SUPPLIER_CREDIT')]);
+    return{procurement,invoices:invoices.filter(x=>String(x.data.procurementId)===procurementId),reconciliations:reconciliations.filter(x=>String(x.data.procurementId)===procurementId),creditNotes:creditNotes.filter(x=>String(x.data.procurementId)===procurementId),credits:credits.filter(x=>String(x.data.procurementId)===procurementId)};
+  }){
     await this.access(groupId,true);const c=(await this.list(groupId,'SUPPLIER_CREDIT')).find(x=>x.id===creditId);if(!c)throw Error('SUPPLIER_CREDIT_NOT_FOUND');if(!Number.isSafeInteger(input.amount)||input.amount<=0)throw Error('INVALID_PAYMENT_AMOUNT');
     if(String(c.data.debtorType)==='GROUP'&&!input.ledgerEntryId)throw Error('LEDGER_ENTRY_REQUIRED');
     if(input.ledgerEntryId&&!await this.repo.getLedgerEntry(this.kernel.context.get().tenantId,groupId,input.ledgerEntryId))throw Error('LEDGER_ENTRY_NOT_FOUND');

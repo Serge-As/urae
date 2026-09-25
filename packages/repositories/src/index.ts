@@ -72,9 +72,21 @@ export interface FinancialCorrectionPlan {
   outboxRecords?: WorkspaceRecord[];
 }
 
+export interface MarketStockReservationPlan {
+  operationId: Id;
+  tenantId: Id;
+  groupId: Id;
+  stock: WorkspaceRecord;
+  order: WorkspaceRecord;
+  movement: EvidenceRecord;
+  expectedVersion: number;
+  reservationQuantity: number;
+}
+
 export interface PlatformRepository {
   commitFinancialOperation(operation: FinancialOperation): FinancialOperation | Promise<FinancialOperation>;
   commitFinancialCorrection(plan: FinancialCorrectionPlan): FinancialCorrectionPlan | Promise<FinancialCorrectionPlan>;
+  commitMarketStockReservation(plan:MarketStockReservationPlan): {stock:WorkspaceRecord;order:WorkspaceRecord;movement:EvidenceRecord} | Promise<{stock:WorkspaceRecord;order:WorkspaceRecord;movement:EvidenceRecord}>;
   getFinancialCellRevision(tenantId:Id,groupId:Id,meetingId:Id,membershipId:Id,rubricId:Id,currency:string): FinancialCellRevision | undefined | Promise<FinancialCellRevision | undefined>;
   listFinancialCellRevisions(tenantId:Id,groupId:Id): FinancialCellRevision[] | Promise<FinancialCellRevision[]>;
   captureGroupPurgeManifest(tenantId:Id,groupId:Id): GroupPurgeManifest | Promise<GroupPurgeManifest>;
@@ -194,6 +206,18 @@ export class InMemoryPlatformRepository implements PlatformRepository {
     this.financialCorrections.set(key,copy);
     return structuredClone(copy);
   }
+  commitMarketStockReservation(plan:MarketStockReservationPlan):{stock:WorkspaceRecord;order:WorkspaceRecord;movement:EvidenceRecord}{
+    const current=this.workspaceRecords.get(plan.stock.id);
+    if(!current||current.tenantId!==plan.tenantId||current.groupId!==plan.groupId)throw new Error('STOCK_ITEM_NOT_FOUND');
+    const version=Number(current.data.version??1),available=Number(current.data.quantity??0)-Number(current.data.reserved??0);
+    if(version!==plan.expectedVersion||available<plan.reservationQuantity)throw new Error('MARKET_STOCK_RESERVATION_CONFLICT');
+    if(String(plan.stock.data.lastReservationOperationId??'')!==plan.operationId)throw new Error('MARKET_STOCK_RESERVATION_PLAN_INVALID');
+    this.workspaceRecords.set(plan.stock.id,structuredClone(plan.stock));
+    this.workspaceRecords.set(plan.order.id,structuredClone(plan.order));
+    this.evidences.set(plan.movement.id,structuredClone(plan.movement));
+    return{stock:structuredClone(plan.stock),order:structuredClone(plan.order),movement:structuredClone(plan.movement)};
+  }
+
   getFinancialCellRevision(tenantId:Id,groupId:Id,meetingId:Id,membershipId:Id,rubricId:Id,currency:string):FinancialCellRevision|undefined{
     const x=this.financialCellRevisions.get(this.financialCellRevisionKey(tenantId,groupId,meetingId,membershipId,rubricId,currency));
     return x?structuredClone(x):undefined;
@@ -475,6 +499,49 @@ export class D1PlatformRepository implements PlatformRepository {
     const stored=JSON.parse(winner.operation_json) as FinancialCorrectionPlan;
     if(stored.intentFingerprint!==plan.intentFingerprint)throw new Error('IDEMPOTENCY_CONFLICT');
     return stored;
+  }
+
+  async commitMarketStockReservation(plan:MarketStockReservationPlan):Promise<{stock:WorkspaceRecord;order:WorkspaceRecord;movement:EvidenceRecord}>{
+    const updatedAt=plan.stock.updatedAt;
+    const stockUpdate=this.db.prepare(`UPDATE platform_records
+      SET data_json=?,updated_at=?
+      WHERE record_type='workspace_record' AND record_id=? AND tenant_id=? AND group_id=?
+        AND CAST(json_extract(data_json,'$.data.version') AS INTEGER)=?
+        AND (CAST(json_extract(data_json,'$.data.quantity') AS INTEGER)-CAST(json_extract(data_json,'$.data.reserved') AS INTEGER))>=?`)
+      .bind(JSON.stringify(plan.stock),updatedAt,plan.stock.id,plan.tenantId,plan.groupId,plan.expectedVersion,plan.reservationQuantity);
+    const guard=this.db.prepare(`INSERT INTO platform_records
+      (record_type,record_id,tenant_id,group_id,assignee_id,idempotency_key,data_json,updated_at)
+      VALUES('market_reservation_guard',?,?,?,?,?,(
+        SELECT json_object('operationId',?) FROM platform_records
+        WHERE record_type='workspace_record' AND record_id=? AND tenant_id=? AND group_id=?
+          AND json_extract(data_json,'$.data.lastReservationOperationId')=?
+        LIMIT 1
+      ),?)`)
+      .bind(plan.operationId,plan.tenantId,plan.groupId,null,plan.operationId,plan.operationId,plan.stock.id,plan.tenantId,plan.groupId,plan.operationId,updatedAt);
+    const orderInsert=this.db.prepare(`INSERT INTO platform_records
+      (record_type,record_id,tenant_id,group_id,assignee_id,idempotency_key,data_json,updated_at)
+      SELECT 'workspace_record',?,?,?,?,?,?,? WHERE EXISTS (
+        SELECT 1 FROM platform_records WHERE record_type='market_reservation_guard' AND record_id=? AND tenant_id=? AND group_id=?
+      )`)
+      .bind(plan.order.id,plan.tenantId,plan.groupId,plan.order.createdBy,plan.operationId,JSON.stringify(plan.order),plan.order.updatedAt,plan.operationId,plan.tenantId,plan.groupId);
+    const evidenceInsert=this.db.prepare(`INSERT INTO platform_records
+      (record_type,record_id,tenant_id,group_id,assignee_id,idempotency_key,data_json,updated_at)
+      SELECT 'evidence',?,?,?,?,?,?,? WHERE EXISTS (
+        SELECT 1 FROM platform_records WHERE record_type='market_reservation_guard' AND record_id=? AND tenant_id=? AND group_id=?
+      )`)
+      .bind(plan.movement.id,plan.tenantId,plan.groupId,null,plan.operationId,JSON.stringify(plan.movement),plan.movement.createdAt,plan.operationId,plan.tenantId,plan.groupId);
+    try{await this.db.batch([stockUpdate,guard,orderInsert,evidenceInsert]);}catch(error){
+      const current=await this.getWorkspaceRecord(plan.tenantId,plan.stock.id),version=Number(current?.data.version??0);
+      if(version!==Number(plan.stock.data.version??0)||String(current?.data.lastReservationOperationId??'')!==plan.operationId)throw new Error('MARKET_STOCK_RESERVATION_CONFLICT',{cause:error});
+      throw error;
+    }
+    const [stock,order,movement]=await Promise.all([
+      this.getWorkspaceRecord(plan.tenantId,plan.stock.id),
+      this.getWorkspaceRecord(plan.tenantId,plan.order.id),
+      this.getEvidence(plan.tenantId,plan.movement.id)
+    ]);
+    if(!stock||!order||!movement)throw new Error('MARKET_STOCK_RESERVATION_NOT_CONFIRMED');
+    return{stock,order,movement};
   }
 
   async getFinancialCellRevision(tenantId:Id,groupId:Id,meetingId:Id,membershipId:Id,rubricId:Id,currency:string):Promise<FinancialCellRevision|undefined>{
