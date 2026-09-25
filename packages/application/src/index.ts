@@ -459,7 +459,7 @@ export class ConnectedApplication {
     return membership;
   }
 
-  async recordFinancialSheetEntry(input:{membershipId:string;meetingId:string;rubric:any;amount:number}):Promise<any>{
+  async recordFinancialSheetEntry(input:{membershipId:string;meetingId:string;rubric:any;amount:number;reason?:string}):Promise<any>{
     if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');
     if(!Number.isSafeInteger(input.amount)||input.amount<=0)throw Error('INVALID_CONTRIBUTION_AMOUNT');
     const rubric=input.rubric??{},kind=String(rubric.activityPlan?.kind??'').toUpperCase();
@@ -468,7 +468,7 @@ export class ConnectedApplication {
     const nature=kind==='LOAN'||systemKey==='LOAN'||/^prets?$|^loans?$/.test(normalized)?'LOAN'
       :kind==='REPAYMENT'||/remboursement|repayment/.test(normalized)?'REPAYMENT'
       :rubric.facets?.direction==='OUTFLOW'?'OUTFLOW':'CONTRIBUTION';
-    if(nature==='CONTRIBUTION')return this.recordCashContribution({membershipId:input.membershipId,meetingId:input.meetingId,rubricId:rubric.id,amount:input.amount});
+    if(nature==='CONTRIBUTION')return this.recordCashContribution({membershipId:input.membershipId,meetingId:input.meetingId,rubricId:rubric.id,amount:input.amount,lateReason:input.reason?.trim()||undefined});
     if(nature==='OUTFLOW')return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/expenses`,{method:'POST',body:JSON.stringify({membershipId:input.membershipId,rubricId:rubric.id,meetingId:input.meetingId,amount:input.amount,label:rubric.name??'Dépense de séance',scope:'SHEET',note:'Saisie depuis la feuille financière canonique',idempotencyKey:makeId('sheet_out')})});
     if(nature==='LOAN'){
       const policy=rubric.policies?.loan;if(!policy?.allowed)throw Error('LOAN_POLICY_REQUIRED');
