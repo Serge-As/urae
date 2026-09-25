@@ -60,18 +60,20 @@ const financialSubmitHandlers=new WeakMap();
 document.addEventListener('click',event=>{
     const target=event.target instanceof Element?event.target.closest('.cell-validate'):null;
     if(!target)return;
-    traceFinancialCell?.('CELL_CLICK_CAPTURE',{bound:target.dataset.ecoSubmitBound||'',membershipId:target.closest('.matrix-cell-entry')?.dataset.membershipId||'',rubricId:target.closest('.matrix-cell-entry')?.dataset.rubricId||'',meetingId:target.closest('.matrix-cell-entry')?.dataset.meetingId||''});
-    const submit=financialSubmitHandlers.get(target)||target.__ecoFinancialSubmit;
+    const mapped=financialSubmitHandlers.get(target),attached=target.__ecoFinancialSubmit,dom0=typeof target.onclick==='function'?target.onclick:null;
+    traceFinancialCell?.('CELL_CLICK_CAPTURE',{bound:target.dataset.ecoSubmitBound||'',hasMapped:Boolean(mapped),hasAttached:typeof attached==='function',hasOnclick:Boolean(dom0),membershipId:target.closest('.matrix-cell-entry')?.dataset.membershipId||'',rubricId:target.closest('.matrix-cell-entry')?.dataset.rubricId||'',meetingId:target.closest('.matrix-cell-entry')?.dataset.meetingId||''});
+    const submit=mapped||attached||dom0;
     if(!submit)return;
-    event.preventDefault();submit();
+    event.preventDefault();submit.call(target,event);
 },true);
 document.addEventListener('keydown',event=>{
     if(event.isComposing||!(event.target instanceof Element))return;
     if(!(event.key==='Enter'||event.code==='Enter'||event.keyCode===13))return;
     const input=event.target.closest('.cell-target-input');if(!input)return;
-    const button=input.closest('.matrix-cell-entry')?.querySelector('.cell-validate'),submit=button?financialSubmitHandlers.get(button):undefined;
+    const button=input.closest('.matrix-cell-entry')?.querySelector('.cell-validate');
+    const submit=button?(financialSubmitHandlers.get(button)||button.__ecoFinancialSubmit||(typeof button.onclick==='function'?button.onclick:null)):undefined;
     if(!submit)return;
-    event.preventDefault();event.stopPropagation();submit();
+    event.preventDefault();event.stopPropagation();submit.call(button,event);
 },true);
 let matrixMeetingId = '';
 let memberSortMode = 'chronological';
