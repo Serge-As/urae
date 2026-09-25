@@ -1,0 +1,73 @@
+name: Eco-System P0 — Real Financial Cell Browser E2E
+
+on:
+  push:
+    branches: ['fix/1.5.2.4-financial-entry-e2e-20260925', 'fix/1.5.2.5-core-a-b-c-t01-t15-20260925']
+  pull_request:
+    branches: ['next/1.5.0-audit-complete-platform-20260923']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: eco-system-financial-cell-e2e
+  cancel-in-progress: true
+
+jobs:
+  chromium-financial-cell:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Probe current production reachability
+        continue-on-error: true
+        shell: bash
+        run: |
+          for url in \
+            "https://eco-system.sergemimf.workers.dev/" \
+            "https://eco-system.sergemimf.workers.dev/health" \
+            "https://eco-system.sergemimf.workers.dev/release.json"
+          do
+            echo "===== $url ====="
+            code="$(curl -L -sS --connect-timeout 10 --max-time 20 -o /tmp/eco-probe-body.txt -w '%{http_code}' "$url" || true)"
+            echo "HTTP=$code"
+            head -c 1200 /tmp/eco-probe-body.txt 2>/dev/null || true
+            echo
+          done
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - run: npm ci --ignore-scripts
+      - run: npm run build
+      - name: Install Chromium runner
+        run: |
+          npm install --no-save --ignore-scripts @playwright/test@1.55.0
+          npx playwright install --with-deps chromium
+      - name: Start isolated local Eco-System
+        run: |
+          rm -f /tmp/eco-financial-e2e.sqlite
+          ECO_DATA_FILE=/tmp/eco-financial-e2e.sqlite OPEN_BROWSER=0 PORT=4173 node scripts/dev-server.mjs > /tmp/eco-financial-e2e.log 2>&1 &
+          echo $! > /tmp/eco-financial-e2e.pid
+          for i in {1..40}; do curl -fsS http://127.0.0.1:4173/health >/dev/null && exit 0; sleep 1; done
+          cat /tmp/eco-financial-e2e.log
+          exit 1
+      - name: Real click Enter closed-session and offline financial flow
+        run: npx playwright test tests/browser/core-a-b-c-t01-t15-1.5.2.5.spec.mjs --browser=chromium --workers=1
+      - name: Print isolated server log on failure
+        if: failure()
+        run: |
+          echo "===== isolated Eco-System server ====="
+          cat /tmp/eco-financial-e2e.log || true
+          echo "===== server process ====="
+          if [ -f /tmp/eco-financial-e2e.pid ]; then ps -fp "$(cat /tmp/eco-financial-e2e.pid)" || true; fi
+      - name: Upload diagnostic report on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: financial-cell-e2e-${{ github.sha }}
+          path: |
+            playwright-report/
+            test-results/
+            /tmp/eco-financial-e2e.log
+          if-no-files-found: ignore

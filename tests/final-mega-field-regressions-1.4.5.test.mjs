@@ -43,7 +43,7 @@ test('important group menus are first-class and no longer hidden in Finance',()=
 test('financial sheet edits a target value for one exact meeting instead of adding a delta',()=>{
   assert.match(main,/Nouvelle valeur totale/);
   assert.match(main,/Remplacer 1 000 par 500 donne 500/);
-  assert.match(main,/setFinancialCellTarget\(\{meetingId,membershipId:member\.id,rubricId:rubric\.id,targetAmount:target,currentAmount:current/);
+  assert.match(main,/setFinancialCellTarget\(\{meetingId,membershipId,rubricId,targetAmount:target,currentAmount:current/);
   assert.match(main,/makeFinancialEntryCell/);
   assert.match(main,/cell-target-input/);
   assert.match(main,/cell-validate/);
