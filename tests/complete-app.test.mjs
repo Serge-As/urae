@@ -5,7 +5,7 @@ import { PRODUCT_MODULES, PRODUCT_CAPABILITY_COUNT } from '../.build/packages/mo
 import { InMemoryPlatformRepository } from '../.build/packages/repositories/src/index.js';
 import { createApiHandler } from '../.build/workers/api/src/index.js';
 
-const RELEASE_VERSION='1.5.2.3-financial-entry-offline';
+const RELEASE_VERSION='1.5.2.6-field-persistence-pc-mobile';
 
 test('Complete App catalog exposes more than 100 unique A-J capabilities',()=>{
   assert.ok(PRODUCT_CAPABILITY_COUNT>=100,`catalog too small: ${PRODUCT_CAPABILITY_COUNT}`);
