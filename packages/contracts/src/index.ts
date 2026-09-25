@@ -418,6 +418,10 @@ export interface OutboxItem<T = unknown> {
   createdAt: string;
   updatedAt: string;
   attempts: number;
+  /** Last business response attached to the durable command. Needed so an ACK
+   * that creates a governed proposal is not mistaken for a canonical value. */
+  lastResult?: Record<string, unknown>;
+  lastError?: string;
 }
 
 
