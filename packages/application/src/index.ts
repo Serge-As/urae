@@ -626,7 +626,7 @@ export class ConnectedApplication {
     // Persist the exact target command before attempting transport. If the HTTP
     // response is lost after commit, the same idempotency key is replayed later.
     const item=await this.queueLocal('FINANCIAL_CELL_CORRECTION_PROPOSAL_V1',payload,operationKey);
-    if(this.isOffline())return{status:'QUEUED_CONSENSUS',current,target:input.targetAmount,outbox:item};
+    if(this.isOffline())return{status:'QUEUED_CONSENSUS',queued:true,current,target:input.targetAmount,outbox:item};
     try{
       const result=await this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/meetings/${encodeURIComponent(input.meetingId)}/financial-cells`,{
         method:'POST',headers:{'x-idempotency-key':operationKey},
