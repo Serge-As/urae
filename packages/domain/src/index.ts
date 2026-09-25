@@ -75,6 +75,28 @@ const persistAudit = async (repo: PlatformRepository, kernel: PlatformKernel, in
   return event;
 };
 
+export type LaunchProject = GroupProject;
+
+export interface LaunchTemplateVersion {
+  id:Id; projectId:Id; version:number; templateKey:string; title:string;
+  snapshot:Record<string,unknown>; createdAt:string; createdBy:Id; immutable:true;
+}
+export interface LaunchSourceDocument {
+  id:Id; projectId:Id; kind:'WORD'|'PDF'|'PHOTO'; fileName:string; fingerprint:string; sourceRef:string;
+  pageIndex?:number; humanReview:'PENDING'|'ACCEPTED'|'REJECTED'; reviewNote?:string; reviewedBy?:Id; reviewedAt?:string;
+  createdAt:string; createdBy:Id;
+}
+export interface FeasibilityRun {
+  id:Id; projectId:Id; result:FeasibilityResult; assumptions:string[]; ledgerMutation:false; realMoney:false;
+  createdAt:string; createdBy:Id; immutable:true;
+}
+export interface LaunchChecklistItem {
+  key:string; label:string; required:boolean; done:boolean; responsibleRole?:string; academyCourseId?:Id; evidenceRef?:string;
+}
+export interface LaunchChecklist {
+  id:Id; projectId:Id; version:number; items:LaunchChecklistItem[]; createdAt:string; createdBy:Id; immutable:true;
+}
+
 export interface CreateGroupProjectInput {
   projectId?: Id;
   tenantId: Id;
@@ -219,6 +241,72 @@ export class FoundationService {
     const next: GroupProject = {...project,status:project.status==='converted'?'converted':'simulated'}; await this.repo.saveProject(next);
     await persistAudit(this.repo,this.kernel,{tenantId,actorId:ctx.actorId,action:'GROUP_PROJECT_SIMULATED',targetType:'group_project',targetId:projectId,requestId,metadata:{result}});
     return result;
+  }
+
+  private async launchProjectFor(tenantId:Id,projectId:Id,capability:ProjectCapability):Promise<GroupProject>{
+    const project=await this.repo.getProject(tenantId,projectId);if(!project)throw new Error('PROJECT_NOT_FOUND');
+    const ctx=this.kernel.context.get();if(!projectCan(project,ctx,capability))throw new Error('FORBIDDEN_SCOPE');
+    return project;
+  }
+
+  private async launchRecords(tenantId:Id,projectId:Id){
+    const rows=await this.repo.listWorkspaceRecords(tenantId,'GROUP.LAUNCH_STUDIO');
+    return rows.filter(x=>String(x.data.projectId??'')===projectId&&x.tags.includes('launch-governance'));
+  }
+
+  async createLaunchTemplateVersion(tenantId:Id,projectId:Id,input:{templateKey:string;title?:string;policies?:Record<string,unknown>;calendar?:unknown[];budget?:Record<string,unknown>;documents?:string[];trainingRefs?:Id[]}):Promise<LaunchTemplateVersion>{
+    const project=await this.launchProjectFor(tenantId,projectId,'EDIT'),ctx=this.kernel.context.get(),rows=await this.launchRecords(tenantId,projectId);
+    const templateKey=input.templateKey.trim();if(!templateKey)throw new Error('LAUNCH_TEMPLATE_KEY_REQUIRED');
+    const versions=rows.filter(x=>x.data.kind==='LAUNCH_TEMPLATE_VERSION'&&x.data.templateKey===templateKey).map(x=>Number(x.data.version??0));
+    const version=Math.max(0,...versions)+1,stamp=now(),snapshot={
+      projectKind:project.kind,governanceModel:project.governanceModel,rubrics:structuredClone(project.rubrics??[]),
+      launchProfile:structuredClone(project.launchProfile??{origin:{mode:'NEW'}}),policies:structuredClone(input.policies??{}),
+      calendar:structuredClone(input.calendar??[]),budget:structuredClone(input.budget??{}),documents:[...(input.documents??[])],trainingRefs:[...(input.trainingRefs??[])]
+    };
+    const id=makeId('launch_template'),record:WorkspaceRecord={id,tenantId,moduleId:'GROUP.LAUNCH_STUDIO',title:(input.title??project.name).trim()||project.name,status:'DONE',tags:['launch-governance','template-version','immutable','project:'+projectId],data:{kind:'LAUNCH_TEMPLATE_VERSION',projectId,templateKey,version,snapshotJson:JSON.stringify(snapshot),immutable:true},createdBy:ctx.actorId,createdAt:stamp,updatedAt:stamp};
+    await this.repo.saveWorkspaceRecord(record);
+    return{id,projectId,version,templateKey,title:record.title,snapshot,createdAt:stamp,createdBy:ctx.actorId,immutable:true};
+  }
+
+  async recordLaunchSourceDocument(tenantId:Id,projectId:Id,input:{kind:'WORD'|'PDF'|'PHOTO';fileName:string;fingerprint:string;sourceRef:string;pageIndex?:number}):Promise<LaunchSourceDocument>{
+    await this.launchProjectFor(tenantId,projectId,'EDIT');const ctx=this.kernel.context.get(),rows=await this.launchRecords(tenantId,projectId);
+    if(!['WORD','PDF','PHOTO'].includes(input.kind))throw new Error('INVALID_LAUNCH_SOURCE_KIND');
+    const fileName=input.fileName.trim(),fingerprint=input.fingerprint.trim(),sourceRef=input.sourceRef.trim();if(!fileName||!fingerprint||!sourceRef)throw new Error('LAUNCH_SOURCE_PROVENANCE_REQUIRED');
+    if(input.pageIndex!==undefined&&(!Number.isSafeInteger(input.pageIndex)||input.pageIndex<1))throw new Error('INVALID_LAUNCH_SOURCE_PAGE');
+    const existing=rows.find(x=>x.data.kind==='LAUNCH_SOURCE_DOCUMENT'&&x.data.fingerprint===fingerprint);
+    if(existing)return{id:existing.id,projectId,kind:String(existing.data.sourceKind) as LaunchSourceDocument['kind'],fileName:String(existing.data.fileName),fingerprint,sourceRef:String(existing.data.sourceRef),pageIndex:existing.data.pageIndex===null||existing.data.pageIndex===undefined?undefined:Number(existing.data.pageIndex),humanReview:String(existing.data.humanReview) as LaunchSourceDocument['humanReview'],reviewNote:String(existing.data.reviewNote??''),reviewedBy:String(existing.data.reviewedBy??'')||undefined,reviewedAt:String(existing.data.reviewedAt??'')||undefined,createdAt:existing.createdAt,createdBy:existing.createdBy};
+    const stamp=now(),id=makeId('launch_source'),record:WorkspaceRecord={id,tenantId,moduleId:'GROUP.LAUNCH_STUDIO',title:'Source lancement · '+fileName,status:'ACTIVE',tags:['launch-governance','source-document','project:'+projectId],data:{kind:'LAUNCH_SOURCE_DOCUMENT',projectId,sourceKind:input.kind,fileName,fingerprint,sourceRef,pageIndex:input.pageIndex??null,humanReview:'PENDING',reviewNote:'',reviewedBy:'',reviewedAt:''},createdBy:ctx.actorId,createdAt:stamp,updatedAt:stamp};
+    await this.repo.saveWorkspaceRecord(record);return{id,projectId,kind:input.kind,fileName,fingerprint,sourceRef,pageIndex:input.pageIndex,humanReview:'PENDING',createdAt:stamp,createdBy:ctx.actorId};
+  }
+
+  async reviewLaunchSourceDocument(tenantId:Id,projectId:Id,documentId:Id,input:{accepted:boolean;note:string}):Promise<LaunchSourceDocument>{
+    await this.launchProjectFor(tenantId,projectId,'EDIT');const ctx=this.kernel.context.get(),record=await this.repo.getWorkspaceRecord(tenantId,documentId);
+    if(!record||record.moduleId!=='GROUP.LAUNCH_STUDIO'||record.data.kind!=='LAUNCH_SOURCE_DOCUMENT'||record.data.projectId!==projectId)throw new Error('LAUNCH_SOURCE_NOT_FOUND');
+    const note=input.note.trim();if(!note)throw new Error('LAUNCH_SOURCE_REVIEW_NOTE_REQUIRED');
+    const reviewedAt=now(),humanReview=input.accepted?'ACCEPTED' as const:'REJECTED' as const,next={...record,status:input.accepted?'DONE' as const:'ACTIVE' as const,data:{...record.data,humanReview,reviewNote:note,reviewedBy:ctx.actorId,reviewedAt},updatedAt:reviewedAt};await this.repo.saveWorkspaceRecord(next);
+    return{id:next.id,projectId,kind:String(next.data.sourceKind) as LaunchSourceDocument['kind'],fileName:String(next.data.fileName),fingerprint:String(next.data.fingerprint),sourceRef:String(next.data.sourceRef),pageIndex:next.data.pageIndex===null||next.data.pageIndex===undefined?undefined:Number(next.data.pageIndex),humanReview,reviewNote:note,reviewedBy:ctx.actorId,reviewedAt,createdAt:next.createdAt,createdBy:next.createdBy};
+  }
+
+  async recordFeasibilityRun(tenantId:Id,projectId:Id):Promise<FeasibilityRun>{
+    const project=await this.launchProjectFor(tenantId,projectId,'SIMULATE'),ctx=this.kernel.context.get(),result=this.simulator.simulate(project),stamp=now(),id=makeId('feasibility_run');
+    const record:WorkspaceRecord={id,tenantId,moduleId:'GROUP.LAUNCH_STUDIO',title:'Simulation de faisabilité · '+project.name,status:'DONE',tags:['launch-governance','feasibility-run','immutable','project:'+projectId],data:{kind:'FEASIBILITY_RUN',projectId,resultJson:JSON.stringify(result),assumptionsJson:JSON.stringify(result.assumptions),ledgerMutation:false,realMoney:false,immutable:true},createdBy:ctx.actorId,createdAt:stamp,updatedAt:stamp};
+    await this.repo.saveWorkspaceRecord(record);return{id,projectId,result,assumptions:[...result.assumptions],ledgerMutation:false,realMoney:false,createdAt:stamp,createdBy:ctx.actorId,immutable:true};
+  }
+
+  async createLaunchChecklistVersion(tenantId:Id,projectId:Id,items:LaunchChecklistItem[]):Promise<LaunchChecklist>{
+    await this.launchProjectFor(tenantId,projectId,'EDIT');const ctx=this.kernel.context.get(),rows=await this.launchRecords(tenantId,projectId);
+    if(!items.length)throw new Error('LAUNCH_CHECKLIST_REQUIRED');
+    const seen=new Set<string>(),cleanItems=items.map(item=>{const key=item.key.trim(),label=item.label.trim();if(!key||!label||seen.has(key))throw new Error('INVALID_LAUNCH_CHECKLIST_ITEM');seen.add(key);return{key,label,required:Boolean(item.required),done:Boolean(item.done),responsibleRole:item.responsibleRole?.trim()||undefined,academyCourseId:item.academyCourseId?.trim()||undefined,evidenceRef:item.evidenceRef?.trim()||undefined};});
+    const version=Math.max(0,...rows.filter(x=>x.data.kind==='LAUNCH_CHECKLIST').map(x=>Number(x.data.version??0)))+1,stamp=now(),id=makeId('launch_checklist');
+    const record:WorkspaceRecord={id,tenantId,moduleId:'GROUP.LAUNCH_STUDIO',title:'Checklist lancement v'+version,status:'DONE',tags:['launch-governance','launch-checklist','immutable','project:'+projectId],data:{kind:'LAUNCH_CHECKLIST',projectId,version,itemsJson:JSON.stringify(cleanItems),immutable:true},createdBy:ctx.actorId,createdAt:stamp,updatedAt:stamp};
+    await this.repo.saveWorkspaceRecord(record);return{id,projectId,version,items:cleanItems,createdAt:stamp,createdBy:ctx.actorId,immutable:true};
+  }
+
+  async launchReadiness(tenantId:Id,projectId:Id):Promise<{ready:boolean;checklistVersion:number;requiredIncomplete:string[];sourceReviews:{pending:number;rejected:number;accepted:number};academyRefs:string[];proofOnly:boolean}>{
+    await this.launchProjectFor(tenantId,projectId,'SIMULATE');const rows=await this.launchRecords(tenantId,projectId),checklists=rows.filter(x=>x.data.kind==='LAUNCH_CHECKLIST').sort((a,b)=>Number(b.data.version??0)-Number(a.data.version??0)),latest=checklists[0];
+    const items=latest?JSON.parse(String(latest.data.itemsJson??'[]')) as LaunchChecklistItem[]:[],requiredIncomplete=items.filter(x=>x.required&&!x.done).map(x=>x.key),docs=rows.filter(x=>x.data.kind==='LAUNCH_SOURCE_DOCUMENT');
+    const pending=docs.filter(x=>x.data.humanReview==='PENDING').length,rejected=docs.filter(x=>x.data.humanReview==='REJECTED').length,accepted=docs.filter(x=>x.data.humanReview==='ACCEPTED').length,academyRefs=[...new Set(items.map(x=>x.academyCourseId).filter((x):x is string=>Boolean(x)))];
+    return{ready:Boolean(latest)&&requiredIncomplete.length===0&&pending===0&&rejected===0,checklistVersion:Number(latest?.data.version??0),requiredIncomplete,sourceReviews:{pending,rejected,accepted},academyRefs,proofOnly:true};
   }
 
   async convertProjectToGroup(tenantId: Id, projectId: Id, requestId = makeId('req')): Promise<Group> {
