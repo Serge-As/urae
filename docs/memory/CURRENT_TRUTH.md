@@ -1,3 +1,58 @@
+## CURRENT OVERRIDE — 1.5.2.3 FINANCIAL ENTRY OFFLINE — PRODUCTION VERIFIED, FIELD ACCEPTANCE PENDING (2026-09-25)
+
+**Repository opérationnel : `SergeDelor/tontine-platform`.**
+**Production publique : `1.5.2.3-financial-entry-offline`.**
+**Statut : CI_QUALIFIED + DEPLOYED + SMOKE_VERIFIED. FIELD_ACCEPTED est volontairement NON déclaré tant que le fondateur n'a pas reproduit les tests ✓ / Entrée / offline sur ses appareils.**
+
+### Pourquoi 1.5.2.3 existe
+La recette réelle du fondateur a invalidé l'affirmation 1.5.2.2 selon laquelle la saisie montant + ✓ était acquise : le montant saisi pouvait être durablement placé dans l'outbox tandis que la lecture Ledger suivante renvoyait encore la valeur serveur précédente. L'interface repeignait alors 0 et donnait l'impression que ✓ n'avait rien fait. Ce constat terrain prime sur l'ancien test source/CI.
+
+### Correction livrée
+- **✓ et touche Entrée utilisent exactement le même chemin de validation** ; Entrée empêche le submit parasite et déclenche la même commande canonique.
+- une première saisie de contribution placée en file locale reste **immédiatement visible dans la matrice**, même si le Ledger distant n'a pas encore confirmé l'écriture ;
+- les corrections de cellule déjà persistées dans l'outbox exposent leur **valeur cible locale** et ne reviennent plus visuellement à l'ancienne valeur pendant l'attente réseau ;
+- une saisie offline/queue affiche explicitement **« Enregistré hors ligne · synchro en attente »** ;
+- les intentions sont persistées dans l'outbox IndexedDB puis synchronisées vers l'owner financier canonique ; aucun second Ledger n'a été créé ;
+- les réponses ambiguës / indisponibilités temporaires n'effacent plus visuellement l'intention locale ;
+- déduplication par idempotency key : une écriture déjà présente dans la projection serveur/cache n'est pas comptée deux fois ;
+- PWA isolée dans un nouveau cache pour empêcher un ancien `main.js` 1.5.2.2 de masquer le correctif.
+
+### Preuves techniques
+- branche hotfix : `hotfix/1.5.2.3-financial-entry-offline-20260925`
+- qualification hotfix : run **36155504042 — SUCCESS — 365/365 PASS**
+- tests spécifiques : projection visible d'une saisie queue alors que le serveur retourne 0 ; déduplication ; correction offline avec cible locale ; ✓ + Entrée + état pending
+- workflow production : **36155682018 — SUCCESS**
+- commit exact déployé : `655cf0b76e2cb1d8ac2338f855c0b93981a1fef3`
+- version runtime : `1.5.2.3-financial-entry-offline`
+- build ID : `eco-system-1.5.2.3-20260925`
+- PWA cache : `eco-system-v1523-financial-entry-offline-20260925`
+- Worker Version ID : `84b9f2ef-9780-4d5b-95f4-e533a5ab3a33`
+- catalogue production : **158 capacités**
+- argent réel : **false / OFF**
+- stockage artefacts : **R2**
+- D1 canonique : `eco-system-db` réutilisée ; migrations additives uniquement
+- R2 canonique : `eco-system-backups` réutilisé
+- sauvegarde pré-déploiement : artifact **10873442195**
+- sauvegarde post-déploiement : artifact **10872769858**
+- restauration post-déploiement : **PASS**, SQLite + `PRAGMA integrity_check=ok`
+- PR d'intégration : **#23 — MERGED**, merge commit `6f013c8b5e3c5d084595be607dc71635ad0bf6b9`
+
+### Blocage fonctionnel volontaire
+Le chantier L7–L12 est **mis en pause**. Aucune poursuite ne doit être présentée comme prioritaire avant la recette terrain de cette correction financière.
+
+### Recette terrain obligatoire avant FIELD_ACCEPTED
+1. sur la feuille de séance, saisir un montant dans une cellule à 0 puis cliquer ✓ : la valeur doit apparaître immédiatement ;
+2. saisir un autre montant et appuyer **Entrée** : résultat identique à ✓ ;
+3. modifier une valeur existante : la cible doit être visible sans addition implicite ;
+4. couper Internet, saisir/valider : la valeur doit rester visible avec **« Enregistré hors ligne · synchro en attente »** ;
+5. rétablir Internet : la file doit se synchroniser sans double comptage ;
+6. actualiser la page et vérifier que la valeur confirmée reste présente ;
+7. répéter au moins une fois dans une fiche individuelle puisque le même renderer canonique est partagé.
+
+**Point de reprise obligatoire : attendre la recette réelle du fondateur sur 1.5.2.3. Si elle échoue, corriger ce flux uniquement. Si elle réussit, seulement alors reprendre L7–L12 depuis la branche qualifiée prévue, en réintégrant d'abord ce hotfix.**
+
+---
+
 ## CURRENT OVERRIDE — 1.5.2.2 GOVERNED FIELD FEEDBACK — PRODUCTION VERIFIED (2026-09-25)
 
 **Repository opérationnel : `SergeDelor/tontine-platform`.**
