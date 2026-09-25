@@ -18,7 +18,8 @@ const makeGroup=async(repo,k,tenantId,actorId,name)=>{
 test('discovery uses a safe public cross-tenant projection and excludes secret/non-public groups', async()=>{
   const repo=new InMemoryPlatformRepository(); const k=new PlatformKernel(); const discovery=new DiscoveryService(repo,k);
   const a=await makeGroup(repo,k,'tenant_A','founder_A','Solidarité Mvog-Ada'); setCtx(k,'tenant_A','founder_A',a.id); await discovery.publishGroupListing({tenantId:'tenant_A',groupId:a.id,visibility:'PUBLIC',discoverable:true,joinPolicy:'REQUEST',recruiting:true,locality:'Yaoundé',missionTags:['solidarité','quartier'],activityTags:['épargne'],meetingMode:'IN_PERSON',contributionBand:{currency:'XAF',min:1000,max:5000,cadence:'weekly'}});
-  const b=await makeGroup(repo,k,'tenant_B','founder_B','Cercle Secret'); setCtx(k,'tenant_B','founder_B',b.id); await discovery.publishGroupListing({tenantId:'tenant_B',groupId:b.id,visibility:'SECRET',discoverable:true,joinPolicy:'INVITE_ONLY',recruiting:false,locality:'Yaoundé',missionTags:['solidarité'],activityTags:[]});
+  const b=await makeGroup(repo,k,'tenant_B','founder_B','Cercle Secret'); setCtx(k,'tenant_B','founder_B',b.id);
+  await assert.rejects(()=>discovery.publishGroupListing({tenantId:'tenant_B',groupId:b.id,visibility:'SECRET',discoverable:true,joinPolicy:'INVITE_ONLY',recruiting:false,locality:'Yaoundé',missionTags:['solidarité'],activityTags:[]}),/SECRET_GROUP_NOT_DISCOVERABLE/);
   const matches=await discovery.search({text:'solidarité',locality:'Yaoundé',missionTags:['solidarité'],maxContribution:{currency:'XAF',amount:5000},recruitingOnly:true});
   assert.equal(matches.length,1); assert.equal(matches[0].listing.groupId,a.id); assert.equal('members' in matches[0].listing,false); assert.equal(matches[0].reasonCodes.includes('LOCALITY_MATCH'),true);
 });
