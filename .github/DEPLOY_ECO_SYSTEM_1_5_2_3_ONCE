@@ -1,0 +1,6 @@
+Eco-System 1.5.2.3 financial-entry hotfix production delivery requested.
+Base production: 1.5.2.2-governed-field-feedback @ 8d4bbee39cdf519f7c6c18296f840ef49313df6a
+Qualified hotfix CI: run 36155504042 — 365/365 PASS.
+Purpose: make canonical financial cell validation visibly effective, validate by click or Enter, and preserve queued/offline values locally until canonical synchronization.
+Guardrails: existing eco-system-db + eco-system-backups only, full CI before mutation, pre/post D1 recovery snapshots, additive migrations only, exact release smoke, realMoneyEnabled=false.
+Requested: 2026-09-25
