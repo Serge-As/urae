@@ -14,7 +14,7 @@ test('L7 launch governance versions templates, preserves document provenance and
   const project=await service.createProject({
     tenantId:tenant,createdBy:actor,name:'Association L7',kind:'association',governanceModel:'community',
     rubrics:[
-      {key:'t1000',name:'Tontine 1 000',kind:'TONTINE',nominalAmount:{currency:'XAF',amount:1000},amountBasis:'PER_SHARE',participationMode:'OPTIONAL',memberCount:10,shareCount:8,potCount:8,sessions:8,duration:{value:8,unit:'SESSIONS'},managementFeePerPayment:50,estimatedExternalCostRate:0,fixedCostPerSession:0},
+      {key:'t1000',name:'Tontine 1 000',kind:'TONTINE',nominalAmount:{currency:'XAF',amount:1000},amountBasis:'PER_SHARE',participationMode:'OPTIONAL',memberCount:10,shareCount:10,potCount:2,sessions:8,duration:{value:8,unit:'SESSIONS'},managementFeePerPayment:50,estimatedExternalCostRate:0,fixedCostPerSession:0},
       {key:'savings',name:'Épargne',kind:'SAVINGS',nominalAmount:{currency:'XAF',amount:5000},amountBasis:'PER_MEMBER',participationMode:'OPTIONAL',memberCount:10,sessions:8,duration:{value:8,unit:'SESSIONS'},managementFeePerPayment:0,estimatedExternalCostRate:0,fixedCostPerSession:0}
     ],
     launchProfile:{origin:{mode:'NEW'},cycle:{expectedSessions:8,cadence:'MONTHLY'},members:{expectedMembers:10},communication:{channels:['IN_APP','PRINT']},accessibility:{ultraSimple:true,lowBandwidthPriority:true,oldDevicePriority:true,preferredLocale:'fr'},sourceDocumentFingerprints:[],previewConfirmed:true}
