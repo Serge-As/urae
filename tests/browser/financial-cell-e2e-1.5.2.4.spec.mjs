@@ -69,8 +69,18 @@ test('real financial matrix validates click, Enter, closed-session first entry a
   const clickCell=cell(ids.rubricIds[0]);
   await clickCell.locator('.cell-target-input').fill('1000');
   await clickCell.locator('.cell-validate').click();
-  await expect.poll(()=>moneyValue(cell(ids.rubricIds[0]))).toBe(1000);
-  await expect.poll(()=>ledgerCellTotal(page,{...ids,rubricId:ids.rubricIds[0]})).toBe(1000);
+  await page.waitForTimeout(1000);
+  const firstUi=await moneyValue(cell(ids.rubricIds[0]));
+  const firstLedger=await ledgerCellTotal(page,{...ids,rubricId:ids.rubricIds[0]});
+  if(firstUi!==1000||firstLedger!==1000){
+    const diagnostics=await page.evaluate(({membershipId,rubricId,meetingId})=>({
+      error:document.querySelector('#errorBox')?.textContent??'',
+      cell:document.querySelector('.matrix-cell-entry[data-membership-id="'+membershipId+'"][data-rubric-id="'+rubricId+'"][data-meeting-id="'+meetingId+'"]')?.textContent??'',
+      state:document.querySelector('.matrix-cell-entry[data-membership-id="'+membershipId+'"][data-rubric-id="'+rubricId+'"][data-meeting-id="'+meetingId+'"]')?.getAttribute('data-save-state')??'',
+      trace:localStorage.getItem('eco.financialCellTrace')??'[]'
+    }),{membershipId:ids.membershipId,rubricId:ids.rubricIds[0],meetingId:ids.meetingId});
+    throw new Error('FIRST_CLICK_NOT_COMMITTED ui='+firstUi+' ledger='+firstLedger+' diagnostics='+JSON.stringify(diagnostics));
+  }
 
   const enterCell=cell(ids.rubricIds[1]);
   await enterCell.locator('.cell-target-input').fill('2000');
