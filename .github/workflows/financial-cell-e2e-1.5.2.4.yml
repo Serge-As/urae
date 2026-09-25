@@ -2,7 +2,7 @@ name: Eco-System P0 — Real Financial Cell Browser E2E
 
 on:
   push:
-    branches: ['fix/1.5.2.4-financial-entry-e2e-20260925', 'fix/1.5.2.5-core-a-b-c-t01-t15-20260925']
+    branches: ['fix/1.5.2.4-financial-entry-e2e-20260925', 'fix/1.5.2.5-core-a-b-c-t01-t15-20260925', 'fix/1.5.2.6-field-persistence-pc-mobile-20260925']
   pull_request:
     branches: ['next/1.5.0-audit-complete-platform-20260923']
   workflow_dispatch:
@@ -53,7 +53,7 @@ jobs:
           cat /tmp/eco-financial-e2e.log
           exit 1
       - name: Real click Enter closed-session and offline financial flow
-        run: npx playwright test tests/browser/core-a-b-c-t01-t15-1.5.2.5.spec.mjs --browser=chromium --workers=1
+        run: npx playwright test tests/browser/core-a-b-c-t01-t15-1.5.2.5.spec.mjs tests/browser/financial-cell-consensus-persistence-1.5.2.6.spec.mjs --browser=chromium --workers=1
       - name: Print isolated server log on failure
         if: failure()
         run: |
