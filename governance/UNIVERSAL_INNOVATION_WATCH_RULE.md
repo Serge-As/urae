@@ -1,6 +1,6 @@
 # RÈGLE UNIVERSELLE PERMANENTE — Veille Innovation Positive
 
-Cette règle s'applique à tous les projets SergeDelor. Elle impose de rechercher régulièrement des innovations, fonctionnalités, modules, idées, algorithmes, parcours, méthodes opérationnelles et briques gratuites/open source susceptibles d'améliorer positivement le projet sans dégrader les acquis.
+Cette règle s'applique à tous les projets Delor85 et SergeDelor. Elle impose de rechercher régulièrement des innovations, fonctionnalités, modules, idées, algorithmes, parcours, méthodes opérationnelles et briques gratuites/open source susceptibles d'améliorer positivement le projet sans dégrader les acquis.
 
 ## FIT-LAPS
 Tout candidat est évalué sur : Fit métier, Impact utilisateur, Terrain réel, Licence/droits, Architecture, Privacy/Protection, Sustainability.
