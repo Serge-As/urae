@@ -1,0 +1,19 @@
+name: Eco-System 1.5.4 — L9 Discovery Membership Owner Qualification
+on:
+  push:
+    branches: ['continue/1.5.4-l9-discovery-membership-owner-20260925']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  qualify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: npm run ci

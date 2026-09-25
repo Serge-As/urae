@@ -8,6 +8,8 @@ const now=()=>new Date().toISOString();
 const MANAGER_ROLES=new Set(['founder','manager','admin','president','treasurer']);
 const normalize=(v:string|undefined)=>String(v??'').trim().toLocaleLowerCase();
 const tokens=(v:string|undefined)=>normalize(v).split(/[^\p{L}\p{N}]+/u).filter(Boolean);
+const opaqueInvitation=()=>{const bytes=new Uint8Array(24);crypto.getRandomValues(bytes);return [...bytes].map(x=>x.toString(16).padStart(2,'0')).join('');};
+const sha256=async(value:string)=>{const digest=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(value));return [...new Uint8Array(digest)].map(x=>x.toString(16).padStart(2,'0')).join('');};
 
 const requireManager=async(repo:PlatformRepository,kernel:PlatformKernel,tenantId:Id,groupId:Id):Promise<void>=>{
   const ctx=kernel.context.get();
@@ -28,6 +30,7 @@ export class DiscoveryService {
 
   async publishGroupListing(input:PublishGroupListingInput):Promise<PublicGroupListing>{
     await requireManager(this.repo,this.kernel,input.tenantId,input.groupId);
+    if(input.visibility==='SECRET') throw new Error('SECRET_GROUP_NOT_DISCOVERABLE');
     const group=await this.repo.getGroup(input.tenantId,input.groupId); if(!group) throw new Error('GROUP_NOT_FOUND');
     const previous=await this.repo.getPublicGroupListing(group.id); const timestamp=now();
     const listing:PublicGroupListing={
@@ -99,4 +102,41 @@ export class MembershipGatewayService {
     const audit=this.kernel.audit.append({tenantId:application.targetTenantId,actorId:this.kernel.context.get().actorId,action:'MEMBERSHIP_APPLICATION_DECIDED',targetType:'membership_application',targetId:application.id,after:{status:updated.status,membershipId},requestId:this.kernel.context.get().requestId}); await this.repo.saveAudit(audit);
     return {application:structuredClone(updated),membershipId};
   }
+
+  async createInvitation(input:{targetTenantId:Id;groupId:Id;expiresAt?:string;note?:string}):Promise<{invitationId:Id;token:string;expiresAt:string}>{
+    await requireManager(this.repo,this.kernel,input.targetTenantId,input.groupId);
+    const ctx=this.kernel.context.get(),token=opaqueInvitation(),tokenHash=await sha256(token);
+    const expiresAt=input.expiresAt?new Date(input.expiresAt).toISOString():new Date(Date.now()+7*24*60*60*1000).toISOString();
+    if(!Number.isFinite(Date.parse(expiresAt))||Date.parse(expiresAt)<=Date.now())throw new Error('INVALID_INVITATION_EXPIRY');
+    const id=makeId('membership_invite'),stamp=now();
+    await this.repo.saveWorkspaceRecord({
+      id,tenantId:input.targetTenantId,groupId:input.groupId,moduleId:'DISCOVERY.MEMBERSHIP',
+      title:'Invitation membre',status:'ACTIVE',tags:['membership-gateway','opaque-invitation','single-use'],
+      data:{kind:'MEMBERSHIP_INVITATION',tokenHash,expiresAt,note:input.note?.trim().slice(0,240)??'',state:'ACTIVE',singleUse:true},
+      createdBy:ctx.actorId,createdAt:stamp,updatedAt:stamp
+    });
+    const audit=this.kernel.audit.append({tenantId:input.targetTenantId,actorId:ctx.actorId,action:'MEMBERSHIP_INVITATION_CREATED',targetType:'group',targetId:input.groupId,after:{invitationId:id,expiresAt,singleUse:true},requestId:ctx.requestId});
+    await this.repo.saveAudit(audit);
+    return{invitationId:id,token,expiresAt};
+  }
+
+  async acceptInvitation(input:{targetTenantId:Id;groupId:Id;token:string}):Promise<{membershipId:Id;invitationId:Id}>{
+    const ctx=this.kernel.context.get(),token=input.token.trim();if(!token)throw new Error('INVITATION_TOKEN_REQUIRED');
+    const tokenHash=await sha256(token),rows=await this.repo.listWorkspaceRecords(input.targetTenantId,'DISCOVERY.MEMBERSHIP',input.groupId);
+    const invitation=rows.find(x=>x.data.kind==='MEMBERSHIP_INVITATION'&&x.data.tokenHash===tokenHash);
+    if(!invitation)throw new Error('INVITATION_NOT_FOUND');
+    if(invitation.status!=='ACTIVE'||String(invitation.data.state)!=='ACTIVE')throw new Error('INVITATION_ALREADY_USED');
+    if(Date.parse(String(invitation.data.expiresAt??''))<=Date.now())throw new Error('INVITATION_EXPIRED');
+    const group=await this.repo.getGroup(input.targetTenantId,input.groupId);if(!group)throw new Error('GROUP_NOT_FOUND');
+    const user=await this.repo.getUser(ctx.actorId);if(!user)throw new Error('USER_NOT_FOUND');
+    const memberships=await this.repo.listMemberships(input.targetTenantId,input.groupId),existing=memberships.find(x=>x.userId===ctx.actorId&&x.status==='active');
+    const membership=existing??{id:makeId('membership'),tenantId:input.targetTenantId,groupId:input.groupId,userId:ctx.actorId,roles:['member'],status:'active' as const,joinedAt:now()};
+    if(!existing)await this.repo.saveMembership(membership);
+    const acceptedAt=now();
+    await this.repo.saveWorkspaceRecord({...invitation,status:'DONE',data:{...invitation.data,state:'ACCEPTED',acceptedBy:ctx.actorId,acceptedAt},updatedAt:acceptedAt});
+    const audit=this.kernel.audit.append({tenantId:input.targetTenantId,actorId:ctx.actorId,action:'MEMBERSHIP_INVITATION_ACCEPTED',targetType:'membership',targetId:membership.id,after:{groupId:input.groupId,invitationId:invitation.id},requestId:ctx.requestId});
+    await this.repo.saveAudit(audit);
+    return{membershipId:membership.id,invitationId:invitation.id};
+  }
+
 }
