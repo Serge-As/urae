@@ -18,6 +18,21 @@ jobs:
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
+      - name: Probe current production reachability
+        continue-on-error: true
+        shell: bash
+        run: |
+          for url in \
+            "https://eco-system.sergemimf.workers.dev/" \
+            "https://eco-system.sergemimf.workers.dev/health" \
+            "https://eco-system.sergemimf.workers.dev/release.json"
+          do
+            echo "===== $url ====="
+            code="$(curl -L -sS --connect-timeout 10 --max-time 20 -o /tmp/eco-probe-body.txt -w '%{http_code}' "$url" || true)"
+            echo "HTTP=$code"
+            head -c 1200 /tmp/eco-probe-body.txt 2>/dev/null || true
+            echo
+          done
       - uses: actions/setup-node@v4
         with:
           node-version: '24'
