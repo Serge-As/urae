@@ -57,7 +57,7 @@ test('real financial matrix validates click, Enter, closed-session first entry a
     return{groupId:group.id,membershipId,meetingId:meeting.id,rubricIds:rubrics.map(x=>x.id)};
   },{password});
 
-  await page.reload({waitUntil:'networkidle'});
+  await page.reload({waitUntil:'domcontentloaded'});
   await expect(page.locator('#authScreen')).toBeHidden();
   await page.locator('button[data-view="operations"]').first().click();
   await expect(page.locator('#meetingMatrix .canonical-financial-matrix')).toBeVisible();
@@ -84,7 +84,7 @@ test('real financial matrix validates click, Enter, closed-session first entry a
     });
     if(!r.ok)throw new Error('CLOSE_HTTP_'+r.status+':'+await r.text());
   },ids);
-  await page.reload({waitUntil:'networkidle'});
+  await page.reload({waitUntil:'domcontentloaded'});
   await page.locator('button[data-view="operations"]').first().click();
   await expect(page.locator('#meetingMatrix .canonical-financial-matrix')).toBeVisible();
   const closedCell=cell(ids.rubricIds[2]);
@@ -103,7 +103,7 @@ test('real financial matrix validates click, Enter, closed-session first entry a
     return r.json();
   },ids);
   ids.meetingId=open2.id;
-  await page.reload({waitUntil:'networkidle'});
+  await page.reload({waitUntil:'domcontentloaded'});
   await page.locator('button[data-view="operations"]').first().click();
   await expect(page.locator('#meetingMatrix .canonical-financial-matrix')).toBeVisible();
   await expect(cell(ids.rubricIds[3],ids.meetingId)).toBeVisible();
@@ -125,7 +125,7 @@ test('real financial matrix validates click, Enter, closed-session first entry a
   await expect.poll(()=>ledgerCellTotal(page,{...ids,rubricId:ids.rubricIds[3]}),{timeout:30_000}).toBe(3000);
   await expect.poll(()=>moneyValue(cell(ids.rubricIds[3],ids.meetingId)),{timeout:30_000}).toBe(3000);
 
-  await page.reload({waitUntil:'networkidle'});
+  await page.reload({waitUntil:'domcontentloaded'});
   await page.locator('button[data-view="operations"]').first().click();
   await expect.poll(()=>moneyValue(cell(ids.rubricIds[3],ids.meetingId))).toBe(3000);
   await expect.poll(()=>ledgerCellTotal(page,{...ids,rubricId:ids.rubricIds[3]})).toBe(3000);
