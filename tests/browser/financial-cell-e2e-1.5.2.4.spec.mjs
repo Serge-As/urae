@@ -89,9 +89,13 @@ test('real financial matrix validates click, Enter, closed-session first entry a
       inputValue:document.querySelector('.matrix-cell-entry[data-membership-id="'+membershipId+'"][data-rubric-id="'+rubricId+'"][data-meeting-id="'+meetingId+'"] .cell-target-input')?.value??'',
       inputMarker:document.querySelector('.matrix-cell-entry[data-membership-id="'+membershipId+'"][data-rubric-id="'+rubricId+'"][data-meeting-id="'+meetingId+'"] .cell-target-input')?.getAttribute('data-e2e-marker')??'',
       buttonMarker:document.querySelector('.matrix-cell-entry[data-membership-id="'+membershipId+'"][data-rubric-id="'+rubricId+'"][data-meeting-id="'+meetingId+'"] .cell-validate')?.getAttribute('data-e2e-marker')??'',
-      mainHasTrace:false
+      submitBound:document.querySelector('.matrix-cell-entry[data-membership-id="'+membershipId+'"][data-rubric-id="'+rubricId+'"][data-meeting-id="'+meetingId+'"] .cell-validate')?.getAttribute('data-eco-submit-bound')??'',
+      onclickType:typeof document.querySelector('.matrix-cell-entry[data-membership-id="'+membershipId+'"][data-rubric-id="'+rubricId+'"][data-meeting-id="'+meetingId+'"] .cell-validate')?.onclick,
+      mainHasTrace:false,
+      mainHasSelfContainedBinding:false
     }),{membershipId:ids.membershipId,rubricId:ids.rubricIds[0],meetingId:ids.meetingId});
-    diagnostics.mainHasTrace=await page.evaluate(async()=>{const src=document.querySelector('script[src*="main.js"]')?.getAttribute('src');if(!src)return false;return (await (await fetch(src,{cache:'no-store'})).text()).includes('traceFinancialCell');});
+    const sourceProof=await page.evaluate(async()=>{const src=document.querySelector('script[src*="main.js"]')?.getAttribute('src');if(!src)return {trace:false,binding:false};const text=await (await fetch(src,{cache:'no-store'})).text();return {trace:text.includes('traceFinancialCell'),binding:text.includes('__ecoFinancialSubmit')&&text.includes("ecoSubmitBound='1'")};});
+    diagnostics.mainHasTrace=sourceProof.trace;diagnostics.mainHasSelfContainedBinding=sourceProof.binding;
     throw new Error('FIRST_CLICK_NOT_COMMITTED ui='+firstUi+' ledger='+firstLedger+' diagnostics='+JSON.stringify(diagnostics));
   }
 
