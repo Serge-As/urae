@@ -68,6 +68,14 @@ test('real financial matrix validates click, Enter, closed-session first entry a
 
   const clickCell=cell(ids.rubricIds[0]);
   await clickCell.locator('.cell-target-input').fill('1000');
+  const beforeClick=await page.evaluate(({membershipId,rubricId,meetingId})=>{
+    const root=document.querySelector('.matrix-cell-entry[data-membership-id="'+membershipId+'"][data-rubric-id="'+rubricId+'"][data-meeting-id="'+meetingId+'"]');
+    const input=root?.querySelector('.cell-target-input'),button=root?.querySelector('.cell-validate');
+    if(input)input.dataset.e2eMarker='input-before-click';
+    if(button)button.dataset.e2eMarker='button-before-click';
+    return{value:input?.value??'',hasState:Boolean(root?.querySelector('.cell-save-state')),html:root?.outerHTML??'',source:document.querySelector('script[src*="main.js"]')?.getAttribute('src')??''};
+  },{membershipId:ids.membershipId,rubricId:ids.rubricIds[0],meetingId:ids.meetingId});
+  if(beforeClick.value!=='1000'||!beforeClick.hasState)throw new Error('INPUT_REPLACED_BEFORE_CLICK '+JSON.stringify(beforeClick));
   await clickCell.locator('.cell-validate').click();
   await page.waitForTimeout(1000);
   const firstUi=await moneyValue(cell(ids.rubricIds[0]));
@@ -77,8 +85,13 @@ test('real financial matrix validates click, Enter, closed-session first entry a
       error:document.querySelector('#errorBox')?.textContent??'',
       cell:document.querySelector('.matrix-cell-entry[data-membership-id="'+membershipId+'"][data-rubric-id="'+rubricId+'"][data-meeting-id="'+meetingId+'"]')?.textContent??'',
       state:document.querySelector('.matrix-cell-entry[data-membership-id="'+membershipId+'"][data-rubric-id="'+rubricId+'"][data-meeting-id="'+meetingId+'"]')?.getAttribute('data-save-state')??'',
-      trace:localStorage.getItem('eco.financialCellTrace')??'[]'
+      trace:localStorage.getItem('eco.financialCellTrace')??'[]',
+      inputValue:document.querySelector('.matrix-cell-entry[data-membership-id="'+membershipId+'"][data-rubric-id="'+rubricId+'"][data-meeting-id="'+meetingId+'"] .cell-target-input')?.value??'',
+      inputMarker:document.querySelector('.matrix-cell-entry[data-membership-id="'+membershipId+'"][data-rubric-id="'+rubricId+'"][data-meeting-id="'+meetingId+'"] .cell-target-input')?.getAttribute('data-e2e-marker')??'',
+      buttonMarker:document.querySelector('.matrix-cell-entry[data-membership-id="'+membershipId+'"][data-rubric-id="'+rubricId+'"][data-meeting-id="'+meetingId+'"] .cell-validate')?.getAttribute('data-e2e-marker')??'',
+      mainHasTrace:false
     }),{membershipId:ids.membershipId,rubricId:ids.rubricIds[0],meetingId:ids.meetingId});
+    diagnostics.mainHasTrace=await page.evaluate(async()=>{const src=document.querySelector('script[src*="main.js"]')?.getAttribute('src');if(!src)return false;return (await (await fetch(src,{cache:'no-store'})).text()).includes('traceFinancialCell');});
     throw new Error('FIRST_CLICK_NOT_COMMITTED ui='+firstUi+' ledger='+firstLedger+' diagnostics='+JSON.stringify(diagnostics));
   }
 
