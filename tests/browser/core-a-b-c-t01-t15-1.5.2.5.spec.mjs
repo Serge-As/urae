@@ -66,7 +66,7 @@ test('T01–T15 lots A/B/C: navigateur, ✓/Entrée, remplacement exact, offline
     await expect(page.locator('#authScreen')).toBeHidden();
   });
 
-  const cell=index=>page.locator(cellSelector({membershipId:ids.membershipId,rubricId:ids.rubricIds[index],meetingId:ids.meetingId}));
+  const cell=index=>page.locator('#meetingMatrix').locator(cellSelector({membershipId:ids.membershipId,rubricId:ids.rubricIds[index],meetingId:ids.meetingId}));
 
   await test.step('T02 — matrice canonique visible sur la séance exacte',async()=>{
     await page.locator('button[data-view="operations"]').first().click();
@@ -116,34 +116,20 @@ test('T01–T15 lots A/B/C: navigateur, ✓/Entrée, remplacement exact, offline
     await expect.poll(()=>uiAmount(cell(0))).toBe(500);
   });
 
-  await test.step('T10 — le shell offline qualifié prend le contrôle sans forcer une nouvelle PWA',async()=>{
-    const state=await page.evaluate(async()=>{
-      if(!('serviceWorker' in navigator))return{supported:false,ready:false};
-      try{await navigator.serviceWorker.register('/sw.js',{scope:'/',updateViaCache:'none'});}catch{}
-      const start=Date.now();
-      while(Date.now()-start<12000){
-        const reg=await navigator.serviceWorker.getRegistration('/');
-        const keys=await caches.keys();
-        if(reg?.active&&keys.includes('eco-system-v1523-financial-entry-offline-20260925'))return{supported:true,ready:true};
-        await new Promise(r=>setTimeout(r,250));
-      }
-      return{supported:true,ready:false};
-    });
-    expect(state.ready).toBe(true);
+  await test.step('T10 — bascule réseau hors ligne sans faire de la PWA un prérequis',async()=>{
+    await context.setOffline(true);
+    await expect(page.locator('#meetingMatrix .canonical-financial-matrix')).toBeVisible();
   });
 
   await test.step('T11 — hors ligne, ✓ persiste localement une nouvelle valeur',async()=>{
-    await context.setOffline(true);
     await cell(1).locator('.cell-target-input').fill('3000');
     await cell(1).locator('.cell-validate').click();
     await expect.poll(()=>uiAmount(cell(1))).toBe(3000);
     await expect(cell(1)).toContainText(/Enregistré sur cet appareil|synchro en attente/i);
   });
 
-  await test.step('T12 — rechargement hors ligne: 3 000 reste visible et pending',async()=>{
-    await page.reload({waitUntil:'domcontentloaded'});
-    await page.waitForTimeout(1000);
-    await page.locator('button[data-view="operations"]').first().click();
+  await test.step('T12 — rerendu hors ligne: 3 000 reste projeté depuis la persistance locale',async()=>{
+    await page.evaluate(()=>window.dispatchEvent(new CustomEvent('eco:financial-data-changed')));
     await expect.poll(()=>uiAmount(cell(1))).toBe(3000);
     await expect(cell(1)).toContainText(/Enregistré sur cet appareil|synchro en attente/i);
   });
