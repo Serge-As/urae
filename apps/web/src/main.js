@@ -56,24 +56,21 @@ const financialCellDrafts=new Map((()=>{try{return Object.entries(JSON.parse(loc
 const persistFinancialCellDrafts=()=>{try{const entries=[...financialCellDrafts.entries()].slice(-120);localStorage.setItem(FINANCIAL_DRAFT_STORAGE,JSON.stringify(Object.fromEntries(entries)));}catch{}};
 const saveFinancialCellDraft=(key,value)=>{if(value==='')financialCellDrafts.delete(key);else financialCellDrafts.set(key,String(value));persistFinancialCellDrafts();};
 const clearFinancialCellDraft=key=>{financialCellDrafts.delete(key);persistFinancialCellDrafts();};
-const financialSubmitHandlers=new WeakMap();
 document.addEventListener('click',event=>{
     const target=event.target instanceof Element?event.target.closest('.cell-validate'):null;
     if(!target)return;
-    const mapped=financialSubmitHandlers.get(target),attached=target.__ecoFinancialSubmit,dom0=typeof target.onclick==='function'?target.onclick:null;
-    traceFinancialCell?.('CELL_CLICK_CAPTURE',{bound:target.dataset.ecoSubmitBound||'',hasMapped:Boolean(mapped),hasAttached:typeof attached==='function',hasOnclick:Boolean(dom0),membershipId:target.closest('.matrix-cell-entry')?.dataset.membershipId||'',rubricId:target.closest('.matrix-cell-entry')?.dataset.rubricId||'',meetingId:target.closest('.matrix-cell-entry')?.dataset.meetingId||''});
-    const submit=mapped||attached||dom0;
-    if(!submit)return;
-    event.preventDefault();submit.call(target,event);
+    event.preventDefault();
+    traceFinancialCell?.('CELL_CLICK_CAPTURE',{bound:target.dataset.ecoSubmitBound||'',membershipId:target.closest('.matrix-cell-entry')?.dataset.membershipId||'',rubricId:target.closest('.matrix-cell-entry')?.dataset.rubricId||'',meetingId:target.closest('.matrix-cell-entry')?.dataset.meetingId||''});
+    void submitFinancialCellElement(target);
 },true);
 document.addEventListener('keydown',event=>{
     if(event.isComposing||!(event.target instanceof Element))return;
     if(!(event.key==='Enter'||event.code==='Enter'||event.keyCode===13))return;
     const input=event.target.closest('.cell-target-input');if(!input)return;
     const button=input.closest('.matrix-cell-entry')?.querySelector('.cell-validate');
-    const submit=button?(financialSubmitHandlers.get(button)||button.__ecoFinancialSubmit||(typeof button.onclick==='function'?button.onclick:null)):undefined;
-    if(!submit)return;
-    event.preventDefault();event.stopPropagation();submit.call(button,event);
+    if(!button)return;
+    event.preventDefault();event.stopPropagation();
+    void submitFinancialCellElement(button);
 },true);
 let matrixMeetingId = '';
 let memberSortMode = 'chronological';
@@ -485,6 +482,86 @@ const exactCellAmount=(membershipId,rubricId,meetingId)=>{
 };
 const exactCellVersion=(membershipId,rubricId,meetingId)=>Number(financialCellVersions.get(JSON.stringify([meetingId,membershipId,rubricId,'XAF']))??0);
 
+const submitFinancialCellElement=async validate=>{
+    const holder=validate?.closest?.('.matrix-cell-entry');
+    const input=holder?.querySelector?.('.cell-target-input');
+    const stateLine=holder?.querySelector?.('.cell-save-state');
+    const currentLabel=holder?.querySelector?.('.cell-current');
+    if(!holder||!input||!stateLine||!currentLabel)return;
+    const membershipId=String(holder.dataset.membershipId??''),rubricId=String(holder.dataset.rubricId??''),meetingId=String(holder.dataset.meetingId??'');
+    const member=members.find(x=>x.id===membershipId),rubric=rubrics.find(x=>x.id===rubricId);
+    if(!member||!rubric||!meetingId){traceFinancialCell('CELL_FAIL',{membershipId,rubricId,meetingId,error:'CELL_CONTEXT_NOT_FOUND'});fail(new Error('CELL_CONTEXT_NOT_FOUND'));return;}
+    const cellKey=financialCellKey(membershipId,rubricId,meetingId);
+    if(holder.dataset.submitting==='1'){traceFinancialCell('CELL_SUBMIT_BUSY',{cellKey});return;}
+    holder.dataset.submitting='1';
+    const nature=financialNatureForRubric(rubric),signedCurrent=exactCellAmount(membershipId,rubricId,meetingId),current=Math.abs(signedCurrent),previousIcon=validate.textContent;
+    let target=Number.NaN;
+    const setCellState=(state,message='')=>{holder.dataset.saveState=state;holder.classList.toggle('is-failed',state==='FAILED');holder.classList.toggle('is-confirmed',state==='CONFIRMED');stateLine.hidden=!message;stateLine.textContent=message;};
+    traceFinancialCell('CELL_SUBMIT_INVOKED',{cellKey,membershipId,rubricId,meetingId,inputValue:input.value,current,nature});
+    try{
+      clearFail();
+      const raw=input.value.trim();
+      if(raw===''){setCellState('IDLE');return;}
+      target=Number(raw);
+      if(!Number.isSafeInteger(target)||target<0)throw new Error('INVALID_CONTRIBUTION_AMOUNT');
+      setCellState('SAVING_LOCAL',tx('Enregistrement…','Saving…'));
+      traceFinancialCell('CELL_SUBMIT',{cellKey,membershipId,rubricId,meetingId,target,current,nature});
+      if(target===current){
+        input.value='';clearFinancialCellDraft(cellKey);setCellState('IDLE');
+        toast(tx('Aucun changement : cette valeur est déjà enregistrée.','No change: this value is already recorded.'));
+        return;
+      }
+      const meeting=meetings.find(x=>x.id===meetingId);let reason='';
+      if(current>0||meeting?.status==='closed'){
+        reason=prompt(tx(`Motif de la modification ${fmt(current)} → ${fmt(target)} :`,`Reason for change ${fmt(current)} → ${fmt(target)}:`),tx('Correction de la valeur de la cellule','Cell value correction'))??'';
+        if(!reason.trim()){setCellState('IDLE');return;}
+      }
+      validate.disabled=true;input.disabled=true;validate.textContent='…';holder.classList.add('is-saving');
+      let result;
+      if(current===0){
+        if(target===0){input.value='';clearFinancialCellDraft(cellKey);setCellState('IDLE');return;}
+        result=await app.recordFinancialSheetEntry({membershipId,meetingId,rubric,amount:target,reason:reason.trim()||undefined});
+      }else{
+        if(nature!=='CONTRIBUTION')throw Error('SPECIALIZED_FINANCIAL_CORRECTION_REQUIRED');
+        result=await app.setFinancialCellTarget({meetingId,membershipId,rubricId,targetAmount:target,currentAmount:current,currentVersion:exactCellVersion(membershipId,rubricId,meetingId),reason:reason.trim()});
+      }
+      const displayTarget=(nature==='LOAN'||nature==='OUTFLOW')?-target:target;
+      if(result?.status==='CONSENSUS_REQUIRED'){
+        financialReviewTargets.set(cellKey,{targetAmount:target,meetingId,membershipId,rubricId,at:new Date().toISOString()});
+        holder.classList.add('pending-consensus');setCellState('REVIEW_REQUIRED',tx('Proposition enregistrée · validation d’un second responsable requise','Proposal saved · second manager approval required'));
+        traceFinancialCell('CELL_REVIEW_REQUIRED',{cellKey,target,current});toast(tx('Modification proposée : elle est enregistrée et attend la décision des gestionnaires.','Change proposal saved and awaiting manager decision.'));
+      }else if(result?.status==='QUEUED_CONSENSUS'||result?.queued){
+        currentLabel.textContent=fmt(displayTarget);setCellState('QUEUED_OFFLINE',tx('Enregistré sur cet appareil · synchro en attente','Saved on this device · pending sync'));
+        traceFinancialCell('CELL_LOCAL_COMMIT',{cellKey,target,status:'QUEUED'});
+        toast(tx('✓ Valeur enregistrée sur cet appareil · synchronisation automatique en attente.','✓ Value saved on this device · automatic sync pending.'));
+      }else if(result?.selfBenefit){
+        financialReviewTargets.set(cellKey,{targetAmount:target,meetingId,membershipId,rubricId,at:new Date().toISOString()});
+        setCellState('REVIEW_REQUIRED',tx('Correction enregistrée · vérification indépendante requise','Correction saved · independent review required'));
+        traceFinancialCell('CELL_REVIEW_REQUIRED',{cellKey,target,current,selfBenefit:true});
+        toast(tx('⚠ Correction de votre propre situation : ancienne valeur, contrepassation et nouvelle valeur sont tracées. Un autre responsable habilité doit la vérifier.','⚠ Correction of your own situation: previous value, reversal and new value are traced. Another authorized manager must review it.'));
+      }else if(result?.requiresIndependentReview){
+        financialReviewTargets.set(cellKey,{targetAmount:target,meetingId,membershipId,rubricId,at:new Date().toISOString()});
+        setCellState('REVIEW_REQUIRED',tx('Correction enregistrée · 2e validation requise','Correction saved · second approval required'));
+        traceFinancialCell('CELL_REVIEW_REQUIRED',{cellKey,target,current});
+        toast(tx('Correction enregistrée avec ancienne valeur, contrepassation et nouvelle valeur. Un autre responsable habilité doit la vérifier avant validation institutionnelle.','Correction recorded with previous value, reversal and new value. Another authorized manager must review it before institutional confirmation.'));
+      }else{
+        financialReviewTargets.delete(cellKey);currentLabel.textContent=fmt(displayTarget);setCellState('CONFIRMED',tx('✓ Validé','✓ Confirmed'));traceFinancialCell('CELL_ACK',{cellKey,target,current});
+        toast(nature==='LOAN'?tx('Prêt décaissé : la caisse diminue et la dette du membre est créée.','Loan disbursed: cash decreases and the member debt is created.'):tx('Valeur enregistrée.','Value saved.'));
+      }
+      input.value='';clearFinancialCellDraft(cellKey);
+      await renderLedger();renderOutbox();
+      window.dispatchEvent(new CustomEvent('eco:financial-data-changed',{detail:{meetingId,membershipId,rubricId}}));
+      await sessionsUI.refresh?.();renderIndividualSheetMatrix();
+    }catch(e){
+      const code=e instanceof Error?e.message:String(e);
+      setCellState('FAILED',tx('Échec : ','Failed: ')+code);
+      traceFinancialCell('CELL_FAIL',{cellKey,target:Number.isFinite(target)?target:Number(input.value||0),current,error:code});
+      fail(e);
+    }finally{
+      delete holder.dataset.submitting;validate.disabled=false;input.disabled=false;validate.textContent=previousIcon;holder.classList.remove('is-saving');
+    }
+};
+
 const makeFinancialEntryCell=({member,rubric,meetingId,editable=true})=>{
     const holder=document.createElement('div');holder.className='matrix-cell matrix-cell-entry';holder.dataset.membershipId=member.id;holder.dataset.rubricId=rubric.id;holder.dataset.meetingId=meetingId;holder.tabIndex=-1;
     const nature=financialNatureForRubric(rubric),signedCurrent=exactCellAmount(member.id,rubric.id,meetingId),current=Math.abs(signedCurrent),currentLabel=document.createElement('strong');
@@ -509,98 +586,7 @@ const makeFinancialEntryCell=({member,rubric,meetingId,editable=true})=>{
     const validate=document.createElement('button');validate.type='button';validate.className='cell-validate';validate.textContent='✓';validate.title=tx('Valider la valeur totale','Confirm total value');validate.setAttribute('aria-label',tx('Valider la saisie','Confirm entry'));
     const stateLine=document.createElement('small');stateLine.className='cell-save-state';stateLine.setAttribute('aria-live','polite');stateLine.hidden=true;
     const setCellState=(state,message='')=>{holder.dataset.saveState=state;holder.classList.toggle('is-failed',state==='FAILED');holder.classList.toggle('is-confirmed',state==='CONFIRMED');stateLine.hidden=!message;stateLine.textContent=message;};
-    let submitting=false;
-    const submit=()=>void(async()=>{
-      traceFinancialCell('CELL_SUBMIT_INVOKED',{cellKey:persistentCellKey,membershipId:member.id,rubricId:rubric.id,meetingId,busy:submitting,inputValue:input.value});
-      if(submitting){traceFinancialCell('CELL_SUBMIT_BUSY',{cellKey:persistentCellKey});return;}
-      submitting=true;
-      const cellKey=persistentCellKey,previousIcon=validate.textContent;
-      let target=Number.NaN;
-      try{
-        clearFail();
-        const raw=input.value.trim();
-        if(raw===''){setCellState('IDLE');return;}
-        target=Number(raw);
-        if(!Number.isSafeInteger(target)||target<0)throw new Error('INVALID_CONTRIBUTION_AMOUNT');
-
-        setCellState('SAVING_LOCAL',tx('Enregistrement…','Saving…'));
-        traceFinancialCell('CELL_SUBMIT',{cellKey,membershipId:member.id,rubricId:rubric.id,meetingId,target,current,nature});
-        if(target===current){
-          input.value='';clearFinancialCellDraft(cellKey);setCellState('IDLE');
-          toast(tx('Aucun changement : cette valeur est déjà enregistrée.','No change: this value is already recorded.'));
-          return;
-        }
-
-        const meeting=meetings.find(x=>x.id===meetingId);let reason='';
-        if(current>0||meeting?.status==='closed'){
-          reason=prompt(tx(`Motif de la modification ${fmt(current)} → ${fmt(target)} :`,`Reason for change ${fmt(current)} → ${fmt(target)}:`),tx('Correction de la valeur de la cellule','Cell value correction'))??'';
-          if(!reason.trim()){setCellState('IDLE');return;}
-        }
-
-        validate.disabled=true;input.disabled=true;validate.textContent='…';holder.classList.add('is-saving');
-        let result;
-        if(current===0){
-          if(target===0){input.value='';clearFinancialCellDraft(cellKey);setCellState('IDLE');return;}
-          result=await app.recordFinancialSheetEntry({membershipId:member.id,meetingId,rubric,amount:target,reason:reason.trim()||undefined});
-        }else{
-          if(nature!=='CONTRIBUTION')throw Error('SPECIALIZED_FINANCIAL_CORRECTION_REQUIRED');
-          result=await app.setFinancialCellTarget({meetingId,membershipId:member.id,rubricId:rubric.id,targetAmount:target,currentAmount:current,currentVersion:exactCellVersion(member.id,rubric.id,meetingId),reason:reason.trim()});
-        }
-
-        if(result?.status==='CONSENSUS_REQUIRED'){
-          financialReviewTargets.set(cellKey,{targetAmount:target,meetingId,membershipId:member.id,rubricId:rubric.id,at:new Date().toISOString()});
-          holder.classList.add('pending-consensus');setCellState('REVIEW_REQUIRED',tx('Proposition enregistrée · validation d’un second responsable requise','Proposal saved · second manager approval required'));
-          traceFinancialCell('CELL_REVIEW_REQUIRED',{cellKey,target,current});toast(tx('Modification proposée : elle est enregistrée et attend la décision des gestionnaires.','Change proposal saved and awaiting manager decision.'));
-        }
-        else if(result?.status==='QUEUED_CONSENSUS'||result?.queued){
-          currentLabel.textContent=fmt(target);setCellState('QUEUED_OFFLINE',tx('Enregistré sur cet appareil · synchro en attente','Saved on this device · pending sync'));
-          traceFinancialCell('CELL_LOCAL_COMMIT',{cellKey,target,status:'QUEUED'});
-          toast(tx('✓ Valeur enregistrée sur cet appareil · synchronisation automatique en attente.','✓ Value saved on this device · automatic sync pending.'));
-        }
-        else if(result?.selfBenefit){
-          financialReviewTargets.set(cellKey,{targetAmount:target,meetingId,membershipId:member.id,rubricId:rubric.id,at:new Date().toISOString()});
-          setCellState('REVIEW_REQUIRED',tx('Correction enregistrée · vérification indépendante requise','Correction saved · independent review required'));
-          traceFinancialCell('CELL_REVIEW_REQUIRED',{cellKey,target,current,selfBenefit:true});
-          toast(tx('⚠ Correction de votre propre situation : ancienne valeur, contrepassation et nouvelle valeur sont tracées. Un autre responsable habilité doit la vérifier.','⚠ Correction of your own situation: previous value, reversal and new value are traced. Another authorized manager must review it.'));
-        }
-        else if(result?.requiresIndependentReview){
-          financialReviewTargets.set(cellKey,{targetAmount:target,meetingId,membershipId:member.id,rubricId:rubric.id,at:new Date().toISOString()});
-          setCellState('REVIEW_REQUIRED',tx('Correction enregistrée · 2e validation requise','Correction saved · second approval required'));
-          traceFinancialCell('CELL_REVIEW_REQUIRED',{cellKey,target,current});
-          toast(tx('Correction enregistrée avec ancienne valeur, contrepassation et nouvelle valeur. Un autre responsable habilité doit la vérifier avant validation institutionnelle.','Correction recorded with previous value, reversal and new value. Another authorized manager must review it before institutional confirmation.'));
-        }
-        else{
-          financialReviewTargets.delete(cellKey);currentLabel.textContent=fmt(target);setCellState('CONFIRMED',tx('✓ Validé','✓ Confirmed'));traceFinancialCell('CELL_ACK',{cellKey,target,current});
-          toast(nature==='LOAN'?tx('Prêt décaissé : la caisse diminue et la dette du membre est créée.','Loan disbursed: cash decreases and the member debt is created.'):tx('Valeur enregistrée.','Value saved.'));
-        }
-
-        input.value='';clearFinancialCellDraft(cellKey);
-        await renderLedger();renderOutbox();
-        window.dispatchEvent(new CustomEvent('eco:financial-data-changed',{detail:{meetingId,membershipId:member.id,rubricId:rubric.id}}));
-        await sessionsUI.refresh?.();renderIndividualSheetMatrix();
-      }catch(e){
-        const code=e instanceof Error?e.message:String(e);
-        setCellState('FAILED',tx('Échec : ','Failed: ')+code);
-        traceFinancialCell('CELL_FAIL',{cellKey,target:Number.isFinite(target)?target:Number(input.value||0),current,error:code});
-        fail(e);
-      }finally{
-        submitting=false;validate.disabled=false;input.disabled=false;validate.textContent=previousIcon;holder.classList.remove('is-saving');
-      }
-    });
-    financialSubmitHandlers.set(validate,submit);
-    validate.__ecoFinancialSubmit=submit;
-    validate.dataset.ecoSubmitBound='1';
-    // Keep both delegated and direct bindings. The delegated capture handler survives
-    // surrounding UI refreshes; the direct handlers guarantee that the exact live
-    // controls still commit even if another listener interferes with bubbling.
-    validate.onclick=submit;
-    validate.addEventListener('click',submit);
-    input.addEventListener('keydown',event=>{
-      if(event.isComposing)return;
-      if(event.key==='Enter'||event.code==='Enter'||event.keyCode===13){
-        event.preventDefault();event.stopPropagation();submit();
-      }
-    });
+    validate.dataset.ecoSubmitBound='canonical';
     holder.append(input,validate,stateLine);return holder;
 };
 
