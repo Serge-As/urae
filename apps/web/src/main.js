@@ -480,7 +480,10 @@ const exactCellAmount=(membershipId,rubricId,meetingId)=>{
     const rubric=rubrics.find(x=>x.id===rubricId),nature=financialNatureForRubric(rubric);
     if(nature!=='CONTRIBUTION')return exactCellEvents(membershipId,rubricId,meetingId).reduce((sum,event)=>sum+(String(event.data?.direction??'IN')==='OUT'?-1:1)*Number(event.data?.amount??0),0);
     const pending=financialPendingTargets.get(financialCellKey(membershipId,rubricId,meetingId));
-    if(pending&&Number.isSafeInteger(Number(pending.targetAmount))&&Number(pending.targetAmount)>=0)return Number(pending.targetAmount);
+    // A locally queued target is the working projection until synchronization.
+    // Once the server ACK says CONSENSUS_REQUIRED, the canonical Ledger value
+    // must remain visible and the target is rendered separately as “Proposé”.
+    if(pending&&String(pending.businessStatus??'')!=='CONSENSUS_REQUIRED'&&Number.isSafeInteger(Number(pending.targetAmount))&&Number(pending.targetAmount)>=0)return Number(pending.targetAmount);
     return exactCellRows(membershipId,rubricId,meetingId).reduce((n,x)=>n+Number(x.netAmount??0),0);
 };
 const exactCellVersion=(membershipId,rubricId,meetingId)=>Number(financialCellVersions.get(JSON.stringify([meetingId,membershipId,rubricId,'XAF']))??0);
