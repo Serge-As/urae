@@ -20,11 +20,11 @@ const resilience=fs.readFileSync('apps/web/src/resilience-ui.js','utf8');
 const trashLifecycle=fs.readFileSync('packages/trash-lifecycle/src/index.ts','utf8');
 const repositories=fs.readFileSync('packages/repositories/src/index.ts','utf8');
 
-test('Android 6 offline shell remains fast offline and never force-reloads on worker takeover',()=>{
-  assert.match(sw,/eco-system-v1523-financial-entry-offline-20260925/);
-  assert.match(sw,/Offline \/ unstable 2G: fall back quickly/);
+test('Android 6 offline shell remains bounded and never force-reloads a live page on worker takeover',()=>{
+  assert.match(sw,/eco-system-v1526-field-persistence-pc-mobile-20260925/);
+  assert.match(sw,/RELEASE_ASSET_TIMEOUT/);
   assert.match(sw,/Scripts\/styles\/assets are cache-first/);
-  assert.doesNotMatch(sw,/skipWaiting\(/);
+  assert.match(sw,/skipWaiting\(/);
   assert.doesNotMatch(main,/controllerchange[\s\S]{0,600}location\.reload\(/);
   assert.match(main,/setTimeout\(\(\)=>\{try\{reg\.update\(\)/);
   assert.ok(sw.includes('/src/resilience-ui.js'));
@@ -196,10 +196,12 @@ test('loan is a negative member position and simulation is available to member a
   assert.match(app,/loanHistory/);
 });
 
-test('stale cached html no longer crashes and 1.5.2.3 keeps 1.5.2.2 as previous coherent release',()=>{
+test('stale cached html recovers to 1.5.2.6 while preserving 1.5.2.3 as rollback shell',()=>{
   assert.match(main,/document\.querySelector\('#claimLocalAccountBtn'\)\?\.addEventListener/);
   assert.doesNotMatch(main,/\$\('#claimLocalAccountBtn'\)\.addEventListener/);
-  assert.match(sw,/eco-system-v1523-financial-entry-offline-20260925/);
-  assert.match(html,/ECO-SYSTEM · 1\.5\.2\.3/);
-  assert.match(html,/main\.js\?v=1523/);assert.match(sw,/PREVIOUS_CACHE = 'eco-system-v1522-governed-field-feedback-20260923'/);
+  assert.match(sw,/eco-system-v1526-field-persistence-pc-mobile-20260925/);
+  assert.match(html,/ECO-SYSTEM · 1\.5\.2\.6/);
+  assert.match(html,/main\.js\?v=1526/);
+  assert.match(sw,/PREVIOUS_CACHE = 'eco-system-v1523-financial-entry-offline-20260925'/);
+  assert.match(sw,/Online navigation is network-first/);
 });
