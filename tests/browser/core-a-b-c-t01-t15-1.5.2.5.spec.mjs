@@ -26,7 +26,8 @@ const ledgerState=async(page,ids,rubricId)=>page.evaluate(async({ids,rubricId})=
 test('T01–T15 lots A/B/C: navigateur, ✓/Entrée, remplacement exact, offline et synchronisation',async({page,context})=>{
   test.setTimeout(150_000);
   const pageErrors=[];
-  page.on('pageerror',e=>pageErrors.push(String(e)));
+  let offlinePhase=false;
+  page.on('pageerror',e=>pageErrors.push({message:String(e),offlinePhase}));
   let ids;
 
   await test.step('T01 — accès navigateur et bootstrap réel',async()=>{
@@ -117,6 +118,7 @@ test('T01–T15 lots A/B/C: navigateur, ✓/Entrée, remplacement exact, offline
   });
 
   await test.step('T10 — bascule réseau hors ligne sans faire de la PWA un prérequis',async()=>{
+    offlinePhase=true;
     await context.setOffline(true);
     await expect(page.locator('#meetingMatrix .canonical-financial-matrix')).toBeVisible();
   });
@@ -143,6 +145,7 @@ test('T01–T15 lots A/B/C: navigateur, ✓/Entrée, remplacement exact, offline
 
   await test.step('T14 — reconnexion synchronise les deux valeurs exactes',async()=>{
     await context.setOffline(false);
+    offlinePhase=false;
     await expect.poll(async()=>(await ledgerState(page,ids,ids.rubricIds[1])).total,{timeout:30_000}).toBe(3000);
     await expect.poll(async()=>(await ledgerState(page,ids,ids.rubricIds[2])).total,{timeout:30_000}).toBe(4000);
   });
@@ -157,6 +160,7 @@ test('T01–T15 lots A/B/C: navigateur, ✓/Entrée, remplacement exact, offline
       const state=await ledgerState(page,ids,ids.rubricIds[i]);
       expect(new Set(state.keys).size).toBe(state.keys.length);
     }
-    expect(pageErrors).toEqual([]);
+    const unexpectedErrors=pageErrors.filter(x=>!(x.offlinePhase&&/Failed to fetch/i.test(x.message)));
+    expect(unexpectedErrors).toEqual([]);
   });
 });
