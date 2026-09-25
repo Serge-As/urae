@@ -51,6 +51,11 @@ let financialSheetEvents = [];
 let financialCellVersions = new Map();
 let financialPendingTargets = new Map();
 let financialReviewTargets = new Map();
+const FINANCIAL_DRAFT_STORAGE='eco.financialCellDrafts';
+const financialCellDrafts=new Map((()=>{try{return Object.entries(JSON.parse(localStorage.getItem(FINANCIAL_DRAFT_STORAGE)||'{}'));}catch{return[];}})());
+const persistFinancialCellDrafts=()=>{try{const entries=[...financialCellDrafts.entries()].slice(-120);localStorage.setItem(FINANCIAL_DRAFT_STORAGE,JSON.stringify(Object.fromEntries(entries)));}catch{}};
+const saveFinancialCellDraft=(key,value)=>{if(value==='')financialCellDrafts.delete(key);else financialCellDrafts.set(key,String(value));persistFinancialCellDrafts();};
+const clearFinancialCellDraft=key=>{financialCellDrafts.delete(key);persistFinancialCellDrafts();};
 let matrixMeetingId = '';
 let memberSortMode = 'chronological';
 const MANAGER_ROLE_IDS=new Set(['founder','manager','admin','president','treasurer','secretary','auditor']);
@@ -478,7 +483,10 @@ const makeFinancialEntryCell=({member,rubric,meetingId,editable=true})=>{
     }
     if(nature==='LOAN'){const badge=document.createElement('small');badge.className='cell-nature negative';badge.textContent=tx('Sortie / dette','Outflow / debt');holder.append(badge);}
     if(!editable)return holder;
+    const persistentCellKey=financialCellKey(member.id,rubric.id,meetingId);
     const input=document.createElement('input');input.type='number';input.min='0';input.step='1';input.inputMode='numeric';input.className='cell-target-input';input.placeholder=current>0?tx('Modifier…','Change…'):tx('Saisir…','Enter…');input.setAttribute('aria-label',tx('Nouvelle valeur totale','New total value'));
+    const restoredDraft=financialCellDrafts.get(persistentCellKey);if(restoredDraft!==undefined)input.value=String(restoredDraft);
+    input.addEventListener('input',()=>saveFinancialCellDraft(persistentCellKey,input.value));
     const validate=document.createElement('button');validate.type='button';validate.className='cell-validate';validate.textContent='✓';validate.title=tx('Valider la valeur totale','Confirm total value');validate.setAttribute('aria-label',tx('Valider la saisie','Confirm entry'));
     const stateLine=document.createElement('small');stateLine.className='cell-save-state';stateLine.setAttribute('aria-live','polite');stateLine.hidden=true;
     const setCellState=(state,message='')=>{holder.dataset.saveState=state;holder.classList.toggle('is-failed',state==='FAILED');holder.classList.toggle('is-confirmed',state==='CONFIRMED');stateLine.hidden=!message;stateLine.textContent=message;};
@@ -486,9 +494,9 @@ const makeFinancialEntryCell=({member,rubric,meetingId,editable=true})=>{
     const submit=()=>void(async()=>{
       if(submitting)return;submitting=true;
       clearFail();const raw=input.value.trim();if(raw===''){submitting=false;return;}const target=Number(raw);if(!Number.isSafeInteger(target)||target<0){submitting=false;fail(new Error('INVALID_CONTRIBUTION_AMOUNT'));return;}
-      const cellKey=financialCellKey(member.id,rubric.id,meetingId);
+      const cellKey=persistentCellKey;
       setCellState('SAVING_LOCAL',tx('Enregistrement…','Saving…'));traceFinancialCell('CELL_SUBMIT',{cellKey,membershipId:member.id,rubricId:rubric.id,meetingId,target,current,nature});
-      if(target===current){input.value='';submitting=false;toast(tx('Aucun changement : cette valeur est déjà enregistrée.','No change: this value is already recorded.'));return;}
+      if(target===current){input.value='';clearFinancialCellDraft(cellKey);submitting=false;setCellState('IDLE');toast(tx('Aucun changement : cette valeur est déjà enregistrée.','No change: this value is already recorded.'));return;}
       const meeting=meetings.find(x=>x.id===meetingId);let reason='';
       if(current>0||meeting?.status==='closed'){
         reason=prompt(tx(`Motif de la modification ${fmt(current)} → ${fmt(target)} :`,`Reason for change ${fmt(current)} → ${fmt(target)}:`),tx('Correction de la valeur de la cellule','Cell value correction'))??'';
@@ -498,7 +506,7 @@ const makeFinancialEntryCell=({member,rubric,meetingId,editable=true})=>{
       try{
         let result;
         if(current===0){
-          if(target===0){input.value='';submitting=false;setCellState('IDLE');return;}
+          if(target===0){input.value='';clearFinancialCellDraft(cellKey);submitting=false;setCellState('IDLE');return;}
           result=await app.recordFinancialSheetEntry({membershipId:member.id,meetingId,rubric,amount:target,reason:reason.trim()||undefined});
         }else{
           if(nature!=='CONTRIBUTION')throw Error('SPECIALIZED_FINANCIAL_CORRECTION_REQUIRED');
@@ -530,7 +538,7 @@ const makeFinancialEntryCell=({member,rubric,meetingId,editable=true})=>{
           financialReviewTargets.delete(cellKey);currentLabel.textContent=fmt(target);setCellState('CONFIRMED',tx('✓ Validé','✓ Confirmed'));traceFinancialCell('CELL_ACK',{cellKey,target,current});
           toast(nature==='LOAN'?tx('Prêt décaissé : la caisse diminue et la dette du membre est créée.','Loan disbursed: cash decreases and the member debt is created.'):tx('Valeur enregistrée.','Value saved.'));
         }
-        input.value='';await renderLedger();renderOutbox();window.dispatchEvent(new CustomEvent('eco:financial-data-changed',{detail:{meetingId,membershipId:member.id,rubricId:rubric.id}}));await sessionsUI.refresh?.();renderIndividualSheetMatrix();
+        input.value='';clearFinancialCellDraft(cellKey);await renderLedger();renderOutbox();window.dispatchEvent(new CustomEvent('eco:financial-data-changed',{detail:{meetingId,membershipId:member.id,rubricId:rubric.id}}));await sessionsUI.refresh?.();renderIndividualSheetMatrix();
       }catch(e){const code=e instanceof Error?e.message:String(e);setCellState('FAILED',tx('Échec : ','Failed: ')+code);traceFinancialCell('CELL_FAIL',{cellKey:financialCellKey(member.id,rubric.id,meetingId),target:Number(input.value||0),current,error:code});fail(e);}finally{submitting=false;validate.disabled=false;input.disabled=false;validate.textContent=previousIcon;holder.classList.remove('is-saving');}
     });
     validate.addEventListener('click',submit);
