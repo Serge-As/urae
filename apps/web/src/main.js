@@ -469,7 +469,10 @@ const exactCellPendingState=(membershipId,rubricId,meetingId)=>{
     const key=financialCellKey(membershipId,rubricId,meetingId),review=financialReviewTargets.get(key);
     if(review)return{pending:true,status:'REVIEW_REQUIRED',kind:'REVIEW',targetAmount:Number(review.targetAmount??0)};
     const correction=financialPendingTargets.get(key);
-    if(correction)return{pending:true,status:correction.status,kind:'CORRECTION',targetAmount:Number(correction.targetAmount??0)};
+    if(correction){
+      const review=String(correction.businessStatus??'')==='CONSENSUS_REQUIRED';
+      return{pending:true,status:review?'REVIEW_REQUIRED':correction.status,kind:review?'REVIEW':'CORRECTION',targetAmount:Number(correction.targetAmount??0)};
+    }
     const receipt=exactCellRows(membershipId,rubricId,meetingId).find(x=>x.localPending===true);
     return receipt?{pending:true,status:String(receipt.localPendingStatus??'PENDING'),kind:'ENTRY',targetAmount:Number(receipt.netAmount??receipt.amount?.amount??0)}:{pending:false,status:'',kind:'',targetAmount:undefined};
 };
@@ -518,12 +521,12 @@ const submitFinancialCellElement=async validate=>{
       }
       validate.disabled=true;input.disabled=true;validate.textContent='…';holder.classList.add('is-saving');
       let result;
-      if(current===0){
-        if(target===0){input.value='';clearFinancialCellDraft(cellKey);setCellState('IDLE');return;}
-        result=await app.recordFinancialSheetEntry({membershipId,meetingId,rubric,amount:target,reason:reason.trim()||undefined});
-      }else{
-        if(nature!=='CONTRIBUTION')throw Error('SPECIALIZED_FINANCIAL_CORRECTION_REQUIRED');
+      if(nature==='CONTRIBUTION'){
+        if(current===0&&target===0){input.value='';clearFinancialCellDraft(cellKey);setCellState('IDLE');return;}
         result=await app.setFinancialCellTarget({meetingId,membershipId,rubricId,targetAmount:target,currentAmount:current,currentVersion:exactCellVersion(membershipId,rubricId,meetingId),reason:reason.trim()});
+      }else{
+        if(current>0)throw Error('SPECIALIZED_FINANCIAL_CORRECTION_REQUIRED');
+        result=await app.recordFinancialSheetEntry({membershipId,meetingId,rubric,amount:target,reason:reason.trim()||undefined});
       }
       const displayTarget=(nature==='LOAN'||nature==='OUTFLOW')?-target:target;
       if(result?.status==='CONSENSUS_REQUIRED'){
