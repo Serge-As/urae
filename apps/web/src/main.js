@@ -56,6 +56,21 @@ const financialCellDrafts=new Map((()=>{try{return Object.entries(JSON.parse(loc
 const persistFinancialCellDrafts=()=>{try{const entries=[...financialCellDrafts.entries()].slice(-120);localStorage.setItem(FINANCIAL_DRAFT_STORAGE,JSON.stringify(Object.fromEntries(entries)));}catch{}};
 const saveFinancialCellDraft=(key,value)=>{if(value==='')financialCellDrafts.delete(key);else financialCellDrafts.set(key,String(value));persistFinancialCellDrafts();};
 const clearFinancialCellDraft=key=>{financialCellDrafts.delete(key);persistFinancialCellDrafts();};
+const financialSubmitHandlers=new WeakMap();
+document.addEventListener('click',event=>{
+    const target=event.target instanceof Element?event.target.closest('.cell-validate'):null;
+    const submit=target?financialSubmitHandlers.get(target):undefined;
+    if(!submit)return;
+    event.preventDefault();submit();
+},true);
+document.addEventListener('keydown',event=>{
+    if(event.isComposing||!(event.target instanceof Element))return;
+    if(!(event.key==='Enter'||event.code==='Enter'||event.keyCode===13))return;
+    const input=event.target.closest('.cell-target-input');if(!input)return;
+    const button=input.closest('.matrix-cell-entry')?.querySelector('.cell-validate'),submit=button?financialSubmitHandlers.get(button):undefined;
+    if(!submit)return;
+    event.preventDefault();event.stopPropagation();submit();
+},true);
 let matrixMeetingId = '';
 let memberSortMode = 'chronological';
 const MANAGER_ROLE_IDS=new Set(['founder','manager','admin','president','treasurer','secretary','auditor']);
@@ -541,11 +556,7 @@ const makeFinancialEntryCell=({member,rubric,meetingId,editable=true})=>{
         input.value='';clearFinancialCellDraft(cellKey);await renderLedger();renderOutbox();window.dispatchEvent(new CustomEvent('eco:financial-data-changed',{detail:{meetingId,membershipId:member.id,rubricId:rubric.id}}));await sessionsUI.refresh?.();renderIndividualSheetMatrix();
       }catch(e){const code=e instanceof Error?e.message:String(e);setCellState('FAILED',tx('Échec : ','Failed: ')+code);traceFinancialCell('CELL_FAIL',{cellKey:financialCellKey(member.id,rubric.id,meetingId),target:Number(input.value||0),current,error:code});fail(e);}finally{submitting=false;validate.disabled=false;input.disabled=false;validate.textContent=previousIcon;holder.classList.remove('is-saving');}
     });
-    validate.addEventListener('click',submit);
-    input.addEventListener('keydown',event=>{
-      if(event.isComposing)return;
-      if(event.key==='Enter'||event.code==='Enter'||event.keyCode===13){event.preventDefault();event.stopPropagation();submit();}
-    });
+    financialSubmitHandlers.set(validate,submit);
     holder.append(input,validate,stateLine);return holder;
 };
 
