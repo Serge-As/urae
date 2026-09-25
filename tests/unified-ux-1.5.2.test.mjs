@@ -31,7 +31,7 @@ test('senior mode increases control sizes and prevents crushed navigation labels
 
 test('service worker never falls back a versioned request to an unversioned stale asset',async()=>{
   const sw=await readFile('.build/sw.js','utf8');
-  assert.match(sw,/eco-system-v1522-governed-field-feedback-20260923/);
+  assert.match(sw,/eco-system-v1523-financial-entry-offline-20260925/);
   assert.match(sw,/if\(url\.search\)return await cache\.match\(request\)/);
   assert.doesNotMatch(sw,/cache\.match\(request\) \|\| await cache\.match\(url\.pathname\)/);
   assert.match(sw,/\/src\/main\.js\?v=152/);
