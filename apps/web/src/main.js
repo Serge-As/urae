@@ -1553,14 +1553,13 @@ $('#installBtn').addEventListener('click', async () => {
 async function ensureCurrentServiceWorker(){
     if(!('serviceWorker' in navigator))return;
     try{
-        const reloadKey='eco.sw.controller-reload:'+CAHIER_VERSION;
+        const controllerKey='eco.sw.controller-ready:'+CAHIER_VERSION;
         navigator.serviceWorker.addEventListener('controllerchange',()=>{
-            if(!navigator.onLine)return;
-            try{
-              if(sessionStorage.getItem(reloadKey)==='1')return;
-              sessionStorage.setItem(reloadKey,'1');
-            }catch{}
-            location.reload();
+            // A new coherent worker may take control while the user is typing,
+            // saving or synchronizing. Never reload that live document: drafts,
+            // in-flight requests and the durable outbox must remain untouched.
+            try{sessionStorage.setItem(controllerKey,'1');}catch{}
+            window.dispatchEvent(new CustomEvent('eco:service-worker-updated',{detail:{version:CAHIER_VERSION}}));
         },{once:false});
         const reg=await navigator.serviceWorker.register('/sw.js',{scope:'/',updateViaCache:'none'});
         try{if(navigator.storage&&navigator.storage.persist)await navigator.storage.persist();}catch{}
