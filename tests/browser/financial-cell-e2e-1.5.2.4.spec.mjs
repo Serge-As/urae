@@ -142,7 +142,13 @@ test('real financial matrix validates click, Enter, closed-session first entry a
     const started=Date.now();
     while(Date.now()-started<12000){
       const reg=await navigator.serviceWorker.getRegistration('/');
-      if(reg?.active)return{supported:true,ready:true,controller:Boolean(navigator.serviceWorker.controller),active:reg.active.state,waiting:reg.waiting?.state??'',installing:reg.installing?.state??'',registrationError,caches:await caches.keys()};
+      const cacheNames=await caches.keys();
+      let releaseReady=false;
+      for(const name of cacheNames){
+        const cache=await caches.open(name);
+        if(await cache.match('/__eco_release_ready__')){releaseReady=true;break;}
+      }
+      if(reg?.active&&releaseReady)return{supported:true,ready:true,controller:Boolean(navigator.serviceWorker.controller),active:reg.active.state,waiting:reg.waiting?.state??'',installing:reg.installing?.state??'',registrationError,caches:cacheNames,releaseReady};
       await new Promise(resolve=>setTimeout(resolve,250));
     }
     const reg=await navigator.serviceWorker.getRegistration('/');

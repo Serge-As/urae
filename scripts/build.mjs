@@ -47,6 +47,47 @@ for (const target of ['.build/index.html','.build/apps/web/index.html']) {
   await writeFile(target,html,'utf8');
 }
 
+// The service worker must cache every module that is statically required by the
+// HTML entry points. Keep this generated from the compiled graph instead of
+// maintaining a second hand-written list that can silently drift.
+const startupMarker='const BUILD_STARTUP_SHELL = [];';
+const staticModuleSpecifiers=source=>{
+  const found=[];
+  for(const match of source.matchAll(/^\s*import\s+(?:[^'"\n]*?\sfrom\s*)?['"]([^'"]+)['"]/gm))found.push(match[1]);
+  for(const match of source.matchAll(/^\s*export\s+[^'"\n]*?\sfrom\s*['"]([^'"]+)['"]/gm))found.push(match[1]);
+  return found;
+};
+const resolveModuleUrl=(specifier,parentUrl)=>{
+  if(!specifier.startsWith('.')&&!specifier.startsWith('/'))return null;
+  const resolved=new URL(specifier,'https://eco.invalid'+parentUrl);
+  return resolved.pathname+resolved.search;
+};
+const compiledPathForUrl=url=>path.join(output,new URL(url,'https://eco.invalid').pathname.replace(/^\//,''));
+const startupShell=new Set();
+const collectStartupModule=async url=>{
+  if(startupShell.has(url))return;
+  const filePath=compiledPathForUrl(url);
+  let source;
+  try{source=await readFile(filePath,'utf8');}
+  catch{throw Error('STARTUP_MODULE_NOT_BUILT:'+url);}
+  startupShell.add(url);
+  for(const specifier of staticModuleSpecifiers(source)){
+    const dependency=resolveModuleUrl(specifier,url);
+    if(dependency)await collectStartupModule(dependency);
+  }
+};
+const builtIndex=await readFile('.build/index.html','utf8');
+const moduleEntries=[...builtIndex.matchAll(/<script\b[^>]*\btype=["']module["'][^>]*\bsrc=["']([^"']+)["'][^>]*>/g)].map(match=>match[1]);
+for(const entry of moduleEntries)await collectStartupModule(entry);
+const startupShellList=[...startupShell].sort();
+for(const target of ['.build/sw.js','.build/apps/web/sw.js']){
+  let source=await readFile(target,'utf8');
+  if(!source.includes(startupMarker))throw Error('SERVICE_WORKER_STARTUP_MARKER_NOT_FOUND');
+  source=source.replace(startupMarker,'const BUILD_STARTUP_SHELL = '+JSON.stringify(startupShellList,null,2)+';');
+  await writeFile(target,source,'utf8');
+}
+console.log('Service Worker startup graph: '+startupShellList.length+' static modules cached as required.');
+
 // Keep the runtime identity truthful without rewriting the large historical
 // source file solely for a release label.
 for (const target of ['.build/workers/api/src/index.js']) {

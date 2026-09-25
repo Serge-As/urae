@@ -2,7 +2,7 @@ name: Eco-System P0 — Real Financial Cell Browser E2E
 
 on:
   push:
-    branches: ['fix/1.5.2.4-financial-entry-e2e-20260925']
+    branches: ['fix/1.5.2.4-financial-entry-e2e-20260925', 'fix/1.5.2.5-core-a-b-c-t01-t15-20260925']
   workflow_dispatch:
 
 permissions:
