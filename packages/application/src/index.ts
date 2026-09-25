@@ -870,6 +870,8 @@ export class ConnectedApplication {
   async createFounderIncident(input:{key:string;title:string;priority?:string;source?:string;note?:string}):Promise<any>{return this.request('/api/v1/founder/control/incidents',{method:'POST',body:JSON.stringify(input)});}
   async transitionFounderControlItem(id:string,status:string,note='',evidenceRef=''):Promise<any>{return this.request('/api/v1/founder/control/items/'+encodeURIComponent(id)+'/transition',{method:'POST',body:JSON.stringify({status,note,evidenceRef})});}
   async markFounderCapabilityHealth(id:string,health:'UNKNOWN'|'PASS'|'DEGRADED'|'FAIL',note=''):Promise<any>{return this.request('/api/v1/founder/control/capabilities/'+encodeURIComponent(id)+'/check',{method:'POST',body:JSON.stringify({health,note})});}
+  async recordFounderKpi(input:{key:string;title:string;source:string;formula:string;period:string;actual?:number;forecast?:number;asOf:string;freshness:string;right:string;proof:string;availability?:'OBSERVED'|'STALE'|'UNAVAILABLE'}):Promise<any>{return this.request('/api/v1/founder/control/kpis',{method:'POST',body:JSON.stringify(input)});}
+  async recordFounderCapabilityProof(id:string,input:{deploymentStage?:'UNKNOWN'|'DEPLOYED';fieldStage?:'NOT_VERIFIED'|'FIELD_ACCEPTED';evidenceRef:string}):Promise<any>{return this.request('/api/v1/founder/control/capabilities/'+encodeURIComponent(id)+'/proof',{method:'POST',body:JSON.stringify(input)});}
 
   async universe(){const server=await this.request<{groups:number;inbox:number;audit:number}>('/api/v1/universe');return{...server,pendingSync:this.outbox.list().filter(x=>x.status!=='CONFIRMED').length};}
 }
