@@ -355,3 +355,29 @@ body.ui-mode-visual .primary:hover{filter:saturate(1.08) brightness(1.03);transf
   .member-management-toolbar{grid-template-columns:1fr}
   .member-management-toolbar button{min-height:48px}
 }
+
+
+/* 1.5.2.6 field-density correction — compact phone tables without shrinking
+   the critical validation target below a practical finger size. */
+@media(max-width:560px){
+  .financial-alert-bar{padding:7px 10px;font-size:12.5px;line-height:1.28;max-height:20vh;overflow:auto}
+  .financial-alert-bar button{min-height:36px;padding:5px 9px;font-size:12px}
+  .canonical-financial-wrap{margin-inline:-4px;border-radius:8px}
+  .canonical-financial-matrix th,.canonical-financial-matrix td{padding:4px 3px;vertical-align:top}
+  .canonical-financial-matrix tbody>tr>th:first-child{min-width:104px;max-width:122px;font-size:12px;line-height:1.25}
+  .matrix-cell-entry{grid-template-columns:minmax(68px,1fr) 44px;min-width:112px;padding:2px!important;gap:2px;align-items:center}
+  .matrix-cell-entry .cell-current{font-size:11.5px;line-height:1.12;margin:0}
+  .matrix-cell-entry .cell-target-input{min-height:40px;padding:5px 6px;border-radius:9px;font-size:14px}
+  .matrix-cell-entry .cell-validate{min-width:44px;min-height:44px;padding:2px;border-radius:8px;font-size:18px}
+  .matrix-cell-entry .cell-save-state,.matrix-cell-entry .cell-sync-state,.matrix-cell-entry .cell-proposed-value{font-size:9.5px;line-height:1.15}
+  .matrix-cell-entry .cell-save-state{min-height:0}
+  .truth-notice{padding:8px 10px;font-size:12px;line-height:1.35}
+  .app-back-btn{left:6px;bottom:78px;min-height:44px;padding:7px 12px;font-size:14px}
+  .side-nav{height:76px;gap:3px;padding:3px 5px calc(4px + env(safe-area-inset-bottom))}
+  .nav-btn{flex-basis:82px;min-width:82px;width:82px;grid-template-rows:22px minmax(22px,auto);min-height:60px;padding:3px 4px}
+  .nav-btn span{width:26px;height:22px}
+  .nav-btn b,.nav-btn b[data-mobile-label]::after{font-size:10.5px;line-height:1.05}
+  .content{padding:10px 7px 96px}
+  .panel{padding:10px;border-radius:12px}
+  .toast{left:8px;right:8px;bottom:84px;max-width:none;padding:9px 11px;font-size:13px;line-height:1.35}
+}
