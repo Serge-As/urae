@@ -284,7 +284,7 @@ export class FoundationService {
     if(!record||record.moduleId!=='GROUP.LAUNCH_STUDIO'||record.data.kind!=='LAUNCH_SOURCE_DOCUMENT'||record.data.projectId!==projectId)throw new Error('LAUNCH_SOURCE_NOT_FOUND');
     const note=input.note.trim();if(!note)throw new Error('LAUNCH_SOURCE_REVIEW_NOTE_REQUIRED');
     const reviewedAt=now(),humanReview=input.accepted?'ACCEPTED' as const:'REJECTED' as const,next={...record,status:input.accepted?'DONE' as const:'ACTIVE' as const,data:{...record.data,humanReview,reviewNote:note,reviewedBy:ctx.actorId,reviewedAt},updatedAt:reviewedAt};await this.repo.saveWorkspaceRecord(next);
-    return{id:next.id,projectId,kind:String(next.data.sourceKind) as LaunchSourceDocument['kind'],fileName:String(next.data.fileName),fingerprint:String(next.data.fingerprint),sourceRef:String(next.data.sourceRef),pageIndex:next.data.pageIndex===null||next.data.pageIndex===undefined?undefined:Number(next.data.pageIndex),humanReview,reviewNote:note,reviewedBy:ctx.actorId,reviewedAt,createdAt:next.createdAt,createdBy:next.createdBy};
+    return{id:next.id,projectId,kind:String(record.data.sourceKind) as LaunchSourceDocument['kind'],fileName:String(record.data.fileName),fingerprint:String(record.data.fingerprint),sourceRef:String(record.data.sourceRef),pageIndex:record.data.pageIndex===null||record.data.pageIndex===undefined?undefined:Number(record.data.pageIndex),humanReview,reviewNote:note,reviewedBy:ctx.actorId,reviewedAt,createdAt:next.createdAt,createdBy:next.createdBy};
   }
 
   async recordFeasibilityRun(tenantId:Id,projectId:Id):Promise<FeasibilityRun>{
