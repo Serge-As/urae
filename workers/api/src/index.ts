@@ -824,6 +824,23 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
       const max=url.searchParams.get('maxContribution'); const currency=url.searchParams.get('currency')??'XAF';
       return json(await discovery.search({text:url.searchParams.get('q')??undefined,locality:url.searchParams.get('locality')??undefined,missionTags:strArray(url.searchParams.get('missionTags')),activityTags:strArray(url.searchParams.get('activityTags')),family:(url.searchParams.get('family')??undefined) as any,meetingMode:(url.searchParams.get('meetingMode')??undefined) as any,maxContribution:max?{currency,amount:finite(max)}:undefined,recruitingOnly:url.searchParams.get('recruitingOnly')==='true'}),200,cors);
     }
+    if(url.pathname==='/api/v1/discovery/candidate-profile'&&request.method==='GET')return json(await discovery.candidateProfile(),200,cors);
+    if(url.pathname==='/api/v1/discovery/candidate-profile'&&request.method==='PUT'){const body=await readJson<any>(request);return json(await discovery.saveCandidateProfile(body),200,cors);}
+    if(url.pathname==='/api/v1/discovery/candidate-invitations'&&request.method==='GET')return json(await discovery.candidateInvitations(),200,cors);
+    const candidateInvitationResponse=url.pathname.match(/^\/api\/v1\/discovery\/candidate-invitations\/([^/]+)\/respond$/);
+    if(candidateInvitationResponse&&request.method==='POST'){const body=await readJson<Record<string,unknown>>(request),response=String(body.response??'');if(response!=='INTERESTED'&&response!=='DECLINED')throw new Error('INVALID_CANDIDATE_INVITATION_RESPONSE');return json(await discovery.respondCandidateInvitation(candidateInvitationResponse[1]!,response),200,cors);}
+    const candidateSearchRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/discovery\/candidates$/);
+    if(candidateSearchRoute&&request.method==='GET')return json(await discovery.searchCandidates(ctx.tenantId,candidateSearchRoute[1]!,{text:url.searchParams.get('q')??undefined,locality:url.searchParams.get('locality')??undefined,tags:strArray(url.searchParams.get('tags')??'')}),200,cors);
+    const candidateFitRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/discovery\/candidates\/([^/]+)\/fit$/);
+    if(candidateFitRoute&&request.method==='GET')return json(await discovery.candidateFit(ctx.tenantId,candidateFitRoute[1]!,candidateFitRoute[2]!),200,cors);
+    const candidateInviteRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/discovery\/candidates\/([^/]+)\/invite$/);
+    if(candidateInviteRoute&&request.method==='POST'){const body=await readJson<Record<string,unknown>>(request);return json(await discovery.inviteCandidate(ctx.tenantId,candidateInviteRoute[1]!,candidateInviteRoute[2]!,{campaignId:body.campaignId?String(body.campaignId):undefined,message:body.message?String(body.message):undefined}),201,cors);}
+    const recruitmentCampaignRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/recruitment-campaigns$/);
+    if(recruitmentCampaignRoute&&request.method==='GET')return json(await discovery.recruitmentCampaigns(ctx.tenantId,recruitmentCampaignRoute[1]!),200,cors);
+    if(recruitmentCampaignRoute&&request.method==='POST'){const body=await readJson<any>(request);return json(await discovery.createRecruitmentCampaign(ctx.tenantId,recruitmentCampaignRoute[1]!,body),201,cors);}
+    const recruitmentCampaignState=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/recruitment-campaigns\/([^/]+)\/state$/);
+    if(recruitmentCampaignState&&request.method==='POST'){const body=await readJson<Record<string,unknown>>(request),state=String(body.state??'');if(!['ACTIVE','PAUSED','CLOSED'].includes(state))throw new Error('INVALID_RECRUITMENT_STATE');return json(await discovery.setRecruitmentCampaignState(ctx.tenantId,recruitmentCampaignState[1]!,recruitmentCampaignState[2]!,state as any),200,cors);}
+
     const discoveryPublish=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/discovery$/);
     if(discoveryPublish&&request.method==='POST'){
       const body=await readJson<Record<string,unknown>>(request); const band=body.contributionBand&&typeof body.contributionBand==='object'?body.contributionBand as Record<string,unknown>:undefined;
