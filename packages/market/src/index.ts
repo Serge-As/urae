@@ -6,7 +6,7 @@ import type {PlatformKernel} from '../../platform-kernel/src/index.js';
 const managers=new Set(['founder','manager','admin','president','treasurer']);
 const now=()=>new Date().toISOString();
 const qty=(v:number)=>{if(!Number.isSafeInteger(v)||v<=0)throw Error('INVALID_QUANTITY');return v;};
-type MarketKind='SHOP'|'STOCK_ITEM'|'MARKET_ORDER'|'GROUP_BUY'|'SUPPLIER'|'PROCUREMENT'|'SUPPLIER_INVOICE'|'PROCUREMENT_RECONCILIATION'|'SUPPLIER_CREDIT_NOTE'|'SUPPLIER_CREDIT'|'FLASH_OFFER'|'MARKET_REQUEST'|'MARKET_RESPONSE'|'DEAL'|'LIVE_MARKET';
+type MarketKind='SHOP'|'STOCK_ITEM'|'MARKET_ORDER'|'GROUP_BUY'|'SUPPLIER'|'PROCUREMENT'|'SUPPLIER_INVOICE'|'PROCUREMENT_RECONCILIATION'|'SUPPLIER_CREDIT_NOTE'|'SUPPLIER_CREDIT'|'FLASH_OFFER'|'MARKET_REQUEST'|'MARKET_RESPONSE'|'DEAL'|'DEAL_COMMITMENT'|'LIVE_MARKET';
 type StockOwnership='COMMERCIAL'|'POT_RESERVED'|'CONSIGNMENT'|'DEPOSIT_SALE';
 export type FlashOfferKind='LIQUIDATION'|'SURPLUS'|'RESCUE';
 export type MarketRequestState='DRAFT'|'OPEN'|'RESPONSES'|'SHORTLIST'|'SELECTED'|'FULFILLMENT'|'CLOSED'|'DISPUTED';
@@ -300,10 +300,14 @@ export class MarketService{
     return this.update(row,{dealState:'OPEN',openedAt:now()});
   }
   async commitDealQuantity(groupId:Id,id:Id,quantity:number){
-    await this.access(groupId,true);const row=(await this.list(groupId,'DEAL')).find(x=>x.id===id);if(!row)throw Error('DEAL_NOT_FOUND');if(String(row.data.dealState)!=='OPEN')throw Error('DEAL_NOT_OPEN');const add=qty(quantity),next=Number(row.data.committedQuantity??0)+add;if(next>Number(row.data.quantity))throw Error('DEAL_QUANTITY_EXCEEDED');
+    const membership=await this.access(groupId,false),ctx=this.kernel.context.get(),row=(await this.list(groupId,'DEAL')).find(x=>x.id===id);if(!row)throw Error('DEAL_NOT_FOUND');if(String(row.data.dealState)!=='OPEN')throw Error('DEAL_NOT_OPEN');
+    const add=qty(quantity),existing=(await this.list(groupId,'DEAL_COMMITMENT')).filter(x=>String(x.data.dealId)===id&&String(x.data.commitmentState)==='ACTIVE'),current=existing.reduce((n,x)=>n+Number(x.data.quantity??0),0),next=current+add;if(next>Number(row.data.quantity))throw Error('DEAL_QUANTITY_EXCEEDED');
+    const commitment=await this.save(groupId,'DEAL_COMMITMENT','Engagement · '+row.title,{dealId:id,quantity:add,actorId:ctx.actorId,membershipId:membership?.id??'',commitmentState:'ACTIVE',committedAt:now()});
     const tiers=JSON.parse(String(row.data.priceTiersJson??'[]')) as Array<{minQuantity:number;unitPrice:number}>;let price=Number(row.data.publicUnitPrice);for(const tier of tiers)if(next>=tier.minQuantity)price=tier.unitPrice;
-    return this.update(row,{committedQuantity:next,effectiveUnitPrice:price,lastCommitAt:now()});
+    const deal=await this.update(row,{committedQuantity:next,effectiveUnitPrice:price,lastCommitAt:now()});
+    return{deal,commitment};
   }
+  async dealCommitments(groupId:Id,id:Id){await this.access(groupId,false);return (await this.list(groupId,'DEAL_COMMITMENT')).filter(x=>String(x.data.dealId)===id&&String(x.data.commitmentState)==='ACTIVE');}
   async transitionDeal(groupId:Id,id:Id,next:'FULFILLMENT'|'CLOSED'|'DISPUTED',note=''){
     await this.access(groupId,true);const row=(await this.list(groupId,'DEAL')).find(x=>x.id===id);if(!row)throw Error('DEAL_NOT_FOUND');const current=String(row.data.dealState) as DealState;const allowed:Record<string,string[]>={OPEN:['FULFILLMENT','DISPUTED','CLOSED'],FULFILLMENT:['CLOSED','DISPUTED'],DISPUTED:['FULFILLMENT','CLOSED']};if(!allowed[current]?.includes(next))throw Error('INVALID_DEAL_TRANSITION');
     return this.update(row,{dealState:next,transitionNote:note.trim(),transitionedAt:now()},next==='CLOSED'?'DONE':'ACTIVE');
@@ -323,6 +327,6 @@ export class MarketService{
   async pinLiveMarketDeal(groupId:Id,id:Id,dealId:Id){
     await this.access(groupId,true);const row=(await this.list(groupId,'LIVE_MARKET')).find(x=>x.id===id),deal=(await this.list(groupId,'DEAL')).find(x=>x.id===dealId);if(!row)throw Error('LIVE_MARKET_NOT_FOUND');if(!deal)throw Error('DEAL_NOT_FOUND');return this.update(row,{pinnedDealId:dealId,pinnedAt:now()});
   }
-  async socialCommerce(groupId:Id){return{flashOffers:await this.list(groupId,'FLASH_OFFER'),requests:await this.list(groupId,'MARKET_REQUEST'),responses:await this.list(groupId,'MARKET_RESPONSE'),deals:await this.list(groupId,'DEAL'),liveMarkets:await this.list(groupId,'LIVE_MARKET')};}
+  async socialCommerce(groupId:Id){return{flashOffers:await this.list(groupId,'FLASH_OFFER'),requests:await this.list(groupId,'MARKET_REQUEST'),responses:await this.list(groupId,'MARKET_RESPONSE'),deals:await this.list(groupId,'DEAL'),commitments:await this.list(groupId,'DEAL_COMMITMENT'),liveMarkets:await this.list(groupId,'LIVE_MARKET')};}
 
 }

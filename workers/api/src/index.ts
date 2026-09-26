@@ -1693,6 +1693,8 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
     if(dealOpen&&request.method==='POST')return json(await market.openDeal(dealOpen[1]!,dealOpen[2]!),200,cors);
     const dealCommit=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/market\/deals\/([^/]+)\/commit$/);
     if(dealCommit&&request.method==='POST'){const body=await readJson<Record<string,unknown>>(request);return json(await market.commitDealQuantity(dealCommit[1]!,dealCommit[2]!,finite(body.quantity)),200,cors);}
+    const dealCommitments=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/market\/deals\/([^/]+)\/commitments$/);
+    if(dealCommitments&&request.method==='GET')return json({items:await market.dealCommitments(dealCommitments[1]!,dealCommitments[2]!)},200,cors);
     const dealTransition=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/market\/deals\/([^/]+)\/transition$/);
     if(dealTransition&&request.method==='POST'){const body=await readJson<Record<string,unknown>>(request);return json(await market.transitionDeal(dealTransition[1]!,dealTransition[2]!,String(body.state??'') as any,String(body.note??'')),200,cors);}
     const liveMarketRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/market\/live-markets$/);

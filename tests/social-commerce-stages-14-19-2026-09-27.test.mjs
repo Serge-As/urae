@@ -41,7 +41,7 @@ test('deal price drop uses only declared real tiers and never increases price',a
  const {market,groupId}=await setup();
  await assert.rejects(()=>market.createDeal(groupId,{title:'Deal savon',dealType:'BULK',publicUnitPrice:21000,quantity:200,availability:'Stock confirmé',publicConditions:'Retrait dépôt',expiresAt:future(5),priceTiers:[{minQuantity:50,unitPrice:20000},{minQuantity:100,unitPrice:20500}]}),/PRICE_DROP_TIER_MUST_NOT_INCREASE/);
  let deal=await market.createDeal(groupId,{title:'Deal savon',dealType:'BULK',publicUnitPrice:21000,quantity:200,availability:'Stock confirmé',publicConditions:'Retrait dépôt',expiresAt:future(5),priceTiers:[{minQuantity:50,unitPrice:20500},{minQuantity:100,unitPrice:20000},{minQuantity:150,unitPrice:19700}]});
- deal=await market.openDeal(groupId,deal.id);deal=await market.commitDealQuantity(groupId,deal.id,120);assert.equal(deal.data.effectiveUnitPrice,20000);assert.equal(deal.data.committedQuantity,120);
+ deal=await market.openDeal(groupId,deal.id);const committed=await market.commitDealQuantity(groupId,deal.id,120);deal=committed.deal;assert.equal(deal.data.effectiveUnitPrice,20000);assert.equal(deal.data.committedQuantity,120);const proof=await market.dealCommitments(groupId,deal.id);assert.equal(proof.length,1);assert.equal(proof[0].data.quantity,120);assert.ok(proof[0].data.actorId);
 });
 
 test('live market is progressive and refuses fabricated video/live prerequisites',async()=>{
