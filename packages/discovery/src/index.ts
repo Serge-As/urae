@@ -28,6 +28,7 @@ export class DiscoveryService {
 
   async publishGroupListing(input:PublishGroupListingInput):Promise<PublicGroupListing>{
     await requireManager(this.repo,this.kernel,input.tenantId,input.groupId);
+    if(input.visibility==='SECRET') throw new Error('SECRET_GROUP_NOT_DISCOVERABLE');
     const group=await this.repo.getGroup(input.tenantId,input.groupId); if(!group) throw new Error('GROUP_NOT_FOUND');
     const previous=await this.repo.getPublicGroupListing(group.id); const timestamp=now();
     const listing:PublicGroupListing={
