@@ -1187,7 +1187,7 @@ const highlightRemoteFinancialCell=(p={})=>{
     const button=cell.querySelector('.cell-validate');if(button){button.textContent='OK';button.classList.add('remote-ack');button.addEventListener('click',()=>{cell.classList.remove('remote-financial-change');button.classList.remove('remote-ack');button.textContent='✓';},{once:true});}
 };
 window.addEventListener('eco:financial-live-update',event=>{
-    const e=event instanceof CustomEvent?event.detail:undefined,p=e?.payload??{};highlightRemoteFinancialCell(p);
+    const e=event instanceof CustomEvent?event.detail:undefined,p=e?.payload??{};if(String(p.actorId??'')!==String(app.currentActor?.()??''))highlightRemoteFinancialCell(p);
     showFinancialAlert({title:p.meetingClosed?tx('Modification après clôture','Post-close change'):tx('Saisie modifiée','Entry changed'),message:p.actorName?tx(`${p.actorName} a modifié une cellule. Elle clignote en vert.`,`${p.actorName} changed a cell. It is flashing green.`):tx('Une cellule financière vient d’être modifiée.','A financial cell was changed.'),closed:Boolean(p.meetingClosed),correction:true});
 });
 

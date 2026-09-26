@@ -55,11 +55,12 @@ test('financial sheet edits a target value for one exact meeting instead of addi
   assert.doesNotMatch(api,/targetAmount-state\.current/);
 });
 
-test('multi-manager correction compares with canonical baseline and requires real majority before apply',()=>{
+test('multi-manager correction applies immediately while explicit dissent keeps the governed confrontation path',()=>{
+  assert.match(api,/manager validation writes immediately/);
+  assert.match(api,/applyFinancialCellTarget/);
+  assert.doesNotMatch(api,/const needsConsensus=meeting\.status==='closed'/);
   assert.match(consensus,/proposeAgainstBaseline/);
-  assert.match(consensus,/Valeur canonique actuelle/);
   assert.match(consensus,/Math\.floor\(managerIds\.length\/2\)\+1/);
-  assert.match(api,/status:'CONSENSUS_REQUIRED'/);
   assert.ok(api.includes("financial-cells\\/([^/]+)\\/apply"));
   assert.match(sessions,/Appliquer la valeur retenue/);
   assert.match(sessions,/applyFinancialCellConsensus/);

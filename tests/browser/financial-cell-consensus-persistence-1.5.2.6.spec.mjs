@@ -5,7 +5,7 @@ const password='Synthetic-consensus-persistence-2026!';
 
 const amountFrom=async locator=>Number(String(await locator.locator('.cell-current').innerText()).replace(/[^0-9-]/g,''));
 
-test('closed-session offline target remains visible as a proposal after synchronization and reload',async({page,context})=>{
+test('closed-session offline target becomes the canonical value after synchronization and reload',async({page,context})=>{
   test.setTimeout(120_000);
   let ids;
   await page.goto(base+'/',{waitUntil:'domcontentloaded'});
@@ -54,9 +54,8 @@ test('closed-session offline target remains visible as a proposal after synchron
   const reloaded=page.locator('#meetingMatrix').locator(selector);
   await expect(reloaded).toBeVisible();
 
-  // Closed-session synchronization may create a governed proposal, but the
-  // user's target must never disappear merely because the outbox item was ACKed.
-  await expect(reloaded).toContainText(/Proposé\s*:\s*1.?000 F CFA/i);
-  await expect.poll(()=>amountFrom(reloaded)).toBe(0);
-  await expect(reloaded).toContainText(/validation.*responsable|confront/i);
+  // A manager validation is immediately canonical. Reload must preserve the
+  // exact target; confrontation is opened only by an explicit dissent/reserve.
+  await expect.poll(()=>amountFrom(reloaded)).toBe(1000);
+  await expect(reloaded).not.toContainText(/Proposé\s*:/i);
 });
