@@ -789,7 +789,7 @@ local_qualification_2026_09_13:
     tests: [external-programs-governed,external-share-aggregate-only]
   - id: ECONOMIC.DEMAND.EXCHANGE.CORE
     domain: economy
-    status: FUNCTIONAL_BETA
+    status: ACQUIRED_FOUNDATION
     risk_class: medium
     offline_policy: deterministic_aggregation_possible
     audit_event: NONE_ENGINE_ONLY
