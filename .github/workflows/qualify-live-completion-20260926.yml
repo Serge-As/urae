@@ -1,0 +1,32 @@
+name: Eco-System — Live Completion Qualification
+
+on:
+  push:
+    branches: ['audit/live-completion-20260926']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: eco-system-live-completion-qualification
+  cancel-in-progress: true
+
+jobs:
+  qualify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - name: Install locked dependencies
+        run: npm ci --ignore-scripts
+      - name: Full governed CI
+        run: npm run ci
+      - name: Build exact candidate shell
+        run: npm run build
+      - name: Live proactive focused tests
+        run: node --test tests/premium-live-proactive-2026-09-26.test.mjs tests/financial-live-author-1.5.2.6.test.mjs tests/financial-live-confrontation-1.5.2.6.test.mjs tests/community-realtime-1.3.2.test.mjs
