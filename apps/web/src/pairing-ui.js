@@ -7,7 +7,7 @@ const extractCode=input=>{
 const copy=async text=>{try{await navigator.clipboard.writeText(text);return true;}catch{return false;}};
 
 export function mountPairingUI({app,notify=()=>{},showError=console.error,getMembers=()=>[],isManager=()=>false,afterMembershipChanged=async()=>{}}){
-  const joinStatus=document.getElementById('joinStatus'),myCode=document.getElementById('myPairingCodeResult'),managerBox=document.getElementById('managerPairingBox'),linkResult=document.getElementById('joinLinkResult'),requestsRoot=document.getElementById('pairingRequestList'),memberSelect=document.getElementById('pairMemberMembership');
+  const joinStatus=document.getElementById('joinStatus'),myCode=document.getElementById('myPairingCodeResult'),managerBox=document.getElementById('managerPairingBox'),linkResult=document.getElementById('joinLinkResult'),requestsRoot=document.getElementById('pairingRequestList'),memberSelect=document.getElementById('pairMemberMembership'),discoveryHub=document.getElementById('discoveryHub');
   if(!joinStatus||!myCode||!managerBox||!linkResult||!requestsRoot||!memberSelect)return{refresh:async()=>{},stop:()=>{}};
   let pendingTimer=null,autoCodeHandled=false;
 
@@ -92,12 +92,45 @@ export function mountPairingUI({app,notify=()=>{},showError=console.error,getMem
     }
   };
 
+  let candidateRoot=document.getElementById('candidateDiscoveryJourney');
+  if(!candidateRoot&&discoveryHub?.closest('section')){
+    candidateRoot=el('section',undefined,'panel');candidateRoot.id='candidateDiscoveryJourney';
+    discoveryHub.closest('section').insertAdjacentElement('beforebegin',candidateRoot);
+  }
+  const split=v=>String(v??'').split(',').map(x=>x.trim()).filter(Boolean);
+  const field=(labelText,name,type='text')=>{const l=el('label',labelText),i=document.createElement(type==='textarea'?'textarea':'input');i.name=name;if(type!=='textarea')i.type=type;l.append(i);return{label:l,input:i};};
+
+  const renderCandidateJourney=async()=>{
+    if(!candidateRoot)return;candidateRoot.replaceChildren();
+    candidateRoot.append(el('h2','Candidats consentants · recrutement privé'),el('p','Vous contrôlez ce qui devient public. Aucun téléphone, CNI, solde ou contact privé n’est révélé par la recherche. Un responsable peut signaler l’intérêt de son groupe ; vous choisissez ensuite de répondre.','truth-notice'));
+    const grid=el('div',undefined,'two-col');
+    const profileBox=el('div',undefined,'stack'),profileForm=el('form',undefined,'form-grid');
+    profileForm.append(el('h3','Mon portfolio public'));
+    const alias=field('Nom / alias public','alias'),locality=field('Localité approximative','locality'),skills=field('Compétences (séparées par virgule)','skills'),interests=field('Centres d’intérêt','interests'),desired=field('Types de groupes recherchés','desired'),availability=field('Disponibilité / préférence','availability'),bio=field('Présentation courte','bio','textarea');
+    const optLabel=el('label',undefined,'check'),opt=document.createElement('input');opt.type='checkbox';opt.name='optIn';optLabel.append(opt,el('span','Je consens à apparaître dans la recherche de candidats'));
+    const save=el('button','Enregistrer mon choix','primary');save.type='submit';profileForm.append(alias.label,locality.label,skills.label,interests.label,desired.label,availability.label,bio.label,optLabel,save);
+    const inbox=el('div',undefined,'stack');profileBox.append(profileForm,el('h3','Invitations reçues'),inbox);grid.append(profileBox);
+    const profile=await app.candidateProfile().catch(()=>undefined);if(profile){alias.input.value=profile.displayAlias??'';locality.input.value=profile.locality??'';skills.input.value=(profile.skills??[]).join(', ');interests.input.value=(profile.interests??[]).join(', ');desired.input.value=(profile.desiredGroupTags??[]).join(', ');availability.input.value=profile.availability??'';bio.input.value=profile.bio??'';opt.checked=true;}
+    profileForm.onsubmit=e=>void(async()=>{e.preventDefault();try{save.disabled=true;await app.saveCandidateProfile({displayAlias:alias.input.value,locality:locality.input.value,skills:split(skills.input.value),interests:split(interests.input.value),desiredGroupTags:split(desired.input.value),availability:availability.input.value,bio:bio.input.value,optIn:opt.checked});notify(opt.checked?'Portfolio public activé.':'Portfolio retiré de la recherche.');await renderCandidateJourney();}catch(err){showError(err);}finally{save.disabled=false;}})();
+    const invitations=await app.candidateInvitations().catch(()=>[]);if(!invitations.length)inbox.append(el('p','Aucune invitation de recrutement.','hint'));
+    for(const inv of invitations){const card=el('article',undefined,'item');card.append(el('strong',inv.groupName||'Groupe'),el('p',inv.message||'Ce groupe souhaite entrer en relation via Eco-System.','hint'),el('span',inv.state,'pill'));if(inv.state==='PENDING'){const a=el('div',undefined,'actions'),yes=el('button','Je suis intéressé(e)','primary'),no=el('button','Décliner','secondary');yes.type=no.type='button';yes.onclick=()=>void(async()=>{try{await app.respondCandidateInvitation(inv.id,'INTERESTED');notify('Intérêt transmis. Le contact reste sous votre contrôle.');await renderCandidateJourney();}catch(err){showError(err);}})();no.onclick=()=>void(async()=>{try{await app.respondCandidateInvitation(inv.id,'DECLINED');await renderCandidateJourney();}catch(err){showError(err);}})();a.append(yes,no);card.append(a);}inbox.append(card);}
+    const managerBox2=el('div',undefined,'stack');grid.append(managerBox2);candidateRoot.append(grid);
+    if(!app.activeGroup()||!isManager()){managerBox2.append(el('h3','Recherche côté groupe'),el('p','Sélectionnez un groupe dont vous êtes responsable pour rechercher des candidats consentants.','hint'));return;}
+    managerBox2.append(el('h3','Recherche côté groupe'));
+    const campaignForm=el('form',undefined,'form-grid'),ct=field('Nom de la campagne','title'),cl=field('Localité','locality'),ctags=field('Compétences / thèmes','tags'),cm=field('Message','message','textarea'),cb=el('button','Créer la campagne','secondary');cb.type='submit';campaignForm.append(ct.label,cl.label,ctags.label,cm.label,cb);
+    const campaignsRoot=el('div',undefined,'stack');managerBox2.append(campaignForm,campaignsRoot);
+    campaignForm.onsubmit=e=>void(async()=>{e.preventDefault();try{await app.createRecruitmentCampaign({title:ct.input.value,message:cm.input.value,locality:cl.input.value,tags:split(ctags.input.value)});notify('Campagne de recrutement créée.');await renderCandidateJourney();}catch(err){showError(err);}})();
+    const campaigns=await app.recruitmentCampaigns().catch(()=>[]);for(const c of campaigns){const card=el('article',undefined,'item');card.append(el('strong',c.title),el('span',String(c.data?.campaignState??c.status),'pill'),el('p',String(c.data?.message??''),'hint'));if(String(c.data?.campaignState)==='ACTIVE'){const pause=el('button','Mettre en pause','link-btn');pause.type='button';pause.onclick=()=>void(async()=>{await app.setRecruitmentCampaignState(c.id,'PAUSED');await renderCandidateJourney();})();card.append(pause);}campaignsRoot.append(card);}
+    const searchForm=el('form',undefined,'form-grid'),sq=field('Mot-clé','q'),sl=field('Localité','locality'),st=field('Compétences / thèmes','tags'),sb=el('button','Rechercher les profils opt-in','primary');sb.type='submit';searchForm.append(sq.label,sl.label,st.label,sb);const results=el('div',undefined,'stack');managerBox2.append(el('h3','Candidats consentants'),searchForm,results);
+    searchForm.onsubmit=e=>void(async()=>{e.preventDefault();try{results.replaceChildren(el('p','Recherche…','hint'));const rows=await app.searchConsentingCandidates({q:sq.input.value,locality:sl.input.value,tags:split(st.input.value)});results.replaceChildren();if(!rows.length)results.append(el('p','Aucun profil opt-in correspondant.','hint'));for(const match of rows){const c=match.candidate,card=el('article',undefined,'item');card.append(el('strong',c.displayAlias),el('p',[c.locality,(c.skills??[]).join(', ')].filter(Boolean).join(' · '),'hint'),el('span','Score recherche '+match.score,'pill'));const actions=el('div',undefined,'actions'),fit=el('button','Voir l’affinité explicable','secondary'),invite=el('button','Signaler l’intérêt du groupe','primary');fit.type=invite.type='button';fit.onclick=()=>void(async()=>{try{const f=await app.candidateGroupFit(c.id);card.append(el('p','Affinité consultative : '+f.score+'/100 · '+f.reasonCodes.join(' · '),'truth-notice'));fit.disabled=true;}catch(err){showError(err);}})();invite.onclick=()=>void(async()=>{try{const active=campaigns.find(x=>String(x.data?.campaignState)==='ACTIVE');const message=window.prompt('Message visible par le candidat :',active?.data?.message||'Notre groupe souhaite vous inviter à découvrir ses activités.');if(message===null)return;await app.inviteConsentingCandidate(c.id,{campaignId:active?.id,message});notify('Invitation transmise sans divulguer les coordonnées privées du candidat.');}catch(err){showError(err);}})();actions.append(fit,invite);card.append(actions);results.append(card);}}catch(err){results.replaceChildren();showError(err);}})();
+  };
+
   const handleUrlCode=async()=>{
     if(autoCodeHandled)return;const url=new URL(location.href),code=url.searchParams.get('code');if(!code)return;
     autoCodeHandled=true;const input=document.getElementById('joinCodeInput');if(input)input.value=code;
     try{await redeem(code);url.searchParams.delete('code');history.replaceState(null,'',url.pathname+url.search+url.hash);}catch(err){showError(err);}
   };
 
-  const refresh=async()=>{try{await renderManager();await handleUrlCode();}catch(err){showError(err);}};
+  const refresh=async()=>{try{await renderManager();await renderCandidateJourney();await handleUrlCode();}catch(err){showError(err);}};
   return{refresh,stop};
 }

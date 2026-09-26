@@ -824,7 +824,7 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
       const max=url.searchParams.get('maxContribution'); const currency=url.searchParams.get('currency')??'XAF';
       return json(await discovery.search({text:url.searchParams.get('q')??undefined,locality:url.searchParams.get('locality')??undefined,missionTags:strArray(url.searchParams.get('missionTags')),activityTags:strArray(url.searchParams.get('activityTags')),family:(url.searchParams.get('family')??undefined) as any,meetingMode:(url.searchParams.get('meetingMode')??undefined) as any,maxContribution:max?{currency,amount:finite(max)}:undefined,recruitingOnly:url.searchParams.get('recruitingOnly')==='true'}),200,cors);
     }
-    if(url.pathname==='/api/v1/discovery/candidate-profile'&&request.method==='GET')return json(await discovery.candidateProfile(),200,cors);
+    if(url.pathname==='/api/v1/discovery/candidate-profile'&&request.method==='GET')return json({profile:await discovery.candidateProfile()},200,cors);
     if(url.pathname==='/api/v1/discovery/candidate-profile'&&request.method==='PUT'){const body=await readJson<any>(request);return json(await discovery.saveCandidateProfile(body),200,cors);}
     if(url.pathname==='/api/v1/discovery/candidate-invitations'&&request.method==='GET')return json(await discovery.candidateInvitations(),200,cors);
     const candidateInvitationResponse=url.pathname.match(/^\/api\/v1\/discovery\/candidate-invitations\/([^/]+)\/respond$/);

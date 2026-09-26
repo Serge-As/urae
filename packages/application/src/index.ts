@@ -585,7 +585,7 @@ export class ConnectedApplication {
     }
   }
   async searchGroups(input:{q?:string;locality?:string;recruitingOnly?:boolean}={}):Promise<GroupDiscoveryMatch[]>{const p=new URLSearchParams();if(input.q)p.set('q',input.q);if(input.locality)p.set('locality',input.locality);if(input.recruitingOnly)p.set('recruitingOnly','true');return this.request(`/api/v1/discovery/groups?${p}`);}
-  async candidateProfile():Promise<any>{return this.request('/api/v1/discovery/candidate-profile');}
+  async candidateProfile():Promise<any>{const r=await this.request('/api/v1/discovery/candidate-profile') as any;return r.profile;}
   async saveCandidateProfile(input:any):Promise<any>{return this.request('/api/v1/discovery/candidate-profile',{method:'PUT',body:JSON.stringify(input)});}
   async candidateInvitations():Promise<any[]>{return this.request('/api/v1/discovery/candidate-invitations');}
   async respondCandidateInvitation(id:string,response:'INTERESTED'|'DECLINED'):Promise<any>{return this.request('/api/v1/discovery/candidate-invitations/'+encodeURIComponent(id)+'/respond',{method:'POST',body:JSON.stringify({response})});}
