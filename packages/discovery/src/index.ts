@@ -18,6 +18,7 @@ export interface PublicCandidateProfile {
 }
 export interface CandidateSearchQuery {text?:string;locality?:string;tags?:string[];}
 export interface CandidateMatch {candidate:PublicCandidateProfile;score:number;reasonCodes:string[];}
+export interface CandidateInvitationView {id:Id;groupId:Id;groupName:string;campaignId?:Id;message?:string;state:'PENDING'|'INTERESTED'|'DECLINED';createdAt:string;updatedAt:string;}
 const candidateProjection=(row:WorkspaceRecord):PublicCandidateProfile=>({
   id:row.id,displayAlias:String(row.data.displayAlias??row.title),locality:row.data.locality?String(row.data.locality):undefined,
   skills:cleanTags(row.data.skills),interests:cleanTags(row.data.interests),desiredGroupTags:cleanTags(row.data.desiredGroupTags),
@@ -131,6 +132,31 @@ export class DiscoveryService {
     if(hits){score+=Math.min(50,hits*10);reasons.push('PUBLIC_TAG_AFFINITY');}
     if(listing?.recruiting){score+=10;reasons.push('GROUP_RECRUITING');}
     return{candidate,score:Math.min(100,score),reasonCodes:reasons,advisoryOnly:true,contactShared:false};
+  }
+
+  private invitationView(row:WorkspaceRecord):CandidateInvitationView{
+    return{id:row.id,groupId:String(row.data.targetGroupId??''),groupName:String(row.data.groupName??''),campaignId:row.data.campaignId?String(row.data.campaignId):undefined,message:row.data.message?String(row.data.message):undefined,state:String(row.data.invitationState??'PENDING') as CandidateInvitationView['state'],createdAt:row.createdAt,updatedAt:row.updatedAt};
+  }
+
+  async inviteCandidate(targetTenantId:Id,groupId:Id,candidateId:Id,input:{campaignId?:Id;message?:string}):Promise<CandidateInvitationView>{
+    await requireManager(this.repo,this.kernel,targetTenantId,groupId);const ctx=this.kernel.context.get(),group=await this.repo.getGroup(targetTenantId,groupId);if(!group)throw new Error('GROUP_NOT_FOUND');
+    const candidate=(await this.repo.listWorkspaceRecords(PUBLIC_CANDIDATE_TENANT,'MEMBERSHIP.PORTFOLIO')).find(x=>x.id===candidateId&&x.status==='ACTIVE'&&Boolean(x.data.optIn));if(!candidate)throw new Error('CANDIDATE_NOT_FOUND');
+    if(input.campaignId){const campaign=await this.repo.getWorkspaceRecord(targetTenantId,input.campaignId);if(!campaign||campaign.groupId!==groupId||campaign.moduleId!=='MEMBERSHIP.RECRUITMENT'||String(campaign.data.campaignState)!=='ACTIVE')throw new Error('RECRUITMENT_CAMPAIGN_NOT_ACTIVE');}
+    const prior=(await this.repo.listWorkspaceRecords(PUBLIC_CANDIDATE_TENANT,'MEMBERSHIP.RECRUITMENT')).find(x=>String(x.data.candidateOwnerActorId)===String(candidate.data.ownerActorId)&&String(x.data.targetGroupId)===groupId&&String(x.data.invitationState)==='PENDING');
+    if(prior)return this.invitationView(prior);
+    const stamp=now(),record:WorkspaceRecord={id:makeId('candidate_invite'),tenantId:PUBLIC_CANDIDATE_TENANT,groupId,moduleId:'MEMBERSHIP.RECRUITMENT',title:'Invitation · '+group.name,status:'ACTIVE',tags:['candidate-invitation','state:PENDING'],data:{candidateOwnerActorId:String(candidate.data.ownerActorId),targetTenantId,targetGroupId:groupId,groupName:group.name,campaignId:input.campaignId??'',message:cleanText(input.message,500),invitationState:'PENDING',privateContactShared:false},createdBy:ctx.actorId,createdAt:stamp,updatedAt:stamp};
+    await this.repo.saveWorkspaceRecord(record);return this.invitationView(record);
+  }
+
+  async candidateInvitations():Promise<CandidateInvitationView[]>{
+    const ctx=this.kernel.context.get(),rows=await this.repo.listWorkspaceRecords(PUBLIC_CANDIDATE_TENANT,'MEMBERSHIP.RECRUITMENT');
+    return rows.filter(x=>String(x.data.candidateOwnerActorId??'')===ctx.actorId&&x.tags.includes('candidate-invitation')).map(x=>this.invitationView(x)).sort((a,b)=>b.updatedAt.localeCompare(a.updatedAt));
+  }
+
+  async respondCandidateInvitation(id:Id,response:'INTERESTED'|'DECLINED'):Promise<CandidateInvitationView>{
+    const ctx=this.kernel.context.get(),row=await this.repo.getWorkspaceRecord(PUBLIC_CANDIDATE_TENANT,id);if(!row||row.moduleId!=='MEMBERSHIP.RECRUITMENT'||!row.tags.includes('candidate-invitation')||String(row.data.candidateOwnerActorId)!==ctx.actorId)throw new Error('CANDIDATE_INVITATION_NOT_FOUND');
+    if(String(row.data.invitationState)!=='PENDING')return this.invitationView(row);
+    const stamp=now(),next:WorkspaceRecord={...row,status:'DONE',tags:[...row.tags.filter(x=>!x.startsWith('state:')),'state:'+response],data:{...row.data,invitationState:response,respondedAt:stamp},updatedAt:stamp};await this.repo.saveWorkspaceRecord(next);return this.invitationView(next);
   }
 
   async createRecruitmentCampaign(targetTenantId:Id,groupId:Id,input:{title:string;message?:string;locality?:string;tags?:string[]}):Promise<WorkspaceRecord>{
