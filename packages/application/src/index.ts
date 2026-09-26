@@ -627,7 +627,7 @@ export class ConnectedApplication {
     // Persist the exact target command before attempting transport. If the HTTP
     // response is lost after commit, the same idempotency key is replayed later.
     const item=await this.queueLocal('FINANCIAL_CELL_CORRECTION_PROPOSAL_V1',payload,operationKey);
-    if(this.isOffline())return{status:'QUEUED_CONSENSUS',queued:true,current,target:input.targetAmount,outbox:item};
+    if(this.isOffline())return{status:'QUEUED_SYNC',queued:true,current,target:input.targetAmount,outbox:item};
     try{
       const result=await this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/meetings/${encodeURIComponent(input.meetingId)}/financial-cells`,{
         method:'POST',headers:{'x-idempotency-key':operationKey},
@@ -638,7 +638,7 @@ export class ConnectedApplication {
       if(error instanceof Error&&error.message==='CELL_VALUE_CONFLICT'){this.outbox.markConflictByKey(this.tenantId,this.actorId,operationKey);await this.persistOutbox();throw error;}
       if(error instanceof Error&&(error.message==='NETWORK_UNAVAILABLE'||/^HTTP_5\d\d$/.test(error.message))){
         await this.persistOutbox();
-        return{status:'QUEUED_CONSENSUS',queued:true,current,target:input.targetAmount,outbox:item};
+        return{status:'QUEUED_SYNC',queued:true,current,target:input.targetAmount,outbox:item};
       }
       throw error;
     }

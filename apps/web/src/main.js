@@ -536,7 +536,7 @@ const submitFinancialCellElement=async validate=>{
         financialReviewTargets.set(cellKey,{targetAmount:target,meetingId,membershipId,rubricId,at:new Date().toISOString()});
         holder.classList.add('pending-consensus');setCellState('REVIEW_REQUIRED',tx('Proposition enregistrée · validation d’un second responsable requise','Proposal saved · second manager approval required'));
         traceFinancialCell('CELL_REVIEW_REQUIRED',{cellKey,target,current});toast(tx('Modification proposée : elle est enregistrée et attend la décision des gestionnaires.','Change proposal saved and awaiting manager decision.'));
-      }else if(result?.status==='QUEUED_CONSENSUS'||result?.queued){
+      }else if(result?.status==='QUEUED_SYNC'||result?.queued){
         currentLabel.textContent=fmt(displayTarget);setCellState('QUEUED_OFFLINE',tx('Enregistré sur cet appareil · synchro en attente','Saved on this device · pending sync'));
         traceFinancialCell('CELL_LOCAL_COMMIT',{cellKey,target,status:'QUEUED'});
         toast(tx('✓ Valeur enregistrée sur cet appareil · synchronisation automatique en attente.','✓ Value saved on this device · automatic sync pending.'));
@@ -1112,6 +1112,7 @@ const refreshOptionalOfflineSafe=async(label,fn)=>{
 const openNoticeAction=action=>{
     if(!action?.view)return;
     go(action.view,{anchor:action.anchor,meetingId:action.meetingId,matrixMeetingId:action.meetingId,sheetMode:action.membershipId&&action.rubricId?'meeting':undefined,membershipId:action.membershipId,rubricId:action.rubricId,force:true});
+    if(action.meetingId&&action.membershipId&&action.rubricId)setTimeout(()=>{highlightRemoteFinancialCell({...action,actorName:action.actorName||tx('Gestionnaire','Manager')});document.querySelector('.remote-financial-change')?.scrollIntoView({behavior:'smooth',block:'center',inline:'nearest'});},180);
     if(action.entityKind&&action.entityId)requestAnimationFrame(()=>{
       const type=String(action.entityKind).toLowerCase(),selector=`[data-detail-type="${CSS.escape(type)}"][data-detail-id="${CSS.escape(String(action.entityId))}"]`,button=document.querySelector(selector);
       button?.scrollIntoView({behavior:'smooth',block:'center'});button?.click?.();
@@ -1176,9 +1177,18 @@ const renderFinancialAlerts=async()=>{
       showFinancialAlert({title:latest.title,message:latest.message,closed,correction:String(latest.priority)==='HIGH',notificationId:latest.id,action:latest.action});
     }catch(error){if(navigator.onLine)console.info('Financial alerts unavailable',error);}
 };
+const highlightRemoteFinancialCell=(p={})=>{
+    if(!p.meetingId||!p.membershipId||!p.rubricId)return;
+    const selector=`.matrix-cell-entry[data-meeting-id="${CSS.escape(String(p.meetingId))}"][data-membership-id="${CSS.escape(String(p.membershipId))}"][data-rubric-id="${CSS.escape(String(p.rubricId))}"]`;
+    const cell=document.querySelector(selector);if(!cell)return;
+    cell.classList.remove('remote-financial-change');void cell.offsetWidth;cell.classList.add('remote-financial-change');
+    const author=String(p.actorName||p.actorId||tx('Autre gestionnaire','Another manager'));cell.dataset.remoteAuthor=author;
+    cell.title=tx(`Modifié par ${author} · ${p.previousAmount??'?'} → ${p.newAmount??'?'} F CFA. OK = j’ai vu.`,`Changed by ${author} · ${p.previousAmount??'?'} → ${p.newAmount??'?'} XAF. OK = seen.`);
+    const button=cell.querySelector('.cell-validate');if(button){button.textContent='OK';button.classList.add('remote-ack');button.addEventListener('click',()=>{cell.classList.remove('remote-financial-change');button.classList.remove('remote-ack');button.textContent='✓';},{once:true});}
+};
 window.addEventListener('eco:financial-live-update',event=>{
-    const e=event instanceof CustomEvent?event.detail:undefined,p=e?.payload??{};
-    showFinancialAlert({title:p.meetingClosed?tx('Alerte après clôture','Post-close alert'):tx('Nouvelle saisie financière','New financial entry'),message:p.operationType==='FINANCIAL_CELL_CORRECTION'?tx('Votre situation financière vient d’être corrigée. Vérifiez-la.','Your financial position was corrected. Please review it.'):tx('Une nouvelle donnée financière vient d’être enregistrée sur votre compte.','A new financial value was recorded on your account.'),closed:Boolean(p.meetingClosed),correction:p.operationType==='FINANCIAL_CELL_CORRECTION'});
+    const e=event instanceof CustomEvent?event.detail:undefined,p=e?.payload??{};highlightRemoteFinancialCell(p);
+    showFinancialAlert({title:p.meetingClosed?tx('Modification après clôture','Post-close change'):tx('Saisie modifiée','Entry changed'),message:p.actorName?tx(`${p.actorName} a modifié une cellule. Elle clignote en vert.`,`${p.actorName} changed a cell. It is flashing green.`):tx('Une cellule financière vient d’être modifiée.','A financial cell was changed.'),closed:Boolean(p.meetingClosed),correction:true});
 });
 
 const refreshGroupContext = async () => {

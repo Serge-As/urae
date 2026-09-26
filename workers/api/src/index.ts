@@ -373,17 +373,7 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
       if(state.current===targetAmount)return json({status:'NO_CHANGE',current:state.current,target:targetAmount},200,cors);
       if(expectedCurrentAmount!==undefined&&expectedCurrentAmount!==state.current)throw Error('CELL_VALUE_CONFLICT');
       if(expectedCellVersion!==undefined&&expectedCellVersion!==state.cellVersion)throw Error('CELL_VERSION_CONFLICT');
-      const managers=await managerUserIds(groupId);
-      const needsConsensus=meeting.status==='closed'||(state.current>0&&(managers.length>1||Boolean(state.baselineActorId&&state.baselineActorId!==ctx.actorId)));
-      if(needsConsensus){
-        const item=await new MeetingLiveConsensusService(repo,kernel).proposeAgainstBaseline({groupId,meetingId,cellKey:membershipId+':'+rubricId,value:targetAmount,baselineValue:state.current,baselineCellVersion:state.cellVersion,baselineActorId:state.baselineActorId,label:'Proposition de correction',membershipId,rubricId});
-        const proposer=await actorLabel(),originalActor=state.baselineActorId?await actorLabelFor(state.baselineActorId):'auteur antérieur',mName=await memberLabel(groupId,membershipId),rName=await rubricLabel(groupId,rubricId),action={view:'operations',anchor:'twoSheetWorkspace',meetingId,membershipId,rubricId,label:'Voir et confronter la cellule'};
-        const sessionWhen=new Intl.DateTimeFormat('fr-FR',{dateStyle:'medium',timeStyle:'short'}).format(new Date(meeting.scheduledAt??meeting.openedAt)),proposalWhen=new Intl.DateTimeFormat('fr-FR',{dateStyle:'medium',timeStyle:'short'}).format(new Date());
-        await notifications.publish(groupId,{title:'Donnée financière à confronter',message:`${mName} · ${rName} · séance ${sessionWhen} : ${proposer} propose ${state.current} → ${targetAmount} F CFA (saisie précédente : ${originalActor}). Proposition : ${proposalWhen}. Motif : ${reason||'non précisé'}. La valeur canonique reste inchangée avant décision du Bureau.`,channels:['IN_APP','WEB_PUSH'],audience:'MANAGERS',priority:'HIGH',action});
-        await notifications.publish(groupId,{title:'Votre donnée est en cours de confrontation',message:`${proposer} propose de modifier ${rName} : ${state.current} → ${targetAmount} F CFA. Aucune valeur n’est encore remplacée tant que les gestionnaires n’ont pas décidé.`,channels:['IN_APP','WEB_PUSH'],audience:'SELECTED',selectedMembershipIds:[membershipId],priority:'HIGH',action});
-        await publishLive(groupId,'CONSENSUS_REQUIRED','financial-cell-proposal:'+item.id+':'+item.version,{meetingId,cellKey:item.cellKey,state:item.state,version:item.version,baselineValue:state.current,proposedValue:targetAmount,membershipId,rubricId,proposedBy:ctx.actorId});
-        return json({status:'CONSENSUS_REQUIRED',current:state.current,target:targetAmount,consensus:item},202,cors);
-      }
+      // 1.5.2.6b: manager validation writes immediately; confrontation follows only an explicit dissent/reserve.
       const creatingCell=state.current===0;
       const applied=await applyFinancialCellTarget({groupId,meetingId,membershipId,rubricId,targetAmount,expectedCurrentAmount:expectedCurrentAmount??state.current,expectedCellVersion:expectedCellVersion??state.cellVersion,reason:reason||'Correction explicite de la feuille de séance',idempotencyKey:String(request.headers.get('x-idempotency-key')??makeId('cell-correction'))});
       return json(applied,creatingCell?201:200,cors);
@@ -2091,13 +2081,9 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
         // the canonical value equals the requested target.
         if(state.current===targetAmount){await markApplied();return json({accepted:true,stored:true,status:'NO_CHANGE'},200,cors);}
         const staleBaseline=baselineValue!==state.current||baselineVersion!==state.cellVersion;
-        const needsConsensus=staleBaseline||meeting.status==='closed'||(state.current>0&&managers.length>1);
-        if(needsConsensus){
-          const consensus=await new MeetingLiveConsensusService(repo,kernel).proposeAgainstBaseline({groupId,meetingId,cellKey:membershipId+':'+rubricId,value:targetAmount,baselineValue:state.current,baselineCellVersion:state.cellVersion,baselineActorId:state.baselineActorId,label:staleBaseline?'Conflit de base hors ligne':'Proposition reçue hors ligne',membershipId,rubricId});
-          await notifications.publish(groupId,{title:staleBaseline?'Conflit de saisie hors ligne':'Correction offline à confronter',message:`La saisie hors ligne partait de ${baselineValue} F CFA (version ${baselineVersion}) ; la valeur canonique est maintenant ${state.current} F CFA (version ${state.cellVersion}) et la proposition demande ${targetAmount} F CFA. La valeur canonique reste inchangée avant décision du Bureau.`,channels:['IN_APP','WEB_PUSH'],audience:'MANAGERS',priority:staleBaseline?'CRITICAL':'HIGH'});
-          await markApplied();return json({accepted:true,stored:true,status:'CONSENSUS_REQUIRED',staleBaseline,consensus},200,cors);
-        }
-        const result=await applyFinancialCellTarget({groupId,meetingId,membershipId,rubricId,targetAmount,expectedCurrentAmount:baselineValue,expectedCellVersion:baselineVersion,reason:reason||'Correction saisie hors ligne puis synchronisée',idempotencyKey:item.idempotencyKey});
+        // Offline exact-target commands are rebased on the latest canonical cell.
+        // They append a traced correction instead of being hidden behind pre-approval.
+        const result=await applyFinancialCellTarget({groupId,meetingId,membershipId,rubricId,targetAmount,expectedCurrentAmount:state.current,expectedCellVersion:state.cellVersion,reason:(staleBaseline?'Rebase après synchronisation · ':'')+(reason||'Correction saisie hors ligne puis synchronisée'),idempotencyKey:item.idempotencyKey});
         await markApplied();return json({accepted:true,stored:true,...result},200,cors);
       }
 
