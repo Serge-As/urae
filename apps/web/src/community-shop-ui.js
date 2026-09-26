@@ -146,6 +146,30 @@ export function mountCommunityShopUI({app,notify=()=>{},showError=console.error,
               await app.receiveMarketProcurement(p.id,{lines:todo,stockOwnership:ownership});notify('Réception enregistrée et stock mis à jour.');await renderStorefront();
             }catch(e){showError(e);}})();card.append(receive);
           }
+          const lifecycle=await app.marketProcurementLifecycle(p.id).catch(()=>({invoices:[],reconciliations:[],creditNotes:[],credits:[]}));
+          card.append(row('Factures fournisseur',String(lifecycle.invoices?.length??0)),row('Rapprochements',String(lifecycle.reconciliations?.length??0)),row('Avoirs',String(lifecycle.creditNotes?.length??0)));
+          const addInvoice=el('button','Ajouter facture fournisseur','secondary');addInvoice.type='button';addInvoice.onclick=()=>void(async()=>{try{
+            const invoiceRef=window.prompt('Référence facture fournisseur :')?.trim();if(!invoiceRef)return;
+            const amount=Math.max(1,Math.trunc(Number(window.prompt('Montant facture XAF :',String(p.data.landedCost??0))??0)));
+            const evidenceRef=window.prompt('Référence de preuve : scan, photo, R2 ou reçu papier')?.trim();if(!evidenceRef)return;
+            await app.recordMarketSupplierInvoice(p.id,{invoiceRef,amount,currency:'XAF',evidenceRef});notify('Facture fournisseur enregistrée.');await renderStorefront();
+          }catch(e){showError(e);}})();card.append(addInvoice);
+          for(const inv of lifecycle.invoices??[]){
+            const line=el('section',undefined,'item');line.append(el('strong',String(inv.data.invoiceRef??inv.title)),row('Facturé',fmt(Number(inv.data.amount??0))),row('Preuve',String(inv.data.evidenceRef??'—')));
+            const rec=(lifecycle.reconciliations??[]).find(x=>String(x.data.invoiceId??'')===String(inv.id));
+            if(rec)line.append(row('Rapprochement',String(rec.data.state??'—')),row('Écart',fmt(Number(rec.data.difference??0))));
+            else{
+              const reconcile=el('button','Rapprocher facture / coût rendu','link-btn');reconcile.type='button';reconcile.onclick=()=>void(async()=>{try{
+                const diff=Number(inv.data.amount??0)-Number(p.data.landedCost??0);
+                const note=diff===0?'':(window.prompt('Écart détecté. Justification :')?.trim()??'');if(diff!==0&&!note)return;
+                await app.reconcileMarketSupplierInvoice(p.id,inv.id,note||undefined);notify('Facture rapprochée au coût rendu.');await renderStorefront();
+              }catch(e){showError(e);}})();line.append(reconcile);
+            }
+            const creditNote=el('button','Enregistrer un avoir','link-btn');creditNote.type='button';creditNote.onclick=()=>void(async()=>{try{
+              const amount=Math.max(1,Math.trunc(Number(window.prompt('Montant de l’avoir XAF :','0')??0))),reason=window.prompt('Motif de l’avoir :')?.trim(),evidenceRef=window.prompt('Référence de preuve de l’avoir :')?.trim();
+              if(!reason||!evidenceRef)return;await app.issueMarketSupplierCreditNote(p.id,{invoiceId:inv.id,amount,reason,evidenceRef});notify('Avoir enregistré ; la dette fournisseur a été ajustée si applicable.');await renderStorefront();
+            }catch(e){showError(e);}})();line.append(creditNote);card.append(line);
+          }
           supply.append(card);
         }
         for(const c of state.credits??[]){
