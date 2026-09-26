@@ -42,12 +42,13 @@ export class RiskFinanceService{
     if(existing)throw Error('LOAN_GUARANTOR_ALREADY_ACTIVE');
     return this.save(groupId,'LOAN_GUARANTEE','Guarantee '+input.loanId,{loanId:input.loanId,membershipId:member.id,guaranteedAmount:input.guaranteedAmount,state:'ACTIVE'});
   }
-  async releaseGuarantee(groupId:Id,guaranteeId:Id,reason:string){
+  async releaseGuarantee(groupId:Id,guaranteeId:Id,reason:string):Promise<RiskRecord>{
     await this.access(groupId,true);const ctx=this.kernel.context.get(),record=await this.repo.getWorkspaceRecord(ctx.tenantId,guaranteeId);
     if(!record||record.groupId!==groupId||record.moduleId!=='FINANCE.LOAN_GUARANTORS'||String(record.data.specializedKind??'')!=='LOAN_GUARANTEE')throw Error('LOAN_GUARANTEE_NOT_FOUND');
-    if(String(record.data.state??'ACTIVE')!=='ACTIVE')return record;
+    const guarantee=record as RiskRecord;
+    if(String(guarantee.data.state??'ACTIVE')!=='ACTIVE')return guarantee;
     const why=reason.trim();if(!why)throw Error('GUARANTEE_RELEASE_REASON_REQUIRED');
-    const updated={...record,status:'DONE',data:{...record.data,state:'RELEASED',releasedAt:now(),releasedBy:ctx.actorId,releaseReason:why},updatedAt:now()};
+    const updated:RiskRecord={...guarantee,status:'DONE',data:{...guarantee.data,state:'RELEASED',releasedAt:now(),releasedBy:ctx.actorId,releaseReason:why},updatedAt:now()};
     await this.repo.saveWorkspaceRecord(updated);return updated;
   }
   async solidarityCase(groupId:Id,input:{beneficiaryMembershipId:Id;title:string;approvedAmount:number;currency?:string}){
