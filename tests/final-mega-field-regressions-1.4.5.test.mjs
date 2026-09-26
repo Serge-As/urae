@@ -62,8 +62,10 @@ test('multi-manager correction applies immediately while explicit dissent keeps 
   assert.match(consensus,/proposeAgainstBaseline/);
   assert.match(consensus,/Math\.floor\(managerIds\.length\/2\)\+1/);
   assert.ok(api.includes("financial-cells\\/([^/]+)\\/apply"));
-  assert.match(sessions,/Appliquer la valeur retenue/);
+  assert.match(sessions,/Corriger la valeur canonique avec la résolution/);
   assert.match(sessions,/applyFinancialCellConsensus/);
+  assert.match(sessions,/Une réserve ne bloque jamais la valeur courante/);
+  assert.doesNotMatch(sessions,/validation d’un second responsable requise/);
   assert.doesNotMatch(consensus,/recordCashContribution|saveLedgerEntry|reverseEntry/);
 });
 
