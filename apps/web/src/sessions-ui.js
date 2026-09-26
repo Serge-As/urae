@@ -80,6 +80,43 @@ export function mountSessionsUI({app,getGroups,getMembers,getMeetings,getRubrics
     section.append(list);await draw();return section;
   };
 
+  const renderManagerIntelligence=async(c)=>{
+    const {meeting,meetings,rubrics,members,me}=c;if(!meeting||!me.isManager)return null;
+    const section=card(t('Assistant proactif de séance','Proactive session assistant'),'panel session-intelligence-panel');
+    section.append(el('p',t('Eco-System analyse les éléments déjà connus et prépare une checklist. Aucun résultat de cet assistant ne modifie le Ledger, les règles ou la séance sans action humaine.','Eco-System analyses known facts and prepares a checklist. Nothing here changes the Ledger, rules or session without human action.'),'truth-notice'));
+    const [beneficiaries,cashboxes]=await Promise.all([app.meetingBeneficiaries(meeting.id).catch(()=>[]),app.cashboxReconciliations().catch(()=>[])]);
+    const pendingEvidence=beneficiaries.filter(x=>!['DONE','CONFIRMED','RECEIVED'].includes(String(x.status??x.data?.status??'').toUpperCase())).length;
+    const sorted=meetings.slice().sort((a,b)=>String(meetingAt(a)).localeCompare(String(meetingAt(b)))),pos=sorted.findIndex(x=>x.id===meeting.id),previous=pos>0?sorted[pos-1]:null;
+    const latestFor=id=>cashboxes.filter(x=>x.meetingId===id).sort((a,b)=>String(b.createdAt).localeCompare(String(a.createdAt)))[0];
+    const previousCashbox=previous?latestFor(previous.id):null,currentCashbox=latestFor(meeting.id);
+    const previousVariance=Number(previousCashbox?.snapshot?.variance??0),currentVariance=Number(currentCashbox?.snapshot?.variance??0);
+    const expected=rubrics.filter(x=>x.status!=='ARCHIVED').map(x=>x.name);
+    const beneficiaryName=id=>members.find(x=>x.id===id)?.displayName??String(id??'');
+    const rubricName=id=>rubrics.find(x=>x.id===id)?.name??String(id??'');
+    const plannedBeneficiaries=beneficiaries.map(x=>({rubric:rubricName(x.data?.rubricId??x.rubricId),beneficiary:beneficiaryName(x.data?.membershipId??x.membershipId)}));
+    const [autopilot,doctor]=await Promise.all([
+      app.meetingAutopilot({
+        meetingLabel:meetingLabel(meeting),expectedRubrics:expected,plannedBeneficiaries,
+        pendingEvidenceCount:pendingEvidence,unresolvedVariance:previousVariance,
+        lastClosingBalance:previousCashbox?.snapshot?.countedClosing??previousCashbox?.snapshot?.theoreticalClosing,
+        offline:typeof navigator!=='undefined'&&navigator.onLine===false
+      }).catch(()=>null),
+      app.savingsYieldDoctor({unreconciledCashDifference:currentVariance||previousVariance,pendingPayoutEvidence:pendingEvidence}).catch(()=>null)
+    ]);
+    if(autopilot){
+      const head=el('div',undefined,'actions');head.append(el('span',autopilot.canOpen?t('✓ Séance préparée','✓ Session ready'):t('⚠ À vérifier avant poursuite','⚠ Review before continuing'),autopilot.canOpen?'pill online':'pill'));
+      if(autopilot.blockers?.length)head.append(el('span',String(autopilot.blockers.length)+' '+t('blocage(s)','blocker(s)'),'pill offline'));section.append(head);
+      const list=el('div',undefined,'stack compact');for(const item of autopilot.checklist??[]){const a=el('article',undefined,'item');a.append(el('strong',item.labelFr),el('span',String(item.status),'pill'));list.append(a);}section.append(el('h4',t('Checklist Meeting Autopilot','Meeting Autopilot checklist')),list);
+      if(autopilot.warnings?.length)section.append(el('p',t('Points à revoir : ','Review points: ')+autopilot.warnings.join(' · '),'hint'));
+      if(autopilot.blockers?.length)section.append(el('p',t('Blocages détectés : ','Detected blockers: ')+autopilot.blockers.join(' · '),'truth-notice'));
+    }
+    if(doctor){
+      const list=el('div',undefined,'stack compact');for(const finding of doctor.findings??[]){const a=el('article',undefined,'item');a.append(el('strong',finding.titleFr),el('span',String(finding.severity),'pill'),el('p',finding.detailFr),el('p',t('Action conseillée : ','Suggested action: ')+finding.actionFr,'hint'));list.append(a);}section.append(el('h4','Group Doctor'),list);
+      section.append(el('small',t('Diagnostic consultatif uniquement · aucune mutation automatique.','Advisory diagnosis only · no automatic mutation.'),'hint'));
+    }
+    return section;
+  };
+
   const renderOverview=async(c)=>{
     const {group,meeting,meetings,members,me}=c;if(!meeting)return card(t('Vue d’ensemble','Overview')).appendChild(el('div',t('Aucune séance disponible.','No session available.'),'empty-state')).parentNode;
     const section=card(meetingLabel(meeting));
@@ -117,6 +154,7 @@ export function mountSessionsUI({app,getGroups,getMembers,getMeetings,getRubrics
       const sheet=await app.memberOperationalSheet(me.membership.id).catch(()=>null),r=sheet?.exerciseMatrix?.find(x=>x.meetingId===meeting.id);
       const own=el('div',undefined,'truth-notice');own.textContent=t('Votre situation pour cette séance : ','Your position for this session: ')+(r?money(r.total):t('aucun mouvement connu','no known movement'));section.append(own);
     }
+    if(me.isManager){const proactive=await renderManagerIntelligence(c);if(proactive)section.append(proactive);}
     if(me.isManager){
       const finish=card(t('Fin de séance · rapprocher puis diffuser','End of session · reconcile then distribute'),'panel session-finish-panel');
       finish.append(el('p',t('Étape 1 : les gestionnaires confrontent uniquement les différences. Étape 2 : après accord, la diffusion aux membres est une action séparée pour éviter une erreur.','Step 1: managers compare differences only. Step 2: after agreement, member distribution is a separate action to prevent mistakes.'),'hint'));

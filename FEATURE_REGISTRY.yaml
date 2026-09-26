@@ -900,14 +900,14 @@ production_qualification_2026_09_16:
     tests: [five-policy-field-comparison,capital-time-policy,productive-attributed-policy]
   - id: GROUP.DOCTOR
     domain: governance-ai
-    status: FUNCTIONAL_BETA
+    status: ACQUIRED_FOUNDATION
     risk_class: high
     offline_policy: advisory_only
     audit_event: NONE_ADVISORY
     tests: [group-doctor-diagnostics]
   - id: MEETING.AUTOPILOT
     domain: meetings
-    status: FUNCTIONAL_BETA
+    status: ACQUIRED_FOUNDATION
     risk_class: high
     offline_policy: preparation_allowed_posting_separate
     audit_event: NONE_PREPARATION
