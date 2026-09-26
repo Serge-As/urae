@@ -11,7 +11,7 @@ const tokens=(v:string|undefined)=>normalize(v).split(/[^\p{L}\p{N}]+/u).filter(
 
 const PUBLIC_CANDIDATE_TENANT='__eco_public_candidate_projection__';
 const cleanText=(v:unknown,max=240)=>String(v??'').trim().replace(/\s+/g,' ').slice(0,max);
-const cleanTags=(v:unknown)=>[...new Set((Array.isArray(v)?v:[]).map(x=>normalize(String(x))).filter(Boolean))].slice(0,24);
+const cleanTags=(v:unknown)=>{let raw:unknown[]=Array.isArray(v)?v:[];if(typeof v==='string'&&v.trim()){try{const parsed=JSON.parse(v);raw=Array.isArray(parsed)?parsed:v.split(',');}catch{raw=v.split(',');}}return[...new Set(raw.map(x=>normalize(String(x))).filter(Boolean))].slice(0,24);};
 export interface PublicCandidateProfile {
   id:Id;displayAlias:string;locality?:string;skills:string[];interests:string[];desiredGroupTags:string[];
   bio?:string;availability?:string;updatedAt:string;
@@ -98,7 +98,7 @@ export class DiscoveryService {
     const record:WorkspaceRecord={
       id:existing?.id??makeId('candidate'),tenantId:PUBLIC_CANDIDATE_TENANT,moduleId:'MEMBERSHIP.PORTFOLIO',title:alias,
       status:input.optIn?'ACTIVE':'ARCHIVED',tags:['public-candidate','consent:'+(input.optIn?'yes':'no')],
-      data:{ownerActorId:ctx.actorId,optIn:Boolean(input.optIn),displayAlias:alias,locality:cleanText(input.locality,120),skills:cleanTags(input.skills),interests:cleanTags(input.interests),desiredGroupTags:cleanTags(input.desiredGroupTags),bio:cleanText(input.bio,500),availability:cleanText(input.availability,120)},
+      data:{ownerActorId:ctx.actorId,optIn:Boolean(input.optIn),displayAlias:alias,locality:cleanText(input.locality,120),skills:JSON.stringify(cleanTags(input.skills)),interests:JSON.stringify(cleanTags(input.interests)),desiredGroupTags:JSON.stringify(cleanTags(input.desiredGroupTags)),bio:cleanText(input.bio,500),availability:cleanText(input.availability,120)},
       createdBy:ctx.actorId,createdAt:existing?.createdAt??stamp,updatedAt:stamp
     };
     await this.repo.saveWorkspaceRecord(record);
@@ -161,7 +161,7 @@ export class DiscoveryService {
 
   async createRecruitmentCampaign(targetTenantId:Id,groupId:Id,input:{title:string;message?:string;locality?:string;tags?:string[]}):Promise<WorkspaceRecord>{
     await requireManager(this.repo,this.kernel,targetTenantId,groupId);const ctx=this.kernel.context.get(),title=cleanText(input.title,160);if(!title)throw new Error('RECRUITMENT_TITLE_REQUIRED');const stamp=now();
-    const record:WorkspaceRecord={id:makeId('recruitment'),tenantId:targetTenantId,groupId,moduleId:'MEMBERSHIP.RECRUITMENT',title,status:'ACTIVE',tags:['recruitment','state:ACTIVE'],data:{campaignState:'ACTIVE',message:cleanText(input.message,500),locality:cleanText(input.locality,120),tags:cleanTags(input.tags),candidateContactPolicy:'OPT_IN_ONLY'},createdBy:ctx.actorId,createdAt:stamp,updatedAt:stamp};
+    const record:WorkspaceRecord={id:makeId('recruitment'),tenantId:targetTenantId,groupId,moduleId:'MEMBERSHIP.RECRUITMENT',title,status:'ACTIVE',tags:['recruitment','state:ACTIVE'],data:{campaignState:'ACTIVE',message:cleanText(input.message,500),locality:cleanText(input.locality,120),tags:JSON.stringify(cleanTags(input.tags)),candidateContactPolicy:'OPT_IN_ONLY'},createdBy:ctx.actorId,createdAt:stamp,updatedAt:stamp};
     await this.repo.saveWorkspaceRecord(record);return record;
   }
 
