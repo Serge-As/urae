@@ -1631,6 +1631,16 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
     if(procurementReceive&&request.method==='POST'){const body=await readJson<any>(request);return json(await market.receiveProcurement(procurementReceive[1]!,procurementReceive[2]!,body),200,cors);}
     const procurementReturn=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/market\/procurements\/([^/]+)\/return$/);
     if(procurementReturn&&request.method==='POST'){const body=await readJson<any>(request);return json(await market.returnProcurement(procurementReturn[1]!,procurementReturn[2]!,body),200,cors);}
+    const stockProjectionRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/market\/stock\/([^/]+)\/projection$/);
+    if(stockProjectionRoute&&request.method==='GET')return json(await market.stockProjection(stockProjectionRoute[1]!,stockProjectionRoute[2]!),200,cors);
+    const procurementLifecycleRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/market\/procurements\/([^/]+)\/lifecycle$/);
+    if(procurementLifecycleRoute&&request.method==='GET')return json(await market.procurementLifecycle(procurementLifecycleRoute[1]!,procurementLifecycleRoute[2]!),200,cors);
+    const supplierInvoiceRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/market\/procurements\/([^/]+)\/invoices$/);
+    if(supplierInvoiceRoute&&request.method==='POST'){const body=await readJson<any>(request);return json(await market.recordSupplierInvoice(supplierInvoiceRoute[1]!,{...body,procurementId:supplierInvoiceRoute[2]!}),201,cors);}
+    const supplierInvoiceReconcile=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/market\/procurements\/([^/]+)\/invoices\/([^/]+)\/reconcile$/);
+    if(supplierInvoiceReconcile&&request.method==='POST'){const body=await readJson<any>(request);return json(await market.reconcileSupplierInvoice(supplierInvoiceReconcile[1]!,{procurementId:supplierInvoiceReconcile[2]!,invoiceId:supplierInvoiceReconcile[3]!,note:body.note?String(body.note):undefined}),200,cors);}
+    const supplierCreditNoteRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/market\/procurements\/([^/]+)\/credit-notes$/);
+    if(supplierCreditNoteRoute&&request.method==='POST'){const body=await readJson<any>(request);return json(await market.issueSupplierCreditNote(supplierCreditNoteRoute[1]!,{...body,procurementId:supplierCreditNoteRoute[2]!}),201,cors);}
     const supplierCreditPayment=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/market\/supplier-credits\/([^/]+)\/payments$/);
     if(supplierCreditPayment&&request.method==='POST'){const body=await readJson<any>(request);return json(await market.paySupplierCredit(supplierCreditPayment[1]!,supplierCreditPayment[2]!,body),200,cors);}
     const groupBuyRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/market\/group-buys$/);
