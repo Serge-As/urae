@@ -392,3 +392,5 @@ body.ui-mode-visual .primary:hover{filter:saturate(1.08) brightness(1.03);transf
 .matrix-cell-entry.live-cell-active{outline:2px solid currentColor;outline-offset:-2px}
 .cell-live-presence{display:block;font-size:.72rem;font-weight:700;line-height:1.15;margin-top:2px;white-space:normal}
 .cell-live-presence[hidden]{display:none!important}
+
+.community-live-presence{font-weight:700;min-height:1.1rem}.community-live-presence[hidden]{display:none!important}

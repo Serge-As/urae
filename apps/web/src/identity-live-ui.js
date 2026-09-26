@@ -49,7 +49,7 @@ export function mountIdentityLiveUI({app,notify=()=>{},showError=console.error})
           if(msg.type==='PONG'){lastPongAt=Date.now();return;}
           if(msg.type==='GROUP_LIVE_SIGNAL'&&msg.event){window.dispatchEvent(new CustomEvent('eco:live-signal',{detail:msg.event}));return;}
           if(msg.type==='GROUP_LIVE_EVENT'&&msg.event){
-            eventQueue=eventQueue.then(async()=>{const seq=Number(msg.event.seq??0);if(seq>lastSeq+1)await catchUp();if(seq>lastSeq)renderEvent(msg.event);}).catch(()=>{});
+            eventQueue=eventQueue.then(async()=>{const seq=Number(msg.event.seq??0);if(seq>lastSeq+1)await catchUp();if(seq>lastSeq){renderEvent(msg.event);try{window.dispatchEvent(new CustomEvent('eco:live-event',{detail:msg.event}));}catch{}}}).catch(()=>{});
           }
         }catch{}
       };

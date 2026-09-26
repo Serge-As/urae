@@ -3,10 +3,12 @@ const v=id=>String(document.getElementById(id)?.value??'').trim();
 const split=value=>value.split(',').map(x=>x.trim()).filter(Boolean);
 const row=(label,value)=>{const p=el('p');const b=el('strong',label+' : ');p.append(b,document.createTextNode(String(value??'—')));return p;};
 
-export function mountCommunityShopUI({app,notify=()=>{},showError=console.error,isManager=()=>false,fmt=n=>String(n)}){
-  let hubs=[],activeHub='',beforeCursor='',draftTimer,readTimer,observer,forumSocket,loadingPosts=false;
+export function mountCommunityShopUI({app,notify=()=>{},showError=console.error,isManager=()=>false,fmt=n=>String(n),actorName=id=>id}){
+  let hubs=[],activeHub='',beforeCursor='',draftTimer,readTimer,observer,loadingPosts=false,forumTypingTimer=0,lastForumTypingSignal=0;
   const hubList=document.getElementById('communityHubList'),postList=document.getElementById('communityPostList'),hubSelect=document.getElementById('communityPostHub'),storefront=document.getElementById('groupStorefront');
   const bodyInput=document.getElementById('communityPostBody'),titleInput=document.getElementById('communityPostTitle'),draftState=document.getElementById('communityDraftState'),readState=document.getElementById('communityReadState');
+  let livePresence=document.getElementById('communityLivePresence');
+  if(!livePresence&&draftState){livePresence=el('p','', 'hint full community-live-presence');livePresence.id='communityLivePresence';livePresence.hidden=true;draftState.insertAdjacentElement('afterend',livePresence);}
 
   const syncDraft=async()=>{
     if(!activeHub||!app.activeGroup()||!bodyInput)return;
@@ -15,15 +17,12 @@ export function mountCommunityShopUI({app,notify=()=>{},showError=console.error,
   };
   const queueDraft=()=>{clearTimeout(draftTimer);if(draftState)draftState.textContent='Synchronisation du brouillon…';draftTimer=setTimeout(()=>void syncDraft(),650);};
 
-  const connectForumLive=()=>{
-    try{forumSocket?.close();forumSocket=undefined;if(!activeHub||!app.activeGroup())return;
-      const ws=new WebSocket(app.liveWebSocketUrl());forumSocket=ws;
-      ws.onmessage=event=>{try{const msg=JSON.parse(event.data);const e=msg?.event;if(msg?.type!=='GROUP_LIVE_EVENT'||!e)return;
-        if(e.type==='COMMUNITY_EVENT'&&e.payload?.hubId===activeHub)void renderPosts({preserveDraft:true,latest:true});
-        if(e.type==='COMMUNITY_DRAFT_SYNC'&&e.payload?.hubId===activeHub)void restoreState(false);
-        if(e.type==='COMMUNITY_READ_SYNC'&&e.payload?.hubId===activeHub)void restoreState(false);
-      }catch{}};
-    }catch{}
+  const forumSignalPayload=()=>({kind:'COMMUNITY_DRAFT',hubId:activeHub});
+  const stopForumTyping=()=>{if(forumTypingTimer){clearTimeout(forumTypingTimer);forumTypingTimer=0;}if(activeHub)void app.publishLiveSignal?.('TYPING_STOP',forumSignalPayload()).catch(()=>{});};
+  const signalForumTyping=()=>{
+    if(!activeHub)return;const now=Date.now();
+    if(now-lastForumTypingSignal>=800){lastForumTypingSignal=now;void app.publishLiveSignal?.('TYPING',forumSignalPayload()).catch(()=>{});}
+    if(forumTypingTimer)clearTimeout(forumTypingTimer);forumTypingTimer=setTimeout(stopForumTyping,2500);
   };
 
   const restoreState=async(scroll=true)=>{
@@ -89,9 +88,9 @@ export function mountCommunityShopUI({app,notify=()=>{},showError=console.error,
     for(const hub of hubs){
       hubSelect.append(new Option(hub.title,hub.id));
       const card=el('article',undefined,'item');card.append(el('strong',hub.title),row('Visibilité',hub.data?.visibility),row('Modération',hub.data?.moderation));
-      const open=el('button','Ouvrir et reprendre où je me suis arrêté','secondary');open.type='button';open.onclick=()=>{activeHub=hub.id;hubSelect.value=hub.id;connectForumLive();void renderPosts();};card.append(open);hubList.append(card);
+      const open=el('button','Ouvrir et reprendre où je me suis arrêté','secondary');open.type='button';open.onclick=()=>{activeHub=hub.id;hubSelect.value=hub.id;void renderPosts();};card.append(open);hubList.append(card);
     }
-    if(!activeHub||!hubs.some(x=>x.id===activeHub))activeHub=hubs[0].id;hubSelect.value=activeHub;connectForumLive();await renderPosts();
+    if(!activeHub||!hubs.some(x=>x.id===activeHub))activeHub=hubs[0].id;hubSelect.value=activeHub;await renderPosts();
   };
 
   const renderStorefront=async()=>{
@@ -163,8 +162,11 @@ export function mountCommunityShopUI({app,notify=()=>{},showError=console.error,
   };
 
   document.getElementById('communityHubForm')?.addEventListener('submit',e=>{e.preventDefault();void(async()=>{try{const hub=await app.createCommunityHub({title:v('communityHubTitle'),about:v('communityHubAbout')||undefined,visibility:v('communityHubVisibility'),tags:split(v('communityHubTags')),federatedGroupCodes:split(v('communityFederatedCodes'))});activeHub=hub.id;notify('Hub communautaire créé.');await renderHubs();}catch(err){showError(err);}})();});
-  hubSelect?.addEventListener('change',()=>{activeHub=hubSelect.value;connectForumLive();void renderPosts();});
-  bodyInput?.addEventListener('input',queueDraft);titleInput?.addEventListener('input',queueDraft);
+  hubSelect?.addEventListener('change',()=>{activeHub=hubSelect.value;void renderPosts();});
+  bodyInput?.addEventListener('input',()=>{queueDraft();signalForumTyping();});
+  titleInput?.addEventListener('input',()=>{queueDraft();signalForumTyping();});
+  bodyInput?.addEventListener('focus',()=>{if(activeHub)void app.publishLiveSignal?.('CELL_FOCUS',forumSignalPayload()).catch(()=>{});});
+  bodyInput?.addEventListener('blur',()=>{stopForumTyping();if(activeHub)void app.publishLiveSignal?.('CELL_BLUR',forumSignalPayload()).catch(()=>{});});
   document.getElementById('communityLoadOlderBtn')?.addEventListener('click',()=>void loadOlder());
   document.getElementById('communityPostForm')?.addEventListener('submit',e=>{e.preventDefault();void(async()=>{try{
     const hubId=v('communityPostHub');if(!hubId)throw Error('COMMUNITY_HUB_REQUIRED');const parentId=bodyInput?.dataset.replyTo||undefined;
@@ -174,6 +176,18 @@ export function mountCommunityShopUI({app,notify=()=>{},showError=console.error,
   }catch(err){showError(err);}})();});
   document.getElementById('groupShopForm')?.addEventListener('submit',e=>{e.preventDefault();void(async()=>{try{await app.saveGroupShop({name:v('groupShopName'),tagline:v('groupShopTagline')||undefined,visibility:v('groupShopVisibility'),locality:v('groupShopLocality')||undefined,categories:split(v('groupShopCategories'))});notify('Boutique du groupe enregistrée.');await renderStorefront();}catch(err){showError(err);}})();});
 
-  const refresh=async()=>{if(!app.activeGroup()){forumSocket?.close();hubList?.replaceChildren();postList?.replaceChildren();storefront?.replaceChildren();return;}try{await Promise.all([renderHubs(),renderStorefront()]);}catch(e){showError(e);}};
+  window.addEventListener('eco:live-event',event=>{
+    const e=event instanceof CustomEvent?event.detail:undefined,p=e?.payload??{};if(!activeHub)return;
+    if(e?.type==='COMMUNITY_EVENT'&&String(p.hubId??'')===String(activeHub))void renderPosts({preserveDraft:true,latest:true});
+    if(e?.type==='COMMUNITY_DRAFT_SYNC'&&String(p.hubId??'')===String(activeHub))void restoreState(false);
+    if(e?.type==='COMMUNITY_READ_SYNC'&&String(p.hubId??'')===String(activeHub))void restoreState(false);
+  });
+  window.addEventListener('eco:live-signal',event=>{
+    const e=event instanceof CustomEvent?event.detail:undefined,p=e?.payload??{},other=String(e?.actorId??'');
+    if(!livePresence||String(p.kind??'')!=='COMMUNITY_DRAFT'||String(p.hubId??'')!==String(activeHub)||!other||other===String(app.currentActor?.()??''))return;
+    if(['TYPING','CELL_FOCUS'].includes(String(e.type??''))){const who=actorName(other)||'Un membre';livePresence.textContent=e.type==='TYPING'?who+' écrit…':who+' prépare un message…';livePresence.hidden=false;clearTimeout(Number(livePresence.dataset.hideTimer||0));livePresence.dataset.hideTimer=String(setTimeout(()=>{livePresence.hidden=true;},3500));}
+    if(['TYPING_STOP','CELL_BLUR'].includes(String(e.type??'')))livePresence.hidden=true;
+  });
+  const refresh=async()=>{if(!app.activeGroup()){stopForumTyping();hubList?.replaceChildren();postList?.replaceChildren();storefront?.replaceChildren();if(livePresence)livePresence.hidden=true;return;}try{await Promise.all([renderHubs(),renderStorefront()]);}catch(e){showError(e);}};
   return{refresh};
 }

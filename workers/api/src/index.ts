@@ -1287,8 +1287,10 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
       if(!options.communityRealtime)throw new Error('COMMUNITY_REALTIME_UNAVAILABLE');
       const groupId=forumReaction[1]!,body=await readJson<Record<string,unknown>>(request),messageId=decodeURIComponent(forumReaction[2]!);
       await requireGroup(groupId);
+      const messageContext=await options.communityRealtime.messageContext(messageId);
+      if(!messageContext||messageContext.tenantId!==ctx.tenantId||messageContext.groupId!==groupId)throw new Error('COMMUNITY_MESSAGE_NOT_FOUND');
       const state=await options.communityRealtime.toggleReaction({messageId,userId:ctx.actorId,reaction:String(body.reaction??'')});
-      await publishLive(groupId,'COMMUNITY_EVENT','forum-reaction:'+messageId+':'+ctx.actorId+':'+String(body.reaction??'')+':'+(state.active?'on':'off'),{messageId,event:'REACTION_CHANGED'});
+      await publishLive(groupId,'COMMUNITY_EVENT','forum-reaction:'+messageId+':'+ctx.actorId+':'+String(body.reaction??'')+':'+(state.active?'on':'off'),{hubId:messageContext.hubId,messageId,event:'REACTION_CHANGED'});
       return json(state,200,cors);
     }
 

@@ -160,7 +160,7 @@ const advancedUI = mountAdvancedUI({
     app, notify: toast, showError: fail, getMembers: () => members, fmt, translate: (fr,en) => tx(fr,en)
 });
 const identityLiveUI = mountIdentityLiveUI({ app, notify: toast, showError: fail });
-const communityShopUI = mountCommunityShopUI({ app, notify: toast, showError: fail, isManager, fmt });
+const communityShopUI = mountCommunityShopUI({ app, notify: toast, showError: fail, isManager, fmt, actorName: actorDisplayName });
 const miscRubricUI = mountMiscRubricUI({ app, notify: toast, showError: fail, getMembers: () => members, getMeetings: () => meetings, isManager, fmt });
 const pairingUI = mountPairingUI({ app, notify: toast, showError: fail, getMembers: () => members, isManager, afterMembershipChanged: async groupId => { await renderGroups(); if(groupId){ app.selectGroup(groupId); await refreshGroupContext(); } } });
 const clearFail = () => { $('#errorBox').hidden = true; $('#errorBox').textContent = ''; };

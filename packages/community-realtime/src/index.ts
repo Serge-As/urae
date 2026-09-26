@@ -84,6 +84,11 @@ export class CommunityRealtimeStore{
     const stamp=now();return this.upsertState(input.tenantId,input.groupId,input.hubId,input.userId,{lastReadMessageId:input.messageId,lastReadAt:stamp,anchorMessageId:input.messageId,anchorRatio:input.anchorRatio??0});
   }
 
+  async messageContext(messageId:string):Promise<{tenantId:string;groupId:string;hubId:string;authorId:string}|undefined>{
+    const row=await this.db.prepare('SELECT tenant_id,group_id,hub_id,author_id FROM community_messages WHERE id=?').bind(messageId).first<Row>();
+    return row?{tenantId:String(row.tenant_id),groupId:String(row.group_id),hubId:String(row.hub_id),authorId:String(row.author_id)}:undefined;
+  }
+
   async toggleReaction(input:{messageId:string;userId:string;reaction:string}):Promise<{active:boolean}>{
     const reaction=clean(input.reaction,24);if(!reaction)throw new Error('REACTION_REQUIRED');
     const existing=await this.db.prepare('SELECT 1 AS yes FROM community_reactions WHERE message_id=? AND user_id=? AND reaction=?').bind(input.messageId,input.userId,reaction).first<{yes:number}>();
