@@ -157,7 +157,7 @@ const completionUI = mountCompletionUI({
     getRubrics: () => rubrics, getLocale: () => uiLocale, fmt, date
 });
 const advancedUI = mountAdvancedUI({
-    app, notify: toast, showError: fail, getMembers: () => members, fmt, translate: (fr,en) => tx(fr,en)
+    app, notify: toast, showError: fail, getMembers: () => members, fmt, translate: (fr,en) => tx(fr,en), isManager
 });
 const identityLiveUI = mountIdentityLiveUI({ app, notify: toast, showError: fail });
 const communityShopUI = mountCommunityShopUI({ app, notify: toast, showError: fail, isManager, fmt, actorName: actorDisplayName });

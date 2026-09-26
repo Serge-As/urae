@@ -981,6 +981,89 @@
             </form>
             <div><h3>Campagnes</h3><div id="groupBuyList" class="stack"></div></div>
           </div>
+
+        </details>
+
+        <details class="panel" id="socialCommercePanel">
+          <summary><strong>Commerce social · Eco NOW · Reverse Market · Deals · Live Market</strong></summary>
+          <p class="truth-notice">Un signal n’est jamais une vente : prévision → acceptation humaine → demande → réponses → sélection → exécution → preuve. Aucun faux compteur, aucun faux stock, aucun faux compte à rebours.</p>
+          <div class="actions" id="valueNetworkPresetActions">
+            <button type="button" class="secondary" data-value-network-preset="NOW">Eco NOW</button>
+            <button type="button" class="secondary" data-value-network-preset="HARVEST">Harvest / pré-récolte</button>
+            <button type="button" class="secondary" data-value-network-preset="FRESH_DROP">Fresh Drop / arrivage</button>
+            <button type="button" class="secondary" data-value-network-preset="PICKUP">Point de retrait</button>
+          </div>
+
+          <div class="two-col">
+            <form id="socialFlashForm" class="form-grid">
+              <h3>Liquidation · Surplus · Rescue Deal</h3>
+              <label>Type<select id="socialFlashKind"><option value="LIQUIDATION">Liquidation</option><option value="SURPLUS">Surplus</option><option value="RESCUE">Rescue Deal</option></select></label>
+              <label>Titre<input id="socialFlashTitle" required></label>
+              <label class="full">Pourquoi cette offre ?<textarea id="socialFlashReason" required rows="2"></textarea></label>
+              <label class="full">État / condition du bien<textarea id="socialFlashCondition" required rows="2"></textarea></label>
+              <label>Quantité<input id="socialFlashQuantity" type="number" min="1" step="1" required></label>
+              <label>Unité<input id="socialFlashUnit" required value="unité"></label>
+              <label>Prix unitaire XAF<input id="socialFlashPrice" type="number" min="0" step="1" required></label>
+              <label>Localité<input id="socialFlashLocality"></label>
+              <label>Expiration<input id="socialFlashExpires" type="datetime-local" required></label>
+              <label>Preuve / référence<input id="socialFlashEvidence" required placeholder="Photo, facture, stock, reçu…"></label>
+              <button class="primary">Publier l’offre vérifiable</button>
+            </form>
+            <div><h3>Offres urgentes actives</h3><div id="socialFlashList" class="stack"></div></div>
+          </div>
+
+          <div class="two-col">
+            <form id="socialRequestForm" class="form-grid">
+              <h3>Demand Exchange · Reverse Market</h3>
+              <label>Origine<select id="socialRequestSource"><option value="MANUAL">Besoin constaté</option><option value="PREDICTION">Prévision à confirmer</option></select></label>
+              <label>Titre<input id="socialRequestTitle" required></label>
+              <label>Catégorie<input id="socialRequestCategory" required></label>
+              <label>Quantité<input id="socialRequestQuantity" type="number" min="1" step="1" required></label>
+              <label>Unité<input id="socialRequestUnit" required value="unité"></label>
+              <label>Localité<input id="socialRequestLocality"></label>
+              <label>Date souhaitée<input id="socialRequestNeededBy" type="date"></label>
+              <label>Budget max XAF<input id="socialRequestBudget" type="number" min="0" step="1"></label>
+              <label class="full">Conditions<textarea id="socialRequestConditions" rows="2"></textarea></label>
+              <label>Preuve / source<input id="socialRequestEvidence"></label>
+              <label class="full">Pourquoi cette prévision ?<textarea id="socialRequestPredictionReason" rows="2" placeholder="Ex. RI : fête annuelle prévue en décembre"></textarea></label>
+              <button class="primary">Créer en brouillon</button>
+            </form>
+            <div><h3>Demandes et réponses</h3><div id="socialRequestList" class="stack"></div></div>
+          </div>
+
+          <div class="two-col">
+            <form id="socialDealForm" class="form-grid">
+              <h3>Eco Deals · baisse de prix réelle</h3>
+              <label>Type<select id="socialDealType"><option value="PUBLIC">Public</option><option value="GROUP">Groupe</option><option value="SUPPLIER">Fournisseur</option><option value="FRESH">Frais</option><option value="BULK">Volume</option><option value="INSTITUTIONAL">Institutionnel</option></select></label>
+              <label>Titre<input id="socialDealTitle" required></label>
+              <label>Prix public unitaire XAF<input id="socialDealPrice" type="number" min="0" step="1" required></label>
+              <label>Quantité réelle disponible<input id="socialDealQuantity" type="number" min="1" step="1" required></label>
+              <label class="full">Disponibilité réelle<input id="socialDealAvailability" required placeholder="Stock confirmé / fenêtre / lieu"></label>
+              <label class="full">Conditions publiques<textarea id="socialDealConditions" required rows="2"></textarea></label>
+              <label>Expiration<input id="socialDealExpires" type="datetime-local" required></label>
+              <label>Paliers quantité:prix<input id="socialDealTiers" placeholder="50:20500,100:20000"></label>
+              <label>Prix fournisseur privé<input id="socialDealSupplierPrice" type="number" min="0"></label>
+              <label>Minimum fournisseur privé<input id="socialDealPrivateMinimum" type="number" min="0"></label>
+              <label>Commission privée<input id="socialDealCommission" type="number" min="0"></label>
+              <button class="primary">Créer le Deal en brouillon</button>
+            </form>
+            <div><h3>Deals actifs</h3><div id="socialDealList" class="stack"></div></div>
+          </div>
+
+          <div class="two-col">
+            <form id="socialLiveForm" class="form-grid">
+              <h3>Eco Live Market</h3>
+              <label>Titre<input id="socialLiveTitle" required></label>
+              <label>Thème<input id="socialLiveTheme"></label>
+              <label>Début prévu<input id="socialLiveScheduled" type="datetime-local" required></label>
+              <label>Mode<select id="socialLiveMode"><option value="TEXT">Texte</option><option value="MEDIA">Image / audio</option><option value="INTERACTIVE">Interactif + Hub</option><option value="VIDEO">Vidéo qualifiée</option></select></label>
+              <label>Hub communautaire<select id="socialLiveHub"><option value="">Aucun</option></select></label>
+              <label>Référence fournisseur vidéo<input id="socialLiveProvider" placeholder="Requise seulement pour VIDEO"></label>
+              <label>Deal épinglé<select id="socialLiveDeal"><option value="">Aucun</option></select></label>
+              <button class="primary">Créer la session</button>
+            </form>
+            <div><h3>Sessions Live</h3><div id="socialLiveList" class="stack"></div><p class="hint">Le compteur de personnes n’est affiché que s’il provient de présence Live réelle. Eco-System n’invente jamais un nombre de spectateurs.</p></div>
+          </div>
         </details>
 
         <section class="panel" id="groupShopPanel">

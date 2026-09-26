@@ -57,6 +57,13 @@ export function mountCoreEconomicLearningUI({app,notify=()=>{},showError=console
   const needs=el('div',undefined,'stack'),offerBox=document.createElement('details');offerBox.append(el('summary','Proposer une offre compatible'),el('p','Le sponsoring est signalé mais ne peut pas améliorer le score de confiance ou de pertinence. Les coûts inconnus restent inconnus.','truth-notice'),offerForm);
   valuePanel.append(valueIntro,needForm,offerBox,needs);
   marketHub.closest('section')?.insertAdjacentElement('afterend',valuePanel);
+  window.addEventListener('eco:value-network-preset',event=>{
+    const kind=String(event instanceof CustomEvent?event.detail?.kind??'':'');if(!['NOW','HARVEST','FRESH_DROP','PICKUP','SUPPLIER','SERVICE'].includes(kind))return;
+    const select=offerForm.elements.kind;if(select)select.value=kind;
+    const title=offerForm.elements.title;if(title){title.focus();title.placeholder=kind==='NOW'?'Disponible maintenant…':kind==='HARVEST'?'Récolte / pré-récolte…':kind==='FRESH_DROP'?'Arrivage daté…':kind==='PICKUP'?'Point de retrait / micro-hub…':'Offre / service…';}
+    offerBox.open=true;
+  });
+
   offerForm.addEventListener('submit',e=>void(async()=>{e.preventDefault();try{
     const dateEnd=val(offerForm,'expiresAt'),available=val(offerForm,'availableBy');
     await app.createValueOffer({title:val(offerForm,'title'),kind:val(offerForm,'kind'),category:val(offerForm,'category'),availableQuantity:num(offerForm,'availableQuantity'),unit:val(offerForm,'unit'),specification:val(offerForm,'specification'),quality:val(offerForm,'quality'),locality:val(offerForm,'locality'),serviceZones:val(offerForm,'serviceZones').split(',').map(x=>x.trim()).filter(Boolean),availableBy:available?new Date(available+'T12:00:00').toISOString():undefined,expiresAt:new Date(dateEnd+'T23:59:59').toISOString(),unitPrice:val(offerForm,'unitPrice')?num(offerForm,'unitPrice'):undefined,transportCost:val(offerForm,'transportCost')?num(offerForm,'transportCost'):undefined,otherCosts:val(offerForm,'otherCosts')?num(offerForm,'otherCosts'):undefined,discount:val(offerForm,'discount')?num(offerForm,'discount'):0,documentedDeliveries:val(offerForm,'documentedDeliveries')?num(offerForm,'documentedDeliveries'):0,confirmedDisputes:val(offerForm,'confirmedDisputes')?num(offerForm,'confirmedDisputes'):0,sponsored:Boolean(offerForm.elements.sponsored?.checked),currency:'XAF'});
