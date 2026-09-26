@@ -824,6 +824,13 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
       const max=url.searchParams.get('maxContribution'); const currency=url.searchParams.get('currency')??'XAF';
       return json(await discovery.search({text:url.searchParams.get('q')??undefined,locality:url.searchParams.get('locality')??undefined,missionTags:strArray(url.searchParams.get('missionTags')),activityTags:strArray(url.searchParams.get('activityTags')),family:(url.searchParams.get('family')??undefined) as any,meetingMode:(url.searchParams.get('meetingMode')??undefined) as any,maxContribution:max?{currency,amount:finite(max)}:undefined,recruitingOnly:url.searchParams.get('recruitingOnly')==='true'}),200,cors);
     }
+    if(url.pathname==='/api/v1/discovery/saved-searches'&&request.method==='GET')return json({items:await discovery.savedSearches()},200,cors);
+    if(url.pathname==='/api/v1/discovery/saved-searches'&&request.method==='POST')return json(await discovery.saveSearch(await readJson<any>(request)),201,cors);
+    const savedRun=url.pathname.match(/^\/api\/v1\/discovery\/saved-searches\/([^/]+)\/run$/);
+    if(savedRun&&request.method==='POST')return json(await discovery.runSavedSearch(savedRun[1]!),200,cors);
+    const savedDelete=url.pathname.match(/^\/api\/v1\/discovery\/saved-searches\/([^/]+)$/);
+    if(savedDelete&&request.method==='DELETE')return json(await discovery.deleteSavedSearch(savedDelete[1]!),200,cors);
+    if(url.pathname==='/api/v1/discovery/proximity'&&request.method==='GET')return json(await discovery.proximity(String(url.searchParams.get('locality')??''),String(url.searchParams.get('q')??'')),200,cors);
     if(url.pathname==='/api/v1/discovery/candidate-profile'&&request.method==='GET')return json({profile:await discovery.candidateProfile()},200,cors);
     if(url.pathname==='/api/v1/discovery/candidate-profile'&&request.method==='PUT'){const body=await readJson<any>(request);return json(await discovery.saveCandidateProfile(body),200,cors);}
     if(url.pathname==='/api/v1/discovery/candidate-invitations'&&request.method==='GET')return json(await discovery.candidateInvitations(),200,cors);
@@ -849,13 +856,22 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
     const applicationCreate=url.pathname.match(/^\/api\/v1\/discovery\/groups\/([^/]+)\/applications$/);
     if(applicationCreate&&request.method==='POST'){
       const body=await readJson<Record<string,unknown>>(request); const band=body.requestedCommitmentBand&&typeof body.requestedCommitmentBand==='object'?body.requestedCommitmentBand as Record<string,unknown>:undefined;
-      return json(await membershipGateway.requestToJoin({groupId:applicationCreate[1]!,message:body.message?String(body.message):undefined,requestedCommitmentBand:band?{currency:String(band.currency??'XAF'),min:band.min===undefined?undefined:finite(band.min),max:band.max===undefined?undefined:finite(band.max),cadence:band.cadence?String(band.cadence):undefined}:undefined}),201,cors);
+      const answers=body.answers&&typeof body.answers==='object'&&!Array.isArray(body.answers)?Object.fromEntries(Object.entries(body.answers as Record<string,unknown>).map(([k,v])=>[k,String(v??'')])):undefined;
+      return json(await membershipGateway.requestToJoin({groupId:applicationCreate[1]!,message:body.message?String(body.message):undefined,requestedCommitmentBand:band?{currency:String(band.currency??'XAF'),min:band.min===undefined?undefined:finite(band.min),max:band.max===undefined?undefined:finite(band.max),cadence:band.cadence?String(band.cadence):undefined}:undefined,answers,referralCode:body.referralCode?String(body.referralCode):undefined}),201,cors);
     }
     if(request.method==='POST'&&url.pathname==='/api/v1/membership-applications'){
       const body=await readJson<Record<string,unknown>>(request);
       const groupId=String(body.groupId??'').trim(); if(!groupId) throw new Error('GROUP_ID_REQUIRED');
-      return json(await membershipGateway.requestToJoin({groupId,message:body.message?String(body.message):undefined}),201,cors);
+      const answers=body.answers&&typeof body.answers==='object'&&!Array.isArray(body.answers)?Object.fromEntries(Object.entries(body.answers as Record<string,unknown>).map(([k,v])=>[k,String(v??'')])):undefined;
+      return json(await membershipGateway.requestToJoin({groupId,message:body.message?String(body.message):undefined,answers,referralCode:body.referralCode?String(body.referralCode):undefined}),201,cors);
     }
+    const membershipQuestions=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/membership-questions$/);
+    if(membershipQuestions&&request.method==='GET'){const listing=await repo.getPublicGroupListing(membershipQuestions[1]!);if(listing?.tenantId===ctx.tenantId)return json(await membershipGateway.groupMembershipQuestions(ctx.tenantId,membershipQuestions[1]!),200,cors);return json(await membershipGateway.membershipQuestions(membershipQuestions[1]!),200,cors);}
+    if(membershipQuestions&&request.method==='PUT'){const body=await readJson<Record<string,unknown>>(request);return json(await membershipGateway.setMembershipQuestions(ctx.tenantId,membershipQuestions[1]!,Array.isArray(body.questions)?body.questions as any:[]),200,cors);}
+    const membershipReferral=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/membership-referrals$/);
+    if(membershipReferral&&request.method==='POST'){const body=await readJson<Record<string,unknown>>(request);return json(await membershipGateway.createReferral(ctx.tenantId,membershipReferral[1]!,String(body.note??'')),201,cors);}
+    const applicationDetail=url.pathname.match(/^\/api\/v1\/membership-applications\/([^/]+)\/details$/);
+    if(applicationDetail&&request.method==='GET')return json(await membershipGateway.applicationDetails(applicationDetail[1]!),200,cors);
     const applicationList=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/applications$/);
     if(applicationList&&request.method==='GET') return json(await membershipGateway.listForGroup(ctx.tenantId,applicationList[1]!),200,cors);
     const applicationDecision=url.pathname.match(/^\/api\/v1\/membership-applications\/([^/]+)\/decision$/);

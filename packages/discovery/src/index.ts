@@ -159,6 +159,25 @@ export class DiscoveryService {
     const stamp=now(),next:WorkspaceRecord={...row,status:'DONE',tags:[...row.tags.filter(x=>!x.startsWith('state:')),'state:'+response],data:{...row.data,invitationState:response,respondedAt:stamp},updatedAt:stamp};await this.repo.saveWorkspaceRecord(next);return this.invitationView(next);
   }
 
+  async saveSearch(input:{id?:Id;title:string;query:GroupDiscoveryQuery;alertsEnabled?:boolean}):Promise<WorkspaceRecord>{
+    const ctx=this.kernel.context.get(),title=cleanText(input.title,120);if(!title)throw new Error('SAVED_SEARCH_TITLE_REQUIRED');
+    const existing=input.id?await this.repo.getWorkspaceRecord(ctx.tenantId,input.id):undefined;
+    if(existing&&(existing.moduleId!=='DISCOVERY.SAVED_SEARCH'||existing.createdBy!==ctx.actorId))throw new Error('FORBIDDEN_SCOPE');
+    const stamp=now(),id=existing?.id??makeId('saved_search'),known=existing?String(existing.data.knownGroupIdsJson??'[]'):'[]';
+    const record:WorkspaceRecord={id,tenantId:ctx.tenantId,moduleId:'DISCOVERY.SAVED_SEARCH',title,status:'ACTIVE',tags:['discovery-search',input.alertsEnabled?'alerts:on':'alerts:off'],data:{ownerActorId:ctx.actorId,queryJson:JSON.stringify(input.query??{}),alertsEnabled:Boolean(input.alertsEnabled),knownGroupIdsJson:known,lastCheckedAt:String(existing?.data.lastCheckedAt??'')},createdBy:ctx.actorId,createdAt:existing?.createdAt??stamp,updatedAt:stamp};
+    await this.repo.saveWorkspaceRecord(record);return record;
+  }
+  async savedSearches():Promise<WorkspaceRecord[]>{const ctx=this.kernel.context.get();return (await this.repo.listWorkspaceRecords(ctx.tenantId,'DISCOVERY.SAVED_SEARCH')).filter(x=>x.createdBy===ctx.actorId&&x.status!=='ARCHIVED').sort((a,b)=>b.updatedAt.localeCompare(a.updatedAt));}
+  async runSavedSearch(id:Id):Promise<{search:WorkspaceRecord;matches:GroupDiscoveryMatch[];newMatches:GroupDiscoveryMatch[]}>{
+    const ctx=this.kernel.context.get(),row=await this.repo.getWorkspaceRecord(ctx.tenantId,id);if(!row||row.moduleId!=='DISCOVERY.SAVED_SEARCH'||row.createdBy!==ctx.actorId)throw new Error('SAVED_SEARCH_NOT_FOUND');
+    let query:GroupDiscoveryQuery={};try{query=JSON.parse(String(row.data.queryJson??'{}')) as GroupDiscoveryQuery;}catch{}
+    const matches=await this.search(query),known=new Set<string>();try{for(const x of JSON.parse(String(row.data.knownGroupIdsJson??'[]')))known.add(String(x));}catch{}
+    const newMatches=matches.filter(x=>!known.has(x.listing.groupId)),stamp=now(),next={...row,data:{...row.data,knownGroupIdsJson:JSON.stringify(matches.map(x=>x.listing.groupId)),lastCheckedAt:stamp},updatedAt:stamp};
+    await this.repo.saveWorkspaceRecord(next);return{search:next,matches,newMatches};
+  }
+  async deleteSavedSearch(id:Id):Promise<WorkspaceRecord>{const ctx=this.kernel.context.get(),row=await this.repo.getWorkspaceRecord(ctx.tenantId,id);if(!row||row.moduleId!=='DISCOVERY.SAVED_SEARCH'||row.createdBy!==ctx.actorId)throw new Error('SAVED_SEARCH_NOT_FOUND');const next={...row,status:'ARCHIVED' as const,updatedAt:now()};await this.repo.saveWorkspaceRecord(next);return next;}
+  async proximity(locality:string,text=''):Promise<GroupDiscoveryMatch[]>{const place=cleanText(locality,120);if(!place)throw new Error('LOCALITY_REQUIRED');return this.search({text:cleanText(text,120)||undefined,locality:place});}
+
   async createRecruitmentCampaign(targetTenantId:Id,groupId:Id,input:{title:string;message?:string;locality?:string;tags?:string[]}):Promise<WorkspaceRecord>{
     await requireManager(this.repo,this.kernel,targetTenantId,groupId);const ctx=this.kernel.context.get(),title=cleanText(input.title,160);if(!title)throw new Error('RECRUITMENT_TITLE_REQUIRED');const stamp=now();
     const record:WorkspaceRecord={id:makeId('recruitment'),tenantId:targetTenantId,groupId,moduleId:'MEMBERSHIP.RECRUITMENT',title,status:'ACTIVE',tags:['recruitment','state:ACTIVE'],data:{campaignState:'ACTIVE',message:cleanText(input.message,500),locality:cleanText(input.locality,120),tags:JSON.stringify(cleanTags(input.tags)),candidateContactPolicy:'OPT_IN_ONLY'},createdBy:ctx.actorId,createdAt:stamp,updatedAt:stamp};
@@ -178,15 +197,34 @@ export class MembershipGatewayService {
   private readonly foundation:FoundationService;
   constructor(private readonly repo:PlatformRepository,private readonly kernel:PlatformKernel){this.foundation=new FoundationService(repo,kernel);}
 
-  async requestToJoin(input:{groupId:Id;message?:string;requestedCommitmentBand?:MembershipApplication['requestedCommitmentBand']}):Promise<MembershipApplication>{
+  private async questionRecord(targetTenantId:Id,groupId:Id){const row=await this.repo.getWorkspaceRecord(targetTenantId,'membership_questions_'+groupId);return row&&row.groupId===groupId&&row.moduleId==='MEMBERSHIP.QUESTIONS'?row:undefined;}
+  private parseQuestions(row?:WorkspaceRecord):Array<{id:string;label:string;required:boolean}>{if(!row)return[];try{const q=JSON.parse(String(row.data.questionsJson??'[]'));return Array.isArray(q)?q.slice(0,12):[];}catch{return[];}}
+  async membershipQuestions(groupId:Id):Promise<Array<{id:string;label:string;required:boolean}>>{const listing=await this.repo.getPublicGroupListing(groupId);if(!listing||listing.visibility!=='PUBLIC'||!listing.discoverable)return[];return this.parseQuestions(await this.questionRecord(listing.tenantId,groupId));}
+  async groupMembershipQuestions(targetTenantId:Id,groupId:Id){await requireManager(this.repo,this.kernel,targetTenantId,groupId);return this.parseQuestions(await this.questionRecord(targetTenantId,groupId));}
+  async setMembershipQuestions(targetTenantId:Id,groupId:Id,questions:Array<{id?:string;label:string;required?:boolean}>):Promise<WorkspaceRecord>{
+    await requireManager(this.repo,this.kernel,targetTenantId,groupId);const cleanQuestions=questions.slice(0,12).map((q,i)=>({id:cleanText(q.id,80)||('q'+(i+1)),label:cleanText(q.label,240),required:Boolean(q.required)})).filter(q=>q.label);if(!cleanQuestions.length)throw new Error('MEMBERSHIP_QUESTIONS_REQUIRED');
+    const stamp=now(),id='membership_questions_'+groupId,existing=await this.questionRecord(targetTenantId,groupId),record:WorkspaceRecord={id,tenantId:targetTenantId,groupId,moduleId:'MEMBERSHIP.QUESTIONS',title:'Questionnaire d’adhésion',status:'ACTIVE',tags:['membership-questions'],data:{questionsJson:JSON.stringify(cleanQuestions)},createdBy:this.kernel.context.get().actorId,createdAt:existing?.createdAt??stamp,updatedAt:stamp};await this.repo.saveWorkspaceRecord(record);return record;
+  }
+  async createReferral(targetTenantId:Id,groupId:Id,note=''):Promise<WorkspaceRecord>{
+    const ctx=this.kernel.context.get(),group=await this.repo.getGroup(targetTenantId,groupId);if(!group)throw new Error('GROUP_NOT_FOUND');const member=(await this.repo.listMemberships(targetTenantId,groupId)).find(x=>x.userId===ctx.actorId&&x.status==='active');if(!member&&group.createdBy!==ctx.actorId)throw new Error('FORBIDDEN_SCOPE');
+    const code='ECO-REF-'+crypto.randomUUID().replace(/-/g,'').slice(0,10).toUpperCase(),stamp=now(),record:WorkspaceRecord={id:makeId('membership_referral'),tenantId:targetTenantId,groupId,moduleId:'MEMBERSHIP.REFERRALS',title:'Parrainage d’adhésion',status:'ACTIVE',tags:['membership-referral','no-auto-reward'],data:{code,referrerActorId:ctx.actorId,referrerMembershipId:member?.id??'',note:cleanText(note,300),rewardAutomatic:false,conversionAutomatic:false},createdBy:ctx.actorId,createdAt:stamp,updatedAt:stamp};await this.repo.saveWorkspaceRecord(record);return record;
+  }
+  private async referralByCode(targetTenantId:Id,groupId:Id,code?:string):Promise<WorkspaceRecord|undefined>{if(!code?.trim())return undefined;const rows=await this.repo.listWorkspaceRecords(targetTenantId,'MEMBERSHIP.REFERRALS',groupId);return rows.find(x=>x.status==='ACTIVE'&&String(x.data.code).toUpperCase()===code.trim().toUpperCase());}
+  async requestToJoin(input:{groupId:Id;message?:string;requestedCommitmentBand?:MembershipApplication['requestedCommitmentBand'];answers?:Record<string,string>;referralCode?:string}):Promise<MembershipApplication>{
     const ctx=this.kernel.context.get(); const listing=await this.repo.getPublicGroupListing(input.groupId); if(!listing||!listing.discoverable||listing.visibility!=='PUBLIC') throw new Error('GROUP_NOT_DISCOVERABLE');
     if(listing.joinPolicy==='CLOSED'||listing.joinPolicy==='INVITE_ONLY') throw new Error('JOIN_REQUIRES_INVITATION');
     const user=await this.repo.getUser(ctx.actorId); if(!user) throw new Error('USER_NOT_FOUND');
-    const existing=(await this.repo.listMembershipApplicationsForGroup(listing.tenantId,listing.groupId)).find(x=>x.applicantUserId===ctx.actorId&&x.status==='PENDING'); if(existing) return existing;
-    const application:MembershipApplication={id:makeId('application'),targetTenantId:listing.tenantId,groupId:listing.groupId,applicantUserId:ctx.actorId,sourceTenantId:ctx.tenantId,status:'PENDING',message:input.message?.trim()||undefined,requestedCommitmentBand:input.requestedCommitmentBand,createdAt:now()};
-    await this.repo.saveMembershipApplication(application);
-    const audit=this.kernel.audit.append({tenantId:listing.tenantId,actorId:ctx.actorId,action:'MEMBERSHIP_APPLICATION_SUBMITTED',targetType:'membership_application',targetId:application.id,after:{groupId:listing.groupId,applicantUserId:ctx.actorId},requestId:ctx.requestId}); await this.repo.saveAudit(audit);
+    const questions=this.parseQuestions(await this.questionRecord(listing.tenantId,listing.groupId)),answers:Record<string,string>={};for(const q of questions){const value=cleanText(input.answers?.[q.id],500);if(q.required&&!value)throw new Error('MEMBERSHIP_REQUIRED_ANSWER_MISSING:'+q.id);if(value)answers[q.id]=value;}
+    const referral=await this.referralByCode(listing.tenantId,listing.groupId,input.referralCode);if(input.referralCode&&!referral)throw new Error('MEMBERSHIP_REFERRAL_NOT_FOUND');
+    let application=(await this.repo.listMembershipApplicationsForGroup(listing.tenantId,listing.groupId)).find(x=>x.applicantUserId===ctx.actorId&&x.status==='PENDING');
+    if(!application){application={id:makeId('application'),targetTenantId:listing.tenantId,groupId:listing.groupId,applicantUserId:ctx.actorId,sourceTenantId:ctx.tenantId,status:'PENDING',message:input.message?.trim()||undefined,requestedCommitmentBand:input.requestedCommitmentBand,createdAt:now()};await this.repo.saveMembershipApplication(application);const audit=this.kernel.audit.append({tenantId:listing.tenantId,actorId:ctx.actorId,action:'MEMBERSHIP_APPLICATION_SUBMITTED',targetType:'membership_application',targetId:application.id,after:{groupId:listing.groupId,applicantUserId:ctx.actorId},requestId:ctx.requestId});await this.repo.saveAudit(audit);}
+    const stamp=now(),metaId='membership_application_meta_'+application.id,existingMeta=await this.repo.getWorkspaceRecord(listing.tenantId,metaId),meta:WorkspaceRecord={id:metaId,tenantId:listing.tenantId,groupId:listing.groupId,moduleId:'MEMBERSHIP.QUESTIONS',title:'Réponses candidature',status:'ACTIVE',tags:['membership-application-meta'],data:{applicationId:application.id,answersJson:JSON.stringify(answers),referralCode:referral?String(referral.data.code):'',referralId:referral?.id??'',referrerActorId:referral?String(referral.data.referrerActorId??''):''},createdBy:ctx.actorId,createdAt:existingMeta?.createdAt??stamp,updatedAt:stamp};await this.repo.saveWorkspaceRecord(meta);
     return structuredClone(application);
+  }
+  async applicationDetails(applicationId:Id):Promise<{application:MembershipApplication;answers:Record<string,string>;referral?:{code:string;referrerActorId:string}}>{
+    const application=await this.repo.getMembershipApplication(applicationId);if(!application)throw new Error('APPLICATION_NOT_FOUND');await requireManager(this.repo,this.kernel,application.targetTenantId,application.groupId);
+    const meta=await this.repo.getWorkspaceRecord(application.targetTenantId,'membership_application_meta_'+application.id);let answers:Record<string,string>={};try{answers=JSON.parse(String(meta?.data.answersJson??'{}'));}catch{}
+    return{application,answers,referral:meta?.data.referralCode?{code:String(meta.data.referralCode),referrerActorId:String(meta.data.referrerActorId??'')}:undefined};
   }
 
   async listForGroup(targetTenantId:Id,groupId:Id):Promise<MembershipApplication[]>{ await requireManager(this.repo,this.kernel,targetTenantId,groupId); return this.repo.listMembershipApplicationsForGroup(targetTenantId,groupId); }

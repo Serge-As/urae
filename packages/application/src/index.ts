@@ -585,6 +585,11 @@ export class ConnectedApplication {
     }
   }
   async searchGroups(input:{q?:string;locality?:string;recruitingOnly?:boolean}={}):Promise<GroupDiscoveryMatch[]>{const p=new URLSearchParams();if(input.q)p.set('q',input.q);if(input.locality)p.set('locality',input.locality);if(input.recruitingOnly)p.set('recruitingOnly','true');return this.request(`/api/v1/discovery/groups?${p}`);}
+  async savedDiscoverySearches():Promise<any[]>{const r=await this.request('/api/v1/discovery/saved-searches') as any;return r.items??[];}
+  async saveDiscoverySearch(input:any):Promise<any>{return this.request('/api/v1/discovery/saved-searches',{method:'POST',body:JSON.stringify(input)});}
+  async runDiscoverySearch(id:string):Promise<any>{return this.request('/api/v1/discovery/saved-searches/'+encodeURIComponent(id)+'/run',{method:'POST',body:'{}'});}
+  async deleteDiscoverySearch(id:string):Promise<any>{return this.request('/api/v1/discovery/saved-searches/'+encodeURIComponent(id),{method:'DELETE'});}
+  async proximityGroups(locality:string,q=''):Promise<any[]>{const p=new URLSearchParams({locality});if(q)p.set('q',q);return this.request('/api/v1/discovery/proximity?'+p);}
   async candidateProfile():Promise<any>{const r=await this.request('/api/v1/discovery/candidate-profile') as any;return r.profile;}
   async saveCandidateProfile(input:any):Promise<any>{return this.request('/api/v1/discovery/candidate-profile',{method:'PUT',body:JSON.stringify(input)});}
   async candidateInvitations():Promise<any[]>{return this.request('/api/v1/discovery/candidate-invitations');}
@@ -604,7 +609,11 @@ export class ConnectedApplication {
   async listPairingRequests():Promise<any[]>{if(!this.activeGroupId)return[];return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/pairing-requests`);}
   async decidePairingRequest(requestId:string,input:{decision:'APPROVE'|'REJECT';membershipId?:string;reason?:string}):Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/pairing-requests/${encodeURIComponent(requestId)}/decision`,{method:'POST',body:JSON.stringify(input)});}
   async pairMemberCode(membershipId:string,code:string):Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/pair-member-code`,{method:'POST',body:JSON.stringify({membershipId,code})});}
-  async requestToJoin(groupId:string,message?:string):Promise<MembershipApplication>{return this.request('/api/v1/membership-applications',{method:'POST',body:JSON.stringify({groupId,message})});}
+  async membershipQuestions(groupId:string):Promise<any[]>{return this.request('/api/v1/groups/'+encodeURIComponent(groupId)+'/membership-questions');}
+  async setMembershipQuestions(questions:any[]):Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/membership-questions',{method:'PUT',body:JSON.stringify({questions})});}
+  async createMembershipReferral(note=''):Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/membership-referrals',{method:'POST',body:JSON.stringify({note})});}
+  async membershipApplicationDetails(id:string):Promise<any>{return this.request('/api/v1/membership-applications/'+encodeURIComponent(id)+'/details');}
+  async requestToJoin(groupId:string,message?:string,answers?:Record<string,string>,referralCode?:string):Promise<MembershipApplication>{return this.request('/api/v1/membership-applications',{method:'POST',body:JSON.stringify({groupId,message,answers,referralCode})});}
   async listApplications():Promise<MembershipApplication[]>{if(!this.activeGroupId)return[];return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/applications`);}
   async decideApplication(id:string,decision:'APPROVE'|'REJECT',reason?:string):Promise<{application:MembershipApplication;membershipId?:string}>{return this.request(`/api/v1/membership-applications/${encodeURIComponent(id)}/decision`,{method:'POST',body:JSON.stringify({decision,reason})});}
 
