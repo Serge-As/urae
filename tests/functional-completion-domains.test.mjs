@@ -47,8 +47,9 @@ test('savings, opening balance and custody all reuse the canonical ledger',async
 });
 
 test('loan guarantees and solidarity cases remain explicit and financially traceable',async()=>{
-  const {ledger,risk}=await setup();
+  const {repo,ledger,risk}=await setup();
   await ledger.recordCashContribution({tenantId:'tenant_f',groupId:'group_f',membershipId:'m_owner',amount:40000,idempotencyKey:'seed-solidarity'});
+  await repo.saveWorkspaceRecord({id:'loan-1',tenantId:'tenant_f',groupId:'group_f',moduleId:'FINANCE.LOANS',title:'Loan 1',status:'ACTIVE',tags:['completion','kind:LOAN'],data:{completionKind:'LOAN',borrowerMembershipId:'m_owner',principal:20000,outstandingPrincipal:20000},createdBy:'owner',createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()});
   const guarantee=await risk.guarantor('group_f',{loanId:'loan-1',membershipId:'m_member',guaranteedAmount:15000});
   assert.equal(guarantee.data.guaranteedAmount,15000);
   const support=await risk.solidarityCase('group_f',{beneficiaryMembershipId:'m_member',title:'Hospital help',approvedAmount:20000});
