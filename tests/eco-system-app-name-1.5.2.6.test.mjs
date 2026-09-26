@@ -1,0 +1,1 @@
+import test from'node:test';import assert from'node:assert/strict';import{readFile}from'node:fs/promises';test('browser application identity is Eco-System',async()=>{const html=await readFile('apps/web/index.html','utf8');assert.match(html,/application-name[^>]*Éco-System/);});\n
