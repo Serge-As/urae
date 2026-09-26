@@ -1533,7 +1533,10 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
     const custodyIn=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/custody\/([^/]+)\/return$/);
     if(custodyIn&&request.method==='POST'){const body=await readJson<Record<string,unknown>>(request);return json(await treasury.returnFromCustody(custodyIn[1]!,custodyIn[2]!,finite(body.amount),String(body.idempotencyKey??makeId('custody_in'))),201,cors);}
     const guarantorRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/loans\/([^/]+)\/guarantors$/);
+    if(guarantorRoute&&request.method==='GET'){const rows=await riskFinance.list(guarantorRoute[1]!,'LOAN_GUARANTEE');return json({items:rows.filter(x=>String(x.data.loanId??'')===guarantorRoute[2]!)},200,cors);}
     if(guarantorRoute&&request.method==='POST'){const body=await readJson<Record<string,unknown>>(request);return json(await riskFinance.guarantor(guarantorRoute[1]!,{loanId:guarantorRoute[2]!,membershipId:String(body.membershipId??''),guaranteedAmount:finite(body.guaranteedAmount)}),201,cors);}
+    const guarantorRelease=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/loans\/([^/]+)\/guarantors\/([^/]+)\/release$/);
+    if(guarantorRelease&&request.method==='POST'){const body=await readJson<Record<string,unknown>>(request),record=await riskFinance.releaseGuarantee(guarantorRelease[1]!,guarantorRelease[3]!,String(body.reason??''));if(String(record.data.loanId??'')!==guarantorRelease[2]!)throw Error('LOAN_GUARANTEE_NOT_FOUND');return json(record,200,cors);}
     const solidarityRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/solidarity\/cases$/);
     if(solidarityRoute&&request.method==='POST'){const body=await readJson<Record<string,unknown>>(request);return json(await riskFinance.solidarityCase(solidarityRoute[1]!,{beneficiaryMembershipId:String(body.beneficiaryMembershipId??''),title:String(body.title??''),approvedAmount:finite(body.approvedAmount),currency:String(body.currency??'XAF')}),201,cors);}
     const solidarityFund=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/solidarity\/cases\/([^/]+)\/fund$/);

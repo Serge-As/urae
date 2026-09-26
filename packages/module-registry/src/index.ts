@@ -70,7 +70,7 @@ export const PRODUCT_MODULES: ProductModule[] = [
   {id:'FINANCE.OBLIGATIONS',labelFr:'Obligations financières',labelEn:'Financial obligations',status:'FOUNDATION_ACTIVE',lot:'E',canonicalDependencies:['KERNEL.POLICY','LEDGER.CANONICAL'],workspace:'UNIVERSAL'},
   {id:'FINANCE.ARREARS',labelFr:'Impayés et régularisation',labelEn:'Arrears & recovery',status:'FOUNDATION_ACTIVE',lot:'E',canonicalDependencies:['KERNEL.POLICY','LEDGER.CANONICAL'],workspace:'UNIVERSAL'},
   {id:'FINANCE.LOANS',labelFr:'Prêts internes',labelEn:'Internal loans',status:'FOUNDATION_ACTIVE',lot:'E',canonicalDependencies:['KERNEL.POLICY','LEDGER.CANONICAL'],workspace:'UNIVERSAL'},
-  {id:'FINANCE.LOAN_GUARANTORS',labelFr:'Garants',labelEn:'Loan guarantors',status:'STRUCTURAL_V1',lot:'E',canonicalDependencies:['KERNEL.POLICY','LEDGER.CANONICAL'],workspace:'UNIVERSAL'},
+  {id:'FINANCE.LOAN_GUARANTORS',labelFr:'Garants',labelEn:'Loan guarantors',status:'FOUNDATION_ACTIVE',lot:'E',canonicalDependencies:['KERNEL.POLICY','LEDGER.CANONICAL'],workspace:'UNIVERSAL'},
   {id:'FINANCE.INTEREST',labelFr:'Intérêts fixes/variables',labelEn:'Fixed/variable interest',status:'FOUNDATION_ACTIVE',lot:'E',canonicalDependencies:['KERNEL.POLICY','LEDGER.CANONICAL'],workspace:'UNIVERSAL'},
   {id:'FINANCE.REPAYMENTS',labelFr:'Remboursements',labelEn:'Repayments',status:'FOUNDATION_ACTIVE',lot:'E',canonicalDependencies:['KERNEL.POLICY','LEDGER.CANONICAL'],workspace:'UNIVERSAL'},
   {id:'FINANCE.SAVINGS_YIELD',labelFr:"Rendement d'épargne",labelEn:'Savings yield',status:'FOUNDATION_ACTIVE',lot:'E',canonicalDependencies:['KERNEL.POLICY','LEDGER.CANONICAL'],workspace:'SPECIALIZED'},

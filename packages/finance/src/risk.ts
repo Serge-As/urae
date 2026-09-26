@@ -34,8 +34,21 @@ export class RiskFinanceService{
   }
   async guarantor(groupId:Id,input:{loanId:Id;membershipId:Id;guaranteedAmount:number}){
     await this.access(groupId,true);validAmount(input.guaranteedAmount);const ctx=this.kernel.context.get();
+    const loan=await this.repo.getWorkspaceRecord(ctx.tenantId,input.loanId);
+    if(!loan||loan.groupId!==groupId||loan.moduleId!=='FINANCE.LOANS'||String(loan.data.completionKind??'')!=='LOAN')throw Error('LOAN_NOT_FOUND');
     const member=await this.repo.getMembership(ctx.tenantId,groupId,input.membershipId);if(!member||member.status!=='active')throw Error('MEMBERSHIP_NOT_FOUND');
+    if(String(loan.data.borrowerMembershipId??'')===member.id)throw Error('LOAN_GUARANTOR_CANNOT_BE_BORROWER');
+    const existing=(await this.list(groupId,'LOAN_GUARANTEE')).find(x=>String(x.data.loanId??'')===input.loanId&&String(x.data.membershipId??'')===member.id&&String(x.data.state??'ACTIVE')==='ACTIVE');
+    if(existing)throw Error('LOAN_GUARANTOR_ALREADY_ACTIVE');
     return this.save(groupId,'LOAN_GUARANTEE','Guarantee '+input.loanId,{loanId:input.loanId,membershipId:member.id,guaranteedAmount:input.guaranteedAmount,state:'ACTIVE'});
+  }
+  async releaseGuarantee(groupId:Id,guaranteeId:Id,reason:string){
+    await this.access(groupId,true);const ctx=this.kernel.context.get(),record=await this.repo.getWorkspaceRecord(ctx.tenantId,guaranteeId);
+    if(!record||record.groupId!==groupId||record.moduleId!=='FINANCE.LOAN_GUARANTORS'||String(record.data.specializedKind??'')!=='LOAN_GUARANTEE')throw Error('LOAN_GUARANTEE_NOT_FOUND');
+    if(String(record.data.state??'ACTIVE')!=='ACTIVE')return record;
+    const why=reason.trim();if(!why)throw Error('GUARANTEE_RELEASE_REASON_REQUIRED');
+    const updated={...record,status:'DONE',data:{...record.data,state:'RELEASED',releasedAt:now(),releasedBy:ctx.actorId,releaseReason:why},updatedAt:now()};
+    await this.repo.saveWorkspaceRecord(updated);return updated;
   }
   async solidarityCase(groupId:Id,input:{beneficiaryMembershipId:Id;title:string;approvedAmount:number;currency?:string}){
     await this.access(groupId,true);validAmount(input.approvedAmount);const ctx=this.kernel.context.get();
