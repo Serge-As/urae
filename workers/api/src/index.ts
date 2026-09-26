@@ -416,7 +416,7 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
       }
       return json({error:'METHOD_NOT_ALLOWED'},405,cors);
     }
-    const liveRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/live\/(health|events|connect|publish)$/);
+    const liveRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/live\/(health|events|connect|publish|signal)$/);
     if(liveRoute){
       const groupId=liveRoute[1]!,action=liveRoute[2]!;
       if(!options.premiumLive||!options.liveNamespace)return json({enabled:false,error:'PREMIUM_LIVE_LEDGER_DISABLED'},503,cors);
@@ -431,6 +431,19 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
         return stub.fetch(new Request('https://group-live.internal/events?after='+encodeURIComponent(after)+'&limit='+encodeURIComponent(limit)+'&userId='+encodeURIComponent(ctx.actorId)));
       }
       if(action==='connect'&&request.method==='GET')return stub.fetch(new Request('https://group-live.internal/connect?userId='+encodeURIComponent(ctx.actorId),{method:'GET',headers:request.headers}));
+      if(action==='signal'&&request.method==='POST'){
+        const body=await readJson<Record<string,unknown>>(request),type=String(body.type??'');
+        const allowed=new Set(['PRESENCE','TYPING','TYPING_STOP','CELL_FOCUS','CELL_BLUR','LIVE_ACK']);
+        if(!allowed.has(type))throw new Error('LIVE_CLIENT_SIGNAL_NOT_ALLOWED');
+        const raw=body.payload&&typeof body.payload==='object'&&!Array.isArray(body.payload)?body.payload as Record<string,unknown>:{};
+        const kind=String(raw.kind??'');
+        await requireGroup(groupId,kind==='FINANCIAL_CELL');
+        const payload:Record<string,string|number|boolean|null>={};
+        for(const [k,v] of Object.entries(raw))if(typeof v==='string'||typeof v==='number'||typeof v==='boolean'||v===null)payload[k]=v;
+        const response=await stub.fetch(new Request('https://group-live.internal/signal',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({type,actorId:ctx.actorId,payload})}));
+        if(!response.ok)throw new Error('LIVE_SIGNAL_FAILED');
+        return json({accepted:true,ephemeral:true,groupCode:passport.publicCode},202,cors);
+      }
       if(action==='publish'&&request.method==='POST'){
         const body=await readJson<Record<string,unknown>>(request),type=String(body.type??'');
         if(type==='MEETING_UPDATE')await requireGroup(groupId,true);

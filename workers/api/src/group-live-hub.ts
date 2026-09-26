@@ -1,10 +1,12 @@
 type LivePayload=Record<string,string|number|boolean|null>;
 export interface GroupLiveEvent {seq:number;id:string;type:string;at:string;actorId:string;idempotencyKey:string;targetUserId?:string;payload:LivePayload;}
+export interface GroupLiveSignal {id:string;type:string;at:string;actorId:string;payload:LivePayload;}
 type StorageLike={get<T=unknown>(key:string):Promise<T|undefined>;put(key:string,value:unknown):Promise<void>;list<T=unknown>(options?:{prefix?:string;startAfter?:string;limit?:number}):Promise<Map<string,T>>;};
 type StateLike={storage:StorageLike;acceptWebSocket?(ws:WebSocket,tags?:string[]):void;getWebSockets?(tag?:string):WebSocket[];};
 
 const json=(data:unknown,status=200)=>new Response(JSON.stringify(data),{status,headers:{'content-type':'application/json; charset=utf-8','cache-control':'no-store'}});
 const allowedTypes=new Set(['FINANCIAL_NOTICE','MEMBER_CONTROL','MEETING_UPDATE','MANAGER_ENTRY','CONSENSUS_REQUIRED','CONSENSUS_SELECTED','MANAGER_RESERVE','MEMBER_PROJECTION_UPDATED','PRESENCE','SYNC_HINT','RULE_UPDATE','COMMUNITY_EVENT','COMMUNITY_DRAFT_SYNC','COMMUNITY_READ_SYNC']);
+const allowedSignalTypes=new Set(['PRESENCE','TYPING','TYPING_STOP','CELL_FOCUS','CELL_BLUR','LIVE_ACK']);
 const cleanPayload=(value:unknown):LivePayload=>{
   if(!value||typeof value!=='object'||Array.isArray(value))return{};
   const out:LivePayload={};for(const [k,v] of Object.entries(value as Record<string,unknown>)){
@@ -35,6 +37,16 @@ export class GroupLiveHub{
     const sockets=event.targetUserId?this.state.getWebSockets?.('user:'+event.targetUserId)??[]:this.state.getWebSockets?.('group-live')??[];
     for(const ws of sockets)try{if(ws.readyState===WebSocket.OPEN)ws.send(message);}catch{}
   }
+  private broadcastSignal(signal:GroupLiveSignal){
+    const message=JSON.stringify({type:'GROUP_LIVE_SIGNAL',event:signal});
+    const sockets=this.state.getWebSockets?.('group-live')??[];
+    for(const ws of sockets)try{if(ws.readyState===WebSocket.OPEN)ws.send(message);}catch{}
+  }
+  private signal(input:Record<string,unknown>):GroupLiveSignal{
+    const type=String(input.type??'');if(!allowedSignalTypes.has(type))throw new Error('LIVE_SIGNAL_TYPE_NOT_ALLOWED');
+    const signal:GroupLiveSignal={id:String(input.id??crypto.randomUUID()),type,at:new Date().toISOString(),actorId:String(input.actorId??'unknown').slice(0,200),payload:cleanPayload(input.payload)};
+    this.broadcastSignal(signal);return signal;
+  }
   private async publish(input:Record<string,unknown>):Promise<GroupLiveEvent>{
     const type=String(input.type??'');if(!allowedTypes.has(type))throw new Error('LIVE_EVENT_TYPE_NOT_ALLOWED');
     const idempotencyKey=String(input.idempotencyKey??'').trim();if(!idempotencyKey||idempotencyKey.length>200)throw new Error('LIVE_IDEMPOTENCY_REQUIRED');
@@ -62,6 +74,9 @@ export class GroupLiveHub{
     if(request.method==='GET'&&url.pathname.endsWith('/events'))return json({events:await this.events(Number(url.searchParams.get('after')??0),Number(url.searchParams.get('limit')??100),url.searchParams.get('userId')??undefined),latest:await this.state.storage.get<number>('seq')??0});
     if(request.method==='POST'&&url.pathname.endsWith('/publish')){
       try{return json({event:await this.publish(await request.json() as Record<string,unknown>)},201);}catch(e){return json({error:e instanceof Error?e.message:'LIVE_ERROR'},400);}
+    }
+    if(request.method==='POST'&&url.pathname.endsWith('/signal')){
+      try{return json({signal:this.signal(await request.json() as Record<string,unknown>)},202);}catch(e){return json({error:e instanceof Error?e.message:'LIVE_ERROR'},400);}
     }
     if(request.method==='GET'&&url.pathname.endsWith('/health'))return json({ok:true,latest:await this.state.storage.get<number>('seq')??0,webSockets:this.state.getWebSockets?.().length??0});
     return json({error:'NOT_FOUND'},404);

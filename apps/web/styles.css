@@ -387,3 +387,8 @@ body.ui-mode-visual .primary:hover{filter:saturate(1.08) brightness(1.03);transf
 
 /* 1.5.2.6c accepted-first financial acknowledgement */
 .matrix-cell-entry.remote-financial-change{animation:ecoRemoteCellPulse 1s ease-in-out infinite;outline:3px solid #1f9d55;outline-offset:-3px}.matrix-cell-entry.remote-financial-closed{animation:ecoClosedCellPulse .9s ease-in-out infinite;outline-color:#c62828;background:#fff1f1}.canonical-financial-matrix.has-post-close-change{outline:4px solid #c62828;outline-offset:2px;box-shadow:0 0 0 5px rgba(198,40,40,.12)}@keyframes ecoClosedCellPulse{0%,100%{background:#fff1f1;box-shadow:inset 0 0 0 2px rgba(198,40,40,.3)}50%{background:#ffcdd2;box-shadow:inset 0 0 0 4px rgba(198,40,40,.75)}}
+
+/* Proactive Premium Live: ephemeral collaboration indicators, never financial authority. */
+.matrix-cell-entry.live-cell-active{outline:2px solid currentColor;outline-offset:-2px}
+.cell-live-presence{display:block;font-size:.72rem;font-weight:700;line-height:1.15;margin-top:2px;white-space:normal}
+.cell-live-presence[hidden]{display:none!important}
