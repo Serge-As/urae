@@ -8,6 +8,11 @@ const now=()=>new Date().toISOString();
 const qty=(v:number)=>{if(!Number.isSafeInteger(v)||v<=0)throw Error('INVALID_QUANTITY');return v;};
 type MarketKind='SHOP'|'STOCK_ITEM'|'MARKET_ORDER'|'GROUP_BUY'|'SUPPLIER'|'PROCUREMENT'|'SUPPLIER_INVOICE'|'PROCUREMENT_RECONCILIATION'|'SUPPLIER_CREDIT_NOTE'|'SUPPLIER_CREDIT'|'FLASH_OFFER'|'MARKET_REQUEST'|'MARKET_RESPONSE'|'DEAL'|'LIVE_MARKET';
 type StockOwnership='COMMERCIAL'|'POT_RESERVED'|'CONSIGNMENT'|'DEPOSIT_SALE';
+export type FlashOfferKind='LIQUIDATION'|'SURPLUS'|'RESCUE';
+export type MarketRequestState='DRAFT'|'OPEN'|'RESPONSES'|'SHORTLIST'|'SELECTED'|'FULFILLMENT'|'CLOSED'|'DISPUTED';
+export type DealType='PUBLIC'|'GROUP'|'SUPPLIER'|'FRESH'|'BULK'|'INSTITUTIONAL';
+export type DealState='DRAFT'|'OPEN'|'FULFILLMENT'|'CLOSED'|'DISPUTED';
+export type LiveMarketMode='TEXT'|'MEDIA'|'VIDEO'|'INTERACTIVE';
 export interface MarketRecord extends WorkspaceRecord{data:WorkspaceRecord['data']&{marketKind:MarketKind;version:number};}
 
 export class MarketService{
@@ -221,5 +226,103 @@ export class MarketService{
     return{procurement,invoices:invoices.filter(x=>String(x.data.procurementId)===procurementId),reconciliations:reconciliations.filter(x=>String(x.data.procurementId)===procurementId),creditNotes:creditNotes.filter(x=>String(x.data.procurementId)===procurementId),credits:credits.filter(x=>String(x.data.procurementId)===procurementId)};
   }
   async procurement(groupId:Id){return{procurements:await this.list(groupId,'PROCUREMENT'),credits:await this.list(groupId,'SUPPLIER_CREDIT'),suppliers:await this.list(groupId,'SUPPLIER')};}
+
+  async createFlashOffer(groupId:Id,input:{kind:FlashOfferKind;title:string;reason:string;condition:string;quantity:number;unit:string;unitPrice:number;currency?:string;locality?:string;expiresAt:string;evidenceRef:string}){
+    await this.access(groupId,true);
+    if(!['LIQUIDATION','SURPLUS','RESCUE'].includes(input.kind))throw Error('INVALID_FLASH_OFFER_KIND');
+    const title=input.title.trim(),reason=input.reason.trim(),condition=input.condition.trim(),evidenceRef=input.evidenceRef.trim();
+    if(!title||!reason||!condition||!evidenceRef)throw Error('FLASH_OFFER_DISCLOSURE_REQUIRED');
+    const expires=Date.parse(input.expiresAt);if(!Number.isFinite(expires)||expires<=Date.now())throw Error('INVALID_FLASH_OFFER_EXPIRY');
+    if(!Number.isSafeInteger(input.unitPrice)||input.unitPrice<0)throw Error('INVALID_FLASH_OFFER_PRICE');
+    return this.save(groupId,'FLASH_OFFER',title,{flashKind:input.kind,reason,condition,quantity:qty(input.quantity),unit:input.unit.trim()||'unité',unitPrice:input.unitPrice,currency:(input.currency??'XAF').trim().toUpperCase(),locality:input.locality?.trim()??'',expiresAt:new Date(expires).toISOString(),evidenceRef,state:'OPEN',truthDisclosure:true,createdAt:now()});
+  }
+  async flashOffers(groupId:Id){return (await this.list(groupId,'FLASH_OFFER')).filter(x=>String(x.data.state)!=='CLOSED');}
+  async closeFlashOffer(groupId:Id,id:Id,reason=''){
+    await this.access(groupId,true);const row=(await this.list(groupId,'FLASH_OFFER')).find(x=>x.id===id);if(!row)throw Error('FLASH_OFFER_NOT_FOUND');
+    return this.update(row,{state:'CLOSED',closedAt:now(),closeReason:reason.trim()},'DONE');
+  }
+
+  async createMarketRequest(groupId:Id,input:{title:string;category:string;quantity:number;unit:string;locality?:string;neededBy?:string;budgetMax?:number;currency?:string;conditions?:string;evidenceRef?:string;sourceType?:'MANUAL'|'PREDICTION';predictionReason?:string}){
+    await this.access(groupId,true);const title=input.title.trim(),category=input.category.trim();if(!title||!category)throw Error('MARKET_REQUEST_FIELDS_REQUIRED');
+    const needed=input.neededBy?Date.parse(input.neededBy):NaN;if(input.neededBy&&(!Number.isFinite(needed)||needed<=Date.now()))throw Error('INVALID_MARKET_REQUEST_DEADLINE');
+    if(input.budgetMax!==undefined&&(!Number.isSafeInteger(input.budgetMax)||input.budgetMax<0))throw Error('INVALID_MARKET_REQUEST_BUDGET');
+    const source=input.sourceType??'MANUAL',predicted=source==='PREDICTION';if(predicted&&!input.predictionReason?.trim())throw Error('PREDICTION_REASON_REQUIRED');
+    return this.save(groupId,'MARKET_REQUEST',title,{requestState:'DRAFT',category,quantity:qty(input.quantity),unit:input.unit.trim()||'unité',locality:input.locality?.trim()??'',neededBy:input.neededBy?new Date(needed).toISOString():'',budgetMax:input.budgetMax??0,budgetSpecified:input.budgetMax!==undefined,currency:(input.currency??'XAF').trim().toUpperCase(),conditions:input.conditions?.trim()??'',evidenceRef:input.evidenceRef?.trim()??'',sourceType:source,predictionReason:input.predictionReason?.trim()??'',humanAccepted:!predicted,responseCount:0,createdAt:now()});
+  }
+  async marketRequests(groupId:Id){return this.list(groupId,'MARKET_REQUEST');}
+  async acceptPredictedMarketRequest(groupId:Id,id:Id){
+    await this.access(groupId,true);const row=(await this.list(groupId,'MARKET_REQUEST')).find(x=>x.id===id);if(!row)throw Error('MARKET_REQUEST_NOT_FOUND');
+    if(String(row.data.sourceType)!=='PREDICTION')throw Error('REQUEST_NOT_PREDICTED');if(String(row.data.requestState)!=='DRAFT')throw Error('MARKET_REQUEST_NOT_DRAFT');
+    return this.update(row,{humanAccepted:true,humanAcceptedAt:now()});
+  }
+  async openMarketRequest(groupId:Id,id:Id){
+    await this.access(groupId,true);const row=(await this.list(groupId,'MARKET_REQUEST')).find(x=>x.id===id);if(!row)throw Error('MARKET_REQUEST_NOT_FOUND');
+    if(String(row.data.requestState)!=='DRAFT')throw Error('MARKET_REQUEST_NOT_DRAFT');if(row.data.humanAccepted!==true)throw Error('PREDICTED_DEMAND_HUMAN_ACCEPTANCE_REQUIRED');
+    return this.update(row,{requestState:'OPEN',openedAt:now()});
+  }
+  async respondMarketRequest(groupId:Id,requestId:Id,input:{supplierRef:string;price:number;currency?:string;availableQuantity:number;deliveryAt?:string;conditions?:string;evidenceRef?:string;variant?:string}){
+    await this.access(groupId,true);const request=(await this.list(groupId,'MARKET_REQUEST')).find(x=>x.id===requestId);if(!request)throw Error('MARKET_REQUEST_NOT_FOUND');
+    if(!['OPEN','RESPONSES'].includes(String(request.data.requestState)))throw Error('MARKET_REQUEST_NOT_OPEN');
+    if(!input.supplierRef.trim())throw Error('SUPPLIER_REFERENCE_REQUIRED');if(!Number.isSafeInteger(input.price)||input.price<0)throw Error('INVALID_MARKET_RESPONSE_PRICE');
+    const delivery=input.deliveryAt?Date.parse(input.deliveryAt):NaN;if(input.deliveryAt&&!Number.isFinite(delivery))throw Error('INVALID_DELIVERY_AT');
+    const response=await this.save(groupId,'MARKET_RESPONSE','Réponse · '+request.title,{requestId,supplierRef:input.supplierRef.trim(),price:input.price,currency:(input.currency??String(request.data.currency??'XAF')).trim().toUpperCase(),availableQuantity:qty(input.availableQuantity),deliveryAt:input.deliveryAt?new Date(delivery).toISOString():'',conditions:input.conditions?.trim()??'',evidenceRef:input.evidenceRef?.trim()??'',variant:input.variant?.trim()??'',responseState:'SUBMITTED',submittedAt:now()});
+    await this.update(request,{requestState:'RESPONSES',responseCount:Number(request.data.responseCount??0)+1});
+    return response;
+  }
+  async marketRequestResponses(groupId:Id,requestId:Id){return (await this.list(groupId,'MARKET_RESPONSE')).filter(x=>String(x.data.requestId)===requestId);}
+  async shortlistMarketResponse(groupId:Id,requestId:Id,responseId:Id){
+    await this.access(groupId,true);const request=(await this.list(groupId,'MARKET_REQUEST')).find(x=>x.id===requestId),response=(await this.list(groupId,'MARKET_RESPONSE')).find(x=>x.id===responseId&&String(x.data.requestId)===requestId);if(!request||!response)throw Error('MARKET_RESPONSE_NOT_FOUND');
+    if(!['RESPONSES','SHORTLIST'].includes(String(request.data.requestState)))throw Error('MARKET_REQUEST_NOT_IN_RESPONSES');
+    await this.update(response,{responseState:'SHORTLISTED',shortlistedAt:now()});return this.update(request,{requestState:'SHORTLIST'});
+  }
+  async selectMarketResponse(groupId:Id,requestId:Id,responseId:Id){
+    await this.access(groupId,true);const request=(await this.list(groupId,'MARKET_REQUEST')).find(x=>x.id===requestId),response=(await this.list(groupId,'MARKET_RESPONSE')).find(x=>x.id===responseId&&String(x.data.requestId)===requestId);if(!request||!response)throw Error('MARKET_RESPONSE_NOT_FOUND');
+    if(!['RESPONSES','SHORTLIST'].includes(String(request.data.requestState)))throw Error('MARKET_REQUEST_NOT_SELECTABLE');
+    await this.update(response,{responseState:'SELECTED',selectedAt:now()});return this.update(request,{requestState:'SELECTED',selectedResponseId:responseId,selectedAt:now()});
+  }
+  async transitionMarketRequest(groupId:Id,id:Id,next:'FULFILLMENT'|'CLOSED'|'DISPUTED',note=''){
+    await this.access(groupId,true);const row=(await this.list(groupId,'MARKET_REQUEST')).find(x=>x.id===id);if(!row)throw Error('MARKET_REQUEST_NOT_FOUND');const current=String(row.data.requestState) as MarketRequestState;
+    const allowed:Record<string,string[]>={SELECTED:['FULFILLMENT','DISPUTED'],FULFILLMENT:['CLOSED','DISPUTED'],DISPUTED:['FULFILLMENT','CLOSED']};if(!allowed[current]?.includes(next))throw Error('INVALID_MARKET_REQUEST_TRANSITION');
+    return this.update(row,{requestState:next,transitionNote:note.trim(),transitionedAt:now()},next==='CLOSED'?'DONE':'ACTIVE');
+  }
+
+  async createDeal(groupId:Id,input:{title:string;dealType:DealType;requestId?:Id;responseId?:Id;publicUnitPrice:number;currency?:string;quantity:number;availability:string;publicConditions:string;expiresAt:string;privateSupplierPrice?:number;privateMinimum?:number;commission?:number;promotion?:number;volumeBonus?:number;priceTiers?:Array<{minQuantity:number;unitPrice:number}>}){
+    await this.access(groupId,true);if(!['PUBLIC','GROUP','SUPPLIER','FRESH','BULK','INSTITUTIONAL'].includes(input.dealType))throw Error('INVALID_DEAL_TYPE');
+    if(!input.title.trim()||!input.availability.trim()||!input.publicConditions.trim())throw Error('PUBLIC_DEAL_TRUTH_REQUIRED');if(!Number.isSafeInteger(input.publicUnitPrice)||input.publicUnitPrice<0)throw Error('INVALID_DEAL_PRICE');
+    const expires=Date.parse(input.expiresAt);if(!Number.isFinite(expires)||expires<=Date.now())throw Error('INVALID_DEAL_EXPIRY');
+    const tiers=(input.priceTiers??[]).map(x=>({minQuantity:qty(x.minQuantity),unitPrice:x.unitPrice})).sort((a,b)=>a.minQuantity-b.minQuantity);for(let i=0;i<tiers.length;i++){if(!Number.isSafeInteger(tiers[i]!.unitPrice)||tiers[i]!.unitPrice<0)throw Error('INVALID_DEAL_TIER_PRICE');if(i&&tiers[i]!.unitPrice>tiers[i-1]!.unitPrice)throw Error('PRICE_DROP_TIER_MUST_NOT_INCREASE');}
+    const privateTerms={supplierPrice:input.privateSupplierPrice??null,minimum:input.privateMinimum??null,commission:input.commission??null,promotion:input.promotion??null,volumeBonus:input.volumeBonus??null};
+    return this.save(groupId,'DEAL',input.title.trim(),{dealType:input.dealType,dealState:'DRAFT',requestId:input.requestId??'',responseId:input.responseId??'',publicUnitPrice:input.publicUnitPrice,effectiveUnitPrice:input.publicUnitPrice,currency:(input.currency??'XAF').trim().toUpperCase(),quantity:qty(input.quantity),availability:input.availability.trim(),publicConditions:input.publicConditions.trim(),expiresAt:new Date(expires).toISOString(),privateTermsJson:JSON.stringify(privateTerms),priceTiersJson:JSON.stringify(tiers),committedQuantity:0,truthfulPublicTerms:true});
+  }
+  async deals(groupId:Id){return this.list(groupId,'DEAL');}
+  async openDeal(groupId:Id,id:Id){
+    await this.access(groupId,true);const row=(await this.list(groupId,'DEAL')).find(x=>x.id===id);if(!row)throw Error('DEAL_NOT_FOUND');if(String(row.data.dealState)!=='DRAFT')throw Error('DEAL_NOT_DRAFT');
+    return this.update(row,{dealState:'OPEN',openedAt:now()});
+  }
+  async commitDealQuantity(groupId:Id,id:Id,quantity:number){
+    await this.access(groupId,true);const row=(await this.list(groupId,'DEAL')).find(x=>x.id===id);if(!row)throw Error('DEAL_NOT_FOUND');if(String(row.data.dealState)!=='OPEN')throw Error('DEAL_NOT_OPEN');const add=qty(quantity),next=Number(row.data.committedQuantity??0)+add;if(next>Number(row.data.quantity))throw Error('DEAL_QUANTITY_EXCEEDED');
+    const tiers=JSON.parse(String(row.data.priceTiersJson??'[]')) as Array<{minQuantity:number;unitPrice:number}>;let price=Number(row.data.publicUnitPrice);for(const tier of tiers)if(next>=tier.minQuantity)price=tier.unitPrice;
+    return this.update(row,{committedQuantity:next,effectiveUnitPrice:price,lastCommitAt:now()});
+  }
+  async transitionDeal(groupId:Id,id:Id,next:'FULFILLMENT'|'CLOSED'|'DISPUTED',note=''){
+    await this.access(groupId,true);const row=(await this.list(groupId,'DEAL')).find(x=>x.id===id);if(!row)throw Error('DEAL_NOT_FOUND');const current=String(row.data.dealState) as DealState;const allowed:Record<string,string[]>={OPEN:['FULFILLMENT','DISPUTED','CLOSED'],FULFILLMENT:['CLOSED','DISPUTED'],DISPUTED:['FULFILLMENT','CLOSED']};if(!allowed[current]?.includes(next))throw Error('INVALID_DEAL_TRANSITION');
+    return this.update(row,{dealState:next,transitionNote:note.trim(),transitionedAt:now()},next==='CLOSED'?'DONE':'ACTIVE');
+  }
+
+  async createLiveMarket(groupId:Id,input:{title:string;theme?:string;scheduledAt:string;mode:LiveMarketMode;communityHubId?:Id;providerRef?:string;pinnedDealId?:Id}){
+    await this.access(groupId,true);if(!['TEXT','MEDIA','VIDEO','INTERACTIVE'].includes(input.mode))throw Error('INVALID_LIVE_MARKET_MODE');if(!input.title.trim())throw Error('LIVE_MARKET_TITLE_REQUIRED');
+    const scheduled=Date.parse(input.scheduledAt);if(!Number.isFinite(scheduled))throw Error('INVALID_LIVE_MARKET_DATE');if(input.mode==='VIDEO'&&!input.providerRef?.trim())throw Error('VIDEO_PROVIDER_REFERENCE_REQUIRED');if(input.mode==='INTERACTIVE'&&!input.communityHubId)throw Error('LIVE_MARKET_COMMUNITY_HUB_REQUIRED');
+    if(input.pinnedDealId&&!(await this.list(groupId,'DEAL')).some(x=>x.id===input.pinnedDealId))throw Error('DEAL_NOT_FOUND');
+    return this.save(groupId,'LIVE_MARKET',input.title.trim(),{liveState:'DRAFT',theme:input.theme?.trim()??'',scheduledAt:new Date(scheduled).toISOString(),mode:input.mode,communityHubId:input.communityHubId??'',providerRef:input.providerRef?.trim()??'',pinnedDealId:input.pinnedDealId??'',realViewerCount:false,falseCountdown:false});
+  }
+  async liveMarkets(groupId:Id){return this.list(groupId,'LIVE_MARKET');}
+  async setLiveMarketState(groupId:Id,id:Id,next:'SCHEDULED'|'LIVE'|'CLOSED'){
+    await this.access(groupId,true);const row=(await this.list(groupId,'LIVE_MARKET')).find(x=>x.id===id);if(!row)throw Error('LIVE_MARKET_NOT_FOUND');const current=String(row.data.liveState);const allowed:Record<string,string[]>={DRAFT:['SCHEDULED'],SCHEDULED:['LIVE','CLOSED'],LIVE:['CLOSED']};if(!allowed[current]?.includes(next))throw Error('INVALID_LIVE_MARKET_TRANSITION');
+    return this.update(row,{liveState:next,liveChangedAt:now()},next==='CLOSED'?'DONE':'ACTIVE');
+  }
+  async pinLiveMarketDeal(groupId:Id,id:Id,dealId:Id){
+    await this.access(groupId,true);const row=(await this.list(groupId,'LIVE_MARKET')).find(x=>x.id===id),deal=(await this.list(groupId,'DEAL')).find(x=>x.id===dealId);if(!row)throw Error('LIVE_MARKET_NOT_FOUND');if(!deal)throw Error('DEAL_NOT_FOUND');return this.update(row,{pinnedDealId:dealId,pinnedAt:now()});
+  }
+  async socialCommerce(groupId:Id){return{flashOffers:await this.list(groupId,'FLASH_OFFER'),requests:await this.list(groupId,'MARKET_REQUEST'),responses:await this.list(groupId,'MARKET_RESPONSE'),deals:await this.list(groupId,'DEAL'),liveMarkets:await this.list(groupId,'LIVE_MARKET')};}
 
 }
