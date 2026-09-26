@@ -1,3 +1,4 @@
 Eco-System 1.5.2.6 field persistence production delivery trigger.
 Created after governed CI and browser field/shell/mobile qualification passed.
 Preserve D1, R2, Ledger, rights and realMoneyEnabled=false.
+Qualified delivery retrigger after d4be554a0a915ccd3d07ffc722b4e3e1d0654c4f: finance Chromium + full field qualification SUCCESS; Eco-System browser identity included.
