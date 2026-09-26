@@ -1664,6 +1664,45 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
     if(groupBuyRoute&&request.method==='POST'){const body=await readJson<Record<string,unknown>>(request);return json(await market.createGroupBuy(groupBuyRoute[1]!,{title:String(body.title??''),stockItemId:body.stockItemId?String(body.stockItemId):undefined,thresholdQuantity:finite(body.thresholdQuantity),deadline:String(body.deadline??'')}),201,cors);}
     const groupBuyCommit=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/market\/group-buys\/([^/]+)\/commit$/);
     if(groupBuyCommit&&request.method==='POST'){const body=await readJson<Record<string,unknown>>(request);return json(await market.commitGroupBuy(groupBuyCommit[1]!,groupBuyCommit[2]!,String(body.membershipId??''),finite(body.quantity)),200,cors);}
+    const socialCommerceRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/market\/social-commerce$/);
+    if(socialCommerceRoute&&request.method==='GET')return json(await market.socialCommerce(socialCommerceRoute[1]!),200,cors);
+    const flashOfferRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/market\/flash-offers$/);
+    if(flashOfferRoute&&request.method==='POST')return json(await market.createFlashOffer(flashOfferRoute[1]!,await readJson<any>(request)),201,cors);
+    const flashClose=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/market\/flash-offers\/([^/]+)\/close$/);
+    if(flashClose&&request.method==='POST'){const body=await readJson<Record<string,unknown>>(request);return json(await market.closeFlashOffer(flashClose[1]!,flashClose[2]!,String(body.reason??'')),200,cors);}
+    const marketRequestRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/market\/requests$/);
+    if(marketRequestRoute&&request.method==='GET')return json({items:await market.marketRequests(marketRequestRoute[1]!)},200,cors);
+    if(marketRequestRoute&&request.method==='POST')return json(await market.createMarketRequest(marketRequestRoute[1]!,await readJson<any>(request)),201,cors);
+    const marketRequestAccept=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/market\/requests\/([^/]+)\/accept-prediction$/);
+    if(marketRequestAccept&&request.method==='POST')return json(await market.acceptPredictedMarketRequest(marketRequestAccept[1]!,marketRequestAccept[2]!),200,cors);
+    const marketRequestOpen=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/market\/requests\/([^/]+)\/open$/);
+    if(marketRequestOpen&&request.method==='POST')return json(await market.openMarketRequest(marketRequestOpen[1]!,marketRequestOpen[2]!),200,cors);
+    const marketResponses=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/market\/requests\/([^/]+)\/responses$/);
+    if(marketResponses&&request.method==='GET')return json({items:await market.marketRequestResponses(marketResponses[1]!,marketResponses[2]!)},200,cors);
+    if(marketResponses&&request.method==='POST')return json(await market.respondMarketRequest(marketResponses[1]!,marketResponses[2]!,await readJson<any>(request)),201,cors);
+    const marketResponseShortlist=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/market\/requests\/([^/]+)\/responses\/([^/]+)\/shortlist$/);
+    if(marketResponseShortlist&&request.method==='POST')return json(await market.shortlistMarketResponse(marketResponseShortlist[1]!,marketResponseShortlist[2]!,marketResponseShortlist[3]!),200,cors);
+    const marketResponseSelect=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/market\/requests\/([^/]+)\/responses\/([^/]+)\/select$/);
+    if(marketResponseSelect&&request.method==='POST')return json(await market.selectMarketResponse(marketResponseSelect[1]!,marketResponseSelect[2]!,marketResponseSelect[3]!),200,cors);
+    const marketRequestTransition=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/market\/requests\/([^/]+)\/transition$/);
+    if(marketRequestTransition&&request.method==='POST'){const body=await readJson<Record<string,unknown>>(request);return json(await market.transitionMarketRequest(marketRequestTransition[1]!,marketRequestTransition[2]!,String(body.state??'') as any,String(body.note??'')),200,cors);}
+    const dealRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/market\/deals$/);
+    if(dealRoute&&request.method==='GET')return json({items:await market.deals(dealRoute[1]!)},200,cors);
+    if(dealRoute&&request.method==='POST')return json(await market.createDeal(dealRoute[1]!,await readJson<any>(request)),201,cors);
+    const dealOpen=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/market\/deals\/([^/]+)\/open$/);
+    if(dealOpen&&request.method==='POST')return json(await market.openDeal(dealOpen[1]!,dealOpen[2]!),200,cors);
+    const dealCommit=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/market\/deals\/([^/]+)\/commit$/);
+    if(dealCommit&&request.method==='POST'){const body=await readJson<Record<string,unknown>>(request);return json(await market.commitDealQuantity(dealCommit[1]!,dealCommit[2]!,finite(body.quantity)),200,cors);}
+    const dealTransition=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/market\/deals\/([^/]+)\/transition$/);
+    if(dealTransition&&request.method==='POST'){const body=await readJson<Record<string,unknown>>(request);return json(await market.transitionDeal(dealTransition[1]!,dealTransition[2]!,String(body.state??'') as any,String(body.note??'')),200,cors);}
+    const liveMarketRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/market\/live-markets$/);
+    if(liveMarketRoute&&request.method==='GET')return json({items:await market.liveMarkets(liveMarketRoute[1]!)},200,cors);
+    if(liveMarketRoute&&request.method==='POST')return json(await market.createLiveMarket(liveMarketRoute[1]!,await readJson<any>(request)),201,cors);
+    const liveMarketState=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/market\/live-markets\/([^/]+)\/state$/);
+    if(liveMarketState&&request.method==='POST'){const body=await readJson<Record<string,unknown>>(request);return json(await market.setLiveMarketState(liveMarketState[1]!,liveMarketState[2]!,String(body.state??'') as any),200,cors);}
+    const liveMarketPin=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/market\/live-markets\/([^/]+)\/pin-deal$/);
+    if(liveMarketPin&&request.method==='POST'){const body=await readJson<Record<string,unknown>>(request);return json(await market.pinLiveMarketDeal(liveMarketPin[1]!,liveMarketPin[2]!,String(body.dealId??'')),200,cors);}
+
     const completionCollection=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/completion$/);
     if(completionCollection&&request.method==='GET'){
       const kind=url.searchParams.get('kind') as CompletionKind|null;
