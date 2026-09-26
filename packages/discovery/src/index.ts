@@ -1,4 +1,4 @@
-import type { GroupDiscoveryMatch, GroupDiscoveryQuery, Id, MembershipApplication, PublicGroupListing, User } from '../../contracts/src/index.js';
+import type { GroupDiscoveryMatch, GroupDiscoveryQuery, Id, MembershipApplication, PublicGroupListing, User, WorkspaceRecord } from '../../contracts/src/index.js';
 import { makeId } from '../../contracts/src/index.js';
 import type { PlatformRepository } from '../../repositories/src/index.js';
 import { PlatformKernel } from '../../platform-kernel/src/index.js';
@@ -8,6 +8,21 @@ const now=()=>new Date().toISOString();
 const MANAGER_ROLES=new Set(['founder','manager','admin','president','treasurer']);
 const normalize=(v:string|undefined)=>String(v??'').trim().toLocaleLowerCase();
 const tokens=(v:string|undefined)=>normalize(v).split(/[^\p{L}\p{N}]+/u).filter(Boolean);
+
+const PUBLIC_CANDIDATE_TENANT='__eco_public_candidate_projection__';
+const cleanText=(v:unknown,max=240)=>String(v??'').trim().replace(/\s+/g,' ').slice(0,max);
+const cleanTags=(v:unknown)=>[...new Set((Array.isArray(v)?v:[]).map(x=>normalize(String(x))).filter(Boolean))].slice(0,24);
+export interface PublicCandidateProfile {
+  id:Id;displayAlias:string;locality?:string;skills:string[];interests:string[];desiredGroupTags:string[];
+  bio?:string;availability?:string;updatedAt:string;
+}
+export interface CandidateSearchQuery {text?:string;locality?:string;tags?:string[];}
+export interface CandidateMatch {candidate:PublicCandidateProfile;score:number;reasonCodes:string[];}
+const candidateProjection=(row:WorkspaceRecord):PublicCandidateProfile=>({
+  id:row.id,displayAlias:String(row.data.displayAlias??row.title),locality:row.data.locality?String(row.data.locality):undefined,
+  skills:cleanTags(row.data.skills),interests:cleanTags(row.data.interests),desiredGroupTags:cleanTags(row.data.desiredGroupTags),
+  bio:row.data.bio?String(row.data.bio):undefined,availability:row.data.availability?String(row.data.availability):undefined,updatedAt:row.updatedAt
+});
 
 const requireManager=async(repo:PlatformRepository,kernel:PlatformKernel,tenantId:Id,groupId:Id):Promise<void>=>{
   const ctx=kernel.context.get();
@@ -66,6 +81,70 @@ export class DiscoveryService {
       results.push({listing:structuredClone(listing),score,reasonCodes:reasons});
     }
     return results.sort((a,b)=>b.score-a.score||a.listing.name.localeCompare(b.listing.name));
+  }
+
+  async candidateProfile():Promise<PublicCandidateProfile|undefined>{
+    const ctx=this.kernel.context.get(),rows=await this.repo.listWorkspaceRecords(PUBLIC_CANDIDATE_TENANT,'MEMBERSHIP.PORTFOLIO');
+    const row=rows.find(x=>String(x.data.ownerActorId??'')===ctx.actorId&&x.status==='ACTIVE'&&Boolean(x.data.optIn));
+    return row?candidateProjection(row):undefined;
+  }
+
+  async saveCandidateProfile(input:{displayAlias:string;locality?:string;skills?:string[];interests?:string[];desiredGroupTags?:string[];bio?:string;availability?:string;optIn:boolean}):Promise<PublicCandidateProfile|undefined>{
+    const ctx=this.kernel.context.get(),user=await this.repo.getUser(ctx.actorId);if(!user)throw new Error('USER_NOT_FOUND');
+    const rows=await this.repo.listWorkspaceRecords(PUBLIC_CANDIDATE_TENANT,'MEMBERSHIP.PORTFOLIO');
+    const existing=rows.find(x=>String(x.data.ownerActorId??'')===ctx.actorId),stamp=now(),alias=cleanText(input.displayAlias||user.displayName,80);
+    if(!alias)throw new Error('CANDIDATE_ALIAS_REQUIRED');
+    const record:WorkspaceRecord={
+      id:existing?.id??makeId('candidate'),tenantId:PUBLIC_CANDIDATE_TENANT,moduleId:'MEMBERSHIP.PORTFOLIO',title:alias,
+      status:input.optIn?'ACTIVE':'ARCHIVED',tags:['public-candidate','consent:'+(input.optIn?'yes':'no')],
+      data:{ownerActorId:ctx.actorId,optIn:Boolean(input.optIn),displayAlias:alias,locality:cleanText(input.locality,120),skills:cleanTags(input.skills),interests:cleanTags(input.interests),desiredGroupTags:cleanTags(input.desiredGroupTags),bio:cleanText(input.bio,500),availability:cleanText(input.availability,120)},
+      createdBy:ctx.actorId,createdAt:existing?.createdAt??stamp,updatedAt:stamp
+    };
+    await this.repo.saveWorkspaceRecord(record);
+    const audit=this.kernel.audit.append({tenantId:ctx.tenantId,actorId:ctx.actorId,action:'CANDIDATE_PUBLIC_PROFILE_UPDATED',targetType:'candidate_projection',targetId:record.id,after:{optIn:Boolean(input.optIn),locality:Boolean(record.data.locality),skillsCount:cleanTags(input.skills).length},requestId:ctx.requestId});await this.repo.saveAudit(audit);
+    return input.optIn?candidateProjection(record):undefined;
+  }
+
+  async searchCandidates(targetTenantId:Id,groupId:Id,query:CandidateSearchQuery):Promise<CandidateMatch[]>{
+    await requireManager(this.repo,this.kernel,targetTenantId,groupId);
+    const text=cleanText(query.text,120),q=tokens(text),locality=normalize(query.locality),wanted=new Set(cleanTags(query.tags));
+    if((text&&text.length<2)||(!q.length&&!locality&&!wanted.size))throw new Error('DISCOVERY_QUERY_REQUIRED');
+    const rows=await this.repo.listWorkspaceRecords(PUBLIC_CANDIDATE_TENANT,'MEMBERSHIP.PORTFOLIO'),matches:CandidateMatch[]=[];
+    for(const row of rows){
+      if(row.status!=='ACTIVE'||!Boolean(row.data.optIn))continue;
+      const c=candidateProjection(row),hay=normalize([c.displayAlias,c.locality,c.bio,...c.skills,...c.interests,...c.desiredGroupTags].filter(Boolean).join(' '));
+      let score=0;const reasons:string[]=[];
+      if(q.length){const hits=q.filter(x=>hay.includes(x)).length;if(!hits)continue;score+=Math.min(40,hits*12);reasons.push('TEXT_MATCH');}
+      if(locality){if(normalize(c.locality)!==locality)continue;score+=30;reasons.push('LOCALITY_MATCH');}
+      if(wanted.size){const pool=new Set([...c.skills,...c.interests,...c.desiredGroupTags].map(normalize)),hits=[...wanted].filter(x=>pool.has(x)).length;if(!hits)continue;score+=Math.min(30,hits*10);reasons.push('TAG_MATCH');}
+      matches.push({candidate:c,score,reasonCodes:reasons});
+    }
+    return matches.sort((a,b)=>b.score-a.score||a.candidate.displayAlias.localeCompare(b.candidate.displayAlias)).slice(0,20);
+  }
+
+  async candidateFit(targetTenantId:Id,groupId:Id,candidateId:Id):Promise<{candidate:PublicCandidateProfile;score:number;reasonCodes:string[];advisoryOnly:true;contactShared:false}>{
+    await requireManager(this.repo,this.kernel,targetTenantId,groupId);
+    const row=(await this.repo.listWorkspaceRecords(PUBLIC_CANDIDATE_TENANT,'MEMBERSHIP.PORTFOLIO')).find(x=>x.id===candidateId&&x.status==='ACTIVE'&&Boolean(x.data.optIn));if(!row)throw new Error('CANDIDATE_NOT_FOUND');
+    const candidate=candidateProjection(row),listing=await this.repo.getPublicGroupListing(groupId);let score=10;const reasons:string[]=['OPT_IN_CANDIDATE'];
+    if(listing?.locality&&normalize(listing.locality)===normalize(candidate.locality)){score+=30;reasons.push('LOCALITY_MATCH');}
+    const groupTags=new Set([...(listing?.missionTags??[]),...(listing?.activityTags??[])].map(normalize)),candidateTags=new Set([...candidate.skills,...candidate.interests,...candidate.desiredGroupTags].map(normalize)),hits=[...groupTags].filter(x=>candidateTags.has(x)).length;
+    if(hits){score+=Math.min(50,hits*10);reasons.push('PUBLIC_TAG_AFFINITY');}
+    if(listing?.recruiting){score+=10;reasons.push('GROUP_RECRUITING');}
+    return{candidate,score:Math.min(100,score),reasonCodes:reasons,advisoryOnly:true,contactShared:false};
+  }
+
+  async createRecruitmentCampaign(targetTenantId:Id,groupId:Id,input:{title:string;message?:string;locality?:string;tags?:string[]}):Promise<WorkspaceRecord>{
+    await requireManager(this.repo,this.kernel,targetTenantId,groupId);const ctx=this.kernel.context.get(),title=cleanText(input.title,160);if(!title)throw new Error('RECRUITMENT_TITLE_REQUIRED');const stamp=now();
+    const record:WorkspaceRecord={id:makeId('recruitment'),tenantId:targetTenantId,groupId,moduleId:'MEMBERSHIP.RECRUITMENT',title,status:'ACTIVE',tags:['recruitment','state:ACTIVE'],data:{campaignState:'ACTIVE',message:cleanText(input.message,500),locality:cleanText(input.locality,120),tags:cleanTags(input.tags),candidateContactPolicy:'OPT_IN_ONLY'},createdBy:ctx.actorId,createdAt:stamp,updatedAt:stamp};
+    await this.repo.saveWorkspaceRecord(record);return record;
+  }
+
+  async recruitmentCampaigns(targetTenantId:Id,groupId:Id):Promise<WorkspaceRecord[]>{
+    await requireManager(this.repo,this.kernel,targetTenantId,groupId);return this.repo.listWorkspaceRecords(targetTenantId,'MEMBERSHIP.RECRUITMENT',groupId);
+  }
+
+  async setRecruitmentCampaignState(targetTenantId:Id,groupId:Id,id:Id,state:'ACTIVE'|'PAUSED'|'CLOSED'):Promise<WorkspaceRecord>{
+    await requireManager(this.repo,this.kernel,targetTenantId,groupId);const row=await this.repo.getWorkspaceRecord(targetTenantId,id);if(!row||row.groupId!==groupId||row.moduleId!=='MEMBERSHIP.RECRUITMENT')throw new Error('RECRUITMENT_CAMPAIGN_NOT_FOUND');const stamp=now(),next={...row,status:state==='CLOSED'?'DONE' as const:'ACTIVE' as const,tags:[...row.tags.filter(x=>!x.startsWith('state:')),'state:'+state],data:{...row.data,campaignState:state},updatedAt:stamp};await this.repo.saveWorkspaceRecord(next);return next;
   }
 }
 
