@@ -994,6 +994,37 @@
             <button type="button" class="secondary" data-value-network-preset="PICKUP">Point de retrait</button>
           </div>
 
+          <details id="smartProcurementPanel">
+            <summary><strong>Smart Procurement · fournisseurs · factures · crédit fournisseur</strong></summary>
+            <p class="truth-notice">Le coût rendu = marchandises + fret + autres coûts documentés. Une dette fournisseur du groupe reste une dette du groupe et son règlement exige une preuve Ledger.</p>
+            <div class="two-col">
+              <form id="marketSupplierForm" class="form-grid">
+                <h3>Fournisseur</h3>
+                <label>Nom<input id="marketSupplierName" required></label>
+                <label>Localité<input id="marketSupplierLocality"></label>
+                <label>Contact / référence<input id="marketSupplierContact"></label>
+                <label>Conditions de paiement<input id="marketSupplierTerms"></label>
+                <label>Preuve de vérification<input id="marketSupplierEvidence" placeholder="Registre, facture, visite, contrat…"></label>
+                <button class="primary">Enregistrer le fournisseur</button>
+              </form>
+              <div><h3>Fournisseurs connus</h3><div id="marketSupplierList" class="stack"></div></div>
+            </div>
+            <div class="two-col">
+              <form id="marketProcurementForm" class="form-grid">
+                <h3>Nouvel approvisionnement</h3>
+                <label>Fournisseur<select id="marketProcurementSupplier" required></select></label>
+                <label>Débiteur<select id="marketProcurementDebtorType"><option value="GROUP">Groupe</option><option value="BUSINESS">Activité privée</option></select></label>
+                <label>Référence débiteur<input id="marketProcurementDebtorRef" placeholder="Auto = groupe actif"></label>
+                <label class="full">Lignes SKU | Libellé | Qté | Coût unitaire<textarea id="marketProcurementLines" rows="4" required placeholder="HUILE-1 | Huile 1L | 20 | 1200"></textarea></label>
+                <label>Fret XAF<input id="marketProcurementFreight" type="number" min="0" step="1" value="0"></label>
+                <label>Autres coûts XAF<input id="marketProcurementOther" type="number" min="0" step="1" value="0"></label>
+                <label>Échéance crédit éventuel<input id="marketProcurementCreditDue" type="date"></label>
+                <button class="primary">Créer l’approvisionnement</button>
+              </form>
+              <div><h3>Cycle d’approvisionnement</h3><div id="marketProcurementList" class="stack"></div></div>
+            </div>
+          </details>
+
           <div class="two-col">
             <form id="socialFlashForm" class="form-grid">
               <h3>Liquidation · Surplus · Rescue Deal</h3>
