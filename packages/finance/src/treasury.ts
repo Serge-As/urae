@@ -65,9 +65,10 @@ export class TreasuryService{
       sourceId:record.id,idempotencyKey:input.idempotencyKey,kind:'opening_balance'});
     return{record,entry};
   }
-  async createEnvelope(groupId:Id,input:{name:string;budgetAmount:number;purpose?:string;currency?:string}){
+  async createEnvelope(groupId:Id,input:{name:string;budgetAmount:number;purpose?:string;currency?:string;membershipId?:Id}){
     await this.access(groupId,true);const name=input.name.trim();if(!name)throw Error('ENVELOPE_NAME_REQUIRED');if(!Number.isSafeInteger(input.budgetAmount)||input.budgetAmount<0)throw Error('INVALID_ENVELOPE_BUDGET');
-    const ctx=this.kernel.context.get(),stamp=now(),record:FinanceRecord={id:makeId('envelope'),tenantId:ctx.tenantId,groupId,moduleId:'FINANCE.ENVELOPES',title:name,summary:input.purpose?.trim().slice(0,800),status:'ACTIVE',tags:['budget-envelope','classification-only'],data:{specializedKind:'BUDGET_ENVELOPE' as any,budgetAmount:input.budgetAmount,allocatedAmount:0,remainingAmount:input.budgetAmount,currency:input.currency??'XAF',allocationsJson:'[]',ledgerMutation:false},createdBy:ctx.actorId,createdAt:stamp,updatedAt:stamp};
+    const ctx=this.kernel.context.get();if(input.membershipId){const member=await this.repo.getMembership(ctx.tenantId,groupId,input.membershipId);if(!member||member.status!=='active')throw Error('MEMBERSHIP_NOT_FOUND');}
+    const stamp=now(),record:FinanceRecord={id:makeId('envelope'),tenantId:ctx.tenantId,groupId,moduleId:'FINANCE.ENVELOPES',title:name,summary:input.purpose?.trim().slice(0,800),status:'ACTIVE',tags:['budget-envelope','classification-only'],data:{specializedKind:'BUDGET_ENVELOPE' as any,membershipId:input.membershipId??null,budgetAmount:input.budgetAmount,allocatedAmount:0,remainingAmount:input.budgetAmount,currency:input.currency??'XAF',allocationsJson:'[]',ledgerMutation:false},createdBy:ctx.actorId,createdAt:stamp,updatedAt:stamp};
     await this.repo.saveWorkspaceRecord(record);await this.repo.saveAudit(this.kernel.audit.append({tenantId:ctx.tenantId,actorId:ctx.actorId,action:'BUDGET_ENVELOPE_CREATED',targetType:'workspace_record',targetId:record.id,requestId:ctx.requestId,metadata:{groupId,budgetAmount:input.budgetAmount}}));return record;
   }
   async envelopes(groupId:Id){
