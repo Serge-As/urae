@@ -45,6 +45,7 @@ import { GrowthReferralService, InMemoryReferralBudgetStore, D1ReferralBudgetSto
 import { KnowledgeAcademyService } from '../../../packages/knowledge-academy/src/index.js';
 import { ValueNetworkService } from '../../../packages/value-network/src/index.js';
 import { GroupReconstitutionService } from '../../../packages/group-reconstitution/src/index.js';
+import { MeetingReopenAuthorizationService } from '../../../packages/meeting-authorization/src/index.js';
 import { SafetyCaseService, CommitmentTrustGraphService, assessReferralStructure, type SafetyCategory, type SafetyCaseState, type SafetyAction } from '../../../packages/trust/src/index.js';
 import { authenticatedApi } from './authenticated.js';
 export { GroupLiveHub } from './group-live-hub.js';
@@ -153,6 +154,7 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
   const reconstitution=new GroupReconstitutionService(repo,kernel);
   const safety=new SafetyCaseService(repo,kernel);
   const trustGraph=new CommitmentTrustGraphService(repo,kernel);
+  const reopenAuth=new MeetingReopenAuthorizationService(repo,kernel);
   if(options.premiumLive)kernel.features.set('premium_live_ledger',true);
   const isFounderTeamActor=async()=>Boolean(options.founderTeamActors?.has(ctx.actorId))||Boolean(options.founderControl&&await options.founderControl.isPlatformOwner(ctx.actorId));
   const requireGroup=async(groupId:string,manage=false)=>{
@@ -363,6 +365,13 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
     if(trashRoute&&request.method==='GET')return json(await listTrash(trashRoute[1]!),200,cors);
     if(trashRoute&&request.method==='POST'){const body=await readJson<Record<string,unknown>>(request);return json(await trashEntity(trashRoute[1]!,String(body.kind??''),String(body.entityId??'')),201,cors);}
     if(trashRestore&&request.method==='POST')return json(await restoreTrash(trashRestore[1]!,decodeURIComponent(trashRestore[2]!)),200,cors);
+    const reopenAuthBase=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/meetings\/([^/]+)\/reopen-authorizations$/);
+    if(reopenAuthBase&&request.method==='GET')return json({items:await reopenAuth.list(reopenAuthBase[1]!,reopenAuthBase[2]!)},200,cors);
+    if(reopenAuthBase&&request.method==='POST'){const body=await readJson<Record<string,unknown>>(request);return json(await reopenAuth.create(reopenAuthBase[1]!,reopenAuthBase[2]!,{reason:String(body.reason??''),expiresAt:body.expiresAt?String(body.expiresAt):undefined,scope:body.scope?String(body.scope):undefined}),201,cors);}
+    const reopenAuthApprove=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/meetings\/([^/]+)\/reopen-authorizations\/([^/]+)\/approve$/);
+    if(reopenAuthApprove&&request.method==='POST'){const row=await reopenAuth.approve(reopenAuthApprove[1]!,reopenAuthApprove[3]!);if(String(row.data.meetingId)!==reopenAuthApprove[2]!)throw Error('REOPEN_AUTH_NOT_FOUND');return json(row,200,cors);}
+    const reopenAuthCancel=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/meetings\/([^/]+)\/reopen-authorizations\/([^/]+)\/cancel$/);
+    if(reopenAuthCancel&&request.method==='POST'){const body=await readJson<Record<string,unknown>>(request),row=await reopenAuth.cancel(reopenAuthCancel[1]!,reopenAuthCancel[3]!,String(body.reason??''));if(String(row.data.meetingId)!==reopenAuthCancel[2]!)throw Error('REOPEN_AUTH_NOT_FOUND');return json(row,200,cors);}
     const financialCellBase=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/meetings\/([^/]+)\/financial-cells$/);
     const financialCellApply=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/meetings\/([^/]+)\/financial-cells\/([^/]+)\/apply$/);
     if(financialCellBase&&request.method==='POST'){
@@ -1133,7 +1142,7 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
     const contributionRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/contributions\/cash$/);
     if(contributionRoute&&request.method==='POST'){
       const body=await readJson<Record<string,unknown>>(request);
-      const receipt=await ledger.recordCashContribution({tenantId:ctx.tenantId,groupId:contributionRoute[1]!,membershipId:String(body.membershipId??''),amount:finite(body.amount),currency:String(body.currency??'XAF'),meetingId:body.meetingId?String(body.meetingId):undefined,rubricId:body.rubricId?String(body.rubricId):undefined,lateReason:body.lateReason?String(body.lateReason):undefined,approverIds:strArray(body.approverIds),idempotencyKey:String(body.idempotencyKey??request.headers.get('x-idempotency-key')??makeId('idem'))});
+      const receipt=await ledger.recordCashContribution({tenantId:ctx.tenantId,groupId:contributionRoute[1]!,membershipId:String(body.membershipId??''),amount:finite(body.amount),currency:String(body.currency??'XAF'),meetingId:body.meetingId?String(body.meetingId):undefined,rubricId:body.rubricId?String(body.rubricId):undefined,lateReason:body.lateReason?String(body.lateReason):undefined,approverIds:strArray(body.approverIds),lateAuthorizationId:body.lateAuthorizationId?String(body.lateAuthorizationId):undefined,idempotencyKey:String(body.idempotencyKey??request.headers.get('x-idempotency-key')??makeId('idem'))});
       const entry=await repo.getLedgerEntry(ctx.tenantId,contributionRoute[1]!,receipt.ledgerEntryId);
       if(entry)await dispatchContributionProjection(contributionRoute[1]!,receipt,entry);
       // The financial transaction is authoritative once D1 has committed it.
@@ -2043,7 +2052,7 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
       const markApplied=async()=>{const at=new Date().toISOString();await repo.saveWorkspaceRecord({id:markerId,tenantId:ctx.tenantId,groupId:(item.payload as any).groupId?String((item.payload as any).groupId):undefined,moduleId:'OFFLINE.OUTBOX_ACK',title:'Offline operation acknowledged',summary:undefined,status:'DONE',tags:['offline','idempotency','type:'+item.type],data:{type:item.type,idempotencyKey:item.idempotencyKey},createdBy:ctx.actorId,createdAt:at,updatedAt:at});};
       if(item.type==='CONTRIBUTION_CASH_RECORDED'){
         const p=item.payload;const groupId=String(p.groupId??'');
-        const receipt=await ledger.recordCashContribution({tenantId:ctx.tenantId,groupId,membershipId:String(p.membershipId??''),amount:finite(p.amount),currency:String(p.currency??'XAF'),meetingId:p.meetingId?String(p.meetingId):undefined,rubricId:p.rubricId?String(p.rubricId):undefined,lateReason:p.lateReason?String(p.lateReason):undefined,approverIds:strArray(p.approverIds),idempotencyKey:item.idempotencyKey});
+        const receipt=await ledger.recordCashContribution({tenantId:ctx.tenantId,groupId,membershipId:String(p.membershipId??''),amount:finite(p.amount),currency:String(p.currency??'XAF'),meetingId:p.meetingId?String(p.meetingId):undefined,rubricId:p.rubricId?String(p.rubricId):undefined,lateReason:p.lateReason?String(p.lateReason):undefined,approverIds:strArray(p.approverIds),lateAuthorizationId:p.lateAuthorizationId?String(p.lateAuthorizationId):undefined,idempotencyKey:item.idempotencyKey});
         const entry=await repo.getLedgerEntry(ctx.tenantId,groupId,receipt.ledgerEntryId);
         if(entry)await dispatchContributionProjection(groupId,receipt,entry);
         await markApplied();
