@@ -101,8 +101,11 @@ const normalizeLaunchProfile=(profile:GroupProjectLaunchProfile|undefined):Group
   if(expectedMembers!==undefined&&(!Number.isSafeInteger(expectedMembers)||expectedMembers<1||expectedMembers>100000))throw new Error('INVALID_EXPECTED_MEMBERS');
   const expectedSessions=profile?.cycle?.expectedSessions;
   if(expectedSessions!==undefined&&(!Number.isSafeInteger(expectedSessions)||expectedSessions<1||expectedSessions>10000))throw new Error('INVALID_EXPECTED_SESSIONS');
+  const tontineVariant=profile?.tontineVariant??'MONEY';
+  if(!['MONEY','IN_KIND','HYBRID'].includes(tontineVariant))throw new Error('INVALID_TONTINE_VARIANT');
   return structuredClone({
     origin,
+    tontineVariant,
     cycle:profile?.cycle,
     members:profile?.members,
     communication:profile?.communication,
@@ -181,9 +184,11 @@ export class FoundationService {
     if (!GOVERNANCE_MODELS.has(input.governanceModel)) throw new Error('INVALID_GOVERNANCE_MODEL');
     const plans=input.rubrics===undefined?undefined:validateLaunchRubrics(input.rubrics);
     const launchProfile=normalizeLaunchProfile(input.launchProfile);
+    if(input.kind!=='rotating_tontine'&&input.launchProfile?.tontineVariant!==undefined)throw new Error('TONTINE_VARIANT_REQUIRES_ROTATING_FAMILY');
+    if(input.kind!=='rotating_tontine')delete (launchProfile as any).tontineVariant;
     if(launchProfile.origin.mode==='TRANSFORM_REGISTERED'){
       const source=await assertCanManageGroup(this.repo,context,input.tenantId,String(launchProfile.origin.sourceGroupId));
-      if(source.kind!=='rotating_tontine'&&source.kind!=='in_kind_tontine')throw new Error('SOURCE_GROUP_NOT_TONTINE');
+      if(!['rotating_tontine','in_kind_tontine','hybrid'].includes(source.kind))throw new Error('SOURCE_GROUP_NOT_TONTINE');
     }
     const currency=plans?.[0]?.nominalAmount.currency??input.nominalContribution?.currency??'XAF';
     // Legacy fields are retained for saved projects; rubric plans are the authority for new configurations.
