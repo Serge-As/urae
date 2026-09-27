@@ -73,9 +73,13 @@ export function mountBusinessStudioUI({app,navigate=()=>{},notify=()=>{},showErr
 
   button('Nouveau mandat',async()=>{
     if(!app.activeGroup())throw new Error('ACTIVE_GROUP_REQUIRED');
-    const srv=field('Services du mandat','text','services'),start=field('Début','date','startsAt'),end=field('Fin facultative','date','endsAt'),model=selectField('Honoraires','feeModel',[['FIXED','Forfait'],['PER_SESSION','Par séance'],['PERCENT_SANDBOX','Pourcentage — simulation seulement'],['CUSTOM','Personnalisé']]),fee=field('Montant / base honoraires','number','feeAmount');
-    const d=await dialogForm('Créer un mandat pour le groupe actif',[srv,start,end,model,fee]);if(!d)return;
-    await app.createBusinessMandate({groupId:app.activeGroup(),services:String(d.services).split(',').map(x=>x.trim()).filter(Boolean),startsAt:d.startsAt,endsAt:d.endsAt||undefined,feeModel:d.feeModel,feeAmount:num(d.feeAmount),currency:'XAF'});notify('Mandat créé en brouillon.');await refresh();
+    const srv=field('Services du mandat','text','services'),start=field('Début','date','startsAt'),end=field('Fin facultative','date','endsAt'),
+      rights=selectField('Droits de mission','rightsPack',[['ADVICE','Conseil + rapports'],['MANAGEMENT','Appui séances + documents + membres + communication'],['BUSINESS','Approvisionnement + Business + rapports'],['TRAINING','Formation + rapports']]),
+      approvers=field('Rôles pouvant approuver','text','approverRoles','founder,president,treasurer,manager'),minimum=field('Nombre minimum d’approbations distinctes','number','minimumApprovals','2'),
+      model=selectField('Honoraires','feeModel',[['FIXED','Forfait'],['PER_SESSION','Par séance'],['PERCENT_SANDBOX','Pourcentage — simulation seulement'],['CUSTOM','Personnalisé']]),fee=field('Montant / base honoraires','number','feeAmount');
+    const d=await dialogForm('Créer un mandat pour le groupe actif',[srv,start,end,rights,approvers,minimum,model,fee]);if(!d)return;
+    const packs={ADVICE:['GROUP_ADVICE','REPORTING'],MANAGEMENT:['MEETING_SUPPORT','DOCUMENT_SUPPORT','REPORTING','MEMBER_ADMIN_SUPPORT','COMMUNICATION_SUPPORT'],BUSINESS:['PROCUREMENT_SUPPORT','BUSINESS_SUPPORT','REPORTING'],TRAINING:['TRAINING_SUPPORT','REPORTING']};
+    await app.createBusinessMandate({groupId:app.activeGroup(),services:String(d.services).split(',').map(x=>x.trim()).filter(Boolean),startsAt:d.startsAt,endsAt:d.endsAt||undefined,feeModel:d.feeModel,feeAmount:num(d.feeAmount),currency:'XAF',delegatedRights:packs[d.rightsPack]??packs.ADVICE,approvalsRequired:String(d.approverRoles).split(',').map(x=>x.trim()).filter(Boolean),minimumApprovals:Math.max(1,num(d.minimumApprovals)||1)});notify('Mandat créé en brouillon. Il doit atteindre son quorum d’approbations avant activation.');await refresh();
   });
 
   button('Nouveau prospect / client',async()=>{
@@ -167,7 +171,7 @@ export function mountBusinessStudioUI({app,navigate=()=>{},notify=()=>{},showErr
   const refresh=async()=>{
     metrics.replaceChildren();guidance.querySelectorAll(':scope > :not(h3)').forEach(x=>x.remove());list.replaceChildren();
     try{
-      const [s,records,proc,profitability,brief]=await Promise.all([app.businessSummary(),app.businessRecords(),app.activeGroup()?app.marketProcurement().catch(()=>({procurements:[],credits:[],suppliers:[]})):Promise.resolve({procurements:[],credits:[],suppliers:[]}),app.businessProfitability().catch(()=>[]),app.businessOperatingBrief().catch(()=>({actions:[],guardrails:[]}))]);
+      const [s,records,groupMandates,proc,profitability,brief]=await Promise.all([app.businessSummary(),app.businessRecords(),app.activeGroup()?app.businessMandatesForGroup().catch(()=>[]):Promise.resolve([]),app.activeGroup()?app.marketProcurement().catch(()=>({procurements:[],credits:[],suppliers:[]})):Promise.resolve({procurements:[],credits:[],suppliers:[]}),app.businessProfitability().catch(()=>[]),app.businessOperatingBrief().catch(()=>({actions:[],guardrails:[]}))]);
       for(const [label,value,note] of [
         ['Recettes encaissées',money(s.received),'factures encaissées + revenus privés'],
         ['Revenus privés directs',money(s.directRevenue),'hors cotisations collectives'],
@@ -201,11 +205,24 @@ export function mountBusinessStudioUI({app,navigate=()=>{},notify=()=>{},showErr
 
       const breakdown=el('details');breakdown.append(el('summary','Lire la structure des recettes et dépenses'));const b=el('div',undefined,'two-col'),rev=el('div'),exp=el('div');rev.append(el('h4','Recettes privées par origine'));exp.append(el('h4','Dépenses par catégorie'));for(const [k,v] of Object.entries(s.revenueBySource??{}))rev.append(row(k,money(v)));for(const [k,v] of Object.entries(s.expenseByCategory??{}))exp.append(row(k,money(v)));if(!(Object.keys(s.revenueBySource??{}).length))rev.append(el('p','Aucune recette directe.','hint'));if(!(Object.keys(s.expenseByCategory??{}).length))exp.append(el('p','Aucune dépense.','hint'));b.append(rev,exp);breakdown.append(b);guidance.append(breakdown);
 
+      if(groupMandates.length){
+        const title=el('h3','Mandats du groupe actif');list.append(title);
+        for(const r of groupMandates){
+          const state=String(r.data.mandateState??'DRAFT'),approvals=parse(r.data.approvalsJson)??[],required=Number(r.data.minimumApprovals??1),rights=parse(r.data.delegatedRightsJson)??[],services=parse(r.data.servicesJson)??[],c=el('article',undefined,'item');
+          c.append(el('strong',r.title),el('span',state,'pill'),el('p','Services : '+services.join(', '),'hint'),el('p','Droits de mission : '+rights.join(', ')+' · élévation système : non','truth-notice'),el('p','Approbations distinctes : '+approvals.length+' / '+required+' · honoraires '+money(r.data.feeAmount),'hint'));
+          if(state==='DRAFT'){
+            const approve=el('button','Approuver ce mandat','secondary');approve.type='button';approve.onclick=()=>void app.approveBusinessMandate(r.id).then(()=>{notify('Approbation enregistrée avec votre compte.');return refresh();}).catch(showError);c.append(approve);
+            if(r.createdBy===app.currentActor()&&approvals.length>=required){const activate=el('button','Activer après quorum','primary');activate.type='button';activate.onclick=()=>void app.activateBusinessMandate(r.id).then(()=>{notify('Mandat activé après contrôle du quorum.');return refresh();}).catch(showError);c.append(activate);}
+          }
+          if(state==='ACTIVE'){const end=el('button','Terminer le mandat','link-btn');end.type='button';end.onclick=()=>void(async()=>{const reason=window.prompt('Motif de fin du mandat :')?.trim();if(!reason)return;await app.endBusinessMandate(r.id,reason);notify('Mandat terminé et tracé.');await refresh();})().catch(showError);c.append(end);}
+          list.append(c);
+        }
+      }
       const recordsTitle=el('h3','Dossiers opérationnels');list.append(recordsTitle);
       if(!records.filter(x=>x.data.businessKind!=='WORKSPACE').length)list.append(el('p','Aucun dossier Business Studio pour le moment.','hint'));
       for(const r of records.filter(x=>x.data.businessKind!=='WORKSPACE').slice().sort((a,b)=>String(b.updatedAt).localeCompare(String(a.updatedAt))).slice(0,80)){
         const c=el('article',undefined,'item'),kind=String(r.data.businessKind??'DOSSIER');c.append(el('strong',r.title),el('span',kind+' · '+String(r.status),'pill'));
-        if(kind==='MANDATE'){const state=String(r.data.mandateState??'DRAFT');c.append(el('p','État : '+state+' · honoraires '+money(r.data.feeAmount),'hint'));if(state==='DRAFT'){const b=el('button','Activer le mandat','secondary');b.type='button';b.onclick=()=>void app.activateBusinessMandate(r.id).then(()=>{notify('Mandat activé.');return refresh();}).catch(showError);c.append(b);}if(state==='ACTIVE'){const end=el('button','Terminer le mandat','link-btn');end.type='button';end.onclick=()=>void(async()=>{const reason=window.prompt('Motif de fin du mandat :','Mandat arrivé à son terme.')?.trim();if(!reason)return;try{await app.endBusinessMandate(r.id,reason);notify('Mandat clôturé avec motif auditable.');await refresh();}catch(err){showError(err);}})();c.append(end);}}
+        if(kind==='MANDATE'){const state=String(r.data.mandateState??'DRAFT'),approvals=parse(r.data.approvalsJson)??[],required=Number(r.data.minimumApprovals??1),rights=parse(r.data.delegatedRightsJson)??[];c.append(el('p','État : '+state+' · approbations '+approvals.length+'/'+required+' · honoraires '+money(r.data.feeAmount),'hint'),el('p','Droits de mission : '+rights.join(', ')+' · aucune élévation automatique de permission système','truth-notice'));}
         if(kind==='CLIENT')c.append(el('p','Relation : '+String(r.data.clientState??'PROSPECT'),'hint'));
         if(kind==='OFFER'){c.append(el('p','Catalogue : '+money(r.data.unitPrice)+' · '+String(r.data.offerState??'ACTIVE'),'hint'));}
         if(kind==='REQUEST')c.append(el('p','Demande : '+String(r.data.requestState??'OPEN')+' · budget '+money(r.data.estimatedBudget),'hint'));
