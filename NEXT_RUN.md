@@ -1,3 +1,18 @@
+# NEXT RUN — ECO-SYSTEM 1.5.2.7
+
+Point de reprise exact : branche `finish/live-whatsapp-completion-20260927`.
+
+1. Exiger une qualification verte sur le HEAD final.
+2. Fusionner PR #29 dans `audit/live-completion-20260926`.
+3. Vérifier la qualification du nouveau HEAD audit, puis fusionner PR #28 dans `fix/1.5.2.6-field-persistence-pc-mobile-20260925`.
+4. Le marqueur `.github/DEPLOY_ECO_SYSTEM_1_5_2_7_LIVE_ONCE` doit déclencher `.github/workflows/deploy-1.5.2.7-live-completion.yml`.
+5. Exiger : npm CI + build + tests navigateur, sauvegarde D1 pré, migrations additives seulement, déploiement, /health + catalogue 164, realMoney=false, sauvegarde post + restauration SQLite integrity_check=ok.
+6. Après succès, consigner le SHA déployé, run, Worker version et artifacts de sauvegarde dans CURRENT_TRUTH/PROJECT_STATE.
+7. Recette terrain ensuite seulement : Chrome/Opera PC, Android 6, offline/outbox, deux gestionnaires Live, WhatsApp Share Out, Aide locale/Collation comme rubriques principales.
+
+Ne pas activer artificiellement les connecteurs externes SMS/WhatsApp provider/Telegram/Email ni les domaines planifiés sans moteur/fournisseur réel.
+
+
 # ECO-SYSTEM — NEXT RUN
 
 ## CURRENT OVERRIDE — 1.5.0 audit implementation (2026-09-23)
