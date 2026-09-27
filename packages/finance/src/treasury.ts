@@ -65,25 +65,6 @@ export class TreasuryService{
       sourceId:record.id,idempotencyKey:input.idempotencyKey,kind:'opening_balance'});
     return{record,entry};
   }
-  async createEnvelope(groupId:Id,input:{name:string;budgetAmount:number;purpose?:string;currency?:string;membershipId?:Id}){
-    await this.access(groupId,true);const name=input.name.trim();if(!name)throw Error('ENVELOPE_NAME_REQUIRED');if(!Number.isSafeInteger(input.budgetAmount)||input.budgetAmount<0)throw Error('INVALID_ENVELOPE_BUDGET');
-    const ctx=this.kernel.context.get();if(input.membershipId){const member=await this.repo.getMembership(ctx.tenantId,groupId,input.membershipId);if(!member||member.status!=='active')throw Error('MEMBERSHIP_NOT_FOUND');}
-    const stamp=now(),record:FinanceRecord={id:makeId('envelope'),tenantId:ctx.tenantId,groupId,moduleId:'FINANCE.ENVELOPES',title:name,summary:input.purpose?.trim().slice(0,800),status:'ACTIVE',tags:['budget-envelope','classification-only'],data:{specializedKind:'BUDGET_ENVELOPE' as any,membershipId:input.membershipId??null,budgetAmount:input.budgetAmount,allocatedAmount:0,remainingAmount:input.budgetAmount,currency:input.currency??'XAF',allocationsJson:'[]',ledgerMutation:false},createdBy:ctx.actorId,createdAt:stamp,updatedAt:stamp};
-    await this.repo.saveWorkspaceRecord(record);await this.repo.saveAudit(this.kernel.audit.append({tenantId:ctx.tenantId,actorId:ctx.actorId,action:'BUDGET_ENVELOPE_CREATED',targetType:'workspace_record',targetId:record.id,requestId:ctx.requestId,metadata:{groupId,budgetAmount:input.budgetAmount}}));return record;
-  }
-  async envelopes(groupId:Id){
-    await this.access(groupId,false);const ctx=this.kernel.context.get();return (await this.repo.listWorkspaceRecords(ctx.tenantId,'FINANCE.ENVELOPES',groupId)).filter(x=>x.status!=='ARCHIVED');
-  }
-  async allocateEnvelope(groupId:Id,envelopeId:Id,input:{amount:number;ledgerEntryId?:Id;note?:string}){
-    await this.access(groupId,true);amount(input.amount);const ctx=this.kernel.context.get(),record=await this.repo.getWorkspaceRecord(ctx.tenantId,envelopeId);if(!record||record.groupId!==groupId||record.moduleId!=='FINANCE.ENVELOPES')throw Error('ENVELOPE_NOT_FOUND');
-    if(input.ledgerEntryId&&!await this.repo.getLedgerEntry(ctx.tenantId,groupId,input.ledgerEntryId))throw Error('LEDGER_ENTRY_NOT_FOUND');
-    let allocations:Array<{id:string;amount:number;ledgerEntryId?:string;note?:string;allocatedAt:string;allocatedBy:string}>;try{allocations=JSON.parse(String(record.data.allocationsJson??'[]'));}catch{allocations=[];}
-    if(input.ledgerEntryId&&allocations.some(x=>x.ledgerEntryId===input.ledgerEntryId))throw Error('ENVELOPE_LEDGER_ENTRY_ALREADY_ALLOCATED');
-    const budget=Number(record.data.budgetAmount??0),allocated=allocations.reduce((n,x)=>n+Number(x.amount??0),0);if(allocated+input.amount>budget)throw Error('ENVELOPE_BUDGET_EXCEEDED');
-    allocations.push({id:makeId('env_alloc'),amount:input.amount,ledgerEntryId:input.ledgerEntryId,note:input.note?.trim().slice(0,500),allocatedAt:now(),allocatedBy:ctx.actorId});
-    const next={...record,data:{...record.data,allocationsJson:JSON.stringify(allocations),allocatedAmount:allocated+input.amount,remainingAmount:budget-allocated-input.amount,ledgerMutation:false},updatedAt:now()};await this.repo.saveWorkspaceRecord(next);
-    await this.repo.saveAudit(this.kernel.audit.append({tenantId:ctx.tenantId,actorId:ctx.actorId,action:'BUDGET_ENVELOPE_ALLOCATED',targetType:'workspace_record',targetId:record.id,requestId:ctx.requestId,metadata:{groupId,amount:input.amount,ledgerEntryId:input.ledgerEntryId??null}}));return next;
-  }
   async createCustody(groupId:Id,input:{name:string;holder:string;currency?:string}){
     const name=input.name.trim(),holder=input.holder.trim();if(!name||!holder)throw Error('CUSTODY_NAME_AND_HOLDER_REQUIRED');
     return this.save(groupId,'CUSTODY_ACCOUNT',name,{holder,currency:input.currency??'XAF'});
