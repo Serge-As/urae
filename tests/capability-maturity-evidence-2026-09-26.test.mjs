@@ -39,6 +39,8 @@ const evidence=[
  ['COMMUNITY.MICRO_ADS','packages/community-micro-ads/src/index.ts',['MICRO_AD_GROUP_NEED_REQUIRES_MANAGER','microAdState','marketplaceRef'],'apps/web/src/micro-ads-ui.js',['Micro-annonces · Je cherche / Je propose','micro-annonce personnelle','Relier au Marketplace']],
  ['MANAGER.VALUE_DISCOVERY','packages/value-discovery/src/index.ts',['ValueDiscoveryService','incomePromise:false','publicationConsent===true'],'apps/web/src/value-discovery-ui.js',['Ce que je sais faire','Suggestions expliquées','revenu garanti : non']],
  ['FINANCE.WALLET','packages/wallet/src/index.ts',['WalletService','derivedFromCanonicalLedger:true','providerTopupEnabled:false','LOAN_DEBT'],'apps/web/src/wallet-ui.js',['Wallet Eco-System','Solde général','Mobile Money/cartes restent désactivées']],
+ ['FINANCE.ENVELOPES','packages/member-envelope/src/index.ts',['MemberEnvelopeService',"scope:'MEMBER_ONLY'","otherMemberFinancialData:false","requiresRecipientBinding:true"],'apps/web/src/member-envelope-ui.js',['Mon enveloppe de séance','aucune donnée financière des autres membres','MEMBER_ENVELOPE_READY']],
+ ['OPPORTUNITY.GRAPH','packages/opportunity-graph/src/index.ts',['OpportunityGraphService','persisted:false','secondSourceOfTruth:false','privacyFiltered:true'],'apps/web/src/opportunity-graph-ui.js',['Eco Opportunity Graph','ne devient jamais une seconde base de vérité','Relations visibles']],
 ];
 test('maturity registry promotes only capabilities with owner engine and user journey evidence',()=>{
  for(const [id,owner,ownerTokens,ui,uiTokens] of evidence){
