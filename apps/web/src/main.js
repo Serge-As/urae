@@ -48,6 +48,7 @@ import { mountOpportunityIntelligenceUI } from './opportunity-intelligence-ui.js
 import { mountOperationalRegistryUI } from './operational-registry-ui.js';
 import { mountGroupLearningRegistryUI } from './group-learning-registry-ui.js';
 import { mountRoleDashboardsUI, mountGeoDirectoryUI, mountProfessionalTalentUI } from './role-directory-talent-ui.js';
+import { mountManagerPublicProfileUI } from './manager-public-profile-ui.js';
 import { mountTrustCenterUI } from './trust-center.js';
 import { mountStarterKitUI } from './starter-kit-ui.js';
 import { mountMeetingFinanceGovernanceUI } from './meeting-finance-governance-ui.js';
@@ -256,6 +257,7 @@ const groupLearningRegistryUI=mountGroupLearningRegistryUI({app,getGroups:()=>gr
 const roleDashboardsUI=mountRoleDashboardsUI({app,getGroups:()=>groups,getMembers:()=>members,getMeetings:()=>meetings,isManager,navigate:go,showError:fail});
 const geoDirectoryUI=mountGeoDirectoryUI({app,isManager,notify:toast,showError:fail});
 const professionalTalentUI=mountProfessionalTalentUI({app,notify:toast,showError:fail});
+const managerPublicProfileUI=mountManagerPublicProfileUI({app,notify:toast,showError:fail});
 const trustCenterUI=mountTrustCenterUI({app,getMembers:()=>members,isManager,notify:toast,showError:fail});
 const starterKitUI=mountStarterKitUI({app,notify:toast,showError:fail});
 const meetingFinanceGovernanceUI=mountMeetingFinanceGovernanceUI({app,getMembers:()=>members,getMeetings:()=>meetings,getRubrics:()=>rubrics,isManager,notify:toast,showError:fail});
