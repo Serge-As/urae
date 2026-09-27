@@ -8,6 +8,7 @@ const now=()=>new Date().toISOString();
 const text=(v:unknown,max:number)=>String(v??'').trim().slice(0,max);
 const safeJson=(v:unknown,max:number)=>{const raw=typeof v==='string'?v:JSON.stringify(v??null);if(raw.length>max)throw Error('STARTER_KIT_PAYLOAD_TOO_LARGE');JSON.parse(raw);return raw;};
 const safeNonNegative=(v:unknown,name:string)=>{const n=Number(v??0);if(!Number.isFinite(n)||n<0)throw Error('INVALID_STARTER_KIT_'+name);return n;};
+const safeFinite=(v:unknown,name:string)=>{const n=Number(v??0);if(!Number.isFinite(n))throw Error('INVALID_STARTER_KIT_'+name);return n;};
 
 export interface StarterKitInput{
   kitVersion?:string;generatedAt?:string;family:string;governance:string;members:number;sessions:number;
@@ -36,7 +37,7 @@ export class StarterKitService{
       kitVersion:text(input.kitVersion||'1.5.2.7',40),generatedAt,family:text(input.family,80),governance:text(input.governance,120),members,sessions,
       monetaryVolume:safeNonNegative(input.monetaryVolume,'VOLUME'),managerFees:safeNonNegative(input.managerFees,'FEES'),
       estimatedExternal:safeNonNegative(input.estimatedExternal,'EXTERNAL'),fixedCosts:safeNonNegative(input.fixedCosts,'FIXED_COSTS'),
-      estimatedMargin:Number(input.estimatedMargin??0),rubricRowsJson:safeJson(input.rubricRowsJson,120000),
+      estimatedMargin:safeFinite(input.estimatedMargin,'MARGIN'),rubricRowsJson:safeJson(input.rubricRowsJson,120000),
       checklistJson:safeJson(input.checklistJson,50000),calendarJson:safeJson(input.calendarJson,70000),risksJson:safeJson(input.risksJson,50000),
       rulesJson:safeJson(input.rulesJson,80000),recommendedModel:text(input.recommendedModel,5000),indicativeAmount:safeNonNegative(input.indicativeAmount,'INDICATIVE_AMOUNT'),
       feeExampleJson:safeJson(input.feeExampleJson,30000),orderPolicy:text(input.orderPolicy,5000),latePolicyJson:safeJson(input.latePolicyJson,30000),
