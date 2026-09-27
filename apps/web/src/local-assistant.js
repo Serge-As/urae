@@ -1,6 +1,6 @@
 const normalize=v=>String(v??'').normalize('NFKD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();
 const tokens=v=>normalize(v).split(/\s+/).filter(Boolean);
-const finance=/\b(cotisation|versement|epargne|épargne|secours|remboursement|pret|prêt|depense|dépense|sortie|collation|ration|tontine|amende|assistance)\b/i;
+const finance=/\b(cotisation|versement|epargne|secours|remboursement|pret|depense|sortie|collation|ration|aide locale|main levee|tontine|amende|assistance)\b/i;
 const amount=/\b\d[\d .]{1,}\b/;
 const launch=/\b(creer|créer|configurer|lancer|nouveau|nouvelle|transformer|association|tontine)\b/i;
 const nav=/\b(ouvre|ouvrir|va|aller|affiche|montre|go|open|show)\b/i;
@@ -18,7 +18,7 @@ const moduleScore=(query,m)=>{
 };
 export function interpretLocalAssistant(raw,modules=[]){
  const text=String(raw??'').trim();if(!text)return{intent:'EMPTY',offlineCapable:true,canWriteLedger:false,requiresHumanConfirmation:false,results:[]};
- if(finance.test(text)&&amount.test(text))return{intent:'FINANCIAL_DRAFT',raw:text,offlineCapable:true,canWriteLedger:false,requiresHumanConfirmation:true,results:[]};
+ if(finance.test(normalize(text))&&amount.test(text))return{intent:'FINANCIAL_DRAFT',raw:text,offlineCapable:true,canWriteLedger:false,requiresHumanConfirmation:true,results:[]};
  if(launch.test(text)&&/\b(creer|créer|configurer|lancer|transformer|nouveau|nouvelle)\b/i.test(text))return{intent:'LAUNCH_DRAFT',raw:text,offlineCapable:true,canWriteLedger:false,requiresHumanConfirmation:true,results:[]};
  const n=normalize(text);for(const [view,aliases] of VIEW_ALIASES)if(nav.test(text)&&aliases.some(a=>n.includes(normalize(a))))return{intent:'NAVIGATE',view,offlineCapable:true,canWriteLedger:false,requiresHumanConfirmation:false,results:[]};
  const results=modules.map(m=>({id:m.id,labelFr:m.labelFr,labelEn:m.labelEn,status:m.status,score:moduleScore(text,m)})).filter(x=>x.score>0).sort((a,b)=>b.score-a.score).slice(0,8);
