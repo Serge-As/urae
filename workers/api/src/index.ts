@@ -46,6 +46,7 @@ import { KnowledgeAcademyService } from '../../../packages/knowledge-academy/src
 import { ValueNetworkService } from '../../../packages/value-network/src/index.js';
 import { GroupReconstitutionService } from '../../../packages/group-reconstitution/src/index.js';
 import { RubricExceptionService } from '../../../packages/rubric-exceptions/src/index.js';
+import { TimeMachineService } from '../../../packages/time-machine/src/index.js';
 import { MeetingReopenAuthorizationService } from '../../../packages/meeting-authorization/src/index.js';
 import { PrepaymentService } from '../../../packages/prepayments/src/index.js';
 import { StarterKitService } from '../../../packages/starter-kit/src/index.js';
@@ -157,6 +158,7 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
   const growthReferral=new GrowthReferralService(repo,kernel,options.referralBudgets??defaultReferralBudgets);
   const reconstitution=new GroupReconstitutionService(repo,kernel);
   const rubricExceptions=new RubricExceptionService(repo,kernel);
+  const timeMachine=new TimeMachineService(repo,kernel);
   const safety=new SafetyCaseService(repo,kernel);
   const trustGraph=new CommitmentTrustGraphService(repo,kernel);
   const reopenAuth=new MeetingReopenAuthorizationService(repo,kernel);
@@ -1561,6 +1563,13 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
       return json({enabled:valid,affinities:valid?await conciergeLearning.commercialAffinities(preferenceContext[1]!):[]},200,cors);
     }
 
+    const timeMachineBase=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/time-machine$/);
+    if(timeMachineBase&&request.method==='GET')return json({items:await timeMachine.list(timeMachineBase[1]!)},200,cors);
+    if(timeMachineBase&&request.method==='POST'){const body=await readJson<Record<string,unknown>>(request);return json(await timeMachine.capture(timeMachineBase[1]!,{label:body.label?String(body.label):undefined,reason:String(body.reason??'')}),201,cors);}
+    const timeMachineOne=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/time-machine\/([^/]+)$/);
+    if(timeMachineOne&&request.method==='GET')return json(await timeMachine.get(timeMachineOne[1]!,timeMachineOne[2]!),200,cors);
+    const timeMachineCompare=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/time-machine\/compare$/);
+    if(timeMachineCompare&&request.method==='GET')return json(await timeMachine.compare(timeMachineCompare[1]!,String(url.searchParams.get('from')??''),String(url.searchParams.get('to')??'')),200,cors);
     const rubricExceptionBase=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/rubric-exceptions$/);
     if(rubricExceptionBase&&request.method==='GET')return json({items:await rubricExceptions.list(rubricExceptionBase[1]!)},200,cors);
     if(rubricExceptionBase&&request.method==='POST'){const body=await readJson<Record<string,unknown>>(request);return json(await rubricExceptions.create(rubricExceptionBase[1]!,{rubricId:String(body.rubricId??''),title:String(body.title??''),scope:String(body.scope??'GROUP') as any,targetRef:body.targetRef?String(body.targetRef):undefined,reason:String(body.reason??''),effectSummary:String(body.effectSummary??''),evidenceRef:String(body.evidenceRef??''),validFrom:body.validFrom?String(body.validFrom):undefined,validUntil:body.validUntil?String(body.validUntil):undefined}),201,cors);}
