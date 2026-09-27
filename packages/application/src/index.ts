@@ -942,6 +942,18 @@ export class ConnectedApplication {
   calendarIcsUrl():string{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.baseUrl+'/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/calendar.ics';}
 
   async listWorkspaceRecords(moduleId?:string,groupId?:string):Promise<WorkspaceRecord[]>{const p=new URLSearchParams();if(moduleId)p.set('moduleId',moduleId);if(groupId)p.set('groupId',groupId);return this.request(`/api/v1/workspaces?${p}`);}
+  async groupModels(groupId=this.activeGroupId):Promise<any[]>{if(!groupId)return[];const r=await this.request('/api/v1/groups/'+encodeURIComponent(groupId)+'/models') as any;return r.items??[];}
+  async visibleGroupModels():Promise<any[]>{const r=await this.request('/api/v1/group-models') as any;return r.items??[];}
+  async captureGroupModel(groupId:string,input:any):Promise<any>{return this.request('/api/v1/groups/'+encodeURIComponent(groupId)+'/models',{method:'POST',body:JSON.stringify(input)});}
+  async requestGroupModelReview(groupId:string,id:string):Promise<any>{return this.request('/api/v1/groups/'+encodeURIComponent(groupId)+'/models/'+encodeURIComponent(id)+'/review-request',{method:'POST',body:'{}'});}
+  async caseLaw(groupId=this.activeGroupId):Promise<any[]>{if(!groupId)return[];const r=await this.request('/api/v1/groups/'+encodeURIComponent(groupId)+'/case-law') as any;return r.items??[];}
+  async createCaseLaw(groupId:string,input:any):Promise<any>{return this.request('/api/v1/groups/'+encodeURIComponent(groupId)+'/case-law',{method:'POST',body:JSON.stringify(input)});}
+  async validateCaseLawLocal(groupId:string,id:string):Promise<any>{return this.request('/api/v1/groups/'+encodeURIComponent(groupId)+'/case-law/'+encodeURIComponent(id)+'/validate-local',{method:'POST',body:'{}'});}
+  async requestCaseLawReview(groupId:string,id:string):Promise<any>{return this.request('/api/v1/groups/'+encodeURIComponent(groupId)+'/case-law/'+encodeURIComponent(id)+'/review-request',{method:'POST',body:'{}'});}
+  async founderGroupModelQueue():Promise<any[]>{const r=await this.request('/api/v1/founder/group-models/review-queue') as any;return r.items??[];}
+  async founderReviewGroupModel(id:string,state:'STANDARD'|'RECOMMENDED'|'DEPRECATED',note:string):Promise<any>{return this.request('/api/v1/founder/group-models/'+encodeURIComponent(id)+'/review',{method:'POST',body:JSON.stringify({state,note})});}
+  async founderCaseLawQueue():Promise<any[]>{const r=await this.request('/api/v1/founder/case-law/review-queue') as any;return r.items??[];}
+  async founderReviewCaseLaw(id:string,state:'RECOMMENDED'|'REJECTED'|'ARCHIVED',note:string):Promise<any>{return this.request('/api/v1/founder/case-law/'+encodeURIComponent(id)+'/review',{method:'POST',body:JSON.stringify({state,note})});}
   async starterKit(groupId=this.activeGroupId):Promise<any|undefined>{if(!groupId)return undefined;return this.request('/api/v1/groups/'+encodeURIComponent(groupId)+'/starter-kit');}
   async saveStarterKit(groupId:string,input:any):Promise<any>{if(!groupId)throw Error('GROUP_REQUIRED');return this.request('/api/v1/groups/'+encodeURIComponent(groupId)+'/starter-kit',{method:'PUT',body:JSON.stringify(input)});}
   async createWorkspaceRecord(input:{moduleId:string;title:string;summary?:string;status?:WorkspaceStatus;tags?:string[];data?:Record<string,string|number|boolean|null>;groupId?:string}):Promise<WorkspaceRecord>{return this.request('/api/v1/workspaces',{method:'POST',body:JSON.stringify({...input,groupId:input.groupId??this.activeGroupId})});}
