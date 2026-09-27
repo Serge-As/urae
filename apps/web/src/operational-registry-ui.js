@@ -34,15 +34,26 @@ export function mountOperationalRegistryUI({app,getGroups=()=>[],getMembers=()=>
   const renderExceptions=async()=>{
     const g=group(),rubrics=getRubrics().filter(r=>r.status==='ACTIVE');body.append(createForm('Proposer une exception gouvernée',[
       {name:'title',label:'Titre',required:true},{name:'rubricId',label:'Rubrique',type:'select',options:[['','Choisir'],...rubrics.map(r=>[r.id,r.name])],required:true},
-      {name:'scope',label:'Portée',type:'select',options:[['GROUP','Groupe'],['MEMBER','Membre'],['MEETING','Séance']]},{name:'targetRef',label:'Référence ciblée',placeholder:'ID membre/séance si nécessaire'},
-      {name:'reason',label:'Motif',type:'textarea',required:true,full:true},{name:'validUntil',label:'Valable jusqu’au',type:'date'}
+      {name:'scope',label:'Portée',type:'select',options:[['GROUP','Groupe'],['MEMBERSHIP','Membre'],['MEETING','Séance']]},{name:'targetRef',label:'Référence ciblée',placeholder:'ID membre/séance si nécessaire'},
+      {name:'reason',label:'Motif',type:'textarea',required:true,full:true},{name:'effectSummary',label:'Effet exceptionnel autorisé',type:'textarea',required:true,full:true},
+      {name:'evidenceRef',label:'Preuve / PV / décision',required:true},{name:'validFrom',label:'Valable à partir du',type:'date'},{name:'validUntil',label:'Valable jusqu’au',type:'date'}
     ],'Proposer l’exception',async d=>{
       if(!g)throw Error('ACTIVE_GROUP_REQUIRED');
-      await app.createWorkspaceRecord({moduleId:'RUBRIC.EXCEPTIONS',groupId:g.id,title:d.title,summary:d.reason,status:'DRAFT',tags:['rubric-exception','state:PROPOSED'],data:{exceptionState:'PROPOSED',rubricId:String(d.rubricId),scope:String(d.scope),targetRef:String(d.targetRef??''),validUntil:isoDate(d.validUntil),reason:String(d.reason),createsLedgerEntry:false,version:1}});
-      notify('Exception proposée. Elle n’a encore aucun effet opérationnel.');
+      await app.createRubricException({rubricId:String(d.rubricId),title:String(d.title),scope:String(d.scope),targetRef:String(d.targetRef??'')||undefined,reason:String(d.reason),effectSummary:String(d.effectSummary),evidenceRef:String(d.evidenceRef),validFrom:d.validFrom?new Date(String(d.validFrom)+'T00:00:00').toISOString():undefined,validUntil:d.validUntil?isoDate(d.validUntil):undefined});
+      notify('Exception proposée : elle reste sans effet tant qu’un responsable ne l’a pas approuvée.');
     }));
-    const rows=await app.listWorkspaceRecords('RUBRIC.EXCEPTIONS',g?.id);if(!rows.length)body.append(el('p','Aucune exception documentée.','empty-state'));
-    for(const r of rows){const rubric=rubrics.find(x=>x.id===r.data.rubricId),c=el('article',undefined,'item');c.append(el('strong',r.title),el('span',String(r.data.exceptionState??r.status),'pill'),el('p',(rubric?.name??String(r.data.rubricId??''))+' · '+String(r.data.scope??'GROUP'),'hint'),el('p',r.summary??''),el('small','Cette exception ne crée aucune écriture financière.'));const a=[];if(r.data.exceptionState==='PROPOSED')a.push(['Approuver',x=>app.updateWorkspaceRecord(x.id,{status:'ACTIVE',tags:['rubric-exception','state:APPROVED'],data:{...x.data,exceptionState:'APPROVED',approvedAt:new Date().toISOString(),createsLedgerEntry:false}}),'primary']);if(r.status!=='ARCHIVED')a.push(['Clore',x=>app.updateWorkspaceRecord(x.id,{status:'ARCHIVED',data:{...x.data,exceptionState:'CLOSED',closedAt:new Date().toISOString()}}),'link-btn']);c.append(actions(r,a));body.append(c);}
+    const rows=await app.rubricExceptions();if(!rows.length)body.append(el('p','Aucune exception documentée.','empty-state'));
+    for(const r of rows){
+      const rubric=rubrics.find(x=>x.id===r.data.rubricId),state=String(r.data.exceptionState??r.status),c=el('article',undefined,'item');
+      c.append(el('strong',r.title),el('span',state,'pill'),el('p',(rubric?.name??String(r.data.rubricId??''))+' · '+String(r.data.scope??'GROUP')+(r.data.targetRef?' · '+String(r.data.targetRef):''),'hint'),el('p',String(r.data.reason??r.summary??'')),el('p','Effet exceptionnel : '+String(r.data.effectSummary??'—'),'hint'),el('small','Preuve : '+String(r.data.evidenceRef??'—')+' · période : '+new Date(String(r.data.validFrom??r.createdAt)).toLocaleDateString('fr-FR')+(r.data.validUntil?' → '+new Date(String(r.data.validUntil)).toLocaleDateString('fr-FR'):' · sans date de fin')+' · aucun mouvement d’argent automatique'));
+      const a=[];
+      if(state==='PROPOSED'){
+        a.push(['Approuver',async x=>{const note=window.prompt('Motif de validation :')?.trim();if(!note)return;await app.decideRubricException(x.id,'APPROVED',note);},'primary']);
+        a.push(['Rejeter',async x=>{const note=window.prompt('Motif du rejet :')?.trim();if(!note)return;await app.decideRubricException(x.id,'REJECTED',note);},'secondary']);
+      }
+      if(['PROPOSED','APPROVED'].includes(state))a.push(['Clore',async x=>{const note=window.prompt('Motif de clôture :')?.trim();if(!note)return;await app.closeRubricException(x.id,note);},'link-btn']);
+      if(a.length)c.append(actions(r,a));body.append(c);
+    }
   };
 
   const renderTime=async()=>{
