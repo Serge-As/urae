@@ -48,9 +48,9 @@ export class CommunityMicroAdService{
    const next={...r,data:{...r.data,marketplaceKind:type==='SEEK'?'NEED':'OFFER',marketplaceRef:target.id,marketplaceLinkedAt:now()},updatedAt:now()};await this.repo.saveWorkspaceRecord(next);return next;
  }
  async list(groupId:Id,input:{locality?:string;type?:MicroAdType;includeClosed?:boolean}={}){
-   await this.member(groupId);const c=this.ctx(),at=Date.now(),rows=(await this.repo.listWorkspaceRecords(c.tenantId,'COMMUNITY.MICRO_ADS',groupId)).filter(x=>!x.tags.includes('micro-ad-report'));
+   const g=await this.member(groupId);const c=this.ctx(),membership=(await this.repo.listMemberships(c.tenantId,groupId)).find(x=>x.userId===c.actorId&&x.status==='active'),manager=g.createdBy===c.actorId||Boolean(membership?.roles.some(role=>['founder','manager','admin','president','secretary'].includes(role))),at=Date.now(),rows=(await this.repo.listWorkspaceRecords(c.tenantId,'COMMUNITY.MICRO_ADS',groupId)).filter(x=>!x.tags.includes('micro-ad-report'));
    const out=[];for(const r of rows){let state=String(r.data.microAdState??'DRAFT');if(state==='PUBLISHED'&&Date.parse(String(r.data.expiresAt))<=at){state='EXPIRED';const next={...r,status:'DONE' as const,tags:['micro-ad','type:'+String(r.data.microAdType),'state:EXPIRED'],data:{...r.data,microAdState:'EXPIRED',expiredAt:now()},updatedAt:now()};await this.repo.saveWorkspaceRecord(next);r.data=next.data;r.status=next.status;r.tags=next.tags;}
-     if(!input.includeClosed&&!['DRAFT','PUBLISHED'].includes(state))continue;if(input.type&&r.data.microAdType!==input.type)continue;if(input.locality&&String(r.data.locality).toLowerCase()!==input.locality.toLowerCase())continue;out.push(r);}
+     if(state==='DRAFT'&&r.createdBy!==c.actorId&&!manager)continue;if(!input.includeClosed&&!['DRAFT','PUBLISHED'].includes(state))continue;if(input.type&&r.data.microAdType!==input.type)continue;if(input.locality&&String(r.data.locality).toLowerCase()!==input.locality.toLowerCase())continue;out.push(r);}
    return out.sort((a,b)=>b.updatedAt.localeCompare(a.updatedAt));
  }
 }
