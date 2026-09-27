@@ -93,7 +93,7 @@ export const PRODUCT_MODULES: ProductModule[] = [
   {id:'COMMUNITY.MICRO_ADS',labelFr:'Micro-annonces',labelEn:'Community micro-listings',status:'STRUCTURAL_V1',lot:'F',canonicalDependencies:['KERNEL.POLICY'],workspace:'UNIVERSAL'},
   {id:'OPPORTUNITY.GRAPH',labelFr:'Opportunity Graph',labelEn:'Opportunity Graph',status:'STRUCTURAL_V1',lot:'F',canonicalDependencies:['KERNEL.POLICY','KERNEL.EVIDENCE'],workspace:'UNIVERSAL'},
   {id:'OPPORTUNITY.NEED',labelFr:'Besoins et opportunités',labelEn:'Needs & opportunities',status:'FOUNDATION_ACTIVE',lot:'F',canonicalDependencies:['KERNEL.POLICY','KERNEL.EVIDENCE'],workspace:'UNIVERSAL'},
-  {id:'TRUST.GRAPH',labelFr:'Trust Graph explicable',labelEn:'Explainable Trust Graph',status:'FOUNDATION_ACTIVE',lot:'F',canonicalDependencies:['KERNEL.POLICY','KERNEL.EVIDENCE','KERNEL.AUDIT'],workspace:'SPECIALIZED'},
+  {id:'TRUST.GRAPH',labelFr:'Trust Graph explicable',labelEn:'Explainable Trust Graph',status:'STRUCTURAL_V1',lot:'F',canonicalDependencies:['KERNEL.POLICY','KERNEL.EVIDENCE','KERNEL.AUDIT'],workspace:'UNIVERSAL'},
   {id:'MARKETPLACE.CORE',labelFr:'Marketplace',labelEn:'Marketplace',status:'FOUNDATION_ACTIVE',lot:'F',canonicalDependencies:['KERNEL.POLICY'],workspace:'UNIVERSAL'},
   {id:'MARKETPLACE.SUPPLIERS',labelFr:'Fournisseurs et sourcing',labelEn:'Suppliers & sourcing',status:'FOUNDATION_ACTIVE',lot:'F',canonicalDependencies:['KERNEL.POLICY'],workspace:'UNIVERSAL'},
   {id:'MARKETPLACE.SUPPLIER_CREDIT',labelFr:'Crédit commercial fournisseur',labelEn:'Supplier trade credit',status:'FOUNDATION_ACTIVE',lot:'F',canonicalDependencies:['KERNEL.POLICY'],workspace:'UNIVERSAL'},
