@@ -16,6 +16,8 @@ export const STARTER_RUBRIC_FACETS:Record<string,RubricFacets>={
   epargne:{direction:'BIDIRECTIONAL',obligation:'CUSTOM',medium:'CASH',refundability:'FULLY_REFUNDABLE',replenishment:'NONE',interestMode:'CUSTOM',eligibilityMode:'RULE_BASED'},
   tontine:{direction:'BIDIRECTIONAL',obligation:'MANDATORY',medium:'HYBRID',refundability:'CONDITIONAL',replenishment:'NONE',interestMode:'NONE',eligibilityMode:'RULE_BASED'},
   pret:{direction:'OUTFLOW',obligation:'OPTIONAL',medium:'CASH',refundability:'FULLY_REFUNDABLE',replenishment:'NONE',interestMode:'CUSTOM',eligibilityMode:'RULE_BASED'},
+  collation:{direction:'BIDIRECTIONAL',obligation:'CUSTOM',medium:'CASH',refundability:'NON_REFUNDABLE',replenishment:'CUSTOM',interestMode:'NONE',eligibilityMode:'RULE_BASED'},
+  aide_locale:{direction:'BIDIRECTIONAL',obligation:'CUSTOM',medium:'CASH',refundability:'CONDITIONAL',replenishment:'CUSTOM',interestMode:'NONE',eligibilityMode:'RULE_BASED'},
   main_levee:{direction:'MIXED',obligation:'EVENT_DRIVEN',medium:'HYBRID',refundability:'CUSTOM',replenishment:'CUSTOM',interestMode:'NONE',eligibilityMode:'EVENT_BASED'}
 };
 
