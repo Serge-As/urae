@@ -278,7 +278,8 @@
                 <legend>2. Famille principale</legend>
                 <label>Nom du groupe<input id="projectName" required placeholder="Ex. CERDAS 2027"></label>
                 <label>Famille<select id="groupKind"><option value="association">Association</option><option value="rotating_tontine">Tontine rotative</option></select></label>
-                <p class="hint full">Une tontine en nature reste une configuration de la tontine. Une association peut contenir zéro, une ou plusieurs tontines comme rubriques.</p>
+                <label id="tontineVariantWrap" hidden>Variante de tontine<select id="tontineVariant"><option value="MONEY">Argent</option><option value="IN_KIND">En nature</option><option value="HYBRID">Hybride argent + nature</option></select></label>
+                <p class="hint full">Une tontine en nature ou hybride reste une configuration de la famille « Tontine rotative ». Une association peut contenir zéro, une ou plusieurs tontines comme rubriques.</p>
               </fieldset>
 
               <fieldset class="launch-step-panel full" data-launch-step="3" hidden>
