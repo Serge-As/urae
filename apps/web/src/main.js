@@ -48,7 +48,6 @@ import { mountOpportunityIntelligenceUI } from './opportunity-intelligence-ui.js
 import { mountOperationalRegistryUI } from './operational-registry-ui.js';
 import { mountRoleDashboardsUI, mountGeoDirectoryUI, mountProfessionalTalentUI } from './role-directory-talent-ui.js';
 import { mountTrustCenterUI } from './trust-center.js';
-import { mountEnvelopeUI } from './finance-envelope-ui.js';
 import { mountMeetingFinanceGovernanceUI } from './meeting-finance-governance-ui.js';
 import { mountQuietWatchUI } from './quiet-watch-ui.js';
 let uiLocale = 'fr';
@@ -250,7 +249,6 @@ const roleDashboardsUI=mountRoleDashboardsUI({app,getGroups:()=>groups,getMember
 const geoDirectoryUI=mountGeoDirectoryUI({app,isManager,notify:toast,showError:fail});
 const professionalTalentUI=mountProfessionalTalentUI({app,notify:toast,showError:fail});
 const trustCenterUI=mountTrustCenterUI({app,getMembers:()=>members,isManager,notify:toast,showError:fail});
-const envelopeUI=mountEnvelopeUI({app,getMembers:()=>members,isManager,notify:toast,showError:fail});
 const meetingFinanceGovernanceUI=mountMeetingFinanceGovernanceUI({app,getMembers:()=>members,getMeetings:()=>meetings,getRubrics:()=>rubrics,isManager,notify:toast,showError:fail});
 const quietWatchUI=mountQuietWatchUI({app,notify:toast,showError:fail,isManager});
 window.addEventListener('popstate',event=>{
@@ -947,7 +945,6 @@ const openModule = async (id) => {
     const m = modules.find(x => x.id === id);
     if (!m)
         return;
-    if(m.status === 'FOUNDATION_ACTIVE' && id === 'SEARCH.UNIVERSAL'){go('ecosystem',{anchor:'universalSearchPanel',force:true});setTimeout(()=>document.querySelector('#universalSearchFull')?.focus(),60);return;}
     if(m.status === 'FOUNDATION_ACTIVE' && id === 'CALENDAR.UNIFIED'){go('ecosystem',{anchor:'unifiedCalendarPanel',force:true});const panel=document.querySelector('#unifiedCalendarPanel');if(panel?.tagName==='DETAILS')panel.open=true;void renderUnifiedCalendar();return;}
     if(m.status === 'FOUNDATION_ACTIVE' && id === 'GOVERNANCE.DOCUMENT_STUDIO'){go('documents',{force:true});void documentsUI.refresh();return;}
     if(m.status === 'FOUNDATION_ACTIVE' && id === 'RUBRIC.STARTER_KITS'){go('launch',{force:true});toast(tx('Le Kit prêt à l’emploi est généré et enregistré depuis le parcours de création du groupe.','The ready-to-use Starter Kit is generated and saved from the group creation journey.'));return;}
@@ -956,18 +953,15 @@ const openModule = async (id) => {
     if(m.status === 'FOUNDATION_ACTIVE' && id === 'DATA.QUALITY'){go('settings',{anchor:'dataQualityCenter',force:true});void dataQualityUI.refresh();return;}
     if(m.status === 'FOUNDATION_ACTIVE' && id === 'PAPER.BRIDGE'){go('documents',{force:true});void documentsUI.refresh();return;}
     if(m.status === 'FOUNDATION_ACTIVE' && id === 'GOVERNANCE.MANDATE'){go('ecosystem',{anchor:'businessStudioOperational',force:true});const panel=document.querySelector('#businessStudioOperational');if(panel?.tagName==='DETAILS')panel.open=true;void businessStudioUI.refresh();return;}
-    if(m.status === 'FOUNDATION_ACTIVE' && ['OPPORTUNITY.GRAPH','MANAGER.VALUE_DISCOVERY','MARKETPLACE.MARKET_INTELLIGENCE'].includes(id)){go('ecosystem',{anchor:'opportunityIntelligence',force:true});opportunityIntelligenceUI.open();return;}
+    if(m.status === 'FOUNDATION_ACTIVE' && id === 'MARKETPLACE.MARKET_INTELLIGENCE'){go('ecosystem',{anchor:'opportunityIntelligence',force:true});opportunityIntelligenceUI.open();return;}
     if(m.status === 'FOUNDATION_ACTIVE' && id === 'GOVERNANCE.TENDER'){go('ecosystem',{anchor:'socialCommercePanel',force:true});const panel=document.querySelector('#socialCommercePanel');if(panel?.tagName==='DETAILS')panel.open=true;return;}
-    if(m.status === 'FOUNDATION_ACTIVE' && id === 'COMMUNITY.MICRO_ADS'){go('ecosystem',{anchor:'adManagerPanel',force:true});void adManagerUI.refresh();return;}
     if(m.status === 'FOUNDATION_ACTIVE' && id === 'RUBRIC.LOCAL_AID'){go('operations',{anchor:'rubricsManagementPanel',force:true});setTimeout(()=>prepareRubricPreset('Aide locale','Rubrique principale de contribution, au même niveau métier que Collation / Ration. Confirmer la règle du groupe : montant, présence/absence, bénéficiaire, solidarité, manquant et décaissement.'),80);return;}
     if(m.status === 'FOUNDATION_ACTIVE' && id === 'RUBRIC.HAND_RAISE'){go('operations',{anchor:'rubricsManagementPanel',force:true});setTimeout(()=>prepareRubricPreset('Main levée','Rubrique principale événementielle : définir motif, bénéficiaire, participation obligatoire ou volontaire, montant ou règle de calcul, preuve et validation du groupe.'),80);return;}
     if(m.status === 'FOUNDATION_ACTIVE' && id === 'PAPER.PRINT'){go('documents',{anchor:'paperPrintCenter',force:true});void printCenterUI.refresh();return;}
-    if(m.status === 'FOUNDATION_ACTIVE' && ['GROUP.MODEL_REGISTRY','GROUP.CASE_LAW','RUBRIC.EXCEPTIONS','DATA.TIME_MACHINE','SUCCESSION.NEXT_OF_KIN'].includes(id)){go('settings',{anchor:'operationalRegistryCenter',force:true});const tab=id==='GROUP.MODEL_REGISTRY'?'models':id==='GROUP.CASE_LAW'?'cases':id==='RUBRIC.EXCEPTIONS'?'exceptions':id==='DATA.TIME_MACHINE'?'time':'succession';operationalRegistryUI.open(tab);return;}
+    if(m.status === 'FOUNDATION_ACTIVE' && ['GROUP.MODEL_REGISTRY','GROUP.CASE_LAW','RUBRIC.EXCEPTIONS','DATA.TIME_MACHINE'].includes(id)){go('settings',{anchor:'operationalRegistryCenter',force:true});const tab=id==='GROUP.MODEL_REGISTRY'?'models':id==='GROUP.CASE_LAW'?'cases':id==='RUBRIC.EXCEPTIONS'?'exceptions':'time';operationalRegistryUI.open(tab);return;}
     if(m.status === 'FOUNDATION_ACTIVE' && id === 'DASHBOARDS.ALL'){go('dashboard',{anchor:'roleDashboardsCenter',force:true});void roleDashboardsUI.refresh();return;}
-    if(m.status === 'FOUNDATION_ACTIVE' && id === 'GEO.DIRECTORY'){go('discovery',{anchor:'geoDirectoryCenter',force:true});void geoDirectoryUI.refresh();return;}
     if(m.status === 'FOUNDATION_ACTIVE' && ['CREATOR.STUDIO','MANAGER.PUBLIC_PROFILE','LEARNING.TALENT'].includes(id)){go('ecosystem',{anchor:'professionalTalentCenter',force:true});professionalTalentUI.open();return;}
     if(m.status === 'FOUNDATION_ACTIVE' && ['FINANCE.TRUST_SCORE','TRUST.GRAPH'].includes(id)){go('members',{anchor:'trustGraphCenter',force:true});void trustCenterUI.refresh();return;}
-    if(m.status === 'FOUNDATION_ACTIVE' && ['FINANCE.ENVELOPES','FINANCE.WALLET'].includes(id)){go('finance',{anchor:'advancedFinancePanel',force:true});const panel=document.querySelector('#advancedFinancePanel');if(panel?.tagName==='DETAILS')panel.open=true;if(id==='FINANCE.ENVELOPES')void envelopeUI.refresh();return;}
     if(m.status === 'FOUNDATION_ACTIVE' && ['MEETING.PREPAYMENTS','MEETING.REOPEN_AUTH'].includes(id)){go('sessions',{anchor:'meetingFinanceGovernanceCenter',force:true});meetingFinanceGovernanceUI.open();return;}
     if(m.status === 'FOUNDATION_ACTIVE' && id === 'SAFETY.QUIET_WATCH'){go('settings',{anchor:'quietWatchCenter',force:true});void quietWatchUI.refresh();return;}
     if(m.status === 'FOUNDATION_ACTIVE' && id === 'AI.LOCAL'){go('operations',{anchor:'voiceFinancialPanel',force:true});document.querySelector('#voiceFinancialPanel')?.scrollIntoView({behavior:'smooth',block:'start'});return;}
@@ -1475,7 +1469,7 @@ $('#addLaunchRubric').onclick=()=>addLaunchRubric();
 $('#addLaunchTontine').onclick=()=>addLaunchRubric({kind:'TONTINE',contributionMode:'MONEY'});
 const syncLaunchFamily=()=>{
   const family=val('groupKind');
-  if(['rotating_tontine','hybrid'].includes(family)&&!launchEditors.some(editor=>editor.read().kind==='TONTINE')){
+  if(family==='rotating_tontine'&&!launchEditors.some(editor=>editor.read().kind==='TONTINE')){
     addLaunchRubric({kind:'TONTINE',name:'Tontine',contributionMode:'MONEY'});
   }
   invalidateProject();
