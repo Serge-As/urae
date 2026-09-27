@@ -50,6 +50,7 @@ import { TimeMachineService } from '../../../packages/time-machine/src/index.js'
 import { NextOfKinService } from '../../../packages/succession/src/index.js';
 import { AnticipationService } from '../../../packages/anticipation/src/index.js';
 import { CommunityMicroAdService } from '../../../packages/community-micro-ads/src/index.js';
+import { ValueDiscoveryService } from '../../../packages/value-discovery/src/index.js';
 import { MeetingReopenAuthorizationService } from '../../../packages/meeting-authorization/src/index.js';
 import { PrepaymentService } from '../../../packages/prepayments/src/index.js';
 import { StarterKitService } from '../../../packages/starter-kit/src/index.js';
@@ -165,6 +166,7 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
   const nextOfKin=new NextOfKinService(repo,kernel);
   const anticipation=new AnticipationService(repo,kernel);
   const microAds=new CommunityMicroAdService(repo,kernel,valueNetwork);
+  const valueDiscovery=new ValueDiscoveryService(repo,kernel);
   const safety=new SafetyCaseService(repo,kernel);
   const trustGraph=new CommitmentTrustGraphService(repo,kernel);
   const reopenAuth=new MeetingReopenAuthorizationService(repo,kernel);
@@ -1573,6 +1575,9 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
       return json({enabled:valid,affinities:valid?await conciergeLearning.commercialAffinities(preferenceContext[1]!):[]},200,cors);
     }
 
+    if(url.pathname==='/api/v1/value-discovery/profile'&&request.method==='GET')return json({profile:await valueDiscovery.profile()},200,cors);
+    if(url.pathname==='/api/v1/value-discovery/profile'&&request.method==='PUT'){const body=await readJson<any>(request);return json(await valueDiscovery.saveProfile(body),200,cors);}
+    if(url.pathname==='/api/v1/value-discovery/suggestions'&&request.method==='GET')return json({items:await valueDiscovery.suggestions(finite(url.searchParams.get('limit'),30))},200,cors);
     const microAdsBase=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/micro-ads$/);
     if(microAdsBase&&request.method==='GET')return json({items:await microAds.list(microAdsBase[1]!,{locality:url.searchParams.get('locality')??undefined,type:(url.searchParams.get('type')??undefined) as any,includeClosed:url.searchParams.get('includeClosed')==='1'})},200,cors);
     if(microAdsBase&&request.method==='POST'){const body=await readJson<Record<string,unknown>>(request);return json(await microAds.create(microAdsBase[1]!,{type:String(body.type??'SEEK') as any,category:String(body.category??''),text:String(body.text??''),locality:String(body.locality??''),contactMode:String(body.contactMode??'CHAT') as any,contactRef:body.contactRef?String(body.contactRef):undefined,durationDays:body.durationDays===undefined?undefined:Number(body.durationDays) as any,customExpiresAt:body.customExpiresAt?String(body.customExpiresAt):undefined}),201,cors);}
