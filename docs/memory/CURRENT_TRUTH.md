@@ -789,3 +789,37 @@ La production est TECHNIQUEMENT QUALIFIÉE. Les nouveaux parcours restent FIELD_
 
 Le smoke distant est qualifié. La visibilité et l’ergonomie sur l’appareil réel du fondateur restent une recette terrain à constater, pas une réussite inventée.
 
+
+
+## Candidat 1.5.2.7 — Live Completion gouverné (2026-09-27)
+
+État exact :
+- branche candidate : `finish/live-whatsapp-completion-20260927` ;
+- PR : **#29**, base `audit/live-completion-20260926` ;
+- version runtime/build : `1.5.2.7-live-completion` ;
+- cache PWA : `eco-system-v1527-live-completion-20260927` ;
+- HEAD qualifié avant mise à jour documentaire : `bd6d541a350f0c86556c12fea000c3d04acb5d16` ;
+- qualification gouvernée : **run #397 / 36353667354 — SUCCESS** ;
+- catalogue : **164 capacités = 154 FOUNDATION_ACTIVE + 5 STRUCTURAL_V1 + 5 PLANNED_DOMAIN** ;
+- argent réel : **OFF** ; aucun nouveau rail de paiement réel n'est activé.
+
+Acquis principaux du candidat :
+1. Live proactif : reconnexion, heartbeat, replay/rattrapage paginé et réinjection des événements durables dans les écrans sans rafraîchissement manuel.
+2. WhatsApp : `SHARE.WHATSAPP.HANDOFF` opérationnel avec deep link Eco-System ; le provider automatisé `INTEGRATION.WHATSAPP` reste external-gated.
+3. Saisies financières canoniques conservées : aucune seconde source de vérité, aucun remplacement du Ledger.
+4. Search universelle, calendrier unifié, variantes de groupe/tontine, Starter Kit, Document Studio, Paper Bridge/Print, Data Quality et Time Machine non destructif.
+5. Prépaiements « ledger once », autorisations après clôture à comptes indépendants, enveloppes membres, Wallet dérivé du Ledger, Trust Graph explicable/advisory.
+6. Business Studio, mandats, Creator/Talent, profil public opt-in, Opportunity Graph, Value Discovery, Market Intelligence, dashboards par rôle, Assistant local, Quiet Watch et Founder AI gouverné.
+7. Correction métier verrouillée : **Collation, Ration et Aide locale sont des rubriques principales remboursables simples** ; **Main levée est un vrai domaine/rubrique Assistance/Solidarity**, espèces ou nature selon la pratique. Aucune de ces deux capacités n'est classée dans « Autres ».
+
+Capacités volontairement non déclarées complètes :
+- `GEO.DIRECTORY` : recherche par localité existante, mais géolocalisation appareil/GPS consentie complète non encore qualifiée ;
+- `INTEGRATION.SMS`, `INTEGRATION.WHATSAPP`, `INTEGRATION.TELEGRAM`, `INTEGRATION.EMAIL` : adaptateurs fournisseurs externes non activés ;
+- `COMMUNITY.VIDEO`, `MARKETPLACE.REWARDS`, `INTEGRATION.MOBILE_MONEY`, `SECURITY.MFA`, `FEDERATION.GROUP_NETWORK` : domaines planifiés, à ne pas simuler.
+
+Limites de vérité :
+- **PR #29 non fusionnée à cet instant** ;
+- **1.5.2.7 non déployée en production à cet instant** ;
+- smoke Cloudflare et BIR+ 1.5.2.7 non encore exécutés ;
+- recette réelle Chrome/Opera/mobile/offline/deux gestionnaires non encore FIELD_ACCEPTED.
+Ces états ne doivent être promus qu'après preuves correspondantes.
