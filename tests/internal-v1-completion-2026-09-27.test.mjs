@@ -49,13 +49,14 @@ test('post-close authorization reaches quorum only with distinct authenticated m
   assert.ok(receipt.latePosting?.approvedBy.includes('founder'));assert.ok(receipt.latePosting?.approvedBy.includes('manager2'));
 });
 
-test('budget envelopes stay structural until a dedicated non-duplicative allocation engine exists',async()=>{
+test('member envelopes are active private distribution projections and never a treasury budget engine',async()=>{
   const registry=await import('../.build/packages/module-registry/src/index.js');
   const capability=registry.PRODUCT_MODULES.find(x=>x.id==='FINANCE.ENVELOPES');
-  assert.equal(capability?.status,'STRUCTURAL_V1');
+  assert.equal(capability?.status,'FOUNDATION_ACTIVE');
+  assert.equal(capability?.labelFr,'Enveloppes des membres');
   const {repo,k,g,ledger}=await seed();ctx(k,'founder',g.id);
   const before=(await repo.listLedgerEntries('t6',g.id)).length;new TreasuryService(repo,k,ledger);
-  assert.equal((await repo.listLedgerEntries('t6',g.id)).length,before,'no envelope pseudo-engine may mutate the canonical ledger while the capability is structural');
+  assert.equal((await repo.listLedgerEntries('t6',g.id)).length,before,'Treasury must not reinterpret member distribution envelopes as budget allocation or create ledger entries');
 });
 
 test('internal wallet is canonical custody, reports its ledger balance and is not an external payment rail',async()=>{
