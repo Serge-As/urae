@@ -821,6 +821,8 @@ export class ConnectedApplication {
   async businessRecords():Promise<any[]>{const r=await this.request('/api/v1/business/records') as any;return r.items??[];}
   async configureBusiness(input:{name:string;currency?:string;services?:string[];locality?:string;monthlyFixedCosts?:number}):Promise<any>{return this.request('/api/v1/business/workspace',{method:'PUT',body:JSON.stringify(input)});}
   async createBusinessMandate(input:any):Promise<any>{return this.request('/api/v1/business/mandates',{method:'POST',body:JSON.stringify(input)});}
+  async businessMandatesForGroup(groupId=this.activeGroupId):Promise<any[]>{if(!groupId)return[];const r=await this.request('/api/v1/groups/'+encodeURIComponent(groupId)+'/business/mandates') as any;return r.items??[];}
+  async approveBusinessMandate(id:string):Promise<any>{return this.request('/api/v1/business/mandates/'+encodeURIComponent(id)+'/approve',{method:'POST',body:'{}'});}
   async activateBusinessMandate(id:string):Promise<any>{return this.request('/api/v1/business/mandates/'+encodeURIComponent(id)+'/activate',{method:'POST',body:'{}'});}
   async endBusinessMandate(id:string,reason:string):Promise<any>{return this.request('/api/v1/business/mandates/'+encodeURIComponent(id)+'/end',{method:'POST',body:JSON.stringify({reason})});}
   async createBusinessClient(input:any):Promise<any>{return this.request('/api/v1/business/clients',{method:'POST',body:JSON.stringify(input)});}
