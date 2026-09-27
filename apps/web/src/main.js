@@ -42,6 +42,7 @@ import { buildUnifiedCalendar } from './unified-calendar.js';
 import { mountDocumentsUI } from './documents-ui.js';
 import { mountMemberDossierUI } from './member-dossier-ui.js';
 import { mountIdentityVerificationUI } from './identity-verification-ui.js';
+import { mountDataQualityUI } from './data-quality-ui.js';
 let uiLocale = 'fr';
 try { uiLocale = localStorage.getItem('tontine.locale') === 'en' ? 'en' : 'fr'; } catch {}
 const tx = (fr,en) => runtimeTranslate(uiLocale,fr,en);
@@ -233,6 +234,7 @@ document.querySelector('#appBackBtn')?.addEventListener('click',goBack);
 const documentsUI=mountDocumentsUI({navigate:go});
 mountMemberDossierUI();
 const identityVerificationUI=mountIdentityVerificationUI({app,getGroups:()=>groups,navigate:go,notify:toast,showError:fail});
+const dataQualityUI=mountDataQualityUI({app,navigate:go,notify:toast,showError:fail});
 window.addEventListener('popstate',event=>{
     const state=event.state?.ecoNav,hash=location.hash.slice(1);
     navDepth=Math.max(0,Number(event.state?.ecoDepth??Math.max(0,navDepth-1)));
@@ -933,6 +935,8 @@ const openModule = async (id) => {
     if(m.status === 'FOUNDATION_ACTIVE' && id === 'RUBRIC.STARTER_KITS'){go('launch',{force:true});toast(tx('Le Kit prêt à l’emploi est généré et enregistré depuis le parcours de création du groupe.','The ready-to-use Starter Kit is generated and saved from the group creation journey.'));return;}
     if(m.status === 'FOUNDATION_ACTIVE' && id === 'TRUST.VERIFICATION'){go('settings',{anchor:'identityVerificationCenter',force:true});void identityVerificationUI.refresh();return;}
     if(m.status === 'FOUNDATION_ACTIVE' && id === 'AI.FOUNDER'){go('ecosystem',{anchor:'knowledgeOperational',force:true});const panel=document.querySelector('#knowledgeOperational');if(panel?.tagName==='DETAILS')panel.open=true;return;}
+    if(m.status === 'FOUNDATION_ACTIVE' && id === 'DATA.QUALITY'){go('settings',{anchor:'dataQualityCenter',force:true});void dataQualityUI.refresh();return;}
+    if(m.status === 'FOUNDATION_ACTIVE' && id === 'PAPER.BRIDGE'){go('documents',{force:true});void documentsUI.refresh();return;}
     const route = m.workspace === 'SPECIALIZED' && m.status === 'FOUNDATION_ACTIVE' ? specializedRoute(id) : undefined;
     if (route) {
         go(route);
