@@ -158,7 +158,7 @@ export const PRODUCT_MODULES: ProductModule[] = [
   {id:'EXPERIENCE.ORAL',labelFr:'Mode Oral guidé',labelEn:'Guided voice mode',status:'FOUNDATION_ACTIVE',lot:'J',canonicalDependencies:['KERNEL.POLICY'],workspace:'UNIVERSAL'},
   {id:'EXPERIENCE.UNIVERSAL_INBOX',labelFr:'Boîte universelle',labelEn:'Universal inbox',status:'FOUNDATION_ACTIVE',lot:'J',canonicalDependencies:['KERNEL.POLICY'],workspace:'SPECIALIZED'},
   {id:'SUPPORT.CENTER',labelFr:'Support, litiges et recours',labelEn:'Support, disputes & appeals',status:'FOUNDATION_ACTIVE',lot:'J',canonicalDependencies:['KERNEL.POLICY'],workspace:'SPECIALIZED'},
-  {id:'TRUST.VERIFICATION',labelFr:'Centre de vérification',labelEn:'Verification center',status:'STRUCTURAL_V1',lot:'J',canonicalDependencies:['KERNEL.POLICY','KERNEL.AUDIT'],workspace:'UNIVERSAL'},
+  {id:'TRUST.VERIFICATION',labelFr:'Centre de vérification',labelEn:'Verification center',status:'FOUNDATION_ACTIVE',lot:'J',canonicalDependencies:['KERNEL.POLICY','KERNEL.AUDIT'],workspace:'SPECIALIZED'},
   {id:'DATA.QUALITY',labelFr:'Qualité des données',labelEn:'Data quality',status:'STRUCTURAL_V1',lot:'J',canonicalDependencies:['KERNEL.POLICY'],workspace:'UNIVERSAL'},
   {id:'DATA.TIME_MACHINE',labelFr:'Time Machine',labelEn:'Time Machine',status:'STRUCTURAL_V1',lot:'J',canonicalDependencies:['KERNEL.POLICY'],workspace:'UNIVERSAL'},
   {id:'SECURITY.AUTH',labelFr:'Authentification',labelEn:'Authentication',status:'FOUNDATION_ACTIVE',lot:'J',canonicalDependencies:['KERNEL.POLICY','KERNEL.AUDIT'],workspace:'UNIVERSAL'},
