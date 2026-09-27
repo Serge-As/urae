@@ -142,7 +142,7 @@ export const PRODUCT_MODULES: ProductModule[] = [
   {id:'PAPER.PRINT',labelFr:'Impression des fiches',labelEn:'Printable forms',status:'STRUCTURAL_V1',lot:'H',canonicalDependencies:['KERNEL.POLICY'],workspace:'UNIVERSAL'},
   {id:'REPORTING.EXPORTS',labelFr:'Exports PDF/Excel/Word/CSV/JSON',labelEn:'PDF/Excel/Word/CSV/JSON exports',status:'FOUNDATION_ACTIVE',lot:'I',canonicalDependencies:['KERNEL.POLICY'],workspace:'UNIVERSAL'},
   {id:'DASHBOARDS.ALL',labelFr:'Dashboards par profil',labelEn:'Role-based dashboards',status:'STRUCTURAL_V1',lot:'I',canonicalDependencies:['KERNEL.POLICY'],workspace:'UNIVERSAL'},
-  {id:'SEARCH.UNIVERSAL',labelFr:'Recherche universelle',labelEn:'Universal search',status:'STRUCTURAL_V1',lot:'I',canonicalDependencies:['KERNEL.POLICY'],workspace:'UNIVERSAL'},
+  {id:'SEARCH.UNIVERSAL',labelFr:'Recherche universelle',labelEn:'Universal search',status:'FOUNDATION_ACTIVE',lot:'I',canonicalDependencies:['KERNEL.POLICY'],workspace:'SPECIALIZED'},
   {id:'CALENDAR.UNIFIED',labelFr:'Calendrier unifié',labelEn:'Unified calendar',status:'FOUNDATION_ACTIVE',lot:'I',canonicalDependencies:['KERNEL.POLICY'],workspace:'SPECIALIZED'},
   {id:'NOTIFY.MULTICHANNEL',labelFr:'Notifications multicanales',labelEn:'Multichannel notifications',status:'FOUNDATION_ACTIVE',lot:'I',canonicalDependencies:['KERNEL.POLICY'],workspace:'UNIVERSAL'},
   {id:'INTEGRATION.MOBILE_MONEY',labelFr:'Mobile Money sandbox',labelEn:'Mobile Money sandbox',status:'PLANNED_DOMAIN',lot:'I',canonicalDependencies:['KERNEL.POLICY'],workspace:'UNIVERSAL'},
