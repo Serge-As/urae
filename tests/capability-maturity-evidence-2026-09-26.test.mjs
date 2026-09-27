@@ -34,7 +34,8 @@ const evidence=[
  ['GOVERNANCE.TENDER','packages/market/src/index.ts',['createMarketRequest','respondMarketRequest','shortlistMarketResponse','selectMarketResponse'],'apps/web/src/advanced-ui.js',['Ajouter une réponse fournisseur','Présélectionner','Sélectionner']],
  ['COMMUNITY.MICRO_ADS','packages/ad-manager/src/index.ts',['create(groupId','frequencyCapPer7Days','selectAdDelivery'],'apps/web/src/ad-manager-ui.js',['Brouillon AdManager créé en sandbox','frequencyCapPer7Days','placements']],
  ['RUBRIC.LOCAL_AID','packages/misc-rubrics/src/index.ts',["'LOCAL_AID'",'postBatch','recordCashContribution'],'apps/web/src/misc-rubrics-ui.js',["kind:value('miscRubricCustomKind')",'Aide locale']],
- ['RUBRIC.HAND_RAISE','packages/misc-rubrics/src/index.ts',["'HAND_RAISE'",'postBatch','recordCashContribution'],'apps/web/src/misc-rubrics-ui.js',["kind:value('miscRubricCustomKind')",'Main levée']]
+ ['RUBRIC.HAND_RAISE','packages/misc-rubrics/src/index.ts',["'HAND_RAISE'",'postBatch','recordCashContribution'],'apps/web/src/misc-rubrics-ui.js',["kind:value('miscRubricCustomKind')",'Main levée']],
+ ['PAPER.PRINT','apps/web/src/print-center.js',['buildPrintSnapshot','financial:ledger?','aucune écriture financière'],'apps/web/src/main.js',['PAPER.PRINT','paperPrintCenter','printCenterUI.refresh']]
 ];
 test('maturity registry promotes only capabilities with owner engine and user journey evidence',()=>{
  for(const [id,owner,ownerTokens,ui,uiTokens] of evidence){
