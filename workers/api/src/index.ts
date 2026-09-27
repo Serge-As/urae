@@ -48,6 +48,7 @@ import { GroupReconstitutionService } from '../../../packages/group-reconstituti
 import { RubricExceptionService } from '../../../packages/rubric-exceptions/src/index.js';
 import { TimeMachineService } from '../../../packages/time-machine/src/index.js';
 import { NextOfKinService } from '../../../packages/succession/src/index.js';
+import { AnticipationService } from '../../../packages/anticipation/src/index.js';
 import { MeetingReopenAuthorizationService } from '../../../packages/meeting-authorization/src/index.js';
 import { PrepaymentService } from '../../../packages/prepayments/src/index.js';
 import { StarterKitService } from '../../../packages/starter-kit/src/index.js';
@@ -161,6 +162,7 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
   const rubricExceptions=new RubricExceptionService(repo,kernel);
   const timeMachine=new TimeMachineService(repo,kernel);
   const nextOfKin=new NextOfKinService(repo,kernel);
+  const anticipation=new AnticipationService(repo,kernel);
   const safety=new SafetyCaseService(repo,kernel);
   const trustGraph=new CommitmentTrustGraphService(repo,kernel);
   const reopenAuth=new MeetingReopenAuthorizationService(repo,kernel);
@@ -1569,6 +1571,14 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
       return json({enabled:valid,affinities:valid?await conciergeLearning.commercialAffinities(preferenceContext[1]!):[]},200,cors);
     }
 
+    const anticipationBase=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/anticipation$/);
+    if(anticipationBase&&request.method==='GET')return json({items:await anticipation.list(anticipationBase[1]!),signals:await anticipation.signals(anticipationBase[1]!)},200,cors);
+    if(anticipationBase&&request.method==='POST')return json(await anticipation.createDraft(anticipationBase[1]!),201,cors);
+    const anticipationTransition=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/anticipation\/([^/]+)\/(validate|complete|archive)$/);
+    if(anticipationTransition&&request.method==='POST'){
+      const [g,id,action]=[anticipationTransition[1]!,anticipationTransition[2]!,anticipationTransition[3]!];
+      return json(action==='validate'?await anticipation.validate(g,id):action==='complete'?await anticipation.complete(g,id):await anticipation.archive(g,id),200,cors);
+    }
     const nextOfKinBase=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/succession\/next-of-kin$/);
     if(nextOfKinBase&&request.method==='GET')return json({items:await nextOfKin.list(nextOfKinBase[1]!,url.searchParams.get('membershipId')??undefined)},200,cors);
     if(nextOfKinBase&&request.method==='POST'){const body=await readJson<Record<string,unknown>>(request);return json(await nextOfKin.create(nextOfKinBase[1]!,{membershipId:String(body.membershipId??''),contactAlias:String(body.contactAlias??''),relationship:String(body.relationship??''),contactRef:String(body.contactRef??''),consentRef:String(body.consentRef??''),notes:body.notes?String(body.notes):undefined}),201,cors);}
