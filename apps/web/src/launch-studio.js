@@ -201,9 +201,7 @@ export function mountLaunchStudio({app,getGroups,getRubrics,addRubric,invalidate
       minutes:String(kit.minutes??'').slice(0,20000),
       profileJson:JSON.stringify(kit.profile??{}).slice(0,50000)
     };
-    const existing=(await app.listWorkspaceRecords('GROUP.STARTER_KIT',groupId).catch(()=>[])).find(x=>x.tags?.includes('starter-kit:canonical'));
-    if(existing)return app.updateWorkspaceRecord(existing.id,{title:'Kit prêt à l’emploi · '+kit.groupName,summary:'Pack opérationnel de démarrage du groupe : règles, checklist, calendrier, Paper Bridge, réunion, trésorerie et risques.',status:'ACTIVE',tags:['starter-kit','starter-kit:canonical','paper-bridge','launch'],data});
-    return app.createWorkspaceRecord({moduleId:'GROUP.STARTER_KIT',groupId,title:'Kit prêt à l’emploi · '+kit.groupName,summary:'Pack opérationnel de démarrage du groupe : règles, checklist, calendrier, Paper Bridge, réunion, trésorerie et risques.',status:'ACTIVE',tags:['starter-kit','starter-kit:canonical','paper-bridge','launch'],data});
+    return app.saveStarterKit(groupId,data);
   };
 
   const renderStarterKit=(root,kit)=>{
