@@ -53,6 +53,7 @@ import { CommunityMicroAdService } from '../../../packages/community-micro-ads/s
 import { ValueDiscoveryService } from '../../../packages/value-discovery/src/index.js';
 import { MeetingReopenAuthorizationService } from '../../../packages/meeting-authorization/src/index.js';
 import { PrepaymentService } from '../../../packages/prepayments/src/index.js';
+import { WalletService } from '../../../packages/wallet/src/index.js';
 import { StarterKitService } from '../../../packages/starter-kit/src/index.js';
 import { GroupModelRegistryService, GroupCaseLawService } from '../../../packages/group-learning-registry/src/index.js';
 import { SafetyCaseService, CommitmentTrustGraphService, assessReferralStructure, type SafetyCategory, type SafetyCaseState, type SafetyAction } from '../../../packages/trust/src/index.js';
@@ -171,6 +172,7 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
   const trustGraph=new CommitmentTrustGraphService(repo,kernel);
   const reopenAuth=new MeetingReopenAuthorizationService(repo,kernel);
   const prepayments=new PrepaymentService(repo,kernel,ledger);
+  const wallet=new WalletService(repo,kernel,ledger);
   const starterKit=new StarterKitService(repo,kernel);
   const groupModels=new GroupModelRegistryService(repo,kernel);
   const groupCaseLaw=new GroupCaseLawService(repo,kernel);
@@ -1574,6 +1576,11 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
       const valid=groupConsent.purposes.COMMERCIAL_PERSONALIZATION&&await options.commercialPreferences.verify(readPreferenceCookie(request),ctx.actorId,preferenceContext[1]!);
       return json({enabled:valid,affinities:valid?await conciergeLearning.commercialAffinities(preferenceContext[1]!):[]},200,cors);
     }
+
+    if(url.pathname==='/api/v1/wallet'&&request.method==='GET')return json(await wallet.projection(),200,cors);
+    if(url.pathname==='/api/v1/wallet/reservations'&&request.method==='POST'){const body=await readJson<Record<string,unknown>>(request);return json(await wallet.reserve({groupId:String(body.groupId??''),subaccountKey:String(body.subaccountKey??''),amount:finite(body.amount),purpose:String(body.purpose??''),expiresAt:body.expiresAt?String(body.expiresAt):undefined}),201,cors);}
+    const walletRelease=url.pathname.match(/^\/api\/v1\/wallet\/reservations\/([^/]+)\/release$/);
+    if(walletRelease&&request.method==='POST')return json(await wallet.release(walletRelease[1]!),200,cors);
 
     if(url.pathname==='/api/v1/value-discovery/profile'&&request.method==='GET')return json({profile:await valueDiscovery.profile()},200,cors);
     if(url.pathname==='/api/v1/value-discovery/profile'&&request.method==='PUT'){const body=await readJson<any>(request);return json(await valueDiscovery.saveProfile(body),200,cors);}
