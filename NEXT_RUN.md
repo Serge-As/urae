@@ -305,3 +305,32 @@ Ordre obligatoire de finalisation :
 - `GEO.DIRECTORY` tant que la géolocalisation appareil consentie n'est pas implémentée/qualifiée ;
 - SMS/WhatsApp provider/Telegram/Email sans fournisseur configuré ;
 - vidéo, rewards, Mobile Money, MFA et fédération tant que leurs dépendances réelles ne sont pas présentes.
+
+
+## Reprise après production 1.5.2.7 — 2026-09-27
+
+Production :
+- version : `1.5.2.7-live-completion`
+- source déployée : `c0dcbfa4391b46773d1e2c8d6b9733cc5d8b367c`
+- Worker : `0c06d6f3-382c-4433-91b4-b071c0573ccd`
+- qualification : **36354372028 SUCCESS**
+- E2E financier navigateur : **36354371970 SUCCESS**
+- deploy/smoke/recovery : **36354371977 SUCCESS**
+- pre-recovery : artifact **10943029509**
+- post-recovery : artifact **10942949813**
+- D1 : aucune migration à appliquer
+- R2 : actif
+- catalogue : 164
+- real money : OFF
+
+Prochaine action normale : **recette terrain**, pas nouveau chantier technique aveugle.
+1. Chrome PC puis Opera PC : connexion, navigation, saisies financières, Enter, modifications, totaux, scroll.
+2. Mobile : shell 1.5.2.7, installation PWA, navigation senior/novice, saisie et retour.
+3. Offline : saisie → validation locale → outbox → retour réseau → confirmation serveur sans doublon.
+4. Deux gestionnaires : modification d'une cellule/session sur A → réception proactive sur B sans refresh ; réserve/confrontation si désaccord.
+5. WhatsApp : partage volontaire → ouverture deep link → authentification éventuelle → retour sur l'objet exact.
+6. Rubriques : confirmer Collation/Ration/Aide locale au même niveau principal ; Main levée dans Assistance/Solidarity ; « Autres » réservé aux petites rubriques correspondantes.
+7. Prêts/dettes/intérêts : simulation, décaissement négatif, intérêts après clôture, situation membre.
+8. Documenter tout défaut reproductible ; écrire/adapter le test permanent avant correction.
+
+Ne pas activer artificiellement GPS, SMS/WhatsApp provider/Telegram/Email, vidéo, rewards, Mobile Money, MFA ou fédération tant que leurs dépendances réelles ne sont pas présentes.
