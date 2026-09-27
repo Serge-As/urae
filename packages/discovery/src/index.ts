@@ -10,6 +10,7 @@ const normalize=(v:string|undefined)=>String(v??'').trim().toLocaleLowerCase();
 const tokens=(v:string|undefined)=>normalize(v).split(/[^\p{L}\p{N}]+/u).filter(Boolean);
 
 const PUBLIC_CANDIDATE_TENANT='__eco_public_candidate_projection__';
+const PUBLIC_MANAGER_TENANT='__eco_public_manager_projection__';
 const cleanText=(v:unknown,max=240)=>String(v??'').trim().replace(/\s+/g,' ').slice(0,max);
 const cleanTags=(v:unknown)=>{let raw:unknown[]=Array.isArray(v)?v:[];if(typeof v==='string'&&v.trim()){try{const parsed=JSON.parse(v);raw=Array.isArray(parsed)?parsed:v.split(',');}catch{raw=v.split(',');}}return[...new Set(raw.map(x=>normalize(String(x))).filter(Boolean))].slice(0,24);};
 export interface PublicCandidateProfile {
@@ -19,6 +20,14 @@ export interface PublicCandidateProfile {
 export interface CandidateSearchQuery {text?:string;locality?:string;tags?:string[];}
 export interface CandidateMatch {candidate:PublicCandidateProfile;score:number;reasonCodes:string[];}
 export interface CandidateInvitationView {id:Id;groupId:Id;groupName:string;campaignId?:Id;message?:string;state:'PENDING'|'INTERESTED'|'DECLINED';createdAt:string;updatedAt:string;}
+export interface PublicManagerProfile {
+  id:Id;displayAlias:string;locality?:string;expertise:string[];services:string[];bio?:string;availability?:string;optIn:boolean;
+  managedPublicGroups:Array<{groupId:Id;name:string}>;academyCertificates:string[];
+  evidenceSummary:{managedPublicGroupCount:number;academyCertificateCount:number;selfDeclaredExpertise:true};
+  contactShared:false;financialDataShared:false;rawIdentityShared:false;automaticRoleGrant:false;updatedAt:string;
+}
+export interface ManagerProfileSearchQuery {text?:string;locality?:string;expertise?:string[];}
+
 const candidateProjection=(row:WorkspaceRecord):PublicCandidateProfile=>({
   id:row.id,displayAlias:String(row.data.displayAlias??row.title),locality:row.data.locality?String(row.data.locality):undefined,
   skills:cleanTags(row.data.skills),interests:cleanTags(row.data.interests),desiredGroupTags:cleanTags(row.data.desiredGroupTags),
@@ -41,6 +50,59 @@ export interface PublishGroupListingInput extends Omit<PublicGroupListing,'id'|'
 /** Public cross-tenant projection. It deliberately never reads member lists, balances or private contacts. */
 export class DiscoveryService {
   constructor(private readonly repo:PlatformRepository,private readonly kernel:PlatformKernel){}
+
+  private managerProjection(row:WorkspaceRecord):PublicManagerProfile{
+    const groups=(()=>{try{const x=JSON.parse(String(row.data.managedPublicGroupsJson??'[]'));return Array.isArray(x)?x.map((g:any)=>({groupId:String(g.groupId??''),name:String(g.name??'')})).filter((g:any)=>g.groupId&&g.name):[];}catch{return[];}})();
+    const certs=(()=>{try{const x=JSON.parse(String(row.data.academyCertificatesJson??'[]'));return Array.isArray(x)?x.map(String).filter(Boolean):[];}catch{return[];}})();
+    return{id:row.id,displayAlias:String(row.data.displayAlias??row.title),locality:row.data.locality?String(row.data.locality):undefined,
+      expertise:cleanTags(row.data.expertiseJson),services:cleanTags(row.data.servicesJson),bio:row.data.bio?String(row.data.bio):undefined,
+      availability:row.data.availability?String(row.data.availability):undefined,optIn:Boolean(row.data.optIn),managedPublicGroups:groups,academyCertificates:certs,
+      evidenceSummary:{managedPublicGroupCount:groups.length,academyCertificateCount:certs.length,selfDeclaredExpertise:true},
+      contactShared:false,financialDataShared:false,rawIdentityShared:false,automaticRoleGrant:false,updatedAt:row.updatedAt};
+  }
+
+  async managerProfile():Promise<PublicManagerProfile|undefined>{
+    const ctx=this.kernel.context.get(),rows=await this.repo.listWorkspaceRecords(PUBLIC_MANAGER_TENANT,'MANAGER.PUBLIC_PROFILE');
+    const row=rows.find(x=>String(x.data.ownerActorId??'')===ctx.actorId);return row?this.managerProjection(row):undefined;
+  }
+
+  async saveManagerProfile(input:{displayAlias:string;locality?:string;expertise?:string[];services?:string[];bio?:string;availability?:string;optIn:boolean;sharePublicGroups?:boolean;shareAcademyCertificates?:boolean}):Promise<PublicManagerProfile>{
+    const ctx=this.kernel.context.get(),user=await this.repo.getUser(ctx.actorId);if(!user)throw new Error('USER_NOT_FOUND');
+    const alias=cleanText(input.displayAlias||user.displayName,80);if(!alias)throw new Error('MANAGER_PROFILE_ALIAS_REQUIRED');
+    const expertise=cleanTags(input.expertise),services=cleanTags(input.services);if(input.optIn&&!expertise.length&&!services.length)throw new Error('MANAGER_PROFILE_EXPERTISE_OR_SERVICE_REQUIRED');
+    const managed:Array<{groupId:Id;name:string}>=[];
+    if(input.sharePublicGroups){
+      for(const g of await this.repo.listGroups(ctx.tenantId)){
+        const membership=(await this.repo.listMemberships(ctx.tenantId,g.id)).find(x=>x.userId===ctx.actorId&&x.status==='active');
+        const manages=g.createdBy===ctx.actorId||Boolean(membership?.roles.some(r=>MANAGER_ROLES.has(r)));if(!manages)continue;
+        const listing=await this.repo.getPublicGroupListing(g.id);if(listing?.visibility==='PUBLIC'&&listing.discoverable)managed.push({groupId:g.id,name:g.name});
+      }
+    }
+    const certs:string[]=[];
+    if(input.shareAcademyCertificates){
+      for(const row of await this.repo.listWorkspaceRecords(ctx.tenantId,'LEARNING.MANAGER_ACADEMY'))if(row.createdBy===ctx.actorId&&row.data.kind==='CERTIFICATE'&&row.status==='DONE')certs.push(row.title);
+    }
+    const rows=await this.repo.listWorkspaceRecords(PUBLIC_MANAGER_TENANT,'MANAGER.PUBLIC_PROFILE'),existing=rows.find(x=>String(x.data.ownerActorId??'')===ctx.actorId),stamp=now();
+    const record:WorkspaceRecord={id:existing?.id??makeId('manager_profile'),tenantId:PUBLIC_MANAGER_TENANT,moduleId:'MANAGER.PUBLIC_PROFILE',title:alias,status:input.optIn?'ACTIVE':'ARCHIVED',tags:['public-manager-profile','consent:'+(input.optIn?'yes':'no')],
+      data:{ownerActorId:ctx.actorId,optIn:Boolean(input.optIn),displayAlias:alias,locality:cleanText(input.locality,120),expertiseJson:JSON.stringify(expertise),servicesJson:JSON.stringify(services),bio:cleanText(input.bio,700),availability:cleanText(input.availability,160),managedPublicGroupsJson:JSON.stringify(managed),academyCertificatesJson:JSON.stringify(certs),contactShared:false,financialDataShared:false,rawIdentityShared:false,automaticRoleGrant:false,selfDeclaredExpertise:true},
+      createdBy:ctx.actorId,createdAt:existing?.createdAt??stamp,updatedAt:stamp};
+    await this.repo.saveWorkspaceRecord(record);
+    await this.repo.saveAudit(this.kernel.audit.append({tenantId:ctx.tenantId,actorId:ctx.actorId,action:'PUBLIC_MANAGER_PROFILE_UPDATED',targetType:'public_manager_profile',targetId:record.id,requestId:ctx.requestId,after:{optIn:Boolean(input.optIn),expertiseCount:expertise.length,servicesCount:services.length,managedPublicGroupCount:managed.length,academyCertificateCount:certs.length,contactShared:false,financialDataShared:false,automaticRoleGrant:false}}));
+    return this.managerProjection(record);
+  }
+
+  async searchManagerProfiles(query:ManagerProfileSearchQuery={}):Promise<PublicManagerProfile[]>{
+    const q=tokens(cleanText(query.text,120)),locality=normalize(query.locality),wanted=new Set(cleanTags(query.expertise)),out:Array<{profile:PublicManagerProfile;score:number}>=[];
+    if(!q.length&&!locality&&!wanted.size)throw new Error('DISCOVERY_QUERY_REQUIRED');
+    for(const row of await this.repo.listWorkspaceRecords(PUBLIC_MANAGER_TENANT,'MANAGER.PUBLIC_PROFILE')){
+      if(row.status!=='ACTIVE'||row.data.optIn!==true)continue;const p=this.managerProjection(row),hay=normalize([p.displayAlias,p.locality,p.bio,...p.expertise,...p.services].filter(Boolean).join(' '));let score=0;
+      if(q.length){const hits=q.filter(x=>hay.includes(x)).length;if(!hits)continue;score+=Math.min(40,hits*12);}
+      if(locality){if(normalize(p.locality)!==locality)continue;score+=30;}
+      if(wanted.size){const pool=new Set([...p.expertise,...p.services].map(normalize)),hits=[...wanted].filter(x=>pool.has(x)).length;if(!hits)continue;score+=Math.min(30,hits*10);}
+      score+=Math.min(10,p.evidenceSummary.managedPublicGroupCount*3+p.evidenceSummary.academyCertificateCount);out.push({profile:p,score});
+    }
+    return out.sort((a,b)=>b.score-a.score||a.profile.displayAlias.localeCompare(b.profile.displayAlias)).slice(0,30).map(x=>x.profile);
+  }
 
   async publishGroupListing(input:PublishGroupListingInput):Promise<PublicGroupListing>{
     await requireManager(this.repo,this.kernel,input.tenantId,input.groupId);
