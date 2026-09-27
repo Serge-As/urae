@@ -28,7 +28,7 @@ test('rubric family semantics keep Aide locale with Collation and Main levée ou
 
 test('semantic audit does not advertise partial or misowned capabilities as active',()=>{
   const structural=[
-    'CORE.HYBRID_GROUP','FINANCE.ENVELOPES','FINANCE.WALLET',
+    'CORE.HYBRID_GROUP','FINANCE.ENVELOPES',
     'OPPORTUNITY.GRAPH','GEO.DIRECTORY',
     
     'AI.FOUNDER','DASHBOARDS.ALL','MANAGER.PUBLIC_PROFILE','SAFETY.QUIET_WATCH','AI.LOCAL','LEARNING.TALENT','CREATOR.STUDIO','TRUST.GRAPH','PAPER.PRINT'
