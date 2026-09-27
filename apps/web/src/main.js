@@ -937,6 +937,7 @@ const openModule = async (id) => {
     if(m.status === 'FOUNDATION_ACTIVE' && id === 'AI.FOUNDER'){go('ecosystem',{anchor:'knowledgeOperational',force:true});const panel=document.querySelector('#knowledgeOperational');if(panel?.tagName==='DETAILS')panel.open=true;return;}
     if(m.status === 'FOUNDATION_ACTIVE' && id === 'DATA.QUALITY'){go('settings',{anchor:'dataQualityCenter',force:true});void dataQualityUI.refresh();return;}
     if(m.status === 'FOUNDATION_ACTIVE' && id === 'PAPER.BRIDGE'){go('documents',{force:true});void documentsUI.refresh();return;}
+    if(m.status === 'FOUNDATION_ACTIVE' && id === 'GOVERNANCE.MANDATE'){go('ecosystem',{anchor:'businessStudioOperational',force:true});const panel=document.querySelector('#businessStudioOperational');if(panel?.tagName==='DETAILS')panel.open=true;void businessStudioUI.refresh();return;}
     const route = m.workspace === 'SPECIALIZED' && m.status === 'FOUNDATION_ACTIVE' ? specializedRoute(id) : undefined;
     if (route) {
         go(route);
