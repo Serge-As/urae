@@ -370,7 +370,7 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
     if(trashRoute&&request.method==='POST'){const body=await readJson<Record<string,unknown>>(request);return json(await trashEntity(trashRoute[1]!,String(body.kind??''),String(body.entityId??'')),201,cors);}
     if(trashRestore&&request.method==='POST')return json(await restoreTrash(trashRestore[1]!,decodeURIComponent(trashRestore[2]!)),200,cors);
     const starterKitRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/starter-kit$/);
-    if(starterKitRoute&&request.method==='GET'){const record=await starterKit.current(starterKitRoute[1]!);return record?json(record,200,cors):json({error:'NOT_FOUND'},404,cors);}
+    if(starterKitRoute&&request.method==='GET'){const record=await starterKit.current(starterKitRoute[1]!);return json(record??null,200,cors);}
     if(starterKitRoute&&request.method==='PUT'){const body=await readJson<any>(request);return json(await starterKit.save(starterKitRoute[1]!,body),200,cors);}
     const prepaymentRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/prepayments$/);
     if(prepaymentRoute&&request.method==='GET')return json({items:await prepayments.list(prepaymentRoute[1]!)},200,cors);
