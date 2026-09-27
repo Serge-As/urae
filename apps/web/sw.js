@@ -27,6 +27,7 @@ const OPTIONAL_SHELL = [
   '/src/interest-community-ui.js', '/src/ad-manager-ui.js', '/src/tontine-manager-ui.js',
   '/src/savings-yield-ui.js', '/src/external-programs-ui.js', '/src/founder-control-ui.js',
   '/src/assistance-rulebook-ui.js',
+  '/src/starter-kit-ui.js',
   '/packages/rubrics/src/launch-config.js', '/packages/rubrics/src/index.js',
   '/packages/completion/src/index.js', '/packages/module-registry/src/index.js',
   '/packages/module-registry/src/service-capabilities.js'
