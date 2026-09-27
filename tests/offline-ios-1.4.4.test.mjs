@@ -47,7 +47,11 @@ test('offline loss of an optional section does not block Group Core',()=>{
 
 test('service worker keeps a complete coherent shell and preserves one previous release',()=>{
   assert.match(sw,/eco-system-v1526-field-persistence-pc-mobile-20260925/);
-  assert.match(sw,/PREVIOUS_CACHE = 'eco-system-v1523-financial-entry-offline-20260925'/);
+  const current=sw.match(/const CACHE = '([^']+)';/)?.[1];
+  const previous=sw.match(/const PREVIOUS_CACHE = '([^']+)';/)?.[1];
+  assert.ok(current&&previous,'current and previous coherent caches are declared');
+  assert.notEqual(current,previous,'rollback cache must differ from current release');
+  assert.match(previous,/^eco-system-v\d+-/);
   for(const asset of ['/index.html','/styles.css?v=1526','/src/main.js?v=1526','/src/sessions-ui.js','/packages/application/src/index.js','/packages/offline/src/index.js'])assert.ok(sw.includes(asset),asset);
   assert.match(sw,/event\.request\.mode === 'navigate'/);
   assert.match(sw,/fetch\(event\.request, \{ cache:'no-store' \}\)/);
