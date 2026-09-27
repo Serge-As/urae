@@ -24,6 +24,7 @@ export interface PublicManagerProfile {
   id:Id;displayAlias:string;locality?:string;expertise:string[];services:string[];bio?:string;availability?:string;optIn:boolean;
   managedPublicGroups:Array<{groupId:Id;name:string}>;academyCertificates:string[];
   evidenceSummary:{managedPublicGroupCount:number;academyCertificateCount:number;selfDeclaredExpertise:true};
+  reputationEvidence:{basis:'PUBLIC_EVIDENCE_ONLY';managedPublicGroups:Array<{groupId:Id;name:string}>;academyCertificates:string[];selfDeclaredExpertise:true;opaqueScore:false};
   contactShared:false;financialDataShared:false;rawIdentityShared:false;automaticRoleGrant:false;updatedAt:string;
 }
 export interface ManagerProfileSearchQuery {text?:string;locality?:string;expertise?:string[];}
@@ -58,6 +59,7 @@ export class DiscoveryService {
       expertise:cleanTags(row.data.expertiseJson),services:cleanTags(row.data.servicesJson),bio:row.data.bio?String(row.data.bio):undefined,
       availability:row.data.availability?String(row.data.availability):undefined,optIn:Boolean(row.data.optIn),managedPublicGroups:groups,academyCertificates:certs,
       evidenceSummary:{managedPublicGroupCount:groups.length,academyCertificateCount:certs.length,selfDeclaredExpertise:true},
+      reputationEvidence:{basis:'PUBLIC_EVIDENCE_ONLY',managedPublicGroups:groups,academyCertificates:certs,selfDeclaredExpertise:true,opaqueScore:false},
       contactShared:false,financialDataShared:false,rawIdentityShared:false,automaticRoleGrant:false,updatedAt:row.updatedAt};
   }
 
