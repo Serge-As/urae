@@ -932,6 +932,7 @@ const openModule = async (id) => {
     if(m.status === 'FOUNDATION_ACTIVE' && id === 'GOVERNANCE.DOCUMENT_STUDIO'){go('documents',{force:true});void documentsUI.refresh();return;}
     if(m.status === 'FOUNDATION_ACTIVE' && id === 'RUBRIC.STARTER_KITS'){go('launch',{force:true});toast(tx('Le Kit prêt à l’emploi est généré et enregistré depuis le parcours de création du groupe.','The ready-to-use Starter Kit is generated and saved from the group creation journey.'));return;}
     if(m.status === 'FOUNDATION_ACTIVE' && id === 'TRUST.VERIFICATION'){go('settings',{anchor:'identityVerificationCenter',force:true});void identityVerificationUI.refresh();return;}
+    if(m.status === 'FOUNDATION_ACTIVE' && id === 'AI.FOUNDER'){go('ecosystem',{anchor:'knowledgeOperational',force:true});const panel=document.querySelector('#knowledgeOperational');if(panel?.tagName==='DETAILS')panel.open=true;return;}
     const route = m.workspace === 'SPECIALIZED' && m.status === 'FOUNDATION_ACTIVE' ? specializedRoute(id) : undefined;
     if (route) {
         go(route);
