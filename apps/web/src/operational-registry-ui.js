@@ -8,9 +8,9 @@ export function mountOperationalRegistryUI({app,getGroups=()=>[],getMembers=()=>
   root.append(el('div','Mémoire opérationnelle gouvernée','eyebrow'),el('h2','Registres, exceptions & Time Machine'),el('p','Ces registres documentent des décisions et snapshots. Ils ne modifient jamais automatiquement le Ledger, une règle active, un rôle membre ou un droit à l’argent.','truth-notice'));
   const tabs=el('div',undefined,'view-switch compact'),body=el('div',undefined,'stack');root.append(tabs,body);
   const sections=[
-    ['models','Modèles'],['cases','Jurisprudence'],['exceptions','Exceptions'],['time','Time Machine'],['succession','Contacts succession · préparation']
+    ['exceptions','Exceptions'],['time','Time Machine'],['succession','Contacts succession · préparation']
   ];
-  let active='models';
+  let active='exceptions';
   for(const [id,label] of sections){const b=el('button',label,id===active?'active':'');b.type='button';b.dataset.opRegistryTab=id;b.onclick=()=>{active=id;for(const x of tabs.querySelectorAll('button'))x.classList.toggle('active',x===b);void render();};tabs.append(b);}
   const hardening=document.querySelector('#hardeningHub')?.closest('section.panel');settings.insertBefore(root,hardening??null);
 
@@ -30,33 +30,6 @@ export function mountOperationalRegistryUI({app,getGroups=()=>[],getMembers=()=>
     return wrap;
   };
   const actions=(record,items)=>{const box=el('div',undefined,'actions');for(const [label,fn,cls='secondary'] of items){const b=el('button',label,cls);b.type='button';b.onclick=()=>void Promise.resolve(fn(record)).then(render).catch(showError);box.append(b);}return box;};
-
-  const renderModels=async()=>{
-    const g=group();body.append(createForm('Enregistrer le modèle actuel',[
-      {name:'name',label:'Nom du modèle',required:true,placeholder:'Ex. Association épargne + secours'},
-      {name:'evidenceRef',label:'Preuve / source',placeholder:'RI, PV, document de référence'},
-      {name:'note',label:'Quand utiliser ce modèle ?',type:'textarea',full:true}
-    ],'Enregistrer le modèle',async d=>{
-      if(!g)throw Error('ACTIVE_GROUP_REQUIRED');
-      await app.createWorkspaceRecord({moduleId:'GROUP.MODEL_REGISTRY',groupId:g.id,title:d.name,summary:d.note||'Modèle opérationnel documenté.',status:'ACTIVE',tags:['group-model','source:'+g.id],data:{registryKind:'GROUP_MODEL',sourceGroupId:g.id,family:String(g.kind??''),evidenceRef:String(d.evidenceRef??''),modelState:'ACTIVE',version:1}});
-      notify('Modèle enregistré sans modifier le groupe actif.');
-    }));
-    const rows=await app.listWorkspaceRecords('GROUP.MODEL_REGISTRY',g?.id);if(!rows.length)body.append(el('p','Aucun modèle enregistré pour ce groupe.','empty-state'));
-    for(const r of rows){const c=el('article',undefined,'item');c.append(el('strong',r.title),el('span',String(r.data.family??''),'pill'),el('p',r.summary??'','hint'));if(r.status!=='ARCHIVED')c.append(actions(r,[['Archiver',x=>app.updateWorkspaceRecord(x.id,{status:'ARCHIVED',data:{...x.data,modelState:'ARCHIVED'}}),'link-btn']]));body.append(c);}
-  };
-
-  const renderCases=async()=>{
-    const g=group();body.append(createForm('Documenter une jurisprudence métier',[
-      {name:'title',label:'Cas / titre',required:true},{name:'situation',label:'Situation rencontrée',type:'textarea',required:true,full:true},
-      {name:'decision',label:'Décision prise',type:'textarea',required:true,full:true},{name:'evidenceRef',label:'Preuve / PV / source',required:true}
-    ],'Créer le cas',async d=>{
-      if(!g)throw Error('ACTIVE_GROUP_REQUIRED');
-      await app.createWorkspaceRecord({moduleId:'GROUP.CASE_LAW',groupId:g.id,title:d.title,summary:d.situation,status:'DRAFT',tags:['case-law','needs-review'],data:{caseState:'DRAFT',decision:String(d.decision),evidenceRef:String(d.evidenceRef),sourceGroupId:g.id,version:1,autoRuleActivation:false}});
-      notify('Cas créé en brouillon. Aucune règle n’a été activée.');
-    }));
-    const rows=await app.listWorkspaceRecords('GROUP.CASE_LAW',g?.id);if(!rows.length)body.append(el('p','Aucun précédent métier documenté.','empty-state'));
-    for(const r of rows){const c=el('article',undefined,'item');c.append(el('strong',r.title),el('span',String(r.data.caseState??r.status),'pill'),el('p',r.summary??''),el('p','Décision : '+String(r.data.decision??''),'hint'),el('small','Preuve : '+String(r.data.evidenceRef??'—')+' · aucune activation automatique de règle'));const a=[];if(r.data.caseState==='DRAFT')a.push(['Valider le précédent',x=>app.updateWorkspaceRecord(x.id,{status:'ACTIVE',tags:['case-law','validated'],data:{...x.data,caseState:'VALIDATED',validatedAt:new Date().toISOString(),autoRuleActivation:false}}),'primary']);if(r.status!=='ARCHIVED')a.push(['Archiver',x=>app.updateWorkspaceRecord(x.id,{status:'ARCHIVED',data:{...x.data,caseState:'ARCHIVED'}}),'link-btn']);if(a.length)c.append(actions(r,a));body.append(c);}
-  };
 
   const renderExceptions=async()=>{
     const g=group(),rubrics=getRubrics().filter(r=>r.status==='ACTIVE');body.append(createForm('Proposer une exception gouvernée',[
@@ -100,7 +73,7 @@ export function mountOperationalRegistryUI({app,getGroups=()=>[],getMembers=()=>
 
   const render=async()=>{
     body.replaceChildren();if(!app.activeGroup()){body.append(el('p','Sélectionnez un groupe.','empty-state'));return;}if(!isManager()){body.append(el('p','Ces registres sont réservés aux responsables habilités.','empty-state'));return;}
-    try{if(active==='models')await renderModels();else if(active==='cases')await renderCases();else if(active==='exceptions')await renderExceptions();else if(active==='time')await renderTime();else await renderSuccession();}catch(e){body.append(el('p','Registre indisponible : '+String(e?.message??e),'hint'));}
+    try{if(active==='exceptions')await renderExceptions();else if(active==='time')await renderTime();else await renderSuccession();}catch(e){body.append(el('p','Registre indisponible : '+String(e?.message??e),'hint'));}
   };
   document.addEventListener('eco:group-context-changed',()=>void render());
   return{refresh:render,open:(tab)=>{if(tab&&sections.some(x=>x[0]===tab)){active=tab;for(const b of tabs.querySelectorAll('button'))b.classList.toggle('active',b.dataset.opRegistryTab===tab);}root.scrollIntoView({behavior:'smooth',block:'start'});void render();}};
