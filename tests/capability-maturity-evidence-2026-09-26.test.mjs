@@ -30,7 +30,9 @@ const evidence=[
  ['MANAGER.VALUE_DISCOVERY','packages/value-network/src/index.ts',['matchNeed','scoreBreakdown','hardReasons'],'apps/web/src/opportunity-intelligence-ui.js',['Value Discovery','Score explicable','Coût rendu']],
  ['MARKETPLACE.MARKET_INTELLIGENCE','packages/economic-intelligence/src/index.ts',['EconomicIntelligenceService','GROUP_PSEUDONYMOUS_AGGREGATE','containsIndividualFinancialData:false'],'apps/web/src/opportunity-intelligence-ui.js',['Market Intelligence','Intelligence marché agrégée','economicProfile']],
  ['AI.LOCAL','packages/voice-commands/src/index.ts',['parseVoiceFinancialCommand','matchVoiceCandidate','parseVoiceAmount'],'apps/web/src/voice-entry-ui.ts',['Rien n’est comptabilisé avant votre validation','Comprendre et prévisualiser','Valider ces saisies']],
- ['SAFETY.QUIET_WATCH','packages/trust/src/index.ts',['SafetyCaseService','UNVERIFIED_SUSPICION','automaticLegalVerdict:false'],'apps/web/src/quiet-watch-ui.js',['suspicion non vérifiée','decideSafetyCase','Enregistrer un recours']]
+ ['SAFETY.QUIET_WATCH','packages/trust/src/index.ts',['SafetyCaseService','UNVERIFIED_SUSPICION','automaticLegalVerdict:false'],'apps/web/src/quiet-watch-ui.js',['suspicion non vérifiée','decideSafetyCase','Enregistrer un recours']],
+ ['GOVERNANCE.TENDER','packages/market/src/index.ts',['createMarketRequest','respondMarketRequest','shortlistMarketResponse','selectMarketResponse'],'apps/web/src/advanced-ui.js',['Ajouter une réponse fournisseur','Présélectionner','Sélectionner']],
+ ['COMMUNITY.MICRO_ADS','packages/ad-manager/src/index.ts',['create(groupId','frequencyCapPer7Days','selectAdDelivery'],'apps/web/src/ad-manager-ui.js',['Brouillon AdManager créé en sandbox','frequencyCapPer7Days','placements']]
 ];
 test('maturity registry promotes only capabilities with owner engine and user journey evidence',()=>{
  for(const [id,owner,ownerTokens,ui,uiTokens] of evidence){
