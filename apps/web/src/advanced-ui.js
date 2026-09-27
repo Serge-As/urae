@@ -49,9 +49,11 @@ export const mountAdvancedUI=({app,notify,showError,getMembers,fmt,translate,isM
     const root=el('custodyList');if(!root||!app.activeGroup())return;
     const rows=(await app.listWorkspaceRecords(undefined,app.activeGroup())).filter(r=>r.data.specializedKind==='CUSTODY_ACCOUNT');root.replaceChildren();
     for(const x of rows){
-      const a=card(x.title,tx('Détenteur','Holder')+': '+String(x.data.holder??''),tx('Devise','Currency')+': '+String(x.data.currency??'XAF'));
-      const send=document.createElement('button');send.type='button';send.textContent=tx('Confier des espèces','Send cash');send.onclick=()=>void run(async()=>{const raw=prompt(tx('Montant à confier','Amount to send'),'10000');if(raw===null)return;await app.sendToCustody(x.id,Number(raw));notify(tx('Mouvement comptabilisé.','Movement posted.'));});
-      const back=document.createElement('button');back.type='button';back.textContent=tx('Retour en caisse','Return to cashbox');back.onclick=()=>void run(async()=>{const raw=prompt(tx('Montant restitué','Returned amount'),'10000');if(raw===null)return;await app.returnFromCustody(x.id,Number(raw));notify(tx('Retour comptabilisé.','Return posted.'));});
+      const position=await app.custodyPosition(x.id).catch(()=>({balance:0,currency:String(x.data.currency??'XAF'),internalOnly:true}));
+      const a=card(x.title,tx('Détenteur','Holder')+': '+String(x.data.holder??''),tx('Solde interne','Internal balance')+': '+fmt(Number(position.balance??0))+' '+String(position.currency??'XAF'));
+      const note=document.createElement('p');note.className='hint';note.textContent=tx('Portefeuille interne Eco-System : transfert comptable caisse ↔ dépôt. Ce n’est ni Mobile Money ni un compte bancaire externe.','Eco-System internal wallet: accounting transfer cashbox ↔ custody. It is not Mobile Money or an external bank account.');a.append(note);
+      const send=document.createElement('button');send.type='button';send.textContent=tx('Confier des espèces','Send cash');send.onclick=()=>void run(async()=>{const raw=prompt(tx('Montant à confier','Amount to send'),'10000');if(raw===null)return;await app.sendToCustody(x.id,Number(raw));notify(tx('Mouvement comptabilisé.','Movement posted.'));await renderCustody();});
+      const back=document.createElement('button');back.type='button';back.textContent=tx('Retour en caisse','Return to cashbox');back.onclick=()=>void run(async()=>{const raw=prompt(tx('Montant restitué','Returned amount'),'10000');if(raw===null)return;await app.returnFromCustody(x.id,Number(raw));notify(tx('Retour comptabilisé.','Return posted.'));await renderCustody();});
       a.append(send,back);root.append(a);
     }
   };
