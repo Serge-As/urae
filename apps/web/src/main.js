@@ -51,6 +51,7 @@ import { mountRoleDashboardsUI, mountGeoDirectoryUI } from './role-directory-tal
 import { mountCreatorTalentUI } from './creator-talent-ui.js';
 import { mountLocalAssistantUI } from './local-assistant.js';
 import { mountQuietWatchUI } from './quiet-watch-ui.js';
+import { mountFounderAIUI } from './founder-ai-ui.js';
 import { mountManagerPublicProfileUI } from './manager-public-profile-ui.js';
 import { mountTrustCenterUI } from './trust-center.js';
 import { mountStarterKitUI } from './starter-kit-ui.js';
@@ -262,6 +263,7 @@ const geoDirectoryUI=mountGeoDirectoryUI({app,isManager,notify:toast,showError:f
 const creatorTalentUI=mountCreatorTalentUI({app,notify:toast,showError:fail});
 const localAssistantUI=mountLocalAssistantUI({getModules:()=>modules,openModule:id=>openModule(id),navigate:go,notify:toast});
 const quietWatchUI=mountQuietWatchUI({app,isManager,notify:toast,showError:fail});
+const founderAIUI=mountFounderAIUI({app,showError:fail});
 const managerPublicProfileUI=mountManagerPublicProfileUI({app,notify:toast,showError:fail});
 const trustCenterUI=mountTrustCenterUI({app,getMembers:()=>members,isManager,notify:toast,showError:fail});
 const starterKitUI=mountStarterKitUI({app,notify:toast,showError:fail});
@@ -989,6 +991,7 @@ const openModule = async (id) => {
     if(m.status === 'FOUNDATION_ACTIVE' && ['MEETING.PREPAYMENTS','MEETING.REOPEN_AUTH'].includes(id)){go('sessions',{anchor:'meetingFinanceGovernanceCenter',force:true});meetingFinanceGovernanceUI.open();return;}
     if(m.status === 'FOUNDATION_ACTIVE' && id === 'AI.LOCAL'){go('dashboard',{anchor:'localAssistantCenter',force:true});localAssistantUI.open();return;}
     if(m.status === 'FOUNDATION_ACTIVE' && id === 'SAFETY.QUIET_WATCH'){go('dashboard',{anchor:'quietWatchCenter',force:true});quietWatchUI.open();return;}
+    if(m.status === 'FOUNDATION_ACTIVE' && id === 'AI.FOUNDER'){go('control',{anchor:'founderAICenter',force:true});founderAIUI.open();return;}
     const route = m.workspace === 'SPECIALIZED' && m.status === 'FOUNDATION_ACTIVE' ? specializedRoute(id) : undefined;
     if (route) {
         go(route);
