@@ -47,27 +47,104 @@ export function mountPrintCenterUI({app,getGroups=()=>[],getMembers=()=>[],getMe
   const host=document.querySelector('#view-documents');if(!host||document.querySelector('#paperPrintCenter'))return{refresh:async()=>{}};
   const panel=el('section',undefined,'panel');panel.id='paperPrintCenter';
   panel.append(el('div','Projection canonique','eyebrow'),el('h2','État imprimable du groupe'),el('p','Les documents imprimés sont des projections des données canoniques. Ils ne créent aucune nouvelle écriture financière.','truth-notice'));
-  const actions=el('div',undefined,'actions'),printGroup=el('button','Imprimer cet état du groupe','primary');printGroup.type='button';actions.append(printGroup);panel.append(actions);
+
+  const controls=el('form',undefined,'form-grid');controls.id='paperPrintForm';
+  const kindLabel=el('label','Document'),kind=document.createElement('select');kind.name='kind';kindLabel.append(kind);
+  const meetingLabel=el('label','Séance'),meetingSelect=document.createElement('select');meetingSelect.name='meeting';meetingLabel.append(meetingSelect);
+  const memberLabel=el('label','Membre'),memberSelect=document.createElement('select');memberSelect.name='member';memberLabel.append(memberSelect);
+  const previewBtn=el('button','Prévisualiser','secondary');previewBtn.type='submit';
+  const printBtn=el('button','Imprimer / Enregistrer en PDF','primary');printBtn.type='button';
+  controls.append(kindLabel,meetingLabel,memberLabel,previewBtn,printBtn);panel.append(controls);
+  const quick=el('div',undefined,'actions'),printGroup=el('button','Imprimer cet état du groupe','link-btn');printGroup.type='button';quick.append(printGroup);panel.append(quick);
   const preview=el('div',undefined,'stack');panel.append(preview);host.append(panel);
 
+  const group=()=>getGroups().find(g=>g.id===app.activeGroup());
+  const activeMembers=()=>getMembers().filter(x=>x.status==='active');
+  const visibleMembers=()=>isManager()?activeMembers():activeMembers().filter(x=>x.userId===app.currentActor());
+  const currentMeeting=()=>getMeetings().find(x=>x.id===meetingSelect.value);
+  const currentMember=()=>visibleMembers().find(x=>x.id===memberSelect.value);
+
+  const refill=()=>{
+    const prevKind=kind.value,prevMeeting=meetingSelect.value,prevMember=memberSelect.value;kind.replaceChildren();
+    const options=[['GROUP_STATE','État général du groupe'],['MEMBER_SHEET','Fiche individuelle']];
+    if(isManager())options.push(['SESSION_SHEET','Feuille de séance'],['ATTENDANCE_SHEET','Émargement / présences'],['ROLE_REGISTER','Registre par rôle'],['MEMBER_CARDS','Cartes membres']);
+    for(const [v,l] of options)kind.append(new Option(l,v));if(options.some(([v])=>v===prevKind))kind.value=prevKind;
+    meetingSelect.replaceChildren(new Option('Choisir une séance',''));for(const m of [...getMeetings()].sort((a,b)=>String(b.scheduledAt??b.openedAt??'').localeCompare(String(a.scheduledAt??a.openedAt??''))))meetingSelect.append(new Option((m.title??'Séance')+' · '+new Date(m.scheduledAt??m.openedAt).toLocaleDateString('fr-FR'),m.id));if(getMeetings().some(m=>m.id===prevMeeting))meetingSelect.value=prevMeeting;
+    memberSelect.replaceChildren(new Option('Choisir un membre',''));for(const m of visibleMembers())memberSelect.append(new Option(m.displayName,m.id));if(visibleMembers().some(m=>m.id===prevMember))memberSelect.value=prevMember;else if(visibleMembers().length===1)memberSelect.value=visibleMembers()[0].id;
+    const k=kind.value;meetingLabel.hidden=!['SESSION_SHEET','ATTENDANCE_SHEET'].includes(k);memberLabel.hidden=k!=='MEMBER_SHEET';
+  };
+
   const snapshot=async()=>{
-    const group=getGroups().find(g=>g.id===app.activeGroup());if(!group)throw Error('ACTIVE_GROUP_REQUIRED');
-    const ledger=isManager()?await app.ledger().catch(()=>null):null;
-    return buildPrintSnapshot({group,members:getMembers(),meetings:getMeetings(),rubrics:getRubrics(),ledger});
+    const g=group();if(!g)throw Error('ACTIVE_GROUP_REQUIRED');const ledger=isManager()?await app.ledger().catch(()=>null):null;
+    return buildPrintSnapshot({group:g,members:getMembers(),meetings:getMeetings(),rubrics:getRubrics(),ledger});
+  };
+  const dataFor=async(k)=>{
+    const g=group();if(!g)throw Error('ACTIVE_GROUP_REQUIRED');
+    if(k==='GROUP_STATE')return snapshot();
+    if(k==='MEMBER_SHEET'){
+      const member=currentMember();if(!member)throw Error('MEMBERSHIP_REQUIRED');
+      if(!isManager()&&member.userId!==app.currentActor())throw Error('FORBIDDEN_SCOPE');
+      const statement=await app.memberStatement(member.id);return buildMemberPrintSheet({group:g,member,statement,rubrics:getRubrics(),meetings:getMeetings()});
+    }
+    if(!isManager())throw Error('MANAGER_REQUIRED');
+    if(k==='SESSION_SHEET'){const meeting=currentMeeting();if(!meeting)throw Error('MEETING_REQUIRED');return buildSessionPrintSheet({group:g,meeting,members:getMembers(),rubrics:getRubrics(),ledger:await app.ledger()});}
+    if(k==='ATTENDANCE_SHEET'){const meeting=currentMeeting();if(!meeting)throw Error('MEETING_REQUIRED');return buildAttendancePrintSheet({group:g,meeting,members:getMembers(),attendance:await app.meetingAttendance(meeting.id)});}
+    if(k==='ROLE_REGISTER')return buildRoleRegister({group:g,members:getMembers()});
+    if(k==='MEMBER_CARDS')return buildMemberCards({group:g,members:getMembers()});
+    throw Error('PRINT_KIND_UNSUPPORTED');
+  };
+
+  const baseCss='<style>body{font-family:system-ui,sans-serif;max-width:1200px;margin:22px auto;padding:0 18px;line-height:1.35;color:#111}table{width:100%;border-collapse:collapse;font-size:12px}th,td{border:1px solid #999;padding:5px;text-align:left;vertical-align:top}th{background:#eee}.num{text-align:right}.muted{color:#555}.cards{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.member-card{border:1px solid #555;padding:14px;min-height:105px;break-inside:avoid}.signature{height:28px;min-width:100px}button{margin-top:20px}@page{margin:12mm}@media print{button{display:none}.landscape{page:landscape}}</style>';
+  const header=d=>'<h1>'+esc(d.group?.name??'Eco-System')+'</h1><p class="muted">Lot '+esc(d.lot??'—')+' · généré le '+esc(new Date(d.generatedAt??Date.now()).toLocaleString('fr-FR'))+' · projection canonique, aucune écriture créée par l’impression.</p>';
+  const htmlFor=(k,d)=>{
+    if(k==='GROUP_STATE'){
+      const financial=d.financial&&isManager()?'<h2>Situation financière canonique</h2><p>Caisse : <strong>'+esc(money(d.financial.cashBalance))+'</strong> · écritures : '+esc(d.financial.entryCount)+' · reçus : '+esc(d.financial.receiptCount)+'</p>':'';
+      const rubrics=d.rubrics.map(x=>'<tr><td>'+esc(x.name)+'</td><td>'+esc(x.kind)+'</td><td>'+esc(x.direction)+'</td></tr>').join(''),meetings=d.meetings.map(x=>'<tr><td>'+esc(x.title)+'</td><td>'+esc(x.status)+'</td><td>'+esc(x.at?new Date(x.at).toLocaleString('fr-FR'):'—')+'</td></tr>').join('');
+      return header({...d,lot:printLot()})+'<p>'+esc(d.group.kind)+' · '+esc(d.group.status)+'</p><p>'+esc(d.counts.members)+' membre(s) actif(s) · '+esc(d.counts.rubrics)+' rubrique(s) · '+esc(d.counts.meetings)+' séance(s)</p>'+financial+'<h2>Rubriques actives</h2><table><tr><th>Rubrique</th><th>Type</th><th>Sens</th></tr>'+rubrics+'</table><h2>Séances</h2><table><tr><th>Séance</th><th>État</th><th>Date</th></tr>'+meetings+'</table>';
+    }
+    if(k==='SESSION_SHEET'){
+      const head='<tr><th>Membre</th>'+d.rubrics.map(r=>'<th>'+esc(r.name)+'</th>').join('')+'<th>Total</th></tr>',rows=d.rows.map(r=>'<tr><td>'+esc(r.displayName)+'</td>'+r.cells.map(v=>'<td class="num">'+esc(v?money(v):'—')+'</td>').join('')+'<td class="num"><strong>'+esc(money(r.total))+'</strong></td></tr>').join(''),totals='<tr><th>Totaux</th>'+d.columnTotals.map(v=>'<th class="num">'+esc(money(v))+'</th>').join('')+'<th class="num">'+esc(money(d.grandTotal))+'</th></tr>';
+      return '<div class="landscape">'+header(d)+'<h2>'+esc(d.meeting.title)+' · Feuille de séance</h2><p>'+esc(d.meeting.status)+' · '+esc(d.meeting.at?new Date(d.meeting.at).toLocaleString('fr-FR'):'')+'</p><table>'+head+rows+totals+'</table></div>';
+    }
+    if(k==='MEMBER_SHEET'){
+      const totals=d.byRubric.map(x=>'<tr><td>'+esc(x.rubricName)+'</td><td class="num">'+esc(money(x.total))+'</td></tr>').join(''),receipts=d.receipts.map(x=>'<tr><td>'+esc(x.meetingName)+'</td><td>'+esc(x.rubricName)+'</td><td class="num">'+esc(money(x.netAmount))+'</td><td>'+esc(new Date(x.receivedAt).toLocaleDateString('fr-FR'))+'</td></tr>').join('');
+      return header(d)+'<h2>Fiche individuelle · '+esc(d.member.displayName)+'</h2><p><strong>Total net : '+esc(money(d.totalNet))+'</strong></p><h3>Totaux par rubrique</h3><table><tr><th>Rubrique</th><th>Total</th></tr>'+totals+'</table><h3>Historique</h3><table><tr><th>Séance</th><th>Rubrique</th><th>Montant</th><th>Date</th></tr>'+receipts+'</table><p class="muted">Cette fiche ne contient aucune donnée financière d’un autre membre.</p>';
+    }
+    if(k==='ATTENDANCE_SHEET'){
+      const rows=d.rows.map(x=>'<tr><td>'+esc(x.displayName)+'</td><td>'+esc(x.attendance||'—')+'</td><td>'+esc(x.note||'')+'</td><td class="signature"></td></tr>').join('');
+      return header(d)+'<h2>'+esc(d.meeting.title)+' · Émargement / présences</h2><table><tr><th>Membre</th><th>Présence</th><th>Observation</th><th>Signature / émargement</th></tr>'+rows+'</table>';
+    }
+    if(k==='ROLE_REGISTER'){
+      const rows=d.rows.map(x=>'<tr><td>'+esc(x.role)+'</td><td>'+esc(x.displayName)+'</td><td>'+esc(x.membershipId)+'</td></tr>').join('');
+      return header(d)+'<h2>Registre par rôle</h2><table><tr><th>Rôle</th><th>Membre</th><th>Référence adhésion</th></tr>'+rows+'</table>';
+    }
+    if(k==='MEMBER_CARDS'){
+      const cards=d.cards.map(x=>'<article class="member-card"><strong>'+esc(x.displayName)+'</strong><p>'+esc(d.group.name)+'</p><p>Réf. '+esc(x.membershipId)+'</p><p>Rôle(s) : '+esc(x.roles.join(', ')||'membre')+'</p><small>Aucun contact privé ni pièce d’identité imprimé automatiquement.</small></article>').join('');
+      return header(d)+'<h2>Cartes membres</h2><div class="cards">'+cards+'</div>';
+    }
+    throw Error('PRINT_KIND_UNSUPPORTED');
+  };
+  const openPrint=async(k)=>{
+    const d=await dataFor(k),w=window.open('','_blank','noopener,noreferrer,width=1100,height=850');if(!w){notify('Autorisez les fenêtres contextuelles pour imprimer.');return;}
+    w.document.write('<!doctype html><meta charset="utf-8"><title>Eco-System · impression</title>'+baseCss+htmlFor(k,d)+'<button onclick="print()">Imprimer / Enregistrer en PDF</button>');w.document.close();notify('Document imprimable préparé depuis les données canoniques.');
   };
   const render=async()=>{
-    preview.replaceChildren();if(!app.activeGroup()){preview.append(el('p','Sélectionnez un groupe pour préparer une impression.','empty-state'));return;}
-    try{const s=await snapshot();const card=el('article',undefined,'item');card.append(el('strong',s.group.name),el('p',s.counts.members+' membre(s) actif(s) · '+s.counts.rubrics+' rubrique(s) · '+s.counts.meetings+' séance(s)','hint'));if(s.financial&&isManager())card.append(el('p','Caisse canonique : '+money(s.financial.cashBalance)+' · '+s.financial.entryCount+' écriture(s)','hint'));preview.append(card);}catch(e){preview.append(el('p',String(e?.message??e),'hint'));}
+    refill();preview.replaceChildren();if(!app.activeGroup()){preview.append(el('p','Sélectionnez un groupe pour préparer une impression.','empty-state'));return;}
+    try{
+      const k=kind.value,d=await dataFor(k),card=el('article',undefined,'item');card.append(el('strong',kind.options[kind.selectedIndex]?.textContent??k));
+      if(d.lot)card.append(el('p','Lot '+d.lot,'hint'));
+      if(k==='GROUP_STATE')card.append(el('p',d.counts.members+' membre(s) actif(s) · '+d.counts.rubrics+' rubrique(s) · '+d.counts.meetings+' séance(s)','hint'));
+      if(k==='SESSION_SHEET')card.append(el('p',d.rows.length+' membre(s) × '+d.rubrics.length+' rubrique(s) · total '+money(d.grandTotal),'hint'));
+      if(k==='MEMBER_SHEET')card.append(el('p',d.member.displayName+' · total net '+money(d.totalNet),'hint'));
+      if(k==='ATTENDANCE_SHEET')card.append(el('p',d.rows.length+' ligne(s) d’émargement avec colonne signature.','hint'));
+      if(k==='ROLE_REGISTER')card.append(el('p',d.rows.length+' affectation(s) de rôle.','hint'));
+      if(k==='MEMBER_CARDS')card.append(el('p',d.cards.length+' carte(s), sans contact privé ni pièce d’identité.','hint'));
+      preview.append(card);
+    }catch(e){preview.append(el('p',String(e?.message??e),'hint'));}
   };
-  printGroup.onclick=()=>void(async()=>{try{
-    const s=await snapshot(),w=window.open('','_blank','noopener,noreferrer,width=960,height=800');if(!w){notify('Autorisez les fenêtres contextuelles pour imprimer.');return;}
-    const financial=s.financial&&isManager()?'<h2>Situation financière canonique</h2><p>Caisse : <strong>'+esc(money(s.financial.cashBalance))+'</strong> · écritures : '+esc(s.financial.entryCount)+' · reçus : '+esc(s.financial.receiptCount)+'</p>':'';
-    const rubrics=s.rubrics.map(x=>'<tr><td>'+esc(x.name)+'</td><td>'+esc(x.kind)+'</td><td>'+esc(x.direction)+'</td></tr>').join('');
-    const meetings=s.meetings.map(x=>'<tr><td>'+esc(x.title)+'</td><td>'+esc(x.status)+'</td><td>'+esc(x.at?new Date(x.at).toLocaleString('fr-FR'):'—')+'</td></tr>').join('');
-    w.document.write('<!doctype html><meta charset="utf-8"><title>Eco-System · '+esc(s.group.name)+'</title><style>body{font-family:system-ui,sans-serif;max-width:980px;margin:30px auto;padding:0 20px;line-height:1.45}table{width:100%;border-collapse:collapse}th,td{border:1px solid #bbb;padding:7px;text-align:left}small{color:#555}@media print{button{display:none}}</style><h1>'+esc(s.group.name)+'</h1><p>'+esc(s.group.kind)+' · '+esc(s.group.status)+'</p><p>'+esc(s.counts.members)+' membre(s) actif(s) · '+esc(s.counts.rubrics)+' rubrique(s) · '+esc(s.counts.meetings)+' séance(s)</p>'+financial+'<h2>Rubriques actives</h2><table><tr><th>Rubrique</th><th>Type</th><th>Sens</th></tr>'+rubrics+'</table><h2>Séances</h2><table><tr><th>Séance</th><th>État</th><th>Date</th></tr>'+meetings+'</table><p><small>Généré par Eco-System le '+esc(new Date(s.generatedAt).toLocaleString('fr-FR'))+'. Projection imprimable : aucune écriture financière n’est créée par cette impression.</small></p><button onclick="print()">Imprimer / Enregistrer en PDF</button>');
-    w.document.close();notify('État imprimable préparé depuis les données canoniques.');
-  }catch(e){showError(e);}})();
-  document.addEventListener('eco:group-context-changed',()=>void render());
-  void render();
-  return{refresh:render};
+  kind.onchange=()=>{refill();void render();};meetingSelect.onchange=()=>void render();memberSelect.onchange=()=>void render();
+  controls.onsubmit=e=>{e.preventDefault();void render();};
+  printBtn.onclick=()=>void openPrint(kind.value).catch(showError);
+  printGroup.onclick=()=>void openPrint('GROUP_STATE').catch(showError);
+  document.addEventListener('eco:group-context-changed',()=>void render());void render();return{refresh:render};
 }
