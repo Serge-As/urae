@@ -46,6 +46,7 @@ import { GrowthReferralService, InMemoryReferralBudgetStore, D1ReferralBudgetSto
 import { KnowledgeAcademyService } from '../../../packages/knowledge-academy/src/index.js';
 import { ValueNetworkService } from '../../../packages/value-network/src/index.js';
 import { GroupReconstitutionService } from '../../../packages/group-reconstitution/src/index.js';
+import { CreatorTalentService } from '../../../packages/creator-talent/src/index.js';
 import { RubricExceptionService } from '../../../packages/rubric-exceptions/src/index.js';
 import { TimeMachineService } from '../../../packages/time-machine/src/index.js';
 import { NextOfKinService } from '../../../packages/succession/src/index.js';
@@ -142,10 +143,11 @@ const createRequestScope = (request:Request,repo:PlatformRepository,artifacts?:A
   const businessStudio=new BusinessStudioService(repo,kernel);
   const knowledgeAcademy=new KnowledgeAcademyService(repo,kernel);
   const valueNetwork=new ValueNetworkService(repo,kernel);
+  const creatorTalent=new CreatorTalentService(repo,kernel,businessStudio,community);
   const tenantId=request.headers.get('x-tenant-id')??'tenant_demo'; const actorId=request.headers.get('x-actor-id')??'user_founder';
   const groupRoles=(request.headers.get('x-group-roles')??'founder,manager').split(',').map(x=>x.trim()).filter(Boolean);
   kernel.context.set({actorId,tenantId,activeGroupId:request.headers.get('x-active-group-id')??undefined,groupRoles,mandateIds:[],deviceId:request.headers.get('x-device-id')??'device_web_demo',sessionId:request.headers.get('x-session-id')??'session_demo',locale:request.headers.get('accept-language')?.toLowerCase().startsWith('en')?'en':'fr',timezone:request.headers.get('x-timezone')??'Africa/Douala',connectivity:'online',requestId:request.headers.get('x-request-id')??makeId('req')});
-  return {kernel,foundation,ledger,meetings,discovery,membershipGateway,rubrics,completion,explainability,documents,receivables,treasury,riskFinance,market,community,imports,artifactStore,memberControl,memberEnvelopes,groupIdentity,conciergeLearning,miscRubrics,adManager,economicIntelligence,externalPrograms,operationalCockpit,businessStudio,knowledgeAcademy,valueNetwork};
+  return {kernel,foundation,ledger,meetings,discovery,membershipGateway,rubrics,completion,explainability,documents,receivables,treasury,riskFinance,market,community,imports,artifactStore,memberControl,memberEnvelopes,groupIdentity,conciergeLearning,miscRubrics,adManager,economicIntelligence,externalPrograms,operationalCockpit,businessStudio,knowledgeAcademy,valueNetwork,creatorTalent};
 };
 
 const inboxFor = async (repo:PlatformRepository,tenantId:string,actorId:string) => {
@@ -160,7 +162,7 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
     const allowed=Boolean((cors as Record<string,string>)['access-control-allow-origin']);
     return new Response(null,{status:allowed?204:403,headers:{...baseSecurityHeaders,...cors,'access-control-allow-methods':'GET,POST,PUT,OPTIONS','access-control-allow-headers':'content-type,x-tenant-id,x-actor-id,x-group-roles,x-active-group-id,x-device-id,x-session-id,x-request-id,x-timezone'}});
   }
-  const {kernel,foundation,ledger,meetings,discovery,membershipGateway,rubrics,completion,explainability,documents,receivables,treasury,riskFinance,market,community,imports,artifactStore,memberControl,memberEnvelopes,groupIdentity,conciergeLearning,miscRubrics,adManager,economicIntelligence,externalPrograms,operationalCockpit,businessStudio,knowledgeAcademy,valueNetwork}=createRequestScope(request,repo,options.artifacts,options.dataUseDefaultMode??'BETA_OPEN',options.documentAI); const ctx=kernel.context.get();
+  const {kernel,foundation,ledger,meetings,discovery,membershipGateway,rubrics,completion,explainability,documents,receivables,treasury,riskFinance,market,community,imports,artifactStore,memberControl,memberEnvelopes,groupIdentity,conciergeLearning,miscRubrics,adManager,economicIntelligence,externalPrograms,operationalCockpit,businessStudio,knowledgeAcademy,valueNetwork,creatorTalent}=createRequestScope(request,repo,options.artifacts,options.dataUseDefaultMode??'BETA_OPEN',options.documentAI); const ctx=kernel.context.get();
   const governanceVotes=new GovernanceVoteService(repo,kernel,options.governanceSecret??'eco-system-nonproduction-governance-secret');
   const notifications=new NotificationService(repo,kernel);
   const growthReferral=new GrowthReferralService(repo,kernel,options.referralBudgets??defaultReferralBudgets);
@@ -585,6 +587,19 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
     if(referralVerify&&request.method==='POST'){const body=await readJson<Record<string,unknown>>(request);return json(await growthReferral.verifyConversion(referralVerify[1]!,referralVerify[2]!,{accepted:Boolean(body.accepted),reason:String(body.reason??''),reviewEvidenceRef:body.reviewEvidenceRef?String(body.reviewEvidenceRef):undefined}),200,cors);}
     const referralReward=url.pathname.match(/^\/api\/v1\/growth\/referral-campaigns\/([^/]+)\/rewards\/([^/]+)\/approve$/);
     if(referralReward&&request.method==='POST')return json(await growthReferral.approveReward(referralReward[1]!,referralReward[2]!),200,cors);
+
+    if(request.method==='GET'&&url.pathname==='/api/v1/creator-studio')return json(await creatorTalent.myCreatorStudio(),200,cors);
+    if(request.method==='POST'&&url.pathname==='/api/v1/creator-studio/content'){const body=await readJson<any>(request);return json(await creatorTalent.createContent(body),201,cors);}
+    const creatorPublish=url.pathname.match(/^\/api\/v1\/creator-studio\/content\/([^/]+)\/publish$/);
+    if(creatorPublish&&request.method==='POST'){const body=await readJson<any>(request);return json(await creatorTalent.publishContent(creatorPublish[1]!,body),200,cors);}
+    const creatorInterest=url.pathname.match(/^\/api\/v1\/creator-studio\/content\/([^/]+)\/interest$/);
+    if(creatorInterest&&request.method==='POST'){const body=await readJson<any>(request);return json(await creatorTalent.recordInterest(creatorInterest[1]!,String(body.note??'')),201,cors);}
+    const creatorConversation=url.pathname.match(/^\/api\/v1\/creator-studio\/content\/([^/]+)\/interests\/([^/]+)\/conversation$/);
+    if(creatorConversation&&request.method==='POST'){const body=await readJson<any>(request);return json(await creatorTalent.startConversation(creatorConversation[1]!,creatorConversation[2]!,body),201,cors);}
+    const creatorAction=url.pathname.match(/^\/api\/v1\/creator-studio\/content\/([^/]+)\/interests\/([^/]+)\/action$/);
+    if(creatorAction&&request.method==='POST'){const body=await readJson<any>(request);return json(await creatorTalent.createCanonicalAction(creatorAction[1]!,creatorAction[2]!,body),201,cors);}
+    if(request.method==='GET'&&url.pathname==='/api/v1/talent/profile')return json(await creatorTalent.talentProfile(),200,cors);
+    if(request.method==='POST'&&url.pathname==='/api/v1/talent/evidence'){const body=await readJson<any>(request);return json(await creatorTalent.addTalentEvidence(body),201,cors);}
 
     if(request.method==='GET'&&url.pathname==='/api/v1/business/summary')return json(await businessStudio.summary(),200,cors);
     if(request.method==='GET'&&url.pathname==='/api/v1/business/records')return json({items:await businessStudio.records()},200,cors);
