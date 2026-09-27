@@ -13,6 +13,7 @@ import { ExplainabilityService, DocumentSearchService, previewCsv, buildNotifica
 import { ReceivablesService, TreasuryService, RiskFinanceService } from '../../../packages/finance/src/index.js';
 import { analyzeGovernanceText, governanceFingerprint, interpretLaunchPrompt } from '../../../packages/guided-assistant/src/index.js';
 import { MemberFinancialControlService } from '../../../packages/member-control/src/index.js';
+import { MemberEnvelopeService } from '../../../packages/member-envelope/src/index.js';
 import { MeetingLiveConsensusService } from '../../../packages/meeting-live-consensus/src/index.js';
 import { GroupIdentityService } from '../../../packages/group-identity/src/index.js';
 import { ConciergeLearningService, type DataUsePurpose, type LearningCategory, type DataUseDefaultMode } from '../../../packages/concierge-learning/src/index.js';
@@ -130,6 +131,7 @@ const createRequestScope = (request:Request,repo:PlatformRepository,artifacts?:A
   const artifactStore=artifacts??new RepositoryArtifactStore(repo,kernel);
   const imports=new HistoricalImportService(repo,kernel,ledger,completion,artifactStore);
   const memberControl=new MemberFinancialControlService(repo,kernel);
+  const memberEnvelopes=new MemberEnvelopeService(repo,kernel,ledger);
   const groupIdentity=new GroupIdentityService(repo,kernel);
   const conciergeLearning=new ConciergeLearningService(repo,kernel,dataUseDefaultMode);
   const miscRubrics=new MiscRubricService(repo,kernel,ledger);
