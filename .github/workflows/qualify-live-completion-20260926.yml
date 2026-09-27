@@ -2,7 +2,7 @@ name: Eco-System — Live Completion Qualification
 
 on:
   push:
-    branches: ['audit/live-completion-20260926']
+    branches: ['audit/live-completion-20260926', 'finish/live-whatsapp-completion-20260927']
   workflow_dispatch:
 
 permissions:
