@@ -805,6 +805,12 @@ export class ConnectedApplication {
   async valueOffers():Promise<any[]>{const r=await this.request('/api/v1/value/offers') as any;return r.items??[];}
   async createValueOffer(input:any):Promise<any>{return this.request('/api/v1/value/offers',{method:'POST',body:JSON.stringify(input)});}
 
+  async quietWatch():Promise<any[]>{if(!this.activeGroupId)return[];const r=await this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/quiet-watch') as any;return r.items??[];}
+  async scanQuietWatch():Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/quiet-watch',{method:'POST',body:'{}'});}
+  async acknowledgeQuietWatch(id:string,note=''):Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/quiet-watch/'+encodeURIComponent(id)+'/acknowledge',{method:'POST',body:JSON.stringify({note})});}
+  async proposeQuietWatchAssistance(id:string,input:{objective:string;steps:string[];participants?:string[]}):Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/quiet-watch/'+encodeURIComponent(id)+'/assistance',{method:'POST',body:JSON.stringify(input)});}
+  async approveQuietWatchAssistance(id:string):Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/quiet-watch/'+encodeURIComponent(id)+'/approve-assistance',{method:'POST',body:'{}'});}
+  async resolveQuietWatch(id:string,note:string,evidenceRef:string):Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/quiet-watch/'+encodeURIComponent(id)+'/resolve',{method:'POST',body:JSON.stringify({note,evidenceRef})});}
   async safetyCases(groupId?:string):Promise<any[]>{const p=new URLSearchParams();if(groupId)p.set('groupId',groupId);const r=await this.request('/api/v1/safety/cases?'+p) as any;return r.items??[];}
   async reportSafety(input:any):Promise<any>{return this.request('/api/v1/safety/reports',{method:'POST',body:JSON.stringify(input)});}
   async transitionSafetyCase(id:string,state:string,note='',evidenceRef=''):Promise<any>{return this.request('/api/v1/safety/cases/'+encodeURIComponent(id)+'/transition',{method:'POST',body:JSON.stringify({state,note,evidenceRef})});}
