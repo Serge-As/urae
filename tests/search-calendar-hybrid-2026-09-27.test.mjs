@@ -19,14 +19,19 @@ test('universal search ranks authorized local projections and normalizes accents
   assert.ok(!rows.some(x=>x.kind==='member'&&x.id==='m1'));
 });
 
-test('remote universal search exposes only normalized document and knowledge rows',()=>{
+test('remote universal search covers documents knowledge métier records and inbox',()=>{
   const rows=remoteUniversalSearch({
-    documents:[{recordId:'d1',title:'RI 2026',score:3,snippet:'Article 8',source:'R2'}],
-    knowledge:[{id:'k1',title:'Règle séance',data:{knowledgeState:'VALIDATED',body:'Deuxième samedi'}}]
+    query:'seance',
+    documents:[{recordId:'d1',title:'RI séance',score:3,snippet:'Article 8',source:'R2'}],
+    knowledge:[{id:'k1',title:'Règle séance',data:{knowledgeState:'VALIDATED',body:'Deuxième samedi'}}],
+    workspaces:[{id:'w1',title:'Préparation séance',moduleId:'MEETING.COMMAND_CENTER',status:'ACTIVE',summary:'Checklist séance',tags:['réunion'],data:{meetingId:'s1'}}],
+    inbox:[{id:'i1',kind:'obligation',title:'Valider séance',status:'open',priority:'high',sourceType:'MEETING'}]
   });
-  assert.equal(rows.length,2);
-  assert.equal(rows[0].kind,'document');
-  assert.equal(rows[1].kind,'knowledge');
+  assert.equal(rows.length,4);
+  assert.ok(rows.some(x=>x.kind==='document'&&x.id==='d1'));
+  assert.ok(rows.some(x=>x.kind==='knowledge'&&x.id==='k1'));
+  assert.ok(rows.some(x=>x.kind==='workspace'&&x.id==='w1'&&x.moduleId==='MEETING.COMMAND_CENTER'));
+  assert.ok(rows.some(x=>x.kind==='inbox'&&x.id==='i1'));
 });
 
 test('unified calendar combines meetings, explicit workspace dates and actor obligations without inventing dates',()=>{
@@ -44,7 +49,7 @@ test('unified calendar combines meetings, explicit workspace dates and actor obl
   assert.ok(!model.all.some(x=>x.entityId==='w2'));
 });
 
-test('launch keeps canonical group families while partial search is not overclaimed and calendar stays active',()=>{
+test('launch keeps canonical group families while full authorized search and calendar stay active',()=>{
   const html=fs.readFileSync('apps/web/index.html','utf8');
   const main=fs.readFileSync('apps/web/src/main.js','utf8');
   const registry=fs.readFileSync('packages/module-registry/src/index.ts','utf8');
@@ -54,6 +59,6 @@ test('launch keeps canonical group families while partial search is not overclai
   assert.match(main,/renderUniversalSearchFull/);
   assert.match(main,/renderUnifiedCalendar/);
   assert.match(registry,/CORE\.HYBRID_GROUP[^\n]*STRUCTURAL_V1[^\n]*UNIVERSAL/);
-  assert.match(registry,/SEARCH\.UNIVERSAL[^\n]*STRUCTURAL_V1[^\n]*UNIVERSAL/);
+  assert.match(registry,/SEARCH\.UNIVERSAL[^\n]*FOUNDATION_ACTIVE[^\n]*SPECIALIZED/);
   assert.match(registry,/CALENDAR\.UNIFIED[^\n]*FOUNDATION_ACTIVE[^\n]*SPECIALIZED/);
 });
