@@ -20,7 +20,7 @@ test('WhatsApp handoff is wired to marketplace and community without promoting t
   const main=fs.readFileSync('apps/web/src/main.js','utf8');
   const registry=fs.readFileSync('packages/module-registry/src/index.ts','utf8');
   assert.match(advanced,/openWhatsAppShare/);
-  assert.match(advanced,/data\.ecoShareKind/);
+  assert.match(advanced,/dataset\.ecoShareKind/);
   assert.match(community,/openWhatsAppShare/);
   assert.match(main,/parseEcoShareIntent/);
   assert.match(main,/eco:share-intent/);
