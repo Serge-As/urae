@@ -838,6 +838,7 @@ export class ConnectedApplication {
   async verifyReferralConversion(campaignId:string,conversionId:string,input:any):Promise<any>{return this.request('/api/v1/growth/referral-campaigns/'+encodeURIComponent(campaignId)+'/conversions/'+encodeURIComponent(conversionId)+'/verify',{method:'POST',body:JSON.stringify(input)});}
   async approveReferralReward(campaignId:string,conversionId:string):Promise<any>{return this.request('/api/v1/growth/referral-campaigns/'+encodeURIComponent(campaignId)+'/rewards/'+encodeURIComponent(conversionId)+'/approve',{method:'POST',body:'{}'});}
 
+  async discoverCreatorContent(hubId?:string):Promise<any[]>{if(!this.activeGroupId)return[];const q=hubId?'?hubId='+encodeURIComponent(hubId):'';const r=await this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/creator-content'+q) as any;return r.items??[];}
   async creatorStudio():Promise<any>{return this.request('/api/v1/creator-studio');}
   async createCreatorContent(input:any):Promise<any>{return this.request('/api/v1/creator-studio/content',{method:'POST',body:JSON.stringify(input)});}
   async publishCreatorContent(id:string,input:{groupId:string;hubId:string}):Promise<any>{return this.request('/api/v1/creator-studio/content/'+encodeURIComponent(id)+'/publish',{method:'POST',body:JSON.stringify(input)});}
