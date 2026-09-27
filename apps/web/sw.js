@@ -28,6 +28,7 @@ const OPTIONAL_SHELL = [
   '/src/savings-yield-ui.js', '/src/external-programs-ui.js', '/src/founder-control-ui.js',
   '/src/assistance-rulebook-ui.js',
   '/src/starter-kit-ui.js',
+  '/src/group-learning-registry-ui.js',
   '/packages/rubrics/src/launch-config.js', '/packages/rubrics/src/index.js',
   '/packages/completion/src/index.js', '/packages/module-registry/src/index.js',
   '/packages/module-registry/src/service-capabilities.js'
