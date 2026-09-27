@@ -36,6 +36,7 @@ import { mountFinancialLabUI } from './financial-lab-ui.js';
 import { mountBusinessStudioUI } from './business-studio-ui.js';
 import { mountCoreEconomicLearningUI } from './core-economic-learning-ui.js';
 import { mountResilienceUI } from './resilience-ui.js';
+import { parseEcoShareIntent } from './share-out.js';
 let uiLocale = 'fr';
 try { uiLocale = localStorage.getItem('tontine.locale') === 'en' ? 'en' : 'fr'; } catch {}
 const tx = (fr,en) => runtimeTranslate(uiLocale,fr,en);
@@ -1277,6 +1278,16 @@ const refreshGroupContext = async () => {
     if(manage)await refreshOptionalOfflineSafe('trash',renderTrash);
 };
 const refreshAll = async () => { await refreshGroupContext(); renderOutbox(); renderCompatibility(); renderKernel(); renderModules(); renderEcosystemHighlights(); renderDomainHubs(); await detailUI.openFromLocation?.(); };
+const openEcoShareIntent=async intent=>{
+    if(!intent)return false;
+    if(intent.groupId&&app.activeGroup()!==intent.groupId){
+        if(!groups.some(g=>g.id===intent.groupId)){toast(tx('Ce partage concerne un groupe auquel ce compte n’a pas accès.','This share belongs to a group this account cannot access.'));return false;}
+        app.selectGroup(intent.groupId);await refreshGroupContext();
+    }
+    go(intent.view||'ecosystem',{anchor:intent.anchor||undefined,force:true});
+    window.dispatchEvent(new CustomEvent('eco:share-intent',{detail:intent}));
+    return true;
+};
 $('#activeGroupSelect').addEventListener('change', async (e) => { const id = e.target.value; app.selectGroup(id || undefined); try {
     await refreshGroupContext();
     toast(id ? 'Groupe actif changé.' : 'Aucun groupe actif.');
@@ -1635,6 +1646,7 @@ async function start() {
           claim.textContent=navigator.onLine?tx('Finaliser le compte local','Finalize local account'):tx('Compte local · Internet requis pour finaliser','Local account · Internet needed to finalize');
         }
         await app.bootstrap();
+        const shareIntent=parseEcoShareIntent();
         const catalog = await app.productCatalog();
         modules = catalog.capabilities;
         populateWorkspaceModules();
@@ -1642,6 +1654,7 @@ async function start() {
         renderEcosystemHighlights();
         renderDomainHubs();
         await refreshAll();
+        if(shareIntent)await openEcoShareIntent(shareIntent);
         await loadWorkspaces();
     }
     catch (e) {
