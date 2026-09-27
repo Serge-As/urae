@@ -57,14 +57,21 @@ export function mountOperationalRegistryUI({app,getGroups=()=>[],getMembers=()=>
   };
 
   const renderTime=async()=>{
-    const g=group(),capture=el('button','Créer un snapshot maintenant','primary');capture.type='button';capture.onclick=()=>void(async()=>{try{
-      if(!g)throw Error('ACTIVE_GROUP_REQUIRED');const ledger=await app.ledger().catch(()=>null),snapshot={capturedAt:new Date().toISOString(),groupId:g.id,groupName:g.name,groupKind:g.kind,members:getMembers().filter(x=>x.status==='active').length,rubrics:getRubrics().filter(x=>x.status==='ACTIVE').length,meetings:(await app.listMeetings()).length,cashBalance:Number(ledger?.summary?.cashBalance??0),entryCount:Number(ledger?.summary?.entryCount??ledger?.entries?.length??0),receiptCount:Number(ledger?.receipts?.length??0)};
-      await app.createWorkspaceRecord({moduleId:'DATA.TIME_MACHINE',groupId:g.id,title:'Snapshot · '+new Date(snapshot.capturedAt).toLocaleString('fr-FR'),summary:'Image de lecture non destructive du groupe.',status:'DONE',tags:['time-machine','read-only-snapshot'],data:{snapshotJson:JSON.stringify(snapshot),capturedAt:snapshot.capturedAt,readOnly:true,rollbackSupported:false}});
-      notify('Snapshot Time Machine enregistré. Aucun rollback automatique n’est autorisé.');await render();
-    }catch(err){showError(err);}})();body.append(capture,el('p','Time Machine conserve des snapshots de lecture pour comparaison. Restaurer le passé automatiquement est volontairement interdit afin de protéger le Ledger.','truth-notice'));
-    const rows=(await app.listWorkspaceRecords('DATA.TIME_MACHINE',g?.id)).sort((a,b)=>String(b.data.capturedAt??b.createdAt).localeCompare(String(a.data.capturedAt??a.createdAt)));if(!rows.length)body.append(el('p','Aucun snapshot.','empty-state'));
-    for(const r of rows.slice(0,30)){const s=safeJson(r.data.snapshotJson,{}),c=el('article',undefined,'item');c.append(el('strong',r.title),el('p',String(s.members??0)+' membre(s) · '+String(s.rubrics??0)+' rubrique(s) · '+String(s.meetings??0)+' séance(s)','hint'),el('p','Caisse '+Number(s.cashBalance??0).toLocaleString('fr-FR')+' XAF · '+String(s.entryCount??0)+' écriture(s)','hint'),el('small','Lecture seule · rollback automatique : non'));body.append(c);}
-    if(rows.length>=2){const a=safeJson(rows[0].data.snapshotJson,{}),b=safeJson(rows[1].data.snapshotJson,{}),d=el('article',undefined,'item');d.append(el('strong','Écart entre les deux derniers snapshots'),el('p','Membres '+(Number(a.members??0)-Number(b.members??0))+' · rubriques '+(Number(a.rubrics??0)-Number(b.rubrics??0))+' · caisse '+(Number(a.cashBalance??0)-Number(b.cashBalance??0)).toLocaleString('fr-FR')+' XAF','hint'));body.prepend(d);}
+    const g=group();body.append(el('p','Time Machine conserve des snapshots immuables de lecture et compare l’évolution du groupe. Aucun rollback automatique n’est autorisé : le Ledger canonique reste append-only.','truth-notice'));
+    const capture=createForm('Créer un snapshot',[
+      {name:'label',label:'Libellé',placeholder:'Ex. Avant clôture annuelle'},
+      {name:'reason',label:'Pourquoi capturer cet état ?',type:'textarea',required:true,full:true}
+    ],'Capturer maintenant',async d=>{if(!g)throw Error('ACTIVE_GROUP_REQUIRED');await app.captureTimeMachine({label:String(d.label??'')||undefined,reason:String(d.reason)});notify('Snapshot immuable enregistré sans modifier le Ledger.');});
+    body.append(capture);
+    const rows=await app.timeMachineSnapshots();if(!rows.length){body.append(el('p','Aucun snapshot.','empty-state'));return;}
+    if(rows.length>=2){
+      const compare=el('section',undefined,'item'),form=document.createElement('form');form.className='form-grid';
+      const fromLabel=el('label','Depuis'),from=document.createElement('select'),toLabel=el('label','Vers'),to=document.createElement('select');
+      for(const r of rows){const label=r.title+' · '+new Date(String(r.data.capturedAt??r.createdAt)).toLocaleString('fr-FR');from.append(new Option(label,r.id));to.append(new Option(label,r.id));}
+      from.value=rows[1].id;to.value=rows[0].id;fromLabel.append(from);toLabel.append(to);const button=el('button','Comparer','secondary');button.type='submit';const result=el('div',undefined,'stack full');form.append(fromLabel,toLabel,button,result);compare.append(el('h3','Comparer deux instants'),form);body.append(compare);
+      form.onsubmit=e=>void(async()=>{e.preventDefault();result.replaceChildren();try{const d=await app.compareTimeMachine(from.value,to.value);const x=d.deltas??{};result.append(el('p','Membres '+Number(x.members??0)+' · rubriques '+Number(x.rubrics??0)+' · séances '+Number(x.meetings??0)+' · écritures '+Number(x.ledgerEntries??0)+' · caisse '+Number(x.cashBalance??0).toLocaleString('fr-FR')+' XAF','hint'),el('small','Lecture seule · rollback automatique : non'));if(d.rubrics?.added?.length)result.append(el('p','Rubriques ajoutées : '+d.rubrics.added.map(x=>x.name).join(', '),'hint'));if(d.rubrics?.removed?.length)result.append(el('p','Rubriques retirées : '+d.rubrics.removed.map(x=>x.name).join(', '),'hint'));}catch(err){showError(err);}})();
+    }
+    for(const r of rows.slice(0,30)){const detail=await app.timeMachineSnapshot(r.id).catch(()=>null),snap=detail?.snapshot??safeJson(r.data.snapshotJson,{}),c=el('article',undefined,'item');c.append(el('strong',r.title),el('p',String(snap?.counts?.activeMembers??0)+' membre(s) actif(s) · '+String(snap?.counts?.rubrics??0)+' rubrique(s) · '+String(snap?.counts?.meetings??0)+' séance(s)','hint'),el('p','Caisse '+Number(snap?.finance?.cashBalance??0).toLocaleString('fr-FR')+' XAF · '+String(snap?.counts?.ledgerEntries??0)+' écriture(s)','hint'),el('small','Capture : '+new Date(String(snap?.capturedAt??r.createdAt)).toLocaleString('fr-FR')+' · lecture seule'));body.append(c);}
   };
 
   const renderSuccession=async()=>{
