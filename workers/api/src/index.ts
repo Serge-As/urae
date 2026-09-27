@@ -22,6 +22,7 @@ import { CommunityService } from '../../../packages/community/src/index.js';
 import { CommunityRealtimeStore } from '../../../packages/community-realtime/src/index.js';
 import { FounderLearningStore } from '../../../packages/founder-observatory/src/index.js';
 import { FounderControlStore, type CapabilityHealth } from '../../../packages/founder-control/src/index.js';
+import { FounderAIService } from '../../../packages/founder-ai/src/index.js';
 import { CommercialPreferenceService, preferenceCookie, clearPreferenceCookie, readPreferenceCookie } from '../../../packages/commercial-preferences/src/index.js';
 import { MiscRubricService } from '../../../packages/misc-rubrics/src/index.js';
 import { allocateSavingsYield, splitInterestPool, simulateWorkbookYieldPipeline, allocateCapitalAtWorkYield, allocateCapitalTimeYield, allocateAttributedProductiveYield, SAVINGS_YIELD_POLICY_PRESETS } from '../../../packages/savings-yield/src/index.js';
@@ -184,6 +185,7 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
   const starterKit=new StarterKitService(repo,kernel);
   const groupModels=new GroupModelRegistryService(repo,kernel);
   const groupCaseLaw=new GroupCaseLawService(repo,kernel);
+  const founderAI=new FounderAIService();
   if(options.premiumLive)kernel.features.set('premium_live_ledger',true);
   const isFounderTeamActor=async()=>Boolean(options.founderTeamActors?.has(ctx.actorId))||Boolean(options.founderControl&&await options.founderControl.isPlatformOwner(ctx.actorId));
   const requireGroup=async(groupId:string,manage=false)=>{
@@ -570,7 +572,14 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
     const knowledgeReview=url.pathname.match(/^\/api\/v1\/knowledge\/([^/]+)\/review$/);
     if(knowledgeReview&&request.method==='POST'){const body=await readJson<any>(request);return json(await knowledgeAcademy.reviewKnowledge(knowledgeReview[1]!,String(body.state??'TO_REVALIDATE') as any,String(body.note??'')),200,cors);}
     if(request.method==='GET'&&url.pathname==='/api/v1/encyclopedia')return json({items:knowledgeAcademy.encyclopedia(url.searchParams.get('q')??'')},200,cors);
-    if(request.method==='GET'&&url.pathname==='/api/v1/founder-ai/context')return json(await knowledgeAcademy.founderContext(url.searchParams.get('q')??''),200,cors);
+    if(request.method==='GET'&&url.pathname==='/api/v1/founder-ai/context'){
+      if(!(await isFounderTeamActor()))throw new Error('FOUNDER_TEAM_ONLY');
+      const q=url.searchParams.get('q')??'',knowledgeContext=await knowledgeAcademy.founderContext(q);
+      const control=options.founderControl?await options.founderControl.snapshot(PRODUCT_MODULES.map(x=>({id:x.id,labelFr:x.labelFr,labelEn:x.labelEn,status:x.status,lot:x.lot,workspace:x.workspace}))):undefined;
+      let learning:undefined|{stats:any;discoveries:any[];privacy:string};
+      if(options.founderLearning){const minGroups=5;const [stats,discoveries]=await Promise.all([options.founderLearning.stats(minGroups),options.founderLearning.discoveries(minGroups,100)]);learning={stats,discoveries,privacy:'SANITIZED_PSEUDONYMOUS_K_ANONYMIZED'};}
+      return json(founderAI.synthesize({query:q,knowledgeContext,control,learning}),200,cors);
+    }
     if(request.method==='GET'&&url.pathname==='/api/v1/academy')return json(await knowledgeAcademy.academy(),200,cors);
     if(request.method==='POST'&&url.pathname==='/api/v1/academy/courses'){const body=await readJson<any>(request);return json(await knowledgeAcademy.createCourse(body),201,cors);}
     const academyEnroll=url.pathname.match(/^\/api\/v1\/academy\/courses\/([^/]+)\/enroll$/);
