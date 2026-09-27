@@ -1489,13 +1489,15 @@ const addLaunchRubric=(preset={})=>{
 $('#addLaunchRubric').onclick=()=>addLaunchRubric();
 $('#addLaunchTontine').onclick=()=>addLaunchRubric({kind:'TONTINE',contributionMode:'MONEY'});
 const syncLaunchFamily=()=>{
-  const family=val('groupKind');
+  const family=val('groupKind'),variant=val('tontineVariant')||'MONEY',wrap=$('#tontineVariantWrap');
+  if(wrap)wrap.hidden=family!=='rotating_tontine';
   if(family==='rotating_tontine'&&!launchEditors.some(editor=>editor.read().kind==='TONTINE')){
-    addLaunchRubric({kind:'TONTINE',name:'Tontine',contributionMode:'MONEY'});
+    addLaunchRubric({kind:'TONTINE',name:'Tontine',contributionMode:variant==='IN_KIND'?'IN_KIND':variant==='HYBRID'?'MIXED':'MONEY'});
   }
   invalidateProject();
 };
 $('#groupKind').addEventListener('change',syncLaunchFamily);
+$('#tontineVariant')?.addEventListener('change',syncLaunchFamily);
 launchStudio=mountLaunchStudio({
   app,getGroups:()=>groups,getRubrics:()=>{try{return readRubricEditors(launchEditors);}catch{return launchEditors.map(e=>e.read());}},
   addRubric:addLaunchRubric,invalidate:invalidateProject,toast,showError:fail
