@@ -82,7 +82,7 @@ export class CommitmentTrustGraphService {
     const addEdge=(from:string,to:string,relation:string,reasonCodes:string[]=[])=>edges.push({from,to,relation,reasonCodes});
     const person='person:'+subject.userId,membership='membership:'+subject.id,groupNode='group:'+group.id;
     addNode({id:person,kind:'PERSON',label:(await this.repo.getUser(subject.userId))?.displayName??subject.userId,sourceRef:subject.userId,meta:{wealthUsed:false,advisoryOnly:true}});
-    addNode({id:membership,kind:'MEMBERSHIP',label:'Adhésion · '+group.name,state:subject.status,sourceRef:subject.id,meta:{joinedAt:subject.joinedAt,tenureDays:Math.max(0,Math.floor((Date.now()-Date.parse(subject.joinedAt))/86400000))}});
+    const joinedAt=subject.joinedAt??now();addNode({id:membership,kind:'MEMBERSHIP',label:'Adhésion · '+group.name,state:subject.status,sourceRef:subject.id,meta:{joinedAt,tenureDays:Math.max(0,Math.floor((Date.now()-Date.parse(joinedAt))/86400000))}});
     addNode({id:groupNode,kind:'GROUP',label:group.name,state:group.status,sourceRef:group.id});addEdge(person,membership,'HAS_MEMBERSHIP',['ACTIVE_GROUP_SCOPE']);addEdge(membership,groupNode,'MEMBER_OF',['MEMBERSHIP_RECORD']);
     for(const role of subject.roles){const id='role:'+role;addNode({id,kind:'ROLE',label:role});addEdge(membership,id,'HOLDS_ROLE',['MEMBERSHIP_ROLE']);}
     for(const r of groupRows.filter(x=>x.moduleId==='MEETING.ATTENDANCE'&&x.data.membershipId===subject.id)){
