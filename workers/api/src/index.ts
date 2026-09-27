@@ -54,6 +54,7 @@ import { ValueDiscoveryService } from '../../../packages/value-discovery/src/ind
 import { MeetingReopenAuthorizationService } from '../../../packages/meeting-authorization/src/index.js';
 import { PrepaymentService } from '../../../packages/prepayments/src/index.js';
 import { WalletService } from '../../../packages/wallet/src/index.js';
+import { OpportunityGraphService } from '../../../packages/opportunity-graph/src/index.js';
 import { StarterKitService } from '../../../packages/starter-kit/src/index.js';
 import { GroupModelRegistryService, GroupCaseLawService } from '../../../packages/group-learning-registry/src/index.js';
 import { SafetyCaseService, CommitmentTrustGraphService, assessReferralStructure, type SafetyCategory, type SafetyCaseState, type SafetyAction } from '../../../packages/trust/src/index.js';
@@ -173,6 +174,7 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
   const reopenAuth=new MeetingReopenAuthorizationService(repo,kernel);
   const prepayments=new PrepaymentService(repo,kernel,ledger);
   const wallet=new WalletService(repo,kernel,ledger);
+  const opportunityGraph=new OpportunityGraphService(repo,kernel);
   const starterKit=new StarterKitService(repo,kernel);
   const groupModels=new GroupModelRegistryService(repo,kernel);
   const groupCaseLaw=new GroupCaseLawService(repo,kernel);
@@ -1577,6 +1579,7 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
       return json({enabled:valid,affinities:valid?await conciergeLearning.commercialAffinities(preferenceContext[1]!):[]},200,cors);
     }
 
+    if(url.pathname==='/api/v1/opportunity-graph'&&request.method==='GET')return json(await opportunityGraph.projection(),200,cors);
     if(url.pathname==='/api/v1/wallet'&&request.method==='GET')return json(await wallet.projection(),200,cors);
     if(url.pathname==='/api/v1/wallet/reservations'&&request.method==='POST'){const body=await readJson<Record<string,unknown>>(request);return json(await wallet.reserve({groupId:String(body.groupId??''),subaccountKey:String(body.subaccountKey??''),amount:finite(body.amount),purpose:String(body.purpose??''),expiresAt:body.expiresAt?String(body.expiresAt):undefined}),201,cors);}
     const walletRelease=url.pathname.match(/^\/api\/v1\/wallet\/reservations\/([^/]+)\/release$/);
