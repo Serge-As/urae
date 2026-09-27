@@ -17,7 +17,7 @@ export class NextOfKinService{
    const manager=g.createdBy===c.actorId||Boolean(m?.roles.some(r=>managers.has(r)));if(!manager&&!m)throw Error('FORBIDDEN_SCOPE');return{group:g,membership:m,manager};
  }
  private async subject(groupId:Id,membershipId:Id){
-   const c=this.ctx(),m=await this.repo.getMembership(c.tenantId,groupId,membershipId);if(!m||m.status==='removed')throw Error('MEMBERSHIP_NOT_FOUND');return m;
+   const c=this.ctx(),m=await this.repo.getMembership(c.tenantId,groupId,membershipId);if(!m)throw Error('MEMBERSHIP_NOT_FOUND');return m;
  }
  private async record(groupId:Id,id:Id){
    const c=this.ctx(),r=await this.repo.getWorkspaceRecord(c.tenantId,id);if(!r||r.groupId!==groupId||r.moduleId!=='SUCCESSION.NEXT_OF_KIN')throw Error('NEXT_OF_KIN_NOT_FOUND');return r;
