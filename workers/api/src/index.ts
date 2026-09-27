@@ -47,6 +47,7 @@ import { ValueNetworkService } from '../../../packages/value-network/src/index.j
 import { GroupReconstitutionService } from '../../../packages/group-reconstitution/src/index.js';
 import { RubricExceptionService } from '../../../packages/rubric-exceptions/src/index.js';
 import { TimeMachineService } from '../../../packages/time-machine/src/index.js';
+import { NextOfKinService } from '../../../packages/succession/src/index.js';
 import { MeetingReopenAuthorizationService } from '../../../packages/meeting-authorization/src/index.js';
 import { PrepaymentService } from '../../../packages/prepayments/src/index.js';
 import { StarterKitService } from '../../../packages/starter-kit/src/index.js';
@@ -159,6 +160,7 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
   const reconstitution=new GroupReconstitutionService(repo,kernel);
   const rubricExceptions=new RubricExceptionService(repo,kernel);
   const timeMachine=new TimeMachineService(repo,kernel);
+  const nextOfKin=new NextOfKinService(repo,kernel);
   const safety=new SafetyCaseService(repo,kernel);
   const trustGraph=new CommitmentTrustGraphService(repo,kernel);
   const reopenAuth=new MeetingReopenAuthorizationService(repo,kernel);
@@ -1563,6 +1565,13 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
       return json({enabled:valid,affinities:valid?await conciergeLearning.commercialAffinities(preferenceContext[1]!):[]},200,cors);
     }
 
+    const nextOfKinBase=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/succession\/next-of-kin$/);
+    if(nextOfKinBase&&request.method==='GET')return json({items:await nextOfKin.list(nextOfKinBase[1]!,url.searchParams.get('membershipId')??undefined)},200,cors);
+    if(nextOfKinBase&&request.method==='POST'){const body=await readJson<Record<string,unknown>>(request);return json(await nextOfKin.create(nextOfKinBase[1]!,{membershipId:String(body.membershipId??''),contactAlias:String(body.contactAlias??''),relationship:String(body.relationship??''),contactRef:String(body.contactRef??''),consentRef:String(body.consentRef??''),notes:body.notes?String(body.notes):undefined}),201,cors);}
+    const nextOfKinConfirm=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/succession\/next-of-kin\/([^/]+)\/confirm$/);
+    if(nextOfKinConfirm&&request.method==='POST')return json(await nextOfKin.confirm(nextOfKinConfirm[1]!,nextOfKinConfirm[2]!),200,cors);
+    const nextOfKinRevoke=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/succession\/next-of-kin\/([^/]+)\/revoke$/);
+    if(nextOfKinRevoke&&request.method==='POST'){const body=await readJson<Record<string,unknown>>(request);return json(await nextOfKin.revoke(nextOfKinRevoke[1]!,nextOfKinRevoke[2]!,String(body.reason??'')),200,cors);}
     const timeMachineBase=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/time-machine$/);
     if(timeMachineBase&&request.method==='GET')return json({items:await timeMachine.list(timeMachineBase[1]!)},200,cors);
     if(timeMachineBase&&request.method==='POST'){const body=await readJson<Record<string,unknown>>(request);return json(await timeMachine.capture(timeMachineBase[1]!,{label:body.label?String(body.label):undefined,reason:String(body.reason??'')}),201,cors);}
