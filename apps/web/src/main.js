@@ -45,7 +45,7 @@ import { mountIdentityVerificationUI } from './identity-verification-ui.js';
 import { mountDataQualityUI } from './data-quality-ui.js';
 import { mountOpportunityIntelligenceUI } from './opportunity-intelligence-ui.js';
 import { mountQuietWatchUI } from './quiet-watch-ui.js';
-import { mountVoiceEntryUI } from './voice-entry-ui.ts';
+import { mountVoiceEntryUI } from './voice-entry-ui.js';
 let uiLocale = 'fr';
 try { uiLocale = localStorage.getItem('tontine.locale') === 'en' ? 'en' : 'fr'; } catch {}
 const tx = (fr,en) => runtimeTranslate(uiLocale,fr,en);
