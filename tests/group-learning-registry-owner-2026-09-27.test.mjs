@@ -10,7 +10,7 @@ const setCtx=(k,actor,groupId)=>k.context.set({actorId:actor,tenantId:'tenant_mo
 async function seed(){
   const repo=new InMemoryPlatformRepository(),k=new PlatformKernel(),f=new FoundationService(repo,k);setCtx(k,'founder');
   await f.ensureUser({id:'founder',displayName:'Founder',locale:'fr',createdAt:new Date().toISOString()});
-  const p=await f.createProject({tenantId:'tenant_models',createdBy:'founder',name:'Association Test',kind:'association',governanceModel:'community',rubrics:[{key:'coll',name:'Collation',kind:'CONTRIBUTION',nominalAmount:{currency:'XAF',amount:1000},memberCount:10,sessions:12,participationMode:'RULE_BASED',contributionMode:'MONEY'}]});
+  const p=await f.createProject({tenantId:'tenant_models',createdBy:'founder',name:'Association Test',kind:'association',governanceModel:'community',rubrics:[{key:'coll',name:'Collation',kind:'CONTRIBUTION',nominalAmount:{currency:'XAF',amount:1000},amountBasis:'PER_MEMBER',memberCount:10,sessions:12,duration:{value:12,unit:'MONTHS'},participationMode:'RULE_BASED',contributionMode:'MONEY',managementFeePerPayment:0,estimatedExternalCostRate:0,fixedCostPerSession:0}]});
   const g=await f.convertProjectToGroup('tenant_models',p.id);setCtx(k,'founder',g.id);return{repo,k,g,models:new GroupModelRegistryService(repo,k),cases:new GroupCaseLawService(repo,k)};
 }
 
