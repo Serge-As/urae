@@ -14,7 +14,7 @@ export interface FounderAIBrief{
   suggestedActions:Array<{label:string;evidenceRef:string;canExecute:false}>;
   guardrails:{founderTeamOnly:true;canExplain:true;canSuggest:true;canExecute:false;canWriteLedger:false;canActivateRules:false;rawMemberData:false;rawGroupLearningData:false};
 }
-const text=v=>String(v??'').toLocaleLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+const text=(v:unknown)=>String(v??'').toLocaleLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
 const match=(query:string,...values:unknown[])=>{const q=text(query).split(/\s+/).filter(Boolean);if(!q.length)return true;const h=text(values.join(' '));return q.every(x=>h.includes(x));};
 export class FounderAIService{
   synthesize(input:FounderAIBriefInput):FounderAIBrief{
