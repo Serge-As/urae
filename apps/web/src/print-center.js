@@ -17,8 +17,8 @@ export function buildPrintSnapshot({group,members=[],meetings=[],rubrics=[],ledg
 export function mountPrintCenterUI({app,getGroups=()=>[],getMembers=()=>[],getMeetings=()=>[],getRubrics=()=>[],isManager=()=>false,notify=()=>{},showError=()=>{}}={}){
   const host=document.querySelector('#view-documents');if(!host||document.querySelector('#paperPrintCenter'))return{refresh:async()=>{}};
   const panel=el('section',undefined,'panel');panel.id='paperPrintCenter';
-  panel.append(el('div','Paper Bridge · Print','eyebrow'),el('h2','Centre d’impression'),el('p','Les documents imprimés sont des projections des données canoniques. Ils ne créent aucune nouvelle écriture financière.','truth-notice'));
-  const actions=el('div',undefined,'actions'),printGroup=el('button','Imprimer l’état du groupe','primary');printGroup.type='button';actions.append(printGroup);panel.append(actions);
+  panel.append(el('div','Projection canonique','eyebrow'),el('h2','État imprimable du groupe'),el('p','Les documents imprimés sont des projections des données canoniques. Ils ne créent aucune nouvelle écriture financière.','truth-notice'));
+  const actions=el('div',undefined,'actions'),printGroup=el('button','Imprimer cet état du groupe','primary');printGroup.type='button';actions.append(printGroup);panel.append(actions);
   const preview=el('div',undefined,'stack');panel.append(preview);host.append(panel);
 
   const snapshot=async()=>{
