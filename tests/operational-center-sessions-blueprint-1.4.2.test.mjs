@@ -113,8 +113,13 @@ test('PWA shell refresh remains versioned without forced offline reload',async()
     readFile('apps/web/index.html','utf8')
   ]);
   assert.match(main,/void ensureCurrentServiceWorker\(\);[\s\S]*?void start\(\);/);
-  assert.match(sw,/eco-system-v1523-financial-entry-offline-20260925/);
-  assert.match(html,/\/styles\.css\?v=(?:143|145|1451|152|1523)/);
-  assert.match(html,/\/src\/main\.js\?v=(?:143|145|1451|152|1523)/);
-  assert.match(html,/ECO-SYSTEM · 1\.(?:4\.(?:3|5(?:\.1| RC)?)|5\.(?:0|2(?:\.3)?))/);
+  const release=sw.match(/const CACHE = 'eco-system-v(\d+)-[^']+';/);
+  assert.ok(release,'versioned service-worker cache');
+  const shellVersion=release[1];
+  assert.match(sw,/const RELEASE_READY = '\/__eco_release_ready__';/);
+  assert.match(sw,/await cache\.put\(RELEASE_READY/);
+  assert.match(sw,/if \(!await cache\.match\(RELEASE_READY\)\) throw new Error\('RELEASE_NOT_READY'\)/);
+  assert.ok(html.includes('/styles.css?v='+shellVersion),'styles use same release suffix');
+  assert.ok(html.includes('/src/main.js?v='+shellVersion),'main uses same release suffix');
+  assert.match(html,/ECO-SYSTEM · 1\.5\.2\.7/);
 });

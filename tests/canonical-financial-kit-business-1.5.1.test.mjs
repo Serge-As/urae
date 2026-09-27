@@ -98,12 +98,13 @@ test('Business Studio records private income but rejects undocumented extraction
   await assert.rejects(()=>service.recordRevenue({label:'Frais du groupe',amount:5000,source:'MANAGEMENT_FEE',groupId:'group_151'}),/COLLECTIVE_REVENUE_LEDGER_REFERENCE_REQUIRED/);
 });
 
-test('starter kit is persisted with the created group and surfaced from group home',()=>{
+test('starter kit is persisted by its dedicated owner and surfaced from group home',()=>{
   assert.match(launch,/const persistStarterKit=async\(groupId\)=>/);
-  assert.match(launch,/GROUP\.STARTER_KIT/);
-  assert.match(launch,/starter-kit:canonical/);
+  assert.match(launch,/app\.saveStarterKit\(groupId,data\)/);
+  assert.doesNotMatch(launch,/GROUP\.STARTER_KIT/);
   assert.match(main,/launchStudio\.persistStarterKit\?\.\(group\.id\)/);
-  assert.match(groupHome,/GROUP\.STARTER_KIT/);
+  assert.match(groupHome,/app\.starterKit\(group\.id\)/);
+  assert.doesNotMatch(groupHome,/GROUP\.STARTER_KIT/);
   assert.match(groupHome,/Kit prêt à l’emploi du groupe/);
   assert.match(groupHome,/Ouvrir \/ imprimer le Kit/);
   assert.match(groupHome,/Ouvrir Business Studio/);

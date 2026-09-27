@@ -10,7 +10,16 @@ export function mountIdentityLiveUI({app,notify=()=>{},showError=console.error})
 
   const clearTimers=()=>{if(reconnectTimer){clearTimeout(reconnectTimer);reconnectTimer=null;}if(heartbeatTimer){clearInterval(heartbeatTimer);heartbeatTimer=null;}};
   const closeSocket=(reason='group-change')=>{clearTimers();try{socket?.close(1000,reason);}catch{}socket=null;};
-  const catchUp=async()=>{if(!app.activeGroup())return;const data=await app.liveEvents(lastSeq);for(const event of data.events??[]){if(Number(event.seq??0)>lastSeq)renderEvent(event);}};
+  const dispatchDurableEvent=event=>{try{window.dispatchEvent(new CustomEvent('eco:live-event',{detail:event}));}catch{}};
+  const catchUp=async()=>{
+    if(!app.activeGroup())return;
+    for(let page=0;page<50;page++){
+      const before=lastSeq,data=await app.liveEvents(lastSeq,500),events=data.events??[];
+      for(const event of events){if(Number(event.seq??0)>lastSeq){renderEvent(event);dispatchDurableEvent(event);}}
+      const latest=Number(data.latest??lastSeq);
+      if(!events.length||lastSeq>=latest||lastSeq===before)break;
+    }
+  };
   const scheduleReconnect=()=>{
     if(!wantConnection||!app.activeGroup()||navigator.onLine===false||reconnectTimer)return;
     const delay=Math.min(12000,750*(2**Math.min(reconnectAttempt,4)));reconnectAttempt+=1;
@@ -23,9 +32,9 @@ export function mountIdentityLiveUI({app,notify=()=>{},showError=console.error})
     if(event.payload?.operationType)card.append(row('Opération',event.payload.operationType));
     if(event.payload?.amount!==undefined)card.append(row('Montant',new Intl.NumberFormat('fr-CM').format(Number(event.payload.amount))+' '+String(event.payload.currency??'XAF')));
     eventsRoot?.prepend(card);while(eventsRoot?.children.length>12)eventsRoot.lastElementChild?.remove();
-    if(['FINANCIAL_NOTICE','MEMBER_CONTROL','MEMBER_PROJECTION_UPDATED','CONSENSUS_SELECTED','MEETING_UPDATE'].includes(event.type)){
+    if(['FINANCIAL_NOTICE','MEMBER_CONTROL','MEMBER_PROJECTION_UPDATED','MEMBER_ENVELOPE_READY','CONSENSUS_SELECTED','MEETING_UPDATE'].includes(event.type)){
       const detail=event.payload?.selectedValue!==undefined?' · '+String(event.payload.selectedValue):'';
-      notify((event.type==='MEMBER_PROJECTION_UPDATED'?'Votre situation financière vient d’être mise à jour':'Mise à jour financière en direct')+detail);
+      notify((event.type==='MEMBER_ENVELOPE_READY'?'Votre enveloppe privée de séance est prête':event.type==='MEMBER_PROJECTION_UPDATED'?'Votre situation financière vient d’être mise à jour':'Mise à jour financière en direct')+detail);
       try{window.dispatchEvent(new CustomEvent('eco:financial-live-update',{detail:event}));}catch{}
       try{if(typeof Notification!=='undefined'&&Notification.permission==='granted'&&document.visibilityState!=='visible')new Notification('Eco-System · Finance',{body:(event.type==='MEMBER_PROJECTION_UPDATED'?'Votre situation a été mise à jour.':'Une opération financière nécessite votre attention.')+detail});}catch{}
     }
@@ -49,7 +58,7 @@ export function mountIdentityLiveUI({app,notify=()=>{},showError=console.error})
           if(msg.type==='PONG'){lastPongAt=Date.now();return;}
           if(msg.type==='GROUP_LIVE_SIGNAL'&&msg.event){window.dispatchEvent(new CustomEvent('eco:live-signal',{detail:msg.event}));return;}
           if(msg.type==='GROUP_LIVE_EVENT'&&msg.event){
-            eventQueue=eventQueue.then(async()=>{const seq=Number(msg.event.seq??0);if(seq>lastSeq+1)await catchUp();if(seq>lastSeq){renderEvent(msg.event);try{window.dispatchEvent(new CustomEvent('eco:live-event',{detail:msg.event}));}catch{}}}).catch(()=>{});
+            eventQueue=eventQueue.then(async()=>{const seq=Number(msg.event.seq??0);if(seq>lastSeq+1)await catchUp();if(seq>lastSeq){renderEvent(msg.event);dispatchDurableEvent(msg.event);}}).catch(()=>{});
           }
         }catch{}
       };

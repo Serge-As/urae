@@ -1,3 +1,4 @@
+import {openWhatsAppShare,focusEcoShareTarget} from './share-out.js';
 const el=(tag,text,className)=>{const e=document.createElement(tag);if(text!==undefined)e.textContent=text;if(className)e.className=className;return e;};
 const v=id=>String(document.getElementById(id)?.value??'').trim();
 const split=value=>value.split(',').map(x=>x.trim()).filter(Boolean);
@@ -49,7 +50,7 @@ export function mountCommunityShopUI({app,notify=()=>{},showError=console.error,
   };
 
   const renderRealtimeMessage=(post)=>{
-    const card=el('article',undefined,'item');card.dataset.forumMessageId=post.id;
+    const card=el('article',undefined,'item');card.dataset.forumMessageId=post.id;card.dataset.ecoShareKind='forum-message';card.dataset.ecoShareId=post.id;
     if(post.parentId)card.append(el('span','↳ Réponse','pill'));
     card.append(el('strong',post.title||post.kind),el('p',post.body??''),el('small',new Date(post.createdAt).toLocaleString('fr-FR')+' · auteur '+post.authorId));
     const actions=el('div',undefined,'actions');
@@ -57,7 +58,7 @@ export function mountCommunityShopUI({app,notify=()=>{},showError=console.error,
       const active=(post.viewerReactions??[]).includes(reaction),count=Number(post.reactions?.[reaction]??0);
       const b=el('button',reaction+(count?' '+count:''),active?'primary':'link-btn');b.type='button';b.onclick=()=>void(async()=>{try{await app.toggleForumReaction(post.id,reaction);await renderPosts({preserveDraft:true,around:post.id});}catch(e){showError(e);}})();actions.append(b);
     }
-    const reply=el('button','Répondre','secondary');reply.type='button';reply.onclick=()=>{if(bodyInput){bodyInput.dataset.replyTo=post.id;bodyInput.focus();bodyInput.placeholder='Réponse à ce message…';}notify('Votre prochain message répondra à celui-ci.');};actions.append(reply);card.append(actions);return card;
+    const reply=el('button','Répondre','secondary');reply.type='button';reply.onclick=()=>{if(bodyInput){bodyInput.dataset.replyTo=post.id;bodyInput.focus();bodyInput.placeholder='Réponse à ce message…';}notify('Votre prochain message répondra à celui-ci.');};actions.append(reply);const share=el('button','Partager WhatsApp','secondary');share.type='button';share.onclick=()=>{const payload=openWhatsAppShare({view:'ecosystem',anchor:'communityEnginePanel',kind:'forum-message',groupId:app.activeGroup(),objectId:post.id,contextId:activeHub,title:'Publication Eco-System',summary:'Ouvrir cette publication dans Eco-System.'});notify('WhatsApp ouvert · '+payload.refCode);};actions.append(share);card.append(actions);return card;
   };
 
   const renderPosts=async(options={})=>{
@@ -206,6 +207,7 @@ export function mountCommunityShopUI({app,notify=()=>{},showError=console.error,
     if(e?.type==='COMMUNITY_DRAFT_SYNC'&&String(p.hubId??'')===String(activeHub))void restoreState(false);
     if(e?.type==='COMMUNITY_READ_SYNC'&&String(p.hubId??'')===String(activeHub))void restoreState(false);
   });
+  window.addEventListener('eco:share-intent',event=>{const intent=event instanceof CustomEvent?event.detail:null;if(!intent||String(intent.kind)!=='forum-message')return;void(async()=>{try{if(intent.contextId&&hubs.some(h=>h.id===intent.contextId)){activeHub=intent.contextId;if(hubSelect)hubSelect.value=activeHub;}await renderPosts({preserveDraft:true,around:intent.objectId});focusEcoShareTarget(intent,postList);}catch(e){showError(e);}})();});
   window.addEventListener('eco:live-signal',event=>{
     const e=event instanceof CustomEvent?event.detail:undefined,p=e?.payload??{},other=String(e?.actorId??'');
     if(!livePresence||String(p.kind??'')!=='COMMUNITY_DRAFT'||String(p.hubId??'')!==String(activeHub)||!other||other===String(app.currentActor?.()??''))return;

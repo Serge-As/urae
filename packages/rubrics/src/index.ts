@@ -16,7 +16,25 @@ export const STARTER_RUBRIC_FACETS:Record<string,RubricFacets>={
   epargne:{direction:'BIDIRECTIONAL',obligation:'CUSTOM',medium:'CASH',refundability:'FULLY_REFUNDABLE',replenishment:'NONE',interestMode:'CUSTOM',eligibilityMode:'RULE_BASED'},
   tontine:{direction:'BIDIRECTIONAL',obligation:'MANDATORY',medium:'HYBRID',refundability:'CONDITIONAL',replenishment:'NONE',interestMode:'NONE',eligibilityMode:'RULE_BASED'},
   pret:{direction:'OUTFLOW',obligation:'OPTIONAL',medium:'CASH',refundability:'FULLY_REFUNDABLE',replenishment:'NONE',interestMode:'CUSTOM',eligibilityMode:'RULE_BASED'},
-  main_levee:{direction:'MIXED',obligation:'EVENT_DRIVEN',medium:'HYBRID',refundability:'CUSTOM',replenishment:'CUSTOM',interestMode:'NONE',eligibilityMode:'EVENT_BASED'}
+  collation:{direction:'BIDIRECTIONAL',obligation:'CUSTOM',medium:'CASH',refundability:'NON_REFUNDABLE',replenishment:'CUSTOM',interestMode:'NONE',eligibilityMode:'RULE_BASED'},
+  aide_locale:{direction:'BIDIRECTIONAL',obligation:'CUSTOM',medium:'CASH',refundability:'NON_REFUNDABLE',replenishment:'CUSTOM',interestMode:'NONE',eligibilityMode:'RULE_BASED'},
+  main_levee:{direction:'MIXED',obligation:'EVENT_DRIVEN',medium:'HYBRID',refundability:'CUSTOM',replenishment:'CUSTOM',interestMode:'NONE',eligibilityMode:'EVENT_BASED'},
+  assistance:{direction:'MIXED',obligation:'EVENT_DRIVEN',medium:'HYBRID',refundability:'CUSTOM',replenishment:'CUSTOM',interestMode:'NONE',eligibilityMode:'EVENT_BASED'}
+};
+
+export const starterRubricFacetsForName=(name:string):RubricFacets|undefined=>{
+  const key=normalize(name).replace(/[_-]+/g,' ').replace(/\s+/g,' ').trim();
+  const code=
+    /^(collation|ration)$/.test(key)?'collation':
+    /^aide locale$/.test(key)?'aide_locale':
+    /^main levee/.test(key)?'main_levee':
+    /^assistances?$/.test(key)?'assistance':
+    /^(secours|solidarite|fonds social)$/.test(key)?'secours':
+    /^epargnes?/.test(key)?'epargne':
+    /^(pret|prets|emprunt|emprunts|credit interne)$/.test(key)?'pret':
+    /^tontines?/.test(key)?'tontine':
+    undefined;
+  return code?structuredClone(STARTER_RUBRIC_FACETS[code]):undefined;
 };
 
 export class RubricKnowledgeService {

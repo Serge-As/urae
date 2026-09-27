@@ -36,6 +36,33 @@ import { mountFinancialLabUI } from './financial-lab-ui.js';
 import { mountBusinessStudioUI } from './business-studio-ui.js';
 import { mountCoreEconomicLearningUI } from './core-economic-learning-ui.js';
 import { mountResilienceUI } from './resilience-ui.js';
+import { parseEcoShareIntent } from './share-out.js';
+import { localUniversalSearch, remoteUniversalSearch } from './universal-search.js';
+import { buildUnifiedCalendar } from './unified-calendar.js';
+import { mountDocumentsUI } from './documents-ui.js';
+import { mountPrintCenterUI } from './print-center.js';
+import { mountMemberDossierUI } from './member-dossier-ui.js';
+import { mountIdentityVerificationUI } from './identity-verification-ui.js';
+import { mountDataQualityUI } from './data-quality-ui.js';
+import { mountOpportunityIntelligenceUI } from './opportunity-intelligence-ui.js';
+import { mountOperationalRegistryUI } from './operational-registry-ui.js';
+import { mountGroupLearningRegistryUI } from './group-learning-registry-ui.js';
+import { mountGeoDirectoryUI } from './role-directory-talent-ui.js';
+import { mountRoleDashboardsUI } from './role-dashboards-ui.js';
+import { mountCreatorTalentUI } from './creator-talent-ui.js';
+import { mountLocalAssistantUI } from './local-assistant.js';
+import { mountQuietWatchUI } from './quiet-watch-ui.js';
+import { mountFounderAIUI } from './founder-ai-ui.js';
+import { mountManagerPublicProfileUI } from './manager-public-profile-ui.js';
+import { mountTrustCenterUI } from './trust-center.js';
+import { mountStarterKitUI } from './starter-kit-ui.js';
+import { mountMeetingFinanceGovernanceUI } from './meeting-finance-governance-ui.js';
+import { mountAnticipationUI } from './anticipation-ui.js';
+import { mountMicroAdsUI } from './micro-ads-ui.js';
+import { mountValueDiscoveryUI } from './value-discovery-ui.js';
+import { mountWalletUI } from './wallet-ui.js';
+import { mountMemberEnvelopeUI } from './member-envelope-ui.js';
+import { mountOpportunityGraphUI } from './opportunity-graph-ui.js';
 let uiLocale = 'fr';
 try { uiLocale = localStorage.getItem('tontine.locale') === 'en' ? 'en' : 'fr'; } catch {}
 const tx = (fr,en) => runtimeTranslate(uiLocale,fr,en);
@@ -85,7 +112,7 @@ let launchStudio;
 let modules = [];
 let selectedLot = 'ALL';
 let deferredInstallPrompt;
-const CAHIER_VERSION = '1.5.1-canonical-financial-tables-kit-business';
+const CAHIER_VERSION = '1.5.2.7-live-completion';
 const $ = (s) => { const e = document.querySelector(s); if (!e)
     throw new Error(`UI_ELEMENT_NOT_FOUND:${s}`); return e; };
 const val = (id) => document.getElementById(id).value.trim();
@@ -224,6 +251,30 @@ document.addEventListener('click',event=>{
     event.preventDefault();go(view,{anchor:id,openTarget:link.dataset.openTarget,force:true});
 });
 document.querySelector('#appBackBtn')?.addEventListener('click',goBack);
+const documentsUI=mountDocumentsUI({navigate:go});
+const printCenterUI=mountPrintCenterUI({app,getGroups:()=>groups,getMembers:()=>members,getMeetings:()=>meetings,getRubrics:()=>rubrics,isManager,notify:toast,showError:fail});
+mountMemberDossierUI();
+const identityVerificationUI=mountIdentityVerificationUI({app,getGroups:()=>groups,navigate:go,notify:toast,showError:fail});
+const dataQualityUI=mountDataQualityUI({app,navigate:go,notify:toast,showError:fail});
+const opportunityIntelligenceUI=mountOpportunityIntelligenceUI({app,notify:toast,showError:fail,isManager});
+const operationalRegistryUI=mountOperationalRegistryUI({app,getGroups:()=>groups,getMembers:()=>members,getRubrics:()=>rubrics,isManager,notify:toast,showError:fail});
+const groupLearningRegistryUI=mountGroupLearningRegistryUI({app,getGroups:()=>groups,notify:toast,showError:fail});
+const roleDashboardsUI=mountRoleDashboardsUI({app,getGroups:()=>groups,getMembers:()=>members,getMeetings:()=>meetings,isManager,navigate:go,showError:fail});
+const geoDirectoryUI=mountGeoDirectoryUI({app,isManager,notify:toast,showError:fail});
+const creatorTalentUI=mountCreatorTalentUI({app,notify:toast,showError:fail});
+const localAssistantUI=mountLocalAssistantUI({getModules:()=>modules,openModule:id=>openModule(id),navigate:go,notify:toast});
+const quietWatchUI=mountQuietWatchUI({app,isManager,notify:toast,showError:fail});
+const founderAIUI=mountFounderAIUI({app,showError:fail});
+const managerPublicProfileUI=mountManagerPublicProfileUI({app,notify:toast,showError:fail});
+const trustCenterUI=mountTrustCenterUI({app,getMembers:()=>members,isManager,notify:toast,showError:fail});
+const starterKitUI=mountStarterKitUI({app,notify:toast,showError:fail});
+const meetingFinanceGovernanceUI=mountMeetingFinanceGovernanceUI({app,getMembers:()=>members,getMeetings:()=>meetings,getRubrics:()=>rubrics,isManager,notify:toast,showError:fail});
+const anticipationUI=mountAnticipationUI({app,isManager,notify:toast,showError:fail});
+const microAdsUI=mountMicroAdsUI({app,isManager,notify:toast,showError:fail});
+const valueDiscoveryUI=mountValueDiscoveryUI({app,notify:toast,showError:fail});
+const walletUI=mountWalletUI({app,notify:toast,showError:fail,navigate:go});
+const memberEnvelopeUI=mountMemberEnvelopeUI({app,notify:toast,showError:fail});
+const opportunityGraphUI=mountOpportunityGraphUI({app,showError:fail});
 window.addEventListener('popstate',event=>{
     const state=event.state?.ecoNav,hash=location.hash.slice(1);
     navDepth=Math.max(0,Number(event.state?.ecoDepth??Math.max(0,navDepth-1)));
@@ -918,6 +969,31 @@ const openModule = async (id) => {
     const m = modules.find(x => x.id === id);
     if (!m)
         return;
+    if(m.status === 'FOUNDATION_ACTIVE' && id === 'CALENDAR.UNIFIED'){go('ecosystem',{anchor:'unifiedCalendarPanel',force:true});const panel=document.querySelector('#unifiedCalendarPanel');if(panel?.tagName==='DETAILS')panel.open=true;void renderUnifiedCalendar();return;}
+    if(m.status === 'FOUNDATION_ACTIVE' && id === 'GOVERNANCE.DOCUMENT_STUDIO'){go('documents',{force:true});void documentsUI.refresh();return;}
+    if(m.status === 'FOUNDATION_ACTIVE' && id === 'TRUST.VERIFICATION'){go('settings',{anchor:'identityVerificationCenter',force:true});void identityVerificationUI.refresh();return;}
+    if(m.status === 'FOUNDATION_ACTIVE' && id === 'DATA.QUALITY'){go('settings',{anchor:'dataQualityCenter',force:true});void dataQualityUI.refresh();return;}
+    if(m.status === 'FOUNDATION_ACTIVE' && id === 'PAPER.BRIDGE'){go('documents',{force:true});void documentsUI.refresh();return;}
+    if(m.status === 'FOUNDATION_ACTIVE' && id === 'RUBRIC.STARTER_KITS'){go('launch',{anchor:'savedStarterKitPanel',force:true});starterKitUI.open();return;}
+    if(m.status === 'FOUNDATION_ACTIVE' && ['GROUP.MODEL_REGISTRY','GROUP.CASE_LAW'].includes(id)){go('settings',{anchor:'groupLearningRegistry',force:true});groupLearningRegistryUI.open(id==='GROUP.MODEL_REGISTRY'?'models':'cases');return;}
+    if(m.status === 'FOUNDATION_ACTIVE' && id === 'GROUP.ANTICIPATION'){go('dashboard',{anchor:'anticipationCenter',force:true});anticipationUI.open();return;}
+    if(m.status === 'FOUNDATION_ACTIVE' && id === 'COMMUNITY.MICRO_ADS'){go('ecosystem',{anchor:'microAdsCenter',force:true});microAdsUI.open();return;}
+    if(m.status === 'FOUNDATION_ACTIVE' && id === 'MANAGER.VALUE_DISCOVERY'){go('ecosystem',{anchor:'valueDiscoveryCenter',force:true});valueDiscoveryUI.open();return;}
+    if(m.status === 'FOUNDATION_ACTIVE' && id === 'FINANCE.WALLET'){go('dashboard',{anchor:'walletCenter',force:true});walletUI.open();return;}
+    if(m.status === 'FOUNDATION_ACTIVE' && id === 'FINANCE.ENVELOPES'){go('dashboard',{anchor:'memberEnvelopeCenter',force:true});memberEnvelopeUI.open();return;}
+    if(m.status === 'FOUNDATION_ACTIVE' && id === 'OPPORTUNITY.GRAPH'){go('ecosystem',{anchor:'opportunityGraphCenter',force:true});opportunityGraphUI.open();return;}
+    if(m.status === 'FOUNDATION_ACTIVE' && ['CREATOR.STUDIO','LEARNING.TALENT'].includes(id)){go('ecosystem',{anchor:'creatorTalentCenter',force:true});creatorTalentUI.open();return;}
+    if(m.status === 'FOUNDATION_ACTIVE' && id === 'MANAGER.PUBLIC_PROFILE'){go('discovery',{anchor:'managerPublicProfileCenter',force:true});managerPublicProfileUI.open();return;}
+    if(m.status === 'FOUNDATION_ACTIVE' && id === 'MARKETPLACE.MARKET_INTELLIGENCE'){go('ecosystem',{anchor:'opportunityIntelligence',force:true});opportunityIntelligenceUI.open();return;}
+    if(m.status === 'FOUNDATION_ACTIVE' && id === 'GOVERNANCE.TENDER'){go('ecosystem',{anchor:'socialCommercePanel',force:true});const panel=document.querySelector('#socialCommercePanel');if(panel?.tagName==='DETAILS')panel.open=true;return;}
+    if(m.status === 'FOUNDATION_ACTIVE' && id === 'RUBRIC.LOCAL_AID'){go('operations',{anchor:'rubricsManagementPanel',force:true});setTimeout(()=>prepareRubricPreset('Aide locale','Rubrique principale de contribution, au même niveau métier que Collation / Ration. Confirmer la règle du groupe : montant, présence/absence, bénéficiaire, solidarité, manquant et décaissement.'),80);return;}
+    if(m.status === 'FOUNDATION_ACTIVE' && id === 'RUBRIC.HAND_RAISE'){go('operations',{anchor:'rubricsManagementPanel',force:true});setTimeout(()=>prepareRubricPreset('Main levée','Rubrique principale événementielle : définir motif, bénéficiaire, participation obligatoire ou volontaire, montant ou règle de calcul, preuve et validation du groupe.'),80);return;}
+    if(m.status === 'FOUNDATION_ACTIVE' && id === 'FINANCE.TRUST_SCORE'){go('members',{anchor:'trustGraphCenter',force:true});void trustCenterUI.refresh();return;}
+    if(m.status === 'FOUNDATION_ACTIVE' && ['MEETING.PREPAYMENTS','MEETING.REOPEN_AUTH'].includes(id)){go('sessions',{anchor:'meetingFinanceGovernanceCenter',force:true});meetingFinanceGovernanceUI.open();return;}
+    if(m.status === 'FOUNDATION_ACTIVE' && id === 'AI.LOCAL'){go('dashboard',{anchor:'localAssistantCenter',force:true});localAssistantUI.open();return;}
+    if(m.status === 'FOUNDATION_ACTIVE' && id === 'SAFETY.QUIET_WATCH'){go('dashboard',{anchor:'quietWatchCenter',force:true});quietWatchUI.open();return;}
+    if(m.status === 'FOUNDATION_ACTIVE' && id === 'AI.FOUNDER'){go('control',{anchor:'founderAICenter',force:true});founderAIUI.open();return;}
+    if(m.status === 'FOUNDATION_ACTIVE' && id === 'DASHBOARDS.ALL'){go('dashboard',{anchor:'roleDashboardsCenter',force:true});roleDashboardsUI.open();return;}
     const route = m.workspace === 'SPECIALIZED' && m.status === 'FOUNDATION_ACTIVE' ? specializedRoute(id) : undefined;
     if (route) {
         go(route);
@@ -1277,6 +1353,16 @@ const refreshGroupContext = async () => {
     if(manage)await refreshOptionalOfflineSafe('trash',renderTrash);
 };
 const refreshAll = async () => { await refreshGroupContext(); renderOutbox(); renderCompatibility(); renderKernel(); renderModules(); renderEcosystemHighlights(); renderDomainHubs(); await detailUI.openFromLocation?.(); };
+const openEcoShareIntent=async intent=>{
+    if(!intent)return false;
+    if(intent.groupId&&app.activeGroup()!==intent.groupId){
+        if(!groups.some(g=>g.id===intent.groupId)){toast(tx('Ce partage concerne un groupe auquel ce compte n’a pas accès.','This share belongs to a group this account cannot access.'));return false;}
+        app.selectGroup(intent.groupId);await refreshGroupContext();
+    }
+    go(intent.view||'ecosystem',{anchor:intent.anchor||undefined,force:true});
+    window.dispatchEvent(new CustomEvent('eco:share-intent',{detail:intent}));
+    return true;
+};
 $('#activeGroupSelect').addEventListener('change', async (e) => { const id = e.target.value; app.selectGroup(id || undefined); try {
     await refreshGroupContext();
     toast(id ? 'Groupe actif changé.' : 'Aucun groupe actif.');
@@ -1301,6 +1387,77 @@ const renderGlobalSearch = () => { const q = val('globalSearch').toLowerCase(); 
     root.append(b);
 } };
 $('#globalSearch').addEventListener('input', renderGlobalSearch);
+let universalSearchTimer;
+let universalSearchRevision=0;
+const openUniversalSearchResult=async row=>{
+    if(row.kind==='group'){app.selectGroup(row.id);await refreshGroupContext();await detailUI.open('group',row.id);return;}
+    if(['member','meeting','rubric'].includes(row.kind)){await detailUI.open(row.kind,row.id);return;}
+    if(row.kind==='module'){await openModule(row.id);return;}
+    if(row.kind==='workspace'&&row.moduleId){await openModule(row.moduleId);return;}
+    if(row.kind==='inbox'){go('dashboard',{anchor:'dashboardInbox',force:true});return;}
+};
+const renderUniversalSearchFull=async()=>{
+    const input=document.querySelector('#universalSearchFull'),root=document.querySelector('#universalSearchFullResults');
+    if(!input||!root)return;
+    const query=input.value.trim(),revision=++universalSearchRevision;root.replaceChildren();
+    if(query.length<2){const p=document.createElement('p');p.className='hint';p.textContent=tx('Saisissez au moins 2 caractères.','Enter at least 2 characters.');root.append(p);return;}
+    const local=localUniversalSearch({query,groups,modules,members,meetings,rubrics});
+    let remote=[];
+    if(navigator.onLine!==false){
+        const groupId=app.activeGroup();
+        const [documents,knowledge,workspaces,inbox]=await Promise.all([
+            groupId?app.searchDocuments(query,20).catch(()=>[]):Promise.resolve([]),
+            app.searchKnowledge(query,groupId).catch(()=>[]),
+            groupId?app.listWorkspaceRecords(undefined,groupId).catch(()=>[]):Promise.resolve([]),
+            app.inboxItems().catch(()=>[])
+        ]);
+        if(revision!==universalSearchRevision)return;
+        remote=remoteUniversalSearch({query,documents,knowledge,workspaces,inbox});
+    }
+    const rows=[...local,...remote].sort((a,b)=>Number(b.score??0)-Number(a.score??0)||String(a.title??'').localeCompare(String(b.title??''),'fr')).slice(0,80);
+    if(!rows.length){const p=document.createElement('p');p.className='empty-state';p.textContent=tx('Aucun résultat autorisé trouvé.','No authorized result found.');root.append(p);return;}
+    for(const row of rows){
+        const interactive=['group','member','meeting','rubric','module'].includes(row.kind),node=document.createElement(interactive?'button':'article');
+        if(interactive){node.type='button';node.className='search-hit';node.onclick=()=>void openUniversalSearchResult(row);}
+        else node.className='item';
+        const title=document.createElement('strong');title.textContent=row.title||row.id;
+        const sub=document.createElement('small');sub.textContent=row.subtitle||row.kind;
+        node.append(title,sub);
+        if(row.snippet){const p=document.createElement('p');p.className='hint';p.textContent=row.snippet;node.append(p);}
+        root.append(node);
+    }
+};
+document.querySelector('#universalSearchFull')?.addEventListener('input',()=>{
+    clearTimeout(universalSearchTimer);universalSearchTimer=setTimeout(()=>void renderUniversalSearchFull(),220);
+});
+const renderUnifiedCalendar=async()=>{
+    const root=document.querySelector('#unifiedCalendarList');if(!root)return;root.replaceChildren();
+    const groupId=app.activeGroup();
+    if(!groupId){const p=document.createElement('p');p.className='empty-state';p.textContent=tx('Sélectionnez un groupe pour afficher son calendrier.','Select a group to display its calendar.');root.append(p);return;}
+    const [records,inbox]=await Promise.all([
+        app.listWorkspaceRecords(undefined,groupId).catch(()=>[]),
+        app.inboxItems().catch(()=>[])
+    ]);
+    const obligations=inbox.filter(x=>x.groupId===groupId&&x.dueAt&&!['DONE','CLOSED','RESOLVED','CANCELLED'].includes(String(x.status??'').toUpperCase()));
+    const model=buildUnifiedCalendar({meetings,records,obligations});
+    const rows=[...model.upcoming.slice(0,80),...model.past.slice(-20)];
+    if(!rows.length){const p=document.createElement('p');p.className='empty-state';p.textContent=tx('Aucune date explicite n’est encore enregistrée.','No explicit date is recorded yet.');root.append(p);return;}
+    for(const row of rows){
+        const item=document.createElement('article');item.className='item';
+        const title=document.createElement('strong');title.textContent=row.title;
+        const meta=document.createElement('small');meta.textContent=date(row.at)+' · '+row.source+(row.status?' · '+row.status:'');
+        item.append(title,meta);
+        if(row.kind==='meeting'){const open=document.createElement('button');open.type='button';open.className='link-btn';open.textContent=tx('Ouvrir la séance','Open meeting');open.onclick=()=>void detailUI.open('meeting',row.entityId);item.append(open);}
+        root.append(item);
+    }
+};
+document.querySelector('#unifiedCalendarRefresh')?.addEventListener('click',()=>void renderUnifiedCalendar());
+document.querySelector('#unifiedCalendarPanel')?.addEventListener('toggle',e=>{if(e.currentTarget.open)void renderUnifiedCalendar();});
+document.querySelector('#unifiedCalendarIcs')?.addEventListener('click',()=>{
+    if(!app.activeGroup()){toast(tx('Sélectionnez d’abord un groupe.','Select a group first.'));return;}
+    if(navigator.onLine===false){toast(tx('Le fichier .ics se télécharge dès que la connexion revient. Le calendrier affiché reste consultable hors ligne.','The .ics file can be downloaded when connectivity returns. The displayed calendar remains available offline.'));return;}
+    const a=document.createElement('a');a.href=app.calendarIcsUrl();a.download='eco-system-calendrier.ics';a.rel='noopener';document.body.append(a);a.click();a.remove();
+});
 document.addEventListener('click', e => { const t = e.target; if (!t.closest('.top-search'))
     $('#globalSearchResults').replaceChildren(); const open = t.closest('[data-module-open]'); if (open?.dataset.moduleOpen)
     void openModule(open.dataset.moduleOpen); });
@@ -1345,13 +1502,15 @@ const addLaunchRubric=(preset={})=>{
 $('#addLaunchRubric').onclick=()=>addLaunchRubric();
 $('#addLaunchTontine').onclick=()=>addLaunchRubric({kind:'TONTINE',contributionMode:'MONEY'});
 const syncLaunchFamily=()=>{
-  const family=val('groupKind');
+  const family=val('groupKind'),variant=val('tontineVariant')||'MONEY',wrap=$('#tontineVariantWrap');
+  if(wrap)wrap.hidden=family!=='rotating_tontine';
   if(family==='rotating_tontine'&&!launchEditors.some(editor=>editor.read().kind==='TONTINE')){
-    addLaunchRubric({kind:'TONTINE',name:'Tontine',contributionMode:'MONEY'});
+    addLaunchRubric({kind:'TONTINE',name:'Tontine',contributionMode:variant==='IN_KIND'?'IN_KIND':variant==='HYBRID'?'MIXED':'MONEY'});
   }
   invalidateProject();
 };
 $('#groupKind').addEventListener('change',syncLaunchFamily);
+$('#tontineVariant')?.addEventListener('change',syncLaunchFamily);
 launchStudio=mountLaunchStudio({
   app,getGroups:()=>groups,getRubrics:()=>{try{return readRubricEditors(launchEditors);}catch{return launchEditors.map(e=>e.read());}},
   addRubric:addLaunchRubric,invalidate:invalidateProject,toast,showError:fail
@@ -1456,6 +1615,9 @@ const prepareRubricPreset=(name,description)=>{
     document.querySelector('#immediateFullPayout').checked=false;
     form.scrollIntoView({behavior:'smooth',block:'start'});document.querySelector('#rubricName')?.focus();
 };
+document.querySelector('#quickRubricCollation')?.addEventListener('click',()=>prepareRubricPreset('Collation','Rubrique principale de contribution : règle du groupe concernant montant, bénéficiaire de la séance, présents/absents, manquant, couverture et décaissement.'));
+document.querySelector('#quickRubricLocalAid')?.addEventListener('click',()=>prepareRubricPreset('Aide locale','Rubrique principale de contribution, équivalente à Collation / Ration dans la nature CONTRIBUTION ; sa règle reste propre au groupe et ne relève pas de « Autres ».'));
+document.querySelector('#quickRubricHandRaise')?.addEventListener('click',()=>prepareRubricPreset('Main levée','Rubrique principale événementielle : motif, bénéficiaire, caractère obligatoire ou volontaire, montant, preuves et autorité de validation à confirmer.'));
 document.querySelector('#quickRubricLoan')?.addEventListener('click',()=>prepareRubricPreset('Prêt','Rubrique de prêts : règles de demande, approbation, décaissement, taux, remboursement et éventuelles sanctions à confirmer par le groupe.'));
 document.querySelector('#quickRubricSavings')?.addEventListener('click',()=>prepareRubricPreset('Épargne','Rubrique d’épargne : versements, retrait, période d’éligibilité et règles de rendement/intérêts à confirmer par le groupe.'));
 document.querySelector('#quickRubricAssistance')?.addEventListener('click',()=>prepareRubricPreset('Assistance','Rubrique d’assistance/solidarité : événements éligibles, preuves, montants et processus d’approbation à confirmer par le groupe.'));
@@ -1635,6 +1797,7 @@ async function start() {
           claim.textContent=navigator.onLine?tx('Finaliser le compte local','Finalize local account'):tx('Compte local · Internet requis pour finaliser','Local account · Internet needed to finalize');
         }
         await app.bootstrap();
+        const shareIntent=parseEcoShareIntent();
         const catalog = await app.productCatalog();
         modules = catalog.capabilities;
         populateWorkspaceModules();
@@ -1642,6 +1805,7 @@ async function start() {
         renderEcosystemHighlights();
         renderDomainHubs();
         await refreshAll();
+        if(shareIntent)await openEcoShareIntent(shareIntent);
         await loadWorkspaces();
     }
     catch (e) {

@@ -1,3 +1,34 @@
+## CURRENT OVERRIDE — 1.5.2.7 LIVE COMPLETION — RELEASE CANDIDATE QUALIFIÉE (2026-09-27)
+
+**Repository : `SergeDelor/tontine-platform`.**
+**Branche candidate : `finish/live-whatsapp-completion-20260927`.**
+**Chaîne d’intégration : PR #29 → `audit/live-completion-20260926`, puis PR #28 → `fix/1.5.2.6-field-persistence-pc-mobile-20260925`.**
+**Release candidate : `1.5.2.7-live-completion` · build `eco-system-1.5.2.7-20260927` · cache PWA `eco-system-v1527-live-completion-20260927`.**
+
+### Vérité fonctionnelle
+- Live proactif : reconnexion, heartbeat, rattrapage paginé et réinjection des événements durables dans les écrans sans rafraîchissement manuel.
+- WhatsApp : partage utilisateur/deep-link opérationnel. Le connecteur fournisseur WhatsApp automatisé reste une dépendance externe et n’est pas déclaré actif.
+- Registre : **164 capacités**, dont **155 FOUNDATION_ACTIVE**, **4 STRUCTURAL_V1 externes** (SMS, WhatsApp provider, Telegram, Email) et **5 PLANNED_DOMAIN** (vidéo, rewards, Mobile Money, MFA, fédération de groupes).
+- Recherche universelle, calendrier unifié, groupe hybride, Starter Kit, Document Studio, Verification Center, Founder AI, Data Quality, Paper Bridge/Print, mandats, Opportunity Graph, Value Discovery, Market Intelligence, Quiet Watch, appels d’offres, micro-annonces, registres métier, Time Machine non destructif, succession, dashboards par rôle, annuaire local, profil public opt-in, Creator Studio et Talent ont des parcours spécialisés.
+- Prépaiements : entrée Ledger une seule fois ; l’affectation future ne recrée aucune recette.
+- Reprise après clôture : quorum par comptes authentifiés distincts lorsque la politique l’exige ; nommer un approbateur ne vaut jamais approbation.
+- Enveloppes : budgets/classification sans mouvement de caisse. Wallet interne : custody comptabilisée dans le Ledger, distincte de Mobile Money.
+- Trust Graph / fiabilité : preuves comportementales contextualisées, explicables et advisory-only ; aucune décision automatique de prêt, admission ou exclusion.
+- **Rubriques : Aide locale est une rubrique principale de nature CONTRIBUTION, au même niveau métier que Collation/Ration ; Main levée est une rubrique principale LEVY. Elles ne relèvent jamais du menu « Autres ». « Autres » reste réservé aux petites sous-rubriques (Inscription, Timbre, Amendes, etc.).**
+- Les tableaux financiers canoniques, saisie ✓/Entrée, remplacement exact, offline/outbox, prêts/dettes/intérêts et Live existants ne doivent pas être réécrits ni remplacés.
+- Argent réel : **OFF**. D1 canonique et R2 existants doivent être réutilisés ; migrations additives uniquement.
+
+### Preuves de non-régression déjà vertes
+- #135 : classification rubriques principales vs « Autres » — SUCCESS.
+- #136 : invariants prépaiements/reprise/enveloppes/wallet/trust — Full governed CI + build + Live tests SUCCESS.
+- #138 : preuves de maturité des six derniers moteurs internes — Full governed CI + build + Live tests SUCCESS.
+- Une ancienne assertion PWA 1.5.2.3 a été corrigée pour conserver 1.5.2.6 comme cache précédent cohérent de 1.5.2.7 ; la qualification finale de release doit être verte avant toute fusion.
+
+### Statut de livraison
+Ne pas déclarer DEPLOYED ou FIELD_ACCEPTED tant que PR #29 et #28 ne sont pas fusionnées et que le workflow Cloudflare 1.5.2.7 n’a pas réussi sauvegarde pré, déploiement, smoke exact et sauvegarde/restauration post. La recette physique PC/Chrome/Opera, Android 6, offline et deux gestionnaires reste distincte.
+
+---
+
 ## CURRENT OVERRIDE — 1.5.2.3 FINANCIAL ENTRY OFFLINE — PRODUCTION VERIFIED, FIELD ACCEPTANCE PENDING (2026-09-25)
 
 **Repository opérationnel : `SergeDelor/tontine-platform`.**
@@ -758,3 +789,37 @@ La production est TECHNIQUEMENT QUALIFIÉE. Les nouveaux parcours restent FIELD_
 
 Le smoke distant est qualifié. La visibilité et l’ergonomie sur l’appareil réel du fondateur restent une recette terrain à constater, pas une réussite inventée.
 
+
+
+## Candidat 1.5.2.7 — Live Completion gouverné (2026-09-27)
+
+État exact :
+- branche candidate : `finish/live-whatsapp-completion-20260927` ;
+- PR : **#29**, base `audit/live-completion-20260926` ;
+- version runtime/build : `1.5.2.7-live-completion` ;
+- cache PWA : `eco-system-v1527-live-completion-20260927` ;
+- HEAD qualifié avant mise à jour documentaire : `bd6d541a350f0c86556c12fea000c3d04acb5d16` ;
+- qualification gouvernée : **run #397 / 36353667354 — SUCCESS** ;
+- catalogue : **164 capacités = 154 FOUNDATION_ACTIVE + 5 STRUCTURAL_V1 + 5 PLANNED_DOMAIN** ;
+- argent réel : **OFF** ; aucun nouveau rail de paiement réel n'est activé.
+
+Acquis principaux du candidat :
+1. Live proactif : reconnexion, heartbeat, replay/rattrapage paginé et réinjection des événements durables dans les écrans sans rafraîchissement manuel.
+2. WhatsApp : `SHARE.WHATSAPP.HANDOFF` opérationnel avec deep link Eco-System ; le provider automatisé `INTEGRATION.WHATSAPP` reste external-gated.
+3. Saisies financières canoniques conservées : aucune seconde source de vérité, aucun remplacement du Ledger.
+4. Search universelle, calendrier unifié, variantes de groupe/tontine, Starter Kit, Document Studio, Paper Bridge/Print, Data Quality et Time Machine non destructif.
+5. Prépaiements « ledger once », autorisations après clôture à comptes indépendants, enveloppes membres, Wallet dérivé du Ledger, Trust Graph explicable/advisory.
+6. Business Studio, mandats, Creator/Talent, profil public opt-in, Opportunity Graph, Value Discovery, Market Intelligence, dashboards par rôle, Assistant local, Quiet Watch et Founder AI gouverné.
+7. Correction métier verrouillée : **Collation, Ration et Aide locale sont des rubriques principales remboursables simples** ; **Main levée est un vrai domaine/rubrique Assistance/Solidarity**, espèces ou nature selon la pratique. Aucune de ces deux capacités n'est classée dans « Autres ».
+
+Capacités volontairement non déclarées complètes :
+- `GEO.DIRECTORY` : recherche par localité existante, mais géolocalisation appareil/GPS consentie complète non encore qualifiée ;
+- `INTEGRATION.SMS`, `INTEGRATION.WHATSAPP`, `INTEGRATION.TELEGRAM`, `INTEGRATION.EMAIL` : adaptateurs fournisseurs externes non activés ;
+- `COMMUNITY.VIDEO`, `MARKETPLACE.REWARDS`, `INTEGRATION.MOBILE_MONEY`, `SECURITY.MFA`, `FEDERATION.GROUP_NETWORK` : domaines planifiés, à ne pas simuler.
+
+Limites de vérité :
+- **PR #29 non fusionnée à cet instant** ;
+- **1.5.2.7 non déployée en production à cet instant** ;
+- smoke Cloudflare et BIR+ 1.5.2.7 non encore exécutés ;
+- recette réelle Chrome/Opera/mobile/offline/deux gestionnaires non encore FIELD_ACCEPTED.
+Ces états ne doivent être promus qu'après preuves correspondantes.

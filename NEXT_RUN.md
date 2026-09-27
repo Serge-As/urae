@@ -1,3 +1,18 @@
+# NEXT RUN — ECO-SYSTEM 1.5.2.7
+
+Point de reprise exact : branche `finish/live-whatsapp-completion-20260927`.
+
+1. Exiger une qualification verte sur le HEAD final.
+2. Fusionner PR #29 dans `audit/live-completion-20260926`.
+3. Vérifier la qualification du nouveau HEAD audit, puis fusionner PR #28 dans `fix/1.5.2.6-field-persistence-pc-mobile-20260925`.
+4. Le marqueur `.github/DEPLOY_ECO_SYSTEM_1_5_2_7_LIVE_ONCE` doit déclencher `.github/workflows/deploy-1.5.2.7-live-completion.yml`.
+5. Exiger : npm CI + build + tests navigateur, sauvegarde D1 pré, migrations additives seulement, déploiement, /health + catalogue 164, realMoney=false, sauvegarde post + restauration SQLite integrity_check=ok.
+6. Après succès, consigner le SHA déployé, run, Worker version et artifacts de sauvegarde dans CURRENT_TRUTH/PROJECT_STATE.
+7. Recette terrain ensuite seulement : Chrome/Opera PC, Android 6, offline/outbox, deux gestionnaires Live, WhatsApp Share Out, Aide locale/Collation comme rubriques principales.
+
+Ne pas activer artificiellement les connecteurs externes SMS/WhatsApp provider/Telegram/Email ni les domaines planifiés sans moteur/fournisseur réel.
+
+
 # ECO-SYSTEM — NEXT RUN
 
 ## CURRENT OVERRIDE — 1.5.0 audit implementation (2026-09-23)
@@ -260,3 +275,33 @@ Reprendre par :
 
 Ne pas réintroduire Backhaul/Eco Route dans Eco-System.
 
+
+
+## Reprise candidat 1.5.2.7 — 2026-09-27
+
+Point de départ :
+- branche : `finish/live-whatsapp-completion-20260927`
+- PR #29 : ouverte vers `audit/live-completion-20260926`
+- runtime : `1.5.2.7-live-completion`
+- qualification de référence : run **#397 / 36353667354 SUCCESS**
+- catalogue : **154 FOUNDATION_ACTIVE / 5 STRUCTURAL_V1 / 5 PLANNED_DOMAIN**
+- real money : **OFF**
+
+Ordre obligatoire de finalisation :
+1. qualifier les commits documentaires de fermeture ;
+2. ne fusionner PR #29 que si la CI reste verte ;
+3. qualifier PR #28 avec la tête intégrée avant fusion dans `fix/1.5.2.6-field-persistence-pc-mobile-20260925` ;
+4. utiliser un workflow de déploiement 1.5.2.7 dont les attentes correspondent exactement à :
+   - version `1.5.2.7-live-completion` ;
+   - build ID `eco-system-1.5.2.7-20260927` ;
+   - PWA cache `eco-system-v1527-live-completion-20260927` ;
+   - SHA exact de livraison ;
+   - `realMoneyEnabled=false` ;
+5. BIR+ pré-déploiement → migrations additives seulement → deploy → smoke root/health/catalog → BIR+ post et restauration/integrity check ;
+6. recette terrain : Chrome + Opera PC, mobile, offline, reprise réseau, deux gestionnaires Live sans rafraîchissement, WhatsApp handoff/deep return, saisies financières/Entrée, Aide locale/Collation/Main levée, séances/prêts/dettes ;
+7. ne marquer FIELD_ACCEPTED qu'après constat réel.
+
+À ne pas « compléter » artificiellement :
+- `GEO.DIRECTORY` tant que la géolocalisation appareil consentie n'est pas implémentée/qualifiée ;
+- SMS/WhatsApp provider/Telegram/Email sans fournisseur configuré ;
+- vidéo, rewards, Mobile Money, MFA et fédération tant que leurs dépendances réelles ne sont pas présentes.

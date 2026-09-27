@@ -66,8 +66,7 @@ export function mountGroupHomeUI({app,getGroups,getMembers,getMeetings,navigate,
     if(manage)actions.append(action(t('Gérer les membres','Manage members'),'members','memberList'),action(t('Gérer / archiver les rubriques','Manage / archive rubrics'),'operations','rubricList'),action(t('Ouvrir le Récap','Open Recap'),'recap'));identification.append(actions);
     const ref=make('details','');ref.append(make('summary','',t('Référence technique','Technical reference')),make('code','',group.id),make('p','hint',t('Le code ECO-GRP identifie le groupe sans donner d’accès. L’ID technique reste secondaire.','The ECO-GRP code identifies the group without granting access. The technical ID remains secondary.')));identification.append(ref);root.append(identification);
 
-    const starterRows=await app.listWorkspaceRecords('GROUP.STARTER_KIT',group.id).catch(()=>[]);
-    const starter=starterRows.find(x=>x.tags?.includes('starter-kit:canonical'))??starterRows[0];
+    const starter=await app.starterKit(group.id).catch(()=>null);
     if(starter){
       const kit=make('section','group-home-block');kit.id='groupStarterKit';kit.append(make('h3','',t('Kit prêt à l’emploi du groupe','Group ready-to-use kit')));
       const parse=value=>{try{return JSON.parse(String(value??''));}catch{return[];}};

@@ -35,7 +35,7 @@ export function mountLaunchStudio({app,getGroups,getRubrics,addRubric,invalidate
   const refreshGroups=()=>{
     const select=byId('sourceGroupId');if(!select)return;const previous=select.value;select.replaceChildren();
     select.append(option('','Choisir la tontine enregistrée'));
-    for(const group of getGroups().filter(g=>['rotating_tontine','in_kind_tontine'].includes(g.kind)))select.append(option(group.id,group.name));
+    for(const group of getGroups().filter(g=>['rotating_tontine','in_kind_tontine','hybrid'].includes(g.kind)))select.append(option(group.id,group.name));
     if([...select.options].some(o=>o.value===previous))select.value=previous;
   };
 
@@ -44,6 +44,7 @@ export function mountLaunchStudio({app,getGroups,getRubrics,addRubric,invalidate
   })[k]&&checked(({IN_APP:'channelInApp',PRINT:'channelPrint',SMS:'channelSms',WHATSAPP:'channelWhatsapp',TELEGRAM:'channelTelegram'})[k]));
 
   const readProfile=()=>({
+    tontineVariant:value('groupKind')==='rotating_tontine'?(value('tontineVariant')||'MONEY'):undefined,
     origin:{
       mode:value('launchOrigin')||'NEW',
       sourceGroupId:value('launchOrigin')==='TRANSFORM_REGISTERED'?(value('sourceGroupId')||undefined):undefined,
@@ -201,9 +202,7 @@ export function mountLaunchStudio({app,getGroups,getRubrics,addRubric,invalidate
       minutes:String(kit.minutes??'').slice(0,20000),
       profileJson:JSON.stringify(kit.profile??{}).slice(0,50000)
     };
-    const existing=(await app.listWorkspaceRecords('GROUP.STARTER_KIT',groupId).catch(()=>[])).find(x=>x.tags?.includes('starter-kit:canonical'));
-    if(existing)return app.updateWorkspaceRecord(existing.id,{title:'Kit prêt à l’emploi · '+kit.groupName,summary:'Pack opérationnel de démarrage du groupe : règles, checklist, calendrier, Paper Bridge, réunion, trésorerie et risques.',status:'ACTIVE',tags:['starter-kit','starter-kit:canonical','paper-bridge','launch'],data});
-    return app.createWorkspaceRecord({moduleId:'GROUP.STARTER_KIT',groupId,title:'Kit prêt à l’emploi · '+kit.groupName,summary:'Pack opérationnel de démarrage du groupe : règles, checklist, calendrier, Paper Bridge, réunion, trésorerie et risques.',status:'ACTIVE',tags:['starter-kit','starter-kit:canonical','paper-bridge','launch'],data});
+    return app.saveStarterKit(groupId,data);
   };
 
   const renderStarterKit=(root,kit)=>{
@@ -239,6 +238,7 @@ export function mountLaunchStudio({app,getGroups,getRubrics,addRubric,invalidate
     textLine(card,'Origine',profile.origin.mode);
     textLine(card,'Groupe',value('projectName'));
     textLine(card,'Famille',value('groupKind'));
+    if(value('groupKind')==='rotating_tontine')textLine(card,'Variante de tontine',({MONEY:'Argent',IN_KIND:'En nature',HYBRID:'Hybride argent + nature'})[String(profile.tontineVariant??'MONEY')]||String(profile.tontineVariant??'MONEY'));
     textLine(card,'Gouvernance',value('governanceModel'));
     textLine(card,'Création historique',profile.origin.historicalCreatedAt||'Nouveau groupe / non renseignée');
     textLine(card,'Exercice',profile.cycle.label||profile.origin.currentExerciseLabel||'À préciser');

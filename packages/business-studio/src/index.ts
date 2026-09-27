@@ -7,6 +7,8 @@ type BusinessKind='WORKSPACE'|'MANDATE'|'CLIENT'|'OFFER'|'REQUEST'|'QUOTE'|'ORDE
 type Money={amount:number;currency:string};
 const now=()=>new Date().toISOString();
 const managerRoles=new Set(['founder','manager','admin','president','treasurer']);
+const MANDATE_RIGHTS=new Set(['GROUP_ADVICE','MEETING_SUPPORT','DOCUMENT_SUPPORT','REPORTING','MEMBER_ADMIN_SUPPORT','PROCUREMENT_SUPPORT','BUSINESS_SUPPORT','TRAINING_SUPPORT','COMMUNICATION_SUPPORT']);
+type MandateApproval={actorId:Id;roles:string[];at:string};
 const int=(v:unknown,name:string,allowZero=true)=>{const n=Number(v);if(!Number.isSafeInteger(n)||n<(allowZero?0:1))throw new Error('INVALID_'+name.toUpperCase());return n;};
 const required=(v:unknown,name:string,max=240)=>{const s=String(v??'').trim();if(!s)throw new Error(name.toUpperCase()+'_REQUIRED');return s.slice(0,max);};
 const json=<T>(v:unknown,fallback:T):T=>{try{return JSON.parse(String(v??'')) as T;}catch{return fallback;}};
@@ -37,6 +39,22 @@ export class BusinessStudioService{
     const m=(await this.repo.listMemberships(ctx.tenantId,groupId)).find(x=>x.userId===ctx.actorId&&x.status==='active');
     if(!m||!m.roles.some(r=>managerRoles.has(r)))throw new Error('FORBIDDEN_SCOPE');return g;
   }
+  private async groupActor(groupId:Id){
+    const ctx=this.kernel.context.get(),g=await this.repo.getGroup(ctx.tenantId,groupId);if(!g)throw new Error('GROUP_NOT_FOUND');
+    if(g.createdBy===ctx.actorId)return{group:g,roles:['founder','manager']};
+    const m=(await this.repo.listMemberships(ctx.tenantId,groupId)).find(x=>x.userId===ctx.actorId&&x.status==='active');
+    if(!m||!m.roles.some(r=>managerRoles.has(r)))throw new Error('FORBIDDEN_SCOPE');return{group:g,roles:[...m.roles]};
+  }
+  private async mandate(id:Id){
+    const ctx=this.kernel.context.get(),r=await this.repo.getWorkspaceRecord(ctx.tenantId,id);if(!r||r.data.businessKind!=='MANDATE')throw new Error('MANDATE_NOT_FOUND');
+    await this.groupManager(String(r.data.groupId));return r;
+  }
+  private mandateApprovals(r:WorkspaceRecord):MandateApproval[]{return json<MandateApproval[]>(r.data.approvalsJson,[]).filter(x=>x&&typeof x.actorId==='string'&&Array.isArray(x.roles));}
+  private mandateApprovalState(r:WorkspaceRecord){
+    const required=Math.max(1,Number(r.data.minimumApprovals??1)),eligibleRoles=json<string[]>(r.data.approvalsRequiredJson,[]);
+    const approvals=this.mandateApprovals(r),eligible=eligibleRoles.length?approvals.filter(a=>a.roles.some(role=>eligibleRoles.includes(role))):approvals;
+    return{required,eligibleRoles,approvals,eligible,count:eligible.length,approved:eligible.length>=required};
+  }
   private async save(kind:BusinessKind,title:string,data:Record<string,string|number|boolean|null>,status:WorkspaceRecord['status']='ACTIVE'){
     const ctx=this.kernel.context.get(),at=now(),record:WorkspaceRecord={id:makeId('biz'),tenantId:ctx.tenantId,moduleId:'MANAGER.BUSINESS_STUDIO',title,status,tags:['business-studio','kind:'+kind.toLowerCase()],data:{...data,businessKind:kind,version:1},createdBy:ctx.actorId,createdAt:at,updatedAt:at};
     await this.repo.saveWorkspaceRecord(record);return record;
@@ -52,17 +70,39 @@ export class BusinessStudioService{
     await this.repo.saveWorkspaceRecord(next);return next;
   }
 
-  async createMandate(input:{groupId:Id;services:string[];startsAt:string;endsAt?:string;feeModel:'FIXED'|'PER_SESSION'|'PERCENT_SANDBOX'|'CUSTOM';feeAmount?:number;currency?:string;approvalsRequired?:string[]}){
-    const g=await this.groupManager(input.groupId),starts=new Date(input.startsAt);if(!Number.isFinite(starts.getTime()))throw new Error('INVALID_STARTS_AT');
+  async createMandate(input:{groupId:Id;services:string[];startsAt:string;endsAt?:string;feeModel:'FIXED'|'PER_SESSION'|'PERCENT_SANDBOX'|'CUSTOM';feeAmount?:number;currency?:string;approvalsRequired?:string[];minimumApprovals?:number;delegatedRights?:string[]}){
+    const {group:g}=await this.groupActor(input.groupId),starts=new Date(input.startsAt);if(!Number.isFinite(starts.getTime()))throw new Error('INVALID_STARTS_AT');
     if(input.endsAt&&Date.parse(input.endsAt)<=starts.getTime())throw new Error('INVALID_ENDS_AT');
     const services=[...new Set(input.services.map(x=>x.trim()).filter(Boolean))];if(!services.length)throw new Error('MANDATE_SERVICES_REQUIRED');
-    return this.save('MANDATE','Mandat · '+g.name,{groupId:g.id,servicesJson:JSON.stringify(services),startsAt:starts.toISOString(),endsAt:input.endsAt?new Date(input.endsAt).toISOString():'',feeModel:input.feeModel,feeAmount:int(input.feeAmount??0,'fee_amount'),currency:input.currency??'XAF',approvalsRequiredJson:JSON.stringify(input.approvalsRequired??[]),mandateState:'DRAFT'});
+    const rights=[...new Set((input.delegatedRights??[]).map(x=>x.trim().toUpperCase()).filter(Boolean))];if(!rights.length)throw new Error('MANDATE_RIGHTS_REQUIRED');for(const right of rights)if(!MANDATE_RIGHTS.has(right))throw new Error('INVALID_MANDATE_RIGHT');
+    const eligible=[...new Set((input.approvalsRequired??['founder','president','treasurer','manager']).map(x=>x.trim()).filter(Boolean))];for(const role of eligible)if(!managerRoles.has(role))throw new Error('INVALID_MANDATE_APPROVER_ROLE');
+    const minimum=Math.max(1,int(input.minimumApprovals??1,'minimum_approvals',false));if(minimum>10)throw new Error('MANDATE_APPROVAL_QUORUM_TOO_HIGH');
+    const record=await this.save('MANDATE','Mandat · '+g.name,{groupId:g.id,servicesJson:JSON.stringify(services),startsAt:starts.toISOString(),endsAt:input.endsAt?new Date(input.endsAt).toISOString():'',feeModel:input.feeModel,feeAmount:int(input.feeAmount??0,'fee_amount'),currency:input.currency??'XAF',approvalsRequiredJson:JSON.stringify(eligible),minimumApprovals:minimum,delegatedRightsJson:JSON.stringify(rights),approvalsJson:'[]',mandateState:'DRAFT',systemPermissionElevation:false});
+    const ctx=this.kernel.context.get();await this.repo.saveAudit(this.kernel.audit.append({tenantId:ctx.tenantId,actorId:ctx.actorId,action:'MANAGEMENT_MANDATE_CREATED',targetType:'business_mandate',targetId:record.id,requestId:ctx.requestId,metadata:{groupId:g.id,minimumApprovals:minimum,delegatedRights:rights.join(',')}}));return record;
+  }
+  async groupMandates(groupId:Id){
+    await this.groupManager(groupId);const ctx=this.kernel.context.get();return (await this.repo.listWorkspaceRecords(ctx.tenantId)).filter(r=>r.data.businessKind==='MANDATE'&&r.data.groupId===groupId).sort((a,b)=>b.updatedAt.localeCompare(a.updatedAt));
+  }
+  async approveMandate(id:Id){
+    const r=await this.mandate(id);if(String(r.data.mandateState)!=='DRAFT')throw new Error('MANDATE_NOT_DRAFT');
+    const ctx=this.kernel.context.get(),{roles}=await this.groupActor(String(r.data.groupId)),state=this.mandateApprovalState(r);
+    if(state.eligibleRoles.length&&!roles.some(role=>state.eligibleRoles.includes(role)))throw new Error('MANDATE_APPROVER_NOT_ELIGIBLE');
+    if(state.approvals.some(a=>a.actorId===ctx.actorId))return r;
+    const approvals=[...state.approvals,{actorId:ctx.actorId,roles,at:now()}],next={...r,data:{...r.data,approvalsJson:JSON.stringify(approvals),approvalCount:approvals.length,version:Number(r.data.version??1)+1},updatedAt:now()};await this.repo.saveWorkspaceRecord(next);
+    await this.repo.saveAudit(this.kernel.audit.append({tenantId:ctx.tenantId,actorId:ctx.actorId,action:'MANAGEMENT_MANDATE_APPROVED',targetType:'business_mandate',targetId:id,requestId:ctx.requestId,metadata:{groupId:r.data.groupId,approvalCount:approvals.length}}));return next;
   }
   async activateMandate(id:Id){
-    const ctx=this.kernel.context.get(),r=await this.repo.getWorkspaceRecord(ctx.tenantId,id);if(!r||r.createdBy!==ctx.actorId||r.data.businessKind!=='MANDATE')throw new Error('MANDATE_NOT_FOUND');
-    await this.groupManager(String(r.data.groupId));return this.mutate(id,{mandateState:'ACTIVE',activatedAt:now()});
+    const ctx=this.kernel.context.get(),r=await this.mandate(id);if(r.createdBy!==ctx.actorId)throw new Error('MANDATE_CREATOR_REQUIRED');if(String(r.data.mandateState)!=='DRAFT')throw new Error('MANDATE_NOT_DRAFT');
+    const state=this.mandateApprovalState(r);if(!state.approved)throw new Error('MANDATE_APPROVALS_INCOMPLETE');
+    const starts=Date.parse(String(r.data.startsAt??'')),ends=r.data.endsAt?Date.parse(String(r.data.endsAt)):Infinity;if(!Number.isFinite(starts)||Date.now()<starts)throw new Error('MANDATE_NOT_STARTED');if(Date.now()>=ends)throw new Error('MANDATE_EXPIRED');
+    const rights=json<string[]>(r.data.delegatedRightsJson,[]);if(!rights.length)throw new Error('MANDATE_RIGHTS_REQUIRED');
+    const next={...r,status:'ACTIVE' as const,data:{...r.data,mandateState:'ACTIVE',activatedAt:now(),activatedBy:ctx.actorId,systemPermissionElevation:false,version:Number(r.data.version??1)+1},updatedAt:now()};await this.repo.saveWorkspaceRecord(next);
+    await this.repo.saveAudit(this.kernel.audit.append({tenantId:ctx.tenantId,actorId:ctx.actorId,action:'MANAGEMENT_MANDATE_ACTIVATED',targetType:'business_mandate',targetId:id,requestId:ctx.requestId,metadata:{groupId:r.data.groupId,approvalCount:state.count}}));return next;
   }
-  async endMandate(id:Id,reason:string){return this.mutate(id,{mandateState:'ENDED',endedAt:now(),endReason:required(reason,'reason',500)},'DONE');}
+  async endMandate(id:Id,reason:string){
+    const r=await this.mandate(id),ctx=this.kernel.context.get();if(!['ACTIVE','DRAFT'].includes(String(r.data.mandateState)))throw new Error('MANDATE_NOT_OPEN');
+    const why=required(reason,'reason',500),next={...r,status:'DONE' as const,data:{...r.data,mandateState:'ENDED',endedAt:now(),endedBy:ctx.actorId,endReason:why,systemPermissionElevation:false,version:Number(r.data.version??1)+1},updatedAt:now()};await this.repo.saveWorkspaceRecord(next);await this.repo.saveAudit(this.kernel.audit.append({tenantId:ctx.tenantId,actorId:ctx.actorId,action:'MANAGEMENT_MANDATE_ENDED',targetType:'business_mandate',targetId:id,requestId:ctx.requestId,metadata:{groupId:r.data.groupId,reason:why}}));return next;
+  }
 
   async createClient(input:{name:string;type:'GROUP'|'PERSON'|'BUSINESS'|'NGO'|'OTHER';groupId?:Id;contactRef?:string;consentToContact?:boolean}){
     if(input.groupId)await this.groupManager(input.groupId);

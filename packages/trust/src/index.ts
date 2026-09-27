@@ -41,6 +41,73 @@ export class CommitmentReliabilityEngine {
   }
 }
 
+export class CommitmentTrustGraphService {
+  constructor(public repo:PlatformRepository,public kernel:PlatformKernel,public engine=new CommitmentReliabilityEngine()){}
+  private ctx(){return this.kernel.context.get();}
+  private async subject(groupId:Id,membershipId:Id,manage=false){
+    const c=this.ctx(),group=await this.repo.getGroup(c.tenantId,groupId);if(!group)throw new Error('GROUP_NOT_FOUND');
+    const subject=await this.repo.getMembership(c.tenantId,groupId,membershipId);if(!subject||subject.status!=='active')throw new Error('MEMBERSHIP_NOT_FOUND');
+    const actor=(await this.repo.listMemberships(c.tenantId,groupId)).find(x=>x.userId===c.actorId&&x.status==='active');
+    const manager=group.createdBy===c.actorId||Boolean(actor?.roles.some(r=>managerRoles.has(r)));
+    if(manage&&!manager)throw new Error('FORBIDDEN_SCOPE');
+    if(!manage&&!manager&&subject.userId!==c.actorId)throw new Error('FORBIDDEN_SCOPE');
+    return{group,subject,manager};
+  }
+  async addEvidence(groupId:Id,membershipId:Id,input:{commitmentBand:CommitmentBandId;kind:ReliabilityEvidence['kind'];sourceId:Id;occurredAt?:string;weight?:number}){
+    const {subject}=await this.subject(groupId,membershipId,true),band=clean(input.commitmentBand,80),sourceId=clean(input.sourceId,240);
+    if(!band||!sourceId)throw new Error('TRUST_EVIDENCE_FIELDS_REQUIRED');
+    const allowed:ReliabilityEvidence['kind'][]=['FULFILLED_ON_TIME','FULFILLED_LATE','MISSED_CONFIRMED','RECOVERED_ARREARS','DISPUTE_RESOLVED','RULE_BREACH_CONFIRMED'];
+    if(!allowed.includes(input.kind))throw new Error('INVALID_RELIABILITY_EVIDENCE_KIND');
+    const occurredAt=input.occurredAt?new Date(input.occurredAt).toISOString():now();if(!Number.isFinite(Date.parse(occurredAt)))throw new Error('INVALID_OCCURRED_AT');
+    const weight=input.weight===undefined?1:Number(input.weight);if(!Number.isFinite(weight)||weight<0.1||weight>3)throw new Error('INVALID_RELIABILITY_WEIGHT');
+    const c=this.ctx(),stamp=now(),record:WorkspaceRecord={id:makeId('trust_evidence'),tenantId:c.tenantId,groupId,moduleId:'TRUST.GRAPH',title:'Preuve de fiabilité · '+input.kind,status:'DONE',tags:['trust-evidence','behaviour-only','band:'+band],data:{kind:'RELIABILITY_EVIDENCE',membershipId,subjectUserId:subject.userId,commitmentBand:band,evidenceKind:input.kind,weight,occurredAt,sourceId,advisoryOnly:true,wealthUsed:false,automaticDecision:false},createdBy:c.actorId,createdAt:stamp,updatedAt:stamp};
+    await this.repo.saveWorkspaceRecord(record);await this.repo.saveAudit(this.kernel.audit.append({tenantId:c.tenantId,actorId:c.actorId,action:'TRUST_EVIDENCE_RECORDED',targetType:'membership',targetId:membershipId,requestId:c.requestId,metadata:{groupId,commitmentBand:band,evidenceKind:input.kind,sourceId}}));return record;
+  }
+  async evidence(groupId:Id,membershipId:Id){
+    await this.subject(groupId,membershipId,false);const c=this.ctx();
+    return (await this.repo.listWorkspaceRecords(c.tenantId,'TRUST.GRAPH',groupId)).filter(x=>x.data.kind==='RELIABILITY_EVIDENCE'&&x.data.membershipId===membershipId).sort((a,b)=>String(b.data.occurredAt??b.createdAt).localeCompare(String(a.data.occurredAt??a.createdAt)));
+  }
+  async profile(groupId:Id,membershipId:Id,commitmentBand:CommitmentBandId){
+    const {subject}=await this.subject(groupId,membershipId,false),band=clean(commitmentBand,80);if(!band)throw new Error('COMMITMENT_BAND_REQUIRED');
+    const rows=await this.evidence(groupId,membershipId),items:ReliabilityEvidence[]=rows.filter(x=>String(x.data.commitmentBand)===band).map(x=>({subjectUserId:subject.userId,commitmentBand:band,kind:String(x.data.evidenceKind) as ReliabilityEvidence['kind'],weight:Number(x.data.weight??1),occurredAt:String(x.data.occurredAt??x.createdAt),sourceId:String(x.data.sourceId??x.id)}));
+    return this.engine.profile(subject.userId,band,items);
+  }
+  async graph(groupId:Id,membershipId:Id){
+    const {group,subject}=await this.subject(groupId,membershipId,false),c=this.ctx();
+    const rows=await this.evidence(groupId,membershipId),bands=[...new Set(rows.map(x=>String(x.data.commitmentBand??'')).filter(Boolean))];
+    const profiles=[];for(const band of bands)profiles.push(await this.profile(groupId,membershipId,band));
+    const groupRows=await this.repo.listWorkspaceRecords(c.tenantId,undefined,groupId),tenantRows=await this.repo.listWorkspaceRecords(c.tenantId);
+    const nodes:Array<{id:string;kind:string;label:string;state?:string;sourceRef?:string;meta?:Record<string,string|number|boolean|null>}>=[],edges:Array<{from:string;to:string;relation:string;reasonCodes:string[]}>=[],seen=new Set<string>();
+    const addNode=(node:{id:string;kind:string;label:string;state?:string;sourceRef?:string;meta?:Record<string,string|number|boolean|null>})=>{if(!seen.has(node.id)){seen.add(node.id);nodes.push(node);}};
+    const addEdge=(from:string,to:string,relation:string,reasonCodes:string[]=[])=>edges.push({from,to,relation,reasonCodes});
+    const person='person:'+subject.userId,membership='membership:'+subject.id,groupNode='group:'+group.id;
+    addNode({id:person,kind:'PERSON',label:(await this.repo.getUser(subject.userId))?.displayName??subject.userId,sourceRef:subject.userId,meta:{wealthUsed:false,advisoryOnly:true}});
+    const joinedAt=subject.joinedAt??now();addNode({id:membership,kind:'MEMBERSHIP',label:'Adhésion · '+group.name,state:subject.status,sourceRef:subject.id,meta:{joinedAt,tenureDays:Math.max(0,Math.floor((Date.now()-Date.parse(joinedAt))/86400000))}});
+    addNode({id:groupNode,kind:'GROUP',label:group.name,state:group.status,sourceRef:group.id});addEdge(person,membership,'HAS_MEMBERSHIP',['ACTIVE_GROUP_SCOPE']);addEdge(membership,groupNode,'MEMBER_OF',['MEMBERSHIP_RECORD']);
+    for(const role of subject.roles){const id='role:'+role;addNode({id,kind:'ROLE',label:role});addEdge(membership,id,'HOLDS_ROLE',['MEMBERSHIP_ROLE']);}
+    for(const r of groupRows.filter(x=>x.moduleId==='MEETING.ATTENDANCE'&&x.data.membershipId===subject.id)){
+      const id='attendance:'+r.id,state=String(r.data.attendance??'');addNode({id,kind:'PARTICIPATION',label:'Présence · '+state,state,sourceRef:r.id,meta:{meetingId:String(r.data.meetingId??'')}});addEdge(membership,id,'PARTICIPATED_AS',['RECORDED_ATTENDANCE']);
+    }
+    for(const r of tenantRows.filter(x=>x.data.businessKind==='MANDATE'&&x.data.groupId===groupId&&x.createdBy===subject.userId)){
+      const id='mandate:'+r.id,state=String(r.data.mandateState??r.status);addNode({id,kind:'MANDATE',label:r.title,state,sourceRef:r.id,meta:{systemPermissionElevation:Boolean(r.data.systemPermissionElevation)}});addEdge(person,id,'HAS_MANDATE',['EXPLICIT_BUSINESS_MANDATE']);
+    }
+    for(const r of groupRows.filter(x=>x.moduleId==='MARKETPLACE.CORE'&&x.data.marketKind==='MARKET_ORDER'&&x.createdBy===subject.userId)){
+      const id='order:'+r.id,state=String(r.data.state??r.status);addNode({id,kind:'ORDER',label:r.title,state,sourceRef:r.id,meta:{disputed:Boolean(r.data.disputed),quantity:Number(r.data.quantity??0)}});addEdge(person,id,'PLACED_ORDER',['MARKET_ORDER_AUTHOR']);
+    }
+    for(const r of tenantRows.filter(x=>x.moduleId==='LEARNING.MANAGER_ACADEMY'&&x.createdBy===subject.userId&&['ENROLLMENT','CERTIFICATE'].includes(String(x.data.kind??'')))){
+      const kind=String(r.data.kind)==='CERTIFICATE'?'CERTIFICATION':'TRAINING',id=kind.toLowerCase()+':'+r.id;addNode({id,kind,label:r.title,state:String(r.data.enrollmentState??r.status),sourceRef:r.id,meta:{grantsFinancialRole:Boolean(r.data.grantsFinancialRole),grantsPermission:Boolean(r.data.grantsPermission)}});addEdge(person,id,kind==='CERTIFICATION'?'EARNED_CERTIFICATION':'ENROLLED_IN',['ACADEMY_RECORD']);
+    }
+    for(const r of groupRows.filter(x=>x.moduleId==='SAFETY.ANTISCAM'&&[subject.userId,subject.id].includes(String(x.data.subjectRef??'')))){
+      const id='incident:'+r.id;addNode({id,kind:'INCIDENT',label:r.title,state:String(r.data.caseState??r.status),sourceRef:r.id,meta:{findingStatus:String(r.data.findingStatus??'UNVERIFIED_SUSPICION'),financialScoreEffect:Boolean(r.data.financialScoreEffect)}});addEdge(person,id,'SUBJECT_OF',['HUMAN_REVIEW_REQUIRED','NO_AUTOMATIC_SCORE_EFFECT']);
+    }
+    for(const r of rows){
+      const id='evidence:'+r.id;addNode({id,kind:'EVIDENCE',label:r.title,state:String(r.data.evidenceKind??''),sourceRef:String(r.data.sourceId??r.id),meta:{commitmentBand:String(r.data.commitmentBand??''),weight:Number(r.data.weight??1),wealthUsed:false}});addEdge(person,id,'SUPPORTED_BY',['BEHAVIOURAL_EVIDENCE']);
+      const source=String(r.data.sourceId??'');if(/^(proof_|cni_hint_|phone_hint_|name_hint_)/.test(source)){const pid='identity-proof-ref:'+source;addNode({id:pid,kind:'IDENTITY_PROOF_REFERENCE',label:'Preuve d’identité référencée',sourceRef:source,meta:{rawIdentifierExposed:false}});addEdge(person,pid,'IDENTITY_SUPPORTED_BY',['REFERENCE_ONLY','NO_RAW_IDENTIFIER']);}
+    }
+    return{membershipId,evidence:rows,profiles,nodes,edges,coverage:{roles:subject.roles.length,participation:groupRows.filter(x=>x.moduleId==='MEETING.ATTENDANCE'&&x.data.membershipId===subject.id).length,mandates:nodes.filter(x=>x.kind==='MANDATE').length,orders:nodes.filter(x=>x.kind==='ORDER').length,training:nodes.filter(x=>x.kind==='TRAINING').length,certifications:nodes.filter(x=>x.kind==='CERTIFICATION').length,incidents:nodes.filter(x=>x.kind==='INCIDENT').length,evidence:rows.length},policy:{advisoryOnly:true,automaticAdmission:false,automaticCreditDecision:false,automaticExclusion:false,wealthUsed:false,opaqueGlobalScore:false,rawIdentityExposed:false,secondSourceOfTruth:false}};
+  }
+}
+
 export const assessReferralStructure=(input:{levels?:number;fundingSource?:string;rewardForRecruitingRecruiters?:boolean;promisedReturnLinkedToRecruitment?:boolean;realProductOrServiceEvidence?:boolean}):ReferralStructureAssessment=>{
   const signals:ReferralStructureAssessment['signals']=[],levels=Math.max(1,Math.trunc(Number(input.levels??1))),funding=clean(input.fundingSource,80).toUpperCase();
   if(levels>1)signals.push({code:'MULTI_LEVEL_REWARD',severity:'CRITICAL',explanation:'Les récompenses de recommandation doivent rester sur un seul niveau direct.'});

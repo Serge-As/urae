@@ -7,6 +7,7 @@ import { LoopbackRelayTransport, envelopeForOutbox } from '../../relay/src/index
 import { PRODUCT_MODULES } from '../../module-registry/src/index.js';
 import { makeId, type CashboxReconciliationRecord, type CashboxSnapshot, type CaseRecord, type ContributionReceipt, type EvidenceRecord, type FeasibilityResult, type Group, type LedgerEntry, type LedgerSummary, type MeetingSession, type Membership, type MembershipView, type OutboxItem, type GroupOperatingPolicy, type RubricDefinition, type RubricOperatingModel, type RubricCyclePreview, type GroupDiscoveryMatch, type PublicGroupListing, type MembershipApplication, type WorkspaceRecord, type WorkspaceStatus } from '../../contracts/src/index.js';
 import type { CompletionKind, CompletionRecord, TontineScheduleConstraint, TontineScheduleResult, LoanScheduleRow } from '../../completion/src/index.js';
+import { starterRubricFacetsForName } from '../../rubrics/src/index.js';
 
 export const KERNEL_SERVICE_IDS = [
   'kernelContext','kernelPolicy','kernelWorkflow','kernelEvents','kernelAudit','kernelObligations','kernelEvidence','kernelReconciliation','kernelInbox','kernelCases','kernelNotifications','kernelConfiguration','kernelFeatures','kernelGovernance','kernelCompatibility','kernelResourceGovernor','kernelOutbox','kernelRelay'
@@ -188,6 +189,11 @@ export class ConnectedApplication {
     }
   }
   currentActor():string{return this.actorId;}
+  async memberEnvelope(meetingId:string,membershipId?:string):Promise<any>{
+    if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');
+    const q=membershipId?'?membershipId='+encodeURIComponent(membershipId):'';
+    return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/meetings/${encodeURIComponent(meetingId)}/member-envelope${q}`);
+  }
   async financialNotices(membershipId:string):Promise<any[]>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/members/${encodeURIComponent(membershipId)}/financial-notices`);}
   async confirmFinancialNotice(noticeId:string,membershipId?:string):Promise<any>{
     if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');
@@ -325,7 +331,7 @@ export class ConnectedApplication {
   }
   async createRubric(input:{name:string;writtenRule?:string;observedPractice?:string;model:RubricOperatingModel}):Promise<RubricDefinition>{
     if(!this.activeGroupId)throw new Error('ACTIVE_GROUP_REQUIRED');
-    const facets={direction:'BIDIRECTIONAL',obligation:'CUSTOM',medium:'CASH',refundability:'CONDITIONAL',replenishment:'CUSTOM',interestMode:'NONE',eligibilityMode:'RULE_BASED'} as const;
+    const facets=starterRubricFacetsForName(input.name)??{direction:'BIDIRECTIONAL',obligation:'CUSTOM',medium:'CASH',refundability:'CONDITIONAL',replenishment:'CUSTOM',interestMode:'NONE',eligibilityMode:'RULE_BASED'} as const;
     const operatingModel={...input.model,writtenRule:input.writtenRule,observedPractice:input.observedPractice};
     if(!this.isOffline())try{return await this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/rubrics`,{method:'POST',body:JSON.stringify({name:input.name,facets,source:'GROUP_CUSTOM',operatingModel})});}catch(error){if(!(error instanceof Error)||error.message!=='NETWORK_UNAVAILABLE')throw error;}
     const stamp=new Date().toISOString(),id=makeId('rubric'),rubric:RubricDefinition={id,tenantId:this.tenantId,groupId:this.activeGroupId,name:input.name.trim(),aliases:[],facets:structuredClone(facets),operatingModel:structuredClone(operatingModel),status:'DRAFT',source:'GROUP_CUSTOM',version:1,createdAt:stamp,updatedAt:stamp};
@@ -487,7 +493,7 @@ export class ConnectedApplication {
     return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/loans/${encodeURIComponent(loan.id)}/repay`,{method:'POST',body:JSON.stringify({principalAmount:component==='PRINCIPAL'?input.amount:0,interestAmount:component==='INTEREST'?input.amount:0,expectedVersion:Number(loan.data?.completionVersion??0),meetingId:input.meetingId,rubricId:rubric.id,idempotencyKey:makeId('sheet_repayment')})});
   }
 
-  async recordCashContribution(input:{membershipId:string;amount:number;meetingId?:string;rubricId?:string;lateReason?:string;approverIds?:string[]}):Promise<{queued:boolean;receipt?:ContributionReceipt;outbox?:OutboxItem}>{
+  async recordCashContribution(input:{membershipId:string;amount:number;meetingId?:string;rubricId?:string;lateReason?:string;approverIds?:string[];lateAuthorizationId?:string}):Promise<{queued:boolean;receipt?:ContributionReceipt;outbox?:OutboxItem}>{
     if(!this.activeGroupId)throw new Error('ACTIVE_GROUP_REQUIRED'); const key=makeId('cash');
     if(!Number.isSafeInteger(input.amount)||input.amount<=0)throw Error('INVALID_CONTRIBUTION_AMOUNT');
     // Persist the same intent before the first send, including while online.
@@ -507,6 +513,39 @@ export class ConnectedApplication {
     if(updated.status!=='CONFIRMED')return{queued:true,outbox:updated};
     return{queued:false,outbox:updated};
   }
+  async prepayments():Promise<any[]>{if(!this.activeGroupId)return[];const r=await this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/prepayments') as any;return r.items??[];}
+  async createPrepayment(input:{membershipId:string;rubricId?:string;amount:number;intendedMeetingId?:string;note?:string}):Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/prepayments',{method:'POST',body:JSON.stringify({...input,idempotencyKey:makeId('prepayment')})});}
+  async allocatePrepayment(id:string,input:{meetingId:string;amount:number}):Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/prepayments/'+encodeURIComponent(id)+'/allocate',{method:'POST',body:JSON.stringify(input)});}
+  async reopenAuthorizations(meetingId:string):Promise<any[]>{if(!this.activeGroupId)return[];const r=await this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/meetings/'+encodeURIComponent(meetingId)+'/reopen-authorizations') as any;return r.items??[];}
+  async createReopenAuthorization(meetingId:string,input:{reason:string;expiresAt?:string;scope?:string}):Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/meetings/'+encodeURIComponent(meetingId)+'/reopen-authorizations',{method:'POST',body:JSON.stringify(input)});}
+  async approveReopenAuthorization(meetingId:string,id:string):Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/meetings/'+encodeURIComponent(meetingId)+'/reopen-authorizations/'+encodeURIComponent(id)+'/approve',{method:'POST',body:'{}'});}
+  async cancelReopenAuthorization(meetingId:string,id:string,reason:string):Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/meetings/'+encodeURIComponent(meetingId)+'/reopen-authorizations/'+encodeURIComponent(id)+'/cancel',{method:'POST',body:JSON.stringify({reason})});}
+  async opportunityGraph():Promise<any>{return this.request('/api/v1/opportunity-graph');}
+  async wallet():Promise<any>{return this.request('/api/v1/wallet');}
+  async reserveWallet(input:{groupId:string;subaccountKey:string;amount:number;purpose:string;expiresAt?:string}):Promise<any>{return this.request('/api/v1/wallet/reservations',{method:'POST',body:JSON.stringify(input)});}
+  async releaseWalletReservation(id:string):Promise<any>{return this.request('/api/v1/wallet/reservations/'+encodeURIComponent(id)+'/release',{method:'POST',body:'{}'});}
+  async valueDiscoveryProfile():Promise<any>{const r=await this.request('/api/v1/value-discovery/profile') as any;return r.profile??null;}
+  async saveValueDiscoveryProfile(input:any):Promise<any>{return this.request('/api/v1/value-discovery/profile',{method:'PUT',body:JSON.stringify(input)});}
+  async valueDiscoverySuggestions(limit=30):Promise<any[]>{const r=await this.request('/api/v1/value-discovery/suggestions?limit='+String(limit)) as any;return r.items??[];}
+  async microAds(filters:{locality?:string;type?:'SEEK'|'OFFER';includeClosed?:boolean}={}):Promise<any[]>{if(!this.activeGroupId)return[];const p=new URLSearchParams();if(filters.locality)p.set('locality',filters.locality);if(filters.type)p.set('type',filters.type);if(filters.includeClosed)p.set('includeClosed','1');const r=await this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/micro-ads?'+p) as any;return r.items??[];}
+  async createMicroAd(input:any):Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/micro-ads',{method:'POST',body:JSON.stringify(input)});}
+  async microAdAction(id:string,action:'publish'|'close'|'report'|'promote',input:any={}):Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/micro-ads/'+encodeURIComponent(id)+'/'+action,{method:'POST',body:JSON.stringify(input)});}
+  async anticipation():Promise<{items:any[];signals:any[]}>{if(!this.activeGroupId)return{items:[],signals:[]};return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/anticipation');}
+  async createAnticipationDraft():Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/anticipation',{method:'POST',body:'{}'});}
+  async transitionAnticipation(id:string,action:'validate'|'complete'|'archive'):Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/anticipation/'+encodeURIComponent(id)+'/'+action,{method:'POST',body:'{}'});}
+  async nextOfKin(membershipId?:string):Promise<any[]>{if(!this.activeGroupId)return[];const p=membershipId?'?membershipId='+encodeURIComponent(membershipId):'';const r=await this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/succession/next-of-kin'+p) as any;return r.items??[];}
+  async createNextOfKin(input:{membershipId:string;contactAlias:string;relationship:string;contactRef:string;consentRef:string;notes?:string}):Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/succession/next-of-kin',{method:'POST',body:JSON.stringify(input)});}
+  async confirmNextOfKin(id:string):Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/succession/next-of-kin/'+encodeURIComponent(id)+'/confirm',{method:'POST',body:'{}'});}
+  async revokeNextOfKin(id:string,reason:string):Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/succession/next-of-kin/'+encodeURIComponent(id)+'/revoke',{method:'POST',body:JSON.stringify({reason})});}
+  async timeMachineSnapshots():Promise<any[]>{if(!this.activeGroupId)return[];const r=await this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/time-machine') as any;return r.items??[];}
+  async captureTimeMachine(input:{label?:string;reason:string}):Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/time-machine',{method:'POST',body:JSON.stringify(input)});}
+  async timeMachineSnapshot(id:string):Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/time-machine/'+encodeURIComponent(id));}
+  async compareTimeMachine(fromId:string,toId:string):Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');const p=new URLSearchParams({from:fromId,to:toId});return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/time-machine/compare?'+p);}
+  async rubricExceptions():Promise<any[]>{if(!this.activeGroupId)return[];const r=await this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/rubric-exceptions') as any;return r.items??[];}
+  async createRubricException(input:{rubricId:string;title:string;scope:'GROUP'|'MEMBERSHIP'|'MEETING';targetRef?:string;reason:string;effectSummary:string;evidenceRef:string;validFrom?:string;validUntil?:string}):Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/rubric-exceptions',{method:'POST',body:JSON.stringify(input)});}
+  async decideRubricException(id:string,state:'APPROVED'|'REJECTED',note:string):Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/rubric-exceptions/'+encodeURIComponent(id)+'/'+(state==='APPROVED'?'approve':'reject'),{method:'POST',body:JSON.stringify({note})});}
+  async closeRubricException(id:string,note:string):Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/rubric-exceptions/'+encodeURIComponent(id)+'/close',{method:'POST',body:JSON.stringify({note})});}
+  async applicableRubricExceptions(input:{rubricId:string;membershipId?:string;meetingId?:string;at?:string}):Promise<any[]>{if(!this.activeGroupId)return[];const p=new URLSearchParams({rubricId:input.rubricId});if(input.membershipId)p.set('membershipId',input.membershipId);if(input.meetingId)p.set('meetingId',input.meetingId);if(input.at)p.set('at',input.at);const r=await this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/rubric-exceptions/applicable?'+p) as any;return r.items??[];}
   async miscRubrics(meetingId?:string):Promise<any[]>{if(!this.activeGroupId)return[];const q=meetingId?'?meetingId='+encodeURIComponent(meetingId):'';return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/misc-rubrics${q}`);}
   async ensureMiscRubricStarters():Promise<any[]>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/misc-rubrics`,{method:'POST',body:JSON.stringify({action:'ensure_starters'})});}
   async createMiscRubric(input:{name:string;description?:string;lifecycle?:'EPHEMERAL'|'PERSISTENT'|'SESSION_ONLY';amountMode?:'FIXED'|'VARIABLE';defaultAmount?:number;activeFirstSessions?:number}):Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/misc-rubrics`,{method:'POST',body:JSON.stringify({action:'create_custom',...input})});}
@@ -572,7 +611,7 @@ export class ConnectedApplication {
   }
   async expenses(input:{meetingId?:string;membershipId?:string;rubricId?:string;scope?:string}={}):Promise<any[]>{if(!this.activeGroupId)return[];const q=new URLSearchParams();for(const [k,v] of Object.entries(input))if(v)q.set(k,String(v));return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/expenses?${q}`);}
   async openSupportCase(summary:string):Promise<CaseRecord>{return this.request('/api/v1/cases',{method:'POST',body:JSON.stringify({summary,groupId:this.activeGroupId})});}
-  async inboxItems():Promise<Array<{id:string;kind:string;title:string;priority:string;status:string;groupId?:string}>>{return this.request('/api/v1/inbox');}
+  async inboxItems():Promise<Array<{id:string;kind:string;title:string;priority:string;status:string;groupId?:string;dueAt?:string;sourceType?:string;sourceId?:string}>>{return this.request('/api/v1/inbox');}
 
   async productCatalog():Promise<{version:string;count:number;capabilities:ReturnType<ConnectedApplication['productModules']>}>{
     try{return await this.request('/api/v1/product/capabilities');}
@@ -590,6 +629,9 @@ export class ConnectedApplication {
   async runDiscoverySearch(id:string):Promise<any>{return this.request('/api/v1/discovery/saved-searches/'+encodeURIComponent(id)+'/run',{method:'POST',body:'{}'});}
   async deleteDiscoverySearch(id:string):Promise<any>{return this.request('/api/v1/discovery/saved-searches/'+encodeURIComponent(id),{method:'DELETE'});}
   async proximityGroups(locality:string,q=''):Promise<any[]>{const p=new URLSearchParams({locality});if(q)p.set('q',q);return this.request('/api/v1/discovery/proximity?'+p);}
+  async managerPublicProfile():Promise<any>{const r=await this.request('/api/v1/discovery/manager-profile') as any;return r.profile;}
+  async saveManagerPublicProfile(input:any):Promise<any>{return this.request('/api/v1/discovery/manager-profile',{method:'PUT',body:JSON.stringify(input)});}
+  async searchManagerPublicProfiles(input:{q?:string;locality?:string;expertise?:string[]}={}):Promise<any[]>{const p=new URLSearchParams();if(input.q)p.set('q',input.q);if(input.locality)p.set('locality',input.locality);if(input.expertise?.length)p.set('expertise',input.expertise.join(','));const r=await this.request('/api/v1/discovery/manager-profiles/search?'+p) as any;return r.items??[];}
   async candidateProfile():Promise<any>{const r=await this.request('/api/v1/discovery/candidate-profile') as any;return r.profile;}
   async saveCandidateProfile(input:any):Promise<any>{return this.request('/api/v1/discovery/candidate-profile',{method:'PUT',body:JSON.stringify(input)});}
   async candidateInvitations():Promise<any[]>{return this.request('/api/v1/discovery/candidate-invitations');}
@@ -691,7 +733,7 @@ export class ConnectedApplication {
     const synced=await this.syncOutbox(),updated=synced.find(x=>x.id===item.id)??item;return{queued:updated.status!=='CONFIRMED',outbox:updated};
   }
   async liveHealth():Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/live/health`);}
-  async liveEvents(after=0):Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/live/events?after=${encodeURIComponent(String(after))}`);}
+  async liveEvents(after=0,limit=500):Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');const safeLimit=Math.min(Math.max(Math.trunc(limit)||500,1),500);return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/live/events?after=${encodeURIComponent(String(after))}&limit=${encodeURIComponent(String(safeLimit))}`);}
   async publishLive(type:'PRESENCE'|'SYNC_HINT'|'MEETING_UPDATE',payload:Record<string,string|number|boolean|null>={}):Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/live/publish`,{method:'POST',body:JSON.stringify({type,payload,idempotencyKey:makeId('live')})});}
   async publishLiveSignal(type:'PRESENCE'|'TYPING'|'TYPING_STOP'|'CELL_FOCUS'|'CELL_BLUR'|'LIVE_ACK',payload:Record<string,string|number|boolean|null>={}):Promise<any>{
     if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');
@@ -702,6 +744,8 @@ export class ConnectedApplication {
 
   async amountExplanation(membershipId:string,rubricId?:string):Promise<unknown>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');const q=rubricId?'?rubricId='+encodeURIComponent(rubricId):'';return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/members/'+encodeURIComponent(membershipId)+'/amount-explanation'+q);}
   async searchDocuments(query:string,limit=20):Promise<Array<{recordId:string;title:string;score:number;snippet:string;source?:string;page?:string;version?:number}>>{if(!this.activeGroupId)return[];return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/documents/search?q='+encodeURIComponent(query)+'&limit='+String(limit));}
+  async registerIdentityProof(type:'CNI'|'PHONE'|'NAME',value:string,sourceRef='USER_PRESENTED'):Promise<{proofId:string;state:string;proofType:string}>{const clean=value.trim();if(!clean)throw Error('IDENTITY_PROOF_VALUE_REQUIRED');return this.request('/api/v1/identity-proofs/'+type.toLowerCase(),{method:'POST',body:JSON.stringify({value:clean,sourceRef})});}
+  async identityProofMatches():Promise<Array<{tenantId:string;groupId:string;membershipId:string;proofType:'CNI'|'PHONE'|'NAME';confidence:'EXACT_HASH_MATCH'}>>{return this.request('/api/v1/identity-proofs/matches');}
   async previewHistoricalCsv(input:{title:string;kind?:'CONTRIBUTIONS'|'OPENING_BALANCE'|'IDENTITY_CLAIMS'|'OBLIGATIONS';text:string;delimiter?:string}):Promise<unknown>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');const path='/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/imports/csv/preview';return this.request(path,{method:'POST',body:JSON.stringify(input)});}
   async groupHealthSnapshot():Promise<unknown>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/health-snapshot');}
   async notificationDigest(hours=24):Promise<unknown>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/notification-digest?hours='+String(hours));}
@@ -714,6 +758,7 @@ export class ConnectedApplication {
   async withdrawSavings(id:string,amount:number):Promise<unknown>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/savings/'+encodeURIComponent(id)+'/withdraw',{method:'POST',body:JSON.stringify({amount,idempotencyKey:makeId('savings_withdraw')})});}
   async recordOpeningBalance(amount:number,note:string):Promise<unknown>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/ledger/opening-balance',{method:'POST',body:JSON.stringify({amount,note,currency:'XAF',idempotencyKey:makeId('opening')})});}
   async createCustody(input:{name:string;holder:string}):Promise<unknown>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/custody',{method:'POST',body:JSON.stringify({...input,currency:'XAF'})});}
+  async custodyPosition(id:string):Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/custody/'+encodeURIComponent(id)+'/position');}
   async sendToCustody(id:string,amount:number):Promise<unknown>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/custody/'+encodeURIComponent(id)+'/send',{method:'POST',body:JSON.stringify({amount,idempotencyKey:makeId('custody_out')})});}
   async returnFromCustody(id:string,amount:number):Promise<unknown>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/custody/'+encodeURIComponent(id)+'/return',{method:'POST',body:JSON.stringify({amount,idempotencyKey:makeId('custody_in')})});}
   async loanGuarantors(loanId:string):Promise<any[]>{if(!this.activeGroupId)return[];const r=await this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/loans/'+encodeURIComponent(loanId)+'/guarantors') as any;return r.items??[];}
@@ -760,6 +805,12 @@ export class ConnectedApplication {
   async valueOffers():Promise<any[]>{const r=await this.request('/api/v1/value/offers') as any;return r.items??[];}
   async createValueOffer(input:any):Promise<any>{return this.request('/api/v1/value/offers',{method:'POST',body:JSON.stringify(input)});}
 
+  async quietWatch():Promise<any[]>{if(!this.activeGroupId)return[];const r=await this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/quiet-watch') as any;return r.items??[];}
+  async scanQuietWatch():Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/quiet-watch',{method:'POST',body:'{}'});}
+  async acknowledgeQuietWatch(id:string,note=''):Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/quiet-watch/'+encodeURIComponent(id)+'/acknowledge',{method:'POST',body:JSON.stringify({note})});}
+  async proposeQuietWatchAssistance(id:string,input:{objective:string;steps:string[];participants?:string[]}):Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/quiet-watch/'+encodeURIComponent(id)+'/assistance',{method:'POST',body:JSON.stringify(input)});}
+  async approveQuietWatchAssistance(id:string):Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/quiet-watch/'+encodeURIComponent(id)+'/approve-assistance',{method:'POST',body:'{}'});}
+  async resolveQuietWatch(id:string,note:string,evidenceRef:string):Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/quiet-watch/'+encodeURIComponent(id)+'/resolve',{method:'POST',body:JSON.stringify({note,evidenceRef})});}
   async safetyCases(groupId?:string):Promise<any[]>{const p=new URLSearchParams();if(groupId)p.set('groupId',groupId);const r=await this.request('/api/v1/safety/cases?'+p) as any;return r.items??[];}
   async reportSafety(input:any):Promise<any>{return this.request('/api/v1/safety/reports',{method:'POST',body:JSON.stringify(input)});}
   async transitionSafetyCase(id:string,state:string,note='',evidenceRef=''):Promise<any>{return this.request('/api/v1/safety/cases/'+encodeURIComponent(id)+'/transition',{method:'POST',body:JSON.stringify({state,note,evidenceRef})});}
@@ -768,6 +819,10 @@ export class ConnectedApplication {
   async decideSafetyCase(id:string,input:any):Promise<any>{return this.request('/api/v1/safety/cases/'+encodeURIComponent(id)+'/decision',{method:'POST',body:JSON.stringify(input)});}
   async appealSafetyCase(id:string,input:any):Promise<any>{return this.request('/api/v1/safety/cases/'+encodeURIComponent(id)+'/appeal',{method:'POST',body:JSON.stringify(input)});}
   async assessReferralStructure(input:any):Promise<any>{return this.request('/api/v1/safety/referral-structure-assessment',{method:'POST',body:JSON.stringify(input)});}
+  async trustGraph(membershipId:string):Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/trust/'+encodeURIComponent(membershipId));}
+  async trustProfile(membershipId:string,band='SMALL'):Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/trust/'+encodeURIComponent(membershipId)+'/profile?band='+encodeURIComponent(band));}
+  async trustEvidence(membershipId:string):Promise<any[]>{if(!this.activeGroupId)return[];const r=await this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/trust/'+encodeURIComponent(membershipId)+'/evidence') as any;return r.items??[];}
+  async addTrustEvidence(membershipId:string,input:any):Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/trust/'+encodeURIComponent(membershipId)+'/evidence',{method:'POST',body:JSON.stringify(input)});}
 
   async searchKnowledge(q='',groupId?:string):Promise<any[]>{const p=new URLSearchParams();if(q)p.set('q',q);if(groupId)p.set('groupId',groupId);const r=await this.request('/api/v1/knowledge?'+p) as any;return r.items??[];}
   async createKnowledge(input:any):Promise<any>{return this.request('/api/v1/knowledge',{method:'POST',body:JSON.stringify(input)});}
@@ -789,10 +844,21 @@ export class ConnectedApplication {
   async verifyReferralConversion(campaignId:string,conversionId:string,input:any):Promise<any>{return this.request('/api/v1/growth/referral-campaigns/'+encodeURIComponent(campaignId)+'/conversions/'+encodeURIComponent(conversionId)+'/verify',{method:'POST',body:JSON.stringify(input)});}
   async approveReferralReward(campaignId:string,conversionId:string):Promise<any>{return this.request('/api/v1/growth/referral-campaigns/'+encodeURIComponent(campaignId)+'/rewards/'+encodeURIComponent(conversionId)+'/approve',{method:'POST',body:'{}'});}
 
+  async discoverCreatorContent(hubId?:string):Promise<any[]>{if(!this.activeGroupId)return[];const q=hubId?'?hubId='+encodeURIComponent(hubId):'';const r=await this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/creator-content'+q) as any;return r.items??[];}
+  async creatorStudio():Promise<any>{return this.request('/api/v1/creator-studio');}
+  async createCreatorContent(input:any):Promise<any>{return this.request('/api/v1/creator-studio/content',{method:'POST',body:JSON.stringify(input)});}
+  async publishCreatorContent(id:string,input:{groupId:string;hubId:string}):Promise<any>{return this.request('/api/v1/creator-studio/content/'+encodeURIComponent(id)+'/publish',{method:'POST',body:JSON.stringify(input)});}
+  async recordCreatorInterest(id:string,note=''):Promise<any>{return this.request('/api/v1/creator-studio/content/'+encodeURIComponent(id)+'/interest',{method:'POST',body:JSON.stringify({note})});}
+  async startCreatorConversation(contentId:string,interestId:string,input:{groupId:string;hubId:string;body:string}):Promise<any>{return this.request('/api/v1/creator-studio/content/'+encodeURIComponent(contentId)+'/interests/'+encodeURIComponent(interestId)+'/conversation',{method:'POST',body:JSON.stringify(input)});}
+  async creatorInterestToBusiness(contentId:string,interestId:string,input:{clientName:string;need:string;estimatedBudget?:number}):Promise<any>{return this.request('/api/v1/creator-studio/content/'+encodeURIComponent(contentId)+'/interests/'+encodeURIComponent(interestId)+'/action',{method:'POST',body:JSON.stringify(input)});}
+  async talentProfile():Promise<any>{return this.request('/api/v1/talent/profile');}
+  async addTalentEvidence(input:any):Promise<any>{return this.request('/api/v1/talent/evidence',{method:'POST',body:JSON.stringify(input)});}
   async businessSummary():Promise<any>{return this.request('/api/v1/business/summary');}
   async businessRecords():Promise<any[]>{const r=await this.request('/api/v1/business/records') as any;return r.items??[];}
   async configureBusiness(input:{name:string;currency?:string;services?:string[];locality?:string;monthlyFixedCosts?:number}):Promise<any>{return this.request('/api/v1/business/workspace',{method:'PUT',body:JSON.stringify(input)});}
   async createBusinessMandate(input:any):Promise<any>{return this.request('/api/v1/business/mandates',{method:'POST',body:JSON.stringify(input)});}
+  async businessMandatesForGroup(groupId=this.activeGroupId):Promise<any[]>{if(!groupId)return[];const r=await this.request('/api/v1/groups/'+encodeURIComponent(groupId)+'/business/mandates') as any;return r.items??[];}
+  async approveBusinessMandate(id:string):Promise<any>{return this.request('/api/v1/business/mandates/'+encodeURIComponent(id)+'/approve',{method:'POST',body:'{}'});}
   async activateBusinessMandate(id:string):Promise<any>{return this.request('/api/v1/business/mandates/'+encodeURIComponent(id)+'/activate',{method:'POST',body:'{}'});}
   async endBusinessMandate(id:string,reason:string):Promise<any>{return this.request('/api/v1/business/mandates/'+encodeURIComponent(id)+'/end',{method:'POST',body:JSON.stringify({reason})});}
   async createBusinessClient(input:any):Promise<any>{return this.request('/api/v1/business/clients',{method:'POST',body:JSON.stringify(input)});}
@@ -927,6 +993,20 @@ export class ConnectedApplication {
   calendarIcsUrl():string{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.baseUrl+'/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/calendar.ics';}
 
   async listWorkspaceRecords(moduleId?:string,groupId?:string):Promise<WorkspaceRecord[]>{const p=new URLSearchParams();if(moduleId)p.set('moduleId',moduleId);if(groupId)p.set('groupId',groupId);return this.request(`/api/v1/workspaces?${p}`);}
+  async groupModels(groupId=this.activeGroupId):Promise<any[]>{if(!groupId)return[];const r=await this.request('/api/v1/groups/'+encodeURIComponent(groupId)+'/models') as any;return r.items??[];}
+  async visibleGroupModels():Promise<any[]>{const r=await this.request('/api/v1/group-models') as any;return r.items??[];}
+  async captureGroupModel(groupId:string,input:any):Promise<any>{return this.request('/api/v1/groups/'+encodeURIComponent(groupId)+'/models',{method:'POST',body:JSON.stringify(input)});}
+  async requestGroupModelReview(groupId:string,id:string):Promise<any>{return this.request('/api/v1/groups/'+encodeURIComponent(groupId)+'/models/'+encodeURIComponent(id)+'/review-request',{method:'POST',body:'{}'});}
+  async caseLaw(groupId=this.activeGroupId):Promise<any[]>{if(!groupId)return[];const r=await this.request('/api/v1/groups/'+encodeURIComponent(groupId)+'/case-law') as any;return r.items??[];}
+  async createCaseLaw(groupId:string,input:any):Promise<any>{return this.request('/api/v1/groups/'+encodeURIComponent(groupId)+'/case-law',{method:'POST',body:JSON.stringify(input)});}
+  async validateCaseLawLocal(groupId:string,id:string):Promise<any>{return this.request('/api/v1/groups/'+encodeURIComponent(groupId)+'/case-law/'+encodeURIComponent(id)+'/validate-local',{method:'POST',body:'{}'});}
+  async requestCaseLawReview(groupId:string,id:string):Promise<any>{return this.request('/api/v1/groups/'+encodeURIComponent(groupId)+'/case-law/'+encodeURIComponent(id)+'/review-request',{method:'POST',body:'{}'});}
+  async founderGroupModelQueue():Promise<any[]>{const r=await this.request('/api/v1/founder/group-models/review-queue') as any;return r.items??[];}
+  async founderReviewGroupModel(id:string,state:'STANDARD'|'RECOMMENDED'|'DEPRECATED',note:string):Promise<any>{return this.request('/api/v1/founder/group-models/'+encodeURIComponent(id)+'/review',{method:'POST',body:JSON.stringify({state,note})});}
+  async founderCaseLawQueue():Promise<any[]>{const r=await this.request('/api/v1/founder/case-law/review-queue') as any;return r.items??[];}
+  async founderReviewCaseLaw(id:string,state:'RECOMMENDED'|'REJECTED'|'ARCHIVED',note:string):Promise<any>{return this.request('/api/v1/founder/case-law/'+encodeURIComponent(id)+'/review',{method:'POST',body:JSON.stringify({state,note})});}
+  async starterKit(groupId=this.activeGroupId):Promise<any|undefined>{if(!groupId)return undefined;return this.request('/api/v1/groups/'+encodeURIComponent(groupId)+'/starter-kit');}
+  async saveStarterKit(groupId:string,input:any):Promise<any>{if(!groupId)throw Error('GROUP_REQUIRED');return this.request('/api/v1/groups/'+encodeURIComponent(groupId)+'/starter-kit',{method:'PUT',body:JSON.stringify(input)});}
   async createWorkspaceRecord(input:{moduleId:string;title:string;summary?:string;status?:WorkspaceStatus;tags?:string[];data?:Record<string,string|number|boolean|null>;groupId?:string}):Promise<WorkspaceRecord>{return this.request('/api/v1/workspaces',{method:'POST',body:JSON.stringify({...input,groupId:input.groupId??this.activeGroupId})});}
   async updateWorkspaceRecord(id:string,input:Partial<Pick<WorkspaceRecord,'title'|'summary'|'status'|'tags'|'data'>>):Promise<WorkspaceRecord>{return this.request(`/api/v1/workspaces/${encodeURIComponent(id)}`,{method:'PUT',body:JSON.stringify(input)});}
 

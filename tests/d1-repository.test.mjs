@@ -7,7 +7,7 @@ import { FoundationService } from '../.build/packages/domain/src/index.js';
 import { DiscoveryService } from '../.build/packages/discovery/src/index.js';
 import worker, {createApiHandler} from '../.build/workers/api/src/index.js';
 
-const RELEASE_VERSION='1.5.2.6-field-persistence-pc-mobile';
+const RELEASE_VERSION='1.5.2.7-live-completion';
 class FakeStatement {
   constructor(db,sql){this.db=db;this.sql=sql;this.values=[];}
   bind(...values){this.values=values;return this;}

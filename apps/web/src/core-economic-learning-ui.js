@@ -153,9 +153,9 @@ export function mountCoreEconomicLearningUI({app,notify=()=>{},showError=console
   const kResults=el('div',undefined,'stack');knowledgePanel.append(el('p','La Knowledge Bank versionne les observations, règles validées, cas et sources. L’IA peut expliquer et proposer, jamais activer une règle ni écrire dans le Ledger.','truth-notice'),search,kResults);
   guidanceHub.closest('section')?.insertAdjacentElement('afterend',knowledgePanel);
   search.addEventListener('submit',e=>void(async()=>{e.preventDefault();try{
-    const q=val(search,'q'),[knowledge,ency,ctx]=await Promise.all([app.searchKnowledge(q,app.activeGroup()||undefined),app.encyclopedia(q),app.founderAiContext(q)]);
+    const q=val(search,'q'),[knowledge,ency,ctx]=await Promise.all([app.searchKnowledge(q,app.activeGroup()||undefined),app.encyclopedia(q),app.founderAiContext(q).catch(()=>null)]);
     kResults.replaceChildren();
-    const cap=el('article',undefined,'item');cap.append(el('strong','Encyclopédie · '+ency.length+' capacité(s)'),el('p','Founder AI : '+(ctx.guardrails?.canWriteLedger?'écriture autorisée':'aucune écriture Ledger')+' · '+(ctx.guardrails?.canActivateRules?'activation règles autorisée':'aucune activation autonome'),'hint'));kResults.append(cap);
+    const cap=el('article',undefined,'item');cap.append(el('strong','Encyclopédie · '+ency.length+' capacité(s)'),el('p',ctx?'Founder AI disponible pour l’équipe fondatrice · '+(ctx.guardrails?.canWriteLedger?'écriture autorisée':'aucune écriture Ledger')+' · '+(ctx.guardrails?.canActivateRules?'activation règles autorisée':'aucune activation autonome'):'Founder AI réservé à l’équipe fondatrice ; la Knowledge Bank reste accessible selon vos droits.','hint'));kResults.append(cap);
     for(const x of ency.slice(0,15)){const c=el('article',undefined,'item');c.append(el('strong',x.labelFr+' · '+x.id),el('span',String(x.truth),'pill'),el('p','Owner/dépendances : '+(x.canonicalDependencies??[]).join(', '),'hint'));kResults.append(c);}
     for(const x of knowledge.slice(0,10)){const c=el('article',undefined,'item');c.append(el('strong',x.title),el('span',String(x.data.knowledgeState??x.status),'pill'),el('p',String(x.data.body??'').slice(0,500),'hint'));kResults.append(c);}
   }catch(err){showError(err);}})());
