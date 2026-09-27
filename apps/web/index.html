@@ -402,7 +402,8 @@
                 <details id="miscRubricConfig">
                   <summary><strong>Ajouter une petite rubrique personnalisée</strong></summary>
                   <form id="miscRubricCustomForm" class="form-grid">
-                    <label>Nom<input id="miscRubricCustomName" required placeholder="Ex. Badge, dossier, pénalité spéciale"></label>
+                    <label>Type<select id="miscRubricCustomKind"><option value="CUSTOM">Autre personnalisée</option><option value="LOCAL_AID">Aide locale</option><option value="HAND_RAISE">Main levée</option></select></label>
+                    <label>Nom<input id="miscRubricCustomName" required placeholder="Ex. Badge, dossier, aide quartier, main levée"></label>
                     <label>Durée<select id="miscRubricCustomLifecycle"><option value="PERSISTENT">Toujours disponible</option><option value="EPHEMERAL">Temporaire au démarrage</option><option value="SESSION_ONLY">Selon la séance</option></select></label>
                     <label>Premières séances<input id="miscRubricCustomSessions" type="number" min="1" step="1" placeholder="Ex. 2"></label>
                     <label>Montant suggéré<input id="miscRubricCustomAmount" type="number" min="0" step="1"></label>
