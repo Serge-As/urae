@@ -40,6 +40,7 @@ import { parseEcoShareIntent } from './share-out.js';
 import { localUniversalSearch, remoteUniversalSearch } from './universal-search.js';
 import { buildUnifiedCalendar } from './unified-calendar.js';
 import { mountDocumentsUI } from './documents-ui.js';
+import { mountPrintCenterUI } from './print-center.js';
 import { mountMemberDossierUI } from './member-dossier-ui.js';
 import { mountIdentityVerificationUI } from './identity-verification-ui.js';
 import { mountDataQualityUI } from './data-quality-ui.js';
@@ -235,6 +236,7 @@ document.addEventListener('click',event=>{
 });
 document.querySelector('#appBackBtn')?.addEventListener('click',goBack);
 const documentsUI=mountDocumentsUI({navigate:go});
+const printCenterUI=mountPrintCenterUI({app,getGroups:()=>groups,getMembers:()=>members,getMeetings:()=>meetings,getRubrics:()=>rubrics,isManager,notify:toast,showError:fail});
 mountMemberDossierUI();
 const identityVerificationUI=mountIdentityVerificationUI({app,getGroups:()=>groups,navigate:go,notify:toast,showError:fail});
 const dataQualityUI=mountDataQualityUI({app,navigate:go,notify:toast,showError:fail});
@@ -948,6 +950,7 @@ const openModule = async (id) => {
     if(m.status === 'FOUNDATION_ACTIVE' && id === 'GOVERNANCE.TENDER'){go('ecosystem',{anchor:'socialCommercePanel',force:true});const panel=document.querySelector('#socialCommercePanel');if(panel?.tagName==='DETAILS')panel.open=true;return;}
     if(m.status === 'FOUNDATION_ACTIVE' && id === 'COMMUNITY.MICRO_ADS'){go('ecosystem',{anchor:'adManagerPanel',force:true});void adManagerUI.refresh();return;}
     if(m.status === 'FOUNDATION_ACTIVE' && ['RUBRIC.LOCAL_AID','RUBRIC.HAND_RAISE'].includes(id)){go('operations',{anchor:'miscRubricPanel',force:true});setTimeout(()=>document.querySelector('#miscRubricConfig')?.setAttribute('open',''),80);return;}
+    if(m.status === 'FOUNDATION_ACTIVE' && id === 'PAPER.PRINT'){go('documents',{anchor:'paperPrintCenter',force:true});void printCenterUI.refresh();return;}
     if(m.status === 'FOUNDATION_ACTIVE' && id === 'SAFETY.QUIET_WATCH'){go('settings',{anchor:'quietWatchCenter',force:true});void quietWatchUI.refresh();return;}
     if(m.status === 'FOUNDATION_ACTIVE' && id === 'AI.LOCAL'){go('operations',{anchor:'voiceFinancialPanel',force:true});document.querySelector('#voiceFinancialPanel')?.scrollIntoView({behavior:'smooth',block:'start'});return;}
     const route = m.workspace === 'SPECIALIZED' && m.status === 'FOUNDATION_ACTIVE' ? specializedRoute(id) : undefined;
