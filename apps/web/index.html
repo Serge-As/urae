@@ -402,8 +402,7 @@
                 <details id="miscRubricConfig">
                   <summary><strong>Ajouter une petite rubrique personnalisée</strong></summary>
                   <form id="miscRubricCustomForm" class="form-grid">
-                    <label>Type<select id="miscRubricCustomKind"><option value="CUSTOM">Autre personnalisée</option><option value="LOCAL_AID">Aide locale</option><option value="HAND_RAISE">Main levée</option></select></label>
-                    <label>Nom<input id="miscRubricCustomName" required placeholder="Ex. Badge, dossier, aide quartier, main levée"></label>
+                    <label>Nom<input id="miscRubricCustomName" required placeholder="Ex. Badge, dossier, pénalité spéciale"></label>
                     <label>Durée<select id="miscRubricCustomLifecycle"><option value="PERSISTENT">Toujours disponible</option><option value="EPHEMERAL">Temporaire au démarrage</option><option value="SESSION_ONLY">Selon la séance</option></select></label>
                     <label>Premières séances<input id="miscRubricCustomSessions" type="number" min="1" step="1" placeholder="Ex. 2"></label>
                     <label>Montant suggéré<input id="miscRubricCustomAmount" type="number" min="0" step="1"></label>
@@ -429,7 +428,7 @@
               </form>
               <form id="rubricForm" class="form-grid">
                 <h3>Ajouter / décrire une rubrique</h3>
-                <div class="actions full"><button id="quickRubricLoan" type="button" class="secondary">Prêt</button><button id="quickRubricSavings" type="button" class="secondary">Épargne</button><button id="quickRubricAssistance" type="button" class="secondary">Assistance</button><span class="hint">Raccourcis : ils préparent le formulaire dans le groupe actif, sans recréer de groupe.</span></div>
+                <div class="actions full"><button id="quickRubricCollation" type="button" class="secondary">Collation</button><button id="quickRubricLocalAid" type="button" class="secondary">Aide locale</button><button id="quickRubricHandRaise" type="button" class="secondary">Main levée</button><button id="quickRubricLoan" type="button" class="secondary">Prêt</button><button id="quickRubricSavings" type="button" class="secondary">Épargne</button><button id="quickRubricAssistance" type="button" class="secondary">Assistance</button><span class="hint">Raccourcis : ils préparent une rubrique principale dans le groupe actif. « Autres » reste réservé aux petites sous-rubriques comme Inscription, Timbre et Amendes.</span></div>
                 <label>Nom<input id="rubricName" required value="Collation"></label>
                 <label class="full">Ce qui est écrit<textarea id="writtenRule" rows="3" placeholder="Article du RI, statuts, résolution…"></textarea></label>
                 <label class="full">Ce qui est réellement pratiqué<textarea id="observedPractice" rows="3" placeholder="Décrivez la pratique réelle, même si elle diffère du texte."></textarea></label>
