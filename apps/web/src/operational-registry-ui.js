@@ -8,7 +8,7 @@ export function mountOperationalRegistryUI({app,getGroups=()=>[],getMembers=()=>
   root.append(el('div','Mémoire opérationnelle gouvernée','eyebrow'),el('h2','Registres, exceptions & Time Machine'),el('p','Ces registres documentent des décisions et snapshots. Ils ne modifient jamais automatiquement le Ledger, une règle active, un rôle membre ou un droit à l’argent.','truth-notice'));
   const tabs=el('div',undefined,'view-switch compact'),body=el('div',undefined,'stack');root.append(tabs,body);
   const sections=[
-    ['models','Modèles'],['cases','Jurisprudence'],['exceptions','Exceptions'],['time','Time Machine'],['succession','Succession']
+    ['models','Modèles'],['cases','Jurisprudence'],['exceptions','Exceptions'],['time','Time Machine'],['succession','Contacts succession · préparation']
   ];
   let active='models';
   for(const [id,label] of sections){const b=el('button',label,id===active?'active':'');b.type='button';b.dataset.opRegistryTab=id;b.onclick=()=>{active=id;for(const x of tabs.querySelectorAll('button'))x.classList.toggle('active',x===b);void render();};tabs.append(b);}
@@ -84,7 +84,7 @@ export function mountOperationalRegistryUI({app,getGroups=()=>[],getMembers=()=>
   };
 
   const renderSuccession=async()=>{
-    const g=group(),members=getMembers().filter(m=>m.status==='active');body.append(el('p','Les contacts de succession sont visibles uniquement par les responsables habilités. Ils ne deviennent ni membre, ni bénéficiaire financier, ni signataire par ce seul enregistrement.','truth-notice'));
+    const g=group(),members=getMembers().filter(m=>m.status==='active');body.append(el('p','Préparation uniquement : ce registre conserve des contacts et preuves déclarés. Il ne réalise pas une succession, ne désigne pas juridiquement un ayant droit et ne transfère aucun rôle, solde ou droit financier.','truth-notice'));
     body.append(createForm('Enregistrer un contact / ayant droit déclaré',[
       {name:'membershipId',label:'Membre concerné',type:'select',options:[['','Choisir'],...members.map(m=>[m.id,m.displayName])],required:true},
       {name:'contactAlias',label:'Nom ou alias du contact',required:true},{name:'relationship',label:'Lien',required:true,placeholder:'Conjoint, enfant, frère/sœur…'},
