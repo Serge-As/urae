@@ -47,6 +47,10 @@ const evidence=[
  ['OPPORTUNITY.GRAPH','packages/opportunity-graph/src/index.ts',['OpportunityGraphService','persisted:false','secondSourceOfTruth:false','privacyFiltered:true'],'apps/web/src/opportunity-graph-ui.js',['Eco Opportunity Graph','ne devient jamais une seconde base de vérité','Relations visibles']],
  ['TRUST.GRAPH','packages/trust/src/index.ts',['CommitmentTrustGraphService','opaqueGlobalScore:false','secondSourceOfTruth:false','IDENTITY_PROOF_REFERENCE','PARTICIPATED_AS'],'apps/web/src/trust-center.js',['Relations explicables','ne crée pas une seconde vérité','Décision automatique']],
  ['PAPER.PRINT','apps/web/src/print-center.js',['buildSessionPrintSheet','buildMemberPrintSheet','buildAttendancePrintSheet','buildRoleRegister','buildMemberCards'],'apps/web/src/print-center.js',['Feuille de séance','Émargement / présences','Fiche individuelle','Cartes membres']],
+ ['AI.FOUNDER','packages/founder-ai/src/index.ts',['FounderAIService','founderTeamOnly:true','canExecute:false','canWriteLedger:false'],'apps/web/src/founder-ai-ui.js',['brief stratégique sourcé','exécution automatique : non','n’invente pas de signal']],
+ ['AI.LOCAL','apps/web/src/local-assistant.js',['interpretLocalAssistant','offlineCapable:true','canWriteLedger:false'],'apps/web/src/local-assistant.js',['voiceFinancialText','Rien ne sera comptabilisé avant votre validation','réseau requis : non']],
+ ['SAFETY.QUIET_WATCH','packages/quiet-watch/src/index.ts',['QuietWatchService','publicAccusation:false','automaticSanction:false','automaticFinancialEffect:false'],'apps/web/src/quiet-watch-ui.js',['aucune accusation','aucune sanction','aucune écriture financière','Résoudre avec preuve']],
+ ['DASHBOARDS.ALL','apps/web/src/role-dashboards-ui.js',['dashboardCard','owner','formula','proof'],'apps/web/src/role-dashboards-ui.js',["'MEMBER'","'MANAGER'","'PARTNER'","'ADVERTISER'","'SUPERADMIN'","'MAINTENANCE'",'Indisponible']],
 ];
 test('maturity registry promotes only capabilities with owner engine and user journey evidence',()=>{
  for(const [id,owner,ownerTokens,ui,uiTokens] of evidence){
