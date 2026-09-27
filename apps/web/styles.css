@@ -394,3 +394,6 @@ body.ui-mode-visual .primary:hover{filter:saturate(1.08) brightness(1.03);transf
 .cell-live-presence[hidden]{display:none!important}
 
 .community-live-presence{font-weight:700;min-height:1.1rem}.community-live-presence[hidden]{display:none!important}
+
+/* Exact share-out return target. */
+.eco-share-target{outline:3px solid currentColor;outline-offset:4px;scroll-margin:92px}
