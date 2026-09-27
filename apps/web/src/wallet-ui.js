@@ -1,6 +1,6 @@
 const el=(tag,text,className)=>{const n=document.createElement(tag);if(text!==undefined)n.textContent=String(text);if(className)n.className=className;return n;};
 const money=n=>Number(n??0).toLocaleString('fr-FR')+' XAF';
-const accessLabel={AVAILABLE:'Disponible',RESERVED:'Réservé',REVIEW_REQUIRED:'Règle à vérifier',ACTIVITY_ONLY:'Activité non dépensable'};
+const accessLabel={AVAILABLE:'Disponible',RESERVED:'Réservé',REVIEW_REQUIRED:'Règle à vérifier',ACTIVITY_ONLY:'Activité / dette non dépensable'};
 
 export function mountWalletUI({app,notify=()=>{},showError=()=>{},navigate=()=>{}}={}){
   const host=document.querySelector('#view-dashboard');if(!host||document.getElementById('walletCenter'))return{refresh:async()=>{},open:()=>{}};
@@ -15,10 +15,10 @@ export function mountWalletUI({app,notify=()=>{},showError=()=>{},navigate=()=>{
     metrics.replaceChildren();subs.replaceChildren();history.replaceChildren();
     try{
       const w=await app.wallet();
-      metric('Wallet',money(w.walletBalance),'Disponible + réservé');
+      metric('Solde général',money(w.walletBalance),'Somme des positions des sous-comptes, dettes incluses');
       metric('Disponible',money(w.availableBalance));
       metric('Réservé',money(w.reservedBalance));
-      metric('Activité non dépensable',money(w.activityOnlyBalance),'Ex. Collation / Aide locale selon la règle');
+      metric('Activité non dépensable',money(w.activityOnlyBalance),'Incluse dans le suivi, jamais confondue avec Disponible');
       if(!w.subaccounts?.length)subs.append(el('p','Aucun sous-compte personnel alimenté.','empty-state'));
       for(const s of w.subaccounts??[]){
         const c=el('article',undefined,'item');c.append(el('strong',s.groupName+' · '+s.label),el('span',accessLabel[s.access]??s.access,'pill'),el('p','Suivi '+money(s.trackedBalance)+' · réservé '+money(s.reservedBalance)+' · disponible '+money(s.availableBalance),'hint'));
