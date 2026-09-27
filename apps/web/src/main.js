@@ -49,6 +49,7 @@ import { mountOperationalRegistryUI } from './operational-registry-ui.js';
 import { mountGroupLearningRegistryUI } from './group-learning-registry-ui.js';
 import { mountRoleDashboardsUI, mountGeoDirectoryUI } from './role-directory-talent-ui.js';
 import { mountCreatorTalentUI } from './creator-talent-ui.js';
+import { mountLocalAssistantUI } from './local-assistant.js';
 import { mountManagerPublicProfileUI } from './manager-public-profile-ui.js';
 import { mountTrustCenterUI } from './trust-center.js';
 import { mountStarterKitUI } from './starter-kit-ui.js';
@@ -258,6 +259,7 @@ const groupLearningRegistryUI=mountGroupLearningRegistryUI({app,getGroups:()=>gr
 const roleDashboardsUI=mountRoleDashboardsUI({app,getGroups:()=>groups,getMembers:()=>members,getMeetings:()=>meetings,isManager,navigate:go,showError:fail});
 const geoDirectoryUI=mountGeoDirectoryUI({app,isManager,notify:toast,showError:fail});
 const creatorTalentUI=mountCreatorTalentUI({app,notify:toast,showError:fail});
+const localAssistantUI=mountLocalAssistantUI({getModules:()=>modules,openModule:id=>openModule(id),navigate:go,notify:toast});
 const managerPublicProfileUI=mountManagerPublicProfileUI({app,notify:toast,showError:fail});
 const trustCenterUI=mountTrustCenterUI({app,getMembers:()=>members,isManager,notify:toast,showError:fail});
 const starterKitUI=mountStarterKitUI({app,notify:toast,showError:fail});
@@ -983,7 +985,7 @@ const openModule = async (id) => {
     if(m.status === 'FOUNDATION_ACTIVE' && id === 'RUBRIC.HAND_RAISE'){go('operations',{anchor:'rubricsManagementPanel',force:true});setTimeout(()=>prepareRubricPreset('Main levée','Rubrique principale événementielle : définir motif, bénéficiaire, participation obligatoire ou volontaire, montant ou règle de calcul, preuve et validation du groupe.'),80);return;}
     if(m.status === 'FOUNDATION_ACTIVE' && id === 'FINANCE.TRUST_SCORE'){go('members',{anchor:'trustGraphCenter',force:true});void trustCenterUI.refresh();return;}
     if(m.status === 'FOUNDATION_ACTIVE' && ['MEETING.PREPAYMENTS','MEETING.REOPEN_AUTH'].includes(id)){go('sessions',{anchor:'meetingFinanceGovernanceCenter',force:true});meetingFinanceGovernanceUI.open();return;}
-    if(m.status === 'FOUNDATION_ACTIVE' && id === 'AI.LOCAL'){go('operations',{anchor:'voiceFinancialPanel',force:true});document.querySelector('#voiceFinancialPanel')?.scrollIntoView({behavior:'smooth',block:'start'});return;}
+    if(m.status === 'FOUNDATION_ACTIVE' && id === 'AI.LOCAL'){go('dashboard',{anchor:'localAssistantCenter',force:true});localAssistantUI.open();return;}
     const route = m.workspace === 'SPECIALIZED' && m.status === 'FOUNDATION_ACTIVE' ? specializedRoute(id) : undefined;
     if (route) {
         go(route);
