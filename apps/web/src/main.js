@@ -47,6 +47,7 @@ import { mountDataQualityUI } from './data-quality-ui.js';
 import { mountOpportunityIntelligenceUI } from './opportunity-intelligence-ui.js';
 import { mountOperationalRegistryUI } from './operational-registry-ui.js';
 import { mountRoleDashboardsUI, mountGeoDirectoryUI, mountProfessionalTalentUI } from './role-directory-talent-ui.js';
+import { mountTrustCenterUI } from './trust-center.js';
 import { mountQuietWatchUI } from './quiet-watch-ui.js';
 let uiLocale = 'fr';
 try { uiLocale = localStorage.getItem('tontine.locale') === 'en' ? 'en' : 'fr'; } catch {}
@@ -246,6 +247,7 @@ const operationalRegistryUI=mountOperationalRegistryUI({app,getGroups:()=>groups
 const roleDashboardsUI=mountRoleDashboardsUI({app,getGroups:()=>groups,getMembers:()=>members,getMeetings:()=>meetings,isManager,navigate:go,showError:fail});
 const geoDirectoryUI=mountGeoDirectoryUI({app,isManager,notify:toast,showError:fail});
 const professionalTalentUI=mountProfessionalTalentUI({app,notify:toast,showError:fail});
+const trustCenterUI=mountTrustCenterUI({app,getMembers:()=>members,isManager,notify:toast,showError:fail});
 const quietWatchUI=mountQuietWatchUI({app,notify:toast,showError:fail,isManager});
 window.addEventListener('popstate',event=>{
     const state=event.state?.ecoNav,hash=location.hash.slice(1);
@@ -959,6 +961,7 @@ const openModule = async (id) => {
     if(m.status === 'FOUNDATION_ACTIVE' && id === 'DASHBOARDS.ALL'){go('dashboard',{anchor:'roleDashboardsCenter',force:true});void roleDashboardsUI.refresh();return;}
     if(m.status === 'FOUNDATION_ACTIVE' && id === 'GEO.DIRECTORY'){go('discovery',{anchor:'geoDirectoryCenter',force:true});void geoDirectoryUI.refresh();return;}
     if(m.status === 'FOUNDATION_ACTIVE' && ['CREATOR.STUDIO','MANAGER.PUBLIC_PROFILE','LEARNING.TALENT'].includes(id)){go('ecosystem',{anchor:'professionalTalentCenter',force:true});professionalTalentUI.open();return;}
+    if(m.status === 'FOUNDATION_ACTIVE' && ['FINANCE.TRUST_SCORE','TRUST.GRAPH'].includes(id)){go('members',{anchor:'trustGraphCenter',force:true});void trustCenterUI.refresh();return;}
     if(m.status === 'FOUNDATION_ACTIVE' && id === 'SAFETY.QUIET_WATCH'){go('settings',{anchor:'quietWatchCenter',force:true});void quietWatchUI.refresh();return;}
     if(m.status === 'FOUNDATION_ACTIVE' && id === 'AI.LOCAL'){go('operations',{anchor:'voiceFinancialPanel',force:true});document.querySelector('#voiceFinancialPanel')?.scrollIntoView({behavior:'smooth',block:'start'});return;}
     const route = m.workspace === 'SPECIALIZED' && m.status === 'FOUNDATION_ACTIVE' ? specializedRoute(id) : undefined;
