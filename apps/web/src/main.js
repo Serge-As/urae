@@ -1360,6 +1360,8 @@ const openUniversalSearchResult=async row=>{
     if(row.kind==='group'){app.selectGroup(row.id);await refreshGroupContext();await detailUI.open('group',row.id);return;}
     if(['member','meeting','rubric'].includes(row.kind)){await detailUI.open(row.kind,row.id);return;}
     if(row.kind==='module'){await openModule(row.id);return;}
+    if(row.kind==='workspace'&&row.moduleId){await openModule(row.moduleId);return;}
+    if(row.kind==='inbox'){go('dashboard',{anchor:'dashboardInbox',force:true});return;}
 };
 const renderUniversalSearchFull=async()=>{
     const input=document.querySelector('#universalSearchFull'),root=document.querySelector('#universalSearchFullResults');
@@ -1368,15 +1370,18 @@ const renderUniversalSearchFull=async()=>{
     if(query.length<2){const p=document.createElement('p');p.className='hint';p.textContent=tx('Saisissez au moins 2 caractères.','Enter at least 2 characters.');root.append(p);return;}
     const local=localUniversalSearch({query,groups,modules,members,meetings,rubrics});
     let remote=[];
-    if(app.activeGroup()&&navigator.onLine!==false){
-        const [documents,knowledge]=await Promise.all([
-            app.searchDocuments(query,20).catch(()=>[]),
-            app.searchKnowledge(query,app.activeGroup()).catch(()=>[])
+    if(navigator.onLine!==false){
+        const groupId=app.activeGroup();
+        const [documents,knowledge,workspaces,inbox]=await Promise.all([
+            groupId?app.searchDocuments(query,20).catch(()=>[]):Promise.resolve([]),
+            app.searchKnowledge(query,groupId).catch(()=>[]),
+            groupId?app.listWorkspaceRecords(undefined,groupId).catch(()=>[]):Promise.resolve([]),
+            app.inboxItems().catch(()=>[])
         ]);
         if(revision!==universalSearchRevision)return;
-        remote=remoteUniversalSearch({documents,knowledge});
+        remote=remoteUniversalSearch({query,documents,knowledge,workspaces,inbox});
     }
-    const rows=[...local,...remote].slice(0,60);
+    const rows=[...local,...remote].sort((a,b)=>Number(b.score??0)-Number(a.score??0)||String(a.title??'').localeCompare(String(b.title??''),'fr')).slice(0,80);
     if(!rows.length){const p=document.createElement('p');p.className='empty-state';p.textContent=tx('Aucun résultat autorisé trouvé.','No authorized result found.');root.append(p);return;}
     for(const row of rows){
         const interactive=['group','member','meeting','rubric','module'].includes(row.kind),node=document.createElement(interactive?'button':'article');
