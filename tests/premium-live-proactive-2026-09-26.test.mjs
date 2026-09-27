@@ -23,6 +23,8 @@ test('client live layer reconnects, heartbeats, replays gaps and exposes financi
   const main=fs.readFileSync('apps/web/src/main.js','utf8');
   const api=fs.readFileSync('workers/api/src/index.ts','utf8');
   assert.match(live,/scheduleReconnect/);assert.match(live,/socket\.send\('PING'\)/);assert.match(live,/seq>lastSeq\+1/);assert.match(live,/GROUP_LIVE_SIGNAL/);assert.match(live,/addEventListener\('online'/);
+  assert.match(live,/app\.liveEvents\(lastSeq,500\)/);assert.match(live,/dispatchDurableEvent\(event\)/);assert.match(live,/page<50/);
+  assert.match(app,/liveEvents\(after=0,limit=500\)/);assert.match(app,/safeLimit/);
   assert.match(app,/publishLiveSignal/);assert.match(api,/live\\\/\(health\|events\|connect\|publish\|signal\)/);assert.match(api,/LIVE_CLIENT_SIGNAL_NOT_ALLOWED/);
   assert.match(main,/publishLiveSignal\?\.\('TYPING'/);assert.match(main,/800/);assert.match(main,/2500/);assert.match(main,/applyRemoteFinancialProjection/);assert.match(main,/remote-ack/);
   assert.doesNotMatch(main,/publishLiveSignal\?\.\('TYPING',[^\n]*amount/);
