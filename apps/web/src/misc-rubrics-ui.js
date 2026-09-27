@@ -75,7 +75,7 @@ export function mountMiscRubricUI({app,notify=()=>{},showError=console.error,get
       const row=el('label',undefined,'item');row.dataset.miscRow='1';row.dataset.templateId=t.id;row.dataset.templateName=t.name;row.dataset.kind=t.kind;
       const check=document.createElement('input');check.type='checkbox';
       const title=el('strong',t.name);
-      const meta=el('span',(t.kind==='REGISTRATION'?'Inscription / réinscription · ':t.kind==='LOAN_STAMP'?'Prêt · ':t.kind==='FINE'?'Événement · ':t.kind==='LOCAL_AID'?'Aide locale · ':t.kind==='HAND_RAISE'?'Main levée · ':'')+(t.lifecycle==='EPHEMERAL'?'éphémère':'disponible'),'hint');
+      const meta=el('span',(t.kind==='REGISTRATION'?'Inscription / réinscription · ':t.kind==='LOAN_STAMP'?'Prêt · ':t.kind==='FINE'?'Événement · ':'')+(t.lifecycle==='EPHEMERAL'?'éphémère':'disponible'),'hint');
       const amount=makeAmountInput(t,row);
       const note=document.createElement('input');note.type='text';note.dataset.miscNote='1';note.placeholder='Note facultative';note.maxLength=500;
       row.prepend(check,title,meta);row.append(amount,note);
@@ -162,7 +162,7 @@ export function mountMiscRubricUI({app,notify=()=>{},showError=console.error,get
 
   document.getElementById('miscRubricCustomForm')?.addEventListener('submit',e=>{e.preventDefault();void (async()=>{try{
     const lifecycle=value('miscRubricCustomLifecycle'),sessions=num('miscRubricCustomSessions');
-    await app.createMiscRubric({kind:value('miscRubricCustomKind')||'CUSTOM',name:value('miscRubricCustomName'),description:value('miscRubricCustomDescription')||undefined,lifecycle,amountMode:'VARIABLE',defaultAmount:num('miscRubricCustomAmount'),activeFirstSessions:lifecycle==='EPHEMERAL'?(sessions||3):undefined});
+    await app.createMiscRubric({name:value('miscRubricCustomName'),description:value('miscRubricCustomDescription')||undefined,lifecycle,amountMode:'VARIABLE',defaultAmount:num('miscRubricCustomAmount'),activeFirstSessions:lifecycle==='EPHEMERAL'?(sessions||3):undefined});
     document.getElementById('miscRubricCustomName').value='';document.getElementById('miscRubricCustomDescription').value='';notify('Petite rubrique ajoutée sous « Autres ».');rubricDefinitions=await app.listRubrics();await renderChoices();
   }catch(err){showError(err);}})();});
 
