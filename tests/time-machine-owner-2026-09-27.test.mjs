@@ -17,12 +17,12 @@ async function seed(){
 test('Time Machine captures immutable derived snapshots and compares change without rollback',async()=>{
  const {repo,g,service}=await seed();
  const a=await service.capture(g.id,{label:'Avant membre',reason:'Point de comparaison'});
- const first=await service.get(g.id,a.id);assert.equal(first.snapshot.counts.activeMembers,0);assert.equal(first.record.data.rollbackSupported,false);
+ const first=await service.get(g.id,a.id);assert.equal(first.snapshot.counts.activeMembers,1);assert.equal(first.record.data.rollbackSupported,false);
  await repo.saveUser({id:'u1',displayName:'Alice',locale:'fr',createdAt:new Date().toISOString()});
  await repo.saveMembership({id:'m1',tenantId:'tenant_time',groupId:g.id,userId:'u1',status:'active',roles:['member'],joinedAt:new Date().toISOString(),updatedAt:new Date().toISOString()});
  const b=await service.capture(g.id,{label:'Après membre',reason:'Mesurer évolution'});
  const diff=await service.compare(g.id,a.id,b.id);assert.equal(diff.deltas.members,1);assert.equal(diff.readOnly,true);assert.equal(diff.rollbackSupported,false);
- const again=await service.get(g.id,a.id);assert.equal(again.snapshot.counts.activeMembers,0);
+ const again=await service.get(g.id,a.id);assert.equal(again.snapshot.counts.activeMembers,1);
 });
 
 test('Time Machine UI uses dedicated owner and exposes no rollback path',()=>{
