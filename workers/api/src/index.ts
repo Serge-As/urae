@@ -46,6 +46,7 @@ import { KnowledgeAcademyService } from '../../../packages/knowledge-academy/src
 import { ValueNetworkService } from '../../../packages/value-network/src/index.js';
 import { GroupReconstitutionService } from '../../../packages/group-reconstitution/src/index.js';
 import { MeetingReopenAuthorizationService } from '../../../packages/meeting-authorization/src/index.js';
+import { PrepaymentService } from '../../../packages/prepayments/src/index.js';
 import { SafetyCaseService, CommitmentTrustGraphService, assessReferralStructure, type SafetyCategory, type SafetyCaseState, type SafetyAction } from '../../../packages/trust/src/index.js';
 import { authenticatedApi } from './authenticated.js';
 export { GroupLiveHub } from './group-live-hub.js';
@@ -155,6 +156,7 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
   const safety=new SafetyCaseService(repo,kernel);
   const trustGraph=new CommitmentTrustGraphService(repo,kernel);
   const reopenAuth=new MeetingReopenAuthorizationService(repo,kernel);
+  const prepayments=new PrepaymentService(repo,kernel,ledger);
   if(options.premiumLive)kernel.features.set('premium_live_ledger',true);
   const isFounderTeamActor=async()=>Boolean(options.founderTeamActors?.has(ctx.actorId))||Boolean(options.founderControl&&await options.founderControl.isPlatformOwner(ctx.actorId));
   const requireGroup=async(groupId:string,manage=false)=>{
@@ -365,6 +367,11 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
     if(trashRoute&&request.method==='GET')return json(await listTrash(trashRoute[1]!),200,cors);
     if(trashRoute&&request.method==='POST'){const body=await readJson<Record<string,unknown>>(request);return json(await trashEntity(trashRoute[1]!,String(body.kind??''),String(body.entityId??'')),201,cors);}
     if(trashRestore&&request.method==='POST')return json(await restoreTrash(trashRestore[1]!,decodeURIComponent(trashRestore[2]!)),200,cors);
+    const prepaymentRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/prepayments$/);
+    if(prepaymentRoute&&request.method==='GET')return json({items:await prepayments.list(prepaymentRoute[1]!)},200,cors);
+    if(prepaymentRoute&&request.method==='POST'){const body=await readJson<Record<string,unknown>>(request);return json(await prepayments.create(prepaymentRoute[1]!,{membershipId:String(body.membershipId??''),rubricId:body.rubricId?String(body.rubricId):undefined,amount:finite(body.amount),intendedMeetingId:body.intendedMeetingId?String(body.intendedMeetingId):undefined,note:body.note?String(body.note):undefined,idempotencyKey:String(body.idempotencyKey??request.headers.get('x-idempotency-key')??makeId('prepayment'))}),201,cors);}
+    const prepaymentAllocate=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/prepayments\/([^/]+)\/allocate$/);
+    if(prepaymentAllocate&&request.method==='POST'){const body=await readJson<Record<string,unknown>>(request);return json(await prepayments.allocate(prepaymentAllocate[1]!,prepaymentAllocate[2]!,{meetingId:String(body.meetingId??''),amount:finite(body.amount)}),200,cors);}
     const reopenAuthBase=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/meetings\/([^/]+)\/reopen-authorizations$/);
     if(reopenAuthBase&&request.method==='GET')return json({items:await reopenAuth.list(reopenAuthBase[1]!,reopenAuthBase[2]!)},200,cors);
     if(reopenAuthBase&&request.method==='POST'){const body=await readJson<Record<string,unknown>>(request);return json(await reopenAuth.create(reopenAuthBase[1]!,reopenAuthBase[2]!,{reason:String(body.reason??''),expiresAt:body.expiresAt?String(body.expiresAt):undefined,scope:body.scope?String(body.scope):undefined}),201,cors);}
