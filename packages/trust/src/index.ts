@@ -41,6 +41,44 @@ export class CommitmentReliabilityEngine {
   }
 }
 
+export class CommitmentTrustGraphService {
+  constructor(public repo:PlatformRepository,public kernel:PlatformKernel,public engine=new CommitmentReliabilityEngine()){}
+  private ctx(){return this.kernel.context.get();}
+  private async subject(groupId:Id,membershipId:Id,manage=false){
+    const c=this.ctx(),group=await this.repo.getGroup(c.tenantId,groupId);if(!group)throw new Error('GROUP_NOT_FOUND');
+    const subject=await this.repo.getMembership(c.tenantId,groupId,membershipId);if(!subject||subject.status!=='active')throw new Error('MEMBERSHIP_NOT_FOUND');
+    const actor=(await this.repo.listMemberships(c.tenantId,groupId)).find(x=>x.userId===c.actorId&&x.status==='active');
+    const manager=group.createdBy===c.actorId||Boolean(actor?.roles.some(r=>managerRoles.has(r)));
+    if(manage&&!manager)throw new Error('FORBIDDEN_SCOPE');
+    if(!manage&&!manager&&subject.userId!==c.actorId)throw new Error('FORBIDDEN_SCOPE');
+    return{group,subject,manager};
+  }
+  async addEvidence(groupId:Id,membershipId:Id,input:{commitmentBand:CommitmentBandId;kind:ReliabilityEvidence['kind'];sourceId:Id;occurredAt?:string;weight?:number}){
+    const {subject}=await this.subject(groupId,membershipId,true),band=clean(input.commitmentBand,80),sourceId=clean(input.sourceId,240);
+    if(!band||!sourceId)throw new Error('TRUST_EVIDENCE_FIELDS_REQUIRED');
+    const allowed:ReliabilityEvidence['kind'][]=['FULFILLED_ON_TIME','FULFILLED_LATE','MISSED_CONFIRMED','RECOVERED_ARREARS','DISPUTE_RESOLVED','RULE_BREACH_CONFIRMED'];
+    if(!allowed.includes(input.kind))throw new Error('INVALID_RELIABILITY_EVIDENCE_KIND');
+    const occurredAt=input.occurredAt?new Date(input.occurredAt).toISOString():now();if(!Number.isFinite(Date.parse(occurredAt)))throw new Error('INVALID_OCCURRED_AT');
+    const weight=input.weight===undefined?1:Number(input.weight);if(!Number.isFinite(weight)||weight<0.1||weight>3)throw new Error('INVALID_RELIABILITY_WEIGHT');
+    const c=this.ctx(),stamp=now(),record:WorkspaceRecord={id:makeId('trust_evidence'),tenantId:c.tenantId,groupId,moduleId:'TRUST.GRAPH',title:'Preuve de fiabilité · '+input.kind,status:'DONE',tags:['trust-evidence','behaviour-only','band:'+band],data:{kind:'RELIABILITY_EVIDENCE',membershipId,subjectUserId:subject.userId,commitmentBand:band,evidenceKind:input.kind,weight,occurredAt,sourceId,advisoryOnly:true,wealthUsed:false,automaticDecision:false},createdBy:c.actorId,createdAt:stamp,updatedAt:stamp};
+    await this.repo.saveWorkspaceRecord(record);await this.repo.saveAudit(this.kernel.audit.append({tenantId:c.tenantId,actorId:c.actorId,action:'TRUST_EVIDENCE_RECORDED',targetType:'membership',targetId:membershipId,requestId:c.requestId,metadata:{groupId,commitmentBand:band,evidenceKind:input.kind,sourceId}}));return record;
+  }
+  async evidence(groupId:Id,membershipId:Id){
+    await this.subject(groupId,membershipId,false);const c=this.ctx();
+    return (await this.repo.listWorkspaceRecords(c.tenantId,'TRUST.GRAPH',groupId)).filter(x=>x.data.kind==='RELIABILITY_EVIDENCE'&&x.data.membershipId===membershipId).sort((a,b)=>String(b.data.occurredAt??b.createdAt).localeCompare(String(a.data.occurredAt??a.createdAt)));
+  }
+  async profile(groupId:Id,membershipId:Id,commitmentBand:CommitmentBandId){
+    const {subject}=await this.subject(groupId,membershipId,false),band=clean(commitmentBand,80);if(!band)throw new Error('COMMITMENT_BAND_REQUIRED');
+    const rows=await this.evidence(groupId,membershipId),items:ReliabilityEvidence[]=rows.filter(x=>String(x.data.commitmentBand)===band).map(x=>({subjectUserId:subject.userId,commitmentBand:band,kind:String(x.data.evidenceKind) as ReliabilityEvidence['kind'],weight:Number(x.data.weight??1),occurredAt:String(x.data.occurredAt??x.createdAt),sourceId:String(x.data.sourceId??x.id)}));
+    return this.engine.profile(subject.userId,band,items);
+  }
+  async graph(groupId:Id,membershipId:Id){
+    const rows=await this.evidence(groupId,membershipId),bands=[...new Set(rows.map(x=>String(x.data.commitmentBand??'')).filter(Boolean))];
+    const profiles=[];for(const band of bands)profiles.push(await this.profile(groupId,membershipId,band));
+    return{membershipId,evidence:rows,profiles,policy:{advisoryOnly:true,automaticAdmission:false,automaticCreditDecision:false,automaticExclusion:false,wealthUsed:false}};
+  }
+}
+
 export const assessReferralStructure=(input:{levels?:number;fundingSource?:string;rewardForRecruitingRecruiters?:boolean;promisedReturnLinkedToRecruitment?:boolean;realProductOrServiceEvidence?:boolean}):ReferralStructureAssessment=>{
   const signals:ReferralStructureAssessment['signals']=[],levels=Math.max(1,Math.trunc(Number(input.levels??1))),funding=clean(input.fundingSource,80).toUpperCase();
   if(levels>1)signals.push({code:'MULTI_LEVEL_REWARD',severity:'CRITICAL',explanation:'Les récompenses de recommandation doivent rester sur un seul niveau direct.'});
