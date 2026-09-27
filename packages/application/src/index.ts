@@ -572,7 +572,7 @@ export class ConnectedApplication {
   }
   async expenses(input:{meetingId?:string;membershipId?:string;rubricId?:string;scope?:string}={}):Promise<any[]>{if(!this.activeGroupId)return[];const q=new URLSearchParams();for(const [k,v] of Object.entries(input))if(v)q.set(k,String(v));return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/expenses?${q}`);}
   async openSupportCase(summary:string):Promise<CaseRecord>{return this.request('/api/v1/cases',{method:'POST',body:JSON.stringify({summary,groupId:this.activeGroupId})});}
-  async inboxItems():Promise<Array<{id:string;kind:string;title:string;priority:string;status:string;groupId?:string}>>{return this.request('/api/v1/inbox');}
+  async inboxItems():Promise<Array<{id:string;kind:string;title:string;priority:string;status:string;groupId?:string;dueAt?:string;sourceType?:string;sourceId?:string}>>{return this.request('/api/v1/inbox');}
 
   async productCatalog():Promise<{version:string;count:number;capabilities:ReturnType<ConnectedApplication['productModules']>}>{
     try{return await this.request('/api/v1/product/capabilities');}
