@@ -945,7 +945,6 @@ const openModule = async (id) => {
         return;
     if(m.status === 'FOUNDATION_ACTIVE' && id === 'CALENDAR.UNIFIED'){go('ecosystem',{anchor:'unifiedCalendarPanel',force:true});const panel=document.querySelector('#unifiedCalendarPanel');if(panel?.tagName==='DETAILS')panel.open=true;void renderUnifiedCalendar();return;}
     if(m.status === 'FOUNDATION_ACTIVE' && id === 'GOVERNANCE.DOCUMENT_STUDIO'){go('documents',{force:true});void documentsUI.refresh();return;}
-    if(m.status === 'FOUNDATION_ACTIVE' && id === 'RUBRIC.STARTER_KITS'){go('launch',{force:true});toast(tx('Le Kit prêt à l’emploi est généré et enregistré depuis le parcours de création du groupe.','The ready-to-use Starter Kit is generated and saved from the group creation journey.'));return;}
     if(m.status === 'FOUNDATION_ACTIVE' && id === 'TRUST.VERIFICATION'){go('settings',{anchor:'identityVerificationCenter',force:true});void identityVerificationUI.refresh();return;}
     if(m.status === 'FOUNDATION_ACTIVE' && id === 'DATA.QUALITY'){go('settings',{anchor:'dataQualityCenter',force:true});void dataQualityUI.refresh();return;}
     if(m.status === 'FOUNDATION_ACTIVE' && id === 'PAPER.BRIDGE'){go('documents',{force:true});void documentsUI.refresh();return;}
@@ -954,7 +953,6 @@ const openModule = async (id) => {
     if(m.status === 'FOUNDATION_ACTIVE' && id === 'RUBRIC.LOCAL_AID'){go('operations',{anchor:'rubricsManagementPanel',force:true});setTimeout(()=>prepareRubricPreset('Aide locale','Rubrique principale de contribution, au même niveau métier que Collation / Ration. Confirmer la règle du groupe : montant, présence/absence, bénéficiaire, solidarité, manquant et décaissement.'),80);return;}
     if(m.status === 'FOUNDATION_ACTIVE' && id === 'RUBRIC.HAND_RAISE'){go('operations',{anchor:'rubricsManagementPanel',force:true});setTimeout(()=>prepareRubricPreset('Main levée','Rubrique principale événementielle : définir motif, bénéficiaire, participation obligatoire ou volontaire, montant ou règle de calcul, preuve et validation du groupe.'),80);return;}
     if(m.status === 'FOUNDATION_ACTIVE' && id === 'PAPER.PRINT'){go('documents',{anchor:'paperPrintCenter',force:true});void printCenterUI.refresh();return;}
-    if(m.status === 'FOUNDATION_ACTIVE' && ['CREATOR.STUDIO','LEARNING.TALENT'].includes(id)){go('ecosystem',{anchor:'professionalTalentCenter',force:true});professionalTalentUI.open();return;}
     if(m.status === 'FOUNDATION_ACTIVE' && ['FINANCE.TRUST_SCORE','TRUST.GRAPH'].includes(id)){go('members',{anchor:'trustGraphCenter',force:true});void trustCenterUI.refresh();return;}
     if(m.status === 'FOUNDATION_ACTIVE' && ['MEETING.PREPAYMENTS','MEETING.REOPEN_AUTH'].includes(id)){go('sessions',{anchor:'meetingFinanceGovernanceCenter',force:true});meetingFinanceGovernanceUI.open();return;}
     if(m.status === 'FOUNDATION_ACTIVE' && id === 'AI.LOCAL'){go('operations',{anchor:'voiceFinancialPanel',force:true});document.querySelector('#voiceFinancialPanel')?.scrollIntoView({behavior:'smooth',block:'start'});return;}
