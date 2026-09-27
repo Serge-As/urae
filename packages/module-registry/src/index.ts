@@ -79,7 +79,7 @@ export const PRODUCT_MODULES: ProductModule[] = [
   {id:'FINANCE.FIXED_TARGET',labelFr:'Cagnottes à cible fixe',labelEn:'Fixed target pools',status:'FOUNDATION_ACTIVE',lot:'E',canonicalDependencies:['KERNEL.POLICY','LEDGER.CANONICAL'],workspace:'SPECIALIZED'},
   {id:'FINANCE.ENVELOPES',labelFr:'Enveloppes des membres',labelEn:'Member envelopes',status:'STRUCTURAL_V1',lot:'E',canonicalDependencies:['KERNEL.POLICY','LEDGER.CANONICAL'],workspace:'UNIVERSAL'},
   {id:'FINANCE.PRIOR_BALANCE',labelFr:'Reprise de solde antérieur',labelEn:'Prior balance carryover',status:'FOUNDATION_ACTIVE',lot:'E',canonicalDependencies:['KERNEL.POLICY','LEDGER.CANONICAL'],workspace:'UNIVERSAL'},
-  {id:'FINANCE.WALLET',labelFr:'Wallet interne multi-rubriques',labelEn:'Internal multi-rubric wallet',status:'STRUCTURAL_V1',lot:'E',canonicalDependencies:['KERNEL.POLICY','LEDGER.CANONICAL'],workspace:'UNIVERSAL'},
+  {id:'FINANCE.WALLET',labelFr:'Wallet interne multi-rubriques',labelEn:'Internal multi-rubric wallet',status:'FOUNDATION_ACTIVE',lot:'E',canonicalDependencies:['KERNEL.POLICY','LEDGER.CANONICAL'],workspace:'SPECIALIZED'},
   {id:'FINANCE.TRUST_SCORE',labelFr:'Fiabilité financière contextuelle',labelEn:'Contextual financial reliability',status:'FOUNDATION_ACTIVE',lot:'E',canonicalDependencies:['KERNEL.POLICY','LEDGER.CANONICAL'],workspace:'SPECIALIZED'},
   {id:'GOVERNANCE.VOTE',labelFr:'Votes, décisions et quorum',labelEn:'Voting, decisions & quorum',status:'FOUNDATION_ACTIVE',lot:'F',canonicalDependencies:['KERNEL.POLICY'],workspace:'UNIVERSAL'},
   {id:'GOVERNANCE.MANDATE',labelFr:'Mandats et délégations',labelEn:'Mandates & delegation',status:'FOUNDATION_ACTIVE',lot:'F',canonicalDependencies:['KERNEL.POLICY'],workspace:'SPECIALIZED'},
