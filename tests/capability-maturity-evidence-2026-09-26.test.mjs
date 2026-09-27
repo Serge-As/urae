@@ -40,7 +40,12 @@ const evidence=[
  ['GROUP.CASE_LAW','apps/web/src/operational-registry-ui.js',['GROUP.CASE_LAW','autoRuleActivation:false','caseState'], 'apps/web/src/main.js',['GROUP.CASE_LAW','operationalRegistryUI.open']],
  ['RUBRIC.EXCEPTIONS','apps/web/src/operational-registry-ui.js',['RUBRIC.EXCEPTIONS','exceptionState','createsLedgerEntry:false'],'apps/web/src/main.js',['RUBRIC.EXCEPTIONS','operationalRegistryUI.open']],
  ['DATA.TIME_MACHINE','apps/web/src/operational-registry-ui.js',['DATA.TIME_MACHINE','read-only-snapshot','rollbackSupported:false'],'apps/web/src/main.js',['DATA.TIME_MACHINE','operationalRegistryUI.open']],
- ['SUCCESSION.NEXT_OF_KIN','apps/web/src/operational-registry-ui.js',['SUCCESSION.NEXT_OF_KIN','grantsMembership:false','grantsFinancialRights:false'],'apps/web/src/main.js',['SUCCESSION.NEXT_OF_KIN','operationalRegistryUI.open']]
+ ['SUCCESSION.NEXT_OF_KIN','apps/web/src/operational-registry-ui.js',['SUCCESSION.NEXT_OF_KIN','grantsMembership:false','grantsFinancialRights:false'],'apps/web/src/main.js',['SUCCESSION.NEXT_OF_KIN','operationalRegistryUI.open']],
+ ['DASHBOARDS.ALL','apps/web/src/role-directory-talent-ui.js',['mountRoleDashboardsUI','Vue responsable','Vue membre'],'apps/web/src/main.js',['DASHBOARDS.ALL','roleDashboardsUI.refresh']],
+ ['GEO.DIRECTORY','packages/discovery/src/index.ts',['proximity(locality','LOCALITY_REQUIRED','searchCandidates'],'apps/web/src/role-directory-talent-ui.js',['Annuaire local','proximityGroups','Aucun suivi GPS permanent']],
+ ['MANAGER.PUBLIC_PROFILE','packages/discovery/src/index.ts',['saveCandidateProfile','optIn','CANDIDATE_PUBLIC_PROFILE_UPDATED'],'apps/web/src/role-directory-talent-ui.js',['Profil public gestionnaire','saveCandidateProfile','Rendre ce profil découvrable']],
+ ['CREATOR.STUDIO','packages/business-studio/src/index.ts',['createOffer','setOfferState','OFFER'],'apps/web/src/role-directory-talent-ui.js',['Creator & Seller Studio','createBusinessOffer','setBusinessOfferState']],
+ ['LEARNING.TALENT','packages/knowledge-academy/src/index.ts',['CERTIFICATE','submitLesson','grantsFinancialRole:false'],'apps/web/src/role-directory-talent-ui.js',['Talent · apprendre','myCertificates','aucun pouvoir administratif ou financier automatique']]
 ];
 test('maturity registry promotes only capabilities with owner engine and user journey evidence',()=>{
  for(const [id,owner,ownerTokens,ui,uiTokens] of evidence){
