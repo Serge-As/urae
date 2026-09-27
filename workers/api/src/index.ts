@@ -1068,7 +1068,7 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
     if(miscCatalog&&request.method==='POST'){
       const body=await readJson<Record<string,unknown>>(request),action=String(body.action??'ensure_starters');
       if(action==='ensure_starters')return json(await miscRubrics.ensureStarters(miscCatalog[1]!),200,cors);
-      if(action==='create_custom')return json(await miscRubrics.createCustom(miscCatalog[1]!,{name:String(body.name??''),description:body.description?String(body.description):undefined,lifecycle:String(body.lifecycle??'PERSISTENT') as any,amountMode:String(body.amountMode??'VARIABLE') as any,defaultAmount:body.defaultAmount===undefined?undefined:finite(body.defaultAmount),activeFirstSessions:body.activeFirstSessions===undefined?undefined:finite(body.activeFirstSessions)}),201,cors);
+      if(action==='create_custom')return json(await miscRubrics.createCustom(miscCatalog[1]!,{kind:String(body.kind??'CUSTOM') as any,name:String(body.name??''),description:body.description?String(body.description):undefined,lifecycle:String(body.lifecycle??'PERSISTENT') as any,amountMode:String(body.amountMode??'VARIABLE') as any,defaultAmount:body.defaultAmount===undefined?undefined:finite(body.defaultAmount),activeFirstSessions:body.activeFirstSessions===undefined?undefined:finite(body.activeFirstSessions)}),201,cors);
       throw new Error('INVALID_MISC_ACTION');
     }
     const miscPostings=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/misc-rubrics\/postings$/);
