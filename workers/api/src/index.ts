@@ -588,6 +588,8 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
     const referralReward=url.pathname.match(/^\/api\/v1\/growth\/referral-campaigns\/([^/]+)\/rewards\/([^/]+)\/approve$/);
     if(referralReward&&request.method==='POST')return json(await growthReferral.approveReward(referralReward[1]!,referralReward[2]!),200,cors);
 
+    const creatorDiscovery=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/creator-content$/);
+    if(creatorDiscovery&&request.method==='GET')return json({items:await creatorTalent.discoverContent(creatorDiscovery[1]!,url.searchParams.get('hubId')??undefined)},200,cors);
     if(request.method==='GET'&&url.pathname==='/api/v1/creator-studio')return json(await creatorTalent.myCreatorStudio(),200,cors);
     if(request.method==='POST'&&url.pathname==='/api/v1/creator-studio/content'){const body=await readJson<any>(request);return json(await creatorTalent.createContent(body),201,cors);}
     const creatorPublish=url.pathname.match(/^\/api\/v1\/creator-studio\/content\/([^/]+)\/publish$/);
