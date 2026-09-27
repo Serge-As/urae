@@ -10,7 +10,7 @@ type WalletAccess='AVAILABLE'|'RESERVED'|'REVIEW_REQUIRED'|'ACTIVITY_ONLY';
 type ReservationState='ACTIVE'|'RELEASED';
 
 export interface WalletSubaccount{
-  key:string;groupId:Id;groupName:string;kind:'RUBRIC'|'SAVINGS_PLAN';
+  key:string;groupId:Id;groupName:string;kind:'RUBRIC'|'SAVINGS_PLAN'|'LOAN_DEBT';
   sourceId:Id;label:string;currency:string;trackedBalance:number;reservedBalance:number;availableBalance:number;
   access:WalletAccess;reasonCodes:string[];
 }
@@ -67,7 +67,15 @@ export class WalletService{
         subaccounts.push({key,groupId:m.groupId,groupName:m.groupName,kind:'RUBRIC',sourceId:rubricId,label:rubric?.name??'Flux non affecté',currency:rows[0]?.amount.currency??'XAF',trackedBalance:tracked,reservedBalance:Math.min(reserved,eligible),availableBalance:available,access:reserved>0&&available===0&&eligible>0?'RESERVED':access,reasonCodes:reasons});
         for(const row of rows)history.push({id:row.id,at:row.receivedAt,groupId:m.groupId,groupName:m.groupName,subaccountKey:key,label:rubric?.name??'Flux non affecté',kind:'CONTRIBUTION',amount:row.netAmount,currency:row.amount.currency,walletEligible:access==='AVAILABLE',ledgerEntryId:row.ledgerEntryId,meetingId:row.meetingId??null});
       }
-      const plans=(await this.repo.listWorkspaceRecords(c.tenantId,undefined,m.groupId)).filter(x=>x.data.specializedKind==='SAVINGS_PLAN'&&x.data.membershipId===m.membershipId&&x.status==='ACTIVE');
+      const groupRecords=await this.repo.listWorkspaceRecords(c.tenantId,undefined,m.groupId);
+      const loans=groupRecords.filter(x=>x.data.completionKind==='LOAN'&&x.data.borrowerMembershipId===m.membershipId&&['DISBURSED','REPAYING'].includes(String(x.data.completionState??'')));
+      for(const loan of loans){
+        const principal=Math.max(0,Number(loan.data.outstandingPrincipal??0)),interest=Math.max(0,Number(loan.data.unpaidInterest??0)),debt=principal+interest;if(debt<=0)continue;
+        const key='loan:'+loan.id;
+        subaccounts.push({key,groupId:m.groupId,groupName:m.groupName,kind:'LOAN_DEBT',sourceId:loan.id,label:loan.title||'Prêt',currency:String(loan.data.currency??'XAF'),trackedBalance:-debt,reservedBalance:0,availableBalance:0,access:'ACTIVITY_ONLY',reasonCodes:['OUTSTANDING_LOAN_DEBT','PRINCIPAL_PLUS_DUE_INTEREST']});
+        history.push({id:'wallet_debt_'+loan.id,at:loan.updatedAt,groupId:m.groupId,groupName:m.groupName,subaccountKey:key,label:loan.title||'Prêt',kind:'DEBT_POSITION',amount:-debt,currency:String(loan.data.currency??'XAF'),walletEligible:false,ledgerEntryId:loan.data.ledgerEntryId??null,meetingId:loan.data.interestAppliesToMeetingId??null,principal,unpaidInterest:interest});
+      }
+      const plans=groupRecords.filter(x=>x.data.specializedKind==='SAVINGS_PLAN'&&x.data.membershipId===m.membershipId&&x.status==='ACTIVE');
       for(const plan of plans){
         const balance=await this.savingsBalance(m.groupId,plan),key='savings:'+plan.id,reserved=this.reservationAmount(reservations,m.groupId,key),available=Math.max(0,balance-reserved);
         subaccounts.push({key,groupId:m.groupId,groupName:m.groupName,kind:'SAVINGS_PLAN',sourceId:plan.id,label:plan.title,currency:String(plan.data.currency??'XAF'),trackedBalance:balance,reservedBalance:Math.min(reserved,balance),availableBalance:available,access:reserved>0&&available===0&&balance>0?'RESERVED':'AVAILABLE',reasonCodes:['EXPLICIT_SAVINGS_PLAN']});
@@ -80,7 +88,8 @@ export class WalletService{
     subaccounts.sort((a,b)=>a.groupName.localeCompare(b.groupName,'fr')||a.label.localeCompare(b.label,'fr'));
     history.sort((a,b)=>String(b.at).localeCompare(String(a.at)));
     const availableBalance=subaccounts.reduce((n,x)=>n+x.availableBalance,0),reservedBalance=subaccounts.reduce((n,x)=>n+x.reservedBalance,0);
-    return{ownerUserId:c.actorId,currency:'XAF',walletBalance:availableBalance+reservedBalance,availableBalance,reservedBalance,activityOnlyBalance,subaccounts,history,providerTopupEnabled:false,externalPaymentRailEnabled:false,derivedFromCanonicalLedger:true,asOf:now()};
+    const walletBalance=subaccounts.reduce((n,x)=>n+x.trackedBalance,0);
+    return{ownerUserId:c.actorId,currency:'XAF',walletBalance,availableBalance,reservedBalance,activityOnlyBalance,subaccounts,history,providerTopupEnabled:false,externalPaymentRailEnabled:false,derivedFromCanonicalLedger:true,asOf:now()};
   }
   async reserve(input:{groupId:Id;subaccountKey:string;amount:number;purpose:string;expiresAt?:string}){
     const c=this.ctx(),amount=Number(input.amount);if(!Number.isSafeInteger(amount)||amount<=0)throw Error('INVALID_WALLET_RESERVATION_AMOUNT');
