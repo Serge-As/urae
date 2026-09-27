@@ -976,6 +976,7 @@ const openModule = async (id) => {
     if(m.status === 'FOUNDATION_ACTIVE' && id === 'FINANCE.ENVELOPES'){go('dashboard',{anchor:'memberEnvelopeCenter',force:true});memberEnvelopeUI.open();return;}
     if(m.status === 'FOUNDATION_ACTIVE' && id === 'OPPORTUNITY.GRAPH'){go('ecosystem',{anchor:'opportunityGraphCenter',force:true});opportunityGraphUI.open();return;}
     if(m.status === 'FOUNDATION_ACTIVE' && ['CREATOR.STUDIO','LEARNING.TALENT'].includes(id)){go('ecosystem',{anchor:'creatorTalentCenter',force:true});creatorTalentUI.open();return;}
+    if(m.status === 'FOUNDATION_ACTIVE' && id === 'MANAGER.PUBLIC_PROFILE'){go('discovery',{anchor:'managerPublicProfileCenter',force:true});managerPublicProfileUI.open();return;}
     if(m.status === 'FOUNDATION_ACTIVE' && id === 'MARKETPLACE.MARKET_INTELLIGENCE'){go('ecosystem',{anchor:'opportunityIntelligence',force:true});opportunityIntelligenceUI.open();return;}
     if(m.status === 'FOUNDATION_ACTIVE' && id === 'GOVERNANCE.TENDER'){go('ecosystem',{anchor:'socialCommercePanel',force:true});const panel=document.querySelector('#socialCommercePanel');if(panel?.tagName==='DETAILS')panel.open=true;return;}
     if(m.status === 'FOUNDATION_ACTIVE' && id === 'RUBRIC.LOCAL_AID'){go('operations',{anchor:'rubricsManagementPanel',force:true});setTimeout(()=>prepareRubricPreset('Aide locale','Rubrique principale de contribution, au même niveau métier que Collation / Ration. Confirmer la règle du groupe : montant, présence/absence, bénéficiaire, solidarité, manquant et décaissement.'),80);return;}
