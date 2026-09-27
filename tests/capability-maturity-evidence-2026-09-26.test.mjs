@@ -36,6 +36,8 @@ const evidence=[
  ['MEETING.PREPAYMENTS','packages/prepayments/src/index.ts',['ledger-once','ledgerMutationOnAllocation:false','PREPAYMENT_ALLOCATED'],'apps/web/src/meeting-finance-governance-ui.js',['Prépaiements / avances','Avance comptabilisée une seule fois','allocation sans mutation Ledger']],
  ['MEETING.REOPEN_AUTH','packages/meeting-authorization/src/index.ts',['independentAccountsRequired:true','authorizationState','APPROVED'],'apps/web/src/meeting-finance-governance-ui.js',['Approuver avec mon compte','lateAuthorizationId','quorum multi-responsables']],
  ['FINANCE.TRUST_SCORE','packages/trust/src/index.ts',['CommitmentReliabilityEngine','WEALTH_NOT_USED','advisoryOnly:true'],'apps/web/src/trust-center.js',['Score indicatif','Advisory only','ne décide jamais automatiquement']],
+ ['COMMUNITY.MICRO_ADS','packages/community-micro-ads/src/index.ts',['MICRO_AD_GROUP_NEED_REQUIRES_MANAGER','microAdState','marketplaceRef'],'apps/web/src/micro-ads-ui.js',['Micro-annonces · Je cherche / Je propose','micro-annonce personnelle','Relier au Marketplace']],
+ ['MANAGER.VALUE_DISCOVERY','packages/value-discovery/src/index.ts',['ValueDiscoveryService','incomePromise:false','publicationConsent===true'],'apps/web/src/value-discovery-ui.js',['Ce que je sais faire','Suggestions expliquées','revenu garanti : non']],
 ];
 test('maturity registry promotes only capabilities with owner engine and user journey evidence',()=>{
  for(const [id,owner,ownerTokens,ui,uiTokens] of evidence){
