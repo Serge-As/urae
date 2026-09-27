@@ -14,12 +14,13 @@ async function seed(){
  await repo.saveGroup({id:'g1',tenantId:'tenant_env',name:'Groupe',kind:'association',governanceModel:'community',createdBy:'founder',status:'active',createdAt:stamp()});
  await repo.saveMembership({id:'m1',tenantId:'tenant_env',groupId:'g1',userId:'u1',status:'active',roles:['member'],joinedAt:stamp(),updatedAt:stamp()});
  await repo.saveMembership({id:'m2',tenantId:'tenant_env',groupId:'g1',userId:'u2',status:'active',roles:['member'],joinedAt:stamp(),updatedAt:stamp()});
- await repo.saveMeeting({id:'meet1',tenantId:'tenant_env',groupId:'g1',title:'Séance 1',status:'closed',openedBy:'founder',openedAt:stamp(),closedAt:stamp()});
+ const openedAt=stamp();await repo.saveMeeting({id:'meet1',tenantId:'tenant_env',groupId:'g1',title:'Séance 1',status:'open',openedBy:'founder',openedAt});
  const facets={direction:'BIDIRECTIONAL',obligation:'CUSTOM',medium:'CASH',refundability:'NON_REFUNDABLE',replenishment:'CUSTOM',interestMode:'NONE',eligibilityMode:'RULE_BASED'};
  await repo.saveRubricDefinition({id:'r1',tenantId:'tenant_env',groupId:'g1',name:'Aide locale',aliases:[],facets,status:'ACTIVE',source:'GROUP_CUSTOM',version:1,createdAt:stamp(),updatedAt:stamp()});
  setCtx(k,'founder',['founder','manager']);
  await ledger.recordCashContribution({tenantId:'tenant_env',groupId:'g1',membershipId:'m1',meetingId:'meet1',rubricId:'r1',amount:1000,idempotencyKey:'m1-c'});
  await ledger.recordCashContribution({tenantId:'tenant_env',groupId:'g1',membershipId:'m2',meetingId:'meet1',rubricId:'r1',amount:9000,idempotencyKey:'m2-c'});
+ await repo.saveMeeting({id:'meet1',tenantId:'tenant_env',groupId:'g1',title:'Séance 1',status:'closed',openedBy:'founder',openedAt,closedAt:stamp()});
  await repo.saveWorkspaceRecord({id:'loan1',tenantId:'tenant_env',groupId:'g1',moduleId:'FINANCE.LOANS',title:'Prêt Alice',status:'ACTIVE',tags:['completion'],data:{completionKind:'LOAN',completionState:'REPAYING',borrowerMembershipId:'m1',outstandingPrincipal:2000,unpaidInterest:250},createdBy:'founder',createdAt:stamp(),updatedAt:stamp()});
  return{repo,k,ledger,service:new MemberEnvelopeService(repo,k,ledger)};
 }
