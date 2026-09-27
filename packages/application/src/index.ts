@@ -838,6 +838,14 @@ export class ConnectedApplication {
   async verifyReferralConversion(campaignId:string,conversionId:string,input:any):Promise<any>{return this.request('/api/v1/growth/referral-campaigns/'+encodeURIComponent(campaignId)+'/conversions/'+encodeURIComponent(conversionId)+'/verify',{method:'POST',body:JSON.stringify(input)});}
   async approveReferralReward(campaignId:string,conversionId:string):Promise<any>{return this.request('/api/v1/growth/referral-campaigns/'+encodeURIComponent(campaignId)+'/rewards/'+encodeURIComponent(conversionId)+'/approve',{method:'POST',body:'{}'});}
 
+  async creatorStudio():Promise<any>{return this.request('/api/v1/creator-studio');}
+  async createCreatorContent(input:any):Promise<any>{return this.request('/api/v1/creator-studio/content',{method:'POST',body:JSON.stringify(input)});}
+  async publishCreatorContent(id:string,input:{groupId:string;hubId:string}):Promise<any>{return this.request('/api/v1/creator-studio/content/'+encodeURIComponent(id)+'/publish',{method:'POST',body:JSON.stringify(input)});}
+  async recordCreatorInterest(id:string,note=''):Promise<any>{return this.request('/api/v1/creator-studio/content/'+encodeURIComponent(id)+'/interest',{method:'POST',body:JSON.stringify({note})});}
+  async startCreatorConversation(contentId:string,interestId:string,input:{groupId:string;hubId:string;body:string}):Promise<any>{return this.request('/api/v1/creator-studio/content/'+encodeURIComponent(contentId)+'/interests/'+encodeURIComponent(interestId)+'/conversation',{method:'POST',body:JSON.stringify(input)});}
+  async creatorInterestToBusiness(contentId:string,interestId:string,input:{clientName:string;need:string;estimatedBudget?:number}):Promise<any>{return this.request('/api/v1/creator-studio/content/'+encodeURIComponent(contentId)+'/interests/'+encodeURIComponent(interestId)+'/action',{method:'POST',body:JSON.stringify(input)});}
+  async talentProfile():Promise<any>{return this.request('/api/v1/talent/profile');}
+  async addTalentEvidence(input:any):Promise<any>{return this.request('/api/v1/talent/evidence',{method:'POST',body:JSON.stringify(input)});}
   async businessSummary():Promise<any>{return this.request('/api/v1/business/summary');}
   async businessRecords():Promise<any[]>{const r=await this.request('/api/v1/business/records') as any;return r.items??[];}
   async configureBusiness(input:{name:string;currency?:string;services?:string[];locality?:string;monthlyFixedCosts?:number}):Promise<any>{return this.request('/api/v1/business/workspace',{method:'PUT',body:JSON.stringify(input)});}
