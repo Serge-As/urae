@@ -4,7 +4,7 @@ const split=v=>String(v??'').split(',').map(x=>x.trim()).filter(Boolean);
 export function mountManagerPublicProfileUI({app,notify=()=>{},showError=()=>{}}={}){
   const host=document.querySelector('#view-discovery');if(!host||document.getElementById('managerPublicProfileCenter'))return{refresh:async()=>{},open:()=>{}};
   const root=el('details',undefined,'panel');root.id='managerPublicProfileCenter';root.append(el('summary','Profil public responsable / expert'));
-  root.append(el('p','Projection publique uniquement avec votre consentement. Expertise et services sont déclarés ; groupes publics gérés et attestations Academy ne sont affichés que si vous choisissez de les partager. Aucun téléphone, email, solde, dette, CNI ou rôle privé n’est publié. Ce profil n’accorde jamais automatiquement un pouvoir de gestion.','truth-notice'));
+  root.append(el('p','Projection publique uniquement avec votre consentement. La réputation est explicable par les preuves publiques que vous choisissez : groupes publics réellement gérés et attestations Academy. Expertise et services restent autodéclarés. Aucun score opaque, téléphone, email, solde, dette, CNI ou rôle privé n’est publié. Ce profil n’accorde jamais automatiquement un pouvoir de gestion.','truth-notice'));
   const grid=el('div',undefined,'two-col'),mine=el('section'),search=el('section');mine.className=search.className='item';grid.append(mine,search);root.append(grid);
   const anchor=document.getElementById('geoDirectoryCenter')??document.querySelector('#discoverySearchForm')?.closest('section.panel');anchor?.insertAdjacentElement('afterend',root);
 
@@ -23,7 +23,7 @@ export function mountManagerPublicProfileUI({app,notify=()=>{},showError=()=>{}}
       notify(saved.optIn?'Profil public responsable/expert publié avec votre consentement.':'Profil public retiré de la découverte.');await renderMine();
     }catch(err){showError(err);}})();
     mine.append(form);
-    if(p){const proof=el('article',undefined,'item');proof.append(el('strong','Preuves publiques choisies'),el('p',(p.evidenceSummary?.managedPublicGroupCount??0)+' groupe(s) public(s) géré(s) · '+(p.evidenceSummary?.academyCertificateCount??0)+' attestation(s) Academy','hint'),el('small','Expertise autodéclarée : oui · contact partagé : non · finance partagée : non · rôle automatique : non'));mine.append(proof);}
+    if(p){const proof=el('article',undefined,'item');proof.append(el('strong','Réputation explicable · preuves publiques choisies'),el('p',(p.evidenceSummary?.managedPublicGroupCount??0)+' groupe(s) public(s) géré(s) · '+(p.evidenceSummary?.academyCertificateCount??0)+' attestation(s) Academy','hint'),el('small','Score opaque : non · expertise autodéclarée : oui · contact partagé : non · finance partagée : non · rôle automatique : non'));mine.append(proof);}
   };
 
   const renderSearch=()=>{
