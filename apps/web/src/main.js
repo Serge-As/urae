@@ -44,6 +44,8 @@ import { mountMemberDossierUI } from './member-dossier-ui.js';
 import { mountIdentityVerificationUI } from './identity-verification-ui.js';
 import { mountDataQualityUI } from './data-quality-ui.js';
 import { mountOpportunityIntelligenceUI } from './opportunity-intelligence-ui.js';
+import { mountQuietWatchUI } from './quiet-watch-ui.js';
+import { mountVoiceEntryUI } from './voice-entry-ui.ts';
 let uiLocale = 'fr';
 try { uiLocale = localStorage.getItem('tontine.locale') === 'en' ? 'en' : 'fr'; } catch {}
 const tx = (fr,en) => runtimeTranslate(uiLocale,fr,en);
@@ -237,6 +239,8 @@ mountMemberDossierUI();
 const identityVerificationUI=mountIdentityVerificationUI({app,getGroups:()=>groups,navigate:go,notify:toast,showError:fail});
 const dataQualityUI=mountDataQualityUI({app,navigate:go,notify:toast,showError:fail});
 const opportunityIntelligenceUI=mountOpportunityIntelligenceUI({app,notify:toast,showError:fail,isManager});
+const quietWatchUI=mountQuietWatchUI({app,notify:toast,showError:fail,isManager});
+mountVoiceEntryUI();
 window.addEventListener('popstate',event=>{
     const state=event.state?.ecoNav,hash=location.hash.slice(1);
     navDepth=Math.max(0,Number(event.state?.ecoDepth??Math.max(0,navDepth-1)));
@@ -941,6 +945,8 @@ const openModule = async (id) => {
     if(m.status === 'FOUNDATION_ACTIVE' && id === 'PAPER.BRIDGE'){go('documents',{force:true});void documentsUI.refresh();return;}
     if(m.status === 'FOUNDATION_ACTIVE' && id === 'GOVERNANCE.MANDATE'){go('ecosystem',{anchor:'businessStudioOperational',force:true});const panel=document.querySelector('#businessStudioOperational');if(panel?.tagName==='DETAILS')panel.open=true;void businessStudioUI.refresh();return;}
     if(m.status === 'FOUNDATION_ACTIVE' && ['OPPORTUNITY.GRAPH','MANAGER.VALUE_DISCOVERY','MARKETPLACE.MARKET_INTELLIGENCE'].includes(id)){go('ecosystem',{anchor:'opportunityIntelligence',force:true});opportunityIntelligenceUI.open();return;}
+    if(m.status === 'FOUNDATION_ACTIVE' && id === 'SAFETY.QUIET_WATCH'){go('settings',{anchor:'quietWatchCenter',force:true});void quietWatchUI.refresh();return;}
+    if(m.status === 'FOUNDATION_ACTIVE' && id === 'AI.LOCAL'){go('operations',{anchor:'voiceFinancialPanel',force:true});document.querySelector('#voiceFinancialPanel')?.scrollIntoView({behavior:'smooth',block:'start'});return;}
     const route = m.workspace === 'SPECIALIZED' && m.status === 'FOUNDATION_ACTIVE' ? specializedRoute(id) : undefined;
     if (route) {
         go(route);
