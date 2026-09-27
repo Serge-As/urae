@@ -47,7 +47,8 @@ import { mountDataQualityUI } from './data-quality-ui.js';
 import { mountOpportunityIntelligenceUI } from './opportunity-intelligence-ui.js';
 import { mountOperationalRegistryUI } from './operational-registry-ui.js';
 import { mountGroupLearningRegistryUI } from './group-learning-registry-ui.js';
-import { mountRoleDashboardsUI, mountGeoDirectoryUI } from './role-directory-talent-ui.js';
+import { mountGeoDirectoryUI } from './role-directory-talent-ui.js';
+import { mountRoleDashboardsUI } from './role-dashboards-ui.js';
 import { mountCreatorTalentUI } from './creator-talent-ui.js';
 import { mountLocalAssistantUI } from './local-assistant.js';
 import { mountQuietWatchUI } from './quiet-watch-ui.js';
@@ -992,6 +993,7 @@ const openModule = async (id) => {
     if(m.status === 'FOUNDATION_ACTIVE' && id === 'AI.LOCAL'){go('dashboard',{anchor:'localAssistantCenter',force:true});localAssistantUI.open();return;}
     if(m.status === 'FOUNDATION_ACTIVE' && id === 'SAFETY.QUIET_WATCH'){go('dashboard',{anchor:'quietWatchCenter',force:true});quietWatchUI.open();return;}
     if(m.status === 'FOUNDATION_ACTIVE' && id === 'AI.FOUNDER'){go('control',{anchor:'founderAICenter',force:true});founderAIUI.open();return;}
+    if(m.status === 'FOUNDATION_ACTIVE' && id === 'DASHBOARDS.ALL'){go('dashboard',{anchor:'roleDashboardsCenter',force:true});roleDashboardsUI.open();return;}
     const route = m.workspace === 'SPECIALIZED' && m.status === 'FOUNDATION_ACTIVE' ? specializedRoute(id) : undefined;
     if (route) {
         go(route);
