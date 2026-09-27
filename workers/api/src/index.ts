@@ -2274,8 +2274,12 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
         const at=new Date().toISOString(),id='meeting_distribution_'+markerHash;
         await repo.saveWorkspaceRecord({id,tenantId:ctx.tenantId,groupId,moduleId:'MEETING.DISTRIBUTION',title:'Diffusion membres prête',summary:'Projection de séance validée et rendue disponible aux membres.',status:'DONE',tags:['meeting-distribution','meeting:'+meetingId],data:{meetingId,kind:'MEMBER_DISTRIBUTION_READY',confirmedAt:String(p.confirmedAt??at)},createdBy:ctx.actorId,createdAt:at,updatedAt:at});
         await publishLive(groupId,'MEETING_UPDATE',item.idempotencyKey,{meetingId,kind:'MEMBER_DISTRIBUTION_READY',at});
+        const envelopes=await memberEnvelopes.buildAll(groupId,meetingId);
+        for(const envelope of envelopes){
+          await publishLive(groupId,'MEMBER_ENVELOPE_READY','member-envelope:'+meetingId+':'+envelope.membershipId,{meetingId,membershipId:envelope.membershipId,fingerprint:envelope.fingerprint,expiresAt:envelope.expiresAt,scope:'MEMBER_ONLY'},envelope.recipientUserId);
+        }
         await markApplied();
-        return json({accepted:true,stored:true,recordId:id},200,cors);
+        return json({accepted:true,stored:true,recordId:id,envelopeCount:envelopes.length},200,cors);
       }
       if(item.type==='FINANCIAL_NOTICE_CONFIRM_V1'){
         const p=item.payload,groupId=String(p.groupId??'');await requireGroup(groupId,false);
