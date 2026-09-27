@@ -1,3 +1,4 @@
 Eco-System 1.5.2.7 live completion production marker
 Created 2026-09-27
 Trigger only after PR #29 then PR #28 merge into the current 1.5.2.6 production branch.
+Retry qualified after release-aware PWA shell E2E: d7930d16dabeeb9c278872768ed274f968d49d60
