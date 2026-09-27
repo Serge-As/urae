@@ -1334,6 +1334,11 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
       const body=await readJson<Record<string,unknown>>(request); return json(await foundation.reconcileCashbox({tenantId:ctx.tenantId,groupId:cashboxRoute[1]!,meetingId:body.meetingId?String(body.meetingId):undefined,openingCash:finite(body.openingCash),cashIn:finite(body.cashIn),cashOut:finite(body.cashOut),countedClosing:finite(body.countedClosing),currency:String(body.currency??'XAF')}),201,cors);
     }
 
+    const memberEnvelope=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/meetings\/([^/]+)\/member-envelope$/);
+    if(memberEnvelope&&request.method==='GET'){
+      const membershipId=url.searchParams.get('membershipId')??undefined;
+      return json(await memberEnvelopes.build(memberEnvelope[1]!,memberEnvelope[2]!,membershipId),200,cors);
+    }
     const memberNotices=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/members\/([^/]+)\/financial-notices$/);
     if(memberNotices&&request.method==='GET')return json(await memberControl.list(memberNotices[1]!,memberNotices[2]!),200,cors);
     const noticeConfirm=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/financial-notices\/([^/]+)\/confirm$/);
