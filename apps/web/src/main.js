@@ -37,6 +37,8 @@ import { mountBusinessStudioUI } from './business-studio-ui.js';
 import { mountCoreEconomicLearningUI } from './core-economic-learning-ui.js';
 import { mountResilienceUI } from './resilience-ui.js';
 import { parseEcoShareIntent } from './share-out.js';
+import { localUniversalSearch, remoteUniversalSearch } from './universal-search.js';
+import { buildUnifiedCalendar } from './unified-calendar.js';
 let uiLocale = 'fr';
 try { uiLocale = localStorage.getItem('tontine.locale') === 'en' ? 'en' : 'fr'; } catch {}
 const tx = (fr,en) => runtimeTranslate(uiLocale,fr,en);
@@ -1312,6 +1314,72 @@ const renderGlobalSearch = () => { const q = val('globalSearch').toLowerCase(); 
     root.append(b);
 } };
 $('#globalSearch').addEventListener('input', renderGlobalSearch);
+let universalSearchTimer;
+let universalSearchRevision=0;
+const openUniversalSearchResult=async row=>{
+    if(row.kind==='group'){app.selectGroup(row.id);await refreshGroupContext();await detailUI.open('group',row.id);return;}
+    if(['member','meeting','rubric'].includes(row.kind)){await detailUI.open(row.kind,row.id);return;}
+    if(row.kind==='module'){await openModule(row.id);return;}
+};
+const renderUniversalSearchFull=async()=>{
+    const input=document.querySelector('#universalSearchFull'),root=document.querySelector('#universalSearchFullResults');
+    if(!input||!root)return;
+    const query=input.value.trim(),revision=++universalSearchRevision;root.replaceChildren();
+    if(query.length<2){const p=document.createElement('p');p.className='hint';p.textContent=tx('Saisissez au moins 2 caractères.','Enter at least 2 characters.');root.append(p);return;}
+    const local=localUniversalSearch({query,groups,modules,members,meetings,rubrics});
+    let remote=[];
+    if(app.activeGroup()&&navigator.onLine!==false){
+        const [documents,knowledge]=await Promise.all([
+            app.searchDocuments(query,20).catch(()=>[]),
+            app.searchKnowledge(query,app.activeGroup()).catch(()=>[])
+        ]);
+        if(revision!==universalSearchRevision)return;
+        remote=remoteUniversalSearch({documents,knowledge});
+    }
+    const rows=[...local,...remote].slice(0,60);
+    if(!rows.length){const p=document.createElement('p');p.className='empty-state';p.textContent=tx('Aucun résultat autorisé trouvé.','No authorized result found.');root.append(p);return;}
+    for(const row of rows){
+        const interactive=['group','member','meeting','rubric','module'].includes(row.kind),node=document.createElement(interactive?'button':'article');
+        if(interactive){node.type='button';node.className='search-hit';node.onclick=()=>void openUniversalSearchResult(row);}
+        else node.className='item';
+        const title=document.createElement('strong');title.textContent=row.title||row.id;
+        const sub=document.createElement('small');sub.textContent=row.subtitle||row.kind;
+        node.append(title,sub);
+        if(row.snippet){const p=document.createElement('p');p.className='hint';p.textContent=row.snippet;node.append(p);}
+        root.append(node);
+    }
+};
+document.querySelector('#universalSearchFull')?.addEventListener('input',()=>{
+    clearTimeout(universalSearchTimer);universalSearchTimer=setTimeout(()=>void renderUniversalSearchFull(),220);
+});
+const renderUnifiedCalendar=async()=>{
+    const root=document.querySelector('#unifiedCalendarList');if(!root)return;root.replaceChildren();
+    const groupId=app.activeGroup();
+    if(!groupId){const p=document.createElement('p');p.className='empty-state';p.textContent=tx('Sélectionnez un groupe pour afficher son calendrier.','Select a group to display its calendar.');root.append(p);return;}
+    const [records,inbox]=await Promise.all([
+        app.listWorkspaceRecords(undefined,groupId).catch(()=>[]),
+        app.inboxItems().catch(()=>[])
+    ]);
+    const obligations=inbox.filter(x=>x.groupId===groupId&&x.dueAt&&!['DONE','CLOSED','RESOLVED','CANCELLED'].includes(String(x.status??'').toUpperCase()));
+    const model=buildUnifiedCalendar({meetings,records,obligations});
+    const rows=[...model.upcoming.slice(0,80),...model.past.slice(-20)];
+    if(!rows.length){const p=document.createElement('p');p.className='empty-state';p.textContent=tx('Aucune date explicite n’est encore enregistrée.','No explicit date is recorded yet.');root.append(p);return;}
+    for(const row of rows){
+        const item=document.createElement('article');item.className='item';
+        const title=document.createElement('strong');title.textContent=row.title;
+        const meta=document.createElement('small');meta.textContent=date(row.at)+' · '+row.source+(row.status?' · '+row.status:'');
+        item.append(title,meta);
+        if(row.kind==='meeting'){const open=document.createElement('button');open.type='button';open.className='link-btn';open.textContent=tx('Ouvrir la séance','Open meeting');open.onclick=()=>void detailUI.open('meeting',row.entityId);item.append(open);}
+        root.append(item);
+    }
+};
+document.querySelector('#unifiedCalendarRefresh')?.addEventListener('click',()=>void renderUnifiedCalendar());
+document.querySelector('#unifiedCalendarPanel')?.addEventListener('toggle',e=>{if(e.currentTarget.open)void renderUnifiedCalendar();});
+document.querySelector('#unifiedCalendarIcs')?.addEventListener('click',()=>{
+    if(!app.activeGroup()){toast(tx('Sélectionnez d’abord un groupe.','Select a group first.'));return;}
+    if(navigator.onLine===false){toast(tx('Le fichier .ics se télécharge dès que la connexion revient. Le calendrier affiché reste consultable hors ligne.','The .ics file can be downloaded when connectivity returns. The displayed calendar remains available offline.'));return;}
+    const a=document.createElement('a');a.href=app.calendarIcsUrl();a.download='eco-system-calendrier.ics';a.rel='noopener';document.body.append(a);a.click();a.remove();
+});
 document.addEventListener('click', e => { const t = e.target; if (!t.closest('.top-search'))
     $('#globalSearchResults').replaceChildren(); const open = t.closest('[data-module-open]'); if (open?.dataset.moduleOpen)
     void openModule(open.dataset.moduleOpen); });
@@ -1357,7 +1425,7 @@ $('#addLaunchRubric').onclick=()=>addLaunchRubric();
 $('#addLaunchTontine').onclick=()=>addLaunchRubric({kind:'TONTINE',contributionMode:'MONEY'});
 const syncLaunchFamily=()=>{
   const family=val('groupKind');
-  if(family==='rotating_tontine'&&!launchEditors.some(editor=>editor.read().kind==='TONTINE')){
+  if(['rotating_tontine','hybrid'].includes(family)&&!launchEditors.some(editor=>editor.read().kind==='TONTINE')){
     addLaunchRubric({kind:'TONTINE',name:'Tontine',contributionMode:'MONEY'});
   }
   invalidateProject();
