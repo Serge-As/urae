@@ -36,7 +36,7 @@ export const PRODUCT_MODULES: ProductModule[] = [
   {id:'GROUP.MODEL_REGISTRY',labelFr:'Registre des modèles',labelEn:'Group model registry',status:'STRUCTURAL_V1',lot:'C',canonicalDependencies:['KERNEL.POLICY'],workspace:'UNIVERSAL'},
   {id:'GROUP.CASE_LAW',labelFr:'Jurisprudence métier',labelEn:'Operational case-law registry',status:'STRUCTURAL_V1',lot:'C',canonicalDependencies:['KERNEL.POLICY'],workspace:'UNIVERSAL'},
   {id:'GROUP.EVOLUTION',labelFr:'Évolution Tontine → Association',labelEn:'Tontine to Association evolution',status:'FOUNDATION_ACTIVE',lot:'C',canonicalDependencies:['KERNEL.POLICY'],workspace:'UNIVERSAL'},
-  {id:'GROUP.ANTICIPATION',labelFr:'Anticipation du groupe',labelEn:'Group anticipation',status:'FOUNDATION_ACTIVE',lot:'C',canonicalDependencies:['KERNEL.POLICY','KERNEL.EVIDENCE'],workspace:'UNIVERSAL'},
+  {id:'GROUP.ANTICIPATION',labelFr:'Anticipation du groupe',labelEn:'Group anticipation',status:'STRUCTURAL_V1',lot:'C',canonicalDependencies:['KERNEL.POLICY','KERNEL.EVIDENCE'],workspace:'UNIVERSAL'},
   {id:'GROUP.MEETING_AUTOPILOT',labelFr:'Meeting Autopilot',labelEn:'Meeting Autopilot',status:'FOUNDATION_ACTIVE',lot:'C',canonicalDependencies:['KERNEL.POLICY','KERNEL.WORKFLOW'],workspace:'UNIVERSAL'},
   {id:'GROUP.DOCTOR',labelFr:'Group Doctor',labelEn:'Group Doctor',status:'FOUNDATION_ACTIVE',lot:'C',canonicalDependencies:['KERNEL.POLICY','KERNEL.AUDIT'],workspace:'UNIVERSAL'},
   {id:'CORE.RUBRICS',labelFr:'Rubriques configurables',labelEn:'Configurable rubrics',status:'FOUNDATION_ACTIVE',lot:'C',canonicalDependencies:['KERNEL.CONFIGURATION','KERNEL.POLICY'],workspace:'SPECIALIZED'},
