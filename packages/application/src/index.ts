@@ -487,7 +487,7 @@ export class ConnectedApplication {
     return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/loans/${encodeURIComponent(loan.id)}/repay`,{method:'POST',body:JSON.stringify({principalAmount:component==='PRINCIPAL'?input.amount:0,interestAmount:component==='INTEREST'?input.amount:0,expectedVersion:Number(loan.data?.completionVersion??0),meetingId:input.meetingId,rubricId:rubric.id,idempotencyKey:makeId('sheet_repayment')})});
   }
 
-  async recordCashContribution(input:{membershipId:string;amount:number;meetingId?:string;rubricId?:string;lateReason?:string;approverIds?:string[]}):Promise<{queued:boolean;receipt?:ContributionReceipt;outbox?:OutboxItem}>{
+  async recordCashContribution(input:{membershipId:string;amount:number;meetingId?:string;rubricId?:string;lateReason?:string;approverIds?:string[];lateAuthorizationId?:string}):Promise<{queued:boolean;receipt?:ContributionReceipt;outbox?:OutboxItem}>{
     if(!this.activeGroupId)throw new Error('ACTIVE_GROUP_REQUIRED'); const key=makeId('cash');
     if(!Number.isSafeInteger(input.amount)||input.amount<=0)throw Error('INVALID_CONTRIBUTION_AMOUNT');
     // Persist the same intent before the first send, including while online.
@@ -507,6 +507,10 @@ export class ConnectedApplication {
     if(updated.status!=='CONFIRMED')return{queued:true,outbox:updated};
     return{queued:false,outbox:updated};
   }
+  async reopenAuthorizations(meetingId:string):Promise<any[]>{if(!this.activeGroupId)return[];const r=await this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/meetings/'+encodeURIComponent(meetingId)+'/reopen-authorizations') as any;return r.items??[];}
+  async createReopenAuthorization(meetingId:string,input:{reason:string;expiresAt?:string;scope?:string}):Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/meetings/'+encodeURIComponent(meetingId)+'/reopen-authorizations',{method:'POST',body:JSON.stringify(input)});}
+  async approveReopenAuthorization(meetingId:string,id:string):Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/meetings/'+encodeURIComponent(meetingId)+'/reopen-authorizations/'+encodeURIComponent(id)+'/approve',{method:'POST',body:'{}'});}
+  async cancelReopenAuthorization(meetingId:string,id:string,reason:string):Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/meetings/'+encodeURIComponent(meetingId)+'/reopen-authorizations/'+encodeURIComponent(id)+'/cancel',{method:'POST',body:JSON.stringify({reason})});}
   async miscRubrics(meetingId?:string):Promise<any[]>{if(!this.activeGroupId)return[];const q=meetingId?'?meetingId='+encodeURIComponent(meetingId):'';return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/misc-rubrics${q}`);}
   async ensureMiscRubricStarters():Promise<any[]>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/misc-rubrics`,{method:'POST',body:JSON.stringify({action:'ensure_starters'})});}
   async createMiscRubric(input:{kind?:'CUSTOM'|'LOCAL_AID'|'HAND_RAISE';name:string;description?:string;lifecycle?:'EPHEMERAL'|'PERSISTENT'|'SESSION_ONLY';amountMode?:'FIXED'|'VARIABLE';defaultAmount?:number;activeFirstSessions?:number}):Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/misc-rubrics`,{method:'POST',body:JSON.stringify({action:'create_custom',...input})});}
