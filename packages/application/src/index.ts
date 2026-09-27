@@ -189,6 +189,11 @@ export class ConnectedApplication {
     }
   }
   currentActor():string{return this.actorId;}
+  async memberEnvelope(meetingId:string,membershipId?:string):Promise<any>{
+    if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');
+    const q=membershipId?'?membershipId='+encodeURIComponent(membershipId):'';
+    return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/meetings/${encodeURIComponent(meetingId)}/member-envelope${q}`);
+  }
   async financialNotices(membershipId:string):Promise<any[]>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/members/${encodeURIComponent(membershipId)}/financial-notices`);}
   async confirmFinancialNotice(noticeId:string,membershipId?:string):Promise<any>{
     if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');
