@@ -39,6 +39,7 @@ import { mountResilienceUI } from './resilience-ui.js';
 import { parseEcoShareIntent } from './share-out.js';
 import { localUniversalSearch, remoteUniversalSearch } from './universal-search.js';
 import { buildUnifiedCalendar } from './unified-calendar.js';
+import { mountDocumentsUI } from './documents-ui.js';
 let uiLocale = 'fr';
 try { uiLocale = localStorage.getItem('tontine.locale') === 'en' ? 'en' : 'fr'; } catch {}
 const tx = (fr,en) => runtimeTranslate(uiLocale,fr,en);
@@ -227,6 +228,7 @@ document.addEventListener('click',event=>{
     event.preventDefault();go(view,{anchor:id,openTarget:link.dataset.openTarget,force:true});
 });
 document.querySelector('#appBackBtn')?.addEventListener('click',goBack);
+const documentsUI=mountDocumentsUI({navigate:go});
 window.addEventListener('popstate',event=>{
     const state=event.state?.ecoNav,hash=location.hash.slice(1);
     navDepth=Math.max(0,Number(event.state?.ecoDepth??Math.max(0,navDepth-1)));
@@ -923,6 +925,8 @@ const openModule = async (id) => {
         return;
     if(m.status === 'FOUNDATION_ACTIVE' && id === 'SEARCH.UNIVERSAL'){go('ecosystem',{anchor:'universalSearchPanel',force:true});setTimeout(()=>document.querySelector('#universalSearchFull')?.focus(),60);return;}
     if(m.status === 'FOUNDATION_ACTIVE' && id === 'CALENDAR.UNIFIED'){go('ecosystem',{anchor:'unifiedCalendarPanel',force:true});const panel=document.querySelector('#unifiedCalendarPanel');if(panel?.tagName==='DETAILS')panel.open=true;void renderUnifiedCalendar();return;}
+    if(m.status === 'FOUNDATION_ACTIVE' && id === 'GOVERNANCE.DOCUMENT_STUDIO'){go('documents',{force:true});void documentsUI.refresh();return;}
+    if(m.status === 'FOUNDATION_ACTIVE' && id === 'RUBRIC.STARTER_KITS'){go('launch',{force:true});toast(tx('Le Kit prêt à l’emploi est généré et enregistré depuis le parcours de création du groupe.','The ready-to-use Starter Kit is generated and saved from the group creation journey.'));return;}
     const route = m.workspace === 'SPECIALIZED' && m.status === 'FOUNDATION_ACTIVE' ? specializedRoute(id) : undefined;
     if (route) {
         go(route);
