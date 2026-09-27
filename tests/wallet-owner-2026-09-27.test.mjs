@@ -23,6 +23,7 @@ async function seed(){
   ctx(k,'founder',['founder','manager'],'g1');
   await ledger.recordCashContribution({tenantId:'tenant_wallet',groupId:'g1',membershipId:'m1',amount:1000,rubricId:'r_aide',idempotencyKey:'aide-1'});
   await ledger.recordCashContribution({tenantId:'tenant_wallet',groupId:'g1',membershipId:'m1',amount:5000,rubricId:'r_save',idempotencyKey:'save-1'});
+  await repo.saveWorkspaceRecord({id:'loan1',tenantId:'tenant_wallet',groupId:'g1',moduleId:'FINANCE.LOANS',title:'Prêt Alice',status:'ACTIVE',tags:['completion','loan'],data:{completionKind:'LOAN',completionState:'REPAYING',borrowerMembershipId:'m1',outstandingPrincipal:2000,unpaidInterest:300,currency:'XAF'},createdBy:'founder',createdAt:stamp(),updatedAt:stamp()});
   return{repo,k,ledger,wallet:new WalletService(repo,k,ledger)};
 }
 
@@ -32,7 +33,7 @@ test('Wallet derives personal balances from canonical ledger and never makes Aid
   const aid=p.subaccounts.find(x=>x.sourceId==='r_aide'),save=p.subaccounts.find(x=>x.sourceId==='r_save');
   assert.equal(aid?.trackedBalance,1000);assert.equal(aid?.availableBalance,0);assert.equal(aid?.access,'ACTIVITY_ONLY');
   assert.equal(save?.trackedBalance,5000);assert.equal(save?.availableBalance,5000);assert.equal(save?.access,'AVAILABLE');
-  assert.equal(p.walletBalance,5000);assert.equal(p.activityOnlyBalance,1000);assert.equal(p.providerTopupEnabled,false);assert.equal(p.externalPaymentRailEnabled,false);
+  const debt=p.subaccounts.find(x=>x.kind==='LOAN_DEBT');assert.equal(debt?.trackedBalance,-2300);assert.equal(p.walletBalance,3700);assert.equal(p.activityOnlyBalance,1000);assert.equal(p.providerTopupEnabled,false);assert.equal(p.externalPaymentRailEnabled,false);
   const r=await wallet.reserve({groupId:'g1',subaccountKey:'rubric:r_save',amount:1200,purpose:'Projet futur'});
   const after=await wallet.projection();assert.equal(after.availableBalance,3800);assert.equal(after.reservedBalance,1200);
   assert.equal((await repo.listLedgerEntries('tenant_wallet','g1')).length,beforeEntries,'reservation must not mutate canonical ledger');
