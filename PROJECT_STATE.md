@@ -319,3 +319,33 @@ Document maître :
 
 La prochaine étape normale est la recette terrain sur téléphone/ordinateur ; tout défaut reproductible doit devenir un test permanent avant correction.
 
+
+
+## Candidat 1.5.2.7 — état de clôture technique (2026-09-27)
+
+Branche : `finish/live-whatsapp-completion-20260927`  
+PR : **#29 → audit/live-completion-20260926**  
+Runtime : `1.5.2.7-live-completion`  
+PWA cache : `eco-system-v1527-live-completion-20260927`
+
+Qualification de référence avant fermeture documentaire :
+- HEAD : `bd6d541a350f0c86556c12fea000c3d04acb5d16`
+- workflow : **Eco-System — Live Completion Qualification**
+- run : **#397 / 36353667354 — SUCCESS**
+- catalogue : **154 actives / 5 structurelles / 5 planifiées = 164**
+
+Règles de conservation :
+- les tableaux financiers et le Ledger canonique restent propriétaires des écritures ;
+- Aide locale est au niveau métier Collation/Ration, jamais sous « Autres » ;
+- Main levée reste Assistance/Solidarity, cash/nature selon les facettes ;
+- WhatsApp handoff ≠ provider WhatsApp automatisé ;
+- Wallet interne ≠ Mobile Money ;
+- Time Machine n'effectue pas de rollback automatique ;
+- Trust Graph n'est pas un score opaque décisionnel ;
+- Founder AI/Assistant local/Quiet Watch ne peuvent pas exécuter silencieusement une mutation financière.
+
+Non encore acquis à cet instant :
+- fusion PR #29 puis PR #28 ;
+- déploiement Cloudflare 1.5.2.7 ;
+- smoke exact SHA + BIR+ pré/post ;
+- FIELD_ACCEPTED Chrome/Opera/mobile/offline/deux gestionnaires.
