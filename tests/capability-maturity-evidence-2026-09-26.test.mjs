@@ -18,7 +18,9 @@ const evidence=[
  ['GOVERNANCE.AI_RULE_EXTRACTION','packages/guided-assistant/src/index.ts',['analyzeGovernanceText','governanceFingerprint'],'apps/web/src/launch-studio.js',['analyzeGroupDocument','renderSuggestions','analyzeLaunchFiles']],
  ['CORE.HYBRID_GROUP','packages/domain/src/index.ts',['GROUP_KINDS',"'hybrid'"],'apps/web/index.html',['value="hybrid"']],
  ['SEARCH.UNIVERSAL','apps/web/src/universal-search.js',['localUniversalSearch','remoteUniversalSearch'],'apps/web/src/main.js',['renderUniversalSearchFull','universalSearchFull']],
- ['CALENDAR.UNIFIED','apps/web/src/unified-calendar.js',['buildUnifiedCalendar','obligations'],'apps/web/src/main.js',['renderUnifiedCalendar','unifiedCalendarPanel']]
+ ['CALENDAR.UNIFIED','apps/web/src/unified-calendar.js',['buildUnifiedCalendar','obligations'],'apps/web/src/main.js',['renderUnifiedCalendar','unifiedCalendarPanel']],
+ ['RUBRIC.STARTER_KITS','packages/rubrics/src/index.ts',['STARTER_RUBRIC_FACETS','starterCandidates'],'apps/web/src/launch-studio.js',['buildStarterKit','persistStarterKit','printStarterKit']],
+ ['GOVERNANCE.DOCUMENT_STUDIO','packages/group-documents/src/index.ts',['GroupDocumentService','async create','async archive'],'apps/web/src/documents-ui.ts',['uploadDocuments','searchDocuments','refreshDocuments']]
 ];
 test('maturity registry promotes only capabilities with owner engine and user journey evidence',()=>{
  for(const [id,owner,ownerTokens,ui,uiTokens] of evidence){
