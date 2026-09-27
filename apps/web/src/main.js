@@ -250,7 +250,7 @@ const roleDashboardsUI=mountRoleDashboardsUI({app,getGroups:()=>groups,getMember
 const geoDirectoryUI=mountGeoDirectoryUI({app,isManager,notify:toast,showError:fail});
 const professionalTalentUI=mountProfessionalTalentUI({app,notify:toast,showError:fail});
 const trustCenterUI=mountTrustCenterUI({app,getMembers:()=>members,isManager,notify:toast,showError:fail});
-const envelopeUI=mountEnvelopeUI({app,isManager,notify:toast,showError:fail});
+const envelopeUI=mountEnvelopeUI({app,getMembers:()=>members,isManager,notify:toast,showError:fail});
 const meetingFinanceGovernanceUI=mountMeetingFinanceGovernanceUI({app,getMembers:()=>members,getMeetings:()=>meetings,getRubrics:()=>rubrics,isManager,notify:toast,showError:fail});
 const quietWatchUI=mountQuietWatchUI({app,notify:toast,showError:fail,isManager});
 window.addEventListener('popstate',event=>{
