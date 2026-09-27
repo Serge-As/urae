@@ -4,7 +4,7 @@ import type {PlatformRepository} from '../../repositories/src/index.js';
 import type {PlatformKernel} from '../../platform-kernel/src/index.js';
 import type {LedgerService} from '../../domain/src/index.js';
 
-export type MiscRubricKind='REGISTRATION'|'LOAN_STAMP'|'FINE'|'LOCAL_AID'|'HAND_RAISE'|'CUSTOM';
+export type MiscRubricKind='REGISTRATION'|'LOAN_STAMP'|'FINE'|'CUSTOM';
 export type MiscLifecycle='EPHEMERAL'|'PERSISTENT'|'SESSION_ONLY';
 export type MiscAmountMode='FIXED'|'VARIABLE';
 
@@ -70,9 +70,8 @@ export class MiscRubricService{
     return this.list(groupId);
   }
 
-  async createCustom(groupId:Id,input:{kind?:Extract<MiscRubricKind,'CUSTOM'|'LOCAL_AID'|'HAND_RAISE'>;name:string;description?:string;lifecycle?:MiscLifecycle;amountMode?:MiscAmountMode;defaultAmount?:number;activeFirstSessions?:number}){
-    const kind=input.kind??'CUSTOM';
-    return this.saveTemplate(groupId,{kind,name:input.name,description:input.description,lifecycle:input.lifecycle??'PERSISTENT',amountMode:input.amountMode??'VARIABLE',defaultAmount:input.defaultAmount,activeFirstSessions:input.activeFirstSessions});
+  async createCustom(groupId:Id,input:{name:string;description?:string;lifecycle?:MiscLifecycle;amountMode?:MiscAmountMode;defaultAmount?:number;activeFirstSessions?:number}){
+    return this.saveTemplate(groupId,{kind:'CUSTOM',name:input.name,description:input.description,lifecycle:input.lifecycle??'PERSISTENT',amountMode:input.amountMode??'VARIABLE',defaultAmount:input.defaultAmount,activeFirstSessions:input.activeFirstSessions});
   }
 
   async list(groupId:Id,meetingId?:Id):Promise<MiscRubricTemplate[]>{
