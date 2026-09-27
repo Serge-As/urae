@@ -921,6 +921,8 @@ const openModule = async (id) => {
     const m = modules.find(x => x.id === id);
     if (!m)
         return;
+    if(m.status === 'FOUNDATION_ACTIVE' && id === 'SEARCH.UNIVERSAL'){go('ecosystem',{anchor:'universalSearchPanel',force:true});setTimeout(()=>document.querySelector('#universalSearchFull')?.focus(),60);return;}
+    if(m.status === 'FOUNDATION_ACTIVE' && id === 'CALENDAR.UNIFIED'){go('ecosystem',{anchor:'unifiedCalendarPanel',force:true});const panel=document.querySelector('#unifiedCalendarPanel');if(panel?.tagName==='DETAILS')panel.open=true;void renderUnifiedCalendar();return;}
     const route = m.workspace === 'SPECIALIZED' && m.status === 'FOUNDATION_ACTIVE' ? specializedRoute(id) : undefined;
     if (route) {
         go(route);
