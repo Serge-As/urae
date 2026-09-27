@@ -349,3 +349,33 @@ Non encore acquis à cet instant :
 - déploiement Cloudflare 1.5.2.7 ;
 - smoke exact SHA + BIR+ pré/post ;
 - FIELD_ACCEPTED Chrome/Opera/mobile/offline/deux gestionnaires.
+
+
+## Production 1.5.2.7 — Live Completion (2026-09-27)
+
+Livraison technique acquise :
+- source déployée : `c0dcbfa4391b46773d1e2c8d6b9733cc5d8b367c`
+- Worker Version ID : `0c06d6f3-382c-4433-91b4-b071c0573ccd`
+- version : `1.5.2.7-live-completion`
+- build ID : `eco-system-1.5.2.7-20260927`
+- PWA cache : `eco-system-v1527-live-completion-20260927`
+- qualification : **#19 / 36354372028 SUCCESS**
+- E2E financier : **#79 / 36354371970 SUCCESS**
+- delivery/smoke/recovery : **#2 / 36354371977 SUCCESS**
+- D1 : existante, aucune migration à appliquer
+- R2 : actif
+- snapshot pré : artifact **10943029509**
+- snapshot post : artifact **10942949813**
+- restauration/integrity post : PASS
+- catalogue : **164**
+- argent réel : OFF
+
+Capacités :
+- 154 FOUNDATION_ACTIVE
+- 5 STRUCTURAL_V1 (GPS/localisation complète + 4 providers de messagerie externes)
+- 5 PLANNED_DOMAIN
+
+Les saisies financières canoniques, Enter, offline/outbox, correction de cellule, prêts/dettes et Live ont été conservés. Le test navigateur PWA obsolète 1.5.2.6 a été rendu release-aware avant la livraison, puis le E2E a repassé en vert.
+
+À constater encore sur appareils réels :
+Chrome + Opera PC, mobile, offline/reconnexion, deux gestionnaires Live sans refresh, WhatsApp handoff/deep return et ergonomie terrain. Aucun FIELD_ACCEPTED ne doit être inventé avant cette recette.
