@@ -1,0 +1,153 @@
+name: Eco-System 1.5.2.7 — Live Completion Qualified Cloudflare Delivery
+
+on:
+  workflow_dispatch:
+  push:
+    branches: ['fix/1.5.2.7-live-completion-20260925']
+    paths: ['.github/DEPLOY_ECO_SYSTEM_1_5_2_7_LIVE_ONCE']
+
+permissions:
+  contents: read
+
+concurrency:
+  group: eco-system-1-5-production
+  cancel-in-progress: false
+
+env:
+  ECO_SYSTEM_DB: eco-system-db
+  R2_BUCKET: eco-system-backups
+  ECO_SYSTEM_ROOT: https://eco-system.sergemimf.workers.dev/
+  ECO_SYSTEM_HEALTH: https://eco-system.sergemimf.workers.dev/health
+  ECO_SYSTEM_CATALOG: https://eco-system.sergemimf.workers.dev/api/v1/product/capabilities
+  EXPECTED_VERSION: 1.5.2.7-live-completion
+  MIN_CAPABILITIES: 164
+
+jobs:
+  qualify-backup-deploy-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    env:
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Install dependencies
+        run: npm install --ignore-scripts
+      - name: Verify Cloudflare credentials
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${CLOUDFLARE_ACCOUNT_ID:-}"
+          test -n "${CLOUDFLARE_API_TOKEN:-}"
+      - name: Full governed qualification before production mutation
+        run: npm run ci
+      - name: Build coherent existing PWA shell and Worker
+        run: npm run build
+      - name: Install Chromium for mandatory T01-T15
+        run: |
+          npm install --no-save --ignore-scripts @playwright/test@1.55.0
+          npx playwright install --with-deps chromium
+      - name: Start isolated A/B/C acceptance server
+        shell: bash
+        run: |
+          rm -f /tmp/eco-abc-deploy.sqlite
+          ECO_DATA_FILE=/tmp/eco-abc-deploy.sqlite OPEN_BROWSER=0 PORT=4173 node scripts/dev-server.mjs > /tmp/eco-abc-deploy.log 2>&1 &
+          echo $! > /tmp/eco-abc-deploy.pid
+          for i in {1..40}; do curl -fsS http://127.0.0.1:4173/health >/dev/null && exit 0; sleep 1; done
+          cat /tmp/eco-abc-deploy.log
+          exit 1
+      - name: Mandatory browser field persistence, shell recovery and mobile recipe before production mutation
+        run: npx playwright test tests/browser/core-a-b-c-t01-t15-1.5.2.5.spec.mjs tests/browser/financial-cell-consensus-persistence-1.5.2.6.spec.mjs tests/browser/browser-shell-mobile-1.5.2.6.spec.mjs --browser=chromium --workers=1
+      - name: Resolve acquired D1 and R2 without replacement
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes wrangler@4 d1 list --json > /tmp/d1-list.json
+          DB_ID="$(node scripts/cloudflare-d1-id.mjs /tmp/d1-list.json "${ECO_SYSTEM_DB}" || true)"
+          if [ -z "${DB_ID}" ]; then
+            echo "::error::Acquired D1 ${ECO_SYSTEM_DB} not found; refusing to create a replacement."
+            exit 1
+          fi
+          if npx --yes wrangler@4 r2 bucket list > /tmp/r2-list.txt 2>/tmp/r2-error.txt && grep -Fq "${R2_BUCKET}" /tmp/r2-list.txt; then
+            node scripts/render-wrangler-storage.mjs "${DB_ID}" "${R2_BUCKET}" workers/api/wrangler.ci.toml
+            echo "R2_MODE=R2" >> "${GITHUB_ENV}"
+          else
+            cat /tmp/r2-error.txt || true
+            echo "::warning::Existing R2 bucket unavailable to token; using bounded D1 fallback without creating a replacement bucket."
+            node scripts/render-wrangler-d1.mjs "${DB_ID}" workers/api/wrangler.ci.toml
+            echo "R2_MODE=D1_FALLBACK" >> "${GITHUB_ENV}"
+          fi
+          sed -i "s/RELEASE_COMMIT_SHA = \"UNBOUND_DEPLOY\"/RELEASE_COMMIT_SHA = \"${GITHUB_SHA}\"/" workers/api/wrangler.ci.toml
+      - name: Export pre-deploy D1 recovery snapshot
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p recovery
+          npx --yes wrangler@4 d1 export "${ECO_SYSTEM_DB}" --remote --output "recovery/eco-system-pre-1.5.2.7-live-${GITHUB_SHA}.sql" --config workers/api/wrangler.ci.toml
+          sha256sum recovery/*.sql > recovery/SHA256SUMS.txt
+      - name: Upload recovery proof
+        uses: actions/upload-artifact@v4
+        with:
+          name: eco-system-pre-1.5.2.7-live-${{ github.sha }}
+          path: recovery/
+          retention-days: 30
+      - name: Apply additive D1 migrations only
+        run: npx --yes wrangler@4 d1 migrations apply "${ECO_SYSTEM_DB}" --remote --config workers/api/wrangler.ci.toml
+      - name: Deploy Worker PWA R2 and daily maintenance trigger
+        run: npx --yes wrangler@4 deploy --config workers/api/wrangler.ci.toml
+      - name: Smoke root health catalog and release identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          root=''; health=''; catalog=''
+          for attempt in 1 2 3 4 5 6 7 8; do
+            root="$(curl --fail --silent --show-error --location --max-time 20 "${ECO_SYSTEM_ROOT}" || true)"
+            health="$(curl --fail --silent --show-error --location --max-time 20 "${ECO_SYSTEM_HEALTH}" || true)"
+            catalog="$(curl --fail --silent --show-error --location --max-time 20 "${ECO_SYSTEM_CATALOG}" || true)"
+            if grep -qi '<!doctype html>' <<<"${root}" \
+              && grep -q '"ok": true' <<<"${health}" \
+              && grep -Fq "\"version\": \"${EXPECTED_VERSION}\"" <<<"${health}" \
+              && grep -Fq "\"commitSha\": \"${GITHUB_SHA}\"" <<<"${health}" \
+              && grep -Fq "\"buildId\": \"eco-system-1.5.2.7-20260927\"" <<<"${health}" \
+              && grep -Fq "\"pwaCache\": \"eco-system-v1527-live-completion-20260927\"" <<<"${health}" \
+              && grep -q '"capabilities"' <<<"${catalog}" \
+              && grep -Fq "\"version\": \"${EXPECTED_VERSION}\"" <<<"${catalog}"; then break; fi
+            echo "Waiting for exact 1.5.2.7 live SHA propagation (attempt ${attempt}/8)…"
+            sleep 4
+          done
+          printf '%s' "${health}" > /tmp/health.json
+          printf '%s' "${catalog}" > /tmp/catalog.json
+          node --input-type=module - <<'NODE'
+          import fs from 'node:fs';
+          const health=JSON.parse(fs.readFileSync('/tmp/health.json','utf8'));
+          const catalog=JSON.parse(fs.readFileSync('/tmp/catalog.json','utf8'));
+          if(health.ok!==true) throw new Error('HEALTH_NOT_OK');
+          if(health.version!==process.env.EXPECTED_VERSION) throw new Error('VERSION_MISMATCH:'+health.version);
+          if(health.commitSha!==process.env.GITHUB_SHA) throw new Error('COMMIT_MISMATCH:'+health.commitSha);
+          if(health.buildId!=='eco-system-1.5.2.7-20260927') throw new Error('BUILD_ID_MISMATCH:'+health.buildId);
+          if(health.pwaCache!=='eco-system-v1527-live-completion-20260927') throw new Error('PWA_CACHE_MISMATCH:'+health.pwaCache);
+          if(health.realMoneyEnabled!==false) throw new Error('REAL_MONEY_MUST_REMAIN_DISABLED');
+          if(health.artifactStorageBound!==true) throw new Error('ARTIFACT_STORAGE_NOT_ACTIVE');
+          if(catalog.version!==process.env.EXPECTED_VERSION) throw new Error('CATALOG_VERSION_MISMATCH:'+catalog.version);
+          if(!Array.isArray(catalog.capabilities)||catalog.count<Number(process.env.MIN_CAPABILITIES)||catalog.capabilities.length!==catalog.count) throw new Error('CAPABILITY_CATALOG_INCOMPLETE:'+catalog.count);
+          console.log(JSON.stringify({version:health.version,commitSha:health.commitSha,buildId:health.buildId,pwaCache:health.pwaCache,capabilities:catalog.count,realMoneyEnabled:health.realMoneyEnabled,artifactStorageMode:health.artifactStorageMode}));
+          NODE
+
+      - name: Export post-deploy D1 recovery snapshot and verify restoration
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p recovery-post
+          npx --yes wrangler@4 d1 export "${ECO_SYSTEM_DB}" --remote --output "recovery-post/eco-system-post-1.5.2.7-live-${GITHUB_SHA}.sql" --config workers/api/wrangler.ci.toml
+          sqlite3 /tmp/eco-system-restore-1.5.2.7-live.db < "recovery-post/eco-system-post-1.5.2.7-live-${GITHUB_SHA}.sql"
+          test "$(sqlite3 /tmp/eco-system-restore-1.5.2.7-live.db 'PRAGMA integrity_check;')" = "ok"
+          sha256sum recovery-post/*.sql > recovery-post/SHA256SUMS.txt
+      - name: Upload post-deploy recovery proof
+        uses: actions/upload-artifact@v4
+        with:
+          name: eco-system-post-1.5.2.7-live-${{ github.sha }}
+          path: recovery-post/
+          retention-days: 30
