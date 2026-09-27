@@ -26,16 +26,16 @@ test('rubric family semantics keep Aide locale with Collation and Main levée ou
   assert.match(html,/Autres[^\n]*Inscription[^\n]*Timbre[^\n]*Amendes/);
 });
 
-test('semantic audit does not advertise partial or misowned capabilities as active',()=>{
-  const structural=[
-    'GEO.DIRECTORY',
-    
-    'AI.FOUNDER','DASHBOARDS.ALL','MANAGER.PUBLIC_PROFILE','SAFETY.QUIET_WATCH','AI.LOCAL','LEARNING.TALENT','CREATOR.STUDIO'
-  ];
-  for(const id of structural){
+test('semantic audit keeps genuinely partial capabilities structural and recognizes completed canonical journeys',()=>{
+  for(const id of ['GEO.DIRECTORY']){
     const module=PRODUCT_MODULES.find(x=>x.id===id);
     assert.ok(module,id+' exists');
-    assert.equal(module.status,'STRUCTURAL_V1',id+' stays structural until its canonical journey is complete');
+    assert.equal(module.status,'STRUCTURAL_V1',id+' remains structural until consented device geolocation is implemented');
+  }
+  for(const id of ['AI.FOUNDER','DASHBOARDS.ALL','MANAGER.PUBLIC_PROFILE','SAFETY.QUIET_WATCH','AI.LOCAL','LEARNING.TALENT','CREATOR.STUDIO']){
+    const module=PRODUCT_MODULES.find(x=>x.id===id);
+    assert.ok(module,id+' exists');
+    assert.equal(module.status,'FOUNDATION_ACTIVE',id+' has a canonical owner, governed journey and dedicated evidence tests');
   }
 });
 
