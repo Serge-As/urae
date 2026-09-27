@@ -33,6 +33,12 @@ export class CreatorTalentService{
     const next={...r,groupId:input.groupId,tags:['creator-studio','content','state:PUBLISHED'],data:{...r.data,contentState:'PUBLISHED',hubId:input.hubId,communityPostId:post.id},updatedAt:now()};await this.repo.saveWorkspaceRecord(next);
     await this.repo.saveAudit(this.kernel.audit.append({tenantId:c.tenantId,actorId:c.actorId,action:'CREATOR_CONTENT_PUBLISHED',targetType:'creator_content',targetId:id,requestId:c.requestId,metadata:{groupId:input.groupId,hubId:input.hubId,communityPostId:post.id}}));return next;
   }
+  async discoverContent(groupId:Id,hubId?:Id){
+    const c=this.ctx(),group=await this.repo.getGroup(c.tenantId,groupId);if(!group)throw Error('GROUP_NOT_FOUND');
+    if(group.createdBy!==c.actorId){const m=(await this.repo.listMemberships(c.tenantId,groupId)).find(x=>x.userId===c.actorId&&x.status==='active');if(!m)throw Error('FORBIDDEN_SCOPE');}
+    const rows=await this.repo.listWorkspaceRecords(c.tenantId,'CREATOR.STUDIO',groupId);
+    return rows.filter(x=>x.data.creatorKind==='CONTENT'&&x.data.contentState==='PUBLISHED'&&(!hubId||x.data.hubId===hubId)).sort((a,b)=>b.updatedAt.localeCompare(a.updatedAt));
+  }
   async recordInterest(id:Id,note=''){
     const c=this.ctx(),content=await this.creatorRecord(id);if(String(content.data.contentState)!=='PUBLISHED')throw Error('CREATOR_CONTENT_NOT_PUBLIC');
     if(content.createdBy===c.actorId)throw Error('CREATOR_SELF_INTEREST_NOT_ALLOWED');
