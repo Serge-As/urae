@@ -578,6 +578,10 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
     if(request.method==='GET'&&url.pathname==='/api/v1/business/records')return json({items:await businessStudio.records()},200,cors);
     if(request.method==='PUT'&&url.pathname==='/api/v1/business/workspace'){const body=await readJson<any>(request);return json(await businessStudio.configure(body),200,cors);}
     if(request.method==='POST'&&url.pathname==='/api/v1/business/mandates'){const body=await readJson<any>(request);return json(await businessStudio.createMandate(body),201,cors);}
+    const groupBusinessMandates=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/business\/mandates$/);
+    if(groupBusinessMandates&&request.method==='GET')return json({items:await businessStudio.groupMandates(groupBusinessMandates[1]!)},200,cors);
+    const businessMandateApprove=url.pathname.match(/^\/api\/v1\/business\/mandates\/([^/]+)\/approve$/);
+    if(businessMandateApprove&&request.method==='POST')return json(await businessStudio.approveMandate(businessMandateApprove[1]!),200,cors);
     const businessMandate=url.pathname.match(/^\/api\/v1\/business\/mandates\/([^/]+)\/(activate|end)$/);
     if(businessMandate&&request.method==='POST'){const body=await readJson<any>(request);return json(businessMandate[2]==='activate'?await businessStudio.activateMandate(businessMandate[1]!):await businessStudio.endMandate(businessMandate[1]!,String(body.reason??'')),200,cors);}
     if(request.method==='POST'&&url.pathname==='/api/v1/business/clients'){const body=await readJson<any>(request);return json(await businessStudio.createClient(body),201,cors);}
