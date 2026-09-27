@@ -21,7 +21,8 @@ const evidence=[
  ['CALENDAR.UNIFIED','apps/web/src/unified-calendar.js',['buildUnifiedCalendar','obligations'],'apps/web/src/main.js',['renderUnifiedCalendar','unifiedCalendarPanel']],
  ['RUBRIC.STARTER_KITS','packages/rubrics/src/index.ts',['STARTER_RUBRIC_FACETS','starterCandidates'],'apps/web/src/launch-studio.js',['buildStarterKit','persistStarterKit','printStarterKit']],
  ['GOVERNANCE.DOCUMENT_STUDIO','packages/group-documents/src/index.ts',['GroupDocumentService','async create','async archive'],'apps/web/src/documents-ui.ts',['uploadDocuments','searchDocuments','refreshDocuments']],
- ['TRUST.VERIFICATION','packages/identity-proof/src/index.ts',['registerAccountProof','candidateMatches','identifier_hash'],'apps/web/src/identity-verification-ui.js',['registerIdentityProof','identityProofMatches','value.value=\'\'']]
+ ['TRUST.VERIFICATION','packages/identity-proof/src/index.ts',['registerAccountProof','candidateMatches','identifier_hash'],'apps/web/src/identity-verification-ui.js',['registerIdentityProof','identityProofMatches','value.value=\'\'']],
+ ['AI.FOUNDER','packages/knowledge-academy/src/index.ts',['founderContext','canActivateRules:false','canWriteLedger:false'],'apps/web/src/core-economic-learning-ui.js',['Founder AI','founderAiContext','knowledgeOperational']]
 ];
 test('maturity registry promotes only capabilities with owner engine and user journey evidence',()=>{
  for(const [id,owner,ownerTokens,ui,uiTokens] of evidence){
