@@ -82,7 +82,7 @@ export const PRODUCT_MODULES: ProductModule[] = [
   {id:'FINANCE.WALLET',labelFr:'Wallet interne multi-rubriques',labelEn:'Internal multi-rubric wallet',status:'STRUCTURAL_V1',lot:'E',canonicalDependencies:['KERNEL.POLICY','LEDGER.CANONICAL'],workspace:'UNIVERSAL'},
   {id:'FINANCE.TRUST_SCORE',labelFr:'Fiabilité financière contextuelle',labelEn:'Contextual financial reliability',status:'STRUCTURAL_V1',lot:'E',canonicalDependencies:['KERNEL.POLICY','LEDGER.CANONICAL'],workspace:'UNIVERSAL'},
   {id:'GOVERNANCE.VOTE',labelFr:'Votes, décisions et quorum',labelEn:'Voting, decisions & quorum',status:'FOUNDATION_ACTIVE',lot:'F',canonicalDependencies:['KERNEL.POLICY'],workspace:'UNIVERSAL'},
-  {id:'GOVERNANCE.MANDATE',labelFr:'Mandats et délégations',labelEn:'Mandates & delegation',status:'STRUCTURAL_V1',lot:'F',canonicalDependencies:['KERNEL.POLICY'],workspace:'UNIVERSAL'},
+  {id:'GOVERNANCE.MANDATE',labelFr:'Mandats et délégations',labelEn:'Mandates & delegation',status:'FOUNDATION_ACTIVE',lot:'F',canonicalDependencies:['KERNEL.POLICY'],workspace:'SPECIALIZED'},
   {id:'GOVERNANCE.TENDER',labelFr:"Appels d'offres",labelEn:'Tenders',status:'STRUCTURAL_V1',lot:'F',canonicalDependencies:['KERNEL.POLICY'],workspace:'UNIVERSAL'},
   {id:'GOVERNANCE.DOCUMENTS',labelFr:'RI, statuts et PV',labelEn:'Bylaws, statutes & minutes',status:'FOUNDATION_ACTIVE',lot:'F',canonicalDependencies:['KERNEL.POLICY'],workspace:'SPECIALIZED'},
   {id:'GOVERNANCE.AI_RULE_EXTRACTION',labelFr:'Lecture IA des règles',labelEn:'AI rule extraction',status:'FOUNDATION_ACTIVE',lot:'F',canonicalDependencies:['KERNEL.POLICY'],workspace:'UNIVERSAL'},
