@@ -76,12 +76,16 @@ export const analyzeGovernanceText=(raw:string):GuidedSuggestion[]=>{
       explanation:'Caisse de solidarité détectée. Vérifiez le montant annuel, la période de versement, le remboursement partiel et les règles de renflouement.',
       rubric:{name:'Secours',kind:'SOLIDARITY',participationMode:'MANDATORY',contributionMode:'MONEY',nominalAmount:amount,contextNote:'À confirmer depuis le règlement : annualité, retenue de fin d’exercice et renflouement après assistance.',policyDraft:{participation:{mode:'MANDATORY'},contribution:{cadence:'ANNUAL',targetAmount:amount?{currency:'XAF',amount}:undefined,allowedMedia:['CASH','MOBILE_MONEY','TRANSFER'],missingHandling:'DEBT'},refund:{mode:'PARTIALLY_REFUNDABLE',settlementTiming:'END_OF_EXERCISE'},reserve:{carryForward:true,trackPerMember:true,openingBalanceSource:'PRIOR_CLOSING',replenishmentRule:'À arbitrer depuis le RI et la pratique observée'},loan:{allowed:false,interestBase:'PRINCIPAL_ONLY',noInterestOnInterest:true},lifecycle:{visibility:'PERSISTENT'}}}}));
   }
-  if(has(/collation|aide\s+locale|ration/i)){
-    const amount=money(text,/(?:collation|aide\s+locale|ration)[^.]{0,120}?([0-9 .]{3,})\s*(?:f|fcfa)/i);
-    out.push(suggestion({category:'RUBRIC',title:'Collation / Aide locale / Ration',confidence:0.9,evidence:evidence(text,/collation|aide\s+locale|ration/i),
-      explanation:'Rubrique de réunion détectée. L’assistant ne suppose pas si les absents paient : cette règle doit être confirmée.',
-      rubric:{name:'Collation',kind:'CONTRIBUTION',participationMode:has(/obligatoire[^.]{0,80}(?:absence|absent)|même\s+en\s+cas\s+d['’]absence/i)?'MANDATORY':'RULE_BASED',contributionMode:'MONEY',nominalAmount:amount,contextNote:'Confirmer bénéficiaire de la réunion, présents/absents et règle de couverture d’un manquant.',policyDraft:{participation:{mode:has(/obligatoire[^.]{0,80}(?:absence|absent)|même\s+en\s+cas\s+d['’]absence/i)?'MANDATORY':'RULE_BASED',absentMemberRule:has(/obligatoire[^.]{0,80}(?:absence|absent)|même\s+en\s+cas\s+d['’]absence/i)?'PAYS':'CUSTOM'},contribution:{cadence:'SESSION',targetAmount:amount?{currency:'XAF',amount}:undefined,allowedMedia:['CASH','MOBILE_MONEY'],missingHandling:'DEBT'},beneficiary:{mode:'HOST',beneficiariesPerSession:1},refund:{mode:'NON_REFUNDABLE',settlementTiming:'SESSION'},lifecycle:{visibility:'PERSISTENT'}}}}));
-  }
+  const pushMeetingContribution=(name:string,pattern:RegExp,amountPattern:RegExp)=>{
+    if(!has(pattern))return;
+    const amount=money(text,amountPattern),mandatory=has(/obligatoire[^.]{0,80}(?:absence|absent)|même\s+en\s+cas\s+d['’]absence/i);
+    out.push(suggestion({category:'RUBRIC',title:name,confidence:0.9,evidence:evidence(text,pattern),
+      explanation:'Rubrique principale de contribution détectée. Collation, Aide locale et Ration restent distinctes si le règlement les distingue ; l’assistant ne les fusionne pas et ne suppose pas si les absents paient.',
+      rubric:{name,kind:'CONTRIBUTION',participationMode:mandatory?'MANDATORY':'RULE_BASED',contributionMode:'MONEY',nominalAmount:amount,contextNote:'Confirmer bénéficiaire de la réunion, présents/absents et règle de couverture d’un manquant.',policyDraft:{participation:{mode:mandatory?'MANDATORY':'RULE_BASED',absentMemberRule:mandatory?'PAYS':'CUSTOM'},contribution:{cadence:'SESSION',targetAmount:amount?{currency:'XAF',amount}:undefined,allowedMedia:['CASH','MOBILE_MONEY'],missingHandling:'DEBT'},beneficiary:{mode:'HOST',beneficiariesPerSession:1},refund:{mode:'NON_REFUNDABLE',settlementTiming:'SESSION'},lifecycle:{visibility:'PERSISTENT'}}}}));
+  };
+  pushMeetingContribution('Collation',/collation/i,/collation[^.]{0,120}?([0-9 .]{3,})\s*(?:f|fcfa)/i);
+  pushMeetingContribution('Aide locale',/aide\s+locale/i,/aide\s+locale[^.]{0,120}?([0-9 .]{3,})\s*(?:f|fcfa)/i);
+  pushMeetingContribution('Ration',/ration/i,/ration[^.]{0,120}?([0-9 .]{3,})\s*(?:f|fcfa)/i);
   if(has(/caisse\s+transport|le\s+transport/i)){
     const amount=money(text,/transport[^.]{0,140}?([0-9 .]{3,})\s*(?:f|fcfa)/i);
     out.push(suggestion({category:'RUBRIC',title:'Transport',confidence:0.88,evidence:evidence(text,/caisse\s+transport|le\s+transport/i),explanation:'Caisse Transport détectée.',
