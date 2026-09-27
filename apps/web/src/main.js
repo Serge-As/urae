@@ -45,6 +45,7 @@ import { mountMemberDossierUI } from './member-dossier-ui.js';
 import { mountIdentityVerificationUI } from './identity-verification-ui.js';
 import { mountDataQualityUI } from './data-quality-ui.js';
 import { mountOpportunityIntelligenceUI } from './opportunity-intelligence-ui.js';
+import { mountOperationalRegistryUI } from './operational-registry-ui.js';
 import { mountQuietWatchUI } from './quiet-watch-ui.js';
 let uiLocale = 'fr';
 try { uiLocale = localStorage.getItem('tontine.locale') === 'en' ? 'en' : 'fr'; } catch {}
@@ -240,6 +241,7 @@ mountMemberDossierUI();
 const identityVerificationUI=mountIdentityVerificationUI({app,getGroups:()=>groups,navigate:go,notify:toast,showError:fail});
 const dataQualityUI=mountDataQualityUI({app,navigate:go,notify:toast,showError:fail});
 const opportunityIntelligenceUI=mountOpportunityIntelligenceUI({app,notify:toast,showError:fail,isManager});
+const operationalRegistryUI=mountOperationalRegistryUI({app,getGroups:()=>groups,getMembers:()=>members,getRubrics:()=>rubrics,isManager,notify:toast,showError:fail});
 const quietWatchUI=mountQuietWatchUI({app,notify:toast,showError:fail,isManager});
 window.addEventListener('popstate',event=>{
     const state=event.state?.ecoNav,hash=location.hash.slice(1);
@@ -949,6 +951,7 @@ const openModule = async (id) => {
     if(m.status === 'FOUNDATION_ACTIVE' && id === 'COMMUNITY.MICRO_ADS'){go('ecosystem',{anchor:'adManagerPanel',force:true});void adManagerUI.refresh();return;}
     if(m.status === 'FOUNDATION_ACTIVE' && ['RUBRIC.LOCAL_AID','RUBRIC.HAND_RAISE'].includes(id)){go('operations',{anchor:'miscRubricPanel',force:true});setTimeout(()=>document.querySelector('#miscRubricConfig')?.setAttribute('open',''),80);return;}
     if(m.status === 'FOUNDATION_ACTIVE' && id === 'PAPER.PRINT'){go('documents',{anchor:'paperPrintCenter',force:true});void printCenterUI.refresh();return;}
+    if(m.status === 'FOUNDATION_ACTIVE' && ['GROUP.MODEL_REGISTRY','GROUP.CASE_LAW','RUBRIC.EXCEPTIONS','DATA.TIME_MACHINE','SUCCESSION.NEXT_OF_KIN'].includes(id)){go('settings',{anchor:'operationalRegistryCenter',force:true});const tab=id==='GROUP.MODEL_REGISTRY'?'models':id==='GROUP.CASE_LAW'?'cases':id==='RUBRIC.EXCEPTIONS'?'exceptions':id==='DATA.TIME_MACHINE'?'time':'succession';operationalRegistryUI.open(tab);return;}
     if(m.status === 'FOUNDATION_ACTIVE' && id === 'SAFETY.QUIET_WATCH'){go('settings',{anchor:'quietWatchCenter',force:true});void quietWatchUI.refresh();return;}
     if(m.status === 'FOUNDATION_ACTIVE' && id === 'AI.LOCAL'){go('operations',{anchor:'voiceFinancialPanel',force:true});document.querySelector('#voiceFinancialPanel')?.scrollIntoView({behavior:'smooth',block:'start'});return;}
     const route = m.workspace === 'SPECIALIZED' && m.status === 'FOUNDATION_ACTIVE' ? specializedRoute(id) : undefined;
