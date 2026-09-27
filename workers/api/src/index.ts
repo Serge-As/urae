@@ -45,7 +45,7 @@ import { GrowthReferralService, InMemoryReferralBudgetStore, D1ReferralBudgetSto
 import { KnowledgeAcademyService } from '../../../packages/knowledge-academy/src/index.js';
 import { ValueNetworkService } from '../../../packages/value-network/src/index.js';
 import { GroupReconstitutionService } from '../../../packages/group-reconstitution/src/index.js';
-import { SafetyCaseService, assessReferralStructure, type SafetyCategory, type SafetyCaseState, type SafetyAction } from '../../../packages/trust/src/index.js';
+import { SafetyCaseService, CommitmentTrustGraphService, assessReferralStructure, type SafetyCategory, type SafetyCaseState, type SafetyAction } from '../../../packages/trust/src/index.js';
 import { authenticatedApi } from './authenticated.js';
 export { GroupLiveHub } from './group-live-hub.js';
 
@@ -152,6 +152,7 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
   const growthReferral=new GrowthReferralService(repo,kernel,options.referralBudgets??defaultReferralBudgets);
   const reconstitution=new GroupReconstitutionService(repo,kernel);
   const safety=new SafetyCaseService(repo,kernel);
+  const trustGraph=new CommitmentTrustGraphService(repo,kernel);
   if(options.premiumLive)kernel.features.set('premium_live_ledger',true);
   const isFounderTeamActor=async()=>Boolean(options.founderTeamActors?.has(ctx.actorId))||Boolean(options.founderControl&&await options.founderControl.isPlatformOwner(ctx.actorId));
   const requireGroup=async(groupId:string,manage=false)=>{
@@ -491,6 +492,13 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
     const safetyAppeal=url.pathname.match(/^\/api\/v1\/safety\/cases\/([^/]+)\/appeal$/);
     if(safetyAppeal&&request.method==='POST'){const body=await readJson<Record<string,unknown>>(request);return json(await safety.appeal(safetyAppeal[1]!,{reason:String(body.reason??''),evidenceRef:body.evidenceRef?String(body.evidenceRef):undefined}),201,cors);}
     if(request.method==='POST'&&url.pathname==='/api/v1/safety/referral-structure-assessment'){const body=await readJson<Record<string,unknown>>(request);return json(assessReferralStructure({levels:finite(body.levels,1),fundingSource:String(body.fundingSource??''),rewardForRecruitingRecruiters:Boolean(body.rewardForRecruitingRecruiters),promisedReturnLinkedToRecruitment:Boolean(body.promisedReturnLinkedToRecruitment),realProductOrServiceEvidence:body.realProductOrServiceEvidence===undefined?undefined:Boolean(body.realProductOrServiceEvidence)}),200,cors);}
+    const trustEvidenceRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/trust\/([^/]+)\/evidence$/);
+    if(trustEvidenceRoute&&request.method==='GET')return json({items:await trustGraph.evidence(trustEvidenceRoute[1]!,trustEvidenceRoute[2]!)},200,cors);
+    if(trustEvidenceRoute&&request.method==='POST'){const body=await readJson<Record<string,unknown>>(request);return json(await trustGraph.addEvidence(trustEvidenceRoute[1]!,trustEvidenceRoute[2]!,{commitmentBand:String(body.commitmentBand??''),kind:String(body.kind??'') as any,sourceId:String(body.sourceId??''),occurredAt:body.occurredAt?String(body.occurredAt):undefined,weight:body.weight===undefined?undefined:Number(body.weight)}),201,cors);}
+    const trustProfileRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/trust\/([^/]+)\/profile$/);
+    if(trustProfileRoute&&request.method==='GET')return json(await trustGraph.profile(trustProfileRoute[1]!,trustProfileRoute[2]!,url.searchParams.get('band')??'SMALL'),200,cors);
+    const trustGraphRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/trust\/([^/]+)$/);
+    if(trustGraphRoute&&request.method==='GET')return json(await trustGraph.graph(trustGraphRoute[1]!,trustGraphRoute[2]!),200,cors);
 
     if(request.method==='GET'&&url.pathname==='/api/v1/knowledge'){return json({items:await knowledgeAcademy.searchKnowledge(url.searchParams.get('q')??'',url.searchParams.get('groupId')??undefined)},200,cors);}
     if(request.method==='POST'&&url.pathname==='/api/v1/knowledge'){const body=await readJson<any>(request);return json(await knowledgeAcademy.createKnowledge(body),201,cors);}
