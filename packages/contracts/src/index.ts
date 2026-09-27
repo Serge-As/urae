@@ -220,6 +220,8 @@ export interface GroupProjectAccessibility {
 
 export interface GroupProjectLaunchProfile {
   origin: GroupProjectOrigin;
+  /** Rotating-tontine operating variant. This refines the canonical family; it never creates a third group family. */
+  tontineVariant?: 'MONEY' | 'IN_KIND' | 'HYBRID';
   cycle?: GroupProjectCycle;
   members?: GroupProjectMemberSetup;
   communication?: GroupProjectCommunication;
