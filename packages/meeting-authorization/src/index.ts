@@ -43,7 +43,7 @@ export class MeetingReopenAuthorizationService{
     if(expiresAt&&Date.parse(expiresAt)<=Date.now())throw Error('REOPEN_AUTH_EXPIRED');
     const stamp=now(),approvals:Approval[]=[{actorId:c.actorId,at:stamp,roles:[...roles]}],id=makeId('reopen_auth');
     const base:WorkspaceRecord={id,tenantId:c.tenantId,groupId,moduleId:'MEETING.REOPEN_AUTH',title:'Autorisation après clôture',summary:reason,status:'ACTIVE',tags:['reopen-auth','state:PENDING'],data:{meetingId,reason,scope:clean(input.scope,240)||'LATE_POSTING',requiredApprovals:Math.max(1,late.approval.minimumApprovals),roleCodesJson:JSON.stringify(allowed),founderOverride:Boolean(late.approval.founderOverride),approvalsJson:JSON.stringify(approvals),authorizationState:'PENDING',expiresAt,closedAt:meeting.closedAt??'',independentAccountsRequired:true},createdBy:c.actorId,createdAt:stamp,updatedAt:stamp};
-    const state=this.status(group,base,approvals),record={...base,tags:['reopen-auth','state:'+state],data:{...base.data,authorizationState:state}};await this.repo.saveWorkspaceRecord(record);
+    const state=this.status(group,base,approvals),record:WorkspaceRecord={...base,tags:['reopen-auth','state:'+state],data:{...base.data,authorizationState:state}};await this.repo.saveWorkspaceRecord(record);
     await this.repo.saveAudit(this.kernel.audit.append({tenantId:c.tenantId,actorId:c.actorId,action:'MEETING_REOPEN_AUTH_CREATED',targetType:'meeting',targetId:meetingId,requestId:c.requestId,metadata:{groupId,authorizationId:id,state,requiredApprovals:record.data.requiredApprovals}}));return record;
   }
   async approve(groupId:Id,id:Id){
@@ -51,11 +51,11 @@ export class MeetingReopenAuthorizationService{
     if(r.data.expiresAt&&Date.parse(String(r.data.expiresAt))<=Date.now())throw Error('REOPEN_AUTH_EXPIRED');
     const allowed=JSON.parse(String(r.data.roleCodesJson??'[]')) as string[];if(!this.eligible(roles,allowed)&&c.actorId!==group.createdBy)throw Error('REOPEN_APPROVER_NOT_ELIGIBLE');
     const approvals=this.approvals(r);if(!approvals.some(x=>x.actorId===c.actorId))approvals.push({actorId:c.actorId,at:now(),roles:[...roles]});
-    const state=this.status(group,r,approvals),next={...r,tags:['reopen-auth','state:'+state],data:{...r.data,approvalsJson:JSON.stringify(approvals),authorizationState:state},updatedAt:now()};await this.repo.saveWorkspaceRecord(next);
+    const state=this.status(group,r,approvals),next:WorkspaceRecord={...r,tags:['reopen-auth','state:'+state],data:{...r.data,approvalsJson:JSON.stringify(approvals),authorizationState:state},updatedAt:now()};await this.repo.saveWorkspaceRecord(next);
     await this.repo.saveAudit(this.kernel.audit.append({tenantId:c.tenantId,actorId:c.actorId,action:'MEETING_REOPEN_AUTH_APPROVED',targetType:'workspace_record',targetId:id,requestId:c.requestId,metadata:{groupId,state,approvalCount:approvals.length}}));return next;
   }
   async cancel(groupId:Id,id:Id,reason:string){
-    await this.access(groupId);const c=this.ctx(),r=await this.get(groupId,id),next={...r,status:'ARCHIVED' as const,tags:['reopen-auth','state:CANCELLED'],data:{...r.data,authorizationState:'CANCELLED',cancelReason:clean(reason,500),cancelledAt:now()},updatedAt:now()};await this.repo.saveWorkspaceRecord(next);return next;
+    await this.access(groupId);const c=this.ctx(),r=await this.get(groupId,id),next:WorkspaceRecord={...r,status:'ARCHIVED',tags:['reopen-auth','state:CANCELLED'],data:{...r.data,authorizationState:'CANCELLED',cancelReason:clean(reason,500),cancelledAt:now()},updatedAt:now()};await this.repo.saveWorkspaceRecord(next);return next;
   }
   async list(groupId:Id,meetingId?:Id){
     await this.access(groupId);const c=this.ctx(),rows=await this.repo.listWorkspaceRecords(c.tenantId,'MEETING.REOPEN_AUTH',groupId);return rows.filter(x=>!meetingId||x.data.meetingId===meetingId).sort((a,b)=>b.updatedAt.localeCompare(a.updatedAt));
