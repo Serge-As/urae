@@ -132,7 +132,7 @@ export const PRODUCT_MODULES: ProductModule[] = [
   {id:'LEARNING.NGO',labelFr:'ONG, programmes et animateurs',labelEn:'NGOs, programs & facilitators',status:'FOUNDATION_ACTIVE',lot:'H',canonicalDependencies:['KERNEL.POLICY'],workspace:'SPECIALIZED'},
   {id:'LEARNING.KNOWLEDGE_BANK',labelFr:'Banque de connaissances',labelEn:'Knowledge Bank',status:'FOUNDATION_ACTIVE',lot:'H',canonicalDependencies:['KERNEL.POLICY'],workspace:'UNIVERSAL'},
   {id:'AI.ASSISTANT',labelFr:'Assistant IA',labelEn:'AI assistant',status:'FOUNDATION_ACTIVE',lot:'H',canonicalDependencies:['KERNEL.POLICY'],workspace:'UNIVERSAL'},
-  {id:'AI.FOUNDER',labelFr:'Founder AI',labelEn:'Founder AI',status:'STRUCTURAL_V1',lot:'H',canonicalDependencies:['KERNEL.POLICY'],workspace:'UNIVERSAL'},
+  {id:'AI.FOUNDER',labelFr:'Founder AI',labelEn:'Founder AI',status:'FOUNDATION_ACTIVE',lot:'H',canonicalDependencies:['KERNEL.POLICY'],workspace:'SPECIALIZED'},
   {id:'AI.LOCAL',labelFr:'Assistant local',labelEn:'Local assistant',status:'STRUCTURAL_V1',lot:'H',canonicalDependencies:['KERNEL.POLICY'],workspace:'UNIVERSAL'},
   {id:'SAFETY.ANTISCAM',labelFr:'Centre anti-arnaques & Labo financier',labelEn:'Anti-scam & Financial Lab',status:'FOUNDATION_ACTIVE',lot:'H',canonicalDependencies:['KERNEL.POLICY','KERNEL.AUDIT','KERNEL.EVIDENCE'],workspace:'UNIVERSAL'},
   {id:'SAFETY.QUIET_WATCH',labelFr:'Quiet Watch',labelEn:'Quiet Watch',status:'STRUCTURAL_V1',lot:'H',canonicalDependencies:['KERNEL.POLICY','KERNEL.AUDIT'],workspace:'UNIVERSAL'},
