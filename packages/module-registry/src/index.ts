@@ -30,7 +30,7 @@ export const PRODUCT_MODULES: ProductModule[] = [
   {id:'CORE.ASSOCIATIONS',labelFr:'Associations à accumulation',labelEn:'Savings / accumulation associations',status:'FOUNDATION_ACTIVE',lot:'C',canonicalDependencies:['KERNEL.POLICY'],workspace:'UNIVERSAL'},
   {id:'CORE.ROTATING_TONTINE',labelFr:'Tontines rotatives',labelEn:'Rotating tontines',status:'FOUNDATION_ACTIVE',lot:'C',canonicalDependencies:['KERNEL.POLICY'],workspace:'UNIVERSAL'},
   {id:'CORE.IN_KIND_TONTINE',labelFr:'Tontines en nature',labelEn:'In-kind tontines',status:'FOUNDATION_ACTIVE',lot:'C',canonicalDependencies:['KERNEL.POLICY'],workspace:'UNIVERSAL'},
-  {id:'CORE.HYBRID_GROUP',labelFr:'Groupes hybrides',labelEn:'Hybrid groups',status:'STRUCTURAL_V1',lot:'C',canonicalDependencies:['KERNEL.POLICY'],workspace:'UNIVERSAL'},
+  {id:'CORE.HYBRID_GROUP',labelFr:'Variante tontine hybride',labelEn:'Hybrid rotating-tontine variant',status:'FOUNDATION_ACTIVE',lot:'C',canonicalDependencies:['KERNEL.POLICY'],workspace:'SPECIALIZED'},
   {id:'GROUP.LAUNCH_STUDIO',labelFr:'Studio de création',labelEn:'Group launch studio',status:'FOUNDATION_ACTIVE',lot:'C',canonicalDependencies:['KERNEL.POLICY'],workspace:'SPECIALIZED'},
   {id:'GROUP.LAUNCH.SIMULATION',labelFr:'Simulations de faisabilité',labelEn:'Feasibility simulations',status:'FOUNDATION_ACTIVE',lot:'C',canonicalDependencies:['KERNEL.POLICY'],workspace:'SPECIALIZED'},
   {id:'GROUP.MODEL_REGISTRY',labelFr:'Registre des modèles',labelEn:'Group model registry',status:'FOUNDATION_ACTIVE',lot:'C',canonicalDependencies:['KERNEL.POLICY'],workspace:'SPECIALIZED'},
