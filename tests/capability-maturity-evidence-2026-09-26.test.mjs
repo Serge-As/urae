@@ -32,7 +32,9 @@ const evidence=[
  ['AI.LOCAL','packages/voice-commands/src/index.ts',['parseVoiceFinancialCommand','matchVoiceCandidate','parseVoiceAmount'],'apps/web/src/voice-entry-ui.ts',['Rien n’est comptabilisé avant votre validation','Comprendre et prévisualiser','Valider ces saisies']],
  ['SAFETY.QUIET_WATCH','packages/trust/src/index.ts',['SafetyCaseService','UNVERIFIED_SUSPICION','automaticLegalVerdict:false'],'apps/web/src/quiet-watch-ui.js',['suspicion non vérifiée','decideSafetyCase','Enregistrer un recours']],
  ['GOVERNANCE.TENDER','packages/market/src/index.ts',['createMarketRequest','respondMarketRequest','shortlistMarketResponse','selectMarketResponse'],'apps/web/src/advanced-ui.js',['Ajouter une réponse fournisseur','Présélectionner','Sélectionner']],
- ['COMMUNITY.MICRO_ADS','packages/ad-manager/src/index.ts',['create(groupId','frequencyCapPer7Days','selectAdDelivery'],'apps/web/src/ad-manager-ui.js',['Brouillon AdManager créé en sandbox','frequencyCapPer7Days','placements']]
+ ['COMMUNITY.MICRO_ADS','packages/ad-manager/src/index.ts',['create(groupId','frequencyCapPer7Days','selectAdDelivery'],'apps/web/src/ad-manager-ui.js',['Brouillon AdManager créé en sandbox','frequencyCapPer7Days','placements']],
+ ['RUBRIC.LOCAL_AID','packages/misc-rubrics/src/index.ts',["'LOCAL_AID'",'postBatch','recordCashContribution'],'apps/web/src/misc-rubrics-ui.js',["kind:value('miscRubricCustomKind')",'Aide locale']],
+ ['RUBRIC.HAND_RAISE','packages/misc-rubrics/src/index.ts',["'HAND_RAISE'",'postBatch','recordCashContribution'],'apps/web/src/misc-rubrics-ui.js',["kind:value('miscRubricCustomKind')",'Main levée']]
 ];
 test('maturity registry promotes only capabilities with owner engine and user journey evidence',()=>{
  for(const [id,owner,ownerTokens,ui,uiTokens] of evidence){
