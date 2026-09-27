@@ -75,22 +75,33 @@ export function mountOperationalRegistryUI({app,getGroups=()=>[],getMembers=()=>
   };
 
   const renderSuccession=async()=>{
-    const g=group(),members=getMembers().filter(m=>m.status==='active');body.append(el('p','Préparation uniquement : ce registre conserve des contacts et preuves déclarés. Il ne réalise pas une succession, ne désigne pas juridiquement un ayant droit et ne transfère aucun rôle, solde ou droit financier.','truth-notice'));
+    const g=group(),allMembers=getMembers().filter(m=>m.status==='active'),members=isManager()?allMembers:allMembers.filter(m=>m.userId===app.currentActor());
+    body.append(el('p','Ce registre prépare la continuité du dossier. Il ne désigne pas juridiquement un héritier et ne transfère aucun rôle, solde, signature ou droit financier. Un membre ne voit que ses propres déclarations ; les responsables habilités voient celles du groupe.','truth-notice'));
+    if(!members.length){body.append(el('p','Aucun dossier membre accessible pour cette déclaration.','empty-state'));return;}
     body.append(createForm('Enregistrer un contact / ayant droit déclaré',[
-      {name:'membershipId',label:'Membre concerné',type:'select',options:[['','Choisir'],...members.map(m=>[m.id,m.displayName])],required:true},
+      {name:'membershipId',label:'Membre concerné',type:'select',options:[...members.map(m=>[m.id,m.displayName])],required:true},
       {name:'contactAlias',label:'Nom ou alias du contact',required:true},{name:'relationship',label:'Lien',required:true,placeholder:'Conjoint, enfant, frère/sœur…'},
-      {name:'contactRef',label:'Référence de contact',required:true,placeholder:'Téléphone/email/référence interne'},{name:'consentRef',label:'Consentement / preuve',required:true,placeholder:'PV, formulaire signé, dossier'}
+      {name:'contactRef',label:'Référence de contact',required:true,placeholder:'Téléphone/email/référence interne'},{name:'consentRef',label:'Consentement / preuve',required:true,placeholder:'PV, formulaire signé, dossier'},
+      {name:'notes',label:'Notes',type:'textarea',full:true}
     ],'Enregistrer',async d=>{
       if(!g)throw Error('ACTIVE_GROUP_REQUIRED');
-      await app.createWorkspaceRecord({moduleId:'SUCCESSION.NEXT_OF_KIN',groupId:g.id,title:'Succession · '+d.contactAlias,summary:'Contact déclaré pour '+(members.find(m=>m.id===d.membershipId)?.displayName??d.membershipId),status:'ACTIVE',tags:['next-of-kin','manager-only'],data:{membershipId:String(d.membershipId),contactAlias:String(d.contactAlias),relationship:String(d.relationship),contactRef:String(d.contactRef),consentRef:String(d.consentRef),successionState:'RECORDED',grantsMembership:false,grantsFinancialRights:false,grantsSigningAuthority:false,version:1}});
-      notify('Contact de succession enregistré sans attribution automatique de droit.');
+      await app.createNextOfKin({membershipId:String(d.membershipId),contactAlias:String(d.contactAlias),relationship:String(d.relationship),contactRef:String(d.contactRef),consentRef:String(d.consentRef),notes:String(d.notes??'')||undefined});
+      notify('Contact enregistré sans attribution automatique de droit.');
     }));
-    const rows=await app.listWorkspaceRecords('SUCCESSION.NEXT_OF_KIN',g?.id);if(!rows.length)body.append(el('p','Aucun contact de succession enregistré.','empty-state'));
-    for(const r of rows){const m=members.find(x=>x.id===r.data.membershipId),c=el('article',undefined,'item');c.append(el('strong',String(r.data.contactAlias??r.title)),el('p',(m?.displayName??String(r.data.membershipId??''))+' · '+String(r.data.relationship??''),'hint'),el('small','Référence : '+String(r.data.contactRef??'')+' · preuve : '+String(r.data.consentRef??'')));if(r.status!=='ARCHIVED')c.append(actions(r,[['Archiver',x=>app.updateWorkspaceRecord(x.id,{status:'ARCHIVED',data:{...x.data,successionState:'ARCHIVED'}}),'link-btn']]));body.append(c);}
+    const rows=await app.nextOfKin();if(!rows.length)body.append(el('p','Aucun contact de succession enregistré.','empty-state'));
+    for(const r of rows){
+      const m=allMembers.find(x=>x.id===r.data.membershipId),state=String(r.data.successionState??'RECORDED'),c=el('article',undefined,'item');
+      c.append(el('strong',String(r.data.contactAlias??r.title)),el('span',state,'pill'),el('p',(m?.displayName??String(r.data.membershipId??''))+' · '+String(r.data.relationship??''),'hint'),el('small','Référence : '+String(r.data.contactRef??'')+' · preuve : '+String(r.data.consentRef??'')+' · droits automatiques : aucun'));
+      const a=[];
+      if(state==='RECORDED')a.push(['Confirmer',x=>app.confirmNextOfKin(x.id),'primary']);
+      if(!['REVOKED','ARCHIVED'].includes(state))a.push(['Révoquer',async x=>{const reason=window.prompt('Motif de révocation :')?.trim();if(!reason)return;await app.revokeNextOfKin(x.id,reason);},'link-btn']);
+      if(a.length)c.append(actions(r,a));body.append(c);
+    }
   };
 
   const render=async()=>{
-    body.replaceChildren();if(!app.activeGroup()){body.append(el('p','Sélectionnez un groupe.','empty-state'));return;}if(!isManager()){body.append(el('p','Ces registres sont réservés aux responsables habilités.','empty-state'));return;}
+    body.replaceChildren();if(!app.activeGroup()){body.append(el('p','Sélectionnez un groupe.','empty-state'));return;}
+    if(!isManager()&&active!=='succession'){body.append(el('p','Ce registre est réservé aux responsables habilités. Le membre peut utiliser uniquement l’onglet Succession pour son propre dossier.','empty-state'));return;}
     try{if(active==='exceptions')await renderExceptions();else if(active==='time')await renderTime();else await renderSuccession();}catch(e){body.append(el('p','Registre indisponible : '+String(e?.message??e),'hint'));}
   };
   document.addEventListener('eco:group-context-changed',()=>void render());
