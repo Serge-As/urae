@@ -945,6 +945,8 @@ const openModule = async (id) => {
     if(m.status === 'FOUNDATION_ACTIVE' && id === 'PAPER.BRIDGE'){go('documents',{force:true});void documentsUI.refresh();return;}
     if(m.status === 'FOUNDATION_ACTIVE' && id === 'GOVERNANCE.MANDATE'){go('ecosystem',{anchor:'businessStudioOperational',force:true});const panel=document.querySelector('#businessStudioOperational');if(panel?.tagName==='DETAILS')panel.open=true;void businessStudioUI.refresh();return;}
     if(m.status === 'FOUNDATION_ACTIVE' && ['OPPORTUNITY.GRAPH','MANAGER.VALUE_DISCOVERY','MARKETPLACE.MARKET_INTELLIGENCE'].includes(id)){go('ecosystem',{anchor:'opportunityIntelligence',force:true});opportunityIntelligenceUI.open();return;}
+    if(m.status === 'FOUNDATION_ACTIVE' && id === 'GOVERNANCE.TENDER'){go('ecosystem',{anchor:'socialCommercePanel',force:true});const panel=document.querySelector('#socialCommercePanel');if(panel?.tagName==='DETAILS')panel.open=true;return;}
+    if(m.status === 'FOUNDATION_ACTIVE' && id === 'COMMUNITY.MICRO_ADS'){go('ecosystem',{anchor:'adManagerPanel',force:true});void adManagerUI.refresh();return;}
     if(m.status === 'FOUNDATION_ACTIVE' && id === 'SAFETY.QUIET_WATCH'){go('settings',{anchor:'quietWatchCenter',force:true});void quietWatchUI.refresh();return;}
     if(m.status === 'FOUNDATION_ACTIVE' && id === 'AI.LOCAL'){go('operations',{anchor:'voiceFinancialPanel',force:true});document.querySelector('#voiceFinancialPanel')?.scrollIntoView({behavior:'smooth',block:'start'});return;}
     const route = m.workspace === 'SPECIALIZED' && m.status === 'FOUNDATION_ACTIVE' ? specializedRoute(id) : undefined;
