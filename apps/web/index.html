@@ -277,7 +277,7 @@
               <fieldset class="launch-step-panel full" data-launch-step="2" hidden>
                 <legend>2. Famille principale</legend>
                 <label>Nom du groupe<input id="projectName" required placeholder="Ex. CERDAS 2027"></label>
-                <label>Famille<select id="groupKind"><option value="association">Association</option><option value="rotating_tontine">Tontine rotative</option></select></label>
+                <label>Famille<select id="groupKind"><option value="association">Association</option><option value="rotating_tontine">Tontine rotative</option><option value="hybrid">Association + tontine / hybride</option></select></label>
                 <p class="hint full">Une tontine en nature reste une configuration de la tontine. Une association peut contenir zéro, une ou plusieurs tontines comme rubriques.</p>
               </fieldset>
 
@@ -1195,6 +1195,20 @@
         </section>
         <section class="panel"><div class="section-kicker"><div><h2>Academy · ONG · IA · Safety · Paper Bridge</h2><p>Accompagnement des gestionnaires, connaissance, documents, anti-arnaque et pont papier ↔ numérique.</p></div></div><div id="guidanceHub" class="hub-grid"></div></section>
         <section class="panel"><div class="section-kicker"><div><h2>Rapports, recherche, calendrier et intégrations</h2><p>Exports, dashboards, notifications et connecteurs.</p></div></div><div id="reportsHub" class="hub-grid"></div></section>
+        <details class="panel" id="universalSearchPanel">
+          <summary><strong>Recherche universelle</strong> · groupes, membres, séances, rubriques, services, documents et connaissances</summary>
+          <div class="form-grid">
+            <label class="full">Rechercher partout<input id="universalSearchFull" class="search" autocomplete="off" placeholder="Nom, séance, rubrique, service, document…"></label>
+          </div>
+          <div id="universalSearchFullResults" class="stack"></div>
+          <p class="hint">Les résultats respectent vos droits actuels. Une recherche ne donne jamais accès à un groupe, un membre ou un document auquel votre compte n’a pas accès.</p>
+        </details>
+        <details class="panel" id="unifiedCalendarPanel">
+          <summary><strong>Calendrier unifié</strong> · séances + échéances personnelles du groupe</summary>
+          <div class="actions"><button id="unifiedCalendarRefresh" type="button" class="secondary">Actualiser</button><button id="unifiedCalendarIcs" type="button" class="primary">Télécharger le calendrier (.ics)</button></div>
+          <div id="unifiedCalendarList" class="stack"></div>
+          <p class="hint">Le calendrier réunit uniquement les dates explicites et autorisées : séances du groupe et échéances qui vous sont assignées. Il n’invente aucune date à partir de vos finances.</p>
+        </details>
         <section class="panel">
           <div class="panel-head"><div><h2>Catalogue complet</h2><p><strong id="capabilityCount">0</strong> capacités connues. Une fonction non visible dans un résumé n'est jamais considérée supprimée.</p></div><input id="catalogSearch" class="search" placeholder="Rechercher une capacité…"></div>
           <div id="lotFilters" class="filters"></div>
