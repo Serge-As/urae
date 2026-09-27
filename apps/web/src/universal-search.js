@@ -16,9 +16,19 @@ export const localUniversalSearch=({query,groups=[],modules=[],members=[],meetin
   return rows.sort((a,b)=>b.score-a.score||a.title.localeCompare(b.title,'fr')).slice(0,40);
 };
 
-export const remoteUniversalSearch=({documents=[],knowledge=[]})=>{
+const scalarText=data=>Object.entries(data??{}).flatMap(([k,v])=>['string','number','boolean'].includes(typeof v)?[k,String(v)]:[]).join(' ');
+export const remoteUniversalSearch=({query='',documents=[],knowledge=[],workspaces=[],inbox=[]})=>{
   const rows=[];
   for(const d of documents)rows.push({kind:'document',id:String(d.recordId??d.id??''),title:String(d.title??'Document'),subtitle:'Document'+(d.source?' · '+d.source:''),snippet:String(d.snippet??''),score:Number(d.score??1)});
-  for(const k of knowledge)rows.push({kind:'knowledge',id:String(k.id??''),title:String(k.title??'Connaissance'),subtitle:'Connaissance · '+String(k.data?.knowledgeState??k.state??''),snippet:String(k.data?.body??'').slice(0,220),score:1});
-  return rows.filter(x=>x.id).slice(0,20);
+  for(const k of knowledge)rows.push({kind:'knowledge',id:String(k.id??''),title:String(k.title??'Connaissance'),subtitle:'Connaissance · '+String(k.data?.knowledgeState??k.state??''),snippet:String(k.data?.body??'').slice(0,220),score:Math.max(1,rank([k.title,k.data?.body,k.data?.tags].join(' '),query))});
+  for(const w of workspaces){
+    const id=String(w.id??'');if(!id)continue;
+    const title=String(w.title??w.moduleId??'Élément métier'),subtitle='Métier · '+String(w.moduleId??'')+' · '+String(w.status??'');
+    push(rows,'workspace',id,title,subtitle,[title,w.summary,w.tags?.join(' '),scalarText(w.data)].join(' '),query,{snippet:String(w.summary??'').slice(0,220),moduleId:String(w.moduleId??'')});
+  }
+  for(const item of inbox){
+    const id=String(item.id??'');if(!id)continue;
+    push(rows,'inbox',id,String(item.title??'Action'),'Action · '+String(item.kind??'')+' · '+String(item.status??''),[item.title,item.kind,item.status,item.priority,item.sourceType,item.sourceId].join(' '),query,{groupId:item.groupId});
+  }
+  return rows.filter(x=>x.id).sort((a,b)=>b.score-a.score||a.title.localeCompare(b.title,'fr')).slice(0,50);
 };
