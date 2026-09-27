@@ -30,7 +30,6 @@ const evidence=[
  ['MEETING.PREPAYMENTS','packages/prepayments/src/index.ts',['ledger-once','ledgerMutationOnAllocation:false','PREPAYMENT_ALLOCATED'],'apps/web/src/meeting-finance-governance-ui.js',['Prépaiements / avances','Avance comptabilisée une seule fois','allocation sans mutation Ledger']],
  ['MEETING.REOPEN_AUTH','packages/meeting-authorization/src/index.ts',['independentAccountsRequired:true','authorizationState','APPROVED'],'apps/web/src/meeting-finance-governance-ui.js',['Approuver avec mon compte','lateAuthorizationId','quorum multi-responsables']],
  ['FINANCE.TRUST_SCORE','packages/trust/src/index.ts',['CommitmentReliabilityEngine','WEALTH_NOT_USED','advisoryOnly:true'],'apps/web/src/trust-center.js',['Score indicatif','Advisory only','ne décide jamais automatiquement']],
- ['TRUST.GRAPH','packages/trust/src/index.ts',['CommitmentTrustGraphService','automaticCreditDecision:false','wealthUsed:false'],'apps/web/src/trust-center.js',['Trust Graph','Décision automatique','richesse utilisée']]
 ];
 test('maturity registry promotes only capabilities with owner engine and user journey evidence',()=>{
  for(const [id,owner,ownerTokens,ui,uiTokens] of evidence){
