@@ -9,7 +9,7 @@ export function mountDataQualityUI({app,navigate,notify=()=>{},showError=()=>{}}
   const actions=node('div',undefined,'actions'),scan=node('button','Scanner les anomalies','primary'),readiness=node('button','Calculer la préparation','secondary'),openLab=node('button','Ouvrir les workflows qualité','link-btn');for(const b of [scan,readiness,openLab])b.type='button';actions.append(scan,readiness,openLab);panel.append(actions);
   const metrics=node('div',undefined,'metrics small'),list=node('div',undefined,'stack');panel.append(metrics,list);hardening.closest('section.panel')?.insertAdjacentElement('beforebegin',panel);
 
-  const openKind=kind=>{navigate?.('services',{anchor:'completionPanel',force:true});setTimeout(()=>{const select=document.querySelector('#completionKind');if(select){select.value=kind;select.dispatchEvent(new Event('change',{bubbles:true}));select.scrollIntoView({behavior:'smooth',block:'center'});}},80);};
+  const openKind=kind=>{navigate?.('services',{anchor:'completionLab',force:true});setTimeout(()=>{const select=document.querySelector('#completionKind');if(select){select.value=kind;select.dispatchEvent(new Event('change',{bubbles:true}));select.scrollIntoView({behavior:'smooth',block:'center'});}},80);};
   openLab.onclick=()=>openKind('ANOMALY');
 
   const refresh=async()=>{
