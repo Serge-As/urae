@@ -942,7 +942,7 @@ export class ConnectedApplication {
   calendarIcsUrl():string{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.baseUrl+'/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/calendar.ics';}
 
   async listWorkspaceRecords(moduleId?:string,groupId?:string):Promise<WorkspaceRecord[]>{const p=new URLSearchParams();if(moduleId)p.set('moduleId',moduleId);if(groupId)p.set('groupId',groupId);return this.request(`/api/v1/workspaces?${p}`);}
-  async starterKit(groupId=this.activeGroupId):Promise<any|undefined>{if(!groupId)return undefined;try{return await this.request('/api/v1/groups/'+encodeURIComponent(groupId)+'/starter-kit');}catch(e){if(e instanceof Error&&/404|NOT_FOUND/.test(e.message))return undefined;throw e;}}
+  async starterKit(groupId=this.activeGroupId):Promise<any|undefined>{if(!groupId)return undefined;return this.request('/api/v1/groups/'+encodeURIComponent(groupId)+'/starter-kit');}
   async saveStarterKit(groupId:string,input:any):Promise<any>{if(!groupId)throw Error('GROUP_REQUIRED');return this.request('/api/v1/groups/'+encodeURIComponent(groupId)+'/starter-kit',{method:'PUT',body:JSON.stringify(input)});}
   async createWorkspaceRecord(input:{moduleId:string;title:string;summary?:string;status?:WorkspaceStatus;tags?:string[];data?:Record<string,string|number|boolean|null>;groupId?:string}):Promise<WorkspaceRecord>{return this.request('/api/v1/workspaces',{method:'POST',body:JSON.stringify({...input,groupId:input.groupId??this.activeGroupId})});}
   async updateWorkspaceRecord(id:string,input:Partial<Pick<WorkspaceRecord,'title'|'summary'|'status'|'tags'|'data'>>):Promise<WorkspaceRecord>{return this.request(`/api/v1/workspaces/${encodeURIComponent(id)}`,{method:'PUT',body:JSON.stringify(input)});}
