@@ -823,3 +823,46 @@ Limites de vérité :
 - smoke Cloudflare et BIR+ 1.5.2.7 non encore exécutés ;
 - recette réelle Chrome/Opera/mobile/offline/deux gestionnaires non encore FIELD_ACCEPTED.
 Ces états ne doivent être promus qu'après preuves correspondantes.
+
+
+## PRODUCTION 1.5.2.7 — Live Completion livrée (2026-09-27)
+
+Production vérifiée :
+- version : `1.5.2.7-live-completion` ;
+- source déployée : `c0dcbfa4391b46773d1e2c8d6b9733cc5d8b367c` ;
+- branche de livraison : `fix/1.5.2.6-field-persistence-pc-mobile-20260925` ;
+- Worker Version ID : `0c06d6f3-382c-4433-91b4-b071c0573ccd` ;
+- build ID : `eco-system-1.5.2.7-20260927` ;
+- PWA cache : `eco-system-v1527-live-completion-20260927` ;
+- catalogue production : **164 capacités** ;
+- qualification branche : run **#19 / 36354372028 SUCCESS** ;
+- E2E financier navigateur : run **#79 / 36354371970 SUCCESS** ;
+- deploy + CI + browser + backup + smoke + restore : run **#2 / 36354371977 SUCCESS** ;
+- D1 : `eco-system-db` réutilisée, **No migrations to apply** ;
+- R2 : `eco-system-backups` utilisé (`artifactStorageMode=R2`) ;
+- snapshot pré : artifact **10943029509** ;
+- snapshot post : artifact **10942949813** ;
+- restauration du snapshot post + `PRAGMA integrity_check` : **PASS** ;
+- smoke : version, SHA, buildId, cache PWA et catalogue 164 exacts ;
+- `realMoneyEnabled=false`.
+
+Correction E2E importante avant livraison :
+- le premier run de livraison s'est arrêté avant production parce que l'ancien test PWA cherchait encore le cache 1.5.2.6 ;
+- le test a été rendu release-aware au commit `d7930d16dabeeb9c278872768ed274f968d49d60` ;
+- qualification #18 et E2E #78 ont ensuite réussi avant le nouveau déclenchement ;
+- aucune régression financière n'a été masquée.
+
+Sémantique métier à préserver :
+- **Collation, Ration et Aide locale** : rubriques principales de même famille métier, jamais « Autres » ;
+- **Main levée** : domaine/rubrique Assistance/Solidarity, cash ou nature selon la pratique, jamais « Autres » ;
+- Wallet interne dérivé du Ledger ≠ Mobile Money ;
+- Share WhatsApp utilisateur ≠ provider WhatsApp automatisé ;
+- Time Machine reste non destructif ;
+- Trust Graph reste explicable/advisory et non décisionnel.
+
+Maturité :
+- **154 FOUNDATION_ACTIVE** ;
+- **5 STRUCTURAL_V1** : `GEO.DIRECTORY`, `INTEGRATION.SMS`, `INTEGRATION.WHATSAPP`, `INTEGRATION.TELEGRAM`, `INTEGRATION.EMAIL` ;
+- **5 PLANNED_DOMAIN** : `COMMUNITY.VIDEO`, `MARKETPLACE.REWARDS`, `INTEGRATION.MOBILE_MONEY`, `SECURITY.MFA`, `FEDERATION.GROUP_NETWORK`.
+
+La production est **TECHNIQUEMENT QUALIFIÉE**. Le statut FIELD_ACCEPTED reste réservé à la recette réelle du fondateur sur Chrome/Opera/mobile/offline/deux gestionnaires ; le smoke distant ne remplace pas cette observation.
