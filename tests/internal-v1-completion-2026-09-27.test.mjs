@@ -54,7 +54,7 @@ test('budget envelopes stay structural until a dedicated non-duplicative allocat
   const capability=registry.PRODUCT_MODULES.find(x=>x.id==='FINANCE.ENVELOPES');
   assert.equal(capability?.status,'STRUCTURAL_V1');
   const {repo,k,g,ledger}=await seed();ctx(k,'founder',g.id);
-  const before=(await repo.listLedgerEntries('t6',g.id)).length,new TreasuryService(repo,k,ledger);
+  const before=(await repo.listLedgerEntries('t6',g.id)).length;new TreasuryService(repo,k,ledger);
   assert.equal((await repo.listLedgerEntries('t6',g.id)).length,before,'no envelope pseudo-engine may mutate the canonical ledger while the capability is structural');
 });
 
