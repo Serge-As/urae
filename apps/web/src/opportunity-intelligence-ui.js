@@ -5,10 +5,10 @@ const state=x=>String(x?.data?.state??x?.status??'');
 export function mountOpportunityIntelligenceUI({app,notify=()=>{},showError=()=>{},isManager=()=>false}={}){
   const marketHub=document.getElementById('marketHub');if(!marketHub||document.getElementById('opportunityIntelligence'))return{refresh:async()=>{}};
   const root=el('details',undefined,'panel');root.id='opportunityIntelligence';
-  root.append(el('summary','Opportunity Graph · Value Discovery · Market Intelligence'));
+  root.append(el('summary','Matching besoins ↔ offres · Market Intelligence'));
   root.append(el('p','Projection explicable des besoins du groupe vers les offres compatibles. Les prix, délais et preuves influencent le classement ; le sponsoring ne modifie jamais le score. Le profil financier reste agrégé au niveau du groupe et n’expose aucun membre.','truth-notice'));
   const metrics=el('div',undefined,'metrics small'),graph=el('div',undefined,'stack'),market=el('div',undefined,'stack');
-  const grid=el('div',undefined,'two-col'),left=el('section'),right=el('section');left.append(el('h3','Graphe besoins → offres'),graph);right.append(el('h3','Intelligence marché agrégée'),market);grid.append(left,right);root.append(metrics,grid);
+  const grid=el('div',undefined,'two-col'),left=el('section'),right=el('section');left.append(el('h3','Correspondance besoins → offres'),graph);right.append(el('h3','Intelligence marché agrégée'),market);grid.append(left,right);root.append(metrics,grid);
   marketHub.closest('section')?.insertAdjacentElement('afterend',root);
 
   const addMetric=(label,value,note='')=>{const m=el('article',undefined,'metric');m.append(el('span',label),el('strong',value));if(note)m.append(el('small',note));metrics.append(m);};
