@@ -73,9 +73,38 @@ export class CommitmentTrustGraphService {
     return this.engine.profile(subject.userId,band,items);
   }
   async graph(groupId:Id,membershipId:Id){
+    const {group,subject}=await this.subject(groupId,membershipId,false),c=this.ctx();
     const rows=await this.evidence(groupId,membershipId),bands=[...new Set(rows.map(x=>String(x.data.commitmentBand??'')).filter(Boolean))];
     const profiles=[];for(const band of bands)profiles.push(await this.profile(groupId,membershipId,band));
-    return{membershipId,evidence:rows,profiles,policy:{advisoryOnly:true,automaticAdmission:false,automaticCreditDecision:false,automaticExclusion:false,wealthUsed:false}};
+    const groupRows=await this.repo.listWorkspaceRecords(c.tenantId,undefined,groupId),tenantRows=await this.repo.listWorkspaceRecords(c.tenantId);
+    const nodes:Array<{id:string;kind:string;label:string;state?:string;sourceRef?:string;meta?:Record<string,string|number|boolean|null>}>=[],edges:Array<{from:string;to:string;relation:string;reasonCodes:string[]}>=[],seen=new Set<string>();
+    const addNode=(node:{id:string;kind:string;label:string;state?:string;sourceRef?:string;meta?:Record<string,string|number|boolean|null>})=>{if(!seen.has(node.id)){seen.add(node.id);nodes.push(node);}};
+    const addEdge=(from:string,to:string,relation:string,reasonCodes:string[]=[])=>edges.push({from,to,relation,reasonCodes});
+    const person='person:'+subject.userId,membership='membership:'+subject.id,groupNode='group:'+group.id;
+    addNode({id:person,kind:'PERSON',label:(await this.repo.getUser(subject.userId))?.displayName??subject.userId,sourceRef:subject.userId,meta:{wealthUsed:false,advisoryOnly:true}});
+    addNode({id:membership,kind:'MEMBERSHIP',label:'Adhésion · '+group.name,state:subject.status,sourceRef:subject.id,meta:{joinedAt:subject.joinedAt,tenureDays:Math.max(0,Math.floor((Date.now()-Date.parse(subject.joinedAt))/86400000))}});
+    addNode({id:groupNode,kind:'GROUP',label:group.name,state:group.status,sourceRef:group.id});addEdge(person,membership,'HAS_MEMBERSHIP',['ACTIVE_GROUP_SCOPE']);addEdge(membership,groupNode,'MEMBER_OF',['MEMBERSHIP_RECORD']);
+    for(const role of subject.roles){const id='role:'+role;addNode({id,kind:'ROLE',label:role});addEdge(membership,id,'HOLDS_ROLE',['MEMBERSHIP_ROLE']);}
+    for(const r of groupRows.filter(x=>x.moduleId==='MEETING.ATTENDANCE'&&x.data.membershipId===subject.id)){
+      const id='attendance:'+r.id,state=String(r.data.attendance??'');addNode({id,kind:'PARTICIPATION',label:'Présence · '+state,state,sourceRef:r.id,meta:{meetingId:String(r.data.meetingId??'')}});addEdge(membership,id,'PARTICIPATED_AS',['RECORDED_ATTENDANCE']);
+    }
+    for(const r of tenantRows.filter(x=>x.data.businessKind==='MANDATE'&&x.data.groupId===groupId&&x.createdBy===subject.userId)){
+      const id='mandate:'+r.id,state=String(r.data.mandateState??r.status);addNode({id,kind:'MANDATE',label:r.title,state,sourceRef:r.id,meta:{systemPermissionElevation:Boolean(r.data.systemPermissionElevation)}});addEdge(person,id,'HAS_MANDATE',['EXPLICIT_BUSINESS_MANDATE']);
+    }
+    for(const r of groupRows.filter(x=>x.moduleId==='MARKETPLACE.CORE'&&x.data.marketKind==='MARKET_ORDER'&&x.createdBy===subject.userId)){
+      const id='order:'+r.id,state=String(r.data.state??r.status);addNode({id,kind:'ORDER',label:r.title,state,sourceRef:r.id,meta:{disputed:Boolean(r.data.disputed),quantity:Number(r.data.quantity??0)}});addEdge(person,id,'PLACED_ORDER',['MARKET_ORDER_AUTHOR']);
+    }
+    for(const r of tenantRows.filter(x=>x.moduleId==='LEARNING.MANAGER_ACADEMY'&&x.createdBy===subject.userId&&['ENROLLMENT','CERTIFICATE'].includes(String(x.data.kind??'')))){
+      const kind=String(r.data.kind)==='CERTIFICATE'?'CERTIFICATION':'TRAINING',id=kind.toLowerCase()+':'+r.id;addNode({id,kind,label:r.title,state:String(r.data.enrollmentState??r.status),sourceRef:r.id,meta:{grantsFinancialRole:Boolean(r.data.grantsFinancialRole),grantsPermission:Boolean(r.data.grantsPermission)}});addEdge(person,id,kind==='CERTIFICATION'?'EARNED_CERTIFICATION':'ENROLLED_IN',['ACADEMY_RECORD']);
+    }
+    for(const r of groupRows.filter(x=>x.moduleId==='SAFETY.ANTISCAM'&&[subject.userId,subject.id].includes(String(x.data.subjectRef??'')))){
+      const id='incident:'+r.id;addNode({id,kind:'INCIDENT',label:r.title,state:String(r.data.caseState??r.status),sourceRef:r.id,meta:{findingStatus:String(r.data.findingStatus??'UNVERIFIED_SUSPICION'),financialScoreEffect:Boolean(r.data.financialScoreEffect)}});addEdge(person,id,'SUBJECT_OF',['HUMAN_REVIEW_REQUIRED','NO_AUTOMATIC_SCORE_EFFECT']);
+    }
+    for(const r of rows){
+      const id='evidence:'+r.id;addNode({id,kind:'EVIDENCE',label:r.title,state:String(r.data.evidenceKind??''),sourceRef:String(r.data.sourceId??r.id),meta:{commitmentBand:String(r.data.commitmentBand??''),weight:Number(r.data.weight??1),wealthUsed:false}});addEdge(person,id,'SUPPORTED_BY',['BEHAVIOURAL_EVIDENCE']);
+      const source=String(r.data.sourceId??'');if(/^(proof_|cni_hint_|phone_hint_|name_hint_)/.test(source)){const pid='identity-proof-ref:'+source;addNode({id:pid,kind:'IDENTITY_PROOF_REFERENCE',label:'Preuve d’identité référencée',sourceRef:source,meta:{rawIdentifierExposed:false}});addEdge(person,pid,'IDENTITY_SUPPORTED_BY',['REFERENCE_ONLY','NO_RAW_IDENTIFIER']);}
+    }
+    return{membershipId,evidence:rows,profiles,nodes,edges,coverage:{roles:subject.roles.length,participation:groupRows.filter(x=>x.moduleId==='MEETING.ATTENDANCE'&&x.data.membershipId===subject.id).length,mandates:nodes.filter(x=>x.kind==='MANDATE').length,orders:nodes.filter(x=>x.kind==='ORDER').length,training:nodes.filter(x=>x.kind==='TRAINING').length,certifications:nodes.filter(x=>x.kind==='CERTIFICATION').length,incidents:nodes.filter(x=>x.kind==='INCIDENT').length,evidence:rows.length},policy:{advisoryOnly:true,automaticAdmission:false,automaticCreditDecision:false,automaticExclusion:false,wealthUsed:false,opaqueGlobalScore:false,rawIdentityExposed:false,secondSourceOfTruth:false}};
   }
 }
 
