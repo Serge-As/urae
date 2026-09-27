@@ -10,7 +10,16 @@ export function mountIdentityLiveUI({app,notify=()=>{},showError=console.error})
 
   const clearTimers=()=>{if(reconnectTimer){clearTimeout(reconnectTimer);reconnectTimer=null;}if(heartbeatTimer){clearInterval(heartbeatTimer);heartbeatTimer=null;}};
   const closeSocket=(reason='group-change')=>{clearTimers();try{socket?.close(1000,reason);}catch{}socket=null;};
-  const catchUp=async()=>{if(!app.activeGroup())return;const data=await app.liveEvents(lastSeq);for(const event of data.events??[]){if(Number(event.seq??0)>lastSeq)renderEvent(event);}};
+  const dispatchDurableEvent=event=>{try{window.dispatchEvent(new CustomEvent('eco:live-event',{detail:event}));}catch{}};
+  const catchUp=async()=>{
+    if(!app.activeGroup())return;
+    for(let page=0;page<50;page++){
+      const before=lastSeq,data=await app.liveEvents(lastSeq,500),events=data.events??[];
+      for(const event of events){if(Number(event.seq??0)>lastSeq){renderEvent(event);dispatchDurableEvent(event);}}
+      const latest=Number(data.latest??lastSeq);
+      if(!events.length||lastSeq>=latest||lastSeq===before)break;
+    }
+  };
   const scheduleReconnect=()=>{
     if(!wantConnection||!app.activeGroup()||navigator.onLine===false||reconnectTimer)return;
     const delay=Math.min(12000,750*(2**Math.min(reconnectAttempt,4)));reconnectAttempt+=1;
@@ -49,7 +58,7 @@ export function mountIdentityLiveUI({app,notify=()=>{},showError=console.error})
           if(msg.type==='PONG'){lastPongAt=Date.now();return;}
           if(msg.type==='GROUP_LIVE_SIGNAL'&&msg.event){window.dispatchEvent(new CustomEvent('eco:live-signal',{detail:msg.event}));return;}
           if(msg.type==='GROUP_LIVE_EVENT'&&msg.event){
-            eventQueue=eventQueue.then(async()=>{const seq=Number(msg.event.seq??0);if(seq>lastSeq+1)await catchUp();if(seq>lastSeq){renderEvent(msg.event);try{window.dispatchEvent(new CustomEvent('eco:live-event',{detail:msg.event}));}catch{}}}).catch(()=>{});
+            eventQueue=eventQueue.then(async()=>{const seq=Number(msg.event.seq??0);if(seq>lastSeq+1)await catchUp();if(seq>lastSeq){renderEvent(msg.event);dispatchDurableEvent(msg.event);}}).catch(()=>{});
           }
         }catch{}
       };
