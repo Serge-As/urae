@@ -41,6 +41,8 @@ const evidence=[
  ['FINANCE.WALLET','packages/wallet/src/index.ts',['WalletService','derivedFromCanonicalLedger:true','providerTopupEnabled:false','LOAN_DEBT'],'apps/web/src/wallet-ui.js',['Wallet Eco-System','Solde général','Mobile Money/cartes restent désactivées']],
  ['FINANCE.ENVELOPES','packages/member-envelope/src/index.ts',['MemberEnvelopeService',"scope:'MEMBER_ONLY'","otherMemberFinancialData:false","requiresRecipientBinding:true"],'apps/web/src/member-envelope-ui.js',['Mon enveloppe de séance','aucune donnée financière des autres membres','MEMBER_ENVELOPE_READY']],
  ['OPPORTUNITY.GRAPH','packages/opportunity-graph/src/index.ts',['OpportunityGraphService','persisted:false','secondSourceOfTruth:false','privacyFiltered:true'],'apps/web/src/opportunity-graph-ui.js',['Eco Opportunity Graph','ne devient jamais une seconde base de vérité','Relations visibles']],
+ ['TRUST.GRAPH','packages/trust/src/index.ts',['CommitmentTrustGraphService','opaqueGlobalScore:false','secondSourceOfTruth:false','IDENTITY_PROOF_REFERENCE','PARTICIPATED_AS'],'apps/web/src/trust-center.js',['Relations explicables','ne crée pas une seconde vérité','Décision automatique']],
+ ['PAPER.PRINT','apps/web/src/print-center.js',['buildSessionPrintSheet','buildMemberPrintSheet','buildAttendancePrintSheet','buildRoleRegister','buildMemberCards'],'apps/web/src/print-center.js',['Feuille de séance','Émargement / présences','Fiche individuelle','Cartes membres']],
 ];
 test('maturity registry promotes only capabilities with owner engine and user journey evidence',()=>{
  for(const [id,owner,ownerTokens,ui,uiTokens] of evidence){
