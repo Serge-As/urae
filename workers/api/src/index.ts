@@ -45,6 +45,7 @@ import { GrowthReferralService, InMemoryReferralBudgetStore, D1ReferralBudgetSto
 import { KnowledgeAcademyService } from '../../../packages/knowledge-academy/src/index.js';
 import { ValueNetworkService } from '../../../packages/value-network/src/index.js';
 import { GroupReconstitutionService } from '../../../packages/group-reconstitution/src/index.js';
+import { RubricExceptionService } from '../../../packages/rubric-exceptions/src/index.js';
 import { MeetingReopenAuthorizationService } from '../../../packages/meeting-authorization/src/index.js';
 import { PrepaymentService } from '../../../packages/prepayments/src/index.js';
 import { StarterKitService } from '../../../packages/starter-kit/src/index.js';
@@ -155,6 +156,7 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
   const notifications=new NotificationService(repo,kernel);
   const growthReferral=new GrowthReferralService(repo,kernel,options.referralBudgets??defaultReferralBudgets);
   const reconstitution=new GroupReconstitutionService(repo,kernel);
+  const rubricExceptions=new RubricExceptionService(repo,kernel);
   const safety=new SafetyCaseService(repo,kernel);
   const trustGraph=new CommitmentTrustGraphService(repo,kernel);
   const reopenAuth=new MeetingReopenAuthorizationService(repo,kernel);
@@ -1559,9 +1561,20 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
       return json({enabled:valid,affinities:valid?await conciergeLearning.commercialAffinities(preferenceContext[1]!):[]},200,cors);
     }
 
+    const rubricExceptionBase=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/rubric-exceptions$/);
+    if(rubricExceptionBase&&request.method==='GET')return json({items:await rubricExceptions.list(rubricExceptionBase[1]!)},200,cors);
+    if(rubricExceptionBase&&request.method==='POST'){const body=await readJson<Record<string,unknown>>(request);return json(await rubricExceptions.create(rubricExceptionBase[1]!,{rubricId:String(body.rubricId??''),title:String(body.title??''),scope:String(body.scope??'GROUP') as any,targetRef:body.targetRef?String(body.targetRef):undefined,reason:String(body.reason??''),effectSummary:String(body.effectSummary??''),evidenceRef:String(body.evidenceRef??''),validFrom:body.validFrom?String(body.validFrom):undefined,validUntil:body.validUntil?String(body.validUntil):undefined}),201,cors);}
+    const rubricExceptionDecide=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/rubric-exceptions\/([^/]+)\/(approve|reject)$/);
+    if(rubricExceptionDecide&&request.method==='POST'){const body=await readJson<Record<string,unknown>>(request);return json(await rubricExceptions.decide(rubricExceptionDecide[1]!,rubricExceptionDecide[2]!,rubricExceptionDecide[3]==='approve'?'APPROVED':'REJECTED',String(body.note??'')),200,cors);}
+    const rubricExceptionClose=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/rubric-exceptions\/([^/]+)\/close$/);
+    if(rubricExceptionClose&&request.method==='POST'){const body=await readJson<Record<string,unknown>>(request);return json(await rubricExceptions.close(rubricExceptionClose[1]!,rubricExceptionClose[2]!,String(body.note??'')),200,cors);}
+    const rubricExceptionApplicable=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/rubric-exceptions\/applicable$/);
+    if(rubricExceptionApplicable&&request.method==='GET')return json({items:await rubricExceptions.applicable(rubricExceptionApplicable[1]!,{rubricId:String(url.searchParams.get('rubricId')??''),membershipId:url.searchParams.get('membershipId')??undefined,meetingId:url.searchParams.get('meetingId')??undefined,at:url.searchParams.get('at')??undefined})},200,cors);
     const amountExplain=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/members\/([^/]+)\/amount-explanation$/);
     if(amountExplain&&request.method==='GET'){
-      return json(await explainability.amount(amountExplain[1]!,amountExplain[2]!,url.searchParams.get('rubricId')??undefined),200,cors);
+      const rubricId=url.searchParams.get('rubricId')??undefined,base=await explainability.amount(amountExplain[1]!,amountExplain[2]!,rubricId);
+      const applicableExceptions=rubricId?await rubricExceptions.applicable(amountExplain[1]!,{rubricId,membershipId:amountExplain[2]!,meetingId:url.searchParams.get('meetingId')??undefined,at:url.searchParams.get('at')??undefined}):[];
+      return json({...base,applicableExceptions},200,cors);
     }
     const documentSearch=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/documents\/search$/);
     if(documentSearch&&request.method==='GET'){
