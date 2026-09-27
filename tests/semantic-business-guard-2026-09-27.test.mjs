@@ -28,7 +28,6 @@ test('rubric family semantics keep Aide locale with Collation and Main levée ou
 
 test('semantic audit does not advertise partial or misowned capabilities as active',()=>{
   const structural=[
-    'CORE.HYBRID_GROUP',
     'GEO.DIRECTORY',
     
     'AI.FOUNDER','DASHBOARDS.ALL','MANAGER.PUBLIC_PROFILE','SAFETY.QUIET_WATCH','AI.LOCAL','LEARNING.TALENT','CREATOR.STUDIO'
@@ -47,10 +46,16 @@ test('custody remains custody and is not relabeled as multi-rubric wallet',()=>{
   assert.doesNotMatch(ui,/Portefeuille interne Eco-System/);
 });
 
-test('new group launch exposes canonical Association and rotating tontine families only',()=>{
+test('new group launch keeps two canonical families and refines rotating tontine with variants',()=>{
   const html=fs.readFileSync('apps/web/index.html','utf8');
   const family=html.match(/<select id="groupKind">([\s\S]*?)<\/select>/)?.[1]??'';
   assert.match(family,/value="association"/);
   assert.match(family,/value="rotating_tontine"/);
   assert.doesNotMatch(family,/value="hybrid"/);
+  const variants=html.match(/<select id="tontineVariant">([\s\S]*?)<\/select>/)?.[1]??'';
+  assert.match(variants,/value="MONEY"/);
+  assert.match(variants,/value="IN_KIND"/);
+  assert.match(variants,/value="HYBRID"/);
+  const hybrid=PRODUCT_MODULES.find(x=>x.id==='CORE.HYBRID_GROUP');
+  assert.equal(hybrid?.status,'FOUNDATION_ACTIVE');
 });
