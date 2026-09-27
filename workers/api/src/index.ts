@@ -47,6 +47,7 @@ import { ValueNetworkService } from '../../../packages/value-network/src/index.j
 import { GroupReconstitutionService } from '../../../packages/group-reconstitution/src/index.js';
 import { MeetingReopenAuthorizationService } from '../../../packages/meeting-authorization/src/index.js';
 import { PrepaymentService } from '../../../packages/prepayments/src/index.js';
+import { StarterKitService } from '../../../packages/starter-kit/src/index.js';
 import { SafetyCaseService, CommitmentTrustGraphService, assessReferralStructure, type SafetyCategory, type SafetyCaseState, type SafetyAction } from '../../../packages/trust/src/index.js';
 import { authenticatedApi } from './authenticated.js';
 export { GroupLiveHub } from './group-live-hub.js';
@@ -157,6 +158,7 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
   const trustGraph=new CommitmentTrustGraphService(repo,kernel);
   const reopenAuth=new MeetingReopenAuthorizationService(repo,kernel);
   const prepayments=new PrepaymentService(repo,kernel,ledger);
+  const starterKit=new StarterKitService(repo,kernel);
   if(options.premiumLive)kernel.features.set('premium_live_ledger',true);
   const isFounderTeamActor=async()=>Boolean(options.founderTeamActors?.has(ctx.actorId))||Boolean(options.founderControl&&await options.founderControl.isPlatformOwner(ctx.actorId));
   const requireGroup=async(groupId:string,manage=false)=>{
@@ -367,6 +369,9 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
     if(trashRoute&&request.method==='GET')return json(await listTrash(trashRoute[1]!),200,cors);
     if(trashRoute&&request.method==='POST'){const body=await readJson<Record<string,unknown>>(request);return json(await trashEntity(trashRoute[1]!,String(body.kind??''),String(body.entityId??'')),201,cors);}
     if(trashRestore&&request.method==='POST')return json(await restoreTrash(trashRestore[1]!,decodeURIComponent(trashRestore[2]!)),200,cors);
+    const starterKitRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/starter-kit$/);
+    if(starterKitRoute&&request.method==='GET'){const record=await starterKit.current(starterKitRoute[1]!);return record?json(record,200,cors):json({error:'NOT_FOUND'},404,cors);}
+    if(starterKitRoute&&request.method==='PUT'){const body=await readJson<any>(request);return json(await starterKit.save(starterKitRoute[1]!,body),200,cors);}
     const prepaymentRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/prepayments$/);
     if(prepaymentRoute&&request.method==='GET')return json({items:await prepayments.list(prepaymentRoute[1]!)},200,cors);
     if(prepaymentRoute&&request.method==='POST'){const body=await readJson<Record<string,unknown>>(request),record=await prepayments.create(prepaymentRoute[1]!,{membershipId:String(body.membershipId??''),rubricId:body.rubricId?String(body.rubricId):undefined,amount:finite(body.amount),intendedMeetingId:body.intendedMeetingId?String(body.intendedMeetingId):undefined,note:body.note?String(body.note):undefined,idempotencyKey:String(body.idempotencyKey??request.headers.get('x-idempotency-key')??makeId('prepayment'))});const receipt=(await repo.listContributionReceipts(ctx.tenantId,prepaymentRoute[1]!)).find(x=>x.id===String(record.data.receiptId??'')),entry=receipt?await repo.getLedgerEntry(ctx.tenantId,prepaymentRoute[1]!,receipt.ledgerEntryId):undefined;if(receipt&&entry)await dispatchContributionProjection(prepaymentRoute[1]!,receipt,entry);return json(record,201,cors);}
