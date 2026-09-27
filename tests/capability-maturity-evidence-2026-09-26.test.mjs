@@ -35,7 +35,12 @@ const evidence=[
  ['COMMUNITY.MICRO_ADS','packages/ad-manager/src/index.ts',['create(groupId','frequencyCapPer7Days','selectAdDelivery'],'apps/web/src/ad-manager-ui.js',['Brouillon AdManager créé en sandbox','frequencyCapPer7Days','placements']],
  ['RUBRIC.LOCAL_AID','packages/misc-rubrics/src/index.ts',["'LOCAL_AID'",'postBatch','recordCashContribution'],'apps/web/src/misc-rubrics-ui.js',["kind:value('miscRubricCustomKind')",'Aide locale']],
  ['RUBRIC.HAND_RAISE','packages/misc-rubrics/src/index.ts',["'HAND_RAISE'",'postBatch','recordCashContribution'],'apps/web/src/misc-rubrics-ui.js',["kind:value('miscRubricCustomKind')",'Main levée']],
- ['PAPER.PRINT','apps/web/src/print-center.js',['buildPrintSnapshot','financial:ledger?','aucune écriture financière'],'apps/web/src/main.js',['PAPER.PRINT','paperPrintCenter','printCenterUI.refresh']]
+ ['PAPER.PRINT','apps/web/src/print-center.js',['buildPrintSnapshot','financial:ledger?','aucune écriture financière'],'apps/web/src/main.js',['PAPER.PRINT','paperPrintCenter','printCenterUI.refresh']],
+ ['GROUP.MODEL_REGISTRY','apps/web/src/operational-registry-ui.js',['GROUP.MODEL_REGISTRY','modelState','sourceGroupId'],'apps/web/src/main.js',['GROUP.MODEL_REGISTRY','operationalRegistryUI.open']],
+ ['GROUP.CASE_LAW','apps/web/src/operational-registry-ui.js',['GROUP.CASE_LAW','autoRuleActivation:false','caseState'], 'apps/web/src/main.js',['GROUP.CASE_LAW','operationalRegistryUI.open']],
+ ['RUBRIC.EXCEPTIONS','apps/web/src/operational-registry-ui.js',['RUBRIC.EXCEPTIONS','exceptionState','createsLedgerEntry:false'],'apps/web/src/main.js',['RUBRIC.EXCEPTIONS','operationalRegistryUI.open']],
+ ['DATA.TIME_MACHINE','apps/web/src/operational-registry-ui.js',['DATA.TIME_MACHINE','read-only-snapshot','rollbackSupported:false'],'apps/web/src/main.js',['DATA.TIME_MACHINE','operationalRegistryUI.open']],
+ ['SUCCESSION.NEXT_OF_KIN','apps/web/src/operational-registry-ui.js',['SUCCESSION.NEXT_OF_KIN','grantsMembership:false','grantsFinancialRights:false'],'apps/web/src/main.js',['SUCCESSION.NEXT_OF_KIN','operationalRegistryUI.open']]
 ];
 test('maturity registry promotes only capabilities with owner engine and user journey evidence',()=>{
  for(const [id,owner,ownerTokens,ui,uiTokens] of evidence){
