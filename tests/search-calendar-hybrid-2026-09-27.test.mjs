@@ -49,16 +49,20 @@ test('unified calendar combines meetings, explicit workspace dates and actor obl
   assert.ok(!model.all.some(x=>x.entityId==='w2'));
 });
 
-test('launch keeps canonical group families while full authorized search and calendar stay active',()=>{
+test('launch keeps canonical families and models hybrid as a rotating-tontine variant',()=>{
   const html=fs.readFileSync('apps/web/index.html','utf8');
   const main=fs.readFileSync('apps/web/src/main.js','utf8');
+  const launch=fs.readFileSync('apps/web/src/launch-studio.js','utf8');
   const registry=fs.readFileSync('packages/module-registry/src/index.ts','utf8');
   assert.doesNotMatch(html,/value="hybrid">Association \+ tontine/);
+  assert.match(html,/id="tontineVariant"/);
+  assert.match(html,/value="HYBRID">Hybride argent \+ nature/);
   assert.match(main,/family==='rotating_tontine'/);
-  assert.doesNotMatch(main,/\['rotating_tontine','hybrid'\]/);
+  assert.match(main,/variant==='HYBRID'\?'MIXED'/);
+  assert.match(launch,/tontineVariant:value\('groupKind'\)==='rotating_tontine'/);
   assert.match(main,/renderUniversalSearchFull/);
   assert.match(main,/renderUnifiedCalendar/);
-  assert.match(registry,/CORE\.HYBRID_GROUP[^\n]*STRUCTURAL_V1[^\n]*UNIVERSAL/);
+  assert.match(registry,/CORE\.HYBRID_GROUP[^\n]*FOUNDATION_ACTIVE[^\n]*SPECIALIZED/);
   assert.match(registry,/SEARCH\.UNIVERSAL[^\n]*FOUNDATION_ACTIVE[^\n]*SPECIALIZED/);
   assert.match(registry,/CALENDAR\.UNIFIED[^\n]*FOUNDATION_ACTIVE[^\n]*SPECIALIZED/);
 });
