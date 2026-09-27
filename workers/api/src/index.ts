@@ -47,6 +47,7 @@ import { KnowledgeAcademyService } from '../../../packages/knowledge-academy/src
 import { ValueNetworkService } from '../../../packages/value-network/src/index.js';
 import { GroupReconstitutionService } from '../../../packages/group-reconstitution/src/index.js';
 import { CreatorTalentService } from '../../../packages/creator-talent/src/index.js';
+import { QuietWatchService } from '../../../packages/quiet-watch/src/index.js';
 import { RubricExceptionService } from '../../../packages/rubric-exceptions/src/index.js';
 import { TimeMachineService } from '../../../packages/time-machine/src/index.js';
 import { NextOfKinService } from '../../../packages/succession/src/index.js';
@@ -144,10 +145,11 @@ const createRequestScope = (request:Request,repo:PlatformRepository,artifacts?:A
   const knowledgeAcademy=new KnowledgeAcademyService(repo,kernel);
   const valueNetwork=new ValueNetworkService(repo,kernel);
   const creatorTalent=new CreatorTalentService(repo,kernel,businessStudio,community);
+  const quietWatch=new QuietWatchService(repo,kernel);
   const tenantId=request.headers.get('x-tenant-id')??'tenant_demo'; const actorId=request.headers.get('x-actor-id')??'user_founder';
   const groupRoles=(request.headers.get('x-group-roles')??'founder,manager').split(',').map(x=>x.trim()).filter(Boolean);
   kernel.context.set({actorId,tenantId,activeGroupId:request.headers.get('x-active-group-id')??undefined,groupRoles,mandateIds:[],deviceId:request.headers.get('x-device-id')??'device_web_demo',sessionId:request.headers.get('x-session-id')??'session_demo',locale:request.headers.get('accept-language')?.toLowerCase().startsWith('en')?'en':'fr',timezone:request.headers.get('x-timezone')??'Africa/Douala',connectivity:'online',requestId:request.headers.get('x-request-id')??makeId('req')});
-  return {kernel,foundation,ledger,meetings,discovery,membershipGateway,rubrics,completion,explainability,documents,receivables,treasury,riskFinance,market,community,imports,artifactStore,memberControl,memberEnvelopes,groupIdentity,conciergeLearning,miscRubrics,adManager,economicIntelligence,externalPrograms,operationalCockpit,businessStudio,knowledgeAcademy,valueNetwork,creatorTalent};
+  return {kernel,foundation,ledger,meetings,discovery,membershipGateway,rubrics,completion,explainability,documents,receivables,treasury,riskFinance,market,community,imports,artifactStore,memberControl,memberEnvelopes,groupIdentity,conciergeLearning,miscRubrics,adManager,economicIntelligence,externalPrograms,operationalCockpit,businessStudio,knowledgeAcademy,valueNetwork,creatorTalent,quietWatch};
 };
 
 const inboxFor = async (repo:PlatformRepository,tenantId:string,actorId:string) => {
@@ -162,7 +164,7 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
     const allowed=Boolean((cors as Record<string,string>)['access-control-allow-origin']);
     return new Response(null,{status:allowed?204:403,headers:{...baseSecurityHeaders,...cors,'access-control-allow-methods':'GET,POST,PUT,OPTIONS','access-control-allow-headers':'content-type,x-tenant-id,x-actor-id,x-group-roles,x-active-group-id,x-device-id,x-session-id,x-request-id,x-timezone'}});
   }
-  const {kernel,foundation,ledger,meetings,discovery,membershipGateway,rubrics,completion,explainability,documents,receivables,treasury,riskFinance,market,community,imports,artifactStore,memberControl,memberEnvelopes,groupIdentity,conciergeLearning,miscRubrics,adManager,economicIntelligence,externalPrograms,operationalCockpit,businessStudio,knowledgeAcademy,valueNetwork,creatorTalent}=createRequestScope(request,repo,options.artifacts,options.dataUseDefaultMode??'BETA_OPEN',options.documentAI); const ctx=kernel.context.get();
+  const {kernel,foundation,ledger,meetings,discovery,membershipGateway,rubrics,completion,explainability,documents,receivables,treasury,riskFinance,market,community,imports,artifactStore,memberControl,memberEnvelopes,groupIdentity,conciergeLearning,miscRubrics,adManager,economicIntelligence,externalPrograms,operationalCockpit,businessStudio,knowledgeAcademy,valueNetwork,creatorTalent,quietWatch}=createRequestScope(request,repo,options.artifacts,options.dataUseDefaultMode??'BETA_OPEN',options.documentAI); const ctx=kernel.context.get();
   const governanceVotes=new GovernanceVoteService(repo,kernel,options.governanceSecret??'eco-system-nonproduction-governance-secret');
   const notifications=new NotificationService(repo,kernel);
   const growthReferral=new GrowthReferralService(repo,kernel,options.referralBudgets??defaultReferralBudgets);
@@ -587,6 +589,12 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
     if(referralVerify&&request.method==='POST'){const body=await readJson<Record<string,unknown>>(request);return json(await growthReferral.verifyConversion(referralVerify[1]!,referralVerify[2]!,{accepted:Boolean(body.accepted),reason:String(body.reason??''),reviewEvidenceRef:body.reviewEvidenceRef?String(body.reviewEvidenceRef):undefined}),200,cors);}
     const referralReward=url.pathname.match(/^\/api\/v1\/growth\/referral-campaigns\/([^/]+)\/rewards\/([^/]+)\/approve$/);
     if(referralReward&&request.method==='POST')return json(await growthReferral.approveReward(referralReward[1]!,referralReward[2]!),200,cors);
+
+    const quietWatchBase=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/quiet-watch$/);
+    if(quietWatchBase&&request.method==='GET')return json({items:await quietWatch.list(quietWatchBase[1]!)},200,cors);
+    if(quietWatchBase&&request.method==='POST')return json(await quietWatch.scan(quietWatchBase[1]!),200,cors);
+    const quietWatchItem=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/quiet-watch\/([^/]+)\/(acknowledge|assistance|approve-assistance|resolve)$/);
+    if(quietWatchItem&&request.method==='POST'){const body=await readJson<any>(request),groupId=quietWatchItem[1]!,id=quietWatchItem[2]!,action=quietWatchItem[3]!;if(action==='acknowledge')return json(await quietWatch.acknowledge(groupId,id,String(body.note??'')),200,cors);if(action==='assistance')return json(await quietWatch.proposeAssistance(groupId,id,body),200,cors);if(action==='approve-assistance')return json(await quietWatch.approveAssistance(groupId,id),200,cors);return json(await quietWatch.resolve(groupId,id,{note:String(body.note??''),evidenceRef:String(body.evidenceRef??'')}),200,cors);}
 
     const creatorDiscovery=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/creator-content$/);
     if(creatorDiscovery&&request.method==='GET')return json({items:await creatorTalent.discoverContent(creatorDiscovery[1]!,url.searchParams.get('hubId')??undefined)},200,cors);
