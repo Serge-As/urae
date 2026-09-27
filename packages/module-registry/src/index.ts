@@ -139,7 +139,7 @@ export const PRODUCT_MODULES: ProductModule[] = [
   {id:'GOVERNANCE.DOCUMENT_STUDIO',labelFr:'Governance Document Studio',labelEn:'Governance Document Studio',status:'FOUNDATION_ACTIVE',lot:'H',canonicalDependencies:['KERNEL.POLICY'],workspace:'SPECIALIZED'},
   {id:'PAPER.BRIDGE',labelFr:'Paper Bridge',labelEn:'Paper Bridge',status:'FOUNDATION_ACTIVE',lot:'H',canonicalDependencies:['KERNEL.POLICY'],workspace:'SPECIALIZED'},
   {id:'PAPER.IMPORT',labelFr:'Import papier/Excel',labelEn:'Paper/Excel import',status:'FOUNDATION_ACTIVE',lot:'H',canonicalDependencies:['KERNEL.POLICY'],workspace:'UNIVERSAL'},
-  {id:'PAPER.PRINT',labelFr:'Impression des fiches',labelEn:'Printable forms',status:'STRUCTURAL_V1',lot:'H',canonicalDependencies:['KERNEL.POLICY'],workspace:'UNIVERSAL'},
+  {id:'PAPER.PRINT',labelFr:'Impression des fiches',labelEn:'Printable forms',status:'FOUNDATION_ACTIVE',lot:'H',canonicalDependencies:['KERNEL.POLICY'],workspace:'SPECIALIZED'},
   {id:'REPORTING.EXPORTS',labelFr:'Exports PDF/Excel/Word/CSV/JSON',labelEn:'PDF/Excel/Word/CSV/JSON exports',status:'FOUNDATION_ACTIVE',lot:'I',canonicalDependencies:['KERNEL.POLICY'],workspace:'UNIVERSAL'},
   {id:'DASHBOARDS.ALL',labelFr:'Dashboards par profil',labelEn:'Role-based dashboards',status:'STRUCTURAL_V1',lot:'I',canonicalDependencies:['KERNEL.POLICY'],workspace:'UNIVERSAL'},
   {id:'SEARCH.UNIVERSAL',labelFr:'Recherche universelle',labelEn:'Universal search',status:'FOUNDATION_ACTIVE',lot:'I',canonicalDependencies:['KERNEL.POLICY'],workspace:'SPECIALIZED'},
