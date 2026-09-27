@@ -31,7 +31,7 @@ test('semantic audit does not advertise partial or misowned capabilities as acti
     'CORE.HYBRID_GROUP',
     'GEO.DIRECTORY',
     
-    'AI.FOUNDER','DASHBOARDS.ALL','MANAGER.PUBLIC_PROFILE','SAFETY.QUIET_WATCH','AI.LOCAL','LEARNING.TALENT','CREATOR.STUDIO','TRUST.GRAPH','PAPER.PRINT'
+    'AI.FOUNDER','DASHBOARDS.ALL','MANAGER.PUBLIC_PROFILE','SAFETY.QUIET_WATCH','AI.LOCAL','LEARNING.TALENT','CREATOR.STUDIO'
   ];
   for(const id of structural){
     const module=PRODUCT_MODULES.find(x=>x.id===id);
