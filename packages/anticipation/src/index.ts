@@ -29,7 +29,7 @@ export class AnticipationService{
     const historical=meetings.filter(m=>m.status==='closed'&&(m.scheduledAt||m.openedAt)).map(m=>({id:m.id,at:Date.parse(String(m.scheduledAt??m.openedAt))})).filter(x=>Number.isFinite(x.at)).sort((a,b)=>a.at-b.at);
     if(!future.length&&historical.length>=3){
       const gaps=[];for(let i=1;i<historical.length;i++)gaps.push(historical[i].at-historical[i-1].at);gaps.sort((a,b)=>a-b);const gap=gaps[Math.floor(gaps.length/2)];
-      if(gap>86400000){const predicted=new Date(historical.at(-1).at+gap);if(predicted.getTime()>t)signals.push({id:'historical-cadence',level:'HISTORICAL_INFERENCE',kind:'MEETING_CADENCE',title:'Cadence historique à examiner',detail:'Les séances passées suggèrent une prochaine période autour du '+predicted.toLocaleDateString('fr-FR')+'. Ce n’est pas une séance programmée.',sourceRefs:historical.slice(-4).map(x=>x.id),suggestedAt:predicted.toISOString(),humanValidated:false});}
+      if(gap>86400000){const predicted=new Date(historical.at(-1)!.at+gap);if(predicted.getTime()>t)signals.push({id:'historical-cadence',level:'HISTORICAL_INFERENCE',kind:'MEETING_CADENCE',title:'Cadence historique à examiner',detail:'Les séances passées suggèrent une prochaine période autour du '+predicted.toLocaleDateString('fr-FR')+'. Ce n’est pas une séance programmée.',sourceRefs:historical.slice(-4).map(x=>x.id),suggestedAt:predicted.toISOString(),humanValidated:false});}
     }
     return signals;
   }
