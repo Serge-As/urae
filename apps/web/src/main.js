@@ -46,6 +46,7 @@ import { mountIdentityVerificationUI } from './identity-verification-ui.js';
 import { mountDataQualityUI } from './data-quality-ui.js';
 import { mountOpportunityIntelligenceUI } from './opportunity-intelligence-ui.js';
 import { mountOperationalRegistryUI } from './operational-registry-ui.js';
+import { mountGroupLearningRegistryUI } from './group-learning-registry-ui.js';
 import { mountRoleDashboardsUI, mountGeoDirectoryUI, mountProfessionalTalentUI } from './role-directory-talent-ui.js';
 import { mountTrustCenterUI } from './trust-center.js';
 import { mountStarterKitUI } from './starter-kit-ui.js';
@@ -245,6 +246,7 @@ const identityVerificationUI=mountIdentityVerificationUI({app,getGroups:()=>grou
 const dataQualityUI=mountDataQualityUI({app,navigate:go,notify:toast,showError:fail});
 const opportunityIntelligenceUI=mountOpportunityIntelligenceUI({app,notify:toast,showError:fail,isManager});
 const operationalRegistryUI=mountOperationalRegistryUI({app,getGroups:()=>groups,getMembers:()=>members,getRubrics:()=>rubrics,isManager,notify:toast,showError:fail});
+const groupLearningRegistryUI=mountGroupLearningRegistryUI({app,getGroups:()=>groups,notify:toast,showError:fail});
 const roleDashboardsUI=mountRoleDashboardsUI({app,getGroups:()=>groups,getMembers:()=>members,getMeetings:()=>meetings,isManager,navigate:go,showError:fail});
 const geoDirectoryUI=mountGeoDirectoryUI({app,isManager,notify:toast,showError:fail});
 const professionalTalentUI=mountProfessionalTalentUI({app,notify:toast,showError:fail});
@@ -951,6 +953,7 @@ const openModule = async (id) => {
     if(m.status === 'FOUNDATION_ACTIVE' && id === 'DATA.QUALITY'){go('settings',{anchor:'dataQualityCenter',force:true});void dataQualityUI.refresh();return;}
     if(m.status === 'FOUNDATION_ACTIVE' && id === 'PAPER.BRIDGE'){go('documents',{force:true});void documentsUI.refresh();return;}
     if(m.status === 'FOUNDATION_ACTIVE' && id === 'RUBRIC.STARTER_KITS'){go('launch',{anchor:'savedStarterKitPanel',force:true});starterKitUI.open();return;}
+    if(m.status === 'FOUNDATION_ACTIVE' && ['GROUP.MODEL_REGISTRY','GROUP.CASE_LAW'].includes(id)){go('settings',{anchor:'groupLearningRegistry',force:true});groupLearningRegistryUI.open(id==='GROUP.MODEL_REGISTRY'?'models':'cases');return;}
     if(m.status === 'FOUNDATION_ACTIVE' && id === 'MARKETPLACE.MARKET_INTELLIGENCE'){go('ecosystem',{anchor:'opportunityIntelligence',force:true});opportunityIntelligenceUI.open();return;}
     if(m.status === 'FOUNDATION_ACTIVE' && id === 'GOVERNANCE.TENDER'){go('ecosystem',{anchor:'socialCommercePanel',force:true});const panel=document.querySelector('#socialCommercePanel');if(panel?.tagName==='DETAILS')panel.open=true;return;}
     if(m.status === 'FOUNDATION_ACTIVE' && id === 'RUBRIC.LOCAL_AID'){go('operations',{anchor:'rubricsManagementPanel',force:true});setTimeout(()=>prepareRubricPreset('Aide locale','Rubrique principale de contribution, au même niveau métier que Collation / Ration. Confirmer la règle du groupe : montant, présence/absence, bénéficiaire, solidarité, manquant et décaissement.'),80);return;}
