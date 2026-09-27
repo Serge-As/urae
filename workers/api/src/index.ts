@@ -135,7 +135,7 @@ const createRequestScope = (request:Request,repo:PlatformRepository,artifacts?:A
 };
 
 const inboxFor = async (repo:PlatformRepository,tenantId:string,actorId:string) => {
-  const obligations=(await repo.listObligations(tenantId,actorId)).filter(x=>x.status==='open'||x.status==='overdue').map(x=>({id:x.id,kind:'obligation',title:x.title,priority:x.priority,status:x.status,groupId:x.groupId}));
+  const obligations=(await repo.listObligations(tenantId,actorId)).filter(x=>x.status==='open'||x.status==='overdue').map(x=>({id:x.id,kind:'obligation',title:x.title,priority:x.priority,status:x.status,groupId:x.groupId,dueAt:x.dueAt,sourceType:x.sourceType,sourceId:x.sourceId}));
   const cases=(await repo.listCases(tenantId,actorId)).filter(x=>x.status!=='CLOSED').map(x=>({id:x.id,kind:'case',title:x.summary,priority:'normal',status:x.status,groupId:x.groupId}));
   return [...obligations,...cases];
 };
@@ -1967,9 +1967,13 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
 
     const calendarRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/calendar\.ics$/);
     if(calendarRoute&&request.method==='GET'){
-      await requireGroup(calendarRoute[1]!);
-      const meetings=await repo.listMeetings(ctx.tenantId,calendarRoute[1]!);
-      const ics=makeIcs(meetings.filter(x=>x.scheduledAt).map(x=>({uid:x.id,title:x.title,start:x.scheduledAt!,cancelled:x.status==='cancelled'})));
+      const groupId=calendarRoute[1]!;await requireGroup(groupId);
+      const [meetings,obligations]=await Promise.all([repo.listMeetings(ctx.tenantId,groupId),repo.listObligations(ctx.tenantId,ctx.actorId)]);
+      const events=[
+        ...meetings.filter(x=>x.scheduledAt).map(x=>({uid:'meeting-'+x.id,title:x.title,start:x.scheduledAt!,cancelled:x.status==='cancelled'})),
+        ...obligations.filter(x=>x.groupId===groupId&&x.dueAt&&(x.status==='open'||x.status==='overdue')).map(x=>({uid:'obligation-'+x.id,title:'Échéance · '+x.title,start:x.dueAt!,cancelled:false}))
+      ];
+      const ics=makeIcs(events);
       return new Response(ics,{status:200,headers:{'content-type':'text/calendar; charset=utf-8','content-disposition':'attachment; filename="eco-system.ics"',...baseSecurityHeaders,...cors}});
     }
 
