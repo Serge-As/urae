@@ -902,6 +902,9 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
     const savedDelete=url.pathname.match(/^\/api\/v1\/discovery\/saved-searches\/([^/]+)$/);
     if(savedDelete&&request.method==='DELETE')return json(await discovery.deleteSavedSearch(savedDelete[1]!),200,cors);
     if(url.pathname==='/api/v1/discovery/proximity'&&request.method==='GET')return json(await discovery.proximity(String(url.searchParams.get('locality')??''),String(url.searchParams.get('q')??'')),200,cors);
+    if(url.pathname==='/api/v1/discovery/manager-profile'&&request.method==='GET')return json({profile:await discovery.managerProfile()},200,cors);
+    if(url.pathname==='/api/v1/discovery/manager-profile'&&request.method==='PUT'){const body=await readJson<any>(request);return json(await discovery.saveManagerProfile(body),200,cors);}
+    if(url.pathname==='/api/v1/discovery/manager-profiles/search'&&request.method==='GET')return json({items:await discovery.searchManagerProfiles({text:url.searchParams.get('q')??undefined,locality:url.searchParams.get('locality')??undefined,expertise:strArray(url.searchParams.get('expertise')??'')})},200,cors);
     if(url.pathname==='/api/v1/discovery/candidate-profile'&&request.method==='GET')return json({profile:await discovery.candidateProfile()},200,cors);
     if(url.pathname==='/api/v1/discovery/candidate-profile'&&request.method==='PUT'){const body=await readJson<any>(request);return json(await discovery.saveCandidateProfile(body),200,cors);}
     if(url.pathname==='/api/v1/discovery/candidate-invitations'&&request.method==='GET')return json(await discovery.candidateInvitations(),200,cors);
