@@ -1,3 +1,34 @@
+## CURRENT OVERRIDE — 1.5.2.7 LIVE COMPLETION — RELEASE CANDIDATE QUALIFIÉE (2026-09-27)
+
+**Repository : `SergeDelor/tontine-platform`.**
+**Branche candidate : `finish/live-whatsapp-completion-20260927`.**
+**Chaîne d’intégration : PR #29 → `audit/live-completion-20260926`, puis PR #28 → `fix/1.5.2.6-field-persistence-pc-mobile-20260925`.**
+**Release candidate : `1.5.2.7-live-completion` · build `eco-system-1.5.2.7-20260927` · cache PWA `eco-system-v1527-live-completion-20260927`.**
+
+### Vérité fonctionnelle
+- Live proactif : reconnexion, heartbeat, rattrapage paginé et réinjection des événements durables dans les écrans sans rafraîchissement manuel.
+- WhatsApp : partage utilisateur/deep-link opérationnel. Le connecteur fournisseur WhatsApp automatisé reste une dépendance externe et n’est pas déclaré actif.
+- Registre : **164 capacités**, dont **155 FOUNDATION_ACTIVE**, **4 STRUCTURAL_V1 externes** (SMS, WhatsApp provider, Telegram, Email) et **5 PLANNED_DOMAIN** (vidéo, rewards, Mobile Money, MFA, fédération de groupes).
+- Recherche universelle, calendrier unifié, groupe hybride, Starter Kit, Document Studio, Verification Center, Founder AI, Data Quality, Paper Bridge/Print, mandats, Opportunity Graph, Value Discovery, Market Intelligence, Quiet Watch, appels d’offres, micro-annonces, registres métier, Time Machine non destructif, succession, dashboards par rôle, annuaire local, profil public opt-in, Creator Studio et Talent ont des parcours spécialisés.
+- Prépaiements : entrée Ledger une seule fois ; l’affectation future ne recrée aucune recette.
+- Reprise après clôture : quorum par comptes authentifiés distincts lorsque la politique l’exige ; nommer un approbateur ne vaut jamais approbation.
+- Enveloppes : budgets/classification sans mouvement de caisse. Wallet interne : custody comptabilisée dans le Ledger, distincte de Mobile Money.
+- Trust Graph / fiabilité : preuves comportementales contextualisées, explicables et advisory-only ; aucune décision automatique de prêt, admission ou exclusion.
+- **Rubriques : Aide locale est une rubrique principale de nature CONTRIBUTION, au même niveau métier que Collation/Ration ; Main levée est une rubrique principale LEVY. Elles ne relèvent jamais du menu « Autres ». « Autres » reste réservé aux petites sous-rubriques (Inscription, Timbre, Amendes, etc.).**
+- Les tableaux financiers canoniques, saisie ✓/Entrée, remplacement exact, offline/outbox, prêts/dettes/intérêts et Live existants ne doivent pas être réécrits ni remplacés.
+- Argent réel : **OFF**. D1 canonique et R2 existants doivent être réutilisés ; migrations additives uniquement.
+
+### Preuves de non-régression déjà vertes
+- #135 : classification rubriques principales vs « Autres » — SUCCESS.
+- #136 : invariants prépaiements/reprise/enveloppes/wallet/trust — Full governed CI + build + Live tests SUCCESS.
+- #138 : preuves de maturité des six derniers moteurs internes — Full governed CI + build + Live tests SUCCESS.
+- Une ancienne assertion PWA 1.5.2.3 a été corrigée pour conserver 1.5.2.6 comme cache précédent cohérent de 1.5.2.7 ; la qualification finale de release doit être verte avant toute fusion.
+
+### Statut de livraison
+Ne pas déclarer DEPLOYED ou FIELD_ACCEPTED tant que PR #29 et #28 ne sont pas fusionnées et que le workflow Cloudflare 1.5.2.7 n’a pas réussi sauvegarde pré, déploiement, smoke exact et sauvegarde/restauration post. La recette physique PC/Chrome/Opera, Android 6, offline et deux gestionnaires reste distincte.
+
+---
+
 ## CURRENT OVERRIDE — 1.5.2.3 FINANCIAL ENTRY OFFLINE — PRODUCTION VERIFIED, FIELD ACCEPTANCE PENDING (2026-09-25)
 
 **Repository opérationnel : `SergeDelor/tontine-platform`.**
