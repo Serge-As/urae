@@ -74,7 +74,7 @@ export class GroupCaseLawService extends Access{
   }
   async review(id:Id,state:'RECOMMENDED'|'REJECTED'|'ARCHIVED',note:string,founderAuthorized:boolean){
     if(!founderAuthorized)throw Error('FOUNDER_TEAM_ONLY');const c=this.ctx(),r=await this.repo.getWorkspaceRecord(c.tenantId,id);if(!r||r.moduleId!==CASE)throw Error('CASE_LAW_NOT_FOUND');if(state==='RECOMMENDED'&&!this.recommendable(r))throw Error('CASE_LAW_RECOMMENDATION_EVIDENCE_INCOMPLETE');
-    const why=str(note,5000);if(!why)throw Error('CASE_LAW_REVIEW_NOTE_REQUIRED');const next={...r,status:state==='ARCHIVED'?'ARCHIVED':'ACTIVE',tags:['case-law','state:'+state],data:{...r.data,caseState:state,reviewNote:why,reviewedAt:now(),reviewedBy:c.actorId,globalRecommendation:state==='RECOMMENDED',autoRuleActivation:false},updatedAt:now()};await this.repo.saveWorkspaceRecord(next);return next;
+    const why=str(note,5000);if(!why)throw Error('CASE_LAW_REVIEW_NOTE_REQUIRED');const status:'ACTIVE'|'ARCHIVED'=state==='ARCHIVED'?'ARCHIVED':'ACTIVE';const next:WorkspaceRecord={...r,status,tags:['case-law','state:'+state],data:{...r.data,caseState:state,reviewNote:why,reviewedAt:now(),reviewedBy:c.actorId,globalRecommendation:state==='RECOMMENDED',autoRuleActivation:false},updatedAt:now()};await this.repo.saveWorkspaceRecord(next);return next;
   }
   async reviewQueue(founderAuthorized:boolean){if(!founderAuthorized)throw Error('FOUNDER_TEAM_ONLY');const c=this.ctx();return (await this.repo.listWorkspaceRecords(c.tenantId,CASE)).filter(x=>x.data.caseState==='REVIEW_REQUESTED').sort((a,b)=>a.updatedAt.localeCompare(b.updatedAt));}
 }
