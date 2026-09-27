@@ -14,6 +14,35 @@ export function buildPrintSnapshot({group,members=[],meetings=[],rubrics=[],ledg
   };
 }
 
+const netReceipt=r=>Number(r?.netAmount??r?.amount?.amount??0);
+const printLot=()=>{const d=new Date(),p=n=>String(n).padStart(2,'0');return 'ECO-PAPER-'+d.getFullYear()+p(d.getMonth()+1)+p(d.getDate())+'-'+p(d.getHours())+p(d.getMinutes())+p(d.getSeconds());};
+
+export function buildSessionPrintSheet({group,meeting,members=[],rubrics=[],ledger}){
+  const activeMembers=members.filter(x=>x.status==='active'),activeRubrics=rubrics.filter(x=>x.status==='ACTIVE'),receipts=(ledger?.receipts??[]).filter(x=>x.meetingId===meeting?.id);
+  const rows=activeMembers.map(m=>{const cells=activeRubrics.map(r=>receipts.filter(x=>x.membershipId===m.id&&x.rubricId===r.id).reduce((n,x)=>n+netReceipt(x),0));return{membershipId:m.id,displayName:m.displayName,cells,total:cells.reduce((a,b)=>a+b,0)};});
+  const columnTotals=activeRubrics.map((_,i)=>rows.reduce((n,row)=>n+Number(row.cells[i]??0),0));
+  return{kind:'SESSION_SHEET',lot:printLot(),generatedAt:new Date().toISOString(),group:{id:group?.id??'',name:group?.name??'Groupe'},meeting:{id:meeting?.id??'',title:meeting?.title??'Séance',status:meeting?.status??'',at:meeting?.scheduledAt??meeting?.openedAt??''},rubrics:activeRubrics.map(r=>({id:r.id,name:r.name})),rows,columnTotals,grandTotal:columnTotals.reduce((a,b)=>a+b,0),canonicalProjection:true};
+}
+export function buildMemberPrintSheet({group,member,statement,rubrics=[],meetings=[]}){
+  const rubricNames=new Map(rubrics.map(r=>[r.id,r.name])),meetingNames=new Map(meetings.map(m=>[m.id,m.title]));
+  const receipts=(statement?.receipts??[]).map(r=>({receiptId:r.id,meetingId:r.meetingId??'',meetingName:meetingNames.get(r.meetingId)??'Sans séance',rubricId:r.rubricId??'',rubricName:rubricNames.get(r.rubricId)??'Sans rubrique',netAmount:netReceipt(r),currency:r.amount?.currency??statement?.currency??'XAF',receivedAt:r.receivedAt}));
+  const byRubric=[...new Set(receipts.map(x=>x.rubricId))].map(id=>({rubricId:id,rubricName:receipts.find(x=>x.rubricId===id)?.rubricName??'Rubrique',total:receipts.filter(x=>x.rubricId===id).reduce((n,x)=>n+x.netAmount,0)}));
+  return{kind:'MEMBER_SHEET',lot:printLot(),generatedAt:new Date().toISOString(),group:{id:group?.id??'',name:group?.name??'Groupe'},member:{id:member?.id??'',displayName:member?.displayName??statement?.displayName??'Membre'},currency:statement?.currency??'XAF',totalNet:Number(statement?.totalNetContributions??0),byRubric,receipts,canonicalProjection:true,otherMemberDataIncluded:false};
+}
+export function buildAttendancePrintSheet({group,meeting,members=[],attendance=[]}){
+  const byMember=new Map(attendance.map(x=>[String(x.data?.membershipId??x.membershipId??''),x]));
+  const rows=members.filter(x=>x.status==='active').map(m=>{const a=byMember.get(m.id);return{membershipId:m.id,displayName:m.displayName,attendance:String(a?.data?.attendance??''),note:String(a?.data?.note??''),signature:''};});
+  return{kind:'ATTENDANCE_SHEET',lot:printLot(),generatedAt:new Date().toISOString(),group:{id:group?.id??'',name:group?.name??'Groupe'},meeting:{id:meeting?.id??'',title:meeting?.title??'Séance',at:meeting?.scheduledAt??meeting?.openedAt??''},rows,canonicalProjection:true,signatureColumn:true};
+}
+export function buildRoleRegister({group,members=[]}){
+  const rows=[];for(const m of members.filter(x=>x.status==='active'))for(const role of m.roles??[])rows.push({membershipId:m.id,displayName:m.displayName,role});
+  rows.sort((a,b)=>String(a.role).localeCompare(String(b.role),'fr')||String(a.displayName).localeCompare(String(b.displayName),'fr'));
+  return{kind:'ROLE_REGISTER',lot:printLot(),generatedAt:new Date().toISOString(),group:{id:group?.id??'',name:group?.name??'Groupe'},rows,canonicalProjection:true};
+}
+export function buildMemberCards({group,members=[]}){
+  return{kind:'MEMBER_CARDS',lot:printLot(),generatedAt:new Date().toISOString(),group:{id:group?.id??'',name:group?.name??'Groupe'},cards:members.filter(x=>x.status==='active').map(m=>({membershipId:m.id,displayName:m.displayName,roles:[...(m.roles??[])],privateContactIncluded:false,identityDocumentIncluded:false})),canonicalProjection:true};
+}
+
 export function mountPrintCenterUI({app,getGroups=()=>[],getMembers=()=>[],getMeetings=()=>[],getRubrics=()=>[],isManager=()=>false,notify=()=>{},showError=()=>{}}={}){
   const host=document.querySelector('#view-documents');if(!host||document.querySelector('#paperPrintCenter'))return{refresh:async()=>{}};
   const panel=el('section',undefined,'panel');panel.id='paperPrintCenter';
