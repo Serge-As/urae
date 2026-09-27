@@ -48,6 +48,7 @@ import { GroupReconstitutionService } from '../../../packages/group-reconstituti
 import { MeetingReopenAuthorizationService } from '../../../packages/meeting-authorization/src/index.js';
 import { PrepaymentService } from '../../../packages/prepayments/src/index.js';
 import { StarterKitService } from '../../../packages/starter-kit/src/index.js';
+import { GroupModelRegistryService, GroupCaseLawService } from '../../../packages/group-learning-registry/src/index.js';
 import { SafetyCaseService, CommitmentTrustGraphService, assessReferralStructure, type SafetyCategory, type SafetyCaseState, type SafetyAction } from '../../../packages/trust/src/index.js';
 import { authenticatedApi } from './authenticated.js';
 export { GroupLiveHub } from './group-live-hub.js';
@@ -159,6 +160,8 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
   const reopenAuth=new MeetingReopenAuthorizationService(repo,kernel);
   const prepayments=new PrepaymentService(repo,kernel,ledger);
   const starterKit=new StarterKitService(repo,kernel);
+  const groupModels=new GroupModelRegistryService(repo,kernel);
+  const groupCaseLaw=new GroupCaseLawService(repo,kernel);
   if(options.premiumLive)kernel.features.set('premium_live_ledger',true);
   const isFounderTeamActor=async()=>Boolean(options.founderTeamActors?.has(ctx.actorId))||Boolean(options.founderControl&&await options.founderControl.isPlatformOwner(ctx.actorId));
   const requireGroup=async(groupId:string,manage=false)=>{
@@ -369,6 +372,23 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
     if(trashRoute&&request.method==='GET')return json(await listTrash(trashRoute[1]!),200,cors);
     if(trashRoute&&request.method==='POST'){const body=await readJson<Record<string,unknown>>(request);return json(await trashEntity(trashRoute[1]!,String(body.kind??''),String(body.entityId??'')),201,cors);}
     if(trashRestore&&request.method==='POST')return json(await restoreTrash(trashRestore[1]!,decodeURIComponent(trashRestore[2]!)),200,cors);
+    const groupModelsRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/models$/);
+    if(groupModelsRoute&&request.method==='GET')return json({items:await groupModels.list(groupModelsRoute[1]!)},200,cors);
+    if(groupModelsRoute&&request.method==='POST'){const body=await readJson<any>(request);return json(await groupModels.capture(groupModelsRoute[1]!,body),201,cors);}
+    const groupModelReviewRequest=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/models\/([^/]+)\/review-request$/);
+    if(groupModelReviewRequest&&request.method==='POST')return json(await groupModels.requestReview(groupModelReviewRequest[1]!,groupModelReviewRequest[2]!),200,cors);
+    if(request.method==='GET'&&url.pathname==='/api/v1/group-models')return json({items:await groupModels.list()},200,cors);
+    const caseLawRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/case-law$/);
+    if(caseLawRoute&&request.method==='GET')return json({items:await groupCaseLaw.list(caseLawRoute[1]!)},200,cors);
+    if(caseLawRoute&&request.method==='POST'){const body=await readJson<any>(request);return json(await groupCaseLaw.create(caseLawRoute[1]!,body),201,cors);}
+    const caseLawAction=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/case-law\/([^/]+)\/(validate-local|review-request)$/);
+    if(caseLawAction&&request.method==='POST')return json(caseLawAction[3]==='validate-local'?await groupCaseLaw.validateLocal(caseLawAction[1]!,caseLawAction[2]!):await groupCaseLaw.requestReview(caseLawAction[1]!,caseLawAction[2]!),200,cors);
+    if(request.method==='GET'&&url.pathname==='/api/v1/founder/group-models/review-queue'){const ok=await isFounderTeamActor();return json({items:await groupModels.reviewQueue(ok)},200,cors);}
+    const founderModelReview=url.pathname.match(/^\/api\/v1\/founder\/group-models\/([^/]+)\/review$/);
+    if(founderModelReview&&request.method==='POST'){const body=await readJson<Record<string,unknown>>(request),ok=await isFounderTeamActor();return json(await groupModels.review(founderModelReview[1]!,String(body.state??'STANDARD') as any,String(body.note??''),ok),200,cors);}
+    if(request.method==='GET'&&url.pathname==='/api/v1/founder/case-law/review-queue'){const ok=await isFounderTeamActor();return json({items:await groupCaseLaw.reviewQueue(ok)},200,cors);}
+    const founderCaseReview=url.pathname.match(/^\/api\/v1\/founder\/case-law\/([^/]+)\/review$/);
+    if(founderCaseReview&&request.method==='POST'){const body=await readJson<Record<string,unknown>>(request),ok=await isFounderTeamActor();return json(await groupCaseLaw.review(founderCaseReview[1]!,String(body.state??'REJECTED') as any,String(body.note??''),ok),200,cors);}
     const starterKitRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/starter-kit$/);
     if(starterKitRoute&&request.method==='GET'){const record=await starterKit.current(starterKitRoute[1]!);return json(record??null,200,cors);}
     if(starterKitRoute&&request.method==='PUT'){const body=await readJson<any>(request);return json(await starterKit.save(starterKitRoute[1]!,body),200,cors);}
