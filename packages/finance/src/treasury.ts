@@ -69,6 +69,13 @@ export class TreasuryService{
     const name=input.name.trim(),holder=input.holder.trim();if(!name||!holder)throw Error('CUSTODY_NAME_AND_HOLDER_REQUIRED');
     return this.save(groupId,'CUSTODY_ACCOUNT',name,{holder,currency:input.currency??'XAF'});
   }
+  async custodyPosition(groupId:Id,custodyId:Id){
+    const record=(await this.list(groupId,'CUSTODY_ACCOUNT')).find(x=>x.id===custodyId);if(!record)throw Error('CUSTODY_ACCOUNT_NOT_FOUND');
+    const ctx=this.kernel.context.get(),code=('CUSTODY_ASSET_'+record.id).replace(/[^A-Z0-9_]/gi,'_').toUpperCase();
+    const account=(await this.repo.listLedgerAccounts(ctx.tenantId,groupId)).find(a=>a.code===code),entries=await this.repo.listLedgerEntries(ctx.tenantId,groupId);
+    let balance=0;if(account)for(const e of entries)for(const line of e.lines)if(line.accountId===account.id)balance+=line.debit-line.credit;
+    return{custodyId,balance,currency:String(record.data.currency??'XAF'),holder:String(record.data.holder??''),name:record.title,internalOnly:true,externalPaymentRail:false};
+  }
   async sendToCustody(groupId:Id,custodyId:Id,value:number,key:string){
     amount(value);const record=(await this.list(groupId,'CUSTODY_ACCOUNT')).find(x=>x.id===custodyId);if(!record)throw Error('CUSTODY_ACCOUNT_NOT_FOUND');
     return this.ledger.recordCashMovement({tenantId:record.tenantId,groupId,amount:value,currency:String(record.data.currency??'XAF'),direction:'out',

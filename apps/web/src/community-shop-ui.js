@@ -1,12 +1,15 @@
+import {openWhatsAppShare,focusEcoShareTarget} from './share-out.js';
 const el=(tag,text,className)=>{const e=document.createElement(tag);if(text!==undefined)e.textContent=text;if(className)e.className=className;return e;};
 const v=id=>String(document.getElementById(id)?.value??'').trim();
 const split=value=>value.split(',').map(x=>x.trim()).filter(Boolean);
 const row=(label,value)=>{const p=el('p');const b=el('strong',label+' : ');p.append(b,document.createTextNode(String(value??'—')));return p;};
 
-export function mountCommunityShopUI({app,notify=()=>{},showError=console.error,isManager=()=>false,fmt=n=>String(n)}){
-  let hubs=[],activeHub='',beforeCursor='',draftTimer,readTimer,observer,forumSocket,loadingPosts=false;
+export function mountCommunityShopUI({app,notify=()=>{},showError=console.error,isManager=()=>false,fmt=n=>String(n),actorName=id=>id}){
+  let hubs=[],activeHub='',beforeCursor='',draftTimer,readTimer,observer,loadingPosts=false,forumTypingTimer=0,lastForumTypingSignal=0;
   const hubList=document.getElementById('communityHubList'),postList=document.getElementById('communityPostList'),hubSelect=document.getElementById('communityPostHub'),storefront=document.getElementById('groupStorefront');
   const bodyInput=document.getElementById('communityPostBody'),titleInput=document.getElementById('communityPostTitle'),draftState=document.getElementById('communityDraftState'),readState=document.getElementById('communityReadState');
+  let livePresence=document.getElementById('communityLivePresence');
+  if(!livePresence&&draftState){livePresence=el('p','', 'hint full community-live-presence');livePresence.id='communityLivePresence';livePresence.hidden=true;draftState.insertAdjacentElement('afterend',livePresence);}
 
   const syncDraft=async()=>{
     if(!activeHub||!app.activeGroup()||!bodyInput)return;
@@ -15,15 +18,12 @@ export function mountCommunityShopUI({app,notify=()=>{},showError=console.error,
   };
   const queueDraft=()=>{clearTimeout(draftTimer);if(draftState)draftState.textContent='Synchronisation du brouillon…';draftTimer=setTimeout(()=>void syncDraft(),650);};
 
-  const connectForumLive=()=>{
-    try{forumSocket?.close();forumSocket=undefined;if(!activeHub||!app.activeGroup())return;
-      const ws=new WebSocket(app.liveWebSocketUrl());forumSocket=ws;
-      ws.onmessage=event=>{try{const msg=JSON.parse(event.data);const e=msg?.event;if(msg?.type!=='GROUP_LIVE_EVENT'||!e)return;
-        if(e.type==='COMMUNITY_EVENT'&&e.payload?.hubId===activeHub)void renderPosts({preserveDraft:true,latest:true});
-        if(e.type==='COMMUNITY_DRAFT_SYNC'&&e.payload?.hubId===activeHub)void restoreState(false);
-        if(e.type==='COMMUNITY_READ_SYNC'&&e.payload?.hubId===activeHub)void restoreState(false);
-      }catch{}};
-    }catch{}
+  const forumSignalPayload=()=>({kind:'COMMUNITY_DRAFT',hubId:activeHub});
+  const stopForumTyping=()=>{if(forumTypingTimer){clearTimeout(forumTypingTimer);forumTypingTimer=0;}if(activeHub)void app.publishLiveSignal?.('TYPING_STOP',forumSignalPayload()).catch(()=>{});};
+  const signalForumTyping=()=>{
+    if(!activeHub)return;const now=Date.now();
+    if(now-lastForumTypingSignal>=800){lastForumTypingSignal=now;void app.publishLiveSignal?.('TYPING',forumSignalPayload()).catch(()=>{});}
+    if(forumTypingTimer)clearTimeout(forumTypingTimer);forumTypingTimer=setTimeout(stopForumTyping,2500);
   };
 
   const restoreState=async(scroll=true)=>{
@@ -50,7 +50,7 @@ export function mountCommunityShopUI({app,notify=()=>{},showError=console.error,
   };
 
   const renderRealtimeMessage=(post)=>{
-    const card=el('article',undefined,'item');card.dataset.forumMessageId=post.id;
+    const card=el('article',undefined,'item');card.dataset.forumMessageId=post.id;card.dataset.ecoShareKind='forum-message';card.dataset.ecoShareId=post.id;
     if(post.parentId)card.append(el('span','↳ Réponse','pill'));
     card.append(el('strong',post.title||post.kind),el('p',post.body??''),el('small',new Date(post.createdAt).toLocaleString('fr-FR')+' · auteur '+post.authorId));
     const actions=el('div',undefined,'actions');
@@ -58,7 +58,7 @@ export function mountCommunityShopUI({app,notify=()=>{},showError=console.error,
       const active=(post.viewerReactions??[]).includes(reaction),count=Number(post.reactions?.[reaction]??0);
       const b=el('button',reaction+(count?' '+count:''),active?'primary':'link-btn');b.type='button';b.onclick=()=>void(async()=>{try{await app.toggleForumReaction(post.id,reaction);await renderPosts({preserveDraft:true,around:post.id});}catch(e){showError(e);}})();actions.append(b);
     }
-    const reply=el('button','Répondre','secondary');reply.type='button';reply.onclick=()=>{if(bodyInput){bodyInput.dataset.replyTo=post.id;bodyInput.focus();bodyInput.placeholder='Réponse à ce message…';}notify('Votre prochain message répondra à celui-ci.');};actions.append(reply);card.append(actions);return card;
+    const reply=el('button','Répondre','secondary');reply.type='button';reply.onclick=()=>{if(bodyInput){bodyInput.dataset.replyTo=post.id;bodyInput.focus();bodyInput.placeholder='Réponse à ce message…';}notify('Votre prochain message répondra à celui-ci.');};actions.append(reply);const share=el('button','Partager WhatsApp','secondary');share.type='button';share.onclick=()=>{const payload=openWhatsAppShare({view:'ecosystem',anchor:'communityEnginePanel',kind:'forum-message',groupId:app.activeGroup(),objectId:post.id,contextId:activeHub,title:'Publication Eco-System',summary:'Ouvrir cette publication dans Eco-System.'});notify('WhatsApp ouvert · '+payload.refCode);};actions.append(share);card.append(actions);return card;
   };
 
   const renderPosts=async(options={})=>{
@@ -89,9 +89,9 @@ export function mountCommunityShopUI({app,notify=()=>{},showError=console.error,
     for(const hub of hubs){
       hubSelect.append(new Option(hub.title,hub.id));
       const card=el('article',undefined,'item');card.append(el('strong',hub.title),row('Visibilité',hub.data?.visibility),row('Modération',hub.data?.moderation));
-      const open=el('button','Ouvrir et reprendre où je me suis arrêté','secondary');open.type='button';open.onclick=()=>{activeHub=hub.id;hubSelect.value=hub.id;connectForumLive();void renderPosts();};card.append(open);hubList.append(card);
+      const open=el('button','Ouvrir et reprendre où je me suis arrêté','secondary');open.type='button';open.onclick=()=>{activeHub=hub.id;hubSelect.value=hub.id;void renderPosts();};card.append(open);hubList.append(card);
     }
-    if(!activeHub||!hubs.some(x=>x.id===activeHub))activeHub=hubs[0].id;hubSelect.value=activeHub;connectForumLive();await renderPosts();
+    if(!activeHub||!hubs.some(x=>x.id===activeHub))activeHub=hubs[0].id;hubSelect.value=activeHub;await renderPosts();
   };
 
   const renderStorefront=async()=>{
@@ -147,6 +147,30 @@ export function mountCommunityShopUI({app,notify=()=>{},showError=console.error,
               await app.receiveMarketProcurement(p.id,{lines:todo,stockOwnership:ownership});notify('Réception enregistrée et stock mis à jour.');await renderStorefront();
             }catch(e){showError(e);}})();card.append(receive);
           }
+          const lifecycle=await app.marketProcurementLifecycle(p.id).catch(()=>({invoices:[],reconciliations:[],creditNotes:[],credits:[]}));
+          card.append(row('Factures fournisseur',String(lifecycle.invoices?.length??0)),row('Rapprochements',String(lifecycle.reconciliations?.length??0)),row('Avoirs',String(lifecycle.creditNotes?.length??0)));
+          const addInvoice=el('button','Ajouter facture fournisseur','secondary');addInvoice.type='button';addInvoice.onclick=()=>void(async()=>{try{
+            const invoiceRef=window.prompt('Référence facture fournisseur :')?.trim();if(!invoiceRef)return;
+            const amount=Math.max(1,Math.trunc(Number(window.prompt('Montant facture XAF :',String(p.data.landedCost??0))??0)));
+            const evidenceRef=window.prompt('Référence de preuve : scan, photo, R2 ou reçu papier')?.trim();if(!evidenceRef)return;
+            await app.recordMarketSupplierInvoice(p.id,{invoiceRef,amount,currency:'XAF',evidenceRef});notify('Facture fournisseur enregistrée.');await renderStorefront();
+          }catch(e){showError(e);}})();card.append(addInvoice);
+          for(const inv of lifecycle.invoices??[]){
+            const line=el('section',undefined,'item');line.append(el('strong',String(inv.data.invoiceRef??inv.title)),row('Facturé',fmt(Number(inv.data.amount??0))),row('Preuve',String(inv.data.evidenceRef??'—')));
+            const rec=(lifecycle.reconciliations??[]).find(x=>String(x.data.invoiceId??'')===String(inv.id));
+            if(rec)line.append(row('Rapprochement',String(rec.data.state??'—')),row('Écart',fmt(Number(rec.data.difference??0))));
+            else{
+              const reconcile=el('button','Rapprocher facture / coût rendu','link-btn');reconcile.type='button';reconcile.onclick=()=>void(async()=>{try{
+                const diff=Number(inv.data.amount??0)-Number(p.data.landedCost??0);
+                const note=diff===0?'':(window.prompt('Écart détecté. Justification :')?.trim()??'');if(diff!==0&&!note)return;
+                await app.reconcileMarketSupplierInvoice(p.id,inv.id,note||undefined);notify('Facture rapprochée au coût rendu.');await renderStorefront();
+              }catch(e){showError(e);}})();line.append(reconcile);
+            }
+            const creditNote=el('button','Enregistrer un avoir','link-btn');creditNote.type='button';creditNote.onclick=()=>void(async()=>{try{
+              const amount=Math.max(1,Math.trunc(Number(window.prompt('Montant de l’avoir XAF :','0')??0))),reason=window.prompt('Motif de l’avoir :')?.trim(),evidenceRef=window.prompt('Référence de preuve de l’avoir :')?.trim();
+              if(!reason||!evidenceRef)return;await app.issueMarketSupplierCreditNote(p.id,{invoiceId:inv.id,amount,reason,evidenceRef});notify('Avoir enregistré ; la dette fournisseur a été ajustée si applicable.');await renderStorefront();
+            }catch(e){showError(e);}})();line.append(creditNote);card.append(line);
+          }
           supply.append(card);
         }
         for(const c of state.credits??[]){
@@ -163,8 +187,11 @@ export function mountCommunityShopUI({app,notify=()=>{},showError=console.error,
   };
 
   document.getElementById('communityHubForm')?.addEventListener('submit',e=>{e.preventDefault();void(async()=>{try{const hub=await app.createCommunityHub({title:v('communityHubTitle'),about:v('communityHubAbout')||undefined,visibility:v('communityHubVisibility'),tags:split(v('communityHubTags')),federatedGroupCodes:split(v('communityFederatedCodes'))});activeHub=hub.id;notify('Hub communautaire créé.');await renderHubs();}catch(err){showError(err);}})();});
-  hubSelect?.addEventListener('change',()=>{activeHub=hubSelect.value;connectForumLive();void renderPosts();});
-  bodyInput?.addEventListener('input',queueDraft);titleInput?.addEventListener('input',queueDraft);
+  hubSelect?.addEventListener('change',()=>{activeHub=hubSelect.value;void renderPosts();});
+  bodyInput?.addEventListener('input',()=>{queueDraft();signalForumTyping();});
+  titleInput?.addEventListener('input',()=>{queueDraft();signalForumTyping();});
+  bodyInput?.addEventListener('focus',()=>{if(activeHub)void app.publishLiveSignal?.('CELL_FOCUS',forumSignalPayload()).catch(()=>{});});
+  bodyInput?.addEventListener('blur',()=>{stopForumTyping();if(activeHub)void app.publishLiveSignal?.('CELL_BLUR',forumSignalPayload()).catch(()=>{});});
   document.getElementById('communityLoadOlderBtn')?.addEventListener('click',()=>void loadOlder());
   document.getElementById('communityPostForm')?.addEventListener('submit',e=>{e.preventDefault();void(async()=>{try{
     const hubId=v('communityPostHub');if(!hubId)throw Error('COMMUNITY_HUB_REQUIRED');const parentId=bodyInput?.dataset.replyTo||undefined;
@@ -174,6 +201,19 @@ export function mountCommunityShopUI({app,notify=()=>{},showError=console.error,
   }catch(err){showError(err);}})();});
   document.getElementById('groupShopForm')?.addEventListener('submit',e=>{e.preventDefault();void(async()=>{try{await app.saveGroupShop({name:v('groupShopName'),tagline:v('groupShopTagline')||undefined,visibility:v('groupShopVisibility'),locality:v('groupShopLocality')||undefined,categories:split(v('groupShopCategories'))});notify('Boutique du groupe enregistrée.');await renderStorefront();}catch(err){showError(err);}})();});
 
-  const refresh=async()=>{if(!app.activeGroup()){forumSocket?.close();hubList?.replaceChildren();postList?.replaceChildren();storefront?.replaceChildren();return;}try{await Promise.all([renderHubs(),renderStorefront()]);}catch(e){showError(e);}};
+  window.addEventListener('eco:live-event',event=>{
+    const e=event instanceof CustomEvent?event.detail:undefined,p=e?.payload??{};if(!activeHub)return;
+    if(e?.type==='COMMUNITY_EVENT'&&String(p.hubId??'')===String(activeHub))void renderPosts({preserveDraft:true,latest:true});
+    if(e?.type==='COMMUNITY_DRAFT_SYNC'&&String(p.hubId??'')===String(activeHub))void restoreState(false);
+    if(e?.type==='COMMUNITY_READ_SYNC'&&String(p.hubId??'')===String(activeHub))void restoreState(false);
+  });
+  window.addEventListener('eco:share-intent',event=>{const intent=event instanceof CustomEvent?event.detail:null;if(!intent||String(intent.kind)!=='forum-message')return;void(async()=>{try{if(intent.contextId&&hubs.some(h=>h.id===intent.contextId)){activeHub=intent.contextId;if(hubSelect)hubSelect.value=activeHub;}await renderPosts({preserveDraft:true,around:intent.objectId});focusEcoShareTarget(intent,postList);}catch(e){showError(e);}})();});
+  window.addEventListener('eco:live-signal',event=>{
+    const e=event instanceof CustomEvent?event.detail:undefined,p=e?.payload??{},other=String(e?.actorId??'');
+    if(!livePresence||String(p.kind??'')!=='COMMUNITY_DRAFT'||String(p.hubId??'')!==String(activeHub)||!other||other===String(app.currentActor?.()??''))return;
+    if(['TYPING','CELL_FOCUS'].includes(String(e.type??''))){const who=actorName(other)||'Un membre';livePresence.textContent=e.type==='TYPING'?who+' écrit…':who+' prépare un message…';livePresence.hidden=false;clearTimeout(Number(livePresence.dataset.hideTimer||0));livePresence.dataset.hideTimer=String(setTimeout(()=>{livePresence.hidden=true;},3500));}
+    if(['TYPING_STOP','CELL_BLUR'].includes(String(e.type??'')))livePresence.hidden=true;
+  });
+  const refresh=async()=>{if(!app.activeGroup()){stopForumTyping();hubList?.replaceChildren();postList?.replaceChildren();storefront?.replaceChildren();if(livePresence)livePresence.hidden=true;return;}try{await Promise.all([renderHubs(),renderStorefront()]);}catch(e){showError(e);}};
   return{refresh};
 }

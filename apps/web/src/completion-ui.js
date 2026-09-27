@@ -139,6 +139,16 @@ export const mountCompletionUI=({app,notify,showError,getMembers,getMeetings,get
       for(const loan of loans){
         const state=primitiveState(loan),a=article(loan.title,state,
           tr('Capital','Principal')+': '+fmt(Number(loan.data.principal??0))+' · '+tr('reste','outstanding')+': '+fmt(Number(loan.data.outstandingPrincipal??0)));
+        const guarantees=await app.loanGuarantors(loan.id).catch(()=>[]);
+        if(guarantees.length){
+          const gbox=document.createElement('div');gbox.className='stack compact';const gh=document.createElement('small');gh.textContent=tr('Garants','Guarantors')+' :';gbox.append(gh);
+          for(const g of guarantees){const line=document.createElement('div');line.className='actions';const state=String(g.data?.state??'ACTIVE');const label=document.createElement('span');label.textContent=nameOfMember(String(g.data?.membershipId??''))+' · '+fmt(Number(g.data?.guaranteedAmount??0))+' · '+state;line.append(label);
+            if(state==='ACTIVE'){const release=document.createElement('button');release.type='button';release.className='link-btn';release.textContent=tr('Libérer','Release');release.onclick=()=>void run(null,async()=>{const reason=window.prompt(tr('Motif de libération de la garantie :','Reason for releasing guarantee:'),tr('Prêt soldé ou garantie remplacée','Loan settled or guarantee replaced'));if(!reason?.trim())return;await app.releaseLoanGuarantor(loan.id,g.id,reason.trim());await renderLoans();});line.append(release);}gbox.append(line);
+          }a.append(gbox);
+        }
+        if(['APPROVED','DISBURSED','REPAYING'].includes(state)){
+          const form=document.createElement('form');form.className='form-grid compact loan-guarantor-form';const sel=document.createElement('select');sel.append(option('',tr('Ajouter un garant','Add guarantor')));for(const m of getMembers().filter(x=>x.status!=='left'&&x.id!==String(loan.data.borrowerMembershipId??'')))sel.append(option(m.id,m.displayName));const amount=document.createElement('input');amount.type='number';amount.inputMode='numeric';amount.min='1';amount.step='1';amount.placeholder=tr('Montant garanti','Guaranteed amount');const add=document.createElement('button');add.type='submit';add.className='secondary';add.textContent=tr('Enregistrer le garant','Save guarantor');form.append(sel,amount,add);form.addEventListener('submit',e=>void run(form,async()=>{e.preventDefault();const guaranteedAmount=Number(amount.value);if(!sel.value||!Number.isSafeInteger(guaranteedAmount)||guaranteedAmount<=0)throw Error('INVALID_GUARANTEE');await app.registerGuarantor(loan.id,{membershipId:sel.value,guaranteedAmount});await renderLoans();notify(tr('Garant enregistré et traçable.','Guarantor saved and traceable.'));}));a.append(form);
+        }
         const actions=document.createElement('div');actions.className='actions';
         const simulate=document.createElement('button');simulate.type='button';simulate.textContent=tr('Simuler l’évolution','Simulate evolution');simulate.onclick=()=>void openLoanSimulationDialog({app,loan,title:tr('Simulation du prêt','Loan simulation'),memberName:nameOfMember(String(loan.data.borrowerMembershipId??''))});actions.append(simulate);
         if(state==='SUBMITTED'){

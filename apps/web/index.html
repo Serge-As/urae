@@ -10,8 +10,8 @@
   <meta name="format-detection" content="telephone=no">
   <meta id="metaDescription" name="description" content="Eco-System — plateforme de gestion de tontines, associations et communautés">
   <link rel="manifest" href="/manifest.webmanifest">
-  <link rel="stylesheet" href="/styles.css?v=1526">
-  <title>Eco-System — 1.5.2.6 · Persistance terrain · UX mobile</title>
+  <link rel="stylesheet" href="/styles.css?v=1527">
+  <title>Eco-System — 1.5.2.7 · Persistance terrain · UX mobile</title>
   <meta name="application-name" content="Éco-System">\n</head>
 <body class="auth-restoring ui-mode-visual">
   <section id="sessionRestoreScreen" class="session-restore-screen" aria-live="polite"><div class="session-restore-card"><span class="auth-logo">E</span><strong>Eco-System</strong><p>Restauration sécurisée de votre session…</p></div></section>
@@ -33,7 +33,7 @@
 <header class="topbar">
     <div class="brand">
       <div class="logo">E</div>
-      <div><strong>Eco-System</strong><small>Plateforme Tontines · Associations · Communautés</small><span class="version-badge">ECO-SYSTEM · 1.5.2.6</span></div>
+      <div><strong>Eco-System</strong><small>Plateforme Tontines · Associations · Communautés</small><span class="version-badge">ECO-SYSTEM · 1.5.2.7</span></div>
     </div>
     <div class="top-context">
       <select id="activeGroupSelect" aria-label="Groupe actif"><option value="">Aucun groupe actif</option></select>
@@ -107,7 +107,7 @@
             <button id="openAssistedModeBtn" type="button" class="secondary">Ouvrir la dictée financière</button>
           </div>
         </section>
-        <div class="cahier-banner"><div><strong>Votre cockpit Eco-System</strong><p>Groupes, communautés, séances, situation personnelle, activités Live et actions utiles dans un seul espace.</p></div><span class="cahier-code">1.5.2.6 · PERSISTANCE TERRAIN · TABLEAUX CANONIQUES · KIT · BUSINESS · BLUEPRINT 5.0.0</span></div>
+        <div class="cahier-banner"><div><strong>Votre cockpit Eco-System</strong><p>Groupes, communautés, séances, situation personnelle, activités Live et actions utiles dans un seul espace.</p></div><span class="cahier-code">1.5.2.7 · LIVE PROACTIF · WHATSAPP SHARE · TABLEAUX CANONIQUES · KIT · BUSINESS · BLUEPRINT 5.0.0</span></div>
         <div class="hero">
           <div>
             <span class="eyebrow">Eco-System · Cahier Maître 2.3.4 + additifs 3.2.0</span>
@@ -278,7 +278,8 @@
                 <legend>2. Famille principale</legend>
                 <label>Nom du groupe<input id="projectName" required placeholder="Ex. CERDAS 2027"></label>
                 <label>Famille<select id="groupKind"><option value="association">Association</option><option value="rotating_tontine">Tontine rotative</option></select></label>
-                <p class="hint full">Une tontine en nature reste une configuration de la tontine. Une association peut contenir zéro, une ou plusieurs tontines comme rubriques.</p>
+                <label id="tontineVariantWrap" hidden>Variante de tontine<select id="tontineVariant"><option value="MONEY">Argent</option><option value="IN_KIND">En nature</option><option value="HYBRID">Hybride argent + nature</option></select></label>
+                <p class="hint full">Une tontine en nature ou hybride reste une configuration de la famille « Tontine rotative ». Une association peut contenir zéro, une ou plusieurs tontines comme rubriques.</p>
               </fieldset>
 
               <fieldset class="launch-step-panel full" data-launch-step="3" hidden>
@@ -428,7 +429,7 @@
               </form>
               <form id="rubricForm" class="form-grid">
                 <h3>Ajouter / décrire une rubrique</h3>
-                <div class="actions full"><button id="quickRubricLoan" type="button" class="secondary">Prêt</button><button id="quickRubricSavings" type="button" class="secondary">Épargne</button><button id="quickRubricAssistance" type="button" class="secondary">Assistance</button><span class="hint">Raccourcis : ils préparent le formulaire dans le groupe actif, sans recréer de groupe.</span></div>
+                <div class="actions full"><button id="quickRubricCollation" type="button" class="secondary">Collation</button><button id="quickRubricLocalAid" type="button" class="secondary">Aide locale</button><button id="quickRubricHandRaise" type="button" class="secondary">Main levée</button><button id="quickRubricLoan" type="button" class="secondary">Prêt</button><button id="quickRubricSavings" type="button" class="secondary">Épargne</button><button id="quickRubricAssistance" type="button" class="secondary">Assistance</button><span class="hint">Raccourcis : ils préparent une rubrique principale dans le groupe actif. « Autres » reste réservé aux petites sous-rubriques comme Inscription, Timbre et Amendes.</span></div>
                 <label>Nom<input id="rubricName" required value="Collation"></label>
                 <label class="full">Ce qui est écrit<textarea id="writtenRule" rows="3" placeholder="Article du RI, statuts, résolution…"></textarea></label>
                 <label class="full">Ce qui est réellement pratiqué<textarea id="observedPractice" rows="3" placeholder="Décrivez la pratique réelle, même si elle diffère du texte."></textarea></label>
@@ -981,6 +982,120 @@
             </form>
             <div><h3>Campagnes</h3><div id="groupBuyList" class="stack"></div></div>
           </div>
+
+        </details>
+
+        <details class="panel" id="socialCommercePanel">
+          <summary><strong>Commerce social · Eco NOW · Reverse Market · Deals · Live Market</strong></summary>
+          <p class="truth-notice">Un signal n’est jamais une vente : prévision → acceptation humaine → demande → réponses → sélection → exécution → preuve. Aucun faux compteur, aucun faux stock, aucun faux compte à rebours.</p>
+          <div class="actions" id="valueNetworkPresetActions">
+            <button type="button" class="secondary" data-value-network-preset="NOW">Eco NOW</button>
+            <button type="button" class="secondary" data-value-network-preset="HARVEST">Harvest / pré-récolte</button>
+            <button type="button" class="secondary" data-value-network-preset="FRESH_DROP">Fresh Drop / arrivage</button>
+            <button type="button" class="secondary" data-value-network-preset="PICKUP">Point de retrait</button>
+          </div>
+
+          <details id="smartProcurementPanel">
+            <summary><strong>Smart Procurement · fournisseurs · factures · crédit fournisseur</strong></summary>
+            <p class="truth-notice">Le coût rendu = marchandises + fret + autres coûts documentés. Une dette fournisseur du groupe reste une dette du groupe et son règlement exige une preuve Ledger.</p>
+            <div class="two-col">
+              <form id="marketSupplierForm" class="form-grid">
+                <h3>Fournisseur</h3>
+                <label>Nom<input id="marketSupplierName" required></label>
+                <label>Localité<input id="marketSupplierLocality"></label>
+                <label>Contact / référence<input id="marketSupplierContact"></label>
+                <label>Conditions de paiement<input id="marketSupplierTerms"></label>
+                <label>Preuve de vérification<input id="marketSupplierEvidence" placeholder="Registre, facture, visite, contrat…"></label>
+                <button class="primary">Enregistrer le fournisseur</button>
+              </form>
+              <div><h3>Fournisseurs connus</h3><div id="marketSupplierList" class="stack"></div></div>
+            </div>
+            <div class="two-col">
+              <form id="marketProcurementForm" class="form-grid">
+                <h3>Nouvel approvisionnement</h3>
+                <label>Fournisseur<select id="marketProcurementSupplier" required></select></label>
+                <label>Débiteur<select id="marketProcurementDebtorType"><option value="GROUP">Groupe</option><option value="BUSINESS">Activité privée</option></select></label>
+                <label>Référence débiteur<input id="marketProcurementDebtorRef" placeholder="Auto = groupe actif"></label>
+                <label class="full">Lignes SKU | Libellé | Qté | Coût unitaire<textarea id="marketProcurementLines" rows="4" required placeholder="HUILE-1 | Huile 1L | 20 | 1200"></textarea></label>
+                <label>Fret XAF<input id="marketProcurementFreight" type="number" min="0" step="1" value="0"></label>
+                <label>Autres coûts XAF<input id="marketProcurementOther" type="number" min="0" step="1" value="0"></label>
+                <label>Échéance crédit éventuel<input id="marketProcurementCreditDue" type="date"></label>
+                <button class="primary">Créer l’approvisionnement</button>
+              </form>
+              <div><h3>Cycle d’approvisionnement</h3><div id="marketProcurementList" class="stack"></div></div>
+            </div>
+          </details>
+
+          <div class="two-col">
+            <form id="socialFlashForm" class="form-grid">
+              <h3>Liquidation · Surplus · Rescue Deal</h3>
+              <label>Type<select id="socialFlashKind"><option value="LIQUIDATION">Liquidation</option><option value="SURPLUS">Surplus</option><option value="RESCUE">Rescue Deal</option></select></label>
+              <label>Titre<input id="socialFlashTitle" required></label>
+              <label class="full">Pourquoi cette offre ?<textarea id="socialFlashReason" required rows="2"></textarea></label>
+              <label class="full">État / condition du bien<textarea id="socialFlashCondition" required rows="2"></textarea></label>
+              <label>Quantité<input id="socialFlashQuantity" type="number" min="1" step="1" required></label>
+              <label>Unité<input id="socialFlashUnit" required value="unité"></label>
+              <label>Prix unitaire XAF<input id="socialFlashPrice" type="number" min="0" step="1" required></label>
+              <label>Localité<input id="socialFlashLocality"></label>
+              <label>Expiration<input id="socialFlashExpires" type="datetime-local" required></label>
+              <label>Preuve / référence<input id="socialFlashEvidence" required placeholder="Photo, facture, stock, reçu…"></label>
+              <button class="primary">Publier l’offre vérifiable</button>
+            </form>
+            <div><h3>Offres urgentes actives</h3><div id="socialFlashList" class="stack"></div></div>
+          </div>
+
+          <div class="two-col">
+            <form id="socialRequestForm" class="form-grid">
+              <h3>Demand Exchange · Reverse Market</h3>
+              <label>Origine<select id="socialRequestSource"><option value="MANUAL">Besoin constaté</option><option value="PREDICTION">Prévision à confirmer</option></select></label>
+              <label>Titre<input id="socialRequestTitle" required></label>
+              <label>Catégorie<input id="socialRequestCategory" required></label>
+              <label>Quantité<input id="socialRequestQuantity" type="number" min="1" step="1" required></label>
+              <label>Unité<input id="socialRequestUnit" required value="unité"></label>
+              <label>Localité<input id="socialRequestLocality"></label>
+              <label>Date souhaitée<input id="socialRequestNeededBy" type="date"></label>
+              <label>Budget max XAF<input id="socialRequestBudget" type="number" min="0" step="1"></label>
+              <label class="full">Conditions<textarea id="socialRequestConditions" rows="2"></textarea></label>
+              <label>Preuve / source<input id="socialRequestEvidence"></label>
+              <label class="full">Pourquoi cette prévision ?<textarea id="socialRequestPredictionReason" rows="2" placeholder="Ex. RI : fête annuelle prévue en décembre"></textarea></label>
+              <button class="primary">Créer en brouillon</button>
+            </form>
+            <div><h3>Demandes et réponses</h3><div id="socialRequestList" class="stack"></div></div>
+          </div>
+
+          <div class="two-col">
+            <form id="socialDealForm" class="form-grid">
+              <h3>Eco Deals · baisse de prix réelle</h3>
+              <label>Type<select id="socialDealType"><option value="PUBLIC">Public</option><option value="GROUP">Groupe</option><option value="SUPPLIER">Fournisseur</option><option value="FRESH">Frais</option><option value="BULK">Volume</option><option value="INSTITUTIONAL">Institutionnel</option></select></label>
+              <label>Titre<input id="socialDealTitle" required></label>
+              <label>Prix public unitaire XAF<input id="socialDealPrice" type="number" min="0" step="1" required></label>
+              <label>Quantité réelle disponible<input id="socialDealQuantity" type="number" min="1" step="1" required></label>
+              <label class="full">Disponibilité réelle<input id="socialDealAvailability" required placeholder="Stock confirmé / fenêtre / lieu"></label>
+              <label class="full">Conditions publiques<textarea id="socialDealConditions" required rows="2"></textarea></label>
+              <label>Expiration<input id="socialDealExpires" type="datetime-local" required></label>
+              <label>Paliers quantité:prix<input id="socialDealTiers" placeholder="50:20500,100:20000"></label>
+              <label>Prix fournisseur privé<input id="socialDealSupplierPrice" type="number" min="0"></label>
+              <label>Minimum fournisseur privé<input id="socialDealPrivateMinimum" type="number" min="0"></label>
+              <label>Commission privée<input id="socialDealCommission" type="number" min="0"></label>
+              <button class="primary">Créer le Deal en brouillon</button>
+            </form>
+            <div><h3>Deals actifs</h3><div id="socialDealList" class="stack"></div></div>
+          </div>
+
+          <div class="two-col">
+            <form id="socialLiveForm" class="form-grid">
+              <h3>Eco Live Market</h3>
+              <label>Titre<input id="socialLiveTitle" required></label>
+              <label>Thème<input id="socialLiveTheme"></label>
+              <label>Début prévu<input id="socialLiveScheduled" type="datetime-local" required></label>
+              <label>Mode<select id="socialLiveMode"><option value="TEXT">Texte</option><option value="MEDIA">Image / audio</option><option value="INTERACTIVE">Interactif + Hub</option><option value="VIDEO">Vidéo qualifiée</option></select></label>
+              <label>Hub communautaire<select id="socialLiveHub"><option value="">Aucun</option></select></label>
+              <label>Référence fournisseur vidéo<input id="socialLiveProvider" placeholder="Requise seulement pour VIDEO"></label>
+              <label>Deal épinglé<select id="socialLiveDeal"><option value="">Aucun</option></select></label>
+              <button class="primary">Créer la session</button>
+            </form>
+            <div><h3>Sessions Live</h3><div id="socialLiveList" class="stack"></div><p class="hint">Le compteur de personnes n’est affiché que s’il provient de présence Live réelle. Eco-System n’invente jamais un nombre de spectateurs.</p></div>
+          </div>
         </details>
 
         <section class="panel" id="groupShopPanel">
@@ -1081,6 +1196,20 @@
         </section>
         <section class="panel"><div class="section-kicker"><div><h2>Academy · ONG · IA · Safety · Paper Bridge</h2><p>Accompagnement des gestionnaires, connaissance, documents, anti-arnaque et pont papier ↔ numérique.</p></div></div><div id="guidanceHub" class="hub-grid"></div></section>
         <section class="panel"><div class="section-kicker"><div><h2>Rapports, recherche, calendrier et intégrations</h2><p>Exports, dashboards, notifications et connecteurs.</p></div></div><div id="reportsHub" class="hub-grid"></div></section>
+        <details class="panel" id="universalSearchPanel">
+          <summary><strong>Recherche universelle</strong> · groupes, membres, séances, rubriques, services, documents et connaissances</summary>
+          <div class="form-grid">
+            <label class="full">Rechercher partout<input id="universalSearchFull" class="search" autocomplete="off" placeholder="Nom, séance, rubrique, service, document…"></label>
+          </div>
+          <div id="universalSearchFullResults" class="stack"></div>
+          <p class="hint">Les résultats respectent vos droits actuels. Une recherche ne donne jamais accès à un groupe, un membre ou un document auquel votre compte n’a pas accès.</p>
+        </details>
+        <details class="panel" id="unifiedCalendarPanel">
+          <summary><strong>Calendrier unifié</strong> · séances + échéances personnelles du groupe</summary>
+          <div class="actions"><button id="unifiedCalendarRefresh" type="button" class="secondary">Actualiser</button><button id="unifiedCalendarIcs" type="button" class="primary">Télécharger le calendrier (.ics)</button></div>
+          <div id="unifiedCalendarList" class="stack"></div>
+          <p class="hint">Le calendrier réunit uniquement les dates explicites et autorisées : séances du groupe et échéances qui vous sont assignées. Il n’invente aucune date à partir de vos finances.</p>
+        </details>
         <section class="panel">
           <div class="panel-head"><div><h2>Catalogue complet</h2><p><strong id="capabilityCount">0</strong> capacités connues. Une fonction non visible dans un résumé n'est jamais considérée supprimée.</p></div><input id="catalogSearch" class="search" placeholder="Rechercher une capacité…"></div>
           <div id="lotFilters" class="filters"></div>
@@ -1089,7 +1218,7 @@
       </section>
 
       <section id="view-services" class="view">
-        <div class="page-head"><div><span class="eyebrow">Catalogue exécutable · 139 capacités</span><h1>Tous les services du Cahier, sans fausse complétude</h1><p>Un moteur spécialisé reste spécialisé. Une capacité en maturation utilise un dossier persistant D1 jusqu’à son moteur final, sans dupliquer Ledger, Membership, authentification ou paiement.</p></div></div>
+        <div class="page-head"><div><span class="eyebrow">Catalogue exécutable · 164 capacités</span><h1>Tous les services du Cahier, sans fausse complétude</h1><p>Un moteur spécialisé reste spécialisé. Une capacité en maturation utilise un dossier persistant D1 jusqu’à son moteur final, sans dupliquer Ledger, Membership, authentification ou paiement.</p></div></div>
         <details class="panel" id="historicalImportPanel">
           <summary><strong>Reprise historique contrôlée · R2 privé</strong></summary>
           <form id="historicalImportForm" class="form-grid">
@@ -1248,8 +1377,8 @@
     </main>
   </div>
 
-  <footer class="footer">Eco-System 1.5.2.6 · Cahier Maître 2.3.4 + Blueprint 5.0.0 · UX unifiée</footer>
-  <script type="module" src="/src/ui-modes.js?v=1526"></script>
-  <script type="module" src="/src/main.js?v=1526"></script>
+  <footer class="footer">Eco-System 1.5.2.7 · Cahier Maître 2.3.4 + Blueprint 5.0.0 · UX unifiée</footer>
+  <script type="module" src="/src/ui-modes.js?v=1527"></script>
+  <script type="module" src="/src/main.js?v=1527"></script>
 </body>
 </html>

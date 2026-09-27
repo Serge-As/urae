@@ -13,6 +13,7 @@ import { ExplainabilityService, DocumentSearchService, previewCsv, buildNotifica
 import { ReceivablesService, TreasuryService, RiskFinanceService } from '../../../packages/finance/src/index.js';
 import { analyzeGovernanceText, governanceFingerprint, interpretLaunchPrompt } from '../../../packages/guided-assistant/src/index.js';
 import { MemberFinancialControlService } from '../../../packages/member-control/src/index.js';
+import { MemberEnvelopeService } from '../../../packages/member-envelope/src/index.js';
 import { MeetingLiveConsensusService } from '../../../packages/meeting-live-consensus/src/index.js';
 import { GroupIdentityService } from '../../../packages/group-identity/src/index.js';
 import { ConciergeLearningService, type DataUsePurpose, type LearningCategory, type DataUseDefaultMode } from '../../../packages/concierge-learning/src/index.js';
@@ -21,6 +22,7 @@ import { CommunityService } from '../../../packages/community/src/index.js';
 import { CommunityRealtimeStore } from '../../../packages/community-realtime/src/index.js';
 import { FounderLearningStore } from '../../../packages/founder-observatory/src/index.js';
 import { FounderControlStore, type CapabilityHealth } from '../../../packages/founder-control/src/index.js';
+import { FounderAIService } from '../../../packages/founder-ai/src/index.js';
 import { CommercialPreferenceService, preferenceCookie, clearPreferenceCookie, readPreferenceCookie } from '../../../packages/commercial-preferences/src/index.js';
 import { MiscRubricService } from '../../../packages/misc-rubrics/src/index.js';
 import { allocateSavingsYield, splitInterestPool, simulateWorkbookYieldPipeline, allocateCapitalAtWorkYield, allocateCapitalTimeYield, allocateAttributedProductiveYield, SAVINGS_YIELD_POLICY_PRESETS } from '../../../packages/savings-yield/src/index.js';
@@ -45,7 +47,21 @@ import { GrowthReferralService, InMemoryReferralBudgetStore, D1ReferralBudgetSto
 import { KnowledgeAcademyService } from '../../../packages/knowledge-academy/src/index.js';
 import { ValueNetworkService } from '../../../packages/value-network/src/index.js';
 import { GroupReconstitutionService } from '../../../packages/group-reconstitution/src/index.js';
-import { SafetyCaseService, assessReferralStructure, type SafetyCategory, type SafetyCaseState, type SafetyAction } from '../../../packages/trust/src/index.js';
+import { CreatorTalentService } from '../../../packages/creator-talent/src/index.js';
+import { QuietWatchService } from '../../../packages/quiet-watch/src/index.js';
+import { RubricExceptionService } from '../../../packages/rubric-exceptions/src/index.js';
+import { TimeMachineService } from '../../../packages/time-machine/src/index.js';
+import { NextOfKinService } from '../../../packages/succession/src/index.js';
+import { AnticipationService } from '../../../packages/anticipation/src/index.js';
+import { CommunityMicroAdService } from '../../../packages/community-micro-ads/src/index.js';
+import { ValueDiscoveryService } from '../../../packages/value-discovery/src/index.js';
+import { MeetingReopenAuthorizationService } from '../../../packages/meeting-authorization/src/index.js';
+import { PrepaymentService } from '../../../packages/prepayments/src/index.js';
+import { WalletService } from '../../../packages/wallet/src/index.js';
+import { OpportunityGraphService } from '../../../packages/opportunity-graph/src/index.js';
+import { StarterKitService } from '../../../packages/starter-kit/src/index.js';
+import { GroupModelRegistryService, GroupCaseLawService } from '../../../packages/group-learning-registry/src/index.js';
+import { SafetyCaseService, CommitmentTrustGraphService, assessReferralStructure, type SafetyCategory, type SafetyCaseState, type SafetyAction } from '../../../packages/trust/src/index.js';
 import { authenticatedApi } from './authenticated.js';
 export { GroupLiveHub } from './group-live-hub.js';
 
@@ -57,11 +73,11 @@ interface WorkersAILike {
   run?(model:string,input:Record<string,unknown>,options?:Record<string,unknown>):Promise<unknown>;
 }
 
-const RELEASE_VERSION='1.5.2.6-field-persistence-pc-mobile';
-const RELEASE_BUILD_ID='eco-system-1.5.2.6-20260925';
+const RELEASE_VERSION='1.5.2.7-live-completion';
+const RELEASE_BUILD_ID='eco-system-1.5.2.7-20260927';
 const RELEASE_SCHEMA_VERSION='d1-additive-20260923';
 const RELEASE_POLICY_VERSION='field-persistence-pc-mobile-20260925';
-const RELEASE_PWA_CACHE='eco-system-v1526-field-persistence-pc-mobile-20260925';
+const RELEASE_PWA_CACHE='eco-system-v1527-live-completion-20260927';
 
 const defaultRepo = new InMemoryPlatformRepository();
 const defaultReferralBudgets = new InMemoryReferralBudgetStore();
@@ -118,6 +134,7 @@ const createRequestScope = (request:Request,repo:PlatformRepository,artifacts?:A
   const artifactStore=artifacts??new RepositoryArtifactStore(repo,kernel);
   const imports=new HistoricalImportService(repo,kernel,ledger,completion,artifactStore);
   const memberControl=new MemberFinancialControlService(repo,kernel);
+  const memberEnvelopes=new MemberEnvelopeService(repo,kernel,ledger);
   const groupIdentity=new GroupIdentityService(repo,kernel);
   const conciergeLearning=new ConciergeLearningService(repo,kernel,dataUseDefaultMode);
   const miscRubrics=new MiscRubricService(repo,kernel,ledger);
@@ -128,14 +145,16 @@ const createRequestScope = (request:Request,repo:PlatformRepository,artifacts?:A
   const businessStudio=new BusinessStudioService(repo,kernel);
   const knowledgeAcademy=new KnowledgeAcademyService(repo,kernel);
   const valueNetwork=new ValueNetworkService(repo,kernel);
+  const creatorTalent=new CreatorTalentService(repo,kernel,businessStudio,community);
+  const quietWatch=new QuietWatchService(repo,kernel);
   const tenantId=request.headers.get('x-tenant-id')??'tenant_demo'; const actorId=request.headers.get('x-actor-id')??'user_founder';
   const groupRoles=(request.headers.get('x-group-roles')??'founder,manager').split(',').map(x=>x.trim()).filter(Boolean);
   kernel.context.set({actorId,tenantId,activeGroupId:request.headers.get('x-active-group-id')??undefined,groupRoles,mandateIds:[],deviceId:request.headers.get('x-device-id')??'device_web_demo',sessionId:request.headers.get('x-session-id')??'session_demo',locale:request.headers.get('accept-language')?.toLowerCase().startsWith('en')?'en':'fr',timezone:request.headers.get('x-timezone')??'Africa/Douala',connectivity:'online',requestId:request.headers.get('x-request-id')??makeId('req')});
-  return {kernel,foundation,ledger,meetings,discovery,membershipGateway,rubrics,completion,explainability,documents,receivables,treasury,riskFinance,market,community,imports,artifactStore,memberControl,groupIdentity,conciergeLearning,miscRubrics,adManager,economicIntelligence,externalPrograms,operationalCockpit,businessStudio,knowledgeAcademy,valueNetwork};
+  return {kernel,foundation,ledger,meetings,discovery,membershipGateway,rubrics,completion,explainability,documents,receivables,treasury,riskFinance,market,community,imports,artifactStore,memberControl,memberEnvelopes,groupIdentity,conciergeLearning,miscRubrics,adManager,economicIntelligence,externalPrograms,operationalCockpit,businessStudio,knowledgeAcademy,valueNetwork,creatorTalent,quietWatch};
 };
 
 const inboxFor = async (repo:PlatformRepository,tenantId:string,actorId:string) => {
-  const obligations=(await repo.listObligations(tenantId,actorId)).filter(x=>x.status==='open'||x.status==='overdue').map(x=>({id:x.id,kind:'obligation',title:x.title,priority:x.priority,status:x.status,groupId:x.groupId}));
+  const obligations=(await repo.listObligations(tenantId,actorId)).filter(x=>x.status==='open'||x.status==='overdue').map(x=>({id:x.id,kind:'obligation',title:x.title,priority:x.priority,status:x.status,groupId:x.groupId,dueAt:x.dueAt,sourceType:x.sourceType,sourceId:x.sourceId}));
   const cases=(await repo.listCases(tenantId,actorId)).filter(x=>x.status!=='CLOSED').map(x=>({id:x.id,kind:'case',title:x.summary,priority:'normal',status:x.status,groupId:x.groupId}));
   return [...obligations,...cases];
 };
@@ -146,12 +165,27 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
     const allowed=Boolean((cors as Record<string,string>)['access-control-allow-origin']);
     return new Response(null,{status:allowed?204:403,headers:{...baseSecurityHeaders,...cors,'access-control-allow-methods':'GET,POST,PUT,OPTIONS','access-control-allow-headers':'content-type,x-tenant-id,x-actor-id,x-group-roles,x-active-group-id,x-device-id,x-session-id,x-request-id,x-timezone'}});
   }
-  const {kernel,foundation,ledger,meetings,discovery,membershipGateway,rubrics,completion,explainability,documents,receivables,treasury,riskFinance,market,community,imports,artifactStore,memberControl,groupIdentity,conciergeLearning,miscRubrics,adManager,economicIntelligence,externalPrograms,operationalCockpit,businessStudio,knowledgeAcademy,valueNetwork}=createRequestScope(request,repo,options.artifacts,options.dataUseDefaultMode??'BETA_OPEN',options.documentAI); const ctx=kernel.context.get();
+  const {kernel,foundation,ledger,meetings,discovery,membershipGateway,rubrics,completion,explainability,documents,receivables,treasury,riskFinance,market,community,imports,artifactStore,memberControl,memberEnvelopes,groupIdentity,conciergeLearning,miscRubrics,adManager,economicIntelligence,externalPrograms,operationalCockpit,businessStudio,knowledgeAcademy,valueNetwork,creatorTalent,quietWatch}=createRequestScope(request,repo,options.artifacts,options.dataUseDefaultMode??'BETA_OPEN',options.documentAI); const ctx=kernel.context.get();
   const governanceVotes=new GovernanceVoteService(repo,kernel,options.governanceSecret??'eco-system-nonproduction-governance-secret');
   const notifications=new NotificationService(repo,kernel);
   const growthReferral=new GrowthReferralService(repo,kernel,options.referralBudgets??defaultReferralBudgets);
   const reconstitution=new GroupReconstitutionService(repo,kernel);
+  const rubricExceptions=new RubricExceptionService(repo,kernel);
+  const timeMachine=new TimeMachineService(repo,kernel);
+  const nextOfKin=new NextOfKinService(repo,kernel);
+  const anticipation=new AnticipationService(repo,kernel);
+  const microAds=new CommunityMicroAdService(repo,kernel,valueNetwork);
+  const valueDiscovery=new ValueDiscoveryService(repo,kernel);
   const safety=new SafetyCaseService(repo,kernel);
+  const trustGraph=new CommitmentTrustGraphService(repo,kernel);
+  const reopenAuth=new MeetingReopenAuthorizationService(repo,kernel);
+  const prepayments=new PrepaymentService(repo,kernel,ledger);
+  const wallet=new WalletService(repo,kernel,ledger);
+  const opportunityGraph=new OpportunityGraphService(repo,kernel);
+  const starterKit=new StarterKitService(repo,kernel);
+  const groupModels=new GroupModelRegistryService(repo,kernel);
+  const groupCaseLaw=new GroupCaseLawService(repo,kernel);
+  const founderAI=new FounderAIService();
   if(options.premiumLive)kernel.features.set('premium_live_ledger',true);
   const isFounderTeamActor=async()=>Boolean(options.founderTeamActors?.has(ctx.actorId))||Boolean(options.founderControl&&await options.founderControl.isPlatformOwner(ctx.actorId));
   const requireGroup=async(groupId:string,manage=false)=>{
@@ -362,6 +396,38 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
     if(trashRoute&&request.method==='GET')return json(await listTrash(trashRoute[1]!),200,cors);
     if(trashRoute&&request.method==='POST'){const body=await readJson<Record<string,unknown>>(request);return json(await trashEntity(trashRoute[1]!,String(body.kind??''),String(body.entityId??'')),201,cors);}
     if(trashRestore&&request.method==='POST')return json(await restoreTrash(trashRestore[1]!,decodeURIComponent(trashRestore[2]!)),200,cors);
+    const groupModelsRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/models$/);
+    if(groupModelsRoute&&request.method==='GET')return json({items:await groupModels.list(groupModelsRoute[1]!)},200,cors);
+    if(groupModelsRoute&&request.method==='POST'){const body=await readJson<any>(request);return json(await groupModels.capture(groupModelsRoute[1]!,body),201,cors);}
+    const groupModelReviewRequest=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/models\/([^/]+)\/review-request$/);
+    if(groupModelReviewRequest&&request.method==='POST')return json(await groupModels.requestReview(groupModelReviewRequest[1]!,groupModelReviewRequest[2]!),200,cors);
+    if(request.method==='GET'&&url.pathname==='/api/v1/group-models')return json({items:await groupModels.list()},200,cors);
+    const caseLawRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/case-law$/);
+    if(caseLawRoute&&request.method==='GET')return json({items:await groupCaseLaw.list(caseLawRoute[1]!)},200,cors);
+    if(caseLawRoute&&request.method==='POST'){const body=await readJson<any>(request);return json(await groupCaseLaw.create(caseLawRoute[1]!,body),201,cors);}
+    const caseLawAction=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/case-law\/([^/]+)\/(validate-local|review-request)$/);
+    if(caseLawAction&&request.method==='POST')return json(caseLawAction[3]==='validate-local'?await groupCaseLaw.validateLocal(caseLawAction[1]!,caseLawAction[2]!):await groupCaseLaw.requestReview(caseLawAction[1]!,caseLawAction[2]!),200,cors);
+    if(request.method==='GET'&&url.pathname==='/api/v1/founder/group-models/review-queue'){const ok=await isFounderTeamActor();return json({items:await groupModels.reviewQueue(ok)},200,cors);}
+    const founderModelReview=url.pathname.match(/^\/api\/v1\/founder\/group-models\/([^/]+)\/review$/);
+    if(founderModelReview&&request.method==='POST'){const body=await readJson<Record<string,unknown>>(request),ok=await isFounderTeamActor();return json(await groupModels.review(founderModelReview[1]!,String(body.state??'STANDARD') as any,String(body.note??''),ok),200,cors);}
+    if(request.method==='GET'&&url.pathname==='/api/v1/founder/case-law/review-queue'){const ok=await isFounderTeamActor();return json({items:await groupCaseLaw.reviewQueue(ok)},200,cors);}
+    const founderCaseReview=url.pathname.match(/^\/api\/v1\/founder\/case-law\/([^/]+)\/review$/);
+    if(founderCaseReview&&request.method==='POST'){const body=await readJson<Record<string,unknown>>(request),ok=await isFounderTeamActor();return json(await groupCaseLaw.review(founderCaseReview[1]!,String(body.state??'REJECTED') as any,String(body.note??''),ok),200,cors);}
+    const starterKitRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/starter-kit$/);
+    if(starterKitRoute&&request.method==='GET'){const record=await starterKit.current(starterKitRoute[1]!);return json(record??null,200,cors);}
+    if(starterKitRoute&&request.method==='PUT'){const body=await readJson<any>(request);return json(await starterKit.save(starterKitRoute[1]!,body),200,cors);}
+    const prepaymentRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/prepayments$/);
+    if(prepaymentRoute&&request.method==='GET')return json({items:await prepayments.list(prepaymentRoute[1]!)},200,cors);
+    if(prepaymentRoute&&request.method==='POST'){const body=await readJson<Record<string,unknown>>(request),record=await prepayments.create(prepaymentRoute[1]!,{membershipId:String(body.membershipId??''),rubricId:body.rubricId?String(body.rubricId):undefined,amount:finite(body.amount),intendedMeetingId:body.intendedMeetingId?String(body.intendedMeetingId):undefined,note:body.note?String(body.note):undefined,idempotencyKey:String(body.idempotencyKey??request.headers.get('x-idempotency-key')??makeId('prepayment'))});const receipt=(await repo.listContributionReceipts(ctx.tenantId,prepaymentRoute[1]!)).find(x=>x.id===String(record.data.receiptId??'')),entry=receipt?await repo.getLedgerEntry(ctx.tenantId,prepaymentRoute[1]!,receipt.ledgerEntryId):undefined;if(receipt&&entry)await dispatchContributionProjection(prepaymentRoute[1]!,receipt,entry);return json(record,201,cors);}
+    const prepaymentAllocate=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/prepayments\/([^/]+)\/allocate$/);
+    if(prepaymentAllocate&&request.method==='POST'){const body=await readJson<Record<string,unknown>>(request);return json(await prepayments.allocate(prepaymentAllocate[1]!,prepaymentAllocate[2]!,{meetingId:String(body.meetingId??''),amount:finite(body.amount)}),200,cors);}
+    const reopenAuthBase=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/meetings\/([^/]+)\/reopen-authorizations$/);
+    if(reopenAuthBase&&request.method==='GET')return json({items:await reopenAuth.list(reopenAuthBase[1]!,reopenAuthBase[2]!)},200,cors);
+    if(reopenAuthBase&&request.method==='POST'){const body=await readJson<Record<string,unknown>>(request);return json(await reopenAuth.create(reopenAuthBase[1]!,reopenAuthBase[2]!,{reason:String(body.reason??''),expiresAt:body.expiresAt?String(body.expiresAt):undefined,scope:body.scope?String(body.scope):undefined}),201,cors);}
+    const reopenAuthApprove=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/meetings\/([^/]+)\/reopen-authorizations\/([^/]+)\/approve$/);
+    if(reopenAuthApprove&&request.method==='POST'){const row=await reopenAuth.approve(reopenAuthApprove[1]!,reopenAuthApprove[3]!);if(String(row.data.meetingId)!==reopenAuthApprove[2]!)throw Error('REOPEN_AUTH_NOT_FOUND');return json(row,200,cors);}
+    const reopenAuthCancel=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/meetings\/([^/]+)\/reopen-authorizations\/([^/]+)\/cancel$/);
+    if(reopenAuthCancel&&request.method==='POST'){const body=await readJson<Record<string,unknown>>(request),row=await reopenAuth.cancel(reopenAuthCancel[1]!,reopenAuthCancel[3]!,String(body.reason??''));if(String(row.data.meetingId)!==reopenAuthCancel[2]!)throw Error('REOPEN_AUTH_NOT_FOUND');return json(row,200,cors);}
     const financialCellBase=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/meetings\/([^/]+)\/financial-cells$/);
     const financialCellApply=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/meetings\/([^/]+)\/financial-cells\/([^/]+)\/apply$/);
     if(financialCellBase&&request.method==='POST'){
@@ -416,7 +482,7 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
       }
       return json({error:'METHOD_NOT_ALLOWED'},405,cors);
     }
-    const liveRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/live\/(health|events|connect|publish)$/);
+    const liveRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/live\/(health|events|connect|publish|signal)$/);
     if(liveRoute){
       const groupId=liveRoute[1]!,action=liveRoute[2]!;
       if(!options.premiumLive||!options.liveNamespace)return json({enabled:false,error:'PREMIUM_LIVE_LEDGER_DISABLED'},503,cors);
@@ -431,6 +497,19 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
         return stub.fetch(new Request('https://group-live.internal/events?after='+encodeURIComponent(after)+'&limit='+encodeURIComponent(limit)+'&userId='+encodeURIComponent(ctx.actorId)));
       }
       if(action==='connect'&&request.method==='GET')return stub.fetch(new Request('https://group-live.internal/connect?userId='+encodeURIComponent(ctx.actorId),{method:'GET',headers:request.headers}));
+      if(action==='signal'&&request.method==='POST'){
+        const body=await readJson<Record<string,unknown>>(request),type=String(body.type??'');
+        const allowed=new Set(['PRESENCE','TYPING','TYPING_STOP','CELL_FOCUS','CELL_BLUR','LIVE_ACK']);
+        if(!allowed.has(type))throw new Error('LIVE_CLIENT_SIGNAL_NOT_ALLOWED');
+        const raw=body.payload&&typeof body.payload==='object'&&!Array.isArray(body.payload)?body.payload as Record<string,unknown>:{};
+        const kind=String(raw.kind??'');
+        await requireGroup(groupId,kind==='FINANCIAL_CELL');
+        const payload:Record<string,string|number|boolean|null>={};
+        for(const [k,v] of Object.entries(raw))if(typeof v==='string'||typeof v==='number'||typeof v==='boolean'||v===null)payload[k]=v;
+        const response=await stub.fetch(new Request('https://group-live.internal/signal',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({type,actorId:ctx.actorId,payload})}));
+        if(!response.ok)throw new Error('LIVE_SIGNAL_FAILED');
+        return json({accepted:true,ephemeral:true,groupCode:passport.publicCode},202,cors);
+      }
       if(action==='publish'&&request.method==='POST'){
         const body=await readJson<Record<string,unknown>>(request),type=String(body.type??'');
         if(type==='MEETING_UPDATE')await requireGroup(groupId,true);
@@ -478,6 +557,13 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
     const safetyAppeal=url.pathname.match(/^\/api\/v1\/safety\/cases\/([^/]+)\/appeal$/);
     if(safetyAppeal&&request.method==='POST'){const body=await readJson<Record<string,unknown>>(request);return json(await safety.appeal(safetyAppeal[1]!,{reason:String(body.reason??''),evidenceRef:body.evidenceRef?String(body.evidenceRef):undefined}),201,cors);}
     if(request.method==='POST'&&url.pathname==='/api/v1/safety/referral-structure-assessment'){const body=await readJson<Record<string,unknown>>(request);return json(assessReferralStructure({levels:finite(body.levels,1),fundingSource:String(body.fundingSource??''),rewardForRecruitingRecruiters:Boolean(body.rewardForRecruitingRecruiters),promisedReturnLinkedToRecruitment:Boolean(body.promisedReturnLinkedToRecruitment),realProductOrServiceEvidence:body.realProductOrServiceEvidence===undefined?undefined:Boolean(body.realProductOrServiceEvidence)}),200,cors);}
+    const trustEvidenceRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/trust\/([^/]+)\/evidence$/);
+    if(trustEvidenceRoute&&request.method==='GET')return json({items:await trustGraph.evidence(trustEvidenceRoute[1]!,trustEvidenceRoute[2]!)},200,cors);
+    if(trustEvidenceRoute&&request.method==='POST'){const body=await readJson<Record<string,unknown>>(request);return json(await trustGraph.addEvidence(trustEvidenceRoute[1]!,trustEvidenceRoute[2]!,{commitmentBand:String(body.commitmentBand??''),kind:String(body.kind??'') as any,sourceId:String(body.sourceId??''),occurredAt:body.occurredAt?String(body.occurredAt):undefined,weight:body.weight===undefined?undefined:Number(body.weight)}),201,cors);}
+    const trustProfileRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/trust\/([^/]+)\/profile$/);
+    if(trustProfileRoute&&request.method==='GET')return json(await trustGraph.profile(trustProfileRoute[1]!,trustProfileRoute[2]!,url.searchParams.get('band')??'SMALL'),200,cors);
+    const trustGraphRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/trust\/([^/]+)$/);
+    if(trustGraphRoute&&request.method==='GET')return json(await trustGraph.graph(trustGraphRoute[1]!,trustGraphRoute[2]!),200,cors);
 
     if(request.method==='GET'&&url.pathname==='/api/v1/knowledge'){return json({items:await knowledgeAcademy.searchKnowledge(url.searchParams.get('q')??'',url.searchParams.get('groupId')??undefined)},200,cors);}
     if(request.method==='POST'&&url.pathname==='/api/v1/knowledge'){const body=await readJson<any>(request);return json(await knowledgeAcademy.createKnowledge(body),201,cors);}
@@ -486,7 +572,14 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
     const knowledgeReview=url.pathname.match(/^\/api\/v1\/knowledge\/([^/]+)\/review$/);
     if(knowledgeReview&&request.method==='POST'){const body=await readJson<any>(request);return json(await knowledgeAcademy.reviewKnowledge(knowledgeReview[1]!,String(body.state??'TO_REVALIDATE') as any,String(body.note??'')),200,cors);}
     if(request.method==='GET'&&url.pathname==='/api/v1/encyclopedia')return json({items:knowledgeAcademy.encyclopedia(url.searchParams.get('q')??'')},200,cors);
-    if(request.method==='GET'&&url.pathname==='/api/v1/founder-ai/context')return json(await knowledgeAcademy.founderContext(url.searchParams.get('q')??''),200,cors);
+    if(request.method==='GET'&&url.pathname==='/api/v1/founder-ai/context'){
+      if(!(await isFounderTeamActor()))throw new Error('FOUNDER_TEAM_ONLY');
+      const q=url.searchParams.get('q')??'',knowledgeContext=await knowledgeAcademy.founderContext(q);
+      const control=options.founderControl?await options.founderControl.snapshot(PRODUCT_MODULES.map(x=>({id:x.id,labelFr:x.labelFr,labelEn:x.labelEn,status:x.status,lot:x.lot,workspace:x.workspace}))):undefined;
+      let learning:undefined|{stats:any;discoveries:any[];privacy:string};
+      if(options.founderLearning){const minGroups=5;const [stats,discoveries]=await Promise.all([options.founderLearning.stats(minGroups),options.founderLearning.discoveries(minGroups,100)]);learning={stats,discoveries,privacy:'SANITIZED_PSEUDONYMOUS_K_ANONYMIZED'};}
+      return json(founderAI.synthesize({query:q,knowledgeContext,control,learning}),200,cors);
+    }
     if(request.method==='GET'&&url.pathname==='/api/v1/academy')return json(await knowledgeAcademy.academy(),200,cors);
     if(request.method==='POST'&&url.pathname==='/api/v1/academy/courses'){const body=await readJson<any>(request);return json(await knowledgeAcademy.createCourse(body),201,cors);}
     const academyEnroll=url.pathname.match(/^\/api\/v1\/academy\/courses\/([^/]+)\/enroll$/);
@@ -506,10 +599,35 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
     const referralReward=url.pathname.match(/^\/api\/v1\/growth\/referral-campaigns\/([^/]+)\/rewards\/([^/]+)\/approve$/);
     if(referralReward&&request.method==='POST')return json(await growthReferral.approveReward(referralReward[1]!,referralReward[2]!),200,cors);
 
+    const quietWatchBase=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/quiet-watch$/);
+    if(quietWatchBase&&request.method==='GET')return json({items:await quietWatch.list(quietWatchBase[1]!)},200,cors);
+    if(quietWatchBase&&request.method==='POST')return json(await quietWatch.scan(quietWatchBase[1]!),200,cors);
+    const quietWatchItem=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/quiet-watch\/([^/]+)\/(acknowledge|assistance|approve-assistance|resolve)$/);
+    if(quietWatchItem&&request.method==='POST'){const body=await readJson<any>(request),groupId=quietWatchItem[1]!,id=quietWatchItem[2]!,action=quietWatchItem[3]!;if(action==='acknowledge')return json(await quietWatch.acknowledge(groupId,id,String(body.note??'')),200,cors);if(action==='assistance')return json(await quietWatch.proposeAssistance(groupId,id,body),200,cors);if(action==='approve-assistance')return json(await quietWatch.approveAssistance(groupId,id),200,cors);return json(await quietWatch.resolve(groupId,id,{note:String(body.note??''),evidenceRef:String(body.evidenceRef??'')}),200,cors);}
+
+    const creatorDiscovery=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/creator-content$/);
+    if(creatorDiscovery&&request.method==='GET')return json({items:await creatorTalent.discoverContent(creatorDiscovery[1]!,url.searchParams.get('hubId')??undefined)},200,cors);
+    if(request.method==='GET'&&url.pathname==='/api/v1/creator-studio')return json(await creatorTalent.myCreatorStudio(),200,cors);
+    if(request.method==='POST'&&url.pathname==='/api/v1/creator-studio/content'){const body=await readJson<any>(request);return json(await creatorTalent.createContent(body),201,cors);}
+    const creatorPublish=url.pathname.match(/^\/api\/v1\/creator-studio\/content\/([^/]+)\/publish$/);
+    if(creatorPublish&&request.method==='POST'){const body=await readJson<any>(request);return json(await creatorTalent.publishContent(creatorPublish[1]!,body),200,cors);}
+    const creatorInterest=url.pathname.match(/^\/api\/v1\/creator-studio\/content\/([^/]+)\/interest$/);
+    if(creatorInterest&&request.method==='POST'){const body=await readJson<any>(request);return json(await creatorTalent.recordInterest(creatorInterest[1]!,String(body.note??'')),201,cors);}
+    const creatorConversation=url.pathname.match(/^\/api\/v1\/creator-studio\/content\/([^/]+)\/interests\/([^/]+)\/conversation$/);
+    if(creatorConversation&&request.method==='POST'){const body=await readJson<any>(request);return json(await creatorTalent.startConversation(creatorConversation[1]!,creatorConversation[2]!,body),201,cors);}
+    const creatorAction=url.pathname.match(/^\/api\/v1\/creator-studio\/content\/([^/]+)\/interests\/([^/]+)\/action$/);
+    if(creatorAction&&request.method==='POST'){const body=await readJson<any>(request);return json(await creatorTalent.createCanonicalAction(creatorAction[1]!,creatorAction[2]!,body),201,cors);}
+    if(request.method==='GET'&&url.pathname==='/api/v1/talent/profile')return json(await creatorTalent.talentProfile(),200,cors);
+    if(request.method==='POST'&&url.pathname==='/api/v1/talent/evidence'){const body=await readJson<any>(request);return json(await creatorTalent.addTalentEvidence(body),201,cors);}
+
     if(request.method==='GET'&&url.pathname==='/api/v1/business/summary')return json(await businessStudio.summary(),200,cors);
     if(request.method==='GET'&&url.pathname==='/api/v1/business/records')return json({items:await businessStudio.records()},200,cors);
     if(request.method==='PUT'&&url.pathname==='/api/v1/business/workspace'){const body=await readJson<any>(request);return json(await businessStudio.configure(body),200,cors);}
     if(request.method==='POST'&&url.pathname==='/api/v1/business/mandates'){const body=await readJson<any>(request);return json(await businessStudio.createMandate(body),201,cors);}
+    const groupBusinessMandates=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/business\/mandates$/);
+    if(groupBusinessMandates&&request.method==='GET')return json({items:await businessStudio.groupMandates(groupBusinessMandates[1]!)},200,cors);
+    const businessMandateApprove=url.pathname.match(/^\/api\/v1\/business\/mandates\/([^/]+)\/approve$/);
+    if(businessMandateApprove&&request.method==='POST')return json(await businessStudio.approveMandate(businessMandateApprove[1]!),200,cors);
     const businessMandate=url.pathname.match(/^\/api\/v1\/business\/mandates\/([^/]+)\/(activate|end)$/);
     if(businessMandate&&request.method==='POST'){const body=await readJson<any>(request);return json(businessMandate[2]==='activate'?await businessStudio.activateMandate(businessMandate[1]!):await businessStudio.endMandate(businessMandate[1]!,String(body.reason??'')),200,cors);}
     if(request.method==='POST'&&url.pathname==='/api/v1/business/clients'){const body=await readJson<any>(request);return json(await businessStudio.createClient(body),201,cors);}
@@ -811,6 +929,33 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
       const max=url.searchParams.get('maxContribution'); const currency=url.searchParams.get('currency')??'XAF';
       return json(await discovery.search({text:url.searchParams.get('q')??undefined,locality:url.searchParams.get('locality')??undefined,missionTags:strArray(url.searchParams.get('missionTags')),activityTags:strArray(url.searchParams.get('activityTags')),family:(url.searchParams.get('family')??undefined) as any,meetingMode:(url.searchParams.get('meetingMode')??undefined) as any,maxContribution:max?{currency,amount:finite(max)}:undefined,recruitingOnly:url.searchParams.get('recruitingOnly')==='true'}),200,cors);
     }
+    if(url.pathname==='/api/v1/discovery/saved-searches'&&request.method==='GET')return json({items:await discovery.savedSearches()},200,cors);
+    if(url.pathname==='/api/v1/discovery/saved-searches'&&request.method==='POST')return json(await discovery.saveSearch(await readJson<any>(request)),201,cors);
+    const savedRun=url.pathname.match(/^\/api\/v1\/discovery\/saved-searches\/([^/]+)\/run$/);
+    if(savedRun&&request.method==='POST')return json(await discovery.runSavedSearch(savedRun[1]!),200,cors);
+    const savedDelete=url.pathname.match(/^\/api\/v1\/discovery\/saved-searches\/([^/]+)$/);
+    if(savedDelete&&request.method==='DELETE')return json(await discovery.deleteSavedSearch(savedDelete[1]!),200,cors);
+    if(url.pathname==='/api/v1/discovery/proximity'&&request.method==='GET')return json(await discovery.proximity(String(url.searchParams.get('locality')??''),String(url.searchParams.get('q')??'')),200,cors);
+    if(url.pathname==='/api/v1/discovery/manager-profile'&&request.method==='GET')return json({profile:await discovery.managerProfile()},200,cors);
+    if(url.pathname==='/api/v1/discovery/manager-profile'&&request.method==='PUT'){const body=await readJson<any>(request);return json(await discovery.saveManagerProfile(body),200,cors);}
+    if(url.pathname==='/api/v1/discovery/manager-profiles/search'&&request.method==='GET')return json({items:await discovery.searchManagerProfiles({text:url.searchParams.get('q')??undefined,locality:url.searchParams.get('locality')??undefined,expertise:strArray(url.searchParams.get('expertise')??'')})},200,cors);
+    if(url.pathname==='/api/v1/discovery/candidate-profile'&&request.method==='GET')return json({profile:await discovery.candidateProfile()},200,cors);
+    if(url.pathname==='/api/v1/discovery/candidate-profile'&&request.method==='PUT'){const body=await readJson<any>(request);return json(await discovery.saveCandidateProfile(body),200,cors);}
+    if(url.pathname==='/api/v1/discovery/candidate-invitations'&&request.method==='GET')return json(await discovery.candidateInvitations(),200,cors);
+    const candidateInvitationResponse=url.pathname.match(/^\/api\/v1\/discovery\/candidate-invitations\/([^/]+)\/respond$/);
+    if(candidateInvitationResponse&&request.method==='POST'){const body=await readJson<Record<string,unknown>>(request),response=String(body.response??'');if(response!=='INTERESTED'&&response!=='DECLINED')throw new Error('INVALID_CANDIDATE_INVITATION_RESPONSE');return json(await discovery.respondCandidateInvitation(candidateInvitationResponse[1]!,response),200,cors);}
+    const candidateSearchRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/discovery\/candidates$/);
+    if(candidateSearchRoute&&request.method==='GET')return json(await discovery.searchCandidates(ctx.tenantId,candidateSearchRoute[1]!,{text:url.searchParams.get('q')??undefined,locality:url.searchParams.get('locality')??undefined,tags:strArray(url.searchParams.get('tags')??'')}),200,cors);
+    const candidateFitRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/discovery\/candidates\/([^/]+)\/fit$/);
+    if(candidateFitRoute&&request.method==='GET')return json(await discovery.candidateFit(ctx.tenantId,candidateFitRoute[1]!,candidateFitRoute[2]!),200,cors);
+    const candidateInviteRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/discovery\/candidates\/([^/]+)\/invite$/);
+    if(candidateInviteRoute&&request.method==='POST'){const body=await readJson<Record<string,unknown>>(request);return json(await discovery.inviteCandidate(ctx.tenantId,candidateInviteRoute[1]!,candidateInviteRoute[2]!,{campaignId:body.campaignId?String(body.campaignId):undefined,message:body.message?String(body.message):undefined}),201,cors);}
+    const recruitmentCampaignRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/recruitment-campaigns$/);
+    if(recruitmentCampaignRoute&&request.method==='GET')return json(await discovery.recruitmentCampaigns(ctx.tenantId,recruitmentCampaignRoute[1]!),200,cors);
+    if(recruitmentCampaignRoute&&request.method==='POST'){const body=await readJson<any>(request);return json(await discovery.createRecruitmentCampaign(ctx.tenantId,recruitmentCampaignRoute[1]!,body),201,cors);}
+    const recruitmentCampaignState=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/recruitment-campaigns\/([^/]+)\/state$/);
+    if(recruitmentCampaignState&&request.method==='POST'){const body=await readJson<Record<string,unknown>>(request),state=String(body.state??'');if(!['ACTIVE','PAUSED','CLOSED'].includes(state))throw new Error('INVALID_RECRUITMENT_STATE');return json(await discovery.setRecruitmentCampaignState(ctx.tenantId,recruitmentCampaignState[1]!,recruitmentCampaignState[2]!,state as any),200,cors);}
+
     const discoveryPublish=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/discovery$/);
     if(discoveryPublish&&request.method==='POST'){
       const body=await readJson<Record<string,unknown>>(request); const band=body.contributionBand&&typeof body.contributionBand==='object'?body.contributionBand as Record<string,unknown>:undefined;
@@ -819,13 +964,22 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
     const applicationCreate=url.pathname.match(/^\/api\/v1\/discovery\/groups\/([^/]+)\/applications$/);
     if(applicationCreate&&request.method==='POST'){
       const body=await readJson<Record<string,unknown>>(request); const band=body.requestedCommitmentBand&&typeof body.requestedCommitmentBand==='object'?body.requestedCommitmentBand as Record<string,unknown>:undefined;
-      return json(await membershipGateway.requestToJoin({groupId:applicationCreate[1]!,message:body.message?String(body.message):undefined,requestedCommitmentBand:band?{currency:String(band.currency??'XAF'),min:band.min===undefined?undefined:finite(band.min),max:band.max===undefined?undefined:finite(band.max),cadence:band.cadence?String(band.cadence):undefined}:undefined}),201,cors);
+      const answers=body.answers&&typeof body.answers==='object'&&!Array.isArray(body.answers)?Object.fromEntries(Object.entries(body.answers as Record<string,unknown>).map(([k,v])=>[k,String(v??'')])):undefined;
+      return json(await membershipGateway.requestToJoin({groupId:applicationCreate[1]!,message:body.message?String(body.message):undefined,requestedCommitmentBand:band?{currency:String(band.currency??'XAF'),min:band.min===undefined?undefined:finite(band.min),max:band.max===undefined?undefined:finite(band.max),cadence:band.cadence?String(band.cadence):undefined}:undefined,answers,referralCode:body.referralCode?String(body.referralCode):undefined}),201,cors);
     }
     if(request.method==='POST'&&url.pathname==='/api/v1/membership-applications'){
       const body=await readJson<Record<string,unknown>>(request);
       const groupId=String(body.groupId??'').trim(); if(!groupId) throw new Error('GROUP_ID_REQUIRED');
-      return json(await membershipGateway.requestToJoin({groupId,message:body.message?String(body.message):undefined}),201,cors);
+      const answers=body.answers&&typeof body.answers==='object'&&!Array.isArray(body.answers)?Object.fromEntries(Object.entries(body.answers as Record<string,unknown>).map(([k,v])=>[k,String(v??'')])):undefined;
+      return json(await membershipGateway.requestToJoin({groupId,message:body.message?String(body.message):undefined,answers,referralCode:body.referralCode?String(body.referralCode):undefined}),201,cors);
     }
+    const membershipQuestions=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/membership-questions$/);
+    if(membershipQuestions&&request.method==='GET'){const listing=await repo.getPublicGroupListing(membershipQuestions[1]!);if(listing?.tenantId===ctx.tenantId)return json(await membershipGateway.groupMembershipQuestions(ctx.tenantId,membershipQuestions[1]!),200,cors);return json(await membershipGateway.membershipQuestions(membershipQuestions[1]!),200,cors);}
+    if(membershipQuestions&&request.method==='PUT'){const body=await readJson<Record<string,unknown>>(request);return json(await membershipGateway.setMembershipQuestions(ctx.tenantId,membershipQuestions[1]!,Array.isArray(body.questions)?body.questions as any:[]),200,cors);}
+    const membershipReferral=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/membership-referrals$/);
+    if(membershipReferral&&request.method==='POST'){const body=await readJson<Record<string,unknown>>(request);return json(await membershipGateway.createReferral(ctx.tenantId,membershipReferral[1]!,String(body.note??'')),201,cors);}
+    const applicationDetail=url.pathname.match(/^\/api\/v1\/membership-applications\/([^/]+)\/details$/);
+    if(applicationDetail&&request.method==='GET')return json(await membershipGateway.applicationDetails(applicationDetail[1]!),200,cors);
     const applicationList=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/applications$/);
     if(applicationList&&request.method==='GET') return json(await membershipGateway.listForGroup(ctx.tenantId,applicationList[1]!),200,cors);
     const applicationDecision=url.pathname.match(/^\/api\/v1\/membership-applications\/([^/]+)\/decision$/);
@@ -1079,7 +1233,7 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
     const contributionRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/contributions\/cash$/);
     if(contributionRoute&&request.method==='POST'){
       const body=await readJson<Record<string,unknown>>(request);
-      const receipt=await ledger.recordCashContribution({tenantId:ctx.tenantId,groupId:contributionRoute[1]!,membershipId:String(body.membershipId??''),amount:finite(body.amount),currency:String(body.currency??'XAF'),meetingId:body.meetingId?String(body.meetingId):undefined,rubricId:body.rubricId?String(body.rubricId):undefined,lateReason:body.lateReason?String(body.lateReason):undefined,approverIds:strArray(body.approverIds),idempotencyKey:String(body.idempotencyKey??request.headers.get('x-idempotency-key')??makeId('idem'))});
+      const receipt=await ledger.recordCashContribution({tenantId:ctx.tenantId,groupId:contributionRoute[1]!,membershipId:String(body.membershipId??''),amount:finite(body.amount),currency:String(body.currency??'XAF'),meetingId:body.meetingId?String(body.meetingId):undefined,rubricId:body.rubricId?String(body.rubricId):undefined,lateReason:body.lateReason?String(body.lateReason):undefined,approverIds:strArray(body.approverIds),lateAuthorizationId:body.lateAuthorizationId?String(body.lateAuthorizationId):undefined,idempotencyKey:String(body.idempotencyKey??request.headers.get('x-idempotency-key')??makeId('idem'))});
       const entry=await repo.getLedgerEntry(ctx.tenantId,contributionRoute[1]!,receipt.ledgerEntryId);
       if(entry)await dispatchContributionProjection(contributionRoute[1]!,receipt,entry);
       // The financial transaction is authoritative once D1 has committed it.
@@ -1217,6 +1371,11 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
       const body=await readJson<Record<string,unknown>>(request); return json(await foundation.reconcileCashbox({tenantId:ctx.tenantId,groupId:cashboxRoute[1]!,meetingId:body.meetingId?String(body.meetingId):undefined,openingCash:finite(body.openingCash),cashIn:finite(body.cashIn),cashOut:finite(body.cashOut),countedClosing:finite(body.countedClosing),currency:String(body.currency??'XAF')}),201,cors);
     }
 
+    const memberEnvelope=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/meetings\/([^/]+)\/member-envelope$/);
+    if(memberEnvelope&&request.method==='GET'){
+      const membershipId=url.searchParams.get('membershipId')??undefined;
+      return json(await memberEnvelopes.build(memberEnvelope[1]!,memberEnvelope[2]!,membershipId),200,cors);
+    }
     const memberNotices=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/members\/([^/]+)\/financial-notices$/);
     if(memberNotices&&request.method==='GET')return json(await memberControl.list(memberNotices[1]!,memberNotices[2]!),200,cors);
     const noticeConfirm=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/financial-notices\/([^/]+)\/confirm$/);
@@ -1274,8 +1433,10 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
       if(!options.communityRealtime)throw new Error('COMMUNITY_REALTIME_UNAVAILABLE');
       const groupId=forumReaction[1]!,body=await readJson<Record<string,unknown>>(request),messageId=decodeURIComponent(forumReaction[2]!);
       await requireGroup(groupId);
+      const messageContext=await options.communityRealtime.messageContext(messageId);
+      if(!messageContext||messageContext.tenantId!==ctx.tenantId||messageContext.groupId!==groupId)throw new Error('COMMUNITY_MESSAGE_NOT_FOUND');
       const state=await options.communityRealtime.toggleReaction({messageId,userId:ctx.actorId,reaction:String(body.reaction??'')});
-      await publishLive(groupId,'COMMUNITY_EVENT','forum-reaction:'+messageId+':'+ctx.actorId+':'+String(body.reaction??'')+':'+(state.active?'on':'off'),{messageId,event:'REACTION_CHANGED'});
+      await publishLive(groupId,'COMMUNITY_EVENT','forum-reaction:'+messageId+':'+ctx.actorId+':'+String(body.reaction??'')+':'+(state.active?'on':'off'),{hubId:messageContext.hubId,messageId,event:'REACTION_CHANGED'});
       return json(state,200,cors);
     }
 
@@ -1462,9 +1623,56 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
       return json({enabled:valid,affinities:valid?await conciergeLearning.commercialAffinities(preferenceContext[1]!):[]},200,cors);
     }
 
+    if(url.pathname==='/api/v1/opportunity-graph'&&request.method==='GET')return json(await opportunityGraph.projection(),200,cors);
+    if(url.pathname==='/api/v1/wallet'&&request.method==='GET')return json(await wallet.projection(),200,cors);
+    if(url.pathname==='/api/v1/wallet/reservations'&&request.method==='POST'){const body=await readJson<Record<string,unknown>>(request);return json(await wallet.reserve({groupId:String(body.groupId??''),subaccountKey:String(body.subaccountKey??''),amount:finite(body.amount),purpose:String(body.purpose??''),expiresAt:body.expiresAt?String(body.expiresAt):undefined}),201,cors);}
+    const walletRelease=url.pathname.match(/^\/api\/v1\/wallet\/reservations\/([^/]+)\/release$/);
+    if(walletRelease&&request.method==='POST')return json(await wallet.release(walletRelease[1]!),200,cors);
+
+    if(url.pathname==='/api/v1/value-discovery/profile'&&request.method==='GET')return json({profile:await valueDiscovery.profile()},200,cors);
+    if(url.pathname==='/api/v1/value-discovery/profile'&&request.method==='PUT'){const body=await readJson<any>(request);return json(await valueDiscovery.saveProfile(body),200,cors);}
+    if(url.pathname==='/api/v1/value-discovery/suggestions'&&request.method==='GET')return json({items:await valueDiscovery.suggestions(finite(url.searchParams.get('limit'),30))},200,cors);
+    const microAdsBase=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/micro-ads$/);
+    if(microAdsBase&&request.method==='GET')return json({items:await microAds.list(microAdsBase[1]!,{locality:url.searchParams.get('locality')??undefined,type:(url.searchParams.get('type')??undefined) as any,includeClosed:url.searchParams.get('includeClosed')==='1'})},200,cors);
+    if(microAdsBase&&request.method==='POST'){const body=await readJson<Record<string,unknown>>(request);return json(await microAds.create(microAdsBase[1]!,{type:String(body.type??'SEEK') as any,category:String(body.category??''),text:String(body.text??''),locality:String(body.locality??''),contactMode:String(body.contactMode??'CHAT') as any,contactRef:body.contactRef?String(body.contactRef):undefined,durationDays:body.durationDays===undefined?undefined:Number(body.durationDays) as any,customExpiresAt:body.customExpiresAt?String(body.customExpiresAt):undefined}),201,cors);}
+    const microAdAction=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/micro-ads\/([^/]+)\/(publish|close|report|promote)$/);
+    if(microAdAction&&request.method==='POST'){const body=await readJson<Record<string,unknown>>(request),[g,id,action]=[microAdAction[1]!,microAdAction[2]!,microAdAction[3]!];return json(action==='publish'?await microAds.publish(g,id):action==='close'?await microAds.close(g,id):action==='report'?await microAds.report(g,id,String(body.reason??'')):await microAds.promote(g,id,{quantity:finite(body.quantity,1),unit:String(body.unit??'unité'),unitPrice:body.unitPrice===undefined?undefined:finite(body.unitPrice),currency:String(body.currency??'XAF'),neededBy:body.neededBy?String(body.neededBy):undefined,expiresAt:body.expiresAt?String(body.expiresAt):undefined,evidenceRef:body.evidenceRef?String(body.evidenceRef):undefined}),200,cors);}
+    const anticipationBase=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/anticipation$/);
+    if(anticipationBase&&request.method==='GET')return json({items:await anticipation.list(anticipationBase[1]!),signals:await anticipation.signals(anticipationBase[1]!)},200,cors);
+    if(anticipationBase&&request.method==='POST')return json(await anticipation.createDraft(anticipationBase[1]!),201,cors);
+    const anticipationTransition=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/anticipation\/([^/]+)\/(validate|complete|archive)$/);
+    if(anticipationTransition&&request.method==='POST'){
+      const [g,id,action]=[anticipationTransition[1]!,anticipationTransition[2]!,anticipationTransition[3]!];
+      return json(action==='validate'?await anticipation.validate(g,id):action==='complete'?await anticipation.complete(g,id):await anticipation.archive(g,id),200,cors);
+    }
+    const nextOfKinBase=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/succession\/next-of-kin$/);
+    if(nextOfKinBase&&request.method==='GET')return json({items:await nextOfKin.list(nextOfKinBase[1]!,url.searchParams.get('membershipId')??undefined)},200,cors);
+    if(nextOfKinBase&&request.method==='POST'){const body=await readJson<Record<string,unknown>>(request);return json(await nextOfKin.create(nextOfKinBase[1]!,{membershipId:String(body.membershipId??''),contactAlias:String(body.contactAlias??''),relationship:String(body.relationship??''),contactRef:String(body.contactRef??''),consentRef:String(body.consentRef??''),notes:body.notes?String(body.notes):undefined}),201,cors);}
+    const nextOfKinConfirm=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/succession\/next-of-kin\/([^/]+)\/confirm$/);
+    if(nextOfKinConfirm&&request.method==='POST')return json(await nextOfKin.confirm(nextOfKinConfirm[1]!,nextOfKinConfirm[2]!),200,cors);
+    const nextOfKinRevoke=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/succession\/next-of-kin\/([^/]+)\/revoke$/);
+    if(nextOfKinRevoke&&request.method==='POST'){const body=await readJson<Record<string,unknown>>(request);return json(await nextOfKin.revoke(nextOfKinRevoke[1]!,nextOfKinRevoke[2]!,String(body.reason??'')),200,cors);}
+    const timeMachineBase=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/time-machine$/);
+    if(timeMachineBase&&request.method==='GET')return json({items:await timeMachine.list(timeMachineBase[1]!)},200,cors);
+    if(timeMachineBase&&request.method==='POST'){const body=await readJson<Record<string,unknown>>(request);return json(await timeMachine.capture(timeMachineBase[1]!,{label:body.label?String(body.label):undefined,reason:String(body.reason??'')}),201,cors);}
+    const timeMachineOne=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/time-machine\/([^/]+)$/);
+    if(timeMachineOne&&request.method==='GET')return json(await timeMachine.get(timeMachineOne[1]!,timeMachineOne[2]!),200,cors);
+    const timeMachineCompare=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/time-machine\/compare$/);
+    if(timeMachineCompare&&request.method==='GET')return json(await timeMachine.compare(timeMachineCompare[1]!,String(url.searchParams.get('from')??''),String(url.searchParams.get('to')??'')),200,cors);
+    const rubricExceptionBase=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/rubric-exceptions$/);
+    if(rubricExceptionBase&&request.method==='GET')return json({items:await rubricExceptions.list(rubricExceptionBase[1]!)},200,cors);
+    if(rubricExceptionBase&&request.method==='POST'){const body=await readJson<Record<string,unknown>>(request);return json(await rubricExceptions.create(rubricExceptionBase[1]!,{rubricId:String(body.rubricId??''),title:String(body.title??''),scope:String(body.scope??'GROUP') as any,targetRef:body.targetRef?String(body.targetRef):undefined,reason:String(body.reason??''),effectSummary:String(body.effectSummary??''),evidenceRef:String(body.evidenceRef??''),validFrom:body.validFrom?String(body.validFrom):undefined,validUntil:body.validUntil?String(body.validUntil):undefined}),201,cors);}
+    const rubricExceptionDecide=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/rubric-exceptions\/([^/]+)\/(approve|reject)$/);
+    if(rubricExceptionDecide&&request.method==='POST'){const body=await readJson<Record<string,unknown>>(request);return json(await rubricExceptions.decide(rubricExceptionDecide[1]!,rubricExceptionDecide[2]!,rubricExceptionDecide[3]==='approve'?'APPROVED':'REJECTED',String(body.note??'')),200,cors);}
+    const rubricExceptionClose=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/rubric-exceptions\/([^/]+)\/close$/);
+    if(rubricExceptionClose&&request.method==='POST'){const body=await readJson<Record<string,unknown>>(request);return json(await rubricExceptions.close(rubricExceptionClose[1]!,rubricExceptionClose[2]!,String(body.note??'')),200,cors);}
+    const rubricExceptionApplicable=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/rubric-exceptions\/applicable$/);
+    if(rubricExceptionApplicable&&request.method==='GET')return json({items:await rubricExceptions.applicable(rubricExceptionApplicable[1]!,{rubricId:String(url.searchParams.get('rubricId')??''),membershipId:url.searchParams.get('membershipId')??undefined,meetingId:url.searchParams.get('meetingId')??undefined,at:url.searchParams.get('at')??undefined})},200,cors);
     const amountExplain=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/members\/([^/]+)\/amount-explanation$/);
     if(amountExplain&&request.method==='GET'){
-      return json(await explainability.amount(amountExplain[1]!,amountExplain[2]!,url.searchParams.get('rubricId')??undefined),200,cors);
+      const rubricId=url.searchParams.get('rubricId')??undefined,base=await explainability.amount(amountExplain[1]!,amountExplain[2]!,rubricId);
+      const applicableExceptions=rubricId?await rubricExceptions.applicable(amountExplain[1]!,{rubricId,membershipId:amountExplain[2]!,meetingId:url.searchParams.get('meetingId')??undefined,at:url.searchParams.get('at')??undefined}):[];
+      return json({...base,applicableExceptions},200,cors);
     }
     const documentSearch=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/documents\/search$/);
     if(documentSearch&&request.method==='GET'){
@@ -1513,12 +1721,17 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
     if(openingRoute&&request.method==='POST'){const body=await readJson<Record<string,unknown>>(request);return json(await treasury.openingBalance(openingRoute[1]!,{amount:finite(body.amount),currency:String(body.currency??'XAF'),note:String(body.note??''),idempotencyKey:String(body.idempotencyKey??request.headers.get('x-idempotency-key')??makeId('opening'))}),201,cors);}
     const custodyRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/custody$/);
     if(custodyRoute&&request.method==='POST'){const body=await readJson<Record<string,unknown>>(request);return json(await treasury.createCustody(custodyRoute[1]!,{name:String(body.name??''),holder:String(body.holder??''),currency:String(body.currency??'XAF')}),201,cors);}
+    const custodyPositionRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/custody\/([^/]+)\/position$/);
+    if(custodyPositionRoute&&request.method==='GET')return json(await treasury.custodyPosition(custodyPositionRoute[1]!,custodyPositionRoute[2]!),200,cors);
     const custodyOut=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/custody\/([^/]+)\/send$/);
     if(custodyOut&&request.method==='POST'){const body=await readJson<Record<string,unknown>>(request);return json(await treasury.sendToCustody(custodyOut[1]!,custodyOut[2]!,finite(body.amount),String(body.idempotencyKey??makeId('custody_out'))),201,cors);}
     const custodyIn=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/custody\/([^/]+)\/return$/);
     if(custodyIn&&request.method==='POST'){const body=await readJson<Record<string,unknown>>(request);return json(await treasury.returnFromCustody(custodyIn[1]!,custodyIn[2]!,finite(body.amount),String(body.idempotencyKey??makeId('custody_in'))),201,cors);}
     const guarantorRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/loans\/([^/]+)\/guarantors$/);
+    if(guarantorRoute&&request.method==='GET'){const rows=await riskFinance.list(guarantorRoute[1]!,'LOAN_GUARANTEE');return json({items:rows.filter(x=>String(x.data.loanId??'')===guarantorRoute[2]!)},200,cors);}
     if(guarantorRoute&&request.method==='POST'){const body=await readJson<Record<string,unknown>>(request);return json(await riskFinance.guarantor(guarantorRoute[1]!,{loanId:guarantorRoute[2]!,membershipId:String(body.membershipId??''),guaranteedAmount:finite(body.guaranteedAmount)}),201,cors);}
+    const guarantorRelease=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/loans\/([^/]+)\/guarantors\/([^/]+)\/release$/);
+    if(guarantorRelease&&request.method==='POST'){const body=await readJson<Record<string,unknown>>(request),record=await riskFinance.releaseGuarantee(guarantorRelease[1]!,guarantorRelease[3]!,String(body.reason??''));if(String(record.data.loanId??'')!==guarantorRelease[2]!)throw Error('LOAN_GUARANTEE_NOT_FOUND');return json(record,200,cors);}
     const solidarityRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/solidarity\/cases$/);
     if(solidarityRoute&&request.method==='POST'){const body=await readJson<Record<string,unknown>>(request);return json(await riskFinance.solidarityCase(solidarityRoute[1]!,{beneficiaryMembershipId:String(body.beneficiaryMembershipId??''),title:String(body.title??''),approvedAmount:finite(body.approvedAmount),currency:String(body.currency??'XAF')}),201,cors);}
     const solidarityFund=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/solidarity\/cases\/([^/]+)\/fund$/);
@@ -1613,12 +1826,63 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
     if(procurementReceive&&request.method==='POST'){const body=await readJson<any>(request);return json(await market.receiveProcurement(procurementReceive[1]!,procurementReceive[2]!,body),200,cors);}
     const procurementReturn=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/market\/procurements\/([^/]+)\/return$/);
     if(procurementReturn&&request.method==='POST'){const body=await readJson<any>(request);return json(await market.returnProcurement(procurementReturn[1]!,procurementReturn[2]!,body),200,cors);}
+    const stockProjectionRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/market\/stock\/([^/]+)\/projection$/);
+    if(stockProjectionRoute&&request.method==='GET')return json(await market.stockProjection(stockProjectionRoute[1]!,stockProjectionRoute[2]!),200,cors);
+    const procurementLifecycleRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/market\/procurements\/([^/]+)\/lifecycle$/);
+    if(procurementLifecycleRoute&&request.method==='GET')return json(await market.procurementLifecycle(procurementLifecycleRoute[1]!,procurementLifecycleRoute[2]!),200,cors);
+    const supplierInvoiceRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/market\/procurements\/([^/]+)\/invoices$/);
+    if(supplierInvoiceRoute&&request.method==='POST'){const body=await readJson<any>(request);return json(await market.recordSupplierInvoice(supplierInvoiceRoute[1]!,{...body,procurementId:supplierInvoiceRoute[2]!}),201,cors);}
+    const supplierInvoiceReconcile=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/market\/procurements\/([^/]+)\/invoices\/([^/]+)\/reconcile$/);
+    if(supplierInvoiceReconcile&&request.method==='POST'){const body=await readJson<any>(request);return json(await market.reconcileSupplierInvoice(supplierInvoiceReconcile[1]!,{procurementId:supplierInvoiceReconcile[2]!,invoiceId:supplierInvoiceReconcile[3]!,note:body.note?String(body.note):undefined}),200,cors);}
+    const supplierCreditNoteRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/market\/procurements\/([^/]+)\/credit-notes$/);
+    if(supplierCreditNoteRoute&&request.method==='POST'){const body=await readJson<any>(request);return json(await market.issueSupplierCreditNote(supplierCreditNoteRoute[1]!,{...body,procurementId:supplierCreditNoteRoute[2]!}),201,cors);}
     const supplierCreditPayment=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/market\/supplier-credits\/([^/]+)\/payments$/);
     if(supplierCreditPayment&&request.method==='POST'){const body=await readJson<any>(request);return json(await market.paySupplierCredit(supplierCreditPayment[1]!,supplierCreditPayment[2]!,body),200,cors);}
     const groupBuyRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/market\/group-buys$/);
     if(groupBuyRoute&&request.method==='POST'){const body=await readJson<Record<string,unknown>>(request);return json(await market.createGroupBuy(groupBuyRoute[1]!,{title:String(body.title??''),stockItemId:body.stockItemId?String(body.stockItemId):undefined,thresholdQuantity:finite(body.thresholdQuantity),deadline:String(body.deadline??'')}),201,cors);}
     const groupBuyCommit=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/market\/group-buys\/([^/]+)\/commit$/);
     if(groupBuyCommit&&request.method==='POST'){const body=await readJson<Record<string,unknown>>(request);return json(await market.commitGroupBuy(groupBuyCommit[1]!,groupBuyCommit[2]!,String(body.membershipId??''),finite(body.quantity)),200,cors);}
+    const socialCommerceRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/market\/social-commerce$/);
+    if(socialCommerceRoute&&request.method==='GET')return json(await market.socialCommerce(socialCommerceRoute[1]!),200,cors);
+    const flashOfferRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/market\/flash-offers$/);
+    if(flashOfferRoute&&request.method==='POST')return json(await market.createFlashOffer(flashOfferRoute[1]!,await readJson<any>(request)),201,cors);
+    const flashClose=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/market\/flash-offers\/([^/]+)\/close$/);
+    if(flashClose&&request.method==='POST'){const body=await readJson<Record<string,unknown>>(request);return json(await market.closeFlashOffer(flashClose[1]!,flashClose[2]!,String(body.reason??'')),200,cors);}
+    const marketRequestRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/market\/requests$/);
+    if(marketRequestRoute&&request.method==='GET')return json({items:await market.marketRequests(marketRequestRoute[1]!)},200,cors);
+    if(marketRequestRoute&&request.method==='POST')return json(await market.createMarketRequest(marketRequestRoute[1]!,await readJson<any>(request)),201,cors);
+    const marketRequestAccept=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/market\/requests\/([^/]+)\/accept-prediction$/);
+    if(marketRequestAccept&&request.method==='POST')return json(await market.acceptPredictedMarketRequest(marketRequestAccept[1]!,marketRequestAccept[2]!),200,cors);
+    const marketRequestOpen=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/market\/requests\/([^/]+)\/open$/);
+    if(marketRequestOpen&&request.method==='POST')return json(await market.openMarketRequest(marketRequestOpen[1]!,marketRequestOpen[2]!),200,cors);
+    const marketResponses=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/market\/requests\/([^/]+)\/responses$/);
+    if(marketResponses&&request.method==='GET')return json({items:await market.marketRequestResponses(marketResponses[1]!,marketResponses[2]!)},200,cors);
+    if(marketResponses&&request.method==='POST')return json(await market.respondMarketRequest(marketResponses[1]!,marketResponses[2]!,await readJson<any>(request)),201,cors);
+    const marketResponseShortlist=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/market\/requests\/([^/]+)\/responses\/([^/]+)\/shortlist$/);
+    if(marketResponseShortlist&&request.method==='POST')return json(await market.shortlistMarketResponse(marketResponseShortlist[1]!,marketResponseShortlist[2]!,marketResponseShortlist[3]!),200,cors);
+    const marketResponseSelect=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/market\/requests\/([^/]+)\/responses\/([^/]+)\/select$/);
+    if(marketResponseSelect&&request.method==='POST')return json(await market.selectMarketResponse(marketResponseSelect[1]!,marketResponseSelect[2]!,marketResponseSelect[3]!),200,cors);
+    const marketRequestTransition=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/market\/requests\/([^/]+)\/transition$/);
+    if(marketRequestTransition&&request.method==='POST'){const body=await readJson<Record<string,unknown>>(request);return json(await market.transitionMarketRequest(marketRequestTransition[1]!,marketRequestTransition[2]!,String(body.state??'') as any,String(body.note??'')),200,cors);}
+    const dealRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/market\/deals$/);
+    if(dealRoute&&request.method==='GET')return json({items:await market.deals(dealRoute[1]!)},200,cors);
+    if(dealRoute&&request.method==='POST')return json(await market.createDeal(dealRoute[1]!,await readJson<any>(request)),201,cors);
+    const dealOpen=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/market\/deals\/([^/]+)\/open$/);
+    if(dealOpen&&request.method==='POST')return json(await market.openDeal(dealOpen[1]!,dealOpen[2]!),200,cors);
+    const dealCommit=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/market\/deals\/([^/]+)\/commit$/);
+    if(dealCommit&&request.method==='POST'){const body=await readJson<Record<string,unknown>>(request);return json(await market.commitDealQuantity(dealCommit[1]!,dealCommit[2]!,finite(body.quantity)),200,cors);}
+    const dealCommitments=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/market\/deals\/([^/]+)\/commitments$/);
+    if(dealCommitments&&request.method==='GET')return json({items:await market.dealCommitments(dealCommitments[1]!,dealCommitments[2]!)},200,cors);
+    const dealTransition=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/market\/deals\/([^/]+)\/transition$/);
+    if(dealTransition&&request.method==='POST'){const body=await readJson<Record<string,unknown>>(request);return json(await market.transitionDeal(dealTransition[1]!,dealTransition[2]!,String(body.state??'') as any,String(body.note??'')),200,cors);}
+    const liveMarketRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/market\/live-markets$/);
+    if(liveMarketRoute&&request.method==='GET')return json({items:await market.liveMarkets(liveMarketRoute[1]!)},200,cors);
+    if(liveMarketRoute&&request.method==='POST')return json(await market.createLiveMarket(liveMarketRoute[1]!,await readJson<any>(request)),201,cors);
+    const liveMarketState=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/market\/live-markets\/([^/]+)\/state$/);
+    if(liveMarketState&&request.method==='POST'){const body=await readJson<Record<string,unknown>>(request);return json(await market.setLiveMarketState(liveMarketState[1]!,liveMarketState[2]!,String(body.state??'') as any),200,cors);}
+    const liveMarketPin=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/market\/live-markets\/([^/]+)\/pin-deal$/);
+    if(liveMarketPin&&request.method==='POST'){const body=await readJson<Record<string,unknown>>(request);return json(await market.pinLiveMarketDeal(liveMarketPin[1]!,liveMarketPin[2]!,String(body.dealId??'')),200,cors);}
+
     const completionCollection=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/completion$/);
     if(completionCollection&&request.method==='GET'){
       const kind=url.searchParams.get('kind') as CompletionKind|null;
@@ -1865,9 +2129,13 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
 
     const calendarRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/calendar\.ics$/);
     if(calendarRoute&&request.method==='GET'){
-      await requireGroup(calendarRoute[1]!);
-      const meetings=await repo.listMeetings(ctx.tenantId,calendarRoute[1]!);
-      const ics=makeIcs(meetings.filter(x=>x.scheduledAt).map(x=>({uid:x.id,title:x.title,start:x.scheduledAt!,cancelled:x.status==='cancelled'})));
+      const groupId=calendarRoute[1]!;await requireGroup(groupId);
+      const [meetings,obligations]=await Promise.all([repo.listMeetings(ctx.tenantId,groupId),repo.listObligations(ctx.tenantId,ctx.actorId)]);
+      const events=[
+        ...meetings.filter(x=>x.scheduledAt).map(x=>({uid:'meeting-'+x.id,title:x.title,start:x.scheduledAt!,cancelled:x.status==='cancelled'})),
+        ...obligations.filter(x=>x.groupId===groupId&&x.dueAt&&(x.status==='open'||x.status==='overdue')).map(x=>({uid:'obligation-'+x.id,title:'Échéance · '+x.title,start:x.dueAt!,cancelled:false}))
+      ];
+      const ics=makeIcs(events);
       return new Response(ics,{status:200,headers:{'content-type':'text/calendar; charset=utf-8','content-disposition':'attachment; filename="eco-system.ics"',...baseSecurityHeaders,...cors}});
     }
 
@@ -1922,7 +2190,7 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
       const markApplied=async()=>{const at=new Date().toISOString();await repo.saveWorkspaceRecord({id:markerId,tenantId:ctx.tenantId,groupId:(item.payload as any).groupId?String((item.payload as any).groupId):undefined,moduleId:'OFFLINE.OUTBOX_ACK',title:'Offline operation acknowledged',summary:undefined,status:'DONE',tags:['offline','idempotency','type:'+item.type],data:{type:item.type,idempotencyKey:item.idempotencyKey},createdBy:ctx.actorId,createdAt:at,updatedAt:at});};
       if(item.type==='CONTRIBUTION_CASH_RECORDED'){
         const p=item.payload;const groupId=String(p.groupId??'');
-        const receipt=await ledger.recordCashContribution({tenantId:ctx.tenantId,groupId,membershipId:String(p.membershipId??''),amount:finite(p.amount),currency:String(p.currency??'XAF'),meetingId:p.meetingId?String(p.meetingId):undefined,rubricId:p.rubricId?String(p.rubricId):undefined,lateReason:p.lateReason?String(p.lateReason):undefined,approverIds:strArray(p.approverIds),idempotencyKey:item.idempotencyKey});
+        const receipt=await ledger.recordCashContribution({tenantId:ctx.tenantId,groupId,membershipId:String(p.membershipId??''),amount:finite(p.amount),currency:String(p.currency??'XAF'),meetingId:p.meetingId?String(p.meetingId):undefined,rubricId:p.rubricId?String(p.rubricId):undefined,lateReason:p.lateReason?String(p.lateReason):undefined,approverIds:strArray(p.approverIds),lateAuthorizationId:p.lateAuthorizationId?String(p.lateAuthorizationId):undefined,idempotencyKey:item.idempotencyKey});
         const entry=await repo.getLedgerEntry(ctx.tenantId,groupId,receipt.ledgerEntryId);
         if(entry)await dispatchContributionProjection(groupId,receipt,entry);
         await markApplied();
@@ -2043,8 +2311,12 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
         const at=new Date().toISOString(),id='meeting_distribution_'+markerHash;
         await repo.saveWorkspaceRecord({id,tenantId:ctx.tenantId,groupId,moduleId:'MEETING.DISTRIBUTION',title:'Diffusion membres prête',summary:'Projection de séance validée et rendue disponible aux membres.',status:'DONE',tags:['meeting-distribution','meeting:'+meetingId],data:{meetingId,kind:'MEMBER_DISTRIBUTION_READY',confirmedAt:String(p.confirmedAt??at)},createdBy:ctx.actorId,createdAt:at,updatedAt:at});
         await publishLive(groupId,'MEETING_UPDATE',item.idempotencyKey,{meetingId,kind:'MEMBER_DISTRIBUTION_READY',at});
+        const envelopes=await memberEnvelopes.buildAll(groupId,meetingId);
+        for(const envelope of envelopes){
+          await publishLive(groupId,'MEMBER_ENVELOPE_READY','member-envelope:'+meetingId+':'+envelope.membershipId,{meetingId,membershipId:envelope.membershipId,fingerprint:envelope.fingerprint,expiresAt:envelope.expiresAt,scope:'MEMBER_ONLY'},envelope.recipientUserId);
+        }
         await markApplied();
-        return json({accepted:true,stored:true,recordId:id},200,cors);
+        return json({accepted:true,stored:true,recordId:id,envelopeCount:envelopes.length},200,cors);
       }
       if(item.type==='FINANCIAL_NOTICE_CONFIRM_V1'){
         const p=item.payload,groupId=String(p.groupId??'');await requireGroup(groupId,false);

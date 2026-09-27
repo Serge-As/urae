@@ -57,6 +57,13 @@ export function mountCoreEconomicLearningUI({app,notify=()=>{},showError=console
   const needs=el('div',undefined,'stack'),offerBox=document.createElement('details');offerBox.append(el('summary','Proposer une offre compatible'),el('p','Le sponsoring est signalé mais ne peut pas améliorer le score de confiance ou de pertinence. Les coûts inconnus restent inconnus.','truth-notice'),offerForm);
   valuePanel.append(valueIntro,needForm,offerBox,needs);
   marketHub.closest('section')?.insertAdjacentElement('afterend',valuePanel);
+  window.addEventListener('eco:value-network-preset',event=>{
+    const kind=String(event instanceof CustomEvent?event.detail?.kind??'':'');if(!['NOW','HARVEST','FRESH_DROP','PICKUP','SUPPLIER','SERVICE'].includes(kind))return;
+    const select=offerForm.elements.kind;if(select)select.value=kind;
+    const title=offerForm.elements.title;if(title){title.focus();title.placeholder=kind==='NOW'?'Disponible maintenant…':kind==='HARVEST'?'Récolte / pré-récolte…':kind==='FRESH_DROP'?'Arrivage daté…':kind==='PICKUP'?'Point de retrait / micro-hub…':'Offre / service…';}
+    offerBox.open=true;
+  });
+
   offerForm.addEventListener('submit',e=>void(async()=>{e.preventDefault();try{
     const dateEnd=val(offerForm,'expiresAt'),available=val(offerForm,'availableBy');
     await app.createValueOffer({title:val(offerForm,'title'),kind:val(offerForm,'kind'),category:val(offerForm,'category'),availableQuantity:num(offerForm,'availableQuantity'),unit:val(offerForm,'unit'),specification:val(offerForm,'specification'),quality:val(offerForm,'quality'),locality:val(offerForm,'locality'),serviceZones:val(offerForm,'serviceZones').split(',').map(x=>x.trim()).filter(Boolean),availableBy:available?new Date(available+'T12:00:00').toISOString():undefined,expiresAt:new Date(dateEnd+'T23:59:59').toISOString(),unitPrice:val(offerForm,'unitPrice')?num(offerForm,'unitPrice'):undefined,transportCost:val(offerForm,'transportCost')?num(offerForm,'transportCost'):undefined,otherCosts:val(offerForm,'otherCosts')?num(offerForm,'otherCosts'):undefined,discount:val(offerForm,'discount')?num(offerForm,'discount'):0,documentedDeliveries:val(offerForm,'documentedDeliveries')?num(offerForm,'documentedDeliveries'):0,confirmedDisputes:val(offerForm,'confirmedDisputes')?num(offerForm,'confirmedDisputes'):0,sponsored:Boolean(offerForm.elements.sponsored?.checked),currency:'XAF'});
@@ -146,9 +153,9 @@ export function mountCoreEconomicLearningUI({app,notify=()=>{},showError=console
   const kResults=el('div',undefined,'stack');knowledgePanel.append(el('p','La Knowledge Bank versionne les observations, règles validées, cas et sources. L’IA peut expliquer et proposer, jamais activer une règle ni écrire dans le Ledger.','truth-notice'),search,kResults);
   guidanceHub.closest('section')?.insertAdjacentElement('afterend',knowledgePanel);
   search.addEventListener('submit',e=>void(async()=>{e.preventDefault();try{
-    const q=val(search,'q'),[knowledge,ency,ctx]=await Promise.all([app.searchKnowledge(q,app.activeGroup()||undefined),app.encyclopedia(q),app.founderAiContext(q)]);
+    const q=val(search,'q'),[knowledge,ency,ctx]=await Promise.all([app.searchKnowledge(q,app.activeGroup()||undefined),app.encyclopedia(q),app.founderAiContext(q).catch(()=>null)]);
     kResults.replaceChildren();
-    const cap=el('article',undefined,'item');cap.append(el('strong','Encyclopédie · '+ency.length+' capacité(s)'),el('p','Founder AI : '+(ctx.guardrails?.canWriteLedger?'écriture autorisée':'aucune écriture Ledger')+' · '+(ctx.guardrails?.canActivateRules?'activation règles autorisée':'aucune activation autonome'),'hint'));kResults.append(cap);
+    const cap=el('article',undefined,'item');cap.append(el('strong','Encyclopédie · '+ency.length+' capacité(s)'),el('p',ctx?'Founder AI disponible pour l’équipe fondatrice · '+(ctx.guardrails?.canWriteLedger?'écriture autorisée':'aucune écriture Ledger')+' · '+(ctx.guardrails?.canActivateRules?'activation règles autorisée':'aucune activation autonome'):'Founder AI réservé à l’équipe fondatrice ; la Knowledge Bank reste accessible selon vos droits.','hint'));kResults.append(cap);
     for(const x of ency.slice(0,15)){const c=el('article',undefined,'item');c.append(el('strong',x.labelFr+' · '+x.id),el('span',String(x.truth),'pill'),el('p','Owner/dépendances : '+(x.canonicalDependencies??[]).join(', '),'hint'));kResults.append(c);}
     for(const x of knowledge.slice(0,10)){const c=el('article',undefined,'item');c.append(el('strong',x.title),el('span',String(x.data.knowledgeState??x.status),'pill'),el('p',String(x.data.body??'').slice(0,500),'hint'));kResults.append(c);}
   }catch(err){showError(err);}})());

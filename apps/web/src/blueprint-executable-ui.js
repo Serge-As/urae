@@ -20,7 +20,9 @@ const DEFINITIONS={
     introFr:'Transformer un besoin réel en demande structurée, comparaison ou achat groupé. Une prévision n’est jamais une commande.',introEn:'Turn a real need into structured demand, comparison or group buying. A forecast is never an order.',
     items:[
       ['OPPORTUNITY.NEED','Exprimer un besoin','Express a need','Que cherchez-vous ou que pouvez-vous proposer ?','What do you need or offer?'],
+      ['MARKETPLACE.PREDICTIVE_DEMAND','Predictive Demand','Predictive Demand','Prévision à confirmer humainement avant toute demande','Forecast requiring human confirmation before any request'],
       ['MARKETPLACE.DEMAND_EXCHANGE','Demand Exchange','Demand Exchange','Demande agrégée / besoin à confronter à l’offre','Aggregated demand / need to match with supply'],
+      ['MARKETPLACE.REVERSE_MARKET','Reverse Market','Reverse Market','Publier un besoin puis recevoir, présélectionner et choisir des réponses','Publish demand then receive, shortlist and select responses'],
       ['MARKETPLACE.PROCUREMENT','Smart Procurement','Smart Procurement','Demande de devis / sourcing','RFQ / sourcing request'],
       ['MARKETPLACE.GROUP_BUY','Achat groupé','Group buying','Préparer un achat collectif avant passage au moteur spécialisé','Prepare collective buying before specialized engine']
     ]
@@ -29,10 +31,13 @@ const DEFINITIONS={
     titleFr:'3 · Eco NOW · Harvest · commerce local',titleEn:'3 · Eco NOW · Harvest · local commerce',
     introFr:'Faire circuler une capacité réelle : stock, récolte, surplus, besoin immédiat ou point de retrait. Les quantités prévues restent distinguées du stock confirmé.',introEn:'Circulate real capacity: stock, harvest, surplus, immediate need or pickup point. Forecast quantities remain distinct from confirmed stock.',
     items:[
+      ['MARKETPLACE.FLASH_OFFERS','Liquidation · Surplus · Rescue','Liquidation · Surplus · Rescue','Écouler un stock réel avec motif, état, preuve et date','Move real stock with reason, condition, evidence and date'],
       ['MARKETPLACE.ECO_NOW','Eco NOW','Eco NOW','J’ai besoin maintenant / Je peux fournir maintenant','I need now / I can supply now'],
       ['MARKETPLACE.HARVEST_LOCAL','Eco Harvest & Local Commerce','Eco Harvest & Local Commerce','Disponibilité prochaine / pré-récolte / groupe producteur','Upcoming availability / pre-harvest / producer group'],
       ['MARKETPLACE.FRESH_DROP','Fresh Drop','Fresh Drop','Arrivage daté, quantité, lieu et conditions','Timed arrival, quantity, place and conditions'],
-      ['MARKETPLACE.PICKUP_NETWORK','Point de retrait / micro-hub','Pickup point / micro-hub','Capacité de collecte, retrait ou redistribution','Collection, pickup or redistribution capacity']
+      ['MARKETPLACE.PICKUP_NETWORK','Point de retrait / micro-hub','Pickup point / micro-hub','Capacité de collecte, retrait ou redistribution','Collection, pickup or redistribution capacity'],
+      ['MARKETPLACE.ECO_DEALS','Eco Deals','Eco Deals','Offre à conditions publiques vraies et paliers réels','Offer with truthful public terms and real tiers'],
+      ['MARKETPLACE.LIVE_MARKET','Eco Live Market','Eco Live Market','Session commerce live progressive reliée aux Deals et au Hub','Progressive live commerce session linked to Deals and Hub']
     ]
   },
   business:{
@@ -91,6 +96,29 @@ export function mountBlueprintExecutableUI({app,getGroups,getMeetings,navigate,n
 
   const workflowForm=(def,context)=>{
     const [moduleId,fr,en,phFr,phEn]=def,box=el('article',undefined,'blueprint-workflow-card');box.append(el('span',moduleId,'blueprint-state'),el('h3',t(fr,en)),el('p',t(phFr,phEn),'hint'));
+    const canonicalHandoffs={
+      'GROUP.MEETING_AUTOPILOT':{labelFr:'Ouvrir l’assistant de séance',labelEn:'Open session assistant',view:'sessions',selector:'.session-intelligence-panel'},
+      'GROUP.DOCTOR':{labelFr:'Ouvrir Group Doctor',labelEn:'Open Group Doctor',view:'sessions',selector:'.session-intelligence-panel'},
+      'OPPORTUNITY.NEED':{labelFr:'Ouvrir Besoins & matching',labelEn:'Open needs & matching',view:'ecosystem',selector:'#valueNetworkOperational'},
+      'MARKETPLACE.PREDICTIVE_DEMAND':{labelFr:'Ouvrir la demande prédictive',labelEn:'Open predictive demand',view:'ecosystem',selector:'#socialCommercePanel',focus:'#socialRequestSource',value:'PREDICTION'},
+      'MARKETPLACE.DEMAND_EXCHANGE':{labelFr:'Ouvrir Demand Exchange',labelEn:'Open Demand Exchange',view:'ecosystem',selector:'#socialCommercePanel',focus:'#socialRequestTitle'},
+      'MARKETPLACE.REVERSE_MARKET':{labelFr:'Ouvrir Reverse Market',labelEn:'Open Reverse Market',view:'ecosystem',selector:'#socialCommercePanel',focus:'#socialRequestTitle'},
+      'MARKETPLACE.PROCUREMENT':{labelFr:'Ouvrir Smart Procurement',labelEn:'Open Smart Procurement',view:'ecosystem',selector:'#smartProcurementPanel',focus:'#marketProcurementSupplier'},
+      'MARKETPLACE.FLASH_OFFERS':{labelFr:'Ouvrir Liquidation / Surplus / Rescue',labelEn:'Open Liquidation / Surplus / Rescue',view:'ecosystem',selector:'#socialCommercePanel',focus:'#socialFlashTitle'},
+      'MARKETPLACE.ECO_DEALS':{labelFr:'Ouvrir Eco Deals',labelEn:'Open Eco Deals',view:'ecosystem',selector:'#socialCommercePanel',focus:'#socialDealTitle'},
+      'MARKETPLACE.LIVE_MARKET':{labelFr:'Ouvrir Eco Live Market',labelEn:'Open Eco Live Market',view:'ecosystem',selector:'#socialCommercePanel',focus:'#socialLiveTitle'},
+      'MANAGER.BUSINESS_STUDIO':{labelFr:'Ouvrir Business Studio',labelEn:'Open Business Studio',view:'ecosystem',selector:'#businessStudioOperational'},
+      'MANAGER.BUSINESS_AGENT':{labelFr:'Ouvrir Business Agent',labelEn:'Open Business Agent',view:'ecosystem',selector:'#businessStudioOperational'},
+      'LEARNING.MANAGER_ACADEMY':{labelFr:'Ouvrir Manager Academy',labelEn:'Open Manager Academy',view:'ecosystem',selector:'#academyOperational'},
+      'SAFETY.ANTISCAM':{labelFr:'Ouvrir le Labo financier',labelEn:'Open Financial Lab',view:'ecosystem',selector:'#financialLabPanel'}
+    };
+    const valuePresets={'MARKETPLACE.ECO_NOW':'NOW','MARKETPLACE.HARVEST_LOCAL':'HARVEST','MARKETPLACE.FRESH_DROP':'FRESH_DROP','MARKETPLACE.PICKUP_NETWORK':'PICKUP'};
+    if(valuePresets[moduleId]){
+      const go=button(t('Ouvrir le moteur canonique','Open canonical engine'),'primary');go.onclick=()=>{navigate('ecosystem');setTimeout(()=>{window.dispatchEvent(new CustomEvent('eco:value-network-preset',{detail:{kind:valuePresets[moduleId]}}));byId('valueNetworkOperational')?.scrollIntoView({behavior:'smooth',block:'start'});},120);};box.append(el('p',t('Cette capacité réutilise le Value Network canonique : aucune offre ou quantité parallèle n’est créée ici.','This capability reuses the canonical Value Network: no parallel offer or quantity is created here.'),'truth-notice'),go);return box;
+    }
+    const handoff=canonicalHandoffs[moduleId];if(handoff){
+      const go=button(t(handoff.labelFr,handoff.labelEn),'primary');go.onclick=()=>{navigate(handoff.view);setTimeout(()=>{const target=document.querySelector(handoff.selector);if(target instanceof HTMLDetailsElement)target.open=true;target?.scrollIntoView({behavior:'smooth',block:'start'});if(handoff.focus){const f=document.querySelector(handoff.focus);if(f&&handoff.value!==undefined)f.value=handoff.value;f?.focus?.();}},140);};box.append(el('p',t('Le Blueprint orchestre ; le moteur canonique exécute. Aucun second dossier métier n’est créé.','Blueprint orchestrates; the canonical engine executes. No second business record is created.'),'truth-notice'),go);return box;
+    }
     if(moduleId==='MARKETPLACE.GROUP_BUY'){
       const notice=el('p',t('Cette activité possède déjà un moteur canonique d’achats groupés. Le Blueprint ne crée donc aucun second enregistrement : il vous transmet vers le Marketplace existant.','This activity already has a canonical group-buy engine. Blueprint therefore creates no second record and hands off to the existing Marketplace.'),'truth-notice');
       const go=button(t('Ouvrir les achats groupés canoniques','Open canonical group buying'),'primary');go.onclick=()=>{navigate('ecosystem');setTimeout(()=>byId('marketEnginePanel')?.scrollIntoView({behavior:'smooth',block:'start'}),100);};box.append(notice,go);return box;

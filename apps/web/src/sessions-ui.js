@@ -53,13 +53,13 @@ export function mountSessionsUI({app,getGroups,getMembers,getMeetings,getRubrics
 
   const renderLiveConsensus=async(c)=>{
     const {meeting,me,members,rubrics}=c;if(!meeting||!me.isManager)return null;
-    const section=card(t('Saisie live multi-gestionnaires','Multi-manager live entry'),'panel live-consensus-panel');
-    section.append(el('p',t('Chaque responsable garde une couleur stable. Si deux saisies divergent, la valeur n’est pas écrasée : le Bureau choisit la bonne donnée. La majorité est retenue, une dissidence maintenue reste en contentieux sans bloquer la séance.','Each manager keeps a stable color. If entries diverge, no value is silently overwritten: managers choose the correct value. The majority is retained and a maintained dissent remains a non-blocking dispute.'),'hint'));
-    const form=el('form',undefined,'form-grid'),member=document.createElement('select'),rubric=document.createElement('select'),value=document.createElement('input'),save=button(t('Proposer cette donnée','Submit this value'),'primary');
+    const section=card(t('Confrontation & réserves entre gestionnaires','Manager reconciliation & reserves'),'panel live-consensus-panel');
+    section.append(el('p',t('La saisie financière se fait uniquement dans la feuille canonique et devient immédiatement la valeur courante. Cet espace sert seulement à ouvrir une contestation explicite, comparer les positions et éventuellement corriger ensuite la valeur canonique avec traçabilité. Une réserve ne bloque jamais la valeur courante.','Financial entry happens only in the canonical sheet and immediately becomes the current value. This area is only for an explicit dispute, comparing positions and, if needed, correcting the canonical value later with an audit trail. A reserve never blocks the current value.'),'truth-notice'));
+    const form=el('form',undefined,'form-grid'),member=document.createElement('select'),rubric=document.createElement('select'),value=document.createElement('input'),save=button(t('Ouvrir cette réserve','Open this reserve'),'secondary');
     member.append(new Option(t('Membre concerné','Affected member'),''));for(const m of members.filter(x=>x.status!=='left'))member.append(new Option(m.displayName,m.id));
     rubric.append(new Option(t('Rubrique','Rubric'),''));for(const r of rubrics.filter(x=>x.status!=='ARCHIVED'))rubric.append(new Option(r.name,r.id));
     value.type='number';value.inputMode='numeric';value.step='1';value.placeholder='0';save.type='submit';
-    form.append(label(t('Membre','Member'),member),label(t('Rubrique','Rubric'),rubric),label(t('Valeur','Value'),value),save);section.append(form);
+    form.append(label(t('Membre concerné','Affected member'),member),label(t('Rubrique concernée','Affected rubric'),rubric),label(t('Valeur à confronter','Value to reconcile'),value),save);section.append(el('p',t('Utilisez ce formulaire seulement si vous contestez une valeur déjà enregistrée. Il ne remplace pas la saisie ✓/Entrée.','Use this form only when disputing a value already recorded. It does not replace ✓/Enter entry.'),'hint'),form);
     const list=el('div',undefined,'item-list');
     const draw=async()=>{list.replaceChildren();const items=await app.liveConsensus(meeting.id).catch(()=>[]);
       for(const item of items){const box=el('article',undefined,'item '+(item.state==='RESERVE_OPEN'?'danger':''));
@@ -70,14 +70,51 @@ export function mountSessionsUI({app,getGroups,getMembers,getMeetings,getRubrics
         box.append(chips);
         if(['MAJORITY_SELECTED','RESERVE_OPEN'].includes(item.state)){const reserve=button(t('Maintenir une donnée différente / réserve','Maintain different value / reserve'));reserve.onclick=()=>void(async()=>{const reason=prompt(t('Motif de la réserve :','Reserve reason:'))||'';if(!reason)return;try{await app.reserveLiveConsensus(meeting.id,item.cellKey,reason);notify(t('Réserve enregistrée sans bloquer la séance.','Reserve recorded without blocking the meeting.'));await draw();}catch(e){showError(e);}})();box.append(reserve);}
         if(item.selectedValue!==undefined&&['MAJORITY_SELECTED','UNANIMOUS','RESERVE_OPEN'].includes(item.state)){
-          const apply=button(t('Appliquer la valeur retenue','Apply selected value'),'primary');
+          const apply=button(t('Corriger la valeur canonique avec la résolution','Correct canonical value with resolution'),'primary');
           apply.onclick=()=>void(async()=>{try{apply.disabled=true;const reason=prompt(t('Motif de l’application / correction :','Reason for applying/correcting:'),t('Valeur retenue après confrontation des gestionnaires','Value selected after manager reconciliation'));if(reason===null)return;const result=await app.applyFinancialCellConsensus(meeting.id,item.cellKey,reason);notify(result?.status==='NO_CHANGE'?t('La valeur canonique était déjà correcte.','Canonical value was already correct.'):t('Valeur canonique corrigée avec traçabilité.','Canonical value corrected with audit trail.'));window.dispatchEvent(new CustomEvent('eco:financial-live-update',{detail:{type:'CONSENSUS_APPLIED',payload:{meetingId:meeting.id,cellKey:item.cellKey,selectedValue:item.selectedValue}}}));await draw();}catch(e){showError(e);}finally{apply.disabled=false;}})();box.append(apply);
         }
         list.append(box);
-      }if(!items.length)list.append(el('div',t('Aucune divergence ou saisie live pour cette séance.','No live entry or divergence for this meeting.'),'empty-state'));
+      }if(!items.length)list.append(el('div',t('Aucune réserve ou divergence ouverte pour cette séance. Les saisies normales restent dans la feuille canonique.','No open reserve or divergence for this meeting. Normal entries stay in the canonical sheet.'),'empty-state'));
     };
-    form.onsubmit=e=>void(async()=>{e.preventDefault();try{if(!member.value||!rubric.value||value.value==='')throw Error(t('Choisissez le membre, la rubrique et la valeur.','Choose member, rubric and value.'));save.disabled=true;const cellKey=member.value+':'+rubric.value;await app.submitLiveConsensus(meeting.id,{cellKey,value:Number(value.value),membershipId:member.value,rubricId:rubric.value});notify(t('Saisie live transmise.','Live entry sent.'));value.value='';await draw();}catch(err){showError(err);}finally{save.disabled=false;}})();
+    form.onsubmit=e=>void(async()=>{e.preventDefault();try{if(!member.value||!rubric.value||value.value==='')throw Error(t('Choisissez le membre, la rubrique et la valeur contestée.','Choose the member, rubric and disputed value.'));save.disabled=true;const cellKey=member.value+':'+rubric.value;await app.submitLiveConsensus(meeting.id,{cellKey,value:Number(value.value),membershipId:member.value,rubricId:rubric.value});notify(t('Réserve ouverte. La valeur canonique actuelle reste active tant qu’une correction n’est pas explicitement appliquée.','Reserve opened. The current canonical value remains active until a correction is explicitly applied.'));value.value='';await draw();}catch(err){showError(err);}finally{save.disabled=false;}})();
     section.append(list);await draw();return section;
+  };
+
+  const renderManagerIntelligence=async(c)=>{
+    const {meeting,meetings,rubrics,members,me}=c;if(!meeting||!me.isManager)return null;
+    const section=card(t('Assistant proactif de séance','Proactive session assistant'),'panel session-intelligence-panel');
+    section.append(el('p',t('Eco-System analyse les éléments déjà connus et prépare une checklist. Aucun résultat de cet assistant ne modifie le Ledger, les règles ou la séance sans action humaine.','Eco-System analyses known facts and prepares a checklist. Nothing here changes the Ledger, rules or session without human action.'),'truth-notice'));
+    const [beneficiaries,cashboxes]=await Promise.all([app.meetingBeneficiaries(meeting.id).catch(()=>[]),app.cashboxReconciliations().catch(()=>[])]);
+    const pendingEvidence=beneficiaries.filter(x=>!['DONE','CONFIRMED','RECEIVED'].includes(String(x.status??x.data?.status??'').toUpperCase())).length;
+    const sorted=meetings.slice().sort((a,b)=>String(meetingAt(a)).localeCompare(String(meetingAt(b)))),pos=sorted.findIndex(x=>x.id===meeting.id),previous=pos>0?sorted[pos-1]:null;
+    const latestFor=id=>cashboxes.filter(x=>x.meetingId===id).sort((a,b)=>String(b.createdAt).localeCompare(String(a.createdAt)))[0];
+    const previousCashbox=previous?latestFor(previous.id):null,currentCashbox=latestFor(meeting.id);
+    const previousVariance=Number(previousCashbox?.snapshot?.variance??0),currentVariance=Number(currentCashbox?.snapshot?.variance??0);
+    const expected=rubrics.filter(x=>x.status!=='ARCHIVED').map(x=>x.name);
+    const beneficiaryName=id=>members.find(x=>x.id===id)?.displayName??String(id??'');
+    const rubricName=id=>rubrics.find(x=>x.id===id)?.name??String(id??'');
+    const plannedBeneficiaries=beneficiaries.map(x=>({rubric:rubricName(x.data?.rubricId??x.rubricId),beneficiary:beneficiaryName(x.data?.membershipId??x.membershipId)}));
+    const [autopilot,doctor]=await Promise.all([
+      app.meetingAutopilot({
+        meetingLabel:meetingLabel(meeting),expectedRubrics:expected,plannedBeneficiaries,
+        pendingEvidenceCount:pendingEvidence,unresolvedVariance:previousVariance,
+        lastClosingBalance:previousCashbox?.snapshot?.countedClosing??previousCashbox?.snapshot?.theoreticalClosing,
+        offline:typeof navigator!=='undefined'&&navigator.onLine===false
+      }).catch(()=>null),
+      app.savingsYieldDoctor({unreconciledCashDifference:currentVariance||previousVariance,pendingPayoutEvidence:pendingEvidence}).catch(()=>null)
+    ]);
+    if(autopilot){
+      const head=el('div',undefined,'actions');head.append(el('span',autopilot.canOpen?t('✓ Séance préparée','✓ Session ready'):t('⚠ À vérifier avant poursuite','⚠ Review before continuing'),autopilot.canOpen?'pill online':'pill'));
+      if(autopilot.blockers?.length)head.append(el('span',String(autopilot.blockers.length)+' '+t('blocage(s)','blocker(s)'),'pill offline'));section.append(head);
+      const list=el('div',undefined,'stack compact');for(const item of autopilot.checklist??[]){const a=el('article',undefined,'item');a.append(el('strong',item.labelFr),el('span',String(item.status),'pill'));list.append(a);}section.append(el('h4',t('Checklist Meeting Autopilot','Meeting Autopilot checklist')),list);
+      if(autopilot.warnings?.length)section.append(el('p',t('Points à revoir : ','Review points: ')+autopilot.warnings.join(' · '),'hint'));
+      if(autopilot.blockers?.length)section.append(el('p',t('Blocages détectés : ','Detected blockers: ')+autopilot.blockers.join(' · '),'truth-notice'));
+    }
+    if(doctor){
+      const list=el('div',undefined,'stack compact');for(const finding of doctor.findings??[]){const a=el('article',undefined,'item');a.append(el('strong',finding.titleFr),el('span',String(finding.severity),'pill'),el('p',finding.detailFr),el('p',t('Action conseillée : ','Suggested action: ')+finding.actionFr,'hint'));list.append(a);}section.append(el('h4','Group Doctor'),list);
+      section.append(el('small',t('Diagnostic consultatif uniquement · aucune mutation automatique.','Advisory diagnosis only · no automatic mutation.'),'hint'));
+    }
+    return section;
   };
 
   const renderOverview=async(c)=>{
@@ -117,6 +154,7 @@ export function mountSessionsUI({app,getGroups,getMembers,getMeetings,getRubrics
       const sheet=await app.memberOperationalSheet(me.membership.id).catch(()=>null),r=sheet?.exerciseMatrix?.find(x=>x.meetingId===meeting.id);
       const own=el('div',undefined,'truth-notice');own.textContent=t('Votre situation pour cette séance : ','Your position for this session: ')+(r?money(r.total):t('aucun mouvement connu','no known movement'));section.append(own);
     }
+    if(me.isManager){const proactive=await renderManagerIntelligence(c);if(proactive)section.append(proactive);}
     if(me.isManager){
       const finish=card(t('Fin de séance · rapprocher puis diffuser','End of session · reconcile then distribute'),'panel session-finish-panel');
       finish.append(el('p',t('Étape 1 : les gestionnaires confrontent uniquement les différences. Étape 2 : après accord, la diffusion aux membres est une action séparée pour éviter une erreur.','Step 1: managers compare differences only. Step 2: after agreement, member distribution is a separate action to prevent mistakes.'),'hint'));

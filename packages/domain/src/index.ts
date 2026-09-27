@@ -101,8 +101,11 @@ const normalizeLaunchProfile=(profile:GroupProjectLaunchProfile|undefined):Group
   if(expectedMembers!==undefined&&(!Number.isSafeInteger(expectedMembers)||expectedMembers<1||expectedMembers>100000))throw new Error('INVALID_EXPECTED_MEMBERS');
   const expectedSessions=profile?.cycle?.expectedSessions;
   if(expectedSessions!==undefined&&(!Number.isSafeInteger(expectedSessions)||expectedSessions<1||expectedSessions>10000))throw new Error('INVALID_EXPECTED_SESSIONS');
+  const tontineVariant=profile?.tontineVariant??'MONEY';
+  if(!['MONEY','IN_KIND','HYBRID'].includes(tontineVariant))throw new Error('INVALID_TONTINE_VARIANT');
   return structuredClone({
     origin,
+    tontineVariant,
     cycle:profile?.cycle,
     members:profile?.members,
     communication:profile?.communication,
@@ -181,9 +184,11 @@ export class FoundationService {
     if (!GOVERNANCE_MODELS.has(input.governanceModel)) throw new Error('INVALID_GOVERNANCE_MODEL');
     const plans=input.rubrics===undefined?undefined:validateLaunchRubrics(input.rubrics);
     const launchProfile=normalizeLaunchProfile(input.launchProfile);
+    if(input.kind!=='rotating_tontine'&&input.launchProfile?.tontineVariant!==undefined)throw new Error('TONTINE_VARIANT_REQUIRES_ROTATING_FAMILY');
+    if(input.kind!=='rotating_tontine')delete (launchProfile as any).tontineVariant;
     if(launchProfile.origin.mode==='TRANSFORM_REGISTERED'){
       const source=await assertCanManageGroup(this.repo,context,input.tenantId,String(launchProfile.origin.sourceGroupId));
-      if(source.kind!=='rotating_tontine'&&source.kind!=='in_kind_tontine')throw new Error('SOURCE_GROUP_NOT_TONTINE');
+      if(!['rotating_tontine','in_kind_tontine','hybrid'].includes(source.kind))throw new Error('SOURCE_GROUP_NOT_TONTINE');
     }
     const currency=plans?.[0]?.nominalAmount.currency??input.nominalContribution?.currency??'XAF';
     // Legacy fields are retained for saved projects; rubric plans are the authority for new configurations.
@@ -432,13 +437,23 @@ const membershipRolesForActor = async (repo:PlatformRepository,tenantId:Id,group
   return membership?.roles??[];
 };
 
-const authorizeLatePosting = async (repo:PlatformRepository,group:Group,ctx:{actorId:Id;tenantId:Id},meeting:MeetingSession,input:{lateReason?:string;approverIds?:Id[]}):Promise<LatePostingTrace> => {
+const authorizeLatePosting = async (repo:PlatformRepository,group:Group,ctx:{actorId:Id;tenantId:Id},meeting:MeetingSession,input:{lateReason?:string;approverIds?:Id[];lateAuthorizationId?:Id}):Promise<LatePostingTrace> => {
   const policy=group.operatingPolicy??starterGroupOperatingPolicy(); const late=policy.latePosting;
   if(late.mode==='FORBIDDEN') throw new Error('LATE_POSTING_NOT_ALLOWED');
   const reason=input.lateReason?.trim(); if(late.requireReason&&!reason) throw new Error('LATE_POSTING_REASON_REQUIRED');
   if(late.maxHoursAfterClose!==undefined&&meeting.closedAt){
     const elapsed=(Date.now()-new Date(meeting.closedAt).getTime())/3600000;
     if(Number.isFinite(elapsed)&&elapsed>late.maxHoursAfterClose) throw new Error('LATE_POSTING_WINDOW_EXPIRED');
+  }
+  if(input.lateAuthorizationId){
+    const auth=await repo.getWorkspaceRecord(ctx.tenantId,input.lateAuthorizationId);if(!auth||auth.groupId!==group.id||auth.moduleId!=='MEETING.REOPEN_AUTH'||String(auth.data.meetingId)!==meeting.id)throw new Error('REOPEN_AUTH_NOT_FOUND');
+    if(String(auth.data.authorizationState)!=='APPROVED')throw new Error('REOPEN_AUTH_NOT_APPROVED');
+    if(auth.data.expiresAt&&Date.parse(String(auth.data.expiresAt))<=Date.now())throw new Error('REOPEN_AUTH_EXPIRED');
+    let approvals:Array<{actorId:Id}>;try{approvals=JSON.parse(String(auth.data.approvalsJson??'[]'));}catch{approvals=[];}
+    const candidateIds=[...new Set(approvals.map(x=>String(x.actorId)).filter(Boolean))],eligible:Id[]=[];let founderPresent=false;
+    for(const id of candidateIds){const roles=await membershipRolesForActor(repo,group.tenantId,group,id);if(id===group.createdBy)founderPresent=true;if(roles.some(r=>late.approval.roleCodes.includes(r)))eligible.push(id);}
+    const approved=(late.approval.founderOverride&&founderPresent)||eligible.length>=late.approval.minimumApprovals;if(!approved)throw new Error('LATE_POSTING_APPROVAL_REQUIRED');
+    return{isLate:true,reason:reason||String(auth.data.reason??'Autorisation après clôture'),approvedBy:eligible,meetingClosedAt:meeting.closedAt};
   }
   // Naming another member is not proof that they approved this operation.
   // Multi-person approvals require independently authenticated approval records.
@@ -504,7 +519,7 @@ export class LedgerService {
     return {cash,memberFunds};
   }
 
-  async recordCashContribution(input:{tenantId:Id;groupId:Id;membershipId:Id;amount:number;currency?:Currency;meetingId?:Id;rubricId?:Id;lateReason?:string;approverIds?:Id[];idempotencyKey:string;effectiveAt?:string;governedCorrectionReason?:string},requestId=makeId('req')):Promise<ContributionReceipt>{
+  async recordCashContribution(input:{tenantId:Id;groupId:Id;membershipId:Id;amount:number;currency?:Currency;meetingId?:Id;rubricId?:Id;lateReason?:string;approverIds?:Id[];lateAuthorizationId?:Id;idempotencyKey:string;effectiveAt?:string;governedCorrectionReason?:string},requestId=makeId('req')):Promise<ContributionReceipt>{
     assertIntPositive('contributionAmount',input.amount); if(!input.idempotencyKey.trim()) throw new Error('IDEMPOTENCY_KEY_REQUIRED');
     const ctx=this.kernel.context.get(); const group=await assertCanManageGroup(this.repo,ctx,input.tenantId,input.groupId);
     const sameIntent=(receipt:ContributionReceipt)=>{
