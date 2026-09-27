@@ -54,6 +54,7 @@ import { mountMeetingFinanceGovernanceUI } from './meeting-finance-governance-ui
 import { mountAnticipationUI } from './anticipation-ui.js';
 import { mountMicroAdsUI } from './micro-ads-ui.js';
 import { mountValueDiscoveryUI } from './value-discovery-ui.js';
+import { mountWalletUI } from './wallet-ui.js';
 let uiLocale = 'fr';
 try { uiLocale = localStorage.getItem('tontine.locale') === 'en' ? 'en' : 'fr'; } catch {}
 const tx = (fr,en) => runtimeTranslate(uiLocale,fr,en);
@@ -259,6 +260,7 @@ const meetingFinanceGovernanceUI=mountMeetingFinanceGovernanceUI({app,getMembers
 const anticipationUI=mountAnticipationUI({app,isManager,notify:toast,showError:fail});
 const microAdsUI=mountMicroAdsUI({app,isManager,notify:toast,showError:fail});
 const valueDiscoveryUI=mountValueDiscoveryUI({app,notify:toast,showError:fail});
+const walletUI=mountWalletUI({app,notify:toast,showError:fail,navigate:go});
 window.addEventListener('popstate',event=>{
     const state=event.state?.ecoNav,hash=location.hash.slice(1);
     navDepth=Math.max(0,Number(event.state?.ecoDepth??Math.max(0,navDepth-1)));
@@ -963,6 +965,7 @@ const openModule = async (id) => {
     if(m.status === 'FOUNDATION_ACTIVE' && id === 'GROUP.ANTICIPATION'){go('dashboard',{anchor:'anticipationCenter',force:true});anticipationUI.open();return;}
     if(m.status === 'FOUNDATION_ACTIVE' && id === 'COMMUNITY.MICRO_ADS'){go('ecosystem',{anchor:'microAdsCenter',force:true});microAdsUI.open();return;}
     if(m.status === 'FOUNDATION_ACTIVE' && id === 'MANAGER.VALUE_DISCOVERY'){go('ecosystem',{anchor:'valueDiscoveryCenter',force:true});valueDiscoveryUI.open();return;}
+    if(m.status === 'FOUNDATION_ACTIVE' && id === 'FINANCE.WALLET'){go('dashboard',{anchor:'walletCenter',force:true});walletUI.open();return;}
     if(m.status === 'FOUNDATION_ACTIVE' && id === 'MARKETPLACE.MARKET_INTELLIGENCE'){go('ecosystem',{anchor:'opportunityIntelligence',force:true});opportunityIntelligenceUI.open();return;}
     if(m.status === 'FOUNDATION_ACTIVE' && id === 'GOVERNANCE.TENDER'){go('ecosystem',{anchor:'socialCommercePanel',force:true});const panel=document.querySelector('#socialCommercePanel');if(panel?.tagName==='DETAILS')panel.open=true;return;}
     if(m.status === 'FOUNDATION_ACTIVE' && id === 'RUBRIC.LOCAL_AID'){go('operations',{anchor:'rubricsManagementPanel',force:true});setTimeout(()=>prepareRubricPreset('Aide locale','Rubrique principale de contribution, au même niveau métier que Collation / Ration. Confirmer la règle du groupe : montant, présence/absence, bénéficiaire, solidarité, manquant et décaissement.'),80);return;}
