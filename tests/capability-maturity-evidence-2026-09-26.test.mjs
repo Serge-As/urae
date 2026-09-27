@@ -24,7 +24,8 @@ const evidence=[
  ['TRUST.VERIFICATION','packages/identity-proof/src/index.ts',['registerAccountProof','candidateMatches','identifier_hash'],'apps/web/src/identity-verification-ui.js',['registerIdentityProof','identityProofMatches','value.value=\'\'']],
  ['AI.FOUNDER','packages/knowledge-academy/src/index.ts',['founderContext','canActivateRules:false','canWriteLedger:false'],'apps/web/src/core-economic-learning-ui.js',['Founder AI','founderAiContext','knowledgeOperational']],
  ['DATA.QUALITY','packages/completion/src/index.ts',["flow('DATA.QUALITY'",'readinessPassport'],'apps/web/src/data-quality-ui.js',['ledgerAnomalies','READINESS_PASSPORT','ANOMALY']],
- ['PAPER.BRIDGE','packages/group-documents/src/index.ts',['GroupDocumentService','artifactKey','fingerprint'],'apps/web/src/documents-ui.ts',['accept=".pdf,.doc,.docx,.txt,image/*"','analyze-files','Paper Bridge']]
+ ['PAPER.BRIDGE','packages/group-documents/src/index.ts',['GroupDocumentService','artifactKey','fingerprint'],'apps/web/src/documents-ui.ts',['accept=".pdf,.doc,.docx,.txt,image/*"','analyze-files','Paper Bridge']],
+ ['GOVERNANCE.MANDATE','packages/business-studio/src/index.ts',['createMandate','activateMandate','endMandate'],'apps/web/src/business-studio-ui.js',['Nouveau mandat','Activer le mandat','Terminer le mandat']]
 ];
 test('maturity registry promotes only capabilities with owner engine and user journey evidence',()=>{
  for(const [id,owner,ownerTokens,ui,uiTokens] of evidence){
