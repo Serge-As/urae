@@ -28,7 +28,9 @@ const evidence=[
  ['GOVERNANCE.MANDATE','packages/business-studio/src/index.ts',['createMandate','activateMandate','endMandate'],'apps/web/src/business-studio-ui.js',['Nouveau mandat','Activer le mandat','Terminer le mandat']],
  ['OPPORTUNITY.GRAPH','packages/value-network/src/index.ts',['createNeed','matchNeed','prepareProcurement'],'apps/web/src/opportunity-intelligence-ui.js',['Graphe besoins → offres','valueNeedMatches','rankingIndependentOfSponsorship']],
  ['MANAGER.VALUE_DISCOVERY','packages/value-network/src/index.ts',['matchNeed','scoreBreakdown','hardReasons'],'apps/web/src/opportunity-intelligence-ui.js',['Value Discovery','Score explicable','Coût rendu']],
- ['MARKETPLACE.MARKET_INTELLIGENCE','packages/economic-intelligence/src/index.ts',['EconomicIntelligenceService','GROUP_PSEUDONYMOUS_AGGREGATE','containsIndividualFinancialData:false'],'apps/web/src/opportunity-intelligence-ui.js',['Market Intelligence','Intelligence marché agrégée','economicProfile']]
+ ['MARKETPLACE.MARKET_INTELLIGENCE','packages/economic-intelligence/src/index.ts',['EconomicIntelligenceService','GROUP_PSEUDONYMOUS_AGGREGATE','containsIndividualFinancialData:false'],'apps/web/src/opportunity-intelligence-ui.js',['Market Intelligence','Intelligence marché agrégée','economicProfile']],
+ ['AI.LOCAL','packages/voice-commands/src/index.ts',['parseVoiceFinancialCommand','matchVoiceCandidate','parseVoiceAmount'],'apps/web/src/voice-entry-ui.ts',['Rien n’est comptabilisé avant votre validation','Comprendre et prévisualiser','Valider ces saisies']],
+ ['SAFETY.QUIET_WATCH','packages/trust/src/index.ts',['SafetyCaseService','UNVERIFIED_SUSPICION','automaticLegalVerdict:false'],'apps/web/src/quiet-watch-ui.js',['suspicion non vérifiée','decideSafetyCase','Enregistrer un recours']]
 ];
 test('maturity registry promotes only capabilities with owner engine and user journey evidence',()=>{
  for(const [id,owner,ownerTokens,ui,uiTokens] of evidence){
