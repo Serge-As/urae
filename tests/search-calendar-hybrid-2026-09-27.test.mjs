@@ -44,15 +44,16 @@ test('unified calendar combines meetings, explicit workspace dates and actor obl
   assert.ok(!model.all.some(x=>x.entityId==='w2'));
 });
 
-test('hybrid launch and the two completed tools are wired as active specialized journeys',()=>{
+test('launch keeps canonical group families while partial search is not overclaimed and calendar stays active',()=>{
   const html=fs.readFileSync('apps/web/index.html','utf8');
   const main=fs.readFileSync('apps/web/src/main.js','utf8');
   const registry=fs.readFileSync('packages/module-registry/src/index.ts','utf8');
-  assert.match(html,/value="hybrid">Association \+ tontine/);
-  assert.match(main,/\['rotating_tontine','hybrid'\]\.includes\(family\)/);
+  assert.doesNotMatch(html,/value="hybrid">Association \+ tontine/);
+  assert.match(main,/family==='rotating_tontine'/);
+  assert.doesNotMatch(main,/\['rotating_tontine','hybrid'\]/);
   assert.match(main,/renderUniversalSearchFull/);
   assert.match(main,/renderUnifiedCalendar/);
-  assert.match(registry,/CORE\.HYBRID_GROUP[^\n]*FOUNDATION_ACTIVE[^\n]*SPECIALIZED/);
-  assert.match(registry,/SEARCH\.UNIVERSAL[^\n]*FOUNDATION_ACTIVE[^\n]*SPECIALIZED/);
+  assert.match(registry,/CORE\.HYBRID_GROUP[^\n]*STRUCTURAL_V1[^\n]*UNIVERSAL/);
+  assert.match(registry,/SEARCH\.UNIVERSAL[^\n]*STRUCTURAL_V1[^\n]*UNIVERSAL/);
   assert.match(registry,/CALENDAR\.UNIFIED[^\n]*FOUNDATION_ACTIVE[^\n]*SPECIALIZED/);
 });
