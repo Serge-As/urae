@@ -160,7 +160,7 @@ export const PRODUCT_MODULES: ProductModule[] = [
   {id:'SUPPORT.CENTER',labelFr:'Support, litiges et recours',labelEn:'Support, disputes & appeals',status:'FOUNDATION_ACTIVE',lot:'J',canonicalDependencies:['KERNEL.POLICY'],workspace:'SPECIALIZED'},
   {id:'TRUST.VERIFICATION',labelFr:'Centre de vérification',labelEn:'Verification center',status:'FOUNDATION_ACTIVE',lot:'J',canonicalDependencies:['KERNEL.POLICY','KERNEL.AUDIT'],workspace:'SPECIALIZED'},
   {id:'DATA.QUALITY',labelFr:'Qualité des données',labelEn:'Data quality',status:'FOUNDATION_ACTIVE',lot:'J',canonicalDependencies:['KERNEL.POLICY'],workspace:'SPECIALIZED'},
-  {id:'DATA.TIME_MACHINE',labelFr:'Time Machine',labelEn:'Time Machine',status:'FOUNDATION_ACTIVE',lot:'J',canonicalDependencies:['KERNEL.POLICY'],workspace:'SPECIALIZED'},
+  {id:'DATA.TIME_MACHINE',labelFr:'Time Machine',labelEn:'Time Machine',status:'STRUCTURAL_V1',lot:'J',canonicalDependencies:['KERNEL.POLICY'],workspace:'UNIVERSAL'},
   {id:'SECURITY.AUTH',labelFr:'Authentification',labelEn:'Authentication',status:'FOUNDATION_ACTIVE',lot:'J',canonicalDependencies:['KERNEL.POLICY','KERNEL.AUDIT'],workspace:'UNIVERSAL'},
   {id:'SECURITY.MFA',labelFr:'MFA rôles sensibles',labelEn:'Sensitive-role MFA',status:'PLANNED_DOMAIN',lot:'J',canonicalDependencies:['KERNEL.POLICY','KERNEL.AUDIT'],workspace:'UNIVERSAL'},
   {id:'SECURITY.MULTITENANT',labelFr:'Isolation multi-tenant',labelEn:'Multi-tenant isolation',status:'FOUNDATION_ACTIVE',lot:'J',canonicalDependencies:['KERNEL.POLICY','KERNEL.AUDIT'],workspace:'UNIVERSAL'},
