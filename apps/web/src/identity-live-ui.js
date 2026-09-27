@@ -32,9 +32,9 @@ export function mountIdentityLiveUI({app,notify=()=>{},showError=console.error})
     if(event.payload?.operationType)card.append(row('Opération',event.payload.operationType));
     if(event.payload?.amount!==undefined)card.append(row('Montant',new Intl.NumberFormat('fr-CM').format(Number(event.payload.amount))+' '+String(event.payload.currency??'XAF')));
     eventsRoot?.prepend(card);while(eventsRoot?.children.length>12)eventsRoot.lastElementChild?.remove();
-    if(['FINANCIAL_NOTICE','MEMBER_CONTROL','MEMBER_PROJECTION_UPDATED','CONSENSUS_SELECTED','MEETING_UPDATE'].includes(event.type)){
+    if(['FINANCIAL_NOTICE','MEMBER_CONTROL','MEMBER_PROJECTION_UPDATED','MEMBER_ENVELOPE_READY','CONSENSUS_SELECTED','MEETING_UPDATE'].includes(event.type)){
       const detail=event.payload?.selectedValue!==undefined?' · '+String(event.payload.selectedValue):'';
-      notify((event.type==='MEMBER_PROJECTION_UPDATED'?'Votre situation financière vient d’être mise à jour':'Mise à jour financière en direct')+detail);
+      notify((event.type==='MEMBER_ENVELOPE_READY'?'Votre enveloppe privée de séance est prête':event.type==='MEMBER_PROJECTION_UPDATED'?'Votre situation financière vient d’être mise à jour':'Mise à jour financière en direct')+detail);
       try{window.dispatchEvent(new CustomEvent('eco:financial-live-update',{detail:event}));}catch{}
       try{if(typeof Notification!=='undefined'&&Notification.permission==='granted'&&document.visibilityState!=='visible')new Notification('Eco-System · Finance',{body:(event.type==='MEMBER_PROJECTION_UPDATED'?'Votre situation a été mise à jour.':'Une opération financière nécessite votre attention.')+detail});}catch{}
     }
