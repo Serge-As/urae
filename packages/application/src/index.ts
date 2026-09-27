@@ -629,6 +629,9 @@ export class ConnectedApplication {
   async runDiscoverySearch(id:string):Promise<any>{return this.request('/api/v1/discovery/saved-searches/'+encodeURIComponent(id)+'/run',{method:'POST',body:'{}'});}
   async deleteDiscoverySearch(id:string):Promise<any>{return this.request('/api/v1/discovery/saved-searches/'+encodeURIComponent(id),{method:'DELETE'});}
   async proximityGroups(locality:string,q=''):Promise<any[]>{const p=new URLSearchParams({locality});if(q)p.set('q',q);return this.request('/api/v1/discovery/proximity?'+p);}
+  async managerPublicProfile():Promise<any>{const r=await this.request('/api/v1/discovery/manager-profile') as any;return r.profile;}
+  async saveManagerPublicProfile(input:any):Promise<any>{return this.request('/api/v1/discovery/manager-profile',{method:'PUT',body:JSON.stringify(input)});}
+  async searchManagerPublicProfiles(input:{q?:string;locality?:string;expertise?:string[]}={}):Promise<any[]>{const p=new URLSearchParams();if(input.q)p.set('q',input.q);if(input.locality)p.set('locality',input.locality);if(input.expertise?.length)p.set('expertise',input.expertise.join(','));const r=await this.request('/api/v1/discovery/manager-profiles/search?'+p) as any;return r.items??[];}
   async candidateProfile():Promise<any>{const r=await this.request('/api/v1/discovery/candidate-profile') as any;return r.profile;}
   async saveCandidateProfile(input:any):Promise<any>{return this.request('/api/v1/discovery/candidate-profile',{method:'PUT',body:JSON.stringify(input)});}
   async candidateInvitations():Promise<any[]>{return this.request('/api/v1/discovery/candidate-invitations');}
