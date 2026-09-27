@@ -18,8 +18,9 @@ const moduleScore=(query,m)=>{
 };
 export function interpretLocalAssistant(raw,modules=[]){
  const text=String(raw??'').trim();if(!text)return{intent:'EMPTY',offlineCapable:true,canWriteLedger:false,requiresHumanConfirmation:false,results:[]};
- if(finance.test(normalize(text))&&amount.test(text))return{intent:'FINANCIAL_DRAFT',raw:text,offlineCapable:true,canWriteLedger:false,requiresHumanConfirmation:true,results:[]};
- if(launch.test(text)&&/\b(creer|créer|configurer|lancer|transformer|nouveau|nouvelle)\b/i.test(text))return{intent:'LAUNCH_DRAFT',raw:text,offlineCapable:true,canWriteLedger:false,requiresHumanConfirmation:true,results:[]};
+ const normalized=normalize(text);
+ if(/\b(creer|configurer|lancer|transformer|nouveau|nouvelle)\b/i.test(normalized)&&/\b(association|tontine|groupe)\b/i.test(normalized))return{intent:'LAUNCH_DRAFT',raw:text,offlineCapable:true,canWriteLedger:false,requiresHumanConfirmation:true,results:[]};
+ if(finance.test(normalized)&&amount.test(text))return{intent:'FINANCIAL_DRAFT',raw:text,offlineCapable:true,canWriteLedger:false,requiresHumanConfirmation:true,results:[]};
  const n=normalize(text);for(const [view,aliases] of VIEW_ALIASES)if(nav.test(text)&&aliases.some(a=>n.includes(normalize(a))))return{intent:'NAVIGATE',view,offlineCapable:true,canWriteLedger:false,requiresHumanConfirmation:false,results:[]};
  const results=modules.map(m=>({id:m.id,labelFr:m.labelFr,labelEn:m.labelEn,status:m.status,score:moduleScore(text,m)})).filter(x=>x.score>0).sort((a,b)=>b.score-a.score).slice(0,8);
  if(nav.test(text)&&results[0]?.score>=0.5)return{intent:'MODULE',moduleId:results[0].id,offlineCapable:true,canWriteLedger:false,requiresHumanConfirmation:false,results};
