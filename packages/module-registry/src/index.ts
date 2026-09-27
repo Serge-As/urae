@@ -169,7 +169,7 @@ export const PRODUCT_MODULES: ProductModule[] = [
   {id:'BACKUP.D1_RESTORE',labelFr:'Backup/restauration D1',labelEn:'D1 backup/restore',status:'FOUNDATION_ACTIVE',lot:'J',canonicalDependencies:['KERNEL.POLICY'],workspace:'UNIVERSAL'},
   {id:'OBSERVABILITY.HEALTH',labelFr:'Health & observabilité',labelEn:'Health & observability',status:'FOUNDATION_ACTIVE',lot:'J',canonicalDependencies:['KERNEL.POLICY'],workspace:'SPECIALIZED'},
   {id:'COMPATIBILITY.LEGACY',labelFr:'Compatibilité anciens appareils',labelEn:'Legacy-device compatibility',status:'FOUNDATION_ACTIVE',lot:'J',canonicalDependencies:['KERNEL.POLICY'],workspace:'UNIVERSAL'},
-  {id:'SUCCESSION.NEXT_OF_KIN',labelFr:'Succession et ayants droit',labelEn:'Succession & next of kin',status:'STRUCTURAL_V1',lot:'J',canonicalDependencies:['KERNEL.POLICY'],workspace:'UNIVERSAL'},
+  {id:'SUCCESSION.NEXT_OF_KIN',labelFr:'Succession et ayants droit',labelEn:'Succession & next of kin',status:'FOUNDATION_ACTIVE',lot:'J',canonicalDependencies:['KERNEL.POLICY'],workspace:'SPECIALIZED'},
   {id:'FEDERATION.GROUP_NETWORK',labelFr:'Fédérations de groupes',labelEn:'Group federations',status:'PLANNED_DOMAIN',lot:'J',canonicalDependencies:['KERNEL.POLICY'],workspace:'UNIVERSAL'},
 ];
 
