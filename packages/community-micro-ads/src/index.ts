@@ -17,6 +17,11 @@ export class CommunityMicroAdService{
    if(g.createdBy===c.actorId)return g;
    const m=(await this.repo.listMemberships(c.tenantId,groupId)).find(x=>x.userId===c.actorId&&x.status==='active');if(!m)throw Error('FORBIDDEN_SCOPE');return g;
  }
+ private async manager(groupId:Id){
+   const c=this.ctx(),g=await this.member(groupId);if(g.createdBy===c.actorId)return true;
+   const m=(await this.repo.listMemberships(c.tenantId,groupId)).find(x=>x.userId===c.actorId&&x.status==='active');
+   return Boolean(m?.roles.some(role=>['founder','manager','admin','president','treasurer','secretary'].includes(role)));
+ }
  private async get(groupId:Id,id:Id){
    const c=this.ctx(),r=await this.repo.getWorkspaceRecord(c.tenantId,id);if(!r||r.groupId!==groupId||r.moduleId!=='COMMUNITY.MICRO_ADS')throw Error('MICRO_AD_NOT_FOUND');return r;
  }
@@ -41,6 +46,7 @@ export class CommunityMicroAdService{
    const type=String(r.data.microAdType) as MicroAdType,category=String(r.data.category),locality=String(r.data.locality),title=r.title,textBody=String(r.data.text??r.summary??'');
    let target;
    if(type==='SEEK'){
+     if(!await this.manager(groupId))throw Error('MICRO_AD_GROUP_NEED_REQUIRES_MANAGER');
      target=await this.valueNetwork.createNeed({groupId,title,category,quantity:input.quantity,unit:input.unit,locality,neededBy:input.neededBy,sourceType:'COMMUNITY_MESSAGE',sourceRef:r.id,note:textBody,publicationConsent:false,currency:input.currency??'XAF'});
    }else{
      target=await this.valueNetwork.createOffer({kind:'SERVICE',title,category,availableQuantity:input.quantity,unit:input.unit,locality,unitPrice:input.unitPrice,currency:input.currency??'XAF',expiresAt:input.expiresAt??String(r.data.expiresAt),evidenceRef:input.evidenceRef,serviceZones:[locality]});
