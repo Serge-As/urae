@@ -45,7 +45,7 @@ export const PRODUCT_MODULES: ProductModule[] = [
   {id:'RUBRIC.OBSERVED_PRACTICE',labelFr:'Pratique observée',labelEn:'Observed practice',status:'FOUNDATION_ACTIVE',lot:'C',canonicalDependencies:['KERNEL.CONFIGURATION','KERNEL.POLICY'],workspace:'SPECIALIZED'},
   {id:'RUBRIC.EFFECTIVE_POLICY',labelFr:'Règle opérationnelle validée',labelEn:'Validated operational policy',status:'FOUNDATION_ACTIVE',lot:'C',canonicalDependencies:['KERNEL.CONFIGURATION','KERNEL.POLICY'],workspace:'SPECIALIZED'},
   {id:'RUBRIC.EXCEPTIONS',labelFr:'Exceptions gouvernées',labelEn:'Governed exceptions',status:'STRUCTURAL_V1',lot:'C',canonicalDependencies:['KERNEL.CONFIGURATION','KERNEL.POLICY'],workspace:'UNIVERSAL'},
-  {id:'RUBRIC.STARTER_KITS',labelFr:'Kits de rubriques',labelEn:'Rubric starter kits',status:'STRUCTURAL_V1',lot:'C',canonicalDependencies:['KERNEL.CONFIGURATION','KERNEL.POLICY'],workspace:'UNIVERSAL'},
+  {id:'RUBRIC.STARTER_KITS',labelFr:'Kit prêt à l’emploi',labelEn:'Ready-to-use Starter Kit',status:'FOUNDATION_ACTIVE',lot:'C',canonicalDependencies:['KERNEL.CONFIGURATION','KERNEL.POLICY'],workspace:'SPECIALIZED'},
   {id:'RUBRIC.COLLATION',labelFr:'Collation',labelEn:'Collation',status:'FOUNDATION_ACTIVE',lot:'C',canonicalDependencies:['KERNEL.CONFIGURATION','KERNEL.POLICY'],workspace:'UNIVERSAL'},
   {id:'RUBRIC.LOCAL_AID',labelFr:'Aide locale',labelEn:'Local assistance',status:'FOUNDATION_ACTIVE',lot:'C',canonicalDependencies:['KERNEL.CONFIGURATION','KERNEL.POLICY'],workspace:'SPECIALIZED'},
   {id:'RUBRIC.HAND_RAISE',labelFr:'Main levée',labelEn:'Hand-raise contribution',status:'FOUNDATION_ACTIVE',lot:'C',canonicalDependencies:['KERNEL.CONFIGURATION','KERNEL.POLICY'],workspace:'SPECIALIZED'},
