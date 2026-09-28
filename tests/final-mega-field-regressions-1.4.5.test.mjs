@@ -203,7 +203,7 @@ test('stale cached html recovers to 1.5.2.8 while preserving 1.5.2.7 as rollback
   assert.match(main,/document\.querySelector\('#claimLocalAccountBtn'\)\?\.addEventListener/);
   assert.doesNotMatch(main,/\$\('#claimLocalAccountBtn'\)\.addEventListener/);
   assert.match(sw,/eco-system-v1527-live-completion-20260927/);
-  assert.match(html,/ECO-SYSTEM · 1\.5\.2\.7/);
+  assert.match(html,/ECO-SYSTEM · 1\.5\.2\.8/);
   assert.match(html,/main\.js\?v=1528/);
   assert.match(sw,/PREVIOUS_CACHE = 'eco-system-v1527-live-completion-20260927'/);
   assert.match(sw,/Online navigation is network-first/);
