@@ -14,6 +14,7 @@ import { buildFinancialRecap, buildSessionRecap, buildClosingCarryover } from '.
 import { diagnoseGroup } from '../../group-doctor/src/index.js';
 import { IndexedDbSovereignStore, createEcoVault, openEcoVault, type SovereignSnapshot } from '../../offline-sovereign/src/index.js';
 import { buildExerciseClosingPlan, buildExerciseCarryForwardSeed, type ExerciseClosingInput, type ExerciseClosingPlan } from '../../exercise/src/index.js';
+import { buildNumpadRubricCodes, parseEcoNumpad, type NumpadCode, type NumpadDraft } from '../../eco-numpad/src/index.js';
 import { createRelayPairingMaterial, encryptMemberCapsule, decryptMemberCapsule, createBroadcastBundle, encodeBroadcastFrames, encodeTargetedBroadcastFrames, type EcoMemberCapsule, type EcoRelayPairingMaterial, type EcoBroadcastBundle } from '../../relay/src/broadcast.js';
 
 export const KERNEL_SERVICE_IDS = [
@@ -720,6 +721,21 @@ export class ConnectedApplication {
     const stamp=new Date().toISOString(),entry={id:'local_ledger_'+input.idempotencyKey,tenantId:this.tenantId,groupId:this.activeGroupId,currency:'XAF',createdAt:stamp,createdBy:this.actorId,descriptionCode:input.descriptionCode,sourceType:input.sourceType,sourceId:input.sourceId,meetingId:input.meetingId,idempotencyKey:input.idempotencyKey,kind:input.kind,lines:[],localPending:true,localDirection:input.direction,localAmount:input.amount};
     const delta=input.direction==='in'?input.amount:-input.amount,summary={...current.summary,cashBalance:Number(current.summary?.cashBalance??0)+delta,entryCount:Number(current.summary?.entryCount??0)+1};
     await this.saveCached(path,{...current,summary,entries:[...(current.entries??[]),entry]});return entry;
+  }
+
+  async numpadCodes():Promise<NumpadCode[]>{
+    if(!this.activeGroupId)return[];const rubrics=(await this.listRubrics()).filter(x=>x.status==='ACTIVE');return buildNumpadRubricCodes(rubrics.map(x=>({id:x.id,name:x.name})));
+  }
+  async previewEcoNumpad(raw:string,meetingId:string):Promise<{draft:NumpadDraft;membership:MembershipView;meeting:MeetingSession;rows:Array<NumpadDraft['entries'][number]&{rubric:RubricDefinition}>}>{
+    if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');const [codes,members,meetings,rubrics]=await Promise.all([this.numpadCodes(),this.listMembers(),this.listMeetings(),this.listRubrics()]),draft=parseEcoNumpad(raw,codes);
+    const membership=members.find(x=>Number(x.memberNumber)===draft.memberNumber&&x.status!=='left');if(!membership)throw Error('NUMPAD_MEMBER_NOT_FOUND');
+    const meeting=meetings.find(x=>x.id===meetingId&&!['cancelled'].includes(x.status));if(!meeting)throw Error('MEETING_NOT_FOUND');
+    const byId=new Map(rubrics.map(x=>[x.id,x])),rows=draft.entries.map(x=>{const rubric=byId.get(x.rubricId);if(!rubric||rubric.status!=='ACTIVE')throw Error('RUBRIC_NOT_FOUND');return{...x,rubric};});
+    return{draft,membership,meeting,rows};
+  }
+  async commitEcoNumpad(raw:string,meetingId:string):Promise<{membershipId:string;meetingId:string;results:any[]}>{
+    const preview=await this.previewEcoNumpad(raw,meetingId),results=[];for(const row of preview.rows)results.push(await this.recordFinancialSheetEntry({membershipId:preview.membership.id,meetingId,rubric:row.rubric,amount:row.amount}));
+    return{membershipId:preview.membership.id,meetingId,results};
   }
 
   pendingFinancialSheetEntries():Array<{meetingId:string;membershipId:string;rubricId:string;amount:number;nature:string;status:string;idempotencyKey:string;createdAt:string}>{
