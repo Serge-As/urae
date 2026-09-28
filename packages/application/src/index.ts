@@ -1046,9 +1046,42 @@ export class ConnectedApplication {
 
   async approveHistoricalImport(id:string,mapping:Record<string,string>={}):Promise<CompletionRecord>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/imports/'+encodeURIComponent(id)+'/approve',{method:'POST',body:JSON.stringify({mapping})});}
   async applyHistoricalImport(id:string):Promise<CompletionRecord>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/imports/'+encodeURIComponent(id)+'/apply',{method:'POST',body:'{}'});}
-  async listCompletion(kind?:CompletionKind):Promise<CompletionRecord[]>{if(!this.activeGroupId)return[];const p=new URLSearchParams();if(kind)p.set('kind',kind);return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/completion?'+p);}
-  async createCompletion(kind:CompletionKind,input:{title:string;summary?:string;data?:Record<string,unknown>;tags?:string[]}):Promise<CompletionRecord>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/completion',{method:'POST',body:JSON.stringify({kind,...input})});}
-  async transitionCompletion(id:string,to:string,expectedVersion:number,patch:Record<string,unknown>={},reason?:string):Promise<CompletionRecord>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/completion/'+encodeURIComponent(id)+'/transition',{method:'POST',body:JSON.stringify({to,expectedVersion,patch,reason})});}
+  private completionPath(kind?:CompletionKind):string{const p=new URLSearchParams();if(kind)p.set('kind',kind);return '/api/v1/groups/'+encodeURIComponent(this.activeGroupId??'')+'/completion?'+p;}
+  private localCompletionStatus(state:string):WorkspaceStatus{
+    if(['DRAFT','UPLOADED','CAPTURED','REQUESTED','SPECIFIED','PREPARED','CREATED','REGISTERED'].includes(state))return'DRAFT';
+    if(['DONE','COMPLETED','CLOSED','FULFILLED','ACCEPTED','RESOLVED','RESTORED_TEST','APPLIED','SERVED'].includes(state))return'DONE';
+    if(['ARCHIVED','REVOKED','CANCELLED','REJECTED','REMOVED','SUPERSEDED','EXPIRED','DISCARDED'].includes(state))return'ARCHIVED';
+    return'ACTIVE';
+  }
+  private encodeCompletionValue(value:unknown):string|number|boolean|null{
+    if(value===null||typeof value==='string'||typeof value==='boolean')return value;
+    if(typeof value==='number'){if(!Number.isFinite(value))throw Error('INVALID_NON_FINITE_VALUE');return value;}
+    if(value===undefined)return null;return JSON.stringify(value);
+  }
+  private async saveLocalCompletion(record:CompletionRecord):Promise<void>{
+    const allPath=this.completionPath(),kind=String(record.data.completionKind) as CompletionKind,kindPath=this.completionPath(kind);
+    const up=(rows:CompletionRecord[])=>[...rows.filter(x=>x.id!==record.id),structuredClone(record)].sort((a,b)=>a.createdAt.localeCompare(b.createdAt));
+    await this.patchCachedArray<CompletionRecord>(allPath,up);await this.patchCachedArray<CompletionRecord>(kindPath,up);
+  }
+  async listCompletion(kind?:CompletionKind):Promise<CompletionRecord[]>{if(!this.activeGroupId)return[];return this.request(this.completionPath(kind));}
+  async createCompletion(kind:CompletionKind,input:{id?:string;title:string;summary?:string;data?:Record<string,unknown>;tags?:string[]}):Promise<CompletionRecord>{
+    if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');
+    const localId=input.id?.trim()||makeId('completion');
+    if(!this.isOffline())try{return await this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/completion',{method:'POST',body:JSON.stringify({kind,id:localId,...input})});}catch(error){if(!(error instanceof Error)||error.message!=='NETWORK_UNAVAILABLE')throw error;}
+    const spec=COMPLETION_WORKFLOWS[kind];if(!spec)throw Error('INVALID_COMPLETION_KIND');const title=input.title.trim();if(!title)throw Error('TITLE_REQUIRED');
+    const data:Record<string,string|number|boolean|null>={completionKind:kind,completionState:spec.initial,completionVersion:1};for(const [key,value] of Object.entries(input.data??{}))data[key]=this.encodeCompletionValue(value);
+    const stamp=new Date().toISOString(),record:CompletionRecord={id:localId,tenantId:this.tenantId,groupId:this.activeGroupId,moduleId:spec.moduleId,title,summary:input.summary?.trim()||undefined,status:this.localCompletionStatus(spec.initial),tags:['completion','kind:'+kind,'state:'+spec.initial,...new Set(input.tags??[])],data,createdBy:this.actorId,createdAt:stamp,updatedAt:stamp};
+    await this.saveLocalCompletion(record);await this.queueLocal('COMPLETION_CREATE_V1',{groupId:this.activeGroupId,kind,id:localId,title:record.title,summary:record.summary??null,data:structuredClone(input.data??{}),tags:input.tags??[]},'completion-create:'+localId);return record;
+  }
+  async transitionCompletion(id:string,to:string,expectedVersion:number,patch:Record<string,unknown>={},reason?:string):Promise<CompletionRecord>{
+    if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');
+    if(!this.isOffline())try{return await this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/completion/'+encodeURIComponent(id)+'/transition',{method:'POST',body:JSON.stringify({to,expectedVersion,patch,reason})});}catch(error){if(!(error instanceof Error)||error.message!=='NETWORK_UNAVAILABLE')throw error;}
+    const current=(await this.listCompletion()).find(x=>x.id===id);if(!current)throw Error('COMPLETION_RECORD_NOT_FOUND');const kind=String(current.data.completionKind) as CompletionKind,spec=COMPLETION_WORKFLOWS[kind],state=String(current.data.completionState),version=Number(current.data.completionVersion??0);
+    if(version!==expectedVersion)throw Error('COMPLETION_VERSION_CONFLICT');if(!(spec?.transitions[state]??[]).includes(to))throw Error('INVALID_COMPLETION_TRANSITION');
+    const data={...current.data};for(const [key,value] of Object.entries(patch)){if(['completionKind','completionState','completionVersion'].includes(key))continue;data[key]=this.encodeCompletionValue(value);}data.completionState=to;data.completionVersion=version+1;if(reason)data.lastTransitionReason=reason.trim();
+    const tags=[...current.tags.filter(x=>!x.startsWith('state:')),'state:'+to],next:CompletionRecord={...current,status:this.localCompletionStatus(to),tags,data,updatedAt:new Date().toISOString()};
+    await this.saveLocalCompletion(next);await this.queueLocal('COMPLETION_TRANSITION_V1',{groupId:this.activeGroupId,id,to,expectedVersion,patch:structuredClone(patch),reason:reason??null},'completion-transition:'+id+':'+expectedVersion+':'+to);return next;
+  }
   async createHistoricalIdentityClaim(input:{historicalReference:string;evidenceReference:string;claimedMembershipId?:string;note?:string}):Promise<CompletionRecord>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/identity-claims',{method:'POST',body:JSON.stringify(input)});}
   async createTontineCycle(input:{rubricId:string;name:string;rounds:number;potsPerRound:number;nominalPotAmount?:number}):Promise<CompletionRecord>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/tontine/cycles',{method:'POST',body:JSON.stringify({...input,currency:'XAF'})});}
   async addTontineShare(input:{cycleId:string;membershipId:string;label:string}):Promise<CompletionRecord>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/tontine/shares',{method:'POST',body:JSON.stringify(input)});}
