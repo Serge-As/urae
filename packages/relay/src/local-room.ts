@@ -61,7 +61,12 @@ export class EcoLocalRoomPeer {
     const signal=decodeLocalRoomSignal(encoded);if(signal.role!=='ANSWER'||signal.roomId!==this._roomId)throw Error('ECO_LOCAL_ROOM_ANSWER_MISMATCH');if(!this.pc)throw Error('ECO_LOCAL_ROOM_NOT_STARTED');
     await this.pc.setRemoteDescription(signal.description);
   }
-  async waitUntilOpen(timeoutMs=12000){if(!this.channel)throw Error('ECO_LOCAL_ROOM_CHANNEL_MISSING');await waitOpen(this.channel,timeoutMs);}
+  async waitUntilOpen(timeoutMs=12000){
+    const started=Date.now();
+    while(!this.channel&&Date.now()-started<timeoutMs)await new Promise(resolve=>setTimeout(resolve,25));
+    if(!this.channel)throw Error('ECO_LOCAL_ROOM_CHANNEL_MISSING');
+    await waitOpen(this.channel,Math.max(250,timeoutMs-(Date.now()-started)));
+  }
   send(type:string,payload:unknown){
     if(!this.channel||this.channel.readyState!=='open')throw Error('ECO_LOCAL_ROOM_NOT_CONNECTED');
     this.channel.send(JSON.stringify({type,payload,sentAt:new Date().toISOString()} satisfies EcoLocalRoomPacket));
