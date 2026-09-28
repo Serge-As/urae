@@ -66,6 +66,9 @@ test('targeted tranche 7 keeps canonical ownership, target replacement and indep
 test('financial dictation is confidence-aware and never treats noise robustness as proven',async()=>{
   const source=await readFile('.build/src/voice-entry-ui.js','utf8');
   assert.match(source,/maxAlternatives\s*=\s*3/);
+  assert.match(source,/interimResults=false/);
+  assert.doesNotMatch(source,/interimResults=true/);
+  assert.match(source,/MediaRecorder/);
   assert.match(source,/confidence/);
   assert.match(source,/Transcription incertaine|Uncertain transcription/);
   assert.match(source,/faible confiance|low confidence/);
