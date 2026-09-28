@@ -7,6 +7,14 @@ const unb64u=v=>{const n=v.replaceAll('-','+').replaceAll('_','/'),raw=atob(n+'=
 const pairingText=material=>'ECOPAIR1.'+b64u(JSON.stringify(material));
 const parsePairing=raw=>{if(!raw.startsWith('ECOPAIR1.'))throw Error('PAIRING_QR_INVALID');const x=JSON.parse(unb64u(raw.slice(9)));if(x.protocolVersion!==1||!x.membershipId||!x.keyId||!x.rawKey)throw Error('PAIRING_QR_INVALID');return x;};
 const download=(name,text,type='application/json')=>{const blob=new Blob([text],{type}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),1500);};
+const money=n=>Math.round(Number(n)||0).toLocaleString('fr-FR')+' F';
+const yieldRows=draft=>{
+  const map=new Map(),add=row=>{if(!row?.memberId)return;const old=map.get(row.memberId)??{membershipId:row.memberId,principal:0,interest:0};old.principal+=Number(row.principal??0);old.interest+=Number(row.interest??0);map.set(row.memberId,old);};
+  const result=draft?.result??{};
+  if(Array.isArray(result.members))for(const row of result.members)add(row);
+  for(const fund of result.funds??[]){const rows=fund?.members??fund?.data?.members??[];for(const row of rows)add(row);}
+  return[...map.values()];
+};
 
 export function mountSovereignOfflineUI({app,getMembers=()=>[],getMeetings=()=>[],isManager=()=>false,notify=()=>{},showError=console.error}={}){
   const relay=document.getElementById('ecoRelayWorkspace'),local=document.getElementById('ecoLocalWorkspace');if(!relay||!local)return{refresh:async()=>{}};
@@ -28,12 +36,24 @@ export function mountSovereignOfflineUI({app,getMembers=()=>[],getMeetings=()=>[
   video.autoplay=true;video.playsInline=true;video.muted=true;video.className='eco-relay-camera';fileInput.type='file';fileInput.accept='.ecobroadcast,application/json';pairImport.type='file';pairImport.accept='.ecopair,application/json,text/plain';
   const receiveActions=el('div',undefined,'actions');receiveActions.append(cameraBtn,cameraStop);receive.append(rh,el('p','Si le scanner caméra n’est pas disponible sur cet appareil, utilisez le fichier Eco Pack reçu hors Internet par Bluetooth, carte SD, câble ou partage local.','hint'),receiveActions,video,progress,el('label','Importer un Eco Pack'),fileInput,el('label','Importer une clé .ecopair'),pairImport);
 
-  const vault=el('section',undefined,'item'),vh=el('h3','4 · Eco Vault · sauvegarde longue durée'),pass=document.createElement('input'),vaultExport=el('button','Créer un Eco Vault','primary'),vaultFile=document.createElement('input'),vaultRestore=el('button','Vérifier puis restaurer','secondary'),vaultStatus=el('p','', 'hint');
+  const exercise=el('section',undefined,'item'),eh=el('h3','Cycle d’exercice · clôture et report offline'),exerciseState=el('div',undefined,'stack'),newLabel=document.createElement('input'),openingCash=document.createElement('input'),openExercise=el('button','Ouvrir un exercice','primary');
+  newLabel.placeholder='Ex. Exercice 2027';openingCash.type='number';openingCash.min='0';openingCash.step='1';openingCash.placeholder='Trésorerie d’ouverture';
+  const openRow=el('div',undefined,'actions');openRow.append(newLabel,openingCash,openExercise);
+  const closeBox=el('div',undefined,'stack'),closingCash=document.createElement('input'),principalDisposition=document.createElement('select'),interestDisposition=document.createElement('select'),solidarity=document.createElement('input'),reserve=document.createElement('input'),bureau=document.createElement('input'),otherCarry=document.createElement('input'),prepareClose=el('button','Préparer la clôture','primary'),closeExercise=el('button','Clôturer définitivement','secondary'),nextLabel=document.createElement('input'),rollExercise=el('button','Reporter et ouvrir le nouvel exercice','primary'),closingResult=el('div',undefined,'stack');
+  for(const input of [closingCash,solidarity,reserve,bureau,otherCarry]){input.type='number';input.min='0';input.step='1';}
+  closingCash.placeholder='Caisse réelle de clôture';solidarity.placeholder='Fonds Secours à retenir/report';reserve.placeholder='Réserve à retenir/report';bureau.placeholder='Bureau / indemnités à payer';otherCarry.placeholder='Autre solde à reporter';
+  principalDisposition.append(new Option('Rembourser le principal aux membres','RETURN_TO_MEMBER'),new Option('Reporter le principal au nouvel exercice','CARRY_FORWARD'));
+  interestDisposition.append(new Option('Payer les intérêts aux membres','PAY_OUT'),new Option('Reporter les intérêts','CARRY_FORWARD'));
+  nextLabel.placeholder='Libellé du nouvel exercice';
+  closeBox.append(el('p','La répartition d’intérêts utilisée est celle que le responsable a mémorisée dans le module Épargne. Aucune méthode cachée n’est substituée.','hint'),closingCash,principalDisposition,interestDisposition,solidarity,reserve,bureau,otherCarry,prepareClose,closeExercise,nextLabel,rollExercise,closingResult);
+  exercise.append(eh,el('p','Un exercice peut vivre intégralement sur cet appareil : ouverture → séances → clôture préparée → validation → report. Les enveloppes de clôture sont des allocations ; un paiement physique reste une opération financière séparée à constater.','truth-notice'),openRow,exerciseState,closeBox);
+
+  const vault=el('section',undefined,'item'),vh=el('h3','Eco Vault · sauvegarde longue durée'),pass=document.createElement('input'),vaultExport=el('button','Créer un Eco Vault','primary'),vaultFile=document.createElement('input'),vaultRestore=el('button','Vérifier puis restaurer','secondary'),vaultStatus=el('p','', 'hint');
   pass.type='password';pass.placeholder='Phrase secrète (8 caractères minimum)';pass.autocomplete='new-password';vaultFile.type='file';vaultFile.accept='.ecovault,text/plain';
   const va=el('div',undefined,'actions');va.append(vaultExport,vaultRestore);vault.append(vh,el('p','Le Vault est chiffré et contient les snapshots, le journal local et les clés Relay du groupe. Gardez plusieurs copies A/B/C sur des supports différents.','hint'),pass,va,vaultFile,vaultStatus);
 
   relay.replaceChildren(status,pairing,broadcast,receive);
-  local.replaceChildren(vault,el('p','Eco Local Room multi-appareils utilisera les mêmes capsules et le même journal. Broadcast QR et Eco Pack sont déjà des transports sans Internet ; le transport LAN/WebRTC restera un accélérateur et jamais une seconde comptabilité.','truth-notice'));
+  local.replaceChildren(exercise,vault,el('p','Eco Local Room multi-appareils utilisera les mêmes capsules et le même journal. Broadcast QR et Eco Pack sont déjà des transports sans Internet ; le transport LAN/WebRTC restera un accélérateur et jamais une seconde comptabilité.','truth-notice'));
 
   const refresh=async()=>{
     const members=getMembers().filter(x=>x.status==='active'),meetings=getMeetings().slice().sort((a,b)=>String(b.scheduledAt??b.openedAt).localeCompare(String(a.scheduledAt??a.openedAt)));
@@ -41,6 +61,12 @@ export function mountSovereignOfflineUI({app,getMembers=()=>[],getMeetings=()=>[
     const mk=meetingSelect.value;meetingSelect.replaceChildren(...meetings.map(m=>{const o=document.createElement('option');o.value=m.id;o.textContent=m.title+' · '+String(m.status);return o;}));if(meetings.some(x=>x.id===mk))meetingSelect.value=mk;
     pairBtn.disabled=rotateBtn.disabled=!isManager()||!members.length;prepare.disabled=!isManager()||!members.length;
     if(!('BarcodeDetector' in window))progress.textContent='Scanner QR natif indisponible sur ce navigateur · utilisez Eco Pack ou un appareil plus récent.';
+    exerciseState.replaceChildren();let exercises=[];try{exercises=await app.exercises();}catch{}
+    const active=exercises.find(x=>['PREPARED','OPEN','CLOSING'].includes(String(x.data?.completionState))),latest=exercises.slice().sort((a,b)=>String(b.createdAt).localeCompare(String(a.createdAt)))[0];
+    if(!exercises.length)exerciseState.append(el('p','Aucun exercice enregistré. Vous pouvez créer le premier sans Internet.','hint'));
+    for(const x of exercises.slice().sort((a,b)=>String(b.createdAt).localeCompare(String(a.createdAt))).slice(0,8)){const row=el('article',undefined,'item');row.append(el('strong',String(x.data?.label??x.title)),el('span',String(x.data?.completionState??''),'pill'));exerciseState.append(row);}
+    openExercise.disabled=!isManager()||Boolean(active);prepareClose.disabled=!isManager()||String(active?.data?.completionState??'')!=='OPEN';closeExercise.disabled=!isManager()||String(active?.data?.completionState??'')!=='CLOSING';rollExercise.disabled=!isManager()||String(latest?.data?.completionState??'')!=='CLOSED';
+    if(isManager()){try{const state=await app.ledger();if(!closingCash.dataset.userEdited)closingCash.value=String(Math.max(0,Number(state.summary?.cashBalance??0)));}catch{}}
   };
 
   const showPair=async rotate=>{
@@ -78,6 +104,27 @@ export function mountSovereignOfflineUI({app,getMembers=()=>[],getMeetings=()=>[
 
   fileInput.onchange=()=>void(async()=>{try{const file=fileInput.files?.[0];if(!file)return;const bundle=JSON.parse(await file.text());const capsule=await app.receiveEcoBroadcast(bundle);progress.textContent='Eco Pack reçu · compte '+capsule.membershipId+' mis à jour.';notify('Eco Pack importé.');}catch(e){showError(e);}});
   pairImport.onchange=()=>void(async()=>{try{const file=pairImport.files?.[0];if(!file)return;await acceptRaw((await file.text()).trim());}catch(e){showError(e);}});
+
+  closingCash.addEventListener('input',()=>closingCash.dataset.userEdited='1');
+  openExercise.onclick=()=>void(async()=>{try{const row=await app.openExercise({label:newLabel.value,openingCash:Number(openingCash.value||0)});notify('Exercice « '+row.title+' » ouvert localement.');newLabel.value='';openingCash.value='';await refresh();}catch(e){showError(e);}})();
+  prepareClose.onclick=()=>void(async()=>{try{
+    const exercises=await app.exercises(),current=exercises.find(x=>String(x.data?.completionState)==='OPEN');if(!current)throw Error('EXERCISE_NOT_OPEN');
+    const [draft,source]=await Promise.all([app.exerciseYieldDraft(),app.savingsYieldSourceData()]),rows=yieldRows(draft),principalByMember=new Map();
+    for(const d of source.deposits??[])principalByMember.set(d.memberId,(principalByMember.get(d.memberId)??0)+Number(d.amount??0));
+    const interestByMember=new Map(rows.map(x=>[x.membershipId,x.interest])),memberIds=new Set([...principalByMember.keys(),...interestByMember.keys()]);
+    const members=[...memberIds].map(id=>({membershipId:id,principal:Number(principalByMember.get(id)??rows.find(x=>x.membershipId===id)?.principal??0),interest:Number(interestByMember.get(id)??0)}));
+    const retainedFunds=[
+      {code:'SOLIDARITY_FUND',label:'Fonds Secours',amount:Number(solidarity.value||0),carryForward:true},
+      {code:'RESERVE',label:'Réserve',amount:Number(reserve.value||0),carryForward:true},
+      {code:'BUREAU',label:'Bureau / indemnités',amount:Number(bureau.value||0),carryForward:false}
+    ].filter(x=>x.amount>0);
+    const prepared=await app.prepareExerciseClosing(current.id,{closingCash:Number(closingCash.value||0),members,retainedFunds,principalDisposition:principalDisposition.value,interestDisposition:interestDisposition.value,unassignedCarryForward:Number(otherCarry.value||0)});
+    const p=prepared.plan;closingResult.replaceChildren(el('p','Méthode intérêts : '+(draft?.method??'aucune répartition mémorisée'),'truth-notice'),el('p','Principal : '+money(p.totalPrincipal)+' · intérêts : '+money(p.totalInterest)+' · enveloppes cash : '+money(p.memberCashPayoutTotal)),el('p','Fonds retenus : '+money(p.retainedFundsTotal)+' · report membres : '+money(p.memberCarryForwardTotal)+' · ouverture suivante prévue : '+money(p.nextExerciseOpeningCash),'hint'));
+    for(const row of p.members.slice(0,30)){const m=getMembers().find(x=>x.id===row.membershipId);closingResult.append(el('p',(m?.displayName??row.membershipId)+' · paiement '+money(row.cashPayout)+' · report '+money(row.nextExerciseOpeningPosition)));}
+    notify('Plan de clôture calculé et conservé localement. Vérifiez-le avant clôture définitive.');await refresh();
+  }catch(e){showError(e);}})();
+  closeExercise.onclick=()=>void(async()=>{try{const current=(await app.exercises()).find(x=>String(x.data?.completionState)==='CLOSING');if(!current)throw Error('EXERCISE_NOT_CLOSING');await app.closeExercise(current.id);notify('Exercice clôturé. Le plan reste figé et auditable.');await refresh();}catch(e){showError(e);}})();
+  rollExercise.onclick=()=>void(async()=>{try{const latest=(await app.exercises()).filter(x=>String(x.data?.completionState)==='CLOSED').sort((a,b)=>String(b.updatedAt).localeCompare(String(a.updatedAt)))[0];if(!latest)throw Error('EXERCISE_NOT_CLOSED');const done=await app.carryForwardExercise(latest.id,nextLabel.value);notify('Nouvel exercice « '+done.next.title+' » ouvert avec les reports validés.');nextLabel.value='';await refresh();}catch(e){showError(e);}})();
 
   vaultExport.onclick=()=>void(async()=>{try{const encoded=await app.exportEcoVault(pass.value);const stamp=new Date().toISOString().replace(/[:.]/g,'-');download('eco-vault-'+(app.activeGroup?.()??'groupe')+'-'+stamp+'.ecovault',encoded,'text/plain');vaultStatus.textContent='Vault créé. Copiez-le idéalement sur deux autres supports physiques.';}catch(e){showError(e);}});
   vaultRestore.onclick=()=>void(async()=>{try{const file=vaultFile.files?.[0];if(!file)throw Error('VAULT_FILE_REQUIRED');const encoded=(await file.text()).trim(),info=await app.inspectEcoVault(pass.value,encoded);vaultStatus.textContent='Vault vérifié : '+info.events+' événements · '+info.snapshots+' snapshots. Restauration…';const done=await app.restoreEcoVault(pass.value,encoded);vaultStatus.textContent='Restauration terminée : '+done.events+' événements · '+done.outbox+' opérations de synchro.';notify('Eco Vault restauré et contrôlé.');await refresh();}catch(e){showError(e);}});
