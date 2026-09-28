@@ -26,6 +26,14 @@ const sheetExpenseTotal=async(page,{groupId,meetingId,membershipId,rubricId})=>p
     .reduce((n,x)=>n+Number(x.amount??0),0);
 },{groupId,meetingId,membershipId,rubricId});
 
+const localOutboxState=page=>page.evaluate(async()=>{
+  const db=await new Promise((resolve,reject)=>{const request=indexedDB.open('tontine-platform',1);request.onsuccess=()=>resolve(request.result);request.onerror=()=>reject(request.error);});
+  try{
+    if(!db.objectStoreNames.contains('outbox'))return[];
+    return await new Promise((resolve,reject)=>{const request=db.transaction('outbox','readonly').objectStore('outbox').getAll();request.onsuccess=()=>resolve(request.result??[]);request.onerror=()=>reject(request.error);});
+  }finally{db.close();}
+});
+
 test('real financial matrix validates click, Enter, closed-session first entry and offline replay',async({page,context})=>{
   test.setTimeout(120_000);
   const pageErrors=[];
@@ -245,7 +253,17 @@ test('real financial matrix validates click, Enter, closed-session first entry a
 
   await context.setOffline(false);
   await expect.poll(()=>ledgerCellTotal(page,{...ids,rubricId:ids.rubricIds[3]}),{timeout:30_000}).toBe(3000);
-  await expect.poll(()=>sheetExpenseTotal(page,{...ids,rubricId:ids.rubricIds[4]}),{timeout:30_000}).toBe(700);
+  let expenseSynced=false;
+  try{await expect.poll(()=>sheetExpenseTotal(page,{...ids,rubricId:ids.rubricIds[4]}),{timeout:30_000}).toBe(700);expenseSynced=true;}catch{}
+  if(!expenseSynced){
+    const outbox=(await localOutboxState(page)).filter(x=>['FINANCIAL_SHEET_ENTRY_V1','FINANCIAL_CELL_CORRECTION_PROPOSAL_V1'].includes(String(x.type))).map(x=>({id:x.id,type:x.type,status:x.status,attempts:x.attempts,lastError:x.lastError,lastResult:x.lastResult,createdAt:x.createdAt,updatedAt:x.updatedAt,idempotencyKey:x.idempotencyKey,payload:x.payload}));
+    const diagnostics=await page.evaluate(async({groupId})=>{
+      const ledgerResponse=await fetch('/api/v1/groups/'+encodeURIComponent(groupId)+'/ledger',{headers:{'x-active-group-id':groupId}});
+      const ledger=ledgerResponse.ok?await ledgerResponse.json():{status:ledgerResponse.status,text:await ledgerResponse.text()};
+      return{online:navigator.onLine,activeGroup:localStorage.getItem('tontine.activeGroupId'),selectorValue:document.querySelector('#activeGroupSelect')?.value??'',selectorText:document.querySelector('#activeGroupSelect')?.selectedOptions?.[0]?.textContent??'',errorText:document.querySelector('#errorBox')?.textContent??'',ledgerSummary:ledger?.summary??null};
+    },{groupId:ids.groupId});
+    throw new Error('OFFLINE_EXPENSE_NOT_SYNCED '+JSON.stringify({diagnostics,outbox,pageErrors}));
+  }
   await expect.poll(()=>moneyValue(cell(ids.rubricIds[3],ids.meetingId)),{timeout:30_000}).toBe(3000);
   await expect.poll(()=>moneyValue(cell(ids.rubricIds[4],ids.meetingId)),{timeout:30_000}).toBe(-700);
 
