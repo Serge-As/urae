@@ -282,6 +282,21 @@ export class FoundationService {
     return this.repo.listMemberships(tenantId,groupId);
   }
 
+  async setMemberNumberOrder(tenantId:Id,groupId:Id,orderedMembershipIds:Id[],requestId=makeId('req')):Promise<Membership[]>{
+    const ctx=this.kernel.context.get();await assertCanManageGroup(this.repo,ctx,tenantId,groupId);
+    const current=(await this.repo.listMemberships(tenantId,groupId)).filter(m=>m.status!=='left');
+    const ids=orderedMembershipIds.map(String),unique=new Set(ids);
+    if(ids.length!==current.length||unique.size!==ids.length||current.some(m=>!unique.has(m.id)))throw Error('MEMBER_NUMBER_ORDER_INCOMPLETE');
+    const byId=new Map(current.map(m=>[m.id,m])),before=current.map(m=>({membershipId:m.id,memberNumber:Number(m.memberNumber)||null}));
+    for(let index=0;index<ids.length;index++){
+      const m=byId.get(ids[index]!);if(!m)throw Error('MEMBERSHIP_NOT_FOUND');
+      const next=index+1;if(Number(m.memberNumber)!==next){m.memberNumber=next;await this.repo.saveMembership(m);}
+    }
+    const after=(await this.repo.listMemberships(tenantId,groupId)).filter(m=>m.status!=='left').sort((a,b)=>(Number(a.memberNumber)||Number.MAX_SAFE_INTEGER)-(Number(b.memberNumber)||Number.MAX_SAFE_INTEGER)||String(a.id).localeCompare(String(b.id)));
+    await persistAudit(this.repo,this.kernel,{tenantId,actorId:ctx.actorId,action:'MEMBER_NUMBER_ORDER_UPDATED',targetType:'group',targetId:groupId,requestId,before:{order:before},after:{order:after.map(m=>({membershipId:m.id,memberNumber:m.memberNumber}))}});
+    return after;
+  }
+
   async addMember(tenantId: Id, groupId: Id, user: User, requestId = makeId('req'), membershipId?:Id): Promise<Membership> {
     const ctx=this.kernel.context.get(); const group=await assertCanManageGroup(this.repo,ctx,tenantId,groupId);
     const decision=this.kernel.policy.evaluate('group:manage',{...ctx,activeGroupId:groupId},{groupId}); if(!decision.allowed) throw new Error(decision.reason);
