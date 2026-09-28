@@ -17,8 +17,12 @@ export function mountMemberEnvelopeUI({app,notify=()=>{},showError=()=>{}}={}){
       const o=document.createElement('option');o.value=m.id;o.textContent=(m.title||'Séance')+' · '+new Date(m.scheduledAt??m.openedAt).toLocaleString('fr-FR');if(preferred===m.id)o.selected=true;select.append(o);
     }
   };
+  const envelopeFromCapsule=capsule=>{
+    if(!capsule?.projection)return null;const p=capsule.projection,meeting=p.meeting??null,receipts=p.receipts??[];
+    return{fingerprint:capsule.projectionDigest??'',expiresAt:capsule.expiresAt,projection:{meeting:meeting??{id:'offline',title:'Dernière projection reçue',status:'offline'},meetingReceipts:receipts.map(r=>({...r,late:Boolean(r.late??false)})),meetingNet:receipts.reduce((n,r)=>n+Number(r.netAmount??0),0),statementTotal:Number(p.statementTotal??0),loanDebts:p.loanDebts??[],obligations:p.obligations??[],notices:p.notices??[]},offlineCapsule:true,projectionVersion:Number(capsule.projectionVersion??0)};
+  };
   const render=env=>{
-    body.replaceChildren();status.textContent='Empreinte : '+String(env.fingerprint??'').slice(0,16)+'… · valable jusqu’au '+new Date(env.expiresAt).toLocaleString('fr-FR');
+    body.replaceChildren();status.textContent=(env.offlineCapsule?'Projection locale v'+env.projectionVersion+' · ':'Empreinte : '+String(env.fingerprint??'').slice(0,16)+'… · ')+(env.expiresAt?'valable jusqu’au '+new Date(env.expiresAt).toLocaleString('fr-FR'):'');
     const summary=el('article',undefined,'item');summary.append(el('strong',env.projection.meeting.title),el('p','Cette séance : '+money(env.projection.meetingNet)+' · total personnel : '+money(env.projection.statementTotal),'hint'));body.append(summary);
     const receipts=el('article',undefined,'item');receipts.append(el('strong','Saisies de cette séance'));
     if(!env.projection.meetingReceipts?.length)receipts.append(el('p','Aucune saisie financière personnelle dans cette séance.','empty-state'));
@@ -36,11 +40,18 @@ export function mountMemberEnvelopeUI({app,notify=()=>{},showError=()=>{}}={}){
   };
   const load=async(meetingId)=>{
     if(!meetingId)return;body.replaceChildren(el('p','Chargement…','hint'));
-    try{const env=await app.memberEnvelope(meetingId);render(env);}catch(e){body.replaceChildren();status.textContent='';showError(e);body.append(el('p',String(e?.message??e)==='MEMBER_DISTRIBUTION_NOT_READY'?'Cette séance n’a pas encore été diffusée aux membres.':'Enveloppe indisponible : '+String(e?.message??e),'hint'));}
+    try{const env=await app.memberEnvelope(meetingId);render(env);return;}catch(serverError){
+      try{const membership=await currentMembership(),capsule=membership?await app.receivedMemberCapsule(membership.id):undefined,local=envelopeFromCapsule(capsule);if(local&&(!local.projection.meeting?.id||local.projection.meeting.id===meetingId)){render(local);return;}}catch{}
+      body.replaceChildren();status.textContent='';showError(serverError);body.append(el('p',String(serverError?.message??serverError)==='MEMBER_DISTRIBUTION_NOT_READY'?'Cette séance n’a pas encore été diffusée aux membres.':'Enveloppe indisponible : '+String(serverError?.message??serverError),'hint'));
+    }
   };
   const refresh=async(preferred)=>{await fillMeetings(preferred);if(select.value)await load(select.value);};
   form.onsubmit=e=>{e.preventDefault();void load(select.value);};
   root.addEventListener('toggle',()=>{if(root.open)void refresh();});
+  window.addEventListener('eco:member-capsule-updated',e=>{
+    const detail=e.detail??{};notify('Votre projection personnelle hors connexion a été mise à jour.');
+    if(root.open){const meetingId=select.value;void load(meetingId);}
+  });
   window.addEventListener('eco:live-event',e=>{
     const ev=e.detail;if(ev?.type!=='MEMBER_ENVELOPE_READY')return;
     const meetingId=String(ev.payload?.meetingId??'');if(!meetingId)return;
