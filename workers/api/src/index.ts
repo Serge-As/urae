@@ -2327,6 +2327,12 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
         await markApplied();
         return json({accepted:true,stored:true,memberships},200,cors);
       }
+      if(item.type==='GROUP_EXERCISE_LABEL_V1'){
+        const p=item.payload,groupId=String(p.groupId??''),label=String(p.label??'').trim();await requireGroup(groupId,true);if(!label)throw Error('EXERCISE_LABEL_REQUIRED');
+        const group=await repo.getGroup(ctx.tenantId,groupId);if(!group)throw Error('GROUP_NOT_FOUND');
+        if(group.currentExerciseLabel!==label)await repo.saveGroup({...group,currentExerciseLabel:label});
+        await markApplied();return json({accepted:true,stored:true,groupId,label},200,cors);
+      }
       if(item.type==='MEMBER_LIFECYCLE_V1'){
         const p=item.payload,groupId=String(p.groupId??''),membershipId=String(p.membershipId??''),input=(p.input&&typeof p.input==='object'?p.input:{}) as Record<string,unknown>,group=await requireGroup(groupId,true);
         const existing=await repo.getMembership(ctx.tenantId,groupId,membershipId);if(!existing)throw Error('MEMBERSHIP_NOT_FOUND');
