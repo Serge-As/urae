@@ -65,11 +65,14 @@ export function qrV10LMatrix(text:string):QrMatrix{
     }
   };
   finder(0,0);finder(SIZE-7,0);finder(0,SIZE-7);
-  for(let i=8;i<SIZE-8;i++){if(!fn[6]![i])set(i,6,i%2===0);if(!fn[i]![6])set(6,i,i%2===0);}
+  // Alignment patterns must be reserved before timing patterns. Version 10 has
+  // valid centers on the timing axes (28,6) and (6,28); placing timing first
+  // would incorrectly suppress 40 function modules and corrupt the symbol.
   for(const cy of ALIGN)for(const cx of ALIGN){
     if(fn[cy]![cx])continue;
     for(let dy=-2;dy<=2;dy++)for(let dx=-2;dx<=2;dx++)set(cx+dx,cy+dy,Math.max(Math.abs(dx),Math.abs(dy))!==1);
   }
+  for(let i=8;i<SIZE-8;i++){if(!fn[6]![i])set(i,6,i%2===0);if(!fn[i]![6])set(6,i,i%2===0);}
   const fmt=formatBits();
   for(let i=0;i<=5;i++)set(8,i,((fmt>>>i)&1)!==0);
   set(8,7,((fmt>>>6)&1)!==0);set(8,8,((fmt>>>7)&1)!==0);set(7,8,((fmt>>>8)&1)!==0);
