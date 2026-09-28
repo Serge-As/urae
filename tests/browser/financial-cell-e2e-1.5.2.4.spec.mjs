@@ -64,7 +64,7 @@ test('real financial matrix validates click, Enter, closed-session first entry a
     const project=await json('/api/v1/group-projects','POST',{name:'Groupe saisie E2E '+suffix,kind:'association',governanceModel:'founder_managed',memberCount:1,sessions:4,nominalContribution:0,currency:'XAF'});
     const group=await json('/api/v1/group-projects/'+encodeURIComponent(project.id)+'/convert','POST',{});
     const members=await json('/api/v1/groups/'+encodeURIComponent(group.id)+'/members','GET',undefined,group.id);
-    const membershipId=members.find(x=>x.userId===account.account.id)?.id??members[0]?.id;
+    const membershipId=members.find(x=>x.userId===account.id)?.id??members[0]?.id;
     if(!membershipId)throw new Error('NO_OWNER_MEMBERSHIP');
 
     const rubricBody=name=>({
@@ -283,7 +283,7 @@ test('server-only session without local identity fails closed offline and recove
   await page.reload({waitUntil:'domcontentloaded'});
   await expect(page.locator('#authScreen')).toBeVisible();
   await expect(page.locator('body')).toHaveClass(/signed-out/);
-  await expect(page.locator('button[data-view="operations"]')).toBeHidden();
+  await expect(page.locator('button[data-view="operations"]').first()).toBeHidden();
   await context.setOffline(false);
   await page.reload({waitUntil:'domcontentloaded'});
   await expect(page.locator('#authScreen')).toBeHidden();
