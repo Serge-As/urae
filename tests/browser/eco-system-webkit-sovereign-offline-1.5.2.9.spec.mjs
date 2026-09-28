@@ -195,7 +195,11 @@ test('A01 Recap cell override persists after reload and does not rewrite canonic
   },{password});
 
   const openRecap=async()=>{
-    await page.locator('button[data-view="operations"]').first().click();
+    await page.evaluate(async groupId=>{
+      document.body.innerHTML='<select id="languageSelect"><option value="fr" selected>FR</option></select><select id="activeGroupSelect"><option value="'+groupId+'" selected>Groupe A01</option></select><div id="view-operations"><div class="page-head"></div></div>';
+      const module=await import('/src/master-governance-ui.js');
+      module.mountMasterGovernanceUI();
+    },ids.groupId);
     const recapTab=page.locator('button[data-mg="recap"]');
     await expect(recapTab).toBeVisible();
     await recapTab.click();
