@@ -466,6 +466,23 @@ export class ConnectedApplication {
     return membership;
   }
 
+  async setMemberNumberOrder(membershipIds:string[]):Promise<MembershipView[]>{
+    if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');
+    const ids=membershipIds.map(String),unique=new Set(ids);if(!ids.length||unique.size!==ids.length)throw Error('MEMBER_NUMBER_ORDER_INCOMPLETE');
+    const path=`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/members`;
+    if(!this.isOffline())try{
+      const result=await this.request<Membership[]>(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/member-number-order`,{method:'PUT',body:JSON.stringify({membershipIds:ids})});
+      const cached=await this.cached<MembershipView[]>(path)??[];
+      const byId=new Map(result.map(x=>[x.id,x]));const merged=cached.map(x=>byId.has(x.id)?{...x,memberNumber:byId.get(x.id)!.memberNumber}:x);
+      await this.saveCached(path,merged);return merged.filter(x=>x.status!=='left').sort((a,b)=>(Number(a.memberNumber)||Number.MAX_SAFE_INTEGER)-(Number(b.memberNumber)||Number.MAX_SAFE_INTEGER));
+    }catch(error){if(!(error instanceof Error)||error.message!=='NETWORK_UNAVAILABLE')throw error;}
+    const cached=await this.cached<MembershipView[]>(path)??[];
+    const current=cached.filter(x=>x.status!=='left');if(current.length!==ids.length||current.some(x=>!unique.has(x.id)))throw Error('MEMBER_NUMBER_ORDER_INCOMPLETE');
+    const rank=new Map(ids.map((id,index)=>[id,index+1]));const updated=cached.map(x=>rank.has(x.id)?{...x,memberNumber:rank.get(x.id)}:x);
+    await this.saveCached(path,updated);await this.queueLocal('MEMBER_NUMBER_ORDER_V1',{groupId:this.activeGroupId,membershipIds:ids},'member-number-order:'+this.activeGroupId+':'+ids.join('|'));
+    return updated.filter(x=>x.status!=='left').sort((a,b)=>(Number(a.memberNumber)||Number.MAX_SAFE_INTEGER)-(Number(b.memberNumber)||Number.MAX_SAFE_INTEGER));
+  }
+
   async recordFinancialSheetEntry(input:{membershipId:string;meetingId:string;rubric:any;amount:number;reason?:string}):Promise<any>{
     if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');
     if(!Number.isSafeInteger(input.amount)||input.amount<=0)throw Error('INVALID_CONTRIBUTION_AMOUNT');
