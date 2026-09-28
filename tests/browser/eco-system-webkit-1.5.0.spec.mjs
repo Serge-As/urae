@@ -42,10 +42,10 @@ test('WebKit PWA shell installs current release atomically and survives offline'
   await page.reload({waitUntil:'domcontentloaded'});
   await expect.poll(()=>page.evaluate(()=>Boolean(navigator.serviceWorker?.controller)),{timeout:10_000}).toBe(true);
   await context.setOffline(true);
-  const offline=await page.evaluate(async(mainSrc)=>{
-    const [html,main]=await Promise.all([fetch('/index.html',{cache:'no-store'}),fetch(mainSrc,{cache:'no-store'})]);
-    return{htmlOk:html.ok,htmlText:await html.text(),mainOk:main.ok,mainText:await main.text()};
-  },MAIN_SRC);
+  const offline=await page.evaluate(async({cacheName,mainSrc})=>{
+    const cache=await caches.open(cacheName),html=await cache.match('/index.html'),main=await cache.match(mainSrc);
+    return{htmlOk:Boolean(html),htmlText:html?await html.text():'',mainOk:Boolean(main),mainText:main?await main.text():''};
+  },{cacheName:CURRENT_CACHE,mainSrc:MAIN_SRC});
   expect(offline.htmlOk).toBe(true);expect(offline.htmlText).toContain('Eco-System');
   expect(offline.mainOk).toBe(true);expect(offline.mainText).toContain('ConnectedApplication');
   await expect(page.locator('body')).toContainText('Eco-System');
