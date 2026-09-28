@@ -1736,7 +1736,7 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
     const arrearsRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/receivables\/arrears$/);
     if(arrearsRoute&&request.method==='GET')return json(await receivables.report(arrearsRoute[1]!,url.searchParams.get('asOf')??undefined),200,cors);
     const savingsRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/savings$/);
-    if(savingsRoute&&request.method==='POST'){const body=await readJson<Record<string,unknown>>(request);return json(await treasury.createSavingsPlan(savingsRoute[1]!,{membershipId:String(body.membershipId??''),name:String(body.name??''),targetAmount:body.targetAmount===undefined?undefined:finite(body.targetAmount),currency:String(body.currency??'XAF')}),201,cors);}
+    if(savingsRoute&&request.method==='POST'){const body=await readJson<Record<string,unknown>>(request);return json(await treasury.createSavingsPlan(savingsRoute[1]!,{id:body.id?String(body.id):undefined,membershipId:String(body.membershipId??''),name:String(body.name??''),targetAmount:body.targetAmount===undefined?undefined:finite(body.targetAmount),currency:String(body.currency??'XAF')}),201,cors);}
     const savingsPosition=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/savings\/([^/]+)\/position$/);
     if(savingsPosition&&request.method==='GET')return json(await treasury.savingsPosition(savingsPosition[1]!,savingsPosition[2]!),200,cors);
     const savingsDeposit=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/savings\/([^/]+)\/deposit$/);
@@ -1746,7 +1746,7 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
     const openingRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/ledger\/opening-balance$/);
     if(openingRoute&&request.method==='POST'){const body=await readJson<Record<string,unknown>>(request);return json(await treasury.openingBalance(openingRoute[1]!,{amount:finite(body.amount),currency:String(body.currency??'XAF'),note:String(body.note??''),idempotencyKey:String(body.idempotencyKey??request.headers.get('x-idempotency-key')??makeId('opening'))}),201,cors);}
     const custodyRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/custody$/);
-    if(custodyRoute&&request.method==='POST'){const body=await readJson<Record<string,unknown>>(request);return json(await treasury.createCustody(custodyRoute[1]!,{name:String(body.name??''),holder:String(body.holder??''),currency:String(body.currency??'XAF')}),201,cors);}
+    if(custodyRoute&&request.method==='POST'){const body=await readJson<Record<string,unknown>>(request);return json(await treasury.createCustody(custodyRoute[1]!,{id:body.id?String(body.id):undefined,name:String(body.name??''),holder:String(body.holder??''),currency:String(body.currency??'XAF')}),201,cors);}
     const custodyPositionRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/custody\/([^/]+)\/position$/);
     if(custodyPositionRoute&&request.method==='GET')return json(await treasury.custodyPosition(custodyPositionRoute[1]!,custodyPositionRoute[2]!),200,cors);
     const custodyOut=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/custody\/([^/]+)\/send$/);
@@ -1759,7 +1759,7 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
     const guarantorRelease=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/loans\/([^/]+)\/guarantors\/([^/]+)\/release$/);
     if(guarantorRelease&&request.method==='POST'){const body=await readJson<Record<string,unknown>>(request),record=await riskFinance.releaseGuarantee(guarantorRelease[1]!,guarantorRelease[3]!,String(body.reason??''));if(String(record.data.loanId??'')!==guarantorRelease[2]!)throw Error('LOAN_GUARANTEE_NOT_FOUND');return json(record,200,cors);}
     const solidarityRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/solidarity\/cases$/);
-    if(solidarityRoute&&request.method==='POST'){const body=await readJson<Record<string,unknown>>(request);return json(await riskFinance.solidarityCase(solidarityRoute[1]!,{beneficiaryMembershipId:String(body.beneficiaryMembershipId??''),title:String(body.title??''),approvedAmount:finite(body.approvedAmount),currency:String(body.currency??'XAF')}),201,cors);}
+    if(solidarityRoute&&request.method==='POST'){const body=await readJson<Record<string,unknown>>(request);return json(await riskFinance.solidarityCase(solidarityRoute[1]!,{id:body.id?String(body.id):undefined,beneficiaryMembershipId:String(body.beneficiaryMembershipId??''),title:String(body.title??''),approvedAmount:finite(body.approvedAmount),currency:String(body.currency??'XAF')}),201,cors);}
     const solidarityFund=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/solidarity\/cases\/([^/]+)\/fund$/);
     if(solidarityFund&&request.method==='POST'){const body=await readJson<Record<string,unknown>>(request);return json(await riskFinance.fund(solidarityFund[1]!,solidarityFund[2]!,finite(body.amount),String(body.idempotencyKey??makeId('solidarity_fund'))),201,cors);}
     const solidarityPay=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/solidarity\/cases\/([^/]+)\/disburse$/);
@@ -2332,6 +2332,56 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
         const group=await repo.getGroup(ctx.tenantId,groupId);if(!group)throw Error('GROUP_NOT_FOUND');
         if(group.currentExerciseLabel!==label)await repo.saveGroup({...group,currentExerciseLabel:label});
         await markApplied();return json({accepted:true,stored:true,groupId,label},200,cors);
+      }
+      if(item.type==='SAVINGS_PLAN_CREATE_V1'){
+        const p=item.payload,groupId=String(p.groupId??'');await requireGroup(groupId,true);
+        const record=await treasury.createSavingsPlan(groupId,{id:String(p.id??''),membershipId:String(p.membershipId??''),name:String(p.name??''),targetAmount:p.targetAmount===null||p.targetAmount===undefined?undefined:finite(p.targetAmount),currency:String(p.currency??'XAF')});
+        await markApplied();return json({accepted:true,stored:true,record},200,cors);
+      }
+      if(item.type==='SAVINGS_DEPOSIT_V1'){
+        const p=item.payload,groupId=String(p.groupId??''),planId=String(p.planId??''),key=String(p.idempotencyKey??item.idempotencyKey);await requireGroup(groupId,true);
+        const entry=await treasury.depositSavings(groupId,planId,finite(p.amount),key);
+        await markApplied();return json({accepted:true,stored:true,entry},200,cors);
+      }
+      if(item.type==='SAVINGS_WITHDRAW_V1'){
+        const p=item.payload,groupId=String(p.groupId??''),planId=String(p.planId??''),key=String(p.idempotencyKey??item.idempotencyKey);await requireGroup(groupId,true);
+        const entry=await treasury.withdrawSavings(groupId,planId,finite(p.amount),key);
+        await markApplied();return json({accepted:true,stored:true,entry},200,cors);
+      }
+      if(item.type==='OPENING_BALANCE_V1'){
+        const p=item.payload,groupId=String(p.groupId??''),key=String(p.idempotencyKey??item.idempotencyKey);await requireGroup(groupId,true);
+        const result=await treasury.openingBalance(groupId,{amount:finite(p.amount),currency:String(p.currency??'XAF'),note:String(p.note??'Offline opening balance'),idempotencyKey:key});
+        await markApplied();return json({accepted:true,stored:true,result},200,cors);
+      }
+      if(item.type==='CUSTODY_CREATE_V1'){
+        const p=item.payload,groupId=String(p.groupId??'');await requireGroup(groupId,true);
+        const record=await treasury.createCustody(groupId,{id:String(p.id??''),name:String(p.name??''),holder:String(p.holder??''),currency:String(p.currency??'XAF')});
+        await markApplied();return json({accepted:true,stored:true,record},200,cors);
+      }
+      if(item.type==='CUSTODY_SEND_V1'){
+        const p=item.payload,groupId=String(p.groupId??''),key=String(p.idempotencyKey??item.idempotencyKey);await requireGroup(groupId,true);
+        const entry=await treasury.sendToCustody(groupId,String(p.custodyId??''),finite(p.amount),key);
+        await markApplied();return json({accepted:true,stored:true,entry},200,cors);
+      }
+      if(item.type==='CUSTODY_RETURN_V1'){
+        const p=item.payload,groupId=String(p.groupId??''),key=String(p.idempotencyKey??item.idempotencyKey);await requireGroup(groupId,true);
+        const entry=await treasury.returnFromCustody(groupId,String(p.custodyId??''),finite(p.amount),key);
+        await markApplied();return json({accepted:true,stored:true,entry},200,cors);
+      }
+      if(item.type==='SOLIDARITY_CASE_CREATE_V1'){
+        const p=item.payload,groupId=String(p.groupId??'');await requireGroup(groupId,true);
+        const record=await riskFinance.solidarityCase(groupId,{id:String(p.id??''),beneficiaryMembershipId:String(p.beneficiaryMembershipId??''),title:String(p.title??''),approvedAmount:finite(p.approvedAmount),currency:String(p.currency??'XAF')});
+        await markApplied();return json({accepted:true,stored:true,record},200,cors);
+      }
+      if(item.type==='SOLIDARITY_FUND_V1'){
+        const p=item.payload,groupId=String(p.groupId??''),key=String(p.idempotencyKey??item.idempotencyKey);await requireGroup(groupId,true);
+        const entry=await riskFinance.fund(groupId,String(p.caseId??''),finite(p.amount),key);
+        await markApplied();return json({accepted:true,stored:true,entry},200,cors);
+      }
+      if(item.type==='SOLIDARITY_DISBURSE_V1'){
+        const p=item.payload,groupId=String(p.groupId??''),key=String(p.idempotencyKey??item.idempotencyKey);await requireGroup(groupId,true);
+        const entry=await riskFinance.disburse(groupId,String(p.caseId??''),finite(p.amount),key);
+        await markApplied();return json({accepted:true,stored:true,entry},200,cors);
       }
       if(item.type==='MEMBER_LIFECYCLE_V1'){
         const p=item.payload,groupId=String(p.groupId??''),membershipId=String(p.membershipId??''),input=(p.input&&typeof p.input==='object'?p.input:{}) as Record<string,unknown>,group=await requireGroup(groupId,true);
