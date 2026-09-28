@@ -3,6 +3,17 @@ import {test,expect} from '@playwright/test';
 const base='http://127.0.0.1:4173';
 const password='Synthetic-browser-finance-2026!';
 
+const localAuthState=page=>page.evaluate(async()=>{
+  if(!('indexedDB' in window))return{supported:false};
+  const db=await new Promise((resolve,reject)=>{const request=indexedDB.open('eco-system-local-auth-v1',1);request.onsuccess=()=>resolve(request.result);request.onerror=()=>reject(request.error);});
+  try{
+    if(!db.objectStoreNames.contains('meta')||!db.objectStoreNames.contains('accounts'))return{supported:true,stores:[...db.objectStoreNames]};
+    const current=await new Promise((resolve,reject)=>{const request=db.transaction('meta','readonly').objectStore('meta').get('current');request.onsuccess=()=>resolve(request.result?.value??null);request.onerror=()=>reject(request.error);});
+    const account=current?await new Promise((resolve,reject)=>{const request=db.transaction('accounts','readonly').objectStore('accounts').get(current);request.onsuccess=()=>resolve(request.result??null);request.onerror=()=>reject(request.error);}):null;
+    return{supported:true,current,account:account?{id:account.id,username:account.username,registrationState:account.registrationState,serverActorId:account.serverActorId,serverTenantId:account.serverTenantId}:null};
+  }finally{db.close();}
+});
+
 const moneyValue=async locator=>{
   const text=await locator.locator('.cell-current').innerText();
   return Number(String(text).replace(/[^0-9-]/g,''));
@@ -39,6 +50,8 @@ test('real financial matrix validates click, Enter, closed-session first entry a
   await page.locator('#authRememberDevice').check();
   await page.locator('#authSubmit').click();
   await expect(page.locator('#authScreen')).toBeHidden();
+  const authStateAfterForm=await localAuthState(page);
+  if(!authStateAfterForm.current||!authStateAfterForm.account)throw new Error('LOCAL_AUTH_NOT_PERSISTED_AFTER_FORM '+JSON.stringify(authStateAfterForm));
 
   const ids=await page.evaluate(async({suffix})=>{
     const json=async(path,method='GET',body,groupId)=>{
