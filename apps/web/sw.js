@@ -36,7 +36,6 @@ const OPTIONAL_SHELL = [
   '/src/starter-kit-ui.js',
   '/src/group-learning-registry-ui.js',
   '/src/role-directory-talent-ui.js', '/src/geolocation.js',
-  '/src/role-directory-talent-ui.js', '/src/geolocation.js',
   '/packages/rubrics/src/launch-config.js', '/packages/rubrics/src/index.js',
   '/packages/completion/src/index.js', '/packages/module-registry/src/index.js',
   '/packages/module-registry/src/service-capabilities.js'
