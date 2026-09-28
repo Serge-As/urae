@@ -612,6 +612,7 @@ const submitFinancialCellElement=async validate=>{
       if(nature==='CONTRIBUTION'){
         if(current===0&&target===0){input.value='';clearFinancialCellDraft(cellKey);setCellState('IDLE');return;}
         result=await app.setFinancialCellTarget({meetingId,membershipId,rubricId,targetAmount:target,currentAmount:current,currentVersion:exactCellVersion(membershipId,rubricId,meetingId),reason:reason.trim()});
+        if(Number.isFinite(Number(result?.cellVersion)))financialCellVersions.set(JSON.stringify([meetingId,membershipId,rubricId,'XAF']),Number(result.cellVersion));
       }else{
         if(current>0)throw Error('SPECIALIZED_FINANCIAL_CORRECTION_REQUIRED');
         result=await app.recordFinancialSheetEntry({membershipId,meetingId,rubric,amount:target,reason:reason.trim()||undefined});
