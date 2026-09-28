@@ -31,3 +31,9 @@ test('activation preserves previous coherent release and only skipWaits after RE
   assert.ok(marker>=0,'RELEASE_READY write missing');
   assert.ok(skip>marker,'skipWaiting must occur only after complete release marker');
 });
+
+
+test('A01 release changes the active cache identity while preserving the previous coherent cache',()=>{
+  assert.match(sw,/const CACHE = 'eco-system-v1529-sovereign-offline-a01-20260928'/);
+  assert.match(sw,/const PREVIOUS_CACHE = 'eco-system-v1529-sovereign-offline-20260928'/);
+});
