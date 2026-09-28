@@ -72,7 +72,7 @@ test('1.5.2.9 A01 shell is version isolated and keeps the previous coherent rele
   const sw=await readFile('.build/sw.js','utf8');
   assert.match(html,/ECO-SYSTEM · 1\.5\.2\.9/);
   assert.match(html,/main\.js\?v=1529/);
-  assert.match(sw,/eco-system-v1529-sovereign-offline-a01-20260928/);
-  assert.match(sw,/PREVIOUS_CACHE = 'eco-system-v1529-sovereign-offline-20260928'/);
+  assert.match(sw,/eco-system-v1529-neural-closure-20260928/);
+  assert.match(sw,/PREVIOUS_CACHE = 'eco-system-v1529-sovereign-offline-a01-20260928'/);
   assert.doesNotMatch(html,/<body[^>]*>\\n\s*<section/);
 });
