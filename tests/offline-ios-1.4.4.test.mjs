@@ -46,13 +46,13 @@ test('offline loss of an optional section does not block Group Core',()=>{
 });
 
 test('service worker keeps a complete coherent shell and preserves one previous release',()=>{
-  assert.match(sw,/eco-system-v1527-live-completion-20260927/);
+  assert.match(sw,/eco-system-v1528-geo-directory-20260928/);
   const current=sw.match(/const CACHE = '([^']+)';/)?.[1];
   const previous=sw.match(/const PREVIOUS_CACHE = '([^']+)';/)?.[1];
   assert.ok(current&&previous,'current and previous coherent caches are declared');
   assert.notEqual(current,previous,'rollback cache must differ from current release');
   assert.match(previous,/^eco-system-v\d+-/);
-  for(const asset of ['/index.html','/styles.css?v=1527','/src/main.js?v=1527','/src/sessions-ui.js','/packages/application/src/index.js','/packages/offline/src/index.js'])assert.ok(sw.includes(asset),asset);
+  for(const asset of ['/index.html','/styles.css?v=1528','/src/main.js?v=1528','/src/sessions-ui.js','/packages/application/src/index.js','/packages/offline/src/index.js'])assert.ok(sw.includes(asset),asset);
   assert.match(sw,/event\.request\.mode === 'navigate'/);
   assert.match(sw,/fetch\(event\.request, \{ cache:'no-store' \}\)/);
   assert.match(sw,/cache\.match\('\/index\.html'\)/);
