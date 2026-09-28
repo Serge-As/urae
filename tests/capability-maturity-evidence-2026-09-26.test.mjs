@@ -51,6 +51,7 @@ const evidence=[
  ['AI.LOCAL','apps/web/src/local-assistant.js',['interpretLocalAssistant','offlineCapable:true','canWriteLedger:false'],'apps/web/src/local-assistant.js',['voiceFinancialText','Rien ne sera comptabilisé avant votre validation','réseau requis : non']],
  ['SAFETY.QUIET_WATCH','packages/quiet-watch/src/index.ts',['QuietWatchService','publicAccusation:false','automaticSanction:false','automaticFinancialEffect:false'],'apps/web/src/quiet-watch-ui.js',['aucune accusation','aucune sanction','aucune écriture financière','Résoudre avec preuve']],
  ['DASHBOARDS.ALL','apps/web/src/role-dashboards-ui.js',['dashboardCard','owner','formula','proof'],'apps/web/src/role-dashboards-ui.js',["'MEMBER'","'MANAGER'","'PARTNER'","'ADVERTISER'","'SUPERADMIN'","'MAINTENANCE'",'Indisponible']],
+ ['GEO.DIRECTORY','packages/discovery/src/index.ts',['proximityByCoordinates','GPS_PROXIMITY','approxLocation'],'apps/web/src/role-directory-talent-ui.js',['requestApproximateLocation','Utiliser ma position','zone GPS approximative']],
 ];
 test('maturity registry promotes only capabilities with owner engine and user journey evidence',()=>{
  for(const [id,owner,ownerTokens,ui,uiTokens] of evidence){
