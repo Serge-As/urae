@@ -78,7 +78,7 @@ const RELEASE_VERSION='1.5.2.9-sovereign-offline';
 const RELEASE_BUILD_ID='eco-system-1.5.2.9-20260928';
 const RELEASE_SCHEMA_VERSION='d1-additive-20260923';
 const RELEASE_POLICY_VERSION='sovereign-offline-cycle-20260928';
-const RELEASE_PWA_CACHE='eco-system-v1529-sovereign-offline-20260928';
+const RELEASE_PWA_CACHE='eco-system-v1529-sovereign-offline-a01-20260928';
 
 const defaultRepo = new InMemoryPlatformRepository();
 const defaultReferralBudgets = new InMemoryReferralBudgetStore();
