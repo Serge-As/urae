@@ -46,9 +46,16 @@ test('successor receives signatories only and no old ledger entry is copied auto
   setActor(kernel,users[1]);await service.sign(trashId);
   setActor(kernel,users[0]);const result=await service.createSuccessor(trashId,{purpose:'Continuer le groupe'});
   assert.equal(result.automaticFinancialTransfer,false);
-  assert.equal((await repo.listMemberships(tenantId,result.group.id)).length,2);
-  assert.equal((await repo.listMemberships(tenantId,result.group.id)).some(x=>x.userId===users[2]),false);
+  const successorMembers=await repo.listMemberships(tenantId,result.group.id);assert.equal(successorMembers.length,2);
+  assert.equal(successorMembers.some(x=>x.userId===users[2]),false);
+  assert.ok(successorMembers.every(x=>x.roles.includes('founder')),'every petition signer becomes a successor founder');
+  const mappings=JSON.parse(String(result.dossier.data.signerMappingsJson??'[]'));assert.equal(mappings.length,2);assert.ok(mappings.every(x=>x.sourceMembershipId&&x.successorMembershipId));
   assert.equal((await repo.listLedgerEntries(tenantId,result.group.id)).length,0);
   assert.equal(result.dossier.data.assetDebtDecisionState,'UNDECIDED_BY_SUCCESSOR');
   assert.equal(result.dossier.data.complaintAvailable,true);
+});
+
+test('petition is frozen once purge arbitration has started',async()=>{
+  const {repo,kernel,users,service}=await seed(3);const trash=await repo.getWorkspaceRecord(tenantId,trashId);await repo.saveWorkspaceRecord({...trash,data:{...trash.data,lifecycleState:'PURGE_PENDING'},updatedAt:new Date().toISOString()});
+  setActor(kernel,users[0]);await assert.rejects(()=>service.sign(trashId),/PETITION_CLOSED_BY_PURGE/);
 });
