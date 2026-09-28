@@ -34,18 +34,21 @@ test('WebKit shell keeps sovereign offline and QR decoder assets cached for airp
   expect(hits).toEqual([true,true,true,true,true,true,true,true]);
   await context.setOffline(true);
   const offline=await page.evaluate(async()=>{
-    const paths=['/index.html','/src/sovereign-offline-ui.js','/src/vendor/qr-scanner-worker.min.js'];
+    const name=(await caches.keys()).find(x=>x.includes('v1529-sovereign-offline')),c=await caches.open(name);
+    const paths=['/index.html','/src/sovereign-offline-ui.js','/src/vendor/qr-scanner-worker.min.js','/packages/relay/src/local-room.js','/packages/eco-numpad/src/index.js'];
     const rows=[];
     for(const path of paths){
-      const response=await fetch(path,{cache:'no-store'});
-      rows.push({path,status:response.status,text:await response.text()});
+      const response=await c.match(path);
+      rows.push({path,status:response?.status??0,text:response?await response.text():''});
     }
     return rows;
   });
-  expect(offline.map(x=>x.status)).toEqual([200,200,200]);
+  expect(offline.map(x=>x.status)).toEqual([200,200,200,200,200]);
   expect(offline[0].text).toContain('ecoRelaySovereignWorkspace');
   expect(offline[1].text).toContain('QrScanner');
   expect(offline[2].text.length).toBeGreaterThan(100);
+  expect(offline[3].text).toContain('EcoLocalRoomPeer');
+  expect(offline[4].text).toContain('parseEcoNumpad');
   await expect(page.locator('#ecoRelaySovereignWorkspace')).toBeAttached();
   await context.setOffline(false);
 });
