@@ -50,8 +50,8 @@ test('real financial matrix validates click, Enter, closed-session first entry a
       return data;
     };
 
-    const suffix=String(Date.now());
-    const account=await json('/api/v1/auth/register','POST',{username:'finance_e2e_'+suffix,password,displayName:'Finance E2E'});
+    const suffix=String(Date.now()),username='finance_e2e_'+suffix;
+    const account=await json('/api/v1/auth/register','POST',{username,password,displayName:'Finance E2E'});
     const project=await json('/api/v1/group-projects','POST',{name:'Groupe saisie E2E '+suffix,kind:'association',governanceModel:'founder_managed',memberCount:1,sessions:4,nominalContribution:0,currency:'XAF'});
     const group=await json('/api/v1/group-projects/'+encodeURIComponent(project.id)+'/convert','POST',{});
     const members=await json('/api/v1/groups/'+encodeURIComponent(group.id)+'/members','GET',undefined,group.id);
@@ -72,9 +72,18 @@ test('real financial matrix validates click, Enter, closed-session first entry a
     rubrics.push(await json('/api/v1/groups/'+encodeURIComponent(group.id)+'/rubrics','POST',expenseBody,group.id));
     const meeting=await json('/api/v1/groups/'+encodeURIComponent(group.id)+'/meetings','POST',{title:'Séance E2E ouverte',scheduledAt:'2026-09-25T15:00:00.000Z'},group.id);
     localStorage.setItem('tontine.activeGroupId',group.id);
-    return{groupId:group.id,membershipId,meetingId:meeting.id,rubricIds:rubrics.map(x=>x.id)};
+    return{groupId:group.id,membershipId,meetingId:meeting.id,rubricIds:rubrics.map(x=>x.id),username};
   },{password});
 
+  // Use the real login surface once so the device receives the salted PBKDF2
+  // offline credential mirror. API-only registration is intentionally not
+  // sufficient for a cold offline restart.
+  await page.locator('[data-auth-mode="login"]').click();
+  await page.locator('#authUsername').fill(ids.username);
+  await page.locator('#authPassword').fill(password);
+  await page.locator('#authSubmit').click();
+  await expect(page.locator('#authScreen')).toBeHidden();
+  await expect(page.locator('#accountName')).toContainText('Finance E2E');
   await page.reload({waitUntil:'domcontentloaded'});
   await expect(page.locator('#authScreen')).toBeHidden();
   await page.locator('button[data-view="operations"]').first().click();
