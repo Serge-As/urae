@@ -18,7 +18,8 @@ const ESSENTIAL_SHELL = [
   '/packages/offline-sovereign/src/index.js', '/packages/exercise/src/index.js',
   '/packages/relay/src/broadcast.js', '/packages/relay/src/qr-v10.js',
   '/packages/savings-yield/src/index.js', '/packages/recap-engine/src/index.js',
-  '/packages/loan-simulator/src/index.js', '/packages/group-doctor/src/index.js'
+  '/packages/loan-simulator/src/index.js', '/packages/group-doctor/src/index.js',
+  '/src/vendor/qr-scanner.min.js', '/src/vendor/qr-scanner-worker.min.js'
 ];
 
 const OPTIONAL_SHELL = [
