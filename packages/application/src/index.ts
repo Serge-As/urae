@@ -608,6 +608,19 @@ export class ConnectedApplication {
     }).filter(x=>x.meetingId&&x.membershipId&&x.rubricId&&Number.isSafeInteger(x.targetAmount)&&x.targetAmount>=0);
   }
 
+  pendingFinancialSheetEntries():Array<{meetingId:string;membershipId:string;rubricId:string;amount:number;nature:string;status:string;idempotencyKey:string;createdAt:string}>{
+    if(!this.activeGroupId)return[];
+    return this.outbox.list().filter(item=>{
+      const payload=item.payload as Record<string,unknown>;
+      return item.tenantId===this.tenantId&&item.actorId===this.actorId&&item.type==='FINANCIAL_SHEET_ENTRY_V1'&&
+        String(payload.groupId??'')===this.activeGroupId&&!['CONFIRMED','CONFLICT','CANCELLED'].includes(item.status);
+    }).map(item=>{
+      const payload=item.payload as Record<string,unknown>;
+      return{meetingId:String(payload.meetingId??''),membershipId:String(payload.membershipId??''),rubricId:String(payload.rubricId??''),
+        amount:Number(payload.amount??0),nature:String(payload.nature??''),status:item.status,idempotencyKey:item.idempotencyKey,createdAt:item.createdAt};
+    }).filter(x=>x.meetingId&&x.membershipId&&x.rubricId&&Number.isSafeInteger(x.amount)&&x.amount>0);
+  }
+
   async ledger():Promise<{summary:LedgerSummary;entries:LedgerEntry[];receipts:Array<ContributionReceipt & {netAmount?:number;localPending?:boolean;localPendingStatus?:string}>;cellRevisions:Array<{meetingId:string;membershipId:string;rubricId:string;currency:string;version:number}>}>{
     if(!this.activeGroupId)return{summary:{currency:'XAF',cashBalance:0,memberFundsLiability:0,entryCount:0},entries:[],receipts:[],cellRevisions:[]};
     const path=`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/ledger`;
