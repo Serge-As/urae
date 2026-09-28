@@ -1823,9 +1823,11 @@ async function start() {
     document.body.classList.add('auth-restoring');
     renderConnectivity();
     renderKernel();
+    let authenticatedSession=false;
     try {
         const session=await app.authStatus();
         if(!session.authenticated||!session.account){showAuth(session.offline?tx('Aucun compte local n’existe encore. Créez votre compte maintenant : Internet n’est pas nécessaire.','No local account exists yet. Create your account now: Internet is not required.'):undefined,session.offline?'register':undefined);return;}
+        authenticatedSession=true;
         $('#authScreen').hidden=true;document.body.classList.remove('signed-out','auth-restoring');
         $('#accountName').textContent=session.account.displayName+(session.registrationState==='LOCAL_PENDING_REGISTRATION'?tx(' · local',' · local'):'');
         const claim=document.querySelector('#claimLocalAccountBtn');
@@ -1846,7 +1848,15 @@ async function start() {
         await loadWorkspaces();
     }
     catch (e) {
-        if(e instanceof Error&&e.message==='NETWORK_UNAVAILABLE'){showAuth(tx('Mode hors ligne disponible : créez votre premier compte local maintenant.','Offline mode is available: create your first local account now.'),'register');return;}
+        if(e instanceof Error&&e.message==='NETWORK_UNAVAILABLE'){
+          if(authenticatedSession){
+            document.body.classList.remove('signed-out','auth-restoring');$('#authScreen').hidden=true;renderConnectivity();renderOutbox();renderCompatibility();renderKernel();renderModules();renderEcosystemHighlights();renderDomainHubs();
+            console.info('Authenticated offline startup kept open; an uncached optional projection was skipped.');
+            toast(tx('Mode hors ligne : les données déjà enregistrées sur cet appareil restent disponibles.','Offline mode: data already saved on this device remains available.'));
+            return;
+          }
+          showAuth(tx('Mode hors ligne disponible : créez votre premier compte local maintenant.','Offline mode is available: create your first local account now.'),'register');return;
+        }
         fail(e);
     }
 }
