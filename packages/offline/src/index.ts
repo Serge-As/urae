@@ -140,6 +140,19 @@ export class IndexedDbOutboxAdapter {
       });
     } finally { db.close(); }
   }
+  async replaceForIdentity(actorId:string,tenantId:string,items:OutboxItem[]):Promise<void>{
+    if(!IndexedDbOutboxAdapter.supported())return;
+    for(const item of items)if(item.actorId!==actorId||item.tenantId!==tenantId)throw Error('OUTBOX_IDENTITY_SCOPE_INVALID');
+    const db=await this.open();try{
+      const existing=await idbAll<OutboxItem>(db.transaction(STORE,'readonly').objectStore(STORE));
+      await new Promise<void>((resolve,reject)=>{
+        const tx=db.transaction(STORE,'readwrite'),store=tx.objectStore(STORE),keep=new Set(items.map(x=>x.id));
+        for(const row of existing)if(row.actorId===actorId&&row.tenantId===tenantId&&!keep.has(row.id))store.delete(row.id);
+        for(const item of items)store.put(structuredClone(item));
+        tx.oncomplete=()=>resolve();tx.onerror=()=>reject(tx.error??Error('INDEXEDDB_REPLACE_FAILED'));tx.onabort=()=>reject(tx.error??Error('INDEXEDDB_REPLACE_ABORTED'));
+      });
+    }finally{db.close();}
+  }
   async migrateIdentity(oldActorId:string,oldTenantId:string,newActorId:string,newTenantId:string):Promise<OutboxItem[]>{
     if(!IndexedDbOutboxAdapter.supported())return[];
     const db=await this.open();
