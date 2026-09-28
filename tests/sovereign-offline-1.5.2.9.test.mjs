@@ -4,6 +4,7 @@ import fs from 'node:fs';
 import {buildExerciseClosingPlan,buildExerciseCarryForwardSeed} from '../.build/packages/exercise/src/index.js';
 import {createRelayPairingMaterial,encodePairingQr,decodePairingQr,encryptMemberCapsule,decryptMemberCapsule,createBroadcastBundle,encodeBroadcastFrames,encodeTargetedBroadcastFrames,EcoBroadcastReceiver,EcoTargetedBroadcastReceiver} from '../.build/packages/relay/src/broadcast.js';
 import {COMPLETION_WORKFLOWS} from '../.build/packages/completion/src/index.js';
+import {encodeLocalRoomSignal,decodeLocalRoomSignal,encodeLocalRoomSignalFrames,EcoLocalRoomSignalReceiver} from '../.build/packages/relay/src/local-room.js';
 
 test('exercise closing distinguishes real cash payout from money carried into next exercise',()=>{
   const plan=buildExerciseClosingPlan({
@@ -117,6 +118,15 @@ test('targeted Broadcast lets one member ignore the other 79 capsules before sto
   assert.equal(capsule.projection.member.memberNumber,27);
 });
 
+test('Eco Local Room signaling survives out-of-order QR frames without Internet',async()=>{
+  const signal=encodeLocalRoomSignal({protocol:'ECO_LOCAL_ROOM_1',roomId:'abcdef123456',role:'OFFER',description:{type:'offer',sdp:'v=0\\r\\no=- 1 1 IN IP4 127.0.0.1\\r\\ns=Eco Local Room\\r\\nt=0 0\\r\\n'},createdAt:new Date().toISOString()});
+  assert.equal(decodeLocalRoomSignal(signal).role,'OFFER');
+  const frames=await encodeLocalRoomSignalFrames(signal,165),receiver=new EcoLocalRoomSignalReceiver();
+  for(const raw of frames.slice().reverse()){receiver.add(raw);receiver.add(raw);}
+  const rebuilt=await receiver.assemble();
+  assert.equal(rebuilt,signal);
+});
+
 test('sovereign offline surfaces are isolated and iOS fallback assets are part of the coherent shell',()=>{
   const html=fs.readFileSync('apps/web/index.html','utf8');
   const legacy=fs.readFileSync('apps/web/src/resilience-ui.js','utf8');
@@ -129,10 +139,10 @@ test('sovereign offline surfaces are isolated and iOS fallback assets are part o
   assert.match(html,/ecoRelayLegacyWorkspace/);assert.match(html,/ecoRelaySovereignWorkspace/);
   assert.match(html,/ecoLocalLegacyWorkspace/);assert.match(html,/ecoLocalSovereignWorkspace/);
   assert.match(legacy,/ecoRelayLegacyWorkspace/);assert.match(sovereign,/ecoRelaySovereignWorkspace/);
-  assert.match(sovereign,/QrScanner/);assert.match(sovereign,/decodePairingQr/);assert.match(sovereign,/EcoTargetedBroadcastReceiver/);
+  assert.match(sovereign,/QrScanner/);assert.match(sovereign,/decodePairingQr/);assert.match(sovereign,/EcoTargetedBroadcastReceiver/);assert.match(sovereign,/EcoLocalRoomPeer/);assert.match(sovereign,/visibilitychange/);assert.match(sovereign,/webkit-playsinline/);
   assert.doesNotMatch(sovereign,/BARCODE_DETECTOR_UNAVAILABLE_USE_ECO_PACK/);
   assert.match(sw,/\/src\/vendor\/qr-scanner\.min\.js/);
-  assert.match(sw,/\/src\/vendor\/qr-scanner-worker\.min\.js/);
+  assert.match(sw,/\/src\/vendor\/qr-scanner-worker\.min\.js/);assert.match(sw,/\/packages\/relay\/src\/local-room\.js/);assert.match(sw,/\/packages\/eco-numpad\/src\/index\.js/);
   assert.match(headers,/Permissions-Policy: camera=\(self\)/);
   assert.match(headers,/worker-src 'self' blob:/);
   assert.match(app,/BROADCAST_MEMBER_LIMIT_120/);
