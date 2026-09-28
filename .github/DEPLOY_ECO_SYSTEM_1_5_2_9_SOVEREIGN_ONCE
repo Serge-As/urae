@@ -1,6 +1,7 @@
 release: 1.5.2.9-sovereign-offline
-source_merge: c35a183c0d2495d40fb5ee36da1b6518c504c4f5
-qualified_ios_run: 36428456020
-qualified_webkit_smoke: 36428455761
-qualified_financial_e2e: 36428455830
-requested_at: 2026-09-28-l1-a01-pwa
+source_merge: 9cb52e99339cafac3d488f4da646bc6c66fbc908
+qualified_field_persistence_run: 36460976501
+qualified_financial_e2e_run: 36460976506
+qualified_sovereign_webkit_run: 36460976535
+qualified_webkit_smoke_run: 36460976455
+requested_at: 2026-09-28-final-neural-delivery
