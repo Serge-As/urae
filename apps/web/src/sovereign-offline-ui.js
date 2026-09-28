@@ -5,7 +5,7 @@ import QrScanner from './vendor/qr-scanner.min.js';
 
 const el=(tag,text,cls)=>{const n=document.createElement(tag);if(text!==undefined)n.textContent=text;if(cls)n.className=cls;return n;};
 const download=(name,text,type='application/json')=>{const blob=new Blob([text],{type}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),1500);};
-const shareOrDownload=async(name,text,type,title)=>{const blob=new Blob([text],{type}),file=new File([blob],name,{type});if(navigator.share&&navigator.canShare?.({files:[file]})){await navigator.share({title,files:[file]});return true;}download(name,text,type);return false;};
+const shareOrDownload=async(name,text,type,title)=>{const blob=new Blob([text],{type});if(typeof File==='function'&&navigator.share&&typeof navigator.canShare==='function'){const file=new File([blob],name,{type});if(navigator.canShare({files:[file]})){await navigator.share({title,files:[file]});return true;}}download(name,text,type);return false;};
 const money=n=>Math.round(Number(n)||0).toLocaleString('fr-FR')+' F';
 const yieldRows=draft=>{
   const map=new Map(),add=row=>{if(!row?.memberId)return;const old=map.get(row.memberId)??{membershipId:row.memberId,principal:0,interest:0};old.principal+=Number(row.principal??0);old.interest+=Number(row.interest??0);map.set(row.memberId,old);};
