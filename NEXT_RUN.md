@@ -1,5 +1,20 @@
 # NEXT RUN — ECO-SYSTEM 1.5.2.7
 
+## REPRISE PRIORITAIRE — RECETTE TERRAIN 1.5.2.9 SOVEREIGN OFFLINE (2026-09-28)
+
+Production : `faa23c6b279197b267dd1981529e39b5bd994d62`, Worker `0902744e-3293-448f-ad4c-5f6af2dd4804`, delivery `36380950649 SUCCESS`.
+
+Recette physique sans nouveau déploiement :
+1. iPhone/iPad Safari puis PWA installée : ouvrir Eco Relay, tester caméra QR ; si standalone échoue, confirmer Safari + Eco Pack.
+2. Appairer 2–3 membres, préparer Broadcast, recevoir chaque capsule, vérifier qu'un téléphone ne stocke que sa capsule.
+3. Mode avion : créer/ouvrir exercice, séance, saisir finances, prêt/remboursement/tontine, fermer/réouvrir app, vérifier persistance.
+4. Eco Local Room : deux appareils sur même Wi-Fi/hotspot, échange offre/réponse QR, connexion DataChannel, capsule membre, confrontation gestionnaires.
+5. Eco Vault : exporter, copier sur autre support, restaurer sur appareil de test, vérifier journal et outbox.
+6. Clôture exercice : intérêts, Fonds Secours/Réserve/Bureau, enveloppes, report, exercice suivant.
+7. Ne déclarer FIELD_ACCEPTED que pour les éléments physiquement observés.
+
+---
+
 ## REPRISE PRIORITAIRE — N° MEMBRES + FINANCE OFFLINE 1.5.2.8 (2026-09-28)
 
 Production vérifiée :

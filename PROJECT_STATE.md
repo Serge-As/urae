@@ -1,5 +1,21 @@
 # ECO-SYSTEM — PROJECT STATE
 
+## CURRENT OVERRIDE — 1.5.2.9 SOVEREIGN OFFLINE + BROADCAST QR + iOS — PRODUCTION VERIFIED (2026-09-28)
+
+Production publique : `1.5.2.9-sovereign-offline`, SHA exact `faa23c6b279197b267dd1981529e39b5bd994d62`, Worker Version ID `0902744e-3293-448f-ad4c-5f6af2dd4804`, PWA cache `eco-system-v1529-sovereign-offline-20260928`.
+
+PR #34 fusionnée : cycle offline souverain, journal local chaîné, Eco Vault, cycle d'exercice multi-années, Tontines/pots, prêts/remboursements, épargne/custody/solidarité local-first, calculs d'intérêts et reports sur appareil, Eco NumPad sans IA, capsules privées membres, Eco Broadcast QR ciblé, Eco Pack, Eco Local Room WebRTC/DataChannel, confrontation de journaux gestionnaires.
+
+Preuves de qualification fusion : souverain+iOS `36377291009 SUCCESS`, WebKit smoke `36377291065 SUCCESS`, financier P0 `36377290960 SUCCESS`. Livraison Cloudflare : `36380950649 SUCCESS`. Le workflow a imposé CI complet, Chromium, WebKit/iOS, résolution D1/R2 existants, backup pré, migrations additives, déploiement, smoke SHA/version/build/cache/catalogue, backup post et restauration SQLite.
+
+Récupération : backup pré artifact `10952617232`, backup post artifact `10952876681`, `PRAGMA integrity_check=ok`. D1 `eco-system-db` réutilisée, aucune migration, R2 `eco-system-backups` actif, catalogue 164, real money OFF.
+
+iOS/WebKit : décodeur QR embarqué sans BarcodeDetector, assets Sovereign/Relay/Local Room/NumPad cachés pour mode avion, test WebKit offline cache vert, offre/réponse Eco Local Room + RTCDataChannel + paquet échangé sous WebKit, `playsinline`, arrêt caméra au background, fallback plein écran CSS, fichier via Web Share si disponible sinon téléchargement. Limite terrain : certains iPhone/iPad peuvent encore subir un bug WebKit `getUserMedia` en PWA standalone ; Safari et Eco Pack sont les fallbacks prévus. FIELD_ACCEPTED caméra réelle reste à constater sur appareils physiques.
+
+Eco Broadcast : appairage membre individuel puis diffusion collective de trames `ECOB2` ciblées ; chaque téléphone ignore les 79/119 autres membres avant stockage et ne reconstruit que sa capsule. Garde-fou applicatif : maximum 120 membres par broadcast. Pour grands groupes, la durée optique dépend du volume réel de chaque capsule et du nombre de trames ; ne pas promettre une diffusion « instantanée ».
+
+---
+
 ## CURRENT STATE — PRODUCTION 1.5.2.8 · N° MEMBRES + FINANCE OFFLINE ÉTENDUE (2026-09-28)
 
 **Statut technique : DEPLOYED + SMOKE_VERIFIED + RECOVERY_VERIFIED. FIELD_ACCEPTED reste en attente de recette physique.**
