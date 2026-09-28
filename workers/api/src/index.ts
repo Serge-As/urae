@@ -1883,6 +1883,9 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
     const procurementRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/market\/procurements$/);
     if(procurementRoute&&request.method==='GET')return json(await market.procurement(procurementRoute[1]!),200,cors);
     if(procurementRoute&&request.method==='POST'){const body=await readJson<any>(request);return json(await market.createProcurement(procurementRoute[1]!,body),201,cors);}
+    const valueProcurementHandoff=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/market\/procurements\/from-value-draft\/([^/]+)$/);
+    if(valueProcurementHandoff&&request.method==='POST'){const body=await readJson<any>(request);return json(await market.approveValueProcurementDraft(valueProcurementHandoff[1]!,valueProcurementHandoff[2]!,body),201,cors);}
+
     const procurementReceive=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/market\/procurements\/([^/]+)\/receive$/);
     if(procurementReceive&&request.method==='POST'){const body=await readJson<any>(request);return json(await market.receiveProcurement(procurementReceive[1]!,procurementReceive[2]!,body),200,cors);}
     const procurementReturn=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/market\/procurements\/([^/]+)\/return$/);
