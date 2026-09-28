@@ -79,3 +79,35 @@ test('1.5.2.3 financial matrix validates both click and Enter and shows durable 
   assert.match(main,/Enregistré sur cet appareil · synchro en attente/);
   assert.match(main,/✓ Valeur enregistrée sur cet appareil/);
 });
+
+
+test('specialized sheet entries queue durably offline for outflow loan and repayment',async()=>{
+  const oldIndexed=globalThis.indexedDB;
+  try{
+    globalThis.indexedDB={};
+    const app=new ConnectedApplication({actorId:'manager_offline_all',tenantId:'tenant_offline_all'});
+    app.selectGroup('group_offline_all');app.outboxStorage.save=async()=>{};app.usingOfflineSnapshot=true;
+    const outflow=await app.recordFinancialSheetEntry({membershipId:'member_1',meetingId:'meeting_1',rubric:{id:'rub_out',name:'Dépense',facets:{direction:'OUTFLOW'}},amount:700});
+    const loan=await app.recordFinancialSheetEntry({membershipId:'member_1',meetingId:'meeting_1',rubric:{id:'rub_loan',name:'Prêt',activityPlan:{kind:'LOAN'},policies:{loan:{allowed:true,rateBasisPointsPerPeriod:200,paymentPriority:'CAPITAL_FIRST'}}},amount:5000});
+    const repayment=await app.recordFinancialSheetEntry({membershipId:'member_1',meetingId:'meeting_1',rubric:{id:'rub_repay',name:'Remboursement',activityPlan:{kind:'REPAYMENT'}},amount:1000});
+    assert.equal(outflow.queued,true);assert.equal(loan.queued,true);assert.equal(repayment.queued,true);
+    const pending=app.pendingFinancialSheetEntries();
+    assert.deepEqual(pending.map(x=>x.nature).sort(),['LOAN','OUTFLOW','REPAYMENT']);
+    assert.deepEqual(pending.map(x=>x.amount).sort((a,b)=>a-b),[700,1000,5000]);
+    assert.equal(app.outboxItems().filter(x=>x.type==='FINANCIAL_SHEET_ENTRY_V1').length,3);
+  }finally{if(oldIndexed===undefined)delete globalThis.indexedDB;else globalThis.indexedDB=oldIndexed;}
+});
+
+test('specialized pending finance is projected after offline reload and replay is idempotent by contract',async()=>{
+  const main=await readFile('.build/src/main.js','utf8');
+  const application=await readFile('.build/packages/application/src/index.js','utf8');
+  const worker=await readFile('.build/workers/api/src/index.js','utf8');
+  assert.match(main,/financialPendingSheetEntries/);
+  assert.match(main,/pendingFinancialSheetEntries/);
+  assert.match(main,/SPECIALIZED_ENTRY/);
+  assert.match(application,/FINANCIAL_SHEET_ENTRY_V1/);
+  assert.match(worker,/FINANCIAL_SHEET_ENTRY_V1/);
+  assert.match(worker,/findLedgerEntryByIdempotency/);
+  assert.match(worker,/sheetEntryKey/);
+  assert.match(worker,/offline-replay/);
+});

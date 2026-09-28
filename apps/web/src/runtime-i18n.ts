@@ -189,6 +189,11 @@ Object.assign(EXTRA_FR_EN,{
   "Ajouter un membre, gérer son statut et ses rôles, puis ouvrir son Dossier Membre sans passer par la séance.": "Add a member, manage their status and roles, then open their Member File without going through a meeting.",
   "Ajouter membre": "Add member",
   "Membre à gérer": "Member to manage",
+  "Numéro / classement du responsable": "Number / manager ranking",
+  "Affecter les N° selon l’ordre affiché": "Assign numbers from displayed order",
+  "Enregistrer les N° saisis": "Save entered numbers",
+  "Le responsable peut attribuer un classement 1…N. Ce même N° apparaît dans les feuilles financières et peut être dicté, par exemple « membre numéro 3 ». Les N° saisis doivent être uniques. La suppression n’est jamais immédiate : le membre passe dans la corbeille pendant 6 mois. Les écritures financières restent intactes et auditables.": "The manager can assign a 1…N ranking. The same number appears in financial sheets and can be dictated, for example “member number 3”. Entered numbers must be unique. Deletion is never immediate: the member stays in the trash for 6 months. Financial records remain intact and auditable.",
+
   "Modifier membre": "Edit member",
   "Supprimer / corbeille": "Delete / trash"
 });

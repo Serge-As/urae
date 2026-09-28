@@ -43,3 +43,29 @@ test('voice UI exposes member-number aliases and parser can resolve a spoken mem
   const match=matchVoiceMention('Eco chez membre numéro 10 secours 500',[{id:'m10',label:'Nlom Essomba',aliases:['membre numéro 10','member number 10']}]);
   assert.equal(match.status,'EXACT');assert.equal(match.candidate?.id,'m10');
 });
+
+
+test('manager-defined member order becomes the stable 1..N voice numbering',async()=>{
+  const {repo,service,group}=await seed();
+  const owner=(await repo.listMemberships('member_no_t',group.id)).find(x=>x.userId==='founder');
+  const a=await service.addMember('member_no_t',group.id,{id:'rank_a',displayName:'Nom difficile A',locale:'fr',createdAt:new Date().toISOString()});
+  const b=await service.addMember('member_no_t',group.id,{id:'rank_b',displayName:'Nom difficile B',locale:'fr',createdAt:new Date().toISOString()});
+  const ranked=await service.setMemberNumberOrder('member_no_t',group.id,[b.id,owner.id,a.id],'rank-op');
+  assert.equal(ranked.find(x=>x.id===b.id)?.memberNumber,1);
+  assert.equal(ranked.find(x=>x.id===owner.id)?.memberNumber,2);
+  assert.equal(ranked.find(x=>x.id===a.id)?.memberNumber,3);
+  const again=await service.ensureMemberNumbers('member_no_t',group.id);
+  assert.equal(again.find(x=>x.id===a.id)?.memberNumber,3);
+  const candidates=ranked.map(x=>({id:x.id,label:x.id,aliases:['membre numéro '+x.memberNumber,'member number '+x.memberNumber]}));
+  const match=matchVoiceMention('Eco chez membre numéro 3 secours 500',candidates);
+  assert.equal(match.status,'EXACT');assert.equal(match.candidate?.id,a.id);
+});
+
+test('financial meeting sheet renders a separate number column before member name',()=>{
+  const main=fs.readFileSync('apps/web/src/main.js','utf8');
+  assert.match(main,/member-number-column/);
+  assert.match(main,/textContent=tx\('N°','No\.'/);
+  assert.match(main,/tr\.append\(number,name\)/);
+  assert.match(main,/memberSaveNumbersBtn/);
+  assert.match(main,/memberApplyDisplayedOrderBtn/);
+});
