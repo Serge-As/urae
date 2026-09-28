@@ -12,7 +12,7 @@ export const normalizeVoiceText=(value:string):string=>value.normalize('NFD').re
 
 export function sanitizeVoiceFinancialTranscript(raw:string):string{
   const compact=String(raw??'').replace(/\s+/g,' ').trim();if(!compact)return '';
-  const wakeToken=/\b(?:eco|éco|echo)(?:\s*[- ]?\s*(?:system|système|systeme))?\b/gi;
+  const wakeToken=/\b(?:eco|éco|echo|écho)(?:\s*[- ]?\s*(?:system|système|systeme))?\b/gi;
   const matches=[...compact.matchAll(wakeToken)];if(matches.length<2)return compact;
   let firstKept=false;
   return compact.replace(wakeToken,(token,offset)=>{if(!firstKept&&Number(offset)<=24){firstKept=true;return /^echo$/i.test(token)?'Eco':token;}return ' ';})
