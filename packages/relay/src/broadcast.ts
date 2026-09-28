@@ -71,8 +71,11 @@ export async function createRelayPairingMaterial(membershipId:string):Promise<Ec
 
 export function encodePairingQr(material:EcoRelayPairingMaterial):string{
   if(material.protocolVersion!==1||!material.groupId||!material.membershipId||!material.keyId||!material.rawKey)throw Error('INVALID_RELAY_PAIRING_MATERIAL');
-  const compact={p:1,g:material.groupId,m:material.membershipId,k:material.keyId,r:material.rawKey,c:material.createdAt,G:material.groupName??'',d:material.displayName??'',n:material.memberNumber??null};
-  return 'ECOP1:'+b64u(te.encode(JSON.stringify(compact)));
+  let compact:any={p:1,g:material.groupId,m:material.membershipId,k:material.keyId,r:material.rawKey,c:material.createdAt,G:material.groupName??'',d:material.displayName??'',n:material.memberNumber??null};
+  let encoded='ECOP1:'+b64u(te.encode(JSON.stringify(compact)));
+  if(te.encode(encoded).length>250){compact={p:1,g:material.groupId,m:material.membershipId,k:material.keyId,r:material.rawKey,c:material.createdAt,n:material.memberNumber??null};encoded='ECOP1:'+b64u(te.encode(JSON.stringify(compact)));}
+  if(te.encode(encoded).length>271)throw Error('PAIRING_QR_TOO_LARGE');
+  return encoded;
 }
 export function decodePairingQr(raw:string):EcoRelayPairingMaterial{
   if(!raw.startsWith('ECOP1:'))throw Error('INVALID_PAIRING_QR');
