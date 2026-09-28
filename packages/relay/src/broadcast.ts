@@ -59,7 +59,7 @@ const hex=(bytes:Uint8Array)=>[...bytes].map(x=>x.toString(16).padStart(2,'0')).
 const randomToken=(bytes=8)=>hex(crypto.getRandomValues(new Uint8Array(bytes)));
 const digest16=async(value:Uint8Array|string)=>{
   const bytes=typeof value==='string'?te.encode(value):value;
-  return hex(new Uint8Array(await crypto.subtle.digest('SHA-256',bytes))).slice(0,16);
+  return hex(new Uint8Array(await crypto.subtle.digest('SHA-256',rawBuffer(bytes)))).slice(0,16);
 };
 const rawBuffer=(bytes:Uint8Array):ArrayBuffer=>bytes.buffer.slice(bytes.byteOffset,bytes.byteOffset+bytes.byteLength) as ArrayBuffer;
 
