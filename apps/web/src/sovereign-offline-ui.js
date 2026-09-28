@@ -1,4 +1,4 @@
-import {EcoBroadcastReceiver,encodePairingQr,decodePairingQr} from '../../../packages/relay/src/broadcast.js';
+import {EcoBroadcastReceiver,EcoTargetedBroadcastReceiver,encodePairingQr,decodePairingQr} from '../../../packages/relay/src/broadcast.js';
 import {qrV10LMatrix,qrMatrixSvg} from '../../../packages/relay/src/qr-v10.js';
 import QrScanner from './vendor/qr-scanner.min.js';
 
@@ -16,7 +16,7 @@ const yieldRows=draft=>{
 
 export function mountSovereignOfflineUI({app,getMembers=()=>[],getMeetings=()=>[],isManager=()=>false,notify=()=>{},showError=console.error}={}){
   const relay=document.getElementById('ecoRelaySovereignWorkspace'),local=document.getElementById('ecoLocalSovereignWorkspace');if(!relay||!local)return{refresh:async()=>{}};
-  let frames=[],frameIndex=0,timer=null,currentBundle=null,qrScanner=null,receiver=new EcoBroadcastReceiver();
+  let frames=[],frameIndex=0,timer=null,currentBundle=null,qrScanner=null,receiver=new EcoBroadcastReceiver(),targetedReceiver=null;
 
   const stopStream=()=>{if(timer){clearInterval(timer);timer=null;}};
   const stopCamera=()=>{if(qrScanner){try{qrScanner.stop();qrScanner.destroy();}catch{}qrScanner=null;}video.srcObject=null;};
@@ -27,8 +27,9 @@ export function mountSovereignOfflineUI({app,getMembers=()=>[],getMeetings=()=>[
   let lastPair=null;
   const pairActions=el('div',undefined,'actions');pairActions.append(pairBtn,rotateBtn,pairExport);pairing.append(ph,pairNote,pairSelect,pairActions,pairQr,pairInfo);
 
-  const broadcast=el('section',undefined,'item'),bh=el('h3','2 · Eco Broadcast QR · diffusion collective'),meetingSelect=el('select'),prepare=el('button','Préparer la diffusion','primary'),start=el('button','Démarrer','primary'),pause=el('button','Pause','secondary'),fullscreen=el('button','Plein écran','secondary'),pack=el('button','Exporter Eco Pack','secondary'),screen=el('div',undefined,'eco-optical-screen'),frameInfo=el('p','Aucune diffusion préparée.','hint'),membersInfo=el('p','', 'hint');
-  start.disabled=pause.disabled=fullscreen.disabled=pack.disabled=true;const ba=el('div',undefined,'actions');ba.append(prepare,start,pause,fullscreen,pack);broadcast.append(bh,el('p','Tous les téléphones regardent le même QR animé. Chaque appareil collecte les trames puis ouvre uniquement la capsule chiffrée de son propriétaire.','hint'),meetingSelect,ba,screen,frameInfo,membersInfo);
+  const broadcast=el('section',undefined,'item'),bh=el('h3','2 · Eco Broadcast QR · diffusion collective'),meetingSelect=el('select'),speedSelect=el('select'),prepare=el('button','Préparer la diffusion','primary'),start=el('button','Démarrer','primary'),pause=el('button','Pause','secondary'),fullscreen=el('button','Plein écran','secondary'),pack=el('button','Exporter Eco Pack','secondary'),screen=el('div',undefined,'eco-optical-screen'),frameInfo=el('p','Aucune diffusion préparée.','hint'),membersInfo=el('p','', 'hint');
+  speedSelect.append(new Option('Vitesse sûre · 2,5 QR/s','2.5'),new Option('Vitesse normale · 4 QR/s','4'),new Option('Vitesse rapide · 5 QR/s','5'));speedSelect.value='2.5';
+  start.disabled=pause.disabled=fullscreen.disabled=pack.disabled=true;const ba=el('div',undefined,'actions');ba.append(prepare,start,pause,fullscreen,pack);broadcast.append(bh,el('p','Tous les téléphones regardent le même QR animé. Les trames sont ciblées : chaque appareil ignore celles des autres membres avant stockage et n’ouvre que sa capsule chiffrée.','hint'),meetingSelect,speedSelect,ba,screen,frameInfo,membersInfo);
 
   const receive=el('section',undefined,'item'),rh=el('h3','3 · Recevoir sur le téléphone du membre'),cameraBtn=el('button','Ouvrir la caméra','primary'),cameraStop=el('button','Arrêter caméra','secondary'),photoBtn=el('button','Lire un QR depuis une photo','secondary'),video=document.createElement('video'),progress=el('p','0 / 0 trame','truth-notice'),fileInput=document.createElement('input'),pairImport=document.createElement('input'),photoInput=document.createElement('input');
   video.autoplay=true;video.playsInline=true;video.muted=true;video.setAttribute('playsinline','');video.setAttribute('webkit-playsinline','');video.className='eco-relay-camera';fileInput.type='file';fileInput.accept='.ecobroadcast,application/json';pairImport.type='file';pairImport.accept='.ecopair,application/json,text/plain';photoInput.type='file';photoInput.accept='image/*';photoInput.setAttribute('capture','environment');photoInput.hidden=true;
@@ -79,24 +80,34 @@ export function mountSovereignOfflineUI({app,getMembers=()=>[],getMeetings=()=>[
     frameInfo.textContent='Trame '+(frameIndex%frames.length+1)+' / '+frames.length+' · boucle '+(Math.floor(frameIndex/frames.length)+1);frameIndex++;
   };
   prepare.onclick=()=>void(async()=>{try{
-    stopStream();screen.replaceChildren();frameIndex=0;const result=await app.prepareEcoBroadcast({meetingId:meetingSelect.value||undefined});currentBundle=result.bundle;frames=result.frames;start.disabled=pause.disabled=fullscreen.disabled=pack.disabled=false;
+    stopStream();screen.replaceChildren();frameIndex=0;const result=await app.prepareEcoBroadcast({meetingId:meetingSelect.value||undefined});currentBundle=result.bundle;frames=result.targetedFrames?.length?result.targetedFrames:result.frames;start.disabled=pause.disabled=fullscreen.disabled=pack.disabled=false;
     membersInfo.textContent=result.included.length+' membre(s) inclus · '+result.unpaired.length+' non appairé(s)'+(result.unpaired.length?' — appairez-les avant la prochaine diffusion.':'');
-    const seconds=Math.ceil(frames.length/2.5);frameInfo.textContent=frames.length+' trames · environ '+seconds+' s par passage à 2,5 images/s · laissez idéalement 2 passages pour les téléphones lents.';renderFrame();
+    const fps=Number(speedSelect.value||2.5),seconds=Math.ceil(frames.length/fps);frameInfo.textContent=frames.length+' trames ciblées · environ '+seconds+' s par passage à '+String(fps).replace('.',',')+' QR/s · laissez idéalement 2 passages si plusieurs téléphones sont anciens ou éloignés.';renderFrame();
   }catch(e){showError(e);}})();
-  start.onclick=()=>{if(!frames.length)return;stopStream();renderFrame();timer=setInterval(renderFrame,400);};
+  start.onclick=()=>{if(!frames.length)return;stopStream();renderFrame();const fps=Math.max(1,Math.min(5,Number(speedSelect.value||2.5)));timer=setInterval(renderFrame,Math.round(1000/fps));};
   pause.onclick=()=>stopStream();
   fullscreen.onclick=()=>{const target=screen;if(target.requestFullscreen){void target.requestFullscreen().catch(()=>{target.classList.toggle('eco-optical-fullscreen-fallback');target.scrollIntoView({block:'center'});});}else{target.classList.toggle('eco-optical-fullscreen-fallback');target.scrollIntoView({block:'center'});}};
   pack.onclick=()=>void(async()=>{try{if(currentBundle)await shareOrDownload('eco-broadcast-'+currentBundle.transferId+'.ecobroadcast',JSON.stringify(currentBundle),'application/json','Eco Broadcast');}catch(e){showError(e);}})();
 
   const acceptRaw=async raw=>{
-    if(raw.startsWith('ECOP1:')){const material=decodePairingQr(raw);await app.importRelayPairingMaterial(material);progress.textContent='Appairage reçu pour ce membre. La clé reste sur cet appareil.';notify('Appairage Eco Relay enregistré.');return;}
+    if(raw.startsWith('ECOP1:')){
+      const material=decodePairingQr(raw);await app.importRelayPairingMaterial(material);const identity=await app.relayReceiverIdentity();targetedReceiver=identity?new EcoTargetedBroadcastReceiver(identity.keyId):null;
+      progress.textContent='Appairage reçu pour ce membre. La clé reste sur cet appareil.';notify('Appairage Eco Relay enregistré.');return;
+    }
+    if(raw.startsWith('ECOB2:')){
+      if(!targetedReceiver){const identity=await app.relayReceiverIdentity();if(!identity)throw Error('RELAY_PAIRING_REQUIRED');targetedReceiver=new EcoTargetedBroadcastReceiver(identity.keyId);}
+      const state=targetedReceiver.add(raw);if(!state.forThisMember)return;
+      progress.textContent=state.received+' / '+state.total+' trames personnelles'+(state.complete?' · complet':'');
+      if(state.complete){const bundle=await targetedReceiver.assemble(),capsule=await app.receiveEcoBroadcast(bundle);progress.textContent='Mise à jour reçue · membre '+capsule.membershipId+' · '+new Date(capsule.generatedAt).toLocaleString();targetedReceiver.reset();stopCamera();notify('Compte personnel Eco mis à jour sans Internet.');}
+      return;
+    }
     if(!raw.startsWith('ECOB1:'))return;
-    const p=receiver.add(raw);progress.textContent=p.received+' / '+p.total+' trames'+(p.complete?' · complet':'');
-    if(p.complete){const bundle=await receiver.assemble(),capsule=await app.receiveEcoBroadcast(bundle);progress.textContent='Mise à jour reçue · membre '+capsule.membershipId+' · '+new Date(capsule.generatedAt).toLocaleString();receiver.reset();stopCamera();notify('Compte personnel Eco mis à jour sans Internet.');}
+    const state=receiver.add(raw);progress.textContent=state.received+' / '+state.total+' trames'+(state.complete?' · complet':'');
+    if(state.complete){const bundle=await receiver.assemble(),capsule=await app.receiveEcoBroadcast(bundle);progress.textContent='Mise à jour reçue · membre '+capsule.membershipId+' · '+new Date(capsule.generatedAt).toLocaleString();receiver.reset();stopCamera();notify('Compte personnel Eco mis à jour sans Internet.');}
   };
   cameraBtn.onclick=()=>void(async()=>{try{
     if(!navigator.mediaDevices?.getUserMedia)throw Error('CAMERA_WEB_UNAVAILABLE_USE_ECO_PACK');
-    stopCamera();receiver=new EcoBroadcastReceiver();qrScanner=new QrScanner(video,result=>void(acceptRaw(String(result.data??result)).catch(showError)),{preferredCamera:'environment',maxScansPerSecond:10,highlightScanRegion:true,highlightCodeOutline:true,returnDetailedScanResult:true});
+    stopCamera();receiver=new EcoBroadcastReceiver();const identity=await app.relayReceiverIdentity();targetedReceiver=identity?new EcoTargetedBroadcastReceiver(identity.keyId):null;qrScanner=new QrScanner(video,result=>void(acceptRaw(String(result.data??result)).catch(showError)),{preferredCamera:'environment',maxScansPerSecond:10,highlightScanRegion:true,highlightCodeOutline:true,returnDetailedScanResult:true});
     await qrScanner.start();progress.textContent='Caméra active · gardez le QR animé dans le cadre jusqu’à 100 %.';
   }catch(e){stopCamera();progress.textContent='Caméra indisponible. Sur iPhone/iPad, essayez Safari ; Eco Pack reste disponible hors Internet.';showError(e);}})();cameraStop.onclick=()=>stopCamera();
   photoBtn.onclick=()=>photoInput.click();photoInput.onchange=()=>void(async()=>{try{const file=photoInput.files?.[0];if(!file)return;const result=await QrScanner.scanImage(file,{returnDetailedScanResult:true});await acceptRaw(String(result.data??result));}catch(e){showError(e);}finally{photoInput.value='';}})();
