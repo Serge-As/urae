@@ -151,3 +151,21 @@ test('sovereign offline surfaces are isolated and iOS fallback assets are part o
   assert.match(worker,/TONTINE_SERVE_V1/);assert.match(worker,/LOAN_DISBURSE_V1/);assert.match(worker,/LOAN_REPAY_V1/);
   assert.match(worker,/COMPLETION_CREATE_V1/);assert.match(worker,/GROUP_EXERCISE_LABEL_V1/);
 });
+
+
+test('A01 UI handlers cannot regress to abandoned async functions',()=>{
+  const sovereign=fs.readFileSync('apps/web/src/sovereign-offline-ui.js','utf8');
+  const governance=fs.readFileSync('apps/web/src/master-governance-ui.ts','utf8');
+  assert.doesNotMatch(sovereign,/peer\.onPacket\(packet=>void\(async\(\)=>/);
+  assert.doesNotMatch(sovereign,/fileInput\.onchange=\(\)=>void\(async\(\)=>/);
+  assert.doesNotMatch(sovereign,/pairImport\.onchange=\(\)=>void\(async\(\)=>/);
+  assert.doesNotMatch(sovereign,/vaultExport\.onclick=\(\)=>void\(async\(\)=>/);
+  assert.doesNotMatch(sovereign,/vaultRestore\.onclick=\(\)=>void\(async\(\)=>/);
+  assert.doesNotMatch(governance,/b\.onclick=\(\)=>void\(async\(\)=>/);
+  assert.match(sovereign,/peer\.onPacket\(async packet=>/);
+  assert.match(sovereign,/fileInput\.onchange=async\(\)=>/);
+  assert.match(sovereign,/pairImport\.onchange=async\(\)=>/);
+  assert.match(sovereign,/vaultExport\.onclick=async\(\)=>/);
+  assert.match(sovereign,/vaultRestore\.onclick=async\(\)=>/);
+  assert.match(governance,/b\.onclick=async\(\)=>/);
+});
