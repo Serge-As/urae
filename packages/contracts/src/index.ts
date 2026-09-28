@@ -438,6 +438,13 @@ export interface ContributionBand {
   cadence?: 'daily' | 'weekly' | 'monthly' | 'session' | string;
 }
 
+export interface PublicApproximateLocation {
+  latitude: number;
+  longitude: number;
+  precisionMeters: number;
+  source: 'DEVICE_GEOLOCATION';
+}
+
 /** Safe, deliberately sparse cross-tenant projection. Never contains member lists, balances or private contacts. */
 export interface PublicGroupListing {
   id: Id;
@@ -450,6 +457,7 @@ export interface PublicGroupListing {
   joinPolicy: JoinPolicy;
   recruiting: boolean;
   locality?: string;
+  approxLocation?: PublicApproximateLocation;
   missionTags: string[];
   activityTags: string[];
   meetingMode?: MeetingMode;
@@ -468,12 +476,16 @@ export interface GroupDiscoveryQuery {
   meetingMode?: MeetingMode;
   maxContribution?: Money;
   recruitingOnly?: boolean;
+  latitude?: number;
+  longitude?: number;
+  radiusKm?: number;
 }
 
 export interface GroupDiscoveryMatch {
   listing: PublicGroupListing;
   score: number;
   reasonCodes: string[];
+  distanceKm?: number;
 }
 
 export interface MembershipApplication {
