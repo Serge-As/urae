@@ -6,8 +6,18 @@ export interface VoiceFinancialCommandDraft{
 }
 export interface VoiceMatchCandidate{id:string;label:string;aliases?:string[];}
 export interface VoiceMatchResult{status:'EXACT'|'FUZZY'|'AMBIGUOUS'|'NONE';candidate?:VoiceMatchCandidate;score:number;alternatives:VoiceMatchCandidate[];}
+export interface VoiceContextualEntryMatch{candidate:VoiceMatchCandidate;amount:number;direction:VoiceFinancialDirection;raw:string;}
 
 export const normalizeVoiceText=(value:string):string=>value.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[’']/g,"'").replace(/\s+/g,' ').trim();
+
+export function sanitizeVoiceFinancialTranscript(raw:string):string{
+  const compact=String(raw??'').replace(/\s+/g,' ').trim();if(!compact)return '';
+  const wakeToken=/(^|[\s,;:!?.()\-])((?:eco|éco|echo|écho)(?:\s*[- ]?\s*(?:system|système|systeme))?)(?=$|[\s,;:!?.()\-])/gi;
+  const matches=[...compact.matchAll(wakeToken)];if(matches.length<2)return compact;
+  let firstKept=false;
+  return compact.replace(wakeToken,(whole,prefix,token,offset)=>{const start=Number(offset)+String(prefix??'').length;if(!firstKept&&start<=24){firstKept=true;return String(prefix??'')+(normalizeVoiceText(String(token))==='echo'?'Eco':String(token));}return String(prefix??'');})
+    .replace(/\s+([,;:.!?])/g,'$1').replace(/\s{2,}/g,' ').trim();
+}
 
 const FR_UNITS:Record<string,number>={zero:0,un:1,une:1,deux:2,trois:3,quatre:4,cinq:5,six:6,sept:7,huit:8,neuf:9,dix:10,onze:11,douze:12,treize:13,quatorze:14,quinze:15,seize:16,dixsept:17,dixhuit:18,dixneuf:19,vingt:20,trente:30,quarante:40,cinquante:50,soixante:60};
 const EN_UNITS:Record<string,number>={zero:0,one:1,two:2,three:3,four:4,five:5,six:6,seven:7,eight:8,nine:9,ten:10,eleven:11,twelve:12,thirteen:13,fourteen:14,fifteen:15,sixteen:16,seventeen:17,eighteen:18,nineteen:19,twenty:20,thirty:30,forty:40,fifty:50,sixty:60,seventy:70,eighty:80,ninety:90};
@@ -91,7 +101,7 @@ const parseSegment=(raw:string):VoiceFinancialEntryDraft|undefined=>{
 };
 
 export function parseVoiceFinancialCommand(raw:string):VoiceFinancialCommandDraft{
-  const warnings:string[]=[];const wake=stripWake(raw);const localeGuess=detectLocale(raw);let body=wake.text.trim();
+  const cleaned=sanitizeVoiceFinancialTranscript(raw);const warnings:string[]=[];const wake=stripWake(cleaned);const localeGuess=detectLocale(cleaned);let body=wake.text.trim();
   const action=body.match(ACTION_WORDS);const actionIndex=action?.index??-1;const header=actionIndex>=0?body.slice(0,actionIndex):body;
   let memberQuery:string|undefined,meetingQuery:string|undefined;
   const member=header.match(/(?:chez|pour|for)\s+(?:le\s+|the\s+)?(?:membre|member)?\s*([^,;]+?)(?=\s+(?:a\s+la\s+seance|à\s+la\s+séance|seance|séance|meeting)\b|\s*[,;]|$)/i)
@@ -118,4 +128,55 @@ export function matchVoiceCandidate(query:string,candidates:VoiceMatchCandidate[
   const best=scored[0];if(!best||best.score<.58)return{status:'NONE',score:best?.score??0,alternatives:scored.slice(0,3).map(x=>x.candidate)};
   const close=scored.filter(x=>best.score-x.score<.06&&x.score>=.58);if(close.length>1&&best.score<.98)return{status:'AMBIGUOUS',score:best.score,alternatives:close.slice(0,5).map(x=>x.candidate)};
   return{status:best.score>=.98?'EXACT':'FUZZY',candidate:best.candidate,score:best.score,alternatives:scored.slice(1,4).map(x=>x.candidate)};
+}
+
+const escapeRegExp=(value:string)=>value.replace(/[|\\{}()[\]^$+*?.-]/g,'\\$&');
+
+export function matchVoiceMention(text:string,candidates:VoiceMatchCandidate[]):VoiceMatchResult{
+  const hay=' '+normalizeVoiceText(sanitizeVoiceFinancialTranscript(text))+' ',hits=new Map<string,{candidate:VoiceMatchCandidate;length:number}>();
+  for(const candidate of candidates){
+    for(const value of [candidate.label,...(candidate.aliases??[])]){
+      const needle=normalizeVoiceText(value);if(!needle)continue;
+      const re=new RegExp('(?:^|[^\\p{L}\\p{N}])'+escapeRegExp(needle).replace(/\\ /g,'\\s+')+'(?=$|[^\\p{L}\\p{N}])','u');
+      if(re.test(hay)){const prior=hits.get(candidate.id);if(!prior||needle.length>prior.length)hits.set(candidate.id,{candidate,length:needle.length});}
+    }
+  }
+  const ranked=[...hits.values()].sort((a,b)=>b.length-a.length);
+  if(!ranked.length)return{status:'NONE',score:0,alternatives:[]};
+  if(ranked.length>1)return{status:'AMBIGUOUS',score:1,alternatives:ranked.slice(0,5).map(x=>x.candidate)};
+  return{status:'EXACT',candidate:ranked[0]!.candidate,score:1,alternatives:[]};
+}
+
+export function extractVoiceFinancialEntriesByCandidates(raw:string,candidates:VoiceMatchCandidate[]):VoiceContextualEntryMatch[]{
+  const text=normalizeVoiceText(sanitizeVoiceFinancialTranscript(raw));
+  const mentions:Array<{start:number;end:number;candidate:VoiceMatchCandidate;alias:string}>=[];
+  for(const candidate of candidates){
+    const aliases=[candidate.label,...(candidate.aliases??[])].map(normalizeVoiceText).filter(Boolean).sort((a,b)=>b.length-a.length);
+    for(const alias of aliases){
+      const re=new RegExp('(?:^|[^\\p{L}\\p{N}])('+escapeRegExp(alias).replace(/\\ /g,'\\s+')+')(?=$|[^\\p{L}\\p{N}])','gu');
+      for(const match of text.matchAll(re)){
+        const whole=match[0]??'',captured=match[1]??'',prefix=whole.slice(0,whole.length-captured.length),start=(match.index??0)+prefix.length;
+        mentions.push({start,end:start+captured.length,candidate,alias});
+      }
+    }
+  }
+  mentions.sort((a,b)=>a.start-b.start||b.alias.length-a.alias.length);
+  const selected:Array<(typeof mentions)[number]>=[];const occupied=new Set<string>();
+  for(const mention of mentions){
+    if(selected.some(x=>mention.start<x.end&&mention.end>x.start))continue;
+    const key=mention.candidate.id+':'+mention.start;if(occupied.has(key))continue;occupied.add(key);selected.push(mention);
+  }
+  selected.sort((a,b)=>a.start-b.start);
+  const results:VoiceContextualEntryMatch[]=[];
+  for(let i=0;i<selected.length;i++){
+    const mention=selected[i]!,next=selected[i+1],segment=text.slice(mention.end,next?.start??text.length)
+      .replace(/^[\s:;,=.-]+/,'').replace(/^(?:montant|amount|est|de|du|des|a|à)\s+/,'').trim();
+    const tokens=segment.split(/\s+/).filter(Boolean);let amount:number|undefined,used='';
+    for(let take=Math.min(8,tokens.length);take>=1;take--){const part=tokens.slice(0,take).join(' '),parsed=parseVoiceAmount(part);if(parsed!==undefined&&parsed>0){amount=parsed;used=part;break;}}
+    if(amount===undefined)continue;
+    const before=text.slice(Math.max(0,mention.start-28),mention.start);
+    const direction:VoiceFinancialDirection=/(?:depense|sortie|decaissement|paye|expense|outflow|payout)\s*$/.test(before)?'OUT':'IN';
+    results.push({candidate:mention.candidate,amount,direction,raw:(mention.alias+' '+used).trim()});
+  }
+  return results;
 }
