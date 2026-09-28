@@ -13,6 +13,10 @@ export interface EcoRelayPairingMaterial {
   keyId:string;
   rawKey:string;
   createdAt:string;
+  groupId?:string;
+  groupName?:string;
+  displayName?:string;
+  memberNumber?:number;
 }
 
 export interface EcoEncryptedCapsule {
