@@ -2373,6 +2373,34 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
         if(String(share.data.completionState)!=='SERVED')share=await completion.markTontineShareServed(groupId,share.id,entry.id,finite(p.expectedVersion));
         await markApplied();return json({accepted:true,stored:true,entry,share},200,cors);
       }
+      if(item.type==='LOAN_DISBURSE_V1'){
+        const p=item.payload,groupId=String(p.groupId??''),loanId=String(p.loanId??''),key=String(p.idempotencyKey??item.idempotencyKey),amount=finite(p.amount);await requireGroup(groupId,true);
+        let loan=(await completion.list(groupId,'LOAN')).find(x=>x.id===loanId);if(!loan)throw Error('LOAN_NOT_FOUND');
+        let entry=await repo.findLedgerEntryByIdempotency(ctx.tenantId,groupId,key);
+        if(!entry)entry=await ledger.recordCashMovement({tenantId:ctx.tenantId,groupId,amount,currency:String(loan.data.currency??'XAF'),direction:'out',counterAccountCode:'LOAN_RECEIVABLE',counterAccountType:'asset',descriptionCode:'LEDGER_LOAN_DISBURSEMENT',sourceType:'loan',sourceId:loan.id,meetingId:p.meetingId?String(p.meetingId):undefined,idempotencyKey:key,kind:'loan_disbursement'});
+        if(String(loan.data.completionState)==='APPROVED')loan=await completion.transition(groupId,loan.id,'DISBURSED',{expectedVersion:finite(p.expectedVersion),patch:{ledgerEntryId:entry.id,outstandingPrincipal:amount,unpaidInterest:0,accruedMeetingIdsJson:'[]',disbursedAt:entry.createdAt}});
+        else if(!['DISBURSED','REPAYING','CLOSED'].includes(String(loan.data.completionState)))throw Error('LOAN_NOT_APPROVED');
+        await markApplied();return json({accepted:true,stored:true,entry,loan},200,cors);
+      }
+      if(item.type==='LOAN_REPAY_V1'){
+        const p=item.payload,groupId=String(p.groupId??''),loanId=String(p.loanId??''),key=String(p.idempotencyKey??item.idempotencyKey),principalPaid=finite(p.principalAmount,0),interestPaid=finite(p.interestAmount,0),meetingId=p.meetingId?String(p.meetingId):undefined;await requireGroup(groupId,true);
+        let loan=(await completion.list(groupId,'LOAN')).find(x=>x.id===loanId);if(!loan)throw Error('LOAN_NOT_FOUND');
+        let entry=await repo.findLedgerEntryByIdempotency(ctx.tenantId,groupId,key);
+        if(!entry){
+          if(!['DISBURSED','REPAYING'].includes(String(loan.data.completionState)))throw Error('LOAN_NOT_REPAYABLE');
+          const outstanding=finite(loan.data.outstandingPrincipal),unpaid=finite(loan.data.unpaidInterest,0),periodInterest=finite(p.periodInterest,0),interestDue=unpaid+periodInterest;
+          if(principalPaid>outstanding)throw Error('INVALID_LOAN_REPAYMENT');if(interestPaid>interestDue)throw Error('LOAN_INTEREST_PAYMENT_EXCEEDS_DUE');
+          entry=await ledger.recordLoanRepayment({tenantId:ctx.tenantId,groupId,principalAmount:principalPaid,interestAmount:interestPaid,currency:String(loan.data.currency??'XAF'),sourceId:loan.id,meetingId,idempotencyKey:key});
+          const remaining=outstanding-principalPaid,unpaidAfter=interestDue-interestPaid,target=remaining===0&&unpaidAfter===0?'CLOSED':'REPAYING';
+          const accrued=Array.isArray(p.accruedMeetingIds)?p.accruedMeetingIds.map(String):jsonStringArray(loan.data.accruedMeetingIdsJson);
+          loan=await completion.transition(groupId,loan.id,target,{expectedVersion:finite(p.expectedVersion),patch:{outstandingPrincipal:remaining,unpaidInterest:unpaidAfter,lastRepaymentLedgerEntryId:entry.id,accruedMeetingIdsJson:JSON.stringify(accrued)}});
+          if(meetingId){
+            const periodId='loan_period_'+encodeURIComponent(loan.id+'|'+meetingId),old=await repo.getWorkspaceRecord(ctx.tenantId,periodId),stamp=entry.createdAt,rate=finite(p.rateBasisPointsPerPeriod??loan.data.rateBasisPointsPerPeriod,0),nextInterest=Math.round(remaining*rate/10000);
+            await repo.saveWorkspaceRecord({id:periodId,tenantId:ctx.tenantId,groupId,moduleId:'FINANCE.LOAN_PERIOD',title:'Période de prêt',summary:'Évolution de prêt rejouée depuis le journal offline.',status:'DONE',tags:['loan-period','loan:'+loan.id,'meeting:'+meetingId,'offline-replay'],data:{loanId:loan.id,membershipId:String(loan.data.borrowerMembershipId??''),meetingId,principalBefore:Number(old?.data.principalBefore??(remaining+principalPaid)),interestOpening:Number(old?.data.interestOpening??Math.max(0,unpaidAfter+interestPaid-finite(p.periodInterest,0))),interestNew:Number(old?.data.interestNew??0)+finite(p.periodInterest,0),paymentAmount:Number(old?.data.paymentAmount??0)+principalPaid+interestPaid,principalPaid:Number(old?.data.principalPaid??0)+principalPaid,interestPaid:Number(old?.data.interestPaid??0)+interestPaid,principalAfter:remaining,interestAfter:unpaidAfter,totalDebtAfter:remaining+unpaidAfter,nextInterestProjected:nextInterest,nextTotalDueProjected:remaining+unpaidAfter+nextInterest,priority:String(loan.data.paymentPriority??'CAPITAL_FIRST'),rateBasisPointsPerPeriod:rate},createdBy:old?.createdBy??ctx.actorId,createdAt:old?.createdAt??stamp,updatedAt:stamp});
+          }
+        }
+        await markApplied();return json({accepted:true,stored:true,entry,loan},200,cors);
+      }
       if(item.type==='RUBRIC_CREATE_V1'){
         const p=item.payload,groupId=String(p.groupId??'');await requireGroup(groupId,true);
         const rubric=await rubrics.createRubric({id:String(p.id??''),tenantId:ctx.tenantId,groupId,name:String(p.name??''),aliases:strArray(p.aliases),purpose:p.purpose?String(p.purpose):undefined,facets:p.facets as any,source:String(p.source??'GROUP_CUSTOM') as any,operatingModel:p.operatingModel as any,policies:p.policies as any,activityPlan:p.activityPlan as any});
