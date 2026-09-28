@@ -50,9 +50,11 @@ test('financial sheet edits a target value for one exact meeting instead of addi
   assert.match(main,/meetingMatrixScope/);
   assert.match(api,/financialCellState/);
   assert.match(api,/applyFinancialCellTarget/);
-  assert.match(api,/ledger\.reverseEntry/);
-  assert.match(api,/amount:input\.targetAmount/);
-  assert.doesNotMatch(api,/targetAmount-state\.current/);
+  const targetStart=api.indexOf('const applyFinancialCellTarget='),targetEnd=api.indexOf('\n  const jsonStringArray=',targetStart),targetBody=api.slice(targetStart,targetEnd);
+  assert.match(targetBody,/replaceCashContributionCell/);
+  assert.match(targetBody,/targetAmount:input\.targetAmount/);
+  assert.doesNotMatch(targetBody,/ledger\.reverseEntry|ledger\.recordCashContribution/);
+  assert.doesNotMatch(targetBody,/targetAmount-state\.current/);
 });
 
 test('multi-manager correction applies immediately while explicit dissent keeps the governed confrontation path',()=>{
