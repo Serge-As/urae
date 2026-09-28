@@ -1076,6 +1076,11 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
       await notifyGovernanceChange(group.id,{title:'Membre ajouté',message:`Membre « ${displayName} » ajouté au groupe.`,action:{view:'members',membershipId:membership.id,entityKind:'MEMBER',entityId:membership.id,label:'Voir le membre'}});
       return json(membership,201,cors);
     }
+    const memberNumberOrder=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/member-number-order$/);
+    if(memberNumberOrder&&request.method==='PUT'){
+      const groupId=memberNumberOrder[1]!,body=await readJson<Record<string,unknown>>(request),membershipIds=strArray(body.membershipIds);
+      return json(await foundation.setMemberNumberOrder(ctx.tenantId,groupId,membershipIds,String(body.operationId??ctx.requestId)),200,cors);
+    }
     const memberLifecycle=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/members\/([^/]+)\/lifecycle$/);
     if(memberLifecycle&&request.method==='PUT'){
       const groupId=memberLifecycle[1]!,membershipId=memberLifecycle[2]!,group=await requireGroup(groupId,true);
@@ -2244,6 +2249,12 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
         const membership=await foundation.addMember(ctx.tenantId,groupId,{id:String(p.userId??''),displayName:String(p.displayName??''),locale:String(p.locale??ctx.locale),createdAt:String(p.createdAt??new Date().toISOString())},item.idempotencyKey,String(p.membershipId??''));
         await markApplied();
         return json({accepted:true,stored:true,membership},200,cors);
+      }
+      if(item.type==='MEMBER_NUMBER_ORDER_V1'){
+        const p=item.payload,groupId=String(p.groupId??'');await requireGroup(groupId,true);
+        const memberships=await foundation.setMemberNumberOrder(ctx.tenantId,groupId,strArray(p.membershipIds),item.idempotencyKey);
+        await markApplied();
+        return json({accepted:true,stored:true,memberships},200,cors);
       }
       if(item.type==='RUBRIC_CREATE_V1'){
         const p=item.payload,groupId=String(p.groupId??'');await requireGroup(groupId,true);
