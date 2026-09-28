@@ -1,9 +1,9 @@
-name: Eco-System 1.5.x — WebKit PWA Smoke
+name: Eco-System 1.5.2.8 — WebKit / iOS PWA Smoke
 
 on:
   workflow_dispatch:
   push:
-    branches: ['next/1.5.0-audit-complete-platform-20260923']
+    branches: ['fix/geo-directory-consented-gps-20260928','fix/1.5.2.6-field-persistence-pc-mobile-20260925']
 
 permissions:
   contents: read
@@ -21,7 +21,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '24'
-      - run: npm install --ignore-scripts
+      - run: npm ci --ignore-scripts
       - run: npm run build
       - name: Install WebKit runner
         run: |
@@ -40,7 +40,7 @@ jobs:
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: webkit-1.5.0-report-${{ github.sha }}
+          name: webkit-1.5.2.8-report-${{ github.sha }}
           path: |
             playwright-report/
             test-results/
