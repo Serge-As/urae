@@ -200,15 +200,27 @@ export class ConnectedApplication {
   }
   currentActor():string{return this.actorId;}
   async relayPairingMaterial(membershipId:string,rotate=false):Promise<EcoRelayPairingMaterial>{
-    if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');const member=(await this.listMembers()).find(x=>x.id===membershipId&&x.status==='active');if(!member)throw Error('MEMBERSHIP_NOT_FOUND');
+    if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');const [members,groups]=await Promise.all([this.listMembers(),this.listGroups()]),member=members.find(x=>x.id===membershipId&&x.status==='active'),group=groups.find(x=>x.id===this.activeGroupId);if(!member||!group)throw Error('MEMBERSHIP_NOT_FOUND');
     const existing=!rotate?await this.sovereign.relayKey(this.tenantId,this.activeGroupId,membershipId):undefined;
-    if(existing)return{protocolVersion:1,membershipId,keyId:existing.keyId,rawKey:existing.rawKey,createdAt:existing.createdAt};
-    const material=await createRelayPairingMaterial(membershipId);await this.sovereign.saveRelayKey({tenantId:this.tenantId,groupId:this.activeGroupId,...material});return material;
+    const base=existing?{protocolVersion:1 as const,membershipId,keyId:existing.keyId,rawKey:existing.rawKey,createdAt:existing.createdAt}:await createRelayPairingMaterial(membershipId);
+    const material:EcoRelayPairingMaterial={...base,groupId:group.id,groupName:group.name,displayName:member.displayName,memberNumber:member.memberNumber};
+    if(!existing)await this.sovereign.saveRelayKey({tenantId:this.tenantId,groupId:this.activeGroupId,membershipId:material.membershipId,keyId:material.keyId,rawKey:material.rawKey,createdAt:material.createdAt});
+    return material;
   }
   async importRelayPairingMaterial(material:EcoRelayPairingMaterial):Promise<void>{
-    if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');if(material.protocolVersion!==1||!material.membershipId||!material.keyId||!material.rawKey)throw Error('INVALID_RELAY_PAIRING_MATERIAL');
-    const member=(await this.listMembers()).find(x=>x.id===material.membershipId);if(!member)throw Error('MEMBERSHIP_NOT_FOUND');
-    await this.sovereign.saveRelayKey({tenantId:this.tenantId,groupId:this.activeGroupId,membershipId:material.membershipId,keyId:material.keyId,rawKey:material.rawKey,createdAt:material.createdAt});
+    if(material.protocolVersion!==1||!material.membershipId||!material.keyId||!material.rawKey||!material.groupId)throw Error('INVALID_RELAY_PAIRING_MATERIAL');
+    const groupId=material.groupId,groups=await this.cached<Group[]>('/api/v1/groups')??[],existingGroup=groups.find(x=>x.id===groupId);
+    if(!existingGroup){
+      const stamp=material.createdAt||new Date().toISOString(),group:Group={id:groupId,tenantId:this.tenantId,name:material.groupName?.trim()||'Groupe Eco Relay',kind:'association',originMode:'IMPORT_EXISTING',governanceModel:'community',status:'active',createdBy:this.actorId,createdAt:stamp};
+      await this.saveCached('/api/v1/groups',[...groups,group]);this.groupTenants.set(groupId,this.tenantId);
+    }
+    this.selectGroup(groupId);
+    const path='/api/v1/groups/'+encodeURIComponent(groupId)+'/members',members=await this.cached<MembershipView[]>(path)??[];
+    if(!members.some(x=>x.id===material.membershipId)){
+      const member:MembershipView={id:material.membershipId,tenantId:this.tenantId,groupId,userId:this.actorId,memberNumber:material.memberNumber,roles:['member'],status:'active',joinedAt:material.createdAt,displayName:material.displayName?.trim()||('Membre '+(material.memberNumber??''))};
+      await this.saveCached(path,[...members,member]);
+    }
+    await this.sovereign.saveRelayKey({tenantId:this.tenantId,groupId,membershipId:material.membershipId,keyId:material.keyId,rawKey:material.rawKey,createdAt:material.createdAt});
   }
   async localMemberCapsule(membershipId:string,meetingId?:string):Promise<EcoMemberCapsule>{
     if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');const [groups,members,rubrics,meetings,ledgerState,loans,exercises]=await Promise.all([this.listGroups(),this.listMembers(),this.listRubrics(),this.listMeetings(),this.ledger(),this.listCompletion('LOAN'),this.exercises()]);
