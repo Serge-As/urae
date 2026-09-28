@@ -2,7 +2,7 @@ import { rm, mkdir, cp, access, readFile, writeFile } from 'node:fs/promises';
 import { spawnSync } from 'node:child_process';
 import path from 'node:path';
 
-const RELEASE_VERSION='1.5.2.8-geo-directory';
+const RELEASE_VERSION='1.5.2.9-sovereign-offline';
 const compiler=path.resolve('node_modules/typescript/bin/tsc');
 try{await access(compiler);}catch{await import('./build-portable.mjs');process.exit(0);}
 const output=path.resolve('.build');
@@ -37,9 +37,9 @@ for (const target of ['.build/apps/web/src/completion-ui.js','.build/src/complet
 // before main.js so stale click semantics cannot win the event race.
 for (const target of ['.build/index.html','.build/apps/web/index.html']) {
   let html=await readFile(target,'utf8');
-  const main='<script type="module" src="/src/main.js?v=1528"></script>';
+  const main='<script type="module" src="/src/main.js?v=1529"></script>';
   if(!html.includes(main))throw Error('MAIN_SCRIPT_ANCHOR_NOT_FOUND');
-  html=html.replace(main,'<script type="module" src="/src/field-hardening.js?v=1528"></script>\n  <script type="module" src="/src/voice-entry-bootstrap.js?v=1528"></script>\n  '+main);
+  html=html.replace(main,'<script type="module" src="/src/field-hardening.js?v=1529"></script>\n  <script type="module" src="/src/voice-entry-bootstrap.js?v=1529"></script>\n  '+main);
   html=html
     .replaceAll('Eco-System — 1.3.3 Fairness Lab · AdOps · Doctor','Eco-System — 1.3.4 Voice · Two-Sheet · Documents')
     .replaceAll('ECO-SYSTEM · 1.3.3','ECO-SYSTEM · 1.3.4')
@@ -59,6 +59,6 @@ for (const target of ['.build/apps/web/src/main.js','.build/src/main.js']) {
   source=source.replace("const CAHIER_VERSION = '1.3.2-savings-control-forum-live';",`const CAHIER_VERSION = '${RELEASE_VERSION}';`);
   await writeFile(target,source,'utf8');
 }
-console.log(`Build OK: .build/ (Eco-System ${RELEASE_VERSION}; 1.5.2.8 consented GPS directory + 1.5.2.7 acquired services`);
+console.log(`Build OK: .build/ (Eco-System ${RELEASE_VERSION}; 1.5.2.9 sovereign offline cycle + Broadcast QR + Eco Vault + iOS fallback`);
 
 await import('./public-assets.mjs');
