@@ -28,10 +28,10 @@ test('WebKit shell keeps sovereign offline and QR decoder assets cached for airp
   }),{timeout:20000}).toBe(true);
   const hits=await page.evaluate(async()=>{
     const name=(await caches.keys()).find(x=>x.includes('v1529-sovereign-offline')),c=await caches.open(name);
-    const paths=['/src/sovereign-offline-ui.js','/src/vendor/qr-scanner.min.js','/src/vendor/qr-scanner-worker.min.js','/packages/offline-sovereign/src/index.js','/packages/exercise/src/index.js','/packages/relay/src/broadcast.js'];
+    const paths=['/src/sovereign-offline-ui.js','/src/vendor/qr-scanner.min.js','/src/vendor/qr-scanner-worker.min.js','/packages/offline-sovereign/src/index.js','/packages/exercise/src/index.js','/packages/relay/src/broadcast.js','/packages/relay/src/local-room.js','/packages/eco-numpad/src/index.js'];
     return Promise.all(paths.map(async p=>Boolean(await c.match(p))));
   });
-  expect(hits).toEqual([true,true,true,true,true,true]);
+  expect(hits).toEqual([true,true,true,true,true,true,true,true]);
   await context.setOffline(true);
   const offline=await page.evaluate(async()=>{
     const paths=['/index.html','/src/sovereign-offline-ui.js','/src/vendor/qr-scanner-worker.min.js'];
@@ -48,4 +48,30 @@ test('WebKit shell keeps sovereign offline and QR decoder assets cached for airp
   expect(offline[2].text.length).toBeGreaterThan(100);
   await expect(page.locator('#ecoRelaySovereignWorkspace')).toBeAttached();
   await context.setOffline(false);
+});
+
+
+test('WebKit opens a serverless Eco Local Room DataChannel and exchanges a packet',async({page})=>{
+  await page.goto(base+'/',{waitUntil:'domcontentloaded'});
+  const result=await page.evaluate(async()=>{
+    const {EcoLocalRoomPeer}=await import('/packages/relay/src/local-room.js');
+    const host=new EcoLocalRoomPeer(),guest=new EcoLocalRoomPeer();
+    let received=null;
+    guest.onPacket(packet=>{received=packet;});
+    try{
+      const offer=await host.createOffer();
+      const answer=await guest.acceptOffer(offer);
+      await host.acceptAnswer(answer);
+      await Promise.all([host.waitUntilOpen(12000),guest.waitUntilOpen(12000)]);
+      host.send('PING',{value:27});
+      const started=Date.now();
+      while(!received&&Date.now()-started<3000)await new Promise(r=>setTimeout(r,25));
+      return{supported:true,host:host.connected,guest:guest.connected,packet:received};
+    }finally{host.close();guest.close();}
+  });
+  expect(result.supported).toBe(true);
+  expect(result.host).toBe(true);
+  expect(result.guest).toBe(true);
+  expect(result.packet?.type).toBe('PING');
+  expect(result.packet?.payload?.value).toBe(27);
 });
