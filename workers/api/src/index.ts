@@ -2362,6 +2362,17 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
         const record=version>expectedVersion&&state===to?existing:await completion.transition(groupId,id,to,{expectedVersion,patch,reason:p.reason?String(p.reason):undefined});
         await markApplied();return json({accepted:true,stored:true,record},200,cors);
       }
+      if(item.type==='TONTINE_SERVE_V1'){
+        const p=item.payload,groupId=String(p.groupId??''),shareId=String(p.shareId??''),key=String(p.idempotencyKey??item.idempotencyKey),amount=finite(p.amount);await requireGroup(groupId,true);
+        let share=(await completion.list(groupId,'TONTINE_SHARE')).find(x=>x.id===shareId);if(!share)throw Error('TONTINE_SHARE_NOT_FOUND');
+        let entry=await repo.findLedgerEntryByIdempotency(ctx.tenantId,groupId,key);
+        if(!entry){
+          if(String(share.data.completionState)!=='SCHEDULED'&&String(share.data.completionState)!=='SERVED')throw Error('TONTINE_SHARE_NOT_SCHEDULED');
+          entry=await ledger.recordCashMovement({tenantId:ctx.tenantId,groupId,amount,currency:String(p.currency??'XAF'),direction:'out',counterAccountCode:'MEMBER_FUNDS_LIABILITY',counterAccountType:'liability',descriptionCode:'LEDGER_TONTINE_BENEFIT',sourceType:'tontine_share',sourceId:share.id,meetingId:p.meetingId?String(p.meetingId):undefined,idempotencyKey:key,kind:'tontine_benefit'});
+        }
+        if(String(share.data.completionState)!=='SERVED')share=await completion.markTontineShareServed(groupId,share.id,entry.id,finite(p.expectedVersion));
+        await markApplied();return json({accepted:true,stored:true,entry,share},200,cors);
+      }
       if(item.type==='RUBRIC_CREATE_V1'){
         const p=item.payload,groupId=String(p.groupId??'');await requireGroup(groupId,true);
         const rubric=await rubrics.createRubric({id:String(p.id??''),tenantId:ctx.tenantId,groupId,name:String(p.name??''),aliases:strArray(p.aliases),purpose:p.purpose?String(p.purpose):undefined,facets:p.facets as any,source:String(p.source??'GROUP_CUSTOM') as any,operatingModel:p.operatingModel as any,policies:p.policies as any,activityPlan:p.activityPlan as any});
