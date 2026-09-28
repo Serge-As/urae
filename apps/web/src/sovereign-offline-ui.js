@@ -100,7 +100,7 @@ export function mountSovereignOfflineUI({app,getMembers=()=>[],getMeetings=()=>[
       else if(packet.type==='MANAGER_DELTA'){const c=await app.confrontLocalRoomManagerDelta(packet.payload);lrCompare.replaceChildren(el('strong','Confrontation des journaux'),el('p','Dernier point commun : #'+c.commonSequence+' · seulement ici : '+c.localOnly+' · seulement autre appareil : '+c.remoteOnly),el('p','Conflits financiers potentiels : '+c.potentialFinancialConflicts.length,c.potentialFinancialConflicts.length?'truth-notice':'hint'));for(const row of c.potentialFinancialConflicts.slice(0,20))lrCompare.append(el('p','⚠ '+row.key,'hint'));}
     }catch(e){showError(e);}}));
   };
-  const waitRoomOpen=async peer=>{try{await peer.waitUntilOpen(15000);stopLocalSignal();lrStatus.textContent='Eco Local Room connecté · données directes appareil à appareil.';lrSignalScreen.replaceChildren();lrSendMember.disabled=!isManager();lrSendDelta.disabled=!isManager();notify('Eco Local Room connecté.');}catch(e){lrStatus.textContent='Connexion locale non établie. Vérifiez que les deux appareils sont sur le même Wi‑Fi/hotspot.';}};
+  const waitRoomOpen=async peer=>{try{await peer.waitUntilOpen(120000);stopLocalSignal();lrStatus.textContent='Eco Local Room connecté · données directes appareil à appareil.';lrSignalScreen.replaceChildren();lrSendMember.disabled=!isManager();lrSendDelta.disabled=!isManager();notify('Eco Local Room connecté.');}catch(e){lrStatus.textContent='Connexion locale non établie. Vérifiez que les deux appareils sont sur le même Wi‑Fi/hotspot.';}};
   const acceptLocalSignal=async raw=>{
     const signal=decodeLocalRoomSignal(raw);
     if(signal.role==='OFFER'){
