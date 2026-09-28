@@ -14,7 +14,7 @@ import { buildFinancialRecap, buildSessionRecap, buildClosingCarryover } from '.
 import { diagnoseGroup } from '../../group-doctor/src/index.js';
 import { IndexedDbSovereignStore, createEcoVault, openEcoVault, type SovereignSnapshot } from '../../offline-sovereign/src/index.js';
 import { buildExerciseClosingPlan, buildExerciseCarryForwardSeed, type ExerciseClosingInput, type ExerciseClosingPlan } from '../../exercise/src/index.js';
-import { createRelayPairingMaterial, encryptMemberCapsule, decryptMemberCapsule, createBroadcastBundle, encodeBroadcastFrames, type EcoMemberCapsule, type EcoRelayPairingMaterial, type EcoBroadcastBundle } from '../../relay/src/broadcast.js';
+import { createRelayPairingMaterial, encryptMemberCapsule, decryptMemberCapsule, createBroadcastBundle, encodeBroadcastFrames, encodeTargetedBroadcastFrames, type EcoMemberCapsule, type EcoRelayPairingMaterial, type EcoBroadcastBundle } from '../../relay/src/broadcast.js';
 
 export const KERNEL_SERVICE_IDS = [
   'kernelContext','kernelPolicy','kernelWorkflow','kernelEvents','kernelAudit','kernelObligations','kernelEvidence','kernelReconciliation','kernelInbox','kernelCases','kernelNotifications','kernelConfiguration','kernelFeatures','kernelGovernance','kernelCompatibility','kernelResourceGovernor','kernelOutbox','kernelRelay'
@@ -222,6 +222,10 @@ export class ConnectedApplication {
     }
     await this.sovereign.saveRelayKey({tenantId:this.tenantId,groupId,membershipId:material.membershipId,keyId:material.keyId,rawKey:material.rawKey,createdAt:material.createdAt});
   }
+  async relayReceiverIdentity():Promise<{membershipId:string;keyId:string}|undefined>{
+    if(!this.activeGroupId)return undefined;const members=await this.listMembers(),own=members.find(x=>x.userId===this.actorId&&x.status!=='left');if(!own)return undefined;
+    const key=await this.sovereign.relayKey(this.tenantId,this.activeGroupId,own.id);return key?{membershipId:own.id,keyId:key.keyId}:undefined;
+  }
   async localMemberCapsule(membershipId:string,meetingId?:string):Promise<EcoMemberCapsule>{
     if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');const [groups,members,rubrics,meetings,ledgerState,loans,exercises]=await Promise.all([this.listGroups(),this.listMembers(),this.listRubrics(),this.listMeetings(),this.ledger(),this.listCompletion('LOAN'),this.exercises()]);
     const member=members.find(x=>x.id===membershipId&&x.status!=='left');if(!member)throw Error('MEMBERSHIP_NOT_FOUND');const group=groups.find(x=>x.id===this.activeGroupId);if(!group)throw Error('GROUP_NOT_FOUND');
@@ -234,14 +238,14 @@ export class ConnectedApplication {
     const generatedAt=new Date().toISOString();
     return{protocolVersion:1,groupId:this.activeGroupId,membershipId,generatedAt,expiresAt:new Date(Date.now()+30*24*3600_000).toISOString(),projection:{group:{id:group.id,name:group.name,currentExerciseLabel:group.currentExerciseLabel??null},member:{id:member.id,memberNumber:member.memberNumber??null,displayName:member.displayName,roles:member.roles,status:member.status},meeting:meeting?{id:meeting.id,title:meeting.title,status:meeting.status,scheduledAt:meeting.scheduledAt??meeting.openedAt}:null,receipts,statementTotal,loanDebts:debts,currentExercise:currentExercise?{id:currentExercise.id,label:String(currentExercise.data.label??currentExercise.title),state:String(currentExercise.data.completionState??''),openingCash:Number(currentExercise.data.openingCash??0)}:null,latestExerciseEnvelope:exerciseEnvelope,pendingLocalOperations:pending}};
   }
-  async prepareEcoBroadcast(input:{meetingId?:string;membershipIds?:string[];ttlMinutes?:number}={}):Promise<{bundle:EcoBroadcastBundle;frames:string[];included:string[];unpaired:string[]}>{
+  async prepareEcoBroadcast(input:{meetingId?:string;membershipIds?:string[];ttlMinutes?:number}={}):Promise<{bundle:EcoBroadcastBundle;frames:string[];targetedFrames:string[];included:string[];unpaired:string[]}>{
     if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');const all=await this.listMembers(),groups=await this.listGroups(),group=groups.find(x=>x.id===this.activeGroupId);if(!group)throw Error('GROUP_NOT_FOUND');const self=all.find(x=>x.userId===this.actorId),canManage=group.createdBy===this.actorId||Boolean(self?.roles?.some(r=>['founder','manager','admin','president','treasurer'].includes(String(r).toLowerCase())));if(!canManage)throw Error('FORBIDDEN_GROUP_MANAGEMENT');const members=all.filter(x=>x.status==='active'),requested=new Set((input.membershipIds?.length?input.membershipIds:members.map(x=>x.id)).map(String));if(requested.size>120)throw Error('BROADCAST_MEMBER_LIMIT_120');const encrypted=[],included:string[]=[],unpaired:string[]=[];
     for(const member of members.filter(x=>requested.has(x.id))){
       const key=await this.sovereign.relayKey(this.tenantId,this.activeGroupId,member.id);if(!key){unpaired.push(member.id);continue;}
       const capsule=await this.localMemberCapsule(member.id,input.meetingId),material:EcoRelayPairingMaterial={protocolVersion:1,membershipId:member.id,keyId:key.keyId,rawKey:key.rawKey,createdAt:key.createdAt};encrypted.push(await encryptMemberCapsule(capsule,material));included.push(member.id);
     }
     if(!encrypted.length)throw Error('BROADCAST_NO_PAIRED_MEMBERS');
-    const bundle=createBroadcastBundle(this.activeGroupId,encrypted,input.ttlMinutes??30),frames=await encodeBroadcastFrames(bundle,180);return{bundle,frames,included,unpaired};
+    const bundle=createBroadcastBundle(this.activeGroupId,encrypted,input.ttlMinutes??30),[frames,targetedFrames]=await Promise.all([encodeBroadcastFrames(bundle,180),encodeTargetedBroadcastFrames(bundle,165)]);return{bundle,frames,targetedFrames,included,unpaired};
   }
   async receiveEcoBroadcast(bundle:EcoBroadcastBundle,membershipId?:string):Promise<EcoMemberCapsule>{
     if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');if(bundle.groupId!==this.activeGroupId)throw Error('BROADCAST_WRONG_GROUP');
