@@ -12,7 +12,7 @@ import { simulatePeriodicLoan } from '../../loan-simulator/src/index.js';
 import { allocateSavingsYield, splitInterestPool, simulateWorkbookYieldPipeline, allocateCapitalAtWorkYield, allocateCapitalTimeYield, allocateAttributedProductiveYield, SAVINGS_YIELD_POLICY_PRESETS } from '../../savings-yield/src/index.js';
 import { buildFinancialRecap, buildSessionRecap, buildClosingCarryover } from '../../recap-engine/src/index.js';
 import { diagnoseGroup } from '../../group-doctor/src/index.js';
-import { IndexedDbSovereignStore, createEcoVault, openEcoVault, type SovereignSnapshot } from '../../offline-sovereign/src/index.js';
+import { IndexedDbSovereignStore, createEcoVault, openEcoVault, validateSovereignJournalEvents, type SovereignSnapshot } from '../../offline-sovereign/src/index.js';
 import { buildExerciseClosingPlan, buildExerciseCarryForwardSeed, type ExerciseClosingInput, type ExerciseClosingPlan } from '../../exercise/src/index.js';
 import { buildNumpadRubricCodes, parseEcoNumpad, type NumpadCode, type NumpadDraft } from '../../eco-numpad/src/index.js';
 import { createRelayPairingMaterial, encryptMemberCapsule, decryptMemberCapsule, createBroadcastBundle, encodeBroadcastFrames, encodeTargetedBroadcastFrames, type EcoMemberCapsule, type EcoRelayPairingMaterial, type EcoBroadcastBundle } from '../../relay/src/broadcast.js';
@@ -106,7 +106,12 @@ export class ConnectedApplication {
     // offline blocker. Mutations are never synthesized here.
     return path==='/api/v1/auth/session'||path.startsWith('/api/v1/');
   }
-  private offlineReadKey(path:string):string{return path==='/api/v1/auth/session'?'session:last':JSON.stringify([this.actorId,this.tenantId,this.activeGroupId??'',path]);}
+  private offlineReadKey(path:string):string{
+    if(path==='/api/v1/auth/session')return 'session:last';
+    const accountTenant=this.homeTenantId??this.tenantId;
+    if(path==='/api/v1/groups')return JSON.stringify([this.actorId,accountTenant,'ACCOUNT',path]);
+    return JSON.stringify([this.actorId,this.tenantId,this.activeGroupId??'',path]);
+  }
   private async cacheReadSnapshot<T>(path:string,body:T):Promise<void>{
     if(!IndexedDbReadSnapshotAdapter.supported()||!this.offlineReadAllowed(path))return;
     const session=path==='/api/v1/auth/session'?(body as any)?.account:undefined;
@@ -117,10 +122,21 @@ export class ConnectedApplication {
     if(typeof window!=='undefined'&&typeof CustomEvent!=='undefined')window.dispatchEvent(new CustomEvent('eco:offline-snapshot-used',{detail:{path,updatedAt}}));
   }
   private isOffline():boolean{return this.usingOfflineSnapshot||(typeof navigator!=='undefined'&&navigator.onLine===false);}
-  private async cached<T>(path:string):Promise<T|undefined>{try{return (await this.readSnapshots.get<T>(this.offlineReadKey(path)))?.body;}catch{return undefined;}}
+  private async cached<T>(path:string):Promise<T|undefined>{
+    try{
+      const exact=await this.readSnapshots.get<T>(this.offlineReadKey(path));if(exact)return exact.body;
+      if(path==='/api/v1/groups'){
+        const tenantId=this.homeTenantId??this.tenantId,rows=await this.readSnapshots.listForActorTenant(this.actorId,tenantId),byId=new Map<string,Group>();
+        for(const row of rows.filter(x=>x.path==='/api/v1/groups'))for(const group of Array.isArray(row.body)?row.body as Group[]:[])if(group?.id)byId.set(group.id,group);
+        if(byId.size){const body=[...byId.values()] as unknown as T;await this.readSnapshots.save({id:this.offlineReadKey(path),actorId:this.actorId,tenantId,path,body});return body;}
+      }
+    }catch{}
+    return undefined;
+  }
   private async saveCached<T>(path:string,body:T):Promise<void>{
     if(!IndexedDbReadSnapshotAdapter.supported())throw Error('DURABLE_STORAGE_REQUIRED');
-    await this.readSnapshots.save({id:this.offlineReadKey(path),actorId:this.actorId,tenantId:this.tenantId,path,body});
+    const tenantId=path==='/api/v1/groups'?(this.homeTenantId??this.tenantId):this.tenantId;
+    await this.readSnapshots.save({id:this.offlineReadKey(path),actorId:this.actorId,tenantId,path,body});
   }
   private async patchCachedArray<T>(path:string,updater:(items:T[])=>T[]):Promise<T[]>{
     const current=structuredClone(await this.cached<T[]>(path)??[]),next=updater(current);
@@ -204,7 +220,7 @@ export class ConnectedApplication {
     if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');const [members,groups]=await Promise.all([this.listMembers(),this.listGroups()]),member=members.find(x=>x.id===membershipId&&x.status==='active'),group=groups.find(x=>x.id===this.activeGroupId);if(!member||!group)throw Error('MEMBERSHIP_NOT_FOUND');const self=members.find(x=>x.userId===this.actorId),canManage=group.createdBy===this.actorId||Boolean(self?.roles?.some(r=>['founder','manager','admin','president','treasurer'].includes(String(r).toLowerCase())));if(!canManage)throw Error('FORBIDDEN_GROUP_MANAGEMENT');
     const existing=!rotate?await this.sovereign.relayKey(this.tenantId,this.activeGroupId,membershipId):undefined;
     const base=existing?{protocolVersion:1 as const,membershipId,keyId:existing.keyId,rawKey:existing.rawKey,createdAt:existing.createdAt}:await createRelayPairingMaterial(membershipId);
-    const material:EcoRelayPairingMaterial={...base,groupId:group.id,groupName:group.name,displayName:member.displayName,memberNumber:member.memberNumber};
+    const material:EcoRelayPairingMaterial={...base,groupId:group.id,groupName:group.name,displayName:member.displayName,memberNumber:member.memberNumber,groupAuthorityId:group.createdBy};
     if(!existing)await this.sovereign.saveRelayKey({tenantId:this.tenantId,groupId:this.activeGroupId,membershipId:material.membershipId,keyId:material.keyId,rawKey:material.rawKey,createdAt:material.createdAt});
     return material;
   }
@@ -212,7 +228,7 @@ export class ConnectedApplication {
     if(material.protocolVersion!==1||!material.membershipId||!material.keyId||!material.rawKey||!material.groupId)throw Error('INVALID_RELAY_PAIRING_MATERIAL');
     const groupId=material.groupId,groups=await this.cached<Group[]>('/api/v1/groups')??[],existingGroup=groups.find(x=>x.id===groupId);
     if(!existingGroup){
-      const stamp=material.createdAt||new Date().toISOString(),group:Group={id:groupId,tenantId:this.tenantId,name:material.groupName?.trim()||'Groupe Eco Relay',kind:'association',originMode:'IMPORT_EXISTING',governanceModel:'community',status:'active',createdBy:this.actorId,createdAt:stamp};
+      const stamp=material.createdAt||new Date().toISOString(),group:Group={id:groupId,tenantId:this.tenantId,name:material.groupName?.trim()||'Groupe Eco Relay',kind:'association',originMode:'IMPORT_EXISTING',governanceModel:'community',status:'active',createdBy:material.groupAuthorityId?.trim()||('relay_authority_'+groupId),createdAt:stamp};
       await this.saveCached('/api/v1/groups',[...groups,group]);this.groupTenants.set(groupId,this.tenantId);
     }
     this.selectGroup(groupId);
