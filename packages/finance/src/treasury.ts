@@ -59,8 +59,9 @@ export class TreasuryService{
       sourceType:'savings_plan',sourceId:plan.id,idempotencyKey:key,kind:'cash_out'});
   }
   async openingBalance(groupId:Id,input:{amount:number;currency?:string;note:string;idempotencyKey:string}){
-    amount(input.amount);const note=input.note.trim();if(!note)throw Error('NOTE_REQUIRED');const ctx=this.kernel.context.get();
-    const record=await this.save(groupId,'OPENING_BALANCE','Opening balance',{amount:input.amount,currency:input.currency??'XAF',note});
+    amount(input.amount);const note=input.note.trim();if(!note)throw Error('NOTE_REQUIRED');const ctx=this.kernel.context.get(),recordId='finance_opening_'+encodeURIComponent(JSON.stringify([ctx.tenantId,groupId,input.idempotencyKey]));
+    const existing=await this.repo.getWorkspaceRecord(ctx.tenantId,recordId),record=existing??await this.save(groupId,'OPENING_BALANCE','Opening balance',{amount:input.amount,currency:input.currency??'XAF',note},recordId);
+    if(existing&&(Number(existing.data.amount)!==input.amount||String(existing.data.note??'')!==note))throw Error('IDEMPOTENCY_CONFLICT');
     const entry=await this.ledger.recordCashMovement({tenantId:ctx.tenantId,groupId,amount:input.amount,currency:input.currency??'XAF',direction:'in',
       counterAccountCode:'OPENING_EQUITY',counterAccountType:'equity',descriptionCode:'LEDGER_OPENING_BALANCE',sourceType:'opening_balance',
       sourceId:record.id,idempotencyKey:input.idempotencyKey,kind:'opening_balance'});
