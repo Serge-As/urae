@@ -64,8 +64,13 @@ const registerGroupPolicies = (kernel: PlatformKernel): void => {
   kernel.policy.register('group:manage', (ctx, input) => {
     const groupId = (input as { groupId?: string } | undefined)?.groupId;
     const allowed = Boolean(groupId && (ctx.activeGroupId === groupId || !ctx.activeGroupId) &&
-      (ctx.groupRoles.includes('manager') || ctx.groupRoles.includes('founder') || ctx.mandateIds.length > 0));
+      (ctx.groupRoles.includes('manager') || ctx.groupRoles.includes('founder')));
     return { allowed, reason: allowed ? 'GROUP_SCOPE_AND_ROLE' : 'FORBIDDEN_SCOPE' };
+  });
+  kernel.policy.register('mandate:right',(ctx,input)=>{
+    const request=input as {groupId?:string;permission?:string}|undefined,groupId=request?.groupId,permission=String(request?.permission??'').toUpperCase(),at=Date.now();
+    const grant=(ctx.mandateGrants??[]).find(g=>g.groupId===groupId&&g.permissions.includes(permission)&&Date.parse(g.startsAt)<=at&&(!g.endsAt||Date.parse(g.endsAt)>at));
+    return{allowed:Boolean(grant),reason:grant?'MANDATE_RIGHT_ALLOWED':'MANDATE_RIGHT_FORBIDDEN'};
   });
 };
 
