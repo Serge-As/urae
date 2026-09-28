@@ -130,7 +130,7 @@ export function matchVoiceCandidate(query:string,candidates:VoiceMatchCandidate[
   return{status:best.score>=.98?'EXACT':'FUZZY',candidate:best.candidate,score:best.score,alternatives:scored.slice(1,4).map(x=>x.candidate)};
 }
 
-const escapeRegExp=(value:string)=>value.replace(/[|\\{}()[\]^$+*?.-]/g,'\\$&');
+const escapeRegExp=(value:string)=>value.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
 
 export function matchVoiceMention(text:string,candidates:VoiceMatchCandidate[]):VoiceMatchResult{
   const hay=' '+normalizeVoiceText(sanitizeVoiceFinancialTranscript(text))+' ',hits=new Map<string,{candidate:VoiceMatchCandidate;length:number}>();
