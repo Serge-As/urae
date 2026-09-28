@@ -154,6 +154,9 @@ export class ConnectedApplication {
     const bytes=new TextEncoder().encode(value),digest=await crypto.subtle.digest('SHA-256',bytes);
     return[...new Uint8Array(digest)].map(x=>x.toString(16).padStart(2,'0')).join('');
   }
+  private localDeviceId():string{
+    const fallback='device_'+this.actorId;try{let id=localStorage.getItem('tontine.deviceId');if(!id){id='device_'+crypto.randomUUID();localStorage.setItem('tontine.deviceId',id);}return id;}catch{return fallback;}
+  }
   private async patchCachedFinancialNotice(membershipId:string,noticeId:string,patch:Record<string,unknown>):Promise<any>{
     if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');
     const path=`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/members/${encodeURIComponent(membershipId)}/financial-notices`;
@@ -244,16 +247,19 @@ export class ConnectedApplication {
     const key=await this.sovereign.relayKey(this.tenantId,this.activeGroupId,own.id);return key?{membershipId:own.id,keyId:key.keyId}:undefined;
   }
   async localMemberCapsule(membershipId:string,meetingId?:string):Promise<EcoMemberCapsule>{
-    if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');const [groups,members,rubrics,meetings,ledgerState,loans,exercises]=await Promise.all([this.listGroups(),this.listMembers(),this.listRubrics(),this.listMeetings(),this.ledger(),this.listCompletion('LOAN'),this.exercises()]);
-    const member=members.find(x=>x.id===membershipId&&x.status!=='left');if(!member)throw Error('MEMBERSHIP_NOT_FOUND');const group=groups.find(x=>x.id===this.activeGroupId);if(!group)throw Error('GROUP_NOT_FOUND');
+    if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');
+    const groupId=this.activeGroupId;
+    const [groups,members,rubrics,meetings,ledgerState,loans,exercises,journal]=await Promise.all([this.listGroups(),this.listMembers(),this.listRubrics(),this.listMeetings(),this.ledger(),this.listCompletion('LOAN'),this.exercises(),this.sovereign.list(this.tenantId,groupId)]);
+    const member=members.find(x=>x.id===membershipId&&x.status!=='left');if(!member)throw Error('MEMBERSHIP_NOT_FOUND');const group=groups.find(x=>x.id===groupId);if(!group)throw Error('GROUP_NOT_FOUND');
     const rubricNames=new Map(rubrics.map(x=>[x.id,x.name])),meeting=meetingId?meetings.find(x=>x.id===meetingId):meetings.slice().sort((a,b)=>String(b.scheduledAt??b.openedAt).localeCompare(String(a.scheduledAt??a.openedAt)))[0];
     const receipts=(ledgerState.receipts??[]).filter((x:any)=>x.membershipId===membershipId&&(!meeting||x.meetingId===meeting.id)).map((x:any)=>({receiptId:x.id,meetingId:x.meetingId??null,rubricId:x.rubricId??null,rubricName:x.rubricId?rubricNames.get(x.rubricId)??'Rubrique':'Sans rubrique',netAmount:Number(x.netAmount??x.amount?.amount??0),currency:String(x.amount?.currency??'XAF'),receivedAt:x.receivedAt,localPending:Boolean(x.localPending)}));
     const allReceipts=(ledgerState.receipts??[]).filter((x:any)=>x.membershipId===membershipId),statementTotal=allReceipts.reduce((n:number,x:any)=>n+Number(x.netAmount??x.amount?.amount??0),0);
     const debts=loans.filter(x=>String(x.data.borrowerMembershipId??'')===membershipId&&['DISBURSED','REPAYING'].includes(String(x.data.completionState??''))).map(x=>({loanId:x.id,title:x.title,principal:Number(x.data.outstandingPrincipal??0),interest:Number(x.data.unpaidInterest??0),totalDebt:Number(x.data.outstandingPrincipal??0)+Number(x.data.unpaidInterest??0)})).filter(x=>x.totalDebt>0);
-    const currentExercise=exercises.find(x=>['OPEN','CLOSING'].includes(String(x.data.completionState)))??exercises.at(-1),latestClosed=exercises.filter(x=>['CLOSED','CARRIED_FORWARD'].includes(String(x.data.completionState))).sort((a,b)=>String(b.updatedAt).localeCompare(String(a.updatedAt)))[0],pending=this.outbox.list().filter(x=>{const p=x.payload as any;return String(p.groupId??'')===this.activeGroupId&&String(p.membershipId??'')===membershipId&&!['CONFIRMED','CANCELLED','CONFLICT'].includes(x.status);}).map(x=>({id:x.id,type:x.type,status:x.status,createdAt:x.createdAt}));
+    const currentExercise=exercises.find(x=>['OPEN','CLOSING'].includes(String(x.data.completionState)))??exercises.at(-1),latestClosed=exercises.filter(x=>['CLOSED','CARRIED_FORWARD'].includes(String(x.data.completionState))).sort((a,b)=>String(b.updatedAt).localeCompare(String(a.updatedAt)))[0],pending=this.outbox.list().filter(x=>{const p=x.payload as any;return String(p.groupId??'')===groupId&&String(p.membershipId??'')===membershipId&&!['CONFIRMED','CANCELLED','CONFLICT'].includes(x.status);}).map(x=>({id:x.id,type:x.type,status:x.status,createdAt:x.createdAt}));
     let exerciseEnvelope:any=null;if(latestClosed?.data.closingPlanJson)try{const plan=JSON.parse(String(latestClosed.data.closingPlanJson));exerciseEnvelope=(plan.members??[]).find((x:any)=>x.membershipId===membershipId)??null;}catch{}
-    const generatedAt=new Date().toISOString();
-    return{protocolVersion:1,groupId:this.activeGroupId,membershipId,generatedAt,expiresAt:new Date(Date.now()+30*24*3600_000).toISOString(),projection:{group:{id:group.id,name:group.name,currentExerciseLabel:group.currentExerciseLabel??null},member:{id:member.id,memberNumber:member.memberNumber??null,displayName:member.displayName,roles:member.roles,status:member.status},meeting:meeting?{id:meeting.id,title:meeting.title,status:meeting.status,scheduledAt:meeting.scheduledAt??meeting.openedAt}:null,receipts,statementTotal,loanDebts:debts,currentExercise:currentExercise?{id:currentExercise.id,label:String(currentExercise.data.label??currentExercise.title),state:String(currentExercise.data.completionState??''),openingCash:Number(currentExercise.data.openingCash??0)}:null,latestExerciseEnvelope:exerciseEnvelope,pendingLocalOperations:pending}};
+    const projection={group:{id:group.id,name:group.name,currentExerciseLabel:group.currentExerciseLabel??null},member:{id:member.id,memberNumber:member.memberNumber??null,displayName:member.displayName,roles:member.roles,status:member.status},meeting:meeting?{id:meeting.id,title:meeting.title,status:meeting.status,scheduledAt:meeting.scheduledAt??meeting.openedAt}:null,receipts,statementTotal,loanDebts:debts,currentExercise:currentExercise?{id:currentExercise.id,label:String(currentExercise.data.label??currentExercise.title),state:String(currentExercise.data.completionState??''),openingCash:Number(currentExercise.data.openingCash??0)}:null,latestExerciseEnvelope:exerciseEnvelope,pendingLocalOperations:pending};
+    const generatedAt=new Date().toISOString(),projectionVersion=journal.at(-1)?.sequence??0,projectionDigest=await this.sha256Hex(JSON.stringify(projection));
+    return{protocolVersion:1,groupId,membershipId,generatedAt,expiresAt:new Date(Date.now()+30*24*3600_000).toISOString(),projection,schemaVersion:1,projectionVersion,sourceAuthorityId:this.actorId,sourceDeviceId:this.localDeviceId(),projectionDigest};
   }
   async prepareEcoBroadcast(input:{meetingId?:string;membershipIds?:string[];ttlMinutes?:number}={}):Promise<{bundle:EcoBroadcastBundle;frames:string[];targetedFrames:string[];included:string[];unpaired:string[]}>{
     if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');const all=await this.listMembers(),groups=await this.listGroups(),group=groups.find(x=>x.id===this.activeGroupId);if(!group)throw Error('GROUP_NOT_FOUND');const self=all.find(x=>x.userId===this.actorId),canManage=group.createdBy===this.actorId||Boolean(self?.roles?.some(r=>['founder','manager','admin','president','treasurer'].includes(String(r).toLowerCase())));if(!canManage)throw Error('FORBIDDEN_GROUP_MANAGEMENT');const members=all.filter(x=>x.status==='active'),requested=new Set((input.membershipIds?.length?input.membershipIds:members.map(x=>x.id)).map(String));if(requested.size>120)throw Error('BROADCAST_MEMBER_LIMIT_120');const encrypted=[],included:string[]=[],unpaired:string[]=[];
@@ -270,7 +276,17 @@ export class ConnectedApplication {
     const key=await this.sovereign.relayKey(this.tenantId,this.activeGroupId,own.id);if(!key)throw Error('RELAY_PAIRING_REQUIRED');
     const encrypted=bundle.capsules.find(x=>x.membershipId===own.id);if(!encrypted)throw Error('BROADCAST_NO_CAPSULE_FOR_MEMBER');
     const material:EcoRelayPairingMaterial={protocolVersion:1,membershipId:own.id,keyId:key.keyId,rawKey:key.rawKey,createdAt:key.createdAt},capsule=await decryptMemberCapsule(bundle.groupId,encrypted,material,bundle.expiresAt);
-    await this.saveCached('/api/v1/relay/member-capsule/'+encodeURIComponent(bundle.groupId)+'/'+encodeURIComponent(own.id),capsule);return capsule;
+    const path='/api/v1/relay/member-capsule/'+encodeURIComponent(bundle.groupId)+'/'+encodeURIComponent(own.id),seenPath='/api/v1/relay/seen-transfers/'+encodeURIComponent(bundle.groupId)+'/'+encodeURIComponent(own.id),existing=await this.cached<EcoMemberCapsule>(path),seen=await this.cached<string[]>(seenPath)??[];
+    const incomingDigest=capsule.projectionDigest??await this.sha256Hex(JSON.stringify(capsule.projection)),incomingVersion=Number(capsule.projectionVersion??0),existingDigest=existing?(existing.projectionDigest??await this.sha256Hex(JSON.stringify(existing.projection))):undefined,existingVersion=Number(existing?.projectionVersion??0);
+    if(existing){
+      if(incomingVersion<existingVersion)throw Error('BROADCAST_STALE_PROJECTION');
+      if(incomingVersion===existingVersion&&incomingDigest!==existingDigest)throw Error('BROADCAST_PROJECTION_CONFLICT');
+      if((incomingVersion===existingVersion&&incomingDigest===existingDigest)||seen.includes(bundle.transferId))return existing;
+    }
+    const normalized:EcoMemberCapsule={...capsule,schemaVersion:1,projectionVersion:incomingVersion,projectionDigest:incomingDigest};
+    await this.saveCached(path,normalized);await this.saveCached(seenPath,[...seen.filter(x=>x!==bundle.transferId).slice(-255),bundle.transferId]);
+    if(typeof window!=='undefined'&&typeof CustomEvent!=='undefined')window.dispatchEvent(new CustomEvent('eco:member-capsule-updated',{detail:{groupId:bundle.groupId,membershipId:own.id,projectionVersion:incomingVersion,transferId:bundle.transferId}}));
+    return normalized;
   }
   async receivedMemberCapsule(membershipId:string):Promise<EcoMemberCapsule|undefined>{
     if(!this.activeGroupId)return undefined;return this.cached('/api/v1/relay/member-capsule/'+encodeURIComponent(this.activeGroupId)+'/'+encodeURIComponent(membershipId));
