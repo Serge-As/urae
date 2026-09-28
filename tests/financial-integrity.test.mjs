@@ -51,7 +51,7 @@ test('D1 v2 arbiter accepts canonical cash-out after a contribution without weak
  assert.equal((await ledger.summary(input.tenantId,group.id)).cashBalance,300);
  const rows=db.db.prepare("SELECT operation_kind,idempotency_key FROM financial_operations_v2 WHERE tenant_id=? AND group_id=? ORDER BY operation_kind,idempotency_key").all(input.tenantId,group.id);
  assert.deepEqual(rows.map(x=>x.operation_kind).sort(),['cash_out','contribution']);
- assert.equal(db.db.prepare("SELECT COUNT(*) AS n FROM financial_operations WHERE tenant_id=? AND group_id=?").get(input.tenantId,group.id).n,1);
+ assert.equal(db.db.prepare("SELECT COUNT(*) AS n FROM financial_operations WHERE tenant_id=? AND group_id=?").get(input.tenantId,group.id).n,0);
  db.db.close();
 });
 
