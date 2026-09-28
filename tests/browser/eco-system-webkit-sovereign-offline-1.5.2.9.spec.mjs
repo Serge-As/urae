@@ -23,19 +23,19 @@ test('WebKit shell keeps sovereign offline and QR decoder assets cached for airp
   await page.goto(base+'/',{waitUntil:'networkidle'});
   await page.evaluate(async()=>{await navigator.serviceWorker.register('/sw.js',{scope:'/',updateViaCache:'none'});});
   await expect.poll(async()=>page.evaluate(async()=>{
-    const names=await caches.keys(),name=names.find(x=>x.includes('v1529-sovereign-offline'));if(!name)return false;
+    const names=await caches.keys(),name=names.find(x=>x.includes('v1529-neural-closure'));if(!name)return false;
     const c=await caches.open(name);
     return Boolean(await c.match('/__eco_release_ready__'));
   }),{timeout:20000}).toBe(true);
   const hits=await page.evaluate(async()=>{
-    const name=(await caches.keys()).find(x=>x.includes('v1529-sovereign-offline')),c=await caches.open(name);
+    const name=(await caches.keys()).find(x=>x.includes('v1529-neural-closure')),c=await caches.open(name);
     const paths=['/src/sovereign-offline-ui.js','/src/vendor/qr-scanner.min.js','/src/vendor/qr-scanner-worker.min.js','/packages/offline-sovereign/src/index.js','/packages/exercise/src/index.js','/packages/relay/src/broadcast.js','/packages/relay/src/local-room.js','/packages/eco-numpad/src/index.js'];
     return Promise.all(paths.map(async p=>Boolean(await c.match(p))));
   });
   expect(hits).toEqual([true,true,true,true,true,true,true,true]);
   await context.setOffline(true);
   const offline=await page.evaluate(async()=>{
-    const name=(await caches.keys()).find(x=>x.includes('v1529-sovereign-offline')),c=await caches.open(name);
+    const name=(await caches.keys()).find(x=>x.includes('v1529-neural-closure')),c=await caches.open(name);
     const paths=['/index.html','/src/sovereign-offline-ui.js','/src/vendor/qr-scanner-worker.min.js','/packages/relay/src/local-room.js','/packages/eco-numpad/src/index.js'];
     const rows=[];
     for(const path of paths){
