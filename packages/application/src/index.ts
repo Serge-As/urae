@@ -1377,10 +1377,10 @@ export class ConnectedApplication {
   }
   async createHistoricalIdentityClaim(input:{historicalReference:string;evidenceReference:string;claimedMembershipId?:string;note?:string}):Promise<CompletionRecord>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/identity-claims',{method:'POST',body:JSON.stringify(input)});}
   async exercises():Promise<CompletionRecord[]>{return this.listCompletion('GROUP_EXERCISE');}
-  async openExercise(input:{label:string;openingCash:number;startsAt?:string;previousExerciseId?:string;memberOpeningPositions?:unknown[];retainedFunds?:unknown[]}):Promise<CompletionRecord>{
+  async openExercise(input:{label:string;openingCash:number;startsAt?:string;previousExerciseId?:string;memberOpeningPositions?:unknown[];retainedFunds?:unknown[];carryManifestId?:string}):Promise<CompletionRecord>{
     if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');const label=input.label.trim();if(!label)throw Error('EXERCISE_LABEL_REQUIRED');if(!Number.isSafeInteger(input.openingCash)||input.openingCash<0)throw Error('INVALID_OPENING_CASH');
     const history=await this.exercises(),existing=history.find(x=>['PREPARED','OPEN','CLOSING'].includes(String(x.data.completionState)));if(existing)throw Error('EXERCISE_ALREADY_OPEN');
-    let record=await this.createCompletion('GROUP_EXERCISE',{title:label,data:{label,openingCash:input.openingCash,startsAt:input.startsAt??new Date().toISOString(),previousExerciseId:input.previousExerciseId??null,memberOpeningPositionsJson:JSON.stringify(input.memberOpeningPositions??[]),retainedFundsJson:JSON.stringify(input.retainedFunds??[])}});
+    let record=await this.createCompletion('GROUP_EXERCISE',{title:label,data:{label,openingCash:input.openingCash,startsAt:input.startsAt??new Date().toISOString(),previousExerciseId:input.previousExerciseId??null,carryManifestId:input.carryManifestId??null,memberOpeningPositionsJson:JSON.stringify(input.memberOpeningPositions??[]),retainedFundsJson:JSON.stringify(input.retainedFunds??[])}});
     record=await this.transitionCompletion(record.id,'OPEN',Number(record.data.completionVersion??1),{openedAt:new Date().toISOString()});
     if(history.length===0&&input.openingCash>0)await this.recordOpeningBalance(input.openingCash,'Trésorerie d’ouverture · '+label);
     const groups=await this.cached<Group[]>('/api/v1/groups')??[],group=groups.find(x=>x.id===this.activeGroupId);if(group){const next={...group,currentExerciseLabel:label};await this.saveCached('/api/v1/groups',groups.map(x=>x.id===group.id?next:x));}
@@ -1400,11 +1400,17 @@ export class ConnectedApplication {
     return this.transitionCompletion(exercise.id,'CLOSED',Number(exercise.data.completionVersion??0),{closedAt:new Date().toISOString(),closedBy:this.actorId});
   }
   async carryForwardExercise(exerciseId:string,nextLabel:string):Promise<{source:CompletionRecord;next:CompletionRecord;seed:any}>{
-    if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');const exercise=(await this.exercises()).find(x=>x.id===exerciseId);if(!exercise)throw Error('EXERCISE_NOT_FOUND');if(String(exercise.data.completionState)!=='CLOSED')throw Error('EXERCISE_NOT_CLOSED');
+    if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');const history=await this.exercises(),exercise=history.find(x=>x.id===exerciseId);if(!exercise)throw Error('EXERCISE_NOT_FOUND');
     let plan:ExerciseClosingPlan;try{plan=JSON.parse(String(exercise.data.closingPlanJson??''));}catch{throw Error('EXERCISE_CLOSING_PLAN_REQUIRED');}
-    const seed=buildExerciseCarryForwardSeed(exercise.id,nextLabel,plan);
-    const source=await this.transitionCompletion(exercise.id,'CARRIED_FORWARD',Number(exercise.data.completionVersion??0),{carriedForwardAt:new Date().toISOString(),nextExerciseLabel:nextLabel,nextExerciseOpeningCash:seed.openingCash});
-    const next=await this.openExercise({label:nextLabel,openingCash:seed.openingCash,previousExerciseId:exercise.id,memberOpeningPositions:seed.memberOpeningPositions,retainedFunds:seed.retainedFunds});
+    const seed=buildExerciseCarryForwardSeed(exercise.id,nextLabel,plan),existingNext=history.find(x=>String(x.data.previousExerciseId??'')===exercise.id&&String(x.data.carryManifestId??'')===seed.carryManifestId);
+    if(String(exercise.data.completionState)==='CARRIED_FORWARD'){
+      const next=existingNext??history.find(x=>x.id===String(exercise.data.successorExerciseId??''));if(!next)throw Error('EXERCISE_SUCCESSOR_MISSING');return{source:exercise,next,seed};
+    }
+    if(String(exercise.data.completionState)!=='CLOSED')throw Error('EXERCISE_NOT_CLOSED');
+    // Reserve/open the successor first. If interruption occurs here, retry detects it by previousExerciseId+carryManifestId.
+    let next=existingNext;
+    if(!next)next=await this.openExercise({label:nextLabel,openingCash:seed.openingCash,previousExerciseId:exercise.id,memberOpeningPositions:seed.memberOpeningPositions,retainedFunds:seed.retainedFunds,carryManifestId:seed.carryManifestId} as any);
+    const source=await this.transitionCompletion(exercise.id,'CARRIED_FORWARD',Number(exercise.data.completionVersion??0),{carriedForwardAt:new Date().toISOString(),nextExerciseLabel:nextLabel,nextExerciseOpeningCash:seed.openingCash,carryManifestId:seed.carryManifestId,successorExerciseId:next.id});
     return{source,next,seed};
   }
   async createTontineCycle(input:{rubricId:string;name:string;rounds:number;potsPerRound:number;nominalPotAmount?:number}):Promise<CompletionRecord>{
