@@ -1,0 +1,53 @@
+name: Eco-System 1.5.2.9 — Sovereign Offline + iOS Qualification
+
+on:
+  push:
+    branches:
+      - 'feat/sovereign-offline-cycle-broadcast-qr-20260928'
+      - 'fix/1.5.2.6-field-persistence-pc-mobile-20260925'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: eco-system-1-5-2-9-sovereign-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  qualify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - name: Full governed CI
+        run: npm run ci
+      - name: Build exact public shell
+        run: npm run build
+      - name: Install WebKit runner
+        run: |
+          npm install --no-save --ignore-scripts @playwright/test@1.55.0
+          npx playwright install --with-deps webkit
+      - name: Start local Eco-System
+        run: |
+          OPEN_BROWSER=0 PORT=4173 node scripts/dev-server.mjs > /tmp/eco-sovereign-webkit.log 2>&1 &
+          for i in {1..30}; do curl -fsS http://127.0.0.1:4173/health >/dev/null && exit 0; sleep 1; done
+          cat /tmp/eco-sovereign-webkit.log
+          exit 1
+      - name: WebKit sovereign offline qualification
+        run: npx playwright test tests/browser/eco-system-webkit-sovereign-offline-1.5.2.9.spec.mjs --browser=webkit --workers=1
+      - name: Upload WebKit report on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: sovereign-offline-webkit-${{ github.sha }}
+          path: |
+            playwright-report/
+            test-results/
+            /tmp/eco-sovereign-webkit.log
+          if-no-files-found: ignore
