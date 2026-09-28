@@ -23,7 +23,7 @@ export function mountSovereignOfflineUI({app,getMembers=()=>[],getMeetings=()=>[
   const stopStream=()=>{if(timer){clearInterval(timer);timer=null;}};
   const stopCamera=()=>{if(qrScanner){try{qrScanner.stop();qrScanner.destroy();}catch{}qrScanner=null;}video.srcObject=null;};
   const stopLocalSignal=()=>{if(localSignalTimer){clearInterval(localSignalTimer);localSignalTimer=null;}};
-  const stopLocalCamera=()=>{if(localQrScanner){try{localQrScanner.stop();localQrScanner.destroy();}catch{}localQrScanner=null;}if(localVideo)localVideo.srcObject=null;};
+  const stopLocalCamera=()=>{if(localQrScanner){try{localQrScanner.stop();localQrScanner.destroy();}catch{}localQrScanner=null;}if(lrVideo)lrVideo.srcObject=null;};
 
   const status=el('p','Eco Relay prêt. Les données financières restent gouvernées par le noyau canonique.','truth-notice');
   const pairing=el('section',undefined,'item'),ph=el('h3','1 · Appairer chaque membre une seule fois'),pairNote=el('p','Le QR d’appairage contient la clé privée de ce membre. Affichez-le seulement devant la personne concernée, de près, puis masquez-le.','hint');
