@@ -654,6 +654,18 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
     if(businessMandateApprove&&request.method==='POST')return json(await businessStudio.approveMandate(businessMandateApprove[1]!),200,cors);
     const businessMandate=url.pathname.match(/^\/api\/v1\/business\/mandates\/([^/]+)\/(activate|end)$/);
     if(businessMandate&&request.method==='POST'){const body=await readJson<any>(request);return json(businessMandate[2]==='activate'?await businessStudio.activateMandate(businessMandate[1]!):await businessStudio.endMandate(businessMandate[1]!,String(body.reason??'')),200,cors);}
+    const delegatedReport=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/mandate-report$/);
+    if(delegatedReport&&request.method==='GET'){
+      const groupId=delegatedReport[1]!,decision=kernel.policy.evaluate('mandate:right',ctx,{groupId,permission:'REPORTING'});if(!decision.allowed)throw Error(decision.reason);
+      const group=await repo.getGroup(ctx.tenantId,groupId);if(!group)throw Error('GROUP_NOT_FOUND');
+      const [members,groupMeetings,summary]=await Promise.all([repo.listMemberships(ctx.tenantId,groupId),repo.listMeetings(ctx.tenantId,groupId),ledger.summary(ctx.tenantId,groupId)]);
+      return json({group:{id:group.id,name:group.name},computedAt:new Date().toISOString(),sourceVersion:summary.entryCount,scope:'GROUP_AGGREGATE',availability:'AVAILABLE',members:{active:members.filter(x=>x.status==='active').length},meetings:{open:groupMeetings.filter(x=>x.status==='open').length,closed:groupMeetings.filter(x=>x.status==='closed').length},ledger:{currency:summary.currency,cashBalance:summary.cashBalance,entryCount:summary.entryCount},mandateRight:'REPORTING'},200,cors);
+    }
+    const delegatedCommunication=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/mandate-communication-drafts$/);
+    if(delegatedCommunication&&request.method==='POST'){
+      const groupId=delegatedCommunication[1]!,decision=kernel.policy.evaluate('mandate:right',ctx,{groupId,permission:'COMMUNICATION_SUPPORT'});if(!decision.allowed)throw Error(decision.reason);const body=await readJson<any>(request),title=String(body.title??'').trim().slice(0,160),message=String(body.message??'').trim().slice(0,1500);if(!title||!message)throw Error('MANDATE_COMMUNICATION_REQUIRED');
+      const at=new Date().toISOString(),record={id:makeId('mandate_comm'),tenantId:ctx.tenantId,groupId,moduleId:'MANDATE.COMMUNICATION_DRAFT',title,summary:message,status:'ACTIVE' as const,tags:['mandate','communication-support','manager-review-required'],data:{mandateIdsJson:JSON.stringify(ctx.mandateIds),requiresManagerPublication:true,financialEffect:false},createdBy:ctx.actorId,createdAt:at,updatedAt:at};await repo.saveWorkspaceRecord(record);await repo.saveAudit(kernel.audit.append({tenantId:ctx.tenantId,actorId:ctx.actorId,action:'MANDATE_COMMUNICATION_DRAFT_CREATED',targetType:'group',targetId:groupId,after:{recordId:record.id},requestId:ctx.requestId}));return json(record,201,cors);
+    }
     if(request.method==='POST'&&url.pathname==='/api/v1/business/clients'){const body=await readJson<any>(request);return json(await businessStudio.createClient(body),201,cors);}
     const businessClient=url.pathname.match(/^\/api\/v1\/business\/clients\/([^/]+)\/state$/);
     if(businessClient&&request.method==='POST'){const body=await readJson<any>(request);return json(await businessStudio.setClientState(businessClient[1]!,String(body.state??'PROSPECT') as any),200,cors);}
