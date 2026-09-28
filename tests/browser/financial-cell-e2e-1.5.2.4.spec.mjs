@@ -104,10 +104,16 @@ test('real financial matrix validates click, Enter, closed-session first entry a
   },{membershipId:ids.membershipId,rubricId:ids.rubricIds[0],meetingId:ids.meetingId});
   if(beforeClick.value!=='1000'||!beforeClick.hasState)throw new Error('INPUT_REPLACED_BEFORE_CLICK '+JSON.stringify(beforeClick));
   await clickCell.locator('.cell-validate').click();
-  await page.waitForTimeout(1000);
-  const firstUi=await moneyValue(cell(ids.rubricIds[0]));
-  const firstLedger=await ledgerCellTotal(page,{...ids,rubricId:ids.rubricIds[0]});
-  if(firstUi!==1000||firstLedger!==1000){
+  let firstUi=0,firstLedger=0,firstReady=false;
+  try{
+    await expect.poll(async()=>{
+      firstUi=await moneyValue(cell(ids.rubricIds[0]));
+      firstLedger=await ledgerCellTotal(page,{...ids,rubricId:ids.rubricIds[0]});
+      return firstUi===1000&&firstLedger===1000;
+    },{timeout:10_000}).toBe(true);
+    firstReady=true;
+  }catch{}
+  if(!firstReady){
     const diagnostics=await page.evaluate(({membershipId,rubricId,meetingId})=>({
       error:document.querySelector('#errorBox')?.textContent??'',
       cell:document.querySelector('.matrix-cell-entry[data-membership-id="'+membershipId+'"][data-rubric-id="'+rubricId+'"][data-meeting-id="'+meetingId+'"]')?.textContent??'',
