@@ -199,12 +199,12 @@ test('loan is a negative member position and simulation is available to member a
   assert.match(app,/loanHistory/);
 });
 
-test('stale cached html recovers to 1.5.2.8 while preserving 1.5.2.7 as rollback shell',()=>{
+test('stale cached html recovers to 1.5.2.9 while preserving 1.5.2.8 as rollback shell',()=>{
   assert.match(main,/document\.querySelector\('#claimLocalAccountBtn'\)\?\.addEventListener/);
   assert.doesNotMatch(main,/\$\('#claimLocalAccountBtn'\)\.addEventListener/);
-  assert.match(sw,/eco-system-v1527-live-completion-20260927/);
-  assert.match(html,/ECO-SYSTEM · 1\.5\.2\.8/);
-  assert.match(html,/main\.js\?v=1528/);
-  assert.match(sw,/PREVIOUS_CACHE = 'eco-system-v1527-live-completion-20260927'/);
+  assert.match(sw,/eco-system-v1529-sovereign-offline-20260928/);
+  assert.match(html,/ECO-SYSTEM · 1\.5\.2\.9/);
+  assert.match(html,/main\.js\?v=1529/);
+  assert.match(sw,/PREVIOUS_CACHE = 'eco-system-v1528-geo-directory-20260928'/);
   assert.match(sw,/Online navigation is network-first/);
 });
