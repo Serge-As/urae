@@ -17,7 +17,7 @@ const yieldRows=draft=>{
 };
 
 export function mountSovereignOfflineUI({app,getMembers=()=>[],getMeetings=()=>[],isManager=()=>false,notify=()=>{},showError=console.error}={}){
-  const relay=document.getElementById('ecoRelayWorkspace'),local=document.getElementById('ecoLocalWorkspace');if(!relay||!local)return{refresh:async()=>{}};
+  const relay=document.getElementById('ecoRelaySovereignWorkspace'),local=document.getElementById('ecoLocalSovereignWorkspace');if(!relay||!local)return{refresh:async()=>{}};
   let frames=[],frameIndex=0,timer=null,currentBundle=null,cameraStream=null,scanTimer=null,receiver=new EcoBroadcastReceiver();
 
   const stopStream=()=>{if(timer){clearInterval(timer);timer=null;}};
