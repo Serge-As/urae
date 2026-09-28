@@ -147,7 +147,7 @@ export class ValueNetworkService{
       if(ageDays<=7)explanations.push('Offre actualisée récemment');
       if(o.data.sponsored===true)warnings.push('Offre sponsorisée : le sponsoring ne modifie pas le score de confiance');
 
-      return{offer:o,eligible,hardReasons,warnings,explanations,baseScore,landedTotal,landedUnitCost,reliability,freshness,priceKnown,sponsored:o.data.sponsored===true,policyVersion:MATCH_POLICY_VERSION};
+      return{offer:o,eligible,hardReasons,warnings,explanations,baseScore,merchandiseCost,landedTotal,landedUnitCost,reliability,freshness,priceKnown,sponsored:o.data.sponsored===true,policyVersion:MATCH_POLICY_VERSION};
     });
 
     const eligible=evaluated.filter(x=>x.eligible),knownCosts=eligible.map(x=>x.landedTotal).filter((x):x is number=>x!==null),minCost=knownCosts.length?Math.min(...knownCosts):null;
