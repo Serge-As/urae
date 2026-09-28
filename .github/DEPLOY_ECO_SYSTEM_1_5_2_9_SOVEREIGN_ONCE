@@ -1,0 +1,6 @@
+release: 1.5.2.9-sovereign-offline
+source_merge: 05176657dfa2801a676ec656ea54fc62591482aa
+qualified_ios_run: 36377291009
+qualified_webkit_smoke: 36377291065
+qualified_financial_e2e: 36377290960
+requested_at: 2026-09-28
