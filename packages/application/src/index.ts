@@ -439,7 +439,7 @@ export class ConnectedApplication {
     this.groupTenants.set(groupId,this.tenantId);await this.saveCached('/api/v1/groups',[...existingGroups.filter(g=>g.id!==groupId),group]);this.selectGroup(groupId);
     await this.saveCached('/api/v1/groups',[...existingGroups.filter(g=>g.id!==groupId),group]);
     await this.saveCached(`/api/v1/groups/${encodeURIComponent(groupId)}/operating-policy`,group.operatingPolicy??starterGroupOperatingPolicy());
-    const owner:MembershipView={id:`membership_owner_${groupId}`,tenantId:this.tenantId,groupId,userId:this.actorId,roles:['founder','manager'],status:'active',joinedAt:group.createdAt,displayName:this.displayName};
+    const owner:MembershipView={id:`membership_owner_${groupId}`,tenantId:this.tenantId,groupId,userId:this.actorId,memberNumber:1,roles:['founder','manager'],status:'active',joinedAt:group.createdAt,displayName:this.displayName};
     await this.saveCached(`/api/v1/groups/${encodeURIComponent(groupId)}/members`,[owner]);
     await this.saveCached(`/api/v1/groups/${encodeURIComponent(groupId)}/meetings`,[]);
     const localRubrics:RubricDefinition[]=[];
@@ -459,7 +459,8 @@ export class ConnectedApplication {
     if(!this.activeGroupId)throw new Error('ACTIVE_GROUP_REQUIRED');
     if(!this.isOffline())try{return await this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/members`,{method:'POST',body:JSON.stringify({displayName,locale:this.locale})});}catch(error){if(!(error instanceof Error)||error.message!=='NETWORK_UNAVAILABLE')throw error;}
     const name=displayName.trim();if(!name)throw Error('MEMBER_NAME_REQUIRED');
-    const stamp=new Date().toISOString(),userId=makeId('user'),membershipId=makeId('membership'),membership:MembershipView={id:membershipId,tenantId:this.tenantId,groupId:this.activeGroupId,userId,roles:['member'],status:'active',joinedAt:stamp,displayName:name};
+    const existing=await this.cached<MembershipView[]>(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/members`)??[],nextNumber=Math.max(0,...existing.map(x=>Number(x.memberNumber)||0))+1;
+    const stamp=new Date().toISOString(),userId=makeId('user'),membershipId=makeId('membership'),membership:MembershipView={id:membershipId,tenantId:this.tenantId,groupId:this.activeGroupId,userId,memberNumber:nextNumber,roles:['member'],status:'active',joinedAt:stamp,displayName:name};
     await this.patchCachedArray<MembershipView>(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/members`,rows=>rows.some(x=>x.id===membershipId)?rows:[...rows,membership]);
     await this.queueLocal('MEMBER_ADD_V1',{groupId:this.activeGroupId,userId,membershipId,displayName:name,locale:this.locale,createdAt:stamp});
     return membership;
