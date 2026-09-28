@@ -378,11 +378,12 @@ export const captureRuntimeI18n=(root:ParentNode=document)=>{
     const raw=text.nodeValue??'';
     if(normalize(raw)&&text.parentElement&&!['SCRIPT','STYLE','TEXTAREA'].includes(text.parentElement.tagName))textSources.set(text,raw);
   }
-  root.querySelectorAll?.('*').forEach(el=>{
+  const elements:Element[]=root instanceof Element?[root,...root.querySelectorAll('*')]:[...root.querySelectorAll?.('*')??[]];
+  for(const el of elements){
     const saved=new Map<string,string>();
     for(const attr of attrs){const value=el.getAttribute(attr);if(value)saved.set(attr,value);}
     if(saved.size)attributeSources.set(el,saved);
-  });
+  }
 };
 
 export const applyRuntimeLocale=(locale:RuntimeLocale)=>{
