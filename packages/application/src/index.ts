@@ -506,7 +506,7 @@ export class ConnectedApplication {
       const body={membershipId:input.membershipId,rubricId:rubric.id,meetingId:input.meetingId,amount:input.amount,label:rubric.name??'Dépense de séance',scope:'SHEET',note:'Saisie depuis la feuille financière canonique',idempotencyKey:key};
       if(this.isOffline())return queue();
       try{return await this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/expenses`,{method:'POST',body:JSON.stringify(body)});}
-      catch(error){if(error instanceof Error&&error.message==='NETWORK_UNAVAILABLE')return queue();throw error;}
+      catch(error){if(error instanceof Error&&(error.message==='NETWORK_UNAVAILABLE'||/^HTTP_5\d\d$/.test(error.message)))return queue();throw error;}
     }
 
     if(nature==='LOAN'){
@@ -522,7 +522,7 @@ export class ConnectedApplication {
         loan=await this.transitionCompletion(loan.id,'SUBMITTED',Number(loan.data?.completionVersion??1),{submittedFromSheet:true,meetingId:input.meetingId});
         loan=await this.transitionCompletion(loan.id,'APPROVED',Number(loan.data?.completionVersion??2),{approvedAt:new Date().toISOString(),approvedFromSheet:true});
         return await this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/loans/${encodeURIComponent(loan.id)}/disburse`,{method:'POST',body:JSON.stringify({amount:input.amount,expectedVersion:Number(loan.data?.completionVersion??3),meetingId:input.meetingId,rubricId:rubric.id,idempotencyKey:key+':disburse'})});
-      }catch(error){if(error instanceof Error&&error.message==='NETWORK_UNAVAILABLE')return queue(replayMeta);throw error;}
+      }catch(error){if(error instanceof Error&&(error.message==='NETWORK_UNAVAILABLE'||/^HTTP_5\d\d$/.test(error.message)))return queue(replayMeta);throw error;}
     }
 
     const component=String(rubric.facets?.custom?.repaymentComponent??'').toUpperCase()==='INTEREST'||/interet|interest/.test(normalized)?'INTEREST':'PRINCIPAL';
@@ -532,7 +532,7 @@ export class ConnectedApplication {
       const loan=input.loanId?active.find(x=>x.id===input.loanId):active.length===1?active[0]:undefined;
       if(!loan)throw Error(active.length>1?'MULTIPLE_LOANS':'LOAN_REQUIRED');
       return await this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/loans/${encodeURIComponent(loan.id)}/repay`,{method:'POST',body:JSON.stringify({principalAmount:component==='PRINCIPAL'?input.amount:0,interestAmount:component==='INTEREST'?input.amount:0,expectedVersion:Number(loan.data?.completionVersion??0),meetingId:input.meetingId,rubricId:rubric.id,idempotencyKey:key+':repay'})});
-    }catch(error){if(error instanceof Error&&error.message==='NETWORK_UNAVAILABLE')return queue({repaymentComponent:component});throw error;}
+    }catch(error){if(error instanceof Error&&(error.message==='NETWORK_UNAVAILABLE'||/^HTTP_5\d\d$/.test(error.message)))return queue({repaymentComponent:component});throw error;}
   }
 
   async recordCashContribution(input:{membershipId:string;amount:number;meetingId?:string;rubricId?:string;lateReason?:string;approverIds?:string[];lateAuthorizationId?:string}):Promise<{queued:boolean;receipt?:ContributionReceipt;outbox?:OutboxItem}>{
