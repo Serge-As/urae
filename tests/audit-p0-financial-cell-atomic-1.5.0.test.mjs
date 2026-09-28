@@ -83,3 +83,16 @@ test('UI/API contract carries cell revision from ledger read to target command',
   assert.match(app,/expectedCellVersion:currentVersion/);
   assert.match(ui,/exactCellVersion/);
 });
+
+
+test('financial UI advances cell revision after ACK and never treats own durable live event as remote edit',()=>{
+  const ui=fs.readFileSync('apps/web/src/main.js','utf8');
+  const submitStart=ui.indexOf('const submitFinancialCellElement='),submitEnd=ui.indexOf('\nconst makeFinancialEntryCell=',submitStart);
+  const submit=ui.slice(submitStart,submitEnd);
+  assert.match(submit,/result\?\.cellVersion/);
+  assert.match(submit,/financialCellVersions\.set/);
+  const liveStart=ui.indexOf("window.addEventListener('eco:financial-live-update'");
+  const live=ui.slice(liveStart,liveStart+1200);
+  assert.match(live,/p\.actorId\?\?e\?\.actorId/);
+  assert.match(live,/sourceActorId&&sourceActorId!==String\(app\.currentActor/);
+});

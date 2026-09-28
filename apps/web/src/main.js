@@ -612,6 +612,7 @@ const submitFinancialCellElement=async validate=>{
       if(nature==='CONTRIBUTION'){
         if(current===0&&target===0){input.value='';clearFinancialCellDraft(cellKey);setCellState('IDLE');return;}
         result=await app.setFinancialCellTarget({meetingId,membershipId,rubricId,targetAmount:target,currentAmount:current,currentVersion:exactCellVersion(membershipId,rubricId,meetingId),reason:reason.trim()});
+        if(Number.isFinite(Number(result?.cellVersion)))financialCellVersions.set(JSON.stringify([meetingId,membershipId,rubricId,'XAF']),Number(result.cellVersion));
       }else{
         if(current>0)throw Error('SPECIALIZED_FINANCIAL_CORRECTION_REQUIRED');
         result=await app.recordFinancialSheetEntry({membershipId,meetingId,rubric,amount:target,reason:reason.trim()||undefined});
@@ -1326,7 +1327,7 @@ window.addEventListener('eco:live-signal',event=>{
 });
 let liveLedgerRefreshTimer=0;
 window.addEventListener('eco:financial-live-update',event=>{
-    const e=event instanceof CustomEvent?event.detail:undefined,p=e?.payload??{};if(String(p.actorId??'')!==String(app.currentActor?.()??''))highlightRemoteFinancialCell(p);
+    const e=event instanceof CustomEvent?event.detail:undefined,p=e?.payload??{},sourceActorId=String(p.actorId??e?.actorId??'');if(sourceActorId&&sourceActorId!==String(app.currentActor?.()??''))highlightRemoteFinancialCell({...p,actorId:sourceActorId});
     showFinancialAlert({title:p.meetingClosed?tx('Modification après clôture','Post-close change'):tx('Saisie modifiée','Entry changed'),message:p.actorName?tx(`${p.actorName} a modifié une cellule. Elle clignote en vert.`,`${p.actorName} changed a cell. It is flashing green.`):tx('Une cellule financière vient d’être modifiée.','A financial cell was changed.'),closed:Boolean(p.meetingClosed),correction:true});
     if(isManager()){if(liveLedgerRefreshTimer)clearTimeout(liveLedgerRefreshTimer);liveLedgerRefreshTimer=setTimeout(()=>{void renderLedger().catch(()=>{});},220);}
 });
