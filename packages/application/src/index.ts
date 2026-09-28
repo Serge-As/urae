@@ -259,6 +259,22 @@ export class ConnectedApplication {
   async receivedMemberCapsule(membershipId:string):Promise<EcoMemberCapsule|undefined>{
     if(!this.activeGroupId)return undefined;return this.cached('/api/v1/relay/member-capsule/'+encodeURIComponent(this.activeGroupId)+'/'+encodeURIComponent(membershipId));
   }
+  async localRoomManagerDelta():Promise<{protocol:'ECO_MANAGER_DELTA_1';groupId:string;actorId:string;generatedAt:string;events:any[]}>{
+    if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return{protocol:'ECO_MANAGER_DELTA_1',groupId:this.activeGroupId,actorId:this.actorId,generatedAt:new Date().toISOString(),events:await this.sovereign.list(this.tenantId,this.activeGroupId)};
+  }
+  async confrontLocalRoomManagerDelta(remote:any):Promise<{commonSequence:number;localOnly:number;remoteOnly:number;potentialFinancialConflicts:Array<{key:string;local:any;remote:any}>}>{
+    if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');if(remote?.protocol!=='ECO_MANAGER_DELTA_1'||remote.groupId!==this.activeGroupId||!Array.isArray(remote.events))throw Error('ECO_LOCAL_ROOM_DELTA_INVALID');
+    const local=await this.sovereign.list(this.tenantId,this.activeGroupId),remoteEvents=remote.events as any[];let commonSequence=0;
+    const max=Math.min(local.length,remoteEvents.length);for(let i=0;i<max;i++){if(local[i]?.sequence===remoteEvents[i]?.sequence&&local[i]?.hash===remoteEvents[i]?.hash)commonSequence=i+1;else break;}
+    const financialTypes=new Set(['CONTRIBUTION_CASH_RECORDED','FINANCIAL_CELL_TARGET_V1','FINANCIAL_SHEET_ENTRY_V1','LOAN_DISBURSE_V1','LOAN_REPAY_V1','TONTINE_SERVE_V1','SAVINGS_DEPOSIT_V1','SAVINGS_WITHDRAW_V1','CUSTODY_MOVEMENT_V1','SOLIDARITY_FUND_V1','SOLIDARITY_PAYOUT_V1']);
+    const key=(event:any)=>{const p=event?.payload??{};return [p.meetingId??'',p.membershipId??p.borrowerMembershipId??'',p.rubricId??'',p.loanId??p.shareId??'',event?.type??''].join('|');};
+    const localMap=new Map(local.slice(commonSequence).filter(x=>financialTypes.has(x.type)).map(x=>[key(x),x])),potentialFinancialConflicts=[];
+    for(const event of remoteEvents.slice(commonSequence).filter((x:any)=>financialTypes.has(String(x.type)))){const k=key(event),mine=localMap.get(k);if(mine&&JSON.stringify(mine.payload)!==JSON.stringify(event.payload))potentialFinancialConflicts.push({key:k,local:mine,remote:event});}
+    return{commonSequence,localOnly:Math.max(0,local.length-commonSequence),remoteOnly:Math.max(0,remoteEvents.length-commonSequence),potentialFinancialConflicts};
+  }
+  async localRoomMemberBundle(membershipId:string,meetingId?:string):Promise<EcoBroadcastBundle>{
+    const result=await this.prepareEcoBroadcast({meetingId,membershipIds:[membershipId],ttlMinutes:60});return result.bundle;
+  }
   async exportEcoVault(passphrase:string):Promise<string>{
     if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');const groupId=this.activeGroupId,allSnapshots=await this.readSnapshots.listForActorTenant(this.actorId,this.tenantId),encoded=encodeURIComponent(groupId);
     const selected=allSnapshots.filter(x=>x.path==='/api/v1/groups'||x.path.includes('/groups/'+encoded+'/')||x.path.includes('/groups/'+groupId+'/')||x.path.includes('/relay/member-capsule/'+encoded+'/')).map(x=>x.path==='/api/v1/groups'?{...x,body:Array.isArray(x.body)?(x.body as any[]).filter(g=>g.id===groupId):x.body}:x);
