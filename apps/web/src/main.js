@@ -11,7 +11,7 @@ if(typeof structuredClone!=='function'){
     window.structuredClone=value=>value===undefined?undefined:JSON.parse(JSON.stringify(value));
 }
 import { ConnectedApplication } from '../../../packages/application/src/index.js';
-import { captureRuntimeI18n, applyRuntimeLocale, localeTag, runtimeTranslate } from './runtime-i18n.js';
+import { captureRuntimeI18n, applyRuntimeLocale, installRuntimeI18nObserver, localeTag, runtimeTranslate } from './runtime-i18n.js';
 import { mountCompletionUI } from './completion-ui.js';
 import { mountAdvancedUI } from './advanced-ui.js';
 import { mountIdentityLiveUI } from './identity-live-ui.js';
@@ -69,6 +69,7 @@ const tx = (fr,en) => runtimeTranslate(uiLocale,fr,en);
 const app = new ConnectedApplication({ locale: uiLocale });
 captureRuntimeI18n(document);
 applyRuntimeLocale(uiLocale);
+installRuntimeI18nObserver(()=>uiLocale);
 let groups = [];
 let members = [];
 let meetings = [];
