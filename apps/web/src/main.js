@@ -78,6 +78,7 @@ let receiptPositions = [];
 let financialSheetEvents = [];
 let financialCellVersions = new Map();
 let financialPendingTargets = new Map();
+let financialPendingSheetEntries = [];
 let financialReviewTargets = new Map();
 const FINANCIAL_DRAFT_STORAGE='eco.financialCellDrafts';
 const financialCellDrafts=new Map((()=>{try{return Object.entries(JSON.parse(localStorage.getItem(FINANCIAL_DRAFT_STORAGE)||'{}'));}catch{return[];}})());
@@ -547,12 +548,20 @@ const exactCellPendingState=(membershipId,rubricId,meetingId)=>{
       const review=String(correction.businessStatus??'')==='CONSENSUS_REQUIRED';
       return{pending:true,status:review?'REVIEW_REQUIRED':correction.status,kind:review?'REVIEW':'CORRECTION',targetAmount:Number(correction.targetAmount??0)};
     }
+    const specialized=financialPendingSheetEntries.find(x=>x.membershipId===membershipId&&x.rubricId===rubricId&&x.meetingId===meetingId);
+    if(specialized)return{pending:true,status:String(specialized.status??'PENDING'),kind:'SPECIALIZED_ENTRY',targetAmount:Number(specialized.amount??0)};
     const receipt=exactCellRows(membershipId,rubricId,meetingId).find(x=>x.localPending===true);
     return receipt?{pending:true,status:String(receipt.localPendingStatus??'PENDING'),kind:'ENTRY',targetAmount:Number(receipt.netAmount??receipt.amount?.amount??0)}:{pending:false,status:'',kind:'',targetAmount:undefined};
 };
 const exactCellAmount=(membershipId,rubricId,meetingId)=>{
     const rubric=rubrics.find(x=>x.id===rubricId),nature=financialNatureForRubric(rubric);
-    if(nature!=='CONTRIBUTION')return exactCellEvents(membershipId,rubricId,meetingId).reduce((sum,event)=>sum+(String(event.data?.direction??'IN')==='OUT'?-1:1)*Number(event.data?.amount??0),0);
+    if(nature!=='CONTRIBUTION'){
+      const committed=exactCellEvents(membershipId,rubricId,meetingId).reduce((sum,event)=>sum+(String(event.data?.direction??'IN')==='OUT'?-1:1)*Number(event.data?.amount??0),0);
+      const pending=financialPendingSheetEntries.find(x=>x.membershipId===membershipId&&x.rubricId===rubricId&&x.meetingId===meetingId);
+      if(!pending)return committed;
+      const signed=['LOAN','OUTFLOW'].includes(String(pending.nature??nature))?-Math.abs(Number(pending.amount??0)):Math.abs(Number(pending.amount??0));
+      return committed===0?signed:committed;
+    }
     const pending=financialPendingTargets.get(financialCellKey(membershipId,rubricId,meetingId));
     // A locally queued target is the working projection until synchronization.
     // Once the server ACK says CONSENSUS_REQUIRED, the canonical Ledger value
@@ -876,6 +885,7 @@ const renderLedger = async () => {
     const [l,sheetEvents,sheetExpenses] = await Promise.all([app.ledger(),app.listWorkspaceRecords('FINANCE.SHEET_EVENT',app.activeGroup()).catch(()=>[]),app.expenses({scope:'SHEET'}).catch(()=>[])]);
     receiptPositions=l.receipts;
     financialPendingTargets=new Map((app.pendingFinancialCellTargets?.()??[]).map(x=>[financialCellKey(x.membershipId,x.rubricId,x.meetingId),x]));
+    financialPendingSheetEntries=app.pendingFinancialSheetEntries?.()??[];
     financialSheetEvents=[...sheetEvents,...sheetExpenses.map(x=>({id:x.id,data:{membershipId:x.membershipId,meetingId:x.meetingId,rubricId:x.rubricId,amount:x.amount,direction:'OUT',ledgerEntryId:x.ledgerEntryId}}))];
     financialCellVersions=new Map((l.cellRevisions??[]).map(r=>[JSON.stringify([r.meetingId,r.membershipId,r.rubricId,r.currency??'XAF']),Number(r.version??0)]));renderMeetingMatrix();renderIndividualSheetMatrix();
     for (const [n, label] of [[l.summary.cashBalance, 'Solde caisse'], [l.summary.memberFundsLiability, 'Engagement membres'], [l.summary.entryCount, 'Écritures']]) {
@@ -1347,7 +1357,7 @@ const refreshGroupContext = async () => {
         await groupHomeUI.refresh();
         await sessionsUI.refresh();
         if(manage)await renderLedger();
-        else{receiptPositions=[];financialSheetEvents=[];financialCellVersions=new Map();$('#ledgerMetrics').replaceChildren();$('#receiptList').textContent='Votre relevé individuel est accessible depuis la liste des membres.';}
+        else{receiptPositions=[];financialSheetEvents=[];financialPendingSheetEntries=[];financialCellVersions=new Map();$('#ledgerMetrics').replaceChildren();$('#receiptList').textContent='Votre relevé individuel est accessible depuis la liste des membres.';}
     }
     if(!active || manage)await refreshOptionalOfflineSafe('applications',renderApplications);else $('#applicationsBox').textContent='Les candidatures sont gérées par les responsables du groupe.';
     await refreshOptionalOfflineSafe('universe',renderUniverse);
