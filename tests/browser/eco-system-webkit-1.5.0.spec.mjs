@@ -41,7 +41,15 @@ test('WebKit PWA shell installs current release atomically and survives offline'
   expect(state.supported).toBe(true);expect(state.ready,state).toBe(true);expect(state.names).toContain(CURRENT_CACHE);expect(state.hits).toEqual([true,true,true,true,true,true]);
   await page.reload({waitUntil:'domcontentloaded'});
   await expect.poll(()=>page.evaluate(()=>Boolean(navigator.serviceWorker?.controller)),{timeout:10_000}).toBe(true);
-  await context.setOffline(true);await page.reload({waitUntil:'domcontentloaded'});await expect(page.locator('body')).toContainText('Eco-System');await context.setOffline(false);
+  await context.setOffline(true);
+  const offline=await page.evaluate(async(mainSrc)=>{
+    const [html,main]=await Promise.all([fetch('/index.html',{cache:'no-store'}),fetch(mainSrc,{cache:'no-store'})]);
+    return{htmlOk:html.ok,htmlText:await html.text(),mainOk:main.ok,mainText:await main.text()};
+  },MAIN_SRC);
+  expect(offline.htmlOk).toBe(true);expect(offline.htmlText).toContain('Eco-System');
+  expect(offline.mainOk).toBe(true);expect(offline.mainText).toContain('ConnectedApplication');
+  await expect(page.locator('body')).toContainText('Eco-System');
+  await context.setOffline(false);
 });
 
 test('English locale is applied from first screen in WebKit and can switch back to French',async({page})=>{
