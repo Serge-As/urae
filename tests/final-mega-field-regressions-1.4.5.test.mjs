@@ -21,7 +21,7 @@ const trashLifecycle=fs.readFileSync('packages/trash-lifecycle/src/index.ts','ut
 const repositories=fs.readFileSync('packages/repositories/src/index.ts','utf8');
 
 test('Android 6 offline shell remains bounded and never force-reloads a live page on worker takeover',()=>{
-  assert.match(sw,/eco-system-v1528-geo-directory-20260928/);
+  assert.match(sw,/eco-system-v1529-sovereign-offline-a01-20260928/);
   assert.match(sw,/RELEASE_ASSET_TIMEOUT/);
   assert.match(sw,/Scripts\/styles\/assets are cache-first/);
   assert.match(sw,/skipWaiting\(/);
@@ -199,12 +199,12 @@ test('loan is a negative member position and simulation is available to member a
   assert.match(app,/loanHistory/);
 });
 
-test('stale cached html recovers to 1.5.2.9 while preserving 1.5.2.8 as rollback shell',()=>{
+test('stale cached html recovers to the A01 1.5.2.9 shell while preserving the previous coherent release',()=>{
   assert.match(main,/document\.querySelector\('#claimLocalAccountBtn'\)\?\.addEventListener/);
   assert.doesNotMatch(main,/\$\('#claimLocalAccountBtn'\)\.addEventListener/);
-  assert.match(sw,/eco-system-v1529-sovereign-offline-20260928/);
+  assert.match(sw,/eco-system-v1529-sovereign-offline-a01-20260928/);
   assert.match(html,/ECO-SYSTEM · 1\.5\.2\.9/);
   assert.match(html,/main\.js\?v=1529/);
-  assert.match(sw,/PREVIOUS_CACHE = 'eco-system-v1528-geo-directory-20260928'/);
+  assert.match(sw,/PREVIOUS_CACHE = 'eco-system-v1529-sovereign-offline-20260928'/);
   assert.match(sw,/Online navigation is network-first/);
 });
