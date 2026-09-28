@@ -1343,7 +1343,7 @@ const refreshGroupContext = async () => {
     $('#membersContent').style.display = active ? 'block' : 'none';
     $('#noActiveGroupMembers').style.display = active ? 'none' : 'block';
     const manage=active && isManager();
-    if(!active){await groupHomeUI.refresh();await sessionsUI.refresh();}
+    if(!active){await refreshOptionalOfflineSafe('group-home',()=>groupHomeUI.refresh());await refreshOptionalOfflineSafe('sessions-home',()=>sessionsUI.refresh());}
     $('#backOfficeContent').style.display = manage ? 'block' : 'none';
     $('#noActiveGroupBackoffice').style.display = manage ? 'none' : 'block';
     $('#noActiveGroupBackoffice').textContent = active&&!manage ? tx('Le Back-office est réservé aux responsables habilités du groupe.','Back office is restricted to authorized group managers.') : tx('Sélectionnez ou créez d’abord un groupe.','Select or create a group first.');
@@ -1356,8 +1356,8 @@ const refreshGroupContext = async () => {
         await renderMeetings();
         if(manage)await refreshOptionalOfflineSafe('official-loan-rubric',()=>app.ensureOfficialLoanRubric());
         await renderLivingRules();
-        await groupHomeUI.refresh();
-        await sessionsUI.refresh();
+        await refreshOptionalOfflineSafe('group-home',()=>groupHomeUI.refresh());
+        await refreshOptionalOfflineSafe('sessions-home',()=>sessionsUI.refresh());
         if(manage)await renderLedger();
         else{receiptPositions=[];financialSheetEvents=[];financialPendingSheetEntries=[];financialCellVersions=new Map();$('#ledgerMetrics').replaceChildren();$('#receiptList').textContent='Votre relevé individuel est accessible depuis la liste des membres.';}
     }
@@ -1822,9 +1822,11 @@ async function start() {
     document.body.classList.add('auth-restoring');
     renderConnectivity();
     renderKernel();
+    let authenticatedSession=false;
     try {
         const session=await app.authStatus();
         if(!session.authenticated||!session.account){showAuth(session.offline?tx('Aucun compte local n’existe encore. Créez votre compte maintenant : Internet n’est pas nécessaire.','No local account exists yet. Create your account now: Internet is not required.'):undefined,session.offline?'register':undefined);return;}
+        authenticatedSession=true;
         $('#authScreen').hidden=true;document.body.classList.remove('signed-out','auth-restoring');
         $('#accountName').textContent=session.account.displayName+(session.registrationState==='LOCAL_PENDING_REGISTRATION'?tx(' · local',' · local'):'');
         const claim=document.querySelector('#claimLocalAccountBtn');
@@ -1834,18 +1836,33 @@ async function start() {
         }
         await app.bootstrap();
         const shareIntent=parseEcoShareIntent();
-        const catalog = await app.productCatalog();
-        modules = catalog.capabilities;
+        try{
+            const catalog=await app.productCatalog();
+            modules=catalog.capabilities;
+        }catch(error){
+            if(!(navigator.onLine===false&&error instanceof Error&&error.message==='NETWORK_UNAVAILABLE'))throw error;
+            console.info('Offline product catalog snapshot unavailable; core group workspace remains usable.');
+        }
         populateWorkspaceModules();
         renderLotFilters();
         renderEcosystemHighlights();
         renderDomainHubs();
         await refreshAll();
-        if(shareIntent)await openEcoShareIntent(shareIntent);
-        await loadWorkspaces();
+        if(shareIntent)await refreshOptionalOfflineSafe('share-intent',()=>openEcoShareIntent(shareIntent));
+        await refreshOptionalOfflineSafe('workspaces',loadWorkspaces);
     }
     catch (e) {
-        if(e instanceof Error&&e.message==='NETWORK_UNAVAILABLE'){showAuth(tx('Mode hors ligne disponible : créez votre premier compte local maintenant.','Offline mode is available: create your first local account now.'),'register');return;}
+        if(e instanceof Error&&e.message==='NETWORK_UNAVAILABLE'){
+            if(authenticatedSession){
+                // The local identity is already proven. A missing secondary snapshot
+                // must never turn an authenticated offline user into a signed-out user.
+                $('#authScreen').hidden=true;document.body.classList.remove('signed-out','auth-restoring');renderConnectivity();
+                try{renderOutbox();renderCompatibility();renderKernel();renderModules();}catch{}
+                toast(tx('Mode hors ligne : certaines données secondaires ne sont pas encore disponibles sur cet appareil. Le noyau local déjà synchronisé reste accessible.','Offline mode: some secondary data is not cached on this device yet. The synchronized local core remains available.'));
+                return;
+            }
+            showAuth(tx('Mode hors ligne disponible : créez votre premier compte local maintenant.','Offline mode is available: create your first local account now.'),'register');return;
+        }
         fail(e);
     }
 }
