@@ -83,7 +83,7 @@ export class TrashLifecycleMaintenance{
           // in the same transaction. R2 deletion must never happen before that arbitration.
           let purge;
           try{purge=await this.repo.purgeGroupData(manifest,item.id,nowIso(at));}catch(error){
-            const current=await this.repo.getWorkspaceRecord(item.tenantId,item.id).catch(()=>undefined),state=String(current?.data.petitionState??'');
+            const current=await Promise.resolve(this.repo.getWorkspaceRecord(item.tenantId,item.id)).catch(()=>undefined),state=String(current?.data.petitionState??'');
             if(['THRESHOLD_REACHED','VERIFIED','RECONSTITUTION_READY'].includes(state)){report.blocked++;continue;}
             throw error;
           }
