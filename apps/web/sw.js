@@ -13,7 +13,12 @@ const ESSENTIAL_SHELL = [
   '/packages/application/src/index.js', '/packages/contracts/src/index.js',
   '/packages/domain/src/index.js', '/packages/offline/src/index.js',
   '/packages/platform-kernel/src/index.js', '/packages/relay/src/index.js',
-  '/packages/repositories/src/index.js'
+  '/packages/repositories/src/index.js',
+  '/src/sovereign-offline-ui.js',
+  '/packages/offline-sovereign/src/index.js', '/packages/exercise/src/index.js',
+  '/packages/relay/src/broadcast.js', '/packages/relay/src/qr-v10.js',
+  '/packages/savings-yield/src/index.js', '/packages/recap-engine/src/index.js',
+  '/packages/loan-simulator/src/index.js', '/packages/group-doctor/src/index.js'
 ];
 
 const OPTIONAL_SHELL = [
