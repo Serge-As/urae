@@ -1,0 +1,61 @@
+name: Eco-System — Neural Closure L2-L8 Qualification
+
+on:
+  push:
+    branches: ['fix/l2-l8-neural-closure-20260928']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: eco-system-neural-closure-l2-l8
+  cancel-in-progress: true
+
+jobs:
+  qualify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - name: Install locked dependencies
+        run: npm ci --ignore-scripts
+      - name: Full governed CI
+        run: npm run ci
+      - name: Build exact public shell
+        run: npm run build
+      - name: Install Chromium and WebKit
+        run: |
+          npm install --no-save --ignore-scripts @playwright/test@1.55.0
+          npx playwright install --with-deps chromium webkit
+      - name: Start isolated Eco-System
+        shell: bash
+        run: |
+          rm -f /tmp/eco-neural-closure.sqlite
+          ECO_DATA_FILE=/tmp/eco-neural-closure.sqlite OPEN_BROWSER=0 PORT=4173 node scripts/dev-server.mjs > /tmp/eco-neural-closure.log 2>&1 &
+          echo $! > /tmp/eco-neural-closure.pid
+          for i in {1..40}; do curl -fsS http://127.0.0.1:4173/health >/dev/null && exit 0; sleep 1; done
+          cat /tmp/eco-neural-closure.log
+          exit 1
+      - name: Chromium financial persistence and shell recovery
+        run: npx playwright test tests/browser/core-a-b-c-t01-t15-1.5.2.5.spec.mjs tests/browser/financial-cell-consensus-persistence-1.5.2.6.spec.mjs tests/browser/browser-shell-mobile-1.5.2.6.spec.mjs --browser=chromium --workers=1
+      - name: Chromium exact replacement 0 1000 500 4000
+        run: npx playwright test tests/browser/financial-cell-e2e-1.5.2.4.spec.mjs --browser=chromium --workers=1
+      - name: WebKit iOS smoke
+        run: npx playwright test tests/browser/eco-system-webkit-1.5.0.spec.mjs --browser=webkit --workers=1
+      - name: WebKit sovereign offline qualification
+        run: npx playwright test tests/browser/eco-system-webkit-sovereign-offline-1.5.2.9.spec.mjs --browser=webkit --workers=1
+      - name: Upload diagnostics on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: neural-closure-l2-l8-${{ github.sha }}
+          path: |
+            playwright-report/
+            test-results/
+            /tmp/eco-neural-closure.log
+          if-no-files-found: ignore
