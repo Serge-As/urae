@@ -31,7 +31,7 @@ export function mountSovereignOfflineUI({app,getMembers=()=>[],getMeetings=()=>[
   start.disabled=pause.disabled=fullscreen.disabled=pack.disabled=true;const ba=el('div',undefined,'actions');ba.append(prepare,start,pause,fullscreen,pack);broadcast.append(bh,el('p','Tous les téléphones regardent le même QR animé. Chaque appareil collecte les trames puis ouvre uniquement la capsule chiffrée de son propriétaire.','hint'),meetingSelect,ba,screen,frameInfo,membersInfo);
 
   const receive=el('section',undefined,'item'),rh=el('h3','3 · Recevoir sur le téléphone du membre'),cameraBtn=el('button','Ouvrir la caméra','primary'),cameraStop=el('button','Arrêter caméra','secondary'),photoBtn=el('button','Lire un QR depuis une photo','secondary'),video=document.createElement('video'),progress=el('p','0 / 0 trame','truth-notice'),fileInput=document.createElement('input'),pairImport=document.createElement('input'),photoInput=document.createElement('input');
-  video.autoplay=true;video.playsInline=true;video.muted=true;video.className='eco-relay-camera';fileInput.type='file';fileInput.accept='.ecobroadcast,application/json';pairImport.type='file';pairImport.accept='.ecopair,application/json,text/plain';photoInput.type='file';photoInput.accept='image/*';photoInput.setAttribute('capture','environment');photoInput.hidden=true;
+  video.autoplay=true;video.playsInline=true;video.muted=true;video.setAttribute('playsinline','');video.setAttribute('webkit-playsinline','');video.className='eco-relay-camera';fileInput.type='file';fileInput.accept='.ecobroadcast,application/json';pairImport.type='file';pairImport.accept='.ecopair,application/json,text/plain';photoInput.type='file';photoInput.accept='image/*';photoInput.setAttribute('capture','environment');photoInput.hidden=true;
   const receiveActions=el('div',undefined,'actions');receiveActions.append(cameraBtn,cameraStop,photoBtn,photoInput);receive.append(rh,el('p','Le décodeur QR est embarqué dans Eco-System et fonctionne sans Internet. Sur iPhone/iPad, si la caméra d’une PWA installée refuse de démarrer, ouvrez Eco-System dans Safari ou utilisez Eco Pack.','hint'),receiveActions,video,progress,el('label','Importer un Eco Pack'),fileInput,el('label','Importer une clé .ecopair'),pairImport);
 
   const exercise=el('section',undefined,'item'),eh=el('h3','Cycle d’exercice · clôture et report offline'),exerciseState=el('div',undefined,'stack'),newLabel=document.createElement('input'),openingCash=document.createElement('input'),openExercise=el('button','Ouvrir un exercice','primary');
@@ -85,7 +85,7 @@ export function mountSovereignOfflineUI({app,getMembers=()=>[],getMeetings=()=>[
   }catch(e){showError(e);}})();
   start.onclick=()=>{if(!frames.length)return;stopStream();renderFrame();timer=setInterval(renderFrame,400);};
   pause.onclick=()=>stopStream();
-  fullscreen.onclick=()=>{const target=screen;target.requestFullscreen?.().catch(()=>{});};
+  fullscreen.onclick=()=>{const target=screen;if(target.requestFullscreen){void target.requestFullscreen().catch(()=>{target.classList.toggle('eco-optical-fullscreen-fallback');target.scrollIntoView({block:'center'});});}else{target.classList.toggle('eco-optical-fullscreen-fallback');target.scrollIntoView({block:'center'});}};
   pack.onclick=()=>void(async()=>{try{if(currentBundle)await shareOrDownload('eco-broadcast-'+currentBundle.transferId+'.ecobroadcast',JSON.stringify(currentBundle),'application/json','Eco Broadcast');}catch(e){showError(e);}})();
 
   const acceptRaw=async raw=>{
@@ -128,5 +128,8 @@ export function mountSovereignOfflineUI({app,getMembers=()=>[],getMeetings=()=>[
   vaultExport.onclick=()=>void(async()=>{try{const encoded=await app.exportEcoVault(pass.value);const stamp=new Date().toISOString().replace(/[:.]/g,'-');await shareOrDownload('eco-vault-'+(app.activeGroup?.()??'groupe')+'-'+stamp+'.ecovault',encoded,'text/plain','Eco Vault');vaultStatus.textContent='Vault créé. Copiez-le idéalement sur deux autres supports physiques.';}catch(e){showError(e);}});
   vaultRestore.onclick=()=>void(async()=>{try{const file=vaultFile.files?.[0];if(!file)throw Error('VAULT_FILE_REQUIRED');const encoded=(await file.text()).trim(),info=await app.inspectEcoVault(pass.value,encoded);vaultStatus.textContent='Vault vérifié : '+info.events+' événements · '+info.snapshots+' snapshots. Restauration…';const done=await app.restoreEcoVault(pass.value,encoded);vaultStatus.textContent='Restauration terminée : '+done.events+' événements · '+done.outbox+' opérations de synchro.';notify('Eco Vault restauré et contrôlé.');await refresh();}catch(e){showError(e);}});
 
-  window.addEventListener('beforeunload',()=>{stopStream();stopCamera();});void refresh();return{refresh,stop:()=>{stopStream();stopCamera();}};
+  const suspendOptics=()=>{stopStream();if(qrScanner){stopCamera();progress.textContent='Caméra arrêtée pendant la mise en arrière-plan. Touchez « Ouvrir la caméra » pour reprendre.';}};
+  const onVisibility=()=>{if(document.hidden)suspendOptics();};
+  document.addEventListener('visibilitychange',onVisibility);window.addEventListener('pagehide',suspendOptics);window.addEventListener('beforeunload',suspendOptics);
+  void refresh();return{refresh,stop:()=>{document.removeEventListener('visibilitychange',onVisibility);window.removeEventListener('pagehide',suspendOptics);stopStream();stopCamera();}};
 }
