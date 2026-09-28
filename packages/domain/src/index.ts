@@ -64,8 +64,13 @@ const registerGroupPolicies = (kernel: PlatformKernel): void => {
   kernel.policy.register('group:manage', (ctx, input) => {
     const groupId = (input as { groupId?: string } | undefined)?.groupId;
     const allowed = Boolean(groupId && (ctx.activeGroupId === groupId || !ctx.activeGroupId) &&
-      (ctx.groupRoles.includes('manager') || ctx.groupRoles.includes('founder') || ctx.mandateIds.length > 0));
+      (ctx.groupRoles.includes('manager') || ctx.groupRoles.includes('founder')));
     return { allowed, reason: allowed ? 'GROUP_SCOPE_AND_ROLE' : 'FORBIDDEN_SCOPE' };
+  });
+  kernel.policy.register('mandate:right',(ctx,input)=>{
+    const request=input as {groupId?:string;permission?:string}|undefined,groupId=request?.groupId,permission=String(request?.permission??'').toUpperCase(),at=Date.now();
+    const grant=(ctx.mandateGrants??[]).find(g=>g.groupId===groupId&&g.permissions.includes(permission)&&Date.parse(g.startsAt)<=at&&(!g.endsAt||Date.parse(g.endsAt)>at));
+    return{allowed:Boolean(grant),reason:grant?'MANDATE_RIGHT_ALLOWED':'MANDATE_RIGHT_FORBIDDEN'};
   });
 };
 
@@ -664,7 +669,7 @@ export class LedgerService {
       id:`financial_correction_outbox_${operationId}`,tenantId:input.tenantId,groupId:input.groupId,moduleId:'FINANCE.CORRECTION_OUTBOX',
       title:'Correction financière à diffuser',summary:'Événements et notifications à diffuser après commit atomique.',
       status:'ACTIVE',tags:['financial-correction','pending'],
-      data:{operationId,meetingId:input.meetingId,membershipId:input.membershipId,rubricId:input.rubricId,previousAmount:current,newAmount:input.targetAmount,reason},
+      data:{operationId,primaryEntryId:primaryEntry.id,meetingId:input.meetingId,membershipId:input.membershipId,rubricId:input.rubricId,previousAmount:current,newAmount:input.targetAmount,reason},
       createdBy:ctx.actorId,createdAt:commitAt,updatedAt:commitAt
     };
     const expectedVersion=input.expectedCellVersion??currentVersion,nextVersion=expectedVersion+1;

@@ -144,17 +144,31 @@ export class MarketService{
   }
   async suppliers(groupId:Id){return this.list(groupId,'SUPPLIER');}
 
-  async createProcurement(groupId:Id,input:{supplierId:Id;debtorType:'GROUP'|'BUSINESS';debtorRef:Id;lines:Array<{sku?:string;label:string;quantity:number;unitCost:number}>;freight?:number;otherCosts?:number;currency?:string;creditDueAt?:string}){
+  async createProcurement(groupId:Id,input:{supplierId:Id;debtorType:'GROUP'|'BUSINESS';debtorRef:Id;lines:Array<{sku?:string;label:string;quantity:number;unitCost:number}>;freight?:number;otherCosts?:number;discount?:number;currency?:string;creditDueAt?:string;sourceNeedId?:Id;sourceOfferId?:Id;sourceDraftId?:Id}){
     await this.access(groupId,true);
     const supplier=(await this.list(groupId,'SUPPLIER')).find(x=>x.id===input.supplierId);if(!supplier)throw Error('SUPPLIER_NOT_FOUND');
     if(input.debtorType==='GROUP'&&input.debtorRef!==groupId)throw Error('SUPPLIER_CREDIT_DEBTOR_MISMATCH');
     if(!input.debtorRef.trim())throw Error('DEBTOR_REFERENCE_REQUIRED');
+    if(input.sourceDraftId){const prior=(await this.list(groupId,'PROCUREMENT')).find(x=>String(x.data.sourceDraftId??'')===input.sourceDraftId);if(prior)return prior;}
     const lines=input.lines.map(x=>({sku:x.sku?.trim()??'',label:x.label.trim(),quantity:qty(x.quantity),unitCost:Number(x.unitCost)}));
     if(!lines.length||lines.some(x=>!x.label||!Number.isSafeInteger(x.unitCost)||x.unitCost<0))throw Error('INVALID_PROCUREMENT_LINES');
-    const goodsCost=lines.reduce((n,x)=>n+x.quantity*x.unitCost,0),freight=Number(input.freight??0),other=Number(input.otherCosts??0);
-    if(!Number.isSafeInteger(freight)||freight<0||!Number.isSafeInteger(other)||other<0)throw Error('INVALID_LANDED_COST');
+    const goodsCost=lines.reduce((n,x)=>n+x.quantity*x.unitCost,0),freight=Number(input.freight??0),other=Number(input.otherCosts??0),discount=Number(input.discount??0),gross=goodsCost+freight+other;
+    if(!Number.isSafeInteger(freight)||freight<0||!Number.isSafeInteger(other)||other<0||!Number.isSafeInteger(discount)||discount<0||discount>gross)throw Error('INVALID_LANDED_COST');
     if(input.creditDueAt&&(!Number.isFinite(Date.parse(input.creditDueAt))||Date.parse(input.creditDueAt)<=Date.now()))throw Error('INVALID_CREDIT_DUE_AT');
-    return this.save(groupId,'PROCUREMENT','Approvisionnement · '+supplier.title,{supplierId:supplier.id,debtorType:input.debtorType,debtorRef:input.debtorRef,linesJson:JSON.stringify(lines),goodsCost,freight,otherCosts:other,landedCost:goodsCost+freight+other,currency:input.currency??'XAF',creditDueAt:input.creditDueAt?new Date(input.creditDueAt).toISOString():'',state:'ORDERED',receivedLinesJson:'[]',returnedLinesJson:'[]'});
+    return this.save(groupId,'PROCUREMENT','Approvisionnement · '+supplier.title,{supplierId:supplier.id,debtorType:input.debtorType,debtorRef:input.debtorRef,linesJson:JSON.stringify(lines),goodsCost,freight,otherCosts:other,discount,landedCost:gross-discount,currency:input.currency??'XAF',creditDueAt:input.creditDueAt?new Date(input.creditDueAt).toISOString():'',sourceNeedId:input.sourceNeedId??'',sourceOfferId:input.sourceOfferId??'',sourceDraftId:input.sourceDraftId??'',state:'ORDERED',receivedLinesJson:'[]',returnedLinesJson:'[]'});
+  }
+  async approveValueProcurementDraft(groupId:Id,draftId:Id,input:{supplierId:Id;debtorType:'GROUP'|'BUSINESS';debtorRef:Id;creditDueAt?:string}){
+    await this.access(groupId,true);const ctx=this.kernel.context.get(),draft=await this.repo.getWorkspaceRecord(ctx.tenantId,draftId);
+    if(!draft||draft.groupId!==groupId||draft.moduleId!=='MARKETPLACE.PROCUREMENT')throw Error('VALUE_PROCUREMENT_DRAFT_NOT_FOUND');
+    const state=String(draft.data.state??'DRAFT');if(!['DRAFT','HANDED_OFF'].includes(state))throw Error('VALUE_PROCUREMENT_DRAFT_NOT_APPROVABLE');
+    if(draft.data.requiresExplicitApproval!==true)throw Error('VALUE_PROCUREMENT_EXPLICIT_APPROVAL_REQUIRED');
+    const prior=(await this.list(groupId,'PROCUREMENT')).find(x=>String(x.data.sourceDraftId??'')===draftId);
+    if(prior){if(state!=='HANDED_OFF')await this.repo.saveWorkspaceRecord({...draft,status:'DONE',data:{...draft.data,state:'HANDED_OFF',procurementId:prior.id,handedOffAt:now()},updatedAt:now()});return prior;}
+    const quantity=qty(Number(draft.data.quantity)),unitPrice=Number(draft.data.unitPrice??0),transportCost=Number(draft.data.transportCost??0),otherCosts=Number(draft.data.otherCosts??0),discount=Number(draft.data.discount??0);
+    if(!Number.isSafeInteger(unitPrice)||unitPrice<0)throw Error('INVALID_PROCUREMENT_LINES');
+    const procurement=await this.createProcurement(groupId,{supplierId:input.supplierId,debtorType:input.debtorType,debtorRef:input.debtorRef,lines:[{label:String(draft.data.needTitle??draft.title),quantity,unitCost:unitPrice}],freight:transportCost,otherCosts,discount,currency:String(draft.data.currency??'XAF'),creditDueAt:input.creditDueAt,sourceNeedId:String(draft.data.needId??''),sourceOfferId:String(draft.data.offerId??''),sourceDraftId:draft.id});
+    await this.repo.saveWorkspaceRecord({...draft,status:'DONE',data:{...draft.data,state:'HANDED_OFF',procurementId:procurement.id,handedOffAt:now(),createsOrder:true,createsDebt:Boolean(input.creditDueAt)},updatedAt:now()});
+    return procurement;
   }
   async receiveProcurement(groupId:Id,procurementId:Id,input:{lines:Array<{lineIndex:number;quantity:number}>;stockOwnership?:StockOwnership}){
     await this.access(groupId,true);const p=(await this.list(groupId,'PROCUREMENT')).find(x=>x.id===procurementId);if(!p)throw Error('PROCUREMENT_NOT_FOUND');

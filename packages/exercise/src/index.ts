@@ -28,6 +28,10 @@ export interface ExerciseMemberEnvelope {
   principalCarryForward:number;
   interestCarryForward:number;
   nextExerciseOpeningPosition:number;
+  allocatedTotal:number;
+  payableCash:number;
+  paidCash:number;
+  carriedTotal:number;
 }
 export interface ExerciseClosingPlan {
   closingCash:number;
@@ -37,6 +41,9 @@ export interface ExerciseClosingPlan {
   retainedFundsPayoutTotal:number;
   retainedFundsCarryForwardTotal:number;
   memberCashPayoutTotal:number;
+  memberAllocatedTotal:number;
+  memberPayableTotal:number;
+  memberPaidTotal:number;
   memberCarryForwardTotal:number;
   unassignedCarryForward:number;
   cashOutTotal:number;
@@ -57,7 +64,8 @@ export function buildExerciseClosingPlan(input:ExerciseClosingInput):ExerciseClo
     const principal=xaf('principal',row.principal),interest=xaf('interest',row.interest);
     const principalReturn=input.principalDisposition==='RETURN_TO_MEMBER'?principal:0,interestReturn=input.interestDisposition==='PAY_OUT'?interest:0;
     const principalCarry=principal-principalReturn,interestCarry=interest-interestReturn;
-    return{membershipId:row.membershipId,principal,interest,cashPayout:principalReturn+interestReturn,principalCarryForward:principalCarry,interestCarryForward:interestCarry,nextExerciseOpeningPosition:principalCarry+interestCarry};
+    const payableCash=principalReturn+interestReturn,carriedTotal=principalCarry+interestCarry;
+    return{membershipId:row.membershipId,principal,interest,cashPayout:payableCash,principalCarryForward:principalCarry,interestCarryForward:interestCarry,nextExerciseOpeningPosition:carriedTotal,allocatedTotal:principal+interest,payableCash,paidCash:0,carriedTotal};
   });
   const retainedFunds=(input.retainedFunds??[]).map(f=>({code:String(f.code??'').trim(),label:String(f.label??'').trim(),amount:xaf('retained_fund',f.amount),carryForward:Boolean(f.carryForward)}));
   if(retainedFunds.some(x=>!x.code||!x.label))throw Error('INVALID_RETAINED_FUND');
@@ -67,6 +75,7 @@ export function buildExerciseClosingPlan(input:ExerciseClosingInput):ExerciseClo
     retainedFundsPayoutTotal=retainedFunds.filter(x=>!x.carryForward).reduce((n,x)=>n+x.amount,0),
     retainedFundsCarryForwardTotal=retainedFunds.filter(x=>x.carryForward).reduce((n,x)=>n+x.amount,0),
     memberCashPayoutTotal=members.reduce((n,x)=>n+x.cashPayout,0),
+    memberAllocatedTotal=members.reduce((n,x)=>n+x.allocatedTotal,0),memberPayableTotal=memberCashPayoutTotal,memberPaidTotal=0,
     memberCarryForwardTotal=members.reduce((n,x)=>n+x.nextExerciseOpeningPosition,0),
     cashOutTotal=memberCashPayoutTotal+retainedFundsPayoutTotal,
     plannedCarryForwardTotal=memberCarryForwardTotal+retainedFundsCarryForwardTotal+unassigned,
@@ -75,10 +84,11 @@ export function buildExerciseClosingPlan(input:ExerciseClosingInput):ExerciseClo
   if(unallocatedCash<0)throw Error('EXERCISE_CLOSING_EXCEEDS_CASH');
   const nextExerciseOpeningCash=plannedCarryForwardTotal+unallocatedCash;
   if(nextExerciseOpeningCash!==closingCash-cashOutTotal)throw Error('EXERCISE_CLOSING_BALANCE_MISMATCH');
-  return{closingCash,totalPrincipal,totalInterest,retainedFundsTotal,retainedFundsPayoutTotal,retainedFundsCarryForwardTotal,memberCashPayoutTotal,memberCarryForwardTotal,unassignedCarryForward:unassigned,cashOutTotal,plannedCarryForwardTotal,requiredCashAtClose,unallocatedCash,nextExerciseOpeningCash,members,retainedFunds,balanced:true};
+  return{closingCash,totalPrincipal,totalInterest,retainedFundsTotal,retainedFundsPayoutTotal,retainedFundsCarryForwardTotal,memberCashPayoutTotal,memberAllocatedTotal,memberPayableTotal,memberPaidTotal,memberCarryForwardTotal,unassignedCarryForward:unassigned,cashOutTotal,plannedCarryForwardTotal,requiredCashAtClose,unallocatedCash,nextExerciseOpeningCash,members,retainedFunds,balanced:true};
 }
 
 export interface ExerciseCarryForwardSeed {
+  carryManifestId:string;
   sourceExerciseId:string;
   nextLabel:string;
   openingCash:number;
@@ -87,7 +97,7 @@ export interface ExerciseCarryForwardSeed {
 }
 export function buildExerciseCarryForwardSeed(sourceExerciseId:string,nextLabel:string,plan:ExerciseClosingPlan):ExerciseCarryForwardSeed{
   if(!sourceExerciseId.trim()||!nextLabel.trim())throw Error('EXERCISE_ID_AND_LABEL_REQUIRED');
-  return{sourceExerciseId,nextLabel,openingCash:plan.nextExerciseOpeningCash,
+  return{carryManifestId:'exercise_carry_'+encodeURIComponent(JSON.stringify([sourceExerciseId,nextLabel.trim()])),sourceExerciseId,nextLabel,openingCash:plan.nextExerciseOpeningCash,
     memberOpeningPositions:plan.members.filter(x=>x.nextExerciseOpeningPosition>0).map(x=>({membershipId:x.membershipId,principal:x.principalCarryForward,interest:x.interestCarryForward,total:x.nextExerciseOpeningPosition})),
     retainedFunds:plan.retainedFunds.filter(x=>x.carryForward&&x.amount>0).map(x=>({code:x.code,label:x.label,amount:x.amount}))};
 }

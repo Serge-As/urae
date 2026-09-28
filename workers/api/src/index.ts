@@ -77,8 +77,8 @@ interface WorkersAILike {
 const RELEASE_VERSION='1.5.2.9-sovereign-offline';
 const RELEASE_BUILD_ID='eco-system-1.5.2.9-20260928';
 const RELEASE_SCHEMA_VERSION='d1-additive-20260923';
-const RELEASE_POLICY_VERSION='sovereign-offline-cycle-20260928';
-const RELEASE_PWA_CACHE='eco-system-v1529-sovereign-offline-a01-20260928';
+const RELEASE_POLICY_VERSION='neural-closure-cycle-20260928';
+const RELEASE_PWA_CACHE='eco-system-v1529-neural-closure-20260928';
 
 const defaultRepo = new InMemoryPlatformRepository();
 const defaultReferralBudgets = new InMemoryReferralBudgetStore();
@@ -151,7 +151,7 @@ const createRequestScope = (request:Request,repo:PlatformRepository,artifacts?:A
   const quietWatch=new QuietWatchService(repo,kernel);
   const tenantId=request.headers.get('x-tenant-id')??'tenant_demo'; const actorId=request.headers.get('x-actor-id')??'user_founder';
   const groupRoles=(request.headers.get('x-group-roles')??'founder,manager').split(',').map(x=>x.trim()).filter(Boolean);
-  kernel.context.set({actorId,tenantId,activeGroupId:request.headers.get('x-active-group-id')??undefined,groupRoles,mandateIds:[],deviceId:request.headers.get('x-device-id')??'device_web_demo',sessionId:request.headers.get('x-session-id')??'session_demo',locale:request.headers.get('accept-language')?.toLowerCase().startsWith('en')?'en':'fr',timezone:request.headers.get('x-timezone')??'Africa/Douala',connectivity:'online',requestId:request.headers.get('x-request-id')??makeId('req')});
+  kernel.context.set({actorId,tenantId,activeGroupId:request.headers.get('x-active-group-id')??undefined,groupRoles,mandateIds:[],mandateGrants:[],deviceId:request.headers.get('x-device-id')??'device_web_demo',sessionId:request.headers.get('x-session-id')??'session_demo',locale:request.headers.get('accept-language')?.toLowerCase().startsWith('en')?'en':'fr',timezone:request.headers.get('x-timezone')??'Africa/Douala',connectivity:'online',requestId:request.headers.get('x-request-id')??makeId('req')});
   return {kernel,foundation,ledger,meetings,discovery,membershipGateway,rubrics,completion,explainability,documents,receivables,treasury,riskFinance,market,community,imports,artifactStore,memberControl,memberEnvelopes,groupIdentity,conciergeLearning,miscRubrics,adManager,economicIntelligence,externalPrograms,operationalCockpit,businessStudio,knowledgeAcademy,valueNetwork,creatorTalent,quietWatch};
 };
 
@@ -167,7 +167,12 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
     const allowed=Boolean((cors as Record<string,string>)['access-control-allow-origin']);
     return new Response(null,{status:allowed?204:403,headers:{...baseSecurityHeaders,...cors,'access-control-allow-methods':'GET,POST,PUT,OPTIONS','access-control-allow-headers':'content-type,x-tenant-id,x-actor-id,x-group-roles,x-active-group-id,x-device-id,x-session-id,x-request-id,x-timezone'}});
   }
-  const {kernel,foundation,ledger,meetings,discovery,membershipGateway,rubrics,completion,explainability,documents,receivables,treasury,riskFinance,market,community,imports,artifactStore,memberControl,memberEnvelopes,groupIdentity,conciergeLearning,miscRubrics,adManager,economicIntelligence,externalPrograms,operationalCockpit,businessStudio,knowledgeAcademy,valueNetwork,creatorTalent,quietWatch}=createRequestScope(request,repo,options.artifacts,options.dataUseDefaultMode??'BETA_OPEN',options.documentAI); const ctx=kernel.context.get();
+  const {kernel,foundation,ledger,meetings,discovery,membershipGateway,rubrics,completion,explainability,documents,receivables,treasury,riskFinance,market,community,imports,artifactStore,memberControl,memberEnvelopes,groupIdentity,conciergeLearning,miscRubrics,adManager,economicIntelligence,externalPrograms,operationalCockpit,businessStudio,knowledgeAcademy,valueNetwork,creatorTalent,quietWatch}=createRequestScope(request,repo,options.artifacts,options.dataUseDefaultMode??'BETA_OPEN',options.documentAI);
+  let ctx=kernel.context.get();
+  try{
+    const at=Date.now(),rows=await repo.listWorkspaceRecords(ctx.tenantId,'MANAGER.BUSINESS_STUDIO'),grants=rows.filter(r=>r.data.businessKind==='MANDATE'&&r.status==='ACTIVE'&&r.data.mandateState==='ACTIVE'&&String(r.data.delegateUserId??'')===ctx.actorId&&Date.parse(String(r.data.startsAt??''))<=at&&(!r.data.endsAt||Date.parse(String(r.data.endsAt))>at)).map(r=>{let permissions:string[]=[];try{permissions=JSON.parse(String(r.data.delegatedRightsJson??'[]'));}catch{}return{mandateId:r.id,groupId:String(r.data.groupId??''),permissions:[...new Set(permissions.map(x=>String(x).toUpperCase()))],startsAt:String(r.data.startsAt??''),endsAt:r.data.endsAt?String(r.data.endsAt):undefined};}).filter(g=>g.groupId&&g.permissions.length);
+    kernel.context.set({...ctx,mandateIds:grants.map(g=>g.mandateId),mandateGrants:grants});ctx=kernel.context.get();
+  }catch{}
   const governanceVotes=new GovernanceVoteService(repo,kernel,options.governanceSecret??'eco-system-nonproduction-governance-secret');
   const notifications=new NotificationService(repo,kernel);
   const growthReferral=new GrowthReferralService(repo,kernel,options.referralBudgets??defaultReferralBudgets);
@@ -250,6 +255,28 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
     const revision=await repo.getFinancialCellRevision(ctx.tenantId,groupId,meetingId,membershipId,rubricId,'XAF');
     return{rows,current:rows.reduce((n,x)=>n+x.netAmount,0),cellVersion:revision?.version??0,baselineActorId:rows.slice().reverse().find(x=>x.netAmount>0)?.receivedBy};
   };
+  const dispatchFinancialCorrectionProjection=async(record:import('../../../packages/contracts/src/index.js').WorkspaceRecord):Promise<{ok:boolean;notice?:any}>=>{
+    if(record.moduleId!=='FINANCE.CORRECTION_OUTBOX'||!record.groupId)return{ok:false};
+    if(record.status==='DONE')return{ok:true};
+    const d=record.data,groupId=record.groupId,operationId=String(d.operationId??''),membershipId=String(d.membershipId??''),meetingId=String(d.meetingId??''),rubricId=String(d.rubricId??''),entryId=String(d.primaryEntryId??''),previousAmount=finite(d.previousAmount),newAmount=finite(d.newAmount),reason=String(d.reason??'Correction de cellule financière');
+    try{
+      const [entry,meeting,targetMember]=await Promise.all([repo.getLedgerEntry(ctx.tenantId,groupId,entryId),repo.getMeeting(ctx.tenantId,groupId,meetingId),repo.getMembership(ctx.tenantId,groupId,membershipId)]);
+      if(!entry||!meeting||!targetMember)throw Error('CORRECTION_PROJECTION_SOURCE_MISSING');
+      const positions=await ledger.receiptPositions(ctx.tenantId,groupId),newSituation=positions.filter(x=>x.membershipId===membershipId).reduce((n,x)=>n+x.netAmount,0),previousSituation=newSituation-(newAmount-previousAmount);
+      const notice=await memberControl.create({groupId,membershipId,entry,operationType:'FINANCIAL_CELL_CORRECTION',amount:newAmount,currency:'XAF',rubricId,meetingId,previousSituation,newSituation,previousAmount,newAmount,correctionReason:reason,selfBenefit:targetMember.userId===record.createdBy,requiresIndependentReview:false});
+      const correctionActor=await actorLabelFor(record.createdBy),correctionMember=await memberLabel(groupId,membershipId),correctionRubric=await rubricLabel(groupId,rubricId),meetingWhen=new Intl.DateTimeFormat('fr-FR',{dateStyle:'medium',timeStyle:'short'}).format(new Date(meeting.scheduledAt??meeting.openedAt)),changeWhen=new Intl.DateTimeFormat('fr-FR',{dateStyle:'medium',timeStyle:'short'}).format(new Date(record.createdAt)),action={view:'operations',anchor:'twoSheetWorkspace',meetingId,membershipId,rubricId,label:'Voir la cellule modifiée'};
+      await notifications.publish(groupId,{title:meeting.status==='closed'?'Séance clôturée modifiée':'Donnée financière corrigée',message:`${correctionMember} · ${correctionRubric} · ${meetingWhen} : ${previousAmount} → ${newAmount} F CFA. Auteur : ${correctionActor}. Modification : ${changeWhen}. Motif : ${reason}`,channels:['IN_APP','WEB_PUSH'],audience:'MANAGERS',priority:meeting.status==='closed'?'CRITICAL':'HIGH',action,idempotencyKey:'financial-correction:'+operationId+':managers'});
+      await notifications.publish(groupId,{title:meeting.status==='closed'?'Votre compte a été corrigé après clôture':'Votre compte a été corrigé',message:`${correctionRubric} · ${meetingWhen} : ${previousAmount} → ${newAmount} F CFA. Auteur : ${correctionActor}. Modification : ${changeWhen}. Motif : ${reason}. Vous pouvez valider ou émettre une réserve.`,channels:['IN_APP','WEB_PUSH'],audience:'SELECTED',selectedMembershipIds:[membershipId],priority:meeting.status==='closed'?'CRITICAL':'HIGH',action,idempotencyKey:'financial-correction:'+operationId+':member'});
+      await publishLive(groupId,'FINANCIAL_NOTICE','financial-cell-correction:'+entry.id,{noticeId:notice.id,ledgerEntryId:entry.id,operationType:'FINANCIAL_CELL_CORRECTION',amount:newAmount,currency:'XAF',previousAmount,newAmount,meetingClosed:meeting.status==='closed',alertLevel:meeting.status==='closed'?'closed':'correction'},targetMember.userId);
+      await publishLive(groupId,'MEETING_UPDATE','financial-cell-managers:'+entry.id,{meetingId,kind:'FINANCIAL_CELL_CORRECTION',operationType:'FINANCIAL_CELL_CORRECTION',membershipId,rubricId,previousAmount,newAmount,meetingClosed:meeting.status==='closed',actorId:record.createdBy,actorName:correctionActor});
+      await repo.saveWorkspaceRecord({...record,status:'DONE',tags:[...new Set(record.tags.filter(t=>!['pending','retry-required'].includes(t)).concat('dispatched'))],data:{...record.data,attemptCount:Number(record.data.attemptCount??0)+1,lastError:null,noticeId:notice.id,dispatchedAt:new Date().toISOString()},updatedAt:new Date().toISOString()});
+      return{ok:true,notice};
+    }catch(error){
+      try{await repo.saveWorkspaceRecord({...record,status:'ACTIVE',tags:[...new Set(record.tags.concat('pending','retry-required'))],data:{...record.data,attemptCount:Number(record.data.attemptCount??0)+1,lastError:(error instanceof Error?error.message:String(error)).slice(0,500)},updatedAt:new Date().toISOString()});}catch{}
+      return{ok:false};
+    }
+  };
+
   const applyFinancialCellTarget=async(input:{groupId:string;meetingId:string;membershipId:string;rubricId:string;targetAmount:number;expectedCurrentAmount?:number;expectedCellVersion?:number;reason:string;idempotencyKey:string;consensusId?:string;consensusVersion?:number})=>{
     const group=await requireGroup(input.groupId,true),meeting=await repo.getMeeting(ctx.tenantId,input.groupId,input.meetingId);if(!meeting||meeting.status==='cancelled')throw Error('MEETING_NOT_FOUND');
     if(!Number.isSafeInteger(input.targetAmount)||input.targetAmount<0)throw Error('INVALID_CONTRIBUTION_AMOUNT');
@@ -264,14 +291,9 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
     },ctx.requestId);
     const receipt=correction.receipt,evidenceEntry=correction.evidenceEntry;
     if(!evidenceEntry)throw Error('FINANCIAL_CORRECTION_NOT_APPLIED');
-    const afterAll=await ledger.receiptPositions(ctx.tenantId,input.groupId),newSituation=afterAll.filter(x=>x.membershipId===input.membershipId).reduce((n,x)=>n+x.netAmount,0),targetMember=await repo.getMembership(ctx.tenantId,input.groupId,input.membershipId);
-    const notice=await memberControl.create({groupId:input.groupId,membershipId:input.membershipId,entry:evidenceEntry,operationType:'FINANCIAL_CELL_CORRECTION',amount:input.targetAmount,currency:'XAF',rubricId:input.rubricId,meetingId:input.meetingId,previousSituation:beforeSituation,newSituation,previousAmount:state.current,newAmount:input.targetAmount,correctionReason:reason,selfBenefit:targetMember?.userId===ctx.actorId,requiresIndependentReview:false});
-    const correctionActor=await actorLabel(),correctionMember=await memberLabel(input.groupId,input.membershipId),correctionRubric=await rubricLabel(input.groupId,input.rubricId),meetingWhen=new Intl.DateTimeFormat('fr-FR',{dateStyle:'medium',timeStyle:'short'}).format(new Date(meeting.scheduledAt??meeting.openedAt)),changeWhen=new Intl.DateTimeFormat('fr-FR',{dateStyle:'medium',timeStyle:'short'}).format(new Date()),action={view:'operations',anchor:'twoSheetWorkspace',meetingId:input.meetingId,membershipId:input.membershipId,rubricId:input.rubricId,label:'Voir la cellule modifiée'};
-    await notifications.publish(input.groupId,{title:meeting.status==='closed'?'Séance clôturée modifiée':'Donnée financière corrigée',message:`${correctionMember} · ${correctionRubric} · ${meetingWhen} : ${state.current} → ${input.targetAmount} F CFA. Auteur : ${correctionActor}. Modification : ${changeWhen}. Motif : ${reason}`,channels:['IN_APP','WEB_PUSH'],audience:'MANAGERS',priority:meeting.status==='closed'?'CRITICAL':'HIGH',action});
-    await notifications.publish(input.groupId,{title:meeting.status==='closed'?'Votre compte a été corrigé après clôture':'Votre compte a été corrigé',message:`${correctionRubric} · ${meetingWhen} : ${state.current} → ${input.targetAmount} F CFA. Auteur : ${correctionActor}. Modification : ${changeWhen}. Motif : ${reason}. Vous pouvez valider ou émettre une réserve.`,channels:['IN_APP','WEB_PUSH'],audience:'SELECTED',selectedMembershipIds:[input.membershipId],priority:meeting.status==='closed'?'CRITICAL':'HIGH',action});
-    if(targetMember)await publishLive(input.groupId,'FINANCIAL_NOTICE','financial-cell-correction:'+evidenceEntry.id,{noticeId:notice.id,ledgerEntryId:evidenceEntry.id,operationType:'FINANCIAL_CELL_CORRECTION',amount:input.targetAmount,currency:'XAF',previousAmount:state.current,newAmount:input.targetAmount,meetingClosed:meeting.status==='closed',alertLevel:meeting.status==='closed'?'closed':'correction'},targetMember.userId);
-    await publishLive(input.groupId,'MEETING_UPDATE','financial-cell-managers:'+evidenceEntry.id,{meetingId:input.meetingId,kind:'FINANCIAL_CELL_CORRECTION',operationType:'FINANCIAL_CELL_CORRECTION',membershipId:input.membershipId,rubricId:input.rubricId,previousAmount:state.current,newAmount:input.targetAmount,meetingClosed:meeting.status==='closed',actorId:ctx.actorId,actorName:correctionActor});
-    return{status:'APPLIED',current:state.current,target:input.targetAmount,previousAmount:state.current,newAmount:input.targetAmount,cellVersion:correction.cellVersion,receipt,notice,groupId:group.id};
+    const outbox=correction.operationId?await repo.getWorkspaceRecord(ctx.tenantId,'financial_correction_outbox_'+correction.operationId):undefined;
+    const delivery=outbox?await dispatchFinancialCorrectionProjection(outbox):{ok:false};
+    return{status:'APPLIED',current:state.current,target:input.targetAmount,previousAmount:state.current,newAmount:input.targetAmount,cellVersion:correction.cellVersion,receipt,notice:delivery.notice??null,deliveryPending:!delivery.ok,groupId:group.id};
   };
 
   const jsonStringArray=(value:unknown):string[]=>{try{const parsed=JSON.parse(String(value??'[]'));return Array.isArray(parsed)?parsed.map(String):[];}catch{return[];}};
@@ -632,6 +654,18 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
     if(businessMandateApprove&&request.method==='POST')return json(await businessStudio.approveMandate(businessMandateApprove[1]!),200,cors);
     const businessMandate=url.pathname.match(/^\/api\/v1\/business\/mandates\/([^/]+)\/(activate|end)$/);
     if(businessMandate&&request.method==='POST'){const body=await readJson<any>(request);return json(businessMandate[2]==='activate'?await businessStudio.activateMandate(businessMandate[1]!):await businessStudio.endMandate(businessMandate[1]!,String(body.reason??'')),200,cors);}
+    const delegatedReport=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/mandate-report$/);
+    if(delegatedReport&&request.method==='GET'){
+      const groupId=delegatedReport[1]!,decision=kernel.policy.evaluate('mandate:right',ctx,{groupId,permission:'REPORTING'});if(!decision.allowed)throw Error(decision.reason);
+      const group=await repo.getGroup(ctx.tenantId,groupId);if(!group)throw Error('GROUP_NOT_FOUND');
+      const [members,groupMeetings,summary]=await Promise.all([repo.listMemberships(ctx.tenantId,groupId),repo.listMeetings(ctx.tenantId,groupId),ledger.summary(ctx.tenantId,groupId)]);
+      return json({group:{id:group.id,name:group.name},computedAt:new Date().toISOString(),sourceVersion:summary.entryCount,scope:'GROUP_AGGREGATE',availability:'AVAILABLE',members:{active:members.filter(x=>x.status==='active').length},meetings:{open:groupMeetings.filter(x=>x.status==='open').length,closed:groupMeetings.filter(x=>x.status==='closed').length},ledger:{currency:summary.currency,cashBalance:summary.cashBalance,entryCount:summary.entryCount},mandateRight:'REPORTING'},200,cors);
+    }
+    const delegatedCommunication=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/mandate-communication-drafts$/);
+    if(delegatedCommunication&&request.method==='POST'){
+      const groupId=delegatedCommunication[1]!,decision=kernel.policy.evaluate('mandate:right',ctx,{groupId,permission:'COMMUNICATION_SUPPORT'});if(!decision.allowed)throw Error(decision.reason);const body=await readJson<any>(request),title=String(body.title??'').trim().slice(0,160),message=String(body.message??'').trim().slice(0,1500);if(!title||!message)throw Error('MANDATE_COMMUNICATION_REQUIRED');
+      const at=new Date().toISOString(),record={id:makeId('mandate_comm'),tenantId:ctx.tenantId,groupId,moduleId:'MANDATE.COMMUNICATION_DRAFT',title,summary:message,status:'ACTIVE' as const,tags:['mandate','communication-support','manager-review-required'],data:{mandateIdsJson:JSON.stringify(ctx.mandateIds),requiresManagerPublication:true,financialEffect:false},createdBy:ctx.actorId,createdAt:at,updatedAt:at};await repo.saveWorkspaceRecord(record);await repo.saveAudit(kernel.audit.append({tenantId:ctx.tenantId,actorId:ctx.actorId,action:'MANDATE_COMMUNICATION_DRAFT_CREATED',targetType:'group',targetId:groupId,after:{recordId:record.id},requestId:ctx.requestId}));return json(record,201,cors);
+    }
     if(request.method==='POST'&&url.pathname==='/api/v1/business/clients'){const body=await readJson<any>(request);return json(await businessStudio.createClient(body),201,cors);}
     const businessClient=url.pathname.match(/^\/api\/v1\/business\/clients\/([^/]+)\/state$/);
     if(businessClient&&request.method==='POST'){const body=await readJson<any>(request);return json(await businessStudio.setClientState(businessClient[1]!,String(body.state??'PROSPECT') as any),200,cors);}
@@ -1270,14 +1304,15 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
     const retryProjectionRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/live\/retry-pending$/);
     if(retryProjectionRoute&&request.method==='POST'){
       const groupId=retryProjectionRoute[1]!;await requireGroup(groupId,true);
-      const pending=(await repo.listWorkspaceRecords(ctx.tenantId,'FINANCE.LIVE_PROJECTION',groupId)).filter(r=>r.status==='ACTIVE');
+      const pending=(await repo.listWorkspaceRecords(ctx.tenantId,'FINANCE.LIVE_PROJECTION',groupId)).filter(r=>r.status==='ACTIVE'),pendingCorrections=(await repo.listWorkspaceRecords(ctx.tenantId,'FINANCE.CORRECTION_OUTBOX',groupId)).filter(r=>r.status==='ACTIVE');
       const receipts=await repo.listContributionReceipts(ctx.tenantId,groupId);let retried=0,confirmed=0;
       for(const record of pending){
         const entryId=String(record.data.entryId??''),entry=entryId?await repo.getLedgerEntry(ctx.tenantId,groupId,entryId):undefined;
         const receipt=receipts.find(x=>x.ledgerEntryId===entryId);
         if(!entry||!receipt)continue;retried++;if(await dispatchContributionProjection(groupId,receipt,entry))confirmed++;
       }
-      return json({retried,confirmed,pending:Math.max(0,pending.length-confirmed)},200,cors);
+      for(const record of pendingCorrections){retried++;if((await dispatchFinancialCorrectionProjection(record)).ok)confirmed++;}
+      return json({retried,confirmed,pending:Math.max(0,pending.length+pendingCorrections.length-confirmed)},200,cors);
     }
 
     const savingsYieldSource=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/savings-yield\/source-data$/);
@@ -1848,6 +1883,9 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
     const procurementRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/market\/procurements$/);
     if(procurementRoute&&request.method==='GET')return json(await market.procurement(procurementRoute[1]!),200,cors);
     if(procurementRoute&&request.method==='POST'){const body=await readJson<any>(request);return json(await market.createProcurement(procurementRoute[1]!,body),201,cors);}
+    const valueProcurementHandoff=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/market\/procurements\/from-value-draft\/([^/]+)$/);
+    if(valueProcurementHandoff&&request.method==='POST'){const body=await readJson<any>(request);return json(await market.approveValueProcurementDraft(valueProcurementHandoff[1]!,valueProcurementHandoff[2]!,body),201,cors);}
+
     const procurementReceive=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/market\/procurements\/([^/]+)\/receive$/);
     if(procurementReceive&&request.method==='POST'){const body=await readJson<any>(request);return json(await market.receiveProcurement(procurementReceive[1]!,procurementReceive[2]!,body),200,cors);}
     const procurementReturn=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/market\/procurements\/([^/]+)\/return$/);
@@ -2707,7 +2745,7 @@ export default {async fetch(request:Request,env:WorkerEnv={}){
   const groupPairing=new GroupPairingService(env.DB,repository,pairingKernel);
   return authenticatedApi(repository,env.DB,async authenticatedRequest=>{
     const h=authenticatedRequest.headers;
-    pairingKernel.context.set({actorId:h.get('x-actor-id')??'unknown',tenantId:h.get('x-tenant-id')??'unknown',activeGroupId:h.get('x-active-group-id')||undefined,groupRoles:(h.get('x-group-roles')??'').split(',').filter(Boolean),mandateIds:[],deviceId:h.get('x-device-id')??'device_web',sessionId:h.get('x-session-id')??'server-authenticated',locale:h.get('accept-language')?.toLowerCase().startsWith('en')?'en':'fr',timezone:h.get('x-timezone')??'Africa/Douala',connectivity:'online',requestId:h.get('x-request-id')??crypto.randomUUID()});
+    pairingKernel.context.set({actorId:h.get('x-actor-id')??'unknown',tenantId:h.get('x-tenant-id')??'unknown',activeGroupId:h.get('x-active-group-id')||undefined,groupRoles:(h.get('x-group-roles')??'').split(',').filter(Boolean),mandateIds:[],mandateGrants:[],deviceId:h.get('x-device-id')??'device_web',sessionId:h.get('x-session-id')??'server-authenticated',locale:h.get('accept-language')?.toLowerCase().startsWith('en')?'en':'fr',timezone:h.get('x-timezone')??'Africa/Douala',connectivity:'online',requestId:h.get('x-request-id')??crypto.randomUUID()});
     return createApiHandler(repository,{artifacts:env.ARTIFACTS,documentAI:env.AI,liveNamespace:env.GROUP_LIVE_HUB,premiumLive:env.PREMIUM_LIVE_LEDGER==='true',referralBudgets:new D1ReferralBudgetStore(env.DB!),founderLearning,founderControl,communityRealtime,founderTeamActors,commercialPreferences,groupPairing,interestCommunities,ecoPulse,identityProof,dataUseDefaultMode,governanceSecret:env.COLLECTIVE_LEARNING_PEPPER??env.IDENTITY_MATCH_PEPPER,releaseCommitSha:env.RELEASE_COMMIT_SHA})(authenticatedRequest);
   })(request);
 },

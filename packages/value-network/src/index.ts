@@ -147,7 +147,7 @@ export class ValueNetworkService{
       if(ageDays<=7)explanations.push('Offre actualisée récemment');
       if(o.data.sponsored===true)warnings.push('Offre sponsorisée : le sponsoring ne modifie pas le score de confiance');
 
-      return{offer:o,eligible,hardReasons,warnings,explanations,baseScore,landedTotal,landedUnitCost,reliability,freshness,priceKnown,sponsored:o.data.sponsored===true,policyVersion:MATCH_POLICY_VERSION};
+      return{offer:o,eligible,hardReasons,warnings,explanations,baseScore,merchandiseCost,landedTotal,landedUnitCost,reliability,freshness,priceKnown,sponsored:o.data.sponsored===true,policyVersion:MATCH_POLICY_VERSION};
     });
 
     const eligible=evaluated.filter(x=>x.eligible),knownCosts=eligible.map(x=>x.landedTotal).filter((x):x is number=>x!==null),minCost=knownCosts.length?Math.min(...knownCosts):null;
@@ -165,8 +165,8 @@ export class ValueNetworkService{
     const need=await this.get(needId,'OPPORTUNITY.NEED'),offer=await this.get(offerId,'OPPORTUNITY.OFFER');if(!need.groupId)throw new Error('GROUP_REQUIRED');await this.groupAccess(need.groupId,true);
     const matches=await this.matchNeed(needId),match=matches.find(x=>x.offer.id===offerId);if(!match)throw new Error('OFFER_NOT_ELIGIBLE');
     const draft=await this.save('MARKETPLACE.PROCUREMENT','Approvisionnement · '+need.title,need.groupId,{
-      state:'DRAFT',needId:need.id,offerId:offer.id,quantity:Number(need.data.quantity),unit:String(need.data.unit),unitPrice:offer.data.unitPrice===null?0:Number(offer.data.unitPrice??0),
-      currency:String(offer.data.currency??'XAF'),supplierRef:String(offer.data.supplierRef??''),landedCost:match.landedTotal,matchScore:match.score,matchPolicyVersion:MATCH_POLICY_VERSION,
+      state:'DRAFT',needId:need.id,offerId:offer.id,needTitle:need.title,category:String(need.data.category??''),quantity:Number(need.data.quantity),unit:String(need.data.unit),unitPrice:offer.data.unitPrice===null?0:Number(offer.data.unitPrice??0),
+      currency:String(offer.data.currency??'XAF'),supplierRef:String(offer.data.supplierRef??''),merchandiseCost:match.merchandiseCost,transportCost:Number(offer.data.transportCost??0),otherCosts:Number(offer.data.otherCosts??0),discount:Number(offer.data.discount??0),landedCost:match.landedTotal,matchScore:match.score,matchPolicyVersion:MATCH_POLICY_VERSION,
       createsOrder:false,createsDebt:false,requiresExplicitApproval:true,version:1
     },['procurement','handoff','draft']);
     await this.mutate(need,{state:'PROCUREMENT_DRAFTED',procurementDraftId:draft.id});return draft;

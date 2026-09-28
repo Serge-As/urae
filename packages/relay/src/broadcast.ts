@@ -5,6 +5,11 @@ export interface EcoMemberCapsule {
   generatedAt:string;
   expiresAt:string;
   projection:Record<string,unknown>;
+  schemaVersion?:1;
+  projectionVersion?:number;
+  sourceAuthorityId?:string;
+  sourceDeviceId?:string;
+  projectionDigest?:string;
 }
 
 export interface EcoRelayPairingMaterial {
@@ -17,6 +22,7 @@ export interface EcoRelayPairingMaterial {
   groupName?:string;
   displayName?:string;
   memberNumber?:number;
+  groupAuthorityId?:string;
 }
 
 export interface EcoEncryptedCapsule {
@@ -71,9 +77,9 @@ export async function createRelayPairingMaterial(membershipId:string):Promise<Ec
 
 export function encodePairingQr(material:EcoRelayPairingMaterial):string{
   if(material.protocolVersion!==1||!material.groupId||!material.membershipId||!material.keyId||!material.rawKey)throw Error('INVALID_RELAY_PAIRING_MATERIAL');
-  let compact:any={p:1,g:material.groupId,m:material.membershipId,k:material.keyId,r:material.rawKey,c:material.createdAt,G:material.groupName??'',d:material.displayName??'',n:material.memberNumber??null};
+  let compact:any={p:1,g:material.groupId,m:material.membershipId,k:material.keyId,r:material.rawKey,c:material.createdAt,G:material.groupName??'',d:material.displayName??'',n:material.memberNumber??null,a:material.groupAuthorityId??''};
   let encoded='ECOP1:'+b64u(te.encode(JSON.stringify(compact)));
-  if(te.encode(encoded).length>250){compact={p:1,g:material.groupId,m:material.membershipId,k:material.keyId,r:material.rawKey,c:material.createdAt,n:material.memberNumber??null};encoded='ECOP1:'+b64u(te.encode(JSON.stringify(compact)));}
+  if(te.encode(encoded).length>250){compact={p:1,g:material.groupId,m:material.membershipId,k:material.keyId,r:material.rawKey,n:material.memberNumber??null,a:material.groupAuthorityId??''};encoded='ECOP1:'+b64u(te.encode(JSON.stringify(compact)));}
   if(te.encode(encoded).length>271)throw Error('PAIRING_QR_TOO_LARGE');
   return encoded;
 }
@@ -81,7 +87,7 @@ export function decodePairingQr(raw:string):EcoRelayPairingMaterial{
   if(!raw.startsWith('ECOP1:'))throw Error('INVALID_PAIRING_QR');
   let c:any;try{c=JSON.parse(td.decode(unb64u(raw.slice(6))));}catch{throw Error('INVALID_PAIRING_QR');}
   if(c?.p!==1||!c.g||!c.m||!c.k||!c.r)throw Error('INVALID_PAIRING_QR');
-  return{protocolVersion:1,groupId:String(c.g),membershipId:String(c.m),keyId:String(c.k),rawKey:String(c.r),createdAt:String(c.c??new Date().toISOString()),groupName:c.G?String(c.G):undefined,displayName:c.d?String(c.d):undefined,memberNumber:Number.isSafeInteger(c.n)?Number(c.n):undefined};
+  return{protocolVersion:1,groupId:String(c.g),membershipId:String(c.m),keyId:String(c.k),rawKey:String(c.r),createdAt:String(c.c??new Date().toISOString()),groupName:c.G?String(c.G):undefined,displayName:c.d?String(c.d):undefined,memberNumber:Number.isSafeInteger(c.n)?Number(c.n):undefined,groupAuthorityId:c.a?String(c.a):undefined};
 }
 
 export async function encryptMemberCapsule(capsule:EcoMemberCapsule,material:EcoRelayPairingMaterial):Promise<EcoEncryptedCapsule>{

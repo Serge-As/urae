@@ -1,3 +1,11 @@
+# CURRENT AUTHORITY — RELEASE CONTRACT (2026-09-28)
+
+La vérité d'identité courante est désormais machine-lisible dans `docs/release/CURRENT_RELEASE_CONTRACT.json`. Les blocs « CURRENT OVERRIDE » ci-dessous sont conservés comme historique de livraisons et ne doivent plus être interprétés, par leur seule position, comme le SHA actuellement servi.
+
+Le SHA de production est autoritatif uniquement lorsque **le workflow de livraison du même SHA est SUCCESS** et que `/health.commitSha` répond exactement ce SHA avec la version, le build, le schéma, la politique et le cache du contrat. `FIELD_ACCEPTED` reste **NOT_ACCEPTED** tant qu'une recette physique séparée n'a pas été constatée sur les appareils ciblés.
+
+---
+
 ## CURRENT OVERRIDE — 1.5.2.9 SOVEREIGN OFFLINE + BROADCAST QR + iOS — PRODUCTION VERIFIED (2026-09-28)
 
 Production publique : `1.5.2.9-sovereign-offline`, SHA exact `faa23c6b279197b267dd1981529e39b5bd994d62`, Worker Version ID `0902744e-3293-448f-ad4c-5f6af2dd4804`, PWA cache `eco-system-v1529-sovereign-offline-20260928`.

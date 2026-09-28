@@ -48,4 +48,32 @@ for(const line of positiveLines){
 }
 const serialized=JSON.stringify(ledger);
 if(/(?:Bearer\s+|eyJ[a-zA-Z0-9_-]{10,}|[A-Za-z0-9_-]{40,}\.[A-Za-z0-9_-]{20,})/.test(serialized)) throw new Error('Truth ledger appears to contain a secret/token value');
+
+const releaseContractPath='docs/release/CURRENT_RELEASE_CONTRACT.json';
+if(!fs.existsSync(releaseContractPath)) throw new Error('Missing current release contract');
+const releaseContract=JSON.parse(fs.readFileSync(releaseContractPath,'utf8'));
+const workerSource=fs.readFileSync('workers/api/src/index.ts','utf8');
+const swSource=fs.readFileSync('apps/web/sw.js','utf8');
+const workflowSource=fs.readFileSync('.github/workflows/deploy-1.5.2.9-sovereign-offline.yml','utf8');
+const constant=(name)=>{
+  const m=workerSource.match(new RegExp("const "+name+"='([^']+)'"));
+  if(!m)throw new Error('Missing Worker release constant '+name);
+  return m[1];
+};
+const rel=releaseContract.release||{};
+const checks=[
+  ['version',constant('RELEASE_VERSION'),rel.version],
+  ['buildId',constant('RELEASE_BUILD_ID'),rel.buildId],
+  ['schemaVersion',constant('RELEASE_SCHEMA_VERSION'),rel.schemaVersion],
+  ['policyVersion',constant('RELEASE_POLICY_VERSION'),rel.policyVersion],
+  ['pwaCache',constant('RELEASE_PWA_CACHE'),rel.pwaCache]
+];
+for(const [name,actual,expected] of checks)if(actual!==expected)throw new Error(`Release contract mismatch ${name}: ${actual} != ${expected}`);
+const swCurrent=swSource.match(/const CACHE = '([^']+)'/)?.[1],swPrevious=swSource.match(/const PREVIOUS_CACHE = '([^']+)'/)?.[1];
+if(swCurrent!==rel.pwaCache)throw new Error('Release contract mismatch Service Worker current cache');
+if(swPrevious!==rel.previousPwaCache)throw new Error('Release contract mismatch Service Worker rollback cache');
+if(!workflowSource.includes(`EXPECTED_VERSION: ${rel.version}`)||!workflowSource.includes(String(rel.pwaCache)))throw new Error('Delivery workflow release identity drift');
+if(releaseContract.truthAxes?.fieldAcceptance!=='NOT_ACCEPTED')throw new Error('FIELD_ACCEPTED requires separate physical evidence and cannot be promoted by source CI');
+if(releaseContract.invariants?.realMoneyEnabled!==false)throw new Error('Release contract must keep real money disabled');
+
 console.log(`Project truth OK: ${records.length} records; Cloudflare/D1/Worker acquisitions preserved; historical assertions preserved, current qualification recorded separately`);

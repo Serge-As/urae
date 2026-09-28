@@ -6,6 +6,14 @@ export interface Money {
   amount: number;
 }
 
+export interface MandateGrantContext {
+  mandateId: Id;
+  groupId: Id;
+  permissions: string[];
+  startsAt: string;
+  endsAt?: string;
+}
+
 export interface ActorContext {
   actorId: Id;
   tenantId: Id;
@@ -14,6 +22,7 @@ export interface ActorContext {
   platformLevel?: number;
   groupRoles: string[];
   mandateIds: Id[];
+  mandateGrants?: MandateGrantContext[];
   deviceId: Id;
   sessionId: Id;
   locale: 'fr' | 'en' | string;

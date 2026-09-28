@@ -40,11 +40,26 @@ export class TrashLifecycleMaintenance{
     await this.repo.saveWorkspaceRecord(notice);return true;
   }
 
+  private async cleanupArtifacts(item:WorkspaceRecord,at:Date):Promise<boolean>{
+    if(item.moduleId!=='TRASH.ARTIFACT_CLEANUP'||item.status!=='ACTIVE')return true;
+    let keys=jsonArray(item.data.artifactKeysJson),done=new Set(jsonArray(item.data.completedKeysJson));
+    if(!keys.length){await this.repo.saveWorkspaceRecord({...item,status:'DONE',data:{...item.data,artifactKeysJson:'[]',completedKeysJson:'[]',lastError:null},updatedAt:nowIso(at)});return true;}
+    if(!this.artifacts||typeof this.artifacts.delete!=='function')return false;
+    try{
+      for(const key of keys){if(done.has(key))continue;await this.artifacts.delete(key);done.add(key);await this.repo.saveWorkspaceRecord({...item,data:{...item.data,completedKeysJson:JSON.stringify([...done]),lastError:null},updatedAt:nowIso(at)});}
+      await this.repo.saveWorkspaceRecord({...item,status:'DONE',tags:[...new Set([...item.tags,'completed'])],data:{...item.data,artifactKeysJson:'[]',completedKeysJson:'[]',lastError:null,completedAt:nowIso(at)},updatedAt:nowIso(at)});return true;
+    }catch(error){await this.repo.saveWorkspaceRecord({...item,status:'ACTIVE',tags:[...new Set([...item.tags,'retry-required'])],data:{...item.data,completedKeysJson:JSON.stringify([...done]),lastError:(error instanceof Error?error.message:'ARTIFACT_DELETE_FAILED').slice(0,300)},updatedAt:nowIso(at)});return false;}
+  }
+
   async run(at=new Date()):Promise<TrashMaintenanceReport>{
     const report:TrashMaintenanceReport={scanned:0,remindersCreated:0,purged:0,blocked:0,errors:[]};
     const items=await this.repo.listTrashMaintenanceItems();
+    // Finish previously committed artifact cleanup jobs first. Business purge has already won arbitration.
+    for(const cleanup of items.filter(x=>x.moduleId==='TRASH.ARTIFACT_CLEANUP'&&x.status==='ACTIVE')){
+      try{if(!await this.cleanupArtifacts(cleanup,at))report.blocked++;}catch(error){report.errors.push({trashId:cleanup.id,error:error instanceof Error?error.message:'UNKNOWN_ERROR'});}
+    }
     for(const original of items){
-      if(String(original.data.kind??'')!=='GROUP'||original.status!=='ACTIVE')continue;
+      if(original.moduleId!=='TRASH.ITEM'||original.status!=='ACTIVE')continue;
       report.scanned++;
       let item=original;
       try{
@@ -53,29 +68,28 @@ export class TrashLifecycleMaintenance{
         const now=at.getTime();
 
         if(expiry<=now){
+          const kind=String(item.data.kind??'');
+          if(kind!=='GROUP'){
+            // For referenced member/meeting/rubric identities, expire the recoverable trash snapshot
+            // without silently deleting ledger references that still point at the archived entity id.
+            item={...item,status:'ARCHIVED',tags:[...new Set([...item.tags,'retention-expired','recovery-snapshot-purged'])],data:{...item.data,lifecycleState:'PURGED_RECOVERY_SNAPSHOT',snapshotJson:'',purgedAt:nowIso(at),restoreDisabled:true},updatedAt:nowIso(at)};
+            await this.repo.saveWorkspaceRecord(item);report.purged++;continue;
+          }
           const petitionState=String(item.data.petitionState??'');
-          if(['THRESHOLD_REACHED','VERIFIED','RECONSTITUTION_READY'].includes(petitionState)){
-            report.blocked++;continue;
-          }
-          if(String(item.data.lifecycleState??'TRASHED')!=='PURGE_PENDING'){
-            item={...item,data:{...item.data,lifecycleState:'PURGE_PENDING',purgeStartedAt:nowIso(at)},updatedAt:nowIso(at)};
-            await this.repo.saveWorkspaceRecord(item);
-          }
+          if(['THRESHOLD_REACHED','VERIFIED','RECONSTITUTION_READY'].includes(petitionState)){report.blocked++;continue;}
           const groupId=String(item.data.entityId??item.groupId??'');if(!groupId)throw new Error('GROUP_ID_REQUIRED');
           const manifest=await this.repo.captureGroupPurgeManifest(item.tenantId,groupId);
-          if(manifest.artifactKeys.length&&(!this.artifacts||typeof this.artifacts.delete!=='function')){
-            item={...item,data:{...item.data,purgeBlocked:'ARTIFACT_DELETE_UNAVAILABLE'},updatedAt:nowIso(at)};
-            await this.repo.saveWorkspaceRecord(item);report.blocked++;continue;
+          // The D1 repository arbitrates petition vs purge and commits a durable R2 cleanup job
+          // in the same transaction. R2 deletion must never happen before that arbitration.
+          let purge;
+          try{purge=await this.repo.purgeGroupData(manifest,item.id,nowIso(at));}catch(error){
+            const current=await Promise.resolve(this.repo.getWorkspaceRecord(item.tenantId,item.id)).catch(()=>undefined),state=String(current?.data.petitionState??'');
+            if(['THRESHOLD_REACHED','VERIFIED','RECONSTITUTION_READY'].includes(state)){report.blocked++;continue;}
+            throw error;
           }
-          let artifactFailure:string|undefined;
-          for(const key of manifest.artifactKeys){
-            try{await this.artifacts?.delete?.(key);}catch(error){artifactFailure=error instanceof Error?error.message:'ARTIFACT_DELETE_FAILED';break;}
-          }
-          if(artifactFailure){
-            item={...item,data:{...item.data,purgeBlocked:'ARTIFACT_DELETE_FAILED',lastPurgeError:artifactFailure.slice(0,300)},updatedAt:nowIso(at)};
-            await this.repo.saveWorkspaceRecord(item);report.blocked++;continue;
-          }
-          await this.repo.purgeGroupData(manifest,item.id,nowIso(at));report.purged++;continue;
+          report.purged++;
+          if(purge.artifactsPending>0){const cleanup=await this.repo.getWorkspaceRecord(item.tenantId,purge.artifactCleanupTaskId);if(cleanup&&!await this.cleanupArtifacts(cleanup,at))report.blocked++;}
+          continue;
         }
 
         const due=Date.parse(String(item.data.nextReminderAt??''));

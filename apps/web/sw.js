@@ -1,5 +1,5 @@
-const CACHE = 'eco-system-v1529-sovereign-offline-a01-20260928';
-const PREVIOUS_CACHE = 'eco-system-v1529-sovereign-offline-20260928';
+const CACHE = 'eco-system-v1529-neural-closure-20260928';
+const PREVIOUS_CACHE = 'eco-system-v1529-sovereign-offline-a01-20260928';
 const RELEASE_READY = '/__eco_release_ready__';
 
 // Authentication, navigation and canonical application owners must be complete
@@ -35,7 +35,6 @@ const OPTIONAL_SHELL = [
   '/src/assistance-rulebook-ui.js',
   '/src/starter-kit-ui.js',
   '/src/group-learning-registry-ui.js',
-  '/src/role-directory-talent-ui.js', '/src/geolocation.js',
   '/src/role-directory-talent-ui.js', '/src/geolocation.js',
   '/packages/rubrics/src/launch-config.js', '/packages/rubrics/src/index.js',
   '/packages/completion/src/index.js', '/packages/module-registry/src/index.js',

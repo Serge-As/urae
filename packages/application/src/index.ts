@@ -12,7 +12,7 @@ import { simulatePeriodicLoan } from '../../loan-simulator/src/index.js';
 import { allocateSavingsYield, splitInterestPool, simulateWorkbookYieldPipeline, allocateCapitalAtWorkYield, allocateCapitalTimeYield, allocateAttributedProductiveYield, SAVINGS_YIELD_POLICY_PRESETS } from '../../savings-yield/src/index.js';
 import { buildFinancialRecap, buildSessionRecap, buildClosingCarryover } from '../../recap-engine/src/index.js';
 import { diagnoseGroup } from '../../group-doctor/src/index.js';
-import { IndexedDbSovereignStore, createEcoVault, openEcoVault, type SovereignSnapshot } from '../../offline-sovereign/src/index.js';
+import { IndexedDbSovereignStore, createEcoVault, openEcoVault, validateSovereignJournalEvents, type SovereignSnapshot } from '../../offline-sovereign/src/index.js';
 import { buildExerciseClosingPlan, buildExerciseCarryForwardSeed, type ExerciseClosingInput, type ExerciseClosingPlan } from '../../exercise/src/index.js';
 import { buildNumpadRubricCodes, parseEcoNumpad, type NumpadCode, type NumpadDraft } from '../../eco-numpad/src/index.js';
 import { createRelayPairingMaterial, encryptMemberCapsule, decryptMemberCapsule, createBroadcastBundle, encodeBroadcastFrames, encodeTargetedBroadcastFrames, type EcoMemberCapsule, type EcoRelayPairingMaterial, type EcoBroadcastBundle } from '../../relay/src/broadcast.js';
@@ -106,21 +106,42 @@ export class ConnectedApplication {
     // offline blocker. Mutations are never synthesized here.
     return path==='/api/v1/auth/session'||path.startsWith('/api/v1/');
   }
-  private offlineReadKey(path:string):string{return path==='/api/v1/auth/session'?'session:last':JSON.stringify([this.actorId,this.tenantId,this.activeGroupId??'',path]);}
+  private offlineReadKey(path:string):string{
+    if(path==='/api/v1/auth/session')return 'session:last';
+    const accountTenant=this.homeTenantId??this.tenantId;
+    if(path==='/api/v1/groups')return JSON.stringify([this.actorId,accountTenant,'ACCOUNT',path]);
+    return JSON.stringify([this.actorId,this.tenantId,this.activeGroupId??'',path]);
+  }
   private async cacheReadSnapshot<T>(path:string,body:T):Promise<void>{
     if(!IndexedDbReadSnapshotAdapter.supported()||!this.offlineReadAllowed(path))return;
-    const session=path==='/api/v1/auth/session'?(body as any)?.account:undefined;
-    try{await this.readSnapshots.save({id:this.offlineReadKey(path),actorId:String(session?.id??this.actorId),tenantId:String(session?.tenantId??this.tenantId),path,body});}catch{}
+    const session=path==='/api/v1/auth/session'?(body as any)?.account:undefined,stamp=new Date().toISOString(),raw=body as any,sourceVersion=raw?.sourceVersion??raw?.projectionVersion??raw?.version??raw?.watermark;
+    try{await this.readSnapshots.save({id:this.offlineReadKey(path),actorId:String(session?.id??this.actorId),tenantId:String(session?.tenantId??this.tenantId),path,body,source:'SERVER',lastSyncedAt:stamp,sourceVersion});}catch{}
   }
   private announceOfflineSnapshot(path:string,updatedAt:string):void{
     this.usingOfflineSnapshot=true;
     if(typeof window!=='undefined'&&typeof CustomEvent!=='undefined')window.dispatchEvent(new CustomEvent('eco:offline-snapshot-used',{detail:{path,updatedAt}}));
   }
   private isOffline():boolean{return this.usingOfflineSnapshot||(typeof navigator!=='undefined'&&navigator.onLine===false);}
-  private async cached<T>(path:string):Promise<T|undefined>{try{return (await this.readSnapshots.get<T>(this.offlineReadKey(path)))?.body;}catch{return undefined;}}
-  private async saveCached<T>(path:string,body:T):Promise<void>{
+  private async cached<T>(path:string):Promise<T|undefined>{
+    try{
+      const exact=await this.readSnapshots.get<T>(this.offlineReadKey(path));if(exact)return exact.body;
+      if(path==='/api/v1/groups'){
+        const tenantId=this.homeTenantId??this.tenantId,rows=await this.readSnapshots.listForActorTenant(this.actorId,tenantId),byId=new Map<string,Group>();
+        for(const row of rows.filter(x=>x.path==='/api/v1/groups'))for(const group of Array.isArray(row.body)?row.body as Group[]:[])if(group?.id)byId.set(group.id,group);
+        if(byId.size){const body=[...byId.values()] as unknown as T;await this.readSnapshots.save({id:this.offlineReadKey(path),actorId:this.actorId,tenantId,path,body});return body;}
+      }
+    }catch{}
+    return undefined;
+  }
+  private async saveCached<T>(path:string,body:T,source:'SERVER'|'LOCAL'|'RELAY'|'RESTORED'='LOCAL'):Promise<void>{
     if(!IndexedDbReadSnapshotAdapter.supported())throw Error('DURABLE_STORAGE_REQUIRED');
-    await this.readSnapshots.save({id:this.offlineReadKey(path),actorId:this.actorId,tenantId:this.tenantId,path,body});
+    const tenantId=path==='/api/v1/groups'?(this.homeTenantId??this.tenantId):this.tenantId,id=this.offlineReadKey(path),previous=await this.readSnapshots.get<any>(id).catch(()=>undefined),raw=body as any,sourceVersion=raw?.sourceVersion??raw?.projectionVersion??raw?.version??raw?.watermark??previous?.sourceVersion;
+    await this.readSnapshots.save({id,actorId:this.actorId,tenantId,path,body,source,lastSyncedAt:source==='SERVER'?new Date().toISOString():previous?.lastSyncedAt,sourceVersion});
+  }
+  async projectionMeta(path:string):Promise<{computedAt:string|null;sourceVersion:string|number|null;lastSyncedAt:string|null;pendingCount:number;scope:{actorId:string;tenantId:string;groupId:string|null};availability:'AVAILABLE'|'STALE'|'LOCAL_PENDING'|'UNAVAILABLE';source:string|null}>{
+    const snapshot=await this.readSnapshots.get<any>(this.offlineReadKey(path)).catch(()=>undefined),pending=this.outbox.list().filter(x=>!['CONFIRMED','CANCELLED'].includes(x.status)&&String((x.payload as any)?.groupId??this.activeGroupId??'')===String(this.activeGroupId??'')).length,body=snapshot?.body as any,computedAt=body?.computedAt??body?.asOf??body?.generatedAt??snapshot?.updatedAt??null,sourceVersion=snapshot?.sourceVersion??body?.sourceVersion??body?.projectionVersion??body?.version??null;
+    const age=computedAt?Date.now()-Date.parse(String(computedAt)):Infinity,availability=!snapshot?'UNAVAILABLE':pending>0?'LOCAL_PENDING':Number.isFinite(age)&&age>24*3600_000?'STALE':'AVAILABLE';
+    return{computedAt,sourceVersion,lastSyncedAt:snapshot?.lastSyncedAt??null,pendingCount:pending,scope:{actorId:this.actorId,tenantId:this.tenantId,groupId:this.activeGroupId??null},availability,source:snapshot?.source??null};
   }
   private async patchCachedArray<T>(path:string,updater:(items:T[])=>T[]):Promise<T[]>{
     const current=structuredClone(await this.cached<T[]>(path)??[]),next=updater(current);
@@ -137,6 +158,9 @@ export class ConnectedApplication {
   private async sha256Hex(value:string):Promise<string>{
     const bytes=new TextEncoder().encode(value),digest=await crypto.subtle.digest('SHA-256',bytes);
     return[...new Uint8Array(digest)].map(x=>x.toString(16).padStart(2,'0')).join('');
+  }
+  private localDeviceId():string{
+    const fallback='device_'+this.actorId;try{let id=localStorage.getItem('tontine.deviceId');if(!id){id='device_'+crypto.randomUUID();localStorage.setItem('tontine.deviceId',id);}return id;}catch{return fallback;}
   }
   private async patchCachedFinancialNotice(membershipId:string,noticeId:string,patch:Record<string,unknown>):Promise<any>{
     if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');
@@ -170,10 +194,11 @@ export class ConnectedApplication {
     const session=await this.authStatus();if(!session.authenticated || !session.account)throw Error('AUTHENTICATION_REQUIRED');
     this.actorId=session.account.id;this.homeTenantId=session.account.tenantId;this.tenantId=session.account.tenantId;this.displayName=session.account.displayName;
     let preferred:string|undefined;try{preferred=localStorage.getItem('tontine.locale')??undefined;}catch{}this.locale=preferred??session.account.locale;
+    if(IndexedDbOutboxAdapter.supported())try{const persisted=await this.outboxStorage.load();this.outbox.restore(persisted.filter(x=>x.actorId===this.actorId&&x.tenantId===this.tenantId));}catch{}
+    await this.recoverInterruptedVaultRestores();
     const groups=await this.listGroups();if(this.activeGroupId&&!groups.some(g=>g.id===this.activeGroupId))this.selectGroup(undefined);if(!this.activeGroupId&&groups[0])this.selectGroup(groups[0].id);else this.selectGroup(this.activeGroupId);
     if(!this.usingOfflineSnapshot){await this.request('/api/v1/bootstrap',{method:'POST',body:JSON.stringify({displayName:this.displayName,locale:this.locale})});await this.groupTrashItems().catch(()=>[]);}
-    let restoredOutbox=0;if(IndexedDbOutboxAdapter.supported())try{const persisted=await this.outboxStorage.load();this.outbox.restore(persisted.filter(x=>x.actorId===this.actorId&&x.tenantId===this.tenantId));restoredOutbox=this.outbox.list().length;}catch{}
-    return{restoredOutbox,groups};
+    return{restoredOutbox:this.outbox.list().length,groups};
   }
 
   async authStatus():Promise<{authenticated:boolean;account:SessionAccount|null;local?:boolean;registrationState?:string;offline?:boolean}>{
@@ -204,7 +229,7 @@ export class ConnectedApplication {
     if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');const [members,groups]=await Promise.all([this.listMembers(),this.listGroups()]),member=members.find(x=>x.id===membershipId&&x.status==='active'),group=groups.find(x=>x.id===this.activeGroupId);if(!member||!group)throw Error('MEMBERSHIP_NOT_FOUND');const self=members.find(x=>x.userId===this.actorId),canManage=group.createdBy===this.actorId||Boolean(self?.roles?.some(r=>['founder','manager','admin','president','treasurer'].includes(String(r).toLowerCase())));if(!canManage)throw Error('FORBIDDEN_GROUP_MANAGEMENT');
     const existing=!rotate?await this.sovereign.relayKey(this.tenantId,this.activeGroupId,membershipId):undefined;
     const base=existing?{protocolVersion:1 as const,membershipId,keyId:existing.keyId,rawKey:existing.rawKey,createdAt:existing.createdAt}:await createRelayPairingMaterial(membershipId);
-    const material:EcoRelayPairingMaterial={...base,groupId:group.id,groupName:group.name,displayName:member.displayName,memberNumber:member.memberNumber};
+    const material:EcoRelayPairingMaterial={...base,groupId:group.id,groupName:group.name,displayName:member.displayName,memberNumber:member.memberNumber,groupAuthorityId:group.createdBy};
     if(!existing)await this.sovereign.saveRelayKey({tenantId:this.tenantId,groupId:this.activeGroupId,membershipId:material.membershipId,keyId:material.keyId,rawKey:material.rawKey,createdAt:material.createdAt});
     return material;
   }
@@ -212,7 +237,7 @@ export class ConnectedApplication {
     if(material.protocolVersion!==1||!material.membershipId||!material.keyId||!material.rawKey||!material.groupId)throw Error('INVALID_RELAY_PAIRING_MATERIAL');
     const groupId=material.groupId,groups=await this.cached<Group[]>('/api/v1/groups')??[],existingGroup=groups.find(x=>x.id===groupId);
     if(!existingGroup){
-      const stamp=material.createdAt||new Date().toISOString(),group:Group={id:groupId,tenantId:this.tenantId,name:material.groupName?.trim()||'Groupe Eco Relay',kind:'association',originMode:'IMPORT_EXISTING',governanceModel:'community',status:'active',createdBy:this.actorId,createdAt:stamp};
+      const stamp=material.createdAt||new Date().toISOString(),group:Group={id:groupId,tenantId:this.tenantId,name:material.groupName?.trim()||'Groupe Eco Relay',kind:'association',originMode:'IMPORT_EXISTING',governanceModel:'community',status:'active',createdBy:material.groupAuthorityId?.trim()||('relay_authority_'+groupId),createdAt:stamp};
       await this.saveCached('/api/v1/groups',[...groups,group]);this.groupTenants.set(groupId,this.tenantId);
     }
     this.selectGroup(groupId);
@@ -227,26 +252,42 @@ export class ConnectedApplication {
     if(!this.activeGroupId)return undefined;const members=await this.listMembers(),own=members.find(x=>x.userId===this.actorId&&x.status!=='left');if(!own)return undefined;
     const key=await this.sovereign.relayKey(this.tenantId,this.activeGroupId,own.id);return key?{membershipId:own.id,keyId:key.keyId}:undefined;
   }
-  async localMemberCapsule(membershipId:string,meetingId?:string):Promise<EcoMemberCapsule>{
-    if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');const [groups,members,rubrics,meetings,ledgerState,loans,exercises]=await Promise.all([this.listGroups(),this.listMembers(),this.listRubrics(),this.listMeetings(),this.ledger(),this.listCompletion('LOAN'),this.exercises()]);
-    const member=members.find(x=>x.id===membershipId&&x.status!=='left');if(!member)throw Error('MEMBERSHIP_NOT_FOUND');const group=groups.find(x=>x.id===this.activeGroupId);if(!group)throw Error('GROUP_NOT_FOUND');
-    const rubricNames=new Map(rubrics.map(x=>[x.id,x.name])),meeting=meetingId?meetings.find(x=>x.id===meetingId):meetings.slice().sort((a,b)=>String(b.scheduledAt??b.openedAt).localeCompare(String(a.scheduledAt??a.openedAt)))[0];
-    const receipts=(ledgerState.receipts??[]).filter((x:any)=>x.membershipId===membershipId&&(!meeting||x.meetingId===meeting.id)).map((x:any)=>({receiptId:x.id,meetingId:x.meetingId??null,rubricId:x.rubricId??null,rubricName:x.rubricId?rubricNames.get(x.rubricId)??'Rubrique':'Sans rubrique',netAmount:Number(x.netAmount??x.amount?.amount??0),currency:String(x.amount?.currency??'XAF'),receivedAt:x.receivedAt,localPending:Boolean(x.localPending)}));
-    const allReceipts=(ledgerState.receipts??[]).filter((x:any)=>x.membershipId===membershipId),statementTotal=allReceipts.reduce((n:number,x:any)=>n+Number(x.netAmount??x.amount?.amount??0),0);
-    const debts=loans.filter(x=>String(x.data.borrowerMembershipId??'')===membershipId&&['DISBURSED','REPAYING'].includes(String(x.data.completionState??''))).map(x=>({loanId:x.id,title:x.title,principal:Number(x.data.outstandingPrincipal??0),interest:Number(x.data.unpaidInterest??0),totalDebt:Number(x.data.outstandingPrincipal??0)+Number(x.data.unpaidInterest??0)})).filter(x=>x.totalDebt>0);
-    const currentExercise=exercises.find(x=>['OPEN','CLOSING'].includes(String(x.data.completionState)))??exercises.at(-1),latestClosed=exercises.filter(x=>['CLOSED','CARRIED_FORWARD'].includes(String(x.data.completionState))).sort((a,b)=>String(b.updatedAt).localeCompare(String(a.updatedAt)))[0],pending=this.outbox.list().filter(x=>{const p=x.payload as any;return String(p.groupId??'')===this.activeGroupId&&String(p.membershipId??'')===membershipId&&!['CONFIRMED','CANCELLED','CONFLICT'].includes(x.status);}).map(x=>({id:x.id,type:x.type,status:x.status,createdAt:x.createdAt}));
-    let exerciseEnvelope:any=null;if(latestClosed?.data.closingPlanJson)try{const plan=JSON.parse(String(latestClosed.data.closingPlanJson));exerciseEnvelope=(plan.members??[]).find((x:any)=>x.membershipId===membershipId)??null;}catch{}
-    const generatedAt=new Date().toISOString();
-    return{protocolVersion:1,groupId:this.activeGroupId,membershipId,generatedAt,expiresAt:new Date(Date.now()+30*24*3600_000).toISOString(),projection:{group:{id:group.id,name:group.name,currentExerciseLabel:group.currentExerciseLabel??null},member:{id:member.id,memberNumber:member.memberNumber??null,displayName:member.displayName,roles:member.roles,status:member.status},meeting:meeting?{id:meeting.id,title:meeting.title,status:meeting.status,scheduledAt:meeting.scheduledAt??meeting.openedAt}:null,receipts,statementTotal,loanDebts:debts,currentExercise:currentExercise?{id:currentExercise.id,label:String(currentExercise.data.label??currentExercise.title),state:String(currentExercise.data.completionState??''),openingCash:Number(currentExercise.data.openingCash??0)}:null,latestExerciseEnvelope:exerciseEnvelope,pendingLocalOperations:pending}};
+  private async localProjectionSnapshot(meetingId?:string):Promise<any>{
+    if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');const groupId=this.activeGroupId;
+    const [groups,members,rubrics,meetings,ledgerState,loans,exercises,journal]=await Promise.all([this.listGroups(),this.listMembers(),this.listRubrics(),this.listMeetings(),this.ledger(),this.listCompletion('LOAN'),this.exercises(),this.sovereign.list(this.tenantId,groupId)]);
+    const group=groups.find(x=>x.id===groupId);if(!group)throw Error('GROUP_NOT_FOUND');
+    const meeting=meetingId?meetings.find(x=>x.id===meetingId):meetings.slice().sort((a,b)=>String(b.scheduledAt??b.openedAt).localeCompare(String(a.scheduledAt??a.openedAt)))[0];
+    return{groupId,group,members,rubrics,meeting,ledgerState,loans,exercises,projectionVersion:journal.at(-1)?.sequence??0};
   }
-  async prepareEcoBroadcast(input:{meetingId?:string;membershipIds?:string[];ttlMinutes?:number}={}):Promise<{bundle:EcoBroadcastBundle;frames:string[];targetedFrames:string[];included:string[];unpaired:string[]}>{
-    if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');const all=await this.listMembers(),groups=await this.listGroups(),group=groups.find(x=>x.id===this.activeGroupId);if(!group)throw Error('GROUP_NOT_FOUND');const self=all.find(x=>x.userId===this.actorId),canManage=group.createdBy===this.actorId||Boolean(self?.roles?.some(r=>['founder','manager','admin','president','treasurer'].includes(String(r).toLowerCase())));if(!canManage)throw Error('FORBIDDEN_GROUP_MANAGEMENT');const members=all.filter(x=>x.status==='active'),requested=new Set((input.membershipIds?.length?input.membershipIds:members.map(x=>x.id)).map(String));if(requested.size>120)throw Error('BROADCAST_MEMBER_LIMIT_120');const encrypted=[],included:string[]=[],unpaired:string[]=[];
-    for(const member of members.filter(x=>requested.has(x.id))){
+  private async memberCapsuleFromSnapshot(snapshot:any,membershipId:string):Promise<EcoMemberCapsule>{
+    const member=snapshot.members.find((x:any)=>x.id===membershipId&&x.status!=='left');if(!member)throw Error('MEMBERSHIP_NOT_FOUND');
+    const rubricNames=new Map(snapshot.rubrics.map((x:any)=>[x.id,x.name])),meeting=snapshot.meeting;
+    const receipts=(snapshot.ledgerState.receipts??[]).filter((x:any)=>x.membershipId===membershipId&&(!meeting||x.meetingId===meeting.id)).map((x:any)=>({receiptId:x.id,meetingId:x.meetingId??null,rubricId:x.rubricId??null,rubricName:x.rubricId?rubricNames.get(x.rubricId)??'Rubrique':'Sans rubrique',netAmount:Number(x.netAmount??x.amount?.amount??0),currency:String(x.amount?.currency??'XAF'),receivedAt:x.receivedAt,localPending:Boolean(x.localPending)}));
+    const allReceipts=(snapshot.ledgerState.receipts??[]).filter((x:any)=>x.membershipId===membershipId),statementTotal=allReceipts.reduce((n:number,x:any)=>n+Number(x.netAmount??x.amount?.amount??0),0);
+    const debts=snapshot.loans.filter((x:any)=>String(x.data.borrowerMembershipId??'')===membershipId&&['DISBURSED','REPAYING'].includes(String(x.data.completionState??''))).map((x:any)=>({loanId:x.id,title:x.title,principal:Number(x.data.outstandingPrincipal??0),interest:Number(x.data.unpaidInterest??0),totalDebt:Number(x.data.outstandingPrincipal??0)+Number(x.data.unpaidInterest??0)})).filter((x:any)=>x.totalDebt>0);
+    const currentExercise=snapshot.exercises.find((x:any)=>['OPEN','CLOSING'].includes(String(x.data.completionState)))??snapshot.exercises.at(-1),latestClosed=snapshot.exercises.filter((x:any)=>['CLOSED','CARRIED_FORWARD'].includes(String(x.data.completionState))).sort((a:any,b:any)=>String(b.updatedAt).localeCompare(String(a.updatedAt)))[0],pending=this.outbox.list().filter(x=>{const p=x.payload as any;return String(p.groupId??'')===snapshot.groupId&&String(p.membershipId??'')===membershipId&&!['CONFIRMED','CANCELLED','CONFLICT'].includes(x.status);}).map(x=>({id:x.id,type:x.type,status:x.status,createdAt:x.createdAt}));
+    let exerciseEnvelope:any=null;if(latestClosed?.data.closingPlanJson)try{const plan=JSON.parse(String(latestClosed.data.closingPlanJson));exerciseEnvelope=(plan.members??[]).find((x:any)=>x.membershipId===membershipId)??null;}catch{}
+    const projection={group:{id:snapshot.group.id,name:snapshot.group.name,currentExerciseLabel:snapshot.group.currentExerciseLabel??null},member:{id:member.id,memberNumber:member.memberNumber??null,displayName:member.displayName,roles:member.roles,status:member.status},meeting:meeting?{id:meeting.id,title:meeting.title,status:meeting.status,scheduledAt:meeting.scheduledAt??meeting.openedAt}:null,receipts,statementTotal,loanDebts:debts,currentExercise:currentExercise?{id:currentExercise.id,label:String(currentExercise.data.label??currentExercise.title),state:String(currentExercise.data.completionState??''),openingCash:Number(currentExercise.data.openingCash??0)}:null,latestExerciseEnvelope:exerciseEnvelope,pendingLocalOperations:pending};
+    const generatedAt=new Date().toISOString(),projectionDigest=await this.sha256Hex(JSON.stringify(projection));
+    return{protocolVersion:1,groupId:snapshot.groupId,membershipId,generatedAt,expiresAt:new Date(Date.now()+30*24*3600_000).toISOString(),projection,schemaVersion:1,projectionVersion:snapshot.projectionVersion,sourceAuthorityId:this.actorId,sourceDeviceId:this.localDeviceId(),projectionDigest};
+  }
+  async localMemberCapsule(membershipId:string,meetingId?:string):Promise<EcoMemberCapsule>{return this.memberCapsuleFromSnapshot(await this.localProjectionSnapshot(meetingId),membershipId);}
+  private broadcastAckPath(groupId:string):string{return '/api/v1/relay/broadcast-acks/'+encodeURIComponent(groupId);}
+  async recordEcoBroadcastAck(membershipId:string,projectionVersion:number):Promise<void>{
+    if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');if(!Number.isSafeInteger(projectionVersion)||projectionVersion<0)throw Error('INVALID_PROJECTION_VERSION');
+    const path=this.broadcastAckPath(this.activeGroupId),acks=await this.cached<Record<string,number>>(path)??{},previous=Number(acks[membershipId]??-1);if(projectionVersion>previous)await this.saveCached(path,{...acks,[membershipId]:projectionVersion});
+  }
+  async prepareEcoBroadcast(input:{meetingId?:string;membershipIds?:string[];ttlMinutes?:number;cursor?:number;pageSize?:number;deltaOnly?:boolean}={}):Promise<{bundle:EcoBroadcastBundle;frames:string[];targetedFrames:string[];included:string[];unpaired:string[];skippedUnchanged:string[];nextCursor:number|null;projectionVersion:number}>{
+    if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');const snapshot=await this.localProjectionSnapshot(input.meetingId),all=snapshot.members,group=snapshot.group,self=all.find((x:any)=>x.userId===this.actorId),canManage=group.createdBy===this.actorId||Boolean(self?.roles?.some((r:any)=>['founder','manager','admin','president','treasurer'].includes(String(r).toLowerCase())));if(!canManage)throw Error('FORBIDDEN_GROUP_MANAGEMENT');
+    const active=all.filter((x:any)=>x.status==='active').slice().sort((a:any,b:any)=>Number(a.memberNumber??Number.MAX_SAFE_INTEGER)-Number(b.memberNumber??Number.MAX_SAFE_INTEGER)||String(a.id).localeCompare(String(b.id))),explicit=input.membershipIds?.length?new Set(input.membershipIds.map(String)):undefined,cursor=Math.max(0,Math.trunc(input.cursor??0)),pageSize=Math.min(200,Math.max(1,Math.trunc(input.pageSize??80))),selected=explicit?active.filter((x:any)=>explicit.has(x.id)):active.slice(cursor,cursor+pageSize),nextCursor=explicit||cursor+selected.length>=active.length?null:cursor+selected.length;
+    const encrypted=[],included:string[]=[],unpaired:string[]=[],skippedUnchanged:string[]=[],acks=input.deltaOnly?await this.cached<Record<string,number>>(this.broadcastAckPath(this.activeGroupId))??{}:{};
+    for(const member of selected){
+      if(input.deltaOnly&&Number(acks[member.id]??-1)>=snapshot.projectionVersion){skippedUnchanged.push(member.id);continue;}
       const key=await this.sovereign.relayKey(this.tenantId,this.activeGroupId,member.id);if(!key){unpaired.push(member.id);continue;}
-      const capsule=await this.localMemberCapsule(member.id,input.meetingId),material:EcoRelayPairingMaterial={protocolVersion:1,membershipId:member.id,keyId:key.keyId,rawKey:key.rawKey,createdAt:key.createdAt};encrypted.push(await encryptMemberCapsule(capsule,material));included.push(member.id);
+      const capsule=await this.memberCapsuleFromSnapshot(snapshot,member.id),material:EcoRelayPairingMaterial={protocolVersion:1,membershipId:member.id,keyId:key.keyId,rawKey:key.rawKey,createdAt:key.createdAt};encrypted.push(await encryptMemberCapsule(capsule,material));included.push(member.id);
     }
-    if(!encrypted.length)throw Error('BROADCAST_NO_PAIRED_MEMBERS');
-    const bundle=createBroadcastBundle(this.activeGroupId,encrypted,input.ttlMinutes??30),[frames,targetedFrames]=await Promise.all([encodeBroadcastFrames(bundle,180),encodeTargetedBroadcastFrames(bundle,165)]);return{bundle,frames,targetedFrames,included,unpaired};
+    if(!encrypted.length)throw Error(skippedUnchanged.length?'BROADCAST_NO_CHANGED_MEMBERS':'BROADCAST_NO_PAIRED_MEMBERS');
+    const bundle=createBroadcastBundle(this.activeGroupId,encrypted,input.ttlMinutes??30),[frames,targetedFrames]=await Promise.all([encodeBroadcastFrames(bundle,180),encodeTargetedBroadcastFrames(bundle,165)]);return{bundle,frames,targetedFrames,included,unpaired,skippedUnchanged,nextCursor,projectionVersion:snapshot.projectionVersion};
   }
   async receiveEcoBroadcast(bundle:EcoBroadcastBundle,membershipId?:string):Promise<EcoMemberCapsule>{
     if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');if(bundle.groupId!==this.activeGroupId)throw Error('BROADCAST_WRONG_GROUP');
@@ -254,7 +295,17 @@ export class ConnectedApplication {
     const key=await this.sovereign.relayKey(this.tenantId,this.activeGroupId,own.id);if(!key)throw Error('RELAY_PAIRING_REQUIRED');
     const encrypted=bundle.capsules.find(x=>x.membershipId===own.id);if(!encrypted)throw Error('BROADCAST_NO_CAPSULE_FOR_MEMBER');
     const material:EcoRelayPairingMaterial={protocolVersion:1,membershipId:own.id,keyId:key.keyId,rawKey:key.rawKey,createdAt:key.createdAt},capsule=await decryptMemberCapsule(bundle.groupId,encrypted,material,bundle.expiresAt);
-    await this.saveCached('/api/v1/relay/member-capsule/'+encodeURIComponent(bundle.groupId)+'/'+encodeURIComponent(own.id),capsule);return capsule;
+    const path='/api/v1/relay/member-capsule/'+encodeURIComponent(bundle.groupId)+'/'+encodeURIComponent(own.id),seenPath='/api/v1/relay/seen-transfers/'+encodeURIComponent(bundle.groupId)+'/'+encodeURIComponent(own.id),existing=await this.cached<EcoMemberCapsule>(path),seen=await this.cached<string[]>(seenPath)??[];
+    const incomingDigest=capsule.projectionDigest??await this.sha256Hex(JSON.stringify(capsule.projection)),incomingVersion=Number(capsule.projectionVersion??0),existingDigest=existing?(existing.projectionDigest??await this.sha256Hex(JSON.stringify(existing.projection))):undefined,existingVersion=Number(existing?.projectionVersion??0);
+    if(existing){
+      if(incomingVersion<existingVersion)throw Error('BROADCAST_STALE_PROJECTION');
+      if(incomingVersion===existingVersion&&incomingDigest!==existingDigest)throw Error('BROADCAST_PROJECTION_CONFLICT');
+      if((incomingVersion===existingVersion&&incomingDigest===existingDigest)||seen.includes(bundle.transferId))return existing;
+    }
+    const normalized:EcoMemberCapsule={...capsule,schemaVersion:1,projectionVersion:incomingVersion,projectionDigest:incomingDigest};
+    await this.saveCached(path,normalized,'RELAY');await this.saveCached(seenPath,[...seen.filter(x=>x!==bundle.transferId).slice(-255),bundle.transferId],'RELAY');
+    if(typeof window!=='undefined'&&typeof CustomEvent!=='undefined')window.dispatchEvent(new CustomEvent('eco:member-capsule-updated',{detail:{groupId:bundle.groupId,membershipId:own.id,projectionVersion:incomingVersion,transferId:bundle.transferId}}));
+    return normalized;
   }
   async receivedMemberCapsule(membershipId:string):Promise<EcoMemberCapsule|undefined>{
     if(!this.activeGroupId)return undefined;return this.cached('/api/v1/relay/member-capsule/'+encodeURIComponent(this.activeGroupId)+'/'+encodeURIComponent(membershipId));
@@ -275,27 +326,68 @@ export class ConnectedApplication {
   async localRoomMemberBundle(membershipId:string,meetingId?:string):Promise<EcoBroadcastBundle>{
     const result=await this.prepareEcoBroadcast({meetingId,membershipIds:[membershipId],ttlMinutes:60});return result.bundle;
   }
+  private vaultRecoveryPath(groupId:string):string{return 'local://vault-recovery/'+encodeURIComponent(groupId);}
+  private vaultRecoveryId(groupId:string):string{return JSON.stringify([this.actorId,this.tenantId,'VAULT_RECOVERY',groupId]);}
+  private async recoverInterruptedVaultRestores():Promise<void>{
+    if(!IndexedDbReadSnapshotAdapter.supported())return;
+    const rows=await this.readSnapshots.listForActorTenant(this.actorId,this.tenantId),markers=rows.filter(x=>x.path.startsWith('local://vault-recovery/'));
+    for(const marker of markers){
+      const b=marker.body as any;if(b?.protocol!=='ECO_VAULT_RECOVERY_1'||!b.groupId){await this.readSnapshots.remove(marker.id).catch(()=>{});continue;}
+      await this.sovereign.replaceGroupState(this.tenantId,String(b.groupId),Array.isArray(b.eventsBefore)?b.eventsBefore:[],Array.isArray(b.relayKeysBefore)?b.relayKeysBefore:[]);
+      await this.readSnapshots.applyAtomic({save:Array.isArray(b.snapshotBackups)?b.snapshotBackups:[],removeIds:Array.isArray(b.snapshotNewIds)?b.snapshotNewIds:[]});
+      const prior=Array.isArray(b.outboxBefore)?b.outboxBefore:[];this.outbox.restore(prior);if(IndexedDbOutboxAdapter.supported())await this.outboxStorage.replaceForIdentity(this.actorId,this.tenantId,prior);
+      await this.readSnapshots.remove(marker.id);
+    }
+  }
+  private async validateOpenedVault(opened:{snapshot:SovereignSnapshot;events:any[];relayKeys:any[]}):Promise<{groupId:string;state:any;snapshots:any[];outbox:any[]}>{
+    const snapshot=opened.snapshot;if(!snapshot?.tenantId||!snapshot?.groupId||!snapshot?.state)throw Error('VAULT_PAYLOAD_INVALID');
+    const groupId=String(snapshot.groupId),state=snapshot.state as any,snapshots=Array.isArray(state.snapshots)?state.snapshots:[],outbox=Array.isArray(state.outbox)?state.outbox:[];
+    if(snapshots.length>10000||opened.events.length>250000||opened.relayKeys.length>10000||outbox.length>50000)throw Error('VAULT_TOO_LARGE');
+    await validateSovereignJournalEvents(snapshot.tenantId,groupId,opened.events as any[]);
+    const enc=encodeURIComponent(groupId);
+    for(const row of snapshots){const path=String(row?.path??'');if(!path||!(path==='/api/v1/groups'||path.includes('/groups/'+enc+'/')||path.includes('/groups/'+groupId+'/')||path.includes('/relay/member-capsule/'+enc+'/')||path.includes('/relay/seen-transfers/'+enc+'/')))throw Error('VAULT_SNAPSHOT_SCOPE_INVALID');}
+    for(const key of opened.relayKeys)if(String(key?.tenantId??'')!==snapshot.tenantId||String(key?.groupId??'')!==groupId||!key?.membershipId||!key?.keyId||!key?.rawKey)throw Error('VAULT_RELAY_KEY_SCOPE_INVALID');
+    return{groupId,state,snapshots,outbox};
+  }
   async exportEcoVault(passphrase:string):Promise<string>{
     if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');const groupId=this.activeGroupId,allSnapshots=await this.readSnapshots.listForActorTenant(this.actorId,this.tenantId),encoded=encodeURIComponent(groupId);
-    const selected=allSnapshots.filter(x=>x.path==='/api/v1/groups'||x.path.includes('/groups/'+encoded+'/')||x.path.includes('/groups/'+groupId+'/')||x.path.includes('/relay/member-capsule/'+encoded+'/')).map(x=>x.path==='/api/v1/groups'?{...x,body:Array.isArray(x.body)?(x.body as any[]).filter(g=>g.id===groupId):x.body}:x);
+    const selected=allSnapshots.filter(x=>x.path==='/api/v1/groups'||x.path.includes('/groups/'+encoded+'/')||x.path.includes('/groups/'+groupId+'/')||x.path.includes('/relay/member-capsule/'+encoded+'/')||x.path.includes('/relay/seen-transfers/'+encoded+'/')).map(x=>x.path==='/api/v1/groups'?{...x,body:Array.isArray(x.body)?(x.body as any[]).filter(g=>g.id===groupId):x.body}:x);
     const journal=await this.sovereign.list(this.tenantId,groupId),keys=await this.sovereign.relayKeys(this.tenantId,groupId),snapshot:SovereignSnapshot={tenantId:this.tenantId,groupId,exportedAt:new Date().toISOString(),appVersion:'1.5.2.9-sovereign-offline',state:{actorId:this.actorId,snapshots:selected,outbox:this.outbox.list().filter(x=>String((x.payload as any)?.groupId??'')===groupId)}};
     return createEcoVault(passphrase,snapshot,journal,keys);
   }
   async inspectEcoVault(passphrase:string,encoded:string):Promise<{tenantId:string;groupId:string;exportedAt:string;events:number;snapshots:number;relayKeys:number}>{
-    const opened=await openEcoVault(passphrase,encoded),snapshots=Array.isArray((opened.snapshot.state as any).snapshots)?(opened.snapshot.state as any).snapshots:[];
-    return{tenantId:opened.snapshot.tenantId,groupId:opened.snapshot.groupId,exportedAt:opened.snapshot.exportedAt,events:opened.events.length,snapshots:snapshots.length,relayKeys:opened.relayKeys.length};
+    const opened=await openEcoVault(passphrase,encoded),checked=await this.validateOpenedVault(opened);
+    return{tenantId:opened.snapshot.tenantId,groupId:checked.groupId,exportedAt:opened.snapshot.exportedAt,events:opened.events.length,snapshots:checked.snapshots.length,relayKeys:opened.relayKeys.length};
   }
   async restoreEcoVault(passphrase:string,encoded:string):Promise<{groupId:string;events:number;snapshots:number;outbox:number}>{
-    const opened=await openEcoVault(passphrase,encoded);if(opened.snapshot.tenantId!==this.tenantId)throw Error('VAULT_TENANT_MISMATCH');const groupId=opened.snapshot.groupId,state=opened.snapshot.state as any,snapshots=Array.isArray(state.snapshots)?state.snapshots:[];
-    this.groupTenants.set(groupId,this.tenantId);this.selectGroup(groupId);
-    for(const row of snapshots){
-      if(!row?.path)continue;const path=String(row.path);
-      if(path==='/api/v1/groups'){const existing=await this.cached<Group[]>('/api/v1/groups')??[],restored=Array.isArray(row.body)?row.body as Group[]:[],byId=new Map(existing.map(g=>[g.id,g]));for(const g of restored)byId.set(g.id,g);await this.saveCached('/api/v1/groups',[...byId.values()]);}
-      else await this.saveCached(path,row.body);
+    const opened=await openEcoVault(passphrase,encoded),checked=await this.validateOpenedVault(opened);if(opened.snapshot.tenantId!==this.tenantId)throw Error('VAULT_TENANT_MISMATCH');
+    const groupId=checked.groupId,currentEvents=await this.sovereign.list(this.tenantId,groupId),currentKeys=await this.sovereign.relayKeys(this.tenantId,groupId),min=Math.min(currentEvents.length,opened.events.length);
+    for(let i=0;i<min;i++)if(currentEvents[i]?.hash!==opened.events[i]?.hash)throw Error('VAULT_JOURNAL_DIVERGENCE');
+    const mergedEvents=currentEvents.length>=opened.events.length?currentEvents:opened.events;
+    const keyMap=new Map(opened.relayKeys.map((x:any)=>[String(x.membershipId),x]));for(const key of currentKeys){const old=keyMap.get(key.membershipId) as any;if(!old||String(key.createdAt)>=String(old.createdAt))keyMap.set(key.membershipId,key);}const mergedKeys=[...keyMap.values()] as any[];
+    const targetSaves:Array<{id:string;actorId:string;tenantId:string;path:string;body:unknown}>=[],snapshotBackups:Array<{id:string;actorId:string;tenantId:string;path:string;body:unknown}>=[],snapshotNewIds:string[]=[];
+    for(const row of checked.snapshots){
+      const path=String(row.path),id=path==='/api/v1/groups'?JSON.stringify([this.actorId,this.homeTenantId??this.tenantId,'ACCOUNT',path]):JSON.stringify([this.actorId,this.tenantId,groupId,path]),current=await this.readSnapshots.get<any>(id),sourceUpdated=String(row.updatedAt??opened.snapshot.exportedAt??'');
+      let body=row.body;
+      if(path==='/api/v1/groups'){const byId=new Map<string,any>();for(const g of Array.isArray(current?.body)?current!.body:[])if(g?.id)byId.set(g.id,g);for(const g of Array.isArray(row.body)?row.body:[])if(g?.id)byId.set(g.id,g);body=[...byId.values()];}
+      else if(current&&sourceUpdated&&String(current.updatedAt)>sourceUpdated)continue;
+      if(current)snapshotBackups.push({id:current.id,actorId:current.actorId,tenantId:current.tenantId,path:current.path,body:current.body});else snapshotNewIds.push(id);
+      targetSaves.push({id,actorId:this.actorId,tenantId:path==='/api/v1/groups'?(this.homeTenantId??this.tenantId):this.tenantId,path,body});
     }
-    await this.sovereign.restoreEvents(this.tenantId,groupId,opened.events);for(const key of opened.relayKeys)await this.sovereign.saveRelayKey({...key,tenantId:this.tenantId,groupId});
-    const vaultOutbox=Array.isArray(state.outbox)?state.outbox:[],other=this.outbox.list().filter(x=>String((x.payload as any)?.groupId??'')!==groupId);this.outbox.restore([...other,...vaultOutbox]);await this.persistOutbox();
-    return{groupId,events:opened.events.length,snapshots:snapshots.length,outbox:vaultOutbox.length};
+    const rank=(x:any)=>x?.status==='CONFIRMED'?3:x?.status==='CANCELLED'?2:1,outboxMap=new Map<string,any>();
+    for(const item of checked.outbox){if(item?.actorId===this.actorId&&item?.tenantId===this.tenantId)outboxMap.set(String(item.idempotencyKey??item.id),item);}
+    for(const item of this.outbox.list()){const k=String(item.idempotencyKey??item.id),old=outboxMap.get(k);if(!old||rank(item)>rank(old)||String(item.updatedAt??item.createdAt??'')>=String(old.updatedAt??old.createdAt??''))outboxMap.set(k,item);}
+    const mergedOutbox=[...outboxMap.values()],outboxBefore=this.outbox.list(),markerId=this.vaultRecoveryId(groupId),markerPath=this.vaultRecoveryPath(groupId);
+    await this.readSnapshots.save({id:markerId,actorId:this.actorId,tenantId:this.tenantId,path:markerPath,body:{protocol:'ECO_VAULT_RECOVERY_1',groupId,eventsBefore:currentEvents,relayKeysBefore:currentKeys,snapshotBackups,snapshotNewIds,outboxBefore}});
+    try{
+      await this.sovereign.replaceGroupState(this.tenantId,groupId,mergedEvents as any[],mergedKeys as any[]);
+      await this.readSnapshots.applyAtomic({save:targetSaves});
+      this.outbox.restore(mergedOutbox);if(IndexedDbOutboxAdapter.supported())await this.outboxStorage.replaceForIdentity(this.actorId,this.tenantId,mergedOutbox);
+      this.groupTenants.set(groupId,this.tenantId);this.selectGroup(groupId);await this.readSnapshots.remove(markerId);
+      return{groupId,events:mergedEvents.length,snapshots:targetSaves.length,outbox:mergedOutbox.length};
+    }catch(error){
+      await this.sovereign.replaceGroupState(this.tenantId,groupId,currentEvents,currentKeys).catch(()=>{});await this.readSnapshots.applyAtomic({save:snapshotBackups,removeIds:snapshotNewIds}).catch(()=>{});this.outbox.restore(outboxBefore);if(IndexedDbOutboxAdapter.supported())await this.outboxStorage.replaceForIdentity(this.actorId,this.tenantId,outboxBefore).catch(()=>{});await this.readSnapshots.remove(markerId).catch(()=>{});throw error;
+    }
   }
   async memberEnvelope(meetingId:string,membershipId?:string):Promise<any>{
     if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');
@@ -1189,6 +1281,7 @@ export class ConnectedApplication {
   async registerMarketSupplier(input:any):Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/market/suppliers',{method:'POST',body:JSON.stringify(input)});}
   async marketProcurement():Promise<any>{if(!this.activeGroupId)return{procurements:[],credits:[],suppliers:[]};return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/market/procurements');}
   async createMarketProcurement(input:any):Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/market/procurements',{method:'POST',body:JSON.stringify(input)});}
+  async approveValueProcurementDraft(draftId:string,input:any):Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/market/procurements/from-value-draft/'+encodeURIComponent(draftId),{method:'POST',body:JSON.stringify(input)});}
   async receiveMarketProcurement(id:string,input:any):Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/market/procurements/'+encodeURIComponent(id)+'/receive',{method:'POST',body:JSON.stringify(input)});}
   async returnMarketProcurement(id:string,input:any):Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/market/procurements/'+encodeURIComponent(id)+'/return',{method:'POST',body:JSON.stringify(input)});}
   async paySupplierCredit(id:string,input:any):Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/market/supplier-credits/'+encodeURIComponent(id)+'/payments',{method:'POST',body:JSON.stringify(input)});}
@@ -1290,10 +1383,10 @@ export class ConnectedApplication {
   }
   async createHistoricalIdentityClaim(input:{historicalReference:string;evidenceReference:string;claimedMembershipId?:string;note?:string}):Promise<CompletionRecord>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/identity-claims',{method:'POST',body:JSON.stringify(input)});}
   async exercises():Promise<CompletionRecord[]>{return this.listCompletion('GROUP_EXERCISE');}
-  async openExercise(input:{label:string;openingCash:number;startsAt?:string;previousExerciseId?:string;memberOpeningPositions?:unknown[];retainedFunds?:unknown[]}):Promise<CompletionRecord>{
+  async openExercise(input:{label:string;openingCash:number;startsAt?:string;previousExerciseId?:string;memberOpeningPositions?:unknown[];retainedFunds?:unknown[];carryManifestId?:string}):Promise<CompletionRecord>{
     if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');const label=input.label.trim();if(!label)throw Error('EXERCISE_LABEL_REQUIRED');if(!Number.isSafeInteger(input.openingCash)||input.openingCash<0)throw Error('INVALID_OPENING_CASH');
     const history=await this.exercises(),existing=history.find(x=>['PREPARED','OPEN','CLOSING'].includes(String(x.data.completionState)));if(existing)throw Error('EXERCISE_ALREADY_OPEN');
-    let record=await this.createCompletion('GROUP_EXERCISE',{title:label,data:{label,openingCash:input.openingCash,startsAt:input.startsAt??new Date().toISOString(),previousExerciseId:input.previousExerciseId??null,memberOpeningPositionsJson:JSON.stringify(input.memberOpeningPositions??[]),retainedFundsJson:JSON.stringify(input.retainedFunds??[])}});
+    let record=await this.createCompletion('GROUP_EXERCISE',{title:label,data:{label,openingCash:input.openingCash,startsAt:input.startsAt??new Date().toISOString(),previousExerciseId:input.previousExerciseId??null,carryManifestId:input.carryManifestId??null,memberOpeningPositionsJson:JSON.stringify(input.memberOpeningPositions??[]),retainedFundsJson:JSON.stringify(input.retainedFunds??[])}});
     record=await this.transitionCompletion(record.id,'OPEN',Number(record.data.completionVersion??1),{openedAt:new Date().toISOString()});
     if(history.length===0&&input.openingCash>0)await this.recordOpeningBalance(input.openingCash,'Trésorerie d’ouverture · '+label);
     const groups=await this.cached<Group[]>('/api/v1/groups')??[],group=groups.find(x=>x.id===this.activeGroupId);if(group){const next={...group,currentExerciseLabel:label};await this.saveCached('/api/v1/groups',groups.map(x=>x.id===group.id?next:x));}
@@ -1313,11 +1406,17 @@ export class ConnectedApplication {
     return this.transitionCompletion(exercise.id,'CLOSED',Number(exercise.data.completionVersion??0),{closedAt:new Date().toISOString(),closedBy:this.actorId});
   }
   async carryForwardExercise(exerciseId:string,nextLabel:string):Promise<{source:CompletionRecord;next:CompletionRecord;seed:any}>{
-    if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');const exercise=(await this.exercises()).find(x=>x.id===exerciseId);if(!exercise)throw Error('EXERCISE_NOT_FOUND');if(String(exercise.data.completionState)!=='CLOSED')throw Error('EXERCISE_NOT_CLOSED');
+    if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');const history=await this.exercises(),exercise=history.find(x=>x.id===exerciseId);if(!exercise)throw Error('EXERCISE_NOT_FOUND');
     let plan:ExerciseClosingPlan;try{plan=JSON.parse(String(exercise.data.closingPlanJson??''));}catch{throw Error('EXERCISE_CLOSING_PLAN_REQUIRED');}
-    const seed=buildExerciseCarryForwardSeed(exercise.id,nextLabel,plan);
-    const source=await this.transitionCompletion(exercise.id,'CARRIED_FORWARD',Number(exercise.data.completionVersion??0),{carriedForwardAt:new Date().toISOString(),nextExerciseLabel:nextLabel,nextExerciseOpeningCash:seed.openingCash});
-    const next=await this.openExercise({label:nextLabel,openingCash:seed.openingCash,previousExerciseId:exercise.id,memberOpeningPositions:seed.memberOpeningPositions,retainedFunds:seed.retainedFunds});
+    const seed=buildExerciseCarryForwardSeed(exercise.id,nextLabel,plan),existingNext=history.find(x=>String(x.data.previousExerciseId??'')===exercise.id&&String(x.data.carryManifestId??'')===seed.carryManifestId);
+    if(String(exercise.data.completionState)==='CARRIED_FORWARD'){
+      const next=existingNext??history.find(x=>x.id===String(exercise.data.successorExerciseId??''));if(!next)throw Error('EXERCISE_SUCCESSOR_MISSING');return{source:exercise,next,seed};
+    }
+    if(String(exercise.data.completionState)!=='CLOSED')throw Error('EXERCISE_NOT_CLOSED');
+    // Reserve/open the successor first. If interruption occurs here, retry detects it by previousExerciseId+carryManifestId.
+    let next=existingNext;
+    if(!next)next=await this.openExercise({label:nextLabel,openingCash:seed.openingCash,previousExerciseId:exercise.id,memberOpeningPositions:seed.memberOpeningPositions,retainedFunds:seed.retainedFunds,carryManifestId:seed.carryManifestId} as any);
+    const source=await this.transitionCompletion(exercise.id,'CARRIED_FORWARD',Number(exercise.data.completionVersion??0),{carriedForwardAt:new Date().toISOString(),nextExerciseLabel:nextLabel,nextExerciseOpeningCash:seed.openingCash,carryManifestId:seed.carryManifestId,successorExerciseId:next.id});
     return{source,next,seed};
   }
   async createTontineCycle(input:{rubricId:string;name:string;rounds:number;potsPerRound:number;nominalPotAmount?:number}):Promise<CompletionRecord>{

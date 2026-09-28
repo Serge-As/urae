@@ -21,7 +21,7 @@ const trashLifecycle=fs.readFileSync('packages/trash-lifecycle/src/index.ts','ut
 const repositories=fs.readFileSync('packages/repositories/src/index.ts','utf8');
 
 test('Android 6 offline shell remains bounded and never force-reloads a live page on worker takeover',()=>{
-  assert.match(sw,/eco-system-v1529-sovereign-offline-a01-20260928/);
+  assert.match(sw,/eco-system-v1529-neural-closure-20260928/);
   assert.match(sw,/RELEASE_ASSET_TIMEOUT/);
   assert.match(sw,/Scripts\/styles\/assets are cache-first/);
   assert.match(sw,/skipWaiting\(/);
@@ -50,9 +50,11 @@ test('financial sheet edits a target value for one exact meeting instead of addi
   assert.match(main,/meetingMatrixScope/);
   assert.match(api,/financialCellState/);
   assert.match(api,/applyFinancialCellTarget/);
-  assert.match(api,/ledger\.reverseEntry/);
-  assert.match(api,/amount:input\.targetAmount/);
-  assert.doesNotMatch(api,/targetAmount-state\.current/);
+  const targetStart=api.indexOf('const applyFinancialCellTarget='),targetEnd=api.indexOf('\n  const jsonStringArray=',targetStart),targetBody=api.slice(targetStart,targetEnd);
+  assert.match(targetBody,/replaceCashContributionCell/);
+  assert.match(targetBody,/targetAmount:input\.targetAmount/);
+  assert.doesNotMatch(targetBody,/ledger\.reverseEntry|ledger\.recordCashContribution/);
+  assert.doesNotMatch(targetBody,/targetAmount-state\.current/);
 });
 
 test('multi-manager correction applies immediately while explicit dissent keeps the governed confrontation path',()=>{
@@ -154,7 +156,8 @@ test('six month trash is calendar-correct reversible and final purge is system-o
   assert.match(api,/snapshotJson/);
   assert.match(api,/commitTrashLifecycle/);
   assert.doesNotMatch(api,/trash[^\n]{0,120}request\.method==='DELETE'/);
-  assert.match(trashLifecycle,/PURGE_PENDING/);
+  assert.match(repositories,/group_purge_execution_guards/);
+  assert.match(trashLifecycle,/TRASH\.ARTIFACT_CLEANUP/);
   assert.match(trashLifecycle,/captureGroupPurgeManifest/);
   assert.match(trashLifecycle,/purgeGroupData/);
   assert.match(trashLifecycle,/Rappel · groupe dans la corbeille/);
@@ -202,9 +205,9 @@ test('loan is a negative member position and simulation is available to member a
 test('stale cached html recovers to the A01 1.5.2.9 shell while preserving the previous coherent release',()=>{
   assert.match(main,/document\.querySelector\('#claimLocalAccountBtn'\)\?\.addEventListener/);
   assert.doesNotMatch(main,/\$\('#claimLocalAccountBtn'\)\.addEventListener/);
-  assert.match(sw,/eco-system-v1529-sovereign-offline-a01-20260928/);
+  assert.match(sw,/eco-system-v1529-neural-closure-20260928/);
   assert.match(html,/ECO-SYSTEM · 1\.5\.2\.9/);
   assert.match(html,/main\.js\?v=1529/);
-  assert.match(sw,/PREVIOUS_CACHE = 'eco-system-v1529-sovereign-offline-20260928'/);
+  assert.match(sw,/PREVIOUS_CACHE = 'eco-system-v1529-sovereign-offline-a01-20260928'/);
   assert.match(sw,/Online navigation is network-first/);
 });
