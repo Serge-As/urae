@@ -4,8 +4,8 @@ import {qrV10LMatrix,qrMatrixSvg} from '../../../packages/relay/src/qr-v10.js';
 const el=(tag,text,cls)=>{const n=document.createElement(tag);if(text!==undefined)n.textContent=text;if(cls)n.className=cls;return n;};
 const b64u=s=>{const bytes=new TextEncoder().encode(s);let raw='';for(const b of bytes)raw+=String.fromCharCode(b);return btoa(raw).replaceAll('+','-').replaceAll('/','_').replace(/=+$/,'');};
 const unb64u=v=>{const n=v.replaceAll('-','+').replaceAll('_','/'),raw=atob(n+'='.repeat((4-n.length%4)%4)),bytes=new Uint8Array(raw.length);for(let i=0;i<raw.length;i++)bytes[i]=raw.charCodeAt(i);return new TextDecoder().decode(bytes);};
-const pairingText=material=>'ECOPAIR1.'+b64u(JSON.stringify(material));
-const parsePairing=raw=>{if(!raw.startsWith('ECOPAIR1.'))throw Error('PAIRING_QR_INVALID');const x=JSON.parse(unb64u(raw.slice(9)));if(x.protocolVersion!==1||!x.membershipId||!x.keyId||!x.rawKey)throw Error('PAIRING_QR_INVALID');return x;};
+const pairingText=material=>'ECOP1:'+b64u(material.membershipId)+':'+material.keyId+':'+material.rawKey;
+const parsePairing=raw=>{const m=/^ECOP1:([A-Za-z0-9_-]+):([a-f0-9]{16}):([A-Za-z0-9_-]+)$/.exec(raw.trim());if(!m)throw Error('PAIRING_QR_INVALID');return{protocolVersion:1,membershipId:unb64u(m[1]),keyId:m[2],rawKey:m[3],createdAt:new Date().toISOString()};};
 const download=(name,text,type='application/json')=>{const blob=new Blob([text],{type}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),1500);};
 const money=n=>Math.round(Number(n)||0).toLocaleString('fr-FR')+' F';
 const yieldRows=draft=>{
@@ -91,7 +91,7 @@ export function mountSovereignOfflineUI({app,getMembers=()=>[],getMeetings=()=>[
   pack.onclick=()=>{if(currentBundle)download('eco-broadcast-'+currentBundle.transferId+'.ecobroadcast',JSON.stringify(currentBundle),'application/json');};
 
   const acceptRaw=async raw=>{
-    if(raw.startsWith('ECOPAIR1.')){const material=parsePairing(raw);await app.importRelayPairingMaterial(material);progress.textContent='Appairage reçu pour ce membre. La clé reste sur cet appareil.';notify('Appairage Eco Relay enregistré.');return;}
+    if(raw.startsWith('ECOP1:')){const material=parsePairing(raw);await app.importRelayPairingMaterial(material);progress.textContent='Appairage reçu pour ce membre. La clé reste sur cet appareil.';notify('Appairage Eco Relay enregistré.');return;}
     if(!raw.startsWith('ECOB1:'))return;
     const p=receiver.add(raw);progress.textContent=p.received+' / '+p.total+' trames'+(p.complete?' · complet':'');
     if(p.complete){const bundle=await receiver.assemble(),capsule=await app.receiveEcoBroadcast(bundle);progress.textContent='Mise à jour reçue · membre '+capsule.membershipId+' · '+new Date(capsule.generatedAt).toLocaleString();receiver.reset();stopCamera();notify('Compte personnel Eco mis à jour sans Internet.');}
