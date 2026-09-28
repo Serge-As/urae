@@ -1256,9 +1256,10 @@ export class ConnectedApplication {
   async exercises():Promise<CompletionRecord[]>{return this.listCompletion('GROUP_EXERCISE');}
   async openExercise(input:{label:string;openingCash:number;startsAt?:string;previousExerciseId?:string;memberOpeningPositions?:unknown[];retainedFunds?:unknown[]}):Promise<CompletionRecord>{
     if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');const label=input.label.trim();if(!label)throw Error('EXERCISE_LABEL_REQUIRED');if(!Number.isSafeInteger(input.openingCash)||input.openingCash<0)throw Error('INVALID_OPENING_CASH');
-    const existing=(await this.exercises()).find(x=>['PREPARED','OPEN','CLOSING'].includes(String(x.data.completionState)));if(existing)throw Error('EXERCISE_ALREADY_OPEN');
+    const history=await this.exercises(),existing=history.find(x=>['PREPARED','OPEN','CLOSING'].includes(String(x.data.completionState)));if(existing)throw Error('EXERCISE_ALREADY_OPEN');
     let record=await this.createCompletion('GROUP_EXERCISE',{title:label,data:{label,openingCash:input.openingCash,startsAt:input.startsAt??new Date().toISOString(),previousExerciseId:input.previousExerciseId??null,memberOpeningPositionsJson:JSON.stringify(input.memberOpeningPositions??[]),retainedFundsJson:JSON.stringify(input.retainedFunds??[])}});
     record=await this.transitionCompletion(record.id,'OPEN',Number(record.data.completionVersion??1),{openedAt:new Date().toISOString()});
+    if(history.length===0&&input.openingCash>0)await this.recordOpeningBalance(input.openingCash,'Trésorerie d’ouverture · '+label);
     const groups=await this.cached<Group[]>('/api/v1/groups')??[],group=groups.find(x=>x.id===this.activeGroupId);if(group){const next={...group,currentExerciseLabel:label};await this.saveCached('/api/v1/groups',groups.map(x=>x.id===group.id?next:x));}
     await this.queueLocal('GROUP_EXERCISE_LABEL_V1',{groupId:this.activeGroupId,exerciseId:record.id,label},'exercise-label:'+record.id);return record;
   }
