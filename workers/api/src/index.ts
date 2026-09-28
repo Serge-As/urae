@@ -74,11 +74,11 @@ interface WorkersAILike {
   run?(model:string,input:Record<string,unknown>,options?:Record<string,unknown>):Promise<unknown>;
 }
 
-const RELEASE_VERSION='1.5.2.8-geo-directory';
-const RELEASE_BUILD_ID='eco-system-1.5.2.8-20260928';
+const RELEASE_VERSION='1.5.2.9-sovereign-offline';
+const RELEASE_BUILD_ID='eco-system-1.5.2.9-20260928';
 const RELEASE_SCHEMA_VERSION='d1-additive-20260923';
-const RELEASE_POLICY_VERSION='field-persistence-pc-mobile-20260925';
-const RELEASE_PWA_CACHE='eco-system-v1528-geo-directory-20260928';
+const RELEASE_POLICY_VERSION='sovereign-offline-cycle-20260928';
+const RELEASE_PWA_CACHE='eco-system-v1529-sovereign-offline-20260928';
 
 const defaultRepo = new InMemoryPlatformRepository();
 const defaultReferralBudgets = new InMemoryReferralBudgetStore();
@@ -1736,7 +1736,7 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
     const arrearsRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/receivables\/arrears$/);
     if(arrearsRoute&&request.method==='GET')return json(await receivables.report(arrearsRoute[1]!,url.searchParams.get('asOf')??undefined),200,cors);
     const savingsRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/savings$/);
-    if(savingsRoute&&request.method==='POST'){const body=await readJson<Record<string,unknown>>(request);return json(await treasury.createSavingsPlan(savingsRoute[1]!,{membershipId:String(body.membershipId??''),name:String(body.name??''),targetAmount:body.targetAmount===undefined?undefined:finite(body.targetAmount),currency:String(body.currency??'XAF')}),201,cors);}
+    if(savingsRoute&&request.method==='POST'){const body=await readJson<Record<string,unknown>>(request);return json(await treasury.createSavingsPlan(savingsRoute[1]!,{id:body.id?String(body.id):undefined,membershipId:String(body.membershipId??''),name:String(body.name??''),targetAmount:body.targetAmount===undefined?undefined:finite(body.targetAmount),currency:String(body.currency??'XAF')}),201,cors);}
     const savingsPosition=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/savings\/([^/]+)\/position$/);
     if(savingsPosition&&request.method==='GET')return json(await treasury.savingsPosition(savingsPosition[1]!,savingsPosition[2]!),200,cors);
     const savingsDeposit=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/savings\/([^/]+)\/deposit$/);
@@ -1746,7 +1746,7 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
     const openingRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/ledger\/opening-balance$/);
     if(openingRoute&&request.method==='POST'){const body=await readJson<Record<string,unknown>>(request);return json(await treasury.openingBalance(openingRoute[1]!,{amount:finite(body.amount),currency:String(body.currency??'XAF'),note:String(body.note??''),idempotencyKey:String(body.idempotencyKey??request.headers.get('x-idempotency-key')??makeId('opening'))}),201,cors);}
     const custodyRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/custody$/);
-    if(custodyRoute&&request.method==='POST'){const body=await readJson<Record<string,unknown>>(request);return json(await treasury.createCustody(custodyRoute[1]!,{name:String(body.name??''),holder:String(body.holder??''),currency:String(body.currency??'XAF')}),201,cors);}
+    if(custodyRoute&&request.method==='POST'){const body=await readJson<Record<string,unknown>>(request);return json(await treasury.createCustody(custodyRoute[1]!,{id:body.id?String(body.id):undefined,name:String(body.name??''),holder:String(body.holder??''),currency:String(body.currency??'XAF')}),201,cors);}
     const custodyPositionRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/custody\/([^/]+)\/position$/);
     if(custodyPositionRoute&&request.method==='GET')return json(await treasury.custodyPosition(custodyPositionRoute[1]!,custodyPositionRoute[2]!),200,cors);
     const custodyOut=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/custody\/([^/]+)\/send$/);
@@ -1759,7 +1759,7 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
     const guarantorRelease=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/loans\/([^/]+)\/guarantors\/([^/]+)\/release$/);
     if(guarantorRelease&&request.method==='POST'){const body=await readJson<Record<string,unknown>>(request),record=await riskFinance.releaseGuarantee(guarantorRelease[1]!,guarantorRelease[3]!,String(body.reason??''));if(String(record.data.loanId??'')!==guarantorRelease[2]!)throw Error('LOAN_GUARANTEE_NOT_FOUND');return json(record,200,cors);}
     const solidarityRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/solidarity\/cases$/);
-    if(solidarityRoute&&request.method==='POST'){const body=await readJson<Record<string,unknown>>(request);return json(await riskFinance.solidarityCase(solidarityRoute[1]!,{beneficiaryMembershipId:String(body.beneficiaryMembershipId??''),title:String(body.title??''),approvedAmount:finite(body.approvedAmount),currency:String(body.currency??'XAF')}),201,cors);}
+    if(solidarityRoute&&request.method==='POST'){const body=await readJson<Record<string,unknown>>(request);return json(await riskFinance.solidarityCase(solidarityRoute[1]!,{id:body.id?String(body.id):undefined,beneficiaryMembershipId:String(body.beneficiaryMembershipId??''),title:String(body.title??''),approvedAmount:finite(body.approvedAmount),currency:String(body.currency??'XAF')}),201,cors);}
     const solidarityFund=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/solidarity\/cases\/([^/]+)\/fund$/);
     if(solidarityFund&&request.method==='POST'){const body=await readJson<Record<string,unknown>>(request);return json(await riskFinance.fund(solidarityFund[1]!,solidarityFund[2]!,finite(body.amount),String(body.idempotencyKey??makeId('solidarity_fund'))),201,cors);}
     const solidarityPay=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/solidarity\/cases\/([^/]+)\/disburse$/);
@@ -1919,7 +1919,7 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
       const kind=String(body.kind??'') as CompletionKind;
       const data=body.data&&typeof body.data==='object'&&!Array.isArray(body.data)?body.data as Record<string,unknown>:{};
       return json(await completion.create(completionCollection[1]!,kind,{
-        title:String(body.title??''),summary:body.summary?String(body.summary):undefined,data,tags:strArray(body.tags)
+        id:body.id?String(body.id):undefined,title:String(body.title??''),summary:body.summary?String(body.summary):undefined,data,tags:strArray(body.tags)
       }),201,cors);
     }
     const completionTransition=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/completion\/([^/]+)\/transition$/);
@@ -2326,6 +2326,136 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
         const memberships=await foundation.setMemberNumberOrder(ctx.tenantId,groupId,strArray(p.membershipIds),item.idempotencyKey);
         await markApplied();
         return json({accepted:true,stored:true,memberships},200,cors);
+      }
+      if(item.type==='GROUP_EXERCISE_LABEL_V1'){
+        const p=item.payload,groupId=String(p.groupId??''),label=String(p.label??'').trim();await requireGroup(groupId,true);if(!label)throw Error('EXERCISE_LABEL_REQUIRED');
+        const group=await repo.getGroup(ctx.tenantId,groupId);if(!group)throw Error('GROUP_NOT_FOUND');
+        if(group.currentExerciseLabel!==label)await repo.saveGroup({...group,currentExerciseLabel:label});
+        await markApplied();return json({accepted:true,stored:true,groupId,label},200,cors);
+      }
+      if(item.type==='SAVINGS_PLAN_CREATE_V1'){
+        const p=item.payload,groupId=String(p.groupId??'');await requireGroup(groupId,true);
+        const record=await treasury.createSavingsPlan(groupId,{id:String(p.id??''),membershipId:String(p.membershipId??''),name:String(p.name??''),targetAmount:p.targetAmount===null||p.targetAmount===undefined?undefined:finite(p.targetAmount),currency:String(p.currency??'XAF')});
+        await markApplied();return json({accepted:true,stored:true,record},200,cors);
+      }
+      if(item.type==='SAVINGS_DEPOSIT_V1'){
+        const p=item.payload,groupId=String(p.groupId??''),planId=String(p.planId??''),key=String(p.idempotencyKey??item.idempotencyKey);await requireGroup(groupId,true);
+        const entry=await treasury.depositSavings(groupId,planId,finite(p.amount),key);
+        await markApplied();return json({accepted:true,stored:true,entry},200,cors);
+      }
+      if(item.type==='SAVINGS_WITHDRAW_V1'){
+        const p=item.payload,groupId=String(p.groupId??''),planId=String(p.planId??''),key=String(p.idempotencyKey??item.idempotencyKey);await requireGroup(groupId,true);
+        const entry=await treasury.withdrawSavings(groupId,planId,finite(p.amount),key);
+        await markApplied();return json({accepted:true,stored:true,entry},200,cors);
+      }
+      if(item.type==='OPENING_BALANCE_V1'){
+        const p=item.payload,groupId=String(p.groupId??''),key=String(p.idempotencyKey??item.idempotencyKey);await requireGroup(groupId,true);
+        const result=await treasury.openingBalance(groupId,{amount:finite(p.amount),currency:String(p.currency??'XAF'),note:String(p.note??'Offline opening balance'),idempotencyKey:key});
+        await markApplied();return json({accepted:true,stored:true,result},200,cors);
+      }
+      if(item.type==='CUSTODY_CREATE_V1'){
+        const p=item.payload,groupId=String(p.groupId??'');await requireGroup(groupId,true);
+        const record=await treasury.createCustody(groupId,{id:String(p.id??''),name:String(p.name??''),holder:String(p.holder??''),currency:String(p.currency??'XAF')});
+        await markApplied();return json({accepted:true,stored:true,record},200,cors);
+      }
+      if(item.type==='CUSTODY_SEND_V1'){
+        const p=item.payload,groupId=String(p.groupId??''),key=String(p.idempotencyKey??item.idempotencyKey);await requireGroup(groupId,true);
+        const entry=await treasury.sendToCustody(groupId,String(p.custodyId??''),finite(p.amount),key);
+        await markApplied();return json({accepted:true,stored:true,entry},200,cors);
+      }
+      if(item.type==='CUSTODY_RETURN_V1'){
+        const p=item.payload,groupId=String(p.groupId??''),key=String(p.idempotencyKey??item.idempotencyKey);await requireGroup(groupId,true);
+        const entry=await treasury.returnFromCustody(groupId,String(p.custodyId??''),finite(p.amount),key);
+        await markApplied();return json({accepted:true,stored:true,entry},200,cors);
+      }
+      if(item.type==='SOLIDARITY_CASE_CREATE_V1'){
+        const p=item.payload,groupId=String(p.groupId??'');await requireGroup(groupId,true);
+        const record=await riskFinance.solidarityCase(groupId,{id:String(p.id??''),beneficiaryMembershipId:String(p.beneficiaryMembershipId??''),title:String(p.title??''),approvedAmount:finite(p.approvedAmount),currency:String(p.currency??'XAF')});
+        await markApplied();return json({accepted:true,stored:true,record},200,cors);
+      }
+      if(item.type==='SOLIDARITY_FUND_V1'){
+        const p=item.payload,groupId=String(p.groupId??''),key=String(p.idempotencyKey??item.idempotencyKey);await requireGroup(groupId,true);
+        const entry=await riskFinance.fund(groupId,String(p.caseId??''),finite(p.amount),key);
+        await markApplied();return json({accepted:true,stored:true,entry},200,cors);
+      }
+      if(item.type==='SOLIDARITY_DISBURSE_V1'){
+        const p=item.payload,groupId=String(p.groupId??''),key=String(p.idempotencyKey??item.idempotencyKey);await requireGroup(groupId,true);
+        const entry=await riskFinance.disburse(groupId,String(p.caseId??''),finite(p.amount),key);
+        await markApplied();return json({accepted:true,stored:true,entry},200,cors);
+      }
+      if(item.type==='MEMBER_LIFECYCLE_V1'){
+        const p=item.payload,groupId=String(p.groupId??''),membershipId=String(p.membershipId??''),input=(p.input&&typeof p.input==='object'?p.input:{}) as Record<string,unknown>,group=await requireGroup(groupId,true);
+        const existing=await repo.getMembership(ctx.tenantId,groupId,membershipId);if(!existing)throw Error('MEMBERSHIP_NOT_FOUND');
+        const status=String(input.status??existing.status) as import('../../../packages/contracts/src/index.js').Membership['status'];if(!['invited','waitlisted','trial','active','suspended','left'].includes(status))throw Error('INVALID_MEMBERSHIP_STATUS');
+        const expected=input.expectedRevision===undefined?Number(existing.lifecycleRevision??0):finite(input.expectedRevision);
+        if(expected!==Number(existing.lifecycleRevision??0)){
+          if(Number(existing.lifecycleRevision??0)>expected&&existing.status===status){await markApplied();return json({accepted:true,stored:true,membership:existing,replayed:true},200,cors);}
+          throw Error('STALE_MEMBERSHIP_VERSION');
+        }
+        const roles=input.roles===undefined?existing.roles:strArray(input.roles);if(existing.userId===group.createdBy&&!roles.includes('founder'))throw Error('FOUNDER_ROLE_REQUIRED');
+        const now=new Date().toISOString(),next={...existing,status,roles,historicalJoinedAt:input.historicalJoinedAt?String(input.historicalJoinedAt):existing.historicalJoinedAt,probationEndsAt:input.probationEndsAt?String(input.probationEndsAt):undefined,lifecycleReason:input.reason?String(input.reason):existing.lifecycleReason,lifecycleUpdatedAt:now,lifecycleUpdatedBy:ctx.actorId,lifecycleRevision:Number(existing.lifecycleRevision??0)+1,reinstatedAt:status==='active'&&['suspended','left','waitlisted','trial'].includes(existing.status)?now:existing.reinstatedAt};
+        await repo.saveMembership(next);await repo.saveAudit(kernel.audit.append({tenantId:ctx.tenantId,actorId:ctx.actorId,action:'MEMBERSHIP_LIFECYCLE_OFFLINE_REPLAYED',targetType:'membership',targetId:membershipId,before:{status:existing.status,roles:existing.roles,revision:existing.lifecycleRevision??0},after:{status:next.status,roles:next.roles,revision:next.lifecycleRevision},metadata:{outboxId:item.id},requestId:ctx.requestId}));
+        await markApplied();return json({accepted:true,stored:true,membership:next},200,cors);
+      }
+      if(item.type==='MEMBER_NAME_V1'){
+        const p=item.payload,groupId=String(p.groupId??''),membershipId=String(p.membershipId??''),displayName=String(p.displayName??'').trim(),reason=String(p.reason??'').trim();await requireGroup(groupId,true);
+        const membership=await repo.getMembership(ctx.tenantId,groupId,membershipId);if(!membership)throw Error('MEMBERSHIP_NOT_FOUND');const user=await repo.getUser(membership.userId);if(!user)throw Error('USER_NOT_FOUND');
+        if(!displayName||!reason)throw Error('MEMBER_NAME_REQUIRED');
+        if(user.displayName!==displayName){const before=user.displayName;await repo.saveUser({...user,displayName});await repo.saveAudit(kernel.audit.append({tenantId:ctx.tenantId,actorId:ctx.actorId,action:'MEMBER_NAME_OFFLINE_REPLAYED',targetType:'membership',targetId:membershipId,before:{displayName:before},after:{displayName},metadata:{reason,outboxId:item.id},requestId:ctx.requestId}));}
+        await markApplied();return json({accepted:true,stored:true,membership:{...membership,displayName}},200,cors);
+      }
+      if(item.type==='COMPLETION_CREATE_V1'){
+        const p=item.payload,groupId=String(p.groupId??''),id=String(p.id??''),kind=String(p.kind??'') as CompletionKind;await requireGroup(groupId,true);
+        const existing=id?await repo.getWorkspaceRecord(ctx.tenantId,id):undefined;
+        const record=existing??await completion.create(groupId,kind,{id,title:String(p.title??''),summary:p.summary?String(p.summary):undefined,data:(p.data&&typeof p.data==='object'?p.data:{}) as Record<string,unknown>,tags:strArray(p.tags)});
+        if(existing&&String(existing.data.completionKind??'')!==kind)throw Error('IDEMPOTENCY_CONFLICT');
+        await markApplied();return json({accepted:true,stored:true,record},200,cors);
+      }
+      if(item.type==='COMPLETION_TRANSITION_V1'){
+        const p=item.payload,groupId=String(p.groupId??''),id=String(p.id??''),to=String(p.to??''),expectedVersion=finite(p.expectedVersion),patch=(p.patch&&typeof p.patch==='object'?p.patch:{}) as Record<string,unknown>;await requireGroup(groupId,true);
+        const existing=await repo.getWorkspaceRecord(ctx.tenantId,id);if(!existing)throw Error('COMPLETION_RECORD_NOT_FOUND');
+        const version=Number(existing.data.completionVersion??0),state=String(existing.data.completionState??'');
+        const record=version>expectedVersion&&state===to?existing:await completion.transition(groupId,id,to,{expectedVersion,patch,reason:p.reason?String(p.reason):undefined});
+        await markApplied();return json({accepted:true,stored:true,record},200,cors);
+      }
+      if(item.type==='TONTINE_SERVE_V1'){
+        const p=item.payload,groupId=String(p.groupId??''),shareId=String(p.shareId??''),key=String(p.idempotencyKey??item.idempotencyKey),amount=finite(p.amount);await requireGroup(groupId,true);
+        let share=(await completion.list(groupId,'TONTINE_SHARE')).find(x=>x.id===shareId);if(!share)throw Error('TONTINE_SHARE_NOT_FOUND');
+        let entry=await repo.findLedgerEntryByIdempotency(ctx.tenantId,groupId,key);
+        if(!entry){
+          if(String(share.data.completionState)!=='SCHEDULED'&&String(share.data.completionState)!=='SERVED')throw Error('TONTINE_SHARE_NOT_SCHEDULED');
+          entry=await ledger.recordCashMovement({tenantId:ctx.tenantId,groupId,amount,currency:String(p.currency??'XAF'),direction:'out',counterAccountCode:'MEMBER_FUNDS_LIABILITY',counterAccountType:'liability',descriptionCode:'LEDGER_TONTINE_BENEFIT',sourceType:'tontine_share',sourceId:share.id,meetingId:p.meetingId?String(p.meetingId):undefined,idempotencyKey:key,kind:'tontine_benefit'});
+        }
+        if(String(share.data.completionState)!=='SERVED')share=await completion.markTontineShareServed(groupId,share.id,entry.id,finite(p.expectedVersion));
+        await markApplied();return json({accepted:true,stored:true,entry,share},200,cors);
+      }
+      if(item.type==='LOAN_DISBURSE_V1'){
+        const p=item.payload,groupId=String(p.groupId??''),loanId=String(p.loanId??''),key=String(p.idempotencyKey??item.idempotencyKey),amount=finite(p.amount);await requireGroup(groupId,true);
+        let loan=(await completion.list(groupId,'LOAN')).find(x=>x.id===loanId);if(!loan)throw Error('LOAN_NOT_FOUND');
+        let entry=await repo.findLedgerEntryByIdempotency(ctx.tenantId,groupId,key);
+        if(!entry)entry=await ledger.recordCashMovement({tenantId:ctx.tenantId,groupId,amount,currency:String(loan.data.currency??'XAF'),direction:'out',counterAccountCode:'LOAN_RECEIVABLE',counterAccountType:'asset',descriptionCode:'LEDGER_LOAN_DISBURSEMENT',sourceType:'loan',sourceId:loan.id,meetingId:p.meetingId?String(p.meetingId):undefined,idempotencyKey:key,kind:'loan_disbursement'});
+        if(String(loan.data.completionState)==='APPROVED')loan=await completion.transition(groupId,loan.id,'DISBURSED',{expectedVersion:finite(p.expectedVersion),patch:{ledgerEntryId:entry.id,outstandingPrincipal:amount,unpaidInterest:0,accruedMeetingIdsJson:'[]',disbursedAt:entry.createdAt}});
+        else if(!['DISBURSED','REPAYING','CLOSED'].includes(String(loan.data.completionState)))throw Error('LOAN_NOT_APPROVED');
+        await markApplied();return json({accepted:true,stored:true,entry,loan},200,cors);
+      }
+      if(item.type==='LOAN_REPAY_V1'){
+        const p=item.payload,groupId=String(p.groupId??''),loanId=String(p.loanId??''),key=String(p.idempotencyKey??item.idempotencyKey),principalPaid=finite(p.principalAmount,0),interestPaid=finite(p.interestAmount,0),meetingId=p.meetingId?String(p.meetingId):undefined;await requireGroup(groupId,true);
+        let loan=(await completion.list(groupId,'LOAN')).find(x=>x.id===loanId);if(!loan)throw Error('LOAN_NOT_FOUND');
+        let entry=await repo.findLedgerEntryByIdempotency(ctx.tenantId,groupId,key);
+        if(!entry){
+          if(!['DISBURSED','REPAYING'].includes(String(loan.data.completionState)))throw Error('LOAN_NOT_REPAYABLE');
+          const outstanding=finite(loan.data.outstandingPrincipal),unpaid=finite(loan.data.unpaidInterest,0),periodInterest=finite(p.periodInterest,0),interestDue=unpaid+periodInterest;
+          if(principalPaid>outstanding)throw Error('INVALID_LOAN_REPAYMENT');if(interestPaid>interestDue)throw Error('LOAN_INTEREST_PAYMENT_EXCEEDS_DUE');
+          entry=await ledger.recordLoanRepayment({tenantId:ctx.tenantId,groupId,principalAmount:principalPaid,interestAmount:interestPaid,currency:String(loan.data.currency??'XAF'),sourceId:loan.id,meetingId,idempotencyKey:key});
+          const remaining=outstanding-principalPaid,unpaidAfter=interestDue-interestPaid,target=remaining===0&&unpaidAfter===0?'CLOSED':'REPAYING';
+          const accrued=Array.isArray(p.accruedMeetingIds)?p.accruedMeetingIds.map(String):jsonStringArray(loan.data.accruedMeetingIdsJson);
+          loan=await completion.transition(groupId,loan.id,target,{expectedVersion:finite(p.expectedVersion),patch:{outstandingPrincipal:remaining,unpaidInterest:unpaidAfter,lastRepaymentLedgerEntryId:entry.id,accruedMeetingIdsJson:JSON.stringify(accrued)}});
+          if(meetingId){
+            const periodId='loan_period_'+encodeURIComponent(loan.id+'|'+meetingId),old=await repo.getWorkspaceRecord(ctx.tenantId,periodId),stamp=entry.createdAt,rate=finite(p.rateBasisPointsPerPeriod??loan.data.rateBasisPointsPerPeriod,0),nextInterest=Math.round(remaining*rate/10000);
+            await repo.saveWorkspaceRecord({id:periodId,tenantId:ctx.tenantId,groupId,moduleId:'FINANCE.LOAN_PERIOD',title:'Période de prêt',summary:'Évolution de prêt rejouée depuis le journal offline.',status:'DONE',tags:['loan-period','loan:'+loan.id,'meeting:'+meetingId,'offline-replay'],data:{loanId:loan.id,membershipId:String(loan.data.borrowerMembershipId??''),meetingId,principalBefore:Number(old?.data.principalBefore??(remaining+principalPaid)),interestOpening:Number(old?.data.interestOpening??Math.max(0,unpaidAfter+interestPaid-finite(p.periodInterest,0))),interestNew:Number(old?.data.interestNew??0)+finite(p.periodInterest,0),paymentAmount:Number(old?.data.paymentAmount??0)+principalPaid+interestPaid,principalPaid:Number(old?.data.principalPaid??0)+principalPaid,interestPaid:Number(old?.data.interestPaid??0)+interestPaid,principalAfter:remaining,interestAfter:unpaidAfter,totalDebtAfter:remaining+unpaidAfter,nextInterestProjected:nextInterest,nextTotalDueProjected:remaining+unpaidAfter+nextInterest,priority:String(loan.data.paymentPriority??'CAPITAL_FIRST'),rateBasisPointsPerPeriod:rate},createdBy:old?.createdBy??ctx.actorId,createdAt:old?.createdAt??stamp,updatedAt:stamp});
+          }
+        }
+        await markApplied();return json({accepted:true,stored:true,entry,loan},200,cors);
       }
       if(item.type==='RUBRIC_CREATE_V1'){
         const p=item.payload,groupId=String(p.groupId??'');await requireGroup(groupId,true);

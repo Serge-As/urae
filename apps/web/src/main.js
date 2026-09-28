@@ -62,6 +62,7 @@ import { mountMicroAdsUI } from './micro-ads-ui.js';
 import { mountValueDiscoveryUI } from './value-discovery-ui.js';
 import { mountWalletUI } from './wallet-ui.js';
 import { mountMemberEnvelopeUI } from './member-envelope-ui.js';
+import { mountSovereignOfflineUI } from './sovereign-offline-ui.js';
 import { mountOpportunityGraphUI } from './opportunity-graph-ui.js';
 let uiLocale = 'fr';
 try { uiLocale = localStorage.getItem('tontine.locale') === 'en' ? 'en' : 'fr'; } catch {}
@@ -280,6 +281,7 @@ const microAdsUI=mountMicroAdsUI({app,isManager,notify:toast,showError:fail});
 const valueDiscoveryUI=mountValueDiscoveryUI({app,notify:toast,showError:fail});
 const walletUI=mountWalletUI({app,notify:toast,showError:fail,navigate:go});
 const memberEnvelopeUI=mountMemberEnvelopeUI({app,notify:toast,showError:fail});
+const sovereignOfflineUI=mountSovereignOfflineUI({app,getMembers:()=>members,getMeetings:()=>meetings,isManager,notify:toast,showError:fail});
 const opportunityGraphUI=mountOpportunityGraphUI({app,showError:fail});
 window.addEventListener('popstate',event=>{
     const state=event.state?.ecoNav,hash=location.hash.slice(1);
@@ -1371,6 +1373,7 @@ const refreshGroupContext = async () => {
     await refreshOptionalOfflineSafe('community-shop',()=>communityShopUI.refresh());
     await refreshOptionalOfflineSafe('misc-rubrics',()=>miscRubricUI.refresh());
     await refreshOptionalOfflineSafe('pairing',()=>pairingUI.refresh());
+    await refreshOptionalOfflineSafe('sovereign-offline',()=>sovereignOfflineUI.refresh());
     await refreshOptionalOfflineSafe('personal-cockpit',()=>personalCockpitUI.refresh());
     await refreshOptionalOfflineSafe('recap',()=>recapUI.refresh());
     await refreshOptionalOfflineSafe('interest-community',()=>interestCommunityUI.refresh());

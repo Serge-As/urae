@@ -8,3 +8,5 @@ for(const name of ['apps','packages','src','index.html','styles.css','manifest.w
   return !relative.startsWith('packages/auth');
  }});
 }
+
+await cp('apps/web/_headers',path.join(publicRoot,'_headers'));

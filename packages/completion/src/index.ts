@@ -37,7 +37,8 @@ export type CompletionKind =
   | 'BACKUP_PROOF'
   | 'READINESS_PASSPORT'
   | 'EXPECTATION_TRACE'
-  | 'DIFFICULT_DAY';
+  | 'DIFFICULT_DAY'
+  | 'GROUP_EXERCISE';
 
 type Primitive = string | number | boolean | null;
 export type CompletionData = Record<string, Primitive>;
@@ -142,6 +143,9 @@ export const COMPLETION_WORKFLOWS: Record<CompletionKind, WorkflowSpec> = {
     REQUESTED:['SPECIFIED'],SPECIFIED:['IMPLEMENTED','REOPENED'],IMPLEMENTED:['TESTED','REOPENED'],TESTED:['ACCEPTED','REOPENED'],
     ACCEPTED:['REOPENED'],REOPENED:['SPECIFIED']
   }, false),
+  GROUP_EXERCISE: flow('GROUP.EXERCISE', ['PREPARED','OPEN','CLOSING','CLOSED','CARRIED_FORWARD'], {
+    PREPARED:['OPEN'],OPEN:['CLOSING'],CLOSING:['OPEN','CLOSED'],CLOSED:['CARRIED_FORWARD'],CARRIED_FORWARD:[]
+  }),
   DIFFICULT_DAY: flow('SUPPORT.CENTER', ['OPEN','AUTHORIZED','REGULARIZATION_PENDING','RESOLVED','REJECTED'], {
     OPEN:['AUTHORIZED','REJECTED'],AUTHORIZED:['REGULARIZATION_PENDING','RESOLVED'],REGULARIZATION_PENDING:['RESOLVED'],RESOLVED:[],REJECTED:[]
   }, false)
@@ -384,7 +388,7 @@ export class CompletionSuiteService {
   }
 
   async create(groupId:Id,kind:CompletionKind,input:{
-    title:string;summary?:string;data?:Record<string,unknown>;tags?:string[];
+    id?:Id;title:string;summary?:string;data?:Record<string,unknown>;tags?:string[];
   }):Promise<CompletionRecord>{
     const spec=COMPLETION_WORKFLOWS[kind];if(!spec)throw new Error('INVALID_COMPLETION_KIND');
     await this.membership(groupId,spec.managerOnly);
@@ -402,7 +406,7 @@ export class CompletionSuiteService {
     this.validate(kind,spec.initial,data);
     const timestamp=now();
     const record:CompletionRecord={
-      id:makeId('completion'),tenantId:ctx.tenantId,groupId,moduleId:spec.moduleId,title,summary:input.summary?.trim()||undefined,
+      id:input.id?.trim()||makeId('completion'),tenantId:ctx.tenantId,groupId,moduleId:spec.moduleId,title,summary:input.summary?.trim()||undefined,
       status:workspaceStatus(spec.initial),tags:['completion','kind:'+kind,'state:'+spec.initial,...new Set(input.tags??[])],
       data,createdBy:ctx.actorId,createdAt:timestamp,updatedAt:timestamp
     };

@@ -15,7 +15,7 @@ const downloadJson=(name,value)=>{const blob=new Blob([JSON.stringify(value,null
 const waitIce=pc=>new Promise(resolve=>{if(pc.iceGatheringState==='complete')return resolve();const done=()=>{if(pc.iceGatheringState==='complete'){pc.removeEventListener('icegatheringstatechange',done);resolve();}};pc.addEventListener('icegatheringstatechange',done);setTimeout(resolve,5000);});
 
 export function mountResilienceUI({app,notify=()=>{},showError=console.error}){
-  const relayRoot=document.getElementById('ecoRelayWorkspace'),localRoot=document.getElementById('ecoLocalWorkspace');
+  const relayRoot=document.getElementById('ecoRelayLegacyWorkspace'),localRoot=document.getElementById('ecoLocalLegacyWorkspace');
   if(!relayRoot||!localRoot)return{refresh:async()=>{}};
   let activeKey,activeKeyId;
 

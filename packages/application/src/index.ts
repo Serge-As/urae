@@ -6,8 +6,16 @@ import { IndexedDbIdentityMigrationJournal, IndexedDbLocalAuthAdapter, IndexedDb
 import { LoopbackRelayTransport, envelopeForOutbox } from '../../relay/src/index.js';
 import { PRODUCT_MODULES } from '../../module-registry/src/index.js';
 import { makeId, type CashboxReconciliationRecord, type CashboxSnapshot, type CaseRecord, type ContributionReceipt, type EvidenceRecord, type FeasibilityResult, type Group, type LedgerEntry, type LedgerSummary, type MeetingSession, type Membership, type MembershipView, type OutboxItem, type GroupOperatingPolicy, type RubricDefinition, type RubricOperatingModel, type RubricCyclePreview, type GroupDiscoveryMatch, type PublicGroupListing, type MembershipApplication, type WorkspaceRecord, type WorkspaceStatus } from '../../contracts/src/index.js';
-import type { CompletionKind, CompletionRecord, TontineScheduleConstraint, TontineScheduleResult, LoanScheduleRow } from '../../completion/src/index.js';
+import { COMPLETION_WORKFLOWS, suggestTontineSchedule as suggestTontineScheduleLocal, buildLoanSchedule, type CompletionKind, type CompletionRecord, type TontineScheduleConstraint, type TontineScheduleResult, type LoanScheduleRow } from '../../completion/src/index.js';
 import { starterRubricFacetsForName } from '../../rubrics/src/index.js';
+import { simulatePeriodicLoan } from '../../loan-simulator/src/index.js';
+import { allocateSavingsYield, splitInterestPool, simulateWorkbookYieldPipeline, allocateCapitalAtWorkYield, allocateCapitalTimeYield, allocateAttributedProductiveYield, SAVINGS_YIELD_POLICY_PRESETS } from '../../savings-yield/src/index.js';
+import { buildFinancialRecap, buildSessionRecap, buildClosingCarryover } from '../../recap-engine/src/index.js';
+import { diagnoseGroup } from '../../group-doctor/src/index.js';
+import { IndexedDbSovereignStore, createEcoVault, openEcoVault, type SovereignSnapshot } from '../../offline-sovereign/src/index.js';
+import { buildExerciseClosingPlan, buildExerciseCarryForwardSeed, type ExerciseClosingInput, type ExerciseClosingPlan } from '../../exercise/src/index.js';
+import { buildNumpadRubricCodes, parseEcoNumpad, type NumpadCode, type NumpadDraft } from '../../eco-numpad/src/index.js';
+import { createRelayPairingMaterial, encryptMemberCapsule, decryptMemberCapsule, createBroadcastBundle, encodeBroadcastFrames, encodeTargetedBroadcastFrames, type EcoMemberCapsule, type EcoRelayPairingMaterial, type EcoBroadcastBundle } from '../../relay/src/broadcast.js';
 
 export const KERNEL_SERVICE_IDS = [
   'kernelContext','kernelPolicy','kernelWorkflow','kernelEvents','kernelAudit','kernelObligations','kernelEvidence','kernelReconciliation','kernelInbox','kernelCases','kernelNotifications','kernelConfiguration','kernelFeatures','kernelGovernance','kernelCompatibility','kernelResourceGovernor','kernelOutbox','kernelRelay'
@@ -63,6 +71,7 @@ export class ConnectedApplication {
   private readonly readSnapshots = new IndexedDbReadSnapshotAdapter();
   private readonly localAuth = new IndexedDbLocalAuthAdapter();
   private readonly identityMigration = new IndexedDbIdentityMigrationJournal();
+  private readonly sovereign = new IndexedDbSovereignStore();
   private usingOfflineSnapshot=false;
   private actorId:string; private tenantId:string; private displayName:string; private locale:string; private activeGroupId?:string;
   private readonly baseUrl:string;
@@ -120,6 +129,8 @@ export class ConnectedApplication {
   private async queueLocal(type:string,payload:Record<string,unknown>,idempotencyKey=makeId('op')):Promise<OutboxItem>{
     const item=this.outbox.enqueue({tenantId:this.tenantId,actorId:this.actorId,type,payload,idempotencyKey});
     await this.persistOutbox();
+    const groupId=String(payload.groupId??this.activeGroupId??'');
+    if(groupId&&IndexedDbSovereignStore.supported())await this.sovereign.append({tenantId:this.tenantId,groupId,actorId:this.actorId,type,payload:{...structuredClone(payload),idempotencyKey,outboxId:item.id}});
     if(typeof window!=='undefined'&&typeof CustomEvent!=='undefined')window.dispatchEvent(new CustomEvent('eco:local-mutation',{detail:{type,id:item.id,idempotencyKey}}));
     return item;
   }
@@ -189,6 +200,103 @@ export class ConnectedApplication {
     }
   }
   currentActor():string{return this.actorId;}
+  async relayPairingMaterial(membershipId:string,rotate=false):Promise<EcoRelayPairingMaterial>{
+    if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');const [members,groups]=await Promise.all([this.listMembers(),this.listGroups()]),member=members.find(x=>x.id===membershipId&&x.status==='active'),group=groups.find(x=>x.id===this.activeGroupId);if(!member||!group)throw Error('MEMBERSHIP_NOT_FOUND');const self=members.find(x=>x.userId===this.actorId),canManage=group.createdBy===this.actorId||Boolean(self?.roles?.some(r=>['founder','manager','admin','president','treasurer'].includes(String(r).toLowerCase())));if(!canManage)throw Error('FORBIDDEN_GROUP_MANAGEMENT');
+    const existing=!rotate?await this.sovereign.relayKey(this.tenantId,this.activeGroupId,membershipId):undefined;
+    const base=existing?{protocolVersion:1 as const,membershipId,keyId:existing.keyId,rawKey:existing.rawKey,createdAt:existing.createdAt}:await createRelayPairingMaterial(membershipId);
+    const material:EcoRelayPairingMaterial={...base,groupId:group.id,groupName:group.name,displayName:member.displayName,memberNumber:member.memberNumber};
+    if(!existing)await this.sovereign.saveRelayKey({tenantId:this.tenantId,groupId:this.activeGroupId,membershipId:material.membershipId,keyId:material.keyId,rawKey:material.rawKey,createdAt:material.createdAt});
+    return material;
+  }
+  async importRelayPairingMaterial(material:EcoRelayPairingMaterial):Promise<void>{
+    if(material.protocolVersion!==1||!material.membershipId||!material.keyId||!material.rawKey||!material.groupId)throw Error('INVALID_RELAY_PAIRING_MATERIAL');
+    const groupId=material.groupId,groups=await this.cached<Group[]>('/api/v1/groups')??[],existingGroup=groups.find(x=>x.id===groupId);
+    if(!existingGroup){
+      const stamp=material.createdAt||new Date().toISOString(),group:Group={id:groupId,tenantId:this.tenantId,name:material.groupName?.trim()||'Groupe Eco Relay',kind:'association',originMode:'IMPORT_EXISTING',governanceModel:'community',status:'active',createdBy:this.actorId,createdAt:stamp};
+      await this.saveCached('/api/v1/groups',[...groups,group]);this.groupTenants.set(groupId,this.tenantId);
+    }
+    this.selectGroup(groupId);
+    const path='/api/v1/groups/'+encodeURIComponent(groupId)+'/members',members=await this.cached<MembershipView[]>(path)??[];
+    if(!members.some(x=>x.id===material.membershipId)){
+      const member:MembershipView={id:material.membershipId,tenantId:this.tenantId,groupId,userId:this.actorId,memberNumber:material.memberNumber,roles:['member'],status:'active',joinedAt:material.createdAt,displayName:material.displayName?.trim()||('Membre '+(material.memberNumber??''))};
+      await this.saveCached(path,[...members,member]);
+    }
+    await this.sovereign.saveRelayKey({tenantId:this.tenantId,groupId,membershipId:material.membershipId,keyId:material.keyId,rawKey:material.rawKey,createdAt:material.createdAt});
+  }
+  async relayReceiverIdentity():Promise<{membershipId:string;keyId:string}|undefined>{
+    if(!this.activeGroupId)return undefined;const members=await this.listMembers(),own=members.find(x=>x.userId===this.actorId&&x.status!=='left');if(!own)return undefined;
+    const key=await this.sovereign.relayKey(this.tenantId,this.activeGroupId,own.id);return key?{membershipId:own.id,keyId:key.keyId}:undefined;
+  }
+  async localMemberCapsule(membershipId:string,meetingId?:string):Promise<EcoMemberCapsule>{
+    if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');const [groups,members,rubrics,meetings,ledgerState,loans,exercises]=await Promise.all([this.listGroups(),this.listMembers(),this.listRubrics(),this.listMeetings(),this.ledger(),this.listCompletion('LOAN'),this.exercises()]);
+    const member=members.find(x=>x.id===membershipId&&x.status!=='left');if(!member)throw Error('MEMBERSHIP_NOT_FOUND');const group=groups.find(x=>x.id===this.activeGroupId);if(!group)throw Error('GROUP_NOT_FOUND');
+    const rubricNames=new Map(rubrics.map(x=>[x.id,x.name])),meeting=meetingId?meetings.find(x=>x.id===meetingId):meetings.slice().sort((a,b)=>String(b.scheduledAt??b.openedAt).localeCompare(String(a.scheduledAt??a.openedAt)))[0];
+    const receipts=(ledgerState.receipts??[]).filter((x:any)=>x.membershipId===membershipId&&(!meeting||x.meetingId===meeting.id)).map((x:any)=>({receiptId:x.id,meetingId:x.meetingId??null,rubricId:x.rubricId??null,rubricName:x.rubricId?rubricNames.get(x.rubricId)??'Rubrique':'Sans rubrique',netAmount:Number(x.netAmount??x.amount?.amount??0),currency:String(x.amount?.currency??'XAF'),receivedAt:x.receivedAt,localPending:Boolean(x.localPending)}));
+    const allReceipts=(ledgerState.receipts??[]).filter((x:any)=>x.membershipId===membershipId),statementTotal=allReceipts.reduce((n:number,x:any)=>n+Number(x.netAmount??x.amount?.amount??0),0);
+    const debts=loans.filter(x=>String(x.data.borrowerMembershipId??'')===membershipId&&['DISBURSED','REPAYING'].includes(String(x.data.completionState??''))).map(x=>({loanId:x.id,title:x.title,principal:Number(x.data.outstandingPrincipal??0),interest:Number(x.data.unpaidInterest??0),totalDebt:Number(x.data.outstandingPrincipal??0)+Number(x.data.unpaidInterest??0)})).filter(x=>x.totalDebt>0);
+    const currentExercise=exercises.find(x=>['OPEN','CLOSING'].includes(String(x.data.completionState)))??exercises.at(-1),latestClosed=exercises.filter(x=>['CLOSED','CARRIED_FORWARD'].includes(String(x.data.completionState))).sort((a,b)=>String(b.updatedAt).localeCompare(String(a.updatedAt)))[0],pending=this.outbox.list().filter(x=>{const p=x.payload as any;return String(p.groupId??'')===this.activeGroupId&&String(p.membershipId??'')===membershipId&&!['CONFIRMED','CANCELLED','CONFLICT'].includes(x.status);}).map(x=>({id:x.id,type:x.type,status:x.status,createdAt:x.createdAt}));
+    let exerciseEnvelope:any=null;if(latestClosed?.data.closingPlanJson)try{const plan=JSON.parse(String(latestClosed.data.closingPlanJson));exerciseEnvelope=(plan.members??[]).find((x:any)=>x.membershipId===membershipId)??null;}catch{}
+    const generatedAt=new Date().toISOString();
+    return{protocolVersion:1,groupId:this.activeGroupId,membershipId,generatedAt,expiresAt:new Date(Date.now()+30*24*3600_000).toISOString(),projection:{group:{id:group.id,name:group.name,currentExerciseLabel:group.currentExerciseLabel??null},member:{id:member.id,memberNumber:member.memberNumber??null,displayName:member.displayName,roles:member.roles,status:member.status},meeting:meeting?{id:meeting.id,title:meeting.title,status:meeting.status,scheduledAt:meeting.scheduledAt??meeting.openedAt}:null,receipts,statementTotal,loanDebts:debts,currentExercise:currentExercise?{id:currentExercise.id,label:String(currentExercise.data.label??currentExercise.title),state:String(currentExercise.data.completionState??''),openingCash:Number(currentExercise.data.openingCash??0)}:null,latestExerciseEnvelope:exerciseEnvelope,pendingLocalOperations:pending}};
+  }
+  async prepareEcoBroadcast(input:{meetingId?:string;membershipIds?:string[];ttlMinutes?:number}={}):Promise<{bundle:EcoBroadcastBundle;frames:string[];targetedFrames:string[];included:string[];unpaired:string[]}>{
+    if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');const all=await this.listMembers(),groups=await this.listGroups(),group=groups.find(x=>x.id===this.activeGroupId);if(!group)throw Error('GROUP_NOT_FOUND');const self=all.find(x=>x.userId===this.actorId),canManage=group.createdBy===this.actorId||Boolean(self?.roles?.some(r=>['founder','manager','admin','president','treasurer'].includes(String(r).toLowerCase())));if(!canManage)throw Error('FORBIDDEN_GROUP_MANAGEMENT');const members=all.filter(x=>x.status==='active'),requested=new Set((input.membershipIds?.length?input.membershipIds:members.map(x=>x.id)).map(String));if(requested.size>120)throw Error('BROADCAST_MEMBER_LIMIT_120');const encrypted=[],included:string[]=[],unpaired:string[]=[];
+    for(const member of members.filter(x=>requested.has(x.id))){
+      const key=await this.sovereign.relayKey(this.tenantId,this.activeGroupId,member.id);if(!key){unpaired.push(member.id);continue;}
+      const capsule=await this.localMemberCapsule(member.id,input.meetingId),material:EcoRelayPairingMaterial={protocolVersion:1,membershipId:member.id,keyId:key.keyId,rawKey:key.rawKey,createdAt:key.createdAt};encrypted.push(await encryptMemberCapsule(capsule,material));included.push(member.id);
+    }
+    if(!encrypted.length)throw Error('BROADCAST_NO_PAIRED_MEMBERS');
+    const bundle=createBroadcastBundle(this.activeGroupId,encrypted,input.ttlMinutes??30),[frames,targetedFrames]=await Promise.all([encodeBroadcastFrames(bundle,180),encodeTargetedBroadcastFrames(bundle,165)]);return{bundle,frames,targetedFrames,included,unpaired};
+  }
+  async receiveEcoBroadcast(bundle:EcoBroadcastBundle,membershipId?:string):Promise<EcoMemberCapsule>{
+    if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');if(bundle.groupId!==this.activeGroupId)throw Error('BROADCAST_WRONG_GROUP');
+    const members=await this.listMembers(),own=membershipId?members.find(x=>x.id===membershipId):members.find(x=>x.userId===this.actorId);if(!own)throw Error('MEMBERSHIP_NOT_FOUND');
+    const key=await this.sovereign.relayKey(this.tenantId,this.activeGroupId,own.id);if(!key)throw Error('RELAY_PAIRING_REQUIRED');
+    const encrypted=bundle.capsules.find(x=>x.membershipId===own.id);if(!encrypted)throw Error('BROADCAST_NO_CAPSULE_FOR_MEMBER');
+    const material:EcoRelayPairingMaterial={protocolVersion:1,membershipId:own.id,keyId:key.keyId,rawKey:key.rawKey,createdAt:key.createdAt},capsule=await decryptMemberCapsule(bundle.groupId,encrypted,material,bundle.expiresAt);
+    await this.saveCached('/api/v1/relay/member-capsule/'+encodeURIComponent(bundle.groupId)+'/'+encodeURIComponent(own.id),capsule);return capsule;
+  }
+  async receivedMemberCapsule(membershipId:string):Promise<EcoMemberCapsule|undefined>{
+    if(!this.activeGroupId)return undefined;return this.cached('/api/v1/relay/member-capsule/'+encodeURIComponent(this.activeGroupId)+'/'+encodeURIComponent(membershipId));
+  }
+  async localRoomManagerDelta():Promise<{protocol:'ECO_MANAGER_DELTA_1';groupId:string;actorId:string;generatedAt:string;events:any[]}>{
+    if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return{protocol:'ECO_MANAGER_DELTA_1',groupId:this.activeGroupId,actorId:this.actorId,generatedAt:new Date().toISOString(),events:await this.sovereign.list(this.tenantId,this.activeGroupId)};
+  }
+  async confrontLocalRoomManagerDelta(remote:any):Promise<{commonSequence:number;localOnly:number;remoteOnly:number;potentialFinancialConflicts:Array<{key:string;local:any;remote:any}>}>{
+    if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');if(remote?.protocol!=='ECO_MANAGER_DELTA_1'||remote.groupId!==this.activeGroupId||!Array.isArray(remote.events))throw Error('ECO_LOCAL_ROOM_DELTA_INVALID');
+    const local=await this.sovereign.list(this.tenantId,this.activeGroupId),remoteEvents=remote.events as any[];let commonSequence=0;
+    const max=Math.min(local.length,remoteEvents.length);for(let i=0;i<max;i++){if(local[i]?.sequence===remoteEvents[i]?.sequence&&local[i]?.hash===remoteEvents[i]?.hash)commonSequence=i+1;else break;}
+    const financialTypes=new Set(['CONTRIBUTION_CASH_RECORDED','FINANCIAL_CELL_TARGET_V1','FINANCIAL_SHEET_ENTRY_V1','LOAN_DISBURSE_V1','LOAN_REPAY_V1','TONTINE_SERVE_V1','SAVINGS_DEPOSIT_V1','SAVINGS_WITHDRAW_V1','CUSTODY_MOVEMENT_V1','SOLIDARITY_FUND_V1','SOLIDARITY_PAYOUT_V1']);
+    const key=(event:any)=>{const p=event?.payload??{};return [p.meetingId??'',p.membershipId??p.borrowerMembershipId??'',p.rubricId??'',p.loanId??p.shareId??'',event?.type??''].join('|');};
+    const localMap=new Map(local.slice(commonSequence).filter(x=>financialTypes.has(x.type)).map(x=>[key(x),x])),potentialFinancialConflicts=[];
+    for(const event of remoteEvents.slice(commonSequence).filter((x:any)=>financialTypes.has(String(x.type)))){const k=key(event),mine=localMap.get(k);if(mine&&JSON.stringify(mine.payload)!==JSON.stringify(event.payload))potentialFinancialConflicts.push({key:k,local:mine,remote:event});}
+    return{commonSequence,localOnly:Math.max(0,local.length-commonSequence),remoteOnly:Math.max(0,remoteEvents.length-commonSequence),potentialFinancialConflicts};
+  }
+  async localRoomMemberBundle(membershipId:string,meetingId?:string):Promise<EcoBroadcastBundle>{
+    const result=await this.prepareEcoBroadcast({meetingId,membershipIds:[membershipId],ttlMinutes:60});return result.bundle;
+  }
+  async exportEcoVault(passphrase:string):Promise<string>{
+    if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');const groupId=this.activeGroupId,allSnapshots=await this.readSnapshots.listForActorTenant(this.actorId,this.tenantId),encoded=encodeURIComponent(groupId);
+    const selected=allSnapshots.filter(x=>x.path==='/api/v1/groups'||x.path.includes('/groups/'+encoded+'/')||x.path.includes('/groups/'+groupId+'/')||x.path.includes('/relay/member-capsule/'+encoded+'/')).map(x=>x.path==='/api/v1/groups'?{...x,body:Array.isArray(x.body)?(x.body as any[]).filter(g=>g.id===groupId):x.body}:x);
+    const journal=await this.sovereign.list(this.tenantId,groupId),keys=await this.sovereign.relayKeys(this.tenantId,groupId),snapshot:SovereignSnapshot={tenantId:this.tenantId,groupId,exportedAt:new Date().toISOString(),appVersion:'1.5.2.9-sovereign-offline',state:{actorId:this.actorId,snapshots:selected,outbox:this.outbox.list().filter(x=>String((x.payload as any)?.groupId??'')===groupId)}};
+    return createEcoVault(passphrase,snapshot,journal,keys);
+  }
+  async inspectEcoVault(passphrase:string,encoded:string):Promise<{tenantId:string;groupId:string;exportedAt:string;events:number;snapshots:number;relayKeys:number}>{
+    const opened=await openEcoVault(passphrase,encoded),snapshots=Array.isArray((opened.snapshot.state as any).snapshots)?(opened.snapshot.state as any).snapshots:[];
+    return{tenantId:opened.snapshot.tenantId,groupId:opened.snapshot.groupId,exportedAt:opened.snapshot.exportedAt,events:opened.events.length,snapshots:snapshots.length,relayKeys:opened.relayKeys.length};
+  }
+  async restoreEcoVault(passphrase:string,encoded:string):Promise<{groupId:string;events:number;snapshots:number;outbox:number}>{
+    const opened=await openEcoVault(passphrase,encoded);if(opened.snapshot.tenantId!==this.tenantId)throw Error('VAULT_TENANT_MISMATCH');const groupId=opened.snapshot.groupId,state=opened.snapshot.state as any,snapshots=Array.isArray(state.snapshots)?state.snapshots:[];
+    this.groupTenants.set(groupId,this.tenantId);this.selectGroup(groupId);
+    for(const row of snapshots){
+      if(!row?.path)continue;const path=String(row.path);
+      if(path==='/api/v1/groups'){const existing=await this.cached<Group[]>('/api/v1/groups')??[],restored=Array.isArray(row.body)?row.body as Group[]:[],byId=new Map(existing.map(g=>[g.id,g]));for(const g of restored)byId.set(g.id,g);await this.saveCached('/api/v1/groups',[...byId.values()]);}
+      else await this.saveCached(path,row.body);
+    }
+    await this.sovereign.restoreEvents(this.tenantId,groupId,opened.events);for(const key of opened.relayKeys)await this.sovereign.saveRelayKey({...key,tenantId:this.tenantId,groupId});
+    const vaultOutbox=Array.isArray(state.outbox)?state.outbox:[],other=this.outbox.list().filter(x=>String((x.payload as any)?.groupId??'')!==groupId);this.outbox.restore([...other,...vaultOutbox]);await this.persistOutbox();
+    return{groupId,events:opened.events.length,snapshots:snapshots.length,outbox:vaultOutbox.length};
+  }
   async memberEnvelope(meetingId:string,membershipId?:string):Promise<any>{
     if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');
     const q=membershipId?'?membershipId='+encodeURIComponent(membershipId):'';
@@ -354,8 +462,21 @@ export class ConnectedApplication {
     await this.queueLocal('RUBRIC_POLICIES_V1',{groupId:this.activeGroupId,rubricId,policies});return updated;
   }
   async previewRubricCycle(rubricId:string,input:{memberCount:number;collectedFromMembers:number;solidarityCoverageAmount?:number;beneficiaryDisbursement?:number}):Promise<RubricCyclePreview>{if(!this.activeGroupId)throw new Error('ACTIVE_GROUP_REQUIRED');return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/rubrics/${encodeURIComponent(rubricId)}/preview-cycle`,{method:'POST',body:JSON.stringify(input)});}
-  async updateMemberLifecycle(membershipId:string,input:{status?:string;roles?:string[];reason?:string;probationEndsAt?:string;historicalJoinedAt?:string;expectedRevision?:number}):Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/members/'+encodeURIComponent(membershipId)+'/lifecycle',{method:'PUT',body:JSON.stringify(input)});}
-  async updateMemberName(membershipId:string,displayName:string,reason:string):Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/members/'+encodeURIComponent(membershipId)+'/name',{method:'PUT',body:JSON.stringify({displayName,reason})});}
+  async updateMemberLifecycle(membershipId:string,input:{status?:string;roles?:string[];reason?:string;probationEndsAt?:string;historicalJoinedAt?:string;expectedRevision?:number}):Promise<any>{
+    if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');
+    if(!this.isOffline())try{return await this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/members/'+encodeURIComponent(membershipId)+'/lifecycle',{method:'PUT',body:JSON.stringify(input)});}catch(error){if(!(error instanceof Error)||error.message!=='NETWORK_UNAVAILABLE')throw error;}
+    const path='/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/members',rows=await this.cached<MembershipView[]>(path)??[],current=rows.find(x=>x.id===membershipId);if(!current)throw Error('MEMBERSHIP_NOT_FOUND');
+    const expected=Number(input.expectedRevision??current.lifecycleRevision??0),actual=Number(current.lifecycleRevision??0);if(expected!==actual)throw Error('MEMBERSHIP_REVISION_CONFLICT');
+    const updated:any={...current,status:input.status??current.status,roles:input.roles??current.roles,probationEndsAt:input.probationEndsAt??(current as any).probationEndsAt,historicalJoinedAt:input.historicalJoinedAt??(current as any).historicalJoinedAt,lifecycleRevision:actual+1,updatedAt:new Date().toISOString(),localActionPending:true};
+    await this.saveCached(path,rows.map(x=>x.id===membershipId?updated:x));await this.queueLocal('MEMBER_LIFECYCLE_V1',{groupId:this.activeGroupId,membershipId,input:{...input,expectedRevision:expected}});return updated;
+  }
+  async updateMemberName(membershipId:string,displayName:string,reason:string):Promise<any>{
+    if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');const clean=displayName.trim(),why=reason.trim();if(!clean)throw Error('INVALID_DISPLAY_NAME');if(!why)throw Error('MEMBER_NAME_REASON_REQUIRED');
+    if(!this.isOffline())try{return await this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/members/'+encodeURIComponent(membershipId)+'/name',{method:'PUT',body:JSON.stringify({displayName:clean,reason:why})});}catch(error){if(!(error instanceof Error)||error.message!=='NETWORK_UNAVAILABLE')throw error;}
+    const path='/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/members',rows=await this.cached<MembershipView[]>(path)??[],current=rows.find(x=>x.id===membershipId);if(!current)throw Error('MEMBERSHIP_NOT_FOUND');
+    const updated:any={...current,displayName:clean,updatedAt:new Date().toISOString(),localActionPending:true};await this.saveCached(path,rows.map(x=>x.id===membershipId?updated:x));
+    await this.queueLocal('MEMBER_NAME_V1',{groupId:this.activeGroupId,membershipId,displayName:clean,reason:why});return updated;
+  }
   async listMembers():Promise<MembershipView[]>{if(!this.activeGroupId)return[];return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/members`);}
   async listMeetings():Promise<MeetingSession[]>{if(!this.activeGroupId)return[];return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/meetings`);}
   async meetingHistory(meetingId:string):Promise<any[]>{if(!this.activeGroupId)return[];const r=await this.request<any>(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/meetings/${encodeURIComponent(meetingId)}/history`);return r.items??[];}
@@ -541,7 +662,7 @@ export class ConnectedApplication {
     // Persist the same intent before the first send, including while online.
     // An ambiguous network failure is retried with this key, never a new charge.
     const item=this.outbox.enqueue({tenantId:this.tenantId,actorId:this.actorId,type:'CONTRIBUTION_CASH_RECORDED',payload:{groupId:this.activeGroupId,...input,currency:'XAF'},idempotencyKey:key});
-    try{await this.persistOutbox();}catch(e){this.outbox.restore(this.outbox.list().filter(x=>x.id!==item.id));throw e;}
+    try{await this.persistOutbox();if(IndexedDbSovereignStore.supported())await this.sovereign.append({tenantId:this.tenantId,groupId:this.activeGroupId,actorId:this.actorId,type:'CONTRIBUTION_CASH_RECORDED',payload:{groupId:this.activeGroupId,...input,currency:'XAF',idempotencyKey:key,outboxId:item.id}});}catch(e){this.outbox.restore(this.outbox.list().filter(x=>x.id!==item.id));throw e;}
     if(this.isOffline()){
       const path=`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/ledger`,current=await this.cached<any>(path)??{summary:{currency:'XAF',cashBalance:0,memberFundsLiability:0,entryCount:0},entries:[],receipts:[]};
       if(!(current.receipts??[]).some((x:any)=>x.idempotencyKey===key)){
@@ -606,6 +727,31 @@ export class ConnectedApplication {
         targetAmount:Number(payload.targetAmount??0),baselineValue:Number(payload.baselineValue??0),baselineVersion:Number(payload.baselineVersion??0),
         status:item.status,businessStatus:String(item.lastResult?.status??'')||undefined,idempotencyKey:item.idempotencyKey,createdAt:item.createdAt};
     }).filter(x=>x.meetingId&&x.membershipId&&x.rubricId&&Number.isSafeInteger(x.targetAmount)&&x.targetAmount>=0);
+  }
+
+  private async patchLocalCashMovement(input:{amount:number;direction:'in'|'out';kind:string;sourceType:string;sourceId:string;meetingId?:string;idempotencyKey:string;descriptionCode:string}):Promise<any>{
+    if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');if(!Number.isSafeInteger(input.amount)||input.amount<=0)throw Error('INVALID_AMOUNT');
+    const path='/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/ledger',current=await this.cached<any>(path)??{summary:{currency:'XAF',cashBalance:0,memberFundsLiability:0,entryCount:0},entries:[],receipts:[],cellRevisions:[]};
+    if(input.direction==='out'&&Number(current.summary?.cashBalance??0)<input.amount)throw Error('INSUFFICIENT_CASH');
+    const existing=(current.entries??[]).find((x:any)=>x.idempotencyKey===input.idempotencyKey);if(existing)return existing;
+    const stamp=new Date().toISOString(),entry={id:'local_ledger_'+input.idempotencyKey,tenantId:this.tenantId,groupId:this.activeGroupId,currency:'XAF',createdAt:stamp,createdBy:this.actorId,descriptionCode:input.descriptionCode,sourceType:input.sourceType,sourceId:input.sourceId,meetingId:input.meetingId,idempotencyKey:input.idempotencyKey,kind:input.kind,lines:[],localPending:true,localDirection:input.direction,localAmount:input.amount};
+    const delta=input.direction==='in'?input.amount:-input.amount,summary={...current.summary,cashBalance:Number(current.summary?.cashBalance??0)+delta,entryCount:Number(current.summary?.entryCount??0)+1};
+    await this.saveCached(path,{...current,summary,entries:[...(current.entries??[]),entry]});return entry;
+  }
+
+  async numpadCodes():Promise<NumpadCode[]>{
+    if(!this.activeGroupId)return[];const rubrics=(await this.listRubrics()).filter(x=>x.status==='ACTIVE');return buildNumpadRubricCodes(rubrics.map(x=>({id:x.id,name:x.name})));
+  }
+  async previewEcoNumpad(raw:string,meetingId:string):Promise<{draft:NumpadDraft;membership:MembershipView;meeting:MeetingSession;rows:Array<NumpadDraft['entries'][number]&{rubric:RubricDefinition}>}>{
+    if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');const [codes,members,meetings,rubrics]=await Promise.all([this.numpadCodes(),this.listMembers(),this.listMeetings(),this.listRubrics()]),draft=parseEcoNumpad(raw,codes);
+    const membership=members.find(x=>Number(x.memberNumber)===draft.memberNumber&&x.status!=='left');if(!membership)throw Error('NUMPAD_MEMBER_NOT_FOUND');
+    const meeting=meetings.find(x=>x.id===meetingId&&!['cancelled'].includes(x.status));if(!meeting)throw Error('MEETING_NOT_FOUND');
+    const byId=new Map(rubrics.map(x=>[x.id,x])),rows=draft.entries.map(x=>{const rubric=byId.get(x.rubricId);if(!rubric||rubric.status!=='ACTIVE')throw Error('RUBRIC_NOT_FOUND');return{...x,rubric};});
+    return{draft,membership,meeting,rows};
+  }
+  async commitEcoNumpad(raw:string,meetingId:string):Promise<{membershipId:string;meetingId:string;results:any[]}>{
+    const preview=await this.previewEcoNumpad(raw,meetingId),results=[];for(const row of preview.rows)results.push(await this.recordFinancialSheetEntry({membershipId:preview.membership.id,meetingId,rubric:row.rubric,amount:row.amount}));
+    return{membershipId:preview.membership.id,meetingId,results};
   }
 
   pendingFinancialSheetEntries():Array<{meetingId:string;membershipId:string;rubricId:string;amount:number;nature:string;status:string;idempotencyKey:string;createdAt:string}>{
@@ -808,21 +954,84 @@ export class ConnectedApplication {
   async createExpectedContribution(input:{membershipId:string;title:string;dueAt:string;amount:number;rubricId?:string}):Promise<unknown>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/receivables/expected',{method:'POST',body:JSON.stringify({...input,currency:'XAF'})});}
   async allocateReceipt(input:{obligationId:string;receiptId:string;amount:number}):Promise<unknown>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/receivables/allocations',{method:'POST',body:JSON.stringify(input)});}
   async arrears(asOf?:string):Promise<unknown[]>{if(!this.activeGroupId)return[];return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/receivables/arrears'+(asOf?'?asOf='+encodeURIComponent(asOf):''));}
-  async createSavingsPlan(input:{membershipId:string;name:string;targetAmount?:number}):Promise<unknown>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/savings',{method:'POST',body:JSON.stringify({...input,currency:'XAF'})});}
-  async savingsPosition(id:string):Promise<unknown>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/savings/'+encodeURIComponent(id)+'/position');}
-  async depositSavings(id:string,amount:number):Promise<unknown>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/savings/'+encodeURIComponent(id)+'/deposit',{method:'POST',body:JSON.stringify({amount,idempotencyKey:makeId('savings')})});}
-  async withdrawSavings(id:string,amount:number):Promise<unknown>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/savings/'+encodeURIComponent(id)+'/withdraw',{method:'POST',body:JSON.stringify({amount,idempotencyKey:makeId('savings_withdraw')})});}
-  async recordOpeningBalance(amount:number,note:string):Promise<unknown>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/ledger/opening-balance',{method:'POST',body:JSON.stringify({amount,note,currency:'XAF',idempotencyKey:makeId('opening')})});}
-  async createCustody(input:{name:string;holder:string}):Promise<unknown>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/custody',{method:'POST',body:JSON.stringify({...input,currency:'XAF'})});}
-  async custodyPosition(id:string):Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/custody/'+encodeURIComponent(id)+'/position');}
-  async sendToCustody(id:string,amount:number):Promise<unknown>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/custody/'+encodeURIComponent(id)+'/send',{method:'POST',body:JSON.stringify({amount,idempotencyKey:makeId('custody_out')})});}
-  async returnFromCustody(id:string,amount:number):Promise<unknown>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/custody/'+encodeURIComponent(id)+'/return',{method:'POST',body:JSON.stringify({amount,idempotencyKey:makeId('custody_in')})});}
+  private specializedFinancePath(kind:'savings'|'custody'|'solidarity'):string{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return '/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/offline-specialized/'+kind;}
+  private async localSpecializedRecords(kind:'savings'|'custody'|'solidarity'):Promise<any[]>{return await this.cached<any[]>(this.specializedFinancePath(kind))??[];}
+  private async saveLocalSpecialized(kind:'savings'|'custody'|'solidarity',record:any):Promise<void>{await this.patchCachedArray<any>(this.specializedFinancePath(kind),rows=>[...rows.filter(x=>x.id!==record.id),structuredClone(record)]);}
+
+  async createSavingsPlan(input:{membershipId:string;name:string;targetAmount?:number}):Promise<any>{
+    if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');
+    if(!this.isOffline())try{const record=await this.request<any>('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/savings',{method:'POST',body:JSON.stringify({...input,currency:'XAF'})});await this.saveLocalSpecialized('savings',{...record,data:{...record.data,localBalance:0}});return record;}catch(error){if(!(error instanceof Error)||error.message!=='NETWORK_UNAVAILABLE')throw error;}
+    const member=(await this.listMembers()).find(x=>x.id===input.membershipId&&x.status==='active'),name=input.name.trim();if(!member)throw Error('MEMBERSHIP_NOT_FOUND');if(!name)throw Error('NAME_REQUIRED');if(input.targetAmount!==undefined&&(!Number.isSafeInteger(input.targetAmount)||input.targetAmount<0))throw Error('INVALID_TARGET_AMOUNT');
+    const stamp=new Date().toISOString(),id=makeId('finance'),record={id,tenantId:this.tenantId,groupId:this.activeGroupId,moduleId:'RUBRIC.SAVINGS',title:name,status:'ACTIVE',tags:['specialized-finance','kind:SAVINGS_PLAN','local-pending'],data:{specializedKind:'SAVINGS_PLAN',membershipId:member.id,targetAmount:input.targetAmount??null,currency:'XAF',localBalance:0},createdBy:this.actorId,createdAt:stamp,updatedAt:stamp};
+    await this.saveLocalSpecialized('savings',record);await this.queueLocal('SAVINGS_PLAN_CREATE_V1',{groupId:this.activeGroupId,id,membershipId:member.id,name,targetAmount:input.targetAmount??null,currency:'XAF'},'savings-plan:'+id);return record;
+  }
+  async savingsPosition(id:string):Promise<any>{
+    if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');
+    if(!this.isOffline())try{const position=await this.request<any>('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/savings/'+encodeURIComponent(id)+'/position'),rows=await this.localSpecializedRecords('savings'),old=rows.find(x=>x.id===id),stamp=new Date().toISOString(),record=old?{...old,data:{...old.data,localBalance:Number(position.balance??0),targetAmount:Number(position.targetAmount??0),currency:String(position.currency??'XAF')},updatedAt:stamp}:{id,tenantId:this.tenantId,groupId:this.activeGroupId,moduleId:'RUBRIC.SAVINGS',title:'Épargne',status:'ACTIVE',tags:['specialized-finance','kind:SAVINGS_PLAN','server-hydrated'],data:{specializedKind:'SAVINGS_PLAN',membershipId:null,targetAmount:Number(position.targetAmount??0),currency:String(position.currency??'XAF'),localBalance:Number(position.balance??0)},createdBy:this.actorId,createdAt:stamp,updatedAt:stamp};await this.saveLocalSpecialized('savings',record);return position;}catch(error){if(!(error instanceof Error)||error.message!=='NETWORK_UNAVAILABLE')throw error;}
+    const plan=(await this.localSpecializedRecords('savings')).find(x=>x.id===id);if(!plan)throw Error('SAVINGS_PLAN_NOT_FOUND');return{planId:id,balance:Number(plan.data?.localBalance??0),currency:String(plan.data?.currency??'XAF'),targetAmount:Number(plan.data?.targetAmount??0),offline:true};
+  }
+  async depositSavings(id:string,amount:number):Promise<any>{
+    if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');if(!Number.isSafeInteger(amount)||amount<=0)throw Error('INVALID_AMOUNT');const key=makeId('savings');
+    if(!this.isOffline())try{const entry=await this.request<any>('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/savings/'+encodeURIComponent(id)+'/deposit',{method:'POST',body:JSON.stringify({amount,idempotencyKey:key})}),rows=await this.localSpecializedRecords('savings'),plan=rows.find(x=>x.id===id);if(plan)await this.saveLocalSpecialized('savings',{...plan,data:{...plan.data,localBalance:Number(plan.data?.localBalance??0)+amount},updatedAt:new Date().toISOString()});return entry;}catch(error){if(!(error instanceof Error)||error.message!=='NETWORK_UNAVAILABLE')throw error;}
+    const plan=(await this.localSpecializedRecords('savings')).find(x=>x.id===id);if(!plan)throw Error('SAVINGS_PLAN_NOT_FOUND');const updated={...plan,data:{...plan.data,localBalance:Number(plan.data?.localBalance??0)+amount},updatedAt:new Date().toISOString()};
+    await this.saveLocalSpecialized('savings',updated);const entry=await this.patchLocalCashMovement({amount,direction:'in',kind:'cash_in',sourceType:'savings_plan',sourceId:id,idempotencyKey:key,descriptionCode:'LEDGER_SAVINGS_DEPOSIT'});await this.queueLocal('SAVINGS_DEPOSIT_V1',{groupId:this.activeGroupId,planId:id,amount,idempotencyKey:key},key);return entry;
+  }
+  async withdrawSavings(id:string,amount:number):Promise<any>{
+    if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');if(!Number.isSafeInteger(amount)||amount<=0)throw Error('INVALID_AMOUNT');const key=makeId('savings_withdraw');
+    if(!this.isOffline())try{const entry=await this.request<any>('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/savings/'+encodeURIComponent(id)+'/withdraw',{method:'POST',body:JSON.stringify({amount,idempotencyKey:key})}),rows=await this.localSpecializedRecords('savings'),plan=rows.find(x=>x.id===id);if(plan)await this.saveLocalSpecialized('savings',{...plan,data:{...plan.data,localBalance:Math.max(0,Number(plan.data?.localBalance??0)-amount)},updatedAt:new Date().toISOString()});return entry;}catch(error){if(!(error instanceof Error)||error.message!=='NETWORK_UNAVAILABLE')throw error;}
+    const plan=(await this.localSpecializedRecords('savings')).find(x=>x.id===id);if(!plan)throw Error('SAVINGS_PLAN_NOT_FOUND');const balance=Number(plan.data?.localBalance??0);if(balance<amount)throw Error('INSUFFICIENT_SAVINGS_BALANCE');const updated={...plan,data:{...plan.data,localBalance:balance-amount},updatedAt:new Date().toISOString()};
+    await this.saveLocalSpecialized('savings',updated);const entry=await this.patchLocalCashMovement({amount,direction:'out',kind:'cash_out',sourceType:'savings_plan',sourceId:id,idempotencyKey:key,descriptionCode:'LEDGER_SAVINGS_WITHDRAWAL'});await this.queueLocal('SAVINGS_WITHDRAW_V1',{groupId:this.activeGroupId,planId:id,amount,idempotencyKey:key},key);return entry;
+  }
+  async recordOpeningBalance(amount:number,note:string):Promise<any>{
+    if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');if(!Number.isSafeInteger(amount)||amount<=0)throw Error('INVALID_AMOUNT');const clean=note.trim();if(!clean)throw Error('NOTE_REQUIRED');const key=makeId('opening');
+    if(!this.isOffline())try{return await this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/ledger/opening-balance',{method:'POST',body:JSON.stringify({amount,note:clean,currency:'XAF',idempotencyKey:key})});}catch(error){if(!(error instanceof Error)||error.message!=='NETWORK_UNAVAILABLE')throw error;}
+    const entry=await this.patchLocalCashMovement({amount,direction:'in',kind:'opening_balance',sourceType:'opening_balance',sourceId:'local-opening-'+key,idempotencyKey:key,descriptionCode:'LEDGER_OPENING_BALANCE'});await this.queueLocal('OPENING_BALANCE_V1',{groupId:this.activeGroupId,amount,note:clean,currency:'XAF',idempotencyKey:key},key);return entry;
+  }
+  async createCustody(input:{name:string;holder:string}):Promise<any>{
+    if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');const name=input.name.trim(),holder=input.holder.trim();if(!name||!holder)throw Error('CUSTODY_NAME_AND_HOLDER_REQUIRED');
+    if(!this.isOffline())try{const record=await this.request<any>('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/custody',{method:'POST',body:JSON.stringify({name,holder,currency:'XAF'})});await this.saveLocalSpecialized('custody',{...record,data:{...record.data,localBalance:0}});return record;}catch(error){if(!(error instanceof Error)||error.message!=='NETWORK_UNAVAILABLE')throw error;}
+    const stamp=new Date().toISOString(),id=makeId('finance'),record={id,tenantId:this.tenantId,groupId:this.activeGroupId,moduleId:'FINANCE.LEDGER',title:name,status:'ACTIVE',tags:['specialized-finance','kind:CUSTODY_ACCOUNT','local-pending'],data:{specializedKind:'CUSTODY_ACCOUNT',holder,currency:'XAF',localBalance:0},createdBy:this.actorId,createdAt:stamp,updatedAt:stamp};
+    await this.saveLocalSpecialized('custody',record);await this.queueLocal('CUSTODY_CREATE_V1',{groupId:this.activeGroupId,id,name,holder,currency:'XAF'},'custody-create:'+id);return record;
+  }
+  async custodyPosition(id:string):Promise<any>{
+    if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');
+    if(!this.isOffline())try{const position=await this.request<any>('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/custody/'+encodeURIComponent(id)+'/position'),rows=await this.localSpecializedRecords('custody'),old=rows.find(x=>x.id===id),stamp=new Date().toISOString(),record=old?{...old,title:String(position.name??old.title),data:{...old.data,holder:String(position.holder??old.data?.holder??''),currency:String(position.currency??'XAF'),localBalance:Number(position.balance??0)},updatedAt:stamp}:{id,tenantId:this.tenantId,groupId:this.activeGroupId,moduleId:'FINANCE.LEDGER',title:String(position.name??'Garde de trésorerie'),status:'ACTIVE',tags:['specialized-finance','kind:CUSTODY_ACCOUNT','server-hydrated'],data:{specializedKind:'CUSTODY_ACCOUNT',holder:String(position.holder??''),currency:String(position.currency??'XAF'),localBalance:Number(position.balance??0)},createdBy:this.actorId,createdAt:stamp,updatedAt:stamp};await this.saveLocalSpecialized('custody',record);return position;}catch(error){if(!(error instanceof Error)||error.message!=='NETWORK_UNAVAILABLE')throw error;}
+    const record=(await this.localSpecializedRecords('custody')).find(x=>x.id===id);if(!record)throw Error('CUSTODY_ACCOUNT_NOT_FOUND');return{custodyId:id,balance:Number(record.data?.localBalance??0),currency:String(record.data?.currency??'XAF'),holder:String(record.data?.holder??''),name:record.title,internalOnly:true,externalPaymentRail:false,offline:true};
+  }
+  async sendToCustody(id:string,amount:number):Promise<any>{
+    if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');if(!Number.isSafeInteger(amount)||amount<=0)throw Error('INVALID_AMOUNT');const key=makeId('custody_out');
+    if(!this.isOffline())try{const entry=await this.request<any>('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/custody/'+encodeURIComponent(id)+'/send',{method:'POST',body:JSON.stringify({amount,idempotencyKey:key})}),rows=await this.localSpecializedRecords('custody'),record=rows.find(x=>x.id===id);if(record)await this.saveLocalSpecialized('custody',{...record,data:{...record.data,localBalance:Number(record.data?.localBalance??0)+amount},updatedAt:new Date().toISOString()});return entry;}catch(error){if(!(error instanceof Error)||error.message!=='NETWORK_UNAVAILABLE')throw error;}
+    const record=(await this.localSpecializedRecords('custody')).find(x=>x.id===id);if(!record)throw Error('CUSTODY_ACCOUNT_NOT_FOUND');const updated={...record,data:{...record.data,localBalance:Number(record.data?.localBalance??0)+amount},updatedAt:new Date().toISOString()};
+    await this.saveLocalSpecialized('custody',updated);const entry=await this.patchLocalCashMovement({amount,direction:'out',kind:'transfer',sourceType:'custody',sourceId:id,idempotencyKey:key,descriptionCode:'LEDGER_CASH_TO_CUSTODY'});await this.queueLocal('CUSTODY_SEND_V1',{groupId:this.activeGroupId,custodyId:id,amount,idempotencyKey:key},key);return entry;
+  }
+  async returnFromCustody(id:string,amount:number):Promise<any>{
+    if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');if(!Number.isSafeInteger(amount)||amount<=0)throw Error('INVALID_AMOUNT');const key=makeId('custody_in');
+    if(!this.isOffline())try{const entry=await this.request<any>('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/custody/'+encodeURIComponent(id)+'/return',{method:'POST',body:JSON.stringify({amount,idempotencyKey:key})}),rows=await this.localSpecializedRecords('custody'),record=rows.find(x=>x.id===id);if(record)await this.saveLocalSpecialized('custody',{...record,data:{...record.data,localBalance:Math.max(0,Number(record.data?.localBalance??0)-amount)},updatedAt:new Date().toISOString()});return entry;}catch(error){if(!(error instanceof Error)||error.message!=='NETWORK_UNAVAILABLE')throw error;}
+    const record=(await this.localSpecializedRecords('custody')).find(x=>x.id===id);if(!record)throw Error('CUSTODY_ACCOUNT_NOT_FOUND');const balance=Number(record.data?.localBalance??0);if(balance<amount)throw Error('INSUFFICIENT_CUSTODY_BALANCE');const updated={...record,data:{...record.data,localBalance:balance-amount},updatedAt:new Date().toISOString()};
+    await this.saveLocalSpecialized('custody',updated);const entry=await this.patchLocalCashMovement({amount,direction:'in',kind:'transfer',sourceType:'custody',sourceId:id,idempotencyKey:key,descriptionCode:'LEDGER_CUSTODY_TO_CASH'});await this.queueLocal('CUSTODY_RETURN_V1',{groupId:this.activeGroupId,custodyId:id,amount,idempotencyKey:key},key);return entry;
+  }
+
   async loanGuarantors(loanId:string):Promise<any[]>{if(!this.activeGroupId)return[];const r=await this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/loans/'+encodeURIComponent(loanId)+'/guarantors') as any;return r.items??[];}
   async registerGuarantor(loanId:string,input:{membershipId:string;guaranteedAmount:number}):Promise<unknown>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/loans/'+encodeURIComponent(loanId)+'/guarantors',{method:'POST',body:JSON.stringify(input)});}
   async releaseLoanGuarantor(loanId:string,guaranteeId:string,reason:string):Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/loans/'+encodeURIComponent(loanId)+'/guarantors/'+encodeURIComponent(guaranteeId)+'/release',{method:'POST',body:JSON.stringify({reason})});}
-  async createSolidarityCase(input:{beneficiaryMembershipId:string;title:string;approvedAmount:number}):Promise<unknown>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/solidarity/cases',{method:'POST',body:JSON.stringify({...input,currency:'XAF'})});}
-  async fundSolidarity(id:string,amount:number):Promise<unknown>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/solidarity/cases/'+encodeURIComponent(id)+'/fund',{method:'POST',body:JSON.stringify({amount,idempotencyKey:makeId('solidarity_fund')})});}
-  async disburseSolidarity(id:string,amount:number):Promise<unknown>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/solidarity/cases/'+encodeURIComponent(id)+'/disburse',{method:'POST',body:JSON.stringify({amount,idempotencyKey:makeId('solidarity_pay')})});}
+  async createSolidarityCase(input:{beneficiaryMembershipId:string;title:string;approvedAmount:number}):Promise<any>{
+    if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');const title=input.title.trim();if(!title)throw Error('TITLE_REQUIRED');if(!Number.isSafeInteger(input.approvedAmount)||input.approvedAmount<=0)throw Error('INVALID_AMOUNT');
+    if(!this.isOffline())try{const record=await this.request<any>('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/solidarity/cases',{method:'POST',body:JSON.stringify({...input,title,currency:'XAF'})});await this.saveLocalSpecialized('solidarity',{...record,data:{...record.data,localFunded:Number(record.data?.localFunded??0),localDisbursed:Number(record.data?.localDisbursed??0)}});return record;}catch(error){if(!(error instanceof Error)||error.message!=='NETWORK_UNAVAILABLE')throw error;}
+    const member=(await this.listMembers()).find(x=>x.id===input.beneficiaryMembershipId&&x.status==='active');if(!member)throw Error('MEMBERSHIP_NOT_FOUND');const stamp=new Date().toISOString(),id=makeId('risk'),record={id,tenantId:this.tenantId,groupId:this.activeGroupId,moduleId:'SOLIDARITY.FUND',title,status:'ACTIVE',tags:['specialized-finance','kind:SOLIDARITY_CASE','local-pending'],data:{specializedKind:'SOLIDARITY_CASE',beneficiaryMembershipId:member.id,approvedAmount:input.approvedAmount,currency:'XAF',state:'APPROVED',localFunded:0,localDisbursed:0},createdBy:this.actorId,createdAt:stamp,updatedAt:stamp};
+    await this.saveLocalSpecialized('solidarity',record);await this.queueLocal('SOLIDARITY_CASE_CREATE_V1',{groupId:this.activeGroupId,id,beneficiaryMembershipId:member.id,title,approvedAmount:input.approvedAmount,currency:'XAF'},'solidarity-case:'+id);return record;
+  }
+  async fundSolidarity(id:string,amount:number):Promise<any>{
+    if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');if(!Number.isSafeInteger(amount)||amount<=0)throw Error('INVALID_AMOUNT');const key=makeId('solidarity_fund');
+    if(!this.isOffline())try{const entry=await this.request<any>('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/solidarity/cases/'+encodeURIComponent(id)+'/fund',{method:'POST',body:JSON.stringify({amount,idempotencyKey:key})}),rows=await this.localSpecializedRecords('solidarity'),record=rows.find(x=>x.id===id);if(record)await this.saveLocalSpecialized('solidarity',{...record,data:{...record.data,localFunded:Number(record.data?.localFunded??0)+amount},updatedAt:new Date().toISOString()});return entry;}catch(error){if(!(error instanceof Error)||error.message!=='NETWORK_UNAVAILABLE')throw error;}
+    const record=(await this.localSpecializedRecords('solidarity')).find(x=>x.id===id);if(!record)throw Error('SOLIDARITY_CASE_NOT_FOUND');const updated={...record,data:{...record.data,localFunded:Number(record.data?.localFunded??0)+amount},updatedAt:new Date().toISOString()};
+    await this.saveLocalSpecialized('solidarity',updated);const entry=await this.patchLocalCashMovement({amount,direction:'in',kind:'cash_in',sourceType:'solidarity_case',sourceId:id,idempotencyKey:key,descriptionCode:'LEDGER_SOLIDARITY_FUNDING'});await this.queueLocal('SOLIDARITY_FUND_V1',{groupId:this.activeGroupId,caseId:id,amount,idempotencyKey:key},key);return entry;
+  }
+  async disburseSolidarity(id:string,amount:number):Promise<any>{
+    if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');if(!Number.isSafeInteger(amount)||amount<=0)throw Error('INVALID_AMOUNT');const key=makeId('solidarity_pay');
+    if(!this.isOffline())try{const entry=await this.request<any>('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/solidarity/cases/'+encodeURIComponent(id)+'/disburse',{method:'POST',body:JSON.stringify({amount,idempotencyKey:key})}),rows=await this.localSpecializedRecords('solidarity'),record=rows.find(x=>x.id===id);if(record)await this.saveLocalSpecialized('solidarity',{...record,data:{...record.data,localDisbursed:Number(record.data?.localDisbursed??0)+amount},updatedAt:new Date().toISOString()});return entry;}catch(error){if(!(error instanceof Error)||error.message!=='NETWORK_UNAVAILABLE')throw error;}
+    const record=(await this.localSpecializedRecords('solidarity')).find(x=>x.id===id);if(!record)throw Error('SOLIDARITY_CASE_NOT_FOUND');const disbursed=Number(record.data?.localDisbursed??0);if(disbursed+amount>Number(record.data?.approvedAmount??0))throw Error('SOLIDARITY_AMOUNT_EXCEEDS_APPROVAL');const updated={...record,data:{...record.data,localDisbursed:disbursed+amount},updatedAt:new Date().toISOString()};
+    await this.saveLocalSpecialized('solidarity',updated);const entry=await this.patchLocalCashMovement({amount,direction:'out',kind:'cash_out',sourceType:'solidarity_case',sourceId:id,idempotencyKey:key,descriptionCode:'LEDGER_SOLIDARITY_DISBURSEMENT'});await this.queueLocal('SOLIDARITY_DISBURSE_V1',{groupId:this.activeGroupId,caseId:id,amount,idempotencyKey:key},key);return entry;
+  }
   async saveGroupShop(input:{name:string;tagline?:string;visibility?:'GROUP_ONLY'|'PUBLIC';locality?:string;categories?:string[]}):Promise<unknown>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/market/shop',{method:'POST',body:JSON.stringify(input)});}
   async groupStorefront():Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/market/storefront');}
   async adCampaigns():Promise<any[]>{if(!this.activeGroupId)return[];return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/ads/campaigns');}
@@ -837,20 +1046,37 @@ export class ConnectedApplication {
   async createAdCampaign(input:any):Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/ads/campaigns',{method:'POST',body:JSON.stringify(input)});}
   async transitionAdCampaign(id:string,state:string,note=''):Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/ads/campaigns/'+encodeURIComponent(id)+'/transition',{method:'POST',body:JSON.stringify({state,note})});}
   async recordAdMetric(id:string,event:'IMPRESSION'|'OPEN'|'ACTION'|'NEGATIVE_FEEDBACK'):Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/ads/campaigns/'+encodeURIComponent(id)+'/metric',{method:'POST',body:JSON.stringify({event})});}
-  async savingsYieldSourceData():Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/savings-yield/source-data');}
-  async previewSavingsYield(input:any):Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/savings-yield/preview',{method:'POST',body:JSON.stringify(input)});}
-  async previewWorkbookSavingsYield(input:any):Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/savings-yield/workbook-preview',{method:'POST',body:JSON.stringify(input)});}
-  async previewCapitalAtWorkYield(input:any):Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/savings-yield/capital-at-work-preview',{method:'POST',body:JSON.stringify(input)});}
-  async previewCapitalTimeYield(input:any):Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/savings-yield/capital-time-preview',{method:'POST',body:JSON.stringify(input)});}
-  async previewAttributedProductiveYield(input:any):Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/savings-yield/attributed-productive-preview',{method:'POST',body:JSON.stringify(input)});}
-  async savingsYieldPolicies():Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/savings-yield/policies');}
-  async savingsYieldDoctor(input:any):Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/savings-yield/doctor',{method:'POST',body:JSON.stringify(input)});}
+  async saveExerciseYieldDraft(method:string,result:any):Promise<any>{
+    if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');const clean=method.trim();if(!clean)throw Error('YIELD_METHOD_REQUIRED');
+    const draft={groupId:this.activeGroupId,method:clean,result:structuredClone(result),savedAt:new Date().toISOString(),savedBy:this.actorId};
+    await this.saveCached('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/exercise-yield-draft',draft);return draft;
+  }
+  async exerciseYieldDraft():Promise<any|undefined>{
+    if(!this.activeGroupId)return undefined;return this.cached('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/exercise-yield-draft');
+  }
+  async savingsYieldSourceData():Promise<any>{
+    if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');const path='/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/savings-yield/source-data';
+    if(!this.isOffline())try{return await this.request(path);}catch(error){if(!(error instanceof Error)||error.message!=='NETWORK_UNAVAILABLE')throw error;}
+    const [rubrics,meetings,members,ledgerState,journal]=await Promise.all([this.listRubrics(),this.listMeetings(),this.listMembers(),this.ledger(),this.sovereign.list(this.tenantId,this.activeGroupId)]);
+    const savingsRubrics=rubrics.filter(r=>r.status==='ACTIVE'&&(String(r.activityPlan?.kind??'').toUpperCase()==='SAVINGS'||/[ée]pargne|saving/i.test(r.name))),savingsIds=new Set(savingsRubrics.map(r=>r.id)),ordered=meetings.slice().sort((a,b)=>String(a.scheduledAt??a.openedAt).localeCompare(String(b.scheduledAt??b.openedAt))),sessionByMeeting=new Map(ordered.map((m,i)=>[m.id,i+1])),periodKeys=['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'],rubricById=new Map(savingsRubrics.map(r=>[r.id,r]));
+    const deposits=(ledgerState.receipts??[]).filter((p:any)=>p.rubricId&&savingsIds.has(p.rubricId)&&Number(p.netAmount??0)>0).map((p:any)=>{const rubric=rubricById.get(p.rubricId)!,session=p.meetingId?(sessionByMeeting.get(p.meetingId)??1):1;return{id:p.id,memberId:p.membershipId,amount:Number(p.netAmount??0),session,fund:/scolaire|school/i.test(rubric.name)?'SCHOOL':'CLASSIC',periodKey:periodKeys[(session-1)%12],rubricId:p.rubricId,meetingId:p.meetingId??null,receivedAt:p.receivedAt};});
+    const cached=await this.cached<any>(path),pendingKeys=new Set(this.outbox.list().filter(x=>!['CONFIRMED','CANCELLED','CONFLICT'].includes(x.status)).map(x=>x.idempotencyKey)),pendingInterest=journal.filter(x=>pendingKeys.has(String(x.payload.idempotencyKey??''))).reduce((n,x)=>n+(x.type==='LOAN_REPAY_V1'?Number(x.payload.interestAmount??0):x.type==='FINANCIAL_SHEET_ENTRY_V1'&&String(x.payload.nature)==='REPAYMENT'&&String(x.payload.repaymentComponent)==='INTEREST'?Number(x.payload.amount??0):0),0);
+    const baseRecovered=Number(cached?.totals?.recoveredInterest??0),classicPrincipal=deposits.filter((d:any)=>d.fund==='CLASSIC').reduce((n:number,d:any)=>n+d.amount,0),schoolPrincipal=deposits.filter((d:any)=>d.fund==='SCHOOL').reduce((n:number,d:any)=>n+d.amount,0);
+    return{generatedAt:new Date().toISOString(),source:'LOCAL_LEDGER_RECEIPTS_AND_SOVEREIGN_JOURNAL',members:members.map(m=>({id:m.id,displayName:m.displayName,status:m.status})),rubrics:savingsRubrics.map(r=>({id:r.id,name:r.name})),meetings:ordered.map((m,i)=>({id:m.id,title:m.title,session:i+1,scheduledAt:m.scheduledAt??m.openedAt})),deposits,totals:{classicPrincipal,schoolPrincipal,totalPrincipal:classicPrincipal+schoolPrincipal,recoveredInterest:baseRecovered+pendingInterest},interestByAccount:cached?.interestByAccount??{},warnings:baseRecovered+pendingInterest===0?['NO_REALIZED_INTEREST_FOUND']:[],offline:true};
+  }
+  async previewSavingsYield(input:any):Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return allocateSavingsYield(input);}
+  async previewWorkbookSavingsYield(input:any):Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return simulateWorkbookYieldPipeline(input);}
+  async previewCapitalAtWorkYield(input:any):Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return allocateCapitalAtWorkYield(input);}
+  async previewCapitalTimeYield(input:any):Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return allocateCapitalTimeYield(input);}
+  async previewAttributedProductiveYield(input:any):Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return allocateAttributedProductiveYield(input);}
+  async savingsYieldPolicies():Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return{presets:SAVINGS_YIELD_POLICY_PRESETS,activation:'HUMAN_CONFIRMATION_REQUIRED',financialPosting:false,offlineCapable:true};}
+  async savingsYieldDoctor(input:any):Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return diagnoseGroup(input);}
   async meetingAutopilot(input:any):Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/meetings/autopilot-preview',{method:'POST',body:JSON.stringify(input)});}
 
-  async previewInterestSplit(total:number,shares:Array<{key:string;basisPoints:number}>):Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/savings-yield/split-preview',{method:'POST',body:JSON.stringify({total,shares})});}
-  async previewFinancialRecap(input:any):Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/recap/financial-preview',{method:'POST',body:JSON.stringify(input)});}
-  async previewSessionRecap(meetingId:string,input:any):Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/meetings/'+encodeURIComponent(meetingId)+'/recap-preview',{method:'POST',body:JSON.stringify(input)});}
-  async previewClosingCarryover(input:any):Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/closing/carryover-preview',{method:'POST',body:JSON.stringify(input)});}
+  async previewInterestSplit(total:number,shares:Array<{key:string;basisPoints:number}>):Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return splitInterestPool(total,shares);}
+  async previewFinancialRecap(input:any):Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return buildFinancialRecap(input);}
+  async previewSessionRecap(meetingId:string,input:any):Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');if(!(await this.listMeetings()).some(x=>x.id===meetingId))throw Error('MEETING_NOT_FOUND');return buildSessionRecap(input);}
+  async previewClosingCarryover(input:any):Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return buildClosingCarryover(input);}
 
   async valueNeeds():Promise<any[]>{if(!this.activeGroupId)return[];const r=await this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/value/needs') as any;return r.items??[];}
   async createValueNeed(input:any):Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/value/needs',{method:'POST',body:JSON.stringify(input)});}
@@ -1026,21 +1252,134 @@ export class ConnectedApplication {
 
   async approveHistoricalImport(id:string,mapping:Record<string,string>={}):Promise<CompletionRecord>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/imports/'+encodeURIComponent(id)+'/approve',{method:'POST',body:JSON.stringify({mapping})});}
   async applyHistoricalImport(id:string):Promise<CompletionRecord>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/imports/'+encodeURIComponent(id)+'/apply',{method:'POST',body:'{}'});}
-  async listCompletion(kind?:CompletionKind):Promise<CompletionRecord[]>{if(!this.activeGroupId)return[];const p=new URLSearchParams();if(kind)p.set('kind',kind);return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/completion?'+p);}
-  async createCompletion(kind:CompletionKind,input:{title:string;summary?:string;data?:Record<string,unknown>;tags?:string[]}):Promise<CompletionRecord>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/completion',{method:'POST',body:JSON.stringify({kind,...input})});}
-  async transitionCompletion(id:string,to:string,expectedVersion:number,patch:Record<string,unknown>={},reason?:string):Promise<CompletionRecord>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/completion/'+encodeURIComponent(id)+'/transition',{method:'POST',body:JSON.stringify({to,expectedVersion,patch,reason})});}
+  private completionPath(kind?:CompletionKind):string{const p=new URLSearchParams();if(kind)p.set('kind',kind);return '/api/v1/groups/'+encodeURIComponent(this.activeGroupId??'')+'/completion?'+p;}
+  private localCompletionStatus(state:string):WorkspaceStatus{
+    if(['DRAFT','UPLOADED','CAPTURED','REQUESTED','SPECIFIED','PREPARED','CREATED','REGISTERED'].includes(state))return'DRAFT';
+    if(['DONE','COMPLETED','CLOSED','FULFILLED','ACCEPTED','RESOLVED','RESTORED_TEST','APPLIED','SERVED'].includes(state))return'DONE';
+    if(['ARCHIVED','REVOKED','CANCELLED','REJECTED','REMOVED','SUPERSEDED','EXPIRED','DISCARDED'].includes(state))return'ARCHIVED';
+    return'ACTIVE';
+  }
+  private encodeCompletionValue(value:unknown):string|number|boolean|null{
+    if(value===null||typeof value==='string'||typeof value==='boolean')return value;
+    if(typeof value==='number'){if(!Number.isFinite(value))throw Error('INVALID_NON_FINITE_VALUE');return value;}
+    if(value===undefined)return null;return JSON.stringify(value);
+  }
+  private async saveLocalCompletion(record:CompletionRecord):Promise<void>{
+    const allPath=this.completionPath(),kind=String(record.data.completionKind) as CompletionKind,kindPath=this.completionPath(kind);
+    const up=(rows:CompletionRecord[])=>[...rows.filter(x=>x.id!==record.id),structuredClone(record)].sort((a,b)=>a.createdAt.localeCompare(b.createdAt));
+    await this.patchCachedArray<CompletionRecord>(allPath,up);await this.patchCachedArray<CompletionRecord>(kindPath,up);
+  }
+  async listCompletion(kind?:CompletionKind):Promise<CompletionRecord[]>{if(!this.activeGroupId)return[];return this.request(this.completionPath(kind));}
+  async createCompletion(kind:CompletionKind,input:{id?:string;title:string;summary?:string;data?:Record<string,unknown>;tags?:string[]}):Promise<CompletionRecord>{
+    if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');
+    const localId=input.id?.trim()||makeId('completion');
+    if(!this.isOffline())try{return await this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/completion',{method:'POST',body:JSON.stringify({kind,id:localId,...input})});}catch(error){if(!(error instanceof Error)||error.message!=='NETWORK_UNAVAILABLE')throw error;}
+    const spec=COMPLETION_WORKFLOWS[kind];if(!spec)throw Error('INVALID_COMPLETION_KIND');const title=input.title.trim();if(!title)throw Error('TITLE_REQUIRED');
+    const data:Record<string,string|number|boolean|null>={completionKind:kind,completionState:spec.initial,completionVersion:1};for(const [key,value] of Object.entries(input.data??{}))data[key]=this.encodeCompletionValue(value);
+    const stamp=new Date().toISOString(),record:CompletionRecord={id:localId,tenantId:this.tenantId,groupId:this.activeGroupId,moduleId:spec.moduleId,title,summary:input.summary?.trim()||undefined,status:this.localCompletionStatus(spec.initial),tags:['completion','kind:'+kind,'state:'+spec.initial,...new Set(input.tags??[])],data,createdBy:this.actorId,createdAt:stamp,updatedAt:stamp};
+    await this.saveLocalCompletion(record);await this.queueLocal('COMPLETION_CREATE_V1',{groupId:this.activeGroupId,kind,id:localId,title:record.title,summary:record.summary??null,data:structuredClone(input.data??{}),tags:input.tags??[]},'completion-create:'+localId);return record;
+  }
+  async transitionCompletion(id:string,to:string,expectedVersion:number,patch:Record<string,unknown>={},reason?:string):Promise<CompletionRecord>{
+    if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');
+    if(!this.isOffline())try{return await this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/completion/'+encodeURIComponent(id)+'/transition',{method:'POST',body:JSON.stringify({to,expectedVersion,patch,reason})});}catch(error){if(!(error instanceof Error)||error.message!=='NETWORK_UNAVAILABLE')throw error;}
+    const current=(await this.listCompletion()).find(x=>x.id===id);if(!current)throw Error('COMPLETION_RECORD_NOT_FOUND');const kind=String(current.data.completionKind) as CompletionKind,spec=COMPLETION_WORKFLOWS[kind],state=String(current.data.completionState),version=Number(current.data.completionVersion??0);
+    if(version!==expectedVersion)throw Error('COMPLETION_VERSION_CONFLICT');if(!(spec?.transitions[state]??[]).includes(to))throw Error('INVALID_COMPLETION_TRANSITION');
+    const data={...current.data};for(const [key,value] of Object.entries(patch)){if(['completionKind','completionState','completionVersion'].includes(key))continue;data[key]=this.encodeCompletionValue(value);}data.completionState=to;data.completionVersion=version+1;if(reason)data.lastTransitionReason=reason.trim();
+    const tags=[...current.tags.filter(x=>!x.startsWith('state:')),'state:'+to],next:CompletionRecord={...current,status:this.localCompletionStatus(to),tags,data,updatedAt:new Date().toISOString()};
+    await this.saveLocalCompletion(next);await this.queueLocal('COMPLETION_TRANSITION_V1',{groupId:this.activeGroupId,id,to,expectedVersion,patch:structuredClone(patch),reason:reason??null},'completion-transition:'+id+':'+expectedVersion+':'+to);return next;
+  }
   async createHistoricalIdentityClaim(input:{historicalReference:string;evidenceReference:string;claimedMembershipId?:string;note?:string}):Promise<CompletionRecord>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/identity-claims',{method:'POST',body:JSON.stringify(input)});}
-  async createTontineCycle(input:{rubricId:string;name:string;rounds:number;potsPerRound:number;nominalPotAmount?:number}):Promise<CompletionRecord>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/tontine/cycles',{method:'POST',body:JSON.stringify({...input,currency:'XAF'})});}
-  async addTontineShare(input:{cycleId:string;membershipId:string;label:string}):Promise<CompletionRecord>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/tontine/shares',{method:'POST',body:JSON.stringify(input)});}
-  async suggestTontineSchedule(input:{shareIds:string[];rounds:number;potsPerRound:number;constraints?:TontineScheduleConstraint[]}):Promise<TontineScheduleResult>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/tontine/schedule/suggest',{method:'POST',body:JSON.stringify(input)});}
-  async scheduleTontineShare(shareId:string,round:number,expectedVersion:number):Promise<CompletionRecord>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/tontine/shares/'+encodeURIComponent(shareId)+'/schedule',{method:'POST',body:JSON.stringify({round,expectedVersion})});}
-  async serveTontineShare(shareId:string,input:{amount:number;expectedVersion:number;meetingId?:string}):Promise<{entry:LedgerEntry;share:CompletionRecord}>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/tontine/shares/'+encodeURIComponent(shareId)+'/serve',{method:'POST',body:JSON.stringify({...input,currency:'XAF',idempotencyKey:makeId('benefit')})});}
+  async exercises():Promise<CompletionRecord[]>{return this.listCompletion('GROUP_EXERCISE');}
+  async openExercise(input:{label:string;openingCash:number;startsAt?:string;previousExerciseId?:string;memberOpeningPositions?:unknown[];retainedFunds?:unknown[]}):Promise<CompletionRecord>{
+    if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');const label=input.label.trim();if(!label)throw Error('EXERCISE_LABEL_REQUIRED');if(!Number.isSafeInteger(input.openingCash)||input.openingCash<0)throw Error('INVALID_OPENING_CASH');
+    const history=await this.exercises(),existing=history.find(x=>['PREPARED','OPEN','CLOSING'].includes(String(x.data.completionState)));if(existing)throw Error('EXERCISE_ALREADY_OPEN');
+    let record=await this.createCompletion('GROUP_EXERCISE',{title:label,data:{label,openingCash:input.openingCash,startsAt:input.startsAt??new Date().toISOString(),previousExerciseId:input.previousExerciseId??null,memberOpeningPositionsJson:JSON.stringify(input.memberOpeningPositions??[]),retainedFundsJson:JSON.stringify(input.retainedFunds??[])}});
+    record=await this.transitionCompletion(record.id,'OPEN',Number(record.data.completionVersion??1),{openedAt:new Date().toISOString()});
+    if(history.length===0&&input.openingCash>0)await this.recordOpeningBalance(input.openingCash,'Trésorerie d’ouverture · '+label);
+    const groups=await this.cached<Group[]>('/api/v1/groups')??[],group=groups.find(x=>x.id===this.activeGroupId);if(group){const next={...group,currentExerciseLabel:label};await this.saveCached('/api/v1/groups',groups.map(x=>x.id===group.id?next:x));}
+    await this.queueLocal('GROUP_EXERCISE_LABEL_V1',{groupId:this.activeGroupId,exerciseId:record.id,label},'exercise-label:'+record.id);return record;
+  }
+  async prepareExerciseClosing(exerciseId:string,input:ExerciseClosingInput):Promise<{exercise:CompletionRecord;plan:ExerciseClosingPlan}>{
+    if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');const exercise=(await this.exercises()).find(x=>x.id===exerciseId);if(!exercise)throw Error('EXERCISE_NOT_FOUND');if(String(exercise.data.completionState)!=='OPEN')throw Error('EXERCISE_NOT_OPEN');
+    const plan=buildExerciseClosingPlan(input),next=await this.transitionCompletion(exercise.id,'CLOSING',Number(exercise.data.completionVersion??0),{closingPlanJson:JSON.stringify(plan),closingPreparedAt:new Date().toISOString(),closingPreparedBy:this.actorId});
+    return{exercise:next,plan};
+  }
+  async reopenExerciseClosing(exerciseId:string,reason:string):Promise<CompletionRecord>{
+    const exercise=(await this.exercises()).find(x=>x.id===exerciseId);if(!exercise)throw Error('EXERCISE_NOT_FOUND');const clean=reason.trim();if(!clean)throw Error('REASON_REQUIRED');
+    return this.transitionCompletion(exercise.id,'OPEN',Number(exercise.data.completionVersion??0),{},clean);
+  }
+  async closeExercise(exerciseId:string):Promise<CompletionRecord>{
+    const exercise=(await this.exercises()).find(x=>x.id===exerciseId);if(!exercise)throw Error('EXERCISE_NOT_FOUND');if(String(exercise.data.completionState)!=='CLOSING')throw Error('EXERCISE_NOT_CLOSING');if(!String(exercise.data.closingPlanJson??''))throw Error('EXERCISE_CLOSING_PLAN_REQUIRED');
+    return this.transitionCompletion(exercise.id,'CLOSED',Number(exercise.data.completionVersion??0),{closedAt:new Date().toISOString(),closedBy:this.actorId});
+  }
+  async carryForwardExercise(exerciseId:string,nextLabel:string):Promise<{source:CompletionRecord;next:CompletionRecord;seed:any}>{
+    if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');const exercise=(await this.exercises()).find(x=>x.id===exerciseId);if(!exercise)throw Error('EXERCISE_NOT_FOUND');if(String(exercise.data.completionState)!=='CLOSED')throw Error('EXERCISE_NOT_CLOSED');
+    let plan:ExerciseClosingPlan;try{plan=JSON.parse(String(exercise.data.closingPlanJson??''));}catch{throw Error('EXERCISE_CLOSING_PLAN_REQUIRED');}
+    const seed=buildExerciseCarryForwardSeed(exercise.id,nextLabel,plan);
+    const source=await this.transitionCompletion(exercise.id,'CARRIED_FORWARD',Number(exercise.data.completionVersion??0),{carriedForwardAt:new Date().toISOString(),nextExerciseLabel:nextLabel,nextExerciseOpeningCash:seed.openingCash});
+    const next=await this.openExercise({label:nextLabel,openingCash:seed.openingCash,previousExerciseId:exercise.id,memberOpeningPositions:seed.memberOpeningPositions,retainedFunds:seed.retainedFunds});
+    return{source,next,seed};
+  }
+  async createTontineCycle(input:{rubricId:string;name:string;rounds:number;potsPerRound:number;nominalPotAmount?:number}):Promise<CompletionRecord>{
+    if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');if(!input.rubricId||!input.name.trim())throw Error('TONTINE_CYCLE_REQUIRED');if(!Number.isSafeInteger(input.rounds)||input.rounds<1||!Number.isSafeInteger(input.potsPerRound)||input.potsPerRound<1)throw Error('INVALID_TONTINE_CYCLE');
+    return this.createCompletion('TONTINE_CYCLE',{title:input.name,data:{rubricId:input.rubricId,rounds:input.rounds,potsPerRound:input.potsPerRound,currency:'XAF',nominalPotAmount:input.nominalPotAmount??null}});
+  }
+  async addTontineShare(input:{cycleId:string;membershipId:string;label:string}):Promise<CompletionRecord>{
+    if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');const cycle=(await this.listCompletion('TONTINE_CYCLE')).find(x=>x.id===input.cycleId);if(!cycle)throw Error('TONTINE_CYCLE_NOT_FOUND');
+    const member=(await this.listMembers()).find(x=>x.id===input.membershipId&&x.status==='active');if(!member)throw Error('MEMBERSHIP_NOT_FOUND');
+    return this.createCompletion('TONTINE_SHARE',{title:input.label,data:{cycleId:input.cycleId,membershipId:input.membershipId,scheduledRound:null,scheduledSlot:null,benefitLedgerEntryId:null}});
+  }
+  async suggestTontineSchedule(input:{shareIds:string[];rounds:number;potsPerRound:number;constraints?:TontineScheduleConstraint[]}):Promise<TontineScheduleResult>{
+    if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return suggestTontineScheduleLocal(input.shareIds,input.rounds,input.potsPerRound,input.constraints??[]);
+  }
+  async scheduleTontineShare(shareId:string,round:number,expectedVersion:number):Promise<CompletionRecord>{
+    if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');const share=(await this.listCompletion('TONTINE_SHARE')).find(x=>x.id===shareId);if(!share)throw Error('TONTINE_SHARE_NOT_FOUND');
+    const cycleId=String(share.data.cycleId??''),cycle=(await this.listCompletion('TONTINE_CYCLE')).find(x=>x.id===cycleId);if(!cycle)throw Error('TONTINE_CYCLE_NOT_FOUND');
+    const maxRound=Number(cycle.data.rounds),pots=Number(cycle.data.potsPerRound);if(!Number.isSafeInteger(round)||round<1||round>maxRound)throw Error('TONTINE_ROUND_OUT_OF_RANGE');
+    const siblings=(await this.listCompletion('TONTINE_SHARE')).filter(x=>x.id!==shareId&&String(x.data.cycleId??'')===cycleId&&Number(x.data.scheduledRound)===round&&String(x.data.completionState)!=='CANCELLED');if(siblings.length>=pots)throw Error('TONTINE_ROUND_CAPACITY_EXCEEDED');
+    return this.transitionCompletion(shareId,'SCHEDULED',expectedVersion,{scheduledRound:round,scheduledSlot:siblings.length+1});
+  }
+  async serveTontineShare(shareId:string,input:{amount:number;expectedVersion:number;meetingId?:string}):Promise<{entry:LedgerEntry;share:CompletionRecord}>{
+    if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');if(!Number.isSafeInteger(input.amount)||input.amount<=0)throw Error('INVALID_AMOUNT');const key=makeId('benefit');
+    if(!this.isOffline())try{return await this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/tontine/shares/'+encodeURIComponent(shareId)+'/serve',{method:'POST',body:JSON.stringify({...input,currency:'XAF',idempotencyKey:key})});}catch(error){if(!(error instanceof Error)||error.message!=='NETWORK_UNAVAILABLE')throw error;}
+    const share=(await this.listCompletion('TONTINE_SHARE')).find(x=>x.id===shareId);if(!share)throw Error('TONTINE_SHARE_NOT_FOUND');if(String(share.data.completionState)!=='SCHEDULED')throw Error('TONTINE_SHARE_NOT_SCHEDULED');if(Number(share.data.completionVersion??0)!==input.expectedVersion)throw Error('COMPLETION_VERSION_CONFLICT');
+    const entry:any=await this.patchLocalCashMovement({amount:input.amount,direction:'out',kind:'tontine_benefit',sourceType:'tontine_share',sourceId:shareId,meetingId:input.meetingId,idempotencyKey:key,descriptionCode:'LEDGER_TONTINE_BENEFIT'});
+    const data={...share.data,completionState:'SERVED',completionVersion:input.expectedVersion+1,benefitLedgerEntryId:entry.id,servedAt:new Date().toISOString()},next:CompletionRecord={...share,status:'DONE',tags:[...share.tags.filter(x=>!x.startsWith('state:')),'state:SERVED'],data,updatedAt:new Date().toISOString()};
+    await this.saveLocalCompletion(next);await this.queueLocal('TONTINE_SERVE_V1',{groupId:this.activeGroupId,shareId,amount:input.amount,expectedVersion:input.expectedVersion,meetingId:input.meetingId??null,currency:'XAF',idempotencyKey:key},key);return{entry,share:next};
+  }
   async createObligation(input:{membershipId:string;type:string;title:string;dueAt?:string;amount?:number;sourceId?:string}):Promise<unknown>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/obligations',{method:'POST',body:JSON.stringify({...input,currency:'XAF'})});}
-  async quoteLoan(input:{principal:number;installments:number;annualRateBasisPoints:number;installmentsPerYear?:number;method?:'FLAT'|'DECLINING';feesTotal?:number}):Promise<{schedule:LoanScheduleRow[]}>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/loans/quote',{method:'POST',body:JSON.stringify(input)});}
-  async simulateLoan(input:{principal:number;periods:number;ratePercentPerPeriod:number;priority:'CAPITAL_FIRST'|'INTEREST_FIRST';interestBasis?:'OUTSTANDING'|'INITIAL';payments?:number[];openingInterestDue?:number}):Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/loans/simulate',{method:'POST',body:JSON.stringify(input)});}
-  async loanHistory(loanId:string):Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/loans/'+encodeURIComponent(loanId)+'/history');}
-  async disburseLoan(id:string,input:{amount?:number;expectedVersion:number;meetingId?:string}):Promise<{entry:LedgerEntry;loan:CompletionRecord}>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/loans/'+encodeURIComponent(id)+'/disburse',{method:'POST',body:JSON.stringify({...input,idempotencyKey:makeId('loan_disbursement')})});}
-  async repayLoan(id:string,input:{principalAmount:number;expectedVersion:number;meetingId?:string}):Promise<{entry:LedgerEntry;loan:CompletionRecord}>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/loans/'+encodeURIComponent(id)+'/repay',{method:'POST',body:JSON.stringify({...input,idempotencyKey:makeId('loan_repayment')})});}
+  async quoteLoan(input:{principal:number;installments:number;annualRateBasisPoints:number;installmentsPerYear?:number;method?:'FLAT'|'DECLINING';feesTotal?:number}):Promise<{schedule:LoanScheduleRow[]}>{
+    if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return{schedule:buildLoanSchedule(input)};
+  }
+  async simulateLoan(input:{principal:number;periods:number;ratePercentPerPeriod:number;priority:'CAPITAL_FIRST'|'INTEREST_FIRST';interestBasis?:'OUTSTANDING'|'INITIAL';payments?:number[];openingInterestDue?:number}):Promise<any>{
+    if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return{rows:simulatePeriodicLoan(input)};
+  }
+  async loanHistory(loanId:string):Promise<any>{
+    if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');if(!this.isOffline())try{return await this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/loans/'+encodeURIComponent(loanId)+'/history');}catch(error){if(!(error instanceof Error)||error.message!=='NETWORK_UNAVAILABLE')throw error;}
+    const loan=(await this.listCompletion('LOAN')).find(x=>x.id===loanId);if(!loan)throw Error('LOAN_NOT_FOUND');const journal=await this.sovereign.list(this.tenantId,this.activeGroupId);
+    return{loan,events:journal.filter(x=>String(x.payload.loanId??x.payload.sourceId??'')===loanId||String(x.payload.id??'')===loanId),offline:true};
+  }
+  async disburseLoan(id:string,input:{amount?:number;expectedVersion:number;meetingId?:string}):Promise<{entry:LedgerEntry;loan:CompletionRecord}>{
+    if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');const key=makeId('loan_disbursement');
+    if(!this.isOffline())try{return await this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/loans/'+encodeURIComponent(id)+'/disburse',{method:'POST',body:JSON.stringify({...input,idempotencyKey:key})});}catch(error){if(!(error instanceof Error)||error.message!=='NETWORK_UNAVAILABLE')throw error;}
+    const loan=(await this.listCompletion('LOAN')).find(x=>x.id===id);if(!loan)throw Error('LOAN_NOT_FOUND');if(String(loan.data.completionState)!=='APPROVED')throw Error('LOAN_NOT_APPROVED');if(Number(loan.data.completionVersion??0)!==input.expectedVersion)throw Error('COMPLETION_VERSION_CONFLICT');
+    const principal=Number(input.amount??loan.data.principal);if(!Number.isSafeInteger(principal)||principal<=0)throw Error('INVALID_LOAN_PRINCIPAL');
+    const entry:any=await this.patchLocalCashMovement({amount:principal,direction:'out',kind:'loan_disbursement',sourceType:'loan',sourceId:id,meetingId:input.meetingId,idempotencyKey:key,descriptionCode:'LEDGER_LOAN_DISBURSEMENT'});
+    const data={...loan.data,completionState:'DISBURSED',completionVersion:input.expectedVersion+1,ledgerEntryId:entry.id,outstandingPrincipal:principal,unpaidInterest:0,accruedMeetingIdsJson:'[]',disbursedAt:new Date().toISOString()},next:CompletionRecord={...loan,status:'ACTIVE',tags:[...loan.tags.filter(x=>!x.startsWith('state:')),'state:DISBURSED'],data,updatedAt:new Date().toISOString()};
+    await this.saveLocalCompletion(next);await this.queueLocal('LOAN_DISBURSE_V1',{groupId:this.activeGroupId,loanId:id,amount:principal,expectedVersion:input.expectedVersion,meetingId:input.meetingId??null,idempotencyKey:key},key);return{entry,loan:next};
+  }
+  async repayLoan(id:string,input:{principalAmount:number;interestAmount?:number;expectedVersion:number;meetingId?:string}):Promise<{entry:LedgerEntry;loan:CompletionRecord}>{
+    if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');const key=makeId('loan_repayment');
+    if(!this.isOffline())try{return await this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/loans/'+encodeURIComponent(id)+'/repay',{method:'POST',body:JSON.stringify({...input,idempotencyKey:key})});}catch(error){if(!(error instanceof Error)||error.message!=='NETWORK_UNAVAILABLE')throw error;}
+    const loan=(await this.listCompletion('LOAN')).find(x=>x.id===id);if(!loan)throw Error('LOAN_NOT_FOUND');if(!['DISBURSED','REPAYING'].includes(String(loan.data.completionState)))throw Error('LOAN_NOT_REPAYABLE');if(Number(loan.data.completionVersion??0)!==input.expectedVersion)throw Error('COMPLETION_VERSION_CONFLICT');
+    const outstanding=Number(loan.data.outstandingPrincipal??0),unpaid=Number(loan.data.unpaidInterest??0),principalPaid=Number(input.principalAmount??0),rateBp=Number(loan.data.rateBasisPointsPerPeriod??0);
+    let accrued:string[]=[];try{accrued=JSON.parse(String(loan.data.accruedMeetingIdsJson??'[]'));if(!Array.isArray(accrued))accrued=[];}catch{accrued=[];}
+    let periodInterest=0;if(input.meetingId&&!accrued.includes(input.meetingId)){periodInterest=Math.round(outstanding*rateBp/10000);accrued.push(input.meetingId);}
+    const interestDue=unpaid+periodInterest,interestPaid=Number(input.interestAmount??0);if(!Number.isSafeInteger(principalPaid)||principalPaid<0||principalPaid>outstanding||!Number.isSafeInteger(interestPaid)||interestPaid<0||interestPaid>interestDue)throw Error('INVALID_LOAN_REPAYMENT');
+    const amount=principalPaid+interestPaid;if(amount<=0)throw Error('INVALID_LOAN_REPAYMENT');const entry:any=await this.patchLocalCashMovement({amount,direction:'in',kind:'loan_repayment',sourceType:'loan',sourceId:id,meetingId:input.meetingId,idempotencyKey:key,descriptionCode:'LEDGER_LOAN_REPAYMENT'});
+    const remaining=outstanding-principalPaid,interestAfter=interestDue-interestPaid,target=remaining===0&&interestAfter===0?'CLOSED':'REPAYING',data={...loan.data,completionState:target,completionVersion:input.expectedVersion+1,outstandingPrincipal:remaining,unpaidInterest:interestAfter,lastRepaymentLedgerEntryId:entry.id,accruedMeetingIdsJson:JSON.stringify(accrued)},next:CompletionRecord={...loan,status:target==='CLOSED'?'DONE':'ACTIVE',tags:[...loan.tags.filter(x=>!x.startsWith('state:')),'state:'+target],data,updatedAt:new Date().toISOString()};
+    await this.saveLocalCompletion(next);await this.queueLocal('LOAN_REPAY_V1',{groupId:this.activeGroupId,loanId:id,principalAmount:principalPaid,interestAmount:interestPaid,periodInterest,rateBasisPointsPerPeriod:rateBp,accruedMeetingIds:accrued,expectedVersion:input.expectedVersion,meetingId:input.meetingId??null,idempotencyKey:key},key);return{entry,loan:next};
+  }
   async createGovernanceDecision(input:{title:string;subject:string;threshold:number;expiresAt?:string;operationFingerprint?:string}):Promise<CompletionRecord>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/governance/decisions',{method:'POST',body:JSON.stringify(input)});}
   async approveGovernanceDecision(id:string,expectedVersion:number):Promise<CompletionRecord>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/governance/decisions/'+encodeURIComponent(id)+'/approve',{method:'POST',body:JSON.stringify({expectedVersion})});}
   async createReadinessPassport():Promise<CompletionRecord>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/readiness',{method:'POST',body:'{}'});}

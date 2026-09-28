@@ -1,23 +1,29 @@
-const CACHE = 'eco-system-v1528-geo-directory-20260928';
-const PREVIOUS_CACHE = 'eco-system-v1527-live-completion-20260927';
+const CACHE = 'eco-system-v1529-sovereign-offline-20260928';
+const PREVIOUS_CACHE = 'eco-system-v1528-geo-directory-20260928';
 const RELEASE_READY = '/__eco_release_ready__';
 
 // Authentication, navigation and canonical application owners must be complete
 // before this worker may install. Optional business/community panels can fail
 // independently without replacing an already-working release.
 const ESSENTIAL_SHELL = [
-  '/', '/index.html', '/styles.css?v=1528', '/manifest.webmanifest',
-  '/src/ui-modes.js?v=1528', '/src/field-hardening.js?v=1528', '/src/main.js?v=1528', '/src/i18n.js', '/src/runtime-i18n.js',
+  '/', '/index.html', '/styles.css?v=1529', '/manifest.webmanifest',
+  '/src/ui-modes.js?v=1529', '/src/field-hardening.js?v=1529', '/src/main.js?v=1529', '/src/i18n.js', '/src/runtime-i18n.js',
   '/src/resilience-ui.js', '/src/group-home-ui.js', '/src/sessions-ui.js',
   '/src/detail-ui.js', '/src/member-control-ui.js', '/src/loan-simulation-ui.js', '/src/business-studio-ui.js', '/src/core-economic-learning-ui.js',
   '/packages/application/src/index.js', '/packages/contracts/src/index.js',
   '/packages/domain/src/index.js', '/packages/offline/src/index.js',
   '/packages/platform-kernel/src/index.js', '/packages/relay/src/index.js',
-  '/packages/repositories/src/index.js'
+  '/packages/repositories/src/index.js',
+  '/src/sovereign-offline-ui.js',
+  '/packages/offline-sovereign/src/index.js', '/packages/exercise/src/index.js',
+  '/packages/relay/src/broadcast.js', '/packages/relay/src/qr-v10.js', '/packages/relay/src/local-room.js',
+  '/packages/savings-yield/src/index.js', '/packages/recap-engine/src/index.js',
+  '/packages/loan-simulator/src/index.js', '/packages/group-doctor/src/index.js', '/packages/eco-numpad/src/index.js',
+  '/src/vendor/qr-scanner.min.js', '/src/vendor/qr-scanner-worker.min.js'
 ];
 
 const OPTIONAL_SHELL = [
-  '/src/voice-entry-bootstrap.js?v=1528', '/src/voice-entry-ui.js', '/src/expense-recap-ui.js',
+  '/src/voice-entry-bootstrap.js?v=1529', '/src/voice-entry-ui.js', '/src/expense-recap-ui.js',
   '/src/member-dossier-ui.js', '/src/documents-ui.js', '/src/contextual-group-ui.js',
   '/src/blueprint-executable-ui.js', '/src/community-blueprint-presets.js',
   '/src/financial-lab-ui.js', '/src/completion-ui.js', '/src/advanced-ui.js',
@@ -88,7 +94,7 @@ const cachedShell = async request => {
   const cache = await caches.open(CACHE);
   const url = new URL(request.url);
   // A versioned request must only match that exact version. Falling back from
-  // main.js?v=1528 to an older /main.js was the source of mixed-release UI.
+  // main.js?v=1529 to an older /main.js was the source of mixed-release UI.
   if(url.search)return await cache.match(request);
   return await cache.match(url.pathname);
 };

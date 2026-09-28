@@ -21,9 +21,9 @@ export class TreasuryService{
     if(manage&&!member.roles.some(r=>managerRoles.has(r)))throw Error('FORBIDDEN_SCOPE');
     return member;
   }
-  private async save(groupId:Id,kind:Kind,title:string,data:Record<string,string|number|boolean|null>):Promise<FinanceRecord>{
+  private async save(groupId:Id,kind:Kind,title:string,data:Record<string,string|number|boolean|null>,recordId?:Id):Promise<FinanceRecord>{
     await this.access(groupId,true);const ctx=this.kernel.context.get(),stamp=now();
-    const record:FinanceRecord={id:makeId('finance'),tenantId:ctx.tenantId,groupId,moduleId:kind==='SAVINGS_PLAN'?'RUBRIC.SAVINGS':'FINANCE.LEDGER',
+    const record:FinanceRecord={id:recordId?.trim()||makeId('finance'),tenantId:ctx.tenantId,groupId,moduleId:kind==='SAVINGS_PLAN'?'RUBRIC.SAVINGS':'FINANCE.LEDGER',
       title,status:'ACTIVE',tags:['specialized-finance','kind:'+kind],data:{...data,specializedKind:kind},createdBy:ctx.actorId,createdAt:stamp,updatedAt:stamp};
     await this.repo.saveWorkspaceRecord(record);return record;
   }
@@ -31,11 +31,12 @@ export class TreasuryService{
     await this.access(groupId,false);const ctx=this.kernel.context.get();
     return (await this.repo.listWorkspaceRecords(ctx.tenantId,undefined,groupId)).filter(r=>r.data.specializedKind===kind) as FinanceRecord[];
   }
-  async createSavingsPlan(groupId:Id,input:{membershipId:Id;name:string;targetAmount?:number;currency?:string}){
+  async createSavingsPlan(groupId:Id,input:{id?:Id;membershipId:Id;name:string;targetAmount?:number;currency?:string}){
     await this.access(groupId,true);const ctx=this.kernel.context.get(),member=await this.repo.getMembership(ctx.tenantId,groupId,input.membershipId);
     if(!member||member.status!=='active')throw Error('MEMBERSHIP_NOT_FOUND');if(input.targetAmount!==undefined&&(!Number.isSafeInteger(input.targetAmount)||input.targetAmount<0))throw Error('INVALID_TARGET_AMOUNT');
     const name=input.name.trim();if(!name)throw Error('NAME_REQUIRED');
-    return this.save(groupId,'SAVINGS_PLAN',name,{membershipId:member.id,targetAmount:input.targetAmount??null,currency:input.currency??'XAF'});
+    const existing=input.id?await this.repo.getWorkspaceRecord(ctx.tenantId,input.id):undefined;if(existing){if(existing.groupId!==groupId||String(existing.data.specializedKind)!=='SAVINGS_PLAN')throw Error('IDEMPOTENCY_CONFLICT');return existing as FinanceRecord;}
+    return this.save(groupId,'SAVINGS_PLAN',name,{membershipId:member.id,targetAmount:input.targetAmount??null,currency:input.currency??'XAF'},input.id);
   }
   async savingsPosition(groupId:Id,planId:Id){
     const plan=(await this.list(groupId,'SAVINGS_PLAN')).find(x=>x.id===planId);if(!plan)throw Error('SAVINGS_PLAN_NOT_FOUND');
@@ -58,16 +59,18 @@ export class TreasuryService{
       sourceType:'savings_plan',sourceId:plan.id,idempotencyKey:key,kind:'cash_out'});
   }
   async openingBalance(groupId:Id,input:{amount:number;currency?:string;note:string;idempotencyKey:string}){
-    amount(input.amount);const note=input.note.trim();if(!note)throw Error('NOTE_REQUIRED');const ctx=this.kernel.context.get();
-    const record=await this.save(groupId,'OPENING_BALANCE','Opening balance',{amount:input.amount,currency:input.currency??'XAF',note});
+    amount(input.amount);const note=input.note.trim();if(!note)throw Error('NOTE_REQUIRED');const ctx=this.kernel.context.get(),recordId='finance_opening_'+encodeURIComponent(JSON.stringify([ctx.tenantId,groupId,input.idempotencyKey]));
+    const existing=await this.repo.getWorkspaceRecord(ctx.tenantId,recordId),record=existing??await this.save(groupId,'OPENING_BALANCE','Opening balance',{amount:input.amount,currency:input.currency??'XAF',note},recordId);
+    if(existing&&(Number(existing.data.amount)!==input.amount||String(existing.data.note??'')!==note))throw Error('IDEMPOTENCY_CONFLICT');
     const entry=await this.ledger.recordCashMovement({tenantId:ctx.tenantId,groupId,amount:input.amount,currency:input.currency??'XAF',direction:'in',
       counterAccountCode:'OPENING_EQUITY',counterAccountType:'equity',descriptionCode:'LEDGER_OPENING_BALANCE',sourceType:'opening_balance',
       sourceId:record.id,idempotencyKey:input.idempotencyKey,kind:'opening_balance'});
     return{record,entry};
   }
-  async createCustody(groupId:Id,input:{name:string;holder:string;currency?:string}){
+  async createCustody(groupId:Id,input:{id?:Id;name:string;holder:string;currency?:string}){
     const name=input.name.trim(),holder=input.holder.trim();if(!name||!holder)throw Error('CUSTODY_NAME_AND_HOLDER_REQUIRED');
-    return this.save(groupId,'CUSTODY_ACCOUNT',name,{holder,currency:input.currency??'XAF'});
+    const ctx=this.kernel.context.get(),existing=input.id?await this.repo.getWorkspaceRecord(ctx.tenantId,input.id):undefined;if(existing){if(existing.groupId!==groupId||String(existing.data.specializedKind)!=='CUSTODY_ACCOUNT')throw Error('IDEMPOTENCY_CONFLICT');return existing as FinanceRecord;}
+    return this.save(groupId,'CUSTODY_ACCOUNT',name,{holder,currency:input.currency??'XAF'},input.id);
   }
   async custodyPosition(groupId:Id,custodyId:Id){
     const record=(await this.list(groupId,'CUSTODY_ACCOUNT')).find(x=>x.id===custodyId);if(!record)throw Error('CUSTODY_ACCOUNT_NOT_FOUND');

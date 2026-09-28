@@ -222,6 +222,11 @@ export class IndexedDbReadSnapshotAdapter {
     }finally{db.close();}
   }
 
+  async listForActorTenant(actorId:string,tenantId:string):Promise<ReadSnapshot[]>{
+    if(!IndexedDbReadSnapshotAdapter.supported())return[];
+    const db=await this.open();try{return (await idbAll<ReadSnapshot>(db.transaction(READ_STORE,'readonly').objectStore(READ_STORE))).filter(x=>x.actorId===actorId&&x.tenantId===tenantId).map(x=>structuredClone(x));}finally{db.close();}
+  }
+
   async clearForActor(actorId:string):Promise<void>{
     if(!IndexedDbReadSnapshotAdapter.supported())return;
     const db=await this.open();

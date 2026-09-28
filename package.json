@@ -1,9 +1,9 @@
 {
   "name": "tontine-platform",
-  "version": "1.5.2-3",
+  "version": "1.5.2-9",
   "private": true,
   "type": "module",
-  "description": "Eco-System 1.5.2.3: canonical financial entry hotfix with visible durable offline validation, Enter-key confirmation and 1.5.2.2 field fixes preserved.",
+  "description": "Eco-System 1.5.2.9: sovereign multi-year offline group cycle, encrypted Eco Broadcast QR, Eco Vault recovery, iOS/WebKit fallbacks, and canonical finance preserved.",
   "engines": {
     "node": ">=24"
   },

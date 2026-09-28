@@ -21,9 +21,9 @@ export class RiskFinanceService{
     if(manage&&!member.roles.some(r=>managerRoles.has(r)))throw Error('FORBIDDEN_SCOPE');
     return member;
   }
-  private async save(groupId:Id,kind:Kind,title:string,data:Record<string,string|number|boolean|null>):Promise<RiskRecord>{
+  private async save(groupId:Id,kind:Kind,title:string,data:Record<string,string|number|boolean|null>,recordId?:Id):Promise<RiskRecord>{
     await this.access(groupId,true);const ctx=this.kernel.context.get(),stamp=now();
-    const record:RiskRecord={id:makeId('risk'),tenantId:ctx.tenantId,groupId,
+    const record:RiskRecord={id:recordId?.trim()||makeId('risk'),tenantId:ctx.tenantId,groupId,
       moduleId:kind==='SOLIDARITY_CASE'?'SOLIDARITY.FUND':'FINANCE.LOAN_GUARANTORS',title,status:'ACTIVE',
       tags:['specialized-finance','kind:'+kind],data:{...data,specializedKind:kind},createdBy:ctx.actorId,createdAt:stamp,updatedAt:stamp};
     await this.repo.saveWorkspaceRecord(record);return record;
@@ -51,11 +51,11 @@ export class RiskFinanceService{
     const updated:RiskRecord={...guarantee,status:'DONE',data:{...guarantee.data,state:'RELEASED',releasedAt:now(),releasedBy:ctx.actorId,releaseReason:why},updatedAt:now()};
     await this.repo.saveWorkspaceRecord(updated);return updated;
   }
-  async solidarityCase(groupId:Id,input:{beneficiaryMembershipId:Id;title:string;approvedAmount:number;currency?:string}){
+  async solidarityCase(groupId:Id,input:{id?:Id;beneficiaryMembershipId:Id;title:string;approvedAmount:number;currency?:string}){
     await this.access(groupId,true);validAmount(input.approvedAmount);const ctx=this.kernel.context.get();
     const member=await this.repo.getMembership(ctx.tenantId,groupId,input.beneficiaryMembershipId);if(!member||member.status!=='active')throw Error('MEMBERSHIP_NOT_FOUND');
-    const title=input.title.trim();if(!title)throw Error('TITLE_REQUIRED');
-    return this.save(groupId,'SOLIDARITY_CASE',title,{beneficiaryMembershipId:member.id,approvedAmount:input.approvedAmount,currency:input.currency??'XAF',state:'APPROVED'});
+    const title=input.title.trim();if(!title)throw Error('TITLE_REQUIRED');const existing=input.id?await this.repo.getWorkspaceRecord(ctx.tenantId,input.id):undefined;if(existing){if(existing.groupId!==groupId||String(existing.data.specializedKind)!=='SOLIDARITY_CASE')throw Error('IDEMPOTENCY_CONFLICT');return existing as RiskRecord;}
+    return this.save(groupId,'SOLIDARITY_CASE',title,{beneficiaryMembershipId:member.id,approvedAmount:input.approvedAmount,currency:input.currency??'XAF',state:'APPROVED'},input.id);
   }
   async fund(groupId:Id,caseId:Id,value:number,key:string){
     validAmount(value);const record=(await this.list(groupId,'SOLIDARITY_CASE')).find(x=>x.id===caseId);if(!record)throw Error('SOLIDARITY_CASE_NOT_FOUND');
