@@ -418,7 +418,7 @@ export class D1PlatformRepository implements PlatformRepository {
   async commitFinancialOperation(operation:FinancialOperation):Promise<FinancialOperation>{
     const e=operation.entry;
     const scope=[e.tenantId,e.groupId,operation.kind,e.idempotencyKey];
-    const statements=[this.db.prepare(`INSERT INTO financial_operations
+    const statements=[this.db.prepare(`INSERT INTO financial_operations_v2
       (tenant_id,group_id,operation_kind,idempotency_key,entry_id,operation_json)
       VALUES(?,?,?,?,?,?) ON CONFLICT(tenant_id,group_id,operation_kind,idempotency_key) DO NOTHING`)
       .bind(...scope,e.id,JSON.stringify(operation))];
@@ -431,7 +431,7 @@ export class D1PlatformRepository implements PlatformRepository {
     for(const [type,value,key] of rows){
       statements.push(this.db.prepare(`INSERT INTO platform_records
         (record_type,record_id,tenant_id,group_id,assignee_id,idempotency_key,data_json,updated_at)
-        SELECT ?,?,?,?,?,?,?,? WHERE EXISTS (SELECT 1 FROM financial_operations
+        SELECT ?,?,?,?,?,?,?,? WHERE EXISTS (SELECT 1 FROM financial_operations_v2
           WHERE tenant_id=? AND group_id=? AND operation_kind=? AND idempotency_key=? AND entry_id=?)
         ON CONFLICT(record_type,record_id) DO NOTHING`)
         .bind(type,value.id,e.tenantId,e.groupId,null,key,JSON.stringify(value),e.createdAt,...scope,e.id));
@@ -439,7 +439,7 @@ export class D1PlatformRepository implements PlatformRepository {
     // D1 batch is transactional: the receipt, entry, accounts and audit either all
     // commit or all roll back. The unique operation key arbitrates competing requests.
     await this.db.batch(statements);
-    const winner=await this.db.prepare(`SELECT operation_json FROM financial_operations
+    const winner=await this.db.prepare(`SELECT operation_json FROM financial_operations_v2
       WHERE tenant_id=? AND group_id=? AND operation_kind=? AND idempotency_key=?`)
       .bind(...scope).first<{operation_json:string}>();
     if(!winner)throw new Error('FINANCIAL_COMMIT_NOT_CONFIRMED');
@@ -666,6 +666,7 @@ export class D1PlatformRepository implements PlatformRepository {
       q('DELETE FROM financial_correction_commit_guards WHERE tenant_id=? AND group_id=?',tenantId,groupId),
       q('DELETE FROM financial_correction_operations WHERE tenant_id=? AND group_id=?',tenantId,groupId),
       q('DELETE FROM financial_cell_revisions WHERE tenant_id=? AND group_id=?',tenantId,groupId),
+      q('DELETE FROM financial_operations_v2 WHERE tenant_id=? AND group_id=?',tenantId,groupId),
       q('DELETE FROM financial_operations WHERE tenant_id=? AND group_id=?',tenantId,groupId),
       q('DELETE FROM platform_records WHERE tenant_id=? AND group_id=?',tenantId,groupId),
       // Legacy normalized tables may still contain historical rows from pre-platform_records releases.
