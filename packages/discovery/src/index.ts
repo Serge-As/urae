@@ -1,4 +1,4 @@
-import type { GroupDiscoveryMatch, GroupDiscoveryQuery, Id, MembershipApplication, PublicGroupListing, User, WorkspaceRecord } from '../../contracts/src/index.js';
+import type { GroupDiscoveryMatch, GroupDiscoveryQuery, Id, MembershipApplication, PublicApproximateLocation, PublicGroupListing, User, WorkspaceRecord } from '../../contracts/src/index.js';
 import { makeId } from '../../contracts/src/index.js';
 import type { PlatformRepository } from '../../repositories/src/index.js';
 import { PlatformKernel } from '../../platform-kernel/src/index.js';
@@ -13,12 +13,26 @@ const PUBLIC_CANDIDATE_TENANT='__eco_public_candidate_projection__';
 const PUBLIC_MANAGER_TENANT='__eco_public_manager_projection__';
 const cleanText=(v:unknown,max=240)=>String(v??'').trim().replace(/\s+/g,' ').slice(0,max);
 const cleanTags=(v:unknown)=>{let raw:unknown[]=Array.isArray(v)?v:[];if(typeof v==='string'&&v.trim()){try{const parsed=JSON.parse(v);raw=Array.isArray(parsed)?parsed:v.split(',');}catch{raw=v.split(',');}}return[...new Set(raw.map(x=>normalize(String(x))).filter(Boolean))].slice(0,24);};
+const validCoordinates=(latitude:number,longitude:number)=>Number.isFinite(latitude)&&Number.isFinite(longitude)&&latitude>=-90&&latitude<=90&&longitude>=-180&&longitude<=180;
+const publicApproximateLocation=(value:Partial<PublicApproximateLocation>|undefined):PublicApproximateLocation|undefined=>{
+  if(!value)return undefined;const latitude=Number(value.latitude),longitude=Number(value.longitude);if(!validCoordinates(latitude,longitude))throw new Error('INVALID_GEO_COORDINATES');
+  return{latitude:Number(latitude.toFixed(2)),longitude:Number(longitude.toFixed(2)),precisionMeters:Math.max(1000,Math.min(10000,Math.round(Number(value.precisionMeters)||1000))),source:'DEVICE_GEOLOCATION'};
+};
+const searchCoordinates=(latitude:unknown,longitude:unknown):{latitude:number;longitude:number}|undefined=>{
+  if(latitude===undefined&&longitude===undefined)return undefined;
+  const lat=Number(latitude),lon=Number(longitude);if(!validCoordinates(lat,lon))throw new Error('INVALID_GEO_COORDINATES');return{latitude:lat,longitude:lon};
+};
+const haversineKm=(a:{latitude:number;longitude:number},b:{latitude:number;longitude:number})=>{
+  const rad=(v:number)=>v*Math.PI/180,R=6371,dLat=rad(b.latitude-a.latitude),dLon=rad(b.longitude-a.longitude),lat1=rad(a.latitude),lat2=rad(b.latitude);
+  const h=Math.sin(dLat/2)**2+Math.cos(lat1)*Math.cos(lat2)*Math.sin(dLon/2)**2;return 2*R*Math.asin(Math.min(1,Math.sqrt(h)));
+};
+const safeRadiusKm=(value:unknown)=>Math.max(1,Math.min(100,Number.isFinite(Number(value))?Number(value):20));
 export interface PublicCandidateProfile {
-  id:Id;displayAlias:string;locality?:string;skills:string[];interests:string[];desiredGroupTags:string[];
+  id:Id;displayAlias:string;locality?:string;approxLocation?:PublicApproximateLocation;skills:string[];interests:string[];desiredGroupTags:string[];
   bio?:string;availability?:string;updatedAt:string;
 }
-export interface CandidateSearchQuery {text?:string;locality?:string;tags?:string[];}
-export interface CandidateMatch {candidate:PublicCandidateProfile;score:number;reasonCodes:string[];}
+export interface CandidateSearchQuery {text?:string;locality?:string;tags?:string[];latitude?:number;longitude?:number;radiusKm?:number;}
+export interface CandidateMatch {candidate:PublicCandidateProfile;score:number;reasonCodes:string[];distanceKm?:number;}
 export interface CandidateInvitationView {id:Id;groupId:Id;groupName:string;campaignId?:Id;message?:string;state:'PENDING'|'INTERESTED'|'DECLINED';createdAt:string;updatedAt:string;}
 export interface PublicManagerProfile {
   id:Id;displayAlias:string;locality?:string;expertise:string[];services:string[];bio?:string;availability?:string;optIn:boolean;
@@ -31,6 +45,7 @@ export interface ManagerProfileSearchQuery {text?:string;locality?:string;expert
 
 const candidateProjection=(row:WorkspaceRecord):PublicCandidateProfile=>({
   id:row.id,displayAlias:String(row.data.displayAlias??row.title),locality:row.data.locality?String(row.data.locality):undefined,
+  approxLocation:Boolean(row.data.geoOptIn)&&row.data.geoLatitude!==undefined&&row.data.geoLongitude!==undefined?publicApproximateLocation({latitude:Number(row.data.geoLatitude),longitude:Number(row.data.geoLongitude),precisionMeters:Number(row.data.geoPrecisionMeters??1000),source:'DEVICE_GEOLOCATION'}):undefined,
   skills:cleanTags(row.data.skills),interests:cleanTags(row.data.interests),desiredGroupTags:cleanTags(row.data.desiredGroupTags),
   bio:row.data.bio?String(row.data.bio):undefined,availability:row.data.availability?String(row.data.availability):undefined,updatedAt:row.updatedAt
 });
@@ -46,6 +61,7 @@ const requireManager=async(repo:PlatformRepository,kernel:PlatformKernel,tenantI
 
 export interface PublishGroupListingInput extends Omit<PublicGroupListing,'id'|'tenantId'|'name'|'family'|'publishedAt'|'updatedAt'> {
   tenantId: Id;
+  clearApproxLocation?: boolean;
 }
 
 /** Public cross-tenant projection. It deliberately never reads member lists, balances or private contacts. */
@@ -115,19 +131,22 @@ export class DiscoveryService {
       id:previous?.id??makeId('listing'),tenantId:group.tenantId,groupId:group.id,name:group.name,
       family:group.kind==='association'?'association':'rotating_tontine',visibility:input.visibility,
       discoverable:input.visibility==='PUBLIC'&&input.discoverable,joinPolicy:input.joinPolicy,recruiting:input.recruiting,
-      locality:input.locality?.trim()||undefined,missionTags:[...new Set(input.missionTags.map(normalize).filter(Boolean))],
+      locality:input.locality?.trim()||undefined,
+      approxLocation:input.clearApproxLocation?undefined:(input.approxLocation?publicApproximateLocation(input.approxLocation):previous?.approxLocation),
+      missionTags:[...new Set(input.missionTags.map(normalize).filter(Boolean))],
       activityTags:[...new Set(input.activityTags.map(normalize).filter(Boolean))],meetingMode:input.meetingMode,
       contributionBand:input.contributionBand,publicManagerAlias:input.publicManagerAlias?.trim()||undefined,
       publishedAt:previous?.publishedAt??timestamp,updatedAt:timestamp
     };
     await this.repo.savePublicGroupListing(listing);
-    const audit=this.kernel.audit.append({tenantId:group.tenantId,actorId:this.kernel.context.get().actorId,action:'GROUP_DISCOVERY_LISTING_PUBLISHED',targetType:'group',targetId:group.id,after:{visibility:listing.visibility,discoverable:listing.discoverable,joinPolicy:listing.joinPolicy,recruiting:listing.recruiting,locality:listing.locality,missionTags:listing.missionTags,activityTags:listing.activityTags},requestId:this.kernel.context.get().requestId});
+    const audit=this.kernel.audit.append({tenantId:group.tenantId,actorId:this.kernel.context.get().actorId,action:'GROUP_DISCOVERY_LISTING_PUBLISHED',targetType:'group',targetId:group.id,after:{visibility:listing.visibility,discoverable:listing.discoverable,joinPolicy:listing.joinPolicy,recruiting:listing.recruiting,locality:listing.locality,approximateLocationShared:Boolean(listing.approxLocation),missionTags:listing.missionTags,activityTags:listing.activityTags},requestId:this.kernel.context.get().requestId});
     await this.repo.saveAudit(audit);
     return structuredClone(listing);
   }
 
   async search(query:GroupDiscoveryQuery={}):Promise<GroupDiscoveryMatch[]>{
     const q=tokens(query.text); const locality=normalize(query.locality); const mission=new Set((query.missionTags??[]).map(normalize)); const activity=new Set((query.activityTags??[]).map(normalize));
+    const coords=searchCoordinates(query.latitude,query.longitude),radiusKm=safeRadiusKm(query.radiusKm);
     const results:GroupDiscoveryMatch[]=[];
     for(const listing of await this.repo.listPublicGroupListings()){
       if(!listing.discoverable||listing.visibility!=='PUBLIC') continue;
@@ -135,17 +154,18 @@ export class DiscoveryService {
       if(query.family&&listing.family!==query.family) continue;
       if(query.meetingMode&&listing.meetingMode&&listing.meetingMode!==query.meetingMode) continue;
       if(query.maxContribution&&listing.contributionBand?.currency===query.maxContribution.currency&&listing.contributionBand.min!==undefined&&listing.contributionBand.min>query.maxContribution.amount) continue;
-      let score=1; const reasons:string[]=[]; const haystack=normalize([listing.name,listing.locality,...listing.missionTags,...listing.activityTags].filter(Boolean).join(' '));
+      let score=1; const reasons:string[]=[]; let distanceKm:number|undefined; const haystack=normalize([listing.name,listing.locality,...listing.missionTags,...listing.activityTags].filter(Boolean).join(' '));
       if(q.length){const hits=q.filter(x=>haystack.includes(x)).length;if(hits===0) continue;score+=hits*12;reasons.push('TEXT_MATCH');}
       if(locality&&normalize(listing.locality)===locality){score+=25;reasons.push('LOCALITY_MATCH');}
+      if(coords){if(!listing.approxLocation)continue;distanceKm=haversineKm(coords,listing.approxLocation);if(distanceKm>radiusKm)continue;score+=Math.max(5,35-Math.round(distanceKm));reasons.push('GPS_PROXIMITY');}
       const missionHits=listing.missionTags.filter(x=>mission.has(normalize(x))).length;if(mission.size&&missionHits===0) continue;if(missionHits){score+=missionHits*15;reasons.push('MISSION_AFFINITY');}
       const activityHits=listing.activityTags.filter(x=>activity.has(normalize(x))).length;if(activity.size&&activityHits===0) continue;if(activityHits){score+=activityHits*10;reasons.push('ACTIVITY_AFFINITY');}
       if(query.family){score+=8;reasons.push('GROUP_FAMILY_MATCH');}
       if(query.meetingMode&&listing.meetingMode===query.meetingMode){score+=6;reasons.push('MEETING_MODE_MATCH');}
       if(listing.recruiting){score+=5;reasons.push('RECRUITING');}
-      results.push({listing:structuredClone(listing),score,reasonCodes:reasons});
+      results.push({listing:structuredClone(listing),score,reasonCodes:reasons,distanceKm:distanceKm===undefined?undefined:Number(distanceKm.toFixed(1))});
     }
-    return results.sort((a,b)=>b.score-a.score||a.listing.name.localeCompare(b.listing.name));
+    return results.sort((a,b)=>(a.distanceKm??Infinity)-(b.distanceKm??Infinity)||b.score-a.score||a.listing.name.localeCompare(b.listing.name));
   }
 
   async candidateProfile():Promise<PublicCandidateProfile|undefined>{
@@ -154,37 +174,39 @@ export class DiscoveryService {
     return row?candidateProjection(row):undefined;
   }
 
-  async saveCandidateProfile(input:{displayAlias:string;locality?:string;skills?:string[];interests?:string[];desiredGroupTags?:string[];bio?:string;availability?:string;optIn:boolean}):Promise<PublicCandidateProfile|undefined>{
+  async saveCandidateProfile(input:{displayAlias:string;locality?:string;approxLocation?:PublicApproximateLocation;skills?:string[];interests?:string[];desiredGroupTags?:string[];bio?:string;availability?:string;optIn:boolean}):Promise<PublicCandidateProfile|undefined>{
     const ctx=this.kernel.context.get(),user=await this.repo.getUser(ctx.actorId);if(!user)throw new Error('USER_NOT_FOUND');
     const rows=await this.repo.listWorkspaceRecords(PUBLIC_CANDIDATE_TENANT,'MEMBERSHIP.PORTFOLIO');
     const existing=rows.find(x=>String(x.data.ownerActorId??'')===ctx.actorId),stamp=now(),alias=cleanText(input.displayAlias||user.displayName,80);
     if(!alias)throw new Error('CANDIDATE_ALIAS_REQUIRED');
+    const approxLocation=input.optIn?publicApproximateLocation(input.approxLocation):undefined;
     const record:WorkspaceRecord={
       id:existing?.id??makeId('candidate'),tenantId:PUBLIC_CANDIDATE_TENANT,moduleId:'MEMBERSHIP.PORTFOLIO',title:alias,
-      status:input.optIn?'ACTIVE':'ARCHIVED',tags:['public-candidate','consent:'+(input.optIn?'yes':'no')],
-      data:{ownerActorId:ctx.actorId,optIn:Boolean(input.optIn),displayAlias:alias,locality:cleanText(input.locality,120),skills:JSON.stringify(cleanTags(input.skills)),interests:JSON.stringify(cleanTags(input.interests)),desiredGroupTags:JSON.stringify(cleanTags(input.desiredGroupTags)),bio:cleanText(input.bio,500),availability:cleanText(input.availability,120)},
+      status:input.optIn?'ACTIVE':'ARCHIVED',tags:['public-candidate','consent:'+(input.optIn?'yes':'no'),'geo-consent:'+(approxLocation?'yes':'no')],
+      data:{ownerActorId:ctx.actorId,optIn:Boolean(input.optIn),displayAlias:alias,locality:cleanText(input.locality,120),geoOptIn:Boolean(approxLocation),geoLatitude:approxLocation?.latitude,geoLongitude:approxLocation?.longitude,geoPrecisionMeters:approxLocation?.precisionMeters,skills:JSON.stringify(cleanTags(input.skills)),interests:JSON.stringify(cleanTags(input.interests)),desiredGroupTags:JSON.stringify(cleanTags(input.desiredGroupTags)),bio:cleanText(input.bio,500),availability:cleanText(input.availability,120)},
       createdBy:ctx.actorId,createdAt:existing?.createdAt??stamp,updatedAt:stamp
     };
     await this.repo.saveWorkspaceRecord(record);
-    const audit=this.kernel.audit.append({tenantId:ctx.tenantId,actorId:ctx.actorId,action:'CANDIDATE_PUBLIC_PROFILE_UPDATED',targetType:'candidate_projection',targetId:record.id,after:{optIn:Boolean(input.optIn),locality:Boolean(record.data.locality),skillsCount:cleanTags(input.skills).length},requestId:ctx.requestId});await this.repo.saveAudit(audit);
+    const audit=this.kernel.audit.append({tenantId:ctx.tenantId,actorId:ctx.actorId,action:'CANDIDATE_PUBLIC_PROFILE_UPDATED',targetType:'candidate_projection',targetId:record.id,after:{optIn:Boolean(input.optIn),locality:Boolean(record.data.locality),approximateLocationShared:Boolean(approxLocation),skillsCount:cleanTags(input.skills).length},requestId:ctx.requestId});await this.repo.saveAudit(audit);
     return input.optIn?candidateProjection(record):undefined;
   }
 
   async searchCandidates(targetTenantId:Id,groupId:Id,query:CandidateSearchQuery):Promise<CandidateMatch[]>{
     await requireManager(this.repo,this.kernel,targetTenantId,groupId);
-    const text=cleanText(query.text,120),q=tokens(text),locality=normalize(query.locality),wanted=new Set(cleanTags(query.tags));
-    if((text&&text.length<2)||(!q.length&&!locality&&!wanted.size))throw new Error('DISCOVERY_QUERY_REQUIRED');
+    const text=cleanText(query.text,120),q=tokens(text),locality=normalize(query.locality),wanted=new Set(cleanTags(query.tags)),coords=searchCoordinates(query.latitude,query.longitude),radiusKm=safeRadiusKm(query.radiusKm);
+    if((text&&text.length<2)||(!q.length&&!locality&&!wanted.size&&!coords))throw new Error('DISCOVERY_QUERY_REQUIRED');
     const rows=await this.repo.listWorkspaceRecords(PUBLIC_CANDIDATE_TENANT,'MEMBERSHIP.PORTFOLIO'),matches:CandidateMatch[]=[];
     for(const row of rows){
       if(row.status!=='ACTIVE'||!Boolean(row.data.optIn))continue;
       const c=candidateProjection(row),hay=normalize([c.displayAlias,c.locality,c.bio,...c.skills,...c.interests,...c.desiredGroupTags].filter(Boolean).join(' '));
-      let score=0;const reasons:string[]=[];
+      let score=0;const reasons:string[]=[];let distanceKm:number|undefined;
       if(q.length){const hits=q.filter(x=>hay.includes(x)).length;if(!hits)continue;score+=Math.min(40,hits*12);reasons.push('TEXT_MATCH');}
       if(locality){if(normalize(c.locality)!==locality)continue;score+=30;reasons.push('LOCALITY_MATCH');}
+      if(coords){if(!c.approxLocation)continue;distanceKm=haversineKm(coords,c.approxLocation);if(distanceKm>radiusKm)continue;score+=Math.max(5,35-Math.round(distanceKm));reasons.push('GPS_PROXIMITY');}
       if(wanted.size){const pool=new Set([...c.skills,...c.interests,...c.desiredGroupTags].map(normalize)),hits=[...wanted].filter(x=>pool.has(x)).length;if(!hits)continue;score+=Math.min(30,hits*10);reasons.push('TAG_MATCH');}
-      matches.push({candidate:c,score,reasonCodes:reasons});
+      matches.push({candidate:c,score,reasonCodes:reasons,distanceKm:distanceKm===undefined?undefined:Number(distanceKm.toFixed(1))});
     }
-    return matches.sort((a,b)=>b.score-a.score||a.candidate.displayAlias.localeCompare(b.candidate.displayAlias)).slice(0,20);
+    return matches.sort((a,b)=>(a.distanceKm??Infinity)-(b.distanceKm??Infinity)||b.score-a.score||a.candidate.displayAlias.localeCompare(b.candidate.displayAlias)).slice(0,20);
   }
 
   async candidateFit(targetTenantId:Id,groupId:Id,candidateId:Id):Promise<{candidate:PublicCandidateProfile;score:number;reasonCodes:string[];advisoryOnly:true;contactShared:false}>{
@@ -241,6 +263,7 @@ export class DiscoveryService {
   }
   async deleteSavedSearch(id:Id):Promise<WorkspaceRecord>{const ctx=this.kernel.context.get(),row=await this.repo.getWorkspaceRecord(ctx.tenantId,id);if(!row||row.moduleId!=='DISCOVERY.SAVED_SEARCH'||row.createdBy!==ctx.actorId)throw new Error('SAVED_SEARCH_NOT_FOUND');const next={...row,status:'ARCHIVED' as const,updatedAt:now()};await this.repo.saveWorkspaceRecord(next);return next;}
   async proximity(locality:string,text=''):Promise<GroupDiscoveryMatch[]>{const place=cleanText(locality,120);if(!place)throw new Error('LOCALITY_REQUIRED');return this.search({text:cleanText(text,120)||undefined,locality:place});}
+  async proximityByCoordinates(latitude:number,longitude:number,radiusKm=20,text=''):Promise<GroupDiscoveryMatch[]>{searchCoordinates(latitude,longitude);return this.search({text:cleanText(text,120)||undefined,latitude,longitude,radiusKm:safeRadiusKm(radiusKm)});}
 
   async createRecruitmentCampaign(targetTenantId:Id,groupId:Id,input:{title:string;message?:string;locality?:string;tags?:string[]}):Promise<WorkspaceRecord>{
     await requireManager(this.repo,this.kernel,targetTenantId,groupId);const ctx=this.kernel.context.get(),title=cleanText(input.title,160);if(!title)throw new Error('RECRUITMENT_TITLE_REQUIRED');const stamp=now();
