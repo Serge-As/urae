@@ -59,7 +59,7 @@ export class TrashLifecycleMaintenance{
       try{if(!await this.cleanupArtifacts(cleanup,at))report.blocked++;}catch(error){report.errors.push({trashId:cleanup.id,error:error instanceof Error?error.message:'UNKNOWN_ERROR'});}
     }
     for(const original of items){
-      if(original.moduleId!=='TRASH.ITEM'||String(original.data.kind??'')!=='GROUP'||original.status!=='ACTIVE')continue;
+      if(original.moduleId!=='TRASH.ITEM'||original.status!=='ACTIVE')continue;
       report.scanned++;
       let item=original;
       try{
@@ -68,6 +68,13 @@ export class TrashLifecycleMaintenance{
         const now=at.getTime();
 
         if(expiry<=now){
+          const kind=String(item.data.kind??'');
+          if(kind!=='GROUP'){
+            // For referenced member/meeting/rubric identities, expire the recoverable trash snapshot
+            // without silently deleting ledger references that still point at the archived entity id.
+            item={...item,status:'ARCHIVED',tags:[...new Set([...item.tags,'retention-expired','recovery-snapshot-purged'])],data:{...item.data,lifecycleState:'PURGED_RECOVERY_SNAPSHOT',snapshotJson:'',purgedAt:nowIso(at),restoreDisabled:true},updatedAt:nowIso(at)};
+            await this.repo.saveWorkspaceRecord(item);report.purged++;continue;
+          }
           const petitionState=String(item.data.petitionState??'');
           if(['THRESHOLD_REACHED','VERIFIED','RECONSTITUTION_READY'].includes(petitionState)){report.blocked++;continue;}
           const groupId=String(item.data.entityId??item.groupId??'');if(!groupId)throw new Error('GROUP_ID_REQUIRED');
