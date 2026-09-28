@@ -13,6 +13,12 @@ test('authenticated offline startup never falls back to first-account registrati
   assert.match(start,/Offline product catalog snapshot unavailable/);
   const authenticatedBranch=start.slice(start.indexOf('if(authenticatedSession)'),start.indexOf("showAuth(tx('Mode hors ligne disponible"));
   assert.doesNotMatch(authenticatedBranch,/showAuth\(/);
+  assert.match(authenticatedBranch,/await renderGroups\(\)/);
+  assert.match(authenticatedBranch,/await renderMembers\(\)/);
+  assert.match(authenticatedBranch,/await renderMeetings\(\)/);
+  assert.match(authenticatedBranch,/await renderLivingRules\(\)/);
+  assert.match(authenticatedBranch,/await renderLedger\(\)/);
+  assert.match(authenticatedBranch,/renderMeetingMatrix\(\)/);
 });
 
 test('core financial refresh remains strict while secondary group/session panels are optional offline',()=>{
