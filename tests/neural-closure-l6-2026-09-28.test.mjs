@@ -39,7 +39,7 @@ test('L6 Value need becomes exactly one canonical Market procurement only after 
   const {value,market,group}=await seed();
   const need=await value.createNeed({groupId:group.id,title:'Huile pour activité',category:'huile',quantity:4,unit:'unité',locality:'Douala',neededBy:new Date(Date.now()+20*86400000).toISOString(),publicationConsent:true});
   await value.validateNeed(need.id);await value.publishNeed(need.id);
-  const offer=await value.createOffer({kind:'SUPPLY',title:'Huile fournisseur',category:'huile',availableQuantity:20,unit:'unité',locality:'Douala',unitPrice:1000,currency:'XAF',expiresAt:new Date(Date.now()+30*86400000).toISOString(),availableBy:new Date(Date.now()+10*86400000).toISOString(),transportCost:500,otherCosts:200,discount:100,supplierRef:'supplier-external-l6'});
+  const offer=await value.createOffer({kind:'SUPPLIER',title:'Huile fournisseur',category:'huile',availableQuantity:20,unit:'unité',locality:'Douala',unitPrice:1000,currency:'XAF',expiresAt:new Date(Date.now()+30*86400000).toISOString(),availableBy:new Date(Date.now()+10*86400000).toISOString(),transportCost:500,otherCosts:200,discount:100,supplierRef:'supplier-external-l6'});
   const matches=await value.matchNeed(need.id);assert.equal(matches.some(x=>x.offer.id===offer.id),true);
   const draft=await value.prepareProcurement(need.id,offer.id);
   assert.equal(draft.moduleId,'MARKETPLACE.PROCUREMENT');
