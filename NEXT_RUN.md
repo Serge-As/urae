@@ -1,5 +1,31 @@
 # NEXT RUN — ECO-SYSTEM 1.5.2.7
 
+## REPRISE PRIORITAIRE — PRODUCTION 1.5.2.8 GPS + VOIX (2026-09-28)
+
+Production vérifiée :
+- SHA : `4ae39be95d0b3faa16e2d86a95b2d47368eb0945`
+- version : `1.5.2.8-geo-directory`
+- Worker : `4e92501a-430d-463f-876e-784366a54b38`
+- deploy/smoke/recovery : **36362622399 SUCCESS**
+- sauvegarde pré : **10946680088**
+- sauvegarde post : **10945783708**
+- catalogue : **155 actives / 4 structurelles externes / 5 planifiées**
+- argent réel : **OFF**
+
+Prochaine action normale : **recette terrain, sans nouveau redéploiement aveugle**.
+1. Actualiser/rouvrir la PWA et confirmer le shell 1.5.2.8.
+2. GPS : cliquer volontairement « utiliser ma position », autoriser puis refuser/révoquer ; vérifier rayon et fallback localité.
+3. Dictée finance : lancer le micro, parler normalement et vérifier que **rien ne s'écrit pendant l'enregistrement**.
+4. Appuyer sur **Arrêter** ; vérifier qu'une seule transcription finale apparaît puis qu'une prévisualisation propose membre, séance, rubriques et montants.
+5. Cas de référence : « Eco, chez Serge, Secours 500, Épargne 1000, Remboursement 5000 ». Vérifier l'absence de « écho » parasite entre les mots et corriger toute ambiguïté dans la preview avant validation.
+6. Tester bruit réel, Chrome/Opera, mobile et appareil Android ancien. Sur navigateur sans MediaRecorder, le fallback SpeechRecognition doit rester final-only et sans boucle de redémarrage.
+7. Vérifier qu'aucune écriture n'est créée tant que la prévisualisation n'est pas confirmée.
+8. Tout défaut reproductible devient d'abord un test permanent ; ne pas réécrire Ledger, tableaux, Meeting owner, Discovery ou GPS déjà qualifiés.
+
+Ne pas promouvoir artificiellement SMS / WhatsApp provider / Telegram / Email sans fournisseur réel. Ne pas déclarer FIELD_ACCEPTED à partir du CI/smoke seul.
+
+---
+
 Point de reprise exact : branche `finish/live-whatsapp-completion-20260927`.
 
 1. Exiger une qualification verte sur le HEAD final.

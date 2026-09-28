@@ -1,3 +1,17 @@
+## CURRENT OVERRIDE — 1.5.2.8 GPS + DICTÉE FINANCIÈRE POST-STOP — PRODUCTION VERIFIED, FIELD ACCEPTANCE PENDING (2026-09-28)
+
+La production publique sert `1.5.2.8-geo-directory` depuis le SHA exact `4ae39be95d0b3faa16e2d86a95b2d47368eb0945` (Worker `4e92501a-430d-463f-876e-784366a54b38`). Le workflow **36362622399** a réussi qualification complète, tests navigateur, sauvegarde D1 pré, réutilisation D1/R2 existants, déploiement, smoke exact, sauvegarde post et restauration SQLite `integrity_check=ok`.
+
+Catalogue : **164 capacités = 155 FOUNDATION_ACTIVE, 4 STRUCTURAL_V1, 5 PLANNED_DOMAIN**. `GEO.DIRECTORY` est actif avec consentement explicite, rayon, fallback localité et projection publique grossière/révocable. Les quatre structurelles restantes sont les fournisseurs externes SMS, WhatsApp provider, Telegram et Email.
+
+Le défaut terrain de dictée financière « Eco/écho répété entre les mots » est corrigé architecturalement : le chemin principal enregistre d'abord l'audio en mémoire, n'écrit rien pendant la parole, transcrit après Arrêter via Whisper Large V3 Turbo, nettoie les répétitions de wake-word, résout les vrais membres/rubriques/séances puis impose la prévisualisation avant toute mutation canonique. Le fallback navigateur est final-only et ne redémarre plus automatiquement.
+
+Preuves : qualification branche **36362304494 SUCCESS**, PR #31 **36362426602 SUCCESS**, post-fusion **36362508633 SUCCESS**, E2E financier **36362508651 SUCCESS**, delivery/recovery **36362622399 SUCCESS**. Backups : pré **10946680088**, post **10945783708**. Argent réel reste **OFF**.
+
+`FIELD_ACCEPTED` n'est pas déclaré : GPS et microphone doivent encore être constatés physiquement sur les appareils du fondateur, notamment bruit réel, Chrome/Opera, Android ancien, permission/refus GPS et exactitude membre-rubrique-séance.
+
+---
+
 ## CURRENT OVERRIDE — 1.5.2.7 LIVE COMPLETION — RELEASE CANDIDATE QUALIFIÉE (2026-09-27)
 
 **Repository : `SergeDelor/tontine-platform`.**

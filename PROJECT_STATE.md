@@ -1,5 +1,51 @@
 # ECO-SYSTEM — PROJECT STATE
 
+## CURRENT STATE — PRODUCTION 1.5.2.8 GPS + DICTÉE FINANCIÈRE FINALISÉE (2026-09-28)
+
+**Statut technique : DEPLOYED + SMOKE_VERIFIED + RECOVERY_VERIFIED. FIELD_ACCEPTED reste en attente de recette physique.**
+
+- source déployée : `4ae39be95d0b3faa16e2d86a95b2d47368eb0945`
+- intégration GPS : PR **#30** ; correction dictée financière : PR **#31**
+- version : `1.5.2.8-geo-directory`
+- build : `eco-system-1.5.2.8-20260928`
+- cache PWA : `eco-system-v1528-geo-directory-20260928`
+- Worker Version ID : `4e92501a-430d-463f-876e-784366a54b38`
+- qualification branche voix/GPS : **36362304494 SUCCESS**
+- qualification PR #31 : **36362426602 SUCCESS**
+- qualification post-fusion : **36362508633 SUCCESS**
+- E2E financier navigateur post-fusion : **36362508651 SUCCESS**
+- déploiement / smoke / recovery : **36362622399 SUCCESS**
+- D1 : `eco-system-db` réutilisée ; **No migrations to apply**
+- R2 : `eco-system-backups` actif
+- sauvegarde pré-déploiement : artifact **10946680088**
+- sauvegarde post-déploiement : artifact **10945783708**
+- restauration SQLite post-déploiement : **PRAGMA integrity_check=ok**
+- catalogue : **164 = 155 FOUNDATION_ACTIVE + 4 STRUCTURAL_V1 + 5 PLANNED_DOMAIN**
+- argent réel : **OFF**
+
+### GEO.DIRECTORY acquis
+- géolocalisation déclenchée uniquement par action explicite de l'utilisateur ;
+- recherche par rayon avec fallback localité manuelle ;
+- publication GPS facultative et révocable ;
+- projection publique volontairement grossière/arrondie ; aucune position précise copiée dans l'audit ;
+- `GEO.DIRECTORY` est maintenant `FOUNDATION_ACTIVE`.
+Les 4 `STRUCTURAL_V1` restants sont uniquement les adaptateurs externes SMS, WhatsApp provider, Telegram et Email.
+
+### Dictée financière P0 corrigée
+- plus d'écriture streaming pendant la parole ;
+- chemin principal : enregistrement audio en mémoire → Arrêter → transcription finale Workers AI Whisper → nettoyage → interprétation ;
+- paramètres anti-boucle : VAD + `condition_on_previous_text=false` ; répétitions parasites Eco/echo/écho nettoyées ;
+- fallback navigateur : résultats finaux seulement, sans redémarrage automatique ;
+- résolution contre les membres, rubriques et séances réels du groupe ;
+- plusieurs couples rubrique/montant peuvent être compris même sans ponctuation artificielle ;
+- aucune mutation financière directe : la prévisualisation membre + séance + rubrique + sens + montant reste obligatoire avant validation ;
+- l'audio n'est pas conservé par ce parcours.
+
+### Recette terrain encore obligatoire
+Vérifier sur appareils réels : permission GPS, recherche par rayon, refus/révocation GPS, microphone réel, transcription après Arrêter sans répétition « écho », bruit ambiant, bonne résolution membre/rubrique/séance, Android ancien/fallback, Chrome/Opera, offline/reconnexion. Ne déclarer `FIELD_ACCEPTED` qu'après constat physique.
+
+---
+
 ## CURRENT STATE — 1.5.2.7 LIVE COMPLETION — RELEASE CANDIDATE QUALIFIÉE (2026-09-27)
 
 **Repository : `SergeDelor/tontine-platform`.**
