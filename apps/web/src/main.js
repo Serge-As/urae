@@ -1762,11 +1762,16 @@ $('#languageSelect').addEventListener('change', async e => {
     await renderUniverse(); await renderInbox();
     toast(tx('Interface passée en français.','Interface switched to English.'));
 });
-window.addEventListener('online', async () => { renderConnectivity(); try {
-    await app.syncOutbox();
-    await refreshAll();
-}
-catch { } });
+let onlineResumePromise=null;
+const resumeOnline=()=>{
+    if(onlineResumePromise)return onlineResumePromise;
+    onlineResumePromise=(async()=>{renderConnectivity();try{
+        await app.syncOutbox();
+        await start();
+    }catch(error){console.info('Online resume deferred',error);}})().finally(()=>{onlineResumePromise=null;});
+    return onlineResumePromise;
+};
+window.addEventListener('online',()=>{void resumeOnline();});
 window.addEventListener('offline', renderConnectivity);
 if('serviceWorker' in navigator)navigator.serviceWorker.addEventListener('message',event=>{
     if(event.data?.type!=='ECO_SYSTEM_SYNC_OUTBOX'||!navigator.onLine)return;
@@ -1937,7 +1942,7 @@ document.querySelector('#claimLocalAccountBtn')?.addEventListener('click',()=>vo
     finally{if(button)button.disabled=false;}
 })());
 $('#logoutBtn').addEventListener('click',async()=>{try{await app.logout();document.body.classList.add('signed-out');$('#authScreen').hidden=false;$('#accountName').textContent='';const claim=document.querySelector('#claimLocalAccountBtn');if(claim)claim.hidden=true;showAuth(tx('Compte fermé sur cet appareil. Vos données locales ne sont pas supprimées.','Account signed out on this device. Your local data was not deleted.'));}catch(e){fail(e);}});
-window.addEventListener('online',()=>{renderConnectivity();void start();});
+// Online recovery is serialized by resumeOnline() above: sync durable outbox first, then restart projections.
 window.addEventListener('offline',()=>{renderConnectivity();const claim=document.querySelector('#claimLocalAccountBtn');if(claim&&!claim.hidden){claim.disabled=true;claim.textContent=tx('Compte local · Internet requis pour finaliser','Local account · Internet needed to finalize');}});
 void ensureCurrentServiceWorker();
 void start();

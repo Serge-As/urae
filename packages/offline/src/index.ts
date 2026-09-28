@@ -71,7 +71,10 @@ export class Outbox {
   }
 
   private async syncPending(handler: SyncHandler): Promise<OutboxItem[]> {
-    for (const current of [...this.items.values()].filter(x => (x.status === 'PENDING' || x.status === 'FAILED') && x.attempts < 5)) {
+    // IndexedDB getAll() is ordered by primary key, not business creation time.
+    // Always replay the canonical chronological view so dependent operations
+    // (cash-in before a later cash-out) survive a cold reload deterministically.
+    for (const current of this.list().filter(x => (x.status === 'PENDING' || x.status === 'FAILED') && x.attempts < 5)) {
       const syncing = { ...current, status: 'SYNCING' as const, attempts: current.attempts + 1, updatedAt: new Date().toISOString() };
       this.items.set(current.id, syncing);
       try {

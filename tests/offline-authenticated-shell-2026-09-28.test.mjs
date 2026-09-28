@@ -31,3 +31,16 @@ test('core financial refresh remains strict while secondary group/session panels
   assert.match(refresh,/refreshOptionalOfflineSafe\('group-home'/);
   assert.match(refresh,/refreshOptionalOfflineSafe\('sessions-home'/);
 });
+
+
+test('online recovery has one serialized owner and syncs durable outbox before restarting projections',()=>{
+  const source=fs.readFileSync('apps/web/src/main.js','utf8');
+  const onlineHandlers=source.match(/window\.addEventListener\('online'/g)??[];
+  assert.equal(onlineHandlers.length,1);
+  const start=source.indexOf('const resumeOnline='),end=source.indexOf("window.addEventListener('offline'",start);
+  const body=source.slice(start,end);
+  assert.match(body,/await app\.syncOutbox\(\)/);
+  assert.match(body,/await start\(\)/);
+  assert.ok(body.indexOf('await app.syncOutbox()')<body.indexOf('await start()'));
+  assert.match(body,/onlineResumePromise/);
+});
