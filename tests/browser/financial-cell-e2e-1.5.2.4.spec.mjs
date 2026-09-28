@@ -119,10 +119,12 @@ test('real financial matrix validates click, Enter, closed-session first entry a
 
   const replaceCell=cell(ids.rubricIds[0]);
   await replaceCell.locator('.cell-target-input').fill('500');
+  page.once('dialog',dialog=>dialog.accept('Correction E2E 1000 vers 500'));
   await replaceCell.locator('.cell-validate').click();
   await expect.poll(()=>moneyValue(cell(ids.rubricIds[0]))).toBe(500);
   await expect.poll(()=>ledgerCellTotal(page,{...ids,rubricId:ids.rubricIds[0]})).toBe(500);
   await replaceCell.locator('.cell-target-input').fill('4000');
+  page.once('dialog',dialog=>dialog.accept('Correction E2E 500 vers 4000'));
   await replaceCell.locator('.cell-target-input').press('Enter');
   await expect.poll(()=>moneyValue(cell(ids.rubricIds[0]))).toBe(4000);
   await expect.poll(()=>ledgerCellTotal(page,{...ids,rubricId:ids.rubricIds[0]})).toBe(4000);
