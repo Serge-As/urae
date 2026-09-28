@@ -1,5 +1,5 @@
 const CACHE = 'eco-system-v1528-geo-directory-20260928';
-const PREVIOUS_CACHE = 'eco-system-v1526-field-persistence-pc-mobile-20260925';
+const PREVIOUS_CACHE = 'eco-system-v1527-live-completion-20260927';
 const RELEASE_READY = '/__eco_release_ready__';
 
 // Authentication, navigation and canonical application owners must be complete
