@@ -32,7 +32,7 @@ const buffer=(b:Uint8Array):ArrayBuffer=>b.buffer.slice(b.byteOffset,b.byteOffse
 const keyId=(t:string,g:string,m:string)=>JSON.stringify([t,g,m]);
 
 export class IndexedDbSovereignStore {
-  static supported(){return typeof indexedDB!=='undefined';}
+  static supported(){return typeof indexedDB!=='undefined'&&typeof indexedDB.open==='function';}
   async append(input:{tenantId:string;groupId:string;actorId:string;type:string;payload:Record<string,unknown>;createdAt?:string}):Promise<SovereignJournalEvent>{
     const rows=await this.list(input.tenantId,input.groupId),last=rows.at(-1),sequence=(last?.sequence??0)+1,createdAt=input.createdAt??new Date().toISOString(),previousHash=last?.hash??'GENESIS';
     const base={tenantId:input.tenantId,groupId:input.groupId,actorId:input.actorId,sequence,type:input.type,payload:clone(input.payload),createdAt,previousHash};
