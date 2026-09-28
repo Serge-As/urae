@@ -101,6 +101,8 @@ export interface Membership {
   tenantId: Id;
   groupId: Id;
   userId: Id;
+  /** Stable human-friendly number within the group, used as a voice-safe alias (e.g. “membre numéro 10”). */
+  memberNumber?: number;
   roles: string[];
   status: 'invited' | 'waitlisted' | 'trial' | 'active' | 'suspended' | 'left';
   joinedAt?: string;

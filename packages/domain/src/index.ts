@@ -243,7 +243,7 @@ export class FoundationService {
       ?{...previous,name:project.name,kind:project.kind,governanceModel:project.governanceModel,status:'active',originMode:origin.mode,historicalCreatedAt:origin.historicalCreatedAt??previous.historicalCreatedAt,currentExerciseLabel:origin.currentExerciseLabel??previous.currentExerciseLabel,evolvedFromKind:previous.kind!==project.kind?previous.kind:previous.evolvedFromKind,launchProfileSnapshot:project.launchProfile?structuredClone(project.launchProfile):previous.launchProfileSnapshot}
       :{id:groupId,tenantId,name:project.name,kind:project.kind,governanceModel:project.governanceModel,status:'active',createdBy:project.createdBy,createdAt:now(),operatingPolicy:starterGroupOperatingPolicy(),originMode:origin.mode,historicalCreatedAt:origin.historicalCreatedAt,currentExerciseLabel:origin.currentExerciseLabel,launchProfileSnapshot:project.launchProfile?structuredClone(project.launchProfile):undefined};
     await this.repo.saveGroup(group);
-    const ownerMembership:Membership={id:`membership_owner_${group.id}`,tenantId,groupId:group.id,userId:project.createdBy,roles:['founder','manager'],status:'active',joinedAt:group.createdAt};
+    const ownerMembership:Membership={id:`membership_owner_${group.id}`,tenantId,groupId:group.id,userId:project.createdBy,memberNumber:1,roles:['founder','manager'],status:'active',joinedAt:group.createdAt};
     if(!(await this.repo.listMemberships(tenantId,group.id)).some(m=>m.userId===project.createdBy))await this.repo.saveMembership(ownerMembership);
     const rubricService=new RubricKnowledgeService(this.repo,this.kernel);
     for(const plan of project.rubrics??[])await rubricService.createRubric({tenantId,groupId:group.id,name:plan.name,launchKey:plan.key,launchProjectId:project.id,activityPlan:plan,policies:plan.policyDraft,source:'GROUP_CUSTOM',facets:{direction:'MIXED',obligation:'CUSTOM',medium:'CASH',refundability:'CUSTOM',replenishment:'CUSTOM',interestMode:'CUSTOM',eligibilityMode:'RULE_BASED'}});
@@ -268,6 +268,20 @@ export class FoundationService {
     return structuredClone(next);
   }
 
+  async ensureMemberNumbers(tenantId:Id,groupId:Id,requestId=makeId('req')):Promise<Membership[]>{
+    const ctx=this.kernel.context.get();await assertCanAccessGroup(this.repo,ctx,tenantId,groupId);
+    const rows=await this.repo.listMemberships(tenantId,groupId),used=new Set<number>();
+    for(const m of rows){const n=Number(m.memberNumber);if(Number.isInteger(n)&&n>0)used.add(n);}
+    const missing=rows.filter(m=>!(Number.isInteger(Number(m.memberNumber))&&Number(m.memberNumber)>0)).sort((a,b)=>{
+      const ad=Date.parse(a.historicalJoinedAt??a.joinedAt??'')||Number.MAX_SAFE_INTEGER,bd=Date.parse(b.historicalJoinedAt??b.joinedAt??'')||Number.MAX_SAFE_INTEGER;
+      return ad-bd||String(a.id).localeCompare(String(b.id));
+    });
+    let next=1,changed=0;
+    for(const m of missing){while(used.has(next))next++;m.memberNumber=next;used.add(next);next++;await this.repo.saveMembership(m);changed++;}
+    if(changed)await persistAudit(this.repo,this.kernel,{tenantId,actorId:ctx.actorId,action:'MEMBER_NUMBERS_BACKFILLED',targetType:'group',targetId:groupId,requestId,after:{count:changed}});
+    return this.repo.listMemberships(tenantId,groupId);
+  }
+
   async addMember(tenantId: Id, groupId: Id, user: User, requestId = makeId('req'), membershipId?:Id): Promise<Membership> {
     const ctx=this.kernel.context.get(); const group=await assertCanManageGroup(this.repo,ctx,tenantId,groupId);
     const decision=this.kernel.policy.evaluate('group:manage',{...ctx,activeGroupId:groupId},{groupId}); if(!decision.allowed) throw new Error(decision.reason);
@@ -275,7 +289,8 @@ export class FoundationService {
     await this.repo.saveUser({...user,displayName:user.displayName.trim()});
     const requestedMembershipId=membershipId?.trim();
     if(requestedMembershipId){const existing=await this.repo.getMembership(tenantId,groupId,requestedMembershipId);if(existing){if(existing.userId!==user.id)throw Error('IDEMPOTENCY_CONFLICT');return structuredClone(existing);}}
-    const membership:Membership={id:requestedMembershipId||makeId('membership'),tenantId,groupId,userId:user.id,roles:['member'],status:'active',joinedAt:now()};
+    const numbered=await this.ensureMemberNumbers(tenantId,groupId,requestId+':numbers'),nextNumber=Math.max(0,...numbered.map(m=>Number(m.memberNumber)||0))+1;
+    const membership:Membership={id:requestedMembershipId||makeId('membership'),tenantId,groupId,userId:user.id,memberNumber:nextNumber,roles:['member'],status:'active',joinedAt:now()};
     await this.repo.saveMembership(membership);
     await persistAudit(this.repo,this.kernel,{tenantId,actorId:ctx.actorId,action:'MEMBER_ADDED',targetType:'membership',targetId:membership.id,requestId,after:membership});
     this.kernel.events.publish({id:makeId('event'),type:'MEMBER_ADDED',occurredAt:now(),tenantId,actorId:ctx.actorId,aggregateType:'group',aggregateId:groupId,payload:{userId:user.id,membershipId:membership.id}});

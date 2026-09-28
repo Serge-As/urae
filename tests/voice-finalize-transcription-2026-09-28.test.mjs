@@ -27,6 +27,7 @@ test('finance voice records first and only transcribes/interprets after Stop',()
   const ui=fs.readFileSync('apps/web/src/voice-entry-ui.ts','utf8');
   const worker=fs.readFileSync('workers/api/src/index.ts','utf8');
   assert.match(ui,/MediaRecorder/);assert.match(ui,/getUserMedia/);assert.match(ui,/\/api\/v1\/voice\/transcribe/);
+  assert.match(ui,/audio\/mp4/);assert.match(ui,/MediaRecorder\.isTypeSupported/);assert.match(ui,/m4a/);
   assert.match(ui,/interimResults=false/);assert.doesNotMatch(ui,/interimResults=true/);
   assert.doesNotMatch(ui,/setTimeout\(\(\)=>\{try\{recognition\.start/);
   assert.match(ui,/rien ne s’écrit pendant l’enregistrement|nothing is written while recording/);

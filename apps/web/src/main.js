@@ -11,7 +11,7 @@ if(typeof structuredClone!=='function'){
     window.structuredClone=value=>value===undefined?undefined:JSON.parse(JSON.stringify(value));
 }
 import { ConnectedApplication } from '../../../packages/application/src/index.js';
-import { captureRuntimeI18n, applyRuntimeLocale, localeTag, runtimeTranslate } from './runtime-i18n.js';
+import { captureRuntimeI18n, applyRuntimeLocale, installRuntimeI18nObserver, localeTag, runtimeTranslate } from './runtime-i18n.js';
 import { mountCompletionUI } from './completion-ui.js';
 import { mountAdvancedUI } from './advanced-ui.js';
 import { mountIdentityLiveUI } from './identity-live-ui.js';
@@ -69,6 +69,7 @@ const tx = (fr,en) => runtimeTranslate(uiLocale,fr,en);
 const app = new ConnectedApplication({ locale: uiLocale });
 captureRuntimeI18n(document);
 applyRuntimeLocale(uiLocale);
+installRuntimeI18nObserver(()=>uiLocale);
 let groups = [];
 let members = [];
 let meetings = [];
@@ -129,6 +130,8 @@ catch {
 const dateOnly=(v)=>{try{return new Intl.DateTimeFormat(localeTag(uiLocale),{dateStyle:'long'}).format(new Date(v));}catch{return String(v??'');}};
 const meetingLabel=(m)=>tx('Réunion du ','Meeting on ')+dateOnly(m?.scheduledAt??m?.openedAt??m?.createdAt??'');
 const actorDisplayName=(actorId)=>members.find(m=>m.userId===actorId)?.displayName??actorId;
+const memberNumberText=m=>Number(m?.memberNumber)>0?tx('Membre n°'+Number(m.memberNumber),'Member #'+Number(m.memberNumber)):'';
+const memberDisplay=m=>(memberNumberText(m)?memberNumberText(m)+' · ':'')+String(m?.displayName??'');
 const toast = (m) => { const e = $('#toast'); e.textContent = m; e.hidden = false; setTimeout(() => e.hidden = true, 2600); };
 const fail = (e) => {
     const box = $('#errorBox');
@@ -421,7 +424,7 @@ const renderMembers = async () => {
     }
     for (const m of ordered) {
         const li = document.createElement('li');
-        const memberLink=document.createElement('button');memberLink.type='button';memberLink.className='link-btn';memberLink.dataset.detailType='member';memberLink.dataset.detailId=m.id;memberLink.textContent=m.displayName;li.append(memberLink,document.createTextNode(' · '+m.roles.join(', ')));
+        const memberLink=document.createElement('button');memberLink.type='button';memberLink.className='link-btn';memberLink.dataset.detailType='member';memberLink.dataset.detailId=m.id;memberLink.textContent=memberDisplay(m);li.append(memberLink,document.createTextNode(' · '+m.roles.join(', ')));
         if(isManager() || m.userId===app.currentActor()){
             const button=document.createElement('button');button.type='button';button.className='link-btn';button.textContent=tx('Relevé','Statement');
             button.onclick=()=>showStatement(m.id).catch(fail);li.append(button);
@@ -436,8 +439,8 @@ const renderMembers = async () => {
             const box=document.createElement('div');box.className='inline-form';box.append(status,roles,reason,save);details.append(box);li.append(details);
         }
         list.append(li);
-        const o = document.createElement('option');o.value = m.id;o.textContent = m.displayName;select.append(o);
-        if(manageSelect){const mo=document.createElement('option');mo.value=m.id;mo.textContent=m.displayName;manageSelect.append(mo);}
+        const o = document.createElement('option');o.value = m.id;o.textContent = memberDisplay(m);select.append(o);
+        if(manageSelect){const mo=document.createElement('option');mo.value=m.id;mo.textContent=memberDisplay(m);manageSelect.append(mo);}
     }
 };
 document.querySelector('#memberSort')?.addEventListener('change',event=>{memberSortMode=event.target.value||'chronological';void renderMembers();});
@@ -715,7 +718,7 @@ const renderCanonicalFinancialTable=({root,mode='meeting',meetingId='',membershi
       for(const r of activeRubrics){const th=document.createElement('th');th.textContent=r.name;hr.append(th);}
       const totalHead=document.createElement('th');totalHead.textContent=tx('Total membre','Member total');hr.append(totalHead);head.append(hr);table.append(head);
       for(const m of activeMembers){
-        const tr=document.createElement('tr'),name=document.createElement('th');name.innerHTML=html`<strong>${m.displayName}</strong><small>${m.roles.join(', ')}</small>`;tr.append(name);let rowTotal=0;
+        const tr=document.createElement('tr'),name=document.createElement('th');name.innerHTML=html`<strong>${memberDisplay(m)}</strong><small>${m.roles.join(', ')}</small>`;tr.append(name);let rowTotal=0;
         for(const r of activeRubrics){const value=exactCellAmount(m.id,r.id,selectedMeeting);rowTotal+=value;const td=document.createElement('td');td.append(makeFinancialEntryCell({member:m,rubric:r,meetingId:selectedMeeting,editable:Boolean(editable&&isManager())}));tr.append(td);}
         const total=document.createElement('td');total.className='table-row-total';total.textContent=fmt(rowTotal);tr.append(total);body.append(tr);
       }

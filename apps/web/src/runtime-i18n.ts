@@ -105,6 +105,252 @@ const EXTRA_FR_EN: Record<string,string> = {
   'Version locale':'Local version'
 };
 
+Object.assign(EXTRA_FR_EN,{
+  "Première utilisation hors ligne :": "First offline use:",
+  "« Créer un compte » fonctionne désormais sans session Internet préalable sur un appareil où Eco-System est déjà installé. Le compte reste local et sera rapproché du serveur seulement lorsque vous déciderez de le finaliser avec Internet.": "“Create account” now works without a prior Internet session on a device where Eco-System is already installed. The account remains local and will be reconciled with the server only when you choose to finalize it online.",
+  "Le mot de passe du compte local n’est pas stocké en clair. Vos groupes et saisies restent sur l’appareil et les intentions de synchronisation conservent leur auteur d’origine.": "The local account password is not stored in plain text. Your groups and entries remain on the device, and synchronization intents keep their original author.",
+  "Finaliser le compte local": "Finalize local account",
+  "← Retour": "← Back",
+  "Finances du groupe": "Group finances",
+  "Ouvrir la dictée financière": "Open financial dictation",
+  "Aucune notification urgente.": "No urgent notification.",
+  "Association / Tontine": "Association / Tontine",
+  "Accueil du groupe": "Group home",
+  "Ouvrir les Séances": "Open Meetings",
+  "Réunion du jour, feuille de séance, présence, bénéficiaires, caisse, dettes et historique": "Today’s meeting, meeting sheet, attendance, beneficiaries, cashbox, debts and history",
+  "Le membre cherche un groupe ; le groupe recherche des candidats consentants. L'adhésion reste gouvernée.": "A member searches for a group; the group searches for consenting candidates. Membership remains governed.",
+  "Aucune liste de membres, téléphone privé ou solde financier n'est publié.": "No member list, private phone number or financial balance is published.",
+  "Rejoindre ou appairer un membre": "Join or pair a member",
+  "Un lien ou code sécurisé suffit. Les groupes historiques conservent l’identité financière du membre et demandent un rapprochement avec sa fiche existante.": "A secure link or code is enough. Historical groups keep the member’s financial identity and require reconciliation with the existing record.",
+  "Je rejoins un groupe": "I am joining a group",
+  "Inviter les membres du groupe actif": "Invite members of the active group",
+  "Automatique selon l’origine du groupe": "Automatic based on group origin",
+  "Créer le lien / code": "Create link / code",
+  "Le membre m’envoie son code": "The member sends me their code",
+  "Membre historique": "Historical member",
+  "Code du membre": "Member code",
+  "Appairer ce compte": "Pair this account",
+  "Créer, intégrer ou transformer un groupe": "Create, integrate or transform a group",
+  "Eco-System accompagne le groupe depuis son origine réelle jusqu’à la prévisualisation finale. Une tontine existante peut évoluer en association sans perdre son identité ni son histoire.": "Eco-System guides the group from its real-world origin to the final preview. An existing tontine can evolve into an association without losing its identity or history.",
+  "Association · tontine rotative": "Association · rotating tontine",
+  "Scénarios et coûts par rubrique": "Scenarios and costs by rubric",
+  "Nouveau groupe": "New group",
+  "Association / tontine qui existe déjà hors Eco-System": "Association / tontine already existing outside Eco-System",
+  "Transformer une tontine déjà enregistrée dans Eco-System": "Transform a tontine already registered in Eco-System",
+  "Groupe à faire évoluer": "Group to evolve",
+  "Association": "Association",
+  "Variante de tontine": "Tontine variant",
+  "Une tontine en nature ou hybride reste une configuration de la famille « Tontine rotative ». Une association peut contenir zéro, une ou plusieurs tontines comme rubriques.": "An in-kind or hybrid tontine remains a configuration of the “Rotating tontine” family. An association may contain zero, one or several tontines as rubrics.",
+  "Propriété, représentation, gestion opérationnelle, vote et pouvoir financier restent séparés. Les droits sensibles continuent à dépendre des rôles et mandats.": "Ownership, representation, operational management, voting and financial authority remain separate. Sensitive rights continue to depend on roles and mandates.",
+  "Jour / règle de réunion": "Meeting day / rule",
+  "Ajouter / inviter progressivement": "Add / invite progressively",
+  "Rapprocher les membres d’un groupe historique": "Reconcile members of a historical group",
+  "La participation aux rubriques est définie séparément : un membre peut ne participer à aucune tontine, à une seule, à plusieurs ou à toutes.": "Participation is defined separately for each rubric: a member may participate in no tontine, one, several or all of them.",
+  "Chaque nature peut être utilisée plusieurs fois et recevoir le nom choisi par le groupe. « Tontine » peut donc devenir Tontine 1 000 F, 10 000 F, Savons, Huiles, Draps, etc.": "Each type can be used several times and given the name chosen by the group. “Tontine” can therefore become Tontine 1,000 F, 10,000 F, Soap, Oil, Sheets, etc.",
+  "Configurez une rubrique ici, validez-la, puis l’assistant vous conduit à la suivante sans aller-retour en bas de page.": "Configure a rubric here, confirm it, then the assistant takes you directly to the next one without scrolling back and forth.",
+  "+ Ajouter une tontine distincte": "+ Add a separate tontine",
+  "Il n’existe pas de cotisation nominale unique imposée. La simulation consolide les rubriques, mais conserve leur logique indépendante.": "There is no imposed single nominal contribution. The simulation consolidates rubrics while preserving their independent logic.",
+  "Langue principale": "Primary language",
+  "Créer / intégrer / transformer le groupe": "Create / integrate / transform the group",
+  "Suivant →": "Next →",
+  "Sélectionnez le contexte actif ou choisissez un groupe source à transformer.": "Select the active context or choose a source group to transform.",
+  "Pilotage transversal du groupe": "Cross-functional group management",
+  "Sélectionnez ou créez d'abord un groupe.": "Select or create a group first.",
+  "Ce sont les deux feuilles de saisie. Cliquez une cellule pour ouvrir un petit éditeur au-dessus de la case, sans quitter le tableau.": "These are the two entry sheets. Click a cell to open a small editor above it without leaving the table.",
+  "Les montants antérieurs restent visibles. Une cellule ouverte conserve le contexte séance × membre × rubrique et accepte de grands montants.": "Previous amounts remain visible. An open cell keeps the meeting × member × rubric context and accepts large amounts.",
+  "Actualiser la fiche": "Refresh the sheet",
+  "Chaque ligne est une séance et chaque colonne une rubrique. Les responsables saisissent directement par cellule ; un simple membre ne voit que sa propre fiche.": "Each row is a meeting and each column a rubric. Managers enter data directly by cell; an ordinary member sees only their own sheet.",
+  "Ouvrez, choisissez ou clôturez une séance. Cliquez sur « Réunion du… » pour voir finances, temporalité, présence, dettes/obligations, bénéficiaires et preuves.": "Open, choose or close a meeting. Click “Meeting on…” to view finances, timing, attendance, debts/obligations, beneficiaries and evidence.",
+  "Ouvrir / programmer": "Open / schedule",
+  "Inscription, Timbre de prêt, Amendes et toute autre sous-rubrique sont configurés ici.": "Registration, Loan stamp, Fines and any other sub-rubric are configured here.",
+  "Leurs montants réels se saisissent uniquement dans « Votre feuille de séance » ou « Vos fiches individuelles ».": "Their actual amounts are entered only in “Your meeting sheet” or “Your individual sheets”.",
+  "Ajouter une petite rubrique personnalisée": "Add a small custom rubric",
+  "Toujours disponible": "Always available",
+  "Selon la séance": "Depending on the meeting",
+  "Créer dans « Autres »": "Create in “Other”",
+  "Écrit ≠ pratique ≠ règle opérationnelle. L'application cherche à comprendre le groupe avant d'imposer.": "Written rule ≠ practice ≠ operational rule. The app seeks to understand the group before imposing anything.",
+  "Ajouter / décrire une rubrique": "Add / describe a rubric",
+  "Prêt": "Loan",
+  "Raccourcis : ils préparent une rubrique principale dans le groupe actif. « Autres » reste réservé aux petites sous-rubriques comme Inscription, Timbre et Amendes.": "Shortcuts prepare a main rubric in the active group. “Other” remains reserved for small sub-rubrics such as Registration, Stamp and Fines.",
+  "Réunion préparée hors connexion": "Meeting prepared offline",
+  "Télécharge uniquement le contexte minimal du groupe sur cet appareil. Les saisies financières offline restent des intentions jusqu’à confirmation serveur.": "Downloads only the group’s minimum context to this device. Offline financial entries remain intents until server confirmation.",
+  "Préparer ce groupe hors ligne": "Prepare this group offline",
+  "Actualiser les paquets locaux": "Refresh local packages",
+  "Ouvrir le menu Tontines": "Open the Tontines menu",
+  "Association / Tontine · unité opérationnelle": "Association / Tontine · operational unit",
+  "Préparez et gérez une réunion précise : finances de séance, feuille membres × rubriques, présence, bénéficiaires, preuves, dettes, classement, précédente / actuelle / suivante et historique.": "Prepare and manage a specific meeting: meeting finances, member × rubric sheet, attendance, beneficiaries, evidence, debts, ordering, previous / current / next and history.",
+  "Choisir ou préparer une séance": "Choose or prepare a meeting",
+  "Le titre visible reste « Réunion du… ». Le titre interne est secondaire.": "The visible title remains “Meeting on…”. The internal title is secondary.",
+  "Nouvelle séance": "New meeting",
+  "Ouvrir la fiche détaillée": "Open detailed sheet",
+  "Feuille de séance": "Meeting sheet",
+  "Récap & caisse": "Recap & cashbox",
+  "Gestion du groupe": "Group management",
+  "Ajouter un membre, gérer son statut et ses rôles, puis ouvrir son Dossier Membre sans passer par la séance.": "Add a member, manage their status and roles, then open their Member File without going through a meeting.",
+  "Ajouter membre": "Add member",
+  "Membre à gérer": "Member to manage",
+  "Modifier membre": "Edit member",
+  "Supprimer / corbeille": "Delete / trash"
+});
+
+Object.assign(EXTRA_FR_EN,{
+  "La suppression n’est jamais immédiate : le membre passe dans la corbeille pendant 6 mois. Les écritures financières restent intactes et auditables.": "Deletion is never immediate: the member stays in the trash for 6 months. Financial records remain intact and auditable.",
+  "Dossier Membre": "Member File",
+  "Sélectionnez un membre pour consulter ou modifier son dossier autorisé.": "Select a member to view or edit their authorized file.",
+  "Choisissez « Dossier membre » sur un membre.": "Choose “Member file” on a member.",
+  "Dépenses sans membre, contrôles et accès au Récap. Les cotisations des membres restent exclusivement dans les deux feuilles.": "Expenses without a member, controls and access to Recap. Member contributions remain exclusively in the two sheets.",
+  "Ouvrir le Récap": "Open Recap",
+  "Back-office du groupe": "Group back office",
+  "Les dépenses non rattachées directement à un membre sont enregistrées ici. Les dépenses de membre/séance restent visibles dans les feuilles et le Récap.": "Expenses not directly attached to a member are recorded here. Member/meeting expenses remain visible in the sheets and Recap.",
+  "Les cotisations réelles se saisissent sur « Votre feuille de séance » ou « Vos fiches individuelles ». Ici, le Bureau configure les règles, simule, rapproche et contrôle les finances.": "Actual contributions are entered in “Your meeting sheet” or “Your individual sheets”. Here, the Board configures rules, simulates, reconciles and controls finances.",
+  "Historique financier": "Financial history",
+  "Utilisez la feuille de séance générale ou la fiche individuelle du membre. Les cellules utilisent la même écriture canonique : saisir 500 à la place de 1 000 remplace 1 000 par 500, sans additionner les deux montants.": "Use the general meeting sheet or the member’s individual sheet. Cells use the same canonical entry: entering 500 instead of 1,000 replaces 1,000 with 500 without adding the two amounts.",
+  "Capital prêté, capital restant, intérêts, remboursements et échéances. Un prêt est une dette du membre et une sortie du groupe, jamais une cotisation positive.": "Principal lent, remaining principal, interest, repayments and due dates. A loan is a member debt and a group outflow, never a positive contribution.",
+  "Suivi de l’épargne et calcul des intérêts selon les règles du groupe. Ce module ne remplace pas la feuille de séance.": "Savings tracking and interest calculation according to group rules. This module does not replace the meeting sheet.",
+  "Sommes restant dues : capital de prêt, intérêts, amendes et autres obligations. Elles sont séparées des cotisations nettes.": "Amounts still due: loan principal, interest, fines and other obligations. They are kept separate from net contributions.",
+  "Les accords sont liés au compte connecté. Le parcours de quorum avec plusieurs personnes reste à compléter.": "Approvals are tied to the signed-in account. The multi-person quorum flow still needs completion.",
+  "Enregistrer": "Save",
+  "Configurez le taux par période, la priorité Capital/Intérêts, la durée maximale, les sanctions, les prêts spéciaux et simulez la dette sans écrire dans le Ledger.": "Configure the per-period rate, Principal/Interest priority, maximum duration, penalties and special loans, and simulate the debt without writing to the Ledger.",
+  "Les simulations, approbations, décaissements et remboursements sont séparés. Cette configuration pilote le capital, les intérêts, la priorité d’imputation, les échéances et les prêts spéciaux du groupe.": "Simulations, approvals, disbursements and repayments are separate. This configuration controls principal, interest, allocation priority, due dates and special loans for the group.",
+  "Suivi financier complémentaire · impayés · épargne · caisse": "Additional financial tracking · arrears · savings · cashbox",
+  "Il ne remplace pas les rubriques du groupe. « Impayés » compare ce qui était attendu à ce qui a réellement été réglé ; « Épargne » suit les plans et mouvements d’épargne ; « Caisse » suit les soldes d’ouverture et les contenants/détenteurs. Pour le travail courant, utilisez toujours d’abord les menus « Prêts », « Épargne » et « Assistances ».": "It does not replace the group’s rubrics. “Arrears” compares expected amounts with what was actually paid; “Savings” tracks savings plans and movements; “Cashbox” tracks opening balances and containers/holders. For day-to-day work, always start with the “Loans”, “Savings” and “Assistance” menus.",
+  "Créer l’attendu": "Create expected amount",
+  "Créer le plan": "Create plan",
+  "Détenteur / contenant de caisse": "Cash holder / container",
+  "Créer": "Create",
+  "Créer le dossier": "Create record",
+  "Les longues modalités détectées dans le RI peuvent être conservées à la création puis validées ici, événement par événement : maladie, deuil, mariage, baptême, naissance, etc. Si aucun RI n’existe, le gestionnaire peut les saisir ou les dicter.": "Detailed terms detected in the internal rules can be kept at creation and validated here, event by event: illness, bereavement, marriage, baptism, birth, etc. If no internal rules exist, the manager can enter or dictate them.",
+  "Aucune finance automatique": "No automatic financial posting",
+  "Rubrique Assistance": "Assistance rubric",
+  "+ Ajouter une modalité": "+ Add a condition",
+  "Enregistrer le brouillon": "Save draft",
+  "Valider les modalités": "Validate conditions",
+  "La validation porte sur les règles ; elle ne crée ni assistance, ni dette, ni décaissement. Les opérations réelles resteront soumises aux droits et preuves.": "Validation applies to the rules; it creates no assistance, debt or disbursement. Real operations remain subject to permissions and evidence.",
+  "Eco-System peut reproduire le chemin historique Feuille mensuelle → Épargne → Principal → Intérêts provisoires → Intérêts finaux, puis comparer ce résultat avec un modèle plus fidèle : le capital effectivement prêté, remboursé et éventuellement reprêté.": "Eco-System can reproduce the historical Monthly sheet → Savings → Principal → Provisional interest → Final interest path, then compare it with a more faithful model: principal actually lent, repaid and possibly lent again.",
+  "Les dépôts d’épargne et les intérêts recouvrés sont d’abord lus dans les écritures canoniques. Le Bureau peut ensuite choisir un montant distribuable différent sans falsifier le total réellement encaissé.": "Savings deposits and recovered interest are first read from canonical entries. The Board may then choose a different distributable amount without falsifying the amount actually collected.",
+  "Prérempli depuis les intérêts réellement encaissés lorsqu’ils existent. Vous pouvez décider de distribuer moins, ou une autre masse autorisée, sans modifier la vérité comptable.": "Pre-filled from interest actually collected when available. You may decide to distribute less, or another authorized amount, without altering the accounting truth.",
+  "Réserve / solde en caisse %": "Reserve / cash balance %",
+  "Dernière séance de l’exercice": "Last meeting of the financial period",
+  "Le groupe peut utiliser une courbe différente pour l’épargne scolaire, comme dans le dossier historique.": "The group may use a different curve for school savings, as in the historical records.",
+  "Matrice personnalisée par prêt": "Custom matrix by loan",
+  "Le Bureau peut conserver sa méthode, choisir Capital × Temps, distinguer ou mutualiser Épargne classique / scolaire, ou appliquer une matrice spécifique. Chaque simulation reste sans écriture financière jusqu’à validation humaine.": "The Board may keep its method, choose Principal × Time, separate or pool standard/school savings, or apply a specific matrix. Every simulation remains non-posting until human validation.",
+  "Séance n°": "Meeting #",
+  "Ajouter le dépôt": "Add deposit",
+  "Un dépôt peut ne rien gagner tant qu’il n’a pas réellement servi à financer un prêt. Le principal remboursé garde l’identité économique du dépôt d’origine et peut être prêté à nouveau.": "A deposit may earn nothing until it has actually financed a loan. Repaid principal keeps the economic identity of the original deposit and may be lent again.",
+  "Prêt accordé": "Loan granted",
+  "Intérêt de prêt encaissé": "Loan interest collected",
+  "Référence prêt": "Loan reference",
+  "Ajouter l’événement": "Add event",
+  "Sans prêt effectif, l’épargne ne produit aucun droit à intérêt": "Without an actual loan, savings create no entitlement to interest",
+  "Le moteur attribué regroupe les événements d’un même prêt. Si la source de financement n’est pas prouvée, Eco-System ne l’invente pas et signale le résidu.": "The allocation engine groups events from the same loan. If the funding source is not proven, Eco-System does not invent it and flags the remainder.",
+  "Aucun intérêt sur intérêt d’un emprunteur : un intérêt impayé ne rejoint jamais son capital. En revanche, un intérêt déjà réellement encaissé peut, si le groupe le décide, être réinvesti comme une nouvelle ressource collective distincte.": "No interest-on-interest for a borrower: unpaid interest never becomes principal. However, interest already actually collected may, if the group decides, be reinvested as a new distinct collective resource.",
+  "Historique financier sécurisé": "Secure financial history",
+  "Gestion permanente du groupe": "Permanent group management",
+  "Chaque tontine reste indépendante : participants, parts, calendrier, pots et historique. Ajouter un retardataire ou reprogrammer un tour futur ne réécrit jamais les pots déjà servis.": "Each tontine remains independent: participants, shares, schedule, pots and history. Adding a late participant or rescheduling a future turn never rewrites pots already served.",
+  "Celles créées pendant la création du groupe apparaissent automatiquement ici. Vous pouvez aussi en ajouter une nouvelle.": "Those created during group setup appear here automatically. You can also add a new one.",
+  "Créer une nouvelle Tontine dans ce groupe": "Create a new Tontine in this group",
+  "Nom de la Tontine": "Tontine name",
+  "Créer la rubrique Tontine": "Create Tontine rubric",
+  "Configurer une tontine du groupe": "Configure a group tontine",
+  "Tontine à configurer": "Tontine to configure",
+  "Liste automatique des rubriques Tontines créées avec le groupe ou ajoutées ici.": "Automatic list of Tontine rubrics created with the group or added here.",
+  "Eco-System propose automatiquement le nom de la tontine sélectionnée ; vous pouvez le compléter par l’exercice.": "Eco-System automatically suggests the selected tontine’s name; you can add the financial period.",
+  "Ajouter une part": "Add a share",
+  "Programmer, reprogrammer, servir ou annuler avec historique versionné.": "Schedule, reschedule, serve or cancel with versioned history.",
+  "Le classement est géré ici puis repris par le menu « Classements & calendrier » : une seule source, aucun classement parallèle.": "Ordering is managed here and reused by the “Ordering & calendar” menu: one source, no parallel ordering.",
+  "Recap du groupe": "Group recap",
+  "Le Recap est réservé aux responsables habilités du groupe.": "Recap is restricted to authorized group managers.",
+  "Association / Tontine d’abord · communautés et opportunités autour · valeur au-delà": "Association / Tontine first · communities and opportunities around it · value beyond",
+  "Les idées validées deviennent des workflows persistants reliés aux moteurs existants : groupe, forums/communautés, besoins, commerce local, activité, talent et confiance. Une proposition reste une proposition jusqu’à validation humaine ; aucun paiement réel n’est déclenché ici.": "Validated ideas become persistent workflows connected to existing engines: group, forums/communities, needs, local commerce, activity, talent and trust. A proposal remains a proposal until human validation; no real payment is triggered here.",
+  "Labo financier & anti-arnaques": "Financial & anti-scam lab",
+  "Rechercher des communautés": "Search communities",
+  "Créer une communauté": "Create a community",
+  "Créer la communauté": "Create community",
+  "Fermer": "Close",
+  "Un forum reste un espace social ; ces raccourcis structurent le besoin sans créer un second moteur. Toute information dite « sourcée » doit citer une source/auteur/preuve : l’heure de publication ne rend jamais une information vraie.": "A forum remains a social space; these shortcuts structure the need without creating a second engine. Any information described as “sourced” must cite a source/author/evidence: publication time never makes information true.",
+  "Créer un Hub": "Create a Hub",
+  "Privée au groupe": "Private to the group",
+  "Créer le Hub": "Create Hub",
+  "La dernière position lue est mémorisée par compte.": "The last read position is remembered per account.",
+  "Ajouter au stock": "Add to inventory",
+  "Ouvrir la campagne": "Open campaign",
+  "Un signal n’est jamais une vente : prévision → acceptation humaine → demande → réponses → sélection → exécution → preuve. Aucun faux compteur, aucun faux stock, aucun faux compte à rebours.": "A signal is never a sale: forecast → human acceptance → request → responses → selection → execution → evidence. No fake counter, fake stock or fake countdown.",
+  "Le coût rendu = marchandises + fret + autres coûts documentés. Une dette fournisseur du groupe reste une dette du groupe et son règlement exige une preuve Ledger.": "Landed cost = goods + freight + other documented costs. A group supplier debt remains a group debt and its settlement requires Ledger evidence.",
+  "Enregistrer le fournisseur": "Save supplier",
+  "Groupe": "Group",
+  "Créer l’approvisionnement": "Create supply order",
+  "Créer en brouillon": "Create as draft",
+  "Quantité réelle disponible": "Actual quantity available",
+  "Créer le Deal en brouillon": "Create Deal as draft",
+  "Aucun": "None",
+  "Créer la session": "Create session"
+});
+
+Object.assign(EXTRA_FR_EN,{
+  "Boutique du groupe": "Group shop",
+  "La vitrine réutilise le stock et les commandes du Marketplace canonique : aucun second inventaire, aucun second paiement.": "The storefront reuses inventory and orders from the canonical Marketplace: no second inventory and no second payment system.",
+  "Groupe seulement": "Group only",
+  "Enregistrer la boutique": "Save shop",
+  "Pour publier un article, créez-le dans le stock ci-dessus puis activez sa visibilité dans la vitrine. Le stock disponible affiché est le stock réel moins les quantités réservées.": "To publish an item, create it in the inventory above and then enable its visibility in the storefront. Displayed available stock is actual stock minus reserved quantities.",
+  "Formalisez l'accompagnement d'un groupe par une ONG, un partenaire financier, un fournisseur, une assurance, un opérateur ou un autre acteur. Le partage financier reste agrégé au niveau du groupe pseudonymisé.": "Formalize support for a group by an NGO, financial partner, supplier, insurer, operator or other actor. Financial sharing remains aggregated at the pseudonymized group level.",
+  "Créer un programme": "Create a program",
+  "Aucune donnée financière partagée": "No financial data shared",
+  "Profil économique agrégé du groupe pseudonymisé": "Aggregated economic profile of the pseudonymized group",
+  "Créer le brouillon": "Create draft",
+  "Profil économique du groupe": "Group economic profile",
+  "Exemple : ECO-GRP-… · Tontine Savons 150 000 F. Aucun nom de membre ni solde individuel.": "Example: ECO-GRP-… · Soap Tontine 150,000 F. No member name or individual balance.",
+  "Campagnes, créations, placements, ciblage contextuel et financier agrégé, modération et analytics. Aucun ciblage individuel par dette, solde, CNI ou identité.": "Campaigns, creatives, placements, contextual and aggregated financial targeting, moderation and analytics. No individual targeting by debt, balance, national ID or identity.",
+  "Actualiser la régie": "Refresh ad management",
+  "Ouvrir un deal": "Open a deal",
+  "Sponsor de groupe": "Group sponsor",
+  "Créer le brouillon sandbox": "Create sandbox draft",
+  "Principe de rendement UX : une publicité ne doit jamais repousser une dette urgente, une validation, une réserve ou une opération financière. L’inventaire commercial commence après le contenu utile.": "UX performance principle: an ad must never push an urgent debt, validation, reservation or financial operation out of view. Commercial inventory starts after useful content.",
+  "Le classement reste déterministe. L’IA ne rédige que des variantes de texte à partir du contexte agrégé du groupe ; aucun solde, dette, CNI ou donnée individuelle ne lui est transmis.": "Ranking remains deterministic. AI only writes text variants from aggregated group context; no balance, debt, national ID or individual data is sent to it.",
+  "Ajouter au pipeline": "Add to pipeline",
+  "Rechercher partout": "Search everywhere",
+  "Les résultats respectent vos droits actuels. Une recherche ne donne jamais accès à un groupe, un membre ou un document auquel votre compte n’a pas accès.": "Results respect your current permissions. Search never grants access to a group, member or document that your account cannot access.",
+  "· séances + échéances personnelles du groupe": "· meetings + personal group due dates",
+  "Le calendrier réunit uniquement les dates explicites et autorisées : séances du groupe et échéances qui vous sont assignées. Il n’invente aucune date à partir de vos finances.": "The calendar includes only explicit, authorized dates: group meetings and due dates assigned to you. It never invents dates from your finances.",
+  "Notifications du groupe actif, triées par priorité et fraîcheur.": "Active-group notifications, sorted by priority and freshness.",
+  "Actualiser le contrôle": "Refresh control",
+  "Créer, suivre et clôturer un problème avec preuve de résolution.": "Create, track and close an issue with evidence of resolution.",
+  "Enregistrer l’incident": "Save incident",
+  "Ajouter au plan éditorial": "Add to editorial plan",
+  "Inventaire dérivé du catalogue canonique : aucune nouvelle capacité ne doit dépendre d’une mise à jour manuelle de cette page.": "Inventory derived from the canonical catalog: no new capability should depend on a manual update of this page.",
+  "Échanges hors Internet entre appareils, confrontation des gestionnaires et diffusion locale assistée. Le transport ne devient jamais l’auteur financier.": "Internet-free exchanges between devices, manager reconciliation and assisted local distribution. The transport layer never becomes the financial author.",
+  "Eco Local · salle de séance": "Eco Local · meeting room",
+  "Un responsable ouvre une salle locale ; les appareils associés reçoivent les mises à jour disponibles et renvoient leurs accusés lorsque le transport local est disponible.": "A manager opens a local room; associated devices receive available updates and return acknowledgements when local transport is available.",
+  "Les suppressions fonctionnelles restent restaurables pendant six mois. Aucune suppression définitive manuelle n’est proposée.": "Functional deletions remain restorable for six months. No manual permanent deletion is offered.",
+  "Groupes, séances, membres et rubriques restent restaurables pendant six mois. Un groupe supprimé déclenche un rappel mensuel au fondateur et au gestionnaire qui l’a supprimé, sauf désactivation. Aucune suppression définitive manuelle n’est proposée.": "Groups, meetings, members and rubrics remain restorable for six months. A deleted group triggers a monthly reminder to the founder and the manager who deleted it, unless disabled. No manual permanent deletion is offered.",
+  "Le code permanent identifie le groupe ; l’empreinte des règles et le profil Concierge évoluent avec son fonctionnement.": "The permanent code identifies the group; the rules fingerprint and Concierge profile evolve with its operation.",
+  "Passeport du groupe": "Group passport",
+  "Connexion automatique lorsqu’un Durable Object Live est disponible ; le mode offline reste le filet de sécurité.": "Automatic connection when a Live Durable Object is available; offline mode remains the safety net.",
+  "Habitude de rubrique": "Rubric habit",
+  "Règle issue d’un document": "Rule derived from a document",
+  "Retour à l’écran précédent": "Back to previous screen",
+  "Ex. Réunion de septembre": "E.g. September meeting",
+  "Collez ici les articles du RI ou décrivez oralement le fonctionnement du groupe…": "Paste internal rules here or describe how the group works orally…",
+  "Facultatif — le titre affiché sera Réunion du…": "Optional — the displayed title will be Meeting on…",
+  "Ex. Assemblée, fête, réunion ordinaire": "E.g. assembly, celebration, regular meeting",
+  "Règle ou usage de cette petite rubrique": "Rule or use for this small rubric",
+  "Séance précédente, actuelle et suivante": "Previous, current and next meeting",
+  "Ex. Réunion ordinaire": "E.g. regular meeting",
+  "Sections de la séance": "Meeting sections",
+  "Plan de la page Finance": "Finance page outline",
+  "Ex. Cotisation de septembre": "E.g. September contribution",
+  "Ex. Cotisation septembre": "E.g. September contribution",
+  "Ex. Tontine 2 000": "E.g. Tontine 2,000",
+  "Ex. Tontine 10 000 — exercice 2027": "E.g. Tontine 10,000 — 2027 period",
+  "Membre, groupe ou client": "Member, group or client",
+  "Auto = groupe actif": "Auto = active group",
+  "Ce que le partenaire apporte au groupe et ce qui est attendu": "What the partner brings to the group and what is expected",
+  "SAVINGS, TONTINE, SOLIDARITY": "SAVINGS, TONTINE, SOLIDARITY",
+  "Nom, séance, rubrique, service, document…": "Name, meeting, rubric, service, document…",
+  "Rechercher une capacité…": "Search a capability…",
+  "Ex. Fournisseur boissons pour séance de novembre": "E.g. beverage supplier for November meeting",
+  "Contexte, règle, décision, prochaine action…": "Context, rule, decision, next action…"
+});
+
 const canonical = new Map<string,string>();
 for(const [key,fr] of Object.entries(messages.fr)){
   const en=(messages.en as Record<string,string>)[key];
@@ -132,11 +378,12 @@ export const captureRuntimeI18n=(root:ParentNode=document)=>{
     const raw=text.nodeValue??'';
     if(normalize(raw)&&text.parentElement&&!['SCRIPT','STYLE','TEXTAREA'].includes(text.parentElement.tagName))textSources.set(text,raw);
   }
-  root.querySelectorAll?.('*').forEach(el=>{
+  const elements:Element[]=root instanceof Element?[root,...root.querySelectorAll('*')]:[...root.querySelectorAll?.('*')??[]];
+  for(const el of elements){
     const saved=new Map<string,string>();
     for(const attr of attrs){const value=el.getAttribute(attr);if(value)saved.set(attr,value);}
     if(saved.size)attributeSources.set(el,saved);
-  });
+  }
 };
 
 export const applyRuntimeLocale=(locale:RuntimeLocale)=>{
@@ -151,6 +398,26 @@ export const applyRuntimeLocale=(locale:RuntimeLocale)=>{
     if(!el.isConnected)continue;
     for(const [attr,source] of saved)el.setAttribute(attr,translateExact(source,locale));
   }
+};
+
+export const installRuntimeI18nObserver=(getLocale:()=>RuntimeLocale)=>{
+  if(typeof MutationObserver==='undefined'||typeof document==='undefined')return()=>{};
+  const observer=new MutationObserver(mutations=>{
+    let changed=false;
+    for(const mutation of mutations){
+      for(const node of mutation.addedNodes){
+        if(node.nodeType===Node.TEXT_NODE){
+          const text=node as Text,raw=text.nodeValue??'',parent=text.parentElement;
+          if(normalize(raw)&&parent&&!['SCRIPT','STYLE','TEXTAREA'].includes(parent.tagName)){textSources.set(text,raw);changed=true;}
+        }else if(node.nodeType===Node.ELEMENT_NODE){
+          captureRuntimeI18n(node as Element);changed=true;
+        }
+      }
+    }
+    if(changed)applyRuntimeLocale(getLocale());
+  });
+  observer.observe(document.documentElement,{subtree:true,childList:true});
+  return()=>observer.disconnect();
 };
 
 export const runtimeTranslate=(locale:RuntimeLocale,fr:string,en?:string)=>locale==='en'?(en??canonical.get(fr)??fr):fr;

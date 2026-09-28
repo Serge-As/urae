@@ -1065,7 +1065,7 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
     const members=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/members$/);
     if(members&&request.method==='GET'){
       const group=await repo.getGroup(ctx.tenantId,members[1]!); if(!group) return json({error:'NOT_FOUND'},404,cors);
-      const list=await repo.listMemberships(ctx.tenantId,group.id); const joined=[];
+      const list=await foundation.ensureMemberNumbers(ctx.tenantId,group.id,ctx.requestId+':member-numbers'); const joined=[];
       for(const m of list){const user=await repo.getUser(m.userId);joined.push({...m,displayName:user?.displayName??m.userId});}
       return json(joined,200,cors);
     }
