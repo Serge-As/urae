@@ -31,7 +31,7 @@ test('runtime bilingual dictionary covers critical current shell journeys',()=>{
 test('PWA cache contains current field-integrity and bilingual transitive modules',()=>{
   const sw=fs.readFileSync('apps/web/sw.js','utf8');
   for(const path of ['/src/field-hardening.js','/src/voice-entry-bootstrap.js','/src/voice-entry-ui.js','/src/expense-recap-ui.js','/src/member-dossier-ui.js','/src/documents-ui.js','/src/contextual-group-ui.js','/src/runtime-i18n.js','/src/completion-ui.js','/src/advanced-ui.js','/src/offline-snapshot.js','/packages/completion/src/index.js'])assert.ok(sw.includes(path),path);
-  assert.match(sw,/eco-system-v1527-live-completion-20260927/);
+  assert.match(sw,/eco-system-v1528-geo-directory-20260928/);
 });
 
 test('current shell identifies the current release instead of stale copies',()=>{
