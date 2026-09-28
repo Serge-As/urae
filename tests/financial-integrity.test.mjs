@@ -11,7 +11,7 @@ import { Outbox } from '../.build/packages/offline/src/index.js';
 import { FilePlatformRepository } from '../scripts/file-repository.mjs';
 
 class SQLiteD1 {
- constructor(){this.db=new DatabaseSync(':memory:');this.db.exec(fs.readFileSync('cloudflare/migrations/0003_platform_records.sql','utf8'));this.db.exec(fs.readFileSync('cloudflare/migrations/0004_financial_operations.sql','utf8'));this.failAt=-1;}
+ constructor(){this.db=new DatabaseSync(':memory:');this.db.exec(fs.readFileSync('cloudflare/migrations/0003_platform_records.sql','utf8'));this.db.exec(fs.readFileSync('cloudflare/migrations/0004_financial_operations.sql','utf8'));this.db.exec(fs.readFileSync('cloudflare/migrations/0019_financial_operations_v2.sql','utf8'));this.failAt=-1;}
  prepare(sql){const db=this.db;let values=[];return{bind(...v){values=v;return this;},async first(){return db.prepare(sql).get(...values)??null;},async all(){return{results:db.prepare(sql).all(...values)};},async run(){return db.prepare(sql).run(...values);}};}
  async batch(statements){this.db.exec('BEGIN');try{const result=[];for(let i=0;i<statements.length;i++){if(i===this.failAt)throw Error('INJECTED_STORAGE_FAILURE');result.push(await statements[i].run());}this.db.exec('COMMIT');return result;}catch(e){this.db.exec('ROLLBACK');throw e;}}
 }
@@ -43,6 +43,18 @@ test('D1 transaction rolls back a failure after ledger insertion; retry commits 
  assert.equal((await ledger.reverseEntry({tenantId:input.tenantId,groupId:input.groupId,entryId:receipt.ledgerEntryId,reason:'correction'})).id,r.id);
  assert.equal((await ledger.summary(input.tenantId,input.groupId)).cashBalance,0);db.db.close();
 });
+test('D1 v2 arbiter accepts canonical cash-out after a contribution without weakening historical rows',async()=>{
+ const db=new SQLiteD1();const repo=new D1PlatformRepository(db);const{k,group,ledger,input}=await setup(repo);
+ await ledger.recordCashContribution(input);
+ const expense=await ledger.recordCashMovement({tenantId:input.tenantId,groupId:group.id,amount:700,direction:'out',counterAccountCode:'GROUP_EXPENSE',counterAccountType:'expense',descriptionCode:'LEDGER_GROUP_EXPENSE',sourceType:'group_expense',sourceId:'expense_test',idempotencyKey:'expense-test',kind:'cash_out'});
+ assert.equal(expense.sourceId,'expense_test');
+ assert.equal((await ledger.summary(input.tenantId,group.id)).cashBalance,300);
+ const rows=db.db.prepare("SELECT operation_kind,idempotency_key FROM financial_operations_v2 WHERE tenant_id=? AND group_id=? ORDER BY operation_kind,idempotency_key").all(input.tenantId,group.id);
+ assert.deepEqual(rows.map(x=>x.operation_kind).sort(),['cash_out','contribution']);
+ assert.equal(db.db.prepare("SELECT COUNT(*) AS n FROM financial_operations WHERE tenant_id=? AND group_id=?").get(input.tenantId,group.id).n,0);
+ db.db.close();
+});
+
 test('file repository persists workspaces and one atomic financial operation across restart',async()=>{
  const dir=fs.mkdtempSync(path.join(os.tmpdir(),'eco-integrity-'));const file=path.join(dir,'db.json');
  try{const repo=new FilePlatformRepository(file);const{ledger,input}=await setup(repo);await Promise.all([ledger.recordCashContribution(input),ledger.recordCashContribution(input)]);
