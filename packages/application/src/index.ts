@@ -114,8 +114,8 @@ export class ConnectedApplication {
   }
   private async cacheReadSnapshot<T>(path:string,body:T):Promise<void>{
     if(!IndexedDbReadSnapshotAdapter.supported()||!this.offlineReadAllowed(path))return;
-    const session=path==='/api/v1/auth/session'?(body as any)?.account:undefined;
-    try{await this.readSnapshots.save({id:this.offlineReadKey(path),actorId:String(session?.id??this.actorId),tenantId:String(session?.tenantId??this.tenantId),path,body});}catch{}
+    const session=path==='/api/v1/auth/session'?(body as any)?.account:undefined,stamp=new Date().toISOString(),raw=body as any,sourceVersion=raw?.sourceVersion??raw?.projectionVersion??raw?.version??raw?.watermark;
+    try{await this.readSnapshots.save({id:this.offlineReadKey(path),actorId:String(session?.id??this.actorId),tenantId:String(session?.tenantId??this.tenantId),path,body,source:'SERVER',lastSyncedAt:stamp,sourceVersion});}catch{}
   }
   private announceOfflineSnapshot(path:string,updatedAt:string):void{
     this.usingOfflineSnapshot=true;
@@ -133,10 +133,15 @@ export class ConnectedApplication {
     }catch{}
     return undefined;
   }
-  private async saveCached<T>(path:string,body:T):Promise<void>{
+  private async saveCached<T>(path:string,body:T,source:'LOCAL'|'RELAY'|'RESTORED'='LOCAL'):Promise<void>{
     if(!IndexedDbReadSnapshotAdapter.supported())throw Error('DURABLE_STORAGE_REQUIRED');
-    const tenantId=path==='/api/v1/groups'?(this.homeTenantId??this.tenantId):this.tenantId;
-    await this.readSnapshots.save({id:this.offlineReadKey(path),actorId:this.actorId,tenantId,path,body});
+    const tenantId=path==='/api/v1/groups'?(this.homeTenantId??this.tenantId):this.tenantId,id=this.offlineReadKey(path),previous=await this.readSnapshots.get<any>(id).catch(()=>undefined),raw=body as any,sourceVersion=raw?.sourceVersion??raw?.projectionVersion??raw?.version??raw?.watermark??previous?.sourceVersion;
+    await this.readSnapshots.save({id,actorId:this.actorId,tenantId,path,body,source,lastSyncedAt:source==='SERVER'?new Date().toISOString():previous?.lastSyncedAt,sourceVersion});
+  }
+  async projectionMeta(path:string):Promise<{computedAt:string|null;sourceVersion:string|number|null;lastSyncedAt:string|null;pendingCount:number;scope:{actorId:string;tenantId:string;groupId:string|null};availability:'AVAILABLE'|'STALE'|'LOCAL_PENDING'|'UNAVAILABLE';source:string|null}>{
+    const snapshot=await this.readSnapshots.get<any>(this.offlineReadKey(path)).catch(()=>undefined),pending=this.outbox.list().filter(x=>!['CONFIRMED','CANCELLED'].includes(x.status)&&String((x.payload as any)?.groupId??this.activeGroupId??'')===String(this.activeGroupId??'')).length,body=snapshot?.body as any,computedAt=body?.computedAt??body?.asOf??body?.generatedAt??snapshot?.updatedAt??null,sourceVersion=snapshot?.sourceVersion??body?.sourceVersion??body?.projectionVersion??body?.version??null;
+    const age=computedAt?Date.now()-Date.parse(String(computedAt)):Infinity,availability=!snapshot?'UNAVAILABLE':pending>0?'LOCAL_PENDING':Number.isFinite(age)&&age>24*3600_000?'STALE':'AVAILABLE';
+    return{computedAt,sourceVersion,lastSyncedAt:snapshot?.lastSyncedAt??null,pendingCount:pending,scope:{actorId:this.actorId,tenantId:this.tenantId,groupId:this.activeGroupId??null},availability,source:snapshot?.source??null};
   }
   private async patchCachedArray<T>(path:string,updater:(items:T[])=>T[]):Promise<T[]>{
     const current=structuredClone(await this.cached<T[]>(path)??[]),next=updater(current);
@@ -298,7 +303,7 @@ export class ConnectedApplication {
       if((incomingVersion===existingVersion&&incomingDigest===existingDigest)||seen.includes(bundle.transferId))return existing;
     }
     const normalized:EcoMemberCapsule={...capsule,schemaVersion:1,projectionVersion:incomingVersion,projectionDigest:incomingDigest};
-    await this.saveCached(path,normalized);await this.saveCached(seenPath,[...seen.filter(x=>x!==bundle.transferId).slice(-255),bundle.transferId]);
+    await this.saveCached(path,normalized,'RELAY');await this.saveCached(seenPath,[...seen.filter(x=>x!==bundle.transferId).slice(-255),bundle.transferId],'RELAY');
     if(typeof window!=='undefined'&&typeof CustomEvent!=='undefined')window.dispatchEvent(new CustomEvent('eco:member-capsule-updated',{detail:{groupId:bundle.groupId,membershipId:own.id,projectionVersion:incomingVersion,transferId:bundle.transferId}}));
     return normalized;
   }
