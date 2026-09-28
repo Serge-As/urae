@@ -1,5 +1,5 @@
-const CACHE = 'eco-system-v1529-sovereign-offline-a01-20260928';
-const PREVIOUS_CACHE = 'eco-system-v1529-sovereign-offline-20260928';
+const CACHE = 'eco-system-v1529-neural-closure-20260928';
+const PREVIOUS_CACHE = 'eco-system-v1529-sovereign-offline-a01-20260928';
 const RELEASE_READY = '/__eco_release_ready__';
 
 // Authentication, navigation and canonical application owners must be complete
