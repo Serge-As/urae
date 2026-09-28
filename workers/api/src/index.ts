@@ -103,6 +103,7 @@ const json = (data: unknown, status = 200, headers: HeadersInit = {}): Response 
 });
 
 const readJson = async <T>(request: Request): Promise<T> => { try { return await request.json() as T; } catch { throw new Error('INVALID_JSON'); } };
+const bytesToBase64=(bytes:Uint8Array):string=>{let binary='';for(let i=0;i<bytes.length;i+=0x8000)binary+=String.fromCharCode(...bytes.subarray(i,Math.min(bytes.length,i+0x8000)));return btoa(binary);};
 const jsonArraySafe=(value:string):string[]=>{try{const x=JSON.parse(value);return Array.isArray(x)?x.map(String):[];}catch{return[];}};
 const strArray=(value:unknown):string[]=>Array.isArray(value)?value.map(String).map(x=>x.trim()).filter(Boolean):typeof value==='string'?value.split(',').map(x=>x.trim()).filter(Boolean):[];
 const finite = (value: unknown, fallback?: number): number => {
@@ -663,6 +664,24 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
 
     if(request.method==='GET'&&url.pathname==='/api/v1/product/capabilities'){
       return json({version:RELEASE_VERSION,count:PRODUCT_CAPABILITY_COUNT,capabilities:PRODUCT_MODULES,readiness:buildProductReadinessReport(PRODUCT_MODULES)},200,cors);
+    }
+
+    if(request.method==='POST'&&url.pathname==='/api/v1/voice/transcribe'){
+      if(!ctx.activeGroupId)throw new Error('ACTIVE_GROUP_REQUIRED');await requireGroup(ctx.activeGroupId,true);
+      if(!options.documentAI?.run)throw new Error('VOICE_TRANSCRIPTION_UNAVAILABLE');
+      const form=await request.formData(),audio=form.get('audio'),language=String(form.get('language')??ctx.locale??'fr').toLowerCase().startsWith('en')?'en':'fr';
+      if(!(audio instanceof Blob)||audio.size<80)throw new Error('VOICE_TRANSCRIPTION_EMPTY');
+      if(audio.size>4_000_000)throw new Error('VOICE_AUDIO_TOO_LARGE');
+      const bytes=new Uint8Array(await audio.arrayBuffer());
+      const result=await options.documentAI.run('@cf/openai/whisper-large-v3-turbo',{
+        audio:bytesToBase64(bytes),task:'transcribe',language,vad_filter:true,condition_on_previous_text:false,
+        compression_ratio_threshold:2.2,no_speech_threshold:0.55,hallucination_silence_threshold:1.5,
+        initial_prompt:language==='fr'
+          ?'Commande financière Eco-System. Conserver exactement les noms propres et les montants. Vocabulaire fréquent : membre, séance, cotisation, épargne, secours, remboursement, prêt, intérêts, assistance, collation, aide locale, main levée.'
+          :'Eco-System financial command. Preserve proper names and amounts exactly. Frequent vocabulary: member, meeting, contribution, savings, support, repayment, loan, interest, assistance.'
+      }) as any;
+      const transcript=String(result?.text??result?.transcription_info?.text??'').trim();if(!transcript)throw new Error('VOICE_TRANSCRIPTION_EMPTY');
+      return json({text:transcript,serverFinal:true,stored:false,model:'@cf/openai/whisper-large-v3-turbo'},200,cors);
     }
 
 
@@ -2440,7 +2459,7 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
     }
 
     return json({error:'NOT_FOUND'},404,cors);
-  } catch(error){const message=error instanceof Error?error.message:'UNKNOWN_ERROR';const status=['FORBIDDEN_SCOPE','FOUNDER_TEAM_ONLY'].includes(message)?403:['IDEMPOTENCY_CONFLICT','CELL_VALUE_CONFLICT','CELL_VERSION_CONFLICT'].includes(message)?409:message.endsWith('_NOT_FOUND')?404:400;return json({error:message,requestId:ctx.requestId},status,cors);}
+  } catch(error){const message=error instanceof Error?error.message:'UNKNOWN_ERROR';const status=['FORBIDDEN_SCOPE','FOUNDER_TEAM_ONLY'].includes(message)?403:message==='VOICE_TRANSCRIPTION_UNAVAILABLE'?503:['IDEMPOTENCY_CONFLICT','CELL_VALUE_CONFLICT','CELL_VERSION_CONFLICT'].includes(message)?409:message.endsWith('_NOT_FOUND')?404:400;return json({error:message,requestId:ctx.requestId},status,cors);}
 };
 
 export const handleRequest=createApiHandler(defaultRepo);
