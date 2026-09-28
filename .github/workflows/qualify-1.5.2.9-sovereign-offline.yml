@@ -39,8 +39,8 @@ jobs:
           for i in {1..30}; do curl -fsS http://127.0.0.1:4173/health >/dev/null && exit 0; sleep 1; done
           cat /tmp/eco-sovereign-webkit.log
           exit 1
-      - name: WebKit sovereign offline qualification
-        run: npx playwright test tests/browser/eco-system-webkit-sovereign-offline-1.5.2.9.spec.mjs --browser=webkit --workers=1
+      - name: WebKit sovereign offline and neural closure qualification
+        run: npx playwright test tests/browser/eco-system-webkit-sovereign-offline-1.5.2.9.spec.mjs tests/browser/eco-system-neural-closure-2026-09-28.spec.mjs --browser=webkit --workers=1
       - name: Upload WebKit report on failure
         if: failure()
         uses: actions/upload-artifact@v4
