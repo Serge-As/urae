@@ -133,7 +133,7 @@ export class ConnectedApplication {
     }catch{}
     return undefined;
   }
-  private async saveCached<T>(path:string,body:T,source:'LOCAL'|'RELAY'|'RESTORED'='LOCAL'):Promise<void>{
+  private async saveCached<T>(path:string,body:T,source:'SERVER'|'LOCAL'|'RELAY'|'RESTORED'='LOCAL'):Promise<void>{
     if(!IndexedDbReadSnapshotAdapter.supported())throw Error('DURABLE_STORAGE_REQUIRED');
     const tenantId=path==='/api/v1/groups'?(this.homeTenantId??this.tenantId):this.tenantId,id=this.offlineReadKey(path),previous=await this.readSnapshots.get<any>(id).catch(()=>undefined),raw=body as any,sourceVersion=raw?.sourceVersion??raw?.projectionVersion??raw?.version??raw?.watermark??previous?.sourceVersion;
     await this.readSnapshots.save({id,actorId:this.actorId,tenantId,path,body,source,lastSyncedAt:source==='SERVER'?new Date().toISOString():previous?.lastSyncedAt,sourceVersion});
