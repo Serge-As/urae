@@ -361,8 +361,21 @@ export class ConnectedApplication {
     await this.queueLocal('RUBRIC_POLICIES_V1',{groupId:this.activeGroupId,rubricId,policies});return updated;
   }
   async previewRubricCycle(rubricId:string,input:{memberCount:number;collectedFromMembers:number;solidarityCoverageAmount?:number;beneficiaryDisbursement?:number}):Promise<RubricCyclePreview>{if(!this.activeGroupId)throw new Error('ACTIVE_GROUP_REQUIRED');return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/rubrics/${encodeURIComponent(rubricId)}/preview-cycle`,{method:'POST',body:JSON.stringify(input)});}
-  async updateMemberLifecycle(membershipId:string,input:{status?:string;roles?:string[];reason?:string;probationEndsAt?:string;historicalJoinedAt?:string;expectedRevision?:number}):Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/members/'+encodeURIComponent(membershipId)+'/lifecycle',{method:'PUT',body:JSON.stringify(input)});}
-  async updateMemberName(membershipId:string,displayName:string,reason:string):Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/members/'+encodeURIComponent(membershipId)+'/name',{method:'PUT',body:JSON.stringify({displayName,reason})});}
+  async updateMemberLifecycle(membershipId:string,input:{status?:string;roles?:string[];reason?:string;probationEndsAt?:string;historicalJoinedAt?:string;expectedRevision?:number}):Promise<any>{
+    if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');
+    if(!this.isOffline())try{return await this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/members/'+encodeURIComponent(membershipId)+'/lifecycle',{method:'PUT',body:JSON.stringify(input)});}catch(error){if(!(error instanceof Error)||error.message!=='NETWORK_UNAVAILABLE')throw error;}
+    const path='/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/members',rows=await this.cached<MembershipView[]>(path)??[],current=rows.find(x=>x.id===membershipId);if(!current)throw Error('MEMBERSHIP_NOT_FOUND');
+    const expected=Number(input.expectedRevision??current.lifecycleRevision??0),actual=Number(current.lifecycleRevision??0);if(expected!==actual)throw Error('MEMBERSHIP_REVISION_CONFLICT');
+    const updated:any={...current,status:input.status??current.status,roles:input.roles??current.roles,probationEndsAt:input.probationEndsAt??(current as any).probationEndsAt,historicalJoinedAt:input.historicalJoinedAt??(current as any).historicalJoinedAt,lifecycleRevision:actual+1,updatedAt:new Date().toISOString(),localActionPending:true};
+    await this.saveCached(path,rows.map(x=>x.id===membershipId?updated:x));await this.queueLocal('MEMBER_LIFECYCLE_V1',{groupId:this.activeGroupId,membershipId,input:{...input,expectedRevision:expected}});return updated;
+  }
+  async updateMemberName(membershipId:string,displayName:string,reason:string):Promise<any>{
+    if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');const clean=displayName.trim(),why=reason.trim();if(!clean)throw Error('INVALID_DISPLAY_NAME');if(!why)throw Error('MEMBER_NAME_REASON_REQUIRED');
+    if(!this.isOffline())try{return await this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/members/'+encodeURIComponent(membershipId)+'/name',{method:'PUT',body:JSON.stringify({displayName:clean,reason:why})});}catch(error){if(!(error instanceof Error)||error.message!=='NETWORK_UNAVAILABLE')throw error;}
+    const path='/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/members',rows=await this.cached<MembershipView[]>(path)??[],current=rows.find(x=>x.id===membershipId);if(!current)throw Error('MEMBERSHIP_NOT_FOUND');
+    const updated:any={...current,displayName:clean,updatedAt:new Date().toISOString(),localActionPending:true};await this.saveCached(path,rows.map(x=>x.id===membershipId?updated:x));
+    await this.queueLocal('MEMBER_NAME_V1',{groupId:this.activeGroupId,membershipId,displayName:clean,reason:why});return updated;
+  }
   async listMembers():Promise<MembershipView[]>{if(!this.activeGroupId)return[];return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/members`);}
   async listMeetings():Promise<MeetingSession[]>{if(!this.activeGroupId)return[];return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/meetings`);}
   async meetingHistory(meetingId:string):Promise<any[]>{if(!this.activeGroupId)return[];const r=await this.request<any>(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/meetings/${encodeURIComponent(meetingId)}/history`);return r.items??[];}
