@@ -18,6 +18,7 @@ export interface EcoRelayPairingMaterial {
 export interface EcoEncryptedCapsule {
   membershipId:string;
   keyId:string;
+  expiresAt:string;
   iv:string;
   ciphertext:string;
 }
@@ -69,13 +70,14 @@ export async function encryptMemberCapsule(capsule:EcoMemberCapsule,material:Eco
   const raw=unb64u(material.rawKey),key=await crypto.subtle.importKey('raw',rawBuffer(raw),{name:'AES-GCM'},false,['encrypt']);
   const iv=crypto.getRandomValues(new Uint8Array(12)),aad=te.encode(JSON.stringify([capsule.groupId,capsule.membershipId,material.keyId,capsule.expiresAt]));
   const cipher=await crypto.subtle.encrypt({name:'AES-GCM',iv:rawBuffer(iv),additionalData:rawBuffer(aad)},key,te.encode(JSON.stringify(capsule)));
-  return{membershipId:capsule.membershipId,keyId:material.keyId,iv:b64u(iv),ciphertext:b64u(new Uint8Array(cipher))};
+  return{membershipId:capsule.membershipId,keyId:material.keyId,expiresAt:capsule.expiresAt,iv:b64u(iv),ciphertext:b64u(new Uint8Array(cipher))};
 }
 
-export async function decryptMemberCapsule(groupId:string,encrypted:EcoEncryptedCapsule,material:EcoRelayPairingMaterial,expiresAt:string):Promise<EcoMemberCapsule>{
+export async function decryptMemberCapsule(groupId:string,encrypted:EcoEncryptedCapsule,material:EcoRelayPairingMaterial,_bundleExpiresAt?:string):Promise<EcoMemberCapsule>{
   if(encrypted.membershipId!==material.membershipId||encrypted.keyId!==material.keyId)throw Error('RELAY_KEY_NOT_FOR_MEMBER');
   const raw=unb64u(material.rawKey),iv=unb64u(encrypted.iv),key=await crypto.subtle.importKey('raw',rawBuffer(raw),{name:'AES-GCM'},false,['decrypt']);
-  const aad=te.encode(JSON.stringify([groupId,encrypted.membershipId,material.keyId,expiresAt]));
+  if(Date.parse(encrypted.expiresAt)<=Date.now())throw Error('RELAY_CAPSULE_EXPIRED');
+  const aad=te.encode(JSON.stringify([groupId,encrypted.membershipId,material.keyId,encrypted.expiresAt]));
   try{
     const plain=await crypto.subtle.decrypt({name:'AES-GCM',iv:rawBuffer(iv),additionalData:rawBuffer(aad)},key,rawBuffer(unb64u(encrypted.ciphertext)));
     const capsule=JSON.parse(td.decode(plain)) as EcoMemberCapsule;
