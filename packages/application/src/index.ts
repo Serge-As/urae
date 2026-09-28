@@ -933,6 +933,14 @@ export class ConnectedApplication {
   async createAdCampaign(input:any):Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/ads/campaigns',{method:'POST',body:JSON.stringify(input)});}
   async transitionAdCampaign(id:string,state:string,note=''):Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/ads/campaigns/'+encodeURIComponent(id)+'/transition',{method:'POST',body:JSON.stringify({state,note})});}
   async recordAdMetric(id:string,event:'IMPRESSION'|'OPEN'|'ACTION'|'NEGATIVE_FEEDBACK'):Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/ads/campaigns/'+encodeURIComponent(id)+'/metric',{method:'POST',body:JSON.stringify({event})});}
+  async saveExerciseYieldDraft(method:string,result:any):Promise<any>{
+    if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');const clean=method.trim();if(!clean)throw Error('YIELD_METHOD_REQUIRED');
+    const draft={groupId:this.activeGroupId,method:clean,result:structuredClone(result),savedAt:new Date().toISOString(),savedBy:this.actorId};
+    await this.saveCached('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/exercise-yield-draft',draft);return draft;
+  }
+  async exerciseYieldDraft():Promise<any|undefined>{
+    if(!this.activeGroupId)return undefined;return this.cached('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/exercise-yield-draft');
+  }
   async savingsYieldSourceData():Promise<any>{
     if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');const path='/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/savings-yield/source-data';
     if(!this.isOffline())try{return await this.request(path);}catch(error){if(!(error instanceof Error)||error.message!=='NETWORK_UNAVAILABLE')throw error;}
