@@ -1,10 +1,13 @@
 import {envelopeForOutbox,generateRelayKey,exportRelayKey,importRelayKey,encryptRelayEnvelope,decryptRelayEnvelope,RelayReplayGuard} from '../../../packages/relay/src/index.js';
+import {EcoBroadcastReceiver,encodePairingQr,decodePairingQr} from '../../../packages/relay/src/broadcast.js';
+import {qrV10LMatrix,qrMatrixSvg} from '../../../packages/relay/src/qr-v10.js';
+import QrScanner from './vendor/qr-scanner.min.js';
 
 const el=(tag,text,cls)=>{const n=document.createElement(tag);if(text!==undefined)n.textContent=String(text);if(cls)n.className=cls;return n;};
 const button=(text,cls='secondary')=>{const b=el('button',text,cls);b.type='button';return b;};
 const replayGuard=new RelayReplayGuard();
 const DB='eco-relay-keys-v1',STORE='keys';
-let lastBundle=null,peer=null,channel=null;
+let lastBundle=null,peer=null,channel=null,broadcastTimer=null,broadcastWakeLock=null,scanner=null;
 
 const openDb=()=>new Promise((resolve,reject)=>{const r=indexedDB.open(DB,1);r.onupgradeneeded=()=>{if(!r.result.objectStoreNames.contains(STORE))r.result.createObjectStore(STORE,{keyPath:'id'});};r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(r.error);});
 const saveKey=async(id,key)=>{const db=await openDb();try{await new Promise((resolve,reject)=>{const tx=db.transaction(STORE,'readwrite');tx.objectStore(STORE).put({id,key});tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error);});}finally{db.close();}};
@@ -13,6 +16,17 @@ const deviceId=()=>{try{let id=localStorage.getItem('eco.relay.device');if(!id){
 const shareText=async(title,text)=>{if(navigator.share){await navigator.share({title,text});return;}await navigator.clipboard?.writeText(text);};
 const downloadJson=(name,value)=>{const blob=new Blob([JSON.stringify(value,null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);};
 const waitIce=pc=>new Promise(resolve=>{if(pc.iceGatheringState==='complete')return resolve();const done=()=>{if(pc.iceGatheringState==='complete'){pc.removeEventListener('icegatheringstatechange',done);resolve();}};pc.addEventListener('icegatheringstatechange',done);setTimeout(resolve,5000);});
+
+const qrSvg=(payload,scale=6)=>qrMatrixSvg(qrV10LMatrix(payload),scale,4);
+const stopBroadcastAnimation=async()=>{
+  if(broadcastTimer){clearInterval(broadcastTimer);broadcastTimer=null;}
+  try{await broadcastWakeLock?.release?.();}catch{}broadcastWakeLock=null;
+};
+const shareJsonFile=async(name,title,value)=>{
+  const blob=new Blob([JSON.stringify(value)],{type:'application/json'}),file=new File([blob],name,{type:'application/json'});
+  if(navigator.share&&navigator.canShare?.({files:[file]})){await navigator.share({title,files:[file]});return true;}
+  downloadJson(name,value);return false;
+};
 
 export function mountResilienceUI({app,notify=()=>{},showError=console.error}){
   const relayRoot=document.getElementById('ecoRelayWorkspace'),localRoot=document.getElementById('ecoLocalWorkspace');
