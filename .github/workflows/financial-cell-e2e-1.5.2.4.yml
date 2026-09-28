@@ -52,8 +52,8 @@ jobs:
           for i in {1..40}; do curl -fsS http://127.0.0.1:4173/health >/dev/null && exit 0; sleep 1; done
           cat /tmp/eco-financial-e2e.log
           exit 1
-      - name: Real click Enter closed-session and offline financial flow
-        run: npx playwright test tests/browser/core-a-b-c-t01-t15-1.5.2.5.spec.mjs tests/browser/financial-cell-consensus-persistence-1.5.2.6.spec.mjs tests/browser/browser-shell-mobile-1.5.2.6.spec.mjs --browser=chromium --workers=1
+      - name: Real click Enter exact replacement closed-session and offline financial flow
+        run: npx playwright test tests/browser/financial-cell-e2e-1.5.2.4.spec.mjs tests/browser/core-a-b-c-t01-t15-1.5.2.5.spec.mjs tests/browser/financial-cell-consensus-persistence-1.5.2.6.spec.mjs tests/browser/browser-shell-mobile-1.5.2.6.spec.mjs --browser=chromium --workers=1
       - name: Print isolated server log on failure
         if: failure()
         run: |
