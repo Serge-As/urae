@@ -31,12 +31,12 @@ test('runtime bilingual dictionary covers critical current shell journeys',()=>{
 test('PWA cache contains current field-integrity and bilingual transitive modules',()=>{
   const sw=fs.readFileSync('apps/web/sw.js','utf8');
   for(const path of ['/src/field-hardening.js','/src/voice-entry-bootstrap.js','/src/voice-entry-ui.js','/src/expense-recap-ui.js','/src/member-dossier-ui.js','/src/documents-ui.js','/src/contextual-group-ui.js','/src/runtime-i18n.js','/src/completion-ui.js','/src/advanced-ui.js','/src/offline-snapshot.js','/packages/completion/src/index.js'])assert.ok(sw.includes(path),path);
-  assert.match(sw,/eco-system-v1528-geo-directory-20260928/);
+  assert.match(sw,/eco-system-v1529-sovereign-offline-20260928/);
 });
 
 test('current shell identifies the current release instead of stale copies',()=>{
   const html=fs.readFileSync('apps/web/index.html','utf8');
-  assert.match(html,/1\.5\.2/);assert.match(html,/BLUEPRINT(?: EXÉCUTABLE)? 5\.0\.0/);assert.doesNotMatch(html,/1\.1\.2/);
+  assert.match(html,/1\.5\.2/);assert.match(html,/BLUEPRINT(?: EXÉCUTABLE)? 5\.0\.0/i);assert.doesNotMatch(html,/1\.1\.2/);
   assert.match(html,/view-tontines/);assert.match(html,/tontineRubricCatalog/);assert.match(html,/view-members/);assert.match(html,/view-backoffice/);assert.match(html,/loanCompletionPanel/);assert.match(html,/completionLab/);
 });
 
