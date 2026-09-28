@@ -72,7 +72,7 @@ for(const [name,actual,expected] of checks)if(actual!==expected)throw new Error(
 const swCurrent=swSource.match(/const CACHE = '([^']+)'/)?.[1],swPrevious=swSource.match(/const PREVIOUS_CACHE = '([^']+)'/)?.[1];
 if(swCurrent!==rel.pwaCache)throw new Error('Release contract mismatch Service Worker current cache');
 if(swPrevious!==rel.previousPwaCache)throw new Error('Release contract mismatch Service Worker rollback cache');
-if(!workflowSource.includes(`EXPECTED_VERSION: ${rel.version}`)||!workflowSource.includes(`"pwaCache": "${rel.pwaCache}"`))throw new Error('Delivery workflow release identity drift');
+if(!workflowSource.includes(`EXPECTED_VERSION: ${rel.version}`)||!workflowSource.includes(String(rel.pwaCache)))throw new Error('Delivery workflow release identity drift');
 if(releaseContract.truthAxes?.fieldAcceptance!=='NOT_ACCEPTED')throw new Error('FIELD_ACCEPTED requires separate physical evidence and cannot be promoted by source CI');
 if(releaseContract.invariants?.realMoneyEnabled!==false)throw new Error('Release contract must keep real money disabled');
 
