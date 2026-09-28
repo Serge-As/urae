@@ -79,7 +79,7 @@ export function encodePairingQr(material:EcoRelayPairingMaterial):string{
   if(material.protocolVersion!==1||!material.groupId||!material.membershipId||!material.keyId||!material.rawKey)throw Error('INVALID_RELAY_PAIRING_MATERIAL');
   let compact:any={p:1,g:material.groupId,m:material.membershipId,k:material.keyId,r:material.rawKey,c:material.createdAt,G:material.groupName??'',d:material.displayName??'',n:material.memberNumber??null,a:material.groupAuthorityId??''};
   let encoded='ECOP1:'+b64u(te.encode(JSON.stringify(compact)));
-  if(te.encode(encoded).length>250){compact={p:1,g:material.groupId,m:material.membershipId,k:material.keyId,r:material.rawKey,c:material.createdAt,n:material.memberNumber??null,a:material.groupAuthorityId??''};encoded='ECOP1:'+b64u(te.encode(JSON.stringify(compact)));}
+  if(te.encode(encoded).length>250){compact={p:1,g:material.groupId,m:material.membershipId,k:material.keyId,r:material.rawKey,n:material.memberNumber??null,a:material.groupAuthorityId??''};encoded='ECOP1:'+b64u(te.encode(JSON.stringify(compact)));}
   if(te.encode(encoded).length>271)throw Error('PAIRING_QR_TOO_LARGE');
   return encoded;
 }
