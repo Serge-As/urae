@@ -17,6 +17,15 @@ const ledgerCellTotal=async(page,{groupId,meetingId,membershipId,rubricId})=>pag
     .reduce((n,x)=>n+Number(x.netAmount??0),0);
 },{groupId,meetingId,membershipId,rubricId});
 
+const sheetExpenseTotal=async(page,{groupId,meetingId,membershipId,rubricId})=>page.evaluate(async({groupId,meetingId,membershipId,rubricId})=>{
+  const response=await fetch('/api/v1/groups/'+encodeURIComponent(groupId)+'/expenses?scope=SHEET',{headers:{'x-active-group-id':groupId}});
+  if(!response.ok)throw new Error('EXPENSE_HTTP_'+response.status+':'+await response.text());
+  const rows=await response.json();
+  return (Array.isArray(rows)?rows:rows.items??[])
+    .filter(x=>x.meetingId===meetingId&&x.membershipId===membershipId&&x.rubricId===rubricId)
+    .reduce((n,x)=>n+Number(x.amount??0),0);
+},{groupId,meetingId,membershipId,rubricId});
+
 test('real financial matrix validates click, Enter, closed-session first entry and offline replay',async({page,context})=>{
   test.setTimeout(120_000);
   const pageErrors=[];
@@ -59,6 +68,8 @@ test('real financial matrix validates click, Enter, closed-session first entry a
     for(const name of ['Secours E2E','Collation E2E','Transport E2E','Épargne E2E']){
       rubrics.push(await json('/api/v1/groups/'+encodeURIComponent(group.id)+'/rubrics','POST',rubricBody(name),group.id));
     }
+    const expenseBody=rubricBody('Dépense E2E');expenseBody.facets.direction='OUTFLOW';
+    rubrics.push(await json('/api/v1/groups/'+encodeURIComponent(group.id)+'/rubrics','POST',expenseBody,group.id));
     const meeting=await json('/api/v1/groups/'+encodeURIComponent(group.id)+'/meetings','POST',{title:'Séance E2E ouverte',scheduledAt:'2026-09-25T15:00:00.000Z'},group.id);
     localStorage.setItem('tontine.activeGroupId',group.id);
     return{groupId:group.id,membershipId,meetingId:meeting.id,rubricIds:rubrics.map(x=>x.id)};
@@ -175,6 +186,12 @@ test('real financial matrix validates click, Enter, closed-session first entry a
   await expect.poll(()=>moneyValue(cell(ids.rubricIds[3],ids.meetingId))).toBe(3000);
   await expect(cell(ids.rubricIds[3],ids.meetingId)).toContainText(/Enregistré sur cet appareil|synchro en attente/i);
 
+  const offlineExpense=cell(ids.rubricIds[4],ids.meetingId);
+  await offlineExpense.locator('.cell-target-input').fill('700');
+  await offlineExpense.locator('.cell-validate').click();
+  await expect.poll(()=>moneyValue(cell(ids.rubricIds[4],ids.meetingId))).toBe(-700);
+  await expect(cell(ids.rubricIds[4],ids.meetingId)).toContainText(/Enregistré sur cet appareil|synchro en attente/i);
+
   await page.reload({waitUntil:'domcontentloaded'});
   await page.waitForTimeout(2000);
   const offlineOperations=page.locator('button[data-view="operations"]').first();
@@ -202,13 +219,19 @@ test('real financial matrix validates click, Enter, closed-session first entry a
   await offlineOperations.click();
   await expect(page.locator('#meetingMatrix .canonical-financial-matrix')).toBeVisible();
   await expect.poll(()=>moneyValue(cell(ids.rubricIds[3],ids.meetingId))).toBe(3000);
+  await expect.poll(()=>moneyValue(cell(ids.rubricIds[4],ids.meetingId))).toBe(-700);
+  await expect(cell(ids.rubricIds[4],ids.meetingId)).toContainText(/Enregistré sur cet appareil|synchro en attente/i);
 
   await context.setOffline(false);
   await expect.poll(()=>ledgerCellTotal(page,{...ids,rubricId:ids.rubricIds[3]}),{timeout:30_000}).toBe(3000);
+  await expect.poll(()=>sheetExpenseTotal(page,{...ids,rubricId:ids.rubricIds[4]}),{timeout:30_000}).toBe(700);
   await expect.poll(()=>moneyValue(cell(ids.rubricIds[3],ids.meetingId)),{timeout:30_000}).toBe(3000);
+  await expect.poll(()=>moneyValue(cell(ids.rubricIds[4],ids.meetingId)),{timeout:30_000}).toBe(-700);
 
   await page.reload({waitUntil:'domcontentloaded'});
   await page.locator('button[data-view="operations"]').first().click();
   await expect.poll(()=>moneyValue(cell(ids.rubricIds[3],ids.meetingId))).toBe(3000);
   await expect.poll(()=>ledgerCellTotal(page,{...ids,rubricId:ids.rubricIds[3]})).toBe(3000);
+  await expect.poll(()=>moneyValue(cell(ids.rubricIds[4],ids.meetingId))).toBe(-700);
+  await expect.poll(()=>sheetExpenseTotal(page,{...ids,rubricId:ids.rubricIds[4]})).toBe(700);
 });
