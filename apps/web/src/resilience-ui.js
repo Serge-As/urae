@@ -32,6 +32,37 @@ export function mountResilienceUI({app,notify=()=>{},showError=console.error}){
   const relayRoot=document.getElementById('ecoRelayWorkspace'),localRoot=document.getElementById('ecoLocalWorkspace');
   if(!relayRoot||!localRoot)return{refresh:async()=>{}};
   let activeKey,activeKeyId;
+  const broadcastReceiver=new EcoBroadcastReceiver();
+
+  const stopScanner=async()=>{
+    if(scanner){try{scanner.stop();scanner.destroy();}catch{}scanner=null;}
+  };
+  const capsuleSummary=(capsule)=>{
+    const p=capsule?.projection??{},m=p.member??{},meeting=p.meeting??{},debts=Array.isArray(p.loanDebts)?p.loanDebts:[],receipts=Array.isArray(p.receipts)?p.receipts:[];
+    const box=el('article',undefined,'item');
+    box.append(el('strong','Compte reçu · '+(m.memberNumber?('N° '+m.memberNumber+' · '):'')+(m.displayName??capsule.membershipId)));
+    box.append(el('p',[meeting.title?('Séance : '+meeting.title):'',receipts.length+' ligne(s) reçue(s)','Solde contributions : '+Number(p.statementTotal??0).toLocaleString('fr-FR')+' F','Dette prêt : '+debts.reduce((n,x)=>n+Number(x.totalDebt??0),0).toLocaleString('fr-FR')+' F'].filter(Boolean).join(' · '),'hint'));
+    return box;
+  };
+  const acceptQrPayload=async(raw,progress,result)=>{
+    if(raw.startsWith('ECOP1:')){
+      const material=decodePairingQr(raw);await app.importRelayPairingMaterial(material);
+      progress.textContent='Appairage reçu et enregistré hors ligne.';result.replaceChildren(el('p','Appairage Eco Relay terminé. Ce téléphone peut maintenant recevoir sa capsule privée.','truth-notice'));notify('Appairage Eco Relay terminé.');return;
+    }
+    if(!raw.startsWith('ECOB1:'))throw Error('QR_ECO_INCONNU');
+    const state=broadcastReceiver.add(raw);progress.textContent='Broadcast : '+state.received+' / '+state.total+' trames reçues';
+    if(state.complete){
+      const bundle=await broadcastReceiver.assemble(),capsule=await app.receiveEcoBroadcast(bundle);
+      result.replaceChildren(capsuleSummary(capsule));progress.textContent='Broadcast terminé · compte mis à jour sur cet appareil.';broadcastReceiver.reset();notify('Compte personnel mis à jour sans Internet.');
+    }
+  };
+  const startScanner=async(video,progress,result)=>{
+    await stopScanner();
+    if(!navigator.mediaDevices?.getUserMedia)throw Error('CAMERA_WEB_INDISPONIBLE');
+    scanner=new QrScanner(video,res=>void(async()=>{try{await acceptQrPayload(String(res.data??res),progress,result);}catch(e){if(String(e?.message??e)!=='INVALID_BROADCAST_FRAME')showError(e);}})(),{preferredCamera:'environment',maxScansPerSecond:10,highlightScanRegion:true,highlightCodeOutline:true,returnDetailedScanResult:true});
+    try{await scanner.start();progress.textContent='Caméra active · gardez le QR dans le cadre.';}
+    catch(error){await stopScanner();throw error;}
+  };
 
   const renderRelay=async()=>{
     relayRoot.replaceChildren();
