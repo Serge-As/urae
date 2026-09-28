@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import {buildExerciseClosingPlan,buildExerciseCarryForwardSeed} from '../.build/packages/exercise/src/index.js';
-import {createRelayPairingMaterial,encodePairingQr,decodePairingQr,encryptMemberCapsule,decryptMemberCapsule,createBroadcastBundle,encodeBroadcastFrames,EcoBroadcastReceiver} from '../.build/packages/relay/src/broadcast.js';
+import {createRelayPairingMaterial,encodePairingQr,decodePairingQr,encryptMemberCapsule,decryptMemberCapsule,createBroadcastBundle,encodeBroadcastFrames,encodeTargetedBroadcastFrames,EcoBroadcastReceiver,EcoTargetedBroadcastReceiver} from '../.build/packages/relay/src/broadcast.js';
 import {COMPLETION_WORKFLOWS} from '../.build/packages/completion/src/index.js';
 
 test('exercise closing distinguishes real cash payout from money carried into next exercise',()=>{
@@ -95,6 +95,28 @@ test('Eco Broadcast can carry 80 separately encrypted member capsules with loss-
   assert.equal(capsule.projection.member.memberNumber,3);
 });
 
+test('targeted Broadcast lets one member ignore the other 79 capsules before storage',async()=>{
+  const groupId='group-target-80',encrypted=[],materials=[];
+  for(let i=1;i<=80;i++){
+    const membershipId='tm'+String(i).padStart(3,'0'),base=await createRelayPairingMaterial(membershipId),material={...base,groupId,memberNumber:i};
+    materials.push(material);
+    encrypted.push(await encryptMemberCapsule({
+      protocolVersion:1,groupId,membershipId,generatedAt:new Date().toISOString(),expiresAt:new Date(Date.now()+3600000).toISOString(),
+      projection:{member:{memberNumber:i,displayName:'Membre '+i},meeting:{id:'s12'},receipts:[{rubric:'Epargne',amount:1000+i}],statementTotal:20000+i}
+    },material));
+  }
+  const bundle=createBroadcastBundle(groupId,encrypted,60),frames=await encodeTargetedBroadcastFrames(bundle,165);
+  assert.ok(frames.length>80);assert.ok(frames.every(x=>new TextEncoder().encode(x).length<=271));
+  const receiver=new EcoTargetedBroadcastReceiver(materials[26].keyId);
+  let forMember=0;
+  for(const raw of frames){const state=receiver.add(raw);if(state.forThisMember)forMember++;}
+  assert.ok(forMember>0);assert.ok(forMember<frames.length/10);assert.equal(receiver.progress().complete,true);
+  const targeted=await receiver.assemble();
+  assert.equal(targeted.capsules.length,1);assert.equal(targeted.capsules[0].membershipId,'tm027');
+  const capsule=await decryptMemberCapsule(groupId,targeted.capsules[0],materials[26],targeted.expiresAt);
+  assert.equal(capsule.projection.member.memberNumber,27);
+});
+
 test('sovereign offline surfaces are isolated and iOS fallback assets are part of the coherent shell',()=>{
   const html=fs.readFileSync('apps/web/index.html','utf8');
   const legacy=fs.readFileSync('apps/web/src/resilience-ui.js','utf8');
@@ -107,7 +129,7 @@ test('sovereign offline surfaces are isolated and iOS fallback assets are part o
   assert.match(html,/ecoRelayLegacyWorkspace/);assert.match(html,/ecoRelaySovereignWorkspace/);
   assert.match(html,/ecoLocalLegacyWorkspace/);assert.match(html,/ecoLocalSovereignWorkspace/);
   assert.match(legacy,/ecoRelayLegacyWorkspace/);assert.match(sovereign,/ecoRelaySovereignWorkspace/);
-  assert.match(sovereign,/QrScanner/);assert.match(sovereign,/decodePairingQr/);
+  assert.match(sovereign,/QrScanner/);assert.match(sovereign,/decodePairingQr/);assert.match(sovereign,/EcoTargetedBroadcastReceiver/);
   assert.doesNotMatch(sovereign,/BARCODE_DETECTOR_UNAVAILABLE_USE_ECO_PACK/);
   assert.match(sw,/\/src\/vendor\/qr-scanner\.min\.js/);
   assert.match(sw,/\/src\/vendor\/qr-scanner-worker\.min\.js/);
