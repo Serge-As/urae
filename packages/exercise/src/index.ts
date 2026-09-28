@@ -34,9 +34,13 @@ export interface ExerciseClosingPlan {
   totalPrincipal:number;
   totalInterest:number;
   retainedFundsTotal:number;
+  retainedFundsPayoutTotal:number;
+  retainedFundsCarryForwardTotal:number;
   memberCashPayoutTotal:number;
   memberCarryForwardTotal:number;
   unassignedCarryForward:number;
+  cashOutTotal:number;
+  plannedCarryForwardTotal:number;
   requiredCashAtClose:number;
   unallocatedCash:number;
   nextExerciseOpeningCash:number;
@@ -59,13 +63,19 @@ export function buildExerciseClosingPlan(input:ExerciseClosingInput):ExerciseClo
   if(retainedFunds.some(x=>!x.code||!x.label))throw Error('INVALID_RETAINED_FUND');
   if(new Set(retainedFunds.map(x=>x.code)).size!==retainedFunds.length)throw Error('DUPLICATE_RETAINED_FUND');
   const totalPrincipal=members.reduce((n,x)=>n+x.principal,0),totalInterest=members.reduce((n,x)=>n+x.interest,0),
-    retainedFundsTotal=retainedFunds.reduce((n,x)=>n+x.amount,0),memberCashPayoutTotal=members.reduce((n,x)=>n+x.cashPayout,0),
+    retainedFundsTotal=retainedFunds.reduce((n,x)=>n+x.amount,0),
+    retainedFundsPayoutTotal=retainedFunds.filter(x=>!x.carryForward).reduce((n,x)=>n+x.amount,0),
+    retainedFundsCarryForwardTotal=retainedFunds.filter(x=>x.carryForward).reduce((n,x)=>n+x.amount,0),
+    memberCashPayoutTotal=members.reduce((n,x)=>n+x.cashPayout,0),
     memberCarryForwardTotal=members.reduce((n,x)=>n+x.nextExerciseOpeningPosition,0),
-    nextExerciseOpeningCash=memberCarryForwardTotal+retainedFunds.filter(x=>x.carryForward).reduce((n,x)=>n+x.amount,0)+unassigned,
-    requiredCashAtClose=memberCashPayoutTotal+retainedFundsTotal+unassigned,
+    cashOutTotal=memberCashPayoutTotal+retainedFundsPayoutTotal,
+    plannedCarryForwardTotal=memberCarryForwardTotal+retainedFundsCarryForwardTotal+unassigned,
+    requiredCashAtClose=cashOutTotal+plannedCarryForwardTotal,
     unallocatedCash=closingCash-requiredCashAtClose;
   if(unallocatedCash<0)throw Error('EXERCISE_CLOSING_EXCEEDS_CASH');
-  return{closingCash,totalPrincipal,totalInterest,retainedFundsTotal,memberCashPayoutTotal,memberCarryForwardTotal,unassignedCarryForward:unassigned,requiredCashAtClose,unallocatedCash,nextExerciseOpeningCash:nextExerciseOpeningCash+unallocatedCash,members,retainedFunds,balanced:true};
+  const nextExerciseOpeningCash=plannedCarryForwardTotal+unallocatedCash;
+  if(nextExerciseOpeningCash!==closingCash-cashOutTotal)throw Error('EXERCISE_CLOSING_BALANCE_MISMATCH');
+  return{closingCash,totalPrincipal,totalInterest,retainedFundsTotal,retainedFundsPayoutTotal,retainedFundsCarryForwardTotal,memberCashPayoutTotal,memberCarryForwardTotal,unassignedCarryForward:unassigned,cashOutTotal,plannedCarryForwardTotal,requiredCashAtClose,unallocatedCash,nextExerciseOpeningCash,members,retainedFunds,balanced:true};
 }
 
 export interface ExerciseCarryForwardSeed {
