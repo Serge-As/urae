@@ -1,12 +1,10 @@
-import {EcoBroadcastReceiver} from '../../../packages/relay/src/broadcast.js';
+import {EcoBroadcastReceiver,encodePairingQr,decodePairingQr} from '../../../packages/relay/src/broadcast.js';
 import {qrV10LMatrix,qrMatrixSvg} from '../../../packages/relay/src/qr-v10.js';
+import QrScanner from './vendor/qr-scanner.min.js';
 
 const el=(tag,text,cls)=>{const n=document.createElement(tag);if(text!==undefined)n.textContent=text;if(cls)n.className=cls;return n;};
-const b64u=s=>{const bytes=new TextEncoder().encode(s);let raw='';for(const b of bytes)raw+=String.fromCharCode(b);return btoa(raw).replaceAll('+','-').replaceAll('/','_').replace(/=+$/,'');};
-const unb64u=v=>{const n=v.replaceAll('-','+').replaceAll('_','/'),raw=atob(n+'='.repeat((4-n.length%4)%4)),bytes=new Uint8Array(raw.length);for(let i=0;i<raw.length;i++)bytes[i]=raw.charCodeAt(i);return new TextDecoder().decode(bytes);};
-const pairingText=material=>'ECOP1:'+b64u(material.membershipId)+':'+material.keyId+':'+material.rawKey;
-const parsePairing=raw=>{const m=/^ECOP1:([A-Za-z0-9_-]+):([a-f0-9]{16}):([A-Za-z0-9_-]+)$/.exec(raw.trim());if(!m)throw Error('PAIRING_QR_INVALID');return{protocolVersion:1,membershipId:unb64u(m[1]),keyId:m[2],rawKey:m[3],createdAt:new Date().toISOString()};};
 const download=(name,text,type='application/json')=>{const blob=new Blob([text],{type}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),1500);};
+const shareOrDownload=async(name,text,type,title)=>{const blob=new Blob([text],{type}),file=new File([blob],name,{type});if(navigator.share&&navigator.canShare?.({files:[file]})){await navigator.share({title,files:[file]});return true;}download(name,text,type);return false;};
 const money=n=>Math.round(Number(n)||0).toLocaleString('fr-FR')+' F';
 const yieldRows=draft=>{
   const map=new Map(),add=row=>{if(!row?.memberId)return;const old=map.get(row.memberId)??{membershipId:row.memberId,principal:0,interest:0};old.principal+=Number(row.principal??0);old.interest+=Number(row.interest??0);map.set(row.memberId,old);};
@@ -18,10 +16,10 @@ const yieldRows=draft=>{
 
 export function mountSovereignOfflineUI({app,getMembers=()=>[],getMeetings=()=>[],isManager=()=>false,notify=()=>{},showError=console.error}={}){
   const relay=document.getElementById('ecoRelaySovereignWorkspace'),local=document.getElementById('ecoLocalSovereignWorkspace');if(!relay||!local)return{refresh:async()=>{}};
-  let frames=[],frameIndex=0,timer=null,currentBundle=null,cameraStream=null,scanTimer=null,receiver=new EcoBroadcastReceiver();
+  let frames=[],frameIndex=0,timer=null,currentBundle=null,qrScanner=null,receiver=new EcoBroadcastReceiver();
 
   const stopStream=()=>{if(timer){clearInterval(timer);timer=null;}};
-  const stopCamera=()=>{if(scanTimer){clearTimeout(scanTimer);scanTimer=null;}if(cameraStream){for(const track of cameraStream.getTracks())track.stop();cameraStream=null;}};
+  const stopCamera=()=>{if(qrScanner){try{qrScanner.stop();qrScanner.destroy();}catch{}qrScanner=null;}video.srcObject=null;};
 
   const status=el('p','Eco Relay prêt. Les données financières restent gouvernées par le noyau canonique.','truth-notice');
   const pairing=el('section',undefined,'item'),ph=el('h3','1 · Appairer chaque membre une seule fois'),pairNote=el('p','Le QR d’appairage contient la clé privée de ce membre. Affichez-le seulement devant la personne concernée, de près, puis masquez-le.','hint');
