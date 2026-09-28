@@ -189,10 +189,11 @@ export class ConnectedApplication {
     const session=await this.authStatus();if(!session.authenticated || !session.account)throw Error('AUTHENTICATION_REQUIRED');
     this.actorId=session.account.id;this.homeTenantId=session.account.tenantId;this.tenantId=session.account.tenantId;this.displayName=session.account.displayName;
     let preferred:string|undefined;try{preferred=localStorage.getItem('tontine.locale')??undefined;}catch{}this.locale=preferred??session.account.locale;
+    if(IndexedDbOutboxAdapter.supported())try{const persisted=await this.outboxStorage.load();this.outbox.restore(persisted.filter(x=>x.actorId===this.actorId&&x.tenantId===this.tenantId));}catch{}
+    await this.recoverInterruptedVaultRestores();
     const groups=await this.listGroups();if(this.activeGroupId&&!groups.some(g=>g.id===this.activeGroupId))this.selectGroup(undefined);if(!this.activeGroupId&&groups[0])this.selectGroup(groups[0].id);else this.selectGroup(this.activeGroupId);
     if(!this.usingOfflineSnapshot){await this.request('/api/v1/bootstrap',{method:'POST',body:JSON.stringify({displayName:this.displayName,locale:this.locale})});await this.groupTrashItems().catch(()=>[]);}
-    let restoredOutbox=0;if(IndexedDbOutboxAdapter.supported())try{const persisted=await this.outboxStorage.load();this.outbox.restore(persisted.filter(x=>x.actorId===this.actorId&&x.tenantId===this.tenantId));restoredOutbox=this.outbox.list().length;}catch{}
-    return{restoredOutbox,groups};
+    return{restoredOutbox:this.outbox.list().length,groups};
   }
 
   async authStatus():Promise<{authenticated:boolean;account:SessionAccount|null;local?:boolean;registrationState?:string;offline?:boolean}>{
@@ -307,27 +308,68 @@ export class ConnectedApplication {
   async localRoomMemberBundle(membershipId:string,meetingId?:string):Promise<EcoBroadcastBundle>{
     const result=await this.prepareEcoBroadcast({meetingId,membershipIds:[membershipId],ttlMinutes:60});return result.bundle;
   }
+  private vaultRecoveryPath(groupId:string):string{return 'local://vault-recovery/'+encodeURIComponent(groupId);}
+  private vaultRecoveryId(groupId:string):string{return JSON.stringify([this.actorId,this.tenantId,'VAULT_RECOVERY',groupId]);}
+  private async recoverInterruptedVaultRestores():Promise<void>{
+    if(!IndexedDbReadSnapshotAdapter.supported())return;
+    const rows=await this.readSnapshots.listForActorTenant(this.actorId,this.tenantId),markers=rows.filter(x=>x.path.startsWith('local://vault-recovery/'));
+    for(const marker of markers){
+      const b=marker.body as any;if(b?.protocol!=='ECO_VAULT_RECOVERY_1'||!b.groupId){await this.readSnapshots.remove(marker.id).catch(()=>{});continue;}
+      await this.sovereign.replaceGroupState(this.tenantId,String(b.groupId),Array.isArray(b.eventsBefore)?b.eventsBefore:[],Array.isArray(b.relayKeysBefore)?b.relayKeysBefore:[]);
+      await this.readSnapshots.applyAtomic({save:Array.isArray(b.snapshotBackups)?b.snapshotBackups:[],removeIds:Array.isArray(b.snapshotNewIds)?b.snapshotNewIds:[]});
+      const prior=Array.isArray(b.outboxBefore)?b.outboxBefore:[];this.outbox.restore(prior);if(IndexedDbOutboxAdapter.supported())await this.outboxStorage.replaceForIdentity(this.actorId,this.tenantId,prior);
+      await this.readSnapshots.remove(marker.id);
+    }
+  }
+  private async validateOpenedVault(opened:{snapshot:SovereignSnapshot;events:any[];relayKeys:any[]}):Promise<{groupId:string;state:any;snapshots:any[];outbox:any[]}>{
+    const snapshot=opened.snapshot;if(!snapshot?.tenantId||!snapshot?.groupId||!snapshot?.state)throw Error('VAULT_PAYLOAD_INVALID');
+    const groupId=String(snapshot.groupId),state=snapshot.state as any,snapshots=Array.isArray(state.snapshots)?state.snapshots:[],outbox=Array.isArray(state.outbox)?state.outbox:[];
+    if(snapshots.length>10000||opened.events.length>250000||opened.relayKeys.length>10000||outbox.length>50000)throw Error('VAULT_TOO_LARGE');
+    await validateSovereignJournalEvents(snapshot.tenantId,groupId,opened.events as any[]);
+    const enc=encodeURIComponent(groupId);
+    for(const row of snapshots){const path=String(row?.path??'');if(!path||!(path==='/api/v1/groups'||path.includes('/groups/'+enc+'/')||path.includes('/groups/'+groupId+'/')||path.includes('/relay/member-capsule/'+enc+'/')||path.includes('/relay/seen-transfers/'+enc+'/')))throw Error('VAULT_SNAPSHOT_SCOPE_INVALID');}
+    for(const key of opened.relayKeys)if(String(key?.tenantId??'')!==snapshot.tenantId||String(key?.groupId??'')!==groupId||!key?.membershipId||!key?.keyId||!key?.rawKey)throw Error('VAULT_RELAY_KEY_SCOPE_INVALID');
+    return{groupId,state,snapshots,outbox};
+  }
   async exportEcoVault(passphrase:string):Promise<string>{
     if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');const groupId=this.activeGroupId,allSnapshots=await this.readSnapshots.listForActorTenant(this.actorId,this.tenantId),encoded=encodeURIComponent(groupId);
-    const selected=allSnapshots.filter(x=>x.path==='/api/v1/groups'||x.path.includes('/groups/'+encoded+'/')||x.path.includes('/groups/'+groupId+'/')||x.path.includes('/relay/member-capsule/'+encoded+'/')).map(x=>x.path==='/api/v1/groups'?{...x,body:Array.isArray(x.body)?(x.body as any[]).filter(g=>g.id===groupId):x.body}:x);
+    const selected=allSnapshots.filter(x=>x.path==='/api/v1/groups'||x.path.includes('/groups/'+encoded+'/')||x.path.includes('/groups/'+groupId+'/')||x.path.includes('/relay/member-capsule/'+encoded+'/')||x.path.includes('/relay/seen-transfers/'+encoded+'/')).map(x=>x.path==='/api/v1/groups'?{...x,body:Array.isArray(x.body)?(x.body as any[]).filter(g=>g.id===groupId):x.body}:x);
     const journal=await this.sovereign.list(this.tenantId,groupId),keys=await this.sovereign.relayKeys(this.tenantId,groupId),snapshot:SovereignSnapshot={tenantId:this.tenantId,groupId,exportedAt:new Date().toISOString(),appVersion:'1.5.2.9-sovereign-offline',state:{actorId:this.actorId,snapshots:selected,outbox:this.outbox.list().filter(x=>String((x.payload as any)?.groupId??'')===groupId)}};
     return createEcoVault(passphrase,snapshot,journal,keys);
   }
   async inspectEcoVault(passphrase:string,encoded:string):Promise<{tenantId:string;groupId:string;exportedAt:string;events:number;snapshots:number;relayKeys:number}>{
-    const opened=await openEcoVault(passphrase,encoded),snapshots=Array.isArray((opened.snapshot.state as any).snapshots)?(opened.snapshot.state as any).snapshots:[];
-    return{tenantId:opened.snapshot.tenantId,groupId:opened.snapshot.groupId,exportedAt:opened.snapshot.exportedAt,events:opened.events.length,snapshots:snapshots.length,relayKeys:opened.relayKeys.length};
+    const opened=await openEcoVault(passphrase,encoded),checked=await this.validateOpenedVault(opened);
+    return{tenantId:opened.snapshot.tenantId,groupId:checked.groupId,exportedAt:opened.snapshot.exportedAt,events:opened.events.length,snapshots:checked.snapshots.length,relayKeys:opened.relayKeys.length};
   }
   async restoreEcoVault(passphrase:string,encoded:string):Promise<{groupId:string;events:number;snapshots:number;outbox:number}>{
-    const opened=await openEcoVault(passphrase,encoded);if(opened.snapshot.tenantId!==this.tenantId)throw Error('VAULT_TENANT_MISMATCH');const groupId=opened.snapshot.groupId,state=opened.snapshot.state as any,snapshots=Array.isArray(state.snapshots)?state.snapshots:[];
-    this.groupTenants.set(groupId,this.tenantId);this.selectGroup(groupId);
-    for(const row of snapshots){
-      if(!row?.path)continue;const path=String(row.path);
-      if(path==='/api/v1/groups'){const existing=await this.cached<Group[]>('/api/v1/groups')??[],restored=Array.isArray(row.body)?row.body as Group[]:[],byId=new Map(existing.map(g=>[g.id,g]));for(const g of restored)byId.set(g.id,g);await this.saveCached('/api/v1/groups',[...byId.values()]);}
-      else await this.saveCached(path,row.body);
+    const opened=await openEcoVault(passphrase,encoded),checked=await this.validateOpenedVault(opened);if(opened.snapshot.tenantId!==this.tenantId)throw Error('VAULT_TENANT_MISMATCH');
+    const groupId=checked.groupId,currentEvents=await this.sovereign.list(this.tenantId,groupId),currentKeys=await this.sovereign.relayKeys(this.tenantId,groupId),min=Math.min(currentEvents.length,opened.events.length);
+    for(let i=0;i<min;i++)if(currentEvents[i]?.hash!==opened.events[i]?.hash)throw Error('VAULT_JOURNAL_DIVERGENCE');
+    const mergedEvents=currentEvents.length>=opened.events.length?currentEvents:opened.events;
+    const keyMap=new Map(opened.relayKeys.map((x:any)=>[String(x.membershipId),x]));for(const key of currentKeys){const old=keyMap.get(key.membershipId) as any;if(!old||String(key.createdAt)>=String(old.createdAt))keyMap.set(key.membershipId,key);}const mergedKeys=[...keyMap.values()] as any[];
+    const targetSaves:Array<{id:string;actorId:string;tenantId:string;path:string;body:unknown}>=[],snapshotBackups:Array<{id:string;actorId:string;tenantId:string;path:string;body:unknown}>=[],snapshotNewIds:string[]=[];
+    for(const row of checked.snapshots){
+      const path=String(row.path),id=path==='/api/v1/groups'?JSON.stringify([this.actorId,this.homeTenantId??this.tenantId,'ACCOUNT',path]):JSON.stringify([this.actorId,this.tenantId,groupId,path]),current=await this.readSnapshots.get<any>(id),sourceUpdated=String(row.updatedAt??opened.snapshot.exportedAt??'');
+      let body=row.body;
+      if(path==='/api/v1/groups'){const byId=new Map<string,any>();for(const g of Array.isArray(current?.body)?current!.body:[])if(g?.id)byId.set(g.id,g);for(const g of Array.isArray(row.body)?row.body:[])if(g?.id)byId.set(g.id,g);body=[...byId.values()];}
+      else if(current&&sourceUpdated&&String(current.updatedAt)>sourceUpdated)continue;
+      if(current)snapshotBackups.push({id:current.id,actorId:current.actorId,tenantId:current.tenantId,path:current.path,body:current.body});else snapshotNewIds.push(id);
+      targetSaves.push({id,actorId:this.actorId,tenantId:path==='/api/v1/groups'?(this.homeTenantId??this.tenantId):this.tenantId,path,body});
     }
-    await this.sovereign.restoreEvents(this.tenantId,groupId,opened.events);for(const key of opened.relayKeys)await this.sovereign.saveRelayKey({...key,tenantId:this.tenantId,groupId});
-    const vaultOutbox=Array.isArray(state.outbox)?state.outbox:[],other=this.outbox.list().filter(x=>String((x.payload as any)?.groupId??'')!==groupId);this.outbox.restore([...other,...vaultOutbox]);await this.persistOutbox();
-    return{groupId,events:opened.events.length,snapshots:snapshots.length,outbox:vaultOutbox.length};
+    const rank=(x:any)=>x?.status==='CONFIRMED'?3:x?.status==='CANCELLED'?2:1,outboxMap=new Map<string,any>();
+    for(const item of checked.outbox){if(item?.actorId===this.actorId&&item?.tenantId===this.tenantId)outboxMap.set(String(item.idempotencyKey??item.id),item);}
+    for(const item of this.outbox.list()){const k=String(item.idempotencyKey??item.id),old=outboxMap.get(k);if(!old||rank(item)>rank(old)||String(item.updatedAt??item.createdAt??'')>=String(old.updatedAt??old.createdAt??''))outboxMap.set(k,item);}
+    const mergedOutbox=[...outboxMap.values()],outboxBefore=this.outbox.list(),markerId=this.vaultRecoveryId(groupId),markerPath=this.vaultRecoveryPath(groupId);
+    await this.readSnapshots.save({id:markerId,actorId:this.actorId,tenantId:this.tenantId,path:markerPath,body:{protocol:'ECO_VAULT_RECOVERY_1',groupId,eventsBefore:currentEvents,relayKeysBefore:currentKeys,snapshotBackups,snapshotNewIds,outboxBefore}});
+    try{
+      await this.sovereign.replaceGroupState(this.tenantId,groupId,mergedEvents as any[],mergedKeys as any[]);
+      await this.readSnapshots.applyAtomic({save:targetSaves});
+      this.outbox.restore(mergedOutbox);if(IndexedDbOutboxAdapter.supported())await this.outboxStorage.replaceForIdentity(this.actorId,this.tenantId,mergedOutbox);
+      this.groupTenants.set(groupId,this.tenantId);this.selectGroup(groupId);await this.readSnapshots.remove(markerId);
+      return{groupId,events:mergedEvents.length,snapshots:targetSaves.length,outbox:mergedOutbox.length};
+    }catch(error){
+      await this.sovereign.replaceGroupState(this.tenantId,groupId,currentEvents,currentKeys).catch(()=>{});await this.readSnapshots.applyAtomic({save:snapshotBackups,removeIds:snapshotNewIds}).catch(()=>{});this.outbox.restore(outboxBefore);if(IndexedDbOutboxAdapter.supported())await this.outboxStorage.replaceForIdentity(this.actorId,this.tenantId,outboxBefore).catch(()=>{});await this.readSnapshots.remove(markerId).catch(()=>{});throw error;
+    }
   }
   async memberEnvelope(meetingId:string,membershipId?:string):Promise<any>{
     if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');
