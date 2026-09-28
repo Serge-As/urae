@@ -226,6 +226,18 @@ export class IndexedDbReadSnapshotAdapter {
     if(!IndexedDbReadSnapshotAdapter.supported())return[];
     const db=await this.open();try{return (await idbAll<ReadSnapshot>(db.transaction(READ_STORE,'readonly').objectStore(READ_STORE))).filter(x=>x.actorId===actorId&&x.tenantId===tenantId).map(x=>structuredClone(x));}finally{db.close();}
   }
+  async applyAtomic(input:{save:Array<{id:string;actorId:string;tenantId:string;path:string;body:unknown}>;removeIds?:string[]}):Promise<void>{
+    if(!IndexedDbReadSnapshotAdapter.supported())return;
+    const seen=new Set<string>();for(const row of input.save){if(!row.id||seen.has(row.id))throw Error('SNAPSHOT_BATCH_INVALID');seen.add(row.id);}
+    const db=await this.open();try{
+      await new Promise<void>((resolve,reject)=>{
+        const tx=db.transaction(READ_STORE,'readwrite'),store=tx.objectStore(READ_STORE),updatedAt=new Date().toISOString();
+        for(const id of input.removeIds??[])if(!seen.has(id))store.delete(id);
+        for(const row of input.save)store.put({...structuredClone(row),updatedAt});
+        tx.oncomplete=()=>resolve();tx.onerror=()=>reject(tx.error??Error('INDEXEDDB_BATCH_WRITE_FAILED'));tx.onabort=()=>reject(tx.error??Error('INDEXEDDB_BATCH_WRITE_ABORTED'));
+      });
+    }finally{db.close();}
+  }
 
   async clearForActor(actorId:string):Promise<void>{
     if(!IndexedDbReadSnapshotAdapter.supported())return;
