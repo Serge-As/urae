@@ -59,3 +59,14 @@ test('0003 platform_records migration is additive and idempotent by construction
   assert.match(sql,/CREATE TABLE IF NOT EXISTS PLATFORM_RECORDS/); assert.match(sql,/CREATE INDEX IF NOT EXISTS/);
   assert.doesNotMatch(sql,/\bDROP\b/); assert.doesNotMatch(sql,/\bTRUNCATE\b/); assert.doesNotMatch(sql,/\bDELETE\s+FROM\b/);
 });
+
+
+test('0019 financial operation v2 migration is additive, seeds legacy rows and covers every canonical operation kind',()=>{
+  const sql=fs.readFileSync('cloudflare/migrations/0019_financial_operations_v2.sql','utf8').toUpperCase();
+  assert.match(sql,/CREATE TABLE IF NOT EXISTS FINANCIAL_OPERATIONS_V2/);
+  assert.match(sql,/INSERT OR IGNORE INTO FINANCIAL_OPERATIONS_V2/);
+  for(const kind of ['CONTRIBUTION','REVERSAL','CASH_IN','CASH_OUT','LOAN_DISBURSEMENT','LOAN_REPAYMENT','TONTINE_BENEFIT','OPENING_BALANCE','TRANSFER'])assert.match(sql,new RegExp("'"+kind+"'"));
+  assert.doesNotMatch(sql,/\bDROP\b/);
+  assert.doesNotMatch(sql,/\bTRUNCATE\b/);
+  assert.doesNotMatch(sql,/\bDELETE\s+FROM\b/);
+});
