@@ -402,6 +402,8 @@ body.ui-mode-visual .primary:hover{filter:saturate(1.08) brightness(1.03);transf
 .eco-optical-screen,.eco-optical-qr{display:grid;place-items:center;min-height:12rem;padding:1rem;background:#fff;border:1px solid var(--border,#d7d7d7);border-radius:1rem;overflow:auto}
 .eco-optical-screen:fullscreen{width:100vw;height:100vh;background:#fff;padding:2vmin}
 .eco-optical-screen:fullscreen svg{width:min(92vw,92vh);height:min(92vw,92vh)}
+.eco-optical-fullscreen-fallback{position:fixed!important;inset:0!important;z-index:9999!important;width:100vw!important;height:100dvh!important;max-width:none!important;max-height:none!important;border-radius:0!important;padding:2vmin!important;background:#fff!important;overflow:auto!important}
+.eco-optical-fullscreen-fallback svg{width:min(92vw,92vh)!important;height:min(92vw,92vh)!important;max-width:none!important}
 .eco-optical-screen svg,.eco-optical-qr svg{max-width:100%;height:auto}
 .eco-relay-camera{width:100%;max-width:36rem;aspect-ratio:4/3;object-fit:cover;background:#111;border-radius:1rem}
 .member-number-editor{display:inline-flex;align-items:center;gap:.35rem;margin-right:.6rem}
