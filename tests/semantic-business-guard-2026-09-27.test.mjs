@@ -26,13 +26,13 @@ test('rubric family semantics keep Aide locale with Collation and Main levée ou
   assert.match(html,/Autres[^\n]*Inscription[^\n]*Timbre[^\n]*Amendes/);
 });
 
-test('semantic audit keeps genuinely partial capabilities structural and recognizes completed canonical journeys',()=>{
-  for(const id of ['GEO.DIRECTORY']){
+test('semantic audit keeps external providers structural and recognizes completed canonical journeys',()=>{
+  for(const id of ['INTEGRATION.SMS','INTEGRATION.WHATSAPP','INTEGRATION.TELEGRAM','INTEGRATION.EMAIL']){
     const module=PRODUCT_MODULES.find(x=>x.id===id);
     assert.ok(module,id+' exists');
-    assert.equal(module.status,'STRUCTURAL_V1',id+' remains structural until consented device geolocation is implemented');
+    assert.equal(module.status,'STRUCTURAL_V1',id+' remains structural until its real provider is qualified');
   }
-  for(const id of ['AI.FOUNDER','DASHBOARDS.ALL','MANAGER.PUBLIC_PROFILE','SAFETY.QUIET_WATCH','AI.LOCAL','LEARNING.TALENT','CREATOR.STUDIO']){
+  for(const id of ['GEO.DIRECTORY','AI.FOUNDER','DASHBOARDS.ALL','MANAGER.PUBLIC_PROFILE','SAFETY.QUIET_WATCH','AI.LOCAL','LEARNING.TALENT','CREATOR.STUDIO']){
     const module=PRODUCT_MODULES.find(x=>x.id===id);
     assert.ok(module,id+' exists');
     assert.equal(module.status,'FOUNDATION_ACTIVE',id+' has a canonical owner, governed journey and dedicated evidence tests');

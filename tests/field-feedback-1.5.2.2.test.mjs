@@ -67,12 +67,12 @@ test('1.5.2.2 flagship visual mode is materially richer while Senior and Assiste
   assert.match(modes,/visual/);assert.match(modes,/senior/);assert.match(modes,/assisted/);
 });
 
-test('1.5.2.7 field shell is version isolated and keeps 1.5.2.6 as coherent fallback',async()=>{
+test('1.5.2.8 GPS shell is version isolated and keeps 1.5.2.7 as coherent fallback',async()=>{
   const html=await readFile('.build/index.html','utf8');
   const sw=await readFile('.build/sw.js','utf8');
-  assert.match(html,/ECO-SYSTEM · 1\.5\.2\.7/);
-  assert.match(html,/main\.js\?v=1527/);
-  assert.match(sw,/eco-system-v1527-live-completion-20260927/);
-  assert.match(sw,/PREVIOUS_CACHE = 'eco-system-v1526-field-persistence-pc-mobile-20260925'/);
+  assert.match(html,/ECO-SYSTEM · 1\.5\.2\.8/);
+  assert.match(html,/main\.js\?v=1528/);
+  assert.match(sw,/eco-system-v1528-geo-directory-20260928/);
+  assert.match(sw,/PREVIOUS_CACHE = 'eco-system-v1527-live-completion-20260927'/);
   assert.doesNotMatch(html,/<body[^>]*>\\n\s*<section/);
 });

@@ -151,7 +151,7 @@ export const PRODUCT_MODULES: ProductModule[] = [
   {id:'INTEGRATION.WHATSAPP',labelFr:'WhatsApp adapter',labelEn:'WhatsApp adapter',status:'STRUCTURAL_V1',lot:'I',canonicalDependencies:['KERNEL.POLICY'],workspace:'UNIVERSAL'},
   {id:'INTEGRATION.TELEGRAM',labelFr:'Telegram adapter',labelEn:'Telegram adapter',status:'STRUCTURAL_V1',lot:'I',canonicalDependencies:['KERNEL.POLICY'],workspace:'UNIVERSAL'},
   {id:'INTEGRATION.EMAIL',labelFr:'Email adapter',labelEn:'Email adapter',status:'STRUCTURAL_V1',lot:'I',canonicalDependencies:['KERNEL.POLICY'],workspace:'UNIVERSAL'},
-  {id:'GEO.DIRECTORY',labelFr:'Annuaire et géolocalisation',labelEn:'Directory & geolocation',status:'STRUCTURAL_V1',lot:'I',canonicalDependencies:['KERNEL.POLICY'],workspace:'UNIVERSAL'},
+  {id:'GEO.DIRECTORY',labelFr:'Annuaire et géolocalisation',labelEn:'Directory & geolocation',status:'FOUNDATION_ACTIVE',lot:'I',canonicalDependencies:['KERNEL.POLICY','KERNEL.EVIDENCE'],workspace:'SPECIALIZED'},
   {id:'OFFLINE.OUTBOX',labelFr:'File offline intelligente',labelEn:'Intelligent offline outbox',status:'FOUNDATION_ACTIVE',lot:'J',canonicalDependencies:['KERNEL.EVENT_BACKBONE'],workspace:'SPECIALIZED'},
   {id:'RELAY.COMMUNITY',labelFr:'Community Relay',labelEn:'Community Relay',status:'FOUNDATION_ACTIVE',lot:'J',canonicalDependencies:['KERNEL.EVENT_BACKBONE'],workspace:'SPECIALIZED'},
   {id:'EXPERIENCE.ULTRA_SIMPLE',labelFr:'Mode Ultra Simple',labelEn:'Ultra Simple Mode',status:'FOUNDATION_ACTIVE',lot:'J',canonicalDependencies:['KERNEL.POLICY'],workspace:'SPECIALIZED'},
