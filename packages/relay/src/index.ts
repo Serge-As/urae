@@ -116,3 +116,4 @@ export class RelayReplayGuard{
 
 export * from './broadcast.js';
 export * from './qr-v10.js';
+export * from './local-room.js';
