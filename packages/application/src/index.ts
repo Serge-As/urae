@@ -483,7 +483,7 @@ export class ConnectedApplication {
     return updated.filter(x=>x.status!=='left').sort((a,b)=>(Number(a.memberNumber)||Number.MAX_SAFE_INTEGER)-(Number(b.memberNumber)||Number.MAX_SAFE_INTEGER));
   }
 
-  async recordFinancialSheetEntry(input:{membershipId:string;meetingId:string;rubric:any;amount:number;reason?:string}):Promise<any>{
+  async recordFinancialSheetEntry(input:{membershipId:string;meetingId:string;rubric:any;amount:number;reason?:string;loanId?:string}):Promise<any>{
     if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');
     if(!Number.isSafeInteger(input.amount)||input.amount<=0)throw Error('INVALID_CONTRIBUTION_AMOUNT');
     const rubric=input.rubric??{},kind=String(rubric.activityPlan?.kind??'').toUpperCase();
@@ -493,22 +493,46 @@ export class ConnectedApplication {
       :kind==='REPAYMENT'||/remboursement|repayment/.test(normalized)?'REPAYMENT'
       :rubric.facets?.direction==='OUTFLOW'?'OUTFLOW':'CONTRIBUTION';
     if(nature==='CONTRIBUTION')return this.recordCashContribution({membershipId:input.membershipId,meetingId:input.meetingId,rubricId:rubric.id,amount:input.amount,lateReason:input.reason?.trim()||undefined});
-    if(nature==='OUTFLOW')return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/expenses`,{method:'POST',body:JSON.stringify({membershipId:input.membershipId,rubricId:rubric.id,meetingId:input.meetingId,amount:input.amount,label:rubric.name??'Dépense de séance',scope:'SHEET',note:'Saisie depuis la feuille financière canonique',idempotencyKey:makeId('sheet_out')})});
+
+    const key=makeId(nature==='OUTFLOW'?'sheet_out':nature==='LOAN'?'sheet_loan':'sheet_repayment');
+    const queue=async(extra:Record<string,unknown>={})=>{
+      const item=await this.queueLocal('FINANCIAL_SHEET_ENTRY_V1',{
+        groupId:this.activeGroupId,membershipId:input.membershipId,meetingId:input.meetingId,rubricId:String(rubric.id??''),rubricName:String(rubric.name??''),amount:input.amount,nature,reason:input.reason?.trim()||undefined,loanId:input.loanId,...extra
+      },key);
+      return{status:'QUEUED_SYNC',queued:true,outbox:item};
+    };
+
+    if(nature==='OUTFLOW'){
+      const body={membershipId:input.membershipId,rubricId:rubric.id,meetingId:input.meetingId,amount:input.amount,label:rubric.name??'Dépense de séance',scope:'SHEET',note:'Saisie depuis la feuille financière canonique',idempotencyKey:key};
+      if(this.isOffline())return queue();
+      try{return await this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/expenses`,{method:'POST',body:JSON.stringify(body)});}
+      catch(error){if(error instanceof Error&&error.message==='NETWORK_UNAVAILABLE')return queue();throw error;}
+    }
+
     if(nature==='LOAN'){
       const policy=rubric.policies?.loan;if(!policy?.allowed)throw Error('LOAN_POLICY_REQUIRED');
       const special=/special/.test(normalized)?policy.specialLoans?.[0]:undefined;
       const rawRate=special?.rateBasisPointsPerPeriod??policy.rateBasisPointsPerPeriod;if(rawRate===undefined||rawRate===null)throw Error('LOAN_RATE_REQUIRED');
       const rateBasisPointsPerPeriod=Number(rawRate),paymentPriority=special?.paymentPriority??policy.paymentPriority??'CAPITAL_FIRST';
-      const periods=Number(special?.maxDurationPeriods??policy.overdue?.maxDurationPeriods??6),key=makeId('sheet_loan');
-      let loan=await this.createCompletion('LOAN',{title:String(rubric.name??'Prêt'),data:{principal:input.amount,currency:'XAF',borrowerMembershipId:input.membershipId,rubricId:rubric.id,rateBasisPointsPerPeriod,paymentPriority,noInterestOnInterest:true,periods,outstandingPrincipal:0,unpaidInterest:0,loanClass:special?'SPECIAL':'STANDARD',sourceSurface:'TWO_SHEETS',sheetEntryKey:key}});
-      loan=await this.transitionCompletion(loan.id,'SUBMITTED',Number(loan.data?.completionVersion??1),{submittedFromSheet:true,meetingId:input.meetingId});
-      loan=await this.transitionCompletion(loan.id,'APPROVED',Number(loan.data?.completionVersion??2),{approvedAt:new Date().toISOString(),approvedFromSheet:true});
-      return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/loans/${encodeURIComponent(loan.id)}/disburse`,{method:'POST',body:JSON.stringify({amount:input.amount,expectedVersion:Number(loan.data?.completionVersion??3),meetingId:input.meetingId,rubricId:rubric.id,idempotencyKey:key+':disburse'})});
+      const periods=Number(special?.maxDurationPeriods??policy.overdue?.maxDurationPeriods??6),loanClass=special?'SPECIAL':'STANDARD';
+      const replayMeta={rateBasisPointsPerPeriod,paymentPriority,periods,loanClass};
+      if(this.isOffline())return queue(replayMeta);
+      try{
+        let loan=await this.createCompletion('LOAN',{title:String(rubric.name??'Prêt'),data:{principal:input.amount,currency:'XAF',borrowerMembershipId:input.membershipId,rubricId:rubric.id,rateBasisPointsPerPeriod,paymentPriority,noInterestOnInterest:true,periods,outstandingPrincipal:0,unpaidInterest:0,loanClass,sourceSurface:'TWO_SHEETS',sheetEntryKey:key}});
+        loan=await this.transitionCompletion(loan.id,'SUBMITTED',Number(loan.data?.completionVersion??1),{submittedFromSheet:true,meetingId:input.meetingId});
+        loan=await this.transitionCompletion(loan.id,'APPROVED',Number(loan.data?.completionVersion??2),{approvedAt:new Date().toISOString(),approvedFromSheet:true});
+        return await this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/loans/${encodeURIComponent(loan.id)}/disburse`,{method:'POST',body:JSON.stringify({amount:input.amount,expectedVersion:Number(loan.data?.completionVersion??3),meetingId:input.meetingId,rubricId:rubric.id,idempotencyKey:key+':disburse'})});
+      }catch(error){if(error instanceof Error&&error.message==='NETWORK_UNAVAILABLE')return queue(replayMeta);throw error;}
     }
-    const active=(await this.listCompletion('LOAN')).filter(l=>String(l.data?.borrowerMembershipId??'')===input.membershipId&&['DISBURSED','REPAYING'].includes(String(l.data?.completionState??''))&&(Number(l.data?.outstandingPrincipal??0)>0||Number(l.data?.unpaidInterest??0)>0));
-    if(active.length!==1)throw Error(active.length>1?'MULTIPLE_LOANS':'LOAN_REQUIRED');
-    const loan=active[0]!,component=String(rubric.facets?.custom?.repaymentComponent??'').toUpperCase()==='INTEREST'||/interet|interest/.test(normalized)?'INTEREST':'PRINCIPAL';
-    return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/loans/${encodeURIComponent(loan.id)}/repay`,{method:'POST',body:JSON.stringify({principalAmount:component==='PRINCIPAL'?input.amount:0,interestAmount:component==='INTEREST'?input.amount:0,expectedVersion:Number(loan.data?.completionVersion??0),meetingId:input.meetingId,rubricId:rubric.id,idempotencyKey:makeId('sheet_repayment')})});
+
+    const component=String(rubric.facets?.custom?.repaymentComponent??'').toUpperCase()==='INTEREST'||/interet|interest/.test(normalized)?'INTEREST':'PRINCIPAL';
+    if(this.isOffline())return queue({repaymentComponent:component});
+    try{
+      const active=(await this.listCompletion('LOAN')).filter(l=>String(l.data?.borrowerMembershipId??'')===input.membershipId&&['DISBURSED','REPAYING'].includes(String(l.data?.completionState??''))&&(Number(l.data?.outstandingPrincipal??0)>0||Number(l.data?.unpaidInterest??0)>0));
+      const loan=input.loanId?active.find(x=>x.id===input.loanId):active.length===1?active[0]:undefined;
+      if(!loan)throw Error(active.length>1?'MULTIPLE_LOANS':'LOAN_REQUIRED');
+      return await this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/loans/${encodeURIComponent(loan.id)}/repay`,{method:'POST',body:JSON.stringify({principalAmount:component==='PRINCIPAL'?input.amount:0,interestAmount:component==='INTEREST'?input.amount:0,expectedVersion:Number(loan.data?.completionVersion??0),meetingId:input.meetingId,rubricId:rubric.id,idempotencyKey:key+':repay'})});
+    }catch(error){if(error instanceof Error&&error.message==='NETWORK_UNAVAILABLE')return queue({repaymentComponent:component});throw error;}
   }
 
   async recordCashContribution(input:{membershipId:string;amount:number;meetingId?:string;rubricId?:string;lateReason?:string;approverIds?:string[];lateAuthorizationId?:string}):Promise<{queued:boolean;receipt?:ContributionReceipt;outbox?:OutboxItem}>{
