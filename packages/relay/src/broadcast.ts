@@ -153,3 +153,72 @@ export class EcoBroadcastReceiver{
     return bundle;
   }
 }
+
+export interface EcoTargetedBroadcastFrame {
+  protocol:'ECOB2';
+  transferId:string;
+  keyId:string;
+  index:number;
+  total:number;
+  digest:string;
+  chunk:string;
+  raw:string;
+}
+interface EcoTargetedPayload {
+  protocol:'ECO_TARGET_1';
+  transferId:string;
+  groupId:string;
+  generatedAt:string;
+  expiresAt:string;
+  capsule:EcoEncryptedCapsule;
+}
+
+export async function encodeTargetedBroadcastFrames(bundle:EcoBroadcastBundle,chunkChars=165):Promise<string[]>{
+  if(chunkChars<80||chunkChars>175)throw Error('INVALID_TARGETED_BROADCAST_CHUNK_SIZE');
+  const perMember:Array<{keyId:string;frames:string[]}>=[];
+  for(const capsule of bundle.capsules){
+    const payload:EcoTargetedPayload={protocol:'ECO_TARGET_1',transferId:bundle.transferId,groupId:bundle.groupId,generatedAt:bundle.generatedAt,expiresAt:bundle.expiresAt,capsule};
+    const encoded=b64u(te.encode(JSON.stringify(payload))),digest=await digest16(encoded),chunks:string[]=[];
+    for(let i=0;i<encoded.length;i+=chunkChars)chunks.push(encoded.slice(i,i+chunkChars));
+    if(chunks.length>999)throw Error('TARGETED_CAPSULE_TOO_LARGE');
+    perMember.push({keyId:capsule.keyId,frames:chunks.map((chunk,index)=>'ECOB2:'+bundle.transferId+':'+capsule.keyId+':'+(index+1)+':'+chunks.length+':'+digest+':'+chunk)});
+  }
+  const out:string[]=[],max=Math.max(...perMember.map(x=>x.frames.length));
+  for(let index=0;index<max;index++)for(const member of perMember)if(member.frames[index])out.push(member.frames[index]!);
+  if(out.length>9999)throw Error('BROADCAST_TOO_LARGE');
+  return out;
+}
+
+export function parseTargetedBroadcastFrame(raw:string):EcoTargetedBroadcastFrame{
+  const m=/^ECOB2:([a-f0-9]{12}):([a-f0-9]{16}):(\d{1,3}):(\d{1,3}):([a-f0-9]{16}):([A-Za-z0-9_-]+)$/.exec(raw.trim());
+  if(!m)throw Error('INVALID_TARGETED_BROADCAST_FRAME');
+  const index=Number(m[3]),total=Number(m[4]);if(index<1||total<1||index>total)throw Error('INVALID_TARGETED_BROADCAST_FRAME_INDEX');
+  return{protocol:'ECOB2',transferId:m[1]!,keyId:m[2]!,index,total,digest:m[5]!,chunk:m[6]!,raw:raw.trim()};
+}
+
+export class EcoTargetedBroadcastReceiver {
+  private transferId?:string;
+  private total=0;
+  private digest='';
+  private frames=new Map<number,string>();
+  constructor(private readonly keyId:string){if(!/^[a-f0-9]{16}$/.test(keyId))throw Error('INVALID_RELAY_KEY_ID');}
+  add(raw:string):{accepted:boolean;forThisMember:boolean;received:number;total:number;complete:boolean}{
+    const frame=parseTargetedBroadcastFrame(raw);
+    if(frame.keyId!==this.keyId)return{accepted:false,forThisMember:false,received:this.frames.size,total:this.total,complete:false};
+    if(!this.transferId){this.transferId=frame.transferId;this.total=frame.total;this.digest=frame.digest;}
+    if(frame.transferId!==this.transferId||frame.total!==this.total||frame.digest!==this.digest)return{accepted:false,forThisMember:true,received:this.frames.size,total:this.total,complete:false};
+    this.frames.set(frame.index,frame.chunk);
+    return{accepted:true,forThisMember:true,received:this.frames.size,total:this.total,complete:this.frames.size===this.total};
+  }
+  progress(){return{transferId:this.transferId,received:this.frames.size,total:this.total,complete:this.total>0&&this.frames.size===this.total};}
+  reset(){this.transferId=undefined;this.total=0;this.digest='';this.frames.clear();}
+  async assemble():Promise<EcoBroadcastBundle>{
+    if(!this.transferId||this.frames.size!==this.total)throw Error('BROADCAST_INCOMPLETE');
+    let encoded='';for(let i=1;i<=this.total;i++){const chunk=this.frames.get(i);if(!chunk)throw Error('BROADCAST_INCOMPLETE');encoded+=chunk;}
+    if(await digest16(encoded)!==this.digest)throw Error('BROADCAST_DIGEST_MISMATCH');
+    let payload:EcoTargetedPayload;try{payload=JSON.parse(td.decode(unb64u(encoded))) as EcoTargetedPayload;}catch{throw Error('BROADCAST_TARGET_DECODE_FAILED');}
+    if(payload.protocol!=='ECO_TARGET_1'||payload.transferId!==this.transferId||payload.capsule.keyId!==this.keyId)throw Error('BROADCAST_TARGET_MISMATCH');
+    if(Date.parse(payload.expiresAt)<=Date.now())throw Error('BROADCAST_EXPIRED');
+    return{protocol:'ECO_BROADCAST_1',transferId:payload.transferId,groupId:payload.groupId,generatedAt:payload.generatedAt,expiresAt:payload.expiresAt,capsules:[payload.capsule]};
+  }
+}
