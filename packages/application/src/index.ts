@@ -13,6 +13,7 @@ import { allocateSavingsYield, splitInterestPool, simulateWorkbookYieldPipeline,
 import { buildFinancialRecap, buildSessionRecap, buildClosingCarryover } from '../../recap-engine/src/index.js';
 import { diagnoseGroup } from '../../group-doctor/src/index.js';
 import { IndexedDbSovereignStore, createEcoVault, openEcoVault, type SovereignSnapshot } from '../../offline-sovereign/src/index.js';
+import { buildExerciseClosingPlan, buildExerciseCarryForwardSeed, type ExerciseClosingInput, type ExerciseClosingPlan } from '../../exercise/src/index.js';
 import { createRelayPairingMaterial, encryptMemberCapsule, decryptMemberCapsule, createBroadcastBundle, encodeBroadcastFrames, type EcoMemberCapsule, type EcoRelayPairingMaterial, type EcoBroadcastBundle } from '../../relay/src/broadcast.js';
 
 export const KERNEL_SERVICE_IDS = [
@@ -1103,6 +1104,36 @@ export class ConnectedApplication {
     await this.saveLocalCompletion(next);await this.queueLocal('COMPLETION_TRANSITION_V1',{groupId:this.activeGroupId,id,to,expectedVersion,patch:structuredClone(patch),reason:reason??null},'completion-transition:'+id+':'+expectedVersion+':'+to);return next;
   }
   async createHistoricalIdentityClaim(input:{historicalReference:string;evidenceReference:string;claimedMembershipId?:string;note?:string}):Promise<CompletionRecord>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/identity-claims',{method:'POST',body:JSON.stringify(input)});}
+  async exercises():Promise<CompletionRecord[]>{return this.listCompletion('GROUP_EXERCISE');}
+  async openExercise(input:{label:string;openingCash:number;startsAt?:string;previousExerciseId?:string;memberOpeningPositions?:unknown[];retainedFunds?:unknown[]}):Promise<CompletionRecord>{
+    if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');const label=input.label.trim();if(!label)throw Error('EXERCISE_LABEL_REQUIRED');if(!Number.isSafeInteger(input.openingCash)||input.openingCash<0)throw Error('INVALID_OPENING_CASH');
+    const existing=(await this.exercises()).find(x=>['PREPARED','OPEN','CLOSING'].includes(String(x.data.completionState)));if(existing)throw Error('EXERCISE_ALREADY_OPEN');
+    let record=await this.createCompletion('GROUP_EXERCISE',{title:label,data:{label,openingCash:input.openingCash,startsAt:input.startsAt??new Date().toISOString(),previousExerciseId:input.previousExerciseId??null,memberOpeningPositionsJson:JSON.stringify(input.memberOpeningPositions??[]),retainedFundsJson:JSON.stringify(input.retainedFunds??[])}});
+    record=await this.transitionCompletion(record.id,'OPEN',Number(record.data.completionVersion??1),{openedAt:new Date().toISOString()});
+    const groups=await this.cached<Group[]>('/api/v1/groups')??[],group=groups.find(x=>x.id===this.activeGroupId);if(group){const next={...group,currentExerciseLabel:label};await this.saveCached('/api/v1/groups',groups.map(x=>x.id===group.id?next:x));}
+    await this.queueLocal('GROUP_EXERCISE_LABEL_V1',{groupId:this.activeGroupId,exerciseId:record.id,label},'exercise-label:'+record.id);return record;
+  }
+  async prepareExerciseClosing(exerciseId:string,input:ExerciseClosingInput):Promise<{exercise:CompletionRecord;plan:ExerciseClosingPlan}>{
+    if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');const exercise=(await this.exercises()).find(x=>x.id===exerciseId);if(!exercise)throw Error('EXERCISE_NOT_FOUND');if(String(exercise.data.completionState)!=='OPEN')throw Error('EXERCISE_NOT_OPEN');
+    const plan=buildExerciseClosingPlan(input),next=await this.transitionCompletion(exercise.id,'CLOSING',Number(exercise.data.completionVersion??0),{closingPlanJson:JSON.stringify(plan),closingPreparedAt:new Date().toISOString(),closingPreparedBy:this.actorId});
+    return{exercise:next,plan};
+  }
+  async reopenExerciseClosing(exerciseId:string,reason:string):Promise<CompletionRecord>{
+    const exercise=(await this.exercises()).find(x=>x.id===exerciseId);if(!exercise)throw Error('EXERCISE_NOT_FOUND');const clean=reason.trim();if(!clean)throw Error('REASON_REQUIRED');
+    return this.transitionCompletion(exercise.id,'OPEN',Number(exercise.data.completionVersion??0),{},clean);
+  }
+  async closeExercise(exerciseId:string):Promise<CompletionRecord>{
+    const exercise=(await this.exercises()).find(x=>x.id===exerciseId);if(!exercise)throw Error('EXERCISE_NOT_FOUND');if(String(exercise.data.completionState)!=='CLOSING')throw Error('EXERCISE_NOT_CLOSING');if(!String(exercise.data.closingPlanJson??''))throw Error('EXERCISE_CLOSING_PLAN_REQUIRED');
+    return this.transitionCompletion(exercise.id,'CLOSED',Number(exercise.data.completionVersion??0),{closedAt:new Date().toISOString(),closedBy:this.actorId});
+  }
+  async carryForwardExercise(exerciseId:string,nextLabel:string):Promise<{source:CompletionRecord;next:CompletionRecord;seed:any}>{
+    if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');const exercise=(await this.exercises()).find(x=>x.id===exerciseId);if(!exercise)throw Error('EXERCISE_NOT_FOUND');if(String(exercise.data.completionState)!=='CLOSED')throw Error('EXERCISE_NOT_CLOSED');
+    let plan:ExerciseClosingPlan;try{plan=JSON.parse(String(exercise.data.closingPlanJson??''));}catch{throw Error('EXERCISE_CLOSING_PLAN_REQUIRED');}
+    const seed=buildExerciseCarryForwardSeed(exercise.id,nextLabel,plan);
+    const source=await this.transitionCompletion(exercise.id,'CARRIED_FORWARD',Number(exercise.data.completionVersion??0),{carriedForwardAt:new Date().toISOString(),nextExerciseLabel:nextLabel,nextExerciseOpeningCash:seed.openingCash});
+    const next=await this.openExercise({label:nextLabel,openingCash:seed.openingCash,previousExerciseId:exercise.id,memberOpeningPositions:seed.memberOpeningPositions,retainedFunds:seed.retainedFunds});
+    return{source,next,seed};
+  }
   async createTontineCycle(input:{rubricId:string;name:string;rounds:number;potsPerRound:number;nominalPotAmount?:number}):Promise<CompletionRecord>{
     if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');if(!input.rubricId||!input.name.trim())throw Error('TONTINE_CYCLE_REQUIRED');if(!Number.isSafeInteger(input.rounds)||input.rounds<1||!Number.isSafeInteger(input.potsPerRound)||input.potsPerRound<1)throw Error('INVALID_TONTINE_CYCLE');
     return this.createCompletion('TONTINE_CYCLE',{title:input.name,data:{rubricId:input.rubricId,rounds:input.rounds,potsPerRound:input.potsPerRound,currency:'XAF',nominalPotAmount:input.nominalPotAmount??null}});
