@@ -33,7 +33,19 @@ test('WebKit shell keeps sovereign offline and QR decoder assets cached for airp
   });
   expect(hits).toEqual([true,true,true,true,true,true]);
   await context.setOffline(true);
-  await page.reload({waitUntil:'domcontentloaded'});
+  const offline=await page.evaluate(async()=>{
+    const paths=['/index.html','/src/sovereign-offline-ui.js','/src/vendor/qr-scanner-worker.min.js'];
+    const rows=[];
+    for(const path of paths){
+      const response=await fetch(path,{cache:'no-store'});
+      rows.push({path,status:response.status,text:await response.text()});
+    }
+    return rows;
+  });
+  expect(offline.map(x=>x.status)).toEqual([200,200,200]);
+  expect(offline[0].text).toContain('ecoRelaySovereignWorkspace');
+  expect(offline[1].text).toContain('QrScanner');
+  expect(offline[2].text.length).toBeGreaterThan(100);
   await expect(page.locator('#ecoRelaySovereignWorkspace')).toBeAttached();
   await context.setOffline(false);
 });
