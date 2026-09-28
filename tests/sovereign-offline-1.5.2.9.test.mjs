@@ -55,7 +55,7 @@ test('GROUP_EXERCISE is a canonical completion workflow',()=>{
 
 test('pairing QR stays compact and preserves the member identity and private key',async()=>{
   const base=await createRelayPairingMaterial('membership-member-number-003');
-  const material={...base,groupId:'group-association-long-offline-id',groupName:'Association communautaire très longue de démonstration',displayName:'Jean-Pierre Serge M.',memberNumber:3};
+  const material={...base,groupId:'group-association-long-offline-id',groupName:'Association communautaire très longue de démonstration',displayName:'Jean-Pierre Serge M.',memberNumber:3,groupAuthorityId:'manager-authority-001'};
   const raw=encodePairingQr(material);
   assert.ok(new TextEncoder().encode(raw).length<=271);
   const decoded=decodePairingQr(raw);
@@ -64,6 +64,7 @@ test('pairing QR stays compact and preserves the member identity and private key
   assert.equal(decoded.keyId,material.keyId);
   assert.equal(decoded.rawKey,material.rawKey);
   assert.equal(decoded.memberNumber,3);
+  assert.equal(decoded.groupAuthorityId,'manager-authority-001');
 });
 
 test('Eco Broadcast can carry 80 separately encrypted member capsules with loss-tolerant frame ordering',async()=>{
@@ -145,7 +146,7 @@ test('sovereign offline surfaces are isolated and iOS fallback assets are part o
   assert.match(sw,/\/src\/vendor\/qr-scanner-worker\.min\.js/);assert.match(sw,/\/packages\/relay\/src\/local-room\.js/);assert.match(sw,/\/packages\/eco-numpad\/src\/index\.js/);
   assert.match(headers,/Permissions-Policy: camera=\(self\)/);
   assert.match(headers,/worker-src 'self' blob:/);
-  assert.match(app,/BROADCAST_MEMBER_LIMIT_120/);
+  assert.match(app,/pageSize\?\?80/);assert.match(app,/Math\.min\(200/);assert.match(app,/deltaOnly/);
   assert.match(app,/TONTINE_SERVE_V1/);assert.match(app,/LOAN_DISBURSE_V1/);assert.match(app,/LOAN_REPAY_V1/);
   assert.match(app,/GROUP_EXERCISE_LABEL_V1/);assert.match(app,/createEcoVault/);
   assert.match(worker,/TONTINE_SERVE_V1/);assert.match(worker,/LOAN_DISBURSE_V1/);assert.match(worker,/LOAN_REPAY_V1/);
