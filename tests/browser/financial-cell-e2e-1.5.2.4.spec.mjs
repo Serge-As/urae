@@ -31,8 +31,16 @@ test('real financial matrix validates click, Enter, closed-session first entry a
   const pageErrors=[];
   page.on('pageerror',error=>pageErrors.push(String(error)));
   await page.goto(base+'/',{waitUntil:'domcontentloaded'});
+  const suffix=String(Date.now());
+  await page.locator('[data-auth-mode="register"]').click();
+  await page.locator('#authName').fill('Finance E2E');
+  await page.locator('#authUsername').fill('finance_e2e_'+suffix);
+  await page.locator('#authPassword').fill(password);
+  await page.locator('#authRememberDevice').check();
+  await page.locator('#authSubmit').click();
+  await expect(page.locator('#authScreen')).toBeHidden();
 
-  const ids=await page.evaluate(async({password})=>{
+  const ids=await page.evaluate(async({suffix})=>{
     const json=async(path,method='GET',body,groupId)=>{
       let response;
       try{
@@ -50,8 +58,9 @@ test('real financial matrix validates click, Enter, closed-session first entry a
       return data;
     };
 
-    const suffix=String(Date.now());
-    const account=await json('/api/v1/auth/register','POST',{username:'finance_e2e_'+suffix,password,displayName:'Finance E2E'});
+    const session=await json('/api/v1/auth/session');
+    if(!session?.authenticated||!session?.account?.id)throw new Error('FORM_ACCOUNT_SESSION_MISSING');
+    const account=session.account;
     const project=await json('/api/v1/group-projects','POST',{name:'Groupe saisie E2E '+suffix,kind:'association',governanceModel:'founder_managed',memberCount:1,sessions:4,nominalContribution:0,currency:'XAF'});
     const group=await json('/api/v1/group-projects/'+encodeURIComponent(project.id)+'/convert','POST',{});
     const members=await json('/api/v1/groups/'+encodeURIComponent(group.id)+'/members','GET',undefined,group.id);
@@ -73,7 +82,7 @@ test('real financial matrix validates click, Enter, closed-session first entry a
     const meeting=await json('/api/v1/groups/'+encodeURIComponent(group.id)+'/meetings','POST',{title:'Séance E2E ouverte',scheduledAt:'2026-09-25T15:00:00.000Z'},group.id);
     localStorage.setItem('tontine.activeGroupId',group.id);
     return{groupId:group.id,membershipId,meetingId:meeting.id,rubricIds:rubrics.map(x=>x.id)};
-  },{password});
+  },{suffix});
 
   await page.reload({waitUntil:'domcontentloaded'});
   await expect(page.locator('#authScreen')).toBeHidden();
@@ -246,4 +255,36 @@ test('real financial matrix validates click, Enter, closed-session first entry a
   await expect.poll(()=>ledgerCellTotal(page,{...ids,rubricId:ids.rubricIds[3]})).toBe(3000);
   await expect.poll(()=>moneyValue(cell(ids.rubricIds[4],ids.meetingId))).toBe(-700);
   await expect.poll(()=>sheetExpenseTotal(page,{...ids,rubricId:ids.rubricIds[4]})).toBe(700);
+});
+
+test('server-only session without local identity fails closed offline and recovers online',async({page,context})=>{
+  test.setTimeout(60_000);
+  await page.goto(base+'/',{waitUntil:'domcontentloaded'});
+  const suffix=String(Date.now());
+  await page.evaluate(async({suffix,password})=>{
+    const response=await fetch('/api/v1/auth/register',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({username:'server_only_'+suffix,password,displayName:'Server only'})});
+    if(!response.ok)throw new Error('REGISTER_HTTP_'+response.status+':'+await response.text());
+  },{suffix,password});
+  await page.reload({waitUntil:'domcontentloaded'});
+  await expect(page.locator('#authScreen')).toBeHidden();
+  const sw=await page.evaluate(async()=>{
+    const reg=await navigator.serviceWorker.register('/sw.js',{scope:'/',updateViaCache:'none'});
+    const started=Date.now();
+    while(Date.now()-started<12000){
+      const cacheNames=await caches.keys();let ready=false;
+      for(const name of cacheNames){const cache=await caches.open(name);if(await cache.match('/__eco_release_ready__')){ready=true;break;}}
+      if(reg.active&&ready)return true;
+      await new Promise(resolve=>setTimeout(resolve,250));
+    }
+    return false;
+  });
+  expect(sw).toBe(true);
+  await context.setOffline(true);
+  await page.reload({waitUntil:'domcontentloaded'});
+  await expect(page.locator('#authScreen')).toBeVisible();
+  await expect(page.locator('body')).toHaveClass(/signed-out/);
+  await expect(page.locator('button[data-view="operations"]')).toBeHidden();
+  await context.setOffline(false);
+  await page.reload({waitUntil:'domcontentloaded'});
+  await expect(page.locator('#authScreen')).toBeHidden();
 });
