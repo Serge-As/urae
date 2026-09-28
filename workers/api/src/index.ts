@@ -1919,7 +1919,7 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
       const kind=String(body.kind??'') as CompletionKind;
       const data=body.data&&typeof body.data==='object'&&!Array.isArray(body.data)?body.data as Record<string,unknown>:{};
       return json(await completion.create(completionCollection[1]!,kind,{
-        title:String(body.title??''),summary:body.summary?String(body.summary):undefined,data,tags:strArray(body.tags)
+        id:body.id?String(body.id):undefined,title:String(body.title??''),summary:body.summary?String(body.summary):undefined,data,tags:strArray(body.tags)
       }),201,cors);
     }
     const completionTransition=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/completion\/([^/]+)\/transition$/);
@@ -2326,6 +2326,41 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
         const memberships=await foundation.setMemberNumberOrder(ctx.tenantId,groupId,strArray(p.membershipIds),item.idempotencyKey);
         await markApplied();
         return json({accepted:true,stored:true,memberships},200,cors);
+      }
+      if(item.type==='MEMBER_LIFECYCLE_V1'){
+        const p=item.payload,groupId=String(p.groupId??''),membershipId=String(p.membershipId??''),input=(p.input&&typeof p.input==='object'?p.input:{}) as Record<string,unknown>,group=await requireGroup(groupId,true);
+        const existing=await repo.getMembership(ctx.tenantId,groupId,membershipId);if(!existing)throw Error('MEMBERSHIP_NOT_FOUND');
+        const status=String(input.status??existing.status) as import('../../../packages/contracts/src/index.js').Membership['status'];if(!['invited','waitlisted','trial','active','suspended','left'].includes(status))throw Error('INVALID_MEMBERSHIP_STATUS');
+        const expected=input.expectedRevision===undefined?Number(existing.lifecycleRevision??0):finite(input.expectedRevision);
+        if(expected!==Number(existing.lifecycleRevision??0)){
+          if(Number(existing.lifecycleRevision??0)>expected&&existing.status===status){await markApplied();return json({accepted:true,stored:true,membership:existing,replayed:true},200,cors);}
+          throw Error('STALE_MEMBERSHIP_VERSION');
+        }
+        const roles=input.roles===undefined?existing.roles:strArray(input.roles);if(existing.userId===group.createdBy&&!roles.includes('founder'))throw Error('FOUNDER_ROLE_REQUIRED');
+        const now=new Date().toISOString(),next={...existing,status,roles,historicalJoinedAt:input.historicalJoinedAt?String(input.historicalJoinedAt):existing.historicalJoinedAt,probationEndsAt:input.probationEndsAt?String(input.probationEndsAt):undefined,lifecycleReason:input.reason?String(input.reason):existing.lifecycleReason,lifecycleUpdatedAt:now,lifecycleUpdatedBy:ctx.actorId,lifecycleRevision:Number(existing.lifecycleRevision??0)+1,reinstatedAt:status==='active'&&['suspended','left','waitlisted','trial'].includes(existing.status)?now:existing.reinstatedAt};
+        await repo.saveMembership(next);await repo.saveAudit(kernel.audit.append({tenantId:ctx.tenantId,actorId:ctx.actorId,action:'MEMBERSHIP_LIFECYCLE_OFFLINE_REPLAYED',targetType:'membership',targetId:membershipId,before:{status:existing.status,roles:existing.roles,revision:existing.lifecycleRevision??0},after:{status:next.status,roles:next.roles,revision:next.lifecycleRevision},metadata:{outboxId:item.id},requestId:ctx.requestId}));
+        await markApplied();return json({accepted:true,stored:true,membership:next},200,cors);
+      }
+      if(item.type==='MEMBER_NAME_V1'){
+        const p=item.payload,groupId=String(p.groupId??''),membershipId=String(p.membershipId??''),displayName=String(p.displayName??'').trim(),reason=String(p.reason??'').trim();await requireGroup(groupId,true);
+        const membership=await repo.getMembership(ctx.tenantId,groupId,membershipId);if(!membership)throw Error('MEMBERSHIP_NOT_FOUND');const user=await repo.getUser(membership.userId);if(!user)throw Error('USER_NOT_FOUND');
+        if(!displayName||!reason)throw Error('MEMBER_NAME_REQUIRED');
+        if(user.displayName!==displayName){const before=user.displayName;await repo.saveUser({...user,displayName});await repo.saveAudit(kernel.audit.append({tenantId:ctx.tenantId,actorId:ctx.actorId,action:'MEMBER_NAME_OFFLINE_REPLAYED',targetType:'membership',targetId:membershipId,before:{displayName:before},after:{displayName},metadata:{reason,outboxId:item.id},requestId:ctx.requestId}));}
+        await markApplied();return json({accepted:true,stored:true,membership:{...membership,displayName}},200,cors);
+      }
+      if(item.type==='COMPLETION_CREATE_V1'){
+        const p=item.payload,groupId=String(p.groupId??''),id=String(p.id??''),kind=String(p.kind??'') as CompletionKind;await requireGroup(groupId,true);
+        const existing=id?await repo.getWorkspaceRecord(ctx.tenantId,id):undefined;
+        const record=existing??await completion.create(groupId,kind,{id,title:String(p.title??''),summary:p.summary?String(p.summary):undefined,data:(p.data&&typeof p.data==='object'?p.data:{}) as Record<string,unknown>,tags:strArray(p.tags)});
+        if(existing&&String(existing.data.completionKind??'')!==kind)throw Error('IDEMPOTENCY_CONFLICT');
+        await markApplied();return json({accepted:true,stored:true,record},200,cors);
+      }
+      if(item.type==='COMPLETION_TRANSITION_V1'){
+        const p=item.payload,groupId=String(p.groupId??''),id=String(p.id??''),to=String(p.to??''),expectedVersion=finite(p.expectedVersion),patch=(p.patch&&typeof p.patch==='object'?p.patch:{}) as Record<string,unknown>;await requireGroup(groupId,true);
+        const existing=await repo.getWorkspaceRecord(ctx.tenantId,id);if(!existing)throw Error('COMPLETION_RECORD_NOT_FOUND');
+        const version=Number(existing.data.completionVersion??0),state=String(existing.data.completionState??'');
+        const record=version>expectedVersion&&state===to?existing:await completion.transition(groupId,id,to,{expectedVersion,patch,reason:p.reason?String(p.reason):undefined});
+        await markApplied();return json({accepted:true,stored:true,record},200,cors);
       }
       if(item.type==='RUBRIC_CREATE_V1'){
         const p=item.payload,groupId=String(p.groupId??'');await requireGroup(groupId,true);
