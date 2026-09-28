@@ -47,17 +47,24 @@ export function mountSovereignOfflineUI({app,getMembers=()=>[],getMeetings=()=>[
   closeBox.append(el('p','La répartition d’intérêts utilisée est celle que le responsable a mémorisée dans le module Épargne. Aucune méthode cachée n’est substituée.','hint'),closingCash,principalDisposition,interestDisposition,solidarity,reserve,bureau,otherCarry,prepareClose,closeExercise,nextLabel,rollExercise,closingResult);
   exercise.append(eh,el('p','Un exercice peut vivre intégralement sur cet appareil : ouverture → séances → clôture préparée → validation → report. Les enveloppes de clôture sont des allocations ; un paiement physique reste une opération financière séparée à constater.','truth-notice'),openRow,exerciseState,closeBox);
 
+  const numpad=el('section',undefined,'item'),nh=el('h3','Eco NumPad · saisie financière sans IA'),numMeeting=el('select'),numInput=document.createElement('input'),numPreview=el('button','Prévisualiser','secondary'),numCommit=el('button','Valider les lignes','primary'),numLegend=el('div',undefined,'stack'),numResult=el('div',undefined,'stack');let numDraft=null;
+  numInput.placeholder='Ex. 3 S 500 E 1000 R 5000';numInput.autocomplete='off';numCommit.disabled=true;
+  const na=el('div',undefined,'actions');na.append(numPreview,numCommit);numpad.append(nh,el('p','Format : N° membre puis couples CODE MONTANT. Exemple « 3 S 500 E 1000 R 5000 ». Tout est interprété localement, sans voix ni IA, puis prévisualisé avant écriture.','truth-notice'),numMeeting,numInput,na,numLegend,numResult);
+
   const vault=el('section',undefined,'item'),vh=el('h3','Eco Vault · sauvegarde longue durée'),pass=document.createElement('input'),vaultExport=el('button','Créer un Eco Vault','primary'),vaultFile=document.createElement('input'),vaultRestore=el('button','Vérifier puis restaurer','secondary'),vaultStatus=el('p','', 'hint');
   pass.type='password';pass.placeholder='Phrase secrète (8 caractères minimum)';pass.autocomplete='new-password';vaultFile.type='file';vaultFile.accept='.ecovault,text/plain';
   const va=el('div',undefined,'actions');va.append(vaultExport,vaultRestore);vault.append(vh,el('p','Le Vault est chiffré et contient les snapshots, le journal local et les clés Relay du groupe. Gardez plusieurs copies A/B/C sur des supports différents.','hint'),pass,va,vaultFile,vaultStatus);
 
   relay.replaceChildren(status,pairing,broadcast,receive);
-  local.replaceChildren(exercise,vault,el('p','Eco Local Room multi-appareils utilisera les mêmes capsules et le même journal. Broadcast QR et Eco Pack sont déjà des transports sans Internet ; le transport LAN/WebRTC restera un accélérateur et jamais une seconde comptabilité.','truth-notice'));
+  local.replaceChildren(numpad,exercise,vault,el('p','Eco Local Room multi-appareils utilisera les mêmes capsules et le même journal. Broadcast QR et Eco Pack sont déjà des transports sans Internet ; le transport LAN/WebRTC restera un accélérateur et jamais une seconde comptabilité.','truth-notice'));
 
   const refresh=async()=>{
     const members=getMembers().filter(x=>x.status==='active'),meetings=getMeetings().slice().sort((a,b)=>String(b.scheduledAt??b.openedAt).localeCompare(String(a.scheduledAt??a.openedAt)));
     const keep=pairSelect.value;pairSelect.replaceChildren(...members.map(m=>{const o=document.createElement('option');o.value=m.id;o.textContent='N°'+(m.memberNumber??'—')+' · '+m.displayName;return o;}));if(members.some(x=>x.id===keep))pairSelect.value=keep;
     const mk=meetingSelect.value;meetingSelect.replaceChildren(...meetings.map(m=>{const o=document.createElement('option');o.value=m.id;o.textContent=m.title+' · '+String(m.status);return o;}));if(meetings.some(x=>x.id===mk))meetingSelect.value=mk;
+    const nk=numMeeting.value;numMeeting.replaceChildren(...meetings.filter(m=>m.status!=='cancelled').map(m=>{const o=document.createElement('option');o.value=m.id;o.textContent=m.title+' · '+String(m.status);return o;}));if(meetings.some(x=>x.id===nk))numMeeting.value=nk;
+    numLegend.replaceChildren();try{for(const row of await app.numpadCodes()){const line=el('p',row.code+' = '+row.name,'hint');numLegend.append(line);}}catch{}
+
     pairBtn.disabled=rotateBtn.disabled=!isManager()||!members.length;prepare.disabled=!isManager()||!members.length;
     if(!navigator.mediaDevices?.getUserMedia)progress.textContent='Caméra Web indisponible sur ce navigateur · Eco Pack reste disponible.';else if(!('BarcodeDetector' in window))progress.textContent='Décodeur Eco QR embarqué actif · compatible Safari/iOS sans BarcodeDetector.';
     exerciseState.replaceChildren();let exercises=[];try{exercises=await app.exercises();}catch{}
@@ -114,6 +121,15 @@ export function mountSovereignOfflineUI({app,getMembers=()=>[],getMeetings=()=>[
 
   fileInput.onchange=()=>void(async()=>{try{const file=fileInput.files?.[0];if(!file)return;const bundle=JSON.parse(await file.text());const capsule=await app.receiveEcoBroadcast(bundle);progress.textContent='Eco Pack reçu · compte '+capsule.membershipId+' mis à jour.';notify('Eco Pack importé.');}catch(e){showError(e);}});
   pairImport.onchange=()=>void(async()=>{try{const file=pairImport.files?.[0];if(!file)return;await acceptRaw((await file.text()).trim());}catch(e){showError(e);}});
+
+  numPreview.onclick=()=>void(async()=>{try{
+    const preview=await app.previewEcoNumpad(numInput.value,numMeeting.value);numDraft={raw:numInput.value,meetingId:numMeeting.value};numResult.replaceChildren(el('strong','Membre N°'+preview.draft.memberNumber+' · '+preview.membership.displayName),el('p',preview.meeting.title,'hint'));
+    for(const row of preview.rows)numResult.append(el('p',row.code+' · '+row.rubric.name+' · '+money(row.amount)));
+    numCommit.disabled=false;
+  }catch(e){numDraft=null;numCommit.disabled=true;numResult.replaceChildren();showError(e);}})();
+  numCommit.onclick=()=>void(async()=>{try{
+    if(!numDraft)throw Error('NUMPAD_PREVIEW_REQUIRED');const done=await app.commitEcoNumpad(numDraft.raw,numDraft.meetingId);notify(done.results.length+' ligne(s) NumPad enregistrée(s).');numInput.value='';numDraft=null;numCommit.disabled=true;numResult.replaceChildren();await refresh();
+  }catch(e){showError(e);}})();
 
   closingCash.addEventListener('input',()=>closingCash.dataset.userEdited='1');
   openExercise.onclick=()=>void(async()=>{try{const row=await app.openExercise({label:newLabel.value,openingCash:Number(openingCash.value||0)});notify('Exercice « '+row.title+' » ouvert localement.');newLabel.value='';openingCash.value='';await refresh();}catch(e){showError(e);}})();
