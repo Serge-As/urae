@@ -183,7 +183,7 @@ export class DiscoveryService {
     const record:WorkspaceRecord={
       id:existing?.id??makeId('candidate'),tenantId:PUBLIC_CANDIDATE_TENANT,moduleId:'MEMBERSHIP.PORTFOLIO',title:alias,
       status:input.optIn?'ACTIVE':'ARCHIVED',tags:['public-candidate','consent:'+(input.optIn?'yes':'no'),'geo-consent:'+(approxLocation?'yes':'no')],
-      data:{ownerActorId:ctx.actorId,optIn:Boolean(input.optIn),displayAlias:alias,locality:cleanText(input.locality,120),geoOptIn:Boolean(approxLocation),geoLatitude:approxLocation?.latitude,geoLongitude:approxLocation?.longitude,geoPrecisionMeters:approxLocation?.precisionMeters,skills:JSON.stringify(cleanTags(input.skills)),interests:JSON.stringify(cleanTags(input.interests)),desiredGroupTags:JSON.stringify(cleanTags(input.desiredGroupTags)),bio:cleanText(input.bio,500),availability:cleanText(input.availability,120)},
+      data:{ownerActorId:ctx.actorId,optIn:Boolean(input.optIn),displayAlias:alias,locality:cleanText(input.locality,120),geoOptIn:Boolean(approxLocation),geoLatitude:approxLocation?.latitude??null,geoLongitude:approxLocation?.longitude??null,geoPrecisionMeters:approxLocation?.precisionMeters??null,skills:JSON.stringify(cleanTags(input.skills)),interests:JSON.stringify(cleanTags(input.interests)),desiredGroupTags:JSON.stringify(cleanTags(input.desiredGroupTags)),bio:cleanText(input.bio,500),availability:cleanText(input.availability,120)},
       createdBy:ctx.actorId,createdAt:existing?.createdAt??stamp,updatedAt:stamp
     };
     await this.repo.saveWorkspaceRecord(record);
