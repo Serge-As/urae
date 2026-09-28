@@ -628,6 +628,15 @@ export class ConnectedApplication {
     }).filter(x=>x.meetingId&&x.membershipId&&x.rubricId&&Number.isSafeInteger(x.targetAmount)&&x.targetAmount>=0);
   }
 
+  private async patchLocalCashMovement(input:{amount:number;direction:'in'|'out';kind:string;sourceType:string;sourceId:string;meetingId?:string;idempotencyKey:string;descriptionCode:string}):Promise<any>{
+    if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');if(!Number.isSafeInteger(input.amount)||input.amount<=0)throw Error('INVALID_AMOUNT');
+    const path='/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/ledger',current=await this.cached<any>(path)??{summary:{currency:'XAF',cashBalance:0,memberFundsLiability:0,entryCount:0},entries:[],receipts:[],cellRevisions:[]};
+    const existing=(current.entries??[]).find((x:any)=>x.idempotencyKey===input.idempotencyKey);if(existing)return existing;
+    const stamp=new Date().toISOString(),entry={id:'local_ledger_'+input.idempotencyKey,tenantId:this.tenantId,groupId:this.activeGroupId,currency:'XAF',createdAt:stamp,createdBy:this.actorId,descriptionCode:input.descriptionCode,sourceType:input.sourceType,sourceId:input.sourceId,meetingId:input.meetingId,idempotencyKey:input.idempotencyKey,kind:input.kind,lines:[],localPending:true,localDirection:input.direction,localAmount:input.amount};
+    const delta=input.direction==='in'?input.amount:-input.amount,summary={...current.summary,cashBalance:Number(current.summary?.cashBalance??0)+delta,entryCount:Number(current.summary?.entryCount??0)+1};
+    await this.saveCached(path,{...current,summary,entries:[...(current.entries??[]),entry]});return entry;
+  }
+
   pendingFinancialSheetEntries():Array<{meetingId:string;membershipId:string;rubricId:string;amount:number;nature:string;status:string;idempotencyKey:string;createdAt:string}>{
     if(!this.activeGroupId)return[];
     return this.outbox.list().filter(item=>{
@@ -1083,11 +1092,33 @@ export class ConnectedApplication {
     await this.saveLocalCompletion(next);await this.queueLocal('COMPLETION_TRANSITION_V1',{groupId:this.activeGroupId,id,to,expectedVersion,patch:structuredClone(patch),reason:reason??null},'completion-transition:'+id+':'+expectedVersion+':'+to);return next;
   }
   async createHistoricalIdentityClaim(input:{historicalReference:string;evidenceReference:string;claimedMembershipId?:string;note?:string}):Promise<CompletionRecord>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/identity-claims',{method:'POST',body:JSON.stringify(input)});}
-  async createTontineCycle(input:{rubricId:string;name:string;rounds:number;potsPerRound:number;nominalPotAmount?:number}):Promise<CompletionRecord>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/tontine/cycles',{method:'POST',body:JSON.stringify({...input,currency:'XAF'})});}
-  async addTontineShare(input:{cycleId:string;membershipId:string;label:string}):Promise<CompletionRecord>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/tontine/shares',{method:'POST',body:JSON.stringify(input)});}
-  async suggestTontineSchedule(input:{shareIds:string[];rounds:number;potsPerRound:number;constraints?:TontineScheduleConstraint[]}):Promise<TontineScheduleResult>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/tontine/schedule/suggest',{method:'POST',body:JSON.stringify(input)});}
-  async scheduleTontineShare(shareId:string,round:number,expectedVersion:number):Promise<CompletionRecord>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/tontine/shares/'+encodeURIComponent(shareId)+'/schedule',{method:'POST',body:JSON.stringify({round,expectedVersion})});}
-  async serveTontineShare(shareId:string,input:{amount:number;expectedVersion:number;meetingId?:string}):Promise<{entry:LedgerEntry;share:CompletionRecord}>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/tontine/shares/'+encodeURIComponent(shareId)+'/serve',{method:'POST',body:JSON.stringify({...input,currency:'XAF',idempotencyKey:makeId('benefit')})});}
+  async createTontineCycle(input:{rubricId:string;name:string;rounds:number;potsPerRound:number;nominalPotAmount?:number}):Promise<CompletionRecord>{
+    if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');if(!input.rubricId||!input.name.trim())throw Error('TONTINE_CYCLE_REQUIRED');if(!Number.isSafeInteger(input.rounds)||input.rounds<1||!Number.isSafeInteger(input.potsPerRound)||input.potsPerRound<1)throw Error('INVALID_TONTINE_CYCLE');
+    return this.createCompletion('TONTINE_CYCLE',{title:input.name,data:{rubricId:input.rubricId,rounds:input.rounds,potsPerRound:input.potsPerRound,currency:'XAF',nominalPotAmount:input.nominalPotAmount??null}});
+  }
+  async addTontineShare(input:{cycleId:string;membershipId:string;label:string}):Promise<CompletionRecord>{
+    if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');const cycle=(await this.listCompletion('TONTINE_CYCLE')).find(x=>x.id===input.cycleId);if(!cycle)throw Error('TONTINE_CYCLE_NOT_FOUND');
+    const member=(await this.listMembers()).find(x=>x.id===input.membershipId&&x.status==='active');if(!member)throw Error('MEMBERSHIP_NOT_FOUND');
+    return this.createCompletion('TONTINE_SHARE',{title:input.label,data:{cycleId:input.cycleId,membershipId:input.membershipId,scheduledRound:null,scheduledSlot:null,benefitLedgerEntryId:null}});
+  }
+  async suggestTontineSchedule(input:{shareIds:string[];rounds:number;potsPerRound:number;constraints?:TontineScheduleConstraint[]}):Promise<TontineScheduleResult>{
+    if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return suggestTontineScheduleLocal(input.shareIds,input.rounds,input.potsPerRound,input.constraints??[]);
+  }
+  async scheduleTontineShare(shareId:string,round:number,expectedVersion:number):Promise<CompletionRecord>{
+    if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');const share=(await this.listCompletion('TONTINE_SHARE')).find(x=>x.id===shareId);if(!share)throw Error('TONTINE_SHARE_NOT_FOUND');
+    const cycleId=String(share.data.cycleId??''),cycle=(await this.listCompletion('TONTINE_CYCLE')).find(x=>x.id===cycleId);if(!cycle)throw Error('TONTINE_CYCLE_NOT_FOUND');
+    const maxRound=Number(cycle.data.rounds),pots=Number(cycle.data.potsPerRound);if(!Number.isSafeInteger(round)||round<1||round>maxRound)throw Error('TONTINE_ROUND_OUT_OF_RANGE');
+    const siblings=(await this.listCompletion('TONTINE_SHARE')).filter(x=>x.id!==shareId&&String(x.data.cycleId??'')===cycleId&&Number(x.data.scheduledRound)===round&&String(x.data.completionState)!=='CANCELLED');if(siblings.length>=pots)throw Error('TONTINE_ROUND_CAPACITY_EXCEEDED');
+    return this.transitionCompletion(shareId,'SCHEDULED',expectedVersion,{scheduledRound:round,scheduledSlot:siblings.length+1});
+  }
+  async serveTontineShare(shareId:string,input:{amount:number;expectedVersion:number;meetingId?:string}):Promise<{entry:LedgerEntry;share:CompletionRecord}>{
+    if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');if(!Number.isSafeInteger(input.amount)||input.amount<=0)throw Error('INVALID_AMOUNT');const key=makeId('benefit');
+    if(!this.isOffline())try{return await this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/tontine/shares/'+encodeURIComponent(shareId)+'/serve',{method:'POST',body:JSON.stringify({...input,currency:'XAF',idempotencyKey:key})});}catch(error){if(!(error instanceof Error)||error.message!=='NETWORK_UNAVAILABLE')throw error;}
+    const share=(await this.listCompletion('TONTINE_SHARE')).find(x=>x.id===shareId);if(!share)throw Error('TONTINE_SHARE_NOT_FOUND');if(String(share.data.completionState)!=='SCHEDULED')throw Error('TONTINE_SHARE_NOT_SCHEDULED');if(Number(share.data.completionVersion??0)!==input.expectedVersion)throw Error('COMPLETION_VERSION_CONFLICT');
+    const entry:any=await this.patchLocalCashMovement({amount:input.amount,direction:'out',kind:'tontine_benefit',sourceType:'tontine_share',sourceId:shareId,meetingId:input.meetingId,idempotencyKey:key,descriptionCode:'LEDGER_TONTINE_BENEFIT'});
+    const data={...share.data,completionState:'SERVED',completionVersion:input.expectedVersion+1,benefitLedgerEntryId:entry.id,servedAt:new Date().toISOString()},next:CompletionRecord={...share,status:'DONE',tags:[...share.tags.filter(x=>!x.startsWith('state:')),'state:SERVED'],data,updatedAt:new Date().toISOString()};
+    await this.saveLocalCompletion(next);await this.queueLocal('TONTINE_SERVE_V1',{groupId:this.activeGroupId,shareId,amount:input.amount,expectedVersion:input.expectedVersion,meetingId:input.meetingId??null,currency:'XAF',idempotencyKey:key},key);return{entry,share:next};
+  }
   async createObligation(input:{membershipId:string;type:string;title:string;dueAt?:string;amount?:number;sourceId?:string}):Promise<unknown>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/obligations',{method:'POST',body:JSON.stringify({...input,currency:'XAF'})});}
   async quoteLoan(input:{principal:number;installments:number;annualRateBasisPoints:number;installmentsPerYear?:number;method?:'FLAT'|'DECLINING';feesTotal?:number}):Promise<{schedule:LoanScheduleRow[]}>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/loans/quote',{method:'POST',body:JSON.stringify(input)});}
   async simulateLoan(input:{principal:number;periods:number;ratePercentPerPeriod:number;priority:'CAPITAL_FIRST'|'INTEREST_FIRST';interestBasis?:'OUTSTANDING'|'INITIAL';payments?:number[];openingInterestDue?:number}):Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/loans/simulate',{method:'POST',body:JSON.stringify(input)});}
