@@ -45,6 +45,8 @@ export interface GroupPurgeResult {
   purged: true;
   scopeHash: string;
   purgedAt: string;
+  artifactCleanupTaskId: string;
+  artifactsPending: number;
 }
 
 export type TrashEntityRecord = Group | Membership | MeetingSession | RubricDefinition;
@@ -255,7 +257,7 @@ export class InMemoryPlatformRepository implements PlatformRepository {
     this.workspaceRecords.set(copy.trashRecord.id,copy.trashRecord);this.audits.set(copy.audit.id,copy.audit);
     return structuredClone(copy);
   }
-  listTrashMaintenanceItems():WorkspaceRecord[]{return [...this.workspaceRecords.values()].filter(x=>x.moduleId==='TRASH.ITEM').map(x=>structuredClone(x));}
+  listTrashMaintenanceItems():WorkspaceRecord[]{return [...this.workspaceRecords.values()].filter(x=>x.moduleId==='TRASH.ITEM'||x.moduleId==='TRASH.ARTIFACT_CLEANUP').map(x=>structuredClone(x));}
 
   captureGroupPurgeManifest(tenantId:Id,groupId:Id):GroupPurgeManifest{
     const ids=new Set<Id>([groupId]),artifacts=new Set<string>();
@@ -289,7 +291,8 @@ export class InMemoryPlatformRepository implements PlatformRepository {
     for(const [key,x] of this.financialCorrections)if(x.tenantId===tenantId&&x.groupId===groupId)this.financialCorrections.delete(key);
     for(const [key,x] of this.financialCellRevisions)if(x.tenantId===tenantId&&x.groupId===groupId)this.financialCellRevisions.delete(key);
     this.groups.delete(groupId);this.purgedGroupScopes.add(scope);
-    return{purged:true,scopeHash:scope,purgedAt};
+    const cleanupId='trash_artifact_cleanup_'+encodeURIComponent(scope),cleanup:WorkspaceRecord={id:cleanupId,tenantId,moduleId:'TRASH.ARTIFACT_CLEANUP',title:'Nettoyage de pièces après purge',status:manifest.artifactKeys.length?'ACTIVE':'DONE',tags:['trash','artifact-cleanup'],data:{artifactKeysJson:JSON.stringify(manifest.artifactKeys),completedKeysJson:'[]',lastError:null,purgeScope:scope,purgedAt},createdBy:'system_trash_maintenance',createdAt:purgedAt,updatedAt:purgedAt};this.workspaceRecords.set(cleanupId,cleanup);
+    return{purged:true,scopeHash:scope,purgedAt,artifactCleanupTaskId:cleanupId,artifactsPending:manifest.artifactKeys.length};
   }
   isGroupPurged(tenantId:Id,groupId:Id):boolean{return this.purgedGroupScopes.has(JSON.stringify([tenantId,groupId]));}
 
@@ -577,7 +580,7 @@ export class D1PlatformRepository implements PlatformRepository {
     await this.db.batch(statements);return structuredClone(plan);
   }
   async listTrashMaintenanceItems():Promise<WorkspaceRecord[]>{
-    const rows=await this.db.prepare(`SELECT data_json FROM platform_records WHERE record_type='workspace_record' AND json_extract(data_json,'$.moduleId')='TRASH.ITEM'`).all<PlatformRecordRow>();
+    const rows=await this.db.prepare(`SELECT data_json FROM platform_records WHERE record_type='workspace_record' AND json_extract(data_json,'$.moduleId') IN ('TRASH.ITEM','TRASH.ARTIFACT_CLEANUP')`).all<PlatformRecordRow>();
     return rows.results.map(r=>JSON.parse(r.data_json) as WorkspaceRecord);
   }
 
@@ -607,7 +610,8 @@ export class D1PlatformRepository implements PlatformRepository {
   }
 
   async purgeGroupData(manifest:GroupPurgeManifest,deletionId:string,purgedAt:string):Promise<GroupPurgeResult>{
-    const {tenantId,groupId}=manifest,scopeHash=await purgeScopeHash(tenantId,groupId),dHash=await deletionHash(deletionId);
+    const {tenantId,groupId}=manifest,scopeHash=await purgeScopeHash(tenantId,groupId),dHash=await deletionHash(deletionId),cleanupId='trash_artifact_cleanup_'+scopeHash;
+    const cleanup:WorkspaceRecord={id:cleanupId,tenantId,moduleId:'TRASH.ARTIFACT_CLEANUP',title:'Nettoyage de pièces après purge',status:manifest.artifactKeys.length?'ACTIVE':'DONE',tags:['trash','artifact-cleanup'],data:{artifactKeysJson:JSON.stringify(manifest.artifactKeys),completedKeysJson:'[]',lastError:null,purgeScopeHash:scopeHash,purgedAt},createdBy:'system_trash_maintenance',createdAt:purgedAt,updatedAt:purgedAt};
     const q=(sql:string,...values:unknown[])=>this.db.prepare(sql).bind(...values);
     const statements:D1PreparedStatementLike[]=[
       // Arbitration happens inside the same D1 batch as deletion. If the final
@@ -629,6 +633,9 @@ export class D1PlatformRepository implements PlatformRepository {
          ),?)
          ON CONFLICT(scope_hash) DO UPDATE SET allowed=excluded.allowed,created_at=excluded.created_at`,
          scopeHash,deletionId,tenantId,groupId,deletionId,purgedAt),
+      q(`INSERT INTO platform_records(record_type,record_id,tenant_id,group_id,assignee_id,idempotency_key,data_json,updated_at)
+         VALUES('workspace_record',?,?,NULL,NULL,NULL,?,?)
+         ON CONFLICT(record_type,record_id) DO UPDATE SET data_json=excluded.data_json,updated_at=excluded.updated_at`,cleanupId,tenantId,JSON.stringify(cleanup),purgedAt),
       // Remove non-group-scoped audit/evidence while the entity graph is still queryable.
       q(`DELETE FROM platform_records WHERE tenant_id=? AND record_type IN ('audit','evidence') AND (
           json_extract(data_json,'$.targetId')=? OR json_extract(data_json,'$.subjectId')=? OR
@@ -679,7 +686,7 @@ export class D1PlatformRepository implements PlatformRepository {
          ON CONFLICT(scope_hash) DO UPDATE SET purged_at=excluded.purged_at,deletion_hash=excluded.deletion_hash,purge_policy_version=excluded.purge_policy_version`,scopeHash,purgedAt,dHash)
     ];
     await this.db.batch(statements);
-    return{purged:true,scopeHash,purgedAt};
+    return{purged:true,scopeHash,purgedAt,artifactCleanupTaskId:cleanupId,artifactsPending:manifest.artifactKeys.length};
   }
 
   async isGroupPurged(tenantId:Id,groupId:Id):Promise<boolean>{
