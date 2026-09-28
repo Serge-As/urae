@@ -253,9 +253,14 @@ export class ConnectedApplication {
   }
   async restoreEcoVault(passphrase:string,encoded:string):Promise<{groupId:string;events:number;snapshots:number;outbox:number}>{
     const opened=await openEcoVault(passphrase,encoded);if(opened.snapshot.tenantId!==this.tenantId)throw Error('VAULT_TENANT_MISMATCH');const groupId=opened.snapshot.groupId,state=opened.snapshot.state as any,snapshots=Array.isArray(state.snapshots)?state.snapshots:[];
-    for(const row of snapshots){if(!row?.path)continue;const body=row.path==='/api/v1/groups'?(()=>{const existing=(this.cached<Group[]>('/api/v1/groups'));return row.body;})():row.body;await this.readSnapshots.save({id:String(row.id),actorId:this.actorId,tenantId:this.tenantId,path:String(row.path),body});}
-    await this.sovereign.restoreEvents(this.tenantId,groupId,opened.events);for(const key of opened.relayKeys)await this.sovereign.saveRelayKey(key);
-    const vaultOutbox=Array.isArray(state.outbox)?state.outbox:[],other=this.outbox.list().filter(x=>String((x.payload as any)?.groupId??'')!==groupId);this.outbox.restore([...other,...vaultOutbox]);await this.persistOutbox();this.selectGroup(groupId);
+    this.groupTenants.set(groupId,this.tenantId);this.selectGroup(groupId);
+    for(const row of snapshots){
+      if(!row?.path)continue;const path=String(row.path);
+      if(path==='/api/v1/groups'){const existing=await this.cached<Group[]>('/api/v1/groups')??[],restored=Array.isArray(row.body)?row.body as Group[]:[],byId=new Map(existing.map(g=>[g.id,g]));for(const g of restored)byId.set(g.id,g);await this.saveCached('/api/v1/groups',[...byId.values()]);}
+      else await this.saveCached(path,row.body);
+    }
+    await this.sovereign.restoreEvents(this.tenantId,groupId,opened.events);for(const key of opened.relayKeys)await this.sovereign.saveRelayKey({...key,tenantId:this.tenantId,groupId});
+    const vaultOutbox=Array.isArray(state.outbox)?state.outbox:[],other=this.outbox.list().filter(x=>String((x.payload as any)?.groupId??'')!==groupId);this.outbox.restore([...other,...vaultOutbox]);await this.persistOutbox();
     return{groupId,events:opened.events.length,snapshots:snapshots.length,outbox:vaultOutbox.length};
   }
   async memberEnvelope(meetingId:string,membershipId?:string):Promise<any>{
