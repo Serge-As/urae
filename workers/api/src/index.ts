@@ -250,6 +250,28 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
     const revision=await repo.getFinancialCellRevision(ctx.tenantId,groupId,meetingId,membershipId,rubricId,'XAF');
     return{rows,current:rows.reduce((n,x)=>n+x.netAmount,0),cellVersion:revision?.version??0,baselineActorId:rows.slice().reverse().find(x=>x.netAmount>0)?.receivedBy};
   };
+  const dispatchFinancialCorrectionProjection=async(record:import('../../../packages/contracts/src/index.js').WorkspaceRecord):Promise<{ok:boolean;notice?:any}>=>{
+    if(record.moduleId!=='FINANCE.CORRECTION_OUTBOX'||!record.groupId)return{ok:false};
+    if(record.status==='DONE')return{ok:true};
+    const d=record.data,groupId=record.groupId,operationId=String(d.operationId??''),membershipId=String(d.membershipId??''),meetingId=String(d.meetingId??''),rubricId=String(d.rubricId??''),entryId=String(d.primaryEntryId??''),previousAmount=finite(d.previousAmount),newAmount=finite(d.newAmount),reason=String(d.reason??'Correction de cellule financière');
+    try{
+      const [entry,meeting,targetMember]=await Promise.all([repo.getLedgerEntry(ctx.tenantId,groupId,entryId),repo.getMeeting(ctx.tenantId,groupId,meetingId),repo.getMembership(ctx.tenantId,groupId,membershipId)]);
+      if(!entry||!meeting||!targetMember)throw Error('CORRECTION_PROJECTION_SOURCE_MISSING');
+      const positions=await ledger.receiptPositions(ctx.tenantId,groupId),newSituation=positions.filter(x=>x.membershipId===membershipId).reduce((n,x)=>n+x.netAmount,0),previousSituation=newSituation-(newAmount-previousAmount);
+      const notice=await memberControl.create({groupId,membershipId,entry,operationType:'FINANCIAL_CELL_CORRECTION',amount:newAmount,currency:'XAF',rubricId,meetingId,previousSituation,newSituation,previousAmount,newAmount,correctionReason:reason,selfBenefit:targetMember.userId===record.createdBy,requiresIndependentReview:false});
+      const correctionActor=await actorLabelFor(record.createdBy),correctionMember=await memberLabel(groupId,membershipId),correctionRubric=await rubricLabel(groupId,rubricId),meetingWhen=new Intl.DateTimeFormat('fr-FR',{dateStyle:'medium',timeStyle:'short'}).format(new Date(meeting.scheduledAt??meeting.openedAt)),changeWhen=new Intl.DateTimeFormat('fr-FR',{dateStyle:'medium',timeStyle:'short'}).format(new Date(record.createdAt)),action={view:'operations',anchor:'twoSheetWorkspace',meetingId,membershipId,rubricId,label:'Voir la cellule modifiée'};
+      await notifications.publish(groupId,{title:meeting.status==='closed'?'Séance clôturée modifiée':'Donnée financière corrigée',message:`${correctionMember} · ${correctionRubric} · ${meetingWhen} : ${previousAmount} → ${newAmount} F CFA. Auteur : ${correctionActor}. Modification : ${changeWhen}. Motif : ${reason}`,channels:['IN_APP','WEB_PUSH'],audience:'MANAGERS',priority:meeting.status==='closed'?'CRITICAL':'HIGH',action,idempotencyKey:'financial-correction:'+operationId+':managers'});
+      await notifications.publish(groupId,{title:meeting.status==='closed'?'Votre compte a été corrigé après clôture':'Votre compte a été corrigé',message:`${correctionRubric} · ${meetingWhen} : ${previousAmount} → ${newAmount} F CFA. Auteur : ${correctionActor}. Modification : ${changeWhen}. Motif : ${reason}. Vous pouvez valider ou émettre une réserve.`,channels:['IN_APP','WEB_PUSH'],audience:'SELECTED',selectedMembershipIds:[membershipId],priority:meeting.status==='closed'?'CRITICAL':'HIGH',action,idempotencyKey:'financial-correction:'+operationId+':member'});
+      await publishLive(groupId,'FINANCIAL_NOTICE','financial-cell-correction:'+entry.id,{noticeId:notice.id,ledgerEntryId:entry.id,operationType:'FINANCIAL_CELL_CORRECTION',amount:newAmount,currency:'XAF',previousAmount,newAmount,meetingClosed:meeting.status==='closed',alertLevel:meeting.status==='closed'?'closed':'correction'},targetMember.userId);
+      await publishLive(groupId,'MEETING_UPDATE','financial-cell-managers:'+entry.id,{meetingId,kind:'FINANCIAL_CELL_CORRECTION',operationType:'FINANCIAL_CELL_CORRECTION',membershipId,rubricId,previousAmount,newAmount,meetingClosed:meeting.status==='closed',actorId:record.createdBy,actorName:correctionActor});
+      await repo.saveWorkspaceRecord({...record,status:'DONE',tags:[...new Set(record.tags.filter(t=>!['pending','retry-required'].includes(t)).concat('dispatched'))],data:{...record.data,attemptCount:Number(record.data.attemptCount??0)+1,lastError:null,noticeId:notice.id,dispatchedAt:new Date().toISOString()},updatedAt:new Date().toISOString()});
+      return{ok:true,notice};
+    }catch(error){
+      try{await repo.saveWorkspaceRecord({...record,status:'ACTIVE',tags:[...new Set(record.tags.concat('pending','retry-required'))],data:{...record.data,attemptCount:Number(record.data.attemptCount??0)+1,lastError:(error instanceof Error?error.message:String(error)).slice(0,500)},updatedAt:new Date().toISOString()});}catch{}
+      return{ok:false};
+    }
+  };
+
   const applyFinancialCellTarget=async(input:{groupId:string;meetingId:string;membershipId:string;rubricId:string;targetAmount:number;expectedCurrentAmount?:number;expectedCellVersion?:number;reason:string;idempotencyKey:string;consensusId?:string;consensusVersion?:number})=>{
     const group=await requireGroup(input.groupId,true),meeting=await repo.getMeeting(ctx.tenantId,input.groupId,input.meetingId);if(!meeting||meeting.status==='cancelled')throw Error('MEETING_NOT_FOUND');
     if(!Number.isSafeInteger(input.targetAmount)||input.targetAmount<0)throw Error('INVALID_CONTRIBUTION_AMOUNT');
@@ -264,14 +286,9 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
     },ctx.requestId);
     const receipt=correction.receipt,evidenceEntry=correction.evidenceEntry;
     if(!evidenceEntry)throw Error('FINANCIAL_CORRECTION_NOT_APPLIED');
-    const afterAll=await ledger.receiptPositions(ctx.tenantId,input.groupId),newSituation=afterAll.filter(x=>x.membershipId===input.membershipId).reduce((n,x)=>n+x.netAmount,0),targetMember=await repo.getMembership(ctx.tenantId,input.groupId,input.membershipId);
-    const notice=await memberControl.create({groupId:input.groupId,membershipId:input.membershipId,entry:evidenceEntry,operationType:'FINANCIAL_CELL_CORRECTION',amount:input.targetAmount,currency:'XAF',rubricId:input.rubricId,meetingId:input.meetingId,previousSituation:beforeSituation,newSituation,previousAmount:state.current,newAmount:input.targetAmount,correctionReason:reason,selfBenefit:targetMember?.userId===ctx.actorId,requiresIndependentReview:false});
-    const correctionActor=await actorLabel(),correctionMember=await memberLabel(input.groupId,input.membershipId),correctionRubric=await rubricLabel(input.groupId,input.rubricId),meetingWhen=new Intl.DateTimeFormat('fr-FR',{dateStyle:'medium',timeStyle:'short'}).format(new Date(meeting.scheduledAt??meeting.openedAt)),changeWhen=new Intl.DateTimeFormat('fr-FR',{dateStyle:'medium',timeStyle:'short'}).format(new Date()),action={view:'operations',anchor:'twoSheetWorkspace',meetingId:input.meetingId,membershipId:input.membershipId,rubricId:input.rubricId,label:'Voir la cellule modifiée'};
-    await notifications.publish(input.groupId,{title:meeting.status==='closed'?'Séance clôturée modifiée':'Donnée financière corrigée',message:`${correctionMember} · ${correctionRubric} · ${meetingWhen} : ${state.current} → ${input.targetAmount} F CFA. Auteur : ${correctionActor}. Modification : ${changeWhen}. Motif : ${reason}`,channels:['IN_APP','WEB_PUSH'],audience:'MANAGERS',priority:meeting.status==='closed'?'CRITICAL':'HIGH',action});
-    await notifications.publish(input.groupId,{title:meeting.status==='closed'?'Votre compte a été corrigé après clôture':'Votre compte a été corrigé',message:`${correctionRubric} · ${meetingWhen} : ${state.current} → ${input.targetAmount} F CFA. Auteur : ${correctionActor}. Modification : ${changeWhen}. Motif : ${reason}. Vous pouvez valider ou émettre une réserve.`,channels:['IN_APP','WEB_PUSH'],audience:'SELECTED',selectedMembershipIds:[input.membershipId],priority:meeting.status==='closed'?'CRITICAL':'HIGH',action});
-    if(targetMember)await publishLive(input.groupId,'FINANCIAL_NOTICE','financial-cell-correction:'+evidenceEntry.id,{noticeId:notice.id,ledgerEntryId:evidenceEntry.id,operationType:'FINANCIAL_CELL_CORRECTION',amount:input.targetAmount,currency:'XAF',previousAmount:state.current,newAmount:input.targetAmount,meetingClosed:meeting.status==='closed',alertLevel:meeting.status==='closed'?'closed':'correction'},targetMember.userId);
-    await publishLive(input.groupId,'MEETING_UPDATE','financial-cell-managers:'+evidenceEntry.id,{meetingId:input.meetingId,kind:'FINANCIAL_CELL_CORRECTION',operationType:'FINANCIAL_CELL_CORRECTION',membershipId:input.membershipId,rubricId:input.rubricId,previousAmount:state.current,newAmount:input.targetAmount,meetingClosed:meeting.status==='closed',actorId:ctx.actorId,actorName:correctionActor});
-    return{status:'APPLIED',current:state.current,target:input.targetAmount,previousAmount:state.current,newAmount:input.targetAmount,cellVersion:correction.cellVersion,receipt,notice,groupId:group.id};
+    const outbox=correction.operationId?await repo.getWorkspaceRecord(ctx.tenantId,'financial_correction_outbox_'+correction.operationId):undefined;
+    const delivery=outbox?await dispatchFinancialCorrectionProjection(outbox):{ok:false};
+    return{status:'APPLIED',current:state.current,target:input.targetAmount,previousAmount:state.current,newAmount:input.targetAmount,cellVersion:correction.cellVersion,receipt,notice:delivery.notice??null,deliveryPending:!delivery.ok,groupId:group.id};
   };
 
   const jsonStringArray=(value:unknown):string[]=>{try{const parsed=JSON.parse(String(value??'[]'));return Array.isArray(parsed)?parsed.map(String):[];}catch{return[];}};
@@ -1270,14 +1287,15 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
     const retryProjectionRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/live\/retry-pending$/);
     if(retryProjectionRoute&&request.method==='POST'){
       const groupId=retryProjectionRoute[1]!;await requireGroup(groupId,true);
-      const pending=(await repo.listWorkspaceRecords(ctx.tenantId,'FINANCE.LIVE_PROJECTION',groupId)).filter(r=>r.status==='ACTIVE');
+      const pending=(await repo.listWorkspaceRecords(ctx.tenantId,'FINANCE.LIVE_PROJECTION',groupId)).filter(r=>r.status==='ACTIVE'),pendingCorrections=(await repo.listWorkspaceRecords(ctx.tenantId,'FINANCE.CORRECTION_OUTBOX',groupId)).filter(r=>r.status==='ACTIVE');
       const receipts=await repo.listContributionReceipts(ctx.tenantId,groupId);let retried=0,confirmed=0;
       for(const record of pending){
         const entryId=String(record.data.entryId??''),entry=entryId?await repo.getLedgerEntry(ctx.tenantId,groupId,entryId):undefined;
         const receipt=receipts.find(x=>x.ledgerEntryId===entryId);
         if(!entry||!receipt)continue;retried++;if(await dispatchContributionProjection(groupId,receipt,entry))confirmed++;
       }
-      return json({retried,confirmed,pending:Math.max(0,pending.length-confirmed)},200,cors);
+      for(const record of pendingCorrections){retried++;if((await dispatchFinancialCorrectionProjection(record)).ok)confirmed++;}
+      return json({retried,confirmed,pending:Math.max(0,pending.length+pendingCorrections.length-confirmed)},200,cors);
     }
 
     const savingsYieldSource=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/savings-yield\/source-data$/);
