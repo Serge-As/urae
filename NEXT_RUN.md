@@ -1,5 +1,29 @@
 # NEXT RUN — ECO-SYSTEM 1.5.2.7
 
+## REPRISE PRIORITAIRE — N° MEMBRES + FINANCE OFFLINE 1.5.2.8 (2026-09-28)
+
+Production vérifiée :
+- SHA : `8e8a927ea0f968ce474473f3103cbddc0341a880`
+- Worker : `53eca7cc-ca2e-459a-b472-4741dfb9dc61`
+- delivery/recovery : **36365348227 SUCCESS**
+- backup pré : **10947511514**
+- backup post : **10947645903**
+- E2E Chromium : **36365348179 SUCCESS**
+- WebKit/iOS : **36365348226 SUCCESS**
+- argent réel : **OFF**
+
+Recette terrain à faire sans redéploiement préalable :
+1. Membres : choisir un classement différent de l'ordre d'inscription, enregistrer 1…N et vérifier qu'il reste identique après fermeture/réouverture.
+2. Feuille séance : vérifier visuellement `N° | Membre | rubriques…`.
+3. Dictée : dire « Eco, membre numéro 3, Secours 500, Épargne 1000 » et vérifier que la preview pointe vers le membre classé N°3.
+4. Couper totalement Internet. Saisir et valider par ✓ puis Entrée une cotisation et une dépense ; recharger la page toujours hors ligne ; les valeurs doivent rester visibles et marquées synchro en attente.
+5. Hors ligne : tester aussi une première saisie Prêt et Remboursement. Revenir en ligne puis vérifier un seul replay canonique sans doublon.
+6. Refaire fermeture/réouverture après synchronisation et vérifier les mêmes montants.
+7. Ne pas déclarer la dictée audio Workers AI comme offline : seule la persistance/validation financière est garantie hors connexion ; la transcription audio cloud exige le réseau.
+8. Tout défaut reproductible devient un test avant correction.
+
+---
+
 ## REPRISE PRIORITAIRE — PRODUCTION 1.5.2.8 GPS + VOIX (2026-09-28)
 
 Production vérifiée :

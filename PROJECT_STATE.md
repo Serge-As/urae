@@ -1,5 +1,58 @@
 # ECO-SYSTEM — PROJECT STATE
 
+## CURRENT STATE — PRODUCTION 1.5.2.8 · N° MEMBRES + FINANCE OFFLINE ÉTENDUE (2026-09-28)
+
+**Statut technique : DEPLOYED + SMOKE_VERIFIED + RECOVERY_VERIFIED. FIELD_ACCEPTED reste en attente de recette physique.**
+
+- PR : **#33** — classement N° membres + finance offline étendue
+- source déployée : `8e8a927ea0f968ce474473f3103cbddc0341a880`
+- version : `1.5.2.8-geo-directory`
+- build : `eco-system-1.5.2.8-20260928`
+- cache PWA : `eco-system-v1528-geo-directory-20260928`
+- Worker Version ID : `53eca7cc-ca2e-459a-b472-4741dfb9dc61`
+- qualification PR après correction moteur vocal : **36365129048 SUCCESS**
+- qualification post-fusion : **36365206808 SUCCESS**
+- E2E financier Chromium post-fusion : **36365206898 SUCCESS**
+- smoke WebKit/iOS post-fusion : **36365206944 SUCCESS**
+- livraison : **36365348227 SUCCESS**
+- E2E financier SHA de livraison : **36365348179 SUCCESS**
+- WebKit/iOS SHA de livraison : **36365348226 SUCCESS**
+- qualification terrain automatisée SHA livraison : **36365348250 SUCCESS**
+- D1 : `eco-system-db` réutilisée ; **No migrations to apply**
+- R2 : `eco-system-backups` actif
+- sauvegarde pré-déploiement : artifact **10947511514**
+- sauvegarde post-déploiement : artifact **10947645903**
+- restauration post : **PRAGMA integrity_check=ok**
+- catalogue : **164 capacités**
+- argent réel : **OFF**
+
+### N° de membre et classement responsable
+- la feuille générale de séance possède une colonne **N°** distincte immédiatement avant **Membre** ;
+- le responsable peut définir le classement 1…N, soit en saisissant les numéros, soit en appliquant l'ordre affiché ;
+- les numéros doivent être uniques et continus ; ils sont persistés sur le Membership canonique, pas dans une table parallèle ;
+- le classement peut être enregistré localement hors connexion puis rejoué via l'outbox ;
+- les lignes financières suivent ce classement ;
+- la dictée accepte les alias `membre numéro N`, `membre N`, `member number N`, etc. Le N° pointe vers le même membership canonique ;
+- le moteur vocal accepte aussi les noms composés avec tiret (ex. Jean-Pierre).
+
+### Finance hors connexion
+Le parcours financier canonique conserve maintenant hors connexion :
+- première cotisation / entrée positive ;
+- correction/remplacement exact d'une cellule ;
+- sortie/dépense ;
+- prêt ;
+- remboursement principal ou intérêt ;
+- validation par ✓ ou Entrée.
+
+Les intentions sont persistées dans IndexedDB avant synchronisation. Les opérations spécialisées utilisent `FINANCIAL_SHEET_ENTRY_V1`; leur projection est restaurée après rechargement toujours hors ligne. Le replay serveur est idempotent ; un prêt partiellement synchronisé est repris via `sheetEntryKey` au lieu de recréer un second prêt.
+
+Preuve navigateur ajoutée : contribution + dépense `-700` saisies hors ligne, page rechargée hors ligne, valeurs encore visibles avec état local, puis reconnexion et persistance canonique serveur sans doublon.
+
+### Limite honnête de la dictée sans réseau
+La **validation/persistance financière** ne dépend plus du réseau. En revanche, l'enregistrement audio envoyé à Workers AI/Whisper pour produire une nouvelle transcription reste un service réseau. Une transcription déjà obtenue ou une instruction saisie en texte peut être interprétée ; ne pas présenter la reconnaissance audio cloud comme garantie offline.
+
+---
+
 ## CURRENT STATE — PRODUCTION 1.5.2.8 GPS + DICTÉE FINANCIÈRE FINALISÉE (2026-09-28)
 
 **Statut technique : DEPLOYED + SMOKE_VERIFIED + RECOVERY_VERIFIED. FIELD_ACCEPTED reste en attente de recette physique.**

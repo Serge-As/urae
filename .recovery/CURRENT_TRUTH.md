@@ -1,3 +1,17 @@
+## CURRENT OVERRIDE — N° MEMBRES + FINANCE OFFLINE ÉTENDUE — PRODUCTION VERIFIED (2026-09-28)
+
+La production publique sert le SHA exact `8e8a927ea0f968ce474473f3103cbddc0341a880`, Worker `53eca7cc-ca2e-459a-b472-4741dfb9dc61`, toujours sous `1.5.2.8-geo-directory`.
+
+La PR **#33** a complété la numérotation déjà existante : le N° correspond désormais au classement explicite du responsable, est persistant et audité, peut être enregistré hors connexion, apparaît dans une colonne **N°** distincte avant le nom dans la feuille financière, et alimente les alias vocaux `membre numéro N`. Le moteur de mention vocale a aussi été corrigé pour les noms avec tiret.
+
+La finance offline couvre désormais les cotisations, corrections de cellule, dépenses/sorties, prêts et remboursements. `FINANCIAL_SHEET_ENTRY_V1` est durable dans IndexedDB, restauré après reload offline et rejoué idempotemment à la reconnexion. Le scénario navigateur réel contribution + dépense -700 → reload offline → reconnexion → persistance serveur unique est vert.
+
+Preuves : PR CI **36365129048 SUCCESS** ; post-fusion **36365206808 SUCCESS** ; E2E financier **36365206898 SUCCESS** ; WebKit/iOS **36365206944 SUCCESS** ; livraison/recovery **36365348227 SUCCESS** ; E2E SHA livraison **36365348179 SUCCESS** ; WebKit SHA livraison **36365348226 SUCCESS**. Backup pré **10947511514**, post **10947645903**, restauration `integrity_check=ok`. D1 existante, aucune migration, R2 actif, catalogue 164, argent réel OFF.
+
+Limite à préserver : la persistance et validation financière sont offline, mais la transcription audio Workers AI/Whisper reste une dépendance réseau et ne doit pas être déclarée offline.
+
+---
+
 ## CURRENT OVERRIDE — 1.5.2.8 GPS + DICTÉE FINANCIÈRE POST-STOP — PRODUCTION VERIFIED, FIELD ACCEPTANCE PENDING (2026-09-28)
 
 La production publique sert `1.5.2.8-geo-directory` depuis le SHA exact `4ae39be95d0b3faa16e2d86a95b2d47368eb0945` (Worker `4e92501a-430d-463f-876e-784366a54b38`). Le workflow **36362622399** a réussi qualification complète, tests navigateur, sauvegarde D1 pré, réutilisation D1/R2 existants, déploiement, smoke exact, sauvegarde post et restauration SQLite `integrity_check=ok`.
