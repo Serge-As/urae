@@ -41,5 +41,6 @@ test('browser GPS is user-triggered, HTTPS-guarded and never persists precise co
   assert.match(helper,/getCurrentPosition/);assert.match(helper,/isSecureContext/);assert.match(helper,/round2/);
   assert.doesNotMatch(helper,/localStorage|sessionStorage|indexedDB/i);
   assert.match(ui,/Utiliser ma position/);assert.match(ui,/Retirer la zone GPS publique/);assert.match(ui,/requestApproximateLocation/);
+  const sw=fs.readFileSync('apps/web/sw.js','utf8');assert.match(sw,/\/src\/role-directory-talent-ui\.js/);assert.match(sw,/\/src\/geolocation\.js/);
   assert.equal(PRODUCT_MODULES.find(x=>x.id==='GEO.DIRECTORY')?.status,'FOUNDATION_ACTIVE');
 });
