@@ -117,6 +117,16 @@ test('real financial matrix validates click, Enter, closed-session first entry a
     throw new Error('FIRST_CLICK_NOT_COMMITTED ui='+firstUi+' ledger='+firstLedger+' diagnostics='+JSON.stringify(diagnostics));
   }
 
+  const replaceCell=cell(ids.rubricIds[0]);
+  await replaceCell.locator('.cell-target-input').fill('500');
+  await replaceCell.locator('.cell-validate').click();
+  await expect.poll(()=>moneyValue(cell(ids.rubricIds[0]))).toBe(500);
+  await expect.poll(()=>ledgerCellTotal(page,{...ids,rubricId:ids.rubricIds[0]})).toBe(500);
+  await replaceCell.locator('.cell-target-input').fill('4000');
+  await replaceCell.locator('.cell-target-input').press('Enter');
+  await expect.poll(()=>moneyValue(cell(ids.rubricIds[0]))).toBe(4000);
+  await expect.poll(()=>ledgerCellTotal(page,{...ids,rubricId:ids.rubricIds[0]})).toBe(4000);
+
   const enterCell=cell(ids.rubricIds[1]);
   await enterCell.locator('.cell-target-input').fill('2000');
   await enterCell.locator('.cell-target-input').press('Enter');
