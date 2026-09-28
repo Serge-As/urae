@@ -51,6 +51,17 @@ export class IndexedDbSovereignStore {
     }
     return{ok:true,count:rows.length};
   }
+  async restoreEvents(tenantId:string,groupId:string,events:SovereignJournalEvent[]):Promise<void>{
+    const ordered=events.filter(x=>x.tenantId===tenantId&&x.groupId===groupId).slice().sort((a,b)=>a.sequence-b.sequence);let prev='GENESIS',sequence=0;
+    for(const row of ordered){
+      if(row.sequence!==sequence+1||row.previousHash!==prev)throw Error('SOVEREIGN_JOURNAL_CHAIN_INVALID');
+      const {id,hash,...base}=row;if(await digest(stable(base))!==hash)throw Error('SOVEREIGN_JOURNAL_HASH_INVALID');prev=hash;sequence=row.sequence;
+    }
+    const db=await openDb();try{
+      const existing=await all<SovereignJournalEvent>(db.transaction(EVENTS,'readonly').objectStore(EVENTS));
+      await new Promise<void>((resolve,reject)=>{const tx=db.transaction(EVENTS,'readwrite'),store=tx.objectStore(EVENTS);for(const row of existing)if(row.tenantId===tenantId&&row.groupId===groupId)store.delete(row.id);for(const row of ordered)store.put(clone(row));tx.oncomplete=()=>resolve();tx.onerror=()=>reject(tx.error);});
+    }finally{db.close();}
+  }
   async saveRelayKey(record:RelayKeyRecord):Promise<void>{
     const db=await openDb();try{await new Promise<void>((resolve,reject)=>{const tx=db.transaction(KEYS,'readwrite');tx.objectStore(KEYS).put({id:keyId(record.tenantId,record.groupId,record.membershipId),...clone(record)});tx.oncomplete=()=>resolve();tx.onerror=()=>reject(tx.error);});}finally{db.close();}
   }
