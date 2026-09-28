@@ -180,6 +180,9 @@ export interface ReadSnapshot<T=unknown>{
   path:string;
   body:T;
   updatedAt:string;
+  source?:'SERVER'|'LOCAL'|'RELAY'|'RESTORED';
+  lastSyncedAt?:string;
+  sourceVersion?:string|number;
 }
 
 const READ_DB_NAME='eco-system-read-snapshots';
@@ -239,7 +242,7 @@ export class IndexedDbReadSnapshotAdapter {
     if(!IndexedDbReadSnapshotAdapter.supported())return[];
     const db=await this.open();try{return (await idbAll<ReadSnapshot>(db.transaction(READ_STORE,'readonly').objectStore(READ_STORE))).filter(x=>x.actorId===actorId&&x.tenantId===tenantId).map(x=>structuredClone(x));}finally{db.close();}
   }
-  async applyAtomic(input:{save:Array<{id:string;actorId:string;tenantId:string;path:string;body:unknown}>;removeIds?:string[]}):Promise<void>{
+  async applyAtomic(input:{save:Array<{id:string;actorId:string;tenantId:string;path:string;body:unknown;source?:ReadSnapshot['source'];lastSyncedAt?:string;sourceVersion?:string|number}>;removeIds?:string[]}):Promise<void>{
     if(!IndexedDbReadSnapshotAdapter.supported())return;
     const seen=new Set<string>();for(const row of input.save){if(!row.id||seen.has(row.id))throw Error('SNAPSHOT_BATCH_INVALID');seen.add(row.id);}
     const db=await this.open();try{
