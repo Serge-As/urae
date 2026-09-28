@@ -69,6 +69,18 @@ export async function createRelayPairingMaterial(membershipId:string):Promise<Ec
   return{protocolVersion:1,membershipId,keyId:(await digest16(raw)),rawKey:b64u(raw),createdAt:new Date().toISOString()};
 }
 
+export function encodePairingQr(material:EcoRelayPairingMaterial):string{
+  if(material.protocolVersion!==1||!material.groupId||!material.membershipId||!material.keyId||!material.rawKey)throw Error('INVALID_RELAY_PAIRING_MATERIAL');
+  const compact={p:1,g:material.groupId,m:material.membershipId,k:material.keyId,r:material.rawKey,c:material.createdAt,G:material.groupName??'',d:material.displayName??'',n:material.memberNumber??null};
+  return 'ECOP1:'+b64u(te.encode(JSON.stringify(compact)));
+}
+export function decodePairingQr(raw:string):EcoRelayPairingMaterial{
+  if(!raw.startsWith('ECOP1:'))throw Error('INVALID_PAIRING_QR');
+  let c:any;try{c=JSON.parse(td.decode(unb64u(raw.slice(6))));}catch{throw Error('INVALID_PAIRING_QR');}
+  if(c?.p!==1||!c.g||!c.m||!c.k||!c.r)throw Error('INVALID_PAIRING_QR');
+  return{protocolVersion:1,groupId:String(c.g),membershipId:String(c.m),keyId:String(c.k),rawKey:String(c.r),createdAt:String(c.c??new Date().toISOString()),groupName:c.G?String(c.G):undefined,displayName:c.d?String(c.d):undefined,memberNumber:Number.isSafeInteger(c.n)?Number(c.n):undefined};
+}
+
 export async function encryptMemberCapsule(capsule:EcoMemberCapsule,material:EcoRelayPairingMaterial):Promise<EcoEncryptedCapsule>{
   if(capsule.membershipId!==material.membershipId)throw Error('RELAY_MEMBERSHIP_KEY_MISMATCH');
   const raw=unb64u(material.rawKey),key=await crypto.subtle.importKey('raw',rawBuffer(raw),{name:'AES-GCM'},false,['encrypt']);
