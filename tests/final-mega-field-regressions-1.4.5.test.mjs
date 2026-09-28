@@ -154,7 +154,8 @@ test('six month trash is calendar-correct reversible and final purge is system-o
   assert.match(api,/snapshotJson/);
   assert.match(api,/commitTrashLifecycle/);
   assert.doesNotMatch(api,/trash[^\n]{0,120}request\.method==='DELETE'/);
-  assert.match(trashLifecycle,/PURGE_PENDING/);
+  assert.match(repositories,/group_purge_execution_guards/);
+  assert.match(trashLifecycle,/TRASH\.ARTIFACT_CLEANUP/);
   assert.match(trashLifecycle,/captureGroupPurgeManifest/);
   assert.match(trashLifecycle,/purgeGroupData/);
   assert.match(trashLifecycle,/Rappel · groupe dans la corbeille/);
