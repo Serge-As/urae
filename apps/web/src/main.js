@@ -1855,11 +1855,17 @@ async function start() {
     catch (e) {
         if(e instanceof Error&&e.message==='NETWORK_UNAVAILABLE'){
             if(authenticatedSession){
-                // The local identity is already proven. A missing secondary snapshot
-                // must never turn an authenticated offline user into a signed-out user.
                 $('#authScreen').hidden=true;document.body.classList.remove('signed-out','auth-restoring');renderConnectivity();
-                try{renderOutbox();renderCompatibility();renderKernel();renderModules();}catch{}
-                toast(tx('Mode hors ligne : certaines données secondaires ne sont pas encore disponibles sur cet appareil. Le noyau local déjà synchronisé reste accessible.','Offline mode: some secondary data is not cached on this device yet. The synchronized local core remains available.'));
+                try{await renderGroups();}catch(error){console.info('Offline groups restore skipped',error);}
+                if(app.activeGroup()){
+                  try{await renderMembers();}catch(error){console.info('Offline members restore skipped',error);}
+                  try{await renderMeetings();}catch(error){console.info('Offline meetings restore skipped',error);}
+                  try{await renderLivingRules();}catch(error){console.info('Offline rubrics restore skipped',error);}
+                  try{if(isManager())await renderLedger();}catch(error){console.info('Offline ledger restore skipped',error);}
+                  try{renderMeetingMatrix();renderIndividualSheetMatrix();}catch(error){console.info('Offline financial matrix render skipped',error);}
+                }
+                try{renderOutbox();renderCompatibility();renderKernel();renderModules();renderEcosystemHighlights();renderDomainHubs();}catch{}
+                toast(tx('Mode hors ligne : le noyau local synchronisé a été restauré. Les sections secondaires non disponibles restent différées.','Offline mode: the synchronized local core was restored. Unavailable secondary sections are deferred.'));
                 return;
             }
             showAuth(tx('Mode hors ligne disponible : créez votre premier compte local maintenant.','Offline mode is available: create your first local account now.'),'register');return;
