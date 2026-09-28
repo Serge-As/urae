@@ -1672,7 +1672,7 @@ catch (e) {
     fail(e);
 } });
 onSubmit('#publishDiscoveryForm', async (e) => { e.preventDefault(); try {
-    await app.publishActiveGroup({ visibility: val('listingVisibility'), discoverable: val('listingVisibility') === 'PUBLIC', joinPolicy: val('listingJoinPolicy'), recruiting: checked('listingRecruiting'), locality: val('listingLocality') || undefined, missionTags: split(val('listingMission')), activityTags: [] });
+    await app.publishActiveGroup({ visibility: val('listingVisibility'), discoverable: val('listingVisibility') === 'PUBLIC', joinPolicy: val('listingJoinPolicy'), recruiting: checked('listingRecruiting'), locality: val('listingLocality') || undefined, ...geoDirectoryUI.currentPublishGeoPatch(), missionTags: split(val('listingMission')), activityTags: [] });
     toast('Projection publique mise à jour.');
 }
 catch (e) {
