@@ -153,5 +153,25 @@ export const applyRuntimeLocale=(locale:RuntimeLocale)=>{
   }
 };
 
+export const installRuntimeI18nObserver=(getLocale:()=>RuntimeLocale)=>{
+  if(typeof MutationObserver==='undefined'||typeof document==='undefined')return()=>{};
+  const observer=new MutationObserver(mutations=>{
+    let changed=false;
+    for(const mutation of mutations){
+      for(const node of mutation.addedNodes){
+        if(node.nodeType===Node.TEXT_NODE){
+          const text=node as Text,raw=text.nodeValue??'',parent=text.parentElement;
+          if(normalize(raw)&&parent&&!['SCRIPT','STYLE','TEXTAREA'].includes(parent.tagName)){textSources.set(text,raw);changed=true;}
+        }else if(node.nodeType===Node.ELEMENT_NODE){
+          captureRuntimeI18n(node as Element);changed=true;
+        }
+      }
+    }
+    if(changed)applyRuntimeLocale(getLocale());
+  });
+  observer.observe(document.documentElement,{subtree:true,childList:true});
+  return()=>observer.disconnect();
+};
+
 export const runtimeTranslate=(locale:RuntimeLocale,fr:string,en?:string)=>locale==='en'?(en??canonical.get(fr)??fr):fr;
 export const runtimeDictionary=()=>Object.fromEntries(canonical);
