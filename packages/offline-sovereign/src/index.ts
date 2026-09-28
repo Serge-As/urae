@@ -37,6 +37,8 @@ const b64u=(bytes:Uint8Array)=>{let s='';for(const b of bytes)s+=String.fromChar
 const unb64u=(v:string)=>{const n=v.replaceAll('-','+').replaceAll('_','/'),p=n+'='.repeat((4-n.length%4)%4),raw=atob(p),o=new Uint8Array(raw.length);for(let i=0;i<raw.length;i++)o[i]=raw.charCodeAt(i);return o;};
 const buffer=(b:Uint8Array):ArrayBuffer=>b.buffer.slice(b.byteOffset,b.byteOffset+b.byteLength) as ArrayBuffer;
 const keyId=(t:string,g:string,m:string)=>JSON.stringify([t,g,m]);
+const appendQueues=new Map<string,Promise<void>>();
+const briefYield=(attempt:number)=>new Promise<void>(resolve=>setTimeout(resolve,Math.min(12,1+(attempt%6)*2)));
 
 export async function validateSovereignJournalEvents(tenantId:string,groupId:string,events:SovereignJournalEvent[]):Promise<void>{
   const ordered=events.filter(x=>x.tenantId===tenantId&&x.groupId===groupId).slice().sort((a,b)=>a.sequence-b.sequence);
@@ -65,7 +67,14 @@ export class IndexedDbSovereignStore {
     return{sequence:last?.sequence??0,hash:last?.hash??'GENESIS',persisted:false};
   }
   async append(input:{tenantId:string;groupId:string;actorId:string;type:string;payload:Record<string,unknown>;createdAt?:string}):Promise<SovereignJournalEvent>{
-    for(let attempt=0;attempt<32;attempt++){
+    const scope=headId(input.tenantId,input.groupId),previous=appendQueues.get(scope)??Promise.resolve();
+    let release!:()=>void;const gate=new Promise<void>(resolve=>{release=resolve;}),tail=previous.catch(()=>{}).then(()=>gate);
+    appendQueues.set(scope,tail);await previous.catch(()=>{});
+    try{return await this.appendContended(input);}
+    finally{release();if(appendQueues.get(scope)===tail)appendQueues.delete(scope);}
+  }
+  private async appendContended(input:{tenantId:string;groupId:string;actorId:string;type:string;payload:Record<string,unknown>;createdAt?:string}):Promise<SovereignJournalEvent>{
+    for(let attempt=0;attempt<128;attempt++){
       const expected=await this.head(input.tenantId,input.groupId),sequence=expected.sequence+1,createdAt=input.createdAt??new Date().toISOString(),previousHash=expected.hash;
       const base={tenantId:input.tenantId,groupId:input.groupId,actorId:input.actorId,sequence,type:input.type,payload:clone(input.payload),createdAt,previousHash};
       const hash=await digest(stable(base)),event:SovereignJournalEvent={id:JSON.stringify([input.tenantId,input.groupId,sequence,hash.slice(0,16)]),...base,hash};
@@ -88,6 +97,7 @@ export class IndexedDbSovereignStore {
         });
         if(committed)return clone(event);
       }finally{db.close();}
+      await briefYield(attempt);
     }
     throw Error('SOVEREIGN_APPEND_CONTENTION');
   }
