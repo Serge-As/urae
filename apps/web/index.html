@@ -498,12 +498,14 @@
             <section class="panel"><h2>Membres du groupe</h2>
               <form id="memberForm" class="inline-form"><input id="memberName" required placeholder="Nom du membre"><button class="primary">Ajouter membre</button></form>
               <div class="member-management-toolbar">
-                <label>Classer les membres<select id="memberSort"><option value="chronological">Ordre chronologique</option><option value="name">Nom A → Z</option><option value="role">Rôle / fonction</option></select></label>
+                <label>Classer les membres<select id="memberSort"><option value="number">Numéro / classement du responsable</option><option value="chronological">Ordre chronologique</option><option value="name">Nom A → Z</option><option value="role">Rôle / fonction</option></select></label>
                 <label>Membre à gérer<select id="memberManageSelect"></select></label>
+                <button id="memberApplyDisplayedOrderBtn" type="button" class="secondary">Affecter les N° selon l’ordre affiché</button>
+                <button id="memberSaveNumbersBtn" type="button" class="secondary">Enregistrer les N° saisis</button>
                 <button id="memberRenameBtn" type="button" class="secondary">Modifier membre</button>
                 <button id="memberTrashBtn" type="button" class="secondary danger-action">Supprimer / corbeille</button>
               </div>
-              <p class="hint">La suppression n’est jamais immédiate : le membre passe dans la corbeille pendant 6 mois. Les écritures financières restent intactes et auditables.</p>
+              <p class="hint">Le responsable peut attribuer un classement 1…N. Ce même N° apparaît dans les feuilles financières et peut être dicté, par exemple « membre numéro 3 ». Les N° saisis doivent être uniques. La suppression n’est jamais immédiate : le membre passe dans la corbeille pendant 6 mois. Les écritures financières restent intactes et auditables.</p>
               <ul id="memberList" class="list"></ul></section>
             <section class="panel"><div class="panel-head"><div><h2>Dossier Membre</h2><p>Sélectionnez un membre pour consulter ou modifier son dossier autorisé.</p></div></div><div id="memberDossierHost" class="stack"><div class="empty-state">Choisissez « Dossier membre » sur un membre.</div></div></section>
           </div>
