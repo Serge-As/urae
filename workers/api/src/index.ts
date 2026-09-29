@@ -2303,23 +2303,14 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
           const policy=rubric.policies?.loan;if(!policy?.allowed)throw Error('LOAN_POLICY_REQUIRED');
           const normalized=String(rubric.name??'').normalize('NFKD').replace(/[\u0300-\u036f]/g,'').toLowerCase(),special=/special/.test(normalized)?policy.specialLoans?.[0]:undefined;
           const rawRate=p.rateBasisPointsPerPeriod??special?.rateBasisPointsPerPeriod??policy.rateBasisPointsPerPeriod;if(rawRate===undefined||rawRate===null)throw Error('LOAN_RATE_REQUIRED');
-          const rateBasisPointsPerPeriod=finite(rawRate),paymentPriority=String(p.paymentPriority??special?.paymentPriority??policy.paymentPriority??'CAPITAL_FIRST'),periods=finite(p.periods??special?.maxDurationPeriods??policy.overdue?.maxDurationPeriods??6),loanClass=String(p.loanClass??(special?'SPECIAL':'STANDARD'));
+          const rateBasisPointsPerPeriod=finite(rawRate),paymentPriority=String(p.paymentPriority??special?.paymentPriority??policy.paymentPriority??'CAPITAL_FIRST'),interestTiming=normalizedLoanInterestTiming(p.interestTiming??special?.interestTiming??policy.interestTiming),periods=finite(p.periods??special?.maxDurationPeriods??policy.overdue?.maxDurationPeriods??6),loanClass=String(p.loanClass??(special?'SPECIAL':'STANDARD'));
           let loan=(await completion.list(groupId,'LOAN')).find(x=>String(x.data?.sheetEntryKey??'')===item.idempotencyKey);
-          if(!loan)loan=await completion.create(groupId,'LOAN',{title:String(rubric.name??'Prêt'),data:{principal:amount,currency:'XAF',borrowerMembershipId:membershipId,rubricId,rateBasisPointsPerPeriod,paymentPriority,noInterestOnInterest:true,periods,outstandingPrincipal:0,unpaidInterest:0,loanClass,sourceSurface:'TWO_SHEETS',sheetEntryKey:item.idempotencyKey}});
+          if(!loan)loan=await completion.create(groupId,'LOAN',{title:String(rubric.name??'Prêt'),data:{principal:amount,currency:'XAF',borrowerMembershipId:membershipId,rubricId,rateBasisPointsPerPeriod,paymentPriority,interestTiming,noInterestOnInterest:true,periods,outstandingPrincipal:0,unpaidInterest:0,loanClass,sourceSurface:'TWO_SHEETS',sheetEntryKey:item.idempotencyKey}});
           let state=String(loan.data.completionState??'');
           if(state==='DRAFT'){loan=await completion.transition(groupId,loan.id,'SUBMITTED',{expectedVersion:finite(loan.data.completionVersion),patch:{submittedFromSheet:true,meetingId}});state=String(loan.data.completionState);}
           if(state==='SUBMITTED'){loan=await completion.transition(groupId,loan.id,'APPROVED',{expectedVersion:finite(loan.data.completionVersion),patch:{approvedAt:new Date().toISOString(),approvedFromSheet:true}});state=String(loan.data.completionState);}
-          let entry=loan.data.ledgerEntryId?await repo.getLedgerEntry(ctx.tenantId,groupId,String(loan.data.ledgerEntryId)):undefined;
-          if(state==='APPROVED'){
-            entry=await ledger.recordCashMovement({tenantId:ctx.tenantId,groupId,amount,currency:String(loan.data.currency??'XAF'),direction:'out',counterAccountCode:'LOAN_RECEIVABLE',counterAccountType:'asset',descriptionCode:'LEDGER_LOAN_DISBURSEMENT',sourceType:'loan',sourceId:loan.id,meetingId,idempotencyKey:item.idempotencyKey+':disburse',kind:'loan_disbursement'});
-            loan=await completion.transition(groupId,loan.id,'DISBURSED',{expectedVersion:finite(loan.data.completionVersion),patch:{ledgerEntryId:entry.id,outstandingPrincipal:amount,unpaidInterest:0,accruedMeetingIdsJson:'[]',disbursedAt:new Date().toISOString()}});
-          }
-          if(!entry)entry=await repo.findLedgerEntryByIdempotency(ctx.tenantId,groupId,item.idempotencyKey+':disburse');
-          if(entry){
-            const eventId='sheet_loan_event_'+entry.id,existing=await repo.getWorkspaceRecord(ctx.tenantId,eventId);
-            if(!existing)await repo.saveWorkspaceRecord({id:eventId,tenantId:ctx.tenantId,groupId,moduleId:'FINANCE.SHEET_EVENT',title:'Prêt décaissé',summary:'Projection de feuille liée à une écriture canonique du prêt synchronisée depuis l’outbox.',status:'DONE',tags:['sheet-event','loan-disbursement','ledger:'+entry.id,'offline-replay'],data:{membershipId,meetingId,rubricId,loanId:loan.id,ledgerEntryId:entry.id,amount,direction:'OUT'},createdBy:ctx.actorId,createdAt:entry.createdAt,updatedAt:entry.createdAt});
-          }
-          await markApplied();return json({accepted:true,stored:true,loan,entry},200,cors);
+          const applied=await disburseApprovedLoan({groupId,loan,principal:amount,expectedVersion:finite(loan.data.completionVersion),meetingId,rubricId,idempotencyKey:item.idempotencyKey+':disburse'});
+          await markApplied();return json({accepted:true,stored:true,...applied},200,cors);
         }
 
         if(nature==='REPAYMENT'){
@@ -2497,11 +2488,8 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
       if(item.type==='LOAN_DISBURSE_V1'){
         const p=item.payload,groupId=String(p.groupId??''),loanId=String(p.loanId??''),key=String(p.idempotencyKey??item.idempotencyKey),amount=finite(p.amount);await requireGroup(groupId,true);
         let loan=(await completion.list(groupId,'LOAN')).find(x=>x.id===loanId);if(!loan)throw Error('LOAN_NOT_FOUND');
-        let entry=await repo.findLedgerEntryByIdempotency(ctx.tenantId,groupId,key);
-        if(!entry)entry=await ledger.recordCashMovement({tenantId:ctx.tenantId,groupId,amount,currency:String(loan.data.currency??'XAF'),direction:'out',counterAccountCode:'LOAN_RECEIVABLE',counterAccountType:'asset',descriptionCode:'LEDGER_LOAN_DISBURSEMENT',sourceType:'loan',sourceId:loan.id,meetingId:p.meetingId?String(p.meetingId):undefined,idempotencyKey:key,kind:'loan_disbursement'});
-        if(String(loan.data.completionState)==='APPROVED')loan=await completion.transition(groupId,loan.id,'DISBURSED',{expectedVersion:finite(p.expectedVersion),patch:{ledgerEntryId:entry.id,outstandingPrincipal:amount,unpaidInterest:0,accruedMeetingIdsJson:'[]',disbursedAt:entry.createdAt}});
-        else if(!['DISBURSED','REPAYING','CLOSED'].includes(String(loan.data.completionState)))throw Error('LOAN_NOT_APPROVED');
-        await markApplied();return json({accepted:true,stored:true,entry,loan},200,cors);
+        const applied=await disburseApprovedLoan({groupId,loan,principal:amount,expectedVersion:finite(p.expectedVersion),meetingId:p.meetingId?String(p.meetingId):undefined,rubricId:p.rubricId?String(p.rubricId):undefined,idempotencyKey:key});
+        await markApplied();return json({accepted:true,stored:true,...applied},200,cors);
       }
       if(item.type==='LOAN_REPAY_V1'){
         const p=item.payload,groupId=String(p.groupId??''),loanId=String(p.loanId??''),key=String(p.idempotencyKey??item.idempotencyKey),principalPaid=finite(p.principalAmount,0),interestPaid=finite(p.interestAmount,0),meetingId=p.meetingId?String(p.meetingId):undefined;await requireGroup(groupId,true);
