@@ -7,7 +7,7 @@ const monthSession=new Map(months.map((m,i)=>[m[0],i+1]));
 export function mountSavingsYieldUI({app,getMembers,notify=()=>{},showError=console.error,fmt=n=>String(n),isManager=()=>false}){
   const form=document.getElementById('yieldDepositForm'),eventForm=document.getElementById('yieldEventForm'),root=document.getElementById('yieldDepositList'),eventRoot=document.getElementById('yieldEventList'),result=document.getElementById('yieldResult'),coefRoot=document.getElementById('yieldCoefficients'),schoolCoefRoot=document.getElementById('yieldSchoolCoefficients');
   if(!form||!root||!result||!coefRoot)return{refresh:async()=>{}};
-  const deposits=[],events=[];let seq=0,eventSeq=0,canonicalLoaded=false;const canonicalSummary=document.getElementById('yieldCanonicalSummary');
+  const deposits=[],events=[];let seq=0,eventSeq=0,canonicalLoaded=false,canonicalRefreshTimer=0;const canonicalSummary=document.getElementById('yieldCanonicalSummary'),canonicalTables=document.getElementById('yieldCanonicalTables'),healthSummary=document.getElementById('yieldHealthSummary'),interestEvolution=document.getElementById('yieldInterestEvolution'),autoSyncStatus=document.getElementById('yieldAutoSyncStatus');
   const option=(v,t)=>{const o=document.createElement('option');o.value=v;o.textContent=t;return o;};
   if(!coefRoot.children.length)for(const [key,label,coef] of months){const l=el('label',label);const i=el('input');i.type='number';i.step='0.1';i.min='0';i.value=String(coef);i.dataset.period=key;l.append(i);coefRoot.append(l);}
   const schoolDefaults=new Map([['JAN',7],['FEB',6],['MAR',5],['APR',4],['MAY',3],['JUN',2],['JUL',1],['AUG',0],['SEP',0],['OCT',0],['NOV',0],['DEC',0]]);
@@ -41,28 +41,41 @@ export function mountSavingsYieldUI({app,getMembers,notify=()=>{},showError=cons
     const select=document.getElementById('yieldDepositMember');if(!select)return;const previous=select.value;select.replaceChildren(option('','Choisir un membre'));
     for(const m of getMembers())select.append(option(m.id,m.displayName));if([...select.options].some(o=>o.value===previous))select.value=previous;
   };
+  const renderSeriesTable=(title,entries,data,note='')=>{
+    const section=el('section',undefined,'yield-canonical-series'),h=el('h3',title);section.append(h);if(note)section.append(el('p',note,'hint'));
+    const wrap=el('div',undefined,'matrix-wrap'),table=el('table',undefined,'meeting-matrix'),head=el('thead'),hr=el('tr');hr.append(el('th','Membre'));
+    const meetingRows=data?.meetings??[];for(const meeting of meetingRows)hr.append(el('th','S'+String(meeting.session??'')));hr.append(el('th','Total'));head.append(hr);table.append(head);
+    const by=new Map();for(const item of entries??[]){const key=String(item.memberId)+'|'+String(item.meetingId??'');by.set(key,(by.get(key)??0)+Number(item.amount??0));}
+    const body=el('tbody'),columnTotals=new Map(),membersRows=(data?.members??[]).filter(x=>x.status!=='left');
+    for(const member of membersRows){const tr=el('tr');tr.append(el('th',member.displayName??member.id));let rowTotal=0;for(const meeting of meetingRows){const amount=Number(by.get(String(member.id)+'|'+String(meeting.id))??0);rowTotal+=amount;columnTotals.set(meeting.id,(columnTotals.get(meeting.id)??0)+amount);tr.append(el('td',amount?fmt(amount):'—'));}tr.append(el('td',fmt(rowTotal)));body.append(tr);}
+    const total=el('tr',undefined,'table-total-row');total.append(el('th','TOTAL'));let grand=0;for(const meeting of meetingRows){const amount=Number(columnTotals.get(meeting.id)??0);grand+=amount;total.append(el('td',fmt(amount)));}total.append(el('td',fmt(grand)));body.append(total);table.append(body);wrap.append(table);section.append(wrap);return section;
+  };
   const renderCanonicalSummary=data=>{
-    if(!canonicalSummary)return;canonicalSummary.replaceChildren();
-    const totals=data?.totals??{},cards=[
-      ['Épargne classique',totals.classicPrincipal??0],['Épargne scolaire',totals.schoolPrincipal??0],
-      ['Épargne totale',totals.totalPrincipal??0],['Intérêts réellement recouvrés',totals.recoveredInterest??0]
-    ];
-    for(const [label,amount] of cards){const card=el('div');card.append(el('span',label),el('strong',fmt(amount)));canonicalSummary.append(card);}
-    const matrix=document.createElement('div');matrix.className='yield-source-matrix';const memberRows=data?.members??[];
-    const by=new Map();for(const d of data?.deposits??[]){const key=d.memberId+'|'+d.periodKey;by.set(key,(by.get(key)??0)+Number(d.amount??0));}
-    const table=document.createElement('table');table.className='meeting-matrix';const head=document.createElement('thead'),hr=document.createElement('tr');hr.append(el('th','Membre'));for(const m of months)hr.append(el('th',m[1].slice(0,3)));hr.append(el('th','Total'));head.append(hr);table.append(head);
-    const body=document.createElement('tbody');for(const member of memberRows){const tr=document.createElement('tr');tr.append(el('th',member.displayName));let total=0;for(const m of months){const v=Number(by.get(member.id+'|'+m[0])??0);total+=v;tr.append(el('td',v?fmt(v):'—'));}tr.append(el('td',fmt(total)));body.append(tr);}table.append(body);matrix.append(el('h3','Dépôts réels par membre et période'),table);canonicalSummary.after(matrix);
+    if(!canonicalSummary)return;canonicalSummary.replaceChildren();canonicalTables?.replaceChildren();healthSummary?.replaceChildren();
+    const totals=data?.totals??{},dynamic=(data?.savingsSeries??[]).map(x=>[x.name,x.total]),cards=[...dynamic,['Remboursements de capital',totals.totalPrincipalRepaid??0],['Intérêts réellement collectés',totals.recoveredInterest??0],['Capital prêts en cours',totals.outstandingPrincipal??0],['Intérêts dus en cours',totals.outstandingInterest??0],['Autres dettes',totals.otherDebt??0],['Dette totale',totals.totalDebt??0]];
+    for(const [label,amount] of cards){const card=el('div');card.append(el('span',label),el('strong',fmt(Number(amount??0))));canonicalSummary.append(card);}
+    const health=data?.health;if(health&&healthSummary){const box=el('article',undefined,'item');box.append(el('strong','Simulation de santé financière demandée'),el('p','(Total remboursements de capital + Total intérêts collectés) – Total dettes en cours ≥ Total épargne','truth-notice'),el('p','Gauche : '+fmt(Number(health.left??0))+' · Total épargne : '+fmt(Number(health.right??0))+' · Écart : '+fmt(Number(health.difference??0))),el('p',health.passes?'Indicateur satisfait pour cette formule.':'Indicateur non satisfait pour cette formule.','hint'));healthSummary.append(box);}
+    if(canonicalTables){for(const series of data?.savingsSeries??[])canonicalTables.append(renderSeriesTable('Rubrique Épargne · '+series.name,series.entries,data,'Données automatiques par membre et par séance.'));canonicalTables.append(renderSeriesTable('Remboursements de capital',data?.repayments??[],data,'Le principal et les intérêts sont séparés par le moteur Prêts même lorsqu’un paiement a été saisi globalement.'));canonicalTables.append(renderSeriesTable('Intérêts collectés',data?.interestReceipts??[],data,'Intérêts réellement encaissés et attribués aux périodes de prêt.'));}
+  };
+  const renderInterestEvolution=async data=>{
+    if(!interestEvolution)return;interestEvolution.replaceChildren();
+    const meetings=data?.meetings??[],memberRows=(data?.members??[]).filter(x=>x.status!=='left'),interestEntries=data?.interestReceipts??[],allDeposits=data?.deposits??[];
+    interestEvolution.append(el('h3','Répartition provisoire des intérêts · évolution par séance'),el('p','Projection de suivi non scellée : à chaque séance, Eco-System répartit provisoirement les intérêts réellement collectés à cette date avec le moteur de pondération sélectionné. Le Bureau conserve le droit de modifier le pool puis de sceller la répartition finale à la clôture de l’exercice.','truth-notice'));
+    if(!meetings.length||!memberRows.length){interestEvolution.append(el('p','Aucune séance ou aucun membre disponible.','hint'));return;}
+    const allocations=new Map(),columnTotals=new Map();
+    for(const meeting of meetings){const session=Number(meeting.session??1),pool=interestEntries.filter(x=>Number(meetings.find(m=>m.id===x.meetingId)?.session??0)<=session).reduce((n,x)=>n+Number(x.amount??0),0),eligible=allDeposits.filter(x=>Number(x.session??1)<=session);if(pool<=0||!eligible.length)continue;try{const result=await app.previewSavingsYield({interestPool:pool,deposits:eligible.map(d=>({id:d.id,memberId:d.memberId,amount:d.amount,periodKey:d.periodKey,fund:d.fund})),coefficients:coefficients(),mode:value('yieldMode')||'EXACT_WEIGHTED_DEPOSITS',amountPower:number('yieldAmountPower')||0.75});for(const row of result.members??[])allocations.set(String(row.memberId)+'|'+String(meeting.id),Number(row.interest??0));columnTotals.set(meeting.id,Number(result.distributedInterest??0));}catch{}}
+    const wrap=el('div',undefined,'matrix-wrap'),table=el('table',undefined,'meeting-matrix'),head=el('thead'),hr=el('tr');hr.append(el('th','Membre'));for(const meeting of meetings)hr.append(el('th','S'+String(meeting.session??'')));hr.append(el('th','Dernière projection'));head.append(hr);table.append(head);
+    const body=el('tbody');for(const member of memberRows){const tr=el('tr');tr.append(el('th',member.displayName??member.id));let latest=0;for(const meeting of meetings){const amount=Number(allocations.get(String(member.id)+'|'+String(meeting.id))??0);if(amount)latest=amount;tr.append(el('td',amount?fmt(amount):'—'));}tr.append(el('td',fmt(latest)));body.append(tr);}const totalsRow=el('tr',undefined,'table-total-row');totalsRow.append(el('th','TOTAL'));let latestTotal=0;for(const meeting of meetings){const amount=Number(columnTotals.get(meeting.id)??0);if(amount)latestTotal=amount;totalsRow.append(el('td',fmt(amount)));}totalsRow.append(el('td',fmt(latestTotal)));body.append(totalsRow);table.append(body);wrap.append(table);interestEvolution.append(wrap);
   };
   const loadCanonical=async(forcePool=false)=>{
     if(!isManager())return;const data=await app.savingsYieldSourceData();canonicalLoaded=true;
     deposits.splice(0,deposits.length,...(data.deposits??[]).map(d=>({...d,id:'canonical:'+d.id})));
     const recovered=Number(data.totals?.recoveredInterest??0),pool=document.getElementById('yieldInterestPool');
-    if(pool&&recovered>0&&(forcePool||!Number(pool.dataset.userEdited))){pool.value=String(recovered);pool.dataset.canonicalValue=String(recovered);}
-    renderDeposits();renderCanonicalSummary(data);
-    notify('Données Épargne rechargées depuis les fiches membres et le Ledger canonique.');
+    if(pool&&(forcePool||!Number(pool.dataset.userEdited))){pool.value=String(recovered);pool.dataset.canonicalValue=String(recovered);}
+    renderDeposits();renderCanonicalSummary(data);await renderInterestEvolution(data);
+    if(autoSyncStatus)autoSyncStatus.textContent='Actualisé automatiquement · '+new Intl.DateTimeFormat('fr-FR',{hour:'2-digit',minute:'2-digit',second:'2-digit'}).format(new Date())+' · source '+String(data.source??'canonique');
   };
   document.getElementById('yieldInterestPool')?.addEventListener('input',e=>{e.currentTarget.dataset.userEdited='1';});
-  document.getElementById('yieldLoadCanonical')?.addEventListener('click',()=>void loadCanonical(true).catch(showError));
 
   const checkShares=()=>{
     const shares=number('yieldClassicShare')+number('yieldSchoolShare')+number('yieldOfficeShare')+number('yieldReserveShare');
@@ -206,6 +219,9 @@ export function mountSavingsYieldUI({app,getMembers,notify=()=>{},showError=cons
   }catch(err){showError(err);}})());
 
   period?.addEventListener('change',()=>{const s=document.getElementById('yieldDepositSession');if(s)s.value=String(monthSession.get(period.value)??1);});
+  const scheduleCanonicalRefresh=()=>{if(!isManager())return;if(canonicalRefreshTimer)clearTimeout(canonicalRefreshTimer);canonicalRefreshTimer=setTimeout(()=>{void loadCanonical(false).catch(showError);},260);};
+  window.addEventListener('eco:financial-data-changed',scheduleCanonicalRefresh);
+  window.addEventListener('eco:financial-live-update',scheduleCanonicalRefresh);
   renderDeposits();renderEvents();populateMembers();if(isManager())void loadCanonical(false).catch(()=>{});
-  return{refresh:async()=>{populateMembers();if(isManager()&&!canonicalLoaded)await loadCanonical(false).catch(()=>{});}};
+  return{refresh:async()=>{populateMembers();if(isManager())await loadCanonical(false).catch(()=>{});}};
 }

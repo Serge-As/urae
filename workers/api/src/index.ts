@@ -1322,9 +1322,10 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
     const savingsYieldSource=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/savings-yield\/source-data$/);
     if(savingsYieldSource&&request.method==='GET'){
       const groupId=savingsYieldSource[1]!;await requireGroup(groupId,true);
-      const [rubricRows,meetingRows,positions,accounts,entries,memberships]=await Promise.all([
+      const [rubricRows,meetingRows,positions,accounts,entries,memberships,loanPeriods,loanRows,obligationRows]=await Promise.all([
         repo.listRubricDefinitions(ctx.tenantId,groupId),repo.listMeetings(ctx.tenantId,groupId),ledger.receiptPositions(ctx.tenantId,groupId),
-        repo.listLedgerAccounts(ctx.tenantId,groupId),repo.listLedgerEntries(ctx.tenantId,groupId),repo.listMemberships(ctx.tenantId,groupId)
+        repo.listLedgerAccounts(ctx.tenantId,groupId),repo.listLedgerEntries(ctx.tenantId,groupId),repo.listMemberships(ctx.tenantId,groupId),
+        repo.listWorkspaceRecords(ctx.tenantId,'FINANCE.LOAN_PERIOD',groupId),completion.list(groupId,'LOAN'),repo.listObligations(ctx.tenantId)
       ]);
       const savingsRubrics=rubricRows.filter(r=>r.status==='ACTIVE'&&(String(r.activityPlan?.kind??'').toUpperCase()==='SAVINGS'||/[ée]pargne|saving/i.test(r.name)));
       const savingsIds=new Set(savingsRubrics.map(r=>r.id));
@@ -1343,7 +1344,18 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
       for(const entry of entries)for(const line of entry.lines){const account=accountById.get(line.accountId);if(account&&/INTEREST.*INCOME|INTEREST_INCOME/i.test(account.code)){interestByAccount[account.code]=(interestByAccount[account.code]??0)+(line.credit-line.debit);}}
       const recoveredInterest=Object.values(interestByAccount).reduce((n,x)=>n+x,0);
       const classicPrincipal=deposits.filter(d=>d.fund==='CLASSIC').reduce((n,d)=>n+d.amount,0),schoolPrincipal=deposits.filter(d=>d.fund==='SCHOOL').reduce((n,d)=>n+d.amount,0);
-      return json({generatedAt:new Date().toISOString(),source:'CANONICAL_LEDGER_AND_RECEIPTS',members:memberRows,rubrics:savingsRubrics.map(r=>({id:r.id,name:r.name})),meetings:orderedMeetings.map((m,i)=>({id:m.id,title:m.title,session:i+1,scheduledAt:m.scheduledAt??m.openedAt})),deposits,totals:{classicPrincipal,schoolPrincipal,totalPrincipal:classicPrincipal+schoolPrincipal,recoveredInterest},interestByAccount,warnings:recoveredInterest===0?['NO_REALIZED_INTEREST_FOUND']:[]},200,cors);
+      const savingsSeries=savingsRubrics.map(r=>{const rows=deposits.filter(d=>d.rubricId===r.id);return{rubricId:r.id,name:r.name,total:rows.reduce((n,d)=>n+d.amount,0),entries:rows.map(d=>({memberId:d.memberId,meetingId:d.meetingId,session:d.session,amount:d.amount}))};});
+      const periodRows=loanPeriods.map(x=>({id:x.id,loanId:String(x.data.loanId??''),memberId:String(x.data.membershipId??''),meetingId:String(x.data.meetingId??''),principalPaid:Number(x.data.principalPaid??0),interestPaid:Number(x.data.interestPaid??0),principalAfter:Number(x.data.principalAfter??0),interestAfter:Number(x.data.interestAfter??0),interestNew:Number(x.data.interestNew??0),nextInterestProjected:Number(x.data.nextInterestProjected??0),totalDebtAfter:Number(x.data.totalDebtAfter??0)}));
+      const repayments=periodRows.filter(x=>x.principalPaid>0).map(x=>({memberId:x.memberId,meetingId:x.meetingId,loanId:x.loanId,amount:x.principalPaid}));
+      const interestReceipts=periodRows.filter(x=>x.interestPaid>0).map(x=>({memberId:x.memberId,meetingId:x.meetingId,loanId:x.loanId,amount:x.interestPaid}));
+      const activeLoans=loanRows.filter(x=>['DISBURSED','REPAYING'].includes(String(x.data.completionState??''))&&(Number(x.data.outstandingPrincipal??0)>0||Number(x.data.unpaidInterest??0)>0));
+      const loanDebts=activeLoans.map(x=>({loanId:x.id,memberId:String(x.data.borrowerMembershipId??''),title:x.title,principal:Number(x.data.outstandingPrincipal??0),interest:Number(x.data.unpaidInterest??0),nextInterestProjected:Math.round(Number(x.data.outstandingPrincipal??0)*Number(x.data.rateBasisPointsPerPeriod??0)/10000),rateBasisPointsPerPeriod:Number(x.data.rateBasisPointsPerPeriod??0),paymentPriority:String(x.data.paymentPriority??'CAPITAL_FIRST')}));
+      const groupObligations=obligationRows.filter(x=>x.groupId===groupId&&(x.status==='open'||x.status==='overdue')),otherDebt=groupObligations.reduce((n,x)=>n+Number(x.amount?.amount??0),0);
+      const outstandingPrincipal=loanDebts.reduce((n,x)=>n+x.principal,0),outstandingInterest=loanDebts.reduce((n,x)=>n+x.interest,0),nextInterestProjected=loanDebts.reduce((n,x)=>n+x.nextInterestProjected,0),totalDebt=outstandingPrincipal+outstandingInterest+otherDebt,totalPrincipalRepaid=repayments.reduce((n,x)=>n+x.amount,0),totalSavings=deposits.reduce((n,x)=>n+x.amount,0);
+      const healthLeft=totalPrincipalRepaid+recoveredInterest-totalDebt,healthRight=totalSavings,warnings:string[]=[];
+      if(recoveredInterest===0)warnings.push('NO_REALIZED_INTEREST_FOUND');
+      const periodInterestTotal=interestReceipts.reduce((n,x)=>n+x.amount,0);if(periodInterestTotal!==recoveredInterest)warnings.push('INTEREST_LEDGER_PERIOD_VARIANCE:'+String(recoveredInterest-periodInterestTotal));
+      return json({generatedAt:new Date().toISOString(),source:'CANONICAL_LEDGER_AND_RECEIPTS',members:memberRows,rubrics:savingsRubrics.map(r=>({id:r.id,name:r.name})),meetings:orderedMeetings.map((m,i)=>({id:m.id,title:m.title,session:i+1,scheduledAt:m.scheduledAt??m.openedAt})),deposits,savingsSeries,repayments,interestReceipts,loanPeriods:periodRows,loanDebts,totals:{classicPrincipal,schoolPrincipal,totalPrincipal:classicPrincipal+schoolPrincipal,totalSavings,totalPrincipalRepaid,recoveredInterest,outstandingPrincipal,outstandingInterest,nextInterestProjected,otherDebt,totalDebt},health:{formula:'(TOTAL_REPAYMENTS + TOTAL_INTEREST_COLLECTED) - TOTAL_CURRENT_DEBT >= TOTAL_SAVINGS',left:healthLeft,right:healthRight,difference:healthLeft-healthRight,passes:healthLeft>=healthRight},interestByAccount,warnings},200,cors);
     }
 
     const savingsYieldPreview=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/savings-yield\/preview$/);

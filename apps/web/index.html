@@ -679,11 +679,14 @@
           <section class="panel" id="savingsYieldLab">
             <div class="section-kicker"><div><h2>Moteur Épargne · intérêts · capital réellement productif</h2><p>Eco-System peut reproduire le chemin historique Feuille mensuelle → Épargne → Principal → Intérêts provisoires → Intérêts finaux, puis comparer ce résultat avec un modèle plus fidèle : le capital effectivement prêté, remboursé et éventuellement reprêté.</p></div></div>
             <div id="yieldCanonicalSummary" class="metrics small"></div>
-            <div class="actions"><button id="yieldLoadCanonical" type="button" class="primary">Recharger les données réelles des fiches membres</button><span class="hint">Les dépôts d’épargne et les intérêts recouvrés sont d’abord lus dans les écritures canoniques. Le Bureau peut ensuite choisir un montant distribuable différent sans falsifier le total réellement encaissé.</span></div>
+            <div class="actions"><span id="yieldAutoSyncStatus" class="truth-notice">Actualisation automatique depuis le Ledger canonique, les fiches membres et le moteur Prêts.</span></div>
+            <div id="yieldHealthSummary"></div>
+            <div id="yieldCanonicalTables" class="stack"></div>
+            <div id="yieldInterestEvolution" class="stack"></div>
             <div class="two-col">
               <div>
                 <div class="form-grid">
-                  <label>Intérêts à répartir (modifiable par le Bureau)<input id="yieldInterestPool" type="number" min="0" step="1" value="708500"><small>Prérempli depuis les intérêts réellement encaissés lorsqu’ils existent. Vous pouvez décider de distribuer moins, ou une autre masse autorisée, sans modifier la vérité comptable.</small></label>
+                  <label>Intérêts à répartir (modifiable par le Bureau)<input id="yieldInterestPool" type="number" min="0" step="1" value=""><small>Prérempli automatiquement avec le total des intérêts réellement encaissés. Le Bureau peut ensuite retenir un autre montant distribuable sans modifier la vérité comptable.</small></label>
                   <label>Part Épargne classique %<input id="yieldClassicShare" type="number" min="0" max="100" step="0.1" value="70"></label>
                   <label>Part Épargne scolaire %<input id="yieldSchoolShare" type="number" min="0" max="100" step="0.1" value="10"></label>
                   <label>Indemnités / charges Bureau %<input id="yieldOfficeShare" type="number" min="0" max="100" step="0.1" value="20"></label>
