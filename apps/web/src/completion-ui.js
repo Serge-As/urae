@@ -130,6 +130,41 @@ export const mountCompletionUI=({app,notify,showError,getMembers,getMeetings,get
     await renderTontine();notify(tr('Planning appliqué.','Schedule applied.'));
   };
 
+  const loanRecapTable=(title,data,selector)=>{
+    const section=document.createElement('section'),h=document.createElement('h4');h.textContent=title;section.append(h);
+    const meetings=data?.meetings??[],members=getMembers().filter(x=>x.status!=='left'),periods=(data?.loanPeriods??[]).slice(),meetingIndex=new Map(meetings.map((m,i)=>[m.id,i]));
+    const wrap=document.createElement('div');wrap.className='matrix-wrap';const table=document.createElement('table');table.className='meeting-matrix';const head=document.createElement('thead'),hr=document.createElement('tr');hr.append(document.createElement('th'));hr.firstChild.textContent=tr('Membre','Member');for(const m of meetings){const th=document.createElement('th');th.textContent='S'+String(m.session??'');hr.append(th);}const thTotal=document.createElement('th');thTotal.textContent=tr('Dernier état','Latest');hr.append(thTotal);head.append(hr);table.append(head);
+    const body=document.createElement('tbody'),columnTotals=new Map();
+    for(const member of members){
+      const row=document.createElement('tr'),name=document.createElement('th');name.textContent=member.displayName;row.append(name);let last=0;
+      for(const meeting of meetings){
+        const idx=meetingIndex.get(meeting.id)??0,eligible=periods.filter(p=>p.memberId===member.id&&(meetingIndex.get(p.meetingId)??-1)<=idx&&(meetingIndex.get(p.meetingId)??-1)>=0).sort((a,b)=>(meetingIndex.get(a.meetingId)??0)-(meetingIndex.get(b.meetingId)??0));
+        const latestByLoan=new Map();for(const p of eligible)latestByLoan.set(p.loanId,p);
+        const amount=[...latestByLoan.values()].reduce((n,p)=>n+Number(selector(p)??0),0);last=amount;columnTotals.set(meeting.id,(columnTotals.get(meeting.id)??0)+amount);const td=document.createElement('td');td.textContent=amount?fmt(amount):'—';row.append(td);
+      }
+      const latest=document.createElement('td');latest.textContent=fmt(last);row.append(latest);body.append(row);
+    }
+    const total=document.createElement('tr');total.className='table-total-row';const label=document.createElement('th');label.textContent='TOTAL';total.append(label);let latestTotal=0;for(const meeting of meetings){const amount=Number(columnTotals.get(meeting.id)??0);latestTotal=amount;const td=document.createElement('td');td.textContent=fmt(amount);total.append(td);}const end=document.createElement('td');end.textContent=fmt(latestTotal);total.append(end);body.append(total);table.append(body);wrap.append(table);section.append(wrap);return section;
+  };
+  const renderLoanDebtRecap=async()=>{
+    const root=byId('loanDebtRecap');if(!root||!app.activeGroup())return;
+    const data=await app.savingsYieldSourceData().catch(()=>null);if(!data)return;
+    root.querySelectorAll('.loan-recap-generated').forEach(x=>x.remove());
+    const holder=document.createElement('div');holder.className='loan-recap-generated stack';
+    const totals=data.totals??{},metrics=document.createElement('div');metrics.className='metrics small';
+    for(const [labelText,amount] of [[tr('Capital en cours','Outstanding principal'),totals.outstandingPrincipal],[tr('Intérêts dus','Interest due'),totals.outstandingInterest],[tr('Prochains intérêts projetés','Projected next interest'),totals.nextInterestProjected],[tr('Autres dettes','Other debt'),totals.otherDebt],[tr('Dette totale exigible','Total due debt'),totals.totalDebt]]){const card=document.createElement('div'),s=document.createElement('span'),strong=document.createElement('strong');s.textContent=labelText;strong.textContent=fmt(Number(amount??0));card.append(s,strong);metrics.append(card);}holder.append(metrics);
+    const note=document.createElement('p');note.className='truth-notice';note.textContent=tr('Intérêts dus = déjà exigibles. Prochains intérêts projetés = montant calculé sur le capital restant pour la prochaine période ; il n’est pas ajouté au Ledger tant que la règle du groupe ne le rend pas exigible.','Interest due = already payable. Projected next interest = calculated on outstanding principal for the next period; it is not posted to the Ledger until group policy makes it due.');holder.append(note);
+    holder.append(
+      loanRecapTable(tr('Capital restant par membre et par séance','Outstanding principal by member and session'),data,p=>p.principalAfter),
+      loanRecapTable(tr('Intérêts dus par membre et par séance','Interest due by member and session'),data,p=>p.interestAfter),
+      loanRecapTable(tr('Prochains intérêts projetés','Projected next interest'),data,p=>p.nextInterestProjected),
+      loanRecapTable(tr('Dette de prêt totale','Total loan debt'),data,p=>p.totalDebtAfter)
+    );
+    const current=document.createElement('section'),h=document.createElement('h4');h.textContent=tr('État actuel des prêts ouverts','Current open-loan position');current.append(h);
+    const list=document.createElement('div');list.className='stack';for(const debt of data.loanDebts??[]){const a=article(nameOfMember(debt.memberId)+' · '+debt.title,'',tr('Capital','Principal')+' '+fmt(debt.principal)+' · '+tr('intérêts dus','interest due')+' '+fmt(debt.interest)+' · '+tr('prochain intérêt','next interest')+' '+fmt(debt.nextInterestProjected)+' · '+tr('priorité','priority')+' '+debt.paymentPriority);list.append(a);}if(!list.childElementCount)list.append(article(tr('Aucun prêt ouvert','No open loan'),'',''));current.append(list);holder.append(current);
+    root.append(holder);
+  };
+
   const renderLoans=async()=>{
     if(!app.activeGroup()){loans=[];decisions=[];return;}
     [loans,decisions]=await Promise.all([app.listCompletion('LOAN'),app.listCompletion('GOVERNANCE_DECISION')]);
@@ -167,6 +202,7 @@ export const mountCompletionUI=({app,notify,showError,getMembers,getMeetings,get
         if(actions.childNodes.length)a.append(actions);root.append(a);
       }
     }
+    await renderLoanDebtRecap();
     const decisionsRoot=byId('decisionList');if(decisionsRoot){decisionsRoot.replaceChildren();
       for(const d of decisions){
         const a=article(d.title,primitiveState(d)+' · '+tr('approbations','approvals')+' '+String(d.data.approvalCount??0)+'/'+String(d.data.threshold??1),String(d.data.subject??''));
