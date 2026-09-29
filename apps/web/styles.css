@@ -408,3 +408,9 @@ body.ui-mode-visual .primary:hover{filter:saturate(1.08) brightness(1.03);transf
 .eco-relay-camera{width:100%;max-width:36rem;aspect-ratio:4/3;object-fit:cover;background:#111;border-radius:1rem}
 .member-number-editor{display:inline-flex;align-items:center;gap:.35rem;margin-right:.6rem}
 .member-number-editor input{width:5.5rem}
+
+
+/* 1.5.2.9 live/soft-finance field hardening — 2026-09-30 */
+.matrix-cell-entry.is-conflict,[data-save-state="CONFLICT"]{outline:3px solid #d18a00;outline-offset:1px;border-radius:10px;background:#fff8e8}
+.financial-alert-bar .financial-alert-close{margin-left:8px;float:right}
+.financial-alert-bar[hidden]{display:none!important}

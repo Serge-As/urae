@@ -3,12 +3,12 @@ const value=id=>String(document.getElementById(id)?.value??'').trim();
 const row=(label,value)=>{const p=el('p');const b=el('strong',label+' : ');p.append(b,document.createTextNode(String(value??'—')));return p;};
 
 export function mountIdentityLiveUI({app,notify=()=>{},showError=console.error}){
-  let socket=null,lastSeq=0,activeGroup,reconnectTimer=null,heartbeatTimer=null,lastPongAt=0,reconnectAttempt=0,wantConnection=true,eventQueue=Promise.resolve();
+  let socket=null,lastSeq=0,activeGroup,reconnectTimer=null,heartbeatTimer=null,catchupTimer=null,lastPongAt=0,lastLiveMessageAt=0,reconnectAttempt=0,wantConnection=true,eventQueue=Promise.resolve();
   const passportRoot=document.getElementById('identityPassport');
   if(!passportRoot)return{refresh:async()=>{},disconnect:()=>{}};
   const dnaRoot=document.getElementById('conciergeDna'),liveRoot=document.getElementById('premiumLiveStatus'),eventsRoot=document.getElementById('liveEventList'),memoryRoot=document.getElementById('conciergeMemoryList');
 
-  const clearTimers=()=>{if(reconnectTimer){clearTimeout(reconnectTimer);reconnectTimer=null;}if(heartbeatTimer){clearInterval(heartbeatTimer);heartbeatTimer=null;}};
+  const clearTimers=()=>{if(reconnectTimer){clearTimeout(reconnectTimer);reconnectTimer=null;}if(heartbeatTimer){clearInterval(heartbeatTimer);heartbeatTimer=null;}if(catchupTimer){clearInterval(catchupTimer);catchupTimer=null;}};
   const closeSocket=(reason='group-change')=>{clearTimers();try{socket?.close(1000,reason);}catch{}socket=null;};
   const dispatchDurableEvent=event=>{try{window.dispatchEvent(new CustomEvent('eco:live-event',{detail:event}));}catch{}};
   const catchUp=async()=>{
@@ -46,13 +46,18 @@ export function mountIdentityLiveUI({app,notify=()=>{},showError=console.error})
     try{
       socket=new WebSocket(app.liveWebSocketUrl());
       socket.onopen=()=>{
-        reconnectAttempt=0;lastPongAt=Date.now();
+        reconnectAttempt=0;lastPongAt=Date.now();lastLiveMessageAt=Date.now();
         if(liveRoot)liveRoot.replaceChildren(row('Connexion','WebSocket connecté'),row('Groupe',activeGroup),row('Temps réel','ACTIF · reprise automatique'));
         void catchUp().catch(()=>{});
         void app.publishLiveSignal?.('PRESENCE',{state:'ONLINE',kind:'GROUP'}).catch(()=>{});
         heartbeatTimer=setInterval(()=>{if(!socket||socket.readyState!==WebSocket.OPEN)return;if(Date.now()-lastPongAt>45000){try{socket.close(4000,'heartbeat-timeout');}catch{}return;}try{socket.send('PING');}catch{}},20000);
+        // Durable fallback: while the tab is visible, replay missed financial events
+        // without forcing a page refresh. WebSocket remains the fast path; this is
+        // only a gap-healing loop for mobile/proxy/browser edge cases.
+        catchupTimer=setInterval(()=>{if(document.visibilityState==='visible'&&navigator.onLine!==false)void catchUp().catch(()=>{});},1200);
       };
       socket.onmessage=e=>{
+        lastLiveMessageAt=Date.now();
         try{
           const msg=JSON.parse(String(e.data));
           if(msg.type==='PONG'){lastPongAt=Date.now();return;}
@@ -128,7 +133,7 @@ export function mountIdentityLiveUI({app,notify=()=>{},showError=console.error})
 
   window.addEventListener('online',()=>{if(wantConnection)connect();});
   window.addEventListener('offline',()=>{closeSocket('offline');if(liveRoot)liveRoot.append(row('Réseau','Hors ligne · outbox active'));});
-  document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&wantConnection&&(!socket||socket.readyState!==WebSocket.OPEN))connect();});
+  document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&wantConnection){if(!socket||socket.readyState!==WebSocket.OPEN)connect();else void catchUp().catch(()=>{});}});
   document.getElementById('refreshPassportBtn')?.addEventListener('click',()=>void (async()=>{try{await app.groupIdentityPassport(true);notify('Passeport identitaire rafraîchi.');await refresh();}catch(e){showError(e);}})());
   document.getElementById('conciergeMemoryForm')?.addEventListener('submit',e=>{e.preventDefault();void (async()=>{try{
     await app.learnConciergeMemory({category:value('conciergeMemoryCategory'),key:value('conciergeMemoryKey'),value:value('conciergeMemoryValue'),sourceRef:value('conciergeMemorySource'),confidence:Number(value('conciergeMemoryConfidence')||0),privacy:value('conciergeMemoryPrivacy'),visibility:value('conciergeMemoryVisibility')});

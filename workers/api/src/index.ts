@@ -229,6 +229,10 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
       await notifications.publish(groupId,{title:closed?'Saisie financière après clôture':'Nouvelle saisie financière',message:`${entryActor} a enregistré ${receipt.amount.amount} F CFA pour ${entryMember} · ${entryRubric}${closed?' après clôture de la séance':''}. Vérifiez cette opération.`,channels:['IN_APP','WEB_PUSH'],audience:'SELECTED',selectedMembershipIds:[receipt.membershipId],priority:closed?'CRITICAL':'NORMAL',action:{view:'operations',anchor:'twoSheetWorkspace',meetingId:receipt.meetingId,membershipId:receipt.membershipId,rubricId:receipt.rubricId,label:'Voir la ligne concernée'}});
       // Keep the Live idempotency key deliberately short and stable. The old encoded notice id could exceed the DO limit.
       await publishLive(groupId,'FINANCIAL_NOTICE','financial-notice:'+entry.id,{noticeId:notice.id,ledgerEntryId:notice.ledgerEntryId,operationType:notice.operationType,amount:notice.amount,currency:notice.currency,previousSituation:notice.previousSituation??0,newSituation:notice.newSituation??0,meetingClosed:Boolean(closed),alertLevel:closed?'closed':'open'},notice.userId);
+      if(receipt.meetingId&&receipt.rubricId){
+        const cell=await financialCellState(groupId,receipt.meetingId,receipt.membershipId,receipt.rubricId);
+        await publishLive(groupId,'MEETING_UPDATE','financial-cell-managers:'+entry.id,{meetingId:receipt.meetingId,kind:'FINANCIAL_CELL',operationType:'CASH_CONTRIBUTION',membershipId:receipt.membershipId,rubricId:receipt.rubricId,previousAmount:cell.current-receipt.amount.amount,newAmount:cell.current,cellVersion:cell.cellVersion,meetingClosed:Boolean(closed),actorId:ctx.actorId,actorName:entryActor});
+      }
       if(existing)await repo.saveWorkspaceRecord({...existing,status:'DONE',tags:[...new Set(existing.tags.filter(t=>t!=='pending').concat('dispatched'))],data:{...existing.data,attemptCount:Number(existing.data.attemptCount??0)+1,lastError:null,dispatchedAt:new Date().toISOString()},updatedAt:new Date().toISOString()});
       return true;
     }catch(error){
@@ -2106,6 +2110,7 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
       if(rubricId&&body.meetingId){
         const eventId='sheet_loan_event_'+entry.id,meetingId=String(body.meetingId),existing=await repo.getWorkspaceRecord(ctx.tenantId,eventId);
         if(!existing)await repo.saveWorkspaceRecord({id:eventId,tenantId:ctx.tenantId,groupId:loanDisburse[1]!,moduleId:'FINANCE.SHEET_EVENT',title:'Prêt décaissé',summary:'Projection de feuille liée à l’écriture canonique du prêt.',status:'DONE',tags:['sheet-event','loan-disbursement','ledger:'+entry.id],data:{membershipId:String(loan.data.borrowerMembershipId??''),meetingId,rubricId,loanId:loan.id,ledgerEntryId:entry.id,amount:principal,direction:'OUT'},createdBy:ctx.actorId,createdAt:entry.createdAt,updatedAt:entry.createdAt});
+        await publishLive(loanDisburse[1]!,'MEETING_UPDATE','loan-sheet-live:'+entry.id,{meetingId,kind:'FINANCIAL_CELL',operationType:'LOAN_DISBURSEMENT',membershipId:String(loan.data.borrowerMembershipId??''),rubricId,previousAmount:0,newAmount:principal,meetingClosed:false,actorId:ctx.actorId,actorName:await actorLabel()});
       }
       return json({entry,loan:updatedLoan},201,cors);
     }
@@ -2155,6 +2160,7 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
       if(repaymentRubricId&&meetingId){
         const eventId='sheet_loan_event_'+entry.id,existing=await repo.getWorkspaceRecord(ctx.tenantId,eventId);
         if(!existing)await repo.saveWorkspaceRecord({id:eventId,tenantId:ctx.tenantId,groupId:loanRepay[1]!,moduleId:'FINANCE.SHEET_EVENT',title:'Remboursement prêt',summary:'Projection de feuille liée à une écriture canonique de remboursement.',status:'DONE',tags:['sheet-event','loan-repayment','ledger:'+entry.id],data:{membershipId:String(loan.data.borrowerMembershipId??''),meetingId,rubricId:repaymentRubricId,loanId:loan.id,ledgerEntryId:entry.id,principalPaid:allocation.principalPaid,interestPaid:allocation.interestPaid,amount:allocation.paymentAmount,direction:'IN'},createdBy:ctx.actorId,createdAt:entry.createdAt,updatedAt:entry.createdAt});
+        await publishLive(loanRepay[1]!,'MEETING_UPDATE','loan-repayment-live:'+entry.id,{meetingId,kind:'FINANCIAL_CELL',operationType:'LOAN_REPAYMENT',membershipId:String(loan.data.borrowerMembershipId??''),rubricId:repaymentRubricId,previousAmount:0,newAmount:allocation.paymentAmount,meetingClosed:false,actorId:ctx.actorId,actorName:await actorLabel()});
       }
       return json({entry,allocation,loan:updatedLoan},201,cors);
     }
