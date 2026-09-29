@@ -1411,7 +1411,7 @@ window.addEventListener('eco:live-signal',event=>{
 });
 let liveLedgerRefreshTimer=0;
 window.addEventListener('eco:financial-live-update',event=>{
-    const e=event instanceof CustomEvent?event.detail:undefined,p=e?.payload??{},sourceActorId=String(p.actorId??e?.actorId??'');if(sourceActorId&&sourceActorId===String(app.currentActor?.()??''))return;
+    const e=event instanceof CustomEvent?event.detail:undefined,p=e?.payload??{},sourceActorId=String(p.actorId??e?.actorId??''),fromOtherActor=sourceActorId&&sourceActorId!==String(app.currentActor?.()??'');if(!fromOtherActor)return;
     if(p.meetingId&&p.membershipId&&p.rubricId)highlightRemoteFinancialCell({...p,actorId:sourceActorId});
     showFinancialAlert({title:p.meetingClosed?tx('Modification après clôture','Post-close change'):tx('Mise à jour financière en direct','Live financial update'),message:p.actorName?tx(`${p.actorName} a mis à jour une cellule. Elle reste surlignée jusqu’à votre accusé de réception.`,`${p.actorName} updated a cell. It stays highlighted until you acknowledge it.`):tx('Une donnée financière vient d’être mise à jour en direct.','A financial value was just updated live.'),closed:Boolean(p.meetingClosed),correction:true});
     if(isManager()&&p.meetingId&&p.membershipId&&p.rubricId){if(liveLedgerRefreshTimer)clearTimeout(liveLedgerRefreshTimer);liveLedgerRefreshTimer=setTimeout(()=>{void refreshFinancialProjectionSilently({meetingId:p.meetingId,membershipId:p.membershipId,rubricId:p.rubricId,remote:true}).catch(()=>{});},180);}
