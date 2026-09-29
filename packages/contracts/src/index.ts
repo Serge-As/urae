@@ -610,12 +610,14 @@ export interface RubricLoanOverduePolicy {
   recoverFrom?:Array<'TONTINE'|'SOLIDARITY'|'GUARANTOR'|'OTHER'>;
   notes?:string[];
 }
+export type RubricLoanInterestTiming='NEXT_SESSION_DUE'|'UPFRONT_DEDUCTED'|'UPFRONT_REQUIRED';
 export interface RubricSpecialLoanRule {
   key:string;
   label:string;
   rateBasisPointsPerPeriod:number;
   maxDurationPeriods?:number;
   paymentPriority?:'CAPITAL_FIRST'|'INTEREST_FIRST'|'EXPLICIT_ALLOCATION';
+  interestTiming?:RubricLoanInterestTiming;
   eligibilityRule?:string;
 }
 export interface RubricLoanPolicy {
@@ -623,6 +625,7 @@ export interface RubricLoanPolicy {
   rateBasisPointsPerPeriod?:number;
   interestBase:'PRINCIPAL_ONLY';
   paymentPriority?:'CAPITAL_FIRST'|'INTEREST_FIRST'|'EXPLICIT_ALLOCATION';
+  interestTiming?:RubricLoanInterestTiming;
   noInterestOnInterest:true;
   overdue?:RubricLoanOverduePolicy;
   specialLoans?:RubricSpecialLoanRule[];

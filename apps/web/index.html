@@ -577,6 +577,14 @@
           <section class="panel" id="financeLoanGuide"><div class="panel-head"><div><h2>Prêts + Intérêts</h2><p>Configurez le taux par période, la priorité Capital/Intérêts, la durée maximale, les sanctions, les prêts spéciaux et simulez la dette sans écrire dans le Ledger.</p></div><button type="button" id="financeLoanRulesBtn" class="primary">Configurer / simuler les prêts</button></div></section>
           <section class="panel" id="loanCompletionPanel" hidden aria-hidden="true">
             <div class="panel-head" id="loanOfficialConfig"><div><h2>Configuration officielle du système Prêts + Intérêts</h2><p>Les simulations, approbations, décaissements et remboursements sont séparés. Cette configuration pilote le capital, les intérêts, la priorité d’imputation, les échéances et les prêts spéciaux du groupe.</p></div></div>
+            <form id="loanPolicyForm" class="form-grid">
+              <h3>Règle générale du groupe</h3>
+              <label>Taux par séance / période %<input id="loanPolicyRate" type="number" min="0" step="0.01" placeholder="Ex. 10"></label>
+              <label>Priorité d’imputation<select id="loanPolicyPriority"><option value="CAPITAL_FIRST">Capital d’abord</option><option value="INTEREST_FIRST">Intérêts d’abord</option><option value="EXPLICIT_ALLOCATION">Répartition explicite par le gestionnaire</option></select></label>
+              <label>Moment de perception des intérêts<select id="loanPolicyInterestTiming"><option value="NEXT_SESSION_DUE">Dus à la séance suivante</option><option value="UPFRONT_DEDUCTED">Retenus immédiatement sur le montant remis</option><option value="UPFRONT_REQUIRED">Payés avant / condition de libération du prêt</option></select></label>
+              <button type="submit" class="primary">Enregistrer la politique Prêts</button>
+              <div id="loanPolicyStatus" class="truth-notice">La base d’intérêt reste toujours le capital restant dû. Aucun intérêt sur intérêt.</div>
+            </form>
             <div class="two-col">
               <form id="loanForm" class="form-grid">
                 <h3>Nouveau prêt</h3>
@@ -587,6 +595,8 @@
                 <label>Périodes / an<input id="loanPeriodsPerYear" type="number" min="1" max="365" step="1" value="12" title="12 = mensuel, 24 = deux fois par mois, 52 = hebdomadaire"></label>
                 <label>Frais totaux<input id="loanFees" type="number" min="0" step="1" value="0"></label>
                 <label>Méthode<select id="loanMethod"><option value="DECLINING">Capital restant dû</option><option value="FLAT">Taux fixe sur capital initial</option></select></label>
+                <label>Priorité de remboursement<select id="loanPaymentPriority"><option value="CAPITAL_FIRST">Capital d’abord</option><option value="INTEREST_FIRST">Intérêts d’abord</option><option value="EXPLICIT_ALLOCATION">Répartition explicite</option></select></label>
+                <label>Perception des intérêts<select id="loanInterestTiming"><option value="NEXT_SESSION_DUE">Séance suivante</option><option value="UPFRONT_DEDUCTED">Retenus immédiatement</option><option value="UPFRONT_REQUIRED">Payés avant libération</option></select></label>
                 <button class="primary">Simuler et créer la demande</button>
               </form>
               <div><h3>Échéancier simulé</h3><div id="loanQuoteResult" class="table-list"></div></div>

@@ -165,15 +165,24 @@ export const mountCompletionUI=({app,notify,showError,getMembers,getMeetings,get
     root.append(holder);
   };
 
+  const officialLoanRubric=()=>getRubrics().find(r=>String(r.facets?.custom?.systemKey??'').toUpperCase()==='LOAN'||/^(prêt|pret|emprunt|loan)s?$/i.test(String(r.name??'').trim()));
+  const hydrateLoanPolicy=()=>{
+    const rubric=officialLoanRubric(),policy=rubric?.policies?.loan,status=byId('loanPolicyStatus');
+    if(policy){if(byId('loanPolicyRate'))byId('loanPolicyRate').value=String(Number(policy.rateBasisPointsPerPeriod??0)/100);if(byId('loanPolicyPriority'))byId('loanPolicyPriority').value=policy.paymentPriority??'CAPITAL_FIRST';if(byId('loanPolicyInterestTiming'))byId('loanPolicyInterestTiming').value=policy.interestTiming??'NEXT_SESSION_DUE';if(byId('loanPaymentPriority'))byId('loanPaymentPriority').value=policy.paymentPriority??'CAPITAL_FIRST';if(byId('loanInterestTiming'))byId('loanInterestTiming').value=policy.interestTiming??'NEXT_SESSION_DUE';if(status)status.textContent=tr('Politique active · taux par période ','Active policy · rate per period ')+(Number(policy.rateBasisPointsPerPeriod??0)/100).toLocaleString(locale()==='fr'?'fr-FR':'en-US')+' % · '+String(policy.paymentPriority??'CAPITAL_FIRST')+' · '+String(policy.interestTiming??'NEXT_SESSION_DUE')+tr(' · aucun intérêt sur intérêt.',' · no interest on interest.');}
+    else if(status)status.textContent=tr('Aucune politique Prêt validée : configurez le taux, la priorité et le moment de perception. Aucun intérêt sur intérêt.','No validated loan policy: configure rate, priority and interest timing. No interest on interest.');
+    return{rubric,policy};
+  };
+
   const renderLoans=async()=>{
     if(!app.activeGroup()){loans=[];decisions=[];return;}
     [loans,decisions]=await Promise.all([app.listCompletion('LOAN'),app.listCompletion('GOVERNANCE_DECISION')]);
+    hydrateLoanPolicy();
     refill(byId('loanBorrower'),getMembers().map(x=>({id:x.id,label:x.displayName})),tr('Choisir un membre','Choose a member'));
     refill(byId('obligationMember'),getMembers().map(x=>({id:x.id,label:x.displayName})),tr('Choisir un membre','Choose a member'));
     const root=byId('loanList');if(root){root.replaceChildren();
       for(const loan of loans){
         const state=primitiveState(loan),a=article(loan.title,state,
-          tr('Capital','Principal')+': '+fmt(Number(loan.data.principal??0))+' · '+tr('reste','outstanding')+': '+fmt(Number(loan.data.outstandingPrincipal??0)));
+          tr('Capital','Principal')+': '+fmt(Number(loan.data.principal??0))+' · '+tr('reste','outstanding')+': '+fmt(Number(loan.data.outstandingPrincipal??0))+' · '+tr('intérêts dus','interest due')+': '+fmt(Number(loan.data.unpaidInterest??0))+' · '+tr('mode','mode')+': '+String(loan.data.interestTiming??'NEXT_SESSION_DUE'));
         const guarantees=await app.loanGuarantors(loan.id).catch(()=>[]);
         if(guarantees.length){
           const gbox=document.createElement('div');gbox.className='stack compact';const gh=document.createElement('small');gh.textContent=tr('Garants','Guarantors')+' :';gbox.append(gh);
@@ -190,7 +199,7 @@ export const mountCompletionUI=({app,notify,showError,getMembers,getMeetings,get
           const b=document.createElement('button');b.type='button';b.textContent=tr('Approuver','Approve');b.onclick=()=>void run(null,async()=>{await app.transitionCompletion(loan.id,'APPROVED',primitiveVersion(loan),{approvedAt:new Date().toISOString()});await renderLoans();});actions.append(b);
         }
         if(state==='APPROVED'){
-          const b=document.createElement('button');b.type='button';b.className='primary';b.textContent=tr('Décaisser','Disburse');b.onclick=()=>void run(null,async()=>{await app.disburseLoan(loan.id,{amount:Number(loan.data.principal),expectedVersion:primitiveVersion(loan)});await renderLoans();notify(tr('Prêt décaissé dans le ledger.','Loan disbursed in the ledger.'));});actions.append(b);
+          const b=document.createElement('button');b.type='button';b.className='primary';b.textContent=tr('Décaisser','Disburse');b.onclick=()=>void run(null,async()=>{const principal=Number(loan.data.principal),timing=String(loan.data.interestTiming??'NEXT_SESSION_DUE'),upfront=timing==='NEXT_SESSION_DUE'?0:Math.round(principal*Number(loan.data.rateBasisPointsPerPeriod??0)/10000);if(upfront>0&&!window.confirm(timing==='UPFRONT_DEDUCTED'?tr('Cette politique retient '+fmt(upfront)+' d’intérêts immédiatement. Le membre reçoit un montant net inférieur au capital dû. Confirmer ?','This policy immediately withholds '+fmt(upfront)+' interest. The member receives less cash than the principal owed. Confirm?'):tr('Cette politique exige '+fmt(upfront)+' d’intérêts avant la libération du capital. Confirmez uniquement si l’intérêt a bien été reçu.','This policy requires '+fmt(upfront)+' interest before principal release. Confirm only if the interest was actually received.')))return;await app.disburseLoan(loan.id,{amount:principal,expectedVersion:primitiveVersion(loan)});await renderLoans();notify(tr('Prêt décaissé dans le Ledger selon la politique du groupe.','Loan disbursed in the Ledger under group policy.'));});actions.append(b);
         }
         if(state==='DISBURSED'||state==='REPAYING'){
           const b=document.createElement('button');b.type='button';b.textContent=tr('Rembourser','Repay');b.onclick=()=>void run(null,async()=>{
@@ -296,12 +305,19 @@ export const mountCompletionUI=({app,notify,showError,getMembers,getMeetings,get
     byId('readinessResult').textContent=p.data.ready===true?tr('Groupe prêt : aucun blocage détecté.','Group ready: no blocker detected.'):tr('À compléter : ','To complete: ')+blockers.join(', ');
   }));
 
+  byId('loanPolicyForm')?.addEventListener('submit',e=>{e.preventDefault();void run(e.currentTarget,async()=>{
+    let rubric=officialLoanRubric();if(!rubric)rubric=await app.ensureOfficialLoanRubric();
+    const rate=Math.round(number('loanPolicyRate')*100);if(!Number.isSafeInteger(rate)||rate<0)throw Error('INVALID_LOAN_RATE');
+    const policies={...(rubric.policies??{}),loan:{...(rubric.policies?.loan??{}),allowed:true,rateBasisPointsPerPeriod:rate,interestBase:'PRINCIPAL_ONLY',paymentPriority:value('loanPolicyPriority')||'CAPITAL_FIRST',interestTiming:value('loanPolicyInterestTiming')||'NEXT_SESSION_DUE',noInterestOnInterest:true}};
+    await app.updateRubricPolicies(rubric.id,policies);notify(tr('Politique Prêts enregistrée.','Loan policy saved.'));await renderLoans();
+  });});
+
   byId('loanForm')?.addEventListener('submit',e=>{e.preventDefault();void run(e.currentTarget,async()=>{
     const principal=number('loanPrincipal'),installments=number('loanInstallments'),rate=Math.round(number('loanRate')*100),periodsPerYear=number('loanPeriodsPerYear'),fees=number('loanFees');
     const quote=await app.quoteLoan({principal,installments,annualRateBasisPoints:rate,installmentsPerYear:periodsPerYear,feesTotal:fees,method:value('loanMethod')});
     renderQuote(quote.schedule);
     let loan=await app.createCompletion('LOAN',{title:tr('Prêt de ','Loan of ')+fmt(principal),data:{
-      principal,currency:'XAF',borrowerMembershipId:value('loanBorrower'),installments,annualRateBasisPoints:rate,installmentsPerYear:periodsPerYear,rateBasisPointsPerPeriod:Math.round(rate/periodsPerYear),paymentPriority:'CAPITAL_FIRST',feesTotal:fees,method:value('loanMethod'),schedule:quote.schedule,outstandingPrincipal:0
+      principal,currency:'XAF',borrowerMembershipId:value('loanBorrower'),installments,annualRateBasisPoints:rate,installmentsPerYear:periodsPerYear,rateBasisPointsPerPeriod:Math.round(rate/periodsPerYear),paymentPriority:value('loanPaymentPriority')||'CAPITAL_FIRST',interestTiming:value('loanInterestTiming')||'NEXT_SESSION_DUE',noInterestOnInterest:true,feesTotal:fees,method:value('loanMethod'),schedule:quote.schedule,outstandingPrincipal:0,unpaidInterest:0
     }});
     loan=await app.transitionCompletion(loan.id,'SUBMITTED',primitiveVersion(loan));await renderLoans();notify(tr('Demande de prêt créée.','Loan request created.'));
   });});
