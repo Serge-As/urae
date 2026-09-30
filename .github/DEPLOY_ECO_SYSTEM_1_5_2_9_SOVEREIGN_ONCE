@@ -1,7 +1,6 @@
 release: 1.5.2.9-sovereign-offline
-source_merge: 9cb52e99339cafac3d488f4da646bc6c66fbc908
-qualified_field_persistence_run: 36460976501
-qualified_financial_e2e_run: 36460976506
-qualified_sovereign_webkit_run: 36460976535
-qualified_webkit_smoke_run: 36460976455
-requested_at: 2026-09-28-final-neural-delivery
+source_merge: bf0d88c1feb79ad9ae47e61ee68785ca17b61ce7
+qualified_governed_ci_run: 36745147841
+qualified_pr: 49
+scope: live-soft-finance-yield-debt-20260930
+requested_at: 2026-09-30-live-finance-delivery
