@@ -136,6 +136,8 @@ const actorDisplayName=(actorId)=>members.find(m=>m.userId===actorId)?.displayNa
 const memberNumberText=m=>Number(m?.memberNumber)>0?tx('Membre n°'+Number(m.memberNumber),'Member #'+Number(m.memberNumber)):'';
 const memberDisplay=m=>(memberNumberText(m)?memberNumberText(m)+' · ':'')+String(m?.displayName??'');
 const toast = (m) => { const e = $('#toast'); e.textContent = m; e.hidden = false; setTimeout(() => e.hidden = true, 2600); };
+let errorHideTimer=0;
+const hideError=()=>{const box=$('#errorBox');if(errorHideTimer){clearTimeout(errorHideTimer);errorHideTimer=0;}box.hidden=true;box.replaceChildren();};
 const fail = (e) => {
     const box = $('#errorBox');
     const code = e instanceof Error ? e.message : String(e);
@@ -152,9 +154,9 @@ const fail = (e) => {
         INDEPENDENT_REVIEW_REQUIRED: 'Cette correction financière exige la revue d’un autre responsable habilité. L’auteur ne peut jamais valider sa propre correction.',
         MEMBER_SELF_ACTION_REQUIRED: 'Le dossier personnel et certaines validations doivent être effectués par le membre concerné lui-même.',
         IDEMPOTENCY_CONFLICT: 'Cette référence correspond déjà à une opération différente. Consultez le reçu existant.',
-        CELL_VALUE_CONFLICT: 'Cette cellule a déjà été modifiée par un autre gestionnaire. Eco-System vient de resynchroniser la valeur actuelle. Vérifiez-la puis validez de nouveau votre montant si nécessaire.',
-        CELL_VERSION_CONFLICT: 'Cette cellule a changé depuis votre dernière lecture. Eco-System vient de resynchroniser la version actuelle. Vérifiez-la puis recommencez uniquement cette cellule.',
-        HTTP_503: 'Le serveur de synchronisation est momentanément indisponible. Si cette opération a été mise en file locale, elle sera renvoyée automatiquement ; sinon réessayez cette cellule dans quelques instants.',
+        CELL_VALUE_CONFLICT: 'Cette cellule a déjà été modifiée par un autre gestionnaire. Eco-System vient de resynchroniser automatiquement la valeur actuelle. Vérifiez-la puis validez de nouveau si nécessaire. Si elle ne se met pas à jour sous 2 secondes, cliquez sur Actualiser.',
+        CELL_VERSION_CONFLICT: 'Cette cellule a changé depuis votre dernière lecture. Eco-System vient de resynchroniser automatiquement sa version. Vérifiez-la puis recommencez uniquement cette cellule. Si elle reste inchangée sous 2 secondes, cliquez sur Actualiser.',
+        HTTP_503: 'Le serveur de synchronisation est momentanément indisponible. Si cette opération a été mise en file locale, elle sera renvoyée automatiquement ; sinon attendez quelques instants puis cliquez sur Actualiser avant de ressaisir.',
         NETWORK_UNAVAILABLE: 'Connexion momentanément indisponible. Les opérations compatibles hors ligne restent conservées sur cet appareil et seront synchronisées automatiquement.',
         CONSENSUS_UNRESOLVED: 'Des saisies de gestionnaires sont encore divergentes. Confrontez-les et choisissez la valeur retenue avant de diffuser aux membres.',
         FORBIDDEN_SCOPE: 'Votre compte ne dispose pas de l’autorisation nécessaire pour ce groupe.',
@@ -176,8 +178,10 @@ const fail = (e) => {
         WORKSPACE_TITLE_REQUIRED: "Donnez un titre au dossier.",
         INVALID_MODULE_ID: "Le service sélectionné n'est pas reconnu."
     };
-    box.textContent = friendly[code] ?? `Action non terminée : ${code}`;
-    box.hidden = false;
+    const message=document.createElement('span');message.className='error-message';message.textContent=friendly[code] ?? `Action non terminée : ${code}`;
+    const close=document.createElement('button');close.type='button';close.className='error-close';close.textContent='× '+tx('Fermer','Close');close.setAttribute('aria-label',tx('Fermer ce message','Close this message'));close.onclick=hideError;
+    box.replaceChildren(message,close);box.hidden=false;
+    if(errorHideTimer)clearTimeout(errorHideTimer);errorHideTimer=setTimeout(hideError,code==='AUTHENTICATION_REQUIRED'?12000:7000);
     if(code==='AUTHENTICATION_REQUIRED')showAuth('Reconnectez-vous : votre saisie en cours reste conservée dans cette page.');
 };
 
@@ -202,7 +206,7 @@ const identityLiveUI = mountIdentityLiveUI({ app, notify: toast, showError: fail
 const communityShopUI = mountCommunityShopUI({ app, notify: toast, showError: fail, isManager, fmt, actorName: actorDisplayName });
 const miscRubricUI = mountMiscRubricUI({ app, notify: toast, showError: fail, getMembers: () => members, getMeetings: () => meetings, isManager, fmt });
 const pairingUI = mountPairingUI({ app, notify: toast, showError: fail, getMembers: () => members, isManager, afterMembershipChanged: async groupId => { await renderGroups(); if(groupId){ app.selectGroup(groupId); await refreshGroupContext(); } } });
-const clearFail = () => { $('#errorBox').hidden = true; $('#errorBox').textContent = ''; };
+const clearFail = hideError;
 let navDepth=Number(history.state?.ecoDepth??0);
 const activeViewName=()=>document.querySelector('.view.active')?.id?.replace(/^view-/,'')||'dashboard';
 const captureNavState=()=>{
@@ -651,6 +655,7 @@ const submitFinancialCellElement=async validate=>{
     const member=members.find(x=>x.id===membershipId),rubric=rubrics.find(x=>x.id===rubricId);
     if(!member||!rubric||!meetingId){traceFinancialCell('CELL_FAIL',{membershipId,rubricId,meetingId,error:'CELL_CONTEXT_NOT_FOUND'});fail(new Error('CELL_CONTEXT_NOT_FOUND'));return;}
     const cellKey=financialCellKey(membershipId,rubricId,meetingId),wrap=holder.closest('.matrix-wrap'),wrapState=wrap?{left:wrap.scrollLeft,top:wrap.scrollTop}:null;
+    const clearRemoteDraft=()=>{void app.publishLiveSignal?.('FINANCIAL_DRAFT_CLEAR',{kind:'FINANCIAL_CELL',meetingId,membershipId,rubricId}).catch(()=>{});};
     if(holder.dataset.submitting==='1'){traceFinancialCell('CELL_SUBMIT_BUSY',{cellKey});return;}
     holder.classList.remove('is-conflict');holder.dataset.submitting='1';
     const nature=financialNatureForRubric(rubric),signedCurrent=exactCellAmount(membershipId,rubricId,meetingId),current=Math.abs(signedCurrent),previousIcon=validate.textContent;
@@ -666,7 +671,7 @@ const submitFinancialCellElement=async validate=>{
       setCellState('SAVING_LOCAL',tx('Enregistrement…','Saving…'));
       traceFinancialCell('CELL_SUBMIT',{cellKey,membershipId,rubricId,meetingId,target,current,nature});
       if(target===current){
-        input.value='';clearFinancialCellDraft(cellKey);setCellState('IDLE');
+        input.value='';clearFinancialCellDraft(cellKey);clearRemoteDraft();setCellState('IDLE');
         toast(tx('Aucun changement : cette valeur est déjà enregistrée.','No change: this value is already recorded.'));
         return;
       }
@@ -678,7 +683,7 @@ const submitFinancialCellElement=async validate=>{
       validate.disabled=true;input.disabled=true;validate.textContent='…';holder.classList.add('is-saving');
       let result;
       if(nature==='CONTRIBUTION'){
-        if(current===0&&target===0){input.value='';clearFinancialCellDraft(cellKey);setCellState('IDLE');return;}
+        if(current===0&&target===0){input.value='';clearFinancialCellDraft(cellKey);clearRemoteDraft();setCellState('IDLE');return;}
         result=await app.setFinancialCellTarget({meetingId,membershipId,rubricId,targetAmount:target,currentAmount:current,currentVersion:exactCellVersion(membershipId,rubricId,meetingId),reason:reason.trim()});
         if(Number.isFinite(Number(result?.cellVersion)))financialCellVersions.set(JSON.stringify([meetingId,membershipId,rubricId,'XAF']),Number(result.cellVersion));
       }else{
@@ -710,7 +715,7 @@ const submitFinancialCellElement=async validate=>{
         financialReviewTargets.delete(cellKey);currentLabel.textContent=fmt(displayTarget);setCellState('CONFIRMED',tx('✓ Validé','✓ Confirmed'));traceFinancialCell('CELL_ACK',{cellKey,target,current});
         toast(nature==='LOAN'?tx('Prêt décaissé : la caisse diminue et la dette du membre est créée.','Loan disbursed: cash decreases and the member debt is created.'):tx('Valeur enregistrée.','Value saved.'));
       }
-      input.value='';clearFinancialCellDraft(cellKey);renderOutbox();
+      input.value='';clearFinancialCellDraft(cellKey);clearRemoteDraft();renderOutbox();
       patchFinancialDomCell({meetingId,membershipId,rubricId,amount:displayTarget,cellVersion:result?.cellVersion});
       focusNextFinancialInput(holder,wrapState);
       window.dispatchEvent(new CustomEvent('eco:financial-data-changed',{detail:{meetingId,membershipId,rubricId,soft:true}}));
@@ -753,12 +758,15 @@ const makeFinancialEntryCell=({member,rubric,meetingId,editable=true})=>{
     const persistentCellKey=financialCellKey(member.id,rubric.id,meetingId);
     const input=document.createElement('input');input.type='number';input.min='0';input.step='1';input.inputMode='numeric';input.className='cell-target-input';input.placeholder=current>0?tx('Modifier…','Change…'):tx('Saisir…','Enter…');input.setAttribute('aria-label',tx('Nouvelle valeur totale','New total value'));
     const restoredDraft=financialCellDrafts.get(persistentCellKey);if(restoredDraft!==undefined)input.value=String(restoredDraft);
-    let typingTimer=0,lastTypingSignal=0;
+    let typingTimer=0,lastTypingSignal=0,draftHeartbeat=0;
     const signalPayload=()=>({kind:'FINANCIAL_CELL',meetingId,membershipId:member.id,rubricId:rubric.id});
     const stopTyping=()=>{if(typingTimer){clearTimeout(typingTimer);typingTimer=0;}void app.publishLiveSignal?.('TYPING_STOP',signalPayload()).catch(()=>{});};
-    input.addEventListener('focus',()=>{void app.publishLiveSignal?.('CELL_FOCUS',signalPayload()).catch(()=>{});});
-    input.addEventListener('input',()=>{saveFinancialCellDraft(persistentCellKey,input.value);const now=Date.now();if(now-lastTypingSignal>=800){lastTypingSignal=now;void app.publishLiveSignal?.('TYPING',signalPayload()).catch(()=>{});}if(typingTimer)clearTimeout(typingTimer);typingTimer=setTimeout(stopTyping,2500);});
-    input.addEventListener('blur',()=>{stopTyping();void app.publishLiveSignal?.('CELL_BLUR',signalPayload()).catch(()=>{});});
+    const publishDraftPresence=()=>{if(input.value.trim())void app.publishLiveSignal?.('FINANCIAL_DRAFT',signalPayload()).catch(()=>{});};
+    const stopDraftHeartbeat=(publishClear=false)=>{if(draftHeartbeat){clearInterval(draftHeartbeat);draftHeartbeat=0;}if(publishClear)void app.publishLiveSignal?.('FINANCIAL_DRAFT_CLEAR',signalPayload()).catch(()=>{});};
+    const ensureDraftHeartbeat=()=>{if(!input.value.trim()){stopDraftHeartbeat(true);return;}publishDraftPresence();if(draftHeartbeat)return;draftHeartbeat=setInterval(()=>{if(!input.isConnected||!input.value.trim()){stopDraftHeartbeat(Boolean(input.isConnected));return;}publishDraftPresence();},4500);};
+    input.addEventListener('focus',()=>{void app.publishLiveSignal?.('CELL_FOCUS',signalPayload()).catch(()=>{});if(input.value.trim())ensureDraftHeartbeat();});
+    input.addEventListener('input',()=>{saveFinancialCellDraft(persistentCellKey,input.value);if(input.value.trim())ensureDraftHeartbeat();else stopDraftHeartbeat(true);const now=Date.now();if(now-lastTypingSignal>=800){lastTypingSignal=now;void app.publishLiveSignal?.('TYPING',signalPayload()).catch(()=>{});}if(typingTimer)clearTimeout(typingTimer);typingTimer=setTimeout(stopTyping,2500);});
+    input.addEventListener('blur',()=>{stopTyping();if(input.value.trim())publishDraftPresence();void app.publishLiveSignal?.('CELL_BLUR',signalPayload()).catch(()=>{});});
     const validate=document.createElement('button');validate.type='button';validate.className='cell-validate';validate.textContent='✓';validate.title=tx('Valider la valeur totale','Confirm total value');validate.setAttribute('aria-label',tx('Valider la saisie','Confirm entry'));
     const liveLine=document.createElement('small');liveLine.className='cell-live-presence';liveLine.setAttribute('aria-live','polite');liveLine.hidden=true;
     const stateLine=document.createElement('small');stateLine.className='cell-save-state';stateLine.setAttribute('aria-live','polite');stateLine.hidden=true;
@@ -1406,8 +1414,12 @@ window.addEventListener('eco:live-signal',event=>{
     const e=event instanceof CustomEvent?event.detail:undefined,p=e?.payload??{},actorId=String(e?.actorId??'');if(!actorId||actorId===String(app.currentActor?.()??''))return;
     if(String(p.kind??'')!=='FINANCIAL_CELL')return;const selector=financialLiveSelector(p),cell=selector?document.querySelector(selector):null;if(!cell)return;
     const line=cell.querySelector('.cell-live-presence');if(!line)return;const name=actorDisplayName(actorId)||tx('Un autre gestionnaire','Another manager');
-    if(['TYPING','CELL_FOCUS'].includes(String(e.type??''))){line.textContent=String(e.type)==='TYPING'?tx(`${name} saisit…`,`${name} is typing…`):tx(`${name} travaille sur cette cellule`,`${name} is working on this cell`);line.hidden=false;cell.classList.add('live-cell-active');clearTimeout(Number(cell.dataset.liveHideTimer||0));const t=setTimeout(()=>{line.hidden=true;cell.classList.remove('live-cell-active');},3500);cell.dataset.liveHideTimer=String(t);}
-    if(['TYPING_STOP','CELL_BLUR'].includes(String(e.type??''))){line.hidden=true;cell.classList.remove('live-cell-active');}
+    const type=String(e.type??'');
+    const resetPresenceTimer=ms=>{clearTimeout(Number(cell.dataset.liveHideTimer||0));const t=setTimeout(()=>{line.hidden=true;cell.classList.remove('live-cell-active','live-cell-draft');delete cell.dataset.remoteDraftAuthor;},ms);cell.dataset.liveHideTimer=String(t);};
+    if(['TYPING','CELL_FOCUS'].includes(type)){line.textContent=type==='TYPING'?tx(`${name} saisit…`,`${name} is typing…`):tx(`${name} travaille sur cette cellule`,`${name} is working on this cell`);line.hidden=false;cell.classList.add('live-cell-active');resetPresenceTimer(3500);}
+    if(type==='FINANCIAL_DRAFT'){cell.dataset.remoteDraftAuthor=name;cell.classList.add('live-cell-draft');line.textContent=tx(`${name} a un brouillon non validé`,`${name} has an unconfirmed draft`);line.hidden=false;resetPresenceTimer(11000);}
+    if(type==='FINANCIAL_DRAFT_CLEAR'){cell.classList.remove('live-cell-draft');delete cell.dataset.remoteDraftAuthor;if(!cell.classList.contains('live-cell-active'))line.hidden=true;}
+    if(['TYPING_STOP','CELL_BLUR'].includes(type)){cell.classList.remove('live-cell-active');const draftAuthor=cell.dataset.remoteDraftAuthor;if(cell.classList.contains('live-cell-draft')&&draftAuthor){line.textContent=tx(`${draftAuthor} a un brouillon non validé`,`${draftAuthor} has an unconfirmed draft`);line.hidden=false;}else line.hidden=true;}
 });
 let liveLedgerRefreshTimer=0;
 window.addEventListener('eco:financial-live-update',event=>{
