@@ -11,8 +11,8 @@ test('typing and cell focus use ephemeral websocket signals without durable stor
   const hub=new GroupLiveHub(state,{});
   const response=await hub.fetch(new Request('https://group-live.internal/signal',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({type:'TYPING',actorId:'manager-2',payload:{kind:'FINANCIAL_CELL',meetingId:'mtg',membershipId:'m',rubricId:'r'}})}));
   assert.equal(response.status,202);
-  assert.equal(puts.length,1,'typing stores only one bounded per-actor hibernation fallback record');
-  assert.match(String(puts[0][0]),/^signal-actor:/);
+  assert.equal(puts.length,1,'typing stores only one bounded per-actor activity fallback record');
+  assert.match(String(puts[0][0]),/^signal-actor:.*:activity$/);
   assert.equal('amount' in (sent[0].event.payload??{}),false,'typing fallback must never contain financial amount');
   assert.equal(sent[0].type,'GROUP_LIVE_SIGNAL');
   assert.equal(sent[0].event.type,'TYPING');

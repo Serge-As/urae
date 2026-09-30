@@ -47,9 +47,10 @@ export class GroupLiveHub{
     const type=String(input.type??'');if(!allowedSignalTypes.has(type))throw new Error('LIVE_SIGNAL_TYPE_NOT_ALLOWED');
     const signal:GroupLiveSignal={id:String(input.id??crypto.randomUUID()),type,at:new Date().toISOString(),actorId:String(input.actorId??'unknown').slice(0,200),payload:cleanPayload(input.payload)};
     const now=Date.now();this.recentSignals=this.recentSignals.filter(x=>now-Date.parse(x.at)<12000);this.recentSignals.push(signal);if(this.recentSignals.length>200)this.recentSignals.splice(0,this.recentSignals.length-200);
-    // Bounded hibernation fallback: exactly one short-lived presence record per actor.
-    // Financial amounts are never part of these signals; only cell identity and state.
-    await this.state.storage.put('signal-actor:'+encodeURIComponent(signal.actorId),signal);
+    // Bounded hibernation fallback: at most two short-lived records per actor:
+    // draft state and transient activity. Financial amounts are never stored here.
+    const category=['FINANCIAL_DRAFT','FINANCIAL_DRAFT_CLEAR'].includes(type)?'draft':'activity';
+    await this.state.storage.put('signal-actor:'+encodeURIComponent(signal.actorId)+':'+category,signal);
     this.broadcastSignal(signal);return signal;
   }
   private async signals(afterAt=0,excludeActorId?:string):Promise<GroupLiveSignal[]>{
@@ -58,7 +59,8 @@ export class GroupLiveHub{
     const all=[...this.recentSignals,...stored.values()],deduped=new Map<string,GroupLiveSignal>();
     for(const signal of all){
       const at=Date.parse(signal.at)||0;if(now-at>12000||at<=afterAt||excludeActorId&&signal.actorId===excludeActorId)continue;
-      const key=signal.actorId+'|'+String(signal.payload?.kind??'')+'|'+String(signal.payload?.meetingId??'')+'|'+String(signal.payload?.membershipId??'')+'|'+String(signal.payload?.rubricId??'');
+      const category=['FINANCIAL_DRAFT','FINANCIAL_DRAFT_CLEAR'].includes(signal.type)?'draft':'activity';
+      const key=signal.actorId+'|'+category+'|'+String(signal.payload?.kind??'')+'|'+String(signal.payload?.meetingId??'')+'|'+String(signal.payload?.membershipId??'')+'|'+String(signal.payload?.rubricId??'');
       const prior=deduped.get(key);if(!prior||Date.parse(prior.at)<at)deduped.set(key,signal);
     }
     return [...deduped.values()].sort((a,b)=>Date.parse(a.at)-Date.parse(b.at)).slice(-100);

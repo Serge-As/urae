@@ -683,10 +683,12 @@ const scheduleFinancialOutboxRecovery=detail=>{
   const timer=setTimeout(run,650);financialRetryTimers.set(key,timer);
 };
 
-let financialSnapshotTimer=0,financialSnapshotBusy=false,financialSnapshotPrimed=false;
+let financialSnapshotTimer=0,financialSnapshotBusy=false,financialSnapshotPrimed=false,financialSnapshotGroup='';
 const financialSnapshotState=new Map();
 const pollCanonicalFinancialSnapshot=async()=>{
   if(financialSnapshotBusy||navigator.onLine===false||document.visibilityState!=='visible'||!app.activeGroup()||!isManager()||!document.querySelector('.canonical-financial-matrix'))return;
+  const activeGroup=String(app.activeGroup()??'');
+  if(financialSnapshotGroup!==activeGroup){financialSnapshotGroup=activeGroup;financialSnapshotState.clear();financialSnapshotPrimed=false;}
   financialSnapshotBusy=true;
   try{
     const data=await app.financialCellSnapshot(),next=new Map();
@@ -694,7 +696,7 @@ const pollCanonicalFinancialSnapshot=async()=>{
       const key=financialCellKey(String(row.membershipId),String(row.rubricId),String(row.meetingId)),signature=String(row.cellVersion??0)+'|'+String(row.amount??0)+'|'+String(row.updatedAt??'');
       next.set(key,signature);
       const previous=financialSnapshotState.get(key);
-      if(financialSnapshotPrimed&&previous!==undefined&&previous!==signature&&!cellHasPendingLocal(row)){
+      if(financialSnapshotPrimed&&previous!==signature&&!cellHasPendingLocal(row)){
         financialOptimisticValues.delete(key);
         patchFinancialDomCell({meetingId:row.meetingId,membershipId:row.membershipId,rubricId:row.rubricId,amount:Number(row.amount??0),cellVersion:Number(row.cellVersion??0),remote:true});
         highlightRemoteFinancialCell({meetingId:row.meetingId,membershipId:row.membershipId,rubricId:row.rubricId,newAmount:Math.abs(Number(row.amount??0)),cellVersion:Number(row.cellVersion??0),actorId:String(row.actorId??''),actorName:row.actorId?actorDisplayName(String(row.actorId)):tx('Autre gestionnaire','Another manager'),operationType:'CANONICAL_SNAPSHOT'});

@@ -20,6 +20,8 @@ test('transient online queue retries automatically and canonical snapshot patche
   assert.match(main,/financialCellSnapshot/);
   assert.match(main,/pollCanonicalFinancialSnapshot/);
   assert.match(main,/1200/);
+  assert.match(main,/previous!==signature/);
+  assert.match(main,/financialSnapshotGroup/);
   const submit=main.slice(main.indexOf('const submitFinancialCellElement'),main.indexOf('const makeFinancialEntryCell'));
   assert.doesNotMatch(submit,/await renderLedger\(\)/);
   assert.doesNotMatch(submit,/sessionsUI\.refresh/);
@@ -27,7 +29,9 @@ test('transient online queue retries automatically and canonical snapshot patche
 
 test('typing and draft presence survive websocket hibernation without storing amounts',()=>{
   assert.match(hub,/signal-actor:/);
-  assert.match(hub,/one short-lived presence record per actor/);
+  assert.match(hub,/at most two short-lived records per actor/);
+  assert.match(hub,/:draft/);
+  assert.match(hub,/:activity/);
   assert.match(hub,/ttlMs:12000/);
   assert.doesNotMatch(hub,/payload\.amount/);
 });
