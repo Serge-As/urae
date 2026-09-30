@@ -558,7 +558,7 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
       if(action==='connect'&&request.method==='GET')return stub.fetch(new Request('https://group-live.internal/connect?userId='+encodeURIComponent(ctx.actorId),{method:'GET',headers:request.headers}));
       if(action==='signal'&&request.method==='POST'){
         const body=await readJson<Record<string,unknown>>(request),type=String(body.type??'');
-        const allowed=new Set(['PRESENCE','TYPING','TYPING_STOP','CELL_FOCUS','CELL_BLUR','LIVE_ACK']);
+        const allowed=new Set(['PRESENCE','TYPING','TYPING_STOP','CELL_FOCUS','CELL_BLUR','FINANCIAL_DRAFT','FINANCIAL_DRAFT_CLEAR','LIVE_ACK']);
         if(!allowed.has(type))throw new Error('LIVE_CLIENT_SIGNAL_NOT_ALLOWED');
         const raw=body.payload&&typeof body.payload==='object'&&!Array.isArray(body.payload)?body.payload as Record<string,unknown>:{};
         const kind=String(raw.kind??'');
