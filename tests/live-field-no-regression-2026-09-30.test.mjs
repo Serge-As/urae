@@ -30,8 +30,8 @@ test('transient online queue retries automatically and canonical snapshot patche
 test('typing and draft presence survive websocket hibernation without storing amounts',()=>{
   assert.match(hub,/signal-actor:/);
   assert.match(hub,/at most two short-lived records per actor/);
-  assert.match(hub,/:draft/);
-  assert.match(hub,/:activity/);
+  assert.match(hub,/\?\'draft\':\'activity\'/);
+  assert.match(hub,/signal-actor:[^\n]*category/);
   assert.match(hub,/ttlMs:12000/);
   assert.doesNotMatch(hub,/payload\.amount/);
 });
