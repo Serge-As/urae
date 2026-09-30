@@ -122,6 +122,19 @@ export class ConnectedApplication {
     if(typeof window!=='undefined'&&typeof CustomEvent!=='undefined')window.dispatchEvent(new CustomEvent('eco:offline-snapshot-used',{detail:{path,updatedAt}}));
   }
   private isOffline():boolean{return this.usingOfflineSnapshot||(typeof navigator!=='undefined'&&navigator.onLine===false);}
+  private async canAttemptCriticalWrite():Promise<boolean>{
+    if(typeof navigator!=='undefined'&&navigator.onLine===false)return false;
+    if(!this.usingOfflineSnapshot)return true;
+    // A single cached GET must never trap later financial writes in offline mode.
+    // Probe the real authenticated server directly, bypassing read-snapshot fallback.
+    try{
+      const response=await fetch(`${this.baseUrl}/api/v1/auth/session`,{method:'GET',headers:this.headers()});
+      if(!response.ok)return false;
+      const body=await response.json() as {authenticated?:boolean;account?:unknown};
+      if(body.authenticated&&body.account){this.usingOfflineSnapshot=false;return true;}
+    }catch{}
+    return false;
+  }
   private async cached<T>(path:string):Promise<T|undefined>{
     try{
       const exact=await this.readSnapshots.get<T>(this.offlineReadKey(path));if(exact)return exact.body;
@@ -715,9 +728,10 @@ export class ConnectedApplication {
       return{status:'QUEUED_SYNC',queued:true,outbox:item};
     };
 
+    const canWrite=await this.canAttemptCriticalWrite();
     if(nature==='OUTFLOW'){
       const body={membershipId:input.membershipId,rubricId:rubric.id,meetingId:input.meetingId,amount:input.amount,label:rubric.name??'Dépense de séance',scope:'SHEET',note:'Saisie depuis la feuille financière canonique',idempotencyKey:key};
-      if(this.isOffline())return queue();
+      if(!canWrite)return queue();
       try{return await this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/expenses`,{method:'POST',body:JSON.stringify(body)});}
       catch(error){if(error instanceof Error&&(error.message==='NETWORK_UNAVAILABLE'||/^HTTP_5\d\d$/.test(error.message)))return queue();throw error;}
     }
@@ -729,7 +743,7 @@ export class ConnectedApplication {
       const rateBasisPointsPerPeriod=Number(rawRate),paymentPriority=special?.paymentPriority??policy.paymentPriority??'CAPITAL_FIRST',interestTiming=special?.interestTiming??policy.interestTiming??'NEXT_SESSION_DUE';
       const periods=Number(special?.maxDurationPeriods??policy.overdue?.maxDurationPeriods??6),loanClass=special?'SPECIAL':'STANDARD';
       const replayMeta={rateBasisPointsPerPeriod,paymentPriority,interestTiming,periods,loanClass};
-      if(this.isOffline())return queue(replayMeta);
+      if(!canWrite)return queue(replayMeta);
       try{
         let loan=await this.createCompletion('LOAN',{title:String(rubric.name??'Prêt'),data:{principal:input.amount,currency:'XAF',borrowerMembershipId:input.membershipId,rubricId:rubric.id,rateBasisPointsPerPeriod,paymentPriority,interestTiming,noInterestOnInterest:true,periods,outstandingPrincipal:0,unpaidInterest:0,loanClass,sourceSurface:'TWO_SHEETS',sheetEntryKey:key}});
         loan=await this.transitionCompletion(loan.id,'SUBMITTED',Number(loan.data?.completionVersion??1),{submittedFromSheet:true,meetingId:input.meetingId});
@@ -739,7 +753,7 @@ export class ConnectedApplication {
     }
 
     const component=String(rubric.facets?.custom?.repaymentComponent??'').toUpperCase()==='INTEREST'||/interet|interest/.test(normalized)?'INTEREST':'PRINCIPAL';
-    if(this.isOffline())return queue({repaymentComponent:component});
+    if(!canWrite)return queue({repaymentComponent:component});
     try{
       const active=(await this.listCompletion('LOAN')).filter(l=>String(l.data?.borrowerMembershipId??'')===input.membershipId&&['DISBURSED','REPAYING'].includes(String(l.data?.completionState??''))&&(Number(l.data?.outstandingPrincipal??0)>0||Number(l.data?.unpaidInterest??0)>0));
       const loan=input.loanId?active.find(x=>x.id===input.loanId):active.length===1?active[0]:undefined;
@@ -755,7 +769,7 @@ export class ConnectedApplication {
     // An ambiguous network failure is retried with this key, never a new charge.
     const item=this.outbox.enqueue({tenantId:this.tenantId,actorId:this.actorId,type:'CONTRIBUTION_CASH_RECORDED',payload:{groupId:this.activeGroupId,...input,currency:'XAF'},idempotencyKey:key});
     try{await this.persistOutbox();if(IndexedDbSovereignStore.supported())await this.sovereign.append({tenantId:this.tenantId,groupId:this.activeGroupId,actorId:this.actorId,type:'CONTRIBUTION_CASH_RECORDED',payload:{groupId:this.activeGroupId,...input,currency:'XAF',idempotencyKey:key,outboxId:item.id}});}catch(e){this.outbox.restore(this.outbox.list().filter(x=>x.id!==item.id));throw e;}
-    if(this.isOffline()){
+    if(!(await this.canAttemptCriticalWrite())){
       const path=`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/ledger`,current=await this.cached<any>(path)??{summary:{currency:'XAF',cashBalance:0,memberFundsLiability:0,entryCount:0},entries:[],receipts:[]};
       if(!(current.receipts??[]).some((x:any)=>x.idempotencyKey===key)){
         const stamp=new Date().toISOString(),receipt={id:'local_receipt_'+item.id,tenantId:this.tenantId,groupId:this.activeGroupId,membershipId:input.membershipId,amount:{currency:'XAF',amount:input.amount},paymentMethod:'cash',ledgerEntryId:'local_pending_'+item.id,meetingId:input.meetingId,receivedAt:stamp,receivedBy:this.actorId,idempotencyKey:key,rubricId:input.rubricId,latePosting:undefined,netAmount:input.amount,localPending:true};
@@ -857,6 +871,11 @@ export class ConnectedApplication {
       return{meetingId:String(payload.meetingId??''),membershipId:String(payload.membershipId??''),rubricId:String(payload.rubricId??''),
         amount:Number(payload.amount??0),nature:String(payload.nature??''),status:item.status,idempotencyKey:item.idempotencyKey,createdAt:item.createdAt};
     }).filter(x=>x.meetingId&&x.membershipId&&x.rubricId&&Number.isSafeInteger(x.amount)&&x.amount>0);
+  }
+
+  async financialCellSnapshot():Promise<{generatedAt:string;watermark:string;cells:Array<{meetingId:string;membershipId:string;rubricId:string;amount:number;cellVersion:number;updatedAt:string;actorId?:string;nature?:string}>}>{
+    if(!this.activeGroupId)return{generatedAt:new Date().toISOString(),watermark:'',cells:[]};
+    return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/financial-cells/snapshot`);
   }
 
   async ledger():Promise<{summary:LedgerSummary;entries:LedgerEntry[];receipts:Array<ContributionReceipt & {netAmount?:number;localPending?:boolean;localPendingStatus?:string}>;cellRevisions:Array<{meetingId:string;membershipId:string;rubricId:string;currency:string;version:number}>}>{
@@ -982,7 +1001,7 @@ export class ConnectedApplication {
     // Persist the exact target command before attempting transport. If the HTTP
     // response is lost after commit, the same idempotency key is replayed later.
     const item=await this.queueLocal('FINANCIAL_CELL_CORRECTION_PROPOSAL_V1',payload,operationKey);
-    if(this.isOffline())return{status:'QUEUED_SYNC',queued:true,current,target:input.targetAmount,outbox:item};
+    if(!(await this.canAttemptCriticalWrite()))return{status:'QUEUED_SYNC',queued:true,current,target:input.targetAmount,outbox:item};
     try{
       const result=await this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/meetings/${encodeURIComponent(input.meetingId)}/financial-cells`,{
         method:'POST',headers:{'x-idempotency-key':operationKey},
