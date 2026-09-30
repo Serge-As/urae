@@ -10,7 +10,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: eco-system-1-5-production
+  group: eco-system-1-5-production-live-20260930
   cancel-in-progress: false
 
 env:
