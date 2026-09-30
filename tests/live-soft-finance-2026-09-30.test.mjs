@@ -69,3 +69,15 @@ test('production configuration really activates the Premium Live Ledger path',()
   assert.match(app,/FINANCIAL_DRAFT'.*FINANCIAL_DRAFT_CLEAR'/);
   assert.match(deploy,/PREMIUM_LIVE_LEDGER_NOT_ACTIVE/);
 });
+
+
+test('soft financial patch preserves queued offline state and skips server refresh until sync',()=>{
+  const patch=main.slice(main.indexOf('const patchFinancialDomCell'),main.indexOf('const focusNextFinancialInput'));
+  assert.match(patch,/preservePending=false/);
+  assert.match(patch,/if\(!preservePending\)\{financialPendingTargets\.delete\(key\);financialReviewTargets\.delete\(key\);\}/);
+  const submit=main.slice(main.indexOf('const submitFinancialCellElement'),main.indexOf('const makeFinancialEntryCell'));
+  assert.match(submit,/const preservePending=Boolean\(result\?\.status==='QUEUED_SYNC'\|\|result\?\.queued\)/);
+  assert.match(submit,/patchFinancialDomCell\(\{meetingId,membershipId,rubricId,amount:displayTarget,cellVersion:result\?\.cellVersion,preservePending\}\)/);
+  assert.match(submit,/if\(!preservePending\)void refreshFinancialProjectionSilently/);
+  assert.match(submit,/detail:\{meetingId,membershipId,rubricId,amount:displayTarget,cellVersion:result\?\.cellVersion,soft:true,preservePending\}/);
+});
