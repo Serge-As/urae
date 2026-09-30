@@ -726,7 +726,11 @@ const submitFinancialCellElement=async validate=>{
       patchFinancialDomCell({meetingId,membershipId,rubricId,amount:displayTarget,cellVersion:result?.cellVersion});
       focusNextFinancialInput(holder,wrapState);
       window.dispatchEvent(new CustomEvent('eco:financial-data-changed',{detail:{meetingId,membershipId,rubricId,soft:true}}));
-      void refreshFinancialProjectionSilently({meetingId,membershipId,rubricId}).catch(()=>{});
+      // Keep a locally queued projection and its “pending sync” badge intact.
+      // A server/canonical refresh is useful only after a confirmed online write;
+      // when queued (offline or transient 5xx), it can race and overwrite the
+      // local outbox-derived pending state before the next render.
+      if(!(result?.status==='QUEUED_SYNC'||result?.queued))void refreshFinancialProjectionSilently({meetingId,membershipId,rubricId}).catch(()=>{});
     }catch(e){
       const code=e instanceof Error?e.message:String(e);
       traceFinancialCell('CELL_FAIL',{cellKey,target:Number.isFinite(target)?target:Number(input.value||0),current,error:code});
