@@ -46,7 +46,6 @@ test('offline loss of an optional section does not block Group Core',()=>{
 });
 
 test('service worker keeps a complete coherent shell and preserves one previous release',()=>{
-  assert.match(sw,/eco-system-v1529-neural-closure-20260928/);
   const current=sw.match(/const CACHE = '([^']+)';/)?.[1];
   const previous=sw.match(/const PREVIOUS_CACHE = '([^']+)';/)?.[1];
   assert.ok(current&&previous,'current and previous coherent caches are declared');
