@@ -6,7 +6,7 @@ type StateLike={storage:StorageLike;acceptWebSocket?(ws:WebSocket,tags?:string[]
 
 const json=(data:unknown,status=200)=>new Response(JSON.stringify(data),{status,headers:{'content-type':'application/json; charset=utf-8','cache-control':'no-store'}});
 const allowedTypes=new Set(['FINANCIAL_NOTICE','MEMBER_CONTROL','MEETING_UPDATE','MANAGER_ENTRY','CONSENSUS_REQUIRED','CONSENSUS_SELECTED','MANAGER_RESERVE','MEMBER_PROJECTION_UPDATED','PRESENCE','SYNC_HINT','RULE_UPDATE','COMMUNITY_EVENT','COMMUNITY_DRAFT_SYNC','COMMUNITY_READ_SYNC']);
-const allowedSignalTypes=new Set(['PRESENCE','TYPING','TYPING_STOP','CELL_FOCUS','CELL_BLUR','LIVE_ACK']);
+const allowedSignalTypes=new Set(['PRESENCE','TYPING','TYPING_STOP','CELL_FOCUS','CELL_BLUR','FINANCIAL_DRAFT','FINANCIAL_DRAFT_CLEAR','LIVE_ACK']);
 const cleanPayload=(value:unknown):LivePayload=>{
   if(!value||typeof value!=='object'||Array.isArray(value))return{};
   const out:LivePayload={};for(const [k,v] of Object.entries(value as Record<string,unknown>)){
@@ -15,6 +15,7 @@ const cleanPayload=(value:unknown):LivePayload=>{
 };
 
 export class GroupLiveHub{
+  private recentSignals:GroupLiveSignal[]=[];
   constructor(private readonly state:StateLike,private readonly env:unknown){void env;}
 
   private async events(after=0,limit=100,userId?:string):Promise<GroupLiveEvent[]>{
@@ -45,7 +46,12 @@ export class GroupLiveHub{
   private signal(input:Record<string,unknown>):GroupLiveSignal{
     const type=String(input.type??'');if(!allowedSignalTypes.has(type))throw new Error('LIVE_SIGNAL_TYPE_NOT_ALLOWED');
     const signal:GroupLiveSignal={id:String(input.id??crypto.randomUUID()),type,at:new Date().toISOString(),actorId:String(input.actorId??'unknown').slice(0,200),payload:cleanPayload(input.payload)};
+    const now=Date.now();this.recentSignals=this.recentSignals.filter(x=>now-Date.parse(x.at)<10000);this.recentSignals.push(signal);if(this.recentSignals.length>200)this.recentSignals.splice(0,this.recentSignals.length-200);
     this.broadcastSignal(signal);return signal;
+  }
+  private signals(afterAt=0,excludeActorId?:string):GroupLiveSignal[]{
+    const now=Date.now();this.recentSignals=this.recentSignals.filter(x=>now-Date.parse(x.at)<10000);
+    return this.recentSignals.filter(x=>Date.parse(x.at)>afterAt&&(!excludeActorId||x.actorId!==excludeActorId)).slice(-100);
   }
   private async publish(input:Record<string,unknown>):Promise<GroupLiveEvent>{
     const type=String(input.type??'');if(!allowedTypes.has(type))throw new Error('LIVE_EVENT_TYPE_NOT_ALLOWED');
@@ -72,6 +78,7 @@ export class GroupLiveHub{
       return new Response(null,{status:101,webSocket:client} as ResponseInit&{webSocket:WebSocket});
     }
     if(request.method==='GET'&&url.pathname.endsWith('/events'))return json({events:await this.events(Number(url.searchParams.get('after')??0),Number(url.searchParams.get('limit')??100),url.searchParams.get('userId')??undefined),latest:await this.state.storage.get<number>('seq')??0});
+    if(request.method==='GET'&&url.pathname.endsWith('/signals')){const rows=this.signals(Number(url.searchParams.get('afterAt')??0),url.searchParams.get('actorId')??undefined);return json({signals:rows,latestAt:rows.reduce((n,x)=>Math.max(n,Date.parse(x.at)||0),Number(url.searchParams.get('afterAt')??0)),ephemeral:true,ttlMs:10000});}
     if(request.method==='POST'&&url.pathname.endsWith('/publish')){
       try{return json({event:await this.publish(await request.json() as Record<string,unknown>)},201);}catch(e){return json({error:e instanceof Error?e.message:'LIVE_ERROR'},400);}
     }

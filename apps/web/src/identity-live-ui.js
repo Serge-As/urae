@@ -3,14 +3,16 @@ const value=id=>String(document.getElementById(id)?.value??'').trim();
 const row=(label,value)=>{const p=el('p');const b=el('strong',label+' : ');p.append(b,document.createTextNode(String(value??'—')));return p;};
 
 export function mountIdentityLiveUI({app,notify=()=>{},showError=console.error}){
-  let socket=null,lastSeq=0,activeGroup,reconnectTimer=null,heartbeatTimer=null,lastPongAt=0,reconnectAttempt=0,wantConnection=true,eventQueue=Promise.resolve();
+  let socket=null,lastSeq=0,lastSignalAt=0,activeGroup,reconnectTimer=null,heartbeatTimer=null,catchupTimer=null,lastPongAt=0,lastLiveMessageAt=0,reconnectAttempt=0,wantConnection=true,eventQueue=Promise.resolve();
   const passportRoot=document.getElementById('identityPassport');
   if(!passportRoot)return{refresh:async()=>{},disconnect:()=>{}};
   const dnaRoot=document.getElementById('conciergeDna'),liveRoot=document.getElementById('premiumLiveStatus'),eventsRoot=document.getElementById('liveEventList'),memoryRoot=document.getElementById('conciergeMemoryList');
 
-  const clearTimers=()=>{if(reconnectTimer){clearTimeout(reconnectTimer);reconnectTimer=null;}if(heartbeatTimer){clearInterval(heartbeatTimer);heartbeatTimer=null;}};
+  const clearTimers=()=>{if(reconnectTimer){clearTimeout(reconnectTimer);reconnectTimer=null;}if(heartbeatTimer){clearInterval(heartbeatTimer);heartbeatTimer=null;}if(catchupTimer){clearInterval(catchupTimer);catchupTimer=null;}};
   const closeSocket=(reason='group-change')=>{clearTimers();try{socket?.close(1000,reason);}catch{}socket=null;};
   const dispatchDurableEvent=event=>{try{window.dispatchEvent(new CustomEvent('eco:live-event',{detail:event}));}catch{}};
+  const dispatchEphemeralSignal=signal=>{const at=Date.parse(String(signal?.at??''))||Date.now();lastSignalAt=Math.max(lastSignalAt,at);try{window.dispatchEvent(new CustomEvent('eco:live-signal',{detail:signal}));}catch{}};
+  const catchUpSignals=async()=>{if(!app.activeGroup()||!app.liveSignals)return;const data=await app.liveSignals(lastSignalAt),signals=data.signals??[];for(const signal of signals)dispatchEphemeralSignal(signal);lastSignalAt=Math.max(lastSignalAt,Number(data.latestAt??lastSignalAt));};
   const catchUp=async()=>{
     if(!app.activeGroup())return;
     for(let page=0;page<50;page++){
@@ -20,6 +22,7 @@ export function mountIdentityLiveUI({app,notify=()=>{},showError=console.error})
       if(!events.length||lastSeq>=latest||lastSeq===before)break;
     }
   };
+  const startCatchupTimer=()=>{if(catchupTimer)return;catchupTimer=setInterval(()=>{if(document.visibilityState==='visible'&&navigator.onLine!==false){void catchUp().catch(()=>{});void catchUpSignals().catch(()=>{});}},1200);};
   const scheduleReconnect=()=>{
     if(!wantConnection||!app.activeGroup()||navigator.onLine===false||reconnectTimer)return;
     const delay=Math.min(12000,750*(2**Math.min(reconnectAttempt,4)));reconnectAttempt+=1;
@@ -42,21 +45,26 @@ export function mountIdentityLiveUI({app,notify=()=>{},showError=console.error})
   };
   const connect=()=>{
     if(!wantConnection||!app.activeGroup()||typeof WebSocket==='undefined'||navigator.onLine===false)return;
-    clearTimers();try{socket?.close(1000,'reconnect');}catch{}socket=null;activeGroup=app.activeGroup();
+    clearTimers();try{socket?.close(1000,'reconnect');}catch{}socket=null;activeGroup=app.activeGroup();startCatchupTimer();
     try{
       socket=new WebSocket(app.liveWebSocketUrl());
       socket.onopen=()=>{
-        reconnectAttempt=0;lastPongAt=Date.now();
+        reconnectAttempt=0;lastPongAt=Date.now();lastLiveMessageAt=Date.now();
         if(liveRoot)liveRoot.replaceChildren(row('Connexion','WebSocket connecté'),row('Groupe',activeGroup),row('Temps réel','ACTIF · reprise automatique'));
         void catchUp().catch(()=>{});
         void app.publishLiveSignal?.('PRESENCE',{state:'ONLINE',kind:'GROUP'}).catch(()=>{});
         heartbeatTimer=setInterval(()=>{if(!socket||socket.readyState!==WebSocket.OPEN)return;if(Date.now()-lastPongAt>45000){try{socket.close(4000,'heartbeat-timeout');}catch{}return;}try{socket.send('PING');}catch{}},20000);
+        // WebSocket is the fast path. The already-running 1.2 s catch-up loop heals
+        // both durable financial gaps and short-lived typing/focus signals when a
+        // browser/proxy drops WebSocket delivery. Ephemeral signals never reach D1.
+        void catchUpSignals().catch(()=>{});
       };
       socket.onmessage=e=>{
+        lastLiveMessageAt=Date.now();
         try{
           const msg=JSON.parse(String(e.data));
           if(msg.type==='PONG'){lastPongAt=Date.now();return;}
-          if(msg.type==='GROUP_LIVE_SIGNAL'&&msg.event){window.dispatchEvent(new CustomEvent('eco:live-signal',{detail:msg.event}));return;}
+          if(msg.type==='GROUP_LIVE_SIGNAL'&&msg.event){dispatchEphemeralSignal(msg.event);return;}
           if(msg.type==='GROUP_LIVE_EVENT'&&msg.event){
             eventQueue=eventQueue.then(async()=>{const seq=Number(msg.event.seq??0);if(seq>lastSeq+1)await catchUp();if(seq>lastSeq){renderEvent(msg.event);dispatchDurableEvent(msg.event);}}).catch(()=>{});
           }
@@ -97,7 +105,7 @@ export function mountIdentityLiveUI({app,notify=()=>{},showError=console.error})
 
   const refresh=async()=>{
     const group=app.activeGroup();if(!group){closeSocket();passportRoot.replaceChildren(el('p','Sélectionnez un groupe.','hint'));dnaRoot?.replaceChildren();liveRoot?.replaceChildren();memoryRoot?.replaceChildren();return;}
-    if(activeGroup&&activeGroup!==group){closeSocket();lastSeq=0;eventsRoot?.replaceChildren();}
+    if(activeGroup&&activeGroup!==group){closeSocket();lastSeq=0;lastSignalAt=0;eventsRoot?.replaceChildren();}
     activeGroup=group;
     try{
       const [passport,dna]=await Promise.all([app.groupIdentityPassport(),app.conciergeProfile()]);
@@ -128,7 +136,7 @@ export function mountIdentityLiveUI({app,notify=()=>{},showError=console.error})
 
   window.addEventListener('online',()=>{if(wantConnection)connect();});
   window.addEventListener('offline',()=>{closeSocket('offline');if(liveRoot)liveRoot.append(row('Réseau','Hors ligne · outbox active'));});
-  document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&wantConnection&&(!socket||socket.readyState!==WebSocket.OPEN))connect();});
+  document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&wantConnection){if(!socket||socket.readyState!==WebSocket.OPEN)connect();else{void catchUp().catch(()=>{});void catchUpSignals().catch(()=>{});}}});
   document.getElementById('refreshPassportBtn')?.addEventListener('click',()=>void (async()=>{try{await app.groupIdentityPassport(true);notify('Passeport identitaire rafraîchi.');await refresh();}catch(e){showError(e);}})());
   document.getElementById('conciergeMemoryForm')?.addEventListener('submit',e=>{e.preventDefault();void (async()=>{try{
     await app.learnConciergeMemory({category:value('conciergeMemoryCategory'),key:value('conciergeMemoryKey'),value:value('conciergeMemoryValue'),sourceRef:value('conciergeMemorySource'),confidence:Number(value('conciergeMemoryConfidence')||0),privacy:value('conciergeMemoryPrivacy'),visibility:value('conciergeMemoryVisibility')});

@@ -2,11 +2,11 @@
   "contractVersion": 1,
   "release": {
     "version": "1.5.2.9-sovereign-offline",
-    "buildId": "eco-system-1.5.2.9-20260928",
+    "buildId": "eco-system-1.5.2.9-20260930-live-finance",
     "schemaVersion": "d1-additive-20260923",
-    "policyVersion": "neural-closure-cycle-20260928",
-    "pwaCache": "eco-system-v1529-neural-closure-20260928",
-    "previousPwaCache": "eco-system-v1529-sovereign-offline-a01-20260928",
+    "policyVersion": "live-finance-policy-20260930",
+    "pwaCache": "eco-system-v1529-live-finance-20260930",
+    "previousPwaCache": "eco-system-v1529-neural-closure-20260928",
     "commitShaAuthority": "DEPLOYMENT_WORKFLOW_GITHUB_SHA_AND_PRODUCTION_HEALTH"
   },
   "truthAxes": {

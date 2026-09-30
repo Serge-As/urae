@@ -1,0 +1,8 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+const html=fs.readFileSync('apps/web/index.html','utf8'),ui=fs.readFileSync('apps/web/src/savings-yield-ui.js','utf8'),worker=fs.readFileSync('workers/api/src/index.ts','utf8'),app=fs.readFileSync('packages/application/src/index.ts','utf8');
+test('savings source is automatic and has no historical hard-coded pool',()=>{assert.doesNotMatch(html,/value="708500"/);assert.doesNotMatch(html,/id="yieldLoadCanonical"/);assert.match(html,/yieldAutoSyncStatus/);assert.match(ui,/scheduleCanonicalRefresh/);assert.match(ui,/eco:financial-live-update/);});
+test('every savings rubric receives its own canonical member x session recap',()=>{assert.match(worker,/savingsSeries=savingsRubrics\.map/);assert.match(worker,/rubricId:r\.id/);assert.match(ui,/Rubrique Épargne · /);assert.match(ui,/renderSeriesTable/);});
+test('repayment principal and collected interest are decomposed by canonical loan periods',()=>{assert.match(worker,/principalPaid:Number/);assert.match(worker,/interestPaid:Number/);assert.match(worker,/const repayments=/);assert.match(worker,/const interestReceipts=/);assert.match(ui,/Remboursements de capital/);assert.match(ui,/Intérêts collectés/);});
+test('requested health formula and provisional interest evolution are exposed without becoming ledger truth',()=>{assert.match(worker,/TOTAL_REPAYMENTS \+ TOTAL_INTEREST_COLLECTED/);assert.match(ui,/Simulation de santé financière demandée/);assert.match(ui,/Répartition provisoire des intérêts · évolution par séance/);assert.match(ui,/Projection de suivi non scellée/);assert.match(app,/LOCAL_LEDGER_RECEIPTS_AND_SOVEREIGN_JOURNAL/);});

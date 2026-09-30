@@ -1,0 +1,3 @@
+import test from 'node:test';import assert from 'node:assert/strict';import fs from 'node:fs';const worker=fs.readFileSync('workers/api/src/index.ts','utf8');
+test('online disbursement executes the three governed timing modes idempotently',()=>{assert.match(worker,/normalizedLoanInterestTiming/);assert.match(worker,/disburseApprovedLoan/);assert.match(worker,/UPFRONT_REQUIRED/);assert.match(worker,/UPFRONT_DEDUCTED/);assert.match(worker,/upfront-interest/);assert.match(worker,/findLedgerEntryByIdempotency/);});
+test('upfront first period is not accrued twice',()=>{assert.match(worker,/coveredUpfront/);assert.match(worker,/interestNew=coveredUpfront\?0/);assert.match(worker,/upfrontInterestSkipNextClose/);assert.match(worker,/première période déjà couverte/);});

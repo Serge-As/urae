@@ -130,15 +130,59 @@ export const mountCompletionUI=({app,notify,showError,getMembers,getMeetings,get
     await renderTontine();notify(tr('Planning appliqué.','Schedule applied.'));
   };
 
+  const loanRecapTable=(title,data,selector)=>{
+    const section=document.createElement('section'),h=document.createElement('h4');h.textContent=title;section.append(h);
+    const meetings=data?.meetings??[],members=getMembers().filter(x=>x.status!=='left'),periods=(data?.loanPeriods??[]).slice(),meetingIndex=new Map(meetings.map((m,i)=>[m.id,i]));
+    const wrap=document.createElement('div');wrap.className='matrix-wrap';const table=document.createElement('table');table.className='meeting-matrix';const head=document.createElement('thead'),hr=document.createElement('tr');hr.append(document.createElement('th'));hr.firstChild.textContent=tr('Membre','Member');for(const m of meetings){const th=document.createElement('th');th.textContent='S'+String(m.session??'');hr.append(th);}const thTotal=document.createElement('th');thTotal.textContent=tr('Dernier état','Latest');hr.append(thTotal);head.append(hr);table.append(head);
+    const body=document.createElement('tbody'),columnTotals=new Map();
+    for(const member of members){
+      const row=document.createElement('tr'),name=document.createElement('th');name.textContent=member.displayName;row.append(name);let last=0;
+      for(const meeting of meetings){
+        const idx=meetingIndex.get(meeting.id)??0,eligible=periods.filter(p=>p.memberId===member.id&&(meetingIndex.get(p.meetingId)??-1)<=idx&&(meetingIndex.get(p.meetingId)??-1)>=0).sort((a,b)=>(meetingIndex.get(a.meetingId)??0)-(meetingIndex.get(b.meetingId)??0));
+        const latestByLoan=new Map();for(const p of eligible)latestByLoan.set(p.loanId,p);
+        const amount=[...latestByLoan.values()].reduce((n,p)=>n+Number(selector(p)??0),0);last=amount;columnTotals.set(meeting.id,(columnTotals.get(meeting.id)??0)+amount);const td=document.createElement('td');td.textContent=amount?fmt(amount):'—';row.append(td);
+      }
+      const latest=document.createElement('td');latest.textContent=fmt(last);row.append(latest);body.append(row);
+    }
+    const total=document.createElement('tr');total.className='table-total-row';const label=document.createElement('th');label.textContent='TOTAL';total.append(label);let latestTotal=0;for(const meeting of meetings){const amount=Number(columnTotals.get(meeting.id)??0);latestTotal=amount;const td=document.createElement('td');td.textContent=fmt(amount);total.append(td);}const end=document.createElement('td');end.textContent=fmt(latestTotal);total.append(end);body.append(total);table.append(body);wrap.append(table);section.append(wrap);return section;
+  };
+  const renderLoanDebtRecap=async()=>{
+    const root=byId('loanDebtRecap');if(!root||!app.activeGroup())return;
+    const data=await app.savingsYieldSourceData().catch(()=>null);if(!data)return;
+    root.querySelectorAll('.loan-recap-generated').forEach(x=>x.remove());
+    const holder=document.createElement('div');holder.className='loan-recap-generated stack';
+    const totals=data.totals??{},metrics=document.createElement('div');metrics.className='metrics small';
+    for(const [labelText,amount] of [[tr('Capital en cours','Outstanding principal'),totals.outstandingPrincipal],[tr('Intérêts dus','Interest due'),totals.outstandingInterest],[tr('Prochains intérêts projetés','Projected next interest'),totals.nextInterestProjected],[tr('Autres dettes','Other debt'),totals.otherDebt],[tr('Dette totale exigible','Total due debt'),totals.totalDebt]]){const card=document.createElement('div'),s=document.createElement('span'),strong=document.createElement('strong');s.textContent=labelText;strong.textContent=fmt(Number(amount??0));card.append(s,strong);metrics.append(card);}holder.append(metrics);
+    const note=document.createElement('p');note.className='truth-notice';note.textContent=tr('Intérêts dus = déjà exigibles. Prochains intérêts projetés = montant calculé sur le capital restant pour la prochaine période ; il n’est pas ajouté au Ledger tant que la règle du groupe ne le rend pas exigible.','Interest due = already payable. Projected next interest = calculated on outstanding principal for the next period; it is not posted to the Ledger until group policy makes it due.');holder.append(note);
+    holder.append(
+      loanRecapTable(tr('Capital restant par membre et par séance','Outstanding principal by member and session'),data,p=>p.principalAfter),
+      loanRecapTable(tr('Intérêts dus par membre et par séance','Interest due by member and session'),data,p=>p.interestAfter),
+      loanRecapTable(tr('Prochains intérêts projetés','Projected next interest'),data,p=>p.nextInterestProjected),
+      loanRecapTable(tr('Dette de prêt totale','Total loan debt'),data,p=>p.totalDebtAfter)
+    );
+    const current=document.createElement('section'),h=document.createElement('h4');h.textContent=tr('État actuel des prêts ouverts','Current open-loan position');current.append(h);
+    const list=document.createElement('div');list.className='stack';for(const debt of data.loanDebts??[]){const a=article(nameOfMember(debt.memberId)+' · '+debt.title,'',tr('Capital','Principal')+' '+fmt(debt.principal)+' · '+tr('intérêts dus','interest due')+' '+fmt(debt.interest)+' · '+tr('prochain intérêt','next interest')+' '+fmt(debt.nextInterestProjected)+' · '+tr('priorité','priority')+' '+debt.paymentPriority);list.append(a);}if(!list.childElementCount)list.append(article(tr('Aucun prêt ouvert','No open loan'),'',''));current.append(list);holder.append(current);
+    root.append(holder);
+  };
+
+  const officialLoanRubric=()=>getRubrics().find(r=>String(r.facets?.custom?.systemKey??'').toUpperCase()==='LOAN'||/^(prêt|pret|emprunt|loan)s?$/i.test(String(r.name??'').trim()));
+  const hydrateLoanPolicy=()=>{
+    const rubric=officialLoanRubric(),policy=rubric?.policies?.loan,status=byId('loanPolicyStatus');
+    if(policy){if(byId('loanPolicyRate'))byId('loanPolicyRate').value=String(Number(policy.rateBasisPointsPerPeriod??0)/100);if(byId('loanPolicyPriority'))byId('loanPolicyPriority').value=policy.paymentPriority??'CAPITAL_FIRST';if(byId('loanPolicyInterestTiming'))byId('loanPolicyInterestTiming').value=policy.interestTiming??'NEXT_SESSION_DUE';if(byId('loanPaymentPriority'))byId('loanPaymentPriority').value=policy.paymentPriority??'CAPITAL_FIRST';if(byId('loanInterestTiming'))byId('loanInterestTiming').value=policy.interestTiming??'NEXT_SESSION_DUE';if(status)status.textContent=tr('Politique active · taux par période ','Active policy · rate per period ')+(Number(policy.rateBasisPointsPerPeriod??0)/100).toLocaleString(locale()==='fr'?'fr-FR':'en-US')+' % · '+String(policy.paymentPriority??'CAPITAL_FIRST')+' · '+String(policy.interestTiming??'NEXT_SESSION_DUE')+tr(' · aucun intérêt sur intérêt.',' · no interest on interest.');}
+    else if(status)status.textContent=tr('Aucune politique Prêt validée : configurez le taux, la priorité et le moment de perception. Aucun intérêt sur intérêt.','No validated loan policy: configure rate, priority and interest timing. No interest on interest.');
+    return{rubric,policy};
+  };
+
   const renderLoans=async()=>{
     if(!app.activeGroup()){loans=[];decisions=[];return;}
     [loans,decisions]=await Promise.all([app.listCompletion('LOAN'),app.listCompletion('GOVERNANCE_DECISION')]);
+    hydrateLoanPolicy();
     refill(byId('loanBorrower'),getMembers().map(x=>({id:x.id,label:x.displayName})),tr('Choisir un membre','Choose a member'));
     refill(byId('obligationMember'),getMembers().map(x=>({id:x.id,label:x.displayName})),tr('Choisir un membre','Choose a member'));
     const root=byId('loanList');if(root){root.replaceChildren();
       for(const loan of loans){
         const state=primitiveState(loan),a=article(loan.title,state,
-          tr('Capital','Principal')+': '+fmt(Number(loan.data.principal??0))+' · '+tr('reste','outstanding')+': '+fmt(Number(loan.data.outstandingPrincipal??0)));
+          tr('Capital','Principal')+': '+fmt(Number(loan.data.principal??0))+' · '+tr('reste','outstanding')+': '+fmt(Number(loan.data.outstandingPrincipal??0))+' · '+tr('intérêts dus','interest due')+': '+fmt(Number(loan.data.unpaidInterest??0))+' · '+tr('mode','mode')+': '+String(loan.data.interestTiming??'NEXT_SESSION_DUE'));
         const guarantees=await app.loanGuarantors(loan.id).catch(()=>[]);
         if(guarantees.length){
           const gbox=document.createElement('div');gbox.className='stack compact';const gh=document.createElement('small');gh.textContent=tr('Garants','Guarantors')+' :';gbox.append(gh);
@@ -155,7 +199,7 @@ export const mountCompletionUI=({app,notify,showError,getMembers,getMeetings,get
           const b=document.createElement('button');b.type='button';b.textContent=tr('Approuver','Approve');b.onclick=()=>void run(null,async()=>{await app.transitionCompletion(loan.id,'APPROVED',primitiveVersion(loan),{approvedAt:new Date().toISOString()});await renderLoans();});actions.append(b);
         }
         if(state==='APPROVED'){
-          const b=document.createElement('button');b.type='button';b.className='primary';b.textContent=tr('Décaisser','Disburse');b.onclick=()=>void run(null,async()=>{await app.disburseLoan(loan.id,{amount:Number(loan.data.principal),expectedVersion:primitiveVersion(loan)});await renderLoans();notify(tr('Prêt décaissé dans le ledger.','Loan disbursed in the ledger.'));});actions.append(b);
+          const b=document.createElement('button');b.type='button';b.className='primary';b.textContent=tr('Décaisser','Disburse');b.onclick=()=>void run(null,async()=>{const principal=Number(loan.data.principal),timing=String(loan.data.interestTiming??'NEXT_SESSION_DUE');if(!['NEXT_SESSION_DUE','UPFRONT_DEDUCTED','UPFRONT_REQUIRED'].includes(timing))throw Error('INVALID_LOAN_INTEREST_TIMING');const upfront=timing==='NEXT_SESSION_DUE'?0:Math.round(principal*Number(loan.data.rateBasisPointsPerPeriod??0)/10000),confirmation=timing==='UPFRONT_DEDUCTED'?tr('Cette politique retient '+fmt(upfront)+' d’intérêts immédiatement. Le membre reçoit un montant net inférieur au capital dû. Confirmer ?','This policy immediately withholds '+fmt(upfront)+' interest. The member receives less cash than the principal owed. Confirm?'):timing==='UPFRONT_REQUIRED'?tr('Cette politique exige '+fmt(upfront)+' d’intérêts avant la libération du capital. Confirmez uniquement si l’intérêt a bien été reçu.','This policy requires '+fmt(upfront)+' interest before principal release. Confirm only if the interest was actually received.'):'';if(upfront>0&&!window.confirm(confirmation))return;await app.disburseLoan(loan.id,{amount:principal,expectedVersion:primitiveVersion(loan)});await renderLoans();notify(tr('Prêt décaissé dans le Ledger selon la politique du groupe.','Loan disbursed in the Ledger under group policy.'));});actions.append(b);
         }
         if(state==='DISBURSED'||state==='REPAYING'){
           const b=document.createElement('button');b.type='button';b.textContent=tr('Rembourser','Repay');b.onclick=()=>void run(null,async()=>{
@@ -167,6 +211,7 @@ export const mountCompletionUI=({app,notify,showError,getMembers,getMeetings,get
         if(actions.childNodes.length)a.append(actions);root.append(a);
       }
     }
+    await renderLoanDebtRecap();
     const decisionsRoot=byId('decisionList');if(decisionsRoot){decisionsRoot.replaceChildren();
       for(const d of decisions){
         const a=article(d.title,primitiveState(d)+' · '+tr('approbations','approvals')+' '+String(d.data.approvalCount??0)+'/'+String(d.data.threshold??1),String(d.data.subject??''));
@@ -260,12 +305,19 @@ export const mountCompletionUI=({app,notify,showError,getMembers,getMeetings,get
     byId('readinessResult').textContent=p.data.ready===true?tr('Groupe prêt : aucun blocage détecté.','Group ready: no blocker detected.'):tr('À compléter : ','To complete: ')+blockers.join(', ');
   }));
 
+  byId('loanPolicyForm')?.addEventListener('submit',e=>{e.preventDefault();void run(e.currentTarget,async()=>{
+    let rubric=officialLoanRubric();if(!rubric)rubric=await app.ensureOfficialLoanRubric();
+    const rate=Math.round(number('loanPolicyRate')*100);if(!Number.isSafeInteger(rate)||rate<0)throw Error('INVALID_LOAN_RATE');
+    const policies={...(rubric.policies??{}),loan:{...(rubric.policies?.loan??{}),allowed:true,rateBasisPointsPerPeriod:rate,interestBase:'PRINCIPAL_ONLY',paymentPriority:value('loanPolicyPriority')||'CAPITAL_FIRST',interestTiming:value('loanPolicyInterestTiming')||'NEXT_SESSION_DUE',noInterestOnInterest:true}};
+    await app.updateRubricPolicies(rubric.id,policies);notify(tr('Politique Prêts enregistrée.','Loan policy saved.'));await renderLoans();
+  });});
+
   byId('loanForm')?.addEventListener('submit',e=>{e.preventDefault();void run(e.currentTarget,async()=>{
     const principal=number('loanPrincipal'),installments=number('loanInstallments'),rate=Math.round(number('loanRate')*100),periodsPerYear=number('loanPeriodsPerYear'),fees=number('loanFees');
     const quote=await app.quoteLoan({principal,installments,annualRateBasisPoints:rate,installmentsPerYear:periodsPerYear,feesTotal:fees,method:value('loanMethod')});
     renderQuote(quote.schedule);
     let loan=await app.createCompletion('LOAN',{title:tr('Prêt de ','Loan of ')+fmt(principal),data:{
-      principal,currency:'XAF',borrowerMembershipId:value('loanBorrower'),installments,annualRateBasisPoints:rate,installmentsPerYear:periodsPerYear,rateBasisPointsPerPeriod:Math.round(rate/periodsPerYear),paymentPriority:'CAPITAL_FIRST',feesTotal:fees,method:value('loanMethod'),schedule:quote.schedule,outstandingPrincipal:0
+      principal,currency:'XAF',borrowerMembershipId:value('loanBorrower'),installments,annualRateBasisPoints:rate,installmentsPerYear:periodsPerYear,rateBasisPointsPerPeriod:Math.round(rate/periodsPerYear),paymentPriority:value('loanPaymentPriority')||'CAPITAL_FIRST',interestTiming:value('loanInterestTiming')||'NEXT_SESSION_DUE',noInterestOnInterest:true,feesTotal:fees,method:value('loanMethod'),schedule:quote.schedule,outstandingPrincipal:0,unpaidInterest:0
     }});
     loan=await app.transitionCompletion(loan.id,'SUBMITTED',primitiveVersion(loan));await renderLoans();notify(tr('Demande de prêt créée.','Loan request created.'));
   });});

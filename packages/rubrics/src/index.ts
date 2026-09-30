@@ -104,6 +104,8 @@ export class RubricKnowledgeService {
     if(policies.loan){
       if(policies.loan.interestBase!=='PRINCIPAL_ONLY'||policies.loan.noInterestOnInterest!==true)throw new Error('INTEREST_ON_INTEREST_FORBIDDEN');
       if(policies.loan.rateBasisPointsPerPeriod!==undefined&&(!Number.isFinite(policies.loan.rateBasisPointsPerPeriod)||policies.loan.rateBasisPointsPerPeriod<0))throw new Error('INVALID_LOAN_RATE');
+      if(policies.loan.interestTiming!==undefined&&!['NEXT_SESSION_DUE','UPFRONT_DEDUCTED','UPFRONT_REQUIRED'].includes(policies.loan.interestTiming))throw new Error('INVALID_LOAN_INTEREST_TIMING');
+      if(policies.loan.paymentPriority!==undefined&&!['CAPITAL_FIRST','INTEREST_FIRST','EXPLICIT_ALLOCATION'].includes(policies.loan.paymentPriority))throw new Error('INVALID_LOAN_PAYMENT_PRIORITY');
       if(policies.loan.overdue){
         const o=policies.loan.overdue;
         if(o.maxDurationPeriods!==undefined&&(!Number.isSafeInteger(o.maxDurationPeriods)||o.maxDurationPeriods<1))throw new Error('INVALID_LOAN_MAX_DURATION');
@@ -115,6 +117,7 @@ export class RubricKnowledgeService {
         if(!special.key?.trim()||!special.label?.trim())throw new Error('INVALID_SPECIAL_LOAN');
         if(!Number.isFinite(special.rateBasisPointsPerPeriod)||special.rateBasisPointsPerPeriod<0)throw new Error('INVALID_SPECIAL_LOAN_RATE');
         if(special.maxDurationPeriods!==undefined&&(!Number.isSafeInteger(special.maxDurationPeriods)||special.maxDurationPeriods<1))throw new Error('INVALID_SPECIAL_LOAN_DURATION');
+        if(special.interestTiming!==undefined&&!['NEXT_SESSION_DUE','UPFRONT_DEDUCTED','UPFRONT_REQUIRED'].includes(special.interestTiming))throw new Error('INVALID_LOAN_INTEREST_TIMING');
       }
     }
     if(policies.fine){

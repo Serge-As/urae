@@ -577,6 +577,14 @@
           <section class="panel" id="financeLoanGuide"><div class="panel-head"><div><h2>Prêts + Intérêts</h2><p>Configurez le taux par période, la priorité Capital/Intérêts, la durée maximale, les sanctions, les prêts spéciaux et simulez la dette sans écrire dans le Ledger.</p></div><button type="button" id="financeLoanRulesBtn" class="primary">Configurer / simuler les prêts</button></div></section>
           <section class="panel" id="loanCompletionPanel" hidden aria-hidden="true">
             <div class="panel-head" id="loanOfficialConfig"><div><h2>Configuration officielle du système Prêts + Intérêts</h2><p>Les simulations, approbations, décaissements et remboursements sont séparés. Cette configuration pilote le capital, les intérêts, la priorité d’imputation, les échéances et les prêts spéciaux du groupe.</p></div></div>
+            <form id="loanPolicyForm" class="form-grid">
+              <h3>Règle générale du groupe</h3>
+              <label>Taux par séance / période %<input id="loanPolicyRate" type="number" min="0" step="0.01" placeholder="Ex. 10"></label>
+              <label>Priorité d’imputation<select id="loanPolicyPriority"><option value="CAPITAL_FIRST">Capital d’abord</option><option value="INTEREST_FIRST">Intérêts d’abord</option><option value="EXPLICIT_ALLOCATION">Répartition explicite par le gestionnaire</option></select></label>
+              <label>Moment de perception des intérêts<select id="loanPolicyInterestTiming"><option value="NEXT_SESSION_DUE">Dus à la séance suivante</option><option value="UPFRONT_DEDUCTED">Retenus immédiatement sur le montant remis</option><option value="UPFRONT_REQUIRED">Payés avant / condition de libération du prêt</option></select></label>
+              <button type="submit" class="primary">Enregistrer la politique Prêts</button>
+              <div id="loanPolicyStatus" class="truth-notice">La base d’intérêt reste toujours le capital restant dû. Aucun intérêt sur intérêt.</div>
+            </form>
             <div class="two-col">
               <form id="loanForm" class="form-grid">
                 <h3>Nouveau prêt</h3>
@@ -587,11 +595,16 @@
                 <label>Périodes / an<input id="loanPeriodsPerYear" type="number" min="1" max="365" step="1" value="12" title="12 = mensuel, 24 = deux fois par mois, 52 = hebdomadaire"></label>
                 <label>Frais totaux<input id="loanFees" type="number" min="0" step="1" value="0"></label>
                 <label>Méthode<select id="loanMethod"><option value="DECLINING">Capital restant dû</option><option value="FLAT">Taux fixe sur capital initial</option></select></label>
+                <label>Priorité de remboursement<select id="loanPaymentPriority"><option value="CAPITAL_FIRST">Capital d’abord</option><option value="INTEREST_FIRST">Intérêts d’abord</option><option value="EXPLICIT_ALLOCATION">Répartition explicite</option></select></label>
+                <label>Perception des intérêts<select id="loanInterestTiming"><option value="NEXT_SESSION_DUE">Séance suivante</option><option value="UPFRONT_DEDUCTED">Retenus immédiatement</option><option value="UPFRONT_REQUIRED">Payés avant libération</option></select></label>
                 <button class="primary">Simuler et créer la demande</button>
               </form>
               <div><h3>Échéancier simulé</h3><div id="loanQuoteResult" class="table-list"></div></div>
             </div>
             <div id="loanList" class="stack"></div>
+            <section id="loanDebtRecap" class="stack">
+              <div class="section-kicker"><div><h3>Récapitulatif Prêts · Intérêts · Dettes</h3><p>Évolution automatique par membre et par séance. Les tableaux sont des projections du moteur Prêts et du Ledger canonique ; ils ne constituent jamais une seconde saisie financière.</p></div></div>
+            </section>
             <div class="two-col">
               <form id="obligationForm" class="form-grid">
                 <h3>Créer une échéance</h3>
@@ -679,11 +692,14 @@
           <section class="panel" id="savingsYieldLab">
             <div class="section-kicker"><div><h2>Moteur Épargne · intérêts · capital réellement productif</h2><p>Eco-System peut reproduire le chemin historique Feuille mensuelle → Épargne → Principal → Intérêts provisoires → Intérêts finaux, puis comparer ce résultat avec un modèle plus fidèle : le capital effectivement prêté, remboursé et éventuellement reprêté.</p></div></div>
             <div id="yieldCanonicalSummary" class="metrics small"></div>
-            <div class="actions"><button id="yieldLoadCanonical" type="button" class="primary">Recharger les données réelles des fiches membres</button><span class="hint">Les dépôts d’épargne et les intérêts recouvrés sont d’abord lus dans les écritures canoniques. Le Bureau peut ensuite choisir un montant distribuable différent sans falsifier le total réellement encaissé.</span></div>
+            <div class="actions"><span id="yieldAutoSyncStatus" class="truth-notice">Actualisation automatique depuis le Ledger canonique, les fiches membres et le moteur Prêts.</span></div>
+            <div id="yieldHealthSummary"></div>
+            <div id="yieldCanonicalTables" class="stack"></div>
+            <div id="yieldInterestEvolution" class="stack"></div>
             <div class="two-col">
               <div>
                 <div class="form-grid">
-                  <label>Intérêts à répartir (modifiable par le Bureau)<input id="yieldInterestPool" type="number" min="0" step="1" value="708500"><small>Prérempli depuis les intérêts réellement encaissés lorsqu’ils existent. Vous pouvez décider de distribuer moins, ou une autre masse autorisée, sans modifier la vérité comptable.</small></label>
+                  <label>Intérêts à répartir (modifiable par le Bureau)<input id="yieldInterestPool" type="number" min="0" step="1" value=""><small>Prérempli automatiquement avec le total des intérêts réellement encaissés. Le Bureau peut ensuite retenir un autre montant distribuable sans modifier la vérité comptable.</small></label>
                   <label>Part Épargne classique %<input id="yieldClassicShare" type="number" min="0" max="100" step="0.1" value="70"></label>
                   <label>Part Épargne scolaire %<input id="yieldSchoolShare" type="number" min="0" max="100" step="0.1" value="10"></label>
                   <label>Indemnités / charges Bureau %<input id="yieldOfficeShare" type="number" min="0" max="100" step="0.1" value="20"></label>
