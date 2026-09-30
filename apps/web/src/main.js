@@ -645,6 +645,73 @@ const refreshFinancialProjectionSilently=async(detail)=>{
     }
 };
 
+const financialRetryTimers=new Map();
+const cellHasPendingLocal=detail=>{
+  const key=financialCellKey(String(detail.membershipId??''),String(detail.rubricId??''),String(detail.meetingId??''));
+  return financialPendingTargets.has(key)||financialPendingSheetEntries.some(x=>x.membershipId===detail.membershipId&&x.rubricId===detail.rubricId&&x.meetingId===detail.meetingId);
+};
+const setCellSyncedState=detail=>{
+  const selector=financialLiveSelector?.(detail)||'';
+  for(const cell of selector?document.querySelectorAll(selector):[]){
+    const state=cell.querySelector('.cell-save-state');if(state){state.textContent=tx('✓ Synchronisé','✓ Synced');state.hidden=false;setTimeout(()=>{if(state.textContent.includes('Synchron')||state.textContent.includes('Synced'))state.hidden=true;},2200);}
+    cell.classList.remove('has-local-pending');
+    cell.querySelector('.cell-sync-state.pending')?.remove();
+  }
+};
+const scheduleFinancialOutboxRecovery=detail=>{
+  const key=financialCellKey(String(detail.membershipId??''),String(detail.rubricId??''),String(detail.meetingId??''));
+  if(financialRetryTimers.has(key)||navigator.onLine===false)return;
+  let attempt=0;
+  const run=async()=>{
+    if(navigator.onLine===false){financialRetryTimers.delete(key);return;}
+    attempt++;
+    try{
+      await app.syncOutbox();renderOutbox();
+      await loadFinancialProjectionState();
+      if(!cellHasPendingLocal(detail)){
+        financialOptimisticValues.delete(key);
+        const amount=exactCellAmount(String(detail.membershipId),String(detail.rubricId),String(detail.meetingId));
+        patchFinancialDomCell({...detail,amount,cellVersion:exactCellVersion(String(detail.membershipId),String(detail.rubricId),String(detail.meetingId)),preservePending:false});
+        setCellSyncedState(detail);financialRetryTimers.delete(key);
+        window.dispatchEvent(new CustomEvent('eco:financial-data-changed',{detail:{...detail,amount,soft:true,recovered:true}}));
+        return;
+      }
+    }catch{}
+    if(attempt>=8){financialRetryTimers.delete(key);return;}
+    const timer=setTimeout(run,Math.min(900+attempt*550,4200));financialRetryTimers.set(key,timer);
+  };
+  const timer=setTimeout(run,650);financialRetryTimers.set(key,timer);
+};
+
+let financialSnapshotTimer=0,financialSnapshotBusy=false,financialSnapshotPrimed=false,financialSnapshotGroup='';
+const financialSnapshotState=new Map();
+const pollCanonicalFinancialSnapshot=async()=>{
+  if(financialSnapshotBusy||navigator.onLine===false||document.visibilityState!=='visible'||!app.activeGroup()||!isManager()||!document.querySelector('.canonical-financial-matrix'))return;
+  const activeGroup=String(app.activeGroup()??'');
+  if(financialSnapshotGroup!==activeGroup){financialSnapshotGroup=activeGroup;financialSnapshotState.clear();financialSnapshotPrimed=false;}
+  financialSnapshotBusy=true;
+  try{
+    const data=await app.financialCellSnapshot(),next=new Map();
+    for(const row of data.cells??[]){
+      const key=financialCellKey(String(row.membershipId),String(row.rubricId),String(row.meetingId)),signature=String(row.cellVersion??0)+'|'+String(row.amount??0)+'|'+String(row.updatedAt??'');
+      next.set(key,signature);
+      const previous=financialSnapshotState.get(key);
+      if(financialSnapshotPrimed&&previous!==signature&&!cellHasPendingLocal(row)){
+        financialOptimisticValues.delete(key);
+        patchFinancialDomCell({meetingId:row.meetingId,membershipId:row.membershipId,rubricId:row.rubricId,amount:Number(row.amount??0),cellVersion:Number(row.cellVersion??0),remote:true});
+        highlightRemoteFinancialCell({meetingId:row.meetingId,membershipId:row.membershipId,rubricId:row.rubricId,newAmount:Math.abs(Number(row.amount??0)),cellVersion:Number(row.cellVersion??0),actorId:String(row.actorId??''),actorName:row.actorId?actorDisplayName(String(row.actorId)):tx('Autre gestionnaire','Another manager'),operationType:'CANONICAL_SNAPSHOT'});
+      }
+    }
+    financialSnapshotState.clear();for(const [k,v] of next)financialSnapshotState.set(k,v);financialSnapshotPrimed=true;
+  }catch{}
+  finally{financialSnapshotBusy=false;}
+};
+const ensureFinancialSnapshotPolling=()=>{
+  if(financialSnapshotTimer)return;
+  financialSnapshotTimer=setInterval(()=>{void pollCanonicalFinancialSnapshot();},1200);
+  void pollCanonicalFinancialSnapshot();
+};
+
 const submitFinancialCellElement=async validate=>{
     const holder=validate?.closest?.('.matrix-cell-entry');
     const input=holder?.querySelector?.('.cell-target-input');
@@ -708,6 +775,7 @@ const submitFinancialCellElement=async validate=>{
         setCellState('QUEUED_OFFLINE',tx('Enregistré sur cet appareil · synchro en attente','Saved on this device · pending sync'));
         traceFinancialCell('CELL_LOCAL_COMMIT',{cellKey,target,status:'QUEUED'});
         toast(tx('✓ Valeur enregistrée sur cet appareil · synchronisation automatique en attente.','✓ Value saved on this device · automatic sync pending.'));
+        if(navigator.onLine!==false)scheduleFinancialOutboxRecovery({meetingId,membershipId,rubricId});
       }else if(result?.selfBenefit){
         currentLabel.textContent=fmt(displayTarget);financialReviewTargets.delete(cellKey);
         setCellState('CONFIRMED',tx('Correction appliquée · vérification indépendante signalée','Correction saved · independent review required'));
@@ -1474,6 +1542,7 @@ const refreshGroupContext = async () => {
     await refreshOptionalOfflineSafe('advanced',()=>advancedUI.refresh());
     await refreshOptionalOfflineSafe('identity-live',()=>identityLiveUI.refresh());
     await refreshOptionalOfflineSafe('financial-alerts',renderFinancialAlerts);
+    if(active&&manage)ensureFinancialSnapshotPolling();
     await refreshOptionalOfflineSafe('urgent-notifications',renderUrgentNotifications);
     await refreshOptionalOfflineSafe('notification-center',renderNotificationCenter);
     await refreshOptionalOfflineSafe('community-shop',()=>communityShopUI.refresh());
@@ -1873,6 +1942,7 @@ const resumeOnline=()=>{
     onlineResumePromise=(async()=>{renderConnectivity();try{
         await app.syncOutbox();
         await start();
+        void pollCanonicalFinancialSnapshot();
     }catch(error){console.info('Online resume deferred',error);}})().finally(()=>{onlineResumePromise=null;});
     return onlineResumePromise;
 };

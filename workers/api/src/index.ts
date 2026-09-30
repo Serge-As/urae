@@ -1452,6 +1452,36 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
       await requireGroup(closingCarryoverPreview[1]!,true);return json(buildClosingCarryover(await readJson<any>(request)),200,cors);
     }
 
+    const financialSnapshotRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/financial-cells\/snapshot$/);
+    if(financialSnapshotRoute&&request.method==='GET'){
+      const groupId=financialSnapshotRoute[1]!;await requireGroup(groupId,false);
+      const [positions,revisions,sheetEvents,sheetExpenses]=await Promise.all([
+        ledger.receiptPositions(ctx.tenantId,groupId),
+        repo.listFinancialCellRevisions(ctx.tenantId,groupId),
+        repo.listWorkspaceRecords(ctx.tenantId,'FINANCE.SHEET_EVENT',groupId),
+        new ExpenseService(repo,kernel,ledger).list(groupId,{scope:'SHEET'}).catch(()=>[])
+      ]);
+      const cells=new Map<string,{meetingId:string;membershipId:string;rubricId:string;amount:number;cellVersion:number;updatedAt:string;actorId?:string;nature?:string}>();
+      const key=(meetingId:string,membershipId:string,rubricId:string)=>JSON.stringify([meetingId,membershipId,rubricId]);
+      const revisionByKey=new Map(revisions.map(r=>[key(r.meetingId,r.membershipId,r.rubricId),r]));
+      for(const p of positions){
+        if(!p.meetingId||!p.rubricId)continue;const k=key(p.meetingId,p.membershipId,p.rubricId),revision=revisionByKey.get(k),old=cells.get(k);
+        const at=String(revision?.updatedAt??p.receivedAt??'');
+        cells.set(k,{meetingId:p.meetingId,membershipId:p.membershipId,rubricId:p.rubricId,amount:Number(old?.amount??0)+Number(p.netAmount??0),cellVersion:Number(revision?.version??0),updatedAt:at>String(old?.updatedAt??'')?at:String(old?.updatedAt??at),actorId:String(p.receivedBy??old?.actorId??''),nature:'CONTRIBUTION'});
+      }
+      for(const r of revisions){const k=key(r.meetingId,r.membershipId,r.rubricId);if(!cells.has(k))cells.set(k,{meetingId:r.meetingId,membershipId:r.membershipId,rubricId:r.rubricId,amount:0,cellVersion:r.version,updatedAt:r.updatedAt,nature:'CONTRIBUTION'});}
+      for(const event of sheetEvents){
+        const meetingId=String(event.data.meetingId??''),membershipId=String(event.data.membershipId??''),rubricId=String(event.data.rubricId??'');if(!meetingId||!membershipId||!rubricId)continue;
+        const direction=String(event.data.direction??'IN'),amount=Number(event.data.amount??0),signed=direction==='OUT'?-Math.abs(amount):Math.abs(amount),k=key(meetingId,membershipId,rubricId),old=cells.get(k);
+        cells.set(k,{meetingId,membershipId,rubricId,amount:Number(old?.amount??0)+signed,cellVersion:Number(old?.cellVersion??0),updatedAt:String(event.updatedAt??event.createdAt??old?.updatedAt??''),actorId:String(event.createdBy??old?.actorId??''),nature:direction==='OUT'?'LOAN_OR_OUTFLOW':'REPAYMENT'});
+      }
+      for(const expense of sheetExpenses){
+        if(!expense.meetingId||!expense.membershipId||!expense.rubricId)continue;const k=key(expense.meetingId,expense.membershipId,expense.rubricId),old=cells.get(k);
+        cells.set(k,{meetingId:expense.meetingId,membershipId:expense.membershipId,rubricId:expense.rubricId,amount:Number(old?.amount??0)-Math.abs(Number(expense.amount??0)),cellVersion:Number(old?.cellVersion??0),updatedAt:String(expense.createdAt??old?.updatedAt??''),actorId:String(expense.createdBy??old?.actorId??''),nature:'OUTFLOW'});
+      }
+      const rows=[...cells.values()],watermark=rows.reduce((m,x)=>String(x.updatedAt??'')>m?String(x.updatedAt):m,'');
+      return json({generatedAt:new Date().toISOString(),watermark,cells:rows},200,cors);
+    }
     const ledgerRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/ledger$/);
     if(ledgerRoute&&request.method==='GET') return json({summary:await ledger.summary(ctx.tenantId,ledgerRoute[1]!),entries:await repo.listLedgerEntries(ctx.tenantId,ledgerRoute[1]!),receipts:await ledger.receiptPositions(ctx.tenantId,ledgerRoute[1]!),cellRevisions:await repo.listFinancialCellRevisions(ctx.tenantId,ledgerRoute[1]!)},200,cors);
     const reverseRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/ledger\/([^/]+)\/reverse$/);
