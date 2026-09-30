@@ -31,7 +31,10 @@ test('senior mode increases control sizes and prevents crushed navigation labels
 
 test('service worker never falls back a versioned request to an unversioned stale asset',async()=>{
   const sw=await readFile('.build/sw.js','utf8');
-  assert.match(sw,/eco-system-v1529-neural-closure-20260928/);
+  const current=sw.match(/const CACHE = '([^']+)';/)?.[1];
+  const previous=sw.match(/const PREVIOUS_CACHE = '([^']+)';/)?.[1];
+  assert.ok(current&&previous,'current and rollback caches must both be declared');
+  assert.notEqual(current,previous,'versioned release must not reuse the rollback cache');
   assert.match(sw,/if\(url\.search\)return await cache\.match\(request\)/);
   assert.doesNotMatch(sw,/cache\.match\(request\) \|\| await cache\.match\(url\.pathname\)/);
   assert.match(sw,/\/src\/main\.js\?v=152/);
