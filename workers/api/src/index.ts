@@ -535,6 +535,12 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
       }
       return json({error:'METHOD_NOT_ALLOWED'},405,cors);
     }
+    const liveSignalsRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/live\/signals$/);
+    if(liveSignalsRoute&&request.method==='GET'){
+      const groupId=liveSignalsRoute[1]!;if(!options.premiumLive||!options.liveNamespace)return json({enabled:false,error:'PREMIUM_LIVE_LEDGER_DISABLED'},503,cors);await requireGroup(groupId,false);
+      const {stub}=await liveStubFor(groupId),afterAt=url.searchParams.get('afterAt')??'0';
+      return stub.fetch(new Request('https://group-live.internal/signals?afterAt='+encodeURIComponent(afterAt)+'&actorId='+encodeURIComponent(ctx.actorId)));
+    }
     const liveRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/live\/(health|events|connect|publish|signal)$/);
     if(liveRoute){
       const groupId=liveRoute[1]!,action=liveRoute[2]!;
