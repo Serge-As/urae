@@ -698,7 +698,14 @@ const submitFinancialCellElement=async validate=>{
         holder.classList.add('pending-consensus');setCellState('CONFIRMED',tx('Proposition enregistrée · validation d’un second responsable requise','Proposal saved · second manager approval required'));
         traceFinancialCell('CELL_REVIEW_REQUIRED',{cellKey,target,current});toast(tx('Modification proposée : elle est enregistrée et attend la décision des gestionnaires.','Change proposal saved and awaiting manager decision.'));
       }else if(result?.status==='QUEUED_SYNC'||result?.queued){
-        currentLabel.textContent=fmt(displayTarget);setCellState('QUEUED_OFFLINE',tx('Enregistré sur cet appareil · synchro en attente','Saved on this device · pending sync'));
+        currentLabel.textContent=fmt(displayTarget);
+        if(nature==='CONTRIBUTION'){
+          financialPendingTargets.set(cellKey,{membershipId,rubricId,meetingId,targetAmount:target,status:'PENDING',businessStatus:''});
+        }else{
+          financialPendingSheetEntries=financialPendingSheetEntries.filter(x=>!(x.membershipId===membershipId&&x.rubricId===rubricId&&x.meetingId===meetingId));
+          financialPendingSheetEntries.push({membershipId,rubricId,meetingId,amount:target,status:'PENDING',nature});
+        }
+        setCellState('QUEUED_OFFLINE',tx('Enregistré sur cet appareil · synchro en attente','Saved on this device · pending sync'));
         traceFinancialCell('CELL_LOCAL_COMMIT',{cellKey,target,status:'QUEUED'});
         toast(tx('✓ Valeur enregistrée sur cet appareil · synchronisation automatique en attente.','✓ Value saved on this device · automatic sync pending.'));
       }else if(result?.selfBenefit){
