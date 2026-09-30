@@ -40,3 +40,22 @@ test('server broadcasts canonical financial writes to managers',()=>{
   assert.match(worker,/loan-sheet-live:/);
   assert.match(worker,/loan-repayment-live:/);
 });
+
+
+test('financial live exposes a draft-presence signal without broadcasting the draft amount',()=>{
+  assert.match(main,/FINANCIAL_DRAFT/);
+  assert.match(main,/FINANCIAL_DRAFT_CLEAR/);
+  assert.match(main,/a un brouillon non validé/);
+  assert.match(main,/4500/);
+  assert.match(worker,/FINANCIAL_DRAFT/);
+  assert.match(css,/live-cell-draft/);
+  const cellBuilder=main.slice(main.indexOf('const makeFinancialEntryCell'),main.indexOf('const ensureMatrixMeeting'));
+  assert.doesNotMatch(cellBuilder,/FINANCIAL_DRAFT[^\n]+input\.value/);
+});
+
+test('blocking errors are closable and conflicts tell the user how to recover',()=>{
+  assert.match(main,/className='error-close'/);
+  assert.match(main,/setTimeout\(hideError/);
+  assert.match(main,/cliquez sur Actualiser/);
+  assert.match(css,/\.error-close/);
+});
