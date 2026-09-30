@@ -1030,7 +1030,7 @@ export class ConnectedApplication {
   async liveEvents(after=0,limit=500):Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');const safeLimit=Math.min(Math.max(Math.trunc(limit)||500,1),500);return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/live/events?after=${encodeURIComponent(String(after))}&limit=${encodeURIComponent(String(safeLimit))}`);}
   async liveSignals(afterAt=0):Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/live/signals?afterAt=${encodeURIComponent(String(Math.max(0,Math.trunc(afterAt)||0)))}`);}
   async publishLive(type:'PRESENCE'|'SYNC_HINT'|'MEETING_UPDATE',payload:Record<string,string|number|boolean|null>={}):Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/live/publish`,{method:'POST',body:JSON.stringify({type,payload,idempotencyKey:makeId('live')})});}
-  async publishLiveSignal(type:'PRESENCE'|'TYPING'|'TYPING_STOP'|'CELL_FOCUS'|'CELL_BLUR'|'LIVE_ACK',payload:Record<string,string|number|boolean|null>={}):Promise<any>{
+  async publishLiveSignal(type:'PRESENCE'|'TYPING'|'TYPING_STOP'|'CELL_FOCUS'|'CELL_BLUR'|'FINANCIAL_DRAFT'|'FINANCIAL_DRAFT_CLEAR'|'LIVE_ACK',payload:Record<string,string|number|boolean|null>={}):Promise<any>{
     if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');
     if(typeof navigator!=='undefined'&&navigator.onLine===false)return{accepted:false,offline:true};
     return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/live/signal`,{method:'POST',body:JSON.stringify({type,payload})});
