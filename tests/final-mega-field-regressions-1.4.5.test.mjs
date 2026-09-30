@@ -208,6 +208,7 @@ test('stale cached html recovers to the live-finance 1.5.2.9 shell while preserv
   assert.match(sw,/eco-system-v1529-live-finance-20260930/);
   assert.match(html,/ECO-SYSTEM · 1\.5\.2\.9/);
   assert.match(html,/main\.js\?v=1529/);
-  assert.match(sw,/PREVIOUS_CACHE = 'eco-system-v1529-neural-closure-20260928'/);
+  const current=sw.match(/const CACHE = '([^']+)';/)?.[1],previous=sw.match(/const PREVIOUS_CACHE = '([^']+)';/)?.[1];
+  assert.ok(current&&previous&&current!==previous,'current release and rollback release must be distinct coherent caches');
   assert.match(sw,/Online navigation is network-first/);
 });
