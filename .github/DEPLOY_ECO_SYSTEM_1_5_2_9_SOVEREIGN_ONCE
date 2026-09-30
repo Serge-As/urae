@@ -7,4 +7,4 @@ qualified_prs: 49,50,51,53
 pwa_cache: eco-system-v1529-live-field-recovery-20260930
 scope: live-field-no-regression-canonical-cell-recovery-deploy-monotonicity-cache-rotation-20260930
 production_concurrency_guard: monotonic-ancestor-check-plus-temporary-cancel
-requested_at: 2026-09-30-live-field-cache-rotated-delivery
+requested_at: 2026-09-30-live-field-cache-rotated-delivery-r2
