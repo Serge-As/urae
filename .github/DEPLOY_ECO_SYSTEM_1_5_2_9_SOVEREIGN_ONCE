@@ -1,6 +1,7 @@
 release: 1.5.2.9-sovereign-offline
-source_merge: afd2d542470601e3c2d05f337e918558f77cb34f
-qualified_governed_ci_run: 36745963365
-qualified_pr: 50
-scope: live-soft-finance-yield-debt-premium-live-20260930
-requested_at: 2026-09-30-premium-live-delivery
+source_merge: c4cf2920b921ab3a6855500ac1270f404f8f5c25
+qualified_p0_financial_run: 36747226832
+qualified_field_persistence_run: 36747226888
+qualified_prs: 49,50,51
+scope: live-soft-finance-yield-debt-premium-live-offline-pending-20260930
+requested_at: 2026-09-30-final-live-finance-delivery
