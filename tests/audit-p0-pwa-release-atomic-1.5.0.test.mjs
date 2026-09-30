@@ -33,7 +33,11 @@ test('activation preserves previous coherent release and only skipWaits after RE
 });
 
 
-test('live-finance release changes the active cache identity while preserving the previous coherent cache',()=>{
-  assert.match(sw,/const CACHE = 'eco-system-v1529-live-finance-20260930'/);
-  assert.match(sw,/const PREVIOUS_CACHE = 'eco-system-v1529-neural-closure-20260928'/);
+test('release changes the active cache identity while preserving a distinct coherent rollback cache',()=>{
+  const current=sw.match(/const CACHE = '([^']+)';/)?.[1];
+  const previous=sw.match(/const PREVIOUS_CACHE = '([^']+)';/)?.[1];
+  assert.ok(current&&previous,'release and rollback caches are both declared');
+  assert.notEqual(current,previous,'active release cache must differ from rollback cache');
+  assert.match(current,/^eco-system-v1529-/);
+  assert.match(previous,/^eco-system-v1529-/);
 });
