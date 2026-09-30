@@ -69,3 +69,11 @@ test('production configuration really activates the Premium Live Ledger path',()
   assert.match(app,/FINANCIAL_DRAFT'.*FINANCIAL_DRAFT_CLEAR'/);
   assert.match(deploy,/PREMIUM_LIVE_LEDGER_NOT_ACTIVE/);
 });
+
+
+test('queued financial cells keep their local pending projection instead of racing a canonical refresh',()=>{
+  const submit=main.slice(main.indexOf('const submitFinancialCellElement'),main.indexOf('const makeFinancialEntryCell'));
+  assert.match(submit,/result\?\.status==='QUEUED_SYNC'\|\|result\?\.queued/);
+  assert.match(submit,/if\(!\(result\?\.status==='QUEUED_SYNC'\|\|result\?\.queued\)\)void refreshFinancialProjectionSilently/);
+  assert.match(submit,/financialPendingTargets\.set\(cellKey/);
+});
