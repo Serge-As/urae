@@ -4,6 +4,7 @@ qualified_p0_financial_run: 36756007272
 qualified_ios_sovereign_run: 36756007329
 qualified_full_ci_run: 36756015554
 qualified_prs: 49,50,51,53
-scope: live-field-no-regression-canonical-cell-recovery-deploy-monotonicity-20260930
-production_concurrency_guard: monotonic-ancestor-check
-requested_at: 2026-09-30-live-field-no-regression-delivery
+pwa_cache: eco-system-v1529-live-field-recovery-20260930
+scope: live-field-no-regression-canonical-cell-recovery-deploy-monotonicity-cache-rotation-20260930
+production_concurrency_guard: monotonic-ancestor-check-plus-temporary-cancel
+requested_at: 2026-09-30-live-field-cache-rotated-delivery
