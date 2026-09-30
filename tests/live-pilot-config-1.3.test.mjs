@@ -18,10 +18,13 @@ test('Premium Live pilot deploy is isolated from production Worker and D1',()=>{
   assert.doesNotMatch(wf,/wrangler@4 deploy --config workers\/api\/wrangler\.ci\.toml/);
 });
 
-test('base production config keeps Premium Live disabled until explicit qualified activation',()=>{
+test('base production config activates Premium Live only after the qualified production gate',()=>{
   const cfg=fs.readFileSync('workers/api/wrangler.toml','utf8');
-  assert.match(cfg,/PREMIUM_LIVE_LEDGER = "false"/);
+  const deploy=fs.readFileSync('.github/workflows/deploy-1.5.2.9-sovereign-offline.yml','utf8');
+  assert.match(cfg,/PREMIUM_LIVE_LEDGER = "true"/);
   assert.match(cfg,/class_name = "GroupLiveHub"/);
   assert.match(cfg,/\[exports\.GroupLiveHub\]/);
   assert.match(cfg,/storage = "sqlite"/);
+  assert.match(deploy,/Full governed qualification before production mutation/);
+  assert.match(deploy,/PREMIUM_LIVE_LEDGER_NOT_ACTIVE/);
 });

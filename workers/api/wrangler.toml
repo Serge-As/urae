@@ -24,7 +24,7 @@ html_handling = "auto-trailing-slash"
 crons = ["15 7 * * *"]
 
 [vars]
-PREMIUM_LIVE_LEDGER = "false"
+PREMIUM_LIVE_LEDGER = "true"
 DATA_USE_PROFILE = "BETA_OPEN"
 RELEASE_COMMIT_SHA = "UNBOUND_DEPLOY"
 

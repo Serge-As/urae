@@ -59,3 +59,13 @@ test('blocking errors are closable and conflicts tell the user how to recover',(
   assert.match(main,/cliquez sur Actualiser/);
   assert.match(css,/\.error-close/);
 });
+
+
+test('production configuration really activates the Premium Live Ledger path',()=>{
+  const wrangler=fs.readFileSync('workers/api/wrangler.toml','utf8');
+  const app=fs.readFileSync('packages/application/src/index.ts','utf8');
+  const deploy=fs.readFileSync('.github/workflows/deploy-1.5.2.9-sovereign-offline.yml','utf8');
+  assert.match(wrangler,/PREMIUM_LIVE_LEDGER = "true"/);
+  assert.match(app,/FINANCIAL_DRAFT'.*FINANCIAL_DRAFT_CLEAR'/);
+  assert.match(deploy,/PREMIUM_LIVE_LEDGER_NOT_ACTIVE/);
+});
