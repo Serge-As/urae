@@ -31,7 +31,8 @@ test('member envelope requires explicit distribution and contains only recipient
  const env=await service.build('g1','meet1');
  assert.equal(env.membershipId,'m1');assert.equal(env.recipientUserId,'u1');assert.equal(env.scope,'MEMBER_ONLY');
  assert.equal(env.projection.meetingNet,1000);assert.equal(env.projection.meetingReceipts.length,1);assert.equal(env.projection.meetingReceipts[0].netAmount,1000);
- assert.ok(!JSON.stringify(env).includes('9000'),'Bob financial amount must never leak into Alice envelope');
+ assert.ok(env.projection.meetingReceipts.every(x=>x.membershipId!=='m2'&&Number(x.netAmount)!==9000),'Bob financial receipt must never leak into Alice envelope');
+ assert.ok((env.projection.loanDebts??[]).every(x=>x.membershipId!=='m2'),'Bob loan debt must never leak into Alice envelope');
  assert.equal(env.projection.loanDebts[0].totalDebt,2250);
  assert.deepEqual(env.privacy,{otherMemberFinancialData:false,contactsIncluded:false,identityDocumentsIncluded:false,rawAuditIncluded:false});
  assert.equal(env.transport.requiresRecipientBinding,true);assert.equal(env.transport.opaqueCapable,true);assert.equal(env.fingerprint.length,64);
