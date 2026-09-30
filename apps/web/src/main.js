@@ -601,7 +601,7 @@ const recalcCanonicalFinancialTable=table=>{
     for(const total of table.querySelectorAll('[data-total-rubric-id]'))total.textContent=fmt(byRubric.get(String(total.dataset.totalRubricId??''))??0);
     const grandTarget=table.querySelector('.table-grand-total');if(grandTarget)grandTarget.textContent=fmt(grand);
 };
-const patchFinancialDomCell=({meetingId,membershipId,rubricId,amount,cellVersion,remote=false}={})=>{
+const patchFinancialDomCell=({meetingId,membershipId,rubricId,amount,cellVersion,remote=false,preservePending=false}={})=>{
     const key=financialCellKey(String(membershipId??''),String(rubricId??''),String(meetingId??''));
     if(Number.isFinite(Number(amount)))financialOptimisticValues.set(key,Number(amount));
     if(Number.isFinite(Number(cellVersion)))financialCellVersions.set(JSON.stringify([String(meetingId??''),String(membershipId??''),String(rubricId??''),'XAF']),Number(cellVersion));
@@ -611,7 +611,7 @@ const patchFinancialDomCell=({meetingId,membershipId,rubricId,amount,cellVersion
     for(const cell of document.querySelectorAll(selector)){
       const value=Number.isFinite(Number(amount))?Number(amount):exactCellAmount(String(membershipId),String(rubricId),String(meetingId));
       const current=cell.querySelector('.cell-current');if(current){current.textContent=fmt(value);current.classList.toggle('is-negative',value<0);}
-      financialPendingTargets.delete(key);financialReviewTargets.delete(key);
+      if(!preservePending){financialPendingTargets.delete(key);financialReviewTargets.delete(key);}
       const table=cell.closest('.canonical-financial-matrix');if(table)touched.add(table);
       if(remote)cell.dataset.remoteAppliedAt=String(Date.now());
     }
@@ -723,10 +723,11 @@ const submitFinancialCellElement=async validate=>{
         toast(nature==='LOAN'?tx('Prêt décaissé : la caisse diminue et la dette du membre est créée.','Loan disbursed: cash decreases and the member debt is created.'):tx('Valeur enregistrée.','Value saved.'));
       }
       input.value='';clearFinancialCellDraft(cellKey);clearRemoteDraft();renderOutbox();
-      patchFinancialDomCell({meetingId,membershipId,rubricId,amount:displayTarget,cellVersion:result?.cellVersion});
+      const preservePending=Boolean(result?.status==='QUEUED_SYNC'||result?.queued);
+      patchFinancialDomCell({meetingId,membershipId,rubricId,amount:displayTarget,cellVersion:result?.cellVersion,preservePending});
       focusNextFinancialInput(holder,wrapState);
-      window.dispatchEvent(new CustomEvent('eco:financial-data-changed',{detail:{meetingId,membershipId,rubricId,soft:true}}));
-      void refreshFinancialProjectionSilently({meetingId,membershipId,rubricId}).catch(()=>{});
+      window.dispatchEvent(new CustomEvent('eco:financial-data-changed',{detail:{meetingId,membershipId,rubricId,amount:displayTarget,cellVersion:result?.cellVersion,soft:true,preservePending}}));
+      if(!preservePending)void refreshFinancialProjectionSilently({meetingId,membershipId,rubricId}).catch(()=>{});
     }catch(e){
       const code=e instanceof Error?e.message:String(e);
       traceFinancialCell('CELL_FAIL',{cellKey,target:Number.isFinite(target)?target:Number(input.value||0),current,error:code});
