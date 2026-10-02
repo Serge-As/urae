@@ -20,6 +20,10 @@ test('savings source recognizes legacy repayment and interest-repayment rubrics 
   assert.match(worker,/Math\.max\(ledgerRecoveredInterest,eventInterestTotal,periodInterestTotal\)/);
   assert.match(worker,/totalDebtIncludingNextInterest/);
   assert.match(worker,/LOAN_RATE_MISSING/);
+  const app=fs.readFileSync('packages/application/src/index.ts','utf8');
+  assert.match(app,/LAST_KNOWN_GOOD_PLUS_LOCAL/);
+  assert.match(app,/loanDebtById/);
+  assert.match(app,/depositById/);
 });
 
 test('rubrics expose one member by session recap and archived rubrics remain visible and restorable',()=>{
@@ -44,5 +48,6 @@ test('sessions debt view consumes unified loan and savings projection instead of
   assert.match(block,/savingsYieldSourceData/);
   assert.match(block,/nextInterestProjected/);
   assert.match(block,/Dette \+ prochaine échéance/);
+  assert.match(ui,/localManager/);
   assert.doesNotMatch(block,/listCompletion\('LOAN'\)/);
 });
