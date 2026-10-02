@@ -694,6 +694,15 @@ const setCellSyncedState=detail=>{
     cell.querySelector('.cell-sync-state.pending')?.remove();
   }
 };
+const pendingTargetSnapshot=()=>Array.from(app.pendingFinancialCellTargets?.()??[]).map(item=>({
+  key:financialCellKey(String(item.membershipId??''),String(item.rubricId??''),String(item.meetingId??'')),
+  meetingId:String(item.meetingId??''),membershipId:String(item.membershipId??''),rubricId:String(item.rubricId??''),
+  amount:Number(item.targetAmount??0),cellVersion:Number(item.baselineCellVersion??0)+1
+})).filter(item=>item.meetingId&&item.membershipId&&item.rubricId&&Number.isSafeInteger(item.amount)&&item.amount>=0);
+const rememberTargetsConfirmedBySync=before=>{
+  const remaining=new Set(Array.from(app.pendingFinancialCellTargets?.()??[]).map(item=>financialCellKey(String(item.membershipId??''),String(item.rubricId??''),String(item.meetingId??''))));
+  for(const item of before)if(!remaining.has(item.key))rememberConfirmedCell(item.key,item);
+};
 const scheduleFinancialOutboxRecovery=detail=>{
   const key=financialCellKey(String(detail.membershipId??''),String(detail.rubricId??''),String(detail.meetingId??''));
   if(financialRetryTimers.has(key)||navigator.onLine===false)return;
@@ -702,7 +711,9 @@ const scheduleFinancialOutboxRecovery=detail=>{
     if(navigator.onLine===false){financialRetryTimers.delete(key);return;}
     attempt++;
     try{
+      const beforeSync=pendingTargetSnapshot();
       await app.syncOutbox();renderOutbox();
+      rememberTargetsConfirmedBySync(beforeSync);
       await loadFinancialProjectionState();
       if(!cellHasPendingLocal(detail)){
         financialOptimisticValues.delete(key);
@@ -2006,7 +2017,9 @@ let onlineResumePromise=null;
 const resumeOnline=()=>{
     if(onlineResumePromise)return onlineResumePromise;
     onlineResumePromise=(async()=>{renderConnectivity();try{
+        const beforeSync=pendingTargetSnapshot();
         await app.syncOutbox();
+        rememberTargetsConfirmedBySync(beforeSync);
         await start();
     }catch(error){console.info('Online resume deferred',error);}})().finally(()=>{onlineResumePromise=null;});
     return onlineResumePromise;
@@ -2015,7 +2028,7 @@ window.addEventListener('online',()=>{void resumeOnline();});
 window.addEventListener('offline', renderConnectivity);
 if('serviceWorker' in navigator)navigator.serviceWorker.addEventListener('message',event=>{
     if(event.data?.type!=='ECO_SYSTEM_SYNC_OUTBOX'||!navigator.onLine)return;
-    void (async()=>{try{await app.syncOutbox();renderOutbox();if(app.activeGroup())await refreshGroupContext();}catch{}})();
+    void (async()=>{try{const beforeSync=pendingTargetSnapshot();await app.syncOutbox();rememberTargetsConfirmedBySync(beforeSync);renderOutbox();if(app.activeGroup())await refreshGroupContext();}catch{}})();
 });
 const iosLike=()=>/iPad|iPhone|iPod/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
 const standaloneMode=()=>window.matchMedia?.('(display-mode: standalone)')?.matches||navigator.standalone===true;
