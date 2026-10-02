@@ -72,8 +72,8 @@ test('1.5.2.9 free-conservation shell is version isolated and keeps the previous
   const sw=await readFile('.build/sw.js','utf8');
   assert.match(html,/ECO-SYSTEM · 1\.5\.2\.9/);
   assert.match(html,/main\.js\?v=1529/);
-  assert.match(sw,/eco-system-v1529-free-conservation-debt-syncfix-20261002/);
-  assert.match(sw,/PREVIOUS_CACHE = 'eco-system-v1529-free-conservation-debt-20261002'/);
+  assert.match(sw,/eco-system-v1529-free-conservation-debt-syncfix2-20261002/);
+  assert.match(sw,/PREVIOUS_CACHE = 'eco-system-v1529-free-conservation-debt-syncfix-20261002'/);
   const current=sw.match(/const CACHE = '([^']+)';/)?.[1],previous=sw.match(/const PREVIOUS_CACHE = '([^']+)';/)?.[1];
   assert.ok(current&&previous&&current!==previous,'current and rollback caches must remain distinct');
   assert.doesNotMatch(html,/<body[^>]*>\\n\s*<section/);
