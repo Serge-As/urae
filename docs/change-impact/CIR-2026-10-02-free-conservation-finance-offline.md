@@ -72,3 +72,9 @@ Le navigateur projette désormais le montant saisi avant d'attendre le transport
 **Risque contrôlé :** une erreur serveur réelle doit revenir à la valeur précédente. Les conflits de version suivent toujours leur resynchronisation ciblée.
 
 **Test de non-régression :** la valeur 3000 doit apparaître en moins de 5 secondes après clic offline, l'Outbox doit rester visible et le replay ultérieur doit conserver exactement 3000.
+
+
+## 9. Ajustement P0 — barrière de confirmation en ligne
+L'optimisme d'affichage est restreint au navigateur explicitement hors ligne. En ligne, la réponse canonique redevient la barrière avant bascule visuelle du montant. Cela restaure la propriété testée « UI mise à jour ⇒ écriture Ledger déjà traitée » tout en conservant la réactivité offline.
+
+Le cache PWA est rotaté vers `eco-system-v1529-free-conservation-debt-syncfix2-20261002` afin que Chrome/Opera n'exécutent pas un ancien `main.js` depuis le Service Worker.
