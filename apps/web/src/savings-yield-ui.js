@@ -52,9 +52,9 @@ export function mountSavingsYieldUI({app,getMembers,notify=()=>{},showError=cons
   };
   const renderCanonicalSummary=data=>{
     if(!canonicalSummary)return;canonicalSummary.replaceChildren();canonicalTables?.replaceChildren();healthSummary?.replaceChildren();
-    const totals=data?.totals??{},dynamic=(data?.savingsSeries??[]).map(x=>[x.name,x.total]),cards=[...dynamic,['Remboursements de capital',totals.totalPrincipalRepaid??0],['Intérêts réellement collectés',totals.recoveredInterest??0],['Capital prêts en cours',totals.outstandingPrincipal??0],['Intérêts dus en cours',totals.outstandingInterest??0],['Autres dettes',totals.otherDebt??0],['Dette totale',totals.totalDebt??0]];
+    const totals=data?.totals??{},dynamic=(data?.savingsSeries??[]).map(x=>[x.name,x.total]),cards=[...dynamic,['Remboursements de capital',totals.totalPrincipalRepaid??0],['Intérêts réellement collectés',totals.recoveredInterest??0],['Capital prêts en cours',totals.outstandingPrincipal??0],['Intérêts dus en cours',totals.outstandingInterest??0],['Intérêts prochaine séance',totals.nextInterestProjected??0],['Autres dettes',totals.otherDebt??0],['Dette exigible',totals.totalDebt??0],['Dette + prochaine échéance',totals.totalDebtIncludingNextInterest??totals.totalDebt??0]];
     for(const [label,amount] of cards){const card=el('div');card.append(el('span',label),el('strong',fmt(Number(amount??0))));canonicalSummary.append(card);}
-    const health=data?.health;if(health&&healthSummary){const box=el('article',undefined,'item');box.append(el('strong','Simulation de santé financière demandée'),el('p','(Total remboursements de capital + Total intérêts collectés) – Total dettes en cours ≥ Total épargne','truth-notice'),el('p','Gauche : '+fmt(Number(health.left??0))+' · Total épargne : '+fmt(Number(health.right??0))+' · Écart : '+fmt(Number(health.difference??0))),el('p',health.passes?'Indicateur satisfait pour cette formule.':'Indicateur non satisfait pour cette formule.','hint'));healthSummary.append(box);}
+    const health=data?.health;if(health&&healthSummary){const box=el('article',undefined,'item');box.append(el('strong','Simulation de santé financière demandée'),el('p','(Total remboursements de capital + Total intérêts collectés) – Dette incluant la prochaine échéance d’intérêts ≥ Total épargne','truth-notice'),el('p','Gauche : '+fmt(Number(health.left??0))+' · Total épargne : '+fmt(Number(health.right??0))+' · Écart : '+fmt(Number(health.difference??0))),el('p',health.passes?'Indicateur satisfait pour cette formule.':'Indicateur non satisfait pour cette formule.','hint'));healthSummary.append(box);}
     if(canonicalTables){for(const series of data?.savingsSeries??[])canonicalTables.append(renderSeriesTable('Rubrique Épargne · '+series.name,series.entries,data,'Données automatiques par membre et par séance.'));canonicalTables.append(renderSeriesTable('Remboursements de capital',data?.repayments??[],data,'Le principal et les intérêts sont séparés par le moteur Prêts même lorsqu’un paiement a été saisi globalement.'));canonicalTables.append(renderSeriesTable('Intérêts collectés',data?.interestReceipts??[],data,'Intérêts réellement encaissés et attribués aux périodes de prêt.'));}
   };
   const renderInterestEvolution=async data=>{
@@ -219,9 +219,13 @@ export function mountSavingsYieldUI({app,getMembers,notify=()=>{},showError=cons
   }catch(err){showError(err);}})());
 
   period?.addEventListener('change',()=>{const s=document.getElementById('yieldDepositSession');if(s)s.value=String(monthSession.get(period.value)??1);});
-  const scheduleCanonicalRefresh=()=>{if(!isManager())return;if(canonicalRefreshTimer)clearTimeout(canonicalRefreshTimer);canonicalRefreshTimer=setTimeout(()=>{void loadCanonical(false).catch(showError);},260);};
+  const financeVisible=()=>document.getElementById('view-finance')?.classList.contains('active')===true;
+  let canonicalDirty=true;
+  const scheduleCanonicalRefresh=()=>{canonicalDirty=true;if(!isManager()||!financeVisible())return;if(canonicalRefreshTimer)clearTimeout(canonicalRefreshTimer);canonicalRefreshTimer=setTimeout(()=>{void loadCanonical(false).then(()=>{canonicalDirty=false;}).catch(showError);},1500);};
   window.addEventListener('eco:financial-data-changed',scheduleCanonicalRefresh);
   window.addEventListener('eco:financial-live-update',scheduleCanonicalRefresh);
-  renderDeposits();renderEvents();populateMembers();if(isManager())void loadCanonical(false).catch(()=>{});
-  return{refresh:async()=>{populateMembers();if(isManager())await loadCanonical(false).catch(()=>{});}};
+  window.addEventListener('eco:view-changed',event=>{if(event instanceof CustomEvent&&event.detail?.view==='finance'&&isManager()&&(!canonicalLoaded||canonicalDirty)){void loadCanonical(false).then(()=>{canonicalDirty=false;}).catch(showError);}});
+  renderDeposits();renderEvents();populateMembers();
+  if(financeVisible()&&isManager())void loadCanonical(false).then(()=>{canonicalDirty=false;}).catch(()=>{});
+  return{refresh:async()=>{populateMembers();if(financeVisible()&&isManager()&&(!canonicalLoaded||canonicalDirty)){await loadCanonical(false).then(()=>{canonicalDirty=false;}).catch(()=>{});}}};
 }

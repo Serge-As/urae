@@ -906,6 +906,20 @@ const hasCanonicalLoanStamp=()=>rubrics.some(r=>r.status!=='ARCHIVED'&&normalize
 const isLegacyStampDuplicate=r=>hasCanonicalLoanStamp()&&normalizeFinancialLabel(r?.name)==='timbre';
 const activeFinancialRubrics=()=>rubrics.filter(x=>x.status!=='ARCHIVED'&&!isLegacyStampDuplicate(x));
 const activeFinancialMembers=()=>members.filter(x=>x.status!=='left').slice().sort((a,b)=>(Number(a.memberNumber)||Number.MAX_SAFE_INTEGER)-(Number(b.memberNumber)||Number.MAX_SAFE_INTEGER)||String(a.displayName??'').localeCompare(String(b.displayName??''),localeTag(uiLocale),{sensitivity:'base'}));
+const renderRubricRecapTable=async(rubric,host)=>{
+  host.replaceChildren();const status=document.createElement('p');status.className='hint';status.textContent=tx('Chargement du récapitulatif…','Loading recap…');host.append(status);
+  try{
+    await loadFinancialProjectionState();
+    const ordered=meetings.filter(x=>x.status!=='cancelled').slice().sort((a,b)=>String(a.scheduledAt??a.openedAt).localeCompare(String(b.scheduledAt??b.openedAt))),people=activeFinancialMembers(),wrap=document.createElement('div');wrap.className='matrix-wrap';const table=document.createElement('table');table.className='meeting-matrix';
+    const head=document.createElement('thead'),hr=document.createElement('tr');for(const label of [tx('Membre','Member'),...ordered.map((m,i)=>'S'+String(i+1)),tx('Total','Total')]){const th=document.createElement('th');th.textContent=label;hr.append(th);}head.append(hr);table.append(head);
+    const body=document.createElement('tbody'),col=new Map();let grand=0;
+    for(const member of people){const tr=document.createElement('tr'),name=document.createElement('th');name.textContent=memberDisplay(member);tr.append(name);let rowTotal=0;for(const meeting of ordered){const amount=exactCellAmount(member.id,rubric.id,meeting.id);rowTotal+=amount;col.set(meeting.id,(col.get(meeting.id)??0)+amount);const td=document.createElement('td');td.textContent=amount?fmt(amount):'—';tr.append(td);}grand+=rowTotal;const td=document.createElement('td');td.textContent=fmt(rowTotal);tr.append(td);body.append(tr);}
+    const total=document.createElement('tr');total.className='table-total-row';const th=document.createElement('th');th.textContent=tx('TOTAL','TOTAL');total.append(th);for(const meeting of ordered){const td=document.createElement('td');td.textContent=fmt(col.get(meeting.id)??0);total.append(td);}const end=document.createElement('td');end.textContent=fmt(grand);total.append(end);body.append(total);table.append(body);wrap.append(table);host.replaceChildren(wrap);
+  }catch(error){host.replaceChildren();const p=document.createElement('p');p.className='truth-notice';p.textContent=tx('Récapitulatif non rechargé : Eco-System conserve la dernière projection locale et réessaiera lors d’un prochain accès.','Recap not reloaded: Eco-System keeps the last local projection and will retry on a later access.');host.append(p);console.info('Rubric recap deferred',error);}
+};
+const appendRubricRecap= (article,rubric)=>{
+  const details=document.createElement('details');details.className='rubric-recap';const summary=document.createElement('summary');summary.textContent=tx('Tableau récapitulatif · membres × séances','Recap table · members × sessions');const host=document.createElement('div');host.className='rubric-recap-host';details.append(summary,host);details.addEventListener('toggle',()=>{if(details.open&&details.dataset.loaded!=='1'){details.dataset.loaded='1';void renderRubricRecapTable(rubric,host);}});article.append(details);
+};
 const canonicalFinancialObservers=new WeakMap();
 const protectCanonicalFinancialHost=root=>{
     if(!root||canonicalFinancialObservers.has(root))return;
@@ -1062,11 +1076,11 @@ const renderLivingRules = async () => {
     }
     if(isManager()){const add=document.createElement('button');add.type='button';add.className='primary';add.textContent=tx('+ Ajouter une rubrique à ce groupe','+ Add a rubric to this group');add.onclick=()=>document.querySelector('#rubricForm')?.scrollIntoView({behavior:'smooth',block:'start'});root.append(add);}
     for (const r of rubrics) {
-        if(r.status==='ARCHIVED')continue;
         const a = document.createElement('article');
-        a.className = 'item';
+        a.className = 'item'+(r.status==='ARCHIVED'?' is-archived':'');
         const m = r.operatingModel;
         const rubricLink=document.createElement('button');rubricLink.type='button';rubricLink.className='link-btn';rubricLink.dataset.detailType='rubric';rubricLink.dataset.detailId=r.id;rubricLink.textContent=r.name;a.append(rubricLink);
+        if(r.status==='ARCHIVED'){const archived=document.createElement('span');archived.className='pill';archived.textContent=tx('Archivée · données conservées','Archived · data preserved');a.append(archived);}
         const written=document.createElement('p');written.className='hint';written.textContent='Écrit : '+(m?.writtenRule||'—');a.append(written);
         const practice=document.createElement('p');practice.className='hint';practice.textContent='Pratique : '+(m?.observedPractice||'—');a.append(practice);
         const small=document.createElement('small');small.textContent=`${m?.ruleRealityStatus ?? 'UNKNOWN'} · cible ${m?.targetMode ?? 'OPEN'} · manquant ${m?.shortfallHandling ?? '—'}`;a.append(small);
@@ -1075,13 +1089,18 @@ const renderLivingRules = async () => {
             const scheduled=(r.activityPlan.participants??[]).flatMap(p=>p.shares.filter(s=>s.turn!==undefined).map(s=>`${p.name} · ${s.name} : tour ${s.turn}`));
             if(scheduled.length){const list=document.createElement('ul');for(const text of scheduled){const li=document.createElement('li');li.textContent=text;list.append(li);}a.append(list);}
         }
+        appendRubricRecap(a,r);
         if(isManager()){
-          const edit=document.createElement('button');edit.type='button';edit.className='secondary';edit.textContent=tx('Configurer les caractéristiques / parts','Configure characteristics / shares');
-          edit.onclick=()=>editRubricPlan(r,async plan=>{await app.updateRubricActivityPlan(r.id,plan);await renderLivingRules();toast(tx('Caractéristiques enregistrées.','Characteristics saved.'));},launchError);
-          const remove=document.createElement('button');remove.type='button';remove.className='link-btn';remove.textContent=tx('Mettre à la corbeille','Move to trash');remove.onclick=()=>void(async()=>{if(!confirm(tx('Archiver cette rubrique dans la corbeille pendant 6 mois ? Les anciennes écritures restent intactes.','Archive this rubric in trash for 6 months? Existing entries remain intact.')))return;try{await app.moveToTrash('RUBRIC',r.id);await renderLivingRules();await renderTrash();toast(tx('Rubrique placée dans la corbeille.','Rubric moved to trash.'));}catch(e){fail(e);}})();
-          a.append(edit,remove);
+          if(r.status==='ARCHIVED'){
+            const restore=document.createElement('button');restore.type='button';restore.className='secondary';restore.textContent=tx('Restaurer cette rubrique','Restore this rubric');restore.onclick=()=>void(async()=>{try{const trash=await app.trashItems(),item=trash.find(x=>String(x.data?.kind??'')==='RUBRIC'&&String(x.data?.entityId??'')===r.id&&x.status==='ACTIVE');if(!item)throw Error('TRASH_ITEM_NOT_FOUND');await app.restoreTrashItem(item.id);await renderLivingRules();await renderTrash();toast(tx('Rubrique restaurée avec son historique.','Rubric restored with its history.'));}catch(e){fail(e);}})();a.append(restore);
+          }else{
+            const edit=document.createElement('button');edit.type='button';edit.className='secondary';edit.textContent=tx('Configurer les caractéristiques / parts','Configure characteristics / shares');
+            edit.onclick=()=>editRubricPlan(r,async plan=>{await app.updateRubricActivityPlan(r.id,plan);await renderLivingRules();toast(tx('Caractéristiques enregistrées.','Characteristics saved.'));},launchError);
+            const remove=document.createElement('button');remove.type='button';remove.className='link-btn';remove.textContent=tx('Mettre à la corbeille','Move to trash');remove.onclick=()=>void(async()=>{if(!confirm(tx('Archiver cette rubrique dans la corbeille pendant 6 mois ? Les anciennes écritures restent intactes.','Archive this rubric in trash for 6 months? Existing entries remain intact.')))return;try{await app.moveToTrash('RUBRIC',r.id);await renderLivingRules();await renderTrash();toast(tx('Rubrique placée dans la corbeille.','Rubric moved to trash.'));}catch(e){fail(e);}})();a.append(edit,remove);
+          }
         }
         root.append(a);
+        if(r.status==='ARCHIVED')continue;
         for (const sel of [rselect, pselect]) {
             const o = document.createElement('option');
             o.value = r.id;

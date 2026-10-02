@@ -1353,17 +1353,25 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
     const savingsYieldSource=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/savings-yield\/source-data$/);
     if(savingsYieldSource&&request.method==='GET'){
       const groupId=savingsYieldSource[1]!;await requireGroup(groupId,true);
-      const [rubricRows,meetingRows,positions,accounts,entries,memberships,loanPeriods,loanRows,obligationRows]=await Promise.all([
+      const [rubricRows,meetingRows,positions,accounts,entries,memberships,loanPeriods,loanRows,obligationRows,sheetEvents]=await Promise.all([
         repo.listRubricDefinitions(ctx.tenantId,groupId),repo.listMeetings(ctx.tenantId,groupId),ledger.receiptPositions(ctx.tenantId,groupId),
         repo.listLedgerAccounts(ctx.tenantId,groupId),repo.listLedgerEntries(ctx.tenantId,groupId),repo.listMemberships(ctx.tenantId,groupId),
-        repo.listWorkspaceRecords(ctx.tenantId,'FINANCE.LOAN_PERIOD',groupId),completion.list(groupId,'LOAN'),repo.listObligations(ctx.tenantId)
+        repo.listWorkspaceRecords(ctx.tenantId,'FINANCE.LOAN_PERIOD',groupId),completion.list(groupId,'LOAN'),repo.listObligations(ctx.tenantId),
+        repo.listWorkspaceRecords(ctx.tenantId,'FINANCE.SHEET_EVENT',groupId)
       ]);
       const savingsRubrics=rubricRows.filter(r=>r.status==='ACTIVE'&&(String(r.activityPlan?.kind??'').toUpperCase()==='SAVINGS'||/[ée]pargne|saving/i.test(r.name)));
       const savingsIds=new Set(savingsRubrics.map(r=>r.id));
       const orderedMeetings=meetingRows.slice().sort((a,b)=>String(a.scheduledAt??a.openedAt).localeCompare(String(b.scheduledAt??b.openedAt)));
       const sessionByMeeting=new Map(orderedMeetings.map((m,i)=>[m.id,i+1]));
       const periodKeys=['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
-      const rubricById=new Map(savingsRubrics.map(r=>[r.id,r]));
+      const rubricById=new Map(savingsRubrics.map(r=>[r.id,r])),allRubricById=new Map(rubricRows.map(r=>[r.id,r]));
+      const normalizeLabel=(value:unknown)=>String(value??'').normalize('NFKD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim();
+      const repaymentComponent=(rubricId:string)=>{
+        const rubric=allRubricById.get(rubricId),name=normalizeLabel(rubric?.name),explicit=String(rubric?.facets?.custom?.repaymentComponent??'').toUpperCase();
+        if(explicit==='INTEREST'||/rembour.*interet|interest.*repay|repay.*interest/.test(name))return'INTEREST';
+        if(explicit==='PRINCIPAL'||/rembour|repay/.test(name))return'PRINCIPAL';
+        return'';
+      };
       const deposits=positions.filter(p=>p.rubricId&&savingsIds.has(p.rubricId)&&p.netAmount>0).map(p=>{
         const rubric=rubricById.get(p.rubricId!)!,session=p.meetingId?(sessionByMeeting.get(p.meetingId)??1):1;
         const fund=/scolaire|school/i.test(rubric.name)?'SCHOOL':'CLASSIC';
@@ -1373,20 +1381,42 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
       const accountById=new Map(accounts.map(a=>[a.id,a]));
       const interestByAccount:Record<string,number>={};
       for(const entry of entries)for(const line of entry.lines){const account=accountById.get(line.accountId);if(account&&/INTEREST.*INCOME|INTEREST_INCOME/i.test(account.code)){interestByAccount[account.code]=(interestByAccount[account.code]??0)+(line.credit-line.debit);}}
-      const recoveredInterest=Object.values(interestByAccount).reduce((n,x)=>n+x,0);
+      const ledgerRecoveredInterest=Object.values(interestByAccount).reduce((n,x)=>n+x,0);
       const classicPrincipal=deposits.filter(d=>d.fund==='CLASSIC').reduce((n,d)=>n+d.amount,0),schoolPrincipal=deposits.filter(d=>d.fund==='SCHOOL').reduce((n,d)=>n+d.amount,0);
       const savingsSeries=savingsRubrics.map(r=>{const rows=deposits.filter(d=>d.rubricId===r.id);return{rubricId:r.id,name:r.name,total:rows.reduce((n,d)=>n+d.amount,0),entries:rows.map(d=>({memberId:d.memberId,meetingId:d.meetingId,session:d.session,amount:d.amount}))};});
-      const periodRows=loanPeriods.map(x=>({id:x.id,loanId:String(x.data.loanId??''),memberId:String(x.data.membershipId??''),meetingId:String(x.data.meetingId??''),principalPaid:Number(x.data.principalPaid??0),interestPaid:Number(x.data.interestPaid??0),principalAfter:Number(x.data.principalAfter??0),interestAfter:Number(x.data.interestAfter??0),interestNew:Number(x.data.interestNew??0),nextInterestProjected:Number(x.data.nextInterestProjected??0),totalDebtAfter:Number(x.data.totalDebtAfter??0)}));
-      const repayments=periodRows.filter(x=>x.principalPaid>0).map(x=>({memberId:x.memberId,meetingId:x.meetingId,loanId:x.loanId,amount:x.principalPaid}));
-      const interestReceipts=periodRows.filter(x=>x.interestPaid>0).map(x=>({memberId:x.memberId,meetingId:x.meetingId,loanId:x.loanId,amount:x.interestPaid}));
-      const activeLoans=loanRows.filter(x=>['DISBURSED','REPAYING'].includes(String(x.data.completionState??''))&&(Number(x.data.outstandingPrincipal??0)>0||Number(x.data.unpaidInterest??0)>0));
-      const loanDebts=activeLoans.map(x=>({loanId:x.id,memberId:String(x.data.borrowerMembershipId??''),title:x.title,principal:Number(x.data.outstandingPrincipal??0),interest:Number(x.data.unpaidInterest??0),nextInterestProjected:Math.round(Number(x.data.outstandingPrincipal??0)*Number(x.data.rateBasisPointsPerPeriod??0)/10000),rateBasisPointsPerPeriod:Number(x.data.rateBasisPointsPerPeriod??0),paymentPriority:String(x.data.paymentPriority??'CAPITAL_FIRST'),interestTiming:String(x.data.interestTiming??'NEXT_SESSION_DUE'),interestAppliesToMeetingId:String(x.data.interestAppliesToMeetingId??'')||null,interestAppliesToLabel:String(x.data.interestAppliesToLabel??'')||null}));
+      const periodRows=loanPeriods.map(x=>({id:x.id,loanId:String(x.data.loanId??''),memberId:String(x.data.membershipId??''),meetingId:String(x.data.meetingId??''),principalPaid:Number(x.data.principalPaid??0),interestPaid:Number(x.data.interestPaid??0),principalAfter:Number(x.data.principalAfter??0),interestAfter:Number(x.data.interestAfter??0),interestNew:Number(x.data.interestNew??0),nextInterestProjected:Number(x.data.nextInterestProjected??0),totalDebtAfter:Number(x.data.totalDebtAfter??0),updatedAt:String(x.updatedAt??x.createdAt??'')}));
+      const paymentEvents=new Map<string,{memberId:string;meetingId:string;loanId:string;principalPaid:number;interestPaid:number}>();
+      for(const x of sheetEvents){
+        const d=x.data??{},rubricId=String(d.rubricId??''),amount=Math.abs(Number(d.amount??0)),component=repaymentComponent(rubricId),principalPaid=Number(d.principalPaid??(component==='PRINCIPAL'?amount:0)),interestPaid=Number(d.interestPaid??(component==='INTEREST'?amount:0));
+        if(principalPaid<=0&&interestPaid<=0)continue;
+        const k=String(d.ledgerEntryId??x.id),old=paymentEvents.get(k);
+        if(!old)paymentEvents.set(k,{memberId:String(d.membershipId??''),meetingId:String(d.meetingId??''),loanId:String(d.loanId??''),principalPaid:Math.max(0,principalPaid),interestPaid:Math.max(0,interestPaid)});
+        else paymentEvents.set(k,{...old,principalPaid:Math.max(old.principalPaid,principalPaid),interestPaid:Math.max(old.interestPaid,interestPaid)});
+      }
+      const eventPayments=[...paymentEvents.values()],eventPrincipalTotal=eventPayments.reduce((n,x)=>n+x.principalPaid,0),eventInterestTotal=eventPayments.reduce((n,x)=>n+x.interestPaid,0);
+      const periodPrincipalTotal=periodRows.reduce((n,x)=>n+x.principalPaid,0),periodInterestTotal=periodRows.reduce((n,x)=>n+x.interestPaid,0);
+      const repayments=(eventPrincipalTotal>0?eventPayments.filter(x=>x.principalPaid>0).map(x=>({memberId:x.memberId,meetingId:x.meetingId,loanId:x.loanId,amount:x.principalPaid})):periodRows.filter(x=>x.principalPaid>0).map(x=>({memberId:x.memberId,meetingId:x.meetingId,loanId:x.loanId,amount:x.principalPaid})));
+      const interestReceipts=(eventInterestTotal>0?eventPayments.filter(x=>x.interestPaid>0).map(x=>({memberId:x.memberId,meetingId:x.meetingId,loanId:x.loanId,amount:x.interestPaid})):periodRows.filter(x=>x.interestPaid>0).map(x=>({memberId:x.memberId,meetingId:x.meetingId,loanId:x.loanId,amount:x.interestPaid})));
+      // The workbook keeps principal debt and interest debt as two rolling balances.
+      // Historical sheet events may predate the canonical loan-period records, so
+      // use the strongest available evidence without double-counting the same payment.
+      const recoveredInterest=Math.max(ledgerRecoveredInterest,eventInterestTotal,periodInterestTotal);
+      const sessionRank=new Map(orderedMeetings.map((m,i)=>[m.id,i+1])),latestPeriodByLoan=new Map<string,(typeof periodRows)[number]>();
+      for(const p of periodRows.slice().sort((a,b)=>(sessionRank.get(a.meetingId)??0)-(sessionRank.get(b.meetingId)??0)||a.updatedAt.localeCompare(b.updatedAt)))if(p.loanId)latestPeriodByLoan.set(p.loanId,p);
+      const activeLoans=loanRows.filter(x=>['DISBURSED','REPAYING'].includes(String(x.data.completionState??''))||Number(latestPeriodByLoan.get(x.id)?.principalAfter??0)>0||Number(latestPeriodByLoan.get(x.id)?.interestAfter??0)>0);
+      const loanDebts=activeLoans.map(x=>{
+        const latest=latestPeriodByLoan.get(x.id),loanNewer=!latest||String(x.updatedAt??'')>=String(latest.updatedAt??''),rubric=allRubricById.get(String(x.data.rubricId??''));
+        const principal=Math.max(0,Number(loanNewer?x.data.outstandingPrincipal:latest?.principalAfter??x.data.outstandingPrincipal??0)),interest=Math.max(0,Number(loanNewer?x.data.unpaidInterest:latest?.interestAfter??x.data.unpaidInterest??0));
+        const rate=Number(x.data.rateBasisPointsPerPeriod??rubric?.policies?.loan?.rateBasisPointsPerPeriod??0),nextInterestProjected=rate>0?Math.round(principal*rate/10000):Number(latest?.nextInterestProjected??0);
+        return{loanId:x.id,memberId:String(x.data.borrowerMembershipId??latest?.memberId??''),rubricId:String(x.data.rubricId??''),title:x.title,principal,interest,nextInterestProjected,totalDue:principal+interest,totalIncludingNextInterest:principal+interest+nextInterestProjected,rateBasisPointsPerPeriod:rate,paymentPriority:String(x.data.paymentPriority??rubric?.policies?.loan?.paymentPriority??'CAPITAL_FIRST'),interestTiming:String(x.data.interestTiming??rubric?.policies?.loan?.interestTiming??'NEXT_SESSION_DUE'),interestAppliesToMeetingId:String(x.data.interestAppliesToMeetingId??'')||null,interestAppliesToLabel:String(x.data.interestAppliesToLabel??'')||null};
+      }).filter(x=>x.principal>0||x.interest>0||x.nextInterestProjected>0);
       const groupObligations=obligationRows.filter(x=>x.groupId===groupId&&(x.status==='open'||x.status==='overdue')),membershipByUser=new Map(memberships.map(m=>[m.userId,m.id])),otherDebts=groupObligations.map(x=>({id:x.id,memberId:membershipByUser.get(String(x.assigneeId??''))??null,title:x.title,status:x.status,amount:Number(x.amount?.amount??0),dueAt:x.dueAt??null})),otherDebt=otherDebts.reduce((n,x)=>n+x.amount,0);
-      const outstandingPrincipal=loanDebts.reduce((n,x)=>n+x.principal,0),outstandingInterest=loanDebts.reduce((n,x)=>n+x.interest,0),nextInterestProjected=loanDebts.reduce((n,x)=>n+x.nextInterestProjected,0),totalDebt=outstandingPrincipal+outstandingInterest+otherDebt,totalPrincipalRepaid=repayments.reduce((n,x)=>n+x.amount,0),totalSavings=deposits.reduce((n,x)=>n+x.amount,0);
-      const healthLeft=totalPrincipalRepaid+recoveredInterest-totalDebt,healthRight=totalSavings,warnings:string[]=[];
+      const outstandingPrincipal=loanDebts.reduce((n,x)=>n+x.principal,0),outstandingInterest=loanDebts.reduce((n,x)=>n+x.interest,0),nextInterestProjected=loanDebts.reduce((n,x)=>n+x.nextInterestProjected,0),totalDebt=outstandingPrincipal+outstandingInterest+otherDebt,totalDebtIncludingNextInterest=totalDebt+nextInterestProjected,totalPrincipalRepaid=Math.max(eventPrincipalTotal,periodPrincipalTotal),totalSavings=deposits.reduce((n,d)=>n+d.amount,0);
+      const healthLeft=totalPrincipalRepaid+recoveredInterest-totalDebtIncludingNextInterest,healthRight=totalSavings,warnings:string[]=[];
       if(recoveredInterest===0)warnings.push('NO_REALIZED_INTEREST_FOUND');
-      const periodInterestTotal=interestReceipts.reduce((n,x)=>n+x.amount,0);if(periodInterestTotal!==recoveredInterest)warnings.push('INTEREST_LEDGER_PERIOD_VARIANCE:'+String(recoveredInterest-periodInterestTotal));
-      return json({generatedAt:new Date().toISOString(),source:'CANONICAL_LEDGER_AND_RECEIPTS',members:memberRows,rubrics:savingsRubrics.map(r=>({id:r.id,name:r.name})),meetings:orderedMeetings.map((m,i)=>({id:m.id,title:m.title,session:i+1,scheduledAt:m.scheduledAt??m.openedAt})),deposits,savingsSeries,repayments,interestReceipts,loanPeriods:periodRows,loanDebts,otherDebts,totals:{classicPrincipal,schoolPrincipal,totalPrincipal:classicPrincipal+schoolPrincipal,totalSavings,totalPrincipalRepaid,recoveredInterest,outstandingPrincipal,outstandingInterest,nextInterestProjected,otherDebt,totalDebt},health:{formula:'(TOTAL_REPAYMENTS + TOTAL_INTEREST_COLLECTED) - TOTAL_CURRENT_DEBT >= TOTAL_SAVINGS',left:healthLeft,right:healthRight,difference:healthLeft-healthRight,passes:healthLeft>=healthRight},interestByAccount,warnings},200,cors);
+      if(eventInterestTotal!==ledgerRecoveredInterest&&eventInterestTotal>0)warnings.push('INTEREST_SOURCE_VARIANCE:'+String(eventInterestTotal-ledgerRecoveredInterest));
+      if(loanDebts.some(x=>x.principal>0&&x.rateBasisPointsPerPeriod<=0))warnings.push('LOAN_RATE_MISSING');
+      return json({generatedAt:new Date().toISOString(),source:'CANONICAL_LEDGER_SHEETS_AND_LOAN_PERIODS',members:memberRows,rubrics:savingsRubrics.map(r=>({id:r.id,name:r.name})),meetings:orderedMeetings.map((m,i)=>({id:m.id,title:m.title,session:i+1,scheduledAt:m.scheduledAt??m.openedAt,status:m.status})),deposits,savingsSeries,repayments,interestReceipts,loanPeriods:periodRows,loanDebts,otherDebts,totals:{classicPrincipal,schoolPrincipal,totalPrincipal:classicPrincipal+schoolPrincipal,totalSavings,totalPrincipalRepaid,recoveredInterest,outstandingPrincipal,outstandingInterest,nextInterestProjected,otherDebt,totalDebt,totalDebtIncludingNextInterest},health:{formula:'(TOTAL_REPAYMENTS + TOTAL_INTEREST_COLLECTED) - TOTAL_DEBT_INCLUDING_NEXT_DUE_INTEREST >= TOTAL_SAVINGS',left:healthLeft,right:healthRight,difference:healthLeft-healthRight,passes:healthLeft>=healthRight},interestByAccount,warnings},200,cors);
     }
 
     const savingsYieldPreview=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/savings-yield\/preview$/);
