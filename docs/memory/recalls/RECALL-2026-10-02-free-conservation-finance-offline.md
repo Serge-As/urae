@@ -98,3 +98,12 @@ Correction décidée :
 - si la commande est refusée, supprimer l'optimisme et restaurer l'ancienne valeur ;
 - conserver l'Outbox comme autorité de reprise offline.
 Ce comportement ne change aucune écriture Ledger et ne fabrique aucun succès serveur.
+
+
+## 7. Additif P0 — optimisme limité au vrai offline
+Le premier correctif de projection immédiate a révélé un risque inverse : en ligne, l'interface pouvait afficher la nouvelle valeur avant que le Ledger n'ait confirmé le remplacement exact. La règle finale est donc :
+- **offline réel (`navigator.onLine === false`)** : projection immédiate comme valeur de travail, avec statut en attente ;
+- **online** : l'ancienne valeur reste visible avec « Enregistrement… » jusqu'à la réponse serveur, puis la nouvelle valeur est affichée ;
+- une erreur réelle restaure l'ancienne valeur si une projection optimiste avait été montrée.
+
+Ce garde-fou évite qu'un 1000 → 500 semble terminé à l'écran alors que le Ledger est encore à 1000.
