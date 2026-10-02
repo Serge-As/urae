@@ -800,17 +800,26 @@ const submitFinancialCellElement=async validate=>{
       }
       validate.disabled=true;input.disabled=true;validate.textContent='…';holder.classList.add('is-saving');
       let result;
+      const displayTarget=(nature==='LOAN'||nature==='OUTFLOW')?-target:target;
+      const stageOptimisticValue=()=>{
+        financialOptimisticValues.set(cellKey,displayTarget);
+        patchFinancialDomCell({meetingId,membershipId,rubricId,amount:displayTarget,preservePending:true});
+        currentLabel.textContent=fmt(displayTarget);
+      };
       if(nature==='CONTRIBUTION'){
         if(current===0&&target===0){input.value='';clearFinancialCellDraft(cellKey);clearRemoteDraft();setCellState('IDLE');return;}
+        // Display the local working value immediately. Transport can be slow or
+        // unavailable, but the cell must not visually jump back while the
+        // durable command is being queued/sent.
+        stageOptimisticValue();
         result=await app.setFinancialCellTarget({meetingId,membershipId,rubricId,targetAmount:target,currentAmount:current,currentVersion:exactCellVersion(membershipId,rubricId,meetingId),reason:reason.trim()});
         if(Number.isFinite(Number(result?.cellVersion)))financialCellVersions.set(JSON.stringify([meetingId,membershipId,rubricId,'XAF']),Number(result.cellVersion));
       }else{
         if(current>0)throw Error('SPECIALIZED_FINANCIAL_CORRECTION_REQUIRED');
+        stageOptimisticValue();
         result=await app.recordFinancialSheetEntry({membershipId,meetingId,rubric,amount:target,reason:reason.trim()||undefined});
       }
-      const displayTarget=(nature==='LOAN'||nature==='OUTFLOW')?-target:target;
-      financialOptimisticValues.set(cellKey,displayTarget);
-      patchFinancialDomCell({meetingId,membershipId,rubricId,amount:displayTarget,cellVersion:result?.cellVersion});
+      patchFinancialDomCell({meetingId,membershipId,rubricId,amount:displayTarget,cellVersion:result?.cellVersion,preservePending:true});
       if(result?.status==='CONSENSUS_REQUIRED'){
         currentLabel.textContent=fmt(displayTarget);financialReviewTargets.delete(cellKey);
         holder.classList.add('pending-consensus');setCellState('CONFIRMED',tx('Proposition enregistrée · validation d’un second responsable requise','Proposal saved · second manager approval required'));
@@ -854,6 +863,9 @@ const submitFinancialCellElement=async validate=>{
     }catch(e){
       const code=e instanceof Error?e.message:String(e);
       traceFinancialCell('CELL_FAIL',{cellKey,target:Number.isFinite(target)?target:Number(input.value||0),current,error:code});
+      // A rejected command must never leave the optimistic working value looking
+      // like a confirmed mutation.
+      financialOptimisticValues.delete(cellKey);
       if(['CELL_VALUE_CONFLICT','CELL_VERSION_CONFLICT'].includes(code)){
         financialOptimisticValues.delete(cellKey);holder.classList.add('is-conflict');
         setCellState('CONFLICT',tx('Une autre saisie existe · resynchronisation de cette cellule…','Another entry exists · resynchronizing this cell…'));
@@ -863,6 +875,7 @@ const submitFinancialCellElement=async validate=>{
         }catch{}
         fail(new Error(code));return;
       }
+      patchFinancialDomCell({meetingId,membershipId,rubricId,amount:signedCurrent,preservePending:false});
       setCellState('FAILED',tx('Échec : ','Failed: ')+code);fail(e);
     }finally{
       delete holder.dataset.submitting;validate.disabled=false;input.disabled=false;validate.textContent=previousIcon;holder.classList.remove('is-saving');

@@ -87,3 +87,14 @@ Le noyau Completion/Loan sait créer et transitionner localement avec Outbox. Le
 
 ## 5. Vérité au moment de cette clôture
 Le checkpoint fonctionnel est qualifié automatiquement mais le premier workflow de livraison du SHA `c746dc9...` a été bloqué **avant mutation production** par le Memory Gate, faute de RECALL/CIR dans le commit déclencheur. Cette clôture ajoute ces deux pièces puis relance la livraison. Aucun FIELD_ACCEPTED ne doit être déclaré avant nouvelle recette réelle Opera/Chrome/mobile/offline par le fondateur.
+
+
+## 6. Additif P0 — projection immédiate offline
+La qualification navigateur du merge documentaire a détecté un cas précis : après passage offline, une valeur 3000 pouvait être durablement mise en file locale mais ne pas être visible assez vite dans la cellule, car l'UI attendait encore la tentative de transport.
+
+Correction décidée :
+- afficher immédiatement la valeur comme **valeur de travail**, avec état « Enregistrement… » ;
+- ne la qualifier « Validé/Synchronisé » qu'après résultat local/serveur ;
+- si la commande est refusée, supprimer l'optimisme et restaurer l'ancienne valeur ;
+- conserver l'Outbox comme autorité de reprise offline.
+Ce comportement ne change aucune écriture Ledger et ne fabrique aucun succès serveur.

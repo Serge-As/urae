@@ -64,3 +64,11 @@ Le code de polling n'est pas supprimé ; il est gelé derrière le mode conserva
 
 ## 7. Critère de clôture
 Le lot peut être livré si CI gouvernée, P0 financier, persistance et WebKit/offline passent sur le même lignage et si le smoke production confirme SHA/cache/version. La recette terrain reste distincte et doit pouvoir invalider la clôture fonctionnelle.
+
+
+## 8. Impact additif — affichage immédiat de la commande offline
+Le navigateur projette désormais le montant saisi avant d'attendre le transport, après validation syntaxique et métier locale. L'état de sauvegarde distingue toujours « Enregistrement », « synchro en attente » et confirmation.
+
+**Risque contrôlé :** une erreur serveur réelle doit revenir à la valeur précédente. Les conflits de version suivent toujours leur resynchronisation ciblée.
+
+**Test de non-régression :** la valeur 3000 doit apparaître en moins de 5 secondes après clic offline, l'Outbox doit rester visible et le replay ultérieur doit conserver exactement 3000.
