@@ -1,12 +1,12 @@
 release: 1.5.2.9-sovereign-offline
-source_head: 2186aac9fa2e8c1da9c69ecaffebd29d956a7bb0
-qualified_p0_offline_sync_run: 37011290280
-qualified_p0_offline_sync_attempt: 2
-qualified_ios_sovereign_run: 37011290302
-qualified_geo_run: 37011326363
+source_head: c746dc9ceb2eaf550ab99793d55af41fc4c7ca54
+qualified_p0_run: 37012029747
+qualified_field_persistence_run: 37012029824
+qualified_ios_sovereign_run: 37012029869
 pwa_cache: eco-system-v1529-free-conservation-debt-syncfix-20261002
 previous_pwa_cache: eco-system-v1529-free-conservation-debt-20261002
 scope: free-conservation-live-debt-interest-rubric-recap-offline-confirmed-sync-20261002
+memory_closure: RECALL-2026-10-02-free-conservation-finance-offline + CIR-2026-10-02-free-conservation-finance-offline
 production_concurrency_guard: monotonic-ancestor-check
 d1_strategy: websocket-push-no-financial-polling-in-free-mode
-requested_at: 2026-10-02T14:22:00+01:00
+requested_at: 2026-10-02T16:10:00+01:00
