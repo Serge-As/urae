@@ -51,3 +51,42 @@ test('sessions debt view consumes unified loan and savings projection instead of
   assert.match(ui,/localManager/);
   assert.doesNotMatch(block,/listCompletion\('LOAN'\)/);
 });
+
+
+test('quota exhaustion opens a durable local circuit breaker instead of hammering D1',()=>{
+  const app=fs.readFileSync('packages/application/src/index.ts','utf8');
+  assert.match(app,/serverBudgetBlockedUntil/);
+  assert.match(app,/eco\.serverBudgetBlock\.v1/);
+  assert.match(app,/markServerBudgetBlocked/);
+  assert.match(app,/status===429\?Date\.UTC/);
+  assert.match(app,/forceServerRetry/);
+  assert.match(app,/if\(this\.serverBudgetBlocked\(\)\)/);
+});
+
+test('manager scope survives D1 exhaustion from last-known groupMe truth',()=>{
+  const app=fs.readFileSync('packages/application/src/index.ts','utf8');
+  assert.match(app,/eco\.groupMe\.v1:/);
+  assert.match(app,/savedAt:new Date\(\)\.toISOString/);
+  assert.match(app,/saved&&\(saved\.membership\|\|saved\.isManager\)/);
+});
+
+test('Remboursements is an official offline-capable rubric and archived historical copy is restorable',()=>{
+  const app=fs.readFileSync('packages/application/src/index.ts','utf8');
+  const worker=fs.readFileSync('workers/api/src/index.ts','utf8');
+  assert.match(app,/ensureOfficialRepaymentRubric/);
+  assert.match(app,/systemKey:'REPAYMENT'/);
+  assert.match(app,/repaymentComponent:'PRINCIPAL'/);
+  assert.match(app,/RUBRIC_RESTORE_V1/);
+  assert.match(worker,/item\.type==='RUBRIC_RESTORE_V1'/);
+  assert.match(worker,/restoreTrash/);
+});
+
+test('legacy loan sheets rebuild debt and derive next-session interest offline',()=>{
+  const app=fs.readFileSync('packages/application/src/index.ts','utf8');
+  assert.match(app,/historicalLoanDebts/);
+  assert.match(app,/loanSheetEvents/);
+  assert.match(app,/disbursementMeetingByLoan/);
+  assert.match(app,/derivedInterest/);
+  assert.match(app,/timing==='NEXT_SESSION_DUE'/);
+  assert.match(app,/latestLater\?\.status==='closed'/);
+});
