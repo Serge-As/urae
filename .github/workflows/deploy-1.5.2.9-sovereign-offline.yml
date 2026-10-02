@@ -127,8 +127,8 @@ jobs:
               && grep -q '"ok": true' <<<"${health}" \
               && grep -Fq "\"version\": \"${EXPECTED_VERSION}\"" <<<"${health}" \
               && grep -Fq "\"commitSha\": \"${GITHUB_SHA}\"" <<<"${health}" \
-              && grep -Fq "\"buildId\": \"eco-system-1.5.2.9-20261002-free-conservation-debt\"" <<<"${health}" \
-              && grep -Fq "\"pwaCache\": \"eco-system-v1529-free-conservation-debt-20261002\"" <<<"${health}" \
+              && grep -Fq "\"buildId\": \"eco-system-1.5.2.9-20261002-free-conservation-debt-syncfix\"" <<<"${health}" \
+              && grep -Fq "\"pwaCache\": \"eco-system-v1529-free-conservation-debt-syncfix-20261002\"" <<<"${health}" \
               && grep -q '"capabilities"' <<<"${catalog}" \
               && grep -Fq "\"version\": \"${EXPECTED_VERSION}\"" <<<"${catalog}"; then break; fi
             echo "Waiting for exact 1.5.2.9 sovereign SHA propagation (attempt ${attempt}/8)…"
@@ -143,8 +143,8 @@ jobs:
           if(health.ok!==true) throw new Error('HEALTH_NOT_OK');
           if(health.version!==process.env.EXPECTED_VERSION) throw new Error('VERSION_MISMATCH:'+health.version);
           if(health.commitSha!==process.env.GITHUB_SHA) throw new Error('COMMIT_MISMATCH:'+health.commitSha);
-          if(health.buildId!=='eco-system-1.5.2.9-20261002-free-conservation-debt') throw new Error('BUILD_ID_MISMATCH:'+health.buildId);
-          if(health.pwaCache!=='eco-system-v1529-free-conservation-debt-20261002') throw new Error('PWA_CACHE_MISMATCH:'+health.pwaCache);
+          if(health.buildId!=='eco-system-1.5.2.9-20261002-free-conservation-debt-syncfix') throw new Error('BUILD_ID_MISMATCH:'+health.buildId);
+          if(health.pwaCache!=='eco-system-v1529-free-conservation-debt-syncfix-20261002') throw new Error('PWA_CACHE_MISMATCH:'+health.pwaCache);
           if(health.realMoneyEnabled!==false) throw new Error('REAL_MONEY_MUST_REMAIN_DISABLED');
           if(health.premiumLiveEnabled!==true) throw new Error('PREMIUM_LIVE_LEDGER_NOT_ACTIVE');
           if(health.artifactStorageBound!==true) throw new Error('ARTIFACT_STORAGE_NOT_ACTIVE');
