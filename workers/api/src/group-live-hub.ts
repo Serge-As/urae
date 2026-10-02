@@ -47,10 +47,9 @@ export class GroupLiveHub{
     const type=String(input.type??'');if(!allowedSignalTypes.has(type))throw new Error('LIVE_SIGNAL_TYPE_NOT_ALLOWED');
     const signal:GroupLiveSignal={id:String(input.id??crypto.randomUUID()),type,at:new Date().toISOString(),actorId:String(input.actorId??'unknown').slice(0,200),payload:cleanPayload(input.payload)};
     const now=Date.now();this.recentSignals=this.recentSignals.filter(x=>now-Date.parse(x.at)<12000);this.recentSignals.push(signal);if(this.recentSignals.length>200)this.recentSignals.splice(0,this.recentSignals.length-200);
-    // Bounded hibernation fallback: at most two short-lived records per actor:
-    // draft state and transient activity. Financial amounts are never stored here.
-    const category=['FINANCIAL_DRAFT','FINANCIAL_DRAFT_CLEAR'].includes(type)?'draft':'activity';
-    await this.state.storage.put('signal-actor:'+encodeURIComponent(signal.actorId)+':'+category,signal);
+    // TYPING / FOCUS / BLUR are pure push: no Durable storage write.
+    // Only an actual draft state change is retained so a reconnect can restore it.
+    if(['FINANCIAL_DRAFT','FINANCIAL_DRAFT_CLEAR'].includes(type))await this.state.storage.put('signal-actor:'+encodeURIComponent(signal.actorId)+':draft',signal);
     this.broadcastSignal(signal);return signal;
   }
   private async signals(afterAt=0,excludeActorId?:string):Promise<GroupLiveSignal[]>{
@@ -86,7 +85,10 @@ export class GroupLiveHub{
       const Pair=(globalThis as unknown as {WebSocketPair:new()=>{0:WebSocket;1:WebSocket}}).WebSocketPair;if(!Pair)return json({error:'WEBSOCKET_PAIR_UNAVAILABLE'},503);
       const pair=new Pair(),client=pair[0],server=pair[1];this.state.acceptWebSocket(server,['group-live','user:'+userId]);
       const hibernatingSocket=server as WebSocket & {serializeAttachment?:(value:unknown)=>void};
-      hibernatingSocket.serializeAttachment?.({connectedAt:new Date().toISOString()});
+      hibernatingSocket.serializeAttachment?.({connectedAt:new Date().toISOString(),userId});
+      const after=Math.max(0,Number(url.searchParams.get('after')??0)||0);
+      for(const event of await this.events(after,500,userId))try{server.send(JSON.stringify({type:'GROUP_LIVE_EVENT',event}));}catch{}
+      for(const signal of await this.signals(Date.now()-12000,userId))try{server.send(JSON.stringify({type:'GROUP_LIVE_SIGNAL',event:signal}));}catch{}
       return new Response(null,{status:101,webSocket:client} as ResponseInit&{webSocket:WebSocket});
     }
     if(request.method==='GET'&&url.pathname.endsWith('/events'))return json({events:await this.events(Number(url.searchParams.get('after')??0),Number(url.searchParams.get('limit')??100),url.searchParams.get('userId')??undefined),latest:await this.state.storage.get<number>('seq')??0});
@@ -103,7 +105,15 @@ export class GroupLiveHub{
 
   async webSocketMessage(ws:WebSocket,message:string|ArrayBuffer){
     if(typeof message!=='string'){ws.send(JSON.stringify({type:'ERROR',error:'TEXT_MESSAGES_ONLY'}));return;}
-    if(message==='PING')ws.send(JSON.stringify({type:'PONG',at:new Date().toISOString()}));
+    if(message==='PING'){ws.send(JSON.stringify({type:'PONG',at:new Date().toISOString()}));return;}
+    try{
+      const parsed=JSON.parse(message) as {type?:string;eventType?:string;payload?:unknown};
+      if(parsed.type!=='CLIENT_SIGNAL')return;
+      const hibernatingSocket=ws as WebSocket & {deserializeAttachment?:()=>unknown};
+      const attachment=hibernatingSocket.deserializeAttachment?.() as {userId?:string}|undefined,actorId=String(attachment?.userId??'');
+      if(!actorId)throw new Error('LIVE_ACTOR_REQUIRED');
+      await this.signal({type:String(parsed.eventType??''),actorId,payload:parsed.payload});
+    }catch(e){try{ws.send(JSON.stringify({type:'ERROR',error:e instanceof Error?e.message:'LIVE_SIGNAL_ERROR'}));}catch{}}
   }
   async webSocketClose(ws:WebSocket,code:number,reason:string){try{ws.close(code,reason);}catch{}}
   async webSocketError(ws:WebSocket){try{ws.close(1011,'live-error');}catch{}}

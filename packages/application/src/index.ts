@@ -1122,7 +1122,7 @@ export class ConnectedApplication {
     if(typeof navigator!=='undefined'&&navigator.onLine===false)return{accepted:false,offline:true};
     return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/live/signal`,{method:'POST',body:JSON.stringify({type,payload})});
   }
-  liveWebSocketUrl():string{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');const base=new URL(this.baseUrl||location.origin,location.origin);base.protocol=base.protocol==='https:'?'wss:':'ws:';base.pathname=`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/live/connect`;base.search='';return base.toString();}
+  liveWebSocketUrl(after=0):string{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');const base=new URL(this.baseUrl||location.origin,location.origin);base.protocol=base.protocol==='https:'?'wss:':'ws:';base.pathname=`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/live/connect`;base.search='';if(Number(after)>0)base.searchParams.set('after',String(Math.trunc(Number(after))));return base.toString();}
 
   async amountExplanation(membershipId:string,rubricId?:string):Promise<unknown>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');const q=rubricId?'?rubricId='+encodeURIComponent(rubricId):'';return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/members/'+encodeURIComponent(membershipId)+'/amount-explanation'+q);}
   async searchDocuments(query:string,limit=20):Promise<Array<{recordId:string;title:string;score:number;snippet:string;source?:string;page?:string;version?:number}>>{if(!this.activeGroupId)return[];return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/documents/search?q='+encodeURIComponent(query)+'&limit='+String(limit));}

@@ -3,12 +3,12 @@ const value=id=>String(document.getElementById(id)?.value??'').trim();
 const row=(label,value)=>{const p=el('p');const b=el('strong',label+' : ');p.append(b,document.createTextNode(String(value??'—')));return p;};
 
 export function mountIdentityLiveUI({app,notify=()=>{},showError=console.error,conservationMode=false}){
-  let socket=null,lastSeq=0,lastSignalAt=0,activeGroup,reconnectTimer=null,heartbeatTimer=null,catchupTimer=null,lastPongAt=0,lastLiveMessageAt=0,reconnectAttempt=0,wantConnection=true,eventQueue=Promise.resolve();
+  let socket=null,lastSeq=0,lastSignalAt=0,activeGroup,reconnectTimer=null,reconnectAttempt=0,wantConnection=true,eventQueue=Promise.resolve();
   const passportRoot=document.getElementById('identityPassport');
-  if(!passportRoot)return{refresh:async()=>{},disconnect:()=>{}};
+  if(!passportRoot)return{refresh:async()=>{},publishSignal:(type,payload)=>app.publishLiveSignal?.(type,payload),disconnect:()=>{}};
   const dnaRoot=document.getElementById('conciergeDna'),liveRoot=document.getElementById('premiumLiveStatus'),eventsRoot=document.getElementById('liveEventList'),memoryRoot=document.getElementById('conciergeMemoryList');
 
-  const clearTimers=()=>{if(reconnectTimer){clearTimeout(reconnectTimer);reconnectTimer=null;}if(heartbeatTimer){clearInterval(heartbeatTimer);heartbeatTimer=null;}if(catchupTimer){clearInterval(catchupTimer);catchupTimer=null;}};
+  const clearTimers=()=>{if(reconnectTimer){clearTimeout(reconnectTimer);reconnectTimer=null;}};
   const closeSocket=(reason='group-change')=>{clearTimers();try{socket?.close(1000,reason);}catch{}socket=null;};
   const dispatchDurableEvent=event=>{try{window.dispatchEvent(new CustomEvent('eco:live-event',{detail:event}));}catch{}};
   const dispatchEphemeralSignal=signal=>{const at=Date.parse(String(signal?.at??''))||Date.now();lastSignalAt=Math.max(lastSignalAt,at);try{window.dispatchEvent(new CustomEvent('eco:live-signal',{detail:signal}));}catch{}};
@@ -22,12 +22,6 @@ export function mountIdentityLiveUI({app,notify=()=>{},showError=console.error,c
       if(!events.length||lastSeq>=latest||lastSeq===before)break;
     }
   };
-  const startCatchupTimer=()=>{if(catchupTimer)return;catchupTimer=setInterval(()=>{
-    if(document.visibilityState!=='visible'||navigator.onLine===false)return;
-    // Conservation fallback only while the push socket is unavailable.
-    // A healthy WebSocket must not be shadowed by REST polling.
-    if(!socket||socket.readyState!==WebSocket.OPEN){void catchUp().catch(()=>{});void catchUpSignals().catch(()=>{});}
-  },30000);};
   const scheduleReconnect=()=>{
     if(!wantConnection||!app.activeGroup()||navigator.onLine===false||reconnectTimer)return;
     const delay=Math.min(12000,750*(2**Math.min(reconnectAttempt,4)));reconnectAttempt+=1;
@@ -48,34 +42,38 @@ export function mountIdentityLiveUI({app,notify=()=>{},showError=console.error,c
     }
     lastSeq=Math.max(lastSeq,Number(event.seq??0));
   };
-  const connect=()=>{if(conservationMode){wantConnection=false;closeSocket('conservation-mode');if(liveRoot)liveRoot.replaceChildren(row('Live Ledger','GELÉ · mode gratuit'),row('Synchronisation','Manuelle / ponctuelle'),row('Réactivation','Code conservé pour le mode premium'));return;}
+  const publishSignal=async(type,payload={})=>{
+    if(!app.activeGroup()||navigator.onLine===false)return{accepted:false,offline:true};
+    if(socket&&socket.readyState===WebSocket.OPEN){
+      try{socket.send(JSON.stringify({type:'CLIENT_SIGNAL',eventType:type,payload}));return{accepted:true,transport:'websocket'};}catch{}
+    }
+    // One action => at most one HTTP fallback. No background polling.
+    try{return await app.publishLiveSignal?.(type,payload)??{accepted:false};}catch{return{accepted:false};}
+  };
+  const connect=()=>{
     if(!wantConnection||!app.activeGroup()||typeof WebSocket==='undefined'||navigator.onLine===false)return;
-    clearTimers();try{socket?.close(1000,'reconnect');}catch{}socket=null;activeGroup=app.activeGroup();startCatchupTimer();
+    clearTimers();try{socket?.close(1000,'reconnect');}catch{}socket=null;activeGroup=app.activeGroup();
     try{
-      socket=new WebSocket(app.liveWebSocketUrl());
+      socket=new WebSocket(app.liveWebSocketUrl(lastSeq));
       socket.onopen=()=>{
-        reconnectAttempt=0;lastPongAt=Date.now();lastLiveMessageAt=Date.now();
-        if(liveRoot)liveRoot.replaceChildren(row('Connexion','WebSocket connecté'),row('Groupe',activeGroup),row('Temps réel','ACTIF · reprise automatique'));
-        void catchUp().catch(()=>{});
-        void app.publishLiveSignal?.('PRESENCE',{state:'ONLINE',kind:'GROUP'}).catch(()=>{});
-        heartbeatTimer=setInterval(()=>{if(!socket||socket.readyState!==WebSocket.OPEN)return;if(Date.now()-lastPongAt>45000){try{socket.close(4000,'heartbeat-timeout');}catch{}return;}try{socket.send('PING');}catch{}},20000);
-        // WebSocket is the fast path. One catch-up on connect closes any gap;
-        // thereafter no periodic REST request runs while the socket is healthy.
-        void catchUpSignals().catch(()=>{});
+        reconnectAttempt=0;
+        if(liveRoot)liveRoot.replaceChildren(row('Connexion','WebSocket connecté'),row('Groupe',activeGroup),row('Temps réel',conservationMode?'PUSH ÉVÉNEMENTIEL · zéro polling D1':'ACTIF · push événementiel'));
       };
       socket.onmessage=e=>{
-        lastLiveMessageAt=Date.now();
         try{
           const msg=JSON.parse(String(e.data));
-          if(msg.type==='PONG'){lastPongAt=Date.now();return;}
           if(msg.type==='GROUP_LIVE_SIGNAL'&&msg.event){dispatchEphemeralSignal(msg.event);return;}
           if(msg.type==='GROUP_LIVE_EVENT'&&msg.event){
-            eventQueue=eventQueue.then(async()=>{const seq=Number(msg.event.seq??0);if(seq>lastSeq+1)await catchUp();if(seq>lastSeq){renderEvent(msg.event);dispatchDurableEvent(msg.event);}}).catch(()=>{});
+            eventQueue=eventQueue.then(async()=>{
+              const seq=Number(msg.event.seq??0);
+              if(seq>lastSeq+1){try{socket?.close(4001,'sequence-gap');}catch{}return;}
+              if(seq>lastSeq){renderEvent(msg.event);dispatchDurableEvent(msg.event);}
+            }).catch(()=>{});
           }
         }catch{}
       };
-      socket.onclose=()=>{socket=null;if(heartbeatTimer){clearInterval(heartbeatTimer);heartbeatTimer=null;}if(liveRoot)liveRoot.append(row('Canal','Déconnecté · reprise automatique'));scheduleReconnect();};
-      socket.onerror=()=>{if(liveRoot)liveRoot.append(row('WebSocket','Interruption détectée · outbox intacte'));};
+      socket.onclose=()=>{socket=null;if(liveRoot)liveRoot.append(row('Canal','Déconnecté · reconnexion sur événement réseau'));scheduleReconnect();};
+      socket.onerror=()=>{if(liveRoot)liveRoot.append(row('WebSocket','Interruption détectée · aucune boucle de polling'));};
     }catch(e){showError(e);scheduleReconnect();}
   };
 
@@ -129,25 +127,25 @@ export function mountIdentityLiveUI({app,notify=()=>{},showError=console.error,c
         preferenceStatus?.replaceChildren(row('Profil bêta','BETA_OPEN'),row('Profil first-party','En attente de synchronisation'));
       }
       if(conservationMode){
-        wantConnection=false;closeSocket('conservation-mode');liveRoot?.replaceChildren(row('Live Ledger','GELÉ · mode gratuit'),row('Coût serveur','Aucun polling Live automatique'),row('Données','Outbox offline + Actualiser lorsque le quota revient'));
+        liveRoot?.replaceChildren(row('Live Ledger','PUSH ÉVÉNEMENTIEL · mode gratuit'),row('Coût D1','Aucun polling automatique'),row('Déclencheurs','frappe · brouillon · validation · reconnexion'));
+        if(!socket||socket.readyState>1)connect();
       }else try{
         const health=await app.liveHealth();liveRoot?.replaceChildren(row('Live Ledger',health.enabled?'ACTIF':'INACTIF'),row('Objets connectés',health.webSockets??0),row('Dernière séquence',health.latest??0),row('Code groupe',health.groupCode??passport.publicCode));
         if(health.enabled&&(!socket||socket.readyState>1))connect();
-        if(health.enabled){const catchup=await app.liveEvents(lastSeq);for(const event of catchup.events??[])renderEvent(event);}
-      }catch(e){liveRoot?.replaceChildren(row('Live Ledger','Non disponible sur ce déploiement'),row('Fallback','Outbox offline + actualisation normale'));}      
+      }catch(e){liveRoot?.replaceChildren(row('Live Ledger','Non disponible sur ce déploiement'),row('Fallback','Outbox offline + actualisation manuelle'));}      
       await renderMemories();
       await renderFounderObservatory();
     }catch(e){showError(e);}
   };
 
-  window.addEventListener('online',()=>{if(!conservationMode&&wantConnection)connect();});
+  window.addEventListener('online',()=>{if(wantConnection)connect();});
   window.addEventListener('offline',()=>{closeSocket('offline');if(liveRoot)liveRoot.append(row('Réseau','Hors ligne · outbox active'));});
-  document.addEventListener('visibilitychange',()=>{if(!conservationMode&&document.visibilityState==='visible'&&wantConnection){if(!socket||socket.readyState!==WebSocket.OPEN)connect();else{void catchUp().catch(()=>{});void catchUpSignals().catch(()=>{});}}});
+  document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&wantConnection&&(!socket||socket.readyState!==WebSocket.OPEN))connect();});
   document.getElementById('refreshPassportBtn')?.addEventListener('click',()=>void (async()=>{try{await app.groupIdentityPassport(true);notify('Passeport identitaire rafraîchi.');await refresh();}catch(e){showError(e);}})());
   document.getElementById('conciergeMemoryForm')?.addEventListener('submit',e=>{e.preventDefault();void (async()=>{try{
     await app.learnConciergeMemory({category:value('conciergeMemoryCategory'),key:value('conciergeMemoryKey'),value:value('conciergeMemoryValue'),sourceRef:value('conciergeMemorySource'),confidence:Number(value('conciergeMemoryConfidence')||0),privacy:value('conciergeMemoryPrivacy'),visibility:value('conciergeMemoryVisibility')});
     notify('Nouvel apprentissage ajouté à la mémoire du groupe.');document.getElementById('conciergeMemoryValue').value='';document.getElementById('conciergeMemorySource').value='';await refresh();
   }catch(err){showError(err);}})();});
 
-  return{refresh,disconnect:()=>{wantConnection=false;closeSocket('manual');},reconnect:()=>{if(conservationMode)return;wantConnection=true;connect();}};
+  return{refresh,publishSignal,disconnect:()=>{wantConnection=false;closeSocket('manual');},reconnect:()=>{wantConnection=true;connect();}};
 }
