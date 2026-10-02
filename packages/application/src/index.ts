@@ -222,8 +222,9 @@ export class ConnectedApplication {
     }
     const body=await response.json().catch(()=>({error:`HTTP_${response.status}`}));
     if(!response.ok){
-      const transient=[429,503,504].includes(response.status);
-      if(transient)this.markServerBudgetBlocked(response.status);
+      const transient=[429,503,504].includes(response.status),errorCode=String((body as any)?.error??'');
+      const quotaSignal=response.status===429||/(?:\bd1\b.{0,80}(?:quota|limit|exceed)|(?:quota|daily\s+limit|limit\s+exceed|too\s+many\s+(?:queries|requests)).{0,80}\bd1\b|quota\s+exceeded|daily\s+quota)/i.test(errorCode);
+      if(quotaSignal)this.markServerBudgetBlocked(response.status===429?429:503);
       if(transient&&cacheable&&IndexedDbReadSnapshotAdapter.supported()){
         try{const snapshot=await this.readSnapshots.get<T>(this.offlineReadKey(path));if(snapshot){this.announceOfflineSnapshot(path,snapshot.updatedAt);return structuredClone(snapshot.body);}}catch{}
       }
