@@ -222,7 +222,7 @@ const completionUI = mountCompletionUI({
 const advancedUI = mountAdvancedUI({
     app, notify: toast, showError: fail, getMembers: () => members, fmt, translate: (fr,en) => tx(fr,en), isManager
 });
-const identityLiveUI = mountIdentityLiveUI({ app, notify: toast, showError: fail });
+const identityLiveUI = mountIdentityLiveUI({ app, notify: toast, showError: fail, conservationMode: FREE_CONSERVATION_MODE });
 const communityShopUI = mountCommunityShopUI({ app, notify: toast, showError: fail, isManager, fmt, actorName: actorDisplayName });
 const miscRubricUI = mountMiscRubricUI({ app, notify: toast, showError: fail, getMembers: () => members, getMeetings: () => meetings, isManager, fmt });
 const pairingUI = mountPairingUI({ app, notify: toast, showError: fail, getMembers: () => members, isManager, afterMembershipChanged: async groupId => { await renderGroups(); if(groupId){ app.selectGroup(groupId); await refreshGroupContext(); } } });
@@ -348,7 +348,11 @@ const blueprintExecutableUI = mountBlueprintExecutableUI({app,getGroups:()=>grou
 mountCommunityBlueprintPresets();
 const financialLabUI = mountFinancialLabUI({app,notify:toast,showError:fail});
 const resilienceUI = mountResilienceUI({app,notify:toast,showError:fail});
-const renderConnectivity = () => { const online = navigator.onLine; const e = $('#connectivity'); e.textContent = `● ${online ? tx('En ligne','Online') : tx('Hors ligne','Offline')}`; e.className = `pill ${online ? 'online' : 'offline'}`; app.setConnectivity(online ? 'online' : 'offline'); };
+const renderConnectivity = () => {
+    const online=navigator.onLine,budget=app.serverBudgetState?.(),paused=Boolean(budget?.blocked),e=$('#connectivity');
+    e.textContent=paused?tx('● Mode conservation · serveur en pause','● Conservation mode · server paused'):`● ${online ? tx('En ligne','Online') : tx('Hors ligne','Offline')}`;
+    e.className=`pill ${online&&!paused?'online':'offline'}`;app.setConnectivity(!online?'offline':paused?'degraded':'online');
+};
 let lastOfflineSnapshotNotice=0;
 window.addEventListener('eco:offline-snapshot-used',event=>{
     const detail=event instanceof CustomEvent?event.detail:undefined,stamp=detail?.updatedAt?new Date(detail.updatedAt):undefined,e=$('#connectivity');
@@ -903,14 +907,15 @@ const makeFinancialEntryCell=({member,rubric,meetingId,editable=true})=>{
     const input=document.createElement('input');input.type='number';input.min='0';input.step='1';input.inputMode='numeric';input.className='cell-target-input';input.placeholder=current>0?tx('Modifier…','Change…'):tx('Saisir…','Enter…');input.setAttribute('aria-label',tx('Nouvelle valeur totale','New total value'));
     const restoredDraft=financialCellDrafts.get(persistentCellKey);if(restoredDraft!==undefined)input.value=String(restoredDraft);
     let typingTimer=0,lastTypingSignal=0,draftHeartbeat=0;
+    const liveSignalsEnabled=!FREE_CONSERVATION_MODE;
     const signalPayload=()=>({kind:'FINANCIAL_CELL',meetingId,membershipId:member.id,rubricId:rubric.id});
-    const stopTyping=()=>{if(typingTimer){clearTimeout(typingTimer);typingTimer=0;}void app.publishLiveSignal?.('TYPING_STOP',signalPayload()).catch(()=>{});};
-    const publishDraftPresence=()=>{if(input.value.trim())void app.publishLiveSignal?.('FINANCIAL_DRAFT',signalPayload()).catch(()=>{});};
-    const stopDraftHeartbeat=(publishClear=false)=>{if(draftHeartbeat){clearInterval(draftHeartbeat);draftHeartbeat=0;}if(publishClear)void app.publishLiveSignal?.('FINANCIAL_DRAFT_CLEAR',signalPayload()).catch(()=>{});};
-    const ensureDraftHeartbeat=()=>{if(!input.value.trim()){stopDraftHeartbeat(true);return;}publishDraftPresence();if(draftHeartbeat)return;draftHeartbeat=setInterval(()=>{if(!input.isConnected||!input.value.trim()){stopDraftHeartbeat(Boolean(input.isConnected));return;}publishDraftPresence();},4500);};
-    input.addEventListener('focus',()=>{void app.publishLiveSignal?.('CELL_FOCUS',signalPayload()).catch(()=>{});if(input.value.trim())ensureDraftHeartbeat();});
-    input.addEventListener('input',()=>{saveFinancialCellDraft(persistentCellKey,input.value);if(input.value.trim())ensureDraftHeartbeat();else stopDraftHeartbeat(true);const now=Date.now();if(now-lastTypingSignal>=800){lastTypingSignal=now;void app.publishLiveSignal?.('TYPING',signalPayload()).catch(()=>{});}if(typingTimer)clearTimeout(typingTimer);typingTimer=setTimeout(stopTyping,2500);});
-    input.addEventListener('blur',()=>{stopTyping();if(input.value.trim())publishDraftPresence();void app.publishLiveSignal?.('CELL_BLUR',signalPayload()).catch(()=>{});});
+    const stopTyping=()=>{if(typingTimer){clearTimeout(typingTimer);typingTimer=0;}if(liveSignalsEnabled)void app.publishLiveSignal?.('TYPING_STOP',signalPayload()).catch(()=>{});};
+    const publishDraftPresence=()=>{if(liveSignalsEnabled&&input.value.trim())void app.publishLiveSignal?.('FINANCIAL_DRAFT',signalPayload()).catch(()=>{});};
+    const stopDraftHeartbeat=(publishClear=false)=>{if(draftHeartbeat){clearInterval(draftHeartbeat);draftHeartbeat=0;}if(liveSignalsEnabled&&publishClear)void app.publishLiveSignal?.('FINANCIAL_DRAFT_CLEAR',signalPayload()).catch(()=>{});};
+    const ensureDraftHeartbeat=()=>{if(!liveSignalsEnabled)return;if(!input.value.trim()){stopDraftHeartbeat(true);return;}publishDraftPresence();if(draftHeartbeat)return;draftHeartbeat=setInterval(()=>{if(!input.isConnected||!input.value.trim()){stopDraftHeartbeat(Boolean(input.isConnected));return;}publishDraftPresence();},4500);};
+    input.addEventListener('focus',()=>{if(liveSignalsEnabled)void app.publishLiveSignal?.('CELL_FOCUS',signalPayload()).catch(()=>{});if(input.value.trim())ensureDraftHeartbeat();});
+    input.addEventListener('input',()=>{saveFinancialCellDraft(persistentCellKey,input.value);if(input.value.trim())ensureDraftHeartbeat();else stopDraftHeartbeat(true);if(liveSignalsEnabled){const now=Date.now();if(now-lastTypingSignal>=800){lastTypingSignal=now;void app.publishLiveSignal?.('TYPING',signalPayload()).catch(()=>{});}if(typingTimer)clearTimeout(typingTimer);typingTimer=setTimeout(stopTyping,2500);}});
+    input.addEventListener('blur',()=>{stopTyping();if(input.value.trim())publishDraftPresence();if(liveSignalsEnabled)void app.publishLiveSignal?.('CELL_BLUR',signalPayload()).catch(()=>{});});
     const validate=document.createElement('button');validate.type='button';validate.className='cell-validate';validate.textContent='✓';validate.title=tx('Valider la valeur totale','Confirm total value');validate.setAttribute('aria-label',tx('Valider la saisie','Confirm entry'));
     const liveLine=document.createElement('small');liveLine.className='cell-live-presence';liveLine.setAttribute('aria-live','polite');liveLine.hidden=true;
     const stateLine=document.createElement('small');stateLine.className='cell-save-state';stateLine.setAttribute('aria-live','polite');stateLine.hidden=true;
@@ -1618,7 +1623,10 @@ const refreshGroupContext = async () => {
     if (active) {
         await renderMembers();
         await renderMeetings();
-        if(manage)await refreshOptionalOfflineSafe('official-loan-rubric',()=>app.ensureOfficialLoanRubric());
+        if(manage){
+          await refreshOptionalOfflineSafe('official-loan-rubric',()=>app.ensureOfficialLoanRubric());
+          await refreshOptionalOfflineSafe('official-repayment-rubric',()=>app.ensureOfficialRepaymentRubric());
+        }
         await renderLivingRules();
         await refreshOptionalOfflineSafe('group-home',()=>groupHomeUI.refresh());
         await refreshOptionalOfflineSafe('sessions-home',()=>sessionsUI.refresh());
@@ -2009,6 +2017,8 @@ $('#syncBtn').addEventListener('click', async () => { if (!navigator.onLine) {
 } try{const result=await app.syncOutbox();renderOutbox();if(isManager())await renderLedger();toast(result.some(x=>['FAILED','CONFLICT','PENDING'].includes(x.status))?'Certaines opérations restent à vérifier dans la file.':'Synchronisation confirmée.');}catch(e){fail(e);} });
 $('#refreshBtn').addEventListener('click', async () => { try {
     clearFail();
+    app.forceServerRetry?.();
+    renderConnectivity();
     await refreshAll();
     toast('Données actualisées.');
 }

@@ -2582,6 +2582,13 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
         await markApplied();
         return json({accepted:true,stored:true,rubric},200,cors);
       }
+      if(item.type==='RUBRIC_RESTORE_V1'){
+        const p=item.payload,groupId=String(p.groupId??''),rubricId=String(p.rubricId??'');await requireGroup(groupId,true);
+        const trash=await listTrash(groupId),itemToRestore=trash.find(x=>String(x.data?.kind??'')==='RUBRIC'&&String(x.data?.entityId??'')===rubricId&&x.status==='ACTIVE');
+        if(itemToRestore)await restoreTrash(groupId,itemToRestore.id);
+        else{const rubric=await repo.getRubricDefinition(ctx.tenantId,groupId,rubricId);if(!rubric)throw Error('RUBRIC_NOT_FOUND');if(rubric.status==='ARCHIVED')await repo.saveRubricDefinition({...rubric,status:'ACTIVE',version:Number(rubric.version??0)+1,updatedAt:new Date().toISOString()});}
+        await markApplied();return json({accepted:true,stored:true,rubricId},200,cors);
+      }
       if(item.type==='RUBRIC_ACTIVITY_PLAN_V1'){
         const p=item.payload,groupId=String(p.groupId??'');await requireGroup(groupId,true);
         const rubric=await rubrics.updateActivityPlan(ctx.tenantId,groupId,String(p.rubricId??''),p.plan);
