@@ -78,7 +78,9 @@ test('soft financial patch preserves queued offline state and skips server refre
   const submit=main.slice(main.indexOf('const submitFinancialCellElement'),main.indexOf('const makeFinancialEntryCell'));
   assert.match(submit,/const preservePending=Boolean\(result\?\.status==='QUEUED_SYNC'\|\|result\?\.queued\)/);
   assert.match(submit,/patchFinancialDomCell\(\{meetingId,membershipId,rubricId,amount:displayTarget,cellVersion:result\?\.cellVersion,preservePending\}\)/);
-  assert.match(submit,/if\(!preservePending\)void pollCanonicalFinancialSnapshot\(\)/);
+  assert.match(submit,/if\(!preservePending&&!FREE_CONSERVATION_MODE\)void pollCanonicalFinancialSnapshot\(\)/);
+  assert.match(main,/FREE_CONSERVATION_MODE=true/);
+  assert.doesNotMatch(submit,/if\(!preservePending\)void pollCanonicalFinancialSnapshot\(\)/);
   assert.doesNotMatch(submit,/if\(!preservePending\)void refreshFinancialProjectionSilently/);
   assert.match(submit,/detail:\{meetingId,membershipId,rubricId,amount:displayTarget,cellVersion:result\?\.cellVersion,soft:true,preservePending\}/);
 });
