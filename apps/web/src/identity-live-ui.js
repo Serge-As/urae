@@ -2,7 +2,7 @@ const el=(tag,text,className)=>{const e=document.createElement(tag);if(text!==un
 const value=id=>String(document.getElementById(id)?.value??'').trim();
 const row=(label,value)=>{const p=el('p');const b=el('strong',label+' : ');p.append(b,document.createTextNode(String(value??'—')));return p;};
 
-export function mountIdentityLiveUI({app,notify=()=>{},showError=console.error}){
+export function mountIdentityLiveUI({app,notify=()=>{},showError=console.error,conservationMode=false}){
   let socket=null,lastSeq=0,lastSignalAt=0,activeGroup,reconnectTimer=null,heartbeatTimer=null,catchupTimer=null,lastPongAt=0,lastLiveMessageAt=0,reconnectAttempt=0,wantConnection=true,eventQueue=Promise.resolve();
   const passportRoot=document.getElementById('identityPassport');
   if(!passportRoot)return{refresh:async()=>{},disconnect:()=>{}};
@@ -48,7 +48,7 @@ export function mountIdentityLiveUI({app,notify=()=>{},showError=console.error})
     }
     lastSeq=Math.max(lastSeq,Number(event.seq??0));
   };
-  const connect=()=>{
+  const connect=()=>{if(conservationMode){wantConnection=false;closeSocket('conservation-mode');if(liveRoot)liveRoot.replaceChildren(row('Live Ledger','GELÉ · mode gratuit'),row('Synchronisation','Manuelle / ponctuelle'),row('Réactivation','Code conservé pour le mode premium'));return;}
     if(!wantConnection||!app.activeGroup()||typeof WebSocket==='undefined'||navigator.onLine===false)return;
     clearTimers();try{socket?.close(1000,'reconnect');}catch{}socket=null;activeGroup=app.activeGroup();startCatchupTimer();
     try{
@@ -128,7 +128,9 @@ export function mountIdentityLiveUI({app,notify=()=>{},showError=console.error})
       }catch(e){
         preferenceStatus?.replaceChildren(row('Profil bêta','BETA_OPEN'),row('Profil first-party','En attente de synchronisation'));
       }
-      try{
+      if(conservationMode){
+        wantConnection=false;closeSocket('conservation-mode');liveRoot?.replaceChildren(row('Live Ledger','GELÉ · mode gratuit'),row('Coût serveur','Aucun polling Live automatique'),row('Données','Outbox offline + Actualiser lorsque le quota revient'));
+      }else try{
         const health=await app.liveHealth();liveRoot?.replaceChildren(row('Live Ledger',health.enabled?'ACTIF':'INACTIF'),row('Objets connectés',health.webSockets??0),row('Dernière séquence',health.latest??0),row('Code groupe',health.groupCode??passport.publicCode));
         if(health.enabled&&(!socket||socket.readyState>1))connect();
         if(health.enabled){const catchup=await app.liveEvents(lastSeq);for(const event of catchup.events??[])renderEvent(event);}
@@ -138,14 +140,14 @@ export function mountIdentityLiveUI({app,notify=()=>{},showError=console.error})
     }catch(e){showError(e);}
   };
 
-  window.addEventListener('online',()=>{if(wantConnection)connect();});
+  window.addEventListener('online',()=>{if(!conservationMode&&wantConnection)connect();});
   window.addEventListener('offline',()=>{closeSocket('offline');if(liveRoot)liveRoot.append(row('Réseau','Hors ligne · outbox active'));});
-  document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&wantConnection){if(!socket||socket.readyState!==WebSocket.OPEN)connect();else{void catchUp().catch(()=>{});void catchUpSignals().catch(()=>{});}}});
+  document.addEventListener('visibilitychange',()=>{if(!conservationMode&&document.visibilityState==='visible'&&wantConnection){if(!socket||socket.readyState!==WebSocket.OPEN)connect();else{void catchUp().catch(()=>{});void catchUpSignals().catch(()=>{});}}});
   document.getElementById('refreshPassportBtn')?.addEventListener('click',()=>void (async()=>{try{await app.groupIdentityPassport(true);notify('Passeport identitaire rafraîchi.');await refresh();}catch(e){showError(e);}})());
   document.getElementById('conciergeMemoryForm')?.addEventListener('submit',e=>{e.preventDefault();void (async()=>{try{
     await app.learnConciergeMemory({category:value('conciergeMemoryCategory'),key:value('conciergeMemoryKey'),value:value('conciergeMemoryValue'),sourceRef:value('conciergeMemorySource'),confidence:Number(value('conciergeMemoryConfidence')||0),privacy:value('conciergeMemoryPrivacy'),visibility:value('conciergeMemoryVisibility')});
     notify('Nouvel apprentissage ajouté à la mémoire du groupe.');document.getElementById('conciergeMemoryValue').value='';document.getElementById('conciergeMemorySource').value='';await refresh();
   }catch(err){showError(err);}})();});
 
-  return{refresh,disconnect:()=>{wantConnection=false;closeSocket('manual');},reconnect:()=>{wantConnection=true;connect();}};
+  return{refresh,disconnect:()=>{wantConnection=false;closeSocket('manual');},reconnect:()=>{if(conservationMode)return;wantConnection=true;connect();}};
 }

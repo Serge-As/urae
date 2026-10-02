@@ -73,6 +73,8 @@ export class ConnectedApplication {
   private readonly identityMigration = new IndexedDbIdentityMigrationJournal();
   private readonly sovereign = new IndexedDbSovereignStore();
   private usingOfflineSnapshot=false;
+  private serverBudgetBlockedUntil=0;
+  private serverBudgetReason='';
   private actorId:string; private tenantId:string; private displayName:string; private locale:string; private activeGroupId?:string;
   private readonly baseUrl:string;
   private groupTenants=new Map<string,string>();
@@ -80,7 +82,10 @@ export class ConnectedApplication {
 
   constructor(options:ConnectedApplicationOptions={}){
     this.baseUrl=options.baseUrl??''; this.actorId=options.actorId??'user_founder'; this.tenantId=options.tenantId??'tenant_local'; this.displayName=options.displayName??'Local Manager';
-    let storedLocale:string|undefined;try{storedLocale=localStorage.getItem('tontine.locale')??undefined;this.activeGroupId=localStorage.getItem('tontine.activeGroupId')??undefined;}catch{}
+    let storedLocale:string|undefined;try{
+      storedLocale=localStorage.getItem('tontine.locale')??undefined;this.activeGroupId=localStorage.getItem('tontine.activeGroupId')??undefined;
+      const budget=JSON.parse(localStorage.getItem('eco.serverBudgetBlock.v1')||'null');if(budget&&Number(budget.until)>Date.now()){this.serverBudgetBlockedUntil=Number(budget.until);this.serverBudgetReason=String(budget.reason??'SERVER_BUDGET');}
+    }catch{}
     this.locale=options.locale??storedLocale??'fr';
   }
 
@@ -100,6 +105,18 @@ export class ConnectedApplication {
   }
 
   private headers(extra:Record<string,string>={}):HeadersInit{return{'content-type':'application/json','accept-language':this.locale,'x-active-group-id':this.activeGroupId??'','x-timezone':'Africa/Douala',...extra};}
+  private serverBudgetBlocked():boolean{
+    if(this.serverBudgetBlockedUntil<=Date.now()){if(this.serverBudgetBlockedUntil){this.serverBudgetBlockedUntil=0;this.serverBudgetReason='';try{localStorage.removeItem('eco.serverBudgetBlock.v1');}catch{}}return false;}
+    return true;
+  }
+  private markServerBudgetBlocked(status:number):void{
+    const now=new Date(),until=status===429?Date.UTC(now.getUTCFullYear(),now.getUTCMonth(),now.getUTCDate()+1,0,5,0):Date.now()+(status===503?15:5)*60_000;
+    this.serverBudgetBlockedUntil=Math.max(this.serverBudgetBlockedUntil,until);this.serverBudgetReason='HTTP_'+status;
+    try{localStorage.setItem('eco.serverBudgetBlock.v1',JSON.stringify({until:this.serverBudgetBlockedUntil,reason:this.serverBudgetReason,at:new Date().toISOString()}));}catch{}
+    if(typeof window!=='undefined'&&typeof CustomEvent!=='undefined')window.dispatchEvent(new CustomEvent('eco:server-budget-blocked',{detail:{until:this.serverBudgetBlockedUntil,reason:this.serverBudgetReason}}));
+  }
+  forceServerRetry():void{this.serverBudgetBlockedUntil=0;this.serverBudgetReason='';try{localStorage.removeItem('eco.serverBudgetBlock.v1');}catch{}this.usingOfflineSnapshot=false;}
+  serverBudgetState():{blocked:boolean;until:number;reason:string}{return{blocked:this.serverBudgetBlocked(),until:this.serverBudgetBlockedUntil,reason:this.serverBudgetReason};}
   private offlineReadAllowed(path:string):boolean{
     // Actor-scoped IndexedDB snapshots are safe for GET projections. Keeping this
     // generic prevents a newly-added read screen from becoming an accidental
@@ -121,8 +138,9 @@ export class ConnectedApplication {
     this.usingOfflineSnapshot=true;
     if(typeof window!=='undefined'&&typeof CustomEvent!=='undefined')window.dispatchEvent(new CustomEvent('eco:offline-snapshot-used',{detail:{path,updatedAt}}));
   }
-  private isOffline():boolean{return this.usingOfflineSnapshot||(typeof navigator!=='undefined'&&navigator.onLine===false);}
+  private isOffline():boolean{return this.serverBudgetBlocked()||this.usingOfflineSnapshot||(typeof navigator!=='undefined'&&navigator.onLine===false);}
   private async canAttemptCriticalWrite():Promise<boolean>{
+    if(this.serverBudgetBlocked())return false;
     if(typeof navigator!=='undefined'&&navigator.onLine===false)return false;
     if(!this.usingOfflineSnapshot)return true;
     // A single cached GET must never trap later financial writes in offline mode.
@@ -187,6 +205,12 @@ export class ConnectedApplication {
     for(const [k,v] of new Headers(init.headers??{}))headers.set(k,v);
     if(typeof FormData!=='undefined'&&init.body instanceof FormData)headers.delete('content-type');
     const method=String(init.method??'GET').toUpperCase(),cacheable=method==='GET'&&this.offlineReadAllowed(path);
+    if(this.serverBudgetBlocked()){
+      if(cacheable&&IndexedDbReadSnapshotAdapter.supported()){
+        try{const snapshot=await this.readSnapshots.get<T>(this.offlineReadKey(path));if(snapshot){this.announceOfflineSnapshot(path,snapshot.updatedAt);return structuredClone(snapshot.body);}}catch{}
+      }
+      throw new Error('NETWORK_UNAVAILABLE');
+    }
     let response:Response;
     try{
       response=await fetch(`${this.baseUrl}${path}`,{...init,headers});
@@ -199,6 +223,7 @@ export class ConnectedApplication {
     const body=await response.json().catch(()=>({error:`HTTP_${response.status}`}));
     if(!response.ok){
       const transient=[429,503,504].includes(response.status);
+      if(transient)this.markServerBudgetBlocked(response.status);
       if(transient&&cacheable&&IndexedDbReadSnapshotAdapter.supported()){
         try{const snapshot=await this.readSnapshots.get<T>(this.offlineReadKey(path));if(snapshot){this.announceOfflineSnapshot(path,snapshot.updatedAt);return structuredClone(snapshot.body);}}catch{}
       }
@@ -450,7 +475,18 @@ export class ConnectedApplication {
     return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/members/'+encodeURIComponent(membershipId)+'/financial-history?'+p.toString());
   }
   async memberStatement(membershipId:string):Promise<import('../../contracts/src/index.js').MemberStatement>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/members/${encodeURIComponent(membershipId)}/statement`);}
-  async groupMe():Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/me`);}
+  async groupMe():Promise<any>{
+    if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');
+    const path=`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/me`,key='eco.groupMe.v1:'+this.actorId+':'+this.activeGroupId;
+    try{
+      const result=await this.request<any>(path);
+      if(result?.membership||result?.isManager){try{localStorage.setItem(key,JSON.stringify({...result,savedAt:new Date().toISOString()}));}catch{}}
+      return result;
+    }catch(error){
+      try{const saved=JSON.parse(localStorage.getItem(key)||'null');if(saved&&(saved.membership||saved.isManager))return saved;}catch{}
+      const cached=await this.cached<any>(path);if(cached)return cached;throw error;
+    }
+  }
   async globalRecap():Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/recap/global`);}
   async memberOperationalSheet(membershipId:string):Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/members/${encodeURIComponent(membershipId)}/operational-sheet`);}
   async authenticate(mode:'login'|'register',input:{username:string;password:string;displayName?:string;rememberDevice?:boolean}):Promise<void>{
@@ -549,6 +585,30 @@ export class ConnectedApplication {
     }
     return this.request(`/api/v1/groups/${encodeURIComponent(groupId)}/rubrics`,{method:'POST',body:JSON.stringify({id,name:'Prêt',aliases:['Prêts','Loan'],purpose:'Prêts aux membres : capital, intérêts et remboursements.',facets,source:'GROUP_CUSTOM',operatingModel})});
   }
+  async ensureOfficialRepaymentRubric():Promise<RubricDefinition>{
+    if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');
+    const groupId=this.activeGroupId,rows=await this.listRubrics(),normalize=(v:string)=>v.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim();
+    const existing=rows.find(r=>String((r.facets as any)?.custom?.systemKey??'').toUpperCase()==='REPAYMENT'||['remboursement','remboursements','repayment','repayments'].includes(normalize(r.name))||(r.aliases??[]).some(a=>['remboursement','remboursements','repayment','repayments'].includes(normalize(String(a)))));
+    if(existing&&existing.status!=='ARCHIVED')return existing;
+    const path=`/api/v1/groups/${encodeURIComponent(groupId)}/rubrics`;
+    if(existing&&existing.status==='ARCHIVED'){
+      if(this.isOffline()){
+        const restored={...existing,status:'ACTIVE' as const,version:Number(existing.version??0)+1,updatedAt:new Date().toISOString()};
+        await this.saveCached(path,rows.map(r=>r.id===existing.id?restored:r));await this.queueLocal('RUBRIC_RESTORE_V1',{groupId,rubricId:existing.id},'restore-repayment:'+groupId+':'+existing.id);return restored;
+      }
+      const trash=await this.trashItems().catch(()=>[]),item=trash.find((x:any)=>String(x.data?.kind??'')==='RUBRIC'&&String(x.data?.entityId??'')===existing.id&&x.status==='ACTIVE');
+      if(item){await this.restoreTrashItem(item.id);const refreshed=await this.listRubrics();return refreshed.find(r=>r.id===existing.id)??existing;}
+    }
+    const id='rubric_core_repayment_'+groupId,stamp=new Date().toISOString(),facets:any=starterRubricFacetsForName('Remboursements')??{direction:'INFLOW',obligation:'EVENT_DRIVEN',medium:'CASH',refundability:'NOT_APPLICABLE',replenishment:'EVENT_DRIVEN',interestMode:'NONE',eligibilityMode:'RULE_BASED',fundCode:'LOAN_RECEIVABLE',custom:{systemKey:'REPAYMENT',repaymentComponent:'PRINCIPAL'}};
+    facets.custom={...(facets.custom??{}),systemKey:'REPAYMENT',repaymentComponent:String(facets.custom?.repaymentComponent??'PRINCIPAL')};
+    const operatingModel:RubricOperatingModel={writtenRule:'Les remboursements de prêts sont des entrées du groupe distinctes du capital prêté et des intérêts encaissés.',observedPractice:'Le principal remboursé et les intérêts peuvent être saisis séparément selon les règles du groupe.',effectiveRuleSummary:'Remboursement positif ; imputation principal/intérêt explicite ; aucune fusion opaque.',ruleRealityStatus:'ALIGNED',targetMode:'OPEN',mandatoryForAbsentees:false,shortfallHandling:'LEAVE_SHORT',payoutMode:'COLLECTED_ONLY',immediateFullPayout:false};
+    if(this.isOffline()){
+      const rubric:RubricDefinition={id,tenantId:this.tenantId,groupId,name:'Remboursements',aliases:['Remboursement','Repayments'],purpose:'Remboursements de capital des prêts ; les intérêts restent identifiables séparément.',facets,operatingModel:structuredClone(operatingModel),status:'ACTIVE',source:'GROUP_CUSTOM',version:1,createdAt:stamp,updatedAt:stamp};
+      await this.patchCachedArray<RubricDefinition>(path,items=>items.some(x=>x.id===id)?items:[...items,rubric]);await this.queueLocal('RUBRIC_CREATE_V1',{groupId,id,name:rubric.name,aliases:rubric.aliases,purpose:rubric.purpose,facets,source:'GROUP_CUSTOM',operatingModel},'ensure-repayment-rubric:'+groupId);return rubric;
+    }
+    return this.request(path,{method:'POST',body:JSON.stringify({id,name:'Remboursements',aliases:['Remboursement','Repayments'],purpose:'Remboursements de capital des prêts ; les intérêts restent identifiables séparément.',facets,source:'GROUP_CUSTOM',operatingModel})});
+  }
+
   async createRubric(input:{name:string;writtenRule?:string;observedPractice?:string;model:RubricOperatingModel}):Promise<RubricDefinition>{
     if(!this.activeGroupId)throw new Error('ACTIVE_GROUP_REQUIRED');
     const facets=starterRubricFacetsForName(input.name)??{direction:'BIDIRECTIONAL',obligation:'CUSTOM',medium:'CASH',refundability:'CONDITIONAL',replenishment:'CUSTOM',interestMode:'NONE',eligibilityMode:'RULE_BASED'} as const;
@@ -1193,8 +1253,17 @@ export class ConnectedApplication {
     const repayments=(eventPrincipal>0?eventPayments.filter((x:any)=>x.principalPaid>0).map((x:any)=>({memberId:x.memberId,meetingId:x.meetingId,loanId:x.loanId,amount:x.principalPaid})):normalizedPeriods.filter((x:any)=>x.principalPaid>0).map((x:any)=>({memberId:x.memberId,meetingId:x.meetingId,loanId:x.loanId,amount:x.principalPaid})));
     const interestReceipts=(eventInterest>0?eventPayments.filter((x:any)=>x.interestPaid>0).map((x:any)=>({memberId:x.memberId,meetingId:x.meetingId,loanId:x.loanId,amount:x.interestPaid})):normalizedPeriods.filter((x:any)=>x.interestPaid>0).map((x:any)=>({memberId:x.memberId,meetingId:x.meetingId,loanId:x.loanId,amount:x.interestPaid})));
     const recoveredInterestFinal=Math.max(recoveredInterest,eventInterest,periodInterest);
-    const localLoanDebts=(loanRows as any[]).filter((x:any)=>['DISBURSED','REPAYING'].includes(String(x.data?.completionState??''))).map((x:any)=>{const rubric=rubricMap.get(String(x.data?.rubricId??'')),principal=Math.max(0,Number(x.data?.outstandingPrincipal??0)),interest=Math.max(0,Number(x.data?.unpaidInterest??0)),rate=Number(x.data?.rateBasisPointsPerPeriod??rubric?.policies?.loan?.rateBasisPointsPerPeriod??0),nextInterestProjected=rate>0?Math.round(principal*rate/10000):0;return{loanId:x.id,memberId:String(x.data?.borrowerMembershipId??''),rubricId:String(x.data?.rubricId??''),title:x.title,principal,interest,nextInterestProjected,totalDue:principal+interest,totalIncludingNextInterest:principal+interest+nextInterestProjected,rateBasisPointsPerPeriod:rate,paymentPriority:String(x.data?.paymentPriority??rubric?.policies?.loan?.paymentPriority??'CAPITAL_FIRST'),interestTiming:String(x.data?.interestTiming??rubric?.policies?.loan?.interestTiming??'NEXT_SESSION_DUE'),lastAccruedInterest:Number(x.data?.lastAccruedInterest??0),interestAppliesToMeetingId:String(x.data?.interestAppliesToMeetingId??'')||null,interestAppliesToLabel:String(x.data?.interestAppliesToLabel??'')||null,interestSourceClosedMeetingId:String(x.data?.interestSourceClosedMeetingId??'')||null};}).filter((x:any)=>x.principal>0||x.interest>0||x.nextInterestProjected>0);
-    const loanDebtById=new Map<string,any>();for(const debt of (cached?.loanDebts??[]))if(debt?.loanId)loanDebtById.set(String(debt.loanId),debt);for(const debt of localLoanDebts)if(debt?.loanId)loanDebtById.set(String(debt.loanId),debt);const loanDebts=[...loanDebtById.values()];
+    const meetingIndex=new Map(ordered.map((m,i)=>[m.id,i])),loanSheetEvents=(sheetEvents as any[]).filter((x:any)=>{const d=x.data??{},rubric=rubricMap.get(String(d.rubricId??'')),name=norm(rubric?.name),system=String((rubric?.facets as any)?.custom?.systemKey??'').toUpperCase();return String(d.direction??'').toUpperCase()==='OUT'&&(system==='LOAN'||/pret|emprunt|loan/.test(name))&&!/timbre|stamp/.test(name);});
+    const disbursementMeetingByLoan=new Map<string,string>();for(const e of loanSheetEvents){const loanId=String(e.data?.loanId??'');if(loanId&&e.data?.meetingId)disbursementMeetingByLoan.set(loanId,String(e.data.meetingId));}
+    const localLoanDebts=(loanRows as any[]).filter((x:any)=>['DISBURSED','REPAYING'].includes(String(x.data?.completionState??''))).map((x:any)=>{
+      const rubric=rubricMap.get(String(x.data?.rubricId??'')),principal=Math.max(0,Number(x.data?.outstandingPrincipal??0)),rate=Number(x.data?.rateBasisPointsPerPeriod??rubric?.policies?.loan?.rateBasisPointsPerPeriod??0),timing=String(x.data?.interestTiming??rubric?.policies?.loan?.interestTiming??'NEXT_SESSION_DUE'),rawInterest=Math.max(0,Number(x.data?.unpaidInterest??0));
+      const sourceMeetingId=String(disbursementMeetingByLoan.get(x.id)??x.data?.upfrontInterestSourceMeetingId??x.data?.disbursementMeetingId??''),sourceIndex=meetingIndex.get(sourceMeetingId),later=sourceIndex===undefined?[]:ordered.slice(sourceIndex+1),periodInterest=rate>0?Math.round(principal*rate/10000):0;
+      const derivedCurrent=timing==='NEXT_SESSION_DUE'&&rawInterest===0&&later.length>0?periodInterest:0,interest=Math.max(rawInterest,derivedCurrent),latestLater=later.at(-1),nextInterestProjected=timing==='NEXT_SESSION_DUE'&&periodInterest>0&&latestLater?.status==='closed'?periodInterest:Number(x.data?.nextInterestProjected??0);
+      return{loanId:x.id,memberId:String(x.data?.borrowerMembershipId??''),rubricId:String(x.data?.rubricId??''),title:x.title,principal,interest,nextInterestProjected,totalDue:principal+interest,totalIncludingNextInterest:principal+interest+nextInterestProjected,rateBasisPointsPerPeriod:rate,paymentPriority:String(x.data?.paymentPriority??rubric?.policies?.loan?.paymentPriority??'CAPITAL_FIRST'),interestTiming:timing,lastAccruedInterest:Number(x.data?.lastAccruedInterest??derivedCurrent),interestAppliesToMeetingId:String(x.data?.interestAppliesToMeetingId??latestLater?.id??'')||null,interestAppliesToLabel:String(x.data?.interestAppliesToLabel??(latestLater?.title||''))||null,interestSourceClosedMeetingId:String(x.data?.interestSourceClosedMeetingId??sourceMeetingId)||null,derivedInterest:derivedCurrent>0};
+    }).filter((x:any)=>x.principal>0||x.interest>0||x.nextInterestProjected>0);
+    const repaymentByMember=new Map<string,number>();for(const p of eventPayments)repaymentByMember.set(p.memberId,(repaymentByMember.get(p.memberId)??0)+Number(p.principalPaid??0));
+    const historicalLoanDebts=loanSheetEvents.map((e:any,index:number)=>{const d=e.data??{},rubric=rubricMap.get(String(d.rubricId??'')),memberId=String(d.membershipId??''),gross=Math.abs(Number(d.amount??0)),availableRepayment=repaymentByMember.get(memberId)??0,used=Math.min(gross,availableRepayment);repaymentByMember.set(memberId,Math.max(0,availableRepayment-used));const principal=Math.max(0,gross-used),rate=Number(rubric?.policies?.loan?.rateBasisPointsPerPeriod??0),sourceMeetingId=String(d.meetingId??''),sourceIndex=meetingIndex.get(sourceMeetingId),later=sourceIndex===undefined?[]:ordered.slice(sourceIndex+1),periodInterest=rate>0?Math.round(principal*rate/10000):0,interest=later.length&&periodInterest>0?periodInterest:0,nextInterestProjected=later.at(-1)?.status==='closed'?periodInterest:0;return{loanId:String(d.loanId??e.id??('historical-loan-'+index)),memberId,rubricId:String(d.rubricId??''),title:String(rubric?.name??e.title??'Prêt historique'),principal,interest,nextInterestProjected,totalDue:principal+interest,totalIncludingNextInterest:principal+interest+nextInterestProjected,rateBasisPointsPerPeriod:rate,paymentPriority:String(rubric?.policies?.loan?.paymentPriority??'CAPITAL_FIRST'),interestTiming:String(rubric?.policies?.loan?.interestTiming??'NEXT_SESSION_DUE'),interestSourceClosedMeetingId:sourceMeetingId,derivedFromLegacySheet:true};}).filter((x:any)=>x.memberId&&x.principal>0);
+    const loanDebtById=new Map<string,any>();for(const debt of (cached?.loanDebts??[]))if(debt?.loanId)loanDebtById.set(String(debt.loanId),debt);for(const debt of historicalLoanDebts)if(debt?.loanId&&!loanDebtById.has(String(debt.loanId)))loanDebtById.set(String(debt.loanId),debt);for(const debt of localLoanDebts)if(debt?.loanId)loanDebtById.set(String(debt.loanId),debt);const loanDebts=[...loanDebtById.values()];
     const outstandingPrincipal=loanDebts.reduce((n:number,x:any)=>n+Number(x.principal??0),0),outstandingInterest=loanDebts.reduce((n:number,x:any)=>n+Number(x.interest??0),0),nextInterestProjected=loanDebts.reduce((n:number,x:any)=>n+Number(x.nextInterestProjected??0),0),otherDebt=Number(cached?.totals?.otherDebt??0),totalDebt=outstandingPrincipal+outstandingInterest+otherDebt,totalDebtIncludingNextInterest=totalDebt+nextInterestProjected,totalPrincipalRepaid=Math.max(eventPrincipal,periodPrincipal,Number(cached?.totals?.totalPrincipalRepaid??0)),totalSavings=effectiveDeposits.reduce((n:number,x:any)=>n+Number(x.amount??0),0),healthLeft=totalPrincipalRepaid+recoveredInterestFinal-totalDebt,healthWithNextLeft=totalPrincipalRepaid+recoveredInterestFinal-totalDebtIncludingNextInterest;
     const effectiveRepayments=repayments.length?repayments:(cached?.repayments??[]),effectiveInterestReceipts=interestReceipts.length?interestReceipts:(cached?.interestReceipts??[]);
     return{generatedAt:new Date().toISOString(),source:'LOCAL_LEDGER_RECEIPTS_AND_SOVEREIGN_JOURNAL',sourceDetail:'LAST_KNOWN_GOOD_PLUS_LOCAL_LEDGER_SHEETS_LOAN_PERIODS_AND_SOVEREIGN_JOURNAL',members:members.map(m=>({id:m.id,displayName:m.displayName,status:m.status})),rubrics:savingsRubrics.map(r=>({id:r.id,name:r.name})),meetings:ordered.map((m,i)=>({id:m.id,title:m.title,session:i+1,scheduledAt:m.scheduledAt??m.openedAt,status:m.status})),deposits:effectiveDeposits,savingsSeries,repayments:effectiveRepayments,interestReceipts:effectiveInterestReceipts,loanPeriods:normalizedPeriods.length?normalizedPeriods:(cached?.loanPeriods??[]),loanDebts,otherDebts:cached?.otherDebts??[],totals:{classicPrincipal,schoolPrincipal,totalPrincipal:classicPrincipal+schoolPrincipal,totalSavings,totalPrincipalRepaid,recoveredInterest:recoveredInterestFinal,outstandingPrincipal,outstandingInterest,nextInterestProjected,otherDebt,totalDebt,totalDebtIncludingNextInterest},health:{formula:'(TOTAL_REPAYMENTS + TOTAL_INTEREST_COLLECTED) - TOTAL_CURRENT_DEBT >= TOTAL_SAVINGS',left:healthLeft,right:totalSavings,difference:healthLeft-totalSavings,passes:healthLeft>=totalSavings},healthWithNext:{formula:'(TOTAL_REPAYMENTS + TOTAL_INTEREST_COLLECTED) - (TOTAL_CURRENT_DEBT + NEXT_INTEREST) >= TOTAL_SAVINGS',left:healthWithNextLeft,right:totalSavings,difference:healthWithNextLeft-totalSavings,passes:healthWithNextLeft>=totalSavings},interestByAccount:cached?.interestByAccount??{},warnings:recoveredInterestFinal===0?['NO_REALIZED_INTEREST_FOUND']:[],offline:true};
@@ -1551,6 +1620,7 @@ export class ConnectedApplication {
   async updateWorkspaceRecord(id:string,input:Partial<Pick<WorkspaceRecord,'title'|'summary'|'status'|'tags'|'data'>>):Promise<WorkspaceRecord>{return this.request(`/api/v1/workspaces/${encodeURIComponent(id)}`,{method:'PUT',body:JSON.stringify(input)});}
 
   async syncOutbox():Promise<OutboxItem[]>{
+    if(this.serverBudgetBlocked()||typeof navigator!=='undefined'&&navigator.onLine===false)return this.outbox.list();
     const result=await this.outbox.sync(async item=>{try{const groupId=(item.payload as {groupId?:string}).groupId;const r=await this.request<Record<string,unknown>&{accepted:boolean;stored?:boolean}>('/api/v1/outbox/apply',{method:'POST',headers:{'x-active-group-id':groupId??''},body:JSON.stringify(item)});return{ok:r.accepted&&r.stored!==false,result:r};}catch(e){const message=e instanceof Error?e.message:String(e);return{ok:false,conflict:['IDEMPOTENCY_CONFLICT','FORBIDDEN_SCOPE','CELL_VALUE_CONFLICT','CELL_VERSION_CONFLICT'].includes(message),error:message};}});await this.persistOutbox();return result;
   }
   async queueDemoIntent(note='Local note'):Promise<OutboxItem>{const item=this.outbox.enqueue({tenantId:this.tenantId,actorId:this.actorId,type:'MEETING_NOTE_UPDATED',payload:{groupId:this.activeGroupId,note},idempotencyKey:`note-${this.activeGroupId??'none'}-${Date.now()}`});await this.persistOutbox();return item;}

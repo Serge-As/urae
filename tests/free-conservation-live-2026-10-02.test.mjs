@@ -32,3 +32,17 @@ test('transient 429 503 504 projections reuse last-known-good cache and mutation
   assert.match(app,/announceOfflineSnapshot/);
   assert.match(app,/throw new Error\('NETWORK_UNAVAILABLE'\)/);
 });
+
+
+test('free conservation freezes live socket and financial presence publishing',()=>{
+  assert.match(main,/conservationMode: FREE_CONSERVATION_MODE/);
+  assert.match(live,/GELÉ · mode gratuit/);
+  assert.match(live,/if\(conservationMode\)/);
+  assert.match(main,/const liveSignalsEnabled=!FREE_CONSERVATION_MODE/);
+  assert.match(main,/if\(liveSignalsEnabled\)void app\.publishLiveSignal/);
+});
+
+
+test('free conservation suppresses residual LIVE_ACK traffic too',()=>{
+  assert.match(main,/if\(!FREE_CONSERVATION_MODE\)void app\.publishLiveSignal\?\.\('LIVE_ACK'/);
+});
