@@ -799,9 +799,9 @@ const submitFinancialCellElement=async validate=>{
         if(!reason.trim()){setCellState('IDLE');return;}
       }
       validate.disabled=true;input.disabled=true;validate.textContent='…';holder.classList.add('is-saving');
-      let result;
+      let result,optimisticStaged=false;
       const displayTarget=(nature==='LOAN'||nature==='OUTFLOW')?-target:target;
-      const stageOptimisticValue=()=>{
+      const stageOptimisticValue=()=>{optimisticStaged=true;
         financialOptimisticValues.set(cellKey,displayTarget);
         patchFinancialDomCell({meetingId,membershipId,rubricId,amount:displayTarget,preservePending:true});
         currentLabel.textContent=fmt(displayTarget);
@@ -811,12 +811,12 @@ const submitFinancialCellElement=async validate=>{
         // Display the local working value immediately. Transport can be slow or
         // unavailable, but the cell must not visually jump back while the
         // durable command is being queued/sent.
-        stageOptimisticValue();
+        if(navigator.onLine===false)stageOptimisticValue();
         result=await app.setFinancialCellTarget({meetingId,membershipId,rubricId,targetAmount:target,currentAmount:current,currentVersion:exactCellVersion(membershipId,rubricId,meetingId),reason:reason.trim()});
         if(Number.isFinite(Number(result?.cellVersion)))financialCellVersions.set(JSON.stringify([meetingId,membershipId,rubricId,'XAF']),Number(result.cellVersion));
       }else{
         if(current>0)throw Error('SPECIALIZED_FINANCIAL_CORRECTION_REQUIRED');
-        stageOptimisticValue();
+        if(navigator.onLine===false)stageOptimisticValue();
         result=await app.recordFinancialSheetEntry({membershipId,meetingId,rubric,amount:target,reason:reason.trim()||undefined});
       }
       patchFinancialDomCell({meetingId,membershipId,rubricId,amount:displayTarget,cellVersion:result?.cellVersion,preservePending:true});
@@ -865,7 +865,7 @@ const submitFinancialCellElement=async validate=>{
       traceFinancialCell('CELL_FAIL',{cellKey,target:Number.isFinite(target)?target:Number(input.value||0),current,error:code});
       // A rejected command must never leave the optimistic working value looking
       // like a confirmed mutation.
-      financialOptimisticValues.delete(cellKey);
+      if(optimisticStaged)financialOptimisticValues.delete(cellKey);
       if(['CELL_VALUE_CONFLICT','CELL_VERSION_CONFLICT'].includes(code)){
         financialOptimisticValues.delete(cellKey);holder.classList.add('is-conflict');
         setCellState('CONFLICT',tx('Une autre saisie existe · resynchronisation de cette cellule…','Another entry exists · resynchronizing this cell…'));
@@ -875,7 +875,7 @@ const submitFinancialCellElement=async validate=>{
         }catch{}
         fail(new Error(code));return;
       }
-      patchFinancialDomCell({meetingId,membershipId,rubricId,amount:signedCurrent,preservePending:false});
+      if(optimisticStaged)patchFinancialDomCell({meetingId,membershipId,rubricId,amount:signedCurrent,preservePending:false});
       setCellState('FAILED',tx('Échec : ','Failed: ')+code);fail(e);
     }finally{
       delete holder.dataset.submitting;validate.disabled=false;input.disabled=false;validate.textContent=previousIcon;holder.classList.remove('is-saving');
