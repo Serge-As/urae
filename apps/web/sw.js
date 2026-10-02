@@ -1,5 +1,5 @@
-const CACHE = 'eco-system-v1529-free-conservation-debt-syncfix-20261002';
-const PREVIOUS_CACHE = 'eco-system-v1529-free-conservation-debt-20261002';
+const CACHE = 'eco-system-v1529-free-conservation-debt-syncfix2-20261002';
+const PREVIOUS_CACHE = 'eco-system-v1529-free-conservation-debt-syncfix-20261002';
 const RELEASE_READY = '/__eco_release_ready__';
 
 // Authentication, navigation and canonical application owners must be complete
