@@ -82,6 +82,23 @@ let financialPendingTargets = new Map();
 let financialPendingSheetEntries = [];
 let financialReviewTargets = new Map();
 const financialOptimisticValues=new Map();
+// Free-tier conservation is the default: WebSocket push is the fast path.
+// Expensive canonical polling code stays available for a future paid mode,
+// but it is never scheduled automatically in this mode.
+const FREE_CONSERVATION_MODE=true;
+const FINANCIAL_CONFIRMED_STORAGE='eco.financialConfirmedCells.v1';
+const financialConfirmedCells=new Map((()=>{try{return Object.entries(JSON.parse(localStorage.getItem(FINANCIAL_CONFIRMED_STORAGE)||'{}'));}catch{return[];}})());
+const persistFinancialConfirmedCells=()=>{try{
+  const now=Date.now(),rows=[...financialConfirmedCells.entries()].filter(([,v])=>v&&now-Number(v.confirmedAt||0)<7*86400000).slice(-500);
+  financialConfirmedCells.clear();for(const [k,v] of rows)financialConfirmedCells.set(k,v);
+  localStorage.setItem(FINANCIAL_CONFIRMED_STORAGE,JSON.stringify(Object.fromEntries(rows)));
+}catch{}};
+const rememberConfirmedCell=(key,{amount,cellVersion,meetingId,membershipId,rubricId}={})=>{
+  if(!Number.isFinite(Number(amount)))return;
+  financialConfirmedCells.set(key,{groupId:String(app.activeGroup?.()??''),meetingId:String(meetingId??''),membershipId:String(membershipId??''),rubricId:String(rubricId??''),amount:Number(amount),cellVersion:Number.isFinite(Number(cellVersion))?Number(cellVersion):null,confirmedAt:Date.now()});
+  persistFinancialConfirmedCells();
+};
+const forgetConfirmedCell=key=>{if(financialConfirmedCells.delete(key))persistFinancialConfirmedCells();};
 const FINANCIAL_DRAFT_STORAGE='eco.financialCellDrafts';
 const financialCellDrafts=new Map((()=>{try{return Object.entries(JSON.parse(localStorage.getItem(FINANCIAL_DRAFT_STORAGE)||'{}'));}catch{return[];}})());
 const persistFinancialCellDrafts=()=>{try{const entries=[...financialCellDrafts.entries()].slice(-120);localStorage.setItem(FINANCIAL_DRAFT_STORAGE,JSON.stringify(Object.fromEntries(entries)));}catch{}};
@@ -107,7 +124,10 @@ document.addEventListener('keydown',event=>{
 let matrixMeetingId = '';
 let memberSortMode = 'number';
 const MANAGER_ROLE_IDS=new Set(['founder','manager','admin','president','treasurer','secretary','auditor']);
-const isManager = () => {const g=groups.find(g=>g.id===app.activeGroup());return Boolean(g&&(g.createdBy===app.currentActor()||(g.viewerRoles??[]).some(r=>MANAGER_ROLE_IDS.has(r))));};
+const isManager = () => {
+  const g=groups.find(g=>g.id===app.activeGroup()),actor=app.currentActor(),self=members.find(m=>m.userId===actor&&m.status!=='left');
+  return Boolean(g&&(g.createdBy===actor||(g.viewerRoles??[]).some(r=>MANAGER_ROLE_IDS.has(String(r).toLowerCase()))||(self?.roles??[]).some(r=>MANAGER_ROLE_IDS.has(String(r).toLowerCase()))));
+};
 let groupPolicy;
 let lastProjectId;
 let projectRevision=0;
@@ -244,6 +264,7 @@ const showView=(name,state)=>{
     document.querySelector('#globalSearchResults')?.replaceChildren();
     restoreNavState(state??{view:name,scrollY:0});
     updateBackButton();
+    try{window.dispatchEvent(new CustomEvent('eco:view-changed',{detail:{view:name,state:state??{}}}));}catch{}
     return true;
 };
 const go=(name,options={})=>{
@@ -568,19 +589,34 @@ const exactCellAmount=(membershipId,rubricId,meetingId)=>{
     const cellKey=financialCellKey(membershipId,rubricId,meetingId),optimistic=financialOptimisticValues.get(cellKey);
     if(Number.isFinite(optimistic))return Number(optimistic);
     const rubric=rubrics.find(x=>x.id===rubricId),nature=financialNatureForRubric(rubric);
+    let canonical=0;
     if(nature!=='CONTRIBUTION'){
-      const committed=exactCellEvents(membershipId,rubricId,meetingId).reduce((sum,event)=>sum+(String(event.data?.direction??'IN')==='OUT'?-1:1)*Number(event.data?.amount??0),0);
+      canonical=exactCellEvents(membershipId,rubricId,meetingId).reduce((sum,event)=>sum+(String(event.data?.direction??'IN')==='OUT'?-1:1)*Number(event.data?.amount??0),0);
       const pending=financialPendingSheetEntries.find(x=>x.membershipId===membershipId&&x.rubricId===rubricId&&x.meetingId===meetingId);
-      if(!pending)return committed;
-      const signed=['LOAN','OUTFLOW'].includes(String(pending.nature??nature))?-Math.abs(Number(pending.amount??0)):Math.abs(Number(pending.amount??0));
-      return committed===0?signed:committed;
+      if(pending){
+        const signed=['LOAN','OUTFLOW'].includes(String(pending.nature??nature))?-Math.abs(Number(pending.amount??0)):Math.abs(Number(pending.amount??0));
+        if(canonical===0)canonical=signed;
+      }
+    }else{
+      const pending=financialPendingTargets.get(cellKey);
+      // A locally queued target is the working projection until synchronization.
+      // Once the server ACK says CONSENSUS_REQUIRED, the canonical Ledger value
+      // remains visible and the target is rendered separately as “Proposé”.
+      if(pending&&String(pending.businessStatus??'')!=='CONSENSUS_REQUIRED'&&Number.isSafeInteger(Number(pending.targetAmount))&&Number(pending.targetAmount)>=0)return Number(pending.targetAmount);
+      canonical=exactCellRows(membershipId,rubricId,meetingId).reduce((n,x)=>n+Number(x.netAmount??0),0);
     }
-    const pending=financialPendingTargets.get(financialCellKey(membershipId,rubricId,meetingId));
-    // A locally queued target is the working projection until synchronization.
-    // Once the server ACK says CONSENSUS_REQUIRED, the canonical Ledger value
-    // must remain visible and the target is rendered separately as “Proposé”.
-    if(pending&&String(pending.businessStatus??'')!=='CONSENSUS_REQUIRED'&&Number.isSafeInteger(Number(pending.targetAmount))&&Number(pending.targetAmount)>=0)return Number(pending.targetAmount);
-    return exactCellRows(membershipId,rubricId,meetingId).reduce((n,x)=>n+Number(x.netAmount??0),0);
+    const confirmed=financialConfirmedCells.get(cellKey);
+    if(confirmed&&String(confirmed.groupId??'')===String(app.activeGroup?.()??'')){
+      const canonicalVersion=Number(financialCellVersions.get(JSON.stringify([meetingId,membershipId,rubricId,'XAF']))??0),confirmedVersion=Number(confirmed.cellVersion);
+      // A strictly newer canonical version supersedes the local confirmation.
+      if(Number.isFinite(confirmedVersion)&&canonicalVersion>confirmedVersion){forgetConfirmedCell(cellKey);return canonical;}
+      // Remove the overlay only when the canonical projection actually confirms
+      // the exact value. Same-version stale reads must never roll the writer back.
+      if((!Number.isFinite(confirmedVersion)||canonicalVersion>=confirmedVersion)&&Number(canonical)===Number(confirmed.amount)){forgetConfirmedCell(cellKey);return canonical;}
+      if(Date.now()-Number(confirmed.confirmedAt??0)<7*86400000)return Number(confirmed.amount);
+      forgetConfirmedCell(cellKey);
+    }
+    return canonical;
 };
 const exactCellVersion=(membershipId,rubricId,meetingId)=>Number(financialCellVersions.get(JSON.stringify([meetingId,membershipId,rubricId,'XAF']))??0);
 
@@ -710,8 +746,9 @@ const pollCanonicalFinancialSnapshot=async()=>{
   finally{financialSnapshotBusy=false;}
 };
 const ensureFinancialSnapshotPolling=()=>{
+  if(FREE_CONSERVATION_MODE)return;
   if(financialSnapshotTimer)return;
-  financialSnapshotTimer=setInterval(()=>{void pollCanonicalFinancialSnapshot();},1200);
+  financialSnapshotTimer=setInterval(()=>{void pollCanonicalFinancialSnapshot();},30000);
   void pollCanonicalFinancialSnapshot();
 };
 
@@ -795,10 +832,14 @@ const submitFinancialCellElement=async validate=>{
       }
       input.value='';clearFinancialCellDraft(cellKey);clearRemoteDraft();renderOutbox();
       const preservePending=Boolean(result?.status==='QUEUED_SYNC'||result?.queued);
+      const unresolvedConsensus=String(result?.status??'')==='CONSENSUS_REQUIRED';
+      if(!preservePending&&!unresolvedConsensus)rememberConfirmedCell(cellKey,{amount:displayTarget,cellVersion:Number.isFinite(Number(result?.cellVersion))?Number(result.cellVersion):exactCellVersion(membershipId,rubricId,meetingId)+1,meetingId,membershipId,rubricId});
       patchFinancialDomCell({meetingId,membershipId,rubricId,amount:displayTarget,cellVersion:result?.cellVersion,preservePending});
       focusNextFinancialInput(holder,wrapState);
       window.dispatchEvent(new CustomEvent('eco:financial-data-changed',{detail:{meetingId,membershipId,rubricId,amount:displayTarget,cellVersion:result?.cellVersion,soft:true,preservePending}}));
-      if(!preservePending)void pollCanonicalFinancialSnapshot();
+      // In free-conservation mode the transaction response + WebSocket event are
+      // authoritative. No D1 snapshot GET is triggered after each cell.
+      if(!preservePending&&!FREE_CONSERVATION_MODE)void pollCanonicalFinancialSnapshot();
     }catch(e){
       const code=e instanceof Error?e.message:String(e);
       traceFinancialCell('CELL_FAIL',{cellKey,target:Number.isFinite(target)?target:Number(input.value||0),current,error:code});
@@ -865,6 +906,20 @@ const hasCanonicalLoanStamp=()=>rubrics.some(r=>r.status!=='ARCHIVED'&&normalize
 const isLegacyStampDuplicate=r=>hasCanonicalLoanStamp()&&normalizeFinancialLabel(r?.name)==='timbre';
 const activeFinancialRubrics=()=>rubrics.filter(x=>x.status!=='ARCHIVED'&&!isLegacyStampDuplicate(x));
 const activeFinancialMembers=()=>members.filter(x=>x.status!=='left').slice().sort((a,b)=>(Number(a.memberNumber)||Number.MAX_SAFE_INTEGER)-(Number(b.memberNumber)||Number.MAX_SAFE_INTEGER)||String(a.displayName??'').localeCompare(String(b.displayName??''),localeTag(uiLocale),{sensitivity:'base'}));
+const renderRubricRecapTable=async(rubric,host)=>{
+  host.replaceChildren();const status=document.createElement('p');status.className='hint';status.textContent=tx('Chargement du récapitulatif…','Loading recap…');host.append(status);
+  try{
+    await loadFinancialProjectionState();
+    const ordered=meetings.filter(x=>x.status!=='cancelled').slice().sort((a,b)=>String(a.scheduledAt??a.openedAt).localeCompare(String(b.scheduledAt??b.openedAt))),people=activeFinancialMembers(),wrap=document.createElement('div');wrap.className='matrix-wrap';const table=document.createElement('table');table.className='meeting-matrix';
+    const head=document.createElement('thead'),hr=document.createElement('tr');for(const label of [tx('Membre','Member'),...ordered.map((m,i)=>'S'+String(i+1)),tx('Total','Total')]){const th=document.createElement('th');th.textContent=label;hr.append(th);}head.append(hr);table.append(head);
+    const body=document.createElement('tbody'),col=new Map();let grand=0;
+    for(const member of people){const tr=document.createElement('tr'),name=document.createElement('th');name.textContent=memberDisplay(member);tr.append(name);let rowTotal=0;for(const meeting of ordered){const amount=exactCellAmount(member.id,rubric.id,meeting.id);rowTotal+=amount;col.set(meeting.id,(col.get(meeting.id)??0)+amount);const td=document.createElement('td');td.textContent=amount?fmt(amount):'—';tr.append(td);}grand+=rowTotal;const td=document.createElement('td');td.textContent=fmt(rowTotal);tr.append(td);body.append(tr);}
+    const total=document.createElement('tr');total.className='table-total-row';const th=document.createElement('th');th.textContent=tx('TOTAL','TOTAL');total.append(th);for(const meeting of ordered){const td=document.createElement('td');td.textContent=fmt(col.get(meeting.id)??0);total.append(td);}const end=document.createElement('td');end.textContent=fmt(grand);total.append(end);body.append(total);table.append(body);wrap.append(table);host.replaceChildren(wrap);
+  }catch(error){host.replaceChildren();const p=document.createElement('p');p.className='truth-notice';p.textContent=tx('Récapitulatif non rechargé : Eco-System conserve la dernière projection locale et réessaiera lors d’un prochain accès.','Recap not reloaded: Eco-System keeps the last local projection and will retry on a later access.');host.append(p);console.info('Rubric recap deferred',error);}
+};
+const appendRubricRecap= (article,rubric)=>{
+  const details=document.createElement('details');details.className='rubric-recap';const summary=document.createElement('summary');summary.textContent=tx('Tableau récapitulatif · membres × séances','Recap table · members × sessions');const host=document.createElement('div');host.className='rubric-recap-host';details.append(summary,host);details.addEventListener('toggle',()=>{if(details.open&&details.dataset.loaded!=='1'){details.dataset.loaded='1';void renderRubricRecapTable(rubric,host);}});article.append(details);
+};
 const canonicalFinancialObservers=new WeakMap();
 const protectCanonicalFinancialHost=root=>{
     if(!root||canonicalFinancialObservers.has(root))return;
@@ -1021,11 +1076,11 @@ const renderLivingRules = async () => {
     }
     if(isManager()){const add=document.createElement('button');add.type='button';add.className='primary';add.textContent=tx('+ Ajouter une rubrique à ce groupe','+ Add a rubric to this group');add.onclick=()=>document.querySelector('#rubricForm')?.scrollIntoView({behavior:'smooth',block:'start'});root.append(add);}
     for (const r of rubrics) {
-        if(r.status==='ARCHIVED')continue;
         const a = document.createElement('article');
-        a.className = 'item';
+        a.className = 'item'+(r.status==='ARCHIVED'?' is-archived':'');
         const m = r.operatingModel;
         const rubricLink=document.createElement('button');rubricLink.type='button';rubricLink.className='link-btn';rubricLink.dataset.detailType='rubric';rubricLink.dataset.detailId=r.id;rubricLink.textContent=r.name;a.append(rubricLink);
+        if(r.status==='ARCHIVED'){const archived=document.createElement('span');archived.className='pill';archived.textContent=tx('Archivée · données conservées','Archived · data preserved');a.append(archived);}
         const written=document.createElement('p');written.className='hint';written.textContent='Écrit : '+(m?.writtenRule||'—');a.append(written);
         const practice=document.createElement('p');practice.className='hint';practice.textContent='Pratique : '+(m?.observedPractice||'—');a.append(practice);
         const small=document.createElement('small');small.textContent=`${m?.ruleRealityStatus ?? 'UNKNOWN'} · cible ${m?.targetMode ?? 'OPEN'} · manquant ${m?.shortfallHandling ?? '—'}`;a.append(small);
@@ -1034,13 +1089,18 @@ const renderLivingRules = async () => {
             const scheduled=(r.activityPlan.participants??[]).flatMap(p=>p.shares.filter(s=>s.turn!==undefined).map(s=>`${p.name} · ${s.name} : tour ${s.turn}`));
             if(scheduled.length){const list=document.createElement('ul');for(const text of scheduled){const li=document.createElement('li');li.textContent=text;list.append(li);}a.append(list);}
         }
+        appendRubricRecap(a,r);
         if(isManager()){
-          const edit=document.createElement('button');edit.type='button';edit.className='secondary';edit.textContent=tx('Configurer les caractéristiques / parts','Configure characteristics / shares');
-          edit.onclick=()=>editRubricPlan(r,async plan=>{await app.updateRubricActivityPlan(r.id,plan);await renderLivingRules();toast(tx('Caractéristiques enregistrées.','Characteristics saved.'));},launchError);
-          const remove=document.createElement('button');remove.type='button';remove.className='link-btn';remove.textContent=tx('Mettre à la corbeille','Move to trash');remove.onclick=()=>void(async()=>{if(!confirm(tx('Archiver cette rubrique dans la corbeille pendant 6 mois ? Les anciennes écritures restent intactes.','Archive this rubric in trash for 6 months? Existing entries remain intact.')))return;try{await app.moveToTrash('RUBRIC',r.id);await renderLivingRules();await renderTrash();toast(tx('Rubrique placée dans la corbeille.','Rubric moved to trash.'));}catch(e){fail(e);}})();
-          a.append(edit,remove);
+          if(r.status==='ARCHIVED'){
+            const restore=document.createElement('button');restore.type='button';restore.className='secondary';restore.textContent=tx('Restaurer cette rubrique','Restore this rubric');restore.onclick=()=>void(async()=>{try{const trash=await app.trashItems(),item=trash.find(x=>String(x.data?.kind??'')==='RUBRIC'&&String(x.data?.entityId??'')===r.id&&x.status==='ACTIVE');if(!item)throw Error('TRASH_ITEM_NOT_FOUND');await app.restoreTrashItem(item.id);await renderLivingRules();await renderTrash();toast(tx('Rubrique restaurée avec son historique.','Rubric restored with its history.'));}catch(e){fail(e);}})();a.append(restore);
+          }else{
+            const edit=document.createElement('button');edit.type='button';edit.className='secondary';edit.textContent=tx('Configurer les caractéristiques / parts','Configure characteristics / shares');
+            edit.onclick=()=>editRubricPlan(r,async plan=>{await app.updateRubricActivityPlan(r.id,plan);await renderLivingRules();toast(tx('Caractéristiques enregistrées.','Characteristics saved.'));},launchError);
+            const remove=document.createElement('button');remove.type='button';remove.className='link-btn';remove.textContent=tx('Mettre à la corbeille','Move to trash');remove.onclick=()=>void(async()=>{if(!confirm(tx('Archiver cette rubrique dans la corbeille pendant 6 mois ? Les anciennes écritures restent intactes.','Archive this rubric in trash for 6 months? Existing entries remain intact.')))return;try{await app.moveToTrash('RUBRIC',r.id);await renderLivingRules();await renderTrash();toast(tx('Rubrique placée dans la corbeille.','Rubric moved to trash.'));}catch(e){fail(e);}})();a.append(edit,remove);
+          }
         }
         root.append(a);
+        if(r.status==='ARCHIVED')continue;
         for (const sel of [rselect, pselect]) {
             const o = document.createElement('option');
             o.value = r.id;
@@ -1473,6 +1533,7 @@ const financialLiveSelector=p=>p?.meetingId&&p?.membershipId&&p?.rubricId?`.matr
 const applyRemoteFinancialProjection=(p={})=>{
     const selector=financialLiveSelector(p);if(!selector)return;
     const amount=Number(p.newAmount);if(!Number.isFinite(amount))return;
+    forgetConfirmedCell(financialCellKey(String(p.membershipId??''),String(p.rubricId??''),String(p.meetingId??'')));
     const rubric=rubrics.find(x=>x.id===String(p.rubricId)),nature=financialNatureForRubric(rubric),signed=(nature==='LOAN'||nature==='OUTFLOW')?-Math.abs(amount):amount;
     patchFinancialDomCell({meetingId:p.meetingId,membershipId:p.membershipId,rubricId:p.rubricId,amount:signed,cellVersion:p.cellVersion,remote:true});
 };
@@ -1505,7 +1566,9 @@ window.addEventListener('eco:financial-live-update',event=>{
     const e=event instanceof CustomEvent?event.detail:undefined,p=e?.payload??{},sourceActorId=String(p.actorId??e?.actorId??''),fromOtherActor=sourceActorId&&sourceActorId!==String(app.currentActor?.()??'');if(!fromOtherActor)return;
     if(p.meetingId&&p.membershipId&&p.rubricId)highlightRemoteFinancialCell({...p,actorId:sourceActorId});
     showFinancialAlert({title:p.meetingClosed?tx('Modification après clôture','Post-close change'):tx('Mise à jour financière en direct','Live financial update'),message:p.actorName?tx(`${p.actorName} a mis à jour une cellule. Elle reste surlignée jusqu’à votre accusé de réception.`,`${p.actorName} updated a cell. It stays highlighted until you acknowledge it.`):tx('Une donnée financière vient d’être mise à jour en direct.','A financial value was just updated live.'),closed:Boolean(p.meetingClosed),correction:true});
-    if(isManager()&&p.meetingId&&p.membershipId&&p.rubricId){if(liveLedgerRefreshTimer)clearTimeout(liveLedgerRefreshTimer);liveLedgerRefreshTimer=setTimeout(()=>{void pollCanonicalFinancialSnapshot();},180);}
+    // The pushed durable event already contains the committed cell projection.
+    // D1 is queried only in the optional paid fallback mode.
+    if(!FREE_CONSERVATION_MODE&&isManager()&&p.meetingId&&p.membershipId&&p.rubricId){if(liveLedgerRefreshTimer)clearTimeout(liveLedgerRefreshTimer);liveLedgerRefreshTimer=setTimeout(()=>{void pollCanonicalFinancialSnapshot();},800);}
 });
 
 const refreshGroupContext = async () => {
@@ -1945,7 +2008,6 @@ const resumeOnline=()=>{
     onlineResumePromise=(async()=>{renderConnectivity();try{
         await app.syncOutbox();
         await start();
-        void pollCanonicalFinancialSnapshot();
     }catch(error){console.info('Online resume deferred',error);}})().finally(()=>{onlineResumePromise=null;});
     return onlineResumePromise;
 };

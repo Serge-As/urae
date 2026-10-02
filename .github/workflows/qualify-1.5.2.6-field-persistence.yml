@@ -2,7 +2,7 @@ name: Eco-System 1.5.2.6 — Field Persistence Browser Qualification
 
 on:
   push:
-    branches: ['fix/1.5.2.6-field-persistence-pc-mobile-20260925']
+    branches: ['fix/1.5.2.6-field-persistence-pc-mobile-20260925', 'fix/free-conservation-debt-rubric-recap-20261002']
   workflow_dispatch:
 
 permissions:
