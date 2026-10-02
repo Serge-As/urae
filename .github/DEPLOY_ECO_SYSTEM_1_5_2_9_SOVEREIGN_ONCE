@@ -1,5 +1,5 @@
 release: 1.5.2.9-sovereign-offline
-source_head: 15ff7619d018272f4838e2b44cf392ef2ac59148
+source_head: 1c3319cba94f86473ea56499bfdea4f68ff26c32
 qualified_p0_financial_run: 37009156664
 qualified_ios_sovereign_run: 37009156674
 qualified_field_persistence_run: 37009156669
@@ -7,7 +7,8 @@ qualified_geo_run: 37009161604
 pwa_cache: eco-system-v1529-free-conservation-debt-20261002
 release_contract_updated: true
 legacy_pwa_assertions_updated: true
+legacy_test_syntax_fixed: true
 scope: free-conservation-live-last-known-good-debt-interest-rubric-recap-offline-20261002
 production_concurrency_guard: monotonic-ancestor-check
 d1_strategy: websocket-push-no-financial-polling-in-free-mode
-requested_at: 2026-10-02T14:08:00+01:00
+requested_at: 2026-10-02T14:13:00+01:00
