@@ -90,3 +90,12 @@ test('legacy loan sheets rebuild debt and derive next-session interest offline',
   assert.match(app,/timing==='NEXT_SESSION_DUE'/);
   assert.match(app,/latestLater\?\.status==='closed'/);
 });
+
+
+test('generic optional-service 503 never opens the global D1 quota circuit',()=>{
+  const app=fs.readFileSync('packages/application/src/index.ts','utf8');
+  assert.match(app,/const quotaSignal=response\.status===429/);
+  assert.match(app,/PREMIUM_LIVE_LEDGER_DISABLED|errorCode/);
+  assert.match(app,/if\(quotaSignal\)this\.markServerBudgetBlocked/);
+  assert.doesNotMatch(app,/if\(transient\)this\.markServerBudgetBlocked/);
+});
