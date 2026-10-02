@@ -41,3 +41,8 @@ test('free conservation freezes live socket and financial presence publishing',(
   assert.match(main,/const liveSignalsEnabled=!FREE_CONSERVATION_MODE/);
   assert.match(main,/if\(liveSignalsEnabled\)void app\.publishLiveSignal/);
 });
+
+
+test('free conservation suppresses residual LIVE_ACK traffic too',()=>{
+  assert.match(main,/if\(!FREE_CONSERVATION_MODE\)void app\.publishLiveSignal\?\.\('LIVE_ACK'/);
+});

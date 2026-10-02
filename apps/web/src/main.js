@@ -1568,7 +1568,7 @@ const applyRemoteFinancialProjection=(p={})=>{
 };
 const acknowledgeRemoteFinancialCell=button=>{
     const cell=button?.closest?.('.matrix-cell-entry');if(!cell)return;cell.classList.remove('remote-financial-change','remote-financial-closed');button.classList.remove('remote-ack');button.textContent='✓';
-    void app.publishLiveSignal?.('LIVE_ACK',{kind:'FINANCIAL_CELL',meetingId:cell.dataset.meetingId||'',membershipId:cell.dataset.membershipId||'',rubricId:cell.dataset.rubricId||''}).catch(()=>{});
+    if(!FREE_CONSERVATION_MODE)void app.publishLiveSignal?.('LIVE_ACK',{kind:'FINANCIAL_CELL',meetingId:cell.dataset.meetingId||'',membershipId:cell.dataset.membershipId||'',rubricId:cell.dataset.rubricId||''}).catch(()=>{});
 };
 const highlightRemoteFinancialCell=(p={})=>{
     const selector=financialLiveSelector(p);if(!selector)return;applyRemoteFinancialProjection(p);
