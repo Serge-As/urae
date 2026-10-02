@@ -22,7 +22,12 @@ export function mountIdentityLiveUI({app,notify=()=>{},showError=console.error})
       if(!events.length||lastSeq>=latest||lastSeq===before)break;
     }
   };
-  const startCatchupTimer=()=>{if(catchupTimer)return;catchupTimer=setInterval(()=>{if(document.visibilityState==='visible'&&navigator.onLine!==false){void catchUp().catch(()=>{});void catchUpSignals().catch(()=>{});}},1200);};
+  const startCatchupTimer=()=>{if(catchupTimer)return;catchupTimer=setInterval(()=>{
+    if(document.visibilityState!=='visible'||navigator.onLine===false)return;
+    // Conservation fallback only while the push socket is unavailable.
+    // A healthy WebSocket must not be shadowed by REST polling.
+    if(!socket||socket.readyState!==WebSocket.OPEN){void catchUp().catch(()=>{});void catchUpSignals().catch(()=>{});}
+  },30000);};
   const scheduleReconnect=()=>{
     if(!wantConnection||!app.activeGroup()||navigator.onLine===false||reconnectTimer)return;
     const delay=Math.min(12000,750*(2**Math.min(reconnectAttempt,4)));reconnectAttempt+=1;
@@ -54,9 +59,8 @@ export function mountIdentityLiveUI({app,notify=()=>{},showError=console.error})
         void catchUp().catch(()=>{});
         void app.publishLiveSignal?.('PRESENCE',{state:'ONLINE',kind:'GROUP'}).catch(()=>{});
         heartbeatTimer=setInterval(()=>{if(!socket||socket.readyState!==WebSocket.OPEN)return;if(Date.now()-lastPongAt>45000){try{socket.close(4000,'heartbeat-timeout');}catch{}return;}try{socket.send('PING');}catch{}},20000);
-        // WebSocket is the fast path. The already-running 1.2 s catch-up loop heals
-        // both durable financial gaps and short-lived typing/focus signals when a
-        // browser/proxy drops WebSocket delivery. Ephemeral signals never reach D1.
+        // WebSocket is the fast path. One catch-up on connect closes any gap;
+        // thereafter no periodic REST request runs while the socket is healthy.
         void catchUpSignals().catch(()=>{});
       };
       socket.onmessage=e=>{

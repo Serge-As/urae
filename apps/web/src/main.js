@@ -82,6 +82,23 @@ let financialPendingTargets = new Map();
 let financialPendingSheetEntries = [];
 let financialReviewTargets = new Map();
 const financialOptimisticValues=new Map();
+// Free-tier conservation is the default: WebSocket push is the fast path.
+// Expensive canonical polling code stays available for a future paid mode,
+// but it is never scheduled automatically in this mode.
+const FREE_CONSERVATION_MODE=true;
+const FINANCIAL_CONFIRMED_STORAGE='eco.financialConfirmedCells.v1';
+const financialConfirmedCells=new Map((()=>{try{return Object.entries(JSON.parse(localStorage.getItem(FINANCIAL_CONFIRMED_STORAGE)||'{}'));}catch{return[];}})());
+const persistFinancialConfirmedCells=()=>{try{
+  const now=Date.now(),rows=[...financialConfirmedCells.entries()].filter(([,v])=>v&&now-Number(v.confirmedAt||0)<7*86400000).slice(-500);
+  financialConfirmedCells.clear();for(const [k,v] of rows)financialConfirmedCells.set(k,v);
+  localStorage.setItem(FINANCIAL_CONFIRMED_STORAGE,JSON.stringify(Object.fromEntries(rows)));
+}catch{}};
+const rememberConfirmedCell=(key,{amount,cellVersion,meetingId,membershipId,rubricId}={})=>{
+  if(!Number.isFinite(Number(amount)))return;
+  financialConfirmedCells.set(key,{groupId:String(app.activeGroup?.()??''),meetingId:String(meetingId??''),membershipId:String(membershipId??''),rubricId:String(rubricId??''),amount:Number(amount),cellVersion:Number.isFinite(Number(cellVersion))?Number(cellVersion):null,confirmedAt:Date.now()});
+  persistFinancialConfirmedCells();
+};
+const forgetConfirmedCell=key=>{if(financialConfirmedCells.delete(key))persistFinancialConfirmedCells();};
 const FINANCIAL_DRAFT_STORAGE='eco.financialCellDrafts';
 const financialCellDrafts=new Map((()=>{try{return Object.entries(JSON.parse(localStorage.getItem(FINANCIAL_DRAFT_STORAGE)||'{}'));}catch{return[];}})());
 const persistFinancialCellDrafts=()=>{try{const entries=[...financialCellDrafts.entries()].slice(-120);localStorage.setItem(FINANCIAL_DRAFT_STORAGE,JSON.stringify(Object.fromEntries(entries)));}catch{}};
@@ -107,7 +124,10 @@ document.addEventListener('keydown',event=>{
 let matrixMeetingId = '';
 let memberSortMode = 'number';
 const MANAGER_ROLE_IDS=new Set(['founder','manager','admin','president','treasurer','secretary','auditor']);
-const isManager = () => {const g=groups.find(g=>g.id===app.activeGroup());return Boolean(g&&(g.createdBy===app.currentActor()||(g.viewerRoles??[]).some(r=>MANAGER_ROLE_IDS.has(r))));};
+const isManager = () => {
+  const g=groups.find(g=>g.id===app.activeGroup()),actor=app.currentActor(),self=members.find(m=>m.userId===actor&&m.status!=='left');
+  return Boolean(g&&(g.createdBy===actor||(g.viewerRoles??[]).some(r=>MANAGER_ROLE_IDS.has(String(r).toLowerCase()))||(self?.roles??[]).some(r=>MANAGER_ROLE_IDS.has(String(r).toLowerCase()))));
+};
 let groupPolicy;
 let lastProjectId;
 let projectRevision=0;
@@ -244,6 +264,7 @@ const showView=(name,state)=>{
     document.querySelector('#globalSearchResults')?.replaceChildren();
     restoreNavState(state??{view:name,scrollY:0});
     updateBackButton();
+    try{window.dispatchEvent(new CustomEvent('eco:view-changed',{detail:{view:name,state:state??{}}}));}catch{}
     return true;
 };
 const go=(name,options={})=>{
@@ -568,19 +589,34 @@ const exactCellAmount=(membershipId,rubricId,meetingId)=>{
     const cellKey=financialCellKey(membershipId,rubricId,meetingId),optimistic=financialOptimisticValues.get(cellKey);
     if(Number.isFinite(optimistic))return Number(optimistic);
     const rubric=rubrics.find(x=>x.id===rubricId),nature=financialNatureForRubric(rubric);
+    let canonical=0;
     if(nature!=='CONTRIBUTION'){
-      const committed=exactCellEvents(membershipId,rubricId,meetingId).reduce((sum,event)=>sum+(String(event.data?.direction??'IN')==='OUT'?-1:1)*Number(event.data?.amount??0),0);
+      canonical=exactCellEvents(membershipId,rubricId,meetingId).reduce((sum,event)=>sum+(String(event.data?.direction??'IN')==='OUT'?-1:1)*Number(event.data?.amount??0),0);
       const pending=financialPendingSheetEntries.find(x=>x.membershipId===membershipId&&x.rubricId===rubricId&&x.meetingId===meetingId);
-      if(!pending)return committed;
-      const signed=['LOAN','OUTFLOW'].includes(String(pending.nature??nature))?-Math.abs(Number(pending.amount??0)):Math.abs(Number(pending.amount??0));
-      return committed===0?signed:committed;
+      if(pending){
+        const signed=['LOAN','OUTFLOW'].includes(String(pending.nature??nature))?-Math.abs(Number(pending.amount??0)):Math.abs(Number(pending.amount??0));
+        if(canonical===0)canonical=signed;
+      }
+    }else{
+      const pending=financialPendingTargets.get(cellKey);
+      // A locally queued target is the working projection until synchronization.
+      // Once the server ACK says CONSENSUS_REQUIRED, the canonical Ledger value
+      // remains visible and the target is rendered separately as “Proposé”.
+      if(pending&&String(pending.businessStatus??'')!=='CONSENSUS_REQUIRED'&&Number.isSafeInteger(Number(pending.targetAmount))&&Number(pending.targetAmount)>=0)return Number(pending.targetAmount);
+      canonical=exactCellRows(membershipId,rubricId,meetingId).reduce((n,x)=>n+Number(x.netAmount??0),0);
     }
-    const pending=financialPendingTargets.get(financialCellKey(membershipId,rubricId,meetingId));
-    // A locally queued target is the working projection until synchronization.
-    // Once the server ACK says CONSENSUS_REQUIRED, the canonical Ledger value
-    // must remain visible and the target is rendered separately as “Proposé”.
-    if(pending&&String(pending.businessStatus??'')!=='CONSENSUS_REQUIRED'&&Number.isSafeInteger(Number(pending.targetAmount))&&Number(pending.targetAmount)>=0)return Number(pending.targetAmount);
-    return exactCellRows(membershipId,rubricId,meetingId).reduce((n,x)=>n+Number(x.netAmount??0),0);
+    const confirmed=financialConfirmedCells.get(cellKey);
+    if(confirmed&&String(confirmed.groupId??'')===String(app.activeGroup?.()??'')){
+      const canonicalVersion=Number(financialCellVersions.get(JSON.stringify([meetingId,membershipId,rubricId,'XAF']))??0),confirmedVersion=Number(confirmed.cellVersion);
+      // A strictly newer canonical version supersedes the local confirmation.
+      if(Number.isFinite(confirmedVersion)&&canonicalVersion>confirmedVersion){forgetConfirmedCell(cellKey);return canonical;}
+      // Remove the overlay only when the canonical projection actually confirms
+      // the exact value. Same-version stale reads must never roll the writer back.
+      if((!Number.isFinite(confirmedVersion)||canonicalVersion>=confirmedVersion)&&Number(canonical)===Number(confirmed.amount)){forgetConfirmedCell(cellKey);return canonical;}
+      if(Date.now()-Number(confirmed.confirmedAt??0)<7*86400000)return Number(confirmed.amount);
+      forgetConfirmedCell(cellKey);
+    }
+    return canonical;
 };
 const exactCellVersion=(membershipId,rubricId,meetingId)=>Number(financialCellVersions.get(JSON.stringify([meetingId,membershipId,rubricId,'XAF']))??0);
 
@@ -710,8 +746,9 @@ const pollCanonicalFinancialSnapshot=async()=>{
   finally{financialSnapshotBusy=false;}
 };
 const ensureFinancialSnapshotPolling=()=>{
+  if(FREE_CONSERVATION_MODE)return;
   if(financialSnapshotTimer)return;
-  financialSnapshotTimer=setInterval(()=>{void pollCanonicalFinancialSnapshot();},1200);
+  financialSnapshotTimer=setInterval(()=>{void pollCanonicalFinancialSnapshot();},30000);
   void pollCanonicalFinancialSnapshot();
 };
 
@@ -795,10 +832,14 @@ const submitFinancialCellElement=async validate=>{
       }
       input.value='';clearFinancialCellDraft(cellKey);clearRemoteDraft();renderOutbox();
       const preservePending=Boolean(result?.status==='QUEUED_SYNC'||result?.queued);
+      const unresolvedConsensus=String(result?.status??'')==='CONSENSUS_REQUIRED';
+      if(!preservePending&&!unresolvedConsensus)rememberConfirmedCell(cellKey,{amount:displayTarget,cellVersion:Number.isFinite(Number(result?.cellVersion))?Number(result.cellVersion):exactCellVersion(membershipId,rubricId,meetingId)+1,meetingId,membershipId,rubricId});
       patchFinancialDomCell({meetingId,membershipId,rubricId,amount:displayTarget,cellVersion:result?.cellVersion,preservePending});
       focusNextFinancialInput(holder,wrapState);
       window.dispatchEvent(new CustomEvent('eco:financial-data-changed',{detail:{meetingId,membershipId,rubricId,amount:displayTarget,cellVersion:result?.cellVersion,soft:true,preservePending}}));
-      if(!preservePending)void pollCanonicalFinancialSnapshot();
+      // In free-conservation mode the transaction response + WebSocket event are
+      // authoritative. No D1 snapshot GET is triggered after each cell.
+      if(!preservePending&&!FREE_CONSERVATION_MODE)void pollCanonicalFinancialSnapshot();
     }catch(e){
       const code=e instanceof Error?e.message:String(e);
       traceFinancialCell('CELL_FAIL',{cellKey,target:Number.isFinite(target)?target:Number(input.value||0),current,error:code});
@@ -1473,6 +1514,7 @@ const financialLiveSelector=p=>p?.meetingId&&p?.membershipId&&p?.rubricId?`.matr
 const applyRemoteFinancialProjection=(p={})=>{
     const selector=financialLiveSelector(p);if(!selector)return;
     const amount=Number(p.newAmount);if(!Number.isFinite(amount))return;
+    forgetConfirmedCell(financialCellKey(String(p.membershipId??''),String(p.rubricId??''),String(p.meetingId??'')));
     const rubric=rubrics.find(x=>x.id===String(p.rubricId)),nature=financialNatureForRubric(rubric),signed=(nature==='LOAN'||nature==='OUTFLOW')?-Math.abs(amount):amount;
     patchFinancialDomCell({meetingId:p.meetingId,membershipId:p.membershipId,rubricId:p.rubricId,amount:signed,cellVersion:p.cellVersion,remote:true});
 };
@@ -1505,7 +1547,9 @@ window.addEventListener('eco:financial-live-update',event=>{
     const e=event instanceof CustomEvent?event.detail:undefined,p=e?.payload??{},sourceActorId=String(p.actorId??e?.actorId??''),fromOtherActor=sourceActorId&&sourceActorId!==String(app.currentActor?.()??'');if(!fromOtherActor)return;
     if(p.meetingId&&p.membershipId&&p.rubricId)highlightRemoteFinancialCell({...p,actorId:sourceActorId});
     showFinancialAlert({title:p.meetingClosed?tx('Modification après clôture','Post-close change'):tx('Mise à jour financière en direct','Live financial update'),message:p.actorName?tx(`${p.actorName} a mis à jour une cellule. Elle reste surlignée jusqu’à votre accusé de réception.`,`${p.actorName} updated a cell. It stays highlighted until you acknowledge it.`):tx('Une donnée financière vient d’être mise à jour en direct.','A financial value was just updated live.'),closed:Boolean(p.meetingClosed),correction:true});
-    if(isManager()&&p.meetingId&&p.membershipId&&p.rubricId){if(liveLedgerRefreshTimer)clearTimeout(liveLedgerRefreshTimer);liveLedgerRefreshTimer=setTimeout(()=>{void pollCanonicalFinancialSnapshot();},180);}
+    // The pushed durable event already contains the committed cell projection.
+    // D1 is queried only in the optional paid fallback mode.
+    if(!FREE_CONSERVATION_MODE&&isManager()&&p.meetingId&&p.membershipId&&p.rubricId){if(liveLedgerRefreshTimer)clearTimeout(liveLedgerRefreshTimer);liveLedgerRefreshTimer=setTimeout(()=>{void pollCanonicalFinancialSnapshot();},800);}
 });
 
 const refreshGroupContext = async () => {
@@ -1945,7 +1989,6 @@ const resumeOnline=()=>{
     onlineResumePromise=(async()=>{renderConnectivity();try{
         await app.syncOutbox();
         await start();
-        void pollCanonicalFinancialSnapshot();
     }catch(error){console.info('Online resume deferred',error);}})().finally(()=>{onlineResumePromise=null;});
     return onlineResumePromise;
 };

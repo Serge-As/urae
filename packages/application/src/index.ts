@@ -197,7 +197,14 @@ export class ConnectedApplication {
       throw new Error('NETWORK_UNAVAILABLE',{cause:error});
     }
     const body=await response.json().catch(()=>({error:`HTTP_${response.status}`}));
-    if(!response.ok)throw new Error(String(body.error??`HTTP_${response.status}`));
+    if(!response.ok){
+      const transient=[429,503,504].includes(response.status);
+      if(transient&&cacheable&&IndexedDbReadSnapshotAdapter.supported()){
+        try{const snapshot=await this.readSnapshots.get<T>(this.offlineReadKey(path));if(snapshot){this.announceOfflineSnapshot(path,snapshot.updatedAt);return structuredClone(snapshot.body);}}catch{}
+      }
+      if(transient)throw new Error('NETWORK_UNAVAILABLE');
+      throw new Error(String(body.error??`HTTP_${response.status}`));
+    }
     this.usingOfflineSnapshot=false;
     if(cacheable)await this.cacheReadSnapshot(path,body as T);
     return body as T;
