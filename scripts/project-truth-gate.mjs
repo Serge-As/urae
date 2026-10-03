@@ -54,7 +54,7 @@ if(!fs.existsSync(releaseContractPath)) throw new Error('Missing current release
 const releaseContract=JSON.parse(fs.readFileSync(releaseContractPath,'utf8'));
 const workerSource=fs.readFileSync('workers/api/src/index.ts','utf8');
 const swSource=fs.readFileSync('apps/web/sw.js','utf8');
-const workflowSource=fs.readFileSync('.github/workflows/deploy-1.5.2.9-sovereign-offline.yml','utf8');
+const workflowSource=fs.readFileSync('.github/workflows/deploy-1.5.2.10-offline-conflicts-loans.yml','utf8');
 const constant=(name)=>{
   const m=workerSource.match(new RegExp("const "+name+"='([^']+)'"));
   if(!m)throw new Error('Missing Worker release constant '+name);
