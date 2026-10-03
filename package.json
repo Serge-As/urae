@@ -1,9 +1,9 @@
 {
   "name": "tontine-platform",
-  "version": "1.5.2-9",
+  "version": "1.5.2-10",
   "private": true,
   "type": "module",
-  "description": "Eco-System 1.5.2.9: sovereign multi-year offline group cycle, encrypted Eco Broadcast QR, Eco Vault recovery, iOS/WebKit fallbacks, and canonical finance preserved.",
+  "description": "Eco-System 1.5.2.10: deterministic offline reload, event-driven reconnect, explicit multi-device financial conflicts, canonical savings truth, and compact loan/debt tables.",
   "engines": {
     "node": ">=24"
   },
