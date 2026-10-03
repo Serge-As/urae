@@ -142,16 +142,9 @@ export class ConnectedApplication {
   private async canAttemptCriticalWrite():Promise<boolean>{
     if(this.serverBudgetBlocked())return false;
     if(typeof navigator!=='undefined'&&navigator.onLine===false)return false;
-    if(!this.usingOfflineSnapshot)return true;
-    // A single cached GET must never trap later financial writes in offline mode.
-    // Probe the real authenticated server directly, bypassing read-snapshot fallback.
-    try{
-      const response=await fetch(`${this.baseUrl}/api/v1/auth/session`,{method:'GET',headers:this.headers()});
-      if(!response.ok)return false;
-      const body=await response.json() as {authenticated?:boolean;account?:unknown};
-      if(body.authenticated&&body.account){this.usingOfflineSnapshot=false;return true;}
-    }catch{}
-    return false;
+    // The business write is itself the connectivity probe. Never spend a D1/HTTP
+    // read merely to ask whether a critical write may be attempted.
+    return true;
   }
   private async cached<T>(path:string):Promise<T|undefined>{
     try{

@@ -8,9 +8,12 @@ const hub=fs.readFileSync('workers/api/src/group-live-hub.ts','utf8');
 const worker=fs.readFileSync('workers/api/src/index.ts','utf8');
 const deploy=fs.readFileSync('.github/workflows/deploy-1.5.2.9-sovereign-offline.yml','utf8');
 
-test('online financial writes probe real server instead of stale cached-read state',()=>{
+test('online financial writes use the business write itself as the connectivity probe',()=>{
   assert.match(app,/canAttemptCriticalWrite/);
-  assert.match(app,/bypassing read-snapshot fallback/);
+  const guard=app.slice(app.indexOf('private async canAttemptCriticalWrite'),app.indexOf('private async cached'));
+  assert.match(guard,/business write is itself the connectivity probe/);
+  assert.doesNotMatch(guard,/fetch\(/);
+  assert.doesNotMatch(guard,/auth\/session/);
   assert.match(app,/setFinancialCellTarget[\s\S]*canAttemptCriticalWrite/);
   assert.match(app,/recordFinancialSheetEntry[\s\S]*canAttemptCriticalWrite/);
 });
