@@ -411,7 +411,13 @@ body.ui-mode-visual .primary:hover{filter:saturate(1.08) brightness(1.03);transf
 .member-number-editor input{width:5.5rem}
 
 
-/* 1.5.2.9 live/soft-finance field hardening — 2026-09-30 */
-.matrix-cell-entry.is-conflict,[data-save-state="CONFLICT"]{outline:3px solid #d18a00;outline-offset:1px;border-radius:10px;background:#fff8e8}
+/* 1.5.2.10 — a divergent offline value is a critical accounting conflict.
+   Red is reinforced by text + animation so the warning is not color-only. */
+@keyframes eco-critical-conflict-blink{0%,100%{outline-width:3px;box-shadow:0 0 0 0 rgba(176,20,32,.12)}50%{outline-width:5px;box-shadow:0 0 0 6px rgba(176,20,32,.18)}}
+.matrix-cell-entry.is-conflict,[data-save-state="CONFLICT"]{outline:3px solid #b01420;outline-offset:2px;border-radius:10px;background:#fff0f1;color:#6f1118}
+.matrix-cell-entry.is-critical-conflict{animation:eco-critical-conflict-blink 1.05s ease-in-out infinite}
+.matrix-cell-entry.is-critical-conflict .cell-save-state{display:block!important;color:#8c1520;font-weight:900;line-height:1.25}
+@media (prefers-reduced-motion:reduce){.matrix-cell-entry.is-critical-conflict{animation:none;outline-width:5px}}
+.rubric-recap-chooser{display:grid;gap:10px;margin:12px 0 16px;border-width:2px}.rubric-recap-chooser select{max-width:min(560px,100%)}
 .financial-alert-bar .financial-alert-close{margin-left:8px;float:right}
 .financial-alert-bar[hidden]{display:none!important}
