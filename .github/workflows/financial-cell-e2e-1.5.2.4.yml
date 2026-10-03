@@ -2,7 +2,7 @@ name: Eco-System P0 — Real Financial Cell Browser E2E
 
 on:
   push:
-    branches: ['fix/1.5.2.4-financial-entry-e2e-20260925', 'fix/1.5.2.5-core-a-b-c-t01-t15-20260925', 'fix/1.5.2.6-field-persistence-pc-mobile-20260925', 'fix/live-field-no-regression-20260930', 'fix/free-conservation-debt-rubric-recap-20261002', 'fix/offline-sync-confirmed-projection-20261002', 'fix/free-event-push-no-polling-20261003']
+    branches: ['fix/1.5.2.4-financial-entry-e2e-20260925', 'fix/1.5.2.5-core-a-b-c-t01-t15-20260925', 'fix/1.5.2.6-field-persistence-pc-mobile-20260925', 'fix/live-field-no-regression-20260930', 'fix/free-conservation-debt-rubric-recap-20261002', 'fix/offline-sync-confirmed-projection-20261002', 'fix/free-event-push-no-polling-20261003', 'fix/critical-write-no-probe-20261003']
   pull_request:
     branches: ['next/1.5.0-audit-complete-platform-20260923']
   workflow_dispatch:

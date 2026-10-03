@@ -9,6 +9,7 @@ on:
       - 'fix/free-conservation-debt-rubric-recap-20261002'
       - 'fix/offline-sync-confirmed-projection-20261002'
       - 'fix/free-event-push-no-polling-20261003'
+      - 'fix/critical-write-no-probe-20261003'
   workflow_dispatch:
 
 permissions:
