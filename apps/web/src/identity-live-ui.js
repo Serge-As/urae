@@ -23,10 +23,10 @@ export function mountIdentityLiveUI({app,notify=()=>{},showError=console.error,c
     }
   };
   const scheduleReconnect=()=>{
-    if(!wantConnection||!app.activeGroup()||navigator.onLine===false||reconnectTimer)return;
-    const delay=Math.min(12000,750*(2**Math.min(reconnectAttempt,4)));reconnectAttempt+=1;
-    reconnectTimer=setTimeout(()=>{reconnectTimer=null;connect();},delay);
-    if(liveRoot)liveRoot.append(row('Reconnexion',Math.round(delay/100)/10+' s'));
+    if(!wantConnection||!app.activeGroup()||navigator.onLine===false||reconnectTimer||reconnectAttempt>=1)return;
+    reconnectAttempt=1;
+    reconnectTimer=setTimeout(()=>{reconnectTimer=null;connect();},1500);
+    if(liveRoot)liveRoot.append(row('Reconnexion','1 tentative · puis attente d’un événement réseau/utilisateur'));
   };
   const renderEvent=event=>{
     const card=el('article',undefined,'item');
@@ -62,6 +62,7 @@ export function mountIdentityLiveUI({app,notify=()=>{},showError=console.error,c
       socket.onmessage=e=>{
         try{
           const msg=JSON.parse(String(e.data));
+          if(msg.type==='GROUP_LIVE_HELLO'){if(msg.reset)lastSeq=0;return;}
           if(msg.type==='GROUP_LIVE_SIGNAL'&&msg.event){dispatchEphemeralSignal(msg.event);return;}
           if(msg.type==='GROUP_LIVE_EVENT'&&msg.event){
             eventQueue=eventQueue.then(async()=>{
@@ -138,14 +139,14 @@ export function mountIdentityLiveUI({app,notify=()=>{},showError=console.error,c
     }catch(e){showError(e);}
   };
 
-  window.addEventListener('online',()=>{if(wantConnection)connect();});
-  window.addEventListener('offline',()=>{closeSocket('offline');if(liveRoot)liveRoot.append(row('Réseau','Hors ligne · outbox active'));});
-  document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&wantConnection&&(!socket||socket.readyState!==WebSocket.OPEN))connect();});
+  window.addEventListener('online',()=>{if(wantConnection){reconnectAttempt=0;connect();}});
+  window.addEventListener('offline',()=>{closeSocket('offline');reconnectAttempt=0;if(liveRoot)liveRoot.append(row('Réseau','Hors ligne · outbox active'));});
+  document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&wantConnection&&(!socket||socket.readyState!==WebSocket.OPEN)){reconnectAttempt=0;connect();}});
   document.getElementById('refreshPassportBtn')?.addEventListener('click',()=>void (async()=>{try{await app.groupIdentityPassport(true);notify('Passeport identitaire rafraîchi.');await refresh();}catch(e){showError(e);}})());
   document.getElementById('conciergeMemoryForm')?.addEventListener('submit',e=>{e.preventDefault();void (async()=>{try{
     await app.learnConciergeMemory({category:value('conciergeMemoryCategory'),key:value('conciergeMemoryKey'),value:value('conciergeMemoryValue'),sourceRef:value('conciergeMemorySource'),confidence:Number(value('conciergeMemoryConfidence')||0),privacy:value('conciergeMemoryPrivacy'),visibility:value('conciergeMemoryVisibility')});
     notify('Nouvel apprentissage ajouté à la mémoire du groupe.');document.getElementById('conciergeMemoryValue').value='';document.getElementById('conciergeMemorySource').value='';await refresh();
   }catch(err){showError(err);}})();});
 
-  return{refresh,publishSignal,disconnect:()=>{wantConnection=false;closeSocket('manual');},reconnect:()=>{wantConnection=true;connect();}};
+  return{refresh,publishSignal,disconnect:()=>{wantConnection=false;closeSocket('manual');},reconnect:()=>{reconnectAttempt=0;wantConnection=true;connect();}};
 }

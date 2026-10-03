@@ -86,8 +86,9 @@ export class GroupLiveHub{
       const pair=new Pair(),client=pair[0],server=pair[1];this.state.acceptWebSocket(server,['group-live','user:'+userId]);
       const hibernatingSocket=server as WebSocket & {serializeAttachment?:(value:unknown)=>void};
       hibernatingSocket.serializeAttachment?.({connectedAt:new Date().toISOString(),userId});
-      const after=Math.max(0,Number(url.searchParams.get('after')??0)||0);
-      for(const event of await this.events(after,500,userId))try{server.send(JSON.stringify({type:'GROUP_LIVE_EVENT',event}));}catch{}
+      const requestedAfter=Math.max(0,Number(url.searchParams.get('after')??0)||0),latest=await this.state.storage.get<number>('seq')??0,reset=requestedAfter>latest,effectiveAfter=reset?0:requestedAfter;
+      try{server.send(JSON.stringify({type:'GROUP_LIVE_HELLO',latest,reset}));}catch{}
+      for(const event of await this.events(effectiveAfter,500,userId))try{server.send(JSON.stringify({type:'GROUP_LIVE_EVENT',event}));}catch{}
       for(const signal of await this.signals(Date.now()-12000,userId))try{server.send(JSON.stringify({type:'GROUP_LIVE_SIGNAL',event:signal}));}catch{}
       return new Response(null,{status:101,webSocket:client} as ResponseInit&{webSocket:WebSocket});
     }

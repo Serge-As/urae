@@ -56,6 +56,8 @@ test('client live layer is websocket-first with reconnect replay and no heartbea
   assert.match(live,/CLIENT_SIGNAL/);
   assert.match(live,/liveWebSocketUrl\(lastSeq\)/);
   assert.match(live,/GROUP_LIVE_SIGNAL/);
+  assert.match(live,/GROUP_LIVE_HELLO/);
+  assert.match(live,/reconnectAttempt>=1/);
   assert.match(live,/addEventListener\('online'/);
   assert.doesNotMatch(live,/socket\.send\('PING'\)/);
   assert.doesNotMatch(live,/setInterval\(/);
