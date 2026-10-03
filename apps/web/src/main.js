@@ -2081,27 +2081,28 @@ $('#languageSelect').addEventListener('change', async e => {
     toast(tx('Interface passée en français.','Interface switched to English.'));
 });
 let onlineResumePromise=null;
+let networkRecoveryNeeded=navigator.onLine===false;
 const resumeOnline=()=>{
     if(onlineResumePromise)return onlineResumePromise;
     const preserved=captureNavState();persistNavState(preserved);
     onlineResumePromise=(async()=>{renderConnectivity();try{
-        if(navigator.onLine===false)return;
+        if(navigator.onLine===false){networkRecoveryNeeded=true;return;}
         const beforeSync=pendingTargetSnapshot();
         await app.syncOutbox();
         rememberTargetsConfirmedBySync(beforeSync);
         if(app.activeGroup())await refreshGroupContext();else await renderGroups();
+        networkRecoveryNeeded=false;
         renderOutbox();renderConnectivity();showView(preserved.view,preserved);renderPersistedFinancialConflicts();
-    }catch(error){console.info('Online resume deferred',error);}})().finally(()=>{onlineResumePromise=null;});
+    }catch(error){networkRecoveryNeeded=true;console.info('Online resume deferred',error);}})().finally(()=>{onlineResumePromise=null;});
     return onlineResumePromise;
 };
 const eventDrivenConnectivityRecovery=()=>{
     renderConnectivity();
     const pending=(app.outboxItems?.()??[]).some(item=>!['CONFIRMED','CANCELLED'].includes(String(item.status)));
-    const wasOffline=document.querySelector('#connectivity')?.classList.contains('offline');
-    if(navigator.onLine&&(pending||wasOffline))void resumeOnline();
+    if(navigator.onLine&&(pending||networkRecoveryNeeded))void resumeOnline();
 };
-window.addEventListener('online',()=>{void resumeOnline();});
-window.addEventListener('offline',()=>{persistNavState(captureNavState());renderConnectivity();});
+window.addEventListener('online',()=>{networkRecoveryNeeded=true;void resumeOnline();});
+window.addEventListener('offline',()=>{networkRecoveryNeeded=true;persistNavState(captureNavState());renderConnectivity();});
 window.addEventListener('pageshow',eventDrivenConnectivityRecovery);
 window.addEventListener('focus',eventDrivenConnectivityRecovery);
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')eventDrivenConnectivityRecovery();});
