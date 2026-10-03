@@ -1367,7 +1367,7 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
         repo.listWorkspaceRecords(ctx.tenantId,'FINANCE.SHEET_EVENT',groupId)
       ]);
       const normalizeSavingsLabel=(value:unknown)=>String(value??'').normalize('NFKD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim();
-      const isSavingsRubric=(r:any)=>String(r.activityPlan?.kind??'').toUpperCase()==='SAVINGS'||/SAVINGS|EPARGNE/.test(String(r.facets?.custom?.systemKey??'').toUpperCase())||/epargne|saving/.test(normalizeSavingsLabel(r.name));
+      const isSavingsRubric=(r:any)=>{const facets=r.facets??{},semanticSavings=String(facets.refundability??'')==='FULLY_REFUNDABLE'&&String(facets.direction??'')!=='OUTFLOW'&&String(facets.interestMode??'')==='CUSTOM';return String(r.activityPlan?.kind??'').toUpperCase()==='SAVINGS'||/SAVINGS|EPARGNE/.test(String(facets.custom?.systemKey??'').toUpperCase())||/epargne|saving/.test(normalizeSavingsLabel(r.name))||semanticSavings;};
       // Historical savings stay in the financial truth even after a rubric is archived.
       const savingsRubrics=rubricRows.filter(isSavingsRubric);
       const savingsIds=new Set(savingsRubrics.map(r=>r.id));
