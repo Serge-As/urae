@@ -15,6 +15,7 @@ concurrency:
 
 env:
   ECO_SYSTEM_DB: eco-system-db
+  CODE_ONLY_DEPLOY: 'false'
   R2_BUCKET: eco-system-backups
   ECO_SYSTEM_ROOT: https://eco-system.sergemimf.workers.dev/
   ECO_SYSTEM_HEALTH: https://eco-system.sergemimf.workers.dev/health
@@ -65,6 +66,14 @@ jobs:
         run: npx playwright test tests/browser/financial-cell-e2e-1.5.2.4.spec.mjs tests/browser/core-a-b-c-t01-t15-1.5.2.5.spec.mjs tests/browser/financial-cell-consensus-persistence-1.5.2.6.spec.mjs tests/browser/browser-shell-mobile-1.5.2.6.spec.mjs --browser=chromium --workers=1
       - name: Mandatory WebKit iOS sovereign journal Vault and Relay qualification before production mutation
         run: npx playwright test tests/browser/eco-system-webkit-sovereign-offline-1.5.2.9.spec.mjs tests/browser/eco-system-neural-closure-2026-09-28.spec.mjs --browser=webkit --workers=1
+      - name: Select quota-safe deployment mode
+        shell: bash
+        run: |
+          set -euo pipefail
+          if grep -Fq "db_mutation: none" .github/DEPLOY_ECO_SYSTEM_1_5_2_9_SOVEREIGN_ONCE; then
+            echo "CODE_ONLY_DEPLOY=true" >> "${GITHUB_ENV}"
+            echo "Code-only deployment selected: no D1 export and no D1 migration."
+          fi
       - name: Resolve acquired D1 and R2 without replacement
         shell: bash
         run: |
@@ -86,6 +95,7 @@ jobs:
           fi
           sed -i "s/RELEASE_COMMIT_SHA = \"UNBOUND_DEPLOY\"/RELEASE_COMMIT_SHA = \"${GITHUB_SHA}\"/" workers/api/wrangler.ci.toml
       - name: Export pre-deploy D1 recovery snapshot
+        if: env.CODE_ONLY_DEPLOY != 'true'
         shell: bash
         run: |
           set -euo pipefail
@@ -93,12 +103,14 @@ jobs:
           npx --yes wrangler@4 d1 export "${ECO_SYSTEM_DB}" --remote --output "recovery/eco-system-pre-1.5.2.9-sovereign-${GITHUB_SHA}.sql" --config workers/api/wrangler.ci.toml
           sha256sum recovery/*.sql > recovery/SHA256SUMS.txt
       - name: Upload recovery proof
+        if: env.CODE_ONLY_DEPLOY != 'true'
         uses: actions/upload-artifact@v4
         with:
           name: eco-system-pre-1.5.2.9-sovereign-${{ github.sha }}
           path: recovery/
           retention-days: 30
       - name: Apply additive D1 migrations only
+        if: env.CODE_ONLY_DEPLOY != 'true'
         run: npx --yes wrangler@4 d1 migrations apply "${ECO_SYSTEM_DB}" --remote --config workers/api/wrangler.ci.toml
       - name: Refuse stale production overwrite
         shell: bash
@@ -127,8 +139,8 @@ jobs:
               && grep -q '"ok": true' <<<"${health}" \
               && grep -Fq "\"version\": \"${EXPECTED_VERSION}\"" <<<"${health}" \
               && grep -Fq "\"commitSha\": \"${GITHUB_SHA}\"" <<<"${health}" \
-              && grep -Fq "\"buildId\": \"eco-system-1.5.2.9-20261002-free-conservation-debt-syncfix2\"" <<<"${health}" \
-              && grep -Fq "\"pwaCache\": \"eco-system-v1529-free-conservation-debt-syncfix2-20261002\"" <<<"${health}" \
+              && grep -Fq "\"buildId\": \"eco-system-1.5.2.9-20261003-free-event-push-no-polling\"" <<<"${health}" \
+              && grep -Fq "\"pwaCache\": \"eco-system-v1529-free-event-push-20261003\"" <<<"${health}" \
               && grep -q '"capabilities"' <<<"${catalog}" \
               && grep -Fq "\"version\": \"${EXPECTED_VERSION}\"" <<<"${catalog}"; then break; fi
             echo "Waiting for exact 1.5.2.9 sovereign SHA propagation (attempt ${attempt}/8)…"
@@ -143,8 +155,8 @@ jobs:
           if(health.ok!==true) throw new Error('HEALTH_NOT_OK');
           if(health.version!==process.env.EXPECTED_VERSION) throw new Error('VERSION_MISMATCH:'+health.version);
           if(health.commitSha!==process.env.GITHUB_SHA) throw new Error('COMMIT_MISMATCH:'+health.commitSha);
-          if(health.buildId!=='eco-system-1.5.2.9-20261002-free-conservation-debt-syncfix2') throw new Error('BUILD_ID_MISMATCH:'+health.buildId);
-          if(health.pwaCache!=='eco-system-v1529-free-conservation-debt-syncfix2-20261002') throw new Error('PWA_CACHE_MISMATCH:'+health.pwaCache);
+          if(health.buildId!=='eco-system-1.5.2.9-20261003-free-event-push-no-polling') throw new Error('BUILD_ID_MISMATCH:'+health.buildId);
+          if(health.pwaCache!=='eco-system-v1529-free-event-push-20261003') throw new Error('PWA_CACHE_MISMATCH:'+health.pwaCache);
           if(health.realMoneyEnabled!==false) throw new Error('REAL_MONEY_MUST_REMAIN_DISABLED');
           if(health.premiumLiveEnabled!==true) throw new Error('PREMIUM_LIVE_LEDGER_NOT_ACTIVE');
           if(health.artifactStorageBound!==true) throw new Error('ARTIFACT_STORAGE_NOT_ACTIVE');
@@ -154,6 +166,7 @@ jobs:
           NODE
 
       - name: Export post-deploy D1 recovery snapshot and verify restoration
+        if: env.CODE_ONLY_DEPLOY != 'true'
         shell: bash
         run: |
           set -euo pipefail
@@ -163,6 +176,7 @@ jobs:
           test "$(sqlite3 /tmp/eco-system-restore-1.5.2.9-sovereign.db 'PRAGMA integrity_check;')" = "ok"
           sha256sum recovery-post/*.sql > recovery-post/SHA256SUMS.txt
       - name: Upload post-deploy recovery proof
+        if: env.CODE_ONLY_DEPLOY != 'true'
         uses: actions/upload-artifact@v4
         with:
           name: eco-system-post-1.5.2.9-sovereign-${{ github.sha }}
