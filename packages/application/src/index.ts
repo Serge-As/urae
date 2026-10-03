@@ -142,16 +142,9 @@ export class ConnectedApplication {
   private async canAttemptCriticalWrite():Promise<boolean>{
     if(this.serverBudgetBlocked())return false;
     if(typeof navigator!=='undefined'&&navigator.onLine===false)return false;
-    if(!this.usingOfflineSnapshot)return true;
-    // A single cached GET must never trap later financial writes in offline mode.
-    // Probe the real authenticated server directly, bypassing read-snapshot fallback.
-    try{
-      const response=await fetch(`${this.baseUrl}/api/v1/auth/session`,{method:'GET',headers:this.headers()});
-      if(!response.ok)return false;
-      const body=await response.json() as {authenticated?:boolean;account?:unknown};
-      if(body.authenticated&&body.account){this.usingOfflineSnapshot=false;return true;}
-    }catch{}
-    return false;
+    // The business write is itself the connectivity probe. Never spend a D1/HTTP
+    // read merely to ask whether a critical write may be attempted.
+    return true;
   }
   private async cached<T>(path:string):Promise<T|undefined>{
     try{
@@ -1063,26 +1056,36 @@ export class ConnectedApplication {
   async reserveLiveConsensus(meetingId:string,cellKey:string,reason:string):Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/meetings/${encodeURIComponent(meetingId)}/live-consensus/${encodeURIComponent(cellKey)}/reserve`,{method:'POST',body:JSON.stringify({reason})});}
   async setFinancialCellTarget(input:{meetingId:string;membershipId:string;rubricId:string;targetAmount:number;currentAmount?:number;currentVersion?:number;reason?:string}):Promise<any>{
     if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');
+    const groupId=this.activeGroupId;
     if(!Number.isSafeInteger(input.targetAmount)||input.targetAmount<0)throw Error('INVALID_CONTRIBUTION_AMOUNT');
     const current=Number(input.currentAmount??0),currentVersion=Number(input.currentVersion??0),operationKey='cell-target:'+makeId('op');
-    const payload={groupId:this.activeGroupId,meetingId:input.meetingId,membershipId:input.membershipId,rubricId:input.rubricId,targetAmount:input.targetAmount,baselineValue:current,baselineVersion:currentVersion,reason:input.reason??''};
+    const payload={groupId,meetingId:input.meetingId,membershipId:input.membershipId,rubricId:input.rubricId,targetAmount:input.targetAmount,baselineValue:current,baselineVersion:currentVersion,reason:input.reason??''};
     // Persist the exact target command before attempting transport. If the HTTP
     // response is lost after commit, the same idempotency key is replayed later.
     const item=await this.queueLocal('FINANCIAL_CELL_CORRECTION_PROPOSAL_V1',payload,operationKey);
     if(!(await this.canAttemptCriticalWrite()))return{status:'QUEUED_SYNC',queued:true,current,target:input.targetAmount,outbox:item};
-    try{
-      const result=await this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/meetings/${encodeURIComponent(input.meetingId)}/financial-cells`,{
-        method:'POST',headers:{'x-idempotency-key':operationKey},
-        body:JSON.stringify({membershipId:input.membershipId,rubricId:input.rubricId,targetAmount:input.targetAmount,expectedCurrentAmount:current,expectedCellVersion:currentVersion,reason:input.reason??''})
-      });
-      this.outbox.markConfirmedByKey(this.tenantId,this.actorId,operationKey);await this.persistOutbox();return result;
-    }catch(error){
-      if(error instanceof Error&&error.message==='CELL_VALUE_CONFLICT'){this.outbox.markConflictByKey(this.tenantId,this.actorId,operationKey);await this.persistOutbox();throw error;}
-      if(error instanceof Error&&(error.message==='NETWORK_UNAVAILABLE'||/^HTTP_5\d\d$/.test(error.message))){
-        await this.persistOutbox();
-        return{status:'QUEUED_SYNC',queued:true,current,target:input.targetAmount,outbox:item};
+    const send=()=>this.request(`/api/v1/groups/${encodeURIComponent(groupId)}/meetings/${encodeURIComponent(input.meetingId)}/financial-cells`,{
+      method:'POST',headers:{'x-idempotency-key':operationKey},
+      body:JSON.stringify({membershipId:input.membershipId,rubricId:input.rubricId,targetAmount:input.targetAmount,expectedCurrentAmount:current,expectedCellVersion:currentVersion,reason:input.reason??''})
+    });
+    const confirm=async(result:any)=>{this.outbox.markConfirmedByKey(this.tenantId,this.actorId,operationKey);await this.persistOutbox();return result;};
+    const conflict=async(error:Error)=>{this.outbox.markConflictByKey(this.tenantId,this.actorId,operationKey);await this.persistOutbox();throw error;};
+    try{return await confirm(await send());}
+    catch(error){
+      if(error instanceof Error&&['CELL_VALUE_CONFLICT','CELL_VERSION_CONFLICT'].includes(error.message))return conflict(error);
+      const transient=error instanceof Error&&(error.message==='NETWORK_UNAVAILABLE'||/^HTTP_5\d\d$/.test(error.message));
+      if(!transient)throw error;
+      // One validation action may perform one idempotent transport retry, never a loop.
+      // A real D1 quota block or explicit offline state suppresses even this retry.
+      if(!this.serverBudgetBlocked()&&(typeof navigator==='undefined'||navigator.onLine!==false)){
+        try{return await confirm(await send());}
+        catch(retryError){
+          if(retryError instanceof Error&&['CELL_VALUE_CONFLICT','CELL_VERSION_CONFLICT'].includes(retryError.message))return conflict(retryError);
+          if(!(retryError instanceof Error&&(retryError.message==='NETWORK_UNAVAILABLE'||/^HTTP_5\d\d$/.test(retryError.message))))throw retryError;
+        }
       }
-      throw error;
+      await this.persistOutbox();
+      return{status:'QUEUED_SYNC',queued:true,current,target:input.targetAmount,outbox:item};
     }
   }
   async applyFinancialCellConsensus(meetingId:string,cellKey:string,reason='Valeur retenue après confrontation des gestionnaires'):Promise<any>{

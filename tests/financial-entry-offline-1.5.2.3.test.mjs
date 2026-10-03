@@ -82,11 +82,14 @@ test('1.5.2.3 financial matrix validates both click and Enter and shows durable 
 
 
 test('specialized sheet entries queue durably offline for outflow loan and repayment',async()=>{
-  const oldIndexed=globalThis.indexedDB;
+  const indexedDescriptor=Object.getOwnPropertyDescriptor(globalThis,'indexedDB'),navigatorDescriptor=Object.getOwnPropertyDescriptor(globalThis,'navigator');
   try{
-    globalThis.indexedDB={};
+    // Keep Outbox durability advertised while preventing real IndexedDB I/O in Node.
+    // Sovereign storage requires indexedDB.open, so this lightweight stub remains disabled there.
+    Object.defineProperty(globalThis,'indexedDB',{value:{},configurable:true,writable:true});
+    Object.defineProperty(globalThis,'navigator',{value:{onLine:false},configurable:true});
     const app=new ConnectedApplication({actorId:'manager_offline_all',tenantId:'tenant_offline_all'});
-    app.selectGroup('group_offline_all');app.outboxStorage.save=async()=>{};app.usingOfflineSnapshot=true;
+    app.selectGroup('group_offline_all');app.outboxStorage.save=async()=>{};
     const outflow=await app.recordFinancialSheetEntry({membershipId:'member_1',meetingId:'meeting_1',rubric:{id:'rub_out',name:'Dépense',facets:{direction:'OUTFLOW'}},amount:700});
     const loan=await app.recordFinancialSheetEntry({membershipId:'member_1',meetingId:'meeting_1',rubric:{id:'rub_loan',name:'Prêt',activityPlan:{kind:'LOAN'},policies:{loan:{allowed:true,rateBasisPointsPerPeriod:200,paymentPriority:'CAPITAL_FIRST'}}},amount:5000});
     const repayment=await app.recordFinancialSheetEntry({membershipId:'member_1',meetingId:'meeting_1',rubric:{id:'rub_repay',name:'Remboursement',activityPlan:{kind:'REPAYMENT'}},amount:1000});
@@ -95,7 +98,10 @@ test('specialized sheet entries queue durably offline for outflow loan and repay
     assert.deepEqual(pending.map(x=>x.nature).sort(),['LOAN','OUTFLOW','REPAYMENT']);
     assert.deepEqual(pending.map(x=>x.amount).sort((a,b)=>a-b),[700,1000,5000]);
     assert.equal(app.outboxItems().filter(x=>x.type==='FINANCIAL_SHEET_ENTRY_V1').length,3);
-  }finally{if(oldIndexed===undefined)delete globalThis.indexedDB;else globalThis.indexedDB=oldIndexed;}
+  }finally{
+    if(indexedDescriptor)Object.defineProperty(globalThis,'indexedDB',indexedDescriptor);else try{delete globalThis.indexedDB;}catch{}
+    if(navigatorDescriptor)Object.defineProperty(globalThis,'navigator',navigatorDescriptor);else try{delete globalThis.navigator;}catch{}
+  }
 });
 
 test('specialized pending finance is projected after offline reload and replay is idempotent by contract',async()=>{

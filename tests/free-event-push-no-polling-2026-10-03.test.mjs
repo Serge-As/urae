@@ -47,3 +47,11 @@ test('debt savings rubric and offline acquisitions remain present',()=>{
   assert.match(app,/updateRubricPolicies[\s\S]*queueLocal\('RUBRIC_POLICIES_V1'/);
   assert.match(app,/createCompletion[\s\S]*COMPLETION_CREATE_V1/);
 });
+
+
+test('critical financial write never spends a preliminary auth GET',()=>{
+  const guard=app.slice(app.indexOf('private async canAttemptCriticalWrite'),app.indexOf('private async cached'));
+  assert.match(guard,/business write is itself the connectivity probe/);
+  assert.doesNotMatch(guard,/fetch\(/);
+  assert.doesNotMatch(guard,/api\/v1\/auth\/session/);
+});
