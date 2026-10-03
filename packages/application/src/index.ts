@@ -1063,19 +1063,28 @@ export class ConnectedApplication {
     // response is lost after commit, the same idempotency key is replayed later.
     const item=await this.queueLocal('FINANCIAL_CELL_CORRECTION_PROPOSAL_V1',payload,operationKey);
     if(!(await this.canAttemptCriticalWrite()))return{status:'QUEUED_SYNC',queued:true,current,target:input.targetAmount,outbox:item};
-    try{
-      const result=await this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/meetings/${encodeURIComponent(input.meetingId)}/financial-cells`,{
-        method:'POST',headers:{'x-idempotency-key':operationKey},
-        body:JSON.stringify({membershipId:input.membershipId,rubricId:input.rubricId,targetAmount:input.targetAmount,expectedCurrentAmount:current,expectedCellVersion:currentVersion,reason:input.reason??''})
-      });
-      this.outbox.markConfirmedByKey(this.tenantId,this.actorId,operationKey);await this.persistOutbox();return result;
-    }catch(error){
-      if(error instanceof Error&&error.message==='CELL_VALUE_CONFLICT'){this.outbox.markConflictByKey(this.tenantId,this.actorId,operationKey);await this.persistOutbox();throw error;}
-      if(error instanceof Error&&(error.message==='NETWORK_UNAVAILABLE'||/^HTTP_5\d\d$/.test(error.message))){
-        await this.persistOutbox();
-        return{status:'QUEUED_SYNC',queued:true,current,target:input.targetAmount,outbox:item};
+    const send=()=>this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/meetings/${encodeURIComponent(input.meetingId)}/financial-cells`,{
+      method:'POST',headers:{'x-idempotency-key':operationKey},
+      body:JSON.stringify({membershipId:input.membershipId,rubricId:input.rubricId,targetAmount:input.targetAmount,expectedCurrentAmount:current,expectedCellVersion:currentVersion,reason:input.reason??''})
+    });
+    const confirm=async(result:any)=>{this.outbox.markConfirmedByKey(this.tenantId,this.actorId,operationKey);await this.persistOutbox();return result;};
+    const conflict=async(error:Error)=>{this.outbox.markConflictByKey(this.tenantId,this.actorId,operationKey);await this.persistOutbox();throw error;};
+    try{return await confirm(await send());}
+    catch(error){
+      if(error instanceof Error&&['CELL_VALUE_CONFLICT','CELL_VERSION_CONFLICT'].includes(error.message))return conflict(error);
+      const transient=error instanceof Error&&(error.message==='NETWORK_UNAVAILABLE'||/^HTTP_5\d\d$/.test(error.message));
+      if(!transient)throw error;
+      // One validation action may perform one idempotent transport retry, never a loop.
+      // A real D1 quota block or explicit offline state suppresses even this retry.
+      if(!this.serverBudgetBlocked()&&(typeof navigator==='undefined'||navigator.onLine!==false)){
+        try{return await confirm(await send());}
+        catch(retryError){
+          if(retryError instanceof Error&&['CELL_VALUE_CONFLICT','CELL_VERSION_CONFLICT'].includes(retryError.message))return conflict(retryError);
+          if(!(retryError instanceof Error&&(retryError.message==='NETWORK_UNAVAILABLE'||/^HTTP_5\d\d$/.test(retryError.message))))throw retryError;
+        }
       }
-      throw error;
+      await this.persistOutbox();
+      return{status:'QUEUED_SYNC',queued:true,current,target:input.targetAmount,outbox:item};
     }
   }
   async applyFinancialCellConsensus(meetingId:string,cellKey:string,reason='Valeur retenue après confrontation des gestionnaires'):Promise<any>{

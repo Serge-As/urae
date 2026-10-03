@@ -14,3 +14,15 @@ test('critical write path has no preliminary connectivity GET',()=>{
   assert.match(cell,/canAttemptCriticalWrite/);
   assert.match(cell,/this\.request\(/);
 });
+
+
+test('cell validation has at most one event-bound idempotent retry and no loop',()=>{
+  const cell=app.slice(app.indexOf('async setFinancialCellTarget'),app.indexOf('async applyFinancialCellConsensus'));
+  assert.match(cell,/const send=\(\)=>this\.request/);
+  assert.match(cell,/One validation action may perform one idempotent transport retry, never a loop/);
+  assert.match(cell,/!this\.serverBudgetBlocked\(\)/);
+  assert.match(cell,/navigator\.onLine!==false/);
+  assert.doesNotMatch(cell,/setInterval|setTimeout/);
+  const sends=(cell.match(/await send\(\)/g)||[]).length;
+  assert.equal(sends,2,'initial send + one retry only');
+});
