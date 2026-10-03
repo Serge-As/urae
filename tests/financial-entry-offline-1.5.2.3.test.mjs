@@ -84,7 +84,9 @@ test('1.5.2.3 financial matrix validates both click and Enter and shows durable 
 test('specialized sheet entries queue durably offline for outflow loan and repayment',async()=>{
   const indexedDescriptor=Object.getOwnPropertyDescriptor(globalThis,'indexedDB'),navigatorDescriptor=Object.getOwnPropertyDescriptor(globalThis,'navigator');
   try{
-    try{delete globalThis.indexedDB;}catch{Object.defineProperty(globalThis,'indexedDB',{value:undefined,configurable:true});}
+    // Keep Outbox durability advertised while preventing real IndexedDB I/O in Node.
+    // Sovereign storage requires indexedDB.open, so this lightweight stub remains disabled there.
+    Object.defineProperty(globalThis,'indexedDB',{value:{},configurable:true,writable:true});
     Object.defineProperty(globalThis,'navigator',{value:{onLine:false},configurable:true});
     const app=new ConnectedApplication({actorId:'manager_offline_all',tenantId:'tenant_offline_all'});
     app.selectGroup('group_offline_all');app.outboxStorage.save=async()=>{};
