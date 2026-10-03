@@ -3,7 +3,7 @@ name: Eco-System 1.5.2.10 — Offline Conflicts Loans Cloudflare Delivery
 on:
   workflow_dispatch:
   push:
-    branches: ['fix/1.5.2.6-field-persistence-pc-mobile-20260925']
+    branches: ['fix/1.5.2.10-offline-conflicts-loans-20261003']
     paths: ['.github/DEPLOY_ECO_SYSTEM_1_5_2_10_ONCE']
 
 permissions:
