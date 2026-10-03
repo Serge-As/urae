@@ -30,6 +30,23 @@ test('draft state is the only ephemeral financial presence persisted',async()=>{
   assert.equal('amount' in (puts[0][1].payload??{}),false);
 });
 
+
+test('direct websocket CLIENT_SIGNAL reaches peer without storage or HTTP fallback',async()=>{
+  globalThis.WebSocket={OPEN:1};
+  const puts=[],received=[];
+  const peer={readyState:1,send:m=>received.push(JSON.parse(String(m)))};
+  const sender={readyState:1,send(){},deserializeAttachment:()=>({userId:'manager-direct'})};
+  const state={storage:{async get(){return 0;},async put(k,v){puts.push([k,v]);},async list(){return new Map();}},getWebSockets(){return[peer];}};
+  const hub=new GroupLiveHub(state,{});
+  await hub.webSocketMessage(sender,JSON.stringify({type:'CLIENT_SIGNAL',eventType:'TYPING',payload:{kind:'FINANCIAL_CELL',meetingId:'m1',membershipId:'member-1',rubricId:'r1'}}));
+  assert.equal(puts.length,0);
+  assert.equal(received.length,1);
+  assert.equal(received[0].type,'GROUP_LIVE_SIGNAL');
+  assert.equal(received[0].event.actorId,'manager-direct');
+  assert.equal(received[0].event.type,'TYPING');
+  assert.equal(received[0].event.payload.amount,undefined);
+});
+
 test('client live layer is websocket-first with reconnect replay and no heartbeat polling',()=>{
   const live=fs.readFileSync('apps/web/src/identity-live-ui.js','utf8');
   const app=fs.readFileSync('packages/application/src/index.ts','utf8');
