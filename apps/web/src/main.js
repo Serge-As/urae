@@ -82,9 +82,9 @@ let financialPendingTargets = new Map();
 let financialPendingSheetEntries = [];
 let financialReviewTargets = new Map();
 const financialOptimisticValues=new Map();
-// Free-tier conservation is the default: WebSocket push is the fast path.
-// Expensive canonical polling code stays available for a future paid mode,
-// but it is never scheduled automatically in this mode.
+// Free-tier conservation is event-driven: WebSocket push carries actual changes.
+// No D1 polling, no draft heartbeat and no periodic Outbox retry are scheduled.
+// Expensive canonical polling stays dormant for a future paid mode.
 const FREE_CONSERVATION_MODE=true;
 const FINANCIAL_CONFIRMED_STORAGE='eco.financialConfirmedCells.v1';
 const financialConfirmedCells=new Map((()=>{try{return Object.entries(JSON.parse(localStorage.getItem(FINANCIAL_CONFIRMED_STORAGE)||'{}'));}catch{return[];}})());
@@ -708,6 +708,7 @@ const rememberTargetsConfirmedBySync=before=>{
   for(const item of before)if(!remaining.has(item.key))rememberConfirmedCell(item.key,item);
 };
 const scheduleFinancialOutboxRecovery=detail=>{
+  if(FREE_CONSERVATION_MODE)return;
   const key=financialCellKey(String(detail.membershipId??''),String(detail.rubricId??''),String(detail.meetingId??''));
   if(financialRetryTimers.has(key)||navigator.onLine===false)return;
   let attempt=0;
@@ -777,7 +778,7 @@ const submitFinancialCellElement=async validate=>{
     const member=members.find(x=>x.id===membershipId),rubric=rubrics.find(x=>x.id===rubricId);
     if(!member||!rubric||!meetingId){traceFinancialCell('CELL_FAIL',{membershipId,rubricId,meetingId,error:'CELL_CONTEXT_NOT_FOUND'});fail(new Error('CELL_CONTEXT_NOT_FOUND'));return;}
     const cellKey=financialCellKey(membershipId,rubricId,meetingId),wrap=holder.closest('.matrix-wrap'),wrapState=wrap?{left:wrap.scrollLeft,top:wrap.scrollTop}:null;
-    const clearRemoteDraft=()=>{void app.publishLiveSignal?.('FINANCIAL_DRAFT_CLEAR',{kind:'FINANCIAL_CELL',meetingId,membershipId,rubricId}).catch(()=>{});};
+    const clearRemoteDraft=()=>{void Promise.resolve(identityLiveUI.publishSignal?.('FINANCIAL_DRAFT_CLEAR',{kind:'FINANCIAL_CELL',meetingId,membershipId,rubricId})).catch(()=>{});};
     if(holder.dataset.submitting==='1'){traceFinancialCell('CELL_SUBMIT_BUSY',{cellKey});return;}
     holder.classList.remove('is-conflict');holder.dataset.submitting='1';
     const nature=financialNatureForRubric(rubric),signedCurrent=exactCellAmount(membershipId,rubricId,meetingId),current=Math.abs(signedCurrent),previousIcon=validate.textContent;
@@ -906,16 +907,15 @@ const makeFinancialEntryCell=({member,rubric,meetingId,editable=true})=>{
     const persistentCellKey=financialCellKey(member.id,rubric.id,meetingId);
     const input=document.createElement('input');input.type='number';input.min='0';input.step='1';input.inputMode='numeric';input.className='cell-target-input';input.placeholder=current>0?tx('Modifier…','Change…'):tx('Saisir…','Enter…');input.setAttribute('aria-label',tx('Nouvelle valeur totale','New total value'));
     const restoredDraft=financialCellDrafts.get(persistentCellKey);if(restoredDraft!==undefined)input.value=String(restoredDraft);
-    let typingTimer=0,lastTypingSignal=0,draftHeartbeat=0;
-    const liveSignalsEnabled=!FREE_CONSERVATION_MODE;
+    let typingTimer=0,typingActive=false,draftAnnounced=false;
+    const liveSignalsEnabled=Boolean(identityLiveUI?.publishSignal);
     const signalPayload=()=>({kind:'FINANCIAL_CELL',meetingId,membershipId:member.id,rubricId:rubric.id});
-    const stopTyping=()=>{if(typingTimer){clearTimeout(typingTimer);typingTimer=0;}if(liveSignalsEnabled)void app.publishLiveSignal?.('TYPING_STOP',signalPayload()).catch(()=>{});};
-    const publishDraftPresence=()=>{if(liveSignalsEnabled&&input.value.trim())void app.publishLiveSignal?.('FINANCIAL_DRAFT',signalPayload()).catch(()=>{});};
-    const stopDraftHeartbeat=(publishClear=false)=>{if(draftHeartbeat){clearInterval(draftHeartbeat);draftHeartbeat=0;}if(liveSignalsEnabled&&publishClear)void app.publishLiveSignal?.('FINANCIAL_DRAFT_CLEAR',signalPayload()).catch(()=>{});};
-    const ensureDraftHeartbeat=()=>{if(!liveSignalsEnabled)return;if(!input.value.trim()){stopDraftHeartbeat(true);return;}publishDraftPresence();if(draftHeartbeat)return;draftHeartbeat=setInterval(()=>{if(!input.isConnected||!input.value.trim()){stopDraftHeartbeat(Boolean(input.isConnected));return;}publishDraftPresence();},4500);};
-    input.addEventListener('focus',()=>{if(liveSignalsEnabled)void app.publishLiveSignal?.('CELL_FOCUS',signalPayload()).catch(()=>{});if(input.value.trim())ensureDraftHeartbeat();});
-    input.addEventListener('input',()=>{saveFinancialCellDraft(persistentCellKey,input.value);if(input.value.trim())ensureDraftHeartbeat();else stopDraftHeartbeat(true);if(liveSignalsEnabled){const now=Date.now();if(now-lastTypingSignal>=800){lastTypingSignal=now;void app.publishLiveSignal?.('TYPING',signalPayload()).catch(()=>{});}if(typingTimer)clearTimeout(typingTimer);typingTimer=setTimeout(stopTyping,2500);}});
-    input.addEventListener('blur',()=>{stopTyping();if(input.value.trim())publishDraftPresence();if(liveSignalsEnabled)void app.publishLiveSignal?.('CELL_BLUR',signalPayload()).catch(()=>{});});
+    const sendSignal=type=>{if(liveSignalsEnabled)void Promise.resolve(identityLiveUI.publishSignal(type,signalPayload())).catch(()=>{});};
+    const stopTyping=()=>{if(typingTimer){clearTimeout(typingTimer);typingTimer=0;}if(typingActive){typingActive=false;sendSignal('TYPING_STOP');}};
+    const announceDraft=()=>{if(!input.value.trim()){if(draftAnnounced){draftAnnounced=false;sendSignal('FINANCIAL_DRAFT_CLEAR');}return;}if(!draftAnnounced){draftAnnounced=true;sendSignal('FINANCIAL_DRAFT');}};
+    input.addEventListener('focus',()=>{sendSignal('CELL_FOCUS');announceDraft();});
+    input.addEventListener('input',()=>{saveFinancialCellDraft(persistentCellKey,input.value);announceDraft();if(!typingActive){typingActive=true;sendSignal('TYPING');}if(typingTimer)clearTimeout(typingTimer);typingTimer=setTimeout(stopTyping,2500);});
+    input.addEventListener('blur',()=>{stopTyping();announceDraft();sendSignal('CELL_BLUR');});
     const validate=document.createElement('button');validate.type='button';validate.className='cell-validate';validate.textContent='✓';validate.title=tx('Valider la valeur totale','Confirm total value');validate.setAttribute('aria-label',tx('Valider la saisie','Confirm entry'));
     const liveLine=document.createElement('small');liveLine.className='cell-live-presence';liveLine.setAttribute('aria-live','polite');liveLine.hidden=true;
     const stateLine=document.createElement('small');stateLine.className='cell-save-state';stateLine.setAttribute('aria-live','polite');stateLine.hidden=true;
@@ -1568,7 +1568,7 @@ const applyRemoteFinancialProjection=(p={})=>{
 };
 const acknowledgeRemoteFinancialCell=button=>{
     const cell=button?.closest?.('.matrix-cell-entry');if(!cell)return;cell.classList.remove('remote-financial-change','remote-financial-closed');button.classList.remove('remote-ack');button.textContent='✓';
-    if(!FREE_CONSERVATION_MODE)void app.publishLiveSignal?.('LIVE_ACK',{kind:'FINANCIAL_CELL',meetingId:cell.dataset.meetingId||'',membershipId:cell.dataset.membershipId||'',rubricId:cell.dataset.rubricId||''}).catch(()=>{});
+    void Promise.resolve(identityLiveUI.publishSignal?.('LIVE_ACK',{kind:'FINANCIAL_CELL',meetingId:cell.dataset.meetingId||'',membershipId:cell.dataset.membershipId||'',rubricId:cell.dataset.rubricId||''})).catch(()=>{});
 };
 const highlightRemoteFinancialCell=(p={})=>{
     const selector=financialLiveSelector(p);if(!selector)return;applyRemoteFinancialProjection(p);

@@ -202,10 +202,11 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
     if(!member || manage && !member.roles.some(r=>['founder','manager','admin','president','treasurer'].includes(r)))throw Error('FORBIDDEN_SCOPE');
     return group;
   };
-  const liveStubFor=async(groupId:string)=>{
+  const liveStubFor=(groupId:string)=>{
     if(!options.premiumLive||!options.liveNamespace)throw new Error('PREMIUM_LIVE_LEDGER_DISABLED');
-    const passport=await groupIdentity.compute(groupId);
-    return{stub:options.liveNamespace.get(options.liveNamespace.idFromName(passport.publicCode)),passport};
+    // Stable tenant + group channel. No D1 read is needed merely to route a Live event.
+    const channelKey=ctx.tenantId+':'+groupId;
+    return{stub:options.liveNamespace.get(options.liveNamespace.idFromName(channelKey)),channelKey};
   };
   const publishLive=async(groupId:string,type:string,idempotencyKey:string,payload:Record<string,string|number|boolean|null>,targetUserId?:string)=>{
     if(!options.premiumLive||!options.liveNamespace)return;
@@ -538,24 +539,30 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
     const liveSignalsRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/live\/signals$/);
     if(liveSignalsRoute&&request.method==='GET'){
       const groupId=liveSignalsRoute[1]!;if(!options.premiumLive||!options.liveNamespace)return json({enabled:false,error:'PREMIUM_LIVE_LEDGER_DISABLED'},503,cors);await requireGroup(groupId,false);
-      const {stub}=await liveStubFor(groupId),afterAt=url.searchParams.get('afterAt')??'0';
+      const {stub}=liveStubFor(groupId),afterAt=url.searchParams.get('afterAt')??'0';
       return stub.fetch(new Request('https://group-live.internal/signals?afterAt='+encodeURIComponent(afterAt)+'&actorId='+encodeURIComponent(ctx.actorId)));
     }
     const liveRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/live\/(health|events|connect|publish|signal)$/);
     if(liveRoute){
       const groupId=liveRoute[1]!,action=liveRoute[2]!;
       if(!options.premiumLive||!options.liveNamespace)return json({enabled:false,error:'PREMIUM_LIVE_LEDGER_DISABLED'},503,cors);
-      const {stub,passport}=await liveStubFor(groupId);
+      const {stub}=liveStubFor(groupId);
       if(action==='health'&&request.method==='GET'){
+        await requireGroup(groupId,false);
         const response=await stub.fetch(new Request('https://group-live.internal/health'));
         const body=await response.json() as Record<string,unknown>;
-        return json({...body,enabled:true,groupCode:passport.publicCode,rulesFingerprint:passport.rulesFingerprint},response.status,cors);
+        return json({...body,enabled:true,groupCode:groupId,transport:'EVENT_PUSH_NO_D1_POLLING'},response.status,cors);
       }
       if(action==='events'&&request.method==='GET'){
+        await requireGroup(groupId,false);
         const after=url.searchParams.get('after')??'0',limit=url.searchParams.get('limit')??'100';
         return stub.fetch(new Request('https://group-live.internal/events?after='+encodeURIComponent(after)+'&limit='+encodeURIComponent(limit)+'&userId='+encodeURIComponent(ctx.actorId)));
       }
-      if(action==='connect'&&request.method==='GET')return stub.fetch(new Request('https://group-live.internal/connect?userId='+encodeURIComponent(ctx.actorId),{method:'GET',headers:request.headers}));
+      if(action==='connect'&&request.method==='GET'){
+        await requireGroup(groupId,false);
+        const after=url.searchParams.get('after')??'0';
+        return stub.fetch(new Request('https://group-live.internal/connect?userId='+encodeURIComponent(ctx.actorId)+'&after='+encodeURIComponent(after),{method:'GET',headers:request.headers}));
+      }
       if(action==='signal'&&request.method==='POST'){
         const body=await readJson<Record<string,unknown>>(request),type=String(body.type??'');
         const allowed=new Set(['PRESENCE','TYPING','TYPING_STOP','CELL_FOCUS','CELL_BLUR','FINANCIAL_DRAFT','FINANCIAL_DRAFT_CLEAR','LIVE_ACK']);
@@ -567,7 +574,7 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
         for(const [k,v] of Object.entries(raw))if(typeof v==='string'||typeof v==='number'||typeof v==='boolean'||v===null)payload[k]=v;
         const response=await stub.fetch(new Request('https://group-live.internal/signal',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({type,actorId:ctx.actorId,payload})}));
         if(!response.ok)throw new Error('LIVE_SIGNAL_FAILED');
-        return json({accepted:true,ephemeral:true,groupCode:passport.publicCode},202,cors);
+        return json({accepted:true,ephemeral:true,groupCode:groupId},202,cors);
       }
       if(action==='publish'&&request.method==='POST'){
         const body=await readJson<Record<string,unknown>>(request),type=String(body.type??'');
@@ -578,7 +585,7 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
         for(const [k,v] of Object.entries(raw))if(typeof v==='string'||typeof v==='number'||typeof v==='boolean'||v===null)payload[k]=v;
         const idempotencyKey=String(body.idempotencyKey??request.headers.get('x-idempotency-key')??makeId('live'));
         await publishLive(groupId,type,idempotencyKey,payload);
-        return json({accepted:true,groupCode:passport.publicCode},202,cors);
+        return json({accepted:true,groupCode:groupId},202,cors);
       }
       return json({error:'METHOD_NOT_ALLOWED'},405,cors);
     }
