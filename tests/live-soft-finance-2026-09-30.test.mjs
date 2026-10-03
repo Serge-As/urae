@@ -27,11 +27,12 @@ test('financial banners are dismissable without deleting notification history',(
   assert.match(css,/financial-alert-close/);
 });
 
-test('live client heals missed durable events while visible',()=>{
-  assert.match(live,/catchupTimer/);
-  assert.match(live,/1200/);
+test('live client heals missed durable events by sequence replay on reconnect without polling',()=>{
+  assert.match(live,/liveWebSocketUrl\(lastSeq\)/);
+  assert.match(live,/sequence-gap/);
   assert.match(live,/visibilityState==='visible'/);
-  assert.match(live,/catchUp\(\)/);
+  assert.doesNotMatch(live,/catchupTimer/);
+  assert.doesNotMatch(live,/setInterval\(/);
 });
 
 test('server broadcasts canonical financial writes to managers',()=>{
@@ -42,11 +43,13 @@ test('server broadcasts canonical financial writes to managers',()=>{
 });
 
 
-test('financial live exposes a draft-presence signal without broadcasting the draft amount',()=>{
+test('financial live exposes draft presence only on state changes and never broadcasts the draft amount',()=>{
   assert.match(main,/FINANCIAL_DRAFT/);
   assert.match(main,/FINANCIAL_DRAFT_CLEAR/);
   assert.match(main,/a un brouillon non validé/);
-  assert.match(main,/4500/);
+  assert.match(main,/draftAnnounced/);
+  assert.doesNotMatch(main,/draftHeartbeat/);
+  assert.doesNotMatch(main,/4500/);
   assert.match(worker,/FINANCIAL_DRAFT/);
   assert.match(css,/live-cell-draft/);
   const cellBuilder=main.slice(main.indexOf('const makeFinancialEntryCell'),main.indexOf('const ensureMatrixMeeting'));

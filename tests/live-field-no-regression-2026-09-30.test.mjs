@@ -15,11 +15,11 @@ test('online financial writes probe real server instead of stale cached-read sta
   assert.match(app,/recordFinancialSheetEntry[\s\S]*canAttemptCriticalWrite/);
 });
 
-test('transient online queue retries automatically and canonical snapshot patches without page reload',()=>{
+test('free conservation keeps targeted patching but disables automatic queue and snapshot loops',()=>{
   assert.match(main,/scheduleFinancialOutboxRecovery/);
   assert.match(main,/financialCellSnapshot/);
   assert.match(main,/pollCanonicalFinancialSnapshot/);
-  assert.match(main,/1200/);
+  assert.match(main,/if\(FREE_CONSERVATION_MODE\)return;/);
   assert.match(main,/previous!==signature/);
   assert.match(main,/financialSnapshotGroup/);
   const submit=main.slice(main.indexOf('const submitFinancialCellElement'),main.indexOf('const makeFinancialEntryCell'));
@@ -27,11 +27,10 @@ test('transient online queue retries automatically and canonical snapshot patche
   assert.doesNotMatch(submit,/sessionsUI\.refresh/);
 });
 
-test('typing and draft presence survive websocket hibernation without storing amounts',()=>{
-  assert.match(hub,/signal-actor:/);
-  assert.match(hub,/at most two short-lived records per actor/);
-  assert.match(hub,/\?\'draft\':\'activity\'/);
-  assert.match(hub,/signal-actor:[^\n]*category/);
+test('typing is pure push while only actual draft state survives websocket hibernation',()=>{
+  assert.match(hub,/TYPING \/ FOCUS \/ BLUR are pure push/);
+  assert.match(hub,/Only an actual draft state change is retained/);
+  assert.match(hub,/signal-actor:[^\n]*:draft/);
   assert.match(hub,/ttlMs:12000/);
   assert.doesNotMatch(hub,/payload\.amount/);
 });
