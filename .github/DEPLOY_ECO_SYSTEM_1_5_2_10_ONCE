@@ -4,3 +4,4 @@ date: 2026-10-03
 db_mutation: none
 mode: code-only-no-d1-export-no-migration
 reason: offline refresh + explicit financial conflict + savings truth + loan/debt tables
+trigger_sha_parent: 898f3ffa79bfa35a0f0b7167d98391a360895fd5
