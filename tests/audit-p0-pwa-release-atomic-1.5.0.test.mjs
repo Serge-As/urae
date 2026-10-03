@@ -14,10 +14,12 @@ test('new service worker refuses to install when any declared startup-shell asse
   assert.match(sw,/RELEASE_READY/);
 });
 
-test('online navigation is network-first while versioned release assets remain immutable in cache',()=>{
+test('installed navigation is coherent-shell-first so offline reload is immediate while release assets stay immutable',()=>{
   assert.doesNotMatch(sw,/ignoreSearch\s*:\s*true/);
   assert.doesNotMatch(sw,/cache\.put\(url\.pathname,fresh/);
-  assert.match(sw,/Online navigation is network-first/);
+  assert.match(sw,/coherent installed shell is the navigation source of truth/);
+  assert.match(sw,/const ready = await cache\.match\(RELEASE_READY\)/);
+  assert.match(sw,/if \(cached\) return cached/);
   assert.match(sw,/fetch\(event\.request, \{ cache:'no-store' \}\)/);
   assert.match(sw,/if\(url\.search\)return await cache\.match\(request\)/);
   assert.match(sw,/APP_SHELL\.includes\(url\.pathname\)/);
@@ -38,6 +40,6 @@ test('release changes the active cache identity while preserving a distinct cohe
   const previous=sw.match(/const PREVIOUS_CACHE = '([^']+)';/)?.[1];
   assert.ok(current&&previous,'release and rollback caches are both declared');
   assert.notEqual(current,previous,'active release cache must differ from rollback cache');
-  assert.match(current,/^eco-system-v1529-/);
+  assert.match(current,/^eco-system-v15210-/);
   assert.match(previous,/^eco-system-v1529-/);
 });
