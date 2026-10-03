@@ -984,7 +984,7 @@ const renderRubricRecapTable=async(rubric,host)=>{
 const appendRubricRecapChooser=root=>{
   if(!root||!rubrics.length)return;
   const section=document.createElement('section');section.id='rubricRecapChooser';section.className='item rubric-recap-chooser';
-  const title=document.createElement('h3');title.textContent=tx('Récapitulatif d’une rubrique','Rubric recap');
+  const title=document.createElement('h3');title.textContent=tx('Tableau récapitulatif · membres × séances','Recap table · members × sessions');
   const hint=document.createElement('p');hint.className='hint';hint.textContent=tx('Choisissez une rubrique : Eco-System affiche un seul tableau membres × séances, avec totaux par membre, par séance et total général.','Choose a rubric: Eco-System shows one members × sessions table, with member, session and grand totals.');
   const select=document.createElement('select');select.setAttribute('aria-label',tx('Rubrique à récapituler','Rubric to recap'));
   for(const rubric of rubrics){const option=document.createElement('option');option.value=rubric.id;option.textContent=rubric.name+(rubric.status==='ARCHIVED'?tx(' · archivée',' · archived'):'');select.append(option);}
