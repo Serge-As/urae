@@ -77,7 +77,7 @@ interface WorkersAILike {
 const RELEASE_VERSION='1.5.2.10-offline-conflicts-loans';
 const RELEASE_BUILD_ID='eco-system-1.5.2.10-20261003-offline-conflicts-loans';
 const RELEASE_SCHEMA_VERSION='d1-additive-20260923';
-const RELEASE_POLICY_VERSION='live-finance-policy-20260930';
+const RELEASE_POLICY_VERSION='live-finance-policy-20261003-explicit-conflicts';
 const RELEASE_PWA_CACHE='eco-system-v15210-offline-conflicts-loans-20261003';
 
 const defaultRepo = new InMemoryPlatformRepository();
