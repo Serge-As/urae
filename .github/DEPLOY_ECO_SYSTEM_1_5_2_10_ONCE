@@ -1,0 +1,6 @@
+Eco-System 1.5.2.10 deployment marker
+release: 1.5.2.10-offline-conflicts-loans
+date: 2026-10-03
+db_mutation: none
+mode: code-only-no-d1-export-no-migration
+reason: offline refresh + explicit financial conflict + savings truth + loan/debt tables

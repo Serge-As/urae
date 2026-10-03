@@ -21,8 +21,8 @@ const trashLifecycle=fs.readFileSync('packages/trash-lifecycle/src/index.ts','ut
 const repositories=fs.readFileSync('packages/repositories/src/index.ts','utf8');
 
 test('Android 6 offline shell remains bounded and never force-reloads a live page on worker takeover',()=>{
-  assert.match(sw,/const CACHE = 'eco-system-v1529-free-event-push-20261003'/);
-  assert.match(sw,/PREVIOUS_CACHE = 'eco-system-v1529-free-conservation-debt-syncfix2-20261002'/);
+  assert.match(sw,/const CACHE = 'eco-system-v15210-offline-conflicts-loans-20261003'/);
+  assert.match(sw,/PREVIOUS_CACHE = 'eco-system-v1529-free-event-push-20261003'/);
   assert.match(sw,/RELEASE_ASSET_TIMEOUT/);
   assert.match(sw,/Scripts\/styles\/assets are cache-first/);
   assert.match(sw,/skipWaiting\(/);
@@ -203,14 +203,14 @@ test('loan is a negative member position and simulation is available to member a
   assert.match(app,/loanHistory/);
 });
 
-test('stale cached html recovers to the free-conservation 1.5.2.9 shell while preserving the previous coherent release',()=>{
+test('stale cached html recovers to the coherent 1.5.2.10 shell while preserving the previous release',()=>{
   assert.match(main,/document\.querySelector\('#claimLocalAccountBtn'\)\?\.addEventListener/);
   assert.doesNotMatch(main,/\$\('#claimLocalAccountBtn'\)\.addEventListener/);
-  assert.match(sw,/const CACHE = 'eco-system-v1529-free-event-push-20261003'/);
-  assert.match(sw,/PREVIOUS_CACHE = 'eco-system-v1529-free-conservation-debt-syncfix2-20261002'/);
-  assert.match(html,/ECO-SYSTEM · 1\.5\.2\.9/);
-  assert.match(html,/main\.js\?v=1529/);
+  assert.match(sw,/const CACHE = 'eco-system-v15210-offline-conflicts-loans-20261003'/);
+  assert.match(sw,/PREVIOUS_CACHE = 'eco-system-v1529-free-event-push-20261003'/);
+  assert.match(html,/ECO-SYSTEM · 1\.5\.2\.10/);
+  assert.match(html,/main\.js\?v=15210/);
   const current=sw.match(/const CACHE = '([^']+)';/)?.[1],previous=sw.match(/const PREVIOUS_CACHE = '([^']+)';/)?.[1];
   assert.ok(current&&previous&&current!==previous,'current release and rollback release must be distinct coherent caches');
-  assert.match(sw,/Online navigation is network-first/);
+  assert.match(sw,/coherent installed shell is the navigation source of truth/);
 });

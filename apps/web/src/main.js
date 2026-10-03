@@ -136,7 +136,7 @@ let launchStudio;
 let modules = [];
 let selectedLot = 'ALL';
 let deferredInstallPrompt;
-const CAHIER_VERSION = '1.5.2.7-live-completion';
+const CAHIER_VERSION = '1.5.2.10-offline-conflicts-loans';
 const $ = (s) => { const e = document.querySelector(s); if (!e)
     throw new Error(`UI_ELEMENT_NOT_FOUND:${s}`); return e; };
 const val = (id) => document.getElementById(id).value.trim();
@@ -228,17 +228,31 @@ const miscRubricUI = mountMiscRubricUI({ app, notify: toast, showError: fail, ge
 const pairingUI = mountPairingUI({ app, notify: toast, showError: fail, getMembers: () => members, isManager, afterMembershipChanged: async groupId => { await renderGroups(); if(groupId){ app.selectGroup(groupId); await refreshGroupContext(); } } });
 const clearFail = hideError;
 let navDepth=Number(history.state?.ecoDepth??0);
+const NAV_STATE_STORAGE='eco.navigation.state.v1';
 const activeViewName=()=>document.querySelector('.view.active')?.id?.replace(/^view-/,'')||'dashboard';
+const readPersistedNavState=()=>{try{const value=JSON.parse(sessionStorage.getItem(NAV_STATE_STORAGE)||'null');return value&&typeof value==='object'?value:null;}catch{return null;}};
+const persistNavState=state=>{if(!state?.view)return;try{sessionStorage.setItem(NAV_STATE_STORAGE,JSON.stringify({...state,savedAt:Date.now()}));}catch{}};
 const captureNavState=()=>{
     const view=activeViewName(),active=document.querySelector(`#view-${view}`);
     const sessionTab=document.querySelector('#sessionsTabs [data-session-tab].active')?.dataset?.sessionTab;
     const meetingId=document.querySelector('#sessionsMeetingSelect')?.value||undefined;
     const matrixMeetingId=document.querySelector('#meetingMatrixScope')?.value||undefined;
+    const membershipId=document.querySelector('#individualSheetMember')?.value||undefined;
     const sheetMode=!document.querySelector('#individualSheetsMode')?.hidden?'individual':'meeting';
     const openDetails=[...(active?.querySelectorAll('details[open][id]')??[])].map(x=>x.id).slice(0,40);
     const focusId=document.activeElement?.id||undefined;
-    return{view,scrollY:window.scrollY,sessionTab,meetingId,matrixMeetingId,sheetMode,openDetails,focusId};
+    return{view,scrollY:window.scrollY,sessionTab,meetingId,matrixMeetingId,membershipId,sheetMode,openDetails,focusId};
 };
+const resolveRequestedNavState=()=>{
+    if(history.state?.ecoNav?.view)return history.state.ecoNav;
+    const saved=readPersistedNavState(),hash=location.hash.slice(1);
+    if(hash){
+        const target=document.getElementById(hash),direct=document.getElementById('view-'+hash),view=target?.closest('.view')?.id?.replace(/^view-/,'')||(direct?hash:(saved?.view||'dashboard'));
+        return saved?.view===view?{...saved,view,anchor:target?hash:saved.anchor}:{view,anchor:target?hash:undefined,scrollY:0};
+    }
+    return saved??captureNavState();
+};
+let startupNavState=resolveRequestedNavState();
 const restoreNavState=state=>{
     if(!state)return;
     if(state.meetingId){const pick=document.querySelector('#sessionsMeetingSelect');if(pick&&[...pick.options].some(o=>o.value===state.meetingId)){pick.value=state.meetingId;pick.dispatchEvent(new Event('change',{bubbles:true}));}}
@@ -262,9 +276,10 @@ const showView=(name,state)=>{
     activeNav?.classList.add('active');
     if(activeNav&&window.matchMedia('(max-width:860px)').matches)setTimeout(()=>activeNav.scrollIntoView({behavior:'smooth',block:'nearest',inline:'center'}),20);
     document.querySelector('#globalSearchResults')?.replaceChildren();
-    restoreNavState(state??{view:name,scrollY:0});
+    const nextState=state??{view:name,scrollY:0};
+    restoreNavState(nextState);persistNavState(nextState);
     updateBackButton();
-    try{window.dispatchEvent(new CustomEvent('eco:view-changed',{detail:{view:name,state:state??{}}}));}catch{}
+    try{window.dispatchEvent(new CustomEvent('eco:view-changed',{detail:{view:name,state:nextState}}));}catch{}
     return true;
 };
 const go=(name,options={})=>{
@@ -321,10 +336,12 @@ window.addEventListener('popstate',event=>{
     updateBackButton();
 });
 try{
-    const initial=captureNavState();
+    const initial=startupNavState;
     if(!history.state?.ecoNav)history.replaceState({ecoNav:initial,ecoDepth:0},'',location.href);
     navDepth=Math.max(0,Number(history.state?.ecoDepth??0));
+    if(initial?.view)showView(initial.view,initial);
 }catch{}
+window.addEventListener('pagehide',()=>persistNavState(captureNavState()));
 updateBackButton();
 const detailUI = mountDetailUI({ app, navigate: go, getGroups: () => groups, getMembers: () => members, getMeetings: () => meetings, getRubrics: () => rubrics, isManager, fmt, date, showError: fail });
 const personalCockpitUI = mountPersonalCockpitUI({ app, getGroups: () => groups, getMembers: () => members, getMeetings: () => meetings, navigate: go, fmt, date, showError: fail });
@@ -701,11 +718,29 @@ const setCellSyncedState=detail=>{
 const pendingTargetSnapshot=()=>Array.from(app.pendingFinancialCellTargets?.()??[]).map(item=>({
   key:financialCellKey(String(item.membershipId??''),String(item.rubricId??''),String(item.meetingId??'')),
   meetingId:String(item.meetingId??''),membershipId:String(item.membershipId??''),rubricId:String(item.rubricId??''),
-  amount:Number(item.targetAmount??0),cellVersion:Number(item.baselineCellVersion??0)+1
+  amount:Number(item.targetAmount??0),cellVersion:Number(item.baselineVersion??0)+1,idempotencyKey:String(item.idempotencyKey??'')
 })).filter(item=>item.meetingId&&item.membershipId&&item.rubricId&&Number.isSafeInteger(item.amount)&&item.amount>=0);
+const markCriticalFinancialConflict=detail=>{
+  const selector=`.matrix-cell-entry[data-meeting-id="${CSS.escape(String(detail.meetingId??''))}"][data-membership-id="${CSS.escape(String(detail.membershipId??''))}"][data-rubric-id="${CSS.escape(String(detail.rubricId??''))}"]`;
+  for(const cell of document.querySelectorAll(selector)){
+    cell.classList.add('is-conflict','is-critical-conflict');
+    const state=cell.querySelector('.cell-save-state');if(state){state.hidden=false;state.textContent=tx(`CONFLIT : cet appareil avait ${fmt(detail.amount)} ; une autre valeur a été synchronisée. Vérification obligatoire.`,`CONFLICT: this device had ${fmt(detail.amount)}; another value was synchronized. Review required.`);}
+  }
+  try{showFinancialAlert({title:tx('Conflit financier à résoudre','Financial conflict to resolve'),message:tx(`La même cellule a été modifiée sur plusieurs appareils. Valeur locale : ${fmt(detail.amount)}. Aucune valeur divergente n’a été écrasée silencieusement.`,`The same cell was edited on multiple devices. Local value: ${fmt(detail.amount)}. No divergent value was silently overwritten.`),conflict:true,closed:true,action:{view:'sessions',meetingId:detail.meetingId,membershipId:detail.membershipId,rubricId:detail.rubricId,label:tx('Voir la cellule','Open cell')}});}catch{}
+};
+const renderPersistedFinancialConflicts=()=>{
+  for(const item of app.outboxItems?.()??[]){
+    if(item.type!=='FINANCIAL_CELL_CORRECTION_PROPOSAL_V1'||item.status!=='CONFLICT')continue;
+    const p=item.payload??{};markCriticalFinancialConflict({meetingId:p.meetingId,membershipId:p.membershipId,rubricId:p.rubricId,amount:Number(p.targetAmount??0),idempotencyKey:item.idempotencyKey});
+  }
+};
 const rememberTargetsConfirmedBySync=before=>{
-  const remaining=new Set(Array.from(app.pendingFinancialCellTargets?.()??[]).map(item=>financialCellKey(String(item.membershipId??''),String(item.rubricId??''),String(item.meetingId??''))));
-  for(const item of before)if(!remaining.has(item.key))rememberConfirmedCell(item.key,item);
+  const byKey=new Map((app.outboxItems?.()??[]).map(item=>[String(item.idempotencyKey??''),item]));
+  for(const item of before){
+    const stored=byKey.get(item.idempotencyKey);
+    if(stored?.status==='CONFIRMED')rememberConfirmedCell(item.key,item);
+    else if(stored?.status==='CONFLICT'){forgetConfirmedCell(item.key);financialOptimisticValues.delete(item.key);markCriticalFinancialConflict(item);}
+  }
 };
 const scheduleFinancialOutboxRecovery=detail=>{
   if(FREE_CONSERVATION_MODE)return;
@@ -946,8 +981,17 @@ const renderRubricRecapTable=async(rubric,host)=>{
     const total=document.createElement('tr');total.className='table-total-row';const th=document.createElement('th');th.textContent=tx('TOTAL','TOTAL');total.append(th);for(const meeting of ordered){const td=document.createElement('td');td.textContent=fmt(col.get(meeting.id)??0);total.append(td);}const end=document.createElement('td');end.textContent=fmt(grand);total.append(end);body.append(total);table.append(body);wrap.append(table);host.replaceChildren(wrap);
   }catch(error){host.replaceChildren();const p=document.createElement('p');p.className='truth-notice';p.textContent=tx('Récapitulatif non rechargé : Eco-System conserve la dernière projection locale et réessaiera lors d’un prochain accès.','Recap not reloaded: Eco-System keeps the last local projection and will retry on a later access.');host.append(p);console.info('Rubric recap deferred',error);}
 };
-const appendRubricRecap= (article,rubric)=>{
-  const details=document.createElement('details');details.className='rubric-recap';const summary=document.createElement('summary');summary.textContent=tx('Tableau récapitulatif · membres × séances','Recap table · members × sessions');const host=document.createElement('div');host.className='rubric-recap-host';details.append(summary,host);details.addEventListener('toggle',()=>{if(details.open&&details.dataset.loaded!=='1'){details.dataset.loaded='1';void renderRubricRecapTable(rubric,host);}});article.append(details);
+const appendRubricRecapChooser=root=>{
+  if(!root||!rubrics.length)return;
+  const section=document.createElement('section');section.id='rubricRecapChooser';section.className='item rubric-recap-chooser';
+  const title=document.createElement('h3');title.textContent=tx('Tableau récapitulatif · membres × séances','Recap table · members × sessions');
+  const hint=document.createElement('p');hint.className='hint';hint.textContent=tx('Choisissez une rubrique : Eco-System affiche un seul tableau membres × séances, avec totaux par membre, par séance et total général.','Choose a rubric: Eco-System shows one members × sessions table, with member, session and grand totals.');
+  const select=document.createElement('select');select.setAttribute('aria-label',tx('Rubrique à récapituler','Rubric to recap'));
+  for(const rubric of rubrics){const option=document.createElement('option');option.value=rubric.id;option.textContent=rubric.name+(rubric.status==='ARCHIVED'?tx(' · archivée',' · archived'):'');select.append(option);}
+  try{const saved=sessionStorage.getItem('eco.rubricRecap.selected');if(saved&&rubrics.some(r=>r.id===saved))select.value=saved;}catch{}
+  const host=document.createElement('div');host.className='rubric-recap-host';
+  const render=()=>{const rubric=rubrics.find(r=>r.id===select.value);if(!rubric)return;try{sessionStorage.setItem('eco.rubricRecap.selected',rubric.id);}catch{}void renderRubricRecapTable(rubric,host);};
+  select.addEventListener('change',render);section.append(title,hint,select,host);root.append(section);render();
 };
 const canonicalFinancialObservers=new WeakMap();
 const protectCanonicalFinancialHost=root=>{
@@ -1104,6 +1148,7 @@ const renderLivingRules = async () => {
         root.innerHTML = `<div class="empty-state">${tx('Aucune rubrique personnalisée. Décrivez par exemple la collation de ce groupe.','No custom rubric. Describe, for example, how this group handles refreshments.')}</div>`;
     }
     if(isManager()){const add=document.createElement('button');add.type='button';add.className='primary';add.textContent=tx('+ Ajouter une rubrique à ce groupe','+ Add a rubric to this group');add.onclick=()=>document.querySelector('#rubricForm')?.scrollIntoView({behavior:'smooth',block:'start'});root.append(add);}
+    appendRubricRecapChooser(root);
     for (const r of rubrics) {
         const a = document.createElement('article');
         a.className = 'item'+(r.status==='ARCHIVED'?' is-archived':'');
@@ -1118,7 +1163,6 @@ const renderLivingRules = async () => {
             const scheduled=(r.activityPlan.participants??[]).flatMap(p=>p.shares.filter(s=>s.turn!==undefined).map(s=>`${p.name} · ${s.name} : tour ${s.turn}`));
             if(scheduled.length){const list=document.createElement('ul');for(const text of scheduled){const li=document.createElement('li');li.textContent=text;list.append(li);}a.append(list);}
         }
-        appendRubricRecap(a,r);
         if(isManager()){
           if(r.status==='ARCHIVED'){
             const restore=document.createElement('button');restore.type='button';restore.className='secondary';restore.textContent=tx('Restaurer cette rubrique','Restore this rubric');restore.onclick=()=>void(async()=>{try{const trash=await app.trashItems(),item=trash.find(x=>String(x.data?.kind??'')==='RUBRIC'&&String(x.data?.entityId??'')===r.id&&x.status==='ACTIVE');if(!item)throw Error('TRASH_ITEM_NOT_FOUND');await app.restoreTrashItem(item.id);await renderLivingRules();await renderTrash();toast(tx('Rubrique restaurée avec son historique.','Rubric restored with its history.'));}catch(e){fail(e);}})();a.append(restore);
@@ -2037,21 +2081,34 @@ $('#languageSelect').addEventListener('change', async e => {
     toast(tx('Interface passée en français.','Interface switched to English.'));
 });
 let onlineResumePromise=null;
+let networkRecoveryNeeded=navigator.onLine===false;
 const resumeOnline=()=>{
     if(onlineResumePromise)return onlineResumePromise;
+    const preserved=captureNavState();persistNavState(preserved);
     onlineResumePromise=(async()=>{renderConnectivity();try{
+        if(navigator.onLine===false){networkRecoveryNeeded=true;return;}
         const beforeSync=pendingTargetSnapshot();
         await app.syncOutbox();
         rememberTargetsConfirmedBySync(beforeSync);
-        await start();
-    }catch(error){console.info('Online resume deferred',error);}})().finally(()=>{onlineResumePromise=null;});
+        if(app.activeGroup())await refreshGroupContext();else await renderGroups();
+        networkRecoveryNeeded=false;
+        renderOutbox();renderConnectivity();showView(preserved.view,preserved);renderPersistedFinancialConflicts();
+    }catch(error){networkRecoveryNeeded=true;console.info('Online resume deferred',error);}})().finally(()=>{onlineResumePromise=null;});
     return onlineResumePromise;
 };
-window.addEventListener('online',()=>{void resumeOnline();});
-window.addEventListener('offline', renderConnectivity);
+const eventDrivenConnectivityRecovery=()=>{
+    renderConnectivity();
+    const pending=(app.outboxItems?.()??[]).some(item=>!['CONFIRMED','CANCELLED'].includes(String(item.status)));
+    if(navigator.onLine&&(pending||networkRecoveryNeeded))void resumeOnline();
+};
+window.addEventListener('online',()=>{networkRecoveryNeeded=true;void resumeOnline();});
+window.addEventListener('offline',()=>{networkRecoveryNeeded=true;persistNavState(captureNavState());renderConnectivity();});
+window.addEventListener('pageshow',eventDrivenConnectivityRecovery);
+window.addEventListener('focus',eventDrivenConnectivityRecovery);
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')eventDrivenConnectivityRecovery();});
 if('serviceWorker' in navigator)navigator.serviceWorker.addEventListener('message',event=>{
     if(event.data?.type!=='ECO_SYSTEM_SYNC_OUTBOX'||!navigator.onLine)return;
-    void (async()=>{try{const beforeSync=pendingTargetSnapshot();await app.syncOutbox();rememberTargetsConfirmedBySync(beforeSync);renderOutbox();if(app.activeGroup())await refreshGroupContext();}catch{}})();
+    void resumeOnline();
 });
 const iosLike=()=>/iPad|iPhone|iPod/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
 const standaloneMode=()=>window.matchMedia?.('(display-mode: standalone)')?.matches||navigator.standalone===true;
@@ -2130,6 +2187,9 @@ async function start() {
         renderEcosystemHighlights();
         renderDomainHubs();
         await refreshAll();
+        const requested=history.state?.ecoNav?.view?history.state.ecoNav:startupNavState??readPersistedNavState();
+        if(requested?.view)showView(requested.view,requested);
+        renderPersistedFinancialConflicts();startupNavState=null;
         if(shareIntent)await refreshOptionalOfflineSafe('share-intent',()=>openEcoShareIntent(shareIntent));
         await refreshOptionalOfflineSafe('workspaces',loadWorkspaces);
     }
@@ -2146,6 +2206,7 @@ async function start() {
                   try{renderMeetingMatrix();renderIndividualSheetMatrix();}catch(error){console.info('Offline financial matrix render skipped',error);}
                 }
                 try{renderOutbox();renderCompatibility();renderKernel();renderModules();renderEcosystemHighlights();renderDomainHubs();}catch{}
+                const requested=history.state?.ecoNav?.view?history.state.ecoNav:startupNavState??readPersistedNavState();if(requested?.view)showView(requested.view,requested);renderPersistedFinancialConflicts();startupNavState=null;
                 toast(tx('Mode hors ligne : le noyau local synchronisé a été restauré. Les sections secondaires non disponibles restent différées.','Offline mode: the synchronized local core was restored. Unavailable secondary sections are deferred.'));
                 return;
             }

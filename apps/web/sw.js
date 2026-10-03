@@ -1,13 +1,13 @@
-const CACHE = 'eco-system-v1529-free-event-push-20261003';
-const PREVIOUS_CACHE = 'eco-system-v1529-free-conservation-debt-syncfix2-20261002';
+const CACHE = 'eco-system-v15210-offline-conflicts-loans-20261003';
+const PREVIOUS_CACHE = 'eco-system-v1529-free-event-push-20261003';
 const RELEASE_READY = '/__eco_release_ready__';
 
 // Authentication, navigation and canonical application owners must be complete
 // before this worker may install. Optional business/community panels can fail
 // independently without replacing an already-working release.
 const ESSENTIAL_SHELL = [
-  '/', '/index.html', '/styles.css?v=1529', '/manifest.webmanifest',
-  '/src/ui-modes.js?v=1529', '/src/field-hardening.js?v=1529', '/src/main.js?v=1529', '/src/i18n.js', '/src/runtime-i18n.js',
+  '/', '/index.html', '/styles.css?v=15210', '/manifest.webmanifest',
+  '/src/ui-modes.js?v=15210', '/src/field-hardening.js?v=15210', '/src/main.js?v=15210', '/src/i18n.js', '/src/runtime-i18n.js',
   '/src/resilience-ui.js', '/src/group-home-ui.js', '/src/sessions-ui.js',
   '/src/detail-ui.js', '/src/member-control-ui.js', '/src/loan-simulation-ui.js', '/src/business-studio-ui.js', '/src/core-economic-learning-ui.js',
   '/packages/application/src/index.js', '/packages/contracts/src/index.js',
@@ -23,7 +23,7 @@ const ESSENTIAL_SHELL = [
 ];
 
 const OPTIONAL_SHELL = [
-  '/src/voice-entry-bootstrap.js?v=1529', '/src/voice-entry-ui.js', '/src/expense-recap-ui.js',
+  '/src/voice-entry-bootstrap.js?v=15210', '/src/voice-entry-ui.js', '/src/expense-recap-ui.js',
   '/src/member-dossier-ui.js', '/src/documents-ui.js', '/src/contextual-group-ui.js',
   '/src/blueprint-executable-ui.js', '/src/community-blueprint-presets.js',
   '/src/financial-lab-ui.js', '/src/completion-ui.js', '/src/advanced-ui.js',
@@ -93,7 +93,7 @@ const cachedShell = async request => {
   const cache = await caches.open(CACHE);
   const url = new URL(request.url);
   // A versioned request must only match that exact version. Falling back from
-  // main.js?v=1529 to an older /main.js was the source of mixed-release UI.
+  // main.js?v=15210 to an older /main.js was the source of mixed-release UI.
   if(url.search)return await cache.match(request);
   return await cache.match(url.pathname);
 };
@@ -110,26 +110,19 @@ self.addEventListener('fetch', event => {
     return;
   }
 
-  // Online navigation is network-first so Chrome/Opera profiles controlled by
-  // an older worker can recover without deleting IndexedDB/outbox/site data.
-  // Offline falls back to the complete cache of this exact release.
+  // The coherent installed shell is the navigation source of truth. Returning
+  // it immediately makes F5/reload deterministic while fully offline instead of
+  // waiting several seconds for a doomed network navigation. Release updates are
+  // handled atomically by service-worker update/install, never by mutating this cache.
   if (event.request.mode === 'navigate') {
     event.respondWith((async () => {
       const cache = await caches.open(CACHE);
-      const cached = await cache.match('/index.html') || await cache.match('/');
-      // Always try the network first; navigator.onLine is not a reliable
-      // connectivity oracle in workers. The bounded timeout preserves 2G/offline fallback.
-      try {
-        const fresh = await Promise.race([
-          fetch(event.request, { cache:'no-store' }),
-          new Promise((_,reject)=>setTimeout(()=>reject(new Error('NAVIGATION_TIMEOUT')),6000))
-        ]);
-        if (fresh && fresh.ok) return fresh;
-      } catch (_) {}
+      const ready = await cache.match(RELEASE_READY);
+      const cached = ready && (await cache.match('/index.html') || await cache.match('/'));
       if (cached) return cached;
       try {
         const fresh = await fetch(event.request, { cache:'no-store' });
-        if (fresh.ok) return fresh;
+        if (fresh && fresh.ok) return fresh;
       } catch (_) {}
       return new Response('<!doctype html><meta charset="utf-8"><title>Eco-System</title><h1>Eco-System</h1><p>Eco-System doit être installé ou transféré sur cet appareil avant une toute première utilisation sans Internet.</p>', {
         status:503, headers:{'content-type':'text/html; charset=utf-8'}
@@ -151,13 +144,6 @@ self.addEventListener('fetch', event => {
 
     try { return await fetch(event.request, { cache:'no-store' }); }
     catch (_) { return new Response('Offline', {status:503,headers:{'content-type':'text/plain; charset=utf-8'}}); }
-  })());
-});
-
-self.addEventListener('periodicsync',event=>{
-  if(event.tag!=='eco-system-outbox')return;
-  event.waitUntil((async()=>{
-    for(const client of await self.clients.matchAll({type:'window',includeUncontrolled:true}))client.postMessage({type:'ECO_SYSTEM_SYNC_OUTBOX',reason:'periodic'});
   })());
 });
 
