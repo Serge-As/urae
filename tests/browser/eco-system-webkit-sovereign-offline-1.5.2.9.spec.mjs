@@ -60,18 +60,19 @@ test('WebKit really reloads the page without network once shell is controlled',a
   await page.goto(target,{waitUntil:'networkidle'});
   await page.evaluate(async()=>navigator.serviceWorker.register('/sw.js',{scope:'/',updateViaCache:'none'}));
   await expect.poll(()=>page.evaluate(async()=>{
-    if(!navigator.serviceWorker.controller)return false;
     for(const name of await caches.keys()){
       const cache=await caches.open(name);
       if(await cache.match('/__eco_release_ready__'))return true;
     }
     return false;
   }),{timeout:45000}).toBe(true);
+  if(!await page.evaluate(()=>Boolean(navigator.serviceWorker.controller)))await page.reload({waitUntil:'domcontentloaded'});
+  await expect.poll(()=>page.evaluate(()=>Boolean(navigator.serviceWorker.controller)),{timeout:20000}).toBe(true);
   await context.setOffline(true);
   try{
     const response=await page.reload({waitUntil:'domcontentloaded',timeout:30000});
     expect(response?.status()).toBe(200);
-    await expect(page.locator('#app')).toBeAttached({timeout:20000});
+    await expect(page.locator('#authScreen')).toBeAttached({timeout:20000});
     expect(page.url()).toContain('#savingsYieldLab');
   }finally{await context.setOffline(false);}
 });
