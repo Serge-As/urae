@@ -1645,7 +1645,7 @@ const applyRemoteFinancialProjection=(p={})=>{
     // Remote projections never erase unconfirmed local financial intents.
     // Preserve them for the server CAS and visibly flag divergent edits.
     const pending=(app.outboxItems?.()??[]).find(item=>{
-      if(['CONFIRMED','CANCELLED','CONFLICT'].includes(String(item.status??'')))return false;
+      if(['CONFIRMED','CANCELLED'].includes(String(item.status??'')))return false;
       if(!['FINANCIAL_CELL_CORRECTION_PROPOSAL_V1','FINANCIAL_SHEET_ENTRY_V1'].includes(String(item.type)))return false;
       const d=item.payload??{};
       return String(d.meetingId??'')===String(p.meetingId)&&String(d.membershipId??'')===String(p.membershipId)&&String(d.rubricId??'')===String(p.rubricId);
