@@ -48,7 +48,7 @@ export function mountIdentityLiveUI({app,notify=()=>{},showError=console.error,c
   const publishSignal=async(type,payload={})=>{
     if(!app.activeGroup())return{accepted:false,reason:'ACTIVE_GROUP_REQUIRED'};
     if(['FINANCIAL_DRAFT','FINANCIAL_DRAFT_CLEAR'].includes(type))pendingDraftSignals.set(signalKey(payload),{type,payload});
-    if(navigator.onLine===false)return{accepted:false,offline:true,queued:['FINANCIAL_DRAFT','FINANCIAL_DRAFT_CLEAR'].includes(type)};
+    if(navigator.onLine===false||app.serverBudgetState?.().blocked)return{accepted:false,offline:true,queued:['FINANCIAL_DRAFT','FINANCIAL_DRAFT_CLEAR'].includes(type)};
     if(socket&&socket.readyState===WebSocket.OPEN){
       try{socket.send(JSON.stringify({type:'CLIENT_SIGNAL',eventType:type,payload}));if(['FINANCIAL_DRAFT','FINANCIAL_DRAFT_CLEAR'].includes(type))pendingDraftSignals.delete(signalKey(payload));return{accepted:true,transport:'websocket'};}catch{}
     }
@@ -59,13 +59,20 @@ export function mountIdentityLiveUI({app,notify=()=>{},showError=console.error,c
   };
   const connect=()=>{
     if(connectPromise)return connectPromise;
-    if(!wantConnection||!app.activeGroup()||typeof WebSocket==='undefined'||navigator.onLine===false)return Promise.resolve();
+    if(!wantConnection||!app.activeGroup()||typeof WebSocket==='undefined'||navigator.onLine===false||app.serverBudgetState?.().blocked)return Promise.resolve();
     if(socket&&[WebSocket.CONNECTING,WebSocket.OPEN].includes(socket.readyState))return Promise.resolve();
     const requestedGroup=app.activeGroup();
     clearTimers();try{socket?.close(1000,'reconnect');}catch{}socket=null;activeGroup=requestedGroup;
     connectPromise=(async()=>{
-      let ticketData;try{ticketData=await app.liveTicket?.();}catch{}
-      if(!wantConnection||navigator.onLine===false||app.activeGroup()!==requestedGroup)return;
+      let ticketData;
+      try{ticketData=await app.liveTicket?.();}
+      catch(e){
+        // A D1 outage/quota must not trigger an expensive legacy authenticated
+        // upgrade on every user action. Legacy fallback is for older 404 APIs.
+        const code=String(e instanceof Error?e.message:e);
+        if(code!=='NOT_FOUND'&&code!=='HTTP_404')throw e;
+      }
+      if(!wantConnection||navigator.onLine===false||app.activeGroup()!==requestedGroup||app.serverBudgetState?.().blocked)return;
       // Legacy authenticated upgrade remains available if ticket issuance is not
       // configured yet; it costs D1 but avoids breaking an older deployment.
       socket=new WebSocket(app.liveWebSocketUrl(lastSeq,String(ticketData?.ticket??'')));
@@ -164,6 +171,7 @@ export function mountIdentityLiveUI({app,notify=()=>{},showError=console.error,c
   };
 
   window.addEventListener('online',()=>{if(wantConnection){reconnectAttempt=0;connect();}});
+  window.addEventListener('eco:server-budget-expired',()=>{if(wantConnection&&navigator.onLine!==false){reconnectAttempt=0;void connect();}});
   window.addEventListener('eco:local-mutation',()=>{if(wantConnection&&navigator.onLine!==false&&(!socket||socket.readyState>1)){reconnectAttempt=0;connect();}});
   window.addEventListener('offline',()=>{closeSocket('offline');reconnectAttempt=0;if(liveRoot)liveRoot.append(row('Réseau','Hors ligne · outbox active'));});
   document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&wantConnection&&(!socket||socket.readyState!==WebSocket.OPEN)){reconnectAttempt=0;connect();}});
