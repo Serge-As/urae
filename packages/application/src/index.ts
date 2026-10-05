@@ -796,8 +796,8 @@ export class ConnectedApplication {
       return{status:'QUEUED_SYNC',queued:true,outbox:item};
     };
 
-    const canWrite=await this.canAttemptCriticalWrite();
     if(nature==='OUTFLOW'){
+      const canWrite=await this.canAttemptCriticalWrite();
       const body={membershipId:input.membershipId,rubricId:rubric.id,meetingId:input.meetingId,amount:input.amount,label:rubric.name??'Dépense de séance',scope:'SHEET',note:'Saisie depuis la feuille financière canonique',idempotencyKey:key};
       if(!canWrite)return queue();
       try{return await this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/expenses`,{method:'POST',body:JSON.stringify(body)});}
@@ -805,6 +805,7 @@ export class ConnectedApplication {
     }
 
     if(nature==='LOAN'){
+      const canWrite=await this.canAttemptCriticalWrite();
       const policy=rubric.policies?.loan;if(!policy?.allowed)throw Error('LOAN_POLICY_REQUIRED');
       const special=/special/.test(normalized)?policy.specialLoans?.[0]:undefined;
       const rawRate=special?.rateBasisPointsPerPeriod??policy.rateBasisPointsPerPeriod;if(rawRate===undefined||rawRate===null)throw Error('LOAN_RATE_REQUIRED');
@@ -834,6 +835,7 @@ export class ConnectedApplication {
     // Write-ahead, including online. Losing a response after a canonical commit
     // must never lose its idempotency key or force the user to pay twice.
     const repaymentIntent=await queue({repaymentComponent:component,paymentPriority:policyPriority});
+    const canWrite=await this.canAttemptCriticalWrite();
     if(!canWrite)return repaymentIntent;
     try{
       const active=(await this.listCompletion('LOAN')).filter(l=>String(l.data?.borrowerMembershipId??'')===input.membershipId&&['DISBURSED','REPAYING'].includes(String(l.data?.completionState??''))&&(Number(l.data?.outstandingPrincipal??0)>0||Number(l.data?.unpaidInterest??0)>0));
