@@ -582,6 +582,8 @@
               <label>Taux par séance / période %<input id="loanPolicyRate" type="number" min="0" step="0.01" placeholder="Ex. 10"></label>
               <label>Priorité d’imputation<select id="loanPolicyPriority"><option value="CAPITAL_FIRST">Capital d’abord</option><option value="INTEREST_FIRST">Intérêts d’abord</option><option value="EXPLICIT_ALLOCATION">Répartition explicite par le gestionnaire</option></select></label>
               <label>Moment de perception des intérêts<select id="loanPolicyInterestTiming"><option value="NEXT_SESSION_DUE">Dus à la séance suivante</option><option value="UPFRONT_DEDUCTED">Retenus immédiatement sur le montant remis</option><option value="UPFRONT_REQUIRED">Payés avant / condition de libération du prêt</option></select></label>
+              <label>Sources autorisées pour financer les prêts<select id="loanPolicyFundingMode"><option value="AVAILABLE_GROUP_CASH">Toute la caisse disponible autorisée par le groupe</option><option value="SAVINGS_REPAYMENTS_ONLY">Épargnes + remboursements/intérêts encaissés uniquement</option></select><small>Les prêts ne peuvent jamais dépasser la liquidité réellement disponible. Le deuxième mode exclut Secours, Transport et autres rubriques.</small></label>
+              <label class="check"><input id="loanPolicyCarryForward" type="checkbox" checked><span>Autoriser les reliquats licites des séances précédentes</span></label>
               <button type="submit" class="primary">Enregistrer la politique Prêts</button>
               <div id="loanPolicyStatus" class="truth-notice">La base d’intérêt reste toujours le capital restant dû. Aucun intérêt sur intérêt.</div>
             </form>
