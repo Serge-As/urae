@@ -1,13 +1,13 @@
-const CACHE = 'eco-system-v15210-offline-conflicts-loans-20261003';
-const PREVIOUS_CACHE = 'eco-system-v1529-free-event-push-20261003';
+const CACHE = 'eco-system-v15211-field-recovery-20261005';
+const PREVIOUS_CACHE = 'eco-system-v15210-offline-conflicts-loans-20261003';
 const RELEASE_READY = '/__eco_release_ready__';
 
 // Authentication, navigation and canonical application owners must be complete
 // before this worker may install. Optional business/community panels can fail
 // independently without replacing an already-working release.
 const ESSENTIAL_SHELL = [
-  '/', '/index.html', '/styles.css?v=15210', '/manifest.webmanifest',
-  '/src/ui-modes.js?v=15210', '/src/field-hardening.js?v=15210', '/src/main.js?v=15210', '/src/i18n.js', '/src/runtime-i18n.js',
+  '/', '/index.html', '/styles.css?v=15211', '/manifest.webmanifest',
+  '/src/ui-modes.js?v=15211', '/src/field-hardening.js?v=15211', '/src/main.js?v=15211', '/src/i18n.js', '/src/runtime-i18n.js',
   '/src/resilience-ui.js', '/src/group-home-ui.js', '/src/sessions-ui.js',
   '/src/detail-ui.js', '/src/member-control-ui.js', '/src/loan-simulation-ui.js', '/src/business-studio-ui.js', '/src/core-economic-learning-ui.js',
   '/packages/application/src/index.js', '/packages/contracts/src/index.js',
@@ -23,7 +23,7 @@ const ESSENTIAL_SHELL = [
 ];
 
 const OPTIONAL_SHELL = [
-  '/src/voice-entry-bootstrap.js?v=15210', '/src/voice-entry-ui.js', '/src/expense-recap-ui.js',
+  '/src/voice-entry-bootstrap.js?v=15211', '/src/voice-entry-ui.js', '/src/expense-recap-ui.js',
   '/src/member-dossier-ui.js', '/src/documents-ui.js', '/src/contextual-group-ui.js',
   '/src/blueprint-executable-ui.js', '/src/community-blueprint-presets.js',
   '/src/financial-lab-ui.js', '/src/completion-ui.js', '/src/advanced-ui.js',
@@ -41,6 +41,7 @@ const OPTIONAL_SHELL = [
   '/packages/module-registry/src/service-capabilities.js'
 ];
 const APP_SHELL = [...ESSENTIAL_SHELL, ...OPTIONAL_SHELL];
+const SHELL_PATHS = new Set(APP_SHELL.map(path=>new URL(path,self.location.origin).pathname));
 
 const fetchReleaseAsset = async path => {
   const response = await Promise.race([
@@ -55,7 +56,10 @@ const fetchReleaseAsset = async path => {
 
 self.addEventListener('install', event => {
   event.waitUntil((async () => {
+    // A fresh cache identity is essential: never partially overwrite the
+    // cache currently controlling users on an unreliable 2G connection.
     const cache = await caches.open(CACHE);
+    try {
     // main.js statically imports several modules historically labelled optional.
     // A release is therefore coherent only after the whole declared shell is
     // fetched and stored. Download in bounded parallel batches for slow links.
@@ -70,6 +74,12 @@ self.addEventListener('install', event => {
     }));
     // Installation is atomic above; only now may this complete release replace a stale controller.
     await self.skipWaiting();
+    } catch (error) {
+      // Roll back an incomplete candidate ONLY. Never delete the previous
+      // release cache, IndexedDB, Outbox, drafts, or any canonical financial data.
+      await caches.delete(CACHE);
+      throw error;
+    }
   })());
 });
 
@@ -93,7 +103,7 @@ const cachedShell = async request => {
   const cache = await caches.open(CACHE);
   const url = new URL(request.url);
   // A versioned request must only match that exact version. Falling back from
-  // main.js?v=15210 to an older /main.js was the source of mixed-release UI.
+  // main.js?v=15211 to an older /main.js was the source of mixed-release UI.
   if(url.search)return await cache.match(request);
   return await cache.match(url.pathname);
 };
@@ -138,7 +148,9 @@ self.addEventListener('fetch', event => {
     const cached = await cachedShell(event.request);
     if (cached) return cached;
 
-    if (APP_SHELL.includes(url.pathname)) {
+    // Never fetch an unknown query-version of a declared shell asset from
+    // network: that would load a different JS version into the offline release.
+    if (SHELL_PATHS.has(url.pathname)) {
       return new Response('Release asset unavailable', {status:503,headers:{'content-type':'text/plain; charset=utf-8'}});
     }
 
