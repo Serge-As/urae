@@ -93,7 +93,6 @@ export function mountIdentityLiveUI({app,notify=()=>{},showError=console.error,c
       };
       socket.onclose=()=>{socket=null;if(liveRoot)liveRoot.append(row('Canal','Déconnecté · reconnexion sur événement réseau'));scheduleReconnect();};
       socket.onerror=()=>{if(liveRoot)liveRoot.append(row('WebSocket','Interruption détectée · aucune boucle de polling'));};
-      };
     })().catch(e=>{showError(e);scheduleReconnect();}).finally(()=>{connectPromise=null;});
     return connectPromise;
   };
