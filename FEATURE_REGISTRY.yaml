@@ -1348,3 +1348,8 @@ production_qualification_2026_09_21_1_4_3:
   excluded_projects:
     - BACKHAUL_RETURN_LOAD_ECO_ROUTE
   field_reception: pending
+
+# 2026-10-05 candidate-only hardening (no new authority/capability): PWA v15211
+# immutable cache + prior v15210 rollback, per-cell Live drafts, no idle D1
+# polling, and optional Identity/Concierge reads on view demand. PR #66 DRAFT,
+# FIELD_ACCEPTED=NOT_ACCEPTED. Feature maturities above are unchanged.
