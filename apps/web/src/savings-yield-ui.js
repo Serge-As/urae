@@ -316,6 +316,7 @@ export function mountSavingsYieldUI({app,getMembers,notify=()=>{},showError=cons
   const scheduleCanonicalRefresh=()=>{canonicalDirty=true;if(!isManager()||!financeVisible())return;if(canonicalRefreshTimer)clearTimeout(canonicalRefreshTimer);canonicalRefreshTimer=setTimeout(()=>{void loadCanonical(false).then(()=>{canonicalDirty=false;}).catch(showError);},1500);};
   window.addEventListener('eco:financial-data-changed',scheduleCanonicalRefresh);
   window.addEventListener('eco:financial-live-update',scheduleCanonicalRefresh);
+  window.addEventListener('eco:live-event',event=>{const e=event instanceof CustomEvent?event.detail:undefined;if(e?.type==='RULE_UPDATE'&&e?.payload?.kind==='SAVINGS_DISTRIBUTION_POLICY'){policyHydratedGroup='';scheduleCanonicalRefresh();}});
   window.addEventListener('eco:view-changed',event=>{if(event instanceof CustomEvent&&event.detail?.view==='finance'&&isManager()&&(!canonicalLoaded||canonicalDirty)){void loadCanonical(false).then(()=>{canonicalDirty=false;}).catch(showError);}});
   renderDeposits();renderEvents();populateMembers();
   if(financeVisible()&&isManager())void loadCanonical(false).then(()=>{canonicalDirty=false;}).catch(()=>{});
