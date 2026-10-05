@@ -171,6 +171,17 @@ export function mountIdentityLiveUI({app,notify=()=>{},showError=console.error,c
   };
 
   window.addEventListener('online',()=>{if(wantConnection){reconnectAttempt=0;connect();}});
+  // Android may retain navigator.onLine=true while switching Wi-Fi/data. React
+  // only to a change of connection TYPE, never to RTT/downlink fluctuations.
+  // No active network probe, heartbeat, or idle D1 traffic is introduced.
+  const networkInfo=navigator.connection||navigator.mozConnection||navigator.webkitConnection;
+  const networkTypeOf=()=>String(networkInfo?.type??'')+'|'+String(networkInfo?.effectiveType??'');
+  let previousNetworkType=networkTypeOf();
+  networkInfo?.addEventListener?.('change',()=>{
+    const next=networkTypeOf();if(next===previousNetworkType)return;previousNetworkType=next;
+    if(!wantConnection||navigator.onLine===false)return;
+    closeSocket('network-interface-change');reconnectAttempt=0;void connect();
+  });
   window.addEventListener('eco:server-budget-expired',()=>{if(wantConnection&&navigator.onLine!==false){reconnectAttempt=0;void connect();}});
   window.addEventListener('eco:local-mutation',()=>{if(wantConnection&&navigator.onLine!==false&&(!socket||socket.readyState>1)){reconnectAttempt=0;connect();}});
   window.addEventListener('offline',()=>{closeSocket('offline');reconnectAttempt=0;if(liveRoot)liveRoot.append(row('Réseau','Hors ligne · outbox active'));});
