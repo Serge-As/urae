@@ -2346,6 +2346,7 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
       const record:WorkspaceRecord={id:makeId('workspace'),tenantId:ctx.tenantId,groupId:body.groupId?String(body.groupId):undefined,moduleId,title,summary:body.summary?String(body.summary):undefined,status,tags:strArray(body.tags),data,createdBy:ctx.actorId,createdAt:timestamp,updatedAt:timestamp};
       await repo.saveWorkspaceRecord(record);
       const audit=kernel.audit.append({tenantId:ctx.tenantId,actorId:ctx.actorId,action:'WORKSPACE_RECORD_CREATED',targetType:'workspace_record',targetId:record.id,after:{moduleId:record.moduleId,groupId:record.groupId,status:record.status},requestId:ctx.requestId}); await repo.saveAudit(audit);
+      if(record.moduleId==='FINANCE.SAVINGS_DISTRIBUTION_POLICY'&&record.groupId)await publishLive(record.groupId,'RULE_UPDATE','savings-yield-policy:'+record.id+':'+record.updatedAt,{kind:'SAVINGS_DISTRIBUTION_POLICY',recordId:record.id,updatedAt:record.updatedAt,actorId:ctx.actorId});
       return json(record,201,cors);
     }
     const workspaceRoute=url.pathname.match(/^\/api\/v1\/workspaces\/([^/]+)$/);
@@ -2359,6 +2360,7 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
       const updated:WorkspaceRecord={...existing,title:body.title===undefined?existing.title:String(body.title).trim()||existing.title,summary:body.summary===undefined?existing.summary:String(body.summary),status,tags:body.tags===undefined?existing.tags:strArray(body.tags),data,updatedAt:new Date().toISOString()};
       await repo.saveWorkspaceRecord(updated);
       const audit=kernel.audit.append({tenantId:ctx.tenantId,actorId:ctx.actorId,action:'WORKSPACE_RECORD_UPDATED',targetType:'workspace_record',targetId:updated.id,after:{moduleId:updated.moduleId,status:updated.status},requestId:ctx.requestId}); await repo.saveAudit(audit);
+      if(updated.moduleId==='FINANCE.SAVINGS_DISTRIBUTION_POLICY'&&updated.groupId)await publishLive(updated.groupId,'RULE_UPDATE','savings-yield-policy:'+updated.id+':'+updated.updatedAt,{kind:'SAVINGS_DISTRIBUTION_POLICY',recordId:updated.id,updatedAt:updated.updatedAt,actorId:ctx.actorId});
       return json(updated,200,cors);
     }
 
