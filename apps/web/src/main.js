@@ -691,7 +691,7 @@ const loadFinancialProjectionState=async({clearOptimistic=false}={})=>{
     receiptPositions=l.receipts;
     financialPendingTargets=new Map((app.pendingFinancialCellTargets?.()??[]).map(x=>[financialCellKey(x.membershipId,x.rubricId,x.meetingId),x]));
     financialPendingSheetEntries=app.pendingFinancialSheetEntries?.()??[];
-    financialSheetEvents=[...sheetEvents,...sheetExpenses.map(x=>({id:x.id,data:{membershipId:x.membershipId,meetingId:x.meetingId,rubricId:x.rubricId,amount:x.amount,direction:'OUT',ledgerEntryId:x.ledgerEntryId}}))];
+    financialSheetEvents=[...sheetEvents,...sheetExpenses.map(x=>({id:x.id,createdBy:x.createdBy,createdAt:x.createdAt,updatedAt:x.updatedAt,data:{membershipId:x.membershipId,meetingId:x.meetingId,rubricId:x.rubricId,amount:x.amount,direction:'OUT',ledgerEntryId:x.ledgerEntryId}}))];
     financialCellVersions=new Map((l.cellRevisions??[]).map(r=>[JSON.stringify([r.meetingId,r.membershipId,r.rubricId,r.currency??'XAF']),Number(r.version??0)]));
     financialCellMetadata=new Map();
     const rememberMeta=(membershipId,rubricId,meetingId,actorId,at)=>{
@@ -907,7 +907,7 @@ const submitFinancialCellElement=async validate=>{
       input.value='';clearFinancialCellDraft(cellKey);clearRemoteDraft();renderOutbox();
       const preservePending=Boolean(result?.status==='QUEUED_SYNC'||result?.queued);
       const unresolvedConsensus=String(result?.status??'')==='CONSENSUS_REQUIRED';
-      if(!preservePending&&!unresolvedConsensus)rememberConfirmedCell(cellKey,{amount:displayTarget,cellVersion:Number.isFinite(Number(result?.cellVersion))?Number(result.cellVersion):exactCellVersion(membershipId,rubricId,meetingId)+1,meetingId,membershipId,rubricId});
+      if(!preservePending&&!unresolvedConsensus){rememberConfirmedCell(cellKey,{amount:displayTarget,cellVersion:Number.isFinite(Number(result?.cellVersion))?Number(result.cellVersion):exactCellVersion(membershipId,rubricId,meetingId)+1,meetingId,membershipId,rubricId});const changedAt=new Date().toISOString(),actorId=String(app.currentActor?.()??'');financialCellMetadata.set(cellKey,{actorId,at:changedAt,stamp:Date.now()});holder.dataset.lastActor=actorId;holder.dataset.lastUpdatedAt=changedAt;holder.title=tx(`Dernière modification : ${actorDisplayName(actorId)||tx('Gestionnaire','Manager')} · ${date(changedAt)}`,`Last change: ${actorDisplayName(actorId)||tx('Gestionnaire','Manager')} · ${date(changedAt)}`);}
       patchFinancialDomCell({meetingId,membershipId,rubricId,amount:displayTarget,cellVersion:result?.cellVersion,preservePending});
       focusNextFinancialInput(holder,wrapState);
       window.dispatchEvent(new CustomEvent('eco:financial-data-changed',{detail:{meetingId,membershipId,rubricId,amount:displayTarget,cellVersion:result?.cellVersion,soft:true,preservePending}}));
@@ -921,7 +921,7 @@ const submitFinancialCellElement=async validate=>{
       // like a confirmed mutation.
       if(optimisticStaged)financialOptimisticValues.delete(cellKey);
       if(['CELL_VALUE_CONFLICT','CELL_VERSION_CONFLICT'].includes(code)){
-        financialOptimisticValues.delete(cellKey);holder.classList.add('is-conflict');
+        financialOptimisticValues.delete(cellKey);holder.classList.add('is-conflict');markCriticalFinancialConflict({meetingId,membershipId,rubricId,amount:Number.isFinite(target)?target:Number(input.value||0)});
         setCellState('CONFLICT',tx('Une autre saisie existe · resynchronisation de cette cellule…','Another entry exists · resynchronizing this cell…'));
         try{
           await refreshFinancialProjectionSilently({meetingId,membershipId,rubricId,remote:true});
