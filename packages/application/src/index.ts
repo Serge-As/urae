@@ -145,12 +145,20 @@ export class ConnectedApplication {
     if(!this.usingOfflineSnapshot)return true;
     // A single cached GET must never trap later financial writes in offline mode.
     // Probe the real authenticated server directly, bypassing read-snapshot fallback.
+    const abort=typeof AbortController==='function'?new AbortController():null;
+    let timer:ReturnType<typeof setTimeout>|undefined;
     try{
-      const response=await fetch(`${this.baseUrl}/api/v1/auth/session`,{method:'GET',headers:this.headers()});
+      // A network check is only triggered by a financial action after an
+      // offline snapshot, never every second. A stalled connection must not
+      // freeze a reimbursement indefinitely (old Android compatible fallback).
+      const probe=fetch(`${this.baseUrl}/api/v1/auth/session`,{method:'GET',headers:this.headers(),signal:abort?.signal});
+      const response=await Promise.race([probe,new Promise<never>((_,reject)=>{
+        timer=setTimeout(()=>{abort?.abort();reject(new Error('NETWORK_UNAVAILABLE'));},4500);
+      })]);
       if(!response.ok)return false;
       const body=await response.json() as {authenticated?:boolean;account?:unknown};
       if(body.authenticated&&body.account){this.usingOfflineSnapshot=false;return true;}
-    }catch{}
+    }catch{}finally{if(timer)clearTimeout(timer);}
     return false;
   }
   private async cached<T>(path:string):Promise<T|undefined>{
