@@ -74,11 +74,11 @@ interface WorkersAILike {
   run?(model:string,input:Record<string,unknown>,options?:Record<string,unknown>):Promise<unknown>;
 }
 
-const RELEASE_VERSION='1.5.2.10-offline-conflicts-loans';
-const RELEASE_BUILD_ID='eco-system-1.5.2.10-20261003-offline-conflicts-loans';
+const RELEASE_VERSION='1.5.2.11-field-recovery';
+const RELEASE_BUILD_ID='eco-system-1.5.2.11-20261005-field-recovery';
 const RELEASE_SCHEMA_VERSION='d1-additive-20260923';
 const RELEASE_POLICY_VERSION='live-finance-policy-20261003-explicit-conflicts';
-const RELEASE_PWA_CACHE='eco-system-v15210-offline-conflicts-loans-20261003';
+const RELEASE_PWA_CACHE='eco-system-v15211-field-recovery-20261005';
 
 const defaultRepo = new InMemoryPlatformRepository();
 const defaultReferralBudgets = new InMemoryReferralBudgetStore();
