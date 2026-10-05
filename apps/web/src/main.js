@@ -373,7 +373,8 @@ const financialLabUI = mountFinancialLabUI({app,notify:toast,showError:fail});
 const resilienceUI = mountResilienceUI({app,notify:toast,showError:fail});
 const renderConnectivity = () => {
     const online=navigator.onLine,budget=app.serverBudgetState?.(),paused=Boolean(budget?.blocked),e=$('#connectivity');
-    e.textContent=paused?tx('● Mode conservation · serveur en pause','● Conservation mode · server paused'):`● ${online ? tx('En ligne','Online') : tx('Hors ligne','Offline')}`;
+    e.textContent=paused?(String(budget?.reason??'').startsWith('D1_')?tx('● Quota Cloudflare · saisies conservées localement','● Cloudflare quota · entries saved locally'):tx('● Mode conservation · serveur en pause','● Conservation mode · server paused')):`● ${online ? tx('En ligne','Online') : tx('Hors ligne','Offline')}`;
+    e.title=paused?tx(`Accès serveur limité. Reprise ciblée après ${new Date(Number(budget?.until??0)).toLocaleString('fr-FR')}. Les validations serveur restent en attente.`,`Server limited. Retry after ${new Date(Number(budget?.until??0)).toLocaleString('en-US')}. Server confirmations pending.`):'';
     e.className=`pill ${online&&!paused?'online':'offline'}`;app.setConnectivity(!online?'offline':paused?'degraded':'online');
 };
 let lastOfflineSnapshotNotice=0;
@@ -2183,6 +2184,8 @@ const eventDrivenConnectivityRecovery=()=>{
 window.addEventListener('online',()=>{networkRecoveryNeeded=true;void resumeOnline();});
 window.addEventListener('offline',()=>{networkRecoveryNeeded=true;persistNavState(captureNavState());renderConnectivity();});
 window.addEventListener('pageshow',eventDrivenConnectivityRecovery);
+window.addEventListener('eco:server-budget-blocked',renderConnectivity);
+window.addEventListener('eco:server-budget-expired',()=>{networkRecoveryNeeded=true;void resumeOnline();});
 window.addEventListener('eco:live-connected',eventDrivenConnectivityRecovery);
 window.addEventListener('focus',eventDrivenConnectivityRecovery);
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')eventDrivenConnectivityRecovery();});
