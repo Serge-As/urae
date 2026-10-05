@@ -2119,6 +2119,7 @@ const eventDrivenConnectivityRecovery=()=>{
 window.addEventListener('online',()=>{networkRecoveryNeeded=true;void resumeOnline();});
 window.addEventListener('offline',()=>{networkRecoveryNeeded=true;persistNavState(captureNavState());renderConnectivity();});
 window.addEventListener('pageshow',eventDrivenConnectivityRecovery);
+window.addEventListener('eco:live-connected',eventDrivenConnectivityRecovery);
 window.addEventListener('focus',eventDrivenConnectivityRecovery);
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')eventDrivenConnectivityRecovery();});
 if('serviceWorker' in navigator)navigator.serviceWorker.addEventListener('message',event=>{
