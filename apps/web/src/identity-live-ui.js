@@ -3,9 +3,10 @@ const value=id=>String(document.getElementById(id)?.value??'').trim();
 const row=(label,value)=>{const p=el('p');const b=el('strong',label+' : ');p.append(b,document.createTextNode(String(value??'—')));return p;};
 
 export function mountIdentityLiveUI({app,notify=()=>{},showError=console.error,conservationMode=false}){
-  let socket=null,lastSeq=0,lastSignalAt=0,activeGroup,reconnectTimer=null,reconnectAttempt=0,wantConnection=true,eventQueue=Promise.resolve();
+  let socket=null,lastSeq=0,lastSignalAt=0,activeGroup,reconnectTimer=null,reconnectAttempt=0,wantConnection=true,eventQueue=Promise.resolve(),connectPromise=null;
+  const pendingDraftSignals=new Map();
   const passportRoot=document.getElementById('identityPassport');
-  if(!passportRoot)return{refresh:async()=>{},publishSignal:(type,payload)=>app.publishLiveSignal?.(type,payload),disconnect:()=>{}};
+  if(!passportRoot)return{refresh:async()=>{},publishSignal:async()=>({accepted:false,reason:'LIVE_UI_UNMOUNTED'}),disconnect:()=>{}};
   const dnaRoot=document.getElementById('conciergeDna'),liveRoot=document.getElementById('premiumLiveStatus'),eventsRoot=document.getElementById('liveEventList'),memoryRoot=document.getElementById('conciergeMemoryList');
 
   const clearTimers=()=>{if(reconnectTimer){clearTimeout(reconnectTimer);reconnectTimer=null;}};
@@ -43,23 +44,34 @@ export function mountIdentityLiveUI({app,notify=()=>{},showError=console.error,c
     }
     lastSeq=Math.max(lastSeq,Number(event.seq??0));
   };
+  const signalKey=payload=>[payload?.kind??'',payload?.meetingId??'',payload?.membershipId??'',payload?.rubricId??''].join('|');
   const publishSignal=async(type,payload={})=>{
-    if(!app.activeGroup()||navigator.onLine===false)return{accepted:false,offline:true};
+    if(!app.activeGroup())return{accepted:false,reason:'ACTIVE_GROUP_REQUIRED'};
+    if(['FINANCIAL_DRAFT','FINANCIAL_DRAFT_CLEAR'].includes(type))pendingDraftSignals.set(signalKey(payload),{type,payload});
+    if(navigator.onLine===false)return{accepted:false,offline:true,queued:['FINANCIAL_DRAFT','FINANCIAL_DRAFT_CLEAR'].includes(type)};
     if(socket&&socket.readyState===WebSocket.OPEN){
-      try{socket.send(JSON.stringify({type:'CLIENT_SIGNAL',eventType:type,payload}));return{accepted:true,transport:'websocket'};}catch{}
+      try{socket.send(JSON.stringify({type:'CLIENT_SIGNAL',eventType:type,payload}));if(['FINANCIAL_DRAFT','FINANCIAL_DRAFT_CLEAR'].includes(type))pendingDraftSignals.delete(signalKey(payload));return{accepted:true,transport:'websocket'};}catch{}
     }
-    // User activity is an allowed reconnect trigger after the finite outage budget.
-    if(wantConnection&&(!socket||socket.readyState>1)){reconnectAttempt=0;connect();}
-    // One action => at most one HTTP fallback. No background polling.
-    try{return await app.publishLiveSignal?.(type,payload)??{accepted:false};}catch{return{accepted:false};}
+    // Ephemeral presence/typing/draft traffic is WebSocket-only. Never convert
+    // keystrokes into REST/D1 requests when the live channel is unavailable.
+    if(wantConnection&&(!socket||socket.readyState>1)){reconnectAttempt=0;void connect();}
+    return{accepted:false,transport:'websocket-pending',queued:['FINANCIAL_DRAFT','FINANCIAL_DRAFT_CLEAR'].includes(type)};
   };
   const connect=()=>{
-    if(!wantConnection||!app.activeGroup()||typeof WebSocket==='undefined'||navigator.onLine===false)return;
-    clearTimers();try{socket?.close(1000,'reconnect');}catch{}socket=null;activeGroup=app.activeGroup();
-    try{
-      socket=new WebSocket(app.liveWebSocketUrl(lastSeq));
+    if(connectPromise)return connectPromise;
+    if(!wantConnection||!app.activeGroup()||typeof WebSocket==='undefined'||navigator.onLine===false)return Promise.resolve();
+    if(socket&&[WebSocket.CONNECTING,WebSocket.OPEN].includes(socket.readyState))return Promise.resolve();
+    const requestedGroup=app.activeGroup();
+    clearTimers();try{socket?.close(1000,'reconnect');}catch{}socket=null;activeGroup=requestedGroup;
+    connectPromise=(async()=>{
+      const ticketData=await app.liveTicket?.();
+      if(!wantConnection||navigator.onLine===false||app.activeGroup()!==requestedGroup)return;
+      socket=new WebSocket(app.liveWebSocketUrl(lastSeq,String(ticketData?.ticket??'')));
       socket.onopen=()=>{
         reconnectAttempt=0;
+        // Re-announce only the latest draft state per cell after reconnect.
+        for(const {type,payload} of pendingDraftSignals.values())try{socket.send(JSON.stringify({type:'CLIENT_SIGNAL',eventType:type,payload}));}catch{}
+        pendingDraftSignals.clear();
         // A successful socket handshake proves the network has recovered.
         // Resume pending Outbox once, without heartbeat or periodic REST probes.
         window.dispatchEvent(new CustomEvent('eco:live-connected',{detail:{groupId:activeGroup}}));
@@ -81,7 +93,9 @@ export function mountIdentityLiveUI({app,notify=()=>{},showError=console.error,c
       };
       socket.onclose=()=>{socket=null;if(liveRoot)liveRoot.append(row('Canal','Déconnecté · reconnexion sur événement réseau'));scheduleReconnect();};
       socket.onerror=()=>{if(liveRoot)liveRoot.append(row('WebSocket','Interruption détectée · aucune boucle de polling'));};
-    }catch(e){showError(e);scheduleReconnect();}
+      };
+    })().catch(e=>{showError(e);scheduleReconnect();}).finally(()=>{connectPromise=null;});
+    return connectPromise;
   };
 
   const renderFounderObservatory=async()=>{
