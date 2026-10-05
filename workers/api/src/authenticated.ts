@@ -9,6 +9,19 @@ const managementRoles=new Set(['founder','manager','admin','president','treasure
 const multipartPaths=new Set(['/api/v1/assistant/group-launch/analyze-files']);
 const JSON_BODY_LIMIT=128*1024;
 const MULTIPART_BODY_LIMIT=26*1024*1024;
+// Warm-isolate optimization only for profile mirrors. NEVER cache group
+// membership, session, financial authorization, ledger or account privileges.
+const recentlyMirroredUsers=new Map<string,{fingerprint:string,expiresAt:number}>();
+const mirrorSessionUser=async(repo:PlatformRepository,account:{id:string;tenantId:string;displayName:string;locale:string;createdAt:string})=>{
+ const fingerprint=[account.tenantId,account.displayName,account.locale,account.createdAt].join('|'),cached=recentlyMirroredUsers.get(account.id);
+ if(cached?.fingerprint===fingerprint&&cached.expiresAt>Date.now())return;
+ const current=await repo.getUser(account.id);
+ if(!current||current.displayName!==account.displayName||current.locale!==account.locale){
+  await repo.saveUser({id:account.id,displayName:account.displayName,locale:account.locale,createdAt:current?.createdAt??account.createdAt});
+ }
+ if(recentlyMirroredUsers.size>=512)recentlyMirroredUsers.delete(recentlyMirroredUsers.keys().next().value!);
+ recentlyMirroredUsers.set(account.id,{fingerprint,expiresAt:Date.now()+5*60_000});
+};
 
 const b64url=(bytes:Uint8Array)=>{let binary='';for(const b of bytes)binary+=String.fromCharCode(b);return btoa(binary).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');};
 const b64urlText=(text:string)=>b64url(new TextEncoder().encode(text));
@@ -55,7 +68,7 @@ export function authenticatedApi(repo:PlatformRepository,db:D1DatabaseLike,handl
    }
    if(url.pathname.startsWith('/api/v1/auth/'))return sessions.handle(request);
    const account=await sessions.current(request);if(!account)return response({error:'AUTHENTICATION_REQUIRED'},401);
-   await repo.saveUser({id:account.id,displayName:account.displayName,locale:account.locale,createdAt:account.createdAt});
+   await mirrorSessionUser(repo,account);
    const memberships=(await repo.listMembershipsForUser(account.id)).filter(m=>m.status==='active');
    const ownGroups=(await repo.listGroups(account.tenantId)).filter(g=>g.createdBy===account.id);
    const allowedGroups=new Map<string,Group>(ownGroups.map(g=>[g.id,g]));
