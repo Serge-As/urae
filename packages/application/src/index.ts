@@ -1630,7 +1630,7 @@ export class ConnectedApplication {
     const loan=(await this.listCompletion('LOAN')).find(x=>x.id===loanId);if(!loan)throw Error('LOAN_NOT_FOUND');const journal=await this.sovereign.list(this.tenantId,this.activeGroupId);
     return{loan,events:journal.filter(x=>String(x.payload.loanId??x.payload.sourceId??'')===loanId||String(x.payload.id??'')===loanId),offline:true};
   }
-  async disburseLoan(id:string,input:{amount?:number;expectedVersion:number;meetingId?:string}):Promise<{entry:LedgerEntry;loan:CompletionRecord}>{
+  async disburseLoan(id:string,input:{amount?:number;expectedVersion:number;meetingId?:string;rubricId?:string}):Promise<{entry:LedgerEntry;loan:CompletionRecord}>{
     if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');const key=makeId('loan_disbursement');
     if(!this.isOffline())try{return await this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/loans/'+encodeURIComponent(id)+'/disburse',{method:'POST',body:JSON.stringify({...input,idempotencyKey:key})});}catch(error){if(!(error instanceof Error)||error.message!=='NETWORK_UNAVAILABLE')throw error;}
     const loan=(await this.listCompletion('LOAN')).find(x=>x.id===id);if(!loan)throw Error('LOAN_NOT_FOUND');if(String(loan.data.completionState)!=='APPROVED')throw Error('LOAN_NOT_APPROVED');if(Number(loan.data.completionVersion??0)!==input.expectedVersion)throw Error('COMPLETION_VERSION_CONFLICT');
@@ -1638,7 +1638,7 @@ export class ConnectedApplication {
     const entry:any=await this.patchLocalCashMovement({amount:principal,direction:'out',kind:'loan_disbursement',sourceType:'loan',sourceId:id,meetingId:input.meetingId,idempotencyKey:key,descriptionCode:'LEDGER_LOAN_DISBURSEMENT'});
     const interestTiming=String(loan.data.interestTiming??'NEXT_SESSION_DUE'),rateBasisPointsPerPeriod=Number(loan.data.rateBasisPointsPerPeriod??0),upfrontInterestExpected=interestTiming==='NEXT_SESSION_DUE'?0:Math.round(principal*rateBasisPointsPerPeriod/10000);
     const data={...loan.data,completionState:'DISBURSED',completionVersion:input.expectedVersion+1,ledgerEntryId:entry.id,outstandingPrincipal:principal,unpaidInterest:0,accruedMeetingIdsJson:'[]',interestTiming,upfrontInterestExpected,upfrontInterestPending:upfrontInterestExpected>0,upfrontInterestSourceMeetingId:input.meetingId??'',upfrontInterestSkipNextClose:upfrontInterestExpected>0&&!input.meetingId,disbursedAt:new Date().toISOString()},next:CompletionRecord={...loan,status:'ACTIVE',tags:[...loan.tags.filter(x=>!x.startsWith('state:')),'state:DISBURSED'],data,updatedAt:new Date().toISOString()};
-    await this.saveLocalCompletion(next);await this.queueLocal('LOAN_DISBURSE_V1',{groupId:this.activeGroupId,loanId:id,amount:principal,expectedVersion:input.expectedVersion,meetingId:input.meetingId??null,interestTiming,rateBasisPointsPerPeriod,idempotencyKey:key},key);return{entry,loan:next};
+    await this.saveLocalCompletion(next);await this.queueLocal('LOAN_DISBURSE_V1',{groupId:this.activeGroupId,loanId:id,amount:principal,expectedVersion:input.expectedVersion,meetingId:input.meetingId??null,rubricId:input.rubricId??String(loan.data.rubricId??''),interestTiming,rateBasisPointsPerPeriod,idempotencyKey:key},key);return{entry,loan:next};
   }
   async repayLoan(id:string,input:{principalAmount:number;interestAmount?:number;expectedVersion:number;meetingId?:string}):Promise<{entry:LedgerEntry;loan:CompletionRecord}>{
     if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');const key=makeId('loan_repayment');
