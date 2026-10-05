@@ -28,7 +28,7 @@ test('financial banners are dismissable without deleting notification history',(
 });
 
 test('live client heals missed durable events by sequence replay on reconnect without polling',()=>{
-  assert.match(live,/liveWebSocketUrl\(lastSeq\)/);
+  assert.match(live,/liveWebSocketUrl\(lastSeq,String\(ticketData\?\.ticket\?\?''\)\)/);
   assert.match(live,/sequence-gap/);
   assert.match(live,/visibilityState==='visible'/);
   assert.doesNotMatch(live,/catchupTimer/);
