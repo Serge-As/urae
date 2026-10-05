@@ -64,7 +64,7 @@ export function authenticatedApi(repo:PlatformRepository,db:D1DatabaseLike,handl
    const liveTicketRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/live\/ticket$/);
    if(request.method==='GET'&&liveTicketRoute){
     const group=allowedGroups.get(liveTicketRoute[1]!);if(!group)return response({error:'FORBIDDEN_SCOPE'},403);if(!liveTicketSecret)return response({error:'LIVE_TICKET_UNAVAILABLE'},503);
-    const membership=memberships.find(m=>m.groupId===group.id),roles=group.createdBy===account.id?['founder','manager']:membership?.roles??[],now=Math.floor(Date.now()/1000),exp=now+8*60*60;
+    const membership=memberships.find(m=>m.groupId===group.id),roles=group.createdBy===account.id?['founder','manager']:membership?.roles??[],now=Math.floor(Date.now()/1000),exp=now+60*60;
     const ticket=await issueLiveTicket({v:1,actorId:account.id,tenantId:group.tenantId,groupId:group.id,roles,exp},liveTicketSecret);
     return response({ticket,expiresAt:new Date(exp*1000).toISOString(),groupId:group.id},200);
    }
