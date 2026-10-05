@@ -54,3 +54,41 @@ test('saved loan policy and debt projection update only after real financial eve
   assert.match(ui,/window\.addEventListener\('eco:financial-live-update',scheduleDebtRefresh\)/);
   assert.doesNotMatch(ui,/setInterval\(/);
 });
+
+
+test('Wi-Fi to mobile change reconnects once without polling or stale onclose dropping the fresh socket',async()=>{
+  const previous=new Map();
+  for(const key of ['document','window','navigator','WebSocket','CustomEvent'])previous.set(key,Object.getOwnPropertyDescriptor(globalThis,key));
+  const sockets=[],networkHandlers={};
+  try{
+    const passport={replaceChildren(){}},connection={type:'wifi',effectiveType:'4g',rtt:30,addEventListener(name,handler){networkHandlers[name]=handler;}};
+    Object.defineProperty(globalThis,'document',{configurable:true,value:{getElementById(id){return id==='identityPassport'?passport:null;},addEventListener(){}}});
+    Object.defineProperty(globalThis,'window',{configurable:true,value:{addEventListener(){},dispatchEvent(){}}});
+    Object.defineProperty(globalThis,'navigator',{configurable:true,value:{onLine:true,connection}});
+    Object.defineProperty(globalThis,'CustomEvent',{configurable:true,value:class {constructor(type,options){this.type=type;this.detail=options?.detail;}}});
+    Object.defineProperty(globalThis,'WebSocket',{configurable:true,value:class {
+      static OPEN=1;static CONNECTING=0;
+      constructor(url){this.url=url;this.readyState=0;sockets.push(this);}
+      close(){this.readyState=3;}
+    }});
+    const app={activeGroup:()=> 'group-net',liveTicket:async()=>({ticket:'signed'}),
+      liveWebSocketUrl:()=> 'wss://example.invalid/live',
+      groupIdentityPassport:async()=>{throw Error('D1_DOWN');},
+      conciergeProfile:async()=>({})};
+    const live=mountIdentityLiveUI({app,conservationMode:true,showError:()=>{}});
+    await live.refresh();
+    await Promise.resolve();
+    assert.equal(sockets.length,1);
+    sockets[0].readyState=1;sockets[0].onopen();
+    connection.rtt=65;networkHandlers.change();
+    await Promise.resolve();
+    assert.equal(sockets.length,1,'RTT change cannot create a new connection');
+    connection.type='cellular';networkHandlers.change();
+    await Promise.resolve();await Promise.resolve();
+    assert.equal(sockets.length,2,'real interface switch reconnects immediately');
+    sockets[1].readyState=1;sockets[1].onopen();
+    sockets[0].onclose();
+    assert.equal(sockets.length,2,'a late old onclose cannot schedule another reconnect');
+    live.disconnect();
+  }finally{for(const [k,d] of previous){if(d)Object.defineProperty(globalThis,k,d);else delete globalThis[k];}}
+});
