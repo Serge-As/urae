@@ -60,6 +60,9 @@ export function mountIdentityLiveUI({app,notify=()=>{},showError=console.error,c
       socket=new WebSocket(app.liveWebSocketUrl(lastSeq));
       socket.onopen=()=>{
         reconnectAttempt=0;
+        // A successful socket handshake proves the network has recovered.
+        // Resume pending Outbox once, without heartbeat or periodic REST probes.
+        window.dispatchEvent(new CustomEvent('eco:live-connected',{detail:{groupId:activeGroup}}));
         if(liveRoot)liveRoot.replaceChildren(row('Connexion','WebSocket connecté'),row('Groupe',activeGroup),row('Temps réel',conservationMode?'PUSH ÉVÉNEMENTIEL · zéro polling D1':'ACTIF · push événementiel'));
       };
       socket.onmessage=e=>{
