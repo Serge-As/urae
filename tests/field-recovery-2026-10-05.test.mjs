@@ -83,6 +83,9 @@ test('Wi-Fi to mobile change reconnects once without polling or stale onclose dr
     connection.rtt=65;networkHandlers.change();
     await Promise.resolve();
     assert.equal(sockets.length,1,'RTT change cannot create a new connection');
+    connection.effectiveType='3g';networkHandlers.change();
+    await Promise.resolve();
+    assert.equal(sockets.length,1,'bandwidth estimate cannot create new Live requests');
     connection.type='cellular';networkHandlers.change();
     await Promise.resolve();await Promise.resolve();
     assert.equal(sockets.length,2,'real interface switch reconnects immediately');
