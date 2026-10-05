@@ -9,7 +9,7 @@ test('financial live socket connects even if optional identity D1 read fails', a
   const sockets=[],events=[],errors=[];
   try {
     const passport={replaceChildren(){}};
-    Object.defineProperty(globalThis,'document',{configurable:true,value:{getElementById(id){return id==='identityPassport'?passport:null;},addEventListener(){}}});
+    Object.defineProperty(globalThis,'document',{configurable:true,value:{getElementById(id){return id==='identityPassport'?passport:id==='view-settings'?{classList:{contains:()=>true}}:null;},addEventListener(){}}});
     Object.defineProperty(globalThis,'window',{configurable:true,value:{addEventListener(){},dispatchEvent(event){events.push(event);}}});
     Object.defineProperty(globalThis,'navigator',{configurable:true,value:{onLine:true}});
     Object.defineProperty(globalThis,'CustomEvent',{configurable:true,value:class {constructor(type,options){this.type=type;this.detail=options?.detail;}}});
@@ -62,7 +62,7 @@ test('Wi-Fi to mobile change reconnects once without polling or stale onclose dr
   const sockets=[],networkHandlers={};
   try{
     const passport={replaceChildren(){}},connection={type:'wifi',effectiveType:'4g',rtt:30,addEventListener(name,handler){networkHandlers[name]=handler;}};
-    Object.defineProperty(globalThis,'document',{configurable:true,value:{getElementById(id){return id==='identityPassport'?passport:null;},addEventListener(){}}});
+    Object.defineProperty(globalThis,'document',{configurable:true,value:{getElementById(id){return id==='identityPassport'?passport:id==='view-settings'?{classList:{contains:()=>true}}:null;},addEventListener(){}}});
     Object.defineProperty(globalThis,'window',{configurable:true,value:{addEventListener(){},dispatchEvent(){}}});
     Object.defineProperty(globalThis,'navigator',{configurable:true,value:{onLine:true,connection}});
     Object.defineProperty(globalThis,'CustomEvent',{configurable:true,value:class {constructor(type,options){this.type=type;this.detail=options?.detail;}}});
@@ -94,4 +94,35 @@ test('Wi-Fi to mobile change reconnects once without polling or stale onclose dr
     assert.equal(sockets.length,2,'a late old onclose cannot schedule another reconnect');
     live.disconnect();
   }finally{for(const [k,d] of previous){if(d)Object.defineProperty(globalThis,k,d);else delete globalThis[k];}}
+});
+
+test('dashboard sync does not trigger unrelated identity, memory or founder reads',async()=>{
+  const previous=new Map();
+  for(const key of ['document','window','navigator','WebSocket','CustomEvent'])previous.set(key,Object.getOwnPropertyDescriptor(globalThis,key));
+  const sockets=[],calls=[];
+  try{
+    const handlers={};
+    Object.defineProperty(globalThis,'document',{configurable:true,value:{getElementById(id){
+      return id==='identityPassport'?{replaceChildren(){}}:id==='view-settings'?{classList:{contains:()=>false}}:null;
+    },addEventListener(){}}});
+    Object.defineProperty(globalThis,'window',{configurable:true,value:{addEventListener(name,fn){handlers[name]=fn;},dispatchEvent(){}}});
+    Object.defineProperty(globalThis,'navigator',{configurable:true,value:{onLine:true}});
+    Object.defineProperty(globalThis,'CustomEvent',{configurable:true,value:class{constructor(type,options){this.type=type;this.detail=options?.detail;}}});
+    Object.defineProperty(globalThis,'WebSocket',{configurable:true,value:class{
+      static OPEN=1;static CONNECTING=0;
+      constructor(url){this.readyState=0;sockets.push(this);}
+      close(){this.readyState=3;}
+    }});
+    const app={activeGroup:()=> 'grp',currentActor:()=> 'actor',
+      liveTicket:async()=>({ticket:'signed'}),liveWebSocketUrl:()=> 'wss://example.invalid/live',
+      groupIdentityPassport:async()=>{calls.push('identity');return{};},
+      conciergeProfile:async()=>{calls.push('concierge');return{};}
+    };
+    const live=mountIdentityLiveUI({app,conservationMode:true,showError:()=>{}});
+    await live.refresh();
+    await Promise.resolve();
+    assert.equal(sockets.length,1);
+    assert.deepEqual(calls,[],'offscreen optional panels consume no D1');
+    live.disconnect();
+  }finally{for(const [k,d]of previous){if(d)Object.defineProperty(globalThis,k,d);else delete globalThis[k];}}
 });
