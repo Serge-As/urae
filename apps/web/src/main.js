@@ -1605,17 +1605,32 @@ const renderFinancialAlerts=async()=>{
 const financialLiveSelector=p=>p?.meetingId&&p?.membershipId&&p?.rubricId?`.matrix-cell-entry[data-meeting-id="${CSS.escape(String(p.meetingId))}"][data-membership-id="${CSS.escape(String(p.membershipId))}"][data-rubric-id="${CSS.escape(String(p.rubricId))}"]`:'';
 const applyRemoteFinancialProjection=(p={})=>{
     const selector=financialLiveSelector(p);if(!selector)return;
-    const amount=Number(p.newAmount);if(!Number.isFinite(amount))return;
+    const amount=Number(p.newAmount);if(!Number.isFinite(amount))return false;
+    // Remote projections never erase unconfirmed local financial intents.
+    // Preserve them for the server CAS and visibly flag divergent edits.
+    const pending=(app.outboxItems?.()??[]).find(item=>{
+      if(['CONFIRMED','CANCELLED','CONFLICT'].includes(String(item.status??'')))return false;
+      if(!['FINANCIAL_CELL_CORRECTION_PROPOSAL_V1','FINANCIAL_SHEET_ENTRY_V1'].includes(String(item.type)))return false;
+      const d=item.payload??{};
+      return String(d.meetingId??'')===String(p.meetingId)&&String(d.membershipId??'')===String(p.membershipId)&&String(d.rubricId??'')===String(p.rubricId);
+    });
+    if(pending){
+      const localAmount=Number(pending.payload?.targetAmount??pending.payload?.amount);
+      if(Number.isFinite(localAmount)&&localAmount!==amount)markCriticalFinancialConflict({...p,amount:localAmount});
+      return false;
+    }
     forgetConfirmedCell(financialCellKey(String(p.membershipId??''),String(p.rubricId??''),String(p.meetingId??'')));
     const rubric=rubrics.find(x=>x.id===String(p.rubricId)),nature=financialNatureForRubric(rubric),signed=(nature==='LOAN'||nature==='OUTFLOW')?-Math.abs(amount):amount;
     patchFinancialDomCell({meetingId:p.meetingId,membershipId:p.membershipId,rubricId:p.rubricId,amount:signed,cellVersion:p.cellVersion,remote:true});
+    return true;
 };
 const acknowledgeRemoteFinancialCell=button=>{
     const cell=button?.closest?.('.matrix-cell-entry');if(!cell)return;cell.classList.remove('remote-financial-change','remote-financial-closed');button.classList.remove('remote-ack');button.textContent='✓';
     void Promise.resolve(identityLiveUI.publishSignal?.('LIVE_ACK',{kind:'FINANCIAL_CELL',meetingId:cell.dataset.meetingId||'',membershipId:cell.dataset.membershipId||'',rubricId:cell.dataset.rubricId||''})).catch(()=>{});
 };
 const highlightRemoteFinancialCell=(p={})=>{
-    const selector=financialLiveSelector(p);if(!selector)return;applyRemoteFinancialProjection(p);
+    const selector=financialLiveSelector(p);if(!selector)return;
+    if(!applyRemoteFinancialProjection(p))return;
     const author=String(p.actorName||actorDisplayName(String(p.actorId||''))||tx('Autre gestionnaire','Another manager'));
     for(const cell of document.querySelectorAll(selector)){
       cell.classList.remove('remote-financial-change','remote-financial-closed');void cell.offsetWidth;cell.classList.add('remote-financial-change');if(p.meetingClosed)cell.classList.add('remote-financial-closed');const table=cell.closest('.canonical-financial-matrix');if(table&&p.meetingClosed)table.classList.add('has-post-close-change');
