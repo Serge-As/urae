@@ -181,7 +181,9 @@ export function mountIdentityLiveUI({app,notify=()=>{},showError=console.error,c
   // only to a change of connection TYPE, never to RTT/downlink fluctuations.
   // No active network probe, heartbeat, or idle D1 traffic is introduced.
   const networkInfo=navigator.connection||navigator.mozConnection||navigator.webkitConnection;
-  const networkTypeOf=()=>String(networkInfo?.type??'')+'|'+String(networkInfo?.effectiveType??'');
+  // effectiveType (2g/3g/4g) is a bandwidth estimate and can oscillate at
+  // rest; it must NOT churn WebSockets. Only the physical interface matters.
+  const networkTypeOf=()=>String(networkInfo?.type??'');
   let previousNetworkType=networkTypeOf();
   networkInfo?.addEventListener?.('change',()=>{
     const next=networkTypeOf();if(next===previousNetworkType)return;previousNetworkType=next;
