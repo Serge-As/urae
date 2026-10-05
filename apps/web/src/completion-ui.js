@@ -366,7 +366,7 @@ export const mountCompletionUI=({app,notify,showError,getMembers,getMeetings,get
   // without a repeating timer or a background D1 polling loop.
   let debtRefreshTimer=0,debtRefreshTask=Promise.resolve();
   const scheduleDebtRefresh=()=>{
-    if(!app.activeGroup()||!byId('loanDebtRecap'))return;
+    if(!app.activeGroup()||!byId('loanDebtRecap')||byId('loanCompletionPanel')?.hidden||!byId('view-finance')?.classList.contains('active'))return;
     if(debtRefreshTimer)clearTimeout(debtRefreshTimer);
     debtRefreshTimer=setTimeout(()=>{
       debtRefreshTimer=0;
