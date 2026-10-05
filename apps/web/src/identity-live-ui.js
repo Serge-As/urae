@@ -23,10 +23,11 @@ export function mountIdentityLiveUI({app,notify=()=>{},showError=console.error,c
     }
   };
   const scheduleReconnect=()=>{
-    if(!wantConnection||!app.activeGroup()||navigator.onLine===false||reconnectTimer||reconnectAttempt>=1)return;
-    reconnectAttempt=1;
-    reconnectTimer=setTimeout(()=>{reconnectTimer=null;connect();},1500);
-    if(liveRoot)liveRoot.append(row('Reconnexion','1 tentative · puis attente d’un événement réseau/utilisateur'));
+    if(!wantConnection||!app.activeGroup()||navigator.onLine===false||reconnectTimer||reconnectAttempt>=4)return;
+    // At most four connection attempts per outage; no idle polling or D1 requests.
+    const backoff=[1500,4500,12000,30000][reconnectAttempt++];
+    reconnectTimer=setTimeout(()=>{reconnectTimer=null;connect();},backoff);
+    if(liveRoot)liveRoot.append(row('Reconnexion','Canal interrompu · tentative '+reconnectAttempt+'/4'));
   };
   const renderEvent=event=>{
     const card=el('article',undefined,'item');
@@ -47,6 +48,8 @@ export function mountIdentityLiveUI({app,notify=()=>{},showError=console.error,c
     if(socket&&socket.readyState===WebSocket.OPEN){
       try{socket.send(JSON.stringify({type:'CLIENT_SIGNAL',eventType:type,payload}));return{accepted:true,transport:'websocket'};}catch{}
     }
+    // User activity is an allowed reconnect trigger after the finite outage budget.
+    if(wantConnection&&(!socket||socket.readyState>1)){reconnectAttempt=0;connect();}
     // One action => at most one HTTP fallback. No background polling.
     try{return await app.publishLiveSignal?.(type,payload)??{accepted:false};}catch{return{accepted:false};}
   };
@@ -110,6 +113,9 @@ export function mountIdentityLiveUI({app,notify=()=>{},showError=console.error,c
     const group=app.activeGroup();if(!group){closeSocket();passportRoot.replaceChildren(el('p','Sélectionnez un groupe.','hint'));dnaRoot?.replaceChildren();liveRoot?.replaceChildren();memoryRoot?.replaceChildren();return;}
     if(activeGroup&&activeGroup!==group){closeSocket();lastSeq=0;lastSignalAt=0;eventsRoot?.replaceChildren();}
     activeGroup=group;
+    // Finance push must not depend on unrelated identity/concierge D1 reads.
+    // A quota-limited request must never prevent managers from receiving writes.
+    if(conservationMode&&(!socket||socket.readyState>1))connect();
     try{
       const [passport,dna]=await Promise.all([app.groupIdentityPassport(),app.conciergeProfile()]);
       passportRoot.replaceChildren(row('Code identitaire',passport.publicCode),row('Empreinte identité',passport.identityFingerprint),row('Empreinte règles',passport.rulesFingerprint),row('Rubriques',passport.rubricCount),row('Sécurité','Identifiant public, jamais un secret d’accès'));
@@ -140,6 +146,7 @@ export function mountIdentityLiveUI({app,notify=()=>{},showError=console.error,c
   };
 
   window.addEventListener('online',()=>{if(wantConnection){reconnectAttempt=0;connect();}});
+  window.addEventListener('eco:local-mutation',()=>{if(wantConnection&&navigator.onLine!==false&&(!socket||socket.readyState>1)){reconnectAttempt=0;connect();}});
   window.addEventListener('offline',()=>{closeSocket('offline');reconnectAttempt=0;if(liveRoot)liveRoot.append(row('Réseau','Hors ligne · outbox active'));});
   document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&wantConnection&&(!socket||socket.readyState!==WebSocket.OPEN)){reconnectAttempt=0;connect();}});
   document.getElementById('refreshPassportBtn')?.addEventListener('click',()=>void (async()=>{try{await app.groupIdentityPassport(true);notify('Passeport identitaire rafraîchi.');await refresh();}catch(e){showError(e);}})());
