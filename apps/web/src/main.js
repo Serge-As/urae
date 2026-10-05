@@ -79,6 +79,15 @@ let receiptPositions = [];
 let financialSheetEvents = [];
 let financialCellVersions = new Map();
 let financialCellMetadata = new Map();
+// Ephemeral indicators are local projections only. No draft amounts are sent
+// over Live or stored on the server, and this map is never a financial authority.
+const remoteFinancialDrafts=new Map();
+const remoteDraftNames=key=>{
+  const actors=remoteFinancialDrafts.get(key);if(!actors)return[];
+  for(const [id,row] of actors)if(Number(row.expiresAt)<Date.now()){clearTimeout(row.timer);actors.delete(id);}
+  if(!actors.size){remoteFinancialDrafts.delete(key);return[];}
+  return [...actors.values()].map(row=>String(row.name)).filter(Boolean);
+};
 let financialPendingTargets = new Map();
 let financialPendingSheetEntries = [];
 let financialReviewTargets = new Map();
@@ -969,6 +978,8 @@ const makeFinancialEntryCell=({member,rubric,meetingId,editable=true})=>{
     input.addEventListener('blur',()=>{stopTyping();announceDraft();sendSignal('CELL_BLUR');});
     const validate=document.createElement('button');validate.type='button';validate.className='cell-validate';validate.textContent='✓';validate.title=tx('Valider la valeur totale','Confirm total value');validate.setAttribute('aria-label',tx('Valider la saisie','Confirm entry'));
     const liveLine=document.createElement('small');liveLine.className='cell-live-presence';liveLine.setAttribute('aria-live','polite');liveLine.hidden=true;
+    const remoteDraftAuthors=remoteDraftNames(persistentCellKey);
+    if(remoteDraftAuthors.length){holder.classList.add('live-cell-draft');holder.dataset.remoteDraftAuthor=remoteDraftAuthors.join(', ');liveLine.textContent=tx(remoteDraftAuthors.join(', ')+' a un brouillon non validé',remoteDraftAuthors.join(', ')+' has an unconfirmed draft');liveLine.hidden=false;}
     const stateLine=document.createElement('small');stateLine.className='cell-save-state';stateLine.setAttribute('aria-live','polite');stateLine.hidden=true;
     const setCellState=(state,message='')=>{holder.dataset.saveState=state;holder.classList.toggle('is-failed',state==='FAILED');holder.classList.toggle('is-confirmed',state==='CONFIRMED');stateLine.hidden=!message;stateLine.textContent=message;};
     validate.dataset.ecoSubmitBound='canonical';
@@ -1690,11 +1701,33 @@ const highlightRemoteFinancialCell=(p={})=>{
       const button=cell.querySelector('.cell-validate');if(button){button.textContent='OK';button.classList.add('remote-ack');}
     }
 };
+const paintRemoteFinancialDraft=(cell,key)=>{
+    const line=cell.querySelector('.cell-live-presence');if(!line)return;
+    const authors=remoteDraftNames(key);
+    if(authors.length){
+      const names=authors.join(', ');cell.dataset.remoteDraftAuthor=names;cell.classList.add('live-cell-draft');
+      if(!cell.classList.contains('live-cell-active')){line.textContent=tx(names+' a un brouillon non validé',names+' has an unconfirmed draft');line.hidden=false;}
+    }else{
+      delete cell.dataset.remoteDraftAuthor;cell.classList.remove('live-cell-draft');
+      if(!cell.classList.contains('live-cell-active'))line.hidden=true;
+    }
+};
 window.addEventListener('eco:live-signal',event=>{
     const e=event instanceof CustomEvent?event.detail:undefined,p=e?.payload??{},actorId=String(e?.actorId??'');if(!actorId||actorId===String(app.currentActor?.()??''))return;
-    if(String(p.kind??'')!=='FINANCIAL_CELL')return;const selector=financialLiveSelector(p),cell=selector?document.querySelector(selector):null;if(!cell)return;
-    const line=cell.querySelector('.cell-live-presence');if(!line)return;const name=actorDisplayName(actorId)||tx('Un autre gestionnaire','Another manager');
-    const type=String(e.type??'');
+    if(String(p.kind??'')!=='FINANCIAL_CELL')return;
+    const key=financialCellKey(String(p.membershipId??''),String(p.rubricId??''),String(p.meetingId??'')),selector=financialLiveSelector(p),type=String(e.type??''),name=actorDisplayName(actorId)||tx('Un autre gestionnaire','Another manager');
+    if(type==='FINANCIAL_DRAFT'){
+      const actors=remoteFinancialDrafts.get(key)??new Map(),old=actors.get(actorId);if(old?.timer)clearTimeout(old.timer);
+      const deadline=Date.now()+30*60_000;
+      const timer=setTimeout(()=>{const latest=actors.get(actorId);if(latest?.expiresAt!==deadline)return;actors.delete(actorId);for(const cell of selector?document.querySelectorAll(selector):[])paintRemoteFinancialDraft(cell,key);},30*60_000);
+      actors.set(actorId,{name,expiresAt:deadline,timer});remoteFinancialDrafts.set(key,actors);
+    }
+    if(type==='FINANCIAL_DRAFT_CLEAR'){
+      const actors=remoteFinancialDrafts.get(key),existing=actors?.get(actorId);if(existing?.timer)clearTimeout(existing.timer);actors?.delete(actorId);
+      if(actors&&!actors.size)remoteFinancialDrafts.delete(key);
+    }
+    for(const cell of selector?document.querySelectorAll(selector):[]){
+      const line=cell.querySelector('.cell-live-presence');if(!line)continue;
     const resetPresenceTimer=(ms,kind='typing')=>{
       const timerKey=kind==='draft'?'liveDraftHideTimer':'liveTypingHideTimer';
       clearTimeout(Number(cell.dataset[timerKey]||0));
@@ -1710,9 +1743,9 @@ window.addEventListener('eco:live-signal',event=>{
       cell.dataset[timerKey]=String(t);
     };
     if(['TYPING','CELL_FOCUS'].includes(type)){line.textContent=type==='TYPING'?tx(`${name} saisit…`,`${name} is typing…`):tx(`${name} travaille sur cette cellule`,`${name} is working on this cell`);line.hidden=false;cell.classList.add('live-cell-active');resetPresenceTimer(3500);}
-    if(type==='FINANCIAL_DRAFT'){cell.dataset.remoteDraftAuthor=name;cell.classList.add('live-cell-draft');line.textContent=tx(`${name} a un brouillon non validé`,`${name} has an unconfirmed draft`);line.hidden=false;resetPresenceTimer(30*60_000,'draft');}
-    if(type==='FINANCIAL_DRAFT_CLEAR'){clearTimeout(Number(cell.dataset.liveDraftHideTimer||0));cell.classList.remove('live-cell-draft');delete cell.dataset.remoteDraftAuthor;if(!cell.classList.contains('live-cell-active'))line.hidden=true;}
-    if(['TYPING_STOP','CELL_BLUR'].includes(type)){cell.classList.remove('live-cell-active');const draftAuthor=cell.dataset.remoteDraftAuthor;if(cell.classList.contains('live-cell-draft')&&draftAuthor){line.textContent=tx(`${draftAuthor} a un brouillon non validé`,`${draftAuthor} has an unconfirmed draft`);line.hidden=false;}else line.hidden=true;}
+    if(['TYPING_STOP','CELL_BLUR'].includes(type))cell.classList.remove('live-cell-active');
+      paintRemoteFinancialDraft(cell,key);
+    }
 });
 let liveLedgerRefreshTimer=0;
 window.addEventListener('eco:financial-live-update',event=>{
