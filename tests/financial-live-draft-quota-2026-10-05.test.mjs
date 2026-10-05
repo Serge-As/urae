@@ -61,9 +61,10 @@ test('a stored unconfirmed draft is replayed after 12s without any polling',asyn
 
 test('presence in the UI does not clear a draft after idle typing-stop timeout',()=>{
   const ui=fs.readFileSync('apps/web/src/main.js','utf8');
-  assert.match(ui,/liveDraftHideTimer/);
+  assert.match(ui,/remoteFinancialDrafts/);
   assert.match(ui,/liveTypingHideTimer/);
-  assert.match(ui,/resetPresenceTimer\(30\*60_000,'draft'\)/);
+  assert.match(ui,/deadline=Date.now\(\)\+30\*60_000/);
+  assert.match(ui,/paintRemoteFinancialDraft/);
   assert.doesNotMatch(ui,/resetPresenceTimer\(11000\)/);
   const live=fs.readFileSync('apps/web/src/identity-live-ui.js','utf8');
   assert.doesNotMatch(live,/setInterval\(/);
