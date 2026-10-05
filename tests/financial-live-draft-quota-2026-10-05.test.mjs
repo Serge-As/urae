@@ -19,7 +19,7 @@ const testState=()=>{
 };
 const post=async(hub,type,payload,actorId='manager-a')=>{
   const response=await hub.fetch(new Request('https://group-live.internal/signal',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({type,actorId,payload})}));
-  assert.equal(response.status,202,await response.text().catch(()=>''));return response.json();
+  assert.equal(response.status,202);return response.json();
 };
 const read=async(hub,afterAt=0)=>(
   await hub.fetch(new Request('https://group-live.internal/signals?afterAt='+afterAt+'&actorId=manager-b'))
