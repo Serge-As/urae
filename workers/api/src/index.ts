@@ -169,7 +169,8 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
   }
   const {kernel,foundation,ledger,meetings,discovery,membershipGateway,rubrics,completion,explainability,documents,receivables,treasury,riskFinance,market,community,imports,artifactStore,memberControl,memberEnvelopes,groupIdentity,conciergeLearning,miscRubrics,adManager,economicIntelligence,externalPrograms,operationalCockpit,businessStudio,knowledgeAcademy,valueNetwork,creatorTalent,quietWatch}=createRequestScope(request,repo,options.artifacts,options.dataUseDefaultMode??'BETA_OPEN',options.documentAI);
   let ctx=kernel.context.get();
-  try{
+  const trustedLiveTicket=request.headers.get('x-live-ticket-authenticated')==='1';
+  if(!trustedLiveTicket)try{
     const at=Date.now(),rows=await repo.listWorkspaceRecords(ctx.tenantId,'MANAGER.BUSINESS_STUDIO'),grants=rows.filter(r=>r.data.businessKind==='MANDATE'&&r.status==='ACTIVE'&&r.data.mandateState==='ACTIVE'&&String(r.data.delegateUserId??'')===ctx.actorId&&Date.parse(String(r.data.startsAt??''))<=at&&(!r.data.endsAt||Date.parse(String(r.data.endsAt))>at)).map(r=>{let permissions:string[]=[];try{permissions=JSON.parse(String(r.data.delegatedRightsJson??'[]'));}catch{}return{mandateId:r.id,groupId:String(r.data.groupId??''),permissions:[...new Set(permissions.map(x=>String(x).toUpperCase()))],startsAt:String(r.data.startsAt??''),endsAt:r.data.endsAt?String(r.data.endsAt):undefined};}).filter(g=>g.groupId&&g.permissions.length);
     kernel.context.set({...ctx,mandateIds:grants.map(g=>g.mandateId),mandateGrants:grants});ctx=kernel.context.get();
   }catch{}
@@ -559,7 +560,9 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
         return stub.fetch(new Request('https://group-live.internal/events?after='+encodeURIComponent(after)+'&limit='+encodeURIComponent(limit)+'&userId='+encodeURIComponent(ctx.actorId)));
       }
       if(action==='connect'&&request.method==='GET'){
-        await requireGroup(groupId,false);
+        // Signed live tickets are already group-scoped by authenticatedApi.
+        // Fallback to the canonical D1 authorization path for legacy clients.
+        if(!trustedLiveTicket)await requireGroup(groupId,false);
         const after=url.searchParams.get('after')??'0';
         return stub.fetch(new Request('https://group-live.internal/connect?userId='+encodeURIComponent(ctx.actorId)+'&after='+encodeURIComponent(after),{method:'GET',headers:request.headers}));
       }
@@ -2859,7 +2862,7 @@ export default {async fetch(request:Request,env:WorkerEnv={}){
     const h=authenticatedRequest.headers;
     pairingKernel.context.set({actorId:h.get('x-actor-id')??'unknown',tenantId:h.get('x-tenant-id')??'unknown',activeGroupId:h.get('x-active-group-id')||undefined,groupRoles:(h.get('x-group-roles')??'').split(',').filter(Boolean),mandateIds:[],mandateGrants:[],deviceId:h.get('x-device-id')??'device_web',sessionId:h.get('x-session-id')??'server-authenticated',locale:h.get('accept-language')?.toLowerCase().startsWith('en')?'en':'fr',timezone:h.get('x-timezone')??'Africa/Douala',connectivity:'online',requestId:h.get('x-request-id')??crypto.randomUUID()});
     return createApiHandler(repository,{artifacts:env.ARTIFACTS,documentAI:env.AI,liveNamespace:env.GROUP_LIVE_HUB,premiumLive:env.PREMIUM_LIVE_LEDGER==='true',referralBudgets:new D1ReferralBudgetStore(env.DB!),founderLearning,founderControl,communityRealtime,founderTeamActors,commercialPreferences,groupPairing,interestCommunities,ecoPulse,identityProof,dataUseDefaultMode,governanceSecret:env.COLLECTIVE_LEARNING_PEPPER??env.IDENTITY_MATCH_PEPPER,releaseCommitSha:env.RELEASE_COMMIT_SHA})(authenticatedRequest);
-  })(request);
+  },env.COLLECTIVE_LEARNING_PEPPER??env.IDENTITY_MATCH_PEPPER)(request);
 },
 async scheduled(controller:{scheduledTime?:number},env:WorkerEnv,executionCtx?:{waitUntil?(promise:Promise<unknown>):void}){
   if(!env.DB)return;
