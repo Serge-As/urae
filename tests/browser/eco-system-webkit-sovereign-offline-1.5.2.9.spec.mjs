@@ -54,7 +54,7 @@ test('WebKit shell keeps sovereign offline and QR decoder assets cached for airp
 });
 
 
-test('WebKit really reloads the page without network once shell is controlled',async({page,context})=>{
+test('WebKit reloads SW cached shell with network requests blocked (offline-emulation bug #42775)',async({page,context})=>{
   test.setTimeout(120_000);
   const target=base+'/#savingsYieldLab';
   await page.goto(target,{waitUntil:'networkidle'});
@@ -68,13 +68,16 @@ test('WebKit really reloads the page without network once shell is controlled',a
   }),{timeout:45000}).toBe(true);
   if(!await page.evaluate(()=>Boolean(navigator.serviceWorker.controller)))await page.reload({waitUntil:'domcontentloaded'});
   await expect.poll(()=>page.evaluate(()=>Boolean(navigator.serviceWorker.controller)),{timeout:20000}).toBe(true);
-  await context.setOffline(true);
+  // Playwright WebKit's context.setOffline(true) breaks even a literal Service
+  // Worker Response (microsoft/playwright#42775, Sept 2026). Chromium CI covers
+  // true airplane mode; WebKit checks SW-only reload with network requests cut.
+  await context.route('**/*',route=>route.abort('internetdisconnected'));
   try{
     const response=await page.reload({waitUntil:'domcontentloaded',timeout:30000});
     expect(response?.status()).toBe(200);
     await expect(page.locator('#authScreen')).toBeAttached({timeout:20000});
     expect(page.url()).toContain('#savingsYieldLab');
-  }finally{await context.setOffline(false);}
+  }finally{await context.unroute('**/*');}
 });
 
 test('WebKit opens a serverless Eco Local Room DataChannel and exchanges a packet',async({page})=>{
