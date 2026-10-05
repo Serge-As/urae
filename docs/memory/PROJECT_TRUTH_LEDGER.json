@@ -1139,6 +1139,20 @@
       "note": "Exact 1.4.5 source and production D1 were archived/restored/checksummed and mirrored to private R2 before mutation; post-deploy D1 and deployment truth were archived the same way.",
       "next": "Keep these checkpoints immutable; no redeploy is required for truth-document updates.",
       "currentProductLine": true
+    },
+    {
+      "id": "candidate.eco.1.5.2.11.field-recovery",
+      "status": "IN_PROGRESS",
+      "scope": "code/PWA/finance-live/recovery",
+      "observedOn": "2026-10-05",
+      "evidence": [
+        "github:https://github.com/SergeDelor/tontine-platform/pull/66",
+        "github:tests/browser/browser-shell-mobile-1.5.2.6.spec.mjs",
+        "github:docs/release/CURRENT_RELEASE_CONTRACT.json",
+        "github:docs/recovery/ECO_FIELD_13_POINTS_2026-10-05.md"
+      ],
+      "note": "Candidate 1.5.2.11: isolated offline shell + previous 1.5.2.10 rollback, idle D1 conservation, multi-manager draft Live and quota circuit. Never call production-delivered or FIELD_ACCEPTED based on CI only.",
+      "next": "Qualify exact head, perform real A/B multi-device and offline F5 field tests; require production SHA and BIR+ backup/smoke before release."
     }
   ]
 }
