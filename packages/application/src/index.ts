@@ -9,7 +9,7 @@ import { makeId, type CashboxReconciliationRecord, type CashboxSnapshot, type Ca
 import { COMPLETION_WORKFLOWS, suggestTontineSchedule as suggestTontineScheduleLocal, buildLoanSchedule, type CompletionKind, type CompletionRecord, type TontineScheduleConstraint, type TontineScheduleResult, type LoanScheduleRow } from '../../completion/src/index.js';
 import { starterRubricFacetsForName } from '../../rubrics/src/index.js';
 import { simulatePeriodicLoan } from '../../loan-simulator/src/index.js';
-import { allocateSavingsYield, splitInterestPool, simulateWorkbookYieldPipeline, allocateCapitalAtWorkYield, allocateCapitalTimeYield, allocateAttributedProductiveYield, SAVINGS_YIELD_POLICY_PRESETS } from '../../savings-yield/src/index.js';
+import { allocateSavingsYield, splitInterestPool, simulateWorkbookYieldPipeline, allocateCapitalAtWorkYield, allocateCapitalTimeYield, allocateAttributedProductiveYield, eligibleSavingsDeposits, allocateBorrowerReward, SAVINGS_YIELD_POLICY_PRESETS } from '../../savings-yield/src/index.js';
 import { buildFinancialRecap, buildSessionRecap, buildClosingCarryover } from '../../recap-engine/src/index.js';
 import { diagnoseGroup } from '../../group-doctor/src/index.js';
 import { IndexedDbSovereignStore, createEcoVault, openEcoVault, validateSovereignJournalEvents, type SovereignSnapshot } from '../../offline-sovereign/src/index.js';
@@ -1329,6 +1329,8 @@ export class ConnectedApplication {
   async previewWorkbookSavingsYield(input:any):Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return simulateWorkbookYieldPipeline(input);}
   async previewCapitalAtWorkYield(input:any):Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return allocateCapitalAtWorkYield(input);}
   async previewCapitalTimeYield(input:any):Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return allocateCapitalTimeYield(input);}
+  savingsEligibleDeposits(deposits:any[],policy:'ALL_DEPOSITS'|'LOAN_SESSION_GATE',loanSessions:number[],eligibleThroughSession:number):any[]{return eligibleSavingsDeposits(deposits,policy,loanSessions,eligibleThroughSession);}
+  async previewBorrowerReward(input:any):Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return allocateBorrowerReward(input);}
   async previewAttributedProductiveYield(input:any):Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return allocateAttributedProductiveYield(input);}
   async savingsYieldPolicies():Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return{presets:SAVINGS_YIELD_POLICY_PRESETS,activation:'HUMAN_CONFIRMATION_REQUIRED',financialPosting:false,offlineCapable:true};}
   async savingsYieldDoctor(input:any):Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return diagnoseGroup(input);}
