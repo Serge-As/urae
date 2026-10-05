@@ -54,6 +54,28 @@ test('WebKit shell keeps sovereign offline and QR decoder assets cached for airp
 });
 
 
+test('WebKit really reloads the page without network once shell is controlled',async({page,context})=>{
+  test.setTimeout(120_000);
+  const target=base+'/#savingsYieldLab';
+  await page.goto(target,{waitUntil:'networkidle'});
+  await page.evaluate(async()=>navigator.serviceWorker.register('/sw.js',{scope:'/',updateViaCache:'none'}));
+  await expect.poll(()=>page.evaluate(async()=>{
+    if(!navigator.serviceWorker.controller)return false;
+    for(const name of await caches.keys()){
+      const cache=await caches.open(name);
+      if(await cache.match('/__eco_release_ready__'))return true;
+    }
+    return false;
+  }),{timeout:45000}).toBe(true);
+  await context.setOffline(true);
+  try{
+    const response=await page.reload({waitUntil:'domcontentloaded',timeout:30000});
+    expect(response?.status()).toBe(200);
+    await expect(page.locator('#app')).toBeAttached({timeout:20000});
+    expect(page.url()).toContain('#savingsYieldLab');
+  }finally{await context.setOffline(false);}
+});
+
 test('WebKit opens a serverless Eco Local Room DataChannel and exchanges a packet',async({page})=>{
   await page.goto(base+'/',{waitUntil:'domcontentloaded'});
   const result=await page.evaluate(async()=>{
