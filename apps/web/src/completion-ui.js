@@ -325,7 +325,11 @@ export const mountCompletionUI=({app,notify,showError,getMembers,getMeetings,get
     let rubric=officialLoanRubric();if(!rubric)rubric=await app.ensureOfficialLoanRubric();
     const rate=Math.round(number('loanPolicyRate')*100);if(!Number.isSafeInteger(rate)||rate<0)throw Error('INVALID_LOAN_RATE');
     const policies={...(rubric.policies??{}),loan:{...(rubric.policies?.loan??{}),allowed:true,rateBasisPointsPerPeriod:rate,interestBase:'PRINCIPAL_ONLY',paymentPriority:value('loanPolicyPriority')||'CAPITAL_FIRST',interestTiming:value('loanPolicyInterestTiming')||'NEXT_SESSION_DUE',noInterestOnInterest:true}};
-    await app.updateRubricPolicies(rubric.id,policies);notify(tr('Politique Prêts enregistrée.','Loan policy saved.'));await renderLoans();
+    const updated=await app.updateRubricPolicies(rubric.id,policies);
+    // The saved rubric is authoritative; the previously loaded view array was
+    // otherwise reused after success and still showed CAPITAL_FIRST.
+    rubric.policies=structuredClone(updated?.policies??policies);
+    notify(tr('Politique Prêts enregistrée.','Loan policy saved.'));await renderLoans();
   });});
 
   byId('loanForm')?.addEventListener('submit',e=>{e.preventDefault();void run(e.currentTarget,async()=>{
@@ -357,6 +361,20 @@ export const mountCompletionUI=({app,notify,showError,getMembers,getMeetings,get
   byId('refreshOfflineSnapshotsBtn')?.addEventListener('click',()=>void renderOfflineSnapshots().catch(showError));
   byId('completionKind')?.addEventListener('change',()=>void renderCompletionRecords().catch(showError));
   byId('completionReload')?.addEventListener('click',()=>void refresh().catch(showError));
+
+  // Derived loan/debt tables must react to actual writes and remote commits,
+  // without a repeating timer or a background D1 polling loop.
+  let debtRefreshTimer=0,debtRefreshTask=Promise.resolve();
+  const scheduleDebtRefresh=()=>{
+    if(!app.activeGroup()||!byId('loanDebtRecap'))return;
+    if(debtRefreshTimer)clearTimeout(debtRefreshTimer);
+    debtRefreshTimer=setTimeout(()=>{
+      debtRefreshTimer=0;
+      debtRefreshTask=debtRefreshTask.catch(()=>{}).then(()=>renderLoanDebtRecap()).catch(showError);
+    },220);
+  };
+  window.addEventListener('eco:financial-data-changed',scheduleDebtRefresh);
+  window.addEventListener('eco:financial-live-update',scheduleDebtRefresh);
 
   const setLocale=()=>{fillCompletionKinds();void refresh().catch(showError);};
   return{refresh,setLocale};
