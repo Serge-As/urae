@@ -54,7 +54,7 @@ test('client live layer is websocket-first with reconnect replay and no heartbea
   const api=fs.readFileSync('workers/api/src/index.ts','utf8');
   assert.match(live,/scheduleReconnect/);
   assert.match(live,/CLIENT_SIGNAL/);
-  assert.match(live,/liveWebSocketUrl\(lastSeq\)/);
+  assert.match(live,/liveWebSocketUrl\(lastSeq,String\(ticketData\?\.ticket\?\?''\)\)/);
   assert.match(live,/GROUP_LIVE_SIGNAL/);
   assert.match(live,/GROUP_LIVE_HELLO/);
   assert.match(live,/reconnectAttempt>=4/);
@@ -62,7 +62,7 @@ test('client live layer is websocket-first with reconnect replay and no heartbea
   assert.match(live,/addEventListener\('online'/);
   assert.doesNotMatch(live,/socket\.send\('PING'\)/);
   assert.doesNotMatch(live,/setInterval\(/);
-  assert.match(app,/liveWebSocketUrl\(after=0\)/);
+  assert.match(app,/liveWebSocketUrl\(after=0,ticket=''\)/);
   assert.match(api,/live\\\/\(health\|events\|connect\|publish\|signal\)/);
   assert.match(main,/identityLiveUI\.publishSignal/);
   assert.match(main,/applyRemoteFinancialProjection/);
