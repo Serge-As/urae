@@ -1213,11 +1213,11 @@ const renderLedger = async () => {
     const footer=document.createElement('div');footer.className='actions';
     const count=document.createElement('span'),prev=document.createElement('button'),next=document.createElement('button');prev.type='button';next.type='button';prev.textContent='← Précédent';next.textContent='Suivant →';prev.className='secondary';next.className='secondary';footer.append(prev,count,next);
     const renderPage=()=>{
-      const query=ledgerHistoryFilters.search.normalize('NFKD').replace(/[\\u0300-\\u036f]/g,'').toLowerCase(),meetingId=ledgerHistoryFilters.meetingId;
+      const query=ledgerHistoryFilters.search.normalize('NFKD').replace(/[\u0300-\u036f]/g,'').toLowerCase(),meetingId=ledgerHistoryFilters.meetingId;
       const filtered=allReceipts.filter(r=>{
         if(meetingId&&String(r.meetingId??'')!==meetingId)return false;
         if(!query)return true;
-        const searchable=[memberById.get(r.membershipId)??r.membershipId,rubricById.get(r.rubricId)??r.rubricId,actorDisplayName(String(r.receivedBy??'')),r.amount?.amount,r.netAmount,date(r.receivedAt)].join(' ').normalize('NFKD').replace(/[\\u0300-\\u036f]/g,'').toLowerCase();
+        const searchable=[memberById.get(r.membershipId)??r.membershipId,rubricById.get(r.rubricId)??r.rubricId,actorDisplayName(String(r.receivedBy??'')),r.amount?.amount,r.netAmount,date(r.receivedAt)].join(' ').normalize('NFKD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
         return searchable.includes(query);
       });
       const pageSize=25,maxPage=Math.max(0,Math.ceil(filtered.length/pageSize)-1);
