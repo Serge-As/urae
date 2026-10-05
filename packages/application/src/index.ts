@@ -75,6 +75,7 @@ export class ConnectedApplication {
   private usingOfflineSnapshot=false;
   private serverBudgetBlockedUntil=0;
   private serverBudgetReason='';
+  private serverBudgetWake?:ReturnType<typeof setTimeout>;
   private actorId:string; private tenantId:string; private displayName:string; private locale:string; private activeGroupId?:string;
   private readonly baseUrl:string;
   private groupTenants=new Map<string,string>();
@@ -87,6 +88,7 @@ export class ConnectedApplication {
       const budget=JSON.parse(localStorage.getItem('eco.serverBudgetBlock.v1')||'null');if(budget&&Number(budget.until)>Date.now()){this.serverBudgetBlockedUntil=Number(budget.until);this.serverBudgetReason=String(budget.reason??'SERVER_BUDGET');}
     }catch{}
     this.locale=options.locale??storedLocale??'fr';
+    this.armServerBudgetWake();
   }
 
   private adoptLocalAccount(account:LocalAccountRecord):SessionAccount{
@@ -109,13 +111,25 @@ export class ConnectedApplication {
     if(this.serverBudgetBlockedUntil<=Date.now()){if(this.serverBudgetBlockedUntil){this.serverBudgetBlockedUntil=0;this.serverBudgetReason='';try{localStorage.removeItem('eco.serverBudgetBlock.v1');}catch{}}return false;}
     return true;
   }
+  private armServerBudgetWake():void{
+    if(this.serverBudgetWake)clearTimeout(this.serverBudgetWake);
+    this.serverBudgetWake=undefined;
+    if(this.serverBudgetBlockedUntil<=Date.now())return;
+    // Exactly one wake-up at the quota boundary, not 1s/30s status probes.
+    this.serverBudgetWake=setTimeout(()=>{
+      this.serverBudgetWake=undefined;
+      if(this.serverBudgetBlockedUntil>Date.now()){this.armServerBudgetWake();return;}
+      if(typeof window!=='undefined'&&typeof CustomEvent!=='undefined')window.dispatchEvent(new CustomEvent('eco:server-budget-expired'));
+    },Math.min(2_147_483_647,this.serverBudgetBlockedUntil-Date.now()+1000));
+  }
   private markServerBudgetBlocked(status:number):void{
-    const now=new Date(),until=status===429?Date.UTC(now.getUTCFullYear(),now.getUTCMonth(),now.getUTCDate()+1,0,5,0):Date.now()+(status===503?15:5)*60_000;
-    this.serverBudgetBlockedUntil=Math.max(this.serverBudgetBlockedUntil,until);this.serverBudgetReason='HTTP_'+status;
+    const now=new Date(),daily=status===429,until=daily?Date.UTC(now.getUTCFullYear(),now.getUTCMonth(),now.getUTCDate()+1,0,5,0):Date.now()+15*60_000;
+    this.serverBudgetBlockedUntil=Math.max(this.serverBudgetBlockedUntil,until);this.serverBudgetReason=daily?'D1_DAILY_QUOTA':'D1_QUOTA_RETRY';
     try{localStorage.setItem('eco.serverBudgetBlock.v1',JSON.stringify({until:this.serverBudgetBlockedUntil,reason:this.serverBudgetReason,at:new Date().toISOString()}));}catch{}
+    this.armServerBudgetWake();
     if(typeof window!=='undefined'&&typeof CustomEvent!=='undefined')window.dispatchEvent(new CustomEvent('eco:server-budget-blocked',{detail:{until:this.serverBudgetBlockedUntil,reason:this.serverBudgetReason}}));
   }
-  forceServerRetry():void{this.serverBudgetBlockedUntil=0;this.serverBudgetReason='';try{localStorage.removeItem('eco.serverBudgetBlock.v1');}catch{}this.usingOfflineSnapshot=false;}
+  forceServerRetry():void{this.serverBudgetBlockedUntil=0;this.serverBudgetReason='';if(this.serverBudgetWake)clearTimeout(this.serverBudgetWake);this.serverBudgetWake=undefined;try{localStorage.removeItem('eco.serverBudgetBlock.v1');}catch{}this.usingOfflineSnapshot=false;}
   serverBudgetState():{blocked:boolean;until:number;reason:string}{return{blocked:this.serverBudgetBlocked(),until:this.serverBudgetBlockedUntil,reason:this.serverBudgetReason};}
   private offlineReadAllowed(path:string):boolean{
     // Actor-scoped IndexedDB snapshots are safe for GET projections. Keeping this
@@ -239,9 +253,13 @@ export class ConnectedApplication {
     }finally{if(requestTimer)clearTimeout(requestTimer);}
     const body=await response.json().catch(()=>({error:`HTTP_${response.status}`}));
     if(!response.ok){
-      const transient=[429,503,504].includes(response.status),errorCode=String((body as any)?.error??'');
-      const quotaSignal=response.status===429||/(?:\bd1\b.{0,80}(?:quota|limit|exceed)|(?:quota|daily\s+limit|limit\s+exceed|too\s+many\s+(?:queries|requests)).{0,80}\bd1\b|quota\s+exceeded|daily\s+quota)/i.test(errorCode);
-      if(quotaSignal)this.markServerBudgetBlocked(response.status===429?429:503);
+      const errorCode=String((body as any)?.error??'');
+      // Not every HTTP 429 is a daily D1 quota: login/security throttles must
+      // never strand the whole app until tomorrow. Require explicit quota text.
+      const quotaSignal=/(?:\bd1\b.{0,80}(?:quota|limit|exceed)|(?:quota|daily\s+limit|limit\s+exceed|too\s+many\s+(?:queries|requests)).{0,80}\bd1\b|quota\s+exceeded|daily\s+quota)/i.test(errorCode);
+      const transient=[503,504].includes(response.status)||quotaSignal;
+      if(quotaSignal)this.markServerBudgetBlocked(/daily|per.day/i.test(errorCode)?429:503);
+      if(response.status===429&&!quotaSignal)throw new Error(errorCode==='HTTP_429'?'RATE_LIMITED':errorCode);
       if(transient&&cacheable&&IndexedDbReadSnapshotAdapter.supported()){
         try{const snapshot=await this.readSnapshots.get<T>(this.offlineReadKey(path));if(snapshot){this.announceOfflineSnapshot(path,snapshot.updatedAt);return structuredClone(snapshot.body);}}catch{}
       }
