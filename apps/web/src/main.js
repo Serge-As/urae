@@ -1183,6 +1183,7 @@ const renderLivingRules = async () => {
     }
     renderMeetingMatrix();
 };
+const ledgerHistoryFilters={search:'',meetingId:'',page:0};
 const renderLedger = async () => {
     const root = $('#ledgerMetrics');
     const receipts = $('#receiptList');
@@ -1197,20 +1198,55 @@ const renderLedger = async () => {
         d.innerHTML = html`<strong>${label === 'Écritures' ? n : fmt(n)}</strong><span>${label}</span>`;
         root.append(d);
     }
-    if (!l.receipts.length)
-        receipts.innerHTML = '<div class="empty-state">Aucune cotisation enregistrée.</div>';
-    for (const r of l.receipts.slice().reverse().slice(0, 100)) {
-        const d = document.createElement('div');
-        d.className = 'receipt';
-        d.innerHTML = html`<strong>${fmt(r.amount.amount)}</strong><span>${members.find(m=>m.id===r.membershipId)?.displayName ?? r.membershipId}</span><small>${date(r.receivedAt)}${r.latePosting?.isLate ? ' · tardive' : ''}</small>`;
-        const net=document.createElement('small');net.textContent=`Net après annulations : ${fmt(r.netAmount)}`;d.append(net);
-        const statement=document.createElement('button');statement.className='link-btn';statement.textContent='Relevé';statement.onclick=()=>showStatement(r.membershipId).catch(fail);d.append(statement);
-        if(r.netAmount>0){const reverse=document.createElement('button');reverse.className='link-btn';reverse.textContent='Annuler avec trace';reverse.title='Annule cette écriture en conservant son historique. Pour remplacer le montant, utilisez « Saisir / corriger » dans la cellule de la feuille.';reverse.onclick=async()=>{
-            const reason=prompt('Pourquoi annuler / corriger cette écriture ? Le reçu original restera visible et Eco-System créera automatiquement l’écriture inverse.');if(!reason?.trim())return;
-            reverse.disabled=true;try{await app.reverseLedgerEntry(r.ledgerEntryId,reason);await renderLedger();toast('Correction enregistrée : l’écriture originale est conservée et son inverse a été ajouté.');}catch(e){fail(e);reverse.disabled=false;}
-        };d.append(reverse);}
-        receipts.append(d);
-    }
+    // A single filterable/paginated matrix replaces 100 receipt cards. Never
+    // truncate canonical history: its actual Ledger and reversal actions remain.
+    const allReceipts=l.receipts.slice().reverse(),memberById=new Map(members.map(x=>[x.id,x.displayName])),rubricById=new Map(rubrics.map(x=>[x.id,x.name])),meetingById=new Map(meetings.map(x=>[x.id,x.title??x.name??x.id]));
+    if(!allReceipts.length){receipts.innerHTML='<div class="empty-state">Aucune cotisation enregistrée.</div>';return;}
+    const search=document.createElement('input');search.type='search';search.placeholder='Rechercher membre, rubrique, gestionnaire, montant…';search.setAttribute('aria-label','Filtrer les écritures');
+    search.value=ledgerHistoryFilters.search;
+    const chooseMeeting=document.createElement('select');chooseMeeting.setAttribute('aria-label','Filtrer par séance');
+    const allOption=document.createElement('option');allOption.value='';allOption.textContent='Toutes les séances';chooseMeeting.append(allOption);
+    for(const [id,label] of meetingById){const opt=document.createElement('option');opt.value=id;opt.textContent=label;chooseMeeting.append(opt);}
+    chooseMeeting.value=ledgerHistoryFilters.meetingId;
+    const controls=document.createElement('div');controls.className='actions';controls.append(chooseMeeting,search);
+    const wrap=document.createElement('div');wrap.className='matrix-wrap';
+    const footer=document.createElement('div');footer.className='actions';
+    const count=document.createElement('span'),prev=document.createElement('button'),next=document.createElement('button');prev.type='button';next.type='button';prev.textContent='← Précédent';next.textContent='Suivant →';prev.className='secondary';next.className='secondary';footer.append(prev,count,next);
+    const renderPage=()=>{
+      const query=ledgerHistoryFilters.search.normalize('NFKD').replace(/[\\u0300-\\u036f]/g,'').toLowerCase(),meetingId=ledgerHistoryFilters.meetingId;
+      const filtered=allReceipts.filter(r=>{
+        if(meetingId&&String(r.meetingId??'')!==meetingId)return false;
+        if(!query)return true;
+        const searchable=[memberById.get(r.membershipId)??r.membershipId,rubricById.get(r.rubricId)??r.rubricId,actorDisplayName(String(r.receivedBy??'')),r.amount?.amount,r.netAmount,date(r.receivedAt)].join(' ').normalize('NFKD').replace(/[\\u0300-\\u036f]/g,'').toLowerCase();
+        return searchable.includes(query);
+      });
+      const pageSize=25,maxPage=Math.max(0,Math.ceil(filtered.length/pageSize)-1);
+      ledgerHistoryFilters.page=Math.min(ledgerHistoryFilters.page,maxPage);
+      const begin=ledgerHistoryFilters.page*pageSize;
+      const table=document.createElement('table');table.className='meeting-matrix ledger-history-table';
+      const thead=document.createElement('thead'),head=document.createElement('tr');
+      for(const label of ['Séance','Membre','Rubrique','Saisi','Net actuel','Gestionnaire','Date','Actions']){const th=document.createElement('th');th.textContent=label;head.append(th);}
+      thead.append(head);table.append(thead);
+      const tbody=document.createElement('tbody');
+      for(const r of filtered.slice(begin,begin+pageSize)){
+        const tr=document.createElement('tr'),cells=[meetingById.get(r.meetingId)??'Sans séance',memberById.get(r.membershipId)??r.membershipId,rubricById.get(r.rubricId)??r.rubricId,fmt(r.amount?.amount??0),fmt(r.netAmount),actorDisplayName(String(r.receivedBy??'')),date(r.receivedAt)+(r.latePosting?.isLate?' · tardive':'')];
+        for(const value of cells){const td=document.createElement('td');td.textContent=String(value??'');tr.append(td);}
+        const actions=document.createElement('td');
+        const statement=document.createElement('button');statement.type='button';statement.className='link-btn';statement.textContent='Relevé';statement.onclick=()=>showStatement(r.membershipId).catch(fail);actions.append(statement);
+        if(r.netAmount>0){const reverse=document.createElement('button');reverse.type='button';reverse.className='link-btn';reverse.textContent='Annuler avec trace';reverse.title='Annule cette écriture en conservant son historique. Pour remplacer le montant, utilisez « Saisir / corriger » dans la cellule de la feuille.';reverse.onclick=async()=>{
+          const reason=prompt('Pourquoi annuler / corriger cette écriture ? Le reçu original restera visible et Eco-System créera automatiquement l’écriture inverse.');if(!reason?.trim())return;
+          reverse.disabled=true;try{await app.reverseLedgerEntry(r.ledgerEntryId,reason);await renderLedger();toast('Correction enregistrée : l’écriture originale est conservée et son inverse a été ajouté.');}catch(e){fail(e);reverse.disabled=false;}
+        };actions.append(reverse);}
+        tr.append(actions);tbody.append(tr);
+      }
+      table.append(tbody);wrap.replaceChildren(table);
+      count.textContent=(filtered.length?(begin+1)+'–'+Math.min(begin+pageSize,filtered.length):'0')+' / '+filtered.length+' écritures';prev.disabled=ledgerHistoryFilters.page===0;next.disabled=ledgerHistoryFilters.page>=maxPage;
+    };
+    search.addEventListener('input',()=>{ledgerHistoryFilters.search=search.value;ledgerHistoryFilters.page=0;renderPage();});
+    chooseMeeting.addEventListener('change',()=>{ledgerHistoryFilters.meetingId=chooseMeeting.value;ledgerHistoryFilters.page=0;renderPage();});
+    prev.addEventListener('click',()=>{ledgerHistoryFilters.page=Math.max(0,ledgerHistoryFilters.page-1);renderPage();});
+    next.addEventListener('click',()=>{ledgerHistoryFilters.page++;renderPage();});
+    receipts.append(controls,wrap,footer);renderPage();
 };
 const renderOutbox = () => { const root = $('#outboxList'); root.replaceChildren(); const xs = app.outboxItems(); if (!xs.length) {
     root.innerHTML = '<li class="empty-state">Aucune opération en attente.</li>';
