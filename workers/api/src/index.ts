@@ -1147,6 +1147,8 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
     if(rubricPoliciesRoute&&request.method==='PUT'){
       const groupId=rubricPoliciesRoute[1]!,rubricId=rubricPoliciesRoute[2]!,body=await readJson<RubricPolicies>(request),updated=await rubrics.updatePolicies({tenantId:ctx.tenantId,groupId,rubricId,policies:body});
       await notifyGovernanceChange(groupId,{title:'Politiques de rubrique modifiées',message:`Politiques de « ${updated.name} » modifiées.`,action:{view:'operations',anchor:'rubricsManagementPanel',rubricId,entityKind:'RUBRIC',entityId:rubricId,label:'Voir la rubrique'}});
+      const loanPolicy=updated.policies?.loan;
+      if(loanPolicy)try{await publishLive(groupId,'RULE_UPDATE','loan-policy:'+rubricId+':'+String(updated.version??0),{kind:'LOAN_POLICY',rubricId,rateBasisPointsPerPeriod:Number(loanPolicy.rateBasisPointsPerPeriod??0),paymentPriority:String(loanPolicy.paymentPriority??'CAPITAL_FIRST'),interestTiming:String(loanPolicy.interestTiming??'NEXT_SESSION_DUE'),fundingMode:String(loanPolicy.fundingMode??'AVAILABLE_GROUP_CASH'),carryForwardUnusedFunds:loanPolicy.carryForwardUnusedFunds!==false,actorId:ctx.actorId});}catch{}
       return json(updated,200,cors);
     }
     const rubricPreviewRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/rubrics\/([^/]+)\/preview-cycle$/);
