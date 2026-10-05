@@ -78,6 +78,7 @@ let rubrics = [];
 let receiptPositions = [];
 let financialSheetEvents = [];
 let financialCellVersions = new Map();
+let financialCellMetadata = new Map();
 let financialPendingTargets = new Map();
 let financialPendingSheetEntries = [];
 let financialReviewTargets = new Map();
@@ -687,6 +688,14 @@ const loadFinancialProjectionState=async({clearOptimistic=false}={})=>{
     financialPendingSheetEntries=app.pendingFinancialSheetEntries?.()??[];
     financialSheetEvents=[...sheetEvents,...sheetExpenses.map(x=>({id:x.id,data:{membershipId:x.membershipId,meetingId:x.meetingId,rubricId:x.rubricId,amount:x.amount,direction:'OUT',ledgerEntryId:x.ledgerEntryId}}))];
     financialCellVersions=new Map((l.cellRevisions??[]).map(r=>[JSON.stringify([r.meetingId,r.membershipId,r.rubricId,r.currency??'XAF']),Number(r.version??0)]));
+    financialCellMetadata=new Map();
+    const rememberMeta=(membershipId,rubricId,meetingId,actorId,at)=>{
+      if(!membershipId||!rubricId||!meetingId)return;
+      const key=financialCellKey(String(membershipId),String(rubricId),String(meetingId)),stamp=Date.parse(String(at??''))||0,old=financialCellMetadata.get(key);
+      if(!old||stamp>=Number(old.stamp??0))financialCellMetadata.set(key,{actorId:String(actorId??''),at:String(at??''),stamp});
+    };
+    for(const row of l.receipts??[])rememberMeta(row.membershipId,row.rubricId,row.meetingId,row.receivedBy,row.receivedAt);
+    for(const event of financialSheetEvents){const d=event.data??{};rememberMeta(d.membershipId,d.rubricId,d.meetingId,event.createdBy,event.updatedAt??event.createdAt);}
     if(clearOptimistic)financialOptimisticValues.clear();
     return l;
 };
@@ -924,8 +933,10 @@ const submitFinancialCellElement=async validate=>{
 
 const makeFinancialEntryCell=({member,rubric,meetingId,editable=true})=>{
     const holder=document.createElement('div');holder.className='matrix-cell matrix-cell-entry';holder.dataset.membershipId=member.id;holder.dataset.rubricId=rubric.id;holder.dataset.meetingId=meetingId;holder.tabIndex=-1;
-    const nature=financialNatureForRubric(rubric),signedCurrent=exactCellAmount(member.id,rubric.id,meetingId),current=Math.abs(signedCurrent),currentLabel=document.createElement('strong');
+    const persistentCellKey=financialCellKey(member.id,rubric.id,meetingId),nature=financialNatureForRubric(rubric),signedCurrent=exactCellAmount(member.id,rubric.id,meetingId),current=Math.abs(signedCurrent),currentLabel=document.createElement('strong');
     currentLabel.className='cell-current'+(signedCurrent<0?' is-negative':'');currentLabel.textContent=fmt(signedCurrent);holder.append(currentLabel);
+    const meta=financialCellMetadata.get(persistentCellKey);
+    if(meta?.actorId||meta?.at){const actor=meta.actorId?actorDisplayName(meta.actorId):tx('Gestionnaire','Manager'),when=meta.at?date(meta.at):'';holder.dataset.lastActor=String(meta.actorId??'');holder.dataset.lastUpdatedAt=String(meta.at??'');holder.title=tx(`Dernière modification : ${actor}${when?' · '+when:''}`,`Last change: ${actor}${when?' · '+when:''}`);}
     const pendingState=exactCellPendingState(member.id,rubric.id,meetingId);
     if(pendingState.pending){
       const pendingBadge=document.createElement('small');pendingBadge.className='cell-sync-state '+(pendingState.kind==='REVIEW'?'review':'pending');
@@ -939,7 +950,6 @@ const makeFinancialEntryCell=({member,rubric,meetingId,editable=true})=>{
     }
     if(nature==='LOAN'){const badge=document.createElement('small');badge.className='cell-nature negative';badge.textContent=tx('Sortie / dette','Outflow / debt');holder.append(badge);}
     if(!editable)return holder;
-    const persistentCellKey=financialCellKey(member.id,rubric.id,meetingId);
     const input=document.createElement('input');input.type='number';input.min='0';input.step='1';input.inputMode='numeric';input.className='cell-target-input';input.placeholder=current>0?tx('Modifier…','Change…'):tx('Saisir…','Enter…');input.setAttribute('aria-label',tx('Nouvelle valeur totale','New total value'));
     const restoredDraft=financialCellDrafts.get(persistentCellKey);if(restoredDraft!==undefined)input.value=String(restoredDraft);
     let typingTimer=0,typingActive=false,draftAnnounced=false;
@@ -1670,7 +1680,7 @@ const highlightRemoteFinancialCell=(p={})=>{
     const author=String(p.actorName||actorDisplayName(String(p.actorId||''))||tx('Autre gestionnaire','Another manager'));
     for(const cell of document.querySelectorAll(selector)){
       cell.classList.remove('remote-financial-change','remote-financial-closed');void cell.offsetWidth;cell.classList.add('remote-financial-change');if(p.meetingClosed)cell.classList.add('remote-financial-closed');const table=cell.closest('.canonical-financial-matrix');if(table&&p.meetingClosed)table.classList.add('has-post-close-change');
-      cell.dataset.remoteAuthor=author;cell.title=tx(`Modifié par ${author} · ${p.previousAmount??'?'} → ${p.newAmount??'?'} F CFA. OK = j’ai vu.`,`Changed by ${author} · ${p.previousAmount??'?'} → ${p.newAmount??'?'} XAF. OK = seen.`);
+      const changedAt=String(p.at??new Date().toISOString()),when=date(changedAt);cell.dataset.remoteAuthor=author;cell.dataset.lastUpdatedAt=changedAt;cell.title=tx(`Modifié par ${author} · ${when} · ${p.previousAmount??'?'} → ${p.newAmount??'?'} F CFA. OK = j’ai vu.`,`Changed by ${author} · ${when} · ${p.previousAmount??'?'} → ${p.newAmount??'?'} XAF. OK = seen.`);financialCellMetadata.set(financialCellKey(String(p.membershipId),String(p.rubricId),String(p.meetingId)),{actorId:String(p.actorId??''),at:changedAt,stamp:Date.parse(changedAt)||Date.now()});
       const button=cell.querySelector('.cell-validate');if(button){button.textContent='OK';button.classList.add('remote-ack');}
     }
 };
@@ -1688,7 +1698,7 @@ window.addEventListener('eco:live-signal',event=>{
 let liveLedgerRefreshTimer=0;
 window.addEventListener('eco:financial-live-update',event=>{
     const e=event instanceof CustomEvent?event.detail:undefined,p=e?.payload??{},sourceActorId=String(p.actorId??e?.actorId??''),fromOtherActor=sourceActorId&&sourceActorId!==String(app.currentActor?.()??'');if(!fromOtherActor)return;
-    if(p.meetingId&&p.membershipId&&p.rubricId)highlightRemoteFinancialCell({...p,actorId:sourceActorId});
+    if(p.meetingId&&p.membershipId&&p.rubricId)highlightRemoteFinancialCell({...p,actorId:sourceActorId,at:e?.at});
     showFinancialAlert({title:p.meetingClosed?tx('Modification après clôture','Post-close change'):tx('Mise à jour financière en direct','Live financial update'),message:p.actorName?tx(`${p.actorName} a mis à jour une cellule. Elle reste surlignée jusqu’à votre accusé de réception.`,`${p.actorName} updated a cell. It stays highlighted until you acknowledge it.`):tx('Une donnée financière vient d’être mise à jour en direct.','A financial value was just updated live.'),closed:Boolean(p.meetingClosed),correction:true});
     // The pushed durable event already contains the committed cell projection.
     // D1 is queried only in the optional paid fallback mode.
