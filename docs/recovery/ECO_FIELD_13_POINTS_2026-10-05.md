@@ -51,3 +51,25 @@
 - **R15** : conflits et notifications visibles sur chaque client sans transfert de données privées ni alertes trompeuses.
 
 **Définition de terminé :** un code présent, des tests unitaires et une CI verte ne suffisent pas. Seule une exécution navigateur de R02–R15 avec preuve du Ledger/IndexedDB/Push, puis un déploiement explicitement autorisé avec vérification SHA/health, permet d'annoncer la livraison métier complète. Aucun chiffre de temps réel n'est promis sans mesure.
+
+
+## Jalon additionnel — Live/Cloudflare sans polling (5 octobre 2026)
+
+**Qualification locale automatisée :** workflow `37317103271` sur `9c3ce510f3c2791cbd5c9de81b1e8a77f451b052`, `governed-ci` SUCCESS (**590/590 tests**), `browser-critical` SUCCESS (Chromium + WebKit). La version publique demeure distincte et **aucune recette terrain à deux comptes ou vraie installation Android 6/iOS n'a été enregistrée**. Ne pas prétendre FIELD_ACCEPTED. Les correctifs et ce document appartiennent à la PR brouillon **#66** et nécessitent une nouvelle qualification au SHA final de documentation.
+
+### Correctifs effectivement présents et testés
+- `GroupLiveHub` : les marqueurs de brouillon sont séparés **par gestionnaire ET par cellule**. Modifier deux rubriques n'écrase plus le marqueur de l'autre. Seuls BEGIN/CLEAR d'un brouillon écrivent l'état DO ; `TYPING` et `FOCUS` sont des signaux WebSocket éphémères **sans D1, sans stockage par frappe, sans heartbeat**. Les brouillons sont rejoués après reconnexion avec TTL borné de 30 minutes, sans conserver le montant ni le texte du brouillon.
+- `main.js` : la projection multi-auteur survit au changement de vue/reconstruction de cellule, le délai `TYPING_STOP` ne supprime plus un brouillon valide ; l’auteur et l’horodatage de la dernière modification viennent du Ledger confirmé et des événements Live. Un signal reçu et un ACK ne remplacent jamais une opération locale divergente en Outbox.
+- `identity-live-ui` : un ticket signé mis en cache ouvre la session socket ; seul un vrai ancien endpoint (404) autorise la voie héritée, et **pas** un quota/503. Maximum quatre tentatives bornées puis événements système et reprise ponctuelle, jamais une boucle REST toutes les secondes.
+- `application` : un 429 de login/rate-limit ne doit pas geler le service au nom de Cloudflare. Le disjoncteur global ne s'ouvre qu'avec **indice explicite de quota D1**, les écritures restent locales et une **seule échéance** réveillera la récupération. La date exacte de rétablissement dépend de la réponse Cloudflare réelle ; aucune confirmation du quota épuisé n'a pu être obtenue depuis cette session.
+- `authenticatedApi` : l'ancienne écriture de fiche utilisateur **à chaque requête authentifiée** a été remplacée par une lecture conditionnelle en mémoire de l'isolate, sur 5 minutes maximum, et une écriture seulement si nom/langue changent. **Aucun cache des autorisations ou du Ledger** : une mutation financière continue à être contrôlée par le serveur.
+
+### Ce qui reste obligatoire AVANT livraison publique
+1. Reproduire avec de **vrais comptes de gestionnaires** `A`/`B` sur Firefox, Opera, Chrome, Android 6.0.1 et Safari/iOS : apparition présence, brouillon, identité/date au survol, validation et réception sans F5, et comparaison de l’absence de GET D1 à l'inactivité.
+2. Après usage prolongé, tester réellement `F5` en mode avion, sans perdre l'écran, les valeurs, le brouillon ni les données IndexedDB (et avec des anciens service workers déjà installés). Le cache atomique préchargé en CI ne reproduit pas à lui seul les caches réels déjà dégradés. **Ne jamais vider les données des utilisateurs pour faire réussir le test.**
+3. Tester les conflits contradictoires `1000→3000` vs `1000→2000` dans les **deux ordres de reconnexion**, et la conservation visible des deux propositions jusqu'à confrontation ; contrôler l'idempotence Ledger après perte de réponse sur Remboursements.
+4. Valider avec des jeux comptables réalistes les règles nouvelles d'épargne, du financement par reliquats et les primes emprunteur (modes, cutoff, 60/20/10/8/2, solvabilité) **sans écrire dans les fonds existants**.
+5. Avant fusion/déploiement : sauvegardes BIR+/D1/R2, **nouvelle version cohérente** (cache SW, assets, manifest, contract, build SHA), CI de cette version, aucune migration destructive, `/health`, contrôle du SHA réellement déployé, puis recette de l’auteur. Le cache `eco-system-v15210-offline-conflicts-loans-20261003` ne doit pas servir à deux builds différents.
+6. Le projet ne doit pas déduire le quota Cloudflare épuisé sur la seule base d’un `ERR_FAILED` de navigateur ou de la mention « En ligne ». Il faut une preuve de réponse Cloudflare ou le panneau d'usage du compte.
+
+**État :** correctifs dans PR #66, qualifiés CI (SHA avant ce checkpoint), **non fusionnés, non déployés, non acceptés sur terrain**. Les points non démontrés ci-dessus restent ouverts et ne peuvent être annoncés comme résolus.
