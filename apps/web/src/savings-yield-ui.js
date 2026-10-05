@@ -141,6 +141,26 @@ export function mountSavingsYieldUI({app,getMembers,notify=()=>{},showError=cons
     if(autoSyncStatus)autoSyncStatus.textContent='Actualisé automatiquement · '+new Intl.DateTimeFormat('fr-FR',{hour:'2-digit',minute:'2-digit',second:'2-digit'}).format(new Date())+' · source '+String(data.source??'canonique');
   };
   document.getElementById('yieldInterestPool')?.addEventListener('input',e=>{e.currentTarget.dataset.userEdited='1';});
+  const policyFieldIds=['yieldEligibilityPolicy','yieldClassicShare','yieldSchoolShare','yieldBorrowerShare','yieldOfficeShare','yieldReserveShare','yieldBorrowerWeightMode','yieldEligibleThrough','yieldEligibleThroughSchool','yieldPoolingMode','yieldResidualPolicy'];
+  for(const id of policyFieldIds){const node=document.getElementById(id);for(const type of ['input','change'])node?.addEventListener(type,()=>{node.dataset.userEdited='1';});}
+  document.getElementById('yieldPolicySaveBtn')?.addEventListener('click',()=>void(async()=>{try{
+    if(!isManager())throw new Error('FORBIDDEN_SCOPE');checkShares();
+    const data={
+      eligibilityPolicy:value('yieldEligibilityPolicy')||'ALL_DEPOSITS',
+      classicShareBasisPoints:bps(number('yieldClassicShare')),schoolShareBasisPoints:bps(number('yieldSchoolShare')),borrowerShareBasisPoints:bps(number('yieldBorrowerShare')),
+      officeShareBasisPoints:bps(number('yieldOfficeShare')),reserveShareBasisPoints:bps(number('yieldReserveShare')),borrowerWeightMode:value('yieldBorrowerWeightMode')||'VOLUME_TIME_INTEREST',
+      eligibleThroughClassic:number('yieldEligibleThrough')||number('yieldEndSession')||12,eligibleThroughSchool:number('yieldEligibleThroughSchool')||number('yieldEndSession')||12,
+      poolingMode:value('yieldPoolingMode')||'POOLED',residualPolicy:value('yieldResidualPolicy')||'TIME_WEIGHTED'
+    };
+    if(!['ALL_DEPOSITS','LOAN_SESSION_GATE'].includes(data.eligibilityPolicy))throw new Error('INVALID_SAVINGS_ELIGIBILITY_POLICY');
+    const existingId=String(canonicalData?.distributionPolicy?.recordId??'');
+    const saved=existingId?await app.updateWorkspaceRecord(existingId,{title:'Politique de répartition des intérêts',summary:'Clé et éligibilité officielles du groupe',status:'ACTIVE',tags:['savings-yield-policy','group-rule'],data}):await app.createWorkspaceRecord({moduleId:'FINANCE.SAVINGS_DISTRIBUTION_POLICY',title:'Politique de répartition des intérêts',summary:'Clé et éligibilité officielles du groupe',status:'ACTIVE',tags:['savings-yield-policy','group-rule'],data});
+    if(canonicalData)canonicalData.distributionPolicy={...data,recordId:saved.id,updatedAt:saved.updatedAt};
+    for(const id of policyFieldIds)delete document.getElementById(id)?.dataset.userEdited;
+    const status=document.getElementById('yieldPolicyStatus');if(status)status.textContent='Politique enregistrée · '+[number('yieldClassicShare'),number('yieldSchoolShare'),number('yieldBorrowerShare'),number('yieldOfficeShare'),number('yieldReserveShare')].join('/')+' % · '+(data.eligibilityPolicy==='LOAN_SESSION_GATE'?'séances avec prêt':'tous dépôts éligibles dans la fenêtre');
+    if(canonicalData)await renderInterestEvolution(canonicalData);
+    notify('Politique de répartition enregistrée. Elle ne crée aucune écriture de distribution tant que la clôture n’est pas validée.');
+  }catch(err){showError(err);}})());
 
   const checkShares=()=>{
     const shares=number('yieldClassicShare')+number('yieldSchoolShare')+number('yieldBorrowerShare')+number('yieldOfficeShare')+number('yieldReserveShare');
