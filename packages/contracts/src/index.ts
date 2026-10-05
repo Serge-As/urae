@@ -620,10 +620,14 @@ export interface RubricSpecialLoanRule {
   interestTiming?:RubricLoanInterestTiming;
   eligibilityRule?:string;
 }
+export type RubricLoanFundingMode='SAVINGS_REPAYMENTS_ONLY'|'AVAILABLE_GROUP_CASH';
 export interface RubricLoanPolicy {
   allowed:boolean;
   rateBasisPointsPerPeriod?:number;
   interestBase:'PRINCIPAL_ONLY';
+  fundingMode?:RubricLoanFundingMode;
+  /** Cumulative lawful residuals from prior sessions stay available unless the group later adopts a stricter rule. */
+  carryForwardUnusedFunds?:boolean;
   paymentPriority?:'CAPITAL_FIRST'|'INTEREST_FIRST'|'EXPLICIT_ALLOCATION';
   interestTiming?:RubricLoanInterestTiming;
   noInterestOnInterest:true;
