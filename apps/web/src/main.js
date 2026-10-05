@@ -1694,10 +1694,23 @@ window.addEventListener('eco:live-signal',event=>{
     if(String(p.kind??'')!=='FINANCIAL_CELL')return;const selector=financialLiveSelector(p),cell=selector?document.querySelector(selector):null;if(!cell)return;
     const line=cell.querySelector('.cell-live-presence');if(!line)return;const name=actorDisplayName(actorId)||tx('Un autre gestionnaire','Another manager');
     const type=String(e.type??'');
-    const resetPresenceTimer=ms=>{clearTimeout(Number(cell.dataset.liveHideTimer||0));const t=setTimeout(()=>{line.hidden=true;cell.classList.remove('live-cell-active','live-cell-draft');delete cell.dataset.remoteDraftAuthor;},ms);cell.dataset.liveHideTimer=String(t);};
+    const resetPresenceTimer=(ms,kind='typing')=>{
+      const timerKey=kind==='draft'?'liveDraftHideTimer':'liveTypingHideTimer';
+      clearTimeout(Number(cell.dataset[timerKey]||0));
+      const t=setTimeout(()=>{
+        if(kind==='draft'){cell.classList.remove('live-cell-draft');delete cell.dataset.remoteDraftAuthor;}
+        else cell.classList.remove('live-cell-active');
+        const author=cell.dataset.remoteDraftAuthor;
+        if(author&&cell.classList.contains('live-cell-draft')){
+          line.textContent=tx(`${author} a un brouillon non validé`,`${author} has an unconfirmed draft`);
+          line.hidden=false;
+        }else if(!cell.classList.contains('live-cell-active'))line.hidden=true;
+      },ms);
+      cell.dataset[timerKey]=String(t);
+    };
     if(['TYPING','CELL_FOCUS'].includes(type)){line.textContent=type==='TYPING'?tx(`${name} saisit…`,`${name} is typing…`):tx(`${name} travaille sur cette cellule`,`${name} is working on this cell`);line.hidden=false;cell.classList.add('live-cell-active');resetPresenceTimer(3500);}
-    if(type==='FINANCIAL_DRAFT'){cell.dataset.remoteDraftAuthor=name;cell.classList.add('live-cell-draft');line.textContent=tx(`${name} a un brouillon non validé`,`${name} has an unconfirmed draft`);line.hidden=false;resetPresenceTimer(11000);}
-    if(type==='FINANCIAL_DRAFT_CLEAR'){cell.classList.remove('live-cell-draft');delete cell.dataset.remoteDraftAuthor;if(!cell.classList.contains('live-cell-active'))line.hidden=true;}
+    if(type==='FINANCIAL_DRAFT'){cell.dataset.remoteDraftAuthor=name;cell.classList.add('live-cell-draft');line.textContent=tx(`${name} a un brouillon non validé`,`${name} has an unconfirmed draft`);line.hidden=false;resetPresenceTimer(30*60_000,'draft');}
+    if(type==='FINANCIAL_DRAFT_CLEAR'){clearTimeout(Number(cell.dataset.liveDraftHideTimer||0));cell.classList.remove('live-cell-draft');delete cell.dataset.remoteDraftAuthor;if(!cell.classList.contains('live-cell-active'))line.hidden=true;}
     if(['TYPING_STOP','CELL_BLUR'].includes(type)){cell.classList.remove('live-cell-active');const draftAuthor=cell.dataset.remoteDraftAuthor;if(cell.classList.contains('live-cell-draft')&&draftAuthor){line.textContent=tx(`${draftAuthor} a un brouillon non validé`,`${draftAuthor} has an unconfirmed draft`);line.hidden=false;}else line.hidden=true;}
 });
 let liveLedgerRefreshTimer=0;
