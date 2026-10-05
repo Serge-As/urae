@@ -1,5 +1,20 @@
 # NEXT RUN — ECO-SYSTEM 1.5.2.7
 
+
+## EXÉCUTION SUIVANTE — ECO 1.5.2.11 — DRAFT #66 (2026-10-05)
+
+Vérifier HEAD de `fix/field-regressions-recovery-20261005`, **CI sur SHA strictement identique**, tests Chromium/WebKit, puis `/health` production actuel. **Ne pas annoncer 1.5.2.11 déployée** tant qu'aucun workflow de livraison réussi et aucun smoke SHA ne le prouve. Production connue et séparée : 1.5.2.10, `393f80df88076072317f08adee81fe14d54d06c5`, livraison `37130397965`.
+
+1. **Recette deux gestionnaires avec leurs vrais droits** : frappe, brouillons distincts, auteur/date au survol, réception de `1000→3000` sans F5, absence de GET à cadence fixe, correction après clôture et conflit contradictoire `1000→2000` en deux ordres.
+2. **Véritable reprise utilisateur** : anciens caches v15210 déjà installés (sans effacer IndexedDB/outbox), F5 mode avion à l'écran exact, puis changement Wi-Fi ↔ cellulaire avec actualisation ponctuelle sans boucle. Android 6 Chrome, Firefox/Opera/Chrome Windows et Safari/iOS natif. Aucun échec WebKit simulé ne doit être maquillé.
+3. **Comptabilité** : remboursement idempotent même si la réponse réseau est perdue ; validation capital/intérêts, deux politiques d'éligibilité S2/S3, report/reliquats, prime 60/20/10/8/2 en simulation, contraintes de caisse et aucun double comptage.
+4. **Quotas** : consulter un véritable journal Cloudflare 429/503 et les compteurs D1 avant de prétendre au quota épuisé. Aucune sonde au repos ; le Live reste indépendant des lectures facultatives.
+5. **Livraison sous garde-fou** : sans création D1/R2, sauvegardes BIR+ applicables et pré/post vérifiées, CI du même SHA, release cache/manifest/contract cohérents, sauvegarde des données et smoke `/health` avec SHA exact. Jamais fusion/deploy silencieux avant les préconditions documentées. Le nouveau cache est `eco-system-v15211-field-recovery-20261005`, le rollback est `eco-system-v15210-offline-conflicts-loans-20261003`.
+
+`FIELD_ACCEPTED = NOT_ACCEPTED` tant que la recette physique n'a pas été exécutée ; une suite verte seule n'établit pas une livraison terrain.
+
+---
+
 ## REPRISE PRIORITAIRE — ECO PR #66 — CLOUDFARE/LIVE ET RECETTE TERRAIN (2026-10-05)
 
 Référence : `fix/field-regressions-recovery-20261005`, revue `docs/recovery/ECO_FIELD_13_POINTS_2026-10-05.md`; base `393f80df88076072317f08adee81fe14d54d06c5`. Dernière preuve CI pré-checkpoint : `9c3ce510f3c2791cbd5c9de81b1e8a77f451b052`, GitHub Actions `37317103271` SUCCESS (590/590 unitaires et tests navigateurs critiques). Vérifier **CI sur HEAD exact après ce checkpoint**.
