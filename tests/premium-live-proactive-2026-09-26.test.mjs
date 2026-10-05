@@ -26,7 +26,7 @@ test('draft state is the only ephemeral financial presence persisted',async()=>{
   const {puts,state}=makeState(),hub=new GroupLiveHub(state,{});
   await hub.fetch(new Request('https://group-live.internal/signal',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({type:'FINANCIAL_DRAFT',actorId:'manager-2',payload:{kind:'FINANCIAL_CELL',meetingId:'mtg',membershipId:'m',rubricId:'r'}})}));
   assert.equal(puts.length,1);
-  assert.match(String(puts[0][0]),/^signal-actor:.*:draft$/);
+  assert.match(String(puts[0][0]),/^signal-actor:.*:draft:FINANCIAL_CELL:mtg:m:r$/);
   assert.equal('amount' in (puts[0][1].payload??{}),false);
 });
 
