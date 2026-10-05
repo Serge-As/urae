@@ -115,6 +115,66 @@ export function allocateSavingsYield(input:SavingsYieldInput):SavingsYieldResult
   };
 }
 
+
+export type SavingsEligibilityPolicy='ALL_DEPOSITS'|'LOAN_SESSION_GATE';
+export function eligibleSavingsDeposits<T extends {session:number}>(deposits:T[],policy:SavingsEligibilityPolicy,loanDisbursementSessions:number[],eligibleThroughSession:number):T[]{
+  const cutoff=integer('eligible_through_session',eligibleThroughSession,1),loanSessions=new Set(loanDisbursementSessions.map(x=>integer('loan_session',x,1)));
+  if(!['ALL_DEPOSITS','LOAN_SESSION_GATE'].includes(policy))throw new Error('INVALID_SAVINGS_ELIGIBILITY_POLICY');
+  return deposits.filter(d=>{
+    integer('deposit_session',d.session,1);
+    if(d.session>cutoff)return false;
+    return policy==='ALL_DEPOSITS'||loanSessions.has(d.session);
+  });
+}
+
+export type BorrowerRewardMode='VOLUME_TIME_INTEREST'|'VOLUME_TIME'|'INTEREST_TIME';
+export interface BorrowerRewardLoan{
+  loanId:string;
+  memberId:string;
+  principal:number;
+  disbursedSession:number;
+  repaidSession?:number;
+  realizedInterest:number;
+}
+export interface BorrowerRewardInput{
+  interestPool:number;
+  endSession:number;
+  mode?:BorrowerRewardMode;
+  loans:BorrowerRewardLoan[];
+}
+export interface BorrowerRewardResult{
+  interestPool:number;
+  mode:BorrowerRewardMode;
+  eligibleLoanCount:number;
+  distributedInterest:number;
+  members:SavingsMemberAllocation[];
+  loans:Array<BorrowerRewardLoan&{eligible:boolean;earlyDuration:number;score:number}>;
+  explanation:string[];
+}
+export function allocateBorrowerReward(input:BorrowerRewardInput):BorrowerRewardResult{
+  const pool=integer('interest_pool',input.interestPool),endSession=integer('end_session',input.endSession,1),mode=input.mode??'VOLUME_TIME_INTEREST';
+  if(!['VOLUME_TIME_INTEREST','VOLUME_TIME','INTEREST_TIME'].includes(mode))throw new Error('INVALID_BORROWER_REWARD_MODE');
+  const seen=new Set<string>(),rows:Array<BorrowerRewardLoan&{eligible:boolean;earlyDuration:number;score:number}>=[];
+  for(const loan of input.loans){
+    if(!loan.loanId||seen.has(loan.loanId)||!loan.memberId)throw new Error('INVALID_BORROWER_LOAN_ID');seen.add(loan.loanId);
+    integer('borrowed_principal',loan.principal,1);integer('disbursed_session',loan.disbursedSession,1);integer('realized_interest',loan.realizedInterest,0);
+    if(loan.disbursedSession>endSession)throw new Error('LOAN_AFTER_END_SESSION');
+    if(loan.repaidSession!==undefined){integer('repaid_session',loan.repaidSession,loan.disbursedSession);if(loan.repaidSession>endSession)throw new Error('REPAYMENT_AFTER_END_SESSION');}
+    const eligible=loan.repaidSession!==undefined,earlyDuration=Math.max(1,endSession-loan.disbursedSession+1);
+    const base=mode==='VOLUME_TIME'?loan.principal:mode==='INTEREST_TIME'?loan.realizedInterest:loan.principal+loan.realizedInterest;
+    rows.push({...loan,eligible,earlyDuration,score:eligible?base*earlyDuration:0});
+  }
+  const grouped=new Map<string,{principal:number;score:number;count:number}>();
+  for(const loan of rows.filter(x=>x.eligible&&x.score>0)){const row=grouped.get(loan.memberId)??{principal:0,score:0,count:0};row.principal+=loan.principal;row.score+=loan.score;row.count++;grouped.set(loan.memberId,row);}
+  const members=pool>0?exactAllocate(pool,[...grouped.entries()].map(([memberId,row])=>({memberId,principal:row.principal,score:row.score,depositCount:row.count}))):[...grouped.entries()].map(([memberId,row])=>({memberId,principal:row.principal,weightedScore:row.score,depositCount:row.count,exactInterest:0,interest:0}));
+  return{interestPool:pool,mode,eligibleLoanCount:rows.filter(x=>x.eligible).length,distributedInterest:members.reduce((n,m)=>n+m.interest,0),members,loans:rows,explanation:[
+    'Seuls les prêts dont le capital est totalement remboursé à la date de clôture sont éligibles à la prime emprunteur.',
+    mode==='VOLUME_TIME_INTEREST'?'Poids = (capital emprunté + intérêts réellement payés) × ancienneté du prêt.':mode==='VOLUME_TIME'?'Poids = capital emprunté × ancienneté du prêt.':'Poids = intérêts réellement payés × ancienneté du prêt.',
+    'Un prêt ancien reçoit plus de poids à montant comparable ; aucune dette encore ouverte ne génère de rétrocommission.',
+    'Les derniers francs sont distribués par plus grands restes pour conserver exactement le pool.'
+  ]};
+}
+
 /* -------------------------------------------------------------------------- */
 /*  Workbook-compatible staged model                                           */
 /* -------------------------------------------------------------------------- */
