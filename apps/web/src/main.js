@@ -1728,20 +1728,11 @@ window.addEventListener('eco:live-signal',event=>{
     }
     for(const cell of selector?document.querySelectorAll(selector):[]){
       const line=cell.querySelector('.cell-live-presence');if(!line)continue;
-    const resetPresenceTimer=(ms,kind='typing')=>{
-      const timerKey=kind==='draft'?'liveDraftHideTimer':'liveTypingHideTimer';
-      clearTimeout(Number(cell.dataset[timerKey]||0));
-      const t=setTimeout(()=>{
-        if(kind==='draft'){cell.classList.remove('live-cell-draft');delete cell.dataset.remoteDraftAuthor;}
-        else cell.classList.remove('live-cell-active');
-        const author=cell.dataset.remoteDraftAuthor;
-        if(author&&cell.classList.contains('live-cell-draft')){
-          line.textContent=tx(`${author} a un brouillon non validé`,`${author} has an unconfirmed draft`);
-          line.hidden=false;
-        }else if(!cell.classList.contains('live-cell-active'))line.hidden=true;
-      },ms);
-      cell.dataset[timerKey]=String(t);
-    };
+      const resetPresenceTimer=ms=>{
+        clearTimeout(Number(cell.dataset.liveTypingHideTimer||0));
+        const t=setTimeout(()=>{cell.classList.remove('live-cell-active');paintRemoteFinancialDraft(cell,key);},ms);
+        cell.dataset.liveTypingHideTimer=String(t);
+      };
     if(['TYPING','CELL_FOCUS'].includes(type)){line.textContent=type==='TYPING'?tx(`${name} saisit…`,`${name} is typing…`):tx(`${name} travaille sur cette cellule`,`${name} is working on this cell`);line.hidden=false;cell.classList.add('live-cell-active');resetPresenceTimer(3500);}
     if(['TYPING_STOP','CELL_BLUR'].includes(type))cell.classList.remove('live-cell-active');
       paintRemoteFinancialDraft(cell,key);
