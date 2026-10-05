@@ -56,22 +56,88 @@ export function mountSavingsYieldUI({app,getMembers,notify=()=>{},showError=cons
     const health=data?.health;if(health&&healthSummary){const box=el('article',undefined,'item');box.append(el('strong','Simulation de santé financière demandée'),el('p','(Total remboursements de capital + Total intérêts collectés) – Total dettes en cours ≥ (Total Épargne + autres rubriques d’Épargne)','truth-notice'),el('p','Gauche : '+fmt(Number(health.left??0))+' · Total épargne : '+fmt(Number(health.right??0))+' · Écart : '+fmt(Number(health.difference??0))),el('p',health.passes?'Indicateur satisfait pour cette formule.':'Indicateur non satisfait pour cette formule.','hint'));const future=data?.healthWithNext;if(future)box.append(el('p','Stress prochaine échéance : après ajout des intérêts projetés de la séance suivante, gauche '+fmt(Number(future.left??0))+' · écart '+fmt(Number(future.difference??0))+'. Cette projection reste distincte de la dette actuellement exigible.','hint'));healthSummary.append(box);}
     if(canonicalTables){for(const series of data?.savingsSeries??[])canonicalTables.append(renderSeriesTable('Rubrique Épargne · '+series.name,series.entries,data,'Données automatiques par membre et par séance.'));canonicalTables.append(renderSeriesTable('Remboursements de capital',data?.repayments??[],data,'Le principal et les intérêts sont séparés par le moteur Prêts même lorsqu’un paiement a été saisi globalement.'));canonicalTables.append(renderSeriesTable('Intérêts collectés',data?.interestReceipts??[],data,'Intérêts réellement encaissés et attribués aux périodes de prêt.'));}
   };
+  const loanSessionsFor=data=>[...new Set((data?.loanDisbursements??[]).map(x=>Number(x.session??0)).filter(x=>Number.isSafeInteger(x)&&x>0))];
+  const officialEligibleDeposits=(source=deposits,data=canonicalData,maxSession=Infinity)=>{
+    const mode=value('yieldEligibilityPolicy')||String(data?.distributionPolicy?.eligibilityPolicy??'ALL_DEPOSITS'),loanSessions=loanSessionsFor(data);
+    const out=[];
+    for(const fund of ['CLASSIC','SCHOOL']){
+      const cutoff=number(fund==='SCHOOL'?'yieldEligibleThroughSchool':'yieldEligibleThrough')||number('yieldEndSession')||12;
+      const rows=source.filter(d=>d.fund===fund&&Number(d.session??1)<=maxSession);
+      const eligible=app.savingsEligibleDeposits?app.savingsEligibleDeposits(rows,mode,loanSessions,cutoff):rows.filter(d=>Number(d.session??1)<=cutoff&&(mode==='ALL_DEPOSITS'||loanSessions.includes(Number(d.session??1))));
+      out.push(...eligible);
+    }
+    return out;
+  };
+  const borrowerRewardPool=()=>Math.round(number('yieldInterestPool')*number('yieldBorrowerShare')/100);
+  const borrowerRewardSolvency=(data,pool=borrowerRewardPool())=>{
+    const t=data?.totals??{},basis=Number(t.totalSavings??0)+Number(t.totalPrincipalRepaid??0)+Number(t.recoveredInterest??0)-Number(t.totalDebt??0),cash=Number(t.cashBalance??0);
+    return{ok:pool<=0||(basis>0&&cash>=pool),basis,cash,pool};
+  };
+  const appendBorrowerReward=async(data=canonicalData)=>{
+    const pool=borrowerRewardPool();if(pool<=0)return;
+    const health=borrowerRewardSolvency(data,pool),section=el('section',undefined,'yield-borrower-reward');
+    section.append(el('h3','Prime emprunteurs / rétrocommission'));
+    if(!health.ok){section.append(el('p','Prime non distribuable pour cette simulation : la balance Épargne + remboursements + intérêts encaissés doit rester positive face aux dettes en cours et la caisse doit couvrir le pool de prime. Balance : '+fmt(health.basis)+' · caisse : '+fmt(health.cash)+' · prime : '+fmt(pool),'truth-notice'));result.append(section);return;}
+    const cycles=loanCycles().filter(x=>x.memberId);
+    if(!cycles.length){section.append(el('p','Aucun prêt totalement remboursé et attribuable à un membre pour cette prime.','hint'));result.append(section);return;}
+    const reward=await app.previewBorrowerReward({interestPool:pool,endSession:number('yieldEndSession')||12,mode:value('yieldBorrowerWeightMode')||'VOLUME_TIME_INTEREST',loans:cycles.map(x=>({loanId:x.loanId,memberId:x.memberId,principal:x.principal,disbursedSession:x.disbursedSession,repaidSession:x.repaidSession,realizedInterest:x.realizedInterest}))});
+    section.append(el('p','Pool emprunteurs : '+fmt(pool)+' · prêts éligibles : '+reward.eligibleLoanCount,'truth-notice'));
+    for(const row of reward.members??[]){const member=getMembers().find(x=>x.id===row.memberId);section.append(el('p',(member?.displayName??row.memberId)+' → '+fmt(row.interest)+' · poids '+Math.round(Number(row.weightedScore??0)).toLocaleString('fr-FR')));}
+    for(const line of reward.explanation??[])section.append(el('p',line,'hint'));result.append(section);
+  };
   const renderInterestEvolution=async data=>{
     if(!interestEvolution)return;interestEvolution.replaceChildren();
-    const meetings=data?.meetings??[],memberRows=(data?.members??[]).filter(x=>x.status!=='left'),interestEntries=data?.interestReceipts??[],allDeposits=data?.deposits??[];
-    interestEvolution.append(el('h3','Répartition provisoire des intérêts · évolution par séance'),el('p','Projection de suivi non scellée : à chaque séance, Eco-System répartit provisoirement les intérêts réellement collectés à cette date avec le moteur de pondération sélectionné. Le Bureau conserve le droit de modifier le pool puis de sceller la répartition finale à la clôture de l’exercice.','truth-notice'));
+    const meetings=data?.meetings??[],memberRows=(data?.members??[]).filter(x=>x.status!=='left'),allDeposits=data?.deposits??[],pool=Number(data?.totals?.recoveredInterest??0);
+    interestEvolution.append(el('h3','Répartition provisoire des intérêts · évolution par séance'),el('p','Projection rétrospective non scellée : le pool actuellement réellement encaissé est réappliqué aux droits nés à chaque séance. La date à laquelle un emprunteur paie finalement ses intérêts ne devient jamais la date de naissance du droit des épargnants. La politique du groupe décide si tous les dépôts de la fenêtre sont éligibles ou uniquement les dépôts des séances où au moins un prêt a effectivement été débloqué.','truth-notice'));
     if(!meetings.length||!memberRows.length){interestEvolution.append(el('p','Aucune séance ou aucun membre disponible.','hint'));return;}
-    const allocations=new Map(),columnTotals=new Map();
-    for(const meeting of meetings){const session=Number(meeting.session??1),pool=interestEntries.filter(x=>Number(meetings.find(m=>m.id===x.meetingId)?.session??0)<=session).reduce((n,x)=>n+Number(x.amount??0),0),eligible=allDeposits.filter(x=>Number(x.session??1)<=session);if(pool<=0||!eligible.length)continue;try{const result=await app.previewSavingsYield({interestPool:pool,deposits:eligible.map(d=>({id:d.id,memberId:d.memberId,amount:d.amount,periodKey:d.periodKey,fund:d.fund})),coefficients:coefficients(),mode:value('yieldMode')||'EXACT_WEIGHTED_DEPOSITS',amountPower:number('yieldAmountPower')||0.75});for(const row of result.members??[])allocations.set(String(row.memberId)+'|'+String(meeting.id),Number(row.interest??0));columnTotals.set(meeting.id,Number(result.distributedInterest??0));}catch{}}
+    const allocations=new Map(),columnTotals=new Map(),loanSessions=loanSessionsFor(data),policy=value('yieldEligibilityPolicy')||'ALL_DEPOSITS';
+    for(const meeting of meetings){
+      const session=Number(meeting.session??1);let totalColumn=0;
+      for(const fund of ['CLASSIC','SCHOOL']){
+        const share=number(fund==='SCHOOL'?'yieldSchoolShare':'yieldClassicShare'),fundPoolValue=Math.round(pool*share/100);if(fundPoolValue<=0)continue;
+        const cutoff=number(fund==='SCHOOL'?'yieldEligibleThroughSchool':'yieldEligibleThrough')||number('yieldEndSession')||12;
+        const candidates=allDeposits.filter(x=>x.fund===fund&&Number(x.session??1)<=session);
+        const eligible=app.savingsEligibleDeposits?app.savingsEligibleDeposits(candidates,policy,loanSessions,cutoff):candidates.filter(d=>Number(d.session??1)<=cutoff&&(policy==='ALL_DEPOSITS'||loanSessions.includes(Number(d.session??1))));
+        if(!eligible.length)continue;
+        try{
+          const preview=await app.previewSavingsYield({interestPool:fundPoolValue,deposits:eligible.map(d=>({id:d.id,memberId:d.memberId,amount:d.amount,periodKey:d.periodKey,fund:d.fund})),coefficients:fund==='SCHOOL'?schoolCoefficients():coefficients(),mode:value('yieldMode')||'EXACT_WEIGHTED_DEPOSITS',amountPower:number('yieldAmountPower')||0.75});
+          for(const row of preview.members??[]){const key=String(row.memberId)+'|'+String(meeting.id);allocations.set(key,Number(allocations.get(key)??0)+Number(row.interest??0));}
+          totalColumn+=Number(preview.distributedInterest??0);
+        }catch{}
+      }
+      const borrowerPool=Math.round(pool*number('yieldBorrowerShare')/100),health=borrowerRewardSolvency(data,borrowerPool);
+      if(borrowerPool>0&&health.ok){
+        const eligibleLoans=loanCycles().filter(x=>x.memberId&&Number(x.disbursedSession)<=session&&x.repaidSession!==undefined&&Number(x.repaidSession)<=session);
+        if(eligibleLoans.length)try{
+          const reward=await app.previewBorrowerReward({interestPool:borrowerPool,endSession:number('yieldEndSession')||12,mode:value('yieldBorrowerWeightMode')||'VOLUME_TIME_INTEREST',loans:eligibleLoans.map(x=>({loanId:x.loanId,memberId:x.memberId,principal:x.principal,disbursedSession:x.disbursedSession,repaidSession:x.repaidSession,realizedInterest:x.realizedInterest}))});
+          for(const row of reward.members??[]){const key=String(row.memberId)+'|'+String(meeting.id);allocations.set(key,Number(allocations.get(key)??0)+Number(row.interest??0));}
+          totalColumn+=Number(reward.distributedInterest??0);
+        }catch{}
+      }
+      columnTotals.set(meeting.id,totalColumn);
+    }
+    const policyText=policy==='LOAN_SESSION_GATE'?'Séance avec prêt : tous ses dépôts éligibles dans la fenêtre. Séance sans prêt : aucun dépôt éligible.':'Tous les dépôts de la fenêtre sont éligibles, qu’un prêt ait été accordé ou non pendant leur séance.';
+    interestEvolution.append(el('p',policyText,'hint'));
     const wrap=el('div',undefined,'matrix-wrap'),table=el('table',undefined,'meeting-matrix'),head=el('thead'),hr=el('tr');hr.append(el('th','Membre'));for(const meeting of meetings)hr.append(el('th','S'+String(meeting.session??'')));hr.append(el('th','Dernière projection'));head.append(hr);table.append(head);
-    const body=el('tbody');for(const member of memberRows){const tr=el('tr');tr.append(el('th',member.displayName??member.id));let latest=0;for(const meeting of meetings){const amount=Number(allocations.get(String(member.id)+'|'+String(meeting.id))??0);if(amount)latest=amount;tr.append(el('td',amount?fmt(amount):'—'));}tr.append(el('td',fmt(latest)));body.append(tr);}const totalsRow=el('tr',undefined,'table-total-row');totalsRow.append(el('th','TOTAL'));let latestTotal=0;for(const meeting of meetings){const amount=Number(columnTotals.get(meeting.id)??0);if(amount)latestTotal=amount;totalsRow.append(el('td',fmt(amount)));}totalsRow.append(el('td',fmt(latestTotal)));body.append(totalsRow);table.append(body);wrap.append(table);interestEvolution.append(wrap);
+    const body=el('tbody');for(const member of memberRows){const tr=el('tr');tr.append(el('th',member.displayName??member.id));let latest=0;for(const meeting of meetings){const amount=Number(allocations.get(String(member.id)+'|'+String(meeting.id))??0);if(amount||allocations.has(String(member.id)+'|'+String(meeting.id)))latest=amount;tr.append(el('td',amount?fmt(amount):'—'));}tr.append(el('td',fmt(latest)));body.append(tr);}const totalsRow=el('tr',undefined,'table-total-row');totalsRow.append(el('th','TOTAL'));let latestTotal=0;for(const meeting of meetings){const amount=Number(columnTotals.get(meeting.id)??0);if(columnTotals.has(meeting.id))latestTotal=amount;totalsRow.append(el('td',fmt(amount)));}totalsRow.append(el('td',fmt(latestTotal)));body.append(totalsRow);table.append(body);wrap.append(table);interestEvolution.append(wrap);
+  };
+  const hydrateDistributionPolicy=data=>{
+    const group=String(app.activeGroup?.()??''),p=data?.distributionPolicy??{};if(!group||policyHydratedGroup===group)return;policyHydratedGroup=group;
+    const set=(id,v)=>{const node=document.getElementById(id);if(node&&!node.dataset.userEdited&&v!==undefined&&v!==null)node.value=String(v);};
+    set('yieldEligibilityPolicy',p.eligibilityPolicy??'ALL_DEPOSITS');set('yieldClassicShare',Number(p.classicShareBasisPoints??7000)/100);set('yieldSchoolShare',Number(p.schoolShareBasisPoints??1000)/100);set('yieldBorrowerShare',Number(p.borrowerShareBasisPoints??0)/100);set('yieldOfficeShare',Number(p.officeShareBasisPoints??2000)/100);set('yieldReserveShare',Number(p.reserveShareBasisPoints??0)/100);set('yieldBorrowerWeightMode',p.borrowerWeightMode??'VOLUME_TIME_INTEREST');set('yieldEligibleThrough',p.eligibleThroughClassic??10);set('yieldEligibleThroughSchool',p.eligibleThroughSchool??7);set('yieldPoolingMode',p.poolingMode??'POOLED');set('yieldResidualPolicy',p.residualPolicy??'TIME_WEIGHTED');
+    const status=document.getElementById('yieldPolicyStatus');if(status)status.textContent='Politique active · '+(value('yieldEligibilityPolicy')==='LOAN_SESSION_GATE'?'éligibilité par séance ayant un prêt':'tous dépôts dans la fenêtre')+' · clé '+[number('yieldClassicShare'),number('yieldSchoolShare'),number('yieldBorrowerShare'),number('yieldOfficeShare'),number('yieldReserveShare')].join('/')+' %.';
   };
   const loadCanonical=async(forcePool=false)=>{
-    if(!isManager())return;const data=await app.savingsYieldSourceData();canonicalLoaded=true;
+    if(!isManager())return;const data=await app.savingsYieldSourceData();canonicalLoaded=true;canonicalData=data;hydrateDistributionPolicy(data);
     deposits.splice(0,deposits.length,...(data.deposits??[]).map(d=>({...d,id:'canonical:'+d.id})));
+    const cycleEvents=[];
+    for(const d of data.loanDisbursements??[])cycleEvents.push({id:'canonical-loan:'+d.loanId+':'+d.meetingId,type:'LOAN_DISBURSEMENT',session:Number(d.session??1),loanId:String(d.loanId),memberId:String(d.memberId??''),amount:Number(d.amount??0),fund:'CLASSIC'});
+    for(const d of data.repayments??[])cycleEvents.push({id:'canonical-principal:'+d.loanId+':'+d.meetingId,type:'LOAN_PRINCIPAL_REPAYMENT',session:Number((data.meetings??[]).find(m=>m.id===d.meetingId)?.session??1),loanId:String(d.loanId),memberId:String(d.memberId??''),amount:Number(d.amount??0)});
+    for(const d of data.interestReceipts??[])cycleEvents.push({id:'canonical-interest:'+d.loanId+':'+d.meetingId,type:'LOAN_INTEREST_RECEIPT',session:Number((data.meetings??[]).find(m=>m.id===d.meetingId)?.session??1),loanId:String(d.loanId),memberId:String(d.memberId??''),amount:Number(d.amount??0),fund:'CLASSIC'});
+    if(cycleEvents.length)events.splice(0,events.length,...cycleEvents);
     const recovered=Number(data.totals?.recoveredInterest??0),pool=document.getElementById('yieldInterestPool');
     if(pool&&(forcePool||!Number(pool.dataset.userEdited))){pool.value=String(recovered);pool.dataset.canonicalValue=String(recovered);}
-    renderDeposits();renderCanonicalSummary(data);await renderInterestEvolution(data);
+    renderDeposits();renderEvents();renderCanonicalSummary(data);await renderInterestEvolution(data);
     if(autoSyncStatus)autoSyncStatus.textContent='Actualisé automatiquement · '+new Intl.DateTimeFormat('fr-FR',{hour:'2-digit',minute:'2-digit',second:'2-digit'}).format(new Date())+' · source '+String(data.source??'canonique');
   };
   document.getElementById('yieldInterestPool')?.addEventListener('input',e=>{e.currentTarget.dataset.userEdited='1';});
