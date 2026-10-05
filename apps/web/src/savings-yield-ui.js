@@ -189,21 +189,23 @@ export function mountSavingsYieldUI({app,getMembers,notify=()=>{},showError=cons
 
   document.getElementById('yieldWorkbookBtn')?.addEventListener('click',()=>void(async()=>{try{
     if(!isManager())throw new Error('FORBIDDEN_SCOPE');checkShares();
+    const eligible=officialEligibleDeposits(deposits,canonicalData,Infinity);
     const data=await app.previewWorkbookSavingsYield({
-      realizedInterestPool:number('yieldInterestPool'),bureauShareBasisPoints:bps(number('yieldOfficeShare')+number('yieldReserveShare')),
-      deposits:deposits.map(({session,...d})=>d),
+      realizedInterestPool:number('yieldInterestPool'),bureauShareBasisPoints:bps(number('yieldOfficeShare')+number('yieldReserveShare')+number('yieldBorrowerShare')),
+      deposits:eligible.map(({session,...d})=>d),
       funds:[
         {fund:'CLASSIC',shareBasisPoints:bps(number('yieldClassicShare')),eligiblePeriods:eligiblePeriods(coefficients()),highestCoefficient:number('yieldHighestCoefficient'),coefficients:coefficients()},
         {fund:'SCHOOL',shareBasisPoints:bps(number('yieldSchoolShare')),eligiblePeriods:eligiblePeriods(schoolCoefficients()),highestCoefficient:number('yieldHighestCoefficientSchool'),coefficients:schoolCoefficients()}
       ]
     });
-    result.replaceChildren();result.append(el('h3','Reproduction du moteur historique'),el('p','Pool choisi : '+fmt(data.realizedInterestPool)+' · Retenue Bureau + Réserve : '+fmt(data.bureauIndemnity)+' · Épargnants : '+fmt(data.distributedToSavers),'truth-notice'));
+    result.replaceChildren();result.append(el('h3','Reproduction du moteur historique'),el('p','Pool choisi : '+fmt(data.realizedInterestPool)+' · Retenue hors épargnants (Bureau + Réserve + prime emprunteurs) : '+fmt(data.bureauIndemnity)+' · Épargnants : '+fmt(data.distributedToSavers),'truth-notice'));
     result.append(el('p',data.algebraicFinding,'hint'));
     for(const fund of data.funds){
       const box=el('article',undefined,'item');box.append(el('strong',fund.fund==='CLASSIC'?'Épargne classique':'Épargne scolaire'),el('p','Principal annuel : '+fmt(fund.totalPrincipal)+' · Pool : '+fmt(fund.allocatedPool)),el('p','Taux général : '+fund.generalRatePercent.toFixed(6)+' % · taux provisoire : '+fund.provisionalBaseRate.toFixed(6)+' · total provisoire : '+fund.provisionalTotal.toFixed(2)+' · ratio final : '+fund.normalizationRatio.toFixed(6),'hint'));
       for(const row of fund.members){const member=getMembers().find(x=>x.id===row.memberId);box.append(el('p',(member?.displayName??row.memberId)+' → '+fmt(row.interest)));}
       result.append(box);
     }
+    await appendBorrowerReward(canonicalData);
     await app.saveExerciseYieldDraft('WORKBOOK_LEGACY',data);
     notify('Moteur Excel reproduit sans comptabilisation · répartition mémorisée pour la clôture.');
   }catch(err){showError(err);}})());
@@ -243,11 +245,11 @@ export function mountSavingsYieldUI({app,getMembers,notify=()=>{},showError=cons
   };
 
   document.getElementById('yieldCapitalTimeBtn')?.addEventListener('click',()=>void(async()=>{try{
-    if(!isManager())throw new Error('FORBIDDEN_SCOPE');
-    const endSession=number('yieldEndSession'),timeExponent=number('yieldTimeExponent')||1,amountPower=number('yieldAmountPowerFair')||1;
+    if(!isManager())throw new Error('FORBIDDEN_SCOPE');checkShares();
+    const endSession=number('yieldEndSession'),timeExponent=number('yield-timeExponent')||1,amountPower=number('yieldAmountPowerFair')||1;
     const sections=[],yieldDrafts=[];
     for(const fund of ['CLASSIC','SCHOOL']){
-      const fundDeposits=deposits.filter(d=>d.fund===fund);
+      const fundDeposits=officialEligibleDeposits(deposits,canonicalData,Infinity).filter(d=>d.fund===fund);
       if(!fundDeposits.length)continue;
       const eligibleThroughSession=number(fund==='SCHOOL'?'yieldEligibleThroughSchool':'yieldEligibleThrough')||endSession;
       const data=await app.previewCapitalTimeYield({interestPool:fundPool(fund),deposits:fundDeposits.map(d=>({id:d.id,memberId:d.memberId,amount:d.amount,session:d.session,fund:d.fund,periodKey:d.periodKey})),policy:{endSession,eligibleThroughSession,timeExponent,amountPower}});
@@ -255,6 +257,7 @@ export function mountSavingsYieldUI({app,getMembers,notify=()=>{},showError=cons
       sections.push({title:fund==='CLASSIC'?'Épargne classique — Capital × Temps':'Épargne scolaire — Capital × Temps',note:'α='+timeExponent+' · β='+amountPower+' · fin éligibilité séance '+eligibleThroughSession,rows:data.members.map(row=>{const member=getMembers().find(x=>x.id===row.memberId);return (member?.displayName??row.memberId)+' → '+fmt(row.interest);})});
     }
     renderComparison('Interest Fairness Lab — Capital × Temps',sections);
+    await appendBorrowerReward(canonicalData);
     await app.saveExerciseYieldDraft('CAPITAL_TIME',{funds:yieldDrafts});
     notify('Simulation Capital × Temps recalculée · répartition mémorisée pour la clôture.');
   }catch(err){showError(err);}})());
@@ -265,10 +268,10 @@ export function mountSavingsYieldUI({app,getMembers,notify=()=>{},showError=cons
     const classicResidual=bps(number('yieldResidualClassicShare')),schoolResidual=10000-classicResidual;
     const data=await app.previewAttributedProductiveYield({
       realizedInterestPool:number('yieldInterestPool'),
-      deposits:deposits.map(d=>({id:d.id,memberId:d.memberId,amount:d.amount,session:d.session,fund:d.fund,periodKey:d.periodKey})),
+      deposits:officialEligibleDeposits(deposits,canonicalData,Infinity).map(d=>({id:d.id,memberId:d.memberId,amount:d.amount,session:d.session,fund:d.fund,periodKey:d.periodKey})),
       loans:loanCycles(),
       policy:{
-        officeShareBasisPoints:bps(number('yieldOfficeShare')+number('yieldReserveShare')),poolingMode,allocationMethod:'PRO_RATA_AVAILABLE',residualPolicy,
+        officeShareBasisPoints:bps(number('yieldOfficeShare')+number('yieldReserveShare')+number('yieldBorrowerShare')),poolingMode,allocationMethod:'PRO_RATA_AVAILABLE',residualPolicy,
         residualFundSharesBasisPoints:residualPolicy==='FIXED_FUND_SPLIT'?{CLASSIC:classicResidual,SCHOOL:schoolResidual}:undefined,
         endSession:number('yieldEndSession'),eligibleThroughSession:number('yieldEligibleThrough')||number('yieldEndSession'),
         timeExponent:number('yieldTimeExponent')||1,amountPower:number('yieldAmountPowerFair')||1
@@ -278,6 +281,7 @@ export function mountSavingsYieldUI({app,getMembers,notify=()=>{},showError=cons
     result.prepend(el('p','Pool épargnants : '+fmt(data.saverPool)+' · intérêts à causalité prouvée : '+fmt(data.evidencedGrossInterest)+' · résidu : '+fmt(data.residualGrossInterest)+' · non alloué : '+fmt(data.unallocatedSaverInterest),'truth-notice'));
     for(const line of data.explanation??[])result.append(el('p',line,'hint'));
     for(const warning of data.warnings??[])result.append(el('p','À examiner : '+warning,'truth-notice'));
+    await appendBorrowerReward(canonicalData);
     await app.saveExerciseYieldDraft('ATTRIBUTED_PRODUCTIVE',data);
     notify('Simulation productive attribuée recalculée · répartition mémorisée pour la clôture.');
   }catch(err){showError(err);}})());
@@ -298,8 +302,10 @@ export function mountSavingsYieldUI({app,getMembers,notify=()=>{},showError=cons
 
   document.getElementById('yieldPreviewBtn')?.addEventListener('click',()=>void(async()=>{try{
     if(!isManager())throw new Error('FORBIDDEN_SCOPE');
-    const data=await app.previewSavingsYield({interestPool:number('yieldInterestPool'),deposits:deposits.map(({fund,session,...d})=>d),coefficients:coefficients(),mode:value('yieldMode')||'EXACT_WEIGHTED_DEPOSITS',amountPower:number('yieldAmountPower')||0.75});
+    checkShares();const eligible=officialEligibleDeposits(deposits,canonicalData,Infinity);
+    const data=await app.previewSavingsYield({interestPool:saverPool(),deposits:eligible.map(({fund,session,...d})=>d),coefficients:coefficients(),mode:value('yieldMode')||'EXACT_WEIGHTED_DEPOSITS',amountPower:number('yieldAmountPower')||0.75});
     renderMembers(data,'Ancien moteur simplifié');
+    await appendBorrowerReward(canonicalData);
     await app.saveExerciseYieldDraft('WEIGHTED_DEPOSITS',data);
     notify('Répartition mémorisée pour la clôture de l’exercice.');
   }catch(err){showError(err);}})());
