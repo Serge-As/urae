@@ -64,8 +64,10 @@ export function mountIdentityLiveUI({app,notify=()=>{},showError=console.error,c
     const requestedGroup=app.activeGroup();
     clearTimers();try{socket?.close(1000,'reconnect');}catch{}socket=null;activeGroup=requestedGroup;
     connectPromise=(async()=>{
-      const ticketData=await app.liveTicket?.();
+      let ticketData;try{ticketData=await app.liveTicket?.();}catch{}
       if(!wantConnection||navigator.onLine===false||app.activeGroup()!==requestedGroup)return;
+      // Legacy authenticated upgrade remains available if ticket issuance is not
+      // configured yet; it costs D1 but avoids breaking an older deployment.
       socket=new WebSocket(app.liveWebSocketUrl(lastSeq,String(ticketData?.ticket??'')));
       socket.onopen=()=>{
         reconnectAttempt=0;
