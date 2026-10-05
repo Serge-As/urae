@@ -1,5 +1,14 @@
 # Eco-System — Reprise terrain 1.5.2.10 — 5 octobre 2026
 
+
+## Candidate de récupération 1.5.2.11 — traitement du risque ancien cache (complément)
+
+La source `1.5.2.10` a été livrée sur `393f80df88076072317f08adee81fe14d54d06c5` (workflow `37130397965`). Le code ultérieur dans PR #66 est désormais étiqueté **1.5.2.11** à l'aide du contrat de version. Le nouveau service worker n'écrit **jamais** dans le cache v15210 lors de son installation : il télécharge le shell v15211 dans son propre cache, place le marqueur prêt en dernier, détruit le seul cache candidat si l'installation échoue, puis garde le cache v15210 pour rollback. Les scripts/styles query-versionnés v15211 ne doivent jamais charger une version différente depuis le réseau sous couverture d'un cache v15211 ; aucune migration ou suppression d'IndexedDB/Outbox n'est introduite. Le test navigateur `browser-shell-mobile-1.5.2.6.spec.mjs` injecte une ancienne version prête et un enregistrement de test IndexedDB avant installation, puis contrôle F5 offline et persistance.
+
+Les lectures non critiques d'Identity Passport/Concierge/Observatoire sont désormais différées tant que la page Réglages est fermée. Le Live financier lui-même continue de se connecter à l'ouverture du groupe. L'indicateur de bande passante `effectiveType` ne déclenche plus de reconnexion, seule une vraie bascule d'interface réseau le fait.
+
+**Aucune preuve de fonctionnement réel Android 6/iOS et multi-gestionnaires n'est remplacée par ces tests automatisés.** La PR demeure brouillon, la production n'a pas été déployée, le quota Cloudflare n'a pas été confirmé ; les scénarios R02–R15 nécessitent la recette terrain selon le plan ci-dessus.
+
 **Source :** 13 exigences utilisateur et neuf captures Firefox/Opera/Chrome de la même séance multi-gestionnaires, groupes CER et BB. **Dépôt :** `SergeDelor/tontine-platform`. **Base :** `fix/1.5.2.10-offline-conflicts-loans-20261003` au SHA `393f80df88076072317f08adee81fe14d54d06c5`. **Branche de récupération :** `fix/field-regressions-recovery-20261005`. Aucune écriture en production, migration destructive, fusion ou déploiement automatique n'est autorisé sans validation.
 
 ## Règles non négociables
