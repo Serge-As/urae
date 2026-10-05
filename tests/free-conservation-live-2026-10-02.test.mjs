@@ -24,7 +24,8 @@ test('free conservation uses event push instead of freezing live',()=>{
   assert.doesNotMatch(live,/GELÉ · mode gratuit/);
   assert.doesNotMatch(live,/setInterval\(/);
   assert.doesNotMatch(live,/startCatchupTimer/);
-  assert.match(live,/reconnectAttempt>=1/);
+  assert.match(live,/reconnectAttempt>=4/);
+  assert.match(live,/\[1500,4500,12000,30000\]/);
   assert.match(live,/GROUP_LIVE_HELLO/);
 });
 
