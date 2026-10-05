@@ -375,6 +375,7 @@ export const mountCompletionUI=({app,notify,showError,getMembers,getMeetings,get
   };
   window.addEventListener('eco:financial-data-changed',scheduleDebtRefresh);
   window.addEventListener('eco:financial-live-update',scheduleDebtRefresh);
+  window.addEventListener('eco:live-event',event=>{const e=event instanceof CustomEvent?event.detail:undefined,p=e?.payload??{};if(e?.type!=='RULE_UPDATE'||p.kind!=='LOAN_POLICY')return;const rubric=getRubrics().find(r=>String(r.id)===String(p.rubricId));if(rubric){rubric.policies={...(rubric.policies??{}),loan:{...(rubric.policies?.loan??{}),allowed:true,interestBase:'PRINCIPAL_ONLY',noInterestOnInterest:true,rateBasisPointsPerPeriod:Number(p.rateBasisPointsPerPeriod??0),paymentPriority:String(p.paymentPriority??'CAPITAL_FIRST'),interestTiming:String(p.interestTiming??'NEXT_SESSION_DUE'),fundingMode:String(p.fundingMode??'AVAILABLE_GROUP_CASH'),carryForwardUnusedFunds:p.carryForwardUnusedFunds!==false}};hydrateLoanPolicy();}if(!byId('loanCompletionPanel')?.hidden&&byId('view-finance')?.classList.contains('active'))void renderLoans().catch(showError);});
 
   const setLocale=()=>{fillCompletionKinds();void refresh().catch(showError);};
   return{refresh,setLocale};
