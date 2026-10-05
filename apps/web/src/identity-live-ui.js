@@ -75,8 +75,9 @@ export function mountIdentityLiveUI({app,notify=()=>{},showError=console.error,c
       if(!wantConnection||navigator.onLine===false||app.activeGroup()!==requestedGroup||app.serverBudgetState?.().blocked)return;
       // Legacy authenticated upgrade remains available if ticket issuance is not
       // configured yet; it costs D1 but avoids breaking an older deployment.
-      socket=new WebSocket(app.liveWebSocketUrl(lastSeq,String(ticketData?.ticket??'')));
-      socket.onopen=()=>{
+      const activeSocket=socket=new WebSocket(app.liveWebSocketUrl(lastSeq,String(ticketData?.ticket??'')));
+      activeSocket.onopen=()=>{
+        if(socket!==activeSocket)return;
         reconnectAttempt=0;
         // Re-announce only the latest draft state per cell after reconnect.
         for(const {type,payload} of pendingDraftSignals.values())try{socket.send(JSON.stringify({type:'CLIENT_SIGNAL',eventType:type,payload}));}catch{}
@@ -86,7 +87,8 @@ export function mountIdentityLiveUI({app,notify=()=>{},showError=console.error,c
         window.dispatchEvent(new CustomEvent('eco:live-connected',{detail:{groupId:activeGroup}}));
         if(liveRoot)liveRoot.replaceChildren(row('Connexion','WebSocket connecté'),row('Groupe',activeGroup),row('Temps réel',conservationMode?'PUSH ÉVÉNEMENTIEL · zéro polling D1':'ACTIF · push événementiel'));
       };
-      socket.onmessage=e=>{
+      activeSocket.onmessage=e=>{
+        if(socket!==activeSocket)return;
         try{
           const msg=JSON.parse(String(e.data));
           if(msg.type==='GROUP_LIVE_HELLO'){if(msg.reset)lastSeq=0;return;}
@@ -94,14 +96,18 @@ export function mountIdentityLiveUI({app,notify=()=>{},showError=console.error,c
           if(msg.type==='GROUP_LIVE_EVENT'&&msg.event){
             eventQueue=eventQueue.then(async()=>{
               const seq=Number(msg.event.seq??0);
-              if(seq>lastSeq+1){try{socket?.close(4001,'sequence-gap');}catch{}return;}
+              if(seq>lastSeq+1){try{if(socket===activeSocket)activeSocket.close(4001,'sequence-gap');}catch{}return;}
               if(seq>lastSeq){renderEvent(msg.event);dispatchDurableEvent(msg.event);}
             }).catch(()=>{});
           }
         }catch{}
       };
-      socket.onclose=()=>{socket=null;if(liveRoot)liveRoot.append(row('Canal','Déconnecté · reconnexion sur événement réseau'));scheduleReconnect();};
-      socket.onerror=()=>{if(liveRoot)liveRoot.append(row('WebSocket','Interruption détectée · aucune boucle de polling'));};
+      activeSocket.onclose=()=>{
+        // A closed old socket must not null a fresh one after a network switch.
+        if(socket!==activeSocket)return;
+        socket=null;if(liveRoot)liveRoot.append(row('Canal','Déconnecté · reconnexion sur événement réseau'));scheduleReconnect();
+      };
+      activeSocket.onerror=()=>{if(socket===activeSocket&&liveRoot)liveRoot.append(row('WebSocket','Interruption détectée · aucune boucle de polling'));};
     })().catch(e=>{showError(e);scheduleReconnect();}).finally(()=>{connectPromise=null;});
     return connectPromise;
   };
