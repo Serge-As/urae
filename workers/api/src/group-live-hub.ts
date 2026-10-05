@@ -73,7 +73,8 @@ export class GroupLiveHub{
       if(now-at>(activeDraft?DRAFT_TTL_MS:12000)||(!activeDraft&&at<=afterAt)||excludeActorId&&signal.actorId===excludeActorId)continue;
       const category=['FINANCIAL_DRAFT','FINANCIAL_DRAFT_CLEAR'].includes(signal.type)?'draft':'activity';
       const key=signal.actorId+'|'+category+'|'+String(signal.payload?.kind??'')+'|'+String(signal.payload?.meetingId??'')+'|'+String(signal.payload?.membershipId??'')+'|'+String(signal.payload?.rubricId??'');
-      const prior=deduped.get(key);if(!prior||Date.parse(prior.at)<at)deduped.set(key,signal);
+      const prior=deduped.get(key);// A CLEAR in the very same millisecond must supersede its DRAFT.
+      if(!prior||Date.parse(prior.at)<=at)deduped.set(key,signal);
     }
     return [...deduped.values()].sort((a,b)=>Date.parse(a.at)-Date.parse(b.at)).slice(-100);
   }
