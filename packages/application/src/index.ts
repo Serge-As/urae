@@ -220,14 +220,23 @@ export class ConnectedApplication {
       throw new Error('NETWORK_UNAVAILABLE');
     }
     let response:Response;
+    // Repayments have a durable write-ahead idempotency key. Their transport
+    // must be time-bounded on unreliable mobile networks so a saved intent can
+    // be shown as pending rather than keeping a cell disabled for minutes.
+    const repaymentWrite=method==='POST'&&/\/loans\/[^/]+\/repay$/.test(path);
+    const abort=repaymentWrite&&typeof AbortController==='function'?new AbortController():null;
+    let requestTimer:ReturnType<typeof setTimeout>|undefined;
     try{
-      response=await fetch(`${this.baseUrl}${path}`,{...init,headers});
+      const send=fetch(`${this.baseUrl}${path}`,{...init,headers,...(abort?{signal:abort.signal}:{})});
+      response=repaymentWrite?await Promise.race([send,new Promise<Response>((_,reject)=>{
+        requestTimer=setTimeout(()=>{abort?.abort();reject(new Error('NETWORK_UNAVAILABLE'));},12000);
+      })]):await send;
     }catch(error){
       if(cacheable&&IndexedDbReadSnapshotAdapter.supported()){
         try{const snapshot=await this.readSnapshots.get<T>(this.offlineReadKey(path));if(snapshot){this.announceOfflineSnapshot(path,snapshot.updatedAt);return structuredClone(snapshot.body);}}catch{}
       }
       throw new Error('NETWORK_UNAVAILABLE',{cause:error});
-    }
+    }finally{if(requestTimer)clearTimeout(requestTimer);}
     const body=await response.json().catch(()=>({error:`HTTP_${response.status}`}));
     if(!response.ok){
       const transient=[429,503,504].includes(response.status),errorCode=String((body as any)?.error??'');
