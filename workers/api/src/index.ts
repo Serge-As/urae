@@ -305,9 +305,43 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
   const jsonStringArray=(value:unknown):string[]=>{try{const parsed=JSON.parse(String(value??'[]'));return Array.isArray(parsed)?parsed.map(String):[];}catch{return[];}};
   const meetingMoment=(meeting:any)=>Date.parse(String(meeting?.scheduledAt??meeting?.openedAt??meeting?.createdAt??''))||0;
   const normalizedLoanInterestTiming=(value:unknown):'NEXT_SESSION_DUE'|'UPFRONT_DEDUCTED'|'UPFRONT_REQUIRED'=>['UPFRONT_DEDUCTED','UPFRONT_REQUIRED'].includes(String(value))?String(value) as any:'NEXT_SESSION_DUE';
+  const loanFundingReservationId=(key:string)=>'loan_funding_reservation_'+encodeURIComponent(key).slice(0,160);
+  const loanFundingAvailability=async(input:{groupId:string;meetingId?:string;mode:'SAVINGS_REPAYMENTS_ONLY'|'AVAILABLE_GROUP_CASH';carryForward:boolean;currency:string;extraRepayment?:number})=>{
+    if(!input.carryForward&&!input.meetingId)throw Error('MEETING_REQUIRED_FOR_SESSION_ONLY_LOAN_FUNDING');
+    const [summary,rubricRows,positions,sheetEvents,reservations]=await Promise.all([
+      ledger.summary(ctx.tenantId,input.groupId,input.currency),repo.listRubricDefinitions(ctx.tenantId,input.groupId),ledger.receiptPositions(ctx.tenantId,input.groupId),
+      repo.listWorkspaceRecords(ctx.tenantId,'FINANCE.SHEET_EVENT',input.groupId),repo.listWorkspaceRecords(ctx.tenantId,'FINANCE.LOANS',input.groupId)
+    ]);
+    const scoped=<T extends {meetingId?:unknown}>(rows:T[])=>input.carryForward?rows:rows.filter(x=>String(x.meetingId??'')===String(input.meetingId??''));
+    const extra=Math.max(0,Number(input.extraRepayment??0)),now=Date.now();
+    const activeReservations=reservations.filter(x=>x.status==='ACTIVE'&&x.tags.includes('loan-funding-reservation')&&Date.parse(String(x.data.expiresAt??''))>now&&(input.carryForward||String(x.data.meetingId??'')===String(input.meetingId??'')));
+    const reserved=activeReservations.reduce((n,x)=>n+Math.max(0,Number(x.data.amount??0)),0);
+    let basis=0;
+    if(input.mode==='AVAILABLE_GROUP_CASH'&&input.carryForward)basis=Math.max(0,Number(summary.cashBalance??0)+extra);
+    else{
+      const normalized=(v:unknown)=>String(v??'').normalize('NFKD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
+      const savingsIds=new Set(rubricRows.filter(r=>{const kind=String(r.activityPlan?.kind??'').toUpperCase(),system=String(r.facets?.custom?.systemKey??'').toUpperCase(),name=normalized(r.name),semantic=String(r.facets?.refundability??'')==='FULLY_REFUNDABLE'&&String(r.facets?.direction??'')!=='OUTFLOW'&&String(r.facets?.interestMode??'')==='CUSTOM';return kind==='SAVINGS'||/SAVINGS|EPARGNE/.test(system)||/epargne|saving/.test(name)||semantic;}).map(r=>r.id));
+      const receiptPool=scoped(positions as any[]).filter((p:any)=>Number(p.netAmount??0)>0&&(input.mode==='AVAILABLE_GROUP_CASH'||savingsIds.has(String(p.rubricId??'')))).reduce((n:number,p:any)=>n+Number(p.netAmount??0),0);
+      const scopedEvents=scoped((sheetEvents as any[]).map(x=>({meetingId:x.data?.meetingId,x}))).map(x=>x.x),repayments=scopedEvents.filter((x:any)=>String(x.data?.direction??'').toUpperCase()==='IN'&&Boolean(x.data?.loanId)).reduce((n:number,x:any)=>n+Math.abs(Number(x.data?.amount??0)),0),outflows=scopedEvents.filter((x:any)=>String(x.data?.direction??'').toUpperCase()==='OUT'&&(input.mode==='AVAILABLE_GROUP_CASH'||Boolean(x.data?.loanId))).reduce((n:number,x:any)=>n+Math.abs(Number(x.data?.amount??0)),0);
+      basis=Math.max(0,receiptPool+repayments+extra-outflows);
+      basis=Math.min(basis,Math.max(0,Number(summary.cashBalance??0)+extra));
+    }
+    return{basis,reserved,available:Math.max(0,basis-reserved),cashBalance:Number(summary.cashBalance??0),mode:input.mode};
+  };
+
   const disburseApprovedLoan=async(input:{groupId:string;loan:any;principal:number;expectedVersion:number;meetingId?:string;rubricId?:string;idempotencyKey:string})=>{
     let loan=input.loan;const initialState=String(loan.data.completionState??''),timing=normalizedLoanInterestTiming(loan.data.interestTiming),rate=finite(loan.data.rateBasisPointsPerPeriod,0),upfrontInterest=timing==='NEXT_SESSION_DUE'?0:Math.round(input.principal*rate/10000),upfrontKey=input.idempotencyKey+':upfront-interest';
-    let upfrontEntry=upfrontInterest>0?await repo.findLedgerEntryByIdempotency(ctx.tenantId,input.groupId,upfrontKey):undefined,entry=await repo.findLedgerEntryByIdempotency(ctx.tenantId,input.groupId,input.idempotencyKey);
+    let upfrontEntry=upfrontInterest>0?await repo.findLedgerEntryByIdempotency(ctx.tenantId,input.groupId,upfrontKey):undefined,entry=await repo.findLedgerEntryByIdempotency(ctx.tenantId,input.groupId,input.idempotencyKey),fundingReservation:WorkspaceRecord|undefined;
+    if(initialState==='APPROVED'&&!entry){
+      const policyRubric=input.rubricId?await repo.getRubricDefinition(ctx.tenantId,input.groupId,input.rubricId):undefined,policy=policyRubric?.policies?.loan,mode=String(policy?.fundingMode??'AVAILABLE_GROUP_CASH')==='SAVINGS_REPAYMENTS_ONLY'?'SAVINGS_REPAYMENTS_ONLY':'AVAILABLE_GROUP_CASH',carryForward=policy?.carryForwardUnusedFunds!==false;
+      if(mode==='SAVINGS_REPAYMENTS_ONLY'&&!input.meetingId)throw Error('MEETING_REQUIRED_FOR_RESTRICTED_LOAN_FUNDING');
+      const reservationId=loanFundingReservationId(input.idempotencyKey),existing=await repo.getWorkspaceRecord(ctx.tenantId,reservationId),stamp=new Date().toISOString(),expiresAt=new Date(Date.now()+60_000).toISOString();
+      if(existing&&Number(existing.data.amount??0)!==input.principal)throw Error('IDEMPOTENCY_CONFLICT');
+      fundingReservation={id:reservationId,tenantId:ctx.tenantId,groupId:input.groupId,moduleId:'FINANCE.LOANS',title:'Réservation de liquidité prêt',summary:'Réservation anti-double-décaissement à durée courte.',status:'ACTIVE',tags:['loan-funding-reservation','loan:'+loan.id],data:{loanId:loan.id,meetingId:input.meetingId??'',amount:input.principal,mode,carryForward,expiresAt},createdBy:existing?.createdBy??ctx.actorId,createdAt:existing?.createdAt??stamp,updatedAt:stamp};
+      await repo.saveWorkspaceRecord(fundingReservation);
+      const availability=await loanFundingAvailability({groupId:input.groupId,meetingId:input.meetingId,mode,carryForward,currency:String(loan.data.currency??'XAF'),extraRepayment:timing==='UPFRONT_REQUIRED'?upfrontInterest:0});
+      if(availability.available<0||availability.basis<availability.reserved){await repo.saveWorkspaceRecord({...fundingReservation,status:'ARCHIVED',data:{...fundingReservation.data,rejectedAt:new Date().toISOString(),basis:availability.basis,reserved:availability.reserved},updatedAt:new Date().toISOString()});throw Error(mode==='SAVINGS_REPAYMENTS_ONLY'?'INSUFFICIENT_AUTHORIZED_LOAN_FUNDS':'INSUFFICIENT_CASH');}
+    }
     if(initialState==='APPROVED'){
       if(timing==='UPFRONT_REQUIRED'&&upfrontInterest>0&&!upfrontEntry){
         const balance=(await ledger.summary(ctx.tenantId,input.groupId,String(loan.data.currency??'XAF'))).cashBalance;
@@ -315,6 +349,7 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
         upfrontEntry=await ledger.recordLoanRepayment({tenantId:ctx.tenantId,groupId:input.groupId,principalAmount:0,interestAmount:upfrontInterest,currency:String(loan.data.currency??'XAF'),sourceId:loan.id,meetingId:input.meetingId,idempotencyKey:upfrontKey});
       }
       if(!entry)entry=await ledger.recordCashMovement({tenantId:ctx.tenantId,groupId:input.groupId,amount:input.principal,currency:String(loan.data.currency??'XAF'),direction:'out',counterAccountCode:'LOAN_RECEIVABLE',counterAccountType:'asset',descriptionCode:'LEDGER_LOAN_DISBURSEMENT',sourceType:'loan',sourceId:loan.id,meetingId:input.meetingId,idempotencyKey:input.idempotencyKey,kind:'loan_disbursement'});
+      const cashAfter=await ledger.summary(ctx.tenantId,input.groupId,String(loan.data.currency??'XAF'));if(Number(cashAfter.cashBalance??0)<0&&entry){await ledger.reverseEntry({tenantId:ctx.tenantId,groupId:input.groupId,entryId:entry.id,reason:'Décaissement concurrent refusé : caisse négative'});if(upfrontEntry)await ledger.reverseEntry({tenantId:ctx.tenantId,groupId:input.groupId,entryId:upfrontEntry.id,reason:'Annulation de l’intérêt préalable car le prêt n’a pas pu être décaissé'});if(fundingReservation)await repo.saveWorkspaceRecord({...fundingReservation,status:'ARCHIVED',data:{...fundingReservation.data,rejectedAt:new Date().toISOString(),reason:'NEGATIVE_CASH_AFTER_CONCURRENT_DISBURSEMENT'},updatedAt:new Date().toISOString()});throw Error('INSUFFICIENT_CASH_CONCURRENT');}
       if(timing==='UPFRONT_DEDUCTED'&&upfrontInterest>0&&!upfrontEntry)upfrontEntry=await ledger.recordLoanRepayment({tenantId:ctx.tenantId,groupId:input.groupId,principalAmount:0,interestAmount:upfrontInterest,currency:String(loan.data.currency??'XAF'),sourceId:loan.id,meetingId:input.meetingId,idempotencyKey:upfrontKey});
       loan=await completion.transition(input.groupId,loan.id,'DISBURSED',{expectedVersion:input.expectedVersion,patch:{ledgerEntryId:entry.id,outstandingPrincipal:input.principal,unpaidInterest:0,accruedMeetingIdsJson:'[]',interestTiming:timing,upfrontInterestAmount:upfrontInterest,upfrontInterestLedgerEntryId:upfrontEntry?.id??'',upfrontInterestSourceMeetingId:input.meetingId??'',upfrontInterestSkipNextClose:upfrontInterest>0&&!input.meetingId,upfrontInterestPending:false,disbursedAt:entry.createdAt}});
     }else if(!['DISBURSED','REPAYING','CLOSED'].includes(initialState)||!entry)throw Error('LOAN_NOT_APPROVED');
@@ -326,6 +361,7 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
       const eventId='sheet_loan_event_'+entry!.id,existing=await repo.getWorkspaceRecord(ctx.tenantId,eventId);if(!existing)await repo.saveWorkspaceRecord({id:eventId,tenantId:ctx.tenantId,groupId:input.groupId,moduleId:'FINANCE.SHEET_EVENT',title:'Prêt décaissé',summary:'Projection de feuille liée à l’écriture canonique du prêt.',status:'DONE',tags:['sheet-event','loan-disbursement','ledger:'+entry!.id],data:{membershipId:String(loan.data.borrowerMembershipId??''),meetingId:input.meetingId,rubricId,loanId:loan.id,ledgerEntryId:entry!.id,amount:input.principal,direction:'OUT'},createdBy:ctx.actorId,createdAt:entry!.createdAt,updatedAt:entry!.createdAt});
       await publishLive(input.groupId,'MEETING_UPDATE','loan-sheet-live:'+entry!.id,{meetingId:input.meetingId,kind:'FINANCIAL_CELL',operationType:'LOAN_DISBURSEMENT',membershipId:String(loan.data.borrowerMembershipId??''),rubricId,previousAmount:0,newAmount:input.principal,meetingClosed:false,actorId:ctx.actorId,actorName:await actorLabel()});
     }
+    if(fundingReservation)await repo.saveWorkspaceRecord({...fundingReservation,status:'DONE',data:{...fundingReservation.data,ledgerEntryId:entry!.id,confirmedAt:new Date().toISOString()},updatedAt:new Date().toISOString()});
     return{entry:entry!,upfrontInterestEntry:upfrontEntry??null,upfrontInterest,interestTiming:timing,loan};
   };
   const accrueLoanInterestAfterMeetingClose=async(groupId:string,closedMeeting:any)=>{
