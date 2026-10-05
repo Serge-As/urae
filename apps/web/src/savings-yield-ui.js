@@ -7,7 +7,7 @@ const monthSession=new Map(months.map((m,i)=>[m[0],i+1]));
 export function mountSavingsYieldUI({app,getMembers,notify=()=>{},showError=console.error,fmt=n=>String(n),isManager=()=>false}){
   const form=document.getElementById('yieldDepositForm'),eventForm=document.getElementById('yieldEventForm'),root=document.getElementById('yieldDepositList'),eventRoot=document.getElementById('yieldEventList'),result=document.getElementById('yieldResult'),coefRoot=document.getElementById('yieldCoefficients'),schoolCoefRoot=document.getElementById('yieldSchoolCoefficients');
   if(!form||!root||!result||!coefRoot)return{refresh:async()=>{}};
-  const deposits=[],events=[];let seq=0,eventSeq=0,canonicalLoaded=false,canonicalRefreshTimer=0;const canonicalSummary=document.getElementById('yieldCanonicalSummary'),canonicalTables=document.getElementById('yieldCanonicalTables'),healthSummary=document.getElementById('yieldHealthSummary'),interestEvolution=document.getElementById('yieldInterestEvolution'),autoSyncStatus=document.getElementById('yieldAutoSyncStatus');
+  const deposits=[],events=[];let seq=0,eventSeq=0,canonicalLoaded=false,canonicalRefreshTimer=0,canonicalData=null,policyHydratedGroup='';const canonicalSummary=document.getElementById('yieldCanonicalSummary'),canonicalTables=document.getElementById('yieldCanonicalTables'),healthSummary=document.getElementById('yieldHealthSummary'),interestEvolution=document.getElementById('yieldInterestEvolution'),autoSyncStatus=document.getElementById('yieldAutoSyncStatus');
   const option=(v,t)=>{const o=document.createElement('option');o.value=v;o.textContent=t;return o;};
   if(!coefRoot.children.length)for(const [key,label,coef] of months){const l=el('label',label);const i=el('input');i.type='number';i.step='0.1';i.min='0';i.value=String(coef);i.dataset.period=key;l.append(i);coefRoot.append(l);}
   const schoolDefaults=new Map([['JAN',7],['FEB',6],['MAR',5],['APR',4],['MAY',3],['JUN',2],['JUL',1],['AUG',0],['SEP',0],['OCT',0],['NOV',0],['DEC',0]]);
@@ -38,8 +38,7 @@ export function mountSavingsYieldUI({app,getMembers,notify=()=>{},showError=cons
     }
   };
   const populateMembers=()=>{
-    const select=document.getElementById('yieldDepositMember');if(!select)return;const previous=select.value;select.replaceChildren(option('','Choisir un membre'));
-    for(const m of getMembers())select.append(option(m.id,m.displayName));if([...select.options].some(o=>o.value===previous))select.value=previous;
+    for(const id of ['yieldDepositMember','yieldEventMember']){const select=document.getElementById(id);if(!select)continue;const previous=select.value;select.replaceChildren(option('','Choisir un membre'));for(const m of getMembers())select.append(option(m.id,m.displayName));if([...select.options].some(o=>o.value===previous))select.value=previous;}
   };
   const renderSeriesTable=(title,entries,data,note='')=>{
     const section=el('section',undefined,'yield-canonical-series'),h=el('h3',title);section.append(h);if(note)section.append(el('p',note,'hint'));
@@ -78,8 +77,8 @@ export function mountSavingsYieldUI({app,getMembers,notify=()=>{},showError=cons
   document.getElementById('yieldInterestPool')?.addEventListener('input',e=>{e.currentTarget.dataset.userEdited='1';});
 
   const checkShares=()=>{
-    const shares=number('yieldClassicShare')+number('yieldSchoolShare')+number('yieldOfficeShare')+number('yieldReserveShare');
-    if(Math.abs(shares-100)>.0001)throw new Error('Les parts Épargne classique + Épargne scolaire + Bureau + Réserve doivent totaliser 100 %.');
+    const shares=number('yieldClassicShare')+number('yieldSchoolShare')+number('yieldBorrowerShare')+number('yieldOfficeShare')+number('yieldReserveShare');
+    if(Math.abs(shares-100)>.0001)throw new Error('Les parts Épargne classique + Épargne scolaire + Emprunteurs + Bureau + Réserve doivent totaliser 100 %.');
   };
   const renderMembers=(data,title)=>{
     result.replaceChildren();result.append(el('h3',title),el('p','Enveloppe effectivement distribuée : '+fmt(data.distributedInterest??data.distributedToSavers??0),'truth-notice'));
@@ -96,9 +95,9 @@ export function mountSavingsYieldUI({app,getMembers,notify=()=>{},showError=cons
   }catch(err){showError(err);}});
 
   eventForm?.addEventListener('submit',e=>{e.preventDefault();try{
-    const type=value('yieldEventType'),session=number('yieldEventSession'),loanId=value('yieldEventLoanId'),fund=value('yieldEventFund')||'CLASSIC',amount=number('yieldEventAmount');
+    const type=value('yieldEventType'),session=number('yieldEventSession'),loanId=value('yieldEventLoanId'),memberId=value('yieldEventMember'),fund=value('yieldEventFund')||'CLASSIC',amount=number('yieldEventAmount');
     if(!loanId||!Number.isSafeInteger(session)||session<=0||!Number.isSafeInteger(amount)||amount<=0)throw new Error('INVALID_SAVINGS_EVENT');
-    const event={id:'yield-event-'+(++eventSeq),type,session,loanId,amount};if(type!=='LOAN_PRINCIPAL_REPAYMENT')event.fund=fund;events.push(event);
+    const event={id:'yield-event-'+(++eventSeq),type,session,loanId,memberId,amount};if(type!=='LOAN_PRINCIPAL_REPAYMENT')event.fund=fund;events.push(event);
     document.getElementById('yieldEventAmount').value='';renderEvents();
   }catch(err){showError(err);}});
 
@@ -124,7 +123,7 @@ export function mountSavingsYieldUI({app,getMembers,notify=()=>{},showError=cons
   }catch(err){showError(err);}})());
 
   const saverPool=()=>{
-    checkShares();const total=number('yieldInterestPool'),retained=bps(number('yieldOfficeShare')+number('yieldReserveShare'));
+    checkShares();const total=number('yieldInterestPool'),retained=bps(number('yieldOfficeShare')+number('yieldReserveShare')+number('yieldBorrowerShare'));
     return Math.round(total*(10000-retained)/10000);
   };
   const fundPool=(fund)=>{
@@ -143,14 +142,15 @@ export function mountSavingsYieldUI({app,getMembers,notify=()=>{},showError=cons
   const loanCycles=()=>{
     const by=new Map();
     for(const event of events){
-      const row=by.get(event.loanId)??{loanId:event.loanId,principal:0,realizedInterest:0,principalRepaid:0,disbursedSession:Infinity,repaidSession:undefined,sourceFund:'CLASSIC'};
+      const row=by.get(event.loanId)??{loanId:event.loanId,memberId:event.memberId??'',principal:0,realizedInterest:0,principalRepaid:0,disbursedSession:Infinity,repaidSession:undefined,sourceFund:'CLASSIC'};
+      if(event.memberId)row.memberId=event.memberId;
       if(event.type==='LOAN_DISBURSEMENT'){row.principal+=event.amount;row.disbursedSession=Math.min(row.disbursedSession,event.session);row.sourceFund=event.fund??row.sourceFund;}
       if(event.type==='LOAN_INTEREST_RECEIPT')row.realizedInterest+=event.amount;
       if(event.type==='LOAN_PRINCIPAL_REPAYMENT'){row.principalRepaid+=event.amount;row.repaidSession=Math.max(row.repaidSession??0,event.session);}
       by.set(event.loanId,row);
     }
     return [...by.values()].filter(x=>x.principal>0).map(x=>({
-      loanId:x.loanId,principal:x.principal,realizedInterest:x.realizedInterest,disbursedSession:x.disbursedSession,
+      loanId:x.loanId,memberId:x.memberId,principal:x.principal,realizedInterest:x.realizedInterest,disbursedSession:x.disbursedSession,
       repaidSession:x.principalRepaid>=x.principal?x.repaidSession:undefined,sourceFund:x.sourceFund,
       eligibleFunds:value('yieldPoolingMode')==='CUSTOM_MATRIX'?[x.sourceFund]:undefined
     }));
