@@ -29,7 +29,8 @@ test('free conservation keeps targeted patching but disables automatic queue and
 
 test('typing is pure push while only actual draft state survives websocket hibernation',()=>{
   assert.match(hub,/TYPING \/ FOCUS \/ BLUR are pure push/);
-  assert.match(hub,/Only an actual draft state change is retained/);
+  assert.match(hub,/Preserve multiple independent cell drafts/);
+  assert.match(hub,/draftStorageKey\(signal\.actorId,signal\.payload\)/);
   assert.match(hub,/signal-actor:[^\n]*:draft/);
   assert.match(hub,/ttlMs:12000/);
   assert.doesNotMatch(hub,/payload\.amount/);
