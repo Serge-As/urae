@@ -1,5 +1,11 @@
 # ECO-SYSTEM — PROJECT STATE
 
+## CANDIDATE ONLY — ECO 1.5.2.10 field recovery / Cloudflare Live (2026-10-05)
+
+Le chantier n'est **pas** une nouvelle version de production. PR brouillon [#66](https://github.com/SergeDelor/tontine-platform/pull/66), base SHA `393f80df88076072317f08adee81fe14d54d06c5`. Sur la branche candidate, le Live est événementiel WebSocket (frappe, brouillon par cellule/acteur, date/auteur, validation), sans polling D1 à la seconde ; réduction des écritures d'identité D1 sur requêtes redondantes ; quota signalé explicitement, Outbox récupérée au retour réseau/quota. Les corrections de dette, politiques de prêt/épargne et historique tabulaire restent sous essais. CI sur `9c3ce510f3c2791cbd5c9de81b1e8a77f451b052` : **590/590 tests**, `browser-critical` SUCCESS, run `37317103271`. **FIELD_ACCEPTED=false**, **deployed=false** pour cette branche ; voir `docs/recovery/ECO_FIELD_13_POINTS_2026-10-05.md`. Requête utilisateur : éviter toute évolution non autorisée et ne jamais mélanger le cache SW v15210 avec du code nouveau avant versionnement complet et recettes.
+
+---
+
 ## CURRENT OVERRIDE — 1.5.2.9 SOVEREIGN OFFLINE + BROADCAST QR + iOS — PRODUCTION VERIFIED (2026-09-28)
 
 Production publique : `1.5.2.9-sovereign-offline`, SHA exact `faa23c6b279197b267dd1981529e39b5bd994d62`, Worker Version ID `0902744e-3293-448f-ad4c-5f6af2dd4804`, PWA cache `eco-system-v1529-sovereign-offline-20260928`.
