@@ -112,9 +112,12 @@ export function mountIdentityLiveUI({app,notify=()=>{},showError=console.error,c
     return connectPromise;
   };
 
+  const deniedObservatoryActors=new Set();
   const renderFounderObservatory=async()=>{
     const panel=document.getElementById('founderObservatoryPanel'),stats=document.getElementById('founderObservatoryStats'),list=document.getElementById('founderObservatoryList');
     if(!panel||!stats||!list)return;
+    const actor=String(app.currentActor?.()??'');
+    if(deniedObservatoryActors.has(actor))return;
     try{
       const data=await app.founderLearningObservatory(5);
       panel.hidden=false;stats.replaceChildren();list.replaceChildren();
@@ -127,7 +130,8 @@ export function mountIdentityLiveUI({app,notify=()=>{},showError=console.error,c
       }
     }catch(e){
       panel.hidden=true;stats.replaceChildren();list.replaceChildren();
-      if(e instanceof Error&&!['FOUNDER_TEAM_ONLY','FORBIDDEN_SCOPE'].includes(e.message)&&!e.message.includes('403'))showError(e);
+      if(e instanceof Error&&(['FOUNDER_TEAM_ONLY','FORBIDDEN_SCOPE'].includes(e.message)||e.message.includes('403')))deniedObservatoryActors.add(actor);
+      else showError(e);
     }
   };
 
@@ -147,6 +151,10 @@ export function mountIdentityLiveUI({app,notify=()=>{},showError=console.error,c
     // Finance push must not depend on unrelated identity/concierge D1 reads.
     // A quota-limited request must never prevent managers from receiving writes.
     if(conservationMode&&(!socket||socket.readyState>1))connect();
+    // A financial mutation must not fan out into five unrelated D1 reads.
+    // Those optional panels are only needed while viewing Settings, not when
+    // opening a group, saving a cell, restoring offline, or resuming Live.
+    if(!document.getElementById('view-settings')?.classList.contains('active'))return;
     try{
       const [passport,dna]=await Promise.all([app.groupIdentityPassport(),app.conciergeProfile()]);
       passportRoot.replaceChildren(row('Code identitaire',passport.publicCode),row('Empreinte identité',passport.identityFingerprint),row('Empreinte règles',passport.rulesFingerprint),row('Rubriques',passport.rubricCount),row('Sécurité','Identifiant public, jamais un secret d’accès'));
@@ -176,6 +184,9 @@ export function mountIdentityLiveUI({app,notify=()=>{},showError=console.error,c
     }catch(e){showError(e);}
   };
 
+  window.addEventListener('eco:view-changed',event=>{
+    if(event?.detail?.view==='settings')void refresh();
+  });
   window.addEventListener('online',()=>{if(wantConnection){reconnectAttempt=0;connect();}});
   // Android may retain navigator.onLine=true while switching Wi-Fi/data. React
   // only to a change of connection TYPE, never to RTT/downlink fluctuations.
