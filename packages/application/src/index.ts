@@ -831,7 +831,10 @@ export class ConnectedApplication {
     const allRubrics=await this.listRubrics().catch(()=>[]);
     const officialLoanRubric=allRubrics.find((r:any)=>String(r.facets?.custom?.systemKey??'').toUpperCase()==='LOAN'||/^(pret|prets|emprunt|emprunts|loan|loans)$/.test(String(r.name??'').normalize('NFKD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim()));
     const policyPriority=String(officialLoanRubric?.policies?.loan?.paymentPriority??'CAPITAL_FIRST')==='INTEREST_FIRST'?'INTEREST_FIRST':'CAPITAL_FIRST';
-    if(!canWrite)return queue({repaymentComponent:component,paymentPriority:policyPriority});
+    // Write-ahead, including online. Losing a response after a canonical commit
+    // must never lose its idempotency key or force the user to pay twice.
+    const repaymentIntent=await queue({repaymentComponent:component,paymentPriority:policyPriority});
+    if(!canWrite)return repaymentIntent;
     try{
       const active=(await this.listCompletion('LOAN')).filter(l=>String(l.data?.borrowerMembershipId??'')===input.membershipId&&['DISBURSED','REPAYING'].includes(String(l.data?.completionState??''))&&(Number(l.data?.outstandingPrincipal??0)>0||Number(l.data?.unpaidInterest??0)>0));
       const loan=input.loanId?active.find(x=>x.id===input.loanId):active.length===1?active[0]:undefined;
@@ -840,8 +843,15 @@ export class ConnectedApplication {
       const allocation=component==='AUTO'
         ?{paymentAmount:input.amount,priority}
         :{principalAmount:component==='PRINCIPAL'?input.amount:0,interestAmount:component==='INTEREST'?input.amount:0,priority};
-      return await this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/loans/${encodeURIComponent(loan.id)}/repay`,{method:'POST',body:JSON.stringify({...allocation,expectedVersion:Number(loan.data?.completionVersion??0),meetingId:input.meetingId,rubricId:rubric.id,idempotencyKey:key+':repay'})});
-    }catch(error){if(error instanceof Error&&(error.message==='NETWORK_UNAVAILABLE'||/^HTTP_5\d\d$/.test(error.message)))return queue({repaymentComponent:component,paymentPriority:policyPriority});throw error;}
+      const result=await this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/loans/${encodeURIComponent(loan.id)}/repay`,{method:'POST',body:JSON.stringify({...allocation,expectedVersion:Number(loan.data?.completionVersion??0),meetingId:input.meetingId,rubricId:rubric.id,idempotencyKey:key+':repay'})});
+      this.outbox.markConfirmedByKey(this.tenantId,this.actorId,key);await this.persistOutbox();
+      return result;
+    }catch(error){
+      if(error instanceof Error&&(error.message==='NETWORK_UNAVAILABLE'||/^HTTP_5\d\d$/.test(error.message)))return repaymentIntent;
+      // A business validation error is not transient; never replay it silently.
+      this.outbox.markConflictByKey(this.tenantId,this.actorId,key);await this.persistOutbox();
+      throw error;
+    }
   }
 
   async recordCashContribution(input:{membershipId:string;amount:number;meetingId?:string;rubricId?:string;lateReason?:string;approverIds?:string[];lateAuthorizationId?:string}):Promise<{queued:boolean;receipt?:ContributionReceipt;outbox?:OutboxItem}>{
