@@ -59,6 +59,10 @@ const scan=async(url,from)=>{
       const dep=localUrl(match[1].trim(),pathname);
       if(dep)await scan(dep,pathname);
     }
+    for(const match of css.matchAll(/@import\s+(?:url\(\s*)?['"]([^'"]+)['"]/g)){
+      const dep=localUrl(match[1],pathname);
+      if(dep)await scan(dep,pathname);
+    }
   }
   if(/\.html$/i.test(pathname)){
     const html=source.toString('utf8');
