@@ -1,5 +1,7 @@
-const CACHE = 'eco-system-v15211-field-recovery-20261005';
-const PREVIOUS_CACHE = 'eco-system-v15210-offline-conflicts-loans-20261003';
+// A new cache identity is mandatory, even for a patch-level app release.
+const CACHE = 'eco-system-q01q28-recovery-20261006';
+const PREVIOUS_CACHE = 'eco-system-v15211-field-recovery-20261005';
+const LEGACY_RECOVERY_CACHE = 'eco-system-v15210-offline-conflicts-loans-20261003';
 const RELEASE_READY = '/__eco_release_ready__';
 
 // Authentication, navigation and canonical application owners must be complete
@@ -84,8 +86,9 @@ self.addEventListener('install', event => {
     await cache.put(RELEASE_READY, new Response(JSON.stringify({cache:CACHE,installedAt:new Date().toISOString(),assets:APP_SHELL.length}), {
       headers:{'content-type':'application/json; charset=utf-8'}
     }));
-    // Installation is atomic above; only now may this complete release replace a stale controller.
-    await self.skipWaiting();
+    // Do not forcibly activate over an open old main.js. Allow the current
+    // controller to finish naturally; no F5 or mixed-version dynamic imports.
+    // A first installation activates normally without skipWaiting().
     } catch (error) {
       // Roll back an incomplete candidate ONLY. Never delete the previous
       // release cache, IndexedDB, Outbox, drafts, or any canonical financial data.
@@ -104,7 +107,7 @@ self.addEventListener('activate', event => {
     // Keep one known previous coherent release for operator rollback/recovery.
     // Never delete the immediately previous cache during the same activation.
     for (const name of names) {
-      if (name.startsWith('eco-system-') && name !== CACHE && name !== PREVIOUS_CACHE) {
+      if (name.startsWith('eco-system-') && name !== CACHE && name !== PREVIOUS_CACHE && name !== LEGACY_RECOVERY_CACHE) {
         try { await caches.delete(name); } catch (_) {}
       }
     }
