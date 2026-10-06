@@ -196,6 +196,7 @@ const fail = (e) => {
         INDEPENDENT_REVIEW_REQUIRED: 'Cette correction financière exige la revue d’un autre responsable habilité. L’auteur ne peut jamais valider sa propre correction.',
         MEMBER_SELF_ACTION_REQUIRED: 'Le dossier personnel et certaines validations doivent être effectués par le membre concerné lui-même.',
         IDEMPOTENCY_CONFLICT: 'Cette référence correspond déjà à une opération différente. Consultez le reçu existant.',
+        CELL_CLOCK_REVIEW_REQUIRED: 'Horloge de validation non vérifiable pour cette saisie. Le montant local est conservé en contentieux et ne remplace pas la comptabilité tant que la chronologie n’est pas vérifiée.',
         CELL_VALUE_CONFLICT: 'Cette cellule a déjà été modifiée par un autre gestionnaire. Eco-System vient de resynchroniser automatiquement la valeur actuelle. Vérifiez-la puis validez de nouveau si nécessaire. Si elle ne se met pas à jour sous 2 secondes, cliquez sur Actualiser.',
         CELL_VERSION_CONFLICT: 'Cette cellule a changé depuis votre dernière lecture. Eco-System vient de resynchroniser automatiquement sa version. Vérifiez-la puis recommencez uniquement cette cellule. Si elle reste inchangée sous 2 secondes, cliquez sur Actualiser.',
         HTTP_503: 'Le serveur de synchronisation est momentanément indisponible. Si cette opération a été mise en file locale, elle sera renvoyée automatiquement ; sinon attendez quelques instants puis cliquez sur Actualiser avant de ressaisir.',
@@ -766,7 +767,7 @@ const markCriticalFinancialConflict=detail=>{
 };
 const renderPersistedFinancialConflicts=()=>{
   for(const item of app.outboxItems?.()??[]){
-    if(item.type!=='FINANCIAL_CELL_CORRECTION_PROPOSAL_V1'||item.status!=='CONFLICT')continue;
+    if(!['FINANCIAL_CELL_CORRECTION_PROPOSAL_V1','FINANCIAL_CELL_CORRECTION_PROPOSAL_V2'].includes(item.type)||item.status!=='CONFLICT')continue;
     const p=item.payload??{};markCriticalFinancialConflict({meetingId:p.meetingId,membershipId:p.membershipId,rubricId:p.rubricId,amount:Number(p.targetAmount??0),idempotencyKey:item.idempotencyKey});
   }
 };
@@ -774,7 +775,17 @@ const rememberTargetsConfirmedBySync=before=>{
   const byKey=new Map((app.outboxItems?.()??[]).map(item=>[String(item.idempotencyKey??''),item]));
   for(const item of before){
     const stored=byKey.get(item.idempotencyKey);
-    if(stored?.status==='CONFIRMED')rememberConfirmedCell(item.key,item);
+    if(stored?.status==='CONFIRMED'){
+      if(stored.lastResult?.status==='SUPERSEDED'){
+        forgetConfirmedCell(item.key);financialOptimisticValues.delete(item.key);
+        const acceptedAmount=Number(stored.lastResult?.canonicalAmount);
+        if(Number.isSafeInteger(acceptedAmount))patchFinancialDomCell({
+          ...item,amount:acceptedAmount,cellVersion:Number(stored.lastResult?.cellVersion),
+          preservePending:false});
+      }else rememberConfirmedCell(item.key,{
+        ...item,amount:Number(stored.lastResult?.canonicalAmount??item.amount),
+        cellVersion:Number(stored.lastResult?.cellVersion??item.cellVersion)});
+    }
     else if(stored?.status==='CONFLICT'){forgetConfirmedCell(item.key);financialOptimisticValues.delete(item.key);markCriticalFinancialConflict(item);}
   }
 };
@@ -864,13 +875,13 @@ const submitFinancialCellElement=async validate=>{
       if(!Number.isSafeInteger(target)||target<0)throw new Error('INVALID_CONTRIBUTION_AMOUNT');
       setCellState('SAVING_LOCAL',tx('Enregistrement…','Saving…'));
       traceFinancialCell('CELL_SUBMIT',{cellKey,membershipId,rubricId,meetingId,target,current,nature});
-      if(target===current){
+      if(target===current&&nature!=='CONTRIBUTION'){
         input.value='';clearFinancialCellDraft(cellKey);clearRemoteDraft();setCellState('IDLE');
         toast(tx('Aucun changement : cette valeur est déjà enregistrée.','No change: this value is already recorded.'));
         return;
       }
       const meeting=meetings.find(x=>x.id===meetingId);let reason='';
-      if(current>0||meeting?.status==='closed'){
+      if(target!==current&&(current>0||meeting?.status==='closed')){
         reason=prompt(tx(`Motif de la modification ${fmt(current)} → ${fmt(target)} :`,`Reason for change ${fmt(current)} → ${fmt(target)}:`),tx('Correction de la valeur de la cellule','Cell value correction'))??'';
         if(!reason.trim()){setCellState('IDLE');return;}
       }
@@ -883,7 +894,7 @@ const submitFinancialCellElement=async validate=>{
         currentLabel.textContent=fmt(displayTarget);
       };
       if(nature==='CONTRIBUTION'){
-        if(current===0&&target===0){input.value='';clearFinancialCellDraft(cellKey);clearRemoteDraft();setCellState('IDLE');return;}
+        // A zero or identical amount may itself be a newer recorded intent.
         // Display the local working value immediately. Transport can be slow or
         // unavailable, but the cell must not visually jump back while the
         // durable command is being queued/sent.
@@ -928,11 +939,23 @@ const submitFinancialCellElement=async validate=>{
       }
       input.value='';clearFinancialCellDraft(cellKey);clearRemoteDraft();renderOutbox();
       const preservePending=Boolean(result?.status==='QUEUED_SYNC'||result?.queued);
+      const superseded=String(result?.status??'')==='SUPERSEDED';
+      const canonicalSigned=superseded?Number(result?.canonicalAmount??signedCurrent):displayTarget;
+      if(superseded){
+        // A later recorded intent on another phone prevailed. Show its value,
+        // never the sender's outdated target and never a false green ACK.
+        financialOptimisticValues.delete(cellKey);forgetConfirmedCell(cellKey);
+        holder.classList.add('is-conflict');
+        setCellState('CONFLICT',tx('Saisie antérieure conservée dans l’historique · montant récent retenu : ',
+          'Earlier entry retained in history · latest value kept: ')+fmt(canonicalSigned));
+        toast(tx('Un autre enregistrement plus récent prévaut. Votre saisie reste contestable.',
+          'A later recording prevails. Your entry remains available for review.'));
+      }
       const unresolvedConsensus=String(result?.status??'')==='CONSENSUS_REQUIRED';
-      if(!preservePending&&!unresolvedConsensus){rememberConfirmedCell(cellKey,{amount:displayTarget,cellVersion:Number.isFinite(Number(result?.cellVersion))?Number(result.cellVersion):exactCellVersion(membershipId,rubricId,meetingId)+1,meetingId,membershipId,rubricId});const changedAt=new Date().toISOString(),actorId=String(app.currentActor?.()??'');financialCellMetadata.set(cellKey,{actorId,at:changedAt,stamp:Date.now()});holder.dataset.lastActor=actorId;stampEditorColor(holder,actorId);holder.dataset.lastUpdatedAt=changedAt;holder.title=tx(`Dernière modification : ${actorDisplayName(actorId)||tx('Gestionnaire','Manager')} · ${date(changedAt)}`,`Last change: ${actorDisplayName(actorId)||tx('Gestionnaire','Manager')} · ${date(changedAt)}`);}
-      patchFinancialDomCell({meetingId,membershipId,rubricId,amount:displayTarget,cellVersion:result?.cellVersion,preservePending});
+      if(!preservePending&&!unresolvedConsensus&&!superseded){rememberConfirmedCell(cellKey,{amount:canonicalSigned,cellVersion:Number.isFinite(Number(result?.cellVersion))?Number(result.cellVersion):exactCellVersion(membershipId,rubricId,meetingId)+1,meetingId,membershipId,rubricId});const changedAt=new Date().toISOString(),actorId=String(app.currentActor?.()??'');financialCellMetadata.set(cellKey,{actorId,at:changedAt,stamp:Date.now()});holder.dataset.lastActor=actorId;stampEditorColor(holder,actorId);holder.dataset.lastUpdatedAt=changedAt;holder.title=tx(`Dernière modification : ${actorDisplayName(actorId)||tx('Gestionnaire','Manager')} · ${date(changedAt)}`,`Last change: ${actorDisplayName(actorId)||tx('Gestionnaire','Manager')} · ${date(changedAt)}`);}
+      patchFinancialDomCell({meetingId,membershipId,rubricId,amount:canonicalSigned,cellVersion:result?.cellVersion,preservePending});
       focusNextFinancialInput(holder,wrapState);
-      window.dispatchEvent(new CustomEvent('eco:financial-data-changed',{detail:{meetingId,membershipId,rubricId,amount:displayTarget,cellVersion:result?.cellVersion,soft:true,preservePending}}));
+      window.dispatchEvent(new CustomEvent('eco:financial-data-changed',{detail:{meetingId,membershipId,rubricId,amount:canonicalSigned,cellVersion:result?.cellVersion,soft:true,preservePending}}));
       // In free-conservation mode the transaction response + WebSocket event are
       // authoritative. No D1 snapshot GET is triggered after each cell.
       if(!preservePending&&!FREE_CONSERVATION_MODE)void pollCanonicalFinancialSnapshot();
@@ -942,7 +965,7 @@ const submitFinancialCellElement=async validate=>{
       // A rejected command must never leave the optimistic working value looking
       // like a confirmed mutation.
       if(optimisticStaged)financialOptimisticValues.delete(cellKey);
-      if(['CELL_VALUE_CONFLICT','CELL_VERSION_CONFLICT'].includes(code)){
+      if(['CELL_VALUE_CONFLICT','CELL_VERSION_CONFLICT','CELL_CLOCK_REVIEW_REQUIRED'].includes(code)){
         financialOptimisticValues.delete(cellKey);holder.classList.add('is-conflict');markCriticalFinancialConflict({meetingId,membershipId,rubricId,amount:Number.isFinite(target)?target:Number(input.value||0)});
         setCellState('CONFLICT',tx('Une autre saisie existe · resynchronisation de cette cellule…','Another entry exists · resynchronizing this cell…'));
         try{
@@ -1685,7 +1708,7 @@ const applyRemoteFinancialProjection=(p={})=>{
     // Preserve them for the server CAS and visibly flag divergent edits.
     const pending=(app.outboxItems?.()??[]).find(item=>{
       if(['CONFIRMED','CANCELLED'].includes(String(item.status??'')))return false;
-      if(!['FINANCIAL_CELL_CORRECTION_PROPOSAL_V1','FINANCIAL_SHEET_ENTRY_V1'].includes(String(item.type)))return false;
+      if(!['FINANCIAL_CELL_CORRECTION_PROPOSAL_V1','FINANCIAL_CELL_CORRECTION_PROPOSAL_V2','FINANCIAL_SHEET_ENTRY_V1'].includes(String(item.type)))return false;
       const d=item.payload??{};
       return String(d.meetingId??'')===String(p.meetingId)&&String(d.membershipId??'')===String(p.membershipId)&&String(d.rubricId??'')===String(p.rubricId);
     });
