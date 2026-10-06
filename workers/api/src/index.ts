@@ -274,7 +274,7 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
       await notifications.publish(groupId,{title:meeting.status==='closed'?'Séance clôturée modifiée':'Donnée financière corrigée',message:`${correctionMember} · ${correctionRubric} · ${meetingWhen} : ${previousAmount} → ${newAmount} F CFA. Auteur : ${correctionActor}. Modification : ${changeWhen}. Motif : ${reason}`,channels:['IN_APP','WEB_PUSH'],audience:'MANAGERS',priority:meeting.status==='closed'?'CRITICAL':'HIGH',action,idempotencyKey:'financial-correction:'+operationId+':managers'});
       await notifications.publish(groupId,{title:meeting.status==='closed'?'Votre compte a été corrigé après clôture':'Votre compte a été corrigé',message:`${correctionRubric} · ${meetingWhen} : ${previousAmount} → ${newAmount} F CFA. Auteur : ${correctionActor}. Modification : ${changeWhen}. Motif : ${reason}. Vous pouvez valider ou émettre une réserve.`,channels:['IN_APP','WEB_PUSH'],audience:'SELECTED',selectedMembershipIds:[membershipId],priority:meeting.status==='closed'?'CRITICAL':'HIGH',action,idempotencyKey:'financial-correction:'+operationId+':member'});
       await publishLive(groupId,'FINANCIAL_NOTICE','financial-cell-correction:'+entry.id,{noticeId:notice.id,ledgerEntryId:entry.id,operationType:'FINANCIAL_CELL_CORRECTION',amount:newAmount,currency:'XAF',previousAmount,newAmount,meetingClosed:meeting.status==='closed',alertLevel:meeting.status==='closed'?'closed':'correction'},targetMember.userId);
-      await publishLive(groupId,'MEETING_UPDATE','financial-cell-managers:'+entry.id,{meetingId,kind:'FINANCIAL_CELL_CORRECTION',operationType:'FINANCIAL_CELL_CORRECTION',membershipId,rubricId,previousAmount,newAmount,cellVersion:d.cellVersion===undefined?undefined:Number(d.cellVersion),meetingClosed:meeting.status==='closed',actorId:record.createdBy,actorName:correctionActor});
+      await publishLive(groupId,'MEETING_UPDATE','financial-cell-managers:'+entry.id,{meetingId,kind:'FINANCIAL_CELL_CORRECTION',operationType:'FINANCIAL_CELL_CORRECTION',membershipId,rubricId,previousAmount,newAmount,cellVersion:d.cellVersion===undefined?0:Number(d.cellVersion),meetingClosed:meeting.status==='closed',actorId:record.createdBy,actorName:correctionActor});
       await repo.saveWorkspaceRecord({...record,status:'DONE',tags:[...new Set(record.tags.filter(t=>!['pending','retry-required'].includes(t)).concat('dispatched'))],data:{...record.data,attemptCount:Number(record.data.attemptCount??0)+1,lastError:null,noticeId:notice.id,dispatchedAt:new Date().toISOString()},updatedAt:new Date().toISOString()});
       return{ok:true,notice};
     }catch(error){
@@ -345,7 +345,7 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
       await publishLive(groupId,decision==='RESERVE'?'MANAGER_RESERVE':'CONSENSUS_SELECTED',
         outcome.review.id,{meetingId,membershipId,rubricId,cellVersion:current.cellVersion,
           amount:current.current,actorId:ctx.actorId,decision,reviewId:outcome.review.id,
-          conflictNoticeId:decision==='RESERVE'?outcome.record.id:undefined});
+          conflictNoticeId:decision==='RESERVE'?outcome.record.id:null});
       if(decision==='RESERVE')await publishLive(groupId,'MEMBER_PROJECTION_UPDATED',
         outcome.review.id+':member',{meetingId,membershipId,rubricId,cellVersion:current.cellVersion,
           amount:current.current,disputed:true},membership.userId);
