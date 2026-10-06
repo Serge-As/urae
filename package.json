@@ -1,9 +1,9 @@
 {
   "name": "tontine-platform",
-  "version": "1.5.2-10",
+  "version": "1.5.2-11",
   "private": true,
   "type": "module",
-  "description": "Eco-System 1.5.2.10: deterministic offline reload, event-driven reconnect, explicit multi-device financial conflicts, canonical savings truth, and compact loan/debt tables.",
+  "description": "Eco-System 1.5.2.11: deterministic offline reload, event-driven reconnect, explicit multi-device financial conflicts, canonical savings truth, and compact loan/debt tables.",
   "engines": {
     "node": ">=24"
   },

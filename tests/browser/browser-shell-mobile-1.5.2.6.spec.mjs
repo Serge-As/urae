@@ -4,6 +4,7 @@ import fs from 'node:fs';
 const swSource=fs.readFileSync('apps/web/sw.js','utf8');
 const htmlSource=fs.readFileSync('apps/web/index.html','utf8');
 const CURRENT_CACHE=swSource.match(/const CACHE = '([^']+)'/)?.[1];
+const PREVIOUS_CACHE=swSource.match(/const PREVIOUS_CACHE = '([^']+)'/)?.[1];
 const MAIN_SRC=htmlSource.match(/<script type="module" src="(\/src\/main\.js\?v=\d+)"><\/script>/)?.[1];
 const VERSION_TAG=MAIN_SRC?.match(/\?v=(\d+)/)?.[1];
 if(!CURRENT_CACHE||!MAIN_SRC||!VERSION_TAG)throw new Error('RELEASE_SHELL_IDENTITY_NOT_FOUND');
@@ -12,6 +13,26 @@ const base='http://127.0.0.1:4173';
 
 test('current shell installs completely, controls reload and survives offline without mixed assets',async({page,context})=>{
   test.setTimeout(90_000);
+  // Seed a coherent 1.5.2.10 cache + local storage before first app load.
+  // No Service Worker is registered on the /health JSON page.
+  await page.goto(base+'/health',{waitUntil:'domcontentloaded'});
+  await page.evaluate(async(previousCache)=>{
+    const old=await caches.open(previousCache);
+    await old.put('/index.html',new Response('<!doctype html><title>OLD_15210</title><body>OLD_15210</body>',{headers:{'content-type':'text/html'}}));
+    await old.put('/__eco_release_ready__',new Response(JSON.stringify({cache:previousCache,installedAt:'2026-10-03'})));
+    localStorage.setItem('eco:release-qa-outbox-marker','outbox-must-survive');
+    await new Promise((resolve,reject)=>{
+      const request=indexedDB.open('eco-release-qa',1);
+      request.onupgradeneeded=()=>request.result.createObjectStore('outbox');
+      request.onerror=()=>reject(request.error);
+      request.onsuccess=()=>{
+        const db=request.result,tx=db.transaction('outbox','readwrite');
+        tx.objectStore('outbox').put({amount:1000,status:'PENDING'},'pending-cell');
+        tx.oncomplete=()=>{db.close();resolve();};
+        tx.onerror=()=>reject(tx.error);
+      };
+    });
+  },PREVIOUS_CACHE);
   await page.goto(base+'/',{waitUntil:'domcontentloaded'});
   await expect(page.locator('body')).toContainText('Eco-System');
 
@@ -62,6 +83,24 @@ test('current shell installs completely, controls reload and survives offline wi
   await page.reload({waitUntil:'domcontentloaded'});
   await expect(page.locator('body')).toContainText('Eco-System');
   await expect(page.locator(`script[src="${MAIN_SRC}"]`)).toHaveCount(1);
+  const retained=await page.evaluate(async({currentCache,previousCache})=>{
+    const old=await caches.open(previousCache),current=await caches.open(currentCache);
+    const index=await old.match('/index.html'),newIndex=await current.match('/index.html');
+    const db=await new Promise((resolve,reject)=>{
+      const r=indexedDB.open('eco-release-qa',1);
+      r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(r.error);
+    });
+    const local=await new Promise((resolve,reject)=>{
+      const r=db.transaction('outbox','readonly').objectStore('outbox').get('pending-cell');
+      r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(r.error);
+    });
+    db.close();
+    return {old:await index?.text(),next:await newIndex?.text(),local,marker:localStorage.getItem('eco:release-qa-outbox-marker')};
+  },{currentCache:CURRENT_CACHE,previousCache:PREVIOUS_CACHE});
+  expect(retained.old).toContain('OLD_15210');
+  expect(retained.next).toContain('Eco-System');
+  expect(retained.marker).toBe('outbox-must-survive');
+  expect(retained.local).toEqual({amount:1000,status:'PENDING'});
   await context.setOffline(false);
 });
 

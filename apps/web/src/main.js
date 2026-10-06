@@ -78,6 +78,16 @@ let rubrics = [];
 let receiptPositions = [];
 let financialSheetEvents = [];
 let financialCellVersions = new Map();
+let financialCellMetadata = new Map();
+// Ephemeral indicators are local projections only. No draft amounts are sent
+// over Live or stored on the server, and this map is never a financial authority.
+const remoteFinancialDrafts=new Map();
+const remoteDraftNames=key=>{
+  const actors=remoteFinancialDrafts.get(key);if(!actors)return[];
+  for(const [id,row] of actors)if(Number(row.expiresAt)<Date.now()){clearTimeout(row.timer);actors.delete(id);}
+  if(!actors.size){remoteFinancialDrafts.delete(key);return[];}
+  return [...actors.values()].map(row=>String(row.name)).filter(Boolean);
+};
 let financialPendingTargets = new Map();
 let financialPendingSheetEntries = [];
 let financialReviewTargets = new Map();
@@ -136,7 +146,7 @@ let launchStudio;
 let modules = [];
 let selectedLot = 'ALL';
 let deferredInstallPrompt;
-const CAHIER_VERSION = '1.5.2.10-offline-conflicts-loans';
+const CAHIER_VERSION = '1.5.2.11-field-recovery';
 const $ = (s) => { const e = document.querySelector(s); if (!e)
     throw new Error(`UI_ELEMENT_NOT_FOUND:${s}`); return e; };
 const val = (id) => document.getElementById(id).value.trim();
@@ -183,6 +193,11 @@ const fail = (e) => {
         DURABLE_STORAGE_REQUIRED: 'Le stockage local est indisponible. Cette opération n’a pas été envoyée.',
         INVALID_CONTRIBUTION_AMOUNT: 'Le montant doit être un entier positif en F CFA.',
         SPECIALIZED_FINANCIAL_CORRECTION_REQUIRED: 'Cette cellule correspond à un prêt, un remboursement ou une sortie. Pour modifier une opération déjà comptabilisée, ouvrez son dossier spécialisé afin de conserver la dette, la caisse et les preuves cohérentes.',
+        INSUFFICIENT_AUTHORIZED_LOAN_FUNDS: 'Le montant du prêt dépasse les fonds que la politique du groupe autorise à prêter (Épargne + Remboursements/Intérêts encaissés disponibles). Aucun décaissement n’a été conservé.',
+        INSUFFICIENT_CASH_CONCURRENT: 'Deux décaissements concurrents auraient rendu la caisse négative. Eco-System a annulé avec trace cette tentative : actualisez le solde puis réessayez.',
+        INSUFFICIENT_CASH: 'La caisse disponible ne suffit pas pour ce décaissement selon la politique actuelle du groupe.',
+        MEETING_REQUIRED_FOR_RESTRICTED_LOAN_FUNDING: 'Ce mode de financement des prêts exige de rattacher le décaissement à une séance afin de vérifier les Épargnes et Remboursements autorisés.',
+        MEETING_REQUIRED_FOR_SESSION_ONLY_LOAN_FUNDING: 'Le groupe interdit le report des reliquats : choisissez la séance du décaissement.',
         LOAN_POLICY_REQUIRED: 'Configurez d’abord les règles de la rubrique Prêt avant le décaissement.',
         LOAN_RATE_REQUIRED: 'Le taux par période du prêt doit être défini avant le décaissement.',
         MULTIPLE_LOANS: 'Ce membre a plusieurs prêts actifs. Ouvrez le dossier Prêts pour choisir exactement celui à rembourser.',
@@ -367,7 +382,8 @@ const financialLabUI = mountFinancialLabUI({app,notify:toast,showError:fail});
 const resilienceUI = mountResilienceUI({app,notify:toast,showError:fail});
 const renderConnectivity = () => {
     const online=navigator.onLine,budget=app.serverBudgetState?.(),paused=Boolean(budget?.blocked),e=$('#connectivity');
-    e.textContent=paused?tx('● Mode conservation · serveur en pause','● Conservation mode · server paused'):`● ${online ? tx('En ligne','Online') : tx('Hors ligne','Offline')}`;
+    e.textContent=paused?(String(budget?.reason??'').startsWith('D1_')?tx('● Quota Cloudflare · saisies conservées localement','● Cloudflare quota · entries saved locally'):tx('● Mode conservation · serveur en pause','● Conservation mode · server paused')):`● ${online ? tx('En ligne','Online') : tx('Hors ligne','Offline')}`;
+    e.title=paused?tx(`Accès serveur limité. Reprise ciblée après ${new Date(Number(budget?.until??0)).toLocaleString('fr-FR')}. Les validations serveur restent en attente.`,`Server limited. Retry after ${new Date(Number(budget?.until??0)).toLocaleString('en-US')}. Server confirmations pending.`):'';
     e.className=`pill ${online&&!paused?'online':'offline'}`;app.setConnectivity(!online?'offline':paused?'degraded':'online');
 };
 let lastOfflineSnapshotNotice=0;
@@ -685,8 +701,16 @@ const loadFinancialProjectionState=async({clearOptimistic=false}={})=>{
     receiptPositions=l.receipts;
     financialPendingTargets=new Map((app.pendingFinancialCellTargets?.()??[]).map(x=>[financialCellKey(x.membershipId,x.rubricId,x.meetingId),x]));
     financialPendingSheetEntries=app.pendingFinancialSheetEntries?.()??[];
-    financialSheetEvents=[...sheetEvents,...sheetExpenses.map(x=>({id:x.id,data:{membershipId:x.membershipId,meetingId:x.meetingId,rubricId:x.rubricId,amount:x.amount,direction:'OUT',ledgerEntryId:x.ledgerEntryId}}))];
+    financialSheetEvents=[...sheetEvents,...sheetExpenses.map(x=>({id:x.id,createdBy:x.createdBy,createdAt:x.createdAt,updatedAt:x.updatedAt,data:{membershipId:x.membershipId,meetingId:x.meetingId,rubricId:x.rubricId,amount:x.amount,direction:'OUT',ledgerEntryId:x.ledgerEntryId}}))];
     financialCellVersions=new Map((l.cellRevisions??[]).map(r=>[JSON.stringify([r.meetingId,r.membershipId,r.rubricId,r.currency??'XAF']),Number(r.version??0)]));
+    financialCellMetadata=new Map();
+    const rememberMeta=(membershipId,rubricId,meetingId,actorId,at)=>{
+      if(!membershipId||!rubricId||!meetingId)return;
+      const key=financialCellKey(String(membershipId),String(rubricId),String(meetingId)),stamp=Date.parse(String(at??''))||0,old=financialCellMetadata.get(key);
+      if(!old||stamp>=Number(old.stamp??0))financialCellMetadata.set(key,{actorId:String(actorId??''),at:String(at??''),stamp});
+    };
+    for(const row of l.receipts??[])rememberMeta(row.membershipId,row.rubricId,row.meetingId,row.receivedBy,row.receivedAt);
+    for(const event of financialSheetEvents){const d=event.data??{};rememberMeta(d.membershipId,d.rubricId,d.meetingId,event.createdBy,event.updatedAt??event.createdAt);}
     if(clearOptimistic)financialOptimisticValues.clear();
     return l;
 };
@@ -893,7 +917,7 @@ const submitFinancialCellElement=async validate=>{
       input.value='';clearFinancialCellDraft(cellKey);clearRemoteDraft();renderOutbox();
       const preservePending=Boolean(result?.status==='QUEUED_SYNC'||result?.queued);
       const unresolvedConsensus=String(result?.status??'')==='CONSENSUS_REQUIRED';
-      if(!preservePending&&!unresolvedConsensus)rememberConfirmedCell(cellKey,{amount:displayTarget,cellVersion:Number.isFinite(Number(result?.cellVersion))?Number(result.cellVersion):exactCellVersion(membershipId,rubricId,meetingId)+1,meetingId,membershipId,rubricId});
+      if(!preservePending&&!unresolvedConsensus){rememberConfirmedCell(cellKey,{amount:displayTarget,cellVersion:Number.isFinite(Number(result?.cellVersion))?Number(result.cellVersion):exactCellVersion(membershipId,rubricId,meetingId)+1,meetingId,membershipId,rubricId});const changedAt=new Date().toISOString(),actorId=String(app.currentActor?.()??'');financialCellMetadata.set(cellKey,{actorId,at:changedAt,stamp:Date.now()});holder.dataset.lastActor=actorId;holder.dataset.lastUpdatedAt=changedAt;holder.title=tx(`Dernière modification : ${actorDisplayName(actorId)||tx('Gestionnaire','Manager')} · ${date(changedAt)}`,`Last change: ${actorDisplayName(actorId)||tx('Gestionnaire','Manager')} · ${date(changedAt)}`);}
       patchFinancialDomCell({meetingId,membershipId,rubricId,amount:displayTarget,cellVersion:result?.cellVersion,preservePending});
       focusNextFinancialInput(holder,wrapState);
       window.dispatchEvent(new CustomEvent('eco:financial-data-changed',{detail:{meetingId,membershipId,rubricId,amount:displayTarget,cellVersion:result?.cellVersion,soft:true,preservePending}}));
@@ -907,7 +931,7 @@ const submitFinancialCellElement=async validate=>{
       // like a confirmed mutation.
       if(optimisticStaged)financialOptimisticValues.delete(cellKey);
       if(['CELL_VALUE_CONFLICT','CELL_VERSION_CONFLICT'].includes(code)){
-        financialOptimisticValues.delete(cellKey);holder.classList.add('is-conflict');
+        financialOptimisticValues.delete(cellKey);holder.classList.add('is-conflict');markCriticalFinancialConflict({meetingId,membershipId,rubricId,amount:Number.isFinite(target)?target:Number(input.value||0)});
         setCellState('CONFLICT',tx('Une autre saisie existe · resynchronisation de cette cellule…','Another entry exists · resynchronizing this cell…'));
         try{
           await refreshFinancialProjectionSilently({meetingId,membershipId,rubricId,remote:true});
@@ -924,8 +948,10 @@ const submitFinancialCellElement=async validate=>{
 
 const makeFinancialEntryCell=({member,rubric,meetingId,editable=true})=>{
     const holder=document.createElement('div');holder.className='matrix-cell matrix-cell-entry';holder.dataset.membershipId=member.id;holder.dataset.rubricId=rubric.id;holder.dataset.meetingId=meetingId;holder.tabIndex=-1;
-    const nature=financialNatureForRubric(rubric),signedCurrent=exactCellAmount(member.id,rubric.id,meetingId),current=Math.abs(signedCurrent),currentLabel=document.createElement('strong');
+    const persistentCellKey=financialCellKey(member.id,rubric.id,meetingId),nature=financialNatureForRubric(rubric),signedCurrent=exactCellAmount(member.id,rubric.id,meetingId),current=Math.abs(signedCurrent),currentLabel=document.createElement('strong');
     currentLabel.className='cell-current'+(signedCurrent<0?' is-negative':'');currentLabel.textContent=fmt(signedCurrent);holder.append(currentLabel);
+    const meta=financialCellMetadata.get(persistentCellKey);
+    if(meta?.actorId||meta?.at){const actor=meta.actorId?actorDisplayName(meta.actorId):tx('Gestionnaire','Manager'),when=meta.at?date(meta.at):'';holder.dataset.lastActor=String(meta.actorId??'');holder.dataset.lastUpdatedAt=String(meta.at??'');holder.title=tx(`Dernière modification : ${actor}${when?' · '+when:''}`,`Last change: ${actor}${when?' · '+when:''}`);}
     const pendingState=exactCellPendingState(member.id,rubric.id,meetingId);
     if(pendingState.pending){
       const pendingBadge=document.createElement('small');pendingBadge.className='cell-sync-state '+(pendingState.kind==='REVIEW'?'review':'pending');
@@ -939,7 +965,6 @@ const makeFinancialEntryCell=({member,rubric,meetingId,editable=true})=>{
     }
     if(nature==='LOAN'){const badge=document.createElement('small');badge.className='cell-nature negative';badge.textContent=tx('Sortie / dette','Outflow / debt');holder.append(badge);}
     if(!editable)return holder;
-    const persistentCellKey=financialCellKey(member.id,rubric.id,meetingId);
     const input=document.createElement('input');input.type='number';input.min='0';input.step='1';input.inputMode='numeric';input.className='cell-target-input';input.placeholder=current>0?tx('Modifier…','Change…'):tx('Saisir…','Enter…');input.setAttribute('aria-label',tx('Nouvelle valeur totale','New total value'));
     const restoredDraft=financialCellDrafts.get(persistentCellKey);if(restoredDraft!==undefined)input.value=String(restoredDraft);
     let typingTimer=0,typingActive=false,draftAnnounced=false;
@@ -953,6 +978,8 @@ const makeFinancialEntryCell=({member,rubric,meetingId,editable=true})=>{
     input.addEventListener('blur',()=>{stopTyping();announceDraft();sendSignal('CELL_BLUR');});
     const validate=document.createElement('button');validate.type='button';validate.className='cell-validate';validate.textContent='✓';validate.title=tx('Valider la valeur totale','Confirm total value');validate.setAttribute('aria-label',tx('Valider la saisie','Confirm entry'));
     const liveLine=document.createElement('small');liveLine.className='cell-live-presence';liveLine.setAttribute('aria-live','polite');liveLine.hidden=true;
+    const remoteDraftAuthors=remoteDraftNames(persistentCellKey);
+    if(remoteDraftAuthors.length){holder.classList.add('live-cell-draft');holder.dataset.remoteDraftAuthor=remoteDraftAuthors.join(', ');liveLine.textContent=tx(remoteDraftAuthors.join(', ')+' a un brouillon non validé',remoteDraftAuthors.join(', ')+' has an unconfirmed draft');liveLine.hidden=false;}
     const stateLine=document.createElement('small');stateLine.className='cell-save-state';stateLine.setAttribute('aria-live','polite');stateLine.hidden=true;
     const setCellState=(state,message='')=>{holder.dataset.saveState=state;holder.classList.toggle('is-failed',state==='FAILED');holder.classList.toggle('is-confirmed',state==='CONFIRMED');stateLine.hidden=!message;stateLine.textContent=message;};
     validate.dataset.ecoSubmitBound='canonical';
@@ -1183,6 +1210,7 @@ const renderLivingRules = async () => {
     }
     renderMeetingMatrix();
 };
+const ledgerHistoryFilters={search:'',meetingId:'',page:0};
 const renderLedger = async () => {
     const root = $('#ledgerMetrics');
     const receipts = $('#receiptList');
@@ -1197,20 +1225,55 @@ const renderLedger = async () => {
         d.innerHTML = html`<strong>${label === 'Écritures' ? n : fmt(n)}</strong><span>${label}</span>`;
         root.append(d);
     }
-    if (!l.receipts.length)
-        receipts.innerHTML = '<div class="empty-state">Aucune cotisation enregistrée.</div>';
-    for (const r of l.receipts.slice().reverse().slice(0, 100)) {
-        const d = document.createElement('div');
-        d.className = 'receipt';
-        d.innerHTML = html`<strong>${fmt(r.amount.amount)}</strong><span>${members.find(m=>m.id===r.membershipId)?.displayName ?? r.membershipId}</span><small>${date(r.receivedAt)}${r.latePosting?.isLate ? ' · tardive' : ''}</small>`;
-        const net=document.createElement('small');net.textContent=`Net après annulations : ${fmt(r.netAmount)}`;d.append(net);
-        const statement=document.createElement('button');statement.className='link-btn';statement.textContent='Relevé';statement.onclick=()=>showStatement(r.membershipId).catch(fail);d.append(statement);
-        if(r.netAmount>0){const reverse=document.createElement('button');reverse.className='link-btn';reverse.textContent='Annuler avec trace';reverse.title='Annule cette écriture en conservant son historique. Pour remplacer le montant, utilisez « Saisir / corriger » dans la cellule de la feuille.';reverse.onclick=async()=>{
-            const reason=prompt('Pourquoi annuler / corriger cette écriture ? Le reçu original restera visible et Eco-System créera automatiquement l’écriture inverse.');if(!reason?.trim())return;
-            reverse.disabled=true;try{await app.reverseLedgerEntry(r.ledgerEntryId,reason);await renderLedger();toast('Correction enregistrée : l’écriture originale est conservée et son inverse a été ajouté.');}catch(e){fail(e);reverse.disabled=false;}
-        };d.append(reverse);}
-        receipts.append(d);
-    }
+    // A single filterable/paginated matrix replaces 100 receipt cards. Never
+    // truncate canonical history: its actual Ledger and reversal actions remain.
+    const allReceipts=l.receipts.slice().reverse(),memberById=new Map(members.map(x=>[x.id,x.displayName])),rubricById=new Map(rubrics.map(x=>[x.id,x.name])),meetingById=new Map(meetings.map(x=>[x.id,x.title??x.name??x.id]));
+    if(!allReceipts.length){receipts.innerHTML='<div class="empty-state">Aucune cotisation enregistrée.</div>';return;}
+    const search=document.createElement('input');search.type='search';search.placeholder='Rechercher membre, rubrique, gestionnaire, montant…';search.setAttribute('aria-label','Filtrer les écritures');
+    search.value=ledgerHistoryFilters.search;
+    const chooseMeeting=document.createElement('select');chooseMeeting.setAttribute('aria-label','Filtrer par séance');
+    const allOption=document.createElement('option');allOption.value='';allOption.textContent='Toutes les séances';chooseMeeting.append(allOption);
+    for(const [id,label] of meetingById){const opt=document.createElement('option');opt.value=id;opt.textContent=label;chooseMeeting.append(opt);}
+    chooseMeeting.value=ledgerHistoryFilters.meetingId;
+    const controls=document.createElement('div');controls.className='actions';controls.append(chooseMeeting,search);
+    const wrap=document.createElement('div');wrap.className='matrix-wrap';
+    const footer=document.createElement('div');footer.className='actions';
+    const count=document.createElement('span'),prev=document.createElement('button'),next=document.createElement('button');prev.type='button';next.type='button';prev.textContent='← Précédent';next.textContent='Suivant →';prev.className='secondary';next.className='secondary';footer.append(prev,count,next);
+    const renderPage=()=>{
+      const query=ledgerHistoryFilters.search.normalize('NFKD').replace(/[\u0300-\u036f]/g,'').toLowerCase(),meetingId=ledgerHistoryFilters.meetingId;
+      const filtered=allReceipts.filter(r=>{
+        if(meetingId&&String(r.meetingId??'')!==meetingId)return false;
+        if(!query)return true;
+        const searchable=[memberById.get(r.membershipId)??r.membershipId,rubricById.get(r.rubricId)??r.rubricId,actorDisplayName(String(r.receivedBy??'')),r.amount?.amount,r.netAmount,date(r.receivedAt)].join(' ').normalize('NFKD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
+        return searchable.includes(query);
+      });
+      const pageSize=25,maxPage=Math.max(0,Math.ceil(filtered.length/pageSize)-1);
+      ledgerHistoryFilters.page=Math.min(ledgerHistoryFilters.page,maxPage);
+      const begin=ledgerHistoryFilters.page*pageSize;
+      const table=document.createElement('table');table.className='meeting-matrix ledger-history-table';
+      const thead=document.createElement('thead'),head=document.createElement('tr');
+      for(const label of ['Séance','Membre','Rubrique','Saisi','Net actuel','Gestionnaire','Date','Actions']){const th=document.createElement('th');th.textContent=label;head.append(th);}
+      thead.append(head);table.append(thead);
+      const tbody=document.createElement('tbody');
+      for(const r of filtered.slice(begin,begin+pageSize)){
+        const tr=document.createElement('tr'),cells=[meetingById.get(r.meetingId)??'Sans séance',memberById.get(r.membershipId)??r.membershipId,rubricById.get(r.rubricId)??r.rubricId,fmt(r.amount?.amount??0),fmt(r.netAmount),actorDisplayName(String(r.receivedBy??'')),date(r.receivedAt)+(r.latePosting?.isLate?' · tardive':'')];
+        for(const value of cells){const td=document.createElement('td');td.textContent=String(value??'');tr.append(td);}
+        const actions=document.createElement('td');
+        const statement=document.createElement('button');statement.type='button';statement.className='link-btn';statement.textContent='Relevé';statement.onclick=()=>showStatement(r.membershipId).catch(fail);actions.append(statement);
+        if(r.netAmount>0){const reverse=document.createElement('button');reverse.type='button';reverse.className='link-btn';reverse.textContent='Annuler avec trace';reverse.title='Annule cette écriture en conservant son historique. Pour remplacer le montant, utilisez « Saisir / corriger » dans la cellule de la feuille.';reverse.onclick=async()=>{
+          const reason=prompt('Pourquoi annuler / corriger cette écriture ? Le reçu original restera visible et Eco-System créera automatiquement l’écriture inverse.');if(!reason?.trim())return;
+          reverse.disabled=true;try{await app.reverseLedgerEntry(r.ledgerEntryId,reason);await renderLedger();toast('Correction enregistrée : l’écriture originale est conservée et son inverse a été ajouté.');}catch(e){fail(e);reverse.disabled=false;}
+        };actions.append(reverse);}
+        tr.append(actions);tbody.append(tr);
+      }
+      table.append(tbody);wrap.replaceChildren(table);
+      count.textContent=(filtered.length?(begin+1)+'–'+Math.min(begin+pageSize,filtered.length):'0')+' / '+filtered.length+' écritures';prev.disabled=ledgerHistoryFilters.page===0;next.disabled=ledgerHistoryFilters.page>=maxPage;
+    };
+    search.addEventListener('input',()=>{ledgerHistoryFilters.search=search.value;ledgerHistoryFilters.page=0;renderPage();});
+    chooseMeeting.addEventListener('change',()=>{ledgerHistoryFilters.meetingId=chooseMeeting.value;ledgerHistoryFilters.page=0;renderPage();});
+    prev.addEventListener('click',()=>{ledgerHistoryFilters.page=Math.max(0,ledgerHistoryFilters.page-1);renderPage();});
+    next.addEventListener('click',()=>{ledgerHistoryFilters.page++;renderPage();});
+    receipts.append(controls,wrap,footer);renderPage();
 };
 const renderOutbox = () => { const root = $('#outboxList'); root.replaceChildren(); const xs = app.outboxItems(); if (!xs.length) {
     root.innerHTML = '<li class="empty-state">Aucune opération en attente.</li>';
@@ -1605,39 +1668,80 @@ const renderFinancialAlerts=async()=>{
 const financialLiveSelector=p=>p?.meetingId&&p?.membershipId&&p?.rubricId?`.matrix-cell-entry[data-meeting-id="${CSS.escape(String(p.meetingId))}"][data-membership-id="${CSS.escape(String(p.membershipId))}"][data-rubric-id="${CSS.escape(String(p.rubricId))}"]`:'';
 const applyRemoteFinancialProjection=(p={})=>{
     const selector=financialLiveSelector(p);if(!selector)return;
-    const amount=Number(p.newAmount);if(!Number.isFinite(amount))return;
+    const amount=Number(p.newAmount);if(!Number.isFinite(amount))return false;
+    // Remote projections never erase unconfirmed local financial intents.
+    // Preserve them for the server CAS and visibly flag divergent edits.
+    const pending=(app.outboxItems?.()??[]).find(item=>{
+      if(['CONFIRMED','CANCELLED'].includes(String(item.status??'')))return false;
+      if(!['FINANCIAL_CELL_CORRECTION_PROPOSAL_V1','FINANCIAL_SHEET_ENTRY_V1'].includes(String(item.type)))return false;
+      const d=item.payload??{};
+      return String(d.meetingId??'')===String(p.meetingId)&&String(d.membershipId??'')===String(p.membershipId)&&String(d.rubricId??'')===String(p.rubricId);
+    });
+    if(pending){
+      const localAmount=Number(pending.payload?.targetAmount??pending.payload?.amount);
+      if(Number.isFinite(localAmount)&&localAmount!==amount)markCriticalFinancialConflict({...p,amount:localAmount});
+      return false;
+    }
     forgetConfirmedCell(financialCellKey(String(p.membershipId??''),String(p.rubricId??''),String(p.meetingId??'')));
     const rubric=rubrics.find(x=>x.id===String(p.rubricId)),nature=financialNatureForRubric(rubric),signed=(nature==='LOAN'||nature==='OUTFLOW')?-Math.abs(amount):amount;
     patchFinancialDomCell({meetingId:p.meetingId,membershipId:p.membershipId,rubricId:p.rubricId,amount:signed,cellVersion:p.cellVersion,remote:true});
+    return true;
 };
 const acknowledgeRemoteFinancialCell=button=>{
     const cell=button?.closest?.('.matrix-cell-entry');if(!cell)return;cell.classList.remove('remote-financial-change','remote-financial-closed');button.classList.remove('remote-ack');button.textContent='✓';
     void Promise.resolve(identityLiveUI.publishSignal?.('LIVE_ACK',{kind:'FINANCIAL_CELL',meetingId:cell.dataset.meetingId||'',membershipId:cell.dataset.membershipId||'',rubricId:cell.dataset.rubricId||''})).catch(()=>{});
 };
 const highlightRemoteFinancialCell=(p={})=>{
-    const selector=financialLiveSelector(p);if(!selector)return;applyRemoteFinancialProjection(p);
+    const selector=financialLiveSelector(p);if(!selector)return;
+    if(!applyRemoteFinancialProjection(p))return;
     const author=String(p.actorName||actorDisplayName(String(p.actorId||''))||tx('Autre gestionnaire','Another manager'));
     for(const cell of document.querySelectorAll(selector)){
       cell.classList.remove('remote-financial-change','remote-financial-closed');void cell.offsetWidth;cell.classList.add('remote-financial-change');if(p.meetingClosed)cell.classList.add('remote-financial-closed');const table=cell.closest('.canonical-financial-matrix');if(table&&p.meetingClosed)table.classList.add('has-post-close-change');
-      cell.dataset.remoteAuthor=author;cell.title=tx(`Modifié par ${author} · ${p.previousAmount??'?'} → ${p.newAmount??'?'} F CFA. OK = j’ai vu.`,`Changed by ${author} · ${p.previousAmount??'?'} → ${p.newAmount??'?'} XAF. OK = seen.`);
+      const changedAt=String(p.at??new Date().toISOString()),when=date(changedAt);cell.dataset.remoteAuthor=author;cell.dataset.lastUpdatedAt=changedAt;cell.title=tx(`Modifié par ${author} · ${when} · ${p.previousAmount??'?'} → ${p.newAmount??'?'} F CFA. OK = j’ai vu.`,`Changed by ${author} · ${when} · ${p.previousAmount??'?'} → ${p.newAmount??'?'} XAF. OK = seen.`);financialCellMetadata.set(financialCellKey(String(p.membershipId),String(p.rubricId),String(p.meetingId)),{actorId:String(p.actorId??''),at:changedAt,stamp:Date.parse(changedAt)||Date.now()});
       const button=cell.querySelector('.cell-validate');if(button){button.textContent='OK';button.classList.add('remote-ack');}
+    }
+};
+const paintRemoteFinancialDraft=(cell,key)=>{
+    const line=cell.querySelector('.cell-live-presence');if(!line)return;
+    const authors=remoteDraftNames(key);
+    if(authors.length){
+      const names=authors.join(', ');cell.dataset.remoteDraftAuthor=names;cell.classList.add('live-cell-draft');
+      if(!cell.classList.contains('live-cell-active')){line.textContent=tx(names+' a un brouillon non validé',names+' has an unconfirmed draft');line.hidden=false;}
+    }else{
+      delete cell.dataset.remoteDraftAuthor;cell.classList.remove('live-cell-draft');
+      if(!cell.classList.contains('live-cell-active'))line.hidden=true;
     }
 };
 window.addEventListener('eco:live-signal',event=>{
     const e=event instanceof CustomEvent?event.detail:undefined,p=e?.payload??{},actorId=String(e?.actorId??'');if(!actorId||actorId===String(app.currentActor?.()??''))return;
-    if(String(p.kind??'')!=='FINANCIAL_CELL')return;const selector=financialLiveSelector(p),cell=selector?document.querySelector(selector):null;if(!cell)return;
-    const line=cell.querySelector('.cell-live-presence');if(!line)return;const name=actorDisplayName(actorId)||tx('Un autre gestionnaire','Another manager');
-    const type=String(e.type??'');
-    const resetPresenceTimer=ms=>{clearTimeout(Number(cell.dataset.liveHideTimer||0));const t=setTimeout(()=>{line.hidden=true;cell.classList.remove('live-cell-active','live-cell-draft');delete cell.dataset.remoteDraftAuthor;},ms);cell.dataset.liveHideTimer=String(t);};
+    if(String(p.kind??'')!=='FINANCIAL_CELL')return;
+    const key=financialCellKey(String(p.membershipId??''),String(p.rubricId??''),String(p.meetingId??'')),selector=financialLiveSelector(p),type=String(e.type??''),name=actorDisplayName(actorId)||tx('Un autre gestionnaire','Another manager');
+    if(type==='FINANCIAL_DRAFT'){
+      const actors=remoteFinancialDrafts.get(key)??new Map(),old=actors.get(actorId);if(old?.timer)clearTimeout(old.timer);
+      const deadline=Date.now()+30*60_000;
+      const timer=setTimeout(()=>{const latest=actors.get(actorId);if(latest?.expiresAt!==deadline)return;actors.delete(actorId);for(const cell of selector?document.querySelectorAll(selector):[])paintRemoteFinancialDraft(cell,key);},30*60_000);
+      actors.set(actorId,{name,expiresAt:deadline,timer});remoteFinancialDrafts.set(key,actors);
+    }
+    if(type==='FINANCIAL_DRAFT_CLEAR'){
+      const actors=remoteFinancialDrafts.get(key),existing=actors?.get(actorId);if(existing?.timer)clearTimeout(existing.timer);actors?.delete(actorId);
+      if(actors&&!actors.size)remoteFinancialDrafts.delete(key);
+    }
+    for(const cell of selector?document.querySelectorAll(selector):[]){
+      const line=cell.querySelector('.cell-live-presence');if(!line)continue;
+      const resetPresenceTimer=ms=>{
+        clearTimeout(Number(cell.dataset.liveTypingHideTimer||0));
+        const t=setTimeout(()=>{cell.classList.remove('live-cell-active');paintRemoteFinancialDraft(cell,key);},ms);
+        cell.dataset.liveTypingHideTimer=String(t);
+      };
     if(['TYPING','CELL_FOCUS'].includes(type)){line.textContent=type==='TYPING'?tx(`${name} saisit…`,`${name} is typing…`):tx(`${name} travaille sur cette cellule`,`${name} is working on this cell`);line.hidden=false;cell.classList.add('live-cell-active');resetPresenceTimer(3500);}
-    if(type==='FINANCIAL_DRAFT'){cell.dataset.remoteDraftAuthor=name;cell.classList.add('live-cell-draft');line.textContent=tx(`${name} a un brouillon non validé`,`${name} has an unconfirmed draft`);line.hidden=false;resetPresenceTimer(11000);}
-    if(type==='FINANCIAL_DRAFT_CLEAR'){cell.classList.remove('live-cell-draft');delete cell.dataset.remoteDraftAuthor;if(!cell.classList.contains('live-cell-active'))line.hidden=true;}
-    if(['TYPING_STOP','CELL_BLUR'].includes(type)){cell.classList.remove('live-cell-active');const draftAuthor=cell.dataset.remoteDraftAuthor;if(cell.classList.contains('live-cell-draft')&&draftAuthor){line.textContent=tx(`${draftAuthor} a un brouillon non validé`,`${draftAuthor} has an unconfirmed draft`);line.hidden=false;}else line.hidden=true;}
+    if(['TYPING_STOP','CELL_BLUR'].includes(type))cell.classList.remove('live-cell-active');
+      paintRemoteFinancialDraft(cell,key);
+    }
 });
 let liveLedgerRefreshTimer=0;
 window.addEventListener('eco:financial-live-update',event=>{
     const e=event instanceof CustomEvent?event.detail:undefined,p=e?.payload??{},sourceActorId=String(p.actorId??e?.actorId??''),fromOtherActor=sourceActorId&&sourceActorId!==String(app.currentActor?.()??'');if(!fromOtherActor)return;
-    if(p.meetingId&&p.membershipId&&p.rubricId)highlightRemoteFinancialCell({...p,actorId:sourceActorId});
+    if(p.meetingId&&p.membershipId&&p.rubricId)highlightRemoteFinancialCell({...p,actorId:sourceActorId,at:e?.at});
     showFinancialAlert({title:p.meetingClosed?tx('Modification après clôture','Post-close change'):tx('Mise à jour financière en direct','Live financial update'),message:p.actorName?tx(`${p.actorName} a mis à jour une cellule. Elle reste surlignée jusqu’à votre accusé de réception.`,`${p.actorName} updated a cell. It stays highlighted until you acknowledge it.`):tx('Une donnée financière vient d’être mise à jour en direct.','A financial value was just updated live.'),closed:Boolean(p.meetingClosed),correction:true});
     // The pushed durable event already contains the committed cell projection.
     // D1 is queried only in the optional paid fallback mode.
@@ -2104,6 +2208,9 @@ const eventDrivenConnectivityRecovery=()=>{
 window.addEventListener('online',()=>{networkRecoveryNeeded=true;void resumeOnline();});
 window.addEventListener('offline',()=>{networkRecoveryNeeded=true;persistNavState(captureNavState());renderConnectivity();});
 window.addEventListener('pageshow',eventDrivenConnectivityRecovery);
+window.addEventListener('eco:server-budget-blocked',renderConnectivity);
+window.addEventListener('eco:server-budget-expired',()=>{networkRecoveryNeeded=true;void resumeOnline();});
+window.addEventListener('eco:live-connected',eventDrivenConnectivityRecovery);
 window.addEventListener('focus',eventDrivenConnectivityRecovery);
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')eventDrivenConnectivityRecovery();});
 if('serviceWorker' in navigator)navigator.serviceWorker.addEventListener('message',event=>{

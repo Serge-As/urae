@@ -1,4 +1,4 @@
-name: Eco-System 1.5.2.10 — Offline Conflicts Loans Cloudflare Delivery
+name: Eco-System 1.5.2.11 — Field Recovery Cloudflare Delivery
 
 on:
   workflow_dispatch:
@@ -19,9 +19,9 @@ env:
   ECO_SYSTEM_ROOT: https://eco-system.sergemimf.workers.dev/
   ECO_SYSTEM_HEALTH: https://eco-system.sergemimf.workers.dev/health
   ECO_SYSTEM_CATALOG: https://eco-system.sergemimf.workers.dev/api/v1/product/capabilities
-  EXPECTED_VERSION: 1.5.2.10-offline-conflicts-loans
-  EXPECTED_BUILD: eco-system-1.5.2.10-20261003-offline-conflicts-loans
-  EXPECTED_CACHE: eco-system-v15210-offline-conflicts-loans-20261003
+  EXPECTED_VERSION: 1.5.2.11-field-recovery
+  EXPECTED_BUILD: eco-system-1.5.2.11-20261005-field-recovery
+  EXPECTED_CACHE: eco-system-v15211-field-recovery-20261005
   MIN_CAPABILITIES: 164
 
 jobs:
@@ -126,7 +126,7 @@ jobs:
               && grep -Fq "\"buildId\": \"${EXPECTED_BUILD}\"" <<<"${health}" \
               && grep -Fq "\"pwaCache\": \"${EXPECTED_CACHE}\"" <<<"${health}" \
               && grep -q '"capabilities"' <<<"${catalog}"; then break; fi
-            echo "Waiting for exact 1.5.2.10 SHA propagation (attempt ${attempt}/8)…"
+            echo "Waiting for exact 1.5.2.11 SHA propagation (attempt ${attempt}/8)…"
             sleep 4
           done
           printf '%s' "${health}" > /tmp/health.json

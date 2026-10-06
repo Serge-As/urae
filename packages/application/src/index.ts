@@ -9,7 +9,7 @@ import { makeId, type CashboxReconciliationRecord, type CashboxSnapshot, type Ca
 import { COMPLETION_WORKFLOWS, suggestTontineSchedule as suggestTontineScheduleLocal, buildLoanSchedule, type CompletionKind, type CompletionRecord, type TontineScheduleConstraint, type TontineScheduleResult, type LoanScheduleRow } from '../../completion/src/index.js';
 import { starterRubricFacetsForName } from '../../rubrics/src/index.js';
 import { simulatePeriodicLoan } from '../../loan-simulator/src/index.js';
-import { allocateSavingsYield, splitInterestPool, simulateWorkbookYieldPipeline, allocateCapitalAtWorkYield, allocateCapitalTimeYield, allocateAttributedProductiveYield, SAVINGS_YIELD_POLICY_PRESETS } from '../../savings-yield/src/index.js';
+import { allocateSavingsYield, splitInterestPool, simulateWorkbookYieldPipeline, allocateCapitalAtWorkYield, allocateCapitalTimeYield, allocateAttributedProductiveYield, eligibleSavingsDeposits, allocateBorrowerReward, SAVINGS_YIELD_POLICY_PRESETS } from '../../savings-yield/src/index.js';
 import { buildFinancialRecap, buildSessionRecap, buildClosingCarryover } from '../../recap-engine/src/index.js';
 import { diagnoseGroup } from '../../group-doctor/src/index.js';
 import { IndexedDbSovereignStore, createEcoVault, openEcoVault, validateSovereignJournalEvents, type SovereignSnapshot } from '../../offline-sovereign/src/index.js';
@@ -75,6 +75,7 @@ export class ConnectedApplication {
   private usingOfflineSnapshot=false;
   private serverBudgetBlockedUntil=0;
   private serverBudgetReason='';
+  private serverBudgetWake?:ReturnType<typeof setTimeout>;
   private actorId:string; private tenantId:string; private displayName:string; private locale:string; private activeGroupId?:string;
   private readonly baseUrl:string;
   private groupTenants=new Map<string,string>();
@@ -87,6 +88,7 @@ export class ConnectedApplication {
       const budget=JSON.parse(localStorage.getItem('eco.serverBudgetBlock.v1')||'null');if(budget&&Number(budget.until)>Date.now()){this.serverBudgetBlockedUntil=Number(budget.until);this.serverBudgetReason=String(budget.reason??'SERVER_BUDGET');}
     }catch{}
     this.locale=options.locale??storedLocale??'fr';
+    this.armServerBudgetWake();
   }
 
   private adoptLocalAccount(account:LocalAccountRecord):SessionAccount{
@@ -109,13 +111,25 @@ export class ConnectedApplication {
     if(this.serverBudgetBlockedUntil<=Date.now()){if(this.serverBudgetBlockedUntil){this.serverBudgetBlockedUntil=0;this.serverBudgetReason='';try{localStorage.removeItem('eco.serverBudgetBlock.v1');}catch{}}return false;}
     return true;
   }
+  private armServerBudgetWake():void{
+    if(this.serverBudgetWake)clearTimeout(this.serverBudgetWake);
+    this.serverBudgetWake=undefined;
+    if(this.serverBudgetBlockedUntil<=Date.now())return;
+    // Exactly one wake-up at the quota boundary, not 1s/30s status probes.
+    this.serverBudgetWake=setTimeout(()=>{
+      this.serverBudgetWake=undefined;
+      if(this.serverBudgetBlockedUntil>Date.now()){this.armServerBudgetWake();return;}
+      if(typeof window!=='undefined'&&typeof CustomEvent!=='undefined')window.dispatchEvent(new CustomEvent('eco:server-budget-expired'));
+    },Math.min(2_147_483_647,this.serverBudgetBlockedUntil-Date.now()+1000));
+  }
   private markServerBudgetBlocked(status:number):void{
-    const now=new Date(),until=status===429?Date.UTC(now.getUTCFullYear(),now.getUTCMonth(),now.getUTCDate()+1,0,5,0):Date.now()+(status===503?15:5)*60_000;
-    this.serverBudgetBlockedUntil=Math.max(this.serverBudgetBlockedUntil,until);this.serverBudgetReason='HTTP_'+status;
+    const now=new Date(),daily=status===429,until=daily?Date.UTC(now.getUTCFullYear(),now.getUTCMonth(),now.getUTCDate()+1,0,5,0):Date.now()+15*60_000;
+    this.serverBudgetBlockedUntil=Math.max(this.serverBudgetBlockedUntil,until);this.serverBudgetReason=daily?'D1_DAILY_QUOTA':'D1_QUOTA_RETRY';
     try{localStorage.setItem('eco.serverBudgetBlock.v1',JSON.stringify({until:this.serverBudgetBlockedUntil,reason:this.serverBudgetReason,at:new Date().toISOString()}));}catch{}
+    this.armServerBudgetWake();
     if(typeof window!=='undefined'&&typeof CustomEvent!=='undefined')window.dispatchEvent(new CustomEvent('eco:server-budget-blocked',{detail:{until:this.serverBudgetBlockedUntil,reason:this.serverBudgetReason}}));
   }
-  forceServerRetry():void{this.serverBudgetBlockedUntil=0;this.serverBudgetReason='';try{localStorage.removeItem('eco.serverBudgetBlock.v1');}catch{}this.usingOfflineSnapshot=false;}
+  forceServerRetry():void{this.serverBudgetBlockedUntil=0;this.serverBudgetReason='';if(this.serverBudgetWake)clearTimeout(this.serverBudgetWake);this.serverBudgetWake=undefined;try{localStorage.removeItem('eco.serverBudgetBlock.v1');}catch{}this.usingOfflineSnapshot=false;}
   serverBudgetState():{blocked:boolean;until:number;reason:string}{return{blocked:this.serverBudgetBlocked(),until:this.serverBudgetBlockedUntil,reason:this.serverBudgetReason};}
   private offlineReadAllowed(path:string):boolean{
     // Actor-scoped IndexedDB snapshots are safe for GET projections. Keeping this
@@ -145,12 +159,20 @@ export class ConnectedApplication {
     if(!this.usingOfflineSnapshot)return true;
     // A single cached GET must never trap later financial writes in offline mode.
     // Probe the real authenticated server directly, bypassing read-snapshot fallback.
+    const abort=typeof AbortController==='function'?new AbortController():null;
+    let timer:ReturnType<typeof setTimeout>|undefined;
     try{
-      const response=await fetch(`${this.baseUrl}/api/v1/auth/session`,{method:'GET',headers:this.headers()});
+      // A network check is only triggered by a financial action after an
+      // offline snapshot, never every second. A stalled connection must not
+      // freeze a reimbursement indefinitely (old Android compatible fallback).
+      const probe=fetch(`${this.baseUrl}/api/v1/auth/session`,{method:'GET',headers:this.headers(),signal:abort?.signal});
+      const response=await Promise.race([probe,new Promise<never>((_,reject)=>{
+        timer=setTimeout(()=>{abort?.abort();reject(new Error('NETWORK_UNAVAILABLE'));},4500);
+      })]);
       if(!response.ok)return false;
       const body=await response.json() as {authenticated?:boolean;account?:unknown};
       if(body.authenticated&&body.account){this.usingOfflineSnapshot=false;return true;}
-    }catch{}
+    }catch{}finally{if(timer)clearTimeout(timer);}
     return false;
   }
   private async cached<T>(path:string):Promise<T|undefined>{
@@ -212,19 +234,32 @@ export class ConnectedApplication {
       throw new Error('NETWORK_UNAVAILABLE');
     }
     let response:Response;
+    // Repayments have a durable write-ahead idempotency key. Their transport
+    // must be time-bounded on unreliable mobile networks so a saved intent can
+    // be shown as pending rather than keeping a cell disabled for minutes.
+    const repaymentWrite=method==='POST'&&/\/loans\/[^/]+\/repay$/.test(path);
+    const abort=repaymentWrite&&typeof AbortController==='function'?new AbortController():null;
+    let requestTimer:ReturnType<typeof setTimeout>|undefined;
     try{
-      response=await fetch(`${this.baseUrl}${path}`,{...init,headers});
+      const send=fetch(`${this.baseUrl}${path}`,{...init,headers,...(abort?{signal:abort.signal}:{})});
+      response=repaymentWrite?await Promise.race([send,new Promise<Response>((_,reject)=>{
+        requestTimer=setTimeout(()=>{abort?.abort();reject(new Error('NETWORK_UNAVAILABLE'));},12000);
+      })]):await send;
     }catch(error){
       if(cacheable&&IndexedDbReadSnapshotAdapter.supported()){
         try{const snapshot=await this.readSnapshots.get<T>(this.offlineReadKey(path));if(snapshot){this.announceOfflineSnapshot(path,snapshot.updatedAt);return structuredClone(snapshot.body);}}catch{}
       }
       throw new Error('NETWORK_UNAVAILABLE',{cause:error});
-    }
+    }finally{if(requestTimer)clearTimeout(requestTimer);}
     const body=await response.json().catch(()=>({error:`HTTP_${response.status}`}));
     if(!response.ok){
-      const transient=[429,503,504].includes(response.status),errorCode=String((body as any)?.error??'');
-      const quotaSignal=response.status===429||/(?:\bd1\b.{0,80}(?:quota|limit|exceed)|(?:quota|daily\s+limit|limit\s+exceed|too\s+many\s+(?:queries|requests)).{0,80}\bd1\b|quota\s+exceeded|daily\s+quota)/i.test(errorCode);
-      if(quotaSignal)this.markServerBudgetBlocked(response.status===429?429:503);
+      const errorCode=String((body as any)?.error??'');
+      // Not every HTTP 429 is a daily D1 quota: login/security throttles must
+      // never strand the whole app until tomorrow. Require explicit quota text.
+      const quotaSignal=/(?:\bd1\b.{0,80}(?:quota|limit|exceed)|(?:quota|daily\s+limit|limit\s+exceed|too\s+many\s+(?:queries|requests)).{0,80}\bd1\b|quota\s+exceeded|daily\s+quota)/i.test(errorCode);
+      const transient=[503,504].includes(response.status)||quotaSignal;
+      if(quotaSignal)this.markServerBudgetBlocked(/daily|per.day/i.test(errorCode)?429:503);
+      if(response.status===429&&!quotaSignal)throw new Error(errorCode==='HTTP_429'?'RATE_LIMITED':errorCode);
       if(transient&&cacheable&&IndexedDbReadSnapshotAdapter.supported()){
         try{const snapshot=await this.readSnapshots.get<T>(this.offlineReadKey(path));if(snapshot){this.announceOfflineSnapshot(path,snapshot.updatedAt);return structuredClone(snapshot.body);}}catch{}
       }
@@ -796,8 +831,8 @@ export class ConnectedApplication {
       return{status:'QUEUED_SYNC',queued:true,outbox:item};
     };
 
-    const canWrite=await this.canAttemptCriticalWrite();
     if(nature==='OUTFLOW'){
+      const canWrite=await this.canAttemptCriticalWrite();
       const body={membershipId:input.membershipId,rubricId:rubric.id,meetingId:input.meetingId,amount:input.amount,label:rubric.name??'Dépense de séance',scope:'SHEET',note:'Saisie depuis la feuille financière canonique',idempotencyKey:key};
       if(!canWrite)return queue();
       try{return await this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/expenses`,{method:'POST',body:JSON.stringify(body)});}
@@ -805,6 +840,7 @@ export class ConnectedApplication {
     }
 
     if(nature==='LOAN'){
+      const canWrite=await this.canAttemptCriticalWrite();
       const policy=rubric.policies?.loan;if(!policy?.allowed)throw Error('LOAN_POLICY_REQUIRED');
       const special=/special/.test(normalized)?policy.specialLoans?.[0]:undefined;
       const rawRate=special?.rateBasisPointsPerPeriod??policy.rateBasisPointsPerPeriod;if(rawRate===undefined||rawRate===null)throw Error('LOAN_RATE_REQUIRED');
@@ -831,7 +867,11 @@ export class ConnectedApplication {
     const allRubrics=await this.listRubrics().catch(()=>[]);
     const officialLoanRubric=allRubrics.find((r:any)=>String(r.facets?.custom?.systemKey??'').toUpperCase()==='LOAN'||/^(pret|prets|emprunt|emprunts|loan|loans)$/.test(String(r.name??'').normalize('NFKD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim()));
     const policyPriority=String(officialLoanRubric?.policies?.loan?.paymentPriority??'CAPITAL_FIRST')==='INTEREST_FIRST'?'INTEREST_FIRST':'CAPITAL_FIRST';
-    if(!canWrite)return queue({repaymentComponent:component,paymentPriority:policyPriority});
+    // Write-ahead, including online. Losing a response after a canonical commit
+    // must never lose its idempotency key or force the user to pay twice.
+    const repaymentIntent=await queue({repaymentComponent:component,paymentPriority:policyPriority});
+    const canWrite=await this.canAttemptCriticalWrite();
+    if(!canWrite)return repaymentIntent;
     try{
       const active=(await this.listCompletion('LOAN')).filter(l=>String(l.data?.borrowerMembershipId??'')===input.membershipId&&['DISBURSED','REPAYING'].includes(String(l.data?.completionState??''))&&(Number(l.data?.outstandingPrincipal??0)>0||Number(l.data?.unpaidInterest??0)>0));
       const loan=input.loanId?active.find(x=>x.id===input.loanId):active.length===1?active[0]:undefined;
@@ -840,8 +880,15 @@ export class ConnectedApplication {
       const allocation=component==='AUTO'
         ?{paymentAmount:input.amount,priority}
         :{principalAmount:component==='PRINCIPAL'?input.amount:0,interestAmount:component==='INTEREST'?input.amount:0,priority};
-      return await this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/loans/${encodeURIComponent(loan.id)}/repay`,{method:'POST',body:JSON.stringify({...allocation,expectedVersion:Number(loan.data?.completionVersion??0),meetingId:input.meetingId,rubricId:rubric.id,idempotencyKey:key+':repay'})});
-    }catch(error){if(error instanceof Error&&(error.message==='NETWORK_UNAVAILABLE'||/^HTTP_5\d\d$/.test(error.message)))return queue({repaymentComponent:component,paymentPriority:policyPriority});throw error;}
+      const result=await this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/loans/${encodeURIComponent(loan.id)}/repay`,{method:'POST',body:JSON.stringify({...allocation,expectedVersion:Number(loan.data?.completionVersion??0),meetingId:input.meetingId,rubricId:rubric.id,idempotencyKey:key+':repay'})});
+      this.outbox.markConfirmedByKey(this.tenantId,this.actorId,key);await this.persistOutbox();
+      return result;
+    }catch(error){
+      if(error instanceof Error&&(error.message==='NETWORK_UNAVAILABLE'||/^HTTP_5\d\d$/.test(error.message)))return repaymentIntent;
+      // A business validation error is not transient; never replay it silently.
+      this.outbox.markConflictByKey(this.tenantId,this.actorId,key);await this.persistOutbox();
+      throw error;
+    }
   }
 
   async recordCashContribution(input:{membershipId:string;amount:number;meetingId?:string;rubricId?:string;lateReason?:string;approverIds?:string[];lateAuthorizationId?:string}):Promise<{queued:boolean;receipt?:ContributionReceipt;outbox?:OutboxItem}>{
@@ -1127,6 +1174,15 @@ export class ConnectedApplication {
     if(this.isOffline())return{queued:true,outbox:item};
     const synced=await this.syncOutbox(),updated=synced.find(x=>x.id===item.id)??item;return{queued:updated.status!=='CONFIRMED',outbox:updated};
   }
+  private liveTicketCache?:{groupId:string;ticket:string;expiresAt:number};
+  async liveTicket():Promise<{ticket:string;expiresAt:string;groupId:string}>{
+    if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');
+    const now=Date.now(),cached=this.liveTicketCache;
+    if(cached&&cached.groupId===this.activeGroupId&&cached.expiresAt-now>5*60_000)return{ticket:cached.ticket,expiresAt:new Date(cached.expiresAt).toISOString(),groupId:cached.groupId};
+    const data=await this.request<{ticket:string;expiresAt:string;groupId:string}>(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/live/ticket`);
+    const expiresAt=Date.parse(data.expiresAt);if(data.ticket&&Number.isFinite(expiresAt))this.liveTicketCache={groupId:data.groupId,ticket:data.ticket,expiresAt};
+    return data;
+  }
   async liveHealth():Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/live/health`);}
   async liveEvents(after=0,limit=500):Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');const safeLimit=Math.min(Math.max(Math.trunc(limit)||500,1),500);return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/live/events?after=${encodeURIComponent(String(after))}&limit=${encodeURIComponent(String(safeLimit))}`);}
   async liveSignals(afterAt=0):Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/live/signals?afterAt=${encodeURIComponent(String(Math.max(0,Math.trunc(afterAt)||0)))}`);}
@@ -1136,7 +1192,7 @@ export class ConnectedApplication {
     if(typeof navigator!=='undefined'&&navigator.onLine===false)return{accepted:false,offline:true};
     return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/live/signal`,{method:'POST',body:JSON.stringify({type,payload})});
   }
-  liveWebSocketUrl(after=0):string{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');const base=new URL(this.baseUrl||location.origin,location.origin);base.protocol=base.protocol==='https:'?'wss:':'ws:';base.pathname=`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/live/connect`;base.search='';if(Number(after)>0)base.searchParams.set('after',String(Math.trunc(Number(after))));return base.toString();}
+  liveWebSocketUrl(after=0,ticket=''):string{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');const base=new URL(this.baseUrl||location.origin,location.origin);base.protocol=base.protocol==='https:'?'wss:':'ws:';base.pathname=`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/live/connect`;base.search='';if(Number(after)>0)base.searchParams.set('after',String(Math.trunc(Number(after))));if(ticket)base.searchParams.set('ticket',ticket);return base.toString();}
 
   async amountExplanation(membershipId:string,rubricId?:string):Promise<unknown>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');const q=rubricId?'?rubricId='+encodeURIComponent(rubricId):'';return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/members/'+encodeURIComponent(membershipId)+'/amount-explanation'+q);}
   async searchDocuments(query:string,limit=20):Promise<Array<{recordId:string;title:string;score:number;snippet:string;source?:string;page?:string;version?:number}>>{if(!this.activeGroupId)return[];return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/documents/search?q='+encodeURIComponent(query)+'&limit='+String(limit));}
@@ -1273,6 +1329,7 @@ export class ConnectedApplication {
     const interestReceipts=(eventInterest>0?eventPayments.filter((x:any)=>x.interestPaid>0).map((x:any)=>({memberId:x.memberId,meetingId:x.meetingId,loanId:x.loanId,amount:x.interestPaid})):normalizedPeriods.filter((x:any)=>x.interestPaid>0).map((x:any)=>({memberId:x.memberId,meetingId:x.meetingId,loanId:x.loanId,amount:x.interestPaid})));
     const recoveredInterestFinal=Math.max(recoveredInterest,eventInterest,periodInterest);
     const meetingIndex=new Map(ordered.map((m,i)=>[m.id,i])),loanSheetEvents=(sheetEvents as any[]).filter((x:any)=>{const d=x.data??{},rubric=rubricMap.get(String(d.rubricId??'')),name=norm(rubric?.name),system=String((rubric?.facets as any)?.custom?.systemKey??'').toUpperCase();return String(d.direction??'').toUpperCase()==='OUT'&&(system==='LOAN'||/pret|emprunt|loan/.test(name))&&!/timbre|stamp/.test(name);});
+    const loanDisbursements=loanSheetEvents.map((x:any)=>{const d=x.data??{},meetingId=String(d.meetingId??'');return{loanId:String(d.loanId??x.id),memberId:String(d.membershipId??''),meetingId,session:(meetingIndex.get(meetingId)??0)+1,amount:Math.abs(Number(d.amount??0)),rubricId:String(d.rubricId??''),createdAt:String(x.createdAt??x.updatedAt??'')}}).filter((x:any)=>x.meetingId&&x.amount>0);
     const disbursementMeetingByLoan=new Map<string,string>();for(const e of loanSheetEvents){const loanId=String(e.data?.loanId??'');if(loanId&&e.data?.meetingId)disbursementMeetingByLoan.set(loanId,String(e.data.meetingId));}
     const localLoanDebts=(loanRows as any[]).filter((x:any)=>['DISBURSED','REPAYING'].includes(String(x.data?.completionState??''))).map((x:any)=>{
       const rubric=rubricMap.get(String(x.data?.rubricId??''))??officialLoanRubric,principal=Math.max(0,Number(x.data?.outstandingPrincipal??0)),rate=Number(x.data?.rateBasisPointsPerPeriod??rubric?.policies?.loan?.rateBasisPointsPerPeriod??0),timing=String(x.data?.interestTiming??rubric?.policies?.loan?.interestTiming??'NEXT_SESSION_DUE'),rawInterest=Math.max(0,Number(x.data?.unpaidInterest??0));
@@ -1285,12 +1342,14 @@ export class ConnectedApplication {
     const loanDebtById=new Map<string,any>();for(const debt of (cached?.loanDebts??[]))if(debt?.loanId)loanDebtById.set(String(debt.loanId),debt);for(const debt of historicalLoanDebts)if(debt?.loanId&&!loanDebtById.has(String(debt.loanId)))loanDebtById.set(String(debt.loanId),debt);for(const debt of localLoanDebts)if(debt?.loanId)loanDebtById.set(String(debt.loanId),debt);const loanDebts=[...loanDebtById.values()];
     const outstandingPrincipal=loanDebts.reduce((n:number,x:any)=>n+Number(x.principal??0),0),outstandingInterest=loanDebts.reduce((n:number,x:any)=>n+Number(x.interest??0),0),nextInterestProjected=loanDebts.reduce((n:number,x:any)=>n+Number(x.nextInterestProjected??0),0),otherDebt=Number(cached?.totals?.otherDebt??0),totalDebt=outstandingPrincipal+outstandingInterest+otherDebt,totalDebtIncludingNextInterest=totalDebt+nextInterestProjected,totalPrincipalRepaid=Math.max(eventPrincipal,periodPrincipal,Number(cached?.totals?.totalPrincipalRepaid??0)),totalSavings=effectiveDeposits.reduce((n:number,x:any)=>n+Number(x.amount??0),0),healthLeft=totalPrincipalRepaid+recoveredInterestFinal-totalDebt,healthWithNextLeft=totalPrincipalRepaid+recoveredInterestFinal-totalDebtIncludingNextInterest;
     const effectiveRepayments=repayments.length?repayments:(cached?.repayments??[]),effectiveInterestReceipts=interestReceipts.length?interestReceipts:(cached?.interestReceipts??[]);
-    return{generatedAt:new Date().toISOString(),source:'LOCAL_LEDGER_RECEIPTS_AND_SOVEREIGN_JOURNAL',sourceDetail:'LAST_KNOWN_GOOD_PLUS_LOCAL_LEDGER_SHEETS_LOAN_PERIODS_AND_SOVEREIGN_JOURNAL',members:members.map(m=>({id:m.id,displayName:m.displayName,status:m.status})),rubrics:savingsRubrics.map(r=>({id:r.id,name:r.name})),meetings:ordered.map((m,i)=>({id:m.id,title:m.title,session:i+1,scheduledAt:m.scheduledAt??m.openedAt,status:m.status})),deposits:effectiveDeposits,savingsSeries,repayments:effectiveRepayments,interestReceipts:effectiveInterestReceipts,loanPeriods:normalizedPeriods.length?normalizedPeriods:(cached?.loanPeriods??[]),loanDebts,otherDebts:cached?.otherDebts??[],totals:{classicPrincipal,schoolPrincipal,totalPrincipal:classicPrincipal+schoolPrincipal,totalSavings,totalPrincipalRepaid,recoveredInterest:recoveredInterestFinal,outstandingPrincipal,outstandingInterest,nextInterestProjected,otherDebt,totalDebt,totalDebtIncludingNextInterest},health:{formula:'(TOTAL_REPAYMENTS + TOTAL_INTEREST_COLLECTED) - TOTAL_CURRENT_DEBT >= TOTAL_SAVINGS',left:healthLeft,right:totalSavings,difference:healthLeft-totalSavings,passes:healthLeft>=totalSavings},healthWithNext:{formula:'(TOTAL_REPAYMENTS + TOTAL_INTEREST_COLLECTED) - (TOTAL_CURRENT_DEBT + NEXT_INTEREST) >= TOTAL_SAVINGS',left:healthWithNextLeft,right:totalSavings,difference:healthWithNextLeft-totalSavings,passes:healthWithNextLeft>=totalSavings},interestByAccount:cached?.interestByAccount??{},warnings:recoveredInterestFinal===0?['NO_REALIZED_INTEREST_FOUND']:[],offline:true};
+    return{generatedAt:new Date().toISOString(),source:'LOCAL_LEDGER_RECEIPTS_AND_SOVEREIGN_JOURNAL',sourceDetail:'LAST_KNOWN_GOOD_PLUS_LOCAL_LEDGER_SHEETS_LOAN_PERIODS_AND_SOVEREIGN_JOURNAL',loanDisbursements,distributionPolicy:cached?.distributionPolicy??{eligibilityPolicy:'ALL_DEPOSITS',classicShareBasisPoints:7000,schoolShareBasisPoints:1000,borrowerShareBasisPoints:0,officeShareBasisPoints:2000,reserveShareBasisPoints:0,borrowerWeightMode:'VOLUME_TIME_INTEREST',eligibleThroughClassic:10,eligibleThroughSchool:7,poolingMode:'POOLED',residualPolicy:'TIME_WEIGHTED',recordId:null},members:members.map(m=>({id:m.id,displayName:m.displayName,status:m.status})),rubrics:savingsRubrics.map(r=>({id:r.id,name:r.name})),meetings:ordered.map((m,i)=>({id:m.id,title:m.title,session:i+1,scheduledAt:m.scheduledAt??m.openedAt,status:m.status})),deposits:effectiveDeposits,savingsSeries,repayments:effectiveRepayments,interestReceipts:effectiveInterestReceipts,loanPeriods:normalizedPeriods.length?normalizedPeriods:(cached?.loanPeriods??[]),loanDebts,otherDebts:cached?.otherDebts??[],totals:{classicPrincipal,schoolPrincipal,totalPrincipal:classicPrincipal+schoolPrincipal,totalSavings,totalPrincipalRepaid,recoveredInterest:recoveredInterestFinal,outstandingPrincipal,outstandingInterest,nextInterestProjected,otherDebt,totalDebt,totalDebtIncludingNextInterest,cashBalance:Number(ledgerState.summary?.cashBalance??cached?.totals?.cashBalance??0)},health:{formula:'(TOTAL_REPAYMENTS + TOTAL_INTEREST_COLLECTED) - TOTAL_CURRENT_DEBT >= TOTAL_SAVINGS',left:healthLeft,right:totalSavings,difference:healthLeft-totalSavings,passes:healthLeft>=totalSavings},healthWithNext:{formula:'(TOTAL_REPAYMENTS + TOTAL_INTEREST_COLLECTED) - (TOTAL_CURRENT_DEBT + NEXT_INTEREST) >= TOTAL_SAVINGS',left:healthWithNextLeft,right:totalSavings,difference:healthWithNextLeft-totalSavings,passes:healthWithNextLeft>=totalSavings},interestByAccount:cached?.interestByAccount??{},warnings:recoveredInterestFinal===0?['NO_REALIZED_INTEREST_FOUND']:[],offline:true};
   }
   async previewSavingsYield(input:any):Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return allocateSavingsYield(input);}
   async previewWorkbookSavingsYield(input:any):Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return simulateWorkbookYieldPipeline(input);}
   async previewCapitalAtWorkYield(input:any):Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return allocateCapitalAtWorkYield(input);}
   async previewCapitalTimeYield(input:any):Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return allocateCapitalTimeYield(input);}
+  savingsEligibleDeposits(deposits:any[],policy:'ALL_DEPOSITS'|'LOAN_SESSION_GATE',loanSessions:number[],eligibleThroughSession:number):any[]{return eligibleSavingsDeposits(deposits,policy,loanSessions,eligibleThroughSession);}
+  async previewBorrowerReward(input:any):Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return allocateBorrowerReward(input);}
   async previewAttributedProductiveYield(input:any):Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return allocateAttributedProductiveYield(input);}
   async savingsYieldPolicies():Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return{presets:SAVINGS_YIELD_POLICY_PRESETS,activation:'HUMAN_CONFIRMATION_REQUIRED',financialPosting:false,offlineCapable:true};}
   async savingsYieldDoctor(input:any):Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return diagnoseGroup(input);}
@@ -1589,7 +1648,7 @@ export class ConnectedApplication {
     const loan=(await this.listCompletion('LOAN')).find(x=>x.id===loanId);if(!loan)throw Error('LOAN_NOT_FOUND');const journal=await this.sovereign.list(this.tenantId,this.activeGroupId);
     return{loan,events:journal.filter(x=>String(x.payload.loanId??x.payload.sourceId??'')===loanId||String(x.payload.id??'')===loanId),offline:true};
   }
-  async disburseLoan(id:string,input:{amount?:number;expectedVersion:number;meetingId?:string}):Promise<{entry:LedgerEntry;loan:CompletionRecord}>{
+  async disburseLoan(id:string,input:{amount?:number;expectedVersion:number;meetingId?:string;rubricId?:string}):Promise<{entry:LedgerEntry;loan:CompletionRecord}>{
     if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');const key=makeId('loan_disbursement');
     if(!this.isOffline())try{return await this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/loans/'+encodeURIComponent(id)+'/disburse',{method:'POST',body:JSON.stringify({...input,idempotencyKey:key})});}catch(error){if(!(error instanceof Error)||error.message!=='NETWORK_UNAVAILABLE')throw error;}
     const loan=(await this.listCompletion('LOAN')).find(x=>x.id===id);if(!loan)throw Error('LOAN_NOT_FOUND');if(String(loan.data.completionState)!=='APPROVED')throw Error('LOAN_NOT_APPROVED');if(Number(loan.data.completionVersion??0)!==input.expectedVersion)throw Error('COMPLETION_VERSION_CONFLICT');
@@ -1597,7 +1656,7 @@ export class ConnectedApplication {
     const entry:any=await this.patchLocalCashMovement({amount:principal,direction:'out',kind:'loan_disbursement',sourceType:'loan',sourceId:id,meetingId:input.meetingId,idempotencyKey:key,descriptionCode:'LEDGER_LOAN_DISBURSEMENT'});
     const interestTiming=String(loan.data.interestTiming??'NEXT_SESSION_DUE'),rateBasisPointsPerPeriod=Number(loan.data.rateBasisPointsPerPeriod??0),upfrontInterestExpected=interestTiming==='NEXT_SESSION_DUE'?0:Math.round(principal*rateBasisPointsPerPeriod/10000);
     const data={...loan.data,completionState:'DISBURSED',completionVersion:input.expectedVersion+1,ledgerEntryId:entry.id,outstandingPrincipal:principal,unpaidInterest:0,accruedMeetingIdsJson:'[]',interestTiming,upfrontInterestExpected,upfrontInterestPending:upfrontInterestExpected>0,upfrontInterestSourceMeetingId:input.meetingId??'',upfrontInterestSkipNextClose:upfrontInterestExpected>0&&!input.meetingId,disbursedAt:new Date().toISOString()},next:CompletionRecord={...loan,status:'ACTIVE',tags:[...loan.tags.filter(x=>!x.startsWith('state:')),'state:DISBURSED'],data,updatedAt:new Date().toISOString()};
-    await this.saveLocalCompletion(next);await this.queueLocal('LOAN_DISBURSE_V1',{groupId:this.activeGroupId,loanId:id,amount:principal,expectedVersion:input.expectedVersion,meetingId:input.meetingId??null,interestTiming,rateBasisPointsPerPeriod,idempotencyKey:key},key);return{entry,loan:next};
+    await this.saveLocalCompletion(next);await this.queueLocal('LOAN_DISBURSE_V1',{groupId:this.activeGroupId,loanId:id,amount:principal,expectedVersion:input.expectedVersion,meetingId:input.meetingId??null,rubricId:input.rubricId??String(loan.data.rubricId??''),interestTiming,rateBasisPointsPerPeriod,idempotencyKey:key},key);return{entry,loan:next};
   }
   async repayLoan(id:string,input:{principalAmount:number;interestAmount?:number;expectedVersion:number;meetingId?:string}):Promise<{entry:LedgerEntry;loan:CompletionRecord}>{
     if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');const key=makeId('loan_repayment');

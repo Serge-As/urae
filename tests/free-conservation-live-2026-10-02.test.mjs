@@ -20,12 +20,14 @@ test('free conservation uses event push instead of freezing live',()=>{
   assert.match(main,/conservationMode: FREE_CONSERVATION_MODE/);
   assert.match(live,/PUSH ÉVÉNEMENTIEL · mode gratuit/);
   assert.match(live,/CLIENT_SIGNAL/);
-  assert.match(live,/liveWebSocketUrl\(lastSeq\)/);
+  assert.match(live,/liveWebSocketUrl\(lastSeq,String\(ticketData\?\.ticket\?\?''\)\)/);
   assert.doesNotMatch(live,/GELÉ · mode gratuit/);
   assert.doesNotMatch(live,/setInterval\(/);
   assert.doesNotMatch(live,/startCatchupTimer/);
-  assert.match(live,/reconnectAttempt>=1/);
+  assert.match(live,/reconnectAttempt>=4/);
+  assert.match(live,/\[1500,4500,12000,30000\]/);
   assert.match(live,/GROUP_LIVE_HELLO/);
+  assert.doesNotMatch(live,/app\.publishLiveSignal\?\./);
 });
 
 test('financial presence is one start one stop without heartbeat traffic',()=>{

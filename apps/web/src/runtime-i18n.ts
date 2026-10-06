@@ -378,6 +378,27 @@ Object.assign(EXTRA_FR_EN,{
   "Contexte, règle, décision, prochaine action…": "Context, rule, decision, next action…"
 });
 
+
+Object.assign(EXTRA_FR_EN,{
+  'Sources autorisées pour financer les prêts':'Authorized sources for funding loans',
+  'Toute la caisse disponible autorisée par le groupe':'All available group cash authorized by the group',
+  'Épargnes + remboursements/intérêts encaissés uniquement':'Savings + collected repayments/interest only',
+  'Les prêts ne peuvent jamais dépasser la liquidité réellement disponible. Le deuxième mode exclut Secours, Transport et autres rubriques.':'Loans can never exceed actually available liquidity. The second mode excludes Solidarity, Transport and other rubrics.',
+  'Autoriser les reliquats licites des séances précédentes':'Allow lawful unused balances from previous meetings',
+  'Prime emprunteurs %':'Borrower reward %',
+  'Facultatif. Réservé aux emprunteurs ayant remboursé selon la politique du groupe.':'Optional. Reserved for borrowers who repaid according to group policy.',
+  'Éligibilité des dépôts':'Deposit eligibility',
+  'Tous les dépôts de la fenêtre sont éligibles':'All deposits in the eligibility window qualify',
+  'Seulement les séances ayant au moins un prêt débloqué':'Only meetings with at least one disbursed loan',
+  'Avec la 2e politique, un seul prêt rend tous les dépôts de la séance éligibles, même si le prêt est inférieur aux dépôts.':'Under the second policy, one loan makes all deposits from that meeting eligible, even when the loan is smaller than the deposits.',
+  'Poids prime emprunteurs':'Borrower reward weighting',
+  'Capital + intérêts payés × ancienneté':'Principal + interest paid × age',
+  'Capital emprunté × ancienneté':'Borrowed principal × age',
+  'Intérêts payés × ancienneté':'Interest paid × age',
+  'Enregistrer la politique de répartition':'Save distribution policy',
+  'Politique de groupe · aucune écriture financière créée par une simulation.':'Group policy · simulations create no financial ledger entry.'
+});
+
 const canonical = new Map<string,string>();
 for(const [key,fr] of Object.entries(messages.fr)){
   const en=(messages.en as Record<string,string>)[key];

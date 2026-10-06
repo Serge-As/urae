@@ -1,5 +1,12 @@
 # CURRENT AUTHORITY — RELEASE CONTRACT (2026-09-28)
 
+
+## Addendum 2026-10-05 — candidate 1.5.2.11, ne pas confondre avec la production
+
+Dernier code en production prouvé par GitHub Actions : **1.5.2.10** SHA `393f80df88076072317f08adee81fe14d54d06c5`, livraison `37130397965` SUCCESS le 3 octobre. La PR #66 ajoute une reprise terrain avec push WebSocket sans polling D1, signaux de saisie/brouillons, anti-conflit et Outbox, un contrôle de quota explicite et réduction des lectures facultatives. L'identité de **candidate 1.5.2.11** est cohérente Worker/build/cache/query/contrat, mais **aucun déploiement ni FIELD_ACCEPTED n'est attesté**. Ne pas modifier les fonds ni vider les caches des anciens utilisateurs. Voir `PROJECT_STATE.md`, `NEXT_RUN.md` et `docs/recovery/ECO_FIELD_13_POINTS_2026-10-05.md` pour tests non couverts.
+
+---
+
 La vérité d'identité courante est désormais machine-lisible dans `docs/release/CURRENT_RELEASE_CONTRACT.json`. Les blocs « CURRENT OVERRIDE » ci-dessous sont conservés comme historique de livraisons et ne doivent plus être interprétés, par leur seule position, comme le SHA actuellement servi.
 
 Le SHA de production est autoritatif uniquement lorsque **le workflow de livraison du même SHA est SUCCESS** et que `/health.commitSha` répond exactement ce SHA avec la version, le build, le schéma, la politique et le cache du contrat. `FIELD_ACCEPTED` reste **NOT_ACCEPTED** tant qu'une recette physique séparée n'a pas été constatée sur les appareils ciblés.

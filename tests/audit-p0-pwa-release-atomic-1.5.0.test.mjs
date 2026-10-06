@@ -12,6 +12,8 @@ test('new service worker refuses to install when any declared startup-shell asse
   assert.match(sw,/RELEASE_ASSET_TIMEOUT/);
   assert.match(sw,/await response\.clone\(\)\.arrayBuffer\(\)/);
   assert.match(sw,/RELEASE_READY/);
+  assert.match(sw,/await caches\.delete\(CACHE\)/);
+  assert.match(sw,/throw error/);
 });
 
 test('installed navigation is coherent-shell-first so offline reload is immediate while release assets stay immutable',()=>{
@@ -22,7 +24,7 @@ test('installed navigation is coherent-shell-first so offline reload is immediat
   assert.match(sw,/if \(cached\) return cached/);
   assert.match(sw,/fetch\(event\.request, \{ cache:'no-store' \}\)/);
   assert.match(sw,/if\(url\.search\)return await cache\.match\(request\)/);
-  assert.match(sw,/APP_SHELL\.includes\(url\.pathname\)/);
+  assert.match(sw,/SHELL_PATHS\.has\(url\.pathname\)/);
 });
 
 test('activation preserves previous coherent release and only skipWaits after RELEASE_READY is written',()=>{
@@ -40,6 +42,6 @@ test('release changes the active cache identity while preserving a distinct cohe
   const previous=sw.match(/const PREVIOUS_CACHE = '([^']+)';/)?.[1];
   assert.ok(current&&previous,'release and rollback caches are both declared');
   assert.notEqual(current,previous,'active release cache must differ from rollback cache');
-  assert.match(current,/^eco-system-v15210-/);
-  assert.match(previous,/^eco-system-v1529-/);
+  assert.match(current,/^eco-system-v15211-/);
+  assert.match(previous,/^eco-system-v15210-/);
 });

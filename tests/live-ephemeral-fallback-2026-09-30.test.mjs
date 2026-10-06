@@ -21,7 +21,9 @@ test('client has no recurring REST fallback; reconnect resumes through websocket
   const app=fs.readFileSync('packages/application/src/index.ts','utf8');
   assert.doesNotMatch(live,/setInterval\(/);
   assert.doesNotMatch(live,/startCatchupTimer/);
-  assert.match(live,/liveWebSocketUrl\(lastSeq\)/);
+  assert.match(live,/liveWebSocketUrl\(lastSeq,String\(ticketData\?\.ticket\?\?''\)\)/);
   assert.match(live,/CLIENT_SIGNAL/);
-  assert.match(app,/liveWebSocketUrl\(after=0\)/);
+  assert.doesNotMatch(live,/app\.publishLiveSignal\?\./);
+  assert.match(live,/WebSocket-only/);
+  assert.match(app,/liveWebSocketUrl\(after=0,ticket=''\)/);
 });

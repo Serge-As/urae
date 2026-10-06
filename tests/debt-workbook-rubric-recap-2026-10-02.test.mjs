@@ -58,7 +58,7 @@ test('quota exhaustion opens a durable local circuit breaker instead of hammerin
   assert.match(app,/serverBudgetBlockedUntil/);
   assert.match(app,/eco\.serverBudgetBlock\.v1/);
   assert.match(app,/markServerBudgetBlocked/);
-  assert.match(app,/status===429\?Date\.UTC/);
+  assert.match(app,/daily\?Date\.UTC/);
   assert.match(app,/forceServerRetry/);
   assert.match(app,/if\(this\.serverBudgetBlocked\(\)\)/);
 });
@@ -94,7 +94,8 @@ test('legacy loan sheets rebuild debt and derive next-session interest offline',
 
 test('generic optional-service 503 never opens the global D1 quota circuit',()=>{
   const app=fs.readFileSync('packages/application/src/index.ts','utf8');
-  assert.match(app,/const quotaSignal=response\.status===429/);
+  assert.match(app,/const quotaSignal=/);
+  assert.match(app,/if\(response\.status===429&&!quotaSignal\)/);
   assert.match(app,/PREMIUM_LIVE_LEDGER_DISABLED|errorCode/);
   assert.match(app,/if\(quotaSignal\)this\.markServerBudgetBlocked/);
   assert.doesNotMatch(app,/if\(transient\)this\.markServerBudgetBlocked/);

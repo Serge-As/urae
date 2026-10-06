@@ -121,5 +121,5 @@ test('PWA shell refresh remains versioned without forced offline reload',async()
   assert.match(sw,/if \(!await cache\.match\(RELEASE_READY\)\) throw new Error\('RELEASE_NOT_READY'\)/);
   assert.ok(html.includes('/styles.css?v='+shellVersion),'styles use same release suffix');
   assert.ok(html.includes('/src/main.js?v='+shellVersion),'main uses same release suffix');
-  assert.match(html,/ECO-SYSTEM · 1\.5\.2\.10/);
+  assert.match(html,/ECO-SYSTEM · 1\.5\.2\.11/);
 });

@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - 'fix/1.5.2.10-offline-conflicts-loans-20261003'
+      - 'fix/field-regressions-recovery-20261005'
   workflow_dispatch:
 
 permissions:

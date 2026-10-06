@@ -74,11 +74,11 @@ interface WorkersAILike {
   run?(model:string,input:Record<string,unknown>,options?:Record<string,unknown>):Promise<unknown>;
 }
 
-const RELEASE_VERSION='1.5.2.10-offline-conflicts-loans';
-const RELEASE_BUILD_ID='eco-system-1.5.2.10-20261003-offline-conflicts-loans';
+const RELEASE_VERSION='1.5.2.11-field-recovery';
+const RELEASE_BUILD_ID='eco-system-1.5.2.11-20261005-field-recovery';
 const RELEASE_SCHEMA_VERSION='d1-additive-20260923';
 const RELEASE_POLICY_VERSION='live-finance-policy-20261003-explicit-conflicts';
-const RELEASE_PWA_CACHE='eco-system-v15210-offline-conflicts-loans-20261003';
+const RELEASE_PWA_CACHE='eco-system-v15211-field-recovery-20261005';
 
 const defaultRepo = new InMemoryPlatformRepository();
 const defaultReferralBudgets = new InMemoryReferralBudgetStore();
@@ -169,7 +169,8 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
   }
   const {kernel,foundation,ledger,meetings,discovery,membershipGateway,rubrics,completion,explainability,documents,receivables,treasury,riskFinance,market,community,imports,artifactStore,memberControl,memberEnvelopes,groupIdentity,conciergeLearning,miscRubrics,adManager,economicIntelligence,externalPrograms,operationalCockpit,businessStudio,knowledgeAcademy,valueNetwork,creatorTalent,quietWatch}=createRequestScope(request,repo,options.artifacts,options.dataUseDefaultMode??'BETA_OPEN',options.documentAI);
   let ctx=kernel.context.get();
-  try{
+  const trustedLiveTicket=request.headers.get('x-live-ticket-authenticated')==='1';
+  if(!trustedLiveTicket)try{
     const at=Date.now(),rows=await repo.listWorkspaceRecords(ctx.tenantId,'MANAGER.BUSINESS_STUDIO'),grants=rows.filter(r=>r.data.businessKind==='MANDATE'&&r.status==='ACTIVE'&&r.data.mandateState==='ACTIVE'&&String(r.data.delegateUserId??'')===ctx.actorId&&Date.parse(String(r.data.startsAt??''))<=at&&(!r.data.endsAt||Date.parse(String(r.data.endsAt))>at)).map(r=>{let permissions:string[]=[];try{permissions=JSON.parse(String(r.data.delegatedRightsJson??'[]'));}catch{}return{mandateId:r.id,groupId:String(r.data.groupId??''),permissions:[...new Set(permissions.map(x=>String(x).toUpperCase()))],startsAt:String(r.data.startsAt??''),endsAt:r.data.endsAt?String(r.data.endsAt):undefined};}).filter(g=>g.groupId&&g.permissions.length);
     kernel.context.set({...ctx,mandateIds:grants.map(g=>g.mandateId),mandateGrants:grants});ctx=kernel.context.get();
   }catch{}
@@ -304,9 +305,44 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
   const jsonStringArray=(value:unknown):string[]=>{try{const parsed=JSON.parse(String(value??'[]'));return Array.isArray(parsed)?parsed.map(String):[];}catch{return[];}};
   const meetingMoment=(meeting:any)=>Date.parse(String(meeting?.scheduledAt??meeting?.openedAt??meeting?.createdAt??''))||0;
   const normalizedLoanInterestTiming=(value:unknown):'NEXT_SESSION_DUE'|'UPFRONT_DEDUCTED'|'UPFRONT_REQUIRED'=>['UPFRONT_DEDUCTED','UPFRONT_REQUIRED'].includes(String(value))?String(value) as any:'NEXT_SESSION_DUE';
+  const loanFundingReservationId=(key:string)=>'loan_funding_reservation_'+encodeURIComponent(key).slice(0,160);
+  const loanFundingAvailability=async(input:{groupId:string;meetingId?:string;mode:'SAVINGS_REPAYMENTS_ONLY'|'AVAILABLE_GROUP_CASH';carryForward:boolean;currency:string;extraRepayment?:number})=>{
+    if(!input.carryForward&&!input.meetingId)throw Error('MEETING_REQUIRED_FOR_SESSION_ONLY_LOAN_FUNDING');
+    const [summary,rubricRows,positions,sheetEvents,reservations]=await Promise.all([
+      ledger.summary(ctx.tenantId,input.groupId,input.currency),repo.listRubricDefinitions(ctx.tenantId,input.groupId),ledger.receiptPositions(ctx.tenantId,input.groupId),
+      repo.listWorkspaceRecords(ctx.tenantId,'FINANCE.SHEET_EVENT',input.groupId),repo.listWorkspaceRecords(ctx.tenantId,'FINANCE.LOANS',input.groupId)
+    ]);
+    const scoped=<T extends {meetingId?:unknown}>(rows:T[])=>input.carryForward?rows:rows.filter(x=>String(x.meetingId??'')===String(input.meetingId??''));
+    const extra=Math.max(0,Number(input.extraRepayment??0)),now=Date.now();
+    const activeReservations=reservations.filter(x=>x.status==='ACTIVE'&&x.tags.includes('loan-funding-reservation')&&Date.parse(String(x.data.expiresAt??''))>now&&(input.carryForward||String(x.data.meetingId??'')===String(input.meetingId??'')));
+    const reserved=activeReservations.reduce((n,x)=>n+Math.max(0,Number(x.data.amount??0)),0);
+    let basis=0;
+    if(input.mode==='AVAILABLE_GROUP_CASH'&&input.carryForward)basis=Math.max(0,Number(summary.cashBalance??0)+extra);
+    else{
+      const normalized=(v:unknown)=>String(v??'').normalize('NFKD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
+      const savingsIds=new Set(rubricRows.filter(r=>{const kind=String(r.activityPlan?.kind??'').toUpperCase(),system=String(r.facets?.custom?.systemKey??'').toUpperCase(),name=normalized(r.name),semantic=String(r.facets?.refundability??'')==='FULLY_REFUNDABLE'&&String(r.facets?.direction??'')!=='OUTFLOW'&&String(r.facets?.interestMode??'')==='CUSTOM';return kind==='SAVINGS'||/SAVINGS|EPARGNE/.test(system)||/epargne|saving/.test(name)||semantic;}).map(r=>r.id));
+      const receiptPool=scoped(positions as any[]).filter((p:any)=>Number(p.netAmount??0)>0&&(input.mode==='AVAILABLE_GROUP_CASH'||savingsIds.has(String(p.rubricId??'')))).reduce((n:number,p:any)=>n+Number(p.netAmount??0),0);
+      const scopedEvents=scoped((sheetEvents as any[]).map(x=>({meetingId:x.data?.meetingId,x}))).map(x=>x.x),repayments=scopedEvents.filter((x:any)=>String(x.data?.direction??'').toUpperCase()==='IN'&&Boolean(x.data?.loanId)).reduce((n:number,x:any)=>n+Math.abs(Number(x.data?.amount??0)),0),outflows=scopedEvents.filter((x:any)=>String(x.data?.direction??'').toUpperCase()==='OUT'&&(input.mode==='AVAILABLE_GROUP_CASH'||Boolean(x.data?.loanId))).reduce((n:number,x:any)=>n+Math.abs(Number(x.data?.amount??0)),0);
+      basis=Math.max(0,receiptPool+repayments+extra-outflows);
+      basis=Math.min(basis,Math.max(0,Number(summary.cashBalance??0)+extra));
+    }
+    return{basis,reserved,available:Math.max(0,basis-reserved),cashBalance:Number(summary.cashBalance??0),mode:input.mode};
+  };
+
   const disburseApprovedLoan=async(input:{groupId:string;loan:any;principal:number;expectedVersion:number;meetingId?:string;rubricId?:string;idempotencyKey:string})=>{
     let loan=input.loan;const initialState=String(loan.data.completionState??''),timing=normalizedLoanInterestTiming(loan.data.interestTiming),rate=finite(loan.data.rateBasisPointsPerPeriod,0),upfrontInterest=timing==='NEXT_SESSION_DUE'?0:Math.round(input.principal*rate/10000),upfrontKey=input.idempotencyKey+':upfront-interest';
-    let upfrontEntry=upfrontInterest>0?await repo.findLedgerEntryByIdempotency(ctx.tenantId,input.groupId,upfrontKey):undefined,entry=await repo.findLedgerEntryByIdempotency(ctx.tenantId,input.groupId,input.idempotencyKey);
+    let upfrontEntry=upfrontInterest>0?await repo.findLedgerEntryByIdempotency(ctx.tenantId,input.groupId,upfrontKey):undefined,entry=await repo.findLedgerEntryByIdempotency(ctx.tenantId,input.groupId,input.idempotencyKey),fundingReservation:WorkspaceRecord|undefined;
+    const upfrontEntryExisted=Boolean(upfrontEntry);
+    if(initialState==='APPROVED'&&!entry){
+      const policyRubricId=input.rubricId??String(loan.data.rubricId??''),policyRubric=policyRubricId?await repo.getRubricDefinition(ctx.tenantId,input.groupId,policyRubricId):undefined,policy=policyRubric?.policies?.loan,mode=String(policy?.fundingMode??'AVAILABLE_GROUP_CASH')==='SAVINGS_REPAYMENTS_ONLY'?'SAVINGS_REPAYMENTS_ONLY':'AVAILABLE_GROUP_CASH',carryForward=policy?.carryForwardUnusedFunds!==false;
+      if(mode==='SAVINGS_REPAYMENTS_ONLY'&&!input.meetingId)throw Error('MEETING_REQUIRED_FOR_RESTRICTED_LOAN_FUNDING');
+      const reservationId=loanFundingReservationId(input.idempotencyKey),existing=await repo.getWorkspaceRecord(ctx.tenantId,reservationId),stamp=new Date().toISOString(),expiresAt=new Date(Date.now()+60_000).toISOString();
+      if(existing&&Number(existing.data.amount??0)!==input.principal)throw Error('IDEMPOTENCY_CONFLICT');
+      fundingReservation={id:reservationId,tenantId:ctx.tenantId,groupId:input.groupId,moduleId:'FINANCE.LOANS',title:'Réservation de liquidité prêt',summary:'Réservation anti-double-décaissement à durée courte.',status:'ACTIVE',tags:['loan-funding-reservation','loan:'+loan.id],data:{loanId:loan.id,meetingId:input.meetingId??'',amount:input.principal,mode,carryForward,expiresAt},createdBy:existing?.createdBy??ctx.actorId,createdAt:existing?.createdAt??stamp,updatedAt:stamp};
+      await repo.saveWorkspaceRecord(fundingReservation);
+      const availability=await loanFundingAvailability({groupId:input.groupId,meetingId:input.meetingId,mode,carryForward,currency:String(loan.data.currency??'XAF'),extraRepayment:timing==='UPFRONT_REQUIRED'?upfrontInterest:0});
+      if(availability.available<0||availability.basis<availability.reserved){await repo.saveWorkspaceRecord({...fundingReservation,status:'ARCHIVED',data:{...fundingReservation.data,rejectedAt:new Date().toISOString(),basis:availability.basis,reserved:availability.reserved},updatedAt:new Date().toISOString()});throw Error(mode==='SAVINGS_REPAYMENTS_ONLY'?'INSUFFICIENT_AUTHORIZED_LOAN_FUNDS':'INSUFFICIENT_CASH');}
+    }
     if(initialState==='APPROVED'){
       if(timing==='UPFRONT_REQUIRED'&&upfrontInterest>0&&!upfrontEntry){
         const balance=(await ledger.summary(ctx.tenantId,input.groupId,String(loan.data.currency??'XAF'))).cashBalance;
@@ -314,6 +350,7 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
         upfrontEntry=await ledger.recordLoanRepayment({tenantId:ctx.tenantId,groupId:input.groupId,principalAmount:0,interestAmount:upfrontInterest,currency:String(loan.data.currency??'XAF'),sourceId:loan.id,meetingId:input.meetingId,idempotencyKey:upfrontKey});
       }
       if(!entry)entry=await ledger.recordCashMovement({tenantId:ctx.tenantId,groupId:input.groupId,amount:input.principal,currency:String(loan.data.currency??'XAF'),direction:'out',counterAccountCode:'LOAN_RECEIVABLE',counterAccountType:'asset',descriptionCode:'LEDGER_LOAN_DISBURSEMENT',sourceType:'loan',sourceId:loan.id,meetingId:input.meetingId,idempotencyKey:input.idempotencyKey,kind:'loan_disbursement'});
+      const cashAfter=await ledger.summary(ctx.tenantId,input.groupId,String(loan.data.currency??'XAF'));if(Number(cashAfter.cashBalance??0)<0&&entry){await ledger.reverseEntry({tenantId:ctx.tenantId,groupId:input.groupId,entryId:entry.id,reason:'Décaissement concurrent refusé : caisse négative'});if(upfrontEntry&&!upfrontEntryExisted)await ledger.reverseEntry({tenantId:ctx.tenantId,groupId:input.groupId,entryId:upfrontEntry.id,reason:'Annulation de l’intérêt préalable créé pendant cette tentative car le prêt n’a pas pu être décaissé'});if(fundingReservation)await repo.saveWorkspaceRecord({...fundingReservation,status:'ARCHIVED',data:{...fundingReservation.data,rejectedAt:new Date().toISOString(),reason:'NEGATIVE_CASH_AFTER_CONCURRENT_DISBURSEMENT'},updatedAt:new Date().toISOString()});throw Error('INSUFFICIENT_CASH_CONCURRENT');}
       if(timing==='UPFRONT_DEDUCTED'&&upfrontInterest>0&&!upfrontEntry)upfrontEntry=await ledger.recordLoanRepayment({tenantId:ctx.tenantId,groupId:input.groupId,principalAmount:0,interestAmount:upfrontInterest,currency:String(loan.data.currency??'XAF'),sourceId:loan.id,meetingId:input.meetingId,idempotencyKey:upfrontKey});
       loan=await completion.transition(input.groupId,loan.id,'DISBURSED',{expectedVersion:input.expectedVersion,patch:{ledgerEntryId:entry.id,outstandingPrincipal:input.principal,unpaidInterest:0,accruedMeetingIdsJson:'[]',interestTiming:timing,upfrontInterestAmount:upfrontInterest,upfrontInterestLedgerEntryId:upfrontEntry?.id??'',upfrontInterestSourceMeetingId:input.meetingId??'',upfrontInterestSkipNextClose:upfrontInterest>0&&!input.meetingId,upfrontInterestPending:false,disbursedAt:entry.createdAt}});
     }else if(!['DISBURSED','REPAYING','CLOSED'].includes(initialState)||!entry)throw Error('LOAN_NOT_APPROVED');
@@ -325,6 +362,7 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
       const eventId='sheet_loan_event_'+entry!.id,existing=await repo.getWorkspaceRecord(ctx.tenantId,eventId);if(!existing)await repo.saveWorkspaceRecord({id:eventId,tenantId:ctx.tenantId,groupId:input.groupId,moduleId:'FINANCE.SHEET_EVENT',title:'Prêt décaissé',summary:'Projection de feuille liée à l’écriture canonique du prêt.',status:'DONE',tags:['sheet-event','loan-disbursement','ledger:'+entry!.id],data:{membershipId:String(loan.data.borrowerMembershipId??''),meetingId:input.meetingId,rubricId,loanId:loan.id,ledgerEntryId:entry!.id,amount:input.principal,direction:'OUT'},createdBy:ctx.actorId,createdAt:entry!.createdAt,updatedAt:entry!.createdAt});
       await publishLive(input.groupId,'MEETING_UPDATE','loan-sheet-live:'+entry!.id,{meetingId:input.meetingId,kind:'FINANCIAL_CELL',operationType:'LOAN_DISBURSEMENT',membershipId:String(loan.data.borrowerMembershipId??''),rubricId,previousAmount:0,newAmount:input.principal,meetingClosed:false,actorId:ctx.actorId,actorName:await actorLabel()});
     }
+    if(fundingReservation)await repo.saveWorkspaceRecord({...fundingReservation,status:'DONE',data:{...fundingReservation.data,ledgerEntryId:entry!.id,confirmedAt:new Date().toISOString()},updatedAt:new Date().toISOString()});
     return{entry:entry!,upfrontInterestEntry:upfrontEntry??null,upfrontInterest,interestTiming:timing,loan};
   };
   const accrueLoanInterestAfterMeetingClose=async(groupId:string,closedMeeting:any)=>{
@@ -559,7 +597,9 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
         return stub.fetch(new Request('https://group-live.internal/events?after='+encodeURIComponent(after)+'&limit='+encodeURIComponent(limit)+'&userId='+encodeURIComponent(ctx.actorId)));
       }
       if(action==='connect'&&request.method==='GET'){
-        await requireGroup(groupId,false);
+        // Signed live tickets are already group-scoped by authenticatedApi.
+        // Fallback to the canonical D1 authorization path for legacy clients.
+        if(!trustedLiveTicket)await requireGroup(groupId,false);
         const after=url.searchParams.get('after')??'0';
         return stub.fetch(new Request('https://group-live.internal/connect?userId='+encodeURIComponent(ctx.actorId)+'&after='+encodeURIComponent(after),{method:'GET',headers:request.headers}));
       }
@@ -1107,6 +1147,8 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
     if(rubricPoliciesRoute&&request.method==='PUT'){
       const groupId=rubricPoliciesRoute[1]!,rubricId=rubricPoliciesRoute[2]!,body=await readJson<RubricPolicies>(request),updated=await rubrics.updatePolicies({tenantId:ctx.tenantId,groupId,rubricId,policies:body});
       await notifyGovernanceChange(groupId,{title:'Politiques de rubrique modifiées',message:`Politiques de « ${updated.name} » modifiées.`,action:{view:'operations',anchor:'rubricsManagementPanel',rubricId,entityKind:'RUBRIC',entityId:rubricId,label:'Voir la rubrique'}});
+      const loanPolicy=updated.policies?.loan;
+      if(loanPolicy)try{await publishLive(groupId,'RULE_UPDATE','loan-policy:'+rubricId+':'+String(updated.version??0),{kind:'LOAN_POLICY',rubricId,rateBasisPointsPerPeriod:Number(loanPolicy.rateBasisPointsPerPeriod??0),paymentPriority:String(loanPolicy.paymentPriority??'CAPITAL_FIRST'),interestTiming:String(loanPolicy.interestTiming??'NEXT_SESSION_DUE'),fundingMode:String(loanPolicy.fundingMode??'AVAILABLE_GROUP_CASH'),carryForwardUnusedFunds:loanPolicy.carryForwardUnusedFunds!==false,actorId:ctx.actorId});}catch{}
       return json(updated,200,cors);
     }
     const rubricPreviewRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/rubrics\/([^/]+)\/preview-cycle$/);
@@ -1360,11 +1402,12 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
     const savingsYieldSource=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/savings-yield\/source-data$/);
     if(savingsYieldSource&&request.method==='GET'){
       const groupId=savingsYieldSource[1]!;await requireGroup(groupId,true);
-      const [rubricRows,meetingRows,positions,accounts,entries,memberships,loanPeriods,loanRows,obligationRows,sheetEvents]=await Promise.all([
+      const [rubricRows,meetingRows,positions,accounts,entries,memberships,loanPeriods,loanRows,obligationRows,sheetEvents,distributionPolicies,ledgerSummary]=await Promise.all([
         repo.listRubricDefinitions(ctx.tenantId,groupId),repo.listMeetings(ctx.tenantId,groupId),ledger.receiptPositions(ctx.tenantId,groupId),
         repo.listLedgerAccounts(ctx.tenantId,groupId),repo.listLedgerEntries(ctx.tenantId,groupId),repo.listMemberships(ctx.tenantId,groupId),
         repo.listWorkspaceRecords(ctx.tenantId,'FINANCE.LOAN_PERIOD',groupId),completion.list(groupId,'LOAN'),repo.listObligations(ctx.tenantId),
-        repo.listWorkspaceRecords(ctx.tenantId,'FINANCE.SHEET_EVENT',groupId)
+        repo.listWorkspaceRecords(ctx.tenantId,'FINANCE.SHEET_EVENT',groupId),repo.listWorkspaceRecords(ctx.tenantId,'FINANCE.SAVINGS_YIELD',groupId),
+        ledger.summary(ctx.tenantId,groupId,'XAF')
       ]);
       const normalizeSavingsLabel=(value:unknown)=>String(value??'').normalize('NFKD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim();
       const isSavingsRubric=(r:any)=>{const facets=r.facets??{},semanticSavings=String(facets.refundability??'')==='FULLY_REFUNDABLE'&&String(facets.direction??'')!=='OUTFLOW'&&String(facets.interestMode??'')==='CUSTOM';return String(r.activityPlan?.kind??'').toUpperCase()==='SAVINGS'||/SAVINGS|EPARGNE/.test(String(facets.custom?.systemKey??'').toUpperCase())||/epargne|saving/.test(normalizeSavingsLabel(r.name))||semanticSavings;};
@@ -1395,6 +1438,9 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
       const ledgerRecoveredInterest=Object.values(interestByAccount).reduce((n,x)=>n+x,0);
       const classicPrincipal=deposits.filter(d=>d.fund==='CLASSIC').reduce((n,d)=>n+d.amount,0),schoolPrincipal=deposits.filter(d=>d.fund==='SCHOOL').reduce((n,d)=>n+d.amount,0);
       const savingsSeries=savingsRubrics.map(r=>{const rows=deposits.filter(d=>d.rubricId===r.id);return{rubricId:r.id,name:r.name,total:rows.reduce((n,d)=>n+d.amount,0),entries:rows.map(d=>({memberId:d.memberId,meetingId:d.meetingId,session:d.session,amount:d.amount}))};});
+      const loanDisbursements=sheetEvents.map(x=>({x,d:x.data??{}})).filter(({d})=>String(d.direction??'').toUpperCase()==='OUT'&&Boolean(d.loanId)&&Boolean(d.meetingId)).map(({x,d})=>({loanId:String(d.loanId),memberId:String(d.membershipId??''),meetingId:String(d.meetingId),session:sessionByMeeting.get(String(d.meetingId))??1,amount:Math.abs(Number(d.amount??0)),rubricId:String(d.rubricId??''),createdAt:String(x.createdAt??x.updatedAt??'')}));
+      const distributionPolicyRecord=distributionPolicies.filter(x=>x.status!=='ARCHIVED'&&x.tags.includes('savings-yield-policy')).sort((a,b)=>String(b.updatedAt??b.createdAt).localeCompare(String(a.updatedAt??a.createdAt)))[0];
+      const distributionPolicy={eligibilityPolicy:String(distributionPolicyRecord?.data?.eligibilityPolicy??'ALL_DEPOSITS'),classicShareBasisPoints:Number(distributionPolicyRecord?.data?.classicShareBasisPoints??7000),schoolShareBasisPoints:Number(distributionPolicyRecord?.data?.schoolShareBasisPoints??1000),borrowerShareBasisPoints:Number(distributionPolicyRecord?.data?.borrowerShareBasisPoints??0),officeShareBasisPoints:Number(distributionPolicyRecord?.data?.officeShareBasisPoints??2000),reserveShareBasisPoints:Number(distributionPolicyRecord?.data?.reserveShareBasisPoints??0),borrowerWeightMode:String(distributionPolicyRecord?.data?.borrowerWeightMode??'VOLUME_TIME_INTEREST'),eligibleThroughClassic:Number(distributionPolicyRecord?.data?.eligibleThroughClassic??10),eligibleThroughSchool:Number(distributionPolicyRecord?.data?.eligibleThroughSchool??7),poolingMode:String(distributionPolicyRecord?.data?.poolingMode??'POOLED'),residualPolicy:String(distributionPolicyRecord?.data?.residualPolicy??'TIME_WEIGHTED'),recordId:distributionPolicyRecord?.id??null,updatedAt:distributionPolicyRecord?.updatedAt??null};
       const periodRows=loanPeriods.map(x=>({id:x.id,loanId:String(x.data.loanId??''),memberId:String(x.data.membershipId??''),meetingId:String(x.data.meetingId??''),principalPaid:Number(x.data.principalPaid??0),interestPaid:Number(x.data.interestPaid??0),principalAfter:Number(x.data.principalAfter??0),interestAfter:Number(x.data.interestAfter??0),interestNew:Number(x.data.interestNew??0),nextInterestProjected:Number(x.data.nextInterestProjected??0),totalDebtAfter:Number(x.data.totalDebtAfter??0),updatedAt:String(x.updatedAt??x.createdAt??'')}));
       const paymentEvents=new Map<string,{memberId:string;meetingId:string;loanId:string;principalPaid:number;interestPaid:number}>();
       for(const x of sheetEvents){
@@ -1427,7 +1473,7 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
       if(recoveredInterest===0)warnings.push('NO_REALIZED_INTEREST_FOUND');
       if(eventInterestTotal!==ledgerRecoveredInterest&&eventInterestTotal>0)warnings.push('INTEREST_SOURCE_VARIANCE:'+String(eventInterestTotal-ledgerRecoveredInterest));
       if(loanDebts.some(x=>x.principal>0&&x.rateBasisPointsPerPeriod<=0))warnings.push('LOAN_RATE_MISSING');
-      return json({generatedAt:new Date().toISOString(),source:'CANONICAL_LEDGER_AND_RECEIPTS',sourceDetail:'LEDGER_RECEIPTS_SHEETS_AND_LOAN_PERIODS',members:memberRows,rubrics:savingsRubrics.map(r=>({id:r.id,name:r.name})),meetings:orderedMeetings.map((m,i)=>({id:m.id,title:m.title,session:i+1,scheduledAt:m.scheduledAt??m.openedAt,status:m.status})),deposits,savingsSeries,repayments,interestReceipts,loanPeriods:periodRows,loanDebts,otherDebts,totals:{classicPrincipal,schoolPrincipal,totalPrincipal:classicPrincipal+schoolPrincipal,totalSavings,totalPrincipalRepaid,recoveredInterest,outstandingPrincipal,outstandingInterest,nextInterestProjected,otherDebt,totalDebt,totalDebtIncludingNextInterest},health:{formula:'(TOTAL_REPAYMENTS + TOTAL_INTEREST_COLLECTED) - TOTAL_CURRENT_DEBT >= TOTAL_SAVINGS',left:healthLeft,right:healthRight,difference:healthLeft-healthRight,passes:healthLeft>=healthRight},healthWithNext:{formula:'(TOTAL_REPAYMENTS + TOTAL_INTEREST_COLLECTED) - (TOTAL_CURRENT_DEBT + NEXT_INTEREST) >= TOTAL_SAVINGS',left:healthWithNextLeft,right:healthRight,difference:healthWithNextLeft-healthRight,passes:healthWithNextLeft>=healthRight},interestByAccount,warnings},200,cors);
+      return json({generatedAt:new Date().toISOString(),source:'CANONICAL_LEDGER_AND_RECEIPTS',sourceDetail:'LEDGER_RECEIPTS_SHEETS_AND_LOAN_PERIODS',members:memberRows,rubrics:savingsRubrics.map(r=>({id:r.id,name:r.name})),loanDisbursements,distributionPolicy,meetings:orderedMeetings.map((m,i)=>({id:m.id,title:m.title,session:i+1,scheduledAt:m.scheduledAt??m.openedAt,status:m.status})),deposits,savingsSeries,repayments,interestReceipts,loanPeriods:periodRows,loanDebts,otherDebts,totals:{classicPrincipal,schoolPrincipal,totalPrincipal:classicPrincipal+schoolPrincipal,totalSavings,totalPrincipalRepaid,recoveredInterest,outstandingPrincipal,outstandingInterest,nextInterestProjected,otherDebt,totalDebt,totalDebtIncludingNextInterest,cashBalance:Number(ledgerSummary.cashBalance??0)},health:{formula:'(TOTAL_REPAYMENTS + TOTAL_INTEREST_COLLECTED) - TOTAL_CURRENT_DEBT >= TOTAL_SAVINGS',left:healthLeft,right:healthRight,difference:healthLeft-healthRight,passes:healthLeft>=healthRight},healthWithNext:{formula:'(TOTAL_REPAYMENTS + TOTAL_INTEREST_COLLECTED) - (TOTAL_CURRENT_DEBT + NEXT_INTEREST) >= TOTAL_SAVINGS',left:healthWithNextLeft,right:healthRight,difference:healthWithNextLeft-healthRight,passes:healthWithNextLeft>=healthRight},interestByAccount,warnings},200,cors);
     }
 
     const savingsYieldPreview=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/savings-yield\/preview$/);
@@ -2227,7 +2273,10 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
       if(!loan)throw new Error('LOAN_NOT_FOUND');
       if(!['DISBURSED','REPAYING'].includes(String(loan.data.completionState)))throw new Error('LOAN_NOT_REPAYABLE');
       const loanRubrics=await repo.listRubricDefinitions(ctx.tenantId,loanRepay[1]!),loanRubric=loanRubrics.find(r=>r.id===String(loan.data.rubricId??''))??loanRubrics.find(r=>String(r.facets?.custom?.systemKey??'').toUpperCase()==='LOAN'||/^(pret|prets|emprunt|emprunts|loan|loans)$/.test(String(r.name??'').normalize('NFKD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim()));
-      const currentPriority=String(body.priority??loanRubric?.policies?.loan?.paymentPriority??loan.data.paymentPriority??'CAPITAL_FIRST')==='INTEREST_FIRST'?'INTEREST_FIRST':'CAPITAL_FIRST';
+      // Group policy, not an old browser's cached priority, governs NEW repayments.
+      // Historical period allocations remain immutable and auditable.
+      const specialPriority=String(loan.data.loanClass??'')==='SPECIAL'?loanRubric?.policies?.loan?.specialLoans?.[0]?.paymentPriority:undefined;
+      const currentPriority=String(specialPriority??loanRubric?.policies?.loan?.paymentPriority??body.priority??loan.data.paymentPriority??'CAPITAL_FIRST')==='INTEREST_FIRST'?'INTEREST_FIRST':'CAPITAL_FIRST';
       const outstanding=finite(loan.data.outstandingPrincipal),unpaidInterest=finite(loan.data.unpaidInterest,0),meetingId=body.meetingId?String(body.meetingId):undefined;
       const repaymentPeriodsPerYear=Math.max(1,finite(loan.data.installmentsPerYear,12)),rateBasisPointsPerPeriod=finite(body.rateBasisPointsPerPeriod??loan.data.rateBasisPointsPerPeriod??Math.round(finite(loan.data.annualRateBasisPoints,0)/repaymentPeriodsPerYear),0);
       let accruedMeetingIds=jsonStringArray(loan.data.accruedMeetingIdsJson),preparedInterestMeetingIds=jsonStringArray(loan.data.preparedInterestMeetingIdsJson),preparedInterestPending=loan.data.preparedInterestPending===true||String(loan.data.preparedInterestPending)==='true';
@@ -2336,6 +2385,7 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
       const record:WorkspaceRecord={id:makeId('workspace'),tenantId:ctx.tenantId,groupId:body.groupId?String(body.groupId):undefined,moduleId,title,summary:body.summary?String(body.summary):undefined,status,tags:strArray(body.tags),data,createdBy:ctx.actorId,createdAt:timestamp,updatedAt:timestamp};
       await repo.saveWorkspaceRecord(record);
       const audit=kernel.audit.append({tenantId:ctx.tenantId,actorId:ctx.actorId,action:'WORKSPACE_RECORD_CREATED',targetType:'workspace_record',targetId:record.id,after:{moduleId:record.moduleId,groupId:record.groupId,status:record.status},requestId:ctx.requestId}); await repo.saveAudit(audit);
+      if(record.moduleId==='FINANCE.SAVINGS_YIELD'&&record.tags.includes('savings-yield-policy')&&record.groupId)await publishLive(record.groupId,'RULE_UPDATE','savings-yield-policy:'+record.id+':'+record.updatedAt,{kind:'SAVINGS_DISTRIBUTION_POLICY',recordId:record.id,updatedAt:record.updatedAt,actorId:ctx.actorId});
       return json(record,201,cors);
     }
     const workspaceRoute=url.pathname.match(/^\/api\/v1\/workspaces\/([^/]+)$/);
@@ -2349,6 +2399,7 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
       const updated:WorkspaceRecord={...existing,title:body.title===undefined?existing.title:String(body.title).trim()||existing.title,summary:body.summary===undefined?existing.summary:String(body.summary),status,tags:body.tags===undefined?existing.tags:strArray(body.tags),data,updatedAt:new Date().toISOString()};
       await repo.saveWorkspaceRecord(updated);
       const audit=kernel.audit.append({tenantId:ctx.tenantId,actorId:ctx.actorId,action:'WORKSPACE_RECORD_UPDATED',targetType:'workspace_record',targetId:updated.id,after:{moduleId:updated.moduleId,status:updated.status},requestId:ctx.requestId}); await repo.saveAudit(audit);
+      if(updated.moduleId==='FINANCE.SAVINGS_YIELD'&&updated.tags.includes('savings-yield-policy')&&updated.groupId)await publishLive(updated.groupId,'RULE_UPDATE','savings-yield-policy:'+updated.id+':'+updated.updatedAt,{kind:'SAVINGS_DISTRIBUTION_POLICY',recordId:updated.id,updatedAt:updated.updatedAt,actorId:ctx.actorId});
       return json(updated,200,cors);
     }
 
@@ -2856,7 +2907,7 @@ export default {async fetch(request:Request,env:WorkerEnv={}){
     const h=authenticatedRequest.headers;
     pairingKernel.context.set({actorId:h.get('x-actor-id')??'unknown',tenantId:h.get('x-tenant-id')??'unknown',activeGroupId:h.get('x-active-group-id')||undefined,groupRoles:(h.get('x-group-roles')??'').split(',').filter(Boolean),mandateIds:[],mandateGrants:[],deviceId:h.get('x-device-id')??'device_web',sessionId:h.get('x-session-id')??'server-authenticated',locale:h.get('accept-language')?.toLowerCase().startsWith('en')?'en':'fr',timezone:h.get('x-timezone')??'Africa/Douala',connectivity:'online',requestId:h.get('x-request-id')??crypto.randomUUID()});
     return createApiHandler(repository,{artifacts:env.ARTIFACTS,documentAI:env.AI,liveNamespace:env.GROUP_LIVE_HUB,premiumLive:env.PREMIUM_LIVE_LEDGER==='true',referralBudgets:new D1ReferralBudgetStore(env.DB!),founderLearning,founderControl,communityRealtime,founderTeamActors,commercialPreferences,groupPairing,interestCommunities,ecoPulse,identityProof,dataUseDefaultMode,governanceSecret:env.COLLECTIVE_LEARNING_PEPPER??env.IDENTITY_MATCH_PEPPER,releaseCommitSha:env.RELEASE_COMMIT_SHA})(authenticatedRequest);
-  })(request);
+  },env.COLLECTIVE_LEARNING_PEPPER??env.IDENTITY_MATCH_PEPPER)(request);
 },
 async scheduled(controller:{scheduledTime?:number},env:WorkerEnv,executionCtx?:{waitUntil?(promise:Promise<unknown>):void}){
   if(!env.DB)return;

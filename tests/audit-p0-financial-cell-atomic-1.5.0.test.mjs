@@ -44,7 +44,7 @@ test('same correction idempotency key cannot be reused for a different intent',(
 
 test('worker cell target no longer performs sequential reversal then contribution',()=>{
   const api=fs.readFileSync('workers/api/src/index.ts','utf8');
-  const start=api.indexOf('const applyFinancialCellTarget='),end=api.indexOf('\n  const trashEntity=',start);
+  const start=api.indexOf('const applyFinancialCellTarget='),end=api.indexOf('\n  const jsonStringArray=',start);
   const body=api.slice(start,end);
   assert.match(body,/replaceCashContributionCell/);
   assert.doesNotMatch(body,/ledger\.reverseEntry/);

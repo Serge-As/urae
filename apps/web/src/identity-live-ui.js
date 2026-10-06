@@ -3,9 +3,10 @@ const value=id=>String(document.getElementById(id)?.value??'').trim();
 const row=(label,value)=>{const p=el('p');const b=el('strong',label+' : ');p.append(b,document.createTextNode(String(value??'—')));return p;};
 
 export function mountIdentityLiveUI({app,notify=()=>{},showError=console.error,conservationMode=false}){
-  let socket=null,lastSeq=0,lastSignalAt=0,activeGroup,reconnectTimer=null,reconnectAttempt=0,wantConnection=true,eventQueue=Promise.resolve();
+  let socket=null,lastSeq=0,lastSignalAt=0,activeGroup,reconnectTimer=null,reconnectAttempt=0,wantConnection=true,eventQueue=Promise.resolve(),connectPromise=null;
+  const pendingDraftSignals=new Map();
   const passportRoot=document.getElementById('identityPassport');
-  if(!passportRoot)return{refresh:async()=>{},publishSignal:(type,payload)=>app.publishLiveSignal?.(type,payload),disconnect:()=>{}};
+  if(!passportRoot)return{refresh:async()=>{},publishSignal:async()=>({accepted:false,reason:'LIVE_UI_UNMOUNTED'}),disconnect:()=>{}};
   const dnaRoot=document.getElementById('conciergeDna'),liveRoot=document.getElementById('premiumLiveStatus'),eventsRoot=document.getElementById('liveEventList'),memoryRoot=document.getElementById('conciergeMemoryList');
 
   const clearTimers=()=>{if(reconnectTimer){clearTimeout(reconnectTimer);reconnectTimer=null;}};
@@ -23,10 +24,11 @@ export function mountIdentityLiveUI({app,notify=()=>{},showError=console.error,c
     }
   };
   const scheduleReconnect=()=>{
-    if(!wantConnection||!app.activeGroup()||navigator.onLine===false||reconnectTimer||reconnectAttempt>=1)return;
-    reconnectAttempt=1;
-    reconnectTimer=setTimeout(()=>{reconnectTimer=null;connect();},1500);
-    if(liveRoot)liveRoot.append(row('Reconnexion','1 tentative · puis attente d’un événement réseau/utilisateur'));
+    if(!wantConnection||!app.activeGroup()||navigator.onLine===false||reconnectTimer||reconnectAttempt>=4)return;
+    // At most four connection attempts per outage; no idle polling or D1 requests.
+    const backoff=[1500,4500,12000,30000][reconnectAttempt++];
+    reconnectTimer=setTimeout(()=>{reconnectTimer=null;connect();},backoff);
+    if(liveRoot)liveRoot.append(row('Reconnexion','Canal interrompu · tentative '+reconnectAttempt+'/4'));
   };
   const renderEvent=event=>{
     const card=el('article',undefined,'item');
@@ -42,24 +44,51 @@ export function mountIdentityLiveUI({app,notify=()=>{},showError=console.error,c
     }
     lastSeq=Math.max(lastSeq,Number(event.seq??0));
   };
+  const signalKey=payload=>[payload?.kind??'',payload?.meetingId??'',payload?.membershipId??'',payload?.rubricId??''].join('|');
   const publishSignal=async(type,payload={})=>{
-    if(!app.activeGroup()||navigator.onLine===false)return{accepted:false,offline:true};
+    if(!app.activeGroup())return{accepted:false,reason:'ACTIVE_GROUP_REQUIRED'};
+    if(['FINANCIAL_DRAFT','FINANCIAL_DRAFT_CLEAR'].includes(type))pendingDraftSignals.set(signalKey(payload),{type,payload});
+    if(navigator.onLine===false||app.serverBudgetState?.().blocked)return{accepted:false,offline:true,queued:['FINANCIAL_DRAFT','FINANCIAL_DRAFT_CLEAR'].includes(type)};
     if(socket&&socket.readyState===WebSocket.OPEN){
-      try{socket.send(JSON.stringify({type:'CLIENT_SIGNAL',eventType:type,payload}));return{accepted:true,transport:'websocket'};}catch{}
+      try{socket.send(JSON.stringify({type:'CLIENT_SIGNAL',eventType:type,payload}));if(['FINANCIAL_DRAFT','FINANCIAL_DRAFT_CLEAR'].includes(type))pendingDraftSignals.delete(signalKey(payload));return{accepted:true,transport:'websocket'};}catch{}
     }
-    // One action => at most one HTTP fallback. No background polling.
-    try{return await app.publishLiveSignal?.(type,payload)??{accepted:false};}catch{return{accepted:false};}
+    // Ephemeral presence/typing/draft traffic is WebSocket-only. Never convert
+    // keystrokes into REST/D1 requests when the live channel is unavailable.
+    if(wantConnection&&(!socket||socket.readyState>1)){reconnectAttempt=0;void connect();}
+    return{accepted:false,transport:'websocket-pending',queued:['FINANCIAL_DRAFT','FINANCIAL_DRAFT_CLEAR'].includes(type)};
   };
   const connect=()=>{
-    if(!wantConnection||!app.activeGroup()||typeof WebSocket==='undefined'||navigator.onLine===false)return;
-    clearTimers();try{socket?.close(1000,'reconnect');}catch{}socket=null;activeGroup=app.activeGroup();
-    try{
-      socket=new WebSocket(app.liveWebSocketUrl(lastSeq));
-      socket.onopen=()=>{
+    if(connectPromise)return connectPromise;
+    if(!wantConnection||!app.activeGroup()||typeof WebSocket==='undefined'||navigator.onLine===false||app.serverBudgetState?.().blocked)return Promise.resolve();
+    if(socket&&[WebSocket.CONNECTING,WebSocket.OPEN].includes(socket.readyState))return Promise.resolve();
+    const requestedGroup=app.activeGroup();
+    clearTimers();try{socket?.close(1000,'reconnect');}catch{}socket=null;activeGroup=requestedGroup;
+    connectPromise=(async()=>{
+      let ticketData;
+      try{ticketData=await app.liveTicket?.();}
+      catch(e){
+        // A D1 outage/quota must not trigger an expensive legacy authenticated
+        // upgrade on every user action. Legacy fallback is for older 404 APIs.
+        const code=String(e instanceof Error?e.message:e);
+        if(code!=='NOT_FOUND'&&code!=='HTTP_404')throw e;
+      }
+      if(!wantConnection||navigator.onLine===false||app.activeGroup()!==requestedGroup||app.serverBudgetState?.().blocked)return;
+      // Legacy authenticated upgrade remains available if ticket issuance is not
+      // configured yet; it costs D1 but avoids breaking an older deployment.
+      const activeSocket=socket=new WebSocket(app.liveWebSocketUrl(lastSeq,String(ticketData?.ticket??'')));
+      activeSocket.onopen=()=>{
+        if(socket!==activeSocket)return;
         reconnectAttempt=0;
+        // Re-announce only the latest draft state per cell after reconnect.
+        for(const {type,payload} of pendingDraftSignals.values())try{socket.send(JSON.stringify({type:'CLIENT_SIGNAL',eventType:type,payload}));}catch{}
+        pendingDraftSignals.clear();
+        // A successful socket handshake proves the network has recovered.
+        // Resume pending Outbox once, without heartbeat or periodic REST probes.
+        window.dispatchEvent(new CustomEvent('eco:live-connected',{detail:{groupId:activeGroup}}));
         if(liveRoot)liveRoot.replaceChildren(row('Connexion','WebSocket connecté'),row('Groupe',activeGroup),row('Temps réel',conservationMode?'PUSH ÉVÉNEMENTIEL · zéro polling D1':'ACTIF · push événementiel'));
       };
-      socket.onmessage=e=>{
+      activeSocket.onmessage=e=>{
+        if(socket!==activeSocket)return;
         try{
           const msg=JSON.parse(String(e.data));
           if(msg.type==='GROUP_LIVE_HELLO'){if(msg.reset)lastSeq=0;return;}
@@ -67,20 +96,33 @@ export function mountIdentityLiveUI({app,notify=()=>{},showError=console.error,c
           if(msg.type==='GROUP_LIVE_EVENT'&&msg.event){
             eventQueue=eventQueue.then(async()=>{
               const seq=Number(msg.event.seq??0);
-              if(seq>lastSeq+1){try{socket?.close(4001,'sequence-gap');}catch{}return;}
-              if(seq>lastSeq){renderEvent(msg.event);dispatchDurableEvent(msg.event);}
+              // Sequence IDs are global to the group, but private notifications
+              // are delivered only to their target. A jump (e.g. 2 -> 5) is
+              // therefore NORMAL for another manager, not lost transport data.
+              // WebSocket preserves ordered delivery; on a real disconnect the
+              // hub replays only authorized events strictly after lastSeq.
+              // Closing here trapped users in a four-retry offline cycle.
+              if(Number.isSafeInteger(seq)&&seq>lastSeq){renderEvent(msg.event);dispatchDurableEvent(msg.event);}
             }).catch(()=>{});
           }
         }catch{}
       };
-      socket.onclose=()=>{socket=null;if(liveRoot)liveRoot.append(row('Canal','Déconnecté · reconnexion sur événement réseau'));scheduleReconnect();};
-      socket.onerror=()=>{if(liveRoot)liveRoot.append(row('WebSocket','Interruption détectée · aucune boucle de polling'));};
-    }catch(e){showError(e);scheduleReconnect();}
+      activeSocket.onclose=()=>{
+        // A closed old socket must not null a fresh one after a network switch.
+        if(socket!==activeSocket)return;
+        socket=null;if(liveRoot)liveRoot.append(row('Canal','Déconnecté · reconnexion sur événement réseau'));scheduleReconnect();
+      };
+      activeSocket.onerror=()=>{if(socket===activeSocket&&liveRoot)liveRoot.append(row('WebSocket','Interruption détectée · aucune boucle de polling'));};
+    })().catch(e=>{showError(e);scheduleReconnect();}).finally(()=>{connectPromise=null;});
+    return connectPromise;
   };
 
+  const deniedObservatoryActors=new Set();
   const renderFounderObservatory=async()=>{
     const panel=document.getElementById('founderObservatoryPanel'),stats=document.getElementById('founderObservatoryStats'),list=document.getElementById('founderObservatoryList');
     if(!panel||!stats||!list)return;
+    const actor=String(app.currentActor?.()??'');
+    if(deniedObservatoryActors.has(actor))return;
     try{
       const data=await app.founderLearningObservatory(5);
       panel.hidden=false;stats.replaceChildren();list.replaceChildren();
@@ -93,7 +135,8 @@ export function mountIdentityLiveUI({app,notify=()=>{},showError=console.error,c
       }
     }catch(e){
       panel.hidden=true;stats.replaceChildren();list.replaceChildren();
-      if(e instanceof Error&&!['FOUNDER_TEAM_ONLY','FORBIDDEN_SCOPE'].includes(e.message)&&!e.message.includes('403'))showError(e);
+      if(e instanceof Error&&(['FOUNDER_TEAM_ONLY','FORBIDDEN_SCOPE'].includes(e.message)||e.message.includes('403')))deniedObservatoryActors.add(actor);
+      else showError(e);
     }
   };
 
@@ -110,6 +153,13 @@ export function mountIdentityLiveUI({app,notify=()=>{},showError=console.error,c
     const group=app.activeGroup();if(!group){closeSocket();passportRoot.replaceChildren(el('p','Sélectionnez un groupe.','hint'));dnaRoot?.replaceChildren();liveRoot?.replaceChildren();memoryRoot?.replaceChildren();return;}
     if(activeGroup&&activeGroup!==group){closeSocket();lastSeq=0;lastSignalAt=0;eventsRoot?.replaceChildren();}
     activeGroup=group;
+    // Finance push must not depend on unrelated identity/concierge D1 reads.
+    // A quota-limited request must never prevent managers from receiving writes.
+    if(conservationMode&&(!socket||socket.readyState>1))connect();
+    // A financial mutation must not fan out into five unrelated D1 reads.
+    // Those optional panels are only needed while viewing Settings, not when
+    // opening a group, saving a cell, restoring offline, or resuming Live.
+    if(!document.getElementById('view-settings')?.classList.contains('active'))return;
     try{
       const [passport,dna]=await Promise.all([app.groupIdentityPassport(),app.conciergeProfile()]);
       passportRoot.replaceChildren(row('Code identitaire',passport.publicCode),row('Empreinte identité',passport.identityFingerprint),row('Empreinte règles',passport.rulesFingerprint),row('Rubriques',passport.rubricCount),row('Sécurité','Identifiant public, jamais un secret d’accès'));
@@ -139,7 +189,25 @@ export function mountIdentityLiveUI({app,notify=()=>{},showError=console.error,c
     }catch(e){showError(e);}
   };
 
+  window.addEventListener('eco:view-changed',event=>{
+    if(event?.detail?.view==='settings')void refresh();
+  });
   window.addEventListener('online',()=>{if(wantConnection){reconnectAttempt=0;connect();}});
+  // Android may retain navigator.onLine=true while switching Wi-Fi/data. React
+  // only to a change of connection TYPE, never to RTT/downlink fluctuations.
+  // No active network probe, heartbeat, or idle D1 traffic is introduced.
+  const networkInfo=navigator.connection||navigator.mozConnection||navigator.webkitConnection;
+  // effectiveType (2g/3g/4g) is a bandwidth estimate and can oscillate at
+  // rest; it must NOT churn WebSockets. Only the physical interface matters.
+  const networkTypeOf=()=>String(networkInfo?.type??'');
+  let previousNetworkType=networkTypeOf();
+  networkInfo?.addEventListener?.('change',()=>{
+    const next=networkTypeOf();if(next===previousNetworkType)return;previousNetworkType=next;
+    if(!wantConnection||navigator.onLine===false)return;
+    closeSocket('network-interface-change');reconnectAttempt=0;void connect();
+  });
+  window.addEventListener('eco:server-budget-expired',()=>{if(wantConnection&&navigator.onLine!==false){reconnectAttempt=0;void connect();}});
+  window.addEventListener('eco:local-mutation',()=>{if(wantConnection&&navigator.onLine!==false&&(!socket||socket.readyState>1)){reconnectAttempt=0;connect();}});
   window.addEventListener('offline',()=>{closeSocket('offline');reconnectAttempt=0;if(liveRoot)liveRoot.append(row('Réseau','Hors ligne · outbox active'));});
   document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&wantConnection&&(!socket||socket.readyState!==WebSocket.OPEN)){reconnectAttempt=0;connect();}});
   document.getElementById('refreshPassportBtn')?.addEventListener('click',()=>void (async()=>{try{await app.groupIdentityPassport(true);notify('Passeport identitaire rafraîchi.');await refresh();}catch(e){showError(e);}})());

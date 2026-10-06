@@ -10,8 +10,8 @@
   <meta name="format-detection" content="telephone=no">
   <meta id="metaDescription" name="description" content="Eco-System — plateforme de gestion de tontines, associations et communautés">
   <link rel="manifest" href="/manifest.webmanifest">
-  <link rel="stylesheet" href="/styles.css?v=15210">
-  <title>Eco-System — 1.5.2.10 · Persistance terrain · UX mobile</title>
+  <link rel="stylesheet" href="/styles.css?v=15211">
+  <title>Eco-System — 1.5.2.11 · Persistance terrain · UX mobile</title>
   <meta name="application-name" content="Éco-System">\n</head>
 <body class="auth-restoring ui-mode-visual">
   <section id="sessionRestoreScreen" class="session-restore-screen" aria-live="polite"><div class="session-restore-card"><span class="auth-logo">E</span><strong>Eco-System</strong><p>Restauration sécurisée de votre session…</p></div></section>
@@ -33,7 +33,7 @@
 <header class="topbar">
     <div class="brand">
       <div class="logo">E</div>
-      <div><strong>Eco-System</strong><small>Plateforme Tontines · Associations · Communautés</small><span class="version-badge">ECO-SYSTEM · 1.5.2.10</span></div>
+      <div><strong>Eco-System</strong><small>Plateforme Tontines · Associations · Communautés</small><span class="version-badge">ECO-SYSTEM · 1.5.2.11</span></div>
     </div>
     <div class="top-context">
       <select id="activeGroupSelect" aria-label="Groupe actif"><option value="">Aucun groupe actif</option></select>
@@ -107,7 +107,7 @@
             <button id="openAssistedModeBtn" type="button" class="secondary">Ouvrir la dictée financière</button>
           </div>
         </section>
-        <div class="cahier-banner"><div><strong>Votre cockpit Eco-System</strong><p>Groupes, communautés, séances, situation personnelle, activités Live et actions utiles dans un seul espace.</p></div><span class="cahier-code">1.5.2.10 · OFFLINE SOUVERAIN · CONFLITS EXPLICITES · REPRISE ÉVÉNEMENTIELLE · TABLEAUX CANONIQUES</span></div>
+        <div class="cahier-banner"><div><strong>Votre cockpit Eco-System</strong><p>Groupes, communautés, séances, situation personnelle, activités Live et actions utiles dans un seul espace.</p></div><span class="cahier-code">1.5.2.11 · OFFLINE SOUVERAIN · CONFLITS EXPLICITES · REPRISE ÉVÉNEMENTIELLE · TABLEAUX CANONIQUES</span></div>
         <div class="hero">
           <div>
             <span class="eyebrow">Eco-System · Cahier Maître 2.3.4 + additifs 3.2.0</span>
@@ -582,6 +582,8 @@
               <label>Taux par séance / période %<input id="loanPolicyRate" type="number" min="0" step="0.01" placeholder="Ex. 10"></label>
               <label>Priorité d’imputation<select id="loanPolicyPriority"><option value="CAPITAL_FIRST">Capital d’abord</option><option value="INTEREST_FIRST">Intérêts d’abord</option><option value="EXPLICIT_ALLOCATION">Répartition explicite par le gestionnaire</option></select></label>
               <label>Moment de perception des intérêts<select id="loanPolicyInterestTiming"><option value="NEXT_SESSION_DUE">Dus à la séance suivante</option><option value="UPFRONT_DEDUCTED">Retenus immédiatement sur le montant remis</option><option value="UPFRONT_REQUIRED">Payés avant / condition de libération du prêt</option></select></label>
+              <label>Sources autorisées pour financer les prêts<select id="loanPolicyFundingMode"><option value="AVAILABLE_GROUP_CASH">Toute la caisse disponible autorisée par le groupe</option><option value="SAVINGS_REPAYMENTS_ONLY">Épargnes + remboursements/intérêts encaissés uniquement</option></select><small>Les prêts ne peuvent jamais dépasser la liquidité réellement disponible. Le deuxième mode exclut Secours, Transport et autres rubriques.</small></label>
+              <label class="check"><input id="loanPolicyCarryForward" type="checkbox" checked><span>Autoriser les reliquats licites des séances précédentes</span></label>
               <button type="submit" class="primary">Enregistrer la politique Prêts</button>
               <div id="loanPolicyStatus" class="truth-notice">La base d’intérêt reste toujours le capital restant dû. Aucun intérêt sur intérêt.</div>
             </form>
@@ -702,6 +704,7 @@
                   <label>Intérêts à répartir (modifiable par le Bureau)<input id="yieldInterestPool" type="number" min="0" step="1" value=""><small>Prérempli automatiquement avec le total des intérêts réellement encaissés. Le Bureau peut ensuite retenir un autre montant distribuable sans modifier la vérité comptable.</small></label>
                   <label>Part Épargne classique %<input id="yieldClassicShare" type="number" min="0" max="100" step="0.1" value="70"></label>
                   <label>Part Épargne scolaire %<input id="yieldSchoolShare" type="number" min="0" max="100" step="0.1" value="10"></label>
+                  <label>Prime emprunteurs %<input id="yieldBorrowerShare" type="number" min="0" max="100" step="0.1" value="0"><small>Facultatif. Réservé aux emprunteurs ayant remboursé selon la politique du groupe.</small></label>
                   <label>Indemnités / charges Bureau %<input id="yieldOfficeShare" type="number" min="0" max="100" step="0.1" value="20"></label>
                   <label>Réserve / solde en caisse %<input id="yieldReserveShare" type="number" min="0" max="100" step="0.1" value="0"></label>
                   <label>Coefficient maximal classique<input id="yieldHighestCoefficient" type="number" min="0.1" step="0.1" value="9"></label>
@@ -717,6 +720,8 @@
   <button id="yieldDoctorBtn" type="button" class="link-btn">Diagnostic Group Doctor</button>
 </div>
 <div class="fairness-policy-grid">
+  <label>Éligibilité des dépôts<select id="yieldEligibilityPolicy"><option value="ALL_DEPOSITS">Tous les dépôts de la fenêtre sont éligibles</option><option value="LOAN_SESSION_GATE">Seulement les séances ayant au moins un prêt débloqué</option></select><small>Avec la 2e politique, un seul prêt rend tous les dépôts de la séance éligibles, même si le prêt est inférieur aux dépôts.</small></label>
+  <label>Poids prime emprunteurs<select id="yieldBorrowerWeightMode"><option value="VOLUME_TIME_INTEREST">Capital + intérêts payés × ancienneté</option><option value="VOLUME_TIME">Capital emprunté × ancienneté</option><option value="INTEREST_TIME">Intérêts payés × ancienneté</option></select></label>
   <label>Fin éligibilité Épargne classique<input id="yieldEligibleThrough" type="number" min="1" step="1" value="10"><small>Ex. 10 = octobre reste éligible.</small></label>
   <label>Fin éligibilité Épargne scolaire<input id="yieldEligibleThroughSchool" type="number" min="1" step="1" value="7"><small>Ex. 7 = juillet, comme dans le dossier historique audité.</small></label>
   <label>Prime de précocité α<input id="yieldTimeExponent" type="number" min="0.1" max="5" step="0.1" value="1"><small>1 = linéaire ; >1 renforce les dépôts précoces.</small></label>
@@ -725,6 +730,7 @@
   <label>Résidu non attribué<select id="yieldResidualPolicy"><option value="TIME_WEIGHTED">Capital × Temps</option><option value="FIXED_FUND_SPLIT">Clé fixe du Bureau</option><option value="UNALLOCATED">Garder en attente de décision</option></select></label>
   <label>Clé résiduelle classique %<input id="yieldResidualClassicShare" type="number" min="0" max="100" step="0.1" value="87.5"><small>À utiliser seulement si « clé fixe ».</small></label>
 </div>
+<div class="actions"><button id="yieldPolicySaveBtn" type="button" class="primary">Enregistrer la politique de répartition</button><span id="yieldPolicyStatus" class="hint">Politique de groupe · aucune écriture financière créée par une simulation.</span></div>
 <p class="truth-notice"><strong>Rien n’est figé.</strong> Le Bureau peut conserver sa méthode, choisir Capital × Temps, distinguer ou mutualiser Épargne classique / scolaire, ou appliquer une matrice spécifique. Chaque simulation reste sans écriture financière jusqu’à validation humaine.</p>
                 <details>
                   <summary><strong>Comparer aussi l’ancien calcul simplifié</strong></summary>
@@ -755,6 +761,7 @@
                 <label>Événement<select id="yieldEventType"><option value="LOAN_DISBURSEMENT">Prêt accordé</option><option value="LOAN_PRINCIPAL_REPAYMENT">Remboursement de principal</option><option value="LOAN_INTEREST_RECEIPT">Intérêt de prêt encaissé</option></select></label>
                 <label>Séance<input id="yieldEventSession" type="number" min="1" step="1" value="1"></label>
                 <label>Référence prêt<input id="yieldEventLoanId" placeholder="Ex. P-001" required></label>
+                <label>Emprunteur<select id="yieldEventMember"><option value="">Choisir un membre</option></select></label>
                 <label>Caisse<select id="yieldEventFund"><option value="CLASSIC">Épargne classique</option><option value="SCHOOL">Épargne scolaire</option></select></label>
                 <label>Montant<input id="yieldEventAmount" type="number" min="1" step="1" required></label>
                 <button class="secondary">Ajouter l’événement</button>
@@ -1395,8 +1402,8 @@
     </main>
   </div>
 
-  <footer class="footer">Eco-System 1.5.2.10 · Cahier Maître 2.3.4 + Blueprint 5.0.0 · UX unifiée</footer>
-  <script type="module" src="/src/ui-modes.js?v=15210"></script>
-  <script type="module" src="/src/main.js?v=15210"></script>
+  <footer class="footer">Eco-System 1.5.2.11 · Cahier Maître 2.3.4 + Blueprint 5.0.0 · UX unifiée</footer>
+  <script type="module" src="/src/ui-modes.js?v=15211"></script>
+  <script type="module" src="/src/main.js?v=15211"></script>
 </body>
 </html>

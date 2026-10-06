@@ -7,6 +7,10 @@ type StateLike={storage:StorageLike;acceptWebSocket?(ws:WebSocket,tags?:string[]
 const json=(data:unknown,status=200)=>new Response(JSON.stringify(data),{status,headers:{'content-type':'application/json; charset=utf-8','cache-control':'no-store'}});
 const allowedTypes=new Set(['FINANCIAL_NOTICE','MEMBER_CONTROL','MEETING_UPDATE','MANAGER_ENTRY','CONSENSUS_REQUIRED','CONSENSUS_SELECTED','MANAGER_RESERVE','MEMBER_PROJECTION_UPDATED','PRESENCE','SYNC_HINT','RULE_UPDATE','COMMUNITY_EVENT','COMMUNITY_DRAFT_SYNC','COMMUNITY_READ_SYNC']);
 const allowedSignalTypes=new Set(['PRESENCE','TYPING','TYPING_STOP','CELL_FOCUS','CELL_BLUR','FINANCIAL_DRAFT','FINANCIAL_DRAFT_CLEAR','LIVE_ACK']);
+// Draft presence carries no amounts or text: one durable marker per actor+cell.
+// It is updated only at draft creation/clear, not on each keystroke.
+const DRAFT_TTL_MS=30*60_000;
+const draftStorageKey=(actorId:string,payload:LivePayload)=>'signal-actor:'+encodeURIComponent(actorId)+':draft:'+['kind','meetingId','membershipId','rubricId'].map(k=>encodeURIComponent(String(payload[k]??''))).join(':');
 const cleanPayload=(value:unknown):LivePayload=>{
   if(!value||typeof value!=='object'||Array.isArray(value))return{};
   const out:LivePayload={};for(const [k,v] of Object.entries(value as Record<string,unknown>)){
@@ -48,8 +52,14 @@ export class GroupLiveHub{
     const signal:GroupLiveSignal={id:String(input.id??crypto.randomUUID()),type,at:new Date().toISOString(),actorId:String(input.actorId??'unknown').slice(0,200),payload:cleanPayload(input.payload)};
     const now=Date.now();this.recentSignals=this.recentSignals.filter(x=>now-Date.parse(x.at)<12000);this.recentSignals.push(signal);if(this.recentSignals.length>200)this.recentSignals.splice(0,this.recentSignals.length-200);
     // TYPING / FOCUS / BLUR are pure push: no Durable storage write.
-    // Only an actual draft state change is retained so a reconnect can restore it.
-    if(['FINANCIAL_DRAFT','FINANCIAL_DRAFT_CLEAR'].includes(type))await this.state.storage.put('signal-actor:'+encodeURIComponent(signal.actorId)+':draft',signal);
+    // Preserve multiple independent cell drafts from the same manager. Clearing
+    // cell A must not erase cell B; the marker contains metadata, not draft text.
+    if(type==='FINANCIAL_DRAFT')await this.state.storage.put(draftStorageKey(signal.actorId,signal.payload),signal);
+    if(type==='FINANCIAL_DRAFT_CLEAR'){
+      const key=draftStorageKey(signal.actorId,signal.payload);
+      if(this.state.storage.delete)await this.state.storage.delete(key);
+      else await this.state.storage.put(key,signal);
+    }
     this.broadcastSignal(signal);return signal;
   }
   private async signals(afterAt=0,excludeActorId?:string):Promise<GroupLiveSignal[]>{
@@ -57,10 +67,14 @@ export class GroupLiveHub{
     const stored=await this.state.storage.list<GroupLiveSignal>({prefix:'signal-actor:',limit:500});
     const all=[...this.recentSignals,...stored.values()],deduped=new Map<string,GroupLiveSignal>();
     for(const signal of all){
-      const at=Date.parse(signal.at)||0;if(now-at>12000||at<=afterAt||excludeActorId&&signal.actorId===excludeActorId)continue;
+      const at=Date.parse(signal.at)||0,activeDraft=signal.type==='FINANCIAL_DRAFT';
+      // Active drafts survive reconnect (and the 12s typing TTL) for at most
+      // 30 minutes. They are cleared explicitly on submit or abandonment.
+      if(now-at>(activeDraft?DRAFT_TTL_MS:12000)||(!activeDraft&&at<=afterAt)||excludeActorId&&signal.actorId===excludeActorId)continue;
       const category=['FINANCIAL_DRAFT','FINANCIAL_DRAFT_CLEAR'].includes(signal.type)?'draft':'activity';
       const key=signal.actorId+'|'+category+'|'+String(signal.payload?.kind??'')+'|'+String(signal.payload?.meetingId??'')+'|'+String(signal.payload?.membershipId??'')+'|'+String(signal.payload?.rubricId??'');
-      const prior=deduped.get(key);if(!prior||Date.parse(prior.at)<at)deduped.set(key,signal);
+      const prior=deduped.get(key);// A CLEAR in the very same millisecond must supersede its DRAFT.
+      if(!prior||Date.parse(prior.at)<=at)deduped.set(key,signal);
     }
     return [...deduped.values()].sort((a,b)=>Date.parse(a.at)-Date.parse(b.at)).slice(-100);
   }

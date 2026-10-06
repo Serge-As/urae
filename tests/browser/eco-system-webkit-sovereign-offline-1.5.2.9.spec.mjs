@@ -54,6 +54,50 @@ test('WebKit shell keeps sovereign offline and QR decoder assets cached for airp
 });
 
 
+test('WebKit reloads offline after origin stops (avoids Playwright offline-emulation bug #42775)',async({page})=>{
+  test.setTimeout(120_000);
+  // WebKit Playwright rejects SW responses when setOffline(true); routing also
+  // aborts before the worker. A REAL server outage is the verified alternative.
+  // Use an isolated proxy so the other tests' :4173 server stays available.
+  const http=await import('node:http');
+  const proxy=http.createServer(async(req,res)=>{
+    try{
+      const upstream=await fetch(base+req.url,{method:req.method,headers:{accept:req.headers.accept??'*/*'}});
+      res.statusCode=upstream.status;
+      for(const [name,value] of upstream.headers){if(!['content-encoding','content-length','transfer-encoding','connection'].includes(name))res.setHeader(name,value);}
+      res.end(Buffer.from(await upstream.arrayBuffer()));
+    }catch{res.writeHead(503);res.end('Origin unavailable');}
+  });
+  await new Promise((resolve,reject)=>{proxy.once('error',reject);proxy.listen(0,'127.0.0.1',resolve);});
+  const origin='http://127.0.0.1:'+proxy.address().port;
+  let stopped=false;
+  const stop=async()=>{
+    if(stopped)return;stopped=true;
+    const closing=new Promise((resolve,reject)=>proxy.close(error=>error?reject(error):resolve()));
+    proxy.closeAllConnections();
+    await closing;
+  };
+  try{
+    const target=origin+'/#savingsYieldLab';
+    await page.goto(target,{waitUntil:'networkidle'});
+    await page.evaluate(async()=>navigator.serviceWorker.register('/sw.js',{scope:'/',updateViaCache:'none'}));
+    await expect.poll(()=>page.evaluate(async()=>{
+      for(const name of await caches.keys()){
+        const cache=await caches.open(name);
+        if(await cache.match('/__eco_release_ready__'))return true;
+      }
+      return false;
+    }),{timeout:45000}).toBe(true);
+    if(!await page.evaluate(()=>Boolean(navigator.serviceWorker.controller)))await page.reload({waitUntil:'domcontentloaded'});
+    await expect.poll(()=>page.evaluate(()=>Boolean(navigator.serviceWorker.controller)),{timeout:20000}).toBe(true);
+    await stop();
+    const response=await page.reload({waitUntil:'domcontentloaded',timeout:30000});
+    expect(response?.status()).toBe(200);
+    await expect(page.locator('#authScreen')).toBeAttached({timeout:20000});
+    expect(page.url()).toContain('#savingsYieldLab');
+  }finally{await stop();}
+});
+
 test('WebKit opens a serverless Eco Local Room DataChannel and exchanges a packet',async({page})=>{
   await page.goto(base+'/',{waitUntil:'domcontentloaded'});
   const result=await page.evaluate(async()=>{

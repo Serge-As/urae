@@ -26,7 +26,7 @@ test('draft state is the only ephemeral financial presence persisted',async()=>{
   const {puts,state}=makeState(),hub=new GroupLiveHub(state,{});
   await hub.fetch(new Request('https://group-live.internal/signal',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({type:'FINANCIAL_DRAFT',actorId:'manager-2',payload:{kind:'FINANCIAL_CELL',meetingId:'mtg',membershipId:'m',rubricId:'r'}})}));
   assert.equal(puts.length,1);
-  assert.match(String(puts[0][0]),/^signal-actor:.*:draft$/);
+  assert.match(String(puts[0][0]),/^signal-actor:.*:draft:FINANCIAL_CELL:mtg:m:r$/);
   assert.equal('amount' in (puts[0][1].payload??{}),false);
 });
 
@@ -54,14 +54,15 @@ test('client live layer is websocket-first with reconnect replay and no heartbea
   const api=fs.readFileSync('workers/api/src/index.ts','utf8');
   assert.match(live,/scheduleReconnect/);
   assert.match(live,/CLIENT_SIGNAL/);
-  assert.match(live,/liveWebSocketUrl\(lastSeq\)/);
+  assert.match(live,/liveWebSocketUrl\(lastSeq,String\(ticketData\?\.ticket\?\?''\)\)/);
   assert.match(live,/GROUP_LIVE_SIGNAL/);
   assert.match(live,/GROUP_LIVE_HELLO/);
-  assert.match(live,/reconnectAttempt>=1/);
+  assert.match(live,/reconnectAttempt>=4/);
+  assert.match(live,/\[1500,4500,12000,30000\]/);
   assert.match(live,/addEventListener\('online'/);
   assert.doesNotMatch(live,/socket\.send\('PING'\)/);
   assert.doesNotMatch(live,/setInterval\(/);
-  assert.match(app,/liveWebSocketUrl\(after=0\)/);
+  assert.match(app,/liveWebSocketUrl\(after=0,ticket=''\)/);
   assert.match(api,/live\\\/\(health\|events\|connect\|publish\|signal\)/);
   assert.match(main,/identityLiveUI\.publishSignal/);
   assert.match(main,/applyRemoteFinancialProjection/);

@@ -1,5 +1,22 @@
 # ECO-SYSTEM — PROJECT STATE
 
+
+## NOUVELLE CANDIDATE 1.5.2.11 — cache PWA isolé, Live événementiel, quota D1 (2026-10-05)
+
+Branche `fix/field-regressions-recovery-20261005`, PR brouillon #66. **Dernière production effectivement livrée** : 1.5.2.10 SHA `393f80df88076072317f08adee81fe14d54d06c5` (delivery GitHub `37130397965` SUCCESS le 3 octobre). La candidate 1.5.2.11 n'est **ni fusionnée, ni déployée, ni acceptée terrain**.
+
+Protection nouvelle : `eco-system-v15211-field-recovery-20261005`, rollback `eco-system-v15210-offline-conflicts-loans-20261003`, scripts `?v=15211`, contrat `docs/release/CURRENT_RELEASE_CONTRACT.json` et Worker version/build synchronisés. Installation du nouveau SW dans un cache séparé, destruction du seul cache candidat en cas d'erreur, aucune suppression des outbox, IndexedDB, brouillons ni Ledger. Les lectures facultatives d'identité/Concierge/Observatoire n'ont plus lieu en arrière-plan de la saisie ; Live WebSocket conservé sans polling ; réseau et quotas traités par événements.
+
+Les tests Chromium/WebKit + unitaires doivent encore prouver ce **SHA final** avant toute promotion. La revue des vieux caches installés sur les véritables appareils (Android 6, iOS, Firefox/Opera/Chrome), des deux gestionnaires et des conflits contradictoires reste une condition **FIELD_ACCEPTED** indépendante de la CI. Pas de migration D1, argent réel OFF, aucun état de compte Cloudflare consultable via cette session. Détails : `docs/recovery/ECO_FIELD_13_POINTS_2026-10-05.md`, `NEXT_RUN.md`.
+
+---
+
+## CANDIDATE ONLY — ECO 1.5.2.10 field recovery / Cloudflare Live (2026-10-05)
+
+Le chantier n'est **pas** une nouvelle version de production. PR brouillon [#66](https://github.com/SergeDelor/tontine-platform/pull/66), base SHA `393f80df88076072317f08adee81fe14d54d06c5`. Sur la branche candidate, le Live est événementiel WebSocket (frappe, brouillon par cellule/acteur, date/auteur, validation), sans polling D1 à la seconde ; réduction des écritures d'identité D1 sur requêtes redondantes ; quota signalé explicitement, Outbox récupérée au retour réseau/quota. Les corrections de dette, politiques de prêt/épargne et historique tabulaire restent sous essais. CI sur `9c3ce510f3c2791cbd5c9de81b1e8a77f451b052` : **590/590 tests**, `browser-critical` SUCCESS, run `37317103271`. **FIELD_ACCEPTED=false**, **deployed=false** pour cette branche ; voir `docs/recovery/ECO_FIELD_13_POINTS_2026-10-05.md`. Requête utilisateur : éviter toute évolution non autorisée et ne jamais mélanger le cache SW v15210 avec du code nouveau avant versionnement complet et recettes.
+
+---
+
 ## CURRENT OVERRIDE — 1.5.2.9 SOVEREIGN OFFLINE + BROADCAST QR + iOS — PRODUCTION VERIFIED (2026-09-28)
 
 Production publique : `1.5.2.9-sovereign-offline`, SHA exact `faa23c6b279197b267dd1981529e39b5bd994d62`, Worker Version ID `0902744e-3293-448f-ad4c-5f6af2dd4804`, PWA cache `eco-system-v1529-sovereign-offline-20260928`.
