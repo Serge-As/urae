@@ -349,8 +349,7 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
       if(decision==='RESERVE')await publishLive(groupId,'MEMBER_PROJECTION_UPDATED',
         outcome.review.id+':member',{meetingId,membershipId,rubricId,cellVersion:current.cellVersion,
           amount:current.current,disputed:true},membership.userId);
-      return json({status:decision==='RESERVE'?'RESERVE_OPEN':'APPROVED',reviewId:outcome.review.id,
-        currentAmount:current.current,cellVersion:current.cellVersion,canonicalUnchanged:true      return {status:decision==='RESERVE'?'RESERVE_OPEN':'APPROVED',reviewId:outcome.review.id,
+      return {status:decision==='RESERVE'?'RESERVE_OPEN':'APPROVED',reviewId:outcome.review.id,
         currentAmount:current.current,cellVersion:current.cellVersion,canonicalUnchanged:true};
   };
 
