@@ -1,0 +1,68 @@
+name: Eco Q01-Q28 staged recovery qualification
+
+on:
+  pull_request:
+    branches:
+      - 'fix/1.5.2.10-offline-conflicts-loans-20261003'
+    paths:
+      - 'apps/web/**'
+      - 'scripts/**'
+      - 'packages/**'
+      - 'workers/**'
+      - 'tests/**'
+      - '.github/workflows/eco-q01-q28-qualification.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  governed-ci:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - name: Governed compile, lint and unit qualification
+        run: npm run ci
+      - name: PWA import closure completeness
+        shell: bash
+        run: |
+          node --input-type=module <<'NODE'
+          import {readFile} from 'node:fs/promises';
+          const manifest=JSON.parse(await readFile('.build/eco-shell-manifest.json'));
+          const sw=await readFile('.build/sw.js','utf8');
+          if(!manifest.schemaVersion||!manifest.initialShell.length)throw Error('MANIFEST_EMPTY');
+          if(sw.includes('const GENERATED_IMPORT_CLOSURE = [];'))throw Error('CLOSURE_NOT_INJECTED');
+          for(const path of manifest.transitiveAssets)if(!sw.includes(path))throw Error('MISSING_DEPENDENCY:'+path);
+          for(const [path,meta] of Object.entries(manifest.assets))if(!meta.sha256||!meta.bytes)throw Error('ASSET_NOT_FINGERPRINTED:'+path);
+          console.log('Manifest validated:',Object.keys(manifest.assets).length,'files');
+          NODE
+  browser-critical:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: npm run build
+      - run: npm install --no-save --ignore-scripts @playwright/test@1.55.0
+      - run: npx playwright install --with-deps chromium webkit
+      - name: Start isolated local application
+        shell: bash
+        run: |
+          OPEN_BROWSER=0 PORT=4173 node scripts/dev-server.mjs > /tmp/eco-q01-q28.log 2>&1 &
+          for i in {1..40}; do curl -fsS http://127.0.0.1:4173/health >/dev/null && exit 0; sleep 1; done
+          cat /tmp/eco-q01-q28.log
+          exit 1
+      - name: Existing offline shell and financial E2E
+        run: npx playwright test tests/browser/financial-cell-consensus-persistence-1.5.2.6.spec.mjs tests/browser/browser-shell-mobile-1.5.2.6.spec.mjs --browser=chromium --workers=1
+      - name: Existing WebKit offline smoke
+        run: npx playwright test tests/browser/eco-system-webkit-sovereign-offline-1.5.2.9.spec.mjs --browser=webkit --workers=1
