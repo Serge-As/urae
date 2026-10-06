@@ -1140,6 +1140,31 @@ export class ConnectedApplication {
   async submitLiveConsensus(meetingId:string,input:{cellKey:string;value:string|number;label?:string;membershipId?:string;rubricId?:string}):Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/meetings/${encodeURIComponent(meetingId)}/live-consensus`,{method:'POST',body:JSON.stringify(input)});}
   async voteLiveConsensus(meetingId:string,cellKey:string,proposalActorId:string):Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/meetings/${encodeURIComponent(meetingId)}/live-consensus/${encodeURIComponent(cellKey)}/vote`,{method:'POST',body:JSON.stringify({proposalActorId})});}
   async reserveLiveConsensus(meetingId:string,cellKey:string,reason:string):Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/meetings/${encodeURIComponent(meetingId)}/live-consensus/${encodeURIComponent(cellKey)}/reserve`,{method:'POST',body:JSON.stringify({reason})});}
+  async reviewFinancialCellChange(input:{
+    meetingId:string;membershipId:string;rubricId:string;amount:number;cellVersion:number;
+    decision:'APPROVE'|'RESERVE';reason?:string;
+  }):Promise<any>{
+    if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');
+    if(!['APPROVE','RESERVE'].includes(input.decision)||!Number.isSafeInteger(input.amount)||
+      input.amount<0||!Number.isSafeInteger(input.cellVersion)||input.cellVersion<0)throw Error('INVALID_CELL_REVIEW');
+    if(input.decision==='RESERVE'&&!String(input.reason??'').trim())throw Error('RESERVE_REASON_REQUIRED');
+    const payload={groupId:this.activeGroupId,...input,reason:String(input.reason??'').trim()};
+    const key='cell-review:'+makeId('intent');
+    const item=await this.queueLocal('FINANCIAL_CELL_REVIEW_V1',payload,key);
+    if(!(await this.canAttemptCriticalWrite()))return{status:'QUEUED_SYNC',queued:true,outbox:item};
+    try{
+      const result=await this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+
+        '/meetings/'+encodeURIComponent(input.meetingId)+'/financial-cells/review',
+        {method:'POST',headers:{'x-idempotency-key':key},body:JSON.stringify(payload)});
+      this.outbox.markConfirmedByKey(this.tenantId,this.actorId,key);
+      await this.persistOutbox();return result;
+    }catch(error){
+      const code=error instanceof Error?error.message:String(error);
+      if(code==='NETWORK_UNAVAILABLE'||/^HTTP_5\d\d$/.test(code))return{status:'QUEUED_SYNC',queued:true,outbox:item};
+      this.outbox.markConflictByKey(this.tenantId,this.actorId,key);
+      await this.persistOutbox();throw error;
+    }
+  }
   async setFinancialCellTarget(input:{meetingId:string;membershipId:string;rubricId:string;targetAmount:number;currentAmount?:number;currentVersion?:number;reason?:string}):Promise<any>{
     if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');
     if(!Number.isSafeInteger(input.targetAmount)||input.targetAmount<0)throw Error('INVALID_CONTRIBUTION_AMOUNT');
