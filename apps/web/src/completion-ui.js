@@ -160,7 +160,7 @@ export const mountCompletionUI=({app,notify,showError,getMembers,getMeetings,get
     // synthesize paid interest, double a repayment or merge separate loans.
     const recap=document.createElement('section'),recapTitle=document.createElement('h4');
     recapTitle.textContent=tr('Récapitulatif de l’évolution des dettes','Debt evolution recap');
-    const recapWrap=document.createElement('div');recapWrap.className='matrix-wrap';
+    const recapWrap=document.createElement('div');recapWrap.className='matrix-wrap loan-recap-wrap';
     const recapTable=document.createElement('table');recapTable.className='meeting-matrix loan-four-criteria-table';
     const sessionRows=data.meetings??[],periods=data.loanPeriods??[],openLoans=data.loanDebts??[];
     const sessionOrder=new Map(sessionRows.map((m,i)=>[String(m.id),i]));
@@ -203,10 +203,11 @@ export const mountCompletionUI=({app,notify,showError,getMembers,getMeetings,get
         row.className='loan-criteria-row loan-criterion-'+kind+(criterionIndex===0?' loan-criteria-start':'');
         if(criterionIndex===0){const memberCell=document.createElement('th'),loanCell=document.createElement('th');
           memberCell.rowSpan=criteria.length;loanCell.rowSpan=criteria.length;
+          memberCell.className='loan-member-key';loanCell.className='loan-name-key';
           memberCell.textContent=nameOfMember(def.memberId);loanCell.textContent=def.title;
           row.append(memberCell,loanCell);
         }
-        const criterionCell=document.createElement('th');criterionCell.textContent=label;row.append(criterionCell);
+        const criterionCell=document.createElement('th');criterionCell.className='loan-criterion-key';criterionCell.textContent=label;row.append(criterionCell);
         progress.forEach((state,index)=>{
           const raw=state?Number(selector(state)??0):0,value=Number.isFinite(raw)?raw:0;
           sums[criterionIndex][index]+=value;
