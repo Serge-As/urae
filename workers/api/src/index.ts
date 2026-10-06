@@ -312,6 +312,12 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
         repo.getRubricDefinition(ctx.tenantId,groupId,rubricId)
       ]);
       if(!meeting||meeting.status==='cancelled'||!membership||!rubric)throw Error('CELL_REVIEW_SCOPE_INVALID');
+      const rubricName=String(rubric.name??'').normalize('NFKD').replace(/[\u0300-\u036f]/g,'').toLowerCase(),
+        rubricKind=String(rubric.activityPlan?.kind??'').toUpperCase(),
+        rubricSystem=String(rubric.facets?.custom?.systemKey??'').toUpperCase();
+      if(['LOAN','REPAYMENT'].includes(rubricKind)||['LOAN','REPAYMENT'].includes(rubricSystem)||
+        /pret|emprunt|loan|remboursement|repayment/.test(rubricName)||rubric.facets?.direction==='OUTFLOW')
+        throw Error('SPECIALIZED_FINANCIAL_REVIEW_REQUIRED');
       const current=await financialCellState(groupId,meetingId,membershipId,rubricId),
         expectedVersion=finite(input.cellVersion,-1),expectedAmount=finite(input.amount,-1);
       if(current.cellVersion!==expectedVersion||current.current!==expectedAmount)throw Error('CELL_REVIEW_STALE');
