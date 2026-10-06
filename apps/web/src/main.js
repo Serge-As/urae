@@ -1700,7 +1700,7 @@ const applyRemoteFinancialProjection=(p={})=>{
     return true;
 };
 const acknowledgeRemoteFinancialCell=button=>{
-    const cell=button?.closest?.('.matrix-cell-entry');if(!cell)return;cell.classList.remove('remote-financial-change','remote-financial-closed');button.remove();cell.querySelector('.cell-remote-change-note')?.remove();
+    const cell=button?.closest?.('.matrix-cell-entry');if(!cell)return;cell.classList.remove('remote-financial-change','remote-financial-closed');button.remove();
     void Promise.resolve(identityLiveUI.publishSignal?.('LIVE_ACK',{kind:'FINANCIAL_CELL',meetingId:cell.dataset.meetingId||'',membershipId:cell.dataset.membershipId||'',rubricId:cell.dataset.rubricId||''})).catch(()=>{});
 };
 const highlightRemoteFinancialCell=(p={})=>{
@@ -1720,6 +1720,57 @@ const highlightRemoteFinancialCell=(p={})=>{
       if(!seen){seen=document.createElement('button');seen.type='button';seen.className='cell-remote-seen-btn secondary';seen.onclick=()=>acknowledgeRemoteFinancialCell(seen);cell.append(seen);}
       seen.textContent=tx('Vu · sans accord','Seen · no approval');
       seen.title=tx('Accusé de lecture uniquement : validez ou contestez séparément','Read receipt only: approve or dispute separately');
+      const controls=cell.querySelector('.cell-remote-review-actions')??document.createElement('div');
+      controls.className='cell-remote-review-actions';controls.replaceChildren();
+      const makeAction=(label,run)=>{
+        const control=document.createElement('button');control.type='button';control.className='secondary';
+        control.textContent=label;control.onclick=()=>void run(control);controls.append(control);return control;
+      };
+      const review=async(decision,reason,control)=>{
+        const membershipId=String(cell.dataset.membershipId??''),rubricId=String(cell.dataset.rubricId??''),
+          meetingId=String(cell.dataset.meetingId??''),signedAmount=exactCellAmount(membershipId,rubricId,meetingId);
+        const currentVersion=Number(cell.dataset.remoteVersion??exactCellVersion(membershipId,rubricId,meetingId));
+        if(!Number.isSafeInteger(currentVersion)||currentVersion<0)throw Error('CELL_REVIEW_STALE');
+        control.disabled=true;
+        try{
+          const result=await app.reviewFinancialCellChange({meetingId,membershipId,rubricId,
+            amount:Math.max(0,signedAmount),cellVersion:currentVersion,decision,reason});
+          if(decision==='RESERVE'){
+            cell.classList.add('is-conflict','is-critical-conflict');
+            const state=cell.querySelector('.cell-save-state');
+            if(state){state.hidden=false;state.textContent=result.queued?
+              tx('Réserve enregistrée sur cet appareil · transmission en attente','Reserve saved locally · pending sync'):
+              tx('Contentieux ouvert · montant maintenu jusqu’à décision','Dispute opened · amount remains until a decision');}
+            // The canonical target remains shown: never create a reverse Ledger
+            // entry by acknowledging or contesting a colleague's amount.
+          }else if(result.queued){
+            const state=cell.querySelector('.cell-save-state');
+            if(state){state.hidden=false;state.textContent=tx('Accord enregistré sur appareil · synchro en attente','Approval saved locally · pending sync');}
+          }else{
+            cell.classList.remove('remote-financial-change');
+            const seenButton=cell.querySelector('.cell-remote-seen-btn');
+            if(seenButton)acknowledgeRemoteFinancialCell(seenButton);
+          }
+        }catch(error){
+          fail(error);
+          if(error instanceof Error&&error.message==='CELL_REVIEW_STALE')
+            void refreshFinancialProjectionSilently({meetingId,membershipId,rubricId,remote:true});
+        }finally{control.disabled=false;}
+      };
+      const accept=makeAction(tx('Approuver','Approve'),control=>review('APPROVE','',control));
+      accept.setAttribute('aria-label',tx('Approuver explicitement cette modification','Explicitly approve this correction'));
+      makeAction(tx('Contester','Dispute'),async control=>{
+        const reason=window.prompt(tx('Motif de la contestation (montant maintenu pendant la procédure) :',
+          'Reason for dispute (the amount stays until a decision):'),'');
+        if(!reason?.trim())return;
+        await review('RESERVE',reason.trim(),control);
+      });
+      makeAction(tx('Remodifier','Edit again'),async()=>{
+        const input=cell.querySelector('.cell-target-input');
+        if(input){input.focus({preventScroll:true});input.scrollIntoView({block:'nearest',inline:'nearest'});}
+      });
+      cell.dataset.remoteVersion=String(p.cellVersion??exactCellVersion(String(p.membershipId),String(p.rubricId),String(p.meetingId)));
+      if(!controls.isConnected)cell.append(controls);
     }
 };
 const paintRemoteFinancialDraft=(cell,key)=>{
