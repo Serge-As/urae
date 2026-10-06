@@ -1,8 +1,9 @@
 // Build-time PWA dependency closure. No runtime network crawl or extra D1 requests.
-import { readFile, writeFile, stat } from 'node:fs/promises';
+import { readFile, writeFile } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
 import path from 'node:path';
-import ts from 'typescript';
+// TypeScript is present in CI. Portable builds must still work without npm packages.
+const ts=(await import('typescript').catch(()=>({default:null}))).default;
 
 const build=path.resolve('.build');
 const swSource=await readFile('apps/web/sw.js','utf8');
@@ -32,14 +33,20 @@ const scan=async(url,from)=>{
   assets.set(pathname,{bytes:source.length,sha256:createHash('sha256').update(source).digest('hex')});
   if(!originalPaths.has(pathname))generated.add(pathname);
   if(/\.m?js$/i.test(pathname)){
-    const file=ts.createSourceFile(pathname,source.toString('utf8'),ts.ScriptTarget.Latest,true,ts.ScriptKind.JS);
     const refs=[];
-    const visit=node=>{
-      if((ts.isImportDeclaration(node)||ts.isExportDeclaration(node))&&node.moduleSpecifier&&ts.isStringLiteral(node.moduleSpecifier))refs.push(node.moduleSpecifier.text);
-      if(ts.isCallExpression(node)&&node.expression.kind===ts.SyntaxKind.ImportKeyword&&node.arguments.length===1&&ts.isStringLiteral(node.arguments[0]))refs.push(node.arguments[0].text);
-      ts.forEachChild(node,visit);
-    };
-    visit(file);
+    if(ts){
+      const file=ts.createSourceFile(pathname,source.toString('utf8'),ts.ScriptTarget.Latest,true,ts.ScriptKind.JS);
+      const visit=node=>{
+        if((ts.isImportDeclaration(node)||ts.isExportDeclaration(node))&&node.moduleSpecifier&&ts.isStringLiteral(node.moduleSpecifier))refs.push(node.moduleSpecifier.text);
+        if(ts.isCallExpression(node)&&node.expression.kind===ts.SyntaxKind.ImportKeyword&&node.arguments.length===1&&ts.isStringLiteral(node.arguments[0]))refs.push(node.arguments[0].text);
+        ts.forEachChild(node,visit);
+      };
+      visit(file);
+    }else{
+      // Node 24's zero-dependency portable compiler still emits ESM syntax.
+      const code=source.toString('utf8');
+      for(const found of code.matchAll(/(?:\b(?:import|export)\s+(?:[^;'"]*?\s+from\s*)?|\bimport\s*\\(\s*)['"]([^'"]+)['"]/g))refs.push(found[1]);
+    }
     for(const spec of refs){
       const dep=localUrl(spec,pathname);
       if(dep)await scan(dep,pathname);
