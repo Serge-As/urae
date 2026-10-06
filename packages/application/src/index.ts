@@ -103,7 +103,7 @@ export class ConnectedApplication {
   private financialRecordedAnchor():{clockAnchorId?:string;elapsedSinceAnchorMs?:number;deviceId:string}{
     const deviceId=this.localDeviceId(),current=this.financialClockAnchor;
     const perf=typeof performance!=='undefined'?performance.now():NaN;
-    if(current?.groupId!==this.activeGroupId||current.deviceId!==deviceId||
+    if(!current||current.groupId!==this.activeGroupId||current.deviceId!==deviceId||
       !Number.isFinite(perf)||perf<current.monotonicAt||Date.now()>current.expiresAt)return{deviceId};
     return{clockAnchorId:current.token,elapsedSinceAnchorMs:Math.round(perf-current.monotonicAt),deviceId};
   }
