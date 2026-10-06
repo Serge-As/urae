@@ -245,8 +245,54 @@ export const mountCompletionUI=({app,notify,showError,getMembers,getMeetings,get
     const journey=document.createElement('section'),jt=document.createElement('h4');jt.textContent=tr('Parcours d’une dette','Debt journey');
     const memberSelect=document.createElement('select'),loanSelect=document.createElement('select'),journeyHost=document.createElement('div');memberSelect.append(option('',tr('Choisir un membre','Choose a member')));
     const debtMembers=[...new Set(debts.map(x=>String(x.memberId??'')).filter(Boolean))];for(const id of debtMembers)memberSelect.append(option(id,nameOfMember(id)));
-    const refillLoans=()=>{loanSelect.replaceChildren(option('',tr('Choisir un prêt','Choose a loan')));for(const debt of debts.filter(x=>!memberSelect.value||String(x.memberId)===memberSelect.value))loanSelect.append(option(String(debt.loanId),debt.title+' · '+fmt(debt.totalDue)));journeyHost.replaceChildren();};
-    const renderJourney=async()=>{journeyHost.replaceChildren();if(!loanSelect.value)return;const loading=document.createElement('p');loading.className='hint';loading.textContent=tr('Chargement du parcours…','Loading journey…');journeyHost.append(loading);try{const history=await app.loanHistory(loanSelect.value),periods=history.periods??[];if(!periods.length){journeyHost.replaceChildren(article(tr('Aucune période détaillée','No detailed period'),' ',tr('Le prêt existe mais aucune période de remboursement n’a encore été enregistrée.','The loan exists but no repayment period has been recorded yet.')));return;}const wrap=document.createElement('div');wrap.className='matrix-wrap';const table=document.createElement('table');table.className='meeting-matrix debt-journey-table';const head=document.createElement('thead'),hr=document.createElement('tr');for(const label of [tr('Séance / date','Session / date'),tr('Capital avant','Principal before'),tr('Intérêt ouverture','Opening interest'),tr('Nouvel intérêt','New interest'),tr('Paiement','Payment'),tr('Capital payé','Principal paid'),tr('Intérêt payé','Interest paid'),tr('Capital restant','Principal left'),tr('Intérêts dus','Interest due'),tr('Dette après','Debt after'),tr('Prochain intérêt','Next interest'),tr('Priorité','Priority')]){const th=document.createElement('th');th.textContent=label;hr.append(th);}head.append(hr);table.append(head);const body=document.createElement('tbody');for(const p of periods){const meeting=getMeetings().find(m=>m.id===p.meetingId),values=[meeting?.title??date(p.createdAt),fmt(p.principalBefore),fmt(p.interestOpening),fmt(p.interestNew),fmt(p.payment),fmt(p.principalPaid),fmt(p.interestPaid),fmt(p.principalAfter),fmt(p.interestAfter),fmt(p.totalDebtAfter),fmt(p.nextInterestProjected),String(p.priority??'')];const row=document.createElement('tr');for(const value of values){const td=document.createElement('td');td.textContent=value;row.append(td);}body.append(row);}table.append(body);wrap.append(table);journeyHost.replaceChildren(wrap);}catch(e){journeyHost.replaceChildren();showError(e);}};
+    const renderGroupJourney=()=>{
+      // Aggregate canonical loan-period snapshots, never fabricate a dummy group loan.
+      // The next-period projection remains separate from payable interest.
+      const timeline=data.meetings??[],periods=data.loanPeriods??[],loanIds=new Set((data.loanDebts??[]).map(p=>String(p.loanId)));
+      for(const p of periods)if(p.loanId)loanIds.add(String(p.loanId));
+      const wrap=document.createElement('div');wrap.className='matrix-wrap',table=document.createElement('table');
+      table.className='meeting-matrix debt-group-journey-table';
+      const header=document.createElement('tr');
+      for(const heading of [tr('Séance','Session'),tr('Capital de début','Opening principal'),tr('Capital remboursé','Principal paid'),tr('Capital restant','Principal remaining'),tr('Intérêts ouverture','Opening interest'),tr('Nouveaux intérêts dus','New interest due'),tr('Intérêts payés','Interest paid'),tr('Intérêts restants','Interest remaining'),tr('Dette exigible','Due debt'),tr('Prochains intérêts projetés','Projected next interest')]){
+        const th=document.createElement('th');th.textContent=heading;header.append(th);
+      }
+      const thead=document.createElement('thead');thead.append(header);table.append(thead);
+      const tbody=document.createElement('tbody'),lastByLoan=new Map();
+      for(const meeting of timeline){
+        const current=periods.filter(p=>String(p.meetingId??'')===String(meeting.id));
+        // A loan with multiple revisions in the same meeting is represented
+        // by its last canonical period only, not by adding duplicate states.
+        const affected=new Map();for(const p of current)affected.set(String(p.loanId),p);
+        const beginning=[...lastByLoan.values()].reduce((n,p)=>n+Number(p.principalAfter??0),0);
+        const openingInterest=[...lastByLoan.values()].reduce((n,p)=>n+Number(p.interestAfter??0),0);
+        const paidPrincipal=[...affected.values()].reduce((n,p)=>n+Number(p.principalPaid??0),0);
+        const paidInterest=[...affected.values()].reduce((n,p)=>n+Number(p.interestPaid??0),0);
+        const newInterest=[...affected.values()].reduce((n,p)=>n+Number(p.interestNew??0),0);
+        for(const [id,p] of affected)lastByLoan.set(id,p);
+        const values=[
+          beginning,paidPrincipal,
+          [...lastByLoan.values()].reduce((n,p)=>n+Number(p.principalAfter??0),0),
+          openingInterest,newInterest,paidInterest,
+          [...lastByLoan.values()].reduce((n,p)=>n+Number(p.interestAfter??0),0),
+          [...lastByLoan.values()].reduce((n,p)=>n+Number(p.totalDebtAfter??0),0),
+          [...lastByLoan.values()].reduce((n,p)=>n+Number(p.nextInterestProjected??0),0)
+        ];
+        const row=document.createElement('tr'),name=document.createElement('th');
+        name.textContent=String(meeting.title??'S'+String(meeting.session??''));row.append(name);
+        for(const value of values){const td=document.createElement('td');td.textContent=fmt(value);row.append(td);}
+        tbody.append(row);
+      }
+      if(!timeline.length){
+        const row=document.createElement('tr'),empty=document.createElement('td');empty.colSpan=10;
+        empty.textContent=tr('Aucune séance disponible.','No session available.');row.append(empty);tbody.append(row);
+      }
+      table.append(tbody);wrap.append(table);
+      const note=document.createElement('p');note.className='hint';
+      note.textContent=tr('Historique calculé uniquement sur les périodes de prêts disponibles. Les décaissements sans période historique vérifiée ne sont pas inventés ; consultez les indicateurs actuels au-dessus pour les encours complets.','History uses available loan periods only. Unverified disbursement periods are not invented; see the current portfolio metrics above for complete outstanding amounts.');
+      journeyHost.replaceChildren(note,wrap);
+    };
+    const refillLoans=()=>{loanSelect.replaceChildren(option('__GROUP__',tr('Ensemble du groupe','Entire group')));for(const debt of debts.filter(x=>!memberSelect.value||String(x.memberId)===memberSelect.value))loanSelect.append(option(String(debt.loanId),debt.title+' · '+fmt(debt.totalDue)));journeyHost.replaceChildren();loanSelect.value='__GROUP__';void renderJourney();};
+    const renderJourney=async()=>{journeyHost.replaceChildren();if(loanSelect.value==='__GROUP__'){renderGroupJourney();return;}if(!loanSelect.value)return;const loading=document.createElement('p');loading.className='hint';loading.textContent=tr('Chargement du parcours…','Loading journey…');journeyHost.append(loading);try{const history=await app.loanHistory(loanSelect.value),periods=history.periods??[];if(!periods.length){journeyHost.replaceChildren(article(tr('Aucune période détaillée','No detailed period'),' ',tr('Le prêt existe mais aucune période de remboursement n’a encore été enregistrée.','The loan exists but no repayment period has been recorded yet.')));return;}const wrap=document.createElement('div');wrap.className='matrix-wrap';const table=document.createElement('table');table.className='meeting-matrix debt-journey-table';const head=document.createElement('thead'),hr=document.createElement('tr');for(const label of [tr('Séance / date','Session / date'),tr('Capital avant','Principal before'),tr('Intérêt ouverture','Opening interest'),tr('Nouvel intérêt','New interest'),tr('Paiement','Payment'),tr('Capital payé','Principal paid'),tr('Intérêt payé','Interest paid'),tr('Capital restant','Principal left'),tr('Intérêts dus','Interest due'),tr('Dette après','Debt after'),tr('Prochain intérêt','Next interest'),tr('Priorité','Priority')]){const th=document.createElement('th');th.textContent=label;hr.append(th);}head.append(hr);table.append(head);const body=document.createElement('tbody');for(const p of periods){const meeting=getMeetings().find(m=>m.id===p.meetingId),values=[meeting?.title??date(p.createdAt),fmt(p.principalBefore),fmt(p.interestOpening),fmt(p.interestNew),fmt(p.payment),fmt(p.principalPaid),fmt(p.interestPaid),fmt(p.principalAfter),fmt(p.interestAfter),fmt(p.totalDebtAfter),fmt(p.nextInterestProjected),String(p.priority??'')];const row=document.createElement('tr');for(const value of values){const td=document.createElement('td');td.textContent=value;row.append(td);}body.append(row);}table.append(body);wrap.append(table);journeyHost.replaceChildren(wrap);}catch(e){journeyHost.replaceChildren();showError(e);}};
     memberSelect.addEventListener('change',refillLoans);loanSelect.addEventListener('change',()=>void renderJourney());refillLoans();journey.append(jt,memberSelect,loanSelect,journeyHost);holder.append(journey);
     root.append(holder);
   };
