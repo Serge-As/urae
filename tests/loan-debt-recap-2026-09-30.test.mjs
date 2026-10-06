@@ -15,8 +15,10 @@ test('debt view distinguishes interest due from next projected interest',()=>{
 test('loan menu exposes member x session recap and current totals',()=>{
   assert.match(html,/id="loanDebtRecap"/);
   assert.match(completion,/loanRecapTable/);
-  assert.match(completion,/Capital restant par membre et par séance/);
-  assert.match(completion,/Intérêts dus par membre et par séance/);
+  assert.match(completion,/loan-four-criteria-table/);
+  assert.match(completion,/Ensemble du groupe/);
+  assert.match(completion,/Capital restant/);
+  assert.match(completion,/Intérêts dus/);
   assert.match(completion,/Prochains intérêts projetés/);
   assert.match(completion,/Dette de prêt totale/);
   assert.match(completion,/Dette totale exigible/);
