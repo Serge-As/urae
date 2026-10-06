@@ -789,3 +789,36 @@ export const makeId = (prefix: string): string => {
   const id=hex.slice(0,8)+'-'+hex.slice(8,12)+'-'+hex.slice(12,16)+'-'+hex.slice(16,20)+'-'+hex.slice(20);
   return `${prefix}_${id}`;
 };
+
+
+/** Recorded at durable local validation, never reconstructed from arrival time.
+ * V2 is a staging contract: V1 remains authoritative until the atomic
+ * repository/outbox/server path and Q01–Q28 have passed qualification. */
+export interface RecordedCellIntentV2 {
+  commandId: string;
+  tenantId: Id;
+  groupId: Id;
+  exerciseId: Id;
+  meetingId: Id;
+  membershipId: Id;
+  rubricId: Id;
+  activityId?: Id;
+  targetAmount: number; // integer absolute XAF, zero included
+  baselineCellVersion: number;
+  baselineAmount: number;
+  actorId: Id;
+  deviceId: string;
+  deviceSequence: number;
+  recordedAtClient: string;
+  clockAnchorId?: string;
+  elapsedSinceAnchorMs?: number;
+  reason?: string;
+}
+/** Produced by a server-verifiable clock reconciliation, not client assertions. */
+export interface NormalizedCellIntentOrder {
+  commandId: string;
+  effectiveRecordedAtMs: number;
+  clockQuality: 'VERIFIED' | 'UNVERIFIABLE';
+  deviceId: string;
+  deviceSequence: number;
+}
