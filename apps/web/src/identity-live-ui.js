@@ -96,8 +96,13 @@ export function mountIdentityLiveUI({app,notify=()=>{},showError=console.error,c
           if(msg.type==='GROUP_LIVE_EVENT'&&msg.event){
             eventQueue=eventQueue.then(async()=>{
               const seq=Number(msg.event.seq??0);
-              if(seq>lastSeq+1){try{if(socket===activeSocket)activeSocket.close(4001,'sequence-gap');}catch{}return;}
-              if(seq>lastSeq){renderEvent(msg.event);dispatchDurableEvent(msg.event);}
+              // Sequence IDs are global to the group, but private notifications
+              // are delivered only to their target. A jump (e.g. 2 -> 5) is
+              // therefore NORMAL for another manager, not lost transport data.
+              // WebSocket preserves ordered delivery; on a real disconnect the
+              // hub replays only authorized events strictly after lastSeq.
+              // Closing here trapped users in a four-retry offline cycle.
+              if(Number.isSafeInteger(seq)&&seq>lastSeq){renderEvent(msg.event);dispatchDurableEvent(msg.event);}
             }).catch(()=>{});
           }
         }catch{}
