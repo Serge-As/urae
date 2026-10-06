@@ -302,6 +302,52 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
     return{status:'APPLIED',current:state.current,target:input.targetAmount,previousAmount:state.current,newAmount:input.targetAmount,cellVersion:correction.cellVersion,receipt,notice:delivery.notice??null,deliveryPending:!delivery.ok,groupId:group.id};
   };
 
+  const applyFinancialReview=async(input:{groupId:string;meetingId:string;membershipId:string;rubricId:string;decision:string;reason:string;amount:number;cellVersion:number})=>{
+    const {groupId,meetingId,membershipId,rubricId,decision,reason}=input;
+    await requireGroup(groupId,true);
+    if(!membershipId||!rubricId||!['APPROVE','RESERVE'].includes(decision))throw Error('INVALID_CELL_REVIEW');
+      const [meeting,membership,rubric]=await Promise.all([
+        repo.getMeeting(ctx.tenantId,groupId,meetingId),
+        repo.getMembership(ctx.tenantId,groupId,membershipId),
+        repo.getRubricDefinition(ctx.tenantId,groupId,rubricId)
+      ]);
+      if(!meeting||meeting.status==='cancelled'||!membership||!rubric)throw Error('CELL_REVIEW_SCOPE_INVALID');
+      const current=await financialCellState(groupId,meetingId,membershipId,rubricId),
+        expectedVersion=finite(input.cellVersion,-1),expectedAmount=finite(input.amount,-1);
+      if(current.cellVersion!==expectedVersion||current.current!==expectedAmount)throw Error('CELL_REVIEW_STALE');
+      const consensus=new MeetingLiveConsensusService(repo,kernel);
+      const outcome=await consensus.reviewCanonicalCell({groupId,meetingId,membershipId,rubricId,
+        amount:current.current,cellVersion:current.cellVersion,reason,
+        decision:decision as 'APPROVE'|'RESERVE'});
+      if(decision==='RESERVE'){
+        const actor=await actorLabel(),member=await memberLabel(groupId,membershipId),rubricName=await rubricLabel(groupId,rubricId);
+        await notifications.publish(groupId,{
+          title:'Contestation de cellule financière',
+          message:`${actor} conteste ${member} · ${rubricName} : ${current.current} F CFA. Motif : ${reason}. La donnée reste applicable durant la procédure.`,
+          channels:['IN_APP','WEB_PUSH'],audience:'MANAGERS',priority:'HIGH',
+          action:{view:'operations',anchor:'twoSheetWorkspace',meetingId,membershipId,rubricId,label:'Consulter la cellule'},
+          idempotencyKey:outcome.review.id+':managers'
+        });
+        await notifications.publish(groupId,{
+          title:'Une modification de votre compte est contestée',
+          message:`${rubricName} : ${current.current} F CFA. Une vérification est ouverte. La valeur reste enregistrée tant qu’aucune décision ne la modifie.`,
+          channels:['IN_APP','WEB_PUSH'],audience:'SELECTED',selectedMembershipIds:[membershipId],priority:'HIGH',
+          action:{view:'operations',anchor:'twoSheetWorkspace',meetingId,membershipId,rubricId,label:'Consulter la situation'},
+          idempotencyKey:outcome.review.id+':member'
+        });
+      }
+      await publishLive(groupId,decision==='RESERVE'?'MANAGER_RESERVE':'CONSENSUS_SELECTED',
+        outcome.review.id,{meetingId,membershipId,rubricId,cellVersion:current.cellVersion,
+          amount:current.current,actorId:ctx.actorId,decision,reviewId:outcome.review.id,
+          conflictNoticeId:decision==='RESERVE'?outcome.record.id:undefined});
+      if(decision==='RESERVE')await publishLive(groupId,'MEMBER_PROJECTION_UPDATED',
+        outcome.review.id+':member',{meetingId,membershipId,rubricId,cellVersion:current.cellVersion,
+          amount:current.current,disputed:true},membership.userId);
+      return json({status:decision==='RESERVE'?'RESERVE_OPEN':'APPROVED',reviewId:outcome.review.id,
+        currentAmount:current.current,cellVersion:current.cellVersion,canonicalUnchanged:true      return {status:decision==='RESERVE'?'RESERVE_OPEN':'APPROVED',reviewId:outcome.review.id,
+        currentAmount:current.current,cellVersion:current.cellVersion,canonicalUnchanged:true};
+  };
+
   const jsonStringArray=(value:unknown):string[]=>{try{const parsed=JSON.parse(String(value??'[]'));return Array.isArray(parsed)?parsed.map(String):[];}catch{return[];}};
   const meetingMoment=(meeting:any)=>Date.parse(String(meeting?.scheduledAt??meeting?.openedAt??meeting?.createdAt??''))||0;
   const normalizedLoanInterestTiming=(value:unknown):'NEXT_SESSION_DUE'|'UPFRONT_DEDUCTED'|'UPFRONT_REQUIRED'=>['UPFRONT_DEDUCTED','UPFRONT_REQUIRED'].includes(String(value))?String(value) as any:'NEXT_SESSION_DUE';
@@ -520,55 +566,16 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
     if(reopenAuthApprove&&request.method==='POST'){const row=await reopenAuth.approve(reopenAuthApprove[1]!,reopenAuthApprove[3]!);if(String(row.data.meetingId)!==reopenAuthApprove[2]!)throw Error('REOPEN_AUTH_NOT_FOUND');return json(row,200,cors);}
     const reopenAuthCancel=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/meetings\/([^/]+)\/reopen-authorizations\/([^/]+)\/cancel$/);
     if(reopenAuthCancel&&request.method==='POST'){const body=await readJson<Record<string,unknown>>(request),row=await reopenAuth.cancel(reopenAuthCancel[1]!,reopenAuthCancel[3]!,String(body.reason??''));if(String(row.data.meetingId)!==reopenAuthCancel[2]!)throw Error('REOPEN_AUTH_NOT_FOUND');return json(row,200,cors);}
-    // Acknowledgment and reservation are governed reviews, NEVER financial
-    // writes. The canonical cell remains available during a dispute.
+    // Manager review does not mutate the canonical ledger.
     const financialCellReview=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/meetings\/([^/]+)\/financial-cells\/review$/);
     if(financialCellReview&&request.method==='POST'){
-      const groupId=financialCellReview[1]!,meetingId=financialCellReview[2]!;
-      await requireGroup(groupId,true);
-      const body=await readJson<Record<string,unknown>>(request),
-        membershipId=String(body.membershipId??''),rubricId=String(body.rubricId??''),
-        decision=String(body.decision??''),reason=String(body.reason??'').trim();
-      if(!membershipId||!rubricId||!['APPROVE','RESERVE'].includes(decision))throw Error('INVALID_CELL_REVIEW');
-      const [meeting,membership,rubric]=await Promise.all([
-        repo.getMeeting(ctx.tenantId,groupId,meetingId),
-        repo.getMembership(ctx.tenantId,groupId,membershipId),
-        repo.getRubricDefinition(ctx.tenantId,groupId,rubricId)
-      ]);
-      if(!meeting||meeting.status==='cancelled'||!membership||!rubric)throw Error('CELL_REVIEW_SCOPE_INVALID');
-      const current=await financialCellState(groupId,meetingId,membershipId,rubricId),
-        expectedVersion=finite(body.cellVersion,-1),expectedAmount=finite(body.amount,-1);
-      if(current.cellVersion!==expectedVersion||current.current!==expectedAmount)throw Error('CELL_REVIEW_STALE');
-      const consensus=new MeetingLiveConsensusService(repo,kernel);
-      const outcome=await consensus.reviewCanonicalCell({groupId,meetingId,membershipId,rubricId,
-        amount:current.current,cellVersion:current.cellVersion,reason,
-        decision:decision as 'APPROVE'|'RESERVE'});
-      if(decision==='RESERVE'){
-        const actor=await actorLabel(),member=await memberLabel(groupId,membershipId),rubricName=await rubricLabel(groupId,rubricId);
-        await notifications.publish(groupId,{
-          title:'Contestation de cellule financière',
-          message:`${actor} conteste ${member} · ${rubricName} : ${current.current} F CFA. Motif : ${reason}. La donnée reste applicable durant la procédure.`,
-          channels:['IN_APP','WEB_PUSH'],audience:'MANAGERS',priority:'HIGH',
-          action:{view:'operations',anchor:'twoSheetWorkspace',meetingId,membershipId,rubricId,label:'Consulter la cellule'},
-          idempotencyKey:outcome.review.id+':managers'
-        });
-        await notifications.publish(groupId,{
-          title:'Une modification de votre compte est contestée',
-          message:`${rubricName} : ${current.current} F CFA. Une vérification est ouverte. La valeur reste enregistrée tant qu’aucune décision ne la modifie.`,
-          channels:['IN_APP','WEB_PUSH'],audience:'SELECTED',selectedMembershipIds:[membershipId],priority:'HIGH',
-          action:{view:'operations',anchor:'twoSheetWorkspace',meetingId,membershipId,rubricId,label:'Consulter la situation'},
-          idempotencyKey:outcome.review.id+':member'
-        });
-      }
-      await publishLive(groupId,decision==='RESERVE'?'MANAGER_RESERVE':'CONSENSUS_SELECTED',
-        outcome.review.id,{meetingId,membershipId,rubricId,cellVersion:current.cellVersion,
-          amount:current.current,actorId:ctx.actorId,decision,reviewId:outcome.review.id,
-          conflictNoticeId:decision==='RESERVE'?outcome.record.id:undefined});
-      if(decision==='RESERVE')await publishLive(groupId,'MEMBER_PROJECTION_UPDATED',
-        outcome.review.id+':member',{meetingId,membershipId,rubricId,cellVersion:current.cellVersion,
-          amount:current.current,disputed:true},membership.userId);
-      return json({status:decision==='RESERVE'?'RESERVE_OPEN':'APPROVED',reviewId:outcome.review.id,
-        currentAmount:current.current,cellVersion:current.cellVersion,canonicalUnchanged:true},200,cors);
+      const body=await readJson<Record<string,unknown>>(request);
+      return json(await applyFinancialReview({
+        groupId:financialCellReview[1]!,meetingId:financialCellReview[2]!,
+        membershipId:String(body.membershipId??''),rubricId:String(body.rubricId??''),
+        decision:String(body.decision??''),reason:String(body.reason??'').trim(),
+        amount:finite(body.amount,-1),cellVersion:finite(body.cellVersion,-1)
+      }),200,cors);
     }
     const financialCellBase=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/meetings\/([^/]+)\/financial-cells$/);
     const financialCellApply=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/meetings\/([^/]+)\/financial-cells\/([^/]+)\/apply$/);
@@ -2821,6 +2828,14 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
         const notice=await memberControl.memberReview(groupId,String(p.noticeId??''),decision,String(p.note??''));
         await markApplied();
         return json({accepted:true,stored:true,notice},200,cors);
+      }
+      if(item.type==='FINANCIAL_CELL_REVIEW_V1'){
+        const p=item.payload,groupId=String(p.groupId??'');
+        const reviewed=await applyFinancialReview({groupId,meetingId:String(p.meetingId??''),
+          membershipId:String(p.membershipId??''),rubricId:String(p.rubricId??''),
+          decision:String(p.decision??''),reason:String(p.reason??''),
+          amount:finite(p.amount,-1),cellVersion:finite(p.cellVersion,-1)});
+        await markApplied();return json({accepted:true,stored:true,...reviewed},200,cors);
       }
       if(item.type==='FINANCIAL_CELL_CORRECTION_PROPOSAL_V1'){
         const p=item.payload,groupId=String(p.groupId??''),meetingId=String(p.meetingId??''),membershipId=String(p.membershipId??''),rubricId=String(p.rubricId??''),targetAmount=finite(p.targetAmount),reason=String(p.reason??'');
