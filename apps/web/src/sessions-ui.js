@@ -17,6 +17,8 @@ const statusFr=s=>({PRESENT:'Présent',LATE:'En retard',REPRESENTED:'Représent�
 export function mountSessionsUI({app,getGroups,getMembers,getMeetings,getRubrics,navigate,openDetail,showError,notify,reloadMeetings}){
   const root=byId('sessionsWorkspace'),select=byId('sessionsMeetingSelect'),timeline=byId('sessionsTimelineStrip');
   let activeTab='overview';
+  let lastRealMeetingId='';
+  let tabRenderGeneration=0;
 
   const context=async()=>{
     const group=getGroups().find(x=>x.id===app.activeGroup()),members=getMembers(),meetings=getMeetings().slice().sort((a,b)=>String(meetingAt(a)).localeCompare(String(meetingAt(b)))),rubrics=getRubrics();
@@ -49,7 +51,7 @@ export function mountSessionsUI({app,getGroups,getMembers,getMeetings,getRubrics
     const index=meetings.findIndex(x=>x.id===meeting.id),previous=index>0?meetings[index-1]:null,next=index>=0&&index<meetings.length-1?meetings[index+1]:null;
     for(const [kind,m] of [[t('Précédente','Previous'),previous],[t('Actuelle','Current'),meeting],[t('Suivante','Next'),next]]){
       const a=el('article',undefined,'session-timeline-card '+(m?.id===meeting.id?'active':''));a.append(el('small',kind),el('strong',m?meetingLabel(m):'—'));
-      if(m){a.append(el('span',[m.location,m.theme].filter(Boolean).join(' · ')||t('Contexte à compléter','Context to complete')));a.onclick=()=>{select.value=m.id;void refresh();};}
+      if(m){a.append(el('span',[m.location,m.theme].filter(Boolean).join(' · ')||t('Contexte à compléter','Context to complete')));a.onclick=()=>{select.value=m.id;lastRealMeetingId=m.id;if(activeTab==='cumulative')activeTab='overview';void refresh();};}
       timeline.append(a);
     }
   };
@@ -285,10 +287,21 @@ export function mountSessionsUI({app,getGroups,getMembers,getMeetings,getRubrics
     if(!list.childElementCount)list.append(el('div',t('Aucun événement métier visible pour cette séance.','No visible business event for this session.'),'empty-state'));section.append(list,el('p',t('Chaque modification financière affiche la séance, le membre, la rubrique, le montant, la date/heure, l’auteur et le motif lorsqu’il existe. L’audit serveur reste l’autorité de preuve.','Each financial change shows the session, member, rubric, amount, date/time, author and reason when available. Server audit remains the evidence authority.'),'hint'));if(openDetail){const b=button(t('Ouvrir la fiche détaillée','Open detailed record'));b.onclick=()=>openDetail('meeting',meeting.id);section.append(b);}return section;
   };
   const renderTab=async()=>{
-    if(!root)return;root.replaceChildren();const c=await context();if(!c.group){root.append(el('div',t('Sélectionnez un groupe.','Select a group.'),'empty-state'));return;}
-    if(c.cumulative){
-      activeTab='cumulative';byId('sessionsTabs')?.querySelectorAll('button').forEach(x=>x.classList.toggle('active',x.dataset.sessionTab==='cumulative'));
-      try{root.append(await renderCumulative(c));}catch(e){showError(e);}return;
+    if(!root)return;
+    // Selecting a cumulative data scope must never hijack another tab.
+    const generation=++tabRenderGeneration;
+    const chosenTab=activeTab;
+    if(chosenTab!=='cumulative'&&select?.value==='__cumulative__'){
+      const meetings=getMeetings().filter(m=>m.status!=='cancelled');
+      const restored=meetings.find(m=>m.id===lastRealMeetingId)??meetings.find(m=>m.status==='open')??meetings[meetings.length-1];
+      if(restored){select.value=restored.id;lastRealMeetingId=restored.id;}
+    }
+    const c=await context();if(generation!==tabRenderGeneration)return;
+    root.replaceChildren();
+    if(!c.group){root.append(el('div',t('Sélectionnez un groupe.','Select a group.'),'empty-state'));return;}
+    byId('sessionsTabs')?.querySelectorAll('button[data-session-tab]').forEach(x=>x.classList.toggle('active',x.dataset.sessionTab===chosenTab));
+    if(chosenTab==='cumulative'){
+      try{const rendered=await renderCumulative(c);if(generation===tabRenderGeneration)root.append(rendered);}catch(e){if(generation===tabRenderGeneration)showError(e);}return;
     }
     const fn={overview:renderOverview,sheet:renderSheet,cumulative:renderCumulative,attendance:renderAttendance,beneficiaries:renderBeneficiaries,recap:renderRecap,debts:renderDebts,schedule:renderSchedule,history:renderHistory}[activeTab]??renderOverview;
     try{
@@ -304,14 +317,14 @@ export function mountSessionsUI({app,getGroups,getMembers,getMeetings,getRubrics
         const add=button(t('+ Nouvelle séance','+ New meeting'));add.onclick=()=>byId('sessionsCreateForm')?.scrollIntoView({behavior:'smooth',block:'start'});
         bar.append(edit,reconcile,distribute,modify,other,add);root.append(bar);
       }
-      const rendered=await fn(c);root.append(rendered);for(const host of rendered.querySelectorAll?.('[data-canonical-financial-host="1"]')??[]){window.dispatchEvent(new CustomEvent('eco:render-canonical-financial-table',{detail:{root:host,mode:host.dataset.financialMode||'meeting',meetingId:host.dataset.meetingId||'',membershipId:host.dataset.membershipId||'',showToolbar:host.dataset.showToolbar!=='false',editable:host.dataset.editable!=='false'}}));}
+      const rendered=await fn(c);if(generation!==tabRenderGeneration)return;root.append(rendered);for(const host of rendered.querySelectorAll?.('[data-canonical-financial-host="1"]')??[]){window.dispatchEvent(new CustomEvent('eco:render-canonical-financial-table',{detail:{root:host,mode:host.dataset.financialMode||'meeting',meetingId:host.dataset.meetingId||'',membershipId:host.dataset.membershipId||'',showToolbar:host.dataset.showToolbar!=='false',editable:host.dataset.editable!=='false'}}));}
     }catch(e){showError(e);root.append(el('div',t('Cette section n’a pas pu être chargée. Les autres modules restent disponibles.','This section could not be loaded. Other modules remain available.'),'empty-state'));}
   };
 
   const refresh=async()=>{await ensurePicker();await renderTimeline();await renderTab();};
 
   byId('sessionsTabs')?.querySelectorAll('button[data-session-tab]').forEach(b=>b.addEventListener('click',()=>{activeTab=b.dataset.sessionTab||'overview';byId('sessionsTabs').querySelectorAll('button').forEach(x=>x.classList.toggle('active',x===b));void renderTab();}));
-  select?.addEventListener('change',()=>{if(select.value==='__cumulative__')activeTab='cumulative';else if(activeTab==='cumulative')activeTab='overview';void refresh();});
+  select?.addEventListener('change',()=>{if(select.value==='__cumulative__')activeTab='cumulative';else{lastRealMeetingId=select.value;if(activeTab==='cumulative')activeTab='overview';}void refresh();});
   byId('sessionsRefreshBtn')?.addEventListener('click',()=>void refresh());
   byId('sessionsOpenDetailBtn')?.addEventListener('click',()=>{if(select?.value&&openDetail)openDetail('meeting',select.value);});
   byId('sessionsCreateForm')?.addEventListener('submit',e=>void(async()=>{e.preventDefault();const submit=byId('sessionsCreateBtn');try{submit.disabled=true;const raw=byId('sessionsScheduledAt').value,created=await app.openMeeting({title:byId('sessionsTitle').value.trim()||undefined,scheduledAt:raw?new Date(raw).toISOString():undefined,location:byId('sessionsLocation').value.trim()||undefined,theme:byId('sessionsTheme').value.trim()||undefined,dressCode:byId('sessionsDressCode').value.trim()||undefined});notify(t('Séance créée.','Session created.'));if(reloadMeetings)await reloadMeetings();if(select)select.value=created.id;window.dispatchEvent(new CustomEvent('eco:sessions-changed'));await refresh();}catch(err){showError(err);}finally{submit.disabled=false;}})());
