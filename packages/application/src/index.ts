@@ -80,6 +80,33 @@ export class ConnectedApplication {
   private readonly baseUrl:string;
   private groupTenants=new Map<string,string>();
   private homeTenantId?:string;
+  private financialClockAnchor?:{groupId:string;deviceId:string;token:string;anchorAtMs:number;monotonicAt:number;expiresAt:number};
+  private financialClockLoading?:Promise<void>;
+  private async warmFinancialClock():Promise<void>{
+    const groupId=this.activeGroupId,deviceId=this.localDeviceId();
+    if(!groupId||typeof navigator!=='undefined'&&navigator.onLine===false||this.serverBudgetBlocked())return;
+    if(this.financialClockAnchor?.groupId===groupId&&
+      this.financialClockAnchor.deviceId===deviceId&&Date.now()<this.financialClockAnchor.expiresAt)return;
+    if(this.financialClockLoading)return this.financialClockLoading;
+    this.financialClockLoading=(async()=>{
+      try{
+        const response=await this.request<{token:string;anchorAtMs:number;expiresAt:string;deviceId:string}>(
+          '/api/v1/groups/'+encodeURIComponent(groupId)+'/financial-clock-anchor?deviceId='+encodeURIComponent(deviceId));
+        if(this.activeGroupId!==groupId||!response?.token||response.deviceId!==deviceId)return;
+        const perf=typeof performance!=='undefined'&&Number.isFinite(performance.now())?performance.now():0;
+        if(perf>0)this.financialClockAnchor={groupId,deviceId,token:response.token,anchorAtMs:response.anchorAtMs,
+          monotonicAt:perf,expiresAt:Date.parse(response.expiresAt)};
+      }catch(error){console.info('Financial clock unavailable, future intents require review',error);}
+    })().finally(()=>{this.financialClockLoading=undefined;});
+    return this.financialClockLoading;
+  }
+  private financialRecordedAnchor():{clockAnchorId?:string;elapsedSinceAnchorMs?:number;deviceId:string}{
+    const deviceId=this.localDeviceId(),current=this.financialClockAnchor;
+    const perf=typeof performance!=='undefined'?performance.now():NaN;
+    if(current?.groupId!==this.activeGroupId||current.deviceId!==deviceId||
+      !Number.isFinite(perf)||perf<current.monotonicAt||Date.now()>current.expiresAt)return{deviceId};
+    return{clockAnchorId:current.token,elapsedSinceAnchorMs:Math.round(perf-current.monotonicAt),deviceId};
+  }
 
   constructor(options:ConnectedApplicationOptions={}){
     this.baseUrl=options.baseUrl??''; this.actorId=options.actorId??'user_founder'; this.tenantId=options.tenantId??'tenant_local'; this.displayName=options.displayName??'Local Manager';
@@ -202,7 +229,7 @@ export class ConnectedApplication {
   }
   private async queueLocal(type:string,payload:Record<string,unknown>,idempotencyKey=makeId('op')):Promise<OutboxItem>{
     let item=this.outbox.enqueue({tenantId:this.tenantId,actorId:this.actorId,type,payload,idempotencyKey});
-    const financialTarget=type==='FINANCIAL_CELL_CORRECTION_PROPOSAL_V1';
+    const financialTarget=['FINANCIAL_CELL_CORRECTION_PROPOSAL_V1','FINANCIAL_CELL_CORRECTION_PROPOSAL_V2'].includes(type);
     if(financialTarget){
       try{
         const committed=await this.outboxStorage.recordFinancialCellIntent(
@@ -296,7 +323,7 @@ export class ConnectedApplication {
     if(IndexedDbOutboxAdapter.supported())try{const persisted=await this.outboxStorage.load();this.outbox.restore(persisted.filter(x=>x.actorId===this.actorId&&x.tenantId===this.tenantId));}catch{}
     await this.recoverInterruptedVaultRestores();
     const groups=await this.listGroups();if(this.activeGroupId&&!groups.some(g=>g.id===this.activeGroupId))this.selectGroup(undefined);if(!this.activeGroupId&&groups[0])this.selectGroup(groups[0].id);else this.selectGroup(this.activeGroupId);
-    if(!this.usingOfflineSnapshot){await this.request('/api/v1/bootstrap',{method:'POST',body:JSON.stringify({displayName:this.displayName,locale:this.locale})});await this.groupTrashItems().catch(()=>[]);}
+    if(!this.usingOfflineSnapshot){await this.request('/api/v1/bootstrap',{method:'POST',body:JSON.stringify({displayName:this.displayName,locale:this.locale})});await this.groupTrashItems().catch(()=>[]);if(this.activeGroupId)void this.warmFinancialClock();}
     return{restoredOutbox:this.outbox.list().length,groups};
   }
 
@@ -601,7 +628,7 @@ export class ConnectedApplication {
 
   setLocale(locale:string):void{this.locale=locale==='en'?'en':'fr';try{localStorage.setItem('tontine.locale',this.locale);}catch{}}
   setConnectivity(_connectivity:'online'|'offline'|'degraded'):void{}
-  selectGroup(groupId?:string):void{this.activeGroupId=groupId;this.tenantId=(groupId?this.groupTenants.get(groupId):undefined)??this.homeTenantId??this.tenantId;try{if(groupId)localStorage.setItem('tontine.activeGroupId',groupId);else localStorage.removeItem('tontine.activeGroupId');}catch{}}
+  selectGroup(groupId?:string):void{const before=this.activeGroupId;this.activeGroupId=groupId;this.tenantId=(groupId?this.groupTenants.get(groupId):undefined)??this.homeTenantId??this.tenantId;if(before!==groupId){this.financialClockAnchor=undefined;if(groupId)void this.warmFinancialClock();}try{if(groupId)localStorage.setItem('tontine.activeGroupId',groupId);else localStorage.removeItem('tontine.activeGroupId');}catch{}}
   activeGroup():string|undefined{return this.activeGroupId;}
 
   async analyzeGroupDocument(text:string):Promise<{fingerprint:string;suggestions:any[];requiresHumanConfirmation:boolean;financialWrites:boolean}>{return this.request('/api/v1/assistant/group-launch/analyze',{method:'POST',body:JSON.stringify({text})});}
@@ -971,7 +998,7 @@ export class ConnectedApplication {
     if(!this.activeGroupId)return[];
     return this.outbox.list().filter(item=>{
       const payload=item.payload as Record<string,unknown>,businessStatus=String(item.lastResult?.status??'');
-      return item.tenantId===this.tenantId&&item.actorId===this.actorId&&item.type==='FINANCIAL_CELL_CORRECTION_PROPOSAL_V1'&&
+      return item.tenantId===this.tenantId&&item.actorId===this.actorId&&['FINANCIAL_CELL_CORRECTION_PROPOSAL_V1','FINANCIAL_CELL_CORRECTION_PROPOSAL_V2'].includes(item.type)&&
         String(payload.groupId??'')===this.activeGroupId&&!['CONFLICT','CANCELLED'].includes(item.status)&&
         (item.status!=='CONFIRMED'||businessStatus==='CONSENSUS_REQUIRED');
     }).map(item=>{
@@ -1169,15 +1196,15 @@ export class ConnectedApplication {
     if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');
     if(!Number.isSafeInteger(input.targetAmount)||input.targetAmount<0)throw Error('INVALID_CONTRIBUTION_AMOUNT');
     const current=Number(input.currentAmount??0),currentVersion=Number(input.currentVersion??0),operationKey='cell-target:'+makeId('op');
-    const payload={groupId:this.activeGroupId,meetingId:input.meetingId,membershipId:input.membershipId,rubricId:input.rubricId,targetAmount:input.targetAmount,baselineValue:current,baselineVersion:currentVersion,reason:input.reason??'',recordedAtClient:new Date().toISOString()};
+    const payload={groupId:this.activeGroupId,meetingId:input.meetingId,membershipId:input.membershipId,rubricId:input.rubricId,targetAmount:input.targetAmount,baselineValue:current,baselineVersion:currentVersion,reason:input.reason??'',recordedAtClient:new Date().toISOString(),...this.financialRecordedAnchor()};
     // Persist the exact target command before attempting transport. If the HTTP
     // response is lost after commit, the same idempotency key is replayed later.
-    const item=await this.queueLocal('FINANCIAL_CELL_CORRECTION_PROPOSAL_V1',payload,operationKey);
+    const item=await this.queueLocal('FINANCIAL_CELL_CORRECTION_PROPOSAL_V2',payload,operationKey);
     if(!(await this.canAttemptCriticalWrite()))return{status:'QUEUED_SYNC',queued:true,current,target:input.targetAmount,outbox:item};
     try{
       const result=await this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/meetings/${encodeURIComponent(input.meetingId)}/financial-cells`,{
         method:'POST',headers:{'x-idempotency-key':operationKey},
-        body:JSON.stringify({membershipId:input.membershipId,rubricId:input.rubricId,targetAmount:input.targetAmount,expectedCurrentAmount:current,expectedCellVersion:currentVersion,reason:input.reason??''})
+        body:JSON.stringify({membershipId:input.membershipId,rubricId:input.rubricId,targetAmount:input.targetAmount,expectedCurrentAmount:current,expectedCellVersion:currentVersion,reason:input.reason??'',intentV2:item.payload})
       });
       this.outbox.markConfirmedByKey(this.tenantId,this.actorId,operationKey);await this.persistOutbox();return result;
     }catch(error){
