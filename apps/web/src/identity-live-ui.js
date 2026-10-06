@@ -48,12 +48,15 @@ export function mountIdentityLiveUI({app,notify=()=>{},showError=console.error,c
   const publishSignal=async(type,payload={})=>{
     if(!app.activeGroup())return{accepted:false,reason:'ACTIVE_GROUP_REQUIRED'};
     if(['FINANCIAL_DRAFT','FINANCIAL_DRAFT_CLEAR'].includes(type))pendingDraftSignals.set(signalKey(payload),{type,payload});
-    if(navigator.onLine===false||app.serverBudgetState?.().blocked)return{accepted:false,offline:true,queued:['FINANCIAL_DRAFT','FINANCIAL_DRAFT_CLEAR'].includes(type)};
+    if(navigator.onLine===false)return{accepted:false,offline:true,queued:['FINANCIAL_DRAFT','FINANCIAL_DRAFT_CLEAR'].includes(type)};
+    // A D1 budget block does not close or disable an already authorized live
+    // socket: ephemeral typing carries no new D1 read or REST write.
     if(socket&&socket.readyState===WebSocket.OPEN){
       try{socket.send(JSON.stringify({type:'CLIENT_SIGNAL',eventType:type,payload}));if(['FINANCIAL_DRAFT','FINANCIAL_DRAFT_CLEAR'].includes(type))pendingDraftSignals.delete(signalKey(payload));return{accepted:true,transport:'websocket'};}catch{}
     }
-    // Ephemeral presence/typing/draft traffic is WebSocket-only. Never convert
-    // keystrokes into REST/D1 requests when the live channel is unavailable.
+    // Ephemeral presence/typing/draft traffic is WebSocket-only. Never
+    // retry a D1-dependent ticket while the server explicitly forbids it.
+    if(app.serverBudgetState?.().blocked)return{accepted:false,transport:'server-budget-wait',queued:['FINANCIAL_DRAFT','FINANCIAL_DRAFT_CLEAR'].includes(type)};
     if(wantConnection&&(!socket||socket.readyState>1)){reconnectAttempt=0;void connect();}
     return{accepted:false,transport:'websocket-pending',queued:['FINANCIAL_DRAFT','FINANCIAL_DRAFT_CLEAR'].includes(type)};
   };
