@@ -74,6 +74,14 @@ export interface FinancialCorrectionPlan {
   outboxRecords?: WorkspaceRecord[];
 }
 
+/** A real, later same-amount validation advances the winning clock and
+ * canonical version without inventing a cash movement. */
+export interface FinancialCellStampPlan {
+  tenantId:Id;groupId:Id;operationId:Id;expectedVersion:number;nextVersion:number;
+  meetingId:Id;membershipId:Id;rubricId:Id;currency:string;
+  records:WorkspaceRecord[];audit:AuditEvent;createdAt:string;
+}
+
 export interface MarketStockReservationPlan {
   operationId: Id;
   tenantId: Id;
@@ -88,6 +96,22 @@ export interface MarketStockReservationPlan {
 export interface PlatformRepository {
   commitFinancialOperation(operation: FinancialOperation): FinancialOperation | Promise<FinancialOperation>;
   commitFinancialCorrection(plan: FinancialCorrectionPlan): FinancialCorrectionPlan | Promise<FinancialCorrectionPlan>;
+  commitFinancialCellStamp(plan:FinancialCellStampPlan):FinancialCellStampPlan|Promise<FinancialCellStampPlan>;
+  commitFinancialCellStamp(plan:FinancialCellStampPlan):FinancialCellStampPlan {
+    const key=this.financialCellRevisionKey(plan.tenantId,plan.groupId,plan.meetingId,
+      plan.membershipId,plan.rubricId,plan.currency);
+    const current=this.financialCellRevisions.get(key);
+    if((current?.version??0)!==plan.expectedVersion)throw Error('CELL_VERSION_CONFLICT');
+    if(plan.nextVersion!==plan.expectedVersion+1)throw Error('INVALID_CELL_VERSION');
+    this.financialCellRevisions.set(key,{tenantId:plan.tenantId,groupId:plan.groupId,
+      meetingId:plan.meetingId,membershipId:plan.membershipId,rubricId:plan.rubricId,
+      currency:plan.currency,version:plan.nextVersion,lastOperationId:plan.operationId,
+      updatedAt:plan.createdAt});
+    for(const record of plan.records)this.workspaceRecords.set(record.id,structuredClone(record));
+    this.audits.set(plan.audit.id,structuredClone(plan.audit));
+    return structuredClone(plan);
+  }
+
   commitMarketStockReservation(plan:MarketStockReservationPlan): {stock:WorkspaceRecord;order:WorkspaceRecord;movement:EvidenceRecord} | Promise<{stock:WorkspaceRecord;order:WorkspaceRecord;movement:EvidenceRecord}>;
   getFinancialCellRevision(tenantId:Id,groupId:Id,meetingId:Id,membershipId:Id,rubricId:Id,currency:string): FinancialCellRevision | undefined | Promise<FinancialCellRevision | undefined>;
   listFinancialCellRevisions(tenantId:Id,groupId:Id): FinancialCellRevision[] | Promise<FinancialCellRevision[]>;
@@ -488,7 +512,7 @@ export class D1PlatformRepository implements PlatformRepository {
         SELECT ?,?,?,?,?,?,?,? WHERE EXISTS (
           SELECT 1 FROM financial_correction_operations
           WHERE tenant_id=? AND group_id=? AND idempotency_key=? AND operation_id=? AND primary_entry_id=?
-        ) ON CONFLICT(record_type,record_id) DO NOTHING`)
+        ) ON CONFLICT(record_type,record_id) ${type==='workspace_record'&&value.id.startsWith('cell_order_v2_')?'DO UPDATE SET data_json=excluded.data_json,updated_at=excluded.updated_at':'DO NOTHING'}`)
         .bind(type,value.id,plan.tenantId,plan.groupId,null,idempotency,JSON.stringify(value),updatedAt,plan.tenantId,plan.groupId,plan.idempotencyKey,plan.operationId,plan.primaryEntryId));
     }
     try{await this.db.batch(statements);}catch(error){
@@ -502,6 +526,61 @@ export class D1PlatformRepository implements PlatformRepository {
     const stored=JSON.parse(winner.operation_json) as FinancialCorrectionPlan;
     if(stored.intentFingerprint!==plan.intentFingerprint)throw new Error('IDEMPOTENCY_CONFLICT');
     return stored;
+  }
+
+  async commitFinancialCellStamp(plan:FinancialCellStampPlan):Promise<FinancialCellStampPlan>{
+    if(plan.nextVersion!==plan.expectedVersion+1)throw Error('INVALID_CELL_VERSION');
+    const key=[plan.tenantId,plan.groupId,plan.meetingId,plan.membershipId,plan.rubricId,plan.currency];
+    const cas=plan.expectedVersion===0?
+      this.db.prepare(`INSERT INTO financial_cell_revisions
+        (tenant_id,group_id,meeting_id,membership_id,rubric_id,currency,version,last_operation_id,updated_at)
+        VALUES(?,?,?,?,?,?,?,?,?)
+        ON CONFLICT(tenant_id,group_id,meeting_id,membership_id,rubric_id,currency)
+        DO UPDATE SET version=excluded.version,last_operation_id=excluded.last_operation_id,updated_at=excluded.updated_at
+        WHERE financial_cell_revisions.version=0`)
+        .bind(...key,plan.nextVersion,plan.operationId,plan.createdAt):
+      this.db.prepare(`UPDATE financial_cell_revisions
+        SET version=?,last_operation_id=?,updated_at=?
+        WHERE tenant_id=? AND group_id=? AND meeting_id=? AND membership_id=? AND rubric_id=? AND currency=? AND version=?`)
+        .bind(plan.nextVersion,plan.operationId,plan.createdAt,...key,plan.expectedVersion);
+    // The operation ID is selected from the exact newly committed CAS row.
+    // Null violates record_id NOT NULL, aborting the full D1 batch on a race.
+    const guard=this.db.prepare(`INSERT INTO platform_records
+      (record_type,record_id,tenant_id,group_id,assignee_id,idempotency_key,data_json,updated_at)
+      VALUES('financial_cell_stamp_guard',(
+        SELECT last_operation_id FROM financial_cell_revisions
+        WHERE tenant_id=? AND group_id=? AND meeting_id=? AND membership_id=? AND rubric_id=? AND currency=?
+          AND version=? AND last_operation_id=?
+      ),?,?,NULL,?,?,?)`)
+      .bind(...key,plan.nextVersion,plan.operationId,plan.tenantId,plan.groupId,
+        plan.operationId,JSON.stringify({operationId:plan.operationId}),plan.createdAt);
+    const statements:D1PreparedStatementLike[]=[cas,guard];
+    for(const record of plan.records){
+      const update=record.moduleId==='FINANCE.CELL_ORDER_V2';
+      statements.push(this.db.prepare(`INSERT INTO platform_records
+        (record_type,record_id,tenant_id,group_id,assignee_id,idempotency_key,data_json,updated_at)
+        SELECT 'workspace_record',?,?,?,?,?,?,?
+          WHERE EXISTS (SELECT 1 FROM platform_records WHERE record_type='financial_cell_stamp_guard'
+            AND record_id=? AND tenant_id=? AND group_id=?)
+        ON CONFLICT(record_type,record_id) ${update?'DO UPDATE SET data_json=excluded.data_json,updated_at=excluded.updated_at':'DO NOTHING'}`)
+        .bind(record.id,plan.tenantId,plan.groupId,null,null,JSON.stringify(record),
+          record.updatedAt,plan.operationId,plan.tenantId,plan.groupId));
+    }
+    statements.push(this.db.prepare(`INSERT INTO platform_records
+      (record_type,record_id,tenant_id,group_id,assignee_id,idempotency_key,data_json,updated_at)
+      SELECT 'audit',?,?,?,?,?,?,? WHERE EXISTS (
+        SELECT 1 FROM platform_records WHERE record_type='financial_cell_stamp_guard'
+          AND record_id=? AND tenant_id=? AND group_id=?)`)
+      .bind(plan.audit.id,plan.tenantId,plan.groupId,null,null,
+        JSON.stringify(plan.audit),plan.audit.at,plan.operationId,plan.tenantId,plan.groupId));
+    try{await this.db.batch(statements);}catch(error){
+      const current=await this.getFinancialCellRevision(...key as [Id,Id,Id,Id,Id,string]);
+      if((current?.version??0)!==plan.expectedVersion)throw Error('CELL_VERSION_CONFLICT',{cause:error});
+      throw error;
+    }
+    const updated=await this.getFinancialCellRevision(...key as [Id,Id,Id,Id,Id,string]);
+    if(updated?.lastOperationId!==plan.operationId||updated.version!==plan.nextVersion)throw Error('FINANCIAL_STAMP_NOT_COMMITTED');
+    return plan;
   }
 
   async commitMarketStockReservation(plan:MarketStockReservationPlan):Promise<{stock:WorkspaceRecord;order:WorkspaceRecord;movement:EvidenceRecord}>{
