@@ -46,6 +46,13 @@ export class Outbox {
   }
 
   list(): OutboxItem[] { return [...this.items.values()].sort((a,b)=>a.createdAt.localeCompare(b.createdAt)).map(x => structuredClone(x)); }
+  /** Mirrors a single IndexedDB transaction already committed with this id. */
+  adoptDurable(item:OutboxItem):void{
+    const current=this.items.get(item.id);
+    if(!current||this.scopeKey(current.tenantId,current.actorId,current.idempotencyKey)!==
+      this.scopeKey(item.tenantId,item.actorId,item.idempotencyKey))throw Error('OUTBOX_DURABLE_IDENTITY_MISMATCH');
+    this.items.set(item.id,structuredClone(item));
+  }
 
   markConfirmedByKey(tenantId:Id,actorId:Id,idempotencyKey:string):OutboxItem|undefined{
     const id=this.byKey.get(this.scopeKey(tenantId,actorId,idempotencyKey)),current=id?this.items.get(id):undefined;
@@ -90,8 +97,13 @@ export class Outbox {
 }
 
 const DB_NAME = 'tontine-platform';
-const DB_VERSION = 1;
+// Additive schema. Never clear the V1 outbox or another identity's records.
+const DB_VERSION = 2;
 const STORE = 'outbox';
+const FINANCE_INTENTS = 'financial_cell_intents';
+const FINANCE_PROJECTIONS = 'financial_cell_projections';
+const FINANCE_JOURNAL = 'financial_cell_journal';
+const DEVICE_SEQUENCE = 'financial_device_sequences';
 
 export class IndexedDbOutboxAdapter {
   static supported(): boolean { return typeof indexedDB !== 'undefined'; }
@@ -103,10 +115,57 @@ export class IndexedDbOutboxAdapter {
       request.onupgradeneeded = () => {
         const db = request.result;
         if (!db.objectStoreNames.contains(STORE)) db.createObjectStore(STORE, { keyPath: 'id' });
+        for(const name of [FINANCE_INTENTS,FINANCE_PROJECTIONS,FINANCE_JOURNAL,DEVICE_SEQUENCE]){
+          if(!db.objectStoreNames.contains(name))db.createObjectStore(name,{keyPath:'id'});
+        }
       };
       request.onsuccess = () => resolve(request.result);
       request.onerror = () => reject(request.error ?? new Error('INDEXEDDB_OPEN_FAILED'));
     });
+  }
+
+  /** One IndexedDB transaction records the financial command, queue item,
+   * local cell projection, same-device monotonic sequence and immutable journal
+   * event. The separate sovereign vault is a secondary mirror, not ACK proof.
+   * A failed transaction rejects without telling the UI that finance was saved.
+   */
+  async recordFinancialCellIntent(item:OutboxItem<Record<string,unknown>>,deviceId:string):Promise<OutboxItem<Record<string,unknown>>>{
+    if(!IndexedDbOutboxAdapter.supported())throw Error('DURABLE_STORAGE_REQUIRED');
+    const p=item.payload,groupId=String(p.groupId??''),meetingId=String(p.meetingId??''),
+      membershipId=String(p.membershipId??''),rubricId=String(p.rubricId??'');
+    if(item.type!=='FINANCIAL_CELL_CORRECTION_PROPOSAL_V1'||!groupId||!meetingId||!membershipId||!rubricId||
+       !deviceId||!Number.isSafeInteger(Number(p.targetAmount))||Number(p.targetAmount)<0)throw Error('CELL_INTENT_INVALID');
+    const db=await this.open();
+    try{
+      return await new Promise<OutboxItem<Record<string,unknown>>>((resolve,reject)=>{
+        const tx=db.transaction([STORE,FINANCE_INTENTS,FINANCE_PROJECTIONS,FINANCE_JOURNAL,DEVICE_SEQUENCE],'readwrite');
+        const queue=tx.objectStore(STORE),intents=tx.objectStore(FINANCE_INTENTS),
+          projections=tx.objectStore(FINANCE_PROJECTIONS),journal=tx.objectStore(FINANCE_JOURNAL),
+          sequences=tx.objectStore(DEVICE_SEQUENCE);
+        const seqKey=JSON.stringify([item.tenantId,item.actorId,deviceId]);
+        let stored:OutboxItem<Record<string,unknown>>|undefined;
+        const read=sequences.get(seqKey);
+        read.onsuccess=()=>{
+          const last=Number(read.result?.value??0);
+          if(!Number.isSafeInteger(last)||last>=Number.MAX_SAFE_INTEGER){tx.abort();return;}
+          const sequence=last+1;
+          sequences.put({id:seqKey,value:sequence});
+          const envelope={...structuredClone(p),deviceId,deviceSequence:sequence,
+            commandId:item.idempotencyKey,recordedAtClient:String(p.recordedAtClient??item.createdAt),
+            recordedAtSource:'LOCAL_VALIDATION'};
+          stored={...structuredClone(item),payload:envelope};
+          const cellKey=JSON.stringify([item.tenantId,groupId,String(p.exerciseId??''),meetingId,membershipId,rubricId,String(p.activityId??''),'XAF']);
+          queue.put(stored);intents.put({id:item.idempotencyKey,tenantId:item.tenantId,actorId:item.actorId,groupId,cellKey,payload:envelope,status:'RECORDED_LOCAL'});
+          projections.put({id:JSON.stringify([item.actorId,cellKey]),tenantId:item.tenantId,actorId:item.actorId,groupId,cellKey,
+            amount:Number(p.targetAmount),commandId:item.idempotencyKey,pending:true,recordedAtClient:envelope.recordedAtClient});
+          journal.put({id:item.id,tenantId:item.tenantId,actorId:item.actorId,groupId,cellKey,
+            type:'FINANCIAL_CELL_INTENT_RECORDED',commandId:item.idempotencyKey,payload:envelope,at:envelope.recordedAtClient});
+        };
+        tx.oncomplete=()=>stored?resolve(stored):reject(Error('CELL_INTENT_NOT_COMMITTED'));
+        tx.onerror=()=>reject(tx.error??Error('CELL_INTENT_STORAGE_FAILED'));
+        tx.onabort=()=>reject(tx.error??Error('CELL_INTENT_STORAGE_ABORTED'));
+      });
+    }finally{db.close();}
   }
 
   async load(): Promise<OutboxItem[]> {
