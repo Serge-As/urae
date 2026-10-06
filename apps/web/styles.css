@@ -461,3 +461,21 @@ body.ui-mode-visual .primary:hover{filter:saturate(1.08) brightness(1.03);transf
   padding: 5px 8px;
   white-space: normal;
 }
+
+.matrix-cell-entry .cell-remote-review-actions {
+  grid-column:1/-1;
+  display:flex;
+  flex-wrap:wrap;
+  gap:5px;
+  min-width:0;
+}
+.matrix-cell-entry .cell-remote-review-actions button {
+  min-height:40px;
+  min-width:76px;
+  padding:6px 8px;
+  font-size:12px;
+  line-height:1.2;
+  overflow-wrap:anywhere;
+  flex:1 1 auto;
+}
+.ultra-simple .cell-remote-review-actions button { min-height:58px; }
