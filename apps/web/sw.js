@@ -1,5 +1,5 @@
 // A new cache identity is mandatory, even for a patch-level app release.
-const CACHE = 'eco-system-q01q28-recovery-20261006';
+const CACHE = 'eco-system-v15211-q01q28-recovery-20261006';
 const PREVIOUS_CACHE = 'eco-system-v15211-field-recovery-20261005';
 const LEGACY_RECOVERY_CACHE = 'eco-system-v15210-offline-conflicts-loans-20261003';
 const RELEASE_READY = '/__eco_release_ready__';
@@ -86,9 +86,9 @@ self.addEventListener('install', event => {
     await cache.put(RELEASE_READY, new Response(JSON.stringify({cache:CACHE,installedAt:new Date().toISOString(),assets:APP_SHELL.length}), {
       headers:{'content-type':'application/json; charset=utf-8'}
     }));
-    // Do not forcibly activate over an open old main.js. Allow the current
-    // controller to finish naturally; no F5 or mixed-version dynamic imports.
-    // A first installation activates normally without skipWaiting().
+    // Activation follows the completed cache marker; the page controllerchange
+    // handler must never reload an editing session or discard its Outbox.
+    await self.skipWaiting();
     } catch (error) {
       // Roll back an incomplete candidate ONLY. Never delete the previous
       // release cache, IndexedDB, Outbox, drafts, or any canonical financial data.
