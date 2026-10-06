@@ -310,6 +310,124 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
     return{status:'APPLIED',current:state.current,target:input.targetAmount,previousAmount:state.current,newAmount:input.targetAmount,cellVersion:correction.cellVersion,receipt,notice:delivery.notice??null,deliveryPending:!delivery.ok,groupId:group.id};
   };
 
+  // Trusted clock quality is added only by authenticatedApi, never by client.
+  // Unsupported/offline-unanchored clocks remain persistent review proposals.
+  const applyRecordedCellV2=async(input:{
+    groupId:string;meetingId:string;membershipId:string;rubricId:string;targetAmount:number;
+    baselineValue:number;baselineVersion:number;recordedAtClient:string;
+    clockAnchorId?:string;deviceId:string;deviceSequence:number;commandId:string;reason:string;
+  })=>{
+    await requireGroup(input.groupId,true);
+    const key=String(input.commandId||''),
+      orderId=financialCellWinnerRecordId(ctx.tenantId,input.groupId,input.meetingId,input.membershipId,input.rubricId),
+      receiptId=financialCellIntentRecordId(ctx.tenantId,input.groupId,key),
+      normalizedMs=Number(request.headers.get('x-eco-recorded-at-ms')),
+      quality=String(request.headers.get('x-eco-clock-quality')||'UNVERIFIABLE');
+    if(!key.startsWith('cell-target:')||!input.meetingId||!input.membershipId||!input.rubricId||
+       !Number.isSafeInteger(input.targetAmount)||input.targetAmount<0)throw Error('CELL_INTENT_INVALID');
+    const existing=await repo.getWorkspaceRecord(ctx.tenantId,receiptId);
+    if(existing){
+      if(existing.createdBy!==ctx.actorId||Number(existing.data.targetAmount)!==input.targetAmount||
+         String(existing.data.meetingId||'')!==input.meetingId||
+         String(existing.data.membershipId||'')!==input.membershipId||
+         String(existing.data.rubricId||'')!==input.rubricId)throw Error('IDEMPOTENCY_CONFLICT');
+      const current=await financialCellState(input.groupId,input.meetingId,input.membershipId,input.rubricId);
+      return{accepted:true,stored:true,replayed:true,status:String(existing.data.status||'RECORDED'),
+        targetAmount:input.targetAmount,canonicalAmount:current.current,cellVersion:current.cellVersion};
+    }
+    const recordReview=async(status:'CLOCK_REVIEW'|'SUPERSEDED',amount:number,version:number)=>{
+      const stamp=new Date().toISOString(),receipt:import('../../../packages/contracts/src/index.js').WorkspaceRecord={
+        id:receiptId,tenantId:ctx.tenantId,groupId:input.groupId,
+        moduleId:'FINANCE.CELL_INTENT_V2',title:'Intention financière historisée',
+        summary:status,status:status==='SUPERSEDED'?'DONE':'ACTIVE',
+        tags:['finance','cell-intent',status.toLowerCase()],
+        data:{meetingId:input.meetingId,membershipId:input.membershipId,
+          rubricId:input.rubricId,commandId:key,targetAmount:input.targetAmount,
+          canonicalAmount:amount,cellVersion:version,status,deviceId:input.deviceId,
+          deviceSequence:input.deviceSequence,recordedAtClient:input.recordedAtClient,
+          clockQuality:quality},
+        createdBy:ctx.actorId,createdAt:stamp,updatedAt:stamp
+      };
+      await repo.saveWorkspaceRecord(receipt);
+      if(status==='SUPERSEDED'){
+        const actor=await actorLabel(),member=await memberLabel(input.groupId,input.membershipId),
+          rubric=await rubricLabel(input.groupId,input.rubricId),
+          textMessage=actor+' : ancien montant '+input.targetAmount+' F CFA remplacé par '+
+            amount+' F CFA pour '+member+' · '+rubric+
+            '. L’intention rejetée reste conservée et contestable.';
+        const action={view:'operations',anchor:'twoSheetWorkspace',meetingId:input.meetingId,
+          membershipId:input.membershipId,rubricId:input.rubricId,label:'Consulter la modification'};
+        await notifications.publish(input.groupId,{
+          title:'Saisie concurrente supplantée',message:textMessage,channels:['IN_APP','WEB_PUSH'],
+          audience:'MANAGERS',priority:'HIGH',action,idempotencyKey:receiptId+':managers'});
+        await notifications.publish(input.groupId,{
+          title:'Modification concurrente de votre compte',message:textMessage,channels:['IN_APP','WEB_PUSH'],
+          audience:'SELECTED',selectedMembershipIds:[input.membershipId],
+          priority:'HIGH',action,idempotencyKey:receiptId+':member'});
+      }
+      return{accepted:true,stored:true,status,targetAmount:input.targetAmount,
+        canonicalAmount:amount,cellVersion:version};
+    };
+    const trusted=quality==='VERIFIED'&&Number.isSafeInteger(normalizedMs)&&normalizedMs>0&&
+      String(input.deviceId||'').length>3&&Number.isSafeInteger(input.deviceSequence)&&input.deviceSequence>0;
+    if(!trusted){
+      const state=await financialCellState(input.groupId,input.meetingId,input.membershipId,input.rubricId);
+      return recordReview('CLOCK_REVIEW',state.current,state.cellVersion);
+    }
+    const intent={commandId:key,actorId:ctx.actorId,deviceId:input.deviceId,
+      deviceSequence:input.deviceSequence,effectiveRecordedAtMs:normalizedMs,clockQuality:'VERIFIED' as const};
+    for(let retry=0;retry<5;retry++){
+      const state=await financialCellState(input.groupId,input.meetingId,input.membershipId,input.rubricId);
+      const record=await repo.getWorkspaceRecord(ctx.tenantId,orderId);
+      const previous=record&&record.moduleId==='FINANCE.CELL_ORDER_V2'&&
+        Number(record.data.cellVersion)===state.cellVersion?record:null;
+      if(record&&!previous)return recordReview('CLOCK_REVIEW',state.current,state.cellVersion);
+      if(previous){
+        const value=previous.data,order=compareNormalizedCellIntents(intent,{
+          commandId:String(value.commandId||''),deviceId:String(value.deviceId||''),
+          deviceSequence:Number(value.deviceSequence),
+          effectiveRecordedAtMs:Number(value.effectiveRecordedAtMs),
+          clockQuality:value.clockQuality==='VERIFIED'?'VERIFIED':'UNVERIFIABLE'
+        });
+        if(order==='CLOCK_REVIEW')return recordReview('CLOCK_REVIEW',state.current,state.cellVersion);
+        if(order==='SAME')throw Error('IDEMPOTENCY_CONFLICT');
+        if(order==='OLDER'){
+          const revision=await repo.getFinancialCellRevision(ctx.tenantId,input.groupId,
+            input.meetingId,input.membershipId,input.rubricId,'XAF');
+          if((revision?.version??0)!==state.cellVersion)continue;
+          return recordReview('SUPERSEDED',state.current,state.cellVersion);
+        }
+      }else if(state.cellVersion!==input.baselineVersion){
+        // Mixed-release V1 corrections have no verifiable record time.
+        return recordReview('CLOCK_REVIEW',state.current,state.cellVersion);
+      }
+      try{
+        const result=await applyFinancialCellTarget({groupId:input.groupId,meetingId:input.meetingId,
+          membershipId:input.membershipId,rubricId:input.rubricId,targetAmount:input.targetAmount,
+          expectedCurrentAmount:state.current,expectedCellVersion:state.cellVersion,
+          reason:input.reason||'Saisie enregistrée et synchronisée',
+          idempotencyKey:key,normalizedIntent:intent});
+        if(result.status==='NO_AMOUNT_CHANGE'){
+          await publishLive(input.groupId,'MEETING_UPDATE','cell-reaffirm:'+key,{
+            meetingId:input.meetingId,membershipId:input.membershipId,rubricId:input.rubricId,
+            kind:'FINANCIAL_CELL',operationType:'CELL_RECONFIRMED',
+            previousAmount:state.current,newAmount:input.targetAmount,
+            cellVersion:result.cellVersion,actorId:ctx.actorId});
+          const membership=await repo.getMembership(ctx.tenantId,input.groupId,input.membershipId);
+          if(membership)await publishLive(input.groupId,'MEMBER_PROJECTION_UPDATED',
+            'reaffirm-member:'+key,{meetingId:input.meetingId,
+              membershipId:input.membershipId,rubricId:input.rubricId,amount:input.targetAmount,
+              cellVersion:result.cellVersion},membership.userId);
+        }
+        return{...result,accepted:true,stored:true,canonicalAmount:input.targetAmount};
+      }catch(error){
+        if(error instanceof Error&&['CELL_VERSION_CONFLICT','CELL_VALUE_CONFLICT'].includes(error.message))continue;
+        throw error;
+      }
+    }
+    throw Error('CELL_CONCURRENCY_RETRY_REQUIRED');
+  };
+
   const applyFinancialReview=async(input:{groupId:string;meetingId:string;membershipId:string;rubricId:string;decision:string;reason:string;amount:number;cellVersion:number})=>{
     const {groupId,meetingId,membershipId,rubricId,decision,reason}=input;
     await requireGroup(groupId,true);
