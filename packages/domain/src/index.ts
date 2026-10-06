@@ -34,17 +34,13 @@ export const compareNormalizedCellIntents = (
     !incoming.deviceId||!incumbent.deviceId||!incoming.commandId||!incumbent.commandId
   ) return 'CLOCK_REVIEW';
   if(incoming.commandId===incumbent.commandId)return 'SAME';
-  const comparisons=[
-    [incoming.effectiveRecordedAtMs,incumbent.effectiveRecordedAtMs],
-    [incoming.deviceId,incumbent.deviceId],
-    [incoming.deviceSequence,incumbent.deviceSequence],
-    [incoming.commandId,incumbent.commandId]
-  ] as Array<[number|string,number|string]>;
-  for(const [left,right] of comparisons){
-    if(left>right)return'NEWER';
-    if(left<right)return'OLDER';
-  }
-  return'SAME';
+  const numberCompare=(a:number,b:number)=>a>b?1:a<b?-1:0;
+  const textCompare=(a:string,b:string)=>a>b?1:a<b?-1:0;
+  const order=numberCompare(incoming.effectiveRecordedAtMs,incumbent.effectiveRecordedAtMs)||
+    textCompare(incoming.deviceId,incumbent.deviceId)||
+    numberCompare(incoming.deviceSequence,incumbent.deviceSequence)||
+    textCompare(incoming.commandId,incumbent.commandId);
+  return order>0?'NEWER':order<0?'OLDER':'SAME';
 };
 const now = (): string => new Date().toISOString();
 const requiredTextCode = (value:string):string => { const clean=value.trim().replace(/[^A-Z0-9_]/gi,'_').toUpperCase(); if(!clean)throw new Error('LEDGER_ACCOUNT_CODE_REQUIRED'); return clean; };
