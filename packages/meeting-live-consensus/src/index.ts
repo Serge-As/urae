@@ -91,6 +91,56 @@ export class MeetingLiveConsensusService{
     if(!cases.some(c=>c.id===caseId))await this.repo.saveCase({id:caseId,tenantId:ctx.tenantId,groupId,type:'LIVE_DATA_DIVERGENCE',subjectType:'meeting_cell',subjectId:id,status:'OPEN',openedBy:ctx.actorId,openedAt:now(),summary:clean(reason)||'Divergence maintenue après choix majoritaire'});
     return saved;
   }
+  /** Review of a canonical value is NOT a second financial authority.
+   * Every manager may accept or reserve without waiting for other accounts.
+   * Reserving leaves the Ledger and the confirmed value untouched. */
+  async reviewCanonicalCell(input:{
+    groupId:string;meetingId:string;membershipId:string;rubricId:string;
+    amount:number;cellVersion:number;reason?:string;decision:'APPROVE'|'RESERVE';
+  }){
+    await this.requireManager(input.groupId);
+    const ctx=this.kernel.context.get(),cellKey=JSON.stringify([input.membershipId,input.rubricId]),
+      id=idFor(input.groupId,input.meetingId,cellKey),existing=await this.repo.getWorkspaceRecord(ctx.tenantId,id),stamp=now();
+    if(!Number.isSafeInteger(input.amount)||input.amount<0||!Number.isSafeInteger(input.cellVersion)||input.cellVersion<0)throw Error('INVALID_CELL_REVIEW');
+    const x:LiveConsensus=existing?parse(existing):{id,groupId:input.groupId,meetingId:input.meetingId,cellKey,
+      membershipId:input.membershipId,rubricId:input.rubricId,proposals:[],votes:[],state:'COLLECTING',
+      dissentingActorIds:[],version:0,createdAt:stamp,updatedAt:stamp};
+    if(x.membershipId&&x.membershipId!==input.membershipId||x.rubricId&&x.rubricId!==input.rubricId)throw Error('CELL_REVIEW_SCOPE_CONFLICT');
+    if(x.baselineCellVersion!==undefined&&x.baselineCellVersion>input.cellVersion)throw Error('CELL_REVIEW_STALE');
+    if(input.decision==='RESERVE'&&!String(input.reason??'').trim())throw Error('RESERVE_REASON_REQUIRED');
+    const reviewKey='review:'+encodeURIComponent(JSON.stringify([x.id,input.cellVersion,ctx.actorId,input.decision]));
+    const found=await this.repo.getWorkspaceRecord(ctx.tenantId,reviewKey);
+    if(found)return{record:x,review:found}; // idempotent per reviewer/revision/action
+    x.membershipId=input.membershipId;x.rubricId=input.rubricId;
+    x.baselineCellVersion=input.cellVersion;
+    x.selectedValue=String(input.amount);
+    x.selectedProposalActorId='canonical:ledger';
+    if(input.decision==='RESERVE'){
+      x.state='RESERVE_OPEN';
+      x.dissentingActorIds=[...new Set([...x.dissentingActorIds,ctx.actorId])];
+    }
+    const review:WorkspaceRecord={id:reviewKey,tenantId:ctx.tenantId,groupId:input.groupId,
+      moduleId:'MEETING.CELL_REVIEW',title:input.decision==='RESERVE'?'Réserve de gestionnaire':'Accord de gestionnaire',
+      summary:clean(input.reason??'')||String(input.amount)+' XAF',status:'ACTIVE',
+      tags:['meeting-live','cell-review',input.decision.toLowerCase()],
+      data:{meetingId:input.meetingId,cellKey,membershipId:input.membershipId,rubricId:input.rubricId,
+        amount:input.amount,cellVersion:input.cellVersion,decision:input.decision,reason:clean(input.reason??'')},
+      createdBy:ctx.actorId,createdAt:stamp,updatedAt:stamp};
+    // The review itself is persisted before the projection notification.
+    // No ledger row can be mutated through this path.
+    await this.repo.saveWorkspaceRecord(review);
+    x.version++;x.updatedAt=stamp;
+    const projected=await this.save(x,'LIVE_CANONICAL_CELL_'+input.decision);
+    if(input.decision==='RESERVE'){
+      const caseId='case_cell_reserve_'+encodeURIComponent(JSON.stringify([id,input.cellVersion,ctx.actorId]));
+      const currentCases=await this.repo.listCases(ctx.tenantId,ctx.actorId);
+      if(!currentCases.some(c=>c.id===caseId))await this.repo.saveCase({
+        id:caseId,tenantId:ctx.tenantId,groupId:input.groupId,type:'LIVE_DATA_DIVERGENCE',
+        subjectType:'meeting_cell',subjectId:id,status:'OPEN',openedBy:ctx.actorId,openedAt:stamp,
+        summary:clean(input.reason)||'Contestation du montant conservé'});
+    }
+    return{record:projected,review};
+  }
   async get(groupId:string,meetingId:string,cellKey:string){const ctx=this.kernel.context.get(),r=await this.repo.getWorkspaceRecord(ctx.tenantId,idFor(groupId,meetingId,cellKey));return r?parse(r):undefined;}
   async list(groupId:string,meetingId:string){const ctx=this.kernel.context.get();return (await this.repo.listWorkspaceRecords(ctx.tenantId,MODULE,groupId)).map(parse).filter(x=>x.meetingId===meetingId);}
 }
