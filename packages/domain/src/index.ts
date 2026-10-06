@@ -695,7 +695,7 @@ export class LedgerService {
       id:`financial_correction_outbox_${operationId}`,tenantId:input.tenantId,groupId:input.groupId,moduleId:'FINANCE.CORRECTION_OUTBOX',
       title:'Correction financière à diffuser',summary:'Événements et notifications à diffuser après commit atomique.',
       status:'ACTIVE',tags:['financial-correction','pending'],
-      data:{operationId,primaryEntryId:primaryEntry.id,meetingId:input.meetingId,membershipId:input.membershipId,rubricId:input.rubricId,previousAmount:current,newAmount:input.targetAmount,reason},
+      data:{operationId,primaryEntryId:primaryEntry.id,meetingId:input.meetingId,membershipId:input.membershipId,rubricId:input.rubricId,previousAmount:current,newAmount:input.targetAmount,cellVersion:(input.expectedCellVersion??currentVersion)+1,reason},
       createdBy:ctx.actorId,createdAt:commitAt,updatedAt:commitAt
     };
     const expectedVersion=input.expectedCellVersion??currentVersion,nextVersion=expectedVersion+1;
