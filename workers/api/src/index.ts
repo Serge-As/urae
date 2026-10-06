@@ -412,12 +412,12 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
             meetingId:input.meetingId,membershipId:input.membershipId,rubricId:input.rubricId,
             kind:'FINANCIAL_CELL',operationType:'CELL_RECONFIRMED',
             previousAmount:state.current,newAmount:input.targetAmount,
-            cellVersion:result.cellVersion,actorId:ctx.actorId});
+            cellVersion:Number(result.cellVersion??state.cellVersion+1),actorId:ctx.actorId});
           const membership=await repo.getMembership(ctx.tenantId,input.groupId,input.membershipId);
           if(membership)await publishLive(input.groupId,'MEMBER_PROJECTION_UPDATED',
             'reaffirm-member:'+key,{meetingId:input.meetingId,
               membershipId:input.membershipId,rubricId:input.rubricId,amount:input.targetAmount,
-              cellVersion:result.cellVersion},membership.userId);
+              cellVersion:Number(result.cellVersion??state.cellVersion+1)},membership.userId);
         }
         return{...result,accepted:true,stored:true,canonicalAmount:input.targetAmount};
       }catch(error){
@@ -2994,7 +2994,7 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
           reason:String(p.reason??'')
         });
         if(outcome.status!=='CLOCK_REVIEW')await markApplied();
-        return json({accepted:true,stored:true,...outcome},200,cors);
+        return json(outcome,200,cors);
       }
       if(item.type==='FINANCIAL_CELL_CORRECTION_PROPOSAL_V1'){
         const p=item.payload,groupId=String(p.groupId??''),meetingId=String(p.meetingId??''),membershipId=String(p.membershipId??''),rubricId=String(p.rubricId??''),targetAmount=finite(p.targetAmount),reason=String(p.reason??'');
