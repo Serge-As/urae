@@ -62,7 +62,9 @@ test('1.5.2.3 offline correction exposes the exact pending target for immediate 
   try{
     globalThis.indexedDB={};
     const app=new ConnectedApplication({actorId:'manager_hotfix',tenantId:'tenant_hotfix'});
-    app.selectGroup('group_hotfix');app.outboxStorage.save=async()=>{};app.usingOfflineSnapshot=true;
+    app.selectGroup('group_hotfix');app.outboxStorage.save=async()=>{};
+    app.outboxStorage.recordFinancialCellIntent=async(item,deviceId)=>({...item,payload:{...item.payload,deviceId,deviceSequence:1,commandId:item.idempotencyKey}});
+    app.usingOfflineSnapshot=true;
     const result=await app.setFinancialCellTarget({meetingId:'meeting_1',membershipId:'member_1',rubricId:'rubric_1',targetAmount:500,currentAmount:1000,currentVersion:2,reason:'Correction terrain'});
     assert.equal(result.queued,true);
     const pending=app.pendingFinancialCellTargets();
