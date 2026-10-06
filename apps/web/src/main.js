@@ -1714,6 +1714,17 @@ const highlightRemoteFinancialCell=(p={})=>{
       note.className='cell-remote-change-note';note.setAttribute('role','status');
       note.textContent=tx('Changement par ','Changed by ')+author+' ('+String(p.actorId??'—')+') · '+when+' · '+String(p.previousAmount??'?')+' → '+String(p.newAmount??'?')+' F CFA';
       if(!note.isConnected)cell.append(note);
+      const rubric=rubrics.find(x=>x.id===String(p.rubricId??''));
+      if(financialNatureForRubric(rubric)!=='CONTRIBUTION'){
+        let direct=cell.querySelector('.cell-remote-specialized');
+        if(!direct){direct=document.createElement('button');direct.type='button';
+          direct.className='secondary cell-remote-specialized';cell.append(direct);}
+        direct.textContent=tx('Examiner dans le dossier financier','Review in financial record');
+        direct.onclick=()=>go('finance',{force:true});
+        // A loan/payment/assistance is a real financial event, not an
+        // absolute contribution target. Its dispute must use its owner.
+        continue;
+      }
       // A separate acknowledgment must never turn the financial ✓ button into
       // an OK button: a manager may immediately re-edit or dispute the cell.
       let seen=cell.querySelector('.cell-remote-seen-btn');
