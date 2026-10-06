@@ -713,3 +713,17 @@ body.ui-mode-senior .canonical-financial-matrix td{font-size:14px;padding:7px}
   #view-operations .page-head h1{font-size:26px}
   #view-operations .page-head p{font-size:12px;line-height:1.3}
 }
+
+
+/* Work debt subtotal grouping: all four criteria remain visible. */
+.loan-four-criteria-table .loan-member-subtotal>*{
+  background:#e9f3eb!important;color:#14543a;border-top:1px solid #b7d7c2;
+  font-weight:850
+}
+.loan-four-criteria-table .loan-member-subtotal>th{
+  position:sticky;left:0;z-index:5;max-width:calc(var(--eco-member-col) + var(--eco-loan-col) + var(--eco-criterion-col));
+  text-align:left;white-space:normal
+}
+.loan-four-criteria-table .loan-member-subtotal>td:last-child{background:#dcefe2!important}
+.loan-four-criteria-table .loan-member-subtotal.loan-criterion-projected>*{color:#51667b}
+.loan-four-criteria-table .loan-member-subtotal.loan-criterion-due>*{font-weight:950;color:#254a39}
