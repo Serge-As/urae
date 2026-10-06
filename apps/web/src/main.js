@@ -1098,10 +1098,14 @@ const renderCanonicalFinancialTable=({root,mode='meeting',meetingId='',membershi
     // the cursor inside the table instead of forcing users to leave it.
     wrap.addEventListener('wheel',event=>{
       if(event.defaultPrevented||event.ctrlKey||event.shiftKey||Math.abs(event.deltaY)<=Math.abs(event.deltaX))return;
-      if(wrap.scrollHeight>wrap.clientHeight+1)return;
+      const verticalRange=Math.max(0,wrap.scrollHeight-wrap.clientHeight);
+      const atEdge=(event.deltaY<0&&wrap.scrollTop<=1)||
+        (event.deltaY>0&&wrap.scrollTop>=verticalRange-1);
+      if(verticalRange>8&&!atEdge)return;
       const page=document.scrollingElement;
       if(!page||page.scrollHeight<=page.clientHeight+1)return;
-      event.preventDefault();window.scrollBy(0,event.deltaY);
+      const delta=event.deltaY*(event.deltaMode===1?16:event.deltaMode===2?window.innerHeight:1);
+      event.preventDefault();window.scrollBy(0,delta);
     },{passive:false});
     const table=document.createElement('table');table.className='meeting-matrix canonical-financial-matrix';
     const head=document.createElement('thead'),hr=document.createElement('tr'),body=document.createElement('tbody');
