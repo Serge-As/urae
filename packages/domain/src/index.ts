@@ -721,7 +721,7 @@ export class LedgerService {
         {id:financialCellIntentRecordId(input.tenantId,input.groupId,input.idempotencyKey),
           tenantId:input.tenantId,groupId:input.groupId,moduleId:'FINANCE.CELL_INTENT_V2',
           title:'Reçu durable de saisie financière',status:'DONE',tags:['finance','idempotency','applied'],
-          data:{...input.normalizedIntent,status:'APPLIED',targetAmount:input.targetAmount,
+          data:{...input.normalizedIntent,meetingId:input.meetingId,membershipId:input.membershipId,rubricId:input.rubricId,status:'APPLIED',targetAmount:input.targetAmount,
             canonicalAmount:input.targetAmount,cellVersion:nextVersion},
           createdBy:ctx.actorId,createdAt:commitAt,updatedAt:commitAt}
       ]:[outbox]};
@@ -772,7 +772,7 @@ export class LedgerService {
         tenantId:input.tenantId,groupId:input.groupId,moduleId:'FINANCE.CELL_INTENT_V2',
         title:'Reçu de confirmation du même montant',status:'DONE',
         tags:['finance','same-amount','idempotency'],
-        data:{...input.intent,status:'NO_AMOUNT_CHANGE',targetAmount:input.amount,
+        data:{...input.intent,meetingId:input.meetingId,membershipId:input.membershipId,rubricId:input.rubricId,status:'NO_AMOUNT_CHANGE',targetAmount:input.amount,
           canonicalAmount:input.amount,cellVersion:nextVersion},
         createdBy:ctx.actorId,createdAt:stamp,updatedAt:stamp},
       {id:'cell_stamp_dispatch_'+encodeURIComponent(input.idempotencyKey),
