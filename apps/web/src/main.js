@@ -118,7 +118,7 @@ document.addEventListener('click',event=>{
     const target=event.target instanceof Element?event.target.closest('.cell-validate'):null;
     if(!target)return;
     event.preventDefault();
-    if(target.classList.contains('remote-ack')){event.stopPropagation();acknowledgeRemoteFinancialCell(target);return;}
+    if(target.classList.contains('remote-ack')){event.stopPropagation();target.classList.remove('remote-ack');target.textContent='✓';return;}
     traceFinancialCell?.('CELL_CLICK_CAPTURE',{bound:target.dataset.ecoSubmitBound||'',membershipId:target.closest('.matrix-cell-entry')?.dataset.membershipId||'',rubricId:target.closest('.matrix-cell-entry')?.dataset.rubricId||'',meetingId:target.closest('.matrix-cell-entry')?.dataset.meetingId||''});
     void submitFinancialCellElement(target);
 },true);
@@ -1700,7 +1700,7 @@ const applyRemoteFinancialProjection=(p={})=>{
     return true;
 };
 const acknowledgeRemoteFinancialCell=button=>{
-    const cell=button?.closest?.('.matrix-cell-entry');if(!cell)return;cell.classList.remove('remote-financial-change','remote-financial-closed');button.classList.remove('remote-ack');button.textContent='✓';button.title=tx('Valider la valeur totale','Confirm total value');cell.querySelector('.cell-remote-change-note')?.remove();
+    const cell=button?.closest?.('.matrix-cell-entry');if(!cell)return;cell.classList.remove('remote-financial-change','remote-financial-closed');button.remove();cell.querySelector('.cell-remote-change-note')?.remove();
     void Promise.resolve(identityLiveUI.publishSignal?.('LIVE_ACK',{kind:'FINANCIAL_CELL',meetingId:cell.dataset.meetingId||'',membershipId:cell.dataset.membershipId||'',rubricId:cell.dataset.rubricId||''})).catch(()=>{});
 };
 const highlightRemoteFinancialCell=(p={})=>{
@@ -1714,7 +1714,12 @@ const highlightRemoteFinancialCell=(p={})=>{
       note.className='cell-remote-change-note';note.setAttribute('role','status');
       note.textContent=tx('Changement par ','Changed by ')+author+' ('+String(p.actorId??'—')+') · '+when+' · '+String(p.previousAmount??'?')+' → '+String(p.newAmount??'?')+' F CFA';
       if(!note.isConnected)cell.append(note);
-      const button=cell.querySelector('.cell-validate');if(button){button.textContent='OK';button.classList.add('remote-ack');button.title=tx('J’ai vu cette modification (ne vaut pas accord)','I saw this change (not approval)');}
+      // A separate acknowledgment must never turn the financial ✓ button into
+      // an OK button: a manager may immediately re-edit or dispute the cell.
+      let seen=cell.querySelector('.cell-remote-seen-btn');
+      if(!seen){seen=document.createElement('button');seen.type='button';seen.className='cell-remote-seen-btn secondary';seen.onclick=()=>acknowledgeRemoteFinancialCell(seen);cell.append(seen);}
+      seen.textContent=tx('Vu · sans accord','Seen · no approval');
+      seen.title=tx('Accusé de lecture uniquement : validez ou contestez séparément','Read receipt only: approve or dispute separately');
     }
 };
 const paintRemoteFinancialDraft=(cell,key)=>{
