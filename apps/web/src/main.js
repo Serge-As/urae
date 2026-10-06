@@ -2213,10 +2213,34 @@ const resumeOnline=()=>{
     const preserved=captureNavState();persistNavState(preserved);
     onlineResumePromise=(async()=>{renderConnectivity();try{
         if(navigator.onLine===false){networkRecoveryNeeded=true;return;}
+        const pendingBefore=(app.outboxItems?.()??[]).filter(item=>!['CONFIRMED','CANCELLED'].includes(String(item.status??'')));
         const beforeSync=pendingTargetSnapshot();
         await app.syncOutbox();
         rememberTargetsConfirmedBySync(beforeSync);
-        if(app.activeGroup())await refreshGroupContext();else await renderGroups();
+        const itemsAfter=new Map((app.outboxItems?.()??[]).map(item=>[String(item.idempotencyKey??''),item]));
+        const changed=beforeSync.filter(item=>['CONFIRMED','CONFLICT'].includes(String(itemsAfter.get(item.idempotencyKey)?.status??'')));
+        // A transport wake-up with zero changes must not reload every table or
+        // return the manager to Home; the WebSocket replays authorized deltas.
+        if(app.activeGroup()&&changed.length){
+            await loadFinancialProjectionState();
+            for(const item of changed){
+                const row=itemsAfter.get(item.idempotencyKey);
+                if(row?.status==='CONFLICT')continue;
+                financialOptimisticValues.delete(item.key);
+                const fresh=exactCellAmount(item.membershipId,item.rubricId,item.meetingId);
+                patchFinancialDomCell({...item,amount:fresh,cellVersion:exactCellVersion(item.membershipId,item.rubricId,item.meetingId)});
+                window.dispatchEvent(new CustomEvent('eco:financial-data-changed',{detail:{...item,amount:fresh,soft:true,recovered:true}}));
+            }
+        }
+        // Structural Outbox writes (groups, membership, rubrics, loans, etc.)
+        // still require their existing full domain hydration until every owner
+        // has a typed incremental projection.
+        const otherConfirmed=pendingBefore.some(item=>
+            !['FINANCIAL_CELL_CORRECTION_PROPOSAL_V1'].includes(String(item.type))&&
+            itemsAfter.get(String(item.idempotencyKey??''))?.status==='CONFIRMED');
+        if(otherConfirmed){
+            if(app.activeGroup())await refreshGroupContext();else await renderGroups();
+        }
         networkRecoveryNeeded=false;
         renderOutbox();renderConnectivity();showView(preserved.view,preserved);renderPersistedFinancialConflicts();
     }catch(error){networkRecoveryNeeded=true;console.info('Online resume deferred',error);}})().finally(()=>{onlineResumePromise=null;});
