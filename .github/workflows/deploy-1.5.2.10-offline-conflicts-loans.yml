@@ -21,11 +21,13 @@ env:
   ECO_SYSTEM_CATALOG: https://eco-system.sergemimf.workers.dev/api/v1/product/capabilities
   EXPECTED_VERSION: 1.5.2.11-field-recovery
   EXPECTED_BUILD: eco-system-1.5.2.11-20261005-field-recovery
-  EXPECTED_CACHE: eco-system-v15211-field-recovery-20261005
+  EXPECTED_CACHE: eco-system-q01q28-recovery-20261006
   MIN_CAPABILITIES: 164
 
 jobs:
   qualify-deploy-smoke:
+    # A draft staging PR must never be deployable by manual dispatch.
+    if: github.ref == 'refs/heads/fix/1.5.2.10-offline-conflicts-loans-20261003'
     runs-on: ubuntu-latest
     timeout-minutes: 45
     env:
