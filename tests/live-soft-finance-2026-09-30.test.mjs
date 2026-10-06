@@ -27,9 +27,11 @@ test('financial banners are dismissable without deleting notification history',(
   assert.match(css,/financial-alert-close/);
 });
 
-test('live client heals missed durable events by sequence replay on reconnect without polling',()=>{
+test('live client replays authorized events and tolerates private global-sequence gaps without polling',()=>{
   assert.match(live,/liveWebSocketUrl\(lastSeq,String\(ticketData\?\.ticket\?\?''\)\)/);
-  assert.match(live,/sequence-gap/);
+  assert.match(live,/Sequence IDs are global to the group/);
+  assert.match(live,/seq>lastSeq/);
+  assert.doesNotMatch(live,/close\(4001,'sequence-gap'\)/);
   assert.match(live,/visibilityState==='visible'/);
   assert.doesNotMatch(live,/catchupTimer/);
   assert.doesNotMatch(live,/setInterval\(/);
