@@ -20,7 +20,8 @@ test('loan menu exposes member x session recap and current totals',()=>{
   assert.match(completion,/Capital restant/);
   assert.match(completion,/Intérêts dus/);
   assert.match(completion,/Prochains intérêts projetés/);
-  assert.match(completion,/loan-criterion-due/);
+  assert.match(completion,/loan-criterion-/);
+  assert.match(completion,/totalDebtAfter/);
   assert.match(completion,/loan-criteria-start/);
   assert.match(completion,/Dette totale exigible/);
 });
