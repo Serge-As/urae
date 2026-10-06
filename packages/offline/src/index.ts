@@ -47,6 +47,12 @@ export class Outbox {
 
   list(): OutboxItem[] { return [...this.items.values()].sort((a,b)=>a.createdAt.localeCompare(b.createdAt)).map(x => structuredClone(x)); }
   /** Mirrors a single IndexedDB transaction already committed with this id. */
+  discardUncommitted(id:string):void{
+    const item=this.items.get(id);if(!item)return;
+    if(item.status!=='PENDING')throw Error('OUTBOX_DISCARD_NON_PENDING');
+    this.items.delete(id);
+    this.byKey.delete(this.scopeKey(item.tenantId,item.actorId,item.idempotencyKey));
+  }
   adoptDurable(item:OutboxItem):void{
     const current=this.items.get(item.id);
     if(!current||this.scopeKey(current.tenantId,current.actorId,current.idempotencyKey)!==
