@@ -31,4 +31,5 @@ for(const f of ['index.html','styles.css','manifest.webmanifest','sw.js']){
 await cp(path.join(output,'apps/web/src'),path.join(output,'src'),{recursive:true});
 console.log('Portable build OK — Node type transformation; TypeScript typecheck remains a separate check.');
 
+await import('./pwa-shell-closure.mjs');
 await import('./public-assets.mjs');
