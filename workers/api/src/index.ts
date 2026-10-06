@@ -719,6 +719,19 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
       if(state.current===targetAmount)return json({status:'NO_CHANGE',current:state.current,target:targetAmount},200,cors);
       if(expectedCurrentAmount!==undefined&&expectedCurrentAmount!==state.current)throw Error('CELL_VALUE_CONFLICT');
       if(expectedCellVersion!==undefined&&expectedCellVersion!==state.cellVersion)throw Error('CELL_VERSION_CONFLICT');
+      if(body.intentV2&&typeof body.intentV2==='object'){
+        const intent=body.intentV2 as Record<string,unknown>;
+        if(String(request.headers.get('x-idempotency-key')??'')!==String(intent.commandId??''))
+          throw Error('CELL_INTENT_KEY_MISMATCH');
+        const result=await applyRecordedCellV2({
+          groupId,meetingId,membershipId,rubricId,targetAmount,reason,
+          baselineValue:Number(intent.baselineValue??0),baselineVersion:Number(intent.baselineVersion??0),
+          recordedAtClient:String(intent.recordedAtClient??''),
+          clockAnchorId:String(intent.clockAnchorId??''),deviceId:String(intent.deviceId??''),
+          deviceSequence:Number(intent.deviceSequence??0),commandId:String(intent.commandId??'')
+        });
+        return json(result,200,cors);
+      }
       // 1.5.2.6b: manager validation writes immediately; confrontation follows only an explicit dissent/reserve.
       const creatingCell=state.current===0;
       const applied=await applyFinancialCellTarget({groupId,meetingId,membershipId,rubricId,targetAmount,expectedCurrentAmount:expectedCurrentAmount??state.current,expectedCellVersion:expectedCellVersion??state.cellVersion,reason:reason||'Correction explicite de la feuille de séance',idempotencyKey:String(request.headers.get('x-idempotency-key')??makeId('cell-correction'))});
@@ -2967,6 +2980,20 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
           decision:String(p.decision??''),reason:String(p.reason??''),
           amount:finite(p.amount,-1),cellVersion:finite(p.cellVersion,-1)});
         await markApplied();return json({accepted:true,stored:true,...reviewed},200,cors);
+      }
+      if(item.type==='FINANCIAL_CELL_CORRECTION_PROPOSAL_V2'){
+        const p=item.payload;
+        const outcome=await applyRecordedCellV2({
+          groupId:String(p.groupId??''),meetingId:String(p.meetingId??''),
+          membershipId:String(p.membershipId??''),rubricId:String(p.rubricId??''),
+          targetAmount:Number(p.targetAmount??0),baselineValue:Number(p.baselineValue??0),
+          baselineVersion:Number(p.baselineVersion??0),recordedAtClient:String(p.recordedAtClient??''),
+          clockAnchorId:String(p.clockAnchorId??''),deviceId:String(p.deviceId??''),
+          deviceSequence:Number(p.deviceSequence??0),commandId:item.idempotencyKey,
+          reason:String(p.reason??'')
+        });
+        if(outcome.status!=='CLOCK_REVIEW')await markApplied();
+        return json({accepted:true,stored:true,...outcome},200,cors);
       }
       if(item.type==='FINANCIAL_CELL_CORRECTION_PROPOSAL_V1'){
         const p=item.payload,groupId=String(p.groupId??''),meetingId=String(p.meetingId??''),membershipId=String(p.membershipId??''),rubricId=String(p.rubricId??''),targetAmount=finite(p.targetAmount),reason=String(p.reason??'');
