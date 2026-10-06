@@ -479,3 +479,204 @@ body.ui-mode-visual .primary:hover{filter:saturate(1.08) brightness(1.03);transf
   flex:1 1 auto;
 }
 .ultra-simple .cell-remote-review-actions button { min-height:58px; }
+
+
+/* Eco data-first matrices: 2026-10-07. No accounting or layout relocation. */
+/* Keep Eco's familiar green / cream palette. Give the available screen width
+   to the existing financial sheets rather than to decorative containers. */
+@media(min-width:861px){
+  .app-shell .content{max-width:none;padding:18px clamp(12px,1.45vw,24px) 65px}
+}
+#twoSheetWorkspace{padding:12px 12px 15px}
+#twoSheetWorkspace .panel-head{margin-bottom:8px;gap:10px}
+#twoSheetWorkspace .panel-head h2{font-size:18px}
+#twoSheetWorkspace .panel-head p{font-size:12px;line-height:1.35;max-width:62ch}
+#twoSheetWorkspace .view-switch{flex-wrap:wrap}
+#twoSheetWorkspace .view-switch button{font-weight:750}
+#twoSheetWorkspace [data-canonical-financial-owner="main-v151"]{
+  overflow:visible;max-width:100%;border:0;background:transparent;
+}
+#twoSheetWorkspace .truth-notice{padding:6px 9px;font-size:11px;line-height:1.3}
+#twoSheetWorkspace .session-safety-toolbar{margin:5px 0 9px;gap:6px}
+#twoSheetWorkspace .session-safety-toolbar label{display:flex;align-items:center;gap:7px;font-size:12px}
+#twoSheetWorkspace .session-safety-toolbar select{min-height:38px;padding:5px 9px;min-width:155px}
+#twoSheetWorkspace .session-safety-toolbar button{min-height:38px;padding:5px 9px}
+/* A compact notification may expand to show details on focus/hover; conflict
+   and closed-meeting alerts keep their own unmistakable visual states. */
+.financial-alert-bar.is-open,.financial-alert-bar.is-closed,.financial-alert-bar.is-critical{
+  display:flex!important;align-items:center;flex-wrap:wrap;gap:4px 9px;
+  padding:6px clamp(10px,1.5vw,22px);font-size:12.5px;
+  font-weight:600;line-height:1.3;box-shadow:0 2px 8px #182a2112
+}
+.financial-alert-bar>strong{font-weight:850;flex:0 0 auto}
+.financial-alert-bar>span{flex:1 1 260px;min-width:0;overflow:hidden;text-overflow:ellipsis;
+  display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:1}
+.financial-alert-bar:focus-within>span,.financial-alert-bar:hover>span{-webkit-line-clamp:unset}
+.financial-alert-bar button{min-height:34px;padding:5px 10px;font-size:12px;font-weight:750;white-space:nowrap}
+.financial-alert-bar .financial-alert-close{margin-left:auto;float:none}
+/* Financial data first: no cards in place of the original matrices. */
+.meeting-matrix{font-variant-numeric:tabular-nums;line-height:1.25}
+.meeting-matrix th,.meeting-matrix td{
+  border-bottom:1px solid #e3e9e4;border-right:1px solid #e6eae6;
+  padding:6px 8px;font-size:12.5px
+}
+.meeting-matrix thead th{
+  background:#eaf2ec;color:#183f30;font-weight:850;white-space:normal;
+  box-shadow:inset 0 -1px 0 #c1d8ca
+}
+.meeting-matrix tbody tr:nth-child(even){background:#f6faf7}
+.meeting-matrix tbody tr:hover{background:#e8f4ec}
+.meeting-matrix tbody tr:focus-within{background:#e6f5ed;box-shadow:inset 0 0 0 1px #9ccfb4}
+.meeting-matrix td{font-variant-numeric:tabular-nums}
+.meeting-matrix .table-total-row{color:#114d36;background:#e6f2e9}
+.meeting-matrix .table-total-row>*{background:#e6f2e9!important;font-weight:900}
+.canonical-financial-wrap{max-width:100%;overflow-x:auto;overflow-y:auto;scrollbar-gutter:stable;
+  border-radius:10px;border:1px solid #c9dcd0;background:#fff}
+.canonical-financial-matrix{min-width:100%;width:max-content;border-collapse:separate;border-spacing:0}
+.canonical-financial-matrix th,.canonical-financial-matrix td{padding:4px 5px;vertical-align:middle}
+.canonical-financial-matrix thead th{top:0;z-index:8;background:#eaf2ec}
+.canonical-financial-matrix td{min-width:134px;text-align:right}
+.canonical-financial-matrix tbody>tr>th{background:#fffefa}
+.canonical-financial-matrix tbody tr:nth-child(even)>th{background:#f3f8f4}
+.canonical-financial-matrix tbody tr:focus-within>th,.canonical-financial-matrix tbody tr:hover>th{background:#e6f5ed}
+.canonical-financial-matrix .member-number-column{width:42px;min-width:42px;max-width:42px;text-align:center;font-size:12px}
+[data-financial-mode="meeting"] .canonical-financial-matrix thead th:nth-child(1),
+[data-financial-mode="meeting"] .canonical-financial-matrix tbody>tr>th.member-number-column{
+  position:sticky;left:0;z-index:7;width:42px;min-width:42px;max-width:42px
+}
+[data-financial-mode="meeting"] .canonical-financial-matrix thead th:nth-child(1){z-index:12}
+[data-financial-mode="meeting"] .canonical-financial-matrix thead th:nth-child(2),
+[data-financial-mode="meeting"] .canonical-financial-matrix tbody>tr:not(.table-total-row)>th:nth-child(2){
+  position:sticky;left:42px;z-index:7;min-width:145px;max-width:185px;
+  box-shadow:2px 0 3px #142e251b
+}
+[data-financial-mode="meeting"] .canonical-financial-matrix thead th:nth-child(2){z-index:11}
+.canonical-financial-matrix tbody>tr>th strong{display:block;line-height:1.2;font-size:12.5px;white-space:normal}
+.canonical-financial-matrix tbody>tr>th small{display:block;font-weight:500;color:#738078;
+  font-size:10px;line-height:1.2;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+[data-financial-mode="individual"] .canonical-financial-matrix thead th:first-child,
+[data-financial-mode="individual"] .canonical-financial-matrix tbody>tr>th:first-child{
+  position:sticky;left:0;z-index:7;min-width:140px;max-width:190px;box-shadow:2px 0 3px #142e251b
+}
+[data-financial-mode="individual"] .canonical-financial-matrix thead th:first-child{z-index:11}
+.canonical-financial-matrix thead th:last-child,
+.canonical-financial-matrix td.table-row-total,
+.canonical-financial-matrix td.table-grand-total{
+  position:sticky;right:0;z-index:6;background:#edf5ee!important;
+  min-width:103px;box-shadow:-2px 0 4px #142e2519;text-align:right
+}
+.canonical-financial-matrix thead th:last-child{z-index:11;text-align:right}
+.canonical-financial-matrix .table-total-row>th:first-child{left:0;z-index:10}
+.canonical-financial-matrix .table-total-row td{font-weight:900;text-align:right;background:#e6f2e9!important}
+/* The amount, editable value and confirmation are always simultaneously
+   available. Do not replace inline editing with modal/card navigation. */
+.canonical-financial-matrix .matrix-cell-entry{
+  min-width:128px;padding:2px!important;gap:2px!important;
+  grid-template-columns:minmax(65px,1fr) 44px;align-items:center
+}
+.canonical-financial-matrix .cell-current{
+  grid-column:1/-1;margin:0;text-align:right;font-size:14px;font-weight:850;
+  color:#153c2c;line-height:1.18;white-space:nowrap
+}
+.canonical-financial-matrix .cell-current.is-negative{color:#a53e31}
+.canonical-financial-matrix .cell-target-input{
+  min-width:0;min-height:36px;height:36px;padding:4px 6px;
+  border-radius:7px;font-size:14px;text-align:right;font-weight:650;
+  font-variant-numeric:tabular-nums
+}
+.canonical-financial-matrix .cell-target-input::-webkit-inner-spin-button,
+.canonical-financial-matrix .cell-target-input::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
+.canonical-financial-matrix .cell-validate{
+  min-height:44px;min-width:44px;height:44px;width:44px;padding:3px;
+  border-radius:8px;font-size:19px
+}
+.canonical-financial-matrix .cell-nature.negative{
+  grid-column:1/-1;padding:0;border:0;background:none;font-size:10px;line-height:1.1;
+  color:#a43a2f;text-align:right;justify-self:end
+}
+/* Default success is represented by the amount itself. Text occupies space
+   only for pending, disputed, unsaved or other significant exceptions. */
+.canonical-financial-matrix .matrix-cell-entry[data-save-state="CONFIRMED"]:not(.pending-consensus):not(.is-conflict) .cell-save-state{display:none!important}
+.canonical-financial-matrix .cell-sync-state,
+.canonical-financial-matrix .cell-proposed-value,
+.canonical-financial-matrix .cell-remote-change-note{
+  font-size:10px;line-height:1.2;overflow-wrap:anywhere
+}
+.canonical-financial-matrix .matrix-cell-entry:focus-within{
+  background:#ebf7ef!important;box-shadow:inset 0 0 0 2px #2d8b67
+}
+/* All four debt measures remain visible per loan, all sessions horizontally
+   available; the three context columns stay put while exploring history. */
+.loan-four-criteria-table{width:max-content;min-width:100%;border-collapse:separate;border-spacing:0;
+  --eco-member-col:125px;--eco-loan-col:145px;--eco-criterion-col:168px}
+.loan-four-criteria-table td{text-align:right;min-width:85px;font-weight:700;white-space:nowrap}
+.loan-four-criteria-table thead th:nth-child(1),
+.loan-four-criteria-table th.loan-member-key{
+  position:sticky;left:0;min-width:var(--eco-member-col);max-width:var(--eco-member-col);z-index:5
+}
+.loan-four-criteria-table thead th:nth-child(2),
+.loan-four-criteria-table th.loan-name-key{
+  position:sticky;left:var(--eco-member-col);min-width:var(--eco-loan-col);
+  max-width:var(--eco-loan-col);z-index:5
+}
+.loan-four-criteria-table thead th:nth-child(3),
+.loan-four-criteria-table th.loan-criterion-key{
+  position:sticky;left:calc(var(--eco-member-col) + var(--eco-loan-col));
+  min-width:var(--eco-criterion-col);max-width:var(--eco-criterion-col);z-index:5
+}
+.loan-four-criteria-table thead th:nth-child(-n+3){z-index:10;background:#eaf2ec}
+.loan-four-criteria-table th.loan-member-key,
+.loan-four-criteria-table th.loan-name-key,
+.loan-four-criteria-table th.loan-criterion-key{background:#f3f8f4}
+.loan-four-criteria-table .loan-criteria-start>*{border-top:2px solid #9dbfac}
+.loan-four-criteria-table .loan-criterion-principal th.loan-criterion-key{border-left:4px solid #267b53}
+.loan-four-criteria-table .loan-criterion-interest th.loan-criterion-key{border-left:4px solid #b68029}
+.loan-four-criteria-table .loan-criterion-projected th.loan-criterion-key{border-left:4px dashed #7d8aa3}
+.loan-four-criteria-table .loan-criterion-due th.loan-criterion-key{border-left:4px solid #87536e;font-weight:900}
+.loan-four-criteria-table .loan-criterion-due td{font-weight:900;background:#f2f7f3}
+.loan-four-criteria-table td:last-child,.loan-four-criteria-table thead th:last-child{
+  position:sticky;right:0;z-index:4;background:#edf5ee;box-shadow:-2px 0 4px #142e2519
+}
+.loan-four-criteria-table thead th:last-child{z-index:9}
+/* Canonical savings and loan recap rows should show numbers as numbers. */
+.yield-canonical-series .meeting-matrix td,.loan-open-state-table td,
+.debt-group-journey-table td,.loan-portfolio-table td{text-align:right;white-space:nowrap}
+.yield-deposit-detail-table td.amount,.yield-deposit-detail-table tfoot td,
+.yield-deposit-detail-table .sum{text-align:right;font-weight:800}
+.yield-deposit-detail-table .table-actions{white-space:nowrap;text-align:center}
+.yield-deposit-detail-table button{min-height:38px;padding:5px 9px}
+@media(max-width:860px){
+  #twoSheetWorkspace{padding:9px}
+  .financial-alert-bar.is-open,.financial-alert-bar.is-closed,.financial-alert-bar.is-critical{position:relative;top:auto;font-size:12px}
+  .financial-alert-bar>span{-webkit-line-clamp:2;flex-basis:100%;order:2}
+  .financial-alert-bar button{min-height:40px}
+  .canonical-financial-matrix tbody>tr>th small{display:none}
+  .canonical-financial-matrix .matrix-cell-entry{min-width:116px}
+  .loan-four-criteria-table{--eco-member-col:105px;--eco-loan-col:115px;--eco-criterion-col:145px}
+}
+@media(max-width:560px){
+  #twoSheetWorkspace .panel-head{display:block}
+  .canonical-financial-matrix th,.canonical-financial-matrix td{padding:3px}
+  [data-financial-mode="meeting"] .canonical-financial-matrix thead th:nth-child(2),
+  [data-financial-mode="meeting"] .canonical-financial-matrix tbody>tr:not(.table-total-row)>th:nth-child(2){min-width:111px;max-width:135px}
+  .canonical-financial-matrix .cell-current{font-size:13px}
+  .canonical-financial-matrix .cell-target-input{min-height:36px;height:36px;font-size:13px}
+  .canonical-financial-matrix .cell-validate{height:44px;min-height:44px;min-width:44px}
+  .canonical-financial-matrix .matrix-cell-entry{min-width:111px}
+  .loan-four-criteria-table{--eco-member-col:88px;--eco-loan-col:100px;--eco-criterion-col:126px}
+  .loan-four-criteria-table th,.loan-four-criteria-table td{padding:5px 6px;font-size:11.5px}
+}
+body.ui-mode-senior .canonical-financial-matrix .cell-target-input,
+body.ui-mode-senior .canonical-financial-matrix .cell-validate,
+body.ultra-simple .canonical-financial-matrix .cell-target-input,
+body.ultra-simple .canonical-financial-matrix .cell-validate{min-height:48px;height:48px;font-size:16px}
+body.ui-mode-senior .canonical-financial-matrix .matrix-cell-entry,
+body.ultra-simple .canonical-financial-matrix .matrix-cell-entry{min-width:158px;gap:5px!important}
+body.ui-mode-senior .canonical-financial-matrix th,
+body.ui-mode-senior .canonical-financial-matrix td{font-size:14px;padding:7px}
+@media print{
+  .canonical-financial-wrap,.loan-portfolio-wrap{overflow:visible!important}
+  .canonical-financial-matrix,.loan-four-criteria-table{width:100%;font-size:10px}
+  .canonical-financial-matrix th,.loan-four-criteria-table th,
+  .canonical-financial-matrix td,.loan-four-criteria-table td{position:static!important}
+}
