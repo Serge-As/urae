@@ -20,7 +20,8 @@ test('loan menu exposes member x session recap and current totals',()=>{
   assert.match(completion,/Capital restant/);
   assert.match(completion,/Intérêts dus/);
   assert.match(completion,/Prochains intérêts projetés/);
-  assert.match(completion,/Dette de prêt totale/);
+  assert.match(completion,/loan-criterion-due/);
+  assert.match(completion,/loan-criteria-start/);
   assert.match(completion,/Dette totale exigible/);
 });
 test('canonical finance source includes per-member other debts and loan policy projection metadata',()=>{
