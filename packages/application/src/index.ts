@@ -87,7 +87,7 @@ export class ConnectedApplication {
     if(!groupId||typeof navigator!=='undefined'&&navigator.onLine===false||this.serverBudgetBlocked())return;
     if(this.financialClockAnchor?.groupId===groupId&&
       this.financialClockAnchor.deviceId===deviceId&&Date.now()<this.financialClockAnchor.expiresAt)return;
-    if(this.financialClockLoading)return this.financialClockLoading;
+    if(this.financialClockLoading){await this.financialClockLoading;if(this.financialClockAnchor?.groupId!==groupId)return this.warmFinancialClock();return;}
     this.financialClockLoading=(async()=>{
       try{
         const response=await this.request<{token:string;anchorAtMs:number;expiresAt:string;deviceId:string}>(
@@ -323,7 +323,7 @@ export class ConnectedApplication {
     if(IndexedDbOutboxAdapter.supported())try{const persisted=await this.outboxStorage.load();this.outbox.restore(persisted.filter(x=>x.actorId===this.actorId&&x.tenantId===this.tenantId));}catch{}
     await this.recoverInterruptedVaultRestores();
     const groups=await this.listGroups();if(this.activeGroupId&&!groups.some(g=>g.id===this.activeGroupId))this.selectGroup(undefined);if(!this.activeGroupId&&groups[0])this.selectGroup(groups[0].id);else this.selectGroup(this.activeGroupId);
-    if(!this.usingOfflineSnapshot){await this.request('/api/v1/bootstrap',{method:'POST',body:JSON.stringify({displayName:this.displayName,locale:this.locale})});await this.groupTrashItems().catch(()=>[]);if(this.activeGroupId)void this.warmFinancialClock();}
+    if(!this.usingOfflineSnapshot){await this.request('/api/v1/bootstrap',{method:'POST',body:JSON.stringify({displayName:this.displayName,locale:this.locale})});await this.groupTrashItems().catch(()=>[]);if(this.activeGroupId)await this.warmFinancialClock();}
     return{restoredOutbox:this.outbox.list().length,groups};
   }
 
