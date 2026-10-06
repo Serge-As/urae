@@ -1,6 +1,6 @@
 import { PlatformKernel } from '../../../packages/platform-kernel/src/index.js';
 import { D1PlatformRepository, InMemoryPlatformRepository, type D1DatabaseLike, type PlatformRepository } from '../../../packages/repositories/src/index.js';
-import { FoundationService, LedgerService, MeetingService, starterGroupOperatingPolicy } from '../../../packages/domain/src/index.js';
+import { FoundationService, LedgerService, MeetingService, starterGroupOperatingPolicy, compareNormalizedCellIntents, financialCellWinnerRecordId, financialCellIntentRecordId } from '../../../packages/domain/src/index.js';
 import { DiscoveryService, MembershipGatewayService } from '../../../packages/discovery/src/index.js';
 import { RubricKnowledgeService } from '../../../packages/rubrics/src/index.js';
 import { makeId, type OutboxItem, type GroupOperatingPolicy, type ProjectCapability, type RubricOperatingModel, type RubricPolicies, type WorkspaceRecord, type WorkspaceStatus } from '../../../packages/contracts/src/index.js';
@@ -283,17 +283,25 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
     }
   };
 
-  const applyFinancialCellTarget=async(input:{groupId:string;meetingId:string;membershipId:string;rubricId:string;targetAmount:number;expectedCurrentAmount?:number;expectedCellVersion?:number;reason:string;idempotencyKey:string;consensusId?:string;consensusVersion?:number})=>{
+  const applyFinancialCellTarget=async(input:{groupId:string;meetingId:string;membershipId:string;rubricId:string;targetAmount:number;expectedCurrentAmount?:number;expectedCellVersion?:number;reason:string;idempotencyKey:string;consensusId?:string;consensusVersion?:number;normalizedIntent?:{commandId:string;actorId:string;deviceId:string;deviceSequence:number;effectiveRecordedAtMs:number;clockQuality:'VERIFIED'}})=>{
     const group=await requireGroup(input.groupId,true),meeting=await repo.getMeeting(ctx.tenantId,input.groupId,input.meetingId);if(!meeting||meeting.status==='cancelled')throw Error('MEETING_NOT_FOUND');
     if(!Number.isSafeInteger(input.targetAmount)||input.targetAmount<0)throw Error('INVALID_CONTRIBUTION_AMOUNT');
     const beforeAll=await ledger.receiptPositions(ctx.tenantId,input.groupId),beforeSituation=beforeAll.filter(x=>x.membershipId===input.membershipId).reduce((n,x)=>n+x.netAmount,0);
     const state=await financialCellState(input.groupId,input.meetingId,input.membershipId,input.rubricId);
-    if(state.current===input.targetAmount)return{status:'NO_CHANGE',current:state.current,target:input.targetAmount};
+    if(state.current===input.targetAmount){
+      if(!input.normalizedIntent)return{status:'NO_CHANGE',current:state.current,target:input.targetAmount};
+      const stamp=await ledger.reaffirmCashContributionCell({tenantId:ctx.tenantId,groupId:input.groupId,
+        meetingId:input.meetingId,membershipId:input.membershipId,rubricId:input.rubricId,
+        amount:input.targetAmount,expectedCellVersion:input.expectedCellVersion??state.cellVersion,
+        idempotencyKey:input.idempotencyKey,intent:input.normalizedIntent});
+      return{status:'NO_AMOUNT_CHANGE',current:state.current,target:input.targetAmount,
+        newAmount:input.targetAmount,cellVersion:stamp.cellVersion};
+    }
     const reason=input.reason.trim()||'Correction de cellule financière';
     const correction=await ledger.replaceCashContributionCell({
       tenantId:ctx.tenantId,groupId:input.groupId,meetingId:input.meetingId,membershipId:input.membershipId,rubricId:input.rubricId,
       targetAmount:input.targetAmount,expectedCurrentAmount:input.expectedCurrentAmount??state.current,expectedCellVersion:input.expectedCellVersion??state.cellVersion,currency:'XAF',
-      reason,idempotencyKey:input.idempotencyKey
+      reason,idempotencyKey:input.idempotencyKey,normalizedIntent:input.normalizedIntent
     },ctx.requestId);
     const receipt=correction.receipt,evidenceEntry=correction.evidenceEntry;
     if(!evidenceEntry)throw Error('FINANCIAL_CORRECTION_NOT_APPLIED');
