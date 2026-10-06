@@ -58,4 +58,27 @@ test('closed-session offline target becomes the canonical value after synchroniz
   // exact target; confrontation is opened only by an explicit dissent/reserve.
   await expect.poll(()=>amountFrom(reloaded)).toBe(1000);
   await expect(reloaded).not.toContainText(/Proposé\s*:/i);
+
+  // Data-first refit must preserve the existing table, editable amounts,
+  // session/member/rubric context, totals and the sticky identifying columns.
+  const sheet=page.locator('#meetingMatrix .canonical-financial-matrix');
+  await expect(sheet).toBeVisible();
+  const headers=await sheet.locator('thead th').allTextContents();
+  expect(headers.map(x=>x.trim())).toEqual(expect.arrayContaining(['N°','Membre','Secours persistance','Total membre']));
+  await expect(sheet.locator('.table-row-total').first()).toBeVisible();
+  await expect(sheet.locator('.table-total-row')).toBeVisible();
+  await expect(reloaded.locator('.cell-target-input')).toBeVisible();
+  await expect(reloaded.locator('.cell-validate')).toBeVisible();
+  const fixed=await sheet.locator('thead th:nth-child(2)').evaluate(node=>getComputedStyle(node).position);
+  expect(fixed).toBe('sticky');
+  await page.setViewportSize({width:390,height:820});
+  await expect(sheet).toBeVisible();
+  const size=await sheet.evaluate(node=>({width:node.scrollWidth,headerCells:node.querySelectorAll('thead th').length}));
+  expect(size.headerCells).toBe(4);
+  await page.locator('#individualSheetsViewBtn').click();
+  const individual=page.locator('#individualSheetMatrix .canonical-financial-matrix');
+  await expect(individual).toBeVisible();
+  const memberHeaders=(await individual.locator('thead th').allTextContents()).map(x=>x.trim());
+  expect(memberHeaders).toEqual(expect.arrayContaining(['Séance','Secours persistance','Total séance']));
+  await expect(individual.locator('.table-total-row')).toBeVisible();
 });
