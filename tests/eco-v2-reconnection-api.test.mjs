@@ -32,7 +32,7 @@ const fixture=async()=>{
       recordedAtClient:new Date(ms||Date.parse('2026-10-06T09:00:00Z')).toISOString(),
       deviceId:'device-'+actor,deviceSequence:Math.max(1,key.length),commandId,reason:'Confrontation test'};
     const body={membershipId:scope.membershipId,rubricId:scope.rubricId,targetAmount:target,
-      expectedCurrentAmount:1000,expectedCellVersion:baseVersion,reason:'Confrontation test',
+      expectedCurrentAmount:v2?1000:baseVersion===0?0:1000,expectedCellVersion:baseVersion,reason:'Confrontation test',
       ...(v2?{intentV2:payload}:{})};
     const request=new Request('https://eco.invalid/api/v1/groups/'+scope.groupId+
       '/meetings/'+scope.meetingId+'/financial-cells',{
