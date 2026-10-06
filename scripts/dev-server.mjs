@@ -2,13 +2,16 @@ import http from 'node:http';
 import { access, readFile, stat } from 'node:fs/promises';
 import path from 'node:path';
 import { spawn } from 'node:child_process';
+import {randomBytes} from 'node:crypto';
 import worker from '../.build/workers/api/src/index.js';
 import { SQLiteD1 } from './sqlite-d1.mjs';
 
 const root = path.resolve('.build');
 const dataFile = process.env.ECO_DATA_FILE ?? '.data/eco-system.sqlite';
 const db = new SQLiteD1(dataFile);db.migrate();
-const handleRequest = request => worker.fetch(request,{DB:db});
+// Ephemeral signing key: test/development only, generated per process and never persisted.
+const localSignedClockKey=randomBytes(32).toString('base64url');
+const handleRequest = request => worker.fetch(request,{DB:db,AUTH_LIVE_SIGNING_SECRET:localSignedClockKey});
 const mime = {
   '.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8',
   '.json':'application/json; charset=utf-8','.webmanifest':'application/manifest+json','.map':'application/json'
