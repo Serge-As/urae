@@ -97,21 +97,6 @@ export interface PlatformRepository {
   commitFinancialOperation(operation: FinancialOperation): FinancialOperation | Promise<FinancialOperation>;
   commitFinancialCorrection(plan: FinancialCorrectionPlan): FinancialCorrectionPlan | Promise<FinancialCorrectionPlan>;
   commitFinancialCellStamp(plan:FinancialCellStampPlan):FinancialCellStampPlan|Promise<FinancialCellStampPlan>;
-  commitFinancialCellStamp(plan:FinancialCellStampPlan):FinancialCellStampPlan {
-    const key=this.financialCellRevisionKey(plan.tenantId,plan.groupId,plan.meetingId,
-      plan.membershipId,plan.rubricId,plan.currency);
-    const current=this.financialCellRevisions.get(key);
-    if((current?.version??0)!==plan.expectedVersion)throw Error('CELL_VERSION_CONFLICT');
-    if(plan.nextVersion!==plan.expectedVersion+1)throw Error('INVALID_CELL_VERSION');
-    this.financialCellRevisions.set(key,{tenantId:plan.tenantId,groupId:plan.groupId,
-      meetingId:plan.meetingId,membershipId:plan.membershipId,rubricId:plan.rubricId,
-      currency:plan.currency,version:plan.nextVersion,lastOperationId:plan.operationId,
-      updatedAt:plan.createdAt});
-    for(const record of plan.records)this.workspaceRecords.set(record.id,structuredClone(record));
-    this.audits.set(plan.audit.id,structuredClone(plan.audit));
-    return structuredClone(plan);
-  }
-
   commitMarketStockReservation(plan:MarketStockReservationPlan): {stock:WorkspaceRecord;order:WorkspaceRecord;movement:EvidenceRecord} | Promise<{stock:WorkspaceRecord;order:WorkspaceRecord;movement:EvidenceRecord}>;
   getFinancialCellRevision(tenantId:Id,groupId:Id,meetingId:Id,membershipId:Id,rubricId:Id,currency:string): FinancialCellRevision | undefined | Promise<FinancialCellRevision | undefined>;
   listFinancialCellRevisions(tenantId:Id,groupId:Id): FinancialCellRevision[] | Promise<FinancialCellRevision[]>;
@@ -232,6 +217,21 @@ export class InMemoryPlatformRepository implements PlatformRepository {
     this.financialCorrections.set(key,copy);
     return structuredClone(copy);
   }
+  commitFinancialCellStamp(plan:FinancialCellStampPlan):FinancialCellStampPlan {
+    const key=this.financialCellRevisionKey(plan.tenantId,plan.groupId,plan.meetingId,
+      plan.membershipId,plan.rubricId,plan.currency);
+    const current=this.financialCellRevisions.get(key);
+    if((current?.version??0)!==plan.expectedVersion)throw Error('CELL_VERSION_CONFLICT');
+    if(plan.nextVersion!==plan.expectedVersion+1)throw Error('INVALID_CELL_VERSION');
+    this.financialCellRevisions.set(key,{tenantId:plan.tenantId,groupId:plan.groupId,
+      meetingId:plan.meetingId,membershipId:plan.membershipId,rubricId:plan.rubricId,
+      currency:plan.currency,version:plan.nextVersion,lastOperationId:plan.operationId,
+      updatedAt:plan.createdAt});
+    for(const record of plan.records)this.workspaceRecords.set(record.id,structuredClone(record));
+    this.audits.set(plan.audit.id,structuredClone(plan.audit));
+    return structuredClone(plan);
+  }
+
   commitMarketStockReservation(plan:MarketStockReservationPlan):{stock:WorkspaceRecord;order:WorkspaceRecord;movement:EvidenceRecord}{
     const current=this.workspaceRecords.get(plan.stock.id);
     if(!current||current.tenantId!==plan.tenantId||current.groupId!==plan.groupId)throw new Error('STOCK_ITEM_NOT_FOUND');
