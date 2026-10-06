@@ -1,7 +1,7 @@
 import type {
   AuditEvent, CashboxReconciliationRecord, CashboxSnapshot, ContributionReceipt, Currency, FeasibilityResult,
   Group, GroupProject, Id, LedgerAccount, LedgerEntry, LedgerLine, LedgerSummary, MeetingSession, Membership,
-  Money, Obligation, User, CaseRecord, EvidenceRecord, GroupOperatingPolicy, ProjectCapability, ProjectAccessGrant, LatePostingTrace, MemberStatement, GroupProjectLaunchProfile, WorkspaceRecord
+  Money, Obligation, User, CaseRecord, EvidenceRecord, GroupOperatingPolicy, ProjectCapability, ProjectAccessGrant, LatePostingTrace, MemberStatement, GroupProjectLaunchProfile, WorkspaceRecord, NormalizedCellIntentOrder
 } from '../../contracts/src/index.js';
 import { makeId } from '../../contracts/src/index.js';
 import type { PlatformRepository, FinancialCorrectionPlan } from '../../repositories/src/index.js';
@@ -15,6 +15,36 @@ const assertIntNonNegative = (name: string, value: number): void => {
 };
 const assertIntPositive = (name: string, value: number): void => {
   if (!Number.isFinite(value) || value <= 0 || !Number.isSafeInteger(value)) throw new Error(`INVALID_${name.toUpperCase()}`);
+};
+/** Total deterministic comparison of *server-normalized* recording times.
+ * The repository must compare inside the same CAS/transaction as the Ledger;
+ * this pure helper is not itself a commit, lock, or client clock validator.
+ * A questionable clock produces REVIEW instead of falsifying chronology.
+ */
+export const compareNormalizedCellIntents = (
+  incoming:NormalizedCellIntentOrder,
+  incumbent:NormalizedCellIntentOrder
+):'NEWER'|'OLDER'|'SAME'|'CLOCK_REVIEW' => {
+  if(
+    incoming.clockQuality!=='VERIFIED'||incumbent.clockQuality!=='VERIFIED'||
+    !Number.isSafeInteger(incoming.effectiveRecordedAtMs)||
+    !Number.isSafeInteger(incumbent.effectiveRecordedAtMs)||
+    !Number.isSafeInteger(incoming.deviceSequence)||
+    !Number.isSafeInteger(incumbent.deviceSequence)||
+    !incoming.deviceId||!incumbent.deviceId||!incoming.commandId||!incumbent.commandId
+  ) return 'CLOCK_REVIEW';
+  if(incoming.commandId===incumbent.commandId)return 'SAME';
+  const comparisons=[
+    [incoming.effectiveRecordedAtMs,incumbent.effectiveRecordedAtMs],
+    [incoming.deviceId,incumbent.deviceId],
+    [incoming.deviceSequence,incumbent.deviceSequence],
+    [incoming.commandId,incumbent.commandId]
+  ] as Array<[number|string,number|string]>;
+  for(const [left,right] of comparisons){
+    if(left>right)return'NEWER';
+    if(left<right)return'OLDER';
+  }
+  return'SAME';
 };
 const now = (): string => new Date().toISOString();
 const requiredTextCode = (value:string):string => { const clean=value.trim().replace(/[^A-Z0-9_]/gi,'_').toUpperCase(); if(!clean)throw new Error('LEDGER_ACCOUNT_CODE_REQUIRED'); return clean; };
