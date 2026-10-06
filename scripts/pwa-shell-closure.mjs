@@ -45,7 +45,7 @@ const scan=async(url,from)=>{
     }else{
       // Node 24's zero-dependency portable compiler still emits ESM syntax.
       const code=source.toString('utf8');
-      for(const found of code.matchAll(/(?:\b(?:import|export)\s+(?:[^;'"]*?\s+from\s*)?|\bimport\s*\\(\s*)['"]([^'"]+)['"]/g))refs.push(found[1]);
+      for(const found of code.matchAll(/(?:\b(?:import|export)\s+(?:[^;'"]*?\s+from\s*)?|\bimport\s*\(\s*)['"]([^'"]+)['"]/g))refs.push(found[1]);
     }
     for(const spec of refs){
       const dep=localUrl(spec,pathname);
