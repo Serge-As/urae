@@ -40,7 +40,11 @@ const OPTIONAL_SHELL = [
   '/packages/completion/src/index.js', '/packages/module-registry/src/index.js',
   '/packages/module-registry/src/service-capabilities.js'
 ];
-const APP_SHELL = [...ESSENTIAL_SHELL, ...OPTIONAL_SHELL];
+// scripts/pwa-shell-closure.mjs fills this build-time list with all direct and
+// transitive local imports; an incomplete dependency graph prevents the build.
+// The source worker keeps its original declarations for review and audit.
+const GENERATED_IMPORT_CLOSURE = [];
+const APP_SHELL = [...ESSENTIAL_SHELL, ...OPTIONAL_SHELL, ...GENERATED_IMPORT_CLOSURE];
 const SHELL_PATHS = new Set(APP_SHELL.map(path=>new URL(path,self.location.origin).pathname));
 
 const fetchReleaseAsset = async path => {
@@ -49,6 +53,14 @@ const fetchReleaseAsset = async path => {
     new Promise((_,reject)=>setTimeout(()=>reject(new Error('RELEASE_ASSET_TIMEOUT:' + path)),8000))
   ]);
   if (!response || !response.ok) throw new Error('RELEASE_ASSET_MISSING:' + path);
+  // A 200 HTML fallback must never be accepted as a JavaScript module.
+  // Missing or wrong MIME types leave the previously-ready cache untouched.
+  const assetPath=new URL(path,self.location.origin).pathname;
+  const returnedType=(response.headers.get('content-type')||'').toLowerCase();
+  const jsAsset=/\.m?js$/i.test(assetPath);
+  if(jsAsset&&!/(?:javascript|ecmascript)/.test(returnedType))throw new Error('RELEASE_ASSET_MIME:'+path+':'+returnedType);
+  if(/\.css$/i.test(assetPath)&&!returnedType.includes('text/css'))throw new Error('RELEASE_ASSET_MIME:'+path+':'+returnedType);
+  if(jsAsset&&response.url&&new URL(response.url).pathname!==assetPath)throw new Error('RELEASE_ASSET_REDIRECT:'+path);
   // Consume a clone now so an incomplete/aborted body cannot masquerade as cached.
   await response.clone().arrayBuffer();
   return response;
