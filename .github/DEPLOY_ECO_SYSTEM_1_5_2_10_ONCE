@@ -1,7 +1,9 @@
-Eco-System 1.5.2.10 deployment marker
-release: 1.5.2.10-offline-conflicts-loans
-date: 2026-10-03
+Eco-System 1.5.2.11 field-recovery deployment marker
+release: 1.5.2.11-field-recovery
+date: 2026-10-06
 db_mutation: none
 mode: code-only-no-d1-export-no-migration
-reason: offline refresh + explicit financial conflict + savings truth + loan/debt tables
-trigger_sha_parent: 898f3ffa79bfa35a0f0b7167d98391a360895fd5
+reason: event-driven live sync + quota-aware reconnect + offline F5 + explicit financial conflicts + repayments/loans/debts + savings yield policies + borrower rewards + secured history
+qualified_pr: 66
+qualified_head_sha: dc8ebafca88d9c40579fcdc8ba62be7abdd6d2f4
+merge_sha_parent: 5b781fac5ba718aa9cbf1a0dc0a25eed73c64e4e
