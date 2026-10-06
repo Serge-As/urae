@@ -680,3 +680,36 @@ body.ui-mode-senior .canonical-financial-matrix td{font-size:14px;padding:7px}
   .canonical-financial-matrix th,.loan-four-criteria-table th,
   .canonical-financial-matrix td,.loan-four-criteria-table td{position:static!important}
 }
+
+
+/* Data-first compact manual deposit toolbar, preserving canonical savings tables. */
+#view-finance .yield-deposit-toolbar{display:flex;gap:7px;flex-wrap:wrap;align-items:center;margin:6px 0 9px}
+#view-finance .yield-deposit-toolbar select{
+  width:auto;flex:1 1 170px;min-width:0;max-width:310px;
+  min-height:39px;padding:6px 9px;border-radius:9px;font-size:13px
+}
+#view-finance .yield-deposit-detail-table{width:max-content;min-width:100%}
+#view-finance .yield-deposit-detail-table th:nth-child(1),
+#view-finance .yield-deposit-detail-table td:nth-child(1){
+  min-width:42px;text-align:center
+}
+#view-finance .yield-deposit-detail-table thead th:nth-child(2),
+#view-finance .yield-deposit-detail-table tbody>tr:not(.table-total-row)>th:nth-child(2){
+  position:sticky;left:42px;min-width:135px;max-width:185px;z-index:3;
+  box-shadow:2px 0 3px #142e251b;background:#fffdf8
+}
+#view-finance .yield-deposit-detail-table thead th:nth-child(2){z-index:5;background:#eaf2ec}
+#view-finance .yield-deposit-detail-table tbody>tr:nth-child(even)>th:nth-child(2){background:#f3f8f4}
+#view-finance .yield-deposit-detail-table td.amount{font-size:14px;white-space:nowrap;color:#193e2f}
+#view-finance .yield-deposit-pager{display:flex;align-items:center;justify-content:flex-end;
+  flex-wrap:wrap;gap:10px;font-size:12px;margin-top:5px}
+#view-finance .yield-deposit-pager button{min-height:38px;padding:5px 9px}
+#view-operations .page-head{margin-bottom:12px;align-items:center}
+#view-operations .page-head h1{font-size:clamp(25px,2.35vw,34px);margin:3px 0}
+#view-operations .page-head p{font-size:12.5px;line-height:1.4;max-width:75ch}
+@media(max-width:560px){
+  #view-finance .yield-deposit-toolbar select{max-width:none;width:100%}
+  #view-operations .page-head{margin-bottom:9px}
+  #view-operations .page-head h1{font-size:26px}
+  #view-operations .page-head p{font-size:12px;line-height:1.3}
+}
