@@ -115,7 +115,7 @@ jobs:
         run: |
           set -euo pipefail
           root=''; health=''; catalog=''
-          for attempt in 1 2 3 4 5 6 7 8; do
+          for attempt in 1 2 3 4 5 6 7 8 9 10 11 12; do
             root="$(curl --fail --silent --show-error --location --max-time 20 "${ECO_SYSTEM_ROOT}" || true)"
             health="$(curl --fail --silent --show-error --location --max-time 20 "${ECO_SYSTEM_HEALTH}" || true)"
             catalog="$(curl --fail --silent --show-error --location --max-time 20 "${ECO_SYSTEM_CATALOG}" || true)"
@@ -125,8 +125,9 @@ jobs:
               && grep -Fq "\"commitSha\": \"${GITHUB_SHA}\"" <<<"${health}" \
               && grep -Fq "\"buildId\": \"${EXPECTED_BUILD}\"" <<<"${health}" \
               && grep -Fq "\"pwaCache\": \"${EXPECTED_CACHE}\"" <<<"${health}" \
+              && grep -Fq "\"version\":\"${EXPECTED_VERSION}\"" <<<"$(tr -d '[:space:]' <<<"${catalog}")" \
               && grep -q '"capabilities"' <<<"${catalog}"; then break; fi
-            echo "Waiting for exact 1.5.2.11 SHA propagation (attempt ${attempt}/8)…"
+            echo "Waiting for exact 1.5.2.11 health + catalog propagation (attempt ${attempt}/12)…"
             sleep 4
           done
           printf '%s' "${health}" > /tmp/health.json
