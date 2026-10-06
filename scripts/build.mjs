@@ -61,4 +61,5 @@ for (const target of ['.build/apps/web/src/main.js','.build/src/main.js']) {
 }
 console.log(`Build OK: .build/ (Eco-System ${RELEASE_VERSION}; offline reload + explicit conflicts + loan/debt tables)`);
 
+await import('./pwa-shell-closure.mjs');
 await import('./public-assets.mjs');
