@@ -192,8 +192,30 @@ export const mountCompletionUI=({app,notify,showError,getMembers,getMeetings,get
     }
     head.append(header);recapTable.append(head);
     const body=document.createElement('tbody'),sums=criteria.map(()=>sessionRows.map(()=>0)),latestTotals=criteria.map(()=>0);
-    const sorted=[...definitions.entries()].sort((a,b)=>nameOfMember(a[1].memberId).localeCompare(nameOfMember(b[1].memberId))||a[0].localeCompare(b[0]));
+    const sorted=[...definitions.entries()].sort((a,b)=>nameOfMember(a[1].memberId).localeCompare(nameOfMember(b[1].memberId))||String(a[1].memberId??'').localeCompare(String(b[1].memberId??''))||a[0].localeCompare(b[0]));
+    // Derived subtotals are grouped by stable member ID, never by display
+    // name: two people sharing a name must not have their debts merged.
+    let currentMemberKey=null;
+    let memberSessions=criteria.map(()=>sessionRows.map(()=>0));
+    let memberLatest=criteria.map(()=>0);
+    const appendMemberTotals=key=>{
+      if(key===null)return;
+      for(let i=0;i<criteria.length;i++){
+        const row=document.createElement('tr');row.className='loan-member-subtotal loan-criterion-'+criteria[i][2];
+        const th=document.createElement('th');th.colSpan=3;
+        th.textContent=tr('SOUS-TOTAL MEMBRE · ','MEMBER SUBTOTAL · ')+nameOfMember(key)+' · '+criteria[i][0];
+        row.append(th);
+        for(const amount of memberSessions[i]){const cell=document.createElement('td');cell.textContent=fmt(amount);row.append(cell);}
+        const now=document.createElement('td');now.textContent=fmt(memberLatest[i]);row.append(now);body.append(row);
+      }
+    };
     for(const [loanId,def] of sorted){
+      const memberKey=String(def.memberId??'');
+      if(currentMemberKey!==null&&memberKey!==currentMemberKey){
+        appendMemberTotals(currentMemberKey);
+        memberSessions=criteria.map(()=>sessionRows.map(()=>0));memberLatest=criteria.map(()=>0);
+      }
+      currentMemberKey=memberKey;
       const rows=orderedPeriods.get(loanId)??[],progress=sessionRows.map((_,i)=>{
         let last;for(const row of rows)if(row.sessionIndex<=i)last=row.period;
         return last;
@@ -210,7 +232,7 @@ export const mountCompletionUI=({app,notify,showError,getMembers,getMeetings,get
         const criterionCell=document.createElement('th');criterionCell.className='loan-criterion-key';criterionCell.textContent=label;row.append(criterionCell);
         progress.forEach((state,index)=>{
           const raw=state?Number(selector(state)??0):0,value=Number.isFinite(raw)?raw:0;
-          sums[criterionIndex][index]+=value;
+          sums[criterionIndex][index]+=value;memberSessions[criterionIndex][index]+=value;
           const cell=document.createElement('td');cell.textContent=state?fmt(value):'—';row.append(cell);
         });
         const latestState=progress[progress.length-1]??rows[rows.length-1]?.period;
@@ -218,10 +240,11 @@ export const mountCompletionUI=({app,notify,showError,getMembers,getMeetings,get
         if(!latestState&&def.open)latest=Number(({
           principal:def.open.principal,interest:def.open.interest,projected:def.open.nextInterestProjected,due:def.open.totalDue
         })[kind]??0);
-        latest=Number.isFinite(latest)?latest:0;latestTotals[criterionIndex]+=latest;
+        latest=Number.isFinite(latest)?latest:0;latestTotals[criterionIndex]+=latest;memberLatest[criterionIndex]+=latest;
         const currentCell=document.createElement('td');currentCell.textContent=fmt(latest);row.append(currentCell);body.append(row);
       }
     }
+    appendMemberTotals(currentMemberKey);
     for(let i=0;i<criteria.length;i++){
       const row=document.createElement('tr');row.className='table-total-row loan-criterion-'+criteria[i][2];
       const label=document.createElement('th');label.colSpan=3;label.textContent=tr('TOTAL GROUPE · ','GROUP TOTAL · ')+criteria[i][0];row.append(label);
