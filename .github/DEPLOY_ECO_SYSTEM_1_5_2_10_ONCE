@@ -7,3 +7,5 @@ reason: event-driven live sync + quota-aware reconnect + offline F5 + explicit f
 qualified_pr: 66
 qualified_head_sha: dc8ebafca88d9c40579fcdc8ba62be7abdd6d2f4
 merge_sha_parent: 5b781fac5ba718aa9cbf1a0dc0a25eed73c64e4e
+smoke_retry: 2026-10-06T14:12Z
+smoke_guard: wait-health-and-catalog-exact-version
