@@ -36,7 +36,7 @@ test('tie break deterministic on device, sequence and command without floating t
   const b=intent('b','2026-10-06T10:10:00Z','dev-b',1);
   assert.equal(compareNormalizedCellIntents(b,a),'NEWER');
   assert.equal(compareNormalizedCellIntents(a,b),'OLDER');
-  assert.equal(compareNormalizedCellIntents({...a,deviceSequence:2},a),'NEWER');
+  assert.equal(compareNormalizedCellIntents({...a,commandId:'a2',deviceSequence:2},a),'NEWER');
 });
 test('unverifiable clock never silently wins through arrival or an invented timestamp',()=>{
   const trusted=intent('server','2026-10-06T10:00:00Z');
