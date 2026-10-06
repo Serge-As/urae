@@ -201,10 +201,28 @@ export class ConnectedApplication {
     await this.saveCached(path,next);return next;
   }
   private async queueLocal(type:string,payload:Record<string,unknown>,idempotencyKey=makeId('op')):Promise<OutboxItem>{
-    const item=this.outbox.enqueue({tenantId:this.tenantId,actorId:this.actorId,type,payload,idempotencyKey});
-    await this.persistOutbox();
+    let item=this.outbox.enqueue({tenantId:this.tenantId,actorId:this.actorId,type,payload,idempotencyKey});
+    const financialTarget=type==='FINANCIAL_CELL_CORRECTION_PROPOSAL_V1';
+    if(financialTarget){
+      try{
+        const committed=await this.outboxStorage.recordFinancialCellIntent(
+          item as OutboxItem<Record<string,unknown>>,this.localDeviceId());
+        this.outbox.adoptDurable(committed);item=committed;
+      }catch(error){
+        // Do not allow an unpersisted in-memory intention to reach the network.
+        this.outbox.discardUncommitted(item.id);
+        throw Error('DURABLE_STORAGE_REQUIRED',{cause:error});
+      }
+    }else await this.persistOutbox();
     const groupId=String(payload.groupId??this.activeGroupId??'');
-    if(groupId&&IndexedDbSovereignStore.supported())await this.sovereign.append({tenantId:this.tenantId,groupId,actorId:this.actorId,type,payload:{...structuredClone(payload),idempotencyKey,outboxId:item.id}});
+    // The financial command already has an atomic, durable journal inside the
+    // Outbox database. A best-effort sovereign mirror must not turn a committed
+    // local action into a spurious failure that encourages duplicate validation.
+    if(groupId&&IndexedDbSovereignStore.supported()){
+      try{await this.sovereign.append({tenantId:this.tenantId,groupId,actorId:this.actorId,type,
+        payload:{...structuredClone(item.payload),idempotencyKey,outboxId:item.id}});}
+      catch(error){if(!financialTarget)throw error;console.info('Sovereign financial mirror deferred',error);}
+    }
     if(typeof window!=='undefined'&&typeof CustomEvent!=='undefined')window.dispatchEvent(new CustomEvent('eco:local-mutation',{detail:{type,id:item.id,idempotencyKey}}));
     return item;
   }
@@ -1126,7 +1144,7 @@ export class ConnectedApplication {
     if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');
     if(!Number.isSafeInteger(input.targetAmount)||input.targetAmount<0)throw Error('INVALID_CONTRIBUTION_AMOUNT');
     const current=Number(input.currentAmount??0),currentVersion=Number(input.currentVersion??0),operationKey='cell-target:'+makeId('op');
-    const payload={groupId:this.activeGroupId,meetingId:input.meetingId,membershipId:input.membershipId,rubricId:input.rubricId,targetAmount:input.targetAmount,baselineValue:current,baselineVersion:currentVersion,reason:input.reason??''};
+    const payload={groupId:this.activeGroupId,meetingId:input.meetingId,membershipId:input.membershipId,rubricId:input.rubricId,targetAmount:input.targetAmount,baselineValue:current,baselineVersion:currentVersion,reason:input.reason??'',recordedAtClient:new Date().toISOString()};
     // Persist the exact target command before attempting transport. If the HTTP
     // response is lost after commit, the same idempotency key is replayed later.
     const item=await this.queueLocal('FINANCIAL_CELL_CORRECTION_PROPOSAL_V1',payload,operationKey);
