@@ -42,6 +42,11 @@ export const compareNormalizedCellIntents = (
     textCompare(incoming.commandId,incumbent.commandId);
   return order>0?'NEWER':order<0?'OLDER':'SAME';
 };
+export const financialCellWinnerRecordId=(tenantId:string,groupId:string,meetingId:string,membershipId:string,rubricId:string,currency='XAF')=>
+  'cell_order_v2_'+encodeURIComponent(JSON.stringify([tenantId,groupId,meetingId,membershipId,rubricId,currency]));
+export const financialCellIntentRecordId=(tenantId:string,groupId:string,commandId:string)=>
+  'cell_intent_v2_'+encodeURIComponent(JSON.stringify([tenantId,groupId,commandId]));
+
 const now = (): string => new Date().toISOString();
 const requiredTextCode = (value:string):string => { const clean=value.trim().replace(/[^A-Z0-9_]/gi,'_').toUpperCase(); if(!clean)throw new Error('LEDGER_ACCOUNT_CODE_REQUIRED'); return clean; };
 
@@ -630,6 +635,9 @@ export class LedgerService {
     tenantId:Id;groupId:Id;meetingId:Id;membershipId:Id;rubricId:Id;
     targetAmount:number;expectedCurrentAmount?:number;expectedCellVersion?:number;currency?:Currency;
     reason?:string;idempotencyKey:string;
+    /** Server-verified normalized clock metadata, never client asserted. */
+    normalizedIntent?:{commandId:string;actorId:string;deviceId:string;deviceSequence:number;
+      effectiveRecordedAtMs:number;clockQuality:'VERIFIED'};
   },requestId=makeId('req')):Promise<{status:'APPLIED'|'NO_CHANGE';previousAmount:number;newAmount:number;cellVersion:number;operationId?:Id;receipt?:ContributionReceipt;evidenceEntry?:LedgerEntry}>{
     assertIntNonNegative('contributionAmount',input.targetAmount);
     if(!input.idempotencyKey.trim())throw new Error('IDEMPOTENCY_KEY_REQUIRED');
@@ -703,7 +711,20 @@ export class LedgerService {
     const plan:FinancialCorrectionPlan={kind:'cell_correction',operationId,idempotencyKey:input.idempotencyKey,intentFingerprint,
       tenantId:input.tenantId,groupId:input.groupId,primaryEntryId:primaryEntry.id,entries,receipt,
       accounts:accounts?[accounts.cash,accounts.memberFunds]:[],audits,
-      cellRevision:{meetingId:input.meetingId,membershipId:input.membershipId,rubricId:input.rubricId,currency,expectedVersion,nextVersion},outboxRecords:[outbox]};
+      cellRevision:{meetingId:input.meetingId,membershipId:input.membershipId,rubricId:input.rubricId,currency,expectedVersion,nextVersion},
+      outboxRecords:input.normalizedIntent?[outbox,
+        {id:financialCellWinnerRecordId(input.tenantId,input.groupId,input.meetingId,input.membershipId,input.rubricId,currency),
+          tenantId:input.tenantId,groupId:input.groupId,moduleId:'FINANCE.CELL_ORDER_V2',
+          title:'Intention financière retenue',status:'ACTIVE',tags:['finance','cell-winner','verified-clock'],
+          data:{...input.normalizedIntent,amount:input.targetAmount,cellVersion:nextVersion},
+          createdBy:ctx.actorId,createdAt:commitAt,updatedAt:commitAt},
+        {id:financialCellIntentRecordId(input.tenantId,input.groupId,input.idempotencyKey),
+          tenantId:input.tenantId,groupId:input.groupId,moduleId:'FINANCE.CELL_INTENT_V2',
+          title:'Reçu durable de saisie financière',status:'DONE',tags:['finance','idempotency','applied'],
+          data:{...input.normalizedIntent,status:'APPLIED',targetAmount:input.targetAmount,
+            canonicalAmount:input.targetAmount,cellVersion:nextVersion},
+          createdBy:ctx.actorId,createdAt:commitAt,updatedAt:commitAt}
+      ]:[outbox]};
     const committed=await this.repo.commitFinancialCorrection(plan);
     const evidenceEntry=committed.entries.find(e=>e.id===committed.primaryEntryId)??committed.entries.at(-1);
     if(committed.operationId===operationId)this.kernel.events.publish({id:makeId('event'),type:'FINANCIAL_CELL_CORRECTED',occurredAt:commitAt,
@@ -711,6 +732,63 @@ export class LedgerService {
       payload:{operationId,meetingId:input.meetingId,membershipId:input.membershipId,rubricId:input.rubricId,previousAmount:current,newAmount:input.targetAmount},
       idempotencyKey:input.idempotencyKey});
     return{status:'APPLIED',previousAmount:current,newAmount:input.targetAmount,cellVersion:committed.cellRevision.nextVersion,operationId:committed.operationId,receipt:committed.receipt,evidenceEntry};
+  }
+
+  /** Same amount ≠ same intent. Stamp a later verified validation without
+   * modifying any cash account, loan, contribution receipt or posting.
+   * The revision, winning order, durable idempotent receipt and audit commit
+   * together behind the same D1 CAS as a real correction.
+   */
+  async reaffirmCashContributionCell(input:{
+    tenantId:Id;groupId:Id;meetingId:Id;membershipId:Id;rubricId:Id;amount:number;
+    expectedCellVersion:number;idempotencyKey:string;
+    intent:{commandId:string;actorId:string;deviceId:string;deviceSequence:number;
+      effectiveRecordedAtMs:number;clockQuality:'VERIFIED'};
+  }):Promise<{status:'NO_AMOUNT_CHANGE';amount:number;cellVersion:number}>{
+    assertIntNonNegative('contributionAmount',input.amount);
+    const ctx=this.kernel.context.get();
+    await assertCanManageGroup(this.repo,ctx,input.tenantId,input.groupId);
+    if(ctx.actorId!==input.intent.actorId||input.idempotencyKey!==input.intent.commandId)
+      throw Error('CELL_INTENT_ACTOR_MISMATCH');
+    const [membership,meeting,rubric]=await Promise.all([
+      this.repo.getMembership(input.tenantId,input.groupId,input.membershipId),
+      this.repo.getMeeting(input.tenantId,input.groupId,input.meetingId),
+      this.repo.getRubricDefinition(input.tenantId,input.groupId,input.rubricId)
+    ]);
+    if(!membership||membership.status!=='active'||!meeting||meeting.status==='cancelled'||!rubric)
+      throw Error('CELL_SCOPE_INVALID');
+    const nextVersion=input.expectedCellVersion+1,stamp=now();
+    const audited=this.kernel.audit.append({tenantId:input.tenantId,actorId:ctx.actorId,
+      action:'FINANCIAL_CELL_REAFFIRMED',targetType:'financial_cell',
+      targetId:encodeURIComponent(JSON.stringify([input.groupId,input.meetingId,input.membershipId,input.rubricId,'XAF'])),
+      requestId:ctx.requestId,metadata:{amount:input.amount,commandId:input.intent.commandId,cellVersion:nextVersion}});
+    const records:WorkspaceRecord[]=[
+      {id:financialCellWinnerRecordId(input.tenantId,input.groupId,input.meetingId,input.membershipId,input.rubricId),
+        tenantId:input.tenantId,groupId:input.groupId,moduleId:'FINANCE.CELL_ORDER_V2',
+        title:'Intention financière retenue',status:'ACTIVE',tags:['finance','cell-winner','verified-clock'],
+        data:{...input.intent,amount:input.amount,cellVersion:nextVersion},
+        createdBy:ctx.actorId,createdAt:stamp,updatedAt:stamp},
+      {id:financialCellIntentRecordId(input.tenantId,input.groupId,input.idempotencyKey),
+        tenantId:input.tenantId,groupId:input.groupId,moduleId:'FINANCE.CELL_INTENT_V2',
+        title:'Reçu de confirmation du même montant',status:'DONE',
+        tags:['finance','same-amount','idempotency'],
+        data:{...input.intent,status:'NO_AMOUNT_CHANGE',targetAmount:input.amount,
+          canonicalAmount:input.amount,cellVersion:nextVersion},
+        createdBy:ctx.actorId,createdAt:stamp,updatedAt:stamp},
+      {id:'cell_stamp_dispatch_'+encodeURIComponent(input.idempotencyKey),
+        tenantId:input.tenantId,groupId:input.groupId,moduleId:'FINANCE.CELL_STAMP_OUTBOX',
+        title:'Diffusion de confirmation financière',status:'ACTIVE',tags:['finance','pending'],
+        data:{commandId:input.idempotencyKey,meetingId:input.meetingId,
+          membershipId:input.membershipId,rubricId:input.rubricId,
+          amount:input.amount,cellVersion:nextVersion},
+        createdBy:ctx.actorId,createdAt:stamp,updatedAt:stamp}
+    ];
+    await this.repo.commitFinancialCellStamp({tenantId:input.tenantId,groupId:input.groupId,
+      operationId:input.idempotencyKey,meetingId:input.meetingId,
+      membershipId:input.membershipId,rubricId:input.rubricId,currency:'XAF',
+      expectedVersion:input.expectedCellVersion,nextVersion,records,
+      audit:audited,createdAt:stamp});
+    return{status:'NO_AMOUNT_CHANGE',amount:input.amount,cellVersion:nextVersion};
   }
 
   private async ensureNamedAccount(tenantId:Id,groupId:Id,currency:Currency,code:string,type:LedgerAccount['type']):Promise<LedgerAccount>{
