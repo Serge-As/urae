@@ -628,7 +628,7 @@ export class ConnectedApplication {
 
   setLocale(locale:string):void{this.locale=locale==='en'?'en':'fr';try{localStorage.setItem('tontine.locale',this.locale);}catch{}}
   setConnectivity(_connectivity:'online'|'offline'|'degraded'):void{}
-  selectGroup(groupId?:string):void{const before=this.activeGroupId;this.activeGroupId=groupId;this.tenantId=(groupId?this.groupTenants.get(groupId):undefined)??this.homeTenantId??this.tenantId;if(before!==groupId){this.financialClockAnchor=undefined;if(groupId)void this.warmFinancialClock();}try{if(groupId)localStorage.setItem('tontine.activeGroupId',groupId);else localStorage.removeItem('tontine.activeGroupId');}catch{}}
+  selectGroup(groupId?:string):void{const before=this.activeGroupId;this.activeGroupId=groupId;this.tenantId=(groupId?this.groupTenants.get(groupId):undefined)??this.homeTenantId??this.tenantId;if(before!==groupId){this.financialClockAnchor=undefined;if(groupId&&typeof window!=='undefined')void this.warmFinancialClock();}try{if(groupId)localStorage.setItem('tontine.activeGroupId',groupId);else localStorage.removeItem('tontine.activeGroupId');}catch{}}
   activeGroup():string|undefined{return this.activeGroupId;}
 
   async analyzeGroupDocument(text:string):Promise<{fingerprint:string;suggestions:any[];requiresHumanConfirmation:boolean;financialWrites:boolean}>{return this.request('/api/v1/assistant/group-launch/analyze',{method:'POST',body:JSON.stringify({text})});}
