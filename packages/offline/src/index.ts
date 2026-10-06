@@ -139,7 +139,7 @@ export class IndexedDbOutboxAdapter {
     if(!IndexedDbOutboxAdapter.supported())throw Error('DURABLE_STORAGE_REQUIRED');
     const p=item.payload,groupId=String(p.groupId??''),meetingId=String(p.meetingId??''),
       membershipId=String(p.membershipId??''),rubricId=String(p.rubricId??'');
-    if(item.type!=='FINANCIAL_CELL_CORRECTION_PROPOSAL_V1'||!groupId||!meetingId||!membershipId||!rubricId||
+    if(!['FINANCIAL_CELL_CORRECTION_PROPOSAL_V1','FINANCIAL_CELL_CORRECTION_PROPOSAL_V2'].includes(item.type)||!groupId||!meetingId||!membershipId||!rubricId||
        !deviceId||!Number.isSafeInteger(Number(p.targetAmount))||Number(p.targetAmount)<0)throw Error('CELL_INTENT_INVALID');
     const db=await this.open();
     try{
