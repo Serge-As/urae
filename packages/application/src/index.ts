@@ -1206,7 +1206,14 @@ export class ConnectedApplication {
         method:'POST',headers:{'x-idempotency-key':operationKey},
         body:JSON.stringify({membershipId:input.membershipId,rubricId:input.rubricId,targetAmount:input.targetAmount,expectedCurrentAmount:current,expectedCellVersion:currentVersion,reason:input.reason??'',intentV2:item.payload})
       });
-      this.outbox.markConfirmedByKey(this.tenantId,this.actorId,operationKey);await this.persistOutbox();return result;
+      if((result as any)?.status==='CLOCK_REVIEW'){
+        // Persist the unresolved intent and surface it as a conflict. A clock
+        // anomaly is never a successful financial confirmation.
+        this.outbox.markConflictByKey(this.tenantId,this.actorId,operationKey);
+        await this.persistOutbox();throw Error('CELL_CLOCK_REVIEW_REQUIRED');
+      }
+      this.outbox.markConfirmedByKey(this.tenantId,this.actorId,operationKey);
+      await this.persistOutbox();return result;
     }catch(error){
       if(error instanceof Error&&['CELL_VALUE_CONFLICT','CELL_VERSION_CONFLICT'].includes(error.message)){this.outbox.markConflictByKey(this.tenantId,this.actorId,operationKey);await this.persistOutbox();throw error;}
       if(error instanceof Error&&(error.message==='NETWORK_UNAVAILABLE'||/^HTTP_5\d\d$/.test(error.message))){
@@ -1769,7 +1776,7 @@ export class ConnectedApplication {
 
   async syncOutbox():Promise<OutboxItem[]>{
     if(this.serverBudgetBlocked()||typeof navigator!=='undefined'&&navigator.onLine===false)return this.outbox.list();
-    const result=await this.outbox.sync(async item=>{try{const groupId=(item.payload as {groupId?:string}).groupId;const r=await this.request<Record<string,unknown>&{accepted:boolean;stored?:boolean}>('/api/v1/outbox/apply',{method:'POST',headers:{'x-active-group-id':groupId??''},body:JSON.stringify(item)});return{ok:r.accepted&&r.stored!==false,result:r};}catch(e){const message=e instanceof Error?e.message:String(e);return{ok:false,conflict:['IDEMPOTENCY_CONFLICT','FORBIDDEN_SCOPE','CELL_VALUE_CONFLICT','CELL_VERSION_CONFLICT'].includes(message),error:message};}});await this.persistOutbox();return result;
+    const result=await this.outbox.sync(async item=>{try{const groupId=(item.payload as {groupId?:string}).groupId;const r=await this.request<Record<string,unknown>&{accepted:boolean;stored?:boolean}>('/api/v1/outbox/apply',{method:'POST',headers:{'x-active-group-id':groupId??''},body:JSON.stringify(item)});return{ok:r.accepted&&r.stored!==false&&r.status!=='CLOCK_REVIEW',conflict:r.status==='CLOCK_REVIEW',result:r};}catch(e){const message=e instanceof Error?e.message:String(e);return{ok:false,conflict:['IDEMPOTENCY_CONFLICT','FORBIDDEN_SCOPE','CELL_VALUE_CONFLICT','CELL_VERSION_CONFLICT','CELL_CLOCK_REVIEW_REQUIRED'].includes(message),error:message};}});await this.persistOutbox();return result;
   }
   async queueDemoIntent(note='Local note'):Promise<OutboxItem>{const item=this.outbox.enqueue({tenantId:this.tenantId,actorId:this.actorId,type:'MEETING_NOTE_UPDATED',payload:{groupId:this.activeGroupId,note},idempotencyKey:`note-${this.activeGroupId??'none'}-${Date.now()}`});await this.persistOutbox();return item;}
   async retryOutboxItem(id:string):Promise<OutboxItem|undefined>{const item=this.outbox.retry(id);await this.persistOutbox();return item;}
