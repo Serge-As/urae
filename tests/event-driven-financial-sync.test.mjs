@@ -13,7 +13,7 @@ test('free-tier financial recovery is event-driven, bounded and never an idle D1
   const snippet=main.slice(start,end>start?end:start+6500);
   assert.doesNotMatch(snippet,/if\(FREE_CONSERVATION_MODE\)return/,'free mode must not strand a validated queued cell');
   assert.match(snippet,/maxAttempts\s*=\s*FREE_CONSERVATION_MODE\s*\?\s*3\s*:\s*8/);
-  assert.match(snippet,/\[200,650,1500\]/,'free retries remain bounded below five seconds');
+  assert.match(snippet,/\[200,\s*650,\s*1500\]/,'free retries remain bounded below five seconds');
   assert.match(main,/if\(FREE_CONSERVATION_MODE\)return;[\s\S]{0,220}setInterval\(/,'only the optional canonical snapshot poll is disabled in free mode');
   assert.match(app,/transportUnavailableUntil\s*=\s*Date\.now\(\)\s*\+\s*3500/);
   assert.match(app,/eco:transport-retry-ready/);
@@ -35,7 +35,7 @@ test('manual refresh preserves navigation and does not bypass a known D1 quota g
   assert.match(snippet,/captureNavState\(\)/);
   assert.match(snippet,/forceTransportRetry/);
   assert.doesNotMatch(snippet,/forceServerRetry/);
-  assert.match(snippet,/showView\(preserved\.view,preserved\)/);
+  assert.match(snippet,/showView\(preserved\.view,\s*preserved\)/);
   assert.match(main,/matrixScrollLeft/);
   assert.match(main,/individualScrollLeft/);
 });
@@ -56,6 +56,7 @@ test('group sheet expense endpoint persists and lists the same canonical expense
     if(!response.ok)throw new Error(method+' '+path+' -> '+response.status+' '+text);
     return data;
   };
+  await request('/api/v1/groups/'+groupId+'/ledger/opening-balance','POST',{amount:5000,currency:'XAF',note:'Caisse test synchronisation',idempotencyKey:'opening-expense-sync'});
   const expense=await request('/api/v1/groups/'+groupId+'/expenses','POST',{amount:750,label:'Transport séance',scope:'SHEET',meetingId:'meeting-expense',membershipId:'membership-expense',rubricId:'rubric-expense',idempotencyKey:'expense-sync-1'});
   assert.equal(expense.amount,750);
   assert.equal(expense.scope,'SHEET');
