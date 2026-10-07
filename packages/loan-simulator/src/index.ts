@@ -1,4 +1,4 @@
-export type LoanPaymentPriority='CAPITAL_FIRST'|'INTEREST_FIRST';
+export type LoanPaymentPriority='CAPITAL_FIRST'|'INTEREST_FIRST'|'EXPLICIT_ALLOCATION';
 export type LoanInterestBasis='OUTSTANDING'|'INITIAL';
 
 export interface PeriodicLoanInput{
@@ -8,6 +8,8 @@ export interface PeriodicLoanInput{
   priority:LoanPaymentPriority;
   interestBasis?:LoanInterestBasis;
   payments?:number[];
+  principalPayments?:number[];
+  interestPayments?:number[];
   openingInterestDue?:number;
 }
 
@@ -62,9 +64,11 @@ export function simulatePeriodicLoan(input:PeriodicLoanInput):PeriodicLoanLine[]
   if(principal<=0)throw Error('INVALID_LOAN_PRINCIPAL');
   if(!Number.isSafeInteger(input.periods)||input.periods<1||input.periods>120)throw Error('INVALID_LOAN_PERIODS');
   if(!Number.isFinite(input.ratePercentPerPeriod)||input.ratePercentPerPeriod<0||input.ratePercentPerPeriod>100)throw Error('INVALID_LOAN_RATE');
-  if(!['CAPITAL_FIRST','INTEREST_FIRST'].includes(input.priority))throw Error('INVALID_LOAN_PRIORITY');
+  if(!['CAPITAL_FIRST','INTEREST_FIRST','EXPLICIT_ALLOCATION'].includes(input.priority))throw Error('INVALID_LOAN_PRIORITY');
   const basis=input.interestBasis??'OUTSTANDING';if(!['OUTSTANDING','INITIAL'].includes(basis))throw Error('INVALID_LOAN_INTEREST_BASIS');
   const payments=(input.payments??[]).map((p,i)=>xaf(p,'LOAN_PAYMENT_'+(i+1)));
+  const principalPayments=(input.principalPayments??[]).map((p,i)=>xaf(p,'LOAN_PRINCIPAL_PAYMENT_'+(i+1)));
+  const interestPayments=(input.interestPayments??[]).map((p,i)=>xaf(p,'LOAN_INTEREST_PAYMENT_'+(i+1)));
   let capital=principal,interestDue=xaf(input.openingInterestDue??0,'OPENING_INTEREST_DUE');const rows:PeriodicLoanLine[]=[];
   for(let period=1;period<=input.periods;period++){
     const principalBefore=capital,interestOpening=interestDue;
@@ -75,8 +79,14 @@ export function simulatePeriodicLoan(input:PeriodicLoanInput):PeriodicLoanLine[]
     const taxable=capital<=0?0:(basis==='INITIAL'?principal:capital);
     const interestNew=Math.round(taxable*input.ratePercentPerPeriod/100);
     interestDue+=interestNew;
-    const payment=payments[period-1]??0;let available=payment,principalPaid=0,interestPaid=0;
-    if(input.priority==='CAPITAL_FIRST'){
+    let payment=payments[period-1]??0,available=payment,principalPaid=0,interestPaid=0;
+    if(input.priority==='EXPLICIT_ALLOCATION'){
+      const plannedPrincipal=principalPayments[period-1]??0,plannedInterest=interestPayments[period-1]??0;
+      payment=plannedPrincipal+plannedInterest;available=0;
+      if(plannedPrincipal>capital)throw Error('LOAN_EXPLICIT_PRINCIPAL_EXCEEDS_DUE');
+      if(plannedInterest>interestDue)throw Error('LOAN_EXPLICIT_INTEREST_EXCEEDS_DUE');
+      principalPaid=plannedPrincipal;interestPaid=plannedInterest;capital-=principalPaid;interestDue-=interestPaid;
+    }else if(input.priority==='CAPITAL_FIRST'){
       principalPaid=Math.min(capital,available);capital-=principalPaid;available-=principalPaid;
       interestPaid=Math.min(interestDue,available);interestDue-=interestPaid;available-=interestPaid;
     }else{
