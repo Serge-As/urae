@@ -335,8 +335,9 @@ export const mountCompletionUI=({app,notify,showError,getMembers,getMeetings,get
     const out=loan?.id?{...fallback,rateBasisPointsPerPeriod:Number(loan.data?.rateBasisPointsPerPeriod??fallback.rateBasisPointsPerPeriod),paymentPriority:String(loan.data?.paymentPriority??fallback.paymentPriority),interestTiming:String(loan.data?.interestTiming??fallback.interestTiming),policyRevisionId:String(loan.data?.policyRevisionId??'')}:{...fallback,policyRevisionId:''};
     for(const revision of history){
       const effective=Date.parse(String(revision?.effectiveAt??''));if(!Number.isFinite(effective)||effective>at)continue;
-      const scope=String(revision?.scope??'NEW_LOANS_ONLY'),createdAfter=created>=effective,selected=Array.isArray(revision?.selectedLoanIds)&&revision.selectedLoanIds.map(String).includes(String(loan?.id??''));
-      if(!(scope==='NEW_AND_ALL_OPEN_LOANS'||(scope==='NEW_AND_SELECTED_OPEN_LOANS'&&(createdAfter||selected))||(scope==='NEW_LOANS_ONLY'&&createdAfter)))continue;
+      const scope=String(revision?.scope??'NEW_LOANS_ONLY'),loanId=String(loan?.id??''),createdAfter=created>=effective,closedBeforeEffect=String(loan?.data?.completionState??'')==='CLOSED'&&(Date.parse(String(loan?.updatedAt??''))||0)>0&&(Date.parse(String(loan?.updatedAt??''))||0)<=effective;
+      const selected=Array.isArray(revision?.selectedLoanIds)&&revision.selectedLoanIds.map(String).includes(loanId),affected=Array.isArray(revision?.affectedLoanIds)&&revision.affectedLoanIds.map(String).includes(loanId),legacyOpenAll=scope==='NEW_AND_ALL_OPEN_LOANS'&&!Array.isArray(revision?.affectedLoanIds)&&!closedBeforeEffect;
+      if(closedBeforeEffect||!(createdAfter||(scope==='NEW_AND_ALL_OPEN_LOANS'&&(affected||legacyOpenAll))||(scope==='NEW_AND_SELECTED_OPEN_LOANS'&&selected)))continue;
       Object.assign(out,loanPolicySnapshot(revision.after),{policyRevisionId:String(revision.id??'')});
     }
     return out;
