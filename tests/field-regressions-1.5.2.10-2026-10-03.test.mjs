@@ -56,7 +56,8 @@ test('generic repayment envelope auto-allocates by the current policy',()=>{
   const replay=worker.slice(worker.indexOf("if(nature==='REPAYMENT')"),worker.indexOf("throw Error('UNSUPPORTED_FINANCIAL_SHEET_NATURE')"));
   assert.match(replay,/component=.*'AUTO'/);
   assert.match(replay,/applyLoanPayment\(/);
-  assert.match(replay,/loanRubric\?\.policies\?\.loan\?\.paymentPriority/);
+  assert.match(replay,/resolveLoanPolicyForOperation\(loan,loanRubric\?\.policies\?\.loan/);
+  assert.match(replay,/effectivePolicy\.paymentPriority/);
 });
 
 test('loan policy, portfolio, open-loan state and debt journey use compact selector/table surfaces',()=>{
@@ -65,7 +66,8 @@ test('loan policy, portfolio, open-loan state and debt journey use compact selec
   assert.match(completion,/loan-open-state-table/);
   assert.match(completion,/Parcours d’une dette/);
   assert.match(completion,/app\.loanHistory\(loanSelect\.value\)/);
-  assert.match(completion,/effectiveLoan=.*paymentPriority:currentPolicy\?\.paymentPriority/s);
+  assert.match(completion,/effectiveLoanPolicyForDisplay\(loan,currentPolicy\)/);
+  assert.match(completion,/effectiveLoan=.*data:\{\.\.\.loan\.data,\.\.\.resolved\}/s);
   assert.match(completion,/Récapitulatif de l’évolution des dettes/);
 });
 
