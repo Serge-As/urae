@@ -338,7 +338,9 @@ export const mountCompletionUI=({app,notify,showError,getMembers,getMeetings,get
       const scope=String(revision?.scope??'NEW_LOANS_ONLY'),loanId=String(loan?.id??''),createdAfter=created>=effective,closedBeforeEffect=String(loan?.data?.completionState??'')==='CLOSED'&&(Date.parse(String(loan?.updatedAt??''))||0)>0&&(Date.parse(String(loan?.updatedAt??''))||0)<=effective;
       const selected=Array.isArray(revision?.selectedLoanIds)&&revision.selectedLoanIds.map(String).includes(loanId),affected=Array.isArray(revision?.affectedLoanIds)&&revision.affectedLoanIds.map(String).includes(loanId),legacyOpenAll=scope==='NEW_AND_ALL_OPEN_LOANS'&&!Array.isArray(revision?.affectedLoanIds)&&!closedBeforeEffect;
       if(closedBeforeEffect||!(createdAfter||(scope==='NEW_AND_ALL_OPEN_LOANS'&&(affected||legacyOpenAll))||(scope==='NEW_AND_SELECTED_OPEN_LOANS'&&selected)))continue;
-      Object.assign(out,loanPolicySnapshot(revision.after),{policyRevisionId:String(revision.id??'')});
+      const next=loanPolicySnapshot(revision.after),disbursedAt=Date.parse(String(loan?.data?.disbursedAt??''))||0;
+      if(disbursedAt&&disbursedAt<effective&&next.interestTiming!=='NEXT_SESSION_DUE')next.interestTiming=out.interestTiming;
+      Object.assign(out,next,{policyRevisionId:String(revision.id??'')});
     }
     return out;
   };
