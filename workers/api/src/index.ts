@@ -482,6 +482,76 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
   const jsonStringArray=(value:unknown):string[]=>{try{const parsed=JSON.parse(String(value??'[]'));return Array.isArray(parsed)?parsed.map(String):[];}catch{return[];}};
   const meetingMoment=(meeting:any)=>Date.parse(String(meeting?.scheduledAt??meeting?.openedAt??meeting?.createdAt??''))||0;
   const normalizedLoanInterestTiming=(value:unknown):'NEXT_SESSION_DUE'|'UPFRONT_DEDUCTED'|'UPFRONT_REQUIRED'=>['UPFRONT_DEDUCTED','UPFRONT_REQUIRED'].includes(String(value))?String(value) as any:'NEXT_SESSION_DUE';
+  const loanPolicySnapshot=(policy:any)=>{
+    const priority=['INTEREST_FIRST','EXPLICIT_ALLOCATION'].includes(String(policy?.paymentPriority))?String(policy.paymentPriority):'CAPITAL_FIRST';
+    return{
+      rateBasisPointsPerPeriod:Math.max(0,finite(policy?.rateBasisPointsPerPeriod,0)),
+      paymentPriority:priority,
+      interestTiming:normalizedLoanInterestTiming(policy?.interestTiming),
+      fundingMode:String(policy?.fundingMode)==='SAVINGS_REPAYMENTS_ONLY'?'SAVINGS_REPAYMENTS_ONLY':'AVAILABLE_GROUP_CASH',
+      carryForwardUnusedFunds:policy?.carryForwardUnusedFunds!==false
+    };
+  };
+  const loanPolicyRevisions=(policy:any)=>Array.isArray(policy?.revisions)?policy.revisions.filter((x:any)=>x&&typeof x==='object'):[] as any[];
+  const resolveLoanPolicyForOperation=(loan:any,policy:any,operationAtMs=Date.now())=>{
+    const history=loanPolicyRevisions(policy).slice().sort((a:any,b:any)=>(Date.parse(String(a.effectiveAt??''))||0)-(Date.parse(String(b.effectiveAt??''))||0)||String(a.id??'').localeCompare(String(b.id??'')));
+    const loanCreated=Date.parse(String(loan?.createdAt??loan?.data?.createdAt??loan?.updatedAt??''))||operationAtMs;
+    const fallback=history.length?loanPolicySnapshot(history[0]?.before):loanPolicySnapshot(policy);
+    const base=loan?.id?{
+      rateBasisPointsPerPeriod:finite(loan?.data?.rateBasisPointsPerPeriod,fallback.rateBasisPointsPerPeriod),
+      paymentPriority:['INTEREST_FIRST','EXPLICIT_ALLOCATION'].includes(String(loan?.data?.paymentPriority))?String(loan.data.paymentPriority):String(fallback.paymentPriority),
+      interestTiming:normalizedLoanInterestTiming(loan?.data?.interestTiming??fallback.interestTiming),
+      fundingMode:String(loan?.data?.fundingMode??fallback.fundingMode)==='SAVINGS_REPAYMENTS_ONLY'?'SAVINGS_REPAYMENTS_ONLY':'AVAILABLE_GROUP_CASH',
+      carryForwardUnusedFunds:loan?.data?.carryForwardUnusedFunds===undefined?fallback.carryForwardUnusedFunds:loan.data.carryForwardUnusedFunds!==false
+    }:fallback;
+    const result:any={...base,policyRevisionId:String(loan?.data?.policyRevisionId??''),policyRevisionEffectiveAt:String(loan?.data?.policyRevisionEffectiveAt??'')};
+    for(const revision of history){
+      const effectiveMs=Date.parse(String(revision.effectiveAt??''));if(!Number.isFinite(effectiveMs)||effectiveMs>operationAtMs)continue;
+      const scope=String(revision.scope??'NEW_LOANS_ONLY'),createdAfter=loanCreated>=effectiveMs;
+      const selected=Array.isArray(revision.selectedLoanIds)&&revision.selectedLoanIds.map(String).includes(String(loan?.id??''));
+      const applies=scope==='NEW_AND_ALL_OPEN_LOANS'||(scope==='NEW_AND_SELECTED_OPEN_LOANS'&&(createdAfter||selected))||(scope==='NEW_LOANS_ONLY'&&createdAfter);
+      if(!applies)continue;
+      Object.assign(result,loanPolicySnapshot(revision.after),{policyRevisionId:String(revision.id??''),policyRevisionEffectiveAt:String(revision.effectiveAt??'')});
+    }
+    return result;
+  };
+  const updateRubricPoliciesGoverned=async(groupId:string,rubricId:string,policies:RubricPolicies)=>{
+    const current=await repo.getRubricDefinition(ctx.tenantId,groupId,rubricId);if(!current)throw Error('RUBRIC_NOT_FOUND');
+    const incoming:any=structuredClone(policies??{}),incomingLoan:any=incoming.loan;
+    if(!incomingLoan)return{updated:await rubrics.updatePolicies({tenantId:ctx.tenantId,groupId,rubricId,policies:incoming}),revision:null,affectedLoanIds:[] as string[]};
+    const prior:any=current.policies?.loan??{},serverHistory=loanPolicyRevisions(prior);
+    const control:any=incomingLoan.changeControl;
+    const {changeControl:_discarded,revisions:_untrusted,...loanFields}=incomingLoan;
+    if(!control){
+      incoming.loan={...loanFields,revisions:serverHistory};
+      return{updated:await rubrics.updatePolicies({tenantId:ctx.tenantId,groupId,rubricId,policies:incoming}),revision:null,affectedLoanIds:[] as string[]};
+    }
+    const commandId=String(control.commandId??makeId('loan_policy_change')),revisionId='loan_policy_revision_'+commandId.replace(/[^A-Za-z0-9_.:-]/g,'_').slice(0,140);
+    const duplicate=serverHistory.find((x:any)=>String(x.id)===revisionId);
+    if(duplicate)return{updated:current,revision:duplicate,affectedLoanIds:[] as string[]};
+    const scope=['NEW_AND_ALL_OPEN_LOANS','NEW_AND_SELECTED_OPEN_LOANS'].includes(String(control.scope))?String(control.scope):'NEW_LOANS_ONLY';
+    const selectedLoanIds=[...new Set((Array.isArray(control.selectedLoanIds)?control.selectedLoanIds:[]).map(String).filter(Boolean))];
+    if(scope==='NEW_AND_SELECTED_OPEN_LOANS'&&!selectedLoanIds.length)throw Error('LOAN_POLICY_SELECTED_LOANS_REQUIRED');
+    const effectiveMode=String(control.effectiveMode??'IMMEDIATE');
+    let effectiveAt=new Date().toISOString(),effectiveMeetingId='';
+    if(effectiveMode==='DATE'){
+      const ms=Date.parse(String(control.effectiveAt??''));if(!Number.isFinite(ms))throw Error('LOAN_POLICY_EFFECTIVE_DATE_INVALID');effectiveAt=new Date(ms).toISOString();
+    }else if(effectiveMode==='MEETING'){
+      effectiveMeetingId=String(control.effectiveMeetingId??'');if(!effectiveMeetingId)throw Error('LOAN_POLICY_EFFECTIVE_MEETING_REQUIRED');
+      const meeting=await repo.getMeeting(ctx.tenantId,groupId,effectiveMeetingId);if(!meeting)throw Error('MEETING_NOT_FOUND');
+      const ms=meetingMoment(meeting);if(!ms)throw Error('LOAN_POLICY_EFFECTIVE_MEETING_DATE_REQUIRED');effectiveAt=new Date(ms).toISOString();
+    }
+    const allLoans=await completion.list(groupId,'LOAN'),openStates=new Set(['SUBMITTED','APPROVED','DISBURSED','REPAYING']);
+    const eligibleOpen=allLoans.filter((loan:any)=>openStates.has(String(loan.data?.completionState??'')));
+    if(scope==='NEW_AND_SELECTED_OPEN_LOANS'){
+      const known=new Set(eligibleOpen.map((x:any)=>String(x.id))),missing=selectedLoanIds.filter(id=>!known.has(id));if(missing.length)throw Error('LOAN_POLICY_SELECTED_LOAN_NOT_OPEN');
+    }
+    const revision:any={id:revisionId,createdAt:new Date().toISOString(),createdBy:ctx.actorId,effectiveAt,effectiveMeetingId:effectiveMeetingId||undefined,scope,selectedLoanIds:scope==='NEW_AND_SELECTED_OPEN_LOANS'?selectedLoanIds:undefined,before:loanPolicySnapshot(prior),after:loanPolicySnapshot(loanFields)};
+    incoming.loan={...loanFields,revisions:[...serverHistory,revision]};
+    const updated=await rubrics.updatePolicies({tenantId:ctx.tenantId,groupId,rubricId,policies:incoming});
+    const affectedLoanIds=scope==='NEW_AND_ALL_OPEN_LOANS'?eligibleOpen.map((x:any)=>String(x.id)):scope==='NEW_AND_SELECTED_OPEN_LOANS'?selectedLoanIds:[];
+    return{updated,revision,affectedLoanIds};
+  };
   const loanFundingReservationId=(key:string)=>'loan_funding_reservation_'+encodeURIComponent(key).slice(0,160);
   const loanFundingAvailability=async(input:{groupId:string;meetingId?:string;mode:'SAVINGS_REPAYMENTS_ONLY'|'AVAILABLE_GROUP_CASH';carryForward:boolean;currency:string;extraRepayment?:number})=>{
     if(!input.carryForward&&!input.meetingId)throw Error('MEETING_REQUIRED_FOR_SESSION_ONLY_LOAN_FUNDING');
