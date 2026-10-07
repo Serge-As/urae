@@ -1249,6 +1249,13 @@ const protectCanonicalFinancialHost=root=>{
 };
 const renderCanonicalFinancialTable=({root,mode='meeting',meetingId='',membershipId='',showToolbar=true,editable=isManager()})=>{
     if(!root)return;
+    const previousWrap=root.querySelector?.('.canonical-financial-wrap');
+    const previousMatrixScroll=previousWrap?{left:Number(previousWrap.scrollLeft)||0,top:Number(previousWrap.scrollTop)||0}:null;
+    const restoreReplacedMatrixScroll=wrap=>{
+      if(!previousMatrixScroll||!wrap)return;
+      const apply=()=>{wrap.scrollLeft=previousMatrixScroll.left;wrap.scrollTop=previousMatrixScroll.top;};
+      apply();requestAnimationFrame(apply);setTimeout(apply,80);
+    };
     const activeEditor=root.querySelector?.('.cell-target-input:focus');
     if(root.dataset.canonicalTableReady==='1'&&activeEditor&&String(activeEditor.value??'').trim()!==''){
       root.dataset.canonicalRenderDeferred='1';
@@ -1310,7 +1317,7 @@ const renderCanonicalFinancialTable=({root,mode='meeting',meetingId='',membershi
         const add=document.createElement('button');add.type='button';add.className='secondary';add.textContent=tx('+ Nouvelle séance','+ New meeting');add.onclick=()=>go('sessions',{anchor:'sessionsCreateForm',force:true});
         toolbar.append(label,other,add);root.append(toolbar);
       }
-      root.append(wrap,note);root.dataset.canonicalTableReady='1';return;
+      root.append(wrap,note);restoreReplacedMatrixScroll(wrap);root.dataset.canonicalTableReady='1';return;
     }
     const member=activeMembers.find(x=>x.id===membershipId);
     if(!member){root.innerHTML='<div class="empty-state">'+tx('Aucune fiche individuelle accessible.','No individual sheet available.')+'</div>';return;}
@@ -1328,7 +1335,7 @@ const renderCanonicalFinancialTable=({root,mode='meeting',meetingId='',membershi
     for(const r of activeRubrics){const amount=activeMeetings.reduce((sum,meeting)=>sum+exactCellAmount(member.id,r.id,meeting.id),0);grand+=amount;const td=document.createElement('td');td.dataset.totalRubricId=r.id;td.textContent=fmt(amount);totalRow.append(td);}
     const grandTd=document.createElement('td');grandTd.className='table-grand-total';grandTd.textContent=fmt(grand);totalRow.append(grandTd);body.append(totalRow);table.append(body);wrap.append(table);
     const note=document.createElement('p');note.className='truth-notice';note.textContent=tx('Cette fiche utilise exactement le même éditeur financier que la feuille de séance. Les totaux de chaque rubrique figurent sur la dernière ligne.','This sheet uses exactly the same financial editor as the meeting sheet. Totals for every rubric appear on the last row.');
-    root.append(wrap,note);root.dataset.canonicalTableReady='1';
+    root.append(wrap,note);restoreReplacedMatrixScroll(wrap);root.dataset.canonicalTableReady='1';
 };
 const renderMeetingMatrix=()=>renderCanonicalFinancialTable({root:document.querySelector('#meetingMatrix'),mode:'meeting',meetingId:ensureMatrixMeeting(),showToolbar:true,editable:isManager()});
 const renderIndividualSheetMatrix=()=>{
