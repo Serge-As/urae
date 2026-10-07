@@ -1497,6 +1497,11 @@ export class ConnectedApplication {
     if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');
     const now=Date.now(),cached=this.liveTicketCache;
     if(cached&&cached.groupId===this.activeGroupId&&cached.expiresAt-now>5*60_000)return{ticket:cached.ticket,expiresAt:new Date(cached.expiresAt).toISOString(),groupId:cached.groupId};
+    // If D1 is temporarily guarded, a still-valid signed Live ticket is more
+    // useful than forcing a refresh that the quota gate will reject. This keeps
+    // Durable Object push alive without any new D1 read.
+    if(this.serverBudgetBlocked()&&cached&&cached.groupId===this.activeGroupId&&cached.expiresAt-now>15_000)
+      return{ticket:cached.ticket,expiresAt:new Date(cached.expiresAt).toISOString(),groupId:cached.groupId};
     const data=await this.request<{ticket:string;expiresAt:string;groupId:string}>(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/live/ticket`);
     const expiresAt=Date.parse(data.expiresAt);if(data.ticket&&Number.isFinite(expiresAt))this.liveTicketCache={groupId:data.groupId,ticket:data.ticket,expiresAt};
     return data;
