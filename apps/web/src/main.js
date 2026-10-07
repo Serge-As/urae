@@ -778,6 +778,12 @@ const pendingTargetSnapshot=()=>Array.from(app.pendingFinancialCellTargets?.()??
   meetingId:String(item.meetingId??''),membershipId:String(item.membershipId??''),rubricId:String(item.rubricId??''),
   amount:Number(item.targetAmount??0),cellVersion:Number(item.baselineVersion??0)+1,idempotencyKey:String(item.idempotencyKey??'')
 })).filter(item=>item.meetingId&&item.membershipId&&item.rubricId&&Number.isSafeInteger(item.amount)&&item.amount>=0);
+const pendingSheetSnapshot=()=>Array.from(app.pendingFinancialSheetEntries?.()??[]).map(item=>({
+  key:financialCellKey(String(item.membershipId??''),String(item.rubricId??''),String(item.meetingId??'')),
+  meetingId:String(item.meetingId??''),membershipId:String(item.membershipId??''),rubricId:String(item.rubricId??''),
+  amount:['LOAN','OUTFLOW'].includes(String(item.nature??''))?-Math.abs(Number(item.amount??0)):Math.abs(Number(item.amount??0)),
+  nature:String(item.nature??''),idempotencyKey:String(item.idempotencyKey??'')
+})).filter(item=>item.meetingId&&item.membershipId&&item.rubricId&&Number.isFinite(item.amount));
 
 let offlineConfrontationDeferred=false;
 const confrontationLabel=(collection,id,fallback)=>{
@@ -2484,11 +2490,14 @@ const resumeOnline=({forceConfrontation=false}={})=>{
         const ferryResult=await app.syncEcoRelayFerry?.().catch(()=>null);
         if(ferryResult&&(Number(ferryResult.downloaded??0)>0||Number(ferryResult.applied??0)>0))window.dispatchEvent(new CustomEvent('eco:manager-relay-updated',{detail:{groupId:app.activeGroup?.(),ferry:true,...ferryResult}}));
         const pendingBefore=(app.outboxItems?.()??[]).filter(item=>!['CONFIRMED','CANCELLED'].includes(String(item.status??'')));
-        const beforeSync=pendingTargetSnapshot();
+        const beforeSync=pendingTargetSnapshot(),beforeSheetSync=pendingSheetSnapshot();
         await app.syncOutbox();
         rememberTargetsConfirmedBySync(beforeSync);
+        financialPendingTargets=new Map((app.pendingFinancialCellTargets?.()??[]).map(x=>[financialCellKey(x.membershipId,x.rubricId,x.meetingId),x]));
+        financialPendingSheetEntries=app.pendingFinancialSheetEntries?.()??[];
         const itemsAfter=new Map((app.outboxItems?.()??[]).map(item=>[String(item.idempotencyKey??''),item]));
         const changed=beforeSync.filter(item=>['CONFIRMED','CONFLICT'].includes(String(itemsAfter.get(item.idempotencyKey)?.status??'')));
+        const changedSheets=beforeSheetSync.filter(item=>itemsAfter.get(item.idempotencyKey)?.status==='CONFIRMED');
         // A transport wake-up with zero changes must not reload every table or
         // return the manager to Home; the WebSocket replays authorized deltas.
         if(app.activeGroup()&&changed.length){
@@ -2502,11 +2511,21 @@ const resumeOnline=({forceConfrontation=false}={})=>{
                 window.dispatchEvent(new CustomEvent('eco:financial-data-changed',{detail:{...item,amount:fresh,soft:true,recovered:true}}));
             }
         }
+        if(app.activeGroup()&&changedSheets.length){
+            for(const item of changedSheets){
+                financialOptimisticValues.delete(item.key);
+                rememberConfirmedCell(item.key,{...item,amount:item.amount,cellVersion:exactCellVersion(item.membershipId,item.rubricId,item.meetingId)});
+                patchFinancialDomCell({...item,amount:item.amount,preservePending:false});
+                setCellSyncedState(item);
+                window.dispatchEvent(new CustomEvent('eco:financial-data-changed',{detail:{...item,soft:true,recovered:true}}));
+            }
+        }
         // Structural Outbox writes (groups, membership, rubrics, loans, etc.)
         // still require their existing full domain hydration until every owner
         // has a typed incremental projection.
+        const incrementalFinancialTypes=new Set(['FINANCIAL_CELL_CORRECTION_PROPOSAL_V1','FINANCIAL_CELL_CORRECTION_PROPOSAL_V2','FINANCIAL_SHEET_ENTRY_V1','FINANCIAL_CELL_REVIEW_V1','CONTRIBUTION_CASH_RECORDED']);
         const otherConfirmed=pendingBefore.some(item=>
-            !['FINANCIAL_CELL_CORRECTION_PROPOSAL_V1'].includes(String(item.type))&&
+            !incrementalFinancialTypes.has(String(item.type))&&
             itemsAfter.get(String(item.idempotencyKey??''))?.status==='CONFIRMED');
         if(otherConfirmed){
             if(app.activeGroup())await refreshGroupContext();else await renderGroups();
@@ -2522,6 +2541,7 @@ const eventDrivenConnectivityRecovery=()=>{
     if(navigator.onLine&&(pending||networkRecoveryNeeded))void resumeOnline();
 };
 window.addEventListener('online',()=>{app.forceTransportRetry?.();networkRecoveryNeeded=true;void resumeOnline();});
+window.addEventListener('eco:transport-retry-ready',()=>{app.forceTransportRetry?.();eventDrivenConnectivityRecovery();});
 window.addEventListener('offline',()=>{networkRecoveryNeeded=true;offlineConfrontationDeferred=false;persistNavState(captureNavState());renderConnectivity();});
 window.addEventListener('pageshow',eventDrivenConnectivityRecovery);
 window.addEventListener('eco:server-budget-blocked',renderConnectivity);
