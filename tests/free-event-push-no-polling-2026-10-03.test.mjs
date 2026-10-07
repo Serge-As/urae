@@ -15,7 +15,7 @@ test('idle app emits no recurring live or D1 traffic',()=>{
   assert.doesNotMatch(live,/setInterval\(/);
   assert.match(main,/const FREE_CONSERVATION_MODE=true/);
   const start=main.indexOf('const scheduleFinancialOutboxRecovery');
-  const recovery=main.slice(start,start+6500);
+  const end=main.indexOf('let financialSnapshotTimer',start);\n  const recovery=main.slice(start,end>start?end:start+6500);
   assert.doesNotMatch(recovery,/setInterval\(/,'validated-cell recovery is bounded setTimeout work, never an idle poll');
   assert.doesNotMatch(recovery,/if\(FREE_CONSERVATION_MODE\)return/,'free mode must still retry a cell the user just validated');
   assert.match(recovery,/maxAttempts=FREE_CONSERVATION_MODE\?3:8/);
