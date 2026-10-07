@@ -507,9 +507,10 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
     const result:any={...base,policyRevisionId:String(loan?.data?.policyRevisionId??''),policyRevisionEffectiveAt:String(loan?.data?.policyRevisionEffectiveAt??'')};
     for(const revision of history){
       const effectiveMs=Date.parse(String(revision.effectiveAt??''));if(!Number.isFinite(effectiveMs)||effectiveMs>operationAtMs)continue;
-      const scope=String(revision.scope??'NEW_LOANS_ONLY'),createdAfter=loanCreated>=effectiveMs;
-      const selected=Array.isArray(revision.selectedLoanIds)&&revision.selectedLoanIds.map(String).includes(String(loan?.id??''));
-      const applies=scope==='NEW_AND_ALL_OPEN_LOANS'||(scope==='NEW_AND_SELECTED_OPEN_LOANS'&&(createdAfter||selected))||(scope==='NEW_LOANS_ONLY'&&createdAfter);
+      const scope=String(revision.scope??'NEW_LOANS_ONLY'),createdAfter=loanCreated>=effectiveMs,loanId=String(loan?.id??''),closedBeforeEffect=String(loan?.data?.completionState??'')==='CLOSED'&&(Date.parse(String(loan?.updatedAt??''))||0)>0&&(Date.parse(String(loan?.updatedAt??''))||0)<=effectiveMs;
+      const selected=Array.isArray(revision.selectedLoanIds)&&revision.selectedLoanIds.map(String).includes(loanId),affected=Array.isArray(revision.affectedLoanIds)&&revision.affectedLoanIds.map(String).includes(loanId);
+      const legacyOpenAll=scope==='NEW_AND_ALL_OPEN_LOANS'&&!Array.isArray(revision.affectedLoanIds)&&!closedBeforeEffect;
+      const applies=!closedBeforeEffect&&(createdAfter||(scope==='NEW_AND_ALL_OPEN_LOANS'&&(affected||legacyOpenAll))||(scope==='NEW_AND_SELECTED_OPEN_LOANS'&&selected));
       if(!applies)continue;
       Object.assign(result,loanPolicySnapshot(revision.after),{policyRevisionId:String(revision.id??''),policyRevisionEffectiveAt:String(revision.effectiveAt??'')});
     }
@@ -546,10 +547,10 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
     if(scope==='NEW_AND_SELECTED_OPEN_LOANS'){
       const known=new Set(eligibleOpen.map((x:any)=>String(x.id))),missing=selectedLoanIds.filter(id=>!known.has(id));if(missing.length)throw Error('LOAN_POLICY_SELECTED_LOAN_NOT_OPEN');
     }
-    const revision:any={id:revisionId,createdAt:new Date().toISOString(),createdBy:ctx.actorId,effectiveAt,effectiveMeetingId:effectiveMeetingId||undefined,scope,selectedLoanIds:scope==='NEW_AND_SELECTED_OPEN_LOANS'?selectedLoanIds:undefined,before:loanPolicySnapshot(prior),after:loanPolicySnapshot(loanFields)};
+    const affectedLoanIds=scope==='NEW_AND_ALL_OPEN_LOANS'?eligibleOpen.map((x:any)=>String(x.id)):scope==='NEW_AND_SELECTED_OPEN_LOANS'?selectedLoanIds:[];
+    const revision:any={id:revisionId,createdAt:new Date().toISOString(),createdBy:ctx.actorId,effectiveAt,effectiveMeetingId:effectiveMeetingId||undefined,scope,selectedLoanIds:scope==='NEW_AND_SELECTED_OPEN_LOANS'?selectedLoanIds:undefined,affectedLoanIds,before:loanPolicySnapshot(prior),after:loanPolicySnapshot(loanFields)};
     incoming.loan={...loanFields,revisions:[...serverHistory,revision]};
     const updated=await rubrics.updatePolicies({tenantId:ctx.tenantId,groupId,rubricId,policies:incoming});
-    const affectedLoanIds=scope==='NEW_AND_ALL_OPEN_LOANS'?eligibleOpen.map((x:any)=>String(x.id)):scope==='NEW_AND_SELECTED_OPEN_LOANS'?selectedLoanIds:[];
     return{updated,revision,affectedLoanIds};
   };
   const loanFundingReservationId=(key:string)=>'loan_funding_reservation_'+encodeURIComponent(key).slice(0,160);
