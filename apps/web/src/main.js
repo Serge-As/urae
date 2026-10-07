@@ -354,7 +354,7 @@ const microAdsUI=mountMicroAdsUI({app,isManager,notify:toast,showError:fail});
 const valueDiscoveryUI=mountValueDiscoveryUI({app,notify:toast,showError:fail});
 const walletUI=mountWalletUI({app,notify:toast,showError:fail,navigate:go});
 const memberEnvelopeUI=mountMemberEnvelopeUI({app,notify:toast,showError:fail});
-const sovereignOfflineUI=mountSovereignOfflineUI({app,getMembers:()=>members,getMeetings:()=>meetings,isManager,notify:toast,showError:fail});
+const sovereignOfflineUI=mountSovereignOfflineUI({app,getMembers:()=>members,getMeetings:()=>meetings,getRubrics:()=>rubrics,isManager,notify:toast,showError:fail});
 const opportunityGraphUI=mountOpportunityGraphUI({app,showError:fail});
 window.addEventListener('popstate',event=>{
     const state=event.state?.ecoNav,hash=location.hash.slice(1);
@@ -2497,8 +2497,8 @@ window.addEventListener('eco:manager-relay-updated',()=>{void(async()=>{
     const structure=await app.localRelayGroupStructure?.();if(structure){
       await renderMembers(structure.members);await renderMeetings(structure.meetings);await renderLivingRules(structure.rubrics);
     }
-    const relayTargets=await app.relayManagerFinancialTargets?.()??[];
-    financialReviewTargets=new Map();
+    const localTargets=app.pendingFinancialCellTargets?.()??[],relayTargets=await app.relayManagerFinancialTargets?.()??[];
+    financialPendingTargets=new Map(localTargets.map(x=>[financialCellKey(x.membershipId,x.rubricId,x.meetingId),x]));financialReviewTargets=new Map();
     for(const relay of relayTargets){
       const key=financialCellKey(relay.membershipId,relay.rubricId,relay.meetingId),local=financialPendingTargets.get(key);
       if(!local)financialPendingTargets.set(key,relay);
