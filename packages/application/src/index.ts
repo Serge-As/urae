@@ -485,6 +485,13 @@ export class ConnectedApplication {
       .filter(x=>x&&String((x.payload??{}).groupId??'')===this.activeGroupId)
       .slice(-5000);
   }
+  async localRelayGroupStructure():Promise<{members:MembershipView[];meetings:MeetingSession[];rubrics:RubricDefinition[]}>{
+    if(!this.activeGroupId)return{members:[],meetings:[],rubrics:[]};const base='/api/v1/groups/'+encodeURIComponent(this.activeGroupId);
+    const [members,meetings,rubrics]=await Promise.all([
+      this.cached<MembershipView[]>(base+'/members'),this.cached<MeetingSession[]>(base+'/meetings'),this.cached<RubricDefinition[]>(base+'/rubrics')
+    ]);
+    return{members:members??[],meetings:meetings??[],rubrics:rubrics??[]};
+  }
   async relayManagerFinancialTargets():Promise<Array<{meetingId:string;membershipId:string;rubricId:string;targetAmount:number;baselineValue:number;baselineVersion:number;status:string;businessStatus:string;idempotencyKey:string;createdAt:string;source:'RELAY';sourceActorId:string;recordedAtClient:string}>>{
     const intents=await this.managerRelayIntents(),byCell=new Map<string,any>();
     for(const item of intents){
