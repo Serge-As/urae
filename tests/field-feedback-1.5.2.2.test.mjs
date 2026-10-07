@@ -72,8 +72,8 @@ test('1.5.2.11 shell is version isolated and keeps the previous coherent release
   const sw=await readFile('.build/sw.js','utf8');
   assert.match(html,/ECO-SYSTEM · 1\.5\.2\.11/);
   assert.match(html,/main\.js\?v=15211/);
-  assert.match(sw,/const CACHE = 'eco-system-v15211-data-first-20261007'/);
-  assert.match(sw,/PREVIOUS_CACHE = 'eco-system-v15211-q01q28-recovery-20261006'/);
+  assert.match(sw,/const CACHE = 'eco-system-v15211-sovereign-relay-20261007'/);
+  assert.match(sw,/PREVIOUS_CACHE = 'eco-system-v15211-data-first-confrontation-20261007'/);
   const current=sw.match(/const CACHE = '([^']+)';/)?.[1],previous=sw.match(/const PREVIOUS_CACHE = '([^']+)';/)?.[1];
   assert.ok(current&&previous&&current!==previous,'current and rollback caches must remain distinct');
   assert.doesNotMatch(html,/<body[^>]*>\\n\s*<section/);
