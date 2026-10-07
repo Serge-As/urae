@@ -8,4 +8,4 @@ qualified_base: fix/1.5.2.10-offline-conflicts-loans-20261003
 qualification_rule: full governed npm ci + Chromium + WebKit must pass on exact deployment SHA before Worker mutation
 production_rule: deploy workflow must prove /health commitSha, buildId, pwaCache and capability catalog
 field_acceptance: NOT_ACCEPTED until Serge verifies production on his browsers/devices
-trigger_nonce: 2026-10-07T18:02+01:00-split-gates
+trigger_nonce: 2026-10-07T18:09+01:00-build-gate
