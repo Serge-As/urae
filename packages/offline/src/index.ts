@@ -77,6 +77,16 @@ export class Outbox {
     const reset={...current,status:'PENDING' as const,attempts:0,updatedAt:new Date().toISOString()};this.items.set(id,reset);return structuredClone(reset);
   }
 
+  /** Cancel a durable local command before transport. This is intentionally
+   * terminal and preserves the journal item for audit/recovery. */
+  cancel(id:Id):OutboxItem|undefined{
+    const current=this.items.get(id);if(!current)return undefined;
+    if(['CONFIRMED','SYNCING'].includes(current.status))throw Error('OUTBOX_CANCEL_NOT_ALLOWED');
+    if(current.status==='CANCELLED')return structuredClone(current);
+    const cancelled={...current,status:'CANCELLED' as const,updatedAt:new Date().toISOString()};
+    this.items.set(id,cancelled);return structuredClone(cancelled);
+  }
+
   sync(handler: SyncHandler): Promise<OutboxItem[]> {
     if(this.syncing)return this.syncing;
     this.syncing=this.syncPending(handler).finally(()=>{this.syncing=undefined;});
