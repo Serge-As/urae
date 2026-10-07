@@ -8,6 +8,7 @@ on:
 
 permissions:
   contents: read
+  statuses: write
 
 concurrency:
   group: eco-system-1-5-production
@@ -37,6 +38,15 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+      - name: Publish production gate pending
+        continue-on-error: true
+        shell: bash
+        run: |
+          curl --fail --silent --show-error -X POST \
+            -H "Authorization: Bearer ${{ github.token }}" \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/statuses/${GITHUB_SHA}" \
+            -d '{"state":"pending","context":"eco-system/production-1.5.2.13","description":"Qualification + Cloudflare smoke in progress"}' >/dev/null
       - uses: actions/setup-node@v4
         with:
           node-version: '24'
@@ -148,3 +158,21 @@ jobs:
           if(!Array.isArray(catalog.capabilities)||catalog.count<Number(process.env.MIN_CAPABILITIES)||catalog.capabilities.length!==catalog.count) throw new Error('CAPABILITY_CATALOG_INCOMPLETE:'+catalog.count);
           console.log(JSON.stringify({version:health.version,commitSha:health.commitSha,buildId:health.buildId,pwaCache:health.pwaCache,capabilities:catalog.count,realMoneyEnabled:health.realMoneyEnabled}));
           NODE
+      - name: Publish production gate result
+        if: always()
+        continue-on-error: true
+        shell: bash
+        run: |
+          if [ "${{ job.status }}" = "success" ]; then
+            state=success
+            description="1.5.2.13 qualified and production smoke passed"
+          else
+            state=failure
+            description="1.5.2.13 qualification or production smoke failed"
+          fi
+          payload="$(node -e 'console.log(JSON.stringify({state:process.argv[1],context:"eco-system/production-1.5.2.13",description:process.argv[2]}))' "$state" "$description")"
+          curl --fail --silent --show-error -X POST \
+            -H "Authorization: Bearer ${{ github.token }}" \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/statuses/${GITHUB_SHA}" \
+            -d "$payload" >/dev/null
