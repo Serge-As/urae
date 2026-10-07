@@ -530,7 +530,7 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
     const duplicate=serverHistory.find((x:any)=>String(x.id)===revisionId);
     if(duplicate)return{updated:current,revision:duplicate,affectedLoanIds:[] as string[]};
     const scope=['NEW_AND_ALL_OPEN_LOANS','NEW_AND_SELECTED_OPEN_LOANS'].includes(String(control.scope))?String(control.scope):'NEW_LOANS_ONLY';
-    const selectedLoanIds=[...new Set((Array.isArray(control.selectedLoanIds)?control.selectedLoanIds:[]).map(String).filter(Boolean))];
+    const selectedLoanIds:string[]=[...new Set<string>((Array.isArray(control.selectedLoanIds)?control.selectedLoanIds:[]).map((x:unknown)=>String(x)).filter(Boolean))];
     if(scope==='NEW_AND_SELECTED_OPEN_LOANS'&&!selectedLoanIds.length)throw Error('LOAN_POLICY_SELECTED_LOANS_REQUIRED');
     const effectiveMode=String(control.effectiveMode??'IMMEDIATE');
     let effectiveAt=new Date().toISOString(),effectiveMeetingId='';
@@ -1422,7 +1422,7 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
       const revision:any=result.revision,scopeLabel=revision?String(revision.scope):'UNCHANGED_SCOPE';
       await notifyGovernanceChange(groupId,{title:'Politiques de rubrique modifiées',message:revision?`Politique de « ${updated.name} » versionnée · portée ${scopeLabel} · effet ${String(revision.effectiveAt)}.`:`Politiques de « ${updated.name} » modifiées.`,action:{view:'operations',anchor:'rubricsManagementPanel',rubricId,entityKind:'RUBRIC',entityId:rubricId,label:'Voir la rubrique'}});
       const loanPolicy=updated.policies?.loan;
-      if(loanPolicy)try{await publishLive(groupId,'RULE_UPDATE','loan-policy:'+rubricId+':'+String(updated.version??0),{kind:'LOAN_POLICY',rubricId,rateBasisPointsPerPeriod:Number(loanPolicy.rateBasisPointsPerPeriod??0),paymentPriority:String(loanPolicy.paymentPriority??'CAPITAL_FIRST'),interestTiming:String(loanPolicy.interestTiming??'NEXT_SESSION_DUE'),fundingMode:String(loanPolicy.fundingMode??'AVAILABLE_GROUP_CASH'),carryForwardUnusedFunds:loanPolicy.carryForwardUnusedFunds!==false,revisionId:String(revision?.id??''),scope:String(revision?.scope??''),effectiveAt:String(revision?.effectiveAt??''),effectiveMeetingId:String(revision?.effectiveMeetingId??''),revision:revision??null,affectedLoanIds:result.affectedLoanIds,actorId:ctx.actorId});}catch{}
+      if(loanPolicy)try{await publishLive(groupId,'RULE_UPDATE','loan-policy:'+rubricId+':'+String(updated.version??0),{kind:'LOAN_POLICY',rubricId,rateBasisPointsPerPeriod:Number(loanPolicy.rateBasisPointsPerPeriod??0),paymentPriority:String(loanPolicy.paymentPriority??'CAPITAL_FIRST'),interestTiming:String(loanPolicy.interestTiming??'NEXT_SESSION_DUE'),fundingMode:String(loanPolicy.fundingMode??'AVAILABLE_GROUP_CASH'),carryForwardUnusedFunds:loanPolicy.carryForwardUnusedFunds!==false,revisionId:String(revision?.id??''),scope:String(revision?.scope??''),effectiveAt:String(revision?.effectiveAt??''),effectiveMeetingId:String(revision?.effectiveMeetingId??''),revisionJson:JSON.stringify(revision??null),affectedLoanIdsJson:JSON.stringify(result.affectedLoanIds),actorId:ctx.actorId});}catch{}
       return json(updated,200,cors);
     }
     const rubricPreviewRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/rubrics\/([^/]+)\/preview-cycle$/);
