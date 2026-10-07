@@ -533,3 +533,8 @@ Object.assign(EXTRA_FR_EN,{
   "Historique des versions de politique (": "Policy revision history ("
 });
 for(const [fr,en] of Object.entries(EXTRA_FR_EN))canonical.set(fr,en);
+
+Object.assign(EXTRA_FR_EN,{
+  "Les changements s’appliquent à partir de leur date/séance d’effet. Un prêt déjà décaissé n’est jamais réécrit pour simuler rétroactivement un intérêt retenu ou payé avant sa libération.": "Changes apply from their effective date/meeting. A loan already disbursed is never rewritten to retroactively simulate interest deducted or paid before release."
+});
+for(const [fr,en] of Object.entries(EXTRA_FR_EN))canonical.set(fr,en);
