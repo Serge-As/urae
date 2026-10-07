@@ -51,7 +51,7 @@ test('service worker keeps a complete coherent shell and preserves one previous 
   assert.ok(current&&previous,'current and previous coherent caches are declared');
   assert.notEqual(current,previous,'rollback cache must differ from current release');
   assert.match(previous,/^eco-system-v\d+-/);
-  for(const asset of ['/index.html','/styles.css?v=15211','/src/main.js?v=15211','/src/sessions-ui.js','/src/sovereign-offline-ui.js','/src/vendor/qr-scanner.min.js','/src/vendor/qr-scanner-worker.min.js','/packages/application/src/index.js','/packages/offline/src/index.js','/packages/offline-sovereign/src/index.js','/packages/exercise/src/index.js'])assert.ok(sw.includes(asset),asset);
+  for(const asset of ['/index.html','/styles.css?v=15212','/src/main.js?v=15212','/src/sessions-ui.js','/src/sovereign-offline-ui.js','/src/vendor/qr-scanner.min.js','/src/vendor/qr-scanner-worker.min.js','/packages/application/src/index.js','/packages/offline/src/index.js','/packages/offline-sovereign/src/index.js','/packages/exercise/src/index.js'])assert.ok(sw.includes(asset),asset);
   assert.match(sw,/event\.request\.mode === 'navigate'/);
   assert.match(sw,/fetch\(event\.request, \{ cache:'no-store' \}\)/);
   assert.match(sw,/cache\.match\('\/index\.html'\)/);
