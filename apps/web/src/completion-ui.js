@@ -487,16 +487,28 @@ export const mountCompletionUI=({app,notify,showError,getMembers,getMeetings,get
     byId('readinessResult').textContent=p.data.ready===true?tr('Groupe prêt : aucun blocage détecté.','Group ready: no blocker detected.'):tr('À compléter : ','To complete: ')+blockers.join(', ');
   }));
 
+  byId('loanPolicyScope')?.addEventListener('change',syncLoanPolicyControls);
+  byId('loanPolicyEffectiveMode')?.addEventListener('change',syncLoanPolicyControls);
   byId('loanPolicyForm')?.addEventListener('submit',e=>{e.preventDefault();void run(e.currentTarget,async()=>{
     let rubric=officialLoanRubric();if(!rubric)rubric=await app.ensureOfficialLoanRubric();
     const rate=Math.round(number('loanPolicyRate')*100);if(!Number.isSafeInteger(rate)||rate<0)throw Error('INVALID_LOAN_RATE');
-    const policies={...(rubric.policies??{}),loan:{...(rubric.policies?.loan??{}),allowed:true,rateBasisPointsPerPeriod:rate,interestBase:'PRINCIPAL_ONLY',paymentPriority:value('loanPolicyPriority')||'CAPITAL_FIRST',interestTiming:value('loanPolicyInterestTiming')||'NEXT_SESSION_DUE',fundingMode:value('loanPolicyFundingMode')||'AVAILABLE_GROUP_CASH',carryForwardUnusedFunds:Boolean(byId('loanPolicyCarryForward')?.checked),noInterestOnInterest:true}};
+    const scope=value('loanPolicyScope')||'NEW_LOANS_ONLY',effectiveMode=value('loanPolicyEffectiveMode')||'IMMEDIATE';
+    const selectedLoanIds=byId('loanPolicySelectedLoans')?[...byId('loanPolicySelectedLoans').selectedOptions].map(x=>x.value):[];
+    if(scope==='NEW_AND_SELECTED_OPEN_LOANS'&&!selectedLoanIds.length)throw Error('LOAN_POLICY_SELECTED_LOANS_REQUIRED');
+    let effectiveAt, effectiveMeetingId;
+    if(effectiveMode==='DATE'){const raw=value('loanPolicyEffectiveAt');if(!raw)throw Error('LOAN_POLICY_EFFECTIVE_DATE_REQUIRED');const parsed=new Date(raw);if(Number.isNaN(parsed.getTime()))throw Error('LOAN_POLICY_EFFECTIVE_DATE_INVALID');effectiveAt=parsed.toISOString();}
+    if(effectiveMode==='MEETING'){effectiveMeetingId=value('loanPolicyEffectiveMeeting');if(!effectiveMeetingId)throw Error('LOAN_POLICY_EFFECTIVE_MEETING_REQUIRED');}
+    const changeControl={scope,effectiveMode,...(effectiveAt?{effectiveAt}:{}),...(effectiveMeetingId?{effectiveMeetingId}:{}),...(scope==='NEW_AND_SELECTED_OPEN_LOANS'?{selectedLoanIds}:{})};
+    const policies={...(rubric.policies??{}),loan:{...(rubric.policies?.loan??{}),allowed:true,rateBasisPointsPerPeriod:rate,interestBase:'PRINCIPAL_ONLY',paymentPriority:value('loanPolicyPriority')||'CAPITAL_FIRST',interestTiming:value('loanPolicyInterestTiming')||'NEXT_SESSION_DUE',fundingMode:value('loanPolicyFundingMode')||'AVAILABLE_GROUP_CASH',carryForwardUnusedFunds:Boolean(byId('loanPolicyCarryForward')?.checked),noInterestOnInterest:true,changeControl}};
     const updated=await app.updateRubricPolicies(rubric.id,policies);
-    // The saved rubric is authoritative; the previously loaded view array was
-    // otherwise reused after success and still showed CAPITAL_FIRST.
     rubric.policies=structuredClone(updated?.policies??policies);
-    notify(tr('Politique Prêts enregistrée.','Loan policy saved.'));await renderLoans();
+    const scopeText=scope==='NEW_LOANS_ONLY'?tr('nouveaux prêts seulement','new loans only'):scope==='NEW_AND_ALL_OPEN_LOANS'?tr('nouveaux + tous les prêts ouverts','new + all open loans'):tr('nouveaux + prêts ouverts sélectionnés','new + selected open loans');
+    notify(tr('Nouvelle version de politique enregistrée : ','New policy version saved: ')+scopeText+'.');await renderLoans();
   });});
+  byId('loanFreeSimulationBtn')?.addEventListener('click',()=>void run(null,async()=>{
+    const policy=hydrateLoanPolicy().policy,effective=effectiveLoanPolicyForDisplay(null,policy),principal=Math.max(1,Number(byId('loanPrincipal')?.value||50000));
+    await openLoanSimulationDialog({app,loan:{data:{principal,outstandingPrincipal:principal,unpaidInterest:0,rateBasisPointsPerPeriod:effective.rateBasisPointsPerPeriod,paymentPriority:effective.paymentPriority,interestTiming:effective.interestTiming,installments:Number(byId('loanInstallments')?.value||6)}},title:tr('Simulation libre · prêt imaginaire','Free simulation · hypothetical loan'),memberName:''});
+  }));
 
   byId('loanForm')?.addEventListener('submit',e=>{e.preventDefault();void run(e.currentTarget,async()=>{
     const principal=number('loanPrincipal'),installments=number('loanInstallments'),rate=Math.round(number('loanRate')*100),periodsPerYear=number('loanPeriodsPerYear'),fees=number('loanFees');
@@ -541,7 +553,7 @@ export const mountCompletionUI=({app,notify,showError,getMembers,getMeetings,get
   };
   window.addEventListener('eco:financial-data-changed',scheduleDebtRefresh);
   window.addEventListener('eco:financial-live-update',scheduleDebtRefresh);
-  window.addEventListener('eco:live-event',event=>{const e=event instanceof CustomEvent?event.detail:undefined,p=e?.payload??{};if(e?.type!=='RULE_UPDATE'||p.kind!=='LOAN_POLICY')return;const rubric=getRubrics().find(r=>String(r.id)===String(p.rubricId));if(rubric){rubric.policies={...(rubric.policies??{}),loan:{...(rubric.policies?.loan??{}),allowed:true,interestBase:'PRINCIPAL_ONLY',noInterestOnInterest:true,rateBasisPointsPerPeriod:Number(p.rateBasisPointsPerPeriod??0),paymentPriority:String(p.paymentPriority??'CAPITAL_FIRST'),interestTiming:String(p.interestTiming??'NEXT_SESSION_DUE'),fundingMode:String(p.fundingMode??'AVAILABLE_GROUP_CASH'),carryForwardUnusedFunds:p.carryForwardUnusedFunds!==false}};hydrateLoanPolicy();}if(!byId('loanCompletionPanel')?.hidden&&byId('view-finance')?.classList.contains('active'))void renderLoans().catch(showError);});
+  window.addEventListener('eco:live-event',event=>{const e=event instanceof CustomEvent?event.detail:undefined,p=e?.payload??{};if(e?.type!=='RULE_UPDATE'||p.kind!=='LOAN_POLICY')return;const rubric=getRubrics().find(r=>String(r.id)===String(p.rubricId));if(rubric){const previous=rubric.policies?.loan??{},history=Array.isArray(previous.revisions)?previous.revisions.slice():[];if(p.revision&&p.revision.id&&!history.some(x=>String(x.id)===String(p.revision.id)))history.push(structuredClone(p.revision));rubric.policies={...(rubric.policies??{}),loan:{...previous,allowed:true,interestBase:'PRINCIPAL_ONLY',noInterestOnInterest:true,rateBasisPointsPerPeriod:Number(p.rateBasisPointsPerPeriod??previous.rateBasisPointsPerPeriod??0),paymentPriority:String(p.paymentPriority??previous.paymentPriority??'CAPITAL_FIRST'),interestTiming:String(p.interestTiming??previous.interestTiming??'NEXT_SESSION_DUE'),fundingMode:String(p.fundingMode??previous.fundingMode??'AVAILABLE_GROUP_CASH'),carryForwardUnusedFunds:p.carryForwardUnusedFunds!==false,revisions:history}};hydrateLoanPolicy();}if(!byId('loanCompletionPanel')?.hidden&&byId('view-finance')?.classList.contains('active'))void renderLoans().catch(showError);});
 
   const setLocale=()=>{fillCompletionKinds();void refresh().catch(showError);};
   return{refresh,setLocale};
