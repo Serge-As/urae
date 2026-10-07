@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 
-test('offline return requires governed financial confrontation before replay', async()=>{
+test('offline return auto-replays unchanged baselines and confronts only real divergence', async()=>{
   const [web,app,offline,css,sw,contract]=await Promise.all([
     readFile('apps/web/src/main.js','utf8'),
     readFile('packages/application/src/index.ts','utf8'),
@@ -18,11 +18,11 @@ test('offline return requires governed financial confrontation before replay', a
   assert.match(web,/Appliquer toutes mes modifications/);
   assert.match(web,/Conserver toutes les données déjà présentes/);
   assert.match(web,/if\(!\(await reviewOfflineFinancialBacklog\(forceConfrontation\)\)\)/);
-  // A genuine offline->online transition still passes through confrontation in
-  // resumeOnline, but a transient failure while navigator.onLine remains true
-  // gets a bounded event-driven retry instead of waiting forever.
+  // Reconnect is automatic when the server has not changed since the local
+  // baseline. Only concurrent divergence opens the confrontation dialog.
+  assert.match(web,/preview\.rows\.every\(row=>!row\.serverChangedSinceBaseline\)\)return true/);
   assert.match(web,/maxAttempts=FREE_CONSERVATION_MODE\?3:8/);
-  assert.match(web,/FREE_CONSERVATION_MODE\?\[350,1200,2800\]/);
+  assert.match(web,/FREE_CONSERVATION_MODE\?\[200,650,1500\]/);
   assert.doesNotMatch(web,/if\(FREE_CONSERVATION_MODE\)return;\s*const key=.*financialRetryTimers/s);
   assert.match(app,/previewOfflineFinancialConfrontation/);
   assert.match(app,/serverChangedSinceBaseline/);
