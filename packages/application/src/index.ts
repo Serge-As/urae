@@ -535,7 +535,7 @@ export class ConnectedApplication {
     }
     if(remote.protocol!=='ECO_MANAGER_DELTA_2'||remote.tenantId!==this.tenantId||!Array.isArray(remote.commands)||!Array.isArray(remote.structuralSnapshots))throw Error('ECO_LOCAL_ROOM_DELTA_INVALID');
     const localRelayed=await this.managerRelayIntents(),localOwn=this.outbox.list().filter(x=>String((x.payload as any)?.groupId??'')===this.activeGroupId&&!['CONFIRMED','CANCELLED'].includes(String(x.status))),local=[...localRelayed,...localOwn];
-    const commandId=(x:any)=>String(x?.actorId??'')+':'+String(x?.idempotencyKey??x?.id??''),localIds=new Set(local.map(commandId)),remoteIds=new Set(remote.commands.map(commandId)),commonCommands=[...remoteIds].filter(x=>localIds.has(x)).length;
+    const commandId=(x:any)=>String(x?.actorId??'')+':'+String(x?.idempotencyKey??x?.id??''),localIds=new Set<string>(local.map(commandId)),remoteIds=new Set<string>((remote.commands as any[]).map(commandId)),commonCommands=[...remoteIds].filter(x=>localIds.has(x)).length;
     const localByCell=new Map<string,any>();for(const item of local){const key=this.managerCommandCellKey(item);if(!key)continue;const old=localByCell.get(key);if(!old||this.managerIntentOrder(item)>this.managerIntentOrder(old))localByCell.set(key,item);}
     const remoteByCell=new Map<string,any>();for(const item of remote.commands){const p=item?.payload??{};if(String(p.groupId??'')!==this.activeGroupId)continue;const key=this.managerCommandCellKey(item);if(!key)continue;const old=remoteByCell.get(key);if(!old||this.managerIntentOrder(item)>this.managerIntentOrder(old))remoteByCell.set(key,item);}
     const potentialFinancialConflicts:any[]=[];
