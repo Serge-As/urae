@@ -82,3 +82,55 @@ test('closed-session offline target becomes the canonical value after synchroniz
   expect(memberHeaders).toEqual(expect.arrayContaining(['Séance','Secours persistance','Total séance']));
   await expect(individual.locator('.table-total-row')).toBeVisible();
 });
+
+
+test('loan policy scopes and free/existing simulation controls are usable in the real browser UI',async({page})=>{
+  test.setTimeout(120_000);
+  await page.goto(base+'/',{waitUntil:'domcontentloaded'});
+  const ids=await page.evaluate(async({password})=>{
+    const json=async(path,method='GET',body,groupId)=>{
+      const response=await fetch(path,{method,headers:{...(body===undefined?{}:{'content-type':'application/json'}),...(groupId?{'x-active-group-id':groupId}:{})},body:body===undefined?undefined:JSON.stringify(body)});
+      const text=await response.text();let data;try{data=JSON.parse(text);}catch{data=text;}
+      if(!response.ok)throw new Error(method+' '+path+' -> '+response.status+' '+text);
+      return data;
+    };
+    const suffix='loan_ui_'+String(Date.now());
+    await json('/api/v1/auth/register','POST',{username:suffix,password,displayName:'Loan UI Browser'});
+    const project=await json('/api/v1/group-projects','POST',{name:'Loan UI '+suffix,kind:'association',governanceModel:'founder_managed',memberCount:2,sessions:3,nominalContribution:1000,currency:'XAF'});
+    const group=await json('/api/v1/group-projects/'+encodeURIComponent(project.id)+'/convert','POST',{});
+    localStorage.setItem('tontine.activeGroupId',group.id);
+    return{groupId:group.id};
+  },{password});
+
+  await page.reload({waitUntil:'domcontentloaded'});
+  await page.locator('#loansNavBtn').click();
+  await expect(page.locator('#financeLoanGuide')).toBeVisible();
+  await page.locator('#financeLoanRulesBtn').click();
+  await expect(page.locator('#loanCompletionPanel')).toBeVisible();
+
+  const scope=page.locator('#loanPolicyScope');
+  await expect(scope).toBeVisible();
+  await expect(scope.locator('option')).toHaveCount(3);
+  await expect(scope).toContainText('Nouveaux prêts uniquement');
+  await expect(scope).toContainText('tous les prêts en cours');
+  await expect(scope).toContainText('certains prêts en cours');
+
+  await page.locator('#loanFreeSimulationBtn').click();
+  const dialog=page.locator('#loanEvolutionDialog');
+  await expect(dialog).toBeVisible();
+  await expect(dialog).toContainText(/Simulation uniquement/i);
+  await expect(dialog.locator('.loan-simulation-summary').first()).toBeVisible();
+
+  const priorities=dialog.locator('.loan-simulation-control-card select');
+  await priorities.first().selectOption('EXPLICIT_ALLOCATION');
+  await expect(dialog.locator('.loan-explicit-allocation-fields').first()).toBeVisible();
+  const explicitInputs=dialog.locator('.loan-explicit-allocation-fields').first().locator('input');
+  await explicitInputs.nth(0).fill('2500, 1500');
+  await explicitInputs.nth(1).fill('0, 0');
+  await dialog.getByRole('button',{name:/Calculer/i}).click();
+  await expect(dialog.locator('.loan-simulation-table').first()).toBeVisible();
+
+  await dialog.locator('.loan-compare-toggle input').check();
+  await expect(dialog.locator('.loan-simulation-b')).toBeVisible();
+  await expect(dialog.locator('.loan-simulation-control-card')).toHaveCount(2);
+});
