@@ -13,8 +13,12 @@ const app=fs.readFileSync('packages/application/src/index.ts','utf8');
 
 test('idle app emits no recurring live or D1 traffic',()=>{
   assert.doesNotMatch(live,/setInterval\(/);
-  assert.match(main,/if\(FREE_CONSERVATION_MODE\)return;/);
-  assert.match(main,/if\(FREE_CONSERVATION_MODE\)return;\n  const key=.*financialRetryTimers/s);
+  assert.match(main,/const FREE_CONSERVATION_MODE=true/);
+  const start=main.indexOf('const scheduleFinancialOutboxRecovery');
+  const recovery=main.slice(start,start+6500);
+  assert.doesNotMatch(recovery,/setInterval\(/,'validated-cell recovery is bounded setTimeout work, never an idle poll');
+  assert.doesNotMatch(recovery,/if\(FREE_CONSERVATION_MODE\)return/,'free mode must still retry a cell the user just validated');
+  assert.match(recovery,/maxAttempts=FREE_CONSERVATION_MODE\?3:8/);
   assert.match(savings,/canonicalDirty/);
   assert.doesNotMatch(savings,/setInterval/);
 });
