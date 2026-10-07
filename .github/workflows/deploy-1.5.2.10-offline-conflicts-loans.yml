@@ -20,8 +20,8 @@ env:
   ECO_SYSTEM_HEALTH: https://eco-system.sergemimf.workers.dev/health
   ECO_SYSTEM_CATALOG: https://eco-system.sergemimf.workers.dev/api/v1/product/capabilities
   EXPECTED_VERSION: 1.5.2.11-field-recovery
-  EXPECTED_BUILD: eco-system-1.5.2.11-20261005-field-recovery
-  EXPECTED_CACHE: eco-system-v15211-q01q28-recovery-20261006
+  EXPECTED_BUILD: eco-system-1.5.2.11-20261007-data-first
+  EXPECTED_CACHE: eco-system-v15211-data-first-20261007
   MIN_CAPABILITIES: 164
 
 jobs:
