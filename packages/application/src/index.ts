@@ -517,7 +517,8 @@ export class ConnectedApplication {
     const allSnapshots=IndexedDbReadSnapshotAdapter.supported()?await this.readSnapshots.listForActorTenant(this.actorId,this.tenantId):[],structuralSnapshots:any[]=[];let bytes=0;
     for(const row of allSnapshots){
       if(!this.managerStructuralPathAllowed(String(row.path??''),groupId))continue;
-      const safe={path:row.path,body:row.body,updatedAt:row.updatedAt,sourceVersion:row.sourceVersion??null},size=JSON.stringify(safe).length;
+      const scopedBody=row.path==='/api/v1/groups'&&Array.isArray(row.body)?(row.body as any[]).filter(g=>String(g?.id??'')===groupId):row.body;
+      const safe={path:row.path,body:scopedBody,updatedAt:row.updatedAt,sourceVersion:row.sourceVersion??null},size=JSON.stringify(safe).length;
       if(bytes+size>900000)break;bytes+=size;structuralSnapshots.push(safe);
     }
     const journal=await this.sovereign.list(this.tenantId,groupId),last=journal.at(-1);
