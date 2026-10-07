@@ -2679,6 +2679,33 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
       return json(updated,200,cors);
     }
 
+    const ferryMatch=/^\/api\/v1\/groups\/([^/]+)\/relay\/ferry-sync$/.exec(url.pathname);
+    if(request.method==='POST'&&ferryMatch){
+      const groupId=decodeURIComponent(ferryMatch[1]!);await requireGroup(groupId,false);
+      const body=await readJson<{packets?:any[];knownPacketIds?:string[]}>(request),packets=Array.isArray(body.packets)?body.packets:[],known=new Set((Array.isArray(body.knownPacketIds)?body.knownPacketIds:[]).map(String).slice(-500));
+      if(packets.length>12)throw Error('RELAY_FERRY_BATCH_TOO_LARGE');
+      const acceptedIds:string[]=[],now=Date.now(),maxExpiry=now+8*24*3600_000;
+      for(const packet of packets){
+        if(packet?.protocol!=='ECO_FERRY_1'||packet.groupId!==groupId||!packet.packetId||!packet.recipientMembershipId||!packet.keyId||!packet.capsule)throw Error('RELAY_FERRY_PACKET_INVALID');
+        const packetId=String(packet.packetId),expiresAt=String(packet.expiresAt??''),expiry=Date.parse(expiresAt),serialized=JSON.stringify(packet);
+        if(!/^[A-Za-z0-9._-]{8,96}$/.test(packetId)||!Number.isFinite(expiry)||expiry<=now||expiry>maxExpiry||serialized.length>350000)throw Error('RELAY_FERRY_PACKET_INVALID');
+        const recordId='relay_ferry_'+packetId,existing=await repo.getWorkspaceRecord(ctx.tenantId,recordId);
+        if(!existing){
+          const stamp=new Date().toISOString();
+          await repo.saveWorkspaceRecord({id:recordId,tenantId:ctx.tenantId,groupId,moduleId:'OFFLINE.RELAY_FERRY',title:'Eco Relay ferry packet',summary:'Opaque store-and-forward packet',status:'ACTIVE',tags:['offline','relay-ferry','opaque','key:'+String(packet.keyId).slice(0,32)],data:{packetId,recipientMembershipId:String(packet.recipientMembershipId),keyId:String(packet.keyId),expiresAt,packetJson:serialized},createdBy:ctx.actorId,createdAt:stamp,updatedAt:stamp});
+        }
+        acceptedIds.push(packetId);known.add(packetId);
+      }
+      const rows=await repo.listWorkspaceRecords(ctx.tenantId,'OFFLINE.RELAY_FERRY',groupId),out:any[]=[];
+      for(const row of rows){
+        const expiry=Date.parse(String(row.data.expiresAt??''));if(!Number.isFinite(expiry)||expiry<=now)continue;
+        const packetId=String(row.data.packetId??'');if(!packetId||known.has(packetId))continue;
+        try{const packet=JSON.parse(String(row.data.packetJson??''));if(packet?.protocol==='ECO_FERRY_1'&&packet.groupId===groupId)out.push(packet);}catch{}
+        if(out.length>=60)break;
+      }
+      return json({acceptedIds,packets:out,serverAt:new Date().toISOString()},200,cors);
+    }
+
     if(request.method==='POST'&&url.pathname==='/api/v1/outbox/apply'){
       const item=await readJson<OutboxItem<Record<string,unknown>>>(request); if(item.tenantId!==ctx.tenantId||item.actorId!==ctx.actorId) throw new Error('FORBIDDEN_SCOPE');
       const markerHash=await sha256Bytes(new TextEncoder().encode(JSON.stringify([ctx.tenantId,ctx.actorId,item.idempotencyKey])).buffer);
