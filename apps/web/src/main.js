@@ -269,7 +269,11 @@ const captureNavState=()=>{
     const sheetMode=!document.querySelector('#individualSheetsMode')?.hidden?'individual':'meeting';
     const openDetails=[...(active?.querySelectorAll('details[open][id]')??[])].map(x=>x.id).slice(0,40);
     const focusId=document.activeElement?.id||undefined;
-    return{view,scrollY:window.scrollY,sessionTab,meetingId,matrixMeetingId,membershipId,sheetMode,openDetails,focusId};
+    const meetingWrap=document.querySelector('#meetingMatrix .canonical-financial-wrap')??document.querySelector('#meetingMatrix');
+    const individualWrap=document.querySelector('#individualSheetMatrix .canonical-financial-wrap')??document.querySelector('#individualSheetMatrix');
+    const matrixScrollLeft=Number(meetingWrap?.scrollLeft??0),matrixScrollTop=Number(meetingWrap?.scrollTop??0);
+    const individualScrollLeft=Number(individualWrap?.scrollLeft??0),individualScrollTop=Number(individualWrap?.scrollTop??0);
+    return{view,scrollY:window.scrollY,sessionTab,meetingId,matrixMeetingId,membershipId,sheetMode,openDetails,focusId,matrixScrollLeft,matrixScrollTop,individualScrollLeft,individualScrollTop};
 };
 const resolveRequestedNavState=()=>{
     if(history.state?.ecoNav?.view)return history.state.ecoNav;
@@ -291,6 +295,13 @@ const restoreNavState=state=>{
         if(state.sheetMode||state.matrixMeetingId||state.membershipId||state.rubricId)window.dispatchEvent(new CustomEvent('eco:restore-financial-sheet',{detail:{sheetMode:state.sheetMode,matrixMeetingId:state.matrixMeetingId,membershipId:state.membershipId,rubricId:state.rubricId}}));
         const anchor=state.anchor?document.getElementById(state.anchor):undefined;
         if(anchor)anchor.scrollIntoView({behavior:'auto',block:'start'});else window.scrollTo({top:Number(state.scrollY)||0,behavior:'auto'});
+        const restoreMatrixScroll=()=>{
+          const meetingWrap=document.querySelector('#meetingMatrix .canonical-financial-wrap')??document.querySelector('#meetingMatrix');
+          const individualWrap=document.querySelector('#individualSheetMatrix .canonical-financial-wrap')??document.querySelector('#individualSheetMatrix');
+          if(meetingWrap){meetingWrap.scrollLeft=Number(state.matrixScrollLeft)||0;meetingWrap.scrollTop=Number(state.matrixScrollTop)||0;}
+          if(individualWrap){individualWrap.scrollLeft=Number(state.individualScrollLeft)||0;individualWrap.scrollTop=Number(state.individualScrollTop)||0;}
+        };
+        restoreMatrixScroll();setTimeout(restoreMatrixScroll,60);setTimeout(restoreMatrixScroll,220);
         if(state.focusId)document.getElementById(state.focusId)?.focus?.({preventScroll:true});
     });
 };
@@ -2438,10 +2449,15 @@ $('#syncBtn').addEventListener('click', async () => { if (!navigator.onLine) {
 } try{offlineConfrontationDeferred=false;await resumeOnline({forceConfrontation:true});renderOutbox();}catch(e){fail(e);} });
 $('#refreshBtn').addEventListener('click', async () => { try {
     clearFail();
-    app.forceServerRetry?.();
+    const preserved=captureNavState();persistNavState(preserved);
+    // Manual refresh may clear a short transport breaker, but must never bypass
+    // a known Cloudflare/D1 quota guard and recreate the former request storm.
+    app.forceTransportRetry?.();
     renderConnectivity();
+    if(navigator.onLine!==false&&(app.outboxItems?.()??[]).some(item=>!['CONFIRMED','CANCELLED'].includes(String(item.status??''))))await resumeOnline();
     await refreshAll();
-    toast('Données actualisées.');
+    showView(preserved.view,preserved);
+    toast(tx('Données actualisées sans perdre votre position.','Data refreshed without losing your position.'));
 }
 catch (e) {
     fail(e);
