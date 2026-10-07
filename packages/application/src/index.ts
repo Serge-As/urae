@@ -190,6 +190,7 @@ export class ConnectedApplication {
   forceTransportRetry():void{this.transportUnavailableUntil=0;}
   private markTransportUnavailable():void{this.transportUnavailableUntil=Date.now()+30000;if(typeof window!=='undefined'&&typeof CustomEvent!=='undefined')window.dispatchEvent(new CustomEvent('eco:transport-degraded',{detail:{until:this.transportUnavailableUntil}}));}
   serverBudgetState():{blocked:boolean;until:number;reason:string}{return{blocked:this.serverBudgetBlocked(),until:this.serverBudgetBlockedUntil,reason:this.serverBudgetReason};}
+  transportState():{degraded:boolean;until:number}{return{degraded:this.transportUnavailableUntil>Date.now(),until:this.transportUnavailableUntil};}
   private offlineReadAllowed(path:string):boolean{
     // Actor-scoped IndexedDB snapshots are safe for GET projections. Keeping this
     // generic prevents a newly-added read screen from becoming an accidental
