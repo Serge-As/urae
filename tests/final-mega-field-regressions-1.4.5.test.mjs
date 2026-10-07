@@ -21,8 +21,8 @@ const trashLifecycle=fs.readFileSync('packages/trash-lifecycle/src/index.ts','ut
 const repositories=fs.readFileSync('packages/repositories/src/index.ts','utf8');
 
 test('Android 6 offline shell remains bounded and never force-reloads a live page on worker takeover',()=>{
-  assert.match(sw,/const CACHE = 'eco-system-v15211-data-first-20261007'/);
-  assert.match(sw,/PREVIOUS_CACHE = 'eco-system-v15211-q01q28-recovery-20261006'/);
+  assert.match(sw,/const CACHE = 'eco-system-v15211-data-first-confrontation-20261007'/);
+  assert.match(sw,/PREVIOUS_CACHE = 'eco-system-v15211-data-first-20261007'/);
   assert.match(sw,/RELEASE_ASSET_TIMEOUT/);
   assert.match(sw,/Scripts\/styles\/assets are cache-first/);
   assert.match(sw,/skipWaiting\(/);
