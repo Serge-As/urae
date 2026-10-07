@@ -102,6 +102,7 @@ export class ConnectedApplication {
   private readonly identityMigration = new IndexedDbIdentityMigrationJournal();
   private readonly sovereign = new IndexedDbSovereignStore();
   private usingOfflineSnapshot=false;
+  private transportUnavailableUntil=0;
   private serverBudgetBlockedUntil=0;
   private serverBudgetReason='';
   private serverBudgetWake?:ReturnType<typeof setTimeout>;
@@ -185,7 +186,9 @@ export class ConnectedApplication {
     this.armServerBudgetWake();
     if(typeof window!=='undefined'&&typeof CustomEvent!=='undefined')window.dispatchEvent(new CustomEvent('eco:server-budget-blocked',{detail:{until:this.serverBudgetBlockedUntil,reason:this.serverBudgetReason}}));
   }
-  forceServerRetry():void{this.serverBudgetBlockedUntil=0;this.serverBudgetReason='';if(this.serverBudgetWake)clearTimeout(this.serverBudgetWake);this.serverBudgetWake=undefined;try{localStorage.removeItem('eco.serverBudgetBlock.v1');}catch{}this.usingOfflineSnapshot=false;}
+  forceServerRetry():void{this.serverBudgetBlockedUntil=0;this.serverBudgetReason='';this.transportUnavailableUntil=0;if(this.serverBudgetWake)clearTimeout(this.serverBudgetWake);this.serverBudgetWake=undefined;try{localStorage.removeItem('eco.serverBudgetBlock.v1');}catch{}this.usingOfflineSnapshot=false;}
+  forceTransportRetry():void{this.transportUnavailableUntil=0;}
+  private markTransportUnavailable():void{this.transportUnavailableUntil=Date.now()+30000;if(typeof window!=='undefined'&&typeof CustomEvent!=='undefined')window.dispatchEvent(new CustomEvent('eco:transport-degraded',{detail:{until:this.transportUnavailableUntil}}));}
   serverBudgetState():{blocked:boolean;until:number;reason:string}{return{blocked:this.serverBudgetBlocked(),until:this.serverBudgetBlockedUntil,reason:this.serverBudgetReason};}
   private offlineReadAllowed(path:string):boolean{
     // Actor-scoped IndexedDB snapshots are safe for GET projections. Keeping this
@@ -208,7 +211,7 @@ export class ConnectedApplication {
     this.usingOfflineSnapshot=true;
     if(typeof window!=='undefined'&&typeof CustomEvent!=='undefined')window.dispatchEvent(new CustomEvent('eco:offline-snapshot-used',{detail:{path,updatedAt}}));
   }
-  private isOffline():boolean{return this.serverBudgetBlocked()||this.usingOfflineSnapshot||(typeof navigator!=='undefined'&&navigator.onLine===false);}
+  private isOffline():boolean{return this.serverBudgetBlocked()||this.usingOfflineSnapshot||this.transportUnavailableUntil>Date.now()||(typeof navigator!=='undefined'&&navigator.onLine===false);}
   private async canAttemptCriticalWrite():Promise<boolean>{
     if(this.serverBudgetBlocked())return false;
     if(typeof navigator!=='undefined'&&navigator.onLine===false)return false;
@@ -301,6 +304,12 @@ export class ConnectedApplication {
     for(const [k,v] of new Headers(init.headers??{}))headers.set(k,v);
     if(typeof FormData!=='undefined'&&init.body instanceof FormData)headers.delete('content-type');
     const method=String(init.method??'GET').toUpperCase(),cacheable=method==='GET'&&this.offlineReadAllowed(path);
+    if(this.transportUnavailableUntil>Date.now()){
+      if(cacheable&&IndexedDbReadSnapshotAdapter.supported()){
+        try{const snapshot=await this.readSnapshots.get<T>(this.offlineReadKey(path));if(snapshot){this.announceOfflineSnapshot(path,snapshot.updatedAt);return structuredClone(snapshot.body);}}catch{}
+      }
+      throw new Error('NETWORK_UNAVAILABLE');
+    }
     if(this.serverBudgetBlocked()){
       if(cacheable&&IndexedDbReadSnapshotAdapter.supported()){
         try{const snapshot=await this.readSnapshots.get<T>(this.offlineReadKey(path));if(snapshot){this.announceOfflineSnapshot(path,snapshot.updatedAt);return structuredClone(snapshot.body);}}catch{}
@@ -308,18 +317,19 @@ export class ConnectedApplication {
       throw new Error('NETWORK_UNAVAILABLE');
     }
     let response:Response;
-    // Repayments have a durable write-ahead idempotency key. Their transport
-    // must be time-bounded on unreliable mobile networks so a saved intent can
-    // be shown as pending rather than keeping a cell disabled for minutes.
-    const repaymentWrite=method==='POST'&&/\/loans\/[^/]+\/repay$/.test(path);
-    const abort=repaymentWrite&&typeof AbortController==='function'?new AbortController():null;
+    // navigator.onLine can be true on a hotspot with no Internet. Bound actual
+    // server attempts; after one failure a short local circuit breaker makes
+    // subsequent offline-capable actions immediate without periodic probing.
+    const formUpload=typeof FormData!=='undefined'&&init.body instanceof FormData,timeoutMs=formUpload?30000:6500;
+    const abort=typeof AbortController==='function'?new AbortController():null;
     let requestTimer:ReturnType<typeof setTimeout>|undefined;
     try{
       const send=fetch(`${this.baseUrl}${path}`,{...init,headers,...(abort?{signal:abort.signal}:{})});
-      response=repaymentWrite?await Promise.race([send,new Promise<Response>((_,reject)=>{
-        requestTimer=setTimeout(()=>{abort?.abort();reject(new Error('NETWORK_UNAVAILABLE'));},12000);
-      })]):await send;
+      response=await Promise.race([send,new Promise<Response>((_,reject)=>{
+        requestTimer=setTimeout(()=>{abort?.abort();reject(new Error('NETWORK_UNAVAILABLE'));},timeoutMs);
+      })]);
     }catch(error){
+      this.markTransportUnavailable();
       if(cacheable&&IndexedDbReadSnapshotAdapter.supported()){
         try{const snapshot=await this.readSnapshots.get<T>(this.offlineReadKey(path));if(snapshot){this.announceOfflineSnapshot(path,snapshot.updatedAt);return structuredClone(snapshot.body);}}catch{}
       }
@@ -340,7 +350,7 @@ export class ConnectedApplication {
       if(transient)throw new Error('NETWORK_UNAVAILABLE');
       throw new Error(String(body.error??`HTTP_${response.status}`));
     }
-    this.usingOfflineSnapshot=false;
+    this.usingOfflineSnapshot=false;this.transportUnavailableUntil=0;
     if(cacheable)await this.cacheReadSnapshot(path,body as T);
     return body as T;
   }
