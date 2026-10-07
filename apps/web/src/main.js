@@ -757,6 +757,130 @@ const pendingTargetSnapshot=()=>Array.from(app.pendingFinancialCellTargets?.()??
   meetingId:String(item.meetingId??''),membershipId:String(item.membershipId??''),rubricId:String(item.rubricId??''),
   amount:Number(item.targetAmount??0),cellVersion:Number(item.baselineVersion??0)+1,idempotencyKey:String(item.idempotencyKey??'')
 })).filter(item=>item.meetingId&&item.membershipId&&item.rubricId&&Number.isSafeInteger(item.amount)&&item.amount>=0);
+
+let offlineConfrontationDeferred=false;
+const confrontationLabel=(collection,id,fallback)=>{
+  const row=collection.find(x=>String(x.id)===String(id));
+  return String(row?.displayName??row?.name??row?.title??fallback??id);
+};
+const showOfflineFinancialConfrontation=preview=>new Promise(resolve=>{
+  const rows=Array.isArray(preview?.rows)?preview.rows:[];
+  if(!rows.length){resolve({applyIds:[],keepServerIds:[]});return;}
+  document.getElementById('offlineFinancialConfrontation')?.remove();
+  const decisions=new Map(rows.map(row=>[row.outboxId,row.sameAmount?'APPLY_LOCAL':'']));
+  const dialog=document.createElement('dialog');dialog.id='offlineFinancialConfrontation';dialog.className='offline-confrontation-dialog';
+  const head=document.createElement('div');head.className='offline-confrontation-head';
+  const title=document.createElement('div'),h=document.createElement('h2'),intro=document.createElement('p');
+  h.textContent=tx('Confrontation des données au retour en ligne','Data review when returning online');
+  intro.textContent=tx(
+    'Eco-System a trouvé des modifications enregistrées hors ligne sur cet appareil. Vérifiez ce qui existe déjà et ce que cet appareil propose avant la synchronisation.',
+    'Eco-System found changes saved offline on this device. Review what already exists and what this device proposes before syncing.'
+  );
+  title.append(h,intro);
+  const stats=document.createElement('div');stats.className='offline-confrontation-stats';
+  const divergent=rows.filter(x=>!x.sameAmount).length,changed=rows.filter(x=>x.serverChangedSinceBaseline).length;
+  for(const [value,label] of [[rows.length,tx('modification(s)','change(s)')],[divergent,tx('divergence(s)','difference(s)')],[changed,tx('valeur(s) distante(s) modifiée(s)','server value(s) changed')]]){
+    const metric=document.createElement('div');metric.innerHTML='<strong>'+String(value)+'</strong><span>'+label+'</span>';stats.append(metric);
+  }
+  head.append(title,stats);dialog.append(head);
+
+  const toolbar=document.createElement('div');toolbar.className='offline-confrontation-toolbar';
+  const applyAll=document.createElement('button');applyAll.type='button';applyAll.className='primary';applyAll.textContent=tx('Appliquer toutes mes modifications','Apply all my changes');
+  const keepAll=document.createElement('button');keepAll.type='button';keepAll.className='secondary';keepAll.textContent=tx('Conserver toutes les données déjà présentes','Keep all existing data');
+  const hint=document.createElement('span');hint.className='hint';hint.textContent=tx('Les confirmations identiques restent envoyées afin de conserver leur date de validation.','Identical confirmations are still sent so their validation time is preserved.');
+  toolbar.append(applyAll,keepAll,hint);dialog.append(toolbar);
+
+  const wrap=document.createElement('div');wrap.className='matrix-wrap offline-confrontation-wrap';
+  const table=document.createElement('table');table.className='meeting-matrix offline-confrontation-table';
+  const thead=document.createElement('thead');thead.innerHTML='<tr><th>'+tx('Membre','Member')+'</th><th>'+tx('Rubrique','Rubric')+'</th><th>'+tx('Source','Source')+'</th><th>'+tx('Montant','Amount')+'</th><th>'+tx('Version / date','Version / date')+'</th><th>'+tx('Décision','Decision')+'</th></tr>';table.append(thead);
+  const grouped=new Map();
+  for(const row of rows){const key=String(row.meetingId);if(!grouped.has(key))grouped.set(key,[]);grouped.get(key).push(row);}
+  const decisionButtons=new Map();
+
+  const setDecision=(row,value)=>{
+    if(row.sameAmount)value='APPLY_LOCAL';
+    decisions.set(row.outboxId,value);
+    const pair=decisionButtons.get(row.outboxId);
+    if(pair){pair.apply.classList.toggle('active',value==='APPLY_LOCAL');pair.keep.classList.toggle('active',value==='KEEP_SERVER');}
+    updateConfirm();
+  };
+  const bulk=(meetingId,value)=>{for(const row of rows.filter(x=>String(x.meetingId)===String(meetingId)))setDecision(row,value);};
+  const renderGroup=(meetingId,groupRows)=>{
+    const tbody=document.createElement('tbody');tbody.dataset.meetingId=meetingId;
+    const section=document.createElement('tr');section.className='offline-confrontation-session';
+    const cell=document.createElement('th');cell.colSpan=6;
+    const left=document.createElement('div'),label=document.createElement('strong'),actions=document.createElement('div');
+    const meeting=meetings.find(x=>String(x.id)===meetingId);
+    label.textContent=meeting?meetingLabel(meeting):tx('Séance ','Meeting ')+meetingId;
+    const useLocal=document.createElement('button');useLocal.type='button';useLocal.className='link-btn';useLocal.textContent=tx('Tout appliquer pour cette séance','Apply all for this meeting');
+    const useServer=document.createElement('button');useServer.type='button';useServer.className='link-btn';useServer.textContent=tx('Tout conserver pour cette séance','Keep existing for this meeting');
+    useLocal.onclick=()=>bulk(meetingId,'APPLY_LOCAL');useServer.onclick=()=>bulk(meetingId,'KEEP_SERVER');
+    actions.append(useLocal,useServer);left.append(label,actions);cell.append(left);section.append(cell);tbody.append(section);
+
+    for(const row of groupRows){
+      const member=confrontationLabel(members,row.membershipId,row.membershipId),rubric=confrontationLabel(rubrics,row.rubricId,row.rubricId);
+      const serverTr=document.createElement('tr');serverTr.className='offline-confrontation-server';
+      const localTr=document.createElement('tr');localTr.className='offline-confrontation-local';
+      const memberCell=document.createElement('th');memberCell.rowSpan=2;memberCell.textContent=member;
+      const rubricCell=document.createElement('th');rubricCell.rowSpan=2;rubricCell.textContent=rubric;
+      const serverSource=document.createElement('td');serverSource.textContent=tx('Déjà présent','Existing');
+      const serverAmount=document.createElement('td');serverAmount.className='amount';serverAmount.textContent=fmt(row.canonicalAmount);
+      const serverMeta=document.createElement('td');serverMeta.textContent='v'+String(row.canonicalVersion)+(row.canonicalUpdatedAt?' · '+date(row.canonicalUpdatedAt):'');
+      const localSource=document.createElement('td');localSource.textContent=tx('Cet appareil','This device');
+      const localAmount=document.createElement('td');localAmount.className='amount';localAmount.textContent=fmt(row.localAmount);
+      const localMeta=document.createElement('td');localMeta.textContent=tx('Enregistré ','Saved ')+date(row.recordedAt);
+      const decision=document.createElement('td');decision.rowSpan=2;decision.className='offline-confrontation-decision';
+      if(row.sameAmount){
+        const same=document.createElement('span');same.className='pill success';same.textContent=tx('Même montant · confirmer','Same amount · confirm');decision.append(same);
+      }else{
+        const apply=document.createElement('button');apply.type='button';apply.className='secondary';apply.textContent=tx('Appliquer cet appareil','Use this device');
+        const keep=document.createElement('button');keep.type='button';keep.className='secondary';keep.textContent=tx('Conserver présent','Keep existing');
+        apply.onclick=()=>setDecision(row,'APPLY_LOCAL');keep.onclick=()=>setDecision(row,'KEEP_SERVER');
+        decisionButtons.set(row.outboxId,{apply,keep});decision.append(apply,keep);
+        if(row.serverChangedSinceBaseline){
+          const warn=document.createElement('small');warn.className='offline-confrontation-warning';warn.textContent=tx('La valeur distante a changé depuis votre départ hors ligne.','The server value changed while you were offline.');decision.append(warn);
+        }
+      }
+      serverTr.append(memberCell,rubricCell,serverSource,serverAmount,serverMeta,decision);
+      localTr.append(localSource,localAmount,localMeta);
+      tbody.append(serverTr,localTr);
+    }
+    table.append(tbody);
+  };
+  for(const [meetingId,groupRows] of grouped)renderGroup(meetingId,groupRows);
+  wrap.append(table);dialog.append(wrap);
+
+  const footer=document.createElement('div');footer.className='offline-confrontation-footer';
+  const later=document.createElement('button');later.type='button';later.className='ghost';later.textContent=tx('Plus tard','Later');
+  const confirm=document.createElement('button');confirm.type='button';confirm.className='primary';
+  const unresolved=document.createElement('span');unresolved.className='hint';
+  const updateConfirm=()=>{
+    const left=rows.filter(row=>!row.sameAmount&&!decisions.get(row.outboxId)).length;
+    confirm.disabled=left>0;confirm.textContent=left?tx('Décidez encore '+left+' ligne(s)','Decide '+left+' more row(s)'):tx('Valider et synchroniser','Confirm and sync');
+    unresolved.textContent=left?tx(left+' divergence(s) à décider.',''+left+' difference(s) still need a decision.'):'';
+  };
+  applyAll.onclick=()=>{for(const row of rows)setDecision(row,'APPLY_LOCAL');};
+  keepAll.onclick=()=>{for(const row of rows)setDecision(row,row.sameAmount?'APPLY_LOCAL':'KEEP_SERVER');};
+  later.onclick=()=>{dialog.close();dialog.remove();resolve(null);};
+  confirm.onclick=()=>{
+    const keepServerIds=rows.filter(row=>decisions.get(row.outboxId)==='KEEP_SERVER').map(row=>row.outboxId);
+    const applyIds=rows.filter(row=>decisions.get(row.outboxId)==='APPLY_LOCAL').map(row=>row.outboxId);
+    dialog.close();dialog.remove();resolve({applyIds,keepServerIds});
+  };
+  footer.append(unresolved,later,confirm);dialog.append(footer);document.body.append(dialog);updateConfirm();dialog.showModal();
+});
+const reviewOfflineFinancialBacklog=async(force=false)=>{
+  if(!isManager()||!app.activeGroup?.())return true;
+  const pending=app.pendingFinancialCellTargets?.()??[];if(!pending.length)return true;
+  if(offlineConfrontationDeferred&&!force)return false;
+  const preview=await app.previewOfflineFinancialConfrontation();
+  if(!preview.rows?.length)return true;
+  const decision=await showOfflineFinancialConfrontation(preview);
+  if(!decision){offlineConfrontationDeferred=true;return false;}
+  for(const id of decision.keepServerIds)await app.cancelOutboxItem(id);
+  offlineConfrontationDeferred=false;renderOutbox();
+  return true;
+};
 const markCriticalFinancialConflict=detail=>{
   const selector=`.matrix-cell-entry[data-meeting-id="${CSS.escape(String(detail.meetingId??''))}"][data-membership-id="${CSS.escape(String(detail.membershipId??''))}"][data-rubric-id="${CSS.escape(String(detail.rubricId??''))}"]`;
   for(const cell of document.querySelectorAll(selector)){
@@ -796,6 +920,7 @@ const scheduleFinancialOutboxRecovery=detail=>{
   let attempt=0;
   const run=async()=>{
     if(navigator.onLine===false){financialRetryTimers.delete(key);return;}
+    if(networkRecoveryNeeded){financialRetryTimers.delete(key);void resumeOnline();return;}
     attempt++;
     try{
       const beforeSync=pendingTargetSnapshot();
@@ -2283,7 +2408,7 @@ $('#queueBtn').addEventListener('click', async () => { await app.queueDemoIntent
 $('#syncBtn').addEventListener('click', async () => { if (!navigator.onLine) {
     fail(new Error('Hors ligne'));
     return;
-} try{const result=await app.syncOutbox();renderOutbox();if(isManager())await renderLedger();toast(result.some(x=>['FAILED','CONFLICT','PENDING'].includes(x.status))?'Certaines opérations restent à vérifier dans la file.':'Synchronisation confirmée.');}catch(e){fail(e);} });
+} try{offlineConfrontationDeferred=false;await resumeOnline({forceConfrontation:true});renderOutbox();}catch(e){fail(e);} });
 $('#refreshBtn').addEventListener('click', async () => { try {
     clearFail();
     app.forceServerRetry?.();
@@ -2307,11 +2432,12 @@ $('#languageSelect').addEventListener('change', async e => {
 });
 let onlineResumePromise=null;
 let networkRecoveryNeeded=navigator.onLine===false;
-const resumeOnline=()=>{
+const resumeOnline=({forceConfrontation=false}={})=>{
     if(onlineResumePromise)return onlineResumePromise;
     const preserved=captureNavState();persistNavState(preserved);
     onlineResumePromise=(async()=>{renderConnectivity();try{
         if(navigator.onLine===false){networkRecoveryNeeded=true;return;}
+        if(!(await reviewOfflineFinancialBacklog(forceConfrontation))){networkRecoveryNeeded=true;renderConnectivity();return;}
         const pendingBefore=(app.outboxItems?.()??[]).filter(item=>!['CONFIRMED','CANCELLED'].includes(String(item.status??'')));
         const beforeSync=pendingTargetSnapshot();
         await app.syncOutbox();
@@ -2351,7 +2477,7 @@ const eventDrivenConnectivityRecovery=()=>{
     if(navigator.onLine&&(pending||networkRecoveryNeeded))void resumeOnline();
 };
 window.addEventListener('online',()=>{networkRecoveryNeeded=true;void resumeOnline();});
-window.addEventListener('offline',()=>{networkRecoveryNeeded=true;persistNavState(captureNavState());renderConnectivity();});
+window.addEventListener('offline',()=>{networkRecoveryNeeded=true;offlineConfrontationDeferred=false;persistNavState(captureNavState());renderConnectivity();});
 window.addEventListener('pageshow',eventDrivenConnectivityRecovery);
 window.addEventListener('eco:server-budget-blocked',renderConnectivity);
 window.addEventListener('eco:server-budget-expired',()=>{networkRecoveryNeeded=true;void resumeOnline();});
