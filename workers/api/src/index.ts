@@ -1816,6 +1816,22 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
       await requireGroup(closingCarryoverPreview[1]!,true);return json(buildClosingCarryover(await readJson<any>(request)),200,cors);
     }
 
+    const groupExpenseRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/expenses$/);
+    if(groupExpenseRoute&&request.method==='GET'){
+      const groupId=groupExpenseRoute[1]!;await requireGroup(groupId,true);
+      const scope=url.searchParams.get('scope')||undefined,meetingId=url.searchParams.get('meetingId')||undefined,membershipId=url.searchParams.get('membershipId')||undefined,rubricId=url.searchParams.get('rubricId')||undefined;
+      return json(await new ExpenseService(repo,kernel,ledger).list(groupId,{scope:scope as any,meetingId,membershipId,rubricId}),200,cors);
+    }
+    if(groupExpenseRoute&&request.method==='POST'){
+      const groupId=groupExpenseRoute[1]!,body=await readJson<Record<string,unknown>>(request);
+      const expense=await new ExpenseService(repo,kernel,ledger).create(groupId,{amount:finite(body.amount),label:String(body.label??'Dépense'),scope:String(body.scope??'BACKOFFICE') as any,meetingId:body.meetingId?String(body.meetingId):undefined,membershipId:body.membershipId?String(body.membershipId):undefined,rubricId:body.rubricId?String(body.rubricId):undefined,note:body.note?String(body.note):undefined,idempotencyKey:String(body.idempotencyKey??request.headers.get('x-idempotency-key')??makeId('expense'))});
+      if(expense.scope==='SHEET'&&expense.meetingId&&expense.membershipId&&expense.rubricId){
+        const meeting=await repo.getMeeting(ctx.tenantId,groupId,expense.meetingId);
+        try{await publishLive(groupId,'MEETING_UPDATE','sheet-outflow-live:'+expense.ledgerEntryId,{meetingId:expense.meetingId,kind:'FINANCIAL_CELL',operationType:'SHEET_OUTFLOW',membershipId:expense.membershipId,rubricId:expense.rubricId,previousAmount:0,newAmount:expense.amount,meetingClosed:meeting?.status==='closed',actorId:ctx.actorId,actorName:await actorLabel()});}catch(error){console.info('Sheet expense Live push deferred',error);}
+      }
+      return json(expense,201,cors);
+    }
+
     const financialSnapshotRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/financial-cells\/snapshot$/);
     if(financialSnapshotRoute&&request.method==='GET'){
       const groupId=financialSnapshotRoute[1]!;await requireGroup(groupId,false);
