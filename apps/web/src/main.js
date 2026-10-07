@@ -394,10 +394,13 @@ mountCommunityBlueprintPresets();
 const financialLabUI = mountFinancialLabUI({app,notify:toast,showError:fail});
 const resilienceUI = mountResilienceUI({app,notify:toast,showError:fail});
 const renderConnectivity = () => {
-    const online=navigator.onLine,budget=app.serverBudgetState?.(),paused=Boolean(budget?.blocked),e=$('#connectivity');
-    e.textContent=paused?(String(budget?.reason??'').startsWith('D1_')?tx('● Quota Cloudflare · saisies conservées localement','● Cloudflare quota · entries saved locally'):tx('● Mode conservation · serveur en pause','● Conservation mode · server paused')):`● ${online ? tx('En ligne','Online') : tx('Hors ligne','Offline')}`;
-    e.title=paused?tx(`Accès serveur limité. Reprise ciblée après ${new Date(Number(budget?.until??0)).toLocaleString('fr-FR')}. Les validations serveur restent en attente.`,`Server limited. Retry after ${new Date(Number(budget?.until??0)).toLocaleString('en-US')}. Server confirmations pending.`):'';
-    e.className=`pill ${online&&!paused?'online':'offline'}`;app.setConnectivity(!online?'offline':paused?'degraded':'online');
+    const online=navigator.onLine,budget=app.serverBudgetState?.(),transport=app.transportState?.(),paused=Boolean(budget?.blocked),degraded=Boolean(transport?.degraded),e=$('#connectivity');
+    e.textContent=paused?(String(budget?.reason??'').startsWith('D1_')?tx('● Quota Cloudflare · saisies conservées localement','● Cloudflare quota · entries saved locally'):tx('● Mode conservation · serveur en pause','● Conservation mode · server paused'))
+      :degraded?tx('● Local actif · serveur momentanément absent','● Local active · server temporarily unavailable')
+      :`● ${online ? tx('En ligne','Online') : tx('Hors ligne','Offline')}`;
+    e.title=paused?tx(`Accès serveur limité. Reprise ciblée après ${new Date(Number(budget?.until??0)).toLocaleString('fr-FR')}. Les validations serveur restent en attente.`,`Server limited. Retry after ${new Date(Number(budget?.until??0)).toLocaleString('en-US')}. Server confirmations pending.`)
+      :degraded?tx('Le réseau local reste utilisable. Eco-System privilégie les données de cet appareil et Eco Relay sans sonder le serveur en boucle.','Local networking remains available. Eco-System prioritizes this device and Eco Relay without polling the server.'):'';
+    e.className=`pill ${online&&!paused&&!degraded?'online':'offline'}`;app.setConnectivity(!online?'offline':paused||degraded?'degraded':'online');
 };
 let lastOfflineSnapshotNotice=0;
 window.addEventListener('eco:offline-snapshot-used',event=>{
@@ -2489,10 +2492,11 @@ const eventDrivenConnectivityRecovery=()=>{
     const pending=(app.outboxItems?.()??[]).some(item=>!['CONFIRMED','CANCELLED'].includes(String(item.status)));
     if(navigator.onLine&&(pending||networkRecoveryNeeded))void resumeOnline();
 };
-window.addEventListener('online',()=>{networkRecoveryNeeded=true;void resumeOnline();});
+window.addEventListener('online',()=>{app.forceTransportRetry?.();networkRecoveryNeeded=true;void resumeOnline();});
 window.addEventListener('offline',()=>{networkRecoveryNeeded=true;offlineConfrontationDeferred=false;persistNavState(captureNavState());renderConnectivity();});
 window.addEventListener('pageshow',eventDrivenConnectivityRecovery);
 window.addEventListener('eco:server-budget-blocked',renderConnectivity);
+window.addEventListener('eco:transport-degraded',renderConnectivity);
 window.addEventListener('eco:manager-relay-updated',()=>{void(async()=>{
     const structure=await app.localRelayGroupStructure?.();if(structure){
       await renderMembers(structure.members);await renderMeetings(structure.meetings);await renderLivingRules(structure.rubrics);
