@@ -621,6 +621,36 @@ export interface RubricSpecialLoanRule {
   eligibilityRule?:string;
 }
 export type RubricLoanFundingMode='SAVINGS_REPAYMENTS_ONLY'|'AVAILABLE_GROUP_CASH';
+export type RubricLoanPolicyChangeScope='NEW_LOANS_ONLY'|'NEW_AND_ALL_OPEN_LOANS'|'NEW_AND_SELECTED_OPEN_LOANS';
+export interface RubricLoanPolicySnapshot {
+  rateBasisPointsPerPeriod?:number;
+  paymentPriority?:'CAPITAL_FIRST'|'INTEREST_FIRST'|'EXPLICIT_ALLOCATION';
+  interestTiming?:RubricLoanInterestTiming;
+  fundingMode?:RubricLoanFundingMode;
+  carryForwardUnusedFunds?:boolean;
+}
+export interface RubricLoanPolicyChangeControl {
+  /** Stable mutation id so online retry and offline replay cannot create duplicate policy revisions. */
+  commandId?:Id;
+  scope:RubricLoanPolicyChangeScope;
+  effectiveMode?:'IMMEDIATE'|'DATE'|'MEETING';
+  effectiveAt?:string;
+  effectiveMeetingId?:Id;
+  selectedLoanIds?:Id[];
+}
+export interface RubricLoanPolicyRevision {
+  id:Id;
+  createdAt:string;
+  createdBy?:Id;
+  effectiveAt:string;
+  effectiveMeetingId?:Id;
+  scope:RubricLoanPolicyChangeScope;
+  selectedLoanIds?:Id[];
+  /** Open loans that were actually eligible when the revision was decided. Closed loans are absent. */
+  affectedLoanIds?:Id[];
+  before:RubricLoanPolicySnapshot;
+  after:RubricLoanPolicySnapshot;
+}
 export interface RubricLoanPolicy {
   allowed:boolean;
   rateBasisPointsPerPeriod?:number;
@@ -633,6 +663,10 @@ export interface RubricLoanPolicy {
   noInterestOnInterest:true;
   overdue?:RubricLoanOverduePolicy;
   specialLoans?:RubricSpecialLoanRule[];
+  /** Server-authored immutable history used to resolve each loan's effective rules without rewriting closed loans. */
+  revisions?:RubricLoanPolicyRevision[];
+  /** Transient command metadata. The API consumes it and never trusts client-authored revision history. */
+  changeControl?:RubricLoanPolicyChangeControl;
 }
 export interface RubricYieldPolicy {
   enabled:boolean;
@@ -789,3 +823,36 @@ export const makeId = (prefix: string): string => {
   const id=hex.slice(0,8)+'-'+hex.slice(8,12)+'-'+hex.slice(12,16)+'-'+hex.slice(16,20)+'-'+hex.slice(20);
   return `${prefix}_${id}`;
 };
+
+
+/** Recorded at durable local validation, never reconstructed from arrival time.
+ * V2 is a staging contract: V1 remains authoritative until the atomic
+ * repository/outbox/server path and Q01–Q28 have passed qualification. */
+export interface RecordedCellIntentV2 {
+  commandId: string;
+  tenantId: Id;
+  groupId: Id;
+  exerciseId: Id;
+  meetingId: Id;
+  membershipId: Id;
+  rubricId: Id;
+  activityId?: Id;
+  targetAmount: number; // integer absolute XAF, zero included
+  baselineCellVersion: number;
+  baselineAmount: number;
+  actorId: Id;
+  deviceId: string;
+  deviceSequence: number;
+  recordedAtClient: string;
+  clockAnchorId?: string;
+  elapsedSinceAnchorMs?: number;
+  reason?: string;
+}
+/** Produced by a server-verifiable clock reconciliation, not client assertions. */
+export interface NormalizedCellIntentOrder {
+  commandId: string;
+  effectiveRecordedAtMs: number;
+  clockQuality: 'VERIFIED' | 'UNVERIFIABLE';
+  deviceId: string;
+  deviceSequence: number;
+}

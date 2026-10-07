@@ -15,7 +15,7 @@ const yieldRows=draft=>{
   return[...map.values()];
 };
 
-export function mountSovereignOfflineUI({app,getMembers=()=>[],getMeetings=()=>[],isManager=()=>false,notify=()=>{},showError=console.error}={}){
+export function mountSovereignOfflineUI({app,getMembers=()=>[],getMeetings=()=>[],getRubrics=()=>[],isManager=()=>false,notify=()=>{},showError=console.error}={}){
   const relay=document.getElementById('ecoRelaySovereignWorkspace'),local=document.getElementById('ecoLocalSovereignWorkspace');if(!relay||!local)return{refresh:async()=>{}};
   let frames=[],frameIndex=0,timer=null,currentBundle=null,qrScanner=null,receiver=new EcoBroadcastReceiver(),targetedReceiver=null;
   let localPeer=null,localSignalFrames=[],localSignalIndex=0,localSignalTimer=null,localQrScanner=null,localSignalReceiver=new EcoLocalRoomSignalReceiver(),localSignalRaw='';
@@ -51,10 +51,10 @@ export function mountSovereignOfflineUI({app,getMembers=()=>[],getMeetings=()=>[
   closeBox.append(el('p','La répartition d’intérêts utilisée est celle que le responsable a mémorisée dans le module Épargne. Aucune méthode cachée n’est substituée.','hint'),closingCash,principalDisposition,interestDisposition,solidarity,reserve,bureau,otherCarry,prepareClose,closeExercise,nextLabel,rollExercise,closingResult);
   exercise.append(eh,el('p','Un exercice peut vivre intégralement sur cet appareil : ouverture → séances → clôture préparée → validation → report. Les enveloppes de clôture sont des allocations ; un paiement physique reste une opération financière séparée à constater.','truth-notice'),openRow,exerciseState,closeBox);
 
-  const localRoom=el('section',undefined,'item'),lrh=el('h3','Eco Local Room · appareil à appareil'),lrStatus=el('p','Aucune salle locale ouverte.','truth-notice'),lrCreate=el('button','Créer une salle (hôte)','primary'),lrScan=el('button','Scanner offre / réponse','secondary'),lrStopScan=el('button','Arrêter caméra','secondary'),lrExport=el('button','Partager le signal','secondary'),lrSignalScreen=el('div',undefined,'eco-optical-screen'),lrVideo=document.createElement('video'),lrFile=document.createElement('input'),lrMember=el('select'),lrSendMember=el('button','Envoyer la capsule du membre','primary'),lrSendDelta=el('button','Confronter avec l’autre gestionnaire','secondary'),lrCompare=el('div',undefined,'stack');
-  lrVideo.autoplay=true;lrVideo.playsInline=true;lrVideo.muted=true;lrVideo.setAttribute('playsinline','');lrVideo.setAttribute('webkit-playsinline','');lrVideo.className='eco-relay-camera';lrFile.type='file';lrFile.accept='.ecolocal,text/plain';lrSendMember.disabled=lrSendDelta.disabled=lrExport.disabled=true;
-  const lra=el('div',undefined,'actions');lra.append(lrCreate,lrScan,lrStopScan,lrExport);const lrs=el('div',undefined,'actions');lrs.append(lrMember,lrSendMember,lrSendDelta);
-  localRoom.append(lrh,el('p','Les deux appareils doivent être sur le même réseau local. Le signal de connexion passe par QR ou fichier ; les données passent ensuite directement en WebRTC, sans serveur Internet.','hint'),lra,lrSignalScreen,lrStatus,lrVideo,el('label','Importer un signal .ecolocal'),lrFile,lrs,lrCompare);
+  const localRoom=el('section',undefined,'item'),lrh=el('h3','Eco Local Room · appareil à appareil'),lrStatus=el('p','Aucune salle locale ouverte.','truth-notice'),lrCreate=el('button','Créer une salle (hôte)','primary'),lrScan=el('button','Scanner offre / réponse','secondary'),lrStopScan=el('button','Arrêter caméra','secondary'),lrExport=el('button','Partager le signal','secondary'),lrSignalScreen=el('div',undefined,'eco-optical-screen'),lrVideo=document.createElement('video'),lrFile=document.createElement('input'),lrMember=el('select'),lrSendMember=el('button','Envoyer la capsule du membre','primary'),lrSendDelta=el('button','Confronter / intégrer gestionnaires','secondary'),lrPrepareFerry=el('button','Préparer les paquets passeurs','secondary'),lrSendFerry=el('button','Échanger les paquets Relay','secondary'),lrInternetFerry=el('button','Profiter de cette connexion Internet','secondary'),ferryStatus=el('p','Aucun paquet passeur préparé.','hint'),lrCompare=el('div',undefined,'stack');
+  lrVideo.autoplay=true;lrVideo.playsInline=true;lrVideo.muted=true;lrVideo.setAttribute('playsinline','');lrVideo.setAttribute('webkit-playsinline','');lrVideo.className='eco-relay-camera';lrFile.type='file';lrFile.accept='.ecolocal,text/plain';lrSendMember.disabled=lrSendDelta.disabled=lrSendFerry.disabled=lrExport.disabled=true;
+  const lra=el('div',undefined,'actions');lra.append(lrCreate,lrScan,lrStopScan,lrExport);const lrs=el('div',undefined,'actions');lrs.append(lrMember,lrSendMember,lrSendDelta,lrPrepareFerry,lrSendFerry,lrInternetFerry);
+  localRoom.append(lrh,el('p','Les deux appareils peuvent échanger directement sur le réseau local sans serveur. Les intentions métier sont conservées avec leur auteur et leur horodatage ; les membres/séances/rubriques peuvent se propager via Eco Relay sans transformer le transport en seconde comptabilité.','hint'),lra,lrSignalScreen,lrStatus,lrVideo,el('label','Importer un signal .ecolocal'),lrFile,lrs,ferryStatus,lrCompare);
 
   const numpad=el('section',undefined,'item'),nh=el('h3','Eco NumPad · saisie financière sans IA'),numMeeting=el('select'),numInput=document.createElement('input'),numPreview=el('button','Prévisualiser','secondary'),numCommit=el('button','Valider les lignes','primary'),numLegend=el('div',undefined,'stack'),numResult=el('div',undefined,'stack');let numDraft=null;
   numInput.placeholder='Ex. 3 S 500 E 1000 R 5000';numInput.autocomplete='off';numCommit.disabled=true;
@@ -71,7 +71,8 @@ export function mountSovereignOfflineUI({app,getMembers=()=>[],getMeetings=()=>[
     const members=getMembers().filter(x=>x.status==='active'),meetings=getMeetings().slice().sort((a,b)=>String(b.scheduledAt??b.openedAt).localeCompare(String(a.scheduledAt??a.openedAt)));
     const keep=pairSelect.value;pairSelect.replaceChildren(...members.map(m=>{const o=document.createElement('option');o.value=m.id;o.textContent='N°'+(m.memberNumber??'—')+' · '+m.displayName;return o;}));if(members.some(x=>x.id===keep))pairSelect.value=keep;
     const lrKeep=lrMember.value;lrMember.replaceChildren(...members.map(m=>{const o=document.createElement('option');o.value=m.id;o.textContent='N°'+(m.memberNumber??'—')+' · '+m.displayName;return o;}));if(members.some(x=>x.id===lrKeep))lrMember.value=lrKeep;
-    lrCreate.disabled=!isManager();lrSendMember.disabled=!localPeer?.connected||!isManager()||!members.length;lrSendDelta.disabled=!localPeer?.connected||!isManager();
+    lrCreate.disabled=!isManager();lrSendMember.disabled=!localPeer?.connected||!isManager()||!members.length;lrSendDelta.disabled=!localPeer?.connected||!isManager();lrPrepareFerry.disabled=!isManager();lrSendFerry.disabled=!localPeer?.connected;
+    try{const ferry=await app.ecoRelayFerryPackets();ferryStatus.textContent=ferry.length+' paquet(s) Relay conservé(s) sur cet appareil · Internet facultatif.';}catch{}
     const mk=meetingSelect.value;meetingSelect.replaceChildren(...meetings.map(m=>{const o=document.createElement('option');o.value=m.id;o.textContent=m.title+' · '+String(m.status);return o;}));if(meetings.some(x=>x.id===mk))meetingSelect.value=mk;
     const nk=numMeeting.value;numMeeting.replaceChildren(...meetings.filter(m=>m.status!=='cancelled').map(m=>{const o=document.createElement('option');o.value=m.id;o.textContent=m.title+' · '+String(m.status);return o;}));if(meetings.some(x=>x.id===nk))numMeeting.value=nk;
     numLegend.replaceChildren();try{for(const row of await app.numpadCodes()){const line=el('p',row.code+' = '+row.name,'hint');numLegend.append(line);}}catch{}
@@ -97,10 +98,37 @@ export function mountSovereignOfflineUI({app,getMembers=()=>[],getMeetings=()=>[
   const wireLocalPeer=peer=>{
     peer.onPacket(async packet=>{try{
       if(packet.type==='MEMBER_CAPSULE'){const capsule=await app.receiveEcoBroadcast(packet.payload);lrCompare.prepend(el('p','Capsule reçue · membre '+capsule.membershipId,'truth-notice'));notify('Compte personnel mis à jour via Eco Local Room.');}
-      else if(packet.type==='MANAGER_DELTA'){const c=await app.confrontLocalRoomManagerDelta(packet.payload);lrCompare.replaceChildren(el('strong','Confrontation des journaux'),el('p','Dernier point commun : #'+c.commonSequence+' · seulement ici : '+c.localOnly+' · seulement autre appareil : '+c.remoteOnly),el('p','Conflits financiers potentiels : '+c.potentialFinancialConflicts.length,c.potentialFinancialConflicts.length?'truth-notice':'hint'));for(const row of c.potentialFinancialConflicts.slice(0,20))lrCompare.append(el('p','⚠ '+row.key,'hint'));}
+      else if(packet.type==='MANAGER_DELTA'){
+        const comparison=await app.confrontLocalRoomManagerDelta(packet.payload),imported=packet.payload?.protocol==='ECO_MANAGER_DELTA_2'?await app.importLocalRoomManagerDelta(packet.payload):{importedCommands:0,mergedSnapshots:0,conflicts:comparison.potentialFinancialConflicts.length};
+        lrCompare.replaceChildren(el('strong','Confrontation Eco Relay'),el('p','Intentions communes : '+String(comparison.commonCommands??0)+' · seulement ici : '+comparison.localOnly+' · seulement autre appareil : '+comparison.remoteOnly),el('p','Données structurelles intégrées : '+String(imported.mergedSnapshots??0)+' · intentions Relay conservées : '+String(imported.importedCommands??0)),el('p','Divergences financières à examiner : '+comparison.potentialFinancialConflicts.length,comparison.potentialFinancialConflicts.length?'truth-notice':'hint'));
+        const conflicts=comparison.potentialFinancialConflicts.slice(0,60),membersById=new Map(getMembers().map(x=>[String(x.id),x])),meetingsById=new Map(getMeetings().map(x=>[String(x.id),x])),rubricsById=new Map(getRubrics().map(x=>[String(x.id),x]));
+        if(conflicts.length){
+          const bulk=el('button','Appliquer les recommandations chronologiques','secondary'),wrap=el('div',undefined,'matrix-wrap relay-confrontation-wrap'),table=el('table',undefined,'meeting-matrix relay-confrontation-table'),head=document.createElement('thead'),hr=document.createElement('tr');
+          for(const label of ['Séance','Membre','Rubrique','Ici','Autre appareil','Ordre','Décision'])hr.append(el('th',label));head.append(hr);table.append(head);const body=document.createElement('tbody'),rows=[];
+          const decide=async(row,choice,tr,buttons)=>{
+            for(const b of buttons)b.disabled=true;
+            try{const result=await app.resolveLocalRoomManagerConflict({local:row.local,remote:row.remote,choice});tr.classList.add('relay-conflict-resolved');tr.dataset.choice=choice;buttons[0].textContent=choice==='LOCAL'?'✓ Ici retenu':'Retenir ici';buttons[1].textContent=choice==='REMOTE'?'✓ Autre retenu':'Retenir l’autre';notify('Décision Eco Relay enregistrée sur cet appareil.');window.dispatchEvent(new CustomEvent('eco:manager-relay-updated',{detail:{resolved:true,result}}));}
+            catch(e){for(const b of buttons)b.disabled=false;showError(e);}
+          };
+          for(const row of conflicts){
+            const lp=row.local?.payload??{},rp=row.remote?.payload??{},meetingId=String(lp.meetingId??rp.meetingId??''),membershipId=String(lp.membershipId??rp.membershipId??''),rubricId=String(lp.rubricId??rp.rubricId??''),mine=Number(lp.targetAmount??lp.amount??0),theirs=Number(rp.targetAmount??rp.amount??0),tr=document.createElement('tr');
+            const meeting=meetingsById.get(meetingId),member=membersById.get(membershipId),rubric=rubricsById.get(rubricId);
+            for(const value of [meeting?.title??meetingId,member?.displayName??membershipId,rubric?.name??rubricId,money(mine),money(theirs),row.recommended==='REMOTE'?'Autre plus récent':'Ici plus récent'])tr.append(el('td',String(value)));
+            const action=document.createElement('td'),keep=el('button','Retenir ici','secondary'),take=el('button','Retenir l’autre','secondary');if(row.recommended==='LOCAL')keep.classList.add('relay-recommended');else take.classList.add('relay-recommended');keep.onclick=()=>void decide(row,'LOCAL',tr,[keep,take]);take.onclick=()=>void decide(row,'REMOTE',tr,[keep,take]);action.append(keep,take);tr.append(action);body.append(tr);rows.push({row,tr,buttons:[keep,take]});
+          }
+          bulk.onclick=()=>void(async()=>{bulk.disabled=true;for(const x of rows){if(x.tr.dataset.choice)continue;await decide(x.row,x.row.recommended==='REMOTE'?'REMOTE':'LOCAL',x.tr,x.buttons);}bulk.disabled=false;})();
+          table.append(body);wrap.append(table);lrCompare.append(bulk,wrap);
+        }
+        notify('Eco Relay : données reçues et conservées localement sans serveur.');
+      }
+      else if(packet.type==='FERRY_PACKET_BATCH'){
+        const result=await app.receiveEcoRelayFerryPackets(Array.isArray(packet.payload)?packet.payload:[]);
+        ferryStatus.textContent='Paquets reçus : '+result.stored+' · appliqués à ce gestionnaire : '+result.applied+'.';
+        notify('Paquets Eco Relay reçus pour transport ou intégration.');
+      }
     }catch(e){showError(e);}});
   };
-  const waitRoomOpen=async peer=>{try{await peer.waitUntilOpen(120000);stopLocalSignal();lrStatus.textContent='Eco Local Room connecté · données directes appareil à appareil.';lrSignalScreen.replaceChildren();lrSendMember.disabled=!isManager();lrSendDelta.disabled=!isManager();notify('Eco Local Room connecté.');}catch(e){lrStatus.textContent='Connexion locale non établie. Vérifiez que les deux appareils sont sur le même Wi‑Fi/hotspot.';}};
+  const waitRoomOpen=async peer=>{try{await peer.waitUntilOpen(120000);stopLocalSignal();lrStatus.textContent='Eco Local Room connecté · données directes appareil à appareil.';lrSignalScreen.replaceChildren();lrSendMember.disabled=!isManager();lrSendDelta.disabled=!isManager();lrSendFerry.disabled=false;notify('Eco Local Room connecté.');}catch(e){lrStatus.textContent='Connexion locale non établie. Vérifiez que les deux appareils sont sur le même Wi‑Fi/hotspot.';}};
   const acceptLocalSignal=async raw=>{
     const signal=decodeLocalRoomSignal(raw);
     if(signal.role==='OFFER'){
@@ -116,7 +144,10 @@ export function mountSovereignOfflineUI({app,getMembers=()=>[],getMeetings=()=>[
   lrScan.onclick=()=>void(async()=>{try{if(!navigator.mediaDevices?.getUserMedia)throw Error('CAMERA_WEB_UNAVAILABLE_USE_ECO_PACK');stopLocalCamera();localSignalReceiver=new EcoLocalRoomSignalReceiver();localQrScanner=new QrScanner(lrVideo,result=>void(acceptLocalFrame(String(result.data??result)).catch(showError)),{preferredCamera:'environment',maxScansPerSecond:10,highlightScanRegion:true,highlightCodeOutline:true,returnDetailedScanResult:true});await localQrScanner.start();lrStatus.textContent='Caméra active · scannez toutes les trames du signal Eco Local.';}catch(e){stopLocalCamera();showError(e);}})();
   lrStopScan.onclick=()=>stopLocalCamera();
   lrSendMember.onclick=()=>void(async()=>{try{if(!localPeer?.connected)throw Error('ECO_LOCAL_ROOM_NOT_CONNECTED');const bundle=await app.localRoomMemberBundle(lrMember.value,numMeeting.value||meetingSelect.value||undefined);localPeer.send('MEMBER_CAPSULE',bundle);notify('Capsule membre envoyée par le réseau local.');}catch(e){showError(e);}})();
-  lrSendDelta.onclick=()=>void(async()=>{try{if(!localPeer?.connected)throw Error('ECO_LOCAL_ROOM_NOT_CONNECTED');localPeer.send('MANAGER_DELTA',await app.localRoomManagerDelta());notify('Journal local envoyé pour confrontation.');}catch(e){showError(e);}})();
+  lrSendDelta.onclick=()=>void(async()=>{try{if(!localPeer?.connected)throw Error('ECO_LOCAL_ROOM_NOT_CONNECTED');localPeer.send('MANAGER_DELTA',await app.localRoomManagerDelta());notify('Intentions et données structurelles envoyées pour confrontation locale.');}catch(e){showError(e);}})();
+  lrPrepareFerry.onclick=()=>void(async()=>{try{const result=await app.prepareManagerFerryPackets();ferryStatus.textContent=result.packets.length+' paquet(s) chiffré(s) préparé(s) · '+result.unpaired.length+' gestionnaire(s) non appairé(s).';notify('Paquets passeurs préparés. Ils peuvent voyager via n’importe quel membre sans être lisibles par lui.');await refresh();}catch(e){showError(e);}})();
+  lrSendFerry.onclick=()=>void(async()=>{try{if(!localPeer?.connected)throw Error('ECO_LOCAL_ROOM_NOT_CONNECTED');const packets=await app.ecoRelayFerryPackets();localPeer.send('FERRY_PACKET_BATCH',packets);notify(packets.length+' paquet(s) Eco Relay transmis à l’autre appareil.');}catch(e){showError(e);}})();
+  lrInternetFerry.onclick=()=>void(async()=>{try{if(navigator.onLine===false)throw Error('NETWORK_UNAVAILABLE');const result=await app.syncEcoRelayFerry();ferryStatus.textContent='Connexion utilisée une fois · envoyés '+result.uploaded+' · reçus '+result.downloaded+' · intégrés '+result.applied+'.';notify('Eco Relay a profité de cette connexion sans polling continu.');await refresh();}catch(e){showError(e);}})();
 
 
   const renderFrame=()=>{

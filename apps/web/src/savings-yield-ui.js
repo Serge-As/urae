@@ -19,13 +19,61 @@ export function mountSavingsYieldUI({app,getMembers,notify=()=>{},showError=cons
   const bps=v=>Math.round(Number(v)*100);
   const eligiblePeriods=map=>Object.entries(map).filter(([,coef])=>Number(coef)>0).map(([key])=>key);
 
+  // Historical manual input for simulation remains separate from the
+  // canonical Ledger-driven member/session matrices below. Never merge entries
+  // by approximate names, dates or amounts.
+  let depositFundFilter='ALL',depositMemberFilter='ALL',depositPage=0;
   const renderDeposits=()=>{
     root.replaceChildren();
-    if(!deposits.length){root.append(el('p','Ajoutez les dépôts réels de l’exercice. Chaque dépôt garde sa caisse, sa période et sa séance.','hint'));return;}
-    for(const d of deposits){
-      const member=getMembers().find(x=>x.id===d.memberId),m=months.find(x=>x[0]===d.periodKey);
-      const row=el('article',undefined,'item');row.append(el('strong',member?.displayName??d.memberId),el('span',(d.fund==='SCHOOL'?'Épargne scolaire':'Épargne')+' · '+(m?.[1]??d.periodKey)+' · séance '+d.session+' · '+fmt(d.amount),'pill'));
-      const b=el('button','Retirer','link-btn');b.type='button';b.onclick=()=>{deposits.splice(deposits.indexOf(d),1);renderDeposits();};row.append(b);root.append(row);
+    const members=getMembers(),memberById=new Map(members.map(m=>[String(m.id),m]));
+    const filters=el('div',undefined,'yield-deposit-toolbar');
+    const fundSelect=el('select');fundSelect.setAttribute('aria-label','Filtrer les dépôts par fonds');
+    for(const [v,t] of [['ALL','Tous les fonds'],['CLASSIC','Épargne classique'],['SCHOOL','Épargne scolaire']])fundSelect.append(option(v,t));
+    fundSelect.value=depositFundFilter;fundSelect.onchange=()=>{depositFundFilter=fundSelect.value;depositPage=0;renderDeposits();};
+    const memberSelect=el('select');memberSelect.setAttribute('aria-label','Filtrer les dépôts par membre');
+    memberSelect.append(option('ALL','Tous les membres'));
+    for(const m of members)memberSelect.append(option(String(m.id),String(m.displayName??m.id)));
+    if(!members.some(m=>String(m.id)===depositMemberFilter))depositMemberFilter='ALL';
+    memberSelect.value=depositMemberFilter;memberSelect.onchange=()=>{depositMemberFilter=memberSelect.value;depositPage=0;renderDeposits();};
+    const hint=el('small','Dépôts de la simulation manuelle · les dépôts comptabilisés figurent dans les matrices canoniques.','hint');
+    filters.append(fundSelect,memberSelect);root.append(hint,filters);
+    const rows=deposits.filter(d=>(depositFundFilter==='ALL'||d.fund===depositFundFilter)&&(depositMemberFilter==='ALL'||String(d.memberId)===depositMemberFilter))
+      .slice().sort((a,b)=>Number(a.session??0)-Number(b.session??0)||String(memberById.get(String(a.memberId))?.displayName??a.memberId).localeCompare(String(memberById.get(String(b.memberId))?.displayName??b.memberId)));
+    const wrap=el('div',undefined,'matrix-wrap');
+    const table=el('table',undefined,'meeting-matrix yield-deposit-detail-table');
+    const head=el('thead'),headRow=el('tr');
+    for(const heading of ['N°','Membre','Rubrique','Séance','Période','Montant (F CFA)','Action'])headRow.append(el('th',heading));
+    head.append(headRow);table.append(head);
+    const body=el('tbody'),size=40,pages=Math.max(1,Math.ceil(rows.length/size));
+    depositPage=Math.min(depositPage,pages-1);
+    const current=rows.slice(depositPage*size,(depositPage+1)*size);
+    for(const d of current){
+      const member=memberById.get(String(d.memberId)),m=months.find(x=>x[0]===d.periodKey);
+      const tr=el('tr');tr.append(
+        el('th',String(member?.memberNumber??'—')),
+        el('th',String(member?.displayName??d.memberId)),
+        el('td',d.fund==='SCHOOL'?'Épargne scolaire':'Épargne classique'),
+        el('td','S'+String(d.session)),
+        el('td',String(m?.[1]??d.periodKey)),
+        el('td',fmt(Number(d.amount??0)),'amount')
+      );
+      const action=el('td',undefined,'table-actions'),remove=el('button','Retirer','link-btn');
+      remove.type='button';remove.setAttribute('aria-label','Retirer le dépôt manuel de '+String(member?.displayName??d.memberId));
+      remove.onclick=()=>{const i=deposits.indexOf(d);if(i!==-1)deposits.splice(i,1);renderDeposits();};
+      action.append(remove);tr.append(action);body.append(tr);
+    }
+    if(!rows.length){const tr=el('tr'),td=el('td','Aucun dépôt pour ce filtre.');td.colSpan=7;tr.append(td);body.append(tr);}
+    const total=el('tr',undefined,'table-total-row'),allTotal=rows.reduce((sum,d)=>sum+Number(d.amount??0),0);
+    const totalLabel=el('th','TOTAL FILTRÉ ('+rows.length+' dépôts)');totalLabel.colSpan=5;
+    const amount=el('td',fmt(allTotal),'amount sum');const empty=el('td','');
+    total.append(totalLabel,amount,empty);body.append(total);table.append(body);wrap.append(table);root.append(wrap);
+    if(pages>1){
+      const pager=el('div',undefined,'yield-deposit-pager');
+      const previous=el('button','← Précédent','secondary');previous.type='button';previous.disabled=depositPage===0;
+      previous.onclick=()=>{depositPage--;renderDeposits();};
+      const next=el('button','Suivant →','secondary');next.type='button';next.disabled=depositPage>=pages-1;
+      next.onclick=()=>{depositPage++;renderDeposits();};
+      pager.append(previous,el('span','Page '+(depositPage+1)+' / '+pages+' · '+rows.length+' dépôts'),next);root.append(pager);
     }
   };
   const renderEvents=()=>{

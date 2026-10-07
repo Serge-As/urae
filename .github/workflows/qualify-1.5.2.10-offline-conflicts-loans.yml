@@ -5,6 +5,7 @@ on:
     branches:
       - 'fix/1.5.2.10-offline-conflicts-loans-20261003'
       - 'fix/field-regressions-recovery-20261005'
+      - 'fix/eco-q01-q28-staged-recovery-20261006'
   workflow_dispatch:
 
 permissions:

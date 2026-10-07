@@ -155,16 +155,107 @@ export const mountCompletionUI=({app,notify,showError,getMembers,getMeetings,get
     for(const [labelText,amount] of [[tr('Capital en cours','Outstanding principal'),totals.outstandingPrincipal],[tr('Intérêts dus','Interest due'),totals.outstandingInterest],[tr('Prochains intérêts projetés','Projected next interest'),totals.nextInterestProjected],[tr('Autres dettes','Other debt'),totals.otherDebt],[tr('Dette totale exigible','Total due debt'),totals.totalDebt],[tr('Dette + prochaine échéance','Debt + next interest'),totals.totalDebtIncludingNextInterest??totals.totalDebt]]){const card=document.createElement('div'),s=document.createElement('span'),strong=document.createElement('strong');s.textContent=labelText;strong.textContent=fmt(Number(amount??0));card.append(s,strong);metrics.append(card);}holder.append(metrics);
     const note=document.createElement('p');note.className='truth-notice';note.textContent=tr('Intérêts dus = déjà exigibles. Prochains intérêts projetés = montant calculé sur le capital restant pour la prochaine période ; il n’est pas ajouté au Ledger tant que la règle du groupe ne le rend pas exigible.','Interest due = already payable. Projected next interest = calculated on outstanding principal for the next period; it is not posted to the Ledger until group policy makes it due.');holder.append(note);
 
-    // One recap table at a time: 20-50 loans/rubrics must not turn the page into
-    // dozens of stacked matrices.
-    const recap=document.createElement('section'),recapTitle=document.createElement('h4');recapTitle.textContent=tr('Récapitulatif de l’évolution des dettes','Debt evolution recap');
-    const recapSelect=document.createElement('select');[
-      ['principal',tr('Capital restant','Outstanding principal')],
-      ['interest',tr('Intérêts dus','Interest due')],
-      ['next',tr('Prochains intérêts projetés','Projected next interest')],
-      ['total',tr('Dette de prêt totale','Total loan debt')]
-    ].forEach(([id,label])=>recapSelect.append(option(id,label)));
-    const recapHost=document.createElement('div');const renderSelectedRecap=()=>{recapHost.replaceChildren();const choice=recapSelect.value,config=choice==='interest'?[tr('Intérêts dus par membre et par séance','Interest due by member and session'),p=>p.interestAfter]:choice==='next'?[tr('Prochains intérêts projetés','Projected next interest'),p=>p.nextInterestProjected]:choice==='total'?[tr('Dette de prêt totale','Total loan debt'),p=>p.totalDebtAfter]:[tr('Capital restant par membre et par séance','Outstanding principal by member and session'),p=>p.principalAfter];recapHost.append(loanRecapTable(config[0],data,config[1]));};recapSelect.addEventListener('change',renderSelectedRecap);recap.append(recapTitle,recapSelect,recapHost);renderSelectedRecap();holder.append(recap);
+    // One grouped table, four simultaneous criteria for every distinct loan.
+    // Canonical loan periods are used as the only historic source: never
+    // synthesize paid interest, double a repayment or merge separate loans.
+    const recap=document.createElement('section'),recapTitle=document.createElement('h4');
+    recapTitle.textContent=tr('Récapitulatif de l’évolution des dettes','Debt evolution recap');
+    const recapWrap=document.createElement('div');recapWrap.className='matrix-wrap loan-recap-wrap';
+    const recapTable=document.createElement('table');recapTable.className='meeting-matrix loan-four-criteria-table';
+    const sessionRows=data.meetings??[],periods=data.loanPeriods??[],openLoans=data.loanDebts??[];
+    const sessionOrder=new Map(sessionRows.map((m,i)=>[String(m.id),i]));
+    const definitions=new Map();
+    for(const debt of openLoans)if(debt.loanId)definitions.set(String(debt.loanId),{memberId:String(debt.memberId??''),title:String(debt.title??debt.loanId),open:debt});
+    for(const p of periods)if(p.loanId){
+      const key=String(p.loanId),existing=definitions.get(key);
+      if(!existing)definitions.set(key,{memberId:String(p.memberId??''),title:String(p.loanTitle??key),open:null});
+      else if(!existing.memberId&&p.memberId)existing.memberId=String(p.memberId);
+    }
+    const orderedPeriods=new Map();
+    periods.forEach((p,originalIndex)=>{
+      const key=String(p.loanId??'');
+      if(!definitions.has(key))return;
+      const rows=orderedPeriods.get(key)??[];
+      rows.push({period:p,index:originalIndex,sessionIndex:sessionOrder.get(String(p.meetingId??''))??Number.MAX_SAFE_INTEGER});
+      orderedPeriods.set(key,rows);
+    });
+    for(const rows of orderedPeriods.values())rows.sort((a,b)=>a.sessionIndex-b.sessionIndex||a.index-b.index);
+    const criteria=[
+      [tr('Capital restant','Outstanding principal'),p=>p.principalAfter,'principal'],
+      [tr('Intérêts dus','Interest due'),p=>p.interestAfter,'interest'],
+      [tr('Prochains intérêts projetés','Projected next interest'),p=>p.nextInterestProjected,'projected'],
+      [tr('Total dette exigible','Total due debt'),p=>p.totalDebtAfter,'due']
+    ];
+    const head=document.createElement('thead'),header=document.createElement('tr');
+    for(const name of [tr('Membre','Member'),tr('Prêt','Loan'),tr('Critère','Criterion'),...sessionRows.map(m=>'S'+String(m.session??'')),tr('Situation actuelle','Current')]){
+      const th=document.createElement('th');th.textContent=name;header.append(th);
+    }
+    head.append(header);recapTable.append(head);
+    const body=document.createElement('tbody'),sums=criteria.map(()=>sessionRows.map(()=>0)),latestTotals=criteria.map(()=>0);
+    const sorted=[...definitions.entries()].sort((a,b)=>nameOfMember(a[1].memberId).localeCompare(nameOfMember(b[1].memberId))||String(a[1].memberId??'').localeCompare(String(b[1].memberId??''))||a[0].localeCompare(b[0]));
+    // Derived subtotals are grouped by stable member ID, never by display
+    // name: two people sharing a name must not have their debts merged.
+    let currentMemberKey=null;
+    let memberSessions=criteria.map(()=>sessionRows.map(()=>0));
+    let memberLatest=criteria.map(()=>0);
+    const appendMemberTotals=key=>{
+      if(key===null)return;
+      for(let i=0;i<criteria.length;i++){
+        const row=document.createElement('tr');row.className='loan-member-subtotal loan-criterion-'+criteria[i][2];
+        const th=document.createElement('th');th.colSpan=3;
+        th.textContent=tr('SOUS-TOTAL MEMBRE · ','MEMBER SUBTOTAL · ')+nameOfMember(key)+' · '+criteria[i][0];
+        row.append(th);
+        for(const amount of memberSessions[i]){const cell=document.createElement('td');cell.textContent=fmt(amount);row.append(cell);}
+        const now=document.createElement('td');now.textContent=fmt(memberLatest[i]);row.append(now);body.append(row);
+      }
+    };
+    for(const [loanId,def] of sorted){
+      const memberKey=String(def.memberId??'');
+      if(currentMemberKey!==null&&memberKey!==currentMemberKey){
+        appendMemberTotals(currentMemberKey);
+        memberSessions=criteria.map(()=>sessionRows.map(()=>0));memberLatest=criteria.map(()=>0);
+      }
+      currentMemberKey=memberKey;
+      const rows=orderedPeriods.get(loanId)??[],progress=sessionRows.map((_,i)=>{
+        let last;for(const row of rows)if(row.sessionIndex<=i)last=row.period;
+        return last;
+      });
+      for(let criterionIndex=0;criterionIndex<criteria.length;criterionIndex++){
+        const [label,selector,kind]=criteria[criterionIndex],row=document.createElement('tr');
+        row.className='loan-criteria-row loan-criterion-'+kind+(criterionIndex===0?' loan-criteria-start':'');
+        if(criterionIndex===0){const memberCell=document.createElement('th'),loanCell=document.createElement('th');
+          memberCell.rowSpan=criteria.length;loanCell.rowSpan=criteria.length;
+          memberCell.className='loan-member-key';loanCell.className='loan-name-key';
+          memberCell.textContent=nameOfMember(def.memberId);loanCell.textContent=def.title;
+          row.append(memberCell,loanCell);
+        }
+        const criterionCell=document.createElement('th');criterionCell.className='loan-criterion-key';criterionCell.textContent=label;row.append(criterionCell);
+        progress.forEach((state,index)=>{
+          const raw=state?Number(selector(state)??0):0,value=Number.isFinite(raw)?raw:0;
+          sums[criterionIndex][index]+=value;memberSessions[criterionIndex][index]+=value;
+          const cell=document.createElement('td');cell.textContent=state?fmt(value):'—';row.append(cell);
+        });
+        const latestState=progress[progress.length-1]??rows[rows.length-1]?.period;
+        let latest=latestState?Number(selector(latestState)??0):0;
+        if(!latestState&&def.open)latest=Number(({
+          principal:def.open.principal,interest:def.open.interest,projected:def.open.nextInterestProjected,due:def.open.totalDue
+        })[kind]??0);
+        latest=Number.isFinite(latest)?latest:0;latestTotals[criterionIndex]+=latest;memberLatest[criterionIndex]+=latest;
+        const currentCell=document.createElement('td');currentCell.textContent=fmt(latest);row.append(currentCell);body.append(row);
+      }
+    }
+    appendMemberTotals(currentMemberKey);
+    for(let i=0;i<criteria.length;i++){
+      const row=document.createElement('tr');row.className='table-total-row loan-criterion-'+criteria[i][2];
+      const label=document.createElement('th');label.colSpan=3;label.textContent=tr('TOTAL GROUPE · ','GROUP TOTAL · ')+criteria[i][0];row.append(label);
+      for(const sum of sums[i]){const cell=document.createElement('td');cell.textContent=fmt(sum);row.append(cell);}
+      const latest=document.createElement('td');latest.textContent=fmt(latestTotals[i]);row.append(latest);body.append(row);
+    }
+    if(!sorted.length){
+      const row=document.createElement('tr'),cell=document.createElement('td');cell.colSpan=4+sessionRows.length;
+      cell.textContent=tr('Aucun prêt ni historique à afficher.','No loans or history to display.');row.append(cell);body.append(row);
+    }
+    recapTable.append(body);recapWrap.append(recapTable);recap.append(recapTitle,recapWrap);holder.append(recap);
 
     const current=document.createElement('section'),h=document.createElement('h4');h.textContent=tr('État actuel des prêts ouverts','Current open-loan position');current.append(h);
     const debts=data.loanDebts??[];if(!debts.length){current.append(article(tr('Aucun prêt ouvert','No open loan'),'',''));}else{
@@ -178,17 +269,95 @@ export const mountCompletionUI=({app,notify,showError,getMembers,getMeetings,get
     const journey=document.createElement('section'),jt=document.createElement('h4');jt.textContent=tr('Parcours d’une dette','Debt journey');
     const memberSelect=document.createElement('select'),loanSelect=document.createElement('select'),journeyHost=document.createElement('div');memberSelect.append(option('',tr('Choisir un membre','Choose a member')));
     const debtMembers=[...new Set(debts.map(x=>String(x.memberId??'')).filter(Boolean))];for(const id of debtMembers)memberSelect.append(option(id,nameOfMember(id)));
-    const refillLoans=()=>{loanSelect.replaceChildren(option('',tr('Choisir un prêt','Choose a loan')));for(const debt of debts.filter(x=>!memberSelect.value||String(x.memberId)===memberSelect.value))loanSelect.append(option(String(debt.loanId),debt.title+' · '+fmt(debt.totalDue)));journeyHost.replaceChildren();};
-    const renderJourney=async()=>{journeyHost.replaceChildren();if(!loanSelect.value)return;const loading=document.createElement('p');loading.className='hint';loading.textContent=tr('Chargement du parcours…','Loading journey…');journeyHost.append(loading);try{const history=await app.loanHistory(loanSelect.value),periods=history.periods??[];if(!periods.length){journeyHost.replaceChildren(article(tr('Aucune période détaillée','No detailed period'),' ',tr('Le prêt existe mais aucune période de remboursement n’a encore été enregistrée.','The loan exists but no repayment period has been recorded yet.')));return;}const wrap=document.createElement('div');wrap.className='matrix-wrap';const table=document.createElement('table');table.className='meeting-matrix debt-journey-table';const head=document.createElement('thead'),hr=document.createElement('tr');for(const label of [tr('Séance / date','Session / date'),tr('Capital avant','Principal before'),tr('Intérêt ouverture','Opening interest'),tr('Nouvel intérêt','New interest'),tr('Paiement','Payment'),tr('Capital payé','Principal paid'),tr('Intérêt payé','Interest paid'),tr('Capital restant','Principal left'),tr('Intérêts dus','Interest due'),tr('Dette après','Debt after'),tr('Prochain intérêt','Next interest'),tr('Priorité','Priority')]){const th=document.createElement('th');th.textContent=label;hr.append(th);}head.append(hr);table.append(head);const body=document.createElement('tbody');for(const p of periods){const meeting=getMeetings().find(m=>m.id===p.meetingId),values=[meeting?.title??date(p.createdAt),fmt(p.principalBefore),fmt(p.interestOpening),fmt(p.interestNew),fmt(p.payment),fmt(p.principalPaid),fmt(p.interestPaid),fmt(p.principalAfter),fmt(p.interestAfter),fmt(p.totalDebtAfter),fmt(p.nextInterestProjected),String(p.priority??'')];const row=document.createElement('tr');for(const value of values){const td=document.createElement('td');td.textContent=value;row.append(td);}body.append(row);}table.append(body);wrap.append(table);journeyHost.replaceChildren(wrap);}catch(e){journeyHost.replaceChildren();showError(e);}};
+    const renderGroupJourney=()=>{
+      // Aggregate canonical loan-period snapshots, never fabricate a dummy group loan.
+      // The next-period projection remains separate from payable interest.
+      const timeline=data.meetings??[],periods=data.loanPeriods??[],loanIds=new Set((data.loanDebts??[]).map(p=>String(p.loanId)));
+      for(const p of periods)if(p.loanId)loanIds.add(String(p.loanId));
+      const wrap=document.createElement('div');wrap.className='matrix-wrap',table=document.createElement('table');
+      table.className='meeting-matrix debt-group-journey-table';
+      const header=document.createElement('tr');
+      for(const heading of [tr('Séance','Session'),tr('Capital de début','Opening principal'),tr('Capital remboursé','Principal paid'),tr('Capital restant','Principal remaining'),tr('Intérêts ouverture','Opening interest'),tr('Nouveaux intérêts dus','New interest due'),tr('Intérêts payés','Interest paid'),tr('Intérêts restants','Interest remaining'),tr('Dette exigible','Due debt'),tr('Prochains intérêts projetés','Projected next interest')]){
+        const th=document.createElement('th');th.textContent=heading;header.append(th);
+      }
+      const thead=document.createElement('thead');thead.append(header);table.append(thead);
+      const tbody=document.createElement('tbody'),lastByLoan=new Map();
+      for(const meeting of timeline){
+        const current=periods.filter(p=>String(p.meetingId??'')===String(meeting.id));
+        // A loan with multiple revisions in the same meeting is represented
+        // by its last canonical period only, not by adding duplicate states.
+        const affected=new Map();for(const p of current)affected.set(String(p.loanId),p);
+        const beginning=[...lastByLoan.values()].reduce((n,p)=>n+Number(p.principalAfter??0),0);
+        const openingInterest=[...lastByLoan.values()].reduce((n,p)=>n+Number(p.interestAfter??0),0);
+        const paidPrincipal=[...affected.values()].reduce((n,p)=>n+Number(p.principalPaid??0),0);
+        const paidInterest=[...affected.values()].reduce((n,p)=>n+Number(p.interestPaid??0),0);
+        const newInterest=[...affected.values()].reduce((n,p)=>n+Number(p.interestNew??0),0);
+        for(const [id,p] of affected)lastByLoan.set(id,p);
+        const values=[
+          beginning,paidPrincipal,
+          [...lastByLoan.values()].reduce((n,p)=>n+Number(p.principalAfter??0),0),
+          openingInterest,newInterest,paidInterest,
+          [...lastByLoan.values()].reduce((n,p)=>n+Number(p.interestAfter??0),0),
+          [...lastByLoan.values()].reduce((n,p)=>n+Number(p.totalDebtAfter??0),0),
+          [...lastByLoan.values()].reduce((n,p)=>n+Number(p.nextInterestProjected??0),0)
+        ];
+        const row=document.createElement('tr'),name=document.createElement('th');
+        name.textContent=String(meeting.title??'S'+String(meeting.session??''));row.append(name);
+        for(const value of values){const td=document.createElement('td');td.textContent=fmt(value);row.append(td);}
+        tbody.append(row);
+      }
+      if(!timeline.length){
+        const row=document.createElement('tr'),empty=document.createElement('td');empty.colSpan=10;
+        empty.textContent=tr('Aucune séance disponible.','No session available.');row.append(empty);tbody.append(row);
+      }
+      table.append(tbody);wrap.append(table);
+      const note=document.createElement('p');note.className='hint';
+      note.textContent=tr('Historique calculé uniquement sur les périodes de prêts disponibles. Les décaissements sans période historique vérifiée ne sont pas inventés ; consultez les indicateurs actuels au-dessus pour les encours complets.','History uses available loan periods only. Unverified disbursement periods are not invented; see the current portfolio metrics above for complete outstanding amounts.');
+      journeyHost.replaceChildren(note,wrap);
+    };
+    const refillLoans=()=>{loanSelect.replaceChildren(option('__GROUP__',tr('Ensemble du groupe','Entire group')));for(const debt of debts.filter(x=>!memberSelect.value||String(x.memberId)===memberSelect.value))loanSelect.append(option(String(debt.loanId),debt.title+' · '+fmt(debt.totalDue)));journeyHost.replaceChildren();loanSelect.value='__GROUP__';void renderJourney();};
+    const renderJourney=async()=>{journeyHost.replaceChildren();if(loanSelect.value==='__GROUP__'){renderGroupJourney();return;}if(!loanSelect.value)return;const loading=document.createElement('p');loading.className='hint';loading.textContent=tr('Chargement du parcours…','Loading journey…');journeyHost.append(loading);try{const history=await app.loanHistory(loanSelect.value),periods=history.periods??[];if(!periods.length){journeyHost.replaceChildren(article(tr('Aucune période détaillée','No detailed period'),' ',tr('Le prêt existe mais aucune période de remboursement n’a encore été enregistrée.','The loan exists but no repayment period has been recorded yet.')));return;}const wrap=document.createElement('div');wrap.className='matrix-wrap';const table=document.createElement('table');table.className='meeting-matrix debt-journey-table';const head=document.createElement('thead'),hr=document.createElement('tr');for(const label of [tr('Séance / date','Session / date'),tr('Capital avant','Principal before'),tr('Intérêt ouverture','Opening interest'),tr('Nouvel intérêt','New interest'),tr('Paiement','Payment'),tr('Capital payé','Principal paid'),tr('Intérêt payé','Interest paid'),tr('Capital restant','Principal left'),tr('Intérêts dus','Interest due'),tr('Dette après','Debt after'),tr('Prochain intérêt','Next interest'),tr('Priorité','Priority')]){const th=document.createElement('th');th.textContent=label;hr.append(th);}head.append(hr);table.append(head);const body=document.createElement('tbody');for(const p of periods){const meeting=getMeetings().find(m=>m.id===p.meetingId),values=[meeting?.title??date(p.createdAt),fmt(p.principalBefore),fmt(p.interestOpening),fmt(p.interestNew),fmt(p.payment),fmt(p.principalPaid),fmt(p.interestPaid),fmt(p.principalAfter),fmt(p.interestAfter),fmt(p.totalDebtAfter),fmt(p.nextInterestProjected),String(p.priority??'')];const row=document.createElement('tr');for(const value of values){const td=document.createElement('td');td.textContent=value;row.append(td);}body.append(row);}table.append(body);wrap.append(table);journeyHost.replaceChildren(wrap);}catch(e){journeyHost.replaceChildren();showError(e);}};
     memberSelect.addEventListener('change',refillLoans);loanSelect.addEventListener('change',()=>void renderJourney());refillLoans();journey.append(jt,memberSelect,loanSelect,journeyHost);holder.append(journey);
     root.append(holder);
   };
 
   const officialLoanRubric=()=>getRubrics().find(r=>String(r.facets?.custom?.systemKey??'').toUpperCase()==='LOAN'||/^(prêt|pret|emprunt|loan)s?$/i.test(String(r.name??'').trim()));
+  const loanPolicySnapshot=policy=>({
+    rateBasisPointsPerPeriod:Math.max(0,Number(policy?.rateBasisPointsPerPeriod??0)||0),
+    paymentPriority:['INTEREST_FIRST','EXPLICIT_ALLOCATION'].includes(String(policy?.paymentPriority))?String(policy.paymentPriority):'CAPITAL_FIRST',
+    interestTiming:['UPFRONT_DEDUCTED','UPFRONT_REQUIRED'].includes(String(policy?.interestTiming))?String(policy.interestTiming):'NEXT_SESSION_DUE',
+    fundingMode:String(policy?.fundingMode)==='SAVINGS_REPAYMENTS_ONLY'?'SAVINGS_REPAYMENTS_ONLY':'AVAILABLE_GROUP_CASH',
+    carryForwardUnusedFunds:policy?.carryForwardUnusedFunds!==false
+  });
+  const effectiveLoanPolicyForDisplay=(loan,policy,at=Date.now())=>{
+    const history=(Array.isArray(policy?.revisions)?policy.revisions:[]).slice().sort((a,b)=>(Date.parse(String(a.effectiveAt??''))||0)-(Date.parse(String(b.effectiveAt??''))||0)||String(a.id??'').localeCompare(String(b.id??'')));
+    const fallback=history.length?loanPolicySnapshot(history[0]?.before):loanPolicySnapshot(policy),created=Date.parse(String(loan?.createdAt??loan?.updatedAt??''))||at;
+    const out=loan?.id?{...fallback,rateBasisPointsPerPeriod:Number(loan.data?.rateBasisPointsPerPeriod??fallback.rateBasisPointsPerPeriod),paymentPriority:String(loan.data?.paymentPriority??fallback.paymentPriority),interestTiming:String(loan.data?.interestTiming??fallback.interestTiming),policyRevisionId:String(loan.data?.policyRevisionId??'')}:{...fallback,policyRevisionId:''};
+    for(const revision of history){
+      const effective=Date.parse(String(revision?.effectiveAt??''));if(!Number.isFinite(effective)||effective>at)continue;
+      const scope=String(revision?.scope??'NEW_LOANS_ONLY'),loanId=String(loan?.id??''),createdAfter=created>=effective,closedBeforeEffect=String(loan?.data?.completionState??'')==='CLOSED'&&(Date.parse(String(loan?.updatedAt??''))||0)>0&&(Date.parse(String(loan?.updatedAt??''))||0)<=effective;
+      const selected=Array.isArray(revision?.selectedLoanIds)&&revision.selectedLoanIds.map(String).includes(loanId),affected=Array.isArray(revision?.affectedLoanIds)&&revision.affectedLoanIds.map(String).includes(loanId),legacyOpenAll=scope==='NEW_AND_ALL_OPEN_LOANS'&&!Array.isArray(revision?.affectedLoanIds)&&!closedBeforeEffect;
+      if(closedBeforeEffect||!(createdAfter||(scope==='NEW_AND_ALL_OPEN_LOANS'&&(affected||legacyOpenAll))||(scope==='NEW_AND_SELECTED_OPEN_LOANS'&&selected)))continue;
+      const next=loanPolicySnapshot(revision.after),disbursedAt=Date.parse(String(loan?.data?.disbursedAt??''))||0;
+      if(disbursedAt&&disbursedAt<effective&&next.interestTiming!=='NEXT_SESSION_DUE')next.interestTiming=out.interestTiming;
+      Object.assign(out,next,{policyRevisionId:String(revision.id??'')});
+    }
+    return out;
+  };
+  const syncLoanPolicyControls=()=>{
+    const scope=value('loanPolicyScope')||'NEW_LOANS_ONLY',mode=value('loanPolicyEffectiveMode')||'IMMEDIATE';
+    if(byId('loanPolicySelectedLoansWrap'))byId('loanPolicySelectedLoansWrap').hidden=scope!=='NEW_AND_SELECTED_OPEN_LOANS';
+    if(byId('loanPolicyEffectiveDateWrap'))byId('loanPolicyEffectiveDateWrap').hidden=mode!=='DATE';
+    if(byId('loanPolicyEffectiveMeetingWrap'))byId('loanPolicyEffectiveMeetingWrap').hidden=mode!=='MEETING';
+  };
   const hydrateLoanPolicy=()=>{
     const rubric=officialLoanRubric(),policy=rubric?.policies?.loan,status=byId('loanPolicyStatus');
-    if(policy){if(byId('loanPolicyRate'))byId('loanPolicyRate').value=String(Number(policy.rateBasisPointsPerPeriod??0)/100);if(byId('loanPolicyPriority'))byId('loanPolicyPriority').value=policy.paymentPriority??'CAPITAL_FIRST';if(byId('loanPolicyInterestTiming'))byId('loanPolicyInterestTiming').value=policy.interestTiming??'NEXT_SESSION_DUE';if(byId('loanPolicyFundingMode'))byId('loanPolicyFundingMode').value=policy.fundingMode??'AVAILABLE_GROUP_CASH';if(byId('loanPolicyCarryForward'))byId('loanPolicyCarryForward').checked=policy.carryForwardUnusedFunds!==false;if(byId('loanPaymentPriority'))byId('loanPaymentPriority').value=policy.paymentPriority??'CAPITAL_FIRST';if(byId('loanInterestTiming'))byId('loanInterestTiming').value=policy.interestTiming??'NEXT_SESSION_DUE';if(status)status.textContent=tr('Politique active · taux par période ','Active policy · rate per period ')+(Number(policy.rateBasisPointsPerPeriod??0)/100).toLocaleString(locale()==='fr'?'fr-FR':'en-US')+' % · '+String(policy.paymentPriority??'CAPITAL_FIRST')+' · '+String(policy.interestTiming??'NEXT_SESSION_DUE')+' · '+String(policy.fundingMode??'AVAILABLE_GROUP_CASH')+tr(' · aucun intérêt sur intérêt.',' · no interest on interest.');}
+    if(policy){if(byId('loanPolicyRate'))byId('loanPolicyRate').value=String(Number(policy.rateBasisPointsPerPeriod??0)/100);if(byId('loanPolicyPriority'))byId('loanPolicyPriority').value=policy.paymentPriority??'CAPITAL_FIRST';if(byId('loanPolicyInterestTiming'))byId('loanPolicyInterestTiming').value=policy.interestTiming??'NEXT_SESSION_DUE';if(byId('loanPolicyFundingMode'))byId('loanPolicyFundingMode').value=policy.fundingMode??'AVAILABLE_GROUP_CASH';if(byId('loanPolicyCarryForward'))byId('loanPolicyCarryForward').checked=policy.carryForwardUnusedFunds!==false;if(byId('loanPaymentPriority'))byId('loanPaymentPriority').value=policy.paymentPriority??'CAPITAL_FIRST';if(byId('loanInterestTiming'))byId('loanInterestTiming').value=policy.interestTiming??'NEXT_SESSION_DUE';if(status){const revisions=Array.isArray(policy.revisions)?policy.revisions:[],future=revisions.filter(x=>(Date.parse(String(x.effectiveAt??''))||0)>Date.now()).sort((a,b)=>Date.parse(String(a.effectiveAt))-Date.parse(String(b.effectiveAt)))[0];status.textContent=tr('Politique de référence · taux ','Reference policy · rate ')+(Number(policy.rateBasisPointsPerPeriod??0)/100).toLocaleString(locale()==='fr'?'fr-FR':'en-US')+' % · '+String(policy.paymentPriority??'CAPITAL_FIRST')+' · '+String(policy.interestTiming??'NEXT_SESSION_DUE')+' · '+String(policy.fundingMode??'AVAILABLE_GROUP_CASH')+tr(' · versions : ',' · versions: ')+revisions.length+(future?tr(' · prochaine prise d’effet ',' · next effective ')+date(String(future.effectiveAt)):'')+tr(' · aucun intérêt sur intérêt.',' · no interest on interest.');}}
     else if(status)status.textContent=tr('Aucune politique Prêt validée : configurez le taux, la priorité et le moment de perception. Aucun intérêt sur intérêt.','No validated loan policy: configure rate, priority and interest timing. No interest on interest.');
+    const meetingSelect=byId('loanPolicyEffectiveMeeting');if(meetingSelect){const current=meetingSelect.value;meetingSelect.replaceChildren(option('',tr('Choisir une séance','Choose a session')));for(const m of getMeetings().filter(x=>x.status!=='cancelled').slice().sort((a,b)=>String(a.scheduledAt??a.openedAt??'').localeCompare(String(b.scheduledAt??b.openedAt??''))))meetingSelect.append(option(m.id,m.title));if([...meetingSelect.options].some(o=>o.value===current))meetingSelect.value=current;}
+    const selected=byId('loanPolicySelectedLoans');if(selected){const chosen=new Set([...selected.selectedOptions].map(o=>o.value));selected.replaceChildren();for(const loan of loans.filter(x=>['SUBMITTED','APPROVED','DISBURSED','REPAYING'].includes(primitiveState(x)))){const borrower=nameOfMember(String(loan.data.borrowerMembershipId??''));const o=option(loan.id,borrower+' · '+loan.title+' · '+fmt(Number(loan.data.outstandingPrincipal??loan.data.principal??0)));o.selected=chosen.has(loan.id);selected.append(o);}}
+    const history=byId('loanPolicyRevisionHistory');if(history){history.replaceChildren();const revisions=Array.isArray(policy?.revisions)?policy.revisions.slice().reverse():[];if(revisions.length){const details=document.createElement('details'),summary=document.createElement('summary');summary.textContent=tr('Historique des versions de politique (','Policy revision history (')+revisions.length+')';details.append(summary);const wrap=document.createElement('div');wrap.className='matrix-wrap';const table=document.createElement('table');table.className='meeting-matrix loan-policy-history-table';table.innerHTML='<thead><tr><th>Effet</th><th>Portée</th><th>Taux</th><th>Priorité</th><th>Intérêts</th><th>Prêts ciblés</th></tr></thead>';const body=document.createElement('tbody');for(const revision of revisions){const row=document.createElement('tr'),after=revision.after??{};for(const v of [date(String(revision.effectiveAt??'')),String(revision.scope??''),(Number(after.rateBasisPointsPerPeriod??0)/100).toLocaleString(locale()==='fr'?'fr-FR':'en-US')+' %',String(after.paymentPriority??''),String(after.interestTiming??''),Array.isArray(revision.selectedLoanIds)?String(revision.selectedLoanIds.length):'—']){const td=document.createElement('td');td.textContent=v;row.append(td);}body.append(row);}table.append(body);wrap.append(table);details.append(wrap);history.append(details);}}
+    syncLoanPolicyControls();
     return{rubric,policy};
   };
 
@@ -214,11 +383,11 @@ export const mountCompletionUI=({app,notify,showError,getMembers,getMeetings,get
         const head=document.createElement('thead'),hr=document.createElement('tr');for(const label of [tr('Membre','Member'),tr('Prêt','Loan'),tr('Accordé / séance','Granted / session'),tr('État','Status'),tr('Capital initial','Initial principal'),tr('Capital restant','Outstanding'),tr('Intérêts dus','Interest due'),tr('Priorité actuelle','Current priority'),tr('Garants','Guarantors'),tr('Actions','Actions')]){const th=document.createElement('th');th.textContent=label;hr.append(th);}head.append(hr);table.append(head);
         const body=document.createElement('tbody');
         for(const loan of loans){
-          const state=primitiveState(loan),row=document.createElement('tr'),borrower=nameOfMember(String(loan.data.borrowerMembershipId??'')),meetingId=String(loan.data.meetingId??loan.data.disbursementMeetingId??loan.data.upfrontInterestSourceMeetingId??''),meeting=getMeetings().find(m=>m.id===meetingId),granted=meeting?.title??date(String(loan.data.disbursedAt??loan.data.approvedAt??loan.createdAt??loan.updatedAt??'')),priority=String(currentPolicy?.paymentPriority??loan.data.paymentPriority??'CAPITAL_FIRST');
+          const state=primitiveState(loan),row=document.createElement('tr'),borrower=nameOfMember(String(loan.data.borrowerMembershipId??'')),meetingId=String(loan.data.meetingId??loan.data.disbursementMeetingId??loan.data.upfrontInterestSourceMeetingId??''),meeting=getMeetings().find(m=>m.id===meetingId),granted=meeting?.title??date(String(loan.data.disbursedAt??loan.data.approvedAt??loan.createdAt??loan.updatedAt??'')),effectivePolicy=effectiveLoanPolicyForDisplay(loan,currentPolicy),priority=String(effectivePolicy.paymentPriority??loan.data.paymentPriority??'CAPITAL_FIRST');
           for(const valueText of [borrower,loan.title,granted,state,fmt(Number(loan.data.principal??0)),fmt(Number(loan.data.outstandingPrincipal??0)),fmt(Number(loan.data.unpaidInterest??0)),priority]){const td=document.createElement('td');td.textContent=valueText;row.append(td);}
           const guarantorCell=document.createElement('td'),gbtn=document.createElement('button');gbtn.type='button';gbtn.className='secondary';gbtn.textContent=tr('Gérer','Manage');gbtn.onclick=()=>void openGuarantorDialog(loan);guarantorCell.append(gbtn);row.append(guarantorCell);
           const actionCell=document.createElement('td'),actions=document.createElement('div');actions.className='actions loan-table-actions';
-          const simulate=document.createElement('button');simulate.type='button';simulate.textContent=tr('Simuler','Simulate');simulate.onclick=()=>{const effectiveLoan={...loan,data:{...loan.data,paymentPriority:currentPolicy?.paymentPriority??loan.data.paymentPriority}};void openLoanSimulationDialog({app,loan:effectiveLoan,title:tr('Simulation du prêt','Loan simulation'),memberName:borrower});};actions.append(simulate);
+          const simulate=document.createElement('button');simulate.type='button';simulate.textContent=tr('Simuler','Simulate');simulate.onclick=()=>{const resolved=effectiveLoanPolicyForDisplay(loan,currentPolicy),effectiveLoan={...loan,data:{...loan.data,...resolved}};void openLoanSimulationDialog({app,loan:effectiveLoan,title:tr('Simulation du prêt existant','Existing-loan simulation'),memberName:borrower});};actions.append(simulate);
           if(state==='SUBMITTED'){const b=document.createElement('button');b.type='button';b.textContent=tr('Approuver','Approve');b.onclick=()=>void run(null,async()=>{await app.transitionCompletion(loan.id,'APPROVED',primitiveVersion(loan),{approvedAt:new Date().toISOString()});await renderLoans();});actions.append(b);}
           if(state==='APPROVED'){const b=document.createElement('button');b.type='button';b.className='primary';b.textContent=tr('Décaisser','Disburse');b.onclick=()=>void run(null,async()=>{const principal=Number(loan.data.principal),timing=String(loan.data.interestTiming??'NEXT_SESSION_DUE');if(!['NEXT_SESSION_DUE','UPFRONT_DEDUCTED','UPFRONT_REQUIRED'].includes(timing))throw Error('INVALID_LOAN_INTEREST_TIMING');const upfront=timing==='NEXT_SESSION_DUE'?0:Math.round(principal*Number(loan.data.rateBasisPointsPerPeriod??0)/10000),confirmation=timing==='UPFRONT_DEDUCTED'?tr('Cette politique retient '+fmt(upfront)+' d’intérêts immédiatement. Le membre reçoit un montant net inférieur au capital dû. Confirmer ?','This policy immediately withholds '+fmt(upfront)+' interest. The member receives less cash than the principal owed. Confirm?'):timing==='UPFRONT_REQUIRED'?tr('Cette politique exige '+fmt(upfront)+' d’intérêts avant la libération du capital. Confirmez uniquement si l’intérêt a bien été reçu.','This policy requires '+fmt(upfront)+' interest before principal release. Confirm only if the interest was actually received.'):'';if(upfront>0&&!window.confirm(confirmation))return;const meetingId=String(loan.data.meetingId??getMeetings().find(m=>m.status==='open')?.id??getMeetings().filter(m=>m.status!=='cancelled').at(-1)?.id??'');const rubricId=String(loan.data.rubricId??officialLoanRubric()?.id??'');await app.disburseLoan(loan.id,{amount:principal,expectedVersion:primitiveVersion(loan),meetingId:meetingId||undefined,rubricId:rubricId||undefined});await renderLoans();notify(tr('Prêt décaissé dans le Ledger selon la politique du groupe.','Loan disbursed in the Ledger under group policy.'));});actions.append(b);}
           if(state==='DISBURSED'||state==='REPAYING'){const b=document.createElement('button');b.type='button';b.textContent=tr('Rembourser capital','Repay principal');b.onclick=()=>void run(null,async()=>{const raw=window.prompt(tr('Capital remboursé :','Principal repaid:'),'10000');if(raw===null)return;const amount=Number(raw);if(!Number.isSafeInteger(amount)||amount<=0)throw Error('INVALID_LOAN_REPAYMENT');await app.repayLoan(loan.id,{principalAmount:amount,expectedVersion:primitiveVersion(loan)});await renderLoans();});actions.append(b);}
@@ -321,16 +490,28 @@ export const mountCompletionUI=({app,notify,showError,getMembers,getMeetings,get
     byId('readinessResult').textContent=p.data.ready===true?tr('Groupe prêt : aucun blocage détecté.','Group ready: no blocker detected.'):tr('À compléter : ','To complete: ')+blockers.join(', ');
   }));
 
+  byId('loanPolicyScope')?.addEventListener('change',syncLoanPolicyControls);
+  byId('loanPolicyEffectiveMode')?.addEventListener('change',syncLoanPolicyControls);
   byId('loanPolicyForm')?.addEventListener('submit',e=>{e.preventDefault();void run(e.currentTarget,async()=>{
     let rubric=officialLoanRubric();if(!rubric)rubric=await app.ensureOfficialLoanRubric();
     const rate=Math.round(number('loanPolicyRate')*100);if(!Number.isSafeInteger(rate)||rate<0)throw Error('INVALID_LOAN_RATE');
-    const policies={...(rubric.policies??{}),loan:{...(rubric.policies?.loan??{}),allowed:true,rateBasisPointsPerPeriod:rate,interestBase:'PRINCIPAL_ONLY',paymentPriority:value('loanPolicyPriority')||'CAPITAL_FIRST',interestTiming:value('loanPolicyInterestTiming')||'NEXT_SESSION_DUE',fundingMode:value('loanPolicyFundingMode')||'AVAILABLE_GROUP_CASH',carryForwardUnusedFunds:Boolean(byId('loanPolicyCarryForward')?.checked),noInterestOnInterest:true}};
+    const scope=value('loanPolicyScope')||'NEW_LOANS_ONLY',effectiveMode=value('loanPolicyEffectiveMode')||'IMMEDIATE';
+    const selectedLoanIds=byId('loanPolicySelectedLoans')?[...byId('loanPolicySelectedLoans').selectedOptions].map(x=>x.value):[];
+    if(scope==='NEW_AND_SELECTED_OPEN_LOANS'&&!selectedLoanIds.length)throw Error('LOAN_POLICY_SELECTED_LOANS_REQUIRED');
+    let effectiveAt, effectiveMeetingId;
+    if(effectiveMode==='DATE'){const raw=value('loanPolicyEffectiveAt');if(!raw)throw Error('LOAN_POLICY_EFFECTIVE_DATE_REQUIRED');const parsed=new Date(raw);if(Number.isNaN(parsed.getTime()))throw Error('LOAN_POLICY_EFFECTIVE_DATE_INVALID');effectiveAt=parsed.toISOString();}
+    if(effectiveMode==='MEETING'){effectiveMeetingId=value('loanPolicyEffectiveMeeting');if(!effectiveMeetingId)throw Error('LOAN_POLICY_EFFECTIVE_MEETING_REQUIRED');}
+    const changeControl={scope,effectiveMode,...(effectiveAt?{effectiveAt}:{}),...(effectiveMeetingId?{effectiveMeetingId}:{}),...(scope==='NEW_AND_SELECTED_OPEN_LOANS'?{selectedLoanIds}:{})};
+    const policies={...(rubric.policies??{}),loan:{...(rubric.policies?.loan??{}),allowed:true,rateBasisPointsPerPeriod:rate,interestBase:'PRINCIPAL_ONLY',paymentPriority:value('loanPolicyPriority')||'CAPITAL_FIRST',interestTiming:value('loanPolicyInterestTiming')||'NEXT_SESSION_DUE',fundingMode:value('loanPolicyFundingMode')||'AVAILABLE_GROUP_CASH',carryForwardUnusedFunds:Boolean(byId('loanPolicyCarryForward')?.checked),noInterestOnInterest:true,changeControl}};
     const updated=await app.updateRubricPolicies(rubric.id,policies);
-    // The saved rubric is authoritative; the previously loaded view array was
-    // otherwise reused after success and still showed CAPITAL_FIRST.
     rubric.policies=structuredClone(updated?.policies??policies);
-    notify(tr('Politique Prêts enregistrée.','Loan policy saved.'));await renderLoans();
+    const scopeText=scope==='NEW_LOANS_ONLY'?tr('nouveaux prêts seulement','new loans only'):scope==='NEW_AND_ALL_OPEN_LOANS'?tr('nouveaux + tous les prêts ouverts','new + all open loans'):tr('nouveaux + prêts ouverts sélectionnés','new + selected open loans');
+    notify(tr('Nouvelle version de politique enregistrée : ','New policy version saved: ')+scopeText+'.');await renderLoans();
   });});
+  byId('loanFreeSimulationBtn')?.addEventListener('click',()=>void run(null,async()=>{
+    const policy=hydrateLoanPolicy().policy,effective=effectiveLoanPolicyForDisplay(null,policy),principal=Math.max(1,Number(byId('loanPrincipal')?.value||50000));
+    await openLoanSimulationDialog({app,loan:{data:{principal,outstandingPrincipal:principal,unpaidInterest:0,rateBasisPointsPerPeriod:effective.rateBasisPointsPerPeriod,paymentPriority:effective.paymentPriority,interestTiming:effective.interestTiming,installments:Number(byId('loanInstallments')?.value||6)}},title:tr('Simulation libre · prêt imaginaire','Free simulation · hypothetical loan'),memberName:''});
+  }));
 
   byId('loanForm')?.addEventListener('submit',e=>{e.preventDefault();void run(e.currentTarget,async()=>{
     const principal=number('loanPrincipal'),installments=number('loanInstallments'),rate=Math.round(number('loanRate')*100),periodsPerYear=number('loanPeriodsPerYear'),fees=number('loanFees');
@@ -375,7 +556,13 @@ export const mountCompletionUI=({app,notify,showError,getMembers,getMeetings,get
   };
   window.addEventListener('eco:financial-data-changed',scheduleDebtRefresh);
   window.addEventListener('eco:financial-live-update',scheduleDebtRefresh);
-  window.addEventListener('eco:live-event',event=>{const e=event instanceof CustomEvent?event.detail:undefined,p=e?.payload??{};if(e?.type!=='RULE_UPDATE'||p.kind!=='LOAN_POLICY')return;const rubric=getRubrics().find(r=>String(r.id)===String(p.rubricId));if(rubric){rubric.policies={...(rubric.policies??{}),loan:{...(rubric.policies?.loan??{}),allowed:true,interestBase:'PRINCIPAL_ONLY',noInterestOnInterest:true,rateBasisPointsPerPeriod:Number(p.rateBasisPointsPerPeriod??0),paymentPriority:String(p.paymentPriority??'CAPITAL_FIRST'),interestTiming:String(p.interestTiming??'NEXT_SESSION_DUE'),fundingMode:String(p.fundingMode??'AVAILABLE_GROUP_CASH'),carryForwardUnusedFunds:p.carryForwardUnusedFunds!==false}};hydrateLoanPolicy();}if(!byId('loanCompletionPanel')?.hidden&&byId('view-finance')?.classList.contains('active'))void renderLoans().catch(showError);});
+  window.addEventListener('eco:rubric-policy-synced',event=>{
+    const detail=event instanceof CustomEvent?event.detail??{}:{};
+    if(String(detail.groupId??'')!==String(app.activeGroup()??''))return;
+    hydrateLoanPolicy();
+    if(!byId('loanCompletionPanel')?.hidden&&byId('view-finance')?.classList.contains('active'))void renderLoans().catch(showError);
+  });
+  window.addEventListener('eco:live-event',event=>{const e=event instanceof CustomEvent?event.detail:undefined,p=e?.payload??{};if(e?.type!=='RULE_UPDATE'||p.kind!=='LOAN_POLICY')return;const rubric=getRubrics().find(r=>String(r.id)===String(p.rubricId));if(rubric){const previous=rubric.policies?.loan??{},history=Array.isArray(previous.revisions)?previous.revisions.slice():[];let revision=null;try{revision=p.revisionJson?JSON.parse(String(p.revisionJson)):null;}catch{}if(revision?.id&&!history.some(x=>String(x.id)===String(revision.id)))history.push(revision);rubric.policies={...(rubric.policies??{}),loan:{...previous,allowed:true,interestBase:'PRINCIPAL_ONLY',noInterestOnInterest:true,rateBasisPointsPerPeriod:Number(p.rateBasisPointsPerPeriod??previous.rateBasisPointsPerPeriod??0),paymentPriority:String(p.paymentPriority??previous.paymentPriority??'CAPITAL_FIRST'),interestTiming:String(p.interestTiming??previous.interestTiming??'NEXT_SESSION_DUE'),fundingMode:String(p.fundingMode??previous.fundingMode??'AVAILABLE_GROUP_CASH'),carryForwardUnusedFunds:p.carryForwardUnusedFunds!==false,revisions:history}};hydrateLoanPolicy();}if(!byId('loanCompletionPanel')?.hidden&&byId('view-finance')?.classList.contains('active'))void renderLoans().catch(showError);});
 
   const setLocale=()=>{fillCompletionKinds();void refresh().catch(showError);};
   return{refresh,setLocale};

@@ -27,7 +27,7 @@ const b64url=(bytes:Uint8Array)=>{let binary='';for(const b of bytes)binary+=Str
 const b64urlText=(text:string)=>b64url(new TextEncoder().encode(text));
 const b64urlDecodeText=(value:string)=>{const normalized=value.replace(/-/g,'+').replace(/_/g,'/');const binary=atob(normalized+'='.repeat((4-normalized.length%4)%4));return new TextDecoder().decode(Uint8Array.from(binary,c=>c.charCodeAt(0)));};
 const signLiveValue=async(value:string,secret:string)=>{const key=await crypto.subtle.importKey('raw',new TextEncoder().encode(secret),{name:'HMAC',hash:'SHA-256'},false,['sign']);return b64url(new Uint8Array(await crypto.subtle.sign('HMAC',key,new TextEncoder().encode(value))));};
-type LiveTicket={v:1;actorId:string;tenantId:string;groupId:string;roles:string[];exp:number;};
+type LiveTicket={v:1;actorId:string;tenantId:string;groupId:string;roles:string[];exp:number;kind?:'ECO_FINANCIAL_CLOCK_V1';deviceId?:string;anchorAtMs?:number;};
 const issueLiveTicket=async(payload:LiveTicket,secret:string)=>{const body=b64urlText(JSON.stringify(payload));return body+'.'+await signLiveValue(body,secret);};
 const verifyLiveTicket=async(token:string,secret:string):Promise<LiveTicket|undefined>=>{
  const [body,signature,extra]=token.split('.');if(!body||!signature||extra)return undefined;
@@ -44,7 +44,7 @@ export function authenticatedApi(repo:PlatformRepository,db:D1DatabaseLike,handl
   const liveConnect=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/live\/connect$/);
   if(request.method==='GET'&&liveConnect&&liveTicketSecret){
    const token=url.searchParams.get('ticket')??'',ticket=token?await verifyLiveTicket(token,liveTicketSecret):undefined;
-   if(ticket&&ticket.groupId===liveConnect[1]){
+   if(ticket&&!ticket.kind&&ticket.groupId===liveConnect[1]){
     const headers=new Headers(request.headers);
     for(const name of ['x-tenant-id','x-actor-id','x-group-roles','x-session-id','x-request-id'])headers.delete(name);
     headers.set('x-tenant-id',ticket.tenantId);headers.set('x-actor-id',ticket.actorId);headers.set('x-group-roles',ticket.roles.join(','));
@@ -81,6 +81,21 @@ export function authenticatedApi(repo:PlatformRepository,db:D1DatabaseLike,handl
     const ticket=await issueLiveTicket({v:1,actorId:account.id,tenantId:group.tenantId,groupId:group.id,roles,exp},liveTicketSecret);
     return response({ticket,expiresAt:new Date(exp*1000).toISOString(),groupId:group.id},200);
    }
+   const clockAnchorRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/financial-clock-anchor$/);
+   if(clockAnchorRoute&&request.method==='GET'){
+     const group=allowedGroups.get(clockAnchorRoute[1]!);
+     if(!group)return response({error:'FORBIDDEN_SCOPE'},403);
+     const membership=memberships.find(m=>m.groupId===group.id);
+     if(group.createdBy!==account.id&&!membership?.roles.some(r=>managementRoles.has(r)))return response({error:'FORBIDDEN_SCOPE'},403);
+     if(!liveTicketSecret)return response({error:'SIGNED_CLOCK_UNAVAILABLE'},503);
+     const deviceId=String(url.searchParams.get('deviceId')??'').trim();
+     if(!deviceId||deviceId.length>128)return response({error:'CLOCK_DEVICE_ID_REQUIRED'},400);
+     const issuedAt=Date.now(),expiry=issuedAt+7*86400000;
+     const ticket=await issueLiveTicket({v:1,kind:'ECO_FINANCIAL_CLOCK_V1',actorId:account.id,
+       tenantId:group.tenantId,groupId:group.id,roles:['CLOCK_ONLY'],deviceId,
+       anchorAtMs:issuedAt,exp:Math.floor(expiry/1000)},liveTicketSecret);
+     return response({token:ticket,anchorAtMs:issuedAt,expiresAt:new Date(expiry).toISOString(),deviceId});
+   }
    const routeGroup=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)/)?.[1];
    const requestedGroup=routeGroup ?? url.searchParams.get('groupId') ?? request.headers.get('x-active-group-id') ?? '';
    const group=requestedGroup?allowedGroups.get(requestedGroup):undefined;
@@ -93,7 +108,31 @@ export function authenticatedApi(repo:PlatformRepository,db:D1DatabaseLike,handl
    const sensitive=/\/(?:ledger|cashbox|applications|operating-policy|expenses)(?:\/|$)/.test(url.pathname)||url.pathname==='/api/v1/workspaces';
    if(group && sensitive && !memberStatement && !roles.some(r=>managementRoles.has(r)))return response({error:'FORBIDDEN_SCOPE'},403);
    const headers=new Headers(request.headers);
-   for(const name of ['x-tenant-id','x-actor-id','x-group-roles','x-session-id','x-request-id'])headers.delete(name);
+   for(const name of ['x-tenant-id','x-actor-id','x-group-roles','x-session-id','x-request-id','x-eco-recorded-at-ms','x-eco-clock-quality'])headers.delete(name);
+   // Only authenticated scope may annotate V2 financial clock quality.
+   // A client supplied numeric timestamp or pre-auth header is never trusted.
+   if(request.method==='POST'&&liveTicketSecret&&
+      (url.pathname==='/api/v1/outbox/apply'||/\/financial-cells$/.test(url.pathname))){
+     const body=await request.clone().json().catch(()=>null) as any;
+     const p=body?.type==='FINANCIAL_CELL_CORRECTION_PROPOSAL_V2'?body.payload:
+       body?.intentV2&&typeof body.intentV2==='object'?body.intentV2:null;
+     if(p){
+       const token=String(p.clockAnchorId??'');
+       const ticket=token?await verifyLiveTicket(token,liveTicketSecret):undefined;
+       const elapsed=Number(p.elapsedSinceAnchorMs),arrival=Date.now();
+       const valid=Boolean(ticket&&ticket.kind==='ECO_FINANCIAL_CLOCK_V1'&&
+         ticket.actorId===account.id&&ticket.tenantId===(group?.tenantId??account.tenantId)&&
+         ticket.groupId===group?.id&&ticket.deviceId===String(p.deviceId??'')&&
+         Number.isSafeInteger(ticket.anchorAtMs)&&Number.isFinite(elapsed)&&elapsed>=0&&
+         elapsed<=7*86400000&&arrival>=ticket.anchorAtMs!&&
+         elapsed<=arrival-ticket.anchorAtMs!+15000);
+       if(valid){
+         const normalizedMs=Math.round(ticket!.anchorAtMs!+elapsed);
+         headers.set('x-eco-recorded-at-ms',String(normalizedMs));
+         headers.set('x-eco-clock-quality','VERIFIED');
+       }else headers.set('x-eco-clock-quality','UNVERIFIABLE');
+     }
+   }
    headers.set('x-tenant-id',group?.tenantId??account.tenantId);headers.set('x-actor-id',account.id);
    headers.set('x-group-roles',roles.join(','));headers.set('x-active-group-id',group?.id??'');
    headers.set('x-session-id','server-authenticated');headers.set('x-request-id',crypto.randomUUID());

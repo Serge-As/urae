@@ -1,7 +1,7 @@
 import type {
   AuditEvent, CashboxReconciliationRecord, CashboxSnapshot, ContributionReceipt, Currency, FeasibilityResult,
   Group, GroupProject, Id, LedgerAccount, LedgerEntry, LedgerLine, LedgerSummary, MeetingSession, Membership,
-  Money, Obligation, User, CaseRecord, EvidenceRecord, GroupOperatingPolicy, ProjectCapability, ProjectAccessGrant, LatePostingTrace, MemberStatement, GroupProjectLaunchProfile, WorkspaceRecord
+  Money, Obligation, User, CaseRecord, EvidenceRecord, GroupOperatingPolicy, ProjectCapability, ProjectAccessGrant, LatePostingTrace, MemberStatement, GroupProjectLaunchProfile, WorkspaceRecord, NormalizedCellIntentOrder
 } from '../../contracts/src/index.js';
 import { makeId } from '../../contracts/src/index.js';
 import type { PlatformRepository, FinancialCorrectionPlan } from '../../repositories/src/index.js';
@@ -16,6 +16,37 @@ const assertIntNonNegative = (name: string, value: number): void => {
 const assertIntPositive = (name: string, value: number): void => {
   if (!Number.isFinite(value) || value <= 0 || !Number.isSafeInteger(value)) throw new Error(`INVALID_${name.toUpperCase()}`);
 };
+/** Total deterministic comparison of *server-normalized* recording times.
+ * The repository must compare inside the same CAS/transaction as the Ledger;
+ * this pure helper is not itself a commit, lock, or client clock validator.
+ * A questionable clock produces REVIEW instead of falsifying chronology.
+ */
+export const compareNormalizedCellIntents = (
+  incoming:NormalizedCellIntentOrder,
+  incumbent:NormalizedCellIntentOrder
+):'NEWER'|'OLDER'|'SAME'|'CLOCK_REVIEW' => {
+  if(
+    incoming.clockQuality!=='VERIFIED'||incumbent.clockQuality!=='VERIFIED'||
+    !Number.isSafeInteger(incoming.effectiveRecordedAtMs)||
+    !Number.isSafeInteger(incumbent.effectiveRecordedAtMs)||
+    !Number.isSafeInteger(incoming.deviceSequence)||
+    !Number.isSafeInteger(incumbent.deviceSequence)||
+    !incoming.deviceId||!incumbent.deviceId||!incoming.commandId||!incumbent.commandId
+  ) return 'CLOCK_REVIEW';
+  if(incoming.commandId===incumbent.commandId)return 'SAME';
+  const numberCompare=(a:number,b:number)=>a>b?1:a<b?-1:0;
+  const textCompare=(a:string,b:string)=>a>b?1:a<b?-1:0;
+  const order=numberCompare(incoming.effectiveRecordedAtMs,incumbent.effectiveRecordedAtMs)||
+    textCompare(incoming.deviceId,incumbent.deviceId)||
+    numberCompare(incoming.deviceSequence,incumbent.deviceSequence)||
+    textCompare(incoming.commandId,incumbent.commandId);
+  return order>0?'NEWER':order<0?'OLDER':'SAME';
+};
+export const financialCellWinnerRecordId=(tenantId:string,groupId:string,meetingId:string,membershipId:string,rubricId:string,currency='XAF')=>
+  'cell_order_v2_'+encodeURIComponent(JSON.stringify([tenantId,groupId,meetingId,membershipId,rubricId,currency]));
+export const financialCellIntentRecordId=(tenantId:string,groupId:string,commandId:string)=>
+  'cell_intent_v2_'+encodeURIComponent(JSON.stringify([tenantId,groupId,commandId]));
+
 const now = (): string => new Date().toISOString();
 const requiredTextCode = (value:string):string => { const clean=value.trim().replace(/[^A-Z0-9_]/gi,'_').toUpperCase(); if(!clean)throw new Error('LEDGER_ACCOUNT_CODE_REQUIRED'); return clean; };
 
@@ -604,6 +635,9 @@ export class LedgerService {
     tenantId:Id;groupId:Id;meetingId:Id;membershipId:Id;rubricId:Id;
     targetAmount:number;expectedCurrentAmount?:number;expectedCellVersion?:number;currency?:Currency;
     reason?:string;idempotencyKey:string;
+    /** Server-verified normalized clock metadata, never client asserted. */
+    normalizedIntent?:{commandId:string;actorId:string;deviceId:string;deviceSequence:number;
+      effectiveRecordedAtMs:number;clockQuality:'VERIFIED'};
   },requestId=makeId('req')):Promise<{status:'APPLIED'|'NO_CHANGE';previousAmount:number;newAmount:number;cellVersion:number;operationId?:Id;receipt?:ContributionReceipt;evidenceEntry?:LedgerEntry}>{
     assertIntNonNegative('contributionAmount',input.targetAmount);
     if(!input.idempotencyKey.trim())throw new Error('IDEMPOTENCY_KEY_REQUIRED');
@@ -669,7 +703,7 @@ export class LedgerService {
       id:`financial_correction_outbox_${operationId}`,tenantId:input.tenantId,groupId:input.groupId,moduleId:'FINANCE.CORRECTION_OUTBOX',
       title:'Correction financière à diffuser',summary:'Événements et notifications à diffuser après commit atomique.',
       status:'ACTIVE',tags:['financial-correction','pending'],
-      data:{operationId,primaryEntryId:primaryEntry.id,meetingId:input.meetingId,membershipId:input.membershipId,rubricId:input.rubricId,previousAmount:current,newAmount:input.targetAmount,reason},
+      data:{operationId,primaryEntryId:primaryEntry.id,meetingId:input.meetingId,membershipId:input.membershipId,rubricId:input.rubricId,previousAmount:current,newAmount:input.targetAmount,cellVersion:(input.expectedCellVersion??currentVersion)+1,reason},
       createdBy:ctx.actorId,createdAt:commitAt,updatedAt:commitAt
     };
     const expectedVersion=input.expectedCellVersion??currentVersion,nextVersion=expectedVersion+1;
@@ -677,7 +711,20 @@ export class LedgerService {
     const plan:FinancialCorrectionPlan={kind:'cell_correction',operationId,idempotencyKey:input.idempotencyKey,intentFingerprint,
       tenantId:input.tenantId,groupId:input.groupId,primaryEntryId:primaryEntry.id,entries,receipt,
       accounts:accounts?[accounts.cash,accounts.memberFunds]:[],audits,
-      cellRevision:{meetingId:input.meetingId,membershipId:input.membershipId,rubricId:input.rubricId,currency,expectedVersion,nextVersion},outboxRecords:[outbox]};
+      cellRevision:{meetingId:input.meetingId,membershipId:input.membershipId,rubricId:input.rubricId,currency,expectedVersion,nextVersion},
+      outboxRecords:input.normalizedIntent?[outbox,
+        {id:financialCellWinnerRecordId(input.tenantId,input.groupId,input.meetingId,input.membershipId,input.rubricId,currency),
+          tenantId:input.tenantId,groupId:input.groupId,moduleId:'FINANCE.CELL_ORDER_V2',
+          title:'Intention financière retenue',status:'ACTIVE',tags:['finance','cell-winner','verified-clock'],
+          data:{...input.normalizedIntent,amount:input.targetAmount,cellVersion:nextVersion},
+          createdBy:ctx.actorId,createdAt:commitAt,updatedAt:commitAt},
+        {id:financialCellIntentRecordId(input.tenantId,input.groupId,input.idempotencyKey),
+          tenantId:input.tenantId,groupId:input.groupId,moduleId:'FINANCE.CELL_INTENT_V2',
+          title:'Reçu durable de saisie financière',status:'DONE',tags:['finance','idempotency','applied'],
+          data:{...input.normalizedIntent,meetingId:input.meetingId,membershipId:input.membershipId,rubricId:input.rubricId,status:'APPLIED',targetAmount:input.targetAmount,
+            canonicalAmount:input.targetAmount,cellVersion:nextVersion},
+          createdBy:ctx.actorId,createdAt:commitAt,updatedAt:commitAt}
+      ]:[outbox]};
     const committed=await this.repo.commitFinancialCorrection(plan);
     const evidenceEntry=committed.entries.find(e=>e.id===committed.primaryEntryId)??committed.entries.at(-1);
     if(committed.operationId===operationId)this.kernel.events.publish({id:makeId('event'),type:'FINANCIAL_CELL_CORRECTED',occurredAt:commitAt,
@@ -685,6 +732,63 @@ export class LedgerService {
       payload:{operationId,meetingId:input.meetingId,membershipId:input.membershipId,rubricId:input.rubricId,previousAmount:current,newAmount:input.targetAmount},
       idempotencyKey:input.idempotencyKey});
     return{status:'APPLIED',previousAmount:current,newAmount:input.targetAmount,cellVersion:committed.cellRevision.nextVersion,operationId:committed.operationId,receipt:committed.receipt,evidenceEntry};
+  }
+
+  /** Same amount ≠ same intent. Stamp a later verified validation without
+   * modifying any cash account, loan, contribution receipt or posting.
+   * The revision, winning order, durable idempotent receipt and audit commit
+   * together behind the same D1 CAS as a real correction.
+   */
+  async reaffirmCashContributionCell(input:{
+    tenantId:Id;groupId:Id;meetingId:Id;membershipId:Id;rubricId:Id;amount:number;
+    expectedCellVersion:number;idempotencyKey:string;
+    intent:{commandId:string;actorId:string;deviceId:string;deviceSequence:number;
+      effectiveRecordedAtMs:number;clockQuality:'VERIFIED'};
+  }):Promise<{status:'NO_AMOUNT_CHANGE';amount:number;cellVersion:number}>{
+    assertIntNonNegative('contributionAmount',input.amount);
+    const ctx=this.kernel.context.get();
+    await assertCanManageGroup(this.repo,ctx,input.tenantId,input.groupId);
+    if(ctx.actorId!==input.intent.actorId||input.idempotencyKey!==input.intent.commandId)
+      throw Error('CELL_INTENT_ACTOR_MISMATCH');
+    const [membership,meeting,rubric]=await Promise.all([
+      this.repo.getMembership(input.tenantId,input.groupId,input.membershipId),
+      this.repo.getMeeting(input.tenantId,input.groupId,input.meetingId),
+      this.repo.getRubricDefinition(input.tenantId,input.groupId,input.rubricId)
+    ]);
+    if(!membership||membership.status!=='active'||!meeting||meeting.status==='cancelled'||!rubric)
+      throw Error('CELL_SCOPE_INVALID');
+    const nextVersion=input.expectedCellVersion+1,stamp=now();
+    const audited=this.kernel.audit.append({tenantId:input.tenantId,actorId:ctx.actorId,
+      action:'FINANCIAL_CELL_REAFFIRMED',targetType:'financial_cell',
+      targetId:encodeURIComponent(JSON.stringify([input.groupId,input.meetingId,input.membershipId,input.rubricId,'XAF'])),
+      requestId:ctx.requestId,metadata:{amount:input.amount,commandId:input.intent.commandId,cellVersion:nextVersion}});
+    const records:WorkspaceRecord[]=[
+      {id:financialCellWinnerRecordId(input.tenantId,input.groupId,input.meetingId,input.membershipId,input.rubricId),
+        tenantId:input.tenantId,groupId:input.groupId,moduleId:'FINANCE.CELL_ORDER_V2',
+        title:'Intention financière retenue',status:'ACTIVE',tags:['finance','cell-winner','verified-clock'],
+        data:{...input.intent,amount:input.amount,cellVersion:nextVersion},
+        createdBy:ctx.actorId,createdAt:stamp,updatedAt:stamp},
+      {id:financialCellIntentRecordId(input.tenantId,input.groupId,input.idempotencyKey),
+        tenantId:input.tenantId,groupId:input.groupId,moduleId:'FINANCE.CELL_INTENT_V2',
+        title:'Reçu de confirmation du même montant',status:'DONE',
+        tags:['finance','same-amount','idempotency'],
+        data:{...input.intent,meetingId:input.meetingId,membershipId:input.membershipId,rubricId:input.rubricId,status:'NO_AMOUNT_CHANGE',targetAmount:input.amount,
+          canonicalAmount:input.amount,cellVersion:nextVersion},
+        createdBy:ctx.actorId,createdAt:stamp,updatedAt:stamp},
+      {id:'cell_stamp_dispatch_'+encodeURIComponent(input.idempotencyKey),
+        tenantId:input.tenantId,groupId:input.groupId,moduleId:'FINANCE.CELL_STAMP_OUTBOX',
+        title:'Diffusion de confirmation financière',status:'ACTIVE',tags:['finance','pending'],
+        data:{commandId:input.idempotencyKey,meetingId:input.meetingId,
+          membershipId:input.membershipId,rubricId:input.rubricId,
+          amount:input.amount,cellVersion:nextVersion},
+        createdBy:ctx.actorId,createdAt:stamp,updatedAt:stamp}
+    ];
+    await this.repo.commitFinancialCellStamp({tenantId:input.tenantId,groupId:input.groupId,
+      operationId:input.idempotencyKey,meetingId:input.meetingId,
+      membershipId:input.membershipId,rubricId:input.rubricId,currency:'XAF',
+      expectedVersion:input.expectedCellVersion,nextVersion,records,
+      audit:audited,createdAt:stamp});
+    return{status:'NO_AMOUNT_CHANGE',amount:input.amount,cellVersion:nextVersion};
   }
 
   private async ensureNamedAccount(tenantId:Id,groupId:Id,currency:Currency,code:string,type:LedgerAccount['type']):Promise<LedgerAccount>{

@@ -62,7 +62,8 @@ test('1.5.2.3 offline correction exposes the exact pending target for immediate 
   try{
     globalThis.indexedDB={};
     const app=new ConnectedApplication({actorId:'manager_hotfix',tenantId:'tenant_hotfix'});
-    app.selectGroup('group_hotfix');app.outboxStorage.save=async()=>{};app.usingOfflineSnapshot=true;
+    app.selectGroup('group_hotfix');app.outboxStorage.save=async()=>{};app.serverBudgetBlockedUntil=Date.now()+60_000;
+    app.outboxStorage.recordFinancialCellIntent=async(item,deviceId)=>({...item,payload:{...item.payload,deviceId,deviceSequence:1,commandId:item.idempotencyKey}});
     const result=await app.setFinancialCellTarget({meetingId:'meeting_1',membershipId:'member_1',rubricId:'rubric_1',targetAmount:500,currentAmount:1000,currentVersion:2,reason:'Correction terrain'});
     assert.equal(result.queued,true);
     const pending=app.pendingFinancialCellTargets();
@@ -86,7 +87,11 @@ test('specialized sheet entries queue durably offline for outflow loan and repay
   try{
     globalThis.indexedDB={};
     const app=new ConnectedApplication({actorId:'manager_offline_all',tenantId:'tenant_offline_all'});
-    app.selectGroup('group_offline_all');app.outboxStorage.save=async()=>{};app.usingOfflineSnapshot=true;
+    app.selectGroup('group_offline_all');app.outboxStorage.save=async()=>{};app.serverBudgetBlockedUntil=Date.now()+60_000;
+    const snapshots=new Map();
+    app.readSnapshots.save=async row=>{const saved={...row,updatedAt:new Date().toISOString()};snapshots.set(row.id,saved);return saved;};
+    app.readSnapshots.get=async id=>snapshots.get(id);
+    app.readSnapshots.listForActorTenant=async()=>[...snapshots.values()];
     const outflow=await app.recordFinancialSheetEntry({membershipId:'member_1',meetingId:'meeting_1',rubric:{id:'rub_out',name:'Dépense',facets:{direction:'OUTFLOW'}},amount:700});
     const loan=await app.recordFinancialSheetEntry({membershipId:'member_1',meetingId:'meeting_1',rubric:{id:'rub_loan',name:'Prêt',activityPlan:{kind:'LOAN'},policies:{loan:{allowed:true,rateBasisPointsPerPeriod:200,paymentPriority:'CAPITAL_FIRST'}}},amount:5000});
     const repayment=await app.recordFinancialSheetEntry({membershipId:'member_1',meetingId:'meeting_1',rubric:{id:'rub_repay',name:'Remboursement',activityPlan:{kind:'REPAYMENT'}},amount:1000});

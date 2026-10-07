@@ -10,8 +10,8 @@
   <meta name="format-detection" content="telephone=no">
   <meta id="metaDescription" name="description" content="Eco-System — plateforme de gestion de tontines, associations et communautés">
   <link rel="manifest" href="/manifest.webmanifest">
-  <link rel="stylesheet" href="/styles.css?v=15211">
-  <title>Eco-System — 1.5.2.11 · Persistance terrain · UX mobile</title>
+  <link rel="stylesheet" href="/styles.css?v=15212">
+  <title>Eco-System — 1.5.2.12 · Synchro événementielle · UX data-first</title>
   <meta name="application-name" content="Éco-System">\n</head>
 <body class="auth-restoring ui-mode-visual">
   <section id="sessionRestoreScreen" class="session-restore-screen" aria-live="polite"><div class="session-restore-card"><span class="auth-logo">E</span><strong>Eco-System</strong><p>Restauration sécurisée de votre session…</p></div></section>
@@ -33,7 +33,7 @@
 <header class="topbar">
     <div class="brand">
       <div class="logo">E</div>
-      <div><strong>Eco-System</strong><small>Plateforme Tontines · Associations · Communautés</small><span class="version-badge">ECO-SYSTEM · 1.5.2.11</span></div>
+      <div><strong>Eco-System</strong><small>Plateforme Tontines · Associations · Communautés</small><span class="version-badge">ECO-SYSTEM · 1.5.2.12</span></div>
     </div>
     <div class="top-context">
       <select id="activeGroupSelect" aria-label="Groupe actif"><option value="">Aucun groupe actif</option></select>
@@ -107,7 +107,7 @@
             <button id="openAssistedModeBtn" type="button" class="secondary">Ouvrir la dictée financière</button>
           </div>
         </section>
-        <div class="cahier-banner"><div><strong>Votre cockpit Eco-System</strong><p>Groupes, communautés, séances, situation personnelle, activités Live et actions utiles dans un seul espace.</p></div><span class="cahier-code">1.5.2.11 · OFFLINE SOUVERAIN · CONFLITS EXPLICITES · REPRISE ÉVÉNEMENTIELLE · TABLEAUX CANONIQUES</span></div>
+        <div class="cahier-banner"><div><strong>Votre cockpit Eco-System</strong><p>Groupes, communautés, séances, situation personnelle, activités Live et actions utiles dans un seul espace.</p></div><span class="cahier-code">1.5.2.12 · OFFLINE SOUVERAIN · SYNCHRO ÉVÉNEMENTIELLE · LIVE PUSH · TABLEAUX DATA-FIRST</span></div>
         <div class="hero">
           <div>
             <span class="eyebrow">Eco-System · Cahier Maître 2.3.4 + additifs 3.2.0</span>
@@ -584,8 +584,39 @@
               <label>Moment de perception des intérêts<select id="loanPolicyInterestTiming"><option value="NEXT_SESSION_DUE">Dus à la séance suivante</option><option value="UPFRONT_DEDUCTED">Retenus immédiatement sur le montant remis</option><option value="UPFRONT_REQUIRED">Payés avant / condition de libération du prêt</option></select></label>
               <label>Sources autorisées pour financer les prêts<select id="loanPolicyFundingMode"><option value="AVAILABLE_GROUP_CASH">Toute la caisse disponible autorisée par le groupe</option><option value="SAVINGS_REPAYMENTS_ONLY">Épargnes + remboursements/intérêts encaissés uniquement</option></select><small>Les prêts ne peuvent jamais dépasser la liquidité réellement disponible. Le deuxième mode exclut Secours, Transport et autres rubriques.</small></label>
               <label class="check"><input id="loanPolicyCarryForward" type="checkbox" checked><span>Autoriser les reliquats licites des séances précédentes</span></label>
-              <button type="submit" class="primary">Enregistrer la politique Prêts</button>
+              <div class="loan-policy-change-grid full">
+                <label>Portée de cette nouvelle version
+                  <select id="loanPolicyScope">
+                    <option value="NEW_LOANS_ONLY">A · Nouveaux prêts uniquement</option>
+                    <option value="NEW_AND_ALL_OPEN_LOANS">B · Nouveaux + tous les prêts en cours</option>
+                    <option value="NEW_AND_SELECTED_OPEN_LOANS">B · Nouveaux + certains prêts en cours</option>
+                  </select>
+                </label>
+                <label>Prise d’effet
+                  <select id="loanPolicyEffectiveMode">
+                    <option value="IMMEDIATE">Immédiatement</option>
+                    <option value="DATE">À une date précise</option>
+                    <option value="MEETING">À une séance précise</option>
+                  </select>
+                </label>
+                <label id="loanPolicyEffectiveDateWrap" hidden>Date / heure d’effet
+                  <input id="loanPolicyEffectiveAt" type="datetime-local">
+                </label>
+                <label id="loanPolicyEffectiveMeetingWrap" hidden>Séance d’effet
+                  <select id="loanPolicyEffectiveMeeting"></select>
+                </label>
+                <label id="loanPolicySelectedLoansWrap" class="full" hidden>Prêts en cours concernés
+                  <select id="loanPolicySelectedLoans" multiple size="6"></select>
+                  <small>Les prêts soldés ne sont jamais réécrits. Ctrl/Cmd + clic permet de sélectionner plusieurs prêts sur PC.</small>
+                </label>
+                <p class="hint full loan-policy-scope-note">Les changements s’appliquent à partir de leur date/séance d’effet. Un prêt déjà décaissé n’est jamais réécrit pour simuler rétroactivement un intérêt retenu ou payé avant sa libération.</p>
+              </div>
+              <div class="actions full">
+                <button type="submit" class="primary">Enregistrer cette version de politique</button>
+                <button id="loanFreeSimulationBtn" type="button" class="secondary">Simuler un prêt imaginaire</button>
+              </div>
               <div id="loanPolicyStatus" class="truth-notice">La base d’intérêt reste toujours le capital restant dû. Aucun intérêt sur intérêt.</div>
+              <div id="loanPolicyRevisionHistory" class="loan-policy-revision-history full"></div>
             </form>
             <div class="two-col">
               <form id="loanForm" class="form-grid">
@@ -1402,8 +1433,8 @@
     </main>
   </div>
 
-  <footer class="footer">Eco-System 1.5.2.11 · Cahier Maître 2.3.4 + Blueprint 5.0.0 · UX unifiée</footer>
-  <script type="module" src="/src/ui-modes.js?v=15211"></script>
-  <script type="module" src="/src/main.js?v=15211"></script>
+  <footer class="footer">Eco-System 1.5.2.12 · Cahier Maître 2.3.4 + Blueprint 5.0.0 · UX unifiée</footer>
+  <script type="module" src="/src/ui-modes.js?v=15212"></script>
+  <script type="module" src="/src/main.js?v=15212"></script>
 </body>
 </html>

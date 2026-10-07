@@ -55,7 +55,7 @@ test('connected cell target is durably queued before HTTP transport and carries 
   const app=fs.readFileSync('packages/application/src/index.ts','utf8');
   const start=app.indexOf('async setFinancialCellTarget'),end=app.indexOf('\n  async applyFinancialCellConsensus',start);
   const body=app.slice(start,end);
-  assert.match(body,/queueLocal\('FINANCIAL_CELL_CORRECTION_PROPOSAL_V1'/);
+  assert.match(body,/queueLocal\('FINANCIAL_CELL_CORRECTION_PROPOSAL_V2'/);
   assert.match(body,/expectedCurrentAmount:current/);
   assert.match(body,/x-idempotency-key/);
   assert.match(body,/markConfirmedByKey/);

@@ -1,13 +1,15 @@
-const CACHE = 'eco-system-v15211-field-recovery-20261005';
-const PREVIOUS_CACHE = 'eco-system-v15210-offline-conflicts-loans-20261003';
+// A new cache identity is mandatory, even for a patch-level app release.
+const CACHE = 'eco-system-v15212-event-sync-ui-20261007';
+const PREVIOUS_CACHE = 'eco-system-v15211-sovereign-relay-20261007';
+const LEGACY_RECOVERY_CACHE = 'eco-system-v15210-offline-conflicts-loans-20261003';
 const RELEASE_READY = '/__eco_release_ready__';
 
 // Authentication, navigation and canonical application owners must be complete
 // before this worker may install. Optional business/community panels can fail
 // independently without replacing an already-working release.
 const ESSENTIAL_SHELL = [
-  '/', '/index.html', '/styles.css?v=15211', '/manifest.webmanifest',
-  '/src/ui-modes.js?v=15211', '/src/field-hardening.js?v=15211', '/src/main.js?v=15211', '/src/i18n.js', '/src/runtime-i18n.js',
+  '/', '/index.html', '/styles.css?v=15212', '/manifest.webmanifest',
+  '/src/ui-modes.js?v=15212', '/src/field-hardening.js?v=15212', '/src/main.js?v=15212', '/src/i18n.js', '/src/runtime-i18n.js',
   '/src/resilience-ui.js', '/src/group-home-ui.js', '/src/sessions-ui.js',
   '/src/detail-ui.js', '/src/member-control-ui.js', '/src/loan-simulation-ui.js', '/src/business-studio-ui.js', '/src/core-economic-learning-ui.js',
   '/packages/application/src/index.js', '/packages/contracts/src/index.js',
@@ -23,7 +25,7 @@ const ESSENTIAL_SHELL = [
 ];
 
 const OPTIONAL_SHELL = [
-  '/src/voice-entry-bootstrap.js?v=15211', '/src/voice-entry-ui.js', '/src/expense-recap-ui.js',
+  '/src/voice-entry-bootstrap.js?v=15212', '/src/voice-entry-ui.js', '/src/expense-recap-ui.js',
   '/src/member-dossier-ui.js', '/src/documents-ui.js', '/src/contextual-group-ui.js',
   '/src/blueprint-executable-ui.js', '/src/community-blueprint-presets.js',
   '/src/financial-lab-ui.js', '/src/completion-ui.js', '/src/advanced-ui.js',
@@ -40,7 +42,11 @@ const OPTIONAL_SHELL = [
   '/packages/completion/src/index.js', '/packages/module-registry/src/index.js',
   '/packages/module-registry/src/service-capabilities.js'
 ];
-const APP_SHELL = [...ESSENTIAL_SHELL, ...OPTIONAL_SHELL];
+// scripts/pwa-shell-closure.mjs fills this build-time list with all direct and
+// transitive local imports; an incomplete dependency graph prevents the build.
+// The source worker keeps its original declarations for review and audit.
+const GENERATED_IMPORT_CLOSURE = [];
+const APP_SHELL = [...ESSENTIAL_SHELL, ...OPTIONAL_SHELL, ...GENERATED_IMPORT_CLOSURE];
 const SHELL_PATHS = new Set(APP_SHELL.map(path=>new URL(path,self.location.origin).pathname));
 
 const fetchReleaseAsset = async path => {
@@ -49,6 +55,14 @@ const fetchReleaseAsset = async path => {
     new Promise((_,reject)=>setTimeout(()=>reject(new Error('RELEASE_ASSET_TIMEOUT:' + path)),8000))
   ]);
   if (!response || !response.ok) throw new Error('RELEASE_ASSET_MISSING:' + path);
+  // A 200 HTML fallback must never be accepted as a JavaScript module.
+  // Missing or wrong MIME types leave the previously-ready cache untouched.
+  const assetPath=new URL(path,self.location.origin).pathname;
+  const returnedType=(response.headers.get('content-type')||'').toLowerCase();
+  const jsAsset=/\.m?js$/i.test(assetPath);
+  if(jsAsset&&!/(?:javascript|ecmascript)/.test(returnedType))throw new Error('RELEASE_ASSET_MIME:'+path+':'+returnedType);
+  if(/\.css$/i.test(assetPath)&&!returnedType.includes('text/css'))throw new Error('RELEASE_ASSET_MIME:'+path+':'+returnedType);
+  if(jsAsset&&response.url&&new URL(response.url).pathname!==assetPath)throw new Error('RELEASE_ASSET_REDIRECT:'+path);
   // Consume a clone now so an incomplete/aborted body cannot masquerade as cached.
   await response.clone().arrayBuffer();
   return response;
@@ -72,7 +86,8 @@ self.addEventListener('install', event => {
     await cache.put(RELEASE_READY, new Response(JSON.stringify({cache:CACHE,installedAt:new Date().toISOString(),assets:APP_SHELL.length}), {
       headers:{'content-type':'application/json; charset=utf-8'}
     }));
-    // Installation is atomic above; only now may this complete release replace a stale controller.
+    // Activation follows the completed cache marker; the page controllerchange
+    // handler must never reload an editing session or discard its Outbox.
     await self.skipWaiting();
     } catch (error) {
       // Roll back an incomplete candidate ONLY. Never delete the previous
@@ -92,7 +107,7 @@ self.addEventListener('activate', event => {
     // Keep one known previous coherent release for operator rollback/recovery.
     // Never delete the immediately previous cache during the same activation.
     for (const name of names) {
-      if (name.startsWith('eco-system-') && name !== CACHE && name !== PREVIOUS_CACHE) {
+      if (name.startsWith('eco-system-') && name !== CACHE && name !== PREVIOUS_CACHE && name !== LEGACY_RECOVERY_CACHE) {
         try { await caches.delete(name); } catch (_) {}
       }
     }
@@ -103,7 +118,7 @@ const cachedShell = async request => {
   const cache = await caches.open(CACHE);
   const url = new URL(request.url);
   // A versioned request must only match that exact version. Falling back from
-  // main.js?v=15211 to an older /main.js was the source of mixed-release UI.
+  // main.js?v=15212 to an older /main.js was the source of mixed-release UI.
   if(url.search)return await cache.match(request);
   return await cache.match(url.pathname);
 };

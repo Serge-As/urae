@@ -8,7 +8,7 @@ import { PRODUCT_MODULES } from '../../module-registry/src/index.js';
 import { makeId, type CashboxReconciliationRecord, type CashboxSnapshot, type CaseRecord, type ContributionReceipt, type EvidenceRecord, type FeasibilityResult, type Group, type LedgerEntry, type LedgerSummary, type MeetingSession, type Membership, type MembershipView, type OutboxItem, type GroupOperatingPolicy, type RubricDefinition, type RubricOperatingModel, type RubricCyclePreview, type GroupDiscoveryMatch, type PublicGroupListing, type MembershipApplication, type WorkspaceRecord, type WorkspaceStatus } from '../../contracts/src/index.js';
 import { COMPLETION_WORKFLOWS, suggestTontineSchedule as suggestTontineScheduleLocal, buildLoanSchedule, type CompletionKind, type CompletionRecord, type TontineScheduleConstraint, type TontineScheduleResult, type LoanScheduleRow } from '../../completion/src/index.js';
 import { starterRubricFacetsForName } from '../../rubrics/src/index.js';
-import { simulatePeriodicLoan } from '../../loan-simulator/src/index.js';
+import { simulatePeriodicLoan, summarizePeriodicLoan } from '../../loan-simulator/src/index.js';
 import { allocateSavingsYield, splitInterestPool, simulateWorkbookYieldPipeline, allocateCapitalAtWorkYield, allocateCapitalTimeYield, allocateAttributedProductiveYield, eligibleSavingsDeposits, allocateBorrowerReward, SAVINGS_YIELD_POLICY_PRESETS } from '../../savings-yield/src/index.js';
 import { buildFinancialRecap, buildSessionRecap, buildClosingCarryover } from '../../recap-engine/src/index.js';
 import { diagnoseGroup } from '../../group-doctor/src/index.js';
@@ -64,6 +64,35 @@ export class FoundationApplication {
 export interface ConnectedApplicationOptions { baseUrl?: string; actorId?: string; tenantId?: string; displayName?: string; locale?: string; }
 export interface SessionAccount {id:string;tenantId:string;username:string;displayName:string;locale:string}
 
+const clientLoanPolicySnapshot=(policy:any)=>({
+  rateBasisPointsPerPeriod:Math.max(0,Number(policy?.rateBasisPointsPerPeriod??0)||0),
+  paymentPriority:['INTEREST_FIRST','EXPLICIT_ALLOCATION'].includes(String(policy?.paymentPriority))?String(policy.paymentPriority):'CAPITAL_FIRST',
+  interestTiming:['UPFRONT_DEDUCTED','UPFRONT_REQUIRED'].includes(String(policy?.interestTiming))?String(policy.interestTiming):'NEXT_SESSION_DUE',
+  fundingMode:String(policy?.fundingMode)==='SAVINGS_REPAYMENTS_ONLY'?'SAVINGS_REPAYMENTS_ONLY':'AVAILABLE_GROUP_CASH',
+  carryForwardUnusedFunds:policy?.carryForwardUnusedFunds!==false
+});
+const resolveClientLoanPolicy=(loan:any,policy:any,operationAtMs=Date.now())=>{
+  const history=(Array.isArray(policy?.revisions)?policy.revisions:[]).filter((x:any)=>x&&typeof x==='object').slice().sort((a:any,b:any)=>(Date.parse(String(a.effectiveAt??''))||0)-(Date.parse(String(b.effectiveAt??''))||0)||String(a.id??'').localeCompare(String(b.id??'')));
+  const fallback=history.length?clientLoanPolicySnapshot(history[0]?.before):clientLoanPolicySnapshot(policy),created=Date.parse(String(loan?.createdAt??loan?.data?.createdAt??loan?.updatedAt??''))||operationAtMs;
+  const out:any=loan?.id?{...fallback,
+    rateBasisPointsPerPeriod:Number(loan?.data?.rateBasisPointsPerPeriod??fallback.rateBasisPointsPerPeriod),
+    paymentPriority:String(loan?.data?.paymentPriority??fallback.paymentPriority),
+    interestTiming:String(loan?.data?.interestTiming??fallback.interestTiming),
+    policyRevisionId:String(loan?.data?.policyRevisionId??''),
+    policyRevisionEffectiveAt:String(loan?.data?.policyRevisionEffectiveAt??'')
+  }:{...fallback,policyRevisionId:'',policyRevisionEffectiveAt:''};
+  for(const revision of history){
+    const effective=Date.parse(String(revision.effectiveAt??''));if(!Number.isFinite(effective)||effective>operationAtMs)continue;
+    const scope=String(revision.scope??'NEW_LOANS_ONLY'),loanId=String(loan?.id??''),createdAfter=created>=effective,closedBeforeEffect=String(loan?.data?.completionState??'')==='CLOSED'&&(Date.parse(String(loan?.updatedAt??''))||0)>0&&(Date.parse(String(loan?.updatedAt??''))||0)<=effective;
+    const selected=Array.isArray(revision.selectedLoanIds)&&revision.selectedLoanIds.map(String).includes(loanId),affected=Array.isArray(revision.affectedLoanIds)&&revision.affectedLoanIds.map(String).includes(loanId),legacyOpenAll=scope==='NEW_AND_ALL_OPEN_LOANS'&&!Array.isArray(revision.affectedLoanIds)&&!closedBeforeEffect;
+    if(closedBeforeEffect||!(createdAfter||(scope==='NEW_AND_ALL_OPEN_LOANS'&&(affected||legacyOpenAll))||(scope==='NEW_AND_SELECTED_OPEN_LOANS'&&selected)))continue;
+    const next=clientLoanPolicySnapshot(revision.after),disbursedAt=Date.parse(String(loan?.data?.disbursedAt??''))||0;
+    if(disbursedAt&&disbursedAt<effective&&next.interestTiming!=='NEXT_SESSION_DUE')next.interestTiming=out.interestTiming;
+    Object.assign(out,next,{policyRevisionId:String(revision.id??''),policyRevisionEffectiveAt:String(revision.effectiveAt??'')});
+  }
+  return out;
+};
+
 export class ConnectedApplication {
   private readonly kernel = new PlatformKernel();
   private readonly outbox = new Outbox();
@@ -73,13 +102,42 @@ export class ConnectedApplication {
   private readonly identityMigration = new IndexedDbIdentityMigrationJournal();
   private readonly sovereign = new IndexedDbSovereignStore();
   private usingOfflineSnapshot=false;
+  private transportUnavailableUntil=0;
   private serverBudgetBlockedUntil=0;
   private serverBudgetReason='';
   private serverBudgetWake?:ReturnType<typeof setTimeout>;
+  private transportWake?:ReturnType<typeof setTimeout>;
   private actorId:string; private tenantId:string; private displayName:string; private locale:string; private activeGroupId?:string;
   private readonly baseUrl:string;
   private groupTenants=new Map<string,string>();
   private homeTenantId?:string;
+  private financialClockAnchor?:{groupId:string;deviceId:string;token:string;anchorAtMs:number;monotonicAt:number;expiresAt:number};
+  private financialClockLoading?:Promise<void>;
+  private async warmFinancialClock():Promise<void>{
+    const groupId=this.activeGroupId,deviceId=this.localDeviceId();
+    if(!groupId||typeof navigator!=='undefined'&&navigator.onLine===false||this.serverBudgetBlocked())return;
+    if(this.financialClockAnchor?.groupId===groupId&&
+      this.financialClockAnchor.deviceId===deviceId&&Date.now()<this.financialClockAnchor.expiresAt)return;
+    if(this.financialClockLoading){await this.financialClockLoading;if(this.financialClockAnchor?.groupId!==groupId)return this.warmFinancialClock();return;}
+    this.financialClockLoading=(async()=>{
+      try{
+        const response=await this.request<{token:string;anchorAtMs:number;expiresAt:string;deviceId:string}>(
+          '/api/v1/groups/'+encodeURIComponent(groupId)+'/financial-clock-anchor?deviceId='+encodeURIComponent(deviceId));
+        if(this.activeGroupId!==groupId||!response?.token||response.deviceId!==deviceId)return;
+        const perf=typeof performance!=='undefined'&&Number.isFinite(performance.now())?performance.now():0;
+        if(perf>0)this.financialClockAnchor={groupId,deviceId,token:response.token,anchorAtMs:response.anchorAtMs,
+          monotonicAt:perf,expiresAt:Date.parse(response.expiresAt)};
+      }catch(error){console.info('Financial clock unavailable, future intents require review',error);}
+    })().finally(()=>{this.financialClockLoading=undefined;});
+    return this.financialClockLoading;
+  }
+  private financialRecordedAnchor():{clockAnchorId?:string;elapsedSinceAnchorMs?:number;deviceId:string}{
+    const deviceId=this.localDeviceId(),current=this.financialClockAnchor;
+    const perf=typeof performance!=='undefined'?performance.now():NaN;
+    if(!current||current.groupId!==this.activeGroupId||current.deviceId!==deviceId||
+      !Number.isFinite(perf)||perf<current.monotonicAt||Date.now()>current.expiresAt)return{deviceId};
+    return{clockAnchorId:current.token,elapsedSinceAnchorMs:Math.round(perf-current.monotonicAt),deviceId};
+  }
 
   constructor(options:ConnectedApplicationOptions={}){
     this.baseUrl=options.baseUrl??''; this.actorId=options.actorId??'user_founder'; this.tenantId=options.tenantId??'tenant_local'; this.displayName=options.displayName??'Local Manager';
@@ -129,8 +187,31 @@ export class ConnectedApplication {
     this.armServerBudgetWake();
     if(typeof window!=='undefined'&&typeof CustomEvent!=='undefined')window.dispatchEvent(new CustomEvent('eco:server-budget-blocked',{detail:{until:this.serverBudgetBlockedUntil,reason:this.serverBudgetReason}}));
   }
-  forceServerRetry():void{this.serverBudgetBlockedUntil=0;this.serverBudgetReason='';if(this.serverBudgetWake)clearTimeout(this.serverBudgetWake);this.serverBudgetWake=undefined;try{localStorage.removeItem('eco.serverBudgetBlock.v1');}catch{}this.usingOfflineSnapshot=false;}
+  forceServerRetry():void{this.serverBudgetBlockedUntil=0;this.serverBudgetReason='';this.transportUnavailableUntil=0;if(this.serverBudgetWake)clearTimeout(this.serverBudgetWake);this.serverBudgetWake=undefined;if(this.transportWake)clearTimeout(this.transportWake);this.transportWake=undefined;try{localStorage.removeItem('eco.serverBudgetBlock.v1');}catch{}this.usingOfflineSnapshot=false;}
+  forceTransportRetry():void{this.transportUnavailableUntil=0;if(this.transportWake)clearTimeout(this.transportWake);this.transportWake=undefined;}
+  markLiveTransportHealthy():void{
+    // A successfully opened authenticated WebSocket is already proof that the
+    // server is reachable. Do not spend a D1/auth GET merely to leave a stale
+    // offline snapshot state before the next financial write.
+    this.transportUnavailableUntil=0;this.usingOfflineSnapshot=false;
+    if(this.transportWake)clearTimeout(this.transportWake);this.transportWake=undefined;
+  }
+  private markTransportUnavailable():void{
+    // One failed fetch must not strand an otherwise-online phone for 30 s.
+    // The wake timer performs NO network request: it only re-opens the gate so
+    // the next real user/outbox/live event can retry.
+    this.transportUnavailableUntil=Date.now()+3500;
+    if(this.transportWake)clearTimeout(this.transportWake);
+    this.transportWake=setTimeout(()=>{
+      this.transportWake=undefined;
+      if(this.transportUnavailableUntil>Date.now())return;
+      this.transportUnavailableUntil=0;
+      if(typeof window!=='undefined'&&typeof CustomEvent!=='undefined')window.dispatchEvent(new CustomEvent('eco:transport-retry-ready'));
+    },3650);
+    if(typeof window!=='undefined'&&typeof CustomEvent!=='undefined')window.dispatchEvent(new CustomEvent('eco:transport-degraded',{detail:{until:this.transportUnavailableUntil}}));
+  }
   serverBudgetState():{blocked:boolean;until:number;reason:string}{return{blocked:this.serverBudgetBlocked(),until:this.serverBudgetBlockedUntil,reason:this.serverBudgetReason};}
+  transportState():{degraded:boolean;until:number}{return{degraded:this.transportUnavailableUntil>Date.now(),until:this.transportUnavailableUntil};}
   private offlineReadAllowed(path:string):boolean{
     // Actor-scoped IndexedDB snapshots are safe for GET projections. Keeping this
     // generic prevents a newly-added read screen from becoming an accidental
@@ -152,28 +233,17 @@ export class ConnectedApplication {
     this.usingOfflineSnapshot=true;
     if(typeof window!=='undefined'&&typeof CustomEvent!=='undefined')window.dispatchEvent(new CustomEvent('eco:offline-snapshot-used',{detail:{path,updatedAt}}));
   }
-  private isOffline():boolean{return this.serverBudgetBlocked()||this.usingOfflineSnapshot||(typeof navigator!=='undefined'&&navigator.onLine===false);}
+  private isOffline():boolean{return this.serverBudgetBlocked()||(typeof navigator!=='undefined'&&navigator.onLine===false);}
   private async canAttemptCriticalWrite():Promise<boolean>{
     if(this.serverBudgetBlocked())return false;
     if(typeof navigator!=='undefined'&&navigator.onLine===false)return false;
-    if(!this.usingOfflineSnapshot)return true;
-    // A single cached GET must never trap later financial writes in offline mode.
-    // Probe the real authenticated server directly, bypassing read-snapshot fallback.
-    const abort=typeof AbortController==='function'?new AbortController():null;
-    let timer:ReturnType<typeof setTimeout>|undefined;
-    try{
-      // A network check is only triggered by a financial action after an
-      // offline snapshot, never every second. A stalled connection must not
-      // freeze a reimbursement indefinitely (old Android compatible fallback).
-      const probe=fetch(`${this.baseUrl}/api/v1/auth/session`,{method:'GET',headers:this.headers(),signal:abort?.signal});
-      const response=await Promise.race([probe,new Promise<never>((_,reject)=>{
-        timer=setTimeout(()=>{abort?.abort();reject(new Error('NETWORK_UNAVAILABLE'));},4500);
-      })]);
-      if(!response.ok)return false;
-      const body=await response.json() as {authenticated?:boolean;account?:unknown};
-      if(body.authenticated&&body.account){this.usingOfflineSnapshot=false;return true;}
-    }catch{}finally{if(timer)clearTimeout(timer);}
-    return false;
+    // The financial write itself is the event-driven connectivity probe. A
+    // previous cached GET or short transport failure must not force an extra
+    // auth/D1 read before every validation. This also lets a phone recover as
+    // soon as mobile data/Wi-Fi works again.
+    this.transportUnavailableUntil=0;
+    if(this.transportWake)clearTimeout(this.transportWake);this.transportWake=undefined;
+    return true;
   }
   private async cached<T>(path:string):Promise<T|undefined>{
     try{
@@ -201,10 +271,28 @@ export class ConnectedApplication {
     await this.saveCached(path,next);return next;
   }
   private async queueLocal(type:string,payload:Record<string,unknown>,idempotencyKey=makeId('op')):Promise<OutboxItem>{
-    const item=this.outbox.enqueue({tenantId:this.tenantId,actorId:this.actorId,type,payload,idempotencyKey});
-    await this.persistOutbox();
+    let item=this.outbox.enqueue({tenantId:this.tenantId,actorId:this.actorId,type,payload,idempotencyKey});
+    const financialTarget=['FINANCIAL_CELL_CORRECTION_PROPOSAL_V1','FINANCIAL_CELL_CORRECTION_PROPOSAL_V2'].includes(type);
+    if(financialTarget){
+      try{
+        const committed=await this.outboxStorage.recordFinancialCellIntent(
+          item as OutboxItem<Record<string,unknown>>,this.localDeviceId());
+        this.outbox.adoptDurable(committed);item=committed;
+      }catch(error){
+        // Do not allow an unpersisted in-memory intention to reach the network.
+        this.outbox.discardUncommitted(item.id);
+        throw Error('DURABLE_STORAGE_REQUIRED',{cause:error});
+      }
+    }else await this.persistOutbox();
     const groupId=String(payload.groupId??this.activeGroupId??'');
-    if(groupId&&IndexedDbSovereignStore.supported())await this.sovereign.append({tenantId:this.tenantId,groupId,actorId:this.actorId,type,payload:{...structuredClone(payload),idempotencyKey,outboxId:item.id}});
+    // The financial command already has an atomic, durable journal inside the
+    // Outbox database. A best-effort sovereign mirror must not turn a committed
+    // local action into a spurious failure that encourages duplicate validation.
+    if(groupId&&IndexedDbSovereignStore.supported()){
+      try{await this.sovereign.append({tenantId:this.tenantId,groupId,actorId:this.actorId,type,
+        payload:{...structuredClone(item.payload),idempotencyKey,outboxId:item.id}});}
+      catch(error){if(!financialTarget)throw error;console.info('Sovereign financial mirror deferred',error);}
+    }
     if(typeof window!=='undefined'&&typeof CustomEvent!=='undefined')window.dispatchEvent(new CustomEvent('eco:local-mutation',{detail:{type,id:item.id,idempotencyKey}}));
     return item;
   }
@@ -226,7 +314,13 @@ export class ConnectedApplication {
     const headers=new Headers(this.headers());
     for(const [k,v] of new Headers(init.headers??{}))headers.set(k,v);
     if(typeof FormData!=='undefined'&&init.body instanceof FormData)headers.delete('content-type');
-    const method=String(init.method??'GET').toUpperCase(),cacheable=method==='GET'&&this.offlineReadAllowed(path);
+    const method=String(init.method??'GET').toUpperCase(),cacheable=method==='GET'&&this.offlineReadAllowed(path),securityCritical=path.startsWith('/api/v1/auth/');
+    if(!securityCritical&&this.transportUnavailableUntil>Date.now()){
+      if(cacheable&&IndexedDbReadSnapshotAdapter.supported()){
+        try{const snapshot=await this.readSnapshots.get<T>(this.offlineReadKey(path));if(snapshot){this.announceOfflineSnapshot(path,snapshot.updatedAt);return structuredClone(snapshot.body);}}catch{}
+      }
+      throw new Error('NETWORK_UNAVAILABLE');
+    }
     if(this.serverBudgetBlocked()){
       if(cacheable&&IndexedDbReadSnapshotAdapter.supported()){
         try{const snapshot=await this.readSnapshots.get<T>(this.offlineReadKey(path));if(snapshot){this.announceOfflineSnapshot(path,snapshot.updatedAt);return structuredClone(snapshot.body);}}catch{}
@@ -234,18 +328,21 @@ export class ConnectedApplication {
       throw new Error('NETWORK_UNAVAILABLE');
     }
     let response:Response;
-    // Repayments have a durable write-ahead idempotency key. Their transport
-    // must be time-bounded on unreliable mobile networks so a saved intent can
-    // be shown as pending rather than keeping a cell disabled for minutes.
-    const repaymentWrite=method==='POST'&&/\/loans\/[^/]+\/repay$/.test(path);
-    const abort=repaymentWrite&&typeof AbortController==='function'?new AbortController():null;
+    // navigator.onLine can be true on a hotspot with no Internet. Bound actual
+    // server attempts; after one failure a short local circuit breaker makes
+    // subsequent offline-capable actions immediate without periodic probing.
+    const formUpload=typeof FormData!=='undefined'&&init.body instanceof FormData,
+      eventCritical=/\/outbox\/apply$|\/financial-cells$|\/loans\/[^/]+\/(?:repay|disburse)$/.test(path),
+      timeoutMs=formUpload?30000:eventCritical?2800:6500;
+    const abort=typeof AbortController==='function'?new AbortController():null;
     let requestTimer:ReturnType<typeof setTimeout>|undefined;
     try{
       const send=fetch(`${this.baseUrl}${path}`,{...init,headers,...(abort?{signal:abort.signal}:{})});
-      response=repaymentWrite?await Promise.race([send,new Promise<Response>((_,reject)=>{
-        requestTimer=setTimeout(()=>{abort?.abort();reject(new Error('NETWORK_UNAVAILABLE'));},12000);
-      })]):await send;
+      response=await Promise.race([send,new Promise<Response>((_,reject)=>{
+        requestTimer=setTimeout(()=>{abort?.abort();reject(new Error('NETWORK_UNAVAILABLE'));},timeoutMs);
+      })]);
     }catch(error){
+      this.markTransportUnavailable();
       if(cacheable&&IndexedDbReadSnapshotAdapter.supported()){
         try{const snapshot=await this.readSnapshots.get<T>(this.offlineReadKey(path));if(snapshot){this.announceOfflineSnapshot(path,snapshot.updatedAt);return structuredClone(snapshot.body);}}catch{}
       }
@@ -266,7 +363,7 @@ export class ConnectedApplication {
       if(transient)throw new Error('NETWORK_UNAVAILABLE');
       throw new Error(String(body.error??`HTTP_${response.status}`));
     }
-    this.usingOfflineSnapshot=false;
+    this.usingOfflineSnapshot=false;this.transportUnavailableUntil=0;
     if(cacheable)await this.cacheReadSnapshot(path,body as T);
     return body as T;
   }
@@ -278,7 +375,7 @@ export class ConnectedApplication {
     if(IndexedDbOutboxAdapter.supported())try{const persisted=await this.outboxStorage.load();this.outbox.restore(persisted.filter(x=>x.actorId===this.actorId&&x.tenantId===this.tenantId));}catch{}
     await this.recoverInterruptedVaultRestores();
     const groups=await this.listGroups();if(this.activeGroupId&&!groups.some(g=>g.id===this.activeGroupId))this.selectGroup(undefined);if(!this.activeGroupId&&groups[0])this.selectGroup(groups[0].id);else this.selectGroup(this.activeGroupId);
-    if(!this.usingOfflineSnapshot){await this.request('/api/v1/bootstrap',{method:'POST',body:JSON.stringify({displayName:this.displayName,locale:this.locale})});await this.groupTrashItems().catch(()=>[]);}
+    if(!this.usingOfflineSnapshot){await this.request('/api/v1/bootstrap',{method:'POST',body:JSON.stringify({displayName:this.displayName,locale:this.locale})});await this.groupTrashItems().catch(()=>[]);if(this.activeGroupId)await this.warmFinancialClock();}
     return{restoredOutbox:this.outbox.list().length,groups};
   }
 
@@ -391,18 +488,181 @@ export class ConnectedApplication {
   async receivedMemberCapsule(membershipId:string):Promise<EcoMemberCapsule|undefined>{
     if(!this.activeGroupId)return undefined;return this.cached('/api/v1/relay/member-capsule/'+encodeURIComponent(this.activeGroupId)+'/'+encodeURIComponent(membershipId));
   }
-  async localRoomManagerDelta():Promise<{protocol:'ECO_MANAGER_DELTA_1';groupId:string;actorId:string;generatedAt:string;events:any[]}>{
-    if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return{protocol:'ECO_MANAGER_DELTA_1',groupId:this.activeGroupId,actorId:this.actorId,generatedAt:new Date().toISOString(),events:await this.sovereign.list(this.tenantId,this.activeGroupId)};
+  private managerRelayIntentPath(groupId:string):string{return 'local://manager-relay-intents/'+encodeURIComponent(groupId);}
+  private relayFerryPath(groupId:string):string{return 'local://relay-ferry/'+encodeURIComponent(groupId);}
+  private managerCommandCellKey(item:any):string{
+    const p=item?.payload??{};
+    if(['FINANCIAL_CELL_CORRECTION_PROPOSAL_V1','FINANCIAL_CELL_CORRECTION_PROPOSAL_V2'].includes(String(item?.type)))
+      return JSON.stringify(['CELL',p.meetingId??'',p.membershipId??'',p.rubricId??'',p.activityId??'']);
+    if(String(item?.type)==='FINANCIAL_SHEET_ENTRY_V1')
+      return JSON.stringify(['SHEET',p.meetingId??'',p.membershipId??'',p.rubricId??'',p.nature??'']);
+    return '';
   }
-  async confrontLocalRoomManagerDelta(remote:any):Promise<{commonSequence:number;localOnly:number;remoteOnly:number;potentialFinancialConflicts:Array<{key:string;local:any;remote:any}>}>{
-    if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');if(remote?.protocol!=='ECO_MANAGER_DELTA_1'||remote.groupId!==this.activeGroupId||!Array.isArray(remote.events))throw Error('ECO_LOCAL_ROOM_DELTA_INVALID');
-    const local=await this.sovereign.list(this.tenantId,this.activeGroupId),remoteEvents=remote.events as any[];let commonSequence=0;
-    const max=Math.min(local.length,remoteEvents.length);for(let i=0;i<max;i++){if(local[i]?.sequence===remoteEvents[i]?.sequence&&local[i]?.hash===remoteEvents[i]?.hash)commonSequence=i+1;else break;}
-    const financialTypes=new Set(['CONTRIBUTION_CASH_RECORDED','FINANCIAL_CELL_TARGET_V1','FINANCIAL_SHEET_ENTRY_V1','LOAN_DISBURSE_V1','LOAN_REPAY_V1','TONTINE_SERVE_V1','SAVINGS_DEPOSIT_V1','SAVINGS_WITHDRAW_V1','CUSTODY_MOVEMENT_V1','SOLIDARITY_FUND_V1','SOLIDARITY_PAYOUT_V1']);
-    const key=(event:any)=>{const p=event?.payload??{};return [p.meetingId??'',p.membershipId??p.borrowerMembershipId??'',p.rubricId??'',p.loanId??p.shareId??'',event?.type??''].join('|');};
-    const localMap=new Map(local.slice(commonSequence).filter(x=>financialTypes.has(x.type)).map(x=>[key(x),x])),potentialFinancialConflicts=[];
-    for(const event of remoteEvents.slice(commonSequence).filter((x:any)=>financialTypes.has(String(x.type)))){const k=key(event),mine=localMap.get(k);if(mine&&JSON.stringify(mine.payload)!==JSON.stringify(event.payload))potentialFinancialConflicts.push({key:k,local:mine,remote:event});}
-    return{commonSequence,localOnly:Math.max(0,local.length-commonSequence),remoteOnly:Math.max(0,remoteEvents.length-commonSequence),potentialFinancialConflicts};
+  private managerIntentOrder(item:any):string{
+    const p=item?.payload??{},stamp=String(p.recordedAtClient??item?.createdAt??''),device=String(p.deviceId??''),seq=String(Number(p.deviceSequence??0)).padStart(12,'0');
+    return [stamp,device,seq,String(item?.idempotencyKey??item?.id??'')].join('|');
+  }
+  private async managerRelayIntents():Promise<any[]>{
+    if(!this.activeGroupId)return[];
+    return (await this.cached<any[]>(this.managerRelayIntentPath(this.activeGroupId))??[])
+      .filter(x=>x&&String((x.payload??{}).groupId??'')===this.activeGroupId)
+      .slice(-5000);
+  }
+  async localRelayGroupStructure():Promise<{members:MembershipView[];meetings:MeetingSession[];rubrics:RubricDefinition[]}>{
+    if(!this.activeGroupId)return{members:[],meetings:[],rubrics:[]};const base='/api/v1/groups/'+encodeURIComponent(this.activeGroupId);
+    const [members,meetings,rubrics]=await Promise.all([
+      this.cached<MembershipView[]>(base+'/members'),this.cached<MeetingSession[]>(base+'/meetings'),this.cached<RubricDefinition[]>(base+'/rubrics')
+    ]);
+    return{members:members??[],meetings:meetings??[],rubrics:rubrics??[]};
+  }
+  async relayManagerFinancialTargets():Promise<Array<{meetingId:string;membershipId:string;rubricId:string;targetAmount:number;baselineValue:number;baselineVersion:number;status:string;businessStatus:string;idempotencyKey:string;createdAt:string;source:'RELAY';sourceActorId:string;recordedAtClient:string}>>{
+    const intents=await this.managerRelayIntents(),byCell=new Map<string,any>();
+    for(const item of intents){
+      if(!['FINANCIAL_CELL_CORRECTION_PROPOSAL_V1','FINANCIAL_CELL_CORRECTION_PROPOSAL_V2'].includes(String(item.type)))continue;
+      const p=item.payload??{},key=this.managerCommandCellKey(item);if(!key)continue;
+      const current=byCell.get(key);if(!current||this.managerIntentOrder(item)>this.managerIntentOrder(current))byCell.set(key,item);
+    }
+    return [...byCell.values()].map(item=>{const p=item.payload??{};return{
+      meetingId:String(p.meetingId??''),membershipId:String(p.membershipId??''),rubricId:String(p.rubricId??''),
+      targetAmount:Number(p.targetAmount??0),baselineValue:Number(p.baselineValue??0),baselineVersion:Number(p.baselineVersion??0),
+      status:'RELAY_RECEIVED',businessStatus:'',idempotencyKey:String(item.idempotencyKey??''),createdAt:String(item.createdAt??p.recordedAtClient??''),
+      source:'RELAY' as const,sourceActorId:String(item.actorId??''),recordedAtClient:String(p.recordedAtClient??item.createdAt??'')
+    };}).filter(x=>x.meetingId&&x.membershipId&&x.rubricId&&Number.isSafeInteger(x.targetAmount)&&x.targetAmount>=0);
+  }
+  private managerStructuralPathAllowed(path:string,groupId:string):boolean{
+    const enc=encodeURIComponent(groupId),base='/api/v1/groups/'+enc;
+    return path==='/api/v1/groups'||path===base+'/members'||path===base+'/meetings'||path===base+'/rubrics'||path===base+'/me'||path===base+'/identity-profile';
+  }
+  async localRoomManagerDelta():Promise<any>{
+    if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');const groupId=this.activeGroupId;
+    const relayed=await this.managerRelayIntents(),own=this.outbox.list().filter(x=>String((x.payload as any)?.groupId??'')===groupId&&!['CONFIRMED','CANCELLED'].includes(String(x.status)));
+    const commandsById=new Map<string,any>();for(const item of [...relayed,...own])commandsById.set(String(item.actorId)+':'+String(item.idempotencyKey??item.id),structuredClone(item));
+    const allSnapshots=IndexedDbReadSnapshotAdapter.supported()?await this.readSnapshots.listForActorTenant(this.actorId,this.tenantId):[],structuralSnapshots:any[]=[];let bytes=0;
+    for(const row of allSnapshots){
+      if(!this.managerStructuralPathAllowed(String(row.path??''),groupId))continue;
+      const scopedBody=row.path==='/api/v1/groups'&&Array.isArray(row.body)?(row.body as any[]).filter(g=>String(g?.id??'')===groupId):row.body;
+      const safe={path:row.path,body:scopedBody,updatedAt:row.updatedAt,sourceVersion:row.sourceVersion??null},size=JSON.stringify(safe).length;
+      if(bytes+size>900000)break;bytes+=size;structuralSnapshots.push(safe);
+    }
+    const journal=await this.sovereign.list(this.tenantId,groupId),last=journal.at(-1);
+    return{protocol:'ECO_MANAGER_DELTA_2',groupId,tenantId:this.tenantId,actorId:this.actorId,sourceDeviceId:this.localDeviceId(),generatedAt:new Date().toISOString(),
+      commands:[...commandsById.values()].slice(-2500),structuralSnapshots,journalHead:last?{sequence:last.sequence,hash:last.hash}:null};
+  }
+  async confrontLocalRoomManagerDelta(remote:any):Promise<any>{
+    if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');if(!remote||remote.groupId!==this.activeGroupId)throw Error('ECO_LOCAL_ROOM_DELTA_INVALID');
+    if(remote.protocol==='ECO_MANAGER_DELTA_1'){
+      if(!Array.isArray(remote.events))throw Error('ECO_LOCAL_ROOM_DELTA_INVALID');
+      const local=await this.sovereign.list(this.tenantId,this.activeGroupId),remoteEvents=remote.events as any[];let commonSequence=0;
+      const max=Math.min(local.length,remoteEvents.length);for(let i=0;i<max;i++){if(local[i]?.sequence===remoteEvents[i]?.sequence&&local[i]?.hash===remoteEvents[i]?.hash)commonSequence=i+1;else break;}
+      return{protocol:'ECO_MANAGER_DELTA_1',commonSequence,commonCommands:0,localOnly:Math.max(0,local.length-commonSequence),remoteOnly:Math.max(0,remoteEvents.length-commonSequence),structuralChanges:0,potentialFinancialConflicts:[]};
+    }
+    if(remote.protocol!=='ECO_MANAGER_DELTA_2'||remote.tenantId!==this.tenantId||!Array.isArray(remote.commands)||!Array.isArray(remote.structuralSnapshots))throw Error('ECO_LOCAL_ROOM_DELTA_INVALID');
+    const localRelayed=await this.managerRelayIntents(),localOwn=this.outbox.list().filter(x=>String((x.payload as any)?.groupId??'')===this.activeGroupId&&!['CONFIRMED','CANCELLED'].includes(String(x.status))),local=[...localRelayed,...localOwn];
+    const commandId=(x:any)=>String(x?.actorId??'')+':'+String(x?.idempotencyKey??x?.id??''),localIds=new Set<string>(local.map(commandId)),remoteIds=new Set<string>((remote.commands as any[]).map(commandId)),commonCommands=[...remoteIds].filter(x=>localIds.has(x)).length;
+    const localByCell=new Map<string,any>();for(const item of local){const key=this.managerCommandCellKey(item);if(!key)continue;const old=localByCell.get(key);if(!old||this.managerIntentOrder(item)>this.managerIntentOrder(old))localByCell.set(key,item);}
+    const remoteByCell=new Map<string,any>();for(const item of remote.commands){const p=item?.payload??{};if(String(p.groupId??'')!==this.activeGroupId)continue;const key=this.managerCommandCellKey(item);if(!key)continue;const old=remoteByCell.get(key);if(!old||this.managerIntentOrder(item)>this.managerIntentOrder(old))remoteByCell.set(key,item);}
+    const potentialFinancialConflicts:any[]=[];
+    for(const [key,theirs] of remoteByCell){
+      const mine=localByCell.get(key);if(!mine)continue;
+      const ma=Number(mine.payload?.targetAmount??mine.payload?.amount),ra=Number(theirs.payload?.targetAmount??theirs.payload?.amount),mineOrder=this.managerIntentOrder(mine),theirOrder=this.managerIntentOrder(theirs);
+      const locallyResolved=String(mine.payload?.reason??'').startsWith('[ECO_RELAY_RESOLUTION]')&&mineOrder>theirOrder;
+      if(Number.isFinite(ma)&&Number.isFinite(ra)&&ma!==ra&&!locallyResolved)potentialFinancialConflicts.push({key,local:mine,remote:theirs,recommended:theirOrder>mineOrder?'REMOTE':'LOCAL'});
+    }
+    return{protocol:'ECO_MANAGER_DELTA_2',commonSequence:0,commonCommands,localOnly:Math.max(0,localIds.size-commonCommands),remoteOnly:Math.max(0,remoteIds.size-commonCommands),structuralChanges:remote.structuralSnapshots.length,potentialFinancialConflicts};
+  }
+  async resolveLocalRoomManagerConflict(input:{local:any;remote:any;choice:'LOCAL'|'REMOTE'}):Promise<any>{
+    if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');if(!['LOCAL','REMOTE'].includes(input.choice))throw Error('ECO_RELAY_RESOLUTION_INVALID');
+    const local=input.local,remote=input.remote,lp=local?.payload??{},rp=remote?.payload??{};
+    const coords=(p:any)=>[String(p.meetingId??''),String(p.membershipId??''),String(p.rubricId??'')];
+    const [lm,lmem,lr]=coords(lp),[rm,rmem,rr]=coords(rp);if(!lm||!lmem||!lr||lm!==rm||lmem!==rmem||lr!==rr)throw Error('ECO_RELAY_RESOLUTION_SCOPE_INVALID');
+    const localAmount=Number(lp.targetAmount??lp.amount),remoteAmount=Number(rp.targetAmount??rp.amount),chosen=input.choice==='REMOTE'?remoteAmount:localAmount;
+    if(!Number.isSafeInteger(chosen)||chosen<0)throw Error('INVALID_CONTRIBUTION_AMOUNT');
+    const baselineVersion=Math.max(0,Number(lp.baselineVersion??0),Number(rp.baselineVersion??0)),reason='[ECO_RELAY_RESOLUTION] '+input.choice+' · '+String(local?.actorId??'local')+' / '+String(remote?.actorId??'relay');
+    const result=await this.setFinancialCellTarget({meetingId:lm,membershipId:lmem,rubricId:lr,targetAmount:chosen,currentAmount:localAmount,currentVersion:baselineVersion,reason});
+    if(typeof window!=='undefined'&&typeof CustomEvent!=='undefined')window.dispatchEvent(new CustomEvent('eco:manager-relay-updated',{detail:{groupId:this.activeGroupId,resolved:true,choice:input.choice,meetingId:lm,membershipId:lmem,rubricId:lr,targetAmount:chosen}}));
+    return result;
+  }
+  async importLocalRoomManagerDelta(remote:any):Promise<{importedCommands:number;mergedSnapshots:number;duplicates:number;conflicts:number}>{
+    if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');if(remote?.protocol!=='ECO_MANAGER_DELTA_2'||remote.groupId!==this.activeGroupId||remote.tenantId!==this.tenantId||!Array.isArray(remote.commands)||!Array.isArray(remote.structuralSnapshots))throw Error('ECO_LOCAL_ROOM_DELTA_INVALID');
+    const current=await this.managerRelayIntents(),byId=new Map(current.map(x=>[String(x.actorId)+':'+String(x.idempotencyKey??x.id),x])),before=byId.size;
+    for(const item of remote.commands.slice(0,2500)){
+      const p=item?.payload??{};if(!item?.actorId||!item?.idempotencyKey||String(p.groupId??'')!==this.activeGroupId)continue;
+      byId.set(String(item.actorId)+':'+String(item.idempotencyKey),structuredClone({...item,relayReceivedAt:new Date().toISOString(),relaySourceDeviceId:String(remote.sourceDeviceId??'')}));
+    }
+    await this.saveCached(this.managerRelayIntentPath(this.activeGroupId),[...byId.values()].slice(-5000),'RELAY');
+    let mergedSnapshots=0;
+    const rowStamp=(x:any)=>Date.parse(String(x?.updatedAt??x?.joinedAt??x?.createdAt??''))||0;
+    for(const snap of remote.structuralSnapshots.slice(0,80)){
+      const path=String(snap?.path??'');if(!this.managerStructuralPathAllowed(path,this.activeGroupId))continue;
+      const incoming=snap?.body,currentBody=await this.cached<any>(path);
+      if(Array.isArray(incoming)){
+        const map=new Map<string,any>();for(const row of Array.isArray(currentBody)?currentBody:[])if(row?.id)map.set(String(row.id),row);
+        for(const row of incoming)if(row?.id){const old=map.get(String(row.id));if(!old||rowStamp(row)>=rowStamp(old))map.set(String(row.id),row);}
+        await this.saveCached(path,[...map.values()],'RELAY');mergedSnapshots++;
+      }else if(incoming&&typeof incoming==='object'){
+        const oldStamp=rowStamp(currentBody),newStamp=rowStamp(incoming);if(!currentBody||newStamp>=oldStamp){await this.saveCached(path,incoming,'RELAY');mergedSnapshots++;}
+      }
+    }
+    const comparison=await this.confrontLocalRoomManagerDelta(remote);
+    if(typeof window!=='undefined'&&typeof CustomEvent!=='undefined')window.dispatchEvent(new CustomEvent('eco:manager-relay-updated',{detail:{groupId:this.activeGroupId,sourceActorId:String(remote.actorId??''),importedCommands:Math.max(0,byId.size-before),mergedSnapshots,conflicts:comparison.potentialFinancialConflicts.length}}));
+    return{importedCommands:Math.max(0,byId.size-before),mergedSnapshots,duplicates:Math.max(0,remote.commands.length-(byId.size-before)),conflicts:comparison.potentialFinancialConflicts.length};
+  }
+  async ecoRelayFerryPackets():Promise<any[]>{
+    if(!this.activeGroupId)return[];const rows=await this.cached<any[]>(this.relayFerryPath(this.activeGroupId))??[],now=Date.now();
+    return rows.filter(x=>x?.protocol==='ECO_FERRY_1'&&x.groupId===this.activeGroupId&&Date.parse(String(x.expiresAt??''))>now).slice(-300);
+  }
+  private async storeEcoRelayFerryPackets(packets:any[]):Promise<number>{
+    if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');const existing=await this.ecoRelayFerryPackets(),map=new Map(existing.map(x=>[String(x.packetId),x]));let added=0;
+    for(const packet of packets.slice(0,100)){
+      if(packet?.protocol!=='ECO_FERRY_1'||packet.groupId!==this.activeGroupId||!packet.packetId||!packet.recipientMembershipId||!packet.capsule||Date.parse(String(packet.expiresAt??''))<=Date.now())continue;
+      if(!map.has(String(packet.packetId)))added++;map.set(String(packet.packetId),structuredClone(packet));
+    }
+    await this.saveCached(this.relayFerryPath(this.activeGroupId),[...map.values()].slice(-300),'RELAY');return added;
+  }
+  async prepareManagerFerryPackets():Promise<{packets:any[];included:string[];unpaired:string[]}>{
+    if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');
+    const full=await this.localRoomManagerDelta(),members=await this.listMembers(),included:string[]=[],unpaired:string[]=[],packets:any[]=[];
+    // Internet ferry is deliberately compact. Direct Eco Local can carry the
+    // full manager delta; the server mailbox gets only a bounded encrypted slice
+    // so one brief mobile-data session benefits the group without megabyte uploads.
+    const budget=90000,commands:any[]=[],structuralSnapshots:any[]=[];let used=JSON.stringify({...full,commands:[],structuralSnapshots:[]}).length;
+    for(const item of (full.commands??[]).slice(-500).reverse()){
+      const size=JSON.stringify(item).length;if(used+size>budget)break;commands.unshift(item);used+=size;
+    }
+    for(const snap of (full.structuralSnapshots??[])){
+      const size=JSON.stringify(snap).length;if(used+size>budget)continue;structuralSnapshots.push(snap);used+=size;
+    }
+    const delta={...full,commands,structuralSnapshots,transportProfile:'FERRY_COMPACT_V1',fullCommandCount:Number(full.commands?.length??0),fullStructuralCount:Number(full.structuralSnapshots?.length??0)};
+    const managerRoles=new Set(['founder','manager','admin','president','treasurer','secretary','auditor']);
+    for(const member of members.filter(x=>x.status==='active'&&(x.roles??[]).some(r=>managerRoles.has(String(r).toLowerCase()))&&x.userId!==this.actorId)){
+      const key=await this.sovereign.relayKey(this.tenantId,this.activeGroupId,member.id);if(!key){unpaired.push(member.id);continue;}
+      const expiresAt=new Date(Date.now()+7*24*3600_000).toISOString(),capsule:EcoMemberCapsule={protocolVersion:1,groupId:this.activeGroupId,membershipId:member.id,generatedAt:new Date().toISOString(),expiresAt,projection:{kind:'ECO_MANAGER_DELTA_2',delta},schemaVersion:1,sourceAuthorityId:this.actorId,sourceDeviceId:this.localDeviceId()};
+      const material:EcoRelayPairingMaterial={protocolVersion:1,membershipId:member.id,keyId:key.keyId,rawKey:key.rawKey,createdAt:key.createdAt},encrypted=await encryptMemberCapsule(capsule,material),bundle=createBroadcastBundle(this.activeGroupId,[encrypted],7*24*60);
+      packets.push({protocol:'ECO_FERRY_1',packetId:bundle.transferId+'-'+encrypted.keyId,groupId:this.activeGroupId,recipientMembershipId:member.id,keyId:encrypted.keyId,createdAt:bundle.generatedAt,expiresAt:bundle.expiresAt,capsule:encrypted,sourceActorId:this.actorId});included.push(member.id);
+    }
+    await this.storeEcoRelayFerryPackets(packets);return{packets,included,unpaired};
+  }
+  async receiveEcoRelayFerryPackets(packets:any[]):Promise<{stored:number;applied:number}>{
+    if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');const stored=await this.storeEcoRelayFerryPackets(packets),members=await this.listMembers(),own=members.find(x=>x.userId===this.actorId&&x.status!=='left');let applied=0;
+    if(own){
+      const key=await this.sovereign.relayKey(this.tenantId,this.activeGroupId,own.id);
+      if(key){
+        const material:EcoRelayPairingMaterial={protocolVersion:1,membershipId:own.id,keyId:key.keyId,rawKey:key.rawKey,createdAt:key.createdAt};
+        for(const packet of packets){
+          if(packet?.protocol!=='ECO_FERRY_1'||packet.groupId!==this.activeGroupId||packet.recipientMembershipId!==own.id||packet.keyId!==key.keyId)continue;
+          try{const capsule=await decryptMemberCapsule(this.activeGroupId,packet.capsule,material,packet.expiresAt),projection:any=capsule.projection;if(projection?.kind==='ECO_MANAGER_DELTA_2'&&projection.delta){await this.importLocalRoomManagerDelta(projection.delta);applied++;}}catch{}
+        }
+      }
+    }
+    return{stored,applied};
+  }
+  async syncEcoRelayFerry():Promise<{uploaded:number;downloaded:number;applied:number;skipped?:boolean}>{
+    if(!this.activeGroupId||this.serverBudgetBlocked()||typeof navigator!=='undefined'&&navigator.onLine===false)return{uploaded:0,downloaded:0,applied:0,skipped:true};
+    const local=await this.ecoRelayFerryPackets(),knownPacketIds=local.map(x=>String(x.packetId)).slice(-500),uploads=local.filter(x=>!x.serverSyncedAt).slice(0,6).map(({serverSyncedAt,...x})=>x);
+    const result=await this.request<any>('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/relay/ferry-sync',{method:'POST',body:JSON.stringify({packets:uploads,knownPacketIds})});
+    const accepted=new Set((result.acceptedIds??[]).map(String)),stamp=new Date().toISOString(),updated=local.map(x=>accepted.has(String(x.packetId))?{...x,serverSyncedAt:stamp}:x);
+    await this.saveCached(this.relayFerryPath(this.activeGroupId),updated,'RELAY');const received=await this.receiveEcoRelayFerryPackets(Array.isArray(result.packets)?result.packets:[]);
+    return{uploaded:accepted.size,downloaded:Array.isArray(result.packets)?result.packets.length:0,applied:received.applied};
   }
   async localRoomMemberBundle(membershipId:string,meetingId?:string):Promise<EcoBroadcastBundle>{
     const result=await this.prepareEcoBroadcast({meetingId,membershipIds:[membershipId],ttlMinutes:60});return result.bundle;
@@ -583,7 +843,7 @@ export class ConnectedApplication {
 
   setLocale(locale:string):void{this.locale=locale==='en'?'en':'fr';try{localStorage.setItem('tontine.locale',this.locale);}catch{}}
   setConnectivity(_connectivity:'online'|'offline'|'degraded'):void{}
-  selectGroup(groupId?:string):void{this.activeGroupId=groupId;this.tenantId=(groupId?this.groupTenants.get(groupId):undefined)??this.homeTenantId??this.tenantId;try{if(groupId)localStorage.setItem('tontine.activeGroupId',groupId);else localStorage.removeItem('tontine.activeGroupId');}catch{}}
+  selectGroup(groupId?:string):void{const before=this.activeGroupId;this.activeGroupId=groupId;this.tenantId=(groupId?this.groupTenants.get(groupId):undefined)??this.homeTenantId??this.tenantId;if(before!==groupId){this.financialClockAnchor=undefined;if(groupId&&typeof window!=='undefined')void this.warmFinancialClock();}try{if(groupId)localStorage.setItem('tontine.activeGroupId',groupId);else localStorage.removeItem('tontine.activeGroupId');}catch{}}
   activeGroup():string|undefined{return this.activeGroupId;}
 
   async analyzeGroupDocument(text:string):Promise<{fingerprint:string;suggestions:any[];requiresHumanConfirmation:boolean;financialWrites:boolean}>{return this.request('/api/v1/assistant/group-launch/analyze',{method:'POST',body:JSON.stringify({text})});}
@@ -664,10 +924,12 @@ export class ConnectedApplication {
   }
   async updateRubricPolicies(rubricId:string,policies:any):Promise<RubricDefinition>{
     if(!this.activeGroupId)throw new Error('ACTIVE_GROUP_REQUIRED');
-    if(!this.isOffline())try{return await this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/rubrics/${encodeURIComponent(rubricId)}/policies`,{method:'PUT',body:JSON.stringify(policies)});}catch(error){if(!(error instanceof Error)||error.message!=='NETWORK_UNAVAILABLE')throw error;}
+    const prepared=structuredClone(policies??{});
+    if(prepared?.loan?.changeControl&&!prepared.loan.changeControl.commandId)prepared.loan.changeControl.commandId=makeId('loan_policy_change');
+    if(!this.isOffline())try{return await this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/rubrics/${encodeURIComponent(rubricId)}/policies`,{method:'PUT',body:JSON.stringify(prepared)});}catch(error){if(!(error instanceof Error)||error.message!=='NETWORK_UNAVAILABLE')throw error;}
     const path=`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/rubrics`,rows=await this.cached<RubricDefinition[]>(path)??[],current=rows.find(x=>x.id===rubricId);if(!current)throw Error('RUBRIC_NOT_FOUND');
-    const updated={...current,policies:structuredClone(policies),version:current.version+1,updatedAt:new Date().toISOString()};await this.saveCached(path,rows.map(x=>x.id===rubricId?updated:x));
-    await this.queueLocal('RUBRIC_POLICIES_V1',{groupId:this.activeGroupId,rubricId,policies});return updated;
+    const updated={...current,policies:structuredClone(prepared),version:current.version+1,updatedAt:new Date().toISOString(),localActionPending:true};await this.saveCached(path,rows.map(x=>x.id===rubricId?updated:x));
+    await this.queueLocal('RUBRIC_POLICIES_V1',{groupId:this.activeGroupId,rubricId,policies:prepared});return updated;
   }
   async previewRubricCycle(rubricId:string,input:{memberCount:number;collectedFromMembers:number;solidarityCoverageAmount?:number;beneficiaryDisbursement?:number}):Promise<RubricCyclePreview>{if(!this.activeGroupId)throw new Error('ACTIVE_GROUP_REQUIRED');return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/rubrics/${encodeURIComponent(rubricId)}/preview-cycle`,{method:'POST',body:JSON.stringify(input)});}
   async updateMemberLifecycle(membershipId:string,input:{status?:string;roles?:string[];reason?:string;probationEndsAt?:string;historicalJoinedAt?:string;expectedRevision?:number}):Promise<any>{
@@ -819,7 +1081,7 @@ export class ConnectedApplication {
     const normalized=String(rubric.name??'').normalize('NFKD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
     const systemKey=String(rubric.facets?.custom?.systemKey??'').toUpperCase();
     const nature=kind==='LOAN'||systemKey==='LOAN'||/^prets?$|^loans?$/.test(normalized)?'LOAN'
-      :kind==='REPAYMENT'||/remboursement|repayment/.test(normalized)?'REPAYMENT'
+      :kind==='REPAYMENT'||systemKey==='REPAYMENT'||/remboursement|repayment/.test(normalized)?'REPAYMENT'
       :rubric.facets?.direction==='OUTFLOW'?'OUTFLOW':'CONTRIBUTION';
     if(nature==='CONTRIBUTION')return this.recordCashContribution({membershipId:input.membershipId,meetingId:input.meetingId,rubricId:rubric.id,amount:input.amount,lateReason:input.reason?.trim()||undefined});
 
@@ -842,14 +1104,14 @@ export class ConnectedApplication {
     if(nature==='LOAN'){
       const canWrite=await this.canAttemptCriticalWrite();
       const policy=rubric.policies?.loan;if(!policy?.allowed)throw Error('LOAN_POLICY_REQUIRED');
-      const special=/special/.test(normalized)?policy.specialLoans?.[0]:undefined;
-      const rawRate=special?.rateBasisPointsPerPeriod??policy.rateBasisPointsPerPeriod;if(rawRate===undefined||rawRate===null)throw Error('LOAN_RATE_REQUIRED');
-      const rateBasisPointsPerPeriod=Number(rawRate),paymentPriority=special?.paymentPriority??policy.paymentPriority??'CAPITAL_FIRST',interestTiming=special?.interestTiming??policy.interestTiming??'NEXT_SESSION_DUE';
+      const special=/special/.test(normalized)?policy.specialLoans?.[0]:undefined,effectivePolicy=resolveClientLoanPolicy(null,policy,Date.now());
+      const rawRate=special?.rateBasisPointsPerPeriod??effectivePolicy.rateBasisPointsPerPeriod;if(rawRate===undefined||rawRate===null)throw Error('LOAN_RATE_REQUIRED');
+      const rateBasisPointsPerPeriod=Number(rawRate),paymentPriority=special?.paymentPriority??effectivePolicy.paymentPriority??'CAPITAL_FIRST',interestTiming=special?.interestTiming??effectivePolicy.interestTiming??'NEXT_SESSION_DUE';
       const periods=Number(special?.maxDurationPeriods??policy.overdue?.maxDurationPeriods??6),loanClass=special?'SPECIAL':'STANDARD';
-      const replayMeta={rateBasisPointsPerPeriod,paymentPriority,interestTiming,periods,loanClass};
+      const replayMeta={rateBasisPointsPerPeriod,paymentPriority,interestTiming,periods,loanClass,policyRevisionId:effectivePolicy.policyRevisionId,policyRevisionEffectiveAt:effectivePolicy.policyRevisionEffectiveAt};
       if(!canWrite)return queue(replayMeta);
       try{
-        let loan=await this.createCompletion('LOAN',{title:String(rubric.name??'Prêt'),data:{principal:input.amount,currency:'XAF',borrowerMembershipId:input.membershipId,rubricId:rubric.id,rateBasisPointsPerPeriod,paymentPriority,interestTiming,noInterestOnInterest:true,periods,outstandingPrincipal:0,unpaidInterest:0,loanClass,sourceSurface:'TWO_SHEETS',sheetEntryKey:key}});
+        let loan=await this.createCompletion('LOAN',{title:String(rubric.name??'Prêt'),data:{principal:input.amount,currency:'XAF',borrowerMembershipId:input.membershipId,rubricId:rubric.id,rateBasisPointsPerPeriod,paymentPriority,interestTiming,policyRevisionId:effectivePolicy.policyRevisionId,policyRevisionEffectiveAt:effectivePolicy.policyRevisionEffectiveAt,noInterestOnInterest:true,periods,outstandingPrincipal:0,unpaidInterest:0,loanClass,sourceSurface:'TWO_SHEETS',sheetEntryKey:key}});
         loan=await this.transitionCompletion(loan.id,'SUBMITTED',Number(loan.data?.completionVersion??1),{submittedFromSheet:true,meetingId:input.meetingId});
         loan=await this.transitionCompletion(loan.id,'APPROVED',Number(loan.data?.completionVersion??2),{approvedAt:new Date().toISOString(),approvedFromSheet:true});
         return await this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/loans/${encodeURIComponent(loan.id)}/disburse`,{method:'POST',body:JSON.stringify({amount:input.amount,expectedVersion:Number(loan.data?.completionVersion??3),meetingId:input.meetingId,rubricId:rubric.id,idempotencyKey:key+':disburse'})});
@@ -866,7 +1128,7 @@ export class ConnectedApplication {
     const component=explicitInterest?'INTEREST':explicitPrincipal?'PRINCIPAL':'AUTO';
     const allRubrics=await this.listRubrics().catch(()=>[]);
     const officialLoanRubric=allRubrics.find((r:any)=>String(r.facets?.custom?.systemKey??'').toUpperCase()==='LOAN'||/^(pret|prets|emprunt|emprunts|loan|loans)$/.test(String(r.name??'').normalize('NFKD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim()));
-    const policyPriority=String(officialLoanRubric?.policies?.loan?.paymentPriority??'CAPITAL_FIRST')==='INTEREST_FIRST'?'INTEREST_FIRST':'CAPITAL_FIRST';
+    const defaultPolicy=resolveClientLoanPolicy(null,officialLoanRubric?.policies?.loan,Date.now()),policyPriority=String(defaultPolicy.paymentPriority??'CAPITAL_FIRST')==='INTEREST_FIRST'?'INTEREST_FIRST':String(defaultPolicy.paymentPriority)==='EXPLICIT_ALLOCATION'?'EXPLICIT_ALLOCATION':'CAPITAL_FIRST';
     // Write-ahead, including online. Losing a response after a canonical commit
     // must never lose its idempotency key or force the user to pay twice.
     const repaymentIntent=await queue({repaymentComponent:component,paymentPriority:policyPriority});
@@ -876,7 +1138,8 @@ export class ConnectedApplication {
       const active=(await this.listCompletion('LOAN')).filter(l=>String(l.data?.borrowerMembershipId??'')===input.membershipId&&['DISBURSED','REPAYING'].includes(String(l.data?.completionState??''))&&(Number(l.data?.outstandingPrincipal??0)>0||Number(l.data?.unpaidInterest??0)>0));
       const loan=input.loanId?active.find(x=>x.id===input.loanId):active.length===1?active[0]:undefined;
       if(!loan)throw Error(active.length>1?'MULTIPLE_LOANS':'LOAN_REQUIRED');
-      const priority=String(officialLoanRubric?.policies?.loan?.paymentPriority??loan.data?.paymentPriority??policyPriority)==='INTEREST_FIRST'?'INTEREST_FIRST':'CAPITAL_FIRST';
+      const effectivePolicy=resolveClientLoanPolicy(loan,officialLoanRubric?.policies?.loan,Date.now()),rawPriority=String(effectivePolicy.paymentPriority??loan.data?.paymentPriority??policyPriority),priority=rawPriority==='INTEREST_FIRST'?'INTEREST_FIRST':rawPriority==='EXPLICIT_ALLOCATION'?'EXPLICIT_ALLOCATION':'CAPITAL_FIRST';
+      if(component==='AUTO'&&priority==='EXPLICIT_ALLOCATION')throw Error('LOAN_EXPLICIT_ALLOCATION_REQUIRED');
       const allocation=component==='AUTO'
         ?{paymentAmount:input.amount,priority}
         :{principalAmount:component==='PRINCIPAL'?input.amount:0,interestAmount:component==='INTEREST'?input.amount:0,priority};
@@ -949,16 +1212,16 @@ export class ConnectedApplication {
   async createMiscRubric(input:{name:string;description?:string;lifecycle?:'EPHEMERAL'|'PERSISTENT'|'SESSION_ONLY';amountMode?:'FIXED'|'VARIABLE';defaultAmount?:number;activeFirstSessions?:number}):Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/misc-rubrics`,{method:'POST',body:JSON.stringify({action:'create_custom',...input})});}
   async postMiscRubrics(input:{membershipId:string;meetingId?:string;items:Array<{templateId:string;amount:number;note?:string}>}):Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/misc-rubrics/postings`,{method:'POST',body:JSON.stringify({...input,idempotencyKey:makeId('misc_batch')})});}
   async miscPostings(filters:{meetingId?:string;membershipId?:string}={}):Promise<any[]>{if(!this.activeGroupId)return[];const p=new URLSearchParams();if(filters.meetingId)p.set('meetingId',filters.meetingId);if(filters.membershipId)p.set('membershipId',filters.membershipId);return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/misc-rubrics/postings?${p}`);}
-  pendingFinancialCellTargets():Array<{meetingId:string;membershipId:string;rubricId:string;targetAmount:number;baselineValue:number;baselineVersion:number;status:string;businessStatus?:string;idempotencyKey:string;createdAt:string}>{
+  pendingFinancialCellTargets():Array<{outboxId:string;meetingId:string;membershipId:string;rubricId:string;targetAmount:number;baselineValue:number;baselineVersion:number;status:string;businessStatus?:string;idempotencyKey:string;createdAt:string}>{
     if(!this.activeGroupId)return[];
     return this.outbox.list().filter(item=>{
       const payload=item.payload as Record<string,unknown>,businessStatus=String(item.lastResult?.status??'');
-      return item.tenantId===this.tenantId&&item.actorId===this.actorId&&item.type==='FINANCIAL_CELL_CORRECTION_PROPOSAL_V1'&&
+      return item.tenantId===this.tenantId&&item.actorId===this.actorId&&['FINANCIAL_CELL_CORRECTION_PROPOSAL_V1','FINANCIAL_CELL_CORRECTION_PROPOSAL_V2'].includes(item.type)&&
         String(payload.groupId??'')===this.activeGroupId&&!['CONFLICT','CANCELLED'].includes(item.status)&&
         (item.status!=='CONFIRMED'||businessStatus==='CONSENSUS_REQUIRED');
     }).map(item=>{
       const payload=item.payload as Record<string,unknown>;
-      return{meetingId:String(payload.meetingId??''),membershipId:String(payload.membershipId??''),rubricId:String(payload.rubricId??''),
+      return{outboxId:item.id,meetingId:String(payload.meetingId??''),membershipId:String(payload.membershipId??''),rubricId:String(payload.rubricId??''),
         targetAmount:Number(payload.targetAmount??0),baselineValue:Number(payload.baselineValue??0),baselineVersion:Number(payload.baselineVersion??0),
         status:item.status,businessStatus:String(item.lastResult?.status??'')||undefined,idempotencyKey:item.idempotencyKey,createdAt:item.createdAt};
     }).filter(x=>x.meetingId&&x.membershipId&&x.rubricId&&Number.isSafeInteger(x.targetAmount)&&x.targetAmount>=0);
@@ -1005,6 +1268,29 @@ export class ConnectedApplication {
   async financialCellSnapshot():Promise<{generatedAt:string;watermark:string;cells:Array<{meetingId:string;membershipId:string;rubricId:string;amount:number;cellVersion:number;updatedAt:string;actorId?:string;nature?:string}>}>{
     if(!this.activeGroupId)return{generatedAt:new Date().toISOString(),watermark:'',cells:[]};
     return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/financial-cells/snapshot`);
+  }
+
+  async previewOfflineFinancialConfrontation():Promise<{generatedAt:string;watermark:string;rows:Array<{
+    outboxId:string;idempotencyKey:string;meetingId:string;membershipId:string;rubricId:string;
+    localAmount:number;baselineAmount:number;baselineVersion:number;recordedAt:string;
+    canonicalAmount:number;canonicalVersion:number;canonicalUpdatedAt:string;canonicalActorId?:string;
+    serverChangedSinceBaseline:boolean;sameAmount:boolean;
+  }>}>{
+    const pending=this.pendingFinancialCellTargets();
+    if(!pending.length)return{generatedAt:new Date().toISOString(),watermark:'',rows:[]};
+    const snapshot=await this.financialCellSnapshot(),byCell=new Map<string,any>();
+    for(const row of snapshot.cells??[])byCell.set(JSON.stringify([row.meetingId,row.membershipId,row.rubricId]),row);
+    const rows=pending.map(item=>{
+      const canonical=byCell.get(JSON.stringify([item.meetingId,item.membershipId,item.rubricId]))??{};
+      const canonicalAmount=Number(canonical.amount??0),canonicalVersion=Number(canonical.cellVersion??0);
+      return{outboxId:item.outboxId,idempotencyKey:item.idempotencyKey,meetingId:item.meetingId,membershipId:item.membershipId,
+        rubricId:item.rubricId,localAmount:item.targetAmount,baselineAmount:item.baselineValue,baselineVersion:item.baselineVersion,
+        recordedAt:item.createdAt,canonicalAmount,canonicalVersion,canonicalUpdatedAt:String(canonical.updatedAt??''),
+        canonicalActorId:canonical.actorId?String(canonical.actorId):undefined,
+        serverChangedSinceBaseline:canonicalVersion>item.baselineVersion||canonicalAmount!==item.baselineValue,
+        sameAmount:canonicalAmount===item.targetAmount};
+    });
+    return{generatedAt:snapshot.generatedAt,watermark:snapshot.watermark,rows};
   }
 
   async ledger():Promise<{summary:LedgerSummary;entries:LedgerEntry[];receipts:Array<ContributionReceipt & {netAmount?:number;localPending?:boolean;localPendingStatus?:string}>;cellRevisions:Array<{meetingId:string;membershipId:string;rubricId:string;currency:string;version:number}>}>{
@@ -1122,21 +1408,53 @@ export class ConnectedApplication {
   async submitLiveConsensus(meetingId:string,input:{cellKey:string;value:string|number;label?:string;membershipId?:string;rubricId?:string}):Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/meetings/${encodeURIComponent(meetingId)}/live-consensus`,{method:'POST',body:JSON.stringify(input)});}
   async voteLiveConsensus(meetingId:string,cellKey:string,proposalActorId:string):Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/meetings/${encodeURIComponent(meetingId)}/live-consensus/${encodeURIComponent(cellKey)}/vote`,{method:'POST',body:JSON.stringify({proposalActorId})});}
   async reserveLiveConsensus(meetingId:string,cellKey:string,reason:string):Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/meetings/${encodeURIComponent(meetingId)}/live-consensus/${encodeURIComponent(cellKey)}/reserve`,{method:'POST',body:JSON.stringify({reason})});}
+  async reviewFinancialCellChange(input:{
+    meetingId:string;membershipId:string;rubricId:string;amount:number;cellVersion:number;
+    decision:'APPROVE'|'RESERVE';reason?:string;
+  }):Promise<any>{
+    if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');
+    if(!['APPROVE','RESERVE'].includes(input.decision)||!Number.isSafeInteger(input.amount)||
+      input.amount<0||!Number.isSafeInteger(input.cellVersion)||input.cellVersion<0)throw Error('INVALID_CELL_REVIEW');
+    if(input.decision==='RESERVE'&&!String(input.reason??'').trim())throw Error('RESERVE_REASON_REQUIRED');
+    const payload={groupId:this.activeGroupId,...input,reason:String(input.reason??'').trim()};
+    const key='cell-review:'+makeId('intent');
+    const item=await this.queueLocal('FINANCIAL_CELL_REVIEW_V1',payload,key);
+    if(!(await this.canAttemptCriticalWrite()))return{status:'QUEUED_SYNC',queued:true,outbox:item};
+    try{
+      const result=await this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+
+        '/meetings/'+encodeURIComponent(input.meetingId)+'/financial-cells/review',
+        {method:'POST',headers:{'x-idempotency-key':key},body:JSON.stringify(payload)});
+      this.outbox.markConfirmedByKey(this.tenantId,this.actorId,key);
+      await this.persistOutbox();return result;
+    }catch(error){
+      const code=error instanceof Error?error.message:String(error);
+      if(code==='NETWORK_UNAVAILABLE'||/^HTTP_5\d\d$/.test(code))return{status:'QUEUED_SYNC',queued:true,outbox:item};
+      this.outbox.markConflictByKey(this.tenantId,this.actorId,key);
+      await this.persistOutbox();throw error;
+    }
+  }
   async setFinancialCellTarget(input:{meetingId:string;membershipId:string;rubricId:string;targetAmount:number;currentAmount?:number;currentVersion?:number;reason?:string}):Promise<any>{
     if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');
     if(!Number.isSafeInteger(input.targetAmount)||input.targetAmount<0)throw Error('INVALID_CONTRIBUTION_AMOUNT');
     const current=Number(input.currentAmount??0),currentVersion=Number(input.currentVersion??0),operationKey='cell-target:'+makeId('op');
-    const payload={groupId:this.activeGroupId,meetingId:input.meetingId,membershipId:input.membershipId,rubricId:input.rubricId,targetAmount:input.targetAmount,baselineValue:current,baselineVersion:currentVersion,reason:input.reason??''};
+    const payload={groupId:this.activeGroupId,meetingId:input.meetingId,membershipId:input.membershipId,rubricId:input.rubricId,targetAmount:input.targetAmount,baselineValue:current,baselineVersion:currentVersion,reason:input.reason??'',recordedAtClient:new Date().toISOString(),...this.financialRecordedAnchor()};
     // Persist the exact target command before attempting transport. If the HTTP
     // response is lost after commit, the same idempotency key is replayed later.
-    const item=await this.queueLocal('FINANCIAL_CELL_CORRECTION_PROPOSAL_V1',payload,operationKey);
+    const item=await this.queueLocal('FINANCIAL_CELL_CORRECTION_PROPOSAL_V2',payload,operationKey);
     if(!(await this.canAttemptCriticalWrite()))return{status:'QUEUED_SYNC',queued:true,current,target:input.targetAmount,outbox:item};
     try{
       const result=await this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/meetings/${encodeURIComponent(input.meetingId)}/financial-cells`,{
         method:'POST',headers:{'x-idempotency-key':operationKey},
-        body:JSON.stringify({membershipId:input.membershipId,rubricId:input.rubricId,targetAmount:input.targetAmount,expectedCurrentAmount:current,expectedCellVersion:currentVersion,reason:input.reason??''})
+        body:JSON.stringify({membershipId:input.membershipId,rubricId:input.rubricId,targetAmount:input.targetAmount,expectedCurrentAmount:current,expectedCellVersion:currentVersion,reason:input.reason??'',intentV2:item.payload})
       });
-      this.outbox.markConfirmedByKey(this.tenantId,this.actorId,operationKey);await this.persistOutbox();return result;
+      if((result as any)?.status==='CLOCK_REVIEW'){
+        // Persist the unresolved intent and surface it as a conflict. A clock
+        // anomaly is never a successful financial confirmation.
+        this.outbox.markConflictByKey(this.tenantId,this.actorId,operationKey);
+        await this.persistOutbox();throw Error('CELL_CLOCK_REVIEW_REQUIRED');
+      }
+      this.outbox.markConfirmedByKey(this.tenantId,this.actorId,operationKey);
+      await this.persistOutbox();return result;
     }catch(error){
       if(error instanceof Error&&['CELL_VALUE_CONFLICT','CELL_VERSION_CONFLICT'].includes(error.message)){this.outbox.markConflictByKey(this.tenantId,this.actorId,operationKey);await this.persistOutbox();throw error;}
       if(error instanceof Error&&(error.message==='NETWORK_UNAVAILABLE'||/^HTTP_5\d\d$/.test(error.message))){
@@ -1332,10 +1650,10 @@ export class ConnectedApplication {
     const loanDisbursements=loanSheetEvents.map((x:any)=>{const d=x.data??{},meetingId=String(d.meetingId??'');return{loanId:String(d.loanId??x.id),memberId:String(d.membershipId??''),meetingId,session:(meetingIndex.get(meetingId)??0)+1,amount:Math.abs(Number(d.amount??0)),rubricId:String(d.rubricId??''),createdAt:String(x.createdAt??x.updatedAt??'')}}).filter((x:any)=>x.meetingId&&x.amount>0);
     const disbursementMeetingByLoan=new Map<string,string>();for(const e of loanSheetEvents){const loanId=String(e.data?.loanId??'');if(loanId&&e.data?.meetingId)disbursementMeetingByLoan.set(loanId,String(e.data.meetingId));}
     const localLoanDebts=(loanRows as any[]).filter((x:any)=>['DISBURSED','REPAYING'].includes(String(x.data?.completionState??''))).map((x:any)=>{
-      const rubric=rubricMap.get(String(x.data?.rubricId??''))??officialLoanRubric,principal=Math.max(0,Number(x.data?.outstandingPrincipal??0)),rate=Number(x.data?.rateBasisPointsPerPeriod??rubric?.policies?.loan?.rateBasisPointsPerPeriod??0),timing=String(x.data?.interestTiming??rubric?.policies?.loan?.interestTiming??'NEXT_SESSION_DUE'),rawInterest=Math.max(0,Number(x.data?.unpaidInterest??0));
+      const rubric=rubricMap.get(String(x.data?.rubricId??''))??officialLoanRubric,effectivePolicy=resolveClientLoanPolicy(x,rubric?.policies?.loan,Date.now()),principal=Math.max(0,Number(x.data?.outstandingPrincipal??0)),rate=Number(effectivePolicy.rateBasisPointsPerPeriod??x.data?.rateBasisPointsPerPeriod??0),timing=String(effectivePolicy.interestTiming??x.data?.interestTiming??'NEXT_SESSION_DUE'),rawInterest=Math.max(0,Number(x.data?.unpaidInterest??0));
       const sourceMeetingId=String(disbursementMeetingByLoan.get(x.id)??x.data?.upfrontInterestSourceMeetingId??x.data?.disbursementMeetingId??''),sourceIndex=meetingIndex.get(sourceMeetingId),later=sourceIndex===undefined?[]:ordered.slice(sourceIndex+1),periodInterest=rate>0?Math.round(principal*rate/10000):0;
       const derivedCurrent=timing==='NEXT_SESSION_DUE'&&rawInterest===0&&later.length>0?periodInterest:0,interest=Math.max(rawInterest,derivedCurrent),latestLater=later.at(-1),nextInterestProjected=timing==='NEXT_SESSION_DUE'&&periodInterest>0&&latestLater?.status==='closed'?periodInterest:Number(x.data?.nextInterestProjected??0);
-      return{loanId:x.id,memberId:String(x.data?.borrowerMembershipId??''),rubricId:String(x.data?.rubricId??''),title:x.title,principal,interest,nextInterestProjected,totalDue:principal+interest,totalIncludingNextInterest:principal+interest+nextInterestProjected,rateBasisPointsPerPeriod:rate,paymentPriority:String(rubric?.policies?.loan?.paymentPriority??x.data?.paymentPriority??'CAPITAL_FIRST'),interestTiming:timing,lastAccruedInterest:Number(x.data?.lastAccruedInterest??derivedCurrent),interestAppliesToMeetingId:String(x.data?.interestAppliesToMeetingId??latestLater?.id??'')||null,interestAppliesToLabel:String(x.data?.interestAppliesToLabel??(latestLater?.title||''))||null,interestSourceClosedMeetingId:String(x.data?.interestSourceClosedMeetingId??sourceMeetingId)||null,derivedInterest:derivedCurrent>0};
+      return{loanId:x.id,memberId:String(x.data?.borrowerMembershipId??''),rubricId:String(x.data?.rubricId??''),title:x.title,principal,interest,nextInterestProjected,totalDue:principal+interest,totalIncludingNextInterest:principal+interest+nextInterestProjected,rateBasisPointsPerPeriod:rate,paymentPriority:String(effectivePolicy.paymentPriority??x.data?.paymentPriority??'CAPITAL_FIRST'),interestTiming:timing,policyRevisionId:String(effectivePolicy.policyRevisionId??x.data?.policyRevisionId??''),lastAccruedInterest:Number(x.data?.lastAccruedInterest??derivedCurrent),interestAppliesToMeetingId:String(x.data?.interestAppliesToMeetingId??latestLater?.id??'')||null,interestAppliesToLabel:String(x.data?.interestAppliesToLabel??(latestLater?.title||''))||null,interestSourceClosedMeetingId:String(x.data?.interestSourceClosedMeetingId??sourceMeetingId)||null,derivedInterest:derivedCurrent>0};
     }).filter((x:any)=>x.principal>0||x.interest>0||x.nextInterestProjected>0);
     const repaymentByMember=new Map<string,number>();for(const p of eventPayments)repaymentByMember.set(p.memberId,(repaymentByMember.get(p.memberId)??0)+Number(p.principalPaid??0));
     const historicalLoanDebts=loanSheetEvents.map((e:any,index:number)=>{const d=e.data??{},rubric=rubricMap.get(String(d.rubricId??'')),memberId=String(d.membershipId??''),gross=Math.abs(Number(d.amount??0)),availableRepayment=repaymentByMember.get(memberId)??0,used=Math.min(gross,availableRepayment);repaymentByMember.set(memberId,Math.max(0,availableRepayment-used));const principal=Math.max(0,gross-used),rate=Number(rubric?.policies?.loan?.rateBasisPointsPerPeriod??0),sourceMeetingId=String(d.meetingId??''),sourceIndex=meetingIndex.get(sourceMeetingId),later=sourceIndex===undefined?[]:ordered.slice(sourceIndex+1),periodInterest=rate>0?Math.round(principal*rate/10000):0,interest=later.length&&periodInterest>0?periodInterest:0,nextInterestProjected=later.at(-1)?.status==='closed'?periodInterest:0;return{loanId:String(d.loanId??e.id??('historical-loan-'+index)),memberId,rubricId:String(d.rubricId??''),title:String(rubric?.name??e.title??'Prêt historique'),principal,interest,nextInterestProjected,totalDue:principal+interest,totalIncludingNextInterest:principal+interest+nextInterestProjected,rateBasisPointsPerPeriod:rate,paymentPriority:String(rubric?.policies?.loan?.paymentPriority??'CAPITAL_FIRST'),interestTiming:String(rubric?.policies?.loan?.interestTiming??'NEXT_SESSION_DUE'),interestSourceClosedMeetingId:sourceMeetingId,derivedFromLegacySheet:true};}).filter((x:any)=>x.memberId&&x.principal>0);
@@ -1640,8 +1958,10 @@ export class ConnectedApplication {
   async quoteLoan(input:{principal:number;installments:number;annualRateBasisPoints:number;installmentsPerYear?:number;method?:'FLAT'|'DECLINING';feesTotal?:number}):Promise<{schedule:LoanScheduleRow[]}>{
     if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return{schedule:buildLoanSchedule(input)};
   }
-  async simulateLoan(input:{principal:number;periods:number;ratePercentPerPeriod:number;priority:'CAPITAL_FIRST'|'INTEREST_FIRST';interestBasis?:'OUTSTANDING'|'INITIAL';payments?:number[];openingInterestDue?:number}):Promise<any>{
-    if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return{rows:simulatePeriodicLoan(input)};
+  async simulateLoan(input:{principal:number;periods:number;ratePercentPerPeriod:number;priority:'CAPITAL_FIRST'|'INTEREST_FIRST'|'EXPLICIT_ALLOCATION';interestBasis?:'OUTSTANDING'|'INITIAL';payments?:number[];principalPayments?:number[];interestPayments?:number[];openingInterestDue?:number}):Promise<any>{
+    if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');
+    const rows=simulatePeriodicLoan(input);
+    return{rows,summary:summarizePeriodicLoan(input,rows)};
   }
   async loanHistory(loanId:string):Promise<any>{
     if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');if(!this.isOffline())try{return await this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/loans/'+encodeURIComponent(loanId)+'/history');}catch(error){if(!(error instanceof Error)||error.message!=='NETWORK_UNAVAILABLE')throw error;}
@@ -1699,10 +2019,27 @@ export class ConnectedApplication {
 
   async syncOutbox():Promise<OutboxItem[]>{
     if(this.serverBudgetBlocked()||typeof navigator!=='undefined'&&navigator.onLine===false)return this.outbox.list();
-    const result=await this.outbox.sync(async item=>{try{const groupId=(item.payload as {groupId?:string}).groupId;const r=await this.request<Record<string,unknown>&{accepted:boolean;stored?:boolean}>('/api/v1/outbox/apply',{method:'POST',headers:{'x-active-group-id':groupId??''},body:JSON.stringify(item)});return{ok:r.accepted&&r.stored!==false,result:r};}catch(e){const message=e instanceof Error?e.message:String(e);return{ok:false,conflict:['IDEMPOTENCY_CONFLICT','FORBIDDEN_SCOPE','CELL_VALUE_CONFLICT','CELL_VERSION_CONFLICT'].includes(message),error:message};}});await this.persistOutbox();return result;
+    // syncOutbox is itself an explicit, event-driven retry opportunity.
+    // Clear only the short transport breaker; quota/D1 protection stays intact.
+    this.transportUnavailableUntil=0;
+    const result=await this.outbox.sync(async item=>{try{const groupId=(item.payload as {groupId?:string}).groupId;const r=await this.request<Record<string,unknown>&{accepted:boolean;stored?:boolean}>('/api/v1/outbox/apply',{method:'POST',headers:{'x-active-group-id':groupId??''},body:JSON.stringify(item)});return{ok:r.accepted&&r.stored!==false&&r.status!=='CLOCK_REVIEW',conflict:r.status==='CLOCK_REVIEW',result:r};}catch(e){const message=e instanceof Error?e.message:String(e);return{ok:false,conflict:['IDEMPOTENCY_CONFLICT','FORBIDDEN_SCOPE','CELL_VALUE_CONFLICT','CELL_VERSION_CONFLICT','CELL_CLOCK_REVIEW_REQUIRED'].includes(message),error:message};}});
+    // Reconcile policy commands with the server-authored revision immediately.
+    // Without this, an offline manager can keep seeing changeControl/localActionPending
+    // until a later full GET even though the policy was already accepted.
+    for(const item of result){
+      if(item.status!=='CONFIRMED'||item.type!=='RUBRIC_POLICIES_V1')continue;
+      const last=(item as any).lastResult as any,rubric=last?.rubric as RubricDefinition|undefined;
+      const groupId=String((item.payload as any)?.groupId??rubric?.groupId??'');if(!rubric?.id||!groupId)continue;
+      const path='/api/v1/groups/'+encodeURIComponent(groupId)+'/rubrics',rows=await this.cached<RubricDefinition[]>(path)??[];
+      const canonical={...structuredClone(rubric),localActionPending:false} as RubricDefinition;
+      await this.saveCached(path,rows.some(x=>x.id===canonical.id)?rows.map(x=>x.id===canonical.id?canonical:x):[...rows,canonical]);
+      if(typeof window!=='undefined')window.dispatchEvent(new CustomEvent('eco:rubric-policy-synced',{detail:{groupId,rubricId:canonical.id,revision:last?.loanPolicyRevision??null}}));
+    }
+    await this.persistOutbox();return result;
   }
   async queueDemoIntent(note='Local note'):Promise<OutboxItem>{const item=this.outbox.enqueue({tenantId:this.tenantId,actorId:this.actorId,type:'MEETING_NOTE_UPDATED',payload:{groupId:this.activeGroupId,note},idempotencyKey:`note-${this.activeGroupId??'none'}-${Date.now()}`});await this.persistOutbox();return item;}
   async retryOutboxItem(id:string):Promise<OutboxItem|undefined>{const item=this.outbox.retry(id);await this.persistOutbox();return item;}
+  async cancelOutboxItem(id:string):Promise<OutboxItem|undefined>{const item=this.outbox.cancel(id);await this.persistOutbox();return item;}
   private async persistOutbox(){if(!IndexedDbOutboxAdapter.supported())throw Error('DURABLE_STORAGE_REQUIRED');try{await this.outboxStorage.save(this.outbox.list());}catch{throw Error('DURABLE_STORAGE_REQUIRED');}}
   outboxItems():OutboxItem[]{return this.outbox.list();}
 
