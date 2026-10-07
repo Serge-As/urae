@@ -1049,3 +1049,74 @@ body.ui-mode-senior .meeting-matrix thead th,body.ui-mode-assisted .meeting-matr
 @media(max-width:560px){
   .loan-explicit-allocation-fields{grid-template-columns:1fr}
 }
+
+
+/* Offline return confrontation — data-first review before replaying financial intents. */
+.offline-confrontation-dialog{
+  width:min(1240px,97vw);max-height:94vh;padding:0;overflow:hidden;
+  border:1px solid #cbd9cf;border-radius:16px;background:#fffdf9
+}
+.offline-confrontation-head{
+  display:flex;justify-content:space-between;gap:16px;align-items:flex-start;
+  padding:16px 18px 12px;border-bottom:1px solid #dde6df;background:linear-gradient(135deg,#f8fcf9,#fff8eb)
+}
+.offline-confrontation-head h2{margin:0 0 4px;color:#123a2a}
+.offline-confrontation-head p{margin:0;max-width:78ch;color:#5f7067;line-height:1.4}
+.offline-confrontation-stats{display:flex;gap:7px;flex-wrap:wrap;justify-content:flex-end}
+.offline-confrontation-stats>div{
+  min-width:94px;padding:8px 10px;border:1px solid #d7e2da;border-radius:11px;background:#fff;text-align:center
+}
+.offline-confrontation-stats strong{display:block;font-size:19px;color:#174b38;font-variant-numeric:tabular-nums}
+.offline-confrontation-stats span{display:block;font-size:10.5px;color:#68766e}
+.offline-confrontation-toolbar{
+  display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:10px 14px;border-bottom:1px solid #e0e7e2
+}
+.offline-confrontation-toolbar .hint{margin-left:auto;max-width:48ch;font-size:11px}
+.offline-confrontation-wrap{
+  max-height:calc(94vh - 210px);overflow:auto;border:0;border-radius:0;box-shadow:none
+}
+.offline-confrontation-table{width:max-content;min-width:100%}
+.offline-confrontation-table th,.offline-confrontation-table td{padding:7px 8px;vertical-align:middle}
+.offline-confrontation-table thead th{position:sticky;top:0;z-index:8;background:#eaf3ed}
+.offline-confrontation-table tbody>tr>th:first-child{min-width:150px}
+.offline-confrontation-table tbody>tr>th:nth-child(2){min-width:130px}
+.offline-confrontation-table td.amount{text-align:right;font-size:14px;font-weight:850;white-space:nowrap}
+.offline-confrontation-server td{background:#fffefb}
+.offline-confrontation-local td{background:#f1f8f3}
+.offline-confrontation-local td.amount{color:#145c40}
+.offline-confrontation-session>th{
+  position:sticky;top:36px;z-index:7;padding:7px 9px!important;background:#dfeee4!important;border-top:2px solid #bdd5c5
+}
+.offline-confrontation-session>th>div{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.offline-confrontation-session>th>div>div{display:flex;gap:6px;flex-wrap:wrap}
+.offline-confrontation-decision{min-width:220px}
+.offline-confrontation-decision button{display:block;width:100%;margin:3px 0;min-height:36px}
+.offline-confrontation-decision button.active{
+  border-color:#287b5d;background:#e7f4ec;color:#15513b;box-shadow:inset 0 0 0 1px #73a78b
+}
+.offline-confrontation-warning{display:block;margin-top:5px;color:#9a5224;font-weight:750;line-height:1.25}
+.offline-confrontation-footer{
+  display:flex;align-items:center;justify-content:flex-end;gap:8px;padding:10px 14px;
+  border-top:1px solid #dbe4de;background:#fffdf8
+}
+.offline-confrontation-footer .hint{margin-right:auto}
+.offline-confrontation-footer .primary:disabled{opacity:.5;cursor:not-allowed;transform:none}
+@media(max-width:760px){
+  .offline-confrontation-dialog{width:100vw;max-width:100vw;height:100dvh;max-height:100dvh;border-radius:0}
+  .offline-confrontation-head{padding:11px;display:block}
+  .offline-confrontation-stats{justify-content:flex-start;margin-top:9px}
+  .offline-confrontation-stats>div{min-width:82px;flex:1}
+  .offline-confrontation-toolbar{padding:8px}
+  .offline-confrontation-toolbar button{flex:1 1 180px}
+  .offline-confrontation-toolbar .hint{flex-basis:100%;margin-left:0}
+  .offline-confrontation-wrap{max-height:calc(100dvh - 255px)}
+  .offline-confrontation-table th,.offline-confrontation-table td{padding:6px;font-size:11.5px}
+  .offline-confrontation-table tbody>tr>th:first-child{min-width:105px}
+  .offline-confrontation-table tbody>tr>th:nth-child(2){min-width:105px}
+  .offline-confrontation-decision{min-width:170px}
+  .offline-confrontation-footer{padding:8px;position:sticky;bottom:0}
+  .offline-confrontation-footer .hint{display:none}
+}
+@media(prefers-reduced-motion:reduce){
+  .offline-confrontation-dialog *{scroll-behavior:auto!important;transition:none!important}
+}
