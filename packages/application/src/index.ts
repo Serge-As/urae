@@ -1026,7 +1026,7 @@ export class ConnectedApplication {
   async createMiscRubric(input:{name:string;description?:string;lifecycle?:'EPHEMERAL'|'PERSISTENT'|'SESSION_ONLY';amountMode?:'FIXED'|'VARIABLE';defaultAmount?:number;activeFirstSessions?:number}):Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/misc-rubrics`,{method:'POST',body:JSON.stringify({action:'create_custom',...input})});}
   async postMiscRubrics(input:{membershipId:string;meetingId?:string;items:Array<{templateId:string;amount:number;note?:string}>}):Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/misc-rubrics/postings`,{method:'POST',body:JSON.stringify({...input,idempotencyKey:makeId('misc_batch')})});}
   async miscPostings(filters:{meetingId?:string;membershipId?:string}={}):Promise<any[]>{if(!this.activeGroupId)return[];const p=new URLSearchParams();if(filters.meetingId)p.set('meetingId',filters.meetingId);if(filters.membershipId)p.set('membershipId',filters.membershipId);return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/misc-rubrics/postings?${p}`);}
-  pendingFinancialCellTargets():Array<{meetingId:string;membershipId:string;rubricId:string;targetAmount:number;baselineValue:number;baselineVersion:number;status:string;businessStatus?:string;idempotencyKey:string;createdAt:string}>{
+  pendingFinancialCellTargets():Array<{outboxId:string;meetingId:string;membershipId:string;rubricId:string;targetAmount:number;baselineValue:number;baselineVersion:number;status:string;businessStatus?:string;idempotencyKey:string;createdAt:string}>{
     if(!this.activeGroupId)return[];
     return this.outbox.list().filter(item=>{
       const payload=item.payload as Record<string,unknown>,businessStatus=String(item.lastResult?.status??'');
@@ -1035,7 +1035,7 @@ export class ConnectedApplication {
         (item.status!=='CONFIRMED'||businessStatus==='CONSENSUS_REQUIRED');
     }).map(item=>{
       const payload=item.payload as Record<string,unknown>;
-      return{meetingId:String(payload.meetingId??''),membershipId:String(payload.membershipId??''),rubricId:String(payload.rubricId??''),
+      return{outboxId:item.id,meetingId:String(payload.meetingId??''),membershipId:String(payload.membershipId??''),rubricId:String(payload.rubricId??''),
         targetAmount:Number(payload.targetAmount??0),baselineValue:Number(payload.baselineValue??0),baselineVersion:Number(payload.baselineVersion??0),
         status:item.status,businessStatus:String(item.lastResult?.status??'')||undefined,idempotencyKey:item.idempotencyKey,createdAt:item.createdAt};
     }).filter(x=>x.meetingId&&x.membershipId&&x.rubricId&&Number.isSafeInteger(x.targetAmount)&&x.targetAmount>=0);
@@ -1082,6 +1082,29 @@ export class ConnectedApplication {
   async financialCellSnapshot():Promise<{generatedAt:string;watermark:string;cells:Array<{meetingId:string;membershipId:string;rubricId:string;amount:number;cellVersion:number;updatedAt:string;actorId?:string;nature?:string}>}>{
     if(!this.activeGroupId)return{generatedAt:new Date().toISOString(),watermark:'',cells:[]};
     return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/financial-cells/snapshot`);
+  }
+
+  async previewOfflineFinancialConfrontation():Promise<{generatedAt:string;watermark:string;rows:Array<{
+    outboxId:string;idempotencyKey:string;meetingId:string;membershipId:string;rubricId:string;
+    localAmount:number;baselineAmount:number;baselineVersion:number;recordedAt:string;
+    canonicalAmount:number;canonicalVersion:number;canonicalUpdatedAt:string;canonicalActorId?:string;
+    serverChangedSinceBaseline:boolean;sameAmount:boolean;
+  }>}>{
+    const pending=this.pendingFinancialCellTargets();
+    if(!pending.length)return{generatedAt:new Date().toISOString(),watermark:'',rows:[]};
+    const snapshot=await this.financialCellSnapshot(),byCell=new Map<string,any>();
+    for(const row of snapshot.cells??[])byCell.set(JSON.stringify([row.meetingId,row.membershipId,row.rubricId]),row);
+    const rows=pending.map(item=>{
+      const canonical=byCell.get(JSON.stringify([item.meetingId,item.membershipId,item.rubricId]))??{};
+      const canonicalAmount=Number(canonical.amount??0),canonicalVersion=Number(canonical.cellVersion??0);
+      return{outboxId:item.outboxId,idempotencyKey:item.idempotencyKey,meetingId:item.meetingId,membershipId:item.membershipId,
+        rubricId:item.rubricId,localAmount:item.targetAmount,baselineAmount:item.baselineValue,baselineVersion:item.baselineVersion,
+        recordedAt:item.createdAt,canonicalAmount,canonicalVersion,canonicalUpdatedAt:String(canonical.updatedAt??''),
+        canonicalActorId:canonical.actorId?String(canonical.actorId):undefined,
+        serverChangedSinceBaseline:canonicalVersion>item.baselineVersion||canonicalAmount!==item.baselineValue,
+        sameAmount:canonicalAmount===item.targetAmount};
+    });
+    return{generatedAt:snapshot.generatedAt,watermark:snapshot.watermark,rows};
   }
 
   async ledger():Promise<{summary:LedgerSummary;entries:LedgerEntry[];receipts:Array<ContributionReceipt & {netAmount?:number;localPending?:boolean;localPendingStatus?:string}>;cellRevisions:Array<{meetingId:string;membershipId:string;rubricId:string;currency:string;version:number}>}>{
@@ -1827,6 +1850,7 @@ export class ConnectedApplication {
   }
   async queueDemoIntent(note='Local note'):Promise<OutboxItem>{const item=this.outbox.enqueue({tenantId:this.tenantId,actorId:this.actorId,type:'MEETING_NOTE_UPDATED',payload:{groupId:this.activeGroupId,note},idempotencyKey:`note-${this.activeGroupId??'none'}-${Date.now()}`});await this.persistOutbox();return item;}
   async retryOutboxItem(id:string):Promise<OutboxItem|undefined>{const item=this.outbox.retry(id);await this.persistOutbox();return item;}
+  async cancelOutboxItem(id:string):Promise<OutboxItem|undefined>{const item=this.outbox.cancel(id);await this.persistOutbox();return item;}
   private async persistOutbox(){if(!IndexedDbOutboxAdapter.supported())throw Error('DURABLE_STORAGE_REQUIRED');try{await this.outboxStorage.save(this.outbox.list());}catch{throw Error('DURABLE_STORAGE_REQUIRED');}}
   outboxItems():OutboxItem[]{return this.outbox.list();}
 
