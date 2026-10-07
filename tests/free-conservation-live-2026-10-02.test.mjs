@@ -48,10 +48,15 @@ test('writer-side confirmed cell survives stale canonical refresh',()=>{
   assert.match(main,/confirmedVersion/);
 });
 
-test('quota circuit queues mutations without automatic retry loop',()=>{
+test('quota circuit has no idle loop but allows bounded retries after a real validation',()=>{
   assert.match(app,/serverBudgetBlockedUntil/);
   assert.match(app,/if\(this\.serverBudgetBlocked\(\)\)/);
-  assert.match(main,/const scheduleFinancialOutboxRecovery=detail=>\{\n  if\(FREE_CONSERVATION_MODE\)return;/);
+  const start=main.indexOf('const scheduleFinancialOutboxRecovery');
+  const end=main.indexOf('let financialSnapshotTimer',start);
+  const recovery=main.slice(start,end>start?end:start+7000);
+  assert.match(recovery,/maxAttempts=FREE_CONSERVATION_MODE\?3:8/);
+  assert.match(recovery,/FREE_CONSERVATION_MODE\?\[200,650,1500\]/);
+  assert.doesNotMatch(recovery,/setInterval\(/);
 });
 
 test('live routing itself adds no D1 identity lookup per event',()=>{
