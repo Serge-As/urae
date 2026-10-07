@@ -1,11 +1,12 @@
 const fmt=n=>new Intl.NumberFormat('fr-FR').format(Number(n??0));
 const selectPriority=value=>{
   const select=document.createElement('select');
-  select.innerHTML='<option value="CAPITAL_FIRST">Capital d’abord</option><option value="INTEREST_FIRST">Intérêts d’abord</option>';
-  select.value=String(value)==='INTEREST_FIRST'?'INTEREST_FIRST':'CAPITAL_FIRST';
+  select.innerHTML='<option value="CAPITAL_FIRST">Capital d’abord</option><option value="INTEREST_FIRST">Intérêts d’abord</option><option value="EXPLICIT_ALLOCATION">Répartition explicite</option>';
+  select.value=['INTEREST_FIRST','EXPLICIT_ALLOCATION'].includes(String(value))?String(value):'CAPITAL_FIRST';
   return select;
 };
 const field=(label,input,className='')=>{const l=document.createElement('label');l.textContent=label;if(className)l.className=className;l.append(input);return l;};
+const series=value=>String(value??'').split(',').map(x=>x.trim()).filter(Boolean).map(Number);
 const simulationTable=(simulation,title)=>{
   const section=document.createElement('section');section.className='loan-simulation-scenario';
   const h=document.createElement('h3');h.textContent=title;section.append(h);
@@ -48,7 +49,12 @@ export const openLoanSimulationDialog=async({app,loan,fallbackDebt=0,fallbackInt
   const a=document.createElement('section');a.className='loan-simulation-control-card';const ah=document.createElement('h3');ah.textContent=loan?.id?'Scénario A · politique effective du prêt':'Scénario A';
   const rateA=document.createElement('input');rateA.type='number';rateA.min='0';rateA.max='100';rateA.step='0.01';rateA.value=String(initialRate);
   const priorityA=selectPriority(data.paymentPriority);
-  a.append(ah,field('Taux % par période',rateA),field('Priorité',priorityA));
+  const explicitA=document.createElement('div');explicitA.className='loan-explicit-allocation-fields';
+  const principalA=document.createElement('input');principalA.placeholder='Capital : ex. 4000, 3000';
+  const interestA=document.createElement('input');interestA.placeholder='Intérêts : ex. 2000, 500';
+  explicitA.append(field('Capital payé par période',principalA),field('Intérêts payés par période',interestA));
+  const syncExplicitA=()=>{explicitA.hidden=priorityA.value!=='EXPLICIT_ALLOCATION';};priorityA.onchange=syncExplicitA;syncExplicitA();
+  a.append(ah,field('Taux % par période',rateA),field('Priorité',priorityA),explicitA);
 
   const compareLabel=document.createElement('label');compareLabel.className='check loan-compare-toggle';
   const compare=document.createElement('input');compare.type='checkbox';const compareText=document.createElement('span');compareText.textContent='Comparer avec un scénario B';compareLabel.append(compare,compareText);
@@ -56,7 +62,12 @@ export const openLoanSimulationDialog=async({app,loan,fallbackDebt=0,fallbackInt
   const bh=document.createElement('h3');bh.textContent='Scénario B · alternative';
   const rateB=document.createElement('input');rateB.type='number';rateB.min='0';rateB.max='100';rateB.step='0.01';rateB.value=String(initialRate);
   const priorityB=selectPriority(priorityA.value==='CAPITAL_FIRST'?'INTEREST_FIRST':'CAPITAL_FIRST');
-  b.append(bh,field('Taux % par période',rateB),field('Priorité',priorityB));
+  const explicitB=document.createElement('div');explicitB.className='loan-explicit-allocation-fields';
+  const principalB=document.createElement('input');principalB.placeholder='Capital : ex. 4000, 3000';
+  const interestB=document.createElement('input');interestB.placeholder='Intérêts : ex. 2000, 500';
+  explicitB.append(field('Capital payé par période',principalB),field('Intérêts payés par période',interestB));
+  const syncExplicitB=()=>{explicitB.hidden=priorityB.value!=='EXPLICIT_ALLOCATION';};priorityB.onchange=syncExplicitB;syncExplicitB();
+  b.append(bh,field('Taux % par période',rateB),field('Priorité',priorityB),explicitB);
   compare.onchange=()=>{b.hidden=!compare.checked;};
   scenarios.append(a,b);
 
@@ -67,11 +78,15 @@ export const openLoanSimulationDialog=async({app,loan,fallbackDebt=0,fallbackInt
   form.append(common,compareLabel,scenarios,note,actions);
 
   const result=document.createElement('div');result.className='loan-simulation-result';
-  const payload=(rate,priority)=>({
-    principal:Number(principalInput.value),openingInterestDue:Number(interestInput.value),periods:Number(periods.value),
-    ratePercentPerPeriod:Number(rate.value),priority:priority.value,interestBasis:'OUTSTANDING',
-    payments:payments.value.split(',').map(x=>x.trim()).filter(Boolean).map(Number)
-  });
+  const payload=(rate,priority,principalAllocation,interestAllocation)=>{
+    const priorityValue=priority.value,principalPayments=series(principalAllocation?.value),interestPayments=series(interestAllocation?.value);
+    return{
+      principal:Number(principalInput.value),openingInterestDue:Number(interestInput.value),periods:Number(periods.value),
+      ratePercentPerPeriod:Number(rate.value),priority:priorityValue,interestBasis:'OUTSTANDING',
+      payments:priorityValue==='EXPLICIT_ALLOCATION'?principalPayments.map((x,i)=>x+Number(interestPayments[i]??0)):series(payments.value),
+      ...(priorityValue==='EXPLICIT_ALLOCATION'?{principalPayments,interestPayments}:{})
+    };
+  };
   const renderHistory=async()=>{
     if(!loan?.id)return null;
     try{
@@ -82,13 +97,13 @@ export const openLoanSimulationDialog=async({app,loan,fallbackDebt=0,fallbackInt
     }catch{return null;}
   };
   const render=async()=>{
-    const aPayload=payload(rateA,priorityA);
+    const aPayload=payload(rateA,priorityA,principalA,interestA);
     if(!Number.isSafeInteger(aPayload.principal)||aPayload.principal<=0)throw Error('Capital à simuler requis.');
     if(!Number.isSafeInteger(aPayload.periods)||aPayload.periods<=0)throw Error('Nombre de périodes invalide.');
-    const tasks=[app.simulateLoan(aPayload)];if(compare.checked)tasks.push(app.simulateLoan(payload(rateB,priorityB)));
+    const tasks=[app.simulateLoan(aPayload)];if(compare.checked)tasks.push(app.simulateLoan(payload(rateB,priorityB,principalB,interestB)));
     const sims=await Promise.all(tasks);result.replaceChildren();
     const head=document.createElement('div');head.className='loan-simulation-comparison-head';
-    const p=document.createElement('p');p.className='hint';p.textContent=compare.checked?'Les deux scénarios partent du même capital, des mêmes intérêts déjà dus et des mêmes paiements prévus. Seuls le taux et la priorité changent.':'Vous pouvez modifier librement le taux, la priorité et les paiements pour explorer un scénario.';
+    const p=document.createElement('p');p.className='hint';p.textContent=compare.checked?'Les deux scénarios partent du même capital et des mêmes intérêts déjà dus. Chaque scénario peut changer taux, priorité et ventilation explicite.':'Vous pouvez modifier librement le taux, la priorité et les paiements. En répartition explicite, saisissez séparément capital et intérêts par période.';
     head.append(p);result.append(head,simulationTable(sims[0],loan?.id?'Scénario A · situation du prêt':'Scénario A'));
     if(compare.checked&&sims[1]){
       const delta=document.createElement('p');delta.className='truth-notice';
