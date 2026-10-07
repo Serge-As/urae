@@ -983,7 +983,7 @@ dialog .matrix-wrap{margin-top:7px}
 .meeting-matrix thead th{font-size:11.5px;line-height:1.2}
 .meeting-matrix tbody th{color:#234237}
 .meeting-matrix td{color:#17271f}
-.meeting-matrix td:not(:has(button)):not(:has(input)):not(:has(select)){font-variant-numeric:tabular-nums}
+.meeting-matrix td{font-variant-numeric:tabular-nums}
 .table-total-row>*{font-weight:900}
 /* Small badges are for exceptions and grouping, not repeated decoration. */
 .pill,.truth-chip,.module-status{box-shadow:none}
@@ -1036,3 +1036,16 @@ body.ui-mode-senior .panel,body.ui-mode-assisted .panel{padding:16px}
 body.ui-mode-senior .item,body.ui-mode-assisted .item{padding:13px}
 body.ui-mode-senior label,body.ui-mode-assisted label{font-size:15px}
 body.ui-mode-senior .meeting-matrix thead th,body.ui-mode-assisted .meeting-matrix thead th{font-size:13px}
+
+
+/* Loan simulation explicit allocation fields */
+.loan-explicit-allocation-fields{
+  grid-column:1/-1;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;
+  padding:8px;border:1px dashed #c9d8cf;border-radius:10px;background:#fffdf8
+}
+.loan-explicit-allocation-fields[hidden]{display:none!important}
+.loan-explicit-allocation-fields label{font-size:12px}
+.loan-explicit-allocation-fields input{min-height:40px}
+@media(max-width:560px){
+  .loan-explicit-allocation-fields{grid-template-columns:1fr}
+}
