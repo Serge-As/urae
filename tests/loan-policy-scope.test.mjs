@@ -39,7 +39,9 @@ const fixture=async()=>{
 
 test('loan policy A, B-all and B-selected preserve each loan history and change only eligible open loans',async()=>{
   const x=await fixture();
-  const [loan1,loan2,loan3,loan4]=await Promise.all(['P1','P2','P3','P4'].map(x.createOpenLoan));
+  const [loan1,loan2,loan3,loan4,closedLoan]=await Promise.all(['P1','P2','P3','P4','P soldé'].map(x.createOpenLoan));
+  const closed=await x.api('/api/v1/groups/'+groupId+'/completion/'+closedLoan.id+'/transition','POST',{to:'CLOSED',expectedVersion:Number(closedLoan.data.completionVersion),patch:{outstandingPrincipal:0,unpaidInterest:0,closedAt:'2026-10-07T08:30:00Z'}});
+  assert.equal(String(closed.data.completionState),'CLOSED');
   let rubric=(await x.repo.getRubricDefinition(tenantId,groupId,rubricId));
   let policy=rubric.policies.loan;
 
@@ -53,6 +55,9 @@ test('loan policy A, B-all and B-selected preserve each loan history and change 
 
   rubric=await x.changePolicy({...policy,paymentPriority:'INTEREST_FIRST'},'NEW_AND_ALL_OPEN_LOANS');
   policy=rubric.policies.loan;
+  const allOpenRevision=policy.revisions.at(-1);
+  assert.ok(allOpenRevision.affectedLoanIds.includes(loan2.id));
+  assert.ok(!allOpenRevision.affectedLoanIds.includes(closedLoan.id),'loan already closed before the decision is excluded from B-all');
   const b=await x.repay(loan2);
   assert.equal(b.interestPaid,2000,'B-all applies the new priority to an eligible open loan');
   assert.equal(b.principalPaid,4000);
