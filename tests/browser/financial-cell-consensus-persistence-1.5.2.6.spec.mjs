@@ -193,10 +193,12 @@ test('repayment 2500 syncs event-wise within five seconds and survives reload wi
   expect(Date.now()-syncStarted).toBeLessThan(5500);
   await expect.poll(()=>amountFrom(cell),{timeout:5000}).toBe(2500);
 
-  // The app refresh must keep the horizontal place. Force a narrow table
-  // viewport so this remains deterministic even if future test rubrics change.
+  // The app refresh must keep the horizontal place. Use a real phone-width
+  // viewport so the replacement matrix still overflows after rerender; do not
+  // fake overflow with an inline width that disappears during refresh.
+  await page.setViewportSize({width:390,height:820});
   const wrap=page.locator('#meetingMatrix .canonical-financial-wrap');
-  await wrap.evaluate(node=>{node.style.maxWidth='320px';node.style.width='320px';node.scrollLeft=node.scrollWidth;});
+  await wrap.evaluate(node=>{node.scrollLeft=node.scrollWidth;});
   const before=await wrap.evaluate(node=>node.scrollLeft);
   expect(before).toBeGreaterThan(0);
   await page.locator('#refreshBtn').evaluate(button=>button.click());
@@ -206,7 +208,7 @@ test('repayment 2500 syncs event-wise within five seconds and survives reload wi
   // A full page reload also restores the active Operations view, selected
   // meeting and matrix column rather than sending the manager back to Home.
   const currentWrap=page.locator('#meetingMatrix .canonical-financial-wrap');
-  await currentWrap.evaluate(node=>{node.style.maxWidth='320px';node.style.width='320px';node.scrollLeft=node.scrollWidth;});
+  await currentWrap.evaluate(node=>{node.scrollLeft=node.scrollWidth;});
   expect(await currentWrap.evaluate(node=>node.scrollLeft)).toBeGreaterThan(0);
   await page.reload({waitUntil:'domcontentloaded'});
   await expect(page.locator('#view-operations')).toHaveClass(/active/);
