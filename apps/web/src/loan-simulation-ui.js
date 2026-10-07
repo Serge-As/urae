@@ -42,7 +42,7 @@ export const openLoanSimulationDialog=async({app,loan,fallbackDebt=0,fallbackInt
   const interestInput=document.createElement('input');interestInput.type='number';interestInput.min='0';interestInput.step='1';interestInput.inputMode='numeric';interestInput.value=String(openingInterest);
   const periods=document.createElement('input');periods.type='number';periods.min='1';periods.max='120';periods.step='1';periods.value=String(Math.max(1,Number(data.remainingPeriods??data.installments??12)||12));
   const payments=document.createElement('input');payments.placeholder='Ex. 5000, 5000, 10000';payments.autocomplete='off';
-  common.append(field('Capital restant / montant imaginaire',principalInput),field('Intérêts déjà dus',interestInput),field('Nombre de périodes',periods),field('Paiements prévus (séparés par des virgules)',payments));
+  common.append(field('Capital restant / montant imaginaire',principalInput),field('Intérêts déjà dus',interestInput),field('Nombre de périodes',periods),field('Paiements prévus · priorités automatiques (virgules)',payments));
 
   const periodsPerYear=Math.max(1,Number(data.installmentsPerYear??12)||12),bps=Number(data.rateBasisPointsPerPeriod??0),annualBps=Number(data.annualRateBasisPoints??0),initialRate=bps>0?bps/100:annualBps>0?(annualBps/periodsPerYear)/100:0;
   const scenarios=document.createElement('div');scenarios.className='loan-simulation-controls';
