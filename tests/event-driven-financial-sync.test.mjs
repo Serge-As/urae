@@ -9,7 +9,8 @@ test('free-tier financial recovery is event-driven, bounded and never an idle D1
   const app=await readFile('.build/packages/application/src/index.js','utf8');
   const start=main.indexOf('const scheduleFinancialOutboxRecovery');
   assert.ok(start>=0,'targeted financial recovery must exist');
-  const end=main.indexOf('let financialSnapshotTimer',start);\n  const snippet=main.slice(start,end>start?end:start+6500);
+  const end=main.indexOf('let financialSnapshotTimer',start);
+  const snippet=main.slice(start,end>start?end:start+6500);
   assert.doesNotMatch(snippet,/if\(FREE_CONSERVATION_MODE\)return/,'free mode must not strand a validated queued cell');
   assert.match(snippet,/maxAttempts\s*=\s*FREE_CONSERVATION_MODE\s*\?\s*3\s*:\s*8/);
   assert.match(snippet,/\[200,650,1500\]/,'free retries remain bounded below five seconds');
