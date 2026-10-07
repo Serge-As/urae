@@ -2,11 +2,11 @@
   "contractVersion": 1,
   "release": {
     "version": "1.5.2.11-field-recovery",
-    "buildId": "eco-system-1.5.2.11-20261005-field-recovery",
+    "buildId": "eco-system-1.5.2.11-20261007-data-first",
     "schemaVersion": "d1-additive-20260923",
-    "policyVersion": "live-finance-policy-20261003-explicit-conflicts",
-    "pwaCache": "eco-system-v15211-q01q28-recovery-20261006",
-    "previousPwaCache": "eco-system-v15211-field-recovery-20261005",
+    "policyVersion": "live-finance-policy-20261007-versioned-loan-scope",
+    "pwaCache": "eco-system-v15211-data-first-20261007",
+    "previousPwaCache": "eco-system-v15211-q01q28-recovery-20261006",
     "commitShaAuthority": "DEPLOYMENT_WORKFLOW_GITHUB_SHA_AND_PRODUCTION_HEALTH"
   },
   "truthAxes": {
