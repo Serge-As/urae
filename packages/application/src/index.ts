@@ -465,18 +465,144 @@ export class ConnectedApplication {
   async receivedMemberCapsule(membershipId:string):Promise<EcoMemberCapsule|undefined>{
     if(!this.activeGroupId)return undefined;return this.cached('/api/v1/relay/member-capsule/'+encodeURIComponent(this.activeGroupId)+'/'+encodeURIComponent(membershipId));
   }
-  async localRoomManagerDelta():Promise<{protocol:'ECO_MANAGER_DELTA_1';groupId:string;actorId:string;generatedAt:string;events:any[]}>{
-    if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return{protocol:'ECO_MANAGER_DELTA_1',groupId:this.activeGroupId,actorId:this.actorId,generatedAt:new Date().toISOString(),events:await this.sovereign.list(this.tenantId,this.activeGroupId)};
+  private managerRelayIntentPath(groupId:string):string{return 'local://manager-relay-intents/'+encodeURIComponent(groupId);}
+  private relayFerryPath(groupId:string):string{return 'local://relay-ferry/'+encodeURIComponent(groupId);}
+  private managerCommandCellKey(item:any):string{
+    const p=item?.payload??{};
+    if(['FINANCIAL_CELL_CORRECTION_PROPOSAL_V1','FINANCIAL_CELL_CORRECTION_PROPOSAL_V2'].includes(String(item?.type)))
+      return JSON.stringify(['CELL',p.meetingId??'',p.membershipId??'',p.rubricId??'',p.activityId??'']);
+    if(String(item?.type)==='FINANCIAL_SHEET_ENTRY_V1')
+      return JSON.stringify(['SHEET',p.meetingId??'',p.membershipId??'',p.rubricId??'',p.nature??'']);
+    return '';
   }
-  async confrontLocalRoomManagerDelta(remote:any):Promise<{commonSequence:number;localOnly:number;remoteOnly:number;potentialFinancialConflicts:Array<{key:string;local:any;remote:any}>}>{
-    if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');if(remote?.protocol!=='ECO_MANAGER_DELTA_1'||remote.groupId!==this.activeGroupId||!Array.isArray(remote.events))throw Error('ECO_LOCAL_ROOM_DELTA_INVALID');
-    const local=await this.sovereign.list(this.tenantId,this.activeGroupId),remoteEvents=remote.events as any[];let commonSequence=0;
-    const max=Math.min(local.length,remoteEvents.length);for(let i=0;i<max;i++){if(local[i]?.sequence===remoteEvents[i]?.sequence&&local[i]?.hash===remoteEvents[i]?.hash)commonSequence=i+1;else break;}
-    const financialTypes=new Set(['CONTRIBUTION_CASH_RECORDED','FINANCIAL_CELL_TARGET_V1','FINANCIAL_SHEET_ENTRY_V1','LOAN_DISBURSE_V1','LOAN_REPAY_V1','TONTINE_SERVE_V1','SAVINGS_DEPOSIT_V1','SAVINGS_WITHDRAW_V1','CUSTODY_MOVEMENT_V1','SOLIDARITY_FUND_V1','SOLIDARITY_PAYOUT_V1']);
-    const key=(event:any)=>{const p=event?.payload??{};return [p.meetingId??'',p.membershipId??p.borrowerMembershipId??'',p.rubricId??'',p.loanId??p.shareId??'',event?.type??''].join('|');};
-    const localMap=new Map(local.slice(commonSequence).filter(x=>financialTypes.has(x.type)).map(x=>[key(x),x])),potentialFinancialConflicts=[];
-    for(const event of remoteEvents.slice(commonSequence).filter((x:any)=>financialTypes.has(String(x.type)))){const k=key(event),mine=localMap.get(k);if(mine&&JSON.stringify(mine.payload)!==JSON.stringify(event.payload))potentialFinancialConflicts.push({key:k,local:mine,remote:event});}
-    return{commonSequence,localOnly:Math.max(0,local.length-commonSequence),remoteOnly:Math.max(0,remoteEvents.length-commonSequence),potentialFinancialConflicts};
+  private managerIntentOrder(item:any):string{
+    const p=item?.payload??{},stamp=String(p.recordedAtClient??item?.createdAt??''),device=String(p.deviceId??''),seq=String(Number(p.deviceSequence??0)).padStart(12,'0');
+    return [stamp,device,seq,String(item?.idempotencyKey??item?.id??'')].join('|');
+  }
+  private async managerRelayIntents():Promise<any[]>{
+    if(!this.activeGroupId)return[];
+    return (await this.cached<any[]>(this.managerRelayIntentPath(this.activeGroupId))??[])
+      .filter(x=>x&&String((x.payload??{}).groupId??'')===this.activeGroupId)
+      .slice(-5000);
+  }
+  async relayManagerFinancialTargets():Promise<Array<{meetingId:string;membershipId:string;rubricId:string;targetAmount:number;baselineValue:number;baselineVersion:number;status:string;businessStatus:string;idempotencyKey:string;createdAt:string;source:'RELAY';sourceActorId:string;recordedAtClient:string}>>{
+    const intents=await this.managerRelayIntents(),byCell=new Map<string,any>();
+    for(const item of intents){
+      if(!['FINANCIAL_CELL_CORRECTION_PROPOSAL_V1','FINANCIAL_CELL_CORRECTION_PROPOSAL_V2'].includes(String(item.type)))continue;
+      const p=item.payload??{},key=this.managerCommandCellKey(item);if(!key)continue;
+      const current=byCell.get(key);if(!current||this.managerIntentOrder(item)>this.managerIntentOrder(current))byCell.set(key,item);
+    }
+    return [...byCell.values()].map(item=>{const p=item.payload??{};return{
+      meetingId:String(p.meetingId??''),membershipId:String(p.membershipId??''),rubricId:String(p.rubricId??''),
+      targetAmount:Number(p.targetAmount??0),baselineValue:Number(p.baselineValue??0),baselineVersion:Number(p.baselineVersion??0),
+      status:'RELAY_RECEIVED',businessStatus:'',idempotencyKey:String(item.idempotencyKey??''),createdAt:String(item.createdAt??p.recordedAtClient??''),
+      source:'RELAY' as const,sourceActorId:String(item.actorId??''),recordedAtClient:String(p.recordedAtClient??item.createdAt??'')
+    };}).filter(x=>x.meetingId&&x.membershipId&&x.rubricId&&Number.isSafeInteger(x.targetAmount)&&x.targetAmount>=0);
+  }
+  private managerStructuralPathAllowed(path:string,groupId:string):boolean{
+    const enc=encodeURIComponent(groupId),base='/api/v1/groups/'+enc;
+    return path==='/api/v1/groups'||path===base+'/members'||path===base+'/meetings'||path===base+'/rubrics'||path===base+'/me'||path===base+'/identity-profile';
+  }
+  async localRoomManagerDelta():Promise<any>{
+    if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');const groupId=this.activeGroupId;
+    const relayed=await this.managerRelayIntents(),own=this.outbox.list().filter(x=>String((x.payload as any)?.groupId??'')===groupId&&!['CONFIRMED','CANCELLED'].includes(String(x.status)));
+    const commandsById=new Map<string,any>();for(const item of [...relayed,...own])commandsById.set(String(item.actorId)+':'+String(item.idempotencyKey??item.id),structuredClone(item));
+    const allSnapshots=IndexedDbReadSnapshotAdapter.supported()?await this.readSnapshots.listForActorTenant(this.actorId,this.tenantId):[],structuralSnapshots:any[]=[];let bytes=0;
+    for(const row of allSnapshots){
+      if(!this.managerStructuralPathAllowed(String(row.path??''),groupId))continue;
+      const safe={path:row.path,body:row.body,updatedAt:row.updatedAt,sourceVersion:row.sourceVersion??null},size=JSON.stringify(safe).length;
+      if(bytes+size>900000)break;bytes+=size;structuralSnapshots.push(safe);
+    }
+    const journal=await this.sovereign.list(this.tenantId,groupId),last=journal.at(-1);
+    return{protocol:'ECO_MANAGER_DELTA_2',groupId,tenantId:this.tenantId,actorId:this.actorId,sourceDeviceId:this.localDeviceId(),generatedAt:new Date().toISOString(),
+      commands:[...commandsById.values()].slice(-2500),structuralSnapshots,journalHead:last?{sequence:last.sequence,hash:last.hash}:null};
+  }
+  async confrontLocalRoomManagerDelta(remote:any):Promise<any>{
+    if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');if(!remote||remote.groupId!==this.activeGroupId)throw Error('ECO_LOCAL_ROOM_DELTA_INVALID');
+    if(remote.protocol==='ECO_MANAGER_DELTA_1'){
+      if(!Array.isArray(remote.events))throw Error('ECO_LOCAL_ROOM_DELTA_INVALID');
+      const local=await this.sovereign.list(this.tenantId,this.activeGroupId),remoteEvents=remote.events as any[];let commonSequence=0;
+      const max=Math.min(local.length,remoteEvents.length);for(let i=0;i<max;i++){if(local[i]?.sequence===remoteEvents[i]?.sequence&&local[i]?.hash===remoteEvents[i]?.hash)commonSequence=i+1;else break;}
+      return{protocol:'ECO_MANAGER_DELTA_1',commonSequence,commonCommands:0,localOnly:Math.max(0,local.length-commonSequence),remoteOnly:Math.max(0,remoteEvents.length-commonSequence),structuralChanges:0,potentialFinancialConflicts:[]};
+    }
+    if(remote.protocol!=='ECO_MANAGER_DELTA_2'||remote.tenantId!==this.tenantId||!Array.isArray(remote.commands)||!Array.isArray(remote.structuralSnapshots))throw Error('ECO_LOCAL_ROOM_DELTA_INVALID');
+    const localRelayed=await this.managerRelayIntents(),localOwn=this.outbox.list().filter(x=>String((x.payload as any)?.groupId??'')===this.activeGroupId&&!['CONFIRMED','CANCELLED'].includes(String(x.status))),local=[...localRelayed,...localOwn];
+    const commandId=(x:any)=>String(x?.actorId??'')+':'+String(x?.idempotencyKey??x?.id??''),localIds=new Set(local.map(commandId)),remoteIds=new Set(remote.commands.map(commandId)),commonCommands=[...remoteIds].filter(x=>localIds.has(x)).length;
+    const localByCell=new Map<string,any>();for(const item of local){const key=this.managerCommandCellKey(item);if(!key)continue;const old=localByCell.get(key);if(!old||this.managerIntentOrder(item)>this.managerIntentOrder(old))localByCell.set(key,item);}
+    const remoteByCell=new Map<string,any>();for(const item of remote.commands){const p=item?.payload??{};if(String(p.groupId??'')!==this.activeGroupId)continue;const key=this.managerCommandCellKey(item);if(!key)continue;const old=remoteByCell.get(key);if(!old||this.managerIntentOrder(item)>this.managerIntentOrder(old))remoteByCell.set(key,item);}
+    const potentialFinancialConflicts:any[]=[];
+    for(const [key,theirs] of remoteByCell){const mine=localByCell.get(key);if(!mine)continue;const ma=Number(mine.payload?.targetAmount??mine.payload?.amount),ra=Number(theirs.payload?.targetAmount??theirs.payload?.amount);if(Number.isFinite(ma)&&Number.isFinite(ra)&&ma!==ra)potentialFinancialConflicts.push({key,local:mine,remote:theirs,recommended:this.managerIntentOrder(theirs)>this.managerIntentOrder(mine)?'REMOTE':'LOCAL'});}
+    return{protocol:'ECO_MANAGER_DELTA_2',commonSequence:0,commonCommands,localOnly:Math.max(0,localIds.size-commonCommands),remoteOnly:Math.max(0,remoteIds.size-commonCommands),structuralChanges:remote.structuralSnapshots.length,potentialFinancialConflicts};
+  }
+  async importLocalRoomManagerDelta(remote:any):Promise<{importedCommands:number;mergedSnapshots:number;duplicates:number;conflicts:number}>{
+    if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');if(remote?.protocol!=='ECO_MANAGER_DELTA_2'||remote.groupId!==this.activeGroupId||remote.tenantId!==this.tenantId||!Array.isArray(remote.commands)||!Array.isArray(remote.structuralSnapshots))throw Error('ECO_LOCAL_ROOM_DELTA_INVALID');
+    const current=await this.managerRelayIntents(),byId=new Map(current.map(x=>[String(x.actorId)+':'+String(x.idempotencyKey??x.id),x])),before=byId.size;
+    for(const item of remote.commands.slice(0,2500)){
+      const p=item?.payload??{};if(!item?.actorId||!item?.idempotencyKey||String(p.groupId??'')!==this.activeGroupId)continue;
+      byId.set(String(item.actorId)+':'+String(item.idempotencyKey),structuredClone({...item,relayReceivedAt:new Date().toISOString(),relaySourceDeviceId:String(remote.sourceDeviceId??'')}));
+    }
+    await this.saveCached(this.managerRelayIntentPath(this.activeGroupId),[...byId.values()].slice(-5000),'RELAY');
+    let mergedSnapshots=0;
+    const rowStamp=(x:any)=>Date.parse(String(x?.updatedAt??x?.joinedAt??x?.createdAt??''))||0;
+    for(const snap of remote.structuralSnapshots.slice(0,80)){
+      const path=String(snap?.path??'');if(!this.managerStructuralPathAllowed(path,this.activeGroupId))continue;
+      const incoming=snap?.body,currentBody=await this.cached<any>(path);
+      if(Array.isArray(incoming)){
+        const map=new Map<string,any>();for(const row of Array.isArray(currentBody)?currentBody:[])if(row?.id)map.set(String(row.id),row);
+        for(const row of incoming)if(row?.id){const old=map.get(String(row.id));if(!old||rowStamp(row)>=rowStamp(old))map.set(String(row.id),row);}
+        await this.saveCached(path,[...map.values()],'RELAY');mergedSnapshots++;
+      }else if(incoming&&typeof incoming==='object'){
+        const oldStamp=rowStamp(currentBody),newStamp=rowStamp(incoming);if(!currentBody||newStamp>=oldStamp){await this.saveCached(path,incoming,'RELAY');mergedSnapshots++;}
+      }
+    }
+    const comparison=await this.confrontLocalRoomManagerDelta(remote);
+    if(typeof window!=='undefined'&&typeof CustomEvent!=='undefined')window.dispatchEvent(new CustomEvent('eco:manager-relay-updated',{detail:{groupId:this.activeGroupId,sourceActorId:String(remote.actorId??''),importedCommands:Math.max(0,byId.size-before),mergedSnapshots,conflicts:comparison.potentialFinancialConflicts.length}}));
+    return{importedCommands:Math.max(0,byId.size-before),mergedSnapshots,duplicates:Math.max(0,remote.commands.length-(byId.size-before)),conflicts:comparison.potentialFinancialConflicts.length};
+  }
+  async ecoRelayFerryPackets():Promise<any[]>{
+    if(!this.activeGroupId)return[];const rows=await this.cached<any[]>(this.relayFerryPath(this.activeGroupId))??[],now=Date.now();
+    return rows.filter(x=>x?.protocol==='ECO_FERRY_1'&&x.groupId===this.activeGroupId&&Date.parse(String(x.expiresAt??''))>now).slice(-300);
+  }
+  private async storeEcoRelayFerryPackets(packets:any[]):Promise<number>{
+    if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');const existing=await this.ecoRelayFerryPackets(),map=new Map(existing.map(x=>[String(x.packetId),x]));let added=0;
+    for(const packet of packets.slice(0,100)){
+      if(packet?.protocol!=='ECO_FERRY_1'||packet.groupId!==this.activeGroupId||!packet.packetId||!packet.recipientMembershipId||!packet.capsule||Date.parse(String(packet.expiresAt??''))<=Date.now())continue;
+      if(!map.has(String(packet.packetId)))added++;map.set(String(packet.packetId),structuredClone(packet));
+    }
+    await this.saveCached(this.relayFerryPath(this.activeGroupId),[...map.values()].slice(-300),'RELAY');return added;
+  }
+  async prepareManagerFerryPackets():Promise<{packets:any[];included:string[];unpaired:string[]}>{
+    if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');const delta=await this.localRoomManagerDelta(),members=await this.listMembers(),included:string[]=[],unpaired:string[]=[],packets:any[]=[];
+    const managerRoles=new Set(['founder','manager','admin','president','treasurer','secretary','auditor']);
+    for(const member of members.filter(x=>x.status==='active'&&(x.roles??[]).some(r=>managerRoles.has(String(r).toLowerCase()))&&x.userId!==this.actorId)){
+      const key=await this.sovereign.relayKey(this.tenantId,this.activeGroupId,member.id);if(!key){unpaired.push(member.id);continue;}
+      const expiresAt=new Date(Date.now()+7*24*3600_000).toISOString(),capsule:EcoMemberCapsule={protocolVersion:1,groupId:this.activeGroupId,membershipId:member.id,generatedAt:new Date().toISOString(),expiresAt,projection:{kind:'ECO_MANAGER_DELTA_2',delta},schemaVersion:1,sourceAuthorityId:this.actorId,sourceDeviceId:this.localDeviceId()};
+      const material:EcoRelayPairingMaterial={protocolVersion:1,membershipId:member.id,keyId:key.keyId,rawKey:key.rawKey,createdAt:key.createdAt},encrypted=await encryptMemberCapsule(capsule,material),bundle=createBroadcastBundle(this.activeGroupId,[encrypted],7*24*60);
+      packets.push({protocol:'ECO_FERRY_1',packetId:bundle.transferId+'-'+encrypted.keyId,groupId:this.activeGroupId,recipientMembershipId:member.id,keyId:encrypted.keyId,createdAt:bundle.generatedAt,expiresAt:bundle.expiresAt,capsule:encrypted,sourceActorId:this.actorId});included.push(member.id);
+    }
+    await this.storeEcoRelayFerryPackets(packets);return{packets,included,unpaired};
+  }
+  async receiveEcoRelayFerryPackets(packets:any[]):Promise<{stored:number;applied:number}>{
+    if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');const stored=await this.storeEcoRelayFerryPackets(packets),members=await this.listMembers(),own=members.find(x=>x.userId===this.actorId&&x.status!=='left');let applied=0;
+    if(own){
+      const key=await this.sovereign.relayKey(this.tenantId,this.activeGroupId,own.id);
+      if(key){
+        const material:EcoRelayPairingMaterial={protocolVersion:1,membershipId:own.id,keyId:key.keyId,rawKey:key.rawKey,createdAt:key.createdAt};
+        for(const packet of packets){
+          if(packet?.protocol!=='ECO_FERRY_1'||packet.groupId!==this.activeGroupId||packet.recipientMembershipId!==own.id||packet.keyId!==key.keyId)continue;
+          try{const capsule=await decryptMemberCapsule(this.activeGroupId,packet.capsule,material,packet.expiresAt),projection:any=capsule.projection;if(projection?.kind==='ECO_MANAGER_DELTA_2'&&projection.delta){await this.importLocalRoomManagerDelta(projection.delta);applied++;}}catch{}
+        }
+      }
+    }
+    return{stored,applied};
+  }
+  async syncEcoRelayFerry():Promise<{uploaded:number;downloaded:number;applied:number;skipped?:boolean}>{
+    if(!this.activeGroupId||this.serverBudgetBlocked()||typeof navigator!=='undefined'&&navigator.onLine===false)return{uploaded:0,downloaded:0,applied:0,skipped:true};
+    const local=await this.ecoRelayFerryPackets(),knownPacketIds=local.map(x=>String(x.packetId)).slice(-500),uploads=local.filter(x=>!x.serverSyncedAt).slice(0,12).map(({serverSyncedAt,...x})=>x);
+    const result=await this.request<any>('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/relay/ferry-sync',{method:'POST',body:JSON.stringify({packets:uploads,knownPacketIds})});
+    const accepted=new Set((result.acceptedIds??[]).map(String)),stamp=new Date().toISOString(),updated=local.map(x=>accepted.has(String(x.packetId))?{...x,serverSyncedAt:stamp}:x);
+    await this.saveCached(this.relayFerryPath(this.activeGroupId),updated,'RELAY');const received=await this.receiveEcoRelayFerryPackets(Array.isArray(result.packets)?result.packets:[]);
+    return{uploaded:accepted.size,downloaded:Array.isArray(result.packets)?result.packets.length:0,applied:received.applied};
   }
   async localRoomMemberBundle(membershipId:string,meetingId?:string):Promise<EcoBroadcastBundle>{
     const result=await this.prepareEcoBroadcast({meetingId,membershipIds:[membershipId],ttlMinutes:60});return result.bundle;
