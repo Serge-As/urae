@@ -106,6 +106,7 @@ export class ConnectedApplication {
   private serverBudgetBlockedUntil=0;
   private serverBudgetReason='';
   private serverBudgetWake?:ReturnType<typeof setTimeout>;
+  private transportWake?:ReturnType<typeof setTimeout>;
   private actorId:string; private tenantId:string; private displayName:string; private locale:string; private activeGroupId?:string;
   private readonly baseUrl:string;
   private groupTenants=new Map<string,string>();
@@ -186,9 +187,22 @@ export class ConnectedApplication {
     this.armServerBudgetWake();
     if(typeof window!=='undefined'&&typeof CustomEvent!=='undefined')window.dispatchEvent(new CustomEvent('eco:server-budget-blocked',{detail:{until:this.serverBudgetBlockedUntil,reason:this.serverBudgetReason}}));
   }
-  forceServerRetry():void{this.serverBudgetBlockedUntil=0;this.serverBudgetReason='';this.transportUnavailableUntil=0;if(this.serverBudgetWake)clearTimeout(this.serverBudgetWake);this.serverBudgetWake=undefined;try{localStorage.removeItem('eco.serverBudgetBlock.v1');}catch{}this.usingOfflineSnapshot=false;}
-  forceTransportRetry():void{this.transportUnavailableUntil=0;}
-  private markTransportUnavailable():void{this.transportUnavailableUntil=Date.now()+30000;if(typeof window!=='undefined'&&typeof CustomEvent!=='undefined')window.dispatchEvent(new CustomEvent('eco:transport-degraded',{detail:{until:this.transportUnavailableUntil}}));}
+  forceServerRetry():void{this.serverBudgetBlockedUntil=0;this.serverBudgetReason='';this.transportUnavailableUntil=0;if(this.serverBudgetWake)clearTimeout(this.serverBudgetWake);this.serverBudgetWake=undefined;if(this.transportWake)clearTimeout(this.transportWake);this.transportWake=undefined;try{localStorage.removeItem('eco.serverBudgetBlock.v1');}catch{}this.usingOfflineSnapshot=false;}
+  forceTransportRetry():void{this.transportUnavailableUntil=0;if(this.transportWake)clearTimeout(this.transportWake);this.transportWake=undefined;}
+  private markTransportUnavailable():void{
+    // One failed fetch must not strand an otherwise-online phone for 30 s.
+    // The wake timer performs NO network request: it only re-opens the gate so
+    // the next real user/outbox/live event can retry.
+    this.transportUnavailableUntil=Date.now()+7000;
+    if(this.transportWake)clearTimeout(this.transportWake);
+    this.transportWake=setTimeout(()=>{
+      this.transportWake=undefined;
+      if(this.transportUnavailableUntil>Date.now())return;
+      this.transportUnavailableUntil=0;
+      if(typeof window!=='undefined'&&typeof CustomEvent!=='undefined')window.dispatchEvent(new CustomEvent('eco:transport-retry-ready'));
+    },7200);
+    if(typeof window!=='undefined'&&typeof CustomEvent!=='undefined')window.dispatchEvent(new CustomEvent('eco:transport-degraded',{detail:{until:this.transportUnavailableUntil}}));
+  }
   serverBudgetState():{blocked:boolean;until:number;reason:string}{return{blocked:this.serverBudgetBlocked(),until:this.serverBudgetBlockedUntil,reason:this.serverBudgetReason};}
   transportState():{degraded:boolean;until:number}{return{degraded:this.transportUnavailableUntil>Date.now(),until:this.transportUnavailableUntil};}
   private offlineReadAllowed(path:string):boolean{
@@ -321,7 +335,9 @@ export class ConnectedApplication {
     // navigator.onLine can be true on a hotspot with no Internet. Bound actual
     // server attempts; after one failure a short local circuit breaker makes
     // subsequent offline-capable actions immediate without periodic probing.
-    const formUpload=typeof FormData!=='undefined'&&init.body instanceof FormData,timeoutMs=formUpload?30000:6500;
+    const formUpload=typeof FormData!=='undefined'&&init.body instanceof FormData,
+      eventCritical=/\/outbox\/apply$|\/financial-cells$|\/loans\/[^/]+\/(?:repay|disburse)$/.test(path),
+      timeoutMs=formUpload?30000:eventCritical?4200:6500;
     const abort=typeof AbortController==='function'?new AbortController():null;
     let requestTimer:ReturnType<typeof setTimeout>|undefined;
     try{
