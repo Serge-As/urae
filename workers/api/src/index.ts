@@ -2585,7 +2585,7 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
       if(repaymentRubricId&&meetingId){
         const eventId='sheet_loan_event_'+entry.id,existing=await repo.getWorkspaceRecord(ctx.tenantId,eventId);
         if(!existing)await repo.saveWorkspaceRecord({id:eventId,tenantId:ctx.tenantId,groupId:loanRepay[1]!,moduleId:'FINANCE.SHEET_EVENT',title:'Remboursement prêt',summary:'Projection de feuille liée à une écriture canonique de remboursement.',status:'DONE',tags:['sheet-event','loan-repayment','ledger:'+entry.id],data:{membershipId:String(loan.data.borrowerMembershipId??''),meetingId,rubricId:repaymentRubricId,loanId:loan.id,ledgerEntryId:entry.id,principalPaid:allocation.principalPaid,interestPaid:allocation.interestPaid,amount:allocation.paymentAmount,direction:'IN'},createdBy:ctx.actorId,createdAt:entry.createdAt,updatedAt:entry.createdAt});
-        await publishLive(loanRepay[1]!,'MEETING_UPDATE','loan-repayment-live:'+entry.id,{meetingId,kind:'FINANCIAL_CELL',operationType:'LOAN_REPAYMENT',membershipId:String(loan.data.borrowerMembershipId??''),rubricId:repaymentRubricId,previousAmount:0,newAmount:allocation.paymentAmount,meetingClosed:false,actorId:ctx.actorId,actorName:await actorLabel()});
+        try{await publishLive(loanRepay[1]!,'MEETING_UPDATE','loan-repayment-live:'+entry.id,{meetingId,kind:'FINANCIAL_CELL',operationType:'LOAN_REPAYMENT',membershipId:String(loan.data.borrowerMembershipId??''),rubricId:repaymentRubricId,previousAmount:0,newAmount:allocation.paymentAmount,meetingClosed:repaymentMeeting?.status==='closed',actorId:ctx.actorId,actorName:await actorLabel()});}catch(error){console.info('Loan repayment Live push deferred',error);}
       }
       return json({entry,allocation,loan:updatedLoan},201,cors);
     }
@@ -2729,6 +2729,7 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
 
         if(nature==='OUTFLOW'){
           const expense=await new ExpenseService(repo,kernel,ledger).create(groupId,{amount,label:String(p.rubricName??rubric.name??'Dépense de séance'),scope:'SHEET',meetingId,membershipId,rubricId,note:String(p.reason??'Saisie financière hors ligne puis synchronisée'),idempotencyKey:item.idempotencyKey});
+          try{await publishLive(groupId,'MEETING_UPDATE','sheet-outflow-live:'+String(expense?.ledgerEntryId??item.idempotencyKey),{meetingId,kind:'FINANCIAL_CELL',operationType:'SHEET_OUTFLOW',membershipId,rubricId,previousAmount:0,newAmount:amount,meetingClosed:meeting.status==='closed',actorId:ctx.actorId,actorName:await actorLabel()});}catch(error){console.info('Outbox expense Live push deferred',error);}
           await markApplied();return json({accepted:true,stored:true,expense},200,cors);
         }
 
@@ -2779,8 +2780,12 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
             await repo.saveWorkspaceRecord({id:periodId,tenantId:ctx.tenantId,groupId,moduleId:'FINANCE.LOAN_PERIOD',title:'Période de prêt',summary:'Évolution du prêt synchronisée depuis une saisie financière hors ligne.',status:'DONE',tags:['loan-period','loan:'+loan.id,'meeting:'+meetingId,'offline-replay'],data:{loanId:loan.id,membershipId,meetingId,principalBefore:Number(oldPeriod?.data.principalBefore??outstanding),interestOpening:Number(oldPeriod?.data.interestOpening??unpaidInterest),interestNew:previousInterestNew+periodInterest,paymentAmount:previousPayment+paymentAmount,principalPaid:previousPrincipalPaid+principalPaid,interestPaid:previousInterestPaid+interestPaid,principalAfter:remainingPrincipal,interestAfter:unpaidInterestAfter,totalDebtAfter,nextInterestProjected:nextInterest,nextTotalDueProjected:totalDebtAfter+nextInterest,priority,rateBasisPointsPerPeriod,policyRevisionId:String(effectivePolicy.policyRevisionId??'')},createdBy:oldPeriod?.createdBy??ctx.actorId,createdAt:oldPeriod?.createdAt??stamp,updatedAt:stamp});
           }
           if(entry){
-            const eventId='sheet_loan_event_'+entry.id,existing=await repo.getWorkspaceRecord(ctx.tenantId,eventId);
-            if(!existing)await repo.saveWorkspaceRecord({id:eventId,tenantId:ctx.tenantId,groupId,moduleId:'FINANCE.SHEET_EVENT',title:'Remboursement prêt',summary:'Projection de feuille liée à une écriture canonique de remboursement synchronisée depuis l’outbox.',status:'DONE',tags:['sheet-event','loan-repayment','ledger:'+entry.id,'offline-replay'],data:{membershipId,meetingId,rubricId,loanId:loan.id,ledgerEntryId:entry.id,principalPaid,interestPaid,amount:principalPaid+interestPaid,direction:'IN'},createdBy:ctx.actorId,createdAt:entry.createdAt,updatedAt:entry.createdAt});
+            const paymentAmount=principalPaid+interestPaid,eventId='sheet_loan_event_'+entry.id,existing=await repo.getWorkspaceRecord(ctx.tenantId,eventId);
+            if(!existing)await repo.saveWorkspaceRecord({id:eventId,tenantId:ctx.tenantId,groupId,moduleId:'FINANCE.SHEET_EVENT',title:'Remboursement prêt',summary:'Projection de feuille liée à une écriture canonique de remboursement synchronisée depuis l’outbox.',status:'DONE',tags:['sheet-event','loan-repayment','ledger:'+entry.id,'offline-replay'],data:{membershipId,meetingId,rubricId,loanId:loan.id,ledgerEntryId:entry.id,principalPaid,interestPaid,amount:paymentAmount,direction:'IN'},createdBy:ctx.actorId,createdAt:entry.createdAt,updatedAt:entry.createdAt});
+            // Outbox replay is a real canonical commit too. Push the exact cell
+            // immediately so other connected accounts do not wait for F5 or a
+            // D1 snapshot poll. Live failure never rolls back the repayment.
+            try{await publishLive(groupId,'MEETING_UPDATE','loan-repayment-live:'+entry.id,{meetingId,kind:'FINANCIAL_CELL',operationType:'LOAN_REPAYMENT',membershipId,rubricId,previousAmount:0,newAmount:paymentAmount,meetingClosed:replayMeeting?.status==='closed',actorId:ctx.actorId,actorName:await actorLabel()});}catch(error){console.info('Outbox repayment Live push deferred',error);}
           }
           await markApplied();return json({accepted:true,stored:true,loan,entry},200,cors);
         }
