@@ -512,7 +512,9 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
       const legacyOpenAll=scope==='NEW_AND_ALL_OPEN_LOANS'&&!Array.isArray(revision.affectedLoanIds)&&!closedBeforeEffect;
       const applies=!closedBeforeEffect&&(createdAfter||(scope==='NEW_AND_ALL_OPEN_LOANS'&&(affected||legacyOpenAll))||(scope==='NEW_AND_SELECTED_OPEN_LOANS'&&selected));
       if(!applies)continue;
-      Object.assign(result,loanPolicySnapshot(revision.after),{policyRevisionId:String(revision.id??''),policyRevisionEffectiveAt:String(revision.effectiveAt??'')});
+      const next=loanPolicySnapshot(revision.after),disbursedAt=Date.parse(String(loan?.data?.disbursedAt??''))||0;
+      if(disbursedAt&&disbursedAt<effectiveMs&&next.interestTiming!=='NEXT_SESSION_DUE')next.interestTiming=result.interestTiming;
+      Object.assign(result,next,{policyRevisionId:String(revision.id??''),policyRevisionEffectiveAt:String(revision.effectiveAt??'')});
     }
     return result;
   };
