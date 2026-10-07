@@ -884,3 +884,155 @@ body.ui-mode-senior .panel{padding:20px}
 body.ui-mode-senior label{font-size:15px}
 body.ui-mode-senior .loan-policy-change-grid{gap:14px}
 body.ui-mode-senior .loan-simulation-summary strong{font-size:21px}
+
+
+/* Eco whole-app visual system — 2026-10-07: polish without moving business surfaces. */
+/* Preserve the familiar Eco palette while making hierarchy, density and
+   affordances consistent across every existing view. */
+:root{
+  --eco-green-950:#103529;--eco-green-800:#17543f;--eco-green-700:#1f6b4f;
+  --eco-green-600:#287b5d;--eco-green-100:#e8f3ed;--eco-green-050:#f4f9f6;
+  --eco-cream:#fffdf8;--eco-warm:#f6f2ea;--eco-gold-100:#fff4dd;
+  --eco-gold-600:#9b6918;--eco-rose-100:#f8edf1;--eco-line:#d8e2db;
+  --eco-shadow-sm:0 2px 8px rgba(20,55,42,.045);
+  --eco-shadow-md:0 8px 24px rgba(20,55,42,.07);
+}
+body{background:linear-gradient(180deg,#f7f4ed 0%,#f4f7f4 46%,#f6f2ed 100%)}
+/* Header remains where it is; only density and hierarchy change. */
+.topbar{
+  border-bottom-color:#dbe4de;background:rgba(255,253,249,.96);
+  box-shadow:0 3px 16px rgba(17,52,39,.055)
+}
+.brand{gap:10px}.brand .logo{
+  border-radius:13px;background:linear-gradient(145deg,#237b59,#11412f);
+  box-shadow:0 5px 14px rgba(22,91,66,.2)
+}
+.brand strong{color:#102e24;letter-spacing:-.015em}
+.version-badge{background:#f7eaf0;color:#81445e}
+.top-context select,.top-search input{border-color:#d4dfd7;background:#fff}
+.top-actions{gap:6px}
+/* Navigation keeps the current information architecture. */
+.side-nav{background:linear-gradient(180deg,#f2efe8,#eef4f0 60%,#f4eff1)}
+.nav-caption{color:#777f79}
+.nav-btn{min-height:44px;padding:8px 10px;border-radius:11px;color:#2b4138}
+.nav-btn span{background:rgba(255,255,255,.72)}
+.nav-btn:hover{background:rgba(255,255,255,.78)}
+.nav-btn.active{
+  color:#14573e;background:linear-gradient(135deg,#fff,#eef8f2);
+  outline:1px solid #d5e6dc;box-shadow:0 4px 13px rgba(18,65,47,.065)
+}
+/* Pages and panels: less empty perimeter, stronger content hierarchy. */
+.content{color:#17251f}
+.page-head{align-items:center;margin-bottom:14px}
+.page-head .eyebrow{font-size:10.5px;letter-spacing:.11em}
+.page-head h1{color:#122c23}
+.page-head p{line-height:1.42}
+.panel{
+  border-color:#dbe4de;background:rgba(255,254,250,.97);
+  box-shadow:var(--eco-shadow-sm);margin-bottom:13px
+}
+.panel:hover{border-color:#d2dfd6}
+.panel-head{margin-bottom:9px}
+.panel-head h2{color:#15372a;letter-spacing:-.015em}
+.panel-head p{line-height:1.38}
+.section-kicker h2,.section-kicker h3{color:#15372a}
+/* Forms become easier to scan without changing field order or semantics. */
+.form-grid{column-gap:11px;row-gap:9px}
+.form-grid h3{grid-column:1/-1;margin:3px 0 0;color:#18432f}
+label{color:#2b4138;font-weight:700}
+input,select,textarea{border-color:#d6dfd9;border-radius:10px;background:#fff;min-height:44px}
+input::placeholder,textarea::placeholder{color:#929b95}
+input:focus,select:focus,textarea:focus{
+  border-color:#348866;box-shadow:0 0 0 3px rgba(47,132,98,.11)
+}
+.check{min-height:44px}
+.actions{align-items:center}
+/* Buttons share a restrained hierarchy throughout the app. */
+button{border-radius:10px}
+.primary{background:linear-gradient(180deg,#247957,#175f45);box-shadow:0 4px 12px rgba(25,92,67,.15)}
+.secondary,.ghost,.link-btn{background:#fff;border-color:#d4dfd7;color:#17392c}
+.link-btn{box-shadow:none}
+.danger-action{background:#fff7f7}
+/* Lists/receipts should read as rows, not oversized cards. */
+.stack{gap:7px}
+.item,.meeting-row,.receipt{
+  border-color:#dce4df;border-radius:11px;background:#fff;padding:10px 11px;
+  box-shadow:0 1px 3px rgba(20,54,41,.02)
+}
+.item p{margin:3px 0}
+.receipt{gap:7px}
+/* Metrics retain all information but consume less vertical space. */
+.metrics{gap:8px;margin:10px 0}
+.metric{padding:11px 12px;border-radius:12px}
+.metric strong{font-size:21px;line-height:1.06}
+.metric span{font-size:11.5px;line-height:1.25}
+/* Tabs preserve positions and labels while feeling like one control. */
+.view-switch{gap:2px;border-radius:10px}
+.view-switch button{padding:5px 9px}
+.view-switch button.active{color:#135a3e;box-shadow:0 1px 5px rgba(18,57,43,.08)}
+/* Dialogs: title/actions remain visible and financial tables get the width. */
+dialog{
+  border-color:#cfdcd3;background:#fffdf9;box-shadow:0 24px 80px rgba(9,39,28,.26)
+}
+dialog::backdrop{background:rgba(13,42,32,.58)}
+dialog>h2:first-child{margin-top:0;color:#133a2a;letter-spacing:-.02em}
+dialog .matrix-wrap{margin-top:7px}
+/* Generic tables: numeric content first, headers compact, rows traceable. */
+.matrix-wrap{border-radius:10px;background:#fff;box-shadow:var(--eco-shadow-sm)}
+.meeting-matrix{font-variant-numeric:tabular-nums}
+.meeting-matrix thead th{font-size:11.5px;line-height:1.2}
+.meeting-matrix tbody th{color:#234237}
+.meeting-matrix td{color:#17271f}
+.meeting-matrix td:not(:has(button)):not(:has(input)):not(:has(select)){font-variant-numeric:tabular-nums}
+.table-total-row>*{font-weight:900}
+/* Small badges are for exceptions and grouping, not repeated decoration. */
+.pill,.truth-chip,.module-status{box-shadow:none}
+.pill{min-height:30px;padding:5px 9px}
+.truth-chip{padding:3px 7px}
+/* Notifications use vertical space only when there is something actionable. */
+.notification-center-item{padding:9px 10px}
+.notification-center-item.is-read{opacity:.7}
+.financial-alert-bar{backdrop-filter:blur(10px)}
+/* Search/result surfaces and cards remain compact. */
+.search-popover{border-color:#d6e1d9;box-shadow:var(--eco-shadow-md)}
+.search-hit{min-height:40px;padding:8px 9px}
+.quick-grid,.hub-grid,.module-catalog{gap:9px}
+.quick,.hub-card,.module-card{border-radius:12px;padding:11px}
+.quick{min-height:80px}.hub-card{min-height:112px}.module-card{min-height:100px}
+/* Mobile: keep the same tables and controls; compress chrome instead of
+   hiding business data. */
+@media(max-width:860px){
+  .topbar{gap:8px;padding:8px 10px}
+  .brand .logo{width:40px;height:40px}
+  .content{padding:12px 9px 118px}
+  .page-head{margin-bottom:9px}
+  .page-head p{font-size:12px}
+  .panel{padding:10px;margin-bottom:9px}
+  .panel-head{margin-bottom:7px}
+  .panel-head h2{font-size:17px}
+  .form-grid{gap:8px}
+  input,select,textarea{min-height:44px;padding:8px 9px}
+  .metrics{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .metric{padding:9px}.metric strong{font-size:18px}
+  .side-nav{height:82px}
+  .nav-btn{min-height:65px}
+}
+@media(max-width:560px){
+  .content{padding-left:7px;padding-right:7px}
+  .panel{border-radius:12px;padding:8px}
+  .page-head h1{font-size:24px}
+  .page-head .page-meta{margin-top:7px}
+  .page-head .primary{width:100%}
+  .metrics{gap:5px}
+  .metric{padding:8px;border-radius:9px}
+  .metric strong{font-size:17px}
+  .metric span{font-size:10.5px}
+  .view-switch{width:100%;overflow-x:auto;justify-content:flex-start}
+  .view-switch button{flex:0 0 auto;white-space:nowrap}
+}
+/* Senior and assisted modes intentionally remain larger than the compact
+   default; cosmetic density must never defeat accessibility. */
+body.ui-mode-senior .panel,body.ui-mode-assisted .panel{padding:16px}
+body.ui-mode-senior .item,body.ui-mode-assisted .item{padding:13px}
+body.ui-mode-senior label,body.ui-mode-assisted label{font-size:15px}
+body.ui-mode-senior .meeting-matrix thead th,body.ui-mode-assisted .meeting-matrix thead th{font-size:13px}
