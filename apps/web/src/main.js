@@ -411,14 +411,16 @@ const renderConnectivity = () => {
       :`● ${online ? tx('En ligne','Online') : tx('Hors ligne','Offline')}`;
     e.title=paused?tx(`Accès serveur limité. Reprise ciblée après ${new Date(Number(budget?.until??0)).toLocaleString('fr-FR')}. Les validations serveur restent en attente.`,`Server limited. Retry after ${new Date(Number(budget?.until??0)).toLocaleString('en-US')}. Server confirmations pending.`)
       :degraded?tx('Le réseau local reste utilisable. Eco-System privilégie les données de cet appareil et Eco Relay sans sonder le serveur en boucle.','Local networking remains available. Eco-System prioritizes this device and Eco Relay without polling the server.'):'';
-    e.className=`pill ${online&&!paused&&!degraded?'online':'offline'}`;app.setConnectivity(!online?'offline':paused||degraded?'degraded':'online');
+    e.className=`pill ${!online||paused?'offline':degraded?'degraded':'online'}`;app.setConnectivity(!online?'offline':paused||degraded?'degraded':'online');
 };
 let lastOfflineSnapshotNotice=0;
 window.addEventListener('eco:offline-snapshot-used',event=>{
     const detail=event instanceof CustomEvent?event.detail:undefined,stamp=detail?.updatedAt?new Date(detail.updatedAt):undefined,e=$('#connectivity');
     const when=stamp&&!Number.isNaN(stamp.getTime())?stamp.toLocaleString():tx('dernière synchro connue','last known sync');
-    e.textContent=tx(`● Hors ligne · données du ${when}`,`● Offline · data from ${when}`);e.className='pill offline';
-    const now=Date.now();if(now-lastOfflineSnapshotNotice>8000){toast(tx('Mode hors ligne : affichage de la dernière copie synchronisée. Les écritures restent en attente de confirmation serveur.','Offline mode: showing the last synchronized copy. Writes remain pending server confirmation.'));lastOfflineSnapshotNotice=now;}
+    const browserOnline=navigator.onLine!==false;
+    e.textContent=browserOnline?tx(`● Local actif · dernière copie du ${when}`,`● Local active · last copy from ${when}`):tx(`● Hors ligne · données du ${when}`,`● Offline · data from ${when}`);
+    e.className=browserOnline?'pill degraded':'pill offline';
+    const now=Date.now();if(now-lastOfflineSnapshotNotice>8000){toast(browserOnline?tx('Serveur momentanément indisponible : Eco-System reste actif localement et reprendra la synchronisation sur le prochain événement réseau ou financier.','Server temporarily unavailable: Eco-System stays active locally and will resume sync on the next network or financial event.'):tx('Mode hors ligne : affichage de la dernière copie synchronisée. Les écritures restent en attente de confirmation serveur.','Offline mode: showing the last synchronized copy. Writes remain pending server confirmation.'));lastOfflineSnapshotNotice=now;}
 });
 const renderUniverse = async () => {
     const u = await app.universe();
