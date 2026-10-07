@@ -64,6 +64,32 @@ export class FoundationApplication {
 export interface ConnectedApplicationOptions { baseUrl?: string; actorId?: string; tenantId?: string; displayName?: string; locale?: string; }
 export interface SessionAccount {id:string;tenantId:string;username:string;displayName:string;locale:string}
 
+const clientLoanPolicySnapshot=(policy:any)=>({
+  rateBasisPointsPerPeriod:Math.max(0,Number(policy?.rateBasisPointsPerPeriod??0)||0),
+  paymentPriority:['INTEREST_FIRST','EXPLICIT_ALLOCATION'].includes(String(policy?.paymentPriority))?String(policy.paymentPriority):'CAPITAL_FIRST',
+  interestTiming:['UPFRONT_DEDUCTED','UPFRONT_REQUIRED'].includes(String(policy?.interestTiming))?String(policy.interestTiming):'NEXT_SESSION_DUE',
+  fundingMode:String(policy?.fundingMode)==='SAVINGS_REPAYMENTS_ONLY'?'SAVINGS_REPAYMENTS_ONLY':'AVAILABLE_GROUP_CASH',
+  carryForwardUnusedFunds:policy?.carryForwardUnusedFunds!==false
+});
+const resolveClientLoanPolicy=(loan:any,policy:any,operationAtMs=Date.now())=>{
+  const history=(Array.isArray(policy?.revisions)?policy.revisions:[]).filter((x:any)=>x&&typeof x==='object').slice().sort((a:any,b:any)=>(Date.parse(String(a.effectiveAt??''))||0)-(Date.parse(String(b.effectiveAt??''))||0)||String(a.id??'').localeCompare(String(b.id??'')));
+  const fallback=history.length?clientLoanPolicySnapshot(history[0]?.before):clientLoanPolicySnapshot(policy),created=Date.parse(String(loan?.createdAt??loan?.data?.createdAt??loan?.updatedAt??''))||operationAtMs;
+  const out:any=loan?.id?{...fallback,
+    rateBasisPointsPerPeriod:Number(loan?.data?.rateBasisPointsPerPeriod??fallback.rateBasisPointsPerPeriod),
+    paymentPriority:String(loan?.data?.paymentPriority??fallback.paymentPriority),
+    interestTiming:String(loan?.data?.interestTiming??fallback.interestTiming),
+    policyRevisionId:String(loan?.data?.policyRevisionId??''),
+    policyRevisionEffectiveAt:String(loan?.data?.policyRevisionEffectiveAt??'')
+  }:{...fallback,policyRevisionId:'',policyRevisionEffectiveAt:''};
+  for(const revision of history){
+    const effective=Date.parse(String(revision.effectiveAt??''));if(!Number.isFinite(effective)||effective>operationAtMs)continue;
+    const scope=String(revision.scope??'NEW_LOANS_ONLY'),createdAfter=created>=effective,selected=Array.isArray(revision.selectedLoanIds)&&revision.selectedLoanIds.map(String).includes(String(loan?.id??''));
+    if(!(scope==='NEW_AND_ALL_OPEN_LOANS'||(scope==='NEW_AND_SELECTED_OPEN_LOANS'&&(createdAfter||selected))||(scope==='NEW_LOANS_ONLY'&&createdAfter)))continue;
+    Object.assign(out,clientLoanPolicySnapshot(revision.after),{policyRevisionId:String(revision.id??''),policyRevisionEffectiveAt:String(revision.effectiveAt??'')});
+  }
+  return out;
+};
+
 export class ConnectedApplication {
   private readonly kernel = new PlatformKernel();
   private readonly outbox = new Outbox();
@@ -889,14 +915,14 @@ export class ConnectedApplication {
     if(nature==='LOAN'){
       const canWrite=await this.canAttemptCriticalWrite();
       const policy=rubric.policies?.loan;if(!policy?.allowed)throw Error('LOAN_POLICY_REQUIRED');
-      const special=/special/.test(normalized)?policy.specialLoans?.[0]:undefined;
-      const rawRate=special?.rateBasisPointsPerPeriod??policy.rateBasisPointsPerPeriod;if(rawRate===undefined||rawRate===null)throw Error('LOAN_RATE_REQUIRED');
-      const rateBasisPointsPerPeriod=Number(rawRate),paymentPriority=special?.paymentPriority??policy.paymentPriority??'CAPITAL_FIRST',interestTiming=special?.interestTiming??policy.interestTiming??'NEXT_SESSION_DUE';
+      const special=/special/.test(normalized)?policy.specialLoans?.[0]:undefined,effectivePolicy=resolveClientLoanPolicy(null,policy,Date.now());
+      const rawRate=special?.rateBasisPointsPerPeriod??effectivePolicy.rateBasisPointsPerPeriod;if(rawRate===undefined||rawRate===null)throw Error('LOAN_RATE_REQUIRED');
+      const rateBasisPointsPerPeriod=Number(rawRate),paymentPriority=special?.paymentPriority??effectivePolicy.paymentPriority??'CAPITAL_FIRST',interestTiming=special?.interestTiming??effectivePolicy.interestTiming??'NEXT_SESSION_DUE';
       const periods=Number(special?.maxDurationPeriods??policy.overdue?.maxDurationPeriods??6),loanClass=special?'SPECIAL':'STANDARD';
-      const replayMeta={rateBasisPointsPerPeriod,paymentPriority,interestTiming,periods,loanClass};
+      const replayMeta={rateBasisPointsPerPeriod,paymentPriority,interestTiming,periods,loanClass,policyRevisionId:effectivePolicy.policyRevisionId,policyRevisionEffectiveAt:effectivePolicy.policyRevisionEffectiveAt};
       if(!canWrite)return queue(replayMeta);
       try{
-        let loan=await this.createCompletion('LOAN',{title:String(rubric.name??'Prêt'),data:{principal:input.amount,currency:'XAF',borrowerMembershipId:input.membershipId,rubricId:rubric.id,rateBasisPointsPerPeriod,paymentPriority,interestTiming,noInterestOnInterest:true,periods,outstandingPrincipal:0,unpaidInterest:0,loanClass,sourceSurface:'TWO_SHEETS',sheetEntryKey:key}});
+        let loan=await this.createCompletion('LOAN',{title:String(rubric.name??'Prêt'),data:{principal:input.amount,currency:'XAF',borrowerMembershipId:input.membershipId,rubricId:rubric.id,rateBasisPointsPerPeriod,paymentPriority,interestTiming,policyRevisionId:effectivePolicy.policyRevisionId,policyRevisionEffectiveAt:effectivePolicy.policyRevisionEffectiveAt,noInterestOnInterest:true,periods,outstandingPrincipal:0,unpaidInterest:0,loanClass,sourceSurface:'TWO_SHEETS',sheetEntryKey:key}});
         loan=await this.transitionCompletion(loan.id,'SUBMITTED',Number(loan.data?.completionVersion??1),{submittedFromSheet:true,meetingId:input.meetingId});
         loan=await this.transitionCompletion(loan.id,'APPROVED',Number(loan.data?.completionVersion??2),{approvedAt:new Date().toISOString(),approvedFromSheet:true});
         return await this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/loans/${encodeURIComponent(loan.id)}/disburse`,{method:'POST',body:JSON.stringify({amount:input.amount,expectedVersion:Number(loan.data?.completionVersion??3),meetingId:input.meetingId,rubricId:rubric.id,idempotencyKey:key+':disburse'})});
@@ -913,7 +939,7 @@ export class ConnectedApplication {
     const component=explicitInterest?'INTEREST':explicitPrincipal?'PRINCIPAL':'AUTO';
     const allRubrics=await this.listRubrics().catch(()=>[]);
     const officialLoanRubric=allRubrics.find((r:any)=>String(r.facets?.custom?.systemKey??'').toUpperCase()==='LOAN'||/^(pret|prets|emprunt|emprunts|loan|loans)$/.test(String(r.name??'').normalize('NFKD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim()));
-    const policyPriority=String(officialLoanRubric?.policies?.loan?.paymentPriority??'CAPITAL_FIRST')==='INTEREST_FIRST'?'INTEREST_FIRST':'CAPITAL_FIRST';
+    const defaultPolicy=resolveClientLoanPolicy(null,officialLoanRubric?.policies?.loan,Date.now()),policyPriority=String(defaultPolicy.paymentPriority??'CAPITAL_FIRST')==='INTEREST_FIRST'?'INTEREST_FIRST':String(defaultPolicy.paymentPriority)==='EXPLICIT_ALLOCATION'?'EXPLICIT_ALLOCATION':'CAPITAL_FIRST';
     // Write-ahead, including online. Losing a response after a canonical commit
     // must never lose its idempotency key or force the user to pay twice.
     const repaymentIntent=await queue({repaymentComponent:component,paymentPriority:policyPriority});
@@ -923,7 +949,8 @@ export class ConnectedApplication {
       const active=(await this.listCompletion('LOAN')).filter(l=>String(l.data?.borrowerMembershipId??'')===input.membershipId&&['DISBURSED','REPAYING'].includes(String(l.data?.completionState??''))&&(Number(l.data?.outstandingPrincipal??0)>0||Number(l.data?.unpaidInterest??0)>0));
       const loan=input.loanId?active.find(x=>x.id===input.loanId):active.length===1?active[0]:undefined;
       if(!loan)throw Error(active.length>1?'MULTIPLE_LOANS':'LOAN_REQUIRED');
-      const priority=String(officialLoanRubric?.policies?.loan?.paymentPriority??loan.data?.paymentPriority??policyPriority)==='INTEREST_FIRST'?'INTEREST_FIRST':'CAPITAL_FIRST';
+      const effectivePolicy=resolveClientLoanPolicy(loan,officialLoanRubric?.policies?.loan,Date.now()),rawPriority=String(effectivePolicy.paymentPriority??loan.data?.paymentPriority??policyPriority),priority=rawPriority==='INTEREST_FIRST'?'INTEREST_FIRST':rawPriority==='EXPLICIT_ALLOCATION'?'EXPLICIT_ALLOCATION':'CAPITAL_FIRST';
+      if(component==='AUTO'&&priority==='EXPLICIT_ALLOCATION')throw Error('LOAN_EXPLICIT_ALLOCATION_REQUIRED');
       const allocation=component==='AUTO'
         ?{paymentAmount:input.amount,priority}
         :{principalAmount:component==='PRINCIPAL'?input.amount:0,interestAmount:component==='INTEREST'?input.amount:0,priority};
