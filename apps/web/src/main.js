@@ -491,8 +491,8 @@ const renderInbox = async () => {
         }
     }
 };
-const renderMembers = async () => {
-    members = (await app.listMembers()).filter(x=>x.status!=='left');
+const renderMembers = async providedMembers => {
+    members = (providedMembers??await app.listMembers()).filter(x=>x.status!=='left');
     const list = $('#memberList'),select = $('#contributionMember'),manageSelect=document.querySelector('#memberManageSelect');
     list.replaceChildren();select.replaceChildren();manageSelect?.replaceChildren();
     const sortDate=m=>Date.parse(m.historicalJoinedAt??m.joinedAt??'')||Number.MAX_SAFE_INTEGER;
@@ -558,8 +558,8 @@ document.querySelector('#memberTrashBtn')?.addEventListener('click',()=>void(asy
     try{await app.moveToTrash('MEMBER',m.id);await renderMembers();await renderTrash();toast(tx('Membre placé dans la corbeille.','Member moved to trash.'));}catch(e){fail(e);}
 })());
 
-const renderMeetings = async () => {
-    meetings = (await app.listMeetings()).filter(x=>x.status!=='cancelled');
+const renderMeetings = async providedMeetings => {
+    meetings = (providedMeetings??await app.listMeetings()).filter(x=>x.status!=='cancelled');
     const root = $('#meetingList');
     root.replaceChildren();
     const select = $('#contributionMeeting');
@@ -1334,18 +1334,18 @@ window.addEventListener('eco:restore-financial-sheet',event=>{
       requestAnimationFrame(()=>{const cell=document.querySelector(`.matrix-cell[data-membership-id="${CSS.escape(detail.membershipId)}"][data-rubric-id="${CSS.escape(detail.rubricId)}"][data-meeting-id="${CSS.escape(matrixMeetingId)}"]`);if(cell){cell.classList.add('pending-consensus');cell.scrollIntoView({behavior:'smooth',block:'center',inline:'center'});cell.focus({preventScroll:true});}});
     }
 });
-const renderLivingRules = async () => {
+const renderLivingRules = async providedRubrics => {
     if (!app.activeGroup())
         return;
     try {
-        groupPolicy = await app.groupOperatingPolicy();
+        if(!providedRubrics)groupPolicy = await app.groupOperatingPolicy();
         const late = groupPolicy.latePosting;
         $('#lateMode').value = late.mode;
         $('#lateMinApprovals').value = String(late.approval.minimumApprovals);
         $('#lateMaxHours').value = late.maxHoursAfterClose === undefined ? '' : String(late.maxHoursAfterClose);
     }
     catch { }
-    rubrics = await app.listRubrics();
+    rubrics = providedRubrics??await app.listRubrics();
     const root = $('#rubricList');
     root.replaceChildren();
     const rselect = $('#contributionRubric');
@@ -2493,7 +2493,19 @@ window.addEventListener('online',()=>{networkRecoveryNeeded=true;void resumeOnli
 window.addEventListener('offline',()=>{networkRecoveryNeeded=true;offlineConfrontationDeferred=false;persistNavState(captureNavState());renderConnectivity();});
 window.addEventListener('pageshow',eventDrivenConnectivityRecovery);
 window.addEventListener('eco:server-budget-blocked',renderConnectivity);
-window.addEventListener('eco:manager-relay-updated',()=>{void loadFinancialProjectionState().then(()=>{for(const cell of document.querySelectorAll('.matrix-cell-entry')){const m=cell.dataset.membershipId,r=cell.dataset.rubricId,mt=cell.dataset.meetingId;if(m&&r&&mt)patchFinancialDomCell({meetingId:mt,membershipId:m,rubricId:r,amount:exactCellAmount(m,r,mt),preservePending:true});}}).catch(()=>{});});
+window.addEventListener('eco:manager-relay-updated',()=>{void(async()=>{
+    const structure=await app.localRelayGroupStructure?.();if(structure){
+      await renderMembers(structure.members);await renderMeetings(structure.meetings);await renderLivingRules(structure.rubrics);
+    }
+    const relayTargets=await app.relayManagerFinancialTargets?.()??[];
+    financialReviewTargets=new Map();
+    for(const relay of relayTargets){
+      const key=financialCellKey(relay.membershipId,relay.rubricId,relay.meetingId),local=financialPendingTargets.get(key);
+      if(!local)financialPendingTargets.set(key,relay);
+      else if(Number(local.targetAmount)!==Number(relay.targetAmount))financialReviewTargets.set(key,{...relay,localTargetAmount:Number(local.targetAmount),source:'RELAY',businessStatus:'RELAY_REVIEW_REQUIRED'});
+    }
+    renderMeetingMatrix();renderIndividualSheetMatrix();renderAllCanonicalFinancialHosts();
+  })().catch(error=>console.info('Relay local projection refresh deferred',error));});
 window.addEventListener('eco:server-budget-expired',()=>{networkRecoveryNeeded=true;void resumeOnline();});
 window.addEventListener('eco:live-connected',eventDrivenConnectivityRecovery);
 window.addEventListener('focus',eventDrivenConnectivityRecovery);
