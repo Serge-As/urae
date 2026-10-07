@@ -189,18 +189,25 @@ export class ConnectedApplication {
   }
   forceServerRetry():void{this.serverBudgetBlockedUntil=0;this.serverBudgetReason='';this.transportUnavailableUntil=0;if(this.serverBudgetWake)clearTimeout(this.serverBudgetWake);this.serverBudgetWake=undefined;if(this.transportWake)clearTimeout(this.transportWake);this.transportWake=undefined;try{localStorage.removeItem('eco.serverBudgetBlock.v1');}catch{}this.usingOfflineSnapshot=false;}
   forceTransportRetry():void{this.transportUnavailableUntil=0;if(this.transportWake)clearTimeout(this.transportWake);this.transportWake=undefined;}
+  markLiveTransportHealthy():void{
+    // A successfully opened authenticated WebSocket is already proof that the
+    // server is reachable. Do not spend a D1/auth GET merely to leave a stale
+    // offline snapshot state before the next financial write.
+    this.transportUnavailableUntil=0;this.usingOfflineSnapshot=false;
+    if(this.transportWake)clearTimeout(this.transportWake);this.transportWake=undefined;
+  }
   private markTransportUnavailable():void{
     // One failed fetch must not strand an otherwise-online phone for 30 s.
     // The wake timer performs NO network request: it only re-opens the gate so
     // the next real user/outbox/live event can retry.
-    this.transportUnavailableUntil=Date.now()+7000;
+    this.transportUnavailableUntil=Date.now()+3500;
     if(this.transportWake)clearTimeout(this.transportWake);
     this.transportWake=setTimeout(()=>{
       this.transportWake=undefined;
       if(this.transportUnavailableUntil>Date.now())return;
       this.transportUnavailableUntil=0;
       if(typeof window!=='undefined'&&typeof CustomEvent!=='undefined')window.dispatchEvent(new CustomEvent('eco:transport-retry-ready'));
-    },7200);
+    },3650);
     if(typeof window!=='undefined'&&typeof CustomEvent!=='undefined')window.dispatchEvent(new CustomEvent('eco:transport-degraded',{detail:{until:this.transportUnavailableUntil}}));
   }
   serverBudgetState():{blocked:boolean;until:number;reason:string}{return{blocked:this.serverBudgetBlocked(),until:this.serverBudgetBlockedUntil,reason:this.serverBudgetReason};}
@@ -226,28 +233,17 @@ export class ConnectedApplication {
     this.usingOfflineSnapshot=true;
     if(typeof window!=='undefined'&&typeof CustomEvent!=='undefined')window.dispatchEvent(new CustomEvent('eco:offline-snapshot-used',{detail:{path,updatedAt}}));
   }
-  private isOffline():boolean{return this.serverBudgetBlocked()||this.usingOfflineSnapshot||this.transportUnavailableUntil>Date.now()||(typeof navigator!=='undefined'&&navigator.onLine===false);}
+  private isOffline():boolean{return this.serverBudgetBlocked()||(typeof navigator!=='undefined'&&navigator.onLine===false);}
   private async canAttemptCriticalWrite():Promise<boolean>{
     if(this.serverBudgetBlocked())return false;
     if(typeof navigator!=='undefined'&&navigator.onLine===false)return false;
-    if(!this.usingOfflineSnapshot)return true;
-    // A single cached GET must never trap later financial writes in offline mode.
-    // Probe the real authenticated server directly, bypassing read-snapshot fallback.
-    const abort=typeof AbortController==='function'?new AbortController():null;
-    let timer:ReturnType<typeof setTimeout>|undefined;
-    try{
-      // A network check is only triggered by a financial action after an
-      // offline snapshot, never every second. A stalled connection must not
-      // freeze a reimbursement indefinitely (old Android compatible fallback).
-      const probe=fetch(`${this.baseUrl}/api/v1/auth/session`,{method:'GET',headers:this.headers(),signal:abort?.signal});
-      const response=await Promise.race([probe,new Promise<never>((_,reject)=>{
-        timer=setTimeout(()=>{abort?.abort();reject(new Error('NETWORK_UNAVAILABLE'));},4500);
-      })]);
-      if(!response.ok)return false;
-      const body=await response.json() as {authenticated?:boolean;account?:unknown};
-      if(body.authenticated&&body.account){this.usingOfflineSnapshot=false;return true;}
-    }catch{}finally{if(timer)clearTimeout(timer);}
-    return false;
+    // The financial write itself is the event-driven connectivity probe. A
+    // previous cached GET or short transport failure must not force an extra
+    // auth/D1 read before every validation. This also lets a phone recover as
+    // soon as mobile data/Wi-Fi works again.
+    this.transportUnavailableUntil=0;
+    if(this.transportWake)clearTimeout(this.transportWake);this.transportWake=undefined;
+    return true;
   }
   private async cached<T>(path:string):Promise<T|undefined>{
     try{
@@ -337,7 +333,7 @@ export class ConnectedApplication {
     // subsequent offline-capable actions immediate without periodic probing.
     const formUpload=typeof FormData!=='undefined'&&init.body instanceof FormData,
       eventCritical=/\/outbox\/apply$|\/financial-cells$|\/loans\/[^/]+\/(?:repay|disburse)$/.test(path),
-      timeoutMs=formUpload?30000:eventCritical?4200:6500;
+      timeoutMs=formUpload?30000:eventCritical?2800:6500;
     const abort=typeof AbortController==='function'?new AbortController():null;
     let requestTimer:ReturnType<typeof setTimeout>|undefined;
     try{
@@ -1085,7 +1081,7 @@ export class ConnectedApplication {
     const normalized=String(rubric.name??'').normalize('NFKD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
     const systemKey=String(rubric.facets?.custom?.systemKey??'').toUpperCase();
     const nature=kind==='LOAN'||systemKey==='LOAN'||/^prets?$|^loans?$/.test(normalized)?'LOAN'
-      :kind==='REPAYMENT'||/remboursement|repayment/.test(normalized)?'REPAYMENT'
+      :kind==='REPAYMENT'||systemKey==='REPAYMENT'||/remboursement|repayment/.test(normalized)?'REPAYMENT'
       :rubric.facets?.direction==='OUTFLOW'?'OUTFLOW':'CONTRIBUTION';
     if(nature==='CONTRIBUTION')return this.recordCashContribution({membershipId:input.membershipId,meetingId:input.meetingId,rubricId:rubric.id,amount:input.amount,lateReason:input.reason?.trim()||undefined});
 
