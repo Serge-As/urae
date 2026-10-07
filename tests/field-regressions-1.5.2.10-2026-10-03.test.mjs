@@ -61,7 +61,8 @@ test('generic repayment envelope auto-allocates by the current policy',()=>{
 });
 
 test('loan policy, portfolio, open-loan state and debt journey use compact selector/table surfaces',()=>{
-  assert.match(worker,/paymentPriority:String\(rubric\?\.policies\?\.loan\?\.paymentPriority\?\?x\.data\.paymentPriority/);
+  assert.match(worker,/effectivePolicy=resolveLoanPolicyForOperation\(x,rubric\?\.policies\?\.loan/);
+  assert.match(worker,/paymentPriority:String\(effectivePolicy\.paymentPriority\?\?x\.data\.paymentPriority/);
   assert.match(completion,/loan-portfolio-table/);
   assert.match(completion,/loan-open-state-table/);
   assert.match(completion,/Parcours d’une dette/);
