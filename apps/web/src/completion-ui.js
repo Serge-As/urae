@@ -556,6 +556,12 @@ export const mountCompletionUI=({app,notify,showError,getMembers,getMeetings,get
   };
   window.addEventListener('eco:financial-data-changed',scheduleDebtRefresh);
   window.addEventListener('eco:financial-live-update',scheduleDebtRefresh);
+  window.addEventListener('eco:rubric-policy-synced',event=>{
+    const detail=event instanceof CustomEvent?event.detail??{}:{};
+    if(String(detail.groupId??'')!==String(app.activeGroup()??''))return;
+    hydrateLoanPolicy();
+    if(!byId('loanCompletionPanel')?.hidden&&byId('view-finance')?.classList.contains('active'))void renderLoans().catch(showError);
+  });
   window.addEventListener('eco:live-event',event=>{const e=event instanceof CustomEvent?event.detail:undefined,p=e?.payload??{};if(e?.type!=='RULE_UPDATE'||p.kind!=='LOAN_POLICY')return;const rubric=getRubrics().find(r=>String(r.id)===String(p.rubricId));if(rubric){const previous=rubric.policies?.loan??{},history=Array.isArray(previous.revisions)?previous.revisions.slice():[];let revision=null;try{revision=p.revisionJson?JSON.parse(String(p.revisionJson)):null;}catch{}if(revision?.id&&!history.some(x=>String(x.id)===String(revision.id)))history.push(revision);rubric.policies={...(rubric.policies??{}),loan:{...previous,allowed:true,interestBase:'PRINCIPAL_ONLY',noInterestOnInterest:true,rateBasisPointsPerPeriod:Number(p.rateBasisPointsPerPeriod??previous.rateBasisPointsPerPeriod??0),paymentPriority:String(p.paymentPriority??previous.paymentPriority??'CAPITAL_FIRST'),interestTiming:String(p.interestTiming??previous.interestTiming??'NEXT_SESSION_DUE'),fundingMode:String(p.fundingMode??previous.fundingMode??'AVAILABLE_GROUP_CASH'),carryForwardUnusedFunds:p.carryForwardUnusedFunds!==false,revisions:history}};hydrateLoanPolicy();}if(!byId('loanCompletionPanel')?.hidden&&byId('view-finance')?.classList.contains('active'))void renderLoans().catch(showError);});
 
   const setLocale=()=>{fillCompletionKinds();void refresh().catch(showError);};
