@@ -1,12 +1,12 @@
 {
   "contractVersion": 1,
   "release": {
-    "version": "1.5.2.12-live-sync",
-    "buildId": "eco-system-1.5.2.12-20261007-event-sync-ui",
+    "version": "1.5.2.13-live-sync",
+    "buildId": "eco-system-1.5.2.13-20261007-live-repayment-ui",
     "schemaVersion": "d1-additive-20260923",
-    "policyVersion": "live-finance-policy-20261007-versioned-loan-scope",
-    "pwaCache": "eco-system-v15212-event-sync-ui-20261007",
-    "previousPwaCache": "eco-system-v15211-sovereign-relay-20261007",
+    "policyVersion": "live-finance-policy-20261007-event-push-repayment",
+    "pwaCache": "eco-system-v15213-live-repayment-ui-20261007",
+    "previousPwaCache": "eco-system-v15212-event-sync-ui-20261007",
     "commitShaAuthority": "DEPLOYMENT_WORKFLOW_GITHUB_SHA_AND_PRODUCTION_HEALTH"
   },
   "truthAxes": {
