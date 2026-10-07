@@ -489,3 +489,47 @@ Object.assign(EXTRA_FR_EN,{
   "Simuler un prêt imaginaire": "Simulate a hypothetical loan"
 });
 for(const [fr,en] of Object.entries(EXTRA_FR_EN))canonical.set(fr,en);
+
+
+Object.assign(EXTRA_FR_EN,{
+  "Simulation uniquement : elle ne modifie ni le prêt ni le Ledger.": "Simulation only: it does not modify the loan or the Ledger.",
+  "Simulation uniquement : aucun scénario ne modifie le prêt, la caisse ou le Ledger.": "Simulation only: no scenario modifies the loan, cashbox or Ledger.",
+  "Capital final": "Final principal",
+  "Intérêts dus": "Interest due",
+  "Dette finale": "Final debt",
+  "Capital restant / montant imaginaire": "Outstanding principal / hypothetical amount",
+  "Intérêts déjà dus": "Interest already due",
+  "Nombre de périodes": "Number of periods",
+  "Paiements prévus (séparés par des virgules)": "Planned payments (comma-separated)",
+  "Scénario A · politique effective du prêt": "Scenario A · loan effective policy",
+  "Scénario A": "Scenario A",
+  "Scénario B · alternative": "Scenario B · alternative",
+  "Comparer avec un scénario B": "Compare with a scenario B",
+  "Taux % par période": "Rate % per period",
+  "Priorité": "Priority",
+  "Les intérêts sont calculés sur le capital restant uniquement. Les intérêts déjà dus restent séparés : aucun intérêt sur intérêt.": "Interest is calculated only on outstanding principal. Interest already due remains separate: no interest on interest.",
+  "Calculer / comparer": "Calculate / compare",
+  "Fermer": "Close",
+  "Capital à simuler requis.": "Principal to simulate is required.",
+  "Nombre de périodes invalide.": "Invalid number of periods.",
+  "Les deux scénarios partent du même capital, des mêmes intérêts déjà dus et des mêmes paiements prévus. Seuls le taux et la priorité changent.": "Both scenarios start with the same principal, interest already due and planned payments. Only rate and priority change.",
+  "Vous pouvez modifier librement le taux, la priorité et les paiements pour explorer un scénario.": "You can freely change rate, priority and payments to explore a scenario.",
+  "Scénario A · situation du prêt": "Scenario A · loan position",
+  "Évolution réelle déjà enregistrée": "Actual history already recorded",
+  "Évolution réelle déjà enregistrée (": "Actual history already recorded (",
+  "Période": "Period",
+  "Capital avant": "Principal before",
+  "Intérêt nouveau": "New interest",
+  "Paiement": "Payment",
+  "Capital payé": "Principal paid",
+  "Intérêt payé": "Interest paid",
+  "Capital restant": "Principal remaining",
+  "Dette totale": "Total debt",
+  "Prochain intérêt": "Next interest",
+  "Effet": "Effective date",
+  "Portée": "Scope",
+  "Taux": "Rate",
+  "Prêts ciblés": "Targeted loans",
+  "Historique des versions de politique (": "Policy revision history ("
+});
+for(const [fr,en] of Object.entries(EXTRA_FR_EN))canonical.set(fr,en);
