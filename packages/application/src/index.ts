@@ -538,8 +538,25 @@ export class ConnectedApplication {
     const localByCell=new Map<string,any>();for(const item of local){const key=this.managerCommandCellKey(item);if(!key)continue;const old=localByCell.get(key);if(!old||this.managerIntentOrder(item)>this.managerIntentOrder(old))localByCell.set(key,item);}
     const remoteByCell=new Map<string,any>();for(const item of remote.commands){const p=item?.payload??{};if(String(p.groupId??'')!==this.activeGroupId)continue;const key=this.managerCommandCellKey(item);if(!key)continue;const old=remoteByCell.get(key);if(!old||this.managerIntentOrder(item)>this.managerIntentOrder(old))remoteByCell.set(key,item);}
     const potentialFinancialConflicts:any[]=[];
-    for(const [key,theirs] of remoteByCell){const mine=localByCell.get(key);if(!mine)continue;const ma=Number(mine.payload?.targetAmount??mine.payload?.amount),ra=Number(theirs.payload?.targetAmount??theirs.payload?.amount);if(Number.isFinite(ma)&&Number.isFinite(ra)&&ma!==ra)potentialFinancialConflicts.push({key,local:mine,remote:theirs,recommended:this.managerIntentOrder(theirs)>this.managerIntentOrder(mine)?'REMOTE':'LOCAL'});}
+    for(const [key,theirs] of remoteByCell){
+      const mine=localByCell.get(key);if(!mine)continue;
+      const ma=Number(mine.payload?.targetAmount??mine.payload?.amount),ra=Number(theirs.payload?.targetAmount??theirs.payload?.amount),mineOrder=this.managerIntentOrder(mine),theirOrder=this.managerIntentOrder(theirs);
+      const locallyResolved=String(mine.payload?.reason??'').startsWith('[ECO_RELAY_RESOLUTION]')&&mineOrder>theirOrder;
+      if(Number.isFinite(ma)&&Number.isFinite(ra)&&ma!==ra&&!locallyResolved)potentialFinancialConflicts.push({key,local:mine,remote:theirs,recommended:theirOrder>mineOrder?'REMOTE':'LOCAL'});
+    }
     return{protocol:'ECO_MANAGER_DELTA_2',commonSequence:0,commonCommands,localOnly:Math.max(0,localIds.size-commonCommands),remoteOnly:Math.max(0,remoteIds.size-commonCommands),structuralChanges:remote.structuralSnapshots.length,potentialFinancialConflicts};
+  }
+  async resolveLocalRoomManagerConflict(input:{local:any;remote:any;choice:'LOCAL'|'REMOTE'}):Promise<any>{
+    if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');if(!['LOCAL','REMOTE'].includes(input.choice))throw Error('ECO_RELAY_RESOLUTION_INVALID');
+    const local=input.local,remote=input.remote,lp=local?.payload??{},rp=remote?.payload??{};
+    const coords=(p:any)=>[String(p.meetingId??''),String(p.membershipId??''),String(p.rubricId??'')];
+    const [lm,lmem,lr]=coords(lp),[rm,rmem,rr]=coords(rp);if(!lm||!lmem||!lr||lm!==rm||lmem!==rmem||lr!==rr)throw Error('ECO_RELAY_RESOLUTION_SCOPE_INVALID');
+    const localAmount=Number(lp.targetAmount??lp.amount),remoteAmount=Number(rp.targetAmount??rp.amount),chosen=input.choice==='REMOTE'?remoteAmount:localAmount;
+    if(!Number.isSafeInteger(chosen)||chosen<0)throw Error('INVALID_CONTRIBUTION_AMOUNT');
+    const baselineVersion=Math.max(0,Number(lp.baselineVersion??0),Number(rp.baselineVersion??0)),reason='[ECO_RELAY_RESOLUTION] '+input.choice+' · '+String(local?.actorId??'local')+' / '+String(remote?.actorId??'relay');
+    const result=await this.setFinancialCellTarget({meetingId:lm,membershipId:lmem,rubricId:lr,targetAmount:chosen,currentAmount:localAmount,currentVersion:baselineVersion,reason});
+    if(typeof window!=='undefined'&&typeof CustomEvent!=='undefined')window.dispatchEvent(new CustomEvent('eco:manager-relay-updated',{detail:{groupId:this.activeGroupId,resolved:true,choice:input.choice,meetingId:lm,membershipId:lmem,rubricId:lr,targetAmount:chosen}}));
+    return result;
   }
   async importLocalRoomManagerDelta(remote:any):Promise<{importedCommands:number;mergedSnapshots:number;duplicates:number;conflicts:number}>{
     if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');if(remote?.protocol!=='ECO_MANAGER_DELTA_2'||remote.groupId!==this.activeGroupId||remote.tenantId!==this.tenantId||!Array.isArray(remote.commands)||!Array.isArray(remote.structuralSnapshots))throw Error('ECO_LOCAL_ROOM_DELTA_INVALID');
@@ -584,7 +601,7 @@ export class ConnectedApplication {
     // Internet ferry is deliberately compact. Direct Eco Local can carry the
     // full manager delta; the server mailbox gets only a bounded encrypted slice
     // so one brief mobile-data session benefits the group without megabyte uploads.
-    const budget=180000,commands:any[]=[],structuralSnapshots:any[]=[];let used=JSON.stringify({...full,commands:[],structuralSnapshots:[]}).length;
+    const budget=90000,commands:any[]=[],structuralSnapshots:any[]=[];let used=JSON.stringify({...full,commands:[],structuralSnapshots:[]}).length;
     for(const item of (full.commands??[]).slice(-500).reverse()){
       const size=JSON.stringify(item).length;if(used+size>budget)break;commands.unshift(item);used+=size;
     }
@@ -617,7 +634,7 @@ export class ConnectedApplication {
   }
   async syncEcoRelayFerry():Promise<{uploaded:number;downloaded:number;applied:number;skipped?:boolean}>{
     if(!this.activeGroupId||this.serverBudgetBlocked()||typeof navigator!=='undefined'&&navigator.onLine===false)return{uploaded:0,downloaded:0,applied:0,skipped:true};
-    const local=await this.ecoRelayFerryPackets(),knownPacketIds=local.map(x=>String(x.packetId)).slice(-500),uploads=local.filter(x=>!x.serverSyncedAt).slice(0,12).map(({serverSyncedAt,...x})=>x);
+    const local=await this.ecoRelayFerryPackets(),knownPacketIds=local.map(x=>String(x.packetId)).slice(-500),uploads=local.filter(x=>!x.serverSyncedAt).slice(0,6).map(({serverSyncedAt,...x})=>x);
     const result=await this.request<any>('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/relay/ferry-sync',{method:'POST',body:JSON.stringify({packets:uploads,knownPacketIds})});
     const accepted=new Set((result.acceptedIds??[]).map(String)),stamp=new Date().toISOString(),updated=local.map(x=>accepted.has(String(x.packetId))?{...x,serverSyncedAt:stamp}:x);
     await this.saveCached(this.relayFerryPath(this.activeGroupId),updated,'RELAY');const received=await this.receiveEcoRelayFerryPackets(Array.isArray(result.packets)?result.packets:[]);
