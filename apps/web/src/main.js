@@ -924,32 +924,45 @@ const rememberTargetsConfirmedBySync=before=>{
   }
 };
 const scheduleFinancialOutboxRecovery=detail=>{
-  if(FREE_CONSERVATION_MODE)return;
   const key=financialCellKey(String(detail.membershipId??''),String(detail.rubricId??''),String(detail.meetingId??''));
   if(financialRetryTimers.has(key)||navigator.onLine===false)return;
   let attempt=0;
+  // Free-plan recovery is still event-driven: a user validation may trigger a
+  // few retries of the already-durable Outbox item, but there is no idle poll.
+  // This closes the old gap where navigator.onLine stayed true after one failed
+  // request and the cell then waited forever for a separate network event.
+  const maxAttempts=FREE_CONSERVATION_MODE?3:8;
+  const delays=FREE_CONSERVATION_MODE?[350,1200,2800]:[650,1450,2350,3250,4150,4200,4200,4200];
   const run=async()=>{
     if(navigator.onLine===false){financialRetryTimers.delete(key);return;}
-    if(networkRecoveryNeeded){financialRetryTimers.delete(key);void resumeOnline();return;}
     attempt++;
     try{
       const beforeSync=pendingTargetSnapshot();
       await app.syncOutbox();renderOutbox();
       rememberTargetsConfirmedBySync(beforeSync);
-      await loadFinancialProjectionState();
+      // Reading canonical Ledger state after every retry would recreate the old
+      // D1-expensive loop. In conservation mode, determine completion from the
+      // durable Outbox itself; the server WebSocket pushes the committed value
+      // to other accounts.
+      financialPendingTargets=new Map((app.pendingFinancialCellTargets?.()??[]).map(x=>[financialCellKey(x.membershipId,x.rubricId,x.meetingId),x]));
+      financialPendingSheetEntries=app.pendingFinancialSheetEntries?.()??[];
       if(!cellHasPendingLocal(detail)){
         financialOptimisticValues.delete(key);
-        const amount=exactCellAmount(String(detail.membershipId),String(detail.rubricId),String(detail.meetingId));
-        patchFinancialDomCell({...detail,amount,cellVersion:exactCellVersion(String(detail.membershipId),String(detail.rubricId),String(detail.meetingId)),preservePending:false});
+        const signed=Number.isFinite(Number(detail.amount))?Number(detail.amount):exactCellAmount(String(detail.membershipId),String(detail.rubricId),String(detail.meetingId));
+        rememberConfirmedCell(key,{...detail,amount:signed,cellVersion:exactCellVersion(String(detail.membershipId),String(detail.rubricId),String(detail.meetingId))});
+        patchFinancialDomCell({...detail,amount:signed,cellVersion:exactCellVersion(String(detail.membershipId),String(detail.rubricId),String(detail.meetingId)),preservePending:false});
         setCellSyncedState(detail);financialRetryTimers.delete(key);
-        window.dispatchEvent(new CustomEvent('eco:financial-data-changed',{detail:{...detail,amount,soft:true,recovered:true}}));
+        window.dispatchEvent(new CustomEvent('eco:financial-data-changed',{detail:{...detail,amount:signed,soft:true,recovered:true}}));
         return;
       }
-    }catch{}
-    if(attempt>=8){financialRetryTimers.delete(key);return;}
-    const timer=setTimeout(run,Math.min(900+attempt*550,4200));financialRetryTimers.set(key,timer);
+      if(!FREE_CONSERVATION_MODE)await loadFinancialProjectionState();
+    }catch(error){
+      console.info('Targeted financial Outbox retry deferred',error);
+    }
+    if(attempt>=maxAttempts){financialRetryTimers.delete(key);return;}
+    const timer=setTimeout(run,delays[Math.min(attempt,delays.length-1)]);financialRetryTimers.set(key,timer);
   };
-  const timer=setTimeout(run,650);financialRetryTimers.set(key,timer);
+  const timer=setTimeout(run,delays[0]);financialRetryTimers.set(key,timer);
 };
 
 let financialSnapshotTimer=0,financialSnapshotBusy=false,financialSnapshotPrimed=false,financialSnapshotGroup='';
@@ -1057,7 +1070,7 @@ const submitFinancialCellElement=async validate=>{
         setCellState('QUEUED_OFFLINE',tx('Enregistré sur cet appareil · synchro en attente','Saved on this device · pending sync'));
         traceFinancialCell('CELL_LOCAL_COMMIT',{cellKey,target,status:'QUEUED'});
         toast(tx('✓ Valeur enregistrée sur cet appareil · synchronisation automatique en attente.','✓ Value saved on this device · automatic sync pending.'));
-        if(navigator.onLine!==false)scheduleFinancialOutboxRecovery({meetingId,membershipId,rubricId});
+        if(navigator.onLine!==false)scheduleFinancialOutboxRecovery({meetingId,membershipId,rubricId,amount:displayTarget,nature});
       }else if(result?.selfBenefit){
         currentLabel.textContent=fmt(displayTarget);financialReviewTargets.delete(cellKey);
         setCellState('CONFIRMED',tx('Correction appliquée · vérification indépendante signalée','Correction saved · independent review required'));
