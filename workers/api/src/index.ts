@@ -2683,7 +2683,7 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
     if(request.method==='POST'&&ferryMatch){
       const groupId=decodeURIComponent(ferryMatch[1]!);await requireGroup(groupId,false);
       const body=await readJson<{packets?:any[];knownPacketIds?:string[]}>(request),packets=Array.isArray(body.packets)?body.packets:[],known=new Set((Array.isArray(body.knownPacketIds)?body.knownPacketIds:[]).map(String).slice(-500));
-      if(packets.length>12)throw Error('RELAY_FERRY_BATCH_TOO_LARGE');
+      if(packets.length>6)throw Error('RELAY_FERRY_BATCH_TOO_LARGE');
       const acceptedIds:string[]=[],now=Date.now(),maxExpiry=now+8*24*3600_000;
       for(const packet of packets){
         if(packet?.protocol!=='ECO_FERRY_1'||packet.groupId!==groupId||!packet.packetId||!packet.recipientMembershipId||!packet.keyId||!packet.capsule)throw Error('RELAY_FERRY_PACKET_INVALID');
@@ -2701,7 +2701,7 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
         const expiry=Date.parse(String(row.data.expiresAt??''));if(!Number.isFinite(expiry)||expiry<=now)continue;
         const packetId=String(row.data.packetId??'');if(!packetId||known.has(packetId))continue;
         try{const packet=JSON.parse(String(row.data.packetJson??''));if(packet?.protocol==='ECO_FERRY_1'&&packet.groupId===groupId)out.push(packet);}catch{}
-        if(out.length>=60)break;
+        if(out.length>=12)break;
       }
       return json({acceptedIds,packets:out,serverAt:new Date().toISOString()},200,cors);
     }
