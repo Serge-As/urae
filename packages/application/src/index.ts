@@ -1810,7 +1810,20 @@ export class ConnectedApplication {
 
   async syncOutbox():Promise<OutboxItem[]>{
     if(this.serverBudgetBlocked()||typeof navigator!=='undefined'&&navigator.onLine===false)return this.outbox.list();
-    const result=await this.outbox.sync(async item=>{try{const groupId=(item.payload as {groupId?:string}).groupId;const r=await this.request<Record<string,unknown>&{accepted:boolean;stored?:boolean}>('/api/v1/outbox/apply',{method:'POST',headers:{'x-active-group-id':groupId??''},body:JSON.stringify(item)});return{ok:r.accepted&&r.stored!==false&&r.status!=='CLOCK_REVIEW',conflict:r.status==='CLOCK_REVIEW',result:r};}catch(e){const message=e instanceof Error?e.message:String(e);return{ok:false,conflict:['IDEMPOTENCY_CONFLICT','FORBIDDEN_SCOPE','CELL_VALUE_CONFLICT','CELL_VERSION_CONFLICT','CELL_CLOCK_REVIEW_REQUIRED'].includes(message),error:message};}});await this.persistOutbox();return result;
+    const result=await this.outbox.sync(async item=>{try{const groupId=(item.payload as {groupId?:string}).groupId;const r=await this.request<Record<string,unknown>&{accepted:boolean;stored?:boolean}>('/api/v1/outbox/apply',{method:'POST',headers:{'x-active-group-id':groupId??''},body:JSON.stringify(item)});return{ok:r.accepted&&r.stored!==false&&r.status!=='CLOCK_REVIEW',conflict:r.status==='CLOCK_REVIEW',result:r};}catch(e){const message=e instanceof Error?e.message:String(e);return{ok:false,conflict:['IDEMPOTENCY_CONFLICT','FORBIDDEN_SCOPE','CELL_VALUE_CONFLICT','CELL_VERSION_CONFLICT','CELL_CLOCK_REVIEW_REQUIRED'].includes(message),error:message};}});
+    // Reconcile policy commands with the server-authored revision immediately.
+    // Without this, an offline manager can keep seeing changeControl/localActionPending
+    // until a later full GET even though the policy was already accepted.
+    for(const item of result){
+      if(item.status!=='CONFIRMED'||item.type!=='RUBRIC_POLICIES_V1')continue;
+      const last=(item as any).lastResult as any,rubric=last?.rubric as RubricDefinition|undefined;
+      const groupId=String((item.payload as any)?.groupId??rubric?.groupId??'');if(!rubric?.id||!groupId)continue;
+      const path='/api/v1/groups/'+encodeURIComponent(groupId)+'/rubrics',rows=await this.cached<RubricDefinition[]>(path)??[];
+      const canonical={...structuredClone(rubric),localActionPending:false} as RubricDefinition;
+      await this.saveCached(path,rows.some(x=>x.id===canonical.id)?rows.map(x=>x.id===canonical.id?canonical:x):[...rows,canonical]);
+      if(typeof window!=='undefined')window.dispatchEvent(new CustomEvent('eco:rubric-policy-synced',{detail:{groupId,rubricId:canonical.id,revision:last?.loanPolicyRevision??null}}));
+    }
+    await this.persistOutbox();return result;
   }
   async queueDemoIntent(note='Local note'):Promise<OutboxItem>{const item=this.outbox.enqueue({tenantId:this.tenantId,actorId:this.actorId,type:'MEETING_NOTE_UPDATED',payload:{groupId:this.activeGroupId,note},idempotencyKey:`note-${this.activeGroupId??'none'}-${Date.now()}`});await this.persistOutbox();return item;}
   async retryOutboxItem(id:string):Promise<OutboxItem|undefined>{const item=this.outbox.retry(id);await this.persistOutbox();return item;}
