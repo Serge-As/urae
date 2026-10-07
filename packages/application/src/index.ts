@@ -572,7 +572,19 @@ export class ConnectedApplication {
     await this.saveCached(this.relayFerryPath(this.activeGroupId),[...map.values()].slice(-300),'RELAY');return added;
   }
   async prepareManagerFerryPackets():Promise<{packets:any[];included:string[];unpaired:string[]}>{
-    if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');const delta=await this.localRoomManagerDelta(),members=await this.listMembers(),included:string[]=[],unpaired:string[]=[],packets:any[]=[];
+    if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');
+    const full=await this.localRoomManagerDelta(),members=await this.listMembers(),included:string[]=[],unpaired:string[]=[],packets:any[]=[];
+    // Internet ferry is deliberately compact. Direct Eco Local can carry the
+    // full manager delta; the server mailbox gets only a bounded encrypted slice
+    // so one brief mobile-data session benefits the group without megabyte uploads.
+    const budget=180000,commands:any[]=[],structuralSnapshots:any[]=[];let used=JSON.stringify({...full,commands:[],structuralSnapshots:[]}).length;
+    for(const item of (full.commands??[]).slice(-500).reverse()){
+      const size=JSON.stringify(item).length;if(used+size>budget)break;commands.unshift(item);used+=size;
+    }
+    for(const snap of (full.structuralSnapshots??[])){
+      const size=JSON.stringify(snap).length;if(used+size>budget)continue;structuralSnapshots.push(snap);used+=size;
+    }
+    const delta={...full,commands,structuralSnapshots,transportProfile:'FERRY_COMPACT_V1',fullCommandCount:Number(full.commands?.length??0),fullStructuralCount:Number(full.structuralSnapshots?.length??0)};
     const managerRoles=new Set(['founder','manager','admin','president','treasurer','secretary','auditor']);
     for(const member of members.filter(x=>x.status==='active'&&(x.roles??[]).some(r=>managerRoles.has(String(r).toLowerCase()))&&x.userId!==this.actorId)){
       const key=await this.sovereign.relayKey(this.tenantId,this.activeGroupId,member.id);if(!key){unpaired.push(member.id);continue;}
