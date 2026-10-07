@@ -160,6 +160,12 @@ test('repayment 2500 syncs event-wise within five seconds and survives reload wi
       id:'repay-rubric-'+suffix,name:'Remboursements',facets:{direction:'INFLOW',obligation:'EVENT_DRIVEN',medium:'CASH',refundability:'NOT_APPLICABLE',replenishment:'EVENT_DRIVEN',interestMode:'NONE',eligibilityMode:'RULE_BASED',custom:{systemKey:'REPAYMENT',repaymentComponent:'PRINCIPAL'}},
       source:'GROUP_CUSTOM',operatingModel:{ruleRealityStatus:'ALIGNED',targetMode:'OPEN',mandatoryForAbsentees:false,shortfallHandling:'LEAVE_SHORT',payoutMode:'COLLECTED_ONLY',immediateFullPayout:false}
     },group.id);
+    // Force a genuinely wide real matrix so position restoration is tested on
+    // columns far to the right instead of relying on synthetic CSS width.
+    for(let i=1;i<=10;i++)await json('/api/v1/groups/'+encodeURIComponent(group.id)+'/rubrics','POST',{
+      id:'wide-rubric-'+i+'-'+suffix,name:'Rubrique '+String(i).padStart(2,'0'),facets:{direction:'INFLOW',obligation:'CUSTOM',medium:'CASH',refundability:'NOT_APPLICABLE',replenishment:'CUSTOM',interestMode:'NONE',eligibilityMode:'RULE_BASED'},
+      source:'GROUP_CUSTOM',operatingModel:{ruleRealityStatus:'ALIGNED',targetMode:'OPEN',mandatoryForAbsentees:false,shortfallHandling:'LEAVE_SHORT',payoutMode:'COLLECTED_ONLY',immediateFullPayout:false}
+    },group.id);
     const meeting=await json('/api/v1/groups/'+encodeURIComponent(group.id)+'/meetings','POST',{title:'Séance remboursement',scheduledAt:'2026-10-07T10:00:00.000Z'},group.id);
     await json('/api/v1/groups/'+encodeURIComponent(group.id)+'/contributions/cash','POST',{membershipId,amount:10000,meetingId:meeting.id,idempotencyKey:'seed-cash-'+suffix},group.id);
     let loan=await json('/api/v1/groups/'+encodeURIComponent(group.id)+'/completion','POST',{kind:'LOAN',title:'Prêt test 10 000',data:{principal:10000,currency:'XAF',borrowerMembershipId:membershipId,rubricId:loanRubric.id,rateBasisPointsPerPeriod:0,paymentPriority:'CAPITAL_FIRST',interestTiming:'NEXT_SESSION_DUE',noInterestOnInterest:true,outstandingPrincipal:0,unpaidInterest:0,installmentsPerYear:12}},group.id);
