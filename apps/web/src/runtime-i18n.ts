@@ -488,3 +488,4 @@ Object.assign(EXTRA_FR_EN,{
   "Enregistrer cette version de politique": "Save this policy version",
   "Simuler un prêt imaginaire": "Simulate a hypothetical loan"
 });
+for(const [fr,en] of Object.entries(EXTRA_FR_EN))canonical.set(fr,en);
