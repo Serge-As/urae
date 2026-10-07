@@ -646,6 +646,8 @@ export interface RubricLoanPolicyRevision {
   effectiveMeetingId?:Id;
   scope:RubricLoanPolicyChangeScope;
   selectedLoanIds?:Id[];
+  /** Open loans that were actually eligible when the revision was decided. Closed loans are absent. */
+  affectedLoanIds?:Id[];
   before:RubricLoanPolicySnapshot;
   after:RubricLoanPolicySnapshot;
 }
