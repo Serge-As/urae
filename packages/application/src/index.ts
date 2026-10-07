@@ -8,7 +8,7 @@ import { PRODUCT_MODULES } from '../../module-registry/src/index.js';
 import { makeId, type CashboxReconciliationRecord, type CashboxSnapshot, type CaseRecord, type ContributionReceipt, type EvidenceRecord, type FeasibilityResult, type Group, type LedgerEntry, type LedgerSummary, type MeetingSession, type Membership, type MembershipView, type OutboxItem, type GroupOperatingPolicy, type RubricDefinition, type RubricOperatingModel, type RubricCyclePreview, type GroupDiscoveryMatch, type PublicGroupListing, type MembershipApplication, type WorkspaceRecord, type WorkspaceStatus } from '../../contracts/src/index.js';
 import { COMPLETION_WORKFLOWS, suggestTontineSchedule as suggestTontineScheduleLocal, buildLoanSchedule, type CompletionKind, type CompletionRecord, type TontineScheduleConstraint, type TontineScheduleResult, type LoanScheduleRow } from '../../completion/src/index.js';
 import { starterRubricFacetsForName } from '../../rubrics/src/index.js';
-import { simulatePeriodicLoan } from '../../loan-simulator/src/index.js';
+import { simulatePeriodicLoan, summarizePeriodicLoan } from '../../loan-simulator/src/index.js';
 import { allocateSavingsYield, splitInterestPool, simulateWorkbookYieldPipeline, allocateCapitalAtWorkYield, allocateCapitalTimeYield, allocateAttributedProductiveYield, eligibleSavingsDeposits, allocateBorrowerReward, SAVINGS_YIELD_POLICY_PRESETS } from '../../savings-yield/src/index.js';
 import { buildFinancialRecap, buildSessionRecap, buildClosingCarryover } from '../../recap-engine/src/index.js';
 import { diagnoseGroup } from '../../group-doctor/src/index.js';
@@ -1749,8 +1749,10 @@ export class ConnectedApplication {
   async quoteLoan(input:{principal:number;installments:number;annualRateBasisPoints:number;installmentsPerYear?:number;method?:'FLAT'|'DECLINING';feesTotal?:number}):Promise<{schedule:LoanScheduleRow[]}>{
     if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return{schedule:buildLoanSchedule(input)};
   }
-  async simulateLoan(input:{principal:number;periods:number;ratePercentPerPeriod:number;priority:'CAPITAL_FIRST'|'INTEREST_FIRST';interestBasis?:'OUTSTANDING'|'INITIAL';payments?:number[];openingInterestDue?:number}):Promise<any>{
-    if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return{rows:simulatePeriodicLoan(input)};
+  async simulateLoan(input:{principal:number;periods:number;ratePercentPerPeriod:number;priority:'CAPITAL_FIRST'|'INTEREST_FIRST'|'EXPLICIT_ALLOCATION';interestBasis?:'OUTSTANDING'|'INITIAL';payments?:number[];principalPayments?:number[];interestPayments?:number[];openingInterestDue?:number}):Promise<any>{
+    if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');
+    const rows=simulatePeriodicLoan(input);
+    return{rows,summary:summarizePeriodicLoan(input,rows)};
   }
   async loanHistory(loanId:string):Promise<any>{
     if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');if(!this.isOffline())try{return await this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/loans/'+encodeURIComponent(loanId)+'/history');}catch(error){if(!(error instanceof Error)||error.message!=='NETWORK_UNAVAILABLE')throw error;}
