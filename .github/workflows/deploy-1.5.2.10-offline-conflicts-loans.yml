@@ -65,9 +65,34 @@ jobs:
           set -euo pipefail
           grep -Fq "db_mutation: none" .github/DEPLOY_ECO_SYSTEM_1_5_2_10_ONCE
           grep -Fq "code-only-no-d1-export-no-migration" .github/DEPLOY_ECO_SYSTEM_1_5_2_10_ONCE
-      - name: Full governed qualification before production mutation
-        run: npm run ci
-
+      - name: TypeScript qualification
+        run: npm run typecheck
+      - name: Status · gate-typecheck
+        continue-on-error: true
+        run: |
+          curl --fail --silent --show-error -X POST -H "Authorization: Bearer ${{ github.token }}" -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/statuses/${GITHUB_SHA}" \
+            -d '{"state":"success","context":"eco-system/gate-typecheck","description":"TypeScript qualification passed"}' >/dev/null
+      - name: Governance and architecture gates
+        run: npm run lint:architecture && npm run lint:shared-governance && npm run lint:constitution && npm run lint:truth && npm run lint:memory && npm run lint:memory-index && npm run lint:source-coverage
+      - name: Status · gate-governance
+        continue-on-error: true
+        run: |
+          curl --fail --silent --show-error -X POST -H "Authorization: Bearer ${{ github.token }}" -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/statuses/${GITHUB_SHA}" \
+            -d '{"state":"success","context":"eco-system/gate-governance","description":"Architecture + BIR + truth gates passed"}' >/dev/null
+      - name: Build coherent PWA shell and Worker
+        run: npm run build
+      - name: Targeted Live, repayment and loan-policy regressions
+        run: node --test tests/event-sync-conservation.test.mjs tests/loan-policy-scope-governance.test.mjs tests/loan-simulator-policy.test.mjs
+      - name: Status · gate-targeted
+        continue-on-error: true
+        run: |
+          curl --fail --silent --show-error -X POST -H "Authorization: Bearer ${{ github.token }}" -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/statuses/${GITHUB_SHA}" \
+            -d '{"state":"success","context":"eco-system/gate-targeted","description":"Live + Remboursements + loan policy regressions passed"}' >/dev/null
+      - name: Complete Node regression suite
+        run: node --test tests/*.test.mjs
       - name: Status · gate-governed
         continue-on-error: true
         shell: bash
@@ -76,9 +101,7 @@ jobs:
             -H "Authorization: Bearer ${{ github.token }}" \
             -H "Accept: application/vnd.github+json" \
             "https://api.github.com/repos/${GITHUB_REPOSITORY}/statuses/${GITHUB_SHA}" \
-            -d '{"state":"success","context":"eco-system/gate-governed","description":"Governed CI passed"}' >/dev/null
-      - name: Build coherent PWA shell and Worker
-        run: npm run build
+            -d '{"state":"success","context":"eco-system/gate-governed","description":"Full governed Node regression suite passed"}' >/dev/null
       - name: Install Chromium and WebKit
         run: |
           npm install --no-save --ignore-scripts @playwright/test@1.55.0
