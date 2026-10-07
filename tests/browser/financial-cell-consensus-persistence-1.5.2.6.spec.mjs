@@ -134,3 +134,84 @@ test('loan policy scopes and free/existing simulation controls are usable in the
   await expect(dialog.locator('.loan-simulation-b')).toBeVisible();
   await expect(dialog.locator('.loan-simulation-control-card')).toHaveCount(2);
 });
+
+test('repayment 2500 syncs event-wise within five seconds and survives reload without losing table context',async({page,context})=>{
+  test.setTimeout(120_000);
+  await page.goto(base+'/',{waitUntil:'domcontentloaded'});
+  const ids=await page.evaluate(async({password})=>{
+    const json=async(path,method='GET',body,groupId)=>{
+      const response=await fetch(path,{method,headers:{...(body===undefined?{}:{'content-type':'application/json'}),...(groupId?{'x-active-group-id':groupId}:{})},body:body===undefined?undefined:JSON.stringify(body)});
+      const text=await response.text();let data;try{data=JSON.parse(text);}catch{data=text;}
+      if(!response.ok)throw new Error(method+' '+path+' -> '+response.status+' '+text);
+      return data;
+    };
+    const suffix='repay_sync_'+String(Date.now());
+    const account=await json('/api/v1/auth/register','POST',{username:suffix,password,displayName:'Repayment Sync Browser'});
+    const project=await json('/api/v1/group-projects','POST',{name:'Repay Sync '+suffix,kind:'association',governanceModel:'founder_managed',memberCount:1,sessions:1,nominalContribution:0,currency:'XAF'});
+    const group=await json('/api/v1/group-projects/'+encodeURIComponent(project.id)+'/convert','POST',{});
+    const members=await json('/api/v1/groups/'+encodeURIComponent(group.id)+'/members','GET',undefined,group.id);
+    const membershipId=members.find(x=>x.userId===account.account.id)?.id??members[0]?.id;
+    const loanRubric=await json('/api/v1/groups/'+encodeURIComponent(group.id)+'/rubrics','POST',{
+      id:'loan-rubric-'+suffix,name:'Prêt',facets:{direction:'OUTFLOW',obligation:'EVENT_DRIVEN',medium:'CASH',refundability:'NOT_APPLICABLE',replenishment:'EVENT_DRIVEN',interestMode:'RATE',eligibilityMode:'RULE_BASED',custom:{systemKey:'LOAN'}},
+      source:'GROUP_CUSTOM',operatingModel:{ruleRealityStatus:'ALIGNED',targetMode:'OPEN',mandatoryForAbsentees:false,shortfallHandling:'LEAVE_SHORT',payoutMode:'COLLECTED_ONLY',immediateFullPayout:false}
+    },group.id);
+    await json('/api/v1/groups/'+encodeURIComponent(group.id)+'/rubrics/'+encodeURIComponent(loanRubric.id)+'/policies','PUT',{loan:{allowed:true,rateBasisPointsPerPeriod:0,interestBase:'PRINCIPAL_ONLY',paymentPriority:'CAPITAL_FIRST',interestTiming:'NEXT_SESSION_DUE',fundingMode:'AVAILABLE_GROUP_CASH',carryForwardUnusedFunds:true,noInterestOnInterest:true}},group.id);
+    const repaymentRubric=await json('/api/v1/groups/'+encodeURIComponent(group.id)+'/rubrics','POST',{
+      id:'repay-rubric-'+suffix,name:'Remboursements',facets:{direction:'INFLOW',obligation:'EVENT_DRIVEN',medium:'CASH',refundability:'NOT_APPLICABLE',replenishment:'EVENT_DRIVEN',interestMode:'NONE',eligibilityMode:'RULE_BASED',custom:{systemKey:'REPAYMENT',repaymentComponent:'PRINCIPAL'}},
+      source:'GROUP_CUSTOM',operatingModel:{ruleRealityStatus:'ALIGNED',targetMode:'OPEN',mandatoryForAbsentees:false,shortfallHandling:'LEAVE_SHORT',payoutMode:'COLLECTED_ONLY',immediateFullPayout:false}
+    },group.id);
+    const meeting=await json('/api/v1/groups/'+encodeURIComponent(group.id)+'/meetings','POST',{title:'Séance remboursement',scheduledAt:'2026-10-07T10:00:00.000Z'},group.id);
+    await json('/api/v1/groups/'+encodeURIComponent(group.id)+'/contributions/cash','POST',{membershipId,amount:10000,meetingId:meeting.id,idempotencyKey:'seed-cash-'+suffix},group.id);
+    let loan=await json('/api/v1/groups/'+encodeURIComponent(group.id)+'/completion','POST',{kind:'LOAN',title:'Prêt test 10 000',data:{principal:10000,currency:'XAF',borrowerMembershipId:membershipId,rubricId:loanRubric.id,rateBasisPointsPerPeriod:0,paymentPriority:'CAPITAL_FIRST',interestTiming:'NEXT_SESSION_DUE',noInterestOnInterest:true,outstandingPrincipal:0,unpaidInterest:0,installmentsPerYear:12}},group.id);
+    loan=await json('/api/v1/groups/'+encodeURIComponent(group.id)+'/completion/'+encodeURIComponent(loan.id)+'/transition','POST',{to:'SUBMITTED',expectedVersion:1,patch:{meetingId:meeting.id}},group.id);
+    loan=await json('/api/v1/groups/'+encodeURIComponent(group.id)+'/completion/'+encodeURIComponent(loan.id)+'/transition','POST',{to:'APPROVED',expectedVersion:2,patch:{}},group.id);
+    loan=(await json('/api/v1/groups/'+encodeURIComponent(group.id)+'/loans/'+encodeURIComponent(loan.id)+'/disburse','POST',{amount:10000,expectedVersion:3,meetingId:meeting.id,rubricId:loanRubric.id,idempotencyKey:'disburse-'+suffix},group.id)).loan;
+    localStorage.setItem('tontine.activeGroupId',group.id);
+    return{groupId:group.id,membershipId,meetingId:meeting.id,repaymentRubricId:repaymentRubric.id,loanId:loan.id};
+  },{password});
+
+  await page.reload({waitUntil:'domcontentloaded'});
+  await page.locator('button[data-view="operations"]').first().click();
+  const selector='.matrix-cell-entry[data-membership-id="'+ids.membershipId+'"][data-rubric-id="'+ids.repaymentRubricId+'"][data-meeting-id="'+ids.meetingId+'"]';
+  const cell=page.locator('#meetingMatrix').locator(selector);
+  await expect(cell).toBeVisible();
+
+  await context.setOffline(true);
+  await cell.locator('.cell-target-input').fill('2500');
+  await cell.locator('.cell-validate').click();
+  await expect.poll(()=>amountFrom(cell)).toBe(2500);
+  await expect(cell).toContainText(/synchro en attente/i);
+
+  const syncStarted=Date.now();
+  await context.setOffline(false);
+  await expect.poll(async()=>page.evaluate(async ids=>{
+    const response=await fetch('/api/v1/groups/'+encodeURIComponent(ids.groupId)+'/loans/'+encodeURIComponent(ids.loanId)+'/history',{headers:{'x-active-group-id':ids.groupId}});
+    if(!response.ok)return false;
+    const history=await response.json();
+    return (history.events??[]).some(x=>Number(x.amount)===2500&&String(x.rubricId)===String(ids.repaymentRubricId));
+  },ids),{timeout:5000,intervals:[200,350,500,700]}).toBe(true);
+  expect(Date.now()-syncStarted).toBeLessThan(5500);
+  await expect.poll(()=>amountFrom(cell),{timeout:5000}).toBe(2500);
+
+  // The app refresh must keep the horizontal place. Force a narrow table
+  // viewport so this remains deterministic even if future test rubrics change.
+  const wrap=page.locator('#meetingMatrix .canonical-financial-wrap');
+  await wrap.evaluate(node=>{node.style.maxWidth='320px';node.style.width='320px';node.scrollLeft=node.scrollWidth;});
+  const before=await wrap.evaluate(node=>node.scrollLeft);
+  expect(before).toBeGreaterThan(0);
+  await page.locator('#refreshBtn').evaluate(button=>button.click());
+  await expect(page.locator('#view-operations')).toHaveClass(/active/);
+  await expect.poll(async()=>page.locator('#meetingMatrix .canonical-financial-wrap').evaluate(node=>node.scrollLeft),{timeout:8000}).toBeGreaterThan(0);
+
+  // A full page reload also restores the active Operations view, selected
+  // meeting and matrix column rather than sending the manager back to Home.
+  const currentWrap=page.locator('#meetingMatrix .canonical-financial-wrap');
+  await currentWrap.evaluate(node=>{node.style.maxWidth='320px';node.style.width='320px';node.scrollLeft=node.scrollWidth;});
+  expect(await currentWrap.evaluate(node=>node.scrollLeft)).toBeGreaterThan(0);
+  await page.reload({waitUntil:'domcontentloaded'});
+  await expect(page.locator('#view-operations')).toHaveClass(/active/);
+  const reloaded=page.locator('#meetingMatrix').locator(selector);
+  await expect(reloaded).toBeVisible();
+  await expect.poll(()=>amountFrom(reloaded)).toBe(2500);
+});
+
