@@ -16,7 +16,7 @@ const fixture=async()=>{
     roles:['member'],joinedAt:createdAt});
   await repo.saveRubricDefinition({id:rubricId,tenantId,groupId,name:'Prêt',status:'ACTIVE',source:'GROUP_CUSTOM',
     facets:{direction:'OUTFLOW',custom:{systemKey:'LOAN'}},
-    policies:{loan:{allowed:true,rateBasisPointsPerPeriod:200,interestBase:'PRINCIPAL_ONLY',
+    policies:{loan:{allowed:true,rateBasisPointsPerPeriod:0,interestBase:'PRINCIPAL_ONLY',
       paymentPriority:'CAPITAL_FIRST',interestTiming:'NEXT_SESSION_DUE',fundingMode:'AVAILABLE_GROUP_CASH',
       carryForwardUnusedFunds:true,noInterestOnInterest:true}},
     createdAt,updatedAt:createdAt,version:1});
@@ -25,7 +25,7 @@ const fixture=async()=>{
     tags:['completion','kind:LOAN','state:'+state],
     data:{completionKind:'LOAN',completionState:state,completionVersion:1,borrowerMembershipId:'membership-borrower',
       rubricId,principal:10000,outstandingPrincipal:state==='CLOSED'?0:10000,unpaidInterest:state==='CLOSED'?0:2000,
-      ledgerEntryId:'historical-disbursement-'+id,currency:'XAF',rateBasisPointsPerPeriod:200,paymentPriority:'CAPITAL_FIRST',
+      ledgerEntryId:'historical-disbursement-'+id,currency:'XAF',rateBasisPointsPerPeriod:0,paymentPriority:'CAPITAL_FIRST',
       interestTiming:'NEXT_SESSION_DUE',noInterestOnInterest:true,installmentsPerYear:12},
     createdBy:'manager-a',createdAt,updatedAt
   });
@@ -42,7 +42,7 @@ const fixture=async()=>{
     return data;
   };
   const policy=async(scope,commandId,selectedLoanIds=[])=>request('/api/v1/groups/'+groupId+'/rubrics/'+rubricId+'/policies','PUT',{
-    loan:{allowed:true,rateBasisPointsPerPeriod:200,interestBase:'PRINCIPAL_ONLY',
+    loan:{allowed:true,rateBasisPointsPerPeriod:0,interestBase:'PRINCIPAL_ONLY',
       paymentPriority:'INTEREST_FIRST',interestTiming:'NEXT_SESSION_DUE',fundingMode:'AVAILABLE_GROUP_CASH',
       carryForwardUnusedFunds:true,noInterestOnInterest:true,
       changeControl:{commandId,scope,effectiveMode:'DATE',effectiveAt,selectedLoanIds}}
