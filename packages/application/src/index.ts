@@ -333,7 +333,7 @@ export class ConnectedApplication {
     // subsequent offline-capable actions immediate without periodic probing.
     const formUpload=typeof FormData!=='undefined'&&init.body instanceof FormData,
       eventCritical=/\/outbox\/apply$|\/financial-cells$|\/loans\/[^/]+\/(?:repay|disburse)$/.test(path),
-      timeoutMs=formUpload?30000:eventCritical?2800:6500;
+      timeoutMs=formUpload?30000:eventCritical?2200:6500;
     const abort=typeof AbortController==='function'?new AbortController():null;
     let requestTimer:ReturnType<typeof setTimeout>|undefined;
     try{
