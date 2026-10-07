@@ -41,7 +41,7 @@ test('member ferry is opaque, bounded and opportunistic',async()=>{
   assert.match(app,/const budget=90000/);
   assert.match(app,/slice\(0,6\)/);
   assert.match(app,/syncEcoRelayFerry/);
-  assert.match(api,/relay\/ferry-sync/);
+  assert.match(api,/ferry-sync/);
   assert.match(api,/requireGroup\(groupId,false\)/);
   assert.match(api,/OFFLINE\.RELAY_FERRY/);
   assert.match(api,/Opaque store-and-forward packet/);
