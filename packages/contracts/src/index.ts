@@ -630,6 +630,8 @@ export interface RubricLoanPolicySnapshot {
   carryForwardUnusedFunds?:boolean;
 }
 export interface RubricLoanPolicyChangeControl {
+  /** Stable mutation id so online retry and offline replay cannot create duplicate policy revisions. */
+  commandId?:Id;
   scope:RubricLoanPolicyChangeScope;
   effectiveMode?:'IMMEDIATE'|'DATE'|'MEETING';
   effectiveAt?:string;
