@@ -23,7 +23,7 @@ const fixture=async()=>{
   const createOpenLoan=async(label)=>{
     let loan=await api('/api/v1/groups/'+groupId+'/completion','POST',{kind:'LOAN',title:label,data:{principal:10000,currency:'XAF',borrowerMembershipId:memberId,rubricId,rateBasisPointsPerPeriod:0,paymentPriority:'CAPITAL_FIRST',interestTiming:'NEXT_SESSION_DUE',noInterestOnInterest:true,outstandingPrincipal:10000,unpaidInterest:2000}});
     for(const to of ['SUBMITTED','APPROVED','DISBURSED']){
-      loan=await api('/api/v1/groups/'+groupId+'/completion/'+loan.id+'/transition','POST',{to,expectedVersion:Number(loan.data.completionVersion),patch:to==='DISBURSED'?{outstandingPrincipal:10000,unpaidInterest:2000,ledgerEntryId:'synthetic-disbursement-'+loan.id}:{}});
+      loan=await api('/api/v1/groups/'+groupId+'/completion/'+loan.id+'/transition','POST',{to,expectedVersion:Number(loan.data.completionVersion),patch:to==='DISBURSED'?{outstandingPrincipal:10000,unpaidInterest:2000,ledgerEntryId:'synthetic-disbursement-'+loan.id,disbursedAt:'2026-10-07T08:15:00Z'}:{}});
     }
     return loan;
   };
@@ -31,8 +31,8 @@ const fixture=async()=>{
     const result=await api('/api/v1/groups/'+groupId+'/loans/'+loan.id+'/repay','POST',{paymentAmount:6000,expectedVersion:Number(loan.data.completionVersion),idempotencyKey:'repay-'+loan.id});
     return result.allocation;
   };
-  const changePolicy=async(policy,scope,selectedLoanIds=[])=>api('/api/v1/groups/'+groupId+'/rubrics/'+rubricId+'/policies','PUT',{
-    loan:{...policy,allowed:true,interestBase:'PRINCIPAL_ONLY',noInterestOnInterest:true,changeControl:{commandId:'cmd-'+scope+'-'+selectedLoanIds.join('-')+'-'+String(policy.paymentPriority),scope,effectiveMode:'IMMEDIATE',selectedLoanIds}}
+  const changePolicy=async(policy,scope,selectedLoanIds=[],control={})=>api('/api/v1/groups/'+groupId+'/rubrics/'+rubricId+'/policies','PUT',{
+    loan:{...policy,allowed:true,interestBase:'PRINCIPAL_ONLY',noInterestOnInterest:true,changeControl:{commandId:String(control.commandId??('cmd-'+scope+'-'+selectedLoanIds.join('-')+'-'+String(policy.paymentPriority)+'-'+String(control.effectiveMode??'IMMEDIATE'))),scope,effectiveMode:String(control.effectiveMode??'IMMEDIATE'),selectedLoanIds,...control}}
   });
   return{repo,api,createOpenLoan,repay,changePolicy};
 };
@@ -89,3 +89,31 @@ test('policy change command is idempotent and never duplicates a revision on ret
   assert.equal(second.policies.loan.revisions.length,1);
   assert.equal(second.policies.loan.revisions[0].id,first.policies.loan.revisions[0].id);
 });
+
+test('meeting-effective revision changes allocation only from the chosen canonical meeting onward',async()=>{
+  const x=await fixture(),loan=await x.createOpenLoan('P séance');
+  await x.repo.saveMeeting({id:'meeting-before',tenantId,groupId,status:'open',title:'Avant',session:1,scheduledAt:'2026-10-07T08:30:00Z',openedAt:'2026-10-07T08:30:00Z',openedBy:'manager-loan'});
+  await x.repo.saveMeeting({id:'meeting-effect',tenantId,groupId,status:'open',title:'Effet',session:2,scheduledAt:'2026-10-08T08:30:00Z',openedAt:'2026-10-08T08:30:00Z',openedBy:'manager-loan'});
+  let rubric=await x.repo.getRubricDefinition(tenantId,groupId,rubricId),policy=rubric.policies.loan;
+  rubric=await x.changePolicy({...policy,paymentPriority:'INTEREST_FIRST'},'NEW_AND_SELECTED_OPEN_LOANS',[loan.id],{commandId:'meeting-effective',effectiveMode:'MEETING',effectiveMeetingId:'meeting-effect'});
+  const revision=rubric.policies.loan.revisions.at(-1);
+  assert.equal(revision.effectiveMeetingId,'meeting-effect');
+  assert.equal(revision.effectiveAt,'2026-10-08T08:30:00.000Z');
+
+  const before=await x.api('/api/v1/groups/'+groupId+'/loans/'+loan.id+'/repay','POST',{paymentAmount:1000,meetingId:'meeting-before',expectedVersion:Number(loan.data.completionVersion),idempotencyKey:'before-effect'});
+  assert.equal(before.allocation.principalPaid,1000);
+  assert.equal(before.allocation.interestPaid,0);
+
+  const after=await x.api('/api/v1/groups/'+groupId+'/loans/'+loan.id+'/repay','POST',{paymentAmount:1000,meetingId:'meeting-effect',expectedVersion:Number(before.loan.data.completionVersion),idempotencyKey:'after-effect'});
+  assert.equal(after.allocation.principalPaid,0);
+  assert.equal(after.allocation.interestPaid,1000);
+});
+
+test('an upfront-interest timing change never rewrites a loan already disbursed',async()=>{
+  const x=await fixture(),loan=await x.createOpenLoan('P timing');
+  const rubric=await x.repo.getRubricDefinition(tenantId,groupId,rubricId),policy=rubric.policies.loan;
+  await x.changePolicy({...policy,interestTiming:'UPFRONT_DEDUCTED'},'NEW_AND_SELECTED_OPEN_LOANS',[loan.id],{commandId:'no-retro-upfront'});
+  const result=await x.api('/api/v1/groups/'+groupId+'/loans/'+loan.id+'/repay','POST',{paymentAmount:1000,expectedVersion:Number(loan.data.completionVersion),idempotencyKey:'timing-repay'});
+  assert.equal(result.loan.data.interestTiming,'NEXT_SESSION_DUE');
+});
+
