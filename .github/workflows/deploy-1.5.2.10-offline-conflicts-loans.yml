@@ -97,8 +97,24 @@ jobs:
           curl --fail --silent --show-error -X POST -H "Authorization: Bearer ${{ github.token }}" -H "Accept: application/vnd.github+json" \
             "https://api.github.com/repos/${GITHUB_REPOSITORY}/statuses/${GITHUB_SHA}" \
             -d '{"state":"success","context":"eco-system/gate-targeted","description":"Live + Remboursements + loan policy regressions passed"}' >/dev/null
-      - name: Complete Node regression suite
-        run: node --test tests/*.test.mjs
+      - name: Complete Node regression suite · file isolated for exact failure identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          for file in tests/*.test.mjs; do
+            echo "::group::${file}"
+            if ! node --test "${file}"; then
+              short="$(basename "${file}" .test.mjs | tr -c 'A-Za-z0-9._-' '-' | cut -c1-70)"
+              curl --fail --silent --show-error -X POST \
+                -H "Authorization: Bearer ${{ github.token }}" \
+                -H "Accept: application/vnd.github+json" \
+                "https://api.github.com/repos/${GITHUB_REPOSITORY}/statuses/${GITHUB_SHA}" \
+                -d "{\"state\":\"failure\",\"context\":\"eco-system/fail-test-${short}\",\"description\":\"Regression test file failed\"}" >/dev/null || true
+              echo "::endgroup::"
+              exit 1
+            fi
+            echo "::endgroup::"
+          done
       - name: Status · gate-governed
         continue-on-error: true
         shell: bash
