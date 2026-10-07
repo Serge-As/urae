@@ -1120,3 +1120,23 @@ body.ui-mode-senior .meeting-matrix thead th,body.ui-mode-assisted .meeting-matr
 @media(prefers-reduced-motion:reduce){
   .offline-confrontation-dialog *{scroll-behavior:auto!important;transition:none!important}
 }
+
+
+/* Eco Relay sovereign manager confrontation */
+.relay-confrontation-wrap{max-height:52vh;overflow:auto;margin-top:8px;border-color:#cbdcd1}
+.relay-confrontation-table{width:max-content;min-width:100%;font-variant-numeric:tabular-nums}
+.relay-confrontation-table thead th{position:sticky;top:0;z-index:4;background:#e8f3ed}
+.relay-confrontation-table td{vertical-align:middle}
+.relay-confrontation-table td:nth-child(4),.relay-confrontation-table td:nth-child(5){text-align:right;font-weight:850;white-space:nowrap}
+.relay-confrontation-table td:last-child{min-width:190px}
+.relay-confrontation-table td:last-child button{display:block;width:100%;margin:3px 0;min-height:36px}
+.relay-confrontation-table .relay-recommended{border-color:#287b5d;background:#edf8f1;color:#164f3a}
+.relay-confrontation-table tr.relay-conflict-resolved td{background:#eef7f1}
+.relay-confrontation-table tr[data-choice="LOCAL"] td:nth-child(4),
+.relay-confrontation-table tr[data-choice="REMOTE"] td:nth-child(5){box-shadow:inset 0 -3px #287b5d}
+.has-relay-pending{outline:1px dashed #6f9d83;outline-offset:-2px}
+@media(max-width:650px){
+  .relay-confrontation-wrap{max-height:60vh}
+  .relay-confrontation-table th,.relay-confrontation-table td{padding:5px 6px;font-size:11px}
+  .relay-confrontation-table td:last-child{min-width:155px}
+}
