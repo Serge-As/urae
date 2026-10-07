@@ -18,7 +18,12 @@ test('offline return requires governed financial confrontation before replay', a
   assert.match(web,/Appliquer toutes mes modifications/);
   assert.match(web,/Conserver toutes les données déjà présentes/);
   assert.match(web,/if\(!\(await reviewOfflineFinancialBacklog\(forceConfrontation\)\)\)/);
-  assert.match(web,/networkRecoveryNeeded\)\{financialRetryTimers\.delete\(key\);void resumeOnline\(\);return;\}/);
+  // A genuine offline->online transition still passes through confrontation in
+  // resumeOnline, but a transient failure while navigator.onLine remains true
+  // gets a bounded event-driven retry instead of waiting forever.
+  assert.match(web,/maxAttempts=FREE_CONSERVATION_MODE\?3:8/);
+  assert.match(web,/FREE_CONSERVATION_MODE\?\[350,1200,2800\]/);
+  assert.doesNotMatch(web,/if\(FREE_CONSERVATION_MODE\)return;\s*const key=.*financialRetryTimers/s);
   assert.match(app,/previewOfflineFinancialConfrontation/);
   assert.match(app,/serverChangedSinceBaseline/);
   assert.match(app,/cancelOutboxItem/);
