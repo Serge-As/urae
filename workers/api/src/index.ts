@@ -1417,10 +1417,11 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
     }
     const rubricPoliciesRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/rubrics\/([^/]+)\/policies$/);
     if(rubricPoliciesRoute&&request.method==='PUT'){
-      const groupId=rubricPoliciesRoute[1]!,rubricId=rubricPoliciesRoute[2]!,body=await readJson<RubricPolicies>(request),updated=await rubrics.updatePolicies({tenantId:ctx.tenantId,groupId,rubricId,policies:body});
-      await notifyGovernanceChange(groupId,{title:'Politiques de rubrique modifiées',message:`Politiques de « ${updated.name} » modifiées.`,action:{view:'operations',anchor:'rubricsManagementPanel',rubricId,entityKind:'RUBRIC',entityId:rubricId,label:'Voir la rubrique'}});
+      const groupId=rubricPoliciesRoute[1]!,rubricId=rubricPoliciesRoute[2]!,body=await readJson<RubricPolicies>(request),result=await updateRubricPoliciesGoverned(groupId,rubricId,body),updated=result.updated;
+      const revision:any=result.revision,scopeLabel=revision?String(revision.scope):'UNCHANGED_SCOPE';
+      await notifyGovernanceChange(groupId,{title:'Politiques de rubrique modifiées',message:revision?`Politique de « ${updated.name} » versionnée · portée ${scopeLabel} · effet ${String(revision.effectiveAt)}.`:`Politiques de « ${updated.name} » modifiées.`,action:{view:'operations',anchor:'rubricsManagementPanel',rubricId,entityKind:'RUBRIC',entityId:rubricId,label:'Voir la rubrique'}});
       const loanPolicy=updated.policies?.loan;
-      if(loanPolicy)try{await publishLive(groupId,'RULE_UPDATE','loan-policy:'+rubricId+':'+String(updated.version??0),{kind:'LOAN_POLICY',rubricId,rateBasisPointsPerPeriod:Number(loanPolicy.rateBasisPointsPerPeriod??0),paymentPriority:String(loanPolicy.paymentPriority??'CAPITAL_FIRST'),interestTiming:String(loanPolicy.interestTiming??'NEXT_SESSION_DUE'),fundingMode:String(loanPolicy.fundingMode??'AVAILABLE_GROUP_CASH'),carryForwardUnusedFunds:loanPolicy.carryForwardUnusedFunds!==false,actorId:ctx.actorId});}catch{}
+      if(loanPolicy)try{await publishLive(groupId,'RULE_UPDATE','loan-policy:'+rubricId+':'+String(updated.version??0),{kind:'LOAN_POLICY',rubricId,rateBasisPointsPerPeriod:Number(loanPolicy.rateBasisPointsPerPeriod??0),paymentPriority:String(loanPolicy.paymentPriority??'CAPITAL_FIRST'),interestTiming:String(loanPolicy.interestTiming??'NEXT_SESSION_DUE'),fundingMode:String(loanPolicy.fundingMode??'AVAILABLE_GROUP_CASH'),carryForwardUnusedFunds:loanPolicy.carryForwardUnusedFunds!==false,revisionId:String(revision?.id??''),scope:String(revision?.scope??''),effectiveAt:String(revision?.effectiveAt??''),effectiveMeetingId:String(revision?.effectiveMeetingId??''),affectedLoanIds:result.affectedLoanIds,actorId:ctx.actorId});}catch{}
       return json(updated,200,cors);
     }
     const rubricPreviewRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/rubrics\/([^/]+)\/preview-cycle$/);
@@ -2986,9 +2987,9 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
       }
       if(item.type==='RUBRIC_POLICIES_V1'){
         const p=item.payload,groupId=String(p.groupId??'');await requireGroup(groupId,true);
-        const rubric=await rubrics.updatePolicies({tenantId:ctx.tenantId,groupId,rubricId:String(p.rubricId??''),policies:p.policies as RubricPolicies});
+        const result=await updateRubricPoliciesGoverned(groupId,String(p.rubricId??''),p.policies as RubricPolicies),rubric=result.updated;
         await markApplied();
-        return json({accepted:true,stored:true,rubric},200,cors);
+        return json({accepted:true,stored:true,rubric,loanPolicyRevision:result.revision??null,affectedLoanIds:result.affectedLoanIds},200,cors);
       }
       if(item.type==='MEETING_CLOSE_V1'){
         const p=item.payload,groupId=String(p.groupId??'');await requireGroup(groupId,true);
