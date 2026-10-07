@@ -32,8 +32,8 @@ test('offline return requires governed financial confrontation before replay', a
   assert.match(css,/offline-confrontation-table/);
   assert.match(css,/offline-confrontation-session/);
   const release=JSON.parse(contract);
-  assert.equal(release.release.pwaCache,'eco-system-v15211-sovereign-relay-20261007');
-  assert.match(sw,/eco-system-v15211-sovereign-relay-20261007/);
+  assert.equal(release.release.pwaCache,'eco-system-v15212-event-sync-ui-20261007');
+  assert.match(sw,/eco-system-v15212-event-sync-ui-20261007/);
 });
 
 test('identical amount confirmations are not silently discarded', async()=>{
