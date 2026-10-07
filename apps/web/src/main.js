@@ -411,7 +411,7 @@ const renderConnectivity = () => {
       :`● ${online ? tx('En ligne','Online') : tx('Hors ligne','Offline')}`;
     e.title=paused?tx(`Accès serveur limité. Reprise ciblée après ${new Date(Number(budget?.until??0)).toLocaleString('fr-FR')}. Les validations serveur restent en attente.`,`Server limited. Retry after ${new Date(Number(budget?.until??0)).toLocaleString('en-US')}. Server confirmations pending.`)
       :degraded?tx('Le réseau local reste utilisable. Eco-System privilégie les données de cet appareil et Eco Relay sans sonder le serveur en boucle.','Local networking remains available. Eco-System prioritizes this device and Eco Relay without polling the server.'):'';
-    e.className=`pill ${!online||paused?'offline':degraded?'degraded':'online'}`;app.setConnectivity(!online?'offline':paused||degraded?'degraded':'online');
+    e.className=`pill ${!online?'offline':paused||degraded?'degraded':'online'}`;app.setConnectivity(!online?'offline':paused||degraded?'degraded':'online');
 };
 let lastOfflineSnapshotNotice=0;
 window.addEventListener('eco:offline-snapshot-used',event=>{
@@ -955,7 +955,7 @@ const scheduleFinancialOutboxRecovery=detail=>{
   // This closes the old gap where navigator.onLine stayed true after one failed
   // request and the cell then waited forever for a separate network event.
   const maxAttempts=FREE_CONSERVATION_MODE?3:8;
-  const delays=FREE_CONSERVATION_MODE?[200,650,1500]:[450,1100,1900,2800,3600,4200,4200,4200];
+  const delays=FREE_CONSERVATION_MODE?[150,550,1300]:[350,900,1700,2600,3400,4200,4200,4200];
   const run=async()=>{
     if(navigator.onLine===false){financialRetryTimers.delete(key);return;}
     attempt++;
