@@ -23,7 +23,7 @@ const fixture=async()=>{
   const createOpenLoan=async(label)=>{
     let loan=await api('/api/v1/groups/'+groupId+'/completion','POST',{kind:'LOAN',title:label,data:{principal:10000,currency:'XAF',borrowerMembershipId:memberId,rubricId,rateBasisPointsPerPeriod:0,paymentPriority:'CAPITAL_FIRST',interestTiming:'NEXT_SESSION_DUE',noInterestOnInterest:true,outstandingPrincipal:10000,unpaidInterest:2000}});
     for(const to of ['SUBMITTED','APPROVED','DISBURSED']){
-      loan=await api('/api/v1/groups/'+groupId+'/completion/'+loan.id+'/transition','POST',{to,expectedVersion:Number(loan.data.completionVersion),patch:to==='DISBURSED'?{outstandingPrincipal:10000,unpaidInterest:2000}:{}});
+      loan=await api('/api/v1/groups/'+groupId+'/completion/'+loan.id+'/transition','POST',{to,expectedVersion:Number(loan.data.completionVersion),patch:to==='DISBURSED'?{outstandingPrincipal:10000,unpaidInterest:2000,ledgerEntryId:'synthetic-disbursement-'+loan.id}:{}});
     }
     return loan;
   };
