@@ -25,7 +25,7 @@ const fixture=async()=>{
     tags:['completion','kind:LOAN','state:'+state],
     data:{completionKind:'LOAN',completionState:state,completionVersion:1,borrowerMembershipId:'membership-borrower',
       rubricId,principal:10000,outstandingPrincipal:state==='CLOSED'?0:10000,unpaidInterest:state==='CLOSED'?0:2000,
-      currency:'XAF',rateBasisPointsPerPeriod:200,paymentPriority:'CAPITAL_FIRST',
+      ledgerEntryId:'historical-disbursement-'+id,currency:'XAF',rateBasisPointsPerPeriod:200,paymentPriority:'CAPITAL_FIRST',
       interestTiming:'NEXT_SESSION_DUE',noInterestOnInterest:true,installmentsPerYear:12},
     createdBy:'manager-a',createdAt,updatedAt
   });
