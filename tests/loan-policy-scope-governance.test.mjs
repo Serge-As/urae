@@ -20,6 +20,10 @@ const fixture=async()=>{
       paymentPriority:'CAPITAL_FIRST',interestTiming:'NEXT_SESSION_DUE',fundingMode:'AVAILABLE_GROUP_CASH',
       carryForwardUnusedFunds:true,noInterestOnInterest:true}},
     createdAt,updatedAt:createdAt,version:1});
+  await repo.saveRubricDefinition({id:'rubric-repayment',tenantId,groupId,name:'Remboursements',status:'ACTIVE',source:'GROUP_CUSTOM',
+    facets:{direction:'INFLOW',custom:{systemKey:'REPAYMENT'}},policies:{},createdAt,updatedAt:createdAt,version:1});
+  await repo.saveMeeting({id:'meeting-repayment',tenantId,groupId,status:'open',title:'Séance remboursement',session:1,
+    scheduledAt:'2026-10-07T13:00:00.000Z',openedAt:'2026-10-07T13:00:00.000Z',openedBy:'manager-a'});
   const saveLoan=async(id,state,updatedAt='2026-10-05T10:00:00.000Z')=>repo.saveWorkspaceRecord({
     id,tenantId,groupId,moduleId:'FINANCE.LOANS',title:id,status:state==='CLOSED'?'DONE':'ACTIVE',
     tags:['completion','kind:LOAN','state:'+state],
@@ -79,6 +83,22 @@ test('Option B applies to open loans and excludes a fully settled loan',async()=
   assert.equal(result.allocation.principalPaid,4000);
   assert.equal(result.allocation.remainingPrincipal,6000);
   assert.equal(result.allocation.unpaidInterestAfter,0);
+});
+
+test('Remboursements persists 2500 in canonical snapshot and durable sheet event',async()=>{
+  const x=await fixture();
+  const result=await x.request('/api/v1/groups/'+groupId+'/loans/loan-open/repay','POST',{
+    paymentAmount:2500,expectedVersion:1,meetingId:'meeting-repayment',rubricId:'rubric-repayment',idempotencyKey:'repay-2500'
+  });
+  assert.equal(result.allocation.paymentAmount,2500);
+  const snapshot=await x.request('/api/v1/groups/'+groupId+'/financial-cells/snapshot');
+  const cell=snapshot.cells.find(row=>row.meetingId==='meeting-repayment'&&row.membershipId==='membership-borrower'&&row.rubricId==='rubric-repayment');
+  assert.ok(cell,'repayment cell must survive a new canonical snapshot');
+  assert.equal(cell.amount,2500);
+  const events=await x.repo.listWorkspaceRecords(tenantId,'FINANCE.SHEET_EVENT',groupId);
+  const event=events.find(row=>String(row.data?.rubricId)==='rubric-repayment'&&String(row.data?.meetingId)==='meeting-repayment');
+  assert.ok(event,'repayment must create a durable FINANCE.SHEET_EVENT');
+  assert.equal(Number(event.data.amount),2500);
 });
 
 test('Selected-open mode affects only selected live loans and policy command replay is idempotent',async()=>{
