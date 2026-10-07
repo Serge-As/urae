@@ -1,6 +1,6 @@
 // A new cache identity is mandatory, even for a patch-level app release.
-const CACHE = 'eco-system-v15211-q01q28-recovery-20261006';
-const PREVIOUS_CACHE = 'eco-system-v15211-field-recovery-20261005';
+const CACHE = 'eco-system-v15211-data-first-20261007';
+const PREVIOUS_CACHE = 'eco-system-v15211-q01q28-recovery-20261006';
 const LEGACY_RECOVERY_CACHE = 'eco-system-v15210-offline-conflicts-loans-20261003';
 const RELEASE_READY = '/__eco_release_ready__';
 
