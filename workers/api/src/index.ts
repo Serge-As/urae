@@ -75,10 +75,10 @@ interface WorkersAILike {
 }
 
 const RELEASE_VERSION='1.5.2.11-field-recovery';
-const RELEASE_BUILD_ID='eco-system-1.5.2.11-20261005-field-recovery';
+const RELEASE_BUILD_ID='eco-system-1.5.2.11-20261007-data-first';
 const RELEASE_SCHEMA_VERSION='d1-additive-20260923';
-const RELEASE_POLICY_VERSION='live-finance-policy-20261003-explicit-conflicts';
-const RELEASE_PWA_CACHE='eco-system-v15211-q01q28-recovery-20261006';
+const RELEASE_POLICY_VERSION='live-finance-policy-20261007-versioned-loan-scope';
+const RELEASE_PWA_CACHE='eco-system-v15211-data-first-20261007';
 
 const defaultRepo = new InMemoryPlatformRepository();
 const defaultReferralBudgets = new InMemoryReferralBudgetStore();
