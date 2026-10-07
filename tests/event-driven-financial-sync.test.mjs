@@ -14,7 +14,9 @@ test('free-tier financial recovery is event-driven, bounded and never an idle D1
   assert.doesNotMatch(snippet,/if\(FREE_CONSERVATION_MODE\)return/,'free mode must not strand a validated queued cell');
   assert.match(snippet,/maxAttempts\s*=\s*FREE_CONSERVATION_MODE\s*\?\s*3\s*:\s*8/);
   assert.match(snippet,/\[200,\s*650,\s*1500\]/,'free retries remain bounded below five seconds');
-  assert.match(main,/if\(FREE_CONSERVATION_MODE\)return;[\s\S]{0,220}setInterval\(/,'only the optional canonical snapshot poll is disabled in free mode');
+  const pollStart=main.indexOf('const ensureFinancialSnapshotPolling'),pollEnd=main.indexOf('const submitFinancialCellElement',pollStart),poll=main.slice(pollStart,pollEnd);
+  assert.match(poll,/if\s*\(\s*FREE_CONSERVATION_MODE\s*\)\s*return/,'canonical snapshot polling is disabled in free mode');
+  assert.match(poll,/setInterval/,'paid-mode polling remains explicitly isolated behind the free-mode guard');
   assert.match(app,/transportUnavailableUntil\s*=\s*Date\.now\(\)\s*\+\s*3500/);
   assert.match(app,/eco:transport-retry-ready/);
 });
