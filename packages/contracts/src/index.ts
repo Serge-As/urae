@@ -621,6 +621,32 @@ export interface RubricSpecialLoanRule {
   eligibilityRule?:string;
 }
 export type RubricLoanFundingMode='SAVINGS_REPAYMENTS_ONLY'|'AVAILABLE_GROUP_CASH';
+export type RubricLoanPolicyChangeScope='NEW_LOANS_ONLY'|'NEW_AND_ALL_OPEN_LOANS'|'NEW_AND_SELECTED_OPEN_LOANS';
+export interface RubricLoanPolicySnapshot {
+  rateBasisPointsPerPeriod?:number;
+  paymentPriority?:'CAPITAL_FIRST'|'INTEREST_FIRST'|'EXPLICIT_ALLOCATION';
+  interestTiming?:RubricLoanInterestTiming;
+  fundingMode?:RubricLoanFundingMode;
+  carryForwardUnusedFunds?:boolean;
+}
+export interface RubricLoanPolicyChangeControl {
+  scope:RubricLoanPolicyChangeScope;
+  effectiveMode?:'IMMEDIATE'|'DATE'|'MEETING';
+  effectiveAt?:string;
+  effectiveMeetingId?:Id;
+  selectedLoanIds?:Id[];
+}
+export interface RubricLoanPolicyRevision {
+  id:Id;
+  createdAt:string;
+  createdBy?:Id;
+  effectiveAt:string;
+  effectiveMeetingId?:Id;
+  scope:RubricLoanPolicyChangeScope;
+  selectedLoanIds?:Id[];
+  before:RubricLoanPolicySnapshot;
+  after:RubricLoanPolicySnapshot;
+}
 export interface RubricLoanPolicy {
   allowed:boolean;
   rateBasisPointsPerPeriod?:number;
@@ -633,6 +659,10 @@ export interface RubricLoanPolicy {
   noInterestOnInterest:true;
   overdue?:RubricLoanOverduePolicy;
   specialLoans?:RubricSpecialLoanRule[];
+  /** Server-authored immutable history used to resolve each loan's effective rules without rewriting closed loans. */
+  revisions?:RubricLoanPolicyRevision[];
+  /** Transient command metadata. The API consumes it and never trusts client-authored revision history. */
+  changeControl?:RubricLoanPolicyChangeControl;
 }
 export interface RubricYieldPolicy {
   enabled:boolean;
