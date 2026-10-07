@@ -25,6 +25,10 @@ test('manager Relay exchanges durable intents without becoming a second ledger',
   assert.match(ui,/Appliquer les recommandations chronologiques/);
   assert.match(main,/Reçu via Eco Relay · serveur non requis pour continuer/);
   assert.match(main,/localRelayGroupStructure/);
+  assert.match(app,/transportUnavailableUntil/);
+  assert.match(app,/markTransportUnavailable/);
+  assert.match(app,/timeoutMs=formUpload\?30000:6500/);
+  assert.match(main,/Local actif · serveur momentanément absent/);
   assert.match(localRoom,/iceServers:\[\]/);
 });
 
