@@ -43,6 +43,6 @@ test('release changes the active cache identity while preserving a distinct cohe
   assert.ok(current&&previous,'release and rollback caches are both declared');
   assert.notEqual(current,previous,'active release cache must differ from rollback cache');
   assert.match(current,/^eco-system-v15211-/);
-  assert.match(previous,/^eco-system-v15211-q01q28-recovery-20261006$/);
+  assert.match(previous,/^eco-system-v15211-data-first-confrontation-20261007$/);
   assert.match(sw,/LEGACY_RECOVERY_CACHE = 'eco-system-v15210-offline-conflicts-loans-20261003'/);
 });
