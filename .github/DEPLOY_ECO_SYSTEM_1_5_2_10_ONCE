@@ -1,11 +1,10 @@
-Eco-System 1.5.2.11 field-recovery deployment marker
-release: 1.5.2.11-field-recovery
-date: 2026-10-06
+Eco-System 1.5.2.12 event-sync + data-first deployment marker
+release: 1.5.2.12-live-sync
+date: 2026-10-07
 db_mutation: none
 mode: code-only-no-d1-export-no-migration
-reason: event-driven live sync + quota-aware reconnect + offline F5 + explicit financial conflicts + repayments/loans/debts + savings yield policies + borrower rewards + secured history
-qualified_pr: 66
-qualified_head_sha: dc8ebafca88d9c40579fcdc8ba62be7abdd6d2f4
-merge_sha_parent: 5b781fac5ba718aa9cbf1a0dc0a25eed73c64e4e
-smoke_retry: 2026-10-06T14:12Z
-smoke_guard: wait-health-and-catalog-exact-version
+reason: targeted financial push + WebSocket fan-out without idle D1 polling + automatic reconnect/outbox replay + exact navigation/table position restore + canonical REPAYMENT rubric + versioned A/B loan policy + data-first responsive UI
+qualified_pr: 67
+qualification_rule: governed-ci + browser-critical must pass on exact head SHA before merge
+production_rule: deploy workflow must prove /health commitSha, buildId, pwaCache and capability catalog
+field_acceptance: NOT_ACCEPTED until Serge verifies production on his browsers/devices
