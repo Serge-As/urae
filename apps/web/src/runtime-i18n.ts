@@ -470,3 +470,21 @@ export const installRuntimeI18nObserver=(getLocale:()=>RuntimeLocale)=>{
 
 export const runtimeTranslate=(locale:RuntimeLocale,fr:string,en?:string)=>locale==='en'?(en??canonical.get(fr)??fr):fr;
 export const runtimeDictionary=()=>Object.fromEntries(canonical);
+
+
+Object.assign(EXTRA_FR_EN,{
+  "Portée de cette nouvelle version": "Scope of this new version",
+  "A · Nouveaux prêts uniquement": "A · New loans only",
+  "B · Nouveaux + tous les prêts en cours": "B · New + all open loans",
+  "B · Nouveaux + certains prêts en cours": "B · New + selected open loans",
+  "Prise d’effet": "Effective timing",
+  "Immédiatement": "Immediately",
+  "À une date précise": "On a specific date",
+  "À une séance précise": "At a specific meeting",
+  "Date / heure d’effet": "Effective date / time",
+  "Séance d’effet": "Effective meeting",
+  "Prêts en cours concernés": "Open loans concerned",
+  "Les prêts soldés ne sont jamais réécrits. Ctrl/Cmd + clic permet de sélectionner plusieurs prêts sur PC.": "Closed loans are never rewritten. Ctrl/Cmd + click selects multiple loans on desktop.",
+  "Enregistrer cette version de politique": "Save this policy version",
+  "Simuler un prêt imaginaire": "Simulate a hypothetical loan"
+});
