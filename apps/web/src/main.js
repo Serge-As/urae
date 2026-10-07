@@ -624,7 +624,7 @@ const activeMeeting = () => {
 const financialNatureForRubric=rubric=>{
     const kind=String(rubric?.activityPlan?.kind??'').toUpperCase(),name=String(rubric?.name??'').normalize('NFKD').replace(/[\u0300-\u036f]/g,'').toLowerCase(),systemKey=String(rubric?.facets?.custom?.systemKey??'').toUpperCase();
     if(kind==='LOAN'||systemKey==='LOAN'||/^prets?$|^loans?$/.test(name))return'LOAN';
-    if(kind==='REPAYMENT'||/remboursement|repayment/.test(name))return'REPAYMENT';
+    if(kind==='REPAYMENT'||systemKey==='REPAYMENT'||/remboursement|repayment/.test(name))return'REPAYMENT';
     if(rubric?.facets?.direction==='OUTFLOW')return'OUTFLOW';
     return'CONTRIBUTION';
 };
@@ -902,6 +902,10 @@ const reviewOfflineFinancialBacklog=async(force=false)=>{
   if(offlineConfrontationDeferred&&!force)return false;
   const preview=await app.previewOfflineFinancialConfrontation();
   if(!preview.rows?.length)return true;
+  // No remote change since this device's baseline = no conflict to arbitrate.
+  // Sync automatically; only real concurrent divergence opens the confrontation
+  // dialog. This keeps reconnect under five seconds without hiding conflicts.
+  if(preview.rows.every(row=>!row.serverChangedSinceBaseline))return true;
   const decision=await showOfflineFinancialConfrontation(preview);
   if(!decision){offlineConfrontationDeferred=true;return false;}
   for(const id of decision.keepServerIds)await app.cancelOutboxItem(id);
@@ -949,7 +953,7 @@ const scheduleFinancialOutboxRecovery=detail=>{
   // This closes the old gap where navigator.onLine stayed true after one failed
   // request and the cell then waited forever for a separate network event.
   const maxAttempts=FREE_CONSERVATION_MODE?3:8;
-  const delays=FREE_CONSERVATION_MODE?[350,1200,2800]:[650,1450,2350,3250,4150,4200,4200,4200];
+  const delays=FREE_CONSERVATION_MODE?[200,650,1500]:[450,1100,1900,2800,3600,4200,4200,4200];
   const run=async()=>{
     if(navigator.onLine===false){financialRetryTimers.delete(key);return;}
     attempt++;
@@ -2552,7 +2556,9 @@ window.addEventListener('eco:transport-retry-ready',()=>{app.forceTransportRetry
 window.addEventListener('offline',()=>{networkRecoveryNeeded=true;offlineConfrontationDeferred=false;persistNavState(captureNavState());renderConnectivity();});
 window.addEventListener('pageshow',eventDrivenConnectivityRecovery);
 window.addEventListener('eco:server-budget-blocked',renderConnectivity);
-window.addEventListener('eco:transport-degraded',renderConnectivity);
+window.addEventListener('eco:transport-degraded',()=>{
+    networkRecoveryNeeded=true;renderConnectivity();
+});
 window.addEventListener('eco:manager-relay-updated',()=>{void(async()=>{
     const structure=await app.localRelayGroupStructure?.();if(structure){
       await renderMembers(structure.members);await renderMeetings(structure.meetings);await renderLivingRules(structure.rubrics);
@@ -2567,13 +2573,24 @@ window.addEventListener('eco:manager-relay-updated',()=>{void(async()=>{
     renderMeetingMatrix();renderIndividualSheetMatrix();renderAllCanonicalFinancialHosts();
   })().catch(error=>console.info('Relay local projection refresh deferred',error));});
 window.addEventListener('eco:server-budget-expired',()=>{networkRecoveryNeeded=true;void resumeOnline();});
-window.addEventListener('eco:live-connected',eventDrivenConnectivityRecovery);
+window.addEventListener('eco:live-connected',()=>{
+    // The authenticated socket itself proves real server reachability. Clear a
+    // stale local/offline latch without issuing a D1/auth probe, then replay only
+    // pending Outbox work.
+    app.markLiveTransportHealthy?.();networkRecoveryNeeded=true;eventDrivenConnectivityRecovery();
+});
 window.addEventListener('focus',eventDrivenConnectivityRecovery);
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')eventDrivenConnectivityRecovery();});
 if('serviceWorker' in navigator)navigator.serviceWorker.addEventListener('message',event=>{
     if(event.data?.type!=='ECO_SYSTEM_SYNC_OUTBOX'||!navigator.onLine)return;
     void resumeOnline();
 });
+// A browser/page refresh must resume the exact business place, including a
+// horizontal financial column far to the right. sessionStorage is synchronous,
+// so pagehide can safely persist the last visible state without any request.
+const persistCurrentNavigation=()=>{try{persistNavState(captureNavState());}catch{}};
+window.addEventListener('pagehide',persistCurrentNavigation);
+window.addEventListener('beforeunload',persistCurrentNavigation);
 const iosLike=()=>/iPad|iPhone|iPod/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
 const standaloneMode=()=>window.matchMedia?.('(display-mode: standalone)')?.matches||navigator.standalone===true;
 const showIosInstallGuide=()=>{
