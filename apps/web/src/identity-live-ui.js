@@ -24,11 +24,15 @@ export function mountIdentityLiveUI({app,notify=()=>{},showError=console.error,c
     }
   };
   const scheduleReconnect=()=>{
-    if(!wantConnection||!app.activeGroup()||navigator.onLine===false||reconnectTimer||reconnectAttempt>=4)return;
-    // At most four connection attempts per outage; no idle polling or D1 requests.
-    const backoff=[1500,4500,12000,30000][reconnectAttempt++];
-    reconnectTimer=setTimeout(()=>{reconnectTimer=null;connect();},backoff);
-    if(liveRoot)liveRoot.append(row('Reconnexion','Canal interrompu · tentative '+reconnectAttempt+'/4'));
+    if(!wantConnection||!app.activeGroup()||navigator.onLine===false||reconnectTimer)return;
+    // Persistent WebSocket recovery is deliberately NOT D1 polling. The first
+    // retries are fast enough for collaborative finance; prolonged outages are
+    // capped at one lightweight handshake every 30 s until a real connection
+    // returns. A cached signed ticket avoids any D1 read on these reconnects.
+    const backoff=[800,1800,4000,10000,30000][Math.min(reconnectAttempt,4)];
+    reconnectAttempt=Math.min(reconnectAttempt+1,5);
+    reconnectTimer=setTimeout(()=>{reconnectTimer=null;void connect();},backoff);
+    if(liveRoot)liveRoot.append(row('Reconnexion','Canal interrompu · reprise automatique dans '+Math.round(backoff/1000)+' s'));
   };
   const renderEvent=event=>{
     const card=el('article',undefined,'item');
@@ -62,7 +66,7 @@ export function mountIdentityLiveUI({app,notify=()=>{},showError=console.error,c
   };
   const connect=()=>{
     if(connectPromise)return connectPromise;
-    if(!wantConnection||!app.activeGroup()||typeof WebSocket==='undefined'||navigator.onLine===false||app.serverBudgetState?.().blocked)return Promise.resolve();
+    if(!wantConnection||!app.activeGroup()||typeof WebSocket==='undefined'||navigator.onLine===false)return Promise.resolve();
     if(socket&&[WebSocket.CONNECTING,WebSocket.OPEN].includes(socket.readyState))return Promise.resolve();
     const requestedGroup=app.activeGroup();
     clearTimers();try{socket?.close(1000,'reconnect');}catch{}socket=null;activeGroup=requestedGroup;
@@ -75,13 +79,13 @@ export function mountIdentityLiveUI({app,notify=()=>{},showError=console.error,c
         const code=String(e instanceof Error?e.message:e);
         if(code!=='NOT_FOUND'&&code!=='HTTP_404')throw e;
       }
-      if(!wantConnection||navigator.onLine===false||app.activeGroup()!==requestedGroup||app.serverBudgetState?.().blocked)return;
+      if(!wantConnection||navigator.onLine===false||app.activeGroup()!==requestedGroup)return;
       // Legacy authenticated upgrade remains available if ticket issuance is not
       // configured yet; it costs D1 but avoids breaking an older deployment.
       const activeSocket=socket=new WebSocket(app.liveWebSocketUrl(lastSeq,String(ticketData?.ticket??'')));
       activeSocket.onopen=()=>{
         if(socket!==activeSocket)return;
-        reconnectAttempt=0;
+        reconnectAttempt=0;app.markLiveTransportHealthy?.();
         // Re-announce only the latest draft state per cell after reconnect.
         for(const {type,payload} of pendingDraftSignals.values())try{socket.send(JSON.stringify({type:'CLIENT_SIGNAL',eventType:type,payload}));}catch{}
         pendingDraftSignals.clear();
