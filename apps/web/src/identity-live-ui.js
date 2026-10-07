@@ -117,7 +117,10 @@ export function mountIdentityLiveUI({app,notify=()=>{},showError=console.error,c
       activeSocket.onclose=()=>{
         // A closed old socket must not null a fresh one after a network switch.
         if(socket!==activeSocket)return;
-        socket=null;if(liveRoot)liveRoot.append(row('Canal','Déconnecté · reconnexion sur événement réseau'));scheduleReconnect();
+        socket=null;
+        try{window.dispatchEvent(new CustomEvent('eco:live-disconnected',{detail:{groupId:activeGroup}}));}catch{}
+        if(liveRoot)liveRoot.append(row('Canal','Déconnecté · reconnexion automatique'));
+        scheduleReconnect();
       };
       activeSocket.onerror=()=>{if(socket===activeSocket&&liveRoot)liveRoot.append(row('WebSocket','Interruption détectée · aucune boucle de polling'));};
     })().catch(e=>{showError(e);scheduleReconnect();}).finally(()=>{connectPromise=null;});
@@ -215,7 +218,11 @@ export function mountIdentityLiveUI({app,notify=()=>{},showError=console.error,c
   });
   window.addEventListener('eco:server-budget-expired',()=>{if(wantConnection&&navigator.onLine!==false){reconnectAttempt=0;void connect();}});
   window.addEventListener('eco:local-mutation',()=>{if(wantConnection&&navigator.onLine!==false&&(!socket||socket.readyState>1)){reconnectAttempt=0;connect();}});
-  window.addEventListener('offline',()=>{closeSocket('offline');reconnectAttempt=0;if(liveRoot)liveRoot.append(row('Réseau','Hors ligne · outbox active'));});
+  window.addEventListener('offline',()=>{
+    closeSocket('offline');reconnectAttempt=0;
+    try{window.dispatchEvent(new CustomEvent('eco:live-disconnected',{detail:{groupId:activeGroup,offline:true}}));}catch{}
+    if(liveRoot)liveRoot.append(row('Réseau','Hors ligne · outbox active'));
+  });
   document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&wantConnection&&(!socket||socket.readyState!==WebSocket.OPEN)){reconnectAttempt=0;connect();}});
   document.getElementById('refreshPassportBtn')?.addEventListener('click',()=>void (async()=>{try{await app.groupIdentityPassport(true);notify('Passeport identitaire rafraîchi.');await refresh();}catch(e){showError(e);}})());
   document.getElementById('conciergeMemoryForm')?.addEventListener('submit',e=>{e.preventDefault();void (async()=>{try{
