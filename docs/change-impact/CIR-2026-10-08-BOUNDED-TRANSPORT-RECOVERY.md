@@ -56,3 +56,7 @@ Correction ciblée : la reconfirmation explicite demande un nouvel ancrage aprè
 ### Preuve initiale de la régression horloge
 
 Le job forensique 113479969251 du run 37826312843 confirme trois échecs d'assertion sur le source précédent (0/3), après compilation réussie. Les deux premiers montrent une nouvelle décision normalisée avant le canonique déjà observé ; le troisième conserve old-clock. Son enveloppe doit demander explicitement le reporter TAP avant de compter '# fail 3'. La troisième fixture est renforcée en retirant l'ancre en mémoire pour isoler le vrai replay du GET hors ligne ; la séquence de remplacement suit aussi celle de l'intention originale. Aucune publication autorisée par ce résultat partiel.
+
+### Audit de dépendances complémentaire
+
+Les installations CI signalent trois dépendances de gravité haute. Les avis primaires GHSA-7mvr-c777-76hp (Playwright, TLS des installateurs) et GHSA-96hv-2xvq-fx4p / GHSA-58qx-3vcg-4xpx (ws, limites mémoire et close) justifient l'inspection du verrou npm. Le job forensique lit npm audit, génère un verrou candidat Playwright 1.56.1 / ws 8.21.0 depuis le registre, publie les métadonnées pour revue, puis restaure le verrou du SHA avant les tests. Cette génération ne modifie aucun dépôt ni déploiement ; son adoption exige revue et qualifications.
