@@ -1197,7 +1197,7 @@
     },
     {
       "id": "candidate.eco.1.5.2.15.bounded.transport.recovery",
-      "status": "IN_PROGRESS",
+      "status": "VERIFIED_REMOTE",
       "scope": "application/outbox/transport-recovery/pwa/qualification",
       "observedOn": "2026-10-08",
       "evidence": [
@@ -1205,10 +1205,15 @@
         "repo:docs/change-impact/CIR-2026-10-08-BOUNDED-TRANSPORT-RECOVERY.md",
         "repo:tests/transport-recovery-no-idle-polling.test.mjs",
         "repo:tests/browser/sovereign-multi-manager-1.5.2.14.spec.mjs",
-        "deterministic-extracted-source:baseline 9 failed sends/8 wakes/1 pending timer; candidate 2/1/0 in 30s"
+        "deterministic-extracted-source:baseline 9 failed sends/8 wakes/1 pending timer; candidate 2/1/0 in 30s",
+        "github:commit:3f7ea03457bbd936a87e299270843043e2826a24",
+        "github:run:37820287689 SUCCESS; 650/650 Node Chromium 8/8 WebKit 6/6",
+        "github:run:37820287701 SUCCESS; governed CI and same browser suites",
+        "github:artifact:11567969551 exact source archive; SHA256SUMS verified; tar readable",
+        "github:PR:71 merged; merge commit 754a8cef153b7ebe92b993de3b68f7a2c42d9f2d"
       ],
-      "note": "Candidate source only at this checkpoint. No Node/Playwright SUCCESS or production delivery presumed. Source archive and exact SHA qualification must be recorded after execution.",
-      "next": "Run governed CI plus browser outage/convergence and deploy only after success; preserve fieldAcceptance NOT_ACCEPTED."
+      "note": "Source qualified remotely and PR merged; production delivery not yet attested in this checkpoint. Duplicate push browser job is still installing browsers and is not counted as a third successful run.",
+      "next": "Trigger existing code-only delivery, requalify deployment SHA before Worker mutation and record exact health/Worker evidence. Physical acceptance remains NOT_ACCEPTED."
     }
   ]
 }

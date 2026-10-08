@@ -6,7 +6,7 @@ Continuer Eco-System sans recommencer, simplifier ou remplacer silencieusement l
 ## Vérité de reprise au 8 octobre 2026
 - production attestée : `1.5.2.14-live-sync`, SHA `d027f09a1382cd29054b33e274f3fd3bf9f8d9f3`, livraison GitHub Actions `37765653486 SUCCESS` ;
 - branche de livraison active : `fix/1.5.2.10-offline-conflicts-loans-20261003` ;
-- candidate de travail : `fix/transport-recovery-bounded-20261008`, version `1.5.2.15-bounded-recovery`, qualification/déploiement à vérifier ;
+- candidate de travail : `fix/transport-recovery-bounded-20261008`, version `1.5.2.15-bounded-recovery`, qualifiée 650/650 Node + Chromium 8/8 + WebKit 6/6, PR #71 fusionnée ; déploiement à vérifier ;
 - autorités de version et preuve : `docs/release/CURRENT_RELEASE_CONTRACT.json`, `docs/memory/CURRENT_TRUTH.md` et `docs/memory/PROJECT_TRUTH_LEDGER.json` ;
 - schéma/D1/R2 préexistants conservés ; `realMoneyEnabled=false`, `FIELD_ACCEPTED=NOT_ACCEPTED` ;
 - l'audit du 8 octobre documente un vrai défaut de polling de reprise et les capacités encore planifiées/externes. Le registre de modules ne vaut pas recette complète.

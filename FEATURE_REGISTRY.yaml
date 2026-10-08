@@ -1377,11 +1377,14 @@ production_qualification_2026_10_08_1_5_2_14:
 candidate_2026_10_08_1_5_2_15:
   version: 1.5.2.15-bounded-recovery
   branch: fix/transport-recovery-bounded-20261008
-  status: IMPLEMENTED_UNVERIFIED
+  status: VERIFIED_REMOTE
   deployed: false
   scope: bounded_transport_recovery_existing_application_outbox_owner
   deterministic_reproducer: baseline_9_sends_8_wakes_candidate_2_sends_1_wake_per_30s
-  node_browser_qualification: pending_exact_sha
+  node_browser_qualification: node_650_chromium_8_webkit_6
+  qualified_source: 3f7ea03457bbd936a87e299270843043e2826a24
+  qualification_runs: [37820287689, 37820287701]
+  source_archive_id: 11567969551
   d1: eco-system-db
   r2: eco-system-backups
   db_mutation: none

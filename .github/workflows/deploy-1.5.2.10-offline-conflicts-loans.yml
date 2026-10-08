@@ -83,6 +83,21 @@ jobs:
             -d '{"state":"success","context":"eco-system/gate-governance","description":"Architecture + BIR + truth gates passed"}' >/dev/null
       - name: Build coherent PWA shell and Worker
         run: npm run build
+      - name: Archive exact deployment source before Worker mutation
+        shell: bash
+        run: |
+          mkdir -p /tmp/eco-deployment-recovery
+          git archive --format=tar.gz HEAD > /tmp/eco-deployment-recovery/source-${{ github.sha }}.tar.gz
+          cd /tmp/eco-deployment-recovery
+          sha256sum source-${{ github.sha }}.tar.gz > SHA256SUMS
+          sha256sum -c SHA256SUMS
+          tar -tzf source-${{ github.sha }}.tar.gz >/dev/null
+      - name: Retain verified deployment recovery archive
+        uses: actions/upload-artifact@v4
+        with:
+          name: eco-deployment-recovery-${{ github.sha }}
+          path: /tmp/eco-deployment-recovery/
+          retention-days: 30
       - name: Status · gate-build
         continue-on-error: true
         run: |
@@ -243,7 +258,7 @@ jobs:
               && grep -Fq "\"pwaCache\": \"${EXPECTED_CACHE}\"" <<<"${health}" \
               && grep -Fq "\"version\":\"${EXPECTED_VERSION}\"" <<<"$(tr -d '[:space:]' <<<"${catalog}")" \
               && grep -q '"capabilities"' <<<"${catalog}"; then break; fi
-            echo "Waiting for exact 1.5.2.14 health + catalog propagation (attempt ${attempt}/12)…"
+            echo "Waiting for exact 1.5.2.15 health + catalog propagation (attempt ${attempt}/12)…"
             sleep 4
           done
           printf '%s' "${health}" > /tmp/health.json
@@ -278,10 +293,10 @@ jobs:
         run: |
           if [ "${{ job.status }}" = "success" ]; then
             state=success
-            description="1.5.2.14 qualified and production smoke passed"
+            description="1.5.2.15 qualified and production smoke passed"
           else
             state=failure
-            description="1.5.2.14 qualification or production smoke failed"
+            description="1.5.2.15 qualification or production smoke failed"
           fi
           payload="$(node -e 'console.log(JSON.stringify({state:process.argv[1],context:"eco-system/production-1.5.2.15",description:process.argv[2]}))' "$state" "$description")"
           curl --fail --silent --show-error -X POST \
