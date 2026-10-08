@@ -135,7 +135,7 @@ test('loan policy scopes and free/existing simulation controls are usable in the
   await expect(dialog.locator('.loan-simulation-control-card')).toHaveCount(2);
 });
 
-test('repayment 2500 syncs event-wise within five seconds and survives reload without losing table context',async({page,context})=>{
+test('repayment 2500 syncs event-wise within five seconds and survives reload without losing table context',async({page,context,browser})=>{
   test.setTimeout(120_000);
   await page.goto(base+'/',{waitUntil:'domcontentloaded'});
   const ids=await page.evaluate(async({password})=>{
@@ -173,7 +173,7 @@ test('repayment 2500 syncs event-wise within five seconds and survives reload wi
     loan=await json('/api/v1/groups/'+encodeURIComponent(group.id)+'/completion/'+encodeURIComponent(loan.id)+'/transition','POST',{to:'APPROVED',expectedVersion:2,patch:{}},group.id);
     loan=(await json('/api/v1/groups/'+encodeURIComponent(group.id)+'/loans/'+encodeURIComponent(loan.id)+'/disburse','POST',{amount:10000,expectedVersion:3,meetingId:meeting.id,rubricId:loanRubric.id,idempotencyKey:'disburse-'+suffix},group.id)).loan;
     localStorage.setItem('tontine.activeGroupId',group.id);
-    return{groupId:group.id,membershipId,meetingId:meeting.id,repaymentRubricId:repaymentRubric.id,loanId:loan.id};
+    return{groupId:group.id,membershipId,meetingId:meeting.id,repaymentRubricId:repaymentRubric.id,loanId:loan.id,username:suffix};
   },{password});
 
   await page.reload({waitUntil:'domcontentloaded'});
@@ -181,6 +181,27 @@ test('repayment 2500 syncs event-wise within five seconds and survives reload wi
   const selector='.matrix-cell-entry[data-membership-id="'+ids.membershipId+'"][data-rubric-id="'+ids.repaymentRubricId+'"][data-meeting-id="'+ids.meetingId+'"]';
   const cell=page.locator('#meetingMatrix').locator(selector);
   await expect(cell).toBeVisible();
+
+  // A second browser context models another device using the same account.
+  // It must converge through the durable WebSocket push, not snapshot polling.
+  const mirrorContext=await browser.newContext();
+  const mirror=await mirrorContext.newPage();
+  await mirror.goto(base+'/',{waitUntil:'domcontentloaded'});
+  await mirror.evaluate(async({username,password,groupId})=>{
+    const response=await fetch('/api/v1/auth/login',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({username,password})});
+    if(!response.ok)throw new Error('MIRROR_LOGIN_'+response.status);
+    localStorage.setItem('tontine.activeGroupId',groupId);
+  },{username:ids.username,password,groupId:ids.groupId});
+  await mirror.reload({waitUntil:'domcontentloaded'});
+  await mirror.locator('button[data-view="operations"]').first().click();
+  const mirrorCell=mirror.locator('#meetingMatrix').locator(selector);
+  await expect(mirrorCell).toBeVisible();
+  await expect.poll(async()=>String(await mirror.locator('#connectivity').innerText()),{timeout:8000}).toMatch(/Live|connexion Live/i);
+  let forbiddenIdleReads=0;
+  mirror.on('request',request=>{
+    const url=new URL(request.url());
+    if(url.pathname.includes('/financial-cells/snapshot')||url.pathname.endsWith('/live/events'))forbiddenIdleReads++;
+  });
 
   await context.setOffline(true);
   await cell.locator('.cell-target-input').fill('2500');
@@ -198,6 +219,9 @@ test('repayment 2500 syncs event-wise within five seconds and survives reload wi
   },ids),{timeout:5000,intervals:[200,350,500,700]}).toBe(true);
   expect(Date.now()-syncStarted).toBeLessThan(5500);
   await expect.poll(()=>amountFrom(cell),{timeout:5000}).toBe(2500);
+  await expect.poll(()=>amountFrom(mirrorCell),{timeout:5000,intervals:[100,200,350,500]}).toBe(2500);
+  await mirror.waitForTimeout(1800);
+  expect(forbiddenIdleReads).toBe(0);
 
   // The app refresh must keep the horizontal place. Use a real phone-width
   // viewport so the replacement matrix still overflows after rerender; do not
@@ -221,5 +245,6 @@ test('repayment 2500 syncs event-wise within five seconds and survives reload wi
   const reloaded=page.locator('#meetingMatrix').locator(selector);
   await expect(reloaded).toBeVisible();
   await expect.poll(()=>amountFrom(reloaded)).toBe(2500);
+  await mirrorContext.close();
 });
 
