@@ -29,3 +29,7 @@ Réutiliser le workflow de qualification existant ; y inclure le scénario multi
 - Suite gouvernée complète, anciens tests Chromium et WebKit du même SHA.
 
 Qualification et livraison : **pas encore attestées dans ce premier checkpoint**. Les vrais résultats seront ajoutés après lecture des runs. FIELD_ACCEPTED demeure NOT_ACCEPTED. Une recette physique Android 6/iOS/2G et les intégrations externes ne se déduisent pas de ces tests.
+
+## Première qualification distante
+
+Run `37819377867`, SHA `12e452865f127a210d2c1f55b45b20be74ffa4fb` : gates gouvernés/build exécutés, Node **648/650**, dont les trois tests fonctionnels de transport PASS. Deux fixtures SW échouent : ancien nom de cache courant codé en dur dans le test de prédécesseur installé, et origin manquant dans la nouvelle simulation. Les fixtures sont reliées au contrat courant et à un environnement SW complet ; les assertions de conservation et de readiness restent obligatoires. Sélection de groupe hors réseau pendant le setup des tests de transport évite un warmup d'horloge sans rapport avec leur scénario. Nouvelle CI requise ; aucune livraison de candidate présumée.

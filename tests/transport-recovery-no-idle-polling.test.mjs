@@ -7,7 +7,7 @@ async function fixture(t,run){
   const before={fetch:globalThis.fetch,indexedDB:globalThis.indexedDB,window:globalThis.window,onLine:Object.getOwnPropertyDescriptor(navigator,'onLine')};
   t.mock.timers.enable({apis:['setTimeout','Date'],now:Date.parse('2026-10-08T12:00:00Z')});
   globalThis.indexedDB={};globalThis.window=new EventTarget();
-  Object.defineProperty(navigator,'onLine',{value:true,configurable:true});
+  Object.defineProperty(navigator,'onLine',{value:false,configurable:true});
   const app=new ConnectedApplication({actorId:'manager',tenantId:'tenant'});app.selectGroup('group');
   let durable=[],reachable=false,recovery,wakes=0;
   const calls=[];
@@ -21,6 +21,8 @@ async function fixture(t,run){
     if(!reachable)throw Error('Synthetic server outage while navigator remains online');
     return new Response(JSON.stringify({accepted:true,stored:true}),{status:200});
   };
+  // Group selection was offline to avoid an unrelated signed-clock warmup.
+  Object.defineProperty(navigator,'onLine',{value:true,configurable:true});
   // Execute the actual shell listener with the real Application/Outbox.
   // The old listener resets attempts and rearms the timer on every wake.
   const listener=readFileSync('apps/web/src/main.js','utf8').split('\n').find(line=>line.startsWith("window.addEventListener('eco:transport-retry-ready',"));
@@ -85,7 +87,7 @@ test('activation retains the coherent 14/13 source caches and the installed 11/l
   const retained=[contract.release.pwaCache,contract.release.previousPwaCache,'eco-system-v15213-live-repayment-ui-20261007','eco-system-v15211-field-recovery-20261005','eco-system-v15210-offline-conflicts-loans-20261003'];
   const obsolete='eco-system-v143-blueprint-5-0-0-finalized-20260921',foreign='another-app-cache';
   const handlers={},deleted=[];
-  const self={addEventListener:(name,handler)=>{handlers[name]=handler;},clients:{claim:async()=>{}}};
+  const self={location:{origin:'https://eco.example'},addEventListener:(name,handler)=>{handlers[name]=handler;},clients:{claim:async()=>{}}};
   const caches={open:async()=>({match:async()=>({ok:true})}),keys:async()=>[...retained,obsolete,foreign],delete:async name=>{deleted.push(name);return true;}};
   new Function('self','caches',readFileSync('apps/web/sw.js','utf8'))(self,caches);
   let activation;handlers.activate({waitUntil:promise=>{activation=promise;}});await activation;
