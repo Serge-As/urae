@@ -1,10 +1,14 @@
-## Reprise du 8 octobre 2026 — candidate 1.5.2.14
+## Production vérifiée — Eco-System 1.5.2.14, 8 octobre 2026
 
-Base exacte examinée : `0f0deacf6428cf841cd25634f732dd2f41d02e66` (PR #69). Branche de travail : `fix/codex-eco-sovereign-live-20261008`. Réparation des propriétaires existants : Outbox durable et ordre des intentions, confrontation persistante par cellule/séance, diffusion GroupLiveHub des totaux, navigation conservée, shell PWA complet et présentation des dettes. Aucun changement des parcours métier ou des politiques de prêt, aucune migration ni manipulation des fonds de production.
+Version publique : `1.5.2.14-live-sync`. Source servie : `d027f09a1382cd29054b33e274f3fd3bf9f8d9f3`. Branche de livraison : `fix/1.5.2.10-offline-conflicts-loans-20261003`. Worker Version ID : `98d720dd-6364-436e-9a00-38809e4a3925`. PR #70 fusionnée.
 
-Qualification : 645/645 tests gouvernés sur la source candidate ; 8 scénarios Chromium locaux dont reprise/confrontation à deux comptes, remboursement cumulatif et sortie des onglets récapitulatifs ; CI distante sur `b0e93abf7668fe885845761db2ff370ae2d2e53c` : runs `37762491737` et `37762491663` SUCCESS, 7 scénarios Chromium et 6 scénarios WebKit SUCCESS. La dernière source produit est identique ; le test d'accès aux onglets complète cette preuve locale. La CI du HEAD final reste obligatoire avant livraison. `FIELD_ACCEPTED = NOT_ACCEPTED`. Les appareils physiques et les groupes réels restent à recetter.
+Qualification sur le même SHA : run `37765653443 SUCCESS`, **646/646 tests**. Livraison code-only : run `37765653486 SUCCESS`, Chromium **7/7**, WebKit **6/6**, /health exact version/build/cache/SHA, catalogue **164**. Vérification publique indépendante du 8 octobre à 10:52 UTC : même SHA, schéma `d1-additive-20260923`, politique `live-finance-policy-20261007-event-push-repayment`, R2 actif, shell HTML et garde de récupération v15211 présents. `realMoneyEnabled=false`.
 
-Livraison prévue par le workflow code-only existant : aucune migration, export D1, écriture de schéma, création D1/R2 ou réécriture de données. L’identité de production doit être prouvée par /health et le workflow avant toute annonce de déploiement. Les blocs antérieurs restent historiques.
+Outbox durable, reprise automatique sans navigation forcée, Live entre comptes et appareils, totaux de cellule cohérents, confrontation persistante par cellule/séance et idempotence sont corrigés. Parcours métier, moteurs, politiques et tableaux existants conservés. Présentation des dettes réparée, quatre critères simultanés, ajustement des colonnes fixes sur téléphone.
+
+Le véritable prédécesseur observé en public était la 1.5.2.11, SHA `c0dcb82e24687bb3473b46ccd4c0c77b9e561310`. Son cache est conservé à l’activation avec les références v15213 et v15210 ; ne pas confondre lignée de code et version réellement installée. Aucun export D1, migration, création D1/R2, changement de schéma ou réécriture de données dans cette livraison.
+
+**FIELD_ACCEPTED = NOT_ACCEPTED** : la CI et le smoke ne prouvent pas une recette physique Android 6, anciens Chrome/Opera, iOS ou 2G, ni celle des 25 groupes réels. La suite de travail est une recette ciblée, pas un nouveau déploiement par défaut. Les blocs antérieurs ci-dessous sont historiques.
 
 ---
 

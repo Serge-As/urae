@@ -1142,7 +1142,7 @@
     },
     {
       "id": "candidate.eco.1.5.2.11.field-recovery",
-      "status": "IN_PROGRESS",
+      "status": "SUPERSEDED",
       "scope": "code/PWA/finance-live/recovery",
       "observedOn": "2026-10-05",
       "evidence": [
@@ -1152,7 +1152,9 @@
         "github:docs/recovery/ECO_FIELD_13_POINTS_2026-10-05.md"
       ],
       "note": "Candidate 1.5.2.11: isolated offline shell + previous 1.5.2.10 rollback, idle D1 conservation, multi-manager draft Live and quota circuit. Never call production-delivered or FIELD_ACCEPTED based on CI only.",
-      "next": "Qualify exact head, perform real A/B multi-device and offline F5 field tests; require production SHA and BIR+ backup/smoke before release."
+      "next": "Continue from deployed 1.5.2.14 source, not this obsolete candidate.",
+      "supersededBy": "cloudflare.production.eco.1.5.2.14",
+      "reason": "Its recovery work is continued and repaired in the qualified, delivered 1.5.2.14 line; preserve historical evidence."
     },
     {
       "id": "eco.1.5.2.14.sovereign.convergence",
@@ -1167,9 +1169,31 @@
         "local-ci:645/645 PASS; local-Chromium:8/8 PASS",
         "github:commit:b0e93abf7668fe885845761db2ff370ae2d2e53c",
         "github:run:37762491737 SUCCESS; governed-ci + Chromium 7/7 + WebKit 6/6",
-        "github:run:37762491663 SUCCESS; separate staged qualification"
+        "github:run:37762491663 SUCCESS; separate staged qualification",
+        "github:commit:d027f09a1382cd29054b33e274f3fd3bf9f8d9f3",
+        "github:run:37765653443 SUCCESS; 646/646 tests",
+        "github:run:37765653486 SUCCESS; Chromium 7/7 + WebKit 6/6 + exact production smoke",
+        "public:2026-10-08T10:52:00.588Z /health + shell + capabilities 164 + installed v15211 cache guard PASS"
       ],
-      "notes": "Qualified candidate source, not deployment proof. Final HEAD must pass CI. Ledger/D1 canonical; no migration or production-money edits; FIELD_ACCEPTED=NOT_ACCEPTED."
+      "notes": "Production source qualified and delivered, independently confirmed by public /health. Ledger/D1 canonical; code-only delivery without migrations/data rewrite. FIELD_ACCEPTED=NOT_ACCEPTED."
+    },
+    {
+      "id": "cloudflare.production.eco.1.5.2.14",
+      "status": "VERIFIED_REMOTE",
+      "scope": "production/worker/pwa/live/offline",
+      "observedOn": "2026-10-08",
+      "currentProductLine": true,
+      "evidence": [
+        "github:PR:70 merged",
+        "github:commit:d027f09a1382cd29054b33e274f3fd3bf9f8d9f3",
+        "github-actions:37765653443 SUCCESS; 646/646 tests",
+        "github-actions:37765653486 SUCCESS; Chromium 7/7 WebKit 6/6; exact smoke",
+        "worker-version:98d720dd-6364-436e-9a00-38809e4a3925",
+        "public-health:2026-10-08T10:52:00.588Z version/build/cache/schema/policy/SHA exact; realMoneyEnabled=false; R2 active; capabilities 164",
+        "public-sw:installed v15211 cache recovery guard present"
+      ],
+      "note": "Convergence and confrontation repaired through existing owners; code-only deployment without D1 export, migration, creation/replacement of storage or finance data rewrite.",
+      "next": "Physical browser/device/2G and real-group acceptance remains NOT_ACCEPTED. Continue from this source; no new deployment is needed for field verification alone."
     }
   ]
 }

@@ -38,3 +38,7 @@ La capture du véritable tableau financier à 390 px révélait que « Total mem
 ## Cache réellement installé — garde-fou de livraison
 
 Le /health public a révélé une production 1.5.2.11, malgré la lignée source précédente 1.5.2.13. L’activation du SW conserve donc également le cache v15211 réellement présent chez les utilisateurs. Un nouveau test exécute le véritable handler d’activation et vérifie que le code de l’ancien shell reste lisible dans ce cache. La qualification du nouvel SHA est obligatoire ; aucune recette physique n’est déduite de ce test.
+
+## Preuve de clôture du 8 octobre 2026
+
+Source publique `d027f09a1382cd29054b33e274f3fd3bf9f8d9f3`, Worker `98d720dd-6364-436e-9a00-38809e4a3925`. Qualification `37765653443 SUCCESS` (646/646) ; livraison code-only `37765653486 SUCCESS` (Chromium 7/7, WebKit 6/6, smoke strict). Vérification publique indépendante /health + shell + catalogue 164 + garde de cache v15211 à 10:52 UTC. L'absence de mutation D1 est explicite dans le workflow ; aucune nouvelle sauvegarde/restauration D1 n'est prétendue. Le checkpoint Git exact de livraison est la preuve de source ; la référence antérieure effectivement observée est c0dcb82e24687bb3473b46ccd4c0c77b9e561310. Toute restauration de code doit reprendre le workflow qualifié et préserver les données. FIELD_ACCEPTED reste NOT_ACCEPTED pour les appareils/groupes physiques.

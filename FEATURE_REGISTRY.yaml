@@ -1353,3 +1353,23 @@ production_qualification_2026_09_21_1_4_3:
 # immutable cache + prior v15210 rollback, per-cell Live drafts, no idle D1
 # polling, and optional Identity/Concierge reads on view demand. PR #66 DRAFT,
 # FIELD_ACCEPTED=NOT_ACCEPTED. Feature maturities above are unchanged.
+
+production_qualification_2026_10_08_1_5_2_14:
+  version: 1.5.2.14-live-sync
+  branch: fix/1.5.2.10-offline-conflicts-loans-20261003
+  deployed: true
+  source_deployed: d027f09a1382cd29054b33e274f3fd3bf9f8d9f3
+  worker_version_id: 98d720dd-6364-436e-9a00-38809e4a3925
+  qualification_run: 37765653443
+  deploy_smoke_run: 37765653486
+  tests_passed: 646
+  chromium_passed: 7
+  webkit_passed: 6
+  production_capabilities: 164
+  deployment_mode: code-only-no-d1-export-no-migration
+  d1: eco-system-db
+  r2: eco-system-backups
+  real_money_enabled: false
+  field_reception: pending
+  field_acceptance: NOT_ACCEPTED
+  note: Existing owners repaired; no new authority, no business journey removed. Public source and installed predecessor cache protection independently confirmed.
