@@ -11,7 +11,7 @@ const sourceBlock=swSource.match(/const ESSENTIAL_SHELL = \[([\s\S]*?)\];\s*cons
 if(!sourceBlock)throw Error('PWA_SHELL_LIST_NOT_FOUND');
 const declared=[...sourceBlock[1].matchAll(/'([^']+)'/g),...sourceBlock[2].matchAll(/'([^']+)'/g)].map(match=>match[1]);
 const originalPaths=new Set(declared.map(v=>new URL(v,'https://eco.invalid').pathname));
-const found=new Set(),generated=new Set(),assets=new Map();
+const found=new Set(),generated=new Set(),assets=new Map(),declaredUrls=new Set(declared);
 const localUrl=(value,owner)=> {
   if(/^(?:data:|blob:|https?:|\/\/|#)/i.test(value))return null;
   const full=new URL(value,'https://eco.invalid'+owner);
@@ -25,13 +25,15 @@ const diskUrl=url=>{
 };
 const scan=async(url,from)=>{
   const pathname=new URL(url,'https://eco.invalid').pathname;
+  // Different query URLs can import the same module bytes. Precache every
+  // literal URL actually requested by the built graph, including aliases.
+  if(!declaredUrls.has(url))generated.add(url);
   if(found.has(pathname))return;
   found.add(pathname);
   let source;
   try { source=await readFile(diskUrl(url)); }
   catch(e){throw Error('PWA_IMPORT_MISSING:'+pathname+' FROM '+from+': '+String(e?.code??e));}
   assets.set(pathname,{bytes:source.length,sha256:createHash('sha256').update(source).digest('hex')});
-  if(!originalPaths.has(pathname))generated.add(pathname);
   if(/\.m?js$/i.test(pathname)){
     const refs=[];
     if(ts){
@@ -83,6 +85,8 @@ const manifest={
 await writeFile(path.join(build,'eco-shell-manifest.json'),JSON.stringify(manifest,null,2)+'\n');
 const marker='const GENERATED_IMPORT_CLOSURE = [];';
 if(!swSource.includes(marker))throw Error('PWA_SHELL_INJECTION_ANCHOR_NOT_FOUND');
-const builtSw=swSource.replace(marker,'const GENERATED_IMPORT_CLOSURE = '+JSON.stringify(manifest.transitiveAssets)+';');
+const hashMarker='const GENERATED_ASSET_HASHES = {};';
+if(!swSource.includes(hashMarker))throw Error('PWA_HASH_INJECTION_ANCHOR_NOT_FOUND');
+const builtSw=swSource.replace(marker,'const GENERATED_IMPORT_CLOSURE = '+JSON.stringify(manifest.transitiveAssets)+';').replace(hashMarker,'const GENERATED_ASSET_HASHES = '+JSON.stringify(Object.fromEntries([...assets].map(([url,meta])=>[url,meta.sha256])))+';');
 for(const dest of ['sw.js','apps/web/sw.js'])await writeFile(path.join(build,dest),builtSw);
 console.log('PWA dependency closure complete:',declared.length,'initial assets,',generated.size,'transitive assets; no missing local import.');

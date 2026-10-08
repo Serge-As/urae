@@ -727,6 +727,14 @@ const focusNextFinancialInput=(holder,wrapState)=>{
     const wrap=holder.closest('.matrix-wrap');if(wrap&&wrapState){wrap.scrollLeft=wrapState.left;wrap.scrollTop=wrapState.top;}
     if(next){next.focus({preventScroll:true});next.scrollIntoView({block:'nearest',inline:'nearest',behavior:'auto'});}
 };
+const hydrateRelayFinancialReviews=async()=>{
+  for(const conflict of await app.localRelayFinancialConflicts?.().catch?.(()=>[])??[]){
+    const local=conflict.local?.payload??{},remote=conflict.remote?.payload??{};
+    if(local.groupId!==app.activeGroup())continue;
+    const key=financialCellKey(String(local.membershipId),String(local.rubricId),String(local.meetingId));
+    financialReviewTargets.set(key,{...remote,targetAmount:Number(remote.targetAmount??remote.amount),localTargetAmount:Number(local.targetAmount??local.amount),source:'RELAY',businessStatus:'RELAY_REVIEW_REQUIRED'});
+  }
+};
 const loadFinancialProjectionState=async({clearOptimistic=false}={})=>{
     const [l,sheetEvents,sheetExpenses]=await Promise.all([app.ledger(),app.listWorkspaceRecords('FINANCE.SHEET_EVENT',app.activeGroup()).catch(()=>[]),app.expenses({scope:'SHEET'}).catch(()=>[])]);
     receiptPositions=l.receipts;
@@ -738,9 +746,11 @@ const loadFinancialProjectionState=async({clearOptimistic=false}={})=>{
       if(!local)financialPendingTargets.set(key,relay);
       else if(Number(local.targetAmount)!==Number(relay.targetAmount))financialReviewTargets.set(key,{...relay,targetAmount:relay.targetAmount,localTargetAmount:Number(local.targetAmount),source:'RELAY',businessStatus:'RELAY_REVIEW_REQUIRED'});
     }
+    await hydrateRelayFinancialReviews();
     financialPendingSheetEntries=app.pendingFinancialSheetEntries?.()??[];
     financialSheetEvents=[...sheetEvents,...sheetExpenses.map(x=>({id:x.id,createdBy:x.createdBy,createdAt:x.createdAt,updatedAt:x.updatedAt,data:{membershipId:x.membershipId,meetingId:x.meetingId,rubricId:x.rubricId,amount:x.amount,direction:'OUT',ledgerEntryId:x.ledgerEntryId}}))];
     financialCellVersions=new Map((l.cellRevisions??[]).map(r=>[JSON.stringify([r.meetingId,r.membershipId,r.rubricId,r.currency??'XAF']),Number(r.version??0)]));
+    for(const event of financialSheetEvents){const d=event.data??{},key=JSON.stringify([d.meetingId,d.membershipId,d.rubricId,'XAF']);financialCellVersions.set(key,(financialCellVersions.get(key)??0)+1);}
     financialCellMetadata=new Map();
     const rememberMeta=(membershipId,rubricId,meetingId,actorId,at)=>{
       if(!membershipId||!rubricId||!meetingId)return;
@@ -749,7 +759,8 @@ const loadFinancialProjectionState=async({clearOptimistic=false}={})=>{
     };
     for(const row of l.receipts??[])rememberMeta(row.membershipId,row.rubricId,row.meetingId,row.receivedBy,row.receivedAt);
     for(const event of financialSheetEvents){const d=event.data??{};rememberMeta(d.membershipId,d.rubricId,d.meetingId,event.createdBy,event.updatedAt??event.createdAt);}
-    if(clearOptimistic)financialOptimisticValues.clear();
+    const pendingSheetKeys=new Set(financialPendingSheetEntries.map(x=>financialCellKey(x.membershipId,x.rubricId,x.meetingId)));
+    for(const key of financialOptimisticValues.keys())if(clearOptimistic||(!financialPendingTargets.has(key)&&!pendingSheetKeys.has(key)))financialOptimisticValues.delete(key);
     return l;
 };
 const refreshFinancialProjectionSilently=async(detail)=>{
@@ -773,9 +784,11 @@ const setCellSyncedState=detail=>{
   const selector=financialLiveSelector?.(detail)||'';
   for(const cell of selector?document.querySelectorAll(selector):[]){
     const state=cell.querySelector('.cell-save-state');if(state){state.textContent=tx('✓ Synchronisé','✓ Synced');state.hidden=false;setTimeout(()=>{if(state.textContent.includes('Synchron')||state.textContent.includes('Synced'))state.hidden=true;},2200);}
-    cell.classList.remove('has-local-pending');
+    cell.classList.remove('has-local-pending','has-review-pending','is-conflict','is-critical-conflict');
     cell.querySelector('.cell-sync-state.pending')?.remove();
   }
+  const bar=document.querySelector('#financialAlertBar');
+  if(bar?.dataset.criticalCellKey===financialCellKey(String(detail.membershipId),String(detail.rubricId),String(detail.meetingId))){delete bar.dataset.criticalCellKey;bar.hidden=true;}
 };
 const pendingTargetSnapshot=()=>Array.from(app.pendingFinancialCellTargets?.()??[]).map(item=>({
   key:financialCellKey(String(item.membershipId??''),String(item.rubricId??''),String(item.meetingId??'')),
@@ -892,7 +905,9 @@ const showOfflineFinancialConfrontation=preview=>new Promise(resolve=>{
   };
   applyAll.onclick=()=>{for(const row of rows)setDecision(row,'APPLY_LOCAL');};
   keepAll.onclick=()=>{for(const row of rows)setDecision(row,row.sameAmount?'APPLY_LOCAL':'KEEP_SERVER');};
-  later.onclick=()=>{dialog.close();dialog.remove();resolve(null);};
+  const defer=()=>{dialog.close();dialog.remove();resolve(null);};
+  later.onclick=defer;
+  dialog.addEventListener('cancel',event=>{event.preventDefault();defer();});
   confirm.onclick=()=>{
     const keepServerIds=rows.filter(row=>decisions.get(row.outboxId)==='KEEP_SERVER').map(row=>row.outboxId);
     const applyIds=rows.filter(row=>decisions.get(row.outboxId)==='APPLY_LOCAL').map(row=>row.outboxId);
@@ -909,10 +924,22 @@ const reviewOfflineFinancialBacklog=async(force=false)=>{
   // No remote change since this device's baseline = no conflict to arbitrate.
   // Sync automatically; only real concurrent divergence opens the confrontation
   // dialog. This keeps reconnect under five seconds without hiding conflicts.
-  if(preview.rows.every(row=>!row.serverChangedSinceBaseline))return true;
+  if(preview.rows.every(row=>row.sameAmount||!row.serverChangedSinceBaseline))return true;
+  for(const row of preview.rows)if(!row.sameAmount&&row.serverChangedSinceBaseline)markCriticalFinancialConflict({...row,amount:row.localAmount});
+  const reviewGroup=String(app.activeGroup());
   const decision=await showOfflineFinancialConfrontation(preview);
+  if(String(app.activeGroup())!==reviewGroup)return false;
   if(!decision){offlineConfrontationDeferred=true;return false;}
-  for(const id of decision.keepServerIds)await app.cancelOutboxItem(id);
+  const retained=await app.resolveOfflineFinancialConfrontation(preview,decision);
+  financialPendingTargets=new Map((app.pendingFinancialCellTargets?.()??[]).map(x=>[financialCellKey(x.membershipId,x.rubricId,x.meetingId),x]));
+  for(const row of retained){
+    const key=financialCellKey(row.membershipId,row.rubricId,row.meetingId);
+    financialOptimisticValues.delete(key);forgetConfirmedCell(key);
+    rememberConfirmedCell(key,{...row,amount:row.retainedAmount,cellVersion:row.retainedVersion});
+    patchFinancialDomCell({...row,amount:row.retainedAmount,cellVersion:row.retainedVersion,preservePending:false});
+    setCellSyncedState(row);
+    window.dispatchEvent(new CustomEvent('eco:financial-data-changed',{detail:{...row,amount:row.retainedAmount,soft:true,reviewed:true}}));
+  }
   offlineConfrontationDeferred=false;renderOutbox();
   return true;
 };
@@ -923,6 +950,14 @@ const markCriticalFinancialConflict=detail=>{
     const state=cell.querySelector('.cell-save-state');if(state){state.hidden=false;state.textContent=tx(`CONFLIT : cet appareil avait ${fmt(detail.amount)} ; une autre valeur a été synchronisée. Vérification obligatoire.`,`CONFLICT: this device had ${fmt(detail.amount)}; another value was synchronized. Review required.`);}
   }
   try{showFinancialAlert({title:tx('Conflit financier à résoudre','Financial conflict to resolve'),message:tx(`La même cellule a été modifiée sur plusieurs appareils. Valeur locale : ${fmt(detail.amount)}. Aucune valeur divergente n’a été écrasée silencieusement.`,`The same cell was edited on multiple devices. Local value: ${fmt(detail.amount)}. No divergent value was silently overwritten.`),conflict:true,closed:true,action:{view:'sessions',meetingId:detail.meetingId,membershipId:detail.membershipId,rubricId:detail.rubricId,label:tx('Voir la cellule','Open cell')}});}catch{}
+  if((app.pendingFinancialCellTargets?.()??[]).length){
+    const bar=document.querySelector('#financialAlertBar');
+    if(bar)bar.dataset.criticalCellKey=financialCellKey(String(detail.membershipId),String(detail.rubricId),String(detail.meetingId));
+    if(bar&&!bar.querySelector('[data-financial-confrontation]')){
+      const review=document.createElement('button');review.type='button';review.dataset.financialConfrontation='1';review.textContent=tx('Comparer les montants','Compare amounts');
+      review.onclick=()=>{offlineConfrontationDeferred=false;void resumeOnline({forceConfrontation:true}).catch(fail);};bar.append(review);
+    }
+  }
 };
 const renderPersistedFinancialConflicts=()=>{
   for(const item of app.outboxItems?.()??[]){
@@ -958,19 +993,10 @@ const scheduleFinancialOutboxRecovery=detail=>{
     financialRetryTimers.delete(key);
     if(navigator.onLine===false)return;
     try{
-      const beforeSync=pendingTargetSnapshot();
-      await app.syncOutbox();renderOutbox();
-      rememberTargetsConfirmedBySync(beforeSync);
-      financialPendingTargets=new Map((app.pendingFinancialCellTargets?.()??[]).map(x=>[financialCellKey(x.membershipId,x.rubricId,x.meetingId),x]));
-      financialPendingSheetEntries=app.pendingFinancialSheetEntries?.()??[];
-      if(!cellHasPendingLocal(detail)){
-        financialOptimisticValues.delete(key);
-        const signed=Number.isFinite(Number(detail.amount))?Number(detail.amount):exactCellAmount(String(detail.membershipId),String(detail.rubricId),String(detail.meetingId));
-        rememberConfirmedCell(key,{...detail,amount:signed,cellVersion:exactCellVersion(String(detail.membershipId),String(detail.rubricId),String(detail.meetingId))});
-        patchFinancialDomCell({...detail,amount:signed,cellVersion:exactCellVersion(String(detail.membershipId),String(detail.rubricId),String(detail.meetingId)),preservePending:false});
-        setCellSyncedState(detail);
-        window.dispatchEvent(new CustomEvent('eco:financial-data-changed',{detail:{...detail,amount:signed,soft:true,recovered:true}}));
-      }
+      // Use the same serialized, reviewed recovery path as a network return.
+      // In particular an older SUPERSEDED target must never be promoted back
+      // over the canonical amount returned by the server.
+      await resumeOnline();
     }catch(error){
       networkRecoveryNeeded=true;
       console.info('Targeted financial Outbox retry deferred until a real connectivity event',error);
@@ -1026,7 +1052,7 @@ const submitFinancialCellElement=async validate=>{
     if(holder.dataset.submitting==='1'){traceFinancialCell('CELL_SUBMIT_BUSY',{cellKey});return;}
     holder.classList.remove('is-conflict');holder.dataset.submitting='1';
     const nature=financialNatureForRubric(rubric),signedCurrent=exactCellAmount(membershipId,rubricId,meetingId),current=Math.abs(signedCurrent),previousIcon=validate.textContent;
-    let target=Number.NaN;
+    let target=Number.NaN,optimisticStaged=false;
     const setCellState=(state,message='')=>{holder.dataset.saveState=state;holder.classList.toggle('is-failed',state==='FAILED');holder.classList.toggle('is-confirmed',state==='CONFIRMED');stateLine.hidden=!message;stateLine.textContent=message;};
     traceFinancialCell('CELL_SUBMIT_INVOKED',{cellKey,membershipId,rubricId,meetingId,inputValue:input.value,current,nature});
     try{
@@ -1048,7 +1074,7 @@ const submitFinancialCellElement=async validate=>{
         if(!reason.trim()){setCellState('IDLE');return;}
       }
       validate.disabled=true;input.disabled=true;validate.textContent='…';holder.classList.add('is-saving');
-      let result,optimisticStaged=false;
+      let result;
       const displayTarget=(nature==='LOAN'||nature==='OUTFLOW')?-target:target;
       const stageOptimisticValue=()=>{optimisticStaged=true;
         financialOptimisticValues.set(cellKey,displayTarget);
@@ -1060,13 +1086,13 @@ const submitFinancialCellElement=async validate=>{
         // Display the local working value immediately. Transport can be slow or
         // unavailable, but the cell must not visually jump back while the
         // durable command is being queued/sent.
-        if(navigator.onLine===false)stageOptimisticValue();
-        result=await app.setFinancialCellTarget({meetingId,membershipId,rubricId,targetAmount:target,currentAmount:current,currentVersion:exactCellVersion(membershipId,rubricId,meetingId),reason:reason.trim()});
+        stageOptimisticValue();
+        result=await app.setFinancialCellTarget({meetingId,membershipId,rubricId,targetAmount:target,currentAmount:current,currentVersion:exactCellVersion(membershipId,rubricId,meetingId),reason:reason.trim(),deferSync:true});
         if(Number.isFinite(Number(result?.cellVersion)))financialCellVersions.set(JSON.stringify([meetingId,membershipId,rubricId,'XAF']),Number(result.cellVersion));
       }else{
         if(current>0)throw Error('SPECIALIZED_FINANCIAL_CORRECTION_REQUIRED');
-        if(navigator.onLine===false)stageOptimisticValue();
-        result=await app.recordFinancialSheetEntry({membershipId,meetingId,rubric,amount:target,reason:reason.trim()||undefined});
+        stageOptimisticValue();
+        result=await app.recordFinancialSheetEntry({membershipId,meetingId,rubric,amount:target,reason:reason.trim()||undefined,deferSync:true});
       }
       patchFinancialDomCell({meetingId,membershipId,rubricId,amount:displayTarget,cellVersion:result?.cellVersion,preservePending:true});
       if(result?.status==='CONSENSUS_REQUIRED'){
@@ -1160,6 +1186,7 @@ const makeFinancialEntryCell=({member,rubric,meetingId,editable=true})=>{
           ?tx('Reçu via Eco Relay · serveur non requis pour continuer','Received via Eco Relay · server not required to continue')
           :tx('Enregistré sur cet appareil · synchro en attente','Saved on this device · pending sync');
       holder.append(pendingBadge);holder.classList.add(pendingState.kind==='REVIEW'?'has-review-pending':pendingState.kind==='RELAY'?'has-relay-pending':'has-local-pending');
+      if(pendingState.kind==='REVIEW')holder.classList.add('is-conflict','is-critical-conflict');
       if(Number.isSafeInteger(pendingState.targetAmount)&&pendingState.targetAmount>=0&&pendingState.kind==='REVIEW'){
         const proposed=document.createElement('small');proposed.className='cell-proposed-value';proposed.textContent=tx('Proposé : ','Proposed: ')+fmt(pendingState.targetAmount);holder.append(proposed);
       }
@@ -1868,6 +1895,11 @@ const dismissedFinancialAlerts=()=>{try{return new Set(JSON.parse(sessionStorage
 const dismissFinancialAlert=id=>{if(!id)return;try{const rows=dismissedFinancialAlerts();rows.add(String(id));sessionStorage.setItem(DISMISSED_FINANCIAL_ALERTS,JSON.stringify([...rows].slice(-80)));}catch{}};
 const showFinancialAlert=(input={})=>{
     const bar=document.querySelector('#financialAlertBar');if(!bar)return;
+    // A late informational push must not erase the unresolved conflict's
+    // comparison action while the manager defers the modal.
+    const criticalKey=bar.dataset.criticalCellKey;
+    if(criticalKey&&!input.conflict&&(app.pendingFinancialCellTargets?.()??[]).some(x=>financialCellKey(x.membershipId,x.rubricId,x.meetingId)===criticalKey)){bar.hidden=false;return;}
+    delete bar.dataset.criticalCellKey;
     if(input.notificationId&&dismissedFinancialAlerts().has(String(input.notificationId))){bar.hidden=true;return;}
     bar.replaceChildren();const title=document.createElement('strong'),message=document.createElement('span');
     title.textContent=input.title||tx('Mise à jour financière','Financial update');message.textContent=' · '+String(input.message||'');
@@ -1890,7 +1922,8 @@ const renderFinancialAlerts=async()=>{
 const financialLiveSelector=p=>p?.meetingId&&p?.membershipId&&p?.rubricId?`.matrix-cell-entry[data-meeting-id="${CSS.escape(String(p.meetingId))}"][data-membership-id="${CSS.escape(String(p.membershipId))}"][data-rubric-id="${CSS.escape(String(p.rubricId))}"]`:'';
 const applyRemoteFinancialProjection=(p={})=>{
     const selector=financialLiveSelector(p);if(!selector)return;
-    const amount=Number(p.newAmount);if(!Number.isFinite(amount))return false;
+    const amount=Number(p.newAmount);if(!Number.isSafeInteger(amount)||amount<0)return false;
+    if(Number.isSafeInteger(Number(p.cellVersion))&&Number(p.cellVersion)<exactCellVersion(String(p.membershipId),String(p.rubricId),String(p.meetingId)))return false;
     // Remote projections never erase unconfirmed local financial intents.
     // Preserve them for the server CAS and visibly flag divergent edits.
     const pending=(app.outboxItems?.()??[]).find(item=>{
@@ -1907,6 +1940,9 @@ const applyRemoteFinancialProjection=(p={})=>{
     forgetConfirmedCell(financialCellKey(String(p.membershipId??''),String(p.rubricId??''),String(p.meetingId??'')));
     const rubric=rubrics.find(x=>x.id===String(p.rubricId)),nature=financialNatureForRubric(rubric),signed=(nature==='LOAN'||nature==='OUTFLOW')?-Math.abs(amount):amount;
     patchFinancialDomCell({meetingId:p.meetingId,membershipId:p.membershipId,rubricId:p.rubricId,amount:signed,cellVersion:p.cellVersion,remote:true});
+    // Keep the confirmed server delta across an offline reload, including when
+    // this screen's older read snapshot has not been rehydrated yet.
+    rememberConfirmedCell(financialCellKey(String(p.membershipId),String(p.rubricId),String(p.meetingId)),{meetingId:p.meetingId,membershipId:p.membershipId,rubricId:p.rubricId,amount:signed,cellVersion:p.cellVersion});
     return true;
 };
 const acknowledgeRemoteFinancialCell=button=>{
@@ -2513,14 +2549,12 @@ $('#languageSelect').addEventListener('change', async e => {
 });
 let onlineResumePromise=null;
 let networkRecoveryNeeded=navigator.onLine===false;
-const resumeOnline=({forceConfrontation=false}={})=>{
+const resumeOnline=({forceConfrontation=false,relayFerry=false}={})=>{
     if(onlineResumePromise)return onlineResumePromise;
     const preserved=captureNavState();persistNavState(preserved);
     onlineResumePromise=(async()=>{renderConnectivity();try{
         if(navigator.onLine===false){networkRecoveryNeeded=true;return;}
         if(!(await reviewOfflineFinancialBacklog(forceConfrontation))){networkRecoveryNeeded=true;renderConnectivity();return;}
-        const ferryResult=await app.syncEcoRelayFerry?.().catch(()=>null);
-        if(ferryResult&&(Number(ferryResult.downloaded??0)>0||Number(ferryResult.applied??0)>0))window.dispatchEvent(new CustomEvent('eco:manager-relay-updated',{detail:{groupId:app.activeGroup?.(),ferry:true,...ferryResult}}));
         const pendingBefore=(app.outboxItems?.()??[]).filter(item=>!['CONFIRMED','CANCELLED'].includes(String(item.status??'')));
         const beforeSync=pendingTargetSnapshot(),beforeSheetSync=pendingSheetSnapshot();
         await app.syncOutbox();
@@ -2538,18 +2572,20 @@ const resumeOnline=({forceConfrontation=false}={})=>{
                 const row=itemsAfter.get(item.idempotencyKey);
                 if(row?.status==='CONFLICT')continue;
                 financialOptimisticValues.delete(item.key);
-                const fresh=exactCellAmount(item.membershipId,item.rubricId,item.meetingId);
+                const fresh=Number.isFinite(Number(row?.lastResult?.canonicalAmount))?Number(row.lastResult.canonicalAmount):exactCellAmount(item.membershipId,item.rubricId,item.meetingId);
                 patchFinancialDomCell({...item,amount:fresh,cellVersion:exactCellVersion(item.membershipId,item.rubricId,item.meetingId)});
+                if(row?.lastResult?.status==='SUPERSEDED')markCriticalFinancialConflict({...item,amount:item.amount});else setCellSyncedState(item);
                 window.dispatchEvent(new CustomEvent('eco:financial-data-changed',{detail:{...item,amount:fresh,soft:true,recovered:true}}));
             }
         }
         if(app.activeGroup()&&changedSheets.length){
             for(const item of changedSheets){
                 financialOptimisticValues.delete(item.key);
-                rememberConfirmedCell(item.key,{...item,amount:item.amount,cellVersion:exactCellVersion(item.membershipId,item.rubricId,item.meetingId)});
-                patchFinancialDomCell({...item,amount:item.amount,preservePending:false});
+                const ack=itemsAfter.get(item.idempotencyKey)?.lastResult??{},amount=Number.isFinite(Number(ack.canonicalAmount))?Number(ack.canonicalAmount):item.amount;
+                rememberConfirmedCell(item.key,{...item,amount,cellVersion:ack.cellVersion??exactCellVersion(item.membershipId,item.rubricId,item.meetingId)});
+                patchFinancialDomCell({...item,amount,preservePending:false});
                 setCellSyncedState(item);
-                window.dispatchEvent(new CustomEvent('eco:financial-data-changed',{detail:{...item,soft:true,recovered:true}}));
+                window.dispatchEvent(new CustomEvent('eco:financial-data-changed',{detail:{...item,amount,soft:true,recovered:true}}));
             }
         }
         // Structural Outbox writes (groups, membership, rubrics, loans, etc.)
@@ -2563,7 +2599,14 @@ const resumeOnline=({forceConfrontation=false}={})=>{
             if(app.activeGroup())await refreshGroupContext();else await renderGroups();
         }
         networkRecoveryNeeded=false;
-        renderOutbox();renderConnectivity();showView(preserved.view,preserved);renderPersistedFinancialConflicts();
+        // Background recovery must not navigate. The manager may have changed
+        // tabs or focused another cell while the server was answering.
+        renderOutbox();renderConnectivity();renderPersistedFinancialConflicts();
+        // Relay ferry is opportunistic and follows the critical financial ACK.
+        // Preparing recipients must never hold a repayment behind many reads.
+        if(relayFerry)void app.syncEcoRelayFerry?.().then(result=>{
+          if(result&&(Number(result.downloaded??0)>0||Number(result.applied??0)>0))window.dispatchEvent(new CustomEvent('eco:manager-relay-updated',{detail:{groupId:app.activeGroup?.(),ferry:true,...result}}));
+        }).catch(()=>{});
     }catch(error){networkRecoveryNeeded=true;console.info('Online resume deferred',error);}})().finally(()=>{onlineResumePromise=null;});
     return onlineResumePromise;
 };
@@ -2572,7 +2615,7 @@ const eventDrivenConnectivityRecovery=()=>{
     const pending=(app.outboxItems?.()??[]).some(item=>!['CONFIRMED','CANCELLED'].includes(String(item.status)));
     if(navigator.onLine&&(pending||networkRecoveryNeeded))void resumeOnline();
 };
-window.addEventListener('online',()=>{app.forceTransportRetry?.();networkRecoveryNeeded=true;void resumeOnline();});
+window.addEventListener('online',()=>{app.forceTransportRetry?.();networkRecoveryNeeded=true;void resumeOnline({relayFerry:true});});
 window.addEventListener('eco:transport-retry-ready',()=>{app.forceTransportRetry?.();eventDrivenConnectivityRecovery();});
 window.addEventListener('offline',()=>{networkRecoveryNeeded=true;offlineConfrontationDeferred=false;persistNavState(captureNavState());renderConnectivity();});
 window.addEventListener('pageshow',eventDrivenConnectivityRecovery);
@@ -2591,6 +2634,7 @@ window.addEventListener('eco:manager-relay-updated',()=>{void(async()=>{
       if(!local)financialPendingTargets.set(key,relay);
       else if(Number(local.targetAmount)!==Number(relay.targetAmount))financialReviewTargets.set(key,{...relay,localTargetAmount:Number(local.targetAmount),source:'RELAY',businessStatus:'RELAY_REVIEW_REQUIRED'});
     }
+    await hydrateRelayFinancialReviews();
     renderMeetingMatrix();renderIndividualSheetMatrix();renderAllCanonicalFinancialHosts();
   })().catch(error=>console.info('Relay local projection refresh deferred',error));});
 window.addEventListener('eco:server-budget-expired',()=>{networkRecoveryNeeded=true;void resumeOnline();});

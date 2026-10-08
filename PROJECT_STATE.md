@@ -1,3 +1,11 @@
+## Reprise du 8 octobre 2026 — candidate 1.5.2.14
+
+Base exacte examinée : `0f0deacf6428cf841cd25634f732dd2f41d02e66` (PR #69). Branche de travail : `fix/codex-eco-sovereign-live-20261008`. Réparation des propriétaires existants : Outbox durable et ordre des intentions, confrontation persistante par cellule/séance, diffusion GroupLiveHub des totaux, navigation conservée, shell PWA complet et présentation des dettes. Aucun changement des parcours métier ou des politiques de prêt, aucune migration ni manipulation des fonds de production.
+
+Qualification en cours : les tests locaux ciblés de confrontation/ordre/idempotence et les premiers scénarios Chromium à deux comptes ont passé. La qualification complète et les navigateurs doivent être verts sur le SHA livré. `FIELD_ACCEPTED = NOT_ACCEPTED`. Une candidate implémentée n'est pas une production attestée : le workflow BIR+ puis le smoke `/health` doivent prouver version/build/cache/SHA avant toute annonce de déploiement. Les blocs antérieurs restent des preuves historiques.
+
+---
+
 # ECO-SYSTEM — PROJECT STATE
 
 

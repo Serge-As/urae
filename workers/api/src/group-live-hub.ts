@@ -2,7 +2,11 @@ type LivePayload=Record<string,string|number|boolean|null>;
 export interface GroupLiveEvent {seq:number;id:string;type:string;at:string;actorId:string;idempotencyKey:string;targetUserId?:string;payload:LivePayload;}
 export interface GroupLiveSignal {id:string;type:string;at:string;actorId:string;payload:LivePayload;}
 type StorageLike={get<T=unknown>(key:string):Promise<T|undefined>;put(key:string,value:unknown):Promise<void>;delete?(key:string):Promise<void>;list<T=unknown>(options?:{prefix?:string;startAfter?:string;limit?:number}):Promise<Map<string,T>>;};
-type StateLike={storage:StorageLike;acceptWebSocket?(ws:WebSocket,tags?:string[]):void;getWebSockets?(tag?:string):WebSocket[];};
+type StateLike={storage:StorageLike;acceptWebSocket?(ws:WebSocket,tags?:string[]):void;getWebSockets?(tag?:string):WebSocket[];
+  // The local qualification adapter supplies transport only. Cloudflare uses
+  // its native WebSocketPair/101 response and the same authenticated hub logic.
+  createWebSocketPair?():{0:WebSocket;1:WebSocket};upgradeWebSocket?(client:WebSocket):Response;
+};
 
 const json=(data:unknown,status=200)=>new Response(JSON.stringify(data),{status,headers:{'content-type':'application/json; charset=utf-8','cache-control':'no-store'}});
 const allowedTypes=new Set(['FINANCIAL_NOTICE','MEMBER_CONTROL','MEETING_UPDATE','MANAGER_ENTRY','CONSENSUS_REQUIRED','CONSENSUS_SELECTED','MANAGER_RESERVE','MEMBER_PROJECTION_UPDATED','PRESENCE','SYNC_HINT','RULE_UPDATE','COMMUNITY_EVENT','COMMUNITY_DRAFT_SYNC','COMMUNITY_READ_SYNC']);
@@ -96,15 +100,16 @@ export class GroupLiveHub{
       if(request.headers.get('Upgrade')?.toLowerCase()!=='websocket')return json({error:'WEBSOCKET_UPGRADE_REQUIRED'},426);
       if(!this.state.acceptWebSocket)return json({error:'HIBERNATION_UNAVAILABLE'},503);
       const userId=url.searchParams.get('userId')?.slice(0,200);if(!userId)return json({error:'LIVE_USER_REQUIRED'},400);
-      const Pair=(globalThis as unknown as {WebSocketPair:new()=>{0:WebSocket;1:WebSocket}}).WebSocketPair;if(!Pair)return json({error:'WEBSOCKET_PAIR_UNAVAILABLE'},503);
-      const pair=new Pair(),client=pair[0],server=pair[1];this.state.acceptWebSocket(server,['group-live','user:'+userId]);
+      const Pair=(globalThis as unknown as {WebSocketPair:new()=>{0:WebSocket;1:WebSocket}}).WebSocketPair;
+      if(!Pair&&!this.state.createWebSocketPair)return json({error:'WEBSOCKET_PAIR_UNAVAILABLE'},503);
+      const pair=this.state.createWebSocketPair?.()??new Pair(),client=pair[0],server=pair[1];this.state.acceptWebSocket(server,['group-live','user:'+userId]);
       const hibernatingSocket=server as WebSocket & {serializeAttachment?:(value:unknown)=>void};
       hibernatingSocket.serializeAttachment?.({connectedAt:new Date().toISOString(),userId});
       const requestedAfter=Math.max(0,Number(url.searchParams.get('after')??0)||0),latest=await this.state.storage.get<number>('seq')??0,reset=requestedAfter>latest,effectiveAfter=reset?0:requestedAfter;
       try{server.send(JSON.stringify({type:'GROUP_LIVE_HELLO',latest,reset}));}catch{}
       for(const event of await this.events(effectiveAfter,500,userId))try{server.send(JSON.stringify({type:'GROUP_LIVE_EVENT',event}));}catch{}
       for(const signal of await this.signals(Date.now()-12000,userId))try{server.send(JSON.stringify({type:'GROUP_LIVE_SIGNAL',event:signal}));}catch{}
-      return new Response(null,{status:101,webSocket:client} as ResponseInit&{webSocket:WebSocket});
+      return this.state.upgradeWebSocket?.(client)??new Response(null,{status:101,webSocket:client} as ResponseInit&{webSocket:WebSocket});
     }
     if(request.method==='GET'&&url.pathname.endsWith('/events'))return json({events:await this.events(Number(url.searchParams.get('after')??0),Number(url.searchParams.get('limit')??100),url.searchParams.get('userId')??undefined),latest:await this.state.storage.get<number>('seq')??0});
     if(request.method==='GET'&&url.pathname.endsWith('/signals')){const rows=await this.signals(Number(url.searchParams.get('afterAt')??0),url.searchParams.get('actorId')??undefined);return json({signals:rows,latestAt:rows.reduce((n,x)=>Math.max(n,Date.parse(x.at)||0),Number(url.searchParams.get('afterAt')??0)),ephemeral:true,ttlMs:12000});}

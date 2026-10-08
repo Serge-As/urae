@@ -1,3 +1,4 @@
+import {currentRelease,currentQuery} from './release-fixture.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
@@ -27,7 +28,7 @@ test('manager Relay exchanges durable intents without becoming a second ledger',
   assert.match(main,/localRelayGroupStructure/);
   assert.match(app,/transportUnavailableUntil/);
   assert.match(app,/markTransportUnavailable/);
-  assert.match(app,/timeoutMs=formUpload\?30000:eventCritical\?2800:6500/);
+  assert.match(app,/timeoutMs=formUpload\?30000:eventCritical\?2200:6500/);
   assert.match(main,/Local actif · serveur momentanément absent/);
   assert.match(localRoom,/iceServers:\[\]/);
 });
@@ -58,10 +59,10 @@ test('member ferry is opaque, bounded and opportunistic',async()=>{
   assert.match(ui,/sans polling continu/);
   assert.match(ui,/FERRY_PACKET_BATCH/);
   const release=JSON.parse(contract);
-  assert.equal(release.release.buildId,'eco-system-1.5.2.12-20261007-event-sync-ui');
-  assert.equal(release.release.pwaCache,'eco-system-v15212-event-sync-ui-20261007');
-  assert.equal(release.release.previousPwaCache,'eco-system-v15211-sovereign-relay-20261007');
-  assert.match(sw,/eco-system-v15212-event-sync-ui-20261007/);
+  assert.ok(release.release.buildId.includes(release.release.version.split('-')[0]));
+  assert.equal(release.release.pwaCache,currentRelease.pwaCache);
+  assert.notEqual(release.release.previousPwaCache,release.release.pwaCache);
+  assert.ok(sw.includes(currentRelease.pwaCache));
 });
 
 test('critical group cycle remains represented by local durable owners',async()=>{

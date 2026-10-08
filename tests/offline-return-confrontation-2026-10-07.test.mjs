@@ -1,3 +1,4 @@
+import {currentRelease,currentQuery} from './release-fixture.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
@@ -20,9 +21,9 @@ test('offline return auto-replays unchanged baselines and confronts only real di
   assert.match(web,/if\(!\(await reviewOfflineFinancialBacklog\(forceConfrontation\)\)\)/);
   // Reconnect is automatic when the server has not changed since the local
   // baseline. Only concurrent divergence opens the confrontation dialog.
-  assert.match(web,/preview\.rows\.every\(row=>!row\.serverChangedSinceBaseline\)\)return true/);
-  assert.match(web,/maxAttempts=FREE_CONSERVATION_MODE\?3:8/);
-  assert.match(web,/FREE_CONSERVATION_MODE\?\[200,650,1500\]/);
+  assert.match(web,/preview\.rows\.every\(row=>row\.sameAmount\|\|!row\.serverChangedSinceBaseline\)\)return true/);
+  assert.match(web,/await resumeOnline\(\)/);
+  assert.match(web,/setTimeout/);assert.doesNotMatch(web,/maxAttempts/);
   assert.doesNotMatch(web,/if\(FREE_CONSERVATION_MODE\)return;\s*const key=.*financialRetryTimers/s);
   assert.match(app,/previewOfflineFinancialConfrontation/);
   assert.match(app,/serverChangedSinceBaseline/);
@@ -32,8 +33,8 @@ test('offline return auto-replays unchanged baselines and confronts only real di
   assert.match(css,/offline-confrontation-table/);
   assert.match(css,/offline-confrontation-session/);
   const release=JSON.parse(contract);
-  assert.equal(release.release.pwaCache,'eco-system-v15212-event-sync-ui-20261007');
-  assert.match(sw,/eco-system-v15212-event-sync-ui-20261007/);
+  assert.equal(release.release.pwaCache,currentRelease.pwaCache);
+  assert.ok(sw.includes(currentRelease.pwaCache));
 });
 
 test('identical amount confirmations are not silently discarded', async()=>{

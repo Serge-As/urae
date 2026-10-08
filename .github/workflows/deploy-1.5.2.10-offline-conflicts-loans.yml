@@ -1,4 +1,4 @@
-name: Eco-System 1.5.2.13 — Live Sync + Repayments + Data-first Cloudflare Delivery
+name: Eco-System 1.5.2.14 — Live Sync + Repayments + Data-first Cloudflare Delivery
 
 on:
   workflow_dispatch:
@@ -20,9 +20,9 @@ env:
   ECO_SYSTEM_ROOT: https://eco-system.sergemimf.workers.dev/
   ECO_SYSTEM_HEALTH: https://eco-system.sergemimf.workers.dev/health
   ECO_SYSTEM_CATALOG: https://eco-system.sergemimf.workers.dev/api/v1/product/capabilities
-  EXPECTED_VERSION: 1.5.2.13-live-sync
-  EXPECTED_BUILD: eco-system-1.5.2.13-20261007-live-repayment-ui
-  EXPECTED_CACHE: eco-system-v15213-live-repayment-ui-20261007
+  EXPECTED_VERSION: 1.5.2.14-live-sync
+  EXPECTED_BUILD: eco-system-1.5.2.14-20261008-sovereign-convergence
+  EXPECTED_CACHE: eco-system-v15214-sovereign-convergence-20261008
   MIN_CAPABILITIES: 164
 
 jobs:
@@ -46,7 +46,7 @@ jobs:
             -H "Authorization: Bearer ${{ github.token }}" \
             -H "Accept: application/vnd.github+json" \
             "https://api.github.com/repos/${GITHUB_REPOSITORY}/statuses/${GITHUB_SHA}" \
-            -d '{"state":"pending","context":"eco-system/production-1.5.2.13","description":"Qualification + Cloudflare smoke in progress"}' >/dev/null
+            -d '{"state":"pending","context":"eco-system/production-1.5.2.14","description":"Qualification + Cloudflare smoke in progress"}' >/dev/null
       - uses: actions/setup-node@v4
         with:
           node-version: '24'
@@ -126,7 +126,6 @@ jobs:
             -d '{"state":"success","context":"eco-system/gate-governed","description":"Full governed Node regression suite passed"}' >/dev/null
       - name: Install Chromium and WebKit
         run: |
-          npm install --no-save --ignore-scripts @playwright/test@1.55.0
           npx playwright install --with-deps chromium webkit
       - name: Start isolated acceptance server
         shell: bash
@@ -136,7 +135,7 @@ jobs:
           cat /tmp/eco-15210-deploy.log
           exit 1
       - name: Mandatory Chromium finance and shell qualification
-        run: npx playwright test tests/browser/financial-cell-consensus-persistence-1.5.2.6.spec.mjs tests/browser/browser-shell-mobile-1.5.2.6.spec.mjs --browser=chromium --workers=1
+        run: npx playwright test tests/browser/financial-cell-consensus-persistence-1.5.2.6.spec.mjs tests/browser/browser-shell-mobile-1.5.2.6.spec.mjs tests/browser/sovereign-multi-manager-1.5.2.14.spec.mjs --browser=chromium --workers=1
 
       - name: Status · gate-chromium
         continue-on-error: true
@@ -244,7 +243,7 @@ jobs:
               && grep -Fq "\"pwaCache\": \"${EXPECTED_CACHE}\"" <<<"${health}" \
               && grep -Fq "\"version\":\"${EXPECTED_VERSION}\"" <<<"$(tr -d '[:space:]' <<<"${catalog}")" \
               && grep -q '"capabilities"' <<<"${catalog}"; then break; fi
-            echo "Waiting for exact 1.5.2.13 health + catalog propagation (attempt ${attempt}/12)…"
+            echo "Waiting for exact 1.5.2.14 health + catalog propagation (attempt ${attempt}/12)…"
             sleep 4
           done
           printf '%s' "${health}" > /tmp/health.json
@@ -279,12 +278,12 @@ jobs:
         run: |
           if [ "${{ job.status }}" = "success" ]; then
             state=success
-            description="1.5.2.13 qualified and production smoke passed"
+            description="1.5.2.14 qualified and production smoke passed"
           else
             state=failure
-            description="1.5.2.13 qualification or production smoke failed"
+            description="1.5.2.14 qualification or production smoke failed"
           fi
-          payload="$(node -e 'console.log(JSON.stringify({state:process.argv[1],context:"eco-system/production-1.5.2.13",description:process.argv[2]}))' "$state" "$description")"
+          payload="$(node -e 'console.log(JSON.stringify({state:process.argv[1],context:"eco-system/production-1.5.2.14",description:process.argv[2]}))' "$state" "$description")"
           curl --fail --silent --show-error -X POST \
             -H "Authorization: Bearer ${{ github.token }}" \
             -H "Accept: application/vnd.github+json" \

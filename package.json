@@ -1,9 +1,9 @@
 {
   "name": "tontine-platform",
-  "version": "1.5.2-13",
+  "version": "1.5.2-14",
   "private": true,
   "type": "module",
-  "description": "Eco-System 1.5.2.13: bounded event-driven financial sync, Live cell push, position-preserving refresh, data-first UI, and governed loan policies.",
+  "description": "Eco-System 1.5.2.14: bounded event-driven financial sync, Live cell push, position-preserving refresh, data-first UI, and governed loan policies.",
   "engines": {
     "node": ">=24"
   },
@@ -26,6 +26,8 @@
     "lint:shared-governance": "node scripts/shared-governance-lint.mjs && node scripts/service-solidarity-lint.mjs"
   },
   "devDependencies": {
-    "typescript": "^5.8.3"
+    "@playwright/test": "^1.55.0",
+    "typescript": "^5.8.3",
+    "ws": "^8.18.3"
   }
 }

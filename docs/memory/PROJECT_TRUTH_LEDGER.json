@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedOn": "2026-09-21",
+  "generatedOn": "2026-10-08",
   "purpose": "Anti-regression operational truth. Read before asking founder to recreate/configure anything.",
   "allowedStatuses": [
     "ACQUIRED",
@@ -1153,6 +1153,20 @@
       ],
       "note": "Candidate 1.5.2.11: isolated offline shell + previous 1.5.2.10 rollback, idle D1 conservation, multi-manager draft Live and quota circuit. Never call production-delivered or FIELD_ACCEPTED based on CI only.",
       "next": "Qualify exact head, perform real A/B multi-device and offline F5 field tests; require production SHA and BIR+ backup/smoke before release."
+    },
+    {
+      "id": "eco.1.5.2.14.sovereign.convergence",
+      "status": "IMPLEMENTED_UNVERIFIED",
+      "scope": "application/outbox/worker/group-live-hub/pwa/financial-ui",
+      "observedOn": "2026-10-08",
+      "evidence": [
+        "repo:docs/change-impact/CIR-2026-10-08-SOVEREIGN-CONVERGENCE.md",
+        "repo:tests/sovereign-convergence-recovery.test.mjs",
+        "repo:tests/repayment-live-total-recovery.test.mjs",
+        "repo:tests/browser/sovereign-multi-manager-1.5.2.14.spec.mjs",
+        "local-targeted: financial recovery and recorded-order tests passed; full same-SHA qualification pending"
+      ],
+      "notes": "Candidate only. Ledger/D1 canonical; no migration, no production money edits, no field acceptance. Existing operator rights and business policies preserved."
     }
   ]
 }

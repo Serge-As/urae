@@ -19,7 +19,7 @@ test('idle app emits no recurring live or D1 traffic',()=>{
   const recovery=main.slice(start,end>start?end:start+6500);
   assert.doesNotMatch(recovery,/setInterval\(/,'validated-cell recovery is bounded setTimeout work, never an idle poll');
   assert.doesNotMatch(recovery,/if\(FREE_CONSERVATION_MODE\)return/,'free mode must still retry a cell the user just validated');
-  assert.match(recovery,/maxAttempts=FREE_CONSERVATION_MODE\?3:8/);
+  assert.match(recovery,/await resumeOnline\(\)/);
   assert.match(savings,/canonicalDirty/);
   assert.doesNotMatch(savings,/setInterval/);
 });
