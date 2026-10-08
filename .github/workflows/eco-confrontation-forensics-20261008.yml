@@ -74,7 +74,7 @@ jobs:
           cat /tmp/eco-old-clock-regression.log
           grep -q "new confirmation must follow the observed canonical version" /tmp/eco-old-clock-regression.log
           grep -q "offline snapshot is not proof of a new clock anchor" /tmp/eco-old-clock-regression.log
-          grep -q "# fail 3" /tmp/eco-old-clock-regression.log
+          grep -q "# fail 4" /tmp/eco-old-clock-regression.log
           git restore --source=HEAD -- packages/application/src/index.ts
       - name: Verify the corrected source with all governed checks
         run: npm run ci

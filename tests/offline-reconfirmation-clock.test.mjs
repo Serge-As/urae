@@ -57,3 +57,17 @@ test('an unavailable clock endpoint cannot turn a cached old server timestamp in
   assert.equal(replacement.payload.clockAnchorId,undefined,'offline snapshot is not proof of a new clock anchor');
   assert.equal(replacement.status,'PENDING');assert.equal(replacement.payload.recordedOffline,true);
 }));
+
+test('a group change during the fresh clock request preserves the original intent and cannot create a command in another group',()=>fixture(async({app,old,decide})=>{
+  let finish;
+  globalThis.fetch=()=>new Promise(resolve=>{finish=()=>{const issuedAt=Date.now();resolve(new Response(JSON.stringify({token:'fresh-clock',anchorAtMs:issuedAt,expiresAt:new Date(issuedAt+600000).toISOString(),deviceId:app.localDeviceId()}),{status:200}));};});
+  const decision=decide();
+  for(let i=0;i<10&&!finish;i++)await Promise.resolve();
+  assert.equal(typeof finish,'function','the fresh server clock request has begun');
+  Object.defineProperty(navigator,'onLine',{value:false,configurable:true});app.selectGroup('another-group');
+  Object.defineProperty(navigator,'onLine',{value:true,configurable:true});finish();
+  await assert.rejects(decision,/CONFRONTATION_DECISION_STALE/);
+  assert.equal(app.outboxItems().length,1,'no replacement crosses the group boundary');
+  assert.equal(app.outboxItems()[0].status,'FAILED','the original remains available for its own group');
+  assert.deepEqual(app.outboxItems()[0].payload,old.payload);
+}));

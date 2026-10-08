@@ -1342,12 +1342,13 @@ export class ConnectedApplication {
 
   async resolveOfflineFinancialConfrontation(preview:Awaited<ReturnType<ConnectedApplication['previewOfflineFinancialConfrontation']>>,decision:{applyIds:string[];keepServerIds:string[]}):Promise<any[]>{
     if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');
+    const groupId=this.activeGroupId,actorId=this.actorId,tenantId=this.tenantId;
     const apply=new Set(decision.applyIds),keep=new Set(decision.keepServerIds),known=new Set(preview.rows.map(x=>x.outboxId));
     if([...apply,...keep].some(id=>!known.has(id))||[...apply].some(id=>keep.has(id))||preview.rows.some(x=>!apply.has(x.outboxId)&&!keep.has(x.outboxId)))throw Error('CONFRONTATION_DECISION_INVALID');
     const resolved=[];
     for(const row of preview.rows){
       const item=this.outbox.list().find(x=>x.id===row.outboxId),p=item?.payload as any;
-      if(!item||item.actorId!==this.actorId||item.tenantId!==this.tenantId||p?.groupId!==this.activeGroupId||['CONFIRMED','SYNCING','CANCELLED'].includes(item.status))throw Error('CONFRONTATION_DECISION_STALE');
+      if(this.activeGroupId!==groupId||this.actorId!==actorId||this.tenantId!==tenantId||!item||item.actorId!==this.actorId||item.tenantId!==this.tenantId||p?.groupId!==this.activeGroupId||['CONFIRMED','SYNCING','CANCELLED'].includes(item.status))throw Error('CONFRONTATION_DECISION_STALE');
       if(keep.has(row.outboxId)){
         await this.cancelOutboxItem(row.outboxId);
         resolved.push({...row,retainedAmount:row.canonicalAmount,retainedVersion:row.canonicalVersion});
@@ -1357,6 +1358,7 @@ export class ConnectedApplication {
         // Commit its replacement before cancellation, so an interrupted device
         // retains at least one durable intent throughout the decision.
         await this.warmFinancialClock(true);
+        if(this.activeGroupId!==groupId||this.actorId!==actorId||this.tenantId!==tenantId)throw Error('CONFRONTATION_DECISION_STALE');
         await this.setFinancialCellTarget({meetingId:row.meetingId,membershipId:row.membershipId,rubricId:row.rubricId,
           targetAmount:row.localAmount,currentAmount:row.canonicalAmount,currentVersion:row.canonicalVersion,
           reason:'[OFFLINE_CONFRONTATION] Reconfirmation explicite de '+item.idempotencyKey+' · '+row.canonicalAmount+' → '+row.localAmount,deferSync:true});

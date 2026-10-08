@@ -68,3 +68,7 @@ Run **37826518664 SUCCESS**, SHA **0415c9464699238568321afba605c98c00c401f8** : 
 Run forensique **37826825119 SUCCESS**, job **113481702657** : **npm audit avant = 3 high**, puis verrou généré depuis npm **Playwright 1.56.1 / ws 8.21.0 = 0 vulnérabilité signalée**. Les versions et intégrités du registre sont adoptées, TypeScript 5.9.3 et fsevents 2.3.2 conservés. La CI et la livraison ajoutent **npm audit --audit-level=high**. Avis primaires : https://github.com/advisories/GHSA-7mvr-c777-76hp ; https://github.com/websockets/ws/security/advisories/GHSA-96hv-2xvq-fx4p ; https://github.com/websockets/ws/security/advisories/GHSA-58qx-3vcg-4xpx . Ces dépendances servent aux tests et au serveur Node local ; le Worker emploie son WebSocket natif.
 
 Les qualifications Chromium/WebKit et le SHA intégrant les dépendances doivent encore passer. Le marqueur de publication reste HOLD. Aucun résultat ci-dessus n'est une recette physique ou une preuve de production 1.5.2.15.
+
+### Protection du contexte pendant l'attente réseau
+
+La reconfirmation conserve son groupe, compte et tenant avant la demande d'horloge et vérifie ce contexte après l'attente. Un changement de groupe pendant cette demande ne doit pas créer une commande dans le nouveau groupe ni annuler l'ancienne. Une quatrième régression utilise une réponse d'horloge différée et un vrai selectGroup pour reproduire cette fenêtre. L'enveloppe exige désormais quatre échecs ciblés sur l'ancien source et **654** tests sur le correctif. Qualification encore requise ; publication HOLD.
