@@ -1156,7 +1156,7 @@
     },
     {
       "id": "eco.1.5.2.14.sovereign.convergence",
-      "status": "IMPLEMENTED_UNVERIFIED",
+      "status": "VERIFIED_REMOTE",
       "scope": "application/outbox/worker/group-live-hub/pwa/financial-ui",
       "observedOn": "2026-10-08",
       "evidence": [
@@ -1164,9 +1164,12 @@
         "repo:tests/sovereign-convergence-recovery.test.mjs",
         "repo:tests/repayment-live-total-recovery.test.mjs",
         "repo:tests/browser/sovereign-multi-manager-1.5.2.14.spec.mjs",
-        "local-targeted: financial recovery and recorded-order tests passed; full same-SHA qualification pending"
+        "local-ci:645/645 PASS; local-Chromium:8/8 PASS",
+        "github:commit:b0e93abf7668fe885845761db2ff370ae2d2e53c",
+        "github:run:37762491737 SUCCESS; governed-ci + Chromium 7/7 + WebKit 6/6",
+        "github:run:37762491663 SUCCESS; separate staged qualification"
       ],
-      "notes": "Candidate only. Ledger/D1 canonical; no migration, no production money edits, no field acceptance. Existing operator rights and business policies preserved."
+      "notes": "Qualified candidate source, not deployment proof. Final HEAD must pass CI. Ledger/D1 canonical; no migration or production-money edits; FIELD_ACCEPTED=NOT_ACCEPTED."
     }
   ]
 }

@@ -730,7 +730,7 @@ local_qualification_2026_09_13:
     risk_class: financial_critical
     offline_policy: canonical_finance_in_d1_projection_queue_retry
     audit_event: FINANCIAL_PROJECTION_LIVE
-    tests: [live-replay-after-500,financial-projection-outbox,live-pilot-end-to-end]
+    tests: [live-replay-after-500,financial-projection-outbox,live-pilot-end-to-end,repayment-live-total-recovery,sovereign-multi-manager-1.5.2.14]
   - id: RUBRIC.POLICIES.COMPOSABLE
     domain: rubrics
     status: FUNCTIONAL_BETA

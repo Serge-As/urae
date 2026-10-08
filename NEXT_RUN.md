@@ -2,7 +2,9 @@
 
 Base exacte examinée : `0f0deacf6428cf841cd25634f732dd2f41d02e66` (PR #69). Branche de travail : `fix/codex-eco-sovereign-live-20261008`. Réparation des propriétaires existants : Outbox durable et ordre des intentions, confrontation persistante par cellule/séance, diffusion GroupLiveHub des totaux, navigation conservée, shell PWA complet et présentation des dettes. Aucun changement des parcours métier ou des politiques de prêt, aucune migration ni manipulation des fonds de production.
 
-Qualification en cours : les tests locaux ciblés de confrontation/ordre/idempotence et les premiers scénarios Chromium à deux comptes ont passé. La qualification complète et les navigateurs doivent être verts sur le SHA livré. `FIELD_ACCEPTED = NOT_ACCEPTED`. Une candidate implémentée n'est pas une production attestée : le workflow BIR+ puis le smoke `/health` doivent prouver version/build/cache/SHA avant toute annonce de déploiement. Les blocs antérieurs restent des preuves historiques.
+Qualification : 645/645 tests gouvernés sur la source candidate ; 8 scénarios Chromium locaux dont reprise/confrontation à deux comptes, remboursement cumulatif et sortie des onglets récapitulatifs ; CI distante sur `b0e93abf7668fe885845761db2ff370ae2d2e53c` : runs `37762491737` et `37762491663` SUCCESS, 7 scénarios Chromium et 6 scénarios WebKit SUCCESS. La dernière source produit est identique ; le test d'accès aux onglets complète cette preuve locale. La CI du HEAD final reste obligatoire avant livraison. `FIELD_ACCEPTED = NOT_ACCEPTED`. Les appareils physiques et les groupes réels restent à recetter.
+
+Livraison prévue par le workflow code-only existant : aucune migration, export D1, écriture de schéma, création D1/R2 ou réécriture de données. L’identité de production doit être prouvée par /health et le workflow avant toute annonce de déploiement. Les blocs antérieurs restent historiques.
 
 ---
 

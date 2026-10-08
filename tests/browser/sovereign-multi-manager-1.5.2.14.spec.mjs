@@ -45,6 +45,14 @@ test('distinct managers see typing and validated amounts, and an idle Live conne
     await page.setViewportSize({width:390,height:820});await expect(cell(page,ids).locator('.cell-validate')).toBeVisible();
     await cell(page,ids).scrollIntoViewIfNeeded();
     await page.screenshot({path:'test-results/convergence-mobile.png',fullPage:false});
+    await page.locator('button[data-view="sessions"]').first().click();
+    await page.locator('#sessionsMeetingSelect').selectOption('__cumulative__');
+    await expect(page.locator('[data-session-tab="cumulative"]')).toHaveClass(/active/);
+    for(const tab of ['beneficiaries','recap','debts','schedule']){
+      await page.locator(`[data-session-tab="${tab}"]`).click();
+      await expect(page.locator(`[data-session-tab="${tab}"]`)).toHaveClass(/active/);
+      await expect(page.locator('#sessionsWorkspace')).not.toBeEmpty();
+    }
   }finally{await secondContext.close();}
 });
 
