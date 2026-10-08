@@ -1,9 +1,9 @@
 {
   "name": "tontine-platform",
-  "version": "1.5.2-14",
+  "version": "1.5.2-15",
   "private": true,
   "type": "module",
-  "description": "Eco-System 1.5.2.14: bounded event-driven financial sync, Live cell push, position-preserving refresh, data-first UI, and governed loan policies.",
+  "description": "Eco-System 1.5.2.15: bounded outage recovery, durable financial intents, event-driven Live convergence and immutable PWA rollback.",
   "engines": {
     "node": ">=24"
   },

@@ -6,6 +6,7 @@ on:
       - 'fix/1.5.2.10-offline-conflicts-loans-20261003'
       - 'fix/field-regressions-recovery-20261005'
       - 'fix/eco-q01-q28-staged-recovery-20261006'
+      - 'fix/transport-recovery-bounded-20261008'
   workflow_dispatch:
 
 permissions:
@@ -21,6 +22,8 @@ jobs:
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: '24'
@@ -30,12 +33,29 @@ jobs:
         run: npm run ci
       - name: Build exact public shell
         run: npm run build
+      - name: Archive exact source with SHA-256 for recovery
+        shell: bash
+        run: |
+          mkdir -p /tmp/eco-source-recovery
+          git archive --format=tar.gz HEAD > /tmp/eco-source-recovery/source-${{ github.sha }}.tar.gz
+          cd /tmp/eco-source-recovery
+          sha256sum source-${{ github.sha }}.tar.gz > SHA256SUMS
+          sha256sum -c SHA256SUMS
+          tar -tzf source-${{ github.sha }}.tar.gz >/dev/null
+      - name: Retain source recovery archive
+        uses: actions/upload-artifact@v4
+        with:
+          name: eco-source-recovery-${{ github.sha }}
+          path: /tmp/eco-source-recovery/
+          retention-days: 30
 
   browser-critical:
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: '24'
@@ -54,7 +74,7 @@ jobs:
           cat /tmp/eco-15210-browser.log
           exit 1
       - name: Chromium financial persistence and shell
-        run: npx playwright test tests/browser/financial-cell-consensus-persistence-1.5.2.6.spec.mjs tests/browser/browser-shell-mobile-1.5.2.6.spec.mjs --browser=chromium --workers=1
+        run: npx playwright test tests/browser/financial-cell-consensus-persistence-1.5.2.6.spec.mjs tests/browser/browser-shell-mobile-1.5.2.6.spec.mjs tests/browser/sovereign-multi-manager-1.5.2.14.spec.mjs --browser=chromium --workers=1
       - name: WebKit sovereign offline
         run: npx playwright test tests/browser/eco-system-webkit-sovereign-offline-1.5.2.9.spec.mjs --browser=webkit --workers=1
       - name: Upload failure evidence

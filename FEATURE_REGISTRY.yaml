@@ -1,5 +1,5 @@
 registry_version: 1
-project_version: 1.5.2.14-live-sync
+project_version: 1.5.2.15-bounded-recovery
 source_of_truth: docs/constitution + verified_code
 
 capabilities:
@@ -1373,3 +1373,18 @@ production_qualification_2026_10_08_1_5_2_14:
   field_reception: pending
   field_acceptance: NOT_ACCEPTED
   note: Existing owners repaired; no new authority, no business journey removed. Public source and installed predecessor cache protection independently confirmed.
+
+candidate_2026_10_08_1_5_2_15:
+  version: 1.5.2.15-bounded-recovery
+  branch: fix/transport-recovery-bounded-20261008
+  status: IMPLEMENTED_UNVERIFIED
+  deployed: false
+  scope: bounded_transport_recovery_existing_application_outbox_owner
+  deterministic_reproducer: baseline_9_sends_8_wakes_candidate_2_sends_1_wake_per_30s
+  node_browser_qualification: pending_exact_sha
+  d1: eco-system-db
+  r2: eco-system-backups
+  db_mutation: none
+  real_money_enabled: false
+  field_acceptance: NOT_ACCEPTED
+  note: No new business capability or maturity promotion; registry status is not end-to-end acceptance.

@@ -2,9 +2,10 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {runInNewContext} from 'node:vm';
+import {currentRelease} from './release-fixture.mjs';
 
 test('activation preserves the ready cache actually installed from public production',async()=>{
-  const origin='https://eco.example',current='eco-system-v15214-sovereign-convergence-20261008';
+  const origin='https://eco.example',current=currentRelease.pwaCache;
   const installed='eco-system-v15211-field-recovery-20261005',ready='/__eco_release_ready__';
   const stores=new Map(),listeners=new Map();
   const open=async name=>{

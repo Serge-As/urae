@@ -103,6 +103,7 @@ export class ConnectedApplication {
   private readonly sovereign = new IndexedDbSovereignStore();
   private usingOfflineSnapshot=false;
   private transportUnavailableUntil=0;
+  private transportRecoveryWakeUsed=false;
   private serverBudgetBlockedUntil=0;
   private serverBudgetReason='';
   private serverBudgetWake?:ReturnType<typeof setTimeout>;
@@ -187,8 +188,9 @@ export class ConnectedApplication {
     this.armServerBudgetWake();
     if(typeof window!=='undefined'&&typeof CustomEvent!=='undefined')window.dispatchEvent(new CustomEvent('eco:server-budget-blocked',{detail:{until:this.serverBudgetBlockedUntil,reason:this.serverBudgetReason}}));
   }
-  forceServerRetry():void{this.serverBudgetBlockedUntil=0;this.serverBudgetReason='';this.transportUnavailableUntil=0;if(this.serverBudgetWake)clearTimeout(this.serverBudgetWake);this.serverBudgetWake=undefined;if(this.transportWake)clearTimeout(this.transportWake);this.transportWake=undefined;try{localStorage.removeItem('eco.serverBudgetBlock.v1');}catch{}this.usingOfflineSnapshot=false;}
+  forceServerRetry():void{this.transportRecoveryWakeUsed=false;this.serverBudgetBlockedUntil=0;this.serverBudgetReason='';this.transportUnavailableUntil=0;if(this.serverBudgetWake)clearTimeout(this.serverBudgetWake);this.serverBudgetWake=undefined;if(this.transportWake)clearTimeout(this.transportWake);this.transportWake=undefined;try{localStorage.removeItem('eco.serverBudgetBlock.v1');}catch{}this.usingOfflineSnapshot=false;}
   forceTransportRetry():void{
+    this.transportRecoveryWakeUsed=false;
     this.transportUnavailableUntil=0;if(this.transportWake)clearTimeout(this.transportWake);this.transportWake=undefined;
     // A real connectivity event reopens exhausted TRANSPORT retries only.
     // Business conflicts and confirmed payments remain terminal.
@@ -206,14 +208,15 @@ export class ConnectedApplication {
     void this.warmFinancialClock();
   }
   private markTransportUnavailable():void{
-    // One failed fetch must not strand an otherwise-online phone for 30 s.
-    // The wake timer performs NO network request: it only re-opens the gate so
-    // the next real user/outbox/live event can retry.
+    // One bounded wake per outage, then wait for a real connectivity/user event.
+    // The automatic wake must not reset this latch or the Outbox attempt limit.
     this.transportUnavailableUntil=Date.now()+3500;
     if(this.transportWake)clearTimeout(this.transportWake);
-    this.transportWake=setTimeout(()=>{
+    this.transportWake=undefined;
+    if(!this.transportRecoveryWakeUsed)this.transportWake=setTimeout(()=>{
       this.transportWake=undefined;
       if(this.transportUnavailableUntil>Date.now())return;
+      this.transportRecoveryWakeUsed=true;
       this.transportUnavailableUntil=0;
       if(typeof window!=='undefined'&&typeof CustomEvent!=='undefined')window.dispatchEvent(new CustomEvent('eco:transport-retry-ready'));
     },3650);
@@ -250,7 +253,7 @@ export class ConnectedApplication {
     // previous cached GET or short transport failure must not force an extra
     // auth/D1 read before every validation. This also lets a phone recover as
     // soon as mobile data/Wi-Fi works again.
-    this.transportUnavailableUntil=0;
+    this.transportRecoveryWakeUsed=false;this.transportUnavailableUntil=0;
     if(this.transportWake)clearTimeout(this.transportWake);this.transportWake=undefined;
     return true;
   }
@@ -374,7 +377,8 @@ export class ConnectedApplication {
       if(transient)throw new Error('NETWORK_UNAVAILABLE');
       throw new Error(String(body.error??`HTTP_${response.status}`));
     }
-    this.usingOfflineSnapshot=false;this.transportUnavailableUntil=0;
+    this.usingOfflineSnapshot=false;this.transportUnavailableUntil=0;this.transportRecoveryWakeUsed=false;
+    if(this.transportWake)clearTimeout(this.transportWake);this.transportWake=undefined;
     if(cacheable)await this.cacheReadSnapshot(path,body as T);
     return body as T;
   }
