@@ -1,18 +1,18 @@
-# AGENTS.md — Eco-System 1.4.1 Production / Field Integrity / Master 2.3.4
+# AGENTS.md — Eco-System, vérité et reprise
 
 ## Mission
 Continuer Eco-System sans recommencer, simplifier ou remplacer silencieusement les acquis.
 
-### Vérité courante
-- production publique qualifiée : `1.4.1-field-integrity-home-sessions` ;
-- lignée de production : `next/1.4.1-field-integrity-guardrails-20260919` ;
-- branche de travail courante : `next/1.4.1-field-integrity-guardrails-20260919` ;
-- source déployée : `024b9837b6fa577c0c2c39297c2ce672f7d130b3` ;
-- Worker Version ID : `d4e56867-077c-47cd-bfc9-9aba4735d596` ;
-- qualification du SHA déployé : run `35488899790` SUCCESS ;
-- qualification + déploiement + smoke + BIR+ pré/post : run `35488899806` SUCCESS ;
-- Premium Live : actif en production 1.4.1 ;
-- argent réel : `realMoneyEnabled=false`.
+## Vérité de reprise au 8 octobre 2026
+- production attestée : `1.5.2.14-live-sync`, SHA `d027f09a1382cd29054b33e274f3fd3bf9f8d9f3`, livraison GitHub Actions `37765653486 SUCCESS` ;
+- branche de livraison active : `fix/1.5.2.10-offline-conflicts-loans-20261003` ;
+- candidate de travail : `fix/transport-recovery-bounded-20261008`, version `1.5.2.15-bounded-recovery`, qualification/déploiement à vérifier ;
+- autorités de version et preuve : `docs/release/CURRENT_RELEASE_CONTRACT.json`, `docs/memory/CURRENT_TRUTH.md` et `docs/memory/PROJECT_TRUTH_LEDGER.json` ;
+- schéma/D1/R2 préexistants conservés ; `realMoneyEnabled=false`, `FIELD_ACCEPTED=NOT_ACCEPTED` ;
+- l'audit du 8 octobre documente un vrai défaut de polling de reprise et les capacités encore planifiées/externes. Le registre de modules ne vaut pas recette complète.
+
+## Préférence persistante du fondateur
+À la fin de chaque réponse de travail, préciser la consommation de crédits si elle est mesurable. Ne jamais inventer un coût exact : solde et quotas partagés ne mesurent pas le coût du chat. Indiquer explicitement l'absence d'une mesure exacte lorsque c'est le cas.
 
 ## MEMORY BEFORE CODE
 Avant tout lot substantiel, lire dans cet ordre :
@@ -121,7 +121,7 @@ Un chat peut s'arrêter sans prévenir. Pour rendre cela sans conséquence :
 ## Clôture obligatoire d'un jalon
 Tests → Project State → Feature Registry → Current Truth/Truth Ledger → NEXT_RUN → CIR/Recall si besoin → BIR+ → bloc **ÉTAT DU PROJET APRÈS ÉTAPE**.
 
-## Ligne production 1.4.1 — 2026-09-20
+## Ligne historique production 1.4.1 — 2026-09-20
 - branche de travail : `next/1.4.1-field-integrity-guardrails-20260919` ;
 - runtime courant : `1.4.1-field-integrity-home-sessions` ;
 - production 1.4.1 vérifiée sur le SHA exact `024b9837b6fa577c0c2c39297c2ce672f7d130b3` ;
@@ -132,7 +132,7 @@ Tests → Project State → Feature Registry → Current Truth/Truth Ledger → 
 - un code ECO-RCP identifie une preuve mais n'accorde aucun droit ;
 - suppression historique d'un membre/rubrique se traduit par lifecycle/archivage si une trace métier doit être conservée.
 
-## Ligne candidate 1.4.2 — séparation UX et Blueprint exécutable
+## Ligne historique candidate 1.4.2 — séparation UX et Blueprint exécutable
 
 Branche :
 `next/1.4.2-operational-center-sessions-blueprint-20260920`
@@ -152,7 +152,7 @@ Invariants supplémentaires :
 - Financial Lab n'émet aucun verdict légal ;
 - Eco Route / Backhaul / Return Load est exclu du périmètre Eco-System.
 
-## Production 1.4.3 / Blueprint 5.0.0 — 2026-09-21
+## Historique production 1.4.3 / Blueprint 5.0.0 — 2026-09-21
 - ligne active : `next/1.4.3-blueprint-5-0-0-finalization-20260921`
 - version publique : `1.4.3-blueprint-5-0-0-finalized`
 - source déployée : `96b8f41467af476b12179b786d7d8f140ef86ce7`

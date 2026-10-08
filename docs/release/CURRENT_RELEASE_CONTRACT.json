@@ -1,12 +1,12 @@
 {
   "contractVersion": 1,
   "release": {
-    "version": "1.5.2.14-live-sync",
-    "buildId": "eco-system-1.5.2.14-20261008-sovereign-convergence",
+    "version": "1.5.2.15-bounded-recovery",
+    "buildId": "eco-system-1.5.2.15-20261008-bounded-recovery",
     "schemaVersion": "d1-additive-20260923",
     "policyVersion": "live-finance-policy-20261007-event-push-repayment",
-    "pwaCache": "eco-system-v15214-sovereign-convergence-20261008",
-    "previousPwaCache": "eco-system-v15213-live-repayment-ui-20261007",
+    "pwaCache": "eco-system-v15215-bounded-recovery-20261008",
+    "previousPwaCache": "eco-system-v15214-sovereign-convergence-20261008",
     "commitShaAuthority": "DEPLOYMENT_WORKFLOW_GITHUB_SHA_AND_PRODUCTION_HEALTH"
   },
   "truthAxes": {

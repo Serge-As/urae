@@ -2610,13 +2610,15 @@ const resumeOnline=({forceConfrontation=false,relayFerry=false}={})=>{
     }catch(error){networkRecoveryNeeded=true;console.info('Online resume deferred',error);}})().finally(()=>{onlineResumePromise=null;});
     return onlineResumePromise;
 };
-const eventDrivenConnectivityRecovery=()=>{
+const eventDrivenConnectivityRecovery=(event)=>{
+    // Foreground activity is a real retry opportunity. A timer wake is not.
+    if(['focus','pageshow','visibilitychange'].includes(String(event?.type??'')))app.forceTransportRetry?.();
     renderConnectivity();
     const pending=(app.outboxItems?.()??[]).some(item=>!['CONFIRMED','CANCELLED'].includes(String(item.status)));
     if(navigator.onLine&&(pending||networkRecoveryNeeded))void resumeOnline();
 };
 window.addEventListener('online',()=>{app.forceTransportRetry?.();networkRecoveryNeeded=true;void resumeOnline({relayFerry:true});});
-window.addEventListener('eco:transport-retry-ready',()=>{app.forceTransportRetry?.();eventDrivenConnectivityRecovery();});
+window.addEventListener('eco:transport-retry-ready',eventDrivenConnectivityRecovery);
 window.addEventListener('offline',()=>{networkRecoveryNeeded=true;offlineConfrontationDeferred=false;persistNavState(captureNavState());renderConnectivity();});
 window.addEventListener('pageshow',eventDrivenConnectivityRecovery);
 window.addEventListener('eco:server-budget-blocked',renderConnectivity);
@@ -2646,7 +2648,7 @@ window.addEventListener('eco:live-connected',()=>{
 });
 window.addEventListener('eco:live-disconnected',()=>{liveChannelConnected=false;renderConnectivity();});
 window.addEventListener('focus',eventDrivenConnectivityRecovery);
-document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')eventDrivenConnectivityRecovery();});
+document.addEventListener('visibilitychange',event=>{if(document.visibilityState==='visible')eventDrivenConnectivityRecovery(event);});
 if('serviceWorker' in navigator)navigator.serviceWorker.addEventListener('message',event=>{
     if(event.data?.type!=='ECO_SYSTEM_SYNC_OUTBOX'||!navigator.onLine)return;
     void resumeOnline();

@@ -1,3 +1,31 @@
+## Reprise active — candidate 1.5.2.15, 8 octobre 2026
+
+Le fondateur autorise aujourd'hui l'audit et l'amélioration directe de sa plateforme. Cette autorisation appartient à cette demande ; les anciennes consignes de staging/interdiction de livraison restent historiques et ne remplacent pas la demande humaine actuelle.
+
+Production attestée à la reprise : **1.5.2.14-live-sync**, SHA `d027f09a1382cd29054b33e274f3fd3bf9f8d9f3`, qualification `37765653443 SUCCESS`, livraison `37765653486 SUCCESS`, Worker `98d720dd-6364-436e-9a00-38809e4a3925`. Ces résultats ont été relus dans GitHub Actions. Le nouvel audit n'a pas obtenu de réponse publique avec son outil Web ; il ne revendique pas une seconde lecture indépendante de /health.
+
+Défaut nouveau et reproduit : la relance `eco:transport-retry-ready` réarme le minuteur et réouvre les tentatives Outbox. À serveur indisponible et navigator.onLine=true, le reproducteur exécutant les méthodes/listener extraits de la source donne **9 envois échoués / 8 réveils en 30 secondes** et un minuteur restant. La candidate limite ce scénario à **2 envois / 1 réveil**, sans minuteur restant. Ceci est une preuve déterministe ciblée, pas encore une preuve Node/Playwright ou terrain.
+
+Source candidate : **1.5.2.15-bounded-recovery**, branche `fix/transport-recovery-bounded-20261008`, cache `eco-system-v15215-bounded-recovery-20261008`, rollback v15214 et protections v15213/v15211/v15210. Qualification et déploiement de cette candidate : **À EXÉCUTER, NON ATTESTÉS** à ce checkpoint. Le contrat décrit le code candidat ; il ne prouve pas la version servie.
+
+Audit complet de reprise et limites : `docs/audits/ECO_SYSTEM_AUDIT_2026-10-08.md`. Inventaire des 164 entrées : `docs/audits/ECO_SYSTEM_CAPABILITY_SNAPSHOT_2026-10-08.json`. Le registre classe 155 fondations opérationnelles, 7 capacités dépendantes d'une qualification externe et 2 planifiées ; un libellé FOUNDATION_ACTIVE ne prouve pas tous les parcours utilisateurs.
+
+Même Ledger/D1 `eco-system-db`, même R2 `eco-system-backups`, schéma/politique inchangés, **realMoneyEnabled=false**, **FIELD_ACCEPTED=NOT_ACCEPTED**. Aucun fonds existant n'est modifié par cette reprise. Les sections suivantes documentent l'état antérieur.
+
+---
+
+## Prochaine exécution concrète
+
+1. Vérifier le HEAD de la branche enfant, lancer la CI gouvernée et les vrais scénarios Chromium/WebKit du même SHA, puis lire les erreurs avant toute promotion.
+2. Conserver l'archive source SHA-256 du workflow de qualification. Elle sauvegarde le code et la mémoire ; elle n'est pas une sauvegarde des fonds D1. La livraison reste le workflow existant code-only, sans export D1 ni migration.
+3. Si les vérifications sont vertes, intégrer dans la branche de livraison existante par avance normale, déclencher son marqueur et vérifier version/build/cache/SHA/catalogue dans /health depuis le workflow. Ne pas fusionner main ni créer un stockage concurrent.
+4. Après livraison attestée, ajouter les vrais identifiants de run, SHA, Worker et artefact dans Current Truth, Truth Ledger, Project State, Feature Registry, CIR/Recall et l'audit. Aucune preuve attendue ne vaut preuve obtenue.
+5. Poursuivre la recette physique Android 6, anciens Chrome/Opera, iOS natif, 2G et groupes réels ; FIELD_ACCEPTED reste NOT_ACCEPTED jusque-là.
+6. Les fournisseurs SMS/WhatsApp/Telegram/email/visio, MFA, Mobile Money, récompenses et fédérations ne deviennent pas fonctionnels par leur seule inscription au catalogue. Qualifier chaque parcours et son fournisseur avant toute annonce complète.
+7. Toujours rendre compte des crédits à l'utilisateur. Si l'outil ne fournit pas un coût exact pour ce chat, indiquer « coût exact non exposé » ; les quotas partagés et le solde ne sont pas le coût de la tâche.
+
+---
+
 ## Production vérifiée — Eco-System 1.5.2.14, 8 octobre 2026
 
 Version publique : `1.5.2.14-live-sync`. Source servie : `d027f09a1382cd29054b33e274f3fd3bf9f8d9f3`. Branche de livraison : `fix/1.5.2.10-offline-conflicts-loans-20261003`. Worker Version ID : `98d720dd-6364-436e-9a00-38809e4a3925`. PR #70 fusionnée.

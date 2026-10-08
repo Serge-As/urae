@@ -1194,6 +1194,21 @@
       ],
       "note": "Convergence and confrontation repaired through existing owners; code-only deployment without D1 export, migration, creation/replacement of storage or finance data rewrite.",
       "next": "Physical browser/device/2G and real-group acceptance remains NOT_ACCEPTED. Continue from this source; no new deployment is needed for field verification alone."
+    },
+    {
+      "id": "candidate.eco.1.5.2.15.bounded.transport.recovery",
+      "status": "IN_PROGRESS",
+      "scope": "application/outbox/transport-recovery/pwa/qualification",
+      "observedOn": "2026-10-08",
+      "evidence": [
+        "repo:docs/audits/ECO_SYSTEM_AUDIT_2026-10-08.md",
+        "repo:docs/change-impact/CIR-2026-10-08-BOUNDED-TRANSPORT-RECOVERY.md",
+        "repo:tests/transport-recovery-no-idle-polling.test.mjs",
+        "repo:tests/browser/sovereign-multi-manager-1.5.2.14.spec.mjs",
+        "deterministic-extracted-source:baseline 9 failed sends/8 wakes/1 pending timer; candidate 2/1/0 in 30s"
+      ],
+      "note": "Candidate source only at this checkpoint. No Node/Playwright SUCCESS or production delivery presumed. Source archive and exact SHA qualification must be recorded after execution.",
+      "next": "Run governed CI plus browser outage/convergence and deploy only after success; preserve fieldAcceptance NOT_ACCEPTED."
     }
   ]
 }

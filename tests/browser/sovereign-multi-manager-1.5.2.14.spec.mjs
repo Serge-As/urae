@@ -87,3 +87,54 @@ test('offline divergent edits survive reload, confront the exact cell, and conve
     await page.reload();await expect.poll(()=>amount(cell(page,ids))).toBe(4000);
   }finally{await secondContext.close();}
 });
+
+const storedCellIntent=(page,ids)=>page.evaluate(ids=>new Promise((resolve,reject)=>{
+  const open=indexedDB.open('tontine-platform');
+  open.onerror=()=>reject(open.error);
+  open.onsuccess=()=>{
+    const db=open.result,read=db.transaction('outbox','readonly').objectStore('outbox').getAll();
+    read.onerror=()=>{db.close();reject(read.error);};
+    read.onsuccess=()=>{const rows=read.result.filter(x=>x.type==='FINANCIAL_CELL_CORRECTION_PROPOSAL_V2'&&x.payload?.groupId===ids.groupId&&x.payload?.meetingId===ids.meetingId&&x.payload?.membershipId===ids.membershipId&&x.payload?.rubricId===ids.rubricId);db.close();resolve(rows);};
+  };
+}),ids);
+
+test('server outage while navigator stays online stops idle retries and the durable cell converges on network return',async({page,browser})=>{
+  test.setTimeout(90000);const {ids,second,secondContext}=await setup(page,browser);
+  try{
+    // Simulate an unreachable HTTPS API while the browser still reports online.
+    // Keep the authenticated Live channel and the second manager's network alive.
+    await page.evaluate(()=>{
+      const send=window.fetch.bind(window);
+      window.__ecoOutage={active:true,calls:0};
+      window.fetch=(input,init)=>{
+        const path=typeof input==='string'?input:input.url??String(input);
+        if(window.__ecoOutage.active&&path.includes('/api/v1/')){
+          window.__ecoOutage.calls++;
+          return Promise.reject(new TypeError('Synthetic API transport outage'));
+        }
+        return send(input,init);
+      };
+    });
+    expect(await page.evaluate(()=>navigator.onLine)).toBe(true);
+    await enter(page,ids,1000);
+    await expect.poll(()=>amount(cell(page,ids))).toBe(1000);
+    await expect.poll(async()=>(await storedCellIntent(page,ids)).length).toBe(1);
+    const [pending]=await storedCellIntent(page,ids);
+    expect(['PENDING','FAILED']).toContain(pending.status);
+    await page.waitForTimeout(9000);
+    const attempts=await page.evaluate(()=>window.__ecoOutage.calls);
+    expect(attempts).toBeGreaterThan(0);
+    await page.waitForTimeout(8000);
+    expect(await page.evaluate(()=>window.__ecoOutage.calls)).toBe(attempts);
+    expect(await amount(cell(second,ids)),'an unsent local value is not server-confirmed finance').toBe(0);
+    await page.evaluate(()=>{window.__ecoOutage.active=false;window.dispatchEvent(new Event('online'));});
+    await expect.poll(()=>amount(cell(second,ids)),{timeout:10000}).toBe(1000);
+    await expect.poll(async()=>(await storedCellIntent(page,ids))[0]?.status,{timeout:10000}).toBe('CONFIRMED');
+    const [confirmed]=await storedCellIntent(page,ids);
+    expect(confirmed.idempotencyKey).toBe(pending.idempotencyKey);
+    expect(confirmed.payload.targetAmount).toBe(1000);
+    const snapshot=await api(second,'/api/v1/groups/'+ids.groupId+'/financial-cells/snapshot','GET',undefined,ids.groupId);
+    expect(snapshot.cells.find(x=>x.meetingId===ids.meetingId&&x.membershipId===ids.membershipId&&x.rubricId===ids.rubricId)?.amount).toBe(1000);
+    await page.screenshot({path:'test-results/bounded-outage-recovered.png',fullPage:false});
+  }finally{await secondContext.close();}
+});
