@@ -18,14 +18,14 @@ test('free conservation keeps canonical D1 polling fully dormant',()=>{
 
 test('free conservation uses event push instead of freezing live',()=>{
   assert.match(main,/conservationMode: FREE_CONSERVATION_MODE/);
-  assert.match(live,/PUSH ÉVÉNEMENTIEL · mode gratuit/);
+  assert.match(live,/PUSH ÉVÉNEMENTIEL · zéro polling D1/);
   assert.match(live,/CLIENT_SIGNAL/);
   assert.match(live,/liveWebSocketUrl\(lastSeq,String\(ticketData\?\.ticket\?\?''\)\)/);
   assert.doesNotMatch(live,/GELÉ · mode gratuit/);
   assert.doesNotMatch(live,/setInterval\(/);
   assert.doesNotMatch(live,/startCatchupTimer/);
-  assert.match(live,/reconnectAttempt>=4/);
-  assert.match(live,/\[1500,4500,12000,30000\]/);
+  assert.match(live,/Math\.min\(reconnectAttempt\+1,5\)/);
+  assert.match(live,/\[800,1800,4000,10000,30000\]/);
   assert.match(live,/GROUP_LIVE_HELLO/);
   assert.doesNotMatch(live,/app\.publishLiveSignal\?\./);
 });
@@ -54,8 +54,8 @@ test('quota circuit has no idle loop but allows bounded retries after a real val
   const start=main.indexOf('const scheduleFinancialOutboxRecovery');
   const end=main.indexOf('let financialSnapshotTimer',start);
   const recovery=main.slice(start,end>start?end:start+7000);
-  assert.match(recovery,/maxAttempts=FREE_CONSERVATION_MODE\?3:8/);
-  assert.match(recovery,/FREE_CONSERVATION_MODE\?\[200,650,1500\]/);
+  assert.match(recovery,/await resumeOnline\(\)/);
+  assert.match(recovery,/setTimeout/);assert.doesNotMatch(recovery,/maxAttempts/);
   assert.doesNotMatch(recovery,/setInterval\(/);
 });
 

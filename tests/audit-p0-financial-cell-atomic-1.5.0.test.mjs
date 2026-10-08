@@ -94,5 +94,5 @@ test('financial UI advances cell revision after ACK and never treats own durable
   const liveStart=ui.indexOf("window.addEventListener('eco:financial-live-update'");
   const live=ui.slice(liveStart,liveStart+1200);
   assert.match(live,/p\.actorId\?\?e\?\.actorId/);
-  assert.match(live,/sourceActorId&&sourceActorId!==String\(app\.currentActor/);
+  assert.match(live,/sameActor=Boolean\(sourceActorId\)/);assert.match(live,/if\(sameActor\)applyRemoteFinancialProjection/);
 });

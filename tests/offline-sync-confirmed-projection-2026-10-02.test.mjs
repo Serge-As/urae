@@ -19,7 +19,7 @@ test('offline target confirmed by outbox remains writer truth until canonical pr
 
 test('automatic retry promotes a synchronized queued target before re-reading projections',()=>{
   const recovery=main.slice(main.indexOf('const scheduleFinancialOutboxRecovery'),main.indexOf('let financialSnapshotTimer'));
-  assert.match(recovery,/const beforeSync=pendingTargetSnapshot\(\)/);
-  assert.match(recovery,/rememberTargetsConfirmedBySync\(beforeSync\)/);
-  assert.ok(recovery.indexOf('rememberTargetsConfirmedBySync(beforeSync)')<recovery.indexOf('await loadFinancialProjectionState()'));
+  assert.match(recovery,/await resumeOnline\(\)/);
+  const resume=main.slice(main.indexOf('const resumeOnline='),main.indexOf("window.addEventListener('online'"));
+  assert.ok(resume.indexOf('rememberTargetsConfirmedBySync(beforeSync)')<resume.indexOf('await loadFinancialProjectionState()'));
 });

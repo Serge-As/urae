@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedOn": "2026-09-21",
+  "generatedOn": "2026-10-08",
   "purpose": "Anti-regression operational truth. Read before asking founder to recreate/configure anything.",
   "allowedStatuses": [
     "ACQUIRED",
@@ -1153,6 +1153,23 @@
       ],
       "note": "Candidate 1.5.2.11: isolated offline shell + previous 1.5.2.10 rollback, idle D1 conservation, multi-manager draft Live and quota circuit. Never call production-delivered or FIELD_ACCEPTED based on CI only.",
       "next": "Qualify exact head, perform real A/B multi-device and offline F5 field tests; require production SHA and BIR+ backup/smoke before release."
+    },
+    {
+      "id": "eco.1.5.2.14.sovereign.convergence",
+      "status": "VERIFIED_REMOTE",
+      "scope": "application/outbox/worker/group-live-hub/pwa/financial-ui",
+      "observedOn": "2026-10-08",
+      "evidence": [
+        "repo:docs/change-impact/CIR-2026-10-08-SOVEREIGN-CONVERGENCE.md",
+        "repo:tests/sovereign-convergence-recovery.test.mjs",
+        "repo:tests/repayment-live-total-recovery.test.mjs",
+        "repo:tests/browser/sovereign-multi-manager-1.5.2.14.spec.mjs",
+        "local-ci:645/645 PASS; local-Chromium:8/8 PASS",
+        "github:commit:b0e93abf7668fe885845761db2ff370ae2d2e53c",
+        "github:run:37762491737 SUCCESS; governed-ci + Chromium 7/7 + WebKit 6/6",
+        "github:run:37762491663 SUCCESS; separate staged qualification"
+      ],
+      "notes": "Qualified candidate source, not deployment proof. Final HEAD must pass CI. Ledger/D1 canonical; no migration or production-money edits; FIELD_ACCEPTED=NOT_ACCEPTED."
     }
   ]
 }

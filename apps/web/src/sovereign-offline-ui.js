@@ -7,6 +7,58 @@ const el=(tag,text,cls)=>{const n=document.createElement(tag);if(text!==undefine
 const download=(name,text,type='application/json')=>{const blob=new Blob([text],{type}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),1500);};
 const shareOrDownload=async(name,text,type,title)=>{const blob=new Blob([text],{type});if(typeof File==='function'&&navigator.share&&typeof navigator.canShare==='function'){const file=new File([blob],name,{type});if(navigator.canShare({files:[file]})){await navigator.share({title,files:[file]});return true;}}download(name,text,type);return false;};
 const money=n=>Math.round(Number(n)||0).toLocaleString('fr-FR')+' F';
+const relayDate=value=>{const at=new Date(value);return Number.isNaN(at.getTime())?'Date à vérifier':new Intl.DateTimeFormat('fr-CM',{dateStyle:'short',timeStyle:'medium'}).format(at);};
+
+export function renderRelayConfrontation({root,conflicts,app,members=[],meetings=[],rubrics=[],notify=()=>{},showError=console.error,onResolved=()=>{}}){
+  root.querySelector('.relay-confrontation-review')?.remove();
+  if(!conflicts?.length)return;
+  const groupId=String(app.activeGroup()),section=el('section',undefined,'relay-confrontation-review');
+  section.append(el('h3','Confrontation des montants'),el('p','Chaque cellule conserve son historique. La recommandation compare les dates déclarées des appareils ; une date incohérente doit être vérifiée.','hint'));
+  const toolbar=el('div',undefined,'actions'),allLocal=el('button','Tout retenir ici','secondary'),allRemote=el('button','Tout retenir de l’autre appareil','secondary'),chronological=el('button','Appliquer les recommandations chronologiques','secondary');toolbar.append(allLocal,allRemote,chronological);section.append(toolbar);
+  const wrap=el('div',undefined,'matrix-wrap relay-confrontation-wrap'),table=el('table',undefined,'meeting-matrix relay-confrontation-table');
+  const head=el('thead'),header=el('tr');for(const label of ['Membre','Rubrique','Source / auteur','Montant','Date de validation','Décision'])header.append(el('th',label));head.append(header);table.append(head);
+  const memberName=id=>members.find(x=>String(x.id)===String(id))?.displayName??id;
+  const rubricName=id=>rubrics.find(x=>String(x.id)===String(id))?.name??id;
+  const actorName=id=>members.find(x=>String(x.userId)===String(id))?.displayName??id;
+  const grouped=new Map(),entries=[];
+  for(const conflict of conflicts){const id=String(conflict.local?.payload?.meetingId??conflict.remote?.payload?.meetingId??'');if(!grouped.has(id))grouped.set(id,[]);grouped.get(id).push(conflict);}
+  const decide=async(entry,choice)=>{
+    if(entry.resolved||String(app.activeGroup())!==groupId)return;
+    entry.buttons.forEach(x=>{x.disabled=true;});
+    try{
+      await app.resolveLocalRoomManagerConflict({local:entry.row.local,remote:entry.row.remote,choice});
+      entry.resolved=true;entry.trs.forEach(x=>x.classList.add('relay-conflict-resolved'));
+      entry.status.textContent=choice==='LOCAL'?'✓ Montant de cet appareil retenu':'✓ Montant de l’autre appareil retenu';
+      notify('Décision enregistrée avec son historique.');onResolved(entry.row,choice);
+    }catch(error){entry.buttons.forEach(x=>{x.disabled=false;});showError(error);}
+  };
+  const bulk=async(entries,choice)=>{
+    toolbar.querySelectorAll('button').forEach(x=>{x.disabled=true;});
+    try{for(const entry of entries)await decide(entry,choice==='CHRONOLOGY'?entry.row.recommended==='REMOTE'?'REMOTE':'LOCAL':choice);}
+    finally{toolbar.querySelectorAll('button').forEach(x=>{x.disabled=false;});}
+  };
+  for(const [meetingId,rows] of grouped){
+    const body=el('tbody'),session=el('tr',undefined,'offline-confrontation-session'),heading=el('th');heading.colSpan=6;
+    heading.append(el('strong',meetings.find(x=>String(x.id)===meetingId)?.title??meetingId));
+    const groupActions=el('div',undefined,'actions'),local=el('button','Séance · retenir ici','secondary'),remote=el('button','Séance · retenir l’autre','secondary'),sessionEntries=[];groupActions.append(local,remote);heading.append(groupActions);session.append(heading);body.append(session);
+    for(const row of rows){
+      const p=row.local?.payload??{},q=row.remote?.payload??{},mine=el('tr',undefined,'offline-confrontation-local'),theirs=el('tr',undefined,'offline-confrontation-server');
+      mine.dataset.conflictKey=row.key;theirs.dataset.conflictKey=row.key;
+      const member=el('th',memberName(p.membershipId??q.membershipId)),rubric=el('th',rubricName(p.rubricId??q.rubricId));member.rowSpan=rubric.rowSpan=2;
+      mine.append(member,rubric,el('td','Cet appareil · '+actorName(row.local.actorId)),el('td',money(p.targetAmount??p.amount),'amount'),el('td',relayDate(p.recordedAtClient??row.local.createdAt)));
+      theirs.append(el('td','Autre appareil · '+actorName(row.remote.actorId)),el('td',money(q.targetAmount??q.amount),'amount'),el('td',relayDate(q.recordedAtClient??row.remote.createdAt)));
+      const choice=el('td'),keep=el('button','Retenir ici','secondary'),take=el('button','Retenir l’autre','secondary'),status=el('small',row.recommended==='REMOTE'?'Date déclarée plus récente sur l’autre appareil':'Date déclarée plus récente ici','hint');choice.rowSpan=2;
+      const supported=[row.local,row.remote].every(x=>['FINANCIAL_CELL_CORRECTION_PROPOSAL_V1','FINANCIAL_CELL_CORRECTION_PROPOSAL_V2'].includes(String(x.type)));
+      const entry={row,trs:[mine,theirs],buttons:[keep,take],status,resolved:false};
+      if(supported){keep.onclick=()=>void decide(entry,'LOCAL');take.onclick=()=>void decide(entry,'REMOTE');choice.append(keep,take,status);entries.push(entry);sessionEntries.push(entry);}
+      else{choice.append(el('strong','Événement financier à vérifier'),el('p','Ce prêt ou remboursement se traite dans son dossier financier. Aucune écriture n’est remplacée par une contribution.','hint'));}
+      mine.append(choice);body.append(mine,theirs);
+    }
+    local.onclick=()=>void bulk(sessionEntries,'LOCAL');remote.onclick=()=>void bulk(sessionEntries,'REMOTE');table.append(body);
+  }
+  allLocal.onclick=()=>void bulk(entries,'LOCAL');allRemote.onclick=()=>void bulk(entries,'REMOTE');chronological.onclick=()=>void bulk(entries,'CHRONOLOGY');
+  wrap.append(table);section.append(wrap);root.append(section);
+}
 const yieldRows=draft=>{
   const map=new Map(),add=row=>{if(!row?.memberId)return;const old=map.get(row.memberId)??{membershipId:row.memberId,principal:0,interest:0};old.principal+=Number(row.principal??0);old.interest+=Number(row.interest??0);map.set(row.memberId,old);};
   const result=draft?.result??{};
@@ -95,30 +147,23 @@ export function mountSovereignOfflineUI({app,getMembers=()=>[],getMeetings=()=>[
   pairBtn.onclick=()=>void showPair(false);rotateBtn.onclick=()=>void showPair(true);pairExport.onclick=()=>void(async()=>{try{if(lastPair)await shareOrDownload('eco-'+lastPair.material.membershipId+'.ecopair',lastPair.raw,'text/plain','Eco Relay · appairage');}catch(e){showError(e);}})();
   const renderLocalSignal=()=>{if(!localSignalFrames.length)return;const raw=localSignalFrames[localSignalIndex%localSignalFrames.length];lrSignalScreen.innerHTML=qrMatrixSvg(qrV10LMatrix(raw),9,4);localSignalIndex++;lrStatus.textContent='Signal local · trame '+(localSignalIndex%localSignalFrames.length||localSignalFrames.length)+' / '+localSignalFrames.length;};
   const showLocalSignal=async raw=>{stopLocalSignal();localSignalRaw=raw;localSignalFrames=await encodeLocalRoomSignalFrames(raw,165);localSignalIndex=0;lrExport.disabled=false;renderLocalSignal();localSignalTimer=setInterval(renderLocalSignal,400);};
+  let relaySendTimer=0;
+  window.addEventListener('eco:financial-local-committed',event=>{
+    if(!isManager()||!localPeer?.connected||String(event.detail?.groupId)!==String(app.activeGroup()))return;
+    if(relaySendTimer)clearTimeout(relaySendTimer);
+    relaySendTimer=setTimeout(()=>{relaySendTimer=0;void app.localRoomManagerDelta().then(delta=>{if(localPeer?.connected)localPeer.send('MANAGER_DELTA',delta);}).catch(showError);},150);
+  });
+  window.addEventListener('eco:view-changed',event=>{
+    if(event.detail?.view==='settings'&&isManager())void app.localRelayFinancialConflicts?.().then(conflicts=>renderRelayConfrontation({root:lrCompare,conflicts,app,members:getMembers(),meetings:getMeetings(),rubrics:getRubrics(),notify,showError})).catch(showError);
+  });
   const wireLocalPeer=peer=>{
     peer.onPacket(async packet=>{try{
       if(packet.type==='MEMBER_CAPSULE'){const capsule=await app.receiveEcoBroadcast(packet.payload);lrCompare.prepend(el('p','Capsule reçue · membre '+capsule.membershipId,'truth-notice'));notify('Compte personnel mis à jour via Eco Local Room.');}
       else if(packet.type==='MANAGER_DELTA'){
+        if(!isManager())throw Error('FORBIDDEN_SCOPE');
         const comparison=await app.confrontLocalRoomManagerDelta(packet.payload),imported=packet.payload?.protocol==='ECO_MANAGER_DELTA_2'?await app.importLocalRoomManagerDelta(packet.payload):{importedCommands:0,mergedSnapshots:0,conflicts:comparison.potentialFinancialConflicts.length};
         lrCompare.replaceChildren(el('strong','Confrontation Eco Relay'),el('p','Intentions communes : '+String(comparison.commonCommands??0)+' · seulement ici : '+comparison.localOnly+' · seulement autre appareil : '+comparison.remoteOnly),el('p','Données structurelles intégrées : '+String(imported.mergedSnapshots??0)+' · intentions Relay conservées : '+String(imported.importedCommands??0)),el('p','Divergences financières à examiner : '+comparison.potentialFinancialConflicts.length,comparison.potentialFinancialConflicts.length?'truth-notice':'hint'));
-        const conflicts=comparison.potentialFinancialConflicts.slice(0,60),membersById=new Map(getMembers().map(x=>[String(x.id),x])),meetingsById=new Map(getMeetings().map(x=>[String(x.id),x])),rubricsById=new Map(getRubrics().map(x=>[String(x.id),x]));
-        if(conflicts.length){
-          const bulk=el('button','Appliquer les recommandations chronologiques','secondary'),wrap=el('div',undefined,'matrix-wrap relay-confrontation-wrap'),table=el('table',undefined,'meeting-matrix relay-confrontation-table'),head=document.createElement('thead'),hr=document.createElement('tr');
-          for(const label of ['Séance','Membre','Rubrique','Ici','Autre appareil','Ordre','Décision'])hr.append(el('th',label));head.append(hr);table.append(head);const body=document.createElement('tbody'),rows=[];
-          const decide=async(row,choice,tr,buttons)=>{
-            for(const b of buttons)b.disabled=true;
-            try{const result=await app.resolveLocalRoomManagerConflict({local:row.local,remote:row.remote,choice});tr.classList.add('relay-conflict-resolved');tr.dataset.choice=choice;buttons[0].textContent=choice==='LOCAL'?'✓ Ici retenu':'Retenir ici';buttons[1].textContent=choice==='REMOTE'?'✓ Autre retenu':'Retenir l’autre';notify('Décision Eco Relay enregistrée sur cet appareil.');window.dispatchEvent(new CustomEvent('eco:manager-relay-updated',{detail:{resolved:true,result}}));}
-            catch(e){for(const b of buttons)b.disabled=false;showError(e);}
-          };
-          for(const row of conflicts){
-            const lp=row.local?.payload??{},rp=row.remote?.payload??{},meetingId=String(lp.meetingId??rp.meetingId??''),membershipId=String(lp.membershipId??rp.membershipId??''),rubricId=String(lp.rubricId??rp.rubricId??''),mine=Number(lp.targetAmount??lp.amount??0),theirs=Number(rp.targetAmount??rp.amount??0),tr=document.createElement('tr');
-            const meeting=meetingsById.get(meetingId),member=membersById.get(membershipId),rubric=rubricsById.get(rubricId);
-            for(const value of [meeting?.title??meetingId,member?.displayName??membershipId,rubric?.name??rubricId,money(mine),money(theirs),row.recommended==='REMOTE'?'Autre plus récent':'Ici plus récent'])tr.append(el('td',String(value)));
-            const action=document.createElement('td'),keep=el('button','Retenir ici','secondary'),take=el('button','Retenir l’autre','secondary');if(row.recommended==='LOCAL')keep.classList.add('relay-recommended');else take.classList.add('relay-recommended');keep.onclick=()=>void decide(row,'LOCAL',tr,[keep,take]);take.onclick=()=>void decide(row,'REMOTE',tr,[keep,take]);action.append(keep,take);tr.append(action);body.append(tr);rows.push({row,tr,buttons:[keep,take]});
-          }
-          bulk.onclick=()=>void(async()=>{bulk.disabled=true;for(const x of rows){if(x.tr.dataset.choice)continue;await decide(x.row,x.row.recommended==='REMOTE'?'REMOTE':'LOCAL',x.tr,x.buttons);}bulk.disabled=false;})();
-          table.append(body);wrap.append(table);lrCompare.append(bulk,wrap);
-        }
+        renderRelayConfrontation({root:lrCompare,conflicts:await app.localRelayFinancialConflicts?.()??comparison.potentialFinancialConflicts,app,members:getMembers(),meetings:getMeetings(),rubrics:getRubrics(),notify,showError});
         notify('Eco Relay : données reçues et conservées localement sans serveur.');
       }
       else if(packet.type==='FERRY_PACKET_BATCH'){

@@ -1,6 +1,6 @@
 // A new cache identity is mandatory, even for a patch-level app release.
-const CACHE = 'eco-system-v15213-live-repayment-ui-20261007';
-const PREVIOUS_CACHE = 'eco-system-v15212-event-sync-ui-20261007';
+const CACHE = 'eco-system-v15214-sovereign-convergence-20261008';
+const PREVIOUS_CACHE = 'eco-system-v15213-live-repayment-ui-20261007';
 const LEGACY_RECOVERY_CACHE = 'eco-system-v15210-offline-conflicts-loans-20261003';
 const RELEASE_READY = '/__eco_release_ready__';
 
@@ -8,8 +8,8 @@ const RELEASE_READY = '/__eco_release_ready__';
 // before this worker may install. Optional business/community panels can fail
 // independently without replacing an already-working release.
 const ESSENTIAL_SHELL = [
-  '/', '/index.html', '/styles.css?v=15213', '/manifest.webmanifest',
-  '/src/ui-modes.js?v=15213', '/src/field-hardening.js?v=15213', '/src/main.js?v=15213', '/src/i18n.js', '/src/runtime-i18n.js',
+  '/', '/index.html', '/styles.css?v=15214', '/manifest.webmanifest',
+  '/src/ui-modes.js?v=15214', '/src/field-hardening.js?v=15214', '/src/main.js?v=15214', '/src/i18n.js', '/src/runtime-i18n.js',
   '/src/resilience-ui.js', '/src/group-home-ui.js', '/src/sessions-ui.js',
   '/src/detail-ui.js', '/src/member-control-ui.js', '/src/loan-simulation-ui.js', '/src/business-studio-ui.js', '/src/core-economic-learning-ui.js',
   '/packages/application/src/index.js', '/packages/contracts/src/index.js',
@@ -25,7 +25,7 @@ const ESSENTIAL_SHELL = [
 ];
 
 const OPTIONAL_SHELL = [
-  '/src/voice-entry-bootstrap.js?v=15213', '/src/voice-entry-ui.js', '/src/expense-recap-ui.js',
+  '/src/voice-entry-bootstrap.js?v=15214', '/src/voice-entry-ui.js', '/src/expense-recap-ui.js',
   '/src/member-dossier-ui.js', '/src/documents-ui.js', '/src/contextual-group-ui.js',
   '/src/blueprint-executable-ui.js', '/src/community-blueprint-presets.js',
   '/src/financial-lab-ui.js', '/src/completion-ui.js', '/src/advanced-ui.js',
@@ -46,14 +46,16 @@ const OPTIONAL_SHELL = [
 // transitive local imports; an incomplete dependency graph prevents the build.
 // The source worker keeps its original declarations for review and audit.
 const GENERATED_IMPORT_CLOSURE = [];
+const GENERATED_ASSET_HASHES = {};
 const APP_SHELL = [...ESSENTIAL_SHELL, ...OPTIONAL_SHELL, ...GENERATED_IMPORT_CLOSURE];
 const SHELL_PATHS = new Set(APP_SHELL.map(path=>new URL(path,self.location.origin).pathname));
 
 const fetchReleaseAsset = async path => {
-  const response = await Promise.race([
-    fetch(path, { cache: 'no-store' }),
-    new Promise((_,reject)=>setTimeout(()=>reject(new Error('RELEASE_ASSET_TIMEOUT:' + path)),8000))
-  ]);
+  const abort=typeof AbortController==='function'?new AbortController():null;
+  let timer;
+  try{
+  const download=(async()=>{
+  const response=await fetch(path,{cache:'no-store',...(abort?{signal:abort.signal}:{})});
   if (!response || !response.ok) throw new Error('RELEASE_ASSET_MISSING:' + path);
   // A 200 HTML fallback must never be accepted as a JavaScript module.
   // Missing or wrong MIME types leave the previously-ready cache untouched.
@@ -64,8 +66,17 @@ const fetchReleaseAsset = async path => {
   if(/\.css$/i.test(assetPath)&&!returnedType.includes('text/css'))throw new Error('RELEASE_ASSET_MIME:'+path+':'+returnedType);
   if(jsAsset&&response.url&&new URL(response.url).pathname!==assetPath)throw new Error('RELEASE_ASSET_REDIRECT:'+path);
   // Consume a clone now so an incomplete/aborted body cannot masquerade as cached.
-  await response.clone().arrayBuffer();
+  const bytes=await response.clone().arrayBuffer(),expected=GENERATED_ASSET_HASHES[assetPath];
+  if(expected&&self.crypto?.subtle){
+    const digest=await self.crypto.subtle.digest('SHA-256',bytes),hash=[...new Uint8Array(digest)].map(v=>v.toString(16).padStart(2,'0')).join('');
+    if(hash!==expected)throw new Error('RELEASE_ASSET_INTEGRITY:'+path);
+  }
   return response;
+  })();
+  // Bound the WHOLE body, not just response headers. A 2G download needs a
+  // longer window; abandoning a candidate never touches the installed release.
+  return await Promise.race([download,new Promise((_,reject)=>{timer=setTimeout(()=>{abort?.abort();reject(new Error('RELEASE_ASSET_TIMEOUT:'+path));},90000);})]);
+  }finally{if(timer)clearTimeout(timer);}
 };
 
 self.addEventListener('install', event => {
@@ -118,7 +129,7 @@ const cachedShell = async request => {
   const cache = await caches.open(CACHE);
   const url = new URL(request.url);
   // A versioned request must only match that exact version. Falling back from
-  // main.js?v=15213 to an older /main.js was the source of mixed-release UI.
+  // main.js?v=15214 to an older /main.js was the source of mixed-release UI.
   if(url.search)return await cache.match(request);
   return await cache.match(url.pathname);
 };

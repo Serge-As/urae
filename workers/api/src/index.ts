@@ -74,11 +74,11 @@ interface WorkersAILike {
   run?(model:string,input:Record<string,unknown>,options?:Record<string,unknown>):Promise<unknown>;
 }
 
-const RELEASE_VERSION='1.5.2.13-live-sync';
-const RELEASE_BUILD_ID='eco-system-1.5.2.13-20261007-live-repayment-ui';
+const RELEASE_VERSION='1.5.2.14-live-sync';
+const RELEASE_BUILD_ID='eco-system-1.5.2.14-20261008-sovereign-convergence';
 const RELEASE_SCHEMA_VERSION='d1-additive-20260923';
 const RELEASE_POLICY_VERSION='live-finance-policy-20261007-event-push-repayment';
-const RELEASE_PWA_CACHE='eco-system-v15213-live-repayment-ui-20261007';
+const RELEASE_PWA_CACHE='eco-system-v15214-sovereign-convergence-20261008';
 
 const defaultRepo = new InMemoryPlatformRepository();
 const defaultReferralBudgets = new InMemoryReferralBudgetStore();
@@ -260,6 +260,36 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
     const rows=(await ledger.receiptPositions(ctx.tenantId,groupId)).filter(x=>x.meetingId===meetingId&&x.membershipId===membershipId&&x.rubricId===rubricId&&x.netAmount!==0);
     const revision=await repo.getFinancialCellRevision(ctx.tenantId,groupId,meetingId,membershipId,rubricId,'XAF');
     return{rows,current:rows.reduce((n,x)=>n+x.netAmount,0),cellVersion:revision?.version??0,baselineActorId:rows.slice().reverse().find(x=>x.netAmount>0)?.receivedBy};
+  };
+  const dispatchSheetProjection=async(record:import('../../../packages/contracts/src/index.js').WorkspaceRecord)=>{
+    if(record.status==='DONE')return true;
+    try{
+      const payload=JSON.parse(String(record.data.payloadJson??'{}'));
+      if(!options.premiumLive||!options.liveNamespace)return false;
+      await publishLive(record.groupId!,'MEETING_UPDATE',String(record.data.eventKey),payload);
+      await repo.saveWorkspaceRecord({...record,status:'DONE',updatedAt:new Date().toISOString()});return true;
+    }catch(error){console.info('Sheet Live delivery pending',error);return false;}
+  };
+  const sheetCellState=async(groupId:string,payload:Record<string,unknown>)=>{
+    // Publish the TOTAL cell, not just the latest repayment. This is the same
+    // read projection used by the two financial sheets, never another Ledger.
+    const [events,expenses]=await Promise.all([repo.listWorkspaceRecords(ctx.tenantId,'FINANCE.SHEET_EVENT',groupId),new ExpenseService(repo,kernel,ledger).list(groupId,{scope:'SHEET'})]);
+    const matches=(row:any)=>String(row.meetingId??'')===String(payload.meetingId)&&String(row.membershipId??'')===String(payload.membershipId)&&String(row.rubricId??'')===String(payload.rubricId);
+    const relevant=events.filter(x=>matches(x.data)),outflows=expenses.filter(matches);
+    const signed=relevant.reduce((n,x)=>n+(String(x.data.direction??'IN')==='OUT'?-1:1)*Math.abs(Number(x.data.amount??0)),0)-outflows.reduce((n,x)=>n+Math.abs(Number(x.amount??0)),0),cellVersion=relevant.length+outflows.length;
+    return{canonicalAmount:signed,cellVersion};
+  };
+  const publishSheetCell=async(groupId:string,eventKey:string,payload:Record<string,string|number|boolean|null|undefined>)=>{
+    try{
+    const state=await sheetCellState(groupId,payload),newAmount=Math.abs(state.canonicalAmount),delta=Number(payload.newAmount??0),projected={...payload,newAmount,previousAmount:Math.max(0,newAmount-delta),cellVersion:state.cellVersion};
+    try{
+    const id='financial_sheet_projection_'+eventKey,existing=await repo.getWorkspaceRecord(ctx.tenantId,id);
+    const stamp=new Date().toISOString(),record=existing??{id,tenantId:ctx.tenantId,groupId,moduleId:'FINANCE.LIVE_PROJECTION',title:'Diffusion de cellule financière',summary:'Projection après commit financier canonique',status:'ACTIVE' as const,tags:['sheet-live','pending'],data:{eventKey,payloadJson:JSON.stringify(projected)},createdBy:ctx.actorId,createdAt:stamp,updatedAt:stamp};
+    if(!existing)await repo.saveWorkspaceRecord(record);
+    const delivered=await dispatchSheetProjection(record);
+    return{...state,deliveryPending:!delivered};
+    }catch(error){console.info('Post-commit sheet projection pending',error);return{...state,deliveryPending:true};}
+    }catch(error){console.info('Post-commit sheet read deferred',error);return{deliveryPending:true};}
   };
   const dispatchFinancialCorrectionProjection=async(record:import('../../../packages/contracts/src/index.js').WorkspaceRecord):Promise<{ok:boolean;notice?:any}>=>{
     if(record.moduleId!=='FINANCE.CORRECTION_OUTBOX'||!record.groupId)return{ok:false};
@@ -610,7 +640,7 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
     }
     const rubricId=input.rubricId??String(loan.data.rubricId??'');if(rubricId&&input.meetingId){
       const eventId='sheet_loan_event_'+entry!.id,existing=await repo.getWorkspaceRecord(ctx.tenantId,eventId);if(!existing)await repo.saveWorkspaceRecord({id:eventId,tenantId:ctx.tenantId,groupId:input.groupId,moduleId:'FINANCE.SHEET_EVENT',title:'Prêt décaissé',summary:'Projection de feuille liée à l’écriture canonique du prêt.',status:'DONE',tags:['sheet-event','loan-disbursement','ledger:'+entry!.id],data:{membershipId:String(loan.data.borrowerMembershipId??''),meetingId:input.meetingId,rubricId,loanId:loan.id,ledgerEntryId:entry!.id,amount:input.principal,direction:'OUT'},createdBy:ctx.actorId,createdAt:entry!.createdAt,updatedAt:entry!.createdAt});
-      try{await publishLive(input.groupId,'MEETING_UPDATE','loan-sheet-live:'+entry!.id,{meetingId:input.meetingId,kind:'FINANCIAL_CELL',operationType:'LOAN_DISBURSEMENT',membershipId:String(loan.data.borrowerMembershipId??''),rubricId,previousAmount:0,newAmount:input.principal,meetingClosed:false,actorId:ctx.actorId,actorName:await actorLabel()});}catch(error){console.info('Loan disbursement Live push deferred',error);}
+      try{await publishSheetCell(input.groupId,'loan-sheet-live:'+entry!.id,{meetingId:input.meetingId,kind:'FINANCIAL_CELL',operationType:'LOAN_DISBURSEMENT',membershipId:String(loan.data.borrowerMembershipId??''),rubricId,previousAmount:0,newAmount:input.principal,meetingClosed:false,actorId:ctx.actorId,actorName:await actorLabel()});}catch(error){console.info('Loan disbursement Live push deferred',error);}
     }
     if(fundingReservation)await repo.saveWorkspaceRecord({...fundingReservation,status:'DONE',data:{...fundingReservation.data,ledgerEntryId:entry!.id,confirmedAt:new Date().toISOString()},updatedAt:new Date().toISOString()});
     return{entry:entry!,upfrontInterestEntry:upfrontEntry??null,upfrontInterest,interestTiming:timing,loan};
@@ -1668,6 +1698,7 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
       const pending=(await repo.listWorkspaceRecords(ctx.tenantId,'FINANCE.LIVE_PROJECTION',groupId)).filter(r=>r.status==='ACTIVE'),pendingCorrections=(await repo.listWorkspaceRecords(ctx.tenantId,'FINANCE.CORRECTION_OUTBOX',groupId)).filter(r=>r.status==='ACTIVE');
       const receipts=await repo.listContributionReceipts(ctx.tenantId,groupId);let retried=0,confirmed=0;
       for(const record of pending){
+        if(record.tags.includes('sheet-live')){retried++;if(await dispatchSheetProjection(record))confirmed++;continue;}
         const entryId=String(record.data.entryId??''),entry=entryId?await repo.getLedgerEntry(ctx.tenantId,groupId,entryId):undefined;
         const receipt=receipts.find(x=>x.ledgerEntryId===entryId);
         if(!entry||!receipt)continue;retried++;if(await dispatchContributionProjection(groupId,receipt,entry))confirmed++;
@@ -1827,7 +1858,7 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
       const expense=await new ExpenseService(repo,kernel,ledger).create(groupId,{amount:finite(body.amount),label:String(body.label??'Dépense'),scope:String(body.scope??'BACKOFFICE') as any,meetingId:body.meetingId?String(body.meetingId):undefined,membershipId:body.membershipId?String(body.membershipId):undefined,rubricId:body.rubricId?String(body.rubricId):undefined,note:body.note?String(body.note):undefined,idempotencyKey:String(body.idempotencyKey??request.headers.get('x-idempotency-key')??makeId('expense'))});
       if(expense.scope==='SHEET'&&expense.meetingId&&expense.membershipId&&expense.rubricId){
         const meeting=await repo.getMeeting(ctx.tenantId,groupId,expense.meetingId);
-        try{await publishLive(groupId,'MEETING_UPDATE','sheet-outflow-live:'+expense.ledgerEntryId,{meetingId:expense.meetingId,kind:'FINANCIAL_CELL',operationType:'SHEET_OUTFLOW',membershipId:expense.membershipId,rubricId:expense.rubricId,previousAmount:0,newAmount:expense.amount,meetingClosed:meeting?.status==='closed',actorId:ctx.actorId,actorName:await actorLabel()});}catch(error){console.info('Sheet expense Live push deferred',error);}
+        try{await publishSheetCell(groupId,'sheet-outflow-live:'+expense.ledgerEntryId,{meetingId:expense.meetingId,kind:'FINANCIAL_CELL',operationType:'SHEET_OUTFLOW',membershipId:expense.membershipId,rubricId:expense.rubricId,previousAmount:0,newAmount:expense.amount,meetingClosed:meeting?.status==='closed',actorId:ctx.actorId,actorName:await actorLabel()});}catch(error){console.info('Sheet expense Live push deferred',error);}
       }
       return json(expense,201,cors);
     }
@@ -1853,11 +1884,11 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
       for(const event of sheetEvents){
         const meetingId=String(event.data.meetingId??''),membershipId=String(event.data.membershipId??''),rubricId=String(event.data.rubricId??'');if(!meetingId||!membershipId||!rubricId)continue;
         const direction=String(event.data.direction??'IN'),amount=Number(event.data.amount??0),signed=direction==='OUT'?-Math.abs(amount):Math.abs(amount),k=key(meetingId,membershipId,rubricId),old=cells.get(k);
-        cells.set(k,{meetingId,membershipId,rubricId,amount:Number(old?.amount??0)+signed,cellVersion:Number(old?.cellVersion??0),updatedAt:String(event.updatedAt??event.createdAt??old?.updatedAt??''),actorId:String(event.createdBy??old?.actorId??''),nature:direction==='OUT'?'LOAN_OR_OUTFLOW':'REPAYMENT'});
+        cells.set(k,{meetingId,membershipId,rubricId,amount:Number(old?.amount??0)+signed,cellVersion:Number(old?.cellVersion??0)+1,updatedAt:String(event.updatedAt??event.createdAt??old?.updatedAt??''),actorId:String(event.createdBy??old?.actorId??''),nature:direction==='OUT'?'LOAN_OR_OUTFLOW':'REPAYMENT'});
       }
       for(const expense of sheetExpenses){
         if(!expense.meetingId||!expense.membershipId||!expense.rubricId)continue;const k=key(expense.meetingId,expense.membershipId,expense.rubricId),old=cells.get(k);
-        cells.set(k,{meetingId:expense.meetingId,membershipId:expense.membershipId,rubricId:expense.rubricId,amount:Number(old?.amount??0)-Math.abs(Number(expense.amount??0)),cellVersion:Number(old?.cellVersion??0),updatedAt:String(expense.createdAt??old?.updatedAt??''),actorId:String(expense.createdBy??old?.actorId??''),nature:'OUTFLOW'});
+        cells.set(k,{meetingId:expense.meetingId,membershipId:expense.membershipId,rubricId:expense.rubricId,amount:Number(old?.amount??0)-Math.abs(Number(expense.amount??0)),cellVersion:Number(old?.cellVersion??0)+1,updatedAt:String(expense.createdAt??old?.updatedAt??''),actorId:String(expense.createdBy??old?.actorId??''),nature:'OUTFLOW'});
       }
       const rows=[...cells.values()],watermark=rows.reduce((m,x)=>String(x.updatedAt??'')>m?String(x.updatedAt):m,'');
       return json({generatedAt:new Date().toISOString(),watermark,cells:rows},200,cors);
@@ -2562,9 +2593,21 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
     const loanRepay=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/loans\/([^/]+)\/repay$/);
     if(loanRepay&&request.method==='POST'){
       const body=await readJson<Record<string,unknown>>(request);
+      await requireGroup(loanRepay[1]!,true);
       const loan=(await completion.list(loanRepay[1]!,'LOAN')).find(x=>x.id===loanRepay[2]!);
       if(!loan)throw new Error('LOAN_NOT_FOUND');
+      const repaymentKey=String(body.idempotencyKey??request.headers.get('x-idempotency-key')??makeId('loan_repayment'));
+      const previousEntry=await repo.findLedgerEntryByIdempotency(ctx.tenantId,loanRepay[1]!,repaymentKey);
+      if(previousEntry){
+        if(previousEntry.sourceType!=='loan_repayment'||previousEntry.sourceId!==loan.id||String(previousEntry.meetingId??'')!==String(body.meetingId??''))throw Error('IDEMPOTENCY_CONFLICT');
+        const principalPaid=previousEntry.lines.filter(x=>x.memoCode==='LEDGER_LOAN_REPAYMENT_PRINCIPAL').reduce((n,x)=>n+x.credit,0),interestPaid=previousEntry.lines.filter(x=>x.memoCode==='LEDGER_LOAN_REPAYMENT_INTEREST').reduce((n,x)=>n+x.credit,0);
+        if((body.paymentAmount!==undefined&&finite(body.paymentAmount)!==principalPaid+interestPaid)||(body.principalAmount!==undefined&&finite(body.principalAmount)!==principalPaid)||(body.interestAmount!==undefined&&finite(body.interestAmount)!==interestPaid))throw Error('IDEMPOTENCY_CONFLICT');
+        const committed=await repo.getWorkspaceRecord(ctx.tenantId,'loan_repayment_committed_'+previousEntry.id);
+        const projected=(await repo.listWorkspaceRecords(ctx.tenantId,'FINANCE.SHEET_EVENT',loanRepay[1]!)).some(x=>String(x.data.ledgerEntryId??'')===previousEntry.id);
+        if(committed||projected||String(loan.data.lastRepaymentLedgerEntryId??'')===previousEntry.id)return json({entry:previousEntry,allocation:{principalPaid,interestPaid,paymentAmount:principalPaid+interestPaid},loan,replayed:true},200,cors);
+      }
       if(!['DISBURSED','REPAYING'].includes(String(loan.data.completionState)))throw new Error('LOAN_NOT_REPAYABLE');
+      if(finite(body.expectedVersion)!==finite(loan.data.completionVersion))throw Error('COMPLETION_VERSION_CONFLICT');
       const loanRubrics=await repo.listRubricDefinitions(ctx.tenantId,loanRepay[1]!),loanRubric=loanRubrics.find(r=>r.id===String(loan.data.rubricId??''))??loanRubrics.find(r=>String(r.facets?.custom?.systemKey??'').toUpperCase()==='LOAN'||/^(pret|prets|emprunt|emprunts|loan|loans)$/.test(String(r.name??'').normalize('NFKD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim()));
       const outstanding=finite(loan.data.outstandingPrincipal),unpaidInterest=finite(loan.data.unpaidInterest,0),meetingId=body.meetingId?String(body.meetingId):undefined;
       const repaymentMeeting=meetingId?await repo.getMeeting(ctx.tenantId,loanRepay[1]!,meetingId):undefined,operationMoment=repaymentMeeting?meetingMoment(repaymentMeeting):Date.now(),effectivePolicy=resolveLoanPolicyForOperation(loan,loanRubric?.policies?.loan,operationMoment);
@@ -2586,12 +2629,13 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
       const entry=await ledger.recordLoanRepayment({
         tenantId:ctx.tenantId,groupId:loanRepay[1]!,principalAmount:allocation.principalPaid,interestAmount:allocation.interestPaid,
         currency:String(loan.data.currency??'XAF'),sourceId:loan.id,meetingId,
-        idempotencyKey:String(body.idempotencyKey??request.headers.get('x-idempotency-key')??makeId('loan_repayment'))
+        idempotencyKey:repaymentKey
       });
       const target=allocation.remainingPrincipal===0&&allocation.unpaidInterestAfter===0?'CLOSED':'REPAYING';
       const updatedLoan=await completion.transition(loanRepay[1]!,loan.id,target,{
         expectedVersion:finite(body.expectedVersion),patch:{outstandingPrincipal:allocation.remainingPrincipal,unpaidInterest:allocation.unpaidInterestAfter,lastRepaymentLedgerEntryId:entry.id,rateBasisPointsPerPeriod,paymentPriority:allocation.priority,interestTiming:effectivePolicy.interestTiming,policyRevisionId:effectivePolicy.policyRevisionId||loan.data.policyRevisionId,policyRevisionEffectiveAt:effectivePolicy.policyRevisionEffectiveAt||loan.data.policyRevisionEffectiveAt,accruedMeetingIdsJson:JSON.stringify(accruedMeetingIds),preparedInterestMeetingIdsJson:JSON.stringify(preparedInterestMeetingIds),preparedInterestPending,interestAppliesToMeetingId:usedPreparedInterest&&meetingId?meetingId:loan.data.interestAppliesToMeetingId}
       });
+      const committedAt=new Date().toISOString();await repo.saveWorkspaceRecord({id:'loan_repayment_committed_'+entry.id,tenantId:ctx.tenantId,groupId:loanRepay[1]!,moduleId:'FINANCE.REPAYMENT_COMMIT',title:'Remboursement appliqué au prêt',status:'DONE',tags:['repayment','idempotency'],data:{loanId:loan.id,ledgerEntryId:entry.id},createdBy:ctx.actorId,createdAt:committedAt,updatedAt:committedAt});
       if(meetingId){
         const periodId='loan_period_'+encodeURIComponent(loan.id+'|'+meetingId),oldPeriod=await repo.getWorkspaceRecord(ctx.tenantId,periodId),stamp=entry.createdAt,nextInterest=Math.round(allocation.remainingPrincipal*rateBasisPointsPerPeriod/10000);
         const previousPayment=Number(oldPeriod?.data.paymentAmount??0),previousPrincipalPaid=Number(oldPeriod?.data.principalPaid??0),previousInterestPaid=Number(oldPeriod?.data.interestPaid??0),previousInterestNew=Number(oldPeriod?.data.interestNew??0);
@@ -2601,7 +2645,7 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
       if(repaymentRubricId&&meetingId){
         const eventId='sheet_loan_event_'+entry.id,existing=await repo.getWorkspaceRecord(ctx.tenantId,eventId);
         if(!existing)await repo.saveWorkspaceRecord({id:eventId,tenantId:ctx.tenantId,groupId:loanRepay[1]!,moduleId:'FINANCE.SHEET_EVENT',title:'Remboursement prêt',summary:'Projection de feuille liée à une écriture canonique de remboursement.',status:'DONE',tags:['sheet-event','loan-repayment','ledger:'+entry.id],data:{membershipId:String(loan.data.borrowerMembershipId??''),meetingId,rubricId:repaymentRubricId,loanId:loan.id,ledgerEntryId:entry.id,principalPaid:allocation.principalPaid,interestPaid:allocation.interestPaid,amount:allocation.paymentAmount,direction:'IN'},createdBy:ctx.actorId,createdAt:entry.createdAt,updatedAt:entry.createdAt});
-        try{await publishLive(loanRepay[1]!,'MEETING_UPDATE','loan-repayment-live:'+entry.id,{meetingId,kind:'FINANCIAL_CELL',operationType:'LOAN_REPAYMENT',membershipId:String(loan.data.borrowerMembershipId??''),rubricId:repaymentRubricId,previousAmount:0,newAmount:allocation.paymentAmount,meetingClosed:repaymentMeeting?.status==='closed',actorId:ctx.actorId,actorName:await actorLabel()});}catch(error){console.info('Loan repayment Live push deferred',error);}
+        try{await publishSheetCell(loanRepay[1]!,'loan-repayment-live:'+entry.id,{meetingId,kind:'FINANCIAL_CELL',operationType:'LOAN_REPAYMENT',membershipId:String(loan.data.borrowerMembershipId??''),rubricId:repaymentRubricId,previousAmount:0,newAmount:allocation.paymentAmount,meetingClosed:repaymentMeeting?.status==='closed',actorId:ctx.actorId,actorName:await actorLabel()});}catch(error){console.info('Loan repayment Live push deferred',error);}
       }
       return json({entry,allocation,loan:updatedLoan},201,cors);
     }
@@ -2726,8 +2770,18 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
       const item=await readJson<OutboxItem<Record<string,unknown>>>(request); if(item.tenantId!==ctx.tenantId||item.actorId!==ctx.actorId) throw new Error('FORBIDDEN_SCOPE');
       const markerHash=await sha256Bytes(new TextEncoder().encode(JSON.stringify([ctx.tenantId,ctx.actorId,item.idempotencyKey])).buffer);
       const markerId='outbox_applied_'+markerHash,existingMarker=await repo.getWorkspaceRecord(ctx.tenantId,markerId);
-      if(existingMarker)return json({accepted:true,stored:true,replayed:true,type:item.type,idempotencyKey:item.idempotencyKey},200,cors);
-      const markApplied=async()=>{const at=new Date().toISOString();await repo.saveWorkspaceRecord({id:markerId,tenantId:ctx.tenantId,groupId:(item.payload as any).groupId?String((item.payload as any).groupId):undefined,moduleId:'OFFLINE.OUTBOX_ACK',title:'Offline operation acknowledged',summary:undefined,status:'DONE',tags:['offline','idempotency','type:'+item.type],data:{type:item.type,idempotencyKey:item.idempotencyKey},createdBy:ctx.actorId,createdAt:at,updatedAt:at});};
+      if(existingMarker){
+        const p=item.payload,groupId=String(p.groupId??'');
+        let ack:Record<string,unknown>={};
+        if(['FINANCIAL_CELL_CORRECTION_PROPOSAL_V1','FINANCIAL_CELL_CORRECTION_PROPOSAL_V2'].includes(item.type)){
+          await requireGroup(groupId,true);const state=await financialCellState(groupId,String(p.meetingId),String(p.membershipId),String(p.rubricId));
+          ack={canonicalAmount:state.current,cellVersion:state.cellVersion,status:existingMarker.data.businessStatus==='CLOCK_REVIEW'?'CLOCK_REVIEW':state.current===Number(p.targetAmount)?'REPLAYED':'SUPERSEDED'};
+        }else if(item.type==='FINANCIAL_SHEET_ENTRY_V1'){
+          await requireGroup(groupId,true);ack=await sheetCellState(groupId,p);
+        }
+        return json({accepted:true,stored:true,replayed:true,type:item.type,idempotencyKey:item.idempotencyKey,...ack},200,cors);
+      }
+      const markApplied=async(result?:Record<string,unknown>)=>{const at=new Date().toISOString();await repo.saveWorkspaceRecord({id:markerId,tenantId:ctx.tenantId,groupId:(item.payload as any).groupId?String((item.payload as any).groupId):undefined,moduleId:'OFFLINE.OUTBOX_ACK',title:'Offline operation acknowledged',summary:undefined,status:'DONE',tags:['offline','idempotency','type:'+item.type],data:{type:item.type,idempotencyKey:item.idempotencyKey,businessStatus:String(result?.status??'')},createdBy:ctx.actorId,createdAt:at,updatedAt:at});};
       if(item.type==='CONTRIBUTION_CASH_RECORDED'){
         const p=item.payload;const groupId=String(p.groupId??'');
         const receipt=await ledger.recordCashContribution({tenantId:ctx.tenantId,groupId,membershipId:String(p.membershipId??''),amount:finite(p.amount),currency:String(p.currency??'XAF'),meetingId:p.meetingId?String(p.meetingId):undefined,rubricId:p.rubricId?String(p.rubricId):undefined,lateReason:p.lateReason?String(p.lateReason):undefined,approverIds:strArray(p.approverIds),lateAuthorizationId:p.lateAuthorizationId?String(p.lateAuthorizationId):undefined,idempotencyKey:item.idempotencyKey});
@@ -2745,7 +2799,7 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
 
         if(nature==='OUTFLOW'){
           const expense=await new ExpenseService(repo,kernel,ledger).create(groupId,{amount,label:String(p.rubricName??rubric.name??'Dépense de séance'),scope:'SHEET',meetingId,membershipId,rubricId,note:String(p.reason??'Saisie financière hors ligne puis synchronisée'),idempotencyKey:item.idempotencyKey});
-          try{await publishLive(groupId,'MEETING_UPDATE','sheet-outflow-live:'+String(expense?.ledgerEntryId??item.idempotencyKey),{meetingId,kind:'FINANCIAL_CELL',operationType:'SHEET_OUTFLOW',membershipId,rubricId,previousAmount:0,newAmount:amount,meetingClosed:meeting.status==='closed',actorId:ctx.actorId,actorName:await actorLabel()});}catch(error){console.info('Outbox expense Live push deferred',error);}
+          try{await publishSheetCell(groupId,'sheet-outflow-live:'+String(expense?.ledgerEntryId??item.idempotencyKey),{meetingId,kind:'FINANCIAL_CELL',operationType:'SHEET_OUTFLOW',membershipId,rubricId,previousAmount:0,newAmount:amount,meetingClosed:meeting.status==='closed',actorId:ctx.actorId,actorName:await actorLabel()});}catch(error){console.info('Outbox expense Live push deferred',error);}
           await markApplied();return json({accepted:true,stored:true,expense},200,cors);
         }
 
@@ -2801,9 +2855,8 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
             // Outbox replay is a real canonical commit too. Push the exact cell
             // immediately so other connected accounts do not wait for F5 or a
             // D1 snapshot poll. Live failure never rolls back the repayment.
-            try{await publishLive(groupId,'MEETING_UPDATE','loan-repayment-live:'+entry.id,{meetingId,kind:'FINANCIAL_CELL',operationType:'LOAN_REPAYMENT',membershipId,rubricId,previousAmount:0,newAmount:paymentAmount,meetingClosed:replayMeeting?.status==='closed',actorId:ctx.actorId,actorName:await actorLabel()});}catch(error){console.info('Outbox repayment Live push deferred',error);}
           }
-          await markApplied();return json({accepted:true,stored:true,loan,entry},200,cors);
+          const cellAck=entry?await publishSheetCell(groupId,'loan-repayment-live:'+entry.id,{meetingId,kind:'FINANCIAL_CELL',operationType:'LOAN_REPAYMENT',membershipId,rubricId,newAmount:principalPaid+interestPaid,actorId:ctx.actorId,actorName:await actorLabel()}):{};await markApplied();return json({accepted:true,stored:true,loan,entry,...cellAck},200,cors);
         }
 
         throw Error('UNSUPPORTED_FINANCIAL_SHEET_NATURE');
@@ -3116,7 +3169,7 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
           deviceSequence:Number(p.deviceSequence??0),commandId:item.idempotencyKey,
           reason:String(p.reason??'')
         });
-        if(outcome.status!=='CLOCK_REVIEW')await markApplied();
+        if(outcome.status!=='CLOCK_REVIEW')await markApplied(outcome);
         return json(outcome,200,cors);
       }
       if(item.type==='FINANCIAL_CELL_CORRECTION_PROPOSAL_V1'){

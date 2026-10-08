@@ -69,8 +69,7 @@ test('closed-session offline target becomes the canonical value after synchroniz
   await expect(sheet.locator('.table-total-row')).toBeVisible();
   await expect(reloaded.locator('.cell-target-input')).toBeVisible();
   await expect(reloaded.locator('.cell-validate')).toBeVisible();
-  const fixed=await sheet.locator('thead th:nth-child(2)').evaluate(node=>getComputedStyle(node).position);
-  expect(fixed).toBe('sticky');
+  await expect(sheet.locator('thead th:nth-child(2)')).toHaveCSS('position','sticky');
   await page.setViewportSize({width:390,height:820});
   await expect(sheet).toBeVisible();
   const size=await sheet.evaluate(node=>({width:node.scrollWidth,headerCells:node.querySelectorAll('thead th').length}));
@@ -135,7 +134,7 @@ test('loan policy scopes and free/existing simulation controls are usable in the
   await expect(dialog.locator('.loan-simulation-control-card')).toHaveCount(2);
 });
 
-test('repayment 2500 syncs event-wise within five seconds and survives reload without losing table context',async({page,context})=>{
+test('repayment 2500 syncs event-wise within five seconds and survives reload without losing table context',async({page,context,browser})=>{
   test.setTimeout(120_000);
   await page.goto(base+'/',{waitUntil:'domcontentloaded'});
   const ids=await page.evaluate(async({password})=>{
@@ -173,7 +172,7 @@ test('repayment 2500 syncs event-wise within five seconds and survives reload wi
     loan=await json('/api/v1/groups/'+encodeURIComponent(group.id)+'/completion/'+encodeURIComponent(loan.id)+'/transition','POST',{to:'APPROVED',expectedVersion:2,patch:{}},group.id);
     loan=(await json('/api/v1/groups/'+encodeURIComponent(group.id)+'/loans/'+encodeURIComponent(loan.id)+'/disburse','POST',{amount:10000,expectedVersion:3,meetingId:meeting.id,rubricId:loanRubric.id,idempotencyKey:'disburse-'+suffix},group.id)).loan;
     localStorage.setItem('tontine.activeGroupId',group.id);
-    return{groupId:group.id,membershipId,meetingId:meeting.id,repaymentRubricId:repaymentRubric.id,loanId:loan.id};
+    return{groupId:group.id,membershipId,meetingId:meeting.id,repaymentRubricId:repaymentRubric.id,loanId:loan.id,username:suffix,actorId:account.account.id,tenantId:account.account.tenantId};
   },{password});
 
   await page.reload({waitUntil:'domcontentloaded'});
@@ -181,6 +180,27 @@ test('repayment 2500 syncs event-wise within five seconds and survives reload wi
   const selector='.matrix-cell-entry[data-membership-id="'+ids.membershipId+'"][data-rubric-id="'+ids.repaymentRubricId+'"][data-meeting-id="'+ids.meetingId+'"]';
   const cell=page.locator('#meetingMatrix').locator(selector);
   await expect(cell).toBeVisible();
+
+  // A second browser context models another device using the same account.
+  // It must converge through the durable WebSocket push, not snapshot polling.
+  const mirrorContext=await browser.newContext();
+  const mirror=await mirrorContext.newPage();
+  await mirror.goto(base+'/',{waitUntil:'domcontentloaded'});
+  await mirror.evaluate(async({username,password,groupId})=>{
+    const response=await fetch('/api/v1/auth/login',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({username,password})});
+    if(!response.ok)throw new Error('MIRROR_LOGIN_'+response.status);
+    localStorage.setItem('tontine.activeGroupId',groupId);
+  },{username:ids.username,password,groupId:ids.groupId});
+  await mirror.reload({waitUntil:'domcontentloaded'});
+  await mirror.locator('button[data-view="operations"]').first().click();
+  const mirrorCell=mirror.locator('#meetingMatrix').locator(selector);
+  await expect(mirrorCell).toBeVisible();
+  await expect(mirror.locator('#connectivity')).toHaveText(/En ligne · Live$/,{timeout:8000});
+  let forbiddenIdleReads=0;
+  mirror.on('request',request=>{
+    const url=new URL(request.url());
+    if(url.pathname.includes('/financial-cells/snapshot')||url.pathname.endsWith('/live/events'))forbiddenIdleReads++;
+  });
 
   await context.setOffline(true);
   await cell.locator('.cell-target-input').fill('2500');
@@ -198,6 +218,22 @@ test('repayment 2500 syncs event-wise within five seconds and survives reload wi
   },ids),{timeout:5000,intervals:[200,350,500,700]}).toBe(true);
   expect(Date.now()-syncStarted).toBeLessThan(5500);
   await expect.poll(()=>amountFrom(cell),{timeout:5000}).toBe(2500);
+  await expect.poll(()=>amountFrom(mirrorCell),{timeout:5000,intervals:[100,200,350,500]}).toBe(2500);
+  await mirror.waitForTimeout(1800);
+  expect(forbiddenIdleReads).toBe(0);
+
+  // A second payment in the same cell must push the cumulative value, not
+  // replace the first payment. Replay the same durable command after its ACK.
+  const secondPayment=await page.evaluate(async ids=>{
+    const headers={'content-type':'application/json','x-active-group-id':ids.groupId};
+    const item={id:'second-'+ids.loanId,tenantId:'',actorId:'',type:'FINANCIAL_SHEET_ENTRY_V1',idempotencyKey:'second-'+ids.loanId,status:'PENDING',attempts:0,createdAt:new Date().toISOString(),updatedAt:new Date().toISOString(),payload:{groupId:ids.groupId,membershipId:ids.membershipId,meetingId:ids.meetingId,rubricId:ids.repaymentRubricId,amount:1500,nature:'REPAYMENT',loanId:ids.loanId,repaymentComponent:'PRINCIPAL'}};
+    item.tenantId=ids.tenantId;item.actorId=ids.actorId;
+    const response=await fetch('/api/v1/outbox/apply',{method:'POST',headers,body:JSON.stringify(item)});const result=await response.json();if(!response.ok)throw Error(JSON.stringify(result));return{item,result};
+  },ids);
+  expect(secondPayment.result.canonicalAmount).toBe(4000);
+  await expect.poll(()=>amountFrom(mirrorCell),{timeout:5000}).toBe(4000);
+  const replay=await page.evaluate(async data=>{const r=await fetch('/api/v1/outbox/apply',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(data.item)});const result=await r.json();if(!r.ok)throw Error(JSON.stringify(result));return result;},secondPayment);
+  expect(replay.replayed).toBe(true);expect(replay.canonicalAmount).toBe(4000);
 
   // The app refresh must keep the horizontal place. Use a real phone-width
   // viewport so the replacement matrix still overflows after rerender; do not
@@ -220,6 +256,10 @@ test('repayment 2500 syncs event-wise within five seconds and survives reload wi
   await expect(page.locator('#view-operations')).toHaveClass(/active/);
   const reloaded=page.locator('#meetingMatrix').locator(selector);
   await expect(reloaded).toBeVisible();
-  await expect.poll(()=>amountFrom(reloaded)).toBe(2500);
+  await expect.poll(()=>amountFrom(reloaded)).toBe(4000);
+  await page.locator('#loansNavBtn').click();
+  await expect(page.locator('#loanDebtRecap .debt-group-journey-table')).toBeVisible();
+  for(const label of ['Capital restant','Intérêts dus','Prochains intérêts projetés','Total dette exigible'])await expect(page.locator('#loanDebtRecap')).toContainText(label);
+  await mirrorContext.close();
 });
 

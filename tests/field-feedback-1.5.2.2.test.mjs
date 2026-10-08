@@ -1,3 +1,4 @@
+import {currentRelease,currentQuery} from './release-fixture.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
@@ -67,13 +68,13 @@ test('1.5.2.2 flagship visual mode is materially richer while Senior and Assiste
   assert.match(modes,/visual/);assert.match(modes,/senior/);assert.match(modes,/assisted/);
 });
 
-test('1.5.2.12 shell is version isolated and keeps the previous coherent release',async()=>{
+test('current release shell is version isolated and keeps the previous coherent release',async()=>{
   const html=await readFile('.build/index.html','utf8');
   const sw=await readFile('.build/sw.js','utf8');
-  assert.match(html,/ECO-SYSTEM · 1\.5\.2\.12/);
-  assert.match(html,/main\.js\?v=15212/);
-  assert.match(sw,/const CACHE = 'eco-system-v15212-event-sync-ui-20261007'/);
-  assert.match(sw,/PREVIOUS_CACHE = 'eco-system-v15211-sovereign-relay-20261007'/);
+  assert.ok(html.includes('ECO-SYSTEM · '+currentRelease.version.split('-')[0]));
+  assert.ok(html.includes('main.js?v='+currentQuery));
+  assert.ok(sw.includes("const CACHE = '"+currentRelease.pwaCache+"'"));
+  assert.ok(sw.includes("PREVIOUS_CACHE = '"+currentRelease.previousPwaCache+"'"));
   const current=sw.match(/const CACHE = '([^']+)';/)?.[1],previous=sw.match(/const PREVIOUS_CACHE = '([^']+)';/)?.[1];
   assert.ok(current&&previous&&current!==previous,'current and rollback caches must remain distinct');
   assert.doesNotMatch(html,/<body[^>]*>\\n\s*<section/);

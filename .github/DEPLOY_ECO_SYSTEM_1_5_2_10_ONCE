@@ -1,11 +1,11 @@
-Eco-System 1.5.2.13 live-sync + repayments + data-first deployment marker
-release: 1.5.2.13-live-sync
-date: 2026-10-07
+Eco-System 1.5.2.14 sovereign convergence and Live deployment marker
+release: 1.5.2.14-live-sync
+date: 2026-10-08
 db_mutation: none
 mode: code-only-no-d1-export-no-migration
-reason: sub-5-second targeted financial retry + persistent WebSocket fan-out without idle D1 polling + cached signed Live ticket under D1 guard + true Live connectivity badge + exact navigation/table position restore + canonical REPAYMENT 2500 persistence test + governed A/B loan policy + data-first responsive UI
-qualified_base: fix/1.5.2.10-offline-conflicts-loans-20261003
-qualification_rule: full governed npm ci + Chromium + WebKit must pass on exact deployment SHA before Worker mutation
-production_rule: deploy workflow must prove /health commitSha, buildId, pwaCache and capability catalog
-field_acceptance: NOT_ACCEPTED until Serge verifies production on his browsers/devices
-trigger_nonce: 2026-10-07T18:30+01:00-file-isolated-suite
+reason: durable confrontation per cell/session, cumulative financial Live totals, cold offline reload recovery, signed-clock recovery for future edits, unchanged business journeys and readable financial tables
+qualified_base: b0e93abf7668fe885845761db2ff370ae2d2e53c
+qualification_rule: full governed CI + Chromium + WebKit on exact deployment SHA before Worker mutation
+production_rule: deploy workflow must prove /health commitSha, version, buildId, pwaCache and capability catalog
+field_acceptance: NOT_ACCEPTED until physical browsers/devices and real groups verify the release
+trigger_nonce: 2026-10-08-sovereign-convergence-codex

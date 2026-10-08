@@ -5,13 +5,15 @@ import { spawn } from 'node:child_process';
 import {randomBytes} from 'node:crypto';
 import worker from '../.build/workers/api/src/index.js';
 import { SQLiteD1 } from './sqlite-d1.mjs';
+import {createLocalLiveNamespace,attachLocalLiveUpgrades} from './local-live-adapter.mjs';
 
 const root = path.resolve('.build');
 const dataFile = process.env.ECO_DATA_FILE ?? '.data/eco-system.sqlite';
 const db = new SQLiteD1(dataFile);db.migrate();
 // Ephemeral signing key: test/development only, generated per process and never persisted.
 const localSignedClockKey=randomBytes(32).toString('base64url');
-const handleRequest = request => worker.fetch(request,{DB:db,AUTH_LIVE_SIGNING_SECRET:localSignedClockKey});
+const liveNamespace=createLocalLiveNamespace();
+const handleRequest = request => worker.fetch(request,{DB:db,AUTH_LIVE_SIGNING_SECRET:localSignedClockKey,GROUP_LIVE_HUB:liveNamespace,PREMIUM_LIVE_LEDGER:'true'});
 const mime = {
   '.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8',
   '.json':'application/json; charset=utf-8','.webmanifest':'application/manifest+json','.map':'application/json'
@@ -58,6 +60,7 @@ const requestHandler = async (req,res) => {
 
 const tryListen = port => new Promise((resolve,reject) => {
   const server=http.createServer(requestHandler);
+  attachLocalLiveUpgrades(server,handleRequest,host=>[`127.0.0.1:${port}`,`localhost:${port}`].includes(host??''));
   const onError=error=>{server.removeListener('listening',onListening);reject({error,server});};
   const onListening=()=>{server.removeListener('error',onError);resolve(server);};
   server.once('error',onError); server.once('listening',onListening); server.listen(port,'127.0.0.1');

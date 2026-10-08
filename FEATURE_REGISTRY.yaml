@@ -1,5 +1,5 @@
 registry_version: 1
-project_version: 1.4.1-field-integrity-home-sessions
+project_version: 1.5.2.14-live-sync
 source_of_truth: docs/constitution + verified_code
 
 capabilities:
@@ -114,14 +114,14 @@ capabilities:
     risk_class: financial_critical
     offline_policy: canonical_pending_queue
     audit_event: OUTBOX_SYNC_RESULT
-    tests: [outbox-idempotence]
+    tests: [outbox-idempotence, sovereign-convergence-recovery, eco-recorded-intent-order, eco-v2-reconnection-api]
   - id: RELAY.TRANSPORT.CORE
     domain: relay
     status: ACQUIRED_FOUNDATION
     risk_class: security_critical
     offline_policy: local_transport_abstraction
     audit_event: RELAY_RECEIPT
-    tests: [relay-loopback]
+    tests: [relay-loopback, sovereign-convergence-recovery]
   - id: GROUP.LAUNCH.PROJECT
     domain: group-launch
     status: ACQUIRED_FOUNDATION
@@ -730,7 +730,7 @@ local_qualification_2026_09_13:
     risk_class: financial_critical
     offline_policy: canonical_finance_in_d1_projection_queue_retry
     audit_event: FINANCIAL_PROJECTION_LIVE
-    tests: [live-replay-after-500,financial-projection-outbox,live-pilot-end-to-end]
+    tests: [live-replay-after-500,financial-projection-outbox,live-pilot-end-to-end,repayment-live-total-recovery,sovereign-multi-manager-1.5.2.14]
   - id: RUBRIC.POLICIES.COMPOSABLE
     domain: rubrics
     status: FUNCTIONAL_BETA

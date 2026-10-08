@@ -1,3 +1,4 @@
+import {currentRelease,currentQuery} from './release-fixture.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
@@ -121,5 +122,5 @@ test('PWA shell refresh remains versioned without forced offline reload',async()
   assert.match(sw,/if \(!await cache\.match\(RELEASE_READY\)\) throw new Error\('RELEASE_NOT_READY'\)/);
   assert.ok(html.includes('/styles.css?v='+shellVersion),'styles use same release suffix');
   assert.ok(html.includes('/src/main.js?v='+shellVersion),'main uses same release suffix');
-  assert.match(html,/ECO-SYSTEM · 1\.5\.2\.12/);
+  assert.ok(html.includes('ECO-SYSTEM · '+currentRelease.version.split('-')[0]));
 });

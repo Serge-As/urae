@@ -146,9 +146,15 @@ export const mountCompletionUI=({app,notify,showError,getMembers,getMeetings,get
     }
     const total=document.createElement('tr');total.className='table-total-row';const label=document.createElement('th');label.textContent='TOTAL';total.append(label);let latestTotal=0;for(const meeting of meetings){const amount=Number(columnTotals.get(meeting.id)??0);latestTotal=amount;const td=document.createElement('td');td.textContent=fmt(amount);total.append(td);}const end=document.createElement('td');end.textContent=fmt(latestTotal);total.append(end);body.append(total);table.append(body);wrap.append(table);section.append(wrap);return section;
   };
+  const debtJourneySelections=new Map();
   const renderLoanDebtRecap=async()=>{
     const root=byId('loanDebtRecap');if(!root||!app.activeGroup())return;
-    const data=await app.savingsYieldSourceData().catch(()=>null);if(!data)return;
+    const debtGroup=String(app.activeGroup());
+    const previousMember=root.querySelector('.debt-journey-member'),previousLoan=root.querySelector('.debt-journey-loan');
+    if(previousMember&&previousLoan)debtJourneySelections.set(debtGroup,{memberId:previousMember.value,loanId:previousLoan.value});
+    const selectedJourney=debtJourneySelections.get(debtGroup)??{memberId:'',loanId:'__GROUP__'};
+    const scrolls=[...root.querySelectorAll('.matrix-wrap')].map(x=>({left:x.scrollLeft,top:x.scrollTop}));
+    const data=await app.savingsYieldSourceData().catch(()=>null);if(!data||String(app.activeGroup())!==debtGroup)return;
     root.querySelectorAll('.loan-recap-generated').forEach(x=>x.remove());
     const holder=document.createElement('div');holder.className='loan-recap-generated stack';
     const totals=data.totals??{},metrics=document.createElement('div');metrics.className='metrics small';
@@ -195,7 +201,7 @@ export const mountCompletionUI=({app,notify,showError,getMembers,getMeetings,get
     const sorted=[...definitions.entries()].sort((a,b)=>nameOfMember(a[1].memberId).localeCompare(nameOfMember(b[1].memberId))||String(a[1].memberId??'').localeCompare(String(b[1].memberId??''))||a[0].localeCompare(b[0]));
     // Derived subtotals are grouped by stable member ID, never by display
     // name: two people sharing a name must not have their debts merged.
-    let currentMemberKey=null;
+    let currentMemberKey=null,memberStripe=0;
     let memberSessions=criteria.map(()=>sessionRows.map(()=>0));
     let memberLatest=criteria.map(()=>0);
     const appendMemberTotals=key=>{
@@ -215,14 +221,14 @@ export const mountCompletionUI=({app,notify,showError,getMembers,getMeetings,get
         appendMemberTotals(currentMemberKey);
         memberSessions=criteria.map(()=>sessionRows.map(()=>0));memberLatest=criteria.map(()=>0);
       }
-      currentMemberKey=memberKey;
+      if(currentMemberKey!==memberKey)memberStripe++;currentMemberKey=memberKey;
       const rows=orderedPeriods.get(loanId)??[],progress=sessionRows.map((_,i)=>{
         let last;for(const row of rows)if(row.sessionIndex<=i)last=row.period;
         return last;
       });
       for(let criterionIndex=0;criterionIndex<criteria.length;criterionIndex++){
         const [label,selector,kind]=criteria[criterionIndex],row=document.createElement('tr');
-        row.className='loan-criteria-row loan-criterion-'+kind+(criterionIndex===0?' loan-criteria-start':'');
+        row.dataset.memberId=memberKey;row.className='loan-criteria-row member-tone-'+(memberStripe%2)+' loan-criterion-'+kind+(criterionIndex===0?' loan-criteria-start':'');
         if(criterionIndex===0){const memberCell=document.createElement('th'),loanCell=document.createElement('th');
           memberCell.rowSpan=criteria.length;loanCell.rowSpan=criteria.length;
           memberCell.className='loan-member-key';loanCell.className='loan-name-key';
@@ -237,10 +243,10 @@ export const mountCompletionUI=({app,notify,showError,getMembers,getMeetings,get
         });
         const latestState=progress[progress.length-1]??rows[rows.length-1]?.period;
         let latest=latestState?Number(selector(latestState)??0):0;
-        if(!latestState&&def.open)latest=Number(({
+        if(def.open)latest=Number(({
           principal:def.open.principal,interest:def.open.interest,projected:def.open.nextInterestProjected,due:def.open.totalDue
         })[kind]??0);
-        latest=Number.isFinite(latest)?latest:0;latestTotals[criterionIndex]+=latest;memberLatest[criterionIndex]+=latest;
+        if((data.closedLoanIds??[]).includes(loanId))latest=0;latest=Number.isFinite(latest)?latest:0;latestTotals[criterionIndex]+=latest;memberLatest[criterionIndex]+=latest;
         const currentCell=document.createElement('td');currentCell.textContent=fmt(latest);row.append(currentCell);body.append(row);
       }
     }
@@ -267,14 +273,14 @@ export const mountCompletionUI=({app,notify,showError,getMembers,getMeetings,get
     // Debt journey is loaded only for the selected loan, avoiding N history
     // requests when a group has dozens of loans.
     const journey=document.createElement('section'),jt=document.createElement('h4');jt.textContent=tr('Parcours d’une dette','Debt journey');
-    const memberSelect=document.createElement('select'),loanSelect=document.createElement('select'),journeyHost=document.createElement('div');memberSelect.append(option('',tr('Choisir un membre','Choose a member')));
+    const memberSelect=document.createElement('select'),loanSelect=document.createElement('select'),journeyHost=document.createElement('div');memberSelect.className='debt-journey-member';loanSelect.className='debt-journey-loan';memberSelect.setAttribute('aria-label',tr('Membre du parcours de dette','Debt journey member'));loanSelect.setAttribute('aria-label',tr('Prêt du parcours de dette','Debt journey loan'));memberSelect.append(option('',tr('Ensemble du groupe','Entire group')));
     const debtMembers=[...new Set(debts.map(x=>String(x.memberId??'')).filter(Boolean))];for(const id of debtMembers)memberSelect.append(option(id,nameOfMember(id)));
     const renderGroupJourney=()=>{
       // Aggregate canonical loan-period snapshots, never fabricate a dummy group loan.
       // The next-period projection remains separate from payable interest.
       const timeline=data.meetings??[],periods=data.loanPeriods??[],loanIds=new Set((data.loanDebts??[]).map(p=>String(p.loanId)));
       for(const p of periods)if(p.loanId)loanIds.add(String(p.loanId));
-      const wrap=document.createElement('div');wrap.className='matrix-wrap',table=document.createElement('table');
+      const wrap=document.createElement('div'),table=document.createElement('table');wrap.className='matrix-wrap';
       table.className='meeting-matrix debt-group-journey-table';
       const header=document.createElement('tr');
       for(const heading of [tr('Séance','Session'),tr('Capital de début','Opening principal'),tr('Capital remboursé','Principal paid'),tr('Capital restant','Principal remaining'),tr('Intérêts ouverture','Opening interest'),tr('Nouveaux intérêts dus','New interest due'),tr('Intérêts payés','Interest paid'),tr('Intérêts restants','Interest remaining'),tr('Dette exigible','Due debt'),tr('Prochains intérêts projetés','Projected next interest')]){
@@ -315,10 +321,12 @@ export const mountCompletionUI=({app,notify,showError,getMembers,getMeetings,get
       note.textContent=tr('Historique calculé uniquement sur les périodes de prêts disponibles. Les décaissements sans période historique vérifiée ne sont pas inventés ; consultez les indicateurs actuels au-dessus pour les encours complets.','History uses available loan periods only. Unverified disbursement periods are not invented; see the current portfolio metrics above for complete outstanding amounts.');
       journeyHost.replaceChildren(note,wrap);
     };
-    const refillLoans=()=>{loanSelect.replaceChildren(option('__GROUP__',tr('Ensemble du groupe','Entire group')));for(const debt of debts.filter(x=>!memberSelect.value||String(x.memberId)===memberSelect.value))loanSelect.append(option(String(debt.loanId),debt.title+' · '+fmt(debt.totalDue)));journeyHost.replaceChildren();loanSelect.value='__GROUP__';void renderJourney();};
+    if([...memberSelect.options].some(x=>x.value===selectedJourney.memberId))memberSelect.value=selectedJourney.memberId;
+    const refillLoans=(preserve=false)=>{const wanted=preserve?selectedJourney.loanId:'__GROUP__';loanSelect.replaceChildren(option('__GROUP__',tr('Ensemble du groupe','Entire group')));for(const debt of debts.filter(x=>!memberSelect.value||String(x.memberId)===memberSelect.value))loanSelect.append(option(String(debt.loanId),debt.title+' · '+fmt(debt.totalDue)));journeyHost.replaceChildren();loanSelect.value=[...loanSelect.options].some(x=>x.value===wanted)?wanted:'__GROUP__';debtJourneySelections.set(debtGroup,{memberId:memberSelect.value,loanId:loanSelect.value});void renderJourney();};
     const renderJourney=async()=>{journeyHost.replaceChildren();if(loanSelect.value==='__GROUP__'){renderGroupJourney();return;}if(!loanSelect.value)return;const loading=document.createElement('p');loading.className='hint';loading.textContent=tr('Chargement du parcours…','Loading journey…');journeyHost.append(loading);try{const history=await app.loanHistory(loanSelect.value),periods=history.periods??[];if(!periods.length){journeyHost.replaceChildren(article(tr('Aucune période détaillée','No detailed period'),' ',tr('Le prêt existe mais aucune période de remboursement n’a encore été enregistrée.','The loan exists but no repayment period has been recorded yet.')));return;}const wrap=document.createElement('div');wrap.className='matrix-wrap';const table=document.createElement('table');table.className='meeting-matrix debt-journey-table';const head=document.createElement('thead'),hr=document.createElement('tr');for(const label of [tr('Séance / date','Session / date'),tr('Capital avant','Principal before'),tr('Intérêt ouverture','Opening interest'),tr('Nouvel intérêt','New interest'),tr('Paiement','Payment'),tr('Capital payé','Principal paid'),tr('Intérêt payé','Interest paid'),tr('Capital restant','Principal left'),tr('Intérêts dus','Interest due'),tr('Dette après','Debt after'),tr('Prochain intérêt','Next interest'),tr('Priorité','Priority')]){const th=document.createElement('th');th.textContent=label;hr.append(th);}head.append(hr);table.append(head);const body=document.createElement('tbody');for(const p of periods){const meeting=getMeetings().find(m=>m.id===p.meetingId),values=[meeting?.title??date(p.createdAt),fmt(p.principalBefore),fmt(p.interestOpening),fmt(p.interestNew),fmt(p.payment),fmt(p.principalPaid),fmt(p.interestPaid),fmt(p.principalAfter),fmt(p.interestAfter),fmt(p.totalDebtAfter),fmt(p.nextInterestProjected),String(p.priority??'')];const row=document.createElement('tr');for(const value of values){const td=document.createElement('td');td.textContent=value;row.append(td);}body.append(row);}table.append(body);wrap.append(table);journeyHost.replaceChildren(wrap);}catch(e){journeyHost.replaceChildren();showError(e);}};
-    memberSelect.addEventListener('change',refillLoans);loanSelect.addEventListener('change',()=>void renderJourney());refillLoans();journey.append(jt,memberSelect,loanSelect,journeyHost);holder.append(journey);
+    memberSelect.addEventListener('change',()=>refillLoans(false));loanSelect.addEventListener('change',()=>{debtJourneySelections.set(debtGroup,{memberId:memberSelect.value,loanId:loanSelect.value});void renderJourney();});refillLoans(true);journey.append(jt,memberSelect,loanSelect,journeyHost);holder.append(journey);
     root.append(holder);
+    requestAnimationFrame(()=>{[...root.querySelectorAll('.matrix-wrap')].forEach((wrap,i)=>{if(scrolls[i]){wrap.scrollLeft=scrolls[i].left;wrap.scrollTop=scrolls[i].top;}});});
   };
 
   const officialLoanRubric=()=>getRubrics().find(r=>String(r.facets?.custom?.systemKey??'').toUpperCase()==='LOAN'||/^(prêt|pret|emprunt|loan)s?$/i.test(String(r.name??'').trim()));

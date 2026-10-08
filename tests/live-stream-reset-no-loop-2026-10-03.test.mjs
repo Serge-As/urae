@@ -9,7 +9,7 @@ test('live stream migration resets stale browser sequence and avoids reconnect l
   assert.match(hub,/GROUP_LIVE_HELLO/);
   assert.match(hub,/effectiveAfter=reset\?0:requestedAfter/);
   assert.match(live,/if\(msg\.type==='GROUP_LIVE_HELLO'\)\{if\(msg\.reset\)lastSeq=0/);
-  assert.match(live,/reconnectAttempt>=4/);
-  assert.match(live,/\[1500,4500,12000,30000\]/);
-  assert.match(live,/tentative '\+reconnectAttempt\+'\/4/);
+  assert.match(live,/Math\.min\(reconnectAttempt\+1,5\)/);
+  assert.match(live,/\[800,1800,4000,10000,30000\]/);
+  assert.doesNotMatch(live,/reconnectAttempt>=4/);
 });
