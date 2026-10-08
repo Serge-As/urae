@@ -5,6 +5,8 @@ on:
       - fix/confrontation-clock-recovery-20261008
     paths:
       - packages/application/src/index.ts
+      - package.json
+      - package-lock.json
       - tests/offline-reconfirmation-clock.test.mjs
       - .github/workflows/eco-confrontation-forensics-20261008.yml
   workflow_dispatch:

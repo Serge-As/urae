@@ -38,3 +38,11 @@ Le job forensique 113479969251 du run 37826312843 confirme trois échecs d'asser
 ### Audit de dépendances complémentaire
 
 Les installations CI signalent trois dépendances de gravité haute. Les avis primaires GHSA-7mvr-c777-76hp (Playwright, TLS des installateurs) et GHSA-96hv-2xvq-fx4p / GHSA-58qx-3vcg-4xpx (ws, limites mémoire et close) justifient l'inspection du verrou npm. Le job forensique lit npm audit, génère un verrou candidat Playwright 1.56.1 / ws 8.21.0 depuis le registre, publie les métadonnées pour revue, puis restaure le verrou du SHA avant les tests. Cette génération ne modifie aucun dépôt ni déploiement ; son adoption exige revue et qualifications.
+
+### Horloge prouvée et dépendances corrigées — qualification finale à exécuter
+
+Run **37826518664 SUCCESS**, SHA **0415c9464699238568321afba605c98c00c401f8** : compilation de l'ancien source Application réussie, trois régressions échouent pour les assertions attendues, puis **653/653** tests et gates passent sur le correctif. Le contexte de l'artefact original montre 4 000 local et un conflit ouvert ; il ne fournit pas directement un ticket d'horloge à attribuer à cet échec précis.
+
+Run forensique **37826825119 SUCCESS**, job **113481702657** : **npm audit avant = 3 high**, puis verrou généré depuis npm **Playwright 1.56.1 / ws 8.21.0 = 0 vulnérabilité signalée**. Les versions et intégrités du registre sont adoptées, TypeScript 5.9.3 et fsevents 2.3.2 conservés. La CI et la livraison ajoutent **npm audit --audit-level=high**. Avis primaires : https://github.com/advisories/GHSA-7mvr-c777-76hp ; https://github.com/websockets/ws/security/advisories/GHSA-96hv-2xvq-fx4p ; https://github.com/websockets/ws/security/advisories/GHSA-58qx-3vcg-4xpx . Ces dépendances servent aux tests et au serveur Node local ; le Worker emploie son WebSocket natif.
+
+Les qualifications Chromium/WebKit et le SHA intégrant les dépendances doivent encore passer. Le marqueur de publication reste HOLD. Aucun résultat ci-dessus n'est une recette physique ou une preuve de production 1.5.2.15.

@@ -1,3 +1,14 @@
+
+### Horloge prouvée et dépendances corrigées — qualification finale à exécuter
+
+Run **37826518664 SUCCESS**, SHA **0415c9464699238568321afba605c98c00c401f8** : compilation de l'ancien source Application réussie, trois régressions échouent pour les assertions attendues, puis **653/653** tests et gates passent sur le correctif. Le contexte de l'artefact original montre 4 000 local et un conflit ouvert ; il ne fournit pas directement un ticket d'horloge à attribuer à cet échec précis.
+
+Run forensique **37826825119 SUCCESS**, job **113481702657** : **npm audit avant = 3 high**, puis verrou généré depuis npm **Playwright 1.56.1 / ws 8.21.0 = 0 vulnérabilité signalée**. Les versions et intégrités du registre sont adoptées, TypeScript 5.9.3 et fsevents 2.3.2 conservés. La CI et la livraison ajoutent **npm audit --audit-level=high**. Avis primaires : https://github.com/advisories/GHSA-7mvr-c777-76hp ; https://github.com/websockets/ws/security/advisories/GHSA-96hv-2xvq-fx4p ; https://github.com/websockets/ws/security/advisories/GHSA-58qx-3vcg-4xpx . Ces dépendances servent aux tests et au serveur Node local ; le Worker emploie son WebSocket natif.
+
+Les qualifications Chromium/WebKit et le SHA intégrant les dépendances doivent encore passer. Le marqueur de publication reste HOLD. Aucun résultat ci-dessus n'est une recette physique ou une preuve de production 1.5.2.15.
+
+---
+
 ## Publication HOLD — confrontation et horloge, 8 octobre 2026
 
 **État courant : publication suspendue, qualification fonctionnelle rouverte.** Le run **37822250394** du SHA **fe2b9b2649992bf4eceda8e10b3d1e4dd76f5d91** a conservé **5 000** chez le second gestionnaire après la reconfirmation explicite de **4 000**. L'artefact **11570211321** garde le contexte et les captures de cet échec. Les réussites antérieures restent des preuves historiques ; elles ne suffisent pas à clore ce défaut intermittent.
