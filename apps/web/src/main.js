@@ -2463,6 +2463,34 @@ $('#syncBtn').addEventListener('click', async () => { if (!navigator.onLine) {
     fail(new Error('Hors ligne'));
     return;
 } try{offlineConfrontationDeferred=false;await resumeOnline({forceConfrontation:true});renderOutbox();}catch(e){fail(e);} });
+const refreshVisibleBusinessSurface=async preserved=>{
+    const view=String(preserved?.view??activeViewName());
+    // Refresh only what the user can currently see. Full group hydration used
+    // to fan out into many unrelated reads and could rebuild the matrix at col 1.
+    if(view==='operations'){
+        const [freshMembers,freshMeetings,freshRubrics]=await Promise.all([
+          app.listMembers(),app.listMeetings(),app.listRubrics()
+        ]);
+        await renderMembers(freshMembers);await renderMeetings(freshMeetings);await renderLivingRules(freshRubrics);
+        if(isManager())await loadFinancialProjectionState({clearOptimistic:false});
+        renderMeetingMatrix();renderIndividualSheetMatrix();renderAllCanonicalFinancialHosts();
+        await identityLiveUI.refresh();
+        return;
+    }
+    if(view==='sessions'){await renderMeetings();await sessionsUI.refresh();await identityLiveUI.refresh();return;}
+    if(view==='members'){await renderMembers();return;}
+    if(view==='finance'){
+        await renderMembers();await renderMeetings();await renderLivingRules();
+        if(isManager())await renderLedger();
+        await completionUI.refresh();await savingsYieldUI.refresh();await identityLiveUI.refresh();return;
+    }
+    if(view==='dashboard'){
+        await renderGroups();renderActiveGroup();renderGroupSelector();await renderUniverse();await renderInbox();await identityLiveUI.refresh();return;
+    }
+    // Non-financial views keep their established owner refresh until they have
+    // typed incremental refreshers of their own.
+    await refreshGroupContext();
+};
 $('#refreshBtn').addEventListener('click', async () => { try {
     clearFail();
     const preserved=captureNavState();persistNavState(preserved);
@@ -2471,9 +2499,9 @@ $('#refreshBtn').addEventListener('click', async () => { try {
     app.forceTransportRetry?.();
     renderConnectivity();
     if(navigator.onLine!==false&&(app.outboxItems?.()??[]).some(item=>!['CONFIRMED','CANCELLED'].includes(String(item.status??''))))await resumeOnline();
-    await refreshAll();
+    await refreshVisibleBusinessSurface(preserved);
     showView(preserved.view,preserved);
-    toast(tx('Données actualisées sans perdre votre position.','Data refreshed without losing your position.'));
+    toast(tx('Données utiles actualisées sans perdre votre position.','Visible data refreshed without losing your position.'));
 }
 catch (e) {
     fail(e);
