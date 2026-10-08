@@ -1197,7 +1197,7 @@
     },
     {
       "id": "candidate.eco.1.5.2.15.bounded.transport.recovery",
-      "status": "VERIFIED_REMOTE",
+      "status": "IN_PROGRESS",
       "scope": "application/outbox/transport-recovery/pwa/qualification",
       "observedOn": "2026-10-08",
       "evidence": [
@@ -1210,10 +1210,27 @@
         "github:run:37820287689 SUCCESS; 650/650 Node Chromium 8/8 WebKit 6/6",
         "github:run:37820287701 SUCCESS; governed CI and same browser suites",
         "github:artifact:11567969551 exact source archive; SHA256SUMS verified; tar readable",
-        "github:PR:71 merged; merge commit 754a8cef153b7ebe92b993de3b68f7a2c42d9f2d"
+        "github:PR:71 merged; merge commit 754a8cef153b7ebe92b993de3b68f7a2c42d9f2d",
+        "github:run:37822250394 FAILURE; divergent offline choice expected 4000 received 5000",
+        "github:artifact:11570211321 preserved browser failure",
+        "github:run:37822250587 CANCELLED before publication",
+        "github:commit:5ee23e831ab661cef65c618534692b112458f584 publication HOLD"
       ],
-      "note": "Source qualified remotely and PR merged; production delivery not yet attested in this checkpoint. Duplicate push browser job is still installing browsers and is not counted as a third successful run.",
-      "next": "Trigger existing code-only delivery, requalify deployment SHA before Worker mutation and record exact health/Worker evidence. Physical acceptance remains NOT_ACCEPTED."
+      "note": "Qualification reopened after a functional intermittent reconfirmation failure. Earlier 650/8/6 successes are historical evidence. Production 1.5.2.15 is not attested.",
+      "next": "Prove old/fixed signed-clock chronology regressions, qualify corrected SHA completely, then resume code-only delivery and record exact production proof. Field acceptance remains separate."
+    },
+    {
+      "id": "issue.eco.offline.reconfirmation.clock.20261008",
+      "status": "IN_PROGRESS",
+      "scope": "application/offline-confrontation/signed-clock",
+      "observedOn": "2026-10-08",
+      "evidence": [
+        "github:run:37822250394 FAILURE; expected 4000 received 5000",
+        "repo:tests/offline-reconfirmation-clock.test.mjs",
+        "repo:workers/api/src/authenticated.ts"
+      ],
+      "note": "A cached clock anchor rebound to a new performance.now() may normalize an explicit decision before the canonical value already observed. Hypothesis needs old/fixed execution evidence.",
+      "next": "Inspect the preserved browser context and prove regressions fail on prior source, pass on corrected source; require full browser qualification before publication."
     }
   ]
 }

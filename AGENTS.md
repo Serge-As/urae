@@ -1,3 +1,5 @@
+> Checkpoint 2026-10-08 : publication HOLD au SHA 5ee23e8. Ne pas annoncer 1.5.2.15 livrée ; conserver l'échec de reconfirmation du run 37822250394. La reprise exige une preuve de causalité horloge/confrontation, puis les qualifications complètes et le smoke exact. Voir CURRENT_TRUTH et CIR-2026-10-08-BOUNDED-TRANSPORT-RECOVERY.
+
 # AGENTS.md — Eco-System, vérité et reprise
 
 ## Mission

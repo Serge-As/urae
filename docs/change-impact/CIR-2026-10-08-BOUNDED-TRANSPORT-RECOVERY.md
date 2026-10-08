@@ -44,3 +44,11 @@ Le job gouverné du run **37820281608** est SUCCESS ; archive source **115679695
 
 ---
 
+
+## Publication suspendue — chronologie d'une reconfirmation
+
+Run `37822250394`, source `fe2b9b2649992bf4eceda8e10b3d1e4dd76f5d91` : Chromium 7/8, ancienne confrontation attend 4000 mais reçoit 5000 après choix explicite. Malgré les qualifications précédentes, ce résultat exige investigation. Marqueur de livraison HOLD commit `5ee23e831ab661cef65c618534692b112458f584` ; ancienne livraison `37822250587` annulée avant publication, nouvelle livraison HOLD refusée au garde du marqueur.
+
+Le code révèle une faiblesse de l'ancrage : warmFinancialClock peut conserver un ancrage antérieur, ou recevoir un vieux GET depuis la copie offline et le raccrocher au performance.now actuel. La normalisation serveur reste anchorAtMs + elapsed ; une nouvelle validation humaine peut alors être datée avant la valeur canonique déjà observée, et être SUPERSEDED. Cette explication doit être confrontée à l'artefact d'échec et aux nouveaux tests ; elle n'est pas présentée comme une lecture du journal qui n'a pas encore eu lieu.
+
+Correction ciblée : la reconfirmation explicite demande un nouvel ancrage après les warmups antérieurs ; l'endpoint d'ancrage horaire est exclu des réponses snapshot offline. Aucun horodatage original modifié, aucun comparateur/Ledger remplacé. Une panne d'ancrage conserve une nouvelle intention non confirmée, sans faux signe de fraîcheur. Tests : chronologie après version canonique, warmup antérieur concurrent, copie cache ancienne sous panne. Le workflow forensique conserve la preuve de tests FAIL sur l'ancienne source puis requalifie la source corrigée.

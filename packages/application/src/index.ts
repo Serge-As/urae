@@ -114,8 +114,12 @@ export class ConnectedApplication {
   private homeTenantId?:string;
   private financialClockAnchor?:{groupId:string;deviceId:string;token:string;anchorAtMs:number;monotonicAt:number;expiresAt:number};
   private financialClockLoading?:Promise<void>;
-  private async warmFinancialClock():Promise<void>{
+  private async warmFinancialClock(refresh=false):Promise<void>{
     const groupId=this.activeGroupId,deviceId=this.localDeviceId();
+    // An explicit reconfirmation observed a newer canonical value. Await any
+    // older warmup, then obtain an anchor issued after that observation.
+    if(refresh&&this.financialClockLoading)await this.financialClockLoading;
+    if(refresh)this.financialClockAnchor=undefined;
     if(!groupId||typeof navigator!=='undefined'&&navigator.onLine===false||this.serverBudgetBlocked())return;
     if(this.financialClockAnchor?.groupId===groupId&&
       this.financialClockAnchor.deviceId===deviceId&&Date.now()<this.financialClockAnchor.expiresAt)return;
@@ -225,6 +229,9 @@ export class ConnectedApplication {
   serverBudgetState():{blocked:boolean;until:number;reason:string}{return{blocked:this.serverBudgetBlocked(),until:this.serverBudgetBlockedUntil,reason:this.serverBudgetReason};}
   transportState():{degraded:boolean;until:number}{return{degraded:this.transportUnavailableUntil>Date.now(),until:this.transportUnavailableUntil};}
   private offlineReadAllowed(path:string):boolean{
+    // A clock anchor cannot be re-based onto performance.now() after replaying
+    // an old GET snapshot. Only a fresh server response establishes that pair.
+    if(/\/financial-clock-anchor(?:\?|$)/.test(path))return false;
     // Actor-scoped IndexedDB snapshots are safe for GET projections. Keeping this
     // generic prevents a newly-added read screen from becoming an accidental
     // offline blocker. Mutations are never synthesized here.
@@ -1349,7 +1356,7 @@ export class ConnectedApplication {
         // Keep the old intent, original date and command key in the audit trail.
         // Commit its replacement before cancellation, so an interrupted device
         // retains at least one durable intent throughout the decision.
-        await this.warmFinancialClock();
+        await this.warmFinancialClock(true);
         await this.setFinancialCellTarget({meetingId:row.meetingId,membershipId:row.membershipId,rubricId:row.rubricId,
           targetAmount:row.localAmount,currentAmount:row.canonicalAmount,currentVersion:row.canonicalVersion,
           reason:'[OFFLINE_CONFRONTATION] Reconfirmation explicite de '+item.idempotencyKey+' · '+row.canonicalAmount+' → '+row.localAmount,deferSync:true});

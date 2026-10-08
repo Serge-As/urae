@@ -1,3 +1,15 @@
+## Publication HOLD — confrontation et horloge, 8 octobre 2026
+
+**État courant : publication suspendue, qualification fonctionnelle rouverte.** Le run **37822250394** du SHA **fe2b9b2649992bf4eceda8e10b3d1e4dd76f5d91** a conservé **5 000** chez le second gestionnaire après la reconfirmation explicite de **4 000**. L'artefact **11570211321** garde le contexte et les captures de cet échec. Les réussites antérieures restent des preuves historiques ; elles ne suffisent pas à clore ce défaut intermittent.
+
+La livraison **37822250587** a été **CANCELLED** avant publication. Le marqueur de livraison au SHA **5ee23e831ab661cef65c618534692b112458f584** est **HOLD-failed-confrontation-qualification** ; le run **37823081345** refuse ce marqueur avant mutation. **1.5.2.14 reste la dernière production attestée.**
+
+Analyse en cours sur **fix/confrontation-clock-recovery-20261008** : une reconfirmation constitue une nouvelle décision après observation du canonique. Elle doit obtenir une ancre d'horloge fraîche ; un ancien GET mis en cache ne peut pas être associé à un nouveau performance.now(). Trois tests comportementaux ciblent une ancre encore valide mais ancienne, un réchauffement en cours et une horloge serveur inaccessible. Le workflow forensique vérifie leur échec sur le source précédent, puis leur réussite sur le source corrigé. Cette causalité doit encore être prouvée par les exécutions.
+
+La reprise de publication exige les nouveaux tests et toutes les suites gouvernées et navigateur sur le même SHA, puis une vérification exacte de la production. **FIELD_ACCEPTED=NOT_ACCEPTED ; realMoneyEnabled=false ; aucune migration ni réécriture D1.**
+
+---
+
 ## Qualification validée — 1.5.2.15, avant livraison
 
 Source qualifiée : `3f7ea03457bbd936a87e299270843043e2826a24`, PR **#71 fusionnée** dans la branche de livraison par `754a8cef153b7ebe92b993de3b68f7a2c42d9f2d`. Runs **37820287689 SUCCESS** et **37820287701 SUCCESS** : **650/650 Node**, **Chromium 8/8**, **WebKit 6/6**, dont le scénario API inaccessible/navigator online et convergence de la même intention entre deux gestionnaires.
