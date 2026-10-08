@@ -1,3 +1,15 @@
+## État courant — HOLD et qualification locale préparée, 8 octobre 2026
+
+**La livraison complète n'est pas réalisée.** La production 1.5.2.15 reste non attestée et la dernière production attestée est 1.5.2.14. La reprise transport est qualifiée ; trois régressions d'horloge sont prouvées et corrigées avec 653/653 Node. Le run **37826825035** sur **4022ef50cf956b9986a9b30adfad91ec91aaebd9** échoue encore sur le résultat inter-gestionnaires **4 000 attendu / 5 000 reçu** (Chromium 7/8). Ne pas réduire cet échec à la seule horloge ni le déclarer résolu.
+
+Le fondateur confirme l'épuisement des **2 000 minutes gratuites GitHub Actions du mois**. Les derniers jobs n'ont aucun runner ni étape ; le terminal Codex échoue avant création de processus. Un lanceur privé autonome **scripts/qualify-eco-locally.mjs** et son mode d'emploi **docs/recovery/ECO_FREE_QUALIFICATION_2026-10-08.md** sont préparés. Leur exécution réelle demeure à faire.
+
+Branche active **fix/confrontation-clock-recovery-20261008**, PR **#72** encore brouillon. Verrou Playwright 1.56.1 / ws 8.21.0 généré depuis npm, audit candidat **0 alerte connue** ; source intégré à qualifier. Protection de contexte groupe/compte/tenant ajoutée après l'attente d'horloge ; comparaison du vrai corps de méthode en V8 réussie, régression Node complète ajoutée. Le scénario navigateur renforce son préalable canonique et conserve un diagnostic expurgé de tickets en cas d'échec. **654 Node, Chromium 8, WebKit 6** attendus, aucun PASS final inventé.
+
+**Marqueur de livraison HOLD ; FIELD_ACCEPTED=NOT_ACCEPTED ; realMoneyEnabled=false ; aucune mutation de données.** Les blocs suivants sont l'historique des checkpoints et doivent être lus à cette lumière.
+
+---
+
 
 ### Horloge prouvée et dépendances corrigées — qualification finale à exécuter
 

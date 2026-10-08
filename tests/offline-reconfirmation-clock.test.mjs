@@ -59,6 +59,7 @@ test('an unavailable clock endpoint cannot turn a cached old server timestamp in
 }));
 
 test('a group change during the fresh clock request preserves the original intent and cannot create a command in another group',()=>fixture(async({app,old,decide})=>{
+  app.financialClockAnchor=undefined;
   let finish;
   globalThis.fetch=()=>new Promise(resolve=>{finish=()=>{const issuedAt=Date.now();resolve(new Response(JSON.stringify({token:'fresh-clock',anchorAtMs:issuedAt,expiresAt:new Date(issuedAt+600000).toISOString(),deviceId:app.localDeviceId()}),{status:200}));};});
   const decision=decide();
