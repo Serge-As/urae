@@ -1,0 +1,81 @@
+name: Eco-System — Confrontation clock regression evidence
+on:
+  push:
+    branches:
+      - fix/confrontation-clock-recovery-20261008
+    paths:
+      - packages/application/src/index.ts
+      - package.json
+      - package-lock.json
+      - tests/offline-reconfirmation-clock.test.mjs
+      - .github/workflows/eco-confrontation-forensics-20261008.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  clock-regression:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - name: Read preserved failed browser evidence
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh run download 37822250394 --repo "${GITHUB_REPOSITORY}" --name eco-15210-critical-browser-fe2b9b2649992bf4eceda8e10b3d1e4dd76f5d91 --dir /tmp/eco-confrontation-evidence
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          for p in Path('/tmp/eco-confrontation-evidence').rglob('error-context.md'):
+              print('PRESERVED BROWSER EVIDENCE:', p.name)
+              lines=p.read_text(encoding='utf-8').splitlines()
+              wanted=set()
+              for i,line in enumerate(lines):
+                  if re.search(r'conflit|4.?000|5.?000|clock|synchron|reconfirm|attente|vérification',line,re.I):
+                      wanted.update(range(max(0,i-2),min(len(lines),i+3)))
+              for i in sorted(wanted):
+                  print(str(i+1)+': '+lines[i])
+          PY
+      - name: Inspect dependency audit and generate a reviewed lock candidate
+        run: |
+          npm audit --json > /tmp/eco-audit-before.json || true
+          node --input-type=module <<'JS'
+          import fs from 'node:fs';
+          const a=JSON.parse(fs.readFileSync('/tmp/eco-audit-before.json','utf8'));
+          console.log('AUDIT_BEFORE',JSON.stringify({metadata:a.metadata,vulnerabilities:a.vulnerabilities}));
+          JS
+          npm install --package-lock-only --ignore-scripts --save-dev --save-exact @playwright/test@1.56.1 ws@8.21.0
+          npm audit --json > /tmp/eco-audit-after.json || true
+          node --input-type=module <<'JS'
+          import fs from 'node:fs';
+          const a=JSON.parse(fs.readFileSync('/tmp/eco-audit-after.json','utf8'));
+          console.log('AUDIT_CANDIDATE',JSON.stringify({metadata:a.metadata,vulnerabilities:a.vulnerabilities}));
+          console.log('REVIEWED_PACKAGE_JSON',JSON.stringify(JSON.parse(fs.readFileSync('package.json','utf8'))));
+          console.log('REVIEWED_PACKAGE_LOCK',JSON.stringify(JSON.parse(fs.readFileSync('package-lock.json','utf8'))));
+          JS
+          git restore --source=HEAD -- package.json package-lock.json
+      - run: npm ci --ignore-scripts
+      - name: Prove the new chronology regressions fail on the previous source
+        run: |
+          git show 5ee23e831ab661cef65c618534692b112458f584:packages/application/src/index.ts > packages/application/src/index.ts
+          npm run build
+          if node --test --test-reporter=tap tests/offline-reconfirmation-clock.test.mjs > /tmp/eco-old-clock-regression.log 2>&1; then
+            cat /tmp/eco-old-clock-regression.log
+            echo "::error::The new regression did not reproduce the old chronology defect"
+            exit 1
+          fi
+          cat /tmp/eco-old-clock-regression.log
+          grep -q "new confirmation must follow the observed canonical version" /tmp/eco-old-clock-regression.log
+          grep -q "offline snapshot is not proof of a new clock anchor" /tmp/eco-old-clock-regression.log
+          grep -q "Missing expected rejection" /tmp/eco-old-clock-regression.log
+          grep -q "# fail 4" /tmp/eco-old-clock-regression.log
+          git restore --source=HEAD -- packages/application/src/index.ts
+      - name: Verify the corrected source with all governed checks
+        run: npm run ci

@@ -65,6 +65,8 @@ jobs:
           set -euo pipefail
           grep -Fq "db_mutation: none" .github/DEPLOY_ECO_SYSTEM_1_5_2_10_ONCE
           grep -Fq "code-only-no-d1-export-no-migration" .github/DEPLOY_ECO_SYSTEM_1_5_2_10_ONCE
+      - name: Dependency security qualification
+        run: npm run audit:dependencies
       - name: TypeScript qualification
         run: npm run typecheck
       - name: Status · gate-typecheck

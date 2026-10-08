@@ -7,6 +7,7 @@ on:
       - 'fix/field-regressions-recovery-20261005'
       - 'fix/eco-q01-q28-staged-recovery-20261006'
       - 'fix/transport-recovery-bounded-20261008'
+      - 'fix/confrontation-clock-recovery-20261008'
   workflow_dispatch:
 
 permissions:

@@ -1,3 +1,38 @@
+## État courant — HOLD et qualification locale préparée, 8 octobre 2026
+
+**La livraison complète n'est pas réalisée.** La production 1.5.2.15 reste non attestée et la dernière production attestée est 1.5.2.14. La reprise transport est qualifiée ; trois régressions d'horloge sont prouvées et corrigées avec 653/653 Node. Le run **37826825035** sur **4022ef50cf956b9986a9b30adfad91ec91aaebd9** échoue encore sur le résultat inter-gestionnaires **4 000 attendu / 5 000 reçu** (Chromium 7/8). Ne pas réduire cet échec à la seule horloge ni le déclarer résolu.
+
+Le fondateur confirme l'épuisement des **2 000 minutes gratuites GitHub Actions du mois**. Les derniers jobs n'ont aucun runner ni étape ; le terminal Codex échoue avant création de processus. Un lanceur privé autonome **scripts/qualify-eco-locally.mjs** et son mode d'emploi **docs/recovery/ECO_FREE_QUALIFICATION_2026-10-08.md** sont préparés. Leur exécution réelle demeure à faire.
+
+Branche active **fix/confrontation-clock-recovery-20261008**, PR **#72** encore brouillon. Verrou Playwright 1.56.1 / ws 8.21.0 généré depuis npm, audit candidat **0 alerte connue** ; source intégré à qualifier. Protection de contexte groupe/compte/tenant ajoutée après l'attente d'horloge ; comparaison du vrai corps de méthode en V8 réussie, régression Node complète ajoutée. Le scénario navigateur renforce son préalable canonique et conserve un diagnostic expurgé de tickets en cas d'échec. **654 Node, Chromium 8, WebKit 6** attendus, aucun PASS final inventé.
+
+**Marqueur de livraison HOLD ; FIELD_ACCEPTED=NOT_ACCEPTED ; realMoneyEnabled=false ; aucune mutation de données.** Les blocs suivants sont l'historique des checkpoints et doivent être lus à cette lumière.
+
+---
+
+
+### Horloge prouvée et dépendances corrigées — qualification finale à exécuter
+
+Run **37826518664 SUCCESS**, SHA **0415c9464699238568321afba605c98c00c401f8** : compilation de l'ancien source Application réussie, trois régressions échouent pour les assertions attendues, puis **653/653** tests et gates passent sur le correctif. Le contexte de l'artefact original montre 4 000 local et un conflit ouvert ; il ne fournit pas directement un ticket d'horloge à attribuer à cet échec précis.
+
+Run forensique **37826825119 SUCCESS**, job **113481702657** : **npm audit avant = 3 high**, puis verrou généré depuis npm **Playwright 1.56.1 / ws 8.21.0 = 0 vulnérabilité signalée**. Les versions et intégrités du registre sont adoptées, TypeScript 5.9.3 et fsevents 2.3.2 conservés. La CI et la livraison ajoutent **npm audit --audit-level=high**. Avis primaires : https://github.com/advisories/GHSA-7mvr-c777-76hp ; https://github.com/websockets/ws/security/advisories/GHSA-96hv-2xvq-fx4p ; https://github.com/websockets/ws/security/advisories/GHSA-58qx-3vcg-4xpx . Ces dépendances servent aux tests et au serveur Node local ; le Worker emploie son WebSocket natif.
+
+Les qualifications Chromium/WebKit et le SHA intégrant les dépendances doivent encore passer. Le marqueur de publication reste HOLD. Aucun résultat ci-dessus n'est une recette physique ou une preuve de production 1.5.2.15.
+
+---
+
+## Publication HOLD — confrontation et horloge, 8 octobre 2026
+
+**État courant : publication suspendue, qualification fonctionnelle rouverte.** Le run **37822250394** du SHA **fe2b9b2649992bf4eceda8e10b3d1e4dd76f5d91** a conservé **5 000** chez le second gestionnaire après la reconfirmation explicite de **4 000**. L'artefact **11570211321** garde le contexte et les captures de cet échec. Les réussites antérieures restent des preuves historiques ; elles ne suffisent pas à clore ce défaut intermittent.
+
+La livraison **37822250587** a été **CANCELLED** avant publication. Le marqueur de livraison au SHA **5ee23e831ab661cef65c618534692b112458f584** est **HOLD-failed-confrontation-qualification** ; le run **37823081345** refuse ce marqueur avant mutation. **1.5.2.14 reste la dernière production attestée.**
+
+Analyse en cours sur **fix/confrontation-clock-recovery-20261008** : une reconfirmation constitue une nouvelle décision après observation du canonique. Elle doit obtenir une ancre d'horloge fraîche ; un ancien GET mis en cache ne peut pas être associé à un nouveau performance.now(). Trois tests comportementaux ciblent une ancre encore valide mais ancienne, un réchauffement en cours et une horloge serveur inaccessible. Le workflow forensique vérifie leur échec sur le source précédent, puis leur réussite sur le source corrigé. Cette causalité doit encore être prouvée par les exécutions.
+
+La reprise de publication exige les nouveaux tests et toutes les suites gouvernées et navigateur sur le même SHA, puis une vérification exacte de la production. **FIELD_ACCEPTED=NOT_ACCEPTED ; realMoneyEnabled=false ; aucune migration ni réécriture D1.**
+
+---
+
 ## Qualification validée — 1.5.2.15, avant livraison
 
 Source qualifiée : `3f7ea03457bbd936a87e299270843043e2826a24`, PR **#71 fusionnée** dans la branche de livraison par `754a8cef153b7ebe92b993de3b68f7a2c42d9f2d`. Runs **37820287689 SUCCESS** et **37820287701 SUCCESS** : **650/650 Node**, **Chromium 8/8**, **WebKit 6/6**, dont le scénario API inaccessible/navigator online et convergence de la même intention entre deux gestionnaires.

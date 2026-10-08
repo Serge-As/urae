@@ -1197,8 +1197,8 @@
     },
     {
       "id": "candidate.eco.1.5.2.15.bounded.transport.recovery",
-      "status": "VERIFIED_REMOTE",
-      "scope": "application/outbox/transport-recovery/pwa/qualification",
+      "status": "IN_PROGRESS",
+      "scope": "application/outbox/transport-recovery/pwa/qualification/signed-clock/context-guard/dependency-security",
       "observedOn": "2026-10-08",
       "evidence": [
         "repo:docs/audits/ECO_SYSTEM_AUDIT_2026-10-08.md",
@@ -1210,10 +1210,50 @@
         "github:run:37820287689 SUCCESS; 650/650 Node Chromium 8/8 WebKit 6/6",
         "github:run:37820287701 SUCCESS; governed CI and same browser suites",
         "github:artifact:11567969551 exact source archive; SHA256SUMS verified; tar readable",
-        "github:PR:71 merged; merge commit 754a8cef153b7ebe92b993de3b68f7a2c42d9f2d"
+        "github:PR:71 merged; merge commit 754a8cef153b7ebe92b993de3b68f7a2c42d9f2d",
+        "github:run:37822250394 FAILURE; divergent offline choice expected 4000 received 5000",
+        "github:artifact:11570211321 preserved browser failure",
+        "github:run:37822250587 CANCELLED before publication",
+        "github:commit:5ee23e831ab661cef65c618534692b112458f584 publication HOLD",
+        "github:run:37826518664 SUCCESS; old Application 3/3 regressions fail, fixed 653/653 PASS",
+        "github:run:37826825119 SUCCESS; dependency audit candidate 3 high -> 0 known",
+        "github:run:37826825035 FAILURE; Node 653 PASS, Chromium 7/8 expected 4000 received 5000",
+        "github:artifact:11571014847 preserved second browser failure",
+        "user-confirmed:GitHub monthly free 2000 minutes exhausted",
+        "extracted-real-resolver:old crosses group and cancels original; fixed CONFRONTATION_DECISION_STALE retains original; narrow simulation only"
       ],
-      "note": "Source qualified remotely and PR merged; production delivery not yet attested in this checkpoint. Duplicate push browser job is still installing browsers and is not counted as a third successful run.",
-      "next": "Trigger existing code-only delivery, requalify deployment SHA before Worker mutation and record exact health/Worker evidence. Physical acceptance remains NOT_ACCEPTED."
+      "note": "Transport qualified, signed-clock regressions proved; complete browser convergence remains unresolved. New dependency lock, context guard and strengthened browser diagnostics require final 654/8/6. Publication HOLD and source PR72 draft.",
+      "next": "Run scripts/qualify-eco-locally.mjs in a functional Node 24 environment; inspect failure JSON if any. Restore a runner for exact delivery qualification before merge/publication. Record health/Worker evidence only after successful delivery."
+    },
+    {
+      "id": "issue.eco.offline.reconfirmation.clock.20261008",
+      "status": "IN_PROGRESS",
+      "scope": "application/offline-confrontation/signed-clock",
+      "observedOn": "2026-10-08",
+      "evidence": [
+        "github:run:37822250394 FAILURE; expected 4000 received 5000",
+        "repo:tests/offline-reconfirmation-clock.test.mjs",
+        "repo:workers/api/src/authenticated.ts",
+        "github:run:37826518664 old/fixed clock proof SUCCESS",
+        "github:run:37826825035 remaining browser convergence FAILURE"
+      ],
+      "note": "Three signed-clock bugs proved by old/fixed source execution; their correction alone does not close the 4000/5000 full browser failure. Preserve that separate convergence issue until canonical/outbox/display diagnostics identify it.",
+      "next": "Inspect the preserved browser context and prove regressions fail on prior source, pass on corrected source; require full browser qualification before publication."
+    },
+    {
+      "id": "issue.eco.qualification.runtime.20261008",
+      "status": "IN_PROGRESS",
+      "scope": "qualification/github-actions/local-runtime",
+      "observedOn": "2026-10-08",
+      "evidence": [
+        "user-confirmed:2000 included monthly Actions minutes exhausted",
+        "github:run:37827591520 jobs runner_id=0 steps=[]",
+        "exec-startup:helper_unknown_error setup refresh had errors",
+        "repo:scripts/qualify-eco-locally.mjs",
+        "repo:docs/recovery/ECO_FREE_QUALIFICATION_2026-10-08.md"
+      ],
+      "note": "Final qualification cannot run in the current tools. Prepared local runner is unexecuted, not evidence of passing tests or deployment.",
+      "next": "Use a functional local terminal and Node 24, or restore a compatible runner; keep delivery HOLD until exact-source checks succeed."
     }
   ]
 }

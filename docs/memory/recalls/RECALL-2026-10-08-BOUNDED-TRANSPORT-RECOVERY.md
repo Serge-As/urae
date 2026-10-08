@@ -22,3 +22,35 @@ Le job gouverné du run **37820281608** est SUCCESS ; archive source **115679695
 
 ---
 
+
+## Publication suspendue — chronologie d'une reconfirmation
+
+Run `37822250394`, source `fe2b9b2649992bf4eceda8e10b3d1e4dd76f5d91` : Chromium 7/8, ancienne confrontation attend 4000 mais reçoit 5000 après choix explicite. Malgré les qualifications précédentes, ce résultat exige investigation. Marqueur de livraison HOLD commit `5ee23e831ab661cef65c618534692b112458f584` ; ancienne livraison `37822250587` annulée avant publication, nouvelle livraison HOLD refusée au garde du marqueur.
+
+Le code révèle une faiblesse de l'ancrage : warmFinancialClock peut conserver un ancrage antérieur, ou recevoir un vieux GET depuis la copie offline et le raccrocher au performance.now actuel. La normalisation serveur reste anchorAtMs + elapsed ; une nouvelle validation humaine peut alors être datée avant la valeur canonique déjà observée, et être SUPERSEDED. Cette explication doit être confrontée à l'artefact d'échec et aux nouveaux tests ; elle n'est pas présentée comme une lecture du journal qui n'a pas encore eu lieu.
+
+Correction ciblée : la reconfirmation explicite demande un nouvel ancrage après les warmups antérieurs ; l'endpoint d'ancrage horaire est exclu des réponses snapshot offline. Aucun horodatage original modifié, aucun comparateur/Ledger remplacé. Une panne d'ancrage conserve une nouvelle intention non confirmée, sans faux signe de fraîcheur. Tests : chronologie après version canonique, warmup antérieur concurrent, copie cache ancienne sous panne. Le workflow forensique conserve la preuve de tests FAIL sur l'ancienne source puis requalifie la source corrigée.
+
+### Preuve initiale de la régression horloge
+
+Le job forensique 113479969251 du run 37826312843 confirme trois échecs d'assertion sur le source précédent (0/3), après compilation réussie. Les deux premiers montrent une nouvelle décision normalisée avant le canonique déjà observé ; le troisième conserve old-clock. Son enveloppe doit demander explicitement le reporter TAP avant de compter '# fail 3'. La troisième fixture est renforcée en retirant l'ancre en mémoire pour isoler le vrai replay du GET hors ligne ; la séquence de remplacement suit aussi celle de l'intention originale. Aucune publication autorisée par ce résultat partiel.
+
+### Audit de dépendances complémentaire
+
+Les installations CI signalent trois dépendances de gravité haute. Les avis primaires GHSA-7mvr-c777-76hp (Playwright, TLS des installateurs) et GHSA-96hv-2xvq-fx4p / GHSA-58qx-3vcg-4xpx (ws, limites mémoire et close) justifient l'inspection du verrou npm. Le job forensique lit npm audit, génère un verrou candidat Playwright 1.56.1 / ws 8.21.0 depuis le registre, publie les métadonnées pour revue, puis restaure le verrou du SHA avant les tests. Cette génération ne modifie aucun dépôt ni déploiement ; son adoption exige revue et qualifications.
+
+### Horloge prouvée et dépendances corrigées — qualification finale à exécuter
+
+Run **37826518664 SUCCESS**, SHA **0415c9464699238568321afba605c98c00c401f8** : compilation de l'ancien source Application réussie, trois régressions échouent pour les assertions attendues, puis **653/653** tests et gates passent sur le correctif. Le contexte de l'artefact original montre 4 000 local et un conflit ouvert ; il ne fournit pas directement un ticket d'horloge à attribuer à cet échec précis.
+
+Run forensique **37826825119 SUCCESS**, job **113481702657** : **npm audit avant = 3 high**, puis verrou généré depuis npm **Playwright 1.56.1 / ws 8.21.0 = 0 vulnérabilité signalée**. Les versions et intégrités du registre sont adoptées, TypeScript 5.9.3 et fsevents 2.3.2 conservés. La CI et la livraison ajoutent **npm audit --audit-level=high**. Avis primaires : https://github.com/advisories/GHSA-7mvr-c777-76hp ; https://github.com/websockets/ws/security/advisories/GHSA-96hv-2xvq-fx4p ; https://github.com/websockets/ws/security/advisories/GHSA-58qx-3vcg-4xpx . Ces dépendances servent aux tests et au serveur Node local ; le Worker emploie son WebSocket natif.
+
+Les qualifications Chromium/WebKit et le SHA intégrant les dépendances doivent encore passer. Le marqueur de publication reste HOLD. Aucun résultat ci-dessus n'est une recette physique ou une preuve de production 1.5.2.15.
+
+### Protection du contexte pendant l'attente réseau
+
+La reconfirmation conserve son groupe, compte et tenant avant la demande d'horloge et vérifie ce contexte après l'attente. Un changement de groupe pendant cette demande ne doit pas créer une commande dans le nouveau groupe ni annuler l'ancienne. Une quatrième régression utilise une réponse d'horloge différée et un vrai selectGroup pour reproduire cette fenêtre. L'enveloppe exige désormais quatre échecs ciblés sur l'ancien source et **654** tests sur le correctif. Qualification encore requise ; publication HOLD.
+
+### Checkpoint de reprise après épuisement du quota
+
+Le fondateur confirme 2 000 minutes gratuites Actions épuisées. Les runs 37827279968 et 37827591520 n'ont aucun runner ni étape. Source 4022ef5 : 653 Node PASS, mais Chromium 7/8, résultat 4 000/5 000 encore en échec (artefact 11571014847). Ne pas attribuer ce résultat à l'horloge seule. La fixture navigateur attend maintenant le vrai canonique 5 000 et les deux montants du dialogue ; elle capture canonique/Outbox/affichages sans tickets si le résultat 4 000 échoue encore. Garde de contexte confirmée par exécution des vrais corps de résolution en V8 : ancien annule/crée dans autre groupe, nouveau rejette/conserve. Ce test étroit ne remplace pas la régression Node réelle ajoutée. Lanceur privé Node multi-OS et mode d'emploi ajoutés, revus statiquement mais non exécutés. 654/8/6 finaux encore requis. HOLD maintenu, pas de fusion PR72 ni de publication, pas de dépense.

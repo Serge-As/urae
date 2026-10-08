@@ -61,7 +61,7 @@ test('distinct managers see typing and validated amounts, and an idle Live conne
   }finally{await secondContext.close();}
 });
 
-test('offline divergent edits survive reload, confront the exact cell, and converge after keeping or explicitly reconfirming a value',async({page,context,browser})=>{
+test('offline divergent edits survive reload, confront the exact cell, and converge after keeping or explicitly reconfirming a value',async({page,context,browser},testInfo)=>{
   test.setTimeout(120000);const {ids,second,secondContext}=await setup(page,browser);
   try{
     await enter(page,ids,1000);await expect.poll(()=>amount(cell(second,ids)),{timeout:5000}).toBe(1000);
@@ -81,10 +81,38 @@ test('offline divergent edits survive reload, confront the exact cell, and conve
     // The server-confirmed remote push must also survive a cold offline refresh.
     await context.setOffline(true);await page.reload();await expect(cell(page,ids)).toBeVisible();await expect.poll(()=>amount(cell(page,ids))).toBe(3000);
     await enter(page,ids,4000);await enter(second,ids,5000);await expect.poll(()=>amount(cell(second,ids))).toBe(5000);
+    // A local amount is durable before its server ACK. Observe the canonical
+    // 5,000 before asking the other device to make a new choice against it.
+    await expect.poll(async()=>{
+      const snapshot=await api(second,'/api/v1/groups/'+ids.groupId+'/financial-cells/snapshot','GET',undefined,ids.groupId);
+      return snapshot.cells.find(x=>x.meetingId===ids.meetingId&&x.membershipId===ids.membershipId&&x.rubricId===ids.rubricId)?.amount;
+    },{timeout:8000}).toBe(5000);
     await context.setOffline(false);await expect(dialog).toBeVisible({timeout:10000});await dialog.press('Escape');await expect(dialog).toHaveCount(0);
-    await page.locator('[data-financial-confrontation]').click();await expect(dialog).toBeVisible();await dialog.getByRole('button',{name:'Appliquer cet appareil',exact:true}).click();await dialog.getByRole('button',{name:'Valider et synchroniser',exact:true}).click();
-    await expect.poll(()=>amount(cell(second,ids)),{timeout:8000}).toBe(4000);await expect.poll(()=>amount(cell(page,ids))).toBe(4000);
-    await page.reload();await expect.poll(()=>amount(cell(page,ids))).toBe(4000);
+    await page.locator('[data-financial-confrontation]').click();await expect(dialog).toBeVisible();await expect(dialog).toContainText('4 000');await expect(dialog).toContainText('5 000');await dialog.getByRole('button',{name:'Appliquer cet appareil',exact:true}).click();await dialog.getByRole('button',{name:'Valider et synchroniser',exact:true}).click();
+    try{
+      await expect.poll(()=>amount(cell(second,ids)),{timeout:8000}).toBe(4000);await expect.poll(()=>amount(cell(page,ids))).toBe(4000);
+      await page.reload();await expect.poll(()=>amount(cell(page,ids))).toBe(4000);
+    }catch(error){
+      // Distinguish canonical ordering, Outbox refusal and a stale Live display.
+      // Only synthetic test data and selected metadata are attached, never tickets.
+      const states=await Promise.allSettled([
+        api(second,'/api/v1/groups/'+ids.groupId+'/financial-cells/snapshot','GET',undefined,ids.groupId),
+        storedCellIntent(page,ids),storedCellIntent(second,ids),amount(cell(page,ids)),amount(cell(second,ids))
+      ]);
+      const safeIntent=row=>({id:row.id,status:row.status,attempts:row.attempts,createdAt:row.createdAt,updatedAt:row.updatedAt,lastError:row.lastError,
+        lastResult:{status:row.lastResult?.status,accepted:row.lastResult?.accepted,canonicalAmount:row.lastResult?.canonicalAmount,cellVersion:row.lastResult?.cellVersion,error:row.lastResult?.error},
+        payload:{groupId:row.payload?.groupId,targetAmount:row.payload?.targetAmount,baselineValue:row.payload?.baselineValue,baselineVersion:row.payload?.baselineVersion,
+          deviceSequence:row.payload?.deviceSequence,recordedOffline:row.payload?.recordedOffline,recordedAtClient:row.payload?.recordedAtClient,
+          hasClockAnchor:Boolean(row.payload?.clockAnchorId),elapsedSinceAnchorMs:row.payload?.elapsedSinceAnchorMs}});
+      const read=i=>states[i].status==='fulfilled'?states[i].value:{error:String(states[i].reason)};
+      const snapshot=read(0),local=read(1),remote=read(2);
+      await testInfo.attach('offline-reconfirmation-state',{
+        body:Buffer.from(JSON.stringify({canonicalCell:snapshot.cells?.find(x=>x.meetingId===ids.meetingId&&x.membershipId===ids.membershipId&&x.rubricId===ids.rubricId)??snapshot,
+          localOutbox:Array.isArray(local)?local.map(safeIntent):local,remoteOutbox:Array.isArray(remote)?remote.map(safeIntent):remote,
+          localDisplay:read(3),remoteDisplay:read(4)},null,2)),contentType:'application/json'
+      });
+      throw error;
+    }
   }finally{await secondContext.close();}
 });
 

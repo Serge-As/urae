@@ -1,3 +1,5 @@
+# CURRENT 2026-10-08: publication HOLD; full 4000/5000 convergence still unqualified; Actions quota exhausted; prepared private local qualification runner. See recovery handoff.
+# 2026-10-08 CURRENT: 1.5.2.15 publication HOLD; offline reconfirmation clock defect under qualification. Current deployed proof remains 1.5.2.14. See CURRENT_TRUTH.
 registry_version: 1
 project_version: 1.5.2.15-bounded-recovery
 source_of_truth: docs/constitution + verified_code
