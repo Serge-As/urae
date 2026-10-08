@@ -1,15 +1,9 @@
-Eco-System 1.5.2.15 bounded transport recovery deployment marker
+Eco-System 1.5.2.15 delivery HOLD
 release: 1.5.2.15-bounded-recovery
 date: 2026-10-08
 db_mutation: none
-mode: code-only-no-d1-export-no-migration
-reason: stop recursive idle transport retries during API outage, retain durable financial intentions and idempotency, preserve business conflicts and quota protection
-qualified_source: 3f7ea03457bbd936a87e299270843043e2826a24
-qualification_runs: 37820287689 SUCCESS; 37820287701 SUCCESS; source-archive 37820281608 governed-ci SUCCESS
-source_archive: 11567969551
-source_archive_digest: sha256:53a664ea2da558f188aae304fe8da06d2bea52b8bf286955d6a88bfb556e79bc
-qualification_rule: full governed checks plus Node and Chromium/WebKit on exact deployment SHA before Worker mutation
-production_rule: deploy workflow must prove /health commitSha, version, buildId, pwaCache and capability catalog
-field_acceptance: NOT_ACCEPTED until physical browsers/devices and real groups verify the release
-trigger_nonce: 2026-10-08-bounded-transport-recovery
-upgrade_guard: preserve-ready-v15214-v15213-installed-v15211-legacy-v15210
+mode: HOLD-failed-confrontation-qualification
+reason: qualification 37822250394 found expected 4000 but received 5000 after explicit offline reconfirmation; investigate before publishing
+source_under_review: fe2b9b2649992bf4eceda8e10b3d1e4dd76f5d91
+field_acceptance: NOT_ACCEPTED
+trigger_nonce: 2026-10-08-hold-confrontation-evidence
