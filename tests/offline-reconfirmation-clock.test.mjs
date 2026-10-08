@@ -6,7 +6,7 @@ async function fixture(run){
   const before={fetch:globalThis.fetch,indexedDB:globalThis.indexedDB,onLine:Object.getOwnPropertyDescriptor(navigator,'onLine')};
   globalThis.indexedDB={};Object.defineProperty(navigator,'onLine',{value:false,configurable:true});
   const app=new ConnectedApplication({actorId:'manager',tenantId:'tenant'});app.selectGroup('group');
-  let sequence=0;const cached=new Map(),anchors=new Map(),calls=[];
+  let sequence=1;const cached=new Map(),anchors=new Map(),calls=[];
   app.readSnapshots.get=async id=>cached.get(id);
   app.readSnapshots.save=async row=>{cached.set(row.id,row);return row;};
   app.outboxStorage.save=async()=>{};
@@ -49,6 +49,7 @@ test('a warmup begun before the decision cannot lend its older anchor to the rec
 }));
 
 test('an unavailable clock endpoint cannot turn a cached old server timestamp into a fresh signed clock',()=>fixture(async({app,old,cached,decide})=>{
+  app.financialClockAnchor=undefined;
   const path='/api/v1/groups/group/financial-clock-anchor?deviceId='+encodeURIComponent(app.localDeviceId());
   cached.set(app.offlineReadKey(path),{body:{token:'old-clock',anchorAtMs:Date.now()-60000,expiresAt:new Date(Date.now()+600000).toISOString(),deviceId:app.localDeviceId()},updatedAt:'2026-10-08T12:00:00Z'});
   globalThis.fetch=async()=>{throw Error('Synthetic clock transport outage');};

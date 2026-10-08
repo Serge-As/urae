@@ -46,7 +46,7 @@ jobs:
         run: |
           git show 5ee23e831ab661cef65c618534692b112458f584:packages/application/src/index.ts > packages/application/src/index.ts
           npm run build
-          if node --test tests/offline-reconfirmation-clock.test.mjs > /tmp/eco-old-clock-regression.log 2>&1; then
+          if node --test --test-reporter=tap tests/offline-reconfirmation-clock.test.mjs > /tmp/eco-old-clock-regression.log 2>&1; then
             cat /tmp/eco-old-clock-regression.log
             echo "::error::The new regression did not reproduce the old chronology defect"
             exit 1
