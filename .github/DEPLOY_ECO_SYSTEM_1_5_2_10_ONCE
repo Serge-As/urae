@@ -12,3 +12,5 @@ trigger_nonce: 2026-10-08-sovereign-convergence-codex
 
 upgrade_guard: preserve-actually-installed-v15211-before-v15214
 upgrade_nonce: 2026-10-08-verified-public-predecessor
+qualification_extension: real-service-worker-activation-preserves-public-predecessor
+qualification_nonce: 2026-10-08-installed-predecessor-regression

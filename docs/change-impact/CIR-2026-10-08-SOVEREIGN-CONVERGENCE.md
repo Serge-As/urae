@@ -34,3 +34,7 @@ Les anciennes assertions de release sont reliées au contrat courant. Les ancien
 ## Dernière vérification sur téléphone
 
 La capture du véritable tableau financier à 390 px révélait que « Total membre », figé à droite, masquait une partie de la saisie. Sur les écrans de 640 px ou moins, cette colonne et les colonnes secondaires du tableau des quatre critères défilent désormais normalement ; la référence du membre reste fixe. Les montants, totaux, tableaux et parcours restent identiques. Le scénario navigateur effectue maintenant une vraie saisie/validation sur téléphone et vérifie sa réception par l'autre gestionnaire, au lieu de vérifier seulement la visibilité du bouton.
+
+## Cache réellement installé — garde-fou de livraison
+
+Le /health public a révélé une production 1.5.2.11, malgré la lignée source précédente 1.5.2.13. L’activation du SW conserve donc également le cache v15211 réellement présent chez les utilisateurs. Un nouveau test exécute le véritable handler d’activation et vérifie que le code de l’ancien shell reste lisible dans ce cache. La qualification du nouvel SHA est obligatoire ; aucune recette physique n’est déduite de ce test.
