@@ -31,8 +31,6 @@ L'adaptateur WebSocket de développement réutilise le GroupLiveHub de productio
 
 Les anciennes assertions de release sont reliées au contrat courant. Les anciennes attentes de blocage après quatre reconnexions ou d'ignorance du même compte sont remplacées par les invariants actuels, étayés par des tests API et de vrais navigateurs. La recette physique Android 6/anciens navigateurs/2G reste à effectuer ; elle n'est jamais déduite d'un émulateur.
 
-## Qualification vérifiée
+## Dernière vérification sur téléphone
 
-645/645 tests locaux gouvernés et 8/8 scénarios Chromium, y compris tous les onglets après le récapitulatif, le démarrage offline, les décisions Conserver/Appliquer, la reconfirmation après perte de l'horloge monotone et le maintien de l'alerte face à un push tardif. CI distante sur b0e93abf7668fe885845761db2ff370ae2d2e53c : runs 37762491737 et 37762491663 SUCCESS ; Chromium 7/7, WebKit 6/6. Le HEAD final documentaire/test doit lui aussi repasser la CI avant livraison.
-
-L'horloge signée est préparée une fois sur événement de connexion authentifiée pour les saisies futures. Les intentions originales restent immuables ; la reconfirmation explicite attend sa nouvelle référence d'horloge. Les projections optimistes sans intention en attente sont retirées à l'hydratation afin qu'une version canonique plus récente reste dominante. Aucun heartbeat ni polling D1 au repos n'est introduit.
+La capture du véritable tableau financier à 390 px révélait que « Total membre », figé à droite, masquait une partie de la saisie. Sur les écrans de 640 px ou moins, cette colonne et les colonnes secondaires du tableau des quatre critères défilent désormais normalement ; la référence du membre reste fixe. Les montants, totaux, tableaux et parcours restent identiques. Le scénario navigateur effectue maintenant une vraie saisie/validation sur téléphone et vérifie sa réception par l'autre gestionnaire, au lieu de vérifier seulement la visibilité du bouton.

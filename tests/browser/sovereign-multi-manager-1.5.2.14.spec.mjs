@@ -44,6 +44,11 @@ test('distinct managers see typing and validated amounts, and an idle Live conne
     await second.waitForTimeout(1200);expect(forbidden).toBe(0);
     await page.setViewportSize({width:390,height:820});await expect(cell(page,ids).locator('.cell-validate')).toBeVisible();
     await cell(page,ids).scrollIntoViewIfNeeded();
+    // Visibility alone did not catch a sticky total covering the editable field.
+    // A real touch-width edit must be actionable and reach the second manager.
+    await cell(page,ids).locator('.cell-target-input').click();
+    await enter(page,ids,2002);
+    await expect.poll(()=>amount(cell(second,ids)),{timeout:5000}).toBe(2002);
     await page.screenshot({path:'test-results/convergence-mobile.png',fullPage:false});
     await page.locator('button[data-view="sessions"]').first().click();
     await page.locator('#sessionsMeetingSelect').selectOption('__cumulative__');

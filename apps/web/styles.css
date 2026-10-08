@@ -1200,3 +1200,22 @@ body.ultra-simple .canonical-financial-matrix .cell-validate{min-height:48px;hei
 @media(prefers-reduced-motion:reduce){
   .remote-financial-change,.is-critical-conflict{animation:none!important;outline:4px solid #b32339}
 }
+
+/* On narrow phones, pinned totals and several context columns can cover the
+   editable amount. Keep the member reference pinned and let totals/history
+   remain accessible through the existing horizontal table scroll. */
+@media(max-width:640px){
+  .canonical-financial-matrix thead th:last-child,
+  .canonical-financial-matrix td.table-row-total,
+  .canonical-financial-matrix td.table-grand-total{
+    position:static!important;right:auto!important;box-shadow:none
+  }
+  .loan-four-criteria-table thead th:nth-child(2),
+  .loan-four-criteria-table th.loan-name-key,
+  .loan-four-criteria-table thead th:nth-child(3),
+  .loan-four-criteria-table th.loan-criterion-key,
+  .loan-four-criteria-table td:last-child,
+  .loan-four-criteria-table thead th:last-child{
+    position:static!important;left:auto!important;right:auto!important;box-shadow:none
+  }
+}
