@@ -9,3 +9,6 @@ qualification_rule: full governed CI + Chromium + WebKit on exact deployment SHA
 production_rule: deploy workflow must prove /health commitSha, version, buildId, pwaCache and capability catalog
 field_acceptance: NOT_ACCEPTED until physical browsers/devices and real groups verify the release
 trigger_nonce: 2026-10-08-sovereign-convergence-codex
+
+upgrade_guard: preserve-actually-installed-v15211-before-v15214
+upgrade_nonce: 2026-10-08-verified-public-predecessor

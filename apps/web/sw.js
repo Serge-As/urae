@@ -2,6 +2,9 @@
 const CACHE = 'eco-system-v15214-sovereign-convergence-20261008';
 const PREVIOUS_CACHE = 'eco-system-v15213-live-repayment-ui-20261007';
 const LEGACY_RECOVERY_CACHE = 'eco-system-v15210-offline-conflicts-loans-20261003';
+// Public /health before this delivery still served v15211. Preserve that real
+// installed predecessor as well as the prior source line and legacy recovery.
+const INSTALLED_RECOVERY_CACHE = 'eco-system-v15211-field-recovery-20261005';
 const RELEASE_READY = '/__eco_release_ready__';
 
 // Authentication, navigation and canonical application owners must be complete
@@ -118,7 +121,7 @@ self.addEventListener('activate', event => {
     // Keep one known previous coherent release for operator rollback/recovery.
     // Never delete the immediately previous cache during the same activation.
     for (const name of names) {
-      if (name.startsWith('eco-system-') && name !== CACHE && name !== PREVIOUS_CACHE && name !== LEGACY_RECOVERY_CACHE) {
+      if (name.startsWith('eco-system-') && name !== CACHE && name !== PREVIOUS_CACHE && name !== LEGACY_RECOVERY_CACHE && name !== INSTALLED_RECOVERY_CACHE) {
         try { await caches.delete(name); } catch (_) {}
       }
     }
