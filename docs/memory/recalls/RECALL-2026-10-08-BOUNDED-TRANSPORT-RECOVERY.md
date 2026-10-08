@@ -22,3 +22,8 @@ Le job gouverné du run **37820281608** est SUCCESS ; archive source **115679695
 
 ---
 
+
+
+## Continuité HOLD après quota mensuel épuisé
+
+Source de travail la plus récente : **e083a6a38b1ab76e6827e512bb7e900604911a4c**, branche **fix/confrontation-clock-recovery-20261008**, PR **#72 brouillon**. Trois défauts d'horloge prouvés, 653 Node PASS ; Chromium 7/8 encore en échec 4 000/5 000 sur 4022ef5. Dernier source 654/8/6 non exécuté. Le fondateur confirme quota Actions 2 000 minutes épuisé ; terminal Codex indisponible. Lanceur privé Node et dossier de reprise préparés sur la branche de travail. Lire **docs/memory/checkpoints/CHECKPOINT-2026-10-08-HOLD-LOCAL-QUALIFICATION.md**. Cette mise à jour de mémoire ne rétablit aucune publication, ne change aucun code d'application et ne mutate aucune donnée.

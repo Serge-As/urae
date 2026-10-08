@@ -3,7 +3,11 @@ release: 1.5.2.15-bounded-recovery
 date: 2026-10-08
 db_mutation: none
 mode: HOLD-failed-confrontation-qualification
-reason: qualification 37822250394 found expected 4000 but received 5000 after explicit offline reconfirmation; investigate before publishing
-source_under_review: fe2b9b2649992bf4eceda8e10b3d1e4dd76f5d91
+reason: offline reconfirmation convergence remains unqualified (runs 37822250394 and 37826825035); Actions included monthly quota exhausted; keep publication HOLD
+source_under_review: e083a6a38b1ab76e6827e512bb7e900604911a4c
 field_acceptance: NOT_ACCEPTED
 trigger_nonce: 2026-10-08-hold-confrontation-evidence
+work_branch: fix/confrontation-clock-recovery-20261008
+work_pr: 72 draft
+latest_handoff: docs/memory/checkpoints/CHECKPOINT-2026-10-08-HOLD-LOCAL-QUALIFICATION.md
+required_final_qualification: 654 Node; Chromium 8; WebKit 6; exact same source before Worker mutation
