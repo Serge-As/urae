@@ -951,24 +951,16 @@ const rememberTargetsConfirmedBySync=before=>{
 const scheduleFinancialOutboxRecovery=detail=>{
   const key=financialCellKey(String(detail.membershipId??''),String(detail.rubricId??''),String(detail.meetingId??''));
   if(financialRetryTimers.has(key)||navigator.onLine===false)return;
-  let attempt=0;
-  // Free-plan recovery is still event-driven: a user validation may trigger a
-  // few retries of the already-durable Outbox item, but there is no idle poll.
-  // This closes the old gap where navigator.onLine stayed true after one failed
-  // request and the cell then waited forever for a separate network event.
-  const maxAttempts=FREE_CONSERVATION_MODE?3:8;
-  const delays=FREE_CONSERVATION_MODE?[150,550,1300]:[350,900,1700,2600,3400,4200,4200,4200];
+  // One user action may cause one bounded recovery attempt only. If it still
+  // cannot reach the server, the durable Outbox waits for a real connectivity
+  // event (online, live-connected, focus/pageshow, manual refresh). No timer loop.
   const run=async()=>{
-    if(navigator.onLine===false){financialRetryTimers.delete(key);return;}
-    attempt++;
+    financialRetryTimers.delete(key);
+    if(navigator.onLine===false)return;
     try{
       const beforeSync=pendingTargetSnapshot();
       await app.syncOutbox();renderOutbox();
       rememberTargetsConfirmedBySync(beforeSync);
-      // Reading canonical Ledger state after every retry would recreate the old
-      // D1-expensive loop. In conservation mode, determine completion from the
-      // durable Outbox itself; the server WebSocket pushes the committed value
-      // to other accounts.
       financialPendingTargets=new Map((app.pendingFinancialCellTargets?.()??[]).map(x=>[financialCellKey(x.membershipId,x.rubricId,x.meetingId),x]));
       financialPendingSheetEntries=app.pendingFinancialSheetEntries?.()??[];
       if(!cellHasPendingLocal(detail)){
@@ -976,18 +968,15 @@ const scheduleFinancialOutboxRecovery=detail=>{
         const signed=Number.isFinite(Number(detail.amount))?Number(detail.amount):exactCellAmount(String(detail.membershipId),String(detail.rubricId),String(detail.meetingId));
         rememberConfirmedCell(key,{...detail,amount:signed,cellVersion:exactCellVersion(String(detail.membershipId),String(detail.rubricId),String(detail.meetingId))});
         patchFinancialDomCell({...detail,amount:signed,cellVersion:exactCellVersion(String(detail.membershipId),String(detail.rubricId),String(detail.meetingId)),preservePending:false});
-        setCellSyncedState(detail);financialRetryTimers.delete(key);
+        setCellSyncedState(detail);
         window.dispatchEvent(new CustomEvent('eco:financial-data-changed',{detail:{...detail,amount:signed,soft:true,recovered:true}}));
-        return;
       }
-      if(!FREE_CONSERVATION_MODE)await loadFinancialProjectionState();
     }catch(error){
-      console.info('Targeted financial Outbox retry deferred',error);
+      networkRecoveryNeeded=true;
+      console.info('Targeted financial Outbox retry deferred until a real connectivity event',error);
     }
-    if(attempt>=maxAttempts){financialRetryTimers.delete(key);return;}
-    const timer=setTimeout(run,delays[Math.min(attempt,delays.length-1)]);financialRetryTimers.set(key,timer);
   };
-  const timer=setTimeout(run,delays[0]);financialRetryTimers.set(key,timer);
+  const timer=setTimeout(run,850);financialRetryTimers.set(key,timer);
 };
 
 let financialSnapshotTimer=0,financialSnapshotBusy=false,financialSnapshotPrimed=false,financialSnapshotGroup='';
@@ -2045,8 +2034,14 @@ window.addEventListener('eco:live-signal',event=>{
 });
 let liveLedgerRefreshTimer=0;
 window.addEventListener('eco:financial-live-update',event=>{
-    const e=event instanceof CustomEvent?event.detail:undefined,p=e?.payload??{},sourceActorId=String(p.actorId??e?.actorId??''),fromOtherActor=sourceActorId&&sourceActorId!==String(app.currentActor?.()??'');if(!fromOtherActor)return;
-    if(p.meetingId&&p.membershipId&&p.rubricId)highlightRemoteFinancialCell({...p,actorId:sourceActorId,at:e?.at});
+    const e=event instanceof CustomEvent?event.detail:undefined,p=e?.payload??{},sourceActorId=String(p.actorId??e?.actorId??''),sameActor=Boolean(sourceActorId)&&sourceActorId===String(app.currentActor?.()??'');
+    if(p.meetingId&&p.membershipId&&p.rubricId){
+      if(sameActor)applyRemoteFinancialProjection({...p,actorId:sourceActorId,at:e?.at});
+      else highlightRemoteFinancialCell({...p,actorId:sourceActorId,at:e?.at});
+    }
+    // Another device logged into the same account must converge too, but the
+    // origin account does not need to be warned about its own committed write.
+    if(sameActor)return;
     showFinancialAlert({title:p.meetingClosed?tx('Modification après clôture','Post-close change'):tx('Mise à jour financière en direct','Live financial update'),message:p.actorName?tx(`${p.actorName} a mis à jour une cellule. Elle reste surlignée jusqu’à votre accusé de réception.`,`${p.actorName} updated a cell. It stays highlighted until you acknowledge it.`):tx('Une donnée financière vient d’être mise à jour en direct.','A financial value was just updated live.'),closed:Boolean(p.meetingClosed),correction:true});
     // The pushed durable event already contains the committed cell projection.
     // D1 is queried only in the optional paid fallback mode.
