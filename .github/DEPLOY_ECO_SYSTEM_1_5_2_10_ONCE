@@ -2,12 +2,13 @@ Eco-System 1.5.2.15 delivery HOLD
 release: 1.5.2.15-bounded-recovery
 date: 2026-10-09
 db_mutation: none
-mode: HOLD-failed-confrontation-qualification
-reason: e083 full Node 654 PASS Chromium 7/8 WebKit not executed; d9 targeted Live diagnostic 1/1 PASS; expense observer real before 3 expected fails / after 3 PASS; governed Node 657 PASS; Chromium running; WebKit not yet executed; keep publication HOLD
-source_under_review: 9bad4832f2b53c3fd89c3765b0e24a5318167d7d
+mode: HOLD-incomplete-compatible-WebKit-qualification
+reason: actual 9bad483 governed Node 657 and Chromium 8 PASS; WebKit Windows 4 PASS/2 FAIL RTC unavailable; total qualification FAIL; no qualified archive or publication
+source_under_review: 07e097588933494dd84d42ecdb92b7894419ae89
+actual_tested_source: 9bad4832f2b53c3fd89c3765b0e24a5318167d7d
 field_acceptance: NOT_ACCEPTED
 trigger_nonce: 2026-10-08-hold-confrontation-evidence
 work_branch: fix/confrontation-clock-recovery-20261008
 work_pr: 72 draft
-latest_handoff: docs/memory/checkpoints/CHECKPOINT-2026-10-09-HOLD-EXPENSE-OBSERVER.md
-required_final_qualification: expense regression before 3 expected assertion failures / after 3 PASS; 657 Node; Chromium 8; WebKit 6; exact same source before Worker mutation
+latest_handoff: docs/memory/checkpoints/CHECKPOINT-2026-10-09-WINDOWS-WEBKIT-FEATURE-GAP.md
+required_final_qualification: 657 Node; Chromium 8; compatible WebKit 6 including real Local Room connection; exact same source before Worker mutation
