@@ -4,11 +4,13 @@ date: 2026-10-09
 db_mutation: none
 mode: HOLD-incomplete-compatible-WebKit-qualification
 reason: actual 9bad483 governed Node 657 and Chromium 8 PASS; WebKit Windows 4 PASS/2 FAIL RTC unavailable; total qualification FAIL; no qualified archive or publication
-source_under_review: 8b6e05bb354ecddbecce5b511fa8c8efb6605d8c
+source_under_review: a7c333699dad0d70cf0de8e2f8a841a00396d0d7
 actual_tested_source: 9bad4832f2b53c3fd89c3765b0e24a5318167d7d
 field_acceptance: NOT_ACCEPTED
 trigger_nonce: 2026-10-08-hold-confrontation-evidence
 work_branch: fix/confrontation-clock-recovery-20261008
 work_pr: 72 draft
-latest_handoff: docs/memory/checkpoints/CHECKPOINT-2026-10-09-WSL-REBOOT-PENDING.md
+latest_handoff: docs/memory/checkpoints/CHECKPOINT-2026-10-09-WINDOWS-CLOUD-QUALIFICATION.md
 required_final_qualification: 657 Node; Chromium 8; compatible WebKit 6 including real Local Room connection; exact same source before Worker mutation
+execution_route: authorized Cloud Linux executor; local Ubuntu optional and not installed
+candidate_cloud_qualification: pending exact-source receipt; previous Windows overall FAIL retained

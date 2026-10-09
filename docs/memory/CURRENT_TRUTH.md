@@ -1,3 +1,15 @@
+## Reprise Windows/Cloud sans Ubuntu local — 9 octobre 2026
+
+Le fondateur demande : « continuons si possible sans Ubuntu ». VirtualMachinePlatform a terminé à 100 % avec succès ; la dernière liste WSL ne contient aucune distribution. Aucune installation Ubuntu locale n'est requise par cette reprise.
+
+Candidate de travail : **a7c333699dad0d70cf0de8e2f8a841a00396d0d7**, branche fix/confrontation-clock-recovery-20261008, PR72 draft. Dernière qualification produit complète exécutée : **9bad483, total FAIL : 657 Node et Chromium 8/8 PASS ; WebKit Windows 4 PASS/2 FAIL**. Les preuves d'échec restent conservées.
+
+Le travail Cloud autorisé existe : conversation 6ac8c4bf-9a24-83ea-b166-c176d065fba7, exécuteur 01a12040-ce4c-73b1-8bbe-6e42bfeab048. Linux/Node 24.19.0, accès de lecture privé et démarrage réel de Chromium/WebKit Playwright 1.56.1 sont confirmés ; WebKit expose les API RTC natives. La qualification complète a commencé sur 8b6e05b ; le SHA candidate ci-dessus a ensuite été transmis pour contrôle distinct. **Aucun résultat complet PASS du nouveau SHA n'est encore acquis.** Le diagnostic Chromium souverain reste complémentaire, qualified=false ; il ne remplace jamais les six scénarios WebKit réels.
+
+Conserver HOLD et la production dernière attestée 1.5.2.14-live-sync, FIELD_ACCEPTED=NOT_ACCEPTED, realMoneyEnabled=false, D1/R2 existants. Aucun achat ni publication effectués. Les blocs antérieurs ci-dessous sont historiques. Reprise détaillée : docs/memory/checkpoints/CHECKPOINT-2026-10-09-WINDOWS-CLOUD-QUALIFICATION.md.
+
+ÉTAT DU PROJET APRÈS ÉTAPE : continuation sans Ubuntu local décidée et environnement Cloud compatible confirmé ; qualification exacte et livraison en attente des preuves réelles.
+
 ## Reprise environnement — WSL avance, redémarrage CBS en attente, 9 octobre 2026
 
 La base WSL 3.0.1 est installée. L'activation native de VirtualMachinePlatform a avancé de 37,8 % à 60,4 % (relevé du fondateur), puis **61,0 % observé dans le terminal**. Elle n'est pas encore confirmée terminée. Le diagnostic Windows du 9 octobre à 03:10:56 indique **redemarrage_CBS=true**, redemarrage_Windows_Update=false, BITS/TrustedInstaller/wuauserv tous Running ; l'événement Setup/Servicing 7 est Information et décrit le début d'activation VirtualMachinePlatform. Le dossier CBS est absent ; aucune erreur fatale n'est fournie. Le marqueur CBS ne désigne pas à lui seul la transaction ni la fin de l'activation.

@@ -1214,6 +1214,21 @@
       ],
       "note": "Source qualified remotely and PR merged; production delivery not yet attested in this checkpoint. Duplicate push browser job is still installing browsers and is not counted as a third successful run.",
       "next": "Trigger existing code-only delivery, requalify deployment SHA before Worker mutation and record exact health/Worker evidence. Physical acceptance remains NOT_ACCEPTED."
+    },
+    {
+      "id": "qualification.windows.cloud.route.20261009",
+      "status": "IN_PROGRESS",
+      "scope": "qualification/environment/windows-preference",
+      "observedOn": "2026-10-09",
+      "evidence": [
+        "user-request:continue if possible without Ubuntu",
+        "native-terminal:VirtualMachinePlatform100% operation succeeded;WSL no installed distribution",
+        "cloud:executor01a12040-ce4c-73b1-8bbe-6e42bfeab048 Linux/Node24.19/private reader and native pinned browser startup confirmed",
+        "cloud:WebKit native RTCPeerConnection and RTCDataChannel present;full qualification started on8b6e05b;new exacta7c3336 communicated",
+        "repo:PR72 candidate a7c333699dad0d70cf0de8e2f8a841a00396d0d7"
+      ],
+      "note": "No full Cloud PASS or qualified archive for the candidate yet. Historical actual9bad Node657/Chromium8PASS/WebKitWindows4PASS2FAIL overallFAIL preserved. Production HOLD, field NOT_ACCEPTED and realMoneyEnabled=false remain.",
+      "next": "Obtain full exact-source657/8/6, archive and SHA256, then exact delivery checks; respect no local Ubuntu preference and do not buy Actions minutes."
     }
   ]
 }
