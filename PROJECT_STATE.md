@@ -1,3 +1,23 @@
+# Source à reprendre — 9bad4832f2b53c3fd89c3765b0e24a5318167d7d
+
+## Reprise courante — diagnostic Live réussi, boucle de dépenses corrigée sous qualification, 9 octobre 2026
+
+**Dernier diagnostic réellement exécuté : d9bc8d9de22156f7ab798ef75470fc5ecf3019a3, Chromium 1/1 PASS (1,6 min)**. Les assertions de convergence à cinq secondes n'ont pas été assouplies. Les fragments d'horodatage transmis par le fondateur mesurent, depuis la validation jusqu'à l'affichage Live chez l'autre gestionnaire : 1 000 = **2 733 ms**, 2 001 = **2 162 ms**, 2 002 = **1 830 ms**. Les intentions Outbox correspondantes sont CONFIRMED, attempts=1, APPLIED, versions 1/2/3. Ce diagnostic unique ne remplace pas la qualification complète ; l'échec antérieur e083a6a Chromium 7/8 reste conservé et sa cause exacte n'est pas prouvée par ce PASS.
+
+Les traces montrent aussi des GET répétés de l'endpoint dépenses sur les deux pages, souvent environ toutes les 120 ms, y compris sans saisie. Les identifiants de timeline ne sont pas un nombre de requêtes. Le total exact n'est pas inventé : le long résultat utilisateur est partiellement tronqué et la copie PowerShell de l'attachement profond est inaccessible. Il reste conservé dans les outputs du chat eco-live-diagnostic-20261009-012738 ; le rapport source se trouve dans outputs/eco-live-sync-diagnostic-2026-10-09T00-24-34-168Z de la copie locale de qualification.
+
+Correction ciblée dans apps/web/src/expense-recap-ui.ts : les MutationObserver ignorent les ajouts/retraits de leurs propres cartes de projection et regroupent les déclenchements simultanés. Les vrais changements du récapitulatif, de la séance, du groupe et de la langue conservent leur lecture du service existant. Aucune nouvelle autorité financière ni base. La simulation JavaScript du code reproduit 20 lectures et une relance pendante en 2,4 s avant correction, puis une seule lecture et aucune relance après ; trois scénarios de simulation avant échouent/après passent. **Cette simulation n'est pas une exécution Node, TypeScript ou Playwright réelle.**
+
+Le source préparé ajoute trois tests de comportement du composant réel (idle, changement canonique/contexte, récapitulatif de séance). scripts/verify-expense-recap-regression.mjs exige leurs trois échecs d'assertion sur le SHA d9bc8d9 puis leurs trois succès sur le checkout courant, sans modifier celui-ci. Le scénario Chromium contrôle désormais aussi les lectures des dépenses/ledger pendant une vraie fenêtre idle après ACK, sur les deux gestionnaires ; toutes les anciennes limites cinq/huit secondes sont conservées. Les traces complètes et leur résumé sont écrits par Node à un chemin peu profond, sans récursion PowerShell.
+
+**Qualification du nouveau correctif : NON EXÉCUTÉE.** Attendu : preuve avant/après, **657/657 Node**, **Chromium 8/8**, **WebKit 6/6**, même SHA propre et archive vérifiée. Le nouveau lanceur reçoit --output-root pour sauvegarder directement les rapports et l'archive dans les outputs du chat ; --skip-browser-install évite uniquement de retélécharger les navigateurs déjà installés. Le quota Actions mensuel épuisé et le helper terminal Codex indisponible restent des limitations d'exécution, pas des échecs métier ; aucun achat ni travail Cloud créé.
+
+**HOLD maintenu, PR72 brouillon, 1.5.2.15 non livrée, FIELD_ACCEPTED=NOT_ACCEPTED et realMoneyEnabled=false.** Dernière production attestée : 1.5.2.14-live-sync. Les trois cartes métier, tous les scénarios et les acquisitions Cloudflare/D1/R2 sont préservés. Un attribut de diagnostic saveState demeure QUEUED_OFFLINE dans le run d9 malgré les Outbox CONFIRMED ; ne pas le confondre avec l'autorité financière canonique. Son alignement reste à examiner séparément si une incohérence visuelle est confirmée.
+
+ÉTAT DU PROJET APRÈS ÉTAPE : diagnostic ciblé réel PASS ; défaut de boucle reproduit en simulation et correction sauvegardée ; tests réels du correctif en attente ; aucune promotion de maturité, fusion ou publication.
+
+---
+
 ## Diagnostic corrigé — sélection vérifiée avant lancement, 9 octobre 2026
 
 Première tentative sur **ad075a7** : build et closure PWA PASS, puis **No tests found**, **aucun scénario navigateur exécuté**. Erreur du filtre du lanceur, pas un échec métier supplémentaire. Source actuelle **d9bc8d9de22156f7ab798ef75470fc5ecf3019a3** dans PR #72 : filtre non ancré, préflight `--list` exige exactement un test ; résumé exige exactement un scénario exécuté sans skip. En attente du résultat réel ; cinq secondes et zéro polling au repos conservés. HOLD reste actif. Reprise : même checkpoint ci-dessous, actualisé avec ces faits.
