@@ -3,14 +3,16 @@ release: 1.5.2.15-bounded-recovery
 date: 2026-10-09
 db_mutation: none
 mode: HOLD-incomplete-compatible-WebKit-qualification
-reason: actual 9bad483 governed Node 657 and Chromium 8 PASS; WebKit Windows 4 PASS/2 FAIL RTC unavailable; total qualification FAIL; no qualified archive or publication
+reason: actual a7 Cloud Node657 and Chromium8 PASS; WebKit4PASS2FAIL zero ICE; Windows sovereign Chromium5PASS1FAIL QR timeout; total FAIL; no qualified archive or publication
 source_under_review: a7c333699dad0d70cf0de8e2f8a841a00396d0d7
-actual_tested_source: 9bad4832f2b53c3fd89c3765b0e24a5318167d7d
+actual_tested_source: a7c333699dad0d70cf0de8e2f8a841a00396d0d7
 field_acceptance: NOT_ACCEPTED
 trigger_nonce: 2026-10-08-hold-confrontation-evidence
 work_branch: fix/confrontation-clock-recovery-20261008
 work_pr: 72 draft
-latest_handoff: docs/memory/checkpoints/CHECKPOINT-2026-10-09-WINDOWS-CLOUD-QUALIFICATION.md
+latest_handoff: docs/memory/checkpoints/CHECKPOINT-2026-10-09-CLOUD-RESULTS-WINDOWS-QR.md
 required_final_qualification: 657 Node; Chromium 8; compatible WebKit 6 including real Local Room connection; exact same source before Worker mutation
 execution_route: authorized Cloud Linux executor; local Ubuntu optional and not installed
-candidate_cloud_qualification: pending exact-source receipt; previous Windows overall FAIL retained
+candidate_cloud_qualification: FAIL actual receipt saved; prior Windows WebKit failures retained
+candidate_windows_sovereign_chromium: 5 PASS; 1 FAIL QR30000ms; 0 skipped; LocalRoom and A01 real PASS
+qr_passive_diagnostic: evidence e71098c prepared; actual Node check/run pending; cause unproven

@@ -1,3 +1,17 @@
+## Résultats réels Cloud et diagnostic QR Windows — 9 octobre 2026
+
+Source figée **a7c333699dad0d70cf0de8e2f8a841a00396d0d7**, tree **0c75c80833d78c807cc2fbef082b06f9c0c6aa7f**, PR72 draft. Le Cloud a terminé sa qualification exacte : **657/657 Node, Chromium 8/8 PASS ; WebKit 4 PASS / 2 FAIL, zéro skip ; total FAIL**. Preuve observateurs : trois échecs attendus sur d9 avant correction, trois succès après. Rapport natif a7 SHA-256 **ee7a9fa5a33937b3fb45b98cd18429753b95b32c686816c4c0d01ddaa5e1f0a0** : hash du rapport, pas d'une archive source. Les API RTC Cloud sont natives mais aucun candidat ICE n'est disponible ; Local Room et A01 restent des échecs réels de ce run. Aucune permission réseau ciblée ne permet de corriger cet environnement ; aucun contournement de sandbox ou WebRTC simulé.
+
+Le fondateur a exécuté les six scénarios souverains inchangés dans Chromium Windows : **5 PASS / 1 FAIL, zéro skip**. Vrai DataChannel/paquet Local Room PASS 8,9 s, callbacks A01 PASS 16,5 s ; cache, rechargement hors connexion et override Recap PASS. Le premier QR dépasse les **30 secondes inchangées**. Rapport utilisateur : outputs/eco-sovereign-chromium-diagnostic-2026-10-09T11-34-04-787Z/diagnostic-report.json. Le parent n'a pas lu ni hashé indépendamment ce fichier natif. Ce diagnostic n'exécute pas WebKit et ne remplace pas ses six scénarios. Ubuntu local absent et non demandé.
+
+Le SDK attend les formats BarcodeDetector et l'image avant son timer de scan de 10 secondes ; **la cause du timeout Windows reste non prouvée**. Le nouvel exécuteur Cloud s'est déconnecté avant de créer un processus (409 environment_offline) : QR ciblé et comparaison Worker non exécutés. Ce blocage n'est pas un nouvel échec produit.
+
+Les reçus et le diagnostic passif revu sont sauvegardés sur **evidence/cloud-qualification-20261009-a7c3336**, commit **e71098c5b6ac5cbbc2f23eadddbd7bef3b2d70b5**. Le script observe le SDK automatique puis son vrai Worker sur le même SVG, deux fenêtres de 30 s, sans modifier les résultats natifs ni le test original. Son corps JavaScript a été analysé syntaxiquement ; **Node --check et exécution Windows en attente**. La commande est transmise au fondateur ; sortie directe dans les outputs du chat, aucune récursion PowerShell.
+
+**HOLD, aucune archive qualifiée ni publication.** Dernière production attestée 1.5.2.14-live-sync, FIELD_ACCEPTED=NOT_ACCEPTED, realMoneyEnabled=false ; D1/R2 existants. Aucun achat ni nouveau runner Actions, aucun crédit de réinitialisation utilisé. Les blocs antérieurs sont historiques. Reprise : docs/memory/checkpoints/CHECKPOINT-2026-10-09-CLOUD-RESULTS-WINDOWS-QR.md.
+
+ÉTAT DU PROJET APRÈS ÉTAPE : correctif dépenses validé Node/Chromium, transfert direct Windows réel validé ; WebKit complet non acquis, cause QR à mesurer, livraison toujours HOLD.
+
 ## Reprise Windows/Cloud sans Ubuntu local — 9 octobre 2026
 
 Le fondateur demande : « continuons si possible sans Ubuntu ». VirtualMachinePlatform a terminé à 100 % avec succès ; la dernière liste WSL ne contient aucune distribution. Aucune installation Ubuntu locale n'est requise par cette reprise.

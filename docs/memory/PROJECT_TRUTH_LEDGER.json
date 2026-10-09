@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedOn": "2026-10-08",
+  "generatedOn": "2026-10-09",
   "purpose": "Anti-regression operational truth. Read before asking founder to recreate/configure anything.",
   "allowedStatuses": [
     "ACQUIRED",
@@ -1225,10 +1225,52 @@
         "native-terminal:VirtualMachinePlatform100% operation succeeded;WSL no installed distribution",
         "cloud:executor01a12040-ce4c-73b1-8bbe-6e42bfeab048 Linux/Node24.19/private reader and native pinned browser startup confirmed",
         "cloud:WebKit native RTCPeerConnection and RTCDataChannel present;full qualification started on8b6e05b;new exacta7c3336 communicated",
-        "repo:PR72 candidate a7c333699dad0d70cf0de8e2f8a841a00396d0d7"
+        "repo:PR72 candidate a7c333699dad0d70cf0de8e2f8a841a00396d0d7",
+        "git:evidence/cloud-qualification-20261009-a7c3336@e71098c5b6ac5cbbc2f23eadddbd7bef3b2d70b5",
+        "native-Cloud:a7 Node657/657 Chromium8/8 WebKit4PASS2FAIL zero skips",
+        "user-reported:Windows a7 Chromium5PASS1FAIL0skip;LocalRoom/A01PASS;QR timeout30000ms"
       ],
-      "note": "No full Cloud PASS or qualified archive for the candidate yet. Historical actual9bad Node657/Chromium8PASS/WebKitWindows4PASS2FAIL overallFAIL preserved. Production HOLD, field NOT_ACCEPTED and realMoneyEnabled=false remain.",
-      "next": "Obtain full exact-source657/8/6, archive and SHA256, then exact delivery checks; respect no local Ubuntu preference and do not buy Actions minutes."
+      "note": "Exact a7 Cloud qualification completed: Node657 and Chromium8 PASS, WebKit4PASS2FAIL zero ICE, overall FAIL. Windows sovereign Chromium5/6 zero skipped, real LocalRoom/A01PASS, QR30s timeout. No local Ubuntu. Historical failures and publication HOLD retained.",
+      "next": "Read passive Windows QR trace after Node --check, diagnose existing owner; still require compatible native WebKit6, exact archive and delivery gates. No local Ubuntu requirement or purchase."
+    },
+    {
+      "id": "qualification.cloud.a7c3336.actual.partial.20261009",
+      "status": "VERIFIED_REMOTE",
+      "scope": "qualification/exact-source/cloud",
+      "observedOn": "2026-10-09",
+      "evidence": [
+        "source:a7c333699dad0d70cf0de8e2f8a841a00396d0d7/tree0c75c80833d78c807cc2fbef082b06f9c0c6aa7f",
+        "native:Node657/657;Chromium8/8;WebKit4PASS2FAIL;0skip",
+        "repo:evidence/cloud-qualification-20261009-a7c3336/docs/qualification/CLOUD_QUALIFICATION_2026-10-09.json"
+      ],
+      "note": "Evidence verified remotely, not successful global qualification. Total FAIL; native report SHA256 ee7a9fa5a33937b3fb45b98cd18429753b95b32c686816c4c0d01ddaa5e1f0a0 is not an archive hash.",
+      "next": "Obtain real compatible WebKit6; preserve logs and HOLD."
+    },
+    {
+      "id": "qualification.windows.chromium.sovereign.a7.partial.20261009",
+      "status": "VERIFIED_LOCAL",
+      "scope": "qualification/user-reported-windows-chromium",
+      "observedOn": "2026-10-09",
+      "evidence": [
+        "user:complete copied native diagnostic;source a7;6selected/executed;5PASS1FAIL0skip",
+        "user:LocalRoom native packetPASS8.9s and A01callbacksPASS16.5s",
+        "user:QR evaluate exceeds30000ms;WebKit not executed"
+      ],
+      "note": "Human copied native output; parent has not independently read/hashed report. Partial diagnostic does not qualify source or replace WebKit.",
+      "next": "Read passive automatic/real Worker trace before product changes."
+    },
+    {
+      "id": "qualification.qr.passive.handoff.20261009",
+      "status": "IN_PROGRESS",
+      "scope": "diagnostic/prepared-not-executed",
+      "observedOn": "2026-10-09",
+      "evidence": [
+        "repo:e71098c5b6ac5cbbc2f23eadddbd7bef3b2d70b5/docs/qualification/qr-passive-windows-diagnostic.mjs",
+        "review:structural JS body syntax parse only; actual Node ESM check pending",
+        "cloud:single targeted test blocked before process creation409environment_offline"
+      ],
+      "note": "SDK native format/image await source risk observed; Windows cause unproven. Genuine return values/Worker observed at unchanged30s windows; candidate a7 frozen.",
+      "next": "User executes Node --check then passive trace; preserve HOLD and prior failures."
     }
   ]
 }
