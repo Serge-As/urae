@@ -19,7 +19,7 @@ async function run(file,args,label){
   console.log('\n[Eco-System diagnostic] '+label);
   const logPath=path.join(scratch,String(report.checks.length+1).padStart(2,'0')+'.log');
   let captured='';
-  const child=spawn(file,args,{cwd:repo,env:process.env,stdio:['ignore','pipe','pipe'],windowsHide:true});
+  const child=spawn(file,args,{cwd:repo,env:{...process.env,ECO_LIVE_SYNC_OUTPUT_DIR:output},stdio:['ignore','pipe','pipe'],windowsHide:true});
   for(const [stream,destination] of [[child.stdout,process.stdout],[child.stderr,process.stderr]])stream.on('data',chunk=>{captured+=chunk.toString();destination.write(chunk);});
   const exitCode=await new Promise((resolve,reject)=>{child.once('error',reject);child.once('close',resolve);});
   await writeFile(logPath,captured,'utf8');
@@ -66,7 +66,7 @@ try{
   report.executedTests={passed:count('passed'),failed:count('failed'),skipped:count('skipped')};
   if(report.executedTests.passed+report.executedTests.failed!==1||report.executedTests.skipped!==0)throw Error('No valid single-test execution summary. This is a diagnostic runner error, not a financial test result.');
   report.testResult=execution.exitCode===0&&report.executedTests.passed===1?'PASS':'FAIL';
-  // A diagnostic PASS cannot replace 654 Node / Chromium 8 / WebKit 6.
+  // A diagnostic PASS cannot replace 657 Node / Chromium 8 / WebKit 6.
   report.status='DIAGNOSTIC_COMPLETED';if(report.testResult!=='PASS')process.exitCode=1;
 }catch(error){
   report.status='DIAGNOSTIC_ERROR';report.testResult=report.testResult??'NOT_EXECUTED';report.error=String(error?.stack??error);process.exitCode=1;

@@ -1,3 +1,5 @@
+import {mkdir,writeFile} from 'node:fs/promises';
+import path from 'node:path';
 import {test,expect} from '@playwright/test';
 
 const base='http://127.0.0.1:4173',password='Synthetic-Multi-Manager-2026!';
@@ -107,7 +109,32 @@ async function attachLiveSyncTiming(testInfo,ids,page,second,stop,timeline,resul
     alpha:read(0),beta:read(1),alphaOutbox:Array.isArray(read(2))?read(2).map(safeCellIntent):read(2),betaOutbox:Array.isArray(read(3))?read(3).map(safeCellIntent):read(3)};
   for(const state of [output.alpha,output.beta])if(state.events)state.events=state.events.map(({atMs,...r})=>({elapsedMs:atMs-start,...r}));
   await testInfo.attach('live-sync-timing',{body:Buffer.from(JSON.stringify(output,null,2)),contentType:'application/json'});
-  console.log('ECO_LIVE_SYNC_TIMING '+JSON.stringify(output));
+  const requests=output.timeline.filter(row=>row.stage==='REQUEST');
+  const grouped=new Map();
+  for(const request of requests){const key=request.page+' '+request.path;grouped.set(key,(grouped.get(key)??0)+1);}
+  const syncDelays=[];
+  for(const [label,state,remote] of [['Alpha',output.alpha,output.beta],['Beta',output.beta,output.alpha]]){
+    for(const submit of state.events??[]){
+      if(submit.stage!=='eco:financial-cell-trace'||submit.traceType!=='CELL_SUBMIT')continue;
+      const seen=(remote.events??[]).find(event=>event.elapsedMs>=submit.elapsedMs&&event.stage==='eco:financial-live-update'&&event.traceType==='MEETING_UPDATE'&&event.amount===submit.amount&&event.display===submit.amount);
+      syncDelays.push({author:label,amount:submit.amount,remoteDisplayDelayMs:seen?seen.elapsedMs-submit.elapsedMs:null});
+    }
+  }
+  const idleStart=output.timeline.find(row=>row.stage==='IDLE_WINDOW_START')?.elapsedMs,idleEnd=output.timeline.find(row=>row.stage==='IDLE_WINDOW_END')?.elapsedMs;
+  const idleExpenseReads=idleStart===undefined?null:requests.filter(row=>row.elapsedMs>=idleStart&&row.elapsedMs<idleEnd&&/\/expenses$/.test(row.path)).length;
+  const summary={result:output.result,thresholdMs:output.thresholdMs,canonicalCell:output.canonicalCell,totalRequests:requests.length,
+    requestsByPageAndPath:[...grouped].sort((a,b)=>b[1]-a[1]).map(([path,count])=>({path,count})),
+    syncDelays,idleExpenseReads,alpha:{display:output.alpha.display,saveState:output.alpha.saveState},beta:{display:output.beta.display,saveState:output.beta.saveState},
+    alphaOutbox:Array.isArray(output.alphaOutbox)?output.alphaOutbox.map(row=>({status:row.status,attempts:row.attempts,targetAmount:row.payload.targetAmount})):output.alphaOutbox,
+    betaOutbox:Array.isArray(output.betaOutbox)?output.betaOutbox.map(row=>({status:row.status,attempts:row.attempts,targetAmount:row.payload.targetAmount})):output.betaOutbox};
+  // Keep complete selected-field evidence, but put a short summary in the terminal.
+  // A shallow native Node path avoids PowerShell recursion through long artifact names.
+  if(process.env.ECO_LIVE_SYNC_OUTPUT_DIR){
+    const directory=path.resolve(process.env.ECO_LIVE_SYNC_OUTPUT_DIR);await mkdir(directory,{recursive:true});
+    await writeFile(path.join(directory,'live-sync-timing.json'),JSON.stringify(output,null,2)+'\n','utf8');
+    await writeFile(path.join(directory,'live-sync-summary.json'),JSON.stringify(summary,null,2)+'\n','utf8');
+  }
+  console.log('ECO_LIVE_SYNC_SUMMARY '+JSON.stringify(summary));
 }
 
 test('distinct managers see typing and validated amounts, and an idle Live connection never polls financial snapshots',async({page,browser},testInfo)=>{
@@ -120,7 +147,24 @@ test('distinct managers see typing and validated amounts, and an idle Live conne
     await expect(cell(second,ids)).toContainText(/Alpha.*saisit|Alpha.*écrit/,{timeout:5000});
     await cell(page,ids).locator('.cell-validate').click();await expect.poll(()=>amount(cell(second,ids)),{timeout:5000}).toBe(1000);
     await enter(second,ids,2001);await expect.poll(()=>amount(cell(page,ids)),{timeout:5000}).toBe(2001);
-    await second.waitForTimeout(1200);expect(forbidden).toBe(0);
+    // The author must be server-confirmed before observing a true idle window.
+    await expect.poll(async()=>(await storedCellIntent(second,ids)).find(row=>row.payload?.targetAmount===2001)?.status,{timeout:5000}).toBe('CONFIRMED');
+    await second.waitForTimeout(300);
+    const idleReads=[],idleListeners=[];
+    for(const [p,label] of [[page,'Alpha'],[second,'Beta']]){
+      const listener=request=>{
+        const pathname=new URL(request.url()).pathname;
+        if(request.method()==='GET'&&/\/expenses$|\/ledger$|\/financial-cells\/snapshot$|\/live\/events$/.test(pathname))idleReads.push({page:label,path:pathname});
+      };
+      p.on('request',listener);idleListeners.push([p,listener]);
+    }
+    timeline.push({atMs:Date.now(),stage:'IDLE_WINDOW_START'});
+    try{await second.waitForTimeout(1200);}finally{
+      for(const [p,listener] of idleListeners)p.off('request',listener);
+      timeline.push({atMs:Date.now(),stage:'IDLE_WINDOW_END'});
+    }
+    expect(forbidden).toBe(0);
+    expect(idleReads,'idle Live screens must not poll financial snapshots, ledger or expenses').toEqual([]);
     await page.setViewportSize({width:390,height:820});await expect(cell(page,ids).locator('.cell-validate')).toBeVisible();
     await cell(page,ids).scrollIntoViewIfNeeded();
     // Visibility alone did not catch a sticky total covering the editable field.

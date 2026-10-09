@@ -1256,8 +1256,8 @@
         "repo:scripts/qualify-eco-locally.mjs",
         "repo:docs/recovery/ECO_FREE_QUALIFICATION_2026-10-08.md"
       ],
-      "note": "Final qualification cannot run in the current tools. Prepared local runner is unexecuted, not evidence of passing tests or deployment.",
-      "next": "Use a functional local terminal and Node 24, or restore a compatible runner; keep delivery HOLD until exact-source checks succeed."
+      "note": "The native user PowerShell qualifier executed e083: 654 Node PASS, Chromium 7/8, WebKit not reached; d9 targeted diagnostic 1/1 passes. Automatic Codex helper still cannot start commands and monthly Actions quota remains exhausted. Cloud Work creation was unavailable. No paid resource purchase.",
+      "next": "Use the working existing user PowerShell checkout; direct Node report output avoids recursive long attachment copies. Require full exact-source gates before removing HOLD."
     },
     {
       "id": "issue.eco.live.sync.latency.20261009",
@@ -1269,10 +1269,29 @@
         "user-provided:error-context.md subsequently displays 2001, authored by Beta",
         "repo:scripts/diagnose-live-sync-locally.mjs",
         "repo:tests/browser/sovereign-multi-manager-1.5.2.14.spec.mjs",
-        "local:ad075a7 diagnostic build PASS then No tests found; zero browser tests executed; runner filter error preserved"
+        "local:ad075a7 diagnostic build PASS then No tests found; zero browser tests executed; runner filter error preserved",
+        "local:d9bc8d9 Chromium diagnostic 1/1 PASS; 1000/2001/2002 remote display delays 2733/2162/1830ms; original 5000ms assertions unchanged",
+        "user-provided:frequent raw GET expenses on Alpha/Beta; truncated timeline, exact total not asserted",
+        "repo:apps/web/src/expense-recap-ui.ts targeted observer fix; real qualification not executed"
       ],
-      "note": "Late convergence is suggested by the failure context. Its cause remains unproved; neither clock arbitration nor discarded pending-intent Live updates is asserted as the cause. Instrumentation changes observation only; original five-second and zero-idle-polling assertions remain required.",
-      "next": "Execute corrected runner with exactly-one-test listing gate; then inspect timing and fix proven cause. The first runner failure is not a financial test failure."
+      "note": "Original e083a6a five-second failure is retained. One d9 diagnostic passes; expense GET feedback is separately observed and reproduced in a JS-only model. Its contribution to the original latency failure remains unproved. Full-source qualification is still required.",
+      "next": "Run exact-source old-fails/new-passes expense regressions, then 657 Node / Chromium 8 / WebKit 6 with unchanged original deadlines; keep HOLD until exact publication gates."
+    },
+    {
+      "id": "issue.eco.expense.recap.observer.loop.20261009",
+      "status": "IN_PROGRESS",
+      "scope": "web/expense-recap/projection/read-load",
+      "observedOn": "2026-10-09",
+      "evidence": [
+        "user-provided:d9 diagnostic requests raw group expenses about every 120ms on both managers",
+        "repo:apps/web/src/expense-recap-ui.ts own-card observer filtering and deduplicated refresh",
+        "simulation:real-function JS model before 20 reads / one timer, after one read / zero timer at 2400ms; not actual Node or browser qualification",
+        "repo:tests/expense-recap-no-idle-polling.test.mjs",
+        "repo:scripts/verify-expense-recap-regression.mjs",
+        "repo:tests/browser/sovereign-multi-manager-1.5.2.14.spec.mjs extended idle read gate"
+      ],
+      "note": "Observed expensive observer feedback is targeted without replacing the canonical expense service or Ledger. Source fix implemented, actual regression and full qualification not executed; no deployment or capability acceptance claimed.",
+      "next": "Prove three intended old assertion failures and three new successes using installed TypeScript and Node, then require all 657 Node, Chromium 8, WebKit 6 plus exact-source archive and publication smoke."
     }
   ]
 }

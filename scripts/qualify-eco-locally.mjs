@@ -12,7 +12,9 @@ import {createServer as portProbe} from 'node:net';
 const repo=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
 const stamp=new Date().toISOString().replace(/[:.]/g,'-');
 const scratch=path.join(repo,'work','eco-local-qualification-'+stamp);
-const output=path.join(repo,'outputs','eco-local-qualification-'+stamp);
+const outputRootArg=process.argv.find(value=>value.startsWith('--output-root='));
+const outputRoot=outputRootArg?path.resolve(outputRootArg.slice('--output-root='.length)):path.join(repo,'outputs');
+const output=path.join(outputRoot,'eco-qualification-'+stamp);
 const report={schemaVersion:1,startedAt:new Date().toISOString(),status:'IN_PROGRESS',sourceSha:null,checks:[],productionDeployed:false,fieldAccepted:false,realMoneyEnabled:false};
 let server,serverLog;
 const clean=text=>String(text??'').replace(/\u001b\[[0-9;]*m/g,'');
@@ -25,9 +27,9 @@ const command=(name,args)=>{
   }
   return{file:name,args};
 };
-async function run(name,args,label){
+async function run(name,args,label,extraEnv={}){
   console.log('\n[Eco-System] '+label);
-  const cmd=command(name,args),result=spawnSync(cmd.file,cmd.args,{cwd:repo,encoding:'utf8',maxBuffer:32*1024*1024,windowsHide:true});
+  const cmd=command(name,args),result=spawnSync(cmd.file,cmd.args,{cwd:repo,encoding:'utf8',maxBuffer:32*1024*1024,windowsHide:true,env:{...process.env,...extraEnv}});
   const stdout=clean(result.stdout),stderr=clean(result.stderr);
   if(stdout)process.stdout.write(stdout);if(stderr)process.stderr.write(stderr);
   const logPath=path.join(scratch,String(report.checks.length+1).padStart(2,'0')+'.log');
@@ -57,10 +59,13 @@ try{
   await mkdir(scratch,{recursive:true});await mkdir(output,{recursive:true});
   const release=JSON.parse(await readFile(path.join(repo,'docs','release','CURRENT_RELEASE_CONTRACT.json'),'utf8'));
   await run('npm',['ci','--ignore-scripts'],'Install exact locked dependencies');
+  if(process.env.ECO_EXPENSE_RECAP_SOURCE_REF)throw Error('Remove ECO_EXPENSE_RECAP_SOURCE_REF: full qualification must use checked-out product source.');
+  await run(process.execPath,['scripts/verify-expense-recap-regression.mjs','--output='+path.join(output,'expense-regression')],'Prove the expense observer defect on old source and the correction on current source');
+  report.expenseRegression=JSON.parse(await readFile(path.join(output,'expense-regression','expense-regression-report.json'),'utf8'));
   const ci=await run('npm',['run','ci'],'Dependency audit, TypeScript, governance and all Node regressions');
   const nodeTests=finalCount(ci,/\btests (\d+)/g),nodePass=finalCount(ci,/\bpass (\d+)/g);
   report.node={tests:nodeTests,passed:nodePass};
-  if(nodeTests!==654||nodePass!==654)throw Error('Expected 654 Node tests; review the exact summary instead of assuming success.');
+  if(nodeTests!==657||nodePass!==657)throw Error('Expected 657 Node tests; review the exact summary instead of assuming success.');
   if(!process.argv.includes('--skip-browser-install'))await run('npx',['playwright','install','--with-deps','chromium','webkit'],'Install the locked Chromium and WebKit browsers');
   // Each qualification has its own disposable SQLite database. Production and
   // any existing local .data/eco-system.sqlite are never opened by this runner.
@@ -76,7 +81,7 @@ try{
   if(!catalogResponse.ok)throw Error('Local capability catalog unavailable.');
   const catalog=await catalogResponse.json();report.capabilities=catalog.count;
   if(catalog.version!==release.release.version||catalog.count<164||catalog.capabilities?.length!==catalog.count)throw Error('Local capability catalog identity/count mismatch.');
-  const chromium=await run('npx',['playwright','test','tests/browser/financial-cell-consensus-persistence-1.5.2.6.spec.mjs','tests/browser/browser-shell-mobile-1.5.2.6.spec.mjs','tests/browser/sovereign-multi-manager-1.5.2.14.spec.mjs','--browser=chromium','--workers=1'],'Chromium: persistence, mobile shell, two managers, confrontation and transport outage');
+  const chromium=await run('npx',['playwright','test','tests/browser/financial-cell-consensus-persistence-1.5.2.6.spec.mjs','tests/browser/browser-shell-mobile-1.5.2.6.spec.mjs','tests/browser/sovereign-multi-manager-1.5.2.14.spec.mjs','--browser=chromium','--workers=1'],'Chromium: persistence, mobile shell, two managers, idle expenses, confrontation and transport outage',{ECO_LIVE_SYNC_OUTPUT_DIR:output});
   const chromiumPassed=finalCount(chromium,/(\d+) passed/g);report.chromium={passed:chromiumPassed};
   if(chromiumPassed!==8)throw Error('Expected Chromium 8/8.');
   const webkit=await run('npx',['playwright','test','tests/browser/eco-system-webkit-sovereign-offline-1.5.2.9.spec.mjs','--browser=webkit','--workers=1'],'WebKit: sovereign offline regression suite');
@@ -100,6 +105,7 @@ try{
   const reportPath=path.join(output,'qualification-report.json');
   await writeFile(reportPath,JSON.stringify(report,null,2)+'\n','utf8');
   console.log('\nQualification report: '+reportPath);
+  try{report.liveSyncSummary=JSON.parse(await readFile(path.join(output,'live-sync-summary.json'),'utf8'));await writeFile(reportPath,JSON.stringify(report,null,2)+'\n','utf8');}catch{}
   console.log('Status: '+report.status+' | Source: '+String(report.sourceSha));
   console.log('This report records local qualification only. Production publication remains governed by its HOLD marker and exact-delivery gates.');
 }
