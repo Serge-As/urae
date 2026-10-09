@@ -1,0 +1,45 @@
+{
+  "schemaVersion": 1,
+  "kind": "FREE_CODESPACES_PREPARATION_ONLY",
+  "status": "PREPARED_NOT_EXECUTED",
+  "sourceSha": "a7c333699dad0d70cf0de8e2f8a841a00396d0d7",
+  "sourceTree": "0c75c80833d78c807cc2fbef082b06f9c0c6aa7f",
+  "accountIncludedUsage": "UNVERIFIED",
+  "paidSpendingBlocked": "UNVERIFIED",
+  "environmentCreated": false,
+  "runnerRegistered": false,
+  "billingChanged": false,
+  "productionDeployed": false,
+  "qualified": false,
+  "realMoneyEnabled": false,
+  "preparedRuntime": {
+    "platform": "linux",
+    "node": "24.19.0",
+    "playwright": "1.56.1",
+    "cores": 2,
+    "image": "GitHub default",
+    "prebuild": false
+  },
+  "verification": {
+    "javascriptBodyParsedInV8": true,
+    "nativeNodeCheck": false,
+    "bashSyntaxCheck": false,
+    "scriptsExecuted": false
+  },
+  "previousResults": {
+    "cloud": {
+      "nodePassed": 657,
+      "chromiumPassed": 8,
+      "webkitPassed": 4,
+      "webkitFailed": 2,
+      "status": "FAIL"
+    },
+    "windowsSovereignChromium": {
+      "passed": 5,
+      "failed": 1,
+      "failedScenario": "QR 30-second timeout",
+      "rootCause": "UNPROVEN"
+    }
+  },
+  "productionGate": "HOLD"
+}
