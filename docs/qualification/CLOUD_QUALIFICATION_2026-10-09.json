@@ -1,0 +1,185 @@
+{
+  "schemaVersion": 1,
+  "kind": "CLOUD_TEST_ATTESTATION",
+  "testedSourceSha": "a7c333699dad0d70cf0de8e2f8a841a00396d0d7",
+  "testedTreeSha": "0c75c80833d78c807cc2fbef082b06f9c0c6aa7f",
+  "status": "FAIL",
+  "qualified": false,
+  "startedAt": "2026-10-09T11:14:02.971Z",
+  "completedAt": "2026-10-09T11:16:38.609Z",
+  "qualificationCommand": "node scripts/qualify-eco-locally.mjs --skip-browser-install --output-root=/tmp/eqr-a7",
+  "skipBrowserInstallReason": "Exact Playwright 1.56.1 Chromium 1194 and WebKit 2215 binaries already installed and genuinely launched; no tests skipped.",
+  "commands": [
+    {
+      "label": "Install exact locked dependencies",
+      "command": "npm ci --ignore-scripts",
+      "status": "PASS",
+      "exitCode": 0
+    },
+    {
+      "label": "Prove the expense observer defect on old source and the correction on current source",
+      "command": "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node scripts/verify-expense-recap-regression.mjs --output=/tmp/eqr-a7/eco-qualification-2026-10-09T11-14-02-971Z/expense-regression",
+      "status": "PASS",
+      "exitCode": 0
+    },
+    {
+      "label": "Dependency audit, TypeScript, governance and all Node regressions",
+      "command": "npm run ci",
+      "status": "PASS",
+      "exitCode": 0
+    },
+    {
+      "label": "Chromium: persistence, mobile shell, two managers, idle expenses, confrontation and transport outage",
+      "command": "npx playwright test tests/browser/financial-cell-consensus-persistence-1.5.2.6.spec.mjs tests/browser/browser-shell-mobile-1.5.2.6.spec.mjs tests/browser/sovereign-multi-manager-1.5.2.14.spec.mjs --browser=chromium --workers=1",
+      "status": "PASS",
+      "exitCode": 0
+    },
+    {
+      "label": "WebKit: sovereign offline regression suite",
+      "command": "npx playwright test tests/browser/eco-system-webkit-sovereign-offline-1.5.2.9.spec.mjs --browser=webkit --workers=1",
+      "status": "FAIL",
+      "exitCode": 1
+    }
+  ],
+  "results": {
+    "observerBefore": {
+      "tests": 3,
+      "passed": 0,
+      "failed": 3,
+      "skipped": 0,
+      "cancelled": 0,
+      "expectedAssertionFailures": true
+    },
+    "observerAfter": {
+      "tests": 3,
+      "passed": 3,
+      "failed": 0,
+      "skipped": 0,
+      "cancelled": 0
+    },
+    "node": {
+      "tests": 657,
+      "pass": 657,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0,
+      "todo": 0
+    },
+    "chromium": {
+      "run": 8,
+      "passed": 8,
+      "failed": 0,
+      "skipped": 0
+    },
+    "webkit": {
+      "run": 6,
+      "passed": 4,
+      "failed": 2,
+      "skipped": 0,
+      "failedScenarios": [
+        "WebKit opens a serverless Eco Local Room DataChannel and exchanges a packet",
+        "A01 sovereign callbacks execute real import, packet and Vault events"
+      ],
+      "firstFailure": "ECO_LOCAL_ROOM_OPEN_TIMEOUT",
+      "secondFailure": "Expected connected status within unchanged 20000ms"
+    }
+  },
+  "sourceBinding": {
+    "checkedOutSha": "a7c333699dad0d70cf0de8e2f8a841a00396d0d7",
+    "trackedSourceClean": true,
+    "serverPid": 1925,
+    "healthCommitSha": "UNBOUND_LOCAL_BUILD",
+    "authority": "CLEAN_TRACKED_CHECKOUT_AND_LOCAL_BUILD; NOT_PRODUCTION_HEALTH",
+    "treeSha": "0c75c80833d78c807cc2fbef082b06f9c0c6aa7f",
+    "allPathsModesGitHashesAndSizesMatchImmutableGitHubTree": true,
+    "trackedFileCount": 667,
+    "gitFsckFull": "PASS",
+    "checkoutHistory": "Authentic Git objects from private GitHub connector, original SHA hashes verified; shallow boundary at immutable d9bc8d9 regression baseline.",
+    "healthProvesProductionSource": false
+  },
+  "runtime": {
+    "os": "Linux x86_64 / Ubuntu 24.04.3 Cloud",
+    "node": "v24.19.0",
+    "python": "3.12.14",
+    "playwright": "1.56.1",
+    "chromiumVersion": "141.0.7390.37",
+    "webkitVersion": "26.0"
+  },
+  "nativeRtc": {
+    "simulated": false,
+    "apiTypes": {
+      "chromium": {
+        "RTCPeerConnection": "function",
+        "RTCDataChannel": "function"
+      },
+      "webkit": {
+        "RTCPeerConnection": "function",
+        "RTCDataChannel": "function"
+      }
+    },
+    "environmentDiagnosticQualified": false,
+    "dataChannelDiagnostic": {
+      "chromium": {
+        "connected": false,
+        "packetReceived": false,
+        "offerIceCandidateCount": 0,
+        "answerIceCandidateCount": 0
+      },
+      "webkit": {
+        "connected": false,
+        "packetReceived": false,
+        "offerIceCandidateCount": 0,
+        "answerIceCandidateCount": 0
+      }
+    },
+    "interfaceEnumeration": {
+      "status": "FAIL",
+      "errorType": "PermissionError",
+      "errno": 1,
+      "error": "[Errno 1] Operation not permitted"
+    },
+    "visibleInterface": "loopback only in /proc/net/dev",
+    "udpLoopbackExchange": "PASS",
+    "interpretation": "Native APIs exist, but no ICE candidate or native DataChannel connection was obtained in this restricted Cloud. Environment diagnosis does not qualify the product."
+  },
+  "nativeReport": {
+    "filename": "qualification-report-a7c3336.json",
+    "sha256": "ee7a9fa5a33937b3fb45b98cd18429753b95b32c686816c4c0d01ddaa5e1f0a0",
+    "preservedUnmodified": true
+  },
+  "historicalObserverSource": {
+    "commitSha": "d9bc8d9de22156f7ab798ef75470fc5ecf3019a3",
+    "path": "apps/web/src/expense-recap-ui.ts",
+    "gitBlobSha": "4e9985ea99e3ba51af3789e8c8c78716558a3096",
+    "sha256": "32e09e7a9c97a3e399acb5e1e851d1caef7ebfd29841b1927af0a043d83200a3",
+    "availableInAuthenticatedGitHistory": true
+  },
+  "sourceArchiveProduced": false,
+  "invariants": {
+    "productionAccessed": false,
+    "productionMutated": false,
+    "cloudD1R2Accessed": false,
+    "secretsMutated": false,
+    "holdMutated": false,
+    "realMoneyEnabled": false,
+    "fieldAccepted": false,
+    "purchases": false,
+    "githubActionsTriggered": false,
+    "founderPcModified": false,
+    "testTimeoutsModified": false,
+    "webRtcSimulated": false,
+    "skippedTests": false
+  },
+  "holdSha256": "471e3fbcc628b28fe0fec4a07c182ff87d62aafef51be644e7acfe4558d9905f",
+  "documentaryEvidence": {
+    "branch": "evidence/cloud-qualification-20261009-a7c3336",
+    "baseSourceSha": "a7c333699dad0d70cf0de8e2f8a841a00396d0d7",
+    "thisDocumentaryCommitIsNotQualified": true,
+    "candidateBranchUnchanged": true,
+    "separate8bReportPath": "docs/qualification/CLOUD_QUALIFICATION_2026-10-09-8b6e05b.json"
+  },
+  "credits": {
+    "exactChatCostMeasurable": false,
+    "reason": "Shared quotas and balances do not provide an exact cost for this chat."
+  }
+}
