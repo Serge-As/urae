@@ -1270,7 +1270,21 @@
         "cloud:single targeted test blocked before process creation409environment_offline"
       ],
       "note": "SDK native format/image await source risk observed; Windows cause unproven. Genuine return values/Worker observed at unchanged30s windows; candidate a7 frozen.",
-      "next": "User executes Node --check then passive trace; preserve HOLD and prior failures."
+      "next": "Pending passive trace retained; founder selected a free Linux route first. Do not ask to run the previous manual PowerShell command during route setup. Windows QR root remains unproven."
+    },
+    {
+      "id": "qualification.free.codespaces.prepared.20261009",
+      "status": "IN_PROGRESS",
+      "scope": "qualification/free-environment-preparation",
+      "observedOn": "2026-10-09",
+      "evidence": [
+        "human:free plans only; no local Ubuntu requested",
+        "human:Codespaces balance display unclear; remaining usage and blocked paid spending unverified",
+        "repo:5f34348717fd52836c2f44a92269c2305ff20e00/docs/qualification/free-codespaces/README.md",
+        "review:JS body syntax parse in V8 only; native Node/Bash checks not executed"
+      ],
+      "note": "Prepared standalone 2-core personal default Codespace route; no environment created, runner registered, billing changed or qualification executed. Candidate a7 frozen, previous FAIL results and deployment HOLD preserved.",
+      "next": "Read actual account billing view before free resource creation, then run unchanged preflights before one canonical full qualification and save evidence automatically. Stop machine after saved proof."
     }
   ]
 }
