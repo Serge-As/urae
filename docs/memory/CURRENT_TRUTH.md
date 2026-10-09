@@ -209,7 +209,7 @@ Preuves : qualification branche **36362304494 SUCCESS**, PR #31 **36362426602 SU
 
 ## CURRENT OVERRIDE — 1.5.2.7 LIVE COMPLETION — RELEASE CANDIDATE QUALIFIÉE (2026-09-27)
 
-**Repository : `SergeDelor/tontine-platform`.**
+**Repository : `SergeDelor/urae`.**
 **Branche candidate : `finish/live-whatsapp-completion-20260927`.**
 **Chaîne d’intégration : PR #29 → `audit/live-completion-20260926`, puis PR #28 → `fix/1.5.2.6-field-persistence-pc-mobile-20260925`.**
 **Release candidate : `1.5.2.7-live-completion` · build `eco-system-1.5.2.7-20260927` · cache PWA `eco-system-v1527-live-completion-20260927`.**
@@ -240,7 +240,7 @@ Ne pas déclarer DEPLOYED ou FIELD_ACCEPTED tant que PR #29 et #28 ne sont pas f
 
 ## CURRENT OVERRIDE — 1.5.2.3 FINANCIAL ENTRY OFFLINE — PRODUCTION VERIFIED, FIELD ACCEPTANCE PENDING (2026-09-25)
 
-**Repository opérationnel : `SergeDelor/tontine-platform`.**
+**Repository opérationnel : `SergeDelor/urae`.**
 **Production publique : `1.5.2.3-financial-entry-offline`.**
 **Statut : CI_QUALIFIED + DEPLOYED + SMOKE_VERIFIED. FIELD_ACCEPTED est volontairement NON déclaré tant que le fondateur n'a pas reproduit les tests ✓ / Entrée / offline sur ses appareils.**
 
@@ -295,7 +295,7 @@ Le chantier L7–L12 est **mis en pause**. Aucune poursuite ne doit être prése
 
 ## CURRENT OVERRIDE — 1.5.2.2 GOVERNED FIELD FEEDBACK — PRODUCTION VERIFIED (2026-09-25)
 
-**Repository opérationnel : `SergeDelor/tontine-platform`.**
+**Repository opérationnel : `SergeDelor/urae`.**
 **Production publique : `1.5.2.2-governed-field-feedback`.**
 **Statut : DEPLOYED + SMOKE_VERIFIED. FIELD_ACCEPTED reste distinct et requiert la recette réelle fondateur/appareils.**
 
@@ -331,11 +331,11 @@ Le chantier L7–L12 est **mis en pause**. Aucune poursuite ne doit être prése
 - isolation PWA/cache 1.5.2.2.
 
 ### Mapping de propriété GitHub
-- Eco-System : `SergeDelor/tontine-platform`
+- Eco-System : `SergeDelor/urae`
 - Beauty : `Delor85/as-beauty` tant qu'il n'est pas transféré
 - Blue Magic : `Delor85/BlueAuto` tant qu'il n'est pas transféré
 - auteurs historiques, commits, anciennes issues et PR signés `Delor85` : **ne pas réécrire**
-- références opérationnelles du dépôt Eco actuel : utiliser `SergeDelor/tontine-platform`
+- références opérationnelles du dépôt Eco actuel : utiliser `SergeDelor/urae`
 
 ### Point de reprise
 La prochaine tranche est la fermeture fonctionnelle **L7–L12** (issue #21), en partant de cette production 1.5.2.2 prouvée et sans réintroduire de moteur parallèle.
