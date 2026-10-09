@@ -1268,10 +1268,11 @@
         "local:e083a6a; Chromium two-manager 2001 update expected 2001 received 1000 at 5000ms, source line 43",
         "user-provided:error-context.md subsequently displays 2001, authored by Beta",
         "repo:scripts/diagnose-live-sync-locally.mjs",
-        "repo:tests/browser/sovereign-multi-manager-1.5.2.14.spec.mjs"
+        "repo:tests/browser/sovereign-multi-manager-1.5.2.14.spec.mjs",
+        "local:ad075a7 diagnostic build PASS then No tests found; zero browser tests executed; runner filter error preserved"
       ],
       "note": "Late convergence is suggested by the failure context. Its cause remains unproved; neither clock arbitration nor discarded pending-intent Live updates is asserted as the cause. Instrumentation changes observation only; original five-second and zero-idle-polling assertions remain required.",
-      "next": "Capture whitelisted request, ACK, local commit, Live and display timings in one isolated diagnostic run; use evidence to target a correction and then requalify all suites."
+      "next": "Execute corrected runner with exactly-one-test listing gate; then inspect timing and fix proven cause. The first runner failure is not a financial test failure."
     }
   ]
 }

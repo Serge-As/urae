@@ -1,3 +1,11 @@
+## Correction du lanceur de diagnostic — 9 octobre 2026
+
+Première tentative réelle sur ad075a733f37326e80a0979bc866158ea74f442f : compilation et closure PWA PASS, puis **No tests found**, aucun scénario navigateur exécuté. Le filtre ancré `^distinct managers` cherchait au début du titre complet Playwright, qui commence par le projet/fichier. L'étiquette Test FAIL du premier rapport décrit donc une erreur de sélection du lanceur, pas une nouvelle preuve d'échec financier. Rapport conservé dans les outputs du chat `eco-live-diagnostic-20261009-011950`.
+
+Correction : filtre non ancré `distinct managers see typing`, préflight `--list` avant compilation exige exactement un test sélectionné, puis résumé exige exactement un test exécuté sans skip. Erreur de sélection/exécution classée DIAGNOSTIC_ERROR / NOT_EXECUTED, jamais qualification. Assertions produit toujours à cinq secondes ; aucune modification métier. Documentation primaire : https://playwright.dev/docs/api/class-testconfig#test-config-grep . Nouvelle exécution nécessaire ; aucun PASS réel présumé.
+
+---
+
 # Eco-System — qualification privée sans minutes GitHub, 8 octobre 2026
 
 ## État exact de la reprise

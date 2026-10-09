@@ -1,3 +1,11 @@
+## Correction du lanceur de diagnostic — 9 octobre 2026
+
+Première tentative réelle sur ad075a733f37326e80a0979bc866158ea74f442f : compilation et closure PWA PASS, puis **No tests found**, aucun scénario navigateur exécuté. Le filtre ancré `^distinct managers` cherchait au début du titre complet Playwright, qui commence par le projet/fichier. L'étiquette Test FAIL du premier rapport décrit donc une erreur de sélection du lanceur, pas une nouvelle preuve d'échec financier. Rapport conservé dans les outputs du chat `eco-live-diagnostic-20261009-011950`.
+
+Correction : filtre non ancré `distinct managers see typing`, préflight `--list` avant compilation exige exactement un test sélectionné, puis résumé exige exactement un test exécuté sans skip. Erreur de sélection/exécution classée DIAGNOSTIC_ERROR / NOT_EXECUTED, jamais qualification. Assertions produit toujours à cinq secondes ; aucune modification métier. Documentation primaire : https://playwright.dev/docs/api/class-testconfig#test-config-grep . Nouvelle exécution nécessaire ; aucun PASS réel présumé.
+
+---
+
 ## État courant — qualification locale partielle et retard Live, 9 octobre 2026
 
 Source réellement exécutée : **e083a6a38b1ab76e6827e512bb7e900604911a4c**. Qualification locale terminée le 8 octobre à **23:57:48.826 UTC**, soit le 9 octobre à **00:57 à Douala**. Le terminal réel et le rapport du lanceur montrent **654/654 Node PASS, zéro échec/skip**, puis **Chromium 7/8**. Le scénario « distinct managers » échoue après la validation de **2 001 F CFA par Beta** : Alpha affiche encore **1 000** à l'assertion de cinq secondes. La capture d'échec communiquée ensuite montre **2 001**, avec l'auteur Beta ; elle suggère une arrivée tardive et ne mesure pas sa cause ni son délai exact.

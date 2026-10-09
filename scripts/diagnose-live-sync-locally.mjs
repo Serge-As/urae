@@ -24,7 +24,7 @@ async function run(file,args,label){
   const exitCode=await new Promise((resolve,reject)=>{child.once('error',reject);child.once('close',resolve);});
   await writeFile(logPath,captured,'utf8');
   report.checks.push({label,status:exitCode===0?'PASS':'FAIL',exitCode,logPath});
-  return exitCode;
+  return{exitCode,captured};
 }
 try{
   if(Number(process.versions.node.split('.')[0])<24)throw Error('Node.js 24 or newer is required.');
@@ -35,8 +35,13 @@ try{
   await mkdir(scratch,{recursive:true});await mkdir(output,{recursive:true});
   const installed=JSON.parse(await readFile(path.join(repo,'node_modules','@playwright','test','package.json'),'utf8'));
   if(installed.version!=='1.56.1')throw Error('The already qualified Playwright 1.56.1 installation is required.');
+  const testArgs=['node_modules/@playwright/test/cli.js','test','tests/browser/sovereign-multi-manager-1.5.2.14.spec.mjs','--browser=chromium','--workers=1','--grep','distinct managers see typing'];
+  const listing=await run(process.execPath,[...testArgs,'--list'],'Verify exactly one diagnostic test is selected before building');
+  const selected=Number(listing.captured.replace(/\u001b\[[0-?]*[ -/]*[@-~]/g,'').match(/Total:\s+(\d+)\s+test/)?.[1]);
+  report.selectedTests=selected;
+  if(listing.exitCode!==0||selected!==1)throw Error('Diagnostic filter must select exactly one test, received '+selected+'. No browser scenario executed.');
   const buildCommand=process.platform==='win32'?{file:process.env.ComSpec||'cmd.exe',args:['/d','/s','/c','npm run build']}:{file:'npm',args:['run','build']};
-  if(await run(buildCommand.file,buildCommand.args,'Build the exact checked-out source')!==0)throw Error('Build failed.');
+  if((await run(buildCommand.file,buildCommand.args,'Build the exact checked-out source')).exitCode!==0)throw Error('Build failed.');
   // Fresh synthetic SQLite only. Do not reopen a prior qualification database.
   await new Promise((resolve,reject)=>{const probe=portProbe();probe.once('error',reject);probe.listen(4173,'127.0.0.1',()=>probe.close(resolve));});
   serverLog=openSync(path.join(scratch,'server.log'),'a');
@@ -55,12 +60,16 @@ try{
   if(health.realMoneyEnabled!==false)throw Error('Synthetic diagnosis requires realMoneyEnabled=false.');
   report.localSourceBinding={sourceSha:report.sourceSha,trackedSourceClean:true,serverPid:server.pid,healthCommitSha:health.commitSha,authority:'CLEAN_CHECKOUT_AND_OWN_LOCAL_BUILD; NOT_PRODUCTION_ATTESTATION'};
   report.localHealth=health;
-  const exitCode=await run(process.execPath,['node_modules/@playwright/test/cli.js','test','tests/browser/sovereign-multi-manager-1.5.2.14.spec.mjs','--browser=chromium','--workers=1','--grep','^distinct managers','--retries=0','--output='+path.join(output,'browser')],'One instrumented two-manager scenario; unchanged five-second assertions');
-  report.testResult=exitCode===0?'PASS':'FAIL';
+  const execution=await run(process.execPath,[...testArgs,'--retries=0','--output='+path.join(output,'browser')],'One instrumented two-manager scenario; unchanged five-second assertions');
+  const summary=execution.captured.replace(/\u001b\[[0-?]*[ -/]*[@-~]/g,'');
+  const count=kind=>Number([...summary.matchAll(new RegExp('(\\d+) '+kind+'\\b','g'))].at(-1)?.[1]??0);
+  report.executedTests={passed:count('passed'),failed:count('failed'),skipped:count('skipped')};
+  if(report.executedTests.passed+report.executedTests.failed!==1||report.executedTests.skipped!==0)throw Error('No valid single-test execution summary. This is a diagnostic runner error, not a financial test result.');
+  report.testResult=execution.exitCode===0&&report.executedTests.passed===1?'PASS':'FAIL';
   // A diagnostic PASS cannot replace 654 Node / Chromium 8 / WebKit 6.
-  report.status='DIAGNOSTIC_COMPLETED';if(exitCode!==0)process.exitCode=1;
+  report.status='DIAGNOSTIC_COMPLETED';if(report.testResult!=='PASS')process.exitCode=1;
 }catch(error){
-  report.status='DIAGNOSTIC_ERROR';report.error=String(error?.stack??error);process.exitCode=1;
+  report.status='DIAGNOSTIC_ERROR';report.testResult=report.testResult??'NOT_EXECUTED';report.error=String(error?.stack??error);process.exitCode=1;
   console.error('\n[Eco-System diagnostic] '+report.error);
 }finally{
   if(server&&server.exitCode===null)server.kill();
