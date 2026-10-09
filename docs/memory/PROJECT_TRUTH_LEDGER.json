@@ -1272,14 +1272,15 @@
         "local:ad075a7 diagnostic build PASS then No tests found; zero browser tests executed; runner filter error preserved",
         "local:d9bc8d9 Chromium diagnostic 1/1 PASS; 1000/2001/2002 remote display delays 2733/2162/1830ms; original 5000ms assertions unchanged",
         "user-provided:frequent raw GET expenses on Alpha/Beta; truncated timeline, exact total not asserted",
-        "repo:apps/web/src/expense-recap-ui.ts targeted observer fix; real qualification not executed"
+        "repo:apps/web/src/expense-recap-ui.ts targeted observer fix; real qualification not executed",
+        "local:9bad483 Chromium 8/8 PASS; remote 1000/2001/2002 display delays 1486/2040/1862ms, same 5000ms deadline"
       ],
-      "note": "Original e083a6a five-second failure is retained. One d9 diagnostic passes; expense GET feedback is separately observed and reproduced in a JS-only model. Its contribution to the original latency failure remains unproved. Full-source qualification is still required.",
-      "next": "Run exact-source old-fails/new-passes expense regressions, then 657 Node / Chromium 8 / WebKit 6 with unchanged original deadlines; keep HOLD until exact publication gates."
+      "note": "Original e083 latency failure remains historical. Both d9 targeted and 9bad full Chromium pass with unchanged deadlines; the expense loop is separately proved and corrected. No causal percentage reduction or exact total prior requests is invented; complete publication remains HOLD because WebKit Windows is 4/6.",
+      "next": "Preserve real-source 657 Node / Chromium 8 proofs and require full compatible WebKit qualification without skip or mock."
     },
     {
       "id": "issue.eco.expense.recap.observer.loop.20261009",
-      "status": "IN_PROGRESS",
+      "status": "VERIFIED_LOCAL",
       "scope": "web/expense-recap/projection/read-load",
       "observedOn": "2026-10-09",
       "evidence": [
@@ -1288,10 +1289,41 @@
         "simulation:real-function JS model before 20 reads / one timer, after one read / zero timer at 2400ms; not actual Node or browser qualification",
         "repo:tests/expense-recap-no-idle-polling.test.mjs",
         "repo:scripts/verify-expense-recap-regression.mjs",
-        "repo:tests/browser/sovereign-multi-manager-1.5.2.14.spec.mjs extended idle read gate"
+        "repo:tests/browser/sovereign-multi-manager-1.5.2.14.spec.mjs extended idle read gate",
+        "local:9bad483 real Node/TypeScript baseline 3 expected assertion failures / corrected source 3 PASS, no skip/cancel",
+        "local:9bad483 governed Node 657 PASS; Chromium 8 PASS; instrumented endpoints 19 total, expense GET Alpha3/Beta2, zero expense reads in idle window"
       ],
-      "note": "Observed expensive observer feedback is targeted without replacing the canonical expense service or Ledger. Source fix implemented, actual regression and full qualification not executed; no deployment or capability acceptance claimed.",
-      "next": "Prove three intended old assertion failures and three new successes using installed TypeScript and Node, then require all 657 Node, Chromium 8, WebKit 6 plus exact-source archive and publication smoke."
+      "note": "Expense observer feedback is corrected and proved on the actual source with old assertion failures, corrected component successes and Chromium idle gate. This is local product verification, not deployment or complete-platform acceptance. Overall qualification fails on two WebKit Windows RTC cases.",
+      "next": "Preserve the proven expense owner fix; qualify all six sovereign WebKit scenarios on a compatible real engine before archive/deployment."
+    },
+    {
+      "id": "qualification.windows.9bad483.20261009",
+      "status": "VERIFIED_LOCAL",
+      "scope": "qualification/partial/exact-source",
+      "observedOn": "2026-10-09",
+      "evidence": [
+        "local:9bad4832f2b53c3fd89c3765b0e24a5318167d7d clean checkout, own isolated server pid7840, /health UNBOUND_LOCAL_BUILD",
+        "user-provided:qualification-report.json started2026-10-09T00:52:01.751Z completed2026-10-09T01:02:49.841Z overallFAIL",
+        "local:expense before-after PASS; governed Node657/657; Chromium8/8; WebKit4PASS2FAIL; no qualified archive"
+      ],
+      "note": "Exact-source local execution proof only. Production not deployed, field not accepted, realMoneyEnabled=false. Selected Live endpoint requests19, expense reads5 over scenario and0 during idle.",
+      "next": "Obtain real compatible-engine WebKit6/6 and repeat required exact-source qualification; never promote this FAIL report to PASS."
+    },
+    {
+      "id": "issue.eco.webkit.windows.rtc.20261009",
+      "status": "IN_PROGRESS",
+      "scope": "qualification/engine-capability/sovereign-local-room",
+      "observedOn": "2026-10-09",
+      "evidence": [
+        "local:WebKit Windows DataChannel throws ECO_LOCAL_ROOM_WEBRTC_UNAVAILABLE",
+        "repo:packages/relay/src/local-room.ts guard returns false when RTCPeerConnection absent",
+        "local:A01 callback expects signal enabled but remains disabled;4 other WebKit testsPASS",
+        "https://playwright.dev/docs/browsers#webkit",
+        "user-input-pending:read-only WSL distribution listing requested",
+        "native-terminal:WSL3.0.1 installation observed after listing request; usable distro and completion not yet confirmed"
+      ],
+      "note": "Installed Windows WebKit lacks the API required by the two unchanged real Local Room scenarios. Existing failure is retained; no fake peer connection, skip, weaker deadline or feature deletion. Compatible environment availability remains unknown.",
+      "next": "Wait for current WSL initialization result; confirm a usable distribution before any Linux qualification. Retain all six real WebKit scenarios and current FAIL."
     }
   ]
 }
