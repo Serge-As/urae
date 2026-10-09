@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedOn": "2026-10-08",
+  "generatedOn": "2026-10-09",
   "purpose": "Anti-regression operational truth. Read before asking founder to recreate/configure anything.",
   "allowedStatuses": [
     "ACQUIRED",
@@ -1199,7 +1199,7 @@
       "id": "candidate.eco.1.5.2.15.bounded.transport.recovery",
       "status": "IN_PROGRESS",
       "scope": "application/outbox/transport-recovery/pwa/qualification/signed-clock/context-guard/dependency-security",
-      "observedOn": "2026-10-08",
+      "observedOn": "2026-10-09",
       "evidence": [
         "repo:docs/audits/ECO_SYSTEM_AUDIT_2026-10-08.md",
         "repo:docs/change-impact/CIR-2026-10-08-BOUNDED-TRANSPORT-RECOVERY.md",
@@ -1220,24 +1220,28 @@
         "github:run:37826825035 FAILURE; Node 653 PASS, Chromium 7/8 expected 4000 received 5000",
         "github:artifact:11571014847 preserved second browser failure",
         "user-confirmed:GitHub monthly free 2000 minutes exhausted",
-        "extracted-real-resolver:old crosses group and cancels original; fixed CONFRONTATION_DECISION_STALE retains original; narrow simulation only"
+        "extracted-real-resolver:old crosses group and cancels original; fixed CONFRONTATION_DECISION_STALE retains original; narrow simulation only",
+        "local:e083a6a38b1ab76e6827e512bb7e900604911a4c; 2026-10-08T23:57:48.826Z; Node 654/654 PASS; Chromium 7/8 FAIL; WebKit NOT_EXECUTED",
+        "local:Chromium offline 4000/5000 confrontation and bounded outage PASS in this one run; not full qualification",
+        "user-provided:failure context later displays 2001 from Beta; precise latency/root cause still unmeasured"
       ],
-      "note": "Transport qualified, signed-clock regressions proved; complete browser convergence remains unresolved. New dependency lock, context guard and strengthened browser diagnostics require final 654/8/6. Publication HOLD and source PR72 draft.",
-      "next": "Run scripts/qualify-eco-locally.mjs in a functional Node 24 environment; inspect failure JSON if any. Restore a runner for exact delivery qualification before merge/publication. Record health/Worker evidence only after successful delivery."
+      "note": "Transport and clock proofs remain historical. Final-source e083 Node 654 passes locally; Chromium 7/8 fails on 2001 Live convergence within five seconds, despite the offline 4000/5000 scenario passing once. No WebKit execution/archive/full qualification/publication. PR72 draft and HOLD persist; new timing instrumentation is prepared, not executed.",
+      "next": "Execute the single-run instrumented Live diagnosis without relaxing deadlines, polling or retrying until green. Fix the proven cause, then require complete exact-source 654/8/6 and delivery gates."
     },
     {
       "id": "issue.eco.offline.reconfirmation.clock.20261008",
       "status": "IN_PROGRESS",
       "scope": "application/offline-confrontation/signed-clock",
-      "observedOn": "2026-10-08",
+      "observedOn": "2026-10-09",
       "evidence": [
         "github:run:37822250394 FAILURE; expected 4000 received 5000",
         "repo:tests/offline-reconfirmation-clock.test.mjs",
         "repo:workers/api/src/authenticated.ts",
         "github:run:37826518664 old/fixed clock proof SUCCESS",
-        "github:run:37826825035 remaining browser convergence FAILURE"
+        "github:run:37826825035 remaining browser convergence FAILURE",
+        "local:e083a6a offline confrontation 4000/5000 PASS once, 2026-10-08T23:57:48.826Z; full suite FAIL on a separate Live scenario"
       ],
-      "note": "Three signed-clock bugs proved by old/fixed source execution; their correction alone does not close the 4000/5000 full browser failure. Preserve that separate convergence issue until canonical/outbox/display diagnostics identify it.",
+      "note": "Three signed-clock bugs proved by old/fixed source execution; their correction alone does not close the 4000/5000 full browser failure. Preserve that separate convergence issue until canonical/outbox/display diagnostics identify it. The final e083 offline browser scenario passes once locally; this does not erase the historical failures or establish complete qualification.",
       "next": "Inspect the preserved browser context and prove regressions fail on prior source, pass on corrected source; require full browser qualification before publication."
     },
     {
@@ -1254,6 +1258,20 @@
       ],
       "note": "Final qualification cannot run in the current tools. Prepared local runner is unexecuted, not evidence of passing tests or deployment.",
       "next": "Use a functional local terminal and Node 24, or restore a compatible runner; keep delivery HOLD until exact-source checks succeed."
+    },
+    {
+      "id": "issue.eco.live.sync.latency.20261009",
+      "status": "IN_PROGRESS",
+      "scope": "financial-live/online-two-managers/diagnostics",
+      "observedOn": "2026-10-09",
+      "evidence": [
+        "local:e083a6a; Chromium two-manager 2001 update expected 2001 received 1000 at 5000ms, source line 43",
+        "user-provided:error-context.md subsequently displays 2001, authored by Beta",
+        "repo:scripts/diagnose-live-sync-locally.mjs",
+        "repo:tests/browser/sovereign-multi-manager-1.5.2.14.spec.mjs"
+      ],
+      "note": "Late convergence is suggested by the failure context. Its cause remains unproved; neither clock arbitration nor discarded pending-intent Live updates is asserted as the cause. Instrumentation changes observation only; original five-second and zero-idle-polling assertions remain required.",
+      "next": "Capture whitelisted request, ACK, local commit, Live and display timings in one isolated diagnostic run; use evidence to target a correction and then requalify all suites."
     }
   ]
 }

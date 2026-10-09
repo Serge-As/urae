@@ -1,3 +1,5 @@
+> CURRENT 2026-10-09 : source e083a6a testé localement : 654 Node PASS, Chromium 7/8 FAIL (Beta 2001 / Alpha encore 1000 à cinq secondes), confrontation 4000/5000 PASS dans ce run, WebKit non exécuté. Diagnostic instrumenté préparé, non encore exécuté. HOLD et PR72 brouillon maintenus. Lire CURRENT_TRUTH/NEXT_RUN ; aucun PASS complet ni livraison à annoncer.
+
 > CURRENT 2026-10-08 : HOLD toujours actif ; lire docs/recovery/ECO_FREE_QUALIFICATION_2026-10-08.md et PR #72. Horloge : trois défauts prouvés, 653 Node PASS. Convergence 4 000/5 000 : encore FAILURE run 37826825035. Dernier source 654 tests non exécuté (quota Actions mensuel épuisé + terminal Codex indisponible). Ne pas fusionner/publier la candidate sans qualification complète ni annoncer la plateforme intégralement finie. Préserver originaux et preuves d'échec.
 
 > Checkpoint 2026-10-08 : publication HOLD au SHA 5ee23e8. Ne pas annoncer 1.5.2.15 livrée ; conserver l'échec de reconfirmation du run 37822250394. La reprise exige une preuve de causalité horloge/confrontation, puis les qualifications complètes et le smoke exact. Voir CURRENT_TRUTH et CIR-2026-10-08-BOUNDED-TRANSPORT-RECOVERY.

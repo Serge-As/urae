@@ -1,3 +1,4 @@
+# CURRENT 2026-10-09: e083a6a local Node 654/654; Chromium 7/8 (2001 Live update misses five-second assertion); offline 4000/5000 passes once; WebKit not executed. HOLD remains. Instrumented diagnostic prepared; no capability maturity promotion.
 # CURRENT 2026-10-08: publication HOLD; full 4000/5000 convergence still unqualified; Actions quota exhausted; prepared private local qualification runner. See recovery handoff.
 # 2026-10-08 CURRENT: 1.5.2.15 publication HOLD; offline reconfirmation clock defect under qualification. Current deployed proof remains 1.5.2.14. See CURRENT_TRUTH.
 registry_version: 1

@@ -54,3 +54,18 @@ La reconfirmation conserve son groupe, compte et tenant avant la demande d'horlo
 ### Checkpoint de reprise après épuisement du quota
 
 Le fondateur confirme 2 000 minutes gratuites Actions épuisées. Les runs 37827279968 et 37827591520 n'ont aucun runner ni étape. Source 4022ef5 : 653 Node PASS, mais Chromium 7/8, résultat 4 000/5 000 encore en échec (artefact 11571014847). Ne pas attribuer ce résultat à l'horloge seule. La fixture navigateur attend maintenant le vrai canonique 5 000 et les deux montants du dialogue ; elle capture canonique/Outbox/affichages sans tickets si le résultat 4 000 échoue encore. Garde de contexte confirmée par exécution des vrais corps de résolution en V8 : ancien annule/crée dans autre groupe, nouveau rejette/conserve. Ce test étroit ne remplace pas la régression Node réelle ajoutée. Lanceur privé Node multi-OS et mode d'emploi ajoutés, revus statiquement mais non exécutés. 654/8/6 finaux encore requis. HOLD maintenu, pas de fusion PR72 ni de publication, pas de dépense.
+
+## Qualification locale réellement exécutée et nouveau diagnostic
+
+Source réellement exécutée : **e083a6a38b1ab76e6827e512bb7e900604911a4c**. Qualification locale terminée le 8 octobre à **23:57:48.826 UTC**, soit le 9 octobre à **00:57 à Douala**. Le terminal réel et le rapport du lanceur montrent **654/654 Node PASS, zéro échec/skip**, puis **Chromium 7/8**. Le scénario « distinct managers » échoue après la validation de **2 001 F CFA par Beta** : Alpha affiche encore **1 000** à l'assertion de cinq secondes. La capture d'échec communiquée ensuite montre **2 001**, avec l'auteur Beta ; elle suggère une arrivée tardive et ne mesure pas sa cause ni son délai exact.
+
+La confrontation **4 000 / 5 000** et la panne API bornée passent dans cette exécution. Ce résultat unique conserve les échecs historiques et ne vaut pas qualification complète. **WebKit NON EXÉCUTÉ** : arrêt du lanceur au premier gate navigateur en échec. **Rapport FAIL**, aucune archive qualifiée créée, aucune publication. Le catalogue local compte 164 capacités. Le /health local annonce UNBOUND_LOCAL_BUILD ; sa liaison est le checkout propre + serveur local du lanceur, pas une attestation de production.
+
+Preuve locale utilisateur : `outputs/eco-reprise-20261009-004328/qualification-report.json` dans le chat de reprise ; capture `test-results/tests-browser-sovereign-mu-85770-r-polls-financial-snapshots-chromium/error-context.md`. Les fichiers et bases synthétiques antérieurs sont conservés. La production 1.5.2.14 reste la dernière attestée.
+
+Prochaine action : **scripts/diagnose-live-sync-locally.mjs**, une seule exécution Chromium du scénario concerné, sur nouvelle SQLite synthétique. Le test existant conserve ses assertions de cinq secondes et de zéro polling au repos ; il ajoute uniquement des horaires/ACK/Outbox/changements d'affichage expurgés de tickets. Diagnostic PASS ou FAIL ≠ qualification de livraison. L'instrumentation nouvellement ajoutée reste à exécuter avant toute conclusion de causalité ou correction métier. Le terminal automatique Codex indisponible et le quota Actions épuisé nécessitent toujours un lancement PowerShell par le fondateur. Pas d'installation navigateur répétée ni de minutes achetées.
+
+**HOLD maintenu**, PR #72 brouillon. Après diagnostic/correction : qualification complète **654 Node + Chromium 8 + WebKit 6 du même SHA**, archive vérifiée puis gates de livraison/smoke exact. **realMoneyEnabled=false ; FIELD_ACCEPTED=NOT_ACCEPTED**. Les blocs suivants restent des preuves historiques, jamais des PASS actuels.
+
+---
+

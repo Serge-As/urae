@@ -33,8 +33,87 @@ async function setup(page,browser){
   return{ids,second,secondContext};
 }
 
-test('distinct managers see typing and validated amounts, and an idle Live connection never polls financial snapshots',async({page,browser})=>{
+const safeCellIntent=row=>({
+  id:row.id,status:row.status,attempts:row.attempts,createdAt:row.createdAt,updatedAt:row.updatedAt,lastError:row.lastError,
+  lastResult:{status:row.lastResult?.status,accepted:row.lastResult?.accepted,canonicalAmount:row.lastResult?.canonicalAmount,cellVersion:row.lastResult?.cellVersion,error:row.lastResult?.error},
+  payload:{targetAmount:row.payload?.targetAmount,baselineValue:row.payload?.baselineValue,baselineVersion:row.payload?.baselineVersion,
+    deviceSequence:row.payload?.deviceSequence,recordedOffline:row.payload?.recordedOffline,recordedAtClient:row.payload?.recordedAtClient,
+    hasClockAnchor:Boolean(row.payload?.clockAnchorId),elapsedSinceAnchorMs:row.payload?.elapsedSinceAnchorMs}
+});
+async function recordLiveSyncTiming(page,ids,label,timeline){
+  const requests=new WeakMap(),jobs=new Set();
+  const add=(stage,detail={})=>timeline.push({atMs:Date.now(),page:label,stage,...detail});
+  const request=r=>{
+    const pathname=new URL(r.url()).pathname;
+    if(!/\/outbox\/apply$|\/financial-cells$|\/ledger$|\/expenses$|\/workspaces$|\/financial-clock-anchor$/.test(pathname))return;
+    const id=timeline.length+1;requests.set(r,id);
+    let command={};
+    if(r.method()==='POST'&&/\/outbox\/apply$|\/financial-cells$/.test(pathname)){
+      try{const body=r.postDataJSON(),p=body.payload??body.intentV2??body;
+        command={type:body.type,targetAmount:p.targetAmount,baselineValue:p.baselineValue,baselineVersion:p.baselineVersion,
+          recordedOffline:p.recordedOffline,recordedAtClient:p.recordedAtClient,hasClockAnchor:Boolean(p.clockAnchorId),
+          elapsedSinceAnchorMs:p.elapsedSinceAnchorMs};}catch{}
+    }
+    add('REQUEST',{id,method:r.method(),path:pathname,command});
+  };
+  const response=r=>{
+    const id=requests.get(r.request());if(!id)return;
+    add('RESPONSE_HEADERS',{id,status:r.status()});
+    const job=(async()=>{
+      // Whitelist financial ACK fields. Never attach cookies, signed tickets,
+      // full request/response bodies, credentials or arbitrary record contents.
+      if(/\/outbox\/apply$|\/financial-cells$/.test(new URL(r.url()).pathname)){
+        try{const body=await r.json();add('ACK',{id,status:body.status,accepted:body.accepted,canonicalAmount:body.canonicalAmount,cellVersion:body.cellVersion,error:body.error});}
+        catch{add('ACK_UNREADABLE',{id});}
+      }else add('RESPONSE_COMPLETE',{id});
+    })();jobs.add(job);void job.finally(()=>jobs.delete(job));
+  };
+  const failed=r=>{const id=requests.get(r);if(id)add('REQUEST_FAILED',{id});};
+  page.on('request',request);page.on('response',response);page.on('requestfailed',failed);
+  await page.evaluate(ids=>{
+    const rows=[];window.__ecoLiveSyncTiming=rows;
+    const listen=type=>window.addEventListener(type,event=>{
+      const d=event.detail??{},p=d.payload??d;
+      if(p.meetingId&&String(p.meetingId)!==ids.meetingId)return;
+      if(p.membershipId&&String(p.membershipId)!==ids.membershipId)return;
+      if(p.rubricId&&String(p.rubricId)!==ids.rubricId)return;
+      const selector='.matrix-cell-entry[data-meeting-id="'+ids.meetingId+'"][data-membership-id="'+ids.membershipId+'"][data-rubric-id="'+ids.rubricId+'"]';
+      const cell=document.querySelector(selector),text=cell?.querySelector('.cell-current')?.textContent;
+      rows.push({atMs:Date.now(),stage:type,traceType:d.type,amount:p.newAmount??p.amount??p.target,cellVersion:p.cellVersion,
+        display:text==null?null:Number(text.replace(/[^0-9-]/g,'')),saveState:cell?.dataset.saveState});
+      if(rows.length>150)rows.shift();
+    });
+    for(const type of ['eco:financial-cell-trace','eco:financial-local-committed','eco:financial-live-update','eco:financial-data-changed','eco:transport-degraded','eco:transport-retry-ready'])listen(type);
+  },ids);
+  return async()=>{
+    page.off('request',request);page.off('response',response);page.off('requestfailed',failed);
+    await Promise.allSettled([...jobs]);
+    return await page.evaluate(ids=>{
+      const selector='.matrix-cell-entry[data-meeting-id="'+ids.meetingId+'"][data-membership-id="'+ids.membershipId+'"][data-rubric-id="'+ids.rubricId+'"]',cell=document.querySelector(selector),text=cell?.querySelector('.cell-current')?.textContent;
+      return{events:window.__ecoLiveSyncTiming??[],display:text==null?null:Number(text.replace(/[^0-9-]/g,'')),saveState:cell?.dataset.saveState,connectivity:document.querySelector('#connectivity')?.textContent};
+    },ids);
+  };
+}
+async function attachLiveSyncTiming(testInfo,ids,page,second,stop,timeline,result){
+  // Stop observers before this diagnostic GET: it is failure evidence, never
+  // part of the application's idle Live request policy or convergence check.
+  const states=await Promise.allSettled([stop[0](),stop[1](),storedCellIntent(page,ids),storedCellIntent(second,ids)]);
+  const read=i=>states[i].status==='fulfilled'?states[i].value:{diagnosticUnavailable:true};
+  const snapshot=await api(second,'/api/v1/groups/'+ids.groupId+'/financial-cells/snapshot','GET',undefined,ids.groupId).catch(()=>null);
+  const canonical=snapshot?.cells?.find(x=>x.meetingId===ids.meetingId&&x.membershipId===ids.membershipId&&x.rubricId===ids.rubricId);
+  const start=timeline[0]?.atMs??Date.now();
+  const output={schemaVersion:1,result,thresholdMs:5000,canonicalCell:canonical?{amount:canonical.amount,cellVersion:canonical.cellVersion,updatedAt:canonical.updatedAt}:null,
+    timeline:timeline.map(({atMs,...r})=>({elapsedMs:atMs-start,...r})),
+    alpha:read(0),beta:read(1),alphaOutbox:Array.isArray(read(2))?read(2).map(safeCellIntent):read(2),betaOutbox:Array.isArray(read(3))?read(3).map(safeCellIntent):read(3)};
+  for(const state of [output.alpha,output.beta])if(state.events)state.events=state.events.map(({atMs,...r})=>({elapsedMs:atMs-start,...r}));
+  await testInfo.attach('live-sync-timing',{body:Buffer.from(JSON.stringify(output,null,2)),contentType:'application/json'});
+  console.log('ECO_LIVE_SYNC_TIMING '+JSON.stringify(output));
+}
+
+test('distinct managers see typing and validated amounts, and an idle Live connection never polls financial snapshots',async({page,browser},testInfo)=>{
   test.setTimeout(90000);const {ids,second,secondContext}=await setup(page,browser);
+  const timeline=[{atMs:Date.now(),stage:'SCENARIO_READY'}],stop=await Promise.all([recordLiveSyncTiming(page,ids,'Alpha',timeline),recordLiveSyncTiming(second,ids,'Beta',timeline)]);
+  let result='PASS';
   try{
     let forbidden=0;second.on('request',r=>{if(/financial-cells\/snapshot|\/live\/events/.test(r.url()))forbidden++;});
     await cell(page,ids).locator('.cell-target-input').fill('1000');
@@ -58,7 +137,10 @@ test('distinct managers see typing and validated amounts, and an idle Live conne
       await expect(page.locator(`[data-session-tab="${tab}"]`)).toHaveClass(/active/);
       await expect(page.locator('#sessionsWorkspace')).not.toBeEmpty();
     }
-  }finally{await secondContext.close();}
+  }catch(error){result='FAIL';throw error;}finally{
+    try{await attachLiveSyncTiming(testInfo,ids,page,second,stop,timeline,result);}catch{console.log('ECO_LIVE_SYNC_TIMING_UNAVAILABLE');}
+    await secondContext.close();
+  }
 });
 
 test('offline divergent edits survive reload, confront the exact cell, and converge after keeping or explicitly reconfirming a value',async({page,context,browser},testInfo)=>{
