@@ -4,7 +4,7 @@ date: 2026-10-09
 db_mutation: none
 mode: HOLD-failed-confrontation-qualification
 reason: local e083 Node 654 PASS; Chromium 7/8 FAIL on 2001 Live within five seconds; WebKit not executed; diagnosis pending; keep publication HOLD
-source_under_review: ad075a733f37326e80a0979bc866158ea74f442f
+source_under_review: d9bc8d9de22156f7ab798ef75470fc5ecf3019a3
 field_acceptance: NOT_ACCEPTED
 trigger_nonce: 2026-10-08-hold-confrontation-evidence
 work_branch: fix/confrontation-clock-recovery-20261008

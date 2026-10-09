@@ -1,3 +1,9 @@
+## Diagnostic corrigé — sélection vérifiée avant lancement, 9 octobre 2026
+
+Première tentative sur **ad075a7** : build et closure PWA PASS, puis **No tests found**, **aucun scénario navigateur exécuté**. Erreur du filtre du lanceur, pas un échec métier supplémentaire. Source actuelle **d9bc8d9de22156f7ab798ef75470fc5ecf3019a3** dans PR #72 : filtre non ancré, préflight `--list` exige exactement un test ; résumé exige exactement un scénario exécuté sans skip. En attente du résultat réel ; cinq secondes et zéro polling au repos conservés. HOLD reste actif. Reprise : même checkpoint ci-dessous, actualisé avec ces faits.
+
+---
+
 # Checkpoint — HOLD et diagnostic Live, 9 octobre 2026
 
 Source exécutée localement : e083a6a38b1ab76e6827e512bb7e900604911a4c. Rapport FAIL terminé le 8 octobre à 23:57:48.826 UTC (9 octobre 00:57 Douala).

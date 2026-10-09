@@ -1,3 +1,9 @@
+## Diagnostic corrigé — sélection vérifiée avant lancement, 9 octobre 2026
+
+Première tentative sur **ad075a7** : build et closure PWA PASS, puis **No tests found**, **aucun scénario navigateur exécuté**. Erreur du filtre du lanceur, pas un échec métier supplémentaire. Source actuelle **d9bc8d9de22156f7ab798ef75470fc5ecf3019a3** dans PR #72 : filtre non ancré, préflight `--list` exige exactement un test ; résumé exige exactement un scénario exécuté sans skip. En attente du résultat réel ; cinq secondes et zéro polling au repos conservés. HOLD reste actif. Reprise : même checkpoint ci-dessous, actualisé avec ces faits.
+
+---
+
 ## État courant — HOLD, résultat local réel et diagnostic Live, 9 octobre 2026
 
 Source exécutée e083a6a : **654 Node PASS / Chromium 7/8 FAIL sur 2001 Live à cinq secondes / WebKit NON EXÉCUTÉ**. La capture montre ensuite 2001 ; cause précise à mesurer. Confrontation 4000/5000 PASS une fois, pas une qualification complète. Source instrumentée **ad075a733f37326e80a0979bc866158ea74f442f**, PR **#72 brouillon**, diagnostic isolé à exécuter avec `scripts/diagnose-live-sync-locally.mjs`. Aucun code métier modifié par ce commit. **Publication HOLD maintenue**, aucune archive qualifiée/livraison ; realMoney=false, FIELD_ACCEPTED=NOT_ACCEPTED. Reprise exacte : `docs/memory/checkpoints/CHECKPOINT-2026-10-09-HOLD-LIVE-SYNC-DIAGNOSTIC.md` ; les blocs suivants sont historiques.
