@@ -1,3 +1,11 @@
+# Preuve réelle en cours de qualification — 9 octobre 2026
+
+Source native **9bad4832f2b53c3fd89c3765b0e24a5318167d7d**. Installation verrouillée npm PASS, zéro vulnérabilité signalée. Le vérificateur Node/TypeScript réel confirme : référence d9bc8d9 **3 tests, 3 échecs des bonnes assertions, zéro skip/cancel** ; source corrigé **3 tests, 3 PASS, zéro échec/skip/cancel** ; résultat du vérificateur **PASS**. Rapport réel : outputs/eco-qualification-2026-10-09T00-52-01-749Z/expense-regression/expense-regression-report.json dans le chat. Le terminal app confirme la commande native et la mise à jour fast-forward du checkout. Aucun source ne change pendant ce lancement.
+
+La suite gouvernée **657 Node**, puis **Chromium 8** et **WebKit 6**, est en cours ; aucun résultat final ni archive qualifiée présumé. HOLD et PR72 draft maintenus. Prochaines observations : résumé de CI, puis limites Live inchangées et lectures zéro au repos sur les deux pages. La preuve avant/après valide le défaut des observateurs ; sa contribution à l'échec historique de latence reste non mesurée.
+
+---
+
 # Source à reprendre — 9bad4832f2b53c3fd89c3765b0e24a5318167d7d
 
 ## Reprise courante — diagnostic Live réussi, boucle de dépenses corrigée sous qualification, 9 octobre 2026
