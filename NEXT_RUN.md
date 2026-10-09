@@ -1,3 +1,11 @@
+# Contrôles Node terminés, navigateurs en cours — 9 octobre 2026
+
+Source exacte **9bad4832f2b53c3fd89c3765b0e24a5318167d7d**, qualification native outputs/eco-qualification-2026-10-09T00-52-01-749Z. Preuve réelle des observateurs : avant 3 échecs des assertions attendues / après 3 PASS. **CI gouvernée PASS, 657/657 Node, fail/cancelled/skipped/todo=0, durée des tests 82 131,4998 ms.** La chaîne npm run ci inclut l'audit, TypeScript, architecture, gouvernance, mémoire et couverture des sources ; l'étape Chromium est atteinte après son code de sortie zéro.
+
+**Chromium en cours ; WebKit non encore exécuté ; qualification totale IN_PROGRESS.** Même source immuable pendant ce run, aucune archive qualifiée ni livraison présumée. HOLD et PR72 draft maintenus.
+
+---
+
 # Preuve réelle en cours de qualification — 9 octobre 2026
 
 Source native **9bad4832f2b53c3fd89c3765b0e24a5318167d7d**. Installation verrouillée npm PASS, zéro vulnérabilité signalée. Le vérificateur Node/TypeScript réel confirme : référence d9bc8d9 **3 tests, 3 échecs des bonnes assertions, zéro skip/cancel** ; source corrigé **3 tests, 3 PASS, zéro échec/skip/cancel** ; résultat du vérificateur **PASS**. Rapport réel : outputs/eco-qualification-2026-10-09T00-52-01-749Z/expense-regression/expense-regression-report.json dans le chat. Le terminal app confirme la commande native et la mise à jour fast-forward du checkout. Aucun source ne change pendant ce lancement.

@@ -3,7 +3,7 @@ release: 1.5.2.15-bounded-recovery
 date: 2026-10-09
 db_mutation: none
 mode: HOLD-failed-confrontation-qualification
-reason: e083 full Node 654 PASS Chromium 7/8 WebKit not executed; d9 targeted Live diagnostic 1/1 PASS; expense observer real before 3 expected fails / after 3 PASS; full 657/8/6 running; keep publication HOLD
+reason: e083 full Node 654 PASS Chromium 7/8 WebKit not executed; d9 targeted Live diagnostic 1/1 PASS; expense observer real before 3 expected fails / after 3 PASS; governed Node 657 PASS; Chromium running; WebKit not yet executed; keep publication HOLD
 source_under_review: 9bad4832f2b53c3fd89c3765b0e24a5318167d7d
 field_acceptance: NOT_ACCEPTED
 trigger_nonce: 2026-10-08-hold-confrontation-evidence
