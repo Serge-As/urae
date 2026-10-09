@@ -1,3 +1,6 @@
+# 2026-10-09 environment-only checkpoint: WSL3.0.1 base installed; VirtualMachinePlatform progressed37.8->61.0; CBS reboot pending; completion/distro unknown.
+# Product proof remains9bad483 Node657 PASS/Chromium8 PASS/WebKit4PASS2FAIL; overallFAIL and HOLD, no capability maturity promotion.
+# Resume after native installation completion and normal Windows reboot: docs/memory/checkpoints/CHECKPOINT-2026-10-09-WSL-REBOOT-PENDING.md
 # CURRENT 2026-10-09: actual 9bad483 old/new expense assertions proved, governed Node 657/657 and Chromium 8/8 PASS; WebKit Windows 4 PASS/2 FAIL (RTC unavailable / disabled signal). Overall FAIL; full compatible-engine gate required. HOLD, no feature maturity or deployment promotion.
 # CURRENT 2026-10-09: d9bc8d9 targeted Chromium 1/1 PASS; expense GET observer feedback observed; targeted UI fix + 3 behavioral regressions prepared, JS model only. Full new-source qualification pending: 657 Node / Chromium 8 / WebKit 6. HOLD remains; no capability maturity promotion.
 # CURRENT 2026-10-09: e083a6a local Node 654/654; Chromium 7/8 (2001 Live update misses five-second assertion); offline 4000/5000 passes once; WebKit not executed. HOLD remains. Instrumented diagnostic prepared; no capability maturity promotion.

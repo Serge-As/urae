@@ -1,3 +1,7 @@
+## Reprise Windows avant prochaine qualification
+
+VirtualMachinePlatform a progressé à 61,0 % ; CBS signale un redémarrage en attente, mais activation/distribution utilisable non confirmées. Lire docs/memory/checkpoints/CHECKPOINT-2026-10-09-WSL-REBOOT-PENDING.md avant le prochain lancement. Ce diagnostic d'environnement n'est pas un gate produit PASS. Conserver le source testé 9bad483 et ses 657 Node / Chromium8 PASS / WebKit4PASS2FAIL, HOLD et tous les six scénarios réels. Faire un redémarrage normal après la fin de l'opération native avant toute qualification Linux.
+
 > CURRENT 2026-10-09 : preuve réelle 9bad483 : observateurs avant 3 échecs attendus / après 3 PASS ; 657 Node et Chromium 8/8 PASS ; WebKit Windows 4 PASS/2 FAIL, API RTC absente. Rapport total FAIL, pas d'archive qualifiée ni livraison. Garder les six scénarios réels ; WSL/environnement compatible à vérifier, état encore inconnu. HOLD et PR72 draft maintenus. Lire CURRENT_TRUTH et checkpoint WINDOWS-WEBKIT-FEATURE-GAP avant toute reprise.
 
 > CURRENT 2026-10-09 : diagnostic d9bc8d9 Chromium 1/1 PASS, convergence 1000/2001/2002 sous cinq secondes ; boucle GET dépenses observée. Correctif observateurs et trois régressions préparés, simulation JS seule réussie. Nouveau source NON QUALIFIÉ : preuve avant/après + 657 Node + Chromium 8 + WebKit 6 requis. HOLD et PR72 draft maintenus. CURRENT_TRUTH/NEXT_RUN font autorité ; ne pas annoncer 1.5.2.15 livrée.

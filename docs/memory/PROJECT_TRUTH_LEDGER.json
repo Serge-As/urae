@@ -1320,10 +1320,26 @@
         "local:A01 callback expects signal enabled but remains disabled;4 other WebKit testsPASS",
         "https://playwright.dev/docs/browsers#webkit",
         "user-input-pending:read-only WSL distribution listing requested",
-        "native-terminal:WSL3.0.1 installation observed after listing request; usable distro and completion not yet confirmed"
+        "native-terminal:WSL3.0.1 installation observed after listing request; usable distro and completion not yet confirmed",
+        "user-provided:Windows diagnostic2026-10-09T03:10:56 local CBSRebootPending=true,WURebootRequired=false;three servicing/update servicesRunning;SetupServicingEvent7Information",
+        "native-terminal:VirtualMachinePlatform progressed37.8->60.4->61.0; completion unconfirmed"
       ],
       "note": "Installed Windows WebKit lacks the API required by the two unchanged real Local Room scenarios. Existing failure is retained; no fake peer connection, skip, weaker deadline or feature deletion. Compatible environment availability remains unknown.",
-      "next": "Wait for current WSL initialization result; confirm a usable distribution before any Linux qualification. Retain all six real WebKit scenarios and current FAIL."
+      "next": "Allow progressing native activation to finish, then perform a normal Windows restart for pending components; confirm installed Linux distributions and actual WebKit capability before qualifying the unchanged six scenarios. Preserve current FAIL."
+    },
+    {
+      "id": "environment.wsl.cbs.reboot.pending.20261009",
+      "status": "IN_PROGRESS",
+      "scope": "qualification/environment/windows-bootstrap",
+      "observedOn": "2026-10-09",
+      "evidence": [
+        "user-provided:TiWorkerCPU193.40625->194.4375 in11seconds;DISMlog671781bytes unchanged41m27s;CBSlog missing",
+        "user-provided:Windows diagnostic03:10:56 CBSRebootPending=true,WURebootRequired=false;BITS/TrustedInstaller/wuauservRunning;ServicingEvent7Information",
+        "native-terminal:WSL3.0.1 installed;VirtualMachinePlatform progressed to61.0%;activation completion unknown",
+        "repo:docs/memory/checkpoints/CHECKPOINT-2026-10-09-WSL-REBOOT-PENDING.md"
+      ],
+      "note": "Actual bootstrap observations only. Pending reboot marker does not prove current activation finished. No forced interruption, OS repair, service modification, Linux execution, purchase or platform deployment performed. Product qualification remains overallFAIL.",
+      "next": "Wait for native completion, save work and perform normal restart; read installed distro list. Resume exact-source657/8/6 qualification with real WebKitLocalRoom, archive and smoke gates."
     }
   ]
 }
