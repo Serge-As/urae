@@ -103,7 +103,7 @@ Prérequis : Git, Node.js **24 ou plus récent**, accès autorisé au dépôt pr
 Depuis un terminal fonctionnel :
 
 ```text
-git clone --branch fix/confrontation-clock-recovery-20261008 --single-branch https://github.com/SergeDelor/tontine-platform.git eco-system-qualification
+git clone --branch fix/confrontation-clock-recovery-20261008 --single-branch https://github.com/SergeDelor/urae.git eco-system-qualification
 cd eco-system-qualification
 node scripts/qualify-eco-locally.mjs
 ```

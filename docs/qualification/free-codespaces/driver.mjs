@@ -61,7 +61,7 @@ async function publishEvidence(){
   execFileSync('git',['-c','user.name=Eco-System qualification','-c','user.email=eco-qualification@localhost','commit','-m','test: preserve free Linux qualification '+report.status+' for a7c3336 [skip ci]'],{cwd:worktree,stdio:'pipe',timeout:60000});
   const sha=execFileSync('git',['rev-parse','HEAD'],{cwd:worktree,encoding:'utf8',timeout:60000}).trim();
   execFileSync('git',['push','origin',sha+':refs/heads/'+branch],{cwd:worktree,stdio:'pipe',timeout:60000});
-  report.publication={status:'PUSHED',branch,commitSha:sha,path:relative,documentaryCommitIsNotTestedSource:true,url:'https://github.com/SergeDelor/tontine-platform/tree/'+sha+'/'+relative};
+  report.publication={status:'PUSHED',branch,commitSha:sha,path:relative,documentaryCommitIsNotTestedSource:true,url:'https://github.com/SergeDelor/urae/tree/'+sha+'/'+relative};
 }
 async function oneScenario(browser,phrase,label){
   const args=['node_modules/@playwright/test/cli.js','test','tests/browser/eco-system-webkit-sovereign-offline-1.5.2.9.spec.mjs','--browser='+browser,'--workers=1','--retries=0','--grep',phrase];

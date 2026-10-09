@@ -163,7 +163,7 @@ Les tests Chromium/WebKit + unitaires doivent encore prouver ce **SHA final** av
 
 ## CANDIDATE ONLY — ECO 1.5.2.10 field recovery / Cloudflare Live (2026-10-05)
 
-Le chantier n'est **pas** une nouvelle version de production. PR brouillon [#66](https://github.com/SergeDelor/tontine-platform/pull/66), base SHA `393f80df88076072317f08adee81fe14d54d06c5`. Sur la branche candidate, le Live est événementiel WebSocket (frappe, brouillon par cellule/acteur, date/auteur, validation), sans polling D1 à la seconde ; réduction des écritures d'identité D1 sur requêtes redondantes ; quota signalé explicitement, Outbox récupérée au retour réseau/quota. Les corrections de dette, politiques de prêt/épargne et historique tabulaire restent sous essais. CI sur `9c3ce510f3c2791cbd5c9de81b1e8a77f451b052` : **590/590 tests**, `browser-critical` SUCCESS, run `37317103271`. **FIELD_ACCEPTED=false**, **deployed=false** pour cette branche ; voir `docs/recovery/ECO_FIELD_13_POINTS_2026-10-05.md`. Requête utilisateur : éviter toute évolution non autorisée et ne jamais mélanger le cache SW v15210 avec du code nouveau avant versionnement complet et recettes.
+Le chantier n'est **pas** une nouvelle version de production. PR brouillon [#66](https://github.com/SergeDelor/urae/pull/66), base SHA `393f80df88076072317f08adee81fe14d54d06c5`. Sur la branche candidate, le Live est événementiel WebSocket (frappe, brouillon par cellule/acteur, date/auteur, validation), sans polling D1 à la seconde ; réduction des écritures d'identité D1 sur requêtes redondantes ; quota signalé explicitement, Outbox récupérée au retour réseau/quota. Les corrections de dette, politiques de prêt/épargne et historique tabulaire restent sous essais. CI sur `9c3ce510f3c2791cbd5c9de81b1e8a77f451b052` : **590/590 tests**, `browser-critical` SUCCESS, run `37317103271`. **FIELD_ACCEPTED=false**, **deployed=false** pour cette branche ; voir `docs/recovery/ECO_FIELD_13_POINTS_2026-10-05.md`. Requête utilisateur : éviter toute évolution non autorisée et ne jamais mélanger le cache SW v15210 avec du code nouveau avant versionnement complet et recettes.
 
 ---
 
@@ -284,7 +284,7 @@ Vérifier sur appareils réels : permission GPS, recherche par rayon, refus/rév
 
 ## CURRENT STATE — 1.5.2.7 LIVE COMPLETION — RELEASE CANDIDATE QUALIFIÉE (2026-09-27)
 
-**Repository : `SergeDelor/tontine-platform`.**
+**Repository : `SergeDelor/urae`.**
 **Branche candidate : `finish/live-whatsapp-completion-20260927`.**
 **Chaîne d’intégration : PR #29 → `audit/live-completion-20260926`, puis PR #28 → `fix/1.5.2.6-field-persistence-pc-mobile-20260925`.**
 **Release candidate : `1.5.2.7-live-completion` · build `eco-system-1.5.2.7-20260927` · cache PWA `eco-system-v1527-live-completion-20260927`.**
