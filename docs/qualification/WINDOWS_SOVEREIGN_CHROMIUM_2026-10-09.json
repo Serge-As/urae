@@ -1,0 +1,48 @@
+{
+  "schemaVersion": 1,
+  "kind": "SOVEREIGN_CHROMIUM_DIAGNOSTIC_ONLY",
+  "sourceSha": "a7c333699dad0d70cf0de8e2f8a841a00396d0d7",
+  "platform": "win32",
+  "browser": "chromium",
+  "playwrightVersion": "1.56.1",
+  "selected": 6,
+  "passed": 5,
+  "failed": 1,
+  "skipped": 0,
+  "qualified": false,
+  "localRoomRealConnection": "PASS 8.9s",
+  "a01Callbacks": "PASS 16.5s",
+  "qrOfflineDecoder": "FAIL timeout30000ms page.evaluate",
+  "shellCache": "PASS 5.9s",
+  "offlineReload": "PASS 9.6s",
+  "recapOverride": "PASS 10.4s",
+  "reportPath": "C:/Users/Admin/Documents/Codex/2026-10-08/salut-boss-il-y-a-beaucoup/outputs/eco-sovereign-chromium-diagnostic-2026-10-09T11-34-04-787Z/diagnostic-report.json",
+  "serverPid": 8608,
+  "healthCommitSha": "UNBOUND_LOCAL_BUILD",
+  "startedAt": "2026-10-09T11:34:05.069Z",
+  "completedAt": "2026-10-09T11:41:04.581Z",
+  "testResult": "FAIL",
+  "webkitResult": "NOT_EXECUTED_BY_THIS_DIAGNOSTIC",
+  "nodeSyntaxCheck": "PASS (user executed node --check before this diagnostic)",
+  "build": "PASS; PWA dependency closure: 73 initial + 26 transitive assets, no missing import",
+  "observations": {
+    "localRoom": "Real native RTCPeerConnection and DataChannel packet test passed on Windows; no simulated WebRTC",
+    "qr": "First unchanged page.evaluate QR scan exceeded 30 seconds; blocked stage not yet identified",
+    "decoderHypothesis": "Native BarcodeDetector format probing has no bounded wait in current vendor factory. This is a hypothesis, not an established root cause."
+  },
+  "provenance": {
+    "reportedBy": "Human user in the current chat",
+    "originalNativeReport": "C:/Users/Admin/Documents/Codex/2026-10-08/salut-boss-il-y-a-beaucoup/outputs/eco-sovereign-chromium-diagnostic-2026-10-09T11-34-04-787Z/diagnostic-report.json",
+    "parentCouldReadNativeReport": false,
+    "authority": "Copied command output and JSON supplied by the user; independent report hashing not available to parent"
+  },
+  "publication": {
+    "qualified": false,
+    "productionDeployed": false,
+    "fieldAccepted": false,
+    "realMoneyEnabled": false,
+    "publicationHold": "PRESERVED"
+  },
+  "testSource": "a7c333699dad0d70cf0de8e2f8a841a00396d0d7",
+  "documentaryCommitIsNotTestedSource": true
+}
