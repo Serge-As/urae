@@ -1,3 +1,5 @@
+# 2026-10-09: founder prefers Windows without local Ubuntu; Cloud reader/runtime confirmed, exact checkout and tests pending.
+# Existing sovereign scenarios gain an optional Chromium diagnostic only; qualified=false, unchanged WebKit gate, no capability maturity promotion.
 # 2026-10-09 environment-only checkpoint: WSL3.0.1 base installed; VirtualMachinePlatform progressed37.8->61.0; CBS reboot pending; completion/distro unknown.
 # Product proof remains9bad483 Node657 PASS/Chromium8 PASS/WebKit4PASS2FAIL; overallFAIL and HOLD, no capability maturity promotion.
 # Resume after native installation completion and normal Windows reboot: docs/memory/checkpoints/CHECKPOINT-2026-10-09-WSL-REBOOT-PENDING.md

@@ -1,3 +1,23 @@
+## Reprise sans Ubuntu local — 9 octobre 2026
+
+Le fondateur confirme : **« continuons si possible sans Ubuntu »**. Cette préférence fait autorité : la gestion du projet reste sous Windows, Ubuntu sur son PC est facultatif. L'activation native de VirtualMachinePlatform a terminé à **100 % / opération réussie** ; le dernier `wsl --list --verbose` indique **aucune distribution installée**. Aucune distribution Ubuntu n'est installée par cette reprise.
+
+Un travail Cloud a été créé avec les instructions exactes : conversation **6ac8c4bf-9a24-83ea-b166-c176d065fba7**, exécuteur **01a12040-ce4c-73b1-8bbe-6e42bfeab048** (host durable). Ses sorties réelles confirment Linux, Node **24.19.0**, lecture du dépôt privé et PR72 ; **Git direct manque d'authentification et le checkout exact est en cours de récupération**. Les binaires Chromium/WebKit Playwright 1.56.1 ont été téléchargés dans le Cloud ; leurs bibliothèques système et leur démarrage réel restent à vérifier. Une archive de source antérieure (artifact 11567969551, source 3f7ea034) a été récupérée pour faciliter la reconstruction ; elle ne qualifie pas le source actuel. Aucun résultat de qualification Cloud PASS ni nouvelle archive qualifiée ne sont encore acquis. GitHub Actions run 37874304697 reste sans runner ni étape ; aucun achat.
+
+Le lanceur existant `scripts/diagnose-live-sync-locally.mjs` reçoit un mode **--scope=sovereign-chromium** et **--output-root**. Il sélectionne les **six scénarios souverains existants et inchangés** sur Chromium déjà installé, sur SQLite synthétique isolée : QR/cache/rechargement, vrai DataChannel Local Room, callbacks A01 et override Recap. Sélection de 6 tests, exécution de 6 tests et zéro skip sont obligatoires. Le mode Live par défaut conserve son scénario unique et ses délais. Tout diagnostic garde qualified=false ; il n'archive ni ne publie et **ne remplace pas WebKit 6/6**.
+
+Dernière preuve produit réelle : **9bad483 : 657 Node, Chromium 8/8 PASS ; WebKit Windows 4 PASS/2 FAIL ; total FAIL**, avant/après dépenses : 3 échecs attendus puis 3 PASS. Les nouveaux changements ne sont pas encore qualifiés ; seule leur syntaxe JavaScript a été examinée. Maintenir HOLD, PR72 draft, FIELD_ACCEPTED=NOT_ACCEPTED, realMoneyEnabled=false et dernière production attestée 1.5.2.14. Les états antérieurs ci-dessous sont historiques.
+
+ÉTAT DU PROJET APRÈS ÉTAPE : continuation Windows décidée, exécuteur Cloud actif avec accès de lecture confirmé, diagnostic Chromium souverain préparé ; qualification exacte complète et livraison restent à produire.
+
+Suite immédiate :
+1. Confirmer le checkout exact du travail Cloud puis exécuter la qualification complète 657/8/6 sur un seul SHA propre.
+2. Le diagnostic souverain Chromium Windows peut compléter les preuves : `node scripts/diagnose-live-sync-locally.mjs --scope=sovereign-chromium --output-root=<outputs du chat>`. Il réutilise Playwright1.56.1 installé et ne télécharge ni système ni navigateur.
+3. Préserver les échecs et ne pas promouvoir Chromium6 en WebKit6. Après tous les gates exacts seulement : archive+SHA256, revue de livraison puis smoke de production exact.
+4. Ne pas exiger Ubuntu local ; proposer une voie distante déjà autorisée ou vérifier les ressources disponibles.
+
+---
+
 ## Reprise environnement — WSL avance, redémarrage CBS en attente, 9 octobre 2026
 
 La base WSL 3.0.1 est installée. L'activation native de VirtualMachinePlatform a avancé de 37,8 % à 60,4 % (relevé du fondateur), puis **61,0 % observé dans le terminal**. Elle n'est pas encore confirmée terminée. Le diagnostic Windows du 9 octobre à 03:10:56 indique **redemarrage_CBS=true**, redemarrage_Windows_Update=false, BITS/TrustedInstaller/wuauserv tous Running ; l'événement Setup/Servicing 7 est Information et décrit le début d'activation VirtualMachinePlatform. Le dossier CBS est absent ; aucune erreur fatale n'est fournie. Le marqueur CBS ne désigne pas à lui seul la transaction ni la fin de l'activation.

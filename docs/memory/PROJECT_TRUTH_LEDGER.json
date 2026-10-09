@@ -1322,10 +1322,12 @@
         "user-input-pending:read-only WSL distribution listing requested",
         "native-terminal:WSL3.0.1 installation observed after listing request; usable distro and completion not yet confirmed",
         "user-provided:Windows diagnostic2026-10-09T03:10:56 local CBSRebootPending=true,WURebootRequired=false;three servicing/update servicesRunning;SetupServicingEvent7Information",
-        "native-terminal:VirtualMachinePlatform progressed37.8->60.4->61.0; completion unconfirmed"
+        "native-terminal:VirtualMachinePlatform progressed37.8->60.4->61.0; completion unconfirmed",
+        "cloud:01a12040-ce4c-73b1-8bbe-6e42bfeab048 Linux/Node24.19 and private GitHub reader confirmed;git direct authentication absent",
+        "cloud:Playwright1.56.1 Chromium/WebKit binaries downloaded;isolated system-library preparation and real startup/WebRTC verification pending"
       ],
-      "note": "Installed Windows WebKit lacks the API required by the two unchanged real Local Room scenarios. Existing failure is retained; no fake peer connection, skip, weaker deadline or feature deletion. Compatible environment availability remains unknown.",
-      "next": "Allow progressing native activation to finish, then perform a normal Windows restart for pending components; confirm installed Linux distributions and actual WebKit capability before qualifying the unchanged six scenarios. Preserve current FAIL."
+      "note": "Installed Windows WebKit lacks the API required by the two unchanged real Local Room scenarios. This failure is retained. Cloud Linux runtime and private GitHub reading are confirmed; pinned browser startup and exact-source full qualification remain pending. No mock peer, skip, weaker deadline or feature deletion.",
+      "next": "Finish authenticated exact-source Cloud materialization and unchanged WebKit6; optional real Chromium6 Windows diagnostic is supplemental, not a WebKit replacement."
     },
     {
       "id": "environment.wsl.cbs.reboot.pending.20261009",
@@ -1336,10 +1338,29 @@
         "user-provided:TiWorkerCPU193.40625->194.4375 in11seconds;DISMlog671781bytes unchanged41m27s;CBSlog missing",
         "user-provided:Windows diagnostic03:10:56 CBSRebootPending=true,WURebootRequired=false;BITS/TrustedInstaller/wuauservRunning;ServicingEvent7Information",
         "native-terminal:WSL3.0.1 installed;VirtualMachinePlatform progressed to61.0%;activation completion unknown",
-        "repo:docs/memory/checkpoints/CHECKPOINT-2026-10-09-WSL-REBOOT-PENDING.md"
+        "repo:docs/memory/checkpoints/CHECKPOINT-2026-10-09-WSL-REBOOT-PENDING.md",
+        "user-provided:VirtualMachinePlatform100%;operation succeeded;restart required;subsequent wsl list reports no installed distribution",
+        "user-request:continue if possible without Ubuntu"
       ],
-      "note": "Actual bootstrap observations only. Pending reboot marker does not prove current activation finished. No forced interruption, OS repair, service modification, Linux execution, purchase or platform deployment performed. Product qualification remains overallFAIL.",
-      "next": "Wait for native completion, save work and perform normal restart; read installed distro list. Resume exact-source657/8/6 qualification with real WebKitLocalRoom, archive and smoke gates."
+      "note": "Historical bootstrap observations are retained. Native VirtualMachinePlatform activation completed successfully at 100%; the latest WSL listing contains no installed distribution. Actual Windows reboot is not attested. The founder prefers Windows continuation without local Ubuntu. No forced interruption, OS repair, service modification, purchase or production deployment performed. Last actual product qualification remains overall FAIL.",
+      "next": "Respect Windows continuation preference; use confirmed Cloud reader/runtime and obtain exact-source checkout/qualification without requiring Ubuntu locally."
+    },
+    {
+      "id": "qualification.windows.cloud.route.20261009",
+      "status": "IN_PROGRESS",
+      "scope": "qualification/environment/Windows-preference",
+      "observedOn": "2026-10-09",
+      "evidence": [
+        "user-request:continue if possible without Ubuntu",
+        "cloud:conversation6ac8c4bf-9a24-83ea-b166-c176d065fba7;executor01a12040-ce4c-73b1-8bbe-6e42bfeab048",
+        "cloud:Linux24.04/Node24.19/8GiB memory/private connector read confirmed;direct git credential absent",
+        "repo:scripts/diagnose-live-sync-locally.mjs scope=sovereign-chromium reuses unchanged six scenarios",
+        "repo:docs/memory/checkpoints/CHECKPOINT-2026-10-09-WINDOWS-CLOUD-QUALIFICATION.md",
+        "github:artifact11567969551 downloaded via supported ZIP tool;previous source3f7ea034 only,not current qualified source",
+        "cloud:pinned Chromium/WebKit binaries downloaded;system libraries and actual startup verification pending"
+      ],
+      "note": "No Cloud PASS or new diagnostic execution yet. Existing actual9bad657/Chromium8PASS/WebKit4PASS2FAIL retained. No Ubuntu local, purchase, deployment or gate weakening.",
+      "next": "Verify exact-source materialization; run full657/8/6 and archive only on success. Obtain optional WindowsChromium6 real receipt."
     }
   ]
 }

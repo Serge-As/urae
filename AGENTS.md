@@ -1,3 +1,7 @@
+## Préférence actuelle : continuer sans Ubuntu local
+
+Le fondateur demande de continuer si possible sans Ubuntu. Respecter cette préférence ; lire docs/memory/checkpoints/CHECKPOINT-2026-10-09-WINDOWS-CLOUD-QUALIFICATION.md. Diagnostic Chromium souverain optionnel, jamais substitut au gateWebKit6 réel. Cloud créé avec accès GitHub de lecture/LinuxNode24 confirmé ; checkout exact/tests encore en cours. Dernière qualification réelle9bad483 globaleFAIL (657Node/Chromium8PASS/WebKit4PASS2FAIL), HOLD et PR72draft maintenus.
+
 ## Reprise Windows avant prochaine qualification
 
 VirtualMachinePlatform a progressé à 61,0 % ; CBS signale un redémarrage en attente, mais activation/distribution utilisable non confirmées. Lire docs/memory/checkpoints/CHECKPOINT-2026-10-09-WSL-REBOOT-PENDING.md avant le prochain lancement. Ce diagnostic d'environnement n'est pas un gate produit PASS. Conserver le source testé 9bad483 et ses 657 Node / Chromium8 PASS / WebKit4PASS2FAIL, HOLD et tous les six scénarios réels. Faire un redémarrage normal après la fin de l'opération native avant toute qualification Linux.
