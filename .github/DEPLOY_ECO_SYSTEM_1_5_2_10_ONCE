@@ -1,13 +1,13 @@
 Eco-System 1.5.2.15 delivery HOLD
 release: 1.5.2.15-bounded-recovery
-date: 2026-10-08
+date: 2026-10-09
 db_mutation: none
 mode: HOLD-failed-confrontation-qualification
-reason: offline reconfirmation convergence remains unqualified (runs 37822250394 and 37826825035); Actions included monthly quota exhausted; keep publication HOLD
-source_under_review: e083a6a38b1ab76e6827e512bb7e900604911a4c
+reason: local e083 Node 654 PASS; Chromium 7/8 FAIL on 2001 Live within five seconds; WebKit not executed; diagnosis pending; keep publication HOLD
+source_under_review: ad075a733f37326e80a0979bc866158ea74f442f
 field_acceptance: NOT_ACCEPTED
 trigger_nonce: 2026-10-08-hold-confrontation-evidence
 work_branch: fix/confrontation-clock-recovery-20261008
 work_pr: 72 draft
-latest_handoff: docs/memory/checkpoints/CHECKPOINT-2026-10-08-HOLD-LOCAL-QUALIFICATION.md
+latest_handoff: docs/memory/checkpoints/CHECKPOINT-2026-10-09-HOLD-LIVE-SYNC-DIAGNOSTIC.md
 required_final_qualification: 654 Node; Chromium 8; WebKit 6; exact same source before Worker mutation

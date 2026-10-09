@@ -1,3 +1,9 @@
+## État courant — HOLD, résultat local réel et diagnostic Live, 9 octobre 2026
+
+Source exécutée e083a6a : **654 Node PASS / Chromium 7/8 FAIL sur 2001 Live à cinq secondes / WebKit NON EXÉCUTÉ**. La capture montre ensuite 2001 ; cause précise à mesurer. Confrontation 4000/5000 PASS une fois, pas une qualification complète. Source instrumentée **ad075a733f37326e80a0979bc866158ea74f442f**, PR **#72 brouillon**, diagnostic isolé à exécuter avec `scripts/diagnose-live-sync-locally.mjs`. Aucun code métier modifié par ce commit. **Publication HOLD maintenue**, aucune archive qualifiée/livraison ; realMoney=false, FIELD_ACCEPTED=NOT_ACCEPTED. Reprise exacte : `docs/memory/checkpoints/CHECKPOINT-2026-10-09-HOLD-LIVE-SYNC-DIAGNOSTIC.md` ; les blocs suivants sont historiques.
+
+---
+
 ## Qualification validée — 1.5.2.15, avant livraison
 
 Source qualifiée : `3f7ea03457bbd936a87e299270843043e2826a24`, PR **#71 fusionnée** dans la branche de livraison par `754a8cef153b7ebe92b993de3b68f7a2c42d9f2d`. Runs **37820287689 SUCCESS** et **37820287701 SUCCESS** : **650/650 Node**, **Chromium 8/8**, **WebKit 6/6**, dont le scénario API inaccessible/navigator online et convergence de la même intention entre deux gestionnaires.
