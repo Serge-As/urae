@@ -9,7 +9,7 @@ Les lectures non critiques d'Identity Passport/Concierge/Observatoire sont déso
 
 **Aucune preuve de fonctionnement réel Android 6/iOS et multi-gestionnaires n'est remplacée par ces tests automatisés.** La PR demeure brouillon, la production n'a pas été déployée, le quota Cloudflare n'a pas été confirmé ; les scénarios R02–R15 nécessitent la recette terrain selon le plan ci-dessus.
 
-**Source :** 13 exigences utilisateur et neuf captures Firefox/Opera/Chrome de la même séance multi-gestionnaires, groupes CER et BB. **Dépôt :** `SergeDelor/tontine-platform`. **Base :** `fix/1.5.2.10-offline-conflicts-loans-20261003` au SHA `393f80df88076072317f08adee81fe14d54d06c5`. **Branche de récupération :** `fix/field-regressions-recovery-20261005`. Aucune écriture en production, migration destructive, fusion ou déploiement automatique n'est autorisé sans validation.
+**Source :** 13 exigences utilisateur et neuf captures Firefox/Opera/Chrome de la même séance multi-gestionnaires, groupes CER et BB. **Dépôt :** `SergeDelor/urae`. **Base :** `fix/1.5.2.10-offline-conflicts-loans-20261003` au SHA `393f80df88076072317f08adee81fe14d54d06c5`. **Branche de récupération :** `fix/field-regressions-recovery-20261005`. Aucune écriture en production, migration destructive, fusion ou déploiement automatique n'est autorisé sans validation.
 
 ## Règles non négociables
 - Préserver Ledger append-only, idempotence, versions de cellule, outbox persistante IndexedDB, politique de consentement, réserves, BIR, V1 existante, fonctionnalité cycle complet offline, Android 6/iOS, ✓ et Entrée, remplacement EXACT (1000→500 reste 500 et non 1500).
