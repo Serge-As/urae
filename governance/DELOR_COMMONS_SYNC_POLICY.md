@@ -52,6 +52,6 @@ Une règle commune n’écrase jamais CURRENT_TRUTH d’un projet. Le projet loc
 ## Projets actuellement concernés
 - Delor85/as-beauty
 - Delor85/BlueAuto
-- SergeDelor/tontine-platform / Eco-System et plateformes associées
+- SergeDelor/urae / Eco-System et plateformes associées
 
 Tout nouveau dépôt Delor85 et SergeDelor doit évaluer cette politique lors de son bootstrap.
