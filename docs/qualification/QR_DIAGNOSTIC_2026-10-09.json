@@ -1,0 +1,94 @@
+{
+  "schemaVersion": 1,
+  "kind": "QR_TIMEOUT_INVESTIGATION",
+  "date": "2026-10-09",
+  "candidateSourceSha": "a7c333699dad0d70cf0de8e2f8a841a00396d0d7",
+  "candidateTreeSha": "0c75c80833d78c807cc2fbef082b06f9c0c6aa7f",
+  "qualified": false,
+  "cloudExecution": {
+    "singleUnchangedQrTestCommandSubmittedOnce": true,
+    "qrTestExecuted": false,
+    "workerComparisonExecuted": false,
+    "status": "BLOCKED_BEFORE_PROCESS_CREATION",
+    "infrastructureError": "failed to query exec-server capabilities: environment registry request failed (409 Conflict, environment_offline): Environment is not connected",
+    "isTestFailure": false,
+    "deadlineRequestedMs": 30000,
+    "fullQualificationRepeated": false
+  },
+  "reportedWindowsEvidence": {
+    "origin": "Parent message; local Windows report not read by this Cloud task",
+    "sourceSha": "a7c333699dad0d70cf0de8e2f8a841a00396d0d7",
+    "playwright": "1.56.1",
+    "scenarios": 6,
+    "passed": 5,
+    "failed": 1,
+    "skipped": 0,
+    "failedScenario": "First QR test: page.evaluate exceeds 30000ms",
+    "localRoom": "Real DataChannel and packet PASS, 8.9s",
+    "a01Callbacks": "PASS, 16.5s",
+    "reportPath": "outputs/eco-sovereign-chromium-diagnostic-2026-10-09T11-34-04-787Z/diagnostic-report.json"
+  },
+  "sourceFindings": {
+    "sdk": {
+      "path": "apps/web/src/vendor/qr-scanner.min.js",
+      "gitBlobSha": "3f31ec98ab681a4fb3ceac6c837007a3e24cfce6",
+      "confirmed": "createQrEngine awaits BarcodeDetector.getSupportedFormats without its own bound. scanImage awaits engine and _loadImage in Promise.all before its existing 10-second scan timer."
+    },
+    "owner": {
+      "path": "apps/web/src/sovereign-offline-ui.js",
+      "gitBlobSha": "290e92ce378d33069e7de8127cf613b188f208c5",
+      "uses": [
+        "Eco Local Room camera",
+        "Eco Broadcast camera",
+        "Photo/file scanImage"
+      ]
+    },
+    "test": {
+      "path": "tests/browser/eco-system-webkit-sovereign-offline-1.5.2.9.spec.mjs",
+      "gitBlobSha": "c12d32bf9b68740a66a01afde243c5996feb72ab",
+      "confirmed": "First test calls default.scanImage(svgDataUri,{returnDetailedScanResult:true}); it does not disable BarcodeDetector or assert its absence."
+    },
+    "worker": {
+      "path": "apps/web/src/vendor/qr-scanner-worker.min.js",
+      "gitBlobSha": "8425f8b1a4c6041a1ff9cf391963ccc43d45ae8a",
+      "confirmed": "Exports createWorker producing a real Worker from its bundled Blob source."
+    },
+    "usageInventoryComplete": false,
+    "usageInventoryLimit": "Requested local rg never returned. Exact-SHA owner/SDK/worker/test read through GitHub; default-branch GitHub search returned no results and is not an exhaustive target-SHA inventory."
+  },
+  "conclusion": {
+    "windowsCauseProven": false,
+    "unboundedAwaitIsConfirmedSourceRisk": true,
+    "possibleOpenStages": [
+      "module import",
+      "SVG/image load",
+      "createQrEngine / native getSupportedFormats",
+      "worker import/start",
+      "native detect or worker scan"
+    ],
+    "minimalFixProposed": false,
+    "reason": "No native Cloud QR/worker observation and no passive Windows trace yet; do not attribute the 30-second failure to getSupportedFormats alone."
+  },
+  "preparedDiagnostic": {
+    "path": "docs/qualification/QR_PASSIVE_WINDOWS_DIAGNOSTIC_2026-10-09.md",
+    "executionLocation": "copy script to untracked work/qr-passive-diagnostic.mjs",
+    "nodeCheckPerformed": false,
+    "executionPerformed": false,
+    "nativeApiCallsObservedWithoutReplacingResults": true,
+    "observationWindowMs": 30000,
+    "workerComparison": "Existing bundled createWorker + existing QrScanner.scanImage on the exact same generated SVG payload",
+    "qualification": false
+  },
+  "invariants": {
+    "candidateSourceChanged": false,
+    "testsChanged": false,
+    "deadlinesChanged": false,
+    "sandboxDisabled": false,
+    "ldPreloadUsed": false,
+    "webRtcSimulated": false,
+    "productionAccessed": false,
+    "cloudD1R2Accessed": false,
+    "purchases": false,
+    "qualifiedArchiveCreated": false
+  }
+}
