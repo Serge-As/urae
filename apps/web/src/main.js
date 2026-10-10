@@ -84,7 +84,7 @@ let financialCellMetadata = new Map();
 const remoteFinancialDrafts=new Map();
 const remoteDraftNames=key=>{
   const actors=remoteFinancialDrafts.get(key);if(!actors)return[];
-  for(const [id,row] of actors)if(Number(row.expiresAt)<Date.now()){clearTimeout(row.timer);actors.delete(id);}
+  for(const [id,row] of actors)if(Number(row.expiresAt)<Date.now()||id===String(app.currentActor?.()??'')){clearTimeout(row.timer);actors.delete(id);}
   if(!actors.size){remoteFinancialDrafts.delete(key);return[];}
   return [...actors.values()].map(row=>String(row.name)).filter(Boolean);
 };
@@ -97,23 +97,36 @@ const financialOptimisticValues=new Map();
 // Expensive canonical polling stays dormant for a future paid mode.
 const FREE_CONSERVATION_MODE=true;
 const FINANCIAL_CONFIRMED_STORAGE='eco.financialConfirmedCells.v1';
-const financialConfirmedCells=new Map((()=>{try{return Object.entries(JSON.parse(localStorage.getItem(FINANCIAL_CONFIRMED_STORAGE)||'{}'));}catch{return[];}})());
+const financialConfirmedCells=new Map();
+let financialStorageScope='';
+const financialCellDrafts=new Map();
+const FINANCIAL_DRAFT_STORAGE='eco.financialCellDrafts.v2';
+// A draft belongs to the editing window and account. Canonical confirmations
+// belong to an authorized account/group; neither may overwrite another account.
+const financialScopedStorageKey=base=>base+':'+JSON.stringify([String(app.currentActor?.()??''),String(app.activeGroup?.()??'')]);
+const ensureFinancialStorageScope=()=>{
+  const scope=financialScopedStorageKey('scope');if(scope===financialStorageScope)return;
+  financialStorageScope=scope;financialConfirmedCells.clear();financialCellDrafts.clear();
+  try{for(const [k,v] of Object.entries(JSON.parse(localStorage.getItem(financialScopedStorageKey(FINANCIAL_CONFIRMED_STORAGE))||'{}')))financialConfirmedCells.set(k,v);}catch{}
+  try{for(const [k,v] of Object.entries(JSON.parse(sessionStorage.getItem(financialScopedStorageKey(FINANCIAL_DRAFT_STORAGE))||'{}')))financialCellDrafts.set(k,String(v));}catch{}
+  for(const actors of remoteFinancialDrafts.values())for(const row of actors.values())clearTimeout(row.timer);
+  remoteFinancialDrafts.clear();
+};
 const persistFinancialConfirmedCells=()=>{try{
   const now=Date.now(),rows=[...financialConfirmedCells.entries()].filter(([,v])=>v&&now-Number(v.confirmedAt||0)<7*86400000).slice(-500);
   financialConfirmedCells.clear();for(const [k,v] of rows)financialConfirmedCells.set(k,v);
-  localStorage.setItem(FINANCIAL_CONFIRMED_STORAGE,JSON.stringify(Object.fromEntries(rows)));
+  localStorage.setItem(financialScopedStorageKey(FINANCIAL_CONFIRMED_STORAGE),JSON.stringify(Object.fromEntries(rows)));
 }catch{}};
 const rememberConfirmedCell=(key,{amount,cellVersion,meetingId,membershipId,rubricId}={})=>{
+  ensureFinancialStorageScope();
   if(!Number.isFinite(Number(amount)))return;
   financialConfirmedCells.set(key,{groupId:String(app.activeGroup?.()??''),meetingId:String(meetingId??''),membershipId:String(membershipId??''),rubricId:String(rubricId??''),amount:Number(amount),cellVersion:Number.isFinite(Number(cellVersion))?Number(cellVersion):null,confirmedAt:Date.now()});
   persistFinancialConfirmedCells();
 };
-const forgetConfirmedCell=key=>{if(financialConfirmedCells.delete(key))persistFinancialConfirmedCells();};
-const FINANCIAL_DRAFT_STORAGE='eco.financialCellDrafts';
-const financialCellDrafts=new Map((()=>{try{return Object.entries(JSON.parse(localStorage.getItem(FINANCIAL_DRAFT_STORAGE)||'{}'));}catch{return[];}})());
-const persistFinancialCellDrafts=()=>{try{const entries=[...financialCellDrafts.entries()].slice(-120);localStorage.setItem(FINANCIAL_DRAFT_STORAGE,JSON.stringify(Object.fromEntries(entries)));}catch{}};
-const saveFinancialCellDraft=(key,value)=>{if(value==='')financialCellDrafts.delete(key);else financialCellDrafts.set(key,String(value));persistFinancialCellDrafts();};
-const clearFinancialCellDraft=key=>{financialCellDrafts.delete(key);persistFinancialCellDrafts();};
+const forgetConfirmedCell=key=>{ensureFinancialStorageScope();if(financialConfirmedCells.delete(key))persistFinancialConfirmedCells();};
+const persistFinancialCellDrafts=()=>{try{const entries=[...financialCellDrafts.entries()].slice(-120);sessionStorage.setItem(financialScopedStorageKey(FINANCIAL_DRAFT_STORAGE),JSON.stringify(Object.fromEntries(entries)));}catch{}};
+const saveFinancialCellDraft=(key,value)=>{ensureFinancialStorageScope();if(value==='')financialCellDrafts.delete(key);else financialCellDrafts.set(key,String(value));persistFinancialCellDrafts();};
+const clearFinancialCellDraft=key=>{ensureFinancialStorageScope();financialCellDrafts.delete(key);persistFinancialCellDrafts();};
 document.addEventListener('click',event=>{
     const target=event.target instanceof Element?event.target.closest('.cell-validate'):null;
     if(!target)return;
@@ -313,7 +326,7 @@ const showView=(name,state)=>{
     target.classList.add('active');
     const activeNav=[...document.querySelectorAll(`.nav-btn[data-view="${name}"]`)].find(x=>!state?.anchor||x.dataset.anchor===state.anchor)||document.querySelector(`.nav-btn[data-view="${name}"]`);
     activeNav?.classList.add('active');
-    if(activeNav&&window.matchMedia('(max-width:860px)').matches)setTimeout(()=>activeNav.scrollIntoView({behavior:'smooth',block:'nearest',inline:'center'}),20);
+    if(activeNav&&window.matchMedia('(max-width:860px)').matches)setTimeout(()=>{const strip=activeNav.parentElement;if(strip)strip.scrollTo({left:Math.max(0,activeNav.offsetLeft-(strip.clientWidth-activeNav.clientWidth)/2),behavior:'smooth'});},20);
     document.querySelector('#globalSearchResults')?.replaceChildren();
     const nextState=state??{view:name,scrollY:0};
     restoreNavState(nextState);persistNavState(nextState);
@@ -736,6 +749,7 @@ const hydrateRelayFinancialReviews=async()=>{
   }
 };
 const loadFinancialProjectionState=async({clearOptimistic=false}={})=>{
+    ensureFinancialStorageScope();
     const [l,sheetEvents,sheetExpenses]=await Promise.all([app.ledger(),app.listWorkspaceRecords('FINANCE.SHEET_EVENT',app.activeGroup()).catch(()=>[]),app.expenses({scope:'SHEET'}).catch(()=>[])]);
     receiptPositions=l.receipts;
     const localTargets=app.pendingFinancialCellTargets?.()??[],relayTargets=await app.relayManagerFinancialTargets?.().catch?.(()=>[])??[];
@@ -783,6 +797,7 @@ const cellHasPendingLocal=detail=>{
 const setCellSyncedState=detail=>{
   const selector=financialLiveSelector?.(detail)||'';
   for(const cell of selector?document.querySelectorAll(selector):[]){
+    cell.dataset.saveState='CONFIRMED';cell.classList.add('is-confirmed');cell.classList.remove('is-failed');
     const state=cell.querySelector('.cell-save-state');if(state){state.textContent=tx('✓ Synchronisé','✓ Synced');state.hidden=false;setTimeout(()=>{if(state.textContent.includes('Synchron')||state.textContent.includes('Synced'))state.hidden=true;},2200);}
     cell.classList.remove('has-local-pending','has-review-pending','is-conflict','is-critical-conflict');
     cell.querySelector('.cell-sync-state.pending')?.remove();
@@ -1170,6 +1185,7 @@ const submitFinancialCellElement=async validate=>{
 };
 
 const makeFinancialEntryCell=({member,rubric,meetingId,editable=true})=>{
+    ensureFinancialStorageScope();
     const holder=document.createElement('div');holder.className='matrix-cell matrix-cell-entry';holder.dataset.membershipId=member.id;holder.dataset.rubricId=rubric.id;holder.dataset.meetingId=meetingId;holder.tabIndex=-1;
     const persistentCellKey=financialCellKey(member.id,rubric.id,meetingId),nature=financialNatureForRubric(rubric),signedCurrent=exactCellAmount(member.id,rubric.id,meetingId),current=Math.abs(signedCurrent),currentLabel=document.createElement('strong');
     currentLabel.className='cell-current'+(signedCurrent<0?' is-negative':'');currentLabel.textContent=fmt(signedCurrent);holder.append(currentLabel);
@@ -1967,9 +1983,8 @@ const highlightRemoteFinancialCell=(p={})=>{
           direct.className='secondary cell-remote-specialized';cell.append(direct);}
         direct.textContent=tx('Examiner dans le dossier financier','Review in financial record');
         direct.onclick=()=>go('finance',{force:true});
-        // A loan/payment/assistance is a real financial event, not an
-        // absolute contribution target. Its dispute must use its owner.
-        continue;
+        // Editing a loan/payment still opens its financial owner. Read receipts,
+        // agreement and reserve below only review the committed projection.
       }
       // A separate acknowledgment must never turn the financial ✓ button into
       // an OK button: a manager may immediately re-edit or dispute the cell.
@@ -1991,7 +2006,7 @@ const highlightRemoteFinancialCell=(p={})=>{
         control.disabled=true;
         try{
           const result=await app.reviewFinancialCellChange({meetingId,membershipId,rubricId,
-            amount:Math.max(0,signedAmount),cellVersion:currentVersion,decision,reason});
+            amount:Math.abs(signedAmount),cellVersion:currentVersion,decision,reason});
           if(decision==='RESERVE'){
             cell.classList.add('is-conflict','is-critical-conflict');
             const state=cell.querySelector('.cell-save-state');
@@ -2656,7 +2671,7 @@ if('serviceWorker' in navigator)navigator.serviceWorker.addEventListener('messag
 // A browser/page refresh must resume the exact business place, including a
 // horizontal financial column far to the right. sessionStorage is synchronous,
 // so pagehide can safely persist the last visible state without any request.
-const persistCurrentNavigation=()=>{try{persistNavState(captureNavState());}catch{}};
+const persistCurrentNavigation=()=>{try{const state=captureNavState();persistNavState(state);history.replaceState({...history.state,ecoNav:state},'',location.href);}catch{}};
 window.addEventListener('pagehide',persistCurrentNavigation);
 window.addEventListener('beforeunload',persistCurrentNavigation);
 const iosLike=()=>/iPad|iPhone|iPod/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);

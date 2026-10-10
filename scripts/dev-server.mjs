@@ -43,7 +43,9 @@ const requestHandler = async (req,res) => {
       const host=req.headers.host??`localhost:${currentPort}`;
       const request=new Request(`http://${host}${req.url}`,{method:req.method,headers,body:['GET','HEAD'].includes(req.method??'GET')?undefined:body});
       const response=await handleRequest(request);
-      res.writeHead(response.status,{...Object.fromEntries(response.headers.entries()),...securityHeaders});
+      const responseHeaders={...Object.fromEntries(response.headers.entries()),...securityHeaders};
+      const sessionCookies=response.headers.getSetCookie();if(sessionCookies.length)responseHeaders['set-cookie']=sessionCookies;
+      res.writeHead(response.status,responseHeaders);
       res.end(Buffer.from(await response.arrayBuffer())); return;
     }
     let pathname = new URL(req.url ?? '/', `http://localhost:${currentPort}`).pathname;

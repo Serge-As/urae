@@ -1,5 +1,5 @@
 // A new cache identity is mandatory, even for a patch-level app release.
-const CACHE = 'eco-system-v15215-bounded-recovery-20261008';
+const CACHE = 'eco-system-v15215-financial-field-completion-20261010';
 const PREVIOUS_CACHE = 'eco-system-v15214-sovereign-convergence-20261008';
 // Preserve the earlier coherent source line as well as the actual v15211 install.
 const PRIOR_SOURCE_RECOVERY_CACHE = 'eco-system-v15213-live-repayment-ui-20261007';
@@ -157,10 +157,15 @@ self.addEventListener('fetch', event => {
   // handled atomically by service-worker update/install, never by mutating this cache.
   if (event.request.mode === 'navigate') {
     event.respondWith((async () => {
-      const cache = await caches.open(CACHE);
-      const ready = await cache.match(RELEASE_READY);
-      const cached = ready && (await cache.match('/index.html') || await cache.match('/'));
-      if (cached) return cached;
+      try {
+        const cache = await caches.open(CACHE);
+        const ready = await cache.match(RELEASE_READY);
+        const cached = ready && (await cache.match('/index.html') || await cache.match('/'));
+        if (cached) return cached;
+      } catch (_) {
+        // CacheStorage failures must not reject respondWith (Chromium ERR_FAILED).
+        // Pending financial data is stored independently and is never cleared.
+      }
       try {
         const fresh = await fetch(event.request, { cache:'no-store' });
         if (fresh && fresh.ok) return fresh;

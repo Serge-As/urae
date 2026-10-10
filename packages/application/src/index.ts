@@ -16,6 +16,7 @@ import { IndexedDbSovereignStore, createEcoVault, openEcoVault, validateSovereig
 import { buildExerciseClosingPlan, buildExerciseCarryForwardSeed, type ExerciseClosingInput, type ExerciseClosingPlan } from '../../exercise/src/index.js';
 import { buildNumpadRubricCodes, parseEcoNumpad, type NumpadCode, type NumpadDraft } from '../../eco-numpad/src/index.js';
 import { createRelayPairingMaterial, encryptMemberCapsule, decryptMemberCapsule, createBroadcastBundle, encodeBroadcastFrames, encodeTargetedBroadcastFrames, type EcoMemberCapsule, type EcoRelayPairingMaterial, type EcoBroadcastBundle } from '../../relay/src/broadcast.js';
+import {browserWindowScope} from './browser-window-scope.js';
 
 export const KERNEL_SERVICE_IDS = [
   'kernelContext','kernelPolicy','kernelWorkflow','kernelEvents','kernelAudit','kernelObligations','kernelEvidence','kernelReconciliation','kernelInbox','kernelCases','kernelNotifications','kernelConfiguration','kernelFeatures','kernelGovernance','kernelCompatibility','kernelResourceGovernor','kernelOutbox','kernelRelay'
@@ -98,7 +99,9 @@ export class ConnectedApplication {
   private readonly outbox = new Outbox();
   private readonly outboxStorage = new IndexedDbOutboxAdapter();
   private readonly readSnapshots = new IndexedDbReadSnapshotAdapter();
-  private readonly localAuth = new IndexedDbLocalAuthAdapter();
+  private localAuth = new IndexedDbLocalAuthAdapter();
+  private windowSessionId?:string;
+  private windowSessionReady:Promise<void>=Promise.resolve();
   private readonly identityMigration = new IndexedDbIdentityMigrationJournal();
   private readonly sovereign = new IndexedDbSovereignStore();
   private usingOfflineSnapshot=false;
@@ -151,6 +154,14 @@ export class ConnectedApplication {
       const budget=JSON.parse(localStorage.getItem('eco.serverBudgetBlock.v1')||'null');if(budget&&Number(budget.until)>Date.now()){this.serverBudgetBlockedUntil=Number(budget.until);this.serverBudgetReason=String(budget.reason??'SERVER_BUDGET');}
     }catch{}
     this.locale=options.locale??storedLocale??'fr';
+    const scope=browserWindowScope();
+    if(scope.id){
+      this.windowSessionId=scope.id;this.localAuth=new IndexedDbLocalAuthAdapter('current:'+scope.id);
+      this.windowSessionReady=scope.ready.then(()=>{
+        if(this.windowSessionId!==scope.id){this.windowSessionId=scope.id;this.localAuth=new IndexedDbLocalAuthAdapter('current:'+scope.id);}
+        try{const group=sessionStorage.getItem('tontine.activeGroupId:'+scope.id);if(group!==null)this.activeGroupId=group||undefined;}catch{}
+      });
+    }
     this.armServerBudgetWake();
   }
 
@@ -165,11 +176,12 @@ export class ConnectedApplication {
     const existing=await this.cached<Group[]>('/api/v1/groups');if(!existing)await this.saveCached('/api/v1/groups',[]);
     return projected;
   }
-  private async serverAuthenticate(mode:'login'|'register',input:{username:string;password:string;displayName?:string}):Promise<{authenticated:boolean;account:SessionAccount}>{
+  private bindWindowSession():void{try{if(this.windowSessionId)sessionStorage.setItem('eco.window.session.bound.v1',this.windowSessionId);}catch{}}
+  private async serverAuthenticate(mode:'login'|'register',input:{username:string;password:string;displayName?:string;rememberDevice?:boolean}):Promise<{authenticated:boolean;account:SessionAccount}>{
     return this.request(`/api/v1/auth/${mode}`,{method:'POST',body:JSON.stringify({...input,locale:this.locale})});
   }
 
-  private headers(extra:Record<string,string>={}):HeadersInit{return{'content-type':'application/json','accept-language':this.locale,'x-active-group-id':this.activeGroupId??'','x-timezone':'Africa/Douala',...extra};}
+  private headers(extra:Record<string,string>={}):HeadersInit{return{'content-type':'application/json','accept-language':this.locale,'x-active-group-id':this.activeGroupId??'','x-timezone':'Africa/Douala',...(this.windowSessionId?{'x-eco-window-id':this.windowSessionId}:{}),...extra};}
   private serverBudgetBlocked():boolean{
     if(this.serverBudgetBlockedUntil<=Date.now()){if(this.serverBudgetBlockedUntil){this.serverBudgetBlockedUntil=0;this.serverBudgetReason='';try{localStorage.removeItem('eco.serverBudgetBlock.v1');}catch{}}return false;}
     return true;
@@ -238,7 +250,7 @@ export class ConnectedApplication {
     return path==='/api/v1/auth/session'||path.startsWith('/api/v1/');
   }
   private offlineReadKey(path:string):string{
-    if(path==='/api/v1/auth/session')return 'session:last';
+    if(path==='/api/v1/auth/session')return this.windowSessionId?'session:window:'+this.windowSessionId:'session:last';
     const accountTenant=this.homeTenantId??this.tenantId;
     if(path==='/api/v1/groups')return JSON.stringify([this.actorId,accountTenant,'ACCOUNT',path]);
     return JSON.stringify([this.actorId,this.tenantId,this.activeGroupId??'',path]);
@@ -290,6 +302,7 @@ export class ConnectedApplication {
     await this.saveCached(path,next);return next;
   }
   private async queueLocal(type:string,payload:Record<string,unknown>,idempotencyKey=makeId('op')):Promise<OutboxItem>{
+    await this.windowSessionReady;
     payload={...payload,recordedOffline:payload.recordedOffline??(this.isOffline()||this.transportUnavailableUntil>Date.now())};
     let item=this.outbox.enqueue({tenantId:this.tenantId,actorId:this.actorId,type,payload,idempotencyKey});
     const financialTarget=['FINANCIAL_CELL_CORRECTION_PROPOSAL_V1','FINANCIAL_CELL_CORRECTION_PROPOSAL_V2'].includes(type);
@@ -332,7 +345,9 @@ export class ConnectedApplication {
     await this.saveCached(path,rows.map(x=>x.id===noticeId?updated:x));return updated;
   }
   private async request<T>(path:string,init:RequestInit={}):Promise<T>{
+    await this.windowSessionReady;
     const headers=new Headers(this.headers());
+    if(path==='/api/v1/auth/session'&&this.windowSessionId){try{if(sessionStorage.getItem('eco.window.session.bound.v1')!==this.windowSessionId)headers.set('x-eco-window-adopt-legacy','1');}catch{}}
     for(const [k,v] of new Headers(init.headers??{}))headers.set(k,v);
     if(typeof FormData!=='undefined'&&init.body instanceof FormData)headers.delete('content-type');
     const method=String(init.method??'GET').toUpperCase(),cacheable=method==='GET'&&this.offlineReadAllowed(path),securityCritical=path.startsWith('/api/v1/auth/');
@@ -394,7 +409,7 @@ export class ConnectedApplication {
     const session=await this.authStatus();if(!session.authenticated || !session.account)throw Error('AUTHENTICATION_REQUIRED');
     this.actorId=session.account.id;this.homeTenantId=session.account.tenantId;this.tenantId=session.account.tenantId;this.displayName=session.account.displayName;
     let preferred:string|undefined;try{preferred=localStorage.getItem('tontine.locale')??undefined;}catch{}this.locale=preferred??session.account.locale;
-    if(IndexedDbOutboxAdapter.supported())try{const persisted=await this.outboxStorage.load();this.outbox.restore(persisted.filter(x=>x.actorId===this.actorId&&x.tenantId===this.tenantId));}catch{}
+    if(IndexedDbOutboxAdapter.supported())try{const persisted=await this.outboxStorage.load();this.outbox.restore(persisted.filter(x=>x.actorId===this.actorId));}catch{}
     await this.recoverInterruptedVaultRestores();
     const groups=await this.listGroups();if(this.activeGroupId&&!groups.some(g=>g.id===this.activeGroupId))this.selectGroup(undefined);if(!this.activeGroupId&&groups[0])this.selectGroup(groups[0].id);else this.selectGroup(this.activeGroupId);
     if(!this.usingOfflineSnapshot){await this.request('/api/v1/bootstrap',{method:'POST',body:JSON.stringify({displayName:this.displayName,locale:this.locale})});await this.groupTrashItems().catch(()=>[]);if(this.activeGroupId)await this.warmFinancialClock();}
@@ -402,18 +417,19 @@ export class ConnectedApplication {
   }
 
   async authStatus():Promise<{authenticated:boolean;account:SessionAccount|null;local?:boolean;registrationState?:string;offline?:boolean}>{
+    await this.windowSessionReady;
     let local:LocalAccountRecord|undefined;try{local=await this.localAuth.current();}catch{}
     if(local?.registrationState==='LOCAL_PENDING_REGISTRATION'){
       const account=this.adoptLocalAccount(local);return{authenticated:true,account,local:true,registrationState:local.registrationState,offline:true};
     }
     if(typeof navigator!=='undefined'&&navigator.onLine===false){
       if(local){const account=this.adoptLocalAccount(local);return{authenticated:true,account,local:true,registrationState:local.registrationState,offline:true};}
-      try{const cached=await this.readSnapshots.get<any>('session:last');if(cached?.body?.authenticated&&cached.body.account){this.announceOfflineSnapshot('/api/v1/auth/session',cached.updatedAt);return{...cached.body,offline:true};}}catch{}
+      try{const cached=await this.readSnapshots.get<any>(this.offlineReadKey('/api/v1/auth/session'));if(cached?.body?.authenticated&&cached.body.account){this.announceOfflineSnapshot('/api/v1/auth/session',cached.updatedAt);return{...cached.body,offline:true};}}catch{}
       return{authenticated:false,account:null,offline:true};
     }
     try{
       const server=await this.request<{authenticated:boolean;account:SessionAccount|null}>('/api/v1/auth/session');
-      if(server.authenticated&&server.account){this.actorId=server.account.id;this.homeTenantId=server.account.tenantId;this.tenantId=server.account.tenantId;this.displayName=server.account.displayName;this.usingOfflineSnapshot=false;return server;}
+      if(server.authenticated&&server.account){this.bindWindowSession();this.actorId=server.account.id;this.homeTenantId=server.account.tenantId;this.tenantId=server.account.tenantId;this.displayName=server.account.displayName;this.usingOfflineSnapshot=false;return server;}
       if(local){const account=this.adoptLocalAccount(local);return{authenticated:true,account,local:true,registrationState:local.registrationState};}
       return server;
     }catch(error){
@@ -829,6 +845,7 @@ export class ConnectedApplication {
   async globalRecap():Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/recap/global`);}
   async memberOperationalSheet(membershipId:string):Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/members/${encodeURIComponent(membershipId)}/operational-sheet`);}
   async authenticate(mode:'login'|'register',input:{username:string;password:string;displayName?:string;rememberDevice?:boolean}):Promise<void>{
+    await this.windowSessionReady;
     const localFlow=async()=>{
       if(!IndexedDbLocalAuthAdapter.supported())throw Error('LOCAL_AUTH_UNAVAILABLE');
       const local=mode==='register'
@@ -840,6 +857,7 @@ export class ConnectedApplication {
     try{
       const result=await this.serverAuthenticate(mode,input);if(!result.authenticated||!result.account)throw Error('AUTHENTICATION_REQUIRED');
       this.actorId=result.account.id;this.homeTenantId=result.account.tenantId;this.tenantId=result.account.tenantId;this.displayName=result.account.displayName;this.usingOfflineSnapshot=false;
+      this.bindWindowSession();this.financialClockAnchor=undefined;this.liveTicketCache=undefined;
       // A successful online authentication becomes an offline-capable credential on this device.
       // Only a salted PBKDF2 verifier is persisted; the clear password is never stored.
       try{
@@ -852,6 +870,7 @@ export class ConnectedApplication {
     }
   }
   async claimLocalAccount(password:string):Promise<{account:SessionAccount;synced:number;pending:number}>{
+    await this.windowSessionReady;
     const local=await this.localAuth.current();if(!local||local.registrationState!=='LOCAL_PENDING_REGISTRATION')throw Error('LOCAL_ACCOUNT_NOT_PENDING');
     if(typeof navigator!=='undefined'&&navigator.onLine===false)throw Error('NETWORK_UNAVAILABLE');
     let server:{authenticated:boolean;account:SessionAccount};
@@ -878,15 +897,18 @@ export class ConnectedApplication {
       return{account:next,synced:syncedRows.length-pending,pending};
     }catch(error){await this.identityMigration.fail(oldActor,oldTenant,error).catch(()=>{});throw error;}
   }
-  async localAccountInfo():Promise<{username:string;displayName:string;registrationState:string}|undefined>{const local=await this.localAuth.current();return local?{username:local.username,displayName:local.displayName,registrationState:local.registrationState}:undefined;}
+  async localAccountInfo():Promise<{username:string;displayName:string;registrationState:string}|undefined>{await this.windowSessionReady;const local=await this.localAuth.current();return local?{username:local.username,displayName:local.displayName,registrationState:local.registrationState}:undefined;}
   async logout():Promise<void>{
+    await this.windowSessionReady;
     try{if(typeof navigator==='undefined'||navigator.onLine!==false)await this.request('/api/v1/auth/logout',{method:'POST',body:'{}'});}catch(error){if(!(error instanceof Error)||error.message!=='NETWORK_UNAVAILABLE')throw error;}
-    try{await this.localAuth.logout();}catch{}this.outbox.restore([]);this.selectGroup(undefined);this.usingOfflineSnapshot=false;try{await this.readSnapshots.remove('session:last');}catch{}
+    this.bindWindowSession();this.financialClockAnchor=undefined;this.liveTicketCache=undefined;
+    try{await this.localAuth.logout();}catch{}this.outbox.restore([]);this.selectGroup(undefined);this.usingOfflineSnapshot=false;try{await this.readSnapshots.remove(this.offlineReadKey('/api/v1/auth/session'));}catch{}
   }
 
   setLocale(locale:string):void{this.locale=locale==='en'?'en':'fr';try{localStorage.setItem('tontine.locale',this.locale);}catch{}}
   setConnectivity(_connectivity:'online'|'offline'|'degraded'):void{}
-  selectGroup(groupId?:string):void{const before=this.activeGroupId;this.activeGroupId=groupId;this.tenantId=(groupId?this.groupTenants.get(groupId):undefined)??this.homeTenantId??this.tenantId;if(before!==groupId){this.financialClockAnchor=undefined;if(groupId&&typeof window!=='undefined')void this.warmFinancialClock();}try{if(groupId)localStorage.setItem('tontine.activeGroupId',groupId);else localStorage.removeItem('tontine.activeGroupId');}catch{}}
+  selectGroup(groupId?:string):void{const before=this.activeGroupId;this.activeGroupId=groupId;this.tenantId=(groupId?this.groupTenants.get(groupId):undefined)??this.homeTenantId??this.tenantId;if(before!==groupId){this.financialClockAnchor=undefined;this.liveTicketCache=undefined;if(groupId&&typeof window!=='undefined')void this.warmFinancialClock();}try{if(this.windowSessionId)sessionStorage.setItem('tontine.activeGroupId:'+this.windowSessionId,groupId??'');else if(groupId)localStorage.setItem('tontine.activeGroupId',groupId);else localStorage.removeItem('tontine.activeGroupId');}catch{}}
+  windowSessionScope():string|undefined{return this.windowSessionId;}
   activeGroup():string|undefined{return this.activeGroupId;}
 
   async analyzeGroupDocument(text:string):Promise<{fingerprint:string;suggestions:any[];requiresHumanConfirmation:boolean;financialWrites:boolean}>{return this.request('/api/v1/assistant/group-launch/analyze',{method:'POST',body:JSON.stringify({text})});}

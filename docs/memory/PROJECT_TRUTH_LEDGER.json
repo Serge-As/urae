@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedOn": "2026-10-09",
+  "generatedOn": "2026-10-10",
   "purpose": "Anti-regression operational truth. Read before asking founder to recreate/configure anything.",
   "allowedStatuses": [
     "ACQUIRED",
@@ -1361,6 +1361,21 @@
       ],
       "note": "No Cloud PASS or new diagnostic execution yet. Existing actual9bad657/Chromium8PASS/WebKit4PASS2FAIL retained. No Ubuntu local, purchase, deployment or gate weakening.",
       "next": "Verify exact-source materialization; run full657/8/6 and archive only on success. Obtain optional WindowsChromium6 real receipt."
+    },
+    {
+      "id": "financial.field_completion.20261010",
+      "status": "IMPLEMENTED_UNVERIFIED",
+      "scope": "window authentication, joined-tenant durable intents, review metadata, summaries, browser navigation",
+      "observedOn": "2026-10-10",
+      "evidence": [
+        "local:16/16 targeted regressions PASS; TypeScript/build PASS",
+        "local:two-account offline/F5 scenario PASS",
+        "repo:tests/window-session-isolation.test.mjs",
+        "repo:tests/browser/window-account-finance-20261010.spec.mjs",
+        "repo:tests/repayment-live-total-recovery.test.mjs"
+      ],
+      "note": "Full exact-source qualification and deployment remain required; no field acceptance or money mode promotion.",
+      "next": "Run private bounded Linux qualification, archive exact source, deploy only after all same-source gates."
     }
   ]
 }

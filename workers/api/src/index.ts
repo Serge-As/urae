@@ -75,10 +75,10 @@ interface WorkersAILike {
 }
 
 const RELEASE_VERSION='1.5.2.15-bounded-recovery';
-const RELEASE_BUILD_ID='eco-system-1.5.2.15-20261008-bounded-recovery';
+const RELEASE_BUILD_ID='eco-system-1.5.2.15-20261010-financial-field-completion';
 const RELEASE_SCHEMA_VERSION='d1-additive-20260923';
 const RELEASE_POLICY_VERSION='live-finance-policy-20261007-event-push-repayment';
-const RELEASE_PWA_CACHE='eco-system-v15215-bounded-recovery-20261008';
+const RELEASE_PWA_CACHE='eco-system-v15215-financial-field-completion-20261010';
 
 const defaultRepo = new InMemoryPlatformRepository();
 const defaultReferralBudgets = new InMemoryReferralBudgetStore();
@@ -165,7 +165,7 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
   const url=new URL(request.url); const cors=corsHeaders(request);
   if(request.method==='OPTIONS'){
     const allowed=Boolean((cors as Record<string,string>)['access-control-allow-origin']);
-    return new Response(null,{status:allowed?204:403,headers:{...baseSecurityHeaders,...cors,'access-control-allow-methods':'GET,POST,PUT,OPTIONS','access-control-allow-headers':'content-type,x-tenant-id,x-actor-id,x-group-roles,x-active-group-id,x-device-id,x-session-id,x-request-id,x-timezone'}});
+    return new Response(null,{status:allowed?204:403,headers:{...baseSecurityHeaders,...cors,'access-control-allow-methods':'GET,POST,PUT,OPTIONS','access-control-allow-headers':'content-type,x-tenant-id,x-actor-id,x-group-roles,x-active-group-id,x-device-id,x-session-id,x-request-id,x-timezone,x-eco-window-id,x-eco-window-adopt-legacy'}});
   }
   const {kernel,foundation,ledger,meetings,discovery,membershipGateway,rubrics,completion,explainability,documents,receivables,treasury,riskFinance,market,community,imports,artifactStore,memberControl,memberEnvelopes,groupIdentity,conciergeLearning,miscRubrics,adManager,economicIntelligence,externalPrograms,operationalCockpit,businessStudio,knowledgeAcademy,valueNetwork,creatorTalent,quietWatch}=createRequestScope(request,repo,options.artifacts,options.dataUseDefaultMode??'BETA_OPEN',options.documentAI);
   let ctx=kernel.context.get();
@@ -471,10 +471,12 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
       const rubricName=String(rubric.name??'').normalize('NFKD').replace(/[\u0300-\u036f]/g,'').toLowerCase(),
         rubricKind=String(rubric.activityPlan?.kind??'').toUpperCase(),
         rubricSystem=String(rubric.facets?.custom?.systemKey??'').toUpperCase();
-      if(['LOAN','REPAYMENT'].includes(rubricKind)||['LOAN','REPAYMENT'].includes(rubricSystem)||
-        /pret|emprunt|loan|remboursement|repayment/.test(rubricName)||rubric.facets?.direction==='OUTFLOW')
-        throw Error('SPECIALIZED_FINANCIAL_REVIEW_REQUIRED');
-      const current=await financialCellState(groupId,meetingId,membershipId,rubricId),
+      const specialized=['LOAN','REPAYMENT'].includes(rubricKind)||['LOAN','REPAYMENT'].includes(rubricSystem)||
+        /pret|emprunt|loan|remboursement|repayment/.test(rubricName)||rubric.facets?.direction==='OUTFLOW';
+      // Review reads the existing owner's committed projection. It can never
+      // replace a loan/payment or reverse its Ledger entry.
+      const sheet=specialized?await sheetCellState(groupId,{meetingId,membershipId,rubricId}):undefined;
+      const current=sheet?{current:Math.abs(sheet.canonicalAmount),cellVersion:sheet.cellVersion}:await financialCellState(groupId,meetingId,membershipId,rubricId),
         expectedVersion=finite(input.cellVersion,-1),expectedAmount=finite(input.amount,-1);
       if(current.cellVersion!==expectedVersion||current.current!==expectedAmount)throw Error('CELL_REVIEW_STALE');
       const consensus=new MeetingLiveConsensusService(repo,kernel);

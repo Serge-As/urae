@@ -60,3 +60,13 @@ test('members cannot impersonate manager and older revision cannot approve newer
   x.setActor('member-1');
   await assert.rejects(()=>x.svc.reviewCanonicalCell(input),/MANAGER_REQUIRED/);
 });
+
+test('an agreement withdraws only its author reserve and preserves another manager dispute',async()=>{
+  const x=fixture(),input={groupId:x.groupId,meetingId:'session-agreement',membershipId:x.memberId,rubricId:'rubric-01',cellVersion:5,amount:3000,decision:'RESERVE',reason:'Vérifier le reçu'};
+  await x.svc.reviewCanonicalCell(input);x.setActor('manager-b');await x.svc.reviewCanonicalCell(input);
+  x.setActor('manager-a');const a=await x.svc.reviewCanonicalCell({...input,decision:'APPROVE'});
+  assert.deepEqual(a.record.dissentingActorIds,['manager-b']);assert.equal([...x.cases.values()].filter(c=>c.status==='OPEN').length,1);
+  x.setActor('manager-b');const b=await x.svc.reviewCanonicalCell({...input,decision:'APPROVE'});
+  assert.deepEqual(b.record.dissentingActorIds,[]);assert.equal([...x.cases.values()].filter(c=>c.status==='OPEN').length,0);assert.equal(x.getAmount(),3000);
+  await x.svc.reviewCanonicalCell(input);assert.equal([...x.cases.values()].filter(c=>c.status==='OPEN').length,1,'a renewed reserve reopens the existing case');
+});
