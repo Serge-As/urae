@@ -2,6 +2,10 @@
 
 > **Projet ECO — développement de l'application EXISTANTE.** Ce dépôt est privé et contient les sources et l'historique réels; il ne doit pas être rendu public pour récupérer des minutes GitHub.
 
+## Reprise de l’implémentation : procédure opérationnelle
+
+**[Lire la procédure de reprise d’Eco-System](docs/operations/REPRISE_IMPLEMENTATION_ECO_URAE_2026-10-10.md)** : source exacte, qualification QR/WebKit, développement sous HOLD, tri des CI, interdiction de publier le code privé dans UTRAE. La procédure n’autorise aucun déploiement ni changement de production.
+
 ## Consigne impérative — quota GitHub Actions privé épuisé
 
 **TOUS LES CONTRIBUTEURS doivent lire le [protocole interne de reprise, CI gratuite et confidentialité](docs/operations/CI_QUOTA_ZERO_UTRAE.md) avant chaque PR ou workflow.** Consulter aussi [la frontière de confidentialité actualisée](docs/operations/URAE_UTRAE_CONFIDENTIALITE_CI_2026-10-10.md).
