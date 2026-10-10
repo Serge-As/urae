@@ -1,11 +1,13 @@
 # URAE — PROTOCOLE INTERNE DE REPRISE AVEC QUOTA ACTIONS PRIVÉ ÉPUISÉ
 **10 octobre 2026 — Diffusion interne via le dépôt privé.**
 
+> **Transfert vérifié** : l'actuel dépôt canonique est `Serge-As/urae` (privé) ; le dépôt auxiliaire est `Serge-As/utrae` (public). Voir `docs/operations/URAE_UTRAE_CONFIDENTIALITE_CI_2026-10-10.md` pour le périmètre confidentiel exhaustif et les interdictions de transfert.
+
 ## 0. Cette procédure s'impose à toutes les tâches Eco
-- **Dépôt privé de référence :** `SergeDelor/urae`, anciennement `SergeDelor/tontine-platform`. **Ne jamais publier sa visibilité ni son histoire**.
-- **Dépôt public de tests auxiliaires :** `SergeDelor/utrae`. Ce n'est PAS une reconstruction de l'application.
+- **Dépôt privé de référence :** `Serge-As/urae`, anciennement `SergeDelor/tontine-platform`. **Ne jamais publier sa visibilité ni son histoire**.
+- **Dépôt public de tests auxiliaires :** `Serge-As/utrae`. Ce n'est PAS une reconstruction de l'application.
 - **Compte Delor85 :** hors périmètre. Aucun transfert ou changement autorisé.
-- **Constat communiqué :** allocation mensuelle GitHub-hosted du propriétaire épuisée. Le compteur exact de facturation n'a pas été lu sur le compte par l'outil GitHub; vérifier dans GitHub Billing. L'existence du dépôt public ne réactive pas la quota privé.
+- **Constat communiqué :** allocation mensuelle GitHub-hosted du propriétaire épuisée. Le compteur exact de facturation n'a pas été lu sur le compte par l'outil GitHub; vérifier dans GitHub Billing. L'existence du dépôt public ne réactive pas le quota privé.
 - **Branche applicative récente repérée :** `evidence/cloud-qualification-20261009-a7c3336` (PR #74 et #76 fusionnées). `main` est essentiellement documentaire. Qualifier et désigner officiellement une branche de livraison avant d'automatiser quoi que ce soit.
 - **Les tests existants ne disparaissent pas :** aucune nouvelle application, aucun nouveau backend, aucune migration D1/R2 automatiquement autorisée.
 
@@ -31,7 +33,7 @@ cd /c/Users/Admin/Desktop/tontine-platform
 git status
 git remote -v
 # Uniquement si origin pointe encore vers l'ancienne adresse :
-git remote set-url origin https://github.com/SergeDelor/urae.git
+git remote set-url origin https://github.com/Serge-As/urae.git
 git fetch origin --prune
 git branch -a
 node --version
