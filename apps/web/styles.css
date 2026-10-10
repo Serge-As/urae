@@ -420,7 +420,7 @@ body.ui-mode-visual .primary:hover{filter:saturate(1.08) brightness(1.03);transf
 @media (prefers-reduced-motion:reduce){.matrix-cell-entry.is-critical-conflict{animation:none;outline-width:5px}}
 .rubric-recap-chooser{display:grid;gap:10px;margin:12px 0 16px;border-width:2px}.rubric-recap-chooser select{max-width:min(560px,100%)}
 .financial-alert-bar .financial-alert-close{margin-left:8px;float:right}
-.financial-alert-bar[hidden]{display:none!important}
+#financialAlertBar[hidden]{display:none!important}
 
 /* Financial editor identity: deterministic, non-authoritative visual hint.
    Critical financial conflicts stay red and take precedence. */

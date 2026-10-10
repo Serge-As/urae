@@ -44,7 +44,7 @@ test('two accounts in one browser keep their own identity, drafts, live amounts,
  await cell(page,ids).locator('.cell-target-input').fill('2500');await expect(cell(second,ids).locator('.cell-target-input')).toHaveValue('');
  await page.evaluate(()=>window.scrollTo(0,500));const before=await page.evaluate(()=>window.scrollY);
  await page.reload({waitUntil:'domcontentloaded'});await expect(page.locator('#accountName')).toContainText('Alpha');await expect(cell(page,ids).locator('.cell-target-input')).toHaveValue('2500');
- await expect.poll(()=>page.evaluate(()=>Math.abs(window.scrollY-Number(history.state?.ecoNav?.scrollY??0)))).toBeLessThan(100);
+ await expect.poll(()=>page.evaluate(previous=>Math.abs(window.scrollY-previous),before)).toBeLessThan(100);
  expect(before).toBeGreaterThan(0);await expect.poll(()=>amount(cell(page,ids))).toBe(2000);
  await second.reload({waitUntil:'domcontentloaded'});await expect(second.locator('#accountName')).toContainText('Beta');await expect.poll(()=>amount(cell(second,ids))).toBe(2000);
 });
