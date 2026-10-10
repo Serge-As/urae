@@ -1,9 +1,12 @@
-Eco-System 1.5.2.15 delivery HOLD
+Eco-System 1.5.2.15 gated financial completion delivery
 release: 1.5.2.15-bounded-recovery
-date: 2026-10-08
+date: 2026-10-11
 db_mutation: none
-mode: HOLD-failed-confrontation-qualification
-reason: qualification 37822250394 found expected 4000 but received 5000 after explicit offline reconfirmation; investigate before publishing
-source_under_review: fe2b9b2649992bf4eceda8e10b3d1e4dd76f5d91
+mode: code-only-no-d1-export-no-migration
+authorization: founder requested complete implementation and deployment using included free resources
+prior_browser_source: 922bdf59464ee449df505ab24b423cd7222f166f
+prior_browser_proof: private run 38093055053, Chromium 10/10 and WebKit 6/6 PASS
+required_before_worker_mutation: complete exact-SHA Node and browser gates, verified private archive, existing D1/R2, production ancestry guard
+required_after_worker_mutation: exact production health SHA, release build and cache, capability catalog and realMoneyEnabled false
 field_acceptance: NOT_ACCEPTED
-trigger_nonce: 2026-10-08-hold-confrontation-evidence
+trigger_nonce: 2026-10-11-financial-window-durability-live-review

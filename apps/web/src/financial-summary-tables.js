@@ -56,6 +56,8 @@ const fundName=fund=>fund==='SCHOOL'?'Épargne scolaire':'Épargne classique';
 
 export function savingsDepositRubrics(deposits=[],rubrics=[]){
   const catalog=new Map();
+  // Both configured simulation funds remain visible before their first deposit.
+  if(!rubrics.length)for(const fund of ['CLASSIC','SCHOOL'])catalog.set('fund:'+fund,{key:'fund:'+fund,id:null,name:fundName(fund),fund});
   for(const r of rubrics){if(!r.id)continue;catalog.set('rubric:'+String(r.id),{key:'rubric:'+String(r.id),id:String(r.id),name:String(r.name??r.id),fund:fundFor(r)});}
   for(const deposit of deposits){
     const fund=String(deposit.fund??'CLASSIC'),key=deposit.rubricId?'rubric:'+String(deposit.rubricId):'fund:'+fund;

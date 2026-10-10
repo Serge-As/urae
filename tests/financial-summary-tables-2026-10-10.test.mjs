@@ -12,4 +12,5 @@ test('savings recap gives each membership all funds and one exact subtotal witho
  const deposits=[{id:'d1',memberId:'a',fund:'CLASSIC',amount:100000},{id:'d2',memberId:'a',fund:'CLASSIC',amount:5000},{id:'d3',memberId:'a',fund:'SCHOOL',amount:20000},{id:'d3',memberId:'a',fund:'SCHOOL',amount:20000},{id:'d4',memberId:'b',fund:'SCHOOL',amount:50000}];
  const recap=projectSavingsDeposits({members,deposits});assert.equal(recap.members.length,2);assert.equal(recap.members[0].rubrics.length,2);assert.equal(recap.members[0].total,125000);assert.equal(recap.members[1].total,50000);assert.equal(recap.total,175000);assert.equal(recap.depositCount,4);
  const school=projectSavingsDeposits({members,deposits,rubricFilter:'SCHOOL'});assert.equal(school.total,70000);assert.ok(school.members.every(m=>m.rubrics.length===1));
+ const firstDeposit=projectSavingsDeposits({members,deposits:deposits.slice(0,1)});assert.equal(firstDeposit.members[0].rubrics.length,2);assert.equal(firstDeposit.members[0].rubrics.find(r=>r.fund==='SCHOOL').total,0);assert.equal(firstDeposit.total,100000);
 });

@@ -1,3 +1,15 @@
+## Qualification navigateur acquise, livraison gouvernée en cours — 11 octobre 2026
+
+Preuve directe privée : run https://github.com/Serge-As/urae/actions/runs/38093055053, source 922bdf59464ee449df505ab24b423cd7222f166f, Chromium 10/10 et WebKit 6/6 PASS. Deux gestionnaires dans le même navigateur, fermeture du bandeau, F5 à la position réelle, intentions hors connexion, remboursement et confrontation ont passé. Convergence Live 978/1832/1054 ms, zéro lecture de dépenses au repos, CONFIRMED des deux côtés.
+
+Le job Node s'est arrêté au memory-gate : les records CIR/Recall manquaient dans le commit CSS. Ils sont complétés dans le nouveau lot, ainsi que la visibilité des deux sous-lignes d'épargne même avant le premier dépôt scolaire. Ce run ne constitue pas un PASS global. Le workflow de publication autorisé par le fondateur doit encore qualifier les 668 tests Node et les 16 scénarios navigateur sur son SHA exact, archiver+SHA256, réutiliser D1/R2, vérifier la monotonie puis publier et contrôler /health.
+
+Dernière production attestée : d027f09a1382cd29054b33e274f3fd3bf9f8d9f3, 1.5.2.14-live-sync. Aucun PASS de livraison ni recette terrain annoncé avant preuve. FIELD_ACCEPTED=NOT_ACCEPTED ; realMoneyEnabled=false ; code-only sans export D1, migration ou remplacement. Le rapport Excel réel 27 membres/12 séances est prêt dans les outputs privés du chat ; 648 cellules +54 totaux et 20 tests épargne PASS, aucune donnée individuelle dans Utrae.
+
+ÉTAT DU PROJET APRÈS ÉTAPE : corrections navigateur réellement vérifiées, qualification Node complète et publication exact-SHA en cours via GitHub privé, sans Ubuntu local ni achat.
+
+---
+
 # BIR — financial field completion
 
 ## Finalisation financière du 10 octobre 2026

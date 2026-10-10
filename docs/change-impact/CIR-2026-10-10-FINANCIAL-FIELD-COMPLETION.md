@@ -1,5 +1,13 @@
 # CIR — financial field completion
 
+## Vérification réelle et livraison gouvernée — 11 octobre 2026
+
+Run privé 38093055053, source 922bdf59464ee449df505ab24b423cd7222f166f : Chromium 10/10 et WebKit 6/6 PASS, aucun scénario supprimé ni simulé. La position réelle après F5, les deux comptes dans le même contexte navigateur et la fermeture du bandeau sont vérifiés. Le sélecteur CSS par ID pour [hidden] prime désormais sur les règles tardives is-open/is-closed. Convergence Live mesurée : 978/1832/1054 ms ; zéro lecture des dépenses au repos ; états affichés CONFIRMED.
+
+Le job Node de ce run s'est arrêté au gate mémoire parce que le commit CSS précédent n'incluait pas son CIR/Recall. Les présents records documentent ce correctif ; ce run ne vaut pas qualification complète. Le tableau de simulation conserve maintenant les deux fonds, même lorsque seul l'un a un premier dépôt ; la régression existante couvre la sous-ligne scolaire à zéro.
+
+Le marqueur autorise la publication demandée par le fondateur uniquement après les gates complets du workflow de livraison, sur son SHA exact : 668 Node, Chromium 10, WebKit 6, archive privée avec SHA256, D1/R2 existants, monotonie et smoke de santé. Aucun remplacement de base, export D1 ou migration. Livraison et recette terrain restent non acquises tant que leurs preuves respectives n'existent pas.
+
 ## Finalisation financière du 10 octobre 2026
 
 Production observée directement : 1.5.2.14-live-sync, commit d027f09a1382cd29054b33e274f3fd3bf9f8d9f3. Le source 1.5.2.15 reste en qualification; aucune livraison revendiquée avant preuve du workflow et /health.

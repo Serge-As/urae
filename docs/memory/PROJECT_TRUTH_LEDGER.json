@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedOn": "2026-10-10",
+  "generatedOn": "2026-10-11",
   "purpose": "Anti-regression operational truth. Read before asking founder to recreate/configure anything.",
   "allowedStatuses": [
     "ACQUIRED",
@@ -1364,18 +1364,20 @@
     },
     {
       "id": "financial.field_completion.20261010",
-      "status": "IMPLEMENTED_UNVERIFIED",
+      "status": "IN_PROGRESS",
       "scope": "window authentication, joined-tenant durable intents, review metadata, summaries, browser navigation",
-      "observedOn": "2026-10-10",
+      "observedOn": "2026-10-11",
       "evidence": [
         "local:16/16 targeted regressions PASS; TypeScript/build PASS",
         "local:two-account offline/F5 scenario PASS",
         "repo:tests/window-session-isolation.test.mjs",
         "repo:tests/browser/window-account-finance-20261010.spec.mjs",
-        "repo:tests/repayment-live-total-recovery.test.mjs"
+        "repo:tests/repayment-live-total-recovery.test.mjs",
+        "github:Serge-As/urae/actions/runs/38093055053;source922bdf59464ee449df505ab24b423cd7222f166f;Chromium10/10+WebKit6/6PASS;Node stopped at memory-gate",
+        "remote-live:978/1832/1054ms;idleExpenseReads0;both windows CONFIRMED"
       ],
-      "note": "Full exact-source qualification and deployment remain required; no field acceptance or money mode promotion.",
-      "next": "Run private bounded Linux qualification, archive exact source, deploy only after all same-source gates."
+      "note": "Browser scenarios actually passed. Full latest-SHA Node and browser deployment gates still required; not deployed or field accepted yet.",
+      "next": "Follow private gated delivery, retain exact source archive and verify production health SHA; no private publication in Utrae."
     }
   ]
 }

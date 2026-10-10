@@ -1,5 +1,11 @@
 # RECALL — financial field completion
 
+## Reprise du 11 octobre 2026
+
+Source 922bdf59464ee449df505ab24b423cd7222f166f, run privé 38093055053 : Chromium 10/10 + WebKit 6/6 PASS ; fermeture du bandeau et position F5 réellement vérifiées. Live 978/1832/1054 ms, zéro polling dépenses, CONFIRMED des deux côtés. Node s'est arrêté au memory-gate (CIR/Recall absents du commit CSS), donc ne pas annoncer un PASS global de ce run.
+
+La présente livraison documente le CSS [hidden] et couvre la présence des deux sous-lignes d'épargne avant tout dépôt scolaire. Le workflow code-only doit réexécuter les 668 Node et les 16 scénarios navigateur sur le SHA publié, archiver celui-ci et vérifier /health exact. Ne pas recréer D1/R2, exporter des données privées vers Utrae ou assimiler une qualification automatisée à la recette terrain.
+
 ## Finalisation financière du 10 octobre 2026
 
 Production observée directement : 1.5.2.14-live-sync, commit d027f09a1382cd29054b33e274f3fd3bf9f8d9f3. Le source 1.5.2.15 reste en qualification; aucune livraison revendiquée avant preuve du workflow et /health.
