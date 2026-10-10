@@ -1,4 +1,6 @@
 # Eco-System — 1.1.2 locale
+> **Développement du produit existant :** dépôt privé `Serge-As/urae`, dépôt public auxiliaire `Serge-As/utrae`. Voir [procédure de reprise et CI Windows privée](docs/operations/ECO_REPRISE_SERGE_AS.md). Aucun frontend, backend, module métier ou service de production ne doit être remplacé pour économiser des minutes.
+
 
 Livraison du 13 septembre 2026 : sessions authentifiées, isolation des groupes,
 encaissements atomiques, relevés individuels, contrepassations, matrice et outbox durable.

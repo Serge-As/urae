@@ -1,0 +1,58 @@
+name: ECO Private Windows Qualification (manual; no GitHub-hosted minutes)
+on:
+  workflow_dispatch:
+    inputs:
+      suite:
+        description: 'quick = typecheck+lint; full = governed CI'
+        required: true
+        default: full
+        type: choice
+        options: [quick, full]
+permissions:
+  contents: read
+concurrency:
+  group: eco-private-win-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  qualify:
+    runs-on: [self-hosted, Windows, X64]
+    timeout-minutes: 120
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - name: Validate app branch (not documentation-only main)
+        run: |
+          if (-not (Test-Path 'packages/application/src/index.ts')) { throw 'Select a qualified app branch, not main' }
+          Write-Host "ECO_SHA=$env:GITHUB_SHA"
+          node --version
+      - name: Install locked dependencies
+        run: |
+          npm ci --ignore-scripts
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Quick private checks
+        if: ${{ inputs.suite == 'quick' }}
+        run: |
+          npm run typecheck
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          npm run lint:architecture
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          npm run lint:shared-governance
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Full private governed suite
+        if: ${{ inputs.suite == 'full' }}
+        run: |
+          npm run ci
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Clarify scope
+        if: always()
+        run: |
+          Write-Host 'Private Windows only. No deployment, no D1 migrations, no Cloudflare secrets.'
+          Write-Host 'Browser/WebKit/mobile staging still require separate qualification.'

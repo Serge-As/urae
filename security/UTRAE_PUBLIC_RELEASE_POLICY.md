@@ -1,5 +1,5 @@
 # UTRAE — politique P0 de publication
-Destination publique : SergeDelor/utrae. Source privée : SergeDelor/urae.
+Destination publique : Serge-As/utrae. Source privée : Serge-As/urae.
 Ne pas modifier Delor85. Ne jamais publier ni refléter les branches/tags/commits/historique Git du dépôt privé.
 
 ## Règle : PRIVATE BY DEFAULT
