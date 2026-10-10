@@ -65,7 +65,7 @@ try{
   const ci=await run('npm',['run','ci'],'Dependency audit, TypeScript, governance and all Node regressions');
   const nodeTests=finalCount(ci,/\btests (\d+)/g),nodePass=finalCount(ci,/\bpass (\d+)/g);
   report.node={tests:nodeTests,passed:nodePass};
-  if(nodeTests!==657||nodePass!==657)throw Error('Expected 657 Node tests; review the exact summary instead of assuming success.');
+  if(nodeTests!==668||nodePass!==668)throw Error('Expected 668 Node tests; review the exact summary instead of assuming success.');
   if(!process.argv.includes('--skip-browser-install'))await run('npx',['playwright','install','--with-deps','chromium','webkit'],'Install the locked Chromium and WebKit browsers');
   // Each qualification has its own disposable SQLite database. Production and
   // any existing local .data/eco-system.sqlite are never opened by this runner.
@@ -81,9 +81,9 @@ try{
   if(!catalogResponse.ok)throw Error('Local capability catalog unavailable.');
   const catalog=await catalogResponse.json();report.capabilities=catalog.count;
   if(catalog.version!==release.release.version||catalog.count<164||catalog.capabilities?.length!==catalog.count)throw Error('Local capability catalog identity/count mismatch.');
-  const chromium=await run('npx',['playwright','test','tests/browser/financial-cell-consensus-persistence-1.5.2.6.spec.mjs','tests/browser/browser-shell-mobile-1.5.2.6.spec.mjs','tests/browser/sovereign-multi-manager-1.5.2.14.spec.mjs','--browser=chromium','--workers=1'],'Chromium: persistence, mobile shell, two managers, idle expenses, confrontation and transport outage',{ECO_LIVE_SYNC_OUTPUT_DIR:output});
+  const chromium=await run('npx',['playwright','test','tests/browser/financial-cell-consensus-persistence-1.5.2.6.spec.mjs','tests/browser/browser-shell-mobile-1.5.2.6.spec.mjs','tests/browser/sovereign-multi-manager-1.5.2.14.spec.mjs','tests/browser/window-account-finance-20261010.spec.mjs','--browser=chromium','--workers=1'],'Chromium: persistence, mobile shell, two managers, idle expenses, confrontation and transport outage',{ECO_LIVE_SYNC_OUTPUT_DIR:output});
   const chromiumPassed=finalCount(chromium,/(\d+) passed/g);report.chromium={passed:chromiumPassed};
-  if(chromiumPassed!==8)throw Error('Expected Chromium 8/8.');
+  if(chromiumPassed!==10)throw Error('Expected Chromium 10/10.');
   const webkit=await run('npx',['playwright','test','tests/browser/eco-system-webkit-sovereign-offline-1.5.2.9.spec.mjs','--browser=webkit','--workers=1'],'WebKit: sovereign offline regression suite');
   const webkitPassed=finalCount(webkit,/(\d+) passed/g);report.webkit={passed:webkitPassed};
   if(webkitPassed!==6)throw Error('Expected WebKit 6/6.');

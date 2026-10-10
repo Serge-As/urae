@@ -1,3 +1,51 @@
+## Livraison financière vérifiée — 11 octobre 2026
+
+Production attestée directement : **1.5.2.15-bounded-recovery**, SHA **881a3e6a59269ce7c63633dd811bc14ba7d579c9**, Worker version **ae26ef15-82c9-4d9b-ad12-0181433359d7**. Livraison https://github.com/Serge-As/urae/actions/runs/38094298613 SUCCESS ; qualification indépendante https://github.com/Serge-As/urae/actions/runs/38094298672 SUCCESS sur le même source. **668/668 Node, Chromium 10/10, WebKit 6/6 ; zéro échec et skip.**
+
+Live mesuré dans la livraison : **1057/951/1026 ms** pour les trois valeurs validées ; **zéro lecture des dépenses au repos**, deux fenêtres CONFIRMED. Comptes indépendants dans un même contexte navigateur, identité des brouillons, F5/position, conservation hors connexion, remboursements, confrontations, vraies transmissions Local Room et fermeture du bandeau ont passé. Les tableaux de dettes et dépôts restent des projections des propriétaires canoniques.
+
+Santé exacte : build eco-system-1.5.2.15-20261010-financial-field-completion ; cache eco-system-v15215-financial-field-completion-20261010 ; 164 capacités ; stockage R2 existant ; realMoneyEnabled=false. Aucun export D1, migration, remplacement de base ou changement de données utilisateur. Monotonie d027f09 -> 881a3e6a59269ce7c63633dd811bc14ba7d579c9 vérifiée. Chrome installé : ouverture/rechargement PASS dans un profil isolé. Le pilote Opera reste bloqué avant navigation ; ne pas annoncer sa vérification. Le profil existant du fondateur n'a pas été effacé ni certifié ; demander seulement une actualisation Ctrl+Maj+R pour charger le nouveau worker si ERR_FAILED persiste.
+
+Archive privée artifact **11684798263**, téléchargée dans les outputs du chat, 865 entrées lisibles, SHA256 tar.gz **b077a2e7746409905bda9203e9c0a975774f44f3dcc76bfb93230d380c8bbc72** vérifié. Noms et montants du classeur restent uniquement dans le rapport privé du chat : **27 membres/12 séances, 648 cellules +54 totaux, 20 tests épargne PASS**, classique 495950, scolaire 70850, Bureau 141700. Aucun transfert privé vers Utrae, achat ou budget payant activé.
+
+ÉTAT DU PROJET APRÈS ÉTAPE : correctifs qualifiés et réellement déployés ; recette terrain **NOT_ACCEPTED**, argent réel désactivé. Les anciens HOLD/échecs ci-dessous sont historiques. Poursuivre depuis le source livré, sans republier une ancienne candidate ou confondre les 164 capacités du catalogue avec une recette complète de tous les modules.
+
+---
+
+## Qualification navigateur acquise, livraison gouvernée en cours — 11 octobre 2026
+
+Preuve directe privée : run https://github.com/Serge-As/urae/actions/runs/38093055053, source 922bdf59464ee449df505ab24b423cd7222f166f, Chromium 10/10 et WebKit 6/6 PASS. Deux gestionnaires dans le même navigateur, fermeture du bandeau, F5 à la position réelle, intentions hors connexion, remboursement et confrontation ont passé. Convergence Live 978/1832/1054 ms, zéro lecture de dépenses au repos, CONFIRMED des deux côtés.
+
+Le job Node s'est arrêté au memory-gate : les records CIR/Recall manquaient dans le commit CSS. Ils sont complétés dans le nouveau lot, ainsi que la visibilité des deux sous-lignes d'épargne même avant le premier dépôt scolaire. Ce run ne constitue pas un PASS global. Le workflow de publication autorisé par le fondateur doit encore qualifier les 668 tests Node et les 16 scénarios navigateur sur son SHA exact, archiver+SHA256, réutiliser D1/R2, vérifier la monotonie puis publier et contrôler /health.
+
+Dernière production attestée : d027f09a1382cd29054b33e274f3fd3bf9f8d9f3, 1.5.2.14-live-sync. Aucun PASS de livraison ni recette terrain annoncé avant preuve. FIELD_ACCEPTED=NOT_ACCEPTED ; realMoneyEnabled=false ; code-only sans export D1, migration ou remplacement. Le rapport Excel réel 27 membres/12 séances est prêt dans les outputs privés du chat ; 648 cellules +54 totaux et 20 tests épargne PASS, aucune donnée individuelle dans Utrae.
+
+ÉTAT DU PROJET APRÈS ÉTAPE : corrections navigateur réellement vérifiées, qualification Node complète et publication exact-SHA en cours via GitHub privé, sans Ubuntu local ni achat.
+
+---
+
+## Finalisation financière du 10 octobre 2026
+
+Production observée directement : 1.5.2.14-live-sync, commit d027f09a1382cd29054b33e274f3fd3bf9f8d9f3. Le source 1.5.2.15 reste en qualification; aucune livraison revendiquée avant preuve du workflow et /health.
+
+Deux causes corrigées : cookie HttpOnly partagé entre fenêtres de comptes distincts, et restauration Outbox limitée au tenant personnel avant sélection du groupe. Les cookies serveur, instantanés de session et groupe actif sont désormais scopiés par fenêtre; les intentions des groupes rejoints restent restaurées pour leur auteur. Les brouillons non validés sont privés à la fenêtre; les montants validés restent persistés avant réseau et l'état UI passe à CONFIRMED après ACK.
+
+La navigation F5 enregistre sa dernière position dans history.state; le défilement du menu mobile reste horizontal. Les tableaux de dettes dédupliquent les révisions et omettent les sous-totaux redondants pour un prêt unique, sans fusionner des prêts légitimes. Les dépôts sont regroupés par membre, rubrique et sous-total, avec couleurs conservées.
+
+Réserves Prêt/Remboursement/sorties : lecture du total engagé dans FINANCE.SHEET_EVENT et le propriétaire Expense, vérification montant/version puis revue MEETING.CELL_REVIEW; aucun reversement ni changement de dette. L'accord d'un gestionnaire ferme sa propre réserve uniquement; la réserve d'un autre reste ouverte. Les contrôles Vu, accord, contestation restent distincts.
+
+Accès Chrome : la production répond HTTP200 dans un profil Chromium vierge, sans échec réseau ni erreur JavaScript observée. Une exception CacheStorage de navigation pouvait rejeter respondWith et produire ERR_FAILED; le nouveau worker revient au réseau sans supprimer les intentions financières. Le message du navigateur du fondateur reste à vérifier après actualisation de ce worker.
+
+Preuves locales du lot : tsc/build PASS et 16/16 regressions ciblées PASS, zéro skip; scénario de deux comptes hors connexion/F5/Outbox PASS. Le scénario Live + position F5 reste en qualification complète (un premier lancement s'est arrêté pendant goto/load avant assertion métier). La limite de convergence cinq secondes reste intacte.
+
+Excel original privé vérifié par SHA256 028d8d2d894616dc559c8de9c2350248a50482e8cad3eb5c5c407df6ceb60be8 : 27 membres, 12 séances, 58 dépôts positifs, 648 cellules +54 totaux comparés à des fractions indépendantes; enveloppes exactes 495950 classique, 70850 scolaire, 141700 Bureau. Les 20 tests d'épargne ciblés ont réellement passé. Rapport et noms individuels restent dans les outputs privés du chat, aucune publication Utrae.
+
+GitHub a changé de propriétaire : Urae privé appartient à Serge-As (compte créé le 10 octobre), Utrae est public. L'accès natif Git authentifié Serge-As et les noms des deux secrets Cloudflare ont été vérifiés; leurs valeurs ne sont pas exportées. Aucun moyen de paiement ni budget payant modifié. Utiliser les minutes incluses du nouveau propriétaire pour une qualification privée bornée; aucun code privé ni fixture confidentielle en CI publique.
+
+État : 668 tests Node et 10 Chromium +6 WebKit exigés sur le même SHA propre; mémoire, archive+SHA256, monotonie production et smoke obligatoire avant livraison. FIELD_ACCEPTED=NOT_ACCEPTED, realMoneyEnabled=false. WSL Debian n'a pas démarré (HCS_E_HYPERV_NOT_INSTALLED); aucune dépendance à Ubuntu pour poursuivre.
+
+---
+
 ## Reprise sans Ubuntu local — 9 octobre 2026
 
 Le fondateur confirme : **« continuons si possible sans Ubuntu »**. Cette préférence fait autorité : la gestion du projet reste sous Windows, Ubuntu sur son PC est facultatif. L'activation native de VirtualMachinePlatform a terminé à **100 % / opération réussie** ; le dernier `wsl --list --verbose` indique **aucune distribution installée**. Aucune distribution Ubuntu n'est installée par cette reprise.

@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedOn": "2026-10-09",
+  "generatedOn": "2026-10-11",
   "purpose": "Anti-regression operational truth. Read before asking founder to recreate/configure anything.",
   "allowedStatuses": [
     "ACQUIRED",
@@ -1361,6 +1361,27 @@
       ],
       "note": "No Cloud PASS or new diagnostic execution yet. Existing actual9bad657/Chromium8PASS/WebKit4PASS2FAIL retained. No Ubuntu local, purchase, deployment or gate weakening.",
       "next": "Verify exact-source materialization; run full657/8/6 and archive only on success. Obtain optional WindowsChromium6 real receipt."
+    },
+    {
+      "id": "financial.field_completion.20261010",
+      "status": "VERIFIED_REMOTE",
+      "scope": "window authentication, joined-tenant durable intents, review metadata, summaries, browser navigation",
+      "observedOn": "2026-10-11",
+      "evidence": [
+        "local:16/16 targeted regressions PASS; TypeScript/build PASS",
+        "local:two-account offline/F5 scenario PASS",
+        "repo:tests/window-session-isolation.test.mjs",
+        "repo:tests/browser/window-account-finance-20261010.spec.mjs",
+        "repo:tests/repayment-live-total-recovery.test.mjs",
+        "github:Serge-As/urae/actions/runs/38093055053;source922bdf59464ee449df505ab24b423cd7222f166f;Chromium10/10+WebKit6/6PASS;Node stopped at memory-gate",
+        "remote-live:978/1832/1054ms;idleExpenseReads0;both windows CONFIRMED",
+        "github:Serge-As/urae/actions/runs/38094298613 SUCCESS;Node668/Chromium10/WebKit6;source881a3e6a59269ce7c63633dd811bc14ba7d579c9",
+        "github:Serge-As/urae/actions/runs/38094298672 SUCCESS",
+        "production:/health commitSha 881a3e6a59269ce7c63633dd811bc14ba7d579c9;version1.5.2.15-bounded-recovery;catalog164;realMoneyfalse",
+        "archive:artifact11684798263;sha256 b077a2e7746409905bda9203e9c0a975774f44f3dcc76bfb93230d380c8bbc72;download and 865 source entries verified"
+      ],
+      "note": "Exact-source qualification and code-only deployment verified. Existing storage/data preserved. Chrome installé : ouverture/rechargement PASS dans un profil isolé. Le pilote Opera reste bloqué avant navigation ; ne pas annoncer sa vérification. Existing founder browser profile and field acceptance remain unverified.",
+      "next": "Use deployed source and private Excel report; preserve realMoney=false and field NOT_ACCEPTED pending actual user acceptance."
     }
   ]
 }

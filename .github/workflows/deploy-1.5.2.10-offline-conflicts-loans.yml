@@ -3,7 +3,7 @@ name: Eco-System 1.5.2.15 — Bounded Recovery Cloudflare Delivery
 on:
   workflow_dispatch:
   push:
-    branches: ['fix/1.5.2.10-offline-conflicts-loans-20261003']
+    branches: ['fix/1.5.2.10-offline-conflicts-loans-20261003', 'fix/eco-financial-field-completion-20261010']
     paths: ['.github/DEPLOY_ECO_SYSTEM_1_5_2_10_ONCE']
 
 permissions:
@@ -21,14 +21,14 @@ env:
   ECO_SYSTEM_HEALTH: https://eco-system.sergemimf.workers.dev/health
   ECO_SYSTEM_CATALOG: https://eco-system.sergemimf.workers.dev/api/v1/product/capabilities
   EXPECTED_VERSION: 1.5.2.15-bounded-recovery
-  EXPECTED_BUILD: eco-system-1.5.2.15-20261008-bounded-recovery
-  EXPECTED_CACHE: eco-system-v15215-bounded-recovery-20261008
+  EXPECTED_BUILD: eco-system-1.5.2.15-20261010-financial-field-completion
+  EXPECTED_CACHE: eco-system-v15215-financial-field-completion-20261010
   MIN_CAPABILITIES: 164
 
 jobs:
   qualify-deploy-smoke:
     # A draft staging PR must never be deployable by manual dispatch.
-    if: github.ref == 'refs/heads/fix/1.5.2.10-offline-conflicts-loans-20261003'
+    if: github.ref == 'refs/heads/fix/1.5.2.10-offline-conflicts-loans-20261003' || github.ref == 'refs/heads/fix/eco-financial-field-completion-20261010'
     runs-on: ubuntu-latest
     timeout-minutes: 45
     env:
@@ -152,7 +152,7 @@ jobs:
           cat /tmp/eco-15210-deploy.log
           exit 1
       - name: Mandatory Chromium finance and shell qualification
-        run: npx playwright test tests/browser/financial-cell-consensus-persistence-1.5.2.6.spec.mjs tests/browser/browser-shell-mobile-1.5.2.6.spec.mjs tests/browser/sovereign-multi-manager-1.5.2.14.spec.mjs --browser=chromium --workers=1
+        run: npx playwright test tests/browser/financial-cell-consensus-persistence-1.5.2.6.spec.mjs tests/browser/browser-shell-mobile-1.5.2.6.spec.mjs tests/browser/sovereign-multi-manager-1.5.2.14.spec.mjs tests/browser/window-account-finance-20261010.spec.mjs --browser=chromium --workers=1
 
       - name: Status · gate-chromium
         continue-on-error: true

@@ -42,3 +42,15 @@ test('a Live outage after financial commit leaves a durable projection which the
   setFail(false);await request('/api/v1/groups/'+groupId+'/live/retry-pending','POST',{});
   assert.equal((await repo.getWorkspaceRecord(tenantId,projection.id)).status,'DONE');assert.equal(events.filter(x=>x.payload.operationType==='LOAN_REPAYMENT').length,1);
 });
+
+test('a repayment reserve and agreement review its exact owner total without paying or reversing the loan twice',async()=>{
+ const {request,repo,tenantId,groupId}=await fixture();
+ await request('/api/v1/groups/'+groupId+'/loans/loan/repay','POST',{paymentAmount:2500,expectedVersion:4,meetingId:'s',rubricId:'r',idempotencyKey:'reserve-payment'});
+ const before=await repo.listLedgerEntries(tenantId,groupId),path='/api/v1/groups/'+groupId+'/meetings/s/financial-cells/review',input={membershipId:'m',rubricId:'r',amount:2500,cellVersion:1,decision:'RESERVE',reason:'Reçu à vérifier'};
+ const reserved=await request(path,'POST',input);assert.equal(reserved.status,'RESERVE_OPEN');assert.equal(reserved.canonicalUnchanged,true);
+ await request(path,'POST',input);assert.equal((await repo.listCases(tenantId,'repay_manager')).filter(x=>x.status==='OPEN').length,1);
+ await assert.rejects(()=>request(path,'POST',{...input,amount:2501}),/CELL_REVIEW_STALE/);
+ const approved=await request(path,'POST',{...input,decision:'APPROVE'});assert.equal(approved.status,'APPROVED');
+ assert.equal((await repo.getWorkspaceRecord(tenantId,'loan')).data.outstandingPrincipal,7500);assert.deepEqual(await repo.listLedgerEntries(tenantId,groupId),before);
+ assert.equal((await repo.listCases(tenantId,'repay_manager')).filter(x=>x.status==='OPEN').length,0);
+});

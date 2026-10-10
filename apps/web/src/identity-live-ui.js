@@ -3,7 +3,7 @@ const value=id=>String(document.getElementById(id)?.value??'').trim();
 const row=(label,value)=>{const p=el('p');const b=el('strong',label+' : ');p.append(b,document.createTextNode(String(value??'—')));return p;};
 
 export function mountIdentityLiveUI({app,notify=()=>{},showError=console.error,conservationMode=false}){
-  let socket=null,lastSeq=0,lastSignalAt=0,activeGroup,reconnectTimer=null,reconnectAttempt=0,wantConnection=true,eventQueue=Promise.resolve(),connectPromise=null;
+  let socket=null,lastSeq=0,lastSignalAt=0,activeGroup,activeActor,reconnectTimer=null,reconnectAttempt=0,wantConnection=true,eventQueue=Promise.resolve(),connectPromise=null;
   const pendingDraftSignals=new Map();
   const passportRoot=document.getElementById('identityPassport');
   if(!passportRoot)return{refresh:async()=>{},publishSignal:async()=>({accepted:false,reason:'LIVE_UI_UNMOUNTED'}),disconnect:()=>{}};
@@ -51,6 +51,8 @@ export function mountIdentityLiveUI({app,notify=()=>{},showError=console.error,c
   const signalKey=payload=>[payload?.kind??'',payload?.meetingId??'',payload?.membershipId??'',payload?.rubricId??''].join('|');
   const publishSignal=async(type,payload={})=>{
     if(!app.activeGroup())return{accepted:false,reason:'ACTIVE_GROUP_REQUIRED'};
+    const actor=String(app.currentActor?.()??'');
+    if(activeActor&&activeActor!==actor){closeSocket('account-change');lastSeq=0;lastSignalAt=0;pendingDraftSignals.clear();activeActor=actor;}
     if(['FINANCIAL_DRAFT','FINANCIAL_DRAFT_CLEAR'].includes(type))pendingDraftSignals.set(signalKey(payload),{type,payload});
     if(navigator.onLine===false)return{accepted:false,offline:true,queued:['FINANCIAL_DRAFT','FINANCIAL_DRAFT_CLEAR'].includes(type)};
     // A D1 budget block does not close or disable an already authorized live
@@ -68,8 +70,8 @@ export function mountIdentityLiveUI({app,notify=()=>{},showError=console.error,c
     if(connectPromise)return connectPromise;
     if(!wantConnection||!app.activeGroup()||typeof WebSocket==='undefined'||navigator.onLine===false)return Promise.resolve();
     if(socket&&[WebSocket.CONNECTING,WebSocket.OPEN].includes(socket.readyState))return Promise.resolve();
-    const requestedGroup=app.activeGroup();
-    clearTimers();try{socket?.close(1000,'reconnect');}catch{}socket=null;activeGroup=requestedGroup;
+    const requestedGroup=app.activeGroup(),requestedActor=String(app.currentActor?.()??'');
+    clearTimers();try{socket?.close(1000,'reconnect');}catch{}socket=null;activeGroup=requestedGroup;activeActor=requestedActor;
     connectPromise=(async()=>{
       let ticketData;
       try{ticketData=await app.liveTicket?.();}
@@ -79,7 +81,7 @@ export function mountIdentityLiveUI({app,notify=()=>{},showError=console.error,c
         const code=String(e instanceof Error?e.message:e);
         if(code!=='NOT_FOUND'&&code!=='HTTP_404')throw e;
       }
-      if(!wantConnection||navigator.onLine===false||app.activeGroup()!==requestedGroup)return;
+      if(!wantConnection||navigator.onLine===false||app.activeGroup()!==requestedGroup||String(app.currentActor?.()??'')!==requestedActor)return;
       // Legacy authenticated upgrade remains available if ticket issuance is not
       // configured yet; it costs D1 but avoids breaking an older deployment.
       const activeSocket=socket=new WebSocket(app.liveWebSocketUrl(lastSeq,String(ticketData?.ticket??'')));
@@ -161,8 +163,9 @@ export function mountIdentityLiveUI({app,notify=()=>{},showError=console.error,c
 
   const refresh=async()=>{
     const group=app.activeGroup();if(!group){closeSocket();passportRoot.replaceChildren(el('p','Sélectionnez un groupe.','hint'));dnaRoot?.replaceChildren();liveRoot?.replaceChildren();memoryRoot?.replaceChildren();return;}
-    if(activeGroup&&activeGroup!==group){closeSocket();lastSeq=0;lastSignalAt=0;eventsRoot?.replaceChildren();}
-    activeGroup=group;
+    const actor=String(app.currentActor?.()??'');
+    if((activeGroup&&activeGroup!==group)||(activeActor&&activeActor!==actor)){closeSocket();lastSeq=0;lastSignalAt=0;pendingDraftSignals.clear();eventsRoot?.replaceChildren();}
+    activeGroup=group;activeActor=actor;
     // Finance push must not depend on unrelated identity/concierge D1 reads.
     // A quota-limited request must never prevent managers from receiving writes.
     if(conservationMode&&(!socket||socket.readyState>1))connect();
