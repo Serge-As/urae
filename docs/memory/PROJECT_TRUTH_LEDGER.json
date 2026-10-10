@@ -1364,7 +1364,7 @@
     },
     {
       "id": "financial.field_completion.20261010",
-      "status": "IN_PROGRESS",
+      "status": "VERIFIED_REMOTE",
       "scope": "window authentication, joined-tenant durable intents, review metadata, summaries, browser navigation",
       "observedOn": "2026-10-11",
       "evidence": [
@@ -1374,10 +1374,14 @@
         "repo:tests/browser/window-account-finance-20261010.spec.mjs",
         "repo:tests/repayment-live-total-recovery.test.mjs",
         "github:Serge-As/urae/actions/runs/38093055053;source922bdf59464ee449df505ab24b423cd7222f166f;Chromium10/10+WebKit6/6PASS;Node stopped at memory-gate",
-        "remote-live:978/1832/1054ms;idleExpenseReads0;both windows CONFIRMED"
+        "remote-live:978/1832/1054ms;idleExpenseReads0;both windows CONFIRMED",
+        "github:Serge-As/urae/actions/runs/38094298613 SUCCESS;Node668/Chromium10/WebKit6;source881a3e6a59269ce7c63633dd811bc14ba7d579c9",
+        "github:Serge-As/urae/actions/runs/38094298672 SUCCESS",
+        "production:/health commitSha 881a3e6a59269ce7c63633dd811bc14ba7d579c9;version1.5.2.15-bounded-recovery;catalog164;realMoneyfalse",
+        "archive:artifact11684798263;sha256 b077a2e7746409905bda9203e9c0a975774f44f3dcc76bfb93230d380c8bbc72;download and 865 source entries verified"
       ],
-      "note": "Browser scenarios actually passed. Full latest-SHA Node and browser deployment gates still required; not deployed or field accepted yet.",
-      "next": "Follow private gated delivery, retain exact source archive and verify production health SHA; no private publication in Utrae."
+      "note": "Exact-source qualification and code-only deployment verified. Existing storage/data preserved. Chrome installé : ouverture/rechargement PASS dans un profil isolé. Le pilote Opera reste bloqué avant navigation ; ne pas annoncer sa vérification. Existing founder browser profile and field acceptance remain unverified.",
+      "next": "Use deployed source and private Excel report; preserve realMoney=false and field NOT_ACCEPTED pending actual user acceptance."
     }
   ]
 }

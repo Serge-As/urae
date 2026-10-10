@@ -1402,3 +1402,5 @@ candidate_2026_10_08_1_5_2_15:
   real_money_enabled: false
   field_acceptance: NOT_ACCEPTED
   note: No new business capability or maturity promotion; registry status is not end-to-end acceptance.
+
+# 2026-10-11: financial field completion deployed at 881a3e6a59269ce7c63633dd811bc14ba7d579c9; private run38094298613 SUCCESS, Node668/Chromium10/WebKit6; FIELD_ACCEPTED=NOT_ACCEPTED, realMoney=false.
