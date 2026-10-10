@@ -12,6 +12,8 @@
 - **Jamais de clone, token, artefact, logs, secrets, sauvegardes ou JS stratégique privé envoyés aux workflows publics UTRAE.**
 - Aucun redémarrage du produit, aucune migration D1/R2, aucune mise en production ni refonte de frontend/backend ne résulte de cette séparation.
 
+**Migration du propriétaire prévue :** `SergeDelor/urae` → **`Serge-As/urae`** (privé). **Ne pas considérer le transfert terminé avant acceptation par Serge-As.** Procédure détaillée et nouvelle stratégie de répartition des CI : [issue privée #78](https://github.com/SergeDelor/urae/issues/78). Aucune fonctionnalité d'Eco ne doit être désactivée pour économiser des minutes.
+
 **Suivi :** [issue #77 — reprise technique](https://github.com/SergeDelor/urae/issues/77) · [issue #75 — contrôle du périmètre public](https://github.com/SergeDelor/urae/issues/75).
 
 > La branche `main` sert actuellement à la documentation; valider la branche applicative et ses tests avant toute livraison.
