@@ -64,3 +64,24 @@ test('service fails closed without binary artifact storage',async()=>{
   const media=new VisualMediaService(repo,kernel,storage);
   await assert.rejects(()=>media.upload('g',photo(),'HOME_HERO'),/D1_FALLBACK_TEXT_ONLY/);
 });
+
+
+test('Marketplace product photos attach to a canonical stock item without touching inventory',async()=>{
+  const {repo,media,kernel}=await setup();
+  scope(kernel,'owner','g');
+  const row={id:'stock-001',tenantId:'tenantA',groupId:'g',moduleId:'MARKETPLACE.CORE',
+    title:'Huile locale',status:'ACTIVE',tags:['market-engine','kind:STOCK_ITEM'],
+    data:{marketKind:'STOCK_ITEM',published:true,ownership:'COMMERCIAL',quantity:12,reserved:2,unitPrice:1000},
+    createdBy:'owner',createdAt:'2026-10-11T00:00:00Z',updatedAt:'2026-10-11T00:00:00Z'};
+  await repo.saveWorkspaceRecord(row);
+  const uploaded=await media.upload('g',photo(),'MARKET_PRODUCT');
+  await media.assignStockVisual('g',row.id,uploaded.id);
+  assert.equal((await media.stockVisuals('g'))[row.id],uploaded.id);
+  const unchanged=await repo.getWorkspaceRecord('tenantA',row.id);
+  assert.equal(unchanged.data.quantity,12);
+  assert.equal(unchanged.data.reserved,2);
+  assert.equal(unchanged.data.unitPrice,1000);
+  await assert.rejects(()=>media.assignStockVisual('g2',row.id,uploaded.id),/STOCK_ITEM_NOT_FOUND/);
+  await media.assignStockVisual('g',row.id,'');
+  assert.deepEqual(await media.stockVisuals('g'),{});
+});
