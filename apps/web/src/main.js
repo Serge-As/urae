@@ -23,6 +23,7 @@ import { mountPersonalCockpitUI } from './personal-cockpit-ui.js';
 import { mountRecapUI } from './recap-ui.js';
 import { mountInterestCommunityUI } from './interest-community-ui.js';
 import { mountAdManagerUI } from './ad-manager-ui.js';
+import { mountVisualMediaStudio } from './visual-media-studio.js';
 import { mountTontineManagerUI } from './tontine-manager-ui.js';
 import { mountSavingsYieldUI } from './savings-yield-ui.js';
 import { mountExternalProgramsUI } from './external-programs-ui.js';
@@ -388,6 +389,7 @@ const personalCockpitUI = mountPersonalCockpitUI({ app, getGroups: () => groups,
 const recapUI = mountRecapUI({ app, getGroups: () => groups, getMembers: () => members, getMeetings: () => meetings, getRubrics: () => rubrics, isManager, navigate: go, fmt, date, showError: fail });
 const interestCommunityUI = mountInterestCommunityUI({ app, notify: toast, showError: fail, date });
 const adManagerUI = mountAdManagerUI({ app, notify: toast, showError: fail, isManager, fmt });
+const visualMediaStudio = mountVisualMediaStudio({app,notify:toast,showError:fail});
 const tontineManagerUI = mountTontineManagerUI({ app, getRubrics: () => rubrics, getMembers: () => members, notify: toast, showError: fail, fmt, isManager });
 const savingsYieldUI = mountSavingsYieldUI({ app, getMembers: () => members, notify: toast, showError: fail, fmt, isManager });
 const externalProgramsUI = mountExternalProgramsUI({ app, notify: toast, showError: fail, isManager, fmt });
@@ -2179,6 +2181,7 @@ const refreshGroupContext = async () => {
     await refreshOptionalOfflineSafe('recap',()=>recapUI.refresh());
     await refreshOptionalOfflineSafe('interest-community',()=>interestCommunityUI.refresh());
     await refreshOptionalOfflineSafe('ad-manager',()=>adManagerUI.refresh());
+    await refreshOptionalOfflineSafe('visual-media',()=>visualMediaStudio.refresh());
     await refreshOptionalOfflineSafe('tontine-manager',()=>tontineManagerUI.refresh());
     await refreshOptionalOfflineSafe('savings-yield',()=>savingsYieldUI.refresh());
     await refreshOptionalOfflineSafe('assistance-rulebook',()=>assistanceRulebookUI.refresh());
