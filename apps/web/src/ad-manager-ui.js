@@ -38,7 +38,7 @@ export function mountAdManagerUI({app,notify=()=>{},showError=console.error,isMa
       const next={DRAFT:'PENDING_REVIEW',PENDING_REVIEW:'APPROVED',APPROVED:'ACTIVE',ACTIVE:'PAUSED',PAUSED:'ACTIVE'}[c.state];
       if(next){
         const b=el('button',next==='PENDING_REVIEW'?'Soumettre à modération':next==='APPROVED'?'Approuver':next==='ACTIVE'?'Activer':'Mettre en pause',next==='ACTIVE'?'primary':'secondary');
-        b.type='button';b.onclick=()=>void(async()=>{try{await app.transitionAdCampaign(c.id,next);notify('Campagne mise à jour.');await render();}catch(e){showError(e);}})();actions.append(b);
+        b.type='button';b.onclick=()=>void(async()=>{try{await app.transitionAdCampaign(c.id,next);notify('Campagne mise à jour.');document.dispatchEvent(new Event('eco:ad-campaign-state-changed'));await render();}catch(e){showError(e);}})();actions.append(b);
       }
       card.append(actions);root.append(card);
     }
