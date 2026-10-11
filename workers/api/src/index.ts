@@ -2316,6 +2316,31 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
     const storefrontRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/market\/storefront$/);
     if(storefrontRoute&&request.method==='GET')return json(await market.storefront(storefrontRoute[1]!),200,cors);
     const visualMedia=new VisualMediaService(repo,kernel,artifactStore);
+
+    const consentedProfiles=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/visual-profile-consents$/);
+    if(consentedProfiles&&request.method==='GET')return json(await visualMedia.consentedProfiles(consentedProfiles[1]!),200,cors);
+    if(consentedProfiles&&request.method==='PUT'){
+      const body=await readJson<Record<string,unknown>>(request);
+      if(typeof body.visible!=='boolean')throw Error('CONSENT_BOOLEAN_REQUIRED');
+      return json(await visualMedia.setProfileConsent(consentedProfiles[1]!,body.visible),200,cors);
+    }
+    const forumPhotos=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/forum-v2\/hubs\/([^/]+)\/photos$/);
+    if(forumPhotos&&request.method==='GET'){
+      const groupId=forumPhotos[1]!,hubId=decodeURIComponent(forumPhotos[2]!);
+      await community.federationProfile(groupId,hubId);
+      return json(await visualMedia.forumPhotos(groupId,hubId),200,cors);
+    }
+    const forumPhotoAssign=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/forum-v2\/messages\/([^/]+)\/photo$/);
+    if(forumPhotoAssign&&request.method==='PUT'){
+      if(!options.communityRealtime)throw Error('COMMUNITY_REALTIME_UNAVAILABLE');
+      const groupId=forumPhotoAssign[1]!,messageId=decodeURIComponent(forumPhotoAssign[2]!);
+      const message=await options.communityRealtime.messageContext(messageId);
+      if(!message||message.groupId!==groupId||message.tenantId!==ctx.tenantId)throw Error('COMMUNITY_MESSAGE_NOT_FOUND');
+      await community.federationProfile(groupId,message.hubId);
+      const body=await readJson<Record<string,unknown>>(request);
+      return json(await visualMedia.setForumPhoto(groupId,messageId,message.hubId,message.authorId,String(body.assetId??'')),200,cors);
+    }
+
     const visualApi=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/visual-media$/);
     if(visualApi&&request.method==='GET')return json(await visualMedia.list(visualApi[1]!),200,cors);
     if(visualApi&&request.method==='POST'){
@@ -2332,7 +2357,15 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
     }
     const visualContent=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/visual-media\/([^/]+)\/content$/);
     if(visualContent&&request.method==='GET'){
-      const asset=await visualMedia.bytes(visualContent[1]!,visualContent[2]!);
+      const groupId=visualContent[1]!,assetId=visualContent[2]!;
+      const row=await visualMedia.record(groupId,assetId);
+      if(row.data.purpose==='FORUM_PHOTO'){
+        const links=await repo.listWorkspaceRecords(ctx.tenantId,'MEDIA.FORUM_PHOTO',groupId);
+        const linked=links.find(x=>x.status==='ACTIVE'&&x.data.assetId===assetId);
+        if(!linked)throw Error('FORUM_PHOTO_NOT_LINKED');
+        await community.federationProfile(groupId,String(linked.data.hubId??''));
+      }
+      const asset=await visualMedia.bytes(groupId,assetId);
       return new Response(asset.bytes,{headers:{...baseSecurityHeaders,...cors,'content-type':asset.mime,'cache-control':'private, no-store','x-content-type-options':'nosniff'}});
     }
     const visualStockList=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/visual-stock$/);
