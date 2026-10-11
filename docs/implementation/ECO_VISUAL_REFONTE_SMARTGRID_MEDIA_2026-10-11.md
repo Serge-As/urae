@@ -31,3 +31,39 @@ Ne pas modifier Ledger, règles métier, Recap, rôles/permissions, toutes les 1
 ## Gates futurs
 1. Memory Recall et CIR du lot média complet ; 2. tests TypeScript, Node, UI et API upload/lecture/refus/tenant ; 3. vraie recette mobile 320/360/390, WebKit 6/6 et Chromium, réseau dégradé, ancien Android ; 4. tests financiers historiques et Récap ; 5. backup BIR+ ; 6. deployment explicitement autorisé et smoke SHA exact ; 7. recette terrain.
 HOLD actuel de la candidate 1.5.2.15 reste en place et est indépendant de ce chantier.
+
+
+## Journal de travaux, 11 octobre 2026 (mise à jour)
+La présente branche ajoute des modules et des routes, mais **aucun PASS CI complet et aucune recette terrain n'ont été fournis**. PR #82 draft.
+
+| Intention des maquettes | État vrai à ce commit | À vérifier / compléter |
+|---|---|---|
+| Feuilles en 1, 2 et 5 parties | Contrôles intégrés à l'éditeur canonique pour réunion et fiche individuelle ; totaux de ligne et général calculés toutes rubriques confondues | Build complet, saisie ✓, changement de partie pendant édition, plusieurs gestionnaires, offline, non-régression Recap |
+| Accueil personnalisé | Riche Accueil préexistant conservé ; renforcement CSS, visuel de groupe sous contrôle média | Capture visuelle réel appareil ; adaptations role-first approfondies |
+| Cockpit Association | GroupHome et actions natives préservés ; visuels de groupe liés au studio | Flux exact d'invitation, photo de groupe visible sur toutes les projections publiques et privées |
+| Galerie centrale de photos | VisualMediaService: import R2, liste, assignation/effacement d'affichage, lecture authentifiée, galerie et aperçu responsive ; image privée par défaut | Typecheck, tests API réels multi-tenant, modération, quota et retrait binaire gouverné ; global assets fondateur |
+| Portrait personnel | Slot PROFILE_PHOTO par acteur+groupe, privé même aux autres gestionnaires | Identity canonique unifiée et consentement de publication sur toutes les fiches |
+| Forum | Forum existant préservé, bannière autorisée affichable + raccourci vers vrai module | Pièces jointes, auteur/avatar par publication, recherche et modération visuelle à compléter |
+| Marketplace | Inventaire/boutique natifs préservés, bannière affichable et raccourci fonctionnel | Photos par produit, variantes/galeries, images de fournisseurs, preuve de livraison |
+| AdManager | Workflow de campagnes sandbox préexistant conservé ; image AD_CREATIVE uploadable, sélectionnable, vérifiée côté API, visible dans carte campagne | Diffusion réelle des images aux placements, attribution/budgets modérés, cockpit annonceur/partenaire externe, droits séparés création/approbation |
+| Bilinguisme FR/EN | Traductions ajoutées au dictionnaire runtime + libellés UI contrôlés | Tester intégralité des 155 capacités et des erreurs |
+| Confrontation/Récap | Code propriétaire préexistant laissé inchangé | Tester 2 gestionnaires, écarts, réserves, correction auditée, recaps historique et cashbox |
+| Faible connexion | Images chargées à la demande, taille binaire max 2 Mo, cache navigateur privé désactivé | Navigation offline réelle, dégradation si R2 absent, bande passante mesurée |
+| Navigation | Raccourcis vers Communautés, Market, Boutique, AdManager et Studio médias utilisent le routeur réel | Vérifier ouverture des sections details et navigation mobile/tablette |
+
+### Tests ajoutés (ne pas déclarer PASS sans exécution)
+- `tests/smart-grid-visual-nonregression-2026-10-11.test.mjs` (test isolé exécuté sur copie locale : 3/3 PASS ; la suite à HEAD n'est pas qualifiée).
+- `tests/visual-media-governance-2026-10-11.test.mjs` (NON exécuté).
+- `tests/visual-ui-contract-2026-10-11.test.mjs` (NON exécuté).
+- Chromium, WebKit, Node complet, tsc, lint architecture, BIR+, smoke : NON exécutés sur la branche PR82.
+- Aucune minute ou crédit GitHub n'a été acheté.
+
+### Risques de dépendances observés
+- Les médias privés doivent être récupérés avec les en-têtes authentifiés de ConnectedApplication et non avec une URL brute dans `img.src` ; corrigé par `visualMediaBlob`.
+- Les routes d'API visuelle contenaient initialement des regexp à doubles antislashs ; corrigées.
+- VisualMediaService isolé n'est pas un nouvel owner du profil canonique, ni des campagnes et ne doit pas le devenir : groupe/identité/AdManager restent propriétaires.
+- Le stockage binaire dépend de l'ArtifactStore R2 déjà connecté ; échec borné quand seul le fallback D1 est disponible.
+- Le choix SmartGrid est une projection éphémère; il n'a aucun schéma ou ledger distinct.
+
+### Décision de livraison
+**HOLD, DRAFT, NOT_CI_QUALIFIED, NOT_DEPLOYED, FIELD_ACCEPTED=NOT_ACCEPTED, realMoneyEnabled=false.** Ne pas promettre la refonte complète ni demander la recette finale du fondateur avant fermeture réelle de chaque écart ci-dessus.
