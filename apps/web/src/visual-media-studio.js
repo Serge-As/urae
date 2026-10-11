@@ -22,8 +22,8 @@ export function mountVisualMediaStudio({app,notify=()=>{},showError=console.erro
     clearUrls();host.replaceChildren();
     const group=app.activeGroup();
     if(!group){host.append(el('p','hint',tr('Choisissez d’abord un groupe.','Choose a group first.')));return;}
-    let assets,slots;
-    try{[assets,slots]=await Promise.all([app.visualMediaList(),app.visualMediaSlots()]);}
+    let assets,slots,profiles;
+    try{[assets,slots,profiles]=await Promise.all([app.visualMediaList(),app.visualMediaSlots(),app.groupProfilePhotos().catch(()=>({}))]);}
     catch(error){if(token===generation){host.append(el('p','hint',tr('Bibliothèque indisponible : ','Media library unavailable: ')+String(error?.message??error)));}return;}
     if(token!==generation)return;
     const hint=el('p','truth-notice',tr('Les images sont privées par défaut. Vous pouvez remplacer votre photo et, avec les droits requis, les visuels du groupe. Une image de campagne est soumise à la validation AdManager.','Images are private by default. You may replace your own photo and, with the required permissions, group visuals. Advertising creatives still require AdManager approval.'));
@@ -70,6 +70,25 @@ export function mountVisualMediaStudio({app,notify=()=>{},showError=console.erro
           try{await app.setVisualMediaSlot(slot,'');notify(tr('Image retirée.','Image removed.'));document.dispatchEvent(new CustomEvent('eco:visual-media-updated',{detail:{slot,groupId:group}}));await draw();}catch(error){showError(error);}
         })();
         actions.append(remove);
+      }
+      if(slot==='PROFILE_PHOTO'){
+        const me=app.currentActor();
+        const shared=Boolean(assetId&&profiles?.[me]===assetId);
+        const consent=el('label','eco-media-consent');
+        const check=document.createElement('input');check.type='checkbox';check.checked=shared;check.disabled=!assetId;
+        consent.append(check,document.createTextNode(tr(
+          ' Autoriser les autres membres du groupe à voir cette photo',
+          ' Allow other group members to see this photo')));
+        check.onchange=()=>void(async()=>{
+          check.disabled=true;
+          try{
+            await app.setProfilePhotoConsent(check.checked);
+            notify(tr('Choix de confidentialité enregistré.','Privacy preference saved.'));
+            document.dispatchEvent(new CustomEvent('eco:visual-media-updated',{detail:{slot,groupId:group}}));
+            await draw();
+          }catch(error){showError(error);check.checked=shared;check.disabled=false;}
+        })();
+        actions.append(consent);
       }
       card.append(head,preview,form,actions);
       grid.append(card);
