@@ -6,6 +6,8 @@ const EXTRA_FR_EN: Record<string,string> = {
   'Studio médias':'Media studio',
   'Accès aux espaces existants':'Access existing workspaces',
   'Boutique du groupe':'Group shop',
+  'Kits du groupe':'Group kits',
+  'Foras · Forums':'Forums and communities',
   'Régie publicitaire':'Advertising management',
   'Images, profils et couvertures':'Images, profiles and covers',
   'Remplacez vos photos et les visuels autorisés dans les cockpits. Les annonces commerciales restent gouvernées par AdManager.':'Replace your photos and authorized images in the workspaces. Advertisements remain governed by AdManager.',
