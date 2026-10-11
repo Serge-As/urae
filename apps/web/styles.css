@@ -1280,3 +1280,8 @@ body.ultra-simple .canonical-financial-matrix .cell-validate{min-height:48px;hei
 .eco-ad-creative-thumb{display:block;width:min(100%,450px);max-height:185px;object-fit:cover;border:1px solid var(--line);border-radius:12px}
 @media(prefers-reduced-motion:reduce){#view-dashboard .panel,#groupHomePanel,.eco-media-slot{transition:none}}
 @media(max-width:680px){#view-dashboard .hero h1{font-size:clamp(1.6rem,6vw,2.35rem)}#view-dashboard .hero p{font-size:.95rem}}
+
+.eco-workspace-jump{display:flex;gap:8px;overflow-x:auto;padding:6px 1px 12px;margin:0 0 10px;scrollbar-width:thin}
+.eco-workspace-jump button{flex:0 0 auto;border:1px solid var(--line);border-radius:999px;min-height:42px;padding:9px 16px;background:var(--surface);color:var(--brand);font-weight:700;white-space:nowrap}
+.eco-workspace-jump button:hover,.eco-workspace-jump button:focus-visible{background:var(--brand-soft);border-color:var(--brand)}
+@media(max-width:600px){.eco-workspace-jump{margin:0 -10px 8px;padding-inline:10px}.eco-workspace-jump button{min-height:48px}}
