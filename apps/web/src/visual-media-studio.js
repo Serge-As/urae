@@ -5,7 +5,8 @@ const mediaSlots=[
   ['MARKET_HERO','Bannière Marketplace','Marketplace banner'],
   ['FORUM_HERO','Bannière Forum','Forum banner'],
   ['PROFILE_PHOTO','Ma photo de profil','My profile picture'],
-  ['AD_CREATIVE','Visuel publicitaire','Advertising creative']
+  ['AD_CREATIVE','Visuel publicitaire','Advertising creative'],
+  ['PARTNER_CREATIVE','Visuel pour proposition partenaire','Partner proposal visual']
 ];
 const el=(tag,className,text)=>{const node=document.createElement(tag);if(className)node.className=className;if(text!==undefined)node.textContent=text;return node;};
 const tr=(fr,en)=>document.documentElement.lang?.toLowerCase().startsWith('en')?en:fr;
@@ -28,7 +29,7 @@ export function mountVisualMediaStudio({app,notify=()=>{},showError=console.erro
     const hint=el('p','truth-notice',tr('Les images sont privées par défaut. Vous pouvez remplacer votre photo et, avec les droits requis, les visuels du groupe. Une image de campagne est soumise à la validation AdManager.','Images are private by default. You may replace your own photo and, with the required permissions, group visuals. Advertising creatives still require AdManager approval.'));
     host.append(hint);
     const grid=el('div','eco-media-grid');
-    for(const [slot,fr,en] of mediaSlots.filter(([slot])=>isManager()||slot==='PROFILE_PHOTO')){
+    for(const [slot,fr,en] of mediaSlots.filter(([slot])=>isManager()||slot==='PROFILE_PHOTO'||slot==='PARTNER_CREATIVE')){
       const card=el('section','eco-media-slot item'),head=el('div','eco-media-head');
       head.append(el('strong','',tr(fr,en)));
       const preview=el('div','eco-media-preview');
