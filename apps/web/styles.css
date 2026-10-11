@@ -1219,3 +1219,23 @@ body.ultra-simple .canonical-financial-matrix .cell-validate{min-height:48px;hei
     position:static!important;left:auto!important;right:auto!important;box-shadow:none
   }
 }
+
+
+/* ECO-SYSTEM visual evolution: non-invasive presentation of existing canonical sheets. */
+.eco-smartgrid-toolbar{display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between;padding:12px 14px;margin:0 0 10px;border:1px solid var(--line);border-radius:var(--radius-sm);background:var(--surface-2)}
+.eco-smartgrid-toolbar>strong{font-size:13px;color:var(--ink)}
+.eco-smartgrid-parts,.eco-smartgrid-navigation{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.eco-smartgrid-parts button,.eco-smartgrid-navigation button{min-height:40px;padding:8px 12px;font-size:12px}
+.eco-smartgrid-parts button[aria-pressed="true"]{outline:2px solid var(--brand);outline-offset:2px}
+.eco-smartgrid-navigation span{min-width:90px;font-size:13px;font-weight:700;text-align:center;color:var(--ink)}
+.eco-smartgrid-toolbar button:focus-visible{outline:3px solid var(--brand-2);outline-offset:3px}
+.canonical-financial-wrap .table-grand-total{color:var(--brand);font-variant-numeric:tabular-nums}
+@media(max-width:680px){
+  .eco-smartgrid-toolbar{display:grid;gap:9px;padding:10px}
+  .eco-smartgrid-parts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr))}
+  .eco-smartgrid-parts button{min-width:0;padding:8px 5px;line-height:1.24;font-size:11px;white-space:normal}
+  .eco-smartgrid-navigation{justify-content:center}
+}
+@media(prefers-reduced-motion:reduce){
+  .eco-smartgrid-toolbar *, .eco-smartgrid-toolbar *::before{transition:none!important}
+}
