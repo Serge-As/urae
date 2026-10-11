@@ -24,6 +24,7 @@ import { mountRecapUI } from './recap-ui.js';
 import { mountInterestCommunityUI } from './interest-community-ui.js';
 import { mountAdManagerUI } from './ad-manager-ui.js';
 import { mountVisualMediaStudio } from './visual-media-studio.js';
+import { mountPartnerAdsUI } from './partner-ad-ui.js';
 import { mountVisualMediaPresenter } from './visual-media-presenter.js';
 import { mountTontineManagerUI } from './tontine-manager-ui.js';
 import { mountSavingsYieldUI } from './savings-yield-ui.js';
@@ -405,6 +406,7 @@ const recapUI = mountRecapUI({ app, getGroups: () => groups, getMembers: () => m
 const interestCommunityUI = mountInterestCommunityUI({ app, notify: toast, showError: fail, date });
 const adManagerUI = mountAdManagerUI({ app, notify: toast, showError: fail, isManager, fmt });
 const visualMediaStudio = mountVisualMediaStudio({app,notify:toast,showError:fail,isManager});
+const partnerAdsUI = mountPartnerAdsUI({app,notify:toast,showError:fail,isManager});
 const visualMediaPresenter = mountVisualMediaPresenter({app,showError:fail});
 const tontineManagerUI = mountTontineManagerUI({ app, getRubrics: () => rubrics, getMembers: () => members, notify: toast, showError: fail, fmt, isManager });
 const savingsYieldUI = mountSavingsYieldUI({ app, getMembers: () => members, notify: toast, showError: fail, fmt, isManager });
@@ -2208,6 +2210,7 @@ const refreshGroupContext = async () => {
     await refreshOptionalOfflineSafe('interest-community',()=>interestCommunityUI.refresh());
     await refreshOptionalOfflineSafe('ad-manager',()=>adManagerUI.refresh());
     await refreshOptionalOfflineSafe('visual-media',()=>visualMediaStudio.refresh());
+    await refreshOptionalOfflineSafe('partner-ads',()=>partnerAdsUI.refresh());
     await refreshOptionalOfflineSafe('visual-media-presenter',()=>visualMediaPresenter.refresh());
     await refreshOptionalOfflineSafe('tontine-manager',()=>tontineManagerUI.refresh());
     await refreshOptionalOfflineSafe('savings-yield',()=>savingsYieldUI.refresh());
