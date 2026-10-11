@@ -27,6 +27,13 @@ export class PartnerAdProposalService{
     const records=await this.repo.listWorkspaceRecords(c.tenantId,MODULE,groupId);
     return records.filter(r=>manager||r.createdBy===c.actorId).sort((a,b)=>b.createdAt.localeCompare(a.createdAt));
   }
+  private async checkOwnedImage(groupId:string,imageId:string,ownerId:string){
+    if(!imageId)return;
+    const c=this.kernel.context.get(),media=await this.repo.getWorkspaceRecord(c.tenantId,imageId);
+    if(!media||media.groupId!==groupId||media.moduleId!=='MEDIA.VISUAL_ASSET'||
+      media.data.purpose!=='PARTNER_CREATIVE'||media.createdBy!==ownerId||media.status!=='ACTIVE')
+      throw Error('PARTNER_AD_MEDIA_OWNER_MISMATCH');
+  }
   async create(groupId:string,input:{title:string;headline:string;body:string;callToAction:string;destinationRef:string;objective:AdObjective;mediaAssetId?:string;locality?:string}){
     await this.access(groupId);
     const c=this.kernel.context.get(),stamp=new Date().toISOString();
@@ -34,6 +41,7 @@ export class PartnerAdProposalService{
       callToAction=clean(input.callToAction,60),destinationRef=clean(input.destinationRef,200),locality=clean(input.locality,100),
       mediaAssetId=clean(input.mediaAssetId,120),objective=input.objective;
     if(!title||!headline||!body||!callToAction||!safeRef(destinationRef)||!objectives.has(objective))throw Error('INVALID_PARTNER_AD_PROPOSAL');
+    await this.checkOwnedImage(groupId,mediaAssetId,c.actorId);
     const record:WorkspaceRecord={id:makeId('partner_ad'),tenantId:c.tenantId,groupId,moduleId:MODULE,title,summary:headline,
       status:'ACTIVE',tags:['ads','proposal','SUBMITTED'],data:{proposalState:'SUBMITTED',headline,body,callToAction,destinationRef,objective,locality,mediaAssetId,reviewNote:'',campaignId:''},
       createdBy:c.actorId,createdAt:stamp,updatedAt:stamp};
@@ -49,6 +57,7 @@ export class PartnerAdProposalService{
     const state=String(row.data.proposalState);
     if(state==='IMPORTED'&&decision==='IMPORT')return row;
     if(state!=='SUBMITTED')throw Error('INVALID_PARTNER_AD_TRANSITION');
+    if(decision==='IMPORT')await this.checkOwnedImage(groupId,String(row.data.mediaAssetId??''),row.createdBy);
     // No self-approval: the submitter cannot also be their own reviewing manager.
     if(row.createdBy===c.actorId)throw Error('PARTNER_AD_SELF_REVIEW_FORBIDDEN');
     const stamp=new Date().toISOString(),reviewNote=clean(note,500);
