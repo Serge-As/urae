@@ -4,7 +4,7 @@ import type {WorkspaceRecord} from '../../contracts/src/index.js';
 import type {ArtifactStoreLike} from '../../imports/src/store.js';
 import {makeId} from '../../contracts/src/index.js';
 
-export const VISUAL_SLOTS=['HOME_HERO','GROUP_LOGO','GROUP_COVER','MARKET_HERO','FORUM_HERO','PROFILE_PHOTO'] as const;
+export const VISUAL_SLOTS=['HOME_HERO','GROUP_LOGO','GROUP_COVER','MARKET_HERO','FORUM_HERO','PROFILE_PHOTO','AD_CREATIVE'] as const;
 export type VisualSlot=typeof VISUAL_SLOTS[number];
 const MODULE='MEDIA.VISUAL_ASSET';
 const SLOT_MODULE='MEDIA.VISUAL_SLOT';
