@@ -1357,12 +1357,12 @@ const renderCanonicalFinancialTable=({root,mode='meeting',meetingId='',membershi
       for(const r of visibleRubrics){const th=document.createElement('th');th.textContent=r.name;hr.append(th);}
       const totalHead=document.createElement('th');totalHead.textContent=tx('Total membre','Member total');hr.append(totalHead);head.append(hr);table.append(head);
       for(const m of activeMembers){
-        const tr=document.createElement('tr'),number=document.createElement('th'),name=document.createElement('th');number.className='member-number-column';number.textContent=String(Number(m.memberNumber)||'—');name.innerHTML=html`<strong>${String(m.displayName??'')}</strong><small>${m.roles.join(', ')}</small>`;name.title=String(m.displayName??'')+(m.roles.length?' · '+m.roles.join(', '):'');tr.append(number,name);let rowTotal=0;
+        const tr=document.createElement('tr'),number=document.createElement('th'),name=document.createElement('th');number.className='member-number-column';number.textContent=String(Number(m.memberNumber)||'—');name.innerHTML=html`<strong>${String(m.displayName??'')}</strong><small>${m.roles.join(', ')}</small>`;name.title=String(m.displayName??'')+(m.roles.length?' · '+m.roles.join(', '):'');tr.append(number,name);const rowTotal=activeRubrics.reduce((sum,r)=>sum+exactCellAmount(m.id,r.id,selectedMeeting),0);
         tr.dataset.membershipId=m.id;
         for(const r of visibleRubrics){const value=exactCellAmount(m.id,r.id,selectedMeeting);const td=document.createElement('td');td.dataset.rubricId=r.id;td.append(makeFinancialEntryCell({member:m,rubric:r,meetingId:selectedMeeting,editable:Boolean(editable&&isManager())}));tr.append(td);}
         const total=document.createElement('td');total.className='table-row-total';total.textContent=fmt(rowTotal);tr.append(total);body.append(tr);
       }
-      const totalRow=document.createElement('tr');totalRow.className='table-total-row';const totalLabel=document.createElement('th');totalLabel.colSpan=2;totalLabel.textContent=tx('TOTAL COLONNES','COLUMN TOTALS');totalRow.append(totalLabel);let grand=0;
+      const totalRow=document.createElement('tr');totalRow.className='table-total-row';const totalLabel=document.createElement('th');totalLabel.colSpan=2;totalLabel.textContent=tx('TOTAL COLONNES','COLUMN TOTALS');totalRow.append(totalLabel);
       for(const r of visibleRubrics){const amount=activeMembers.reduce((sum,m)=>sum+exactCellAmount(m.id,r.id,selectedMeeting),0);const td=document.createElement('td');td.dataset.totalRubricId=r.id;td.textContent=fmt(amount);totalRow.append(td);}
       const grandTd=document.createElement('td');grandTd.className='table-grand-total';
       const grand=activeMembers.reduce((total,m)=>total+activeRubrics.reduce((sum,r)=>sum+exactCellAmount(m.id,r.id,selectedMeeting),0),0);
@@ -1390,12 +1390,12 @@ const renderCanonicalFinancialTable=({root,mode='meeting',meetingId='',membershi
     const totalHead=document.createElement('th');totalHead.textContent=tx('Total séance','Meeting total');hr.append(totalHead);head.append(hr);table.append(head);
     const activeMeetings=meetings.filter(x=>x.status!=='cancelled').slice().sort((a,b)=>String(a.scheduledAt??a.openedAt).localeCompare(String(b.scheduledAt??b.openedAt)));
     for(const meeting of activeMeetings){
-      const tr=document.createElement('tr'),th=document.createElement('th');th.textContent=meetingLabel(meeting)+(meeting.status==='closed'?' · '+tx('clôturée','closed'):'');tr.append(th);let rowTotal=0;
+      const tr=document.createElement('tr'),th=document.createElement('th');th.textContent=meetingLabel(meeting)+(meeting.status==='closed'?' · '+tx('clôturée','closed'):'');tr.append(th);const rowTotal=activeRubrics.reduce((sum,r)=>sum+exactCellAmount(member.id,r.id,meeting.id),0);
       tr.dataset.meetingId=meeting.id;
       for(const r of visibleRubrics){const value=exactCellAmount(member.id,r.id,meeting.id);const td=document.createElement('td');td.dataset.rubricId=r.id;td.append(makeFinancialEntryCell({member,rubric:r,meetingId:meeting.id,editable:Boolean(editable&&isManager())}));tr.append(td);}
       const total=document.createElement('td');total.className='table-row-total';total.textContent=fmt(rowTotal);tr.append(total);body.append(tr);
     }
-    const totalRow=document.createElement('tr');totalRow.className='table-total-row';const label=document.createElement('th');label.textContent=tx('TOTAL COLONNES','COLUMN TOTALS');totalRow.append(label);let grand=0;
+    const totalRow=document.createElement('tr');totalRow.className='table-total-row';const label=document.createElement('th');label.textContent=tx('TOTAL COLONNES','COLUMN TOTALS');totalRow.append(label);
     for(const r of visibleRubrics){const amount=activeMeetings.reduce((sum,meeting)=>sum+exactCellAmount(member.id,r.id,meeting.id),0);const td=document.createElement('td');td.dataset.totalRubricId=r.id;td.textContent=fmt(amount);totalRow.append(td);}
     const grandTd=document.createElement('td');grandTd.className='table-grand-total';
     const grand=activeMeetings.reduce((total,m)=>total+activeRubrics.reduce((sum,r)=>sum+exactCellAmount(member.id,r.id,m.id),0),0);
