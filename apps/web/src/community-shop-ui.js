@@ -49,10 +49,32 @@ export function mountCommunityShopUI({app,notify=()=>{},showError=console.error,
     for(const node of postList.querySelectorAll('[data-forum-message-id]'))observer.observe(node);
   };
 
+  let forumPhotosByPost={},groupPortraits={},forumMediaUrls=[];
+  const cleanForumUrls=()=>{for(const url of forumMediaUrls)URL.revokeObjectURL(url);forumMediaUrls=[];};
+  const paintForumImage=(target,assetId,className)=>{
+    if(!assetId)return;
+    const img=el('img',undefined,className);img.alt='Photo partagée';img.loading='lazy';img.decoding='async';target.append(img);
+    void app.visualMediaBlob(assetId).then(blob=>{
+      if(!img.isConnected)return;
+      const url=URL.createObjectURL(blob);forumMediaUrls.push(url);img.src=url;
+    }).catch(()=>img.remove());
+  };
   const renderRealtimeMessage=(post)=>{
     const card=el('article',undefined,'item');card.dataset.forumMessageId=post.id;card.dataset.ecoShareKind='forum-message';card.dataset.ecoShareId=post.id;
     if(post.parentId)card.append(el('span','↳ Réponse','pill'));
+    const avatarId=groupPortraits[post.authorId];
+    if(avatarId)paintForumImage(card,avatarId,'eco-forum-avatar');
     card.append(el('strong',post.title||post.kind),el('p',post.body??''),el('small',new Date(post.createdAt).toLocaleString('fr-FR')+' · auteur '+post.authorId));
+    const mediaId=forumPhotosByPost[post.id];
+    if(mediaId){
+      paintForumImage(card,mediaId,'eco-forum-post-photo');
+      if(post.authorId===app.currentActor()){
+        const detach=el('button','Retirer ma photo','link-btn');
+        detach.type='button';
+        detach.onclick=()=>void app.assignForumPhoto(post.id,'').then(()=>renderPosts({preserveDraft:true,around:post.id})).catch(showError);
+        card.append(detach);
+      }
+    }
     const actions=el('div',undefined,'actions');
     for(const reaction of ['👍','❤️','😂','👏']){
       const active=(post.viewerReactions??[]).includes(reaction),count=Number(post.reactions?.[reaction]??0);
@@ -66,7 +88,13 @@ export function mountCommunityShopUI({app,notify=()=>{},showError=console.error,
     try{
       const state=await restoreState(false);
       const query={limit:60};if(options.around)query.around=options.around;else if(!options.latest&&state?.anchorMessageId)query.around=state.anchorMessageId;
-      const data=await app.forumMessages(activeHub,query);postList.replaceChildren();beforeCursor=data.nextBefore??'';
+      const [data,pictures,profiles]=await Promise.all([
+        app.forumMessages(activeHub,query),
+        app.forumPhotoMap(activeHub).catch(()=>({})),
+        app.groupProfilePhotos().catch(()=>({}))
+      ]);
+      cleanForumUrls();forumPhotosByPost=pictures;groupPortraits=profiles;
+      postList.replaceChildren();beforeCursor=data.nextBefore??'';
       if(!data.messages?.length)postList.append(el('p','Aucun message dans ce Hub. Votre brouillon reste synchronisé jusqu’à publication.','hint'));
       for(const post of data.messages??[])postList.append(renderRealtimeMessage(post));
       observeReadPositions();
@@ -232,9 +260,27 @@ export function mountCommunityShopUI({app,notify=()=>{},showError=console.error,
   bodyInput?.addEventListener('focus',()=>{if(activeHub)void app.publishLiveSignal?.('CELL_FOCUS',forumSignalPayload()).catch(()=>{});});
   bodyInput?.addEventListener('blur',()=>{stopForumTyping();if(activeHub)void app.publishLiveSignal?.('CELL_BLUR',forumSignalPayload()).catch(()=>{});});
   document.getElementById('communityLoadOlderBtn')?.addEventListener('click',()=>void loadOlder());
+  const forumForm=document.getElementById('communityPostForm');
+  if(forumForm&&!document.getElementById('communityPostPhoto')){
+    const label=el('label','Photo de publication (PNG, JPG ou WebP, 2 Mo maximum)');
+    const input=document.createElement('input');input.type='file';input.id='communityPostPhoto';
+    input.accept='image/png,image/jpeg,image/webp';input.setAttribute('aria-label','Photo de publication');
+    label.append(input);forumForm.append(label);
+  }
   document.getElementById('communityPostForm')?.addEventListener('submit',e=>{e.preventDefault();void(async()=>{try{
     const hubId=v('communityPostHub');if(!hubId)throw Error('COMMUNITY_HUB_REQUIRED');const parentId=bodyInput?.dataset.replyTo||undefined;
-    await app.createForumMessage(hubId,{kind:v('communityPostKind'),title:v('communityPostTitle')||undefined,body:v('communityPostBody'),parentId});
+    const posted=await app.createForumMessage(hubId,{kind:v('communityPostKind'),title:v('communityPostTitle')||undefined,body:v('communityPostBody'),parentId});
+    const photo=document.getElementById('communityPostPhoto')?.files?.[0];
+    if(photo){
+      try{
+        const asset=await app.uploadVisualMedia(photo,'FORUM_PHOTO');
+        await app.assignForumPhoto(posted.id,asset.id);
+      }catch(error){
+        showError(error);
+        notify('Message publié ; la photo n’a pas été attachée. Réessayez depuis le message.');
+      }
+    }
+    const photoInput=document.getElementById('communityPostPhoto');if(photoInput)photoInput.value='';
     if(bodyInput){bodyInput.value='';delete bodyInput.dataset.replyTo;bodyInput.placeholder='Le brouillon est synchronisé avec vos autres appareils.';}if(titleInput)titleInput.value='';
     notify('Message publié et synchronisé.');activeHub=hubId;await renderPosts({latest:true});
   }catch(err){showError(err);}})();});
