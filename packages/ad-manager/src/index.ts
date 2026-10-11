@@ -18,6 +18,7 @@ export interface AdCreative {
   body:string;
   callToAction:string;
   destinationRef:string;
+  mediaAssetId?:string;
 }
 export interface AdCampaign {
   id:string;groupId:string;name:string;objective:AdObjective;state:AdCampaignState;
@@ -66,7 +67,8 @@ export class AdManagerService{
     return structuredClone(t);
   }
   private validateCreative(c:AdCreative){
-    const out={headline:clean(c.headline,120),body:clean(c.body,1000),callToAction:clean(c.callToAction,60),destinationRef:clean(c.destinationRef,240)};
+    const out={headline:clean(c.headline,120),body:clean(c.body,1000),callToAction:clean(c.callToAction,60),destinationRef:clean(c.destinationRef,240),...(c.mediaAssetId?{mediaAssetId:clean(c.mediaAssetId,120)}:{})};
+    if(out.mediaAssetId&&!/^visual_media_[a-zA-Z0-9_-]{1,105}$/.test(out.mediaAssetId))throw new Error('INVALID_AD_MEDIA_REFERENCE');
     if(!out.headline||!out.body||!out.callToAction||!out.destinationRef)throw new Error('INVALID_AD_CREATIVE');return out;
   }
   async list(groupId:string){await this.requireManager(groupId);const ctx=this.kernel.context.get();return(await this.repo.listWorkspaceRecords(ctx.tenantId,MODULE,groupId)).map(decode).sort((a,b)=>b.updatedAt.localeCompare(a.updatedAt));}
