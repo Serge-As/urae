@@ -2369,6 +2369,8 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
       }
       return json(await partnerAds.review(groupId,proposalId,decision as 'REJECT'|'IMPORT',String(decisionBody.note??'')),200,cors);
     }
+    const adSurface=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/ads\/surface\/([^/]+)$/);
+    if(adSurface&&request.method==='GET')return json(await adManager.placement(adSurface[1]!,adSurface[2]! as any),200,cors);
     const adDashboard=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/ads\/dashboard$/);
     if(adDashboard&&request.method==='GET')return json(await adManager.dashboard(adDashboard[1]!),200,cors);
     const adHousePlan=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/ads\/house-plan$/);
