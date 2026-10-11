@@ -139,6 +139,8 @@ export class VisualMediaService {
       this.repo.listWorkspaceRecords(ctx.tenantId,SLOT_MODULE,groupId),
       this.repo.listMemberships(ctx.tenantId,groupId)]);
     const membersAllowed=new Set(members.filter(m=>m.status==='active').map(m=>m.userId));
+    const group=await this.repo.getGroup(ctx.tenantId,groupId);
+    if(group?.createdBy)membersAllowed.add(group.createdBy);
     const slotMap=new Map(slots.filter(x=>x.data.slot==='PROFILE_PHOTO').map(x=>[String(x.data.actorId),String(x.data.assetId??'')]));
     const result:Record<string,string>={};
     for(const row of rows){
