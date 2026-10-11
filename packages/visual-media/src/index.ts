@@ -82,7 +82,18 @@ export class VisualMediaService {
       const manager=group?.createdBy===ctx.actorId||Boolean(member?.roles.some(r=>managers.has(r)));
       const slots=await this.presentation(groupId);
       const referenced=Object.values(slots).includes(id);
-      if(!manager&&!referenced)throw Error('FORBIDDEN_MEDIA_ACCESS');
+      if(!manager&&!referenced){
+        let activeAdImage=false;
+        if(['AD_CREATIVE','PARTNER_CREATIVE'].includes(String(row.data.purpose))){
+          const campaigns=await this.repo.listWorkspaceRecords(ctx.tenantId,'ADS.MANAGER',groupId);
+          activeAdImage=campaigns.some(c=>{
+            if(c.groupId!==groupId||c.data.state!=='ACTIVE')return false;
+            try{return JSON.parse(String(c.data.creativeJson??'{}')).mediaAssetId===id;}
+            catch{return false;}
+          });
+        }
+        if(!activeAdImage)throw Error('FORBIDDEN_MEDIA_ACCESS');
+      }
     }
     return row;
   }
