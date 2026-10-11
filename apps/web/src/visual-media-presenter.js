@@ -25,6 +25,14 @@ export function mountVisualMediaPresenter({app,showError=console.error}={}){
   };
   const refresh=async(force=false)=>{
     const groupId=app.activeGroup()??null;
+    const financial=Boolean(document.querySelector('#view-finance.active, #view-sessions.active, #view-operations.active, #view-recap.active'));
+    const offline=typeof navigator!=='undefined'&&navigator.onLine===false;
+    if(financial||offline){
+      // Optional imagery must not trip the app-wide transport circuit-breaker
+      // or compete with reconciliation/outbox during financial recovery.
+      if(previousGroupId!==groupId){generation++;clear();previousGroupId=null;}
+      return;
+    }
     if(!force&&previousGroupId===groupId)return;
     const version=++generation;
     clear();
@@ -75,5 +83,6 @@ export function mountVisualMediaPresenter({app,showError=console.error}={}){
   document.addEventListener('eco:visual-media-updated',()=>void refresh(true));
   document.addEventListener('eco:language-changed',()=>void refresh(true));
   window.addEventListener('online',()=>void refresh(true));
+  window.addEventListener('eco:view-changed',event=>{if(['dashboard','ecosystem'].includes(event.detail?.view))void refresh();});
   return{refresh};
 }
