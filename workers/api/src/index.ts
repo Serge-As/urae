@@ -2358,6 +2358,11 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
     if(adCampaigns&&request.method==='GET')return json(await adManager.list(adCampaigns[1]!),200,cors);
     if(adCampaigns&&request.method==='POST'){
       const body=await readJson<Record<string,unknown>>(request);
+      const creative=body.creative&&typeof body.creative==='object'?body.creative as Record<string,unknown>:{};
+      if(creative.mediaAssetId){
+        const row=await visualMedia.record(adCampaigns[1]!,String(creative.mediaAssetId),true);
+        if(row.data.purpose!=='AD_CREATIVE')throw Error('AD_MEDIA_PURPOSE_MISMATCH');
+      }
       return json(await adManager.create(adCampaigns[1]!,body as any),201,cors);
     }
     const adTransition=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/ads\/campaigns\/([^/]+)\/transition$/);
