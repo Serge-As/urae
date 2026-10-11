@@ -7,6 +7,7 @@ export function mountAdManagerUI({app,notify=()=>{},showError=console.error,isMa
   const root=document.getElementById('adCampaignList'),form=document.getElementById('adCampaignForm');
   const kpis=document.getElementById('adKpis'),inventoryRoot=document.getElementById('adInventoryList'),houseRoot=document.getElementById('adHouseList'),prospectRoot=document.getElementById('adProspectList'),prospectForm=document.getElementById('adProspectForm');
   if(!root||!form)return{refresh:async()=>{}};
+  document.addEventListener('eco:partner-ad-imported',()=>void render().catch(showError));
   let imageUrls=[];
   const clearImages=()=>{for(const url of imageUrls)URL.revokeObjectURL(url);imageUrls=[];};
 
