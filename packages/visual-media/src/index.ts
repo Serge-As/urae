@@ -13,9 +13,14 @@ const managers=new Set(['founder','manager','admin','president','treasurer']);
 const keyFor=(groupId:string,slot:VisualSlot,actorId:string)=>'visual_slot_'+encodeURIComponent(groupId)+'_'+slot+(slot==='PROFILE_PHOTO'?'_'+encodeURIComponent(actorId):'');
 const isValidSlot=(slot:string):slot is VisualSlot=>(VISUAL_SLOTS as readonly string[]).includes(slot);
 export const sniffVisualMime=(bytes:Uint8Array):string=>{
-  if(bytes.length>=8&&[137,80,78,71,13,10,26,10].every((n,i)=>bytes[i]===n))return'image/png';
-  if(bytes.length>=4&&bytes[0]===255&&bytes[1]===216&&bytes[2]===255)return'image/jpeg';
-  if(bytes.length>=12&&String.fromCharCode(...bytes.slice(0,4))==='RIFF'&&String.fromCharCode(...bytes.slice(8,12))==='WEBP')return'image/webp';
+  if(bytes.length>=45&&[137,80,78,71,13,10,26,10].every((n,i)=>bytes[i]===n)){
+    if(String.fromCharCode(...bytes.slice(12,16))!=='IHDR')throw Error('MEDIA_INVALID_PNG');
+    const view=new DataView(bytes.buffer,bytes.byteOffset,bytes.byteLength),width=view.getUint32(16),height=view.getUint32(20);
+    if(!width||!height||width>6000||height>6000||width*height>16000000)throw Error('MEDIA_INVALID_DIMENSIONS');
+    return'image/png';
+  }
+  if(bytes.length>=6&&bytes[0]===255&&bytes[1]===216&&bytes[2]===255&&bytes.at(-2)===255&&bytes.at(-1)===217)return'image/jpeg';
+  if(bytes.length>=20&&String.fromCharCode(...bytes.slice(0,4))==='RIFF'&&String.fromCharCode(...bytes.slice(8,12))==='WEBP'&&['VP8 ','VP8L','VP8X'].includes(String.fromCharCode(...bytes.slice(12,16))))return'image/webp';
   throw Error('MEDIA_UNSUPPORTED_FORMAT');
 };
 export const assertVisualSize=(size:number)=>{
