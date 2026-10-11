@@ -89,7 +89,7 @@ export function mountAdManagerUI({app,notify=()=>{},showError=console.error,isMa
     const mediaSelect=document.getElementById('adCampaignMedia');
     if(mediaSelect){
       const choice=mediaSelect.value;
-      mediaSelect.replaceChildren(new Option('Sans image / No image',''));
+      mediaSelect.replaceChildren(new Option(document.documentElement.lang==='en'?'No image':'Sans image',''));
       for(const asset of media.filter(x=>x.purpose==='AD_CREATIVE'))mediaSelect.append(new Option(asset.name,asset.id));
       if([...mediaSelect.options].some(x=>x.value===choice))mediaSelect.value=choice;
     }
