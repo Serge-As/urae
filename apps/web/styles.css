@@ -1285,3 +1285,10 @@ body.ultra-simple .canonical-financial-matrix .cell-validate{min-height:48px;hei
 .eco-workspace-jump button{flex:0 0 auto;border:1px solid var(--line);border-radius:999px;min-height:42px;padding:9px 16px;background:var(--surface);color:var(--brand);font-weight:700;white-space:nowrap}
 .eco-workspace-jump button:hover,.eco-workspace-jump button:focus-visible{background:var(--brand-soft);border-color:var(--brand)}
 @media(max-width:600px){.eco-workspace-jump{margin:0 -10px 8px;padding-inline:10px}.eco-workspace-jump button{min-height:48px}}
+
+/* Stock images are ornamental; market stock, reservation and price remain canonical. */
+.eco-market-product-photo{display:block;width:min(100%,420px);aspect-ratio:4/3;object-fit:cover;border-radius:12px;border:1px solid var(--line);background:var(--surface-2);margin:0 0 10px}
+.eco-stock-photo-form{display:flex;align-items:end;flex-wrap:wrap;gap:8px;margin-top:10px}
+.eco-stock-photo-form input[type=file]{width:min(100%,300px);height:auto}
+.eco-stock-photo-form button{min-height:48px}
+@media(max-width:620px){.eco-stock-photo-form{display:grid;grid-template-columns:1fr}.eco-stock-photo-form input[type=file]{width:100%}}
