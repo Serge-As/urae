@@ -1701,6 +1701,32 @@ export class ConnectedApplication {
     return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/ads/surface/'+encodeURIComponent(placementId));
   }
   async adCampaigns():Promise<any[]>{if(!this.activeGroupId)return[];return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/ads/campaigns');}
+  async founderBrandLibrary():Promise<any>{return this.request('/api/v1/founder/brand/assets');}
+  async uploadFounderBrandAsset(file:File):Promise<any>{
+    const form=new FormData();form.append('file',file);
+    return this.request('/api/v1/founder/brand/assets',{method:'POST',body:form});
+  }
+  async setFounderBrandSlot(slot:string,assetId:string):Promise<any>{
+    return this.request('/api/v1/founder/brand/slots',{method:'PUT',body:JSON.stringify({slot,assetId})});
+  }
+  async groupBrandSlots():Promise<Record<string,string>>{
+    if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');
+    return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/brand/slots');
+  }
+  async founderBrandBlob(id:string):Promise<Blob>{return this.brandBlob('/api/v1/founder/brand/assets/'+encodeURIComponent(id)+'/content');}
+  async groupBrandBlob(id:string):Promise<Blob>{
+    if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');
+    return this.brandBlob('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/brand/assets/'+encodeURIComponent(id)+'/content');
+  }
+  private async brandBlob(path:string):Promise<Blob>{
+    const abort=new AbortController(),timer=setTimeout(()=>abort.abort(),12000);
+    try{
+      const response=await fetch(this.baseUrl+path,{method:'GET',headers:this.headers(),credentials:'same-origin',cache:'no-store',signal:abort.signal});
+      if(!response.ok)throw Error('BRAND_IMAGE_READ_UNAVAILABLE');
+      if(!['image/png','image/jpeg','image/webp'].includes(String(response.headers.get('content-type')??'')))throw Error('INVALID_BRAND_IMAGE_RESPONSE');
+      return response.blob();
+    }finally{clearTimeout(timer);}
+  }
   async visualMediaList():Promise<any[]> {if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/visual-media');}
   async visualMediaSlots():Promise<Record<string,string>> {if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/visual-slots');}
   async uploadVisualMedia(file:File,purpose:string):Promise<any> {if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');const form=new FormData();form.append('file',file);form.append('purpose',purpose);return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/visual-media',{method:'POST',body:form});}
