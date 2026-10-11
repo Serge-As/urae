@@ -1385,12 +1385,12 @@ const renderCanonicalFinancialTable=({root,mode='meeting',meetingId='',membershi
         const add=document.createElement('button');add.type='button';add.className='secondary';add.textContent=tx('+ Nouvelle séance','+ New meeting');add.onclick=()=>go('sessions',{anchor:'sessionsCreateForm',force:true});
         toolbar.append(label,other,add);root.append(toolbar);
       }
+      root.append(presentation,wrap,note);
       if(columnGroups.length>1){
         const explanation=document.createElement('p');explanation.className='eco-smartgrid-explanation';
         explanation.textContent=tx('Les sous-totaux des colonnes concernent uniquement cette partie. Les totaux généraux des membres et de la feuille comprennent toutes les rubriques, même masquées.','Column subtotals apply only to this part. Member and sheet grand totals include all rubrics, including hidden parts.');
         root.append(explanation);
-      }
-      root.append(presentation,wrap,note);restoreReplacedMatrixScroll(wrap);root.dataset.canonicalTableReady='1';return;
+      }restoreReplacedMatrixScroll(wrap);root.dataset.canonicalTableReady='1';return;
     }
     const member=activeMembers.find(x=>x.id===membershipId);
     if(!member){root.innerHTML='<div class="empty-state">'+tx('Aucune fiche individuelle accessible.','No individual sheet available.')+'</div>';return;}
@@ -1411,12 +1411,12 @@ const renderCanonicalFinancialTable=({root,mode='meeting',meetingId='',membershi
     grandTd.textContent=fmt(grand);grandTd.title=tx('Total général de toutes les rubriques','Grand total across every rubric');
     totalRow.append(grandTd);body.append(totalRow);table.append(body);wrap.append(table);
     const note=document.createElement('p');note.className='truth-notice';note.textContent=tx('Cette fiche utilise exactement le même éditeur financier que la feuille de séance. Les totaux de chaque rubrique figurent sur la dernière ligne.','This sheet uses exactly the same financial editor as the meeting sheet. Totals for every rubric appear on the last row.');
-    if(columnGroups.length>1){
+    root.append(presentation,wrap,note);
+      if(columnGroups.length>1){
         const explanation=document.createElement('p');explanation.className='eco-smartgrid-explanation';
         explanation.textContent=tx('Les sous-totaux des colonnes concernent uniquement cette partie. Les totaux généraux des membres et de la feuille comprennent toutes les rubriques, même masquées.','Column subtotals apply only to this part. Member and sheet grand totals include all rubrics, including hidden parts.');
         root.append(explanation);
-      }
-      root.append(presentation,wrap,note);restoreReplacedMatrixScroll(wrap);root.dataset.canonicalTableReady='1';
+      }restoreReplacedMatrixScroll(wrap);root.dataset.canonicalTableReady='1';
 };
 const renderMeetingMatrix=()=>renderCanonicalFinancialTable({root:document.querySelector('#meetingMatrix'),mode:'meeting',meetingId:ensureMatrixMeeting(),showToolbar:true,editable:isManager()});
 const renderIndividualSheetMatrix=()=>{
