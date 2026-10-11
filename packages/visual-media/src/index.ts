@@ -4,7 +4,7 @@ import type {WorkspaceRecord} from '../../contracts/src/index.js';
 import type {ArtifactStoreLike} from '../../imports/src/store.js';
 import {makeId} from '../../contracts/src/index.js';
 
-export const VISUAL_SLOTS=['HOME_HERO','GROUP_LOGO','GROUP_COVER','MARKET_HERO','FORUM_HERO','PROFILE_PHOTO','AD_CREATIVE','MARKET_PRODUCT'] as const;
+export const VISUAL_SLOTS=['HOME_HERO','GROUP_LOGO','GROUP_COVER','MARKET_HERO','FORUM_HERO','PROFILE_PHOTO','AD_CREATIVE','MARKET_PRODUCT','PARTNER_CREATIVE'] as const;
 export type VisualSlot=typeof VISUAL_SLOTS[number];
 const MODULE='MEDIA.VISUAL_ASSET';
 const SLOT_MODULE='MEDIA.VISUAL_SLOT';
@@ -40,7 +40,7 @@ export class VisualMediaService {
   }
   async upload(groupId:string,file:File,purpose:VisualSlot){
     if(!isValidSlot(purpose))throw Error('MEDIA_INVALID_PURPOSE');
-    await this.access(groupId,purpose!=='PROFILE_PHOTO');
+    await this.access(groupId,!['PROFILE_PHOTO','PARTNER_CREATIVE'].includes(purpose));
     assertVisualSize(file.size);
     const bytes=new Uint8Array(await file.arrayBuffer()),mime=sniffVisualMime(bytes);
     if(file.type&&file.type.toLowerCase()!==mime)throw Error('MEDIA_MIME_MISMATCH');
