@@ -1688,6 +1688,15 @@ export class ConnectedApplication {
   async uploadVisualMedia(file:File,purpose:string):Promise<any> {if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');const form=new FormData();form.append('file',file);form.append('purpose',purpose);return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/visual-media',{method:'POST',body:form});}
   async setVisualMediaSlot(slot:string,assetId:string):Promise<any> {if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/visual-slots',{method:'PUT',body:JSON.stringify({slot,assetId})});}
   visualMediaContentUrl(id:string):string {if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return '/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/visual-media/'+encodeURIComponent(id)+'/content';}
+  async marketStockVisuals():Promise<Record<string,string>>{
+    if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');
+    return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/visual-stock');
+  }
+  async setMarketStockVisual(stockId:string,assetId:string):Promise<{stockId:string;assetId:string}>{
+    if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');
+    return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/visual-stock/'+encodeURIComponent(stockId),
+      {method:'PUT',body:JSON.stringify({assetId})});
+  }
   async visualMediaBlob(id:string):Promise<Blob>{
     if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');
     const url=this.visualMediaContentUrl(id),abort=new AbortController(),timeout=setTimeout(()=>abort.abort(),12000);
