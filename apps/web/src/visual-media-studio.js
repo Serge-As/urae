@@ -4,7 +4,8 @@ const mediaSlots=[
   ['GROUP_COVER','Couverture du groupe','Group cover'],
   ['MARKET_HERO','Bannière Marketplace','Marketplace banner'],
   ['FORUM_HERO','Bannière Forum','Forum banner'],
-  ['PROFILE_PHOTO','Ma photo de profil','My profile picture']
+  ['PROFILE_PHOTO','Ma photo de profil','My profile picture'],
+  ['AD_CREATIVE','Visuel publicitaire','Advertising creative']
 ];
 const el=(tag,className,text)=>{const node=document.createElement(tag);if(className)node.className=className;if(text!==undefined)node.textContent=text;return node;};
 const tr=(fr,en)=>document.documentElement.lang?.toLowerCase().startsWith('en')?en:fr;
