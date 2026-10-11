@@ -14,6 +14,7 @@ const locations=[
 const fr=(f,e)=>document.documentElement.lang==='en'?e:f;
 export function mountVisualMediaPresenter({app,showError=console.error}={}){
   let generation=0;
+  let previousGroupId=null;
   let urls=[];
   let observer=null;
   const clear=()=>{
@@ -22,10 +23,13 @@ export function mountVisualMediaPresenter({app,showError=console.error}={}){
     for(const url of urls)URL.revokeObjectURL(url);
     urls=[];
   };
-  const refresh=async()=>{
+  const refresh=async(force=false)=>{
+    const groupId=app.activeGroup()??null;
+    if(!force&&previousGroupId===groupId)return;
+    previousGroupId=groupId;
     const version=++generation;
     clear();
-    if(!app.activeGroup())return;
+    if(!groupId)return;
     let slots;
     try{slots=await app.visualMediaSlots();}
     catch(error){/* Offline remains fully functional without optional media. */return;}
@@ -68,7 +72,7 @@ export function mountVisualMediaPresenter({app,showError=console.error}={}){
     }
   };
   document.addEventListener('eco:group-context-changed',()=>void refresh());
-  document.addEventListener('eco:visual-media-updated',()=>void refresh());
-  document.addEventListener('eco:language-changed',()=>void refresh());
+  document.addEventListener('eco:visual-media-updated',()=>void refresh(true));
+  document.addEventListener('eco:language-changed',()=>void refresh(true));
   return{refresh};
 }
