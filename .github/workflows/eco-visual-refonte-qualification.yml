@@ -1,0 +1,48 @@
+name: Eco-System visual refonte — qualification (no deploy)
+on:
+  pull_request:
+    branches:
+      - fix/confrontation-clock-recovery-20261008
+    paths:
+      - 'apps/web/**'
+      - 'packages/**'
+      - 'workers/api/**'
+      - 'tests/**'
+      - 'scripts/**'
+      - 'tsconfig.json'
+      - 'package*.json'
+      - '.github/workflows/eco-visual-refonte-qualification.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: eco-visual-refonte-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+jobs:
+  code-quality:
+    name: "Typecheck, architecture, business and security"
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: 'npm'
+      - run: npm ci --ignore-scripts
+      - run: npm run ci
+  browsers:
+    name: "Mobile Chromium and WebKit"
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: 'npm'
+      - run: npm ci --ignore-scripts
+      - run: npm run build
+      - run: npx playwright install --with-deps chromium webkit
+      - run: npx playwright test tests/browser/browser-shell-mobile-1.5.2.6.spec.mjs tests/browser/sovereign-multi-manager-1.5.2.14.spec.mjs --browser=chromium --workers=1
+      - run: npx playwright test tests/browser/eco-system-webkit-sovereign-offline-1.5.2.9.spec.mjs --browser=webkit --workers=1
