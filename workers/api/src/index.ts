@@ -2317,7 +2317,7 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
     const storefrontRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/market\/storefront$/);
     if(storefrontRoute&&request.method==='GET')return json(await market.storefront(storefrontRoute[1]!),200,cors);
     const visualMedia=new VisualMediaService(repo,kernel,artifactStore);
-    const brandMedia=new FounderBrandMediaService(repo,kernel,artifactStore);
+    const brandMedia=new FounderBrandMediaService(repo,kernel,artifactStore,isFounderTeamActor);
     const founderBrandList=url.pathname==='/api/v1/founder/brand/assets';
     if(founderBrandList&&request.method==='GET'){
       if(!(await isFounderTeamActor()))throw Error('FOUNDER_TEAM_ONLY');
