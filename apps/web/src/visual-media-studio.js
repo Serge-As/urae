@@ -82,8 +82,10 @@ export function mountVisualMediaStudio({app,notify=()=>{},showError=console.erro
     }
     host.append(gallery);
   };
-  const refresh=()=>draw().catch(showError);
+  const active=()=>document.getElementById('view-ecosystem')?.classList.contains('active')===true;
+  const refresh=()=>active()?draw().catch(showError):Promise.resolve();
   document.addEventListener('eco:group-context-changed',refresh);
   document.addEventListener('eco:language-changed',refresh);
+  window.addEventListener('eco:view-changed',event=>{if(event.detail?.view==='ecosystem')void refresh();});
   return{refresh};
 }
