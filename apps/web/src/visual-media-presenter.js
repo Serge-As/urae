@@ -37,8 +37,10 @@ export function mountVisualMediaPresenter({app,showError=console.error}={}){
     const version=++generation;
     clear();
     if(!groupId){previousGroupId=null;return;}
-    let slots;
-    try{slots=await app.visualMediaSlots();}
+    let slots,brand;
+    try{[slots,brand]=await Promise.all([
+      app.visualMediaSlots(),app.groupBrandSlots().catch(()=>({}))
+    ]);}
     catch(error){previousGroupId=null;/* Offline remains fully functional without optional media. */return;}
     if(version!==generation)return;
     previousGroupId=groupId;
@@ -46,7 +48,8 @@ export function mountVisualMediaPresenter({app,showError=console.error}={}){
       if(frame.dataset.ecoLoaded==='1')return;
       frame.dataset.ecoLoaded='1';
       try{
-        const blob=await app.visualMediaBlob(id);
+        const blob=frame.dataset.ecoBrand==='1'
+          ?await app.groupBrandBlob(id):await app.visualMediaBlob(id);
         if(version!==generation||!frame.isConnected)return;
         const objectUrl=URL.createObjectURL(blob);urls.push(objectUrl);
         const image=document.createElement('img');
@@ -67,12 +70,15 @@ export function mountVisualMediaPresenter({app,showError=console.error}={}){
       },{rootMargin:'180px 0px'});
     }
     for(const [slot,selector,cssClass] of locations){
-      const id=slots?.[slot],target=document.querySelector(selector);
+      const brandSlot=slot==='GROUP_LOGO'?'BRAND_LOGO':slot;
+      const ownId=slots?.[slot],brandId=slot==='PROFILE_PHOTO'?null:brand?.[brandSlot];
+      const id=ownId||brandId,target=document.querySelector(selector);
       if(!id||!target)continue;
       const frame=document.createElement('figure');
       frame.className='eco-visual-display '+cssClass;
       frame.dataset.ecoVisualMedia=slot;
       frame.dataset.ecoAssetId=id;
+      if(!ownId&&brandId)frame.dataset.ecoBrand='1';
       frame.append(document.createElement('span'));
       target.insertAdjacentElement('afterend',frame);
       if(observer)observer.observe(frame);
