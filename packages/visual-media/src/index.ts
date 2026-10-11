@@ -4,14 +4,18 @@ import type {WorkspaceRecord} from '../../contracts/src/index.js';
 import type {ArtifactStoreLike} from '../../imports/src/store.js';
 import {makeId} from '../../contracts/src/index.js';
 
-export const VISUAL_SLOTS=['HOME_HERO','GROUP_LOGO','GROUP_COVER','MARKET_HERO','FORUM_HERO','PROFILE_PHOTO','AD_CREATIVE','MARKET_PRODUCT','PARTNER_CREATIVE'] as const;
+export const VISUAL_SLOTS=['HOME_HERO','GROUP_LOGO','GROUP_COVER','MARKET_HERO','FORUM_HERO','PROFILE_PHOTO','AD_CREATIVE','MARKET_PRODUCT','PARTNER_CREATIVE','FORUM_PHOTO'] as const;
 export type VisualSlot=typeof VISUAL_SLOTS[number];
 const MODULE='MEDIA.VISUAL_ASSET';
 const SLOT_MODULE='MEDIA.VISUAL_SLOT';
+const CONSENT_MODULE='MEDIA.PROFILE_CONSENT';
+const FORUM_MODULE='MEDIA.FORUM_PHOTO';
 const MAX_MEDIA_BYTES=2_000_000;
 const managers=new Set(['founder','manager','admin','president','treasurer']);
 const keyFor=(groupId:string,slot:VisualSlot,actorId:string)=>'visual_slot_'+encodeURIComponent(groupId)+'_'+slot+(['PROFILE_PHOTO','PARTNER_CREATIVE'].includes(slot)?'_'+encodeURIComponent(actorId):'');
 const stockVisualKey=(groupId:string,stockId:string)=>'visual_stock_'+encodeURIComponent(groupId)+'_'+encodeURIComponent(stockId);
+const consentKey=(groupId:string,actor:string)=>'visual_consent_'+encodeURIComponent(groupId)+'_'+encodeURIComponent(actor);
+const forumKey=(groupId:string,messageId:string)=>'visual_forum_'+encodeURIComponent(groupId)+'_'+encodeURIComponent(messageId);
 const isValidSlot=(slot:string):slot is VisualSlot=>(VISUAL_SLOTS as readonly string[]).includes(slot);
 export const sniffVisualMime=(bytes:Uint8Array):string=>{
   if(bytes.length>=45&&[137,80,78,71,13,10,26,10].every((n,i)=>bytes[i]===n)){
@@ -40,7 +44,7 @@ export class VisualMediaService {
   }
   async upload(groupId:string,file:File,purpose:VisualSlot){
     if(!isValidSlot(purpose))throw Error('MEDIA_INVALID_PURPOSE');
-    await this.access(groupId,!['PROFILE_PHOTO','PARTNER_CREATIVE'].includes(purpose));
+    await this.access(groupId,!['PROFILE_PHOTO','PARTNER_CREATIVE','FORUM_PHOTO'].includes(purpose));
     assertVisualSize(file.size);
     const bytes=new Uint8Array(await file.arrayBuffer()),mime=sniffVisualMime(bytes);
     if(file.type&&file.type.toLowerCase()!==mime)throw Error('MEDIA_MIME_MISMATCH');
@@ -70,8 +74,20 @@ export class VisualMediaService {
     await this.access(groupId,requireManage);
     const ctx=this.kernel.context.get(),row=await this.repo.getWorkspaceRecord(ctx.tenantId,id);
     if(!row||row.groupId!==groupId||row.moduleId!==MODULE||row.status!=='ACTIVE')throw Error('MEDIA_NOT_FOUND');
-    if(row.data.purpose==='PROFILE_PHOTO'&&row.createdBy!==ctx.actorId)throw Error('FORBIDDEN_MEDIA_ACCESS');
+    if(row.data.purpose==='PROFILE_PHOTO'&&row.createdBy!==ctx.actorId){
+      const published=await this.consentedProfiles(groupId);
+      if(published[row.createdBy]!==id)throw Error('FORBIDDEN_MEDIA_ACCESS');
+    }
     if(!requireManage&&row.createdBy!==ctx.actorId){
+      if(row.data.purpose==='FORUM_PHOTO'){
+        const refs=await this.forumPhotos(groupId);
+        if(!Object.values(refs).includes(id))throw Error('FORBIDDEN_MEDIA_ACCESS');
+        return row;
+      }
+      if(row.data.purpose==='PROFILE_PHOTO'){
+        // Explicit group-only consent was checked above.
+        return row;
+      }
       if(row.data.purpose==='MARKET_PRODUCT'){
         const assigned=await this.stockVisuals(groupId);
         if(!Object.values(assigned).includes(id))throw Error('FORBIDDEN_MEDIA_ACCESS');
@@ -113,6 +129,70 @@ export class VisualMediaService {
       if(row?.groupId===groupId&&row.moduleId===SLOT_MODULE&&row.status==='ACTIVE'&&typeof row.data.assetId==='string'&&row.data.assetId)output[slot]=row.data.assetId;
     }
     return output;
+  }
+  /** Each member controls group-only visibility of their own profile picture. */
+  async consentedProfiles(groupId:string):Promise<Record<string,string>>{
+    await this.access(groupId);
+    const ctx=this.kernel.context.get();
+    const [rows,slots,members]=await Promise.all([
+      this.repo.listWorkspaceRecords(ctx.tenantId,CONSENT_MODULE,groupId),
+      this.repo.listWorkspaceRecords(ctx.tenantId,SLOT_MODULE,groupId),
+      this.repo.listMemberships(ctx.tenantId,groupId)]);
+    const membersAllowed=new Set(members.filter(m=>m.status==='active').map(m=>m.userId));
+    const slotMap=new Map(slots.filter(x=>x.data.slot==='PROFILE_PHOTO').map(x=>[String(x.data.actorId),String(x.data.assetId??'')]));
+    const result:Record<string,string>={};
+    for(const row of rows){
+      const actor=String(row.data.actorId??'');
+      if(row.id!==consentKey(groupId,actor)||row.status!=='ACTIVE'||row.data.visible!==true||!membersAllowed.has(actor))continue;
+      const id=slotMap.get(actor);if(!id||id!==row.data.assetId)continue;
+      result[actor]=id;
+    }
+    return result;
+  }
+  async setProfileConsent(groupId:string,visible:boolean){
+    await this.access(groupId);
+    const ctx=this.kernel.context.get(),slots=await this.presentation(groupId),assetId=slots.PROFILE_PHOTO??'';
+    if(visible&&!assetId)throw Error('PROFILE_PHOTO_REQUIRED');
+    const id=consentKey(groupId,ctx.actorId),old=await this.repo.getWorkspaceRecord(ctx.tenantId,id),stamp=new Date().toISOString();
+    const row:WorkspaceRecord={id,tenantId:ctx.tenantId,groupId,moduleId:CONSENT_MODULE,title:'PROFILE_GROUP_VISIBILITY',
+      status:'ACTIVE',tags:['media','consent','group-only'],data:{actorId:ctx.actorId,visible:Boolean(visible),assetId:visible?assetId:''},
+      createdBy:old?.createdBy??ctx.actorId,createdAt:old?.createdAt??stamp,updatedAt:stamp};
+    await this.repo.saveWorkspaceRecord(row);
+    await this.repo.saveAudit(this.kernel.audit.append({tenantId:ctx.tenantId,actorId:ctx.actorId,
+      action:'PROFILE_MEDIA_CONSENT_CHANGED',targetType:'profile_consent',targetId:id,requestId:ctx.requestId,
+      metadata:{groupId,visible:Boolean(visible)}}));
+    return{visible:Boolean(visible),assetId:visible?assetId:''};
+  }
+  /** Post author ownership is checked against the canonical Forum v2 message in the API. */
+  async setForumPhoto(groupId:string,messageId:string,hubId:string,authorId:string,assetId:string){
+    await this.access(groupId);
+    const ctx=this.kernel.context.get();
+    if(authorId!==ctx.actorId)throw Error('FORUM_PHOTO_AUTHOR_ONLY');
+    if(assetId){
+      const row=await this.record(groupId,assetId);
+      if(row.data.purpose!=='FORUM_PHOTO'||row.createdBy!==ctx.actorId)throw Error('MEDIA_PURPOSE_MISMATCH');
+    }
+    const id=forumKey(groupId,messageId),old=await this.repo.getWorkspaceRecord(ctx.tenantId,id),stamp=new Date().toISOString();
+    const row:WorkspaceRecord={id,tenantId:ctx.tenantId,groupId,moduleId:FORUM_MODULE,title:'Forum photo',
+      status:'ACTIVE',tags:['media','forum'],data:{messageId,hubId,assetId},
+      createdBy:old?.createdBy??ctx.actorId,createdAt:old?.createdAt??stamp,updatedAt:stamp};
+    await this.repo.saveWorkspaceRecord(row);
+    await this.repo.saveAudit(this.kernel.audit.append({tenantId:ctx.tenantId,actorId:ctx.actorId,
+      action:'FORUM_PHOTO_UPDATED',targetType:'forum_media',targetId:id,requestId:ctx.requestId,
+      metadata:{groupId,messageId,hubId,hasPhoto:Boolean(assetId)}}));
+    return{messageId,assetId};
+  }
+  async forumPhotos(groupId:string,hubId?:string):Promise<Record<string,string>>{
+    await this.access(groupId);
+    const ctx=this.kernel.context.get(),result:Record<string,string>={};
+    const rows=await this.repo.listWorkspaceRecords(ctx.tenantId,FORUM_MODULE,groupId);
+    for(const row of rows){
+      const messageId=String(row.data.messageId??'');
+      if(row.status!=='ACTIVE'||row.groupId!==groupId||row.id!==forumKey(groupId,messageId))continue;
+      if(hubId&&row.data.hubId!==hubId)continue;
+      const assetId=String(row.data.assetId??'');if(assetId)result[messageId]=assetId;
+    }
+    return result;
   }
   /** Marketplace image projection only; never changes stock quantity, price or publication. */
   async stockVisuals(groupId:string):Promise<Record<string,string>>{
