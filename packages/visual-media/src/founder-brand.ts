@@ -15,8 +15,11 @@ const slotKey=(slot:BrandSlot)=>'platform_brand_'+slot;
  * Separate platform namespace prevents a group's image overriding other groups.
  */
 export class FounderBrandMediaService{
-  constructor(readonly repo:PlatformRepository,readonly kernel:PlatformKernel,readonly store:ArtifactStoreLike){}
+  constructor(readonly repo:PlatformRepository,readonly kernel:PlatformKernel,readonly store:ArtifactStoreLike,
+    readonly canManage:()=>Promise<boolean>=async()=>false){}
+  private async guard(){if(!(await this.canManage()))throw Error('FOUNDER_TEAM_ONLY');}
   async list(){
+    await this.guard();
     const [photos,slots]=await Promise.all([
       this.repo.listWorkspaceRecords(ROOT,ASSET),this.selected()]);
     return{assets:photos.filter(x=>x.status==='ACTIVE').map(x=>({id:x.id,name:x.title,
@@ -32,6 +35,7 @@ export class FounderBrandMediaService{
     return output;
   }
   async upload(file:File){
+    await this.guard();
     assertVisualSize(file.size);
     const bytes=new Uint8Array(await file.arrayBuffer()),mime=sniffVisualMime(bytes);
     if(file.type&&file.type.toLowerCase()!==mime)throw Error('MEDIA_MIME_MISMATCH');
@@ -48,6 +52,7 @@ export class FounderBrandMediaService{
     return{id,name,contentType:mime,size:bytes.length};
   }
   async assign(slot:string,assetId:string){
+    await this.guard();
     if(!valid(slot))throw Error('INVALID_BRAND_SLOT');
     if(assetId){
       const asset=await this.repo.getWorkspaceRecord(ROOT,assetId);
@@ -64,6 +69,7 @@ export class FounderBrandMediaService{
     return{slot,assetId};
   }
   async bytes(id:string,founder=false){
+    if(founder)await this.guard();
     const asset=await this.repo.getWorkspaceRecord(ROOT,id);
     if(!asset||asset.moduleId!==ASSET||asset.status!=='ACTIVE')throw Error('BRAND_ASSET_NOT_FOUND');
     if(!founder&&!Object.values(await this.selected()).includes(id))throw Error('BRAND_ASSET_NOT_PUBLIC');
