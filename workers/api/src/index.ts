@@ -2314,7 +2314,7 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
     const storefrontRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/market\/storefront$/);
     if(storefrontRoute&&request.method==='GET')return json(await market.storefront(storefrontRoute[1]!),200,cors);
     const visualMedia=new VisualMediaService(repo,kernel,artifactStore);
-    const visualApi=url.pathname.match(/^\\/api\\/v1\\/groups\\/([^/]+)\\/visual-media$/);
+    const visualApi=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/visual-media$/);
     if(visualApi&&request.method==='GET')return json(await visualMedia.list(visualApi[1]!),200,cors);
     if(visualApi&&request.method==='POST'){
       const form=await request.formData(),file=form.get('file');
@@ -2322,13 +2322,13 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
       const result=await visualMedia.upload(visualApi[1]!,file,String(form.get('purpose')??'') as any);
       return json(result,201,cors);
     }
-    const visualSlots=url.pathname.match(/^\\/api\\/v1\\/groups\\/([^/]+)\\/visual-slots$/);
+    const visualSlots=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/visual-slots$/);
     if(visualSlots&&request.method==='GET')return json(await visualMedia.presentation(visualSlots[1]!),200,cors);
     if(visualSlots&&request.method==='PUT'){
       const body=await readJson<Record<string,unknown>>(request);
       return json(await visualMedia.assign(visualSlots[1]!,String(body.slot??''),String(body.assetId??'')),200,cors);
     }
-    const visualContent=url.pathname.match(/^\\/api\\/v1\\/groups\\/([^/]+)\\/visual-media\\/([^/]+)\\/content$/);
+    const visualContent=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/visual-media\/([^/]+)\/content$/);
     if(visualContent&&request.method==='GET'){
       const asset=await visualMedia.bytes(visualContent[1]!,visualContent[2]!);
       return new Response(asset.bytes,{headers:{...baseSecurityHeaders,...cors,'content-type':asset.mime,'cache-control':'private, no-store','x-content-type-options':'nosniff'}});
