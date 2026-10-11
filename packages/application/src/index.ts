@@ -1688,6 +1688,17 @@ export class ConnectedApplication {
   async uploadVisualMedia(file:File,purpose:string):Promise<any> {if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');const form=new FormData();form.append('file',file);form.append('purpose',purpose);return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/visual-media',{method:'POST',body:form});}
   async setVisualMediaSlot(slot:string,assetId:string):Promise<any> {if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/visual-slots',{method:'PUT',body:JSON.stringify({slot,assetId})});}
   visualMediaContentUrl(id:string):string {if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return '/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/visual-media/'+encodeURIComponent(id)+'/content';}
+  async visualMediaBlob(id:string):Promise<Blob>{
+    if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');
+    const url=this.visualMediaContentUrl(id),abort=new AbortController(),timeout=setTimeout(()=>abort.abort(),12000);
+    try {
+      const response=await fetch(this.baseUrl+url,{method:'GET',headers:this.headers(),credentials:'same-origin',cache:'no-store',signal:abort.signal});
+      if(!response.ok){const error=await response.json().catch(()=>({error:'MEDIA_READ_UNAVAILABLE'}));throw Error(String(error.error??'MEDIA_READ_UNAVAILABLE'));}
+      const type=String(response.headers.get('content-type')??'');
+      if(!['image/png','image/jpeg','image/webp'].includes(type))throw Error('MEDIA_INVALID_RESPONSE');
+      return await response.blob();
+    }finally{clearTimeout(timeout);}
+  }
   async adDashboard():Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/ads/dashboard');}
   async adHousePlan():Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/ads/house-plan');}
   async adHouseVariants():Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/ads/house-variants',{method:'POST',body:'{}'});}
