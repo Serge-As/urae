@@ -46,3 +46,22 @@ test('approved ad shows only on safe Home, Forum and Market surfaces and CTA use
  expect(await page.evaluate(()=>window.__navigated[0])).toMatchObject({view:'ecosystem',opts:{anchor:'socialCommercePanel'}});
  await expect(page.locator('[data-eco-ad-surface="FORUM_NATIVE"]')).toContainText('Atelier local');
 });
+
+test('optional advertising never hits the network during finance or offline replay',async({page})=>{
+ await page.goto(base+'/health');
+ await page.setContent('<!doctype html><html lang="fr"><body><section id="view-finance" class="view active"><form id="contributionForm"></form></section><section id="view-dashboard" class="view"><div class="hero">Home</div></section><section id="communityEnginePanel"><div class="section-kicker"></div></section><details id="marketEnginePanel"><summary>Market</summary></details></body></html>');
+ await page.evaluate(async()=>{
+   const {mountAdSurfacesUI}=await import('/src/ad-surfaces-ui.js');
+   window.__adReads=0;
+   const app={activeGroup:()=> 'group-1',adSurface:async()=>{window.__adReads++;return{kind:'NONE'};}};
+   window.__ads=mountAdSurfacesUI({app});
+   await window.__ads.refresh();
+ });
+ expect(await page.evaluate(()=>window.__adReads)).toBe(0);
+ await page.evaluate(()=>{
+   document.getElementById('view-finance').classList.remove('active');
+   document.getElementById('view-dashboard').classList.add('active');
+   window.dispatchEvent(new CustomEvent('eco:view-changed',{detail:{view:'dashboard'}}));
+ });
+ await expect.poll(()=>page.evaluate(()=>window.__adReads)).toBe(3);
+});
