@@ -4,13 +4,14 @@ import type {WorkspaceRecord} from '../../contracts/src/index.js';
 import type {ArtifactStoreLike} from '../../imports/src/store.js';
 import {makeId} from '../../contracts/src/index.js';
 
-export const VISUAL_SLOTS=['HOME_HERO','GROUP_LOGO','GROUP_COVER','MARKET_HERO','FORUM_HERO','PROFILE_PHOTO','AD_CREATIVE'] as const;
+export const VISUAL_SLOTS=['HOME_HERO','GROUP_LOGO','GROUP_COVER','MARKET_HERO','FORUM_HERO','PROFILE_PHOTO','AD_CREATIVE','MARKET_PRODUCT'] as const;
 export type VisualSlot=typeof VISUAL_SLOTS[number];
 const MODULE='MEDIA.VISUAL_ASSET';
 const SLOT_MODULE='MEDIA.VISUAL_SLOT';
 const MAX_MEDIA_BYTES=2_000_000;
 const managers=new Set(['founder','manager','admin','president','treasurer']);
 const keyFor=(groupId:string,slot:VisualSlot,actorId:string)=>'visual_slot_'+encodeURIComponent(groupId)+'_'+slot+(slot==='PROFILE_PHOTO'?'_'+encodeURIComponent(actorId):'');
+const stockVisualKey=(groupId:string,stockId:string)=>'visual_stock_'+encodeURIComponent(groupId)+'_'+encodeURIComponent(stockId);
 const isValidSlot=(slot:string):slot is VisualSlot=>(VISUAL_SLOTS as readonly string[]).includes(slot);
 export const sniffVisualMime=(bytes:Uint8Array):string=>{
   if(bytes.length>=45&&[137,80,78,71,13,10,26,10].every((n,i)=>bytes[i]===n)){
@@ -71,6 +72,11 @@ export class VisualMediaService {
     if(!row||row.groupId!==groupId||row.moduleId!==MODULE||row.status!=='ACTIVE')throw Error('MEDIA_NOT_FOUND');
     if(row.data.purpose==='PROFILE_PHOTO'&&row.createdBy!==ctx.actorId)throw Error('FORBIDDEN_MEDIA_ACCESS');
     if(!requireManage&&row.createdBy!==ctx.actorId){
+      if(row.data.purpose==='MARKET_PRODUCT'){
+        const assigned=await this.stockVisuals(groupId);
+        if(!Object.values(assigned).includes(id))throw Error('FORBIDDEN_MEDIA_ACCESS');
+        return row;
+      }
       const group=await this.repo.getGroup(ctx.tenantId,groupId);
       const member=(await this.repo.listMemberships(ctx.tenantId,groupId)).find(m=>m.userId===ctx.actorId&&m.status==='active');
       const manager=group?.createdBy===ctx.actorId||Boolean(member?.roles.some(r=>managers.has(r)));
@@ -96,6 +102,47 @@ export class VisualMediaService {
       if(row?.groupId===groupId&&row.moduleId===SLOT_MODULE&&row.status==='ACTIVE'&&typeof row.data.assetId==='string'&&row.data.assetId)output[slot]=row.data.assetId;
     }
     return output;
+  }
+  /** Marketplace image projection only; never changes stock quantity, price or publication. */
+  async stockVisuals(groupId:string):Promise<Record<string,string>>{
+    await this.access(groupId);
+    const ctx=this.kernel.context.get();
+    const group=await this.repo.getGroup(ctx.tenantId,groupId);
+    const membership=(await this.repo.listMemberships(ctx.tenantId,groupId)).find(m=>m.userId===ctx.actorId&&m.status==='active');
+    const isManager=group?.createdBy===ctx.actorId||Boolean(membership?.roles.some(r=>managers.has(r)));
+    const [stocks,rows]=await Promise.all([
+      this.repo.listWorkspaceRecords(ctx.tenantId,'MARKETPLACE.CORE',groupId),
+      this.repo.listWorkspaceRecords(ctx.tenantId,SLOT_MODULE,groupId)
+    ]);
+    const allowed=new Set(stocks.filter(x=>x.data.marketKind==='STOCK_ITEM'&&(isManager||x.data.published===true)&&
+      (isManager||x.data.ownership!=='POT_RESERVED')).map(x=>x.id));
+    const result:Record<string,string>={};
+    for(const row of rows){
+      if(row.status!=='ACTIVE'||row.moduleId!==SLOT_MODULE||row.groupId!==groupId||row.data.slot!=='MARKET_PRODUCT')continue;
+      const itemId=String(row.data.subjectId??'');
+      if(!allowed.has(itemId)||row.id!==stockVisualKey(groupId,itemId))continue;
+      const assetId=String(row.data.assetId??'');
+      if(assetId)result[itemId]=assetId;
+    }
+    return result;
+  }
+  async assignStockVisual(groupId:string,stockId:string,assetId:string){
+    await this.access(groupId,true);
+    const ctx=this.kernel.context.get(),stock=await this.repo.getWorkspaceRecord(ctx.tenantId,stockId);
+    if(!stock||stock.groupId!==groupId||stock.moduleId!=='MARKETPLACE.CORE'||stock.data.marketKind!=='STOCK_ITEM')throw Error('STOCK_ITEM_NOT_FOUND');
+    if(assetId){
+      const photo=await this.record(groupId,assetId,true);
+      if(photo.data.purpose!=='MARKET_PRODUCT')throw Error('MEDIA_PURPOSE_MISMATCH');
+    }
+    const id=stockVisualKey(groupId,stockId),previous=await this.repo.getWorkspaceRecord(ctx.tenantId,id),stamp=new Date().toISOString();
+    const record:WorkspaceRecord={id,tenantId:ctx.tenantId,groupId,moduleId:SLOT_MODULE,title:'MARKET_PRODUCT',
+      status:'ACTIVE',tags:['media-slot','market-product'],data:{assetId,slot:'MARKET_PRODUCT',subjectId:stockId},
+      createdBy:previous?.createdBy??ctx.actorId,createdAt:previous?.createdAt??stamp,updatedAt:stamp};
+    await this.repo.saveWorkspaceRecord(record);
+    await this.repo.saveAudit(this.kernel.audit.append({tenantId:ctx.tenantId,actorId:ctx.actorId,
+      action:'MARKET_PRODUCT_VISUAL_UPDATED',targetType:'media_slot',targetId:id,requestId:ctx.requestId,
+      metadata:{groupId,stockId,assetId:assetId||null}}));
+    return{stockId,assetId};
   }
   async assign(groupId:string,slot:string,assetId:string){
     if(!isValidSlot(slot))throw Error('MEDIA_INVALID_PURPOSE');
