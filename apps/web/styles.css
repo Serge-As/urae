@@ -1261,3 +1261,22 @@ body.ultra-simple .canonical-financial-matrix .cell-validate{min-height:48px;hei
 .eco-group-visual{aspect-ratio:4/1}.eco-market-visual,.eco-forum-visual{aspect-ratio:4/1}
 .eco-logo-visual,.eco-profile-visual{width:116px;height:116px;aspect-ratio:1}.eco-logo-visual img,.eco-profile-visual img{max-height:none}
 @media(max-width:600px){.eco-home-visual,.eco-group-visual,.eco-market-visual,.eco-forum-visual{aspect-ratio:16/9}.eco-logo-visual,.eco-profile-visual{width:80px;height:80px}}
+
+/* Eco-System Horizon: refinements to existing, unchanged workflows */
+#view-dashboard .hero{
+  border:1px solid var(--line);border-radius:var(--radius);
+  background:
+    radial-gradient(circle at 88% 18%,rgba(184,138,59,.14),transparent 36%),
+    linear-gradient(115deg,var(--brand-soft),var(--surface) 55%,#fff7eb);
+  box-shadow:var(--shadow);overflow:hidden;
+}
+#view-dashboard .hero h1{font-weight:800;letter-spacing:-.035em;text-wrap:balance;max-width:19ch}
+#view-dashboard .hero p{max-width:62ch}
+#view-dashboard .metrics .metric,#groupHomePanel .metric{
+  border:1px solid var(--line);border-radius:var(--radius-sm);box-shadow:var(--shadow)
+}
+#view-dashboard .panel,#groupHomePanel,.eco-media-slot{transition:box-shadow .15s ease}
+@media(hover:hover){#view-dashboard .panel:hover,#groupHomePanel:hover{box-shadow:0 10px 26px rgba(20,32,26,.08)}}
+.eco-ad-creative-thumb{display:block;width:min(100%,450px);max-height:185px;object-fit:cover;border:1px solid var(--line);border-radius:12px}
+@media(prefers-reduced-motion:reduce){#view-dashboard .panel,#groupHomePanel,.eco-media-slot{transition:none}}
+@media(max-width:680px){#view-dashboard .hero h1{font-size:clamp(1.6rem,6vw,2.35rem)}#view-dashboard .hero p{font-size:.95rem}}
