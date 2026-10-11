@@ -94,22 +94,61 @@ export function mountCommunityShopUI({app,notify=()=>{},showError=console.error,
     if(!activeHub||!hubs.some(x=>x.id===activeHub))activeHub=hubs[0].id;hubSelect.value=activeHub;await renderPosts();
   };
 
+  let marketVisualRender=0;
+  let stockPhotoUrls=[];
+  const releaseStockPhotos=()=>{for(const url of stockPhotoUrls)URL.revokeObjectURL(url);stockPhotoUrls=[];};
+  const decorateStockPhoto=(card,id,token)=>{
+    if(!id)return;
+    const image=el('img',undefined,'eco-market-product-photo');
+    image.alt=document.documentElement.lang==='en'?'Product photo':'Photo du produit';
+    image.loading='lazy';image.decoding='async';
+    card.prepend(image);
+    void app.visualMediaBlob(id).then(blob=>{
+      if(marketVisualRender!==token||!card.isConnected)return;
+      const url=URL.createObjectURL(blob);stockPhotoUrls.push(url);image.src=url;
+    }).catch(()=>image.remove());
+  };
   const renderStorefront=async()=>{
+    const token=++marketVisualRender;
+    releaseStockPhotos();
     if(!storefront||!app.activeGroup())return;storefront.replaceChildren();
-    const data=await app.groupStorefront();
+    const [data,visuals]=await Promise.all([app.groupStorefront(),app.marketStockVisuals().catch(()=>({}))]);
+    if(token!==marketVisualRender)return;
     if(data.shop){
       const head=el('article',undefined,'item');head.append(el('strong',data.shop.name),row('Slogan',data.shop.tagline||'—'),row('Visibilité',data.shop.visibility),row('Localité',data.shop.locality||'—'),row('Catégories',(data.shop.categories??[]).join(', ')||'—'));storefront.append(head);
       const name=document.getElementById('groupShopName'),tag=document.getElementById('groupShopTagline'),vis=document.getElementById('groupShopVisibility'),loc=document.getElementById('groupShopLocality'),cats=document.getElementById('groupShopCategories');
       if(name)name.value=data.shop.name??'';if(tag)tag.value=data.shop.tagline??'';if(vis)vis.value=data.shop.visibility??'GROUP_ONLY';if(loc)loc.value=data.shop.locality??'';if(cats)cats.value=(data.shop.categories??[]).join(', ');
     }else storefront.append(el('p','La boutique n’est pas encore configurée.','hint'));
     for(const item of data.items??[]){
-      const card=el('article',undefined,'item');card.append(el('strong',item.name),row('SKU',item.sku),row('Nature',item.ownership==='POT_RESERVED'?'Réservé pot / tontine':item.ownership==='CONSIGNMENT'?'Consignation':item.ownership==='DEPOSIT_SALE'?'Dépôt-vente':'Commercial'),row('Disponible',item.available+' '+item.unit),row('Prix',fmt(item.unitPrice)),row('Description',item.description||'—'));storefront.append(card);
+      const card=el('article',undefined,'item');decorateStockPhoto(card,visuals[item.id],token);card.append(el('strong',item.name),row('SKU',item.sku),row('Nature',item.ownership==='POT_RESERVED'?'Réservé pot / tontine':item.ownership==='CONSIGNMENT'?'Consignation':item.ownership==='DEPOSIT_SALE'?'Dépôt-vente':'Commercial'),row('Disponible',item.available+' '+item.unit),row('Prix',fmt(item.unitPrice)),row('Description',item.description||'—'));storefront.append(card);
     }
     if(isManager()){
       const records=await app.listWorkspaceRecords('MARKETPLACE.CORE',app.activeGroup());
       const stocks=records.filter(x=>x.data?.marketKind==='STOCK_ITEM');
       if(stocks.length){const manage=el('section',undefined,'stack');manage.append(el('h4','Publication des articles du stock'));for(const item of stocks){
-        const ownership=String(item.data.ownership??'COMMERCIAL'),card=el('article',undefined,'item');card.append(el('strong',item.title),row('Stock',Number(item.data.quantity)-Number(item.data.reserved??0)),row('Nature',ownership==='POT_RESERVED'?'Réservé pot / tontine':ownership==='CONSIGNMENT'?'Consignation':ownership==='DEPOSIT_SALE'?'Dépôt-vente':'Commercial'),row('Vitrine',item.data.published?'Publié':'Masqué'));
+        const ownership=String(item.data.ownership??'COMMERCIAL'),card=el('article',undefined,'item');decorateStockPhoto(card,visuals[item.id],token);card.append(el('strong',item.title),row('Stock',Number(item.data.quantity)-Number(item.data.reserved??0)),row('Nature',ownership==='POT_RESERVED'?'Réservé pot / tontine':ownership==='CONSIGNMENT'?'Consignation':ownership==='DEPOSIT_SALE'?'Dépôt-vente':'Commercial'),row('Vitrine',item.data.published?'Publié':'Masqué'));
+        const photoForm=document.createElement('form');photoForm.className='eco-stock-photo-form';
+        const photoInput=document.createElement('input');photoInput.type='file';photoInput.accept='image/jpeg,image/png,image/webp';
+        photoInput.required=true;photoInput.setAttribute('aria-label',document.documentElement.lang==='en'?'Product photo':'Photo du produit');
+        const upload=el('button',document.documentElement.lang==='en'?'Add or replace photo':'Ajouter / remplacer la photo','secondary');
+        upload.type='submit';photoForm.append(photoInput,upload);
+        photoForm.onsubmit=event=>{event.preventDefault();void(async()=>{
+          const file=photoInput.files?.[0];if(!file)return;
+          upload.disabled=true;
+          try{
+            const media=await app.uploadVisualMedia(file,'MARKET_PRODUCT');
+            await app.setMarketStockVisual(item.id,media.id);
+            notify(document.documentElement.lang==='en'?'Product photo saved.':'Photo de produit enregistrée.');
+            await renderStorefront();
+          }catch(error){showError(error);}finally{upload.disabled=false;}
+        })();};
+        card.append(photoForm);
+        if(visuals[item.id]){
+          const removePhoto=el('button',document.documentElement.lang==='en'?'Remove photo':'Retirer la photo','link-btn');
+          removePhoto.type='button';
+          removePhoto.onclick=()=>void app.setMarketStockVisual(item.id,'').then(()=>renderStorefront()).catch(showError);
+          card.append(removePhoto);
+        }
         if(ownership!=='POT_RESERVED'){const toggle=el('button',item.data.published?'Retirer de la vitrine':'Publier dans la vitrine',item.data.published?'secondary':'primary');toggle.type='button';
           toggle.onclick=()=>void(async()=>{try{let price=Number(item.data.unitPrice??0);if(!item.data.published){const raw=window.prompt('Prix unitaire XAF :',String(price||0));if(raw===null)return;price=Math.max(0,Math.trunc(Number(raw)||0));}await app.setStockListing(item.id,{published:!Boolean(item.data.published),unitPrice:price,description:String(item.data.description??'')});notify('Vitrine mise à jour.');await renderStorefront();}catch(e){showError(e);}})();card.append(toggle);
         }else card.append(el('p','Ce stock appartient au pot/tontine : la vente commerciale est bloquée par le moteur.','truth-notice'));
