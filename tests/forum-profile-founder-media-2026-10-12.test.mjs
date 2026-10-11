@@ -1,0 +1,67 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {PlatformKernel} from '../.build/packages/platform-kernel/src/index.js';
+import {InMemoryPlatformRepository} from '../.build/packages/repositories/src/index.js';
+import {VisualMediaService} from '../.build/packages/visual-media/src/index.js';
+import {FounderBrandMediaService} from '../.build/packages/visual-media/src/founder-brand.js';
+const PNG=Uint8Array.from(Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO8FbhQAAAAASUVORK5CYII=','base64'));
+const photo=()=>new File([PNG],'photo.png',{type:'image/png'});
+const scope=(kernel,actor)=>kernel.context.set({tenantId:'tenantA',actorId:actor,activeGroupId:'g',groupRoles:[],mandateIds:[],deviceId:'d',sessionId:'s',locale:'fr',timezone:'Africa/Douala',connectivity:'online',requestId:'test'});
+async function setup(){
+ const repo=new InMemoryPlatformRepository(),kernel=new PlatformKernel(),objects=new Map();
+ const storage={async put(key,bytes){objects.set(key,new Uint8Array(bytes))},async get(key){const bytes=objects.get(key);return bytes?{arrayBuffer:async()=>bytes.buffer.slice(bytes.byteOffset,bytes.byteOffset+bytes.byteLength)}:null}};
+ scope(kernel,'owner');
+ await repo.saveGroup({id:'g',tenantId:'tenantA',name:'Association',kind:'association',governanceModel:'founder_managed',status:'active',createdBy:'owner',createdAt:'2026-10-12T00:00:00Z'});
+ for(const actor of ['author','reader'])await repo.saveMembership({id:'mem-'+actor,tenantId:'tenantA',groupId:'g',userId:actor,roles:[],status:'active'});
+ return{repo,kernel,objects,storage,media:new VisualMediaService(repo,kernel,storage)};
+}
+test('profile photo stays private until group-only owner consent, and revocation is immediate',async()=>{
+ const {kernel,media}=await setup();
+ scope(kernel,'author');
+ const uploaded=await media.upload('g',photo(),'PROFILE_PHOTO');
+ await media.assign('g','PROFILE_PHOTO',uploaded.id);
+ scope(kernel,'reader');
+ await assert.rejects(()=>media.record('g',uploaded.id),/FORBIDDEN_MEDIA_ACCESS/);
+ scope(kernel,'author');
+ await media.setProfileConsent('g',true);
+ assert.equal((await media.consentedProfiles('g')).author,uploaded.id);
+ scope(kernel,'reader');
+ assert.equal((await media.record('g',uploaded.id)).id,uploaded.id);
+ scope(kernel,'author');
+ await media.setProfileConsent('g',false);
+ scope(kernel,'reader');
+ await assert.rejects(()=>media.record('g',uploaded.id),/FORBIDDEN_MEDIA_ACCESS/);
+});
+test('forum message photo is readable within group only when attached, and author alone may change it',async()=>{
+ const {kernel,media}=await setup();
+ scope(kernel,'author');
+ const uploaded=await media.upload('g',photo(),'FORUM_PHOTO');
+ await media.setForumPhoto('g','message-1','hub-1','author',uploaded.id);
+ assert.equal((await media.forumPhotos('g','hub-1'))['message-1'],uploaded.id);
+ assert.deepEqual(await media.forumPhotos('g','other-hub'),{});
+ scope(kernel,'reader');
+ assert.equal((await media.record('g',uploaded.id)).id,uploaded.id);
+ await assert.rejects(()=>media.setForumPhoto('g','message-1','hub-1','author',''),/FORUM_PHOTO_AUTHOR_ONLY/);
+ scope(kernel,'author');
+ await media.setForumPhoto('g','message-1','hub-1','author','');
+ scope(kernel,'reader');
+ await assert.rejects(()=>media.record('g',uploaded.id),/FORBIDDEN_MEDIA_ACCESS/);
+});
+test('platform brand library refuses nonfounder writes, publishes only selected asset and allows rollback',async()=>{
+ const {repo,kernel,storage}=await setup();let allowed=false;
+ const brand=new FounderBrandMediaService(repo,kernel,storage,async()=>allowed);
+ await assert.rejects(()=>brand.upload(photo()),/FOUNDER_TEAM_ONLY/);
+ allowed=true;
+ const photoA=await brand.upload(photo());
+ const photoB=await brand.upload(photo());
+ assert.equal((await brand.list()).assets.length,2);
+ await assert.rejects(()=>brand.bytes(photoA.id),/BRAND_ASSET_NOT_PUBLIC/);
+ await brand.assign('HOME_HERO',photoA.id);
+ assert.equal((await brand.selected()).HOME_HERO,photoA.id);
+ assert.equal(new Uint8Array((await brand.bytes(photoA.id)).bytes).byteLength,PNG.length);
+ await assert.rejects(()=>brand.bytes(photoB.id),/BRAND_ASSET_NOT_PUBLIC/);
+ await brand.assign('HOME_HERO','');
+ assert.deepEqual(await brand.selected(),{});
+ allowed=false;await assert.rejects(()=>brand.list(),/FOUNDER_TEAM_ONLY/);
+ await assert.rejects(()=>brand.assign('BRAND_LOGO',photoB.id),/FOUNDER_TEAM_ONLY/);
+});
