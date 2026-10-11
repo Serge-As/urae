@@ -84,8 +84,10 @@ export class VisualMediaService {
   async presentation(groupId:string){
     await this.access(groupId);
     const ctx=this.kernel.context.get(),output:Record<string,string>={};
+    const records=await this.repo.listWorkspaceRecords(ctx.tenantId,SLOT_MODULE,groupId);
+    const byId=new Map(records.map(row=>[row.id,row]));
     for(const slot of VISUAL_SLOTS){
-      const id=keyFor(groupId,slot,ctx.actorId),row=await this.repo.getWorkspaceRecord(ctx.tenantId,id);
+      const row=byId.get(keyFor(groupId,slot,ctx.actorId));
       if(row?.groupId===groupId&&row.moduleId===SLOT_MODULE&&row.status==='ACTIVE'&&typeof row.data.assetId==='string'&&row.data.assetId)output[slot]=row.data.assetId;
     }
     return output;
