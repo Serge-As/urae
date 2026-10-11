@@ -30,6 +30,7 @@ import { buildFinancialRecap, buildSessionRecap, buildClosingCarryover } from '.
 import { AdManagerService, AD_PLACEMENT_CATALOG, HOUSE_AD_CATALOG, selectAdDelivery } from '../../../packages/ad-manager/src/index.js';
 import { PartnerAdProposalService } from '../../../packages/ad-manager/src/partner-proposals.js';
 import { VisualMediaService } from '../../../packages/visual-media/src/index.js';
+import { FounderBrandMediaService } from '../../../packages/visual-media/src/founder-brand.js';
 import { diagnoseGroup } from '../../../packages/group-doctor/src/index.js';
 import { prepareMeetingAutopilot } from '../../../packages/meeting-autopilot/src/index.js';
 import { EconomicIntelligenceService } from '../../../packages/economic-intelligence/src/index.js';
@@ -2316,6 +2317,40 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
     const storefrontRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/market\/storefront$/);
     if(storefrontRoute&&request.method==='GET')return json(await market.storefront(storefrontRoute[1]!),200,cors);
     const visualMedia=new VisualMediaService(repo,kernel,artifactStore);
+    const brandMedia=new FounderBrandMediaService(repo,kernel,artifactStore);
+    const founderBrandList=url.pathname==='/api/v1/founder/brand/assets';
+    if(founderBrandList&&request.method==='GET'){
+      if(!(await isFounderTeamActor()))throw Error('FOUNDER_TEAM_ONLY');
+      return json(await brandMedia.list(),200,cors);
+    }
+    if(founderBrandList&&request.method==='POST'){
+      if(!(await isFounderTeamActor()))throw Error('FOUNDER_TEAM_ONLY');
+      const form=await request.formData(),file=form.get('file');
+      if(!(file instanceof File))throw Error('MEDIA_FILE_REQUIRED');
+      return json(await brandMedia.upload(file),201,cors);
+    }
+    if(url.pathname==='/api/v1/founder/brand/slots'&&request.method==='PUT'){
+      if(!(await isFounderTeamActor()))throw Error('FOUNDER_TEAM_ONLY');
+      const body=await readJson<Record<string,unknown>>(request);
+      return json(await brandMedia.assign(String(body.slot??''),String(body.assetId??'')),200,cors);
+    }
+    const founderBrandContent=url.pathname.match(/^\/api\/v1\/founder\/brand\/assets\/([^/]+)\/content$/);
+    if(founderBrandContent&&request.method==='GET'){
+      if(!(await isFounderTeamActor()))throw Error('FOUNDER_TEAM_ONLY');
+      const asset=await brandMedia.bytes(founderBrandContent[1]!,true);
+      return new Response(asset.bytes,{headers:{...baseSecurityHeaders,...cors,'content-type':asset.mime,'cache-control':'private, no-store','x-content-type-options':'nosniff'}});
+    }
+    const groupBrandList=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/brand\/slots$/);
+    if(groupBrandList&&request.method==='GET'){
+      await requireGroup(groupBrandList[1]!);
+      return json(await brandMedia.selected(),200,cors);
+    }
+    const groupBrandContent=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/brand\/assets\/([^/]+)\/content$/);
+    if(groupBrandContent&&request.method==='GET'){
+      await requireGroup(groupBrandContent[1]!);
+      const asset=await brandMedia.bytes(groupBrandContent[2]!);
+      return new Response(asset.bytes,{headers:{...baseSecurityHeaders,...cors,'content-type':asset.mime,'cache-control':'private, no-store','x-content-type-options':'nosniff'}});
+    }
 
     const consentedProfiles=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/visual-profile-consents$/);
     if(consentedProfiles&&request.method==='GET')return json(await visualMedia.consentedProfiles(consentedProfiles[1]!),200,cors);
