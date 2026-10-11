@@ -2333,6 +2333,13 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
       const asset=await visualMedia.bytes(visualContent[1]!,visualContent[2]!);
       return new Response(asset.bytes,{headers:{...baseSecurityHeaders,...cors,'content-type':asset.mime,'cache-control':'private, no-store','x-content-type-options':'nosniff'}});
     }
+    const visualStockList=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/visual-stock$/);
+    if(visualStockList&&request.method==='GET')return json(await visualMedia.stockVisuals(visualStockList[1]!),200,cors);
+    const visualStockItem=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/visual-stock\/([^/]+)$/);
+    if(visualStockItem&&request.method==='PUT'){
+      const body=await readJson<Record<string,unknown>>(request);
+      return json(await visualMedia.assignStockVisual(visualStockItem[1]!,visualStockItem[2]!,String(body.assetId??'')),200,cors);
+    }
     const adDashboard=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/ads\/dashboard$/);
     if(adDashboard&&request.method==='GET')return json(await adManager.dashboard(adDashboard[1]!),200,cors);
     const adHousePlan=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/ads\/house-plan$/);
