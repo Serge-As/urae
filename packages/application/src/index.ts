@@ -1715,6 +1715,24 @@ export class ConnectedApplication {
     return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/visual-stock/'+encodeURIComponent(stockId),
       {method:'PUT',body:JSON.stringify({assetId})});
   }
+  async groupProfilePhotos():Promise<Record<string,string>>{
+    if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');
+    return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/visual-profile-consents');
+  }
+  async setProfilePhotoConsent(visible:boolean):Promise<{visible:boolean;assetId:string}>{
+    if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');
+    return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/visual-profile-consents',
+      {method:'PUT',body:JSON.stringify({visible})});
+  }
+  async forumPhotoMap(hubId:string):Promise<Record<string,string>>{
+    if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');
+    return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/forum-v2/hubs/'+encodeURIComponent(hubId)+'/photos');
+  }
+  async assignForumPhoto(messageId:string,assetId:string):Promise<{messageId:string;assetId:string}>{
+    if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');
+    return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/forum-v2/messages/'+encodeURIComponent(messageId)+'/photo',
+      {method:'PUT',body:JSON.stringify({assetId})});
+  }
   async visualMediaBlob(id:string):Promise<Blob>{
     if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');
     const url=this.visualMediaContentUrl(id),abort=new AbortController(),timeout=setTimeout(()=>abort.abort(),12000);
