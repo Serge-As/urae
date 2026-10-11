@@ -15,7 +15,9 @@ const fr=(f,e)=>document.documentElement.lang==='en'?e:f;
 export function mountVisualMediaPresenter({app,showError=console.error}={}){
   let generation=0;
   let urls=[];
+  let observer=null;
   const clear=()=>{
+    observer?.disconnect();observer=null;
     document.querySelectorAll('[data-eco-visual-media]').forEach(x=>x.remove());
     for(const url of urls)URL.revokeObjectURL(url);
     urls=[];
@@ -28,24 +30,41 @@ export function mountVisualMediaPresenter({app,showError=console.error}={}){
     try{slots=await app.visualMediaSlots();}
     catch(error){/* Offline remains fully functional without optional media. */return;}
     if(version!==generation)return;
+    const load=async(frame,id)=>{
+      if(frame.dataset.ecoLoaded==='1')return;
+      frame.dataset.ecoLoaded='1';
+      try{
+        const blob=await app.visualMediaBlob(id);
+        if(version!==generation||!frame.isConnected)return;
+        const objectUrl=URL.createObjectURL(blob);urls.push(objectUrl);
+        const image=document.createElement('img');
+        image.src=objectUrl;image.decoding='async';image.loading='lazy';
+        image.alt=fr('Image de présentation','Presentation image');
+        frame.replaceChildren(image);
+      }catch{
+        // No image is better than a broken image above critical group operations.
+        frame.remove();
+      }
+    };
+    if(typeof IntersectionObserver==='function'){
+      observer=new IntersectionObserver(entries=>{
+        for(const entry of entries)if(entry.isIntersecting){
+          observer?.unobserve(entry.target);
+          void load(entry.target,entry.target.dataset.ecoAssetId);
+        }
+      },{rootMargin:'180px 0px'});
+    }
     for(const [slot,selector,cssClass] of locations){
       const id=slots?.[slot],target=document.querySelector(selector);
       if(!id||!target)continue;
-      try{
-        const blob=await app.visualMediaBlob(id);
-        if(version!==generation)return;
-        const objectUrl=URL.createObjectURL(blob);urls.push(objectUrl);
-        const frame=document.createElement('figure');
-        frame.className='eco-visual-display '+cssClass;
-        frame.dataset.ecoVisualMedia=slot;
-        const image=document.createElement('img');
-        image.src=objectUrl;image.decoding='async';image.loading=slot==='HOME_HERO'?'eager':'lazy';
-        image.alt=fr('Image de présentation : '+slot,'Presentation image: '+slot);
-        frame.append(image);
-        // Insert after the heading in the same original domain; never replace
-        // any canonical controls, session input, Recap or existing content.
-        target.insertAdjacentElement('afterend',frame);
-      }catch(error){/* A missing asset cannot hide operational features. */}
+      const frame=document.createElement('figure');
+      frame.className='eco-visual-display '+cssClass;
+      frame.dataset.ecoVisualMedia=slot;
+      frame.dataset.ecoAssetId=id;
+      frame.append(document.createElement('span'));
+      target.insertAdjacentElement('afterend',frame);
+      if(observer)observer.observe(frame);
+      else void load(frame,id);
     }
   };
   document.addEventListener('eco:group-context-changed',()=>void refresh());
