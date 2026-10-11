@@ -297,7 +297,13 @@ const restoreNavState=state=>{
         if(state.openTarget){const node=document.getElementById(state.openTarget);if(node){if(node.tagName==='DETAILS')node.open=true;node.hidden=false;node.setAttribute('aria-hidden','false');}}
         if(state.sheetMode||state.matrixMeetingId||state.membershipId||state.rubricId)window.dispatchEvent(new CustomEvent('eco:restore-financial-sheet',{detail:{sheetMode:state.sheetMode,matrixMeetingId:state.matrixMeetingId,membershipId:state.membershipId,rubricId:state.rubricId}}));
         const anchor=state.anchor?document.getElementById(state.anchor):undefined;
-        if(anchor)anchor.scrollIntoView({behavior:'auto',block:'start'});else window.scrollTo({top:Number(state.scrollY)||0,behavior:'auto'});
+        if(anchor){
+          // All module shortcuts use the existing owner panels, including dynamically
+          // mounted Business/Academy/Kit details. Reveal ancestors before scrolling.
+          let owner=anchor instanceof Element?anchor.closest('details'):null;
+          while(owner){owner.open=true;owner=owner.parentElement?.closest('details')??null;}
+          anchor.scrollIntoView({behavior:'auto',block:'start'});
+        }else window.scrollTo({top:Number(state.scrollY)||0,behavior:'auto'});
         const restoreMatrixScroll=()=>{
           const meetingWrap=document.querySelector('#meetingMatrix .canonical-financial-wrap')??document.querySelector('#meetingMatrix');
           const individualWrap=document.querySelector('#individualSheetMatrix .canonical-financial-wrap')??document.querySelector('#individualSheetMatrix');
