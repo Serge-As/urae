@@ -36,7 +36,7 @@ test('owner may upload, select, read and revoke a group visual without finance w
   const bytes=await media.bytes('g',uploaded.id);
   assert.deepEqual(new Uint8Array(bytes.bytes),PNG);
   await media.assign('g','HOME_HERO','');
-  assert.equal((await media.presentation('g')).HOME_HERO,'');
+  assert.equal((await media.presentation('g')).HOME_HERO,undefined);
 });
 
 test('group/tenant isolation and privacy of profile images cannot be bypassed by manager',async()=>{
