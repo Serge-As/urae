@@ -23,8 +23,17 @@ export function mountAdSurfacesUI({app,navigate=()=>{},showError=console.error}=
  let group=null,generation=0,urls=[];
  const clear=()=>{document.querySelectorAll('[data-eco-ad-surface]').forEach(x=>x.remove());for(const url of urls)URL.revokeObjectURL(url);urls=[];};
  const refresh=async(force=false)=>{
-  const groupId=app.activeGroup()??null;if(!force&&groupId===group)return;
-  group=groupId;const stamp=++generation;clear();if(!groupId)return;
+  const groupId=app.activeGroup()??null;
+  const criticalFlow=Boolean(document.querySelector('#view-finance.active, #view-sessions.active, #view-operations.active, #view-recap.active'));
+  const offline=typeof navigator!=='undefined'&&navigator.onLine===false;
+  // Advertisements are optional; no network call may delay a financial
+  // operation, live reconciliation, or offline outbox replay.
+  if(!groupId||criticalFlow||offline){
+    if(group!==groupId){group=groupId;generation++;clear();}
+    return;
+  }
+  if(!force&&groupId===group)return;
+  group=groupId;const stamp=++generation;clear();
   const results=await Promise.all(SURFACES.map(async spec=>{
     try{return{spec,ad:await app.adSurface(spec.placement)};}catch{return{spec,ad:null};}
   }));
@@ -59,5 +68,6 @@ export function mountAdSurfacesUI({app,navigate=()=>{},showError=console.error}=
  document.addEventListener('eco:ad-campaign-state-changed',rerender);
  document.addEventListener('eco:language-changed',rerender);
  window.addEventListener('online',rerender);
+ window.addEventListener('eco:view-changed',event=>{if(['dashboard','ecosystem'].includes(event.detail?.view))rerender();});
  return{refresh};
 }
