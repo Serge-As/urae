@@ -1682,6 +1682,20 @@ export class ConnectedApplication {
   }
   async saveGroupShop(input:{name:string;tagline?:string;visibility?:'GROUP_ONLY'|'PUBLIC';locality?:string;categories?:string[]}):Promise<unknown>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/market/shop',{method:'POST',body:JSON.stringify(input)});}
   async groupStorefront():Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/market/storefront');}
+  async partnerAdProposals():Promise<any[]>{
+    if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');
+    return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/ads/partner-proposals');
+  }
+  async createPartnerAdProposal(input:Record<string,unknown>):Promise<any>{
+    if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');
+    return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/ads/partner-proposals',
+      {method:'POST',body:JSON.stringify(input)});
+  }
+  async reviewPartnerAdProposal(id:string,decision:'IMPORT'|'REJECT',note=''):Promise<any>{
+    if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');
+    return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/ads/partner-proposals/'+encodeURIComponent(id)+'/review',
+      {method:'POST',body:JSON.stringify({decision,note})});
+  }
   async adCampaigns():Promise<any[]>{if(!this.activeGroupId)return[];return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/ads/campaigns');}
   async visualMediaList():Promise<any[]> {if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/visual-media');}
   async visualMediaSlots():Promise<Record<string,string>> {if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/visual-slots');}
