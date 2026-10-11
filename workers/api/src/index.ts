@@ -197,26 +197,6 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
   const founderAI=new FounderAIService();
   if(options.premiumLive)kernel.features.set('premium_live_ledger',true);
   const isFounderTeamActor=async()=>Boolean(options.founderTeamActors?.has(ctx.actorId))||Boolean(options.founderControl&&await options.founderControl.isPlatformOwner(ctx.actorId));
-  const visualMedia=new VisualMediaService(repo,kernel,artifactStore);
-  const visualApi=url.pathname.match(/^\\/api\\/v1\\/groups\\/([^/]+)\\/visual-media$/);
-  if(visualApi&&request.method==='GET')return json(await visualMedia.list(visualApi[1]!),200,cors);
-  if(visualApi&&request.method==='POST'){
-    const form=await request.formData(),file=form.get('file');
-    if(!(file instanceof File))throw Error('MEDIA_FILE_REQUIRED');
-    const result=await visualMedia.upload(visualApi[1]!,file,String(form.get('purpose')??'') as any);
-    return json(result,201,cors);
-  }
-  const visualSlots=url.pathname.match(/^\\/api\\/v1\\/groups\\/([^/]+)\\/visual-slots$/);
-  if(visualSlots&&request.method==='GET')return json(await visualMedia.presentation(visualSlots[1]!),200,cors);
-  if(visualSlots&&request.method==='PUT'){
-    const body=await readJson<Record<string,unknown>>(request);
-    return json(await visualMedia.assign(visualSlots[1]!,String(body.slot??''),String(body.assetId??'')),200,cors);
-  }
-  const visualContent=url.pathname.match(/^\\/api\\/v1\\/groups\\/([^/]+)\\/visual-media\\/([^/]+)\\/content$/);
-  if(visualContent&&request.method==='GET'){
-    const asset=await visualMedia.bytes(visualContent[1]!,visualContent[2]!);
-    return new Response(asset.bytes,{headers:{...baseSecurityHeaders,...cors,'content-type':asset.mime,'cache-control':'private, no-store','x-content-type-options':'nosniff'}});
-  }
   const requireGroup=async(groupId:string,manage=false)=>{
     const group=await repo.getGroup(ctx.tenantId,groupId);if(!group)throw Error('GROUP_NOT_FOUND');
     if(group.createdBy===ctx.actorId)return group;
@@ -2333,6 +2313,26 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
     }
     const storefrontRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/market\/storefront$/);
     if(storefrontRoute&&request.method==='GET')return json(await market.storefront(storefrontRoute[1]!),200,cors);
+    const visualMedia=new VisualMediaService(repo,kernel,artifactStore);
+    const visualApi=url.pathname.match(/^\\/api\\/v1\\/groups\\/([^/]+)\\/visual-media$/);
+    if(visualApi&&request.method==='GET')return json(await visualMedia.list(visualApi[1]!),200,cors);
+    if(visualApi&&request.method==='POST'){
+      const form=await request.formData(),file=form.get('file');
+      if(!(file instanceof File))throw Error('MEDIA_FILE_REQUIRED');
+      const result=await visualMedia.upload(visualApi[1]!,file,String(form.get('purpose')??'') as any);
+      return json(result,201,cors);
+    }
+    const visualSlots=url.pathname.match(/^\\/api\\/v1\\/groups\\/([^/]+)\\/visual-slots$/);
+    if(visualSlots&&request.method==='GET')return json(await visualMedia.presentation(visualSlots[1]!),200,cors);
+    if(visualSlots&&request.method==='PUT'){
+      const body=await readJson<Record<string,unknown>>(request);
+      return json(await visualMedia.assign(visualSlots[1]!,String(body.slot??''),String(body.assetId??'')),200,cors);
+    }
+    const visualContent=url.pathname.match(/^\\/api\\/v1\\/groups\\/([^/]+)\\/visual-media\\/([^/]+)\\/content$/);
+    if(visualContent&&request.method==='GET'){
+      const asset=await visualMedia.bytes(visualContent[1]!,visualContent[2]!);
+      return new Response(asset.bytes,{headers:{...baseSecurityHeaders,...cors,'content-type':asset.mime,'cache-control':'private, no-store','x-content-type-options':'nosniff'}});
+    }
     const adDashboard=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/ads\/dashboard$/);
     if(adDashboard&&request.method==='GET')return json(await adManager.dashboard(adDashboard[1]!),200,cors);
     const adHousePlan=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/ads\/house-plan$/);
