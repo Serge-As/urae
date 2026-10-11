@@ -10,7 +10,7 @@ const MODULE='MEDIA.VISUAL_ASSET';
 const SLOT_MODULE='MEDIA.VISUAL_SLOT';
 const MAX_MEDIA_BYTES=2_000_000;
 const managers=new Set(['founder','manager','admin','president','treasurer']);
-const keyFor=(groupId:string,slot:VisualSlot,actorId:string)=>'visual_slot_'+encodeURIComponent(groupId)+'_'+slot+(slot==='PROFILE_PHOTO'?'_'+encodeURIComponent(actorId):'');
+const keyFor=(groupId:string,slot:VisualSlot,actorId:string)=>'visual_slot_'+encodeURIComponent(groupId)+'_'+slot+(['PROFILE_PHOTO','PARTNER_CREATIVE'].includes(slot)?'_'+encodeURIComponent(actorId):'');
 const stockVisualKey=(groupId:string,stockId:string)=>'visual_stock_'+encodeURIComponent(groupId)+'_'+encodeURIComponent(stockId);
 const isValidSlot=(slot:string):slot is VisualSlot=>(VISUAL_SLOTS as readonly string[]).includes(slot);
 export const sniffVisualMime=(bytes:Uint8Array):string=>{
@@ -146,15 +146,15 @@ export class VisualMediaService {
   }
   async assign(groupId:string,slot:string,assetId:string){
     if(!isValidSlot(slot))throw Error('MEDIA_INVALID_PURPOSE');
-    await this.access(groupId,slot!=='PROFILE_PHOTO');
+    await this.access(groupId,!['PROFILE_PHOTO','PARTNER_CREATIVE'].includes(slot));
     const ctx=this.kernel.context.get();
     if(assetId){
       const row=await this.record(groupId,assetId,slot!=='PROFILE_PHOTO');
-      if(slot==='PROFILE_PHOTO'&&row.createdBy!==ctx.actorId)throw Error('FORBIDDEN_MEDIA_OWNER');
+      if(['PROFILE_PHOTO','PARTNER_CREATIVE'].includes(slot)&&row.createdBy!==ctx.actorId)throw Error('FORBIDDEN_MEDIA_OWNER');
       if(String(row.data.purpose)!==slot)throw Error('MEDIA_PURPOSE_MISMATCH');
     }
     const id=keyFor(groupId,slot,ctx.actorId),previous=await this.repo.getWorkspaceRecord(ctx.tenantId,id),stamp=new Date().toISOString();
-    const record:WorkspaceRecord={id,tenantId:ctx.tenantId,groupId,moduleId:SLOT_MODULE,title:slot,status:'ACTIVE',tags:['media-slot',slot],data:{assetId,slot,actorId:slot==='PROFILE_PHOTO'?ctx.actorId:''},createdBy:previous?.createdBy??ctx.actorId,createdAt:previous?.createdAt??stamp,updatedAt:stamp};
+    const record:WorkspaceRecord={id,tenantId:ctx.tenantId,groupId,moduleId:SLOT_MODULE,title:slot,status:'ACTIVE',tags:['media-slot',slot],data:{assetId,slot,actorId:['PROFILE_PHOTO','PARTNER_CREATIVE'].includes(slot)?ctx.actorId:''},createdBy:previous?.createdBy??ctx.actorId,createdAt:previous?.createdAt??stamp,updatedAt:stamp};
     await this.repo.saveWorkspaceRecord(record);
     await this.repo.saveAudit(this.kernel.audit.append({tenantId:ctx.tenantId,actorId:ctx.actorId,action:'VISUAL_MEDIA_SLOT_UPDATED',targetType:'media_slot',targetId:id,requestId:ctx.requestId,metadata:{groupId,slot,assetId:assetId||null}}));
     return{slot,assetId};
