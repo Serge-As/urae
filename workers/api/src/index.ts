@@ -28,6 +28,7 @@ import { MiscRubricService } from '../../../packages/misc-rubrics/src/index.js';
 import { allocateSavingsYield, splitInterestPool, simulateWorkbookYieldPipeline, allocateCapitalAtWorkYield, allocateCapitalTimeYield, allocateAttributedProductiveYield, SAVINGS_YIELD_POLICY_PRESETS } from '../../../packages/savings-yield/src/index.js';
 import { buildFinancialRecap, buildSessionRecap, buildClosingCarryover } from '../../../packages/recap-engine/src/index.js';
 import { AdManagerService, AD_PLACEMENT_CATALOG, HOUSE_AD_CATALOG, selectAdDelivery } from '../../../packages/ad-manager/src/index.js';
+import { PartnerAdProposalService } from '../../../packages/ad-manager/src/partner-proposals.js';
 import { VisualMediaService } from '../../../packages/visual-media/src/index.js';
 import { diagnoseGroup } from '../../../packages/group-doctor/src/index.js';
 import { prepareMeetingAutopilot } from '../../../packages/meeting-autopilot/src/index.js';
@@ -142,6 +143,7 @@ const createRequestScope = (request:Request,repo:PlatformRepository,artifacts?:A
   const conciergeLearning=new ConciergeLearningService(repo,kernel,dataUseDefaultMode);
   const miscRubrics=new MiscRubricService(repo,kernel,ledger);
   const adManager=new AdManagerService(repo,kernel,documentAI);
+  const partnerAds=new PartnerAdProposalService(repo,kernel,adManager);
   const economicIntelligence=new EconomicIntelligenceService(repo,kernel);
   const externalPrograms=new ExternalProgramsService(repo,kernel);
   const operationalCockpit=new OperationalCockpitService(repo,kernel,ledger);
@@ -2339,6 +2341,33 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
     if(visualStockItem&&request.method==='PUT'){
       const body=await readJson<Record<string,unknown>>(request);
       return json(await visualMedia.assignStockVisual(visualStockItem[1]!,visualStockItem[2]!,String(body.assetId??'')),200,cors);
+    }
+    // Partner self-service: image remains private and campaign NEVER auto-activates.
+    const adProposals=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/ads\/partner-proposals$/);
+    if(adProposals&&request.method==='GET')return json(await partnerAds.list(adProposals[1]!),200,cors);
+    if(adProposals&&request.method==='POST'){
+      const body=await readJson<Record<string,unknown>>(request);
+      const groupId=adProposals[1]!,mediaId=String(body.mediaAssetId??'');
+      if(mediaId){
+        const asset=await visualMedia.record(groupId,mediaId);
+        if(asset.data.purpose!=='PARTNER_CREATIVE'||asset.createdBy!==kernel.context.get().actorId)
+          throw Error('PARTNER_AD_MEDIA_OWNER_MISMATCH');
+      }
+      return json(await partnerAds.create(groupId,body as any),201,cors);
+    }
+    const adProposalReview=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/ads\/partner-proposals\/([^/]+)\/review$/);
+    if(adProposalReview&&request.method==='POST'){
+      const groupId=adProposalReview[1]!,proposalId=adProposalReview[2]!;
+      const proposals=await partnerAds.list(groupId),item=proposals.find(p=>p.id===proposalId);
+      if(!item)throw Error('PARTNER_AD_NOT_FOUND');
+      const decisionBody=await readJson<Record<string,unknown>>(request);
+      const decision=String(decisionBody.decision??'');
+      if(!['REJECT','IMPORT'].includes(decision))throw Error('PARTNER_AD_INVALID_REVIEW');
+      if(decision==='IMPORT'&&item.data.mediaAssetId){
+        const media=await visualMedia.record(groupId,String(item.data.mediaAssetId),true);
+        if(media.data.purpose!=='PARTNER_CREATIVE'||media.createdBy!==item.createdBy)throw Error('PARTNER_AD_MEDIA_OWNER_MISMATCH');
+      }
+      return json(await partnerAds.review(groupId,proposalId,decision as 'REJECT'|'IMPORT',String(decisionBody.note??'')),200,cors);
     }
     const adDashboard=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/ads\/dashboard$/);
     if(adDashboard&&request.method==='GET')return json(await adManager.dashboard(adDashboard[1]!),200,cors);
