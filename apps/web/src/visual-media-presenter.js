@@ -26,14 +26,14 @@ export function mountVisualMediaPresenter({app,showError=console.error}={}){
   const refresh=async(force=false)=>{
     const groupId=app.activeGroup()??null;
     if(!force&&previousGroupId===groupId)return;
-    previousGroupId=groupId;
     const version=++generation;
     clear();
-    if(!groupId)return;
+    if(!groupId){previousGroupId=null;return;}
     let slots;
     try{slots=await app.visualMediaSlots();}
-    catch(error){/* Offline remains fully functional without optional media. */return;}
+    catch(error){previousGroupId=null;/* Offline remains fully functional without optional media. */return;}
     if(version!==generation)return;
+    previousGroupId=groupId;
     const load=async(frame,id)=>{
       if(frame.dataset.ecoLoaded==='1')return;
       frame.dataset.ecoLoaded='1';
@@ -74,5 +74,6 @@ export function mountVisualMediaPresenter({app,showError=console.error}={}){
   document.addEventListener('eco:group-context-changed',()=>void refresh());
   document.addEventListener('eco:visual-media-updated',()=>void refresh(true));
   document.addEventListener('eco:language-changed',()=>void refresh(true));
+  window.addEventListener('online',()=>void refresh(true));
   return{refresh};
 }
