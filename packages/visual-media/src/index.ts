@@ -57,13 +57,14 @@ export class VisualMediaService {
     const member=(await this.repo.listMemberships(ctx.tenantId,groupId)).find(m=>m.userId===ctx.actorId&&m.status==='active');
     const manage=group?.createdBy===ctx.actorId||Boolean(member?.roles.some(r=>managers.has(r)));
     return (await this.repo.listWorkspaceRecords(ctx.tenantId,MODULE,groupId))
-      .filter(x=>x.status==='ACTIVE'&&(manage||x.createdBy===ctx.actorId))
+      .filter(x=>x.status==='ACTIVE'&&(x.createdBy===ctx.actorId||(manage&&x.data.purpose!=='PROFILE_PHOTO')))
       .map(x=>this.safe(x));
   }
   async record(groupId:string,id:string,requireManage=false){
     await this.access(groupId,requireManage);
     const ctx=this.kernel.context.get(),row=await this.repo.getWorkspaceRecord(ctx.tenantId,id);
     if(!row||row.groupId!==groupId||row.moduleId!==MODULE||row.status!=='ACTIVE')throw Error('MEDIA_NOT_FOUND');
+    if(row.data.purpose==='PROFILE_PHOTO'&&row.createdBy!==ctx.actorId)throw Error('FORBIDDEN_MEDIA_ACCESS');
     if(!requireManage&&row.createdBy!==ctx.actorId){
       const group=await this.repo.getGroup(ctx.tenantId,groupId);
       const member=(await this.repo.listMemberships(ctx.tenantId,groupId)).find(m=>m.userId===ctx.actorId&&m.status==='active');
