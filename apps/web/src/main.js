@@ -343,6 +343,14 @@ const go=(name,options={})=>{
 const goBack=()=>{if(navDepth>0)history.back();};
 document.querySelectorAll('[data-view]').forEach(b=>b.addEventListener('click',()=>go(b.dataset.view,{anchor:b.dataset.anchor,meetingId:b.dataset.meetingId,matrixMeetingId:b.dataset.matrixMeetingId,sheetMode:b.dataset.sheetMode,openTarget:b.dataset.openTarget,force:Boolean(b.dataset.anchor||b.dataset.sheetMode||b.dataset.openTarget)})));
 document.querySelectorAll('[data-go]').forEach(b=>b.addEventListener('click',()=>go(b.dataset.go,{anchor:b.dataset.anchor,meetingId:b.dataset.meetingId,matrixMeetingId:b.dataset.matrixMeetingId,sheetMode:b.dataset.sheetMode,openTarget:b.dataset.openTarget,force:Boolean(b.dataset.anchor||b.dataset.sheetMode||b.dataset.openTarget)})));
+
+document.querySelectorAll('[data-eco-module-preset]').forEach(button=>button.addEventListener('click',()=>{
+    const kind=button.dataset.ecoModulePreset;
+    if(!['NOW','HARVEST'].includes(kind))return;
+    // The owner module creates the form and validates its data. This shortcut
+    // only selects an existing preset; it never constructs a second workflow.
+    requestAnimationFrame(()=>window.dispatchEvent(new CustomEvent('eco:value-network-preset',{detail:{kind}})));
+}));
 document.addEventListener('click',event=>{
     const link=event.target instanceof Element?event.target.closest('a[href^="#"]'):null;if(!link)return;
     const id=(link.getAttribute('href')||'').slice(1);if(!id)return;
