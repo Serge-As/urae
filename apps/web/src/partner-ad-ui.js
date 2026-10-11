@@ -33,7 +33,7 @@ export function mountPartnerAdsUI({app,isManager=()=>false,notify=()=>{},showErr
    for(const x of assets.filter(a=>a.purpose==='PARTNER_CREATIVE'&&(isManager()||a.ownerId===app.currentActor())))media.append(new Option(x.name,x.id));
    if(!proposals.length)list.append(el('p',tr('Aucune proposition.','No proposals.'),'hint'));
    for(const p of proposals){
-    const card=el('article',undefined,'item'),state=String(p.data?.proposalState??'UNKNOWN');
+    const card=el('article',undefined,'item eco-partner-proposal'),state=String(p.data?.proposalState??'UNKNOWN');
     card.append(el('strong',p.title),el('span',state,'pill'),el('p',String(p.data?.headline??'')),
       el('p',String(p.data?.body??''),'hint'));
     if(p.data?.reviewNote)card.append(el('p',String(p.data.reviewNote),'hint'));
