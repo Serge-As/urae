@@ -30,6 +30,7 @@ import { mountFounderControlUI } from './founder-control-ui.js';
 import { mountAssistanceRulebookUI } from './assistance-rulebook-ui.js';
 import { mountGroupHomeUI } from './group-home-ui.js';
 import { mountSessionsUI } from './sessions-ui.js';
+import { splitFinancialRubrics } from './smart-grid-view.js';
 import { mountBlueprintExecutableUI } from './blueprint-executable-ui.js';
 import { mountCommunityBlueprintPresets } from './community-blueprint-presets.js';
 import { mountFinancialLabUI } from './financial-lab-ui.js';
@@ -1292,6 +1293,42 @@ const renderCanonicalFinancialTable=({root,mode='meeting',meetingId='',membershi
     root.replaceChildren();
     const activeRubrics=activeFinancialRubrics(),activeMembers=activeFinancialMembers();
     if(!activeRubrics.length||!activeMembers.length){root.innerHTML='<div class="empty-state">'+tx('Ajoutez au moins un membre et une rubrique active.','Add at least one member and one active rubric.')+'</div>';return;}
+    // SmartGrid is a presentation-only projection. Financial editors and writes
+    // remain exclusively owned by the existing canonical renderer and Ledger.
+    const panelScope=mode==='meeting'?'meeting':'individual';
+    const choiceKey='eco.smartGrid.parts.'+panelScope;
+    let parts=1;
+    try{parts=[1,2,5].includes(Number(sessionStorage.getItem(choiceKey)))?Number(sessionStorage.getItem(choiceKey)):1;}catch{}
+    const columnGroups=splitFinancialRubrics(activeRubrics,parts);
+    const panelKey='eco.smartGrid.index.'+panelScope;
+    let panelIndex=0;
+    try{panelIndex=Math.max(0,Math.min(columnGroups.length-1,Number(sessionStorage.getItem(panelKey))||0));}catch{}
+    const visibleRubrics=columnGroups[panelIndex]??activeRubrics;
+    const presentation= document.createElement('div');presentation.className='eco-smartgrid-toolbar';
+    const title=document.createElement('strong');title.textContent=tx('Affichage des rubriques','Rubric display');
+    const presets=document.createElement('div');presets.className='eco-smartgrid-parts';
+    for(const n of [1,2,5]){
+      const b=document.createElement('button');b.type='button';b.className=parts===n?'primary':'secondary';
+      b.textContent=n===1?tx('Vue intégrale','Full view'):tx('Vue en '+n+' parties',n+' parts view');
+      b.setAttribute('aria-pressed',String(parts===n));
+      b.onclick=()=>{try{sessionStorage.setItem(choiceKey,String(n));sessionStorage.setItem(panelKey,'0');}catch{}
+        renderCanonicalFinancialTable({root,mode,meetingId,membershipId,showToolbar,editable});};
+      presets.append(b);
+    }
+    presentation.append(title,presets);
+    if(columnGroups.length>1){
+      const navigation=document.createElement('div');navigation.className='eco-smartgrid-navigation';
+      const previous=document.createElement('button');previous.type='button';previous.className='secondary';previous.textContent='←';
+      previous.setAttribute('aria-label',tx('Partie précédente','Previous part'));previous.disabled=panelIndex===0;
+      const indication=document.createElement('span');indication.textContent=tx('Partie ','Part ')+(panelIndex+1)+' / '+columnGroups.length;
+      indication.setAttribute('aria-live','polite');
+      const next=document.createElement('button');next.type='button';next.className='secondary';next.textContent='→';
+      next.setAttribute('aria-label',tx('Partie suivante','Next part'));next.disabled=panelIndex===columnGroups.length-1;
+      const openPart=index=>{try{sessionStorage.setItem(panelKey,String(index));}catch{}
+        renderCanonicalFinancialTable({root,mode,meetingId,membershipId,showToolbar,editable});};
+      previous.onclick=()=>openPart(panelIndex-1);next.onclick=()=>openPart(panelIndex+1);
+      navigation.append(previous,indication,next);presentation.append(navigation);
+    }
     const wrap=document.createElement('div');wrap.className='matrix-wrap canonical-financial-wrap';
     // The matrix scrolls horizontally. Forward ordinary vertical mouse-wheel
     // motion to the document when the matrix has no vertical overflow: keep
@@ -1317,17 +1354,20 @@ const renderCanonicalFinancialTable=({root,mode='meeting',meetingId='',membershi
       matrixMeetingId=selectedMeeting;root.dataset.meetingId=selectedMeeting;
       const numberHead=document.createElement('th');numberHead.textContent=tx('N°','No.');numberHead.className='member-number-column';hr.append(numberHead);
       const memberHead=document.createElement('th');memberHead.textContent=tx('Membre','Member');hr.append(memberHead);
-      for(const r of activeRubrics){const th=document.createElement('th');th.textContent=r.name;hr.append(th);}
+      for(const r of visibleRubrics){const th=document.createElement('th');th.textContent=r.name;hr.append(th);}
       const totalHead=document.createElement('th');totalHead.textContent=tx('Total membre','Member total');hr.append(totalHead);head.append(hr);table.append(head);
       for(const m of activeMembers){
         const tr=document.createElement('tr'),number=document.createElement('th'),name=document.createElement('th');number.className='member-number-column';number.textContent=String(Number(m.memberNumber)||'—');name.innerHTML=html`<strong>${String(m.displayName??'')}</strong><small>${m.roles.join(', ')}</small>`;name.title=String(m.displayName??'')+(m.roles.length?' · '+m.roles.join(', '):'');tr.append(number,name);let rowTotal=0;
         tr.dataset.membershipId=m.id;
-        for(const r of activeRubrics){const value=exactCellAmount(m.id,r.id,selectedMeeting);rowTotal+=value;const td=document.createElement('td');td.dataset.rubricId=r.id;td.append(makeFinancialEntryCell({member:m,rubric:r,meetingId:selectedMeeting,editable:Boolean(editable&&isManager())}));tr.append(td);}
+        for(const r of visibleRubrics){const value=exactCellAmount(m.id,r.id,selectedMeeting);const td=document.createElement('td');td.dataset.rubricId=r.id;td.append(makeFinancialEntryCell({member:m,rubric:r,meetingId:selectedMeeting,editable:Boolean(editable&&isManager())}));tr.append(td);}
         const total=document.createElement('td');total.className='table-row-total';total.textContent=fmt(rowTotal);tr.append(total);body.append(tr);
       }
       const totalRow=document.createElement('tr');totalRow.className='table-total-row';const totalLabel=document.createElement('th');totalLabel.colSpan=2;totalLabel.textContent=tx('TOTAL COLONNES','COLUMN TOTALS');totalRow.append(totalLabel);let grand=0;
-      for(const r of activeRubrics){const amount=activeMembers.reduce((sum,m)=>sum+exactCellAmount(m.id,r.id,selectedMeeting),0);grand+=amount;const td=document.createElement('td');td.dataset.totalRubricId=r.id;td.textContent=fmt(amount);totalRow.append(td);}
-      const grandTd=document.createElement('td');grandTd.className='table-grand-total';grandTd.textContent=fmt(grand);totalRow.append(grandTd);body.append(totalRow);
+      for(const r of visibleRubrics){const amount=activeMembers.reduce((sum,m)=>sum+exactCellAmount(m.id,r.id,selectedMeeting),0);const td=document.createElement('td');td.dataset.totalRubricId=r.id;td.textContent=fmt(amount);totalRow.append(td);}
+      const grandTd=document.createElement('td');grandTd.className='table-grand-total';
+      const grand=activeMembers.reduce((total,m)=>total+activeRubrics.reduce((sum,r)=>sum+exactCellAmount(m.id,r.id,selectedMeeting),0),0);
+      grandTd.textContent=fmt(grand);grandTd.title=tx('Total général de toutes les rubriques','Grand total across every rubric');
+      totalRow.append(grandTd);body.append(totalRow);
       table.append(body);wrap.append(table);
       const note=document.createElement('p');note.className='truth-notice';note.textContent=tx('Une seule matrice financière canonique est utilisée ici et dans les fiches individuelles. Chaque cellule est la valeur totale de la séance : Remplacer 1 000 par 500 donne 500. La dernière ligne totalise chaque colonne et la dernière colonne totalise chaque membre.','One canonical financial matrix is used here and in individual sheets. Each cell is the total value for the meeting: replacing 1,000 with 500 gives 500. The last row totals every column and the last column totals every member.');
       if(showToolbar){
@@ -1341,25 +1381,28 @@ const renderCanonicalFinancialTable=({root,mode='meeting',meetingId='',membershi
         const add=document.createElement('button');add.type='button';add.className='secondary';add.textContent=tx('+ Nouvelle séance','+ New meeting');add.onclick=()=>go('sessions',{anchor:'sessionsCreateForm',force:true});
         toolbar.append(label,other,add);root.append(toolbar);
       }
-      root.append(wrap,note);restoreReplacedMatrixScroll(wrap);root.dataset.canonicalTableReady='1';return;
+      root.append(presentation,wrap,note);restoreReplacedMatrixScroll(wrap);root.dataset.canonicalTableReady='1';return;
     }
     const member=activeMembers.find(x=>x.id===membershipId);
     if(!member){root.innerHTML='<div class="empty-state">'+tx('Aucune fiche individuelle accessible.','No individual sheet available.')+'</div>';return;}
     hr.append(document.createElement('th'));hr.firstChild.textContent=tx('Séance','Meeting');
-    for(const r of activeRubrics){const th=document.createElement('th');th.textContent=r.name;hr.append(th);}
+    for(const r of visibleRubrics){const th=document.createElement('th');th.textContent=r.name;hr.append(th);}
     const totalHead=document.createElement('th');totalHead.textContent=tx('Total séance','Meeting total');hr.append(totalHead);head.append(hr);table.append(head);
     const activeMeetings=meetings.filter(x=>x.status!=='cancelled').slice().sort((a,b)=>String(a.scheduledAt??a.openedAt).localeCompare(String(b.scheduledAt??b.openedAt)));
     for(const meeting of activeMeetings){
       const tr=document.createElement('tr'),th=document.createElement('th');th.textContent=meetingLabel(meeting)+(meeting.status==='closed'?' · '+tx('clôturée','closed'):'');tr.append(th);let rowTotal=0;
       tr.dataset.meetingId=meeting.id;
-      for(const r of activeRubrics){const value=exactCellAmount(member.id,r.id,meeting.id);rowTotal+=value;const td=document.createElement('td');td.dataset.rubricId=r.id;td.append(makeFinancialEntryCell({member,rubric:r,meetingId:meeting.id,editable:Boolean(editable&&isManager())}));tr.append(td);}
+      for(const r of visibleRubrics){const value=exactCellAmount(member.id,r.id,meeting.id);const td=document.createElement('td');td.dataset.rubricId=r.id;td.append(makeFinancialEntryCell({member,rubric:r,meetingId:meeting.id,editable:Boolean(editable&&isManager())}));tr.append(td);}
       const total=document.createElement('td');total.className='table-row-total';total.textContent=fmt(rowTotal);tr.append(total);body.append(tr);
     }
     const totalRow=document.createElement('tr');totalRow.className='table-total-row';const label=document.createElement('th');label.textContent=tx('TOTAL COLONNES','COLUMN TOTALS');totalRow.append(label);let grand=0;
-    for(const r of activeRubrics){const amount=activeMeetings.reduce((sum,meeting)=>sum+exactCellAmount(member.id,r.id,meeting.id),0);grand+=amount;const td=document.createElement('td');td.dataset.totalRubricId=r.id;td.textContent=fmt(amount);totalRow.append(td);}
-    const grandTd=document.createElement('td');grandTd.className='table-grand-total';grandTd.textContent=fmt(grand);totalRow.append(grandTd);body.append(totalRow);table.append(body);wrap.append(table);
+    for(const r of visibleRubrics){const amount=activeMeetings.reduce((sum,meeting)=>sum+exactCellAmount(member.id,r.id,meeting.id),0);const td=document.createElement('td');td.dataset.totalRubricId=r.id;td.textContent=fmt(amount);totalRow.append(td);}
+    const grandTd=document.createElement('td');grandTd.className='table-grand-total';
+    const grand=activeMeetings.reduce((total,m)=>total+activeRubrics.reduce((sum,r)=>sum+exactCellAmount(member.id,r.id,m.id),0),0);
+    grandTd.textContent=fmt(grand);grandTd.title=tx('Total général de toutes les rubriques','Grand total across every rubric');
+    totalRow.append(grandTd);body.append(totalRow);table.append(body);wrap.append(table);
     const note=document.createElement('p');note.className='truth-notice';note.textContent=tx('Cette fiche utilise exactement le même éditeur financier que la feuille de séance. Les totaux de chaque rubrique figurent sur la dernière ligne.','This sheet uses exactly the same financial editor as the meeting sheet. Totals for every rubric appear on the last row.');
-    root.append(wrap,note);restoreReplacedMatrixScroll(wrap);root.dataset.canonicalTableReady='1';
+    root.append(presentation,wrap,note);restoreReplacedMatrixScroll(wrap);root.dataset.canonicalTableReady='1';
 };
 const renderMeetingMatrix=()=>renderCanonicalFinancialTable({root:document.querySelector('#meetingMatrix'),mode:'meeting',meetingId:ensureMatrixMeeting(),showToolbar:true,editable:isManager()});
 const renderIndividualSheetMatrix=()=>{
