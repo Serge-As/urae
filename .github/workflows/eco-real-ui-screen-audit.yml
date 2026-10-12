@@ -42,3 +42,4 @@ jobs:
           const r=JSON.parse(fs.readFileSync('audit-live-ui/audit.json','utf8'));
           console.log(JSON.stringify({url:r.url,health:r.health,shots:r.screenshots.length,login:r.checks.filter(x=>x.phase==='initial').map(x=>({id:x.id,authenticated:x.authenticated,reason:x.reason})),views:r.checks.filter(x=>x.view).length,blocked:r.checks.filter(x=>String(x.status).startsWith('BLOCKED')).length},null,2));
           JS
+# live post-deploy comparison 20261012; read-only screenshots, never deploy.
