@@ -1,0 +1,35 @@
+name: Eco-System — real 10-step group and cockpit acceptance
+on:
+  push:
+    branches: [preview/eco-refonte-20261012]
+    paths:
+      - 'scripts/group-visual-proof-preview.mjs'
+      - '.github/workflows/eco-group-real-acceptance.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: eco-group-real-acceptance
+  cancel-in-progress: false
+jobs:
+  group-audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: npx playwright install --with-deps chromium
+      - name: Attempt actual group wizard then capture sensitive group screens
+        run: node scripts/group-visual-proof-preview.mjs
+      - name: Preserve failures, screenshots and reproducible evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: eco-system-group-wizard-real-proof
+          path: group-evidence/
+          if-no-files-found: warn
+          retention-days: 21
