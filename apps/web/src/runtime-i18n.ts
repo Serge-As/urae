@@ -3,6 +3,10 @@ import {messages} from './i18n.js';
 export type RuntimeLocale = 'fr'|'en';
 
 const EXTRA_FR_EN: Record<string,string> = {
+  'Langue / Language':'Language',
+  'Langue de l’interface / Interface language':'Interface language',
+  'Langue de l’interface':'Interface language',
+  'Choisir la langue / Choose language':'Choose language',
   'Découvrir des groupes':'Discover groups',
   'Vos principales actions':'Your main actions',
   'Studio médias':'Media studio',
