@@ -19,6 +19,9 @@
   <section id="authScreen" class="auth-screen" aria-label="Connexion à Eco-System">
   <div class="auth-brand"><span class="auth-logo">E</span><strong>Eco-System</strong><p>Vos groupes, vos comptes, vos décisions.</p></div>
   <div class="auth-card">
+    <label class="eco-language-picker eco-auth-language">Langue / Language
+      <select id="authLanguageSelect" data-eco-language-control aria-label="Langue de l’interface / Interface language"><option value="fr">Français</option><option value="en">English</option></select>
+    </label>
     <h1>Bienvenue dans votre espace</h1>
     <div class="auth-tabs"><button type="button" data-auth-mode="login" class="selected" aria-pressed="true">Connexion</button><button type="button" data-auth-mode="register" aria-pressed="false">Créer un compte</button></div>
     <form id="authForm" class="form-grid">
@@ -40,7 +43,7 @@
       <select id="activeGroupSelect" aria-label="Groupe actif"><option value="">Aucun groupe actif</option></select>
       <div class="top-search"><input id="globalSearch" placeholder="Rechercher une fonction, un groupe, un service…" autocomplete="off"><div id="globalSearchResults" class="search-popover"></div></div>
     </div>
-    <div class="top-actions"><span id="accountName"></span><button id="claimLocalAccountBtn" type="button" class="primary" hidden>Finaliser le compte local</button><button id="logoutBtn" type="button" class="ghost">Déconnexion</button>
+    <div class="top-actions"><label class="eco-language-picker eco-top-language" aria-label="Langue de l’interface"><select id="topLanguageSelect" data-eco-language-control aria-label="Choisir la langue / Choose language"><option value="fr">FR</option><option value="en">EN</option></select></label><span id="accountName"></span><button id="claimLocalAccountBtn" type="button" class="primary" hidden>Finaliser le compte local</button><button id="logoutBtn" type="button" class="ghost">Déconnexion</button>
       <span id="connectivity" class="pill">● …</span>
       <button id="installBtn" class="ghost" hidden>Installer</button>
       <button id="refreshBtn" class="ghost">Actualiser</button>
