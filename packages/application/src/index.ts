@@ -1545,6 +1545,29 @@ export class ConnectedApplication {
     return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/meetings/${encodeURIComponent(meetingId)}/financial-cells/${encodeURIComponent(cellKey)}/apply`,{method:'POST',body:JSON.stringify({reason})});
   }
   async groupNotifications():Promise<any[]>{if(!this.activeGroupId)return[];return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/notifications`);}
+  /** Read-only personal projection of the existing group NotificationService.
+   * Each scoped request is independently authorized by the API. Nothing switches
+   * activeGroupId, invents a notification, or starts background polling.
+   */
+  async notificationsAcrossGroups():Promise<{items:any[];unavailable:{groupId:string;groupName:string}[]}>{
+    const groups=await this.listGroups(),items:any[]=[],unavailable:{groupId:string;groupName:string}[]=[];
+    for(let offset=0;offset<groups.length;offset+=3){
+      const batch=groups.slice(offset,offset+3);
+      await Promise.all(batch.map(async group=>{
+        try{
+          const notices=await this.request<any[]>('/api/v1/groups/'+encodeURIComponent(group.id)+'/notifications');
+          for(const notice of notices)items.push({...notice,groupId:group.id,groupName:group.name});
+        }catch{
+          unavailable.push({groupId:group.id,groupName:group.name});
+        }
+      }));
+    }
+    return{items,unavailable};
+  }
+  async markNotificationReadInGroup(groupId:string,id:string):Promise<any>{
+    if(!groupId||!id)throw Error('NOTICE_SCOPE_REQUIRED');
+    return this.request('/api/v1/groups/'+encodeURIComponent(groupId)+'/notifications/'+encodeURIComponent(id)+'/read',{method:'POST',body:'{}'});
+  }
   async trashItems():Promise<any[]>{if(!this.activeGroupId)return[];return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/trash`);}
   async moveToTrash(kind:'MEETING'|'MEMBER'|'RUBRIC'|'GROUP',entityId:string):Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/trash`,{method:'POST',body:JSON.stringify({kind,entityId})});}
   async restoreTrashItem(trashId:string):Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/trash/${encodeURIComponent(trashId)}/restore`,{method:'POST',body:'{}'});}
