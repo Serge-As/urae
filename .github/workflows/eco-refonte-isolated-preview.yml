@@ -39,21 +39,31 @@ jobs:
           npm ci --ignore-scripts
           npm run ci
           npm run build
-      - name: Verify isolated Cloudflare DB and media bucket (read only)
+      - name: Provision only isolated preview D1 and R2 (never touch production resources)
         shell: bash
+        env:
+          CI: 'true'
         run: |
           set -euo pipefail
+          test "$PREVIEW_DB" = 'eco-system-refonte-preview-db'
+          test "$PREVIEW_BUCKET" = 'eco-system-refonte-preview-media'
+          test "$PREVIEW_WORKER" = 'eco-system-refonte-preview'
           npx --yes wrangler@4 d1 list --json > /tmp/eco-preview-d1-list.json
           DB_ID="$(node scripts/cloudflare-d1-id.mjs /tmp/eco-preview-d1-list.json "$PREVIEW_DB" || true)"
           if [ -z "$DB_ID" ]; then
-            echo "::error::Preview D1 not provisioned. Refusing to reuse or create a database."
-            exit 1
+            echo "Isolated preview database absent; creating the empty preview database only."
+            npx --yes wrangler@4 d1 create "$PREVIEW_DB" --location=weur --update-config=false
+            npx --yes wrangler@4 d1 list --json > /tmp/eco-preview-d1-list.json
+            DB_ID="$(node scripts/cloudflare-d1-id.mjs /tmp/eco-preview-d1-list.json "$PREVIEW_DB" || true)"
           fi
+          test -n "$DB_ID" || { echo "::error::Cannot provision isolated preview D1"; exit 1; }
           npx --yes wrangler@4 r2 bucket list > /tmp/eco-preview-r2-list.txt
           if ! grep -Fq "$PREVIEW_BUCKET" /tmp/eco-preview-r2-list.txt; then
-            echo "::error::Preview R2 not provisioned. Refusing to reuse production media."
-            exit 1
+            echo "Isolated preview media bucket absent; creating an empty bucket only."
+            npx --yes wrangler@4 r2 bucket create "$PREVIEW_BUCKET"
+            npx --yes wrangler@4 r2 bucket list > /tmp/eco-preview-r2-list.txt
           fi
+          grep -Fq "$PREVIEW_BUCKET" /tmp/eco-preview-r2-list.txt || { echo "::error::Cannot provision isolated preview R2"; exit 1; }
           echo "PREVIEW_DB_ID=$DB_ID" >> "$GITHUB_ENV"
       - name: Generate isolated Wrangler config
         shell: bash
