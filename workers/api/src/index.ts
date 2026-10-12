@@ -29,6 +29,7 @@ import { allocateSavingsYield, splitInterestPool, simulateWorkbookYieldPipeline,
 import { buildFinancialRecap, buildSessionRecap, buildClosingCarryover } from '../../../packages/recap-engine/src/index.js';
 import { AdManagerService, AD_PLACEMENT_CATALOG, HOUSE_AD_CATALOG, selectAdDelivery } from '../../../packages/ad-manager/src/index.js';
 import { PartnerAdProposalService } from '../../../packages/ad-manager/src/partner-proposals.js';
+import { ExternalAdInviteService } from '../../../packages/ad-manager/src/external-invitations.js';
 import { VisualMediaService } from '../../../packages/visual-media/src/index.js';
 import { FounderBrandMediaService } from '../../../packages/visual-media/src/founder-brand.js';
 import { diagnoseGroup } from '../../../packages/group-doctor/src/index.js';
@@ -145,6 +146,7 @@ const createRequestScope = (request:Request,repo:PlatformRepository,artifacts?:A
   const miscRubrics=new MiscRubricService(repo,kernel,ledger);
   const adManager=new AdManagerService(repo,kernel,documentAI);
   const partnerAds=new PartnerAdProposalService(repo,kernel,adManager);
+  const externalAds=new ExternalAdInviteService(repo,kernel,artifactStore);
   const economicIntelligence=new EconomicIntelligenceService(repo,kernel);
   const externalPrograms=new ExternalProgramsService(repo,kernel);
   const operationalCockpit=new OperationalCockpitService(repo,kernel,ledger);
@@ -156,7 +158,7 @@ const createRequestScope = (request:Request,repo:PlatformRepository,artifacts?:A
   const tenantId=request.headers.get('x-tenant-id')??'tenant_demo'; const actorId=request.headers.get('x-actor-id')??'user_founder';
   const groupRoles=(request.headers.get('x-group-roles')??'founder,manager').split(',').map(x=>x.trim()).filter(Boolean);
   kernel.context.set({actorId,tenantId,activeGroupId:request.headers.get('x-active-group-id')??undefined,groupRoles,mandateIds:[],mandateGrants:[],deviceId:request.headers.get('x-device-id')??'device_web_demo',sessionId:request.headers.get('x-session-id')??'session_demo',locale:request.headers.get('accept-language')?.toLowerCase().startsWith('en')?'en':'fr',timezone:request.headers.get('x-timezone')??'Africa/Douala',connectivity:'online',requestId:request.headers.get('x-request-id')??makeId('req')});
-  return {kernel,foundation,ledger,meetings,discovery,membershipGateway,rubrics,completion,explainability,documents,receivables,treasury,riskFinance,market,community,imports,artifactStore,memberControl,memberEnvelopes,groupIdentity,conciergeLearning,miscRubrics,adManager,partnerAds,economicIntelligence,externalPrograms,operationalCockpit,businessStudio,knowledgeAcademy,valueNetwork,creatorTalent,quietWatch};
+  return {kernel,foundation,ledger,meetings,discovery,membershipGateway,rubrics,completion,explainability,documents,receivables,treasury,riskFinance,market,community,imports,artifactStore,memberControl,memberEnvelopes,groupIdentity,conciergeLearning,miscRubrics,adManager,partnerAds,externalAds,economicIntelligence,externalPrograms,operationalCockpit,businessStudio,knowledgeAcademy,valueNetwork,creatorTalent,quietWatch};
 };
 
 const inboxFor = async (repo:PlatformRepository,tenantId:string,actorId:string) => {
@@ -171,7 +173,7 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
     const allowed=Boolean((cors as Record<string,string>)['access-control-allow-origin']);
     return new Response(null,{status:allowed?204:403,headers:{...baseSecurityHeaders,...cors,'access-control-allow-methods':'GET,POST,PUT,OPTIONS','access-control-allow-headers':'content-type,x-tenant-id,x-actor-id,x-group-roles,x-active-group-id,x-device-id,x-session-id,x-request-id,x-timezone'}});
   }
-  const {kernel,foundation,ledger,meetings,discovery,membershipGateway,rubrics,completion,explainability,documents,receivables,treasury,riskFinance,market,community,imports,artifactStore,memberControl,memberEnvelopes,groupIdentity,conciergeLearning,miscRubrics,adManager,partnerAds,economicIntelligence,externalPrograms,operationalCockpit,businessStudio,knowledgeAcademy,valueNetwork,creatorTalent,quietWatch}=createRequestScope(request,repo,options.artifacts,options.dataUseDefaultMode??'BETA_OPEN',options.documentAI);
+  const {kernel,foundation,ledger,meetings,discovery,membershipGateway,rubrics,completion,explainability,documents,receivables,treasury,riskFinance,market,community,imports,artifactStore,memberControl,memberEnvelopes,groupIdentity,conciergeLearning,miscRubrics,adManager,partnerAds,externalAds,economicIntelligence,externalPrograms,operationalCockpit,businessStudio,knowledgeAcademy,valueNetwork,creatorTalent,quietWatch}=createRequestScope(request,repo,options.artifacts,options.dataUseDefaultMode??'BETA_OPEN',options.documentAI);
   let ctx=kernel.context.get();
   const trustedLiveTicket=request.headers.get('x-live-ticket-authenticated')==='1';
   if(!trustedLiveTicket)try{
@@ -2439,6 +2441,27 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
     }
     const adSurface=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/ads\/surface\/([^/]+)$/);
     if(adSurface&&request.method==='GET')return json(await adManager.placement(adSurface[1]!,adSurface[2]! as any),200,cors);
+    // Advertiser portal uses a high-entropy, founder/manager-issued bearer
+    // invitation. The bearer has no group member rights, financial permissions
+    // or authority to publish campaigns.
+    const externalInvite=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/ads\/external-invites$/);
+    if(externalInvite&&request.method==='GET')return json(await externalAds.list(externalInvite[1]!),200,cors);
+    if(externalInvite&&request.method==='POST'){
+      const body=await readJson<Record<string,unknown>>(request);
+      return json(await externalAds.issue(externalInvite[1]!,String(body.title??''),Number(body.hours??72)),201,cors);
+    }
+    const externalIntake=url.pathname.match(/^\/api\/v1\/external-ads\/groups\/([^/]+)\/invites\/([^/]+)$/);
+    if(externalIntake&&request.method==='GET')return json(await externalAds.status(externalIntake[1]!,decodeURIComponent(externalIntake[2]!)),200,cors);
+    if(externalIntake&&request.method==='POST'){
+      const input=await readJson<Record<string,unknown>>(request);
+      return json(await externalAds.submit(externalIntake[1]!,decodeURIComponent(externalIntake[2]!),input),201,cors);
+    }
+    const externalPhoto=url.pathname.match(/^\/api\/v1\/external-ads\/groups\/([^/]+)\/invites\/([^/]+)\/photo$/);
+    if(externalPhoto&&request.method==='POST'){
+      const data=await request.formData(),file=data.get('file');
+      if(!(file instanceof File))throw Error('MEDIA_FILE_REQUIRED');
+      return json(await externalAds.upload(externalPhoto[1]!,decodeURIComponent(externalPhoto[2]!),file),201,cors);
+    }
     const adDashboard=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/ads\/dashboard$/);
     if(adDashboard&&request.method==='GET')return json(await adManager.dashboard(adDashboard[1]!),200,cors);
     const adHousePlan=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/ads\/house-plan$/);
