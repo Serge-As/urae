@@ -18,6 +18,8 @@ const pages=[
 
 async function snapshot(page,label,mode){
   const safe=label.replace(/[^a-z0-9_-]/gi,'_'),file=mode+'-'+safe+'.png';
+  await page.evaluate(()=>{document.documentElement.style.scrollBehavior='auto';window.scrollTo(0,0);});
+  await page.waitForTimeout(150);
   await page.screenshot({path:path.join(dest,file),animations:'disabled',timeout:15000});
   const state=await page.evaluate(()=>{
     const body=document.body;
