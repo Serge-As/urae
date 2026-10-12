@@ -78,12 +78,13 @@ export function mountPersonalCockpitUI({app,getGroups,getMembers,getMeetings,nav
   const tr=(fr,en)=>document.documentElement.lang?.startsWith('en')?en:fr;
   // Personal directory only. Every discussion still belongs to the existing
   // Community / InterestCommunity owner; no second feed or message store.
-  const renderPersonalForas=(groups,communities)=>{
+  const renderPersonalForas=(groups,communities,unavailable=false)=>{
     const section=el('details',undefined,'item personal-foras-directory');
     const count=groups.length+communities.length;
     section.append(el('summary',tr('Mes Foras · '+count+' espaces','My Forums · '+count+' spaces')));
     const hint=el('p',tr('Retrouvez vos groupes et communautés sans quitter votre compte. Chaque espace garde ses propres droits.','Open your groups and communities from your account. Each space keeps its own permissions.'),'hint');
     section.append(hint);
+    if(unavailable)section.append(el('p',tr('La liste de vos groupes est temporairement indisponible. Cela ne signifie pas que vous en avez été retiré.','Your group list is temporarily unavailable. It does not mean that you have been removed.'),'truth-notice'));
     if(groups.length){
       section.append(el('strong',tr('Foras de mes groupes','My group forums')));
       for(const group of groups){
@@ -105,7 +106,7 @@ export function mountPersonalCockpitUI({app,getGroups,getMembers,getMeetings,nav
         section.append(button);
       }
     }
-    if(!count)section.append(el('p',tr('Rejoignez un groupe ou une communauté pour retrouver ici ses échanges.','Join a group or community to find its discussions here.'),'hint'));
+    if(!count&&!unavailable)section.append(el('p',tr('Rejoignez un groupe ou une communauté pour retrouver ici ses échanges.','Join a group or community to find its discussions here.'),'hint'));
     spaces.append(section);
   };
     const refresh=async()=>{
@@ -116,18 +117,19 @@ export function mountPersonalCockpitUI({app,getGroups,getMembers,getMeetings,nav
     metrics.append(metric(personalCommunities.length,'Communautés d’intérêt'));
     // A tenant catalogue can contain groups that are not mine. Never expose
     // those names as my forum shortcuts without a server membership check.
-    let forumGroups=[];try{forumGroups=await app.listMyGroups();}catch{}
-    renderPersonalForas(forumGroups,personalCommunities);
+    let forumGroups=[],forumsUnavailable=false;
+    try{forumGroups=await app.listMyGroups();}catch{forumsUnavailable=true;}
+    renderPersonalForas(forumGroups,personalCommunities,forumsUnavailable);
     void renderPulse();
     if(!groupId){
       situation.append(el('p','Choisissez un groupe ou rejoignez-en un avec un code.','hint'),action('Choisir / rejoindre','discovery'));
       next.append(el('p','Aucun groupe actif : votre cockpit reste centré sur votre compte.','hint'));
-      spaces.append(...groups.slice(0,12).map(g=>detail(g.name,'group',g.id)));
+      spaces.append(...forumGroups.slice(0,12).map(g=>detail(g.name,'group',g.id)));
       for(const c of personalCommunities.slice(0,8)){const a=el('article',undefined,'item');a.append(el('strong',c.name),row('Communauté',c.locality||'Sans localité'));spaces.append(a);}
       spaces.append(action('Découvrir des communautés','ecosystem'));
       return;
     }
-    const active=groups.find(g=>g.id===groupId);if(active)spaces.append(detail(active.name,'group',active.id));
+    const active=forumGroups.find(g=>g.id===groupId);if(active)spaces.append(detail(active.name,'group',active.id));
     const open=meetings.filter(m=>m.status==='open'),future=meetings.filter(m=>m.scheduledAt&&Date.parse(m.scheduledAt)>=Date.now()).sort((a,b)=>Date.parse(a.scheduledAt)-Date.parse(b.scheduledAt));
     metrics.append(metric(open.length,'Séances ouvertes'));
     if(mine){
