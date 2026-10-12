@@ -114,7 +114,10 @@ export function mountPersonalCockpitUI({app,getGroups,getMembers,getMeetings,nav
     metrics.append(metric(groups.length,'Groupes accessibles'));
     let personalCommunities=[];try{personalCommunities=await app.myInterestCommunities();}catch{}
     metrics.append(metric(personalCommunities.length,'Communautés d’intérêt'));
-    renderPersonalForas(groups,personalCommunities);
+    // A tenant catalogue can contain groups that are not mine. Never expose
+    // those names as my forum shortcuts without a server membership check.
+    let forumGroups=[];try{forumGroups=await app.listMyGroups();}catch{}
+    renderPersonalForas(forumGroups,personalCommunities);
     void renderPulse();
     if(!groupId){
       situation.append(el('p','Choisissez un groupe ou rejoignez-en un avec un code.','hint'),action('Choisir / rejoindre','discovery'));
