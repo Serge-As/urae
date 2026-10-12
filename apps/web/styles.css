@@ -1307,3 +1307,19 @@ body.ultra-simple .canonical-financial-matrix .cell-validate{min-height:48px;hei
 .eco-partner-ads .eco-partner-proposal-form{margin-block:12px 18px}
 @media(max-width:680px){.eco-ad-surface{margin:10px 0 16px;padding:14px 12px}
   .eco-ad-surface>button{width:100%;min-height:48px}.eco-ad-surface-image{aspect-ratio:16/9}}
+
+/* Standalone externally invited advertiser portal; same existing Eco palette. */
+
+body{min-height:100vh;padding:clamp(12px,4vw,40px);background:var(--bg)}
+.external-ad-shell{max-width:780px;margin:auto;display:grid;gap:18px}
+.external-ad-shell header,.external-ad-shell section{background:var(--surface);padding:clamp(16px,3vw,28px);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow)}
+.external-ad-shell h1{margin:0;color:var(--brand);font-size:clamp(1.6rem,4vw,2.3rem)}
+.external-ad-shell .external-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.external-ad-shell label{display:grid;gap:6px;font-weight:600}
+.external-ad-shell label.wide{grid-column:1/-1}
+.external-ad-shell input,.external-ad-shell textarea,.external-ad-shell select{width:100%;max-width:100%;min-height:45px}
+.external-ad-shell button{min-height:48px}
+.external-ad-shell .status{white-space:pre-wrap}
+@media(max-width:640px){.external-ad-shell .external-grid{grid-template-columns:1fr}}
+
+#externalAdForm[hidden]{display:none!important}
