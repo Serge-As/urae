@@ -1,3 +1,4 @@
+export {};
 const byId=id=>document.getElementById(id);
 const options=new URLSearchParams(location.hash.slice(1));
 const token=options.get('token')??'',tenant=options.get('tenant')??'',group=options.get('group')??'';
