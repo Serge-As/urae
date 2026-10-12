@@ -19,6 +19,15 @@ async function step(label,fn){
   try{await fn();report.steps.push({step:label,result:'PASS'});}
   catch(e){report.steps.push({step:label,result:'FAIL',error:String(e).slice(0,450)});throw e;}
 }
+async function next(){
+  const current=Number((await page.locator('#launchStepStatus').innerText()).match(/\d+/)?.[0]??0);
+  await page.locator('#launchNextBtn').click();
+  await page.waitForFunction(expected=>{
+    const value=document.querySelector('#launchStepStatus')?.textContent??'';
+    return Number(value.match(/\d+/)?.[0]??0)===expected &&
+      document.querySelector('[data-launch-step="'+expected+'"]')?.hidden===false;
+  },current+1,{timeout:7000});
+}
 function browse(view){
  return page.locator('#mainNav .nav-btn[data-view="'+view+'"]').first().evaluate(e=>e.click());
 }
@@ -35,18 +44,18 @@ try{
   await page.locator('body:not(.signed-out):not(.auth-restoring)').waitFor({timeout:20000});
   await page.locator('#authScreen').waitFor({state:'hidden',timeout:20000});
  });
- await step('navigate wizard',async()=>{await browse('launch');await page.locator('#launchNextBtn').click();});
+ await step('navigate wizard',async()=>{await browse('launch');await next();});
  await step('group identity and governance',async()=>{
   await page.locator('#projectName').fill('Association UX Audit Isolée');
   await page.locator('#groupKind').selectOption('association');
-  await page.locator('#launchNextBtn').click(); // 3
+  await next(); // 3
   await page.locator('#governanceModel').selectOption('founder_managed');
-  await page.locator('#launchNextBtn').click(); // 4
+  await next(); // 4
   await page.locator('#cycleLabel').fill('Audit octobre 2026');
   await page.locator('#cycleExpectedSessions').fill('3');
-  await page.locator('#launchNextBtn').click(); // 5
+  await next(); // 5
   await page.locator('#expectedMembers').fill('3');
-  await page.locator('#launchNextBtn').click(); // 6
+  await next(); // 6
  });
  await step('create governed rubric, no real money',async()=>{
   await page.locator('#addLaunchRubric').click();
@@ -58,7 +67,7 @@ try{
   if(await rub('Pots servis par tour').locator('input').isEnabled())await rub('Pots servis par tour').locator('input').fill('3');
   await rub('Nombre de tours').locator('input').fill('3');
   await rub('Durée du cycle').locator('input').fill('3');
-  await page.locator('#launchNextBtn').click(); // 7
+  await next(); // 7
  });
  await step('simulate plan',async()=>{
   await page.locator('#simulateProjectBtn').click();
@@ -67,7 +76,7 @@ try{
   if(!result.includes('Total monétaire'))throw Error('Simulation did not produce expected result: '+result.slice(0,120));
  });
  await step('review preview and create',async()=>{
-  for(let n=8;n<=10;n++)await page.locator('#launchNextBtn').click();
+  for(let n=8;n<=10;n++)await next();
   await page.locator('#previewConfirmed').check();
   await page.locator('#createGroupBtn').click();
   await page.waitForTimeout(2600);
