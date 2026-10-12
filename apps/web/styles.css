@@ -1477,3 +1477,27 @@ body.external-ad-portal{min-height:100vh;padding:clamp(12px,4vw,40px);background
 .eco-auth-language{justify-content:flex-end;flex-wrap:wrap;font-size:12px;font-weight:700;margin-bottom:12px}
 .eco-top-language{flex:0 0 auto}
 @media(max-width:700px){.eco-top-language select{min-width:64px;min-height:44px;padding:6px 8px}.eco-auth-language{justify-content:flex-start}}
+
+/* Personal foras, cross-group inbox, and governed AdManager creative preview.
+   Presentation only: no polling, cross-tenant access or fictional delivery. */
+.personal-foras-directory{display:grid;gap:12px;min-width:0;padding:16px;
+  border:1px solid var(--line);border-radius:16px;background:var(--surface)}
+.personal-foras-directory summary{cursor:pointer;color:var(--brand);font-weight:800;min-height:44px;
+  display:list-item;align-content:center}
+.personal-foras-directory>strong{margin-top:6px;display:block;font-size:.86rem;color:var(--brand)}
+.personal-forum-link{display:block;width:100%;text-align:left;overflow-wrap:anywhere;
+  min-height:44px;margin:5px 0;padding:10px 14px}
+.notification-origin{display:block;color:var(--brand);font-weight:750;letter-spacing:.015em}
+.ad-creative-preview{display:grid;gap:10px;align-content:start;min-width:0;padding:16px;
+  border:1px solid var(--line);border-radius:16px;background:var(--surface)}
+.ad-creative-preview .eco-ad-disclosure{text-transform:none;font-weight:750}
+.ad-creative-preview-image{width:100%;max-height:220px;object-fit:cover;border-radius:12px;
+  background:var(--brand-soft);aspect-ratio:16/9}
+.ad-creative-preview-image[hidden]{display:none}
+.ad-creative-preview strong{font-size:1.12rem;line-height:1.25;color:var(--brand)}
+.ad-creative-preview p{margin:0;line-height:1.5;overflow-wrap:anywhere}
+.ad-creative-preview .pill{justify-self:start}
+.ad-creative-preview .hint{overflow-wrap:anywhere}
+.ad-creative-preview button{justify-self:start;min-height:44px}
+@media(max-width:700px){.personal-foras-directory,.ad-creative-preview{padding:12px}
+ .personal-forum-link{min-height:48px}}
