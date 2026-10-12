@@ -402,7 +402,16 @@ try{
 window.addEventListener('pagehide',()=>persistNavState(captureNavState()));
 updateBackButton();
 const detailUI = mountDetailUI({ app, navigate: go, getGroups: () => groups, getMembers: () => members, getMeetings: () => meetings, getRubrics: () => rubrics, isManager, fmt, date, showError: fail });
-const personalCockpitUI = mountPersonalCockpitUI({ app, getGroups: () => groups, getMembers: () => members, getMeetings: () => meetings, navigate: go, fmt, date, showError: fail });
+const personalCockpitUI = mountPersonalCockpitUI({
+  app, getGroups:()=>groups, getMembers:()=>members, getMeetings:()=>meetings,
+  navigate:go, fmt, date, showError:fail,
+  openGroupForum:async groupId=>{
+    // Reuse the normal group-context refresh and its permission checks.
+    if(!groups.some(group=>group.id===groupId))throw Error('FORBIDDEN_SCOPE');
+    if(app.activeGroup()!==groupId){app.selectGroup(groupId);await refreshGroupContext();}
+    go('ecosystem',{anchor:'communityEnginePanel',force:true});
+  }
+});
 const recapUI = mountRecapUI({ app, getGroups: () => groups, getMembers: () => members, getMeetings: () => meetings, getRubrics: () => rubrics, isManager, navigate: go, fmt, date, showError: fail });
 const interestCommunityUI = mountInterestCommunityUI({ app, notify: toast, showError: fail, date });
 const adManagerUI = mountAdManagerUI({ app, notify: toast, showError: fail, isManager, fmt });
