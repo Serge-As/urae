@@ -3,6 +3,7 @@ on:
   pull_request:
     branches:
       - fix/confrontation-clock-recovery-20261008
+      - preview/eco-refonte-20261012
     paths:
       - 'apps/web/**'
       - 'packages/**'
