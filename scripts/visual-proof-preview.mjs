@@ -117,6 +117,27 @@ async function runViewport(mode,viewport,isMobile){
 }
 await runViewport('desktop',{width:1440,height:900},false);
 await runViewport('mobile',{width:390,height:844},true);
+// Small contact sheet derived exclusively from REAL live-deployment screenshots.
+// The base64 marker can be privately inspected; originals remain in the artifact.
+try{
+  const labels=['dashboard','operations','finance','ecosystem'];
+  const cells=[];
+  for(const mode of ['desktop','mobile']){
+    for(const label of labels){
+      const filename=mode+'-'+label+'.png';
+      if(!report.captures.some(c=>c.file===filename))continue;
+      const data=await fs.readFile(path.join(dest,filename));
+      cells.push({mode,label,url:'data:image/png;base64,'+data.toString('base64')});
+    }
+  }
+  const sheet=await browser.newPage({viewport:{width:1040,height:1050},deviceScaleFactor:1});
+  const cards=cells.map(c=>'<article><div>'+c.mode+' — '+c.label+'</div><img src="'+c.url+'" alt="'+c.label+'"></article>').join('');
+  await sheet.setContent('<!doctype html><html><head><style>body{background:#eff4ef;margin:14px;font:17px Arial}main{display:grid;grid-template-columns:repeat(2,1fr);gap:13px}article{border:1px solid #c7d8cf;border-radius:10px;overflow:hidden;background:white}article div{padding:8px 10px;font-weight:bold;color:#176d58}img{display:block;width:100%;height:215px;object-fit:contain;object-position:top;background:#f8faf8}</style></head><body><main>'+cards+'</main></body></html>');
+  await sheet.screenshot({path:path.join(dest,'REAL_CONTACT_SHEET.jpg'),type:'jpeg',quality:37,fullPage:true});
+  const contact=await fs.readFile(path.join(dest,'REAL_CONTACT_SHEET.jpg'));
+  console.log('ECO_REAL_CONTACT_JPEG_BASE64 '+contact.toString('base64'));
+  await sheet.close();
+}catch(error){report.errors.push({kind:'contact-sheet',error:String(error).slice(0,250)});}
 await browser.close();
 await fs.writeFile(path.join(dest,'evidence.json'),JSON.stringify(report,null,2));
 const compact={url:preview,captured:report.captures.length,
