@@ -1219,3 +1219,107 @@ body.ultra-simple .canonical-financial-matrix .cell-validate{min-height:48px;hei
     position:static!important;left:auto!important;right:auto!important;box-shadow:none
   }
 }
+
+
+/* ECO-SYSTEM visual evolution: non-invasive presentation of existing canonical sheets. */
+.eco-smartgrid-toolbar{display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between;padding:12px 14px;margin:0 0 10px;border:1px solid var(--line);border-radius:var(--radius-sm);background:var(--surface-2)}
+.eco-smartgrid-toolbar>strong{font-size:13px;color:var(--ink)}
+.eco-smartgrid-parts,.eco-smartgrid-navigation{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.eco-smartgrid-parts button,.eco-smartgrid-navigation button{min-height:40px;padding:8px 12px;font-size:12px}
+.eco-smartgrid-parts button[aria-pressed="true"]{outline:2px solid var(--brand);outline-offset:2px}
+.eco-smartgrid-navigation span{min-width:90px;font-size:13px;font-weight:700;text-align:center;color:var(--ink)}
+.eco-smartgrid-toolbar button:focus-visible{outline:3px solid var(--brand-2);outline-offset:3px}
+.canonical-financial-wrap .table-grand-total{color:var(--brand);font-variant-numeric:tabular-nums}
+@media(max-width:680px){
+  .eco-smartgrid-toolbar{display:grid;gap:9px;padding:10px}
+  .eco-smartgrid-parts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr))}
+  .eco-smartgrid-parts button{min-width:0;padding:8px 5px;line-height:1.24;font-size:11px;white-space:normal}
+  .eco-smartgrid-navigation{justify-content:center}
+}
+@media(prefers-reduced-motion:reduce){
+  .eco-smartgrid-toolbar *, .eco-smartgrid-toolbar *::before{transition:none!important}
+}
+
+/* Eco-System media studio — inherited palette, no change to business screens. */
+.eco-media-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,280px),1fr));gap:14px}
+.eco-media-slot{display:grid;gap:10px;align-content:start;min-width:0;background:var(--surface);border-radius:var(--radius-sm);padding:14px}
+.eco-media-head{display:flex;justify-content:space-between;align-items:center;color:var(--ink)}
+.eco-media-preview{width:100%;aspect-ratio:16/9;display:grid;place-items:center;overflow:hidden;border-radius:12px;border:1px solid var(--line);background:var(--brand-soft)}
+.eco-media-preview img{width:100%;height:100%;object-fit:cover}
+.eco-media-placeholder{font-size:52px;color:var(--brand);opacity:.68}
+.eco-media-form{display:grid;gap:9px}
+.eco-media-form input[type=file]{height:auto;min-height:48px;max-width:100%;background:var(--surface)}
+.eco-media-form button{width:100%}
+.eco-media-library{padding:14px;border:1px solid var(--line);border-radius:12px}
+.eco-media-library summary{cursor:pointer;font-weight:700}
+@media(max-width:620px){.eco-media-grid{grid-template-columns:1fr}.eco-media-slot{padding:12px}}
+
+/* New visual layers sit alongside, never over, the existing operational controls. */
+.eco-visual-display{margin:12px 0 18px;max-width:100%;overflow:hidden;position:relative;border:1px solid var(--line);border-radius:var(--radius);background:var(--surface-2);box-shadow:var(--shadow)}
+.eco-visual-display img{width:100%;height:100%;max-height:320px;display:block;object-fit:cover}
+.eco-home-visual{aspect-ratio:3/1}.eco-home-visual img{max-height:none}
+.eco-group-visual{aspect-ratio:4/1}.eco-market-visual,.eco-forum-visual{aspect-ratio:4/1}
+.eco-logo-visual,.eco-profile-visual{width:116px;height:116px;aspect-ratio:1}.eco-logo-visual img,.eco-profile-visual img{max-height:none}
+@media(max-width:600px){.eco-home-visual,.eco-group-visual,.eco-market-visual,.eco-forum-visual{aspect-ratio:16/9}.eco-logo-visual,.eco-profile-visual{width:80px;height:80px}}
+
+/* Eco-System Horizon: refinements to existing, unchanged workflows */
+#view-dashboard .hero{
+  border:1px solid var(--line);border-radius:var(--radius);
+  background:
+    radial-gradient(circle at 88% 18%,rgba(184,138,59,.14),transparent 36%),
+    linear-gradient(115deg,var(--brand-soft),var(--surface) 55%,#fff7eb);
+  box-shadow:var(--shadow);overflow:hidden;
+}
+#view-dashboard .hero h1{font-weight:800;letter-spacing:-.035em;text-wrap:balance;max-width:19ch}
+#view-dashboard .hero p{max-width:62ch}
+#view-dashboard .metrics .metric,#groupHomePanel .metric{
+  border:1px solid var(--line);border-radius:var(--radius-sm);box-shadow:var(--shadow)
+}
+#view-dashboard .panel,#groupHomePanel,.eco-media-slot{transition:box-shadow .15s ease}
+@media(hover:hover){#view-dashboard .panel:hover,#groupHomePanel:hover{box-shadow:0 10px 26px rgba(20,32,26,.08)}}
+.eco-ad-creative-thumb{display:block;width:min(100%,450px);max-height:185px;object-fit:cover;border:1px solid var(--line);border-radius:12px}
+@media(prefers-reduced-motion:reduce){#view-dashboard .panel,#groupHomePanel,.eco-media-slot{transition:none}}
+@media(max-width:680px){#view-dashboard .hero h1{font-size:clamp(1.6rem,6vw,2.35rem)}#view-dashboard .hero p{font-size:.95rem}}
+
+.eco-workspace-jump{display:flex;gap:8px;overflow-x:auto;padding:6px 1px 12px;margin:0 0 10px;scrollbar-width:thin}
+.eco-workspace-jump button{flex:0 0 auto;border:1px solid var(--line);border-radius:999px;min-height:42px;padding:9px 16px;background:var(--surface);color:var(--brand);font-weight:700;white-space:nowrap}
+.eco-workspace-jump button:hover,.eco-workspace-jump button:focus-visible{background:var(--brand-soft);border-color:var(--brand)}
+@media(max-width:600px){.eco-workspace-jump{margin:0 -10px 8px;padding-inline:10px}.eco-workspace-jump button{min-height:48px}}
+
+/* Stock images are ornamental; market stock, reservation and price remain canonical. */
+.eco-market-product-photo{display:block;width:min(100%,420px);aspect-ratio:4/3;object-fit:cover;border-radius:12px;border:1px solid var(--line);background:var(--surface-2);margin:0 0 10px}
+.eco-stock-photo-form{display:flex;align-items:end;flex-wrap:wrap;gap:8px;margin-top:10px}
+.eco-stock-photo-form input[type=file]{width:min(100%,300px);height:auto}
+.eco-stock-photo-form button{min-height:48px}
+@media(max-width:620px){.eco-stock-photo-form{display:grid;grid-template-columns:1fr}.eco-stock-photo-form input[type=file]{width:100%}}
+
+/* Governed AdManager placement cards: inherit the existing green/plum/gold palette. */
+.eco-ad-surface{display:grid;gap:8px;max-width:100%;min-width:0;margin:12px 0 18px;padding:16px 18px;
+  border:1px solid var(--line);border-inline-start:4px solid var(--brand);border-radius:var(--radius-sm);
+  background:var(--surface);box-shadow:var(--shadow)}
+.eco-ad-disclosure{display:inline-flex;justify-self:start;max-width:100%;font-size:11px;
+  font-weight:750;text-transform:uppercase;letter-spacing:.045em;color:var(--brand)}
+.eco-ad-surface>strong{font-size:clamp(1rem,1.7vw,1.2rem);color:var(--ink)}
+.eco-ad-surface>p{margin:0;max-width:70ch;line-height:1.6}
+.eco-ad-surface>button{justify-self:start;min-height:44px}
+.eco-ad-surface-image{width:min(100%,510px);aspect-ratio:2/1;object-fit:cover;
+  border-radius:10px;border:1px solid var(--line)}
+.eco-partner-ads .eco-partner-proposal-form{margin-block:12px 18px}
+@media(max-width:680px){.eco-ad-surface{margin:10px 0 16px;padding:14px 12px}
+  .eco-ad-surface>button{width:100%;min-height:48px}.eco-ad-surface-image{aspect-ratio:16/9}}
+
+/* Standalone externally invited advertiser portal; same existing Eco palette. */
+
+body{min-height:100vh;padding:clamp(12px,4vw,40px);background:var(--bg)}
+.external-ad-shell{max-width:780px;margin:auto;display:grid;gap:18px}
+.external-ad-shell header,.external-ad-shell section{background:var(--surface);padding:clamp(16px,3vw,28px);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow)}
+.external-ad-shell h1{margin:0;color:var(--brand);font-size:clamp(1.6rem,4vw,2.3rem)}
+.external-ad-shell .external-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.external-ad-shell label{display:grid;gap:6px;font-weight:600}
+.external-ad-shell label.wide{grid-column:1/-1}
+.external-ad-shell input,.external-ad-shell textarea,.external-ad-shell select{width:100%;max-width:100%;min-height:45px}
+.external-ad-shell button{min-height:48px}
+.external-ad-shell .status{white-space:pre-wrap}
+@media(max-width:640px){.external-ad-shell .external-grid{grid-template-columns:1fr}}
+
+#externalAdForm[hidden]{display:none!important}

@@ -3,6 +3,19 @@ import {messages} from './i18n.js';
 export type RuntimeLocale = 'fr'|'en';
 
 const EXTRA_FR_EN: Record<string,string> = {
+  'Studio médias':'Media studio',
+  'Accès aux espaces existants':'Access existing workspaces',
+  'Boutique du groupe':'Group shop',
+  'Kits du groupe':'Group kits',
+  'Foras · Forums':'Forums and communities',
+  'Régie publicitaire':'Advertising management',
+  'Proposer une publicité':'Submit an advertisement',
+  'Images, profils et couvertures':'Images, profiles and covers',
+  'Remplacez vos photos et les visuels autorisés dans les cockpits. Les annonces commerciales restent gouvernées par AdManager.':'Replace your photos and authorized images in the workspaces. Advertisements remain governed by AdManager.',
+  'Image du créatif publicitaire':'Advertising creative image',
+  'Sans image':'No image',
+  'Ajoutez les images dans « Studio médias » ; elles restent soumises à modération.':'Add images in Media Studio; they remain subject to moderation.',
+
   'Connexion':'Sign in','Créer un compte':'Create account','Votre nom d’affichage':'Your display name',
   'Identifiant':'Username','Mot de passe':'Password','Me connecter':'Sign in',
   'Lettres, chiffres, point, tiret ou underscore.':'Letters, digits, dot, dash or underscore.',

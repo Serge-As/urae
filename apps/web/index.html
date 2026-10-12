@@ -870,6 +870,22 @@
 
       <section id="view-ecosystem" class="view">
         <div class="page-head"><div><span class="eyebrow">Lots F–I</span><h1>Communauté, économie, croissance et accompagnement</h1><p>Les grands services du Cahier sont désormais organisés par domaine au lieu d’être noyés dans une simple liste.</p></div><div class="page-meta"><span class="pill">Community</span><span class="pill">Marketplace</span><span class="pill">Academy & IA</span></div></div>
+        <nav class="eco-workspace-jump" aria-label="Accès aux espaces existants">
+          <button type="button" data-view="ecosystem" data-anchor="interestCommunityPanel">Communautés</button>
+          <button type="button" data-view="ecosystem" data-anchor="marketEnginePanel">Marketplace</button>
+          <button type="button" data-view="ecosystem" data-anchor="groupShopPanel">Boutique du groupe</button>
+          <button type="button" data-view="ecosystem" data-anchor="adManagerPanel">Régie publicitaire</button>
+          <button type="button" data-view="ecosystem" data-anchor="partnerAdPanel">Proposer une publicité</button>
+          <button type="button" data-view="ecosystem" data-anchor="visualMediaPanel">Studio médias</button>
+          <button type="button" data-view="ecosystem" data-anchor="valueNetworkOperational" data-eco-module-preset="NOW">Eco NOW</button>
+          <button type="button" data-view="ecosystem" data-anchor="socialDealTitle">Eco Deals</button>
+          <button type="button" data-view="ecosystem" data-anchor="businessStudioOperational">Eco Business</button>
+          <button type="button" data-view="ecosystem" data-anchor="communityEnginePanel">Foras · Forums</button>
+          <button type="button" data-view="launch" data-anchor="savedStarterKitPanel">Kits du groupe</button>
+          <button type="button" data-view="ecosystem" data-anchor="valueNetworkOperational" data-eco-module-preset="HARVEST">Eco Harvest</button>
+          <button type="button" data-view="ecosystem" data-anchor="academyOperational">Academy</button>
+          <button type="button" data-view="ecosystem" data-anchor="creatorTalentCenter">Creator &amp; Talent</button>
+        </nav>
         <div id="ecosystemHighlights" class="quick-grid"></div>
         <section class="panel" id="blueprintExecutablePanel">
           <div class="panel-head"><div><span class="eyebrow">Blueprint exécutable 5.0.0</span><h2>Association / Tontine d’abord · communautés et opportunités autour · valeur au-delà</h2><p>Les idées validées deviennent des workflows persistants reliés aux moteurs existants : groupe, forums/communautés, besoins, commerce local, activité, talent et confiance. Une proposition reste une proposition jusqu’à validation humaine ; aucun paiement réel n’est déclenché ici.</p></div><button id="blueprintRefreshBtn" type="button" class="secondary">Actualiser</button></div>
@@ -1193,6 +1209,13 @@
         </section>
 
         <section class="panel"><div class="section-kicker"><div><h2>AdManager & sponsoring</h2><p>Campagnes, créations, placements, ciblage contextuel et financier agrégé, modération et analytics. Aucun ciblage individuel par dette, solde, CNI ou identité.</p></div></div><div id="growthHub" class="hub-grid"></div></section>
+        <section class="panel" id="visualMediaPanel">
+          <div class="section-kicker"><div><span class="eyebrow">Studio médias</span>
+            <h2>Images, profils et couvertures</h2>
+            <p>Remplacez vos photos et les visuels autorisés dans les cockpits. Les annonces commerciales restent gouvernées par AdManager.</p>
+          </div></div>
+          <div id="ecoVisualMediaStudio" class="stack"></div>
+        </section>
         <section class="panel" id="adManagerPanel">
           <div class="section-kicker"><div><span class="eyebrow">AdOps · régie complète</span><h2>AdManager & Revenue Studio</h2><p>Inventaire, campagnes, créations, prospects annonceurs, auto-promotion Eco-System et mesure. La publicité reste native, faible-data et absente du cœur d’une action financière critique.</p></div><button id="adManagerRefreshBtn" type="button" class="link-btn">Actualiser la régie</button></div>
           <div id="adKpis" class="metrics small"></div>
@@ -1215,6 +1238,10 @@
                 <label>Centres d’intérêt<input id="adCampaignInterests" placeholder="épargne, agriculture, formation"></label>
                 <label>Types de rubriques<input id="adCampaignRubricKinds" placeholder="SAVINGS, TONTINE, SOLIDARITY"></label>
                 <label class="full">Tranches de volumes agrégés<input id="adCampaignVolumeBands" placeholder="SAVON:100000-500000, EPARGNE:1000000-5000000"></label>
+                <label class="full">Image du créatif publicitaire
+                  <select id="adCampaignMedia"><option value="">Sans image</option></select>
+                  <small>Ajoutez les images dans « Studio médias » ; elles restent soumises à modération.</small>
+                </label>
                 <label>Titre créatif<input id="adCampaignHeadline" required></label>
                 <label>Action<input id="adCampaignCta" required placeholder="Voir l’offre"></label>
                 <label class="full">Message<textarea id="adCampaignBody" rows="3" required></textarea></label>

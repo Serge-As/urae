@@ -23,6 +23,10 @@ import { mountPersonalCockpitUI } from './personal-cockpit-ui.js';
 import { mountRecapUI } from './recap-ui.js';
 import { mountInterestCommunityUI } from './interest-community-ui.js';
 import { mountAdManagerUI } from './ad-manager-ui.js';
+import { mountVisualMediaStudio } from './visual-media-studio.js';
+import { mountPartnerAdsUI } from './partner-ad-ui.js';
+import { mountAdSurfacesUI } from './ad-surfaces-ui.js';
+import { mountVisualMediaPresenter } from './visual-media-presenter.js';
 import { mountTontineManagerUI } from './tontine-manager-ui.js';
 import { mountSavingsYieldUI } from './savings-yield-ui.js';
 import { mountExternalProgramsUI } from './external-programs-ui.js';
@@ -30,6 +34,7 @@ import { mountFounderControlUI } from './founder-control-ui.js';
 import { mountAssistanceRulebookUI } from './assistance-rulebook-ui.js';
 import { mountGroupHomeUI } from './group-home-ui.js';
 import { mountSessionsUI } from './sessions-ui.js';
+import { splitFinancialRubrics } from './smart-grid-view.js';
 import { mountBlueprintExecutableUI } from './blueprint-executable-ui.js';
 import { mountCommunityBlueprintPresets } from './community-blueprint-presets.js';
 import { mountFinancialLabUI } from './financial-lab-ui.js';
@@ -294,7 +299,13 @@ const restoreNavState=state=>{
         if(state.openTarget){const node=document.getElementById(state.openTarget);if(node){if(node.tagName==='DETAILS')node.open=true;node.hidden=false;node.setAttribute('aria-hidden','false');}}
         if(state.sheetMode||state.matrixMeetingId||state.membershipId||state.rubricId)window.dispatchEvent(new CustomEvent('eco:restore-financial-sheet',{detail:{sheetMode:state.sheetMode,matrixMeetingId:state.matrixMeetingId,membershipId:state.membershipId,rubricId:state.rubricId}}));
         const anchor=state.anchor?document.getElementById(state.anchor):undefined;
-        if(anchor)anchor.scrollIntoView({behavior:'auto',block:'start'});else window.scrollTo({top:Number(state.scrollY)||0,behavior:'auto'});
+        if(anchor){
+          // All module shortcuts use the existing owner panels, including dynamically
+          // mounted Business/Academy/Kit details. Reveal ancestors before scrolling.
+          let owner=anchor instanceof Element?anchor.closest('details'):null;
+          while(owner){owner.open=true;owner=owner.parentElement?.closest('details')??null;}
+          anchor.scrollIntoView({behavior:'auto',block:'start'});
+        }else window.scrollTo({top:Number(state.scrollY)||0,behavior:'auto'});
         const restoreMatrixScroll=()=>{
           const meetingWrap=document.querySelector('#meetingMatrix .canonical-financial-wrap')??document.querySelector('#meetingMatrix');
           const individualWrap=document.querySelector('#individualSheetMatrix .canonical-financial-wrap')??document.querySelector('#individualSheetMatrix');
@@ -334,6 +345,14 @@ const go=(name,options={})=>{
 const goBack=()=>{if(navDepth>0)history.back();};
 document.querySelectorAll('[data-view]').forEach(b=>b.addEventListener('click',()=>go(b.dataset.view,{anchor:b.dataset.anchor,meetingId:b.dataset.meetingId,matrixMeetingId:b.dataset.matrixMeetingId,sheetMode:b.dataset.sheetMode,openTarget:b.dataset.openTarget,force:Boolean(b.dataset.anchor||b.dataset.sheetMode||b.dataset.openTarget)})));
 document.querySelectorAll('[data-go]').forEach(b=>b.addEventListener('click',()=>go(b.dataset.go,{anchor:b.dataset.anchor,meetingId:b.dataset.meetingId,matrixMeetingId:b.dataset.matrixMeetingId,sheetMode:b.dataset.sheetMode,openTarget:b.dataset.openTarget,force:Boolean(b.dataset.anchor||b.dataset.sheetMode||b.dataset.openTarget)})));
+
+document.querySelectorAll('[data-eco-module-preset]').forEach(button=>button.addEventListener('click',()=>{
+    const kind=button.dataset.ecoModulePreset;
+    if(!['NOW','HARVEST'].includes(kind))return;
+    // The owner module creates the form and validates its data. This shortcut
+    // only selects an existing preset; it never constructs a second workflow.
+    requestAnimationFrame(()=>window.dispatchEvent(new CustomEvent('eco:value-network-preset',{detail:{kind}})));
+}));
 document.addEventListener('click',event=>{
     const link=event.target instanceof Element?event.target.closest('a[href^="#"]'):null;if(!link)return;
     const id=(link.getAttribute('href')||'').slice(1);if(!id)return;
@@ -387,6 +406,10 @@ const personalCockpitUI = mountPersonalCockpitUI({ app, getGroups: () => groups,
 const recapUI = mountRecapUI({ app, getGroups: () => groups, getMembers: () => members, getMeetings: () => meetings, getRubrics: () => rubrics, isManager, navigate: go, fmt, date, showError: fail });
 const interestCommunityUI = mountInterestCommunityUI({ app, notify: toast, showError: fail, date });
 const adManagerUI = mountAdManagerUI({ app, notify: toast, showError: fail, isManager, fmt });
+const visualMediaStudio = mountVisualMediaStudio({app,notify:toast,showError:fail,isManager});
+const partnerAdsUI = mountPartnerAdsUI({app,notify:toast,showError:fail,isManager});
+const adSurfacesUI = mountAdSurfacesUI({app,navigate:go,showError:fail});
+const visualMediaPresenter = mountVisualMediaPresenter({app,showError:fail});
 const tontineManagerUI = mountTontineManagerUI({ app, getRubrics: () => rubrics, getMembers: () => members, notify: toast, showError: fail, fmt, isManager });
 const savingsYieldUI = mountSavingsYieldUI({ app, getMembers: () => members, notify: toast, showError: fail, fmt, isManager });
 const externalProgramsUI = mountExternalProgramsUI({ app, notify: toast, showError: fail, isManager, fmt });
@@ -1292,6 +1315,42 @@ const renderCanonicalFinancialTable=({root,mode='meeting',meetingId='',membershi
     root.replaceChildren();
     const activeRubrics=activeFinancialRubrics(),activeMembers=activeFinancialMembers();
     if(!activeRubrics.length||!activeMembers.length){root.innerHTML='<div class="empty-state">'+tx('Ajoutez au moins un membre et une rubrique active.','Add at least one member and one active rubric.')+'</div>';return;}
+    // SmartGrid is a presentation-only projection. Financial editors and writes
+    // remain exclusively owned by the existing canonical renderer and Ledger.
+    const panelScope=mode==='meeting'?'meeting':'individual';
+    const choiceKey='eco.smartGrid.parts.'+panelScope;
+    let parts=1;
+    try{parts=[1,2,5].includes(Number(sessionStorage.getItem(choiceKey)))?Number(sessionStorage.getItem(choiceKey)):1;}catch{}
+    const columnGroups=splitFinancialRubrics(activeRubrics,parts);
+    const panelKey='eco.smartGrid.index.'+panelScope;
+    let panelIndex=0;
+    try{panelIndex=Math.max(0,Math.min(columnGroups.length-1,Number(sessionStorage.getItem(panelKey))||0));}catch{}
+    const visibleRubrics=columnGroups[panelIndex]??activeRubrics;
+    const presentation= document.createElement('div');presentation.className='eco-smartgrid-toolbar';
+    const title=document.createElement('strong');title.textContent=tx('Affichage des rubriques','Rubric display');
+    const presets=document.createElement('div');presets.className='eco-smartgrid-parts';
+    for(const n of [1,2,5]){
+      const b=document.createElement('button');b.type='button';b.className=parts===n?'primary':'secondary';
+      b.textContent=n===1?tx('Vue intégrale','Full view'):tx('Vue en '+n+' parties',n+' parts view');
+      b.setAttribute('aria-pressed',String(parts===n));
+      b.onclick=()=>{try{sessionStorage.setItem(choiceKey,String(n));sessionStorage.setItem(panelKey,'0');}catch{}
+        renderCanonicalFinancialTable({root,mode,meetingId,membershipId,showToolbar,editable});};
+      presets.append(b);
+    }
+    presentation.append(title,presets);
+    if(columnGroups.length>1){
+      const navigation=document.createElement('div');navigation.className='eco-smartgrid-navigation';
+      const previous=document.createElement('button');previous.type='button';previous.className='secondary';previous.textContent='←';
+      previous.setAttribute('aria-label',tx('Partie précédente','Previous part'));previous.disabled=panelIndex===0;
+      const indication=document.createElement('span');indication.textContent=tx('Partie ','Part ')+(panelIndex+1)+' / '+columnGroups.length;
+      indication.setAttribute('aria-live','polite');
+      const next=document.createElement('button');next.type='button';next.className='secondary';next.textContent='→';
+      next.setAttribute('aria-label',tx('Partie suivante','Next part'));next.disabled=panelIndex===columnGroups.length-1;
+      const openPart=index=>{try{sessionStorage.setItem(panelKey,String(index));}catch{}
+        renderCanonicalFinancialTable({root,mode,meetingId,membershipId,showToolbar,editable});};
+      previous.onclick=()=>openPart(panelIndex-1);next.onclick=()=>openPart(panelIndex+1);
+      navigation.append(previous,indication,next);presentation.append(navigation);
+    }
     const wrap=document.createElement('div');wrap.className='matrix-wrap canonical-financial-wrap';
     // The matrix scrolls horizontally. Forward ordinary vertical mouse-wheel
     // motion to the document when the matrix has no vertical overflow: keep
@@ -1317,17 +1376,20 @@ const renderCanonicalFinancialTable=({root,mode='meeting',meetingId='',membershi
       matrixMeetingId=selectedMeeting;root.dataset.meetingId=selectedMeeting;
       const numberHead=document.createElement('th');numberHead.textContent=tx('N°','No.');numberHead.className='member-number-column';hr.append(numberHead);
       const memberHead=document.createElement('th');memberHead.textContent=tx('Membre','Member');hr.append(memberHead);
-      for(const r of activeRubrics){const th=document.createElement('th');th.textContent=r.name;hr.append(th);}
-      const totalHead=document.createElement('th');totalHead.textContent=tx('Total membre','Member total');hr.append(totalHead);head.append(hr);table.append(head);
+      for(const r of visibleRubrics){const th=document.createElement('th');th.textContent=r.name;hr.append(th);}
+      const totalHead=document.createElement('th');totalHead.textContent=columnGroups.length>1?tx('Total général membre','Member grand total'):tx('Total membre','Member total');hr.append(totalHead);head.append(hr);table.append(head);
       for(const m of activeMembers){
-        const tr=document.createElement('tr'),number=document.createElement('th'),name=document.createElement('th');number.className='member-number-column';number.textContent=String(Number(m.memberNumber)||'—');name.innerHTML=html`<strong>${String(m.displayName??'')}</strong><small>${m.roles.join(', ')}</small>`;name.title=String(m.displayName??'')+(m.roles.length?' · '+m.roles.join(', '):'');tr.append(number,name);let rowTotal=0;
+        const tr=document.createElement('tr'),number=document.createElement('th'),name=document.createElement('th');number.className='member-number-column';number.textContent=String(Number(m.memberNumber)||'—');name.innerHTML=html`<strong>${String(m.displayName??'')}</strong><small>${m.roles.join(', ')}</small>`;name.title=String(m.displayName??'')+(m.roles.length?' · '+m.roles.join(', '):'');tr.append(number,name);const rowTotal=activeRubrics.reduce((sum,r)=>sum+exactCellAmount(m.id,r.id,selectedMeeting),0);
         tr.dataset.membershipId=m.id;
-        for(const r of activeRubrics){const value=exactCellAmount(m.id,r.id,selectedMeeting);rowTotal+=value;const td=document.createElement('td');td.dataset.rubricId=r.id;td.append(makeFinancialEntryCell({member:m,rubric:r,meetingId:selectedMeeting,editable:Boolean(editable&&isManager())}));tr.append(td);}
+        for(const r of visibleRubrics){const value=exactCellAmount(m.id,r.id,selectedMeeting);const td=document.createElement('td');td.dataset.rubricId=r.id;td.append(makeFinancialEntryCell({member:m,rubric:r,meetingId:selectedMeeting,editable:Boolean(editable&&isManager())}));tr.append(td);}
         const total=document.createElement('td');total.className='table-row-total';total.textContent=fmt(rowTotal);tr.append(total);body.append(tr);
       }
-      const totalRow=document.createElement('tr');totalRow.className='table-total-row';const totalLabel=document.createElement('th');totalLabel.colSpan=2;totalLabel.textContent=tx('TOTAL COLONNES','COLUMN TOTALS');totalRow.append(totalLabel);let grand=0;
-      for(const r of activeRubrics){const amount=activeMembers.reduce((sum,m)=>sum+exactCellAmount(m.id,r.id,selectedMeeting),0);grand+=amount;const td=document.createElement('td');td.dataset.totalRubricId=r.id;td.textContent=fmt(amount);totalRow.append(td);}
-      const grandTd=document.createElement('td');grandTd.className='table-grand-total';grandTd.textContent=fmt(grand);totalRow.append(grandTd);body.append(totalRow);
+      const totalRow=document.createElement('tr');totalRow.className='table-total-row';const totalLabel=document.createElement('th');totalLabel.colSpan=2;totalLabel.textContent=tx('TOTAL COLONNES','COLUMN TOTALS');totalRow.append(totalLabel);
+      for(const r of visibleRubrics){const amount=activeMembers.reduce((sum,m)=>sum+exactCellAmount(m.id,r.id,selectedMeeting),0);const td=document.createElement('td');td.dataset.totalRubricId=r.id;td.textContent=fmt(amount);totalRow.append(td);}
+      const grandTd=document.createElement('td');grandTd.className='table-grand-total';
+      const grand=activeMembers.reduce((total,m)=>total+activeRubrics.reduce((sum,r)=>sum+exactCellAmount(m.id,r.id,selectedMeeting),0),0);
+      grandTd.textContent=fmt(grand);grandTd.title=tx('Total général de toutes les rubriques','Grand total across every rubric');
+      totalRow.append(grandTd);body.append(totalRow);
       table.append(body);wrap.append(table);
       const note=document.createElement('p');note.className='truth-notice';note.textContent=tx('Une seule matrice financière canonique est utilisée ici et dans les fiches individuelles. Chaque cellule est la valeur totale de la séance : Remplacer 1 000 par 500 donne 500. La dernière ligne totalise chaque colonne et la dernière colonne totalise chaque membre.','One canonical financial matrix is used here and in individual sheets. Each cell is the total value for the meeting: replacing 1,000 with 500 gives 500. The last row totals every column and the last column totals every member.');
       if(showToolbar){
@@ -1341,25 +1403,38 @@ const renderCanonicalFinancialTable=({root,mode='meeting',meetingId='',membershi
         const add=document.createElement('button');add.type='button';add.className='secondary';add.textContent=tx('+ Nouvelle séance','+ New meeting');add.onclick=()=>go('sessions',{anchor:'sessionsCreateForm',force:true});
         toolbar.append(label,other,add);root.append(toolbar);
       }
-      root.append(wrap,note);restoreReplacedMatrixScroll(wrap);root.dataset.canonicalTableReady='1';return;
+      root.append(presentation,wrap,note);
+      if(columnGroups.length>1){
+        const explanation=document.createElement('p');explanation.className='eco-smartgrid-explanation';
+        explanation.textContent=tx('Les sous-totaux des colonnes concernent uniquement cette partie. Les totaux généraux des membres et de la feuille comprennent toutes les rubriques, même masquées.','Column subtotals apply only to this part. Member and sheet grand totals include all rubrics, including hidden parts.');
+        root.append(explanation);
+      }restoreReplacedMatrixScroll(wrap);root.dataset.canonicalTableReady='1';return;
     }
     const member=activeMembers.find(x=>x.id===membershipId);
     if(!member){root.innerHTML='<div class="empty-state">'+tx('Aucune fiche individuelle accessible.','No individual sheet available.')+'</div>';return;}
     hr.append(document.createElement('th'));hr.firstChild.textContent=tx('Séance','Meeting');
-    for(const r of activeRubrics){const th=document.createElement('th');th.textContent=r.name;hr.append(th);}
-    const totalHead=document.createElement('th');totalHead.textContent=tx('Total séance','Meeting total');hr.append(totalHead);head.append(hr);table.append(head);
+    for(const r of visibleRubrics){const th=document.createElement('th');th.textContent=r.name;hr.append(th);}
+    const totalHead=document.createElement('th');totalHead.textContent=columnGroups.length>1?tx('Total général séance','Meeting grand total'):tx('Total séance','Meeting total');hr.append(totalHead);head.append(hr);table.append(head);
     const activeMeetings=meetings.filter(x=>x.status!=='cancelled').slice().sort((a,b)=>String(a.scheduledAt??a.openedAt).localeCompare(String(b.scheduledAt??b.openedAt)));
     for(const meeting of activeMeetings){
-      const tr=document.createElement('tr'),th=document.createElement('th');th.textContent=meetingLabel(meeting)+(meeting.status==='closed'?' · '+tx('clôturée','closed'):'');tr.append(th);let rowTotal=0;
+      const tr=document.createElement('tr'),th=document.createElement('th');th.textContent=meetingLabel(meeting)+(meeting.status==='closed'?' · '+tx('clôturée','closed'):'');tr.append(th);const rowTotal=activeRubrics.reduce((sum,r)=>sum+exactCellAmount(member.id,r.id,meeting.id),0);
       tr.dataset.meetingId=meeting.id;
-      for(const r of activeRubrics){const value=exactCellAmount(member.id,r.id,meeting.id);rowTotal+=value;const td=document.createElement('td');td.dataset.rubricId=r.id;td.append(makeFinancialEntryCell({member,rubric:r,meetingId:meeting.id,editable:Boolean(editable&&isManager())}));tr.append(td);}
+      for(const r of visibleRubrics){const value=exactCellAmount(member.id,r.id,meeting.id);const td=document.createElement('td');td.dataset.rubricId=r.id;td.append(makeFinancialEntryCell({member,rubric:r,meetingId:meeting.id,editable:Boolean(editable&&isManager())}));tr.append(td);}
       const total=document.createElement('td');total.className='table-row-total';total.textContent=fmt(rowTotal);tr.append(total);body.append(tr);
     }
-    const totalRow=document.createElement('tr');totalRow.className='table-total-row';const label=document.createElement('th');label.textContent=tx('TOTAL COLONNES','COLUMN TOTALS');totalRow.append(label);let grand=0;
-    for(const r of activeRubrics){const amount=activeMeetings.reduce((sum,meeting)=>sum+exactCellAmount(member.id,r.id,meeting.id),0);grand+=amount;const td=document.createElement('td');td.dataset.totalRubricId=r.id;td.textContent=fmt(amount);totalRow.append(td);}
-    const grandTd=document.createElement('td');grandTd.className='table-grand-total';grandTd.textContent=fmt(grand);totalRow.append(grandTd);body.append(totalRow);table.append(body);wrap.append(table);
+    const totalRow=document.createElement('tr');totalRow.className='table-total-row';const label=document.createElement('th');label.textContent=tx('TOTAL COLONNES','COLUMN TOTALS');totalRow.append(label);
+    for(const r of visibleRubrics){const amount=activeMeetings.reduce((sum,meeting)=>sum+exactCellAmount(member.id,r.id,meeting.id),0);const td=document.createElement('td');td.dataset.totalRubricId=r.id;td.textContent=fmt(amount);totalRow.append(td);}
+    const grandTd=document.createElement('td');grandTd.className='table-grand-total';
+    const grand=activeMeetings.reduce((total,m)=>total+activeRubrics.reduce((sum,r)=>sum+exactCellAmount(member.id,r.id,m.id),0),0);
+    grandTd.textContent=fmt(grand);grandTd.title=tx('Total général de toutes les rubriques','Grand total across every rubric');
+    totalRow.append(grandTd);body.append(totalRow);table.append(body);wrap.append(table);
     const note=document.createElement('p');note.className='truth-notice';note.textContent=tx('Cette fiche utilise exactement le même éditeur financier que la feuille de séance. Les totaux de chaque rubrique figurent sur la dernière ligne.','This sheet uses exactly the same financial editor as the meeting sheet. Totals for every rubric appear on the last row.');
-    root.append(wrap,note);restoreReplacedMatrixScroll(wrap);root.dataset.canonicalTableReady='1';
+    root.append(presentation,wrap,note);
+      if(columnGroups.length>1){
+        const explanation=document.createElement('p');explanation.className='eco-smartgrid-explanation';
+        explanation.textContent=tx('Les sous-totaux des colonnes concernent uniquement cette partie. Les totaux généraux des membres et de la feuille comprennent toutes les rubriques, même masquées.','Column subtotals apply only to this part. Member and sheet grand totals include all rubrics, including hidden parts.');
+        root.append(explanation);
+      }restoreReplacedMatrixScroll(wrap);root.dataset.canonicalTableReady='1';
 };
 const renderMeetingMatrix=()=>renderCanonicalFinancialTable({root:document.querySelector('#meetingMatrix'),mode:'meeting',meetingId:ensureMatrixMeeting(),showToolbar:true,editable:isManager()});
 const renderIndividualSheetMatrix=()=>{
@@ -2136,6 +2211,10 @@ const refreshGroupContext = async () => {
     await refreshOptionalOfflineSafe('recap',()=>recapUI.refresh());
     await refreshOptionalOfflineSafe('interest-community',()=>interestCommunityUI.refresh());
     await refreshOptionalOfflineSafe('ad-manager',()=>adManagerUI.refresh());
+    await refreshOptionalOfflineSafe('visual-media',()=>visualMediaStudio.refresh());
+    await refreshOptionalOfflineSafe('partner-ads',()=>partnerAdsUI.refresh());
+    await refreshOptionalOfflineSafe('ad-surfaces',()=>adSurfacesUI.refresh());
+    await refreshOptionalOfflineSafe('visual-media-presenter',()=>visualMediaPresenter.refresh());
     await refreshOptionalOfflineSafe('tontine-manager',()=>tontineManagerUI.refresh());
     await refreshOptionalOfflineSafe('savings-yield',()=>savingsYieldUI.refresh());
     await refreshOptionalOfflineSafe('assistance-rulebook',()=>assistanceRulebookUI.refresh());

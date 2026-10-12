@@ -28,6 +28,10 @@ import { MiscRubricService } from '../../../packages/misc-rubrics/src/index.js';
 import { allocateSavingsYield, splitInterestPool, simulateWorkbookYieldPipeline, allocateCapitalAtWorkYield, allocateCapitalTimeYield, allocateAttributedProductiveYield, SAVINGS_YIELD_POLICY_PRESETS } from '../../../packages/savings-yield/src/index.js';
 import { buildFinancialRecap, buildSessionRecap, buildClosingCarryover } from '../../../packages/recap-engine/src/index.js';
 import { AdManagerService, AD_PLACEMENT_CATALOG, HOUSE_AD_CATALOG, selectAdDelivery } from '../../../packages/ad-manager/src/index.js';
+import { PartnerAdProposalService } from '../../../packages/ad-manager/src/partner-proposals.js';
+import { ExternalAdInviteService } from '../../../packages/ad-manager/src/external-invitations.js';
+import { VisualMediaService } from '../../../packages/visual-media/src/index.js';
+import { FounderBrandMediaService } from '../../../packages/visual-media/src/founder-brand.js';
 import { diagnoseGroup } from '../../../packages/group-doctor/src/index.js';
 import { prepareMeetingAutopilot } from '../../../packages/meeting-autopilot/src/index.js';
 import { EconomicIntelligenceService } from '../../../packages/economic-intelligence/src/index.js';
@@ -141,6 +145,8 @@ const createRequestScope = (request:Request,repo:PlatformRepository,artifacts?:A
   const conciergeLearning=new ConciergeLearningService(repo,kernel,dataUseDefaultMode);
   const miscRubrics=new MiscRubricService(repo,kernel,ledger);
   const adManager=new AdManagerService(repo,kernel,documentAI);
+  const partnerAds=new PartnerAdProposalService(repo,kernel,adManager);
+  const externalAds=new ExternalAdInviteService(repo,kernel,artifactStore);
   const economicIntelligence=new EconomicIntelligenceService(repo,kernel);
   const externalPrograms=new ExternalProgramsService(repo,kernel);
   const operationalCockpit=new OperationalCockpitService(repo,kernel,ledger);
@@ -152,7 +158,7 @@ const createRequestScope = (request:Request,repo:PlatformRepository,artifacts?:A
   const tenantId=request.headers.get('x-tenant-id')??'tenant_demo'; const actorId=request.headers.get('x-actor-id')??'user_founder';
   const groupRoles=(request.headers.get('x-group-roles')??'founder,manager').split(',').map(x=>x.trim()).filter(Boolean);
   kernel.context.set({actorId,tenantId,activeGroupId:request.headers.get('x-active-group-id')??undefined,groupRoles,mandateIds:[],mandateGrants:[],deviceId:request.headers.get('x-device-id')??'device_web_demo',sessionId:request.headers.get('x-session-id')??'session_demo',locale:request.headers.get('accept-language')?.toLowerCase().startsWith('en')?'en':'fr',timezone:request.headers.get('x-timezone')??'Africa/Douala',connectivity:'online',requestId:request.headers.get('x-request-id')??makeId('req')});
-  return {kernel,foundation,ledger,meetings,discovery,membershipGateway,rubrics,completion,explainability,documents,receivables,treasury,riskFinance,market,community,imports,artifactStore,memberControl,memberEnvelopes,groupIdentity,conciergeLearning,miscRubrics,adManager,economicIntelligence,externalPrograms,operationalCockpit,businessStudio,knowledgeAcademy,valueNetwork,creatorTalent,quietWatch};
+  return {kernel,foundation,ledger,meetings,discovery,membershipGateway,rubrics,completion,explainability,documents,receivables,treasury,riskFinance,market,community,imports,artifactStore,memberControl,memberEnvelopes,groupIdentity,conciergeLearning,miscRubrics,adManager,partnerAds,externalAds,economicIntelligence,externalPrograms,operationalCockpit,businessStudio,knowledgeAcademy,valueNetwork,creatorTalent,quietWatch};
 };
 
 const inboxFor = async (repo:PlatformRepository,tenantId:string,actorId:string) => {
@@ -165,9 +171,9 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
   const url=new URL(request.url); const cors=corsHeaders(request);
   if(request.method==='OPTIONS'){
     const allowed=Boolean((cors as Record<string,string>)['access-control-allow-origin']);
-    return new Response(null,{status:allowed?204:403,headers:{...baseSecurityHeaders,...cors,'access-control-allow-methods':'GET,POST,PUT,OPTIONS','access-control-allow-headers':'content-type,x-tenant-id,x-actor-id,x-group-roles,x-active-group-id,x-device-id,x-session-id,x-request-id,x-timezone'}});
+    return new Response(null,{status:allowed?204:403,headers:{...baseSecurityHeaders,...cors,'access-control-allow-methods':'GET,POST,PUT,DELETE,OPTIONS','access-control-allow-headers':'content-type,x-tenant-id,x-actor-id,x-group-roles,x-active-group-id,x-device-id,x-session-id,x-request-id,x-timezone,x-external-ad-token'}});
   }
-  const {kernel,foundation,ledger,meetings,discovery,membershipGateway,rubrics,completion,explainability,documents,receivables,treasury,riskFinance,market,community,imports,artifactStore,memberControl,memberEnvelopes,groupIdentity,conciergeLearning,miscRubrics,adManager,economicIntelligence,externalPrograms,operationalCockpit,businessStudio,knowledgeAcademy,valueNetwork,creatorTalent,quietWatch}=createRequestScope(request,repo,options.artifacts,options.dataUseDefaultMode??'BETA_OPEN',options.documentAI);
+  const {kernel,foundation,ledger,meetings,discovery,membershipGateway,rubrics,completion,explainability,documents,receivables,treasury,riskFinance,market,community,imports,artifactStore,memberControl,memberEnvelopes,groupIdentity,conciergeLearning,miscRubrics,adManager,partnerAds,externalAds,economicIntelligence,externalPrograms,operationalCockpit,businessStudio,knowledgeAcademy,valueNetwork,creatorTalent,quietWatch}=createRequestScope(request,repo,options.artifacts,options.dataUseDefaultMode??'BETA_OPEN',options.documentAI);
   let ctx=kernel.context.get();
   const trustedLiveTicket=request.headers.get('x-live-ticket-authenticated')==='1';
   if(!trustedLiveTicket)try{
@@ -2312,6 +2318,153 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
     }
     const storefrontRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/market\/storefront$/);
     if(storefrontRoute&&request.method==='GET')return json(await market.storefront(storefrontRoute[1]!),200,cors);
+    const visualMedia=new VisualMediaService(repo,kernel,artifactStore);
+    const brandMedia=new FounderBrandMediaService(repo,kernel,artifactStore,isFounderTeamActor);
+    const founderBrandList=url.pathname==='/api/v1/founder/brand/assets';
+    if(founderBrandList&&request.method==='GET'){
+      if(!(await isFounderTeamActor()))throw Error('FOUNDER_TEAM_ONLY');
+      return json(await brandMedia.list(),200,cors);
+    }
+    if(founderBrandList&&request.method==='POST'){
+      if(!(await isFounderTeamActor()))throw Error('FOUNDER_TEAM_ONLY');
+      const form=await request.formData(),file=form.get('file');
+      if(!(file instanceof File))throw Error('MEDIA_FILE_REQUIRED');
+      return json(await brandMedia.upload(file),201,cors);
+    }
+    if(url.pathname==='/api/v1/founder/brand/slots'&&request.method==='PUT'){
+      if(!(await isFounderTeamActor()))throw Error('FOUNDER_TEAM_ONLY');
+      const body=await readJson<Record<string,unknown>>(request);
+      return json(await brandMedia.assign(String(body.slot??''),String(body.assetId??'')),200,cors);
+    }
+    const founderBrandContent=url.pathname.match(/^\/api\/v1\/founder\/brand\/assets\/([^/]+)\/content$/);
+    if(founderBrandContent&&request.method==='GET'){
+      if(!(await isFounderTeamActor()))throw Error('FOUNDER_TEAM_ONLY');
+      const asset=await brandMedia.bytes(founderBrandContent[1]!,true);
+      return new Response(asset.bytes,{headers:{...baseSecurityHeaders,...cors,'content-type':asset.mime,'cache-control':'private, no-store','x-content-type-options':'nosniff'}});
+    }
+    const groupBrandList=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/brand\/slots$/);
+    if(groupBrandList&&request.method==='GET'){
+      await requireGroup(groupBrandList[1]!);
+      return json(await brandMedia.selected(),200,cors);
+    }
+    const groupBrandContent=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/brand\/assets\/([^/]+)\/content$/);
+    if(groupBrandContent&&request.method==='GET'){
+      await requireGroup(groupBrandContent[1]!);
+      const asset=await brandMedia.bytes(groupBrandContent[2]!);
+      return new Response(asset.bytes,{headers:{...baseSecurityHeaders,...cors,'content-type':asset.mime,'cache-control':'private, no-store','x-content-type-options':'nosniff'}});
+    }
+
+    const consentedProfiles=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/visual-profile-consents$/);
+    if(consentedProfiles&&request.method==='GET')return json(await visualMedia.consentedProfiles(consentedProfiles[1]!),200,cors);
+    if(consentedProfiles&&request.method==='PUT'){
+      const body=await readJson<Record<string,unknown>>(request);
+      if(typeof body.visible!=='boolean')throw Error('CONSENT_BOOLEAN_REQUIRED');
+      return json(await visualMedia.setProfileConsent(consentedProfiles[1]!,body.visible),200,cors);
+    }
+    const forumPhotos=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/forum-v2\/hubs\/([^/]+)\/photos$/);
+    if(forumPhotos&&request.method==='GET'){
+      const groupId=forumPhotos[1]!,hubId=decodeURIComponent(forumPhotos[2]!);
+      await community.federationProfile(groupId,hubId);
+      return json(await visualMedia.forumPhotos(groupId,hubId),200,cors);
+    }
+    const forumPhotoAssign=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/forum-v2\/messages\/([^/]+)\/photo$/);
+    if(forumPhotoAssign&&request.method==='PUT'){
+      if(!options.communityRealtime)throw Error('COMMUNITY_REALTIME_UNAVAILABLE');
+      const groupId=forumPhotoAssign[1]!,messageId=decodeURIComponent(forumPhotoAssign[2]!);
+      const message=await options.communityRealtime.messageContext(messageId);
+      if(!message||message.groupId!==groupId||message.tenantId!==ctx.tenantId)throw Error('COMMUNITY_MESSAGE_NOT_FOUND');
+      await community.federationProfile(groupId,message.hubId);
+      const body=await readJson<Record<string,unknown>>(request);
+      return json(await visualMedia.setForumPhoto(groupId,messageId,message.hubId,message.authorId,String(body.assetId??'')),200,cors);
+    }
+
+    const visualApi=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/visual-media$/);
+    if(visualApi&&request.method==='GET')return json(await visualMedia.list(visualApi[1]!),200,cors);
+    if(visualApi&&request.method==='POST'){
+      const form=await request.formData(),file=form.get('file');
+      if(!(file instanceof File))throw Error('MEDIA_FILE_REQUIRED');
+      const result=await visualMedia.upload(visualApi[1]!,file,String(form.get('purpose')??'') as any);
+      return json(result,201,cors);
+    }
+    const visualSlots=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/visual-slots$/);
+    if(visualSlots&&request.method==='GET')return json(await visualMedia.presentation(visualSlots[1]!),200,cors);
+    if(visualSlots&&request.method==='PUT'){
+      const body=await readJson<Record<string,unknown>>(request);
+      return json(await visualMedia.assign(visualSlots[1]!,String(body.slot??''),String(body.assetId??'')),200,cors);
+    }
+    const visualContent=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/visual-media\/([^/]+)\/content$/);
+    if(visualContent&&request.method==='GET'){
+      const groupId=visualContent[1]!,assetId=visualContent[2]!;
+      const row=await visualMedia.record(groupId,assetId);
+      if(row.data.purpose==='FORUM_PHOTO'){
+        const links=await repo.listWorkspaceRecords(ctx.tenantId,'MEDIA.FORUM_PHOTO',groupId);
+        const linked=links.find(x=>x.status==='ACTIVE'&&x.data.assetId===assetId);
+        if(!linked)throw Error('FORUM_PHOTO_NOT_LINKED');
+        await community.federationProfile(groupId,String(linked.data.hubId??''));
+      }
+      const asset=await visualMedia.bytes(groupId,assetId);
+      return new Response(asset.bytes,{headers:{...baseSecurityHeaders,...cors,'content-type':asset.mime,'cache-control':'private, no-store','x-content-type-options':'nosniff'}});
+    }
+    const visualStockList=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/visual-stock$/);
+    if(visualStockList&&request.method==='GET')return json(await visualMedia.stockVisuals(visualStockList[1]!),200,cors);
+    const visualStockItem=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/visual-stock\/([^/]+)$/);
+    if(visualStockItem&&request.method==='PUT'){
+      const body=await readJson<Record<string,unknown>>(request);
+      return json(await visualMedia.assignStockVisual(visualStockItem[1]!,visualStockItem[2]!,String(body.assetId??'')),200,cors);
+    }
+    // Partner self-service: image remains private and campaign NEVER auto-activates.
+    const adProposals=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/ads\/partner-proposals$/);
+    if(adProposals&&request.method==='GET')return json(await partnerAds.list(adProposals[1]!),200,cors);
+    if(adProposals&&request.method==='POST'){
+      const body=await readJson<Record<string,unknown>>(request);
+      const groupId=adProposals[1]!,mediaId=String(body.mediaAssetId??'');
+      if(mediaId){
+        const asset=await visualMedia.record(groupId,mediaId);
+        if(asset.data.purpose!=='PARTNER_CREATIVE'||asset.createdBy!==kernel.context.get().actorId)
+          throw Error('PARTNER_AD_MEDIA_OWNER_MISMATCH');
+      }
+      return json(await partnerAds.create(groupId,body as any),201,cors);
+    }
+    const adProposalReview=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/ads\/partner-proposals\/([^/]+)\/review$/);
+    if(adProposalReview&&request.method==='POST'){
+      const groupId=adProposalReview[1]!,proposalId=adProposalReview[2]!;
+      const proposals=await partnerAds.list(groupId),item=proposals.find(p=>p.id===proposalId);
+      if(!item)throw Error('PARTNER_AD_NOT_FOUND');
+      const decisionBody=await readJson<Record<string,unknown>>(request);
+      const decision=String(decisionBody.decision??'');
+      if(!['REJECT','IMPORT'].includes(decision))throw Error('PARTNER_AD_INVALID_REVIEW');
+      if(decision==='IMPORT'&&item.data.mediaAssetId){
+        const media=await visualMedia.record(groupId,String(item.data.mediaAssetId),true);
+        if(media.data.purpose!=='PARTNER_CREATIVE'||media.createdBy!==item.createdBy)throw Error('PARTNER_AD_MEDIA_OWNER_MISMATCH');
+      }
+      return json(await partnerAds.review(groupId,proposalId,decision as 'REJECT'|'IMPORT',String(decisionBody.note??'')),200,cors);
+    }
+    const adSurface=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/ads\/surface\/([^/]+)$/);
+    if(adSurface&&request.method==='GET')return json(await adManager.placement(adSurface[1]!,adSurface[2]! as any),200,cors);
+    // Advertiser portal uses a high-entropy, founder/manager-issued bearer
+    // invitation. The bearer has no group member rights, financial permissions
+    // or authority to publish campaigns.
+    const externalInvite=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/ads\/external-invites$/);
+    if(externalInvite&&request.method==='GET')return json(await externalAds.list(externalInvite[1]!),200,cors);
+    if(externalInvite&&request.method==='POST'){
+      const body=await readJson<Record<string,unknown>>(request);
+      return json(await externalAds.issue(externalInvite[1]!,String(body.title??''),Number(body.hours??72)),201,cors);
+    }
+    const revokeExternalInvite=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/ads\/external-invites\/([^/]+)$/);
+    if(revokeExternalInvite&&request.method==='DELETE')
+      return json(await externalAds.revoke(revokeExternalInvite[1]!,revokeExternalInvite[2]!),200,cors);
+    const externalIntake=url.pathname.match(/^\/api\/v1\/external-ads\/groups\/([^/]+)\/invite$/);
+    if(externalIntake&&request.method==='GET')return json(await externalAds.status(externalIntake[1]!,String(request.headers.get('x-external-ad-token')??'')),200,cors);
+    if(externalIntake&&request.method==='POST'){
+      const input=await readJson<Record<string,unknown>>(request);
+      return json(await externalAds.submit(externalIntake[1]!,String(request.headers.get('x-external-ad-token')??''),input),201,cors);
+    }
+    const externalPhoto=url.pathname.match(/^\/api\/v1\/external-ads\/groups\/([^/]+)\/invite\/photo$/);
+    if(externalPhoto&&request.method==='POST'){
+      const data=await request.formData(),file=data.get('file');
+      if(!(file instanceof File))throw Error('MEDIA_FILE_REQUIRED');
+      return json(await externalAds.upload(externalPhoto[1]!,String(request.headers.get('x-external-ad-token')??''),file),201,cors);
+    }
     const adDashboard=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/ads\/dashboard$/);
     if(adDashboard&&request.method==='GET')return json(await adManager.dashboard(adDashboard[1]!),200,cors);
     const adHousePlan=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/ads\/house-plan$/);
@@ -2337,6 +2490,11 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
     if(adCampaigns&&request.method==='GET')return json(await adManager.list(adCampaigns[1]!),200,cors);
     if(adCampaigns&&request.method==='POST'){
       const body=await readJson<Record<string,unknown>>(request);
+      const creative=body.creative&&typeof body.creative==='object'?body.creative as Record<string,unknown>:{};
+      if(creative.mediaAssetId){
+        const row=await visualMedia.record(adCampaigns[1]!,String(creative.mediaAssetId),true);
+        if(row.data.purpose!=='AD_CREATIVE')throw Error('AD_MEDIA_PURPOSE_MISMATCH');
+      }
       return json(await adManager.create(adCampaigns[1]!,body as any),201,cors);
     }
     const adTransition=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/ads\/campaigns\/([^/]+)\/transition$/);
