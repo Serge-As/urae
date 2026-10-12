@@ -96,6 +96,14 @@ try{
   const onResponse=resp=>{if(resp.url().includes('/api/v1/group-projects'))events.push({type:'response',status:resp.status(),path:new URL(resp.url()).pathname});};
   const onFail=req=>{if(req.url().includes('/api/v1/group-projects'))events.push({type:'failed',failure:req.failure()?.slice(0,150)??null});};
   page.on('request',onRequest);page.on('response',onResponse);page.on('requestfailed',onFail);
+  await page.evaluate(()=>{
+    window.__ecoLaunchErrors=[];
+    const error=document.querySelector('#errorBox');
+    if(error){new MutationObserver(()=>{
+      const value=error.textContent?.trim();
+      if(value&&window.__ecoLaunchErrors.at(-1)!==value)window.__ecoLaunchErrors.push(value.slice(0,400));
+    }).observe(error,{attributes:true,childList:true,subtree:true,characterData:true});}
+  });
   await page.locator('#simulateProjectBtn').click();
   // A remote Cloudflare D1 cold start can take longer than a fixed delay.
   // Wait for the canonical output OR a real error; do not invent a failure
@@ -115,6 +123,7 @@ try{
       result:document.querySelector('#simulationResult')?.textContent?.slice(0,120)
     }));
     console.log('ECO_LAUNCH_SIMULATION_NETWORK',JSON.stringify(events));
+    console.log('ECO_LAUNCH_TRANSIENT_ERRORS',JSON.stringify(await page.evaluate(()=>window.__ecoLaunchErrors??[])));
     throw Error('Simulation did not produce expected result: '+JSON.stringify(diagnostic)+' network='+JSON.stringify(events));
   }
  });
