@@ -11,7 +11,7 @@ await rm(output, { recursive: true, force: true });
 const result = spawnSync(process.execPath, [compiler,'-p', 'tsconfig.json'], { stdio: 'inherit' });
 if (result.status !== 0) process.exit(result.status ?? 1);
 await mkdir('.build/apps/web', { recursive: true });
-for (const file of ['index.html','styles.css','manifest.webmanifest']) {
+for (const file of ['index.html','external-ad.html','styles.css','manifest.webmanifest']) {
   await cp(path.join('apps/web', file), path.join('.build/apps/web', file));
   await cp(path.join('apps/web', file), path.join('.build', file));
 }
