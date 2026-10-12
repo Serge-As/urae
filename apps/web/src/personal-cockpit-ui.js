@@ -172,6 +172,19 @@ export function mountPersonalCockpitUI({app,getGroups,getMembers,getMeetings,nav
       const hubs=await app.listCommunityHubs();if(hubs.length){const h=el('article',undefined,'item');h.append(el('strong',hubs.length+' Hub(s) du groupe'),action('Voir Communauté & économie','ecosystem'));spaces.append(h);}
     }catch{}
     for(const c of personalCommunities.slice(0,8)){const a=el('article',undefined,'item');a.append(el('strong',c.name),row('Communauté',c.locality||'Sans localité'));spaces.append(a);}
+    const opportunities=el('section',undefined,'item personal-opportunity-actions');
+    opportunities.append(el('strong',tr('Mes opportunités économiques','My business opportunities')));
+    opportunities.append(el('p',tr('Transformez vos besoins en demandes gouvernées et proposez vos services. Aucun engagement automatique.','Turn your needs into governed requests and offer services. No automatic commitment.'),'hint'));
+    const buttons=el('div',undefined,'actions');
+    for(const [kind,fr,en] of [['REQUEST','Exprimer un besoin','Post a need'],['OFFER','Proposer un produit ou service','Offer a product or service']]){
+      const button=el('button',tr(fr,en),'secondary');
+      button.type='button';
+      button.onclick=()=>window.dispatchEvent(new CustomEvent('eco:forum-opportunity-intent',{detail:{groupId:app.activeGroup(),kind,title:'',body:''}}));
+      buttons.append(button);
+    }
+    const discover=el('button',tr('Rechercher des opportunités','Explore opportunities'),'link-btn');
+    discover.type='button';discover.onclick=()=>navigate('ecosystem',{anchor:'valueNetworkOperational',force:true});buttons.append(discover);
+    opportunities.append(buttons);spaces.append(opportunities);
     spaces.append(action('Découvrir d’autres groupes','discovery'),action('Communautés d’intérêt','ecosystem'));
   };
   document.getElementById('ecoPulseRefreshBtn')?.addEventListener('click',()=>void renderPulse());
