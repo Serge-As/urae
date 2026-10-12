@@ -57,6 +57,39 @@ export function mountCoreEconomicLearningUI({app,notify=()=>{},showError=console
   const needs=el('div',undefined,'stack'),offerBox=document.createElement('details');offerBox.append(el('summary','Proposer une offre compatible'),el('p','Le sponsoring est signalé mais ne peut pas améliorer le score de confiance ou de pertinence. Les coûts inconnus restent inconnus.','truth-notice'),offerForm);
   valuePanel.append(valueIntro,needForm,offerBox,needs);
   marketHub.closest('section')?.insertAdjacentElement('afterend',valuePanel);
+  const forumOrigin=el('p',undefined,'truth-notice');
+  forumOrigin.hidden=true;valuePanel.insertBefore(forumOrigin,needForm);
+  window.addEventListener('eco:forum-opportunity-intent',event=>{
+    const data=event instanceof CustomEvent?event.detail:null;
+    if(!data||!['REQUEST','OFFER'].includes(String(data.kind)))return;
+    if(data.kind==='REQUEST'&&(!app.activeGroup()||String(data.groupId)!==String(app.activeGroup())))return;
+    if(data.groupId&&String(data.groupId)!==String(app.activeGroup()))return;
+    const en=document.documentElement.lang?.startsWith('en');
+    const form=data.kind==='REQUEST'?needForm:offerForm;
+    const touched=['title','category','quantity','availableQuantity','unit','specification'].some(name=>String(form.elements[name]?.value??'').trim());
+    if(touched&&!window.confirm(en?'Replace your current unsaved business form with this forum idea?':'Remplacer votre formulaire économique non enregistré par cette idée du Fora ?'))return;
+    if(touched)form.reset();
+    if(data.kind==='REQUEST'){
+      // Preserve true source provenance in the canonical opportunity owner.
+      form.dataset.sourceType=data.messageId?'COMMUNITY_MESSAGE':'MANUAL';
+      form.dataset.sourceRef=data.messageId?String(data.messageId):'';
+    }
+    const text=String(data.body??'').trim();
+    const sourceTitle=String(data.title??'').trim();
+    const title=sourceTitle&&!['REQUEST','OFFER'].includes(sourceTitle)?sourceTitle:text.slice(0,100);
+    if(form.elements.title)form.elements.title.value=title.slice(0,160);
+    if(form.elements.specification)form.elements.specification.value=text.slice(0,400);
+    // Commercial fields (price, quantity, validity and category) must be
+    // provided by a human in the canonical form. No write occurs here.
+    valuePanel.open=true;
+    offerBox.open=data.kind==='OFFER';
+    forumOrigin.hidden=false;
+    forumOrigin.textContent=en
+      ?'Draft based on a forum message. Verify quantities, price, category, availability and rights before explicitly submitting. The original forum post is unchanged.'
+      :'Brouillon inspiré d’un message du Fora. Vérifiez quantités, prix, catégorie, disponibilité et droits avant toute validation explicite. La publication d’origine reste inchangée.';
+    window.dispatchEvent(new CustomEvent('eco:open-economic-opportunity',{detail:{groupId:data.groupId,kind:data.kind}}));
+    form.elements.title?.focus();
+  });
   window.addEventListener('eco:value-network-preset',event=>{
     const kind=String(event instanceof CustomEvent?event.detail?.kind??'':'');if(!['NOW','HARVEST','FRESH_DROP','PICKUP','SUPPLIER','SERVICE'].includes(kind))return;
     const select=offerForm.elements.kind;if(select)select.value=kind;
@@ -71,8 +104,8 @@ export function mountCoreEconomicLearningUI({app,notify=()=>{},showError=console
   }catch(err){showError(err);}})());
 
   needForm.addEventListener('submit',e=>void(async()=>{e.preventDefault();try{
-    await app.createValueNeed({title:val(needForm,'title'),category:val(needForm,'category'),quantity:num(needForm,'quantity'),unit:val(needForm,'unit'),specification:val(needForm,'specification'),quality:val(needForm,'quality'),locality:val(needForm,'locality'),neededBy:val(needForm,'neededBy')||undefined,budgetMax:val(needForm,'budgetMax')?num(needForm,'budgetMax'):undefined,substitutionsAllowed:Boolean(needForm.elements.substitutionsAllowed?.checked),publicationConsent:Boolean(needForm.elements.publicationConsent?.checked),currency:'XAF',sourceType:'MANUAL'});
-    needForm.reset();notify('Besoin créé en brouillon.');await renderNeeds();
+    await app.createValueNeed({title:val(needForm,'title'),category:val(needForm,'category'),quantity:num(needForm,'quantity'),unit:val(needForm,'unit'),specification:val(needForm,'specification'),quality:val(needForm,'quality'),locality:val(needForm,'locality'),neededBy:val(needForm,'neededBy')||undefined,budgetMax:val(needForm,'budgetMax')?num(needForm,'budgetMax'):undefined,substitutionsAllowed:Boolean(needForm.elements.substitutionsAllowed?.checked),publicationConsent:Boolean(needForm.elements.publicationConsent?.checked),currency:'XAF',sourceType:needForm.dataset.sourceType==='COMMUNITY_MESSAGE'?'COMMUNITY_MESSAGE':'MANUAL',sourceRef:needForm.dataset.sourceRef||undefined});
+    needForm.reset();delete needForm.dataset.sourceType;delete needForm.dataset.sourceRef;notify('Besoin créé en brouillon.');await renderNeeds();
   }catch(err){showError(err);}})());
 
   const renderNeeds=async()=>{

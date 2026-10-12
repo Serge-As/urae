@@ -343,6 +343,16 @@ const go=(name,options={})=>{
     showView(name,next);updateBackButton();
 };
 const goBack=()=>{if(navDepth>0)history.back();};
+window.addEventListener('eco:open-economic-opportunity',event=>{
+  const groupId=event instanceof CustomEvent?String(event.detail?.groupId??''):'';
+  const kind=event instanceof CustomEvent?String(event.detail?.kind??''):'';
+  if(groupId&&groupId!==app.activeGroup())return;
+  if(!groupId&&kind!=='OFFER')return;
+  // Navigate only after the canonical demand/offer form accepted a draft.
+  // No publication, reservation, payment or inventory mutation occurs.
+  go('ecosystem',{anchor:'valueNetworkOperational',force:true});
+});
+
 document.querySelectorAll('[data-view]').forEach(b=>b.addEventListener('click',()=>go(b.dataset.view,{anchor:b.dataset.anchor,meetingId:b.dataset.meetingId,matrixMeetingId:b.dataset.matrixMeetingId,sheetMode:b.dataset.sheetMode,openTarget:b.dataset.openTarget,force:Boolean(b.dataset.anchor||b.dataset.sheetMode||b.dataset.openTarget)})));
 document.querySelectorAll('[data-go]').forEach(b=>b.addEventListener('click',()=>go(b.dataset.go,{anchor:b.dataset.anchor,meetingId:b.dataset.meetingId,matrixMeetingId:b.dataset.matrixMeetingId,sheetMode:b.dataset.sheetMode,openTarget:b.dataset.openTarget,force:Boolean(b.dataset.anchor||b.dataset.sheetMode||b.dataset.openTarget)})));
 
@@ -402,7 +412,16 @@ try{
 window.addEventListener('pagehide',()=>persistNavState(captureNavState()));
 updateBackButton();
 const detailUI = mountDetailUI({ app, navigate: go, getGroups: () => groups, getMembers: () => members, getMeetings: () => meetings, getRubrics: () => rubrics, isManager, fmt, date, showError: fail });
-const personalCockpitUI = mountPersonalCockpitUI({ app, getGroups: () => groups, getMembers: () => members, getMeetings: () => meetings, navigate: go, fmt, date, showError: fail });
+const personalCockpitUI = mountPersonalCockpitUI({
+  app, getGroups:()=>groups, getMembers:()=>members, getMeetings:()=>meetings,
+  navigate:go, fmt, date, showError:fail, isManager,
+  openGroupForum:async groupId=>{
+    // Reuse the normal group-context refresh and its permission checks.
+    if(!groups.some(group=>group.id===groupId))throw Error('FORBIDDEN_SCOPE');
+    if(app.activeGroup()!==groupId){app.selectGroup(groupId);await refreshGroupContext();}
+    go('ecosystem',{anchor:'communityEnginePanel',force:true});
+  }
+});
 const recapUI = mountRecapUI({ app, getGroups: () => groups, getMembers: () => members, getMeetings: () => meetings, getRubrics: () => rubrics, isManager, navigate: go, fmt, date, showError: fail });
 const interestCommunityUI = mountInterestCommunityUI({ app, notify: toast, showError: fail, date });
 const adManagerUI = mountAdManagerUI({ app, notify: toast, showError: fail, isManager, fmt });
@@ -1946,24 +1965,82 @@ const renderUrgentNotifications=async()=>{
 document.querySelector('#urgentNotificationsRefreshBtn')?.addEventListener('click',()=>void renderUrgentNotifications());
 document.querySelector('#urgentNotificationsAllBtn')?.addEventListener('click',()=>{go('inbox',{anchor:'notificationCenterPanel',force:true});setTimeout(()=>document.querySelector('#notificationCenterPanel')?.scrollIntoView({behavior:'smooth',block:'start'}),120);});
 const renderNotificationCenter=async()=>{
-  const root=document.querySelector('#notificationCenterList'),meta=document.querySelector('#notificationCenterMeta');if(!root)return;
-  root.replaceChildren();if(!app.activeGroup()){root.innerHTML='<div class="empty-state">'+tx('Sélectionnez un groupe pour consulter ses alertes.','Select a group to view its alerts.')+'</div>';return;}
+  const root=document.querySelector('#notificationCenterList'),meta=document.querySelector('#notificationCenterMeta');
+  if(!root)return;
+  // Do not request every group's inbox during routine group refreshes or
+  // financial work. Only query when the personal inbox is actually open.
+  if(!document.querySelector('#view-inbox.active'))return;
+  root.replaceChildren();
+  if(meta)meta.textContent=tx('Lecture des alertes autorisées de mes groupes…','Loading authorized alerts from my groups…');
   try{
-    const rank={CRITICAL:4,HIGH:3,NORMAL:2,LOW:1},notices=(await app.groupNotifications()).slice().sort((a,b)=>Number(Boolean(a.read))-Number(Boolean(b.read))||(rank[String(b.priority)]??0)-(rank[String(a.priority)]??0)||String(b.createdAt??'').localeCompare(String(a.createdAt??'')));
-    const visible=notices.slice(0,100);if(meta)meta.textContent=tx(`${notices.filter(x=>!x.read).length} non lue(s) · ${notices.length} alerte(s) connues · affichage des 100 plus pertinentes au maximum.`,`${notices.filter(x=>!x.read).length} unread · ${notices.length} known alerts · showing at most the 100 most relevant.`);
-    if(!visible.length){root.innerHTML='<div class="empty-state">'+tx('Aucune alerte pour ce groupe.','No alerts for this group.')+'</div>';return;}
-    for(const n of visible){
-      const article=document.createElement('article');article.className='item notification-center-item '+(n.read?'is-read':'is-unread')+' priority-'+String(n.priority??'NORMAL').toLowerCase();
-      const h=document.createElement('strong');h.textContent=(n.priority==='CRITICAL'?'🔴 ':n.priority==='HIGH'?'🟠 ':n.priority==='LOW'?'⚪ ':'🔵 ')+String(n.title??tx('Notification','Notification'));
-      const p=document.createElement('p');p.textContent=String(n.message??'');const small=document.createElement('small');small.textContent=date(n.createdAt);
-      const actions=document.createElement('div');actions.className='actions';
-      if(n.action?.view){const open=document.createElement('button');open.type='button';open.className='primary';open.textContent=n.action.label||tx('Ouvrir','Open');open.onclick=()=>openNoticeAction(n.action);actions.append(open);}
-      if(!n.read){const seen=document.createElement('button');seen.type='button';seen.className='secondary';seen.textContent=tx('Marquer comme lu','Mark as read');seen.onclick=()=>void(async()=>{try{await app.markGroupNotificationRead(n.id);await renderNotificationCenter();await renderUrgentNotifications();await renderFinancialAlerts();}catch(e){fail(e);}})();actions.append(seen);}
-      article.append(h,p,small,actions);root.append(article);
+    const result=await app.notificationsAcrossGroups();
+    const rank={CRITICAL:4,HIGH:3,NORMAL:2,LOW:1};
+    const notices=result.items.slice().sort((a,b)=>Number(Boolean(a.read))-Number(Boolean(b.read))||(rank[String(b.priority)]??0)-(rank[String(a.priority)]??0)||String(b.createdAt??'').localeCompare(String(a.createdAt??'')));
+    const unread=notices.filter(x=>!x.read).length,missing=result.unavailable.length;
+    if(meta)meta.textContent=tx(
+      unread+' non lue(s) · '+notices.length+' notification(s) de mes groupes'+(missing?' · '+missing+' groupe(s) indisponible(s)':'')+'. Les autres services y apparaissent lorsqu’ils émettent une notification via le moteur existant.',
+      unread+' unread · '+notices.length+' group notification(s)'+(missing?' · '+missing+' group(s) unavailable':'')+'. Other services appear when they publish an alert through the existing notification owner.'
+    );
+    if(missing){
+      const warning=document.createElement('p');warning.className='truth-notice';warning.setAttribute('role','status');
+      warning.textContent=tx('Chargement partiel : certaines alertes ne sont pas accessibles ou le réseau est indisponible. Aucune notification manquante n’est déclarée lue.',
+        'Partial loading: some alerts could not be accessed or the network is unavailable. Missing alerts are not marked as read.');
+      root.append(warning);
     }
-  }catch(error){if(navigator.onLine)fail(error);else root.innerHTML='<div class="empty-state">'+tx('Centre d’alertes indisponible hors ligne tant qu’aucune copie locale n’existe.','Alert center unavailable offline until a local copy exists.')+'</div>';}
+    if(!notices.length){
+      const empty=document.createElement('p');empty.className='empty-state';
+      empty.textContent=tx('Aucune notification de groupe accessible pour le moment.','No accessible group notifications yet.');
+      root.append(empty);return;
+    }
+    for(const n of notices.slice(0,100)){
+      const article=document.createElement('article');
+      article.className='item notification-center-item '+(n.read?'is-read':'is-unread')+' priority-'+String(n.priority??'NORMAL').toLowerCase();
+      const name=document.createElement('small');name.className='notification-origin';name.textContent=String(n.groupName??'');
+      const h=document.createElement('strong');h.textContent=(n.priority==='CRITICAL'?'🔴 ':n.priority==='HIGH'?'🟠 ':n.priority==='LOW'?'⚪ ':'🔵 ')+String(n.title??tx('Notification','Notification'));
+      const message=document.createElement('p');message.textContent=String(n.message??'');
+      const stamp=document.createElement('small');stamp.textContent=date(n.createdAt);
+      const actions=document.createElement('div');actions.className='actions';
+      if(n.action?.view){
+        const open=document.createElement('button');open.type='button';open.className='primary';
+        open.textContent=n.action.label||tx('Ouvrir dans ce groupe','Open in this group');
+        open.onclick=()=>void(async()=>{
+          try{
+            if(n.groupId&&app.activeGroup()!==n.groupId){
+              app.selectGroup(n.groupId);
+              await refreshGroupContext();
+            }
+            openNoticeAction(n.action);
+          }catch(error){fail(error);}
+        })();
+        actions.append(open);
+      }
+      if(!n.read){
+        const seen=document.createElement('button');seen.type='button';seen.className='secondary';
+        seen.textContent=tx('Marquer comme lu','Mark as read');
+        seen.onclick=()=>void(async()=>{
+          try{
+            seen.disabled=true;
+            await app.markNotificationReadInGroup(String(n.groupId),String(n.id));
+            await renderNotificationCenter();
+            if(app.activeGroup()===n.groupId)await renderUrgentNotifications();
+          }catch(error){seen.disabled=false;fail(error);}
+        })();
+        actions.append(seen);
+      }
+      article.append(name,h,message,stamp,actions);root.append(article);
+    }
+  }catch(error){
+    if(navigator.onLine)fail(error);
+    const message=document.createElement('p');message.className='truth-notice';
+    message.textContent=tx('Alertes non disponibles. Réessayez lorsque votre connexion revient ; aucun état de lecture n’a été modifié.',
+      'Alerts unavailable. Retry when your connection returns; no read state has been changed.');
+    root.append(message);
+  }
 };
 document.querySelector('#notificationCenterRefreshBtn')?.addEventListener('click',()=>void renderNotificationCenter());
+window.addEventListener('eco:view-changed',event=>{
+  if(event.detail?.view==='inbox')void renderNotificationCenter();
+});
 
 const DISMISSED_FINANCIAL_ALERTS='eco.dismissedFinancialAlerts';
 const dismissedFinancialAlerts=()=>{try{return new Set(JSON.parse(sessionStorage.getItem(DISMISSED_FINANCIAL_ALERTS)||'[]'));}catch{return new Set();}};

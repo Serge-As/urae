@@ -768,7 +768,7 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
     if(globalGroupTrashRestore&&request.method==='POST'){const id=decodeURIComponent(globalGroupTrashRestore[1]!),record=await repo.getWorkspaceRecord(ctx.tenantId,id);if(!record||!await groupTrashVisible(record))throw Error('TRASH_ITEM_NOT_FOUND');return json(await restoreTrash(String(record.data.entityId??record.groupId??''),id),200,cors);}
     const globalGroupTrashReminders=url.pathname.match(/^\/api\/v1\/trash\/groups\/([^/]+)\/reminders$/);
     if(globalGroupTrashReminders&&request.method==='PUT'){const id=decodeURIComponent(globalGroupTrashReminders[1]!),record=await repo.getWorkspaceRecord(ctx.tenantId,id);if(!record||!await groupTrashVisible(record))throw Error('TRASH_ITEM_NOT_FOUND');const body=await readJson<Record<string,unknown>>(request),enabled=body.enabled!==false,optOut=new Set(jsonArraySafe(String(record.data.reminderOptOutUserIdsJson??'[]')));if(enabled)optOut.delete(ctx.actorId);else optOut.add(ctx.actorId);const updated={...record,data:{...record.data,reminderOptOutUserIdsJson:JSON.stringify([...optOut])},updatedAt:new Date().toISOString()};await repo.saveWorkspaceRecord(updated);return json(updated,200,cors);}
-    const scopedGroup=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)/)?.[1];
+    const scopedGroup=url.pathname==='/api/v1/groups/mine'?undefined:url.pathname.match(/^\/api\/v1\/groups\/([^/]+)/)?.[1];
     if(scopedGroup)await requireGroup(scopedGroup);
     const trashRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/trash$/);
     const trashRestore=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/trash\/([^/]+)\/restore$/);
@@ -1367,6 +1367,22 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
     const sim=url.pathname.match(/^\/api\/v1\/group-projects\/([^/]+)\/simulate$/); if(request.method==='POST'&&sim) return json(await foundation.simulateProject(ctx.tenantId,sim[1]!),200,cors);
     const convert=url.pathname.match(/^\/api\/v1\/group-projects\/([^/]+)\/convert$/); if(request.method==='POST'&&convert) return json(await foundation.convertProjectToGroup(ctx.tenantId,convert[1]!),201,cors);
 
+    if(request.method==='GET'&&url.pathname==='/api/v1/groups/mine'){
+      // Account-scoped view for personal foras and notifications. Do not
+      // reuse the broad tenant catalogue as proof of group membership.
+      const all=await repo.listGroups(ctx.tenantId),visible=[] as typeof all;
+      for(let offset=0;offset<all.length;offset+=4){
+        const batch=await Promise.all(all.slice(offset,offset+4).map(async group=>{
+          if(group.status==='archived')return null;
+          if(group.createdBy===ctx.actorId)return group;
+          const membership=(await repo.listMemberships(ctx.tenantId,group.id))
+            .some(member=>member.userId===ctx.actorId&&member.status==='active');
+          return membership?group:null;
+        }));
+        for(const group of batch)if(group)visible.push(group);
+      }
+      return json(visible,200,cors);
+    }
     if(request.method==='GET'&&url.pathname==='/api/v1/groups') return json(await repo.listGroups(ctx.tenantId),200,cors);
     const groupPolicyRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/operating-policy$/);
     if(groupPolicyRoute&&request.method==='GET'){const group=await repo.getGroup(ctx.tenantId,groupPolicyRoute[1]!);if(!group)return json({error:'NOT_FOUND'},404,cors);return json(group.operatingPolicy??starterGroupOperatingPolicy(),200,cors);}

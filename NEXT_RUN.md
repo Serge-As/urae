@@ -1,3 +1,13 @@
+## Jalon visuel NON QUALIFIÉ — 12 octobre 2026 (Foras / Inbox / AdManager)
+
+Branche isolée : `feat/ux-foras-inbox-adpreview-20261012` (issue de `preview/eco-refonte-20261012@f2c38bc8`). AUCUN déploiement, AUCUNE modification D1/R2, HOLD #72 inchangé et `realMoneyEnabled=false`.
+
+Code : répertoire personnel des foras de groupes/communautés ; endpoint d'accès vérifié `GET /api/v1/groups/mine` ; centre d'alertes multi-groupes à la demande ; aperçu publicitaire de brouillon avec image R2 déjà accessible. Test : `tests/personal-foras-multigroup-inbox-20261012.test.mjs` ajouté mais pas encore exécuté. Vérification de syntaxe JS/MJS seulement.
+
+**AVANT TOUT MERGE OU DÉPLOIEMENT** : lire `docs/implementation/ECO_FORAS_NOTIFICATIONS_ADOPS_UI_HANDOFF_2026-10-12.md` ; lancer `npm run typecheck`, test ciblé puis gates complets + navigateurs et test permission/média avec préproduction isolée. Vérifier budget Actions gratuit et SHA exact. Ne pas prétendre que le forum commun, les émetteurs NOW/Deal, tous les placements Ads ou la recette 155/155 sont terminés.
+
+---
+
 ## Reprise sans Ubuntu local — 9 octobre 2026
 
 Le fondateur confirme : **« continuons si possible sans Ubuntu »**. Cette préférence fait autorité : la gestion du projet reste sous Windows, Ubuntu sur son PC est facultatif. L'activation native de VirtualMachinePlatform a terminé à **100 % / opération réussie** ; le dernier `wsl --list --verbose` indique **aucune distribution installée**. Aucune distribution Ubuntu n'est installée par cette reprise.
