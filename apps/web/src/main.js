@@ -2493,9 +2493,33 @@ const simulateCurrentLaunch=async({silent=false}={})=>{
   launchStudio.afterSimulation();if(!silent)toast('Projet et rubriques vérifiés. Continuez jusqu’à la prévisualisation finale.');
   return r;
 };
+// Unlike the transient global toast, this local result survives long enough
+// for members and real-device audits to understand why a simulation failed.
+let launchSimulationPending=false;
 const simulateLaunchFromUserAction=async()=>{
-  try{await simulateCurrentLaunch();}
-  catch(error){fail(Error(launchError(error)));}
+  if(launchSimulationPending)return;
+  const button=$('#simulateProjectBtn'),output=$('#simulationResult');
+  launchSimulationPending=true;button.disabled=true;
+  const label=button.textContent;
+  output.setAttribute('role','status');
+  output.replaceChildren();
+  const progress=document.createElement('p');
+  progress.className='truth-notice';progress.textContent=tx('Vérification de la faisabilité en cours…','Feasibility check in progress…');
+  output.append(progress);
+  try{
+    await simulateCurrentLaunch();
+    output.dataset.simulationStatus='PASS';
+  }catch(error){
+    const message=launchError(error);
+    output.replaceChildren();
+    const detail=document.createElement('p');
+    detail.className='truth-notice';detail.setAttribute('role','alert');
+    detail.textContent=tx('Simulation non terminée : ','Simulation could not finish: ')+message;
+    output.append(detail);output.dataset.simulationStatus='ERROR';
+    fail(Error(message));
+  }finally{
+    button.disabled=false;button.textContent=label;launchSimulationPending=false;
+  }
 };
 onSubmit('#projectForm', async event=>{
   event.preventDefault();
