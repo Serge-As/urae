@@ -1,0 +1,35 @@
+name: Eco-System — real deployed screenshots and visual audit
+on:
+  push:
+    branches: [preview/eco-refonte-20261012]
+    paths:
+      - 'scripts/visual-proof-preview.mjs'
+      - '.github/workflows/eco-visual-evidence-preview.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: eco-real-screens-preview
+  cancel-in-progress: false
+jobs:
+  screenshots:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: npx playwright install --with-deps chromium
+      - name: Capture deployed pages at 1440px and 390px
+        run: node scripts/visual-proof-preview.mjs
+      - name: Keep true screenshots and inspection JSON even on failure
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: eco-system-real-screen-evidence
+          path: visual-evidence/
+          if-no-files-found: warn
+          retention-days: 21
