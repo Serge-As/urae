@@ -1447,14 +1447,14 @@ body.external-ad-portal{min-height:100vh;padding:clamp(12px,4vw,40px);background
   .finance-toc a{padding:8px 11px;font-size:13px;min-height:48px}
 }
 
-/* Eco-System iPhone/WebKit: retain mobile overflow closure without
-   undoing the already deployed dark-green, high-contrast hero. */
-#view-dashboard .hero{color:#fff}
-#view-dashboard .hero h1{color:#fff}
-#view-dashboard .hero p{color:#f1fcf5}
-#view-dashboard .hero .eyebrow{color:#d4f4df}
+/* Real preview proves the later pale-green hero wins the cascade.
+   Fix foreground to accessible dark-green, preserving the new hero layout. */
+#view-dashboard .hero{color:#173e31}
+#view-dashboard .hero h1{color:#174b39}
+#view-dashboard .hero p{color:#345e4c}
+#view-dashboard .hero .eyebrow{color:#176946}
 #view-dashboard .hero .hero-card,#view-dashboard .hero .hero-card span,
-#view-dashboard .hero .hero-card small{color:#ebf7f0}
+#view-dashboard .hero .hero-card small{color:#345e4c}
 .cahier-banner{flex-wrap:wrap;min-width:0;max-width:100%}
 .cahier-banner > *{min-width:0}
 .cahier-code{white-space:normal;max-width:100%;overflow-wrap:anywhere;word-break:break-word}
