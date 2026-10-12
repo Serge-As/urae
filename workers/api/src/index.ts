@@ -171,7 +171,7 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
   const url=new URL(request.url); const cors=corsHeaders(request);
   if(request.method==='OPTIONS'){
     const allowed=Boolean((cors as Record<string,string>)['access-control-allow-origin']);
-    return new Response(null,{status:allowed?204:403,headers:{...baseSecurityHeaders,...cors,'access-control-allow-methods':'GET,POST,PUT,OPTIONS','access-control-allow-headers':'content-type,x-tenant-id,x-actor-id,x-group-roles,x-active-group-id,x-device-id,x-session-id,x-request-id,x-timezone,x-external-ad-token'}});
+    return new Response(null,{status:allowed?204:403,headers:{...baseSecurityHeaders,...cors,'access-control-allow-methods':'GET,POST,PUT,DELETE,OPTIONS','access-control-allow-headers':'content-type,x-tenant-id,x-actor-id,x-group-roles,x-active-group-id,x-device-id,x-session-id,x-request-id,x-timezone,x-external-ad-token'}});
   }
   const {kernel,foundation,ledger,meetings,discovery,membershipGateway,rubrics,completion,explainability,documents,receivables,treasury,riskFinance,market,community,imports,artifactStore,memberControl,memberEnvelopes,groupIdentity,conciergeLearning,miscRubrics,adManager,partnerAds,externalAds,economicIntelligence,externalPrograms,operationalCockpit,businessStudio,knowledgeAcademy,valueNetwork,creatorTalent,quietWatch}=createRequestScope(request,repo,options.artifacts,options.dataUseDefaultMode??'BETA_OPEN',options.documentAI);
   let ctx=kernel.context.get();
@@ -2450,6 +2450,9 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
       const body=await readJson<Record<string,unknown>>(request);
       return json(await externalAds.issue(externalInvite[1]!,String(body.title??''),Number(body.hours??72)),201,cors);
     }
+    const revokeExternalInvite=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/ads\/external-invites\/([^/]+)$/);
+    if(revokeExternalInvite&&request.method==='DELETE')
+      return json(await externalAds.revoke(revokeExternalInvite[1]!,revokeExternalInvite[2]!),200,cors);
     const externalIntake=url.pathname.match(/^\/api\/v1\/external-ads\/groups\/([^/]+)\/invite$/);
     if(externalIntake&&request.method==='GET')return json(await externalAds.status(externalIntake[1]!,String(request.headers.get('x-external-ad-token')??'')),200,cors);
     if(externalIntake&&request.method==='POST'){
