@@ -171,7 +171,7 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
   const url=new URL(request.url); const cors=corsHeaders(request);
   if(request.method==='OPTIONS'){
     const allowed=Boolean((cors as Record<string,string>)['access-control-allow-origin']);
-    return new Response(null,{status:allowed?204:403,headers:{...baseSecurityHeaders,...cors,'access-control-allow-methods':'GET,POST,PUT,OPTIONS','access-control-allow-headers':'content-type,x-tenant-id,x-actor-id,x-group-roles,x-active-group-id,x-device-id,x-session-id,x-request-id,x-timezone'}});
+    return new Response(null,{status:allowed?204:403,headers:{...baseSecurityHeaders,...cors,'access-control-allow-methods':'GET,POST,PUT,OPTIONS','access-control-allow-headers':'content-type,x-tenant-id,x-actor-id,x-group-roles,x-active-group-id,x-device-id,x-session-id,x-request-id,x-timezone,x-external-ad-token'}});
   }
   const {kernel,foundation,ledger,meetings,discovery,membershipGateway,rubrics,completion,explainability,documents,receivables,treasury,riskFinance,market,community,imports,artifactStore,memberControl,memberEnvelopes,groupIdentity,conciergeLearning,miscRubrics,adManager,partnerAds,externalAds,economicIntelligence,externalPrograms,operationalCockpit,businessStudio,knowledgeAcademy,valueNetwork,creatorTalent,quietWatch}=createRequestScope(request,repo,options.artifacts,options.dataUseDefaultMode??'BETA_OPEN',options.documentAI);
   let ctx=kernel.context.get();
@@ -2450,17 +2450,17 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
       const body=await readJson<Record<string,unknown>>(request);
       return json(await externalAds.issue(externalInvite[1]!,String(body.title??''),Number(body.hours??72)),201,cors);
     }
-    const externalIntake=url.pathname.match(/^\/api\/v1\/external-ads\/groups\/([^/]+)\/invites\/([^/]+)$/);
-    if(externalIntake&&request.method==='GET')return json(await externalAds.status(externalIntake[1]!,decodeURIComponent(externalIntake[2]!)),200,cors);
+    const externalIntake=url.pathname.match(/^\/api\/v1\/external-ads\/groups\/([^/]+)\/invite$/);
+    if(externalIntake&&request.method==='GET')return json(await externalAds.status(externalIntake[1]!,String(request.headers.get('x-external-ad-token')??'')),200,cors);
     if(externalIntake&&request.method==='POST'){
       const input=await readJson<Record<string,unknown>>(request);
-      return json(await externalAds.submit(externalIntake[1]!,decodeURIComponent(externalIntake[2]!),input),201,cors);
+      return json(await externalAds.submit(externalIntake[1]!,String(request.headers.get('x-external-ad-token')??''),input),201,cors);
     }
-    const externalPhoto=url.pathname.match(/^\/api\/v1\/external-ads\/groups\/([^/]+)\/invites\/([^/]+)\/photo$/);
+    const externalPhoto=url.pathname.match(/^\/api\/v1\/external-ads\/groups\/([^/]+)\/invite\/photo$/);
     if(externalPhoto&&request.method==='POST'){
       const data=await request.formData(),file=data.get('file');
       if(!(file instanceof File))throw Error('MEDIA_FILE_REQUIRED');
-      return json(await externalAds.upload(externalPhoto[1]!,decodeURIComponent(externalPhoto[2]!),file),201,cors);
+      return json(await externalAds.upload(externalPhoto[1]!,String(request.headers.get('x-external-ad-token')??''),file),201,cors);
     }
     const adDashboard=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/ads\/dashboard$/);
     if(adDashboard&&request.method==='GET')return json(await adManager.dashboard(adDashboard[1]!),200,cors);
