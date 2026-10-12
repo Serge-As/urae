@@ -1687,6 +1687,10 @@ export class ConnectedApplication {
     if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');
     return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/ads/external-invites');
   }
+  async revokeExternalAdInvite(inviteId:string):Promise<any>{
+    if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');
+    return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/ads/external-invites/'+encodeURIComponent(inviteId),{method:'DELETE'});
+  }
   async createExternalAdInvite(title:string,hours=72):Promise<{token:string;expiresAt:string;inviteId:string}>{
     if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');
     return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/ads/external-invites',
