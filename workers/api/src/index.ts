@@ -1367,6 +1367,22 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
     const sim=url.pathname.match(/^\/api\/v1\/group-projects\/([^/]+)\/simulate$/); if(request.method==='POST'&&sim) return json(await foundation.simulateProject(ctx.tenantId,sim[1]!),200,cors);
     const convert=url.pathname.match(/^\/api\/v1\/group-projects\/([^/]+)\/convert$/); if(request.method==='POST'&&convert) return json(await foundation.convertProjectToGroup(ctx.tenantId,convert[1]!),201,cors);
 
+    if(request.method==='GET'&&url.pathname==='/api/v1/groups/mine'){
+      // Account-scoped view for personal foras and notifications. Do not
+      // reuse the broad tenant catalogue as proof of group membership.
+      const all=await repo.listGroups(ctx.tenantId),visible=[] as typeof all;
+      for(let offset=0;offset<all.length;offset+=4){
+        const batch=await Promise.all(all.slice(offset,offset+4).map(async group=>{
+          if(group.status==='archived')return null;
+          if(group.createdBy===ctx.actorId)return group;
+          const membership=(await repo.listMemberships(ctx.tenantId,group.id))
+            .some(member=>member.userId===ctx.actorId&&member.status==='active');
+          return membership?group:null;
+        }));
+        for(const group of batch)if(group)visible.push(group);
+      }
+      return json(visible,200,cors);
+    }
     if(request.method==='GET'&&url.pathname==='/api/v1/groups') return json(await repo.listGroups(ctx.tenantId),200,cors);
     const groupPolicyRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/operating-policy$/);
     if(groupPolicyRoute&&request.method==='GET'){const group=await repo.getGroup(ctx.tenantId,groupPolicyRoute[1]!);if(!group)return json({error:'NOT_FOUND'},404,cors);return json(group.operatingPolicy??starterGroupOperatingPolicy(),200,cors);}
