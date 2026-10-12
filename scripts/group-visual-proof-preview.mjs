@@ -82,7 +82,16 @@ try{
   await page.locator('#simulateProjectBtn').click();
   await page.waitForTimeout(2500);
   const result=await page.locator('#simulationResult').innerText();
-  if(!result.includes('Total monétaire'))throw Error('Simulation did not produce expected result: '+result.slice(0,120));
+  if(!result.includes('Total monétaire')){
+    const diagnostic=await page.evaluate(()=>({
+      step:document.querySelector('#launchStepStatus')?.textContent,
+      htmlInvalid:[...document.querySelectorAll('#projectForm :invalid')].map(x=>({id:x.id,name:x.getAttribute('name'),hidden:x.closest('[data-launch-step]')?.hidden,disabled:x.disabled})).slice(0,25),
+      error:document.querySelector('#errorBox')?.textContent?.slice(0,500),
+      status:document.querySelector('#toast')?.textContent?.slice(0,220),
+      result:document.querySelector('#simulationResult')?.textContent?.slice(0,120)
+    }));
+    throw Error('Simulation did not produce expected result: '+JSON.stringify(diagnostic));
+  }
  });
  await step('review preview and create',async()=>{
   for(let n=8;n<=10;n++)await next();
@@ -110,3 +119,4 @@ try{
 await fs.writeFile(path.join(out,'group-evidence.json'),JSON.stringify(report,null,2));
 console.log('ECO_REAL_GROUP_FLOW',JSON.stringify(report));
 await browser.close();
+if(report.result!=='GROUP_CREATED')process.exitCode=1;
