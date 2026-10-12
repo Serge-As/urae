@@ -1682,6 +1682,16 @@ export class ConnectedApplication {
   }
   async saveGroupShop(input:{name:string;tagline?:string;visibility?:'GROUP_ONLY'|'PUBLIC';locality?:string;categories?:string[]}):Promise<unknown>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/market/shop',{method:'POST',body:JSON.stringify(input)});}
   async groupStorefront():Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/market/storefront');}
+  currentTenant():string{return this.tenantId;}
+  async externalAdInvites():Promise<any[]>{
+    if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');
+    return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/ads/external-invites');
+  }
+  async createExternalAdInvite(title:string,hours=72):Promise<{token:string;expiresAt:string;inviteId:string}>{
+    if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');
+    return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/ads/external-invites',
+      {method:'POST',body:JSON.stringify({title,hours})});
+  }
   async partnerAdProposals():Promise<any[]>{
     if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');
     return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/ads/partner-proposals');
