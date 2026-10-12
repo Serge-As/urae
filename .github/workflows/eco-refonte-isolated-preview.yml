@@ -1,0 +1,96 @@
+name: Eco-System refonte — isolated Cloudflare preview
+on:
+  push:
+    branches: ['preview/eco-refonte-20261012']
+    paths:
+      - '.github/workflows/eco-refonte-isolated-preview.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: eco-refonte-preview-deployment
+  cancel-in-progress: false
+jobs:
+  preview:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    env:
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      PREVIEW_WORKER: eco-system-refonte-preview
+      PREVIEW_DB: eco-system-refonte-preview-db
+      PREVIEW_BUCKET: eco-system-refonte-preview-media
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - name: Require isolation and correct preproduction source
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF_NAME" = 'preview/eco-refonte-20261012'
+          test -f workers/api/wrangler.toml
+          test -n "$CLOUDFLARE_ACCOUNT_ID" || { echo '::error::Missing Cloudflare account secret'; exit 1; }
+          test -n "$CLOUDFLARE_API_TOKEN" || { echo '::error::Missing Cloudflare API token secret'; exit 1; }
+      - name: Locked dependencies and full app qualification
+        run: |
+          npm ci --ignore-scripts
+          npm run ci
+          npm run build
+      - name: Verify isolated Cloudflare DB and media bucket (read only)
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes wrangler@4 d1 list --json > /tmp/eco-preview-d1-list.json
+          DB_ID="$(node scripts/cloudflare-d1-id.mjs /tmp/eco-preview-d1-list.json "$PREVIEW_DB" || true)"
+          if [ -z "$DB_ID" ]; then
+            echo "::error::Preview D1 not provisioned. Refusing to reuse or create a database."
+            exit 1
+          fi
+          npx --yes wrangler@4 r2 bucket list > /tmp/eco-preview-r2-list.txt
+          if ! grep -Fq "$PREVIEW_BUCKET" /tmp/eco-preview-r2-list.txt; then
+            echo "::error::Preview R2 not provisioned. Refusing to reuse production media."
+            exit 1
+          fi
+          echo "PREVIEW_DB_ID=$DB_ID" >> "$GITHUB_ENV"
+      - name: Generate isolated Wrangler config
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import os
+          from pathlib import Path
+          env=os.environ
+          config=Path('workers/api/wrangler.toml').read_text()
+          assert 'name = "eco-system"' in config
+          assert 'RELEASE_COMMIT_SHA = "UNBOUND_DEPLOY"' in config
+          config=config.replace('name = "eco-system"','name = "'+env['PREVIEW_WORKER']+'"',1)
+          config=config.replace('RELEASE_COMMIT_SHA = "UNBOUND_DEPLOY"','RELEASE_COMMIT_SHA = "'+env['GITHUB_SHA']+'"',1)
+          config+='\n[[d1_databases]]\nbinding = "DB"\ndatabase_name = "'+env['PREVIEW_DB']+'"\ndatabase_id = "'+env['PREVIEW_DB_ID']+'"\nmigrations_dir = "../../cloudflare/migrations"\n'
+          config+='\n[[r2_buckets]]\nbinding = "ARTIFACTS"\nbucket_name = "'+env['PREVIEW_BUCKET']+'"\n'
+          Path('workers/api/wrangler.preview.toml').write_text(config)
+          print('Worker preview configured with isolated D1/R2; production untouched.')
+          PY
+      - name: Preview-only schema migrations
+        run: npx --yes wrangler@4 d1 migrations apply "$PREVIEW_DB" --remote --config workers/api/wrangler.preview.toml
+      - name: Deploy isolated preview only
+        run: npx --yes wrangler@4 deploy --config workers/api/wrangler.preview.toml
+      - name: Prove preview PWA and release health
+        shell: bash
+        run: |
+          set -euo pipefail
+          URL="https://eco-system-refonte-preview.sergemimf.workers.dev"
+          curl --fail --show-error --silent --retry 5 --retry-delay 2 "$URL/health" > /tmp/eco-preview-health.json
+          curl --fail --show-error --silent --retry 5 --retry-delay 2 "$URL/" > /tmp/eco-preview-root.html
+          node --input-type=module - <<'NODE'
+          import fs from 'node:fs';
+          const health=JSON.parse(fs.readFileSync('/tmp/eco-preview-health.json','utf8'));
+          const root=fs.readFileSync('/tmp/eco-preview-root.html','utf8');
+          if(health.ok!==true)throw Error('HEALTH_NOT_OK');
+          if(health.realMoneyEnabled!==false)throw Error('REAL_MONEY_UNSAFE');
+          if(health.commitSha!==process.env.GITHUB_SHA)throw Error('COMMIT_MISMATCH');
+          if(!root.toLowerCase().includes('<!doctype html>'))throw Error('ROOT_NOT_PWA');
+          console.log('PREVIEW_PUBLISHED_AND_VERIFIED',health.version,health.commitSha);
+          NODE
