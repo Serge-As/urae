@@ -8,7 +8,57 @@ export function mountAdManagerUI({app,notify=()=>{},showError=console.error,isMa
   const kpis=document.getElementById('adKpis'),inventoryRoot=document.getElementById('adInventoryList'),houseRoot=document.getElementById('adHouseList'),prospectRoot=document.getElementById('adProspectList'),prospectForm=document.getElementById('adProspectForm');
   if(!root||!form)return{refresh:async()=>{}};
   document.addEventListener('eco:partner-ad-imported',()=>void render().catch(showError));
-  let imageUrls=[];
+  document.addEventListener('eco:visual-media-updated',()=>void render().catch(showError));
+  // Preview is a local projection of the existing media/campaign fields.
+  // No campaign is activated, impression counted or money charged here.
+  const preview=el('section',undefined,'ad-creative-preview item full');
+  preview.setAttribute('aria-label',document.documentElement.lang==='en'?'Advertising draft preview':'Aperçu du brouillon publicitaire');
+  const previewDisclosure=el('small','','eco-ad-disclosure'),
+    previewTitle=el('strong','',''),previewBody=el('p','',''),
+    previewAction=el('span','','pill'),previewPlacements=el('small','','hint'),
+    previewImage=el('img','','ad-creative-preview-image');
+  previewImage.alt='';previewImage.loading='lazy';previewImage.hidden=true;
+  const previewMediaAction=el('button',document.documentElement.lang==='en'?'Manage images':'Gérer les images','secondary');
+  previewMediaAction.type='button';
+  previewMediaAction.onclick=()=>{
+    const studio=document.getElementById('ecoVisualMediaStudio');
+    if(!studio)return;
+    for(let parent=studio.parentElement;parent;parent=parent.parentElement)if(parent.tagName==='DETAILS')parent.open=true;
+    studio.scrollIntoView({behavior:'smooth',block:'start'});
+    studio.querySelector('input[type="file"]')?.focus({preventScroll:true});
+  };
+  preview.append(previewDisclosure,previewImage,previewTitle,previewBody,previewAction,previewPlacements,previewMediaAction);
+  form.insertBefore(preview,form.querySelector('button.primary'));
+  let previewUrl='',previewGeneration=0;
+  const clearPreviewImage=()=>{
+    previewGeneration++;if(previewUrl){URL.revokeObjectURL(previewUrl);previewUrl='';}
+    previewImage.hidden=true;previewImage.removeAttribute('src');
+  };
+  const paintPreview=()=>{
+    const en=document.documentElement.lang==='en';
+    previewDisclosure.textContent=en?'Sponsored content · draft only':'Contenu sponsorisé · aperçu non publié';
+    previewTitle.textContent=value('adCampaignHeadline')||(en?'Your campaign headline':'Le titre de votre campagne');
+    previewBody.textContent=value('adCampaignBody')||(en?'Your message will appear here.':'Votre message apparaîtra ici.');
+    previewAction.textContent=value('adCampaignCta')||(en?'Action':'Action');
+    const option=document.getElementById('adCampaignPlacements');
+    const placements=[...(option?.selectedOptions??[])].map(o=>o.textContent.trim());
+    previewPlacements.textContent=(en?'Planned placements: ':'Emplacements envisagés : ')+(placements.join(' · ')||(en?'not selected':'non sélectionnés'));
+  };
+  const loadPreviewImage=async()=>{
+    clearPreviewImage();const id=value('adCampaignMedia'),generation=previewGeneration;
+    if(!id||navigator.onLine===false)return;
+    try{
+      const blob=await app.visualMediaBlob(id);
+      if(generation!==previewGeneration||value('adCampaignMedia')!==id)return;
+      previewUrl=URL.createObjectURL(blob);previewImage.src=previewUrl;previewImage.hidden=false;
+    }catch{/* Protected or unavailable media are not represented as published. */}
+  };
+  form.addEventListener('input',paintPreview);
+  form.addEventListener('change',event=>{
+    paintPreview();if(event.target?.id==='adCampaignMedia')void loadPreviewImage();
+  });
+  paintPreview();
+    let imageUrls=[];
   const clearImages=()=>{for(const url of imageUrls)URL.revokeObjectURL(url);imageUrls=[];};
 
   const metric=(label,value)=>{const c=el('article',undefined,'metric');c.append(el('strong',String(value)),el('span',label));return c;};
@@ -103,7 +153,7 @@ export function mountAdManagerUI({app,notify=()=>{},showError=console.error,isMa
       placements:placements.length?placements:['FEED_NATIVE'],frequencyCapPer7Days:Number(value('adCampaignFrequency')||3),
       targeting:{localities:split(value('adCampaignLocalities')),interestTags:split(value('adCampaignInterests')),rubricKinds:split(value('adCampaignRubricKinds')),aggregateRubricVolumeBands:split(value('adCampaignVolumeBands'))},
       creative:{headline:value('adCampaignHeadline'),body:value('adCampaignBody'),callToAction:value('adCampaignCta'),destinationRef:value('adCampaignDestination'),...(value('adCampaignMedia')?{mediaAssetId:value('adCampaignMedia')}:{})}};
-    await app.createAdCampaign(input);notify('Brouillon AdManager créé en sandbox.');form.reset();document.getElementById('adCampaignFrequency').value='3';await render();
+    await app.createAdCampaign(input);notify('Brouillon AdManager créé en sandbox.');form.reset();document.getElementById('adCampaignFrequency').value='3';clearPreviewImage();paintPreview();await render();
   }catch(err){showError(err);}})();});
 
   prospectForm?.addEventListener('submit',e=>{e.preventDefault();void(async()=>{try{
@@ -125,6 +175,6 @@ export function mountAdManagerUI({app,notify=()=>{},showError=console.error,isMa
     notify(data.aiUsed?'4 variantes House Ads générées par IA.':'Variantes déterministes utilisées sans bloquer la régie.');
   }catch(e){showError(e);}})());
   document.getElementById('adManagerRefreshBtn')?.addEventListener('click',()=>void render().catch(showError));
-  document.addEventListener('eco:group-context-changed',()=>void render().catch(showError));
+  document.addEventListener('eco:group-context-changed',()=>{clearPreviewImage();void render().catch(showError);});
   return{refresh:render};
 }
