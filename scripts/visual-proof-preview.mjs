@@ -34,7 +34,15 @@ async function snapshot(page,label,mode){
       viewport:{w:innerWidth,h:innerHeight},
       buttonsVisible:[...document.querySelectorAll('button')].filter(e=>{const r=e.getBoundingClientRect();return r.width>0&&r.height>0&&!e.disabled}).length,
       inputsVisible:[...document.querySelectorAll('input')].filter(e=>e.getBoundingClientRect().height>0).length,
-      focusTag:focused?.tagName
+      focusTag:focused?.tagName,
+      heroStyle: (() => {
+        const hero=document.querySelector('#view-dashboard .hero');
+        if(!hero)return null;
+        const title=hero.querySelector('h1'),info=hero.querySelector('p');
+        return {background:getComputedStyle(hero).backgroundImage,
+          titleColor:title?getComputedStyle(title).color:null,
+          paragraphColor:info?getComputedStyle(info).color:null};
+      })()
     };
   });
   report.captures.push({file,label,mode,state});
