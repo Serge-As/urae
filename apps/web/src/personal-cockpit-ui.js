@@ -3,7 +3,7 @@ const el=(tag,text,className)=>{const e=document.createElement(tag);if(text!==un
 const row=(label,value)=>{const p=el('p');p.append(el('strong',label+' : '),document.createTextNode(String(value??'—')));return p;};
 const detail=(label,type,id)=>{const a=el('a',label,'link-btn');a.href='#detail='+encodeURIComponent(type)+':'+encodeURIComponent(id);a.dataset.detailType=type;a.dataset.detailId=id;return a;};
 
-export function mountPersonalCockpitUI({app,getGroups,getMembers,getMeetings,navigate,openGroupForum,fmt=n=>String(n),date=x=>String(x),showError=console.error}){
+export function mountPersonalCockpitUI({app,getGroups,getMembers,getMeetings,navigate,openGroupForum,isManager=()=>false,fmt=n=>String(n),date=x=>String(x),showError=console.error}){
   const metrics=document.getElementById('personalCockpitMetrics'),situation=document.getElementById('personalSituation'),next=document.getElementById('personalNext'),noticesRoot=document.getElementById('personalLiveNotices'),spaces=document.getElementById('personalSpaces');
   const pulseRoot=document.getElementById('ecoPulseFeed'),pulseProfile=document.getElementById('ecoPulseProfile');
   if(!metrics||!situation||!next||!noticesRoot||!spaces)return{refresh:async()=>{}};
@@ -176,7 +176,7 @@ export function mountPersonalCockpitUI({app,getGroups,getMembers,getMeetings,nav
     opportunities.append(el('strong',tr('Mes opportunités économiques','My business opportunities')));
     opportunities.append(el('p',tr('Transformez vos besoins en demandes gouvernées et proposez vos services. Aucun engagement automatique.','Turn your needs into governed requests and offer services. No automatic commitment.'),'hint'));
     const buttons=el('div',undefined,'actions');
-    for(const [kind,fr,en] of [['REQUEST','Exprimer un besoin','Post a need'],['OFFER','Proposer un produit ou service','Offer a product or service']]){
+    for(const [kind,fr,en] of [['REQUEST','Exprimer un besoin collectif','Post a collective need'],['OFFER','Proposer un produit ou service','Offer a product or service']].filter(([kind])=>kind!=='REQUEST'||isManager())){
       const button=el('button',tr(fr,en),'secondary');
       button.type='button';
       button.onclick=()=>window.dispatchEvent(new CustomEvent('eco:forum-opportunity-intent',{detail:{groupId:app.activeGroup(),kind,title:'',body:''}}));
