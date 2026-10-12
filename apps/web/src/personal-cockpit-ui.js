@@ -126,7 +126,11 @@ export function mountPersonalCockpitUI({app,getGroups,getMembers,getMeetings,nav
       next.append(el('p','Aucun groupe actif : votre cockpit reste centré sur votre compte.','hint'));
       spaces.append(...forumGroups.slice(0,12).map(g=>detail(g.name,'group',g.id)));
       for(const c of personalCommunities.slice(0,8)){const a=el('article',undefined,'item');a.append(el('strong',c.name),row('Communauté',c.locality||'Sans localité'));spaces.append(a);}
-      spaces.append(action('Découvrir des communautés','ecosystem'));
+      // A person can offer a service even before joining a group.
+      const sell=el('button',tr('Proposer mes services','Offer my services'),'primary');
+      sell.type='button';
+      sell.onclick=()=>window.dispatchEvent(new CustomEvent('eco:forum-opportunity-intent',{detail:{kind:'OFFER',title:'',body:''}}));
+      spaces.append(sell,action(tr('Découvrir des communautés','Explore communities'),'ecosystem'));
       return;
     }
     const active=forumGroups.find(g=>g.id===groupId);if(active)spaces.append(detail(active.name,'group',active.id));
