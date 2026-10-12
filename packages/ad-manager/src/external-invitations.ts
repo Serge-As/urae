@@ -35,6 +35,17 @@ export class ExternalAdInviteService{
   await this.manager(groupId);const c=this.kernel.context.get(),rows=await this.repo.listWorkspaceRecords(c.tenantId,INVITE,groupId);
   return rows.map(x=>({id:x.id,name:x.title,expiresAt:x.data.expiresAt,proposalId:x.data.proposalId??''}));
  }
+ async revoke(groupId:string,inviteId:string){
+  await this.manager(groupId);
+  const c=this.kernel.context.get(),row=await this.repo.getWorkspaceRecord(c.tenantId,inviteId);
+  if(!row||row.groupId!==groupId||row.moduleId!==INVITE)throw Error('AD_INVITE_NOT_FOUND');
+  if(row.data.proposalId)throw Error('AD_INVITE_ALREADY_USED');
+  if(row.status!=='ACTIVE')return{id:inviteId,status:row.status};
+  await this.repo.saveWorkspaceRecord({...row,status:'ARCHIVED',updatedAt:new Date().toISOString()});
+  await this.repo.saveAudit(this.kernel.audit.append({tenantId:c.tenantId,actorId:c.actorId,action:'EXTERNAL_AD_INVITATION_REVOKED',
+   targetType:'ad_invite',targetId:inviteId,requestId:c.requestId,metadata:{groupId}}));
+  return{id:inviteId,status:'ARCHIVED'};
+ }
  private async verify(groupId:string,token:string,consumed=false){
   const id=token.split('.')[0]??'',c=this.kernel.context.get();
   if(!/^ad_invite_[a-zA-Z0-9_-]{1,110}$/.test(id)||token.length>220||token.length<50)throw Error('AD_INVITE_INVALID');
