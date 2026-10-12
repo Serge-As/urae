@@ -36,7 +36,7 @@ const requestHandler = async (req,res) => {
   try {
     if(![`127.0.0.1:${currentPort}`,`localhost:${currentPort}`].includes(req.headers.host??'')){res.writeHead(403);res.end('Host not allowed');return;}
     if (req.url?.startsWith('/api/') || req.url === '/health') {
-      const chunks=[];let size=0; for await (const c of req) {size+=c.length;if(size>131072){res.writeHead(413);res.end('Request too large');return;}chunks.push(c);}
+      const chunks=[];let size=0; for await (const c of req) {size+=c.length;if(size>(/\/visual-media$|\/brand\/assets$|\/invite\/photo$/.test(req.url??'')?2300000:131072)){res.writeHead(413);res.end('Request too large');return;}chunks.push(c);}
       const body=Buffer.concat(chunks); const headers=new Headers();
       for(const [k,v] of Object.entries(req.headers)) if(v) headers.set(k,Array.isArray(v)?v.join(','):v);
       headers.set('cf-connecting-ip',req.socket.remoteAddress??'local');
