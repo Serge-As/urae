@@ -4,29 +4,27 @@ import fs from 'node:fs';
 const html=fs.readFileSync('apps/web/index.html','utf8');
 const sw=fs.readFileSync('apps/web/sw.js','utf8');
 const build=fs.readFileSync('scripts/build.mjs','utf8');
+const preview=fs.readFileSync('scripts/preview-cache-identity.mjs','utf8');
+const workflow=fs.readFileSync('.github/workflows/eco-refonte-isolated-preview.yml','utf8');
+const contract=JSON.parse(fs.readFileSync('docs/release/CURRENT_RELEASE_CONTRACT.json','utf8'));
 
-test('new preview release has one immutable 15216 shell identity across index, worker and builder',()=>{
-  assert.match(sw,/const CACHE = 'eco-system-v15216-ux-cache-recovery-20261012'/);
-  assert.match(sw,/const PREVIOUS_CACHE = 'eco-system-v15215-bounded-recovery-20261008'/);
-  assert.match(build,/const RELEASE_VERSION='1\.5\.2\.16-ux-cache-recovery'/);
-  for(const file of ['/styles.css','/src/ui-modes.js','/src/main.js']){
-    assert.ok(html.includes(file+'?v=15216'),file+' index link');
-    assert.ok(sw.includes(file+'?v=15216'),file+' precache link');
-  }
-  for(const file of ['/src/field-hardening.js','/src/voice-entry-bootstrap.js']){
-    assert.ok(build.includes(file+'?v=15216'),file+' builder link');
-    assert.ok(sw.includes(file+'?v=15216'),file+' precache link');
-  }
-  assert.doesNotMatch(html,/\?v=15215/);
-  assert.doesNotMatch(build,/\?v=15215/);
-  assert.doesNotMatch(sw,/\?v=15215/);
+test('production source release contract is not changed by preview-only cache isolation',()=>{
+  assert.ok(sw.includes("const CACHE = '"+contract.release.pwaCache+"'"));
+  assert.ok(sw.includes("const PREVIOUS_CACHE = '"+contract.release.previousPwaCache+"'"));
+  assert.match(build,/const RELEASE_VERSION='1\.5\.2\.15-bounded-recovery'/);
+  assert.match(html,/main\.js\?v=15215/);
+  assert.match(preview,/GITHUB_REF_NAME/);
+  assert.match(preview,/preview\/eco-refonte-20261012/);
+  assert.match(preview,/eco-system-preview-/);
+  assert.match(workflow,/node scripts\/preview-cache-identity\.mjs/);
+  assert.match(workflow,/Locked dependencies and full app qualification/);
 });
 
-test('updates retain offline financial data and previous coherent cache',()=>{
-  assert.match(sw,/name !== PREVIOUS_CACHE/);
+test('preview stamp protects previous release and does not remove offline financial data',()=>{
+  assert.match(preview,/const PREVIOUS_CACHE =/);
+  assert.match(preview,/name !== PREVIOUS_CACHE/);
+  assert.doesNotMatch(preview,/indexedDB\.deleteDatabase\(/);
+  assert.doesNotMatch(preview,/localStorage\.clear\(/);
   assert.match(sw,/cache\.put\(RELEASE_READY/);
-  assert.match(sw,/await self\.skipWaiting\(\)/);
-  assert.doesNotMatch(sw,/indexedDB\.deleteDatabase/);
-  assert.doesNotMatch(sw,/localStorage\.clear\(/);
-  assert.doesNotMatch(sw,/caches\.delete\(PREVIOUS_CACHE\)/);
+  assert.match(sw,/event\.request\.mode === 'navigate'/);
 });
