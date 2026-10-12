@@ -109,3 +109,4 @@ jobs:
           if(!root.toLowerCase().includes('<!doctype html>'))throw Error('ROOT_NOT_PWA');
           console.log('PREVIEW_PUBLISHED_AND_VERIFIED',health.version,health.commitSha);
           NODE
+# real-screen UX pass 20261012: isolated preview only; never touches production.
