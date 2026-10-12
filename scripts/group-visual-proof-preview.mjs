@@ -68,6 +68,18 @@ try{
  });
  await step('create governed rubric, no real money',async()=>{
   await page.locator('#addLaunchRubric').click();
+  const details=await page.evaluate(()=>({
+    step:document.querySelector('#launchStepStatus')?.textContent,
+    visibleSteps:[...document.querySelectorAll('[data-launch-step]')].filter(x=>!x.hidden).map(x=>x.dataset.launchStep),
+    addButtonDisabled:document.querySelector('#addLaunchRubric')?.disabled,
+    addButtonParentDisabled:document.querySelector('#addLaunchRubric')?.closest('fieldset')?.disabled,
+    editors:document.querySelectorAll('.launch-rubric').length,
+    rubricLabels:[...document.querySelectorAll('.launch-rubric label')].slice(0,5).map(x=>x.textContent?.slice(0,80)),
+    output:document.querySelector('#launchRubrics')?.textContent?.slice(0,180),
+    status:document.querySelector('#errorBox')?.textContent?.slice(0,200)
+  }));
+  console.log('ECO_LAUNCH_RUBRIC_INSERTION',JSON.stringify(details));
+  if(details.editors<1)throw new Error('RUBRIC_EDITOR_NOT_INSERTED '+JSON.stringify(details));
   await rub('Cette rubrique sert à…').locator('select').selectOption('CONTRIBUTION');
   await rub('Nom utilisé dans votre association').locator('input').fill('Collation test');
   await rub('Montant nominal par versement').locator('input').fill('1000');
