@@ -43,7 +43,7 @@ test('foras and creative preview are projections of existing owners, never paral
   assert.match(backend,/url\.pathname==='\/api\/v1\/groups\/mine'/);
   assert.match(backend,/member\.userId===ctx\.actorId&&member\.status==='active'/);
   assert.match(appCode,/const groups=await this\.listMyGroups\(\)/);
-  assert.match(personal,/renderPersonalForas\(groups,personalCommunities\)/);
+  assert.match(personal,/renderPersonalForas\(forumGroups,personalCommunities,forumsUnavailable\)/);
   assert.match(personal,/eco:open-interest-community/);
   assert.match(main,/anchor:'communityEnginePanel'/);
   assert.match(main,/app.notificationsAcrossGroups\(\)/);
