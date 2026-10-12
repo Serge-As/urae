@@ -106,12 +106,14 @@ try{
   });
   // Real Worker assets, not merely a successful /health, determine whether
   // the launched UI has the same event handler as the qualified source.
-  const served=await page.request.get(report.target+'/src/main.js?v=15215',{headers:{'cache-control':'no-cache','pragma':'no-cache'}});
+  const mainAssetPath=await page.locator('script[type="module"][src*="/src/main.js"]').first().getAttribute('src');
+  if(!mainAssetPath)throw Error('MAIN_SCRIPT_TAG_MISSING');
+  const served=await page.request.get(new URL(mainAssetPath,report.target).href,{headers:{'cache-control':'no-cache','pragma':'no-cache'}});
   const servedSource=await served.text();
   const release=await page.request.get(report.target+'/health');
   const health=await release.json().catch(()=>({}));
   const assetTruth={status:served.status(),bytes:servedSource.length,
-    hasBoundedLaunchFeedback:servedSource.includes('Simulation non terminée'),
+    mainAssetPath,hasBoundedLaunchFeedback:servedSource.includes('Simulation non terminée'),
     hasHandlerSymbol:servedSource.includes('simulateLaunchFromUserAction'),
     etag:served.headers().etag??null,cacheControl:served.headers()['cache-control']??null,
     actualHealthSha:health.commitSha??null,expectedSha:report.sha};

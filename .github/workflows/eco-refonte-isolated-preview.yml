@@ -44,6 +44,20 @@ jobs:
           npm ci --ignore-scripts
           npm run ci
           npm run build
+      - name: Stamp only the isolated preview PWA with its exact GitHub SHA
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Old healthy preview SHA is only a rollback cache pointer, NEVER a
+          # production deploy input. Network failure leaves the legacy cache.
+          curl --fail --silent --show-error --max-time 9 \
+            https://eco-system-refonte-preview.sergemimf.workers.dev/health \
+            > /tmp/eco-preview-previous-health.json || true
+          if [ -s /tmp/eco-preview-previous-health.json ]; then
+            ECO_PREVIEW_PREVIOUS_SHA="$(node -e "const fs=require('fs');try{const j=JSON.parse(fs.readFileSync('/tmp/eco-preview-previous-health.json','utf8'));const s=String(j.commitSha||'');if(/^[a-f0-9]{40}$/.test(s))process.stdout.write(s)}catch{}")"
+            export ECO_PREVIEW_PREVIOUS_SHA
+          fi
+          node scripts/preview-cache-identity.mjs
       - name: Provision only isolated preview D1 and R2 (never touch production resources)
         shell: bash
         env:
