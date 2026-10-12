@@ -54,8 +54,8 @@ try{
   await rub('Nom utilisé dans votre association').locator('input').fill('Collation test');
   await rub('Montant nominal par versement').locator('input').fill('1000');
   await rub('Nombre de membres participant').locator('input').fill('3');
-  await rub('Nombre total de noms').locator('input').fill('3');
-  await rub('Pots servis par tour').locator('input').fill('1');
+  if(await rub('Nombre total de noms').locator('input').isEnabled())await rub('Nombre total de noms').locator('input').fill('3');
+  if(await rub('Pots servis par tour').locator('input').isEnabled())await rub('Pots servis par tour').locator('input').fill('3');
   await rub('Nombre de tours').locator('input').fill('3');
   await rub('Durée du cycle').locator('input').fill('3');
   await page.locator('#launchNextBtn').click(); // 7
