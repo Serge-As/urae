@@ -24,7 +24,7 @@ async function compile(dir){
  }
 }
 for(const dir of ['apps','packages','workers'])await compile(dir);
-for(const f of ['index.html','styles.css','manifest.webmanifest','sw.js']){
+for(const f of ['index.html','external-ad.html','styles.css','manifest.webmanifest','sw.js']){
  await cp(path.join(root,'apps/web',f),path.join(output,'apps/web',f));
  await cp(path.join(root,'apps/web',f),path.join(output,f));
 }
