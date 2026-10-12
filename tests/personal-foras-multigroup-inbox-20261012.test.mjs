@@ -6,7 +6,7 @@ import {ConnectedApplication} from '../.build/packages/application/src/index.js'
 test('personal inbox reads all authorized groups through existing scoped API without switching active group',async()=>{
   const app=Object.create(ConnectedApplication.prototype),requested=[];
   app.activeGroupId='g1';
-  app.listGroups=async()=>[{id:'g1',name:'Groupe 1'},{id:'g2',name:'Groupe 2'},{id:'g3',name:'Groupe 3'}];
+  app.listMyGroups=async()=>[{id:'g1',name:'Groupe 1'},{id:'g2',name:'Groupe 2'},{id:'g3',name:'Groupe 3'}];
   app.request=async url=>{
     requested.push(url);
     if(url.includes('/g3/'))throw Error('NETWORK_UNAVAILABLE');
@@ -37,6 +37,11 @@ test('foras and creative preview are projections of existing owners, never paral
   const personal=fs.readFileSync('apps/web/src/personal-cockpit-ui.js','utf8');
   const main=fs.readFileSync('apps/web/src/main.js','utf8');
   const ads=fs.readFileSync('apps/web/src/ad-manager-ui.js','utf8');
+  const backend=fs.readFileSync('workers/api/src/index.ts','utf8');
+  const appCode=fs.readFileSync('packages/application/src/index.ts','utf8');
+  assert.match(backend,/url\.pathname==='\/api\/v1\/groups\/mine'/);
+  assert.match(backend,/member\.userId===ctx\.actorId&&member\.status==='active'/);
+  assert.match(appCode,/const groups=await this\.listMyGroups\(\)/);
   assert.match(personal,/renderPersonalForas\(groups,personalCommunities\)/);
   assert.match(personal,/eco:open-interest-community/);
   assert.match(main,/anchor:'communityEnginePanel'/);
