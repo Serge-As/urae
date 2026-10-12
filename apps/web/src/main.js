@@ -343,6 +343,14 @@ const go=(name,options={})=>{
     showView(name,next);updateBackButton();
 };
 const goBack=()=>{if(navDepth>0)history.back();};
+window.addEventListener('eco:open-economic-opportunity',event=>{
+  const groupId=event instanceof CustomEvent?String(event.detail?.groupId??''):'';
+  if(!groupId||groupId!==app.activeGroup())return;
+  // Navigate only after the canonical demand/offer form accepted a draft.
+  // No publication, reservation, payment or inventory mutation occurs.
+  go('ecosystem',{anchor:'valueNetworkOperational',force:true});
+});
+
 document.querySelectorAll('[data-view]').forEach(b=>b.addEventListener('click',()=>go(b.dataset.view,{anchor:b.dataset.anchor,meetingId:b.dataset.meetingId,matrixMeetingId:b.dataset.matrixMeetingId,sheetMode:b.dataset.sheetMode,openTarget:b.dataset.openTarget,force:Boolean(b.dataset.anchor||b.dataset.sheetMode||b.dataset.openTarget)})));
 document.querySelectorAll('[data-go]').forEach(b=>b.addEventListener('click',()=>go(b.dataset.go,{anchor:b.dataset.anchor,meetingId:b.dataset.meetingId,matrixMeetingId:b.dataset.matrixMeetingId,sheetMode:b.dataset.sheetMode,openTarget:b.dataset.openTarget,force:Boolean(b.dataset.anchor||b.dataset.sheetMode||b.dataset.openTarget)})));
 
