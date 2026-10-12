@@ -8,7 +8,7 @@ const INVITE='ADS.EXTERNAL_INVITE',PROPOSAL='ADS.PARTNER_PROPOSAL';
 const roles=new Set(['founder','manager','admin','president','treasurer']);
 const objective=new Set(['AWARENESS','COMMUNITY_JOIN','EVENT_RSVP','DEAL_OPEN','GROUP_BUY','LEAD','PARTNER_PROGRAM']);
 const clean=(v:unknown,max:number)=>String(v??'').trim().replace(/\s+/g,' ').slice(0,max);
-const hash=async v=>[...new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(v)))].map(x=>x.toString(16).padStart(2,'0')).join('');
+const hash=async (v:string)=>[...new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(v)))].map(x=>x.toString(16).padStart(2,'0')).join('');
 const safeDestination=(v:string)=>/^(?:[a-z][a-z0-9-]{1,42}:[a-zA-Z0-9_-]{1,110}|\/[^/][^\s]{0,160})$/.test(v);
 export class ExternalAdInviteService{
  constructor(readonly repo:PlatformRepository,readonly kernel:PlatformKernel,readonly store?:ArtifactStoreLike){}
