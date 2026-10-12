@@ -51,6 +51,27 @@ export function mountPartnerAdsUI({app,isManager=()=>false,notify=()=>{},showErr
     }catch(error){showError(error);}finally{button.disabled=false;}
    })();};
    host.append(inviteBox);
+   const invites=el('div',undefined,'stack');inviteBox.append(invites);
+   try{
+    for(const invite of await app.externalAdInvites()){
+     if(gen!==version)return;
+     const item=el('div',undefined,'eco-external-invite-entry');
+     const expired=Date.parse(String(invite.expiresAt??''))<=Date.now();
+     item.append(el('strong',invite.name),
+       el('small',invite.proposalId?tr('Proposition reçue','Proposal received'):
+          invite.status!=='ACTIVE'?tr('Révoquée','Revoked'):expired?tr('Expirée','Expired'):tr('En attente','Pending'),'hint'));
+     if(invite.status==='ACTIVE'&&!invite.proposalId&&!expired){
+      const cancel=el('button',tr('Révoquer','Revoke'),'link-btn');cancel.type='button';
+      cancel.onclick=()=>void(async()=>{
+       if(!window.confirm(tr('Révoquer immédiatement ce lien ?','Revoke this invitation now?')))return;
+       try{await app.revokeExternalAdInvite(invite.id);notify(tr('Invitation révoquée.','Invitation revoked.'));await refresh();}
+       catch(error){showError(error);}
+      })();
+      item.append(cancel);
+     }
+     invites.append(item);
+    }
+   }catch(error){invites.append(el('p',tr('Invitations indisponibles.','Invitations unavailable.'),'hint'));}
   }
   const list=el('div',undefined,'stack');host.append(el('h3',tr('Propositions et suivi','Proposals & tracking')),list);
   try{
