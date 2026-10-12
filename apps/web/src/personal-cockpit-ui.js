@@ -3,7 +3,7 @@ const el=(tag,text,className)=>{const e=document.createElement(tag);if(text!==un
 const row=(label,value)=>{const p=el('p');p.append(el('strong',label+' : '),document.createTextNode(String(value??'—')));return p;};
 const detail=(label,type,id)=>{const a=el('a',label,'link-btn');a.href='#detail='+encodeURIComponent(type)+':'+encodeURIComponent(id);a.dataset.detailType=type;a.dataset.detailId=id;return a;};
 
-export function mountPersonalCockpitUI({app,getGroups,getMembers,getMeetings,navigate,fmt=n=>String(n),date=x=>String(x),showError=console.error}){
+export function mountPersonalCockpitUI({app,getGroups,getMembers,getMeetings,navigate,openGroupForum,fmt=n=>String(n),date=x=>String(x),showError=console.error}){
   const metrics=document.getElementById('personalCockpitMetrics'),situation=document.getElementById('personalSituation'),next=document.getElementById('personalNext'),noticesRoot=document.getElementById('personalLiveNotices'),spaces=document.getElementById('personalSpaces');
   const pulseRoot=document.getElementById('ecoPulseFeed'),pulseProfile=document.getElementById('ecoPulseProfile');
   if(!metrics||!situation||!next||!noticesRoot||!spaces)return{refresh:async()=>{}};
@@ -75,12 +75,46 @@ export function mountPersonalCockpitUI({app,getGroups,getMembers,getMeetings,nav
     }catch(e){pulseProfile.textContent='EcoPulse reste disponible dès que la synchronisation serveur revient.';pulseRoot.append(el('p','Le cockpit principal continue de fonctionner sans recommandation réseau.','hint'));}
   };
 
-  const refresh=async()=>{
+  const tr=(fr,en)=>document.documentElement.lang?.startsWith('en')?en:fr;
+  // Personal directory only. Every discussion still belongs to the existing
+  // Community / InterestCommunity owner; no second feed or message store.
+  const renderPersonalForas=(groups,communities)=>{
+    const section=el('details',undefined,'item personal-foras-directory');
+    const count=groups.length+communities.length;
+    section.append(el('summary',tr('Mes Foras · '+count+' espaces','My Forums · '+count+' spaces')));
+    const hint=el('p',tr('Retrouvez vos groupes et communautés sans quitter votre compte. Chaque espace garde ses propres droits.','Open your groups and communities from your account. Each space keeps its own permissions.'),'hint');
+    section.append(hint);
+    if(groups.length){
+      section.append(el('strong',tr('Foras de mes groupes','My group forums')));
+      for(const group of groups){
+        const button=el('button',String(group.name||group.id),'secondary personal-forum-link');
+        button.type='button';button.dataset.forumGroup=String(group.id);
+        button.onclick=()=>void Promise.resolve(openGroupForum?.(group.id)).catch(showError);
+        section.append(button);
+      }
+    }
+    if(communities.length){
+      section.append(el('strong',tr('Foras de mes communautés','My community forums')));
+      for(const community of communities){
+        const button=el('button',String(community.name||community.id),'secondary personal-forum-link');
+        button.type='button';button.dataset.forumCommunity=String(community.id);
+        button.onclick=()=>{
+          navigate('ecosystem',{anchor:'interestCommunityWorkspace',force:true});
+          document.dispatchEvent(new CustomEvent('eco:open-interest-community',{detail:{id:String(community.id)}}));
+        };
+        section.append(button);
+      }
+    }
+    if(!count)section.append(el('p',tr('Rejoignez un groupe ou une communauté pour retrouver ici ses échanges.','Join a group or community to find its discussions here.'),'hint'));
+    spaces.append(section);
+  };
+    const refresh=async()=>{
     metrics.replaceChildren();situation.replaceChildren();next.replaceChildren();noticesRoot.replaceChildren();spaces.replaceChildren();
     const groups=getGroups(),groupId=app.activeGroup(),members=getMembers(),meetings=getMeetings(),mine=members.find(m=>m.userId===app.currentActor());
     metrics.append(metric(groups.length,'Groupes accessibles'));
     let personalCommunities=[];try{personalCommunities=await app.myInterestCommunities();}catch{}
     metrics.append(metric(personalCommunities.length,'Communautés d’intérêt'));
+    renderPersonalForas(groups,personalCommunities);
     void renderPulse();
     if(!groupId){
       situation.append(el('p','Choisissez un groupe ou rejoignez-en un avec un code.','hint'),action('Choisir / rejoindre','discovery'));
