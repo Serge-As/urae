@@ -91,7 +91,21 @@ jobs:
       - name: Preview-only schema migrations
         run: npx --yes wrangler@4 d1 migrations apply "$PREVIEW_DB" --remote --config workers/api/wrangler.preview.toml
       - name: Deploy isolated preview only
-        run: npx --yes wrangler@4 deploy --config workers/api/wrangler.preview.toml
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Transient Cloudflare malformed-response errors can occur after asset
+          # upload; retry only the SAME isolated Worker config and SAME SHA.
+          DEPLOYED=0
+          for TRY in 1 2 3; do
+            if npx --yes wrangler@4 deploy --config workers/api/wrangler.preview.toml; then
+              DEPLOYED=1
+              break
+            fi
+            echo "Isolated Wrangler deploy attempt $TRY failed; no production resource accessed."
+            if [ "$TRY" -lt 3 ]; then sleep $((TRY*12)); fi
+          done
+          test "$DEPLOYED" -eq 1 || { echo "::error::ISOLATED_PREVIEW_DEPLOY_UNAVAILABLE"; exit 1; }
       - name: Prove preview PWA and release health
         shell: bash
         run: |
