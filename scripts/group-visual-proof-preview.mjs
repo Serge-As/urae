@@ -104,6 +104,24 @@ try{
       if(value&&window.__ecoLaunchErrors.at(-1)!==value)window.__ecoLaunchErrors.push(value.slice(0,400));
     }).observe(error,{attributes:true,childList:true,subtree:true,characterData:true});}
   });
+  // Real Worker assets, not merely a successful /health, determine whether
+  // the launched UI has the same event handler as the qualified source.
+  const served=await page.request.get(report.target+'/src/main.js?v=15215',{headers:{'cache-control':'no-cache','pragma':'no-cache'}});
+  const servedSource=await served.text();
+  const release=await page.request.get(report.target+'/health');
+  const health=await release.json().catch(()=>({}));
+  const assetTruth={status:served.status(),bytes:servedSource.length,
+    hasBoundedLaunchFeedback:servedSource.includes('Simulation non terminée'),
+    hasHandlerSymbol:servedSource.includes('simulateLaunchFromUserAction'),
+    etag:served.headers().etag??null,cacheControl:served.headers()['cache-control']??null,
+    actualHealthSha:health.commitSha??null,expectedSha:report.sha};
+  console.log('ECO_LAUNCH_SERVED_ASSET',JSON.stringify(assetTruth));
+  await page.evaluate(()=>{
+    window.__ecoSimulationClickCaptured=0;
+    document.addEventListener('click',event=>{
+      if(event.target?.closest?.('#simulateProjectBtn'))window.__ecoSimulationClickCaptured++;
+    },true);
+  });
   console.log('ECO_LAUNCH_BEFORE_CLICK',JSON.stringify(await page.evaluate(()=>{
     const button=document.getElementById('simulateProjectBtn');
     const fieldset=button?.closest('fieldset');
@@ -117,7 +135,8 @@ try{
     localState:document.getElementById('simulationResult')?.dataset.simulationStatus,
     localText:document.getElementById('simulationResult')?.textContent?.slice(0,300),
     error:document.getElementById('errorBox')?.textContent?.slice(0,300),
-    buttonDisabled:document.getElementById('simulateProjectBtn')?.disabled
+    buttonDisabled:document.getElementById('simulateProjectBtn')?.disabled,
+    clickObserved:window.__ecoSimulationClickCaptured??0
   }))));
   // A remote Cloudflare D1 cold start can take longer than a fixed delay.
   // Wait for the canonical output OR a real error; do not invent a failure
