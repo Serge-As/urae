@@ -345,7 +345,9 @@ const go=(name,options={})=>{
 const goBack=()=>{if(navDepth>0)history.back();};
 window.addEventListener('eco:open-economic-opportunity',event=>{
   const groupId=event instanceof CustomEvent?String(event.detail?.groupId??''):'';
-  if(!groupId||groupId!==app.activeGroup())return;
+  const kind=event instanceof CustomEvent?String(event.detail?.kind??''):'';
+  if(groupId&&groupId!==app.activeGroup())return;
+  if(!groupId&&kind!=='OFFER')return;
   // Navigate only after the canonical demand/offer form accepted a draft.
   // No publication, reservation, payment or inventory mutation occurs.
   go('ecosystem',{anchor:'valueNetworkOperational',force:true});
