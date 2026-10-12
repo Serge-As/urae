@@ -1323,3 +1323,93 @@ body.external-ad-portal{min-height:100vh;padding:clamp(12px,4vw,40px);background
 @media(max-width:640px){.external-ad-shell .external-grid{grid-template-columns:1fr}}
 
 #externalAdForm[hidden]{display:none!important}
+
+/* Eco-System visible cockpit restoration – preview (2026-10-12).
+   Presentation only: no duplicate financial or community state owner. */
+#view-dashboard .hero{
+  display:grid;
+  grid-template-columns:minmax(0,1.7fr) minmax(220px,.65fr);
+  align-items:center;
+  min-height:300px;
+  gap:24px;
+  margin:0 0 18px;
+  padding:clamp(22px,3vw,38px);
+  background:
+    radial-gradient(circle at 86% 22%,rgba(226,179,104,.34) 0 6%,transparent 40%),
+    radial-gradient(circle at 98% 88%,rgba(74,164,129,.2) 0 17%,transparent 45%),
+    linear-gradient(124deg,#e2f4e8 0%,#f9fbf6 62%,#fff6e9 100%);
+  border:1px solid rgba(39,111,76,.24);
+  border-radius:22px;
+  box-shadow:0 16px 42px rgba(20,69,45,.09);
+}
+#view-dashboard .hero h1{
+  max-width:18ch;
+  font-size:clamp(1.9rem,3.25vw,3.15rem);
+  line-height:1.13;letter-spacing:-.04em;
+  margin:.36em 0 .4em;color:#174b39;
+}
+#view-dashboard .hero p{line-height:1.6;font-size:clamp(.95rem,1.23vw,1.05rem);max-width:57ch}
+#view-dashboard .hero .eyebrow{color:#236648;font-weight:800;letter-spacing:.06em}
+#view-dashboard .eco-hero-identity{
+  padding:22px;border:1px solid rgba(22,99,65,.24);
+  border-radius:20px;background:rgba(255,255,255,.86);
+  box-shadow:0 12px 32px rgba(30,84,55,.08);
+}
+#view-dashboard .eco-hero-identity .safe{color:var(--brand)}
+.eco-hero-actions{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin-top:24px}
+.eco-hero-actions button{min-height:49px;max-width:100%;font-weight:780;padding:12px 18px;border-radius:12px;white-space:normal;text-wrap:balance}
+.eco-hero-actions .primary{background:#1f6b4f;color:white;border-color:#1f6b4f}
+#view-dashboard > .ui-mode-panel{margin-block:0 18px}
+#view-dashboard > .cahier-banner{order:initial}
+#view-dashboard .quick-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,190px),1fr));gap:14px}
+#view-dashboard .quick-grid .quick{
+  min-height:126px;padding:20px 17px;border:1px solid var(--line);
+  border-radius:16px;background:var(--surface);
+  box-shadow:0 8px 25px rgba(24,68,42,.04);
+  transition:transform .15s ease,box-shadow .15s ease;
+  text-align:start;
+}
+#view-dashboard .quick-grid .quick>b{font-weight:800;color:var(--ink);font-size:1.03rem}
+#view-dashboard .quick-grid .quick>span{font-size:.86rem;line-height:1.5}
+#view-dashboard .quick-grid .quick:focus-visible{outline:3px solid var(--brand);outline-offset:3px}
+#view-ecosystem>.page-head,#view-operations>.page-head,#view-launch>.page-head,
+#view-sessions>.page-head,#view-finance>.page-head,#view-recap>.page-head{
+  padding:clamp(18px,2.5vw,28px);
+  border:1px solid var(--line);
+  border-radius:18px;
+  background:linear-gradient(112deg,var(--brand-soft),var(--surface) 75%);
+  margin-bottom:14px;
+}
+#view-ecosystem>.eco-workspace-jump{display:flex;flex-wrap:wrap;gap:8px;overflow:visible;margin:14px 0 23px}
+#view-ecosystem>.eco-workspace-jump button{
+  background:var(--surface);border-radius:13px;min-height:48px;
+  padding:12px 16px;box-shadow:0 4px 14px rgba(15,59,42,.045)
+}
+#view-ecosystem>.eco-workspace-jump button:hover{transform:translateY(-1px);box-shadow:var(--shadow)}
+#view-ecosystem .panel,#view-dashboard .panel,#groupHomePanel{border-radius:18px}
+@media(hover:hover){
+ #view-dashboard .quick-grid .quick:hover{transform:translateY(-3px);box-shadow:0 12px 28px rgba(21,75,47,.1)}
+}
+@media(max-width:900px){
+ #view-dashboard .hero{grid-template-columns:1fr;min-height:0;gap:14px}
+ #view-dashboard .hero h1{max-width:none;font-size:clamp(1.6rem,5vw,2.35rem)}
+ #view-dashboard .eco-hero-identity{max-width:450px}
+}
+@media(max-width:600px){
+ #view-dashboard .hero{padding:20px 17px;border-radius:16px;margin-bottom:12px}
+ #view-dashboard .hero h1{font-size:clamp(1.55rem,6.3vw,2.05rem);line-height:1.18}
+ #view-dashboard .hero p{font-size:.93rem}
+ .eco-hero-actions{display:grid;grid-template-columns:1fr;gap:8px;margin-top:16px}
+ .eco-hero-actions button{width:100%;min-height:50px}
+ #view-dashboard .eco-hero-identity{padding:14px 17px}
+ #view-dashboard .quick-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+ #view-dashboard .quick-grid .quick{min-height:116px;padding:12px 10px}
+ #view-dashboard .quick-grid .quick>b{font-size:.93rem}
+ #view-dashboard .quick-grid .quick>span{font-size:.76rem}
+ #view-ecosystem>.eco-workspace-jump{display:flex;flex-wrap:nowrap;overflow-x:auto;scroll-snap-type:x mandatory;margin:10px -8px 15px;padding:4px 8px 12px}
+ #view-ecosystem>.eco-workspace-jump button{scroll-snap-align:start;min-width:120px;padding:12px 14px}
+}
+@media(prefers-reduced-motion:reduce){
+ #view-dashboard .quick-grid .quick{transition:none}
+ #view-ecosystem>.eco-workspace-jump button{transform:none}
+}
