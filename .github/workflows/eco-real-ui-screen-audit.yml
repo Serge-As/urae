@@ -1,0 +1,44 @@
+name: Eco-System — audit of real deployed screens
+on:
+  push:
+    branches:
+      - preview/eco-refonte-20261012
+    paths:
+      - .github/workflows/eco-real-ui-screen-audit.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  capture:
+    runs-on: ubuntu-latest
+    timeout-minutes: 22
+    env:
+      ECO_AUDIT_URL: https://eco-system-refonte-preview.sergemimf.workers.dev
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - name: Install locked browser tooling
+        run: |
+          npm ci --ignore-scripts
+          npx playwright install --with-deps chromium webkit
+      - name: Capture actual live Cloudflare app in 2 browsers x 2 sizes x 2 languages
+        run: node scripts/audit-live-ui.mjs
+      - name: Archive visual evidence including blockers
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: eco-system-real-screen-audit
+          path: audit-live-ui/
+          retention-days: 21
+          if-no-files-found: warn
+      - name: Show factual visual coverage
+        if: success()
+        run: |
+          node --input-type=module - <<'JS'
+          import fs from 'node:fs';
+          const r=JSON.parse(fs.readFileSync('audit-live-ui/audit.json','utf8'));
+          console.log(JSON.stringify({url:r.url,health:r.health,shots:r.screenshots.length,login:r.checks.filter(x=>x.phase==='initial').map(x=>({id:x.id,authenticated:x.authenticated,reason:x.reason})),views:r.checks.filter(x=>x.view).length,blocked:r.checks.filter(x=>String(x.status).startsWith('BLOCKED')).length},null,2));
+          JS
