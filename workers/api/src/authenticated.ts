@@ -7,6 +7,9 @@ const response=(body:unknown,status=200)=>new Response(JSON.stringify(body),{sta
 const publicPaths=new Set(['/health','/api/v1/product/capabilities','/api/v1/discovery/groups','/api/v1/kernel']);
 const managementRoles=new Set(['founder','manager','admin','president','treasurer']);
 const multipartPaths=new Set(['/api/v1/assistant/group-launch/analyze-files']);
+const boundedMediaUpload=/^\/api\/v1\/(?:groups\/[^/]+\/visual-media|founder\/brand\/assets)$/;
+const EXTERNAL_AD_PATH=/^\/api\/v1\/external-ads\/groups\/([a-zA-Z0-9_-]{1,110})\/invite(\/photo)?$/;
+const MEDIA_BODY_LIMIT=2_300_000;
 const JSON_BODY_LIMIT=128*1024;
 const MULTIPART_BODY_LIMIT=26*1024*1024;
 // Warm-isolate optimization only for profile mirrors. NEVER cache group
@@ -41,6 +44,45 @@ export function authenticatedApi(repo:PlatformRepository,db:D1DatabaseLike,handl
  return async (request:Request):Promise<Response>=>{
   const url=new URL(request.url);
   if(request.method==='GET' && publicPaths.has(url.pathname))return handle(request);
+  // A verified, one-use external advertiser capability has no account session.
+  // Never bypass auth for group endpoints, finance, Founder Control or any
+  // non-invitation API. The service checks the token hash, tenant and group.
+  const external=url.pathname.match(EXTERNAL_AD_PATH);
+  if(external){
+   if(!['GET','POST'].includes(request.method)||external[2]&&request.method!=='POST')
+    return response({error:'METHOD_NOT_ALLOWED'},405);
+   const tenant=String(request.headers.get('x-tenant-id')??'');
+   const token=String(request.headers.get('x-external-ad-token')??'');
+   if(!/^[a-zA-Z0-9_-]{1,110}$/.test(tenant)||token.length<50||token.length>220)
+    return response({error:'AD_INVITE_INVALID'},403);
+   if(request.method==='POST'){
+    if(request.headers.get('origin')!==url.origin)return response({error:'ORIGIN_NOT_ALLOWED'},403);
+    const mime=String(request.headers.get('content-type')??'').toLowerCase(),photo=Boolean(external[2]);
+    if(photo?!mime.startsWith('multipart/form-data;'):!mime.startsWith('application/json'))
+     return response({error:photo?'MULTIPART_REQUIRED':'JSON_REQUIRED'},415);
+    const limit=photo?MEDIA_BODY_LIMIT:JSON_BODY_LIMIT;
+    if(Number(request.headers.get('content-length')??0)>limit)return response({error:'REQUEST_TOO_LARGE'},413);
+    const reader=request.body?.getReader(),parts:Uint8Array[]=[];let size=0;
+    if(reader)while(true){
+     const next=await reader.read();if(next.done)break;
+     size+=next.value.length;
+     if(size>limit){await reader.cancel();return response({error:'REQUEST_TOO_LARGE'},413);}
+     parts.push(next.value);
+    }
+    const all=new Uint8Array(size);let offset=0;
+    for(const part of parts){all.set(part,offset);offset+=part.length;}
+    request=new Request(url,{method:'POST',headers:request.headers,body:all});
+   }
+   const headers=new Headers(request.headers);
+   for(const key of ['x-actor-id','x-group-roles','x-active-group-id','x-session-id','x-request-id','x-eco-recorded-at-ms','x-eco-clock-quality','x-live-ticket-authenticated'])headers.delete(key);
+   headers.set('x-tenant-id',tenant);
+   headers.set('x-actor-id','external-ad-invite-only');
+   headers.set('x-group-roles','');
+   headers.set('x-active-group-id',external[1]!);
+   headers.set('x-session-id','invitation-only');
+   headers.set('x-request-id',crypto.randomUUID());
+   return handle(new Request(request,{headers}));
+  }
   const liveConnect=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/live\/connect$/);
   if(request.method==='GET'&&liveConnect&&liveTicketSecret){
    const token=url.searchParams.get('ticket')??'',ticket=token?await verifyLiveTicket(token,liveTicketSecret):undefined;
@@ -56,10 +98,12 @@ export function authenticatedApi(repo:PlatformRepository,db:D1DatabaseLike,handl
    if(!['GET','HEAD','OPTIONS'].includes(request.method)){
     if(request.headers.get('origin')!==url.origin)return response({error:'ORIGIN_NOT_ALLOWED'},403);
     const contentType=(request.headers.get('content-type')??'').toLowerCase();
-    const multipartAllowed=multipartPaths.has(url.pathname)&&contentType.startsWith('multipart/form-data;');
+    const binaryMedia=boundedMediaUpload.test(url.pathname);
+    const multipartAllowed=(multipartPaths.has(url.pathname)||binaryMedia)&&contentType.startsWith('multipart/form-data;');
     const jsonAllowed=contentType.startsWith('application/json');
-    if(!jsonAllowed&&!multipartAllowed)return response({error:'JSON_REQUIRED'},415);
-    const bodyLimit=multipartAllowed?MULTIPART_BODY_LIMIT:JSON_BODY_LIMIT;
+    const emptyDelete=request.method==='DELETE'&&!request.body;
+    if(!jsonAllowed&&!multipartAllowed&&!emptyDelete)return response({error:'JSON_REQUIRED'},415);
+    const bodyLimit=multipartAllowed?(binaryMedia?MEDIA_BODY_LIMIT:MULTIPART_BODY_LIMIT):JSON_BODY_LIMIT;
     if(Number(request.headers.get('content-length')??0)>bodyLimit)return response({error:'REQUEST_TOO_LARGE'},413);
     const reader=request.body?.getReader(),chunks:Uint8Array[]=[];let size=0;
     if(reader){while(true){const next=await reader.read();if(next.done)break;size+=next.value.length;if(size>bodyLimit){await reader.cancel();return response({error:'REQUEST_TOO_LARGE'},413);}chunks.push(next.value);}}
