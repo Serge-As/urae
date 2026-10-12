@@ -21,12 +21,21 @@ async function step(label,fn){
 }
 async function next(){
   const current=Number((await page.locator('#launchStepStatus').innerText()).match(/\d+/)?.[0]??0);
-  await page.locator('#launchNextBtn').click();
+  await page.locator('#launchNextBtn').evaluate(button=>button.click());
   await page.waitForFunction(expected=>{
     const value=document.querySelector('#launchStepStatus')?.textContent??'';
     return Number(value.match(/\d+/)?.[0]??0)===expected &&
       document.querySelector('[data-launch-step="'+expected+'"]')?.hidden===false;
-  },current+1,{timeout:7000});
+  },current+1,{timeout:7000}).catch(async error=>{
+    const debug=await page.evaluate(()=>({
+      step:document.querySelector('#launchStepStatus')?.textContent,
+      visibleStep:[...document.querySelectorAll('[data-launch-step]')].filter(x=>!x.hidden).map(x=>x.dataset.launchStep),
+      nextDisabled:document.querySelector('#launchNextBtn')?.disabled,
+      formInert:document.querySelector('#projectForm')?.inert,
+      errors:document.querySelector('#errorBox')?.textContent?.slice(0,260)
+    }));
+    throw new Error(String(error)+' | '+JSON.stringify(debug));
+  });
 }
 function browse(view){
  return page.locator('#mainNav .nav-btn[data-view="'+view+'"]').first().evaluate(e=>e.click());
