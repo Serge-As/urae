@@ -768,7 +768,7 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
     if(globalGroupTrashRestore&&request.method==='POST'){const id=decodeURIComponent(globalGroupTrashRestore[1]!),record=await repo.getWorkspaceRecord(ctx.tenantId,id);if(!record||!await groupTrashVisible(record))throw Error('TRASH_ITEM_NOT_FOUND');return json(await restoreTrash(String(record.data.entityId??record.groupId??''),id),200,cors);}
     const globalGroupTrashReminders=url.pathname.match(/^\/api\/v1\/trash\/groups\/([^/]+)\/reminders$/);
     if(globalGroupTrashReminders&&request.method==='PUT'){const id=decodeURIComponent(globalGroupTrashReminders[1]!),record=await repo.getWorkspaceRecord(ctx.tenantId,id);if(!record||!await groupTrashVisible(record))throw Error('TRASH_ITEM_NOT_FOUND');const body=await readJson<Record<string,unknown>>(request),enabled=body.enabled!==false,optOut=new Set(jsonArraySafe(String(record.data.reminderOptOutUserIdsJson??'[]')));if(enabled)optOut.delete(ctx.actorId);else optOut.add(ctx.actorId);const updated={...record,data:{...record.data,reminderOptOutUserIdsJson:JSON.stringify([...optOut])},updatedAt:new Date().toISOString()};await repo.saveWorkspaceRecord(updated);return json(updated,200,cors);}
-    const scopedGroup=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)/)?.[1];
+    const scopedGroup=url.pathname==='/api/v1/groups/mine'?undefined:url.pathname.match(/^\/api\/v1\/groups\/([^/]+)/)?.[1];
     if(scopedGroup)await requireGroup(scopedGroup);
     const trashRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/trash$/);
     const trashRestore=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/trash\/([^/]+)\/restore$/);
