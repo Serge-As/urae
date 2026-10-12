@@ -897,6 +897,8 @@ export class ConnectedApplication {
   async interpretGroupLaunch(text:string):Promise<{draft:any;requiresHumanConfirmation:boolean;financialWrites:boolean}>{return this.request('/api/v1/assistant/group-launch/interpret',{method:'POST',body:JSON.stringify({text})});}
 
   async listGroups():Promise<Group[]>{const all=await this.request<Group[]>('/api/v1/groups');this.groupTenants=new Map(all.map(g=>[g.id,g.tenantId]));return all.filter(g=>g.status!=='archived');}
+  /** Personal views must use server-verified memberships, not the broader tenant group catalogue. */
+  async listMyGroups():Promise<Group[]>{return this.request<Group[]>('/api/v1/groups/mine');}
   async groupOperatingPolicy():Promise<GroupOperatingPolicy>{if(!this.activeGroupId)throw new Error('ACTIVE_GROUP_REQUIRED');return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/operating-policy`);}
   async updateGroupOperatingPolicy(policy:GroupOperatingPolicy):Promise<Group>{
     if(!this.activeGroupId)throw new Error('ACTIVE_GROUP_REQUIRED');
@@ -1550,7 +1552,7 @@ export class ConnectedApplication {
    * activeGroupId, invents a notification, or starts background polling.
    */
   async notificationsAcrossGroups():Promise<{items:any[];unavailable:{groupId:string;groupName:string}[]}>{
-    const groups=await this.listGroups(),items:any[]=[],unavailable:{groupId:string;groupName:string}[]=[];
+    const groups=await this.listMyGroups(),items:any[]=[],unavailable:{groupId:string;groupName:string}[]=[];
     for(let offset=0;offset<groups.length;offset+=3){
       const batch=groups.slice(offset,offset+3);
       await Promise.all(batch.map(async group=>{
