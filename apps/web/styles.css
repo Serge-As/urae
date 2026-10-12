@@ -1310,7 +1310,7 @@ body.ultra-simple .canonical-financial-matrix .cell-validate{min-height:48px;hei
 
 /* Standalone externally invited advertiser portal; same existing Eco palette. */
 
-body{min-height:100vh;padding:clamp(12px,4vw,40px);background:var(--bg)}
+body.external-ad-portal{min-height:100vh;padding:clamp(12px,4vw,40px);background:var(--bg)}
 .external-ad-shell{max-width:780px;margin:auto;display:grid;gap:18px}
 .external-ad-shell header,.external-ad-shell section{background:var(--surface);padding:clamp(16px,3vw,28px);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow)}
 .external-ad-shell h1{margin:0;color:var(--brand);font-size:clamp(1.6rem,4vw,2.3rem)}
