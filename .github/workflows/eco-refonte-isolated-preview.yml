@@ -97,9 +97,14 @@ jobs:
         run: |
           set -euo pipefail
           URL="https://eco-system-refonte-preview.sergemimf.workers.dev"
-          curl --fail --show-error --silent --retry 5 --retry-delay 2 "$URL/health" > /tmp/eco-preview-health.json
-          curl --fail --show-error --silent --retry 5 --retry-delay 2 "$URL/" > /tmp/eco-preview-root.html
-          node --input-type=module - <<'NODE'
+          # Cloudflare workers.dev may still serve an older revision for a
+          # short propagation window after Wrangler reports upload success.
+          # Verify the EXACT SHA, never accept an old revision as green.
+          PROVED=0
+          for ATTEMPT in $(seq 1 20); do
+            curl --fail --show-error --silent --retry 3 --retry-delay 1 "$URL/health" > /tmp/eco-preview-health.json
+            curl --fail --show-error --silent --retry 3 --retry-delay 1 "$URL/" > /tmp/eco-preview-root.html
+            if node --input-type=module - <<'NODE'
           import fs from 'node:fs';
           const health=JSON.parse(fs.readFileSync('/tmp/eco-preview-health.json','utf8'));
           const root=fs.readFileSync('/tmp/eco-preview-root.html','utf8');
@@ -109,4 +114,12 @@ jobs:
           if(!root.toLowerCase().includes('<!doctype html>'))throw Error('ROOT_NOT_PWA');
           console.log('PREVIEW_PUBLISHED_AND_VERIFIED',health.version,health.commitSha);
           NODE
+            then
+              PROVED=1
+              break
+            fi
+            echo "Waiting for deployed preview SHA to propagate (attempt $ATTEMPT)."
+            sleep 6
+          done
+          test "$PROVED" -eq 1 || { echo "::error::PREVIEW_SHA_NOT_PROPAGATED"; exit 1; }
 # real-screen UX pass 20261012: isolated preview only; never touches production.
