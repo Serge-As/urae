@@ -2617,6 +2617,7 @@ catch (e) {
 } });
 $('#modeBtn').addEventListener('click', () => { document.body.classList.toggle('ultra-simple'); toast(document.body.classList.contains('ultra-simple') ? 'Mode Ultra Simple activé.' : 'Mode complet activé.'); });
 $('#languageSelect').addEventListener('change', async e => {
+    document.querySelectorAll('[data-eco-language-control]').forEach(c=>{c.value=e.target.value==='en'?'en':'fr';});
     uiLocale = e.target.value === 'en' ? 'en' : 'fr';
     app.setLocale(uiLocale);
     applyRuntimeLocale(uiLocale);
@@ -2625,6 +2626,15 @@ $('#languageSelect').addEventListener('change', async e => {
     renderConnectivity(); renderModules(); renderEcosystemHighlights(); renderDomainHubs(); renderActiveGroup(); renderGroupSelector();
     await renderUniverse(); await renderInbox();
     toast(tx('Interface passée en français.','Interface switched to English.'));
+});
+document.querySelectorAll('[data-eco-language-control]').forEach(control=>{
+    control.value=uiLocale;
+    control.addEventListener('change',()=>{
+        const canonical=document.getElementById('languageSelect');
+        if(!canonical)return;
+        canonical.value=control.value==='en'?'en':'fr';
+        canonical.dispatchEvent(new Event('change',{bubbles:true}));
+    });
 });
 let onlineResumePromise=null;
 let networkRecoveryNeeded=navigator.onLine===false;
