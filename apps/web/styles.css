@@ -1446,3 +1446,23 @@ body.external-ad-portal{min-height:100vh;padding:clamp(12px,4vw,40px);background
   .finance-toc{gap:7px;margin-bottom:14px}
   .finance-toc a{padding:8px 11px;font-size:13px;min-height:48px}
 }
+
+/* Eco-System iPhone/WebKit overflow and contrast closure based on real preview screenshots. */
+#view-dashboard .hero{color:#174b39}
+#view-dashboard .hero p{color:#345e4c}
+#view-dashboard .hero .eyebrow{color:#176946}
+#view-dashboard .hero .hero-card,#view-dashboard .hero .hero-card span,
+#view-dashboard .hero .hero-card small{color:#345e4c}
+.cahier-banner{flex-wrap:wrap;min-width:0;max-width:100%}
+.cahier-banner > *{min-width:0}
+.cahier-code{white-space:normal;max-width:100%;overflow-wrap:anywhere;word-break:break-word}
+#view-dashboard .hero>*{min-width:0}
+#view-dashboard .quick-grid>*{min-width:0}
+@media(max-width:680px){
+  .cahier-banner{display:grid;grid-template-columns:minmax(0,1fr);gap:8px}
+  .cahier-code{justify-self:start;line-height:1.45}
+  .topbar{max-width:100vw;min-width:0}
+  .topbar>.brand,.topbar>.top-context,.topbar>.top-actions{min-width:0;max-width:100%}
+  #view-dashboard .hero{width:100%;min-width:0}
+  #view-dashboard .hero .hero-card{min-width:0}
+}
