@@ -81,6 +81,28 @@ async function runViewport(mode,viewport,isMobile){
       await snapshot(page,'registration-result',mode);
       return;
     }
+    if(mode==='desktop'){
+      const control=page.locator('#topLanguageSelect');
+      if(await control.count()){
+        try{
+          await control.selectOption('en');
+          await page.waitForFunction(()=>document.documentElement.lang==='en',null,{timeout:5000});
+          await page.waitForTimeout(500);
+          await snapshot(page,'dashboard-in-English',mode);
+          await page.reload({waitUntil:'domcontentloaded'});
+          await page.waitForTimeout(1800);
+          report.auth.englishReload={
+            locale:await page.evaluate(()=>document.documentElement.lang),
+            control:await page.locator('#topLanguageSelect').inputValue(),
+            stillAuthenticated:!(await page.locator('#authScreen').isVisible())
+          };
+          if(report.auth.englishReload.locale!=='en'||report.auth.englishReload.control!=='en')
+            report.errors.push({mode,kind:'locale-persistence',value:report.auth.englishReload});
+          await page.locator('#topLanguageSelect').selectOption('fr');
+          await page.waitForFunction(()=>document.documentElement.lang==='fr',null,{timeout:5000});
+        }catch(error){report.errors.push({mode,kind:'language-switch',error:String(error).slice(0,450)});}
+      }else report.errors.push({mode,kind:'missing-language-switch'});
+    }
     for(const [view,label] of pages){
       try{
         const nav=page.locator('#mainNav [data-view="'+view+'"]').first();
