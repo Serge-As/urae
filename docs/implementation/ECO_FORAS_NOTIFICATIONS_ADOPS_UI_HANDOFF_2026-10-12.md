@@ -39,3 +39,12 @@ La référence source est le HEAD de la branche preview `f2c38bc8d51001484b7395d
 6. Mettre à jour truth ledger/state/feature registry seulement avec des résultats réellement obtenus; BIR+ et autorisation avant production.
 
 **ÉTAT DU PROJET APRÈS ÉTAPE** : un premier lot UI est codé sur branche privée distincte, sans preuve d'exécution sur Cloudflare et sans promotion de maturité. Les demandes transversales intégrales restent ouvertes.
+
+## Additif Business / conversion d'opportunités
+- Un message de Forum v2 marqué `REQUEST` présente « Structurer ce besoin » uniquement aux gestionnaires autorisés ; `OFFER` présente « Proposer ce service » à l'utilisateur connecté. Ils **ouvrent et préremplissent** les formulaires du véritable owner `ValueNetworkService`, sans créer de transaction ni publier automatiquement.
+- L'interface demande confirmation avant d'écraser un formulaire partiellement rempli. Lorsqu'un besoin est réellement enregistré, `sourceType=COMMUNITY_MESSAGE` et `sourceRef=messageId` conservent la provenance au sein de l'owner existant; publication et validation restent gouvernées et distinctes.
+- Le cockpit personnel ouvre les entrées d'offres/produits/services; un utilisateur sans groupe actif peut proposer son service par le propriétaire `OPPORTUNITY.OFFER` qui n'exige pas de groupe. Les besoins collectifs demeurent réservés aux managers.
+- `tests/forum-business-handoff-20261012.test.mjs` vérifie contrat de handoff, vraie persistance dans le service de besoins et offre de service personnelle; à EXÉCUTER sur le SHA exact.
+- **Non livré** : forum général plateforme, notifications tous modules, workflow complet d'achat/vente, paiements, monétisation réelle, unification totale de l'UI et qualification du jeu 155/155.
+
+Aucune assertion de livraison ou d'upload D1/R2 réel avant exécution de CI, tests navigateurs et preuves de préproduction exacte. Le chemin critique financier, la PR #72 HOLD et production restent inchangés.
