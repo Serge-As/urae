@@ -104,14 +104,28 @@ try{
       if(value&&window.__ecoLaunchErrors.at(-1)!==value)window.__ecoLaunchErrors.push(value.slice(0,400));
     }).observe(error,{attributes:true,childList:true,subtree:true,characterData:true});}
   });
+  console.log('ECO_LAUNCH_BEFORE_CLICK',JSON.stringify(await page.evaluate(()=>{
+    const button=document.getElementById('simulateProjectBtn');
+    const fieldset=button?.closest('fieldset');
+    return{disabled:button?.disabled,fieldsetDisabled:fieldset?.disabled,
+      fieldsetHidden:fieldset?.hidden,hasForm:!!button?.closest('form'),
+      buttonType:button?.type,projectName:document.getElementById('projectName')?.value?.length};
+  })));
   await page.locator('#simulateProjectBtn').click();
+  await page.waitForTimeout(900);
+  console.log('ECO_LAUNCH_AFTER_CLICK',JSON.stringify(await page.evaluate(()=>({
+    localState:document.getElementById('simulationResult')?.dataset.simulationStatus,
+    localText:document.getElementById('simulationResult')?.textContent?.slice(0,300),
+    error:document.getElementById('errorBox')?.textContent?.slice(0,300),
+    buttonDisabled:document.getElementById('simulateProjectBtn')?.disabled
+  }))));
   // A remote Cloudflare D1 cold start can take longer than a fixed delay.
   // Wait for the canonical output OR a real error; do not invent a failure
   // solely because an asynchronous request has not returned after 2.5 sec.
   await page.waitForFunction(()=>{
     const result=document.querySelector('#simulationResult')?.textContent??'';
     const error=document.querySelector('#errorBox');
-    return result.includes('Total monétaire')||Boolean(error&&!error.hidden&&error.textContent?.trim());
+    return result.includes('Total monétaire')||Boolean(document.querySelector('#simulationResult[data-simulation-status="ERROR"]'))||Boolean(error&&!error.hidden&&error.textContent?.trim());
   },null,{timeout:25000}).catch(()=>{});
   const result=await page.locator('#simulationResult').innerText();
   if(!result.includes('Total monétaire')){
@@ -120,7 +134,8 @@ try{
       htmlInvalid:[...document.querySelectorAll('#projectForm :invalid')].map(x=>({id:x.id,name:x.getAttribute('name'),hidden:x.closest('[data-launch-step]')?.hidden,disabled:x.disabled})).slice(0,25),
       error:document.querySelector('#errorBox')?.textContent?.slice(0,500),
       status:document.querySelector('#toast')?.textContent?.slice(0,220),
-      result:document.querySelector('#simulationResult')?.textContent?.slice(0,120)
+      result:document.querySelector('#simulationResult')?.textContent?.slice(0,600),
+      resultStatus:document.querySelector('#simulationResult')?.dataset.simulationStatus
     }));
     console.log('ECO_LAUNCH_SIMULATION_NETWORK',JSON.stringify(events));
     console.log('ECO_LAUNCH_TRANSIENT_ERRORS',JSON.stringify(await page.evaluate(()=>window.__ecoLaunchErrors??[])));
