@@ -6,11 +6,12 @@ AGENTS.md; CURRENT_TRUTH; PROJECT_TRUTH_LEDGER; PROJECT_STATE; cahier maître 3.
 La référence source est le HEAD de la branche preview `f2c38bc8d51001484b7395d4e4bf903cecf3919f`. PR #82 fusionnée sur candidate, #72 en HOLD. Aucun argent réel, aucun déploiement de production.
 
 ## Contrat livré dans ce lot (code soumis seulement)
-1. `personal-cockpit-ui.js` : répertoire "Mes Foras" listant TOUS les groupes accessibles et communautés d'intérêt dont l'utilisateur est membre. Le lien change réellement de groupe par le flux standard `selectGroup` + `refreshGroupContext` et ouvre `communityEnginePanel`. Les communautés utilisent `eco:open-interest-community` et l'owner existant. Aucun deuxième magasin de posts.
-2. `ConnectedApplication.notificationsAcrossGroups()` : lecture explicite à l'ouverture du centre, par lots de trois requêtes simultanées, uniquement sur les groupes retournés par `listGroups()`. GET d'origine `/api/v1/groups/:id/notifications`, autorisations backend inchangées; conserve la provenance, n'altère pas le groupe actif, expose les échecs partiels. `markNotificationReadInGroup()` utilise le groupe indiqué, sans mutation de contexte.
-3. `main.js` : Centre d'alertes de tous les groupes ; tri non-lues/criticité/date, état d'accès partiel, marquage de lecture et deep link vers le groupe concerné. **Aucune lecture de tous les groupes au repos** : seulement quand la vue Inbox est ouverte et à l'actualisation.
-4. `ad-manager-ui.js` : véritable projection en direct des champs campagne (sans facturation, sans impression), aperçu du créatif et de ses placements; image R2 via `visualMediaBlob` seulement après choix explicite; lien vers studio médias existant; révocation des object URLs et actualisation des choix après upload. `styles.css` responsive.
-5. Test Node contractuel + test de service multi-groupes dans `tests/personal-foras-multigroup-inbox-20261012.test.mjs` créé.
+1. `personal-cockpit-ui.js` : répertoire "Mes Foras" listant les groupes **avec appartenance vérifiée** et les communautés d'intérêt dont l'utilisateur est membre. Le lien change réellement de groupe par le flux standard `selectGroup` + `refreshGroupContext` et ouvre `communityEnginePanel`. Les communautés utilisent `eco:open-interest-community` et l'owner existant. Aucun deuxième magasin de posts.
+2. **Protection des espaces personnels** : endpoint API `GET /api/v1/groups/mine` lit les appartenances actives via le dépôt canonique avant de retourner les groupes visibles (créateur ou membre actif). `ConnectedApplication.listMyGroups()` ne réutilise pas le catalogue général de tenant. Si la liste échoue, le cockpit dit « indisponible », jamais « aucun groupe ».
+3. `ConnectedApplication.notificationsAcrossGroups()` : lecture explicite à l'ouverture du centre, par lots de trois requêtes simultanées, uniquement sur les groupes retournés par `listGroups()`. GET d'origine `/api/v1/groups/:id/notifications`, autorisations backend inchangées; conserve la provenance, n'altère pas le groupe actif, expose les échecs partiels. `markNotificationReadInGroup()` utilise le groupe indiqué, sans mutation de contexte.
+4. `main.js` : Centre d'alertes de tous les groupes ; tri non-lues/criticité/date, état d'accès partiel, marquage de lecture et deep link vers le groupe concerné. **Aucune lecture de tous les groupes au repos** : seulement quand la vue Inbox est ouverte et à l'actualisation.
+5. `ad-manager-ui.js` : véritable projection en direct des champs campagne (sans facturation, sans impression), aperçu du créatif et de ses placements; image R2 via `visualMediaBlob` seulement après choix explicite; lien vers studio médias existant; révocation des object URLs et actualisation des choix après upload. `styles.css` responsive.
+6. Test Node contractuel + test de service multi-groupes dans `tests/personal-foras-multigroup-inbox-20261012.test.mjs` créé.
 
 ## Sources canoniques NON modifiées
 - CommunityService / CommunityRealtimeStore; Interest Communities; Membership.
@@ -27,7 +28,7 @@ La référence source est le HEAD de la branche preview `f2c38bc8d51001484b7395d
 
 ## Gates NON EFFECTUÉS
 - `npm run ci`; Playwright desktop/mobile Chromium et WebKit; comparaison SHA du Worker déployé; D1/R2 réel; notifications inter-acteurs; passage de groupe avec foras actifs; iOS/Android6; gestion réseau absent et restauration.
-- La vérification syntaxique isolée des trois JS modifiés a réussi, **mais n'est pas un test métier**.
+- La vérification syntaxique isolée des trois JS modifiés et du test MJS a réussi, **mais n'est pas un test métier**.
 
 ## Reprise impérative
 1. Exécuter build/typecheck + le test ciblé, corriger tout FAIL, puis suite complète avant tout déploiement.
