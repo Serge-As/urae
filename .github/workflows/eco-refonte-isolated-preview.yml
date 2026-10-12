@@ -4,6 +4,11 @@ on:
     branches: ['preview/eco-refonte-20261012']
     paths:
       - '.github/workflows/eco-refonte-isolated-preview.yml'
+      - 'apps/web/index.html'
+      - 'apps/web/styles.css'
+      - 'apps/web/src/**'
+      - 'packages/**'
+      - 'workers/api/src/**'
   workflow_dispatch:
 permissions:
   contents: read
