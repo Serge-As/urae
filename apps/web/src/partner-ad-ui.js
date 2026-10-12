@@ -26,6 +26,32 @@ export function mountPartnerAdsUI({app,isManager=()=>false,notify=()=>{},showErr
   mediaLabel.append(media,el('small',tr('Importez d’abord une image dans Studio médias → Proposition partenaire.','Upload the picture in Media Studio → Partner proposal first.'),'hint'));
   form.append(mediaLabel);
   const submit=el('button',tr('Soumettre pour examen','Submit for review'),'primary');submit.type='submit';form.append(submit);host.append(form);
+
+  if(isManager()){
+   const inviteBox=el('section',undefined,'eco-external-ad-invites item');
+   inviteBox.append(el('h3',tr('Inviter un annonceur externe','Invite an external advertiser')),
+    el('p',tr('Lien valable 72 heures, utilisable pour une proposition seulement, sans accès aux données du groupe ni paiement.','72-hour one-use submission link, with no group data or payment access.'),'hint'));
+   const inviteForm=el('form',undefined,'eco-external-invite-form');
+   const label=el('label',tr('Nom de l’annonceur invité','Invited advertiser'));
+   const name=document.createElement('input');name.type='text';name.required=true;name.maxLength=120;
+   label.append(name);
+   const button=el('button',tr('Créer une invitation','Create invitation'),'secondary');button.type='submit';
+   const result=el('div',undefined,'eco-external-invite-result');
+   inviteForm.append(label,button);inviteBox.append(inviteForm,result);
+   inviteForm.onsubmit=event=>{event.preventDefault();void(async()=>{
+    button.disabled=true;
+    try{
+     const invite=await app.createExternalAdInvite(name.value,72);
+     const url=new URL('external-ad.html',window.location.href);
+     url.hash=new URLSearchParams({tenant:app.currentTenant(),group:app.activeGroup(),token:invite.token}).toString();
+     const value=url.toString(),copy=el('button',tr('Copier le lien','Copy invitation'),'secondary');
+     copy.type='button';copy.onclick=()=>void navigator.clipboard.writeText(value).then(()=>notify(tr('Lien copié.','Link copied.'))).catch(showError);
+     const input=document.createElement('input');input.readOnly=true;input.value=value;input.setAttribute('aria-label',tr('Lien externe à remettre au partenaire','External partner link'));
+     result.replaceChildren(el('p',tr('Lien confidentiel : disponible une seule fois.','Confidential link: shown only once.'),'hint'),input,copy);
+    }catch(error){showError(error);}finally{button.disabled=false;}
+   })();};
+   host.append(inviteBox);
+  }
   const list=el('div',undefined,'stack');host.append(el('h3',tr('Propositions et suivi','Proposals & tracking')),list);
   try{
    const [assets,proposals]=await Promise.all([app.visualMediaList().catch(()=>[]),app.partnerAdProposals()]);
