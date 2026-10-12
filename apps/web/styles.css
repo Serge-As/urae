@@ -1264,11 +1264,11 @@ body.ultra-simple .canonical-financial-matrix .cell-validate{min-height:48px;hei
 
 /* Eco-System Horizon: refinements to existing, unchanged workflows */
 #view-dashboard .hero{
-  border:1px solid var(--line);border-radius:var(--radius);
+  border:1px solid rgba(255,255,255,.18);border-radius:var(--radius);
   background:
-    radial-gradient(circle at 88% 18%,rgba(184,138,59,.14),transparent 36%),
-    linear-gradient(115deg,var(--brand-soft),var(--surface) 55%,#fff7eb);
-  box-shadow:var(--shadow);overflow:hidden;
+    radial-gradient(circle at 90% 13%,rgba(232,182,108,.24),transparent 38%),
+    linear-gradient(115deg,#173e31 0%,#1f6b4f 60%,#603f55 100%);
+  color:#fff;box-shadow:0 18px 36px rgba(19,60,44,.16);overflow:hidden;
 }
 #view-dashboard .hero h1{font-weight:800;letter-spacing:-.035em;text-wrap:balance;max-width:19ch}
 #view-dashboard .hero p{max-width:62ch}
@@ -1412,4 +1412,37 @@ body.external-ad-portal{min-height:100vh;padding:clamp(12px,4vw,40px);background
 @media(prefers-reduced-motion:reduce){
  #view-dashboard .quick-grid .quick{transition:none}
  #view-ecosystem>.eco-workspace-jump button{transform:none}
+}
+
+
+/* Real-device visual audit, 12 Oct 2026: explicit contrast and responsive
+   release/status controls. These styles change no action, permission or owner. */
+#view-dashboard .hero h1{color:#fff}
+#view-dashboard .hero p,#view-dashboard .hero .hero-card p{color:#f1fcf5}
+#view-dashboard .hero .eyebrow{color:#d4f4df}
+#view-dashboard .hero .hero-card{background:rgba(13,48,33,.32);border-color:rgba(255,255,255,.3)}
+#view-dashboard .hero .hero-card span,
+#view-dashboard .hero .hero-card small{color:#ebf7f0}
+.cahier-banner{flex-wrap:wrap;min-width:0}
+.cahier-banner>div{min-width:0;flex:1 1 280px}
+.cahier-code{
+  white-space:normal;overflow-wrap:anywhere;word-break:normal;
+  flex:0 1 420px;max-width:100%;line-height:1.45;
+}
+.finance-toc{
+  display:flex;align-items:stretch;flex-wrap:wrap;gap:9px;
+  margin:12px 0 18px;max-width:100%;
+}
+.finance-toc a{
+  display:inline-flex;align-items:center;min-height:44px;padding:9px 13px;
+  border:1px solid var(--line);border-radius:999px;background:var(--surface);
+  color:var(--brand);font-weight:650;text-decoration:none;
+}
+.finance-toc a:hover,.finance-toc a:focus-visible{
+  background:var(--brand-soft);border-color:var(--brand-2);
+}
+@media(max-width:680px){
+  .cahier-code{flex:1 1 100%;font-size:10px;line-height:1.55}
+  .finance-toc{gap:7px;margin-bottom:14px}
+  .finance-toc a{padding:8px 11px;font-size:13px;min-height:48px}
 }
