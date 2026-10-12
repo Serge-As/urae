@@ -61,3 +61,16 @@ test('external link refuses expired invitation, unsupported contents and unsafe 
  await repo.saveWorkspaceRecord({...stored,data:{...stored.data,expiresAt:'2020-01-01T00:00:00Z'}});
  await assert.rejects(()=>external.status('g',invite.token),/AD_INVITE_EXPIRED/);
 });
+
+test('a manager can revoke an unused invitation and outsider cannot restore it',async()=>{
+ const {kernel,external}=await setup();
+ const invite=await external.issue('g','Expired soon');
+ scope(kernel,'external');
+ await assert.rejects(()=>external.revoke('g',invite.inviteId),/FORBIDDEN_SCOPE/);
+ scope(kernel,'manager');
+ const result=await external.revoke('g',invite.inviteId);
+ assert.equal(result.status,'ARCHIVED');
+ scope(kernel,'external');
+ await assert.rejects(()=>external.status('g',invite.token),/AD_INVITE_INVALID/);
+ await assert.rejects(()=>external.submit('g',invite.token,proposal()),/AD_INVITE_INVALID/);
+});
