@@ -39,11 +39,12 @@ async function inspect(browser,type,device,lang){
  }catch(e){checks.push({id,phase:'language',status:'BLOCKED',reason:String(e).slice(0,150)});}
  for(const [name,purpose]of Object.entries(views)){
   try{
-   const btn=page.locator('.nav-btn[data-view="'+name+'"]').first();
-   if(await btn.count())await btn.click({timeout:6000});else{
-    const other=page.locator('button[data-view="'+name+'"]').first();if(await other.count())await other.click({timeout:6000});
-   }
-   await page.waitForTimeout(400);const current=await state(page);await shot(page,id,name);
+   const btn=page.locator('button[data-view="'+name+'"]:visible').first();
+   if(await btn.count())await btn.click({timeout:6000});
+   else if(!(await state(page)).active.includes('view-'+name))throw Error('No visible navigation control for '+name);
+   await page.waitForTimeout(450);
+   await page.evaluate(()=>window.scrollTo({top:0,behavior:'instant'}));
+   const current=await state(page);await shot(page,id,name);
    checks.push({id,view:name,purpose,status:current.active.includes('view-'+name)?'CAPTURED_ACTIVE':'NOT_ACTIVE',...current});
   }catch(e){checks.push({id,view:name,status:'BLOCKED_VIEW',reason:String(e).slice(0,300)});}
  }
