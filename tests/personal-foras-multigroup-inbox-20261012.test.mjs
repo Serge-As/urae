@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import {ConnectedApplication} from '../.build/packages/application/src/index.js';
+import {handleRequest} from '../.build/workers/api/src/index.js';
 
 test('personal inbox reads all authorized groups through existing scoped API without switching active group',async()=>{
   const app=Object.create(ConnectedApplication.prototype),requested=[];
@@ -51,4 +52,32 @@ test('foras and creative preview are projections of existing owners, never paral
   assert.match(ads,/clearPreviewImage\(\)/);
   assert.match(ads,/Contenu sponsorisé · aperçu non publié/);
   assert.doesNotMatch(personal,/new WebSocket\(/);
+});
+test('personal group directory never lists another creator or a non-member in the same tenant',async()=>{
+  const tenant='ux_my_foras_scope_20261012';
+  const send=(actor,url,init={})=>handleRequest(new Request('https://example.test'+url,{
+    ...init,headers:{'content-type':'application/json','x-tenant-id':tenant,'x-actor-id':actor,'x-group-roles':'founder,manager',...(init.headers||{})}
+  }));
+  const create=async(actor,name)=>{
+    const p=await send(actor,'/api/v1/group-projects',{method:'POST',body:JSON.stringify({
+      name,memberCount:2,sessions:2,nominalContribution:1000,
+      managementFeePerContribution:0,estimatedExternalCostRate:0,fixedOperatingCostPerSession:0
+    })});
+    assert.equal(p.status,201);
+    const project=await p.json();
+    const g=await send(actor,'/api/v1/group-projects/'+encodeURIComponent(project.id)+'/convert',{method:'POST',body:'{}'});
+    assert.equal(g.status,201);return g.json();
+  };
+  const own=await create('owner_a','Private A');
+  const other=await create('owner_b','Private B');
+  const mine=await send('owner_a','/api/v1/groups/mine');
+  assert.equal(mine.status,200);
+  const visible=await mine.json();
+  assert.ok(visible.some(group=>group.id===own.id));
+  assert.ok(!visible.some(group=>group.id===other.id));
+  const stranger=await send('not_a_member','/api/v1/groups/mine');
+  assert.equal(stranger.status,200);
+  assert.deepEqual(await stranger.json(),[]);
+  const privateNotices=await send('not_a_member','/api/v1/groups/'+encodeURIComponent(own.id)+'/notifications');
+  assert.notEqual(privateNotices.status,200);
 });
