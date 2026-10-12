@@ -80,7 +80,14 @@ try{
  });
  await step('simulate plan',async()=>{
   await page.locator('#simulateProjectBtn').click();
-  await page.waitForTimeout(2500);
+  // A remote Cloudflare D1 cold start can take longer than a fixed delay.
+  // Wait for the canonical output OR a real error; do not invent a failure
+  // solely because an asynchronous request has not returned after 2.5 sec.
+  await page.waitForFunction(()=>{
+    const result=document.querySelector('#simulationResult')?.textContent??'';
+    const error=document.querySelector('#errorBox');
+    return result.includes('Total monétaire')||Boolean(error&&!error.hidden&&error.textContent?.trim());
+  },null,{timeout:25000}).catch(()=>{});
   const result=await page.locator('#simulationResult').innerText();
   if(!result.includes('Total monétaire')){
     const diagnostic=await page.evaluate(()=>({
