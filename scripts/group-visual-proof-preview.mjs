@@ -120,9 +120,16 @@ try{
   console.log('ECO_LAUNCH_SERVED_ASSET',JSON.stringify(assetTruth));
   await page.evaluate(()=>{
     window.__ecoSimulationClickCaptured=0;
-    document.addEventListener('click',event=>{
-      if(event.target?.closest?.('#simulateProjectBtn'))window.__ecoSimulationClickCaptured++;
-    },true);
+    window.__ecoWizardDocumentToken=String(performance.timeOrigin);
+    window.__ecoWizardEvents=[];
+    for(const type of ['pointerdown','pointerup','click']){
+      window.addEventListener(type,event=>{
+        if(event.target?.closest?.('#simulateProjectBtn')){
+          window.__ecoWizardEvents.push({type,buttonDisabled:!!event.target.closest('#simulateProjectBtn')?.disabled});
+          if(type==='click')window.__ecoSimulationClickCaptured++;
+        }
+      },true);
+    }
   });
   console.log('ECO_LAUNCH_BEFORE_CLICK',JSON.stringify(await page.evaluate(()=>{
     const button=document.getElementById('simulateProjectBtn');
@@ -138,8 +145,26 @@ try{
     localText:document.getElementById('simulationResult')?.textContent?.slice(0,300),
     error:document.getElementById('errorBox')?.textContent?.slice(0,300),
     buttonDisabled:document.getElementById('simulateProjectBtn')?.disabled,
-    clickObserved:window.__ecoSimulationClickCaptured??0
+    clickObserved:window.__ecoSimulationClickCaptured??0,
+    documentToken:window.__ecoWizardDocumentToken??null,
+    performanceOrigin:performance.timeOrigin,
+    pageUrl:location.href,
+    observedEvents:window.__ecoWizardEvents??[]
   }))));
+  if(await page.evaluate(()=>Number(window.__ecoSimulationClickCaptured??0)===0)){
+    // A native DOM click is a diagnostic, not a substitute for real pointer
+    // acceptance. Keep it separately labelled; never turn a pointer FAIL
+    // into a field-acceptance PASS.
+    await page.locator('#simulateProjectBtn').evaluate(node=>node.click());
+    await page.waitForTimeout(1100);
+    console.log('ECO_LAUNCH_NATIVE_CLICK_DIAG',JSON.stringify(await page.evaluate(()=>({
+      pageUrl:location.href,token:window.__ecoWizardDocumentToken??null,
+      observedEvents:window.__ecoWizardEvents??[],
+      localText:document.getElementById('simulationResult')?.textContent?.slice(0,420),
+      localState:document.getElementById('simulationResult')?.dataset.simulationStatus??null,
+      buttonDisabled:document.getElementById('simulateProjectBtn')?.disabled
+    }))));
+  }
   // A remote Cloudflare D1 cold start can take longer than a fixed delay.
   // Wait for the canonical output OR a real error; do not invent a failure
   // solely because an asynchronous request has not returned after 2.5 sec.
