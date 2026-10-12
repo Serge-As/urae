@@ -83,7 +83,7 @@ export function mountCommunityShopUI({app,notify=()=>{},showError=console.error,
     const reply=el('button','Répondre','secondary');reply.type='button';reply.onclick=()=>{if(bodyInput){bodyInput.dataset.replyTo=post.id;bodyInput.focus();bodyInput.placeholder='Réponse à ce message…';}notify('Votre prochain message répondra à celui-ci.');};actions.append(reply);
     // Forum -> economic owner is a draft handoff, never a purchase, commitment,
     // finance write, or automatic publication. Only the current group can act.
-    if(['REQUEST','OFFER'].includes(String(post.kind))&&!post.parentId){
+    if((post.kind==='OFFER'||(post.kind==='REQUEST'&&isManager()))&&!post.parentId){
       const en=document.documentElement.lang?.startsWith('en');
       const opportunity=el('button',post.kind==='REQUEST'?(en?'Structure this need':'Structurer ce besoin'):(en?'Offer this service':'Proposer ce service'),'secondary');
       opportunity.type='button';
