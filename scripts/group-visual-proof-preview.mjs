@@ -91,6 +91,11 @@ try{
   await next(); // 7
  });
  await step('simulate plan',async()=>{
+  const events=[];
+  const onRequest=req=>{if(req.url().includes('/api/v1/group-projects'))events.push({type:'request',method:req.method(),path:new URL(req.url()).pathname});};
+  const onResponse=resp=>{if(resp.url().includes('/api/v1/group-projects'))events.push({type:'response',status:resp.status(),path:new URL(resp.url()).pathname});};
+  const onFail=req=>{if(req.url().includes('/api/v1/group-projects'))events.push({type:'failed',failure:req.failure()?.slice(0,150)??null});};
+  page.on('request',onRequest);page.on('response',onResponse);page.on('requestfailed',onFail);
   await page.locator('#simulateProjectBtn').click();
   // A remote Cloudflare D1 cold start can take longer than a fixed delay.
   // Wait for the canonical output OR a real error; do not invent a failure
@@ -109,7 +114,8 @@ try{
       status:document.querySelector('#toast')?.textContent?.slice(0,220),
       result:document.querySelector('#simulationResult')?.textContent?.slice(0,120)
     }));
-    throw Error('Simulation did not produce expected result: '+JSON.stringify(diagnostic));
+    console.log('ECO_LAUNCH_SIMULATION_NETWORK',JSON.stringify(events));
+    throw Error('Simulation did not produce expected result: '+JSON.stringify(diagnostic)+' network='+JSON.stringify(events));
   }
  });
  await step('review preview and create',async()=>{
