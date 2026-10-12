@@ -2416,9 +2416,15 @@ const simulateCurrentLaunch=async({silent=false}={})=>{
   launchStudio.afterSimulation();if(!silent)toast('Projet et rubriques vérifiés. Continuez jusqu’à la prévisualisation finale.');
   return r;
 };
-onSubmit('#projectForm', async (e) => { e.preventDefault(); try {
-  await simulateCurrentLaunch();
-}catch(e){fail(Error(launchError(e)));} });
+const simulateLaunchFromUserAction=async()=>{
+  try{await simulateCurrentLaunch();}
+  catch(error){fail(Error(launchError(error)));}
+};
+onSubmit('#projectForm', async event=>{
+  event.preventDefault();
+  await simulateLaunchFromUserAction();
+});
+$('#simulateProjectBtn').addEventListener('click',()=>void simulateLaunchFromUserAction());
 $('#createGroupBtn').addEventListener('click',async()=>{
   const button=$('#createGroupBtn');if(button.disabled)return;
   const originalLabel=button.textContent;button.disabled=true;$('#projectForm').inert=true;
