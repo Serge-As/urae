@@ -399,7 +399,7 @@ export class ConnectedApplication {
     // An account can join/create any number of associations and groups.
     // Never auto-select another tenant member's group from the broad catalogue.
     // The API verifies ownership or active membership before returning rows.
-    const groups=await this.listAccessibleGroups();
+    const groups=await this.listGroups();
     if(this.activeGroupId&&!groups.some(g=>g.id===this.activeGroupId))this.selectGroup(undefined);
     if(!this.activeGroupId&&groups[0])this.selectGroup(groups[0].id);
     else this.selectGroup(this.activeGroupId);
