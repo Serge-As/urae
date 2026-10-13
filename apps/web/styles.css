@@ -1501,3 +1501,23 @@ body.external-ad-portal{min-height:100vh;padding:clamp(12px,4vw,40px);background
 .ad-creative-preview button{justify-self:start;min-height:44px}
 @media(max-width:700px){.personal-foras-directory,.ad-creative-preview{padding:12px}
  .personal-forum-link{min-height:48px}}
+
+
+/* Personal multi-group access is always visible from navigation.
+   Preview identity is truthful; no release contract/financial change. */
+.preview-env-badge{display:inline-flex;align-items:center;max-width:100%;
+  margin-top:3px;padding:3px 8px;background:#e8f4ff;color:#184f82;
+  border:1px solid #9bbddd;border-radius:999px;font-size:11px;
+  font-weight:850;letter-spacing:.01em;overflow-wrap:anywhere}
+.preview-env-badge[hidden]{display:none!important}
+.personal-group-directory{display:grid;grid-template-columns:minmax(0,1fr) auto;
+  align-items:end;gap:10px;border:1px solid var(--line);border-radius:14px;
+  padding:14px;min-width:0}
+.personal-group-directory>strong,.personal-group-directory>.truth-notice{grid-column:1/-1}
+.personal-group-picker{min-width:0;width:100%;min-height:44px}
+.personal-group-directory button{min-height:44px}
+@media(max-width:680px){
+  .personal-group-directory{grid-template-columns:minmax(0,1fr)}
+  .personal-group-directory>strong,.personal-group-directory>.truth-notice{grid-column:1}
+  .personal-group-directory button{width:100%}
+}
