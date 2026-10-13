@@ -2551,17 +2551,12 @@ $('#createGroupBtn').addEventListener('click',async()=>{
     toast(`Groupe créé : ${group.name}. Ses espaces se chargent sans bloquer la navigation.`);
     // Preserve both operations; failure is visible, never mistaken for an
     // unsuccessful group conversion or silently swallowed.
-    void (async()=>{
-      try{
-        await launchStudio.persistStarterKit?.(group.id);
-      }catch(error){
-        const message=error instanceof Error?error.message:String(error);
-        console.warn('KIT_STARTER_PERSISTENCE_PENDING',message);
-        toast(tx('Groupe créé ; Kit prêt à l’emploi à réessayer depuis le groupe.','Group created; starter kit must be retried from the group.'));
-      }
-      try{await refreshGroupContext();}
-      catch(error){fail(error);}
-    })();
+    void launchStudio.persistStarterKit?.(group.id).catch(error=>{
+      const message=error instanceof Error?error.message:String(error);
+      console.warn('KIT_STARTER_PERSISTENCE_PENDING',message);
+      toast(tx('Groupe créé ; Kit prêt à l’emploi à réessayer depuis le groupe.','Group created; starter kit must be retried from the group.'));
+    });
+    void refreshGroupContext().catch(fail);
   }catch(error){
     launchStudio.renderPreview();fail(Error(launchError(error)));
   }finally{$('#projectForm').inert=false;button.disabled=false;button.textContent=originalLabel;}
