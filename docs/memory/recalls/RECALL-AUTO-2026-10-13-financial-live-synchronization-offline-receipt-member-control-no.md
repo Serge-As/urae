@@ -157,3 +157,6 @@ Sources relues : apps/web/src/main.js (état cellule et reviewOfflineFinancialBa
 
 ## Rappel avant livraison
 Relus : tests/browser/window-account-finance-20261010.spec.mjs de la production881a3e6, financial-work-ui et financialPassageSummary, workflow Cloudflare existant et sauvegarde. Sources financières inchangées ; revue locale distincte d'une copie de synthèse serveur. Aucun dump personnel dans les preuves GitHub ; récupération complète dans le R2 privé acquis. Les nouvelles recettes restent à exécuter avant promotion.
+
+## Rappel de contrôle : baseline et position
+Sources relues : exactCellAmount, applyRemoteFinancialProjection, renderCanonicalFinancialTable et restoreNavState. Comparer à la baseline réelle de la commande durable, pas à zéro par défaut. Ne pas prendre une synthèse serveur en cache pour les nouvelles saisies hors connexion. Une restauration différée ne doit pas annuler un déplacement déjà effectué. Ledger et horaires d'origine inchangés.

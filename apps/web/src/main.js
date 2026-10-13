@@ -327,11 +327,13 @@ const restoreNavState=state=>{
           while(owner){owner.open=true;owner=owner.parentElement?.closest('details')??null;}
           anchor.scrollIntoView({behavior:'auto',block:'start'});
         }else window.scrollTo({top:Number(state.scrollY)||0,behavior:'auto'});
+        const restoredWrappers=new WeakSet();
+        const restoreOne=(wrap,left,top)=>{if(!wrap||wrap.clientWidth===0||restoredWrappers.has(wrap))return;if(wrap.scrollLeft!==0||wrap.scrollTop!==0){restoredWrappers.add(wrap);return;}wrap.scrollLeft=left;wrap.scrollTop=top;restoredWrappers.add(wrap);};
         const restoreMatrixScroll=()=>{
           const meetingWrap=document.querySelector('#meetingMatrix .canonical-financial-wrap')??document.querySelector('#meetingMatrix');
           const individualWrap=document.querySelector('#individualSheetMatrix .canonical-financial-wrap')??document.querySelector('#individualSheetMatrix');
-          if(meetingWrap){meetingWrap.scrollLeft=Number(state.matrixScrollLeft)||0;meetingWrap.scrollTop=Number(state.matrixScrollTop)||0;}
-          if(individualWrap){individualWrap.scrollLeft=Number(state.individualScrollLeft)||0;individualWrap.scrollTop=Number(state.individualScrollTop)||0;}
+          restoreOne(meetingWrap,Number(state.matrixScrollLeft)||0,Number(state.matrixScrollTop)||0);
+          restoreOne(individualWrap,Number(state.individualScrollLeft)||0,Number(state.individualScrollTop)||0);
         };
         restoreMatrixScroll();setTimeout(restoreMatrixScroll,60);setTimeout(restoreMatrixScroll,220);
         if(state.focusId)document.getElementById(state.focusId)?.focus?.({preventScroll:true});
@@ -1126,7 +1128,7 @@ const ensureFinancialSnapshotPolling=()=>{
 let financialWorkUI;
 const ensureFinancialWorkUI=()=>financialWorkUI??=createFinancialWorkUI({app,tx,notify:toast,resume:()=>resumeOnline(),
   summary:async(meetingId,membershipId,ids)=>{
-    try{const data=await app.financialPassageSummary(meetingId,membershipId,ids);if(data.projectionSource==='LOCAL_CACHE')throw Error('LOCAL_SUMMARY_REQUIRED');return data;}catch(e){if(e.message!=='LOCAL_SUMMARY_REQUIRED'&&navigator.onLine!==false&&!app.serverBudgetState?.().blocked)throw e;
+    try{if(navigator.onLine===false)throw Error('LOCAL_SUMMARY_REQUIRED');const data=await app.financialPassageSummary(meetingId,membershipId,ids);if(data.projectionSource==='LOCAL_CACHE')throw Error('LOCAL_SUMMARY_REQUIRED');return data;}catch(e){if(e.message!=='LOCAL_SUMMARY_REQUIRED'&&navigator.onLine!==false&&!app.serverBudgetState?.().blocked)throw e;
       const ordered=meetings.filter(x=>x.status!=='cancelled').slice().sort((a,b)=>String(a.scheduledAt??a.openedAt).localeCompare(String(b.scheduledAt??b.openedAt))),beforeIds=ordered.slice(0,ordered.findIndex(x=>x.id===meetingId)).map(x=>x.id);
       const lines=ids.map(rubricId=>{const current=exactCellAmount(membershipId,rubricId,meetingId),before=beforeIds.reduce((n,id)=>n+exactCellAmount(membershipId,rubricId,id),0);return{rubricId,rubricName:rubrics.find(x=>x.id===rubricId)?.name??rubricId,before,current,total:before+current,cellVersion:exactCellVersion(membershipId,rubricId,meetingId)};});return{local:true,lines,totals:Object.fromEntries(['before','current','total'].map(k=>[k,lines.reduce((n,x)=>n+x[k],0)]))};}
   },
@@ -1207,7 +1209,7 @@ const submitFinancialCellElement=async validate=>{
       }else if(result?.status==='QUEUED_SYNC'||result?.queued){
         currentLabel.textContent=fmt(displayTarget);
         if(nature==='CONTRIBUTION'){
-          financialPendingTargets.set(cellKey,{membershipId,rubricId,meetingId,targetAmount:target,status:'PENDING',businessStatus:''});
+          financialPendingTargets.set(cellKey,{membershipId,rubricId,meetingId,targetAmount:target,baselineValue:Number(result?.outbox?.payload?.baselineValue??current),baselineVersion:Number(result?.outbox?.payload?.baselineVersion??exactCellVersion(membershipId,rubricId,meetingId)),status:'PENDING',businessStatus:''});
         }else{
           financialPendingSheetEntries=financialPendingSheetEntries.filter(x=>!(x.membershipId===membershipId&&x.rubricId===rubricId&&x.meetingId===meetingId));
           financialPendingSheetEntries.push({membershipId,rubricId,meetingId,amount:target,status:'PENDING',nature});
@@ -1383,7 +1385,8 @@ const renderCanonicalFinancialTable=({root,mode='meeting',meetingId='',membershi
     const previousMatrixScroll=previousWrap?{left:Number(previousWrap.scrollLeft)||0,top:Number(previousWrap.scrollTop)||0}:null;
     const restoreReplacedMatrixScroll=wrap=>{
       if(!previousMatrixScroll||!wrap)return;
-      const apply=()=>{wrap.scrollLeft=previousMatrixScroll.left;wrap.scrollTop=previousMatrixScroll.top;};
+      let applied=false;
+      const apply=()=>{if(applied||!wrap.isConnected||wrap.clientWidth===0)return;if(wrap.scrollLeft!==0||wrap.scrollTop!==0){applied=true;return;}wrap.scrollLeft=previousMatrixScroll.left;wrap.scrollTop=previousMatrixScroll.top;applied=true;};
       apply();requestAnimationFrame(apply);setTimeout(apply,80);
     };
     const activeEditor=root.querySelector?.('.cell-target-input:focus');
@@ -2150,6 +2153,8 @@ const applyRemoteFinancialProjection=(p={})=>{
     });
     if(pending){
       const localAmount=Number(pending.payload?.targetAmount??pending.payload?.amount);
+      const baselineVersion=Number(pending.payload?.baselineVersion);
+      if(Number.isFinite(localAmount)&&localAmount!==amount&&Number.isSafeInteger(baselineVersion)&&Number(p.cellVersion??0)<=baselineVersion)return false;
       if(Number.isFinite(localAmount)&&localAmount!==amount){
         markCriticalFinancialConflict({...p,amount:localAmount});
         const key=financialCellKey(String(p.membershipId),String(p.rubricId),String(p.meetingId));
