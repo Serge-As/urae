@@ -5,7 +5,66 @@ export function mountFounderControlUI({app,notify=()=>{},showError=console.error
   const nav=document.getElementById('founderControlNavBtn'),root=document.getElementById('founderControlRoot');
   const metrics=document.getElementById('controlMetrics'),services=document.getElementById('controlServices'),complaints=document.getElementById('controlComplaints'),incidents=document.getElementById('controlIncidents'),content=document.getElementById('controlContent'),meta=document.getElementById('controlMeta');
   if(!nav||!root||!metrics||!services||!complaints||!incidents||!content||!meta)return{refresh:async()=>false};
-  let authorized=false,last=null;
+  let authorized=false,last=null,brandUrls=[];
+  const brandHost=el('section',undefined,'panel eco-brand-library');
+  brandHost.id='founderBrandLibrary';
+  root.querySelector('.page-head')?.insertAdjacentElement('afterend',brandHost);
+  const displayBrand=async()=>{
+    for(const url of brandUrls)URL.revokeObjectURL(url);brandUrls=[];
+    brandHost.replaceChildren(el('h2','Identité visuelle globale / Global brand imagery'));
+    brandHost.append(el('p','Ces images sont communes à tous les groupes et remplacent les visuels de démonstration. Chaque groupe garde la priorité sur ses propres bannières.','truth-notice'));
+    try{
+      const library=await app.founderBrandLibrary(),slots=library.slots??{};
+      const form=el('form',undefined,'eco-brand-upload');
+      const file=document.createElement('input');file.type='file';file.accept='image/png,image/jpeg,image/webp';file.required=true;
+      file.setAttribute('aria-label','Importer un visuel global');
+      const send=el('button','Importer la photo','primary');send.type='submit';
+      form.append(file,send);
+      form.onsubmit=event=>{event.preventDefault();void(async()=>{
+        send.disabled=true;
+        try{
+          const photo=file.files?.[0];if(!photo)return;
+          if(photo.size>2000000)throw Error('MEDIA_SIZE_OUT_OF_RANGE');
+          await app.uploadFounderBrandAsset(photo);
+          notify('Photo globale enregistrée dans la bibliothèque.');
+          await displayBrand();
+        }catch(e){showError(e);}finally{send.disabled=false;}
+      })();};
+      brandHost.append(form);
+      const grid=el('div',undefined,'eco-media-grid');
+      for(const [slot,title] of [['HOME_HERO','Accueil général'],['MARKET_HERO','Marketplace'],['FORUM_HERO','Foras / Forum'],['BRAND_LOGO','Logo Eco-System']]){
+        const card=el('section',undefined,'eco-media-slot item');
+        const caption=el('strong',title),select=document.createElement('select');
+        select.setAttribute('aria-label','Visuel global : '+title);
+        select.append(new Option('Image originale / aucune',''));
+        for(const asset of library.assets??[])select.append(new Option(asset.name,asset.id));
+        select.value=slots[slot]??'';
+        const preview=el('div',undefined,'eco-media-preview');
+        const show=async(id)=>{
+          preview.replaceChildren();
+          if(!id){preview.append(el('span','Aucune image de remplacement.','hint'));return;}
+          const img=document.createElement('img');img.alt=title;preview.append(img);
+          try{
+            const blob=await app.founderBrandBlob(id);
+            if(!img.isConnected)return;
+            const url=URL.createObjectURL(blob);brandUrls.push(url);img.src=url;
+          }catch(e){preview.replaceChildren(el('span','Image indisponible','hint'));}
+        };
+        void show(select.value);
+        select.onchange=()=>void(async()=>{
+          select.disabled=true;
+          try{
+            await app.setFounderBrandSlot(slot,select.value);
+            notify('Identité visuelle mise à jour : '+title);
+            document.dispatchEvent(new Event('eco:visual-media-updated'));
+            await displayBrand();
+          }catch(e){showError(e);select.disabled=false;}
+        })();
+        card.append(caption,preview,select);grid.append(card);
+      }
+      brandHost.append(grid,el('small','La bibliothèque est réservée à la plateforme ; aucun responsable de groupe ne peut modifier ces visuels.','hint'));
+    }catch(e){brandHost.append(el('p','Bibliothèque globale indisponible : '+String(e?.message??e),'hint'));}
+  };
   const pill=(text,kind='')=>el('span',text,'pill '+kind);
   const metric=(n,label)=>{const d=el('div',undefined,'metric');d.append(el('strong',String(n)),el('span',label));return d;};
   const button=(label,fn,cls='secondary')=>{const b=el('button',label,cls);b.type='button';b.onclick=()=>void fn();return b;};
@@ -14,7 +73,7 @@ export function mountFounderControlUI({app,notify=()=>{},showError=console.error
     let snap;
     try{snap=await app.founderControl();authorized=true;nav.hidden=false;root.hidden=false;}
     catch(e){authorized=false;nav.hidden=true;root.hidden=true;return false;}
-    last=snap;metrics.replaceChildren();services.replaceChildren();complaints.replaceChildren();incidents.replaceChildren();content.replaceChildren();
+    last=snap;await displayBrand();metrics.replaceChildren();services.replaceChildren();complaints.replaceChildren();incidents.replaceChildren();content.replaceChildren();
     metrics.append(metric(snap.platform.groups,'Groupes'),metric(snap.platform.memberships,'Adhésions'),metric(snap.platform.openComplaints,'Plaintes ouvertes'),metric(snap.capabilities.length,'Capacités supervisées'),metric(snap.incidents.filter(x=>!['RESOLVED','CLOSED'].includes(x.status)).length,'Incidents ouverts'),metric(snap.content.filter(x=>!['PUBLISHED','DONE','ARCHIVED'].includes(x.status)).length,'Contenus à traiter'));
     meta.textContent='Supervision automatique : '+snap.supervisionRule+' · actualisé '+new Date(snap.generatedAt).toLocaleString('fr-FR');
 

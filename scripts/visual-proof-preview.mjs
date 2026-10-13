@@ -1,0 +1,149 @@
+import {chromium} from '@playwright/test';
+import {randomBytes} from 'node:crypto';
+import fs from 'node:fs/promises';
+import path from 'node:path';
+
+const preview='https://eco-system-refonte-preview.sergemimf.workers.dev';
+const dest='visual-evidence';
+await fs.mkdir(dest,{recursive:true});
+const browser=await chromium.launch({headless:true});
+const report={utc:new Date().toISOString(),target:preview,sourceSha:process.env.GITHUB_SHA,
+  captures:[],errors:[],mobileOverflow:[],screenStates:{},auth:{},status:'OBSERVATION_ONLY'};
+const pages=[
+  ['dashboard','Accueil'],['launch','Créer / intégrer'],['operations','Cockpit Association'],
+  ['sessions','Séances'],['finance','Finances'],['recap','Récap'],
+  ['ecosystem','Écosystème, NOW, Deals, Business, Forum'],
+  ['services','Services'],['backoffice','Back-office']
+];
+
+async function snapshot(page,label,mode){
+  const safe=label.replace(/[^a-z0-9_-]/gi,'_'),file=mode+'-'+safe+'.png';
+  await page.evaluate(()=>{document.documentElement.style.scrollBehavior='auto';window.scrollTo(0,0);});
+  await page.waitForTimeout(150);
+  await page.screenshot({path:path.join(dest,file),animations:'disabled',timeout:15000});
+  const state=await page.evaluate(()=>{
+    const body=document.body;
+    const focused=document.activeElement;
+    const activeView=[...document.querySelectorAll('.view.active')].map(e=>e.id);
+    const panels=[...document.querySelectorAll('.view.active h1,.view.active h2,.view.active summary')]
+      .filter(e=>e.getBoundingClientRect().width>0).slice(0,30).map(e=>e.textContent?.trim().slice(0,110));
+    return{
+      title:document.title,lang:document.documentElement.lang,bodyClass:body.className,
+      activeView,panels,authVisible:!!document.querySelector('.auth-screen:not([hidden])'),
+      horizontalOverflow:document.documentElement.scrollWidth>window.innerWidth+2,
+      viewport:{w:innerWidth,h:innerHeight},
+      buttonsVisible:[...document.querySelectorAll('button')].filter(e=>{const r=e.getBoundingClientRect();return r.width>0&&r.height>0&&!e.disabled}).length,
+      inputsVisible:[...document.querySelectorAll('input')].filter(e=>e.getBoundingClientRect().height>0).length,
+      focusTag:focused?.tagName,
+      heroStyle: (() => {
+        const hero=document.querySelector('#view-dashboard .hero');
+        if(!hero)return null;
+        const title=hero.querySelector('h1'),info=hero.querySelector('p');
+        return {background:getComputedStyle(hero).backgroundImage,
+          titleColor:title?getComputedStyle(title).color:null,
+          paragraphColor:info?getComputedStyle(info).color:null};
+      })()
+    };
+  });
+  report.captures.push({file,label,mode,state});
+  if(state.horizontalOverflow)report.mobileOverflow.push({label,mode});
+  return state;
+}
+async function runViewport(mode,viewport,isMobile){
+  const context=await browser.newContext({viewport,deviceScaleFactor:1,isMobile,hasTouch:isMobile,serviceWorkers:'block',locale:'fr-FR'});
+  const page=await context.newPage();
+  page.on('pageerror',e=>report.errors.push({mode,kind:'pageerror',error:String(e).slice(0,400)}));
+  page.on('response',r=>{if(r.status()>=500)report.errors.push({mode,kind:'http5xx',status:r.status(),url:r.url().replace(/([?&](?:token|secret|password)=)[^&]+/ig,'$1[redacted]').slice(0,250)});});
+  try{
+    const res=await page.goto(preview+'/',{waitUntil:'domcontentloaded',timeout:30000});
+    report.screenStates[mode]={httpStatus:res?.status()};
+    await page.waitForTimeout(3500);
+    await snapshot(page,'auth-before-signin',mode);
+    // Entirely synthetic isolated preview account: no real user's credentials.
+    const suffix=(process.env.GITHUB_RUN_ID??String(Date.now())).slice(-8)+randomBytes(3).toString('hex');
+    const username='uxaudit'+suffix;
+    const password='Uxaudit-'+randomBytes(18).toString('hex')+'!';
+    await page.locator('[data-auth-mode="register"]').click({timeout:8000});
+    await page.locator('#authName').fill('UX Test Isolé');
+    await page.locator('#authUsername').fill(username);
+    await page.locator('#authPassword').fill(password);
+    await page.locator('#authSubmit').click();
+    let authenticated=false;
+    try{
+      await page.waitForFunction(()=>!document.body.classList.contains('signed-out') &&
+        !document.body.classList.contains('auth-restoring'),{timeout:17000});
+      await page.waitForTimeout(1300);
+      authenticated=!(await page.locator('#authScreen').isVisible());
+    }catch{}
+    report.auth[mode]={registeredOrSignedIn:authenticated,
+      errorMessage:await page.locator('#authError').textContent().then(x=>(x??'').slice(0,180)).catch(()=>null)};
+    if(!authenticated){
+      await snapshot(page,'registration-result',mode);
+      return;
+    }
+    if(mode==='desktop'){
+      const control=page.locator('#topLanguageSelect');
+      if(await control.count()){
+        try{
+          await control.selectOption('en');
+          await page.waitForFunction(()=>document.documentElement.lang==='en',null,{timeout:5000});
+          await page.waitForTimeout(500);
+          await snapshot(page,'dashboard-in-English',mode);
+          await page.reload({waitUntil:'domcontentloaded'});
+          await page.waitForTimeout(1800);
+          report.auth.englishReload={
+            locale:await page.evaluate(()=>document.documentElement.lang),
+            control:await page.locator('#topLanguageSelect').inputValue(),
+            stillAuthenticated:!(await page.locator('#authScreen').isVisible())
+          };
+          if(report.auth.englishReload.locale!=='en'||report.auth.englishReload.control!=='en')
+            report.errors.push({mode,kind:'locale-persistence',value:report.auth.englishReload});
+          await page.locator('#topLanguageSelect').selectOption('fr');
+          await page.waitForFunction(()=>document.documentElement.lang==='fr',null,{timeout:5000});
+        }catch(error){report.errors.push({mode,kind:'language-switch',error:String(error).slice(0,450)});}
+      }else report.errors.push({mode,kind:'missing-language-switch'});
+    }
+    for(const [view,label] of pages){
+      try{
+        const nav=page.locator('#mainNav [data-view="'+view+'"]').first();
+        if(!await nav.count())continue;
+        await nav.evaluate(e=>e.click());
+        await page.waitForTimeout(900);
+        await snapshot(page,view,mode);
+      }catch(e){report.errors.push({mode,view,kind:'capture',error:String(e).slice(0,280)});}
+    }
+  }catch(e){report.errors.push({mode,kind:'fatal',error:String(e).slice(0,500)});}
+  await context.close();
+}
+await runViewport('desktop',{width:1440,height:900},false);
+await runViewport('mobile',{width:390,height:844},true);
+// Small contact sheet derived exclusively from REAL live-deployment screenshots.
+// The base64 marker can be privately inspected; originals remain in the artifact.
+try{
+  const labels=['dashboard','operations','finance','ecosystem'];
+  const cells=[];
+  for(const mode of ['desktop','mobile']){
+    for(const label of labels){
+      const filename=mode+'-'+label+'.png';
+      if(!report.captures.some(c=>c.file===filename))continue;
+      const data=await fs.readFile(path.join(dest,filename));
+      cells.push({mode,label,url:'data:image/png;base64,'+data.toString('base64')});
+    }
+  }
+  const sheet=await browser.newPage({viewport:{width:1040,height:1050},deviceScaleFactor:1});
+  const cards=cells.map(c=>'<article><div>'+c.mode+' — '+c.label+'</div><img src="'+c.url+'" alt="'+c.label+'"></article>').join('');
+  await sheet.setContent('<!doctype html><html><head><style>body{background:#eff4ef;margin:14px;font:17px Arial}main{display:grid;grid-template-columns:repeat(2,1fr);gap:13px}article{border:1px solid #c7d8cf;border-radius:10px;overflow:hidden;background:white}article div{padding:8px 10px;font-weight:bold;color:#176d58}img{display:block;width:100%;height:215px;object-fit:contain;object-position:top;background:#f8faf8}</style></head><body><main>'+cards+'</main></body></html>');
+  await sheet.screenshot({path:path.join(dest,'REAL_CONTACT_SHEET.jpg'),type:'jpeg',quality:37,fullPage:true});
+  const contact=await fs.readFile(path.join(dest,'REAL_CONTACT_SHEET.jpg'));
+  console.log('ECO_REAL_CONTACT_JPEG_BASE64 '+contact.toString('base64'));
+  await sheet.close();
+}catch(error){report.errors.push({kind:'contact-sheet',error:String(error).slice(0,250)});}
+await browser.close();
+await fs.writeFile(path.join(dest,'evidence.json'),JSON.stringify(report,null,2));
+const compact={url:preview,captured:report.captures.length,
+  auth:report.auth,screenStates:report.screenStates,
+  overflow:report.mobileOverflow,errors:report.errors};
+console.log('ECO_REAL_SCREEN_AUDIT',JSON.stringify(compact));
+if(!report.captures.some(c=>c.mode==='desktop'&&c.label==='auth-before-signin')||
+  !report.captures.some(c=>c.mode==='mobile'&&c.label==='auth-before-signin'))
+  process.exitCode=1;

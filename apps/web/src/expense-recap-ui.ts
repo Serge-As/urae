@@ -26,10 +26,19 @@ async function renderMeetingExpenses(){
   }finally{detailBusy=false;}
 }
 
-function schedule(){setTimeout(()=>{void renderRecapExpenses();void renderMeetingExpenses();},120);}
+let refreshTimer:ReturnType<typeof setTimeout>|undefined;
+function schedule(){
+  if(refreshTimer!==undefined)return;
+  refreshTimer=setTimeout(()=>{refreshTimer=undefined;void renderRecapExpenses();void renderMeetingExpenses();},120);
+}
+// MutationObserver runs after the render stack: busy has already been reset.
+// Ignore only this projection's own top-level cards; real recap/detail changes
+// still trigger a fresh read from the existing canonical expense endpoint.
+const externalMutation=(records:MutationRecord[],marker:'expenseRecap'|'meetingExpenses')=>records.some(record=>
+  Array.from(record.addedNodes).concat(Array.from(record.removedNodes)).some(node=>!(node instanceof HTMLElement&&node.dataset[marker]==='1')));
 export function mountExpenseRecapUI(){
-  const recap=byId('recapFinance');if(recap)new MutationObserver(()=>{if(!recapBusy)schedule();}).observe(recap,{childList:true});
-  const detail=byId('detailBody');if(detail)new MutationObserver(()=>{if(!detailBusy)schedule();}).observe(detail,{childList:true,subtree:false});
+  const recap=byId('recapFinance');if(recap)new MutationObserver(records=>{if(!recapBusy&&externalMutation(records,'expenseRecap'))schedule();}).observe(recap,{childList:true});
+  const detail=byId('detailBody');if(detail)new MutationObserver(records=>{if(!detailBusy&&externalMutation(records,'meetingExpenses'))schedule();}).observe(detail,{childList:true,subtree:false});
   document.addEventListener('click',event=>{const target=event.target instanceof Element?event.target.closest('[data-view="recap"],[data-detail-type="meeting"],#refreshBtn'):null;if(target)schedule();});
   byId<HTMLSelectElement>('activeGroupSelect')?.addEventListener('change',schedule);byId<HTMLSelectElement>('languageSelect')?.addEventListener('change',schedule);schedule();
 }

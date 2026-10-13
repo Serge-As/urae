@@ -1,3 +1,5 @@
+import {mkdir,writeFile} from 'node:fs/promises';
+import path from 'node:path';
 import {test,expect} from '@playwright/test';
 
 const base='http://127.0.0.1:4173',password='Synthetic-Multi-Manager-2026!';
@@ -33,15 +35,136 @@ async function setup(page,browser){
   return{ids,second,secondContext};
 }
 
-test('distinct managers see typing and validated amounts, and an idle Live connection never polls financial snapshots',async({page,browser})=>{
+const safeCellIntent=row=>({
+  id:row.id,status:row.status,attempts:row.attempts,createdAt:row.createdAt,updatedAt:row.updatedAt,lastError:row.lastError,
+  lastResult:{status:row.lastResult?.status,accepted:row.lastResult?.accepted,canonicalAmount:row.lastResult?.canonicalAmount,cellVersion:row.lastResult?.cellVersion,error:row.lastResult?.error},
+  payload:{targetAmount:row.payload?.targetAmount,baselineValue:row.payload?.baselineValue,baselineVersion:row.payload?.baselineVersion,
+    deviceSequence:row.payload?.deviceSequence,recordedOffline:row.payload?.recordedOffline,recordedAtClient:row.payload?.recordedAtClient,
+    hasClockAnchor:Boolean(row.payload?.clockAnchorId),elapsedSinceAnchorMs:row.payload?.elapsedSinceAnchorMs}
+});
+async function recordLiveSyncTiming(page,ids,label,timeline){
+  const requests=new WeakMap(),jobs=new Set();
+  const add=(stage,detail={})=>timeline.push({atMs:Date.now(),page:label,stage,...detail});
+  const request=r=>{
+    const pathname=new URL(r.url()).pathname;
+    if(!/\/outbox\/apply$|\/financial-cells$|\/ledger$|\/expenses$|\/workspaces$|\/financial-clock-anchor$/.test(pathname))return;
+    const id=timeline.length+1;requests.set(r,id);
+    let command={};
+    if(r.method()==='POST'&&/\/outbox\/apply$|\/financial-cells$/.test(pathname)){
+      try{const body=r.postDataJSON(),p=body.payload??body.intentV2??body;
+        command={type:body.type,targetAmount:p.targetAmount,baselineValue:p.baselineValue,baselineVersion:p.baselineVersion,
+          recordedOffline:p.recordedOffline,recordedAtClient:p.recordedAtClient,hasClockAnchor:Boolean(p.clockAnchorId),
+          elapsedSinceAnchorMs:p.elapsedSinceAnchorMs};}catch{}
+    }
+    add('REQUEST',{id,method:r.method(),path:pathname,command});
+  };
+  const response=r=>{
+    const id=requests.get(r.request());if(!id)return;
+    add('RESPONSE_HEADERS',{id,status:r.status()});
+    const job=(async()=>{
+      // Whitelist financial ACK fields. Never attach cookies, signed tickets,
+      // full request/response bodies, credentials or arbitrary record contents.
+      if(/\/outbox\/apply$|\/financial-cells$/.test(new URL(r.url()).pathname)){
+        try{const body=await r.json();add('ACK',{id,status:body.status,accepted:body.accepted,canonicalAmount:body.canonicalAmount,cellVersion:body.cellVersion,error:body.error});}
+        catch{add('ACK_UNREADABLE',{id});}
+      }else add('RESPONSE_COMPLETE',{id});
+    })();jobs.add(job);void job.finally(()=>jobs.delete(job));
+  };
+  const failed=r=>{const id=requests.get(r);if(id)add('REQUEST_FAILED',{id});};
+  page.on('request',request);page.on('response',response);page.on('requestfailed',failed);
+  await page.evaluate(ids=>{
+    const rows=[];window.__ecoLiveSyncTiming=rows;
+    const listen=type=>window.addEventListener(type,event=>{
+      const d=event.detail??{},p=d.payload??d;
+      if(p.meetingId&&String(p.meetingId)!==ids.meetingId)return;
+      if(p.membershipId&&String(p.membershipId)!==ids.membershipId)return;
+      if(p.rubricId&&String(p.rubricId)!==ids.rubricId)return;
+      const selector='.matrix-cell-entry[data-meeting-id="'+ids.meetingId+'"][data-membership-id="'+ids.membershipId+'"][data-rubric-id="'+ids.rubricId+'"]';
+      const cell=document.querySelector(selector),text=cell?.querySelector('.cell-current')?.textContent;
+      rows.push({atMs:Date.now(),stage:type,traceType:d.type,amount:p.newAmount??p.amount??p.target,cellVersion:p.cellVersion,
+        display:text==null?null:Number(text.replace(/[^0-9-]/g,'')),saveState:cell?.dataset.saveState});
+      if(rows.length>150)rows.shift();
+    });
+    for(const type of ['eco:financial-cell-trace','eco:financial-local-committed','eco:financial-live-update','eco:financial-data-changed','eco:transport-degraded','eco:transport-retry-ready'])listen(type);
+  },ids);
+  return async()=>{
+    page.off('request',request);page.off('response',response);page.off('requestfailed',failed);
+    await Promise.allSettled([...jobs]);
+    return await page.evaluate(ids=>{
+      const selector='.matrix-cell-entry[data-meeting-id="'+ids.meetingId+'"][data-membership-id="'+ids.membershipId+'"][data-rubric-id="'+ids.rubricId+'"]',cell=document.querySelector(selector),text=cell?.querySelector('.cell-current')?.textContent;
+      return{events:window.__ecoLiveSyncTiming??[],display:text==null?null:Number(text.replace(/[^0-9-]/g,'')),saveState:cell?.dataset.saveState,connectivity:document.querySelector('#connectivity')?.textContent};
+    },ids);
+  };
+}
+async function attachLiveSyncTiming(testInfo,ids,page,second,stop,timeline,result){
+  // Stop observers before this diagnostic GET: it is failure evidence, never
+  // part of the application's idle Live request policy or convergence check.
+  const states=await Promise.allSettled([stop[0](),stop[1](),storedCellIntent(page,ids),storedCellIntent(second,ids)]);
+  const read=i=>states[i].status==='fulfilled'?states[i].value:{diagnosticUnavailable:true};
+  const snapshot=await api(second,'/api/v1/groups/'+ids.groupId+'/financial-cells/snapshot','GET',undefined,ids.groupId).catch(()=>null);
+  const canonical=snapshot?.cells?.find(x=>x.meetingId===ids.meetingId&&x.membershipId===ids.membershipId&&x.rubricId===ids.rubricId);
+  const start=timeline[0]?.atMs??Date.now();
+  const output={schemaVersion:1,result,thresholdMs:5000,canonicalCell:canonical?{amount:canonical.amount,cellVersion:canonical.cellVersion,updatedAt:canonical.updatedAt}:null,
+    timeline:timeline.map(({atMs,...r})=>({elapsedMs:atMs-start,...r})),
+    alpha:read(0),beta:read(1),alphaOutbox:Array.isArray(read(2))?read(2).map(safeCellIntent):read(2),betaOutbox:Array.isArray(read(3))?read(3).map(safeCellIntent):read(3)};
+  for(const state of [output.alpha,output.beta])if(state.events)state.events=state.events.map(({atMs,...r})=>({elapsedMs:atMs-start,...r}));
+  await testInfo.attach('live-sync-timing',{body:Buffer.from(JSON.stringify(output,null,2)),contentType:'application/json'});
+  const requests=output.timeline.filter(row=>row.stage==='REQUEST');
+  const grouped=new Map();
+  for(const request of requests){const key=request.page+' '+request.path;grouped.set(key,(grouped.get(key)??0)+1);}
+  const syncDelays=[];
+  for(const [label,state,remote] of [['Alpha',output.alpha,output.beta],['Beta',output.beta,output.alpha]]){
+    for(const submit of state.events??[]){
+      if(submit.stage!=='eco:financial-cell-trace'||submit.traceType!=='CELL_SUBMIT')continue;
+      const seen=(remote.events??[]).find(event=>event.elapsedMs>=submit.elapsedMs&&event.stage==='eco:financial-live-update'&&event.traceType==='MEETING_UPDATE'&&event.amount===submit.amount&&event.display===submit.amount);
+      syncDelays.push({author:label,amount:submit.amount,remoteDisplayDelayMs:seen?seen.elapsedMs-submit.elapsedMs:null});
+    }
+  }
+  const idleStart=output.timeline.find(row=>row.stage==='IDLE_WINDOW_START')?.elapsedMs,idleEnd=output.timeline.find(row=>row.stage==='IDLE_WINDOW_END')?.elapsedMs;
+  const idleExpenseReads=idleStart===undefined?null:requests.filter(row=>row.elapsedMs>=idleStart&&row.elapsedMs<idleEnd&&/\/expenses$/.test(row.path)).length;
+  const summary={result:output.result,thresholdMs:output.thresholdMs,canonicalCell:output.canonicalCell,totalRequests:requests.length,
+    requestsByPageAndPath:[...grouped].sort((a,b)=>b[1]-a[1]).map(([path,count])=>({path,count})),
+    syncDelays,idleExpenseReads,alpha:{display:output.alpha.display,saveState:output.alpha.saveState},beta:{display:output.beta.display,saveState:output.beta.saveState},
+    alphaOutbox:Array.isArray(output.alphaOutbox)?output.alphaOutbox.map(row=>({status:row.status,attempts:row.attempts,targetAmount:row.payload.targetAmount})):output.alphaOutbox,
+    betaOutbox:Array.isArray(output.betaOutbox)?output.betaOutbox.map(row=>({status:row.status,attempts:row.attempts,targetAmount:row.payload.targetAmount})):output.betaOutbox};
+  // Keep complete selected-field evidence, but put a short summary in the terminal.
+  // A shallow native Node path avoids PowerShell recursion through long artifact names.
+  if(process.env.ECO_LIVE_SYNC_OUTPUT_DIR){
+    const directory=path.resolve(process.env.ECO_LIVE_SYNC_OUTPUT_DIR);await mkdir(directory,{recursive:true});
+    await writeFile(path.join(directory,'live-sync-timing.json'),JSON.stringify(output,null,2)+'\n','utf8');
+    await writeFile(path.join(directory,'live-sync-summary.json'),JSON.stringify(summary,null,2)+'\n','utf8');
+  }
+  console.log('ECO_LIVE_SYNC_SUMMARY '+JSON.stringify(summary));
+}
+
+test('distinct managers see typing and validated amounts, and an idle Live connection never polls financial snapshots',async({page,browser},testInfo)=>{
   test.setTimeout(90000);const {ids,second,secondContext}=await setup(page,browser);
+  const timeline=[{atMs:Date.now(),stage:'SCENARIO_READY'}],stop=await Promise.all([recordLiveSyncTiming(page,ids,'Alpha',timeline),recordLiveSyncTiming(second,ids,'Beta',timeline)]);
+  let result='PASS';
   try{
     let forbidden=0;second.on('request',r=>{if(/financial-cells\/snapshot|\/live\/events/.test(r.url()))forbidden++;});
     await cell(page,ids).locator('.cell-target-input').fill('1000');
     await expect(cell(second,ids)).toContainText(/Alpha.*saisit|Alpha.*écrit/,{timeout:5000});
     await cell(page,ids).locator('.cell-validate').click();await expect.poll(()=>amount(cell(second,ids)),{timeout:5000}).toBe(1000);
     await enter(second,ids,2001);await expect.poll(()=>amount(cell(page,ids)),{timeout:5000}).toBe(2001);
-    await second.waitForTimeout(1200);expect(forbidden).toBe(0);
+    // The author must be server-confirmed before observing a true idle window.
+    await expect.poll(async()=>(await storedCellIntent(second,ids)).find(row=>row.payload?.targetAmount===2001)?.status,{timeout:5000}).toBe('CONFIRMED');
+    await second.waitForTimeout(300);
+    const idleReads=[],idleListeners=[];
+    for(const [p,label] of [[page,'Alpha'],[second,'Beta']]){
+      const listener=request=>{
+        const pathname=new URL(request.url()).pathname;
+        if(request.method()==='GET'&&/\/expenses$|\/ledger$|\/financial-cells\/snapshot$|\/live\/events$/.test(pathname))idleReads.push({page:label,path:pathname});
+      };
+      p.on('request',listener);idleListeners.push([p,listener]);
+    }
+    timeline.push({atMs:Date.now(),stage:'IDLE_WINDOW_START'});
+    try{await second.waitForTimeout(1200);}finally{
+      for(const [p,listener] of idleListeners)p.off('request',listener);
+      timeline.push({atMs:Date.now(),stage:'IDLE_WINDOW_END'});
+    }
+    expect(forbidden).toBe(0);
+    expect(idleReads,'idle Live screens must not poll financial snapshots, ledger or expenses').toEqual([]);
     await page.setViewportSize({width:390,height:820});await expect(cell(page,ids).locator('.cell-validate')).toBeVisible();
     await cell(page,ids).scrollIntoViewIfNeeded();
     // Visibility alone did not catch a sticky total covering the editable field.
@@ -58,10 +181,13 @@ test('distinct managers see typing and validated amounts, and an idle Live conne
       await expect(page.locator(`[data-session-tab="${tab}"]`)).toHaveClass(/active/);
       await expect(page.locator('#sessionsWorkspace')).not.toBeEmpty();
     }
-  }finally{await secondContext.close();}
+  }catch(error){result='FAIL';throw error;}finally{
+    try{await attachLiveSyncTiming(testInfo,ids,page,second,stop,timeline,result);}catch{console.log('ECO_LIVE_SYNC_TIMING_UNAVAILABLE');}
+    await secondContext.close();
+  }
 });
 
-test('offline divergent edits survive reload, confront the exact cell, and converge after keeping or explicitly reconfirming a value',async({page,context,browser})=>{
+test('offline divergent edits survive reload, confront the exact cell, and converge after keeping or explicitly reconfirming a value',async({page,context,browser},testInfo)=>{
   test.setTimeout(120000);const {ids,second,secondContext}=await setup(page,browser);
   try{
     await enter(page,ids,1000);await expect.poll(()=>amount(cell(second,ids)),{timeout:5000}).toBe(1000);
@@ -81,10 +207,38 @@ test('offline divergent edits survive reload, confront the exact cell, and conve
     // The server-confirmed remote push must also survive a cold offline refresh.
     await context.setOffline(true);await page.reload();await expect(cell(page,ids)).toBeVisible();await expect.poll(()=>amount(cell(page,ids))).toBe(3000);
     await enter(page,ids,4000);await enter(second,ids,5000);await expect.poll(()=>amount(cell(second,ids))).toBe(5000);
+    // A local amount is durable before its server ACK. Observe the canonical
+    // 5,000 before asking the other device to make a new choice against it.
+    await expect.poll(async()=>{
+      const snapshot=await api(second,'/api/v1/groups/'+ids.groupId+'/financial-cells/snapshot','GET',undefined,ids.groupId);
+      return snapshot.cells.find(x=>x.meetingId===ids.meetingId&&x.membershipId===ids.membershipId&&x.rubricId===ids.rubricId)?.amount;
+    },{timeout:8000}).toBe(5000);
     await context.setOffline(false);await expect(dialog).toBeVisible({timeout:10000});await dialog.press('Escape');await expect(dialog).toHaveCount(0);
-    await page.locator('[data-financial-confrontation]').click();await expect(dialog).toBeVisible();await dialog.getByRole('button',{name:'Appliquer cet appareil',exact:true}).click();await dialog.getByRole('button',{name:'Valider et synchroniser',exact:true}).click();
-    await expect.poll(()=>amount(cell(second,ids)),{timeout:8000}).toBe(4000);await expect.poll(()=>amount(cell(page,ids))).toBe(4000);
-    await page.reload();await expect.poll(()=>amount(cell(page,ids))).toBe(4000);
+    await page.locator('[data-financial-confrontation]').click();await expect(dialog).toBeVisible();await expect(dialog).toContainText('4 000');await expect(dialog).toContainText('5 000');await dialog.getByRole('button',{name:'Appliquer cet appareil',exact:true}).click();await dialog.getByRole('button',{name:'Valider et synchroniser',exact:true}).click();
+    try{
+      await expect.poll(()=>amount(cell(second,ids)),{timeout:8000}).toBe(4000);await expect.poll(()=>amount(cell(page,ids))).toBe(4000);
+      await page.reload();await expect.poll(()=>amount(cell(page,ids))).toBe(4000);
+    }catch(error){
+      // Distinguish canonical ordering, Outbox refusal and a stale Live display.
+      // Only synthetic test data and selected metadata are attached, never tickets.
+      const states=await Promise.allSettled([
+        api(second,'/api/v1/groups/'+ids.groupId+'/financial-cells/snapshot','GET',undefined,ids.groupId),
+        storedCellIntent(page,ids),storedCellIntent(second,ids),amount(cell(page,ids)),amount(cell(second,ids))
+      ]);
+      const safeIntent=row=>({id:row.id,status:row.status,attempts:row.attempts,createdAt:row.createdAt,updatedAt:row.updatedAt,lastError:row.lastError,
+        lastResult:{status:row.lastResult?.status,accepted:row.lastResult?.accepted,canonicalAmount:row.lastResult?.canonicalAmount,cellVersion:row.lastResult?.cellVersion,error:row.lastResult?.error},
+        payload:{groupId:row.payload?.groupId,targetAmount:row.payload?.targetAmount,baselineValue:row.payload?.baselineValue,baselineVersion:row.payload?.baselineVersion,
+          deviceSequence:row.payload?.deviceSequence,recordedOffline:row.payload?.recordedOffline,recordedAtClient:row.payload?.recordedAtClient,
+          hasClockAnchor:Boolean(row.payload?.clockAnchorId),elapsedSinceAnchorMs:row.payload?.elapsedSinceAnchorMs}});
+      const read=i=>states[i].status==='fulfilled'?states[i].value:{error:String(states[i].reason)};
+      const snapshot=read(0),local=read(1),remote=read(2);
+      await testInfo.attach('offline-reconfirmation-state',{
+        body:Buffer.from(JSON.stringify({canonicalCell:snapshot.cells?.find(x=>x.meetingId===ids.meetingId&&x.membershipId===ids.membershipId&&x.rubricId===ids.rubricId)??snapshot,
+          localOutbox:Array.isArray(local)?local.map(safeIntent):local,remoteOutbox:Array.isArray(remote)?remote.map(safeIntent):remote,
+          localDisplay:read(3),remoteDisplay:read(4)},null,2)),contentType:'application/json'
+      });
+      throw error;
+    }
   }finally{await secondContext.close();}
 });
 

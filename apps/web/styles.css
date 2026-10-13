@@ -1219,3 +1219,305 @@ body.ultra-simple .canonical-financial-matrix .cell-validate{min-height:48px;hei
     position:static!important;left:auto!important;right:auto!important;box-shadow:none
   }
 }
+
+
+/* ECO-SYSTEM visual evolution: non-invasive presentation of existing canonical sheets. */
+.eco-smartgrid-toolbar{display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between;padding:12px 14px;margin:0 0 10px;border:1px solid var(--line);border-radius:var(--radius-sm);background:var(--surface-2)}
+.eco-smartgrid-toolbar>strong{font-size:13px;color:var(--ink)}
+.eco-smartgrid-parts,.eco-smartgrid-navigation{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.eco-smartgrid-parts button,.eco-smartgrid-navigation button{min-height:40px;padding:8px 12px;font-size:12px}
+.eco-smartgrid-parts button[aria-pressed="true"]{outline:2px solid var(--brand);outline-offset:2px}
+.eco-smartgrid-navigation span{min-width:90px;font-size:13px;font-weight:700;text-align:center;color:var(--ink)}
+.eco-smartgrid-toolbar button:focus-visible{outline:3px solid var(--brand-2);outline-offset:3px}
+.canonical-financial-wrap .table-grand-total{color:var(--brand);font-variant-numeric:tabular-nums}
+@media(max-width:680px){
+  .eco-smartgrid-toolbar{display:grid;gap:9px;padding:10px}
+  .eco-smartgrid-parts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr))}
+  .eco-smartgrid-parts button{min-width:0;padding:8px 5px;line-height:1.24;font-size:11px;white-space:normal}
+  .eco-smartgrid-navigation{justify-content:center}
+}
+@media(prefers-reduced-motion:reduce){
+  .eco-smartgrid-toolbar *, .eco-smartgrid-toolbar *::before{transition:none!important}
+}
+
+/* Eco-System media studio — inherited palette, no change to business screens. */
+.eco-media-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,280px),1fr));gap:14px}
+.eco-media-slot{display:grid;gap:10px;align-content:start;min-width:0;background:var(--surface);border-radius:var(--radius-sm);padding:14px}
+.eco-media-head{display:flex;justify-content:space-between;align-items:center;color:var(--ink)}
+.eco-media-preview{width:100%;aspect-ratio:16/9;display:grid;place-items:center;overflow:hidden;border-radius:12px;border:1px solid var(--line);background:var(--brand-soft)}
+.eco-media-preview img{width:100%;height:100%;object-fit:cover}
+.eco-media-placeholder{font-size:52px;color:var(--brand);opacity:.68}
+.eco-media-form{display:grid;gap:9px}
+.eco-media-form input[type=file]{height:auto;min-height:48px;max-width:100%;background:var(--surface)}
+.eco-media-form button{width:100%}
+.eco-media-library{padding:14px;border:1px solid var(--line);border-radius:12px}
+.eco-media-library summary{cursor:pointer;font-weight:700}
+@media(max-width:620px){.eco-media-grid{grid-template-columns:1fr}.eco-media-slot{padding:12px}}
+
+/* New visual layers sit alongside, never over, the existing operational controls. */
+.eco-visual-display{margin:12px 0 18px;max-width:100%;overflow:hidden;position:relative;border:1px solid var(--line);border-radius:var(--radius);background:var(--surface-2);box-shadow:var(--shadow)}
+.eco-visual-display img{width:100%;height:100%;max-height:320px;display:block;object-fit:cover}
+.eco-home-visual{aspect-ratio:3/1}.eco-home-visual img{max-height:none}
+.eco-group-visual{aspect-ratio:4/1}.eco-market-visual,.eco-forum-visual{aspect-ratio:4/1}
+.eco-logo-visual,.eco-profile-visual{width:116px;height:116px;aspect-ratio:1}.eco-logo-visual img,.eco-profile-visual img{max-height:none}
+@media(max-width:600px){.eco-home-visual,.eco-group-visual,.eco-market-visual,.eco-forum-visual{aspect-ratio:16/9}.eco-logo-visual,.eco-profile-visual{width:80px;height:80px}}
+
+/* Eco-System Horizon: refinements to existing, unchanged workflows */
+#view-dashboard .hero{
+  border:1px solid rgba(255,255,255,.18);border-radius:var(--radius);
+  background:
+    radial-gradient(circle at 90% 13%,rgba(232,182,108,.24),transparent 38%),
+    linear-gradient(115deg,#173e31 0%,#1f6b4f 60%,#603f55 100%);
+  color:#fff;box-shadow:0 18px 36px rgba(19,60,44,.16);overflow:hidden;
+}
+#view-dashboard .hero h1{font-weight:800;letter-spacing:-.035em;text-wrap:balance;max-width:19ch}
+#view-dashboard .hero p{max-width:62ch}
+#view-dashboard .metrics .metric,#groupHomePanel .metric{
+  border:1px solid var(--line);border-radius:var(--radius-sm);box-shadow:var(--shadow)
+}
+#view-dashboard .panel,#groupHomePanel,.eco-media-slot{transition:box-shadow .15s ease}
+@media(hover:hover){#view-dashboard .panel:hover,#groupHomePanel:hover{box-shadow:0 10px 26px rgba(20,32,26,.08)}}
+.eco-ad-creative-thumb{display:block;width:min(100%,450px);max-height:185px;object-fit:cover;border:1px solid var(--line);border-radius:12px}
+@media(prefers-reduced-motion:reduce){#view-dashboard .panel,#groupHomePanel,.eco-media-slot{transition:none}}
+@media(max-width:680px){#view-dashboard .hero h1{font-size:clamp(1.6rem,6vw,2.35rem)}#view-dashboard .hero p{font-size:.95rem}}
+
+.eco-workspace-jump{display:flex;gap:8px;overflow-x:auto;padding:6px 1px 12px;margin:0 0 10px;scrollbar-width:thin}
+.eco-workspace-jump button{flex:0 0 auto;border:1px solid var(--line);border-radius:999px;min-height:42px;padding:9px 16px;background:var(--surface);color:var(--brand);font-weight:700;white-space:nowrap}
+.eco-workspace-jump button:hover,.eco-workspace-jump button:focus-visible{background:var(--brand-soft);border-color:var(--brand)}
+@media(max-width:600px){.eco-workspace-jump{margin:0 -10px 8px;padding-inline:10px}.eco-workspace-jump button{min-height:48px}}
+
+/* Stock images are ornamental; market stock, reservation and price remain canonical. */
+.eco-market-product-photo{display:block;width:min(100%,420px);aspect-ratio:4/3;object-fit:cover;border-radius:12px;border:1px solid var(--line);background:var(--surface-2);margin:0 0 10px}
+.eco-stock-photo-form{display:flex;align-items:end;flex-wrap:wrap;gap:8px;margin-top:10px}
+.eco-stock-photo-form input[type=file]{width:min(100%,300px);height:auto}
+.eco-stock-photo-form button{min-height:48px}
+@media(max-width:620px){.eco-stock-photo-form{display:grid;grid-template-columns:1fr}.eco-stock-photo-form input[type=file]{width:100%}}
+
+/* Governed AdManager placement cards: inherit the existing green/plum/gold palette. */
+.eco-ad-surface{display:grid;gap:8px;max-width:100%;min-width:0;margin:12px 0 18px;padding:16px 18px;
+  border:1px solid var(--line);border-inline-start:4px solid var(--brand);border-radius:var(--radius-sm);
+  background:var(--surface);box-shadow:var(--shadow)}
+.eco-ad-disclosure{display:inline-flex;justify-self:start;max-width:100%;font-size:11px;
+  font-weight:750;text-transform:uppercase;letter-spacing:.045em;color:var(--brand)}
+.eco-ad-surface>strong{font-size:clamp(1rem,1.7vw,1.2rem);color:var(--ink)}
+.eco-ad-surface>p{margin:0;max-width:70ch;line-height:1.6}
+.eco-ad-surface>button{justify-self:start;min-height:44px}
+.eco-ad-surface-image{width:min(100%,510px);aspect-ratio:2/1;object-fit:cover;
+  border-radius:10px;border:1px solid var(--line)}
+.eco-partner-ads .eco-partner-proposal-form{margin-block:12px 18px}
+@media(max-width:680px){.eco-ad-surface{margin:10px 0 16px;padding:14px 12px}
+  .eco-ad-surface>button{width:100%;min-height:48px}.eco-ad-surface-image{aspect-ratio:16/9}}
+
+/* Standalone externally invited advertiser portal; same existing Eco palette. */
+
+body.external-ad-portal{min-height:100vh;padding:clamp(12px,4vw,40px);background:var(--bg)}
+.external-ad-shell{max-width:780px;margin:auto;display:grid;gap:18px}
+.external-ad-shell header,.external-ad-shell section{background:var(--surface);padding:clamp(16px,3vw,28px);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow)}
+.external-ad-shell h1{margin:0;color:var(--brand);font-size:clamp(1.6rem,4vw,2.3rem)}
+.external-ad-shell .external-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.external-ad-shell label{display:grid;gap:6px;font-weight:600}
+.external-ad-shell label.wide{grid-column:1/-1}
+.external-ad-shell input,.external-ad-shell textarea,.external-ad-shell select{width:100%;max-width:100%;min-height:45px}
+.external-ad-shell button{min-height:48px}
+.external-ad-shell .status{white-space:pre-wrap}
+@media(max-width:640px){.external-ad-shell .external-grid{grid-template-columns:1fr}}
+
+#externalAdForm[hidden]{display:none!important}
+
+/* Eco-System visible cockpit restoration – preview (2026-10-12).
+   Presentation only: no duplicate financial or community state owner. */
+#view-dashboard .hero{
+  display:grid;
+  grid-template-columns:minmax(0,1.7fr) minmax(220px,.65fr);
+  align-items:center;
+  min-height:300px;
+  gap:24px;
+  margin:0 0 18px;
+  padding:clamp(22px,3vw,38px);
+  background:
+    radial-gradient(circle at 86% 22%,rgba(226,179,104,.34) 0 6%,transparent 40%),
+    radial-gradient(circle at 98% 88%,rgba(74,164,129,.2) 0 17%,transparent 45%),
+    linear-gradient(124deg,#e2f4e8 0%,#f9fbf6 62%,#fff6e9 100%);
+  border:1px solid rgba(39,111,76,.24);
+  border-radius:22px;
+  box-shadow:0 16px 42px rgba(20,69,45,.09);
+}
+#view-dashboard .hero h1{
+  max-width:18ch;
+  font-size:clamp(1.9rem,3.25vw,3.15rem);
+  line-height:1.13;letter-spacing:-.04em;
+  margin:.36em 0 .4em;color:#174b39;
+}
+#view-dashboard .hero p{line-height:1.6;font-size:clamp(.95rem,1.23vw,1.05rem);max-width:57ch}
+#view-dashboard .hero .eyebrow{color:#236648;font-weight:800;letter-spacing:.06em}
+#view-dashboard .eco-hero-identity{
+  padding:22px;border:1px solid rgba(22,99,65,.24);
+  border-radius:20px;background:rgba(255,255,255,.86);
+  box-shadow:0 12px 32px rgba(30,84,55,.08);
+}
+#view-dashboard .eco-hero-identity .safe{color:var(--brand)}
+.eco-hero-actions{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin-top:24px}
+.eco-hero-actions button{min-height:49px;max-width:100%;font-weight:780;padding:12px 18px;border-radius:12px;white-space:normal;text-wrap:balance}
+.eco-hero-actions .primary{background:#1f6b4f;color:white;border-color:#1f6b4f}
+#view-dashboard > .ui-mode-panel{margin-block:0 18px}
+#view-dashboard > .cahier-banner{order:initial}
+#view-dashboard .quick-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,190px),1fr));gap:14px}
+#view-dashboard .quick-grid .quick{
+  min-height:126px;padding:20px 17px;border:1px solid var(--line);
+  border-radius:16px;background:var(--surface);
+  box-shadow:0 8px 25px rgba(24,68,42,.04);
+  transition:transform .15s ease,box-shadow .15s ease;
+  text-align:start;
+}
+#view-dashboard .quick-grid .quick>b{font-weight:800;color:var(--ink);font-size:1.03rem}
+#view-dashboard .quick-grid .quick>span{font-size:.86rem;line-height:1.5}
+#view-dashboard .quick-grid .quick:focus-visible{outline:3px solid var(--brand);outline-offset:3px}
+#view-ecosystem>.page-head,#view-operations>.page-head,#view-launch>.page-head,
+#view-sessions>.page-head,#view-finance>.page-head,#view-recap>.page-head{
+  padding:clamp(18px,2.5vw,28px);
+  border:1px solid var(--line);
+  border-radius:18px;
+  background:linear-gradient(112deg,var(--brand-soft),var(--surface) 75%);
+  margin-bottom:14px;
+}
+#view-ecosystem>.eco-workspace-jump{display:flex;flex-wrap:wrap;gap:8px;overflow:visible;margin:14px 0 23px}
+#view-ecosystem>.eco-workspace-jump button{
+  background:var(--surface);border-radius:13px;min-height:48px;
+  padding:12px 16px;box-shadow:0 4px 14px rgba(15,59,42,.045)
+}
+#view-ecosystem>.eco-workspace-jump button:hover{transform:translateY(-1px);box-shadow:var(--shadow)}
+#view-ecosystem .panel,#view-dashboard .panel,#groupHomePanel{border-radius:18px}
+@media(hover:hover){
+ #view-dashboard .quick-grid .quick:hover{transform:translateY(-3px);box-shadow:0 12px 28px rgba(21,75,47,.1)}
+}
+@media(max-width:900px){
+ #view-dashboard .hero{grid-template-columns:1fr;min-height:0;gap:14px}
+ #view-dashboard .hero h1{max-width:none;font-size:clamp(1.6rem,5vw,2.35rem)}
+ #view-dashboard .eco-hero-identity{max-width:450px}
+}
+@media(max-width:600px){
+ #view-dashboard .hero{padding:20px 17px;border-radius:16px;margin-bottom:12px}
+ #view-dashboard .hero h1{font-size:clamp(1.55rem,6.3vw,2.05rem);line-height:1.18}
+ #view-dashboard .hero p{font-size:.93rem}
+ .eco-hero-actions{display:grid;grid-template-columns:1fr;gap:8px;margin-top:16px}
+ .eco-hero-actions button{width:100%;min-height:50px}
+ #view-dashboard .eco-hero-identity{padding:14px 17px}
+ #view-dashboard .quick-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+ #view-dashboard .quick-grid .quick{min-height:116px;padding:12px 10px}
+ #view-dashboard .quick-grid .quick>b{font-size:.93rem}
+ #view-dashboard .quick-grid .quick>span{font-size:.76rem}
+ #view-ecosystem>.eco-workspace-jump{display:flex;flex-wrap:nowrap;overflow-x:auto;scroll-snap-type:x mandatory;margin:10px -8px 15px;padding:4px 8px 12px}
+ #view-ecosystem>.eco-workspace-jump button{scroll-snap-align:start;min-width:120px;padding:12px 14px}
+}
+@media(prefers-reduced-motion:reduce){
+ #view-dashboard .quick-grid .quick{transition:none}
+ #view-ecosystem>.eco-workspace-jump button{transform:none}
+}
+
+
+/* Real-device visual audit, 12 Oct 2026: explicit contrast and responsive
+   release/status controls. These styles change no action, permission or owner. */
+#view-dashboard .hero h1{color:#fff}
+#view-dashboard .hero p,#view-dashboard .hero .hero-card p{color:#f1fcf5}
+#view-dashboard .hero .eyebrow{color:#d4f4df}
+#view-dashboard .hero .hero-card{background:rgba(13,48,33,.32);border-color:rgba(255,255,255,.3)}
+#view-dashboard .hero .hero-card span,
+#view-dashboard .hero .hero-card small{color:#ebf7f0}
+.cahier-banner{flex-wrap:wrap;min-width:0}
+.cahier-banner>div{min-width:0;flex:1 1 280px}
+.cahier-code{
+  white-space:normal;overflow-wrap:anywhere;word-break:normal;
+  flex:0 1 420px;max-width:100%;line-height:1.45;
+}
+.finance-toc{
+  display:flex;align-items:stretch;flex-wrap:wrap;gap:9px;
+  margin:12px 0 18px;max-width:100%;
+}
+.finance-toc a{
+  display:inline-flex;align-items:center;min-height:44px;padding:9px 13px;
+  border:1px solid var(--line);border-radius:999px;background:var(--surface);
+  color:var(--brand);font-weight:650;text-decoration:none;
+}
+.finance-toc a:hover,.finance-toc a:focus-visible{
+  background:var(--brand-soft);border-color:var(--brand-2);
+}
+@media(max-width:680px){
+  .cahier-code{flex:1 1 100%;font-size:10px;line-height:1.55}
+  .finance-toc{gap:7px;margin-bottom:14px}
+  .finance-toc a{padding:8px 11px;font-size:13px;min-height:48px}
+}
+
+/* Real preview proves the later pale-green hero wins the cascade.
+   Fix foreground to accessible dark-green, preserving the new hero layout. */
+#view-dashboard .hero{color:#173e31}
+#view-dashboard .hero h1{color:#174b39}
+#view-dashboard .hero p{color:#345e4c}
+#view-dashboard .hero .eyebrow{color:#176946}
+#view-dashboard .hero .hero-card,#view-dashboard .hero .hero-card span,
+#view-dashboard .hero .hero-card small{color:#345e4c}
+.cahier-banner{flex-wrap:wrap;min-width:0;max-width:100%}
+.cahier-banner > *{min-width:0}
+.cahier-code{white-space:normal;max-width:100%;overflow-wrap:anywhere;word-break:break-word}
+#view-dashboard .hero>*{min-width:0}
+#view-dashboard .quick-grid>*{min-width:0}
+@media(max-width:680px){
+  .cahier-banner{display:grid;grid-template-columns:minmax(0,1fr);gap:8px}
+  .cahier-code{justify-self:start;line-height:1.45}
+  .topbar{max-width:100vw;min-width:0}
+  .topbar>.brand,.topbar>.top-context,.topbar>.top-actions{min-width:0;max-width:100%}
+  #view-dashboard .hero{width:100%;min-width:0}
+  #view-dashboard .hero .hero-card{min-width:0}
+}
+
+
+/* Locale controls reuse canonical language change; no second translation owner. */
+.eco-language-picker{display:flex;align-items:center;gap:6px;min-width:0;margin:0}
+.eco-language-picker select{width:auto;min-width:72px;min-height:42px;padding:7px 10px;
+  border:1px solid var(--line);border-radius:10px;background:var(--surface);color:var(--brand);font-weight:750}
+.eco-auth-language{justify-content:flex-end;flex-wrap:wrap;font-size:12px;font-weight:700;margin-bottom:12px}
+.eco-top-language{flex:0 0 auto}
+@media(max-width:700px){.eco-top-language select{min-width:64px;min-height:44px;padding:6px 8px}.eco-auth-language{justify-content:flex-start}}
+
+/* Personal foras, cross-group inbox, and governed AdManager creative preview.
+   Presentation only: no polling, cross-tenant access or fictional delivery. */
+.personal-foras-directory{display:grid;gap:12px;min-width:0;padding:16px;
+  border:1px solid var(--line);border-radius:16px;background:var(--surface)}
+.personal-foras-directory summary{cursor:pointer;color:var(--brand);font-weight:800;min-height:44px;
+  display:list-item;align-content:center}
+.personal-foras-directory>strong{margin-top:6px;display:block;font-size:.86rem;color:var(--brand)}
+.personal-forum-link{display:block;width:100%;text-align:left;overflow-wrap:anywhere;
+  min-height:44px;margin:5px 0;padding:10px 14px}
+.notification-origin{display:block;color:var(--brand);font-weight:750;letter-spacing:.015em}
+.ad-creative-preview{display:grid;gap:10px;align-content:start;min-width:0;padding:16px;
+  border:1px solid var(--line);border-radius:16px;background:var(--surface)}
+.ad-creative-preview .eco-ad-disclosure{text-transform:none;font-weight:750}
+.ad-creative-preview-image{width:100%;max-height:220px;object-fit:cover;border-radius:12px;
+  background:var(--brand-soft);aspect-ratio:16/9}
+.ad-creative-preview-image[hidden]{display:none}
+.ad-creative-preview strong{font-size:1.12rem;line-height:1.25;color:var(--brand)}
+.ad-creative-preview p{margin:0;line-height:1.5;overflow-wrap:anywhere}
+.ad-creative-preview .pill{justify-self:start}
+.ad-creative-preview .hint{overflow-wrap:anywhere}
+.ad-creative-preview button{justify-self:start;min-height:44px}
+@media(max-width:700px){.personal-foras-directory,.ad-creative-preview{padding:12px}
+ .personal-forum-link{min-height:48px}}
+
+
+/* Personal multi-group access is always visible from navigation.
+   Preview identity is truthful; no release contract/financial change. */
+.preview-env-badge{display:inline-flex;align-items:center;max-width:100%;
+  margin-top:3px;padding:3px 8px;background:#e8f4ff;color:#184f82;
+  border:1px solid #9bbddd;border-radius:999px;font-size:11px;
+  font-weight:850;letter-spacing:.01em;overflow-wrap:anywhere}
+.preview-env-badge[hidden]{display:none!important}
+.personal-group-directory{display:grid;grid-template-columns:minmax(0,1fr) auto;
+  align-items:end;gap:10px;border:1px solid var(--line);border-radius:14px;
+  padding:14px;min-width:0}
+.personal-group-directory>strong,.personal-group-directory>.truth-notice{grid-column:1/-1}
+.personal-group-picker{min-width:0;width:100%;min-height:44px}
+.personal-group-directory button{min-height:44px}
+@media(max-width:680px){
+  .personal-group-directory{grid-template-columns:minmax(0,1fr)}
+  .personal-group-directory>strong,.personal-group-directory>.truth-notice{grid-column:1}
+  .personal-group-directory button{width:100%}
+}
