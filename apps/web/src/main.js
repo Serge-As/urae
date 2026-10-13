@@ -508,7 +508,7 @@ const renderGroupSelector = () => {
 const renderGroups = async () => {
     // Member-facing navigation uses the membership-checked account catalogue,
     // not all groups of the same tenant (which can include private groups).
-    groups = await app.listMyGroups();
+    groups = await app.listAccessibleGroups();
     const root = $('#groupsList');
     root.replaceChildren();
     if (!groups.length) {
