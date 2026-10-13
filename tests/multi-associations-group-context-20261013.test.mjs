@@ -48,11 +48,28 @@ test('client keeps all verified groups and their canonical tenant mapping withou
 test('creation opens real group immediately, with optional Kit not blocking group context',()=>{
   const ui=fs.readFileSync('apps/web/src/main.js','utf8');
   const client=fs.readFileSync('packages/application/src/index.ts','utf8');
-  assert.match(ui,/groups = await app\.listMyGroups\(\)/);
+  assert.match(ui,/groups = await app\.listAccessibleGroups\(\)/);
   assert.match(ui,/await renderGroups\(\);\s*renderActiveGroup\(\);\s*renderGroupSelector\(\);\s*go\('operations'/);
   assert.match(ui,/void launchStudio\.persistStarterKit\?\.\(group\.id\)\.catch/);
   assert.match(ui,/void refreshGroupContext\(\)\.catch\(fail\)/);
-  assert.match(client,/const groups=await this\.listMyGroups\(\)/);
+  assert.match(client,/const groups=await this\.listAccessibleGroups\(\)/);
   assert.match(client,/path==='\/api\/v1\/groups\/mine'/);
   assert.doesNotMatch(ui,/groups = await app\.listGroups\(\);\s*const root = \$\('#groupsList'\)/);
+});
+
+test('join-link membership remains selectable only after canonical scoped access succeeds',async()=>{
+  const app=Object.create(ConnectedApplication.prototype);
+  app.activeGroupId='joined';app.groupTenants=new Map();
+  app.listMyGroups=async()=>[{id:'owned',tenantId:'account',name:'Owned'}];
+  app.listGroups=async()=>[{id:'owned',tenantId:'account'},{id:'joined',tenantId:'account'},{id:'private',tenantId:'account'}];
+  let checks=0;
+  app.request=async path=>{assert.equal(path,'/api/v1/groups/joined/members');checks++;return[{id:'member',userId:'actor'}];};
+  const accessible=await app.listAccessibleGroups();
+  assert.deepEqual(accessible.map(g=>g.id),['owned','joined']);
+  assert.equal(checks,1);
+  assert.equal(app.activeGroupId,'joined');
+  app.request=async()=>{throw Error('FORBIDDEN_SCOPE');};
+  const restricted=await app.listAccessibleGroups();
+  assert.deepEqual(restricted.map(g=>g.id),['owned']);
+  assert.ok(!restricted.some(g=>g.id==='private'));
 });
