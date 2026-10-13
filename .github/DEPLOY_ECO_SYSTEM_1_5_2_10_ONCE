@@ -1,18 +1,21 @@
-Eco-System 1.5.2.15 delivery HOLD
-release: 1.5.2.15-bounded-recovery
-date: 2026-10-09
+Eco-System 1.5.2.16 production delivery authorized
+release: 1.5.2.16-live-modes-refonte
+date: 2026-10-13
 db_mutation: none
-mode: HOLD-incomplete-compatible-WebKit-qualification
-reason: actual a7 Cloud Node657 and Chromium8 PASS; WebKit4PASS2FAIL zero ICE; Windows sovereign Chromium5PASS1FAIL QR timeout; total FAIL; no qualified archive or publication
-source_under_review: a7c333699dad0d70cf0de8e2f8a841a00396d0d7
-actual_tested_source: a7c333699dad0d70cf0de8e2f8a841a00396d0d7
+mode: code-only-with-verified-readonly-backup-no-migration
+qualified_source: c32c5a2cf7619f4e34fbe5a409d2179786861704
+merged_source: fad55db819b184c0f38950e814edd89c7c99fd9c
+qualification: two independent successful workflows
+native: 723 PASS
+chromium: 11 PASS required and qualified
+webkit: 6 PASS required and qualified
+qualification_runs: 38461566887 38461567123
+production_ancestry: preserve 881a3e6a59269ce7c63633dd811bc14ba7d579c9
+backup: mandatory D1 export, verified SQLite restore, private R2 archive download/hash before deploy
+storage: existing eco-system-db and eco-system-backups, no replacement or migration
+financial_signing: preserve existing key, never rotate, provision only proven absent first key after backup
+real_money_enabled: false
 field_acceptance: NOT_ACCEPTED
-trigger_nonce: 2026-10-08-hold-confrontation-evidence
-work_branch: fix/confrontation-clock-recovery-20261008
-work_pr: 72 draft
-latest_handoff: docs/memory/checkpoints/CHECKPOINT-2026-10-09-CLOUD-RESULTS-WINDOWS-QR.md
-required_final_qualification: 657 Node; Chromium 8; compatible WebKit 6 including real Local Room connection; exact same source before Worker mutation
-execution_route: authorized Cloud Linux executor; local Ubuntu optional and not installed
-candidate_cloud_qualification: FAIL actual receipt saved; prior Windows WebKit failures retained
-candidate_windows_sovereign_chromium: 5 PASS; 1 FAIL QR30000ms; 0 skipped; LocalRoom and A01 real PASS
-qr_passive_diagnostic: evidence e71098c prepared; actual Node check/run pending; cause unproven
+historical_pr72_hold: preserved; no merge or override of PR72
+trigger_nonce: 2026-10-13-c32c5a2-qualified-live-refonte
+authorization: current user explicitly requested implementation and production deployment
