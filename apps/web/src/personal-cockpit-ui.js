@@ -133,11 +133,11 @@ export function mountPersonalCockpitUI({app,getGroups,getMembers,getMeetings,nav
       option.value=String(group.id);groupPicker.append(option);
     }
     groupPicker.value=forumGroups.some(group=>group.id===app.activeGroup())?app.activeGroup():'';
-    const open=el('button',tr('Ouvrir mon groupe','Open my group'),'primary');
-    open.type='button';open.disabled=!groupPicker.value;
-    groupPicker.onchange=()=>{open.disabled=!groupPicker.value;};
-    open.onclick=()=>void Promise.resolve(openGroupWorkspace?.(groupPicker.value)).catch(showError);
-    associations.append(groupPicker,open);
+    const openWorkspaceBtn=el('button',tr('Ouvrir mon groupe','Open my group'),'primary');
+    openWorkspaceBtn.type='button';openWorkspaceBtn.disabled=!groupPicker.value;
+    groupPicker.onchange=()=>{openWorkspaceBtn.disabled=!groupPicker.value;};
+    openWorkspaceBtn.onclick=()=>void Promise.resolve(openGroupWorkspace?.(groupPicker.value)).catch(showError);
+    associations.append(groupPicker,openWorkspaceBtn);
     if(forumsUnavailable)associations.append(el('p',tr('Répertoire temporairement indisponible : vos autres groupes ne sont pas supprimés.','Directory temporarily unavailable: your other groups have not been deleted.'),'truth-notice'));
     spaces.append(associations);
     void renderPulse();
