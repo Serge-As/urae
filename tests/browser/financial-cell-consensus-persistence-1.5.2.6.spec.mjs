@@ -1,4 +1,4 @@
-import {handleWorkDialogs} from './financial-work-mode-helper.mjs';
+import {settleWorkDialog} from './financial-work-mode-helper.mjs';
 import {test,expect} from '@playwright/test';
 
 const base='http://127.0.0.1:4173';
@@ -44,7 +44,7 @@ test('closed-session offline target becomes the canonical value after synchroniz
   await context.setOffline(true);
   page.once('dialog',dialog=>dialog.accept('Correction hors ligne de séance clôturée'));
   await cell.locator('.cell-target-input').fill('1000');
-  await cell.locator('.cell-validate').click();
+  await cell.locator('.cell-validate').click();await settleWorkDialog(page);
   await expect.poll(()=>amountFrom(cell)).toBe(1000);
   await expect(cell).toContainText(/synchro en attente/i);
 
@@ -205,7 +205,7 @@ test('repayment 2500 syncs event-wise within five seconds and survives reload wi
 
   await context.setOffline(true);
   await cell.locator('.cell-target-input').fill('2500');
-  await cell.locator('.cell-validate').click();
+  await cell.locator('.cell-validate').click();await settleWorkDialog(page);
   await expect.poll(()=>amountFrom(cell)).toBe(2500);
   await expect(cell).toContainText(/synchro en attente/i);
 
@@ -263,6 +263,3 @@ test('repayment 2500 syncs event-wise within five seconds and survives reload wi
   for(const label of ['Capital restant','Intérêts dus','Prochains intérêts projetés','Total dette exigible'])await expect(page.locator('#loanDebtRecap')).toContainText(label);
   await mirrorContext.close();
 });
-
-
-test.beforeEach(async({page})=>{await handleWorkDialogs(page);});

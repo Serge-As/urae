@@ -64,7 +64,7 @@ jobs:
         run: |
           set -euo pipefail
           grep -Fq "db_mutation: none" .github/DEPLOY_ECO_SYSTEM_1_5_2_10_ONCE
-          grep -Fq "code-only-no-d1-export-no-migration" .github/DEPLOY_ECO_SYSTEM_1_5_2_10_ONCE
+          grep -Fq "code-only-with-verified-readonly-backup-no-migration" .github/DEPLOY_ECO_SYSTEM_1_5_2_10_ONCE
       - name: TypeScript qualification
         run: npm run typecheck
       - name: Status · gate-typecheck
@@ -205,8 +205,20 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          ! grep -Eq "d1 (export|migrations apply|execute)" .github/workflows/deploy-1.5.2.10-offline-conflicts-loans.yml
-          echo "Code-only deployment: no D1 export, migration, execute, schema mutation or data rewrite."
+          ! grep -Eq "d1 (migrations apply|execute)" .github/workflows/deploy-1.5.2.10-offline-conflicts-loans.yml
+          echo "Code-only deployment: no migration, execute, schema mutation or data rewrite; read-only backup is required."
+      - name: Verify restorable production backup in existing private R2
+        run: node scripts/backup-production-before-delivery.mjs
+      - name: Preserve private recovery receipt
+        uses: actions/upload-artifact@v4
+        with:
+          name: production-recovery-${{ github.sha }}
+          path: |
+            .recovery/recovery.tar.gz
+            .recovery/recovery.sha256
+            .recovery/manifest.json
+          retention-days: 14
+          if-no-files-found: error
       - name: Refuse stale production overwrite
         shell: bash
         run: |

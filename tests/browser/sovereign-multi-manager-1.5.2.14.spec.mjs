@@ -1,4 +1,4 @@
-import {handleWorkDialogs} from './financial-work-mode-helper.mjs';
+import {settleWorkDialog} from './financial-work-mode-helper.mjs';
 import {mkdir,writeFile} from 'node:fs/promises';
 import path from 'node:path';
 import {test,expect} from '@playwright/test';
@@ -13,7 +13,7 @@ const cell=(page,ids)=>page.locator(`#meetingMatrix .matrix-cell-entry[data-memb
 const enter=async(page,ids,value)=>{
   if(await amount(cell(page,ids))>0)page.once('dialog',d=>d.accept('Correction vérifiée entre gestionnaires'));
   await cell(page,ids).locator('.cell-target-input').fill(String(value));
-  await cell(page,ids).locator('.cell-validate').click();
+  await cell(page,ids).locator('.cell-validate').click();await settleWorkDialog(page);
 };
 async function setup(page,browser){
   await page.goto(base);const suffix=Date.now()+'_'+Math.floor(Math.random()*100000);
@@ -24,7 +24,7 @@ async function setup(page,browser){
   const rubric=await api(page,'/api/v1/groups/'+groupId+'/rubrics','POST',{name:'Secours convergence',facets:{direction:'INFLOW',obligation:'CUSTOM',medium:'CASH',refundability:'CONDITIONAL',replenishment:'CUSTOM',interestMode:'NONE',eligibilityMode:'RULE_BASED'},source:'GROUP_CUSTOM',operatingModel:{ruleRealityStatus:'ALIGNED',targetMode:'OPEN',mandatoryForAbsentees:false,shortfallHandling:'LEAVE_SHORT',payoutMode:'COLLECTED_ONLY',immediateFullPayout:false}},groupId);
   const meeting=await api(page,'/api/v1/groups/'+groupId+'/meetings','POST',{title:'Séance confrontation',scheduledAt:new Date().toISOString()},groupId);
   const invite=await api(page,'/api/v1/groups/'+groupId+'/join-links','POST',{mode:'AUTO_JOIN'},groupId);
-  const secondContext=await browser.newContext(),second=await secondContext.newPage();await handleWorkDialogs(second);await second.goto(base);
+  const secondContext=await browser.newContext(),second=await secondContext.newPage();await second.goto(base);
   await api(second,'/api/v1/auth/register','POST',{username:'manager_'+suffix,password,displayName:'Gestionnaire Beta'});
   const joined=await api(second,'/api/v1/join/redeem','POST',{code:invite.code});
   await api(page,'/api/v1/groups/'+groupId+'/members/'+joined.membershipId+'/lifecycle','PUT',{roles:['manager','member'],status:'active',reason:'Gestionnaire de qualification'},groupId);
@@ -146,7 +146,7 @@ test('distinct managers see typing and validated amounts, and an idle Live conne
     let forbidden=0;second.on('request',r=>{if(/financial-cells\/snapshot|\/live\/events/.test(r.url()))forbidden++;});
     await cell(page,ids).locator('.cell-target-input').fill('1000');
     await expect(cell(second,ids)).toContainText(/Alpha.*saisit|Alpha.*écrit/,{timeout:5000});
-    await cell(page,ids).locator('.cell-validate').click();await expect.poll(()=>amount(cell(second,ids)),{timeout:5000}).toBe(1000);
+    await cell(page,ids).locator('.cell-validate').click();await settleWorkDialog(page);await expect.poll(()=>amount(cell(second,ids)),{timeout:5000}).toBe(1000);
     await enter(second,ids,2001);await expect.poll(()=>amount(cell(page,ids)),{timeout:5000}).toBe(2001);
     // The author must be server-confirmed before observing a true idle window.
     await expect.poll(async()=>(await storedCellIntent(second,ids)).find(row=>row.payload?.targetAmount===2001)?.status,{timeout:5000}).toBe('CONFIRMED');
@@ -293,5 +293,3 @@ test('server outage while navigator stays online stops idle retries and the dura
     await page.screenshot({path:'test-results/bounded-outage-recovered.png',fullPage:false});
   }finally{await secondContext.close();}
 });
-
-test.beforeEach(async({page})=>{await handleWorkDialogs(page);});

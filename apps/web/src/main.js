@@ -1296,7 +1296,7 @@ const makeFinancialEntryCell=({member,rubric,meetingId,editable=true})=>{
     const sendSignal=type=>{if(liveSignalsEnabled)void Promise.resolve(identityLiveUI.publishSignal(type,signalPayload())).catch(()=>{});};
     const stopTyping=()=>{if(typingTimer){clearTimeout(typingTimer);typingTimer=0;}if(typingActive){typingActive=false;sendSignal('TYPING_STOP');}};
     const announceDraft=()=>{if(!input.value.trim()){if(draftAnnounced){draftAnnounced=false;sendSignal('FINANCIAL_DRAFT_CLEAR');}return;}if(!draftAnnounced){draftAnnounced=true;sendSignal('FINANCIAL_DRAFT');}};
-    input.addEventListener('focus',()=>{sendSignal('CELL_FOCUS');announceDraft();});
+    input.addEventListener('focus',()=>{sendSignal('CELL_FOCUS');announceDraft();void financialWorkUI?.visit(meetingId,member.id).catch(fail);});
     input.addEventListener('input',()=>{saveFinancialCellDraft(persistentCellKey,input.value);announceDraft();if(!typingActive){typingActive=true;sendSignal('TYPING');}if(typingTimer)clearTimeout(typingTimer);typingTimer=setTimeout(stopTyping,2500);});
     input.addEventListener('blur',()=>{stopTyping();announceDraft();sendSignal('CELL_BLUR');});
     const validate=document.createElement('button');validate.type='button';validate.className='cell-validate';validate.textContent='✓';validate.title=tx('Valider la valeur totale','Confirm total value');validate.setAttribute('aria-label',tx('Valider la saisie','Confirm entry'));
@@ -2831,6 +2831,7 @@ const resumeOnline=({forceConfrontation=false,relayFerry=false}={})=>{
         const pendingBefore=(app.outboxItems?.()??[]).filter(item=>!['CONFIRMED','CANCELLED'].includes(String(item.status??'')));
         const beforeSync=pendingTargetSnapshot(),beforeSheetSync=pendingSheetSnapshot();
         await app.syncOutbox();
+        if((app.outboxItems?.()??[]).some(x=>x.lastResult?.deliveryPending))await app.repairFinancialLiveDelivery?.();
         rememberTargetsConfirmedBySync(beforeSync);
         financialPendingTargets=new Map((app.pendingFinancialCellTargets?.()??[]).map(x=>[financialCellKey(x.membershipId,x.rubricId,x.meetingId),x]));
         financialPendingSheetEntries=app.pendingFinancialSheetEntries?.()??[];
@@ -2919,6 +2920,7 @@ window.addEventListener('eco:manager-relay-updated',()=>{void(async()=>{
   })().catch(error=>console.info('Relay local projection refresh deferred',error));});
 window.addEventListener('eco:server-budget-expired',()=>{networkRecoveryNeeded=true;void resumeOnline();});
 window.addEventListener('eco:live-connected',()=>{
+    void app.repairFinancialLiveDelivery?.().catch(e=>{if(String(e.message)!=='FORBIDDEN_SCOPE')console.info('Financial delivery repair deferred',e);});
     // The authenticated socket itself proves real server reachability. Clear a
     // stale local/offline latch without issuing a D1/auth probe, then replay only
     // pending Outbox work.

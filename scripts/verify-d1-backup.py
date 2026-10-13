@@ -1,0 +1,15 @@
+import sys, sqlite3, hashlib, json, pathlib
+source=pathlib.Path(sys.argv[1]); target=pathlib.Path(sys.argv[2])
+if target.exists(): raise SystemExit('Restore target already exists')
+raw=source.read_bytes()
+if not raw: raise SystemExit('Empty backup')
+connection=sqlite3.connect(target)
+try:
+    connection.executescript(raw.decode('utf-8'))
+    check=connection.execute('PRAGMA integrity_check').fetchall()
+    if check != [('ok',)]: raise RuntimeError('SQLite integrity failure')
+    if connection.execute('PRAGMA foreign_key_check').fetchone(): raise RuntimeError('Foreign key integrity failure')
+    tables=connection.execute("SELECT name FROM sqlite_master WHERE type='table'").fetchall()
+    if not tables: raise RuntimeError('No restored tables')
+    print(json.dumps({'integrity':'ok','foreignKeys':'ok','tables':len(tables),'sqlBytes':len(raw),'sqlSha256':hashlib.sha256(raw).hexdigest()}))
+finally: connection.close()

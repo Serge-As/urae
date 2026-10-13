@@ -31,10 +31,11 @@ export function createFinancialWorkUI({app,tx,notify,summary,edit,resume}){
     await app.closeFinancialPassage(selected.meetingId,selected.membershipId,data.lines.map(x=>({rubricId:x.rubricId,amount:Math.abs(x.current),cellVersion:x.cellVersion})));current=null;passages.delete(key);void resume();toolbar();return true;
   };
   const before=async(meetingId,membershipId,rubricId)=>{
-    if(busy)return false;busy=(async()=>{if(current&&(current.meetingId!==meetingId||current.membershipId!==membershipId)&&!await finish())return false;
-      const mode=await choose(meetingId);if(!mode)return false;current={meetingId,membershipId};app.beginFinancialPassage(meetingId,membershipId,mode);const key=JSON.stringify([scope(meetingId),membershipId]),set=passages.get(key)??new Set();set.add(rubricId);passages.set(key,set);toolbar();return true;})();try{return await busy;}finally{busy=null;}
+    if(busy)return false;if(current&&(current.groupId!==app.activeGroup()||current.actorId!==app.currentActor()))current=null;busy=(async()=>{if(current&&(current.meetingId!==meetingId||current.membershipId!==membershipId)&&!await finish())return false;
+      const mode=await choose(meetingId);if(!mode)return false;current={meetingId,membershipId,groupId:app.activeGroup(),actorId:app.currentActor()};app.beginFinancialPassage(meetingId,membershipId,mode);const key=JSON.stringify([scope(meetingId),membershipId]),set=passages.get(key)??new Set();set.add(rubricId);passages.set(key,set);toolbar();return true;})();try{return await busy;}finally{busy=null;}
   };
   window.addEventListener('eco:live-signal',e=>{if(e.detail?.type==='WORK_MODE_PROPOSAL'&&current&&e.detail.payload?.meetingId===current.meetingId&&!busy)notify(tx('Plusieurs gestionnaires saisissent cette séance : vous pouvez activer le mode Réunion.','Several managers are entering this meeting: Meeting mode is available.'));});
   window.addEventListener('eco:financial-work-mode',e=>{if(e.detail?.meetingId)modes.set(scope(e.detail.meetingId),e.detail.mode);toolbar();});
-  return{before,finish,toolbar};
+  const visit=async(meetingId,membershipId)=>{if(!current||current.groupId!==app.activeGroup()||current.actorId!==app.currentActor()||current.meetingId===meetingId&&current.membershipId===membershipId||busy)return;busy=finish();try{await busy;}finally{busy=null;}};
+  return{before,finish,toolbar,visit};
 }

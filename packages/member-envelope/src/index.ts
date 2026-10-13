@@ -68,7 +68,7 @@ export class MemberEnvelopeService{
     const own=projection.cells.filter(x=>x.membershipId===membershipId),byRubric=new Map(rubrics.map(x=>[x.id,x]));
     const lines=[...new Set(rubricIds)].map(rubricId=>{
       const rows=own.filter(x=>x.rubricId===rubricId),current=rows.find(x=>x.meetingId===meetingId),before=rows.filter(x=>beforeIds.has(x.meetingId)).reduce((n,x)=>n+x.amount,0),amount=Number(current?.amount??0),r=byRubric.get(rubricId);
-      const controls=notices.filter(x=>x.data.membershipId===membershipId&&x.data.meetingId===meetingId&&x.data.rubricId===rubricId).sort((a,b)=>b.createdAt.localeCompare(a.createdAt));
+      const controls=notices.filter(x=>x.data.membershipId===membershipId&&x.data.meetingId===meetingId&&x.data.rubricId===rubricId).sort((a,b)=>Number(Number(b.data.newAmount)===Math.abs(amount))-Number(Number(a.data.newAmount)===Math.abs(amount))||b.createdAt.localeCompare(a.createdAt));
       return{rubricId,rubricName:r?.name??rubricId,before,current:amount,total:before+amount,currency:'XAF',cellVersion:Number(current?.cellVersion??0),authorId:current?.actorId??controls[0]?.createdBy??'',noticeId:controls[0]?.id??'',noticeIds:controls.map(x=>x.id),disputeState:String(controls[0]?.data.disputeState??'NO_RESERVE'),nature:current?.nature??'CONTRIBUTION'};
     });
     return{groupId,meetingId,meetingTitle:meeting.title,membershipId,userId:target.userId,generatedAt:projection.generatedAt,lines,totals:{before:lines.reduce((n,x)=>n+x.before,0),current:lines.reduce((n,x)=>n+x.current,0),total:lines.reduce((n,x)=>n+x.total,0)},totalMeaning:'SUM_OF_DISPLAYED_MONETARY_FLOWS_NOT_CASH_OR_DEBT_STOCK'};

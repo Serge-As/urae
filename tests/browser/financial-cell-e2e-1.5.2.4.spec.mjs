@@ -1,4 +1,4 @@
-import {handleWorkDialogs} from './financial-work-mode-helper.mjs';
+import {settleWorkDialog} from './financial-work-mode-helper.mjs';
 import {test,expect} from '@playwright/test';
 
 const base='http://127.0.0.1:4173';
@@ -112,7 +112,7 @@ test('real financial matrix validates click, Enter, closed-session first entry a
     return{value:input?.value??'',hasState:Boolean(root?.querySelector('.cell-save-state')),html:root?.outerHTML??'',source:document.querySelector('script[src*="main.js"]')?.getAttribute('src')??''};
   },{membershipId:ids.membershipId,rubricId:ids.rubricIds[0],meetingId:ids.meetingId});
   if(beforeClick.value!=='1000'||!beforeClick.hasState)throw new Error('INPUT_REPLACED_BEFORE_CLICK '+JSON.stringify(beforeClick));
-  await clickCell.locator('.cell-validate').click();
+  await clickCell.locator('.cell-validate').click();await settleWorkDialog(page);
   await page.waitForTimeout(1000);
   const firstUi=await moneyValue(cell(ids.rubricIds[0]));
   const firstLedger=await ledgerCellTotal(page,{...ids,rubricId:ids.rubricIds[0]});
@@ -138,18 +138,18 @@ test('real financial matrix validates click, Enter, closed-session first entry a
   const replaceCell=cell(ids.rubricIds[0]);
   await replaceCell.locator('.cell-target-input').fill('500');
   page.once('dialog',dialog=>dialog.accept('Correction E2E 1000 vers 500'));
-  await replaceCell.locator('.cell-validate').click();
+  await replaceCell.locator('.cell-validate').click();await settleWorkDialog(page);
   await expect.poll(()=>moneyValue(cell(ids.rubricIds[0]))).toBe(500);
   await expect.poll(()=>ledgerCellTotal(page,{...ids,rubricId:ids.rubricIds[0]})).toBe(500);
   await replaceCell.locator('.cell-target-input').fill('4000');
   page.once('dialog',dialog=>dialog.accept('Correction E2E 500 vers 4000'));
-  await replaceCell.locator('.cell-target-input').press('Enter');
+  await replaceCell.locator('.cell-target-input').press('Enter');await settleWorkDialog(page);
   await expect.poll(()=>moneyValue(cell(ids.rubricIds[0]))).toBe(4000);
   await expect.poll(()=>ledgerCellTotal(page,{...ids,rubricId:ids.rubricIds[0]})).toBe(4000);
 
   const enterCell=cell(ids.rubricIds[1]);
   await enterCell.locator('.cell-target-input').fill('2000');
-  await enterCell.locator('.cell-target-input').press('Enter');
+  await enterCell.locator('.cell-target-input').press('Enter');await settleWorkDialog(page);
   await expect.poll(()=>moneyValue(cell(ids.rubricIds[1]))).toBe(2000);
   await expect.poll(()=>ledgerCellTotal(page,{...ids,rubricId:ids.rubricIds[1]})).toBe(2000);
 
@@ -165,7 +165,7 @@ test('real financial matrix validates click, Enter, closed-session first entry a
   const closedCell=cell(ids.rubricIds[2]);
   page.once('dialog',dialog=>dialog.accept('Régularisation E2E après clôture'));
   await closedCell.locator('.cell-target-input').fill('1500');
-  await closedCell.locator('.cell-validate').click();
+  await closedCell.locator('.cell-validate').click();await settleWorkDialog(page);
   await expect.poll(()=>moneyValue(cell(ids.rubricIds[2]))).toBe(1500);
   await expect.poll(()=>ledgerCellTotal(page,{...ids,rubricId:ids.rubricIds[2]})).toBe(1500);
 
@@ -212,13 +212,13 @@ test('real financial matrix validates click, Enter, closed-session first entry a
   await context.setOffline(true);
   const offlineCell=cell(ids.rubricIds[3],ids.meetingId);
   await offlineCell.locator('.cell-target-input').fill('3000');
-  await offlineCell.locator('.cell-validate').click();
+  await offlineCell.locator('.cell-validate').click();await settleWorkDialog(page);
   await expect.poll(()=>moneyValue(cell(ids.rubricIds[3],ids.meetingId))).toBe(3000);
   await expect(cell(ids.rubricIds[3],ids.meetingId)).toContainText(/Enregistré sur cet appareil|synchro en attente/i);
 
   const offlineExpense=cell(ids.rubricIds[4],ids.meetingId);
   await offlineExpense.locator('.cell-target-input').fill('700');
-  await offlineExpense.locator('.cell-validate').click();
+  await offlineExpense.locator('.cell-validate').click();await settleWorkDialog(page);
   await expect.poll(()=>moneyValue(cell(ids.rubricIds[4],ids.meetingId))).toBe(-700);
   await expect(cell(ids.rubricIds[4],ids.meetingId)).toContainText(/Enregistré sur cet appareil|synchro en attente/i);
 
@@ -275,5 +275,3 @@ test('real financial matrix validates click, Enter, closed-session first entry a
   await expect.poll(()=>moneyValue(cell(ids.rubricIds[4],ids.meetingId))).toBe(-700);
   await expect.poll(()=>sheetExpenseTotal(page,{...ids,rubricId:ids.rubricIds[4]})).toBe(700);
 });
-
-test.beforeEach(async({page})=>{await handleWorkDialogs(page);});

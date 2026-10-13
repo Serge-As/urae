@@ -1724,6 +1724,12 @@ export class ConnectedApplication {
     return data;
   }
   async liveHealth():Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/live/health`);}
+  private financialDeliveryRepair?:Promise<unknown>;
+  async repairFinancialLiveDelivery():Promise<unknown>{
+    if(!this.activeGroupId||this.serverBudgetBlocked()||typeof navigator!=='undefined'&&navigator.onLine===false)return;
+    if(this.financialDeliveryRepair)return this.financialDeliveryRepair;
+    const groupId=this.activeGroupId;this.financialDeliveryRepair=this.request('/api/v1/groups/'+encodeURIComponent(groupId)+'/live/retry-pending',{method:'POST',body:'{}'}).finally(()=>{this.financialDeliveryRepair=undefined;});return this.financialDeliveryRepair;
+  }
   async liveEvents(after=0,limit=500):Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');const safeLimit=Math.min(Math.max(Math.trunc(limit)||500,1),500);return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/live/events?after=${encodeURIComponent(String(after))}&limit=${encodeURIComponent(String(safeLimit))}`);}
   async liveSignals(afterAt=0):Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/live/signals?afterAt=${encodeURIComponent(String(Math.max(0,Math.trunc(afterAt)||0)))}`);}
   async publishLive(type:'PRESENCE'|'SYNC_HINT'|'MEETING_UPDATE',payload:Record<string,string|number|boolean|null>={}):Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/live/publish`,{method:'POST',body:JSON.stringify({type,payload,idempotencyKey:makeId('live')})});}
