@@ -18,6 +18,7 @@ export interface AdCreative {
   body:string;
   callToAction:string;
   destinationRef:string;
+  mediaAssetId?:string;
 }
 export interface AdCampaign {
   id:string;groupId:string;name:string;objective:AdObjective;state:AdCampaignState;
@@ -66,7 +67,8 @@ export class AdManagerService{
     return structuredClone(t);
   }
   private validateCreative(c:AdCreative){
-    const out={headline:clean(c.headline,120),body:clean(c.body,1000),callToAction:clean(c.callToAction,60),destinationRef:clean(c.destinationRef,240)};
+    const out={headline:clean(c.headline,120),body:clean(c.body,1000),callToAction:clean(c.callToAction,60),destinationRef:clean(c.destinationRef,240),...(c.mediaAssetId?{mediaAssetId:clean(c.mediaAssetId,120)}:{})};
+    if(out.mediaAssetId&&!/^visual_media_[a-zA-Z0-9_-]{1,105}$/.test(out.mediaAssetId))throw new Error('INVALID_AD_MEDIA_REFERENCE');
     if(!out.headline||!out.body||!out.callToAction||!out.destinationRef)throw new Error('INVALID_AD_CREATIVE');return out;
   }
   async list(groupId:string){await this.requireManager(groupId);const ctx=this.kernel.context.get();return(await this.repo.listWorkspaceRecords(ctx.tenantId,MODULE,groupId)).map(decode).sort((a,b)=>b.updatedAt.localeCompare(a.updatedAt));}
@@ -149,6 +151,33 @@ export class AdManagerService{
     }
   }
 
+  /** Safe public projection for active group members. No targeting or budgets leave this endpoint. */
+  async placement(groupId:string,placementId:AdPlacementId){
+    const ctx=this.kernel.context.get(),group=await this.repo.getGroup(ctx.tenantId,groupId);
+    if(!group)throw Error('GROUP_NOT_FOUND');
+    const member=(await this.repo.listMemberships(ctx.tenantId,groupId)).find(m=>m.userId===ctx.actorId&&m.status==='active');
+    if(group.createdBy!==ctx.actorId&&!member)throw Error('FORBIDDEN_SCOPE');
+    if(!AD_PLACEMENT_CATALOG.some(x=>x.id===placementId))throw Error('UNKNOWN_AD_PLACEMENT');
+    // Direct serving is intentionally absent from receipts and financial mutation flows.
+    if(!['HOME_AFTER_PRIORITIES','FEED_NATIVE','FORUM_NATIVE','MARKETPLACE_SPONSORED'].includes(placementId))
+      throw Error('AD_PLACEMENT_NOT_PUBLIC');
+    const records=await this.repo.listWorkspaceRecords(ctx.tenantId,MODULE,groupId);
+    const campaigns=records.filter(r=>r.data.state==='ACTIVE').map(decode);
+    const decision=selectAdDelivery(campaigns,{placementId,groupKind:group.kind});
+    if(decision.kind==='PAID'){
+      const campaign=campaigns.find(x=>x.id===decision.campaignId);
+      if(!campaign)return{kind:'NONE' as const};
+      const {headline,body,callToAction,destinationRef,mediaAssetId}=campaign.creative;
+      return{kind:'SPONSORED_SANDBOX' as const,campaignId:campaign.id,
+        headline,body,callToAction,destinationRef,mediaAssetId:mediaAssetId??null};
+    }
+    if(decision.kind==='HOUSE'){
+      const house=HOUSE_AD_CATALOG.find(x=>x.key===decision.houseKey);
+      if(house)return{kind:'HOUSE' as const,headline:house.headline,body:house.body,
+        callToAction:house.callToAction,destinationRef:house.destinationRef,mediaAssetId:null};
+    }
+    return{kind:'NONE' as const};
+  }
   async dashboard(groupId:string){
     const campaigns=await this.list(groupId),prospects=await this.listProspects(groupId);
     const impressions=campaigns.reduce((n,x)=>n+x.impressions,0),opens=campaigns.reduce((n,x)=>n+x.opens,0),actions=campaigns.reduce((n,x)=>n+x.actions,0),negativeFeedback=campaigns.reduce((n,x)=>n+x.negativeFeedback,0);

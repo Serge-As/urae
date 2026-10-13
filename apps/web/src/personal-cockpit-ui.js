@@ -3,7 +3,7 @@ const el=(tag,text,className)=>{const e=document.createElement(tag);if(text!==un
 const row=(label,value)=>{const p=el('p');p.append(el('strong',label+' : '),document.createTextNode(String(value??'—')));return p;};
 const detail=(label,type,id)=>{const a=el('a',label,'link-btn');a.href='#detail='+encodeURIComponent(type)+':'+encodeURIComponent(id);a.dataset.detailType=type;a.dataset.detailId=id;return a;};
 
-export function mountPersonalCockpitUI({app,getGroups,getMembers,getMeetings,navigate,fmt=n=>String(n),date=x=>String(x),showError=console.error}){
+export function mountPersonalCockpitUI({app,getGroups,getMembers,getMeetings,navigate,openGroupForum,openGroupWorkspace,isManager=()=>false,fmt=n=>String(n),date=x=>String(x),showError=console.error}){
   const metrics=document.getElementById('personalCockpitMetrics'),situation=document.getElementById('personalSituation'),next=document.getElementById('personalNext'),noticesRoot=document.getElementById('personalLiveNotices'),spaces=document.getElementById('personalSpaces');
   const pulseRoot=document.getElementById('ecoPulseFeed'),pulseProfile=document.getElementById('ecoPulseProfile');
   if(!metrics||!situation||!next||!noticesRoot||!spaces)return{refresh:async()=>{}};
@@ -75,22 +75,85 @@ export function mountPersonalCockpitUI({app,getGroups,getMembers,getMeetings,nav
     }catch(e){pulseProfile.textContent='EcoPulse reste disponible dès que la synchronisation serveur revient.';pulseRoot.append(el('p','Le cockpit principal continue de fonctionner sans recommandation réseau.','hint'));}
   };
 
-  const refresh=async()=>{
+  const tr=(fr,en)=>document.documentElement.lang?.startsWith('en')?en:fr;
+  // Personal directory only. Every discussion still belongs to the existing
+  // Community / InterestCommunity owner; no second feed or message store.
+  const renderPersonalForas=(groups,communities,unavailable=false)=>{
+    const section=el('details',undefined,'item personal-foras-directory');
+    const count=groups.length+communities.length;
+    section.append(el('summary',tr('Mes Foras · '+count+' espaces','My Forums · '+count+' spaces')));
+    const hint=el('p',tr('Retrouvez vos groupes et communautés sans quitter votre compte. Chaque espace garde ses propres droits.','Open your groups and communities from your account. Each space keeps its own permissions.'),'hint');
+    section.append(hint);
+    if(unavailable)section.append(el('p',tr('La liste de vos groupes est temporairement indisponible. Cela ne signifie pas que vous en avez été retiré.','Your group list is temporarily unavailable. It does not mean that you have been removed.'),'truth-notice'));
+    if(groups.length){
+      section.append(el('strong',tr('Foras de mes groupes','My group forums')));
+      for(const group of groups){
+        const button=el('button',String(group.name||group.id),'secondary personal-forum-link');
+        button.type='button';button.dataset.forumGroup=String(group.id);
+        button.onclick=()=>void Promise.resolve(openGroupForum?.(group.id)).catch(showError);
+        section.append(button);
+      }
+    }
+    if(communities.length){
+      section.append(el('strong',tr('Foras de mes communautés','My community forums')));
+      for(const community of communities){
+        const button=el('button',String(community.name||community.id),'secondary personal-forum-link');
+        button.type='button';button.dataset.forumCommunity=String(community.id);
+        button.onclick=()=>{
+          navigate('ecosystem',{anchor:'interestCommunityWorkspace',force:true});
+          document.dispatchEvent(new CustomEvent('eco:open-interest-community',{detail:{id:String(community.id)}}));
+        };
+        section.append(button);
+      }
+    }
+    if(!count&&!unavailable)section.append(el('p',tr('Rejoignez un groupe ou une communauté pour retrouver ici ses échanges.','Join a group or community to find its discussions here.'),'hint'));
+    spaces.append(section);
+  };
+    const refresh=async()=>{
     metrics.replaceChildren();situation.replaceChildren();next.replaceChildren();noticesRoot.replaceChildren();spaces.replaceChildren();
     const groups=getGroups(),groupId=app.activeGroup(),members=getMembers(),meetings=getMeetings(),mine=members.find(m=>m.userId===app.currentActor());
     metrics.append(metric(groups.length,'Groupes accessibles'));
     let personalCommunities=[];try{personalCommunities=await app.myInterestCommunities();}catch{}
     metrics.append(metric(personalCommunities.length,'Communautés d’intérêt'));
+    // A tenant catalogue can contain groups that are not mine. Never expose
+    // those names as my forum shortcuts without a server membership check.
+    let forumGroups=[],forumsUnavailable=false;
+    try{forumGroups=await app.listMyGroups();}catch{forumsUnavailable=true;}
+    renderPersonalForas(forumGroups,personalCommunities,forumsUnavailable);
+    // Separate group workspaces from discussions. A member can choose any
+    // number of associations or tontines belonging to this authenticated
+    // account; this selector has no slice/pagination cap or duplicated state.
+    const associations=el('section',undefined,'item personal-group-directory');
+    associations.append(el('strong',tr('Mes associations et groupes ('+forumGroups.length+')','My associations and groups ('+forumGroups.length+')')));
+    const groupPicker=el('select',undefined,'personal-group-picker');
+    groupPicker.setAttribute('aria-label',tr('Choisir une association ou un groupe','Choose an association or group'));
+    const placeholder=el('option',tr('Choisir mon espace…','Choose my workspace…'));placeholder.value='';groupPicker.append(placeholder);
+    for(const group of forumGroups){
+      const option=el('option',group.name+(group.kind==='association'?' · Association':' · Tontine'));
+      option.value=String(group.id);groupPicker.append(option);
+    }
+    groupPicker.value=forumGroups.some(group=>group.id===app.activeGroup())?app.activeGroup():'';
+    const openWorkspaceBtn=el('button',tr('Ouvrir mon groupe','Open my group'),'primary');
+    openWorkspaceBtn.type='button';openWorkspaceBtn.disabled=!groupPicker.value;
+    groupPicker.onchange=()=>{openWorkspaceBtn.disabled=!groupPicker.value;};
+    openWorkspaceBtn.onclick=()=>void Promise.resolve(openGroupWorkspace?.(groupPicker.value)).catch(showError);
+    associations.append(groupPicker,openWorkspaceBtn);
+    if(forumsUnavailable)associations.append(el('p',tr('Répertoire temporairement indisponible : vos autres groupes ne sont pas supprimés.','Directory temporarily unavailable: your other groups have not been deleted.'),'truth-notice'));
+    spaces.append(associations);
     void renderPulse();
     if(!groupId){
       situation.append(el('p','Choisissez un groupe ou rejoignez-en un avec un code.','hint'),action('Choisir / rejoindre','discovery'));
       next.append(el('p','Aucun groupe actif : votre cockpit reste centré sur votre compte.','hint'));
-      spaces.append(...groups.slice(0,12).map(g=>detail(g.name,'group',g.id)));
+      spaces.append(...forumGroups.slice(0,12).map(g=>detail(g.name,'group',g.id)));
       for(const c of personalCommunities.slice(0,8)){const a=el('article',undefined,'item');a.append(el('strong',c.name),row('Communauté',c.locality||'Sans localité'));spaces.append(a);}
-      spaces.append(action('Découvrir des communautés','ecosystem'));
+      // A person can offer a service even before joining a group.
+      const sell=el('button',tr('Proposer mes services','Offer my services'),'primary');
+      sell.type='button';
+      sell.onclick=()=>window.dispatchEvent(new CustomEvent('eco:forum-opportunity-intent',{detail:{kind:'OFFER',title:'',body:''}}));
+      spaces.append(sell,action(tr('Découvrir des communautés','Explore communities'),'ecosystem'));
       return;
     }
-    const active=groups.find(g=>g.id===groupId);if(active)spaces.append(detail(active.name,'group',active.id));
+    const active=forumGroups.find(g=>g.id===groupId);if(active)spaces.append(detail(active.name,'group',active.id));
     const open=meetings.filter(m=>m.status==='open'),future=meetings.filter(m=>m.scheduledAt&&Date.parse(m.scheduledAt)>=Date.now()).sort((a,b)=>Date.parse(a.scheduledAt)-Date.parse(b.scheduledAt));
     metrics.append(metric(open.length,'Séances ouvertes'));
     if(mine){
@@ -133,6 +196,19 @@ export function mountPersonalCockpitUI({app,getGroups,getMembers,getMeetings,nav
       const hubs=await app.listCommunityHubs();if(hubs.length){const h=el('article',undefined,'item');h.append(el('strong',hubs.length+' Hub(s) du groupe'),action('Voir Communauté & économie','ecosystem'));spaces.append(h);}
     }catch{}
     for(const c of personalCommunities.slice(0,8)){const a=el('article',undefined,'item');a.append(el('strong',c.name),row('Communauté',c.locality||'Sans localité'));spaces.append(a);}
+    const opportunities=el('section',undefined,'item personal-opportunity-actions');
+    opportunities.append(el('strong',tr('Mes opportunités économiques','My business opportunities')));
+    opportunities.append(el('p',tr('Transformez vos besoins en demandes gouvernées et proposez vos services. Aucun engagement automatique.','Turn your needs into governed requests and offer services. No automatic commitment.'),'hint'));
+    const buttons=el('div',undefined,'actions');
+    for(const [kind,fr,en] of [['REQUEST','Exprimer un besoin collectif','Post a collective need'],['OFFER','Proposer un produit ou service','Offer a product or service']].filter(([kind])=>kind!=='REQUEST'||isManager())){
+      const button=el('button',tr(fr,en),'secondary');
+      button.type='button';
+      button.onclick=()=>window.dispatchEvent(new CustomEvent('eco:forum-opportunity-intent',{detail:{groupId:app.activeGroup(),kind,title:'',body:''}}));
+      buttons.append(button);
+    }
+    const discover=el('button',tr('Rechercher des opportunités','Explore opportunities'),'link-btn');
+    discover.type='button';discover.onclick=()=>navigate('ecosystem',{anchor:'valueNetworkOperational',force:true});buttons.append(discover);
+    opportunities.append(buttons);spaces.append(opportunities);
     spaces.append(action('Découvrir d’autres groupes','discovery'),action('Communautés d’intérêt','ecosystem'));
   };
   document.getElementById('ecoPulseRefreshBtn')?.addEventListener('click',()=>void renderPulse());

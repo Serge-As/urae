@@ -12,7 +12,9 @@ test('3 Oct release is zero-polling and quota-safe code-only delivery',()=>{
   assert.match(deploy,/eco-system-v1529-free-event-push-20261003/);
   assert.match(sw,/LEGACY_RECOVERY_CACHE = 'eco-system-v15210-offline-conflicts-loans-20261003'/);
   assert.match(main,/const FREE_CONSERVATION_MODE=true/);
-  assert.doesNotMatch(live,/setInterval\(/);
+  assert.match(live,/workMode!=='REUNION'/);
+  assert.match(live,/SYNC_PROBE/);
+  assert.doesNotMatch(live,/setInterval\([^\n]*liveEvents/);
   assert.match(marker,/db_mutation: none/);
   assert.match(marker,/code-only-no-d1-export-no-migration/);
   assert.match(deploy,/CODE_ONLY_DEPLOY=true/);

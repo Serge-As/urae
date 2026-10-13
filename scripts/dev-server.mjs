@@ -12,7 +12,7 @@ const dataFile = process.env.ECO_DATA_FILE ?? '.data/eco-system.sqlite';
 const db = new SQLiteD1(dataFile);db.migrate();
 // Ephemeral signing key: test/development only, generated per process and never persisted.
 const localSignedClockKey=randomBytes(32).toString('base64url');
-const liveNamespace=createLocalLiveNamespace();
+const liveNamespace=createLocalLiveNamespace({DB:db});
 const handleRequest = request => worker.fetch(request,{DB:db,AUTH_LIVE_SIGNING_SECRET:localSignedClockKey,GROUP_LIVE_HUB:liveNamespace,PREMIUM_LIVE_LEDGER:'true'});
 const mime = {
   '.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8',
@@ -36,14 +36,16 @@ const requestHandler = async (req,res) => {
   try {
     if(![`127.0.0.1:${currentPort}`,`localhost:${currentPort}`].includes(req.headers.host??'')){res.writeHead(403);res.end('Host not allowed');return;}
     if (req.url?.startsWith('/api/') || req.url === '/health') {
-      const chunks=[];let size=0; for await (const c of req) {size+=c.length;if(size>131072){res.writeHead(413);res.end('Request too large');return;}chunks.push(c);}
+      const chunks=[];let size=0; for await (const c of req) {size+=c.length;if(size>(/\/visual-media$|\/brand\/assets$|\/invite\/photo$/.test(req.url??'')?2300000:131072)){res.writeHead(413);res.end('Request too large');return;}chunks.push(c);}
       const body=Buffer.concat(chunks); const headers=new Headers();
       for(const [k,v] of Object.entries(req.headers)) if(v) headers.set(k,Array.isArray(v)?v.join(','):v);
       headers.set('cf-connecting-ip',req.socket.remoteAddress??'local');
       const host=req.headers.host??`localhost:${currentPort}`;
       const request=new Request(`http://${host}${req.url}`,{method:req.method,headers,body:['GET','HEAD'].includes(req.method??'GET')?undefined:body});
       const response=await handleRequest(request);
-      res.writeHead(response.status,{...Object.fromEntries(response.headers.entries()),...securityHeaders});
+      const responseHeaders={...Object.fromEntries(response.headers.entries()),...securityHeaders};
+      const sessionCookies=response.headers.getSetCookie();if(sessionCookies.length)responseHeaders['set-cookie']=sessionCookies;
+      res.writeHead(response.status,responseHeaders);
       res.end(Buffer.from(await response.arrayBuffer())); return;
     }
     let pathname = new URL(req.url ?? '/', `http://localhost:${currentPort}`).pathname;

@@ -12,6 +12,17 @@ export async function renderMemberFinancialNotices({app,membershipId,memberUserI
     const actorName=id=>members.find(m=>m.userId===id)?.displayName??id;
     const meetingName=id=>{const m=meetings.find(x=>x.id===id);if(!m)return id??'—';try{return 'Réunion du '+new Intl.DateTimeFormat('fr-CM',{dateStyle:'long'}).format(new Date(m.scheduledAt??m.openedAt));}catch{return m.title??id;}};
 
+    const bundles=await app.financialBundles?.(membershipId)??[];
+    const shownMeetings=new Set();
+    for(const bundle of bundles){if(shownMeetings.has(bundle.snapshot.meetingId))continue;shownMeetings.add(bundle.snapshot.meetingId);
+      const card=document.createElement('article');card.className='item';const h=document.createElement('h4');h.textContent=bundle.snapshot.meetingTitle+' · synthèse '+bundle.version+(bundle.partial?' · partielle':'');card.append(h);
+      const wrap=document.createElement('div');wrap.className='matrix-wrap';const table=document.createElement('table');table.className='eco-work-summary';const head=document.createElement('tr');for(const label of ['Rubrique','Avant la séance','Séance actuelle','Total','Contrôle']){const th=document.createElement('th');th.textContent=label;head.append(th);}const thead=document.createElement('thead');thead.append(head);table.append(thead);const tbody=document.createElement('tbody');
+      for(const r of bundle.snapshot.lines){const tr=document.createElement('tr');for(const v of [r.rubricName,fmt(r.before),fmt(r.current),fmt(r.total)]){const td=document.createElement('td');td.textContent=v;tr.append(td);}const td=document.createElement('td');const control=notices.find(n=>n.id===r.noticeId);
+        if(memberUserId===app.currentActor()&&control){const reserve=button('Contester cette ligne');reserve.onclick=()=>void(async()=>{const reason=window.prompt('Quelle donnée de cette ligne souhaitez-vous contester ?','');if(!reason?.trim())return;try{await app.reserveFinancialNotice(r.noticeId,reason.trim(),membershipId);notify('Réserve enregistrée. Le montant comptable est conservé.');await refresh();}catch(e){showError(e);}})();td.append(reserve);}else td.textContent='—';tr.append(td);tbody.append(tr);
+      }
+      const total=document.createElement('tr');total.className='table-total-row';for(const v of ['Total des flux affichés',fmt(bundle.snapshot.totals.before),fmt(bundle.snapshot.totals.current),fmt(bundle.snapshot.totals.total),'']){const td=document.createElement('td');td.textContent=v;total.append(td);}tbody.append(total);table.append(tbody);wrap.append(table);card.append(wrap,line('Nature du total','Flux des rubriques affichées ; distinct du solde de caisse et de la dette.'));
+      if(memberUserId===app.currentActor()){const confirm=button('Valider les transactions de cette synthèse','primary');confirm.onclick=()=>void(async()=>{confirm.disabled=true;try{for(const id of new Set(bundle.snapshot.lines.flatMap(r=>r.noticeIds??[r.noticeId]).filter(Boolean))){await app.confirmFinancialNotice(id,membershipId);}notify('Prise de connaissance enregistrée ; les réserves restent consultables.');await refresh();}catch(e){showError(e);confirm.disabled=false;}})();card.append(confirm);}list.append(card);
+    }
     if(!notices.length){const p=document.createElement('p');p.className='hint';p.textContent='Aucune modification financière à vérifier pour ce membre.';list.append(p);return;}
     const self=memberUserId===app.currentActor();
     for(const n of notices){

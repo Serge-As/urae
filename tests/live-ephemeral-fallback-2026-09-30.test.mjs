@@ -19,7 +19,9 @@ test('recent typing is visible immediately without Durable storage write',async(
 test('client has no recurring REST fallback; reconnect resumes through websocket sequence',()=>{
   const live=fs.readFileSync('apps/web/src/identity-live-ui.js','utf8');
   const app=fs.readFileSync('packages/application/src/index.ts','utf8');
-  assert.doesNotMatch(live,/setInterval\(/);
+  assert.match(live,/workMode!=='REUNION'/);
+  assert.match(live,/SYNC_PROBE/);
+  assert.doesNotMatch(live,/setInterval\([^\n]*liveEvents/);
   assert.doesNotMatch(live,/startCatchupTimer/);
   assert.match(live,/liveWebSocketUrl\(lastSeq,String\(ticketData\?\.ticket\?\?''\)\)/);
   assert.match(live,/CLIENT_SIGNAL/);

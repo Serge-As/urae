@@ -1,4 +1,4 @@
-name: Eco-System 1.5.2.15 — Bounded Recovery Cloudflare Delivery
+name: Eco-System 1.5.2.16 — Live and Refonte Cloudflare Delivery
 
 on:
   workflow_dispatch:
@@ -20,9 +20,9 @@ env:
   ECO_SYSTEM_ROOT: https://eco-system.sergemimf.workers.dev/
   ECO_SYSTEM_HEALTH: https://eco-system.sergemimf.workers.dev/health
   ECO_SYSTEM_CATALOG: https://eco-system.sergemimf.workers.dev/api/v1/product/capabilities
-  EXPECTED_VERSION: 1.5.2.15-bounded-recovery
-  EXPECTED_BUILD: eco-system-1.5.2.15-20261008-bounded-recovery
-  EXPECTED_CACHE: eco-system-v15215-bounded-recovery-20261008
+  EXPECTED_VERSION: 1.5.2.16-live-modes-refonte
+  EXPECTED_BUILD: eco-system-1.5.2.16-20261013-live-modes-refonte
+  EXPECTED_CACHE: eco-system-v15216-live-modes-refonte-20261013
   MIN_CAPABILITIES: 164
 
 jobs:
@@ -64,7 +64,7 @@ jobs:
         run: |
           set -euo pipefail
           grep -Fq "db_mutation: none" .github/DEPLOY_ECO_SYSTEM_1_5_2_10_ONCE
-          grep -Fq "code-only-no-d1-export-no-migration" .github/DEPLOY_ECO_SYSTEM_1_5_2_10_ONCE
+          grep -Fq "code-only-with-verified-readonly-backup-no-migration" .github/DEPLOY_ECO_SYSTEM_1_5_2_10_ONCE
       - name: TypeScript qualification
         run: npm run typecheck
       - name: Status · gate-typecheck
@@ -104,8 +104,8 @@ jobs:
           curl --fail --silent --show-error -X POST -H "Authorization: Bearer ${{ github.token }}" -H "Accept: application/vnd.github+json" \
             "https://api.github.com/repos/${GITHUB_REPOSITORY}/statuses/${GITHUB_SHA}" \
             -d '{"state":"success","context":"eco-system/gate-build","description":"Coherent PWA + Worker build passed"}' >/dev/null
-      - name: Targeted Live, repayment and loan-policy regressions
-        run: node --test tests/event-sync-conservation.test.mjs tests/loan-policy-scope-governance.test.mjs tests/loan-simulator-policy.test.mjs
+      - name: Complete native financial and application regressions
+        run: npm test
       - name: Status · gate-targeted
         continue-on-error: true
         run: |
@@ -150,7 +150,7 @@ jobs:
           cat /tmp/eco-15210-deploy.log
           exit 1
       - name: Mandatory Chromium finance and shell qualification
-        run: npx playwright test tests/browser/financial-cell-consensus-persistence-1.5.2.6.spec.mjs tests/browser/browser-shell-mobile-1.5.2.6.spec.mjs tests/browser/sovereign-multi-manager-1.5.2.14.spec.mjs --browser=chromium --workers=1
+        run: npx playwright test tests/browser/financial-cell-consensus-persistence-1.5.2.6.spec.mjs tests/browser/browser-shell-mobile-1.5.2.6.spec.mjs tests/browser/sovereign-multi-manager-1.5.2.14.spec.mjs tests/browser/window-account-finance-20261010.spec.mjs --browser=chromium --workers=1
 
       - name: Status · gate-chromium
         continue-on-error: true
@@ -187,8 +187,8 @@ jobs:
             node scripts/render-wrangler-storage.mjs "${DB_ID}" "${R2_BUCKET}" workers/api/wrangler.ci.toml
           else
             cat /tmp/r2-error.txt || true
-            echo "::warning::Existing R2 bucket unavailable to token; using bounded D1 fallback without creating a replacement bucket."
-            node scripts/render-wrangler-d1.mjs "${DB_ID}" workers/api/wrangler.ci.toml
+            echo "::warning::R2 listing unavailable; retain the acquired R2 binding and require the read/write recovery verification before deploy."
+            node scripts/render-wrangler-storage.mjs "${DB_ID}" "${R2_BUCKET}" workers/api/wrangler.ci.toml
           fi
           sed -i "s/RELEASE_COMMIT_SHA = \"UNBOUND_DEPLOY\"/RELEASE_COMMIT_SHA = \"${GITHUB_SHA}\"/" workers/api/wrangler.ci.toml
 
@@ -205,14 +205,29 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          ! grep -Eq "d1 (export|migrations apply|execute)" .github/workflows/deploy-1.5.2.10-offline-conflicts-loans.yml
-          echo "Code-only deployment: no D1 export, migration, execute, schema mutation or data rewrite."
+          ! grep -Eq "d1 (migrations apply|execute)" .github/workflows/deploy-1.5.2.10-offline-conflicts-loans.yml
+          echo "Code-only deployment: no migration, execute, schema mutation or data rewrite; read-only backup is required."
+      - name: Verify restorable production backup in existing private R2
+        run: node scripts/backup-production-before-delivery.mjs
+      - name: Preserve private recovery receipt
+        uses: actions/upload-artifact@v4
+        with:
+          name: production-recovery-${{ github.sha }}
+          path: |
+            .recovery/recovery.sha256
+            .recovery/manifest.json
+          retention-days: 14
+          if-no-files-found: error
       - name: Refuse stale production overwrite
         shell: bash
         run: |
           set -euo pipefail
           CURRENT_SHA="$(curl --fail --silent --show-error --location --max-time 20 "${ECO_SYSTEM_HEALTH}" | node -e "let s='';process.stdin.on('data',d=>s+=d).on('end',()=>{try{process.stdout.write(JSON.parse(s).commitSha||'')}catch{}})")"
-          if [ -n "${CURRENT_SHA}" ] && git cat-file -e "${CURRENT_SHA}^{commit}" 2>/dev/null; then
+          if ! [[ "${CURRENT_SHA}" =~ ^[0-9a-f]{40}$ ]] || ! git cat-file -e "${CURRENT_SHA}^{commit}" 2>/dev/null; then
+            echo "::error::Production source is unavailable or unknown; refuse publication."
+            exit 1
+          fi
+          if [ -n "${CURRENT_SHA}" ]; then
             if ! git merge-base --is-ancestor "${CURRENT_SHA}" "${GITHUB_SHA}"; then
               echo "::error::Production ${CURRENT_SHA} is not an ancestor of candidate ${GITHUB_SHA}; refusing stale or divergent overwrite."
               exit 1
@@ -229,6 +244,16 @@ jobs:
             -H "Accept: application/vnd.github+json" \
             "https://api.github.com/repos/${GITHUB_REPOSITORY}/statuses/${GITHUB_SHA}" \
             -d '{"state":"success","context":"eco-system/gate-monotonicity","description":"Production ancestry guard passed"}' >/dev/null
+      - name: Preserve the production financial signing key; create only when absent
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes wrangler@4 secret list --config workers/api/wrangler.ci.toml > /tmp/eco-secret-names.json
+          node -e "const fs=require('fs');const s=JSON.parse(fs.readFileSync('/tmp/eco-secret-names.json'));if(!Array.isArray(s)||s.some(x=>typeof x.name!=='string'))throw Error('Invalid secret-name receipt');fs.writeFileSync('/tmp/eco-clock-present',s.some(x=>x.name==='AUTH_LIVE_SIGNING_SECRET')?'yes':'no');"
+          if [ "$(cat /tmp/eco-clock-present)" = "no" ]; then
+            node -e "process.stdout.write(require('crypto').randomBytes(32).toString('base64url'))" | npx --yes wrangler@4 secret put AUTH_LIVE_SIGNING_SECRET --config workers/api/wrangler.ci.toml
+          fi
+          echo "Financial signing configuration preserved; no existing key was rotated."
       - name: Deploy Worker and PWA — code only
         run: npx --yes wrangler@4 deploy --config workers/api/wrangler.ci.toml
 

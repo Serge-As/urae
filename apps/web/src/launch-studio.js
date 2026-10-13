@@ -12,7 +12,14 @@ export function mountLaunchStudio({app,getGroups,getRubrics,addRubric,invalidate
 
   const showStep=next=>{
     step=Math.max(1,Math.min(10,Number(next)||1));
-    for(const p of panels)p.hidden=Number(p.dataset.launchStep)!==step;
+    for(const p of panels){
+      const inactive=Number(p.dataset.launchStep)!==step;
+      // Keep values and canonical draft in the DOM, but prevent controls in
+      // hidden wizard steps from blocking HTML5 form submission on step 7.
+      // The business simulation still validates the complete project model.
+      p.hidden=inactive;
+      p.disabled=inactive;
+    }
     for(const i of indicators){
       const n=Number(i.dataset.launchIndicator);i.classList.toggle('active',n===step);i.classList.toggle('done',n<step);
     }

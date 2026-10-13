@@ -67,7 +67,9 @@ test('presence in the UI does not clear a draft after idle typing-stop timeout',
   assert.match(ui,/paintRemoteFinancialDraft/);
   assert.doesNotMatch(ui,/resetPresenceTimer\(11000\)/);
   const live=fs.readFileSync('apps/web/src/identity-live-ui.js','utf8');
-  assert.doesNotMatch(live,/setInterval\(/);
+  assert.match(live,/workMode!=='REUNION'/);
+  assert.match(live,/SYNC_PROBE/);
+  assert.doesNotMatch(live,/setInterval\([^\n]*liveEvents/);
   assert.match(live,/serverBudgetState\?\.\(\)\.blocked/);
 });
 

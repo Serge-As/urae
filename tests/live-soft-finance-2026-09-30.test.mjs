@@ -34,7 +34,9 @@ test('live client replays authorized events and tolerates private global-sequenc
   assert.doesNotMatch(live,/close\(4001,'sequence-gap'\)/);
   assert.match(live,/visibilityState==='visible'/);
   assert.doesNotMatch(live,/catchupTimer/);
-  assert.doesNotMatch(live,/setInterval\(/);
+  assert.match(live,/workMode!=='REUNION'/);
+  assert.match(live,/SYNC_PROBE/);
+  assert.doesNotMatch(live,/setInterval\([^\n]*liveEvents/);
 });
 
 test('server broadcasts canonical financial writes to managers',()=>{

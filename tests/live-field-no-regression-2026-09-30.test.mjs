@@ -40,7 +40,8 @@ test('typing is pure push while only actual draft state survives websocket hiber
 
 test('server exposes compact financial cell snapshot and deployment cannot roll back production',()=>{
   assert.match(worker,/financial-cells\\\/snapshot/);
-  assert.match(worker,/watermark/);
+  assert.match(worker,/memberEnvelopes\.canonicalCells/);
+  assert.match(fs.readFileSync('packages/member-envelope/src/index.ts','utf8'),/watermark/);
   assert.match(deploy,/Refuse stale production overwrite/);
   assert.match(deploy,/git merge-base --is-ancestor/);
   assert.match(deploy,/fetch-depth: 0/);

@@ -1,5 +1,3 @@
-# Dernier checkpoint : 07e097588933494dd84d42ecdb92b7894419ae89 (documentation seule après le run exact 9bad483)
-
 ## Résultat réel — finances et Chromium validés, WebKit Windows partiel, 9 octobre 2026
 
 Source **9bad4832f2b53c3fd89c3765b0e24a5318167d7d**, qualification native terminée **2026-10-09T01:02:49.841Z** (02:02 à Douala), rapport outputs/eco-qualification-2026-10-09T00-52-01-749Z/qualification-report.json dans le chat. **Résultat global FAIL** : aucune archive qualifiée ni publication.

@@ -35,7 +35,7 @@ test('direct websocket CLIENT_SIGNAL reaches peer without storage or HTTP fallba
   globalThis.WebSocket={OPEN:1};
   const puts=[],received=[];
   const peer={readyState:1,send:m=>received.push(JSON.parse(String(m)))};
-  const sender={readyState:1,send(){},deserializeAttachment:()=>({userId:'manager-direct'})};
+  const sender={readyState:1,send(){},deserializeAttachment:()=>({userId:'manager-direct',manager:true})};
   const state={storage:{async get(){return 0;},async put(k,v){puts.push([k,v]);},async list(){return new Map();}},getWebSockets(){return[peer];}};
   const hub=new GroupLiveHub(state,{});
   await hub.webSocketMessage(sender,JSON.stringify({type:'CLIENT_SIGNAL',eventType:'TYPING',payload:{kind:'FINANCIAL_CELL',meetingId:'m1',membershipId:'member-1',rubricId:'r1'}}));
@@ -61,7 +61,8 @@ test('client live layer is websocket-first with reconnect replay and no heartbea
   assert.match(live,/\[800,1800,4000,10000,30000\]/);
   assert.match(live,/addEventListener\('online'/);
   assert.doesNotMatch(live,/socket\.send\('PING'\)/);
-  assert.doesNotMatch(live,/setInterval\(/);
+  assert.match(live,/workMode!=='REUNION'/);
+  assert.match(live,/SYNC_PROBE/);
   assert.match(app,/liveWebSocketUrl\(after=0,ticket=''\)/);
   assert.match(api,/live\\\/\(health\|events\|connect\|publish\|signal\)/);
   assert.match(main,/identityLiveUI\.publishSignal/);

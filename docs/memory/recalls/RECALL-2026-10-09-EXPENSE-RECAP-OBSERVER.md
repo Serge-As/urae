@@ -1,0 +1,50 @@
+## Reprise environnement — WSL avance, redémarrage CBS en attente, 9 octobre 2026
+
+La base WSL 3.0.1 est installée. L'activation native de VirtualMachinePlatform a avancé de 37,8 % à 60,4 % (relevé du fondateur), puis **61,0 % observé dans le terminal**. Elle n'est pas encore confirmée terminée. Le diagnostic Windows du 9 octobre à 03:10:56 indique **redemarrage_CBS=true**, redemarrage_Windows_Update=false, BITS/TrustedInstaller/wuauserv tous Running ; l'événement Setup/Servicing 7 est Information et décrit le début d'activation VirtualMachinePlatform. Le dossier CBS est absent ; aucune erreur fatale n'est fournie. Le marqueur CBS ne désigne pas à lui seul la transaction ni la fin de l'activation.
+
+**Suite :** laisser l'opération native qui progresse se terminer ; après message final/retour au prompt, sauvegarder les travaux puis faire un redémarrage Windows normal pour les changements de composants en attente. Après ce redémarrage, vérifier les distributions avec `wsl --list --verbose`, puis seulement préparer l'environnement Linux compatible. Aucune interruption forcée, réparation d'image, modification de service ou exécution Linux n'a été réalisée par l'agent.
+
+La qualification produit reste celle du source **9bad4832f2b53c3fd89c3765b0e24a5318167d7d : Node 657/657, Chromium 8/8, WebKit Windows 4 PASS / 2 FAIL ; total FAIL**. Ni ce diagnostic système ni le redémarrage ne qualifient le produit. Maintenir tous les six scénarios WebKit réels, l'archive après les gates exacts, HOLD, PR72 draft, FIELD_ACCEPTED=NOT_ACCEPTED et realMoneyEnabled=false. Le helper terminal Codex et le quota gratuit Actions restent indisponibles ; aucune minute achetée ni crédit de réinitialisation utilisé.
+
+Détail de reprise : docs/memory/checkpoints/CHECKPOINT-2026-10-09-WSL-REBOOT-PENDING.md. Documentation : https://learn.microsoft.com/en-us/windows/wsl/install et https://learn.microsoft.com/en-us/powershell/dsc/reference/resources/microsoft/windows/rebootpending/ .
+
+ÉTAT DU PROJET APRÈS ÉTAPE : diagnostic système acquis, activation toujours en cours, redémarrage composants signalé, Linux utilisable non confirmé, qualification complète et livraison toujours en attente.
+
+---
+
+## Résultat réel — finances et Chromium validés, WebKit Windows partiel, 9 octobre 2026
+
+Source **9bad4832f2b53c3fd89c3765b0e24a5318167d7d**, qualification native terminée **2026-10-09T01:02:49.841Z** (02:02 à Douala), rapport outputs/eco-qualification-2026-10-09T00-52-01-749Z/qualification-report.json dans le chat. **Résultat global FAIL** : aucune archive qualifiée ni publication.
+
+- Dépendances verrouillées et CI gouvernée PASS ; **657/657 Node**, fail/cancelled/skipped/todo=0, 82 131,4998 ms.
+- Preuve réelle du composant TypeScript/Node : ancien d9bc8d9 **3 échecs des assertions attendues**, correctif **3 PASS**, zéro skip/cancel, vérificateur PASS.
+- **Chromium 8/8 PASS (4,3 min)** : shell/offline/mobile, prêts/politiques, remboursement 2 500, deux gestionnaires, confrontation 4 000/5 000 et panne API bornée.
+- Live : 1 000 / 2 001 / 2 002 reçus sur l'autre écran en **1 486 / 2 040 / 1 862 ms**, limites cinq secondes inchangées. **19 requêtes sur les endpoints instrumentés** (pas toutes les requêtes réseau), dont cinq lectures dépenses pendant le parcours et **zéro lecture dépenses pendant la fenêtre idle** ; Outbox toutes CONFIRMED et canonical=2002/version3.
+- **WebKit 4 PASS / 2 FAIL (1,4 min)**. QR decoder, assets offline, rechargement origine arrêtée et override Recap passent. DataChannel échoue avec ECO_LOCAL_ROOM_WEBRTC_UNAVAILABLE ; callback A01 s'arrête sur Partager le signal désactivé. Le guard ecoLocalRoomSupported retourne false uniquement quand RTCPeerConnection est absent. Ce résultat expose une API manquante dans le WebKit Windows utilisé ; il ne prouve aucun échec financier ni ne permet de déclarer la suite WebKit complète PASS.
+
+Playwright documente que les fonctionnalités de WebKit diffèrent selon l'OS : https://playwright.dev/docs/browsers#webkit . Ne pas généraliser le WebKit Windows à Safari/iOS ; ne pas supprimer, simuler ou ignorer les deux scénarios réels pour rendre artificiellement la suite verte. La suite **6/6 avec connexion réelle** reste requise sur un environnement WebKit compatible. Lecture native de la liste WSL demandée au fondateur ; le terminal montre ensuite la mise en place de **WSL 3.0.1**, comportement de premier lancement non prévu dans l'annonce de lecture seule. **Distribution Linux utilisable et résultat final encore inconnus** ; cette installation de base ne qualifie aucun test. Aucun nouveau travail Cloud, achat ni déploiement de la plateforme. Le terminal helper Codex et le quota Actions restent indisponibles ; le connector GitHub Fetch refuse les endpoints user/codespaces, donc aucun accès Codespaces ni quota gratuit n'est présumé.
+
+Source métier inchangé après cette exécution ; le prochain checkpoint ajoute uniquement la vérité de reprise. HOLD, PR72 draft, FIELD_ACCEPTED=NOT_ACCEPTED et realMoneyEnabled=false maintenus. Production dernière attestée 1.5.2.14-live-sync. L'absence d'API RTC n'autorise pas une nouvelle autorité financière ni la suppression de Local Room, des deux feuilles ou des autres capacités.
+
+ÉTAT DU PROJET APRÈS ÉTAPE : boucle de dépenses corrigée et prouvée avant/après en Node réel + navigateur ; finances 657 Node/8 Chromium PASS ; compatibilité WebKit complète non acquise ; qualification totale FAIL ; livraison en attente du gate compatible, archive et smoke exact.
+
+---
+
+## Reprise courante — diagnostic Live réussi, boucle de dépenses corrigée sous qualification, 9 octobre 2026
+
+**Dernier diagnostic réellement exécuté : d9bc8d9de22156f7ab798ef75470fc5ecf3019a3, Chromium 1/1 PASS (1,6 min)**. Les assertions de convergence à cinq secondes n'ont pas été assouplies. Les fragments d'horodatage transmis par le fondateur mesurent, depuis la validation jusqu'à l'affichage Live chez l'autre gestionnaire : 1 000 = **2 733 ms**, 2 001 = **2 162 ms**, 2 002 = **1 830 ms**. Les intentions Outbox correspondantes sont CONFIRMED, attempts=1, APPLIED, versions 1/2/3. Ce diagnostic unique ne remplace pas la qualification complète ; l'échec antérieur e083a6a Chromium 7/8 reste conservé et sa cause exacte n'est pas prouvée par ce PASS.
+
+Les traces montrent aussi des GET répétés de l'endpoint dépenses sur les deux pages, souvent environ toutes les 120 ms, y compris sans saisie. Les identifiants de timeline ne sont pas un nombre de requêtes. Le total exact n'est pas inventé : le long résultat utilisateur est partiellement tronqué et la copie PowerShell de l'attachement profond est inaccessible. Il reste conservé dans les outputs du chat eco-live-diagnostic-20261009-012738 ; le rapport source se trouve dans outputs/eco-live-sync-diagnostic-2026-10-09T00-24-34-168Z de la copie locale de qualification.
+
+Correction ciblée dans apps/web/src/expense-recap-ui.ts : les MutationObserver ignorent les ajouts/retraits de leurs propres cartes de projection et regroupent les déclenchements simultanés. Les vrais changements du récapitulatif, de la séance, du groupe et de la langue conservent leur lecture du service existant. Aucune nouvelle autorité financière ni base. La simulation JavaScript du code reproduit 20 lectures et une relance pendante en 2,4 s avant correction, puis une seule lecture et aucune relance après ; trois scénarios de simulation avant échouent/après passent. **Cette simulation n'est pas une exécution Node, TypeScript ou Playwright réelle.**
+
+Le source préparé ajoute trois tests de comportement du composant réel (idle, changement canonique/contexte, récapitulatif de séance). scripts/verify-expense-recap-regression.mjs exige leurs trois échecs d'assertion sur le SHA d9bc8d9 puis leurs trois succès sur le checkout courant, sans modifier celui-ci. Le scénario Chromium contrôle désormais aussi les lectures des dépenses/ledger pendant une vraie fenêtre idle après ACK, sur les deux gestionnaires ; toutes les anciennes limites cinq/huit secondes sont conservées. Les traces complètes et leur résumé sont écrits par Node à un chemin peu profond, sans récursion PowerShell.
+
+**Qualification du nouveau correctif : NON EXÉCUTÉE.** Attendu : preuve avant/après, **657/657 Node**, **Chromium 8/8**, **WebKit 6/6**, même SHA propre et archive vérifiée. Le nouveau lanceur reçoit --output-root pour sauvegarder directement les rapports et l'archive dans les outputs du chat ; --skip-browser-install évite uniquement de retélécharger les navigateurs déjà installés. Le quota Actions mensuel épuisé et le helper terminal Codex indisponible restent des limitations d'exécution, pas des échecs métier ; aucun achat ni travail Cloud créé.
+
+**HOLD maintenu, PR72 brouillon, 1.5.2.15 non livrée, FIELD_ACCEPTED=NOT_ACCEPTED et realMoneyEnabled=false.** Dernière production attestée : 1.5.2.14-live-sync. Les trois cartes métier, tous les scénarios et les acquisitions Cloudflare/D1/R2 sont préservés. Un attribut de diagnostic saveState demeure QUEUED_OFFLINE dans le run d9 malgré les Outbox CONFIRMED ; ne pas le confondre avec l'autorité financière canonique. Son alignement reste à examiner séparément si une incohérence visuelle est confirmée.
+
+ÉTAT DU PROJET APRÈS ÉTAPE : diagnostic ciblé réel PASS ; défaut de boucle reproduit en simulation et correction sauvegardée ; tests réels du correctif en attente ; aucune promotion de maturité, fusion ou publication.
+
+---
+

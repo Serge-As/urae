@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="referrer" content="no-referrer">
+<meta name="robots" content="noindex,nofollow">
+<title>Eco-System · Espace annonceur invité</title>
+<link rel="stylesheet" href="/styles.css?v=15215">
+
+<script type="module" src="/src/external-ad-portal.js?v=15215"></script>
+</head>
+<body class="external-ad-portal">
+<main class="external-ad-shell">
+<header>
+<p class="eyebrow">Eco-System · Publicité gouvernée</p>
+<h1 id="portalTitle">Annonceur invité</h1>
+<p id="portalIntro">Ce lien permet de transmettre une seule proposition publicitaire à un groupe. Une publicité n'est jamais publiée automatiquement et aucun paiement ne sera prélevé ici.</p>
+<button id="portalLanguage" type="button" class="secondary">English</button>
+</header>
+<section>
+<p id="portalStatus" class="status" role="status" aria-live="polite">Vérification de l'invitation…</p>
+<form id="externalAdForm" class="external-grid" hidden>
+<label>Nom de votre proposition<input name="title" maxlength="140" required autocomplete="organization-title"></label>
+<label>Titre publicitaire<input name="headline" maxlength="120" required></label>
+<label class="wide">Description<textarea name="body" rows="4" maxlength="1000" required></textarea></label>
+<label>Action proposée<input name="callToAction" maxlength="60" required placeholder="Voir l'offre"></label>
+<label>Destination interne<input name="destinationRef" maxlength="200" required placeholder="deal:offre-1"></label>
+<label>Objectif<select name="objective" required>
+<option value="AWARENESS">Visibilité</option><option value="COMMUNITY_JOIN">Rejoindre la communauté</option>
+<option value="EVENT_RSVP">Événement</option><option value="DEAL_OPEN">Offre</option>
+<option value="GROUP_BUY">Achat groupé</option><option value="LEAD">Demande d'informations</option>
+<option value="PARTNER_PROGRAM">Partenariat</option></select></label>
+<label>Localité (facultatif)<input name="locality" maxlength="100"></label>
+<label class="wide">Image facultative (PNG/JPEG/WebP, 2 Mo max)<input id="externalAdPhoto" type="file" accept="image/png,image/jpeg,image/webp"></label>
+<div class="wide"><button type="submit" id="externalAdSend" class="primary">Soumettre à modération</button></div>
+</form>
+</section>
+<footer><small>Confidentialité : aucune donnée financière ou membre n'est accessible depuis cette invitation. Ce lien ne sert ni de caisse ni de promesse de diffusion.</small></footer>
+</main>
+</body>
+</html>

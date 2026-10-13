@@ -10,14 +10,18 @@
   <meta name="format-detection" content="telephone=no">
   <meta id="metaDescription" name="description" content="Eco-System — plateforme de gestion de tontines, associations et communautés">
   <link rel="manifest" href="/manifest.webmanifest">
-  <link rel="stylesheet" href="/styles.css?v=15215">
+  <link rel="stylesheet" href="/styles.css?v=15216">
   <title>Eco-System — 1.5.2.15 · Synchro événementielle · UX data-first</title>
-  <meta name="application-name" content="Éco-System">\n</head>
+  <meta name="application-name" content="Éco-System">
+</head>
 <body class="auth-restoring ui-mode-visual">
   <section id="sessionRestoreScreen" class="session-restore-screen" aria-live="polite"><div class="session-restore-card"><span class="auth-logo">E</span><strong>Eco-System</strong><p>Restauration sécurisée de votre session…</p></div></section>
   <section id="authScreen" class="auth-screen" aria-label="Connexion à Eco-System">
   <div class="auth-brand"><span class="auth-logo">E</span><strong>Eco-System</strong><p>Vos groupes, vos comptes, vos décisions.</p></div>
   <div class="auth-card">
+    <label class="eco-language-picker eco-auth-language">Langue / Language
+      <select id="authLanguageSelect" data-eco-language-control aria-label="Langue de l’interface / Interface language"><option value="fr">Français</option><option value="en">English</option></select>
+    </label>
     <h1>Bienvenue dans votre espace</h1>
     <div class="auth-tabs"><button type="button" data-auth-mode="login" class="selected" aria-pressed="true">Connexion</button><button type="button" data-auth-mode="register" aria-pressed="false">Créer un compte</button></div>
     <form id="authForm" class="form-grid">
@@ -33,13 +37,13 @@
 <header class="topbar">
     <div class="brand">
       <div class="logo">E</div>
-      <div><strong>Eco-System</strong><small>Plateforme Tontines · Associations · Communautés</small><span class="version-badge">ECO-SYSTEM · 1.5.2.15</span></div>
+      <div><strong>Eco-System</strong><small>Plateforme Tontines · Associations · Communautés</small><span class="version-badge">ECO-SYSTEM · 1.5.2.16</span><span id="previewEnvBadge" class="preview-env-badge" hidden>PRÉPRODUCTION · données de test séparées</span></div>
     </div>
     <div class="top-context">
       <select id="activeGroupSelect" aria-label="Groupe actif"><option value="">Aucun groupe actif</option></select>
       <div class="top-search"><input id="globalSearch" placeholder="Rechercher une fonction, un groupe, un service…" autocomplete="off"><div id="globalSearchResults" class="search-popover"></div></div>
     </div>
-    <div class="top-actions"><span id="accountName"></span><button id="claimLocalAccountBtn" type="button" class="primary" hidden>Finaliser le compte local</button><button id="logoutBtn" type="button" class="ghost">Déconnexion</button>
+    <div class="top-actions"><label class="eco-language-picker eco-top-language" aria-label="Langue de l’interface"><select id="topLanguageSelect" data-eco-language-control aria-label="Choisir la langue / Choose language"><option value="fr">FR</option><option value="en">EN</option></select></label><span id="accountName"></span><button id="claimLocalAccountBtn" type="button" class="primary" hidden>Finaliser le compte local</button><button id="logoutBtn" type="button" class="ghost">Déconnexion</button>
       <span id="connectivity" class="pill">● …</span>
       <button id="installBtn" class="ghost" hidden>Installer</button>
       <button id="refreshBtn" class="ghost">Actualiser</button>
@@ -56,6 +60,7 @@
       <span class="nav-caption">Mon espace</span>
       <button data-view="dashboard" class="nav-btn active"><span>⌂</span><b>Accueil</b></button>
       <button data-view="inbox" class="nav-btn"><span>✉</span><b>À faire</b></button>
+      <button id="myAssociationsNavBtn" type="button" data-view="dashboard" data-anchor="personalCockpitPanel" class="nav-btn"><span>▣</span><b>Mes associations</b></button>
       <span class="nav-caption">Groupes</span>
       <button data-view="discovery" class="nav-btn"><span>⌕</span><b>Découvrir</b></button>
       <button data-view="launch" class="nav-btn"><span>＋</span><b>Créer / intégrer</b></button>
@@ -90,6 +95,22 @@
 
     <main class="content">
       <section id="view-dashboard" class="view active">
+        <div class="hero">
+          <div>
+            <span class="eyebrow">Eco-System · Cahier Maître 2.3.4 + additifs 3.2.0</span>
+            <h1>Gérer une tontine ou une association sans perdre sa réalité.</h1>
+            <p>Créez votre groupe, préparez les séances, décrivez ses règles et suivez les encaissements enregistrés. Retrouvez les cotisations et leurs éventuelles annulations dans chaque relevé.</p>
+            <div class="eco-hero-actions" aria-label="Vos principales actions">
+              <button type="button" class="primary" data-go="launch">Créer / intégrer un groupe</button>
+              <button type="button" class="secondary" data-go="discovery">Découvrir des groupes</button>
+              <button type="button" class="secondary" data-view="ecosystem" data-anchor="valueNetworkOperational" data-eco-module-preset="NOW">Eco NOW</button>
+            </div>
+          </div>
+          <div class="hero-card eco-hero-identity">
+            <span>Mode financier réel</span><strong class="safe">DÉSACTIVÉ</strong>
+            <small>Tests fonctionnels et données de démonstration uniquement.</small>
+          </div>
+        </div>
         <section id="uiModePanel" class="ui-mode-panel" aria-labelledby="uiModeTitle">
           <div class="ui-mode-copy"><span class="eyebrow">Confort d’utilisation</span><h2 id="uiModeTitle">Choisissez votre mode</h2><p id="uiModeHelp">Présentation moderne et visuelle, densité normale et accès rapides.</p></div>
           <div class="ui-mode-controls">
@@ -108,18 +129,6 @@
           </div>
         </section>
         <div class="cahier-banner"><div><strong>Votre cockpit Eco-System</strong><p>Groupes, communautés, séances, situation personnelle, activités Live et actions utiles dans un seul espace.</p></div><span class="cahier-code">1.5.2.15 · OFFLINE SOUVERAIN · SYNCHRO ÉVÉNEMENTIELLE · LIVE PUSH · TABLEAUX DATA-FIRST</span></div>
-        <div class="hero">
-          <div>
-            <span class="eyebrow">Eco-System · Cahier Maître 2.3.4 + additifs 3.2.0</span>
-            <h1>Gérer une tontine ou une association sans perdre sa réalité.</h1>
-            <p>Créez votre groupe, préparez les séances, décrivez ses règles et suivez les encaissements enregistrés. Retrouvez les cotisations et leurs éventuelles annulations dans chaque relevé.</p>
-          </div>
-          <div class="hero-card">
-            <span>Mode financier réel</span><strong class="safe">DÉSACTIVÉ</strong>
-            <small>Tests fonctionnels et données de démonstration uniquement.</small>
-          </div>
-        </div>
-
         <div id="universeCards" class="metrics"></div>
 
         <div class="two-col">
@@ -337,7 +346,7 @@
               <fieldset class="launch-step-panel full" data-launch-step="7" hidden>
                 <legend>7. Finance et faisabilité</legend>
                 <p class="hint full">Il n’existe pas de cotisation nominale unique imposée. La simulation consolide les rubriques, mais conserve leur logique indépendante.</p>
-                <button class="primary" id="simulateProjectBtn" type="submit">Simuler la faisabilité</button>
+                <button class="primary" id="simulateProjectBtn" type="button">Simuler la faisabilité</button>
                 <div id="simulationResult" class="result full"></div>
               </fieldset>
 
@@ -870,6 +879,22 @@
 
       <section id="view-ecosystem" class="view">
         <div class="page-head"><div><span class="eyebrow">Lots F–I</span><h1>Communauté, économie, croissance et accompagnement</h1><p>Les grands services du Cahier sont désormais organisés par domaine au lieu d’être noyés dans une simple liste.</p></div><div class="page-meta"><span class="pill">Community</span><span class="pill">Marketplace</span><span class="pill">Academy & IA</span></div></div>
+        <nav class="eco-workspace-jump" aria-label="Accès aux espaces existants">
+          <button type="button" data-view="ecosystem" data-anchor="interestCommunityPanel">Communautés</button>
+          <button type="button" data-view="ecosystem" data-anchor="marketEnginePanel">Marketplace</button>
+          <button type="button" data-view="ecosystem" data-anchor="groupShopPanel">Boutique du groupe</button>
+          <button type="button" data-view="ecosystem" data-anchor="adManagerPanel">Régie publicitaire</button>
+          <button type="button" data-view="ecosystem" data-anchor="partnerAdPanel">Proposer une publicité</button>
+          <button type="button" data-view="ecosystem" data-anchor="visualMediaPanel">Studio médias</button>
+          <button type="button" data-view="ecosystem" data-anchor="valueNetworkOperational" data-eco-module-preset="NOW">Eco NOW</button>
+          <button type="button" data-view="ecosystem" data-anchor="socialDealTitle">Eco Deals</button>
+          <button type="button" data-view="ecosystem" data-anchor="businessStudioOperational">Eco Business</button>
+          <button type="button" data-view="ecosystem" data-anchor="communityEnginePanel">Foras · Forums</button>
+          <button type="button" data-view="launch" data-anchor="savedStarterKitPanel">Kits du groupe</button>
+          <button type="button" data-view="ecosystem" data-anchor="valueNetworkOperational" data-eco-module-preset="HARVEST">Eco Harvest</button>
+          <button type="button" data-view="ecosystem" data-anchor="academyOperational">Academy</button>
+          <button type="button" data-view="ecosystem" data-anchor="creatorTalentCenter">Creator &amp; Talent</button>
+        </nav>
         <div id="ecosystemHighlights" class="quick-grid"></div>
         <section class="panel" id="blueprintExecutablePanel">
           <div class="panel-head"><div><span class="eyebrow">Blueprint exécutable 5.0.0</span><h2>Association / Tontine d’abord · communautés et opportunités autour · valeur au-delà</h2><p>Les idées validées deviennent des workflows persistants reliés aux moteurs existants : groupe, forums/communautés, besoins, commerce local, activité, talent et confiance. Une proposition reste une proposition jusqu’à validation humaine ; aucun paiement réel n’est déclenché ici.</p></div><button id="blueprintRefreshBtn" type="button" class="secondary">Actualiser</button></div>
@@ -1193,6 +1218,13 @@
         </section>
 
         <section class="panel"><div class="section-kicker"><div><h2>AdManager & sponsoring</h2><p>Campagnes, créations, placements, ciblage contextuel et financier agrégé, modération et analytics. Aucun ciblage individuel par dette, solde, CNI ou identité.</p></div></div><div id="growthHub" class="hub-grid"></div></section>
+        <section class="panel" id="visualMediaPanel">
+          <div class="section-kicker"><div><span class="eyebrow">Studio médias</span>
+            <h2>Images, profils et couvertures</h2>
+            <p>Remplacez vos photos et les visuels autorisés dans les cockpits. Les annonces commerciales restent gouvernées par AdManager.</p>
+          </div></div>
+          <div id="ecoVisualMediaStudio" class="stack"></div>
+        </section>
         <section class="panel" id="adManagerPanel">
           <div class="section-kicker"><div><span class="eyebrow">AdOps · régie complète</span><h2>AdManager & Revenue Studio</h2><p>Inventaire, campagnes, créations, prospects annonceurs, auto-promotion Eco-System et mesure. La publicité reste native, faible-data et absente du cœur d’une action financière critique.</p></div><button id="adManagerRefreshBtn" type="button" class="link-btn">Actualiser la régie</button></div>
           <div id="adKpis" class="metrics small"></div>
@@ -1215,6 +1247,10 @@
                 <label>Centres d’intérêt<input id="adCampaignInterests" placeholder="épargne, agriculture, formation"></label>
                 <label>Types de rubriques<input id="adCampaignRubricKinds" placeholder="SAVINGS, TONTINE, SOLIDARITY"></label>
                 <label class="full">Tranches de volumes agrégés<input id="adCampaignVolumeBands" placeholder="SAVON:100000-500000, EPARGNE:1000000-5000000"></label>
+                <label class="full">Image du créatif publicitaire
+                  <select id="adCampaignMedia"><option value="">Sans image</option></select>
+                  <small>Ajoutez les images dans « Studio médias » ; elles restent soumises à modération.</small>
+                </label>
                 <label>Titre créatif<input id="adCampaignHeadline" required></label>
                 <label>Action<input id="adCampaignCta" required placeholder="Voir l’offre"></label>
                 <label class="full">Message<textarea id="adCampaignBody" rows="3" required></textarea></label>
@@ -1434,7 +1470,7 @@
   </div>
 
   <footer class="footer">Eco-System 1.5.2.15 · Cahier Maître 2.3.4 + Blueprint 5.0.0 · UX unifiée</footer>
-  <script type="module" src="/src/ui-modes.js?v=15215"></script>
-  <script type="module" src="/src/main.js?v=15215"></script>
+  <script type="module" src="/src/ui-modes.js?v=15216"></script>
+  <script type="module" src="/src/main.js?v=15216"></script>
 </body>
 </html>

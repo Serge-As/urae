@@ -13,7 +13,7 @@ test('1.5.2.3 queued financial entry stays visibly projected when server ledger 
     app.selectGroup('group_hotfix');
     app.outboxStorage.save=async()=>{};
     app.readSnapshots.save=async x=>({...x,updatedAt:new Date().toISOString()});
-    app.readSnapshots.get=async()=>undefined;
+    app.readSnapshots.get=async()=>undefined;app.readSnapshots.listForActorTenant=async()=>[];
     globalThis.fetch=async(input,init={})=>{
       const url=String(input);
       if(url.includes('/api/v1/outbox/apply'))return new Response(JSON.stringify({error:'TEMPORARY_UNAVAILABLE'}),{status:503,headers:{'content-type':'application/json'}});
@@ -38,7 +38,7 @@ test('1.5.2.3 optimistic ledger deduplicates a pending intent already present in
   try{
     globalThis.indexedDB={};
     const app=new ConnectedApplication({actorId:'manager_hotfix',tenantId:'tenant_hotfix'});
-    app.selectGroup('group_hotfix');app.outboxStorage.save=async()=>{};
+    app.selectGroup('group_hotfix');app.outboxStorage.save=async()=>{};app.readSnapshots.listForActorTenant=async()=>[];
     globalThis.fetch=async input=>{
       const url=String(input);
       if(url.includes('/api/v1/outbox/apply'))return new Response(JSON.stringify({error:'TEMPORARY_UNAVAILABLE'}),{status:503,headers:{'content-type':'application/json'}});
@@ -62,7 +62,7 @@ test('1.5.2.3 offline correction exposes the exact pending target for immediate 
   try{
     globalThis.indexedDB={};
     const app=new ConnectedApplication({actorId:'manager_hotfix',tenantId:'tenant_hotfix'});
-    app.selectGroup('group_hotfix');app.outboxStorage.save=async()=>{};app.serverBudgetBlockedUntil=Date.now()+60_000;
+    app.selectGroup('group_hotfix');app.outboxStorage.save=async()=>{};app.readSnapshots.listForActorTenant=async()=>[];app.serverBudgetBlockedUntil=Date.now()+60_000;
     app.outboxStorage.recordFinancialCellIntent=async(item,deviceId)=>({...item,payload:{...item.payload,deviceId,deviceSequence:1,commandId:item.idempotencyKey}});
     const result=await app.setFinancialCellTarget({meetingId:'meeting_1',membershipId:'member_1',rubricId:'rubric_1',targetAmount:500,currentAmount:1000,currentVersion:2,reason:'Correction terrain'});
     assert.equal(result.queued,true);
