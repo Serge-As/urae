@@ -1,9 +1,12 @@
-# Livraison demandée — 13 octobre 2026
+## Production vérifiée — 13 octobre 2026
 
-Les suites https://github.com/Serge-As/urae/actions/runs/38461566887 et https://github.com/Serge-As/urae/actions/runs/38461567123 ont réussi sur c32c5a2. La PR92 est fusionnée au commit fad55db819b184c0f38950e814edd89c7c99fd9c, même tree applicatif086cd4e2.
+Version **1.5.2.16-live-modes-refonte**, commit effectivement servi **0d06e9a86e1527c97123db8442cb10913d3c91c6** ; Worker272e3874-b66f-4c74-8017-5656007e33c2. Workflow https://github.com/Serge-As/urae/actions/runs/38462983464 SUCCESS. À20:32:57UTC, le smoke a lu /health et le catalogue réels : version/build/cache/SHA exacts,164capacités, realMoneyEnabled=false. PR92 fusionnée ; ascendance de881a3e6 conservée.
 
-Le marqueur active le workflow canonique. La livraison n'est pas encore prouvée : sauvegarde réelle, restauration, relecture/hash R2, conservation de la clé financière, puis vérification /health et catalogue doivent terminer avec succès. La version publiée sera attestée seulement par le SHA exact du workflow et la réponse réelle du service.
+Qualification de source : native723PASS, Chromium11PASS, WebKit6PASS ; aucune assertion financière ni délai assouplis. Le Live distinct-manager et les réconciliations/offline reload passent. Deux comptes/fenêtres dans le même profil et revue locale après ancienne synthèse couverts. Refonte compatible importée dans la vraie production, pas seulement en préproduction.
 
-Source : Live durable, commandes préparées avant transport, confrontation et réserves, modes de séance, revue locale hors connexion, synthèses privées, refonte compatible avec les corrections réellement déployées. Dernière recette : Node723, Chromium11, WebKit6. Assertions financières et durées inchangées ; deux comptes/fenêtres dans le même profil couverts.
+Sauvegarde réelle avant publication : export D1, restauration SQLite avec intégrité/FK contrôlés, archive privée R2 relue et hash vérifié. Cléeco-system-backups/production-recovery/0d06e9a86e1527c97123db8442cb10913d3c91c6.tar.gz ; SHA256c93d4003b8117a031ae3cb002e3a6cc486a36f7d9d2ae53b2ca0394af3405070. Reçu privé GitHubartifact11847177113,609octets ; aucun dump financier inclus dans ce reçu. D1/R2 acquis conservés, aucune migration/réécriture des données et aucune rotation d'une clé financière existante.
 
-Aucune recette authentifiée exhaustive des155capacités n'est présumée ; FIELD_ACCEPTED reste NOT_ACCEPTED. Aucun remplacement de D1/R2, aucun dump personnel conservé dans les artifacts GitHub de cette livraison, aucune activation d'argent réel.
+Limite précise : le navigateur de contrôle et le service d'exécution local du chat ont cessé de répondre ; continuation assurée via CI native/GitHub. La recette authentifiée exhaustive sur le compte réel Delor, les captures de tous les modules et la matrice complète155capacités ne sont pas attestées. **FIELD_ACCEPTED=NOT_ACCEPTED** ; ce déploiement ne promeut pas ces axes. PR72HOLDhistorique inchangée ; ne jamais annoncer tous les parcours intégralement validés.
+
+Prochaine reprise : partir de la branche applicative fix/1.5.2.10-offline-conflicts-loans-20261003 et du SHA servi0d06e9a ; vérifier /health avant toute nouvelle promotion. Compléter la recette authentifiée et visuelle sur les données réelles, sans créer de transactions de test dans les groupes de production. Ne pas recommencer l'audit ni remplacer la base par la préproduction.
+
