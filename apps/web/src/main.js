@@ -415,6 +415,13 @@ const detailUI = mountDetailUI({ app, navigate: go, getGroups: () => groups, get
 const personalCockpitUI = mountPersonalCockpitUI({
   app, getGroups:()=>groups, getMembers:()=>members, getMeetings:()=>meetings,
   navigate:go, fmt, date, showError:fail, isManager,
+  openGroupWorkspace:async groupId=>{
+    const mine=await app.listMyGroups();
+    if(!mine.some(group=>group.id===groupId))throw Error('FORBIDDEN_SCOPE');
+    app.selectGroup(groupId);
+    await refreshGroupContext();
+    go('dashboard',{force:true});
+  },
   openGroupForum:async groupId=>{
     // Reuse the normal group-context refresh and its permission checks.
     if(!groups.some(group=>group.id===groupId))throw Error('FORBIDDEN_SCOPE');
