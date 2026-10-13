@@ -3,13 +3,15 @@ import {GroupLiveHub} from '../.build/workers/api/src/group-live-hub.js';
 
 // Development/test transport for the production hub. Financial requests still
 // pass through worker.fetch and SQLiteD1; no financial authority is emulated.
-export function createLocalLiveNamespace(){
+export function createLocalLiveNamespace(env={}){
   const channels=new Map();
   const get=id=>{
     if(channels.has(id))return channels.get(id);
-    const values=new Map(),sockets=new Set();
+    const values=new Map(),sockets=new Set();let alarmTimer,alarmAt=null;
     const state={
       storage:{
+        getAlarm:async()=>alarmAt,deleteAlarm:async()=>{clearTimeout(alarmTimer);alarmAt=null;},
+        setAlarm:async at=>{clearTimeout(alarmTimer);alarmAt=at;alarmTimer=setTimeout(()=>{alarmAt=null;void hub.alarm();},Math.max(1,at-Date.now()));alarmTimer.unref?.();},
         get:async key=>structuredClone(values.get(key)),
         put:async(key,value)=>{values.set(key,structuredClone(value));},
         delete:async key=>values.delete(key),
@@ -37,7 +39,7 @@ export function createLocalLiveNamespace(){
         response.webSocket=client;return response;
       }
     };
-    const hub=new GroupLiveHub(state,{});channels.set(id,hub);return hub;
+    const hub=new GroupLiveHub(state,env);channels.set(id,hub);return hub;
   };
   return{idFromName:name=>name,get};
 }

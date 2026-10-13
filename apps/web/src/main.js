@@ -1,3 +1,4 @@
+import {createFinancialWorkUI} from './financial-work-ui.js';
 import {createRubricEditor,readRubricEditors,describeRubricPlan,editRubricPlan} from './launch-rubrics.js';
 import {mountLaunchStudio} from './launch-studio.js';
 import {renderMemberFinancialNotices} from './member-control-ui.js';
@@ -89,12 +90,13 @@ let receiptPositions = [];
 let financialSheetEvents = [];
 let financialCellVersions = new Map();
 let financialCellMetadata = new Map();
+let financialDurableProjections=new Map(),financialSnapshotCellVersions=new Map();
 // Ephemeral indicators are local projections only. No draft amounts are sent
 // over Live or stored on the server, and this map is never a financial authority.
 const remoteFinancialDrafts=new Map();
 const remoteDraftNames=key=>{
   const actors=remoteFinancialDrafts.get(key);if(!actors)return[];
-  for(const [id,row] of actors)if(Number(row.expiresAt)<Date.now()){clearTimeout(row.timer);actors.delete(id);}
+  for(const [id,row] of actors)if(Number(row.expiresAt)<Date.now()||id===String(app.currentActor?.()??'')){clearTimeout(row.timer);actors.delete(id);}
   if(!actors.size){remoteFinancialDrafts.delete(key);return[];}
   return [...actors.values()].map(row=>String(row.name)).filter(Boolean);
 };
@@ -107,23 +109,37 @@ const financialOptimisticValues=new Map();
 // Expensive canonical polling stays dormant for a future paid mode.
 const FREE_CONSERVATION_MODE=true;
 const FINANCIAL_CONFIRMED_STORAGE='eco.financialConfirmedCells.v1';
-const financialConfirmedCells=new Map((()=>{try{return Object.entries(JSON.parse(localStorage.getItem(FINANCIAL_CONFIRMED_STORAGE)||'{}'));}catch{return[];}})());
+const financialConfirmedCells=new Map();
+let financialStorageScope='';
+const financialCellDrafts=new Map();
+const FINANCIAL_DRAFT_STORAGE='eco.financialCellDrafts.v2';
+// A draft belongs to the editing window and account. Canonical confirmations
+// belong to an authorized account/group; neither may overwrite another account.
+const financialScopedStorageKey=base=>base+':'+JSON.stringify([String(app.currentActor?.()??''),String(app.activeGroup?.()??'')]);
+const ensureFinancialStorageScope=()=>{
+  const scope=financialScopedStorageKey('scope');if(scope===financialStorageScope)return;
+  financialStorageScope=scope;financialConfirmedCells.clear();financialCellDrafts.clear();
+  try{for(const [k,v] of Object.entries(JSON.parse(localStorage.getItem(financialScopedStorageKey(FINANCIAL_CONFIRMED_STORAGE))||'{}')))financialConfirmedCells.set(k,v);}catch{}
+  try{for(const [k,v] of Object.entries(JSON.parse(sessionStorage.getItem(financialScopedStorageKey(FINANCIAL_DRAFT_STORAGE))||'{}')))financialCellDrafts.set(k,String(v));}catch{}
+  for(const actors of remoteFinancialDrafts.values())for(const row of actors.values())clearTimeout(row.timer);
+  remoteFinancialDrafts.clear();
+};
 const persistFinancialConfirmedCells=()=>{try{
   const now=Date.now(),rows=[...financialConfirmedCells.entries()].filter(([,v])=>v&&now-Number(v.confirmedAt||0)<7*86400000).slice(-500);
   financialConfirmedCells.clear();for(const [k,v] of rows)financialConfirmedCells.set(k,v);
-  localStorage.setItem(FINANCIAL_CONFIRMED_STORAGE,JSON.stringify(Object.fromEntries(rows)));
+  localStorage.setItem(financialScopedStorageKey(FINANCIAL_CONFIRMED_STORAGE),JSON.stringify(Object.fromEntries(rows)));
 }catch{}};
 const rememberConfirmedCell=(key,{amount,cellVersion,meetingId,membershipId,rubricId}={})=>{
+  ensureFinancialStorageScope();
   if(!Number.isFinite(Number(amount)))return;
   financialConfirmedCells.set(key,{groupId:String(app.activeGroup?.()??''),meetingId:String(meetingId??''),membershipId:String(membershipId??''),rubricId:String(rubricId??''),amount:Number(amount),cellVersion:Number.isFinite(Number(cellVersion))?Number(cellVersion):null,confirmedAt:Date.now()});
   persistFinancialConfirmedCells();
+  void Promise.resolve(app.receiveFinancialLiveEvent?.({groupId:app.activeGroup?.(),payload:{meetingId,membershipId,rubricId,newAmount:Math.abs(Number(amount)),cellVersion:Number(cellVersion??0),actorId:app.currentActor?.()}})).catch(error=>console.info('Financial read model persistence deferred',error));
 };
-const forgetConfirmedCell=key=>{if(financialConfirmedCells.delete(key))persistFinancialConfirmedCells();};
-const FINANCIAL_DRAFT_STORAGE='eco.financialCellDrafts';
-const financialCellDrafts=new Map((()=>{try{return Object.entries(JSON.parse(localStorage.getItem(FINANCIAL_DRAFT_STORAGE)||'{}'));}catch{return[];}})());
-const persistFinancialCellDrafts=()=>{try{const entries=[...financialCellDrafts.entries()].slice(-120);localStorage.setItem(FINANCIAL_DRAFT_STORAGE,JSON.stringify(Object.fromEntries(entries)));}catch{}};
-const saveFinancialCellDraft=(key,value)=>{if(value==='')financialCellDrafts.delete(key);else financialCellDrafts.set(key,String(value));persistFinancialCellDrafts();};
-const clearFinancialCellDraft=key=>{financialCellDrafts.delete(key);persistFinancialCellDrafts();};
+const forgetConfirmedCell=key=>{ensureFinancialStorageScope();if(financialConfirmedCells.delete(key))persistFinancialConfirmedCells();};
+const persistFinancialCellDrafts=()=>{try{const entries=[...financialCellDrafts.entries()].slice(-120);sessionStorage.setItem(financialScopedStorageKey(FINANCIAL_DRAFT_STORAGE),JSON.stringify(Object.fromEntries(entries)));}catch{}};
+const saveFinancialCellDraft=(key,value)=>{ensureFinancialStorageScope();if(value==='')financialCellDrafts.delete(key);else financialCellDrafts.set(key,String(value));persistFinancialCellDrafts();};
+const clearFinancialCellDraft=key=>{ensureFinancialStorageScope();financialCellDrafts.delete(key);persistFinancialCellDrafts();};
 document.addEventListener('click',event=>{
     const target=event.target instanceof Element?event.target.closest('.cell-validate'):null;
     if(!target)return;
@@ -329,7 +345,7 @@ const showView=(name,state)=>{
     target.classList.add('active');
     const activeNav=[...document.querySelectorAll(`.nav-btn[data-view="${name}"]`)].find(x=>!state?.anchor||x.dataset.anchor===state.anchor)||document.querySelector(`.nav-btn[data-view="${name}"]`);
     activeNav?.classList.add('active');
-    if(activeNav&&window.matchMedia('(max-width:860px)').matches)setTimeout(()=>activeNav.scrollIntoView({behavior:'smooth',block:'nearest',inline:'center'}),20);
+    if(activeNav&&window.matchMedia('(max-width:860px)').matches)setTimeout(()=>{const strip=activeNav.parentElement;if(strip)strip.scrollTo({left:Math.max(0,activeNav.offsetLeft-(strip.clientWidth-activeNav.clientWidth)/2),behavior:'smooth'});},20);
     document.querySelector('#globalSearchResults')?.replaceChildren();
     const nextState=state??{view:name,scrollY:0};
     restoreNavState(nextState);persistNavState(nextState);
@@ -731,9 +747,11 @@ const exactCellAmount=(membershipId,rubricId,meetingId)=>{
       // A locally queued target is the working projection until synchronization.
       // Once the server ACK says CONSENSUS_REQUIRED, the canonical Ledger value
       // remains visible and the target is rendered separately as “Proposé”.
-      if(pending&&String(pending.businessStatus??'')!=='CONSENSUS_REQUIRED'&&Number.isSafeInteger(Number(pending.targetAmount))&&Number(pending.targetAmount)>=0)return Number(pending.targetAmount);
+      if(pending&&!['CONSENSUS_REQUIRED','REMOTE_DIVERGENCE'].includes(String(pending.businessStatus??''))&&Number.isSafeInteger(Number(pending.targetAmount))&&Number(pending.targetAmount)>=0)return Number(pending.targetAmount);
       canonical=exactCellRows(membershipId,rubricId,meetingId).reduce((n,x)=>n+Number(x.netAmount??0),0);
     }
+    const streamed=financialDurableProjections.get(cellKey),snapshotVersion=Number(financialSnapshotCellVersions.get(JSON.stringify([meetingId,membershipId,rubricId,'XAF']))??0);
+    if(streamed&&streamed.cellVersion>=snapshotVersion)canonical=['LOAN','OUTFLOW'].includes(nature)?-Math.abs(streamed.amount):streamed.amount;
     const confirmed=financialConfirmedCells.get(cellKey);
     if(confirmed&&String(confirmed.groupId??'')===String(app.activeGroup?.()??'')){
       const canonicalVersion=Number(financialCellVersions.get(JSON.stringify([meetingId,membershipId,rubricId,'XAF']))??0),confirmedVersion=Number(confirmed.cellVersion);
@@ -797,6 +815,7 @@ const hydrateRelayFinancialReviews=async()=>{
   }
 };
 const loadFinancialProjectionState=async({clearOptimistic=false}={})=>{
+    ensureFinancialStorageScope();
     const [l,sheetEvents,sheetExpenses]=await Promise.all([app.ledger(),app.listWorkspaceRecords('FINANCE.SHEET_EVENT',app.activeGroup()).catch(()=>[]),app.expenses({scope:'SHEET'}).catch(()=>[])]);
     receiptPositions=l.receipts;
     const localTargets=app.pendingFinancialCellTargets?.()??[],relayTargets=await app.relayManagerFinancialTargets?.().catch?.(()=>[])??[];
@@ -812,6 +831,9 @@ const loadFinancialProjectionState=async({clearOptimistic=false}={})=>{
     financialSheetEvents=[...sheetEvents,...sheetExpenses.map(x=>({id:x.id,createdBy:x.createdBy,createdAt:x.createdAt,updatedAt:x.updatedAt,data:{membershipId:x.membershipId,meetingId:x.meetingId,rubricId:x.rubricId,amount:x.amount,direction:'OUT',ledgerEntryId:x.ledgerEntryId}}))];
     financialCellVersions=new Map((l.cellRevisions??[]).map(r=>[JSON.stringify([r.meetingId,r.membershipId,r.rubricId,r.currency??'XAF']),Number(r.version??0)]));
     for(const event of financialSheetEvents){const d=event.data??{},key=JSON.stringify([d.meetingId,d.membershipId,d.rubricId,'XAF']);financialCellVersions.set(key,(financialCellVersions.get(key)??0)+1);}
+    financialSnapshotCellVersions=new Map(financialCellVersions);
+    financialDurableProjections=new Map((l.liveCells??[]).map(p=>[financialCellKey(p.membershipId,p.rubricId,p.meetingId),p]));
+    for(const p of l.liveCells??[]){const key=JSON.stringify([p.meetingId,p.membershipId,p.rubricId,'XAF']);financialCellVersions.set(key,Math.max(Number(financialCellVersions.get(key)??0),Number(p.cellVersion)));const pending=financialPendingTargets.get(financialCellKey(p.membershipId,p.rubricId,p.meetingId));if(pending&&p.cellVersion>Number(pending.baselineVersion??pending.baselineCellVersion??0)&&Number(pending.targetAmount)!==p.amount)pending.businessStatus='REMOTE_DIVERGENCE';}
     financialCellMetadata=new Map();
     const rememberMeta=(membershipId,rubricId,meetingId,actorId,at)=>{
       if(!membershipId||!rubricId||!meetingId)return;
@@ -844,6 +866,7 @@ const cellHasPendingLocal=detail=>{
 const setCellSyncedState=detail=>{
   const selector=financialLiveSelector?.(detail)||'';
   for(const cell of selector?document.querySelectorAll(selector):[]){
+    cell.dataset.saveState='CONFIRMED';cell.classList.add('is-confirmed');cell.classList.remove('is-failed');
     const state=cell.querySelector('.cell-save-state');if(state){state.textContent=tx('✓ Synchronisé','✓ Synced');state.hidden=false;setTimeout(()=>{if(state.textContent.includes('Synchron')||state.textContent.includes('Synced'))state.hidden=true;},2200);}
     cell.classList.remove('has-local-pending','has-review-pending','is-conflict','is-critical-conflict');
     cell.querySelector('.cell-sync-state.pending')?.remove();
@@ -1099,6 +1122,15 @@ const ensureFinancialSnapshotPolling=()=>{
   void pollCanonicalFinancialSnapshot();
 };
 
+let financialWorkUI;
+const ensureFinancialWorkUI=()=>financialWorkUI??=createFinancialWorkUI({app,tx,notify:toast,resume:()=>resumeOnline(),
+  summary:async(meetingId,membershipId,ids)=>{
+    try{return await app.financialPassageSummary(meetingId,membershipId,ids);}catch(e){if(navigator.onLine!==false&&!app.serverBudgetState?.().blocked)throw e;
+      const ordered=meetings.filter(x=>x.status!=='cancelled').slice().sort((a,b)=>String(a.scheduledAt??a.openedAt).localeCompare(String(b.scheduledAt??b.openedAt))),beforeIds=ordered.slice(0,ordered.findIndex(x=>x.id===meetingId)).map(x=>x.id);
+      const lines=ids.map(rubricId=>{const current=exactCellAmount(membershipId,rubricId,meetingId),before=beforeIds.reduce((n,id)=>n+exactCellAmount(membershipId,rubricId,id),0);return{rubricId,rubricName:rubrics.find(x=>x.id===rubricId)?.name??rubricId,before,current,total:before+current,cellVersion:exactCellVersion(membershipId,rubricId,meetingId)};});return{lines,totals:Object.fromEntries(['before','current','total'].map(k=>[k,lines.reduce((n,x)=>n+x[k],0)]))};}
+  },
+  edit:(selection,rubricId)=>{const cell=[...document.querySelectorAll('.matrix-cell-entry')].find(x=>x.dataset.meetingId===selection.meetingId&&x.dataset.membershipId===selection.membershipId&&x.dataset.rubricId===rubricId);cell?.scrollIntoView({block:'center',inline:'nearest'});cell?.querySelector('input')?.focus();}
+});
 const submitFinancialCellElement=async validate=>{
     const holder=validate?.closest?.('.matrix-cell-entry');
     const input=holder?.querySelector?.('.cell-target-input');
@@ -1122,6 +1154,7 @@ const submitFinancialCellElement=async validate=>{
       if(raw===''){setCellState('IDLE');return;}
       target=Number(raw);
       if(!Number.isSafeInteger(target)||target<0)throw new Error('INVALID_CONTRIBUTION_AMOUNT');
+      if(!await ensureFinancialWorkUI().before(meetingId,membershipId,rubricId)){setCellState('IDLE');return;}
       setCellState('SAVING_LOCAL',tx('Enregistrement…','Saving…'));
       traceFinancialCell('CELL_SUBMIT',{cellKey,membershipId,rubricId,meetingId,target,current,nature});
       if(target===current&&nature!=='CONTRIBUTION'){
@@ -1231,6 +1264,7 @@ const submitFinancialCellElement=async validate=>{
 };
 
 const makeFinancialEntryCell=({member,rubric,meetingId,editable=true})=>{
+    ensureFinancialStorageScope();
     const holder=document.createElement('div');holder.className='matrix-cell matrix-cell-entry';holder.dataset.membershipId=member.id;holder.dataset.rubricId=rubric.id;holder.dataset.meetingId=meetingId;holder.tabIndex=-1;
     const persistentCellKey=financialCellKey(member.id,rubric.id,meetingId),nature=financialNatureForRubric(rubric),signedCurrent=exactCellAmount(member.id,rubric.id,meetingId),current=Math.abs(signedCurrent),currentLabel=document.createElement('strong');
     currentLabel.className='cell-current'+(signedCurrent<0?' is-negative':'');currentLabel.textContent=fmt(signedCurrent);holder.append(currentLabel);
@@ -2105,12 +2139,17 @@ const applyRemoteFinancialProjection=(p={})=>{
     });
     if(pending){
       const localAmount=Number(pending.payload?.targetAmount??pending.payload?.amount);
-      if(Number.isFinite(localAmount)&&localAmount!==amount)markCriticalFinancialConflict({...p,amount:localAmount});
-      return false;
+      if(Number.isFinite(localAmount)&&localAmount!==amount){
+        markCriticalFinancialConflict({...p,amount:localAmount});
+        const key=financialCellKey(String(p.membershipId),String(p.rubricId),String(p.meetingId));
+        const projection=financialPendingTargets.get(key);if(projection)projection.businessStatus='REMOTE_DIVERGENCE';
+        financialOptimisticValues.delete(key);
+      }
     }
     forgetConfirmedCell(financialCellKey(String(p.membershipId??''),String(p.rubricId??''),String(p.meetingId??'')));
     const rubric=rubrics.find(x=>x.id===String(p.rubricId)),nature=financialNatureForRubric(rubric),signed=(nature==='LOAN'||nature==='OUTFLOW')?-Math.abs(amount):amount;
-    patchFinancialDomCell({meetingId:p.meetingId,membershipId:p.membershipId,rubricId:p.rubricId,amount:signed,cellVersion:p.cellVersion,remote:true});
+    financialDurableProjections.set(financialCellKey(String(p.membershipId),String(p.rubricId),String(p.meetingId)),{amount,cellVersion:Number(p.cellVersion??0),actorId:String(p.actorId??''),at:String(p.at??'')});
+    patchFinancialDomCell({meetingId:p.meetingId,membershipId:p.membershipId,rubricId:p.rubricId,amount:signed,cellVersion:p.cellVersion,remote:true,preservePending:Boolean(pending)});
     // Keep the confirmed server delta across an offline reload, including when
     // this screen's older read snapshot has not been rehydrated yet.
     rememberConfirmedCell(financialCellKey(String(p.membershipId),String(p.rubricId),String(p.meetingId)),{meetingId:p.meetingId,membershipId:p.membershipId,rubricId:p.rubricId,amount:signed,cellVersion:p.cellVersion});
@@ -2138,9 +2177,8 @@ const highlightRemoteFinancialCell=(p={})=>{
           direct.className='secondary cell-remote-specialized';cell.append(direct);}
         direct.textContent=tx('Examiner dans le dossier financier','Review in financial record');
         direct.onclick=()=>go('finance',{force:true});
-        // A loan/payment/assistance is a real financial event, not an
-        // absolute contribution target. Its dispute must use its owner.
-        continue;
+        // Editing a loan/payment still opens its financial owner. Read receipts,
+        // agreement and reserve below only review the committed projection.
       }
       // A separate acknowledgment must never turn the financial ✓ button into
       // an OK button: a manager may immediately re-edit or dispute the cell.
@@ -2162,7 +2200,7 @@ const highlightRemoteFinancialCell=(p={})=>{
         control.disabled=true;
         try{
           const result=await app.reviewFinancialCellChange({meetingId,membershipId,rubricId,
-            amount:Math.max(0,signedAmount),cellVersion:currentVersion,decision,reason});
+            amount:Math.abs(signedAmount),cellVersion:currentVersion,decision,reason});
           if(decision==='RESERVE'){
             cell.classList.add('is-conflict','is-critical-conflict');
             const state=cell.querySelector('.cell-save-state');
@@ -2781,10 +2819,11 @@ document.querySelectorAll('[data-eco-language-control]').forEach(control=>{
         canonical.dispatchEvent(new Event('change',{bubbles:true}));
     });
 });
-let onlineResumePromise=null;
+let onlineResumePromise=null,onlineResumeRequested=false;
 let networkRecoveryNeeded=navigator.onLine===false;
 const resumeOnline=({forceConfrontation=false,relayFerry=false}={})=>{
-    if(onlineResumePromise)return onlineResumePromise;
+    if(onlineResumePromise){onlineResumeRequested=true;return onlineResumePromise;}
+    onlineResumeRequested=false;
     const preserved=captureNavState();persistNavState(preserved);
     onlineResumePromise=(async()=>{renderConnectivity();try{
         if(navigator.onLine===false){networkRecoveryNeeded=true;return;}
@@ -2841,7 +2880,12 @@ const resumeOnline=({forceConfrontation=false,relayFerry=false}={})=>{
         if(relayFerry)void app.syncEcoRelayFerry?.().then(result=>{
           if(result&&(Number(result.downloaded??0)>0||Number(result.applied??0)>0))window.dispatchEvent(new CustomEvent('eco:manager-relay-updated',{detail:{groupId:app.activeGroup?.(),ferry:true,...result}}));
         }).catch(()=>{});
-    }catch(error){networkRecoveryNeeded=true;console.info('Online resume deferred',error);}})().finally(()=>{onlineResumePromise=null;});
+    }catch(error){networkRecoveryNeeded=true;console.info('Online resume deferred',error);}})().finally(()=>{
+      onlineResumePromise=null;
+      const again=onlineResumeRequested;onlineResumeRequested=false;
+      if(again&&navigator.onLine!==false&&!offlineConfrontationDeferred&&
+        !app.serverBudgetState?.().blocked&&(app.outboxItems?.()??[]).some(x=>x.status==='PENDING'))void resumeOnline();
+    });
     return onlineResumePromise;
 };
 const eventDrivenConnectivityRecovery=(event)=>{
@@ -2890,7 +2934,7 @@ if('serviceWorker' in navigator)navigator.serviceWorker.addEventListener('messag
 // A browser/page refresh must resume the exact business place, including a
 // horizontal financial column far to the right. sessionStorage is synchronous,
 // so pagehide can safely persist the last visible state without any request.
-const persistCurrentNavigation=()=>{try{persistNavState(captureNavState());}catch{}};
+const persistCurrentNavigation=()=>{try{const state=captureNavState();persistNavState(state);history.replaceState({...history.state,ecoNav:state},'',location.href);}catch{}};
 window.addEventListener('pagehide',persistCurrentNavigation);
 window.addEventListener('beforeunload',persistCurrentNavigation);
 const iosLike=()=>/iPad|iPhone|iPod/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);

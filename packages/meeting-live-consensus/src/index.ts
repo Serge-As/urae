@@ -110,7 +110,7 @@ export class MeetingLiveConsensusService{
     if(input.decision==='RESERVE'&&!String(input.reason??'').trim())throw Error('RESERVE_REASON_REQUIRED');
     const reviewKey='review:'+encodeURIComponent(JSON.stringify([x.id,input.cellVersion,ctx.actorId,input.decision]));
     const found=await this.repo.getWorkspaceRecord(ctx.tenantId,reviewKey);
-    if(found)return{record:x,review:found}; // idempotent per reviewer/revision/action
+    if(found&&(input.decision==='RESERVE'?x.dissentingActorIds.includes(ctx.actorId):!x.dissentingActorIds.includes(ctx.actorId)))return{record:x,review:found};
     x.membershipId=input.membershipId;x.rubricId=input.rubricId;
     x.baselineCellVersion=input.cellVersion;
     x.selectedValue=String(input.amount);
@@ -118,6 +118,9 @@ export class MeetingLiveConsensusService{
     if(input.decision==='RESERVE'){
       x.state='RESERVE_OPEN';
       x.dissentingActorIds=[...new Set([...x.dissentingActorIds,ctx.actorId])];
+    }else{
+      x.dissentingActorIds=x.dissentingActorIds.filter(actor=>actor!==ctx.actorId);
+      if(x.state==='RESERVE_OPEN'&&!x.dissentingActorIds.length)x.state='COLLECTING';
     }
     const review:WorkspaceRecord={id:reviewKey,tenantId:ctx.tenantId,groupId:input.groupId,
       moduleId:'MEETING.CELL_REVIEW',title:input.decision==='RESERVE'?'Réserve de gestionnaire':'Accord de gestionnaire',
@@ -128,18 +131,24 @@ export class MeetingLiveConsensusService{
       createdBy:ctx.actorId,createdAt:stamp,updatedAt:stamp};
     // The review itself is persisted before the projection notification.
     // No ledger row can be mutated through this path.
-    await this.repo.saveWorkspaceRecord(review);
+    if(!found)await this.repo.saveWorkspaceRecord(review);
     x.version++;x.updatedAt=stamp;
     const projected=await this.save(x,'LIVE_CANONICAL_CELL_'+input.decision);
     if(input.decision==='RESERVE'){
       const caseId='case_cell_reserve_'+encodeURIComponent(JSON.stringify([id,input.cellVersion,ctx.actorId]));
       const currentCases=await this.repo.listCases(ctx.tenantId,ctx.actorId);
+      const reopened=currentCases.find(c=>c.id===caseId&&c.status==='CLOSED');
+      if(reopened)await this.repo.saveCase({...reopened,status:'OPEN'});
       if(!currentCases.some(c=>c.id===caseId))await this.repo.saveCase({
         id:caseId,tenantId:ctx.tenantId,groupId:input.groupId,type:'LIVE_DATA_DIVERGENCE',
         subjectType:'meeting_cell',subjectId:id,status:'OPEN',openedBy:ctx.actorId,openedAt:stamp,
         summary:clean(input.reason)||'Contestation du montant conservé'});
+    }else{
+      const caseId='case_cell_reserve_'+encodeURIComponent(JSON.stringify([id,input.cellVersion,ctx.actorId]));
+      const currentCases=await this.repo.listCases(ctx.tenantId,ctx.actorId),ownCase=currentCases.find(c=>c.id===caseId);
+      if(ownCase&&ownCase.status!=='CLOSED')await this.repo.saveCase({...ownCase,status:'CLOSED'});
     }
-    return{record:projected,review};
+    return{record:projected,review:found??review};
   }
   async get(groupId:string,meetingId:string,cellKey:string){const ctx=this.kernel.context.get(),r=await this.repo.getWorkspaceRecord(ctx.tenantId,idFor(groupId,meetingId,cellKey));return r?parse(r):undefined;}
   async list(groupId:string,meetingId:string){const ctx=this.kernel.context.get();return (await this.repo.listWorkspaceRecords(ctx.tenantId,MODULE,groupId)).map(parse).filter(x=>x.meetingId===meetingId);}

@@ -1,3 +1,4 @@
+import {renderDebtEvolutionTable} from './financial-summary-tables.js';
 import {MeetingSnapshotStore} from './offline-snapshot.js';
 import {openLoanSimulationDialog} from './loan-simulation-ui.js';
 const KIND_LABELS = {
@@ -161,108 +162,13 @@ export const mountCompletionUI=({app,notify,showError,getMembers,getMeetings,get
     for(const [labelText,amount] of [[tr('Capital en cours','Outstanding principal'),totals.outstandingPrincipal],[tr('Intérêts dus','Interest due'),totals.outstandingInterest],[tr('Prochains intérêts projetés','Projected next interest'),totals.nextInterestProjected],[tr('Autres dettes','Other debt'),totals.otherDebt],[tr('Dette totale exigible','Total due debt'),totals.totalDebt],[tr('Dette + prochaine échéance','Debt + next interest'),totals.totalDebtIncludingNextInterest??totals.totalDebt]]){const card=document.createElement('div'),s=document.createElement('span'),strong=document.createElement('strong');s.textContent=labelText;strong.textContent=fmt(Number(amount??0));card.append(s,strong);metrics.append(card);}holder.append(metrics);
     const note=document.createElement('p');note.className='truth-notice';note.textContent=tr('Intérêts dus = déjà exigibles. Prochains intérêts projetés = montant calculé sur le capital restant pour la prochaine période ; il n’est pas ajouté au Ledger tant que la règle du groupe ne le rend pas exigible.','Interest due = already payable. Projected next interest = calculated on outstanding principal for the next period; it is not posted to the Ledger until group policy makes it due.');holder.append(note);
 
-    // One grouped table, four simultaneous criteria for every distinct loan.
-    // Canonical loan periods are used as the only historic source: never
-    // synthesize paid interest, double a repayment or merge separate loans.
+    // Read-only Loan projection: one member label, real loans kept distinct.
+    // A single loan needs no identical member subtotal; multiple loans retain it.
     const recap=document.createElement('section'),recapTitle=document.createElement('h4');
     recapTitle.textContent=tr('Récapitulatif de l’évolution des dettes','Debt evolution recap');
     const recapWrap=document.createElement('div');recapWrap.className='matrix-wrap loan-recap-wrap';
-    const recapTable=document.createElement('table');recapTable.className='meeting-matrix loan-four-criteria-table';
-    const sessionRows=data.meetings??[],periods=data.loanPeriods??[],openLoans=data.loanDebts??[];
-    const sessionOrder=new Map(sessionRows.map((m,i)=>[String(m.id),i]));
-    const definitions=new Map();
-    for(const debt of openLoans)if(debt.loanId)definitions.set(String(debt.loanId),{memberId:String(debt.memberId??''),title:String(debt.title??debt.loanId),open:debt});
-    for(const p of periods)if(p.loanId){
-      const key=String(p.loanId),existing=definitions.get(key);
-      if(!existing)definitions.set(key,{memberId:String(p.memberId??''),title:String(p.loanTitle??key),open:null});
-      else if(!existing.memberId&&p.memberId)existing.memberId=String(p.memberId);
-    }
-    const orderedPeriods=new Map();
-    periods.forEach((p,originalIndex)=>{
-      const key=String(p.loanId??'');
-      if(!definitions.has(key))return;
-      const rows=orderedPeriods.get(key)??[];
-      rows.push({period:p,index:originalIndex,sessionIndex:sessionOrder.get(String(p.meetingId??''))??Number.MAX_SAFE_INTEGER});
-      orderedPeriods.set(key,rows);
-    });
-    for(const rows of orderedPeriods.values())rows.sort((a,b)=>a.sessionIndex-b.sessionIndex||a.index-b.index);
-    const criteria=[
-      [tr('Capital restant','Outstanding principal'),p=>p.principalAfter,'principal'],
-      [tr('Intérêts dus','Interest due'),p=>p.interestAfter,'interest'],
-      [tr('Prochains intérêts projetés','Projected next interest'),p=>p.nextInterestProjected,'projected'],
-      [tr('Total dette exigible','Total due debt'),p=>p.totalDebtAfter,'due']
-    ];
-    const head=document.createElement('thead'),header=document.createElement('tr');
-    for(const name of [tr('Membre','Member'),tr('Prêt','Loan'),tr('Critère','Criterion'),...sessionRows.map(m=>'S'+String(m.session??'')),tr('Situation actuelle','Current')]){
-      const th=document.createElement('th');th.textContent=name;header.append(th);
-    }
-    head.append(header);recapTable.append(head);
-    const body=document.createElement('tbody'),sums=criteria.map(()=>sessionRows.map(()=>0)),latestTotals=criteria.map(()=>0);
-    const sorted=[...definitions.entries()].sort((a,b)=>nameOfMember(a[1].memberId).localeCompare(nameOfMember(b[1].memberId))||String(a[1].memberId??'').localeCompare(String(b[1].memberId??''))||a[0].localeCompare(b[0]));
-    // Derived subtotals are grouped by stable member ID, never by display
-    // name: two people sharing a name must not have their debts merged.
-    let currentMemberKey=null,memberStripe=0;
-    let memberSessions=criteria.map(()=>sessionRows.map(()=>0));
-    let memberLatest=criteria.map(()=>0);
-    const appendMemberTotals=key=>{
-      if(key===null)return;
-      for(let i=0;i<criteria.length;i++){
-        const row=document.createElement('tr');row.className='loan-member-subtotal loan-criterion-'+criteria[i][2];
-        const th=document.createElement('th');th.colSpan=3;
-        th.textContent=tr('SOUS-TOTAL MEMBRE · ','MEMBER SUBTOTAL · ')+nameOfMember(key)+' · '+criteria[i][0];
-        row.append(th);
-        for(const amount of memberSessions[i]){const cell=document.createElement('td');cell.textContent=fmt(amount);row.append(cell);}
-        const now=document.createElement('td');now.textContent=fmt(memberLatest[i]);row.append(now);body.append(row);
-      }
-    };
-    for(const [loanId,def] of sorted){
-      const memberKey=String(def.memberId??'');
-      if(currentMemberKey!==null&&memberKey!==currentMemberKey){
-        appendMemberTotals(currentMemberKey);
-        memberSessions=criteria.map(()=>sessionRows.map(()=>0));memberLatest=criteria.map(()=>0);
-      }
-      if(currentMemberKey!==memberKey)memberStripe++;currentMemberKey=memberKey;
-      const rows=orderedPeriods.get(loanId)??[],progress=sessionRows.map((_,i)=>{
-        let last;for(const row of rows)if(row.sessionIndex<=i)last=row.period;
-        return last;
-      });
-      for(let criterionIndex=0;criterionIndex<criteria.length;criterionIndex++){
-        const [label,selector,kind]=criteria[criterionIndex],row=document.createElement('tr');
-        row.dataset.memberId=memberKey;row.className='loan-criteria-row member-tone-'+(memberStripe%2)+' loan-criterion-'+kind+(criterionIndex===0?' loan-criteria-start':'');
-        if(criterionIndex===0){const memberCell=document.createElement('th'),loanCell=document.createElement('th');
-          memberCell.rowSpan=criteria.length;loanCell.rowSpan=criteria.length;
-          memberCell.className='loan-member-key';loanCell.className='loan-name-key';
-          memberCell.textContent=nameOfMember(def.memberId);loanCell.textContent=def.title;
-          row.append(memberCell,loanCell);
-        }
-        const criterionCell=document.createElement('th');criterionCell.className='loan-criterion-key';criterionCell.textContent=label;row.append(criterionCell);
-        progress.forEach((state,index)=>{
-          const raw=state?Number(selector(state)??0):0,value=Number.isFinite(raw)?raw:0;
-          sums[criterionIndex][index]+=value;memberSessions[criterionIndex][index]+=value;
-          const cell=document.createElement('td');cell.textContent=state?fmt(value):'—';row.append(cell);
-        });
-        const latestState=progress[progress.length-1]??rows[rows.length-1]?.period;
-        let latest=latestState?Number(selector(latestState)??0):0;
-        if(def.open)latest=Number(({
-          principal:def.open.principal,interest:def.open.interest,projected:def.open.nextInterestProjected,due:def.open.totalDue
-        })[kind]??0);
-        if((data.closedLoanIds??[]).includes(loanId))latest=0;latest=Number.isFinite(latest)?latest:0;latestTotals[criterionIndex]+=latest;memberLatest[criterionIndex]+=latest;
-        const currentCell=document.createElement('td');currentCell.textContent=fmt(latest);row.append(currentCell);body.append(row);
-      }
-    }
-    appendMemberTotals(currentMemberKey);
-    for(let i=0;i<criteria.length;i++){
-      const row=document.createElement('tr');row.className='table-total-row loan-criterion-'+criteria[i][2];
-      const label=document.createElement('th');label.colSpan=3;label.textContent=tr('TOTAL GROUPE · ','GROUP TOTAL · ')+criteria[i][0];row.append(label);
-      for(const sum of sums[i]){const cell=document.createElement('td');cell.textContent=fmt(sum);row.append(cell);}
-      const latest=document.createElement('td');latest.textContent=fmt(latestTotals[i]);row.append(latest);body.append(row);
-    }
-    if(!sorted.length){
-      const row=document.createElement('tr'),cell=document.createElement('td');cell.colSpan=4+sessionRows.length;
-      cell.textContent=tr('Aucun prêt ni historique à afficher.','No loans or history to display.');row.append(cell);body.append(row);
-    }
-    recapTable.append(body);recapWrap.append(recapTable);recap.append(recapTitle,recapWrap);holder.append(recap);
-
+    recapWrap.append(renderDebtEvolutionTable(data,{memberName:nameOfMember,fmt,tr}));
+    recap.append(recapTitle,recapWrap);holder.append(recap);
     const current=document.createElement('section'),h=document.createElement('h4');h.textContent=tr('État actuel des prêts ouverts','Current open-loan position');current.append(h);
     const debts=data.loanDebts??[];if(!debts.length){current.append(article(tr('Aucun prêt ouvert','No open loan'),'',''));}else{
       const wrap=document.createElement('div');wrap.className='matrix-wrap';const table=document.createElement('table');table.className='meeting-matrix loan-open-state-table';

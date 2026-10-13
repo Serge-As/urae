@@ -94,10 +94,15 @@ export class Outbox {
   }
 
   private async syncPending(handler: SyncHandler): Promise<OutboxItem[]> {
+    const attempted=new Set<string>();
     // IndexedDB getAll() is ordered by primary key, not business creation time.
     // Always replay the canonical chronological view so dependent operations
     // (cash-in before a later cash-out) survive a cold reload deterministically.
-    for (const current of this.list().filter(x => (x.status === 'PENDING' || x.status === 'FAILED') && x.attempts < 5)) {
+    while(true){
+    const ready=this.list().filter(x => !attempted.has(x.id)&&(x.status === 'PENDING' || x.status === 'FAILED') && x.attempts < 5);
+    if(!ready.length)break;
+    for (const current of ready) {
+      attempted.add(current.id);
       const syncing = { ...current, status: 'SYNCING' as const, attempts: current.attempts + 1, updatedAt: new Date().toISOString() };
       this.items.set(current.id, syncing);
       try {
@@ -107,6 +112,7 @@ export class Outbox {
       } catch (error) {
         this.items.set(current.id, { ...syncing, status: 'FAILED', lastError: error instanceof Error ? error.message : String(error), updatedAt: new Date().toISOString() });
       }
+    }
     }
     return this.list();
   }
@@ -305,6 +311,28 @@ export class IndexedDbReadSnapshotAdapter {
     }finally{db.close();}
   }
 
+  /** Read models only. The comparison and write share one IDB transaction,
+   * including when two tabs receive different cells at the same time. */
+  async saveVersionedCell<T extends {cellVersion:number;projectionSeq:number;amount:number}>(snapshot:Omit<ReadSnapshot<T>,'updatedAt'>):Promise<ReadSnapshot<T>>{
+    if(!Number.isSafeInteger(snapshot.body.cellVersion)||snapshot.body.cellVersion<0||!Number.isSafeInteger(snapshot.body.amount))throw Error('INVALID_FINANCIAL_PROJECTION');
+    const value={...structuredClone(snapshot),updatedAt:new Date().toISOString()};
+    if(!IndexedDbReadSnapshotAdapter.supported())return value;
+    const db=await this.open();let retained:ReadSnapshot<T>=value;
+    try{return await new Promise<ReadSnapshot<T>>((resolve,reject)=>{
+      const tx=db.transaction(READ_STORE,'readwrite'),store=tx.objectStore(READ_STORE),get=store.get(value.id);
+      get.onsuccess=()=>{
+        const old=get.result as ReadSnapshot<T>|undefined;
+        if(old&&(old.actorId!==value.actorId||old.tenantId!==value.tenantId)){tx.abort();reject(Error('PROJECTION_SCOPE_MISMATCH'));return;}
+        const before=old?.body;
+        if(before&&(before.cellVersion>value.body.cellVersion||before.cellVersion===value.body.cellVersion&&Number(before.projectionSeq??0)>Number(value.body.projectionSeq??0))){retained=old!;return;}
+        if(before&&before.cellVersion===value.body.cellVersion&&Number(before.projectionSeq??0)===Number(value.body.projectionSeq??0)&&before.amount!==value.body.amount){tx.abort();reject(Error('CANONICAL_PROJECTION_CONFLICT'));return;}
+        store.put(value);
+      };
+      get.onerror=()=>reject(get.error??Error('INDEXEDDB_READ_FAILED'));
+      tx.oncomplete=()=>resolve(retained);tx.onerror=()=>reject(tx.error??Error('INDEXEDDB_WRITE_FAILED'));tx.onabort=()=>reject(tx.error??Error('INDEXEDDB_WRITE_ABORTED'));
+    });}finally{db.close();}
+  }
+
   async remove(id:string):Promise<void>{
     if(!IndexedDbReadSnapshotAdapter.supported())return;
     const db=await this.open();
@@ -392,6 +420,7 @@ const constantTimeTextEqual=(left:string,right:string):boolean=>{const a=bytesBa
 const normalizeLocalUsername=(value:string):string=>value.trim().toLowerCase();
 
 export class IndexedDbLocalAuthAdapter{
+  constructor(private readonly sessionKey='current'){}
   static supported():boolean{return typeof indexedDB!=='undefined'&&typeof crypto!=='undefined'&&Boolean(crypto.subtle)&&typeof crypto.getRandomValues==='function';}
   private async open():Promise<IDBDatabase>{
     if(!IndexedDbLocalAuthAdapter.supported())throw Error('LOCAL_AUTH_UNAVAILABLE');
@@ -402,7 +431,7 @@ export class IndexedDbLocalAuthAdapter{
     });
   }
   private async currentId(db:IDBDatabase):Promise<string|undefined>{
-    return new Promise((resolve,reject)=>{const request=db.transaction(LOCAL_META_STORE,'readonly').objectStore(LOCAL_META_STORE).get('current');request.onsuccess=()=>resolve(request.result?.value as string|undefined);request.onerror=()=>reject(request.error??new Error('INDEXEDDB_READ_FAILED'));});
+    return new Promise((resolve,reject)=>{const store=db.transaction(LOCAL_META_STORE,'readonly').objectStore(LOCAL_META_STORE),request=store.get(this.sessionKey);request.onsuccess=()=>{if(request.result||this.sessionKey==='current'){resolve(request.result?.value||undefined);return;}const legacy=store.get('current');legacy.onsuccess=()=>resolve(legacy.result?.value||undefined);legacy.onerror=()=>reject(legacy.error??Error('INDEXEDDB_READ_FAILED'));};request.onerror=()=>reject(request.error??new Error('INDEXEDDB_READ_FAILED'));});
   }
   async current():Promise<LocalAccountRecord|undefined>{
     if(!IndexedDbLocalAuthAdapter.supported())return undefined;const db=await this.open();
@@ -418,7 +447,7 @@ export class IndexedDbLocalAuthAdapter{
       if(accounts.some(x=>x.username===username))throw Error('ACCOUNT_UNAVAILABLE');
       const saltBytes=crypto.getRandomValues(new Uint8Array(16)),salt=base64Bytes(saltBytes),iterations=120000;
       const account:LocalAccountRecord={id:'local_user_'+randomHex(16),tenantId:'local_tenant_'+randomHex(16),username,displayName,locale:input.locale==='en'?'en':'fr',createdAt:new Date().toISOString(),registrationState:'LOCAL_PENDING_REGISTRATION',salt,passwordVerifier:await deriveLocalPasswordVerifier(password,salt,iterations),iterations};
-      await new Promise<void>((resolve,reject)=>{const tx=db.transaction([LOCAL_ACCOUNT_STORE,LOCAL_META_STORE],'readwrite');tx.objectStore(LOCAL_ACCOUNT_STORE).put(account);tx.objectStore(LOCAL_META_STORE).put({key:'current',value:account.id});tx.oncomplete=()=>resolve();tx.onerror=()=>reject(tx.error??new Error('INDEXEDDB_WRITE_FAILED'));});
+      await new Promise<void>((resolve,reject)=>{const tx=db.transaction([LOCAL_ACCOUNT_STORE,LOCAL_META_STORE],'readwrite');tx.objectStore(LOCAL_ACCOUNT_STORE).put(account);tx.objectStore(LOCAL_META_STORE).put({key:this.sessionKey,value:account.id});if(this.sessionKey!=='current')tx.objectStore(LOCAL_META_STORE).put({key:'current',value:account.id});tx.oncomplete=()=>resolve();tx.onerror=()=>reject(tx.error??new Error('INDEXEDDB_WRITE_FAILED'));});
       return jsonClone(account);
     }finally{db.close();}
   }
@@ -428,7 +457,7 @@ export class IndexedDbLocalAuthAdapter{
       const accounts=await idbAll<LocalAccountRecord>(db.transaction(LOCAL_ACCOUNT_STORE,'readonly').objectStore(LOCAL_ACCOUNT_STORE)),account=accounts.find(x=>x.username===username);
       const salt=account?.salt??base64Bytes(new Uint8Array(16)),iterations=account?.iterations??120000,actual=await deriveLocalPasswordVerifier(password,salt,iterations);
       if(!account||!constantTimeTextEqual(actual,account.passwordVerifier))throw Error('INVALID_CREDENTIALS');
-      await new Promise<void>((resolve,reject)=>{const tx=db.transaction(LOCAL_META_STORE,'readwrite');tx.objectStore(LOCAL_META_STORE).put({key:'current',value:account.id});tx.oncomplete=()=>resolve();tx.onerror=()=>reject(tx.error??new Error('INDEXEDDB_WRITE_FAILED'));});
+      await new Promise<void>((resolve,reject)=>{const tx=db.transaction(LOCAL_META_STORE,'readwrite');tx.objectStore(LOCAL_META_STORE).put({key:this.sessionKey,value:account.id});if(this.sessionKey!=='current')tx.objectStore(LOCAL_META_STORE).put({key:'current',value:account.id});tx.oncomplete=()=>resolve();tx.onerror=()=>reject(tx.error??new Error('INDEXEDDB_WRITE_FAILED'));});
       return jsonClone(account);
     }finally{db.close();}
   }
@@ -450,20 +479,20 @@ export class IndexedDbLocalAuthAdapter{
         salt,passwordVerifier:await deriveLocalPasswordVerifier(password,salt,iterations),iterations,
         serverActorId:input.serverActorId,serverTenantId:input.serverTenantId,claimedAt:new Date().toISOString()
       };
-      await new Promise<void>((resolve,reject)=>{const tx=db.transaction([LOCAL_ACCOUNT_STORE,LOCAL_META_STORE],'readwrite');tx.objectStore(LOCAL_ACCOUNT_STORE).put(account);tx.objectStore(LOCAL_META_STORE).put({key:'current',value:account.id});tx.oncomplete=()=>resolve();tx.onerror=()=>reject(tx.error??new Error('INDEXEDDB_WRITE_FAILED'));});
+      await new Promise<void>((resolve,reject)=>{const tx=db.transaction([LOCAL_ACCOUNT_STORE,LOCAL_META_STORE],'readwrite');tx.objectStore(LOCAL_ACCOUNT_STORE).put(account);tx.objectStore(LOCAL_META_STORE).put({key:this.sessionKey,value:account.id});if(this.sessionKey!=='current')tx.objectStore(LOCAL_META_STORE).put({key:'current',value:account.id});tx.oncomplete=()=>resolve();tx.onerror=()=>reject(tx.error??new Error('INDEXEDDB_WRITE_FAILED'));});
       return jsonClone(account);
     }finally{db.close();}
   }
   async logout():Promise<void>{
     if(!IndexedDbLocalAuthAdapter.supported())return;const db=await this.open();
-    try{await new Promise<void>((resolve,reject)=>{const tx=db.transaction(LOCAL_META_STORE,'readwrite');tx.objectStore(LOCAL_META_STORE).delete('current');tx.oncomplete=()=>resolve();tx.onerror=()=>reject(tx.error??new Error('INDEXEDDB_DELETE_FAILED'));});}finally{db.close();}
+    try{const own=await this.currentId(db);await new Promise<void>((resolve,reject)=>{const tx=db.transaction(LOCAL_META_STORE,'readwrite'),store=tx.objectStore(LOCAL_META_STORE);store.put({key:this.sessionKey,value:null});if(this.sessionKey!=='current'){const legacy=store.get('current');legacy.onsuccess=()=>{if(legacy.result?.value===own)store.put({key:'current',value:null});};}tx.oncomplete=()=>resolve();tx.onerror=()=>reject(tx.error??new Error('INDEXEDDB_DELETE_FAILED'));});}finally{db.close();}
   }
   async markClaimed(localId:string,server:{id:string;tenantId:string}):Promise<LocalAccountRecord>{
     const db=await this.open();try{
       const current=await new Promise<LocalAccountRecord|undefined>((resolve,reject)=>{const request=db.transaction(LOCAL_ACCOUNT_STORE,'readonly').objectStore(LOCAL_ACCOUNT_STORE).get(localId);request.onsuccess=()=>resolve(request.result as LocalAccountRecord|undefined);request.onerror=()=>reject(request.error??new Error('INDEXEDDB_READ_FAILED'));});
       if(!current)throw Error('LOCAL_ACCOUNT_NOT_FOUND');
       const updated:LocalAccountRecord={...current,registrationState:'SERVER_CLAIMED',serverActorId:server.id,serverTenantId:server.tenantId,claimedAt:new Date().toISOString()};
-      await new Promise<void>((resolve,reject)=>{const tx=db.transaction([LOCAL_ACCOUNT_STORE,LOCAL_META_STORE],'readwrite');tx.objectStore(LOCAL_ACCOUNT_STORE).put(updated);tx.objectStore(LOCAL_META_STORE).put({key:'current',value:localId});tx.oncomplete=()=>resolve();tx.onerror=()=>reject(tx.error??new Error('INDEXEDDB_WRITE_FAILED'));});return jsonClone(updated);
+      await new Promise<void>((resolve,reject)=>{const tx=db.transaction([LOCAL_ACCOUNT_STORE,LOCAL_META_STORE],'readwrite');tx.objectStore(LOCAL_ACCOUNT_STORE).put(updated);tx.objectStore(LOCAL_META_STORE).put({key:this.sessionKey,value:localId});if(this.sessionKey!=='current')tx.objectStore(LOCAL_META_STORE).put({key:'current',value:localId});tx.oncomplete=()=>resolve();tx.onerror=()=>reject(tx.error??new Error('INDEXEDDB_WRITE_FAILED'));});return jsonClone(updated);
     }finally{db.close();}
   }
 }

@@ -1,3 +1,11 @@
+## Reprise intégrée — 13 octobre 2026 : Live, modes et refonte
+
+La source privée candidate54dba6c est réconciliée avec les corrections applicatives réellement servies en production881a3e6. Guide modifié du fondateur appliqué aux synthèses : correction gestionnaire par ligne, réserve membre par ligne. Compilation native Node24 réussie ; dernière suite complète exécutée : **719/719 PASS, zéro skip**. Des modifications de transport postérieures restent à requalifier sur le prochain SHA. Architecture, constitution, mémoire, source coverage et gouvernance PASS.
+
+Implémentation : réception des cellules canonisées persistée avant avancement du curseur ; intentions Outbox ajoutées pendant la synchronisation drainées ; journal Live séquencé/filtré par audience ; choix Réunion/Hors réunion, contrôle1Hz WebSocket uniquement en réunion, synthèse des cotisations/corrections avec notifications120–180s hors réunion ; correction/réserve par ligne. Les flux spécialisés de prêt/remboursement ne sont pas encore prouvés de bout en bout dans la nouvelle synthèse ; ne pas annoncer la totalité des parcours acceptée.
+
+Version source candidate1.5.2.16-live-modes-refonte et caches distincts ; cache production15215 et anciennes lignes de récupération conservés. Refonte importée de préproduction + correctifs UI accessibles ; **recette visuelle authentifiée complète, Chromium/WebKit sur ce SHA, sauvegarde restaurable et déploiement production encore NON ATTESTÉS**. PR72 resteHOLD historique ; PR92 demeure candidate, jamais assimilée à la production. Aucun achat/argent réel, aucune modification de la base de production.
+
 ## Route gratuite préparée — 9 octobre 2026
 
 Le fondateur demande les forfaits gratuits uniquement et la poursuite sans Ubuntu local. Le dossier Codespaces est sauvegardé au commit documentaire **5f34348717fd52836c2f44a92269c2305ff20e00**, sur `evidence/cloud-qualification-20261009-a7c3336` : [procédure](https://github.com/SergeDelor/tontine-platform/blob/5f34348717fd52836c2f44a92269c2305ff20e00/docs/qualification/free-codespaces/README.md). Aucun Codespace n'a été créé ; le calcul/stockage gratuits restants et le blocage des dépenses payantes sont **non vérifiés**. Ne rien démarrer ni activer de budget sur une supposition de disponibilité.

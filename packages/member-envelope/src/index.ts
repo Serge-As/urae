@@ -42,6 +42,38 @@ export class MemberEnvelopeService{
     if(!a.manager&&target.userId!==c.actorId)throw Error('FORBIDDEN_SCOPE');
     return{target,manager:a.manager};
   }
+  /** The same canonical read model serves confrontation and private summaries.
+   * It is not a second accounting engine and it never writes financial data. */
+  async canonicalCells(groupId:Id){
+    const c=this.ctx(),access=await this.access(groupId);
+    const [positions,revisions,events,expenses]=await Promise.all([
+      this.ledger.receiptPositions(c.tenantId,groupId),this.repo.listFinancialCellRevisions(c.tenantId,groupId),
+      this.repo.listWorkspaceRecords(c.tenantId,'FINANCE.SHEET_EVENT',groupId),this.repo.listWorkspaceRecords(c.tenantId,'FINANCE.EXPENSE',groupId)
+    ]);
+    const key=(meetingId:string,membershipId:string,rubricId:string)=>JSON.stringify([meetingId,membershipId,rubricId]);
+    const cells=new Map<string,{meetingId:string;membershipId:string;rubricId:string;amount:number;cellVersion:number;updatedAt:string;actorId?:string;nature?:string}>(),versions=new Map(revisions.map(r=>[key(r.meetingId,r.membershipId,r.rubricId),r]));
+    for(const p of positions){if(!p.meetingId||!p.rubricId)continue;const k=key(p.meetingId,p.membershipId,p.rubricId),old=cells.get(k),r=versions.get(k),at=String(r?.updatedAt??p.receivedAt??'');cells.set(k,{meetingId:p.meetingId,membershipId:p.membershipId,rubricId:p.rubricId,amount:Number(old?.amount??0)+Number(p.netAmount??0),cellVersion:Number(r?.version??0),updatedAt:at>String(old?.updatedAt??'')?at:String(old?.updatedAt??at),actorId:String(p.receivedBy??old?.actorId??''),nature:'CONTRIBUTION'});}
+    for(const r of revisions){const k=key(r.meetingId,r.membershipId,r.rubricId);if(!cells.has(k))cells.set(k,{meetingId:r.meetingId,membershipId:r.membershipId,rubricId:r.rubricId,amount:0,cellVersion:r.version,updatedAt:r.updatedAt,nature:'CONTRIBUTION'});}
+    for(const e of events){const d=e.data,meetingId=String(d.meetingId??''),membershipId=String(d.membershipId??''),rubricId=String(d.rubricId??'');if(!meetingId||!membershipId||!rubricId)continue;const k=key(meetingId,membershipId,rubricId),old=cells.get(k),out=d.direction==='OUT';cells.set(k,{meetingId,membershipId,rubricId,amount:Number(old?.amount??0)+(out?-1:1)*Math.abs(Number(d.amount??0)),cellVersion:Number(old?.cellVersion??0)+1,updatedAt:e.updatedAt??e.createdAt,actorId:e.createdBy,nature:out?'LOAN_OR_OUTFLOW':'REPAYMENT'});}
+    for(const e of expenses){const d=e.data;if(d.scope!=='SHEET'||e.status==='ARCHIVED')continue;const meetingId=String(d.meetingId??''),membershipId=String(d.membershipId??''),rubricId=String(d.rubricId??'');if(!meetingId||!membershipId||!rubricId)continue;const k=key(meetingId,membershipId,rubricId),old=cells.get(k);cells.set(k,{meetingId,membershipId,rubricId,amount:Number(old?.amount??0)-Math.abs(Number(d.amount??0)),cellVersion:Number(old?.cellVersion??0)+1,updatedAt:e.updatedAt??e.createdAt,actorId:e.createdBy,nature:'OUTFLOW'});}
+    const visible=[...cells.values()].filter(x=>access.manager||x.membershipId===access.membership?.id);
+    const watermark=visible.reduce((n,x)=>Math.max(n,Date.parse(x.updatedAt)||0),0);
+    return{cells:visible,watermark,generatedAt:now()};
+  }
+
+  async passageSummary(groupId:Id,meetingId:Id,membershipId:Id,rubricIds:string[]){
+    const c=this.ctx(),{target}=await this.target(groupId,membershipId),meeting=await this.repo.getMeeting(c.tenantId,groupId,meetingId);if(!meeting)throw Error('MEETING_NOT_FOUND');
+    const [projection,allMeetings,rubrics,notices]=await Promise.all([this.canonicalCells(groupId),this.repo.listMeetings(c.tenantId,groupId),this.repo.listRubricDefinitions(c.tenantId,groupId),this.repo.listWorkspaceRecords(c.tenantId,'FINANCE.MEMBER_CONTROL',groupId)]);
+    const ordered=allMeetings.slice().sort((a,b)=>String(a.scheduledAt??a.openedAt).localeCompare(String(b.scheduledAt??b.openedAt))||a.id.localeCompare(b.id)),at=ordered.findIndex(x=>x.id===meetingId),beforeIds=new Set(ordered.slice(0,Math.max(0,at)).map(x=>x.id));
+    const own=projection.cells.filter(x=>x.membershipId===membershipId),byRubric=new Map(rubrics.map(x=>[x.id,x]));
+    const lines=[...new Set(rubricIds)].map(rubricId=>{
+      const rows=own.filter(x=>x.rubricId===rubricId),current=rows.find(x=>x.meetingId===meetingId),before=rows.filter(x=>beforeIds.has(x.meetingId)).reduce((n,x)=>n+x.amount,0),amount=Number(current?.amount??0),r=byRubric.get(rubricId);
+      const controls=notices.filter(x=>x.data.membershipId===membershipId&&x.data.meetingId===meetingId&&x.data.rubricId===rubricId).sort((a,b)=>b.createdAt.localeCompare(a.createdAt));
+      return{rubricId,rubricName:r?.name??rubricId,before,current:amount,total:before+amount,currency:'XAF',cellVersion:Number(current?.cellVersion??0),authorId:current?.actorId??controls[0]?.createdBy??'',noticeId:controls[0]?.id??'',noticeIds:controls.map(x=>x.id),disputeState:String(controls[0]?.data.disputeState??'NO_RESERVE'),nature:current?.nature??'CONTRIBUTION'};
+    });
+    return{groupId,meetingId,meetingTitle:meeting.title,membershipId,userId:target.userId,generatedAt:projection.generatedAt,lines,totals:{before:lines.reduce((n,x)=>n+x.before,0),current:lines.reduce((n,x)=>n+x.current,0),total:lines.reduce((n,x)=>n+x.total,0)},totalMeaning:'SUM_OF_DISPLAYED_MONETARY_FLOWS_NOT_CASH_OR_DEBT_STOCK'};
+  }
+
   async distributionReady(groupId:Id,meetingId:Id){
     const c=this.ctx(),rows=await this.repo.listWorkspaceRecords(c.tenantId,'MEETING.DISTRIBUTION',groupId);
     return rows.some(x=>x.status==='DONE'&&x.data.kind==='MEMBER_DISTRIBUTION_READY'&&x.data.meetingId===meetingId);

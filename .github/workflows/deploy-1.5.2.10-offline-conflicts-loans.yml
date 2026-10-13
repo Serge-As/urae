@@ -20,9 +20,9 @@ env:
   ECO_SYSTEM_ROOT: https://eco-system.sergemimf.workers.dev/
   ECO_SYSTEM_HEALTH: https://eco-system.sergemimf.workers.dev/health
   ECO_SYSTEM_CATALOG: https://eco-system.sergemimf.workers.dev/api/v1/product/capabilities
-  EXPECTED_VERSION: 1.5.2.15-bounded-recovery
-  EXPECTED_BUILD: eco-system-1.5.2.15-20261008-bounded-recovery
-  EXPECTED_CACHE: eco-system-v15215-bounded-recovery-20261008
+  EXPECTED_VERSION: 1.5.2.16-live-modes-refonte
+  EXPECTED_BUILD: eco-system-1.5.2.16-20261013-live-modes-refonte
+  EXPECTED_CACHE: eco-system-v15216-live-modes-refonte-20261013
   MIN_CAPABILITIES: 164
 
 jobs:

@@ -1,3 +1,4 @@
+import {handleWorkDialogs} from './financial-work-mode-helper.mjs';
 import {test,expect} from '@playwright/test';
 
 const base='http://127.0.0.1:4173';
@@ -274,3 +275,5 @@ test('real financial matrix validates click, Enter, closed-session first entry a
   await expect.poll(()=>moneyValue(cell(ids.rubricIds[4],ids.meetingId))).toBe(-700);
   await expect.poll(()=>sheetExpenseTotal(page,{...ids,rubricId:ids.rubricIds[4]})).toBe(700);
 });
+
+test.beforeEach(async({page})=>{await handleWorkDialogs(page);});

@@ -3,14 +3,17 @@ const value=id=>String(document.getElementById(id)?.value??'').trim();
 const row=(label,value)=>{const p=el('p');const b=el('strong',label+' : ');p.append(b,document.createTextNode(String(value??'—')));return p;};
 
 export function mountIdentityLiveUI({app,notify=()=>{},showError=console.error,conservationMode=false}){
-  let socket=null,lastSeq=0,lastSignalAt=0,activeGroup,reconnectTimer=null,reconnectAttempt=0,wantConnection=true,eventQueue=Promise.resolve(),connectPromise=null;
-  const pendingDraftSignals=new Map();
+  let socket=null,lastSeq=0,lastSignalAt=0,activeGroup,activeActor,reconnectTimer=null,reconnectAttempt=0,wantConnection=true,eventQueue=Promise.resolve(),connectPromise=null;
+  const pendingDraftSignals=new Map();let workMode='HORS_REUNION',probeTimer=null;
+  const configureProbe=()=>{clearInterval(probeTimer);probeTimer=null;if(workMode!=='REUNION')return;probeTimer=setInterval(()=>{if(navigator.onLine!==false&&socket?.readyState===WebSocket.OPEN)socket.send(JSON.stringify({type:'SYNC_PROBE',after:lastSeq}));},1000);};
+  window.addEventListener('eco:financial-work-mode',e=>{workMode=e.detail?.mode??'HORS_REUNION';configureProbe();});
+
   const passportRoot=document.getElementById('identityPassport');
   if(!passportRoot)return{refresh:async()=>{},publishSignal:async()=>({accepted:false,reason:'LIVE_UI_UNMOUNTED'}),disconnect:()=>{}};
   const dnaRoot=document.getElementById('conciergeDna'),liveRoot=document.getElementById('premiumLiveStatus'),eventsRoot=document.getElementById('liveEventList'),memoryRoot=document.getElementById('conciergeMemoryList');
 
   const clearTimers=()=>{if(reconnectTimer){clearTimeout(reconnectTimer);reconnectTimer=null;}};
-  const closeSocket=(reason='group-change')=>{clearTimers();try{socket?.close(1000,reason);}catch{}socket=null;};
+  const closeSocket=(reason='group-change')=>{clearTimers();clearInterval(probeTimer);probeTimer=null;try{socket?.close(1000,reason);}catch{}socket=null;};
   const dispatchDurableEvent=event=>{try{window.dispatchEvent(new CustomEvent('eco:live-event',{detail:event}));}catch{}};
   const dispatchEphemeralSignal=signal=>{const at=Date.parse(String(signal?.at??''))||Date.now();lastSignalAt=Math.max(lastSignalAt,at);try{window.dispatchEvent(new CustomEvent('eco:live-signal',{detail:signal}));}catch{}};
   const catchUpSignals=async()=>{if(!app.activeGroup()||!app.liveSignals)return;const data=await app.liveSignals(lastSignalAt),signals=data.signals??[];for(const signal of signals)dispatchEphemeralSignal(signal);lastSignalAt=Math.max(lastSignalAt,Number(data.latestAt??lastSignalAt));};
@@ -18,9 +21,10 @@ export function mountIdentityLiveUI({app,notify=()=>{},showError=console.error,c
     if(!app.activeGroup())return;
     for(let page=0;page<50;page++){
       const before=lastSeq,data=await app.liveEvents(lastSeq,500),events=data.events??[];
-      for(const event of events){if(Number(event.seq??0)>lastSeq){renderEvent(event);dispatchDurableEvent(event);}}
+      for(const event of events){if(Number(event.seq??0)>lastSeq){await app.receiveFinancialLiveEvent?.({...event,groupId:activeGroup});renderEvent(event);dispatchDurableEvent(event);}}
+      lastSeq=Math.max(lastSeq,Number(data.scannedCursor??lastSeq));
       const latest=Number(data.latest??lastSeq);
-      if(!events.length||lastSeq>=latest||lastSeq===before)break;
+      if(data.hasMore===false||lastSeq>=latest||lastSeq===before)break;
     }
   };
   const scheduleReconnect=()=>{
@@ -35,12 +39,13 @@ export function mountIdentityLiveUI({app,notify=()=>{},showError=console.error,c
     if(liveRoot)liveRoot.append(row('Reconnexion','Canal interrompu · reprise automatique dans '+Math.round(backoff/1000)+' s'));
   };
   const renderEvent=event=>{
+    if(event.type==='WORK_MODE_CHANGED'){workMode=event.payload?.mode??'HORS_REUNION';configureProbe();window.dispatchEvent(new CustomEvent('eco:financial-work-mode',{detail:event.payload}));}
     const card=el('article',undefined,'item');
     card.append(row('Événement',event.type),row('Heure',event.at),row('Séquence',event.seq));
     if(event.payload?.operationType)card.append(row('Opération',event.payload.operationType));
     if(event.payload?.amount!==undefined)card.append(row('Montant',new Intl.NumberFormat('fr-CM').format(Number(event.payload.amount))+' '+String(event.payload.currency??'XAF')));
     eventsRoot?.prepend(card);while(eventsRoot?.children.length>12)eventsRoot.lastElementChild?.remove();
-    if(['FINANCIAL_NOTICE','MEMBER_CONTROL','MEMBER_PROJECTION_UPDATED','MEMBER_ENVELOPE_READY','CONSENSUS_SELECTED','MEETING_UPDATE'].includes(event.type)){
+    if(['FINANCIAL_NOTICE','MEMBER_CONTROL','MEMBER_PROJECTION_UPDATED','MEMBER_ENVELOPE_READY','MEMBER_BUNDLE_READY','CONSENSUS_SELECTED','MEETING_UPDATE'].includes(event.type)){
       const detail=event.payload?.selectedValue!==undefined?' · '+String(event.payload.selectedValue):'';
       notify((event.type==='MEMBER_ENVELOPE_READY'?'Votre enveloppe privée de séance est prête':event.type==='MEMBER_PROJECTION_UPDATED'?'Votre situation financière vient d’être mise à jour':'Mise à jour financière en direct')+detail);
       try{window.dispatchEvent(new CustomEvent('eco:financial-live-update',{detail:event}));}catch{}
@@ -51,6 +56,8 @@ export function mountIdentityLiveUI({app,notify=()=>{},showError=console.error,c
   const signalKey=payload=>[payload?.kind??'',payload?.meetingId??'',payload?.membershipId??'',payload?.rubricId??''].join('|');
   const publishSignal=async(type,payload={})=>{
     if(!app.activeGroup())return{accepted:false,reason:'ACTIVE_GROUP_REQUIRED'};
+    const actor=String(app.currentActor?.()??'');
+    if(activeActor&&activeActor!==actor){closeSocket('account-change');lastSeq=0;lastSignalAt=0;pendingDraftSignals.clear();activeActor=actor;}
     if(['FINANCIAL_DRAFT','FINANCIAL_DRAFT_CLEAR'].includes(type))pendingDraftSignals.set(signalKey(payload),{type,payload});
     if(navigator.onLine===false)return{accepted:false,offline:true,queued:['FINANCIAL_DRAFT','FINANCIAL_DRAFT_CLEAR'].includes(type)};
     // A D1 budget block does not close or disable an already authorized live
@@ -68,8 +75,8 @@ export function mountIdentityLiveUI({app,notify=()=>{},showError=console.error,c
     if(connectPromise)return connectPromise;
     if(!wantConnection||!app.activeGroup()||typeof WebSocket==='undefined'||navigator.onLine===false)return Promise.resolve();
     if(socket&&[WebSocket.CONNECTING,WebSocket.OPEN].includes(socket.readyState))return Promise.resolve();
-    const requestedGroup=app.activeGroup();
-    clearTimers();try{socket?.close(1000,'reconnect');}catch{}socket=null;activeGroup=requestedGroup;
+    const requestedGroup=app.activeGroup(),requestedActor=String(app.currentActor?.()??'');
+    clearTimers();try{socket?.close(1000,'reconnect');}catch{}socket=null;activeGroup=requestedGroup;activeActor=requestedActor;
     connectPromise=(async()=>{
       let ticketData;
       try{ticketData=await app.liveTicket?.();}
@@ -79,7 +86,7 @@ export function mountIdentityLiveUI({app,notify=()=>{},showError=console.error,c
         const code=String(e instanceof Error?e.message:e);
         if(code!=='NOT_FOUND'&&code!=='HTTP_404')throw e;
       }
-      if(!wantConnection||navigator.onLine===false||app.activeGroup()!==requestedGroup)return;
+      if(!wantConnection||navigator.onLine===false||app.activeGroup()!==requestedGroup||String(app.currentActor?.()??'')!==requestedActor)return;
       // Legacy authenticated upgrade remains available if ticket issuance is not
       // configured yet; it costs D1 but avoids breaking an older deployment.
       const activeSocket=socket=new WebSocket(app.liveWebSocketUrl(lastSeq,String(ticketData?.ticket??'')));
@@ -98,7 +105,8 @@ export function mountIdentityLiveUI({app,notify=()=>{},showError=console.error,c
         if(socket!==activeSocket)return;
         try{
           const msg=JSON.parse(String(e.data));
-          if(msg.type==='GROUP_LIVE_HELLO'){if(msg.reset)lastSeq=0;return;}
+          if(msg.type==='GROUP_LIVE_HELLO'){if(msg.reset)lastSeq=0;configureProbe();return;}
+          if(msg.type==='GROUP_LIVE_REPLAY_END'){eventQueue=eventQueue.then(async()=>{lastSeq=Math.max(lastSeq,Number(msg.scannedCursor??lastSeq));if(msg.hasMore)await catchUp();}).catch(showError);return;}
           if(msg.type==='GROUP_LIVE_SIGNAL'&&msg.event){dispatchEphemeralSignal(msg.event);return;}
           if(msg.type==='GROUP_LIVE_EVENT'&&msg.event){
             eventQueue=eventQueue.then(async()=>{
@@ -109,8 +117,8 @@ export function mountIdentityLiveUI({app,notify=()=>{},showError=console.error,c
               // WebSocket preserves ordered delivery; on a real disconnect the
               // hub replays only authorized events strictly after lastSeq.
               // Closing here trapped users in a four-retry offline cycle.
-              if(Number.isSafeInteger(seq)&&seq>lastSeq){renderEvent(msg.event);dispatchDurableEvent(msg.event);}
-            }).catch(()=>{});
+              if(Number.isSafeInteger(seq)&&seq>lastSeq){await app.receiveFinancialLiveEvent?.({...msg.event,groupId:requestedGroup});if(app.activeGroup()!==requestedGroup||String(app.currentActor?.()??'')!==requestedActor)return;renderEvent(msg.event);dispatchDurableEvent(msg.event);}
+            }).catch(e=>{showError(e);closeSocket('durable-receive-failed');scheduleReconnect();});
           }
         }catch{}
       };
@@ -161,8 +169,9 @@ export function mountIdentityLiveUI({app,notify=()=>{},showError=console.error,c
 
   const refresh=async()=>{
     const group=app.activeGroup();if(!group){closeSocket();passportRoot.replaceChildren(el('p','Sélectionnez un groupe.','hint'));dnaRoot?.replaceChildren();liveRoot?.replaceChildren();memoryRoot?.replaceChildren();return;}
-    if(activeGroup&&activeGroup!==group){closeSocket();lastSeq=0;lastSignalAt=0;eventsRoot?.replaceChildren();}
-    activeGroup=group;
+    const actor=String(app.currentActor?.()??'');
+    if((activeGroup&&activeGroup!==group)||(activeActor&&activeActor!==actor)){closeSocket();lastSeq=0;lastSignalAt=0;pendingDraftSignals.clear();eventsRoot?.replaceChildren();}
+    activeGroup=group;activeActor=actor;
     // Finance push must not depend on unrelated identity/concierge D1 reads.
     // A quota-limited request must never prevent managers from receiving writes.
     if(conservationMode&&(!socket||socket.readyState>1))connect();

@@ -78,11 +78,11 @@ interface WorkersAILike {
   run?(model:string,input:Record<string,unknown>,options?:Record<string,unknown>):Promise<unknown>;
 }
 
-const RELEASE_VERSION='1.5.2.15-bounded-recovery';
-const RELEASE_BUILD_ID='eco-system-1.5.2.15-20261008-bounded-recovery';
+const RELEASE_VERSION='1.5.2.16-live-modes-refonte';
+const RELEASE_BUILD_ID='eco-system-1.5.2.16-20261013-live-modes-refonte';
 const RELEASE_SCHEMA_VERSION='d1-additive-20260923';
 const RELEASE_POLICY_VERSION='live-finance-policy-20261007-event-push-repayment';
-const RELEASE_PWA_CACHE='eco-system-v15215-bounded-recovery-20261008';
+const RELEASE_PWA_CACHE='eco-system-v15216-live-modes-refonte-20261013';
 
 const defaultRepo = new InMemoryPlatformRepository();
 const defaultReferralBudgets = new InMemoryReferralBudgetStore();
@@ -171,7 +171,7 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
   const url=new URL(request.url); const cors=corsHeaders(request);
   if(request.method==='OPTIONS'){
     const allowed=Boolean((cors as Record<string,string>)['access-control-allow-origin']);
-    return new Response(null,{status:allowed?204:403,headers:{...baseSecurityHeaders,...cors,'access-control-allow-methods':'GET,POST,PUT,DELETE,OPTIONS','access-control-allow-headers':'content-type,x-tenant-id,x-actor-id,x-group-roles,x-active-group-id,x-device-id,x-session-id,x-request-id,x-timezone,x-external-ad-token'}});
+    return new Response(null,{status:allowed?204:403,headers:{...baseSecurityHeaders,...cors,'access-control-allow-methods':'GET,POST,PUT,DELETE,OPTIONS','access-control-allow-headers':'content-type,x-tenant-id,x-actor-id,x-group-roles,x-active-group-id,x-device-id,x-session-id,x-request-id,x-timezone,x-external-ad-token,x-eco-window-id,x-eco-window-adopt-legacy'}});
   }
   const {kernel,foundation,ledger,meetings,discovery,membershipGateway,rubrics,completion,explainability,documents,receivables,treasury,riskFinance,market,community,imports,artifactStore,memberControl,memberEnvelopes,groupIdentity,conciergeLearning,miscRubrics,adManager,partnerAds,externalAds,economicIntelligence,externalPrograms,operationalCockpit,businessStudio,knowledgeAcademy,valueNetwork,creatorTalent,quietWatch}=createRequestScope(request,repo,options.artifacts,options.dataUseDefaultMode??'BETA_OPEN',options.documentAI);
   let ctx=kernel.context.get();
@@ -217,6 +217,9 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
   };
   const publishLive=async(groupId:string,type:string,idempotencyKey:string,payload:Record<string,string|number|boolean|null>,targetUserId?:string)=>{
     if(!options.premiumLive||!options.liveNamespace)return;
+    // Encoded review/notice IDs can exceed the hub's 200-character contract.
+    // Hash the full key, never truncate it (distinct reviews must not collide).
+    if(idempotencyKey.length>200)idempotencyKey='live-sha256:'+await sha256Bytes(new TextEncoder().encode(idempotencyKey).buffer);
     const {stub}=await liveStubFor(groupId);
     const response=await stub.fetch(new Request('https://group-live.internal/publish',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({type,actorId:ctx.actorId,idempotencyKey,payload,targetUserId})}));
     if(!response.ok){
@@ -225,21 +228,37 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
     }
   };
 
+  let financialWorkMetadata:Record<string,unknown>={};
+  const workCall=async(groupId:string,action:string,body:Record<string,unknown>)=>{
+    const {stub}=liveStubFor(groupId);const r=await stub.fetch(new Request('https://group-live.internal/financial-work/'+action,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({...body,tenantId:ctx.tenantId,groupId,actorId:ctx.actorId})}));
+    const result=await r.json() as Record<string,unknown>;if(!r.ok)throw Error(String(result.error??'FINANCIAL_WORK_ERROR'));return result;
+  };
+  const groupNotice=async(groupId:string,notice:any,operationId:string)=>{
+    if(!options.premiumLive||!options.liveNamespace||!notice.meetingId||!notice.rubricId)return false;
+    const {stub}=liveStubFor(groupId),r=await stub.fetch(new Request('https://group-live.internal/financial-work/context?meetingId='+encodeURIComponent(notice.meetingId)));
+    const context=(await r.json() as any).context;if(!context)return false;
+    await workCall(groupId,'operation',{meetingId:notice.meetingId,membershipId:notice.membershipId,userId:notice.userId,operationId,noticeId:notice.id,rubricId:notice.rubricId,commandId:financialWorkMetadata.commandId,passageId:financialWorkMetadata.passageId,deviceId:ctx.deviceId});return true;
+  };
   const dispatchContributionProjection=async(groupId:string,receipt:import('../../../packages/contracts/src/index.js').ContributionReceipt,entry:import('../../../packages/contracts/src/index.js').LedgerEntry)=>{
     const projectionId='financial_projection_'+entry.id,existing=await repo.getWorkspaceRecord(ctx.tenantId,projectionId);
     if(existing?.status==='DONE')return true;
     try{
+      const meeting=receipt.meetingId?await repo.getMeeting(ctx.tenantId,groupId,receipt.meetingId):undefined,closed=meeting?.status==='closed';
+      const entryActor=await actorLabelFor(entry.createdBy).catch(()=>entry.createdBy);
+      // Deliver the committed value before any optional notification work.
+      if(receipt.meetingId&&receipt.rubricId){
+        const cell=await financialCellState(groupId,receipt.meetingId,receipt.membershipId,receipt.rubricId);
+        await publishLive(groupId,'MEETING_UPDATE','financial-cell-managers:'+entry.id,{meetingId:receipt.meetingId,kind:'FINANCIAL_CELL',operationType:'CASH_CONTRIBUTION',membershipId:receipt.membershipId,rubricId:receipt.rubricId,previousAmount:cell.current-receipt.amount.amount,newAmount:cell.current,cellVersion:cell.cellVersion,meetingClosed:Boolean(closed),actorId:entry.createdBy,actorName:entryActor});
+      }
       const positions=await ledger.receiptPositions(ctx.tenantId,groupId);
       const after=positions.filter(p=>p.membershipId===receipt.membershipId).reduce((n,p)=>n+p.netAmount,0);
-      const meeting=receipt.meetingId?await repo.getMeeting(ctx.tenantId,groupId,receipt.meetingId):undefined,closed=meeting?.status==='closed';
       const notice=await memberControl.create({groupId,membershipId:receipt.membershipId,entry,operationType:'CASH_CONTRIBUTION',amount:receipt.amount.amount,currency:receipt.amount.currency,rubricId:receipt.rubricId,meetingId:receipt.meetingId,previousSituation:after-receipt.amount.amount,newSituation:after});
-      const entryActor=await actorLabel(),entryMember=await memberLabel(groupId,receipt.membershipId),entryRubric=receipt.rubricId?await rubricLabel(groupId,receipt.rubricId):'Sans rubrique';
+      const grouped=await groupNotice(groupId,notice,entry.id);
+      const entryMember=await memberLabel(groupId,receipt.membershipId),entryRubric=receipt.rubricId?await rubricLabel(groupId,receipt.rubricId):'Sans rubrique';
+      if(!grouped){
       await notifications.publish(groupId,{title:closed?'Saisie financière après clôture':'Nouvelle saisie financière',message:`${entryActor} a enregistré ${receipt.amount.amount} F CFA pour ${entryMember} · ${entryRubric}${closed?' après clôture de la séance':''}. Vérifiez cette opération.`,channels:['IN_APP','WEB_PUSH'],audience:'SELECTED',selectedMembershipIds:[receipt.membershipId],priority:closed?'CRITICAL':'NORMAL',action:{view:'operations',anchor:'twoSheetWorkspace',meetingId:receipt.meetingId,membershipId:receipt.membershipId,rubricId:receipt.rubricId,label:'Voir la ligne concernée'}});
       // Keep the Live idempotency key deliberately short and stable. The old encoded notice id could exceed the DO limit.
       await publishLive(groupId,'FINANCIAL_NOTICE','financial-notice:'+entry.id,{noticeId:notice.id,ledgerEntryId:notice.ledgerEntryId,operationType:notice.operationType,amount:notice.amount,currency:notice.currency,previousSituation:notice.previousSituation??0,newSituation:notice.newSituation??0,meetingClosed:Boolean(closed),alertLevel:closed?'closed':'open'},notice.userId);
-      if(receipt.meetingId&&receipt.rubricId){
-        const cell=await financialCellState(groupId,receipt.meetingId,receipt.membershipId,receipt.rubricId);
-        await publishLive(groupId,'MEETING_UPDATE','financial-cell-managers:'+entry.id,{meetingId:receipt.meetingId,kind:'FINANCIAL_CELL',operationType:'CASH_CONTRIBUTION',membershipId:receipt.membershipId,rubricId:receipt.rubricId,previousAmount:cell.current-receipt.amount.amount,newAmount:cell.current,cellVersion:cell.cellVersion,meetingClosed:Boolean(closed),actorId:ctx.actorId,actorName:entryActor});
       }
       if(existing)await repo.saveWorkspaceRecord({...existing,status:'DONE',tags:[...new Set(existing.tags.filter(t=>t!=='pending').concat('dispatched'))],data:{...existing.data,attemptCount:Number(existing.data.attemptCount??0)+1,lastError:null,dispatchedAt:new Date().toISOString()},updatedAt:new Date().toISOString()});
       return true;
@@ -304,13 +323,17 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
     try{
       const [entry,meeting,targetMember]=await Promise.all([repo.getLedgerEntry(ctx.tenantId,groupId,entryId),repo.getMeeting(ctx.tenantId,groupId,meetingId),repo.getMembership(ctx.tenantId,groupId,membershipId)]);
       if(!entry||!meeting||!targetMember)throw Error('CORRECTION_PROJECTION_SOURCE_MISSING');
+      const correctionActor=await actorLabelFor(record.createdBy).catch(()=>record.createdBy);
+      await publishLive(groupId,'MEETING_UPDATE','financial-cell-managers:'+entry.id,{meetingId,kind:'FINANCIAL_CELL_CORRECTION',operationType:'FINANCIAL_CELL_CORRECTION',membershipId,rubricId,previousAmount,newAmount,cellVersion:d.cellVersion===undefined?0:Number(d.cellVersion),meetingClosed:meeting.status==='closed',actorId:record.createdBy,actorName:correctionActor});
       const positions=await ledger.receiptPositions(ctx.tenantId,groupId),newSituation=positions.filter(x=>x.membershipId===membershipId).reduce((n,x)=>n+x.netAmount,0),previousSituation=newSituation-(newAmount-previousAmount);
       const notice=await memberControl.create({groupId,membershipId,entry,operationType:'FINANCIAL_CELL_CORRECTION',amount:newAmount,currency:'XAF',rubricId,meetingId,previousSituation,newSituation,previousAmount,newAmount,correctionReason:reason,selfBenefit:targetMember.userId===record.createdBy,requiresIndependentReview:false});
-      const correctionActor=await actorLabelFor(record.createdBy),correctionMember=await memberLabel(groupId,membershipId),correctionRubric=await rubricLabel(groupId,rubricId),meetingWhen=new Intl.DateTimeFormat('fr-FR',{dateStyle:'medium',timeStyle:'short'}).format(new Date(meeting.scheduledAt??meeting.openedAt)),changeWhen=new Intl.DateTimeFormat('fr-FR',{dateStyle:'medium',timeStyle:'short'}).format(new Date(record.createdAt)),action={view:'operations',anchor:'twoSheetWorkspace',meetingId,membershipId,rubricId,label:'Voir la cellule modifiée'};
+      const grouped=await groupNotice(groupId,notice,operationId);
+      const correctionMember=await memberLabel(groupId,membershipId),correctionRubric=await rubricLabel(groupId,rubricId),meetingWhen=new Intl.DateTimeFormat('fr-FR',{dateStyle:'medium',timeStyle:'short'}).format(new Date(meeting.scheduledAt??meeting.openedAt)),changeWhen=new Intl.DateTimeFormat('fr-FR',{dateStyle:'medium',timeStyle:'short'}).format(new Date(record.createdAt)),action={view:'operations',anchor:'twoSheetWorkspace',meetingId,membershipId,rubricId,label:'Voir la cellule modifiée'};
       await notifications.publish(groupId,{title:meeting.status==='closed'?'Séance clôturée modifiée':'Donnée financière corrigée',message:`${correctionMember} · ${correctionRubric} · ${meetingWhen} : ${previousAmount} → ${newAmount} F CFA. Auteur : ${correctionActor}. Modification : ${changeWhen}. Motif : ${reason}`,channels:['IN_APP','WEB_PUSH'],audience:'MANAGERS',priority:meeting.status==='closed'?'CRITICAL':'HIGH',action,idempotencyKey:'financial-correction:'+operationId+':managers'});
+      if(!grouped){
       await notifications.publish(groupId,{title:meeting.status==='closed'?'Votre compte a été corrigé après clôture':'Votre compte a été corrigé',message:`${correctionRubric} · ${meetingWhen} : ${previousAmount} → ${newAmount} F CFA. Auteur : ${correctionActor}. Modification : ${changeWhen}. Motif : ${reason}. Vous pouvez valider ou émettre une réserve.`,channels:['IN_APP','WEB_PUSH'],audience:'SELECTED',selectedMembershipIds:[membershipId],priority:meeting.status==='closed'?'CRITICAL':'HIGH',action,idempotencyKey:'financial-correction:'+operationId+':member'});
       await publishLive(groupId,'FINANCIAL_NOTICE','financial-cell-correction:'+entry.id,{noticeId:notice.id,ledgerEntryId:entry.id,operationType:'FINANCIAL_CELL_CORRECTION',amount:newAmount,currency:'XAF',previousAmount,newAmount,meetingClosed:meeting.status==='closed',alertLevel:meeting.status==='closed'?'closed':'correction'},targetMember.userId);
-      await publishLive(groupId,'MEETING_UPDATE','financial-cell-managers:'+entry.id,{meetingId,kind:'FINANCIAL_CELL_CORRECTION',operationType:'FINANCIAL_CELL_CORRECTION',membershipId,rubricId,previousAmount,newAmount,cellVersion:d.cellVersion===undefined?0:Number(d.cellVersion),meetingClosed:meeting.status==='closed',actorId:record.createdBy,actorName:correctionActor});
+      }
       await repo.saveWorkspaceRecord({...record,status:'DONE',tags:[...new Set(record.tags.filter(t=>!['pending','retry-required'].includes(t)).concat('dispatched'))],data:{...record.data,attemptCount:Number(record.data.attemptCount??0)+1,lastError:null,noticeId:notice.id,dispatchedAt:new Date().toISOString()},updatedAt:new Date().toISOString()});
       return{ok:true,notice};
     }catch(error){
@@ -368,8 +391,13 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
          String(existing.data.membershipId||'')!==input.membershipId||
          String(existing.data.rubricId||'')!==input.rubricId)throw Error('IDEMPOTENCY_CONFLICT');
       const current=await financialCellState(input.groupId,input.meetingId,input.membershipId,input.rubricId);
+      // The financial receipt and its delivery are separate facts. A replay
+      // repairs a lost post-commit push while preserving the original Ledger.
+      const pending=(await repo.listWorkspaceRecords(ctx.tenantId,'FINANCE.CORRECTION_OUTBOX',input.groupId)).filter(r=>r.status==='ACTIVE'&&String(r.data.meetingId)===input.meetingId&&String(r.data.membershipId)===input.membershipId&&String(r.data.rubricId)===input.rubricId&&Number(r.data.cellVersion)===Number(existing.data.cellVersion));
+      let deliveryPending=false;
+      for(const projection of pending)if(!(await dispatchFinancialCorrectionProjection(projection)).ok)deliveryPending=true;
       return{accepted:true,stored:true,replayed:true,status:String(existing.data.status||'RECORDED'),
-        targetAmount:input.targetAmount,canonicalAmount:current.current,cellVersion:current.cellVersion};
+        targetAmount:input.targetAmount,canonicalAmount:current.current,cellVersion:current.cellVersion,deliveryPending};
     }
     const recordReview=async(status:'CLOCK_REVIEW'|'SUPERSEDED',amount:number,version:number)=>{
       const stamp=new Date().toISOString(),receipt:import('../../../packages/contracts/src/index.js').WorkspaceRecord={
@@ -477,10 +505,12 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
       const rubricName=String(rubric.name??'').normalize('NFKD').replace(/[\u0300-\u036f]/g,'').toLowerCase(),
         rubricKind=String(rubric.activityPlan?.kind??'').toUpperCase(),
         rubricSystem=String(rubric.facets?.custom?.systemKey??'').toUpperCase();
-      if(['LOAN','REPAYMENT'].includes(rubricKind)||['LOAN','REPAYMENT'].includes(rubricSystem)||
-        /pret|emprunt|loan|remboursement|repayment/.test(rubricName)||rubric.facets?.direction==='OUTFLOW')
-        throw Error('SPECIALIZED_FINANCIAL_REVIEW_REQUIRED');
-      const current=await financialCellState(groupId,meetingId,membershipId,rubricId),
+      const specialized=['LOAN','REPAYMENT'].includes(rubricKind)||['LOAN','REPAYMENT'].includes(rubricSystem)||
+        /pret|emprunt|loan|remboursement|repayment/.test(rubricName)||rubric.facets?.direction==='OUTFLOW';
+      // Review reads the existing owner's committed projection. It can never
+      // replace a loan/payment or reverse its Ledger entry.
+      const sheet=specialized?await sheetCellState(groupId,{meetingId,membershipId,rubricId}):undefined;
+      const current=sheet?{current:Math.abs(sheet.canonicalAmount),cellVersion:sheet.cellVersion}:await financialCellState(groupId,meetingId,membershipId,rubricId),
         expectedVersion=finite(input.cellVersion,-1),expectedAmount=finite(input.amount,-1);
       if(current.cellVersion!==expectedVersion||current.current!==expectedAmount)throw Error('CELL_REVIEW_STALE');
       const consensus=new MeetingLiveConsensusService(repo,kernel);
@@ -886,6 +916,29 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
       }
       return json({error:'METHOD_NOT_ALLOWED'},405,cors);
     }
+    const bundlesRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/members\/([^/]+)\/financial-bundles$/);
+    if(bundlesRoute&&request.method==='GET'){
+      const groupId=bundlesRoute[1]!,membershipId=bundlesRoute[2]!,group=await requireGroup(groupId),target=await repo.getMembership(ctx.tenantId,groupId,membershipId);
+      if(!target)throw Error('MEMBERSHIP_NOT_FOUND');if(target.userId!==ctx.actorId&&group.createdBy!==ctx.actorId&&!ctx.groupRoles.some(r=>['founder','manager','admin','president','treasurer'].includes(r)))throw Error('FORBIDDEN_SCOPE');
+      const records=await repo.listWorkspaceRecords(ctx.tenantId,'FINANCE.MEMBER_BUNDLE',groupId);
+      return json({items:records.filter(x=>x.data.membershipId===membershipId&&x.data.userId===target.userId).sort((a,b)=>b.createdAt.localeCompare(a.createdAt)).slice(0,30).map(x=>({id:x.id,version:x.data.bundleVersion,partial:Boolean(x.data.partial),createdAt:x.createdAt,snapshot:JSON.parse(String(x.data.snapshotJson))}))},200,cors);
+    }
+    const workRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/meetings\/([^/]+)\/financial-work\/(context|mode|activity|close|pause|summary)$/);
+    if(workRoute){
+      const groupId=workRoute[1]!,meetingId=workRoute[2]!,action=workRoute[3]!;await requireGroup(groupId,action!=='summary');
+      if(!await repo.getMeeting(ctx.tenantId,groupId,meetingId))throw Error('MEETING_NOT_FOUND');
+      if(action==='summary'&&request.method==='GET')return json(await memberEnvelopes.passageSummary(groupId,meetingId,String(url.searchParams.get('membershipId')??''),String(url.searchParams.get('rubricIds')??'').split(',').filter(Boolean)),200,cors);
+      if(action==='context'&&request.method==='GET'){const {stub}=liveStubFor(groupId);return stub.fetch(new Request('https://group-live.internal/financial-work/context?meetingId='+encodeURIComponent(meetingId)));}
+      if(request.method==='POST'){
+        const body=await readJson<Record<string,unknown>>(request);
+        if(action==='close'&&Array.isArray(body.reviewedValues)){
+          const snapshot=await memberEnvelopes.canonicalCells(groupId);
+          for(const v of body.reviewedValues as any[]){const cell=snapshot.cells.find(x=>x.meetingId===meetingId&&x.membershipId===body.membershipId&&x.rubricId===v.rubricId);if(Math.abs(cell?.amount??0)!==Math.abs(Number(v.amount))||Number(cell?.cellVersion??0)!==Number(v.cellVersion??0))throw Error('SYNTHESIS_CHANGED_REVIEW_REQUIRED');}
+        }
+        return json(await workCall(groupId,action,{...body,meetingId}),200,cors);
+      }
+      return json({error:'METHOD_NOT_ALLOWED'},405,cors);
+    }
     const liveSignalsRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/live\/signals$/);
     if(liveSignalsRoute&&request.method==='GET'){
       const groupId=liveSignalsRoute[1]!;if(!options.premiumLive||!options.liveNamespace)return json({enabled:false,error:'PREMIUM_LIVE_LEDGER_DISABLED'},503,cors);await requireGroup(groupId,false);
@@ -906,14 +959,14 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
       if(action==='events'&&request.method==='GET'){
         await requireGroup(groupId,false);
         const after=url.searchParams.get('after')??'0',limit=url.searchParams.get('limit')??'100';
-        return stub.fetch(new Request('https://group-live.internal/events?after='+encodeURIComponent(after)+'&limit='+encodeURIComponent(limit)+'&userId='+encodeURIComponent(ctx.actorId)));
+        return stub.fetch(new Request('https://group-live.internal/events?after='+encodeURIComponent(after)+'&limit='+encodeURIComponent(limit)+'&userId='+encodeURIComponent(ctx.actorId)+'&manager='+(ctx.groupRoles.some(r=>['founder','manager','admin','president','treasurer'].includes(r))?'1':'0')));
       }
       if(action==='connect'&&request.method==='GET'){
         // Signed live tickets are already group-scoped by authenticatedApi.
         // Fallback to the canonical D1 authorization path for legacy clients.
         if(!trustedLiveTicket)await requireGroup(groupId,false);
         const after=url.searchParams.get('after')??'0';
-        return stub.fetch(new Request('https://group-live.internal/connect?userId='+encodeURIComponent(ctx.actorId)+'&after='+encodeURIComponent(after),{method:'GET',headers:request.headers}));
+        return stub.fetch(new Request('https://group-live.internal/connect?userId='+encodeURIComponent(ctx.actorId)+'&after='+encodeURIComponent(after)+'&manager='+(ctx.groupRoles.some(r=>['founder','manager','admin','president','treasurer'].includes(r))?'1':'0'),{method:'GET',headers:request.headers}));
       }
       if(action==='signal'&&request.method==='POST'){
         const body=await readJson<Record<string,unknown>>(request),type=String(body.type??'');
@@ -935,6 +988,7 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
         const raw=body.payload&&typeof body.payload==='object'&&!Array.isArray(body.payload)?body.payload as Record<string,unknown>:{};
         const payload:Record<string,string|number|boolean|null>={};
         for(const [k,v] of Object.entries(raw))if(typeof v==='string'||typeof v==='number'||typeof v==='boolean'||v===null)payload[k]=v;
+        if(type==='MEETING_UPDATE'&&(raw.membershipId||raw.rubricId||raw.newAmount!==undefined||raw.cellVersion!==undefined))throw Error('CANONICAL_FINANCIAL_EVENT_SERVER_ONLY');
         const idempotencyKey=String(body.idempotencyKey??request.headers.get('x-idempotency-key')??makeId('live'));
         await publishLive(groupId,type,idempotencyKey,payload);
         return json({accepted:true,groupCode:groupId},202,cors);
@@ -1888,32 +1942,7 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
     const financialSnapshotRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/financial-cells\/snapshot$/);
     if(financialSnapshotRoute&&request.method==='GET'){
       const groupId=financialSnapshotRoute[1]!;await requireGroup(groupId,false);
-      const [positions,revisions,sheetEvents,sheetExpenses]=await Promise.all([
-        ledger.receiptPositions(ctx.tenantId,groupId),
-        repo.listFinancialCellRevisions(ctx.tenantId,groupId),
-        repo.listWorkspaceRecords(ctx.tenantId,'FINANCE.SHEET_EVENT',groupId),
-        new ExpenseService(repo,kernel,ledger).list(groupId,{scope:'SHEET'}).catch(()=>[])
-      ]);
-      const cells=new Map<string,{meetingId:string;membershipId:string;rubricId:string;amount:number;cellVersion:number;updatedAt:string;actorId?:string;nature?:string}>();
-      const key=(meetingId:string,membershipId:string,rubricId:string)=>JSON.stringify([meetingId,membershipId,rubricId]);
-      const revisionByKey=new Map(revisions.map(r=>[key(r.meetingId,r.membershipId,r.rubricId),r]));
-      for(const p of positions){
-        if(!p.meetingId||!p.rubricId)continue;const k=key(p.meetingId,p.membershipId,p.rubricId),revision=revisionByKey.get(k),old=cells.get(k);
-        const at=String(revision?.updatedAt??p.receivedAt??'');
-        cells.set(k,{meetingId:p.meetingId,membershipId:p.membershipId,rubricId:p.rubricId,amount:Number(old?.amount??0)+Number(p.netAmount??0),cellVersion:Number(revision?.version??0),updatedAt:at>String(old?.updatedAt??'')?at:String(old?.updatedAt??at),actorId:String(p.receivedBy??old?.actorId??''),nature:'CONTRIBUTION'});
-      }
-      for(const r of revisions){const k=key(r.meetingId,r.membershipId,r.rubricId);if(!cells.has(k))cells.set(k,{meetingId:r.meetingId,membershipId:r.membershipId,rubricId:r.rubricId,amount:0,cellVersion:r.version,updatedAt:r.updatedAt,nature:'CONTRIBUTION'});}
-      for(const event of sheetEvents){
-        const meetingId=String(event.data.meetingId??''),membershipId=String(event.data.membershipId??''),rubricId=String(event.data.rubricId??'');if(!meetingId||!membershipId||!rubricId)continue;
-        const direction=String(event.data.direction??'IN'),amount=Number(event.data.amount??0),signed=direction==='OUT'?-Math.abs(amount):Math.abs(amount),k=key(meetingId,membershipId,rubricId),old=cells.get(k);
-        cells.set(k,{meetingId,membershipId,rubricId,amount:Number(old?.amount??0)+signed,cellVersion:Number(old?.cellVersion??0)+1,updatedAt:String(event.updatedAt??event.createdAt??old?.updatedAt??''),actorId:String(event.createdBy??old?.actorId??''),nature:direction==='OUT'?'LOAN_OR_OUTFLOW':'REPAYMENT'});
-      }
-      for(const expense of sheetExpenses){
-        if(!expense.meetingId||!expense.membershipId||!expense.rubricId)continue;const k=key(expense.meetingId,expense.membershipId,expense.rubricId),old=cells.get(k);
-        cells.set(k,{meetingId:expense.meetingId,membershipId:expense.membershipId,rubricId:expense.rubricId,amount:Number(old?.amount??0)-Math.abs(Number(expense.amount??0)),cellVersion:Number(old?.cellVersion??0)+1,updatedAt:String(expense.createdAt??old?.updatedAt??''),actorId:String(expense.createdBy??old?.actorId??''),nature:'OUTFLOW'});
-      }
-      const rows=[...cells.values()],watermark=rows.reduce((m,x)=>String(x.updatedAt??'')>m?String(x.updatedAt):m,'');
-      return json({generatedAt:new Date().toISOString(),watermark,cells:rows},200,cors);
+      return json(await memberEnvelopes.canonicalCells(groupId),200,cors);
     }
     const ledgerRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/ledger$/);
     if(ledgerRoute&&request.method==='GET') return json({summary:await ledger.summary(ctx.tenantId,ledgerRoute[1]!),entries:await repo.listLedgerEntries(ctx.tenantId,ledgerRoute[1]!),receipts:await ledger.receiptPositions(ctx.tenantId,ledgerRoute[1]!),cellRevisions:await repo.listFinancialCellRevisions(ctx.tenantId,ledgerRoute[1]!)},200,cors);
@@ -2942,6 +2971,8 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
 
     if(request.method==='POST'&&url.pathname==='/api/v1/outbox/apply'){
       const item=await readJson<OutboxItem<Record<string,unknown>>>(request); if(item.tenantId!==ctx.tenantId||item.actorId!==ctx.actorId) throw new Error('FORBIDDEN_SCOPE');
+      financialWorkMetadata={...((item.payload.financialWork as Record<string,unknown>)??{}),commandId:item.id};
+      if(item.type==='FINANCIAL_WORK_V1'){const p=item.payload;await requireGroup(String(p.groupId),true);const action=String(p.action);if(!['mode','close','pause','activity'].includes(action))throw Error('FINANCIAL_WORK_ACTION_NOT_ALLOWED');if(!await repo.getMeeting(ctx.tenantId,String(p.groupId),String(p.meetingId)))throw Error('MEETING_NOT_FOUND');if(action==='close'&&Array.isArray(p.reviewedValues)){const snapshot=await memberEnvelopes.canonicalCells(String(p.groupId));for(const v of p.reviewedValues as any[]){const cell=snapshot.cells.find(x=>x.meetingId===p.meetingId&&x.membershipId===p.membershipId&&x.rubricId===v.rubricId);if(Math.abs(cell?.amount??0)!==Math.abs(Number(v.amount)))throw Error('SYNTHESIS_CHANGED_REVIEW_REQUIRED');}}return json({accepted:true,stored:true,result:await workCall(String(p.groupId),action,p)},200,cors);}
       const markerHash=await sha256Bytes(new TextEncoder().encode(JSON.stringify([ctx.tenantId,ctx.actorId,item.idempotencyKey])).buffer);
       const markerId='outbox_applied_'+markerHash,existingMarker=await repo.getWorkspaceRecord(ctx.tenantId,markerId);
       if(existingMarker){

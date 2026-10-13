@@ -12,7 +12,7 @@ const dataFile = process.env.ECO_DATA_FILE ?? '.data/eco-system.sqlite';
 const db = new SQLiteD1(dataFile);db.migrate();
 // Ephemeral signing key: test/development only, generated per process and never persisted.
 const localSignedClockKey=randomBytes(32).toString('base64url');
-const liveNamespace=createLocalLiveNamespace();
+const liveNamespace=createLocalLiveNamespace({DB:db});
 const handleRequest = request => worker.fetch(request,{DB:db,AUTH_LIVE_SIGNING_SECRET:localSignedClockKey,GROUP_LIVE_HUB:liveNamespace,PREMIUM_LIVE_LEDGER:'true'});
 const mime = {
   '.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8',
@@ -43,7 +43,9 @@ const requestHandler = async (req,res) => {
       const host=req.headers.host??`localhost:${currentPort}`;
       const request=new Request(`http://${host}${req.url}`,{method:req.method,headers,body:['GET','HEAD'].includes(req.method??'GET')?undefined:body});
       const response=await handleRequest(request);
-      res.writeHead(response.status,{...Object.fromEntries(response.headers.entries()),...securityHeaders});
+      const responseHeaders={...Object.fromEntries(response.headers.entries()),...securityHeaders};
+      const sessionCookies=response.headers.getSetCookie();if(sessionCookies.length)responseHeaders['set-cookie']=sessionCookies;
+      res.writeHead(response.status,responseHeaders);
       res.end(Buffer.from(await response.arrayBuffer())); return;
     }
     let pathname = new URL(req.url ?? '/', `http://localhost:${currentPort}`).pathname;

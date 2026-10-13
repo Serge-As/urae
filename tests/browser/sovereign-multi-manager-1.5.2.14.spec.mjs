@@ -1,3 +1,4 @@
+import {handleWorkDialogs} from './financial-work-mode-helper.mjs';
 import {mkdir,writeFile} from 'node:fs/promises';
 import path from 'node:path';
 import {test,expect} from '@playwright/test';
@@ -23,7 +24,7 @@ async function setup(page,browser){
   const rubric=await api(page,'/api/v1/groups/'+groupId+'/rubrics','POST',{name:'Secours convergence',facets:{direction:'INFLOW',obligation:'CUSTOM',medium:'CASH',refundability:'CONDITIONAL',replenishment:'CUSTOM',interestMode:'NONE',eligibilityMode:'RULE_BASED'},source:'GROUP_CUSTOM',operatingModel:{ruleRealityStatus:'ALIGNED',targetMode:'OPEN',mandatoryForAbsentees:false,shortfallHandling:'LEAVE_SHORT',payoutMode:'COLLECTED_ONLY',immediateFullPayout:false}},groupId);
   const meeting=await api(page,'/api/v1/groups/'+groupId+'/meetings','POST',{title:'Séance confrontation',scheduledAt:new Date().toISOString()},groupId);
   const invite=await api(page,'/api/v1/groups/'+groupId+'/join-links','POST',{mode:'AUTO_JOIN'},groupId);
-  const secondContext=await browser.newContext(),second=await secondContext.newPage();await second.goto(base);
+  const secondContext=await browser.newContext(),second=await secondContext.newPage();await handleWorkDialogs(second);await second.goto(base);
   await api(second,'/api/v1/auth/register','POST',{username:'manager_'+suffix,password,displayName:'Gestionnaire Beta'});
   const joined=await api(second,'/api/v1/join/redeem','POST',{code:invite.code});
   await api(page,'/api/v1/groups/'+groupId+'/members/'+joined.membershipId+'/lifecycle','PUT',{roles:['manager','member'],status:'active',reason:'Gestionnaire de qualification'},groupId);
@@ -292,3 +293,5 @@ test('server outage while navigator stays online stops idle retries and the dura
     await page.screenshot({path:'test-results/bounded-outage-recovered.png',fullPage:false});
   }finally{await secondContext.close();}
 });
+
+test.beforeEach(async({page})=>{await handleWorkDialogs(page);});

@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 const sessions=fs.readFileSync('apps/web/src/sessions-ui.js','utf8');
-const completion=fs.readFileSync('apps/web/src/completion-ui.js','utf8');
+const completion=fs.readFileSync('apps/web/src/completion-ui.js','utf8')+'\n'+fs.readFileSync('apps/web/src/financial-summary-tables.js','utf8');
 const worker=fs.readFileSync('workers/api/src/index.ts','utf8');
 const html=fs.readFileSync('apps/web/index.html','utf8');
 

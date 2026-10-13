@@ -1,3 +1,4 @@
+import {projectSavingsDeposits,renderSavingsDepositTable} from './financial-summary-tables.js';
 const el=(tag,text,className)=>{const n=document.createElement(tag);if(text!==undefined)n.textContent=text;if(className)n.className=className;return n;};
 const value=id=>String(document.getElementById(id)?.value??'').trim();
 const number=id=>Number(value(id));
@@ -37,43 +38,16 @@ export function mountSavingsYieldUI({app,getMembers,notify=()=>{},showError=cons
     memberSelect.value=depositMemberFilter;memberSelect.onchange=()=>{depositMemberFilter=memberSelect.value;depositPage=0;renderDeposits();};
     const hint=el('small','Dépôts de la simulation manuelle · les dépôts comptabilisés figurent dans les matrices canoniques.','hint');
     filters.append(fundSelect,memberSelect);root.append(hint,filters);
-    const rows=deposits.filter(d=>(depositFundFilter==='ALL'||d.fund===depositFundFilter)&&(depositMemberFilter==='ALL'||String(d.memberId)===depositMemberFilter))
-      .slice().sort((a,b)=>Number(a.session??0)-Number(b.session??0)||String(memberById.get(String(a.memberId))?.displayName??a.memberId).localeCompare(String(memberById.get(String(b.memberId))?.displayName??b.memberId)));
-    const wrap=el('div',undefined,'matrix-wrap');
-    const table=el('table',undefined,'meeting-matrix yield-deposit-detail-table');
-    const head=el('thead'),headRow=el('tr');
-    for(const heading of ['N°','Membre','Rubrique','Séance','Période','Montant (F CFA)','Action'])headRow.append(el('th',heading));
-    head.append(headRow);table.append(head);
-    const body=el('tbody'),size=40,pages=Math.max(1,Math.ceil(rows.length/size));
-    depositPage=Math.min(depositPage,pages-1);
-    const current=rows.slice(depositPage*size,(depositPage+1)*size);
-    for(const d of current){
-      const member=memberById.get(String(d.memberId)),m=months.find(x=>x[0]===d.periodKey);
-      const tr=el('tr');tr.append(
-        el('th',String(member?.memberNumber??'—')),
-        el('th',String(member?.displayName??d.memberId)),
-        el('td',d.fund==='SCHOOL'?'Épargne scolaire':'Épargne classique'),
-        el('td','S'+String(d.session)),
-        el('td',String(m?.[1]??d.periodKey)),
-        el('td',fmt(Number(d.amount??0)),'amount')
-      );
-      const action=el('td',undefined,'table-actions'),remove=el('button','Retirer','link-btn');
-      remove.type='button';remove.setAttribute('aria-label','Retirer le dépôt manuel de '+String(member?.displayName??d.memberId));
-      remove.onclick=()=>{const i=deposits.indexOf(d);if(i!==-1)deposits.splice(i,1);renderDeposits();};
-      action.append(remove);tr.append(action);body.append(tr);
-    }
-    if(!rows.length){const tr=el('tr'),td=el('td','Aucun dépôt pour ce filtre.');td.colSpan=7;tr.append(td);body.append(tr);}
-    const total=el('tr',undefined,'table-total-row'),allTotal=rows.reduce((sum,d)=>sum+Number(d.amount??0),0);
-    const totalLabel=el('th','TOTAL FILTRÉ ('+rows.length+' dépôts)');totalLabel.colSpan=5;
-    const amount=el('td',fmt(allTotal),'amount sum');const empty=el('td','');
-    total.append(totalLabel,amount,empty);body.append(total);table.append(body);wrap.append(table);root.append(wrap);
+    const projection=projectSavingsDeposits({deposits,members,rubricFilter:depositFundFilter,memberFilter:depositMemberFilter});
+    const {table,page,pages}=renderSavingsDepositTable(projection,{fmt,memberPage:depositPage,periodName:key=>months.find(m=>m[0]===key)?.[1]??key,onRemove:d=>{const i=deposits.indexOf(d);if(i!==-1)deposits.splice(i,1);renderDeposits();}});
+    depositPage=page;const wrap=el('div',undefined,'matrix-wrap');wrap.append(table);root.append(wrap);
     if(pages>1){
       const pager=el('div',undefined,'yield-deposit-pager');
       const previous=el('button','← Précédent','secondary');previous.type='button';previous.disabled=depositPage===0;
       previous.onclick=()=>{depositPage--;renderDeposits();};
       const next=el('button','Suivant →','secondary');next.type='button';next.disabled=depositPage>=pages-1;
       next.onclick=()=>{depositPage++;renderDeposits();};
-      pager.append(previous,el('span','Page '+(depositPage+1)+' / '+pages+' · '+rows.length+' dépôts'),next);root.append(pager);
+      pager.append(previous,el('span','Page '+(depositPage+1)+' / '+pages+' · '+projection.members.length+' membres'),next);root.append(pager);
     }
   };
   const renderEvents=()=>{

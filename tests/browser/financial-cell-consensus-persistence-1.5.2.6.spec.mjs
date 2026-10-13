@@ -1,3 +1,4 @@
+import {handleWorkDialogs} from './financial-work-mode-helper.mjs';
 import {test,expect} from '@playwright/test';
 
 const base='http://127.0.0.1:4173';
@@ -263,3 +264,5 @@ test('repayment 2500 syncs event-wise within five seconds and survives reload wi
   await mirrorContext.close();
 });
 
+
+test.beforeEach(async({page})=>{await handleWorkDialogs(page);});
