@@ -124,6 +124,16 @@ try{
       if(event.target?.closest?.('#simulateProjectBtn'))window.__ecoSimulationClickCaptured++;
     },true);
   });
+  console.log('ECO_LAUNCH_HIT_TEST',JSON.stringify(await page.evaluate(()=>{
+    const b=document.getElementById('simulateProjectBtn'),r=b.getBoundingClientRect();
+    const center=document.elementFromPoint(r.left+r.width/2,r.top+r.height/2);
+    const styles=getComputedStyle(b),top=center?getComputedStyle(center):null;
+    return{button:{x:r.x,y:r.y,w:r.width,h:r.height,pointerEvents:styles.pointerEvents},
+      centerHit:{id:center?.id,tag:center?.tagName,classes:center?.className,
+        pointerEvents:top?.pointerEvents},centerInsideButton:center===b||b.contains(center),
+      back:document.getElementById('appBackBtn')?.getBoundingClientRect().toJSON(),
+      activeElement:document.activeElement?.id};
+  })));
   console.log('ECO_LAUNCH_BEFORE_CLICK',JSON.stringify(await page.evaluate(()=>{
     const button=document.getElementById('simulateProjectBtn');
     const fieldset=button?.closest('fieldset');
@@ -140,6 +150,21 @@ try{
     buttonDisabled:document.getElementById('simulateProjectBtn')?.disabled,
     clickObserved:window.__ecoSimulationClickCaptured??0
   }))));
+  // Diagnostic-only: browser-native .click() proves whether an obscured
+  // pointer or an unbound handler caused the failure. This MUST NOT turn a
+  // failed human pointer click into a passing acceptance test.
+  const pointerObserved=await page.evaluate(()=>window.__ecoSimulationClickCaptured??0);
+  if(pointerObserved===0){
+    await page.evaluate(()=>document.getElementById('simulateProjectBtn')?.click());
+    await page.waitForTimeout(800);
+    console.log('ECO_LAUNCH_DOM_CLICK_DIAGNOSTIC',JSON.stringify(await page.evaluate(()=>({
+      clickObserved:window.__ecoSimulationClickCaptured??0,
+      localState:document.getElementById('simulationResult')?.dataset.simulationStatus,
+      localText:document.getElementById('simulationResult')?.textContent?.slice(0,300),
+      status:document.getElementById('errorBox')?.textContent?.slice(0,260)
+    }))));
+    throw Error('REAL_POINTER_CLICK_NOT_OBSERVED; DOM click executed for diagnosis only');
+  }
   // A remote Cloudflare D1 cold start can take longer than a fixed delay.
   // Wait for the canonical output OR a real error; do not invent a failure
   // solely because an asynchronous request has not returned after 2.5 sec.
