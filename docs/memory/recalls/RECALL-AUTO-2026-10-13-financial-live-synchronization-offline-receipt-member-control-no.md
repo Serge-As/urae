@@ -151,3 +151,6 @@ Terms élargis: confrontation, control, financial, live, manager, meeting, membe
 
 ## Gate
 Ce rapport est un index de rappel, pas une décision métier. Toute contradiction doit être rapprochée avec la Constitution, l'état réel du code, les CIR/ADR et les tests avant implémentation.
+
+## Rappel de sous-lot : affichage et confrontation
+Sources relues : apps/web/src/main.js (état cellule et reviewOfflineFinancialBacklog), packages/application/src/index.ts (pendingFinancialCellTargets et previewOfflineFinancialConfrontation). Ledger reste inchangé. Une intention CLOCK_REVIEW doit rester contrôlable et non sendable ; la nouvelle intention après confirmation explicite aura sa propre date. La dernière recette a prouvé le Live mais pas encore fermé ses deux écarts UI. Aucun PASS futur n'est présumé.

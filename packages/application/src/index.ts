@@ -1356,7 +1356,7 @@ export class ConnectedApplication {
     return this.outbox.list().filter(item=>{
       const payload=item.payload as Record<string,unknown>,businessStatus=String(item.lastResult?.status??'');
       return item.tenantId===this.tenantId&&item.actorId===this.actorId&&['FINANCIAL_CELL_CORRECTION_PROPOSAL_V1','FINANCIAL_CELL_CORRECTION_PROPOSAL_V2'].includes(item.type)&&
-        String(payload.groupId??'')===this.activeGroupId&&!['CONFLICT','CANCELLED'].includes(item.status)&&
+        String(payload.groupId??'')===this.activeGroupId&&item.status!=='CANCELLED'&&(item.status!=='CONFLICT'||businessStatus==='CLOCK_REVIEW')&&
         (item.status!=='CONFIRMED'||businessStatus==='CONSENSUS_REQUIRED');
     }).map(item=>{
       const payload=item.payload as Record<string,unknown>;

@@ -720,9 +720,9 @@ const traceFinancialCell=(type,detail={})=>{
 const exactCellPendingState=(membershipId,rubricId,meetingId)=>{
     const key=financialCellKey(membershipId,rubricId,meetingId),review=financialReviewTargets.get(key);
     if(review)return{pending:true,status:'REVIEW_REQUIRED',kind:'REVIEW',targetAmount:Number(review.targetAmount??0)};
-    const correction=financialPendingTargets.get(key);
+    const correction=financialPendingTargets.get(key)??(app.pendingFinancialCellTargets?.()??[]).find(x=>x.membershipId===membershipId&&x.rubricId===rubricId&&x.meetingId===meetingId);
     if(correction){
-      const review=String(correction.businessStatus??'')==='CONSENSUS_REQUIRED',relay=String(correction.source??'')==='RELAY';
+      const review=['CONSENSUS_REQUIRED','CLOCK_REVIEW'].includes(String(correction.businessStatus??'')),relay=String(correction.source??'')==='RELAY';
       return{pending:true,status:review?'REVIEW_REQUIRED':correction.status,kind:review?'REVIEW':relay?'RELAY':'CORRECTION',targetAmount:Number(correction.targetAmount??0),sourceActorId:String(correction.sourceActorId??'')};
     }
     const specialized=financialPendingSheetEntries.find(x=>x.membershipId===membershipId&&x.rubricId===rubricId&&x.meetingId===meetingId);
@@ -747,7 +747,7 @@ const exactCellAmount=(membershipId,rubricId,meetingId)=>{
       // A locally queued target is the working projection until synchronization.
       // Once the server ACK says CONSENSUS_REQUIRED, the canonical Ledger value
       // remains visible and the target is rendered separately as “Proposé”.
-      if(pending&&!['CONSENSUS_REQUIRED','REMOTE_DIVERGENCE'].includes(String(pending.businessStatus??''))&&Number.isSafeInteger(Number(pending.targetAmount))&&Number(pending.targetAmount)>=0)return Number(pending.targetAmount);
+      if(pending&&!['CONSENSUS_REQUIRED','REMOTE_DIVERGENCE','CLOCK_REVIEW'].includes(String(pending.businessStatus??''))&&Number.isSafeInteger(Number(pending.targetAmount))&&Number(pending.targetAmount)>=0)return Number(pending.targetAmount);
       canonical=exactCellRows(membershipId,rubricId,meetingId).reduce((n,x)=>n+Number(x.netAmount??0),0);
     }
     const streamed=financialDurableProjections.get(cellKey),snapshotVersion=Number(financialSnapshotCellVersions.get(JSON.stringify([meetingId,membershipId,rubricId,'XAF']))??0);
@@ -1008,7 +1008,8 @@ const reviewOfflineFinancialBacklog=async(force=false)=>{
   // No remote change since this device's baseline = no conflict to arbitrate.
   // Sync automatically; only real concurrent divergence opens the confrontation
   // dialog. This keeps reconnect under five seconds without hiding conflicts.
-  if(preview.rows.every(row=>row.sameAmount||!row.serverChangedSinceBaseline))return true;
+  const clockReview=pending.some(x=>x.status==='CONFLICT'&&x.businessStatus==='CLOCK_REVIEW');
+  if(!force&&!clockReview&&preview.rows.every(row=>row.sameAmount||!row.serverChangedSinceBaseline))return true;
   for(const row of preview.rows)if(!row.sameAmount&&row.serverChangedSinceBaseline)markCriticalFinancialConflict({...row,amount:row.localAmount});
   const reviewGroup=String(app.activeGroup());
   const decision=await showOfflineFinancialConfrontation(preview);
@@ -1146,7 +1147,13 @@ const submitFinancialCellElement=async validate=>{
     holder.classList.remove('is-conflict');holder.dataset.submitting='1';
     const nature=financialNatureForRubric(rubric),signedCurrent=exactCellAmount(membershipId,rubricId,meetingId),current=Math.abs(signedCurrent),previousIcon=validate.textContent;
     let target=Number.NaN,optimisticStaged=false;
-    const setCellState=(state,message='')=>{holder.dataset.saveState=state;holder.classList.toggle('is-failed',state==='FAILED');holder.classList.toggle('is-confirmed',state==='CONFIRMED');stateLine.hidden=!message;stateLine.textContent=message;};
+    const setCellState=(state,message='')=>{
+      const selector=financialLiveSelector({meetingId,membershipId,rubricId}),cells=new Set([holder,...document.querySelectorAll(selector)]);
+      for(const cell of cells){
+        cell.dataset.saveState=state;cell.classList.toggle('is-failed',state==='FAILED');cell.classList.toggle('is-confirmed',state==='CONFIRMED');
+        const line=cell.querySelector('.cell-save-state')??document.createElement('small');line.className='cell-save-state';line.setAttribute('aria-live','polite');line.hidden=!message;line.textContent=message;if(!line.isConnected)cell.append(line);
+      }
+    };
     traceFinancialCell('CELL_SUBMIT_INVOKED',{cellKey,membershipId,rubricId,meetingId,inputValue:input.value,current,nature});
     try{
       clearFail();
