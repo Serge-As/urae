@@ -73,3 +73,15 @@ test('join-link membership remains selectable only after canonical scoped access
   assert.deepEqual(restricted.map(g=>g.id),['owned']);
   assert.ok(!restricted.some(g=>g.id==='private'));
 });
+
+test('personal cockpit exposes a full membership-scoped association picker with canonical group opening',()=>{
+  const personal=fs.readFileSync('apps/web/src/personal-cockpit-ui.js','utf8');
+  const main=fs.readFileSync('apps/web/src/main.js','utf8');
+  assert.match(personal,/personal-group-picker/);
+  assert.match(personal,/for\(const group of forumGroups\)/);
+  assert.match(personal,/openGroupWorkspace\?\.\(groupPicker\.value\)/);
+  assert.match(main,/openGroupWorkspace:async groupId=>/);
+  assert.match(main,/const mine=await app\.listMyGroups\(\)/);
+  assert.match(main,/app\.selectGroup\(groupId\);\s*await refreshGroupContext\(\)/);
+  assert.doesNotMatch(personal,/forumGroups\.slice\(0,\s*\d+\).*personal-group-picker/);
+});
