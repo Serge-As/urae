@@ -51,7 +51,7 @@ export class FoundationApplication {
   reconcileCashbox(input:{openingCash:number;cashIn:number;cashOut:number;countedClosing:number}):{snapshot:CashboxSnapshot;reconciliation:{status:string;variance:number}}{const snapshot=this.service.cashbox.close(input);const r=this.kernel.reconciliation.compare(snapshot.theoreticalClosing,snapshot.countedClosing);return{snapshot,reconciliation:{status:r.status,variance:r.variance}};}
   async queueDemoIntent(note='Local demo update'):Promise<OutboxItem>{const item=this.outbox.enqueue({tenantId:this.tenantId,actorId:this.actorId,type:'MEETING_NOTE_UPDATED',payload:{activeGroupId:this.activeGroupId,note},idempotencyKey:`demo-${this.activeGroupId??'none'}-${new Date().toISOString().slice(0,16)}`});await this.persistOutbox();return item;}
   async syncOutbox():Promise<OutboxItem[]>{const result=await this.outbox.sync(async item=>({ok:(await this.relay.send(envelopeForOutbox('web-demo',item))).accepted}));await this.persistOutbox();return result;}
-  private async persistOutbox():Promise<void>{if(!IndexedDbOutboxAdapter.supported())return;try{await this.outboxStorage.save(this.outbox.list());}catch{}}
+  private async persistOutbox():Promise<void>{if(!IndexedDbOutboxAdapter.supported())return;try{await this.outboxStorage.save(this.outbox.durableItems());}catch{}}
   outboxItems():OutboxItem[]{return this.outbox.list();}
   productModules(){return structuredClone(PRODUCT_MODULES);}
   kernelServices():readonly string[]{return KERNEL_SERVICE_IDS;}
@@ -328,6 +328,7 @@ export class ConnectedApplication {
     const passage=this.financialWorkPassages.get(JSON.stringify([this.actorId,this.activeGroupId,payload.meetingId,payload.membershipId]));if(passage&&type!=='FINANCIAL_WORK_V1')payload={...payload,financialWork:{passageId:passage.passageId,mode:passage.mode}};
     payload={...payload,recordedOffline:payload.recordedOffline??(this.isOffline()||this.transportUnavailableUntil>Date.now())};
     let item=this.outbox.enqueue({tenantId:this.tenantId,actorId:this.actorId,type,payload,idempotencyKey});
+    this.outbox.holdUntilDurable(item.id);
     const financialTarget=['FINANCIAL_CELL_CORRECTION_PROPOSAL_V1','FINANCIAL_CELL_CORRECTION_PROPOSAL_V2'].includes(type);
     if(financialTarget){
       try{
@@ -339,7 +340,7 @@ export class ConnectedApplication {
         this.outbox.discardUncommitted(item.id);
         throw Error('DURABLE_STORAGE_REQUIRED',{cause:error});
       }
-    }else try{await this.persistOutbox();}catch(error){this.outbox.discardUncommitted(item.id);throw Error('DURABLE_STORAGE_REQUIRED',{cause:error});}
+    }else try{if(!IndexedDbOutboxAdapter.supported())throw Error('DURABLE_STORAGE_REQUIRED');await this.outboxStorage.save([item]);this.outbox.releaseAfterDurable(item.id);}catch(error){this.outbox.discardUncommitted(item.id);throw Error('DURABLE_STORAGE_REQUIRED',{cause:error});}
     const groupId=String(payload.groupId??this.activeGroupId??'');
     // The financial command already has an atomic, durable journal inside the
     // Outbox database. A best-effort sovereign mirror must not turn a committed
@@ -2416,7 +2417,7 @@ export class ConnectedApplication {
   async queueDemoIntent(note='Local note'):Promise<OutboxItem>{const item=this.outbox.enqueue({tenantId:this.tenantId,actorId:this.actorId,type:'MEETING_NOTE_UPDATED',payload:{groupId:this.activeGroupId,note},idempotencyKey:`note-${this.activeGroupId??'none'}-${Date.now()}`});await this.persistOutbox();return item;}
   async retryOutboxItem(id:string):Promise<OutboxItem|undefined>{const item=this.outbox.retry(id);await this.persistOutbox();return item;}
   async cancelOutboxItem(id:string):Promise<OutboxItem|undefined>{const item=this.outbox.cancel(id);await this.persistOutbox();return item;}
-  private async persistOutbox(){if(!IndexedDbOutboxAdapter.supported())throw Error('DURABLE_STORAGE_REQUIRED');try{await this.outboxStorage.save(this.outbox.list());}catch{throw Error('DURABLE_STORAGE_REQUIRED');}}
+  private async persistOutbox(){if(!IndexedDbOutboxAdapter.supported())throw Error('DURABLE_STORAGE_REQUIRED');try{await this.outboxStorage.save(this.outbox.durableItems());}catch{throw Error('DURABLE_STORAGE_REQUIRED');}}
   outboxItems():OutboxItem[]{return this.outbox.list();}
 
   productModules(){return structuredClone(PRODUCT_MODULES);}

@@ -65,7 +65,7 @@ try{
   const ci=await run('npm',['run','ci'],'Dependency audit, TypeScript, governance and all Node regressions');
   const nodeTests=finalCount(ci,/\btests (\d+)/g),nodePass=finalCount(ci,/\bpass (\d+)/g);
   report.node={tests:nodeTests,passed:nodePass};
-  if(nodeTests!==720||nodePass!==720)throw Error('Expected 720 Node tests; review the exact summary instead of assuming success.');
+  if(nodeTests!==722||nodePass!==722)throw Error('Expected 722 Node tests; review the exact summary instead of assuming success.');
   if(!process.argv.includes('--skip-browser-install'))await run('npx',['playwright','install','--with-deps','chromium','webkit'],'Install the locked Chromium and WebKit browsers');
   // Each qualification has its own disposable SQLite database. Production and
   // any existing local .data/eco-system.sqlite are never opened by this runner.

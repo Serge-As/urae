@@ -2942,6 +2942,7 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
     if(workspaceRoute&&request.method==='PUT'){
       const existing=await repo.getWorkspaceRecord(ctx.tenantId,workspaceRoute[1]!); if(!existing)return json({error:'NOT_FOUND'},404,cors);
       if(!await visibleWorkspace(existing))throw Error('FORBIDDEN_SCOPE');
+      if(existing.moduleId==='FINANCE.MEMBER_BUNDLE')throw Error('IMMUTABLE_FINANCIAL_SNAPSHOT');
       const body=await readJson<Record<string,unknown>>(request);
       const status=String(body.status??existing.status) as WorkspaceStatus; if(!['DRAFT','ACTIVE','DONE','ARCHIVED'].includes(status)) throw new Error('INVALID_WORKSPACE_STATUS');
       const rawData=body.data&&typeof body.data==='object'&&!Array.isArray(body.data)?body.data as Record<string,unknown>:existing.data;

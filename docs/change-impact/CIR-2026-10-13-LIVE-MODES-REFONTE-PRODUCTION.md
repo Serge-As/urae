@@ -28,3 +28,7 @@ Reproduire le défaut avant/après ; tester vrais services/SQLite, stockage navi
 
 ## État
 IN_PROGRESS — compilation/correction/recette/déploiement non encore attestés. Innovations expérimentales du guide conservées derrière qualification ; elles ne remplacent pas les garanties de base.
+
+## Sous-lot : barrière avant transport
+
+Après 720 tests natifs verts, la recette Chromiumce631534 termine6PASS2FAIL : CLOCK_REVIEW avec ancre mais sans séquence. Cause reproduite avant correction : le drainage observe une commande encore en préparation IndexedDB. Réutilisation Outbox/IndexedDbOutboxAdapter, aucune nouvelle vérité financière. Commandes préparées visibles localement mais inéligibles au transport et aux sauvegardes génériques jusqu'au commit ; adoption du paquet durable et relecture au drainage. Test rouge puis vert, suite722/722PASS. PUT générique des synthèses livrées interdit et testé. Navigateurs exacts/backup réelle/publication encore à prouver.

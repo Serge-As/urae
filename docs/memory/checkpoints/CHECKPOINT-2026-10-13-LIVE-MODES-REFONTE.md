@@ -1,3 +1,9 @@
+## Barrière de durabilité — correction reproduite et qualifiée
+
+Au SHAce631534 : gouvernance native PASS, Chromium6/8PASS ; deux FAIL, zéro skip, pas de livraison. Le diagnostic sélectionné montrait CLOCK_REVIEW avec une ancre présente mais sans deviceSequence. Un test natif de concurrence reproduit l'envoi d'une intention avant la fin de recordFinancialCellIntent (FAIL1!==0 avant correction).
+
+Correction : Outbox expose les commandes en préparation uniquement à la projection locale ; elles sont exclues du drainage et de persistOutbox jusqu'au commit. Le marqueur est libéré après la vraie transaction IndexedDB ; le drainer relit la commande canonisée. Les modes/non-financiers sont persistés individuellement, sans sauvegarder une intention financière non préparée. Régression vérifiée et suite complète **722/722 PASS, zéro skip**. Un second test interdit la réécriture d'une synthèse financière livrée via PUT/workspaces. Le prochain SHA doit encore réussir les navigateurs ; aucun déploiement production attesté.
+
 ## Complément qualifié — 13 octobre 2026
 
 Suite native complète : **720/720 PASS, aucun skip** ; le test ajouté lie les décaissements et remboursements à leurs véritables écritures et notices, sans doubler la finance. Synthèses spécialisées raccordées, reprise événementielle des projections non diffusées. Sauvegarde read-only avant livraison préparée : export D1, restauration SQLite avec integrity/FK check, archive source, dépôt privé R2 et relecture/hash ; **aucune sauvegarde de production exécutée ou prétendue à ce stade**. Validateur testé sur un exemple synthétique sain et un SQL invalide rejeté.

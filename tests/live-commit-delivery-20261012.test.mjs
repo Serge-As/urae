@@ -57,3 +57,9 @@ test('replaying an acknowledged V2 command repairs an interrupted push without a
   assert.deepEqual(await x.repo.listLedgerEntries(x.ids.tenant,x.ids.group),before);
   assert.equal(x.events().filter(e=>e.type==='MEETING_UPDATE'&&e.payload.newAmount===2000).length,1,'lost commit push must be replayed, not abandoned after the HTTP acknowledgement');
 });
+
+test('generic workspace editing cannot rewrite an already delivered private financial snapshot',async()=>{
+ const x=await fixture(),at=new Date().toISOString(),record={id:'synthetic-frozen-bundle',tenantId:x.ids.tenant,groupId:x.ids.group,moduleId:'FINANCE.MEMBER_BUNDLE',title:'Frozen summary',status:'DONE',tags:['member-bundle'],data:{snapshotJson:'{"amount":1000}'},createdBy:x.ids.actor,createdAt:at,updatedAt:at};await x.repo.saveWorkspaceRecord(record);
+ const response=await createApiHandler(x.repo)(new Request('https://eco.test/api/v1/workspaces/'+record.id,{method:'PUT',headers:{'content-type':'application/json','x-tenant-id':x.ids.tenant,'x-actor-id':x.ids.actor,'x-group-roles':'manager'},body:JSON.stringify({data:{snapshotJson:'{"amount":9999}'}})}));
+ assert.equal((await response.json()).error,'IMMUTABLE_FINANCIAL_SNAPSHOT');assert.deepEqual(await x.repo.getWorkspaceRecord(x.ids.tenant,record.id),record);
+});

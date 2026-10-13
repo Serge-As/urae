@@ -24,6 +24,7 @@ export class Outbox {
   private items = new Map<Id, OutboxItem>();
   private byKey = new Map<string, Id>();
   private syncing?: Promise<OutboxItem[]>;
+  private awaitingDurability=new Set<string>();
   private scopeKey(tenantId:Id,actorId:Id,key:string):string{return JSON.stringify([tenantId,actorId,key]);}
 
   enqueue<T>(input: { tenantId: Id; actorId: Id; type: string; payload: T; idempotencyKey: string }): OutboxItem<T> {
@@ -37,7 +38,7 @@ export class Outbox {
   }
 
   restore(items: OutboxItem[]): void {
-    this.items.clear(); this.byKey.clear();
+    this.items.clear(); this.byKey.clear();this.awaitingDurability.clear();
     for (const item of items) {
       if (!item.id || !item.idempotencyKey || !item.tenantId || !item.actorId) continue;
       const safe: OutboxItem = { ...structuredClone(item), status: item.status === 'SYNCING' ? 'PENDING' : item.status };
@@ -46,18 +47,22 @@ export class Outbox {
   }
 
   list(): OutboxItem[] { return [...this.items.values()].sort((a,b)=>a.createdAt.localeCompare(b.createdAt)).map(x => structuredClone(x)); }
+  /** The item is visible locally, but no transport may observe it until commit. */
+  holdUntilDurable(id:string):void{if(this.items.has(id))this.awaitingDurability.add(id);}
+  releaseAfterDurable(id:string):void{this.awaitingDurability.delete(id);}
+  durableItems():OutboxItem[]{return this.list().filter(x=>!this.awaitingDurability.has(x.id));}
   /** Mirrors a single IndexedDB transaction already committed with this id. */
   discardUncommitted(id:string):void{
     const item=this.items.get(id);if(!item)return;
     if(item.status!=='PENDING')throw Error('OUTBOX_DISCARD_NON_PENDING');
-    this.items.delete(id);
+    this.items.delete(id);this.awaitingDurability.delete(id);
     this.byKey.delete(this.scopeKey(item.tenantId,item.actorId,item.idempotencyKey));
   }
   adoptDurable(item:OutboxItem):void{
     const current=this.items.get(item.id);
     if(!current||this.scopeKey(current.tenantId,current.actorId,current.idempotencyKey)!==
       this.scopeKey(item.tenantId,item.actorId,item.idempotencyKey))throw Error('OUTBOX_DURABLE_IDENTITY_MISMATCH');
-    this.items.set(item.id,structuredClone(item));
+    this.items.set(item.id,structuredClone(item));this.awaitingDurability.delete(item.id);
   }
 
   markConfirmedByKey(tenantId:Id,actorId:Id,idempotencyKey:string):OutboxItem|undefined{
@@ -99,9 +104,11 @@ export class Outbox {
     // Always replay the canonical chronological view so dependent operations
     // (cash-in before a later cash-out) survive a cold reload deterministically.
     while(true){
-    const ready=this.list().filter(x => !attempted.has(x.id)&&(x.status === 'PENDING' || x.status === 'FAILED') && x.attempts < 5);
+    const ready=this.list().filter(x => !attempted.has(x.id)&&!this.awaitingDurability.has(x.id)&&(x.status === 'PENDING' || x.status === 'FAILED') && x.attempts < 5);
     if(!ready.length)break;
-    for (const current of ready) {
+    for (const candidate of ready) {
+      const current=this.items.get(candidate.id);
+      if(!current||this.awaitingDurability.has(current.id)||!['PENDING','FAILED'].includes(current.status))continue;
       attempted.add(current.id);
       const syncing = { ...current, status: 'SYNCING' as const, attempts: current.attempts + 1, updatedAt: new Date().toISOString() };
       this.items.set(current.id, syncing);

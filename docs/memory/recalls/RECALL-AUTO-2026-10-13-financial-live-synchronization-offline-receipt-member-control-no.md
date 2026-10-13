@@ -16,30 +16,30 @@ Terms élargis: confrontation, control, financial, live, manager, meeting, membe
   - 317: "repo:packages/discovery MembershipGatewayService",
   - 320: "note": "Cross-tenant application and canonical membership approval path locally verified.",
   - 321: "next": "Add invitations, custom application questions, portfolio and referrals without duplicating membership engine.",
-- **docs/memory/CURRENT_TRUTH.md** — score 93; concepts: financial, live, offline, member, control, manager, confrontation, meeting, modes, visual
-  - 5: Le contrôleur préparé réutilise le qualificateur canonique sur la candidate a7 gelée, commence par un véritable échange WebKit et le QR Chromium inchangés, puis lance la qualification complète une seule fois après succès. Il publiera les rapports réels dans un
-  - 13: Le SDK attend les formats BarcodeDetector et l'image avant son timer de scan de 10 secondes ; **la cause du timeout Windows reste non prouvée**. Le nouvel exécuteur Cloud s'est déconnecté avant de créer un processus (409 environment_offline) : QR ciblé et comp
-  - 17: **HOLD, aucune archive qualifiée ni publication.** Dernière production attestée 1.5.2.14-live-sync, FIELD_ACCEPTED=NOT_ACCEPTED, realMoneyEnabled=false ; D1/R2 existants. Aucun achat ni nouveau runner Actions, aucun crédit de réinitialisation utilisé. Les bloc
-  - 25: Candidate de travail : **a7c333699dad0d70cf0de8e2f8a841a00396d0d7**, branche fix/confrontation-clock-recovery-20261008, PR72 draft. Dernière qualification produit complète exécutée : **9bad483, total FAIL : 657 Node et Chromium 8/8 PASS ; WebKit Windows 4 PASS
-  - 27: Le travail Cloud autorisé existe : conversation 6ac8c4bf-9a24-83ea-b166-c176d065fba7, exécuteur 01a12040-ce4c-73b1-8bbe-6e42bfeab048. Linux/Node 24.19.0, accès de lecture privé et démarrage réel de Chromium/WebKit Playwright 1.56.1 sont confirmés ; WebKit expo
-- **PROJECT_STATE.md** — score 67; concepts: financial, live, offline, member, control, notifications, manager, confrontation, meeting, visual
-  - 5: Le contrôleur préparé réutilise le qualificateur canonique sur la candidate a7 gelée, commence par un véritable échange WebKit et le QR Chromium inchangés, puis lance la qualification complète une seule fois après succès. Il publiera les rapports réels dans un
-  - 13: Le SDK attend les formats BarcodeDetector et l'image avant son timer de scan de 10 secondes ; **la cause du timeout Windows reste non prouvée**. Le nouvel exécuteur Cloud s'est déconnecté avant de créer un processus (409 environment_offline) : QR ciblé et comp
-  - 17: **HOLD, aucune archive qualifiée ni publication.** Dernière production attestée 1.5.2.14-live-sync, FIELD_ACCEPTED=NOT_ACCEPTED, realMoneyEnabled=false ; D1/R2 existants. Aucun achat ni nouveau runner Actions, aucun crédit de réinitialisation utilisé. Les bloc
-  - 25: Candidate de travail : **a7c333699dad0d70cf0de8e2f8a841a00396d0d7**, branche fix/confrontation-clock-recovery-20261008, PR72 draft. Dernière qualification produit complète exécutée : **9bad483, total FAIL : 657 Node et Chromium 8/8 PASS ; WebKit Windows 4 PASS
-  - 27: Le travail Cloud autorisé existe : conversation 6ac8c4bf-9a24-83ea-b166-c176d065fba7, exécuteur 01a12040-ce4c-73b1-8bbe-6e42bfeab048. Linux/Node 24.19.0, accès de lecture privé et démarrage réel de Chromium/WebKit Playwright 1.56.1 sont confirmés ; WebKit expo
+- **docs/memory/CURRENT_TRUTH.md** — score 99; concepts: financial, live, offline, member, control, notifications, manager, confrontation, meeting, modes, visual, refonte
+  - 7: ## Reprise intégrée — 13 octobre 2026 : Live, modes et refonte
+  - 11: Implémentation : réception des cellules canonisées persistée avant avancement du curseur ; intentions Outbox ajoutées pendant la synchronisation drainées ; journal Live séquencé/filtré par audience ; choix Réunion/Hors réunion, contrôle1Hz WebSocket uniquement
+  - 13: Version source candidate1.5.2.16-live-modes-refonte et caches distincts ; cache production15215 et anciennes lignes de récupération conservés. Refonte importée de préproduction + correctifs UI accessibles ; **recette visuelle authentifiée complète, Chromium/We
+  - 19: Le contrôleur préparé réutilise le qualificateur canonique sur la candidate a7 gelée, commence par un véritable échange WebKit et le QR Chromium inchangés, puis lance la qualification complète une seule fois après succès. Il publiera les rapports réels dans un
+  - 27: Le SDK attend les formats BarcodeDetector et l'image avant son timer de scan de 10 secondes ; **la cause du timeout Windows reste non prouvée**. Le nouvel exécuteur Cloud s'est déconnecté avant de créer un processus (409 environment_offline) : QR ciblé et comp
+- **PROJECT_STATE.md** — score 74; concepts: financial, live, offline, member, control, notifications, manager, confrontation, meeting, modes, visual, refonte
+  - 7: ## Reprise intégrée — 13 octobre 2026 : Live, modes et refonte
+  - 11: Implémentation : réception des cellules canonisées persistée avant avancement du curseur ; intentions Outbox ajoutées pendant la synchronisation drainées ; journal Live séquencé/filtré par audience ; choix Réunion/Hors réunion, contrôle1Hz WebSocket uniquement
+  - 13: Version source candidate1.5.2.16-live-modes-refonte et caches distincts ; cache production15215 et anciennes lignes de récupération conservés. Refonte importée de préproduction + correctifs UI accessibles ; **recette visuelle authentifiée complète, Chromium/We
+  - 19: Le contrôleur préparé réutilise le qualificateur canonique sur la candidate a7 gelée, commence par un véritable échange WebKit et le QR Chromium inchangés, puis lance la qualification complète une seule fois après succès. Il publiera les rapports réels dans un
+  - 27: Le SDK attend les formats BarcodeDetector et l'image avant son timer de scan de 10 secondes ; **la cause du timeout Windows reste non prouvée**. Le nouvel exécuteur Cloud s'est déconnecté avant de créer un processus (409 environment_offline) : QR ciblé et comp
+- **NEXT_RUN.md** — score 66; concepts: financial, live, offline, control, notifications, confrontation, meeting, modes, visual, refonte
+  - 7: ## Reprise intégrée — 13 octobre 2026 : Live, modes et refonte
+  - 11: Implémentation : réception des cellules canonisées persistée avant avancement du curseur ; intentions Outbox ajoutées pendant la synchronisation drainées ; journal Live séquencé/filtré par audience ; choix Réunion/Hors réunion, contrôle1Hz WebSocket uniquement
+  - 13: Version source candidate1.5.2.16-live-modes-refonte et caches distincts ; cache production15215 et anciennes lignes de récupération conservés. Refonte importée de préproduction + correctifs UI accessibles ; **recette visuelle authentifiée complète, Chromium/We
+  - 19: Le contrôleur préparé réutilise le qualificateur canonique sur la candidate a7 gelée, commence par un véritable échange WebKit et le QR Chromium inchangés, puis lance la qualification complète une seule fois après succès. Il publiera les rapports réels dans un
+  - 27: Le SDK attend les formats BarcodeDetector et l'image avant son timer de scan de 10 secondes ; **la cause du timeout Windows reste non prouvée**. Le nouvel exécuteur Cloud s'est déconnecté avant de créer un processus (409 environment_offline) : QR ciblé et comp
 - **docs/memory/MASTER_CAPABILITY_INDEX.json** — score 60; concepts: financial, offline, member, control, notifications, manager, meeting, modes, refonte
   - 236: "summary": "Ne jamais supprimer une fonctionnalité historique simplement parce qu’elle complique une refonte ; d’abord vérifier si elle est encore voulue, puis documenter explicitement son remplacement.",
   - 326: "summary": "L’automatisation doit réduire les tâches répétitives, pas retirer le contrôle aux responsables élus.",
   - 828: "id": "OFFLINE_PENDING",
   - 835: "status": "Proposer résolution contrôlée",
   - 926: "summary": "MEMBER_INVITED : enregistrer actor, tenant, target, timestamp, request_id, résultat, motif si sensible, sans secret.",
-- **NEXT_RUN.md** — score 59; concepts: financial, live, offline, control, confrontation, meeting, visual
-  - 5: Le contrôleur préparé réutilise le qualificateur canonique sur la candidate a7 gelée, commence par un véritable échange WebKit et le QR Chromium inchangés, puis lance la qualification complète une seule fois après succès. Il publiera les rapports réels dans un
-  - 13: Le SDK attend les formats BarcodeDetector et l'image avant son timer de scan de 10 secondes ; **la cause du timeout Windows reste non prouvée**. Le nouvel exécuteur Cloud s'est déconnecté avant de créer un processus (409 environment_offline) : QR ciblé et comp
-  - 17: **HOLD, aucune archive qualifiée ni publication.** Dernière production attestée 1.5.2.14-live-sync, FIELD_ACCEPTED=NOT_ACCEPTED, realMoneyEnabled=false ; D1/R2 existants. Aucun achat ni nouveau runner Actions, aucun crédit de réinitialisation utilisé. Les bloc
-  - 25: Candidate de travail : **a7c333699dad0d70cf0de8e2f8a841a00396d0d7**, branche fix/confrontation-clock-recovery-20261008, PR72 draft. Dernière qualification produit complète exécutée : **9bad483, total FAIL : 657 Node et Chromium 8/8 PASS ; WebKit Windows 4 PASS
-  - 27: Le travail Cloud autorisé existe : conversation 6ac8c4bf-9a24-83ea-b166-c176d065fba7, exécuteur 01a12040-ce4c-73b1-8bbe-6e42bfeab048. Linux/Node 24.19.0, accès de lecture privé et démarrage réel de Chromium/WebKit Playwright 1.56.1 sont confirmés ; WebKit expo
 - **docs/constitution/ECO_SYSTEM_Cahier_des_Charges_Maitre_Exhaustif_3.2.0_2026-09-16.md** — score 49; concepts: live, offline, receipt, member, control, notifications, manager, meeting, modes, visual
   - 6: Production stable au début de cette édition : `1.3.2-savings-control-forum-live`
   - 12: > La 3.2.0 **n'abrège pas** la sauvegarde exhaustive 2.3.4. La 2.3.4 reste le socle constitutionnel intégral : mémoire, taxonomie, rubriques, terrain, architecture organique, garde-fous, Service Solidarity Protocol, Discovery, Forum, Marketplace, AdManager, ON
@@ -112,6 +112,12 @@ Terms élargis: confrontation, control, financial, live, manager, meeting, membe
   - 23: - **WebKit 4 PASS / 2 FAIL (1,4 min)**. QR decoder, assets offline, rechargement origine arrêtée et override Recap passent. DataChannel échoue avec ECO_LOCAL_ROOM_WEBRTC_UNAVAILABLE ; callback A01 s'arrête sur Partager le signal désactivé. Le guard ecoLocalRoo
   - 27: Source métier inchangé après cette exécution ; le prochain checkpoint ajoute uniquement la vérité de reprise. HOLD, PR72 draft, FIELD_ACCEPTED=NOT_ACCEPTED et realMoneyEnabled=false maintenus. Production dernière attestée 1.5.2.14-live-sync. L'absence d'API RT
   - 35: The d9 targeted two-manager diagnostic passes with unchanged five-second convergence assertions. Its safe network trace also contains repeated raw expense GETs on both pages. This is a separate observed defect; the original e083 latency failure is retained and
+- **docs/memory/checkpoints/CHECKPOINT-2026-10-13-LIVE-MODES-REFONTE.md** — score 12; concepts: financial, live, control, notifications, modes, refonte
+  - 3: Au SHAce631534 : gouvernance native PASS, Chromium6/8PASS ; deux FAIL, zéro skip, pas de livraison. Le diagnostic sélectionné montrait CLOCK_REVIEW avec une ancre présente mais sans deviceSequence. Un test natif de concurrence reproduit l'envoi d'une intention
+  - 5: Correction : Outbox expose les commandes en préparation uniquement à la projection locale ; elles sont exclues du drainage et de persistOutbox jusqu'au commit. Le marqueur est libéré après la vraie transaction IndexedDB ; le drainer relit la commande canonisée
+  - 13: ## Reprise intégrée — 13 octobre 2026 : Live, modes et refonte
+  - 17: Implémentation : réception des cellules canonisées persistée avant avancement du curseur ; intentions Outbox ajoutées pendant la synchronisation drainées ; journal Live séquencé/filtré par audience ; choix Réunion/Hors réunion, contrôle1Hz WebSocket uniquement
+  - 19: Version source candidate1.5.2.16-live-modes-refonte et caches distincts ; cache production15215 et anciennes lignes de récupération conservés. Refonte importée de préproduction + correctifs UI accessibles ; **recette visuelle authentifiée complète, Chromium/We
 - **docs/memory/recalls/RECALL-2026-10-09-EXPENSE-RECAP-OBSERVER.md** — score 12; concepts: live, offline, control, confrontation
   - 21: - **Chromium 8/8 PASS (4,3 min)** : shell/offline/mobile, prêts/politiques, remboursement 2 500, deux gestionnaires, confrontation 4 000/5 000 et panne API bornée.
   - 22: - Live : 1 000 / 2 001 / 2 002 reçus sur l'autre écran en **1 486 / 2 040 / 1 862 ms**, limites cinq secondes inchangées. **19 requêtes sur les endpoints instrumentés** (pas toutes les requêtes réseau), dont cinq lectures dépenses pendant le parcours et **zéro
@@ -142,12 +148,6 @@ Terms élargis: confrontation, control, financial, live, manager, meeting, membe
   - 16: Source instrumentée à exécuter : ad075a733f37326e80a0979bc866158ea74f442f, branche fix/confrontation-clock-recovery-20261008, PR #72 brouillon.
   - 17: `scripts/diagnose-live-sync-locally.mjs` reconstruit ce checkout propre, utilise uniquement des données synthétiques dans une nouvelle SQLite et exécute une fois le seul scénario Live concerné. Sorties en direct, zéro réinstallation npm/navigateurs. Horaires/A
   - 23: Publication HOLD-failed-confrontation-qualification maintenue. Dernière production attestée 1.5.2.14-live-sync d027f09a1382cd29054b33e274f3fd3bf9f8d9f3 ; Worker 98d720dd-6364-436e-9a00-38809e4a3925. D1 eco-system-db et R2 eco-system-backups conservés. realMone
-- **docs/change-impact/CIR-2026-09-11-cahier-app-1.1.md** — score 7; concepts: offline, control, meeting, refonte
-  - 17: - Meeting Command Center cartes + matrice ;
-  - 22: - design mobile/desktop, Mode Ultra Simple et grands contrôles ;
-  - 27: Aucune suppression ni refonte de données. Aucun nouveau D1. Aucune migration destructive. Les mêmes services et `eco-system-db` sont réutilisés.
-  - 29: ## Risques / contrôles
-  - 32: - Régression offline : shell mis en cache, navigation réseau d'abord puis fallback offline.
 
 ## Gate
 Ce rapport est un index de rappel, pas une décision métier. Toute contradiction doit être rapprochée avec la Constitution, l'état réel du code, les CIR/ADR et les tests avant implémentation.

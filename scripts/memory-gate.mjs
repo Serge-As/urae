@@ -1,5 +1,5 @@
 import { execFileSync } from 'node:child_process';
-const run=(args)=>{try{return execFileSync('git',args,{encoding:'utf8'}).trim();}catch{return '';}};
+const run=(args)=>{try{return execFileSync('git',args,{encoding:'utf8'}).trimEnd();}catch{return '';}};
 const changed=new Set();
 const status=run(['status','--porcelain','--untracked-files=all']);
 for(const line of status.split(/\r?\n/).filter(Boolean)){const p=line.slice(3).trim().replace(/^"|"$/g,''); if(p) changed.add(p);}
