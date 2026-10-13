@@ -1155,6 +1155,10 @@ const submitFinancialCellElement=async validate=>{
       target=Number(raw);
       if(!Number.isSafeInteger(target)||target<0)throw new Error('INVALID_CONTRIBUTION_AMOUNT');
       if(!await ensureFinancialWorkUI().before(meetingId,membershipId,rubricId)){setCellState('IDLE');return;}
+      // A window/account handover can invalidate the early group clock warm-up.
+      // Reuse a valid anchor, or obtain one before recording a new online intent.
+      // Existing offline intentions and their original timestamps are never rewritten.
+      await app.warmFinancialClock?.();
       setCellState('SAVING_LOCAL',tx('Enregistrement…','Saving…'));
       traceFinancialCell('CELL_SUBMIT',{cellKey,membershipId,rubricId,meetingId,target,current,nature});
       if(target===current&&nature!=='CONTRIBUTION'){

@@ -126,7 +126,7 @@ async function attachLiveSyncTiming(testInfo,ids,page,second,stop,timeline,resul
   const summary={result:output.result,thresholdMs:output.thresholdMs,canonicalCell:output.canonicalCell,totalRequests:requests.length,
     requestsByPageAndPath:[...grouped].sort((a,b)=>b[1]-a[1]).map(([path,count])=>({path,count})),
     syncDelays,idleExpenseReads,alpha:{display:output.alpha.display,saveState:output.alpha.saveState},beta:{display:output.beta.display,saveState:output.beta.saveState},
-    alphaOutbox:Array.isArray(output.alphaOutbox)?output.alphaOutbox.map(row=>({status:row.status,attempts:row.attempts,targetAmount:row.payload.targetAmount})):output.alphaOutbox,
+    alphaOutbox:Array.isArray(output.alphaOutbox)?output.alphaOutbox.map(row=>({status:row.status,attempts:row.attempts,targetAmount:row.payload.targetAmount,error:row.lastError,businessStatus:row.lastResult?.status,hasClockAnchor:row.payload?.hasClockAnchor,deviceSequence:row.payload?.deviceSequence})):output.alphaOutbox,
     betaOutbox:Array.isArray(output.betaOutbox)?output.betaOutbox.map(row=>({status:row.status,attempts:row.attempts,targetAmount:row.payload.targetAmount})):output.betaOutbox};
   // Keep complete selected-field evidence, but put a short summary in the terminal.
   // A shallow native Node path avoids PowerShell recursion through long artifact names.

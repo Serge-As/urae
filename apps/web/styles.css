@@ -1535,3 +1535,7 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{ou
 .matrix-cell-entry.is-critical-conflict{border:2px solid #b42318;background:#fff1ee}.matrix-cell-entry .cell-current{font-variant-numeric:tabular-nums}.matrix-cell-entry .cell-validate{min-height:44px;min-width:44px}
 @media(max-width:600px){.eco-work-dialog{padding:16px;border-radius:16px}.eco-work-actions button{width:100%}.eco-work-toolbar{padding:12px}.eco-work-toolbar button{flex:1}.eco-work-summary th,.eco-work-summary td{padding:10px}}
 @media(prefers-reduced-motion:reduce){.matrix-cell-entry.is-critical-conflict{animation:none!important}}
+
+/* Financial columns remain readable on a phone; scroll lives inside the sheet. */
+.canonical-financial-wrap{min-width:0;max-width:100%;overflow:auto}
+.canonical-financial-wrap .canonical-financial-matrix{min-width:640px;width:100%;table-layout:auto}
