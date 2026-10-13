@@ -37,7 +37,7 @@
 <header class="topbar">
     <div class="brand">
       <div class="logo">E</div>
-      <div><strong>Eco-System</strong><small>Plateforme Tontines · Associations · Communautés</small><span class="version-badge">ECO-SYSTEM · 1.5.2.15</span></div>
+      <div><strong>Eco-System</strong><small>Plateforme Tontines · Associations · Communautés</small><span class="version-badge">ECO-SYSTEM · 1.5.2.15</span><span id="previewEnvBadge" class="preview-env-badge" hidden>PRÉPRODUCTION · données de test séparées</span></div>
     </div>
     <div class="top-context">
       <select id="activeGroupSelect" aria-label="Groupe actif"><option value="">Aucun groupe actif</option></select>
@@ -60,6 +60,7 @@
       <span class="nav-caption">Mon espace</span>
       <button data-view="dashboard" class="nav-btn active"><span>⌂</span><b>Accueil</b></button>
       <button data-view="inbox" class="nav-btn"><span>✉</span><b>À faire</b></button>
+      <button id="myAssociationsNavBtn" type="button" data-view="dashboard" data-anchor="personalCockpitPanel" class="nav-btn"><span>▣</span><b>Mes associations</b></button>
       <span class="nav-caption">Groupes</span>
       <button data-view="discovery" class="nav-btn"><span>⌕</span><b>Découvrir</b></button>
       <button data-view="launch" class="nav-btn"><span>＋</span><b>Créer / intégrer</b></button>
