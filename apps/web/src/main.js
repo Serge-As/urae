@@ -72,6 +72,11 @@ import { mountOpportunityGraphUI } from './opportunity-graph-ui.js';
 let uiLocale = 'fr';
 try { uiLocale = localStorage.getItem('tontine.locale') === 'en' ? 'en' : 'fr'; } catch {}
 const tx = (fr,en) => runtimeTranslate(uiLocale,fr,en);
+// Make the isolated preview unmistakable. The production title/version and
+// financial conflict banners are untouched; this is a visual truth label.
+const previewEnvironment=location.hostname==='eco-system-refonte-preview.sergemimf.workers.dev';
+const previewBadge=document.getElementById('previewEnvBadge');
+if(previewBadge)previewBadge.hidden=!previewEnvironment;
 const app = new ConnectedApplication({ locale: uiLocale });
 captureRuntimeI18n(document);
 applyRuntimeLocale(uiLocale);
