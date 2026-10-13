@@ -48,11 +48,11 @@ test('client keeps all verified groups and their canonical tenant mapping withou
 test('creation opens real group immediately, with optional Kit not blocking group context',()=>{
   const ui=fs.readFileSync('apps/web/src/main.js','utf8');
   const client=fs.readFileSync('packages/application/src/index.ts','utf8');
-  assert.match(ui,/groups = await app\.listAccessibleGroups\(\)/);
+  assert.match(ui,/groups = await app\.listGroups\(\)/);
   assert.match(ui,/await renderGroups\(\);\s*renderActiveGroup\(\);\s*renderGroupSelector\(\);\s*go\('operations'/);
   assert.match(ui,/void launchStudio\.persistStarterKit\?\.\(group\.id\)\.catch/);
   assert.match(ui,/void refreshGroupContext\(\)\.catch\(fail\)/);
-  assert.match(client,/const groups=await this\.listAccessibleGroups\(\)/);
+  assert.match(client,/const groups=await this\.listGroups\(\)/);
   assert.match(client,/path==='\/api\/v1\/groups\/mine'/);
   assert.doesNotMatch(ui,/groups = await app\.listGroups\(\);\s*const root = \$\('#groupsList'\)/);
 });
