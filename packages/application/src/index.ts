@@ -905,10 +905,26 @@ export class ConnectedApplication {
   async listGroups():Promise<Group[]>{const all=await this.request<Group[]>('/api/v1/groups');this.groupTenants=new Map(all.map(g=>[g.id,g.tenantId]));return all.filter(g=>g.status!=='archived');}
   /** Personal views must use server-verified memberships, not the broader tenant group catalogue. */
   async listMyGroups():Promise<Group[]>{
-    const rows=await this.request<Group[]>('/api/v1/groups/mine');
+    let rows:Group[];
+    try{rows=await this.request<Group[]>('/api/v1/groups/mine');}
+    catch(error){
+      if(!(error instanceof Error)||error.message!=='NETWORK_UNAVAILABLE')throw error;
+      // First offline session after an offline-created group can predate the
+      // account-scoped server snapshot. Never expose the broader tenant
+      // catalogue: only groups created by this actor or bearing an existing
+      // offline membership for this actor can be selected.
+      const local=await this.cached<Group[]>('/api/v1/groups')??[];
+      const accessible:Group[]=[];
+      for(const group of local){
+        if(group.status==='archived')continue;
+        if(group.createdBy===this.actorId){accessible.push(group);continue;}
+        const members=await this.cached<MembershipView[]>(`/api/v1/groups/${encodeURIComponent(group.id)}/members`).catch(()=>undefined);
+        if(members?.some(member=>member.userId===this.actorId&&member.status==='active'))accessible.push(group);
+      }
+      rows=accessible;
+    }
     const visible=rows.filter(g=>g?.id&&g.status!=='archived');
-    // Retain tenants from authorized group memberships only. This is the
-    // existing canonical group -> tenant selector, not a parallel registry.
+    // Retain tenants from authorized memberships and local actor proofs only.
     for(const group of visible)this.groupTenants.set(group.id,group.tenantId);
     return visible;
   }
