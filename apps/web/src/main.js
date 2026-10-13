@@ -506,7 +506,9 @@ const renderGroupSelector = () => {
     sel.value = app.activeGroup() ?? '';
 };
 const renderGroups = async () => {
-    groups = await app.listGroups();
+    // Member-facing navigation uses the membership-checked account catalogue,
+    // not all groups of the same tenant (which can include private groups).
+    groups = await app.listMyGroups();
     const root = $('#groupsList');
     root.replaceChildren();
     if (!groups.length) {
@@ -2539,13 +2541,30 @@ $('#createGroupBtn').addEventListener('click',async()=>{
     say('2/3 · Création du groupe et de ses rubriques…');
     const group=await app.createGroupFromProject(project);
     lastProjectId=undefined;window.__ecoLastProjectReady=false;
-    say('3/4 · Enregistrement du Kit prêt à l’emploi…');
-    await launchStudio.persistStarterKit?.(group.id);
-    say('4/4 · Synchronisation du groupe…');
-    await refreshGroupContext();toast(`Groupe créé : ${group.name} · Kit prêt à l’emploi archivé avec le groupe.`);go('operations');
+    // A completed canonical group must be visible before optional Kit/media
+    // work. Never leave users on a loading wizard while 20+ dashboards refresh.
+    say('3/4 · Activation du groupe…');
+    await renderGroups();
+    renderActiveGroup();
+    renderGroupSelector();
+    go('operations',{force:true});
+    toast(`Groupe créé : ${group.name}. Ses espaces se chargent sans bloquer la navigation.`);
+    // Preserve both operations; failure is visible, never mistaken for an
+    // unsuccessful group conversion or silently swallowed.
+    void (async()=>{
+      try{
+        await launchStudio.persistStarterKit?.(group.id);
+      }catch(error){
+        const message=error instanceof Error?error.message:String(error);
+        console.warn('KIT_STARTER_PERSISTENCE_PENDING',message);
+        toast(tx('Groupe créé ; Kit prêt à l’emploi à réessayer depuis le groupe.','Group created; starter kit must be retried from the group.'));
+      }
+      try{await refreshGroupContext();}
+      catch(error){fail(error);}
+    })();
   }catch(error){
     launchStudio.renderPreview();fail(Error(launchError(error)));
-  }finally{$('#projectForm').inert=false;button.textContent=originalLabel;}
+  }finally{$('#projectForm').inert=false;button.disabled=false;button.textContent=originalLabel;}
 });
 onSubmit('#memberForm', async (e) => { e.preventDefault(); try {
     await app.addMember(val('memberName'));
