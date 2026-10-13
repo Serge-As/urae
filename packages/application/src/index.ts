@@ -240,7 +240,7 @@ export class ConnectedApplication {
   private offlineReadKey(path:string):string{
     if(path==='/api/v1/auth/session')return 'session:last';
     const accountTenant=this.homeTenantId??this.tenantId;
-    if(path==='/api/v1/groups')return JSON.stringify([this.actorId,accountTenant,'ACCOUNT',path]);
+    if(path==='/api/v1/groups'||path==='/api/v1/groups/mine')return JSON.stringify([this.actorId,accountTenant,'ACCOUNT',path]);
     return JSON.stringify([this.actorId,this.tenantId,this.activeGroupId??'',path]);
   }
   private async cacheReadSnapshot<T>(path:string,body:T):Promise<void>{
@@ -396,7 +396,13 @@ export class ConnectedApplication {
     let preferred:string|undefined;try{preferred=localStorage.getItem('tontine.locale')??undefined;}catch{}this.locale=preferred??session.account.locale;
     if(IndexedDbOutboxAdapter.supported())try{const persisted=await this.outboxStorage.load();this.outbox.restore(persisted.filter(x=>x.actorId===this.actorId&&x.tenantId===this.tenantId));}catch{}
     await this.recoverInterruptedVaultRestores();
-    const groups=await this.listGroups();if(this.activeGroupId&&!groups.some(g=>g.id===this.activeGroupId))this.selectGroup(undefined);if(!this.activeGroupId&&groups[0])this.selectGroup(groups[0].id);else this.selectGroup(this.activeGroupId);
+    // An account can join/create any number of associations and groups.
+    // Never auto-select another tenant member's group from the broad catalogue.
+    // The API verifies ownership or active membership before returning rows.
+    const groups=await this.listGroups();
+    if(this.activeGroupId&&!groups.some(g=>g.id===this.activeGroupId))this.selectGroup(undefined);
+    if(!this.activeGroupId&&groups[0])this.selectGroup(groups[0].id);
+    else this.selectGroup(this.activeGroupId);
     if(!this.usingOfflineSnapshot){await this.request('/api/v1/bootstrap',{method:'POST',body:JSON.stringify({displayName:this.displayName,locale:this.locale})});await this.groupTrashItems().catch(()=>[]);if(this.activeGroupId)await this.warmFinancialClock();}
     return{restoredOutbox:this.outbox.list().length,groups};
   }
@@ -898,7 +904,45 @@ export class ConnectedApplication {
 
   async listGroups():Promise<Group[]>{const all=await this.request<Group[]>('/api/v1/groups');this.groupTenants=new Map(all.map(g=>[g.id,g.tenantId]));return all.filter(g=>g.status!=='archived');}
   /** Personal views must use server-verified memberships, not the broader tenant group catalogue. */
-  async listMyGroups():Promise<Group[]>{return this.request<Group[]>('/api/v1/groups/mine');}
+  async listMyGroups():Promise<Group[]>{
+    let rows:Group[];
+    try{rows=await this.request<Group[]>('/api/v1/groups/mine');}
+    catch(error){
+      if(!(error instanceof Error)||error.message!=='NETWORK_UNAVAILABLE')throw error;
+      // First offline session after an offline-created group can predate the
+      // account-scoped server snapshot. Never expose the broader tenant
+      // catalogue: only groups created by this actor or bearing an existing
+      // offline membership for this actor can be selected.
+      const local=await this.cached<Group[]>('/api/v1/groups')??[];
+      const accessible:Group[]=[];
+      for(const group of local){
+        if(group.status==='archived')continue;
+        if(group.createdBy===this.actorId){accessible.push(group);continue;}
+        const members=await this.cached<MembershipView[]>(`/api/v1/groups/${encodeURIComponent(group.id)}/members`).catch(()=>undefined);
+        if(members?.some(member=>member.userId===this.actorId&&member.status==='active'))accessible.push(group);
+      }
+      rows=accessible;
+    }
+    const visible=rows.filter(g=>g?.id&&g.status!=='archived');
+    // Retain tenants from authorized memberships and local actor proofs only.
+    for(const group of visible)this.groupTenants.set(group.id,group.tenantId);
+    return visible;
+  }
+  /** Preserve authorized join-link/legacy group selection when the account
+   * membership directory is temporarily behind the canonical group owner.
+   * Only a successful scoped members request may unlock an extra group.
+   * The broad tenant catalogue alone never proves access.
+   */
+  async listAccessibleGroups():Promise<Group[]>{
+    const visible=await this.listMyGroups(),active=this.activeGroupId;
+    if(!active||visible.some(g=>g.id===active))return visible;
+    try{
+      await this.request('/api/v1/groups/'+encodeURIComponent(active)+'/members');
+      const group=(await this.listGroups()).find(g=>g.id===active);
+      if(group){this.groupTenants.set(group.id,group.tenantId);return [...visible,group];}
+    }catch{}
+    return visible;
+  }
   async groupOperatingPolicy():Promise<GroupOperatingPolicy>{if(!this.activeGroupId)throw new Error('ACTIVE_GROUP_REQUIRED');return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/operating-policy`);}
   async updateGroupOperatingPolicy(policy:GroupOperatingPolicy):Promise<Group>{
     if(!this.activeGroupId)throw new Error('ACTIVE_GROUP_REQUIRED');
