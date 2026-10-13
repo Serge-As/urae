@@ -430,6 +430,11 @@ const personalCockpitUI = mountPersonalCockpitUI({
   }
 });
 const recapUI = mountRecapUI({ app, getGroups: () => groups, getMembers: () => members, getMeetings: () => meetings, getRubrics: () => rubrics, isManager, navigate: go, fmt, date, showError: fail });
+window.addEventListener('eco:view-changed',event=>{
+    if(event.detail?.view!=='recap')return;
+    // Loading is driven by actual navigation, never a background polling loop.
+    void recapUI.refresh().catch(fail);
+});
 const interestCommunityUI = mountInterestCommunityUI({ app, notify: toast, showError: fail, date });
 const adManagerUI = mountAdManagerUI({ app, notify: toast, showError: fail, isManager, fmt });
 const visualMediaStudio = mountVisualMediaStudio({app,notify:toast,showError:fail,isManager});
@@ -2247,8 +2252,14 @@ window.addEventListener('eco:financial-live-update',event=>{
 });
 
 const refreshGroupContext = async () => {
+    const requestedGroup=app.activeGroup();
     await renderGroups();
+    if(requestedGroup!==app.activeGroup())return;
     const active = Boolean(app.activeGroup());
+    // Role checks must use the NEW group's members, not the previous group's
+    // list. Otherwise invited managers temporarily lose finance/Recap access.
+    if(active)await renderMembers();
+    if(requestedGroup!==app.activeGroup())return;
     $('#operationsContent').style.display = active ? 'block' : 'none';
     $('#noActiveGroupOperations').style.display = active ? 'none' : 'block';
     $('#sessionsContent').style.display = active ? 'block' : 'none';
@@ -2267,8 +2278,8 @@ const refreshGroupContext = async () => {
     for(const id of ['advancedFinancePanel','assistanceRulebookPanel','savingsYieldLab','financeLedgerPanel']){const node=$('#'+id);if(node)node.hidden=active&&!manage;}
     for(const id of ['openAssistanceRulebookBtn','openSavingsLabBtn']){const node=$('#'+id);if(node)node.hidden=active&&!manage;}
     if (active) {
-        await renderMembers();
         await renderMeetings();
+        if(requestedGroup!==app.activeGroup())return;
         if(manage){
           await refreshOptionalOfflineSafe('official-loan-rubric',()=>app.ensureOfficialLoanRubric());
           await refreshOptionalOfflineSafe('official-repayment-rubric',()=>app.ensureOfficialRepaymentRubric());
@@ -2294,7 +2305,7 @@ const refreshGroupContext = async () => {
     await refreshOptionalOfflineSafe('pairing',()=>pairingUI.refresh());
     await refreshOptionalOfflineSafe('sovereign-offline',()=>sovereignOfflineUI.refresh());
     await refreshOptionalOfflineSafe('personal-cockpit',()=>personalCockpitUI.refresh());
-    await refreshOptionalOfflineSafe('recap',()=>recapUI.refresh());
+    if(activeViewName()==='recap'&&requestedGroup===app.activeGroup())await refreshOptionalOfflineSafe('recap',()=>recapUI.refresh());
     await refreshOptionalOfflineSafe('interest-community',()=>interestCommunityUI.refresh());
     await refreshOptionalOfflineSafe('ad-manager',()=>adManagerUI.refresh());
     await refreshOptionalOfflineSafe('visual-media',()=>visualMediaStudio.refresh());
@@ -2709,6 +2720,7 @@ $('#syncBtn').addEventListener('click', async () => { if (!navigator.onLine) {
 } try{offlineConfrontationDeferred=false;await resumeOnline({forceConfrontation:true});renderOutbox();}catch(e){fail(e);} });
 const refreshVisibleBusinessSurface=async preserved=>{
     const view=String(preserved?.view??activeViewName());
+    if(view==='recap'){await recapUI.refresh();return;}
     if(view==='operations'){
         const [freshMembers,freshMeetings,freshRubrics]=await Promise.all([app.listMembers(),app.listMeetings(),app.listRubrics()]);
         await renderMembers(freshMembers);await renderMeetings(freshMeetings);await renderLivingRules(freshRubrics);

@@ -10,10 +10,46 @@ export function mountRecapUI({app,getGroups,getMembers,getMeetings,getRubrics,is
   const action=(label,view)=>{const b=el('button',undefined,'quick');b.type='button';b.append(el('b',label));b.onclick=()=>navigate(view);return b;};
   const section=(title)=>{const box=el('article',undefined,'item');box.append(el('strong',title));return box;};
   const clear=()=>ids.forEach(id=>roots[id].replaceChildren());
-
+  let renderedGroupId=null,refreshToken=0;
   const refresh=async()=>{
-    const active=Boolean(app.activeGroup()),manager=active&&isManager();if(nav)nav.hidden=!manager;if(denied)denied.hidden=manager||!active;if(content)content.hidden=!manager;clear();if(!manager)return;
-    const group=getGroups().find(g=>g.id===app.activeGroup()),members=getMembers(),meetings=getMeetings(),rubrics=getRubrics(),openMeetings=meetings.filter(m=>m.status==='open');
+    const groupId=app.activeGroup(),token=++refreshToken;
+    const current=()=>token===refreshToken&&app.activeGroup()===groupId;
+    const active=Boolean(groupId),manager=active&&isManager();
+    const group=getGroups().find(g=>g.id===groupId);
+    const members=getMembers();
+    const own=members.find(m=>m.userId===app.currentActor()&&m.status==='active'&&m.groupId===groupId);
+    const allowed=manager||Boolean(own);
+    if(nav)nav.hidden=!allowed;
+    if(denied)denied.hidden=!active||allowed;
+    if(content)content.hidden=!allowed;
+    // A group switch must not leave the previous group's financial projection
+    // visible. A refresh of the SAME group leaves its prior safe projection
+    // in place until canonical reads finish.
+    if(renderedGroupId!==groupId){clear();renderedGroupId=groupId;}
+    if(!allowed){clear();return;}
+    const pending=el('p','Actualisation des données du groupe…','hint recap-loading');
+    roots.recapAlerts.append(pending);
+    if(!manager){
+      // Members see only their own canonical statement. Never reuse the
+      // manager aggregate Ledger or another membership's private figures.
+      let statement;
+      try{statement=await app.memberStatement(own.id);}catch(error){
+        if(!current())return;
+        pending.remove();
+        roots.recapAlerts.append(el('p','Relevé personnel momentanément indisponible. Réessayez depuis votre fiche individuelle.','truth-notice'));
+        return;
+      }
+      if(!current())return;
+      clear();
+      roots.recapIdentityLive.append(row('Groupe',group?.name??statement.groupName??'Groupe actif'));
+      roots.recapMembers.append(detail(own.displayName,'member',own.id));
+      roots.recapMetrics.append(metric(fmt(statement.totalNetContributions??0),'Mes cotisations nettes'),metric(fmt(statement.totalDebt??0),'Mes dettes'));
+      roots.recapFinance.append(row('Capital restant',fmt(statement.debtPrincipal??0)),row('Intérêts dus',fmt(statement.debtInterest??0)),row('Arrêté au',statement.asOf?date(statement.asOf):'—'));
+      roots.recapAlerts.append(el('p','Vue personnelle uniquement. Les comptes des autres membres restent protégés.','hint'));
+      roots.recapActions.append(action('Ma fiche','members'),action('Séances','sessions'),action('Mes groupes','dashboard'));
+      return;
+    }
+    const meetings=getMeetings(),rubrics=getRubrics(),openMeetings=meetings.filter(m=>m.status==='open');
     const futureMeetings=meetings.filter(m=>m.scheduledAt&&Date.parse(m.scheduledAt)>Date.now()).sort((a,b)=>Date.parse(a.scheduledAt)-Date.parse(b.scheduledAt));
     const [passport,dna,ledger,arrears,loans,pairings,applications,misc,miscCatalog,hubs,storefront,live,joinLinks,beta,pulse]=await Promise.all([
       app.groupIdentityPassport().catch(()=>null),app.conciergeProfile().catch(()=>null),app.ledger().catch(()=>null),app.arrears().catch(()=>[]),app.listCompletion('LOAN').catch(()=>[]),
@@ -21,6 +57,9 @@ export function mountRecapUI({app,getGroups,getMembers,getMeetings,getRubrics,is
       app.listCommunityHubs().catch(()=>[]),app.groupStorefront().catch(()=>({shop:null,items:[]})),app.liveHealth().catch(()=>null),
       app.listJoinLinks().catch(()=>[]),app.dataUseConsent().catch(()=>null),app.ecoPulseProfile().catch(()=>({affinities:[]}))
     ]);
+    if(!current())return;
+    clear();
+    if(!ledger)roots.recapAlerts.append(el('p','Ledger momentanément indisponible : aucune valeur financière n’est inventée.','truth-notice'));
 
     const activeMembers=members.filter(m=>m.status==='active'),managerMembers=activeMembers.filter(m=>(m.roles??[]).some(r=>['founder','manager','admin','president','treasurer'].includes(r)));
     const pendingApps=applications.filter(x=>x.status==='PENDING'),pendingPair=pairings.filter(x=>x.status==='PENDING');
