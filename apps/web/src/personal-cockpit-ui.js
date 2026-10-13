@@ -3,7 +3,7 @@ const el=(tag,text,className)=>{const e=document.createElement(tag);if(text!==un
 const row=(label,value)=>{const p=el('p');p.append(el('strong',label+' : '),document.createTextNode(String(value??'—')));return p;};
 const detail=(label,type,id)=>{const a=el('a',label,'link-btn');a.href='#detail='+encodeURIComponent(type)+':'+encodeURIComponent(id);a.dataset.detailType=type;a.dataset.detailId=id;return a;};
 
-export function mountPersonalCockpitUI({app,getGroups,getMembers,getMeetings,navigate,openGroupForum,isManager=()=>false,fmt=n=>String(n),date=x=>String(x),showError=console.error}){
+export function mountPersonalCockpitUI({app,getGroups,getMembers,getMeetings,navigate,openGroupForum,openGroupWorkspace,isManager=()=>false,fmt=n=>String(n),date=x=>String(x),showError=console.error}){
   const metrics=document.getElementById('personalCockpitMetrics'),situation=document.getElementById('personalSituation'),next=document.getElementById('personalNext'),noticesRoot=document.getElementById('personalLiveNotices'),spaces=document.getElementById('personalSpaces');
   const pulseRoot=document.getElementById('ecoPulseFeed'),pulseProfile=document.getElementById('ecoPulseProfile');
   if(!metrics||!situation||!next||!noticesRoot||!spaces)return{refresh:async()=>{}};
@@ -120,6 +120,26 @@ export function mountPersonalCockpitUI({app,getGroups,getMembers,getMeetings,nav
     let forumGroups=[],forumsUnavailable=false;
     try{forumGroups=await app.listMyGroups();}catch{forumsUnavailable=true;}
     renderPersonalForas(forumGroups,personalCommunities,forumsUnavailable);
+    // Separate group workspaces from discussions. A member can choose any
+    // number of associations or tontines belonging to this authenticated
+    // account; this selector has no slice/pagination cap or duplicated state.
+    const associations=el('section',undefined,'item personal-group-directory');
+    associations.append(el('strong',tr('Mes associations et groupes ('+forumGroups.length+')','My associations and groups ('+forumGroups.length+')')));
+    const groupPicker=el('select',undefined,'personal-group-picker');
+    groupPicker.setAttribute('aria-label',tr('Choisir une association ou un groupe','Choose an association or group'));
+    const placeholder=el('option',tr('Choisir mon espace…','Choose my workspace…'));placeholder.value='';groupPicker.append(placeholder);
+    for(const group of forumGroups){
+      const option=el('option',group.name+(group.kind==='association'?' · Association':' · Tontine'));
+      option.value=String(group.id);groupPicker.append(option);
+    }
+    groupPicker.value=forumGroups.some(group=>group.id===app.activeGroup())?app.activeGroup():'';
+    const open=el('button',tr('Ouvrir mon groupe','Open my group'),'primary');
+    open.type='button';open.disabled=!groupPicker.value;
+    groupPicker.onchange=()=>{open.disabled=!groupPicker.value;};
+    open.onclick=()=>void Promise.resolve(openGroupWorkspace?.(groupPicker.value)).catch(showError);
+    associations.append(groupPicker,open);
+    if(forumsUnavailable)associations.append(el('p',tr('Répertoire temporairement indisponible : vos autres groupes ne sont pas supprimés.','Directory temporarily unavailable: your other groups have not been deleted.'),'truth-notice'));
+    spaces.append(associations);
     void renderPulse();
     if(!groupId){
       situation.append(el('p','Choisissez un groupe ou rejoignez-en un avec un code.','hint'),action('Choisir / rejoindre','discovery'));
