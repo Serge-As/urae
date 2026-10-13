@@ -293,3 +293,18 @@ test('server outage while navigator stays online stops idle retries and the dura
     await page.screenshot({path:'test-results/bounded-outage-recovered.png',fullPage:false});
   }finally{await secondContext.close();}
 });
+
+test('offline member review uses the newly saved local value instead of an older cached summary',async({page,context,browser})=>{
+ test.setTimeout(120000);const {ids,second,secondContext}=await setup(page,browser);
+ try{
+  await enter(page,ids,1000);await expect.poll(()=>amount(cell(second,ids)),{timeout:5000}).toBe(1000);
+  await page.getByRole('button',{name:'Vérifier le membre et terminer',exact:true}).click();
+  let review=page.locator('.eco-work-dialog');await expect(review).toBeVisible();
+  await expect.poll(async()=>Number((await review.locator('tbody tr').first().locator('td').nth(2).innerText()).replace(/[^0-9-]/g,''))).toBe(1000);
+  await review.getByRole('button',{name:'Valider la synthèse et continuer',exact:true}).click();await expect(review).toHaveCount(0);
+  await context.setOffline(true);await enter(page,ids,2000);await expect.poll(()=>amount(cell(page,ids))).toBe(2000);
+  await page.getByRole('button',{name:'Vérifier le membre et terminer',exact:true}).click();review=page.locator('.eco-work-dialog');await expect(review).toBeVisible();
+  await expect.poll(async()=>Number((await review.locator('tbody tr').first().locator('td').nth(2).innerText()).replace(/[^0-9-]/g,''))).toBe(2000);
+  await expect(review).toContainText('cet appareil');
+ }finally{await secondContext.close();}
+});

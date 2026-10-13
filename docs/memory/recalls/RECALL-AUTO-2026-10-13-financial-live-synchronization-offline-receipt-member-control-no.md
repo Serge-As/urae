@@ -154,3 +154,6 @@ Ce rapport est un index de rappel, pas une décision métier. Toute contradictio
 
 ## Rappel de sous-lot : affichage et confrontation
 Sources relues : apps/web/src/main.js (état cellule et reviewOfflineFinancialBacklog), packages/application/src/index.ts (pendingFinancialCellTargets et previewOfflineFinancialConfrontation). Ledger reste inchangé. Une intention CLOCK_REVIEW doit rester contrôlable et non sendable ; la nouvelle intention après confirmation explicite aura sa propre date. La dernière recette a prouvé le Live mais pas encore fermé ses deux écarts UI. Aucun PASS futur n'est présumé.
+
+## Rappel avant livraison
+Relus : tests/browser/window-account-finance-20261010.spec.mjs de la production881a3e6, financial-work-ui et financialPassageSummary, workflow Cloudflare existant et sauvegarde. Sources financières inchangées ; revue locale distincte d'une copie de synthèse serveur. Aucun dump personnel dans les preuves GitHub ; récupération complète dans le R2 privé acquis. Les nouvelles recettes restent à exécuter avant promotion.

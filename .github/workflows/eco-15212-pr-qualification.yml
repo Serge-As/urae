@@ -58,6 +58,6 @@ jobs:
           cat /tmp/eco-15212-pr.log
           exit 1
       - name: Chromium finance, sync, position and shell
-        run: npx playwright test tests/browser/financial-cell-consensus-persistence-1.5.2.6.spec.mjs tests/browser/browser-shell-mobile-1.5.2.6.spec.mjs tests/browser/sovereign-multi-manager-1.5.2.14.spec.mjs --browser=chromium --workers=1
+        run: npx playwright test tests/browser/financial-cell-consensus-persistence-1.5.2.6.spec.mjs tests/browser/browser-shell-mobile-1.5.2.6.spec.mjs tests/browser/sovereign-multi-manager-1.5.2.14.spec.mjs tests/browser/window-account-finance-20261010.spec.mjs --browser=chromium --workers=1
       - name: WebKit sovereign offline
         run: npx playwright test tests/browser/eco-system-webkit-sovereign-offline-1.5.2.9.spec.mjs --browser=webkit --workers=1

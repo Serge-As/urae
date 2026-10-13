@@ -1126,9 +1126,9 @@ const ensureFinancialSnapshotPolling=()=>{
 let financialWorkUI;
 const ensureFinancialWorkUI=()=>financialWorkUI??=createFinancialWorkUI({app,tx,notify:toast,resume:()=>resumeOnline(),
   summary:async(meetingId,membershipId,ids)=>{
-    try{return await app.financialPassageSummary(meetingId,membershipId,ids);}catch(e){if(navigator.onLine!==false&&!app.serverBudgetState?.().blocked)throw e;
+    try{const data=await app.financialPassageSummary(meetingId,membershipId,ids);if(data.projectionSource==='LOCAL_CACHE')throw Error('LOCAL_SUMMARY_REQUIRED');return data;}catch(e){if(e.message!=='LOCAL_SUMMARY_REQUIRED'&&navigator.onLine!==false&&!app.serverBudgetState?.().blocked)throw e;
       const ordered=meetings.filter(x=>x.status!=='cancelled').slice().sort((a,b)=>String(a.scheduledAt??a.openedAt).localeCompare(String(b.scheduledAt??b.openedAt))),beforeIds=ordered.slice(0,ordered.findIndex(x=>x.id===meetingId)).map(x=>x.id);
-      const lines=ids.map(rubricId=>{const current=exactCellAmount(membershipId,rubricId,meetingId),before=beforeIds.reduce((n,id)=>n+exactCellAmount(membershipId,rubricId,id),0);return{rubricId,rubricName:rubrics.find(x=>x.id===rubricId)?.name??rubricId,before,current,total:before+current,cellVersion:exactCellVersion(membershipId,rubricId,meetingId)};});return{lines,totals:Object.fromEntries(['before','current','total'].map(k=>[k,lines.reduce((n,x)=>n+x[k],0)]))};}
+      const lines=ids.map(rubricId=>{const current=exactCellAmount(membershipId,rubricId,meetingId),before=beforeIds.reduce((n,id)=>n+exactCellAmount(membershipId,rubricId,id),0);return{rubricId,rubricName:rubrics.find(x=>x.id===rubricId)?.name??rubricId,before,current,total:before+current,cellVersion:exactCellVersion(membershipId,rubricId,meetingId)};});return{local:true,lines,totals:Object.fromEntries(['before','current','total'].map(k=>[k,lines.reduce((n,x)=>n+x[k],0)]))};}
   },
   edit:(selection,rubricId)=>{const cell=[...document.querySelectorAll('.matrix-cell-entry')].find(x=>x.dataset.meetingId===selection.meetingId&&x.dataset.membershipId===selection.membershipId&&x.dataset.rubricId===rubricId);cell?.scrollIntoView({block:'center',inline:'nearest'});cell?.querySelector('input')?.focus();}
 });

@@ -322,7 +322,7 @@ export class ConnectedApplication {
     const commands=this.outbox.list().filter(x=>String((x.payload as any)?.financialWork?.passageId??'')===p.passageId).map(x=>x.id);
     await this.queueLocal('FINANCIAL_WORK_V1',{groupId:this.activeGroupId,meetingId,membershipId,action:'close',passageId:p.passageId,terminalCommandIds:commands,reviewedValues});this.financialWorkPassages.delete(key);
   }
-  async financialPassageSummary(meetingId:string,membershipId:string,rubricIds:string[]):Promise<any>{return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId!)+'/meetings/'+encodeURIComponent(meetingId)+'/financial-work/summary?membershipId='+encodeURIComponent(membershipId)+'&rubricIds='+encodeURIComponent(rubricIds.join(',')));}
+  async financialPassageSummary(meetingId:string,membershipId:string,rubricIds:string[]):Promise<any>{const data=await this.request<any>('/api/v1/groups/'+encodeURIComponent(this.activeGroupId!)+'/meetings/'+encodeURIComponent(meetingId)+'/financial-work/summary?membershipId='+encodeURIComponent(membershipId)+'&rubricIds='+encodeURIComponent(rubricIds.join(',')));return{...data,projectionSource:this.usingOfflineSnapshot?'LOCAL_CACHE':'SERVER'};}
   private async queueLocal(type:string,payload:Record<string,unknown>,idempotencyKey=makeId('op')):Promise<OutboxItem>{
     await this.windowSessionReady;
     const passage=this.financialWorkPassages.get(JSON.stringify([this.actorId,this.activeGroupId,payload.meetingId,payload.membershipId]));if(passage&&type!=='FINANCIAL_WORK_V1')payload={...payload,financialWork:{passageId:passage.passageId,mode:passage.mode}};

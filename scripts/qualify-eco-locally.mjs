@@ -83,7 +83,7 @@ try{
   if(catalog.version!==release.release.version||catalog.count<164||catalog.capabilities?.length!==catalog.count)throw Error('Local capability catalog identity/count mismatch.');
   const chromium=await run('npx',['playwright','test','tests/browser/financial-cell-consensus-persistence-1.5.2.6.spec.mjs','tests/browser/browser-shell-mobile-1.5.2.6.spec.mjs','tests/browser/sovereign-multi-manager-1.5.2.14.spec.mjs','tests/browser/window-account-finance-20261010.spec.mjs','--browser=chromium','--workers=1'],'Chromium: persistence, mobile shell, two managers, idle expenses, confrontation and transport outage',{ECO_LIVE_SYNC_OUTPUT_DIR:output});
   const chromiumPassed=finalCount(chromium,/(\d+) passed/g);report.chromium={passed:chromiumPassed};
-  if(chromiumPassed!==10)throw Error('Expected Chromium 10/10.');
+  if(chromiumPassed!==11)throw Error('Expected Chromium 11/11.');
   const webkit=await run('npx',['playwright','test','tests/browser/eco-system-webkit-sovereign-offline-1.5.2.9.spec.mjs','--browser=webkit','--workers=1'],'WebKit: sovereign offline regression suite');
   const webkitPassed=finalCount(webkit,/(\d+) passed/g);report.webkit={passed:webkitPassed};
   if(webkitPassed!==6)throw Error('Expected WebKit 6/6.');
