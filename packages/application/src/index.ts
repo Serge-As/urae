@@ -399,7 +399,7 @@ export class ConnectedApplication {
     // An account can join/create any number of associations and groups.
     // Never auto-select another tenant member's group from the broad catalogue.
     // The API verifies ownership or active membership before returning rows.
-    const groups=await this.listMyGroups();
+    const groups=await this.listAccessibleGroups();
     if(this.activeGroupId&&!groups.some(g=>g.id===this.activeGroupId))this.selectGroup(undefined);
     if(!this.activeGroupId&&groups[0])this.selectGroup(groups[0].id);
     else this.selectGroup(this.activeGroupId);
@@ -926,6 +926,21 @@ export class ConnectedApplication {
     const visible=rows.filter(g=>g?.id&&g.status!=='archived');
     // Retain tenants from authorized memberships and local actor proofs only.
     for(const group of visible)this.groupTenants.set(group.id,group.tenantId);
+    return visible;
+  }
+  /** Preserve authorized join-link/legacy group selection when the account
+   * membership directory is temporarily behind the canonical group owner.
+   * Only a successful scoped members request may unlock an extra group.
+   * The broad tenant catalogue alone never proves access.
+   */
+  async listAccessibleGroups():Promise<Group[]>{
+    const visible=await this.listMyGroups(),active=this.activeGroupId;
+    if(!active||visible.some(g=>g.id===active))return visible;
+    try{
+      await this.request('/api/v1/groups/'+encodeURIComponent(active)+'/members');
+      const group=(await this.listGroups()).find(g=>g.id===active);
+      if(group){this.groupTenants.set(group.id,group.tenantId);return [...visible,group];}
+    }catch{}
     return visible;
   }
   async groupOperatingPolicy():Promise<GroupOperatingPolicy>{if(!this.activeGroupId)throw new Error('ACTIVE_GROUP_REQUIRED');return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/operating-policy`);}
