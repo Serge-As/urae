@@ -1323,3 +1323,13 @@ body{min-height:100vh;padding:clamp(12px,4vw,40px);background:var(--bg)}
 @media(max-width:640px){.external-ad-shell .external-grid{grid-template-columns:1fr}}
 
 #externalAdForm[hidden]{display:none!important}
+
+/* Cell microphone: same canonical editor, no second financial table. */
+.canonical-financial-matrix .matrix-cell-entry{grid-template-columns:minmax(65px,1fr) 44px 44px;min-width:178px}
+.matrix-cell-entry .cell-dictate{min-width:44px;min-height:44px;height:44px;width:44px;padding:2px;font-size:19px;border:1px solid var(--line);border-radius:8px;background:#f1f7f4}
+.matrix-cell-entry .cell-dictate:focus-visible{outline:3px solid #1f7a4c;outline-offset:2px}
+.matrix-cell-entry .eco-cell-voice-review{grid-column:1/-1;display:grid;gap:7px;padding:10px;background:#fff;border:2px solid #387657;border-radius:12px;min-width:185px;max-width:280px;box-shadow:0 6px 18px #0002;z-index:2}
+.matrix-cell-entry .eco-cell-voice-review p{margin:0;white-space:normal;overflow-wrap:anywhere}
+.matrix-cell-entry .eco-cell-voice-review input{width:100%;min-height:44px;font-size:18px}
+.matrix-cell-entry .eco-cell-voice-review button{min-height:44px;white-space:normal}
+@media(max-width:720px){.canonical-financial-matrix .matrix-cell-entry{grid-template-columns:minmax(65px,1fr) 44px 44px;min-width:172px}}
