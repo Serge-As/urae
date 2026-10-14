@@ -205,13 +205,64 @@ function installFocusedFieldDictation(){
   button.onclick=()=>{if(!target)return;controller?.stop?.();controller=speech(uiEn()?'en-US':'fr-FR',(text,confidence)=>{if(!target)return;if(target instanceof HTMLInputElement&&target.type==='number'){const amount=parseVoiceAmount(text);if(confidence!==undefined&&confidence<0.60){button.title=t('Montant entendu avec faible confiance : « '+text+' ». Rien n’a été remplacé ; répétez ou saisissez au clavier.','Amount heard with low confidence: “'+text+'”. Nothing was replaced; repeat or type it.');return;}if(amount!==undefined)target.value=String(amount);else{button.title=t('Montant non compris : « '+text+' ». Répétez ou saisissez au clavier.','Amount not understood: “'+text+'”. Repeat or type it.');return;}}else target.value+=(target.value&& !/\s$/.test(target.value)?' ':'')+text;target.dispatchEvent(new Event('input',{bubbles:true}));target.dispatchEvent(new Event('change',{bubbles:true}));button.title=confidence!==undefined?t('Confiance de transcription : ','Transcription confidence: ')+Math.round(confidence*100)+' %':t('Dictée reçue ; vérifiez le champ avant validation.','Dictation received; review the field before confirming.');},(active,message)=>{button.textContent=active?'⏹️':'🎙️';button.setAttribute('aria-label',message);});controller.toggle();};
 }
 
+// Cell dictation never writes to the Ledger. It produces an editable draft for
+// the existing canonical cell; ✓/Enter still own financial validation.
+function installFinancialCellDictation(){
+  let controller:any=null;
+  window.addEventListener('eco:financial-cell-dictate',(event:Event)=>{
+    const detail=(event as CustomEvent).detail;
+    const input=detail?.input as HTMLInputElement|undefined;
+    const microphone=detail?.microphone as HTMLButtonElement|undefined;
+    if(!input?.isConnected||!microphone?.isConnected||input.disabled)return;
+    controller?.stop?.();
+    const holder=input.closest('.matrix-cell-entry') as HTMLElement|null;
+    if(!holder)return;
+    const prior=document.getElementById('eco-cell-voice-review');prior?.remove();
+    const review=document.createElement('div');review.id='eco-cell-voice-review';
+    review.className='eco-cell-voice-review';review.setAttribute('role','dialog');
+    review.setAttribute('aria-label',t('Vérifier la dictée','Review dictation'));
+    const state=document.createElement('p');state.setAttribute('aria-live','polite');
+    const transcript=document.createElement('p');
+    const value=document.createElement('input');value.type='number';value.min='0';value.step='1';value.inputMode='numeric';
+    value.setAttribute('aria-label',t('Montant entendu en francs CFA','Recognized amount in CFA francs'));
+    const replay=document.createElement('button');replay.type='button';replay.textContent=t('🔊 Relire','🔊 Read aloud');
+    const cancel=document.createElement('button');cancel.type='button';cancel.textContent=t('Annuler','Cancel');
+    const apply=document.createElement('button');apply.type='button';apply.textContent=t('✓ Placer dans la cellule','✓ Fill cell');
+    apply.disabled=true;
+    const close=()=>{controller?.stop?.();review.remove();microphone.disabled=false;};
+    cancel.onclick=close;
+    replay.onclick=()=>speak(t('Montant compris : ','Recognized amount: ')+value.value+t(' francs CFA',' CFA francs'));
+    apply.onclick=()=>{
+      const amount=Number(value.value);
+      if(!Number.isSafeInteger(amount)||amount<0){state.textContent=t('Montant incorrect.','Invalid amount.');return;}
+      if(!input.isConnected||input.disabled){close();return;}
+      input.value=String(amount);
+      input.dispatchEvent(new Event('input',{bubbles:true}));
+      input.dispatchEvent(new Event('change',{bubbles:true}));
+      close();input.focus();
+    };
+    review.append(state,transcript,value,replay,cancel,apply);
+    holder.append(review);microphone.disabled=true;
+    controller=financialSpeech(uiEn()?'en-US':'fr-FR',(spoken)=>{
+      if(!review.isConnected)return;
+      transcript.textContent=t('Entendu : ','Heard: ')+spoken;
+      const amount=parseVoiceAmount(spoken);
+      if(amount===undefined){state.textContent=t('Montant non reconnu : corrigez-le manuellement ou réessayez.','Amount not recognized: correct manually or try again.');value.value='';apply.disabled=true;return;}
+      value.value=String(amount);apply.disabled=false;
+      state.textContent=t('Vérifiez le chiffre, puis placez-le dans la cellule. La comptabilisation exige toujours ✓ ou Entrée.','Review the amount and fill the cell. Posting still requires ✓ or Enter.');
+      speak(t('J’ai entendu ','I heard ')+String(amount)+t(' francs CFA. Confirmez ou corrigez.',' CFA francs. Confirm or correct.'));
+    },(active,message)=>{if(review.isConnected)state.textContent=message;});
+    controller.toggle();
+  });
+}
+
 // Individual financial sheets are also owned by main.js.
 function translateInjected(){for(const el of document.querySelectorAll<HTMLElement>('[data-v-fr][data-v-en]'))el.textContent=uiEn()?el.dataset.vEn??'':el.dataset.vFr??'';}
 
 export function mountVoiceEntryUI(){
   // 1.5.1 ownership contract: voice augments inputs but never owns/re-renders
   // the financial matrices. main.js is the sole canonical table renderer.
-  installFinancialVoicePanel();installBackOfficeExpense();installFocusedFieldDictation();
+  installFinancialVoicePanel();installBackOfficeExpense();installFocusedFieldDictation();installFinancialCellDictation();
   byId<HTMLButtonElement>('membersNavBtn')?.addEventListener('click',()=>setTimeout(()=>byId('memberForm')?.scrollIntoView({behavior:'smooth',block:'center'}),100));
   byId<HTMLButtonElement>('financeIndividualSheetBtn')?.addEventListener('click',()=>{document.querySelector<HTMLButtonElement>('.nav-btn[data-view="operations"]')?.click();setTimeout(()=>byId<HTMLButtonElement>('individualSheetsViewBtn')?.click(),100);});
   byId<HTMLButtonElement>('financeLoanRulesBtn')?.addEventListener('click',()=>{document.querySelector<HTMLButtonElement>('.nav-btn[data-view="operations"]')?.click();setTimeout(()=>{document.querySelector<HTMLButtonElement>('#masterGovernanceCenter [data-mg="loan"]')?.click();byId('mg-loan')?.scrollIntoView({behavior:'smooth',block:'start'});},100);});
