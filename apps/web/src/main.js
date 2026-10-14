@@ -1234,7 +1234,14 @@ const makeFinancialEntryCell=({member,rubric,meetingId,editable=true})=>{
     const stateLine=document.createElement('small');stateLine.className='cell-save-state';stateLine.setAttribute('aria-live','polite');stateLine.hidden=true;
     const setCellState=(state,message='')=>{holder.dataset.saveState=state;holder.classList.toggle('is-failed',state==='FAILED');holder.classList.toggle('is-confirmed',state==='CONFIRMED');stateLine.hidden=!message;stateLine.textContent=message;};
     validate.dataset.ecoSubmitBound='canonical';
-    holder.append(input,validate,liveLine,stateLine);return holder;
+    // Voice is an input accessory only. The canonical ✓/Enter validation, Ledger,
+    // offline outbox and conflict resolution keep exclusive ownership of the write.
+    const microphone=document.createElement('button');microphone.type='button';microphone.className='cell-dictate';
+    microphone.textContent='🎙️';
+    microphone.title=tx('Dicter un montant puis vérifier avant de saisir','Dictate an amount, review it before entry');
+    microphone.setAttribute('aria-label',tx('Dicter le montant pour '+member.displayName+', rubrique '+rubric.name,'Dictate amount for '+member.displayName+', category '+rubric.name));
+    microphone.addEventListener('click',()=>window.dispatchEvent(new CustomEvent('eco:financial-cell-dictate',{detail:{input,microphone}})));
+    holder.append(input,microphone,validate,liveLine,stateLine);return holder;
 };
 
 const ensureMatrixMeeting=()=>{
