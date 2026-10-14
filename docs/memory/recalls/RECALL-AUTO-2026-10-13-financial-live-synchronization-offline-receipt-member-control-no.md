@@ -160,3 +160,9 @@ Relus : tests/browser/window-account-finance-20261010.spec.mjs de la production8
 
 ## Rappel de contrôle : baseline et position
 Sources relues : exactCellAmount, applyRemoteFinancialProjection, renderCanonicalFinancialTable et restoreNavState. Comparer à la baseline réelle de la commande durable, pas à zéro par défaut. Ne pas prendre une synthèse serveur en cache pour les nouvelles saisies hors connexion. Une restauration différée ne doit pas annuler un déplacement déjà effectué. Ledger et horaires d'origine inchangés.
+
+## Finalisation du 14 octobre : identité visible et recette réelle
+
+Reprise depuis d96019c (documentation seule après production0d06e9a). `/health` réel confirme la production. Connexion sécurisée réussie ; page Séances observée sans mutation financière. Protection native des données ensuite bloquante, récupération de navigation refusée. Aucun succès Live terrain ou recette155 déduit de cette observation.
+
+Défaut certain : titre/bannière/footer1.5.2.15 malgré version canonique1.5.2.16. Correction des trois libellés ; extension du gate de vérité existant aux quatre surfaces visibles, sans nouveau propriétaire de version. Registre project_version aligné, statuts de capacités inchangés. Ledger, D1/R2, intentions hors connexion, modes, réserves et parcours métier intacts. Contrôle local du gate réussi ; publication du nouveau SHA encore à attester.

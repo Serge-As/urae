@@ -1,3 +1,13 @@
+## Finalisation — 14 octobre 2026
+
+Production recontrôlée par lecture réelle de `/health` : `0d06e9a86e1527c97123db8442cb10913d3c91c6`, version 1.5.2.16, Live et stockage R2 liés, argent réel désactivé. Livraison38462983464 toujours SUCCESS ; aucun nouveau lot financier engagé.
+
+Connexion sécurisée du navigateur réussie et page Séances réellement ouverte sur un groupe existant, sans saisie financière de test. La protection des données de connexion a ensuite bloqué les observations ; navigation de récupération également refusée. La recette visuelle exhaustive reste donc non attestée. Un état « Local actif » et un message de connexion momentanément indisponible ont été observés : ils ne constituent ni une preuve de panne générale ni une preuve du Live réel réussi sur ce compte.
+
+Écart certain corrigé : titre, bannière et pied de page affichaient encore 1.5.2.15 alors que le badge et le serveur servent 1.5.2.16. Le gate existant compare désormais les quatre libellés de version au contrat canonique de livraison. Aucun parcours, montant, conflit, cache financier, droit ni autorité métier modifié. Qualification et nouvelle livraison de ce complément à constater, sans réutiliser un ancien succès pour le nouveau SHA.
+
+Prochaine étape restante : recette authentifiée en lecture, captures desktop/mobile et matrice155 complète ; aucune promotion FIELD_ACCEPTED, aucun effacement de données locales. Ne pas reprendre les travaux financiers déjà déployés à zéro.
+
 ## Production vérifiée — 13 octobre 2026
 
 Version **1.5.2.16-live-modes-refonte**, commit effectivement servi **0d06e9a86e1527c97123db8442cb10913d3c91c6** ; Worker272e3874-b66f-4c74-8017-5656007e33c2. Workflow https://github.com/Serge-As/urae/actions/runs/38462983464 SUCCESS. À20:32:57UTC, le smoke a lu /health et le catalogue réels : version/build/cache/SHA exacts,164capacités, realMoneyEnabled=false. PR92 fusionnée ; ascendance de881a3e6 conservée.

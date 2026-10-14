@@ -45,3 +45,9 @@ Livraison : conserver la liaison R2 acquise, jamais basculer silencieusement ver
 
 ## Fermeture des deux écarts de la recette étendue
 9cae101 : native723PASS, Chromium9PASS2FAIL, sans publication. Les deux comptes/fenêtres de production passent. Le test ajouté révèle une ancienne synthèse1 000 présentée en revue hors connexion après saisie2 000 ; une requête mise en cache ne doit pas remplacer le travail local. Le mode offline utilise directement la projection locale. Baseline de la commande préparée conservée dans le modèle UI ; une projection reçue de version inférieure/égale à cette baseline n'invalide pas l'intention plus récente. Les rappels de restauration du défilement s'appliquent une seule fois quand le tableau est visible ; ils ne doivent pas remettre à zéro un déplacement déjà effectué. Recette11 à réexécuter, aucun résultat futur présumé.
+
+## Finalisation du 14 octobre : identité visible et recette réelle
+
+Reprise depuis d96019c (documentation seule après production0d06e9a). `/health` réel confirme la production. Connexion sécurisée réussie ; page Séances observée sans mutation financière. Protection native des données ensuite bloquante, récupération de navigation refusée. Aucun succès Live terrain ou recette155 déduit de cette observation.
+
+Défaut certain : titre/bannière/footer1.5.2.15 malgré version canonique1.5.2.16. Correction des trois libellés ; extension du gate de vérité existant aux quatre surfaces visibles, sans nouveau propriétaire de version. Registre project_version aligné, statuts de capacités inchangés. Ledger, D1/R2, intentions hors connexion, modes, réserves et parcours métier intacts. Contrôle local du gate réussi ; publication du nouveau SHA encore à attester.

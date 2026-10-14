@@ -1,6 +1,6 @@
 Eco-System 1.5.2.16 production delivery authorized
 release: 1.5.2.16-live-modes-refonte
-date: 2026-10-13
+date: 2026-10-14
 db_mutation: none
 mode: code-only-with-verified-readonly-backup-no-migration
 qualified_source: c32c5a2cf7619f4e34fbe5a409d2179786861704
@@ -17,5 +17,8 @@ financial_signing: preserve existing key, never rotate, provision only proven ab
 real_money_enabled: false
 field_acceptance: NOT_ACCEPTED
 historical_pr72_hold: preserved; no merge or override of PR72
-trigger_nonce: 2026-10-13-c32c5a2-qualified-live-refonte
+trigger_nonce: 2026-10-14-release-labels-canonical-contract
 authorization: current user explicitly requested implementation and production deployment
+
+followup: visible release labels only; financial code unchanged from qualified0d06e9a
+followup_qualification: same-SHA mandatory gates in this workflow, no relaxation

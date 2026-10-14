@@ -69,6 +69,21 @@ const checks=[
   ['pwaCache',constant('RELEASE_PWA_CACHE'),rel.pwaCache]
 ];
 for(const [name,actual,expected] of checks)if(actual!==expected)throw new Error(`Release contract mismatch ${name}: ${actual} != ${expected}`);
+// The health response and the interface must identify the same release.
+// Compare only current UI labels; historical doctrine versions remain intact.
+const releaseHtml=fs.readFileSync('apps/web/index.html','utf8');
+const shortVersion=rel.version?.match(/^\d+\.\d+\.\d+/)?.[0];
+if(!shortVersion)throw new Error('Release contract lacks semantic version');
+const visibleReleaseSurfaces=[
+  ['title', /<title>([^<]+)<\/title>/],
+  ['version badge', /class="version-badge"[^>]*>([^<]+)</],
+  ['cockpit banner', /class="cahier-code"[^>]*>([^<]+)</],
+  ['footer', /<footer\b[^>]*>([^<]+)</]
+];
+for(const [name,pattern] of visibleReleaseSurfaces){
+  const actual=releaseHtml.match(pattern)?.[1]?.match(/\b\d+\.\d+\.\d+\b/)?.[0];
+  if(actual!==shortVersion)throw new Error(`Release identity drift in ${name}: ${actual} != ${shortVersion}`);
+}
 const swCurrent=swSource.match(/const CACHE = '([^']+)'/)?.[1],swPrevious=swSource.match(/const PREVIOUS_CACHE = '([^']+)'/)?.[1];
 if(swCurrent!==rel.pwaCache)throw new Error('Release contract mismatch Service Worker current cache');
 if(swPrevious!==rel.previousPwaCache)throw new Error('Release contract mismatch Service Worker rollback cache');
