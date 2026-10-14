@@ -20,3 +20,9 @@ Version source candidate1.5.2.16-live-modes-refonte et caches distincts ; cache 
 
 
 Prochaines étapes exactes : publier le checkpoint privé ; qualifier le SHA exact ; finir le regroupement spécialisé ; valider les parcours navigateur/captures, sauvegarde restaurable, puis seulement promouvoir via la branche applicative canonique. Le miroir local ne reproduit pas le SHA GitHub ; commits distants avec parent54dba6c, sans réécriture de référence.
+
+## Livraison finale constatée — 14 octobre 2026
+
+Source c3b7b589086d4d9439612d6cf6a5e959c8d1080f, livraison38522445853 SUCCESS, qualification38522445843 SUCCESS. 723Node/11Chromium/6WebKit PASS. Le HTML public et /health ont été relus indépendamment : identité de version cohérente et source exacte. Sauvegarde D1 restaurée, archive privée R2 relue et vérifiée, reçu11874562075 ; aucune mutation du schéma ni remplacement des ressources.
+
+Lot de version **livré** ; recette exhaustive155 **non acceptée**. Le navigateur authentifié a montré Séances, puis a bloqué les observations par protection native des données de connexion ; navigation de récupération également refusée. Handoff nécessaire pour la seule suite de cette recette, sans reprise de l'implémentation financière qualifiée. Voir `docs/release/DELIVERY-2026-10-14-FINALISATION.md`.

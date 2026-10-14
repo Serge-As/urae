@@ -1,3 +1,4 @@
+# CURRENT 2026-10-14: productionc3b7b58, delivery38522445853 SUCCESS, Node723/Chromium11/WebKit6 PASS, visible release labels independently verified; no capability maturity promotion, FIELD_ACCEPTED=NOT_ACCEPTED.
 # 2026-10-14: version labels aligned with the canonical delivery contract; no capability maturity or FIELD_ACCEPTED promotion. New delivery pending.
 # CURRENT 2026-10-13: 1.5.2.16 deployed at 0d06e9a; delivery38462983464 SUCCESS, native723/Chromium11/WebKit6 qualified; acquired D1/R2 preserved; fieldAcceptance remains NOT_ACCEPTED.
 # 2026-10-09: founder prefers Windows without local Ubuntu; Cloud reader/runtime confirmed, exact checkout and tests pending.

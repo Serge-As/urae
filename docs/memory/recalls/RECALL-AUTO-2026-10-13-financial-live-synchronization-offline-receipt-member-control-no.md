@@ -166,3 +166,9 @@ Sources relues : exactCellAmount, applyRemoteFinancialProjection, renderCanonica
 Reprise depuis d96019c (documentation seule après production0d06e9a). `/health` réel confirme la production. Connexion sécurisée réussie ; page Séances observée sans mutation financière. Protection native des données ensuite bloquante, récupération de navigation refusée. Aucun succès Live terrain ou recette155 déduit de cette observation.
 
 Défaut certain : titre/bannière/footer1.5.2.15 malgré version canonique1.5.2.16. Correction des trois libellés ; extension du gate de vérité existant aux quatre surfaces visibles, sans nouveau propriétaire de version. Registre project_version aligné, statuts de capacités inchangés. Ledger, D1/R2, intentions hors connexion, modes, réserves et parcours métier intacts. Contrôle local du gate réussi ; publication du nouveau SHA encore à attester.
+
+## Livraison finale constatée — 14 octobre 2026
+
+Source c3b7b589086d4d9439612d6cf6a5e959c8d1080f, livraison38522445853 SUCCESS, qualification38522445843 SUCCESS. 723Node/11Chromium/6WebKit PASS. Le HTML public et /health ont été relus indépendamment : identité de version cohérente et source exacte. Sauvegarde D1 restaurée, archive privée R2 relue et vérifiée, reçu11874562075 ; aucune mutation du schéma ni remplacement des ressources.
+
+Lot de version **livré** ; recette exhaustive155 **non acceptée**. Le navigateur authentifié a montré Séances, puis a bloqué les observations par protection native des données de connexion ; navigation de récupération également refusée. Handoff nécessaire pour la seule suite de cette recette, sans reprise de l'implémentation financière qualifiée. Voir `docs/release/DELIVERY-2026-10-14-FINALISATION.md`.

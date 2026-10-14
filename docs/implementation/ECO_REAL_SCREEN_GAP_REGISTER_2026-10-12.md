@@ -1,3 +1,7 @@
+## Mise à jour production — 14 octobre 2026
+
+Le code de refonte et les corrections de saisie/Live sont désormais réellement en production, source `c3b7b589086d4d9439612d6cf6a5e959c8d1080f`, livraison38522445853SUCCESS (723Node/11Chromium/6WebKit). Les quatre libellés de version publics ont été relus à1.5.2.16. Une connexion réelle et la vue Séances ont été observées sans transaction de test ; protection native du navigateur ensuite bloquante, donc pas de nouvelles captures. La qualification automatisée ferme ses scénarios exacts, pas les155preuves visuelles/terrain. La recette exhaustive reste OUVERTE. Les observations du12octobre ci-dessous concernent la préproduction historique et ne sont pas des captures de la production actuelle.
+
 # Eco-System — Registre d’écarts de la prévisualisation réelle
 **Audit du 12 octobre 2026 • statut : OUVERT — NON RECETTÉ, version de préproduction isolée.**
 

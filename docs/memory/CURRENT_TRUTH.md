@@ -1,3 +1,15 @@
+## Livraison finale vérifiée — 14 octobre 2026
+
+Production : **1.5.2.16-live-modes-refonte**, SHA réellement servi **c3b7b589086d4d9439612d6cf6a5e959c8d1080f**, Worker **54562f4d-3a0f-45eb-bfef-ae82101ef810**. [Livraison 38522445853](https://github.com/Serge-As/urae/actions/runs/38522445853) et qualification38522445843 **SUCCESS**. Lecture indépendante de `/health` et du HTML public : SHA exact, titre/badge/bannière/footer tous1.5.2.16, cache attendu, argent réel désactivé, R2 et Live liés.
+
+Qualification du même SHA : **723 Node, 11 Chromium, 6 WebKit PASS**, aucun test retiré ni délai financier assoupli. Sauvegarde D1 réellement restaurée et archive privée R2 relue/hashée avant publication ; SHA256 **f77611813bc986c95828965b8d0cc02171640592166881d2eac96228b843f0e6**, reçu GitHub11874562075. Bases, stockage, règles financières, conflits et intentions hors connexion conservés.
+
+Le complément du14octobre corrige uniquement l'identité visible de version et son gate. La saisie durable, le Live, la synchro, les modes, les synthèses et la refonte intégrée sont le lot financier/UI déjà livré le13octobre, conservé sans réécriture.
+
+**Reste ouvert :** recette visuelle authentifiée exhaustive, captures desktop/mobile et preuves complètes155capacités. Connexion sécurisée et écran Séances réels observés ; la protection native du navigateur a ensuite empêché l'observation et la navigation de récupération. Le message local/connexion indisponible vu dans ce navigateur n'a pas pu être diagnostiqué : ni panne générale ni réussite Live terrain déduite. **FIELD_ACCEPTED=NOT_ACCEPTED** ; PR72HOLD intacte. Aucun nouveau code financier à reprendre à zéro ; seule cette recette nécessite de débloquer le navigateur. Détails : `docs/release/DELIVERY-2026-10-14-FINALISATION.md`.
+
+Les sections précédentes ci-dessous sont l'historique des étapes, pas l'état courant.
+
 ## Finalisation — 14 octobre 2026
 
 Production recontrôlée par lecture réelle de `/health` : `0d06e9a86e1527c97123db8442cb10913d3c91c6`, version 1.5.2.16, Live et stockage R2 liés, argent réel désactivé. Livraison38462983464 toujours SUCCESS ; aucun nouveau lot financier engagé.
