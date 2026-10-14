@@ -1,3 +1,4 @@
+import {adviseEcoRequest} from './eco-intelligence-core.js';
 const normalize=v=>String(v??'').normalize('NFKD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();
 const tokens=v=>normalize(v).split(/\s+/).filter(Boolean);
 const finance=/\b(cotisation|versement|epargne|secours|remboursement|pret|depense|sortie|collation|ration|aide locale|main levee|tontine|amende|assistance)\b/i;
@@ -32,8 +33,23 @@ export function mountLocalAssistantUI({getModules=()=>[],openModule=()=>{},navig
  const host=document.querySelector('#view-dashboard');if(!host||document.getElementById('localAssistantCenter'))return{open:()=>{},interpret:(x)=>interpretLocalAssistant(x,getModules())};
  const root=el('details',undefined,'panel');root.id='localAssistantCenter';root.append(el('summary','Assistant local · hors ligne · actions sûres'));
  root.append(el('p','L’assistant local comprend la navigation, recherche le catalogue, prépare le Launch Studio et transmet les commandes financières au panneau de prévisualisation. Il ne peut jamais écrire directement dans le Ledger. La voix dépend du navigateur ; le texte reste disponible hors ligne.','truth-notice'));
+ const intelligence=el('section',undefined,'eco-intelligence-help');const helpTitle=el('h3','Éco IA · conseils locaux / Offline guidance');
+ const language=document.createElement('select');language.setAttribute('aria-label','Langue du conseil / Advice language');
+ for(const [code,label] of [['fr','Français'],['en','English']]){const option=document.createElement('option');option.value=code;option.textContent=label;language.append(option);}
+ const advisory=el('div',undefined,'stack');intelligence.append(helpTitle,language,advisory);root.append(intelligence);
+ const renderAdvice=raw=>{
+  const a=adviseEcoRequest(raw,{locale:language.value});advisory.replaceChildren();
+  if(a.intent==='UNKNOWN'||a.intent==='EMPTY')return;
+  advisory.append(el('h4',a.heading),el('p',a.explanation));
+  const steps=el('ol');for(const step of a.steps)steps.append(el('li',step));advisory.append(steps);
+  for(const warning of a.warnings)advisory.append(el('p','⚠ '+warning,'truth-notice'));
+  const listen=el('button',language.value==='en'?'🔊 Read instructions':'🔊 Lire les instructions','secondary');listen.type='button';
+  listen.onclick=()=>{if(!('speechSynthesis' in window))return;window.speechSynthesis.cancel();const utterance=new SpeechSynthesisUtterance([a.heading,a.explanation,...a.steps,...a.warnings].join('. '));utterance.lang=language.value==='en'?'en-US':'fr-FR';window.speechSynthesis.speak(utterance);};advisory.append(listen);
+  if(a.destination){const next=el('button',language.value==='en'?'Open the relevant service':'Ouvrir le service concerné','secondary');next.type='button';next.onclick=()=>navigate(a.destination.view,{anchor:a.destination.anchor,force:true});advisory.append(next);}
+ };
+
  const form=document.createElement('form');form.className='form-grid';const lab=el('label','Votre instruction'),box=document.createElement('textarea');box.rows=3;box.placeholder='Ex. Ouvre les séances · Crée une tontine hybride · Chez membre Alice, Épargne 1000';lab.className='full';lab.append(box);const run=el('button','Comprendre localement','primary');run.type='submit';form.append(lab,run);const result=el('div',undefined,'stack');root.append(form,result);host.prepend(root);
- const execute=raw=>{const draft=interpretLocalAssistant(raw,getModules());result.replaceChildren();const note=el('p','Traitement local · réseau requis : non · écriture Ledger directe : non','hint');result.append(note);
+ const execute=raw=>{renderAdvice(raw);const draft=interpretLocalAssistant(raw,getModules());result.replaceChildren();const note=el('p','Traitement local · réseau requis : non · écriture Ledger directe : non','hint');result.append(note);
    if(draft.intent==='EMPTY'){result.append(el('p','Écrivez une instruction.','empty-state'));return draft;}
    if(draft.intent==='FINANCIAL_DRAFT'){const c=el('article',undefined,'item');c.append(el('strong','Brouillon financier détecté'),el('p','Ouverture du panneau financier canonique. Rien ne sera comptabilisé avant votre validation de la prévisualisation.','truth-notice'));const b=el('button','Prévisualiser dans les deux feuilles','primary');b.type='button';b.onclick=()=>{navigate('operations',{anchor:'voiceFinancialPanel',force:true});setTimeout(()=>{const input=document.getElementById('voiceFinancialText');if(input){input.value=raw;input.dispatchEvent(new Event('input',{bubbles:true}));document.getElementById('voiceFinancialInterpret')?.click();}},120);};c.append(b);result.append(c);return draft;}
    if(draft.intent==='LAUNCH_DRAFT'){const c=el('article',undefined,'item');c.append(el('strong','Configuration de groupe à préparer'),el('p','Le texte est transmis au Launch Studio comme description à analyser ; aucune création de groupe ni règle n’est validée automatiquement.','hint'));const b=el('button','Préparer dans le Launch Studio','primary');b.type='button';b.onclick=()=>{navigate('launch',{anchor:'launchAssistantPanel',force:true});setTimeout(()=>{const input=document.getElementById('launchAssistantText');if(input){input.value=raw;input.dispatchEvent(new Event('input',{bubbles:true}));}},100);};c.append(b);result.append(c);return draft;}
