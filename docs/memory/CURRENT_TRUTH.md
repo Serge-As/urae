@@ -1,3 +1,8 @@
+
+## Blocage définitif de ce navigateur de recette — 14 octobre 2026
+
+Après la connexion sécurisée, les observations et la navigation de récupération ont été bloquées. La demande de reprise manuelle a ensuite été refusée par Browser Use : « The browser URL policy blocks this action », next_action=stop. Arrêter les actions dans ce navigateur ; ne pas tenter de contourner la restriction via une autre surface, CDP ou récupération d'identifiants. Aucun nouveau contrôle visuel ni capture complète ne peut être attesté dans cette session. Le déploiement c3b7b58 et ses preuves restent acquis ; recueillir les observations de l'utilisateur sur la version publiée pour la suite de la recette.
+
 ## Livraison finale vérifiée — 14 octobre 2026
 
 Production : **1.5.2.16-live-modes-refonte**, SHA réellement servi **c3b7b589086d4d9439612d6cf6a5e959c8d1080f**, Worker **54562f4d-3a0f-45eb-bfef-ae82101ef810**. [Livraison 38522445853](https://github.com/Serge-As/urae/actions/runs/38522445853) et qualification38522445843 **SUCCESS**. Lecture indépendante de `/health` et du HTML public : SHA exact, titre/badge/bannière/footer tous1.5.2.16, cache attendu, argent réel désactivé, R2 et Live liés.

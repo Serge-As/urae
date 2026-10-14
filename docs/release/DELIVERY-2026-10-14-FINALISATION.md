@@ -1,3 +1,8 @@
+
+## Blocage définitif de ce navigateur de recette — 14 octobre 2026
+
+Après la connexion sécurisée, les observations et la navigation de récupération ont été bloquées. La demande de reprise manuelle a ensuite été refusée par Browser Use : « The browser URL policy blocks this action », next_action=stop. Arrêter les actions dans ce navigateur ; ne pas tenter de contourner la restriction via une autre surface, CDP ou récupération d'identifiants. Aucun nouveau contrôle visuel ni capture complète ne peut être attesté dans cette session. Le déploiement c3b7b58 et ses preuves restent acquis ; recueillir les observations de l'utilisateur sur la version publiée pour la suite de la recette.
+
 # Eco-System — livraison du 14 octobre 2026
 
 **Publié en production** : https://eco-system.sergemimf.workers.dev/#sessions
