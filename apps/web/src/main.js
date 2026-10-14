@@ -373,6 +373,7 @@ const roleDashboardsUI=mountRoleDashboardsUI({app,getGroups:()=>groups,getMember
 const geoDirectoryUI=mountGeoDirectoryUI({app,isManager,notify:toast,showError:fail});
 const creatorTalentUI=mountCreatorTalentUI({app,notify:toast,showError:fail});
 const localAssistantUI=mountLocalAssistantUI({getModules:()=>modules,openModule:id=>openModule(id),navigate:go,notify:toast});
+document.querySelector('#ecoAiNavBtn')?.addEventListener('click',()=>localAssistantUI.open());
 const quietWatchUI=mountQuietWatchUI({app,isManager,notify:toast,showError:fail});
 const founderAIUI=mountFounderAIUI({app,showError:fail});
 const managerPublicProfileUI=mountManagerPublicProfileUI({app,notify:toast,showError:fail});

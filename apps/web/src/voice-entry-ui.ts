@@ -97,15 +97,30 @@ async function postRepayment(membershipId:string,meetingId:string,rubric:any,amo
 interface PreviewRow{draft:VoiceFinancialEntryDraft;rubricId:string;direction:'IN'|'OUT';amount:number;loanId?:string;}
 let previewRows:PreviewRow[]=[];
 
-function speech(lang:string,onFinal:(text:string,confidence?:number)=>void,onState:(active:boolean,message:string)=>void){
+const installedLocalSpeechLanguages=new Set<string>();
+async function detectInstalledLocalSpeech(lang:string){
+  const Recognition=(window as any).SpeechRecognition||(window as any).webkitSpeechRecognition;
+  if(!Recognition||typeof Recognition.available!=='function')return;
+  try{
+    const status=await Recognition.available({langs:[lang],processLocally:true});
+    if(status==='available')installedLocalSpeechLanguages.add(lang);
+  }catch{ /* Unsupported local recognition: keep the existing remote/manual fallback. */ }
+}
+function speech(lang:string,onFinal:(text:string,confidence?:number)=>void,onState:(active:boolean,message:string)=>void,localOnly=false){
   const Recognition=(window as any).SpeechRecognition||(window as any).webkitSpeechRecognition;if(!Recognition){onState(false,t('Reconnaissance vocale non disponible sur ce navigateur. Utilisez le texte.','Speech recognition is unavailable in this browser. Use text input.'));return{toggle:()=>{},stop:()=>{}};}
   let listening=false,stopping=false,recognition:any;let parts:string[]=[],weighted=0,count=0;
   const finish=()=>{const final=sanitizeVoiceFinancialTranscript(parts.join(' '));if(final)onFinal(final,count?weighted/count:undefined);parts=[];weighted=0;count=0;};
-  const start=()=>{if(listening)return;parts=[];weighted=0;count=0;stopping=false;recognition=new Recognition();recognition.lang=lang;recognition.continuous=true;recognition.interimResults=false;recognition.maxAlternatives=3;recognition.onstart=()=>onState(true,t('Je vous écoute… Le texte apparaîtra seulement après l’arrêt.','Listening… Text will appear only after you stop.'));recognition.onresult=(event:any)=>{for(let i=event.resultIndex??0;i<event.results.length;i++)if(event.results[i].isFinal){const alt=event.results[i][0],part=String(alt?.transcript??'').trim();if(part&&normalizeLabel(parts.at(-1))!==normalizeLabel(part))parts.push(part);const confidence=Number(alt?.confidence);if(Number.isFinite(confidence)&&confidence>0){weighted+=confidence;count++;}}};recognition.onerror=(e:any)=>{const code=String(e.error??'');if(['not-allowed','service-not-allowed','audio-capture'].includes(code)){listening=false;stopping=false;onState(false,t('Micro indisponible ou permission refusée.','Microphone unavailable or permission denied.'));return;}if(code==='no-speech'){onState(listening,t('Parole non reconnue. Continuez ou arrêtez puis réessayez.','No speech recognized. Continue or stop and retry.'));return;}if(code==='network')onState(listening,t('Le service vocal du navigateur rencontre un problème réseau. La saisie texte reste disponible.','The browser speech service has a network problem. Text input remains available.'));};recognition.onend=()=>{const hadAudio=parts.length>0;listening=false;stopping=false;finish();onState(false,hadAudio?t('Transcription finale prête.','Final transcription ready.'):t('Dictée arrêtée sans transcription.','Dictation stopped without transcription.'));};listening=true;try{recognition.start();}catch{listening=false;onState(false,t('Impossible de démarrer la dictée. Utilisez le texte puis réessayez.','Unable to start dictation. Use text input and try again.'));}};
+  const start=()=>{if(listening)return;parts=[];weighted=0;count=0;stopping=false;recognition=new Recognition();recognition.lang=lang;if(localOnly)recognition.processLocally=true;recognition.continuous=true;recognition.interimResults=false;recognition.maxAlternatives=3;recognition.onstart=()=>onState(true,t('Je vous écoute… Le texte apparaîtra seulement après l’arrêt.','Listening… Text will appear only after you stop.'));recognition.onresult=(event:any)=>{for(let i=event.resultIndex??0;i<event.results.length;i++)if(event.results[i].isFinal){const alt=event.results[i][0],part=String(alt?.transcript??'').trim();if(part&&normalizeLabel(parts.at(-1))!==normalizeLabel(part))parts.push(part);const confidence=Number(alt?.confidence);if(Number.isFinite(confidence)&&confidence>0){weighted+=confidence;count++;}}};recognition.onerror=(e:any)=>{const code=String(e.error??'');if(['not-allowed','service-not-allowed','audio-capture'].includes(code)){listening=false;stopping=false;onState(false,t('Micro indisponible ou permission refusée.','Microphone unavailable or permission denied.'));return;}if(code==='no-speech'){onState(listening,t('Parole non reconnue. Continuez ou arrêtez puis réessayez.','No speech recognized. Continue or stop and retry.'));return;}if(code==='network')onState(listening,t('Le service vocal du navigateur rencontre un problème réseau. La saisie texte reste disponible.','The browser speech service has a network problem. Text input remains available.'));};recognition.onend=()=>{const hadAudio=parts.length>0;listening=false;stopping=false;finish();onState(false,hadAudio?t('Transcription finale prête.','Final transcription ready.'):t('Dictée arrêtée sans transcription.','Dictation stopped without transcription.'));};listening=true;try{recognition.start();}catch{listening=false;onState(false,t('Impossible de démarrer la dictée. Utilisez le texte puis réessayez.','Unable to start dictation. Use text input and try again.'));}};
   const stop=()=>{if(!listening||stopping)return;stopping=true;onState(true,t('Arrêt… finalisation de la transcription.','Stopping… finalizing transcription.'));try{recognition?.stop();}catch{listening=false;stopping=false;finish();onState(false,t('Dictée arrêtée.','Dictation stopped.'));}};return{toggle:()=>listening?stop():start(),stop};
 }
 
 function financialSpeech(lang:string,onFinal:(text:string,confidence?:number)=>void,onState:(active:boolean,message:string)=>void){
+  // Only explicitly confirmed *on-device* recognition runs without an AI server.
+  // Browser speech APIs without processLocally are not guaranteed offline.
+  if(installedLocalSpeechLanguages.has(lang))return speech(lang,onFinal,onState,true);
+  if(navigator.onLine===false){
+    return {toggle:()=>onState(false,t('Transcription vocale hors ligne indisponible sur cet appareil. Saisissez le montant au clavier ; aucune donnée audio n’est envoyée.','Offline speech recognition is unavailable on this device. Type the amount instead; no audio is sent.')),stop:()=>{}};
+  }
   if(typeof MediaRecorder==='undefined'||!navigator.mediaDevices?.getUserMedia)return speech(lang,onFinal,onState);
   let active=false,stopping=false,recorder:MediaRecorder|undefined,stream:MediaStream|undefined,chunks:BlobPart[]=[],autoStop:number|undefined;
   const closeStream=()=>{for(const track of stream?.getTracks()??[])track.stop();stream=undefined;if(autoStop!==undefined){window.clearTimeout(autoStop);autoStop=undefined;}};
@@ -260,6 +275,8 @@ function installFinancialCellDictation(){
 function translateInjected(){for(const el of document.querySelectorAll<HTMLElement>('[data-v-fr][data-v-en]'))el.textContent=uiEn()?el.dataset.vEn??'':el.dataset.vFr??'';}
 
 export function mountVoiceEntryUI(){
+  // Preflight does not download/install language packs or consume server AI.
+  void detectInstalledLocalSpeech('fr-FR');void detectInstalledLocalSpeech('en-US');
   // 1.5.1 ownership contract: voice augments inputs but never owns/re-renders
   // the financial matrices. main.js is the sole canonical table renderer.
   installFinancialVoicePanel();installBackOfficeExpense();installFocusedFieldDictation();installFinancialCellDictation();
