@@ -39,3 +39,12 @@ test('existing cell voice remains a draft, preserving canonical validation',()=>
  assert.match(ui,/function installFinancialCellDictation/);
  assert.match(ui,/input\.dispatchEvent\(new Event\('input'/);
 });
+
+test('on-device speech is preferred only after an explicit installed-language check',()=>{
+ const ui=read('apps/web/src/voice-entry-ui.ts');
+ assert.match(ui,/SpeechRecognition\.available/);
+ assert.match(ui,/processLocally:true/);
+ assert.match(ui,/installedLocalSpeechLanguages\.has\(lang\)/);
+ assert.match(ui,/navigator\.onLine===false/);
+ assert.match(ui,/no audio is sent/);
+});
