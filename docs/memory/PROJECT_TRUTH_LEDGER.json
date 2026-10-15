@@ -1320,6 +1320,18 @@
       ],
       "note": "Visible release identity correction and existing truth gate qualified and published. Financial/application code from0d06e9a preserved. Authenticated Sessions observed, but subsequent protected-browser inspection failed; exhaustive155-capability field acceptance not attested.",
       "next": "Browser action stopped after native protection and URL-policy refusal of manual handoff. Do not bypass or retry via alternative browser surfaces. Collect user observations on the published version; exhaustive visual acceptance remains NOT_ACCEPTED."
+    },
+    {
+      "id": "ui.cockpit-continuity.20261015",
+      "status": "IN_PROGRESS",
+      "scope": "visual-ui-and-local-navigation-projection",
+      "observedOn": "2026-10-15",
+      "evidence": [
+        "source:docs/change-impact/CIR-2026-10-15-cockpit-continuity.md",
+        "local:typecheck and build PASS; seven targeted tests PASS",
+        "source:tests/browser/cockpit-continuity-20261015.spec.mjs added to existing gates"
+      ],
+      "note": "No deployment or exhaustive field acceptance inferred. No financial authority changed."
     }
   ]
 }

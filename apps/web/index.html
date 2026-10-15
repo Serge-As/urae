@@ -10,11 +10,11 @@
   <meta name="format-detection" content="telephone=no">
   <meta id="metaDescription" name="description" content="Eco-System — plateforme de gestion de tontines, associations et communautés">
   <link rel="manifest" href="/manifest.webmanifest">
-  <link rel="stylesheet" href="/styles.css?v=15216">
-  <title>Eco-System — 1.5.2.16 · Synchro événementielle · UX data-first</title>
+  <link rel="stylesheet" href="/styles.css?v=15217">
+  <title>Eco-System — 1.5.2.17 · Cockpit personnel · Eco IA</title>
   <meta name="application-name" content="Éco-System">
 </head>
-<body class="auth-restoring ui-mode-visual">
+<body class="auth-restoring ui-mode-visual eco-cockpit-shell">
   <section id="sessionRestoreScreen" class="session-restore-screen" aria-live="polite"><div class="session-restore-card"><span class="auth-logo">E</span><strong>Eco-System</strong><p>Restauration sécurisée de votre session…</p></div></section>
   <section id="authScreen" class="auth-screen" aria-label="Connexion à Eco-System">
   <div class="auth-brand"><span class="auth-logo">E</span><strong>Eco-System</strong><p>Vos groupes, vos comptes, vos décisions.</p></div>
@@ -37,7 +37,7 @@
 <header class="topbar">
     <div class="brand">
       <div class="logo">E</div>
-      <div><strong>Eco-System</strong><small>Plateforme Tontines · Associations · Communautés</small><span class="version-badge">ECO-SYSTEM · 1.5.2.16</span><span id="previewEnvBadge" class="preview-env-badge" hidden>PRÉPRODUCTION · données de test séparées</span></div>
+      <div><strong>Eco-System</strong><small>Plateforme Tontines · Associations · Communautés</small><span class="version-badge">ECO-SYSTEM · 1.5.2.17</span><span id="previewEnvBadge" class="preview-env-badge" hidden>PRÉPRODUCTION · données de test séparées</span></div>
     </div>
     <div class="top-context">
       <select id="activeGroupSelect" aria-label="Groupe actif"><option value="">Aucun groupe actif</option></select>
@@ -64,7 +64,7 @@
       <span class="nav-caption">Groupes</span>
       <button data-view="discovery" class="nav-btn"><span>⌕</span><b>Découvrir</b></button>
       <button data-view="launch" class="nav-btn"><span>＋</span><b>Créer / intégrer</b></button>
-      <button id="ecoAiNavBtn" data-view="launch" class="nav-btn"><span>✦</span><b>Eco IA</b></button>
+      <button id="ecoAiNavBtn" data-view="assistant" class="nav-btn"><span>✦</span><b>Eco IA</b></button>
       <button data-view="operations" class="nav-btn"><span>⌘</span><b data-mobile-label="Centre op.">Centre opérationnel</b></button>
       <button id="sessionsNavBtn" data-view="sessions" class="nav-btn"><span>☷</span><b data-mobile-label="Séances">Séances</b></button>
       <button id="memberSheetsNavBtn" data-view="operations" data-anchor="twoSheetWorkspace" data-sheet-mode="individual" class="nav-btn"><span>▥</span><b>Fiches membres</b></button>
@@ -83,6 +83,9 @@
       <button data-view="ecosystem" data-anchor="interestCommunityPanel" class="nav-btn"><span>◎</span><b>Communautés</b></button>
       <button data-view="ecosystem" data-anchor="externalProgramsPanel" class="nav-btn"><span>◇</span><b>Partenaires & ONG</b></button>
       <button data-view="ecosystem" data-anchor="adManagerPanel" class="nav-btn"><span>◈</span><b>Publicité</b></button>
+      <button data-module-open="MARKETPLACE.CORE" class="nav-btn"><span>↗</span><b>Marketplace</b></button>
+      <button data-module-open="COMMUNITY.FORUM" class="nav-btn"><span>◌</span><b>Foras & Hubs</b></button>
+      <button data-view="ecosystem" data-anchor="valueNetworkOperational" data-eco-module-preset="NOW" class="nav-btn"><span>ϟ</span><b>Eco NOW</b></button>
       <button data-view="services" class="nav-btn"><span>▦</span><b>Tous les services</b></button>
       <span class="nav-caption">Résilience</span>
       <button data-view="relay" data-anchor="ecoRelayPanel" class="nav-btn"><span>⇄</span><b>Eco Relay</b></button>
@@ -95,22 +98,22 @@
 
     <main class="content">
       <section id="view-dashboard" class="view active">
-        <div class="hero">
-          <div>
-            <span class="eyebrow">Eco-System · Cahier Maître 2.3.4 + additifs 3.2.0</span>
-            <h1>Gérer une tontine ou une association sans perdre sa réalité.</h1>
-            <p>Créez votre groupe, préparez les séances, décrivez ses règles et suivez les encaissements enregistrés. Retrouvez les cotisations et leurs éventuelles annulations dans chaque relevé.</p>
-            <div class="eco-hero-actions" aria-label="Vos principales actions">
-              <button type="button" class="primary" data-go="launch">Créer / intégrer un groupe</button>
-              <button type="button" class="secondary" data-go="discovery">Découvrir des groupes</button>
-              <button type="button" class="secondary" data-view="ecosystem" data-anchor="valueNetworkOperational" data-eco-module-preset="NOW">Eco NOW</button>
-            </div>
-          </div>
-          <div class="hero-card eco-hero-identity">
-            <span>Mode financier réel</span><strong class="safe">DÉSACTIVÉ</strong>
-            <small>Tests fonctionnels et données de démonstration uniquement.</small>
-          </div>
+        <header class="cockpit-welcome">
+          <div><span class="eyebrow">MON ESPACE ECO</span><h1 id="cockpitGreeting">Votre journée, vos possibilités</h1><p id="cockpitContext">Vos groupes, vos activités et vos opportunités au même endroit.</p><small class="cahier-code">1.5.2.17 · Cockpit personnel</small></div>
+          <div class="actions"><button class="primary" type="button" data-go="assistant">✦ Parler à Eco IA</button><button class="secondary" type="button" data-go="launch">＋ Créer / intégrer</button></div>
+        </header>
+        <div class="cockpit-workbench">
+          <section class="cockpit-focus"><span class="eyebrow">AVANCER ENSEMBLE</span><h2>Que voulez-vous accomplir ?</h2><p>Une séance à préparer, une idée à partager, une opportunité à saisir.</p><div class="actions"><button class="primary" type="button" data-go="sessions">Ouvrir mes séances →</button><button class="secondary" type="button" data-go="inbox">Mes actions à traiter</button></div><p class="cockpit-mode-note">Mode financier réel désactivé · données de démonstration.</p></section>
+          <section class="panel" id="journeyPanel"><div class="panel-head"><div><span class="eyebrow">À VOTRE RYTHME</span><h2>Reprendre le fil</h2></div></div><div id="journeyRecent" class="journey-recent"></div><details class="journey-settings"><summary>Ma mémoire de navigation</summary><p class="hint">Derniers espaces uniquement, sur cet appareil, pendant 30 jours, séparés par compte et groupe. Aucun montant ni contenu de conversation.</p><label class="inline-check"><input type="checkbox" id="journeyRemember">Retenir mes espaces récents</label><button type="button" id="journeyClear" class="link-btn">Effacer cet historique</button></details></section>
         </div>
+        <nav class="cockpit-launchpad" aria-label="Accès directs à l’écosystème">
+          <button type="button" data-go="sessions"><span>☷</span><b>Séances</b><small>Préparer et suivre</small></button>
+          <button type="button" data-go="operations" data-anchor="twoSheetWorkspace" data-sheet-mode="individual"><span>▥</span><b>Mes fiches</b><small>Retrouver une situation</small></button>
+          <button type="button" data-module-open="MARKETPLACE.CORE"><span>↗</span><b>Marketplace</b><small>Acheter et vendre</small></button>
+          <button type="button" data-go="ecosystem" data-anchor="valueNetworkOperational" data-eco-module-preset="NOW"><span>ϟ</span><b>Eco NOW</b><small>Saisir une opportunité</small></button>
+          <button type="button" data-module-open="COMMUNITY.FORUM"><span>◎</span><b>Foras & communautés</b><small>Échanger et mutualiser</small></button>
+          <button type="button" data-go="services"><span>▦</span><b>Toutes les capacités</b><small>Explorer l’écosystème</small></button>
+        </nav>
         <section id="uiModePanel" class="ui-mode-panel" aria-labelledby="uiModeTitle">
           <div class="ui-mode-copy"><span class="eyebrow">Confort d’utilisation</span><h2 id="uiModeTitle">Choisissez votre mode</h2><p id="uiModeHelp">Présentation moderne et visuelle, densité normale et accès rapides.</p></div>
           <div class="ui-mode-controls">
@@ -128,7 +131,7 @@
             <button id="openAssistedModeBtn" type="button" class="secondary">Ouvrir la dictée financière</button>
           </div>
         </section>
-        <div class="cahier-banner"><div><strong>Votre cockpit Eco-System</strong><p>Groupes, communautés, séances, situation personnelle, activités Live et actions utiles dans un seul espace.</p></div><span class="cahier-code">1.5.2.16 · OFFLINE SOUVERAIN · SYNCHRO ÉVÉNEMENTIELLE · LIVE PUSH · TABLEAUX DATA-FIRST</span></div>
+        <div class="cahier-banner"><strong>Vos priorités, vos espaces</strong></div>
         <div id="universeCards" class="metrics"></div>
 
         <div class="two-col">
@@ -186,6 +189,8 @@
           </div>
         </section>
       </section>
+
+      <section id="view-assistant" class="view" aria-label="Eco IA"><div class="page-head"><div><span class="eyebrow">ECO IA · FR / EN</span><h1>Un coup de main, au bon endroit.</h1><p>Expliquez votre besoin, relisez la proposition et choisissez la suite.</p></div></div><div id="assistantWorkspace"></div></section>
 
       <section id="view-discovery" class="view">
         <div class="page-head"><div><span class="eyebrow">Lot B</span><h1>Discovery · Identity · Membership</h1><p>Le membre cherche un groupe ; le groupe recherche des candidats consentants. L'adhésion reste gouvernée.</p></div></div>
@@ -1469,8 +1474,9 @@
     </main>
   </div>
 
-  <footer class="footer">Eco-System 1.5.2.16 · Cahier Maître 2.3.4 + Blueprint 5.0.0 · UX unifiée</footer>
-  <script type="module" src="/src/ui-modes.js?v=15216"></script>
-  <script type="module" src="/src/main.js?v=15216"></script>
+  <footer class="footer">Eco-System 1.5.2.17 · Cahier Maître 2.3.4 + Blueprint 5.0.0 · UX unifiée</footer>
+  <script type="module" src="/src/ui-modes.js?v=15217"></script>
+  <script type="module" src="/src/main.js?v=15217"></script>
 </body>
 </html>
+

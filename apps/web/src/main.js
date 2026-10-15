@@ -1,3 +1,5 @@
+import {createJourneyContext,mountJourneyUI} from './journey-context.js';
+import {createCellDictationButton,speech} from './voice-entry-ui.js';
 import {createFinancialWorkUI} from './financial-work-ui.js';
 import {createRubricEditor,readRubricEditors,describeRubricPlan,editRubricPlan} from './launch-rubrics.js';
 import {mountLaunchStudio} from './launch-studio.js';
@@ -405,7 +407,10 @@ const groupLearningRegistryUI=mountGroupLearningRegistryUI({app,getGroups:()=>gr
 const roleDashboardsUI=mountRoleDashboardsUI({app,getGroups:()=>groups,getMembers:()=>members,getMeetings:()=>meetings,isManager,navigate:go,showError:fail});
 const geoDirectoryUI=mountGeoDirectoryUI({app,isManager,notify:toast,showError:fail});
 const creatorTalentUI=mountCreatorTalentUI({app,notify:toast,showError:fail});
-const localAssistantUI=mountLocalAssistantUI({getModules:()=>modules,openModule:id=>openModule(id),navigate:go,notify:toast});
+const journey=createJourneyContext({storage:{getItem:key=>localStorage.getItem(key),setItem:(key,value)=>localStorage.setItem(key,value)},scope:()=>({actor:app.currentActor(),group:app.activeGroup()})});
+const assistantContext=()=>({actor:app.currentActor(),group:app.activeGroup(),groupLabel:groups.find(g=>g.id===app.activeGroup())?.name||'',role:isManager()?'manager':'member',view:activeViewName(),recent:journey.snapshot().recent});
+const journeyUI=mountJourneyUI({journey,navigate:go,getContext:assistantContext});
+const localAssistantUI=mountLocalAssistantUI({getModules:()=>modules,openModule:id=>openModule(id),navigate:go,notify:toast,getContext:assistantContext,speech});
 const quietWatchUI=mountQuietWatchUI({app,isManager,notify:toast,showError:fail});
 const founderAIUI=mountFounderAIUI({app,showError:fail});
 const managerPublicProfileUI=mountManagerPublicProfileUI({app,notify:toast,showError:fail});
@@ -1319,7 +1324,8 @@ const makeFinancialEntryCell=({member,rubric,meetingId,editable=true})=>{
     const stateLine=document.createElement('small');stateLine.className='cell-save-state';stateLine.setAttribute('aria-live','polite');stateLine.hidden=true;
     const setCellState=(state,message='')=>{holder.dataset.saveState=state;holder.classList.toggle('is-failed',state==='FAILED');holder.classList.toggle('is-confirmed',state==='CONFIRMED');stateLine.hidden=!message;stateLine.textContent=message;};
     validate.dataset.ecoSubmitBound='canonical';
-    holder.append(input,validate,liveLine,stateLine);return holder;
+    const dictation=createCellDictationButton(input,{label:memberDisplay(member)+' · '+rubric.name,getScope:()=>String(app.currentActor())+'|'+String(app.activeGroup())});
+    holder.append(input,dictation,validate,liveLine,stateLine);return holder;
 };
 
 const ensureMatrixMeeting=()=>{
@@ -1435,7 +1441,11 @@ const renderCanonicalFinancialTable=({root,mode='meeting',meetingId='',membershi
       const openPart=index=>{try{sessionStorage.setItem(panelKey,String(index));}catch{}
         renderCanonicalFinancialTable({root,mode,meetingId,membershipId,showToolbar,editable});};
       previous.onclick=()=>openPart(panelIndex-1);next.onclick=()=>openPart(panelIndex+1);
-      navigation.append(previous,indication,next);presentation.append(navigation);
+      const partSelect=document.createElement('select');partSelect.setAttribute('aria-label',tx('Choisir une partie du tableau','Choose a table part'));
+      columnGroups.forEach((columns,index)=>{const option=document.createElement('option');option.value=String(index);option.textContent=tx('Partie ','Part ')+(index+1)+' · '+(columns[0]?.name||'')+(columns.length>1?' → '+columns.at(-1).name:'');partSelect.append(option);});
+      partSelect.value=String(panelIndex);partSelect.onchange=()=>openPart(Number(partSelect.value));
+      navigation.append(previous,indication,next,partSelect);presentation.append(navigation);
+      const totalHint=document.createElement('small');totalHint.className='hint';totalHint.textContent=tx('Les totaux incluent toutes les parties. Les colonnes de cette partie restent modifiables dans la même feuille.','Totals include all parts. Columns in this part remain editable in the same sheet.');presentation.append(totalHint);
     }
     const wrap=document.createElement('div');wrap.className='matrix-wrap canonical-financial-wrap';
     // The matrix scrolls horizontally. Forward ordinary vertical mouse-wheel
@@ -1799,7 +1809,7 @@ const openModule = async (id) => {
     if(m.status === 'FOUNDATION_ACTIVE' && id === 'RUBRIC.HAND_RAISE'){go('operations',{anchor:'rubricsManagementPanel',force:true});setTimeout(()=>prepareRubricPreset('Main levée','Rubrique principale événementielle : définir motif, bénéficiaire, participation obligatoire ou volontaire, montant ou règle de calcul, preuve et validation du groupe.'),80);return;}
     if(m.status === 'FOUNDATION_ACTIVE' && id === 'FINANCE.TRUST_SCORE'){go('members',{anchor:'trustGraphCenter',force:true});void trustCenterUI.refresh();return;}
     if(m.status === 'FOUNDATION_ACTIVE' && ['MEETING.PREPAYMENTS','MEETING.REOPEN_AUTH'].includes(id)){go('sessions',{anchor:'meetingFinanceGovernanceCenter',force:true});meetingFinanceGovernanceUI.open();return;}
-    if(m.status === 'FOUNDATION_ACTIVE' && id === 'AI.LOCAL'){go('dashboard',{anchor:'localAssistantCenter',force:true});localAssistantUI.open();return;}
+    if(m.status === 'FOUNDATION_ACTIVE' && id === 'AI.LOCAL'){go('assistant',{anchor:'localAssistantCenter',force:true});localAssistantUI.open();return;}
     if(m.status === 'FOUNDATION_ACTIVE' && id === 'SAFETY.QUIET_WATCH'){go('dashboard',{anchor:'quietWatchCenter',force:true});quietWatchUI.open();return;}
     if(m.status === 'FOUNDATION_ACTIVE' && id === 'AI.FOUNDER'){go('control',{anchor:'founderAICenter',force:true});founderAIUI.open();return;}
     if(m.status === 'FOUNDATION_ACTIVE' && id === 'DASHBOARDS.ALL'){go('dashboard',{anchor:'roleDashboardsCenter',force:true});roleDashboardsUI.open();return;}
@@ -2312,7 +2322,9 @@ window.addEventListener('eco:financial-live-update',event=>{
 
 const refreshGroupContext = async () => {
     const requestedGroup=app.activeGroup();
+    journeyUI.refresh();localAssistantUI.refreshContext();
     await renderGroups();
+    journeyUI.refresh();localAssistantUI.refreshContext();
     if(requestedGroup!==app.activeGroup())return;
     const active = Boolean(app.activeGroup());
     // Role checks must use the NEW group's members, not the previous group's
@@ -3123,8 +3135,9 @@ document.querySelector('#claimLocalAccountBtn')?.addEventListener('click',()=>vo
     catch(e){fail(e);}
     finally{if(button)button.disabled=false;}
 })());
-$('#logoutBtn').addEventListener('click',async()=>{try{await app.logout();document.body.classList.add('signed-out');$('#authScreen').hidden=false;$('#accountName').textContent='';const claim=document.querySelector('#claimLocalAccountBtn');if(claim)claim.hidden=true;showAuth(tx('Compte fermé sur cet appareil. Vos données locales ne sont pas supprimées.','Account signed out on this device. Your local data was not deleted.'));}catch(e){fail(e);}});
+$('#logoutBtn').addEventListener('click',async()=>{try{await app.logout();journeyUI.refresh();localAssistantUI.refreshContext();document.body.classList.add('signed-out');$('#authScreen').hidden=false;$('#accountName').textContent='';const claim=document.querySelector('#claimLocalAccountBtn');if(claim)claim.hidden=true;showAuth(tx('Compte fermé sur cet appareil. Vos données locales ne sont pas supprimées.','Account signed out on this device. Your local data was not deleted.'));}catch(e){fail(e);}});
 // Online recovery is serialized by resumeOnline() above: sync durable outbox first, then restart projections.
 window.addEventListener('offline',()=>{renderConnectivity();const claim=document.querySelector('#claimLocalAccountBtn');if(claim&&!claim.hidden){claim.disabled=true;claim.textContent=tx('Compte local · Internet requis pour finaliser','Local account · Internet needed to finalize');}});
 void ensureCurrentServiceWorker();
 void start();
+

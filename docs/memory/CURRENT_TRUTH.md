@@ -1,3 +1,9 @@
+## Candidat 1.5.2.17 — cockpit et continuité — 15 octobre 2026
+
+Accueil de travail compact, raccourcis vers les propriétaires existants, style commun, écran Eco IA FR/EN, guides locaux contextualisés, mémoire de destinations par compte/groupe (8 espaces, fenêtre de 30 jours, désactivation/effacement), dictée avec relecture dans les cellules et sélection directe des parties de tableau. Aucun nouveau propriétaire financier ni mutation de données D1.
+
+Contrôles locaux : types et compilation réussis ; 7 tests ciblés réussis. Première qualification native : 725/728, deux écarts de présentation/traduction corrigés et un marqueur historique absent du miroir récupéré ; nouvelle qualification en cours. Les scénarios navigateur cockpit/voix sont ajoutés aux gates existants, sans retrait de tests. Version candidate non encore attestée en production ; FIELD_ACCEPTED=NOT_ACCEPTED. Baseline applicative c3b7b58 ; documentation récente f51d0e5 conservée. La restriction de l'ancien navigateur authentifié reste respectée ; les nouveaux scénarios CI utilisent exclusivement des comptes synthétiques et un serveur isolé.
+
 
 ## Blocage définitif de ce navigateur de recette — 14 octobre 2026
 
@@ -1132,3 +1138,4 @@ Maturité :
 - **5 PLANNED_DOMAIN** : `COMMUNITY.VIDEO`, `MARKETPLACE.REWARDS`, `INTEGRATION.MOBILE_MONEY`, `SECURITY.MFA`, `FEDERATION.GROUP_NETWORK`.
 
 La production est **TECHNIQUEMENT QUALIFIÉE**. Le statut FIELD_ACCEPTED reste réservé à la recette réelle du fondateur sur Chrome/Opera/mobile/offline/deux gestionnaires ; le smoke distant ne remplace pas cette observation.
+

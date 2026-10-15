@@ -427,9 +427,10 @@ export function mountLaunchStudio({app,getGroups,getRubrics,addRubric,invalidate
   byId('clearLaunchFiles')?.addEventListener('click',clearFiles);
   byId('interpretLaunchText')?.addEventListener('click',()=>void interpret());
   byId('startLaunchVoice')?.addEventListener('click',startVoice);
-  byId('ecoAiNavBtn')?.addEventListener('click',()=>setTimeout(()=>{showStep(6);byId('launchAssistantPanel')?.scrollIntoView({behavior:'smooth',block:'start'});},80));
+  // Eco IA has its own screen; Launch Studio remains the owner of group drafts.
   byId('previewConfirmed')?.addEventListener('change',renderPreview);
   for(const p of panels)p.addEventListener('input',()=>{invalidate();if(step===10)renderPreview();});
   refreshGroups();syncOrigin();showStep(1);
   return{readProfile,refreshGroups,showStep,renderPreview,persistStarterKit,starterKitSnapshot:()=>lastStarterKit?structuredClone(lastStarterKit):null,afterSimulation:()=>{window.__ecoLastProjectReady=true;renderPreview();},invalidateSimulation:()=>{window.__ecoLastProjectReady=false;if(byId('createGroupBtn'))byId('createGroupBtn').disabled=true;}};
 }
+
