@@ -2401,6 +2401,7 @@ export class ConnectedApplication {
 
   async syncOutbox():Promise<OutboxItem[]>{
     if(this.serverBudgetBlocked()||typeof navigator!=='undefined'&&navigator.onLine===false)return this.outbox.list();
+    const statusesBefore=new Map(this.outbox.list().map(item=>[item.id,item.status]));
     // syncOutbox is itself an explicit, event-driven retry opportunity.
     // Clear only the short transport breaker; quota/D1 protection stays intact.
     this.transportUnavailableUntil=0;
@@ -2418,7 +2419,19 @@ export class ConnectedApplication {
       await this.saveCached(path,rows.some(x=>x.id===canonical.id)?rows.map(x=>x.id===canonical.id?canonical:x):[...rows,canonical]);
       if(typeof window!=='undefined')window.dispatchEvent(new CustomEvent('eco:rubric-policy-synced',{detail:{groupId,rubricId:canonical.id,revision:last?.loanPolicyRevision??null}}));
     }
-    await this.persistOutbox();return result;
+    await this.persistOutbox();
+    // syncPending also drains intentions added WHILE a preceding command is
+    // being sent. A caller's initial snapshot cannot acknowledge those rows.
+    // Publish only persisted, server-confirmed transitions from this owner.
+    if(typeof window!=='undefined'&&typeof CustomEvent!=='undefined')for(const item of result){
+      if(item.status!=='CONFIRMED'||statusesBefore.get(item.id)==='CONFIRMED'||
+        !['FINANCIAL_CELL_CORRECTION_PROPOSAL_V1','FINANCIAL_CELL_CORRECTION_PROPOSAL_V2','FINANCIAL_SHEET_ENTRY_V1'].includes(item.type))continue;
+      const p=item.payload as any,ack=(item as any).lastResult??{};
+      window.dispatchEvent(new CustomEvent('eco:financial-outbox-confirmed',{detail:{actorId:item.actorId,groupId:p.groupId,
+        meetingId:p.meetingId,membershipId:p.membershipId,rubricId:p.rubricId,idempotencyKey:item.idempotencyKey,
+        amount:ack.canonicalAmount,cellVersion:ack.cellVersion,status:ack.status}}));
+    }
+    return result;
   }
   async queueDemoIntent(note='Local note'):Promise<OutboxItem>{const item=this.outbox.enqueue({tenantId:this.tenantId,actorId:this.actorId,type:'MEETING_NOTE_UPDATED',payload:{groupId:this.activeGroupId,note},idempotencyKey:`note-${this.activeGroupId??'none'}-${Date.now()}`});await this.persistOutbox();return item;}
   async retryOutboxItem(id:string):Promise<OutboxItem|undefined>{const item=this.outbox.retry(id);await this.persistOutbox();return item;}

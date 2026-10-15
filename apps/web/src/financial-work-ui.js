@@ -1,6 +1,6 @@
 const node=(tag,text,cls)=>{const e=document.createElement(tag);if(text!==undefined)e.textContent=text;if(cls)e.className=cls;return e;};
-export function createFinancialWorkUI({app,tx,notify,summary,edit,resume}){
-  const modes=new Map(),passages=new Map();let current=null,busy=null,liveConnected=false;
+export function createFinancialWorkUI({app,tx,notify,summary,edit,resume,isLiveConnected=()=>false}){
+  const modes=new Map(),passages=new Map();let current=null,busy=null;
   const scope=(meetingId)=>JSON.stringify([app.currentActor(),app.activeGroup(),meetingId]);
   const prompt=({title,content,actions})=>new Promise(resolve=>{
     const previous=document.activeElement,d=node('dialog',undefined,'eco-work-dialog');d.append(node('h2',title));if(content)d.append(content);
@@ -13,7 +13,7 @@ export function createFinancialWorkUI({app,tx,notify,summary,edit,resume}){
       let bar=root.querySelector(':scope > .eco-work-toolbar');if(!bar){bar=node('div',undefined,'eco-work-toolbar');root.prepend(bar);}bar.replaceChildren();
       const meetingId=root.dataset.meetingId||current?.meetingId||'',mode=meetingId?modes.get(scope(meetingId)):null;
       const label=mode==='REUNION'?tx('Réunion','Meeting'):mode==='HORS_REUNION'?tx('Hors réunion','Outside meeting'):tx('Mode à choisir','Choose a mode');
-      const status=navigator.onLine===false?tx('hors ligne · saisies conservées ici','offline · entries saved here'):liveConnected?tx('Live connecté','Live connected'):tx('connexion Live en attente','Live connection pending');
+      const status=navigator.onLine===false?tx('hors ligne · saisies conservées ici','offline · entries saved here'):isLiveConnected()?tx('Live connecté','Live connected'):tx('connexion Live en attente','Live connection pending');
       const indicator=node('strong',label+' · '+status);indicator.setAttribute('role','status');bar.append(indicator);
       const review=node('button',tx('Vérifier le membre et terminer','Review member and finish'),'secondary');review.type='button';review.disabled=!current||Boolean(meetingId&&current.meetingId!==meetingId);review.onclick=()=>void finish().catch(e=>notify(String(e.message)));bar.append(review);
       const change=node('button',tx('Choisir le mode','Choose mode'),'secondary');change.type='button';change.disabled=!meetingId;change.onclick=()=>void choose(meetingId,true).catch(e=>notify(String(e.message)));bar.append(change);
@@ -43,9 +43,9 @@ export function createFinancialWorkUI({app,tx,notify,summary,edit,resume}){
   };
   window.addEventListener('eco:live-signal',e=>{if(e.detail?.type==='WORK_MODE_PROPOSAL'&&current&&e.detail.payload?.meetingId===current.meetingId&&!busy)notify(tx('Plusieurs gestionnaires saisissent cette séance : vous pouvez activer le mode Réunion.','Several managers are entering this meeting: Meeting mode is available.'));});
   window.addEventListener('eco:financial-work-mode',e=>{if(e.detail?.meetingId)modes.set(scope(e.detail.meetingId),e.detail.mode);toolbar();});
-  window.addEventListener('eco:live-connected',()=>{liveConnected=true;toolbar();});
-  window.addEventListener('eco:live-disconnected',()=>{liveConnected=false;toolbar();});
-  window.addEventListener('offline',()=>{liveConnected=false;toolbar();});
+  window.addEventListener('eco:live-connected',toolbar);
+  window.addEventListener('eco:live-disconnected',toolbar);
+  window.addEventListener('offline',toolbar);
   const visit=async(meetingId,membershipId)=>{if(!current||current.groupId!==app.activeGroup()||current.actorId!==app.currentActor()||current.meetingId===meetingId&&current.membershipId===membershipId||busy)return;busy=finish();try{await busy;}finally{busy=null;}};
   return{before,finish,toolbar,visit};
 }

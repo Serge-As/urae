@@ -1133,7 +1133,7 @@ const ensureFinancialSnapshotPolling=()=>{
 };
 
 let financialWorkUI;
-const ensureFinancialWorkUI=()=>financialWorkUI??=createFinancialWorkUI({app,tx,notify:toast,resume:()=>resumeOnline(),
+const ensureFinancialWorkUI=()=>financialWorkUI??=createFinancialWorkUI({app,tx,notify:toast,resume:()=>resumeOnline(),isLiveConnected:()=>liveChannelConnected,
   summary:async(meetingId,membershipId,ids)=>{
     try{if(navigator.onLine===false)throw Error('LOCAL_SUMMARY_REQUIRED');const data=await app.financialPassageSummary(meetingId,membershipId,ids);if(data.projectionSource==='LOCAL_CACHE')throw Error('LOCAL_SUMMARY_REQUIRED');return data;}catch(e){if(e.message!=='LOCAL_SUMMARY_REQUIRED'&&navigator.onLine!==false&&!app.serverBudgetState?.().blocked)throw e;
       const ordered=meetings.filter(x=>x.status!=='cancelled').slice().sort((a,b)=>String(a.scheduledAt??a.openedAt).localeCompare(String(b.scheduledAt??b.openedAt))),beforeIds=ordered.slice(0,ordered.findIndex(x=>x.id===meetingId)).map(x=>x.id);
@@ -1539,7 +1539,7 @@ const renderCanonicalFinancialTable=({root,mode='meeting',meetingId='',membershi
         const explanation=document.createElement('p');explanation.className='eco-smartgrid-explanation';
         explanation.textContent=tx('Les sous-totaux des colonnes concernent uniquement cette partie. Les totaux généraux des membres et de la feuille comprennent toutes les rubriques, même masquées.','Column subtotals apply only to this part. Member and sheet grand totals include all rubrics, including hidden parts.');
         root.append(explanation);
-      }restoreReplacedMatrixScroll(wrap);root.dataset.canonicalTableReady='1';financialWorkUI?.toolbar();return;
+      }restoreReplacedMatrixScroll(wrap);root.dataset.canonicalTableReady='1';ensureFinancialWorkUI().toolbar();return;
     }
     const member=activeMembers.find(x=>x.id===membershipId);
     if(!member){root.innerHTML='<div class="empty-state">'+tx('Aucune fiche individuelle accessible.','No individual sheet available.')+'</div>';return;}
@@ -1565,7 +1565,7 @@ const renderCanonicalFinancialTable=({root,mode='meeting',meetingId='',membershi
         const explanation=document.createElement('p');explanation.className='eco-smartgrid-explanation';
         explanation.textContent=tx('Les sous-totaux des colonnes concernent uniquement cette partie. Les totaux généraux des membres et de la feuille comprennent toutes les rubriques, même masquées.','Column subtotals apply only to this part. Member and sheet grand totals include all rubrics, including hidden parts.');
         root.append(explanation);
-      }restoreReplacedMatrixScroll(wrap);root.dataset.canonicalTableReady='1';financialWorkUI?.toolbar();
+      }restoreReplacedMatrixScroll(wrap);root.dataset.canonicalTableReady='1';ensureFinancialWorkUI().toolbar();
 };
 const renderMeetingMatrix=()=>renderCanonicalFinancialTable({root:document.querySelector('#meetingMatrix'),mode:'meeting',meetingId:ensureMatrixMeeting(),showToolbar:true,editable:isManager()});
 const renderIndividualSheetMatrix=()=>{
@@ -1594,6 +1594,24 @@ document.querySelector('#meetingSheetViewBtn')?.addEventListener('click',()=>{do
 document.querySelector('#individualSheetsViewBtn')?.addEventListener('click',()=>{document.querySelector('#meetingMatrixPanel').hidden=true;document.querySelector('#individualSheetsMode').hidden=false;document.querySelector('#individualSheetsViewBtn').classList.add('active');document.querySelector('#meetingSheetViewBtn').classList.remove('active');renderIndividualSheetMatrix();});
 window.addEventListener('eco:render-two-sheets',()=>{renderMeetingMatrix();renderIndividualSheetMatrix();});
 window.addEventListener('eco:ui-mode-changed',()=>{renderMeetingMatrix();renderIndividualSheetMatrix();renderAllCanonicalFinancialHosts();});
+window.addEventListener('eco:financial-outbox-confirmed',event=>{
+  const d=event.detail??{};
+  if(String(d.actorId)!==String(app.currentActor())||String(d.groupId)!==String(app.activeGroup()))return;
+  const amount=Number(d.amount),version=Number(d.cellVersion);
+  if(!Number.isSafeInteger(amount)||!Number.isSafeInteger(version)||['SUPERSEDED','CONSENSUS_REQUIRED','CLOCK_REVIEW'].includes(d.status))return;
+  financialPendingTargets=new Map((app.pendingFinancialCellTargets?.()??[]).map(x=>[financialCellKey(x.membershipId,x.rubricId,x.meetingId),x]));
+  financialPendingSheetEntries=app.pendingFinancialSheetEntries?.()??[];
+  if(cellHasPendingLocal(d))return; // A more recent local command still needs its own ACK.
+  if(exactCellVersion(d.membershipId,d.rubricId,d.meetingId)>version)return;
+  const nature=financialNatureForRubric(rubrics.find(r=>r.id===d.rubricId));
+  const signed=['LOAN','OUTFLOW'].includes(nature)?-Math.abs(amount):amount;
+  const key=financialCellKey(d.membershipId,d.rubricId,d.meetingId);
+  financialOptimisticValues.delete(key);
+  rememberConfirmedCell(key,{...d,amount:signed,cellVersion:version});
+  patchFinancialDomCell({...d,amount:signed,preservePending:false});
+  setCellSyncedState(d);
+  window.dispatchEvent(new CustomEvent('eco:financial-data-changed',{detail:{...d,amount:signed,soft:true}}));
+});
 window.addEventListener('eco:set-matrix-meeting',event=>{const id=event instanceof CustomEvent?String(event.detail?.meetingId??''):'';if(id&&meetings.some(x=>x.id===id)){matrixMeetingId=id;try{sessionStorage.setItem('eco.matrixMeetingId',id);}catch{}}});
 
 window.addEventListener('eco:restore-financial-sheet',event=>{

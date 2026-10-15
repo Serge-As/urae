@@ -2,6 +2,22 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {ConnectedApplication} from '../.build/packages/application/src/index.js';
 
+test('a financial command added during another send emits its persisted server confirmation',async()=>{
+  const previousFetch=globalThis.fetch,previousWindow=globalThis.window;
+  globalThis.window=new EventTarget();const events=[];window.addEventListener('eco:financial-outbox-confirmed',e=>events.push(e.detail));
+  let release;const blocked=new Promise(resolve=>{release=resolve;});let entered;const started=new Promise(resolve=>{entered=resolve;});let sends=0;
+  const app=new ConnectedApplication({actorId:'manager',tenantId:'tenant'});app.persistOutbox=async()=>{};
+  globalThis.fetch=async(_url,init)=>{const item=JSON.parse(init.body);sends++;if(item.type==='FINANCIAL_WORK_V1'){entered();await blocked;}return new Response(JSON.stringify({accepted:true,stored:true,canonicalAmount:1750,cellVersion:1,status:'APPLIED'}),{status:200});};
+  const make=type=>({actorId:'manager',tenantId:'tenant',type,idempotencyKey:type,payload:{groupId:'group',meetingId:'meeting',membershipId:'member',rubricId:'rubric',targetAmount:1750}});
+  try{
+    app.outbox.enqueue(make('FINANCIAL_WORK_V1'));const sync=app.syncOutbox();await started;
+    app.outbox.enqueue(make('FINANCIAL_CELL_CORRECTION_PROPOSAL_V2'));release();await sync;
+    assert.equal(sends,2);assert.equal(events.length,1);assert.equal(events[0].amount,1750);assert.equal(events[0].actorId,'manager');
+    assert.equal(app.outboxItems().find(x=>x.type==='FINANCIAL_CELL_CORRECTION_PROPOSAL_V2').status,'CONFIRMED');
+    await app.syncOutbox();assert.equal(events.length,1,'old confirmations are not replayed as new transitions');
+  }finally{globalThis.fetch=previousFetch;if(previousWindow===undefined)delete globalThis.window;else globalThis.window=previousWindow;}
+});
+
 test('a 3-second financial response completes once with its original intent, without a false network failure',async t=>{
   const saved=globalThis.fetch;
   t.mock.timers.enable({apis:['setTimeout','Date'],now:Date.parse('2026-10-15T12:00:00Z')});

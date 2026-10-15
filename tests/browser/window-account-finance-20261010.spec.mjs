@@ -42,8 +42,8 @@ test('two accounts in one browser keep their own identity, drafts, live amounts,
  const visualFont=await cell(second,ids).locator('.cell-current').evaluate(e=>parseFloat(getComputedStyle(e).fontSize));
  expect(seniorFont-visualFont).toBeGreaterThanOrEqual(4);
  expect(await cell(second,ids).evaluate(e=>e.getBoundingClientRect().height)).toBeLessThan(95);
- await page.screenshot({path:'artifacts/meeting-senior.png',fullPage:false});
- await second.screenshot({path:'artifacts/meeting-visual.png',fullPage:false});
+ await cell(page,ids).scrollIntoViewIfNeeded();await page.screenshot({path:'artifacts/meeting-senior.png',fullPage:false});
+ await cell(second,ids).scrollIntoViewIfNeeded();await second.screenshot({path:'artifacts/meeting-visual.png',fullPage:false});
  await page.locator('#workspaceUiMode').selectOption('assisted');
  await expect(page.locator('#meetingMatrix .eco-work-toolbar')).toHaveCSS('display','flex');
  await page.screenshot({path:'artifacts/meeting-assisted.png',fullPage:false});

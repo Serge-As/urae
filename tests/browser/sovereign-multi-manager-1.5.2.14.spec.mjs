@@ -82,6 +82,8 @@ test('20, 40 and 100 categories are all covered by complete fitting parts, with 
     const seen=[];let total;
     for(let i=0;i<parts;i++){
       await root.getByRole('combobox',{name:'Choisir une partie du tableau'}).selectOption(String(i));
+      await expect(root.locator('.canonical-financial-wrap')).toBeVisible();
+      await expect.poll(()=>root.locator('.canonical-financial-wrap').evaluate(w=>w.clientWidth)).toBeGreaterThan(0);
       const geometry=await root.locator('.canonical-financial-wrap').evaluate(w=>({overflow:w.scrollWidth-w.clientWidth,width:w.clientWidth,table:w.querySelector('table').getBoundingClientRect().width}));
       expect(geometry.overflow,'part '+(i+1)+'/'+parts+' must be complete').toBeLessThanOrEqual(2);
       expect(geometry.width).toBeGreaterThan(0);
@@ -90,12 +92,14 @@ test('20, 40 and 100 categories are all covered by complete fitting parts, with 
     }
     expect(seen.length).toBe(size);expect([...new Set(seen)].sort()).toEqual(rows.map(r=>r.id).sort());
     expect(Number(total.replace(/[^0-9-]/g,''))).toBe(1000);
+    await root.locator('.canonical-financial-wrap').scrollIntoViewIfNeeded();
     await page.screenshot({path:'artifacts/meeting-'+size+'-categories.png',fullPage:false});
   }
   await page.setViewportSize({width:700,height:900});
   await page.locator('#workspaceUiMode').selectOption('senior');
   await expect(page.locator('#meetingMatrix table')).toHaveAttribute('data-fitted','true');
   expect(await page.locator('#meetingMatrix .canonical-financial-wrap').evaluate(w=>w.scrollWidth-w.clientWidth)).toBeLessThanOrEqual(2);
+  await page.locator('#meetingMatrix .canonical-financial-wrap').scrollIntoViewIfNeeded();
   await page.screenshot({path:'artifacts/meeting-100-senior-narrow.png',fullPage:false});
 });
 
