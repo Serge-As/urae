@@ -6,6 +6,8 @@ Les régressions reproduites après 1.5.2.17 ont motivé le correctif : acquitte
 
 FIELD_ACCEPTED=NOT_ACCEPTED. Ne pas confondre cette réparation qualifiée avec une recette du compte Delor, une absence garantie de tout autre défaut, une mémoire interappareils intégrale ou l'achèvement de toutes les intentions stratégiques. Ne pas contourner l'ancien blocage du navigateur. Ne pas supprimer de données locales ni de saisies en attente. Reprendre sur cette production et ses preuves ; tout nouvel écart doit être reproduit dans le propriétaire existant.
 
+Contrôle complémentaire : l'échec intermittent de mesure du défilement du run documentaire 38815229373 a été traité dans le test, sans changement du code applicatif. La qualification renforcée 38816739897 sur 3b31c5b011b2809fd80e2ccedad0ff74c4a1f3d2 passe native732/Chromium11/WebKit6, avec vérification explicite du défilement après rechargement. La production reste au SHA 70e376d9524b4646b1756482f7d7bf2713e3925d, qualifié15Chromium/6WebKit.
+
 Les entrées suivantes sont historiques ; leurs annonces de livraison ne constituent pas une acceptation terrain.
 
 ## Réparation après signalement terrain — 15 octobre 2026

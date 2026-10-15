@@ -36,10 +36,12 @@
         "docs/release/CONFORMANCE-2026-10-15-WORKSPACE-REPAIR.md",
         "docs/release/evidence/WORKSPACE-REPAIR-PUBLIC-2026-10-15.json",
         "https://github.com/Serge-As/urae/actions/runs/38812599315",
-        "https://github.com/Serge-As/urae/actions/runs/38812599318"
+        "https://github.com/Serge-As/urae/actions/runs/38812599318",
+        "https://github.com/Serge-As/urae/actions/runs/38816739897"
       ],
       "observedOn": "2026-10-15",
-      "next": "Preserve pending local entries and existing authorities; reproduce any further founder-reported regression. Do not claim authenticated Delor acceptance."
+      "next": "Preserve pending local entries and existing authorities; reproduce any further founder-reported regression. Do not claim authenticated Delor acceptance.",
+      "note": "An intermittent detached-wrapper scroll measurement in documentation run38815229373 was corrected in the test and strengthened with an explicit post-reload offset assertion. Run38816739897 native732/Chromium11/WebKit6 PASS; runtime sources unchanged from deployed70e376d."
     },
     {
       "id": "constitution.master.2.3.3",

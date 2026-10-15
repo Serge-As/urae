@@ -44,3 +44,10 @@ PR 95 fusionnée sous d2f6b9537088794364b15f082e5db9b7ebb2da57. La publication n
 ## Livraison observée
 
 Version 1.5.2.18 publiée au SHA 70e376d9524b4646b1756482f7d7bf2713e3925d. Livraison 38812599315 SUCCESS ; 732/15/6 PASS sur la source publiée, sauvegarde vérifiée et dix lectures publiques cohérentes. Voir DELIVERY-2026-10-15-WORKSPACE-REPAIR et le reçu JSON. FIELD_ACCEPTED reste NOT_ACCEPTED ; aucune acceptation du compte réel ni achèvement global de la vision prétendu.
+
+
+## Contrôle complémentaire de continuité après bilan
+
+Le run documentaire 38815229373 a révélé une mesure intermittente de défilement à zéro sur un wrapper remplacé pendant le rafraîchissement (la synchronisation financière du scénario avait passé ses contrôles). Le test utilise maintenant une résolution du wrapper courant et sa mesure dans le même tour navigateur ; il vérifie aussi explicitement une position horizontale non nulle après rechargement complet. Aucun seuil de convergence ni contrôle existant n'a été réduit.
+
+Source de test 3b31c5b011b2809fd80e2ccedad0ff74c4a1f3d2 : [qualification 38816739897](https://github.com/Serge-As/urae/actions/runs/38816739897) SUCCESS, 732 tests applicatifs, Chromium 11/11 et WebKit 6/6 du workflow secondaire. La comparaison avec le SHA publié confirme que seuls les documents et ce test ont changé : code applicatif déployé inchangé. Les 15 scénarios Chromium du workflow de livraison restent attestés sur le SHA publié. L'échec initial est conservé, pas effacé par une relance aveugle.
