@@ -2,7 +2,7 @@ import {test,expect} from '@playwright/test';
 const base='http://127.0.0.1:4173';
 test.setTimeout(120000);
 test('connected cockpit, direct destinations, memory and Eco IA remain usable on desktop and phone',async({page})=>{
- page.on('pageerror',error=>console.log('COCKPIT_PAGE_ERROR',error.message));page.on('console',message=>{if(message.type()==='error'||message.text().startsWith('ASSISTANT_EVENT'))console.log('COCKPIT_CONSOLE_ERROR',message.text());});
+ page.on('pageerror',error=>console.log('COCKPIT_PAGE_ERROR',error.message));page.on('console',message=>{if(message.type()==='error')console.log('COCKPIT_CONSOLE_ERROR',message.text());});
  await page.goto(base,{waitUntil:'domcontentloaded'});
  await page.evaluate(async()=>{
   const scope=sessionStorage.getItem('eco.window.session.v1');
@@ -14,9 +14,7 @@ test('connected cockpit, direct destinations, memory and Eco IA remain usable on
  await page.locator('#sessionsNavBtn').click();await expect(page.locator('#view-sessions')).toBeVisible();
  await page.locator('#mainNav [data-view="dashboard"]').first().click();await expect(page.locator('#journeyRecent')).toContainText('Séances');
  await page.locator('#ecoAiNavBtn').click();await expect(page.locator('#view-assistant')).toBeVisible();await expect(page.locator('#view-launch')).toBeHidden();
- const cdp=await page.context().newCDPSession(page);const target=await cdp.send('Runtime.evaluate',{expression:'document.querySelector(\'#localAssistantCenter button[type="submit"]\')'});const listeners=await cdp.send('DOMDebugger.getEventListeners',{objectId:target.result.objectId});console.log('ASSISTANT_LISTENERS',JSON.stringify(listeners.listeners));await cdp.detach();await page.evaluate(()=>{for(const kind of ['pointerdown','pointerup','click','submit'])document.addEventListener(kind,e=>console.log('ASSISTANT_EVENT',kind,e.target.tagName,e.target.id,e.target.textContent?.slice(0,80)),true);});
- console.log('ASSISTANT_SOURCE',await page.evaluate(async()=>({hasHandler:(await(await fetch('/src/local-assistant.js')).text()).includes('requestState')})));
- await page.locator('#ecoAssistantPrompt').fill('Reprendre mon activité');await page.locator('#localAssistantCenter button[type="submit"]').click();console.log('ASSISTANT_SUBMIT_STATE',await page.evaluate(()=>({button:document.querySelector('#localAssistantCenter button[type="submit"]')?.dataset.requestState,resultLength:document.getElementById('ecoAssistantResult')?.textContent.length,forms:document.querySelectorAll('#localAssistantCenter form').length,views:document.querySelectorAll('#localAssistantCenter').length})));await expect(page.locator('#ecoAssistantResult')).toContainText('sessions');
+ await page.locator('#ecoAssistantPrompt').fill('Reprendre mon activité');await expect(page.locator('#focusedFieldDictation')).toHaveCSS('position','fixed');await page.locator('#localAssistantCenter button[type="submit"]').click();await expect(page.locator('#ecoAssistantResult')).toContainText('sessions');
  await page.locator('#ecoAssistantPrompt').fill('Vendre ou acheter');await page.locator('#localAssistantCenter button[type="submit"]').click();await expect(page.locator('#ecoAssistantResult')).toContainText('acheteur');
  await page.screenshot({path:'artifacts/eco-ia-desktop.png',fullPage:true});
  await page.locator('#mainNav [data-view="dashboard"]').first().click();await page.locator('.journey-settings summary').click();await page.locator('#journeyRemember').uncheck();await page.locator('#sessionsNavBtn').click();await page.locator('#mainNav [data-view="dashboard"]').first().click();await expect(page.locator('#journeyRecent')).toContainText('désactivée');
