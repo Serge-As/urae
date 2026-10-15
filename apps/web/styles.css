@@ -1592,3 +1592,10 @@ body.eco-cockpit-shell{--eco-ink:#17392f;--eco-muted:#5e7169;--eco-line:#dce7df;
 .eco-cockpit-shell #view-dashboard>.ui-mode-panel{padding:10px 16px;margin:12px 0;gap:12px}.eco-cockpit-shell .ui-mode-copy .eyebrow{display:none}.eco-cockpit-shell .ui-mode-copy p{margin:2px 0}
 .eco-cockpit-shell .matrix-cell-entry .cell-validate{grid-column:2;grid-row:2;min-width:44px;min-height:44px}.eco-cockpit-shell .matrix-cell-entry .cell-target-input{grid-column:1;grid-row:2}.eco-cockpit-shell .matrix-cell-entry .cell-dictate{grid-column:2;min-width:44px;min-height:44px}
 .eco-cockpit-shell .eco-smartgrid-navigation{flex-wrap:wrap}.eco-cockpit-shell .eco-smartgrid-navigation select{max-width:100%;font-size:12px}.eco-cockpit-shell .eco-smartgrid-toolbar>.hint{display:block;flex-basis:100%;font-size:11px}
+/* Let the shared header wrap without covering the first screen. */
+body.eco-cockpit-shell .topbar{height:auto;min-height:76px}
+body.eco-cockpit-shell .nav-btn.active{background:#176a50!important;color:#fff!important}
+body.eco-cockpit-shell .nav-btn.active b{color:#fff!important}
+body.eco-cockpit-shell .side-nav{background:#f6f9f5}
+body.eco-cockpit-shell .content{padding-bottom:112px}
+@media(max-width:860px){body.eco-cockpit-shell .content{width:auto;max-width:100vw;overflow-x:clip}body.eco-cockpit-shell .canonical-financial-wrap{width:100%;max-width:calc(100vw - 50px)}body.eco-cockpit-shell .canonical-financial-matrix{min-width:640px}}
