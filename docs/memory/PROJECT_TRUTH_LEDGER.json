@@ -1323,15 +1323,17 @@
     },
     {
       "id": "ui.cockpit-continuity.20261015",
-      "status": "IN_PROGRESS",
+      "status": "VERIFIED_REMOTE",
       "scope": "visual-ui-and-local-navigation-projection",
       "observedOn": "2026-10-15",
       "evidence": [
-        "source:docs/change-impact/CIR-2026-10-15-cockpit-continuity.md",
-        "local:typecheck and build PASS; seven targeted tests PASS",
-        "source:tests/browser/cockpit-continuity-20261015.spec.mjs added to existing gates"
+        "github-actions:38712364934 SUCCESS;728Node13Chromium6WebKitPASS",
+        "actual-public-health-html-css-assistant-sw-catalog:2026-10-15T09:38Z;af08c4bc26a5f7511b9092cc5a9bf6c0927a5766;164capabilities;realMoney=false",
+        "recovery:restoredIntegrityok;privateR2readbackSHA256fe55fca87960c98f342ce9d246940d1976bd6830bd977f152ae1ce9f234c4619",
+        "secondary:38712364922 first scroll-position assertion failed; unchanged-SHA retry9Chromium6WebKitPASS",
+        "source:docs/release/DELIVERY-2026-10-15-COCKPIT.md"
       ],
-      "note": "No deployment or exhaustive field acceptance inferred. No financial authority changed."
+      "note": "Published and public assets independently verified. Local navigation projection and deterministic local assistant, not universal cross-device memory or generative intelligence. FIELD_ACCEPTED=NOT_ACCEPTED; financial authority unchanged."
     }
   ]
 }

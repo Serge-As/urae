@@ -1,3 +1,11 @@
+## Production vérifiée — cockpit et Eco IA — 15 octobre 2026
+
+**1.5.2.17-cockpit-continuity** réellement servie : `af08c4bc26a5f7511b9092cc5a9bf6c0927a5766`. Livraison38712364934SUCCESS, 728tests applicatifs,13Chromium et6WebKitPASS sur le SHA publié. Sauvegarde D1 restaurée et archive privée R2 relue/hashée avant publication. Lecture publique indépendante à09:38UTC : HTML/cockpit, Eco IA, CSS, cache, health et catalogue164 cohérents. Ressources et données existantes conservées.
+
+Accueil compact et navigation unifiée, Eco IA local FR/EN, mémoire des destinations par compte/groupe désactivable, dictée de cellule avec arrêt/relecture/report, accès aux parties1/2/5. Aucune mémoire intégrale interappareils ni IA générative prétendue. FIELD_ACCEPTED=NOT_ACCEPTED. Qualification secondaire38712364922réussie après relance du même code ; premier échec intermittent sur position de défilement conservé dans les preuves. Détails et limites : `docs/release/DELIVERY-2026-10-15-COCKPIT.md`. Reprendre sur cette production ; ne pas recommencer la refonte déjà livrée.
+
+Les entrées suivantes décrivent l’historique, pas un déploiement encore en attente.
+
 ## Candidat 1.5.2.17 — cockpit et continuité — 15 octobre 2026
 
 Accueil de travail compact, raccourcis vers les propriétaires existants, style commun, écran Eco IA FR/EN, guides locaux contextualisés, mémoire de destinations par compte/groupe (8 espaces, fenêtre de 30 jours, désactivation/effacement), dictée avec relecture dans les cellules et sélection directe des parties de tableau. Aucun nouveau propriétaire financier ni mutation de données D1.
