@@ -82,13 +82,27 @@ test('20, 40 and 100 categories are all covered by complete fitting parts, with 
     const seen=[];let total;
     for(let i=0;i<parts;i++){
       await root.getByRole('combobox',{name:'Choisir une partie du tableau'}).selectOption(String(i));
-      await expect(root.locator('.canonical-financial-wrap')).toBeVisible();
-      await expect.poll(()=>root.locator('.canonical-financial-wrap').evaluate(w=>w.clientWidth)).toBeGreaterThan(0);
-      const geometry=await root.locator('.canonical-financial-wrap').evaluate(w=>({overflow:w.scrollWidth-w.clientWidth,width:w.clientWidth,table:w.querySelector('table').getBoundingClientRect().width}));
+      // Resolve the live host inside one browser evaluation. A locator's
+      // previously resolved wrapper can be detached by a concurrent canonical
+      // resize/reload between the visibility check and its geometry read.
+      // Verify the requested part, its dimensions, rubric IDs and total from
+      // the same attached table; do not count an empty/detached projection.
+      let geometry;
+      await expect.poll(async()=>{
+        geometry=await page.evaluate(()=>{
+          const root=document.querySelector('#meetingMatrix'),w=root?.querySelector('.canonical-financial-wrap'),table=w?.querySelector('table');
+          if(!w?.isConnected||!table)return null;
+          return{overflow:w.scrollWidth-w.clientWidth,width:w.clientWidth,table:table.getBoundingClientRect().width,
+            part:Number(root.querySelector('[aria-label="Choisir une partie du tableau"]')?.value),
+            rubrics:[...table.querySelectorAll('tbody tr:first-child td[data-rubric-id]')].map(n=>n.dataset.rubricId),
+            total:table.querySelector('.table-grand-total')?.textContent};
+        });
+        return Boolean(geometry?.width>0&&geometry.part===i);
+      }).toBe(true);
       expect(geometry.overflow,'part '+(i+1)+'/'+parts+' must be complete').toBeLessThanOrEqual(2);
       expect(geometry.width).toBeGreaterThan(0);
-      seen.push(...await root.locator('tbody tr').first().locator('td[data-rubric-id]').evaluateAll(nodes=>nodes.map(n=>n.dataset.rubricId)));
-      const displayed=await root.locator('.table-grand-total').innerText();if(total===undefined)total=displayed;expect(displayed).toBe(total);
+      seen.push(...geometry.rubrics);
+      const displayed=geometry.total;if(total===undefined)total=displayed;expect(displayed).toBe(total);
     }
     expect(seen.length).toBe(size);expect([...new Set(seen)].sort()).toEqual(rows.map(r=>r.id).sort());
     expect(Number(total.replace(/[^0-9-]/g,''))).toBe(1000);
