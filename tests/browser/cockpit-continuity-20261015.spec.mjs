@@ -2,7 +2,7 @@ import {test,expect} from '@playwright/test';
 const base='http://127.0.0.1:4173';
 test.setTimeout(120000);
 test('connected cockpit, direct destinations, memory and Eco IA remain usable on desktop and phone',async({page})=>{
- page.on('pageerror',error=>console.log('COCKPIT_PAGE_ERROR',error.message));page.on('console',message=>{if(message.type()==='error')console.log('COCKPIT_CONSOLE_ERROR',message.text());});
+ page.on('pageerror',error=>console.log('COCKPIT_PAGE_ERROR',error.message));page.on('console',message=>{if(message.type()==='error'||message.text().startsWith('ASSISTANT_EVENT'))console.log('COCKPIT_CONSOLE_ERROR',message.text());});
  await page.goto(base,{waitUntil:'domcontentloaded'});
  await page.evaluate(async()=>{
   const scope=sessionStorage.getItem('eco.window.session.v1');
