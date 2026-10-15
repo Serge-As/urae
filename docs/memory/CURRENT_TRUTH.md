@@ -1,3 +1,13 @@
+## Réparation 1.5.2.18 déployée et vérifiée — 15 octobre 2026
+
+La production est **1.5.2.18-workspace-repair**, source `70e376d9524b4646b1756482f7d7bf2713e3925d`, build `eco-system-1.5.2.18-20261015-workspace-repair`, cache `eco-system-v15218-workspace-repair-20261015`. Livraison 38812599315 SUCCESS et qualification indépendante 38812599318 SUCCESS sur le SHA publié : 732 tests applicatifs PASS, Chromium 15/15, WebKit 6/6, garde-fous et sauvegarde D1 restaurée puis archive R2 relue/hashée. Dix lectures publiques indépendantes concordent, achevées le 15 octobre à 22:06:31 UTC (23:06:31 Douala).
+
+Les régressions reproduites après 1.5.2.17 ont motivé le correctif : acquittement canonique d'une commande ajoutée pendant un autre envoi, frappe Live lors de connexion, mode Réunion visible sans reconstruction structurelle, parties réellement mesurées, modes distincts par fenêtre, cellules compactes et accueil à onglets locaux. La conformité est explicitée exigence par exigence dans `docs/release/CONFORMANCE-2026-10-15-WORKSPACE-REPAIR.md` ; preuves et limites dans `docs/release/DELIVERY-2026-10-15-WORKSPACE-REPAIR.md`.
+
+FIELD_ACCEPTED=NOT_ACCEPTED. Ne pas confondre cette réparation qualifiée avec une recette du compte Delor, une absence garantie de tout autre défaut, une mémoire interappareils intégrale ou l'achèvement de toutes les intentions stratégiques. Ne pas contourner l'ancien blocage du navigateur. Ne pas supprimer de données locales ni de saisies en attente. Reprendre sur cette production et ses preuves ; tout nouvel écart doit être reproduit dans le propriétaire existant.
+
+Les entrées suivantes sont historiques ; leurs annonces de livraison ne constituent pas une acceptation terrain.
+
 ## Réparation après signalement terrain — 15 octobre 2026
 
 La production 1.5.2.17 est déployée, mais le fondateur a signalé des régressions de saisie/Live et une non-conformité des tableaux, des modes et de l’organisation aux documents. Les tests précédents ne valent pas acceptation de ces usages. FIELD_ACCEPTED=NOT_ACCEPTED.

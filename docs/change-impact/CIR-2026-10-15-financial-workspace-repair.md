@@ -39,3 +39,8 @@ Réparation en cours ; aucune de ces hypothèses n'est déclarée corrigée ou d
 Source bccb12ca9c22eff866089555c47b6bdef8002bb1 : run 38810746007 SUCCESS, 732 tests natifs PASS, Chromium 15/15 et WebKit 6/6 PASS ; qualification indépendante Q01–Q28 38810745968 SUCCESS. La recette couvre aussi l'acquittement après envoi du mode, une réponse retardée de 3,1 s, toutes les parties 20/40/100, l'indépendance des modes et l'édition mobile. Les mesures de propagation Live normales observées sont 966/969/991 ms, sans polling financier au repos. Captures CI SHA256 5c63f952e18a72b14603fbac5893199dccbd5873ed04697c54bf1c6940604715.
 
 PR 95 fusionnée sous d2f6b9537088794364b15f082e5db9b7ebb2da57. La publication n'est pas encore attestée à ce checkpoint : le marqueur déclenche à nouveau l'intégralité des contrôles, la sauvegarde et la livraison. FIELD_ACCEPTED=NOT_ACCEPTED.
+
+
+## Livraison observée
+
+Version 1.5.2.18 publiée au SHA 70e376d9524b4646b1756482f7d7bf2713e3925d. Livraison 38812599315 SUCCESS ; 732/15/6 PASS sur la source publiée, sauvegarde vérifiée et dix lectures publiques cohérentes. Voir DELIVERY-2026-10-15-WORKSPACE-REPAIR et le reçu JSON. FIELD_ACCEPTED reste NOT_ACCEPTED ; aucune acceptation du compte réel ni achèvement global de la vision prétendu.

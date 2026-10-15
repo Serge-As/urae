@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedOn": "2026-10-09",
+  "generatedOn": "2026-10-15",
   "purpose": "Anti-regression operational truth. Read before asking founder to recreate/configure anything.",
   "allowedStatuses": [
     "ACQUIRED",
@@ -27,13 +27,19 @@
   "records": [
     {
       "id": "workspace-repair-20261015",
-      "status": "IN_PROGRESS",
-      "statement": "Founder reported regressions on deployed 1.5.2.17. Repair 1.5.2.18 prepared; 7 targeted tests pass, full qualification and deployment pending. FIELD_ACCEPTED remains NOT_ACCEPTED.",
+      "status": "VERIFIED_REMOTE",
+      "statement": "Repair 1.5.2.18 deployed at 70e376d9524b4646b1756482f7d7bf2713e3925d after native732/Chromium15/WebKit6 PASS, readonly D1 restore/R2 readback and exact public release verification. Founder regressions acknowledged; field acceptance remains NOT_ACCEPTED and complete strategic vision is not claimed.",
       "evidence": [
         "docs/change-impact/CIR-2026-10-15-financial-workspace-repair.md",
-        "docs/memory/recalls/RECALL-2026-10-15-financial-workspace-repair.md"
+        "docs/memory/recalls/RECALL-2026-10-15-financial-workspace-repair.md",
+        "docs/release/DELIVERY-2026-10-15-WORKSPACE-REPAIR.md",
+        "docs/release/CONFORMANCE-2026-10-15-WORKSPACE-REPAIR.md",
+        "docs/release/evidence/WORKSPACE-REPAIR-PUBLIC-2026-10-15.json",
+        "https://github.com/Serge-As/urae/actions/runs/38812599315",
+        "https://github.com/Serge-As/urae/actions/runs/38812599318"
       ],
-      "observedOn": "2026-10-15"
+      "observedOn": "2026-10-15",
+      "next": "Preserve pending local entries and existing authorities; reproduce any further founder-reported regression. Do not claim authenticated Delor acceptance."
     },
     {
       "id": "constitution.master.2.3.3",

@@ -1,0 +1,96 @@
+{
+  "observedAtUtc": "2026-10-15T22:06:31.727667+00:00",
+  "sourceSha": "70e376d9524b4646b1756482f7d7bf2713e3925d",
+  "health": {
+    "ok": true,
+    "service": "tontine-api",
+    "version": "1.5.2.18-workspace-repair",
+    "buildId": "eco-system-1.5.2.18-20261015-workspace-repair",
+    "commitSha": "70e376d9524b4646b1756482f7d7bf2713e3925d",
+    "schemaVersion": "d1-additive-20260923",
+    "policyVersion": "live-finance-policy-20261007-event-push-repayment",
+    "pwaCache": "eco-system-v15218-workspace-repair-20261015",
+    "now": "2026-10-15T22:04:52.906Z",
+    "realMoneyEnabled": false,
+    "manualCashLedgerEnabled": true,
+    "premiumLiveEnabled": true,
+    "founderControlBound": true,
+    "communityRealtimeBound": true,
+    "artifactStorageBound": true,
+    "artifactStorageMode": "R2",
+    "contextScope": "request"
+  },
+  "capabilityCount": 164,
+  "endpoints": {
+    "/health": {
+      "status": 200,
+      "bytes": 671,
+      "sha256": "f77f228801c2ff1874277c7aa654e92a4c20b43f47435ba8a86e90bdd39b3e3e"
+    },
+    "/": {
+      "status": 200,
+      "bytes": 153983,
+      "sha256": "487f2a863e0c3e71691f97b725675eecaf44220b61715cf428a1db6fa4d178dc"
+    },
+    "/sw.js": {
+      "status": 200,
+      "bytes": 23146,
+      "sha256": "1268a1f4f4bd379d5b1796c57ff6241f91dd82c9688216cb32acfe5e4b2e6043"
+    },
+    "/styles.css": {
+      "status": 200,
+      "bytes": 141117,
+      "sha256": "9eff86cc204a5758a4cb731508ef976c12e1ed4b92c7510d57538a30c893c3cf"
+    },
+    "/src/main.js": {
+      "status": 200,
+      "bytes": 321580,
+      "sha256": "cbd2d6215189528fc2ac318c70098e3f99f65a18bc3af38425a13523a12204fe"
+    },
+    "/src/smart-grid-view.js": {
+      "status": 200,
+      "bytes": 2384,
+      "sha256": "f99cb43ad10925cd90b26d04684f32d6dc7d7413a56b7d3ce02332121bf1b301"
+    },
+    "/src/financial-work-ui.js": {
+      "status": 200,
+      "bytes": 10257,
+      "sha256": "e1ced55678d49c49ffa4ce3472b15069ea8be397665e2375cd05b699b840e06d"
+    },
+    "/src/workspace-navigation.js": {
+      "status": 200,
+      "bytes": 6474,
+      "sha256": "06e64781936522a9656efc6c0b89b78bd4e80719bf2856ffa5c09ad0addbafed"
+    },
+    "/src/ui-modes.js": {
+      "status": 200,
+      "bytes": 3805,
+      "sha256": "795339401f0eaa42a9822a918cf3982bedfaea02c68f4669a845372bb711ee81"
+    },
+    "/api/v1/product/capabilities": {
+      "status": 200,
+      "bytes": 50761,
+      "sha256": "6bc376d3f34049ef03886f80b416da7dd07b0e6c572accd45c5ae1e72feb9795"
+    }
+  },
+  "checks": {
+    "allPublicEndpoints200": true,
+    "exactSource": true,
+    "exactVersion": true,
+    "exactBuild": true,
+    "exactCache": true,
+    "realMoneyDisabled": true,
+    "catalogConsistent": true,
+    "htmlLoadsNewShell": true,
+    "publishedCanonicalAck": true,
+    "publishedMeasuredParts": true,
+    "publishedLiveModeIndicator": true,
+    "publishedWindowMode": true,
+    "publishedLocalCockpitTabs": true,
+    "serviceWorkerNewCache": true
+  },
+  "limits": [
+    "Public endpoint verification does not prove authenticated D1 writes or field acceptance of Delor.",
+    "Browser behavior is qualified with isolated synthetic accounts."
+  ]
+}
