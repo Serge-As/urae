@@ -2,7 +2,7 @@ import {extractVoiceFinancialEntriesByCandidates,matchVoiceCandidate,matchVoiceM
 
 type AnyRecord=Record<string,any>;
 const byId=<T extends HTMLElement=HTMLElement>(id:string)=>document.getElementById(id) as T|null;
-const uiEn=()=>byId<HTMLSelectElement>('languageSelect')?.value==='en';
+const uiEn=()=>document.documentElement.lang==='en'||byId<HTMLSelectElement>('topLanguageSelect')?.value==='en';
 const t=(fr:string,en:string)=>uiEn()?en:fr;
 const activeGroup=()=>byId<HTMLSelectElement>('activeGroupSelect')?.value||(()=>{try{return localStorage.getItem('tontine.activeGroupId')??'';}catch{return '';}})();
 const idem=(prefix:string)=>prefix+':'+(crypto.randomUUID?.()??String(Date.now())+Math.random().toString(36).slice(2));
@@ -97,7 +97,7 @@ async function postRepayment(membershipId:string,meetingId:string,rubric:any,amo
 interface PreviewRow{draft:VoiceFinancialEntryDraft;rubricId:string;direction:'IN'|'OUT';amount:number;loanId?:string;}
 let previewRows:PreviewRow[]=[];
 
-function speech(lang:string,onFinal:(text:string,confidence?:number)=>void,onState:(active:boolean,message:string)=>void){
+export function speech(lang:string,onFinal:(text:string,confidence?:number)=>void,onState:(active:boolean,message:string)=>void){
   const Recognition=(window as any).SpeechRecognition||(window as any).webkitSpeechRecognition;if(!Recognition){onState(false,t('Reconnaissance vocale non disponible sur ce navigateur. Utilisez le texte.','Speech recognition is unavailable in this browser. Use text input.'));return{toggle:()=>{},stop:()=>{}};}
   let listening=false,stopping=false,recognition:any;let parts:string[]=[],weighted=0,count=0;
   const finish=()=>{const final=sanitizeVoiceFinancialTranscript(parts.join(' '));if(final)onFinal(final,count?weighted/count:undefined);parts=[];weighted=0;count=0;};
@@ -217,4 +217,29 @@ export function mountVoiceEntryUI(){
   byId<HTMLButtonElement>('financeLoanRulesBtn')?.addEventListener('click',()=>{document.querySelector<HTMLButtonElement>('.nav-btn[data-view="operations"]')?.click();setTimeout(()=>{document.querySelector<HTMLButtonElement>('#masterGovernanceCenter [data-mg="loan"]')?.click();byId('mg-loan')?.scrollIntoView({behavior:'smooth',block:'start'});},100);});
   translateInjected();byId<HTMLSelectElement>('languageSelect')?.addEventListener('change',()=>translateInjected());
   byId<HTMLSelectElement>('activeGroupSelect')?.addEventListener('change',()=>{loadedGroup='';void loadContext(true).catch(()=>{});});
+}
+
+
+// This helper only fills the existing editor. main.js remains the writer.
+export function createCellDictationButton(input:HTMLInputElement,{label,getScope}:{label:string;getScope:()=>string}){
+  const button=document.createElement('button');button.type='button';button.className='cell-dictate';button.textContent='🎙';button.setAttribute('aria-label',t('Dicter un montant : ','Dictate an amount: ')+label);
+  button.onclick=()=>{
+    const scope=getScope(),initialValue=input.value,dialog=document.createElement('dialog');dialog.className='eco-dictation-dialog';dialog.setAttribute('aria-label',t('Dicter et relire un montant','Dictate and review an amount'));
+    const title=document.createElement('h2');title.textContent=t('Dicter, relire, reporter','Dictate, review, fill');
+    const who=document.createElement('p');who.textContent=label;
+    const note=document.createElement('p');note.textContent=t('La voix peut nécessiter Internet. Vérifiez la valeur totale souhaitée. Le report ne comptabilise rien : utilisez ensuite la validation de la cellule.','Voice may require Internet. Check the desired total value. Filling the cell posts nothing: use the cell confirmation afterwards.');
+    const transcriptLabel=document.createElement('label');transcriptLabel.textContent=t('Texte entendu · corrigeable','Heard text · editable');const transcript=document.createElement('textarea');transcript.rows=3;transcript.maxLength=500;transcriptLabel.append(transcript);
+    const amountLabel=document.createElement('label');amountLabel.textContent=t('Montant total à reporter (F CFA)','Total amount to fill (CFA francs)');const amount=document.createElement('input');amount.type='number';amount.min='0';amount.step='1';amount.inputMode='numeric';amountLabel.append(amount);
+    const status=document.createElement('p');status.setAttribute('role','status');
+    const actions=document.createElement('div');actions.className='actions';const listen=document.createElement('button'),apply=document.createElement('button'),cancel=document.createElement('button');for(const b of [listen,apply,cancel])b.type='button';listen.className='secondary';apply.className='primary';cancel.className='secondary';listen.textContent=t('🎙 Écouter','🎙 Listen');apply.textContent=t('Reporter dans la cellule','Fill the cell');cancel.textContent=t('Annuler','Cancel');apply.disabled=true;
+    let closed=false,controller:ReturnType<typeof speech>|undefined,timer:ReturnType<typeof setTimeout>|undefined,recording=false;
+    const valid=()=>!closed&&input.isConnected&&getScope()===scope&&input.value===initialValue;
+    const update=()=>{apply.disabled=recording||!amount.value.trim()||!Number.isSafeInteger(Number(amount.value))||Number(amount.value)<0;};
+    transcript.oninput=()=>{const text=transcript.value.trim();const parsed=/\d[.,]\d/.test(text)?undefined:parseVoiceAmount(text);amount.value=parsed===undefined?'':String(parsed);status.textContent=parsed===undefined?t('Montant ambigu : saisissez le montant exact ci-dessous.','Ambiguous amount: enter the exact amount below.'):t('Relisez le texte et vérifiez le montant avant le report.','Review the text and amount before filling the cell.');update();};amount.oninput=update;
+    listen.onclick=()=>{if(controller&&recording){controller.stop();return;}controller=speech(uiEn()?'en-US':'fr-FR',(text)=>{if(!valid())return;transcript.value=text;transcript.dispatchEvent(new Event('input'));},(active,message)=>{if(closed)return;recording=active;status.textContent=message;listen.textContent=active?t('■ Arrêter et relire','■ Stop and review'):t('🎙 Écouter','🎙 Listen');update();if(!active)clearTimeout(timer);});controller.toggle();timer=setTimeout(()=>controller?.stop(),45000);};
+    const close=()=>{if(closed)return;closed=true;controller?.stop();clearTimeout(timer);window.removeEventListener('eco:view-changed',close);document.getElementById('activeGroupSelect')?.removeEventListener('change',close);document.getElementById('logoutBtn')?.removeEventListener('click',close);dialog.close();dialog.remove();if(input.isConnected&&getScope()===scope)input.focus();};
+    apply.onclick=()=>{update();if(apply.disabled)return;if(!valid()){status.textContent=t('Le contexte ou la cellule a changé. Fermez et recommencez.','Context or cell changed. Close and start again.');apply.disabled=true;return;}input.value=String(Number(amount.value));input.dispatchEvent(new Event('input',{bubbles:true}));close();};cancel.onclick=close;dialog.addEventListener('cancel',e=>{e.preventDefault();close();});
+    window.addEventListener('eco:view-changed',close);document.getElementById('activeGroupSelect')?.addEventListener('change',close);document.getElementById('logoutBtn')?.addEventListener('click',close);
+    actions.append(listen,apply,cancel);dialog.append(title,who,note,transcriptLabel,amountLabel,status,actions);document.body.append(dialog);dialog.showModal();transcript.focus();
+  };return button;
 }

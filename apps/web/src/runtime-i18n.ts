@@ -582,3 +582,43 @@ Object.assign(EXTRA_FR_EN,{
   "Les changements s’appliquent à partir de leur date/séance d’effet. Un prêt déjà décaissé n’est jamais réécrit pour simuler rétroactivement un intérêt retenu ou payé avant sa libération.": "Changes apply from their effective date/meeting. A loan already disbursed is never rewritten to retroactively simulate interest deducted or paid before release."
 });
 for(const [fr,en] of Object.entries(EXTRA_FR_EN))canonical.set(fr,en);
+
+
+// Cockpit continuity: all visible copy uses the existing runtime dictionary.
+Object.assign(EXTRA_FR_EN,{
+  "MON ESPACE ECO": "MY ECO SPACE",
+  "Votre journée, vos possibilités": "Your day, your possibilities",
+  "Vos groupes, vos activités et vos opportunités au même endroit.": "Your groups, activities and opportunities in one place.",
+  "✦ Parler à Eco IA": "✦ Talk to Eco AI",
+  "＋ Créer / intégrer": "＋ Create / join",
+  "AVANCER ENSEMBLE": "MOVE FORWARD TOGETHER",
+  "Que voulez-vous accomplir ?": "What would you like to accomplish?",
+  "Une séance à préparer, une idée à partager, une opportunité à saisir.": "A meeting to prepare, an idea to share, an opportunity to seize.",
+  "Ouvrir mes séances →": "Open my sessions →",
+  "Mes actions à traiter": "My tasks to handle",
+  "Mode financier réel désactivé · données de démonstration.": "Real-money mode disabled · demonstration data.",
+  "À VOTRE RYTHME": "AT YOUR PACE",
+  "Reprendre le fil": "Pick up where you left off",
+  "Ma mémoire de navigation": "My navigation memory",
+  "Derniers espaces uniquement, sur cet appareil, pendant 30 jours, séparés par compte et groupe. Aucun montant ni contenu de conversation.": "Recent spaces only, on this device, for 30 days, separated by account and group. No amounts or conversation content.",
+  "Retenir mes espaces récents": "Remember my recent spaces",
+  "Effacer cet historique": "Clear this history",
+  "Accès directs à l’écosystème": "Ecosystem shortcuts",
+  "Préparer et suivre": "Prepare and follow up",
+  "Mes fiches": "My sheets",
+  "Retrouver une situation": "Review a situation",
+  "Acheter et vendre": "Buy and sell",
+  "Saisir une opportunité": "Seize an opportunity",
+  "Foras & communautés": "Forums & communities",
+  "Échanger et mutualiser": "Share and cooperate",
+  "Toutes les capacités": "All capabilities",
+  "Explorer l’écosystème": "Explore the ecosystem",
+  "Foras & Hubs": "Forums & Hubs",
+  "Documents & exports": "Documents & exports",
+  "Un coup de main, au bon endroit.": "A helping hand, where you need it.",
+  "Expliquez votre besoin, relisez la proposition et choisissez la suite.": "Describe your need, review the suggestion and choose what comes next.",
+  "Vos priorités, vos espaces": "Your priorities, your spaces",
+  "Vos derniers espaces consultés apparaîtront ici.": "Your recently visited spaces will appear here.",
+  "La mémorisation du parcours est désactivée.": "Activity memory is paused."
+});
+for(const [fr,en] of Object.entries(EXTRA_FR_EN))canonical.set(fr,en);
