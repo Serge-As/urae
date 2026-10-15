@@ -1,6 +1,7 @@
 // A new cache identity is mandatory, even for a patch-level app release.
-const CACHE = 'eco-system-v15217-cockpit-continuity-20261015';
-const PREVIOUS_CACHE = 'eco-system-v15216-live-modes-refonte-20261013';
+const CACHE = 'eco-system-v15218-workspace-repair-20261015';
+const PREVIOUS_CACHE = 'eco-system-v15217-cockpit-continuity-20261015';
+const PRIOR_REDESIGN_CACHE = 'eco-system-v15216-live-modes-refonte-20261013';
 const PRIOR_CONVERGENCE_CACHE = 'eco-system-v15214-sovereign-convergence-20261008';
 // Preserve the earlier coherent source line as well as the actual v15211 install.
 const PRIOR_SOURCE_RECOVERY_CACHE = 'eco-system-v15213-live-repayment-ui-20261007';
@@ -14,8 +15,8 @@ const RELEASE_READY = '/__eco_release_ready__';
 // before this worker may install. Optional business/community panels can fail
 // independently without replacing an already-working release.
 const ESSENTIAL_SHELL = [
-  '/', '/index.html', '/styles.css?v=15217', '/manifest.webmanifest',
-  '/src/ui-modes.js?v=15217', '/src/field-hardening.js?v=15217', '/src/main.js?v=15217', '/src/i18n.js', '/src/runtime-i18n.js',
+  '/', '/index.html', '/styles.css?v=15218', '/manifest.webmanifest',
+  '/src/ui-modes.js?v=15218', '/src/field-hardening.js?v=15218', '/src/main.js?v=15218', '/src/i18n.js', '/src/runtime-i18n.js',
   '/src/resilience-ui.js', '/src/group-home-ui.js', '/src/sessions-ui.js',
   '/src/detail-ui.js', '/src/member-control-ui.js', '/src/loan-simulation-ui.js', '/src/business-studio-ui.js', '/src/core-economic-learning-ui.js',
   '/packages/application/src/index.js', '/packages/contracts/src/index.js',
@@ -31,7 +32,7 @@ const ESSENTIAL_SHELL = [
 ];
 
 const OPTIONAL_SHELL = [
-  '/src/voice-entry-bootstrap.js?v=15217', '/src/voice-entry-ui.js', '/src/expense-recap-ui.js',
+  '/src/voice-entry-bootstrap.js?v=15218', '/src/voice-entry-ui.js', '/src/expense-recap-ui.js',
   '/src/member-dossier-ui.js', '/src/documents-ui.js', '/src/contextual-group-ui.js',
   '/src/blueprint-executable-ui.js', '/src/community-blueprint-presets.js',
   '/src/financial-lab-ui.js', '/src/completion-ui.js', '/src/advanced-ui.js',
@@ -124,7 +125,7 @@ self.addEventListener('activate', event => {
     // Keep one known previous coherent release for operator rollback/recovery.
     // Never delete the immediately previous cache during the same activation.
     for (const name of names) {
-      if (name.startsWith('eco-system-') && name !== CACHE && name !== PREVIOUS_CACHE && name !== LEGACY_RECOVERY_CACHE && name !== INSTALLED_RECOVERY_CACHE && name !== PRIOR_SOURCE_RECOVERY_CACHE && name !== PRIOR_CONVERGENCE_CACHE) {
+      if (name.startsWith('eco-system-') && name !== CACHE && name !== PREVIOUS_CACHE && name !== PRIOR_REDESIGN_CACHE && name !== LEGACY_RECOVERY_CACHE && name !== INSTALLED_RECOVERY_CACHE && name !== PRIOR_SOURCE_RECOVERY_CACHE && name !== PRIOR_CONVERGENCE_CACHE) {
         try { await caches.delete(name); } catch (_) {}
       }
     }
@@ -135,7 +136,7 @@ const cachedShell = async request => {
   const cache = await caches.open(CACHE);
   const url = new URL(request.url);
   // A versioned request must only match that exact version. Falling back from
-  // main.js?v=15217 to an older /main.js was the source of mixed-release UI.
+  // main.js?v=15218 to an older /main.js was the source of mixed-release UI.
   if(url.search)return await cache.match(request);
   return await cache.match(url.pathname);
 };

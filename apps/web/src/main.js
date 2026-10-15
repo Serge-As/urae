@@ -1,4 +1,5 @@
 import {createJourneyContext,mountJourneyUI} from './journey-context.js';
+import {mountWorkspaceNavigation} from './workspace-navigation.js';
 import {createCellDictationButton,speech} from './voice-entry-ui.js';
 import {createFinancialWorkUI} from './financial-work-ui.js';
 import {createRubricEditor,readRubricEditors,describeRubricPlan,editRubricPlan} from './launch-rubrics.js';
@@ -37,7 +38,7 @@ import { mountFounderControlUI } from './founder-control-ui.js';
 import { mountAssistanceRulebookUI } from './assistance-rulebook-ui.js';
 import { mountGroupHomeUI } from './group-home-ui.js';
 import { mountSessionsUI } from './sessions-ui.js';
-import { splitFinancialRubrics } from './smart-grid-view.js';
+import { splitFinancialRubrics, planFinancialRubricLayout } from './smart-grid-view.js';
 import { mountBlueprintExecutableUI } from './blueprint-executable-ui.js';
 import { mountCommunityBlueprintPresets } from './community-blueprint-presets.js';
 import { mountFinancialLabUI } from './financial-lab-ui.js';
@@ -486,6 +487,7 @@ const blueprintExecutableUI = mountBlueprintExecutableUI({app,getGroups:()=>grou
 mountCommunityBlueprintPresets();
 const financialLabUI = mountFinancialLabUI({app,notify:toast,showError:fail});
 const resilienceUI = mountResilienceUI({app,notify:toast,showError:fail});
+mountWorkspaceNavigation({getScope:()=>[app.currentActor(),app.activeGroup()].map(encodeURIComponent).join('.'),navigate:go});
 let liveChannelConnected=false;
 const renderConnectivity = () => {
     const online=navigator.onLine,budget=app.serverBudgetState?.(),transport=app.transportState?.(),paused=Boolean(budget?.blocked),degraded=Boolean(transport?.degraded),e=$('#connectivity');
@@ -1131,7 +1133,7 @@ const ensureFinancialSnapshotPolling=()=>{
 };
 
 let financialWorkUI;
-const ensureFinancialWorkUI=()=>financialWorkUI??=createFinancialWorkUI({app,tx,notify:toast,resume:()=>resumeOnline(),
+const ensureFinancialWorkUI=()=>financialWorkUI??=createFinancialWorkUI({app,tx,notify:toast,resume:()=>resumeOnline(),isLiveConnected:()=>liveChannelConnected,
   summary:async(meetingId,membershipId,ids)=>{
     try{if(navigator.onLine===false)throw Error('LOCAL_SUMMARY_REQUIRED');const data=await app.financialPassageSummary(meetingId,membershipId,ids);if(data.projectionSource==='LOCAL_CACHE')throw Error('LOCAL_SUMMARY_REQUIRED');return data;}catch(e){if(e.message!=='LOCAL_SUMMARY_REQUIRED'&&navigator.onLine!==false&&!app.serverBudgetState?.().blocked)throw e;
       const ordered=meetings.filter(x=>x.status!=='cancelled').slice().sort((a,b)=>String(a.scheduledAt??a.openedAt).localeCompare(String(b.scheduledAt??b.openedAt))),beforeIds=ordered.slice(0,ordered.findIndex(x=>x.id===meetingId)).map(x=>x.id);
@@ -1308,14 +1310,14 @@ const makeFinancialEntryCell=({member,rubric,meetingId,editable=true})=>{
     if(!editable)return holder;
     const input=document.createElement('input');input.type='number';input.min='0';input.step='1';input.inputMode='numeric';input.className='cell-target-input';input.placeholder=current>0?tx('Modifier…','Change…'):tx('Saisir…','Enter…');input.setAttribute('aria-label',tx('Nouvelle valeur totale','New total value'));
     const restoredDraft=financialCellDrafts.get(persistentCellKey);if(restoredDraft!==undefined)input.value=String(restoredDraft);
-    let typingTimer=0,typingActive=false,draftAnnounced=false;
+    let typingTimer=0,typingActive=false,lastTypingSignal=0,draftAnnounced=false;
     const liveSignalsEnabled=Boolean(identityLiveUI?.publishSignal);
     const signalPayload=()=>({kind:'FINANCIAL_CELL',meetingId,membershipId:member.id,rubricId:rubric.id});
     const sendSignal=type=>{if(liveSignalsEnabled)void Promise.resolve(identityLiveUI.publishSignal(type,signalPayload())).catch(()=>{});};
     const stopTyping=()=>{if(typingTimer){clearTimeout(typingTimer);typingTimer=0;}if(typingActive){typingActive=false;sendSignal('TYPING_STOP');}};
     const announceDraft=()=>{if(!input.value.trim()){if(draftAnnounced){draftAnnounced=false;sendSignal('FINANCIAL_DRAFT_CLEAR');}return;}if(!draftAnnounced){draftAnnounced=true;sendSignal('FINANCIAL_DRAFT');}};
     input.addEventListener('focus',()=>{sendSignal('CELL_FOCUS');announceDraft();void financialWorkUI?.visit(meetingId,member.id).catch(fail);});
-    input.addEventListener('input',()=>{saveFinancialCellDraft(persistentCellKey,input.value);announceDraft();if(!typingActive){typingActive=true;sendSignal('TYPING');}if(typingTimer)clearTimeout(typingTimer);typingTimer=setTimeout(stopTyping,2500);});
+    input.addEventListener('input',()=>{saveFinancialCellDraft(persistentCellKey,input.value);announceDraft();if(!typingActive||Date.now()-lastTypingSignal>=1000){typingActive=true;lastTypingSignal=Date.now();sendSignal('TYPING');}if(typingTimer)clearTimeout(typingTimer);typingTimer=setTimeout(stopTyping,2500);});
     input.addEventListener('blur',()=>{stopTyping();announceDraft();sendSignal('CELL_BLUR');});
     const validate=document.createElement('button');validate.type='button';validate.className='cell-validate';validate.textContent='✓';validate.title=tx('Valider la valeur totale','Confirm total value');validate.setAttribute('aria-label',tx('Valider la saisie','Confirm entry'));
     const liveLine=document.createElement('small');liveLine.className='cell-live-presence';liveLine.setAttribute('aria-live','polite');liveLine.hidden=true;
@@ -1363,6 +1365,7 @@ const appendRubricRecapChooser=root=>{
   select.addEventListener('change',render);section.append(title,hint,select,host);root.append(section);render();
 };
 const canonicalFinancialObservers=new WeakMap();
+const canonicalFinancialSizes=new WeakMap();
 const protectCanonicalFinancialHost=root=>{
     if(!root||canonicalFinancialObservers.has(root))return;
     const observer=new MutationObserver(()=>{
@@ -1387,6 +1390,18 @@ const protectCanonicalFinancialHost=root=>{
 };
 const renderCanonicalFinancialTable=({root,mode='meeting',meetingId='',membershipId='',showToolbar=true,editable=isManager()})=>{
     if(!root)return;
+    const measuredWidth=root.clientWidth||0;
+    if(typeof ResizeObserver!=='undefined'&&!canonicalFinancialSizes.has(root)){
+      const state={width:measuredWidth,observer:null};
+      state.observer=new ResizeObserver(()=>{
+        const width=root.clientWidth;
+        if(width<1||Math.abs(width-state.width)<8)return;
+        state.width=width;
+        if(root.querySelector('.cell-target-input:focus')){root.dataset.canonicalRenderDeferred='1';return;}
+        renderCanonicalFinancialTable({root,mode:root.dataset.financialMode||mode,meetingId:root.dataset.meetingId||'',membershipId:root.dataset.membershipId||'',showToolbar:root.dataset.showToolbar!=='false',editable:root.dataset.editable!=='false'});
+      });
+      canonicalFinancialSizes.set(root,state);state.observer.observe(root);
+    }
     const previousWrap=root.querySelector?.('.canonical-financial-wrap');
     const previousMatrixScroll=previousWrap?{left:Number(previousWrap.scrollLeft)||0,top:Number(previousWrap.scrollTop)||0}:null;
     const restoreReplacedMatrixScroll=wrap=>{
@@ -1409,10 +1424,14 @@ const renderCanonicalFinancialTable=({root,mode='meeting',meetingId='',membershi
     if(!activeRubrics.length||!activeMembers.length){root.innerHTML='<div class="empty-state">'+tx('Ajoutez au moins un membre et une rubrique active.','Add at least one member and one active rubric.')+'</div>';return;}
     // SmartGrid is a presentation-only projection. Financial editors and writes
     // remain exclusively owned by the existing canonical renderer and Ledger.
-    const panelScope=mode==='meeting'?'meeting':'individual';
+    const panelScope=[app.currentActor(),app.activeGroup(),mode].map(encodeURIComponent).join('.');
     const choiceKey='eco.smartGrid.parts.'+panelScope;
-    let parts=1;
-    try{parts=[1,2,5].includes(Number(sessionStorage.getItem(choiceKey)))?Number(sessionStorage.getItem(choiceKey)):1;}catch{}
+    const uiMode=document.documentElement.dataset.uiMode||'visual';
+    const layout=planFinancialRubricLayout({count:activeRubrics.length,width:measuredWidth,mode:uiMode,individual:mode!=='meeting'});
+    let savedParts=null;try{const saved=sessionStorage.getItem(choiceKey);if(saved!==null)savedParts=Number(saved);}catch{}
+    const parts=savedParts===1?1:savedParts&&layout.fits(savedParts)?savedParts:layout.recommended||1;
+    root.dataset.parts=String(parts);root.dataset.recommendedParts=String(layout.recommended||'');
+    root.dataset.rubricCount=String(activeRubrics.length);
     const columnGroups=splitFinancialRubrics(activeRubrics,parts);
     const panelKey='eco.smartGrid.index.'+panelScope;
     let panelIndex=0;
@@ -1421,7 +1440,7 @@ const renderCanonicalFinancialTable=({root,mode='meeting',meetingId='',membershi
     const presentation= document.createElement('div');presentation.className='eco-smartgrid-toolbar';
     const title=document.createElement('strong');title.textContent=tx('Affichage des rubriques','Rubric display');
     const presets=document.createElement('div');presets.className='eco-smartgrid-parts';
-    for(const n of [1,2,5]){
+    for(const n of layout.choices){
       const b=document.createElement('button');b.type='button';b.className=parts===n?'primary':'secondary';
       b.textContent=n===1?tx('Vue intégrale','Full view'):tx('Vue en '+n+' parties',n+' parts view');
       b.setAttribute('aria-pressed',String(parts===n));
@@ -1430,6 +1449,11 @@ const renderCanonicalFinancialTable=({root,mode='meeting',meetingId='',membershi
       presets.append(b);
     }
     presentation.append(title,presets);
+    const fitHint=document.createElement('small');fitHint.className='hint eco-smartgrid-fit';
+    fitHint.textContent=layout.recommended===null
+      ?tx('Fenêtre trop étroite pour une partie entière : la vue intégrale conserve le défilement horizontal. Élargissez la fenêtre ou choisissez le mode Visuel.','The window is too narrow for a complete part: full view keeps horizontal scrolling. Widen the window or choose Visual mode.')
+      :tx(activeRubrics.length+' rubriques · '+(layout.recommended===1?'le tableau tient en entier':layout.recommended+' parties minimum pour tout lire sans défilement horizontal')+'. Seuls les découpages qui tiennent sont proposés.',activeRubrics.length+' categories · '+(layout.recommended===1?'the whole table fits':layout.recommended+' parts minimum to read everything without horizontal scrolling')+'. Only layouts that fit are offered.');
+    presentation.append(fitHint);
     if(columnGroups.length>1){
       const navigation=document.createElement('div');navigation.className='eco-smartgrid-navigation';
       const previous=document.createElement('button');previous.type='button';previous.className='secondary';previous.textContent='←';
@@ -1463,6 +1487,17 @@ const renderCanonicalFinancialTable=({root,mode='meeting',meetingId='',membershi
       event.preventDefault();window.scrollBy(0,delta);
     },{passive:false});
     const table=document.createElement('table');table.className='meeting-matrix canonical-financial-matrix';
+    // Explicit columns make the measured partition a real layout contract,
+    // independent of the many historical table minimum-width selectors.
+    const fitted=Boolean(layout.fits(parts));table.dataset.fitted=String(fitted);table.dataset.mode=mode;
+    const columns=document.createElement('colgroup');
+    const addColumn=(width,kind)=>{const col=document.createElement('col');col.setAttribute('width',String(width));col.className='financial-column-'+kind;columns.append(col);};
+    if(mode==='meeting')addColumn(layout.numberWidth,'number');
+    addColumn(layout.identityWidth,'identity');
+    for(const r of visibleRubrics)addColumn(layout.columnWidth,'rubric');
+    addColumn(layout.totalWidth,'total');table.append(columns);
+    table.setAttribute('width',String(layout.reserved+visibleRubrics.length*layout.columnWidth));
+    wrap.dataset.fitted=String(fitted);
     const head=document.createElement('thead'),hr=document.createElement('tr'),body=document.createElement('tbody');
     if(mode==='meeting'){
       if(!isManager()){root.innerHTML='<div class="empty-state">'+tx('La feuille générale de séance est réservée aux responsables habilités.','The general meeting sheet is restricted to authorized managers.')+'</div>';return;}
@@ -1504,7 +1539,7 @@ const renderCanonicalFinancialTable=({root,mode='meeting',meetingId='',membershi
         const explanation=document.createElement('p');explanation.className='eco-smartgrid-explanation';
         explanation.textContent=tx('Les sous-totaux des colonnes concernent uniquement cette partie. Les totaux généraux des membres et de la feuille comprennent toutes les rubriques, même masquées.','Column subtotals apply only to this part. Member and sheet grand totals include all rubrics, including hidden parts.');
         root.append(explanation);
-      }restoreReplacedMatrixScroll(wrap);root.dataset.canonicalTableReady='1';return;
+      }restoreReplacedMatrixScroll(wrap);root.dataset.canonicalTableReady='1';ensureFinancialWorkUI().toolbar();return;
     }
     const member=activeMembers.find(x=>x.id===membershipId);
     if(!member){root.innerHTML='<div class="empty-state">'+tx('Aucune fiche individuelle accessible.','No individual sheet available.')+'</div>';return;}
@@ -1530,7 +1565,7 @@ const renderCanonicalFinancialTable=({root,mode='meeting',meetingId='',membershi
         const explanation=document.createElement('p');explanation.className='eco-smartgrid-explanation';
         explanation.textContent=tx('Les sous-totaux des colonnes concernent uniquement cette partie. Les totaux généraux des membres et de la feuille comprennent toutes les rubriques, même masquées.','Column subtotals apply only to this part. Member and sheet grand totals include all rubrics, including hidden parts.');
         root.append(explanation);
-      }restoreReplacedMatrixScroll(wrap);root.dataset.canonicalTableReady='1';
+      }restoreReplacedMatrixScroll(wrap);root.dataset.canonicalTableReady='1';ensureFinancialWorkUI().toolbar();
 };
 const renderMeetingMatrix=()=>renderCanonicalFinancialTable({root:document.querySelector('#meetingMatrix'),mode:'meeting',meetingId:ensureMatrixMeeting(),showToolbar:true,editable:isManager()});
 const renderIndividualSheetMatrix=()=>{
@@ -1558,6 +1593,25 @@ document.querySelector('#individualSheetMember')?.addEventListener('change',rend
 document.querySelector('#meetingSheetViewBtn')?.addEventListener('click',()=>{document.querySelector('#meetingMatrixPanel').hidden=false;document.querySelector('#individualSheetsMode').hidden=true;document.querySelector('#meetingSheetViewBtn').classList.add('active');document.querySelector('#individualSheetsViewBtn').classList.remove('active');renderMeetingMatrix();});
 document.querySelector('#individualSheetsViewBtn')?.addEventListener('click',()=>{document.querySelector('#meetingMatrixPanel').hidden=true;document.querySelector('#individualSheetsMode').hidden=false;document.querySelector('#individualSheetsViewBtn').classList.add('active');document.querySelector('#meetingSheetViewBtn').classList.remove('active');renderIndividualSheetMatrix();});
 window.addEventListener('eco:render-two-sheets',()=>{renderMeetingMatrix();renderIndividualSheetMatrix();});
+window.addEventListener('eco:ui-mode-changed',()=>{renderMeetingMatrix();renderIndividualSheetMatrix();renderAllCanonicalFinancialHosts();});
+window.addEventListener('eco:financial-outbox-confirmed',event=>{
+  const d=event.detail??{};
+  if(String(d.actorId)!==String(app.currentActor())||String(d.groupId)!==String(app.activeGroup()))return;
+  const amount=Number(d.amount),version=Number(d.cellVersion);
+  if(!Number.isSafeInteger(amount)||!Number.isSafeInteger(version)||['SUPERSEDED','CONSENSUS_REQUIRED','CLOCK_REVIEW'].includes(d.status))return;
+  financialPendingTargets=new Map((app.pendingFinancialCellTargets?.()??[]).map(x=>[financialCellKey(x.membershipId,x.rubricId,x.meetingId),x]));
+  financialPendingSheetEntries=app.pendingFinancialSheetEntries?.()??[];
+  if(cellHasPendingLocal(d))return; // A more recent local command still needs its own ACK.
+  if(exactCellVersion(d.membershipId,d.rubricId,d.meetingId)>version)return;
+  const nature=financialNatureForRubric(rubrics.find(r=>r.id===d.rubricId));
+  const signed=['LOAN','OUTFLOW'].includes(nature)?-Math.abs(amount):amount;
+  const key=financialCellKey(d.membershipId,d.rubricId,d.meetingId);
+  financialOptimisticValues.delete(key);
+  rememberConfirmedCell(key,{...d,amount:signed,cellVersion:version});
+  patchFinancialDomCell({...d,amount:signed,preservePending:false});
+  setCellSyncedState(d);
+  window.dispatchEvent(new CustomEvent('eco:financial-data-changed',{detail:{...d,amount:signed,soft:true}}));
+});
 window.addEventListener('eco:set-matrix-meeting',event=>{const id=event instanceof CustomEvent?String(event.detail?.meetingId??''):'';if(id&&meetings.some(x=>x.id===id)){matrixMeetingId=id;try{sessionStorage.setItem('eco.matrixMeetingId',id);}catch{}}});
 
 window.addEventListener('eco:restore-financial-sheet',event=>{
@@ -2893,7 +2947,7 @@ const resumeOnline=({forceConfrontation=false,relayFerry=false}={})=>{
         // Structural Outbox writes (groups, membership, rubrics, loans, etc.)
         // still require their existing full domain hydration until every owner
         // has a typed incremental projection.
-        const incrementalFinancialTypes=new Set(['FINANCIAL_CELL_CORRECTION_PROPOSAL_V1','FINANCIAL_CELL_CORRECTION_PROPOSAL_V2','FINANCIAL_SHEET_ENTRY_V1','FINANCIAL_CELL_REVIEW_V1','CONTRIBUTION_CASH_RECORDED']);
+        const incrementalFinancialTypes=new Set(['FINANCIAL_CELL_CORRECTION_PROPOSAL_V1','FINANCIAL_CELL_CORRECTION_PROPOSAL_V2','FINANCIAL_SHEET_ENTRY_V1','FINANCIAL_CELL_REVIEW_V1','CONTRIBUTION_CASH_RECORDED','FINANCIAL_WORK_V1']);
         const otherConfirmed=pendingBefore.some(item=>
             !incrementalFinancialTypes.has(String(item.type))&&
             itemsAfter.get(String(item.idempotencyKey??''))?.status==='CONFIRMED');

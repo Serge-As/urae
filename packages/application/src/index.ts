@@ -376,7 +376,10 @@ export class ConnectedApplication {
     for(const [k,v] of new Headers(init.headers??{}))headers.set(k,v);
     if(typeof FormData!=='undefined'&&init.body instanceof FormData)headers.delete('content-type');
     const method=String(init.method??'GET').toUpperCase(),cacheable=method==='GET'&&this.offlineReadAllowed(path),securityCritical=path.startsWith('/api/v1/auth/');
-    if(!securityCritical&&this.transportUnavailableUntil>Date.now()){
+    // A slow optional panel must not prevent the independent Live handshake
+    // or clock anchor from recovering. Explicit server quota blocks still apply.
+    const recoveryControl=/\/(?:live\/ticket|financial-clock-anchor)$/.test(path);
+    if(!securityCritical&&!recoveryControl&&this.transportUnavailableUntil>Date.now()){
       if(cacheable&&IndexedDbReadSnapshotAdapter.supported()){
         try{const snapshot=await this.readSnapshots.get<T>(this.offlineReadKey(path));if(snapshot){this.announceOfflineSnapshot(path,snapshot.updatedAt);return structuredClone(snapshot.body);}}catch{}
       }
@@ -394,7 +397,10 @@ export class ConnectedApplication {
     // subsequent offline-capable actions immediate without periodic probing.
     const formUpload=typeof FormData!=='undefined'&&init.body instanceof FormData,
       eventCritical=/\/outbox\/apply$|\/financial-cells$|\/loans\/[^/]+\/(?:repay|disburse)$/.test(path),
-      timeoutMs=formUpload?30000:eventCritical?2200:6500;
+      // The fast-network convergence target is not a transport deadline.
+      // Aborting at 2.2 s stranded valid writes on slow mobile connections.
+      // Local durability remains immediate; retries retain their idempotency key.
+      timeoutMs=formUpload?30000:eventCritical?15000:6500;
     const abort=typeof AbortController==='function'?new AbortController():null;
     let requestTimer:ReturnType<typeof setTimeout>|undefined;
     try{
@@ -2395,6 +2401,7 @@ export class ConnectedApplication {
 
   async syncOutbox():Promise<OutboxItem[]>{
     if(this.serverBudgetBlocked()||typeof navigator!=='undefined'&&navigator.onLine===false)return this.outbox.list();
+    const statusesBefore=new Map(this.outbox.list().map(item=>[item.id,item.status]));
     // syncOutbox is itself an explicit, event-driven retry opportunity.
     // Clear only the short transport breaker; quota/D1 protection stays intact.
     this.transportUnavailableUntil=0;
@@ -2412,7 +2419,19 @@ export class ConnectedApplication {
       await this.saveCached(path,rows.some(x=>x.id===canonical.id)?rows.map(x=>x.id===canonical.id?canonical:x):[...rows,canonical]);
       if(typeof window!=='undefined')window.dispatchEvent(new CustomEvent('eco:rubric-policy-synced',{detail:{groupId,rubricId:canonical.id,revision:last?.loanPolicyRevision??null}}));
     }
-    await this.persistOutbox();return result;
+    await this.persistOutbox();
+    // syncPending also drains intentions added WHILE a preceding command is
+    // being sent. A caller's initial snapshot cannot acknowledge those rows.
+    // Publish only persisted, server-confirmed transitions from this owner.
+    if(typeof window!=='undefined'&&typeof CustomEvent!=='undefined')for(const item of result){
+      if(item.status!=='CONFIRMED'||statusesBefore.get(item.id)==='CONFIRMED'||
+        !['FINANCIAL_CELL_CORRECTION_PROPOSAL_V1','FINANCIAL_CELL_CORRECTION_PROPOSAL_V2','FINANCIAL_SHEET_ENTRY_V1'].includes(item.type))continue;
+      const p=item.payload as any,ack=(item as any).lastResult??{};
+      window.dispatchEvent(new CustomEvent('eco:financial-outbox-confirmed',{detail:{actorId:item.actorId,groupId:p.groupId,
+        meetingId:p.meetingId,membershipId:p.membershipId,rubricId:p.rubricId,idempotencyKey:item.idempotencyKey,
+        amount:ack.canonicalAmount,cellVersion:ack.cellVersion,status:ack.status}}));
+    }
+    return result;
   }
   async queueDemoIntent(note='Local note'):Promise<OutboxItem>{const item=this.outbox.enqueue({tenantId:this.tenantId,actorId:this.actorId,type:'MEETING_NOTE_UPDATED',payload:{groupId:this.activeGroupId,note},idempotencyKey:`note-${this.activeGroupId??'none'}-${Date.now()}`});await this.persistOutbox();return item;}
   async retryOutboxItem(id:string):Promise<OutboxItem|undefined>{const item=this.outbox.retry(id);await this.persistOutbox();return item;}
@@ -2432,3 +2451,4 @@ export class ConnectedApplication {
 
   async universe(){const server=await this.request<{groups:number;inbox:number;audit:number}>('/api/v1/universe');return{...server,pendingSync:this.outbox.list().filter(x=>x.status!=='CONFIRMED').length};}
 }
+

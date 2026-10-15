@@ -1590,7 +1590,6 @@ body.eco-cockpit-shell{--eco-ink:#17392f;--eco-muted:#5e7169;--eco-line:#dce7df;
 .eco-cockpit-shell .cockpit-welcome .cahier-code{display:inline-block;margin-top:8px;padding:2px 7px;background:#e9f0e4;color:#5f745e;font-size:9px;font-weight:500}
 .eco-cockpit-shell #view-dashboard>.cahier-banner{padding:8px 0;background:none;border:0;margin:12px 0;color:#687b69;font-size:11px}
 .eco-cockpit-shell #view-dashboard>.ui-mode-panel{padding:10px 16px;margin:12px 0;gap:12px}.eco-cockpit-shell .ui-mode-copy .eyebrow{display:none}.eco-cockpit-shell .ui-mode-copy p{margin:2px 0}
-.eco-cockpit-shell .matrix-cell-entry .cell-validate{grid-column:2;grid-row:2;min-width:44px;min-height:44px}.eco-cockpit-shell .matrix-cell-entry .cell-target-input{grid-column:1;grid-row:2}.eco-cockpit-shell .matrix-cell-entry .cell-dictate{grid-column:2;min-width:44px;min-height:44px}
 .eco-cockpit-shell .eco-smartgrid-navigation{flex-wrap:wrap}.eco-cockpit-shell .eco-smartgrid-navigation select{max-width:100%;font-size:12px}.eco-cockpit-shell .eco-smartgrid-toolbar>.hint{display:block;flex-basis:100%;font-size:11px}
 /* Let the shared header wrap without covering the first screen. */
 body.eco-cockpit-shell .topbar{height:auto;min-height:76px}
@@ -1635,3 +1634,113 @@ body.eco-cockpit-shell .content{padding-bottom:112px}
  .focused-field-dictation{right:12px;bottom:76px}.member-dossier .form-grid,#view-documents .form-grid{grid-template-columns:minmax(0,1fr)!important}
  .contextual-rubric-grid{grid-template-columns:minmax(0,1fr)}
 }
+
+/* Canonical workspace density. These tokens are the common owner for the
+   three modes; the financial layout planner uses these same column widths. */
+body.eco-cockpit-shell{
+ --work-font:13px;--work-amount:14px;--work-control:32px;--work-gap:4px;
+ --work-rubric:132px;--work-identity:116px;--work-total:108px;
+ --work-pad:6px;--work-input:13px;
+}
+body.eco-cockpit-shell.ui-mode-senior{
+ --work-font:17px;--work-amount:19px;--work-control:46px;--work-gap:6px;
+ --work-rubric:214px;--work-identity:148px;--work-total:134px;
+ --work-pad:9px;--work-input:17px;
+}
+body.eco-cockpit-shell.ui-mode-assisted{
+ --work-font:15px;--work-amount:17px;--work-control:44px;--work-gap:6px;
+ --work-rubric:184px;--work-identity:116px;--work-total:108px;
+ --work-pad:8px;--work-input:16px;
+}
+body.eco-cockpit-shell .topbar{background:#fff;backdrop-filter:none}
+.workspace-mode-picker{display:flex;align-items:center;gap:6px;color:#52695d;font-size:11px}
+.workspace-mode-picker select{width:auto;max-width:172px;font-size:12px}
+body.eco-cockpit-shell :is(table,.meeting-matrix){font-size:var(--work-font)}
+body.eco-cockpit-shell :is(th,td){padding:var(--work-pad) 9px;vertical-align:middle;height:auto}
+body.eco-cockpit-shell .canonical-financial-wrap{max-width:100%;width:100%;scrollbar-width:auto}
+body.eco-cockpit-shell .canonical-financial-matrix{
+ table-layout:fixed;width:auto;min-width:100%;border-collapse:separate;border-spacing:0;
+ font-size:var(--work-font);
+}
+body.eco-cockpit-shell .canonical-financial-matrix[data-fitted="true"]{width:100%;min-width:0}
+body.eco-cockpit-shell .canonical-financial-matrix :is(th,td){
+ min-width:0;max-width:none;padding:var(--work-pad);height:auto;
+ overflow-wrap:anywhere;line-height:1.35;
+}
+body.eco-cockpit-shell .canonical-financial-matrix col.financial-column-number{width:32px}
+body.eco-cockpit-shell .canonical-financial-matrix col.financial-column-identity{width:var(--work-identity)}
+body.eco-cockpit-shell .canonical-financial-matrix[data-mode="individual"] col.financial-column-identity{width:140px}
+body.eco-cockpit-shell .canonical-financial-matrix col.financial-column-rubric{width:var(--work-rubric)}
+body.eco-cockpit-shell .canonical-financial-matrix col.financial-column-total{width:var(--work-total)}
+body.eco-cockpit-shell .canonical-financial-matrix[data-fitted="false"] :is(td[data-rubric-id],th:not(:first-child):not(:nth-child(2)):not(:last-child)){min-width:var(--work-rubric)}
+body.eco-cockpit-shell .canonical-financial-matrix .member-number-column{width:32px;min-width:32px;max-width:32px;left:0}
+body.eco-cockpit-shell .canonical-financial-matrix[data-mode="meeting"] :is(th:nth-child(2),td:nth-child(2)){left:32px;min-width:0}
+body.eco-cockpit-shell .canonical-financial-matrix .table-row-total,
+body.eco-cockpit-shell .canonical-financial-matrix .table-grand-total{font-size:var(--work-font);white-space:normal;overflow-wrap:normal;min-width:0}
+body.eco-cockpit-shell .canonical-financial-matrix tbody th small{display:block;font-size:.72em;font-weight:400;color:#63776b}
+body.eco-cockpit-shell .matrix-cell-entry{
+ display:grid;grid-template-columns:minmax(0,1fr) calc(var(--work-control) - 4px) max(44px,var(--work-control));
+ grid-template-rows:auto auto;align-items:center;gap:var(--work-gap);padding:3px;
+ min-width:0;min-height:0;height:auto;max-width:100%;border-radius:7px;
+}
+body.eco-cockpit-shell .matrix-cell-entry .cell-current{
+ grid-column:1/-1;grid-row:1;font-size:var(--work-amount);line-height:1.25;
+ margin:0;text-align:right;white-space:nowrap;font-weight:700;
+}
+body.eco-cockpit-shell .matrix-cell-entry :is(.cell-target-input,.cell-validate,.cell-dictate){
+ grid-row:2;min-height:var(--work-control);height:var(--work-control);max-height:none;
+ min-width:0;width:100%;margin:0;padding:3px;border-radius:6px;
+ font-size:var(--work-input);box-sizing:border-box;
+}
+body.eco-cockpit-shell .matrix-cell-entry .cell-target-input{grid-column:1;appearance:textfield;-moz-appearance:textfield}
+body.eco-cockpit-shell .matrix-cell-entry .cell-target-input::-webkit-inner-spin-button{appearance:none}
+body.eco-cockpit-shell .matrix-cell-entry .cell-dictate{grid-column:2;background:#f2f6ec;color:#335b44;border:1px solid #d4e1cf}
+body.eco-cockpit-shell .matrix-cell-entry .cell-validate{grid-column:3;background:#176a50;color:#fff;border:1px solid #176a50;font-weight:700;min-height:max(44px,var(--work-control));height:max(44px,var(--work-control))}
+body.eco-cockpit-shell .matrix-cell-entry :is(.cell-sync-state,.cell-save-state,.cell-live-presence,.cell-nature,.cell-proposed-value,.cell-remote-review){
+ grid-column:1/-1;grid-row:auto;width:auto;margin:0;line-height:1.3;
+ font-size:calc(var(--work-font) - 2px);overflow-wrap:normal;text-align:left;
+}
+body.eco-cockpit-shell .matrix-cell-entry [hidden]{display:none!important}
+body.eco-cockpit-shell .matrix-cell-entry .cell-live-presence{color:#235e9a;background:#eef5ff;padding:3px 4px;border-radius:4px}
+body.eco-cockpit-shell .matrix-cell-entry :is(.pending,.cell-save-state){color:#805500}
+body.eco-cockpit-shell.ui-mode-assisted .matrix-cell-entry .cell-dictate{border:2px solid #376cbb;background:#edf4ff;color:#1a4e91}
+body.eco-cockpit-shell.ui-mode-assisted .eco-work-toolbar::after{
+ content:"1. Choisissez le membre · 2. Saisissez ou dictez · 3. Relisez · 4. Validez avec ✓";
+ flex-basis:100%;font-size:14px;color:#365c89;padding:6px 0;
+}
+html[lang="en"] body.eco-cockpit-shell.ui-mode-assisted .eco-work-toolbar::after{content:"1. Choose the member · 2. Type or dictate · 3. Review · 4. Confirm with ✓"}
+body.eco-cockpit-shell .eco-work-toolbar{display:flex;align-items:center;flex-wrap:wrap;gap:8px;padding:10px 12px;margin-bottom:12px;background:#f0f5f0;border:1px solid #d6e2d5;border-radius:10px}
+body.eco-cockpit-shell .eco-work-toolbar strong{margin-right:auto;font-size:var(--work-font)}
+body.eco-cockpit-shell .eco-work-toolbar button{font-size:var(--work-font);min-height:36px}
+body.eco-cockpit-shell .eco-smartgrid-toolbar{padding:12px;gap:10px;background:#f5f8f2}
+body.eco-cockpit-shell .eco-smartgrid-toolbar button{font-size:var(--work-font);min-height:36px;padding:7px 10px}
+body.eco-cockpit-shell .eco-smartgrid-navigation{display:flex;gap:8px;align-items:center}
+body.eco-cockpit-shell .eco-smartgrid-navigation select{flex:1 1 240px;width:auto;min-width:0}
+body.eco-cockpit-shell .eco-smartgrid-fit{flex-basis:100%;font-size:calc(var(--work-font) - 1px)}
+body.eco-cockpit-shell .ledger-history-table{table-layout:auto;min-width:940px;font-size:var(--work-font)}
+body.eco-cockpit-shell .ledger-history-table :is(th,td){height:auto;padding:var(--work-pad) 10px;min-width:0;white-space:normal}
+body.eco-cockpit-shell .ledger-history-table :is(th,td):last-child{min-width:265px;width:265px;position:static}
+body.eco-cockpit-shell .ledger-history-table td:last-child button{display:inline-flex;align-items:center;white-space:nowrap;margin:2px;min-height:34px;padding:6px 9px;font-size:var(--work-font)}
+body.eco-cockpit-shell .ledger-history-table td:nth-child(7){min-width:140px;white-space:nowrap}
+@media(max-width:680px){.workspace-mode-picker{font-size:0}.workspace-mode-picker select{font-size:12px;max-width:144px}body.eco-cockpit-shell .eco-work-toolbar{padding:8px}}
+
+.workspace-tabs{display:flex;gap:6px;border-bottom:1px solid #d9e4d8;margin:0 0 18px;padding:0 0 8px;overflow:auto;scrollbar-width:thin}
+body.eco-cockpit-shell .workspace-tabs button{flex-shrink:0;background:transparent;border:1px solid transparent;box-shadow:none;border-radius:8px;padding:9px 14px;font-size:var(--work-font);color:#526d5e;min-height:38px}
+body.eco-cockpit-shell .workspace-tabs button.active{color:#174e39;background:#e7f0de;border-color:#c9ddc2;font-weight:700}
+body.eco-cockpit-shell .cockpit-tab-panel[hidden]{display:none!important}
+.cockpit-tab-panel>.panel,.cockpit-tab-panel>.two-col{margin-bottom:18px}
+body.eco-cockpit-shell .cockpit-welcome{margin-bottom:14px}
+body.eco-cockpit-shell .cockpit-welcome h1{font-size:30px}
+body.eco-cockpit-shell .cockpit-focus{padding:20px 24px}
+body.eco-cockpit-shell .cockpit-focus h2{font-size:22px;margin:8px 0}
+body.eco-cockpit-shell .cockpit-launchpad{margin-bottom:18px}
+body.eco-cockpit-shell .cockpit-launchpad button{padding:12px;gap:3px}
+body.eco-cockpit-shell .cockpit-launchpad span{width:28px;height:28px;margin-bottom:3px}
+body.eco-cockpit-shell .cockpit-intent-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,210px),1fr));gap:12px;margin-top:16px}
+body.eco-cockpit-shell .cockpit-intent{display:flex;flex-direction:column;align-items:flex-start;gap:9px;padding:20px;background:#f8fbf5;border:1px solid #d9e7d3;text-align:left;min-height:120px}
+body.eco-cockpit-shell .cockpit-intent strong{font-size:16px;color:#244e39}
+body.eco-cockpit-shell .cockpit-intent span{font-size:13px;font-weight:400;color:#65786a;line-height:1.5}
+body.eco-cockpit-shell.ui-mode-senior .workspace-tabs button{font-size:17px;min-height:48px}
+body.eco-cockpit-shell.ui-mode-senior .cockpit-welcome h1{font-size:36px}
+body.eco-cockpit-shell.ui-mode-assisted .workspace-tabs button{min-height:46px}
+@media(max-width:680px){body.eco-cockpit-shell .workspace-tabs button{font-size:12px;padding:8px 10px}.cockpit-welcome .actions{flex-wrap:wrap}body.eco-cockpit-shell .cockpit-intent{min-height:100px}}

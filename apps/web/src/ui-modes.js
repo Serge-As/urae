@@ -5,7 +5,7 @@ const $=id=>document.getElementById(id);
 
 export const currentUiMode=()=>{
   try{
-    const saved=localStorage.getItem(STORAGE_KEY);
+    const saved=sessionStorage.getItem(STORAGE_KEY)||localStorage.getItem(STORAGE_KEY);
     return VALID.has(saved)?saved:'visual';
   }catch{return'visual';}
 };
@@ -21,8 +21,7 @@ export const applyUiMode=(mode,{persist=true,announce=false}={})=>{
   document.body.classList.remove('ui-mode-visual','ui-mode-senior','ui-mode-assisted');
   document.body.classList.add('ui-mode-'+next);
   document.documentElement.dataset.uiMode=next;
-  const select=$('uiModeSelect');
-  if(select&&select.value!==next)select.value=next;
+  for(const select of document.querySelectorAll('#uiModeSelect, #workspaceUiMode'))if(select.value!==next)select.value=next;
   document.querySelectorAll('[data-ui-mode-button]').forEach(button=>{
     const active=button.dataset.uiModeButton===next;
     button.classList.toggle('active',active);
@@ -37,7 +36,9 @@ export const applyUiMode=(mode,{persist=true,announce=false}={})=>{
         : 'Boutons larges, instructions courtes et accès prioritaire à la dictée. Toute saisie financière dictée reste relue avant validation.';
   }
   if(persist){
-    try{localStorage.setItem(STORAGE_KEY,next);}catch{}
+    // Each window may compare a different mode. The shared value is only the
+    // default for a newly opened window, never an override of an explicit choice.
+    try{sessionStorage.setItem(STORAGE_KEY,next);localStorage.setItem(STORAGE_KEY,next);}catch{}
   }
   if(announce)window.dispatchEvent(new CustomEvent('eco:ui-mode-changed',{detail:{mode:next,label:modeLabel(next)}}));
   return next;
@@ -61,8 +62,7 @@ const openAssistedEntry=()=>{
 
 const install=()=>{
   applyUiMode(currentUiMode(),{persist:false});
-  const select=$('uiModeSelect');
-  if(select){
+  for(const select of document.querySelectorAll('#uiModeSelect, #workspaceUiMode')){
     select.value=currentUiMode();
     select.addEventListener('change',()=>applyUiMode(select.value,{persist:true,announce:true}));
   }
@@ -71,9 +71,10 @@ const install=()=>{
   }));
   $('openAssistedModeBtn')?.addEventListener('click',openAssistedEntry);
   window.addEventListener('storage',event=>{
-    if(event.key===STORAGE_KEY)applyUiMode(event.newValue||'visual',{persist:false});
+    if(event.key===STORAGE_KEY&&!sessionStorage.getItem(STORAGE_KEY))applyUiMode(event.newValue||'visual',{persist:false,announce:true});
   });
 };
 
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',install,{once:true});
 else install();
+

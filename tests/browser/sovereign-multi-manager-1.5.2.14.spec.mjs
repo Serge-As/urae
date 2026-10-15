@@ -6,7 +6,8 @@ import {test,expect} from '@playwright/test';
 const base='http://127.0.0.1:4173',password='Synthetic-Multi-Manager-2026!';
 const amount=async cell=>Number((await cell.locator('.cell-current').innerText()).replace(/[^0-9-]/g,''));
 const api=(page,path,method='GET',body,groupId)=>page.evaluate(async({path,method,body,groupId})=>{
-  const r=await fetch(path,{method,headers:{...(body===undefined?{}:{'content-type':'application/json'}),...(groupId?{'x-active-group-id':groupId}:{})},body:body===undefined?undefined:JSON.stringify(body)});
+  const scope=sessionStorage.getItem('eco.window.session.v1');
+  const r=await fetch(path,{method,headers:{...(body===undefined?{}:{'content-type':'application/json'}),...(scope?{'x-eco-window-id':scope}:{}),...(groupId?{'x-active-group-id':groupId}:{})},body:body===undefined?undefined:JSON.stringify(body)});
   const data=await r.json();if(!r.ok)throw Error(method+' '+path+' '+r.status+' '+JSON.stringify(data));return data;
 },{path,method,body,groupId});
 const cell=(page,ids)=>page.locator(`#meetingMatrix .matrix-cell-entry[data-membership-id="${ids.membershipId}"][data-rubric-id="${ids.rubricId}"][data-meeting-id="${ids.meetingId}"]`);
@@ -16,7 +17,7 @@ const enter=async(page,ids,value)=>{
   await cell(page,ids).locator('.cell-validate').click();await settleWorkDialog(page);
 };
 async function setup(page,browser){
-  await page.goto(base);const suffix=Date.now()+'_'+Math.floor(Math.random()*100000);
+  await page.goto(base);await expect.poll(()=>page.evaluate(()=>sessionStorage.getItem('eco.window.session.v1'))).toMatch(/^[a-f0-9]{32}$/);const suffix=Date.now()+'_'+Math.floor(Math.random()*100000);
   const account=await api(page,'/api/v1/auth/register','POST',{username:'owner_'+suffix,password,displayName:'Gestionnaire Alpha'});
   const project=await api(page,'/api/v1/group-projects','POST',{name:'Convergence '+suffix,kind:'association',governanceModel:'founder_managed',memberCount:1,sessions:3,nominalContribution:0,currency:'XAF'});
   const group=await api(page,'/api/v1/group-projects/'+project.id+'/convert','POST',{}),groupId=group.id;
@@ -25,16 +26,96 @@ async function setup(page,browser){
   const meeting=await api(page,'/api/v1/groups/'+groupId+'/meetings','POST',{title:'Séance confrontation',scheduledAt:new Date().toISOString()},groupId);
   const invite=await api(page,'/api/v1/groups/'+groupId+'/join-links','POST',{mode:'AUTO_JOIN'},groupId);
   const secondContext=await browser.newContext(),second=await secondContext.newPage();await second.goto(base);
+  await expect.poll(()=>second.evaluate(()=>sessionStorage.getItem('eco.window.session.v1'))).toMatch(/^[a-f0-9]{32}$/);
   await api(second,'/api/v1/auth/register','POST',{username:'manager_'+suffix,password,displayName:'Gestionnaire Beta'});
   const joined=await api(second,'/api/v1/join/redeem','POST',{code:invite.code});
   await api(page,'/api/v1/groups/'+groupId+'/members/'+joined.membershipId+'/lifecycle','PUT',{roles:['manager','member'],status:'active',reason:'Gestionnaire de qualification'},groupId);
   const ids={groupId,membershipId,rubricId:rubric.id,meetingId:meeting.id};
-  for(const [p,username] of [[page,'owner_'+suffix],[second,'manager_'+suffix]]){
-    await p.locator('[data-auth-mode="login"]').click();await p.locator('#authUsername').fill(username);await p.locator('#authPassword').fill(password);await p.locator('#authSubmit').click();await expect(p.locator('#authScreen')).toBeHidden();
+  // Registration already established each window's real authorized session.
+  // Do not authenticate the same fixture again and exhaust the production-like
+  // IP rate limiter as this suite grows. Login itself has dedicated UI coverage.
+  for(const p of [page,second]){
     await p.evaluate(id=>localStorage.setItem('tontine.activeGroupId',id),groupId);await p.reload();await p.locator('button[data-view="operations"]').first().click();await expect(cell(p,ids)).toBeVisible();await expect(p.locator('#connectivity')).toHaveText(/En ligne · Live$/,{timeout:10000});
   }
   return{ids,second,secondContext};
 }
+
+test('a slow response still confirms once, Meeting mode keeps the editor, and the other manager receives the amount',async({page,browser})=>{
+  test.setTimeout(120000);const {ids,second,secondContext}=await setup(page,browser);
+  try{
+    let sends=0;
+    await page.route('**/api/v1/outbox/apply',async route=>{
+      const body=route.request().postDataJSON();
+      if(String(body.type).startsWith('FINANCIAL_CELL')){sends++;const response=await route.fetch();await new Promise(r=>setTimeout(r,3100));await route.fulfill({response});}
+      else await route.continue();
+    });
+    await cell(page,ids).locator('.cell-target-input').fill('1750');
+    await expect(cell(second,ids)).toContainText(/Alpha.*saisit/,{timeout:5000});
+    await cell(page,ids).locator('.cell-validate').click();await settleWorkDialog(page);
+    await expect(page.locator('#meetingMatrix .eco-work-toolbar')).toContainText('Réunion');
+    await expect(cell(page,ids)).toHaveAttribute('data-save-state','CONFIRMED',{timeout:9000});
+    await expect.poll(()=>amount(cell(second,ids)),{timeout:5000}).toBe(1750);
+    expect(sends,'one durable command, one completed send').toBe(1);
+    await expect(page.locator('#connectivity')).toHaveText(/En ligne · Live$/);
+    await page.locator('button[data-view="sessions"]').first().click();
+    await page.locator('#sessionsMeetingSelect').selectOption(ids.meetingId);
+    await page.locator('[data-session-tab="sheet"]').click();
+    await expect(page.locator('#sessionsWorkspace .eco-work-toolbar')).toContainText('Réunion');
+    await page.screenshot({path:'artifacts/meeting-synchronized.png',fullPage:false});
+  }finally{await secondContext.close();}
+});
+
+test('20, 40 and 100 categories are all covered by complete fitting parts, with invariant general totals',async({page,browser})=>{
+  test.setTimeout(240000);const {ids,secondContext}=await setup(page,browser);await secondContext.close();
+  await page.setViewportSize({width:1440,height:960});
+  await enter(page,ids,1000);await expect(cell(page,ids)).toHaveAttribute('data-save-state','CONFIRMED');
+  const rubricBody=name=>({name,facets:{direction:'INFLOW',obligation:'CUSTOM',medium:'CASH',refundability:'CONDITIONAL',replenishment:'CUSTOM',interestMode:'NONE',eligibilityMode:'RULE_BASED'},source:'GROUP_CUSTOM',operatingModel:{ruleRealityStatus:'ALIGNED',targetMode:'OPEN',mandatoryForAbsentees:false,shortfallHandling:'LEAVE_SHORT',payoutMode:'COLLECTED_ONLY',immediateFullPayout:false}});
+  for(const size of [20,40,100]){
+    let rows=await api(page,'/api/v1/groups/'+ids.groupId+'/rubrics','GET',undefined,ids.groupId);
+    while(rows.length<size){const r=await api(page,'/api/v1/groups/'+ids.groupId+'/rubrics','POST',rubricBody('Rubrique activité '+(rows.length+1)),ids.groupId);rows.push(r);}
+    await page.locator('#refreshBtn').click();
+    const root=page.locator('#meetingMatrix');
+    await expect(root).toHaveAttribute('data-rubric-count',String(size));
+    await expect(root.locator('table.canonical-financial-matrix')).toHaveAttribute('data-fitted','true');
+    const parts=Number(await root.getAttribute('data-parts'));expect(parts).toBeGreaterThan(2);
+    await expect(root.getByRole('button',{name:'Vue en 2 parties',exact:true})).toHaveCount(0);
+    const seen=[];let total;
+    for(let i=0;i<parts;i++){
+      await root.getByRole('combobox',{name:'Choisir une partie du tableau'}).selectOption(String(i));
+      // Resolve the live host inside one browser evaluation. A locator's
+      // previously resolved wrapper can be detached by a concurrent canonical
+      // resize/reload between the visibility check and its geometry read.
+      // Verify the requested part, its dimensions, rubric IDs and total from
+      // the same attached table; do not count an empty/detached projection.
+      let geometry;
+      await expect.poll(async()=>{
+        geometry=await page.evaluate(()=>{
+          const root=document.querySelector('#meetingMatrix'),w=root?.querySelector('.canonical-financial-wrap'),table=w?.querySelector('table');
+          if(!w?.isConnected||!table)return null;
+          return{overflow:w.scrollWidth-w.clientWidth,width:w.clientWidth,table:table.getBoundingClientRect().width,
+            part:Number(root.querySelector('[aria-label="Choisir une partie du tableau"]')?.value),
+            rubrics:[...table.querySelectorAll('tbody tr:first-child td[data-rubric-id]')].map(n=>n.dataset.rubricId),
+            total:table.querySelector('.table-grand-total')?.textContent};
+        });
+        return Boolean(geometry?.width>0&&geometry.part===i);
+      }).toBe(true);
+      expect(geometry.overflow,'part '+(i+1)+'/'+parts+' must be complete').toBeLessThanOrEqual(2);
+      expect(geometry.width).toBeGreaterThan(0);
+      seen.push(...geometry.rubrics);
+      const displayed=geometry.total;if(total===undefined)total=displayed;expect(displayed).toBe(total);
+    }
+    expect(seen.length).toBe(size);expect([...new Set(seen)].sort()).toEqual(rows.map(r=>r.id).sort());
+    expect(Number(total.replace(/[^0-9-]/g,''))).toBe(1000);
+    await root.locator('.canonical-financial-wrap').scrollIntoViewIfNeeded();
+    await page.screenshot({path:'artifacts/meeting-'+size+'-categories.png',fullPage:false});
+  }
+  await page.setViewportSize({width:700,height:900});
+  await page.locator('#workspaceUiMode').selectOption('senior');
+  await expect(page.locator('#meetingMatrix table')).toHaveAttribute('data-fitted','true');
+  expect(await page.locator('#meetingMatrix .canonical-financial-wrap').evaluate(w=>w.scrollWidth-w.clientWidth)).toBeLessThanOrEqual(2);
+  await page.locator('#meetingMatrix .canonical-financial-wrap').scrollIntoViewIfNeeded();
+  await page.screenshot({path:'artifacts/meeting-100-senior-narrow.png',fullPage:false});
+});
 
 const safeCellIntent=row=>({
   id:row.id,status:row.status,attempts:row.attempts,createdAt:row.createdAt,updatedAt:row.updatedAt,lastError:row.lastError,
@@ -308,3 +389,4 @@ test('offline member review uses the newly saved local value instead of an older
   await expect(review).toContainText('cet appareil');
  }finally{await secondContext.close();}
 });
+

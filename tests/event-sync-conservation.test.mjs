@@ -13,7 +13,7 @@ test('free-plan finance sync is event-driven with one targeted retry, never peri
   assert.doesNotMatch(main,/maxAttempts=FREE_CONSERVATION_MODE/);
   assert.doesNotMatch(main,/FREE_CONSERVATION_MODE\?\[[^\]]+\]/);
   assert.match(main,/Targeted financial Outbox retry deferred until a real connectivity event/);
-  assert.match(app,/eventCritical\?2200/);
+  assert.match(app,/eventCritical\?15000/);
 });
 
 test('Live WebSocket reconnects persistently and is not disabled merely by a D1 budget latch',()=>{
@@ -46,3 +46,4 @@ test('manual refresh is targeted and page reload persists exact financial naviga
   assert.match(main,/refreshVisibleBusinessSurface/);
   assert.match(main,/Données utiles actualisées sans perdre votre position/);
 });
+

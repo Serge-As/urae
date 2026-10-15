@@ -13,8 +13,8 @@ const contract=JSON.parse(fs.readFileSync('docs/release/CURRENT_RELEASE_CONTRACT
 test('production source release contract is not changed by preview-only cache isolation',()=>{
   assert.ok(sw.includes("const CACHE = '"+contract.release.pwaCache+"'"));
   assert.ok(sw.includes("const PREVIOUS_CACHE = '"+contract.release.previousPwaCache+"'"));
-  assert.match(build,/const RELEASE_VERSION='1\.5\.2\.17-cockpit-continuity'/);
-  assert.match(html,/main\.js\?v=15217/);
+  assert.match(build,/const RELEASE_VERSION='1\.5\.2\.18-workspace-repair'/);
+  assert.match(html,/main\.js\?v=15218/);
   assert.match(preview,/GITHUB_REF_NAME/);
   assert.match(preview,/preview\/eco-refonte-20261012/);
   assert.match(preview,/eco-system-preview-/);
@@ -26,7 +26,7 @@ test('production source release contract is not changed by preview-only cache is
     assert.match(workflow,/ECO_SYSTEM_DB: eco-system-db/);
     assert.match(workflow,/R2_BUCKET: eco-system-backups/);
     assert.match(workflow,/Verify code-only marker/);
-    assert.match(workflow,/EXPECTED_VERSION: 1\.5\.2\.17-cockpit-continuity/);
+    assert.match(workflow,/EXPECTED_VERSION: 1\.5\.2\.18-workspace-repair/);
     assert.doesNotMatch(workflow,/PREVIEW_DB:|PREVIEW_BUCKET:/);
   }
 });
