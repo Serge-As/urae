@@ -36,6 +36,63 @@ async function setup(page,browser){
   return{ids,second,secondContext};
 }
 
+test('a slow response still confirms once, Meeting mode keeps the editor, and the other manager receives the amount',async({page,browser})=>{
+  test.setTimeout(120000);const {ids,second,secondContext}=await setup(page,browser);
+  try{
+    let sends=0;
+    await page.route('**/api/v1/outbox/apply',async route=>{
+      const body=route.request().postDataJSON();
+      if(String(body.type).startsWith('FINANCIAL_CELL')){sends++;const response=await route.fetch();await new Promise(r=>setTimeout(r,3100));await route.fulfill({response});}
+      else await route.continue();
+    });
+    await cell(page,ids).locator('.cell-target-input').fill('1750');
+    await expect(cell(second,ids)).toContainText(/Alpha.*saisit/,{timeout:5000});
+    await cell(page,ids).locator('.cell-validate').click();await settleWorkDialog(page);
+    await expect(page.locator('#meetingMatrix .eco-work-toolbar')).toContainText('Réunion');
+    await expect(cell(page,ids)).toHaveAttribute('data-save-state','CONFIRMED',{timeout:9000});
+    await expect.poll(()=>amount(cell(second,ids)),{timeout:5000}).toBe(1750);
+    expect(sends,'one durable command, one completed send').toBe(1);
+    await expect(page.locator('#connectivity')).toHaveText(/En ligne · Live$/);
+    await page.locator('button[data-view="sessions"]').first().click();
+    await expect(page.locator('#sessionsWorkspace .eco-work-toolbar')).toContainText('Réunion');
+    await page.screenshot({path:'artifacts/meeting-synchronized.png',fullPage:false});
+  }finally{await secondContext.close();}
+});
+
+test('20, 40 and 100 categories are all covered by complete fitting parts, with invariant general totals',async({page,browser})=>{
+  test.setTimeout(240000);const {ids,secondContext}=await setup(page,browser);await secondContext.close();
+  await page.setViewportSize({width:1440,height:960});
+  await enter(page,ids,1000);await expect(cell(page,ids)).toHaveAttribute('data-save-state','CONFIRMED');
+  const rubricBody=name=>({name,facets:{direction:'INFLOW',obligation:'CUSTOM',medium:'CASH',refundability:'CONDITIONAL',replenishment:'CUSTOM',interestMode:'NONE',eligibilityMode:'RULE_BASED'},source:'GROUP_CUSTOM',operatingModel:{ruleRealityStatus:'ALIGNED',targetMode:'OPEN',mandatoryForAbsentees:false,shortfallHandling:'LEAVE_SHORT',payoutMode:'COLLECTED_ONLY',immediateFullPayout:false}});
+  for(const size of [20,40,100]){
+    let rows=await api(page,'/api/v1/groups/'+ids.groupId+'/rubrics','GET',undefined,ids.groupId);
+    while(rows.length<size){const r=await api(page,'/api/v1/groups/'+ids.groupId+'/rubrics','POST',rubricBody('Rubrique activité '+(rows.length+1)),ids.groupId);rows.push(r);}
+    await page.locator('#refreshBtn').click();
+    const root=page.locator('#meetingMatrix');
+    await expect(root).toHaveAttribute('data-rubric-count',String(size));
+    await expect(root.locator('table.canonical-financial-matrix')).toHaveAttribute('data-fitted','true');
+    const parts=Number(await root.getAttribute('data-parts'));expect(parts).toBeGreaterThan(2);
+    await expect(root.getByRole('button',{name:'Vue en 2 parties',exact:true})).toHaveCount(0);
+    const seen=[];let total;
+    for(let i=0;i<parts;i++){
+      await root.getByRole('combobox',{name:'Choisir une partie du tableau'}).selectOption(String(i));
+      const geometry=await root.locator('.canonical-financial-wrap').evaluate(w=>({overflow:w.scrollWidth-w.clientWidth,width:w.clientWidth,table:w.querySelector('table').getBoundingClientRect().width}));
+      expect(geometry.overflow,'part '+(i+1)+'/'+parts+' must be complete').toBeLessThanOrEqual(2);
+      expect(geometry.width).toBeGreaterThan(0);
+      seen.push(...await root.locator('tbody tr').first().locator('td[data-rubric-id]').evaluateAll(nodes=>nodes.map(n=>n.dataset.rubricId)));
+      const displayed=await root.locator('.table-grand-total').innerText();if(total===undefined)total=displayed;expect(displayed).toBe(total);
+    }
+    expect(seen.length).toBe(size);expect([...new Set(seen)].sort()).toEqual(rows.map(r=>r.id).sort());
+    expect(Number(total.replace(/[^0-9-]/g,''))).toBe(1000);
+    await page.screenshot({path:'artifacts/meeting-'+size+'-categories.png',fullPage:false});
+  }
+  await page.setViewportSize({width:700,height:900});
+  await page.locator('#workspaceUiMode').selectOption('senior');
+  await expect(page.locator('#meetingMatrix table')).toHaveAttribute('data-fitted','true');
+  expect(await page.locator('#meetingMatrix .canonical-financial-wrap').evaluate(w=>w.scrollWidth-w.clientWidth)).toBeLessThanOrEqual(2);
+  await page.screenshot({path:'artifacts/meeting-100-senior-narrow.png',fullPage:false});
+});
+
 const safeCellIntent=row=>({
   id:row.id,status:row.status,attempts:row.attempts,createdAt:row.createdAt,updatedAt:row.updatedAt,lastError:row.lastError,
   lastResult:{status:row.lastResult?.status,accepted:row.lastResult?.accepted,canonicalAmount:row.lastResult?.canonicalAmount,cellVersion:row.lastResult?.cellVersion,error:row.lastResult?.error},
@@ -308,3 +365,4 @@ test('offline member review uses the newly saved local value instead of an older
   await expect(review).toContainText('cet appareil');
  }finally{await secondContext.close();}
 });
+

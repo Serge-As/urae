@@ -26,6 +26,16 @@
   ],
   "records": [
     {
+      "id": "workspace-repair-20261015",
+      "status": "IN_PROGRESS",
+      "statement": "Founder reported regressions on deployed 1.5.2.17. Repair 1.5.2.18 prepared; 7 targeted tests pass, full qualification and deployment pending. FIELD_ACCEPTED remains NOT_ACCEPTED.",
+      "evidence": [
+        "docs/change-impact/CIR-2026-10-15-financial-workspace-repair.md",
+        "docs/memory/recalls/RECALL-2026-10-15-financial-workspace-repair.md"
+      ],
+      "observedOn": "2026-10-15"
+    },
+    {
       "id": "constitution.master.2.3.3",
       "status": "VERIFIED_LOCAL",
       "scope": "documentation/memory",

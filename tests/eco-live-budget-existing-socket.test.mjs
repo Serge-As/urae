@@ -36,8 +36,17 @@ test('existing signed WebSocket remains usable when unrelated D1 quota is blocke
     assert.equal(result.transport,'websocket');
     assert.ok(ws.sent.some(m=>m.eventType==='TYPING'));
     assert.equal(tickets,1,'typing sends no new ticket/D1 request');
+    // Reconnect in progress: an initial keystroke must survive until OPEN,
+    // while a subsequent STOP must cancel its obsolete presence.
+    ws.readyState=0;
+    const payload={kind:'FINANCIAL_CELL',meetingId:'s1',membershipId:'m1',rubricId:'r1'};
+    await live.publishSignal('TYPING',payload);ws.readyState=1;ws.onopen();
+    assert.equal(ws.sent.filter(m=>m.eventType==='TYPING').length,2);
+    ws.readyState=0;await live.publishSignal('TYPING',payload);await live.publishSignal('TYPING_STOP',payload);ws.readyState=1;ws.onopen();
+    assert.equal(ws.sent.filter(m=>m.eventType==='TYPING').length,2,'stopped typing is not resurrected');
     live.disconnect();
   }finally{
     for(const [k,d]of saved)if(d)Object.defineProperty(globalThis,k,d);else delete globalThis[k];
   }
 });
+

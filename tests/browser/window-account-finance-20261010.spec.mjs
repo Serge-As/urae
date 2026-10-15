@@ -34,6 +34,20 @@ async function enter(page,ids,value){if(await amount(cell(page,ids))>0)page.once
 
 test('two accounts in one browser keep their own identity, drafts, live amounts, close button and F5 position',async({page,context})=>{
  const {ids,second}=await setup(page,context);
+ await page.locator('#workspaceUiMode').selectOption('senior');
+ await second.locator('#workspaceUiMode').selectOption('visual');
+ await expect(page.locator('body')).toHaveClass(/ui-mode-senior/);
+ await expect(second.locator('body')).toHaveClass(/ui-mode-visual/);
+ const seniorFont=await cell(page,ids).locator('.cell-current').evaluate(e=>parseFloat(getComputedStyle(e).fontSize));
+ const visualFont=await cell(second,ids).locator('.cell-current').evaluate(e=>parseFloat(getComputedStyle(e).fontSize));
+ expect(seniorFont-visualFont).toBeGreaterThanOrEqual(4);
+ expect(await cell(second,ids).evaluate(e=>e.getBoundingClientRect().height)).toBeLessThan(95);
+ await page.screenshot({path:'artifacts/meeting-senior.png',fullPage:false});
+ await second.screenshot({path:'artifacts/meeting-visual.png',fullPage:false});
+ await page.locator('#workspaceUiMode').selectOption('assisted');
+ await expect(page.locator('#meetingMatrix .eco-work-toolbar')).toHaveCSS('display','flex');
+ await page.screenshot({path:'artifacts/meeting-assisted.png',fullPage:false});
+ await page.locator('#workspaceUiMode').selectOption('visual');
  await cell(page,ids).locator('.cell-target-input').fill('1000');
  await expect(cell(second,ids)).toContainText(/Alpha.*saisit|Alpha.*brouillon/,{timeout:5000});
  await expect(cell(page,ids).locator('.cell-live-presence')).not.toContainText('Beta');
@@ -59,3 +73,4 @@ test('offline validations from two accounts in one profile survive F5 without er
  const stored=await page.evaluate(()=>new Promise((resolve,reject)=>{const r=indexedDB.open('tontine-platform');r.onerror=()=>reject(r.error);r.onsuccess=()=>{const db=r.result;const q=db.transaction('outbox').objectStore('outbox').getAll();q.onsuccess=()=>{resolve(q.result.map(x=>({actorId:x.actorId,status:x.status,target:x.payload?.targetAmount})));db.close();};q.onerror=()=>reject(q.error);};}));
  expect(new Set(stored.filter(x=>[4100,4200].includes(x.target)).map(x=>x.actorId)).size).toBe(2);
 });
+

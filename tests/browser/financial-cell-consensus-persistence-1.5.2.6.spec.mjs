@@ -240,6 +240,9 @@ test('repayment 2500 syncs event-wise within five seconds and survives reload wi
   // viewport so the replacement matrix still overflows after rerender; do not
   // fake overflow with an inline width that disappears during refresh.
   await page.setViewportSize({width:390,height:820});
+  // Deliberately choose the complete scrollable sheet. The adaptive default
+  // now avoids horizontal scrolling by offering complete fitting parts.
+  await page.locator('#meetingMatrix').getByRole('button',{name:'Vue intégrale',exact:true}).click();
   const wrap=page.locator('#meetingMatrix .canonical-financial-wrap');
   await wrap.evaluate(node=>{node.scrollLeft=node.scrollWidth;});
   const before=await wrap.evaluate(node=>node.scrollLeft);
@@ -263,3 +266,4 @@ test('repayment 2500 syncs event-wise within five seconds and survives reload wi
   for(const label of ['Capital restant','Intérêts dus','Prochains intérêts projetés','Total dette exigible'])await expect(page.locator('#loanDebtRecap')).toContainText(label);
   await mirrorContext.close();
 });
+

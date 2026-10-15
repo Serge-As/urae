@@ -1,4 +1,4 @@
-name: Eco-System 1.5.2.17 — Live and Refonte Cloudflare Delivery
+name: Eco-System 1.5.2.18 — Live and Refonte Cloudflare Delivery
 
 on:
   workflow_dispatch:
@@ -20,9 +20,9 @@ env:
   ECO_SYSTEM_ROOT: https://eco-system.sergemimf.workers.dev/
   ECO_SYSTEM_HEALTH: https://eco-system.sergemimf.workers.dev/health
   ECO_SYSTEM_CATALOG: https://eco-system.sergemimf.workers.dev/api/v1/product/capabilities
-  EXPECTED_VERSION: 1.5.2.17-cockpit-continuity
-  EXPECTED_BUILD: eco-system-1.5.2.17-20261015-cockpit-continuity
-  EXPECTED_CACHE: eco-system-v15217-cockpit-continuity-20261015
+  EXPECTED_VERSION: 1.5.2.18-workspace-repair
+  EXPECTED_BUILD: eco-system-1.5.2.18-20261015-workspace-repair
+  EXPECTED_CACHE: eco-system-v15218-workspace-repair-20261015
   MIN_CAPABILITIES: 164
 
 jobs:

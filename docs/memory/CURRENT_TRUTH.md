@@ -1,3 +1,9 @@
+## Réparation après signalement terrain — 15 octobre 2026
+
+La production 1.5.2.17 est déployée, mais le fondateur a signalé des régressions de saisie/Live et une non-conformité des tableaux, des modes et de l’organisation aux documents. Les tests précédents ne valent pas acceptation de ces usages. FIELD_ACCEPTED=NOT_ACCEPTED.
+
+Candidate 1.5.2.18-workspace-repair en cours : partitions mesurées, modes par fenêtre et densité distincte, contexte Réunion sans rechargement métier complet, présence pendant reconnexion, délai réseau adapté et cockpit à onglets locaux. CIR et Recall du 15 octobre financial-workspace-repair. Sept contrôles ciblés passent ; qualification complète et livraison encore À VÉRIFIER. Ne pas annoncer cette candidate déployée.
+
 ## Production vérifiée — cockpit et Eco IA — 15 octobre 2026
 
 **1.5.2.17-cockpit-continuity** réellement servie : `af08c4bc26a5f7511b9092cc5a9bf6c0927a5766`. Livraison38712364934SUCCESS, 728tests applicatifs,13Chromium et6WebKitPASS sur le SHA publié. Sauvegarde D1 restaurée et archive privée R2 relue/hashée avant publication. Lecture publique indépendante à09:38UTC : HTML/cockpit, Eco IA, CSS, cache, health et catalogue164 cohérents. Ressources et données existantes conservées.

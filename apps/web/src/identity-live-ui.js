@@ -4,7 +4,7 @@ const row=(label,value)=>{const p=el('p');const b=el('strong',label+' : ');p.app
 
 export function mountIdentityLiveUI({app,notify=()=>{},showError=console.error,conservationMode=false}){
   let socket=null,lastSeq=0,lastSignalAt=0,activeGroup,activeActor,reconnectTimer=null,reconnectAttempt=0,wantConnection=true,eventQueue=Promise.resolve(),connectPromise=null;
-  const pendingDraftSignals=new Map();let workMode='HORS_REUNION',probeTimer=null;
+  const pendingDraftSignals=new Map(),pendingPresenceSignals=new Map();let workMode='HORS_REUNION',probeTimer=null;
   const configureProbe=()=>{clearInterval(probeTimer);probeTimer=null;if(workMode!=='REUNION')return;probeTimer=setInterval(()=>{if(navigator.onLine!==false&&socket?.readyState===WebSocket.OPEN)socket.send(JSON.stringify({type:'SYNC_PROBE',after:lastSeq}));},1000);};
   window.addEventListener('eco:financial-work-mode',e=>{workMode=e.detail?.mode??'HORS_REUNION';configureProbe();});
 
@@ -57,13 +57,21 @@ export function mountIdentityLiveUI({app,notify=()=>{},showError=console.error,c
   const publishSignal=async(type,payload={})=>{
     if(!app.activeGroup())return{accepted:false,reason:'ACTIVE_GROUP_REQUIRED'};
     const actor=String(app.currentActor?.()??'');
-    if(activeActor&&activeActor!==actor){closeSocket('account-change');lastSeq=0;lastSignalAt=0;pendingDraftSignals.clear();activeActor=actor;}
+    if(activeActor&&activeActor!==actor){closeSocket('account-change');lastSeq=0;lastSignalAt=0;pendingDraftSignals.clear();pendingPresenceSignals.clear();activeActor=actor;}
+    const presenceKey=signalKey(payload);
+    if(['CELL_FOCUS','TYPING'].includes(type)){
+      // A user may start typing before the handshake completes. Keep only the
+      // latest ephemeral state, briefly, and never queue its unvalidated amount.
+      pendingPresenceSignals.set(presenceKey,{type,payload,expiresAt:Date.now()+3000});
+      if(pendingPresenceSignals.size>32)pendingPresenceSignals.delete(pendingPresenceSignals.keys().next().value);
+    }
+    if(['CELL_BLUR','TYPING_STOP'].includes(type))pendingPresenceSignals.delete(presenceKey);
     if(['FINANCIAL_DRAFT','FINANCIAL_DRAFT_CLEAR'].includes(type))pendingDraftSignals.set(signalKey(payload),{type,payload});
     if(navigator.onLine===false)return{accepted:false,offline:true,queued:['FINANCIAL_DRAFT','FINANCIAL_DRAFT_CLEAR'].includes(type)};
     // A D1 budget block does not close or disable an already authorized live
     // socket: ephemeral typing carries no new D1 read or REST write.
     if(socket&&socket.readyState===WebSocket.OPEN){
-      try{socket.send(JSON.stringify({type:'CLIENT_SIGNAL',eventType:type,payload}));if(['FINANCIAL_DRAFT','FINANCIAL_DRAFT_CLEAR'].includes(type))pendingDraftSignals.delete(signalKey(payload));return{accepted:true,transport:'websocket'};}catch{}
+      try{socket.send(JSON.stringify({type:'CLIENT_SIGNAL',eventType:type,payload}));pendingPresenceSignals.delete(presenceKey);if(['FINANCIAL_DRAFT','FINANCIAL_DRAFT_CLEAR'].includes(type))pendingDraftSignals.delete(signalKey(payload));return{accepted:true,transport:'websocket'};}catch{}
     }
     // Ephemeral presence/typing/draft traffic is WebSocket-only. Never
     // retry a D1-dependent ticket while the server explicitly forbids it.
@@ -96,6 +104,8 @@ export function mountIdentityLiveUI({app,notify=()=>{},showError=console.error,c
         // Re-announce only the latest draft state per cell after reconnect.
         for(const {type,payload} of pendingDraftSignals.values())try{socket.send(JSON.stringify({type:'CLIENT_SIGNAL',eventType:type,payload}));}catch{}
         pendingDraftSignals.clear();
+        for(const {type,payload,expiresAt} of pendingPresenceSignals.values())if(expiresAt>Date.now())try{socket.send(JSON.stringify({type:'CLIENT_SIGNAL',eventType:type,payload}));}catch{}
+        pendingPresenceSignals.clear();
         // A successful socket handshake proves the network has recovered.
         // Resume pending Outbox once, without heartbeat or periodic REST probes.
         window.dispatchEvent(new CustomEvent('eco:live-connected',{detail:{groupId:activeGroup}}));
@@ -170,7 +180,7 @@ export function mountIdentityLiveUI({app,notify=()=>{},showError=console.error,c
   const refresh=async()=>{
     const group=app.activeGroup();if(!group){closeSocket();passportRoot.replaceChildren(el('p','Sélectionnez un groupe.','hint'));dnaRoot?.replaceChildren();liveRoot?.replaceChildren();memoryRoot?.replaceChildren();return;}
     const actor=String(app.currentActor?.()??'');
-    if((activeGroup&&activeGroup!==group)||(activeActor&&activeActor!==actor)){closeSocket();lastSeq=0;lastSignalAt=0;pendingDraftSignals.clear();eventsRoot?.replaceChildren();}
+    if((activeGroup&&activeGroup!==group)||(activeActor&&activeActor!==actor)){closeSocket();lastSeq=0;lastSignalAt=0;pendingDraftSignals.clear();pendingPresenceSignals.clear();eventsRoot?.replaceChildren();}
     activeGroup=group;activeActor=actor;
     // Finance push must not depend on unrelated identity/concierge D1 reads.
     // A quota-limited request must never prevent managers from receiving writes.
@@ -241,3 +251,4 @@ export function mountIdentityLiveUI({app,notify=()=>{},showError=console.error,c
 
   return{refresh,publishSignal,disconnect:()=>{wantConnection=false;closeSocket('manual');},reconnect:()=>{reconnectAttempt=0;wantConnection=true;connect();}};
 }
+

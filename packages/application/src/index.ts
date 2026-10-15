@@ -376,7 +376,10 @@ export class ConnectedApplication {
     for(const [k,v] of new Headers(init.headers??{}))headers.set(k,v);
     if(typeof FormData!=='undefined'&&init.body instanceof FormData)headers.delete('content-type');
     const method=String(init.method??'GET').toUpperCase(),cacheable=method==='GET'&&this.offlineReadAllowed(path),securityCritical=path.startsWith('/api/v1/auth/');
-    if(!securityCritical&&this.transportUnavailableUntil>Date.now()){
+    // A slow optional panel must not prevent the independent Live handshake
+    // or clock anchor from recovering. Explicit server quota blocks still apply.
+    const recoveryControl=/\/(?:live\/ticket|financial-clock-anchor)$/.test(path);
+    if(!securityCritical&&!recoveryControl&&this.transportUnavailableUntil>Date.now()){
       if(cacheable&&IndexedDbReadSnapshotAdapter.supported()){
         try{const snapshot=await this.readSnapshots.get<T>(this.offlineReadKey(path));if(snapshot){this.announceOfflineSnapshot(path,snapshot.updatedAt);return structuredClone(snapshot.body);}}catch{}
       }
@@ -394,7 +397,10 @@ export class ConnectedApplication {
     // subsequent offline-capable actions immediate without periodic probing.
     const formUpload=typeof FormData!=='undefined'&&init.body instanceof FormData,
       eventCritical=/\/outbox\/apply$|\/financial-cells$|\/loans\/[^/]+\/(?:repay|disburse)$/.test(path),
-      timeoutMs=formUpload?30000:eventCritical?2200:6500;
+      // The fast-network convergence target is not a transport deadline.
+      // Aborting at 2.2 s stranded valid writes on slow mobile connections.
+      // Local durability remains immediate; retries retain their idempotency key.
+      timeoutMs=formUpload?30000:eventCritical?15000:6500;
     const abort=typeof AbortController==='function'?new AbortController():null;
     let requestTimer:ReturnType<typeof setTimeout>|undefined;
     try{
@@ -2432,3 +2438,4 @@ export class ConnectedApplication {
 
   async universe(){const server=await this.request<{groups:number;inbox:number;audit:number}>('/api/v1/universe');return{...server,pendingSync:this.outbox.list().filter(x=>x.status!=='CONFIRMED').length};}
 }
+

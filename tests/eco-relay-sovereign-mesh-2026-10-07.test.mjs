@@ -28,7 +28,7 @@ test('manager Relay exchanges durable intents without becoming a second ledger',
   assert.match(main,/localRelayGroupStructure/);
   assert.match(app,/transportUnavailableUntil/);
   assert.match(app,/markTransportUnavailable/);
-  assert.match(app,/timeoutMs=formUpload\?30000:eventCritical\?2200:6500/);
+  assert.match(app,/timeoutMs=formUpload\?30000:eventCritical\?15000:6500/);
   assert.match(main,/Local actif · serveur momentanément absent/);
   assert.match(localRoom,/iceServers:\[\]/);
 });
@@ -78,3 +78,4 @@ test('critical group cycle remains represented by local durable owners',async()=
   assert.match(app,/async closeExercise/);
   assert.match(app,/async carryForwardExercise/);
 });
+
