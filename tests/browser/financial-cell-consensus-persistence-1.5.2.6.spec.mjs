@@ -243,9 +243,15 @@ test('repayment 2500 syncs event-wise within five seconds and survives reload wi
   // Deliberately choose the complete scrollable sheet. The adaptive default
   // now avoids horizontal scrolling by offering complete fitting parts.
   await page.locator('#meetingMatrix').getByRole('button',{name:'Vue intégrale',exact:true}).click();
-  const wrap=page.locator('#meetingMatrix .canonical-financial-wrap');
-  await wrap.evaluate(node=>{node.scrollLeft=node.scrollWidth;});
-  const before=await wrap.evaluate(node=>node.scrollLeft);
+  // Read and scroll the current attached wrapper in the same browser turn.
+  // Canonical refresh can replace a wrapper between locator resolution and
+  // evaluation; measuring that detached node reports a false zero offset.
+  const scrollCurrentMatrix=()=>page.evaluate(()=>{
+    const node=document.querySelector('#meetingMatrix .canonical-financial-wrap');
+    if(!node?.isConnected||node.clientWidth===0)return 0;
+    node.scrollLeft=node.scrollWidth;return node.scrollLeft;
+  });
+  const before=await scrollCurrentMatrix();
   expect(before).toBeGreaterThan(0);
   await page.locator('#refreshBtn').evaluate(button=>button.click());
   await expect(page.locator('#view-operations')).toHaveClass(/active/);
@@ -253,14 +259,13 @@ test('repayment 2500 syncs event-wise within five seconds and survives reload wi
 
   // A full page reload also restores the active Operations view, selected
   // meeting and matrix column rather than sending the manager back to Home.
-  const currentWrap=page.locator('#meetingMatrix .canonical-financial-wrap');
-  await currentWrap.evaluate(node=>{node.scrollLeft=node.scrollWidth;});
-  expect(await currentWrap.evaluate(node=>node.scrollLeft)).toBeGreaterThan(0);
+  expect(await scrollCurrentMatrix()).toBeGreaterThan(0);
   await page.reload({waitUntil:'domcontentloaded'});
   await expect(page.locator('#view-operations')).toHaveClass(/active/);
   const reloaded=page.locator('#meetingMatrix').locator(selector);
   await expect(reloaded).toBeVisible();
   await expect.poll(()=>amountFrom(reloaded)).toBe(4000);
+  await expect.poll(()=>page.evaluate(()=>document.querySelector('#meetingMatrix .canonical-financial-wrap')?.scrollLeft??0),{timeout:8000}).toBeGreaterThan(0);
   await page.locator('#loansNavBtn').click();
   await expect(page.locator('#loanDebtRecap .debt-group-journey-table')).toBeVisible();
   for(const label of ['Capital restant','Intérêts dus','Prochains intérêts projetés','Total dette exigible'])await expect(page.locator('#loanDebtRecap')).toContainText(label);
