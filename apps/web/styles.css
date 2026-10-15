@@ -1599,3 +1599,5 @@ body.eco-cockpit-shell .nav-btn.active b{color:#fff!important}
 body.eco-cockpit-shell .side-nav{background:#f6f9f5}
 body.eco-cockpit-shell .content{padding-bottom:112px}
 @media(max-width:860px){body.eco-cockpit-shell .content{width:auto;max-width:100vw;overflow-x:clip}body.eco-cockpit-shell .canonical-financial-wrap{width:100%;max-width:calc(100vw - 50px)}body.eco-cockpit-shell .canonical-financial-matrix{min-width:640px}}
+
+@media(min-width:861px){body.eco-cockpit-shell .side-nav{top:var(--eco-header-height,76px);height:calc(100dvh - var(--eco-header-height,76px))}}

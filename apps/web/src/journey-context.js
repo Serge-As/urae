@@ -35,5 +35,7 @@ export function mountJourneyUI({journey,navigate,getContext}) {
   document.getElementById('journeyClear').onclick=()=>{journey.clear();refresh();window.dispatchEvent(new CustomEvent('eco:journey-changed'));};
   window.addEventListener('eco:view-changed',e=>{journey.visit(e.detail?.view);refresh();});
   window.addEventListener('storage',refresh);
+  const header=document.querySelector('.topbar');
+  if(header&&typeof ResizeObserver!=='undefined'){const resize=new ResizeObserver(()=>document.documentElement.style.setProperty('--eco-header-height',header.getBoundingClientRect().height+'px'));resize.observe(header);}
   refresh();return {refresh};
 }
