@@ -109,7 +109,17 @@ export function mountPersonalCockpitUI({app,getGroups,getMembers,getMeetings,nav
     if(!count&&!unavailable)section.append(el('p',tr('Rejoignez un groupe ou une communauté pour retrouver ici ses échanges.','Join a group or community to find its discussions here.'),'hint'));
     spaces.append(section);
   };
-    const refresh=async()=>{
+  let navigationActor='';
+  const prepareNavigation=()=>{
+    const actor=app.currentActor(),nav=document.getElementById('myRotatingTontinesNavBtn');
+    if(nav&&navigationActor!==actor)nav.hidden=true;
+    navigationActor=actor;
+    return app.listMyGroups().then(rows=>{
+      if(nav&&app.currentActor()===actor)nav.hidden=!rows.some(g=>g.kind==='rotating_tontine'||g.kind==='in_kind_tontine');
+      return rows;
+    });
+  };
+    const refresh=async(authorizedDirectory)=>{
     metrics.replaceChildren();situation.replaceChildren();next.replaceChildren();noticesRoot.replaceChildren();spaces.replaceChildren();
     const groups=getGroups(),groupId=app.activeGroup(),members=getMembers(),meetings=getMeetings(),mine=members.find(m=>m.userId===app.currentActor());
     metrics.append(metric(groups.length,'Groupes accessibles'));
@@ -118,7 +128,7 @@ export function mountPersonalCockpitUI({app,getGroups,getMembers,getMeetings,nav
     // A tenant catalogue can contain groups that are not mine. Never expose
     // those names as my forum shortcuts without a server membership check.
     let forumGroups=[],forumsUnavailable=false;
-    try{forumGroups=await app.listMyGroups();}catch{forumsUnavailable=true;}
+    try{forumGroups=await(authorizedDirectory??prepareNavigation());}catch{forumsUnavailable=true;}
     renderPersonalForas(forumGroups,personalCommunities,forumsUnavailable);
     // Separate group workspaces from discussions. A member can choose any
     // number of associations or tontines belonging to this authenticated
@@ -140,6 +150,15 @@ export function mountPersonalCockpitUI({app,getGroups,getMembers,getMeetings,nav
     associations.append(groupPicker,openWorkspaceBtn);
     if(forumsUnavailable)associations.append(el('p',tr('Répertoire temporairement indisponible : vos autres groupes ne sont pas supprimés.','Directory temporarily unavailable: your other groups have not been deleted.'),'truth-notice'));
     spaces.append(associations);
+    const rotatingGroups=forumGroups.filter(g=>g.kind==='rotating_tontine'||g.kind==='in_kind_tontine');
+    const rotatingNav=document.getElementById('myRotatingTontinesNavBtn');
+    if(rotatingNav&&!forumsUnavailable)rotatingNav.hidden=!rotatingGroups.length;
+    if(rotatingGroups.length){
+      const directory=el('section',undefined,'item personal-group-directory');directory.id='personalRotatingTontines';
+      directory.append(el('strong',tr('Mes tontines rotatives · '+rotatingGroups.length,'My rotating tontines · '+rotatingGroups.length)),el('p',tr('Retrouvez ici toutes vos tontines, comme membre ou gestionnaire. Ouvrir une tontine conserve ses rubriques, ses cycles, ses parts et son historique.','Find all your tontines as a member or manager. Opening one preserves its categories, cycles, shares and history.'),'hint'));
+      for(const group of rotatingGroups){const button=el('button',String(group.name),'secondary');button.type='button';button.dataset.rotatingGroup=group.id;button.onclick=()=>void Promise.resolve(openGroupWorkspace?.(group.id)).catch(showError);directory.append(button);}
+      spaces.append(directory);
+    }
     void renderPulse();
     if(!groupId){
       situation.append(el('p','Choisissez un groupe ou rejoignez-en un avec un code.','hint'),action('Choisir / rejoindre','discovery'));
@@ -212,5 +231,6 @@ export function mountPersonalCockpitUI({app,getGroups,getMembers,getMeetings,nav
     spaces.append(action('Découvrir d’autres groupes','discovery'),action('Communautés d’intérêt','ecosystem'));
   };
   document.getElementById('ecoPulseRefreshBtn')?.addEventListener('click',()=>void renderPulse());
-  return{refresh,refreshPulse:renderPulse};
+  return{refresh,refreshPulse:renderPulse,prepareNavigation};
 }
+

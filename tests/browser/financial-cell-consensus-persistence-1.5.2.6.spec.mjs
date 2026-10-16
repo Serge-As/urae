@@ -135,7 +135,7 @@ test('loan policy scopes and free/existing simulation controls are usable in the
   await expect(dialog.locator('.loan-simulation-control-card')).toHaveCount(2);
 });
 
-test('repayment 2500 syncs event-wise within five seconds and survives reload without losing table context',async({page,context,browser})=>{
+test('repayment 2500 syncs event-wise within five seconds and survives reload without losing table context',async({page,context,browser},testInfo)=>{
   test.setTimeout(120_000);
   await page.goto(base+'/',{waitUntil:'domcontentloaded'});
   const ids=await page.evaluate(async({password})=>{
@@ -209,6 +209,8 @@ test('repayment 2500 syncs event-wise within five seconds and survives reload wi
   await expect.poll(()=>amountFrom(cell)).toBe(2500);
   await expect(cell).toContainText(/synchro en attente/i);
 
+  const outboxReplies=[];
+  page.on('response',response=>{if(new URL(response.url()).pathname==='/api/v1/outbox/apply')void response.json().then(body=>outboxReplies.push({status:response.status(),body})).catch(()=>{});});
   const syncStarted=Date.now();
   await context.setOffline(false);
   await expect.poll(async()=>page.evaluate(async ids=>{
@@ -216,7 +218,11 @@ test('repayment 2500 syncs event-wise within five seconds and survives reload wi
     if(!response.ok)return false;
     const history=await response.json();
     return (history.events??[]).some(x=>Number(x.amount)===2500&&String(x.rubricId)===String(ids.repaymentRubricId));
-  },ids),{timeout:5000,intervals:[200,350,500,700]}).toBe(true);
+  },ids),{timeout:5000,intervals:[200,350,500,700]}).toBe(true).catch(async error=>{
+    const durable=await page.evaluate(()=>new Promise((resolve,reject)=>{const r=indexedDB.open('tontine-platform');r.onerror=()=>reject(r.error);r.onsuccess=()=>{const db=r.result,q=db.transaction('outbox').objectStore('outbox').getAll();q.onsuccess=()=>{resolve(q.result);db.close();};q.onerror=()=>reject(q.error);};}));
+    await testInfo.attach('repayment-sync-diagnostic',{body:Buffer.from(JSON.stringify({outboxReplies,durable,cell:await cell.innerText()},null,2)),contentType:'application/json'});
+    throw error;
+  });
   expect(Date.now()-syncStarted).toBeLessThan(5500);
   await expect.poll(()=>amountFrom(cell),{timeout:5000}).toBe(2500);
   await expect.poll(()=>amountFrom(mirrorCell),{timeout:5000,intervals:[100,200,350,500]}).toBe(2500);
@@ -269,6 +275,19 @@ test('repayment 2500 syncs event-wise within five seconds and survives reload wi
   await page.locator('#loansNavBtn').click();
   await expect(page.locator('#loanDebtRecap .debt-group-journey-table')).toBeVisible();
   for(const label of ['Capital restant','Intérêts dus','Prochains intérêts projetés','Total dette exigible'])await expect(page.locator('#loanDebtRecap')).toContainText(label);
+  await page.setViewportSize({width:1280,height:900});
+  const portfolio=page.locator('.loan-portfolio-table'),section=page.getByRole('combobox',{name:'Partie du portefeuille de prêts',exact:true});
+  await expect(portfolio.locator('tbody tr')).toHaveCount(1);
+  await section.selectOption('1');
+  await expect(portfolio.locator('thead th:visible')).toHaveCount(5);
+  await expect(portfolio.locator('tbody td').first()).toContainText('Repayment Sync Browser');
+  await section.selectOption('2');
+  await expect(portfolio.locator('thead th:visible')).toHaveCount(7);
+  await expect(portfolio.getByRole('button',{name:'Simuler',exact:true})).toBeVisible();
+  const memberWidth=await portfolio.locator('tbody td').first().evaluate(e=>e.getBoundingClientRect().width);
+  expect(memberWidth).toBeGreaterThanOrEqual(140);
+  await page.locator('.loan-portfolio-wrap').scrollIntoViewIfNeeded();
+  await page.screenshot({path:'artifacts/loan-portfolio-debt-section.png',fullPage:false});
   await mirrorContext.close();
 });
 

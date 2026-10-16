@@ -390,3 +390,42 @@ test('offline member review uses the newly saved local value instead of an older
  }finally{await secondContext.close();}
 });
 
+test('clicking another member opens the previous summary before typing, and cancelling or continuing never loses an entry',async({page,browser})=>{
+ test.setTimeout(120000);const {ids,secondContext}=await setup(page,browser);
+ try{
+  const members=await api(page,'/api/v1/groups/'+ids.groupId+'/members','GET',undefined,ids.groupId),other={...ids,membershipId:members.find(m=>m.id!==ids.membershipId).id};
+  await enter(page,ids,1000);await expect(cell(page,ids)).toHaveAttribute('data-save-state','CONFIRMED');
+  await page.route('**/financial-work/summary?**',async route=>{await new Promise(resolve=>setTimeout(resolve,850));await route.continue();});
+  await cell(page,other).locator('.cell-current').click();
+  let review=page.locator('.eco-work-dialog');await expect(review).toBeVisible();await expect(review).toContainText('Synthèse du membre avant de continuer');
+  await expect(cell(page,other).locator('input')).toHaveJSProperty('readOnly',true);
+  await page.keyboard.type('999');await expect(cell(page,other).locator('input')).toHaveValue('');
+  await expect.poll(async()=>Number((await review.locator('tbody tr').first().locator('td').nth(2).innerText()).replace(/[^0-9-]/g,''))).toBe(1000);
+  await review.getByRole('button',{name:'Revenir à la saisie',exact:true}).click();await expect(review).toHaveCount(0);
+  await expect(cell(page,other).locator('input')).toHaveValue('');expect(await amount(cell(page,other))).toBe(0);
+  // Keyboard access must obey the same gate as a click on the cell background.
+  await cell(page,other).locator('input').focus();review=page.locator('.eco-work-dialog');await expect(review).toBeVisible();
+  await review.getByRole('button',{name:'Valider la synthèse et continuer',exact:true}).click();await expect(review).toHaveCount(0);
+  await cell(page,other).locator('input').fill('750');await cell(page,other).locator('.cell-validate').click();await settleWorkDialog(page);
+  await expect(cell(page,other)).toHaveAttribute('data-save-state','CONFIRMED');expect(await amount(cell(page,ids))).toBe(1000);expect(await amount(cell(page,other))).toBe(750);
+  await page.reload();await expect(cell(page,other)).toBeVisible();expect(await amount(cell(page,ids))).toBe(1000);expect(await amount(cell(page,other))).toBe(750);
+  const ledger=await api(page,'/api/v1/groups/'+ids.groupId+'/ledger','GET',undefined,ids.groupId);expect(ledger.receipts.filter(r=>r.membershipId===other.membershipId&&r.rubricId===ids.rubricId)).toHaveLength(1);
+  await page.screenshot({path:'artifacts/member-summary-before-next-entry.png',fullPage:false});
+ }finally{await secondContext.close();}
+});
+
+test('another manager review survives refresh and disappears durably only after exact approval',async({page,browser})=>{
+ test.setTimeout(120000);const {ids,second,secondContext}=await setup(page,browser);
+ try{
+  await enter(page,ids,1000);await expect.poll(()=>amount(cell(second,ids)),{timeout:8000}).toBe(1000);
+  await second.reload();await expect(cell(second,ids)).toBeVisible();
+  const approve=()=>cell(second,ids).getByRole('button',{name:'Approuver explicitement cette modification',exact:true});
+  await expect(approve()).toBeVisible();await expect(second.locator('#financialAlertBar')).toContainText('Modifications à examiner');
+  await second.locator('#refreshBtn').click();await expect(approve()).toBeVisible();await expect(second.locator('#financialAlertBar')).toContainText('Modifications à examiner');
+  await approve().click();await expect(approve()).toHaveCount(0);
+  await second.reload();await expect(cell(second,ids)).toBeVisible();await expect(approve()).toHaveCount(0);await expect(second.locator('#financialAlertBar')).not.toContainText('Modifications à examiner');
+  await enter(page,ids,3000);await expect.poll(()=>amount(cell(second,ids)),{timeout:8000}).toBe(3000);await expect(approve()).toBeVisible();
+  await second.reload();await expect(approve()).toBeVisible();expect(await amount(cell(second,ids))).toBe(3000);
+ }finally{await secondContext.close();}
+});
+

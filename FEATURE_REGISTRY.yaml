@@ -1,3 +1,4 @@
+# CANDIDATE 2026-10-16: member continuity, exact global debt, tontine participation/advances, personal directory and wider debt tables. Qualification incomplete; production18 remains attested; no maturity or field-acceptance promotion.
 # Verification 2026-10-15: strengthened attached-wrapper scroll/reload assertion qualified in 38816739897 (native732/Chromium11/WebKit6); runtime identical to published70e376d. No field acceptance promotion.
 # CURRENT 2026-10-15: repair 1.5.2.18 deployed at 70e376d9524b4646b1756482f7d7bf2713e3925d; production38812599315 SUCCESS, native732/Chromium15/WebKit6 PASS; backup restored/R2 readback and public assets verified. FIELD_ACCEPTED=NOT_ACCEPTED; no capability maturity promotion. Earlier checkpoints below are historical.
 # REPAIR 2026-10-15: founder reported financial/UI regressions after 1.5.2.17; 1.5.2.18 qualification pending; no maturity or field acceptance promotion.
@@ -1408,4 +1409,3 @@ candidate_2026_10_08_1_5_2_15:
   real_money_enabled: false
   field_acceptance: NOT_ACCEPTED
   note: No new business capability or maturity promotion; registry status is not end-to-end acceptance.
-

@@ -52,12 +52,14 @@ test('savings history recognizes archived and system-key savings instead of coll
 
 test('generic repayment envelope auto-allocates by the current policy',()=>{
   assert.match(app,/const component=explicitInterest\?'INTEREST':explicitPrincipal\?'PRINCIPAL':'AUTO'/);
-  assert.match(app,/paymentAmount:input\.amount,priority/);
+  assert.match(app,/await this\.syncOutbox\(\)/);
   const replay=worker.slice(worker.indexOf("if(nature==='REPAYMENT')"),worker.indexOf("throw Error('UNSUPPORTED_FINANCIAL_SHEET_NATURE')"));
-  assert.match(replay,/component=.*'AUTO'/);
-  assert.match(replay,/applyLoanPayment\(/);
-  assert.match(replay,/resolveLoanPolicyForOperation\(loan,loanRubric\?\.policies\?\.loan/);
-  assert.match(replay,/effectivePolicy\.paymentPriority/);
+  assert.match(replay,/repayFinancialSheet\(item,markerId,existingMarker\)/);
+  const shared=worker.slice(worker.indexOf('const applyCanonicalLoanRepayment='),worker.indexOf('const updateRubricPoliciesGoverned='));
+  assert.match(shared,/component=.*'AUTO'/);
+  assert.match(shared,/applyLoanPayment\(/);
+  assert.match(shared,/resolveLoanPolicyForOperation\(loan,loanRubric\?\.policies\?\.loan/);
+  assert.match(shared,/effectivePolicy\.paymentPriority/);
 });
 
 test('loan policy, portfolio, open-loan state and debt journey use compact selector/table surfaces',()=>{
@@ -78,3 +80,4 @@ test('rubric recap is one chooser and one matrix, not one stacked table per rubr
   assert.match(main,/Tableau récapitulatif · membres × séances/);
   assert.doesNotMatch(main,/appendRubricRecap\(a,r\)/);
 });
+

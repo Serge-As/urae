@@ -32,7 +32,7 @@ async function setup(page,context){
 }
 async function enter(page,ids,value){if(await amount(cell(page,ids))>0)page.once('dialog',d=>d.accept('Correction vérifiée'));await cell(page,ids).locator('.cell-target-input').fill(String(value));await cell(page,ids).locator('.cell-validate').click();await settleWorkDialog(page);}
 
-test('two accounts in one browser keep their own identity, drafts, live amounts, close button and F5 position',async({page,context})=>{
+test('two accounts in one browser keep their own identity, drafts, live amounts, review approval and F5 position',async({page,context})=>{
  const {ids,second}=await setup(page,context);
  await page.locator('#workspaceUiMode').selectOption('senior');
  await second.locator('#workspaceUiMode').selectOption('visual');
@@ -55,7 +55,10 @@ test('two accounts in one browser keep their own identity, drafts, live amounts,
  await expect(cell(page,ids)).toHaveAttribute('data-save-state','CONFIRMED',{timeout:5000});
  await enter(second,ids,2000);await expect.poll(()=>amount(cell(page,ids)),{timeout:5000}).toBe(2000);
  await expect(cell(second,ids)).toHaveAttribute('data-save-state','CONFIRMED',{timeout:5000});
- await expect(page.locator('#financialAlertBar')).toBeVisible();await page.locator('#financialAlertBar .financial-alert-close').click();await expect(page.locator('#financialAlertBar')).toBeHidden();
+ await expect(page.locator('#financialAlertBar')).toBeVisible();
+ await expect(page.locator('#financialAlertBar .financial-alert-close')).toHaveCount(0);
+ await cell(page,ids).getByRole('button',{name:'Approuver explicitement cette modification',exact:true}).click();
+ await expect(page.locator('#financialAlertBar')).toBeHidden();
  await cell(page,ids).locator('.cell-target-input').fill('2500');await expect(cell(second,ids).locator('.cell-target-input')).toHaveValue('');
  await page.evaluate(()=>window.scrollTo(0,500));const before=await page.evaluate(()=>window.scrollY);
  await page.reload({waitUntil:'domcontentloaded'});await expect(page.locator('#accountName')).toContainText('Alpha');await expect(cell(page,ids).locator('.cell-target-input')).toHaveValue('2500');

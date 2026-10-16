@@ -26,8 +26,11 @@ test('loan menu exposes member x session recap and current totals',()=>{
   assert.match(completion,/Dette totale exigible/);
 });
 test('canonical finance source includes per-member other debts and loan policy projection metadata',()=>{
-  assert.match(worker,/otherDebts=groupObligations\.map/);
+  assert.match(worker,/groupObligations=await receivables\.report\(groupId\)/);
+  assert.match(worker,/otherDebts=groupObligations\.filter/);
+  assert.match(worker,/amount:x\.outstanding/);
   assert.match(worker,/interestTiming:String/);
   assert.match(worker,/interestAppliesToLabel/);
   assert.match(worker,/loanPeriods:periodRows,loanDebts,otherDebts/);
 });
+
