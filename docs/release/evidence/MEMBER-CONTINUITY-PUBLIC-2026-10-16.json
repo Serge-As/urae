@@ -1,0 +1,99 @@
+{
+  "schemaVersion": 1,
+  "deliveryRun": 38921072914,
+  "qualificationRun": 38921072892,
+  "qualifiedPullRequest": 96,
+  "qualifiedHead": "76689dcdf70d58788ffa30f897b36e63457d728c",
+  "workerVersionId": "0c0c2631-1151-4e1d-bbcd-1b6935d1acbf",
+  "verificationOwner": "existing delivery workflow, unauthenticated HTTPS reads after deployment",
+  "public": {
+    "verifiedAt": "2026-10-16T15:12:52.788Z",
+    "version": "1.5.2.19-member-continuity",
+    "sourceSha": "5e7044ee2a8c346c0a36f905d74d41a2a2dfab0d",
+    "buildId": "eco-system-1.5.2.19-20261016-member-continuity",
+    "pwaCache": "eco-system-v15219-member-continuity-20261016",
+    "capabilities": 164,
+    "realMoneyEnabled": false,
+    "assets": [
+      {
+        "path": "/",
+        "sha256": "b3c9c50a4fd34e6745c8c30f535fdbc4209fa7d8cf0eccac867f226367a56340"
+      },
+      {
+        "path": "/styles.css",
+        "sha256": "e48bf7aab706f689bf52e8f42ca7d91aa46b3841e7d275d41566e966c63bb7a1"
+      },
+      {
+        "path": "/sw.js",
+        "sha256": "154f5f3b691ae13a3317e54b9259eb784524dcf309aaf1cddba79f6425272372"
+      },
+      {
+        "path": "/eco-shell-manifest.json",
+        "sha256": "b68f276999722b559195c105007eb39db7acf283ee814f2c363900ebd36b8e55"
+      },
+      {
+        "path": "/src/main.js",
+        "sha256": "7d57c5e0dc89d6888d8dcd211c78005918858f3b66da29f598e3f4ad7dd001c8"
+      },
+      {
+        "path": "/src/financial-work-ui.js",
+        "sha256": "8b37fc8a6ec4d8f6a790aa6fb3e03af222b444687111b9985078040c2df69b77"
+      },
+      {
+        "path": "/src/completion-ui.js",
+        "sha256": "08b6bc67eb6c77c2065ae3c983523b21d4d223190b4a6f82d0eff999aedc5fa1"
+      },
+      {
+        "path": "/src/ui-modes.js",
+        "sha256": "795339401f0eaa42a9822a918cf3982bedfaea02c68f4669a845372bb711ee81"
+      },
+      {
+        "path": "/src/field-hardening.js",
+        "sha256": "6c4284d33ac9441a847fc504f18d9bf079ded736c05656b287dcd96e9f4efb01"
+      },
+      {
+        "path": "/src/runtime-i18n.js",
+        "sha256": "68227a0793c83a9e2894dc75b758f5acaeaf342174554118f98f76226de92887"
+      }
+    ]
+  },
+  "backup": {
+    "verified": true,
+    "sha256": "83cad4bc46f0d2f5512a765ce2a3677cc48655d1258653fc357a0d0fef796325",
+    "manifest": {
+      "protocol": "ECO_RECOVERY_1",
+      "sourceSha": "5e7044ee2a8c346c0a36f905d74d41a2a2dfab0d",
+      "createdAt": "2026-10-16T15:12:29.774Z",
+      "database": "eco-system-db",
+      "bucket": "eco-system-backups",
+      "verification": {
+        "integrity": "ok",
+        "foreignKeys": "ok",
+        "tables": 50,
+        "sqlBytes": 2936766,
+        "sqlSha256": "209f536b2c6af897f58c1e4b35b4bc0c3bbae8a86b27b3156a0e85159b26254e"
+      }
+    }
+  },
+  "tests": {
+    "native": {
+      "passed": 738,
+      "failed": 0
+    },
+    "chromium": {
+      "passed": 17,
+      "failed": 0
+    },
+    "webkit": {
+      "passed": 6,
+      "failed": 0
+    }
+  },
+  "fieldAcceptance": "NOT_ACCEPTED",
+  "limitations": [
+    "Automated browser scenarios use synthetic accounts on an isolated server.",
+    "Protected Delor browser session was not bypassed; no authenticated Delor acceptance or missing-group recovery claim.",
+    "Public checks were run from GitHub Actions; local public HTTP reads were unavailable.",
+    "This delivery does not attest all strategic documents or full cross-device assistant memory."
+  ]
+}

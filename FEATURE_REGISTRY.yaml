@@ -1,4 +1,4 @@
-# CANDIDATE 2026-10-16: member continuity, exact global debt, tontine participation/advances, personal directory and wider debt tables. Qualification incomplete; production18 remains attested; no maturity or field-acceptance promotion.
+# CURRENT 2026-10-16: 1.5.2.19 deployed at 5e7044ee2a8c346c0a36f905d74d41a2a2dfab0d; delivery38921072914 and qualification38921072892 SUCCESS, native738/Chromium17/WebKit6. Backup restored/R2 readback; ten public asset hashes match same-SHA build. FIELD_ACCEPTED=NOT_ACCEPTED; no capability maturity promotion. Earlier checkpoints below are historical.
 # Verification 2026-10-15: strengthened attached-wrapper scroll/reload assertion qualified in 38816739897 (native732/Chromium11/WebKit6); runtime identical to published70e376d. No field acceptance promotion.
 # CURRENT 2026-10-15: repair 1.5.2.18 deployed at 70e376d9524b4646b1756482f7d7bf2713e3925d; production38812599315 SUCCESS, native732/Chromium15/WebKit6 PASS; backup restored/R2 readback and public assets verified. FIELD_ACCEPTED=NOT_ACCEPTED; no capability maturity promotion. Earlier checkpoints below are historical.
 # REPAIR 2026-10-15: founder reported financial/UI regressions after 1.5.2.17; 1.5.2.18 qualification pending; no maturity or field acceptance promotion.
@@ -17,7 +17,7 @@
 # CURRENT 2026-10-08: publication HOLD; full 4000/5000 convergence still unqualified; Actions quota exhausted; prepared private local qualification runner. See recovery handoff.
 # 2026-10-08 CURRENT: 1.5.2.15 publication HOLD; offline reconfirmation clock defect under qualification. Current deployed proof remains 1.5.2.14. See CURRENT_TRUTH.
 registry_version: 1
-project_version: 1.5.2.17-live-modes-refonte
+project_version: 1.5.2.19-member-continuity
 source_of_truth: docs/constitution + verified_code
 
 capabilities:

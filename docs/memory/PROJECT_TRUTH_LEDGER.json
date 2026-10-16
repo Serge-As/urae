@@ -27,18 +27,24 @@
   "records": [
     {
       "id": "member-financial-continuity-20261016",
-      "status": "IN_PROGRESS",
+      "status": "VERIFIED_REMOTE",
       "scope": "financial UI and canonical projections",
-      "statement": "Candidate19 implements immediate previous-member review before new input, durable exact manager approval, shared global debt repayment and tontine participation/advance projection. Intermediate qualification734/738 native and16/17 Chromium; optional annual-rate fallback and source assertions corrected, final qualification and delivery pending. Production18 remains attested.",
+      "statement": "1.5.2.19-member-continuity deployed at 5e7044ee2a8c346c0a36f905d74d41a2a2dfab0d after 738/738 native, 17/17 Chromium and 6/6 WebKit, verified read-only backup restore/private R2 readback and exact health/catalogue plus ten public asset hashes. Immediate previous-member summary before new input, durable exact review, canonical due repayment, tontine participation/shares/advances, authorized personal directory and complete loan sections are implemented. Automated browser tests are synthetic; field acceptance remains NOT_ACCEPTED.",
       "evidence": [
         "docs/change-impact/CIR-2026-10-16-member-financial-continuity.md",
         "docs/memory/recalls/RECALL-2026-10-16-member-financial-continuity.md",
         "docs/release/DELIVERY-2026-10-16-MEMBER-CONTINUITY.md",
+        "docs/release/evidence/MEMBER-CONTINUITY-PUBLIC-2026-10-16.json",
         "https://github.com/Serge-As/urae/pull/96",
-        "https://github.com/Serge-As/urae/actions/runs/38907783015"
+        "https://github.com/Serge-As/urae/actions/runs/38918515304",
+        "https://github.com/Serge-As/urae/actions/runs/38918515190",
+        "https://github.com/Serge-As/urae/actions/runs/38921072914",
+        "https://github.com/Serge-As/urae/actions/runs/38921072892"
       ],
       "observedOn": "2026-10-16",
-      "next": "Pass exact-SHA full qualification, verify read-only backup restore/readback, deploy through existing workflow and independently verify public release; no authenticated field acceptance or missing-group claim."
+      "next": "Preserve existing owners and pending local entries. Reproduce any further real discrepancy; no protected Delor browser bypass, missing-group recovery claim, full strategic completion or field acceptance promotion.",
+      "workerVersionId": "0c0c2631-1151-4e1d-bbcd-1b6935d1acbf",
+      "backupArchiveSha256": "83cad4bc46f0d2f5512a765ce2a3677cc48655d1258653fc357a0d0fef796325"
     },
     {
       "id": "workspace-repair-20261015",
@@ -1360,7 +1366,7 @@
       "scope": "visual-ui-and-local-navigation-projection",
       "observedOn": "2026-10-15",
       "evidence": [
-        "github-actions:38712364934 SUCCESS;728Node13Chromium6WebKitPASS",
+        "github-actions:38712364934 SUCCESS;728Node13 scénarios Chromium6WebKitPASS",
         "actual-public-health-html-css-assistant-sw-catalog:2026-10-15T09:38Z;af08c4bc26a5f7511b9092cc5a9bf6c0927a5766;164capabilities;realMoney=false",
         "recovery:restoredIntegrityok;privateR2readbackSHA256fe55fca87960c98f342ce9d246940d1976bd6830bd977f152ae1ce9f234c4619",
         "secondary:38712364922 first scroll-position assertion failed; unchanged-SHA retry9Chromium6WebKitPASS",
