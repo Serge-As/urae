@@ -286,6 +286,7 @@ test('repayment 2500 syncs event-wise within five seconds and survives reload wi
   await expect(portfolio.getByRole('button',{name:'Simuler',exact:true})).toBeVisible();
   const memberWidth=await portfolio.locator('tbody td').first().evaluate(e=>e.getBoundingClientRect().width);
   expect(memberWidth).toBeGreaterThanOrEqual(140);
+  await page.locator('.loan-portfolio-wrap').scrollIntoViewIfNeeded();
   await page.screenshot({path:'artifacts/loan-portfolio-debt-section.png',fullPage:false});
   await mirrorContext.close();
 });

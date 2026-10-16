@@ -117,7 +117,10 @@ export function authenticatedApi(repo:PlatformRepository,db:D1DatabaseLike,handl
    const ownGroups=(await repo.listGroups(account.tenantId)).filter(g=>g.createdBy===account.id);
    const allowedGroups=new Map<string,Group>(ownGroups.map(g=>[g.id,g]));
    for(const m of memberships){const group=await repo.getGroupById(m.groupId);if(group && group.tenantId===m.tenantId)allowedGroups.set(group.id,group);}
-   if(request.method==='GET' && url.pathname==='/api/v1/groups')return response([...allowedGroups.values()].map(g=>({...g,viewerRoles:g.createdBy===account.id?['founder','manager']:memberships.find(m=>m.groupId===g.id)?.roles??[]})));
+   // The personal directory is an account route. Resolve it before the
+   // /groups/:id authorization branch; "mine" is never a group identifier.
+   // Use the same freshly authorized memberships, including other tenants.
+   if(request.method==='GET' && ['/api/v1/groups','/api/v1/groups/mine'].includes(url.pathname))return response([...allowedGroups.values()].map(g=>({...g,viewerRoles:g.createdBy===account.id?['founder','manager']:memberships.find(m=>m.groupId===g.id)?.roles??[]})));
    const liveTicketRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/live\/ticket$/);
    if(request.method==='GET'&&liveTicketRoute){
     const group=allowedGroups.get(liveTicketRoute[1]!);if(!group)return response({error:'FORBIDDEN_SCOPE'},403);if(!liveTicketSecret)return response({error:'LIVE_TICKET_UNAVAILABLE'},503);
@@ -189,3 +192,4 @@ export function authenticatedApi(repo:PlatformRepository,db:D1DatabaseLike,handl
   }catch{return response({error:'SERVICE_UNAVAILABLE'},503);}
  };
 }
+

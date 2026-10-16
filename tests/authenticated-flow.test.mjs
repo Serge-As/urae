@@ -17,6 +17,11 @@ test('real session protects business routes, ignores forged identity, and can be
   const g=await group(e,a);const outsider=await register(e,'session_outsider');
   const denied=await e.request(`/api/v1/groups/${g.id}/ledger`,'GET',undefined,outsider.cookie,{'x-actor-id':a.account.id,'x-tenant-id':a.account.tenantId,'x-group-roles':'founder,manager'});assert.equal(denied.status,403);
   const data=await (await e.request('/api/v1/groups','GET',undefined,outsider.cookie)).json();assert.equal(data.length,0);
+  assert.equal((await e.request('/api/v1/groups/mine')).status,401);
+  const personal=await e.request('/api/v1/groups/mine','GET',undefined,a.cookie);assert.equal(personal.status,200,await personal.clone().text());
+  assert.deepEqual((await personal.json()).map(x=>x.id),[g.id]);
+  const privateDirectory=await e.request('/api/v1/groups/mine','GET',undefined,outsider.cookie,{'x-active-group-id':g.id,'x-actor-id':a.account.id});
+  assert.equal(privateDirectory.status,200);assert.deepEqual(await privateDirectory.json(),[]);
   const logout=await e.request('/api/v1/auth/logout','POST',{},a.cookie);assert.equal(logout.status,200);
   assert.equal((await e.request('/api/v1/groups','GET',undefined,a.cookie)).status,401);
  }finally{e.db.close();}
@@ -52,6 +57,8 @@ test('cross-tenant admission grants own statement, never group ledger or another
   r=await e.request(`/api/v1/membership-applications/${application.id}/decision`,'POST',{decision:'APPROVE'},owner.cookie,headers);assert.equal(r.status,200,await r.clone().text());
   const all=await (await e.request(`/api/v1/groups/${g.id}/members`,'GET',undefined,owner.cookie,headers)).json();const membership=all.find(m=>m.userId===member.account.id);
   const accessible=await (await e.request('/api/v1/groups','GET',undefined,member.cookie)).json();assert.equal(accessible[0].id,g.id);assert.deepEqual(accessible[0].viewerRoles,['member']);
+  const personal=await e.request('/api/v1/groups/mine','GET',undefined,member.cookie);assert.equal(personal.status,200,await personal.clone().text());
+  assert.deepEqual(await personal.json(),accessible,'personal directory retains authorized memberships from the group tenant');
   r=await e.request(`/api/v1/groups/${g.id}/contributions/cash`,'POST',{membershipId:membership.id,amount:7000,idempotencyKey:'statement-test'},owner.cookie,headers);const receipt=await r.json();assert.equal(r.status,201);
   const path=`/api/v1/groups/${g.id}/members/${membership.id}/statement`;
   r=await e.request(path,'GET',undefined,member.cookie,headers);assert.equal(r.status,200);assert.equal((await r.json()).totalNetContributions,7000);
@@ -113,3 +120,4 @@ test('second manager immediately replaces 1000 by 500 without ever producing 150
   assert.ok(memberAlerts.some(x=>/compte a été corrigé|Donnée financière corrigée/i.test(String(x.title??''))), 'affected member must receive a correction alert');
  }finally{e.db.close();}
 });
+
