@@ -84,7 +84,7 @@ test('canonical tontine participation rejects a nonparticipant, accounts for two
   const {repo,request}=await fixture(),stamp='2026-10-01T08:00:00Z';
   await repo.saveRubricDefinition({id:'ton',tenantId:'t',groupId:'g',name:'Tontine de test',facets:{direction:'INFLOW',obligation:'OPTIONAL',custom:{systemKey:'TONTINE'}},activityPlan:{kind:'TONTINE',nominalAmount:{currency:'XAF',amount:100},amountBasis:'PER_SHARE',participationMode:'OPTIONAL'},status:'ACTIVE',source:'GROUP_CUSTOM',createdAt:stamp});
   const position=(meeting='s')=>request('a','/financial-entry-position?meetingId='+meeting+'&membershipId=m-a&rubricId=ton');
-  const pay=(meeting,targetAmount,version=0,current=0,reason='Cotisation')=>request('a','/meetings/'+meeting+'/financial-cells','POST',{membershipId:'m-a',rubricId:'ton',targetAmount,expectedCurrentAmount:current,expectedCellVersion:version,reason,idempotencyKey:'ton-'+meeting+'-'+targetAmount});
+  const pay=(meeting,targetAmount,version=0,current=0,reason='Cotisation')=>request('a','/meetings/'+meeting+'/financial-cells','POST',{membershipId:'m-a',rubricId:'ton',targetAmount,expectedCurrentAmount:current,expectedCellVersion:version,reason,idempotencyKey:'ton-'+meeting+'-'+targetAmount+'-'+reason});
   assert.equal((await position()).eligible,false);await assert.rejects(pay('s',100),/TONTINE_NOT_PARTICIPATING/);assert.equal((await repo.listLedgerEntries('t','g')).length,0);
   await request('a','/members/m-a/participations','POST',{rubricId:'ton',status:'ACTIVE',shareCount:2});
   for(let i=1;i<=6;i++){await repo.saveMeeting({id:'s'+i,tenantId:'t',groupId:'g',title:'Séance '+i,status:'open',scheduledAt:'2026-10-0'+i+'T08:00:00Z',openedAt:stamp,openedBy:'a'});if(i<=4)await pay('s'+i,200);}

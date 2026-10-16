@@ -96,6 +96,7 @@ let financialCellMetadata = new Map();
 let financialDurableProjections=new Map(),financialSnapshotCellVersions=new Map();
 let financialReviewInbox=new Map();
 let financialApprovedReviewVersions=new Map();
+let financialReviewSnapshotLoaded=false;
 // Ephemeral indicators are local projections only. No draft amounts are sent
 // over Live or stored on the server, and this map is never a financial authority.
 const remoteFinancialDrafts=new Map();
@@ -123,7 +124,7 @@ const FINANCIAL_DRAFT_STORAGE='eco.financialCellDrafts.v2';
 const financialScopedStorageKey=base=>base+':'+JSON.stringify([String(app.currentActor?.()??''),String(app.activeGroup?.()??'')]);
 const ensureFinancialStorageScope=()=>{
   const scope=financialScopedStorageKey('scope');if(scope===financialStorageScope)return;
-  financialStorageScope=scope;financialConfirmedCells.clear();financialCellDrafts.clear();financialReviewInbox.clear();financialApprovedReviewVersions.clear();
+  financialStorageScope=scope;financialConfirmedCells.clear();financialCellDrafts.clear();financialReviewInbox.clear();financialApprovedReviewVersions.clear();financialReviewSnapshotLoaded=false;
   try{for(const [k,v] of Object.entries(JSON.parse(localStorage.getItem(financialScopedStorageKey(FINANCIAL_CONFIRMED_STORAGE))||'{}')))financialConfirmedCells.set(k,v);}catch{}
   try{for(const [k,v] of Object.entries(JSON.parse(sessionStorage.getItem(financialScopedStorageKey(FINANCIAL_DRAFT_STORAGE))||'{}')))financialCellDrafts.set(k,String(v));}catch{}
   for(const actors of remoteFinancialDrafts.values())for(const row of actors.values())clearTimeout(row.timer);
@@ -834,8 +835,8 @@ const hydrateRelayFinancialReviews=async()=>{
 };
 const loadFinancialProjectionState=async({clearOptimistic=false}={})=>{
     ensureFinancialStorageScope();
-    const [l,sheetEvents,sheetExpenses,reviewSnapshot]=await Promise.all([app.ledger(),app.listWorkspaceRecords('FINANCE.SHEET_EVENT',app.activeGroup()).catch(()=>[]),app.expenses({scope:'SHEET'}).catch(()=>[]),app.financialCellSnapshot().catch(()=>null)]);
-    if(reviewSnapshot){financialReviewInbox=new Map(reviewSnapshot.cells.filter(x=>x.reviewRequired).map(x=>[financialCellKey(x.membershipId,x.rubricId,x.meetingId),x]));financialApprovedReviewVersions=new Map(reviewSnapshot.cells.filter(x=>x.reviewDecision==='APPROVE').map(x=>[financialCellKey(x.membershipId,x.rubricId,x.meetingId),Number(x.cellVersion)]));}
+    const [l,sheetEvents,sheetExpenses,reviewSnapshot]=await Promise.all([app.ledger(),app.listWorkspaceRecords('FINANCE.SHEET_EVENT',app.activeGroup()).catch(()=>[]),app.expenses({scope:'SHEET'}).catch(()=>[]),app.financialCellSnapshot(financialReviewSnapshotLoaded).catch(()=>null)]);
+    if(reviewSnapshot){financialReviewSnapshotLoaded=true;financialReviewInbox=new Map(reviewSnapshot.cells.filter(x=>x.reviewRequired).map(x=>[financialCellKey(x.membershipId,x.rubricId,x.meetingId),x]));financialApprovedReviewVersions=new Map(reviewSnapshot.cells.filter(x=>x.reviewDecision==='APPROVE').map(x=>[financialCellKey(x.membershipId,x.rubricId,x.meetingId),Number(x.cellVersion)]));}
     receiptPositions=l.receipts;
     const localTargets=app.pendingFinancialCellTargets?.()??[],relayTargets=await app.relayManagerFinancialTargets?.().catch?.(()=>[])??[];
     financialPendingTargets=new Map(localTargets.map(x=>[financialCellKey(x.membershipId,x.rubricId,x.meetingId),x]));
@@ -2257,7 +2258,7 @@ const dismissedFinancialAlerts=()=>{try{return new Set(JSON.parse(sessionStorage
 const dismissFinancialAlert=id=>{if(!id)return;try{const rows=dismissedFinancialAlerts();rows.add(String(id));sessionStorage.setItem(DISMISSED_FINANCIAL_ALERTS,JSON.stringify([...rows].slice(-80)));}catch{}};
 const showFinancialAlert=(input={})=>{
     const bar=document.querySelector('#financialAlertBar');if(!bar)return;
-    if(!input.review&&financialReviewInbox.size){renderPendingFinancialReviewAlert();return;}
+    if(!input.review&&!input.conflict&&financialReviewInbox.size){renderPendingFinancialReviewAlert();return;}
     clearTimeout(Number(bar.dataset.autoHideTimer||0));
     // A late informational push must not erase the unresolved conflict's
     // comparison action while the manager defers the modal.
@@ -2286,6 +2287,8 @@ const renderFinancialAlerts=async()=>{
 };
 const financialLiveSelector=p=>p?.meetingId&&p?.membershipId&&p?.rubricId?`.matrix-cell-entry[data-meeting-id="${CSS.escape(String(p.meetingId))}"][data-membership-id="${CSS.escape(String(p.membershipId))}"][data-rubric-id="${CSS.escape(String(p.rubricId))}"]`:'';
 const renderPendingFinancialReviewAlert=()=>{
+  const criticalKey=document.querySelector('#financialAlertBar')?.dataset.criticalCellKey;
+  if(criticalKey&&(app.pendingFinancialCellTargets?.()??[]).some(x=>financialCellKey(x.membershipId,x.rubricId,x.meetingId)===criticalKey))return;
   const row=financialReviewInbox.values().next().value;if(!row)return;
   showFinancialAlert({review:true,correction:true,title:tx('Modifications à examiner','Changes to review'),message:tx(financialReviewInbox.size+' cellule(s) attendent votre accord ou une contestation. Cette alerte reste disponible après actualisation.',financialReviewInbox.size+' cell(s) await your approval or dispute. This alert remains after refresh.'),action:{view:'operations',anchor:'twoSheetWorkspace',...row,label:tx('Examiner la cellule','Review cell')}});
 };

@@ -1403,8 +1403,9 @@ export class ConnectedApplication {
     const query=new URLSearchParams(input),path='/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/financial-entry-position?'+query;
     const position=await this.request<any>(path);return{...position,projectionSource:this.usingOfflineSnapshot?'LOCAL_CACHE':'SERVER'};
   }
-  async financialCellSnapshot():Promise<{generatedAt:string;watermark:string;cells:Array<{meetingId:string;membershipId:string;rubricId:string;amount:number;cellVersion:number;updatedAt:string;actorId?:string;nature?:string;reviewRequired?:boolean;reviewDecision?:string}>}>{
+  async financialCellSnapshot(cachedOnly=false):Promise<{generatedAt:string;watermark:string;cells:Array<{meetingId:string;membershipId:string;rubricId:string;amount:number;cellVersion:number;updatedAt:string;actorId?:string;nature?:string;reviewRequired?:boolean;reviewDecision?:string}>}>{
     if(!this.activeGroupId)return{generatedAt:new Date().toISOString(),watermark:'',cells:[]};
+    if(cachedOnly)return await this.cached<{generatedAt:string;watermark:string;cells:any[]}>('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/financial-cells/snapshot')??{generatedAt:new Date().toISOString(),watermark:'',cells:[]};
     return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/financial-cells/snapshot`);
   }
 
