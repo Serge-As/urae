@@ -290,6 +290,7 @@ jobs:
           printf '%s' "${catalog}" > /tmp/catalog.json
           node --input-type=module - <<'NODE'
           import fs from 'node:fs';
+          import {createHash} from 'node:crypto';
           const health=JSON.parse(fs.readFileSync('/tmp/health.json','utf8'));
           const catalog=JSON.parse(fs.readFileSync('/tmp/catalog.json','utf8'));
           if(health.ok!==true) throw new Error('HEALTH_NOT_OK');
@@ -301,7 +302,34 @@ jobs:
           if(catalog.version!==process.env.EXPECTED_VERSION) throw new Error('CATALOG_VERSION_MISMATCH:'+catalog.version);
           if(!Array.isArray(catalog.capabilities)||catalog.count<Number(process.env.MIN_CAPABILITIES)||catalog.capabilities.length!==catalog.count) throw new Error('CAPABILITY_CATALOG_INCOMPLETE:'+catalog.count);
           console.log(JSON.stringify({version:health.version,commitSha:health.commitSha,buildId:health.buildId,pwaCache:health.pwaCache,capabilities:catalog.count,realMoneyEnabled:health.realMoneyEnabled}));
+          const files=['/','/styles.css','/sw.js','/eco-shell-manifest.json','/src/main.js','/src/financial-work-ui.js','/src/completion-ui.js','/src/ui-modes.js','/src/field-hardening.js','/src/runtime-i18n.js'];
+          const assets=[];
+          for(const pathname of files){
+            const disk='.build/public/'+(pathname==='/'?'index.html':pathname.slice(1));
+            const expected=createHash('sha256').update(fs.readFileSync(disk)).digest('hex');
+            let actual=null;
+            for(let attempt=0;attempt<8;attempt++){
+              try{
+                const response=await fetch(new URL(pathname,process.env.ECO_SYSTEM_ROOT),{cache:'no-store',headers:{'Cache-Control':'no-cache'},signal:AbortSignal.timeout(15000)});
+                if(response.ok) actual=createHash('sha256').update(Buffer.from(await response.arrayBuffer())).digest('hex');
+              }catch{}
+              if(actual===expected)break;
+              if(attempt<7)await new Promise(resolve=>setTimeout(resolve,4000));
+            }
+            if(actual!==expected)throw new Error('PUBLIC_ASSET_MISMATCH:'+pathname);
+            assets.push({path:pathname,sha256:actual});
+          }
+          const receipt={verifiedAt:new Date().toISOString(),version:health.version,sourceSha:health.commitSha,buildId:health.buildId,pwaCache:health.pwaCache,capabilities:catalog.count,realMoneyEnabled:health.realMoneyEnabled,assets};
+          fs.writeFileSync('.recovery/public-verification.json',JSON.stringify(receipt,null,2)+'\n');
+          console.log(JSON.stringify({publicAssetsVerified:assets.length,sourceSha:health.commitSha,verifiedAt:receipt.verifiedAt}));
           NODE
+      - name: Preserve exact public asset verification
+        uses: actions/upload-artifact@v4
+        with:
+          name: production-public-verification-${{ github.sha }}
+          path: .recovery/public-verification.json
+          retention-days: 30
+          if-no-files-found: error
       - name: Status · gate-smoke
         continue-on-error: true
         shell: bash

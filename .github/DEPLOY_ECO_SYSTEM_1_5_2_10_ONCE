@@ -1,23 +1,24 @@
-Eco-System 1.5.2.18 production repair delivery authorized
-release: 1.5.2.18-workspace-repair
-date: 2026-10-15
+Eco-System 1.5.2.19 production member continuity delivery authorized
+release: 1.5.2.19-member-continuity
+date: 2026-10-16
 db_mutation: none
 mode: code-only-with-verified-readonly-backup-no-migration
-qualified_source: bccb12ca9c22eff866089555c47b6bdef8002bb1
-merged_source: d2f6b9537088794364b15f082e5db9b7ebb2da57
+qualified_source: 76689dcdf70d58788ffa30f897b36e63457d728c
+merged_source: 9551f9d5363ea30ba532ea6b12239fe91b387705
 qualification: two independent successful workflows
-native: 732 PASS
-chromium: 15 PASS required and qualified
+native: 738 PASS
+chromium: 17 PASS required and qualified
 webkit: 6 PASS required and qualified
-qualification_runs: 38810746007 38810745968
-production_ancestry: preserve af08c4bc26a5f7511b9092cc5a9bf6c0927a5766 and 4c7e70244e816cf33d71fc8221011c4a5848ee24
+qualification_runs: 38918515304 38918515190
+production_ancestry: preserve 70e376d9524b4646b1756482f7d7bf2713e3925d and all prior deliveries
 backup: mandatory D1 export, verified SQLite restore, private R2 archive download/hash before deploy
 storage: existing eco-system-db and eco-system-backups, no replacement or migration
 financial_signing: preserve existing key, never rotate, provision only proven absent first key after backup
 real_money_enabled: false
 field_acceptance: NOT_ACCEPTED
 historical_pr72_hold: preserved; no merge or override of PR72
-trigger_nonce: 2026-10-15-workspace-repair-qualified-732-15-6
+trigger_nonce: 2026-10-16-member-continuity-qualified-738-17-6
 authorization: current user explicitly requested repair, implementation and production deployment
-scope: canonical financial acknowledgements, typing presence, measured complete partitions, distinct window display modes, compact editors and local cockpit tabs
+scope: immediate previous-member summary, durable exact review, canonical global due repayments, tontine participation shares arrears advances, personal directory authorization and complete readable loan sections
 qualification_same_deployment_sha: mandatory full gates before publication, no relaxation
+public_verification: exact health catalog release plus SHA-256 comparison of ten deployed PWA assets with same-SHA build
