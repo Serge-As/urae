@@ -3,6 +3,7 @@ import {validateLaunchRubrics,simulateRubricPlan} from './launch-config.js';
 import { makeId } from '../../contracts/src/index.js';
 import type { PlatformRepository } from '../../repositories/src/index.js';
 import { PlatformKernel } from '../../platform-kernel/src/index.js';
+import {projectTontineContribution} from './contribution-position.js';
 
 const now=()=>new Date().toISOString();
 const MANAGER_ROLES=new Set(['founder','manager','admin','president','treasurer']);
@@ -39,6 +40,23 @@ export const starterRubricFacetsForName=(name:string):RubricFacets|undefined=>{
 
 export class RubricKnowledgeService {
   constructor(private readonly repo:PlatformRepository,private readonly kernel:PlatformKernel){}
+  async contributionPosition(input:{tenantId:Id;groupId:Id;membershipId:Id;meetingId:Id;rubricId:Id;positions:Array<{membershipId:string;rubricId?:string;meetingId?:string;netAmount?:number;amount:{amount:number}}>;targetCash?:number}){
+    await requireManager(this.repo,this.kernel,input.tenantId,input.groupId);
+    const rubric=await this.repo.getRubricDefinition(input.tenantId,input.groupId,input.rubricId);if(!rubric)throw Error('RUBRIC_NOT_FOUND');
+    const plan=rubric.activityPlan,isTontine=plan?.kind==='TONTINE'||String(rubric.facets?.custom?.systemKey??'').toUpperCase()==='TONTINE'||/^tontine(?:\b|\d)/.test(normalize(rubric.name));
+    if(!isTontine)return{kind:'CONTRIBUTION' as const,applies:false};
+    const [group,member,meetings,participations,cycles,shares]=await Promise.all([this.repo.getGroup(input.tenantId,input.groupId),this.repo.getMembership(input.tenantId,input.groupId,input.membershipId),this.repo.listMeetings(input.tenantId,input.groupId),this.repo.listWorkspaceRecords(input.tenantId,'MEMBERSHIP.RUBRIC_PARTICIPATION',input.groupId),this.repo.listWorkspaceRecords(input.tenantId,'CORE.ROTATING_TONTINE',input.groupId),this.repo.listWorkspaceRecords(input.tenantId,'MEETING.BENEFICIARIES',input.groupId)]);
+    if(!member||member.status!=='active')throw Error('MEMBERSHIP_NOT_FOUND');
+    const participation=participations.find(x=>x.data.membershipId===input.membershipId&&x.data.rubricId===input.rubricId),cycleIds=new Set(cycles.filter(x=>x.data.completionKind==='TONTINE_CYCLE'&&x.data.rubricId===input.rubricId&&!['CANCELLED','COMPLETED'].includes(String(x.data.completionState))).map(x=>x.id));
+    const ownedShares=shares.filter(x=>x.data.completionKind==='TONTINE_SHARE'&&cycleIds.has(String(x.data.cycleId))&&x.data.membershipId===input.membershipId&&x.data.completionState!=='CANCELLED');
+    const mandatory=plan?.participationMode==='MANDATORY'||(!plan?.participationMode&&rubric.policies?.participation?.mode==='MANDATORY')||(!plan?.participationMode&&!rubric.policies?.participation?.mode&&rubric.facets?.obligation==='MANDATORY'),automatic=group?.kind==='rotating_tontine'||mandatory;
+    const count=participation?(participation.data.status==='ACTIVE'?Number(participation.data.shareCount??1):0):ownedShares.length||(automatic?1:0),eligible=count>0;
+    const nominal=plan?.nominalAmount?.amount??rubric.policies?.contribution?.targetAmount?.amount??rubric.operatingModel?.perMemberAmount?.amount;
+    const ordered=meetings.filter(m=>m.status!=='cancelled').slice().sort((a,b)=>String(a.scheduledAt??a.openedAt).localeCompare(String(b.scheduledAt??b.openedAt))||a.id.localeCompare(b.id)),at=ordered.findIndex(m=>m.id===input.meetingId);if(at<0)throw Error('MEETING_NOT_FOUND');
+    const sessions=ordered.slice(0,at+1).filter(m=>m.id===input.meetingId||m.status==='open'||m.status==='closed').length;
+    const receipts=input.positions.filter(p=>p.membershipId===input.membershipId&&p.rubricId===input.rubricId),paidTotal=receipts.reduce((n,p)=>n+Number(p.netAmount??p.amount.amount),0),currentCash=receipts.filter(p=>p.meetingId===input.meetingId).reduce((n,p)=>n+Number(p.netAmount??p.amount.amount),0),configured=Number.isSafeInteger(nominal)&&Number(nominal)>0;
+    return{kind:'TONTINE' as const,applies:true,configured,participationSource:participation?'MEMBERSHIP.RUBRIC_PARTICIPATION':ownedShares.length?'TONTINE_SHARE':automatic?'GROUP_DEFAULT':'NOT_ENROLLED',contributionMode:plan?.contributionMode??'MONEY',...projectTontineContribution({eligible,shares:plan?.amountBasis==='PER_MEMBER'&&eligible?1:count,perShare:configured?Number(nominal):0,sessions,paidTotal,currentCash,targetCash:input.targetCash})};
+  }
 
   starterCandidates(){return Object.entries(STARTER_RUBRIC_FACETS).map(([code,facets])=>({code,facets:structuredClone(facets),requiresGroupConfirmation:true}));}
 
@@ -196,3 +214,4 @@ export class RubricKnowledgeService {
     const updated={...claim,status,reviewedAt:now(),reviewedBy:this.kernel.context.get().actorId} satisfies GovernanceKnowledgeClaim; await this.repo.saveGovernanceKnowledgeClaim(updated);return structuredClone(updated);
   }
 }
+

@@ -46,14 +46,19 @@ export class MemberEnvelopeService{
    * It is not a second accounting engine and it never writes financial data. */
   async canonicalCells(groupId:Id){
     const c=this.ctx(),access=await this.access(groupId);
-    const [positions,revisions,events,expenses]=await Promise.all([
+    const [positions,revisions,events,expenses,corrections]=await Promise.all([
       this.ledger.receiptPositions(c.tenantId,groupId),this.repo.listFinancialCellRevisions(c.tenantId,groupId),
-      this.repo.listWorkspaceRecords(c.tenantId,'FINANCE.SHEET_EVENT',groupId),this.repo.listWorkspaceRecords(c.tenantId,'FINANCE.EXPENSE',groupId)
+      this.repo.listWorkspaceRecords(c.tenantId,'FINANCE.SHEET_EVENT',groupId),this.repo.listWorkspaceRecords(c.tenantId,'FINANCE.EXPENSE',groupId),this.repo.listWorkspaceRecords(c.tenantId,'FINANCE.CORRECTION_OUTBOX',groupId)
     ]);
     const key=(meetingId:string,membershipId:string,rubricId:string)=>JSON.stringify([meetingId,membershipId,rubricId]);
     const cells=new Map<string,{meetingId:string;membershipId:string;rubricId:string;amount:number;cellVersion:number;updatedAt:string;actorId?:string;nature?:string}>(),versions=new Map(revisions.map(r=>[key(r.meetingId,r.membershipId,r.rubricId),r]));
     for(const p of positions){if(!p.meetingId||!p.rubricId)continue;const k=key(p.meetingId,p.membershipId,p.rubricId),old=cells.get(k),r=versions.get(k),at=String(r?.updatedAt??p.receivedAt??'');cells.set(k,{meetingId:p.meetingId,membershipId:p.membershipId,rubricId:p.rubricId,amount:Number(old?.amount??0)+Number(p.netAmount??0),cellVersion:Number(r?.version??0),updatedAt:at>String(old?.updatedAt??'')?at:String(old?.updatedAt??at),actorId:String(p.receivedBy??old?.actorId??''),nature:'CONTRIBUTION'});}
     for(const r of revisions){const k=key(r.meetingId,r.membershipId,r.rubricId);if(!cells.has(k))cells.set(k,{meetingId:r.meetingId,membershipId:r.membershipId,rubricId:r.rubricId,amount:0,cellVersion:r.version,updatedAt:r.updatedAt,nature:'CONTRIBUTION'});}
+    for(const cell of cells.values()){
+      const correction=corrections.find(x=>x.data.meetingId===cell.meetingId&&x.data.membershipId===cell.membershipId&&x.data.rubricId===cell.rubricId&&Number(x.data.cellVersion)===cell.cellVersion);
+      if(correction)cell.actorId=correction.createdBy;
+      else cell.actorId=positions.filter(p=>p.meetingId===cell.meetingId&&p.membershipId===cell.membershipId&&p.rubricId===cell.rubricId).sort((a,b)=>b.receivedAt.localeCompare(a.receivedAt))[0]?.receivedBy??cell.actorId;
+    }
     for(const e of events){const d=e.data,meetingId=String(d.meetingId??''),membershipId=String(d.membershipId??''),rubricId=String(d.rubricId??'');if(!meetingId||!membershipId||!rubricId)continue;const k=key(meetingId,membershipId,rubricId),old=cells.get(k),out=d.direction==='OUT';cells.set(k,{meetingId,membershipId,rubricId,amount:Number(old?.amount??0)+(out?-1:1)*Math.abs(Number(d.amount??0)),cellVersion:Number(old?.cellVersion??0)+1,updatedAt:e.updatedAt??e.createdAt,actorId:e.createdBy,nature:out?'LOAN_OR_OUTFLOW':'REPAYMENT'});}
     for(const e of expenses){const d=e.data;if(d.scope!=='SHEET'||e.status==='ARCHIVED')continue;const meetingId=String(d.meetingId??''),membershipId=String(d.membershipId??''),rubricId=String(d.rubricId??'');if(!meetingId||!membershipId||!rubricId)continue;const k=key(meetingId,membershipId,rubricId),old=cells.get(k);cells.set(k,{meetingId,membershipId,rubricId,amount:Number(old?.amount??0)-Math.abs(Number(d.amount??0)),cellVersion:Number(old?.cellVersion??0)+1,updatedAt:e.updatedAt??e.createdAt,actorId:e.createdBy,nature:'OUTFLOW'});}
     const reviews=access.manager?await this.repo.listWorkspaceRecords(c.tenantId,'MEETING.CELL_REVIEW',groupId):[];

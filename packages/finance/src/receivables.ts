@@ -36,18 +36,22 @@ export class ReceivablesService{
       amount:{currency:input.currency??'XAF',amount:input.amount}};
     await this.repo.saveObligation(obligation);return obligation;
   }
-  async allocate(groupId:Id,input:{obligationId:Id;receiptId:Id;amount:number}):Promise<PaymentAllocation>{
+  async allocate(groupId:Id,input:{obligationId:Id;receiptId:Id;amount:number;idempotencyKey?:string}):Promise<PaymentAllocation>{
     await this.access(groupId,true);positive(input.amount);const ctx=this.kernel.context.get();
+    const allocationId=input.idempotencyKey?'allocation_'+encodeURIComponent(JSON.stringify([groupId,input.obligationId,input.receiptId,input.idempotencyKey])):makeId('allocation');
+    if(input.idempotencyKey){const existing=await this.repo.getWorkspaceRecord(ctx.tenantId,allocationId);if(existing){if(existing.moduleId!=='FINANCE.ARREARS'||existing.groupId!==groupId||Number(existing.data.amount)!==input.amount)throw Error('IDEMPOTENCY_CONFLICT');return existing as PaymentAllocation;}}
     const obligation=(await this.repo.listObligations(ctx.tenantId)).find(o=>o.id===input.obligationId&&o.groupId===groupId);
     if(!obligation?.amount)throw Error('OBLIGATION_NOT_FOUND');
     const receipt=(await this.repo.listContributionReceipts(ctx.tenantId,groupId)).find(r=>r.id===input.receiptId);if(!receipt)throw Error('RECEIPT_NOT_FOUND');
+    const payer=await this.repo.getMembership(ctx.tenantId,groupId,receipt.membershipId);
+    if(!payer||![payer.userId,payer.id].includes(obligation.assigneeId))throw Error('ALLOCATION_MEMBER_MISMATCH');
     if(receipt.amount.currency!==obligation.amount.currency)throw Error('ALLOCATION_CURRENCY_MISMATCH');
     const allocations=await this.allocations(groupId);
     const receiptUsed=allocations.filter(a=>a.data.receiptId===receipt.id).reduce((n,a)=>n+Number(a.data.amount),0);
     const obligationUsed=allocations.filter(a=>a.data.obligationId===obligation.id).reduce((n,a)=>n+Number(a.data.amount),0);
     if(receiptUsed+input.amount>receipt.amount.amount)throw Error('RECEIPT_OVERALLOCATED');
     if(obligationUsed+input.amount>obligation.amount.amount)throw Error('OBLIGATION_OVERALLOCATED');
-    const stamp=now(),record:PaymentAllocation={id:makeId('allocation'),tenantId:ctx.tenantId,groupId,moduleId:'FINANCE.ARREARS',
+    const stamp=now(),record:PaymentAllocation={id:allocationId,tenantId:ctx.tenantId,groupId,moduleId:'FINANCE.ARREARS',
       title:'Allocation '+receipt.id,status:'ACTIVE',tags:['specialized-finance','kind:PAYMENT_ALLOCATION'],
       data:{specializedKind:'PAYMENT_ALLOCATION',obligationId:obligation.id,receiptId:receipt.id,amount:input.amount,currency:receipt.amount.currency},
       createdBy:ctx.actorId,createdAt:stamp,updatedAt:stamp};
@@ -66,3 +70,4 @@ export class ReceivablesService{
         status:outstanding===0?'SETTLED':(o.dueAt&&Date.parse(o.dueAt)<cutoff?'OVERDUE':'OPEN')};});
   }
 }
+

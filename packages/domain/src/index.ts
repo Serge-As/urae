@@ -596,7 +596,14 @@ export class LedgerService {
     };
     const existing=await this.repo.findContributionReceiptByIdempotency(input.tenantId,input.groupId,input.idempotencyKey);
     if(existing) return sameIntent(existing);
-    if(input.rubricId && !(await this.repo.getRubricDefinition(input.tenantId,input.groupId,input.rubricId))) throw new Error('RUBRIC_NOT_FOUND');
+    if(input.rubricId){
+      const rubric=await this.repo.getRubricDefinition(input.tenantId,input.groupId,input.rubricId);if(!rubric)throw Error('RUBRIC_NOT_FOUND');
+      if(input.meetingId&&(rubric.activityPlan?.kind==='TONTINE'||String(rubric.facets?.custom?.systemKey??'')==='TONTINE'||/^tontine(?:\b|\d)/i.test(rubric.name))){
+        const positions=await this.receiptPositions(input.tenantId,input.groupId),current=positions.filter(p=>p.membershipId===input.membershipId&&p.meetingId===input.meetingId&&p.rubricId===input.rubricId).reduce((n,p)=>n+p.netAmount,0),position=await new RubricKnowledgeService(this.repo,this.kernel).contributionPosition({...input,meetingId:input.meetingId,rubricId:input.rubricId,positions,targetCash:current+input.amount});
+        if(position.applies&&!position.eligible)throw Error('TONTINE_NOT_PARTICIPATING');
+        if(position.applies&&position.configured&&position.advance>0&&!/\[AVANCE\]/i.test(input.lateReason??input.governedCorrectionReason??''))throw Error('TONTINE_ADVANCE_DECLARATION_REQUIRED');
+      }
+    }
     const membership=await this.repo.getMembership(input.tenantId,input.groupId,input.membershipId); if(!membership||membership.status!=='active') throw new Error('MEMBERSHIP_NOT_FOUND');
     let latePosting:LatePostingTrace|undefined;
     if(input.meetingId){
@@ -648,7 +655,8 @@ export class LedgerService {
     const membership=await this.repo.getMembership(input.tenantId,input.groupId,input.membershipId);
     if(!membership||membership.status!=='active')throw new Error('MEMBERSHIP_NOT_FOUND');
     if(!(await this.repo.getRubricDefinition(input.tenantId,input.groupId,input.rubricId)))throw new Error('RUBRIC_NOT_FOUND');
-    const positions=(await this.receiptPositions(input.tenantId,input.groupId))
+    const allPositions=await this.receiptPositions(input.tenantId,input.groupId);
+    const positions=allPositions
       .filter(r=>r.meetingId===input.meetingId&&r.membershipId===input.membershipId&&r.rubricId===input.rubricId&&r.netAmount!==0);
     const current=positions.reduce((n,r)=>n+r.netAmount,0);
     const revision=await this.repo.getFinancialCellRevision(input.tenantId,input.groupId,input.meetingId,input.membershipId,input.rubricId,input.currency??'XAF');
@@ -657,6 +665,12 @@ export class LedgerService {
     if(input.expectedCellVersion!==undefined&&currentVersion!==input.expectedCellVersion)throw new Error('CELL_VERSION_CONFLICT');
     if(current===input.targetAmount)return{status:'NO_CHANGE',previousAmount:current,newAmount:input.targetAmount,cellVersion:currentVersion};
     const reason=(input.reason??'').trim();
+    const rubric=await this.repo.getRubricDefinition(input.tenantId,input.groupId,input.rubricId);
+    if(input.targetAmount>current&&rubric&&(rubric.activityPlan?.kind==='TONTINE'||String(rubric.facets?.custom?.systemKey??'')==='TONTINE'||/^tontine(?:\b|\d)/i.test(rubric.name))){
+      const position=await new RubricKnowledgeService(this.repo,this.kernel).contributionPosition({...input,positions:allPositions,targetCash:input.targetAmount});
+      if(position.applies&&!position.eligible)throw Error('TONTINE_NOT_PARTICIPATING');
+      if(position.applies&&position.configured&&position.advance>0&&!/\[AVANCE\]/i.test(reason))throw Error('TONTINE_ADVANCE_DECLARATION_REQUIRED');
+    }
     if((current>0||meeting.status==='closed')&&!reason)throw new Error('REVERSAL_REASON_REQUIRED');
     const currency=input.currency??'XAF',commitAt=now(),operationId=makeId('cellcorr');
     const reversalEntries:LedgerEntry[]=[],audits:AuditEvent[]=[];
@@ -928,3 +942,4 @@ export class LedgerService {
     return {currency,cashBalance,memberFundsLiability,entryCount:entries.length};
   }
 }
+

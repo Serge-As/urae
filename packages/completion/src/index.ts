@@ -297,6 +297,7 @@ export const applyLoanPayment=(input:{
   // Interest is always calculated on principal only. Unpaid interest is carried separately and never capitalized.
   const accrued=Math.round(principal*rateBp/10000);
   const interestDue=unpaid+accrued;
+  if(payment>principal+interestDue)throw new Error('LOAN_PAYMENT_EXCEEDS_TOTAL_DUE');
   let principalPaid=0,interestPaid=0;
   if(priority==='CAPITAL_FIRST'){
     principalPaid=Math.min(payment,principal);
@@ -611,3 +612,4 @@ export class CompletionSuiteService {
     }
   }
 }
+
