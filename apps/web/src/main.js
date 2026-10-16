@@ -2492,6 +2492,10 @@ window.addEventListener('eco:financial-live-update',event=>{
 
 const refreshGroupContext = async () => {
     const requestedGroup=app.activeGroup();
+    // Account navigation does not wait for optional group/financial panels.
+    // Reuse this same membership-checked directory in the personal cockpit.
+    const personalDirectory=personalCockpitUI.prepareNavigation?.();
+    personalDirectory?.catch(()=>{});
     journeyUI.refresh();localAssistantUI.refreshContext();
     await renderGroups();
     journeyUI.refresh();localAssistantUI.refreshContext();
@@ -2545,7 +2549,7 @@ const refreshGroupContext = async () => {
     await refreshOptionalOfflineSafe('misc-rubrics',()=>miscRubricUI.refresh());
     await refreshOptionalOfflineSafe('pairing',()=>pairingUI.refresh());
     await refreshOptionalOfflineSafe('sovereign-offline',()=>sovereignOfflineUI.refresh());
-    await refreshOptionalOfflineSafe('personal-cockpit',()=>personalCockpitUI.refresh());
+    await refreshOptionalOfflineSafe('personal-cockpit',()=>personalCockpitUI.refresh(personalDirectory));
     if(activeViewName()==='recap'&&requestedGroup===app.activeGroup())await refreshOptionalOfflineSafe('recap',()=>recapUI.refresh());
     await refreshOptionalOfflineSafe('interest-community',()=>interestCommunityUI.refresh());
     await refreshOptionalOfflineSafe('ad-manager',()=>adManagerUI.refresh());

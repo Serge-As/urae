@@ -109,7 +109,17 @@ export function mountPersonalCockpitUI({app,getGroups,getMembers,getMeetings,nav
     if(!count&&!unavailable)section.append(el('p',tr('Rejoignez un groupe ou une communauté pour retrouver ici ses échanges.','Join a group or community to find its discussions here.'),'hint'));
     spaces.append(section);
   };
-    const refresh=async()=>{
+  let navigationActor='';
+  const prepareNavigation=()=>{
+    const actor=app.currentActor(),nav=document.getElementById('myRotatingTontinesNavBtn');
+    if(nav&&navigationActor!==actor)nav.hidden=true;
+    navigationActor=actor;
+    return app.listMyGroups().then(rows=>{
+      if(nav&&app.currentActor()===actor)nav.hidden=!rows.some(g=>g.kind==='rotating_tontine'||g.kind==='in_kind_tontine');
+      return rows;
+    });
+  };
+    const refresh=async(authorizedDirectory)=>{
     metrics.replaceChildren();situation.replaceChildren();next.replaceChildren();noticesRoot.replaceChildren();spaces.replaceChildren();
     const groups=getGroups(),groupId=app.activeGroup(),members=getMembers(),meetings=getMeetings(),mine=members.find(m=>m.userId===app.currentActor());
     metrics.append(metric(groups.length,'Groupes accessibles'));
@@ -118,7 +128,7 @@ export function mountPersonalCockpitUI({app,getGroups,getMembers,getMeetings,nav
     // A tenant catalogue can contain groups that are not mine. Never expose
     // those names as my forum shortcuts without a server membership check.
     let forumGroups=[],forumsUnavailable=false;
-    try{forumGroups=await app.listMyGroups();}catch{forumsUnavailable=true;}
+    try{forumGroups=await(authorizedDirectory??prepareNavigation());}catch{forumsUnavailable=true;}
     renderPersonalForas(forumGroups,personalCommunities,forumsUnavailable);
     // Separate group workspaces from discussions. A member can choose any
     // number of associations or tontines belonging to this authenticated
@@ -221,6 +231,6 @@ export function mountPersonalCockpitUI({app,getGroups,getMembers,getMeetings,nav
     spaces.append(action('Découvrir d’autres groupes','discovery'),action('Communautés d’intérêt','ecosystem'));
   };
   document.getElementById('ecoPulseRefreshBtn')?.addEventListener('click',()=>void renderPulse());
-  return{refresh,refreshPulse:renderPulse};
+  return{refresh,refreshPulse:renderPulse,prepareNavigation};
 }
 
