@@ -23,7 +23,8 @@ test('free-tier financial recovery is event-driven, bounded and never an idle D1
 
 test('specialized repayment and outflow commits emit Live cell events in direct and Outbox paths',async()=>{
   const worker=await readFile('.build/workers/api/src/index.js','utf8');
-  assert.ok((worker.match(/loan-repayment-live:/g)||[]).length>=2,'repayment direct + Outbox replay must both publish');
+  assert.match(worker,/loan-repayment-live:/,'the shared canonical repayment owner must publish');
+  assert.ok((worker.match(/applyCanonicalLoanRepayment\(/g)||[]).length>=3,'direct route, planned Outbox and legacy replay must delegate to the publishing owner');
   assert.ok((worker.match(/sheet-outflow-live:/g)||[]).length>=2,'outflow direct + Outbox replay must both publish');
   assert.match(worker,/operationType:\s*['"]LOAN_REPAYMENT['"]/);
   assert.match(worker,/operationType:\s*['"]SHEET_OUTFLOW['"]/);
@@ -67,3 +68,4 @@ test('group sheet expense endpoint persists and lists the same canonical expense
   assert.equal(rows[0].id,expense.id);
   assert.equal(rows[0].rubricId,'rubric-expense');
 });
+

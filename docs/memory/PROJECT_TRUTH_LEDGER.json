@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedOn": "2026-10-15",
+  "generatedOn": "2026-10-16",
   "purpose": "Anti-regression operational truth. Read before asking founder to recreate/configure anything.",
   "allowedStatuses": [
     "ACQUIRED",
@@ -25,6 +25,21 @@
     "Update this ledger whenever a remote verification, deployment, abandonment or supersession changes project truth."
   ],
   "records": [
+    {
+      "id": "member-financial-continuity-20261016",
+      "status": "IN_PROGRESS",
+      "scope": "financial UI and canonical projections",
+      "statement": "Candidate19 implements immediate previous-member review before new input, durable exact manager approval, shared global debt repayment and tontine participation/advance projection. Intermediate qualification734/738 native and16/17 Chromium; optional annual-rate fallback and source assertions corrected, final qualification and delivery pending. Production18 remains attested.",
+      "evidence": [
+        "docs/change-impact/CIR-2026-10-16-member-financial-continuity.md",
+        "docs/memory/recalls/RECALL-2026-10-16-member-financial-continuity.md",
+        "docs/release/DELIVERY-2026-10-16-MEMBER-CONTINUITY.md",
+        "https://github.com/Serge-As/urae/pull/96",
+        "https://github.com/Serge-As/urae/actions/runs/38907783015"
+      ],
+      "observedOn": "2026-10-16",
+      "next": "Pass exact-SHA full qualification, verify read-only backup restore/readback, deploy through existing workflow and independently verify public release; no authenticated field acceptance or missing-group claim."
+    },
     {
       "id": "workspace-repair-20261015",
       "status": "VERIFIED_REMOTE",

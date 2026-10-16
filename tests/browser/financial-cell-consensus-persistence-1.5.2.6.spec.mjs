@@ -275,6 +275,18 @@ test('repayment 2500 syncs event-wise within five seconds and survives reload wi
   await page.locator('#loansNavBtn').click();
   await expect(page.locator('#loanDebtRecap .debt-group-journey-table')).toBeVisible();
   for(const label of ['Capital restant','Intérêts dus','Prochains intérêts projetés','Total dette exigible'])await expect(page.locator('#loanDebtRecap')).toContainText(label);
+  await page.setViewportSize({width:1280,height:900});
+  const portfolio=page.locator('.loan-portfolio-table'),section=page.getByRole('combobox',{name:'Partie du portefeuille de prêts',exact:true});
+  await expect(portfolio.locator('tbody tr')).toHaveCount(1);
+  await section.selectOption('1');
+  await expect(portfolio.locator('thead th:visible')).toHaveCount(5);
+  await expect(portfolio.locator('tbody td').first()).toContainText('Repayment Sync Browser');
+  await section.selectOption('2');
+  await expect(portfolio.locator('thead th:visible')).toHaveCount(7);
+  await expect(portfolio.getByRole('button',{name:'Simuler',exact:true})).toBeVisible();
+  const memberWidth=await portfolio.locator('tbody td').first().evaluate(e=>e.getBoundingClientRect().width);
+  expect(memberWidth).toBeGreaterThanOrEqual(140);
+  await page.screenshot({path:'artifacts/loan-portfolio-debt-section.png',fullPage:false});
   await mirrorContext.close();
 });
 

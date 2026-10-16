@@ -10,7 +10,11 @@ test('1.5.2.2 canonical sheet dispatches contribution outflow loan and repayment
   assert.match(app,/recordCashContribution/);
   assert.match(app,/scope\s*:\s*['"]SHEET['"]/);
   assert.match(app,/\/loans\/[^\x60'"]*\/disburse/);
-  assert.match(app,/\/loans\/[^\x60'"]*\/repay/);
+  assert.match(app,/await this\.syncOutbox\(\)/);
+  const worker=await readFile('.build/workers/api/src/index.js','utf8');
+  assert.match(worker,/repayFinancialSheet\(item,\s*markerId,\s*existingMarker\)/);
+  assert.match(worker,/applyCanonicalLoanRepayment\(groupId,\s*leg.loanId/);
+  assert.match(worker,/ledger\.recordLoanRepayment\(/);
   assert.match(main,/financialNatureForRubric/);
   assert.match(main,/recordFinancialSheetEntry/);
   assert.match(main,/FINANCE\.SHEET_EVENT/);
@@ -79,3 +83,4 @@ test('current release shell is version isolated and keeps the previous coherent 
   assert.ok(current&&previous&&current!==previous,'current and rollback caches must remain distinct');
   assert.doesNotMatch(html,/<body[^>]*>\\n\s*<section/);
 });
+

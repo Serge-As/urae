@@ -1,3 +1,17 @@
+## Continuité membre et dette exacte — candidate du 16 octobre 2026
+
+Le fondateur confirme saisie et Visuel compact en production18, puis signale les limites de revue, synthèse, remboursement et participation tontine. La branche `codex/member-financial-continuity-20261016`, PR96, corrige ces points dans les propriétaires existants. Candidate **1.5.2.19-member-continuity**, pas encore déployée : ne pas confondre le code candidat avec la production attestée18/70e376d.
+
+Le clic sur une cellule d'un autre membre ouvre immédiatement la synthèse précédente et bloque la nouvelle saisie jusqu'à la décision. Les validations en cours sont attendues ; la clôture n'est pas la condition de durabilité des montants. La revue de l'autre gestionnaire est persistante, exacte et versionnée ; les conflits gardent leur accès à la confrontation. Les remboursements utilisent Completion/Ledger/Receivables pour le capital, les intérêts dus et les dettes spéciales exigibles, sans intérêts futurs ni double encaissement au rejeu. Participation et parts de tontine sont lues chez leurs propriétaires ; les avances déclarées couvrent les séances suivantes sans nouveau cash. Le répertoire personnel des tontines et les vues de portefeuille en deux parties sont des projections.
+
+Qualification intermédiaire4c88506 : **734/738 tests natifs et 16/17 Chromium**. Le remboursement échoue sur l'absence de taux annuel optionnel malgré un taux par période présent ; correction préparée. Trois anciens contrôles structurels sont adaptés à l'unique moteur partagé, sans retirer leurs garanties. Les essais de synthèse avant saisie, revue après rechargement, absence de polling Live et confrontation passent. WebKit complet, qualification exacte de la candidate19 et publication restent à vérifier. Aucun échec n'est déclaré réussi.
+
+Production précédente conservée, aucune migration ni purge. Livraison à réaliser par le workflow existant après qualification du même SHA, export D1 en lecture seule restauré et archive R2 relue/hashée. **FIELD_ACCEPTED=NOT_ACCEPTED**. Le groupe rotatif du compte Delor n'a pas été observé ; absence visible ne vaut pas suppression et aucun groupe n'est recréé. Ancien blocage du navigateur protégé respecté. Toutes les ambitions stratégiques ne sont pas annoncées terminées.
+
+ÉTAT DU PROJET APRÈS ÉTAPE : implémentation candidate19 ; qualification et déploiement en cours ; version18 toujours dernière production attestée. Voir `docs/change-impact/CIR-2026-10-16-member-financial-continuity.md`, Recall associé et `docs/release/DELIVERY-2026-10-16-MEMBER-CONTINUITY.md`.
+
+Les entrées suivantes sont historiques.
+
 ## Réparation 1.5.2.18 déployée et vérifiée — 15 octobre 2026
 
 La production est **1.5.2.18-workspace-repair**, source `70e376d9524b4646b1756482f7d7bf2713e3925d`, build `eco-system-1.5.2.18-20261015-workspace-repair`, cache `eco-system-v15218-workspace-repair-20261015`. Livraison 38812599315 SUCCESS et qualification indépendante 38812599318 SUCCESS sur le SHA publié : 732 tests applicatifs PASS, Chromium 15/15, WebKit 6/6, garde-fous et sauvegarde D1 restaurée puis archive R2 relue/hashée. Dix lectures publiques indépendantes concordent, achevées le 15 octobre à 22:06:31 UTC (23:06:31 Douala).
@@ -1164,4 +1178,3 @@ Maturité :
 - **5 PLANNED_DOMAIN** : `COMMUNITY.VIDEO`, `MARKETPLACE.REWARDS`, `INTEGRATION.MOBILE_MONEY`, `SECURITY.MFA`, `FEDERATION.GROUP_NETWORK`.
 
 La production est **TECHNIQUEMENT QUALIFIÉE**. Le statut FIELD_ACCEPTED reste réservé à la recette réelle du fondateur sur Chrome/Opera/mobile/offline/deux gestionnaires ; le smoke distant ne remplace pas cette observation.
-

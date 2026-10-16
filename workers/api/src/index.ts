@@ -78,11 +78,11 @@ interface WorkersAILike {
   run?(model:string,input:Record<string,unknown>,options?:Record<string,unknown>):Promise<unknown>;
 }
 
-const RELEASE_VERSION='1.5.2.18-workspace-repair';
-const RELEASE_BUILD_ID='eco-system-1.5.2.18-20261015-workspace-repair';
+const RELEASE_VERSION='1.5.2.19-member-continuity';
+const RELEASE_BUILD_ID='eco-system-1.5.2.19-20261016-member-continuity';
 const RELEASE_SCHEMA_VERSION='d1-additive-20260923';
 const RELEASE_POLICY_VERSION='live-finance-policy-20261007-event-push-repayment';
-const RELEASE_PWA_CACHE='eco-system-v15218-workspace-repair-20261015';
+const RELEASE_PWA_CACHE='eco-system-v15219-member-continuity-20261016';
 
 const defaultRepo = new InMemoryPlatformRepository();
 const defaultReferralBudgets = new InMemoryReferralBudgetStore();
@@ -664,7 +664,7 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
     const defaultRubric=allRubrics.find(r=>String(r.facets?.custom?.systemKey??'')==='LOAN'),loans=allLoans.filter(l=>l.data.borrowerMembershipId===membershipId&&['DISBURSED','REPAYING'].includes(String(l.data.completionState))).sort((a,b)=>a.createdAt.localeCompare(b.createdAt)||a.id.localeCompare(b.id)).map(loan=>{
       if(String(loan.data.currency??'XAF')!=='XAF')throw Error('DEBT_CURRENCY_REQUIRES_SEPARATE_PAYMENT');
       const loanRubric=allRubrics.find(r=>r.id===loan.data.rubricId)??defaultRubric,policy=resolveLoanPolicyForOperation(loan,loanRubric?.policies?.loan,meetingMoment(meeting)||Date.now()),principal=finite(loan.data.outstandingPrincipal),unpaid=finite(loan.data.unpaidInterest),prepared=jsonStringArray(loan.data.preparedInterestMeetingIdsJson).includes(meetingId)||loan.data.preparedInterestPending===true||String(loan.data.preparedInterestPending)==='true',accrued=jsonStringArray(loan.data.accruedMeetingIdsJson).includes(meetingId);
-      const rate=finite(policy.rateBasisPointsPerPeriod,Math.round(finite(loan.data.annualRateBasisPoints)/Math.max(1,finite(loan.data.installmentsPerYear,12)))),interest=unpaid+(!prepared&&!accrued?Math.round(principal*rate/10000):0);
+      const rate=finite(policy.rateBasisPointsPerPeriod,Math.round(finite(loan.data.annualRateBasisPoints,0)/Math.max(1,finite(loan.data.installmentsPerYear,12)))),interest=unpaid+(!prepared&&!accrued?Math.round(principal*rate/10000):0);
       if(!Number.isSafeInteger(principal)||principal<0||!Number.isSafeInteger(interest)||interest<0)throw Error('FINANCIAL_POSITION_UNVERIFIABLE');
       return{loanId:loan.id,title:loan.title,principal,interest,totalDue:principal+interest,expectedVersion:finite(loan.data.completionVersion),priority:String(policy.paymentPriority??'CAPITAL_FIRST')};
     }).filter(l=>l.totalDue>0);
