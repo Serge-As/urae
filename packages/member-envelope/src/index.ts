@@ -56,7 +56,11 @@ export class MemberEnvelopeService{
     for(const r of revisions){const k=key(r.meetingId,r.membershipId,r.rubricId);if(!cells.has(k))cells.set(k,{meetingId:r.meetingId,membershipId:r.membershipId,rubricId:r.rubricId,amount:0,cellVersion:r.version,updatedAt:r.updatedAt,nature:'CONTRIBUTION'});}
     for(const e of events){const d=e.data,meetingId=String(d.meetingId??''),membershipId=String(d.membershipId??''),rubricId=String(d.rubricId??'');if(!meetingId||!membershipId||!rubricId)continue;const k=key(meetingId,membershipId,rubricId),old=cells.get(k),out=d.direction==='OUT';cells.set(k,{meetingId,membershipId,rubricId,amount:Number(old?.amount??0)+(out?-1:1)*Math.abs(Number(d.amount??0)),cellVersion:Number(old?.cellVersion??0)+1,updatedAt:e.updatedAt??e.createdAt,actorId:e.createdBy,nature:out?'LOAN_OR_OUTFLOW':'REPAYMENT'});}
     for(const e of expenses){const d=e.data;if(d.scope!=='SHEET'||e.status==='ARCHIVED')continue;const meetingId=String(d.meetingId??''),membershipId=String(d.membershipId??''),rubricId=String(d.rubricId??'');if(!meetingId||!membershipId||!rubricId)continue;const k=key(meetingId,membershipId,rubricId),old=cells.get(k);cells.set(k,{meetingId,membershipId,rubricId,amount:Number(old?.amount??0)-Math.abs(Number(d.amount??0)),cellVersion:Number(old?.cellVersion??0)+1,updatedAt:e.updatedAt??e.createdAt,actorId:e.createdBy,nature:'OUTFLOW'});}
-    const visible=[...cells.values()].filter(x=>access.manager||x.membershipId===access.membership?.id);
+    const reviews=access.manager?await this.repo.listWorkspaceRecords(c.tenantId,'MEETING.CELL_REVIEW',groupId):[];
+    const visible=[...cells.values()].filter(x=>access.manager||x.membershipId===access.membership?.id).map(cell=>{
+      const review=reviews.filter(r=>r.createdBy===c.actorId&&r.data.meetingId===cell.meetingId&&r.data.membershipId===cell.membershipId&&r.data.rubricId===cell.rubricId&&Number(r.data.cellVersion)===cell.cellVersion&&Number(r.data.amount)===Math.abs(cell.amount)).sort((a,b)=>Number(b.data.reviewSequence??0)-Number(a.data.reviewSequence??0)||b.updatedAt.localeCompare(a.updatedAt))[0];
+      return{...cell,reviewRequired:Boolean(access.manager&&cell.actorId&&cell.actorId!==c.actorId&&review?.data.decision!=='APPROVE'),reviewDecision:review?String(review.data.decision):undefined};
+    });
     const watermark=visible.reduce((n,x)=>Math.max(n,Date.parse(x.updatedAt)||0),0);
     return{cells:visible,watermark,generatedAt:now()};
   }
@@ -116,3 +120,4 @@ export class MemberEnvelopeService{
     return out;
   }
 }
+

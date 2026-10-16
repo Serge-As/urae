@@ -1410,7 +1410,7 @@ export class ConnectedApplication {
     }).filter(x=>x.meetingId&&x.membershipId&&x.rubricId&&Number.isSafeInteger(x.amount)&&x.amount>0);
   }
 
-  async financialCellSnapshot():Promise<{generatedAt:string;watermark:string;cells:Array<{meetingId:string;membershipId:string;rubricId:string;amount:number;cellVersion:number;updatedAt:string;actorId?:string;nature?:string}>}>{
+  async financialCellSnapshot():Promise<{generatedAt:string;watermark:string;cells:Array<{meetingId:string;membershipId:string;rubricId:string;amount:number;cellVersion:number;updatedAt:string;actorId?:string;nature?:string;reviewRequired?:boolean;reviewDecision?:string}>}>{
     if(!this.activeGroupId)return{generatedAt:new Date().toISOString(),watermark:'',cells:[]};
     return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/financial-cells/snapshot`);
   }
@@ -1471,6 +1471,7 @@ export class ConnectedApplication {
   /** A durable, account-scoped read model; it never creates a Ledger entry. */
   async receiveFinancialLiveEvent(event:{seq?:number;at?:string;actorId?:string;groupId?:string;streamGeneration?:string;payload?:Record<string,unknown>}):Promise<FinancialLiveCellProjection|undefined>{
     const p=event.payload??{},groupId=String(p.groupId??event.groupId??this.activeGroupId??'');
+    if(groupId===this.activeGroupId&&['APPROVE','RESERVE'].includes(String(p.decision))){await this.persistFinancialReviewAck({groupId,actorId:String(p.actorId??event.actorId??''),meetingId:String(p.meetingId),membershipId:String(p.membershipId),rubricId:String(p.rubricId),amount:Number(p.amount),cellVersion:Number(p.cellVersion),decision:String(p.decision)});return;}
     if(!groupId||groupId!==this.activeGroupId||!p.meetingId||!p.membershipId||!p.rubricId||p.newAmount===undefined)return;
     const amount=Number(p.newAmount),cellVersion=Number(p.cellVersion??0),projectionSeq=Number(event.seq??0);
     if(!Number.isSafeInteger(amount)||amount<0||!Number.isSafeInteger(cellVersion)||cellVersion<0||!Number.isSafeInteger(projectionSeq)||projectionSeq<0)throw Error('INVALID_FINANCIAL_PROJECTION');
@@ -1626,13 +1627,19 @@ export class ConnectedApplication {
         '/meetings/'+encodeURIComponent(input.meetingId)+'/financial-cells/review',
         {method:'POST',headers:{'x-idempotency-key':key},body:JSON.stringify(payload)});
       this.outbox.markConfirmedByKey(this.tenantId,this.actorId,key);
-      await this.persistOutbox();return result;
+      await this.persistOutbox();await this.persistFinancialReviewAck({...payload,actorId:this.actorId});return result;
     }catch(error){
       const code=error instanceof Error?error.message:String(error);
       if(code==='NETWORK_UNAVAILABLE'||/^HTTP_5\d\d$/.test(code))return{status:'QUEUED_SYNC',queued:true,outbox:item};
       this.outbox.markConflictByKey(this.tenantId,this.actorId,key);
       await this.persistOutbox();throw error;
     }
+  }
+  private async persistFinancialReviewAck(input:{groupId:string;actorId:string;meetingId:string;membershipId:string;rubricId:string;amount:number;cellVersion:number;decision:string}):Promise<void>{
+    if(input.actorId!==this.actorId)return;
+    const path='/api/v1/groups/'+encodeURIComponent(input.groupId)+'/financial-cells/snapshot',snapshot=await this.cached<any>(path);
+    if(snapshot?.cells){for(const cell of snapshot.cells)if(cell.meetingId===input.meetingId&&cell.membershipId===input.membershipId&&cell.rubricId===input.rubricId&&Number(cell.cellVersion)===input.cellVersion&&Math.abs(Number(cell.amount))===input.amount){cell.reviewRequired=input.decision!=='APPROVE';cell.reviewDecision=input.decision;}await this.saveCached(path,snapshot,'SERVER');}
+    if(typeof window!=='undefined')window.dispatchEvent(new CustomEvent('eco:financial-review-confirmed',{detail:input}));
   }
   async setFinancialCellTarget(input:{meetingId:string;membershipId:string;rubricId:string;targetAmount:number;currentAmount?:number;currentVersion?:number;reason?:string;deferSync?:boolean}):Promise<any>{
     if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');
@@ -2423,6 +2430,7 @@ export class ConnectedApplication {
     // syncPending also drains intentions added WHILE a preceding command is
     // being sent. A caller's initial snapshot cannot acknowledge those rows.
     // Publish only persisted, server-confirmed transitions from this owner.
+    for(const item of result)if(item.status==='CONFIRMED'&&statusesBefore.get(item.id)!=='CONFIRMED'&&item.type==='FINANCIAL_CELL_REVIEW_V1')await this.persistFinancialReviewAck({...item.payload,actorId:item.actorId} as any);
     if(typeof window!=='undefined'&&typeof CustomEvent!=='undefined')for(const item of result){
       if(item.status!=='CONFIRMED'||statusesBefore.get(item.id)==='CONFIRMED'||
         !['FINANCIAL_CELL_CORRECTION_PROPOSAL_V1','FINANCIAL_CELL_CORRECTION_PROPOSAL_V2','FINANCIAL_SHEET_ENTRY_V1'].includes(item.type))continue;

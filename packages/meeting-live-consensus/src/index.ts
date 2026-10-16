@@ -127,11 +127,11 @@ export class MeetingLiveConsensusService{
       summary:clean(input.reason??'')||String(input.amount)+' XAF',status:'ACTIVE',
       tags:['meeting-live','cell-review',input.decision.toLowerCase()],
       data:{meetingId:input.meetingId,cellKey,membershipId:input.membershipId,rubricId:input.rubricId,
-        amount:input.amount,cellVersion:input.cellVersion,decision:input.decision,reason:clean(input.reason??'')},
+        amount:input.amount,cellVersion:input.cellVersion,decision:input.decision,reviewSequence:x.version+1,reason:clean(input.reason??'')},
       createdBy:ctx.actorId,createdAt:stamp,updatedAt:stamp};
     // The review itself is persisted before the projection notification.
     // No ledger row can be mutated through this path.
-    if(!found)await this.repo.saveWorkspaceRecord(review);
+    await this.repo.saveWorkspaceRecord({...review,createdAt:found?.createdAt??stamp});
     x.version++;x.updatedAt=stamp;
     const projected=await this.save(x,'LIVE_CANONICAL_CELL_'+input.decision);
     if(input.decision==='RESERVE'){
@@ -153,3 +153,4 @@ export class MeetingLiveConsensusService{
   async get(groupId:string,meetingId:string,cellKey:string){const ctx=this.kernel.context.get(),r=await this.repo.getWorkspaceRecord(ctx.tenantId,idFor(groupId,meetingId,cellKey));return r?parse(r):undefined;}
   async list(groupId:string,meetingId:string){const ctx=this.kernel.context.get();return (await this.repo.listWorkspaceRecords(ctx.tenantId,MODULE,groupId)).map(parse).filter(x=>x.meetingId===meetingId);}
 }
+

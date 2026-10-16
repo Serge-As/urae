@@ -2,10 +2,11 @@ const node=(tag,text,cls)=>{const e=document.createElement(tag);if(text!==undefi
 export function createFinancialWorkUI({app,tx,notify,summary,edit,resume,isLiveConnected=()=>false}){
   const modes=new Map(),passages=new Map();let current=null,busy=null;
   const scope=(meetingId)=>JSON.stringify([app.currentActor(),app.activeGroup(),meetingId]);
-  const prompt=({title,content,actions})=>new Promise(resolve=>{
+  const prompt=({title,content,actions,loading})=>new Promise(resolve=>{
     const previous=document.activeElement,d=node('dialog',undefined,'eco-work-dialog');d.append(node('h2',title));if(content)d.append(content);
     const controls=node('div',undefined,'eco-work-actions');for(const action of actions){const b=node('button',action.label,action.primary?'primary':'secondary');b.type='button';if(action.value===false)b.dataset.return='1';b.onclick=()=>{d.close();d.remove();previous?.focus?.();resolve(action.value);};controls.append(b);}d.append(controls);
     d.addEventListener('cancel',()=>{d.remove();resolve(null);},{once:true});document.body.append(d);d.showModal();
+    if(loading){for(const b of controls.querySelectorAll('button'))b.disabled=true;void loading(content).then(()=>{for(const b of controls.querySelectorAll('button'))b.disabled=false;}).catch(error=>{content.replaceChildren(node('p',tx('La synthèse ne peut pas encore être chargée. Vos saisies validées sont conservées. Réessayez.','The summary cannot be loaded yet. Your confirmed entries are saved. Please retry.')));for(const b of controls.querySelectorAll('[data-return]'))b.disabled=false;notify(String(error.message));});}
   });
   const toolbar=()=>{
     const hosts=[...document.querySelectorAll('[data-canonical-financial-host="1"][data-canonical-table-ready="1"]')];
@@ -29,16 +30,22 @@ export function createFinancialWorkUI({app,tx,notify,summary,edit,resume,isLiveC
   };
   const finish=async()=>{
     if(!current)return true;const selected={...current},key=JSON.stringify([scope(selected.meetingId),selected.membershipId]),changed=passages.get(key)??new Set();
-    if(navigator.onLine!==false)await resume();
-    const data=await summary(selected.meetingId,selected.membershipId,[...changed]);const table=node('table',undefined,'eco-work-summary');const head=node('tr');for(const label of [tx('Rubrique','Category'),tx('Avant la séance','Before meeting'),tx('Séance actuelle','Current meeting'),tx('Total','Total'),tx('Action','Action')])head.append(node('th',label));const thead=node('thead');thead.append(head);table.append(thead);const body=node('tbody');
-    let modified=null;for(const row of data.lines){const tr=node('tr');for(const value of [row.rubricName,row.before,row.current,row.total])tr.append(node('td',typeof value==='number'?new Intl.NumberFormat('fr-CM').format(value)+' F CFA':value));const td=node('td'),b=node('button',tx('Modifier','Change'),'secondary');b.type='button';b.onclick=()=>{modified=row.rubricId;table.closest('dialog')?.querySelector('[data-return]')?.click();};td.append(b);tr.append(td);body.append(tr);}const total=node('tr',undefined,'table-total-row');total.append(node('th',tx('Total des flux affichés','Total displayed flows')));for(const key of ['before','current','total'])total.append(node('td',new Intl.NumberFormat('fr-CM').format(data.totals[key])+' F CFA'));total.append(node('td',''));body.append(total);table.append(body);
-    const content=node('div');if(data.local)content.append(node('p',tx('Cette synthèse présente les saisies enregistrées sur cet appareil. La connexion permettra de les partager.','This summary shows entries saved on this device. A connection will share them.')));content.append(node('p',tx('Vérifiez les montants. Le total ci-dessous additionne les flux affichés ; il ne représente pas le solde de caisse ni la dette.','Check the amounts. This total sums displayed flows; it is not the cash balance or debt.')),table);
-    const result=await prompt({title:tx('Synthèse du membre avant de continuer','Review member before continuing'),content,actions:[{label:tx('Valider la synthèse et continuer','Confirm summary and continue'),value:true,primary:true},{label:tx('Revenir à la saisie','Return to entry'),value:false}]});
+    let data,modified=null;const content=node('div');content.append(node('p',tx('Préparation de la synthèse… Les montants validés sont déjà enregistrés sur cet appareil.','Preparing summary… Confirmed amounts are already saved on this device.')));
+    // Open synchronously on the other member's focus, before a network wait or
+    // any typing. The modal never gates persistence of a previous validation.
+    const result=await prompt({title:tx('Synthèse du membre avant de continuer','Review member before continuing'),content,actions:[{label:tx('Valider la synthèse et continuer','Confirm summary and continue'),value:true,primary:true},{label:tx('Revenir à la saisie','Return to entry'),value:false}],loading:async()=>{
+      if(navigator.onLine!==false)await resume();
+      data=await summary(selected.meetingId,selected.membershipId,[...changed]);const table=node('table',undefined,'eco-work-summary');const head=node('tr');for(const label of [tx('Rubrique','Category'),tx('Avant la séance','Before meeting'),tx('Séance actuelle','Current meeting'),tx('Total','Total'),tx('Action','Action')])head.append(node('th',label));const thead=node('thead');thead.append(head);table.append(thead);const body=node('tbody');
+      for(const row of data.lines){const tr=node('tr');for(const value of [row.rubricName,row.before,row.current,row.total])tr.append(node('td',typeof value==='number'?new Intl.NumberFormat('fr-CM').format(value)+' F CFA':value));const td=node('td'),b=node('button',tx('Modifier','Change'),'secondary');b.type='button';b.onclick=()=>{modified=row.rubricId;table.closest('dialog')?.querySelector('[data-return]')?.click();};td.append(b);tr.append(td);body.append(tr);}const total=node('tr',undefined,'table-total-row');total.append(node('th',tx('Total des flux affichés','Total displayed flows')));for(const key of ['before','current','total'])total.append(node('td',new Intl.NumberFormat('fr-CM').format(data.totals[key])+' F CFA'));total.append(node('td',''));body.append(total);table.append(body);
+      content.replaceChildren();if(data.local)content.append(node('p',tx('Cette synthèse présente les saisies enregistrées sur cet appareil. La connexion permettra de les partager.','This summary shows entries saved on this device. A connection will share them.')));content.append(node('p',tx('Vérifiez les montants. Le total ci-dessous additionne les flux affichés ; il ne représente pas le solde de caisse ni la dette.','Check the amounts. This total sums displayed flows; it is not the cash balance or debt.')),table);
+    }});
     if(modified){edit(selected,modified);return false;}if(!result)return false;
     await app.closeFinancialPassage(selected.meetingId,selected.membershipId,data.lines.map(x=>({rubricId:x.rubricId,amount:Math.abs(x.current),cellVersion:x.cellVersion})));current=null;passages.delete(key);void resume();toolbar();return true;
   };
   const before=async(meetingId,membershipId,rubricId)=>{
-    if(busy)return false;if(current&&(current.groupId!==app.activeGroup()||current.actorId!==app.currentActor()))current=null;busy=(async()=>{if(current&&(current.meetingId!==meetingId||current.membershipId!==membershipId)&&!await finish())return false;
+    // A fast validation during the member review must await it, never silently
+    // become an uncommitted draft because a focus handler already set busy.
+    if(busy&&!await busy)return false;if(current&&(current.groupId!==app.activeGroup()||current.actorId!==app.currentActor()))current=null;busy=(async()=>{if(current&&(current.meetingId!==meetingId||current.membershipId!==membershipId)&&!await finish())return false;
       const mode=await choose(meetingId);if(!mode)return false;current={meetingId,membershipId,groupId:app.activeGroup(),actorId:app.currentActor()};app.beginFinancialPassage(meetingId,membershipId,mode);const key=JSON.stringify([scope(meetingId),membershipId]),set=passages.get(key)??new Set();set.add(rubricId);passages.set(key,set);toolbar();return true;})();try{return await busy;}finally{busy=null;}
   };
   window.addEventListener('eco:live-signal',e=>{if(e.detail?.type==='WORK_MODE_PROPOSAL'&&current&&e.detail.payload?.meetingId===current.meetingId&&!busy)notify(tx('Plusieurs gestionnaires saisissent cette séance : vous pouvez activer le mode Réunion.','Several managers are entering this meeting: Meeting mode is available.'));});
@@ -46,7 +53,8 @@ export function createFinancialWorkUI({app,tx,notify,summary,edit,resume,isLiveC
   window.addEventListener('eco:live-connected',toolbar);
   window.addEventListener('eco:live-disconnected',toolbar);
   window.addEventListener('offline',toolbar);
-  const visit=async(meetingId,membershipId)=>{if(!current||current.groupId!==app.activeGroup()||current.actorId!==app.currentActor()||current.meetingId===meetingId&&current.membershipId===membershipId||busy)return;busy=finish();try{await busy;}finally{busy=null;}};
-  return{before,finish,toolbar,visit};
+  const needsReview=(meetingId,membershipId)=>Boolean(current&&current.groupId===app.activeGroup()&&current.actorId===app.currentActor()&&(current.meetingId!==meetingId||current.membershipId!==membershipId));
+  const visit=async(meetingId,membershipId)=>{if(busy)return busy;if(!needsReview(meetingId,membershipId))return true;busy=finish();try{return await busy;}finally{busy=null;}};
+  return{before,finish,toolbar,visit,needsReview};
 }
 
