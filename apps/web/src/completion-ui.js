@@ -307,7 +307,11 @@ export const mountCompletionUI=({app,notify,showError,getMembers,getMeetings,get
           if(state==='DISBURSED'||state==='REPAYING'){const b=document.createElement('button');b.type='button';b.textContent=tr('Rembourser capital','Repay principal');b.onclick=()=>void run(null,async()=>{const raw=window.prompt(tr('Capital remboursé :','Principal repaid:'),'10000');if(raw===null)return;const amount=Number(raw);if(!Number.isSafeInteger(amount)||amount<=0)throw Error('INVALID_LOAN_REPAYMENT');await app.repayLoan(loan.id,{principalAmount:amount,expectedVersion:primitiveVersion(loan)});await renderLoans();});actions.append(b);}
           actionCell.append(actions);row.append(actionCell);body.append(row);
         }
-        table.append(body);wrap.append(table);root.append(wrap);
+        table.append(body);wrap.append(table);
+        const view=document.createElement('div');view.className='debt-table-view-controls actions';view.setAttribute('aria-label',tr('Affichage du portefeuille','Portfolio display'));
+        const selector=document.createElement('select');selector.setAttribute('aria-label',tr('Partie du portefeuille de prêts','Loan portfolio section'));
+        for(const [id,label] of [['all',tr('Vue intégrale','Complete view')],['1',tr('Partie 1 / 2 · identification et accord','Part 1 / 2 · identity and approval')],['2',tr('Partie 2 / 2 · dette et actions','Part 2 / 2 · debt and actions')]])selector.append(option(id,label));
+        selector.onchange=()=>{wrap.dataset.debtPart=selector.value;};view.append(selector);root.append(view,wrap);
       }
     }
     await renderLoanDebtRecap();
@@ -481,3 +485,4 @@ export const mountCompletionUI=({app,notify,showError,getMembers,getMeetings,get
   const setLocale=()=>{fillCompletionKinds();void refresh().catch(showError);};
   return{refresh,setLocale};
 };
+

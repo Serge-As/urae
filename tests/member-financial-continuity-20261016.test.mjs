@@ -79,3 +79,21 @@ test('global repayment position pays existing loans and due special debts once a
   const entries=await repo.listLedgerEntries('t','g');assert.equal(entries.length,3);await apply('repay-last',3000,4000,1000,p.cellVersion);assert.deepEqual(await repo.listLedgerEntries('t','g'),entries);
   p=await position();await assert.rejects(apply('after-clearing',1,4001,4000,p.cellVersion),/MEMBER_DEBT_SETTLED/);
 });
+
+test('canonical tontine participation rejects a nonparticipant, accounts for two shares and carries advance without another receipt',async()=>{
+  const {repo,request}=await fixture(),stamp='2026-10-01T08:00:00Z';
+  await repo.saveRubricDefinition({id:'ton',tenantId:'t',groupId:'g',name:'Tontine de test',facets:{direction:'INFLOW',obligation:'OPTIONAL',custom:{systemKey:'TONTINE'}},activityPlan:{kind:'TONTINE',nominalAmount:{currency:'XAF',amount:100},amountBasis:'PER_SHARE',participationMode:'OPTIONAL'},status:'ACTIVE',source:'GROUP_CUSTOM',createdAt:stamp});
+  const position=(meeting='s')=>request('a','/financial-entry-position?meetingId='+meeting+'&membershipId=m-a&rubricId=ton');
+  const pay=(meeting,targetAmount,version=0,current=0,reason='Cotisation')=>request('a','/meetings/'+meeting+'/financial-cells','POST',{membershipId:'m-a',rubricId:'ton',targetAmount,expectedCurrentAmount:current,expectedCellVersion:version,reason,idempotencyKey:'ton-'+meeting+'-'+targetAmount});
+  assert.equal((await position()).eligible,false);await assert.rejects(pay('s',100),/TONTINE_NOT_PARTICIPATING/);assert.equal((await repo.listLedgerEntries('t','g')).length,0);
+  await request('a','/members/m-a/participations','POST',{rubricId:'ton',status:'ACTIVE',shareCount:2});
+  for(let i=1;i<=6;i++){await repo.saveMeeting({id:'s'+i,tenantId:'t',groupId:'g',title:'Séance '+i,status:'open',scheduledAt:'2026-10-0'+i+'T08:00:00Z',openedAt:stamp,openedBy:'a'});if(i<=4)await pay('s'+i,200);}
+  let p=await position();assert.equal(p.periodic,200);assert.equal(p.expectedCumulative,1400);assert.equal(p.arrearsBefore,400);assert.equal(p.remainingDue,600);
+  const partial=await pay('s',250);p=await position();assert.equal(p.remainingDue,350);
+  await assert.rejects(pay('s',850,partial.cellVersion,250,'Surplus non déclaré'),/TONTINE_ADVANCE_DECLARATION_REQUIRED/);
+  await pay('s',850,partial.cellVersion,250,'[AVANCE] Rappel et avance confirmés');p=await position();assert.equal(p.advance,250);assert.equal(p.remainingDue,0);
+  const ledgerBefore=await repo.listLedgerEntries('t','g');await repo.saveMeeting({id:'s8',tenantId:'t',groupId:'g',title:'Séance 8',status:'open',scheduledAt:'2026-11-01T08:00:00Z',openedAt:stamp,openedBy:'a'});
+  p=await position('s8');assert.equal(p.coveredByAdvance,200);assert.equal(p.advance,50);assert.equal(p.currentCash,0);assert.deepEqual(await repo.listLedgerEntries('t','g'),ledgerBefore);
+  const group=await repo.getGroup('t','g');await repo.saveGroup({...group,kind:'rotating_tontine'});const handler=createApiHandler(repo),response=await handler(new Request('https://test.local/api/v1/groups/g/financial-entry-position?meetingId=s&membershipId=m-b&rubricId=ton',{headers:{'x-tenant-id':'t','x-actor-id':'a','x-group-roles':'manager','x-active-group-id':'g'}}));
+  const automatic=await response.json();assert.equal(response.status,200);assert.equal(automatic.eligible,true);assert.equal(automatic.participationSource,'GROUP_DEFAULT');
+});

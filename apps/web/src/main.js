@@ -95,6 +95,7 @@ let financialCellVersions = new Map();
 let financialCellMetadata = new Map();
 let financialDurableProjections=new Map(),financialSnapshotCellVersions=new Map();
 let financialReviewInbox=new Map();
+let financialApprovedReviewVersions=new Map();
 // Ephemeral indicators are local projections only. No draft amounts are sent
 // over Live or stored on the server, and this map is never a financial authority.
 const remoteFinancialDrafts=new Map();
@@ -122,7 +123,7 @@ const FINANCIAL_DRAFT_STORAGE='eco.financialCellDrafts.v2';
 const financialScopedStorageKey=base=>base+':'+JSON.stringify([String(app.currentActor?.()??''),String(app.activeGroup?.()??'')]);
 const ensureFinancialStorageScope=()=>{
   const scope=financialScopedStorageKey('scope');if(scope===financialStorageScope)return;
-  financialStorageScope=scope;financialConfirmedCells.clear();financialCellDrafts.clear();
+  financialStorageScope=scope;financialConfirmedCells.clear();financialCellDrafts.clear();financialReviewInbox.clear();financialApprovedReviewVersions.clear();
   try{for(const [k,v] of Object.entries(JSON.parse(localStorage.getItem(financialScopedStorageKey(FINANCIAL_CONFIRMED_STORAGE))||'{}')))financialConfirmedCells.set(k,v);}catch{}
   try{for(const [k,v] of Object.entries(JSON.parse(sessionStorage.getItem(financialScopedStorageKey(FINANCIAL_DRAFT_STORAGE))||'{}')))financialCellDrafts.set(k,String(v));}catch{}
   for(const actors of remoteFinancialDrafts.values())for(const row of actors.values())clearTimeout(row.timer);
@@ -834,7 +835,7 @@ const hydrateRelayFinancialReviews=async()=>{
 const loadFinancialProjectionState=async({clearOptimistic=false}={})=>{
     ensureFinancialStorageScope();
     const [l,sheetEvents,sheetExpenses,reviewSnapshot]=await Promise.all([app.ledger(),app.listWorkspaceRecords('FINANCE.SHEET_EVENT',app.activeGroup()).catch(()=>[]),app.expenses({scope:'SHEET'}).catch(()=>[]),app.financialCellSnapshot().catch(()=>null)]);
-    if(reviewSnapshot)financialReviewInbox=new Map(reviewSnapshot.cells.filter(x=>x.reviewRequired).map(x=>[financialCellKey(x.membershipId,x.rubricId,x.meetingId),x]));
+    if(reviewSnapshot){financialReviewInbox=new Map(reviewSnapshot.cells.filter(x=>x.reviewRequired).map(x=>[financialCellKey(x.membershipId,x.rubricId,x.meetingId),x]));financialApprovedReviewVersions=new Map(reviewSnapshot.cells.filter(x=>x.reviewDecision==='APPROVE').map(x=>[financialCellKey(x.membershipId,x.rubricId,x.meetingId),Number(x.cellVersion)]));}
     receiptPositions=l.receipts;
     const localTargets=app.pendingFinancialCellTargets?.()??[],relayTargets=await app.relayManagerFinancialTargets?.().catch?.(()=>[])??[];
     financialPendingTargets=new Map(localTargets.map(x=>[financialCellKey(x.membershipId,x.rubricId,x.meetingId),x]));
@@ -1128,7 +1129,7 @@ const pollCanonicalFinancialSnapshot=async()=>{
       }else if(financialSnapshotPrimed&&previous!==signature&&!cellHasPendingLocal(row)){
         financialOptimisticValues.delete(key);
         patchFinancialDomCell({meetingId:row.meetingId,membershipId:row.membershipId,rubricId:row.rubricId,amount:canonicalAmount,cellVersion:Number(row.cellVersion??0),remote:true});
-        highlightRemoteFinancialCell({meetingId:row.meetingId,membershipId:row.membershipId,rubricId:row.rubricId,newAmount:Math.abs(canonicalAmount),cellVersion:Number(row.cellVersion??0),actorId:String(row.actorId??''),actorName:row.actorId?actorDisplayName(String(row.actorId)):tx('Autre gestionnaire','Another manager'),operationType:'CANONICAL_SNAPSHOT'});
+        if(row.reviewRequired)highlightRemoteFinancialCell({meetingId:row.meetingId,membershipId:row.membershipId,rubricId:row.rubricId,newAmount:Math.abs(canonicalAmount),cellVersion:Number(row.cellVersion??0),actorId:String(row.actorId??''),actorName:row.actorId?actorDisplayName(String(row.actorId)):tx('Autre gestionnaire','Another manager'),operationType:'CANONICAL_SNAPSHOT'});
       }
     }
     financialSnapshotState.clear();for(const [k,v] of next)financialSnapshotState.set(k,v);financialSnapshotPrimed=true;
@@ -1143,7 +1144,9 @@ const ensureFinancialSnapshotPolling=()=>{
 };
 
 let financialWorkUI;
+const financialLocalSubmissions=new Map();
 const ensureFinancialWorkUI=()=>financialWorkUI??=createFinancialWorkUI({app,tx,notify:toast,resume:()=>resumeOnline(),isLiveConnected:()=>liveChannelConnected,
+  waitForEntries:async(meetingId,membershipId)=>{await Promise.all([...financialLocalSubmissions.values()].filter(x=>x.meetingId===meetingId&&x.membershipId===membershipId).map(x=>x.done));},
   summary:async(meetingId,membershipId,ids)=>{
     try{if(navigator.onLine===false)throw Error('LOCAL_SUMMARY_REQUIRED');const data=await app.financialPassageSummary(meetingId,membershipId,ids);if(data.projectionSource==='LOCAL_CACHE')throw Error('LOCAL_SUMMARY_REQUIRED');return data;}catch(e){if(e.message!=='LOCAL_SUMMARY_REQUIRED'&&navigator.onLine!==false&&!app.serverBudgetState?.().blocked)throw e;
       const ordered=meetings.filter(x=>x.status!=='cancelled').slice().sort((a,b)=>String(a.scheduledAt??a.openedAt).localeCompare(String(b.scheduledAt??b.openedAt))),beforeIds=ordered.slice(0,ordered.findIndex(x=>x.id===meetingId)).map(x=>x.id);
@@ -1172,6 +1175,7 @@ const submitFinancialCellElement=async validate=>{
     const clearRemoteDraft=()=>{void Promise.resolve(identityLiveUI.publishSignal?.('FINANCIAL_DRAFT_CLEAR',{kind:'FINANCIAL_CELL',meetingId,membershipId,rubricId})).catch(()=>{});};
     if(holder.dataset.submitting==='1'){traceFinancialCell('CELL_SUBMIT_BUSY',{cellKey});return;}
     holder.classList.remove('is-conflict');holder.dataset.submitting='1';
+    let localComplete;const localSubmission={meetingId,membershipId,done:new Promise(resolve=>{localComplete=resolve;})};financialLocalSubmissions.set(cellKey,localSubmission);
     const nature=financialNatureForRubric(rubric),signedCurrent=exactCellAmount(membershipId,rubricId,meetingId),current=Math.abs(signedCurrent),previousIcon=validate.textContent;
     let target=Number.NaN,optimisticStaged=false;
     const setCellState=(state,message='')=>{
@@ -1315,6 +1319,7 @@ const submitFinancialCellElement=async validate=>{
       if(optimisticStaged)patchFinancialDomCell({meetingId,membershipId,rubricId,amount:signedCurrent,preservePending:false});
       setCellState('FAILED',tx('Échec : ','Failed: ')+code);fail(e);
     }finally{
+      localComplete();if(financialLocalSubmissions.get(cellKey)===localSubmission)financialLocalSubmissions.delete(cellKey);
       delete holder.dataset.submitting;validate.disabled=false;input.disabled=false;validate.textContent=previousIcon;holder.classList.remove('is-saving');
     }
 };
@@ -2292,6 +2297,7 @@ const resolveFinancialReviewProjection=detail=>{
   if(detail.actorId!==app.currentActor()||detail.groupId!==app.activeGroup()||detail.decision!=='APPROVE')return;
   const key=financialCellKey(detail.membershipId,detail.rubricId,detail.meetingId),pending=financialReviewInbox.get(key);
   if(pending&&Number(pending.cellVersion)>Number(detail.cellVersion))return;
+  financialApprovedReviewVersions.set(key,Number(detail.cellVersion));
   financialReviewInbox.delete(key);
   for(const cell of document.querySelectorAll(financialLiveSelector(detail))){
     if(Number(cell.dataset.remoteVersion??0)>Number(detail.cellVersion))continue;
@@ -2342,6 +2348,7 @@ const acknowledgeRemoteFinancialCell=button=>{
 const highlightRemoteFinancialCell=(p={})=>{
     const selector=financialLiveSelector(p);if(!selector)return;
     if(!applyRemoteFinancialProjection(p))return;
+    if(Number(financialApprovedReviewVersions.get(financialCellKey(p.membershipId,p.rubricId,p.meetingId))??-1)>=Number(p.cellVersion))return;
     if(p.actorId&&p.actorId!==app.currentActor()){
       const key=financialCellKey(p.membershipId,p.rubricId,p.meetingId),old=financialReviewInbox.get(key);
       if(!old||Number(old.cellVersion)<=Number(p.cellVersion))financialReviewInbox.set(key,{...p,amount:Number(p.newAmount)});

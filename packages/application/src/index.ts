@@ -1474,6 +1474,7 @@ export class ConnectedApplication {
     const path=`/api/v1/groups/${encodeURIComponent(groupId)}/financial-live-cells/${encodeURIComponent(key)}`;
     const saved=await this.readSnapshots.saveVersionedCell({id:JSON.stringify([actorId,tenantId,groupId,path]),actorId,tenantId,path,body,source:'SERVER',sourceVersion:cellVersion,lastSyncedAt:new Date().toISOString()});
     const cells=this.liveFinancialCells.get(scope)??new Map();cells.set(key,saved.body);this.liveFinancialCells.set(scope,cells);
+    if(this.actorId!==actorId||this.tenantId!==tenantId||this.activeGroupId!==groupId)return structuredClone(saved.body);
     const snapshotPath='/api/v1/groups/'+encodeURIComponent(groupId)+'/financial-cells/snapshot',snapshot=await this.cached<any>(snapshotPath)??{cells:[]};
     const previous=(snapshot.cells??[]).find((x:any)=>x.meetingId===body.meetingId&&x.membershipId===body.membershipId&&x.rubricId===body.rubricId);
     if(!previous||Number(previous.cellVersion)<saved.body.cellVersion){
