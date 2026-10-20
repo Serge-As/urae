@@ -19,7 +19,9 @@ Qualification locale déjà observée : 744/744 tests Node, six nouveaux contrô
 
 Incidents rencontrés et traités avant publication : boucle de notification de langue corrigée par comparaison de la valeur ; Échap du champ de recherche ne doit pas demander deux pressions pour fermer ; dialogue retiré du DOM quand fermé afin de préserver les sélecteurs des autres dialogues ; fixture financière sélectionnant le groupe par le sélecteur autorisé ; attente d'un résultat de recherche avant l'action clavier pour éviter une course avec la restauration initiale.
 
-La compilation finale et les suites complètes Chromium/WebKit restent à inscrire après résultat. La livraison n'est pas encore attestée par ce document candidat. La publication est conditionnée aux contrôles du workflow de production, à la sauvegarde D1 restaurée avec intégrité, à la relecture privée R2 et à la comparaison publique des onze ressources servies avec le SHA livré, dont le nouveau module de navigation.
+La compilation finale ferme le graphe PWA (73 ressources initiales et 38 imports transitifs). Les deux qualifications GitHub indépendantes [39401856044](https://github.com/Serge-As/urae/actions/runs/39401856044) et [39401856043](https://github.com/Serge-As/urae/actions/runs/39401856043) réussissent sur le même code `611baffaba9f937d8fe9ae413b67bd7753f8f15f` : 744 tests natifs, 17 scénarios Chromium existants et 6 WebKit. Les trois scénarios de navigation ajoutés passent localement. Le workflow de livraison exige les 20 Chromium sur son SHA exact. Un accès facultatif à un sélecteur financier monté progressivement a également été corrigé pour préserver le chargement de la feuille.
+
+La livraison n'est pas encore attestée par ce document candidat. La publication est conditionnée aux contrôles du workflow de production, à la sauvegarde D1 restaurée avec intégrité, à la relecture privée R2 et à la comparaison publique des onze ressources servies avec le SHA livré, dont le nouveau module de navigation.
 
 ## Récupération et invariants
 

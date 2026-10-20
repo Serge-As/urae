@@ -1,24 +1,23 @@
-Eco-System 1.5.2.19 production member continuity delivery authorized
-release: 1.5.2.19-member-continuity
-date: 2026-10-16
+Eco-System 1.5.2.20 lot 01 navigation delivery authorized
+release: 1.5.2.20-navigation-coherence
+date: 2026-10-20
 db_mutation: none
 mode: code-only-with-verified-readonly-backup-no-migration
-qualified_source: 76689dcdf70d58788ffa30f897b36e63457d728c
-merged_source: 9551f9d5363ea30ba532ea6b12239fe91b387705
-qualification: two independent successful workflows
-native: 738 PASS
-chromium: 17 PASS required and qualified
-webkit: 6 PASS required and qualified
-qualification_runs: 38918515304 38918515190
-production_ancestry: preserve 70e376d9524b4646b1756482f7d7bf2713e3925d and all prior deliveries
+qualified_source: 611baffaba9f937d8fe9ae413b67bd7753f8f15f
+qualification: two independent successful workflows on qualified_source
+native: 744 PASS
+chromium: 17 existing scenarios PASS in both independent workflows; 3 added navigation scenarios PASS locally; all 20 mandatory on deployment SHA
+webkit: 6 PASS in both independent workflows; mandatory again on deployment SHA
+qualification_runs: 39401856044 39401856043
+production_ancestry: preserve 5e7044ee2a8c346c0a36f905d74d41a2a2dfab0d and all prior deliveries
 backup: mandatory D1 export, verified SQLite restore, private R2 archive download/hash before deploy
 storage: existing eco-system-db and eco-system-backups, no replacement or migration
 financial_signing: preserve existing key, never rotate, provision only proven absent first key after backup
 real_money_enabled: false
 field_acceptance: NOT_ACCEPTED
 historical_pr72_hold: preserved; no merge or override of PR72
-trigger_nonce: 2026-10-16-member-continuity-qualified-738-17-6
-authorization: current user explicitly requested repair, implementation and production deployment
-scope: immediate previous-member summary, durable exact review, canonical global due repayments, tontine participation shares arrears advances, personal directory authorization and complete readable loan sections
+trigger_nonce: 2026-10-20-lot01-navigation-qualified-744-20-6
+authorization: current user explicitly requested implementation and production deployment, then continuation by priority
+scope: contextual shell navigation, existing-route menu, local bilingual search, account/group favorites, keyboard access and financial draft/focus continuity
 qualification_same_deployment_sha: mandatory full gates before publication, no relaxation
-public_verification: exact health catalog release plus SHA-256 comparison of ten deployed PWA assets with same-SHA build
+public_verification: exact health catalog release plus SHA-256 comparison of eleven deployed PWA assets with same-SHA build
