@@ -17,6 +17,7 @@ import { buildExerciseClosingPlan, buildExerciseCarryForwardSeed, type ExerciseC
 import { buildNumpadRubricCodes, parseEcoNumpad, type NumpadCode, type NumpadDraft } from '../../eco-numpad/src/index.js';
 import { createRelayPairingMaterial, encryptMemberCapsule, decryptMemberCapsule, createBroadcastBundle, encodeBroadcastFrames, encodeTargetedBroadcastFrames, type EcoMemberCapsule, type EcoRelayPairingMaterial, type EcoBroadcastBundle } from '../../relay/src/broadcast.js';
 import {browserWindowScope} from './browser-window-scope.js';
+import {RequestBudgetMonitor,canCoalesceSecondaryRead,type RequestBudgetToken} from './request-budget.js';
 
 export const KERNEL_SERVICE_IDS = [
   'kernelContext','kernelPolicy','kernelWorkflow','kernelEvents','kernelAudit','kernelObligations','kernelEvidence','kernelReconciliation','kernelInbox','kernelCases','kernelNotifications','kernelConfiguration','kernelFeatures','kernelGovernance','kernelCompatibility','kernelResourceGovernor','kernelOutbox','kernelRelay'
@@ -101,6 +102,16 @@ export interface FinancialLiveCellProjection {
 }
 
 export class ConnectedApplication {
+  private readonly requestMeter=new RequestBudgetMonitor();
+  private readonly secondaryReads=new Map<string,Promise<unknown>>();
+  private secondaryReadGeneration=0;
+  private coalesceSecondaryReads=true;
+  private requestMeasurementScope():string{return JSON.stringify([this.actorId,this.tenantId,this.activeGroupId??'',this.windowSessionId??'']);}
+  startRequestMeasurement(budget=100):void{this.requestMeter.syncScope(this.requestMeasurementScope());this.requestMeter.reset(true,budget);}
+  stopRequestMeasurement():void{this.requestMeter.stop();}
+  clearRequestMeasurement():void{this.requestMeter.reset(false);}
+  requestMeasurement(){this.requestMeter.syncScope(this.requestMeasurementScope());return{...this.requestMeter.snapshot(),secondaryReadCoalescing:this.coalesceSecondaryReads};}
+  setSecondaryReadCoalescing(enabled:boolean):void{this.coalesceSecondaryReads=enabled===true;this.secondaryReadGeneration++;this.secondaryReads.clear();}
   private readonly kernel = new PlatformKernel();
   private readonly outbox = new Outbox();
   private readonly outboxStorage = new IndexedDbOutboxAdapter();
@@ -369,6 +380,23 @@ export class ConnectedApplication {
     await this.saveCached(path,rows.map(x=>x.id===noticeId?updated:x));return updated;
   }
   private async request<T>(path:string,init:RequestInit={}):Promise<T>{
+    const method=String(init.method??'GET').toUpperCase(),scope=this.requestMeasurementScope();
+    this.requestMeter.syncScope(scope);const token=this.requestMeter.start(path,method);
+    if(method!=='GET'){this.secondaryReadGeneration++;this.secondaryReads.clear();}
+    const eligible=this.coalesceSecondaryReads&&canCoalesceSecondaryRead(path,init),
+      key=JSON.stringify([scope,this.locale,this.secondaryReadGeneration,path]);
+    const existing=eligible?this.secondaryReads.get(key):undefined;
+    let work:Promise<T>|undefined;
+    try{
+      if(existing){this.requestMeter.coalesced(token);const body=structuredClone(await existing) as T;this.requestMeter.finish(token,true);return body;}
+      work=this.requestOnce<T>(path,init,token);
+      if(eligible&&this.secondaryReads.size<64)this.secondaryReads.set(key,work);
+      const body=await work;this.requestMeter.finish(token,true);
+      return eligible?structuredClone(body):body;
+    }catch(error){this.requestMeter.finish(token,false);throw error;}
+    finally{if(work&&this.secondaryReads.get(key)===work)this.secondaryReads.delete(key);}
+  }
+  private async requestOnce<T>(path:string,init:RequestInit={},measurement:RequestBudgetToken|null=null):Promise<T>{
     const origin={id:this.offlineReadKey(path),actorId:this.actorId,tenantId:this.tenantId};
     await this.windowSessionReady;
     const headers=new Headers(this.headers());
@@ -381,13 +409,13 @@ export class ConnectedApplication {
     const recoveryControl=/\/(?:live\/ticket|financial-clock-anchor)$/.test(path);
     if(!securityCritical&&!recoveryControl&&this.transportUnavailableUntil>Date.now()){
       if(cacheable&&IndexedDbReadSnapshotAdapter.supported()){
-        try{const snapshot=await this.readSnapshots.get<T>(this.offlineReadKey(path));if(snapshot){this.announceOfflineSnapshot(path,snapshot.updatedAt);return structuredClone(snapshot.body);}}catch{}
+        try{const snapshot=await this.readSnapshots.get<T>(this.offlineReadKey(path));if(snapshot){this.requestMeter.local(measurement);this.announceOfflineSnapshot(path,snapshot.updatedAt);return structuredClone(snapshot.body);}}catch{}
       }
       throw new Error('NETWORK_UNAVAILABLE');
     }
     if(this.serverBudgetBlocked()){
       if(cacheable&&IndexedDbReadSnapshotAdapter.supported()){
-        try{const snapshot=await this.readSnapshots.get<T>(this.offlineReadKey(path));if(snapshot){this.announceOfflineSnapshot(path,snapshot.updatedAt);return structuredClone(snapshot.body);}}catch{}
+        try{const snapshot=await this.readSnapshots.get<T>(this.offlineReadKey(path));if(snapshot){this.requestMeter.local(measurement);this.announceOfflineSnapshot(path,snapshot.updatedAt);return structuredClone(snapshot.body);}}catch{}
       }
       throw new Error('NETWORK_UNAVAILABLE');
     }
@@ -404,6 +432,7 @@ export class ConnectedApplication {
     const abort=typeof AbortController==='function'?new AbortController():null;
     let requestTimer:ReturnType<typeof setTimeout>|undefined;
     try{
+      this.requestMeter.network(measurement);
       const send=fetch(`${this.baseUrl}${path}`,{...init,headers,...(abort?{signal:abort.signal}:{})});
       response=await Promise.race([send,new Promise<Response>((_,reject)=>{
         requestTimer=setTimeout(()=>{abort?.abort();reject(new Error('NETWORK_UNAVAILABLE'));},timeoutMs);
@@ -411,11 +440,12 @@ export class ConnectedApplication {
     }catch(error){
       this.markTransportUnavailable();
       if(cacheable&&IndexedDbReadSnapshotAdapter.supported()){
-        try{const snapshot=await this.readSnapshots.get<T>(this.offlineReadKey(path));if(snapshot){this.announceOfflineSnapshot(path,snapshot.updatedAt);return structuredClone(snapshot.body);}}catch{}
+        try{const snapshot=await this.readSnapshots.get<T>(this.offlineReadKey(path));if(snapshot){this.requestMeter.local(measurement);this.announceOfflineSnapshot(path,snapshot.updatedAt);return structuredClone(snapshot.body);}}catch{}
       }
       throw new Error('NETWORK_UNAVAILABLE',{cause:error});
     }finally{if(requestTimer)clearTimeout(requestTimer);}
     const body=await response.json().catch(()=>({error:`HTTP_${response.status}`}));
+    this.requestMeter.json(measurement,body);
     if(!response.ok){
       const errorCode=String((body as any)?.error??'');
       // Not every HTTP 429 is a daily D1 quota: login/security throttles must
@@ -425,7 +455,7 @@ export class ConnectedApplication {
       if(quotaSignal)this.markServerBudgetBlocked(/daily|per.day/i.test(errorCode)?429:503);
       if(response.status===429&&!quotaSignal)throw new Error(errorCode==='HTTP_429'?'RATE_LIMITED':errorCode);
       if(transient&&cacheable&&IndexedDbReadSnapshotAdapter.supported()){
-        try{const snapshot=await this.readSnapshots.get<T>(this.offlineReadKey(path));if(snapshot){this.announceOfflineSnapshot(path,snapshot.updatedAt);return structuredClone(snapshot.body);}}catch{}
+        try{const snapshot=await this.readSnapshots.get<T>(this.offlineReadKey(path));if(snapshot){this.requestMeter.local(measurement);this.announceOfflineSnapshot(path,snapshot.updatedAt);return structuredClone(snapshot.body);}}catch{}
       }
       if(transient)throw new Error('NETWORK_UNAVAILABLE');
       throw new Error(String(body.error??`HTTP_${response.status}`));

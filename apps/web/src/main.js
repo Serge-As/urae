@@ -1,6 +1,7 @@
 import {createJourneyContext,mountJourneyUI} from './journey-context.js';
 import {mountWorkspaceNavigation} from './workspace-navigation.js';
 import {mountShellNavigation} from './shell-navigation.js';
+import {mountRequestBudgetUI} from './request-budget-ui.js';
 import {createCellDictationButton,speech} from './voice-entry-ui.js';
 import {createFinancialWorkUI} from './financial-work-ui.js';
 import {createRubricEditor,readRubricEditors,describeRubricPlan,editRubricPlan} from './launch-rubrics.js';
@@ -83,6 +84,7 @@ const previewEnvironment=location.hostname==='eco-system-refonte-preview.sergemi
 const previewBadge=document.getElementById('previewEnvBadge');
 if(previewBadge)previewBadge.hidden=!previewEnvironment;
 const app = new ConnectedApplication({ locale: uiLocale });
+mountRequestBudgetUI({app,tx});
 captureRuntimeI18n(document);
 applyRuntimeLocale(uiLocale);
 installRuntimeI18nObserver(()=>uiLocale);
@@ -181,7 +183,7 @@ let launchStudio;
 let modules = [];
 let selectedLot = 'ALL';
 let deferredInstallPrompt;
-const CAHIER_VERSION = '1.5.2.22-session-rehearsal';
+const CAHIER_VERSION = '1.5.2.23-resource-proof';
 const $ = (s) => { const e = document.querySelector(s); if (!e)
     throw new Error(`UI_ELEMENT_NOT_FOUND:${s}`); return e; };
 const val = (id) => document.getElementById(id).value.trim();

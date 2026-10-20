@@ -1,9 +1,9 @@
 {
   "name": "tontine-platform",
-  "version": "1.5.2-22",
+  "version": "1.5.2-23",
   "private": true,
   "type": "module",
-  "description": "Eco-System 1.5.2.22: preserved financial session workflows and isolated local rehearsal with complete table parts and exact member summaries.",
+  "description": "Eco-System 1.5.2.23: local request budgets, bounded simultaneous secondary-read reuse and effect-comparison evidence; canonical finance and offline guarantees preserved.",
   "engines": {
     "node": ">=24"
   },

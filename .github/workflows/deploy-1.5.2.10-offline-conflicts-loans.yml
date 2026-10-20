@@ -1,4 +1,4 @@
-name: Eco-System 1.5.2.22 — Live and Refonte Cloudflare Delivery
+name: Eco-System 1.5.2.23 — Live and Refonte Cloudflare Delivery
 
 on:
   workflow_dispatch:
@@ -20,9 +20,9 @@ env:
   ECO_SYSTEM_ROOT: https://eco-system.sergemimf.workers.dev/
   ECO_SYSTEM_HEALTH: https://eco-system.sergemimf.workers.dev/health
   ECO_SYSTEM_CATALOG: https://eco-system.sergemimf.workers.dev/api/v1/product/capabilities
-  EXPECTED_VERSION: 1.5.2.22-session-rehearsal
-  EXPECTED_BUILD: eco-system-1.5.2.22-20261020-session-rehearsal
-  EXPECTED_CACHE: eco-system-v15222-session-rehearsal-20261020
+  EXPECTED_VERSION: 1.5.2.23-resource-proof
+  EXPECTED_BUILD: eco-system-1.5.2.23-20261020-resource-proof
+  EXPECTED_CACHE: eco-system-v15223-resource-proof-20261020
   MIN_CAPABILITIES: 164
 
 jobs:
@@ -105,7 +105,7 @@ jobs:
             "https://api.github.com/repos/${GITHUB_REPOSITORY}/statuses/${GITHUB_SHA}" \
             -d '{"state":"success","context":"eco-system/gate-build","description":"Coherent PWA + Worker build passed"}' >/dev/null
       - name: Complete native financial and application regressions
-        run: npm test
+        run: node --test tests/*.test.mjs
       - name: Status · gate-targeted
         continue-on-error: true
         run: |
@@ -130,6 +130,17 @@ jobs:
             fi
             echo "::endgroup::"
           done
+      - name: Compare measured secondary savings and preserved financial effects
+        run: |
+          node scripts/compare-lot-effects.mjs artifacts/lot28-mirror-before.json artifacts/lot28-mirror-after.json
+          node scripts/compare-lot-effects.mjs artifacts/lot28-finance-mirror-before.json artifacts/lot28-finance-mirror-after.json
+      - name: Retain measured comparison evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: lot28-effect-mirror-${{ github.sha }}
+          path: artifacts/lot28-*-*.json
+          retention-days: 30
+          if-no-files-found: error
       - name: Status · gate-governed
         continue-on-error: true
         shell: bash
@@ -150,7 +161,7 @@ jobs:
           cat /tmp/eco-15210-deploy.log
           exit 1
       - name: Mandatory Chromium finance and shell qualification
-        run: npx playwright test tests/browser/financial-cell-consensus-persistence-1.5.2.6.spec.mjs tests/browser/browser-shell-mobile-1.5.2.6.spec.mjs tests/browser/sovereign-multi-manager-1.5.2.14.spec.mjs tests/browser/window-account-finance-20261010.spec.mjs tests/browser/cockpit-continuity-20261015.spec.mjs tests/browser/navigation-lot01-20261020.spec.mjs tests/browser/session-rehearsal-lot05-20261020.spec.mjs --browser=chromium --workers=1
+        run: npx playwright test tests/browser/financial-cell-consensus-persistence-1.5.2.6.spec.mjs tests/browser/browser-shell-mobile-1.5.2.6.spec.mjs tests/browser/sovereign-multi-manager-1.5.2.14.spec.mjs tests/browser/window-account-finance-20261010.spec.mjs tests/browser/cockpit-continuity-20261015.spec.mjs tests/browser/navigation-lot01-20261020.spec.mjs tests/browser/session-rehearsal-lot05-20261020.spec.mjs tests/browser/request-budget-lot28-20261020.spec.mjs --browser=chromium --workers=1
 
       - name: Status · gate-chromium
         continue-on-error: true
@@ -309,7 +320,7 @@ jobs:
           if(catalog.version!==process.env.EXPECTED_VERSION) throw new Error('CATALOG_VERSION_MISMATCH:'+catalog.version);
           if(!Array.isArray(catalog.capabilities)||catalog.count<Number(process.env.MIN_CAPABILITIES)||catalog.capabilities.length!==catalog.count) throw new Error('CAPABILITY_CATALOG_INCOMPLETE:'+catalog.count);
           console.log(JSON.stringify({version:health.version,commitSha:health.commitSha,buildId:health.buildId,pwaCache:health.pwaCache,capabilities:catalog.count,realMoneyEnabled:health.realMoneyEnabled}));
-          const files=['/','/styles.css','/sw.js','/eco-shell-manifest.json','/src/main.js','/src/financial-work-ui.js','/src/completion-ui.js','/src/ui-modes.js','/src/field-hardening.js','/src/runtime-i18n.js','/src/shell-navigation.js','/src/session-rehearsal.js'];
+          const files=['/','/styles.css','/sw.js','/eco-shell-manifest.json','/src/main.js','/src/financial-work-ui.js','/src/completion-ui.js','/src/ui-modes.js','/src/field-hardening.js','/src/runtime-i18n.js','/src/shell-navigation.js','/src/session-rehearsal.js','/src/request-budget-ui.js','/packages/application/src/index.js','/packages/application/src/request-budget.js'];
           const assets=[];
           for(const pathname of files){
             const disk='.build/public/'+(pathname==='/'?'index.html':pathname.slice(1));

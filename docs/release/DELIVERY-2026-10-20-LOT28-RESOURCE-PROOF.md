@@ -1,0 +1,39 @@
+# Lot 28 — exploitation, ressources et preuve des effets
+
+## Parcours disponible dans le candidat
+
+Dans Réglages, ouvrir « Mesurer les requêtes d’un parcours ». Fixer un plafond indicatif, démarrer, accomplir l'action habituelle, revenir, arrêter et lire les compteurs. Les compteurs séparent appels applicatifs, envois HTTP, doublons regroupés, réponses locales et erreurs. Le tableau donne six catégories fixes et les octets du JSON décodé. Export JSON local et effacement ; aucun service de télémétrie, aucune collecte périodique, aucune conservation du contenu ou de l'adresse d'une requête. Un dépassement ne bloque jamais une opération. Changer d'espace remet le compteur à zéro. Les appels déjà en cours peuvent finir après Arrêter ; le nombre encore en cours est affiché.
+
+L'interrupteur « Regrouper les lectures secondaires identiques et simultanées » permet de désactiver immédiatement ce seul gain dans la fenêtre. Le changement efface la mesure pour ne pas mélanger référence et candidat. Une nouvelle fenêtre ou un rechargement reprend la configuration normale ; il ne s'agit pas d'une préférence serveur ni d'un droit métier.
+
+## Optimisation bornée et effets conservés
+
+Quatre familles de GET, avec options par défaut seulement : catalogue produit, compteur Universe, listes Workspace et profil de conciergerie. Deux demandes rejoignent le même envoi uniquement si elles sont simultanées et ont exactement le même chemin, la même langue, le même compte, tenant, groupe et fenêtre, sans commande intermédiaire. Chaque consommateur reçoit une copie. Les promesses en cours sont bornées à 64 ; une entrée disparaît à la fin, y compris en erreur. Un GET ultérieur repart sur le transport existant. Les options explicites ne sont pas regroupées.
+
+Finance, authentification, Live, horloge signée, notifications, signaux et toutes les écritures sont exclus. Une mutation invalide les anciennes possibilités de regroupement avant son envoi ; aucun appel en cours n'est annulé. Les délais, erreurs, cache hors ligne, clés d'idempotence et confirmations appartiennent au transport actuel. Le mode gratuit étant déjà sans polling financier, le gain annoncé ne repose pas sur sa suppression.
+
+Neuf tests natifs passent localement. Référence/candidat sur six demandes et une lecture fraîche : 7 envois contre 2. Avec le véritable Worker et une SQLite synthétique, six lectures Workspace, deux commandes cash ayant la même clé et une lecture Ledger : **9 envois contre 4**, même reçu retourné deux fois, une seule écriture Ledger de 1 000 XAF, même résumé et mêmes versions. Zéro requête au repos avant/après. Ces chiffres concernent uniquement ces scénarios reproductibles ; ils ne prédisent pas un pourcentage global ni une facture. Les identifiants et dates générés de fixtures indépendantes ne sont pas comparés comme s'ils devaient être identiques ; montants, clés, répétition du même reçu, nombre d'écritures, états, versions et ordre restent significatifs. Les tests complets acquis complètent cette comparaison bornée.
+
+## Eco Mirror et pipeline
+
+`node scripts/compare-lot-effects.mjs avant.json apres.json` exige le schéma ECO_EFFECT_MIRROR_V1, un scénario nommé, l'empreinte des mêmes commandes, les effets non vides et des métriques cohérentes. Une différence métier, une écriture perdue, une hausse de requêtes au repos, une preuve absente ou l'absence de gain donne un code de sortie en échec. Le comparateur ne corrige pas les rapports et ne décide aucune opération.
+
+Les tests produisent réellement `artifacts/lot28-mirror-before.json`, `lot28-mirror-after.json`, `lot28-finance-mirror-before.json` et `lot28-finance-mirror-after.json`. La livraison compare ces sorties puis les archive sur le SHA testé. Ils contiennent exclusivement des données synthétiques. Une compilation TypeScript redondante du workflow est retirée : le premier passage natif consomme le build cohérent déjà produit. Les deux exécutions natives et tous les scénarios navigateur restent obligatoires. Le nombre de compilations baisse d'une ; les minutes économisées ne sont pas encore mesurées.
+
+## ECO-LOCK installable sans approbation inventée
+
+Le vérificateur `scripts/verify-eco-lock-approval.mjs` accepte seulement une signature Ed25519 externe portant sur dépôt, base, HEAD, chemins exacts, SHA-256 de l'analyse d'impact, rollback, signataire humain, émission et expiration. Signature absente ou altérée, autre clé, SHA, impact ou chemins, date expirée ou future : échec. Il ne contient aucune commande de signature ni clé privée.
+
+Installation proposée pour chaque dépôt : le propriétaire conserve la clé privée hors du dépôt et des agents ; il place la clé publique dans une configuration protégée hors du candidat ; le workflow de confiance calcule lui-même les SHA, chemins et l'empreinte du CIR ; après examen humain, il reçoit l'enveloppe signée et exécute `node scripts/verify-eco-lock-approval.mjs accord.json cle-publique-de-confiance.pem changement-attendu.json`. Cette vérification doit devenir un contrôle requis protégé, avec impossibilité pour le candidat de changer lui-même le workflow ou la clé. Ajouter les protections de branche/revue disponibles dans le compte et vérifier leurs possibilités réelles. Le signataire examine les inconvénients directs et indirects, les dépendances, le gain, la méthode, la recette, les données nouvelles et la récupération avant de signer.
+
+**État réel : vérificateur implémenté et testé, activation universelle non effectuée.** Une clé publique ou un workflow modifiable par le même agent ne garantit pas un contrôle humain. Les outils GitHub disponibles ici n'offrent pas l'administration des protections de tous les comptes. La demande humaine actuelle autorise ce lot dans son périmètre ; elle ne devient pas une signature cryptographique créée par l'agent. Les vérifications existantes de SHA, sauvegarde et publication restent actives indépendamment de cette installation proposée.
+
+## Exploitation, exceptions et récupération
+
+Les indicateurs santé existants exposent version/build/cache/source, disponibilité Live et stockage, avec argent réel désactivé. La publication vérifie leur cohérence, le catalogue d'au moins 164 capacités et quinze empreintes exactes, comprenant l'application compilée, le compteur et son panneau. Les anciens caches cohérents sont conservés pour la reprise. Un build partiel ne remplace pas le shell complet.
+
+Quota D1, serveur absent, réapparition du réseau, ancien client PWA, doublon de commande et callback sont requalifiés par les suites existantes. Aucun adaptateur de paiement externe n'est activé : sandbox reste sandbox. Les échanges WebSocket, assets, requêtes D1 internes, trafic compressé, temps CPU, stockage et facturation ne sont pas déduits du compteur HTTP. Aucun collecteur payant ou service à essai limité n'est ajouté.
+
+Récupération immédiate : désactiver l'interrupteur dans Réglages. Si une restauration logicielle est nécessaire, republier la source qualifiée 61c939d6 avec son shell/PWA cohérent en suivant les contrôles existants ; ne jamais restaurer des données anciennes par-dessus des écritures nouvelles. Aucun schéma ou contrat financier n'a changé. D1/R2 et clé de signature conservés. Le workflow conserve une exportation D1 en lecture seule, sa restauration SQLite vérifiée et une archive privée R2 relue/hashée avant publication.
+
+Qualification intégrée attendue : **760 natifs, 23 Chromium, 6 WebKit**, puis sauvegarde, santé, catalogue et quinze ressources publiques. Ce sont des attentes avant livraison, pas des succès annoncés. FIELD_ACCEPTED=NOT_ACCEPTED et coût exact du chat non mesurable. L02 vient après la clôture réelle de L28.

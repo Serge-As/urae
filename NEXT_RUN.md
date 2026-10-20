@@ -1,3 +1,11 @@
+## Lot 28 — ressources et preuves, candidat du 20 octobre 2026
+
+L01 et L05 sont clos, publiés et vérifiés ; dernière production attestée 1.5.2.22, source 61c939d6, livraison 39411571048 et qualification 39411571191 réussies. Le candidat local **1.5.2.23-resource-proof** ajoute une mesure locale volontaire des requêtes de parcours dans Réglages, un regroupement des seuls GET secondaires identiques simultanés et une comparaison des effets avant/après. Le transport canonique, l'outbox, les ACK, les prêts et la présence conservent leurs contrats. Aucun cache temporel ni polling ajouté.
+
+Neuf tests isolés passent, avec un vrai Worker/SQLite : six lectures secondaires deviennent une ; scénario avec deux commandes financières idempotentes et une lecture Ledger, 9 envois deviennent 4, mêmes montants, reçus, clés et effets. Au repos zéro dans les deux cas. Aucune extrapolation de facturation. Publication non acquise : 760 natifs, 23 Chromium, 6 WebKit et quinze empreintes publiques doivent passer sur le SHA intégré. Verrou de signature humaine ECO-LOCK proposé/testé mais non activé universellement ; aucune approbation créée par l'agent. D1/R2/clé existants conservés, aucun service payant, FIELD_ACCEPTED=NOT_ACCEPTED.
+
+Après clôture réelle de L28 : L02, L23, L10, L24, L25. Coût exact des crédits non mesurable. Les lignes suivantes sont l'historique daté.
+
 ## Lot 05 terminé, publié et vérifié — 20 octobre 2026
 
 Production **1.5.2.22-session-rehearsal**, source `61c939d6c6fe68b23ca2c015fdc269460469e591`, build `eco-system-1.5.2.22-20261020-session-rehearsal`, cache `eco-system-v15222-session-rehearsal-20261020`, Worker `34249960-2dcb-49f7-b200-fa56752d2e23`. Livraison [39411571048 SUCCESS](https://github.com/Serge-As/urae/actions/runs/39411571048), qualification indépendante [39411571191 SUCCESS](https://github.com/Serge-As/urae/actions/runs/39411571191). Même source : **751 tests natifs, 22 Chromium, 6 WebKit** réussis dans la livraison. Reçu public : `docs/release/evidence/LOT05-SESSION-REHEARSAL-PUBLIC-2026-10-20.json` ; douze empreintes, catalogue 164, vérification à 11:05:40.022Z. Santé HTTPS relue indépendamment à 11:06:47.786Z : source/build/cache exacts et realMoneyEnabled=false.

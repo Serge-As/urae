@@ -1,0 +1,11 @@
+# Recall — lot 28, ressources et preuves
+
+Le fondateur demande des lots complets déployés suivant le classement, sans nouvel audit général. L01 et L05 sont publiés et clos ; dernière production attestée 1.5.2.22, source `61c939d6c6fe68b23ca2c015fdc269460469e591`, livraison 39411571048 et qualification indépendante 39411571191 réussies. Clôture documentaire `dd2ae65ca74456c189908cfb66be27198d3495f0`. L28 est le prochain lot, avant L02, L23, L10, L24, L25.
+
+Candidat 1.5.2.23-resource-proof : mesure locale explicite dans Réglages et regroupement de GET secondaires simultanés. `ConnectedApplication` conserve le transport ; aucun propriétaire financier dupliqué. Pas de cache temporel, polling, modification d'ACK, d'outbox, de calcul, d'autorisation ni de présence. Le compteur n'exporte aucun contenu/URL/identifiant. La limite est indicative et ne bloque pas les commandes.
+
+Neuf tests natifs du lot passent : limites et vie privée de la mesure, allowlist, clones, absence de cache, contexte/langue/options, invalidation avant mutation, panne/reprise, comparaison bloquante et signature externe ECO-LOCK. Le vrai Worker/SQLite donne mêmes reçus, idempotence et Ledger pour 9 requêtes de référence et 4 candidates. Les rapports synthétiques sont générés dans artifacts et comparés dans le pipeline. Une compilation redondante de la livraison est économisée en réutilisant le même build ; les deux exécutions natives existantes restent obligatoires. Aucun gain en minutes ou facture n'est inventé.
+
+Le vérificateur de signature ne crée pas une approbation ; son activation avec clé publique contrôlée hors candidat et protection des branches est proposée, pas déclarée effectuée sur tous les comptes. Les gates exact-SHA, backup restaurable et empreintes publiques restent en vigueur. Vérifier le candidat intégré et les quinze ressources effectivement servies avant de clore. FIELD_ACCEPTED=NOT_ACCEPTED ; Delor protégé, ne pas contourner. Aucun accès à un service payant. Coût exact des crédits non mesurable.
+
+Checkout courant `implementation-lot01-20261020`, branche locale `codex/lot-28-resource-proof-20261020`. Le Git local d'import n'est pas un historique à pousser. Déploiement exclusivement sur la branche de livraison active et par workflow qualifié. Après clôture L28, continuer L02 sans reprendre l'audit de toutes les sources.
