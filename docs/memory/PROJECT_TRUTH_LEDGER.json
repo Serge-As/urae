@@ -27,15 +27,18 @@
   "records": [
     {
       "id": "lot28-resource-proof-20261020",
-      "status": "IN_PROGRESS",
+      "status": "VERIFIED_REMOTE",
       "scope": "technical request observation and bounded secondary read reuse",
-      "statement": "Local opt-in request budgets and same-effect comparison implemented; nine native tests passed, including real Worker idempotent Ledger scenario. Exact integrated CI and publication still pending. No financial computation, Outbox or Live timing change.",
+      "statement": "Published local opt-in request measurement and bounded simultaneous secondary read reuse; exact same-source qualification, backup and public asset hashes verified. External human signature verifier installable and tested, not universally activated.",
       "evidence": [
-        "docs/change-impact/CIR-2026-10-20-LOT28-RESOURCE-PROOF.md",
-        "docs/memory/recalls/RECALL-2026-10-20-LOT28-RESOURCE-PROOF.md"
+        "source:12fe2f01b3cdfe08cf845ea9d7104fbb9026cc23",
+        "github-actions:39416149450 SUCCESS; independent39416149462 SUCCESS",
+        "qualification:760Node23Chromium6WebKitPASS",
+        "docs/release/evidence/LOT28-RESOURCE-PROOF-PUBLIC-2026-10-20.json",
+        "private-R2-readback-sha256:091b10eb6c19df887fa31e85843c695ce8d4cd53e5006cb51b098922e4c21779; restored integrityok"
       ],
       "observedOn": "2026-10-20",
-      "next": "Complete integrated qualification and exact public verification, then L02."
+      "next": "Implement L02, then L23, L10, L24, L25. FIELD_ACCEPTED=NOT_ACCEPTED."
     },
     {
       "id": "lot05-session-rehearsal-20261020",

@@ -1,0 +1,71 @@
+{
+  "verifiedAt": "2026-10-20T11:44:35.933Z",
+  "version": "1.5.2.23-resource-proof",
+  "sourceSha": "12fe2f01b3cdfe08cf845ea9d7104fbb9026cc23",
+  "buildId": "eco-system-1.5.2.23-20261020-resource-proof",
+  "pwaCache": "eco-system-v15223-resource-proof-20261020",
+  "capabilities": 164,
+  "realMoneyEnabled": false,
+  "assets": [
+    {
+      "path": "/",
+      "sha256": "88740b24ddaa96ebb63095baf17fb17e3d35e5579fcab40ec5a650b976558885"
+    },
+    {
+      "path": "/styles.css",
+      "sha256": "c1819ecc77f0c344d14bdfebe192c3eb881d44e3317cd15b3e00fdb19f89bb92"
+    },
+    {
+      "path": "/sw.js",
+      "sha256": "b6c08a74b6e819f068fa66c3db443f014ee835c1f73acfe01af1959a3c364a6d"
+    },
+    {
+      "path": "/eco-shell-manifest.json",
+      "sha256": "9a20e064982cd06cb09d9d614413eaa5ab2d3e55edc60ced97b4ccde6865c400"
+    },
+    {
+      "path": "/src/main.js",
+      "sha256": "26fdf08bef35ac93297ae3ddad40e2c8dfaa0e3e3ea36dd4c0ac0b33c6dd493c"
+    },
+    {
+      "path": "/src/financial-work-ui.js",
+      "sha256": "4968d4ec17afca3faebe4416a2b91e318f04b544a988d63f0947e8891b779e1b"
+    },
+    {
+      "path": "/src/completion-ui.js",
+      "sha256": "08b6bc67eb6c77c2065ae3c983523b21d4d223190b4a6f82d0eff999aedc5fa1"
+    },
+    {
+      "path": "/src/ui-modes.js",
+      "sha256": "795339401f0eaa42a9822a918cf3982bedfaea02c68f4669a845372bb711ee81"
+    },
+    {
+      "path": "/src/field-hardening.js",
+      "sha256": "6c4284d33ac9441a847fc504f18d9bf079ded736c05656b287dcd96e9f4efb01"
+    },
+    {
+      "path": "/src/runtime-i18n.js",
+      "sha256": "68227a0793c83a9e2894dc75b758f5acaeaf342174554118f98f76226de92887"
+    },
+    {
+      "path": "/src/shell-navigation.js",
+      "sha256": "5bc9ec6d5a9c17ab0190370c464e79cd0029b25009b168b7486c0acb30865b72"
+    },
+    {
+      "path": "/src/session-rehearsal.js",
+      "sha256": "57b6e41c3b7381f0b86e8569d9bf45d64616f1dd8af353295061d611b3d31b63"
+    },
+    {
+      "path": "/src/request-budget-ui.js",
+      "sha256": "62dccfab867860795b77df2936bf02a8fef7e21e10f4842be6f3545a8322e83d"
+    },
+    {
+      "path": "/packages/application/src/index.js",
+      "sha256": "1c64d326dcc330d0deaef0b04d45ee0bd91d1abcdadef20c81a5573614e239a5"
+    },
+    {
+      "path": "/packages/application/src/request-budget.js",
+      "sha256": "00f39471099cc69127ae301660d22694c5b8097e6be7ea42fbed040aede498d5"
+    }
+  ]
+}
