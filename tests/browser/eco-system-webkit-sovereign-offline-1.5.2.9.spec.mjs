@@ -1,7 +1,7 @@
 import {test,expect} from '@playwright/test';
 import fs from 'node:fs/promises';
 
-const base='http://127.0.0.1:4173';
+const base=process.env.ECO_WEBKIT_BASE_URL??'http://127.0.0.1:4173';
 
 test('WebKit decodes an Eco QR with the bundled offline decoder and no BarcodeDetector dependency',async({page})=>{
   const response=await page.goto(base+'/',{waitUntil:'domcontentloaded'});

@@ -18,6 +18,7 @@ field_acceptance: NOT_ACCEPTED
 historical_pr72_hold: preserved; no merge or override of PR72
 trigger_nonce: 2026-10-20-lot05-session-rehearsal-exact-sha-gated
 authorization: current user requested implementation and deployment of complete lots by agreed priority
+qualification: separate synthetic WebKit data from Chromium; retain production authentication rate limits
 scope: requalify existing session workflows and add isolated educational rehearsal; no production financial command or data in rehearsal
 qualification_same_deployment_sha: mandatory full gates before publication, no relaxation
 public_verification: exact health catalog release plus SHA-256 comparison of twelve deployed PWA assets with same-SHA build

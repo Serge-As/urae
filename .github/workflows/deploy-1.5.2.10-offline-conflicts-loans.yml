@@ -161,8 +161,15 @@ jobs:
             -H "Accept: application/vnd.github+json" \
             "https://api.github.com/repos/${GITHUB_REPOSITORY}/statuses/${GITHUB_SHA}" \
             -d '{"state":"success","context":"eco-system/gate-chromium","description":"Chromium finance + shell passed"}' >/dev/null
+      - name: Start isolated synthetic WebKit server
+        shell: bash
+        run: |
+          OPEN_BROWSER=0 PORT=4174 ECO_DATA_FILE=.data/deploy-webkit-${GITHUB_RUN_ID}.sqlite node scripts/dev-server.mjs > /tmp/eco-deploy-webkit.log 2>&1 &
+          for i in {1..40}; do curl -fsS http://127.0.0.1:4174/health >/dev/null && exit 0; sleep 1; done
+          cat /tmp/eco-deploy-webkit.log
+          exit 1
       - name: Mandatory WebKit sovereign offline qualification
-        run: npx playwright test tests/browser/eco-system-webkit-sovereign-offline-1.5.2.9.spec.mjs --browser=webkit --workers=1
+        run: ECO_WEBKIT_BASE_URL=http://127.0.0.1:4174 npx playwright test tests/browser/eco-system-webkit-sovereign-offline-1.5.2.9.spec.mjs --browser=webkit --workers=1
 
       - name: Status · gate-webkit
         continue-on-error: true
