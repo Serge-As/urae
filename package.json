@@ -1,9 +1,9 @@
 {
   "name": "tontine-platform",
-  "version": "1.5.2-24",
+  "version": "1.5.2-25",
   "private": true,
   "type": "module",
-  "description": "Eco-System 1.5.2.24: prioritized personal cockpit and scoped journey references; canonical owners, financial sheets and offline guarantees preserved.",
+  "description": "Eco-System 1.5.2.25: local bilingual assistant tools, voluntary topic memory, negotiation drafts and verified authorized search; canonical owners and offline guarantees preserved.",
   "engines": {
     "node": ">=24"
   },

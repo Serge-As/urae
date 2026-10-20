@@ -78,11 +78,11 @@ interface WorkersAILike {
   run?(model:string,input:Record<string,unknown>,options?:Record<string,unknown>):Promise<unknown>;
 }
 
-const RELEASE_VERSION='1.5.2.24-cockpit-continuity';
-const RELEASE_BUILD_ID='eco-system-1.5.2.24-20261020-cockpit-continuity';
+const RELEASE_VERSION='1.5.2.25-assistant-tools';
+const RELEASE_BUILD_ID='eco-system-1.5.2.25-20261020-assistant-tools';
 const RELEASE_SCHEMA_VERSION='d1-additive-20260923';
 const RELEASE_POLICY_VERSION='live-finance-policy-20261007-event-push-repayment';
-const RELEASE_PWA_CACHE='eco-system-v15224-cockpit-continuity-20261020';
+const RELEASE_PWA_CACHE='eco-system-v15225-assistant-tools-20261020';
 
 const defaultRepo = new InMemoryPlatformRepository();
 const defaultReferralBudgets = new InMemoryReferralBudgetStore();

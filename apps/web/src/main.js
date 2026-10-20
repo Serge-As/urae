@@ -48,7 +48,7 @@ import { mountBusinessStudioUI } from './business-studio-ui.js';
 import { mountCoreEconomicLearningUI } from './core-economic-learning-ui.js';
 import { mountResilienceUI } from './resilience-ui.js';
 import { parseEcoShareIntent } from './share-out.js';
-import { localUniversalSearch, remoteUniversalSearch } from './universal-search.js';
+import { localUniversalSearch, remoteUniversalSearch, authorizedSearchContext } from './universal-search.js';
 import { buildUnifiedCalendar } from './unified-calendar.js';
 import { mountDocumentsUI } from './documents-ui.js';
 import { mountPrintCenterUI } from './print-center.js';
@@ -183,7 +183,7 @@ let launchStudio;
 let modules = [];
 let selectedLot = 'ALL';
 let deferredInstallPrompt;
-const CAHIER_VERSION = '1.5.2.24-cockpit-continuity';
+const CAHIER_VERSION = '1.5.2.25-assistant-tools';
 const $ = (s) => { const e = document.querySelector(s); if (!e)
     throw new Error(`UI_ELEMENT_NOT_FOUND:${s}`); return e; };
 const val = (id) => document.getElementById(id).value.trim();
@@ -451,7 +451,7 @@ const roleDashboardsUI=mountRoleDashboardsUI({app,getGroups:()=>groups,getMember
 const geoDirectoryUI=mountGeoDirectoryUI({app,isManager,notify:toast,showError:fail});
 const creatorTalentUI=mountCreatorTalentUI({app,notify:toast,showError:fail});
 const journey=createJourneyContext({storage:{getItem:key=>localStorage.getItem(key),setItem:(key,value)=>localStorage.setItem(key,value)},scope:()=>({actor:app.currentActor(),group:app.activeGroup()})});
-const assistantContext=()=>({actor:app.currentActor(),group:app.activeGroup(),groupLabel:groups.find(g=>g.id===app.activeGroup())?.name||'',role:isManager()?'manager':'member',view:activeViewName(),recent:journey.snapshot().recent});
+const assistantContext=()=>({actor:app.currentActor(),tenant:app.currentTenant(),memoryEnabled:journey.snapshot().enabled,group:app.activeGroup(),groupLabel:groups.find(g=>g.id===app.activeGroup())?.name||'',role:isManager()?'manager':'member',view:activeViewName(),recent:journey.snapshot().recent});
 const journeyUI=mountJourneyUI({journey,navigate:go,getContext:assistantContext});
 const shellNavigation=mountShellNavigation({getContext:()=>{
     const context=assistantContext(),view=activeViewName();
@@ -461,7 +461,7 @@ const shellNavigation=mountShellNavigation({getContext:()=>{
     const select=view==='sessions'?find('#sessionsMeetingSelect'):view==='operations'?(!find('#individualSheetsMode')?.hidden?find('#individualSheetMember'):find('#meetingMatrixScope')):view==='services'?find('#workspaceModule'):null;
     return{...context,objectLabel:context.group?select?.selectedOptions?.[0]?.textContent||'':''};
 },getCurrentState:captureNavState,navigate:go});
-const localAssistantUI=mountLocalAssistantUI({getModules:()=>modules,openModule:id=>openModule(id),navigate:go,notify:toast,getContext:assistantContext,speech});
+const localAssistantUI=mountLocalAssistantUI({getModules:()=>modules,openModule:id=>openModule(id),navigate:go,notify:toast,getContext:assistantContext,searchAuthorized:async query=>{const captured=JSON.stringify([app.currentActor(),app.currentTenant(),app.activeGroup()]);await openModule('SEARCH.UNIVERSAL');if(captured!==JSON.stringify([app.currentActor(),app.currentTenant(),app.activeGroup()]))return;const input=document.getElementById('universalSearchFull');if(input){input.value=String(query).slice(0,4000);input.dispatchEvent(new Event('input',{bubbles:true}));}},speech});
 const quietWatchUI=mountQuietWatchUI({app,isManager,notify:toast,showError:fail});
 const founderAIUI=mountFounderAIUI({app,showError:fail});
 const managerPublicProfileUI=mountManagerPublicProfileUI({app,notify:toast,showError:fail});
@@ -1969,6 +1969,7 @@ const openModule = async (id) => {
     const m = modules.find(x => x.id === id);
     if (!m)
         return;
+    if(m.status==='FOUNDATION_ACTIVE'&&id==='SEARCH.UNIVERSAL'){await go('ecosystem',{anchor:'universalSearchPanel',force:true});const panel=document.getElementById('universalSearchPanel');if(panel?.tagName==='DETAILS')panel.open=true;return;}
     if(m.status === 'FOUNDATION_ACTIVE' && id === 'CALENDAR.UNIFIED'){go('ecosystem',{anchor:'unifiedCalendarPanel',force:true});const panel=document.querySelector('#unifiedCalendarPanel');if(panel?.tagName==='DETAILS')panel.open=true;void renderUnifiedCalendar();return;}
     if(m.status === 'FOUNDATION_ACTIVE' && id === 'GOVERNANCE.DOCUMENT_STUDIO'){go('documents',{force:true});void documentsUI.refresh();return;}
     if(m.status === 'FOUNDATION_ACTIVE' && id === 'TRUST.VERIFICATION'){go('settings',{anchor:'identityVerificationCenter',force:true});void identityVerificationUI.refresh();return;}
@@ -2540,6 +2541,7 @@ window.addEventListener('eco:financial-live-update',event=>{
 const refreshGroupContext = async () => {
     const requestedGroup=app.activeGroup();
     personalCockpitUI.clearForContext?.();
+    universalSearchRevision++;document.getElementById('universalSearchFullResults')?.replaceChildren();const searchScope=JSON.stringify([app.currentActor(),app.currentTenant(),app.activeGroup()]);if(searchScope!==universalSearchScope){universalSearchScope=searchScope;const input=document.getElementById('universalSearchFull');if(input)input.value='';}
     // Account navigation does not wait for optional group/financial panels.
     // Reuse this same membership-checked directory in the personal cockpit.
     const personalDirectory=personalCockpitUI.prepareNavigation?.();
@@ -2656,6 +2658,7 @@ const renderGlobalSearch = () => { const q = val('globalSearch').toLowerCase(); 
 $('#globalSearch').addEventListener('input', renderGlobalSearch);
 let universalSearchTimer;
 let universalSearchRevision=0;
+let universalSearchScope='';
 const openUniversalSearchResult=async row=>{
     if(row.kind==='group'){app.selectGroup(row.id);await refreshGroupContext();await detailUI.open('group',row.id);return;}
     if(['member','meeting','rubric'].includes(row.kind)){await detailUI.open(row.kind,row.id);return;}
@@ -2668,24 +2671,31 @@ const renderUniversalSearchFull=async()=>{
     if(!input||!root)return;
     const query=input.value.trim(),revision=++universalSearchRevision;root.replaceChildren();
     if(query.length<2){const p=document.createElement('p');p.className='hint';p.textContent=tx('Saisissez au moins 2 caractères.','Enter at least 2 characters.');root.append(p);return;}
-    const local=localUniversalSearch({query,groups,modules,members,meetings,rubrics});
+    const getSearchContext=()=>({actor:app.currentActor(),tenant:app.currentTenant(),group:app.activeGroup()||''}),captured=getSearchContext();
+    const current=()=>revision===universalSearchRevision&&JSON.stringify(captured)===JSON.stringify(getSearchContext());
+    let access={groups:[],privateGroup:false},privateUnavailable=false;
+    try{if(navigator.onLine===false)throw Error('SEARCH_OFFLINE');access=await authorizedSearchContext({app,context:captured,getContext:getSearchContext});}catch{privateUnavailable=true;}
+    if(!current())return;
+    const local=localUniversalSearch({query,groups:access.groups,modules,members:access.privateGroup?members:[],meetings:access.privateGroup?meetings:[],rubrics:access.privateGroup?rubrics:[]});
     let remote=[];
-    if(navigator.onLine!==false){
-        const groupId=app.activeGroup();
+    if(!privateUnavailable){
+        const groupId=access.privateGroup?captured.group:undefined;
+        const partial=()=>{privateUnavailable=true;return[];};
         const [documents,knowledge,workspaces,inbox]=await Promise.all([
-            groupId?app.searchDocuments(query,20).catch(()=>[]):Promise.resolve([]),
-            app.searchKnowledge(query,groupId).catch(()=>[]),
-            groupId?app.listWorkspaceRecords(undefined,groupId).catch(()=>[]):Promise.resolve([]),
-            app.inboxItems().catch(()=>[])
+            groupId?app.searchDocuments(query,20).catch(partial):Promise.resolve([]),
+            app.searchKnowledge(query,groupId).catch(partial),
+            groupId?app.listWorkspaceRecords(undefined,groupId).catch(partial):Promise.resolve([]),
+            app.inboxItems({requireServer:true}).catch(partial)
         ]);
-        if(revision!==universalSearchRevision)return;
+        if(!current())return;
         remote=remoteUniversalSearch({query,documents,knowledge,workspaces,inbox});
     }
     const rows=[...local,...remote].sort((a,b)=>Number(b.score??0)-Number(a.score??0)||String(a.title??'').localeCompare(String(b.title??''),'fr')).slice(0,80);
+    if(privateUnavailable){const p=document.createElement('p');p.className='truth-notice';p.textContent=tx('Une source privée ne peut pas être vérifiée. Les services locaux restent accessibles ; les résultats peuvent être incomplets.','A private source cannot be verified. Local services remain accessible; results may be incomplete.');root.append(p);}
     if(!rows.length){const p=document.createElement('p');p.className='empty-state';p.textContent=tx('Aucun résultat autorisé trouvé.','No authorized result found.');root.append(p);return;}
     for(const row of rows){
         const interactive=['group','member','meeting','rubric','module'].includes(row.kind),node=document.createElement(interactive?'button':'article');
-        if(interactive){node.type='button';node.className='search-hit';node.onclick=()=>void openUniversalSearchResult(row);}
+        if(interactive){node.type='button';node.className='search-hit';node.onclick=()=>void(async()=>{if(!current())return;try{if(row.kind!=='module'){const fresh=await authorizedSearchContext({app,context:captured,getContext:getSearchContext});if(!current())return;if(row.kind==='group'&&!fresh.groups.some(g=>g.id===row.id))throw Error('SEARCH_ACCESS_UNVERIFIED');}await openUniversalSearchResult(row);}catch{root.replaceChildren();const p=document.createElement('p');p.className='truth-notice';p.textContent=tx('Les droits de cette cible doivent être revérifiés. Relancez la recherche.','Permissions for this target need checking. Run the search again.');root.append(p);}})();}
         else node.className='item';
         const title=document.createElement('strong');title.textContent=row.title||row.id;
         const sub=document.createElement('small');sub.textContent=row.subtitle||row.kind;

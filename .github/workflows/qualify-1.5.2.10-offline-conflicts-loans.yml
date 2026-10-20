@@ -67,7 +67,7 @@ jobs:
           npm install --no-save --ignore-scripts @playwright/test@1.55.0
           npx playwright install --with-deps chromium webkit
       - name: Chromium financial persistence and shell
-        run: node scripts/qualify-browser-isolated.mjs --browser=chromium tests/browser/financial-cell-consensus-persistence-1.5.2.6.spec.mjs tests/browser/browser-shell-mobile-1.5.2.6.spec.mjs tests/browser/sovereign-multi-manager-1.5.2.14.spec.mjs tests/browser/navigation-lot01-20261020.spec.mjs tests/browser/session-rehearsal-lot05-20261020.spec.mjs tests/browser/request-budget-lot28-20261020.spec.mjs tests/browser/cockpit-priorities-lot02-20261020.spec.mjs
+        run: node scripts/qualify-browser-isolated.mjs --browser=chromium tests/browser/financial-cell-consensus-persistence-1.5.2.6.spec.mjs tests/browser/browser-shell-mobile-1.5.2.6.spec.mjs tests/browser/sovereign-multi-manager-1.5.2.14.spec.mjs tests/browser/navigation-lot01-20261020.spec.mjs tests/browser/session-rehearsal-lot05-20261020.spec.mjs tests/browser/request-budget-lot28-20261020.spec.mjs tests/browser/cockpit-priorities-lot02-20261020.spec.mjs tests/browser/assistant-tools-lot23-20261020.spec.mjs
       - name: WebKit sovereign offline
         run: node scripts/qualify-browser-isolated.mjs --browser=webkit tests/browser/eco-system-webkit-sovereign-offline-1.5.2.9.spec.mjs
       - name: Retain isolated browser qualification evidence

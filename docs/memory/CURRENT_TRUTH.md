@@ -1,3 +1,9 @@
+## Lot 23 — Eco IA, candidat du 20 octobre 2026
+
+Production précédente attestée **1.5.2.24-cockpit-continuity**, source9575e84df3d710a3723d8979ca547f900a1b474d ; L01/L05/L28/L02 clos et vérifiés. L23 prépare **1.5.2.25-assistant-tools** : intentions et guides FR/EN, contrats d’outils bornés, mémoire volontaire de thèmes et brouillons de négociation non envoyés. Les brouillons financiers rejoignent la prévisualisation existante, jamais le Ledger directement. La recherche réutilise son propriétaire et revérifie les autorisations serveur avant toute projection privée.
+
+Neuf nouveaux tests natifs et les six tests acquis ciblés passent. Qualification intégrée/publication à acquérir : attendus779 natifs,27 Chromium,6 WebKit et23 empreintes publiques. Aucun abonnement, dépendance ajoutée, téléchargement automatique de modèle, migration ou changement des moteurs financiers. FIELD_ACCEPTED=NOT_ACCEPTED. Coût exact des crédits non mesurable. Après clôture réelle : L10,L24,L25. Les checkpoints suivants sont historiques.
+
 ## Lot 02 terminé, publié et vérifié — 20 octobre 2026
 
 Production **1.5.2.24-cockpit-continuity**, source `9575e84df3d710a3723d8979ca547f900a1b474d`, build `eco-system-1.5.2.24-20261020-cockpit-continuity`, cache `eco-system-v15224-cockpit-continuity-20261020`, Worker `3f65248a-57e0-45a1-b7fc-f08a30f09293`. Livraison [39437509472 SUCCESS](https://github.com/Serge-As/urae/actions/runs/39437509472), qualification indépendante [39437509841 SUCCESS](https://github.com/Serge-As/urae/actions/runs/39437509841). Même source : **770 natifs,25 Chromium,6 WebKit** réussis, zéro ignoré ou flaky accepté. Reçu `docs/release/evidence/LOT02-COCKPIT-CONTINUITY-PUBLIC-2026-10-20.json` : vingt empreintes publiques concordantes, catalogue164, argent réel désactivé, vérifié à14:23:48.578Z. Santé relue indépendamment à14:28:07.793Z : version/build/cache/source exacts, Live et R2 liés.

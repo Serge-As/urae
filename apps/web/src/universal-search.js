@@ -1,4 +1,13 @@
 const norm=value=>String(value??'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLocaleLowerCase().trim();
+export async function authorizedSearchContext({app,context,getContext}){
+ const same=()=>JSON.stringify(context)===JSON.stringify(getContext());
+ const requireSame=()=>{if(!same())throw Error('SEARCH_CONTEXT_CHANGED');};requireSame();
+ const groups=await app.listMyGroups({requireServer:true});requireSame();
+ if(!context.group)return{groups,privateGroup:false};
+ const access=await app.groupMe({requireServer:true});requireSame();
+ if(!access?.isManager&&String(access?.membership?.status).toLowerCase()!=='active')throw Error('SEARCH_ACCESS_UNVERIFIED');
+ return{groups,privateGroup:true};
+}
 const tokens=q=>norm(q).split(/[^\p{L}\p{N}]+/u).filter(Boolean);
 const rank=(haystack,query)=>{
   const h=norm(haystack),qs=tokens(query);if(!qs.length)return 0;if(!qs.every(t=>h.includes(t)))return 0;

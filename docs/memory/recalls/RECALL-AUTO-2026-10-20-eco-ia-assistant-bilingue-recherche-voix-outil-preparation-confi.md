@@ -1,0 +1,152 @@
+# Memory Recall — Eco IA assistant bilingue recherche voix outil preparation confirmation negociation consentement
+
+Date: 2026-10-20
+Terms élargis: assistant, bilingue, confirmation, consentement, eco, negociation, outil, preparation, recherche, voix
+
+## Sources les plus pertinentes
+- **docs/memory/CURRENT_TRUTH.md** — score 38; concepts: eco, assistant, bilingue, recherche, voix, outil, preparation, confirmation, consentement
+  - 5: Neuf tests natifs du lot et les cinq tests de continuité précédents passent. La qualification intégrée et la publication restent à acquérir : attendus 769 natifs, 25 Chromium, 6 WebKit et vingt empreintes publiques. Droits et existence revérifiés au clic ; rép
+  - 11: Production **1.5.2.23-resource-proof**, source `12fe2f01b3cdfe08cf845ea9d7104fbb9026cc23`, build `eco-system-1.5.2.23-20261020-resource-proof`, cache `eco-system-v15223-resource-proof-20261020`, Worker `7ad6527f-66f8-40b5-b63b-e646721e08cc`. Livraison [3941614
+  - 13: Le panneau de mesure volontaire est dans Réglages. Le transport regroupe uniquement les GET secondaires autorisés identiques et simultanés, avec clones, invalidation avant mutation et sans cache temporel. Comparaison réelle Worker/SQLite : 9 envois deviennent
+  - 17: BIR+ et ÉTAT DU PROJET APRÈS ÉTAPE : réalisé, qualifié, intégré, publié et vérifié en ligne pour L28 ; **FIELD_ACCEPTED=NOT_ACCEPTED** pour la recette humaine Delor. Aucune économie de minutes ou de crédits inventée ; coût exact du chat non mesurable. Suite pa
+  - 23: Production **1.5.2.22-session-rehearsal**, source `61c939d6c6fe68b23ca2c015fdc269460469e591`, build `eco-system-1.5.2.22-20261020-session-rehearsal`, cache `eco-system-v15222-session-rehearsal-20261020`, Worker `34249960-2dcb-49f7-b200-fa56752d2e23`. Livraison
+- **docs/constitution/ECO_SYSTEM_Cahier_des_Charges_Maitre_Exhaustif_3.0.0_2026-09-16.md** — score 37; concepts: eco, assistant, recherche, voix, outil, confirmation, negociation, consentement
+  - 1: # ECO-SYSTEM — Cahier des Charges Maître Exhaustif 3.0.0
+  - 2: ## Plateforme de gestion de tontines, associations, communautés et écosystème économique
+  - 4: **Ligne de développement : `next/1.3.1-recovery-recap-services-20260915`**
+  - 26: Eco-System remplace progressivement les feuilles Excel, cahiers papier, calculs manuels, appels téléphoniques et messages dispersés utilisés par les tontines et associations.
+  - 28: L'objectif n'est pas de forcer tous les groupes à fonctionner de la même manière. Au contraire, Eco-System doit apprendre et représenter les règles propres à chaque groupe :
+- **docs/memory/MASTER_CAPABILITY_INDEX.json** — score 35; concepts: eco, assistant, recherche, preparation, confirmation, consentement
+  - 5: "path": "docs/constitution/ECO_SYSTEM_Cahier_des_Charges_Maitre_Exhaustif_Sauvegarde_2.3.4_2026-09-05.md",
+  - 20: "summary": "— L'IA peut proposer « Solidarité ressemble à Secours », mais le classement effectif d'une rubrique existante n'est jamais modifié sans validation d'un responsable habilité.",
+  - 68: "summary": "Statut secourable configurable et explicable",
+  - 260: "summary": "Le mode hors-ligne n’autorise jamais une fausse confirmation de paiement.",
+  - 320: "summary": "Le produit doit expliquer ses calculs et recommandations.",
+- **docs/constitution/ECO_SYSTEM_Cahier_des_Charges_Maitre_Exhaustif_3.2.0_2026-09-16.md** — score 33; concepts: eco, recherche, voix, confirmation, consentement
+  - 1: # ECO-SYSTEM — Cahier des Charges Maître Exhaustif 3.2.0
+  - 7: D1 canonique : `eco-system-db`
+  - 8: R2 privé : `eco-system-backups`
+  - 25: Eco-System est une plateforme PWA FR/EN destinée aux tontines, associations et communautés, conçue pour le Cameroun et les contextes à faible connectivité sans s'y limiter. Elle remplace progressivement le mélange papier + Excel/VBA + WhatsApp/Telegram + calcu
+  - 35: - permettre une évolution vers communauté, économie locale, partenaires/ONG, publicité responsable et services professionnels.
+- **PROJECT_STATE.md** — score 33; concepts: eco, assistant, bilingue, recherche, voix, outil, preparation, confirmation
+  - 5: Neuf tests natifs du lot et les cinq tests de continuité précédents passent. La qualification intégrée et la publication restent à acquérir : attendus 769 natifs, 25 Chromium, 6 WebKit et vingt empreintes publiques. Droits et existence revérifiés au clic ; rép
+  - 11: Production **1.5.2.23-resource-proof**, source `12fe2f01b3cdfe08cf845ea9d7104fbb9026cc23`, build `eco-system-1.5.2.23-20261020-resource-proof`, cache `eco-system-v15223-resource-proof-20261020`, Worker `7ad6527f-66f8-40b5-b63b-e646721e08cc`. Livraison [3941614
+  - 13: Le panneau de mesure volontaire est dans Réglages. Le transport regroupe uniquement les GET secondaires autorisés identiques et simultanés, avec clones, invalidation avant mutation et sans cache temporel. Comparaison réelle Worker/SQLite : 9 envois deviennent
+  - 17: BIR+ et ÉTAT DU PROJET APRÈS ÉTAPE : réalisé, qualifié, intégré, publié et vérifié en ligne pour L28 ; **FIELD_ACCEPTED=NOT_ACCEPTED** pour la recette humaine Delor. Aucune économie de minutes ou de crédits inventée ; coût exact du chat non mesurable. Suite pa
+  - 23: Production **1.5.2.22-session-rehearsal**, source `61c939d6c6fe68b23ca2c015fdc269460469e591`, build `eco-system-1.5.2.22-20261020-session-rehearsal`, cache `eco-system-v15222-session-rehearsal-20261020`, Worker `34249960-2dcb-49f7-b200-fa56752d2e23`. Livraison
+- **NEXT_RUN.md** — score 31; concepts: eco, bilingue, recherche, voix, outil, preparation, confirmation
+  - 5: Neuf tests natifs du lot et les cinq tests de continuité précédents passent. La qualification intégrée et la publication restent à acquérir : attendus 769 natifs, 25 Chromium, 6 WebKit et vingt empreintes publiques. Droits et existence revérifiés au clic ; rép
+  - 11: Production **1.5.2.23-resource-proof**, source `12fe2f01b3cdfe08cf845ea9d7104fbb9026cc23`, build `eco-system-1.5.2.23-20261020-resource-proof`, cache `eco-system-v15223-resource-proof-20261020`, Worker `7ad6527f-66f8-40b5-b63b-e646721e08cc`. Livraison [3941614
+  - 13: Le panneau de mesure volontaire est dans Réglages. Le transport regroupe uniquement les GET secondaires autorisés identiques et simultanés, avec clones, invalidation avant mutation et sans cache temporel. Comparaison réelle Worker/SQLite : 9 envois deviennent
+  - 17: BIR+ et ÉTAT DU PROJET APRÈS ÉTAPE : réalisé, qualifié, intégré, publié et vérifié en ligne pour L28 ; **FIELD_ACCEPTED=NOT_ACCEPTED** pour la recette humaine Delor. Aucune économie de minutes ou de crédits inventée ; coût exact du chat non mesurable. Suite pa
+  - 23: Production **1.5.2.22-session-rehearsal**, source `61c939d6c6fe68b23ca2c015fdc269460469e591`, build `eco-system-1.5.2.22-20261020-session-rehearsal`, cache `eco-system-v15222-session-rehearsal-20261020`, Worker `34249960-2dcb-49f7-b200-fa56752d2e23`. Livraison
+- **FEATURE_REGISTRY.yaml** — score 30; concepts: eco, assistant, preparation, confirmation
+  - 11: # CANDIDATE 2026-10-15: cockpit continuity and bilingual assistant UI; qualification pending; no capability maturity promotion.
+  - 22: # CURRENT 2026-10-09: e083a6a local Node 654/654; Chromium 7/8 (2001 Live update misses five-second assertion); offline 4000/5000 passes once; WebKit not executed. HOLD remains. Instrumented diagnostic prepared; no capability maturity promotion.
+  - 23: # CURRENT 2026-10-08: publication HOLD; full 4000/5000 convergence still unqualified; Actions quota exhausted; prepared private local qualification runner. See recovery handoff.
+  - 24: # 2026-10-08 CURRENT: 1.5.2.15 publication HOLD; offline reconfirmation clock defect under qualification. Current deployed proof remains 1.5.2.14. See CURRENT_TRUTH.
+  - 48: offline_policy: transition_preparation_only_when_server_required
+- **docs/constitution/ECO_SYSTEM_Cahier_des_Charges_Maitre_Exhaustif_3.1.0_2026-09-16.md** — score 26; concepts: eco, recherche, voix, confirmation, consentement
+  - 1: # ECO-SYSTEM — Cahier des Charges Maître Exhaustif 3.1.0
+  - 4: Production : **Eco-System 1.3.2 déployé et smoke-testé**
+  - 6: Worker : `eco-system`
+  - 7: D1 : `eco-system-db`
+  - 8: R2 privé : `eco-system-backups`
+- **docs/memory/PROJECT_TRUTH_LEDGER.json** — score 23; concepts: eco, assistant, preparation
+  - 24: "SUPERSEDED/ABANDONED records are retained with reason.",
+  - 27: "records": [
+  - 43: "scope": "technical request observation and bounded secondary read reuse",
+  - 44: "statement": "Published local opt-in request measurement and bounded simultaneous secondary read reuse; exact same-source qualification, backup and public asset hashes verified. External human signature verifier installable and tested, not universally activate
+  - 106: "next": "Preserve existing owners and pending local entries. Reproduce any further real discrepancy; no protected Delor browser bypass, missing-group recovery claim, full strategic completion or field acceptance promotion.",
+- **AGENTS.md** — score 21; concepts: eco, consentement
+  - 1: # AGENTS.md — Eco-System, vérité et reprise
+  - 4: Continuer Eco-System sans recommencer, simplifier ou remplacer silencieusement les acquis.
+  - 9: - candidate de travail : `fix/transport-recovery-bounded-20261008`, version `1.5.2.15-bounded-recovery`, qualifiée 650/650 Node + Chromium 8/8 + WebKit 6/6, PR #71 fusionnée ; déploiement à vérifier ;
+  - 23: 5. `docs/constitution/ECO_SYSTEM_Cahier_des_Charges_Maitre_Exhaustif_3.2.0_2026-09-16.md` + socle constitutionnel 2.3.4 ;
+  - 24: 6. `docs/economics/ECO_SYSTEM_Modele_Economique_AdManager_Approfondi_3.2.0_2026-09-16.md` ;
+- **docs/memory/checkpoints/CHECKPOINT-2026-10-09-HOLD-EXPENSE-OBSERVER.md** — score 20; concepts: eco
+  - 3: Source exacte **9bad4832f2b53c3fd89c3765b0e24a5318167d7d**, qualification native outputs/eco-qualification-2026-10-09T00-52-01-749Z. Preuve réelle des observateurs : avant 3 échecs des assertions attendues / après 3 PASS. **CI gouvernée PASS, 657/657 Node, fai
+  - 11: Source native **9bad4832f2b53c3fd89c3765b0e24a5318167d7d**. Installation verrouillée npm PASS, zéro vulnérabilité signalée. Le vérificateur Node/TypeScript réel confirme : référence d9bc8d9 **3 tests, 3 échecs des bonnes assertions, zéro skip/cancel** ; source
+  - 21: **Dernier diagnostic réellement exécuté : d9bc8d9de22156f7ab798ef75470fc5ecf3019a3, Chromium 1/1 PASS (1,6 min)**. Les assertions de convergence à cinq secondes n'ont pas été assouplies. Les fragments d'horodatage transmis par le fondateur mesurent, depuis la
+  - 23: Les traces montrent aussi des GET répétés de l'endpoint dépenses sur les deux pages, souvent environ toutes les 120 ms, y compris sans saisie. Les identifiants de timeline ne sont pas un nombre de requêtes. Le total exact n'est pas inventé : le long résultat u
+  - 27: Le source préparé ajoute trois tests de comportement du composant réel (idle, changement canonique/contexte, récapitulatif de séance). scripts/verify-expense-recap-regression.mjs exige leurs trois échecs d'assertion sur le SHA d9bc8d9 puis leurs trois succès s
+- **docs/change-impact/CIR-2026-10-20-LOT28-RESOURCE-PROOF.md** — score 19; concepts: eco, recherche, preparation, confirmation
+  - 3: Autorisation humaine : poursuivre les lots complets et les publier suivant le classement proposé ; le lot 28 suit le lot 05. Le périmètre autorisé est l'observation technique, la suppression de doublons secondaires démontrés et la qualification. Les preuves de
+  - 7: Le transport de `ConnectedApplication` demeure l'unique propriétaire des requêtes applicatives. Le Ledger, les calculs, l'outbox, les horloges signées, les délais, les erreurs, la présence WebSocket et les confirmations gardent leurs propriétaires et contrats
+  - 9: Ajouter un observateur local explicite de parcours : compte des appels utiles, envois HTTP, lectures regroupées, réponses locales, erreurs et volume JSON décodé. Aucun corps, URL, recherche, identifiant ou montant dans le rapport. Mesure par fenêtre et context
+  - 11: Regrouper seulement des GET secondaires simultanés strictement identiques : catalogue produit, compteur Universe, listes Workspace et profil de conciergerie. Pas de cache temporel. Aucun regroupement pour finance, authentification, Live, signaux, notifications
+  - 17: Comparer référence sans regroupement et candidat sur le même jeu synthétique : six demandes simultanées d'une même lecture secondaire, mêmes résultats ; une nouvelle lecture ultérieure reste fraîche. Au repos, zéro requête supplémentaire dans les deux versions
+- **docs/memory/HISTORICAL_TRUTH_2026-09-11.md** — score 13; concepts: eco
+  - 1: # ECO-SYSTEM — CURRENT TRUTH
+  - 8: - URL PWA unique : `https://eco-system.sergemimf.workers.dev/`
+  - 9: - Worker : `eco-system`
+  - 10: - D1 : exclusivement `eco-system-db`
+  - 17: - Commit produit matérialisé : `7e08a76` (`feat: materialize Eco-System 1.0 Complete App`)
+- **docs/change-impact/CIR-2026-09-10-complete-app-1.0.md** — score 12; concepts: eco
+  - 1: # CIR — Eco-System 1.0 Complete App
+  - 8: Replace the old Alpha-facing shell with the Complete App product line while preserving proven canonical services and the 0.6/0.5.1 recovery checkpoints.
+  - 11: Eco-System must model how each group actually defines and operates each rubric. Written rules, observed practice, validated operational policy, exceptions, approval authority and evidence remain distinct layers. A practice from one group must never become a un
+  - 16: - Living Rules, Discovery/Membership, Group Launch, Session, Finance and ecosystem entry points exposed from one coherent product surface.
+  - 29: - Reuses existing `platform_records` persistence for workspace records.
+- **docs/change-impact/CIR-2026-10-02-free-conservation-finance-offline.md** — score 12; concepts: eco, confirmation
+  - 7: Réduire drastiquement les lectures D1 tout en conservant une interaction rapide, corriger la cohérence de l'affichage côté auteur, reconstruire les dettes/intérêts/épargne depuis les preuves réelles, restaurer les rubriques historiques et étendre l'usage offli
+  - 25: **Bénéfice attendu :** consommation D1 indépendante du nombre de secondes pendant lesquelles plusieurs navigateurs restent ouverts.
+  - 27: **Risque :** si le WebSocket tombe, l'actualisation immédiate peut être retardée jusqu'à une action/réouverture/reprise. L'Outbox et les projections locales empêchent la perte de données ; elles ne prétendent pas remplacer une confirmation serveur.
+  - 30: `FINANCIAL_CONFIRMED_STORAGE` garde temporairement la dernière valeur confirmée et empêche une lecture canonique plus ancienne de remettre visuellement 1500 après validation de 3000. Elle s'efface lorsque la version canonique rejoint/dépasse la confirmation.
+  - 39: Les événements de feuille historiques et nouveaux sont interprétés par nature de rubrique : principal ou intérêts. Les libellés historiques « Remboursement(s) » et « Remboursement intérêts » restent reconnus. Le calcul évite de compter deux fois le même paieme
+- **docs/change-impact/CIR-2026-10-20-LOT01-NAVIGATION.md** — score 12; concepts: eco, bilingue, recherche
+  - 11: Rendre les fonctions existantes faciles à retrouver sans changer leurs parcours. Nouveau composant de présentation shell-navigation : contexte personnel/groupe/écran, menu complet, recherche FR/EN locale, favoris locaux séparés par compte/groupe, accès clavier
+  - 17: - Ouverture de dialogue : risque de perte de focus ou de première frappe ; fermer restitue le champ existant, sans reconstruire la feuille. Tester brouillon et présence.
+  - 18: - Droits et changement de groupe : risque de raccourci ancien ; relire les boutons actuels à l’activation, isoler les favoris, supprimer le contexte visible à la déconnexion. Serveur toujours autoritaire.
+  - 26: Tests de recherche multilingue et favoris avec séparation A/B, expiration et stockage refusé. Navigateur synthétique : clavier, favori, compte/groupe, trois densités, largeur et zoom, champs conservés et reprise. Suites financières, conflits, hors ligne et PWA
+  - 42: Contrôle Windows de la stabilisation : les deux scénarios ciblés passent (F5 avec position et comptes distincts ; menu/détour/reprise du brouillon). La restauration observe les changements de dimensions pendant au plus 1,5 seconde et cède immédiatement au proc
+- **docs/memory/recalls/RECALL-2026-10-20-LOT01-NAVIGATION.md** — score 12; concepts: eco, bilingue, recherche
+  - 5: Base distante : `5cba15abc3e5d61f2ad35d40fefb5d320e3f28d2`, branche active `fix/1.5.2.10-offline-conflicts-loans-20261003`. Production avant ce lot : `5e7044ee2a8c346c0a36f905d74d41a2a2dfab0d`, 1.5.2.19. La copie de travail a été reconstruite depuis l'archive
+  - 7: Réemploi : `main.js` reste propriétaire de la navigation ; les boutons existants restent propriétaires de leurs destinations ; `ui-modes.js` reste propriétaire des modes ; la finance conserve ses propriétaires, ses brouillons, son outbox et ses messages Live.
+  - 9: Qualification prévue : recherche bilingue, isolation et expiration ; clavier et petits écrans ; trois modes distincts ; brouillon et retour à la cellule ; régressions financières complètes Node, Chromium et WebKit ; fermeture du graphe PWA. Utiliser uniquement
+  - 23: Contrôle Windows de la stabilisation : les deux scénarios ciblés passent (F5 avec position et comptes distincts ; menu/détour/reprise du brouillon). La restauration observe les changements de dimensions pendant au plus 1,5 seconde et cède immédiatement au proc
+  - 28: Production **1.5.2.21-navigation-stability**, source `5c9366445d6699b7a608f06a49a4efb61ec7d1ff`, build `eco-system-1.5.2.21-20261020-navigation-stability`, cache `eco-system-v15221-navigation-stability-20261020`, Worker `44612486-e62b-480f-820c-134f98ffc617`.
+- **docs/change-impact/CIR-2026-09-17-master-2.3.4-closure.md** — score 11; concepts: eco
+  - 19: - Non-financial operational dossiers: Universal Workspace may persist governed records, but cannot become a second ledger, loan book, membership authority or inventory authority.
+  - 20: - Marketplace: Market service and canonical stock/order records.
+  - 29: 2. Upgrade operational UI for still-structural Master capabilities, prioritising member lifecycle, meeting governance, obligations/recovery, reporting/exports, Discovery/recruitment and notifications.
+  - 30: 3. Add/reuse API contracts and domain records only through canonical owners.
+  - 31: 4. Add additive D1 migrations only when persistence cannot safely reuse existing generic records.
+- **docs/memory/recalls/RECALL-2026-09-17-master-2.3.4-closure.md** — score 10; concepts: eco
+  - 5: Parent production checkpoint: `1817ad7d3c7dd8e2497244a6735e712a3a414253` (Eco-System 1.3.4)
+  - 9: Close the gap between the product actually exposed by Eco-System and the full constitutional business baseline 2.3.4. The founder explicitly rejected the prior claim that the application was complete and requested a renewed confrontation of all previously supp
+  - 14: 2. `ECO_SYSTEM_Cahier_des_Charges_Maitre_Exhaustif_Sauvegarde_2.3.4_2026-09-05.md` from the founder's preserved File Library.
+  - 21: ## Recovered constitutional invariants
+  - 25: - An association may contain zero, one or many rotating tontines and independent rubrics such as Collation, Secours, savings, school savings, loans, assistance, projects, charges and receipts.
+- **docs/memory/recalls/RECALL-2026-10-09-EXPENSE-RECAP-OBSERVER.md** — score 10; concepts: eco
+  - 17: Source **9bad4832f2b53c3fd89c3765b0e24a5318167d7d**, qualification native terminée **2026-10-09T01:02:49.841Z** (02:02 à Douala), rapport outputs/eco-qualification-2026-10-09T00-52-01-749Z/qualification-report.json dans le chat. **Résultat global FAIL** : aucu
+  - 22: - Live : 1 000 / 2 001 / 2 002 reçus sur l'autre écran en **1 486 / 2 040 / 1 862 ms**, limites cinq secondes inchangées. **19 requêtes sur les endpoints instrumentés** (pas toutes les requêtes réseau), dont cinq lectures dépenses pendant le parcours et **zéro
+  - 23: - **WebKit 4 PASS / 2 FAIL (1,4 min)**. QR decoder, assets offline, rechargement origine arrêtée et override Recap passent. DataChannel échoue avec ECO_LOCAL_ROOM_WEBRTC_UNAVAILABLE ; callback A01 s'arrête sur Partager le signal désactivé. Le guard ecoLocalRoo
+  - 35: **Dernier diagnostic réellement exécuté : d9bc8d9de22156f7ab798ef75470fc5ecf3019a3, Chromium 1/1 PASS (1,6 min)**. Les assertions de convergence à cinq secondes n'ont pas été assouplies. Les fragments d'horodatage transmis par le fondateur mesurent, depuis la
+  - 37: Les traces montrent aussi des GET répétés de l'endpoint dépenses sur les deux pages, souvent environ toutes les 120 ms, y compris sans saisie. Les identifiants de timeline ne sont pas un nombre de requêtes. Le total exact n'est pas inventé : le long résultat u
+- **docs/memory/recalls/RECALL-2026-10-20-LOT28-RESOURCE-PROOF.md** — score 10; concepts: eco, preparation
+  - 5: Candidat 1.5.2.23-resource-proof : mesure locale explicite dans Réglages et regroupement de GET secondaires simultanés. `ConnectedApplication` conserve le transport ; aucun propriétaire financier dupliqué. Pas de cache temporel, polling, modification d'ACK, d'
+  - 7: Neuf tests natifs du lot passent : limites et vie privée de la mesure, allowlist, clones, absence de cache, contexte/langue/options, invalidation avant mutation, panne/reprise, comparaison bloquante et signature externe ECO-LOCK. Le vrai Worker/SQLite donne mê
+  - 18: Production **1.5.2.23-resource-proof**, source `12fe2f01b3cdfe08cf845ea9d7104fbb9026cc23`, build `eco-system-1.5.2.23-20261020-resource-proof`, cache `eco-system-v15223-resource-proof-20261020`, Worker `7ad6527f-66f8-40b5-b63b-e646721e08cc`. Livraison [3941614
+  - 20: Le panneau de mesure volontaire est dans Réglages. Le transport regroupe uniquement les GET secondaires autorisés identiques et simultanés, avec clones, invalidation avant mutation et sans cache temporel. Comparaison réelle Worker/SQLite : 9 envois deviennent
+  - 24: BIR+ et ÉTAT DU PROJET APRÈS ÉTAPE : réalisé, qualifié, intégré, publié et vérifié en ligne pour L28 ; **FIELD_ACCEPTED=NOT_ACCEPTED** pour la recette humaine Delor. Aucune économie de minutes ou de crédits inventée ; coût exact du chat non mesurable. Suite pa
+- **docs/memory/checkpoints/CHECKPOINT-2026-10-09-HOLD-LIVE-SYNC-DIAGNOSTIC.md** — score 9; concepts: eco, outil
+  - 3: Première tentative sur **ad075a7** : build et closure PWA PASS, puis **No tests found**, **aucun scénario navigateur exécuté**. Erreur du filtre du lanceur, pas un échec métier supplémentaire. Source actuelle **d9bc8d9de22156f7ab798ef75470fc5ecf3019a3** dans P
+  - 11: - Chromium 7/8 : Beta valide 2001, Alpha affiche 1000 à cinq secondes. La capture d'échec transmise ensuite affiche 2001 authored by Beta ; retard suggéré, cause exacte non prouvée.
+  - 16: Source instrumentée à exécuter : ad075a733f37326e80a0979bc866158ea74f442f, branche fix/confrontation-clock-recovery-20261008, PR #72 brouillon.
+  - 17: `scripts/diagnose-live-sync-locally.mjs` reconstruit ce checkout propre, utilise uniquement des données synthétiques dans une nouvelle SQLite et exécute une fois le seul scénario Live concerné. Sorties en direct, zéro réinstallation npm/navigateurs. Horaires/A
+  - 19: Le fondateur reçoit une commande PowerShell d'avance rapide de son clone existant, vérification du SHA exact, exécution et copie du diagnostic dans les outputs du chat. Le terminal automatique Codex reste indisponible. Quota mensuel Actions inclus épuisé, dern
+- **docs/change-impact/CIR-2026-10-08-SOVEREIGN-CONVERGENCE.md** — score 8; concepts: eco, confirmation
+  - 1: # CIR — reprise Eco-System : confrontation, synchronisation et présentation
+  - 7: Réparer les propriétaires existants : Application/Outbox pour la durabilité et la reprise, Ledger/D1 pour les montants canoniques, GroupLiveHub pour la diffusion, Eco Relay pour le transport local, vues existantes pour la présentation. Aucun second Ledger, auc
+  - 12: - Le serveur navigateur de qualification n'instancie pas GroupLiveHub et ne traite pas les upgrades WebSocket. Le test de diffusion du remboursement échoue ; son indicateur accepte aussi le texte « connexion Live » déconnecté.
+  - 19: Conserver l'historique des intentions, les clés d'idempotence et l'ordre de validation. Une décision explicite qui reconfirme une ancienne valeur doit être une nouvelle intention datée et tracée, jamais une falsification de l'ancienne date. Les montants en att
+  - 25: - Outbox : confirmation locale rapide, reprise unique sérialisée, réouverture des échecs de transport après un vrai événement, protection des conflits métier et quotas. Annuler/appliquer une confrontation conserve l'intention d'origine ; le choix explicite cré
+- **docs/change-impact/CIR-2026-10-15-cockpit-continuity.md** — score 8; concepts: eco, assistant, voix, consentement
+  - 1: # CIR — Cockpit, Eco IA et continuité personnelle
+  - 5: Propriétaires conservés : main.js pour navigation et les deux feuilles financières ; local-assistant.js pour interprétation locale ; voice-entry-ui.ts pour transcription ; EcoPulse et ConciergeLearning pour recommandations et consentements métier. Aucun deuxiè
+  - 7: Extension : présentation commune, accueil compact, accès directs aux capacités existantes, écran Eco IA FR/EN. Une projection de navigation locale, bornée et effaçable, contient uniquement des destinations autorisées, sous clé compte/groupe ; aucun montant, te
+  - 9: Voix : réutilisation de la reconnaissance existante, arrêt puis relecture explicite avant report dans la cellule, validation financière canonique distincte. Changement de compte/groupe/vue invalide le report.
+
+## Gate
+Ce rapport est un index de rappel, pas une décision métier. Toute contradiction doit être rapprochée avec la Constitution, l'état réel du code, les CIR/ADR et les tests avant implémentation.

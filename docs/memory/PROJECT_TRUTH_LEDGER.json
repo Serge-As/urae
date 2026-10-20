@@ -26,6 +26,18 @@
   ],
   "records": [
     {
+      "id": "lot23-assistant-tools-20261020",
+      "scope": "existing local assistant, optional topic memory, draft templates and authorized search owner",
+      "status": "IN_PROGRESS",
+      "statement": "Nine assistant contract tests pass. Same-source integrated qualification and public delivery remain required; no model or subscription added.",
+      "evidence": [
+        "docs/change-impact/CIR-2026-10-20-LOT23-ASSISTANT-TOOLS.md",
+        "docs/memory/recalls/RECALL-2026-10-20-LOT23-ASSISTANT-TOOLS.md"
+      ],
+      "observedOn": "2026-10-20",
+      "next": "Qualify exact SHA, verify readonly backup and public assets; then L10."
+    },
+    {
       "id": "lot02-cockpit-continuity-20261020",
       "scope": "personal cockpit projections and minimal journey references",
       "status": "VERIFIED_REMOTE",

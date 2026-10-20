@@ -989,10 +989,11 @@ export class ConnectedApplication {
 
   async listGroups():Promise<Group[]>{const all=await this.request<Group[]>('/api/v1/groups');this.groupTenants=new Map(all.map(g=>[g.id,g.tenantId]));return all.filter(g=>g.status!=='archived');}
   /** Personal views must use server-verified memberships, not the broader tenant group catalogue. */
-  async listMyGroups():Promise<Group[]>{
+  async listMyGroups(options:{requireServer?:boolean}={}):Promise<Group[]>{
     let rows:Group[];
-    try{rows=await this.request<Group[]>('/api/v1/groups/mine');}
+    try{rows=await this.request<Group[]>('/api/v1/groups/mine',options.requireServer?{cache:'no-store'}:{});}
     catch(error){
+      if(options.requireServer)throw error;
       if(!(error instanceof Error)||error.message!=='NETWORK_UNAVAILABLE')throw error;
       // First offline session after an offline-created group can predate the
       // account-scoped server snapshot. Never expose the broader tenant
