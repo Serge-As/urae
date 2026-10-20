@@ -26,6 +26,18 @@
   ],
   "records": [
     {
+      "id": "lot05-session-rehearsal-20261020",
+      "status": "IN_PROGRESS",
+      "scope": "session presentation and isolated educational rehearsal",
+      "statement": "Lot 05 candidate 1.5.2.22 preserves canonical financial owners and adds a purely local fictional exercise. Seven native model tests passed; browser and same-SHA deployment qualification remain pending. No production finance or transport access is injected into the exercise.",
+      "evidence": [
+        "docs/change-impact/CIR-2026-10-20-LOT05-SESSION-REHEARSAL.md",
+        "docs/memory/recalls/RECALL-2026-10-20-LOT05-SESSION-REHEARSAL.md"
+      ],
+      "observedOn": "2026-10-20",
+      "next": "Qualify integrated SHA, publish through guarded workflow and verify twelve public assets before closing L05; then L28."
+    },
+    {
       "id": "lot01-navigation-20261020",
       "status": "VERIFIED_REMOTE",
       "scope": "presentation/navigation",

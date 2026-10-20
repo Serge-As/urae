@@ -1,9 +1,9 @@
 {
   "name": "tontine-platform",
-  "version": "1.5.2-21",
+  "version": "1.5.2-22",
   "private": true,
   "type": "module",
-  "description": "Eco-System 1.5.2.21: coherent accessible navigation, local bilingual search, scoped favorites and preserved financial continuity.",
+  "description": "Eco-System 1.5.2.22: preserved financial session workflows and isolated local rehearsal with complete table parts and exact member summaries.",
   "engines": {
     "node": ">=24"
   },
@@ -32,4 +32,3 @@
     "ws": "8.21.0"
   }
 }
-

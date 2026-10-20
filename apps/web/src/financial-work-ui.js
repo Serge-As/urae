@@ -1,3 +1,4 @@
+import {openSessionRehearsal} from './session-rehearsal.js';
 const node=(tag,text,cls)=>{const e=document.createElement(tag);if(text!==undefined)e.textContent=text;if(cls)e.className=cls;return e;};
 export function createFinancialWorkUI({app,tx,notify,summary,edit,resume,waitForEntries=async()=>{},isLiveConnected=()=>false}){
   const modes=new Map(),passages=new Map();let current=null,busy=null;
@@ -18,6 +19,7 @@ export function createFinancialWorkUI({app,tx,notify,summary,edit,resume,waitFor
       const indicator=node('strong',label+' · '+status);indicator.setAttribute('role','status');bar.append(indicator);
       const review=node('button',tx('Vérifier le membre et terminer','Review member and finish'),'secondary');review.type='button';review.disabled=!current||Boolean(meetingId&&current.meetingId!==meetingId);review.onclick=()=>void finish().catch(e=>notify(String(e.message)));bar.append(review);
       const change=node('button',tx('Choisir le mode','Choose mode'),'secondary');change.type='button';change.disabled=!meetingId;change.onclick=()=>void choose(meetingId,true).catch(e=>notify(String(e.message)));bar.append(change);
+      const practice=node('button',tx('S’entraîner sans toucher la caisse','Practice without changing the cashbook'),'secondary eco-session-practice-open');practice.type='button';practice.onclick=()=>openSessionRehearsal({tx});bar.append(practice);
     }
   };
   const choose=async(meetingId,change=false)=>{

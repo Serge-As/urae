@@ -1,12 +1,12 @@
 {
   "contractVersion": 1,
   "release": {
-    "version": "1.5.2.21-navigation-stability",
-    "buildId": "eco-system-1.5.2.21-20261020-navigation-stability",
+    "version": "1.5.2.22-session-rehearsal",
+    "buildId": "eco-system-1.5.2.22-20261020-session-rehearsal",
     "schemaVersion": "d1-additive-20260923",
     "policyVersion": "live-finance-policy-20261007-event-push-repayment",
-    "pwaCache": "eco-system-v15221-navigation-stability-20261020",
-    "previousPwaCache": "eco-system-v15220-navigation-coherence-20261020",
+    "pwaCache": "eco-system-v15222-session-rehearsal-20261020",
+    "previousPwaCache": "eco-system-v15221-navigation-stability-20261020",
     "commitShaAuthority": "DEPLOYMENT_WORKFLOW_GITHUB_SHA_AND_PRODUCTION_HEALTH"
   },
   "truthAxes": {

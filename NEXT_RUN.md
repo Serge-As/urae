@@ -1,3 +1,11 @@
+## Lot 05 — séances et répétition locale, réalisation du 20 octobre 2026
+
+Le lot 01 est clos et publié en 1.5.2.21, source 5c936644, avec preuves dans le reçu LOT01-STABILITY et livraison 39406749561. L05 conserve tous les propriétaires financiers et requalifie partitions, synthèses, brouillons, présence, confrontation, hors ligne et F5. Candidat **1.5.2.22-session-rehearsal** : exercice local avec trois personnes fictives, vingt rubriques réparties par le planificateur existant, totaux généraux et synthèse figée avant changement de membre. Aucun accès à un compte/groupe réel ni au transport, à la persistance ou au Ledger depuis l'exercice. Sept tests du modèle réussissent ; qualification navigateur et intégration complète en cours.
+
+L05 n'est pas encore déclaré publié. Le workflow exact-SHA exige toutes les régressions et les douze empreintes publiques. Aucune migration, dépendance payante ou argent réel. FIELD_ACCEPTED=NOT_ACCEPTED. Après L05, poursuivre **L28**, puis L02, L23, L10, L24, L25. Coût exact des crédits non mesurable.
+
+Les informations suivantes sont historiques et datées.
+
 ## Lot 01 terminé, publié et vérifié — 20 octobre 2026
 
 Production **1.5.2.21-navigation-stability**, source `5c9366445d6699b7a608f06a49a4efb61ec7d1ff`, build `eco-system-1.5.2.21-20261020-navigation-stability`, cache `eco-system-v15221-navigation-stability-20261020`, Worker `44612486-e62b-480f-820c-134f98ffc617`. Livraison [39406749561 SUCCESS](https://github.com/Serge-As/urae/actions/runs/39406749561) et qualification indépendante [39406749566 SUCCESS](https://github.com/Serge-As/urae/actions/runs/39406749566) sur ce même SHA. Le workflow de livraison réussit 744 tests natifs, 20 Chromium et 6 WebKit. Quatre contrôles ciblés sur la version compilée passent aussi sous Windows ; six tests de recherche/favoris passent localement.

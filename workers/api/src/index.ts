@@ -78,11 +78,11 @@ interface WorkersAILike {
   run?(model:string,input:Record<string,unknown>,options?:Record<string,unknown>):Promise<unknown>;
 }
 
-const RELEASE_VERSION='1.5.2.21-navigation-stability';
-const RELEASE_BUILD_ID='eco-system-1.5.2.21-20261020-navigation-stability';
+const RELEASE_VERSION='1.5.2.22-session-rehearsal';
+const RELEASE_BUILD_ID='eco-system-1.5.2.22-20261020-session-rehearsal';
 const RELEASE_SCHEMA_VERSION='d1-additive-20260923';
 const RELEASE_POLICY_VERSION='live-finance-policy-20261007-event-push-repayment';
-const RELEASE_PWA_CACHE='eco-system-v15221-navigation-stability-20261020';
+const RELEASE_PWA_CACHE='eco-system-v15222-session-rehearsal-20261020';
 
 const defaultRepo = new InMemoryPlatformRepository();
 const defaultReferralBudgets = new InMemoryReferralBudgetStore();
@@ -3566,4 +3566,3 @@ async scheduled(controller:{scheduledTime?:number},env:WorkerEnv,executionCtx?:{
 }
 };
 export {defaultRepo as repo};
-
