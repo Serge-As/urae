@@ -183,7 +183,7 @@ let launchStudio;
 let modules = [];
 let selectedLot = 'ALL';
 let deferredInstallPrompt;
-const CAHIER_VERSION = '1.5.2.23-resource-proof';
+const CAHIER_VERSION = '1.5.2.24-cockpit-continuity';
 const $ = (s) => { const e = document.querySelector(s); if (!e)
     throw new Error(`UI_ELEMENT_NOT_FOUND:${s}`); return e; };
 const val = (id) => document.getElementById(id).value.trim();
@@ -493,7 +493,8 @@ updateBackButton();
 const detailUI = mountDetailUI({ app, navigate: go, getGroups: () => groups, getMembers: () => members, getMeetings: () => meetings, getRubrics: () => rubrics, isManager, fmt, date, showError: fail });
 const personalCockpitUI = mountPersonalCockpitUI({
   app, getGroups:()=>groups, getMembers:()=>members, getMeetings:()=>meetings,
-  navigate:go, fmt, date, showError:fail, isManager,
+  navigate:go, fmt, date, showError:fail, isManager, journey, openDetail:(type,id)=>detailUI.open(type,id),
+  openInbox:async id=>{const scope=[app.currentActor(),app.currentTenant?.(),app.activeGroup()].join('|');await renderInbox(id);if(scope!==[app.currentActor(),app.currentTenant?.(),app.activeGroup()].join('|'))return;go('inbox',{anchor:'eco-inbox-item-'+id,force:true});},
   openGroupWorkspace:async groupId=>{
     const mine=await app.listMyGroups();
     if(!mine.some(group=>group.id===groupId))throw Error('FORBIDDEN_SCOPE');
@@ -629,8 +630,11 @@ const renderGroups = async () => {
     renderActiveGroup();
     renderGroupSelector();
 };
-const renderInbox = async () => {
+const renderInbox = async highlightedId => {
+    const captured={actor:app.currentActor(),tenant:app.currentTenant?.(),group:app.activeGroup()||''};
     const items = await app.inboxItems();
+    if(captured.actor!==app.currentActor()||captured.group!==(app.activeGroup()||'')||captured.tenant!==app.currentTenant?.())return;
+    personalCockpitUI.acceptInbox?.(items,captured);
     for (const selector of ['#dashboardInbox', '#inboxList']) {
         const root = $(selector);
         root.replaceChildren();
@@ -638,8 +642,11 @@ const renderInbox = async () => {
             root.innerHTML = `<li class="empty-state">${tx('Aucune action urgente.','No urgent action.')}</li>`;
             continue;
         }
-        for (const i of items.slice(0, selector === '#dashboardInbox' ? 5 : 50)) {
+        const visible=items.slice(0,selector==='#dashboardInbox'?5:50),target=typeof highlightedId==='string'?items.find(x=>x.id===highlightedId):null;
+        if(selector==='#inboxList'&&target&&!visible.some(x=>x.id===target.id))visible.push(target);
+        for (const i of visible) {
             const li = document.createElement('li');
+            if(selector==='#inboxList'){li.id='eco-inbox-item-'+i.id;li.tabIndex=-1;}
             li.textContent = `${i.title} · ${i.status}`;
             root.append(li);
         }
@@ -2532,6 +2539,7 @@ window.addEventListener('eco:financial-live-update',event=>{
 
 const refreshGroupContext = async () => {
     const requestedGroup=app.activeGroup();
+    personalCockpitUI.clearForContext?.();
     // Account navigation does not wait for optional group/financial panels.
     // Reuse this same membership-checked directory in the personal cockpit.
     const personalDirectory=personalCockpitUI.prepareNavigation?.();

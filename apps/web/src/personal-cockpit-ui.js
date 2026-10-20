@@ -1,15 +1,23 @@
+import {mountCockpitPriorities} from './cockpit-priorities-ui.js';
 import {openLoanSimulationDialog} from './loan-simulation-ui.js';
 const el=(tag,text,className)=>{const e=document.createElement(tag);if(text!==undefined)e.textContent=text;if(className)e.className=className;return e;};
 const row=(label,value)=>{const p=el('p');p.append(el('strong',label+' : '),document.createTextNode(String(value??'—')));return p;};
 const detail=(label,type,id)=>{const a=el('a',label,'link-btn');a.href='#detail='+encodeURIComponent(type)+':'+encodeURIComponent(id);a.dataset.detailType=type;a.dataset.detailId=id;return a;};
 
-export function mountPersonalCockpitUI({app,getGroups,getMembers,getMeetings,navigate,openGroupForum,openGroupWorkspace,isManager=()=>false,fmt=n=>String(n),date=x=>String(x),showError=console.error}){
+export function mountPersonalCockpitUI({app,getGroups,getMembers,getMeetings,navigate,openGroupForum,openGroupWorkspace,journey,openDetail,openInbox,isManager=()=>false,fmt=n=>String(n),date=x=>String(x),showError=console.error}){
   const metrics=document.getElementById('personalCockpitMetrics'),situation=document.getElementById('personalSituation'),next=document.getElementById('personalNext'),noticesRoot=document.getElementById('personalLiveNotices'),spaces=document.getElementById('personalSpaces');
   const pulseRoot=document.getElementById('ecoPulseFeed'),pulseProfile=document.getElementById('ecoPulseProfile');
   if(!metrics||!situation||!next||!noticesRoot||!spaces)return{refresh:async()=>{}};
   const metric=(value,label)=>{const d=el('div',undefined,'metric');d.append(el('strong',String(value)),el('span',label));return d;};
   const action=(label,view)=>{const b=el('button',label,'secondary');b.type='button';b.onclick=()=>navigate(view);return b;};
   const impressed=new Set(),dwelled=new Set(),timers=new Map();
+  const context=()=>({actor:app.currentActor(),tenant:app.currentTenant?.(),group:app.activeGroup()||''});
+  const sameContext=c=>JSON.stringify(c)===JSON.stringify(context());
+  const priorities=mountCockpitPriorities({app,journey,navigate,openDetail,openGroupWorkspace,openInbox,openOpportunity:item=>pulseOpen(item)});
+  let refreshGeneration=0,sharedInbox=null,pulseGeneration=0,displayedContext=JSON.stringify(context());
+  const clearForContext=()=>{refreshGeneration++;for(const root of [metrics,situation,next,noticesRoot,spaces,pulseRoot])root?.replaceChildren();if(pulseProfile)pulseProfile.textContent='';const nextContext=JSON.stringify(context());if(nextContext!==displayedContext){displayedContext=nextContext;pulseGeneration++;for(const timer of timers.values())clearTimeout(timer);timers.clear();impressed.clear();dwelled.clear();sharedInbox=null;}priorities.reset();};
+  const acceptInbox=(items,captured=context())=>{if(!sameContext(captured))return;sharedInbox={context:captured,items:items.filter(x=>!x.groupId||x.groupId===captured.group)};void priorities.update({inbox:sharedInbox.items},captured);};
+
   const pulseSignal=async(item,actionName)=>{
     try{await app.recordEcoPulse({itemId:item.id,itemKind:item.kind,action:actionName,source:item.source,groupId:item.groupId,locality:item.locality,tags:item.tags??[]});}catch{}
   };
@@ -47,9 +55,12 @@ export function mountPersonalCockpitUI({app,getGroups,getMembers,getMeetings,nav
   };
   const renderPulse=async()=>{
     if(!pulseRoot||!pulseProfile)return;
+    const captured=context(),pulseToken=++pulseGeneration;
     pulseRoot.replaceChildren();pulseProfile.textContent='EcoPulse prépare vos suggestions…';
     try{
       const [feed,profile]=await Promise.all([app.ecoPulseFeed({limit:12}),app.ecoPulseProfile()]);
+      if(!sameContext(captured)||pulseToken!==pulseGeneration)return;
+      void priorities.update({opportunities:feed.items??[]},captured);
       const top=(profile.affinities??[]).filter(x=>x.score>0).slice(0,5);
       pulseProfile.textContent=top.length?'EcoPulse apprend surtout : '+top.map(x=>x.value).join(' · ')+' · 15% d’exploration pour éviter une bulle fermée.':'EcoPulse démarre en mode exploration : vos ouvertures, recherches, adhésions et masquages vont rapidement personnaliser ce fil.';
       if(!(feed.items??[]).length){pulseRoot.append(el('p','Les recommandations apparaîtront dès que des groupes ou communautés seront publiés.','hint'));return;}
@@ -72,7 +83,7 @@ export function mountPersonalCockpitUI({app,getGroups,getMembers,getMeetings,nav
         const key=item.kind+':'+item.id;if(!impressed.has(key)){impressed.add(key);void pulseSignal(item,'IMPRESSION');}
         observeDwell(card,item);
       }
-    }catch(e){pulseProfile.textContent='EcoPulse reste disponible dès que la synchronisation serveur revient.';pulseRoot.append(el('p','Le cockpit principal continue de fonctionner sans recommandation réseau.','hint'));}
+    }catch(e){if(!sameContext(captured)||pulseToken!==pulseGeneration)return;void priorities.update({opportunities:null},captured);pulseProfile.textContent='EcoPulse reste disponible dès que la synchronisation serveur revient.';pulseRoot.append(el('p','Le cockpit principal continue de fonctionner sans recommandation réseau.','hint'));}
   };
 
   const tr=(fr,en)=>document.documentElement.lang?.startsWith('en')?en:fr;
@@ -120,15 +131,18 @@ export function mountPersonalCockpitUI({app,getGroups,getMembers,getMeetings,nav
     });
   };
     const refresh=async(authorizedDirectory)=>{
-    metrics.replaceChildren();situation.replaceChildren();next.replaceChildren();noticesRoot.replaceChildren();spaces.replaceChildren();
+    clearForContext();const captured=context(),token=refreshGeneration,current=()=>sameContext(captured)&&token===refreshGeneration;
     const groups=getGroups(),groupId=app.activeGroup(),members=getMembers(),meetings=getMeetings(),mine=members.find(m=>m.userId===app.currentActor());
     metrics.append(metric(groups.length,'Groupes accessibles'));
     let personalCommunities=[];try{personalCommunities=await app.myInterestCommunities();}catch{}
+    if(!current())return;
     metrics.append(metric(personalCommunities.length,'Communautés d’intérêt'));
     // A tenant catalogue can contain groups that are not mine. Never expose
     // those names as my forum shortcuts without a server membership check.
     let forumGroups=[],forumsUnavailable=false;
     try{forumGroups=await(authorizedDirectory??prepareNavigation());}catch{forumsUnavailable=true;}
+    if(!current())return;
+    void priorities.update({groups:forumGroups,groupsUnavailable:forumsUnavailable,meetings,manager:isManager(),memberId:mine?.id||'',inbox:sharedInbox&&sameContext(sharedInbox.context)?sharedInbox.items:null},captured);
     renderPersonalForas(forumGroups,personalCommunities,forumsUnavailable);
     // Separate group workspaces from discussions. A member can choose any
     // number of associations or tontines belonging to this authenticated
@@ -177,12 +191,12 @@ export function mountPersonalCockpitUI({app,getGroups,getMembers,getMeetings,nav
     metrics.append(metric(open.length,'Séances ouvertes'));
     if(mine){
       try{
-        const statement=await app.memberStatement(mine.id);
+        const statement=await app.memberStatement(mine.id);if(!current())return;
         const totalDebt=Number(statement.totalDebt??0),positionAfterDebt=Number(statement.totalNetContributions??0)-totalDebt;
         metrics.append(metric(fmt(statement.totalNetContributions),'Mes cotisations nettes'),metric(fmt(totalDebt),'Mes dettes'),metric(fmt(positionAfterDebt),'Position après dettes'));
         situation.append(detail(mine.displayName,'member',mine.id),row('Cotisations nettes',fmt(statement.totalNetContributions)),row('Dettes / prêts + intérêts',fmt(totalDebt)),row('Position après dettes',fmt(positionAfterDebt)),row('Dernière actualisation',date(statement.asOf)));
         try{
-          const sheet=await app.memberOperationalSheet(mine.id),rubrics=sheet.rubrics??[],matrix=sheet.exerciseMatrix??[],box=el('article',undefined,'item');
+          const sheet=await app.memberOperationalSheet(mine.id);if(!current())return;const rubrics=sheet.rubrics??[],matrix=sheet.exerciseMatrix??[],box=el('article',undefined,'item');
           box.append(el('strong','Ma fiche financière du groupe'),el('p','Toutes les rubriques du groupe sont reprises ici depuis la même vérité que la feuille de séance.','hint'));
           const grid=el('div',undefined,'personal-rubric-grid');
           for(const rubric of rubrics){
@@ -190,14 +204,14 @@ export function mountPersonalCockpitUI({app,getGroups,getMembers,getMeetings,nav
             item.type='button';if(rubric.polarity==='NEGATIVE')item.classList.add('financial-negative');item.innerHTML='<span>'+String(rubric.name)+'</span><strong>'+fmt(total)+'</strong>';item.onclick=()=>{location.hash='#detail=member:'+encodeURIComponent(mine.id);};grid.append(item);
           }
           box.append(grid);const actions=el('div',undefined,'actions'),open=el('button','Ouvrir ma fiche individuelle complète','primary');open.type='button';open.onclick=()=>{location.hash='#detail=member:'+encodeURIComponent(mine.id);};const sim=el('button','Simuler l’évolution de mon prêt','secondary');sim.type='button';sim.onclick=()=>void(async()=>{try{const loans=(sheet.loans??[]).filter(x=>['DISBURSED','REPAYING'].includes(String(x.data?.completionState??''))),loan=loans[0];await openLoanSimulationDialog({app,loan,fallbackDebt:Number(statement.debtPrincipal??0),fallbackInterest:Number(statement.debtInterest??0),title:'Évolution de mon prêt',memberName:mine.displayName});}catch(e){showError(e);}})();actions.append(open,sim);box.append(actions);situation.append(box);
-        }catch(e){situation.append(el('p','La fiche financière détaillée sera affichée dès que la synchronisation du groupe est disponible.','hint'));}
-      }catch(e){situation.append(detail(mine.displayName,'member',mine.id),el('p','Votre relevé personnel reste accessible depuis votre fiche.','hint'));}
+        }catch(e){if(!current())return;situation.append(el('p','La fiche financière détaillée sera affichée dès que la synchronisation du groupe est disponible.','hint'));}
+      }catch(e){if(!current())return;situation.append(detail(mine.displayName,'member',mine.id),el('p','Votre relevé personnel reste accessible depuis votre fiche.','hint'));}
       try{
-        const notices=await app.financialNotices(mine.id),pending=notices.filter(n=>!['CONFIRMED','APPROVED_AFTER_REVIEW'].includes(String(n.status)));
+        const notices=await app.financialNotices(mine.id);if(!current())return;void priorities.update({notices},captured);const pending=notices.filter(n=>!['CONFIRMED','APPROVED_AFTER_REVIEW'].includes(String(n.status)));
         metrics.append(metric(pending.length,'Avis à vérifier'));
         if(!notices.length)noticesRoot.append(el('p','Aucun avis financier à vérifier.','hint'));
         for(const n of notices.slice(0,8)){const a=el('article',undefined,'item');a.append(el('strong',String(n.operationType??'Opération')),row('Montant',fmt(Number(n.amount??0))),row('État',n.status),row('Date',date(n.createdAt??n.updatedAt??'')));noticesRoot.append(a);}
-      }catch{noticesRoot.append(el('p','Les avis apparaîtront ici dès qu’une opération vous concerne.','hint'));}
+      }catch{if(!current())return;noticesRoot.append(el('p','Les avis apparaîtront ici dès qu’une opération vous concerne.','hint'));}
     }else{
       situation.append(el('p','Votre compte n’est pas encore relié à une fiche membre dans ce groupe. Utilisez l’appairage si le groupe existait déjà.','hint'),action('Appairer mon compte','discovery'));
     }
@@ -205,14 +219,14 @@ export function mountPersonalCockpitUI({app,getGroups,getMembers,getMeetings,nav
     else if(future.length){const m=future[0],a=el('article',undefined,'item');a.append(detail(m.title,'meeting',m.id),row('Prévue',date(m.scheduledAt)));next.append(a);}
     else next.append(el('p','Aucune prochaine séance renseignée.','hint'));
     try{
-      const inbox=await app.inboxItems(),mineItems=inbox.filter(x=>!x.groupId||x.groupId===groupId);
+      const inbox=await app.inboxItems();if(!current())return;acceptInbox(inbox,captured);const mineItems=inbox.filter(x=>!x.groupId||x.groupId===groupId);
       if(mineItems.length){const a=el('article',undefined,'item');a.append(el('strong',mineItems.length+' action(s) à traiter'));const b=action('Ouvrir À faire','inbox');a.append(b);next.append(a);}
     }catch{}
     try{
-      const health=await app.liveHealth();const a=el('article',undefined,'item');a.append(el('strong','Live Ledger'),row('État',health.enabled?'Connecté / disponible':'Non actif sur ce déploiement'),row('Séquence',health.latest??0));noticesRoot.prepend(a);
+      const health=await app.liveHealth();if(!current())return;const a=el('article',undefined,'item');a.append(el('strong','Live Ledger'),row('État',health.enabled?'Connecté / disponible':'Non actif sur ce déploiement'),row('Séquence',health.latest??0));noticesRoot.prepend(a);
     }catch{}
     try{
-      const hubs=await app.listCommunityHubs();if(hubs.length){const h=el('article',undefined,'item');h.append(el('strong',hubs.length+' Hub(s) du groupe'),action('Voir Communauté & économie','ecosystem'));spaces.append(h);}
+      const hubs=await app.listCommunityHubs();if(!current())return;if(hubs.length){const h=el('article',undefined,'item');h.append(el('strong',hubs.length+' Hub(s) du groupe'),action('Voir Communauté & économie','ecosystem'));spaces.append(h);}
     }catch{}
     for(const c of personalCommunities.slice(0,8)){const a=el('article',undefined,'item');a.append(el('strong',c.name),row('Communauté',c.locality||'Sans localité'));spaces.append(a);}
     const opportunities=el('section',undefined,'item personal-opportunity-actions');
@@ -231,6 +245,6 @@ export function mountPersonalCockpitUI({app,getGroups,getMembers,getMeetings,nav
     spaces.append(action('Découvrir d’autres groupes','discovery'),action('Communautés d’intérêt','ecosystem'));
   };
   document.getElementById('ecoPulseRefreshBtn')?.addEventListener('click',()=>void renderPulse());
-  return{refresh,refreshPulse:renderPulse,prepareNavigation};
+  return{refresh,refreshPulse:renderPulse,prepareNavigation,clearForContext,acceptInbox};
 }
 

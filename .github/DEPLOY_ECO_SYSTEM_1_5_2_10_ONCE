@@ -1,13 +1,13 @@
-Eco-System 1.5.2.23 lot 28 resource proof delivery authorized
-release: 1.5.2.23-resource-proof
+Eco-System 1.5.2.24 lot 02 cockpit continuity delivery authorized
+release: 1.5.2.24-cockpit-continuity
 date: 2026-10-20
 db_mutation: none
 mode: code-only-with-verified-readonly-backup-no-migration
-qualified_baseline_source: 61c939d6c6fe68b23ca2c015fdc269460469e591
-qualified_baseline_delivery: 39411571048
-qualification: baseline passed 751 native, 22 Chromium, 6 WebKit; candidate must pass all exact-SHA gates
-candidate_native: 760 expected including nine resource and effect proof tests; mandatory before deploy
-candidate_chromium: 23 expected including one new resource-budget scenario; mandatory before deploy
+qualified_baseline_source: 12fe2f01b3cdfe08cf845ea9d7104fbb9026cc23
+qualified_baseline_delivery: 39416149450
+qualification: baseline passed 760 native, 23 Chromium, 6 WebKit; candidate must pass all exact-SHA gates
+candidate_native: 769 expected including nine cockpit continuity tests; mandatory before deploy
+candidate_chromium: 25 expected including two new cockpit scenarios; mandatory before deploy
 candidate_webkit: 6 mandatory before deploy
 production_ancestry: preserve 5c9366445d6699b7a608f06a49a4efb61ec7d1ff and all prior deliveries
 backup: mandatory D1 export, verified SQLite restore, private R2 archive download/hash before deploy
@@ -16,9 +16,9 @@ financial_signing: preserve existing key, never rotate, provision only proven ab
 real_money_enabled: false
 field_acceptance: NOT_ACCEPTED
 historical_pr72_hold: preserved; no merge or override of PR72
-trigger_nonce: 2026-10-20-lot28-resource-proof-isolated-exact-sha-retry
+trigger_nonce: 2026-10-20-lot02-cockpit-continuity-exact-sha-gated
 authorization: current user requested implementation and deployment of complete lots by agreed priority
 qualification: separate synthetic SQLite and process for every browser file; retain production authentication rate limits
-scope: local request measurement and simultaneous allowlisted secondary GET reuse; preserve acquired financial semantics
+scope: read-only prioritized cockpit, scoped presentation preferences and minimal continuity references; preserve acquired financial owners
 qualification_same_deployment_sha: mandatory full gates before publication, no relaxation
-public_verification: exact health catalog release plus SHA-256 comparison of fifteen deployed PWA assets with same-SHA build
+public_verification: exact health catalog release plus SHA-256 comparison of twenty deployed PWA assets with same-SHA build

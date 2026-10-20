@@ -1,9 +1,9 @@
 {
   "name": "tontine-platform",
-  "version": "1.5.2-23",
+  "version": "1.5.2-24",
   "private": true,
   "type": "module",
-  "description": "Eco-System 1.5.2.23: local request budgets, bounded simultaneous secondary-read reuse and effect-comparison evidence; canonical finance and offline guarantees preserved.",
+  "description": "Eco-System 1.5.2.24: prioritized personal cockpit and scoped journey references; canonical owners, financial sheets and offline guarantees preserved.",
   "engines": {
     "node": ">=24"
   },

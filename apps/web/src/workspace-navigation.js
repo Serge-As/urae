@@ -29,7 +29,7 @@ export function mountWorkspaceNavigation({getScope=()=>'',navigate=()=>{}}={}){
     const key=['groupHomePanel','roleDashboardsCenter'].includes(id)?'groups'
       :['ecoPulsePanel','anticipationCenter','anticipationPanel'].includes(id)?'opportunities'
       :id==='uiModePanel'||id==='universeCards'||node.classList.contains('cahier-banner')||node.querySelector(':scope > .quick-grid')?'services'
-      :id==='personalCockpitPanel'||id==='urgentNotificationsPanel'||node.matches('.cockpit-workbench,.cockpit-launchpad,.two-col')?'overview':'services';
+      :id==='ecoCockpitWorkbench'||id==='personalCockpitPanel'||id==='urgentNotificationsPanel'||node.matches('.cockpit-workbench,.cockpit-launchpad,.two-col')?'overview':'services';
     panels.get(key).append(node);
   };
   for(const node of [...dashboard.children])classify(node);

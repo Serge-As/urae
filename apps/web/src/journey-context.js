@@ -9,11 +9,18 @@ export function createJourneyContext({storage, scope, now = Date.now} = {}) {
     catch { return {enabled:true,recent:[]}; }
   };
   const write = v => { const k=key(); if(k)try{storage.setItem(k,JSON.stringify(v));}catch{} return v; };
+  const references=()=>{
+    if(!read().enabled)return[];
+    try{const raw=JSON.parse(storage.getItem(key())||'null');return Array.isArray(raw?.references)?raw.references.filter(r=>r?.kind==='meeting'&&typeof r.id==='string'&&r.id.length>0&&r.id.length<=240&&/^[\w.:/-]+$/.test(r.id)&&['sessions','operations'].includes(r.view)&&Number.isFinite(r.at)&&r.at<=now()&&now()-r.at<TTL).slice(0,16).map(r=>({kind:'meeting',id:r.id,view:r.view,at:r.at})):[];}catch{return[];}
+  };
   return {
     snapshot:read,
-    visit(view) { const v=read(); if(!v.enabled||!JOURNEY_VIEWS.includes(view)||view==='assistant')return v; return write({enabled:true,recent:[{view,at:now()},...v.recent.filter(r=>r.view!==view)].slice(0,8)}); },
-    setEnabled(enabled) { return write({enabled:Boolean(enabled),recent:enabled?read().recent:[]}); },
-    clear() { return write({enabled:read().enabled,recent:[]}); }
+    references,
+    rememberReference(reference){const r=reference,v=read();if(!v.enabled||r?.kind!=='meeting'||typeof r.id!=='string'||!r.id||r.id.length>240||!/^[\w.:/-]+$/.test(r.id)||!['sessions','operations'].includes(r.view))return false;write({...v,references:[{kind:'meeting',id:r.id,view:r.view,at:now()},...references().filter(x=>x.id!==r.id)].slice(0,16)});return true;},
+    forgetReference(id){return write({...read(),references:references().filter(r=>r.id!==id)});},
+    visit(view) { const v=read(); if(!v.enabled||!JOURNEY_VIEWS.includes(view)||view==='assistant')return v; const refs=references();write({enabled:true,recent:[{view,at:now()},...v.recent.filter(r=>r.view!==view)].slice(0,8),references:refs});return read(); },
+    setEnabled(enabled) { const refs=references();write({enabled:Boolean(enabled),recent:enabled?read().recent:[],references:enabled?refs:[]});return read(); },
+    clear() { write({enabled:read().enabled,recent:[],references:[]});return read(); }
   };
 }
 

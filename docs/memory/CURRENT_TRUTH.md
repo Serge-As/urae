@@ -1,3 +1,11 @@
+## Lot 02 — cockpit et continuité, candidat du 20 octobre 2026
+
+Dernière production attestée **1.5.2.23-resource-proof**, source 12fe2f01b3cdfe08cf845ea9d7104fbb9026cc23 ; L01/L05/L28 clos et vérifiés. L02 prépare **1.5.2.24-cockpit-continuity** : quatre voies de priorités expliquées dans Accueil, préférences locales isolées et passeport minimal de séances interrompues. Reuse Before Build : résultats et callbacks des propriétaires existants, aucun solde ni transaction dans ce panneau. Les anciens cockpits, répertoires multi-groupes, feuilles et parcours restent présents.
+
+Neuf tests natifs du lot et les cinq tests de continuité précédents passent. La qualification intégrée et la publication restent à acquérir : attendus 769 natifs, 25 Chromium, 6 WebKit et vingt empreintes publiques. Droits et existence revérifiés au clic ; réponse locale de secours ≠ autorisation fraîche. Aucune lecture réseau automatique ajoutée au panneau, aucune collecte périodique, aucune migration ou dépendance payante. FIELD_ACCEPTED=NOT_ACCEPTED, coût exact des crédits non mesurable.
+
+Après clôture réelle : L23, L10, L24, L25. Les informations suivantes sont l’historique daté.
+
 ## Lot 28 terminé, publié et vérifié — 20 octobre 2026
 
 Production **1.5.2.23-resource-proof**, source `12fe2f01b3cdfe08cf845ea9d7104fbb9026cc23`, build `eco-system-1.5.2.23-20261020-resource-proof`, cache `eco-system-v15223-resource-proof-20261020`, Worker `7ad6527f-66f8-40b5-b63b-e646721e08cc`. Livraison [39416149450 SUCCESS](https://github.com/Serge-As/urae/actions/runs/39416149450), qualification indépendante [39416149462 SUCCESS](https://github.com/Serge-As/urae/actions/runs/39416149462). Même source : **760 natifs, 23 Chromium, 6 WebKit** réussis, sans scénario supprimé, ignoré ou flaky accepté. Reçu public `docs/release/evidence/LOT28-RESOURCE-PROOF-PUBLIC-2026-10-20.json` : quinze empreintes SHA-256, catalogue 164, realMoneyEnabled=false, vérification à 11:44:35.933Z. Santé HTTPS relue indépendamment à 11:47:41Z : version/source/build/cache exacts, D1/R2 et Live liés.

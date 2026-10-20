@@ -1,0 +1,37 @@
+# Lot 02 — accueil de travail et continuité personnelle
+
+## Parcours et sources
+
+Le nouveau panneau « L’essentiel, au bon moment » apparaît dans Accueil après les six raccourcis existants. Quatre voies montrent les actions assignées et séances ouvertes, les dates futures et avis à vérifier, les feuilles interrompues et les opportunités issues du fil EcoPulse existant. Chaque carte porte sa provenance, sa fraîcheur connue ou une indication explicite de vérification nécessaire, sa raison et une action. Les propositions ne valent ni engagement ni transaction.
+
+Le classement reste explicable : blocage, échéance atteinte, priorité de la source, séance ouverte, avis à vérifier, reprise et suggestion. Une épingle augmente le rang sans effacer un blocage urgent. Masquer ne supprime pas l’objet : le nombre de cartes masquées et le bouton Réinitialiser restent visibles. Au-delà de six cartes par voie, « Voir les N cartes » donne accès à la totalité de la projection autorisée ; aucun sous-ensemble n’est présenté comme exhaustif. Désactiver « Mes choix de présentation » ignore les masquages/épingles et les suggestions optionnelles, tandis que les actions métier autorisées restent accessibles.
+
+Les préférences contiennent seulement des identifiants de cartes et dates, sont séparées par compte/tenant/groupe sur l’appareil, bornées à quatre-vingts références et trente jours, et ne sont jamais envoyées à un service de suivi. Un stockage indisponible ne casse pas le parcours et signale l’impossibilité de conserver le choix. Aucun abonnement ou nouvelle bibliothèque nécessaire.
+
+## Passeport de continuité I01
+
+Quand un utilisateur entre dans une cellule de sa feuille de séance existante, Journey Context mémorise uniquement le type séance, son identifiant, la vue d’origine et la date. Il ne copie pas le montant, le texte, le brouillon ou la vérité financière. Seize références maximum, expiration trente jours, séparation compte/groupe. Les huit vues récentes historiques et leur API restent compatibles. Le consentement mémoire existant arrête et efface les deux mémoires ; Effacer supprime aussi les références.
+
+Dans À reprendre, le gestionnaire ouvre sa feuille sur la bonne séance via le routeur et la restauration financière existants. Le cockpit ne soumet pas de cellule. Les montants, brouillons, ACK et conflits restent gérés par leurs propriétaires. Avant la reprise, GroupMe et Meeting sont relus par ConnectedApplication et la métadonnée doit attester une réponse serveur fraîche pour le même acteur/tenant/groupe. Une réponse locale de secours peut rester utile ailleurs ; elle ne devient pas une nouvelle autorisation de reprise. Fermeture/suppression connue retire le raccourci ; vérification impossible affiche la raison et ne navigue pas. Un changement de contexte pendant un await invalide le résultat.
+
+Les actions À faire sont revérifiées dans la boîte canonique, puis ouvrent la ligne correspondante, même si elle était au-delà des cinquante premières. Les avis sont revérifiés pour la fiche personnelle avant d’ouvrir cette fiche. Les opportunités délèguent aux actions existantes EcoPulse/communautés/boutique. Les liens Préparer une séance, Calendrier et Group Doctor ouvrent leurs propriétaires actuels ; aucune règle financière n’est déduite ou changée dans ce panneau.
+
+## Résilience et ressources
+
+Le panneau consomme les résultats déjà lus par Personal Cockpit, Inbox et EcoPulse. La construction des cartes, le classement, les préférences et la lecture des métadonnées IndexedDB n’ajoutent aucune requête réseau automatique. Les contrôles d’autorisation et d’existence sont des lectures explicites au clic. Aucune minuterie de collecte ou actualisation périodique. Les signaux préexistants EcoPulse ne sont pas présentés comme un nouveau gain de ce lot. Les compteurs de L28 permettent de vérifier le parcours réel.
+
+Une source absente n’efface pas les autres voies ; état inconnu ≠ zéro confirmé. Les anciennes métriques financières sont conservées dans leur propriétaire : le nouveau panneau ne calcule aucun solde. Le contexte précédent est effacé immédiatement au changement ; des gardes de génération et compte/tenant/groupe empêchent un ancien résultat asynchrone de repeindre des informations privées. Les répertoires de tous les groupes autorisés et les activités historiques restent accessibles.
+
+La présentation utilise des styles limités à ce panneau : cartes compactes et sources lisibles, colonnes adaptées à l’espace disponible, une colonne sur téléphone ; senior agrandi, assisté guidé et cibles plus grandes. FR/EN réagit aux vrais changements de langue, sans boucle avec le traducteur existant. Aucun style inline ni assouplissement de CSP.
+
+## Qualification et publication
+
+Attendus avant publication : neuf nouveaux tests natifs, les suites acquises complètes (**769 natifs**), **25 Chromium**, **6 WebKit**, droits retirés, source partielle, mémoire OFF, stockage indisponible, références périmées, action exacte et trois modes à 360 px. Le navigateur observe zéro commande financière provenant du panneau et vérifie que les préférences n’ajoutent pas de lectures réseau. Les chiffres définitifs seront ceux du SHA qualifié, sans masquer échec ou limite.
+
+Livraison code uniquement, version/build/cache cohérents, même D1/R2 et clé de signature, aucune migration. Sauvegarde restaurable et archive R2 relue avant Worker ; santé et catalogue du SHA exact, puis vingt empreintes publiques incluant les deux nouveaux modules, Journey Context et Personal Cockpit. Retour possible par retrait du raccord UI ou nouvelle publication cohérente à partir de l’archive attestée ; aucune écriture métier à annuler. Le format des anciennes préférences et vues reste lisible.
+
+Statut initial : préparation locale, publication non acquise. FIELD_ACCEPTED=NOT_ACCEPTED ; la recette humaine Delor reste distincte des scénarios synthétiques. Coût exact du chat non mesurable. Suite après clôture : L23, L10, L24, L25.
+
+Qualification locale du 20 octobre : 769 tests natifs réussis ; deux scénarios Chromium propres au lot réussis ensemble sur un serveur/SQLite isolés, zéro ignoré ou flaky. Le contrôle de silence réseau attend la fin du chargement initial puis observe les deux commandes locales et 1,2 seconde d’inactivité : zéro appel API. Les contrôles d’architecture, d’index mémoire et de vérité passent. Ces résultats locaux ne remplacent pas la qualification et les reçus publics du SHA livré.
+
+Raccord du classement des panneaux : Workspace Navigation doit classer ecoCockpitWorkbench dans Vue d’ensemble. Le test navigateur initial a découvert que le classement par défaut rangeait ce panneau dans Services ; correction additive du seul identifiant, sans changer les quatre onglets ni leurs anciens panneaux. Ce module est ajouté aux empreintes publiques. Les signaux EcoPulse gardent leur déduplication au sein du même contexte, afin qu’un rafraîchissement de présentation n’ajoute pas d’impressions réseau.
