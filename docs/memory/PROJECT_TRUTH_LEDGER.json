@@ -27,15 +27,20 @@
   "records": [
     {
       "id": "lot05-session-rehearsal-20261020",
-      "status": "IN_PROGRESS",
+      "status": "VERIFIED_REMOTE",
       "scope": "session presentation and isolated educational rehearsal",
-      "statement": "Lot 05 candidate 1.5.2.22 preserves canonical financial owners and adds a purely local fictional exercise. Seven native model tests passed; browser and same-SHA deployment qualification remain pending. No production finance or transport access is injected into the exercise.",
+      "statement": "Lot 05 version 1.5.2.22 published from 61c939d6 with 751 native, 22 Chromium and 6 WebKit passing; twelve public assets, exact health and restorable private backup verified. The purely local fictional exercise has no production finance or transport access. Field acceptance remains NOT_ACCEPTED.",
       "evidence": [
-        "docs/change-impact/CIR-2026-10-20-LOT05-SESSION-REHEARSAL.md",
-        "docs/memory/recalls/RECALL-2026-10-20-LOT05-SESSION-REHEARSAL.md"
+        "source:61c939d6c6fe68b23ca2c015fdc269460469e591",
+        "github-actions:39411571048 SUCCESS; independent39411571191 SUCCESS",
+        "qualification:751Node22Chromium6WebKitPASS",
+        "public-receipt:docs/release/evidence/LOT05-SESSION-REHEARSAL-PUBLIC-2026-10-20.json",
+        "health-independent:2026-10-20T11:06:47.786Z version/build/cache/SHA exact",
+        "private-R2-readback-sha256:d9ded1006ae4ccebf1200594bc5ac3c16ee71c1de68705644462ad0117847293; restored integrityok"
       ],
       "observedOn": "2026-10-20",
-      "next": "Qualify integrated SHA, publish through guarded workflow and verify twelve public assets before closing L05; then L28."
+      "next": "Continue L28, then L02, L23, L10, L24, L25. Do not repeat source audit.",
+      "note": "Published and public assets verified. Local synthetic rehearsal only; actual financial owners unchanged. No migration or signing-key rotation. FIELD_ACCEPTED=NOT_ACCEPTED."
     },
     {
       "id": "lot01-navigation-20261020",
