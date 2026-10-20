@@ -26,16 +26,33 @@
   ],
   "records": [
     {
+      "id": "lot10-commercial-cycle-20261020",
+      "scope": "group-shop quotes, canonical atomic orders and group-buy exceptions",
+      "status": "VERIFIED_REMOTE",
+      "statement": "Published immutable quote comparison/acceptance, atomic partial deliveries/returns/cancellation, stock terms and exact group-buy withdrawal/cost allocation. Global L10 remains IN_PROGRESS. No payments inferred or new financial owner.",
+      "evidence": [
+        "source:1c012c47567a3f8eba8fc3fff22fa6dba658d4cf",
+        "github-actions:39478003645 SUCCESS; independent39478003625 SUCCESS",
+        "qualification:808Node29Chromium6WebKitPASS",
+        "public-receipt:docs/release/evidence/LOT10-COMMERCIAL-CYCLE-PUBLIC-2026-10-20.json",
+        "health-independent:2026-10-20T19:02:50.4469400Z",
+        "private-R2-readback-sha256:e27f76ad08363c9fc76ae4fe184e5f9e3442530d336aa59cd9ea2bcfe56305ba; restored integrityok"
+      ],
+      "observedOn": "2026-10-20",
+      "next": "Complete missing profile and receipt/handoff scope before closing global lot. FIELD_ACCEPTED=NOT_ACCEPTED."
+    },
+    {
       "id": "lot10-commercial-orders-20261020",
       "scope": "canonical commercial quotes, stock and order fulfilment, group-buy commitments",
       "status": "IN_PROGRESS",
-      "statement": "29 new service tests pass in memory and real SQLite/D1. Complete browser and integrated qualification plus public delivery still required. Standalone personal storefronts are not claimed newly available.",
+      "statement": "Group-shop commercial cycle published and verified in1.5.2.26. Global lot remains partial: standalone personal storefront mandates, distinct buyer receipt and referenced SAV handoff are not newly delivered.",
       "evidence": [
-        "docs/change-impact/CIR-2026-10-20-LOT10-COMMERCIAL-ORDERS.md",
-        "docs/memory/recalls/RECALL-2026-10-20-LOT10-COMMERCIAL-ORDERS.md"
+        "source:1c012c47567a3f8eba8fc3fff22fa6dba658d4cf",
+        "github-actions:39478003645 SUCCESS; independent39478003625 SUCCESS",
+        "public-receipt:docs/release/evidence/LOT10-COMMERCIAL-CYCLE-PUBLIC-2026-10-20.json"
       ],
       "observedOn": "2026-10-20",
-      "next": "Qualify exact SHA, restore readonly backup, deploy and compare public assets. Close actual scope before next lot."
+      "next": "Continue missing profile/mandate and handoff coverage from this deployed baseline; no new general audit, do not mark global lot complete. FIELD_ACCEPTED remains NOT_ACCEPTED."
     },
     {
       "id": "lot23-assistant-tools-20261020",

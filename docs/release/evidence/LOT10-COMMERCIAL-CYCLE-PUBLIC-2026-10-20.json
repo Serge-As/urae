@@ -1,0 +1,119 @@
+{
+  "verifiedAt": "2026-10-20T18:56:57.954Z",
+  "version": "1.5.2.26-commercial-orders",
+  "sourceSha": "1c012c47567a3f8eba8fc3fff22fa6dba658d4cf",
+  "buildId": "eco-system-1.5.2.26-20261020-commercial-orders",
+  "pwaCache": "eco-system-v15226-commercial-orders-20261020",
+  "capabilities": 164,
+  "realMoneyEnabled": false,
+  "assets": [
+    {
+      "path": "/",
+      "sha256": "6676419c460be0282cfe0db67aef0b0672752479d4e647df53d674d01b122f84"
+    },
+    {
+      "path": "/styles.css",
+      "sha256": "ae4bac564e5efb824a3c788c492a418d6f41c7a30e6ee560275992aa948b6871"
+    },
+    {
+      "path": "/sw.js",
+      "sha256": "f3bdc96fe168cc797606ccec20b8c10f47dcd04eccdd142a8e873ea83245986d"
+    },
+    {
+      "path": "/eco-shell-manifest.json",
+      "sha256": "cc58d7719cbf530637517abae562e8de74aaa6069b14b5f24d2a331e026ab05c"
+    },
+    {
+      "path": "/src/main.js",
+      "sha256": "5ba77ee1eab69b3659c20c87af5bda5ecf9ac59cd0246ce4d40f30d75ef8c269"
+    },
+    {
+      "path": "/src/financial-work-ui.js",
+      "sha256": "4968d4ec17afca3faebe4416a2b91e318f04b544a988d63f0947e8891b779e1b"
+    },
+    {
+      "path": "/src/completion-ui.js",
+      "sha256": "08b6bc67eb6c77c2065ae3c983523b21d4d223190b4a6f82d0eff999aedc5fa1"
+    },
+    {
+      "path": "/src/ui-modes.js",
+      "sha256": "795339401f0eaa42a9822a918cf3982bedfaea02c68f4669a845372bb711ee81"
+    },
+    {
+      "path": "/src/field-hardening.js",
+      "sha256": "6c4284d33ac9441a847fc504f18d9bf079ded736c05656b287dcd96e9f4efb01"
+    },
+    {
+      "path": "/src/runtime-i18n.js",
+      "sha256": "91f34912a2a2c659449988e4172d04d1fa20bdb6746033889f0e286d900823c4"
+    },
+    {
+      "path": "/src/shell-navigation.js",
+      "sha256": "5bc9ec6d5a9c17ab0190370c464e79cd0029b25009b168b7486c0acb30865b72"
+    },
+    {
+      "path": "/src/session-rehearsal.js",
+      "sha256": "57b6e41c3b7381f0b86e8569d9bf45d64616f1dd8af353295061d611b3d31b63"
+    },
+    {
+      "path": "/src/request-budget-ui.js",
+      "sha256": "62dccfab867860795b77df2936bf02a8fef7e21e10f4842be6f3545a8322e83d"
+    },
+    {
+      "path": "/packages/application/src/index.js",
+      "sha256": "e5f922f6c6349cf0b274bc2541a92c14638fba46781fd7c9471bb5fa905a13cb"
+    },
+    {
+      "path": "/packages/application/src/request-budget.js",
+      "sha256": "00f39471099cc69127ae301660d22694c5b8097e6be7ea42fbed040aede498d5"
+    },
+    {
+      "path": "/src/cockpit-priorities.js",
+      "sha256": "dfb2678284d5fcb3269bb366a4c4e7e1dfd25ab694bba6c5005a70c502014de3"
+    },
+    {
+      "path": "/src/cockpit-priorities-ui.js",
+      "sha256": "86ce0a26c0573893e81a2c1d20b64994a90a091b53524aa6992abe2c97bc53f2"
+    },
+    {
+      "path": "/src/journey-context.js",
+      "sha256": "5199dd16542efa8434e15e6a5f96f1e018f2963d49ce4b0c10d3a71d23f2a9ae"
+    },
+    {
+      "path": "/src/personal-cockpit-ui.js",
+      "sha256": "25d59daffbb6ebc36a6d913341b661bfb0c24d887a633cb468804233769a4a43"
+    },
+    {
+      "path": "/src/workspace-navigation.js",
+      "sha256": "4eef9756b38fb5e9d0dee5a8af7d4a904f7ce01ae2de9d2ba93bb3349d20c7d1"
+    },
+    {
+      "path": "/src/assistant-actions.js",
+      "sha256": "49844001277c862414e566446cb9ea7db4f0ddd73e456a2c17545f27e113779e"
+    },
+    {
+      "path": "/src/local-assistant.js",
+      "sha256": "f4d7722f9efbc3f810ad8f13f10fc12e3e60f74edd67e7ffb7076092dd76acd4"
+    },
+    {
+      "path": "/src/universal-search.js",
+      "sha256": "4364b14d1067f1091c47e9da28a07312f82cebaae4d911d04fb1bd96580e5c07"
+    },
+    {
+      "path": "/src/advanced-ui.js",
+      "sha256": "be6c81eeec7c8512adbe989c269642c88473cf371e38604c28022c41ecd01373"
+    },
+    {
+      "path": "/src/community-shop-ui.js",
+      "sha256": "ef6e532681c3edeb222bb18adc2ceb50d28bc90b50de2ca83056c5d78846ad00"
+    },
+    {
+      "path": "/src/market-order-board.js",
+      "sha256": "7a4266a1f32e06ccccaf5e5f69bf3def95fbc0c3d0547122c4fcc770eddda60a"
+    },
+    {
+      "path": "/src/market-quotes-ui.js",
+      "sha256": "f095fc06476416d841409c2523ced172e0f2ef08d73611bf679481d7b5338bc7"
+    }
+  ]
+}
