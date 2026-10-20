@@ -1,0 +1,103 @@
+{
+  "verifiedAt": "2026-10-20T16:51:58.179Z",
+  "version": "1.5.2.25-assistant-tools",
+  "sourceSha": "71a30e65f1cc1a4f0d9476e9e10462bce65ae16a",
+  "buildId": "eco-system-1.5.2.25-20261020-assistant-tools",
+  "pwaCache": "eco-system-v15225-assistant-tools-20261020",
+  "capabilities": 164,
+  "realMoneyEnabled": false,
+  "assets": [
+    {
+      "path": "/",
+      "sha256": "7afc0e2f2c297daac003c4494e2eca6e933893038a4c997e83212689caf01f67"
+    },
+    {
+      "path": "/styles.css",
+      "sha256": "b318aae996e178373945741f921a405fdf6a2272bd6984894ad9f257e30ea2cb"
+    },
+    {
+      "path": "/sw.js",
+      "sha256": "c3f3dc4366ac0d5ace79c5e8195fcf62df0686170958d7300edbf12a33a7225a"
+    },
+    {
+      "path": "/eco-shell-manifest.json",
+      "sha256": "7fd0553b5395cfcf8a9460b0edae3bd6ed1453ab7d38a8c81bdf7b00fe03bc7f"
+    },
+    {
+      "path": "/src/main.js",
+      "sha256": "ccc765d02baeb75fa7bd1b9f4b44ecfb5c0d515881cd94a50c69515ac0bccec5"
+    },
+    {
+      "path": "/src/financial-work-ui.js",
+      "sha256": "4968d4ec17afca3faebe4416a2b91e318f04b544a988d63f0947e8891b779e1b"
+    },
+    {
+      "path": "/src/completion-ui.js",
+      "sha256": "08b6bc67eb6c77c2065ae3c983523b21d4d223190b4a6f82d0eff999aedc5fa1"
+    },
+    {
+      "path": "/src/ui-modes.js",
+      "sha256": "795339401f0eaa42a9822a918cf3982bedfaea02c68f4669a845372bb711ee81"
+    },
+    {
+      "path": "/src/field-hardening.js",
+      "sha256": "6c4284d33ac9441a847fc504f18d9bf079ded736c05656b287dcd96e9f4efb01"
+    },
+    {
+      "path": "/src/runtime-i18n.js",
+      "sha256": "68227a0793c83a9e2894dc75b758f5acaeaf342174554118f98f76226de92887"
+    },
+    {
+      "path": "/src/shell-navigation.js",
+      "sha256": "5bc9ec6d5a9c17ab0190370c464e79cd0029b25009b168b7486c0acb30865b72"
+    },
+    {
+      "path": "/src/session-rehearsal.js",
+      "sha256": "57b6e41c3b7381f0b86e8569d9bf45d64616f1dd8af353295061d611b3d31b63"
+    },
+    {
+      "path": "/src/request-budget-ui.js",
+      "sha256": "62dccfab867860795b77df2936bf02a8fef7e21e10f4842be6f3545a8322e83d"
+    },
+    {
+      "path": "/packages/application/src/index.js",
+      "sha256": "4c9827621bd77e0466e6edff8fa9df85dde2a5442dfbd4426682eac2ba8428c8"
+    },
+    {
+      "path": "/packages/application/src/request-budget.js",
+      "sha256": "00f39471099cc69127ae301660d22694c5b8097e6be7ea42fbed040aede498d5"
+    },
+    {
+      "path": "/src/cockpit-priorities.js",
+      "sha256": "dfb2678284d5fcb3269bb366a4c4e7e1dfd25ab694bba6c5005a70c502014de3"
+    },
+    {
+      "path": "/src/cockpit-priorities-ui.js",
+      "sha256": "86ce0a26c0573893e81a2c1d20b64994a90a091b53524aa6992abe2c97bc53f2"
+    },
+    {
+      "path": "/src/journey-context.js",
+      "sha256": "5199dd16542efa8434e15e6a5f96f1e018f2963d49ce4b0c10d3a71d23f2a9ae"
+    },
+    {
+      "path": "/src/personal-cockpit-ui.js",
+      "sha256": "25d59daffbb6ebc36a6d913341b661bfb0c24d887a633cb468804233769a4a43"
+    },
+    {
+      "path": "/src/workspace-navigation.js",
+      "sha256": "4eef9756b38fb5e9d0dee5a8af7d4a904f7ce01ae2de9d2ba93bb3349d20c7d1"
+    },
+    {
+      "path": "/src/assistant-actions.js",
+      "sha256": "49844001277c862414e566446cb9ea7db4f0ddd73e456a2c17545f27e113779e"
+    },
+    {
+      "path": "/src/local-assistant.js",
+      "sha256": "f4d7722f9efbc3f810ad8f13f10fc12e3e60f74edd67e7ffb7076092dd76acd4"
+    },
+    {
+      "path": "/src/universal-search.js",
+      "sha256": "4364b14d1067f1091c47e9da28a07312f82cebaae4d911d04fb1bd96580e5c07"
+    }
+  ]
+}
