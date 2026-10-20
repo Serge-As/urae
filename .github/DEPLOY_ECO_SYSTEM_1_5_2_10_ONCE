@@ -16,9 +16,9 @@ financial_signing: preserve existing key, never rotate, provision only proven ab
 real_money_enabled: false
 field_acceptance: NOT_ACCEPTED
 historical_pr72_hold: preserved; no merge or override of PR72
-trigger_nonce: 2026-10-20-lot28-resource-proof-exact-sha-gated
+trigger_nonce: 2026-10-20-lot28-resource-proof-isolated-exact-sha-retry
 authorization: current user requested implementation and deployment of complete lots by agreed priority
-qualification: separate synthetic WebKit data from Chromium; retain production authentication rate limits
+qualification: separate synthetic SQLite and process for every browser file; retain production authentication rate limits
 scope: local request measurement and simultaneous allowlisted secondary GET reuse; preserve acquired financial semantics
 qualification_same_deployment_sha: mandatory full gates before publication, no relaxation
 public_verification: exact health catalog release plus SHA-256 comparison of fifteen deployed PWA assets with same-SHA build
