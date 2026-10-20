@@ -1,0 +1,55 @@
+{
+  "verifiedAt": "2026-10-20T10:24:12.353Z",
+  "version": "1.5.2.21-navigation-stability",
+  "sourceSha": "5c9366445d6699b7a608f06a49a4efb61ec7d1ff",
+  "buildId": "eco-system-1.5.2.21-20261020-navigation-stability",
+  "pwaCache": "eco-system-v15221-navigation-stability-20261020",
+  "capabilities": 164,
+  "realMoneyEnabled": false,
+  "assets": [
+    {
+      "path": "/",
+      "sha256": "315fc97cd65c3d719ed11f0d75c82071ed600cdbf82828a0fc3b839c2c33f9a6"
+    },
+    {
+      "path": "/styles.css",
+      "sha256": "e237ae9703779991df930afe00842afe0526e627a58f609c39c0388e77fd5b2c"
+    },
+    {
+      "path": "/sw.js",
+      "sha256": "7e8934594f40b30b92856e6912e31c44df6634522b5b05b6277d044de5196c91"
+    },
+    {
+      "path": "/eco-shell-manifest.json",
+      "sha256": "b79839bfe44d8fd5cc523c2e5b3fd2ba4c46f4a8f04ec2ddb23e3e31cdd9232d"
+    },
+    {
+      "path": "/src/main.js",
+      "sha256": "bfe2c71e9b08e1a02533e4cef8a663befdd1dd5dbe766c9814092c0fdd5f11cd"
+    },
+    {
+      "path": "/src/financial-work-ui.js",
+      "sha256": "8b37fc8a6ec4d8f6a790aa6fb3e03af222b444687111b9985078040c2df69b77"
+    },
+    {
+      "path": "/src/completion-ui.js",
+      "sha256": "08b6bc67eb6c77c2065ae3c983523b21d4d223190b4a6f82d0eff999aedc5fa1"
+    },
+    {
+      "path": "/src/ui-modes.js",
+      "sha256": "795339401f0eaa42a9822a918cf3982bedfaea02c68f4669a845372bb711ee81"
+    },
+    {
+      "path": "/src/field-hardening.js",
+      "sha256": "6c4284d33ac9441a847fc504f18d9bf079ded736c05656b287dcd96e9f4efb01"
+    },
+    {
+      "path": "/src/runtime-i18n.js",
+      "sha256": "68227a0793c83a9e2894dc75b758f5acaeaf342174554118f98f76226de92887"
+    },
+    {
+      "path": "/src/shell-navigation.js",
+      "sha256": "0e91e09c547ee37135dec1ed7b41e3b8f555fab88676c177b0286e1dba971350"
+    }
+  ]
+}

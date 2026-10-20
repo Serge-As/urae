@@ -27,17 +27,20 @@
   "records": [
     {
       "id": "lot01-navigation-20261020",
-      "status": "IN_PROGRESS",
+      "status": "VERIFIED_REMOTE",
       "scope": "presentation/navigation",
-      "statement": "1.5.2.20 navigation deployed at 302c108 with 744 native, 20 Chromium and 6 WebKit; backup and eleven public hashes verified. Additional Windows scroll restoration discrepancy under investigation in 1.5.2.21-navigation-stability; lot closure remains pending that qualification.",
+      "statement": "Lot 01 completed and deployed as 1.5.2.21-navigation-stability at 5c9366445d6699b7a608f06a49a4efb61ec7d1ff. Exact-SHA delivery passed 744 native, 20 Chromium, 6 WebKit, restored backup integrity/private R2 readback and eleven matching public asset hashes. Independent qualification succeeded. Four compiled Windows scenarios passed, covering F5 position and draft/focus through canonical sheet rebuild. Canonical finance, drafts and Live retained. FIELD_ACCEPTED remains NOT_ACCEPTED.",
       "evidence": [
         "docs/change-impact/CIR-2026-10-20-LOT01-NAVIGATION.md",
         "docs/memory/recalls/RECALL-2026-10-20-LOT01-NAVIGATION.md",
         "https://github.com/Serge-As/urae/actions/runs/39402988571",
-        "docs/release/evidence/LOT01-NAVIGATION-PUBLIC-2026-10-20.json"
+        "docs/release/evidence/LOT01-NAVIGATION-PUBLIC-2026-10-20.json",
+        "https://github.com/Serge-As/urae/actions/runs/39406749561",
+        "https://github.com/Serge-As/urae/actions/runs/39406749566",
+        "docs/release/evidence/LOT01-STABILITY-PUBLIC-2026-10-20.json"
       ],
       "observedOn": "2026-10-20",
-      "next": "Qualify and publish navigation position stability repair, then L05 by priority."
+      "next": "Implement L05, then L28, L02, L23, L10, L24, L25 by agreed priority."
     },
     {
       "id": "member-financial-continuity-20261016",

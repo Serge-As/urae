@@ -1,48 +1,29 @@
-# Lot 01 — navigation et cohérence visuelle
+# Lot 01 — navigation et cohérence visuelle, livré
 
-## Périmètre livré par le code candidat
+## Lot 01 terminé, publié et vérifié — 20 octobre 2026
 
-- Barre de contexte personnel → groupe → espace/objet, rôle courant et retour à la feuille précédente.
-- Menu des destinations existantes, recherche locale accentuée ou sans accents, synonymes français/anglais ; raccourci Ctrl/⌘ K, flèches, Échap, restitution du focus.
-- Jusqu'à huit favoris choisis, conservés localement par compte/groupe pendant trente jours ; effacement possible, défaillance du stockage non bloquante.
-- Recherche de fonctions dans la barre existante, avec navigation clavier. Aucun appel à une API de recherche par lettre.
-- Modes visuel (13 px pour ces commandes), senior (17 px) et assisté (15 px et guide visible), en conservant l'accès aux mêmes actions.
-- Reprise du contexte exact de saisie : séance, membre, rubrique, position et focus. Le montant reste dans le propriétaire du brouillon financier existant.
+Production **1.5.2.21-navigation-stability**, source `5c9366445d6699b7a608f06a49a4efb61ec7d1ff`, build `eco-system-1.5.2.21-20261020-navigation-stability`, cache `eco-system-v15221-navigation-stability-20261020`, Worker `44612486-e62b-480f-820c-134f98ffc617`. Livraison [39406749561 SUCCESS](https://github.com/Serge-As/urae/actions/runs/39406749561) et qualification indépendante [39406749566 SUCCESS](https://github.com/Serge-As/urae/actions/runs/39406749566) sur ce même SHA. Le workflow de livraison réussit 744 tests natifs, 20 Chromium et 6 WebKit. Quatre contrôles ciblés sur la version compilée passent aussi sous Windows ; six tests de recherche/favoris passent localement.
 
-Ces éléments sont de présentation. Ils ne constituent ni un nouveau moteur financier, ni une mémoire de toutes les données utilisateur entre appareils, ni l'implémentation des vingt-sept autres lots.
+Menu complet des destinations autorisées existantes ; recherche locale bilingue et clavier ; huit favoris maximum par compte/groupe avec expiration ; barre de contexte et rôle ; modes distincts ; retour à la feuille, au brouillon et à la cellule. La stabilisation corrige le défilement lors du chargement différé et le focus si une cellule est reconstruite pendant le menu. Aucune réécriture des moteurs financiers, nouvelle dépendance ou migration.
 
-## Qualification à consolider au SHA publié
+Sauvegarde D1 restaurée avec intégrité `ok`, archive privée relue et empreinte vérifiée ; hash `f10b71bd8113c2793ab351a619c56430f508185a4e92458a7b32fd3df3decc18`. Onze ressources publiques identiques au build exact, catalogue 164, argent réel désactivé. Reçu : `docs/release/evidence/LOT01-STABILITY-PUBLIC-2026-10-20.json` ; vérification du workflow à 10:24:12.353 UTC et santé publique lue dans cette session à 10:25:51.950 UTC.
 
-La référence 1.5.2.19 vient de l'archive exacte GitHub vérifiée par SHA-256, avec les seuls documents ultérieurs du HEAD 5cba15a superposés. Le dossier incomplet `implementation/` n'a pas été publié.
+**Suite autorisée : L05 → L28 → L02 → L23 → L10 → L24 → L25**, puis les autres lots selon priorité. L05 commence par les acquis des séances et l'enrichissement I02 de répétition sur données fictives. Ne pas reprendre l'audit général ni publier le miroir incomplet `implementation/`. Checkout courant : `implementation-lot01-20261020`. La recette est synthétique ; FIELD_ACCEPTED=NOT_ACCEPTED. Coût exact des crédits non mesurable.
 
-Qualification locale déjà observée : 744/744 tests Node, six nouveaux contrôles de recherche/favoris inclus ; architecture, gouvernance, constitution, vérité, mémoire et couverture documentaire valides ; audit des dépendances : zéro vulnérabilité signalée. Le scénario navigateur conserve le brouillon 5432 et le focus après menu et détour par Marketplace, sans commande financière. Les neuf combinaisons 360/768/1366 × visuel/senior/assisté ont une largeur de dialogue contenue. Le viewport effectif 683×450 représente l'espace disponible d'une fenêtre 1366×900 à zoom 200 % ; le réglage natif du navigateur n'a pas été automatisé.
+Les informations suivantes sont historiques et conservent leurs dates.
 
-Incidents rencontrés et traités avant publication : boucle de notification de langue corrigée par comparaison de la valeur ; Échap du champ de recherche ne doit pas demander deux pressions pour fermer ; dialogue retiré du DOM quand fermé afin de préserver les sélecteurs des autres dialogues ; fixture financière sélectionnant le groupe par le sélecteur autorisé ; attente d'un résultat de recherche avant l'action clavier pour éviter une course avec la restauration initiale.
+## Utilisation et limites
 
-La compilation finale ferme le graphe PWA (73 ressources initiales et 38 imports transitifs). Les deux qualifications GitHub indépendantes [39401856044](https://github.com/Serge-As/urae/actions/runs/39401856044) et [39401856043](https://github.com/Serge-As/urae/actions/runs/39401856043) réussissent sur le même code `611baffaba9f937d8fe9ae413b67bd7753f8f15f` : 744 tests natifs, 17 scénarios Chromium existants et 6 WebKit. Les trois scénarios de navigation ajoutés passent localement. Le workflow de livraison exige les 20 Chromium sur son SHA exact. Un accès facultatif à un sélecteur financier monté progressivement a également été corrigé pour préserver le chargement de la feuille.
+« Tous les espaces » ou Ctrl/⌘ K ouvre le menu. La recherche accepte les noms et synonymes FR/EN sans requête par caractère. Les étoiles épinglent des destinations accessibles ; les droits sont relus à chaque activation. « Reprendre la saisie » retrouve les identifiants de séance, membre et rubrique ; le propriétaire financier existant conserve seul le montant.
 
-La livraison n'est pas encore attestée par ce document candidat. La publication est conditionnée aux contrôles du workflow de production, à la sauvegarde D1 restaurée avec intégrité, à la relecture privée R2 et à la comparaison publique des onze ressources servies avec le SHA livré, dont le nouveau module de navigation.
+La reprise est propre à la fenêtre et les favoris à ce compte/groupe sur cet appareil. Le lot ne constitue pas une synchronisation de l'historique personnel entre tous les appareils ni la livraison des autres lots. Les neuf combinaisons 360/768/1366 × trois modes ont été vérifiées. Le viewport effectif à zoom 200 % a été testé ; le réglage natif du navigateur n'a pas été automatisé.
 
-## Récupération et invariants
+## Incidents traités et preuves conservées
 
-Revenir au Worker précédent et à sa source 5e7044e selon le reçu de livraison existant. Aucune migration à inverser, aucune recréation de D1/R2, aucun effacement de saisie. L'ancien cache 1.5.2.19 ainsi que les caches de récupération déjà conservés restent préservés. Les favoris sont des identifiants locaux facultatifs ; les enlever n'affecte pas la finance.
+Boucle de traduction évitée par comparaison de langue ; Échap ferme le menu en une pression ; dialogue retiré du DOM lorsqu'il est fermé ; sélecteurs financiers facultatifs pendant le chargement ; restauration de position limitée à 1,5 seconde et annulée au prochain geste ; référence de focus résolue à nouveau après reconstruction canonique. Le test reconstruit effectivement la feuille pendant le menu et vérifie brouillon, focus et absence de POST financier. Le test attend la confirmation du changement de groupe avant d'exercer ce groupe.
 
-`realMoneyEnabled=false` ; 164 capacités minimum ; `FIELD_ACCEPTED=NOT_ACCEPTED`. Recette automatique sur données synthétiques, aucun contournement de la session Delor protégée. Aucun abonnement ni nouvelle bibliothèque obligatoire.
+La première publication 1.5.2.20 est conservée dans le reçu antérieur. Sa qualification indépendante avait relevé une perte de focus malgré la livraison réussie ; les contrôles Windows ont également révélé le défilement. Ces constats ne sont pas effacés : la correction 1.5.2.21 dispose de ses propres qualifications réussies et de son propre reçu public.
 
-## Programme après publication
+## Récupération
 
-Selon les priorités du dossier gratuit, poursuivre L05 (séances, saisie, Live et tableaux), L28 (comparaison des effets et ressources), L02 (cockpits), L23 (Eco IA), L10 (commerce), L24 (notifications), L25 (SAV), puis les autres lots retenus. La numérotation n'est pas un ordre d'exécution. Achever, qualifier et publier chaque lot avant d'annoncer sa fin.
-
-ÉTAT DU PROJET APRÈS ÉTAPE : lot 1 candidat implémenté ; qualification complète et preuve publique en cours. Coût exact des crédits non mesurable depuis la session.
-
-## Stabilisation de position, 20 octobre 2026
-
-La version 1.5.2.20 est publiée au SHA `302c108795352cb4aaaaff283b935a681ce26c1a` ; livraison 39402988571 SUCCESS : 744 tests natifs, 20 Chromium et 6 WebKit, sauvegarde restaurée avec intégrité et onze empreintes publiques conformes. Worker `4cc48269-1435-493a-ab75-5ea447d81fba`. Reçu : `docs/release/evidence/LOT01-NAVIGATION-PUBLIC-2026-10-20.json`.
-
-Un contrôle Windows complémentaire a relevé un décalage de défilement après F5 (19/20 scénarios locaux passent). Le contrôle avec l'ancienne interface passe ; retirer seulement la reprise de focus ne résout pas l'écart. Le candidat **1.5.2.21-navigation-stability** restaure immédiatement la position et exclut le bandeau fixe de l'ancrage automatique. Qualification ciblée puis workflow intégral exact-SHA requis avant de déclarer le lot clos. Aucun moteur financier, schéma, abonnement ou nouvelle dépendance.
-
-Après fermeture de L01, poursuivre le classement : L05 → L28 → L02 → L23 → L10 → L24 → L25. FIELD_ACCEPTED=NOT_ACCEPTED. Coût exact des crédits non mesurable.
-
-Les informations suivantes sont historiques et datées.
-
-Contrôle Windows de la stabilisation : les deux scénarios ciblés passent (F5 avec position et comptes distincts ; menu/détour/reprise du brouillon). La restauration observe les changements de dimensions pendant au plus 1,5 seconde et cède immédiatement au prochain geste utilisateur ; une nouvelle navigation annule la précédente. La fermeture du menu résout les identifiants de la cellule si le champ initial a été remplacé. Un test supplémentaire provoque la reconstruction par le propriétaire canonique pendant le menu. Aucun montant ni commande financière ne transite dans cette référence de focus. Qualification complète du SHA exact encore obligatoire avant publication 1.5.2.21.
+Les caches cohérents 1.5.2.20, 1.5.2.19 et les générations de récupération antérieures sont préservés. Aucun schéma, clé de signature, fichier R2 métier ou donnée financière n'a été remplacé. Retirer ce composant de présentation et publier un build cohérent reste possible ; les favoris facultatifs n'ont aucun effet sur le Ledger. La source de récupération est archivée par le workflow de livraison. Les ressources D1/R2 acquises restent les mêmes.

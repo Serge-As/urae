@@ -1,20 +1,12 @@
-## Lot 01 — navigation publiée, stabilisation Windows du 20 octobre 2026
+## Lot 01 terminé, publié et vérifié — 20 octobre 2026
 
-La version 1.5.2.20 est publiée au SHA `302c108795352cb4aaaaff283b935a681ce26c1a` ; livraison 39402988571 SUCCESS : 744 tests natifs, 20 Chromium et 6 WebKit, sauvegarde restaurée avec intégrité et onze empreintes publiques conformes. Worker `4cc48269-1435-493a-ab75-5ea447d81fba`. Reçu : `docs/release/evidence/LOT01-NAVIGATION-PUBLIC-2026-10-20.json`.
+Production **1.5.2.21-navigation-stability**, source `5c9366445d6699b7a608f06a49a4efb61ec7d1ff`, build `eco-system-1.5.2.21-20261020-navigation-stability`, cache `eco-system-v15221-navigation-stability-20261020`, Worker `44612486-e62b-480f-820c-134f98ffc617`. Livraison [39406749561 SUCCESS](https://github.com/Serge-As/urae/actions/runs/39406749561) et qualification indépendante [39406749566 SUCCESS](https://github.com/Serge-As/urae/actions/runs/39406749566) sur ce même SHA. Le workflow de livraison réussit 744 tests natifs, 20 Chromium et 6 WebKit. Quatre contrôles ciblés sur la version compilée passent aussi sous Windows ; six tests de recherche/favoris passent localement.
 
-Un contrôle Windows complémentaire a relevé un décalage de défilement après F5 (19/20 scénarios locaux passent). Le contrôle avec l'ancienne interface passe ; retirer seulement la reprise de focus ne résout pas l'écart. Le candidat **1.5.2.21-navigation-stability** restaure immédiatement la position et exclut le bandeau fixe de l'ancrage automatique. Qualification ciblée puis workflow intégral exact-SHA requis avant de déclarer le lot clos. Aucun moteur financier, schéma, abonnement ou nouvelle dépendance.
+Menu complet des destinations autorisées existantes ; recherche locale bilingue et clavier ; huit favoris maximum par compte/groupe avec expiration ; barre de contexte et rôle ; modes distincts ; retour à la feuille, au brouillon et à la cellule. La stabilisation corrige le défilement lors du chargement différé et le focus si une cellule est reconstruite pendant le menu. Aucune réécriture des moteurs financiers, nouvelle dépendance ou migration.
 
-Après fermeture de L01, poursuivre le classement : L05 → L28 → L02 → L23 → L10 → L24 → L25. FIELD_ACCEPTED=NOT_ACCEPTED. Coût exact des crédits non mesurable.
+Sauvegarde D1 restaurée avec intégrité `ok`, archive privée relue et empreinte vérifiée ; hash `f10b71bd8113c2793ab351a619c56430f508185a4e92458a7b32fd3df3decc18`. Onze ressources publiques identiques au build exact, catalogue 164, argent réel désactivé. Reçu : `docs/release/evidence/LOT01-STABILITY-PUBLIC-2026-10-20.json` ; vérification du workflow à 10:24:12.353 UTC et santé publique lue dans cette session à 10:25:51.950 UTC.
 
-Les informations suivantes sont historiques et datées.
-
-## Lot 01 — navigation cohérente, candidat du 20 octobre 2026
-
-Autorisation explicite : implémenter et déployer le lot 1 puis poursuivre. Candidat **1.5.2.20-navigation-coherence** ; qualification en cours, **aucun nouveau déploiement attesté à ce stade**. La dernière production prouvée reste 1.5.2.19 (`5e7044ee2a8c346c0a36f905d74d41a2a2dfab0d`).
-
-Menu complet déléguant aux boutons existants, recherche locale FR/EN, favoris par compte/groupe, contexte personnel/groupe/espace/rôle, modes visuel/senior/assisté et reprise de la dernière feuille. Aucun nouveau moteur financier ni requête de recherche à chaque frappe. Conserver le verrou de non-régression, les propriétaires canoniques et les saisies en attente. CIR et Recall du 20 octobre LOT01-NAVIGATION.
-
-ÉTAT DU PROJET APRÈS ÉTAPE : code candidat présent ; tests, preuve de livraison et vérification publique à compléter. FIELD_ACCEPTED=NOT_ACCEPTED. Aucun coût exact de crédits n'est mesurable.
+**Suite autorisée : L05 → L28 → L02 → L23 → L10 → L24 → L25**, puis les autres lots selon priorité. L05 commence par les acquis des séances et l'enrichissement I02 de répétition sur données fictives. Ne pas reprendre l'audit général ni publier le miroir incomplet `implementation/`. Checkout courant : `implementation-lot01-20261020`. La recette est synthétique ; FIELD_ACCEPTED=NOT_ACCEPTED. Coût exact des crédits non mesurable.
 
 Les informations suivantes sont historiques et conservent leurs dates.
 

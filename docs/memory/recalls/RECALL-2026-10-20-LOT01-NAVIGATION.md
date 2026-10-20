@@ -21,3 +21,16 @@ Après fermeture de L01, poursuivre le classement : L05 → L28 → L02 → L23 
 Les informations suivantes sont historiques et datées.
 
 Contrôle Windows de la stabilisation : les deux scénarios ciblés passent (F5 avec position et comptes distincts ; menu/détour/reprise du brouillon). La restauration observe les changements de dimensions pendant au plus 1,5 seconde et cède immédiatement au prochain geste utilisateur ; une nouvelle navigation annule la précédente. La fermeture du menu résout les identifiants de la cellule si le champ initial a été remplacé. Un test supplémentaire provoque la reconstruction par le propriétaire canonique pendant le menu. Aucun montant ni commande financière ne transite dans cette référence de focus. Qualification complète du SHA exact encore obligatoire avant publication 1.5.2.21.
+
+
+## Clôture vérifiée
+
+Production **1.5.2.21-navigation-stability**, source `5c9366445d6699b7a608f06a49a4efb61ec7d1ff`, build `eco-system-1.5.2.21-20261020-navigation-stability`, cache `eco-system-v15221-navigation-stability-20261020`, Worker `44612486-e62b-480f-820c-134f98ffc617`. Livraison [39406749561 SUCCESS](https://github.com/Serge-As/urae/actions/runs/39406749561) et qualification indépendante [39406749566 SUCCESS](https://github.com/Serge-As/urae/actions/runs/39406749566) sur ce même SHA. Le workflow de livraison réussit 744 tests natifs, 20 Chromium et 6 WebKit. Quatre contrôles ciblés sur la version compilée passent aussi sous Windows ; six tests de recherche/favoris passent localement.
+
+Menu complet des destinations autorisées existantes ; recherche locale bilingue et clavier ; huit favoris maximum par compte/groupe avec expiration ; barre de contexte et rôle ; modes distincts ; retour à la feuille, au brouillon et à la cellule. La stabilisation corrige le défilement lors du chargement différé et le focus si une cellule est reconstruite pendant le menu. Aucune réécriture des moteurs financiers, nouvelle dépendance ou migration.
+
+Sauvegarde D1 restaurée avec intégrité `ok`, archive privée relue et empreinte vérifiée ; hash `f10b71bd8113c2793ab351a619c56430f508185a4e92458a7b32fd3df3decc18`. Onze ressources publiques identiques au build exact, catalogue 164, argent réel désactivé. Reçu : `docs/release/evidence/LOT01-STABILITY-PUBLIC-2026-10-20.json` ; vérification du workflow à 10:24:12.353 UTC et santé publique lue dans cette session à 10:25:51.950 UTC.
+
+**Suite autorisée : L05 → L28 → L02 → L23 → L10 → L24 → L25**, puis les autres lots selon priorité. L05 commence par les acquis des séances et l'enrichissement I02 de répétition sur données fictives. Ne pas reprendre l'audit général ni publier le miroir incomplet `implementation/`. Checkout courant : `implementation-lot01-20261020`. La recette est synthétique ; FIELD_ACCEPTED=NOT_ACCEPTED. Coût exact des crédits non mesurable.
+
+Les informations suivantes sont historiques et conservent leurs dates.
