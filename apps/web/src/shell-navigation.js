@@ -78,6 +78,10 @@ export function mountShellNavigation({getContext=()=>({}),getCurrentState=()=>({
     navigated=true;if(dialog.open)dialog.close();allowed.source.click();
   };
   const renderDialog=()=>{
+    // Role/translation refreshes may arrive between two keyboard events. Keep
+    // focus on the same destination when its presentation is rebuilt.
+    const focused=list.contains(document.activeElement)?document.activeElement:null;
+    const focusId=focused?.dataset.navigationId,starId=focused?.dataset.favoriteId;
     const rows=searchNavigationEntries(entries(),filter.value),saved=new Set(favorites.ids());list.replaceChildren();
     status.textContent=rows.length?tx(rows.length+' espaces accessibles',rows.length+' available spaces'):tx('Aucun espace trouvé. Essayez un autre terme.','No matching space. Try another term.');
     for(const row of rows){
@@ -88,6 +92,7 @@ export function mountShellNavigation({getContext=()=>({}),getCurrentState=()=>({
       star.dataset.favoriteId=row.id;item.append(go,star);list.append(item);
     }
     clear.disabled=!getContext().actor||favorites.ids().length===0;
+    if(focused){const next=[...list.querySelectorAll('button')].find(b=>focusId?b.dataset.navigationId===focusId:b.dataset.favoriteId===starId);(next||filter).focus({preventScroll:true});}
   };
   const starFocus=id=>[...list.querySelectorAll('[data-favorite-id]')].find(b=>b.dataset.favoriteId===id)?.focus();
   const refresh=()=>{
@@ -121,6 +126,7 @@ export function mountShellNavigation({getContext=()=>({}),getCurrentState=()=>({
   dialog.addEventListener('keydown',e=>{if(e.key==='Escape'){e.preventDefault();e.stopPropagation();dialog.close();}});
   filter.addEventListener('keydown',e=>{if(e.key==='ArrowDown'){const first=list.querySelector('.eco-navigation-destination');if(first){e.preventDefault();first.focus();}}});
   list.addEventListener('keydown',e=>{
+    if(e.key==='Enter'&&e.target?.matches?.('.eco-navigation-destination')){const row=entries().find(x=>x.id===e.target.dataset.navigationId);if(row){e.preventDefault();activate(row);}return;}
     if(!['ArrowUp','ArrowDown','Home','End'].includes(e.key))return;
     const bs=[...list.querySelectorAll('.eco-navigation-destination')],index=bs.indexOf(document.activeElement);if(index<0)return;
     e.preventDefault();const next=e.key==='Home'?0:e.key==='End'?bs.length-1:(index+(e.key==='ArrowDown'?1:-1)+bs.length)%bs.length;bs[next]?.focus();

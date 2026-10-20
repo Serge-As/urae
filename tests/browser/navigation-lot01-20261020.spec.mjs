@@ -20,7 +20,9 @@ test('complete menu is local, bilingual, keyboard accessible and favorites survi
  await page.keyboard.press('Control+k');await expect(menu(page)).toBeVisible();await expect(page.locator('#ecoNavigationFilter')).toBeFocused();
  await page.locator('#ecoNavigationFilter').fill('loans');await expect(menu(page).locator('.eco-navigation-destination').first()).toContainText('Prêts');
  await menu(page).locator('.eco-navigation-star').first().click();await expect(menu(page).locator('.eco-navigation-star').first()).toHaveAttribute('aria-pressed','true');
- await page.locator('#ecoNavigationFilter').focus();await page.keyboard.press('ArrowDown');await expect(menu(page).locator('.eco-navigation-destination').first()).toBeFocused();await page.keyboard.press('Enter');
+ await page.locator('#ecoNavigationFilter').focus();await page.keyboard.press('ArrowDown');await expect(menu(page).locator('.eco-navigation-destination').first()).toBeFocused();
+ // A concurrent shell refresh must not detach the keyboard destination.
+ await page.evaluate(()=>document.body.classList.toggle('synthetic-navigation-refresh'));await expect(menu(page).locator('.eco-navigation-destination').first()).toBeFocused();await page.keyboard.press('Enter');
  await expect(menu(page)).not.toBeVisible();await expect(page.locator('#view-finance')).toBeVisible();
  await expect(page.locator('#ecoNavigationFavorites')).toContainText('Prêts');
  await page.reload();await expect(page.locator('#ecoNavigationFavorites')).toContainText('Prêts');

@@ -66,17 +66,18 @@ jobs:
         run: |
           npm install --no-save --ignore-scripts @playwright/test@1.55.0
           npx playwright install --with-deps chromium webkit
-      - name: Start isolated Eco-System
-        shell: bash
-        run: |
-          OPEN_BROWSER=0 PORT=4173 node scripts/dev-server.mjs > /tmp/eco-15210-browser.log 2>&1 &
-          for i in {1..40}; do curl -fsS http://127.0.0.1:4173/health >/dev/null && exit 0; sleep 1; done
-          cat /tmp/eco-15210-browser.log
-          exit 1
       - name: Chromium financial persistence and shell
-        run: npx playwright test tests/browser/financial-cell-consensus-persistence-1.5.2.6.spec.mjs tests/browser/browser-shell-mobile-1.5.2.6.spec.mjs tests/browser/sovereign-multi-manager-1.5.2.14.spec.mjs tests/browser/navigation-lot01-20261020.spec.mjs tests/browser/session-rehearsal-lot05-20261020.spec.mjs tests/browser/request-budget-lot28-20261020.spec.mjs --browser=chromium --workers=1
+        run: node scripts/qualify-browser-isolated.mjs --browser=chromium tests/browser/financial-cell-consensus-persistence-1.5.2.6.spec.mjs tests/browser/browser-shell-mobile-1.5.2.6.spec.mjs tests/browser/sovereign-multi-manager-1.5.2.14.spec.mjs tests/browser/navigation-lot01-20261020.spec.mjs tests/browser/session-rehearsal-lot05-20261020.spec.mjs tests/browser/request-budget-lot28-20261020.spec.mjs
       - name: WebKit sovereign offline
-        run: npx playwright test tests/browser/eco-system-webkit-sovereign-offline-1.5.2.9.spec.mjs --browser=webkit --workers=1
+        run: node scripts/qualify-browser-isolated.mjs --browser=webkit tests/browser/eco-system-webkit-sovereign-offline-1.5.2.9.spec.mjs
+      - name: Retain isolated browser qualification evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: browser-isolated-${{ github.job }}-${{ github.sha }}
+          path: artifacts/browser-isolated/
+          retention-days: 14
+          if-no-files-found: warn
       - name: Upload failure evidence
         if: failure()
         uses: actions/upload-artifact@v4
