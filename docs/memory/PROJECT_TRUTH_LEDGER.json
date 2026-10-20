@@ -28,14 +28,18 @@
     {
       "id": "lot02-cockpit-continuity-20261020",
       "scope": "personal cockpit projections and minimal journey references",
-      "status": "IN_PROGRESS",
-      "statement": "Candidate9910be4 blocked before deployment: controlling SW prevented injected403 in new browser test. New test blocks SW for its HTTP fixture only and proves interception. Acquired PWA suites remain. Explicit server-only verification and same-context feedback preservation added. Ten native cockpit cases plus three offline snapshot cases pass; full770Node25Chromium6WebKit qualification required.",
+      "status": "VERIFIED_REMOTE",
+      "statement": "Published scoped four-lane personal priorities and minimal meeting continuity. Canonical owners preserved; explicit server verification denies stale grants, ordinary offline reads unchanged. Same-source full qualification, backup restoration and twenty public asset hashes verified.",
       "evidence": [
-        "docs/change-impact/CIR-2026-10-20-LOT02-COCKPIT-CONTINUITY.md",
-        "docs/memory/recalls/RECALL-2026-10-20-LOT02-COCKPIT-CONTINUITY.md"
+        "source:9575e84df3d710a3723d8979ca547f900a1b474d",
+        "github-actions:39437509472 SUCCESS; independent39437509841 SUCCESS",
+        "qualification:770Node25Chromium6WebKitPASS",
+        "public-receipt:docs/release/evidence/LOT02-COCKPIT-CONTINUITY-PUBLIC-2026-10-20.json",
+        "health-independent:2026-10-20T14:28:07.7932977Z exact release identity",
+        "private-R2-readback-sha256:35d94fbf0a21b673f58dee9a4331b89f7734affcedc438bcc9e66f051a34628f; restored integrityok"
       ],
       "observedOn": "2026-10-20",
-      "next": "Qualify exact SHA, backup and verify public assets before closure; then L23."
+      "next": "Continue L23 then L10,L24,L25. FIELD_ACCEPTED remains NOT_ACCEPTED."
     },
     {
       "id": "lot28-resource-proof-20261020",
