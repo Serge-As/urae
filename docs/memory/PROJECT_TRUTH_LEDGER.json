@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedOn": "2026-10-16",
+  "generatedOn": "2026-10-20",
   "purpose": "Anti-regression operational truth. Read before asking founder to recreate/configure anything.",
   "allowedStatuses": [
     "ACQUIRED",
@@ -25,6 +25,18 @@
     "Update this ledger whenever a remote verification, deployment, abandonment or supersession changes project truth."
   ],
   "records": [
+    {
+      "id": "lot01-navigation-20261020",
+      "status": "IN_PROGRESS",
+      "scope": "presentation/navigation",
+      "statement": "Navigation candidate 1.5.2.20 implemented; not yet qualified or deployed. Existing financial owners, drafts and Live preserved. Explicit founder authorization for implementation and deployment.",
+      "evidence": [
+        "docs/change-impact/CIR-2026-10-20-LOT01-NAVIGATION.md",
+        "docs/memory/recalls/RECALL-2026-10-20-LOT01-NAVIGATION.md"
+      ],
+      "observedOn": "2026-10-20",
+      "next": "Qualify complete regression suites, publish via guarded workflow and verify exact production SHA."
+    },
     {
       "id": "member-financial-continuity-20261016",
       "status": "VERIFIED_REMOTE",

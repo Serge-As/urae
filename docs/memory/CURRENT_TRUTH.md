@@ -1,3 +1,13 @@
+## Lot 01 — navigation cohérente, candidat du 20 octobre 2026
+
+Autorisation explicite : implémenter et déployer le lot 1 puis poursuivre. Candidat **1.5.2.20-navigation-coherence** ; qualification en cours, **aucun nouveau déploiement attesté à ce stade**. La dernière production prouvée reste 1.5.2.19 (`5e7044ee2a8c346c0a36f905d74d41a2a2dfab0d`).
+
+Menu complet déléguant aux boutons existants, recherche locale FR/EN, favoris par compte/groupe, contexte personnel/groupe/espace/rôle, modes visuel/senior/assisté et reprise de la dernière feuille. Aucun nouveau moteur financier ni requête de recherche à chaque frappe. Conserver le verrou de non-régression, les propriétaires canoniques et les saisies en attente. CIR et Recall du 20 octobre LOT01-NAVIGATION.
+
+ÉTAT DU PROJET APRÈS ÉTAPE : code candidat présent ; tests, preuve de livraison et vérification publique à compléter. FIELD_ACCEPTED=NOT_ACCEPTED. Aucun coût exact de crédits n'est mesurable.
+
+Les informations suivantes sont historiques et conservent leurs dates.
+
 ## Continuité membre et dette exacte — 1.5.2.19 déployée et vérifiée le 16 octobre 2026
 
 La production est **1.5.2.19-member-continuity**, source `5e7044ee2a8c346c0a36f905d74d41a2a2dfab0d`, build `eco-system-1.5.2.19-20261016-member-continuity`, cache `eco-system-v15219-member-continuity-20261016`, Worker `0c0c2631-1151-4e1d-bbcd-1b6935d1acbf`. PR96 fusionnée ; livraison [38921072914 SUCCESS](https://github.com/Serge-As/urae/actions/runs/38921072914), qualification indépendante [38921072892 SUCCESS](https://github.com/Serge-As/urae/actions/runs/38921072892) sur ce même SHA. Les deux qualifications précédant la fusion passent aussi sur 76689dc.

@@ -1,5 +1,6 @@
 import {createJourneyContext,mountJourneyUI} from './journey-context.js';
 import {mountWorkspaceNavigation} from './workspace-navigation.js';
+import {mountShellNavigation} from './shell-navigation.js';
 import {createCellDictationButton,speech} from './voice-entry-ui.js';
 import {createFinancialWorkUI} from './financial-work-ui.js';
 import {createRubricEditor,readRubricEditors,describeRubricPlan,editRubricPlan} from './launch-rubrics.js';
@@ -180,7 +181,7 @@ let launchStudio;
 let modules = [];
 let selectedLot = 'ALL';
 let deferredInstallPrompt;
-const CAHIER_VERSION = '1.5.2.13-live-sync';
+const CAHIER_VERSION = '1.5.2.20-navigation-coherence';
 const $ = (s) => { const e = document.querySelector(s); if (!e)
     throw new Error(`UI_ELEMENT_NOT_FOUND:${s}`); return e; };
 const val = (id) => document.getElementById(id).value.trim();
@@ -299,6 +300,11 @@ const NAV_STATE_STORAGE='eco.navigation.state.v1';
 const activeViewName=()=>document.querySelector('.view.active')?.id?.replace(/^view-/,'')||'dashboard';
 const readPersistedNavState=()=>{try{const value=JSON.parse(sessionStorage.getItem(NAV_STATE_STORAGE)||'null');return value&&typeof value==='object'?value:null;}catch{return null;}};
 const persistNavState=state=>{if(!state?.view)return;try{sessionStorage.setItem(NAV_STATE_STORAGE,JSON.stringify({...state,savedAt:Date.now()}));}catch{}};
+// A navigation button receives focus before its click handler runs. Retain the
+// last attached editor reference so returning to a sheet can restore that cell.
+// Its value remains exclusively in the existing financial draft owner.
+let lastFinancialEditor=null;
+document.addEventListener('focusin',event=>{if(event.target?.matches?.('.cell-target-input'))lastFinancialEditor=event.target;});
 const captureNavState=()=>{
     const view=activeViewName(),active=document.querySelector(`#view-${view}`);
     const sessionTab=document.querySelector('#sessionsTabs [data-session-tab].active')?.dataset?.sessionTab;
@@ -308,11 +314,14 @@ const captureNavState=()=>{
     const sheetMode=!document.querySelector('#individualSheetsMode')?.hidden?'individual':'meeting';
     const openDetails=[...(active?.querySelectorAll('details[open][id]')??[])].map(x=>x.id).slice(0,40);
     const focusId=document.activeElement?.id||undefined;
+    const editor=document.activeElement?.matches?.('.cell-target-input')?document.activeElement:lastFinancialEditor;
+    const focusedCell=editor?.isConnected&&active?.contains(editor)?editor.closest('.matrix-cell-entry'):null;
+    const financialFocus=focusedCell?{meetingId:focusedCell.dataset.meetingId,membershipId:focusedCell.dataset.membershipId,rubricId:focusedCell.dataset.rubricId,hostId:focusedCell.closest('#meetingMatrix,#sessionsWorkspace,#individualSheetMatrix')?.id}:undefined;
     const meetingWrap=document.querySelector('#meetingMatrix .canonical-financial-wrap')??document.querySelector('#meetingMatrix');
     const individualWrap=document.querySelector('#individualSheetMatrix .canonical-financial-wrap')??document.querySelector('#individualSheetMatrix');
     const matrixScrollLeft=Number(meetingWrap?.scrollLeft??0),matrixScrollTop=Number(meetingWrap?.scrollTop??0);
     const individualScrollLeft=Number(individualWrap?.scrollLeft??0),individualScrollTop=Number(individualWrap?.scrollTop??0);
-    return{view,scrollY:window.scrollY,sessionTab,meetingId,matrixMeetingId,membershipId,sheetMode,openDetails,focusId,matrixScrollLeft,matrixScrollTop,individualScrollLeft,individualScrollTop};
+    return{view,scrollY:window.scrollY,sessionTab,meetingId,matrixMeetingId,membershipId,sheetMode,openDetails,focusId,financialFocus,matrixScrollLeft,matrixScrollTop,individualScrollLeft,individualScrollTop};
 };
 const resolveRequestedNavState=()=>{
     if(history.state?.ecoNav?.view)return history.state.ecoNav;
@@ -350,6 +359,11 @@ const restoreNavState=state=>{
         };
         restoreMatrixScroll();setTimeout(restoreMatrixScroll,60);setTimeout(restoreMatrixScroll,220);
         if(state.focusId)document.getElementById(state.focusId)?.focus?.({preventScroll:true});
+        if(state.financialFocus){
+          const f=state.financialFocus,host=f.hostId?document.getElementById(f.hostId):document.querySelector('#view-'+state.view);
+          const selector=`.matrix-cell-entry[data-meeting-id="${CSS.escape(String(f.meetingId??''))}"][data-membership-id="${CSS.escape(String(f.membershipId??''))}"][data-rubric-id="${CSS.escape(String(f.rubricId??''))}"] .cell-target-input`;
+          host?.querySelector(selector)?.focus({preventScroll:true});
+        }
     });
 };
 const updateBackButton=()=>{const b=document.querySelector('#appBackBtn');if(b)b.hidden=navDepth<=0;};
@@ -371,9 +385,10 @@ const showView=(name,state)=>{
 const go=(name,options={})=>{
     const current=captureNavState(),sameDestination=name===current.view&&!options.anchor&&!options.force&&!options.sheetMode&&!options.openTarget;
     if(sameDestination)return;
+    window.dispatchEvent(new CustomEvent('eco:navigation-leaving',{detail:{state:current}}));
     try{history.replaceState({ecoNav:current,ecoDepth:navDepth},'',`#${current.view}`);}catch{}
     navDepth+=1;
-    const next={view:name,scrollY:Number(options.scrollY)||0,anchor:options.anchor,sessionTab:options.sessionTab,meetingId:options.meetingId,matrixMeetingId:options.matrixMeetingId,sheetMode:options.sheetMode,openTarget:options.openTarget,membershipId:options.membershipId,rubricId:options.rubricId};
+    const next={view:name,scrollY:Number(options.scrollY)||0,anchor:options.anchor,sessionTab:options.sessionTab,meetingId:options.meetingId,matrixMeetingId:options.matrixMeetingId,sheetMode:options.sheetMode,openTarget:options.openTarget,membershipId:options.membershipId,rubricId:options.rubricId,focusId:options.focusId,financialFocus:options.financialFocus,openDetails:options.openDetails,matrixScrollLeft:options.matrixScrollLeft,matrixScrollTop:options.matrixScrollTop,individualScrollLeft:options.individualScrollLeft,individualScrollTop:options.individualScrollTop};
     const hash=options.anchor?`#${options.anchor}`:`#${name}`;
     try{history.pushState({ecoNav:next,ecoDepth:navDepth},'',hash);}catch{}
     showView(name,next);updateBackButton();
@@ -421,6 +436,14 @@ const creatorTalentUI=mountCreatorTalentUI({app,notify:toast,showError:fail});
 const journey=createJourneyContext({storage:{getItem:key=>localStorage.getItem(key),setItem:(key,value)=>localStorage.setItem(key,value)},scope:()=>({actor:app.currentActor(),group:app.activeGroup()})});
 const assistantContext=()=>({actor:app.currentActor(),group:app.activeGroup(),groupLabel:groups.find(g=>g.id===app.activeGroup())?.name||'',role:isManager()?'manager':'member',view:activeViewName(),recent:journey.snapshot().recent});
 const journeyUI=mountJourneyUI({journey,navigate:go,getContext:assistantContext});
+const shellNavigation=mountShellNavigation({getContext:()=>{
+    const context=assistantContext(),view=activeViewName();
+    // These controls are mounted progressively by their existing owners.
+    // Missing presentation context must never interrupt group/finance loading.
+    const find=selector=>document.querySelector(selector);
+    const select=view==='sessions'?find('#sessionsMeetingSelect'):view==='operations'?(!find('#individualSheetsMode')?.hidden?find('#individualSheetMember'):find('#meetingMatrixScope')):view==='services'?find('#workspaceModule'):null;
+    return{...context,objectLabel:context.group?select?.selectedOptions?.[0]?.textContent||'':''};
+},getCurrentState:captureNavState,navigate:go});
 const localAssistantUI=mountLocalAssistantUI({getModules:()=>modules,openModule:id=>openModule(id),navigate:go,notify:toast,getContext:assistantContext,speech});
 const quietWatchUI=mountQuietWatchUI({app,isManager,notify:toast,showError:fail});
 const founderAIUI=mountFounderAIUI({app,showError:fail});
@@ -2497,6 +2520,7 @@ const refreshGroupContext = async () => {
     const personalDirectory=personalCockpitUI.prepareNavigation?.();
     personalDirectory?.catch(()=>{});
     journeyUI.refresh();localAssistantUI.refreshContext();
+    shellNavigation.refresh();
     await renderGroups();
     journeyUI.refresh();localAssistantUI.refreshContext();
     if(requestedGroup!==app.activeGroup())return;
@@ -2586,7 +2610,10 @@ catch (err) {
     fail(err);
 } });
 const renderGlobalSearch = () => { const q = val('globalSearch').toLowerCase(); const root = $('#globalSearchResults'); root.replaceChildren(); if (q.length < 2)
-    return; const ms = modules.filter(m => `${m.id} ${m.labelFr} ${m.labelEn}`.toLowerCase().includes(q)).slice(0, 8); const gs = groups.filter(g => g.name.toLowerCase().includes(q)).slice(0, 4); for (const g of gs) {
+    return;
+    const destinations=shellNavigation.search(q).slice(0,6),shownModules=new Set(destinations.map(d=>d.module).filter(Boolean));
+    for(const destination of destinations){const b=document.createElement('button');b.type='button';b.className='search-hit';const title=document.createElement('strong');title.textContent=destination.label;const sub=document.createElement('small');sub.textContent=tx('Fonction · accès direct','Function · direct access');b.append(title,sub);b.onclick=()=>shellNavigation.activate(destination);root.append(b);}
+    const ms = modules.filter(m => !shownModules.has(m.id)&&`${m.id} ${m.labelFr} ${m.labelEn}`.toLowerCase().includes(q)).slice(0, 8); const gs = groups.filter(g => g.name.toLowerCase().includes(q)).slice(0, 4); for (const g of gs) {
     const b = document.createElement('button');
     b.type = 'button';
     b.className = 'search-hit';
