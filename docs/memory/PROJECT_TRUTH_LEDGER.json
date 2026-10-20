@@ -1483,6 +1483,17 @@
         "source:docs/release/DELIVERY-2026-10-15-COCKPIT.md"
       ],
       "note": "Published and public assets independently verified. Local navigation projection and deterministic local assistant, not universal cross-device memory or generative intelligence. FIELD_ACCEPTED=NOT_ACCEPTED; financial authority unchanged."
+    },
+    {
+      "id": "delivery.lot10.personal_commerce.2026_10_20",
+      "scope": "Personal Market scopes, current mandates, buyer receipt and canonical support reference; candidate1.5.2.27; global L10 in progress",
+      "status": "IMPLEMENTED_UNVERIFIED",
+      "observedOn": "2026-10-20",
+      "evidence": [
+        "docs/change-impact/CIR-2026-10-20-LOT10-PERSONAL-SHOPS.md",
+        "tests/market-personal-shops-lot10-20261020.test.mjs",
+        "tests/browser/personal-shops-lot10-20261020.spec.mjs"
+      ]
     }
   ]
 }

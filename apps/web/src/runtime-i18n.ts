@@ -3,6 +3,11 @@ import {messages} from './i18n.js';
 export type RuntimeLocale = 'fr'|'en';
 
 const EXTRA_FR_EN: Record<string,string> = {
+  'Compte acheteur pour la réception':'Buyer account for receipt',
+  'Aucun compte lié':'No linked account',
+  'Mes boutiques · découvrir · mes achats':'My shops · discover · my purchases',
+  'Votre commerce personnel et vos achats, avec vos droits actuels. Les fonds des groupes restent séparés.':'Your personal commerce and purchases, with your current rights. Group funds remain separate.',
+  'Mes boutiques et mes achats':'My shops and purchases',
   'Disponible à partir du':'Available from',
   "Disponible jusqu'au":'Available until',
   'Affichage':'Display',

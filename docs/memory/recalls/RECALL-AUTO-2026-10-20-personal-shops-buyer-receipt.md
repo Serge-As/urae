@@ -1,0 +1,9 @@
+## L10 — suite boutiques personnelles, candidat 1.5.2.27
+
+La production de référence reste 1.5.2.26-commercial-orders, source1c012c47567a3f8eba8fc3fff22fa6dba658d4cf, livraison39478003645 SUCCESS. **Le candidat1.5.2.27 n'est pas encore publié ni accepté.**
+
+Changements en qualification : boutiques personnelles multiples sans faux groupe, vitrine publique expurgée, catalogue/stock canonique, collaborateurs READ/SELL expirables et révocables, achats entre comptes authentifiés distincts, réception acheteur indépendante avec preuve immuable et comparaison de version, dossier Kernel.Cases lié à la commande. BusinessStudio reste privé et propriétaire des clients/prestations/charges ; Market reste owner du commerce. Les routes workspace génériques ne créent/modifient pas les records Market. Aucun nouveau Ledger, caisse, paiement, abonnement ou modèle.
+
+Risques contrôlés : requêtes explicites uniquement, aucun polling ajouté ; séparation des boutiques même quand group_id est NULL, données privées exclues du public, identité acheteur imposée par serveur, propriétaire courant et révocation revérifiés. Des comptes réels inscrits possèdent des tenants distincts : un raccord interne résout uniquement les records Market puis réapplique les droits, sans API générique inter-tenant. Les dossiers SAV restent une référence ; leur traitement transversal complet est L25.
+
+Suite immédiate : finir tests natifs/SQLite + navigateur deux inscriptions, gates intégrales, sauvegarde/restauration read-only, publication du même source, vérification santé et29 empreintes. **L10 global reste IN_PROGRESS** tant que sa qualification et ses écarts de couverture ne sont pas clos. FIELD_ACCEPTED=NOT_ACCEPTED. realMoneyEnabled=false ; D1/R2/clé et parcours financiers acquis conservés. Coût exact des crédits du chat non mesurable.

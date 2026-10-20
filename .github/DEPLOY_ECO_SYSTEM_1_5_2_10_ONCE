@@ -1,13 +1,13 @@
-Eco-System 1.5.2.26 lot10 commercial orders delivery authorized
-release: 1.5.2.26-commercial-orders
+Eco-System 1.5.2.27 personal commerce delivery authorized
+release: 1.5.2.27-personal-commerce
 date: 2026-10-20
 db_mutation: none
 mode: code-only-with-verified-readonly-backup-no-migration
-qualified_baseline_source: 71a30e65f1cc1a4f0d9476e9e10462bce65ae16a
-qualified_baseline_delivery: 39457082605 attempt2 SUCCESS
-qualification: baseline passed779 native27 Chromium6 WebKit; candidate must pass all exact-SHA gates
-candidate_native: 808 expected including29 commercial contract tests; mandatory before deploy
-candidate_chromium: 29 expected including two complete commerce scenarios; mandatory before deploy
+qualified_baseline_source: 1c012c47567a3f8eba8fc3fff22fa6dba658d4cf
+qualified_baseline_delivery: 39478003645 attempt1 SUCCESS
+qualification: baseline passed808 native29 Chromium6 WebKit; candidate must pass full exact-SHA gates
+candidate_native: 835 expected including27 new personal commerce contracts; mandatory before deploy
+candidate_chromium: 32 expected including3 new cross-account commerce scenarios; mandatory before deploy
 candidate_webkit: 6 mandatory before deploy
 production_ancestry: preserve5c9366445d6699b7a608f06a49a4efb61ec7d1ff and all prior deliveries
 backup: mandatory readonly D1 export, verified SQLite restore, private R2 archive download/hash before deploy
@@ -16,9 +16,8 @@ financial_signing: preserve existing key, never rotate, provision only proven ab
 real_money_enabled: false
 field_acceptance: NOT_ACCEPTED
 historical_pr72_hold: preserved; no merge or override of PR72
-trigger_nonce: 2026-10-20-lot10-commercial-orders-exact-source
+trigger_nonce: 2026-10-20-lot10-personal-commerce-exact-source
 authorization: current user requested implementation and deployment of complete lots by agreed priority
-qualification: separate synthetic SQLite and process for every browser file; retain production authentication rate limits
-scope: canonical Market stock, immutable quotes, atomic commercial orders, partial delivery and returns, withdrawal and exact fee allocation for group buys; preserve acquired finance
+scope: personal shop ownership and limited current collaborator rights; canonical Market reservation/delivery; independent buyer receipt; Kernel.Cases reference; acquired finance untouched
 qualification_same_deployment_sha: mandatory full gates before publication, no relaxation
-public_verification: exact health and catalog release plus SHA256 comparison of27 deployed PWA assets with same-SHA build
+public_verification: exact health and catalogue plus29 deployed asset SHA256 comparisons with same-SHA build

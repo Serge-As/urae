@@ -1,9 +1,9 @@
 {
   "name": "tontine-platform",
-  "version": "1.5.2-26",
+  "version": "1.5.2-27",
   "private": true,
   "type": "module",
-  "description": "Eco-System 1.5.2.26: canonical commercial quotes, atomic order fulfilment, stock terms and exact group-buy commitments; acquired financial and offline owners preserved.",
+  "description": "Eco-System 1.5.2.27: personal and group commerce, current seller mandates, independent buyer receipt and referenced canonical support; acquired finance/offline preserved.",
   "engines": {
     "node": ">=24"
   },

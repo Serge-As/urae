@@ -1830,3 +1830,12 @@ body.ui-mode-assisted .eco-workbench :is(button,p,small,span,label){font-size:15
 #marketQuoteBoard table{min-width:660px;table-layout:auto}
 #marketQuoteBoard td,#marketQuoteBoard th{padding:.65rem;white-space:normal;overflow-wrap:anywhere;vertical-align:top}
 #marketQuoteBoard .market-quote-card{overflow-wrap:anywhere}
+
+/* Personal commerce: reuse the acquired cards and mode typography, scoped layout. */
+#personalShopsPanel .form-grid{grid-template-columns:repeat(auto-fit,minmax(min(100%,15rem),1fr));align-items:end}
+#personalShopsPanel .item{min-width:0;overflow-wrap:anywhere}
+#personalShopsPanel .actions{flex-wrap:wrap}
+#personalShopsPanel .form-grid label{min-width:0}
+#personalShopsPanel input,#personalShopsPanel select{min-width:0;max-width:100%;box-sizing:border-box}
+#personalShopsPanel input[type=checkbox]{width:auto;justify-self:start}
+#personalShopsPanel .market-order-card .form-grid{grid-template-columns:repeat(auto-fit,minmax(min(100%,12rem),1fr))}

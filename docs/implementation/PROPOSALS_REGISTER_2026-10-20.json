@@ -1,0 +1,670 @@
+{
+  "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md",
+  "meaning": "Inventory of proposals, not a claim that all are implemented. T/M are optional tools/reference models, not installed dependencies. Existing lots have delivery evidence, detailed proposal coverage is not inferred from a lot number.",
+  "count": 92,
+  "proposals": [
+    {
+      "id": "A01",
+      "title": "Une navigation qui connaît le contexte et garde la séance intacte · lot 01",
+      "status": "DELIVERED_WITH_DOCUMENTED_LIMITS",
+      "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md",
+      "evidence": [
+        "docs/release/evidence/LOT01-NAVIGATION-PUBLIC-2026-10-20.json",
+        "docs/release/evidence/LOT01-STABILITY-PUBLIC-2026-10-20.json"
+      ],
+      "limits": "Automated delivery evidence, not field acceptance or completion of all future refinements.",
+      "targetLots": [
+        1
+      ]
+    },
+    {
+      "id": "A02",
+      "title": "Un cockpit de décisions, de reprise et d’opportunités utiles · lot 02",
+      "status": "DELIVERED_WITH_DOCUMENTED_LIMITS",
+      "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md",
+      "evidence": [
+        "docs/release/evidence/LOT02-COCKPIT-CONTINUITY-PUBLIC-2026-10-20.json"
+      ],
+      "limits": "Automated delivery evidence, not field acceptance or completion of all future refinements.",
+      "targetLots": [
+        2
+      ]
+    },
+    {
+      "id": "A03",
+      "title": "Un Kit qui vérifie la compréhension avant de créer le groupe · lot 03",
+      "status": "PLANNED_OR_REQUIRES_DETAILED_COVERAGE",
+      "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md",
+      "targetLots": [
+        3
+      ]
+    },
+    {
+      "id": "A04",
+      "title": "Un journal des décisions relié à leurs effets · lot 04",
+      "status": "PLANNED_OR_REQUIRES_DETAILED_COVERAGE",
+      "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md",
+      "targetLots": [
+        4
+      ]
+    },
+    {
+      "id": "A05",
+      "title": "Une feuille de séance complète, lisible et fiable sur deux appareils · lot 05",
+      "status": "DELIVERED_WITH_DOCUMENTED_LIMITS",
+      "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md",
+      "evidence": [
+        "docs/release/evidence/LOT05-SESSION-REHEARSAL-PUBLIC-2026-10-20.json"
+      ],
+      "limits": "Automated delivery evidence, not field acceptance or completion of all future refinements.",
+      "targetLots": [
+        5
+      ]
+    },
+    {
+      "id": "A06",
+      "title": "Un solde que l’on peut expliquer et rapprocher · lot 06",
+      "status": "PLANNED_OR_REQUIRES_DETAILED_COVERAGE",
+      "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md",
+      "targetLots": [
+        6
+      ]
+    },
+    {
+      "id": "A07",
+      "title": "Un prêt expliqué échéance par échéance et composante par composante · lot 07",
+      "status": "PLANNED_OR_REQUIRES_DETAILED_COVERAGE",
+      "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md",
+      "targetLots": [
+        7
+      ]
+    },
+    {
+      "id": "A08",
+      "title": "Un reçu détaillé de répartition des rendements · lot 08",
+      "status": "PLANNED_OR_REQUIRES_DETAILED_COVERAGE",
+      "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md",
+      "targetLots": [
+        8
+      ]
+    },
+    {
+      "id": "A09",
+      "title": "Un calendrier de tontine et de solidarité compréhensible · lot 09",
+      "status": "PLANNED_OR_REQUIRES_DETAILED_COVERAGE",
+      "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md",
+      "targetLots": [
+        9
+      ]
+    },
+    {
+      "id": "A10",
+      "title": "Un dossier de commande qui va jusqu’au retour et au service après-vente · lot 10",
+      "status": "IMPLEMENTED_PENDING_SAME_SOURCE_QUALIFICATION",
+      "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md",
+      "evidence": [
+        "tests/market-orders-lot10-20261020.test.mjs",
+        "tests/market-personal-shops-lot10-20261020.test.mjs",
+        "docs/release/DELIVERY-2026-10-20-LOT10-PERSONAL-COMMERCE.md"
+      ],
+      "limits": "Full transversal SAV belongs to L25; no payment or reimbursement inferred.",
+      "targetLots": [
+        10
+      ]
+    },
+    {
+      "id": "A11",
+      "title": "Un Business Studio qui confronte l’idée aux résultats · lot 11",
+      "status": "PLANNED_OR_REQUIRES_DETAILED_COVERAGE",
+      "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md",
+      "targetLots": [
+        11
+      ]
+    },
+    {
+      "id": "A12",
+      "title": "Un rapprochement entre besoins et ressources qui explique ses raisons · lot 12",
+      "status": "PLANNED_OR_REQUIRES_DETAILED_COVERAGE",
+      "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md",
+      "targetLots": [
+        12
+      ]
+    },
+    {
+      "id": "A13",
+      "title": "Des offres NOW réellement fraîches et une logistique de proximité · lot 13",
+      "status": "PLANNED_OR_REQUIRES_DETAILED_COVERAGE",
+      "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md",
+      "targetLots": [
+        13
+      ]
+    },
+    {
+      "id": "A14",
+      "title": "Des Foras qui transforment les échanges en connaissances et en actions · lot 14",
+      "status": "PLANNED_OR_REQUIRES_DETAILED_COVERAGE",
+      "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md",
+      "targetLots": [
+        14
+      ]
+    },
+    {
+      "id": "A15",
+      "title": "Des Carnets utiles pour être découvert sans tout exposer · lot 15",
+      "status": "PLANNED_OR_REQUIRES_DETAILED_COVERAGE",
+      "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md",
+      "targetLots": [
+        15
+      ]
+    },
+    {
+      "id": "A16",
+      "title": "Un parcours apprendre, pratiquer, prouver et contribuer · lot 16",
+      "status": "PLANNED_OR_REQUIRES_DETAILED_COVERAGE",
+      "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md",
+      "targetLots": [
+        16
+      ]
+    },
+    {
+      "id": "A17",
+      "title": "Eco Jobs avec candidatures suivies et critères transparents · lot 17",
+      "status": "PLANNED_OR_REQUIRES_DETAILED_COVERAGE",
+      "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md",
+      "targetLots": [
+        17
+      ]
+    },
+    {
+      "id": "A18",
+      "title": "Une Data Room organisée par questions de vérification · lot 18",
+      "status": "PLANNED_OR_REQUIRES_DETAILED_COVERAGE",
+      "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md",
+      "targetLots": [
+        18
+      ]
+    },
+    {
+      "id": "A19",
+      "title": "Launch Boost organisé en résultats vérifiables · lot 19",
+      "status": "PLANNED_OR_REQUIRES_DETAILED_COVERAGE",
+      "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md",
+      "targetLots": [
+        19
+      ]
+    },
+    {
+      "id": "A20",
+      "title": "AdManager et intelligence de marché à budget maîtrisé · lot 20",
+      "status": "PLANNED_OR_REQUIRES_DETAILED_COVERAGE",
+      "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md",
+      "targetLots": [
+        20
+      ]
+    },
+    {
+      "id": "A21",
+      "title": "Un passeport de confiance fondé sur des faits limités · lot 21",
+      "status": "PLANNED_OR_REQUIRES_DETAILED_COVERAGE",
+      "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md",
+      "targetLots": [
+        21
+      ]
+    },
+    {
+      "id": "A22",
+      "title": "Un Labo anti-arnaques qui explique et accompagne · lot 22",
+      "status": "PLANNED_OR_REQUIRES_DETAILED_COVERAGE",
+      "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md",
+      "targetLots": [
+        22
+      ]
+    },
+    {
+      "id": "A23",
+      "title": "Eco IA bilingue, utile même sans modèle payant · lot 23",
+      "status": "DELIVERED_WITH_DOCUMENTED_LIMITS",
+      "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md",
+      "evidence": [
+        "docs/release/evidence/LOT23-ASSISTANT-TOOLS-PUBLIC-2026-10-20.json"
+      ],
+      "limits": "Automated delivery evidence, not field acceptance or completion of all future refinements.",
+      "targetLots": [
+        23
+      ]
+    },
+    {
+      "id": "A24",
+      "title": "Une Inbox qui distingue envoyé, reçu, lu et traité · lot 24",
+      "status": "PLANNED_OR_REQUIRES_DETAILED_COVERAGE",
+      "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md",
+      "targetLots": [
+        24
+      ]
+    },
+    {
+      "id": "A25",
+      "title": "Eco Care et SAV avec responsabilité et prochaine étape visibles · lot 25",
+      "status": "PLANNED_OR_REQUIRES_DETAILED_COVERAGE",
+      "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md",
+      "targetLots": [
+        25
+      ]
+    },
+    {
+      "id": "A26",
+      "title": "Des documents fiables avec OCR relu et exports vérifiables · lot 26",
+      "status": "PLANNED_OR_REQUIRES_DETAILED_COVERAGE",
+      "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md",
+      "targetLots": [
+        26
+      ]
+    },
+    {
+      "id": "A27",
+      "title": "Une reprise prouvée et un contrôle de qualité des données · lot 27",
+      "status": "PLANNED_OR_REQUIRES_DETAILED_COVERAGE",
+      "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md",
+      "targetLots": [
+        27
+      ]
+    },
+    {
+      "id": "A28",
+      "title": "Un budget de requêtes et une barrière de non-régression mesurable · lot 28",
+      "status": "DELIVERED_WITH_DOCUMENTED_LIMITS",
+      "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md",
+      "evidence": [
+        "docs/release/evidence/LOT28-RESOURCE-PROOF-PUBLIC-2026-10-20.json"
+      ],
+      "limits": "Automated delivery evidence, not field acceptance or completion of all future refinements.",
+      "targetLots": [
+        28
+      ]
+    },
+    {
+      "id": "I01",
+      "title": "Le passeport de continuité personnelle · propriétaire L02",
+      "status": "PLANNED_OR_REQUIRES_DETAILED_COVERAGE",
+      "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md"
+    },
+    {
+      "id": "I02",
+      "title": "La répétition générale d’une séance · propriétaire L05",
+      "status": "PLANNED_OR_REQUIRES_DETAILED_COVERAGE",
+      "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md"
+    },
+    {
+      "id": "I03",
+      "title": "Le budget de requêtes par parcours · propriétaire L28",
+      "status": "PLANNED_OR_REQUIRES_DETAILED_COVERAGE",
+      "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md"
+    },
+    {
+      "id": "I04",
+      "title": "Les besoins mutualisés avec consentement · propriétaire L12",
+      "status": "PLANNED_OR_REQUIRES_DETAILED_COVERAGE",
+      "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md"
+    },
+    {
+      "id": "I05",
+      "title": "Le parcours productif personnel sur une période choisie · propriétaire L19",
+      "status": "PLANNED_OR_REQUIRES_DETAILED_COVERAGE",
+      "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md"
+    },
+    {
+      "id": "I06",
+      "title": "La chaîne anti-gaspillage Harvest · propriétaire L13",
+      "status": "PLANNED_OR_REQUIRES_DETAILED_COVERAGE",
+      "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md"
+    },
+    {
+      "id": "I07",
+      "title": "La carte de preuve partageable et révocable · propriétaire L21",
+      "status": "PLANNED_OR_REQUIRES_DETAILED_COVERAGE",
+      "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md"
+    },
+    {
+      "id": "I08",
+      "title": "Le prix expliqué, avec ses limites · propriétaire L20",
+      "status": "PLANNED_OR_REQUIRES_DETAILED_COVERAGE",
+      "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md"
+    },
+    {
+      "id": "I09",
+      "title": "Eco Mirror : comparer les effets avant de remplacer un acquis · propriétaire L28",
+      "status": "PLANNED_OR_REQUIRES_DETAILED_COVERAGE",
+      "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md"
+    },
+    {
+      "id": "I10",
+      "title": "Le dossier d’incident reproductible sans données privées · propriétaire L27",
+      "status": "PLANNED_OR_REQUIRES_DETAILED_COVERAGE",
+      "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md"
+    },
+    {
+      "id": "I11",
+      "title": "Le laboratoire « que se passe-t-il si… » · propriétaire L07",
+      "status": "PLANNED_OR_REQUIRES_DETAILED_COVERAGE",
+      "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md"
+    },
+    {
+      "id": "I12",
+      "title": "La parité entre modes compact, sénior et assisté · propriétaire L01",
+      "status": "PLANNED_OR_REQUIRES_DETAILED_COVERAGE",
+      "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md"
+    },
+    {
+      "id": "I13",
+      "title": "Le scénario de résistance d’une tontine · propriétaire L09",
+      "status": "PLANNED_OR_REQUIRES_DETAILED_COVERAGE",
+      "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md"
+    },
+    {
+      "id": "I14",
+      "title": "L’assistant de négociation qui prépare sans agir à la place · propriétaire L23",
+      "status": "PLANNED_OR_REQUIRES_DETAILED_COVERAGE",
+      "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md"
+    },
+    {
+      "id": "I15",
+      "title": "La carte des questions, preuves et contradictions · propriétaire L18",
+      "status": "PLANNED_OR_REQUIRES_DETAILED_COVERAGE",
+      "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md"
+    },
+    {
+      "id": "I16",
+      "title": "L’assemblage de moyens disponibles · propriétaire L11",
+      "status": "PLANNED_OR_REQUIRES_DETAILED_COVERAGE",
+      "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md"
+    },
+    {
+      "id": "I17",
+      "title": "La première mission accompagnée · propriétaire L16",
+      "status": "PLANNED_OR_REQUIRES_DETAILED_COVERAGE",
+      "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md"
+    },
+    {
+      "id": "I18",
+      "title": "Le SAV préventif par accord sur les attentes · propriétaire L25",
+      "status": "PLANNED_OR_REQUIRES_DETAILED_COVERAGE",
+      "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md"
+    },
+    {
+      "id": "I19",
+      "title": "Qui attend quoi, de qui et depuis quand ? · propriétaire L24",
+      "status": "PLANNED_OR_REQUIRES_DETAILED_COVERAGE",
+      "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md"
+    },
+    {
+      "id": "I20",
+      "title": "La bibliothèque de solutions éprouvées dans leur contexte · propriétaire L14",
+      "status": "PLANNED_OR_REQUIRES_DETAILED_COVERAGE",
+      "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md"
+    },
+    {
+      "id": "T01",
+      "title": "Lit",
+      "status": "REFERENCE_MODEL_NOT_IMPORTED",
+      "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md"
+    },
+    {
+      "id": "T02",
+      "title": "TanStack Table",
+      "status": "REFERENCE_MODEL_NOT_IMPORTED",
+      "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md"
+    },
+    {
+      "id": "T03",
+      "title": "TanStack Virtual",
+      "status": "REFERENCE_MODEL_NOT_IMPORTED",
+      "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md"
+    },
+    {
+      "id": "T04",
+      "title": "Lucide",
+      "status": "REFERENCE_MODEL_NOT_IMPORTED",
+      "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md"
+    },
+    {
+      "id": "T05",
+      "title": "Floating UI",
+      "status": "REFERENCE_MODEL_NOT_IMPORTED",
+      "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md"
+    },
+    {
+      "id": "T06",
+      "title": "DOMPurify",
+      "status": "REFERENCE_MODEL_NOT_IMPORTED",
+      "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md"
+    },
+    {
+      "id": "T07",
+      "title": "axe-core",
+      "status": "REFERENCE_MODEL_NOT_IMPORTED",
+      "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md"
+    },
+    {
+      "id": "T08",
+      "title": "Dexie.js",
+      "status": "REFERENCE_MODEL_NOT_IMPORTED",
+      "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md"
+    },
+    {
+      "id": "T09",
+      "title": "Yjs",
+      "status": "REFERENCE_MODEL_NOT_IMPORTED",
+      "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md"
+    },
+    {
+      "id": "T10",
+      "title": "XState",
+      "status": "REFERENCE_MODEL_NOT_IMPORTED",
+      "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md"
+    },
+    {
+      "id": "T11",
+      "title": "Zod",
+      "status": "REFERENCE_MODEL_NOT_IMPORTED",
+      "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md"
+    },
+    {
+      "id": "T12",
+      "title": "MiniSearch",
+      "status": "REFERENCE_MODEL_NOT_IMPORTED",
+      "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md"
+    },
+    {
+      "id": "T13",
+      "title": "FlexSearch",
+      "status": "REFERENCE_MODEL_NOT_IMPORTED",
+      "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md"
+    },
+    {
+      "id": "T14",
+      "title": "CASL",
+      "status": "REFERENCE_MODEL_NOT_IMPORTED",
+      "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md"
+    },
+    {
+      "id": "T15",
+      "title": "OpenTelemetry JavaScript",
+      "status": "REFERENCE_MODEL_NOT_IMPORTED",
+      "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md"
+    },
+    {
+      "id": "T16",
+      "title": "Playwright",
+      "status": "REFERENCE_MODEL_NOT_IMPORTED",
+      "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md"
+    },
+    {
+      "id": "T17",
+      "title": "fast-check",
+      "status": "REFERENCE_MODEL_NOT_IMPORTED",
+      "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md"
+    },
+    {
+      "id": "T18",
+      "title": "Pact JS",
+      "status": "REFERENCE_MODEL_NOT_IMPORTED",
+      "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md"
+    },
+    {
+      "id": "T19",
+      "title": "PDF.js",
+      "status": "REFERENCE_MODEL_NOT_IMPORTED",
+      "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md"
+    },
+    {
+      "id": "T20",
+      "title": "Tesseract.js",
+      "status": "REFERENCE_MODEL_NOT_IMPORTED",
+      "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md"
+    },
+    {
+      "id": "T21",
+      "title": "Transformers.js",
+      "status": "REFERENCE_MODEL_NOT_IMPORTED",
+      "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md"
+    },
+    {
+      "id": "T22",
+      "title": "Vosk",
+      "status": "REFERENCE_MODEL_NOT_IMPORTED",
+      "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md"
+    },
+    {
+      "id": "T23",
+      "title": "DuckDB",
+      "status": "REFERENCE_MODEL_NOT_IMPORTED",
+      "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md"
+    },
+    {
+      "id": "T24",
+      "title": "Apache ECharts",
+      "status": "REFERENCE_MODEL_NOT_IMPORTED",
+      "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md"
+    },
+    {
+      "id": "M01",
+      "title": "ERPNext : relier les documents opérationnels",
+      "status": "REFERENCE_MODEL_NOT_IMPORTED",
+      "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md"
+    },
+    {
+      "id": "M02",
+      "title": "Odoo Community : continuité du dossier commercial",
+      "status": "REFERENCE_MODEL_NOT_IMPORTED",
+      "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md"
+    },
+    {
+      "id": "M03",
+      "title": "Discourse : une discussion qui reste retrouvable",
+      "status": "REFERENCE_MODEL_NOT_IMPORTED",
+      "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md"
+    },
+    {
+      "id": "M04",
+      "title": "Zulip : organiser les échanges par sujet",
+      "status": "REFERENCE_MODEL_NOT_IMPORTED",
+      "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md"
+    },
+    {
+      "id": "M05",
+      "title": "Open Collective : séparer demande, approbation et paiement",
+      "status": "REFERENCE_MODEL_NOT_IMPORTED",
+      "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md"
+    },
+    {
+      "id": "M06",
+      "title": "Open Food Network : relier producteurs et distribution locale",
+      "status": "REFERENCE_MODEL_NOT_IMPORTED",
+      "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md"
+    },
+    {
+      "id": "M07",
+      "title": "Medusa : séparer les responsabilités du commerce",
+      "status": "REFERENCE_MODEL_NOT_IMPORTED",
+      "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md"
+    },
+    {
+      "id": "M08",
+      "title": "Decidim : rendre la participation traçable",
+      "status": "REFERENCE_MODEL_NOT_IMPORTED",
+      "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md"
+    },
+    {
+      "id": "M09",
+      "title": "Loomio : décider avec le contexte et les raisons",
+      "status": "REFERENCE_MODEL_NOT_IMPORTED",
+      "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md"
+    },
+    {
+      "id": "M10",
+      "title": "KoboToolbox : préparer et reprendre une collecte hors ligne",
+      "status": "REFERENCE_MODEL_NOT_IMPORTED",
+      "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md"
+    },
+    {
+      "id": "M11",
+      "title": "Ushahidi : recueillir, qualifier et situer des signalements",
+      "status": "REFERENCE_MODEL_NOT_IMPORTED",
+      "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md"
+    },
+    {
+      "id": "M12",
+      "title": "Moodle : relier compétences, apprentissage et preuve",
+      "status": "REFERENCE_MODEL_NOT_IMPORTED",
+      "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md"
+    },
+    {
+      "id": "M13",
+      "title": "Open Badges : une preuve portable et décrite",
+      "status": "REFERENCE_MODEL_NOT_IMPORTED",
+      "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md"
+    },
+    {
+      "id": "M14",
+      "title": "OpenStreetMap : contribuer des faits vérifiables",
+      "status": "REFERENCE_MODEL_NOT_IMPORTED",
+      "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md"
+    },
+    {
+      "id": "M15",
+      "title": "Metabase : des tableaux de bord qui mènent à la question suivante",
+      "status": "REFERENCE_MODEL_NOT_IMPORTED",
+      "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md"
+    },
+    {
+      "id": "M16",
+      "title": "Plane : une tâche avec responsable et état",
+      "status": "REFERENCE_MODEL_NOT_IMPORTED",
+      "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md"
+    },
+    {
+      "id": "M17",
+      "title": "Easy!Appointments : réserver un créneau compréhensible",
+      "status": "REFERENCE_MODEL_NOT_IMPORTED",
+      "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md"
+    },
+    {
+      "id": "M18",
+      "title": "Nextcloud : partager un document avec une portée explicite",
+      "status": "REFERENCE_MODEL_NOT_IMPORTED",
+      "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md"
+    },
+    {
+      "id": "M19",
+      "title": "Gitea : conditionner l’intégration à des vérifications",
+      "status": "REFERENCE_MODEL_NOT_IMPORTED",
+      "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md"
+    },
+    {
+      "id": "M20",
+      "title": "Zammad : suivre réponse, résolution et escalade",
+      "status": "REFERENCE_MODEL_NOT_IMPORTED",
+      "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md"
+    }
+  ]
+}

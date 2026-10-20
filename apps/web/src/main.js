@@ -22,6 +22,7 @@ import { mountCompletionUI } from './completion-ui.js';
 import { mountAdvancedUI } from './advanced-ui.js';
 import { mountIdentityLiveUI } from './identity-live-ui.js';
 import { mountCommunityShopUI } from './community-shop-ui.js';
+import {mountPersonalShopsUI} from './personal-shops-ui.js';
 import { mountMiscRubricUI } from './misc-rubrics-ui.js';
 import { mountPairingUI } from './pairing-ui.js';
 import { mountDetailUI } from './detail-ui.js';
@@ -183,7 +184,7 @@ let launchStudio;
 let modules = [];
 let selectedLot = 'ALL';
 let deferredInstallPrompt;
-const CAHIER_VERSION = '1.5.2.26-commercial-orders';
+const CAHIER_VERSION = '1.5.2.27-personal-commerce';
 const $ = (s) => { const e = document.querySelector(s); if (!e)
     throw new Error(`UI_ELEMENT_NOT_FOUND:${s}`); return e; };
 const val = (id) => document.getElementById(id).value.trim();
@@ -294,6 +295,7 @@ const advancedUI = mountAdvancedUI({
 });
 const identityLiveUI = mountIdentityLiveUI({ app, notify: toast, showError: fail, conservationMode: FREE_CONSERVATION_MODE });
 const communityShopUI = mountCommunityShopUI({ app, notify: toast, showError: fail, isManager, fmt, actorName: actorDisplayName });
+const personalShopsUI = mountPersonalShopsUI({app,notify:toast,showError:fail,fmt});
 const miscRubricUI = mountMiscRubricUI({ app, notify: toast, showError: fail, getMembers: () => members, getMeetings: () => meetings, isManager, fmt });
 const pairingUI = mountPairingUI({ app, notify: toast, showError: fail, getMembers: () => members, isManager, afterMembershipChanged: async groupId => { await renderGroups(); if(groupId){ app.selectGroup(groupId); await refreshGroupContext(); } } });
 const clearFail = hideError;
@@ -1974,6 +1976,7 @@ const openModule = async (id) => {
         await go('ecosystem',{anchor:'marketEnginePanel',force:true});
         if(captured!==JSON.stringify([app.currentActor(),app.currentTenant(),app.activeGroup()]))return;
         const panel=document.getElementById('marketEnginePanel');if(panel)panel.open=true;
+        if(id==='MARKETPLACE.CORE')await personalShopsUI.open();
         await advancedUI.openMarket();return;
     }
     if(m.status==='FOUNDATION_ACTIVE'&&id==='SEARCH.UNIVERSAL'){await go('ecosystem',{anchor:'universalSearchPanel',force:true});const panel=document.getElementById('universalSearchPanel');if(panel?.tagName==='DETAILS')panel.open=true;return;}
@@ -2548,6 +2551,7 @@ window.addEventListener('eco:financial-live-update',event=>{
 const refreshGroupContext = async () => {
     const requestedGroup=app.activeGroup();
     personalCockpitUI.clearForContext?.();
+    personalShopsUI.clearForContext?.();
     universalSearchRevision++;document.getElementById('universalSearchFullResults')?.replaceChildren();const searchScope=JSON.stringify([app.currentActor(),app.currentTenant(),app.activeGroup()]);if(searchScope!==universalSearchScope){universalSearchScope=searchScope;const input=document.getElementById('universalSearchFull');if(input)input.value='';}
     // Account navigation does not wait for optional group/financial panels.
     // Reuse this same membership-checked directory in the personal cockpit.
@@ -2604,6 +2608,7 @@ const refreshGroupContext = async () => {
     await refreshOptionalOfflineSafe('urgent-notifications',renderUrgentNotifications);
     await refreshOptionalOfflineSafe('notification-center',renderNotificationCenter);
     await refreshOptionalOfflineSafe('community-shop',()=>communityShopUI.refresh());
+    if(document.getElementById('personalShopsPanel')?.open)await refreshOptionalOfflineSafe('personal-shops',()=>personalShopsUI.refresh());
     await refreshOptionalOfflineSafe('misc-rubrics',()=>miscRubricUI.refresh());
     await refreshOptionalOfflineSafe('pairing',()=>pairingUI.refresh());
     await refreshOptionalOfflineSafe('sovereign-offline',()=>sovereignOfflineUI.refresh());
@@ -3075,6 +3080,7 @@ $('#languageSelect').addEventListener('change', async e => {
     uiLocale = e.target.value === 'en' ? 'en' : 'fr';
     app.setLocale(uiLocale);
     applyRuntimeLocale(uiLocale);
+    await personalShopsUI.setLocale?.();
     completionUI.setLocale();
     advancedUI.setLocale();
     renderConnectivity(); renderModules(); renderEcosystemHighlights(); renderDomainHubs(); renderActiveGroup(); renderGroupSelector();

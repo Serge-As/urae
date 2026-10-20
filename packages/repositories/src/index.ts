@@ -85,7 +85,7 @@ export interface FinancialCellStampPlan {
 export interface MarketStockReservationPlan {
   operationId: Id;
   tenantId: Id;
-  groupId: Id;
+  groupId?: Id;
   stock: WorkspaceRecord;
   order: WorkspaceRecord;
   movement: EvidenceRecord;
@@ -94,9 +94,11 @@ export interface MarketStockReservationPlan {
 }
 
 export interface MarketOrderTransitionPlan {
-  operationId:Id;tenantId:Id;groupId:Id;stock:WorkspaceRecord;order:WorkspaceRecord;movement:EvidenceRecord;
+  operationId:Id;tenantId:Id;groupId?:Id;stock:WorkspaceRecord;order:WorkspaceRecord;movement:EvidenceRecord;
   expectedStockVersion:number;expectedOrderVersion:number;
 }
+
+const marketScope=(r:WorkspaceRecord)=>String(r.data.marketScopeId??r.groupId??'');
 
 export interface MarketRecordMutationPlan {record:WorkspaceRecord;expectedVersion:number;movement?:EvidenceRecord;}
 
@@ -177,6 +179,9 @@ export interface PlatformRepository {
   saveGovernanceKnowledgeClaim(claim: GovernanceKnowledgeClaim): void | Promise<void>;
   listGovernanceKnowledgeClaims(tenantId: Id, groupId?: Id): GovernanceKnowledgeClaim[] | Promise<GovernanceKnowledgeClaim[]>;
 
+  getMarketRecordById(id:Id):WorkspaceRecord|undefined|Promise<WorkspaceRecord|undefined>;
+  listMarketShops(actorId?:Id):WorkspaceRecord[]|Promise<WorkspaceRecord[]>;
+  listMarketPurchases(actorId:Id):WorkspaceRecord[]|Promise<WorkspaceRecord[]>;
   saveWorkspaceRecord(record: WorkspaceRecord): void | Promise<void>;
   getWorkspaceRecord(tenantId: Id, id: Id): WorkspaceRecord | undefined | Promise<WorkspaceRecord | undefined>;
   listWorkspaceRecords(tenantId: Id, moduleId?: string, groupId?: Id): WorkspaceRecord[] | Promise<WorkspaceRecord[]>;
@@ -243,9 +248,9 @@ export class InMemoryPlatformRepository implements PlatformRepository {
 
   commitMarketRecordMutation(plan:MarketRecordMutationPlan):WorkspaceRecord{
     const current=this.workspaceRecords.get(plan.record.id);
-    if(!current||current.tenantId!==plan.record.tenantId||current.groupId!==plan.record.groupId)throw Error('FORBIDDEN_SCOPE');
+    if(!current||current.tenantId!==plan.record.tenantId||current.groupId!==plan.record.groupId||marketScope(current)!==marketScope(plan.record))throw Error('FORBIDDEN_SCOPE');
     if(Number(current.data.version??1)!==plan.expectedVersion)throw Error('MARKET_RECORD_CONFLICT');
-    if(plan.movement&&(plan.movement.tenantId!==current.tenantId||plan.movement.subjectId!==current.id||plan.movement.data.groupId!==current.groupId))throw Error('MARKET_ORDER_PLAN_INVALID');
+    if(plan.movement&&(plan.movement.tenantId!==current.tenantId||plan.movement.subjectId!==current.id||plan.movement.data.groupId!==current.groupId||String(plan.movement.data.marketScopeId??plan.movement.data.groupId??'')!==marketScope(current)))throw Error('MARKET_ORDER_PLAN_INVALID');
     this.workspaceRecords.set(current.id,structuredClone(plan.record));
     if(plan.movement)this.evidences.set(plan.movement.id,structuredClone(plan.movement));
     return structuredClone(plan.record);
@@ -253,7 +258,7 @@ export class InMemoryPlatformRepository implements PlatformRepository {
 
   commitMarketOrderTransition(plan:MarketOrderTransitionPlan):{stock:WorkspaceRecord;order:WorkspaceRecord;movement:EvidenceRecord}{
     const stock=this.workspaceRecords.get(plan.stock.id),order=this.workspaceRecords.get(plan.order.id),prior=this.evidences.get(plan.movement.id);
-    if(!stock||!order||stock.tenantId!==plan.tenantId||order.tenantId!==plan.tenantId||stock.groupId!==plan.groupId||order.groupId!==plan.groupId)throw Error('FORBIDDEN_SCOPE');
+    if(!stock||!order||stock.tenantId!==plan.tenantId||order.tenantId!==plan.tenantId||stock.groupId!==plan.groupId||order.groupId!==plan.groupId||marketScope(stock)!==marketScope(order)||marketScope(stock)!==marketScope(plan.stock)||marketScope(order)!==marketScope(plan.order))throw Error('FORBIDDEN_SCOPE');
     if(prior){if(prior.type!=='MARKET_STOCK_MOVEMENT'||prior.data.requestFingerprint!==plan.movement.data.requestFingerprint)throw Error('MARKET_IDEMPOTENCY_CONFLICT');return{stock:structuredClone(stock),order:structuredClone(order),movement:structuredClone(prior)};}
     if(Number(stock.data.version??1)!==plan.expectedStockVersion||Number(order.data.version??1)!==plan.expectedOrderVersion)throw Error('MARKET_ORDER_CONFLICT');
     if(plan.movement.subjectId!==stock.id||plan.movement.data.sourceId!==order.id||String(plan.stock.data.lastMarketOperationId)!==plan.operationId||String(plan.order.data.lastMarketOperationId)!==plan.operationId)throw Error('MARKET_ORDER_PLAN_INVALID');
@@ -263,7 +268,7 @@ export class InMemoryPlatformRepository implements PlatformRepository {
 
   commitMarketStockReservation(plan:MarketStockReservationPlan):{stock:WorkspaceRecord;order:WorkspaceRecord;movement:EvidenceRecord}{
     const current=this.workspaceRecords.get(plan.stock.id);
-    if(!current||current.tenantId!==plan.tenantId||current.groupId!==plan.groupId)throw new Error('STOCK_ITEM_NOT_FOUND');
+    if(!current||current.tenantId!==plan.tenantId||current.groupId!==plan.groupId||marketScope(current)!==marketScope(plan.order)||marketScope(current)!==marketScope(plan.stock))throw new Error('STOCK_ITEM_NOT_FOUND');
     const version=Number(current.data.version??1),available=Number(current.data.quantity??0)-Number(current.data.reserved??0)-Number(current.data.quarantine??0);
     if(version!==plan.expectedVersion||available<plan.reservationQuantity)throw new Error('MARKET_STOCK_RESERVATION_CONFLICT');
     if(String(plan.stock.data.lastReservationOperationId??'')!==plan.operationId)throw new Error('MARKET_STOCK_RESERVATION_PLAN_INVALID');
@@ -428,6 +433,9 @@ export class InMemoryPlatformRepository implements PlatformRepository {
   saveGovernanceKnowledgeClaim(claim: GovernanceKnowledgeClaim): void { this.governanceKnowledgeClaims.set(claim.id, structuredClone(claim)); }
   listGovernanceKnowledgeClaims(tenantId: Id, groupId?: Id): GovernanceKnowledgeClaim[] { return [...this.governanceKnowledgeClaims.values()].filter(x=>x.tenantId===tenantId&&(!groupId||x.groupId===groupId)).map(x=>structuredClone(x)); }
   saveWorkspaceRecord(record: WorkspaceRecord): void { this.workspaceRecords.set(record.id, structuredClone(record)); }
+  getMarketRecordById(id:Id):WorkspaceRecord|undefined{const r=this.workspaceRecords.get(id);return r?.tags.includes('market-engine')?structuredClone(r):undefined;}
+  listMarketShops(actorId?:Id):WorkspaceRecord[]{return [...this.workspaceRecords.values()].filter(r=>r.tags.includes('market-engine')&&r.data.marketKind==='SHOP'&&r.data.ownerType==='PERSON'&&!r.groupId&&r.status==='ACTIVE'&&(actorId?r.createdBy===actorId||JSON.parse(String(r.data.collaboratorsJson??'[]')).some((x:{userId:string})=>x.userId===actorId):r.data.visibility==='PUBLIC')).map(r=>structuredClone(r));}
+  listMarketPurchases(actorId:Id):WorkspaceRecord[]{return [...this.workspaceRecords.values()].filter(r=>r.tags.includes('market-engine')&&r.data.marketKind==='MARKET_ORDER'&&r.data.buyerUserId===actorId).map(r=>structuredClone(r));}
   getWorkspaceRecord(tenantId: Id, id: Id): WorkspaceRecord | undefined { const x=this.workspaceRecords.get(id); return x?.tenantId===tenantId?structuredClone(x):undefined; }
   listWorkspaceRecords(tenantId: Id, moduleId?: string, groupId?: Id): WorkspaceRecord[] { return [...this.workspaceRecords.values()].filter(x=>x.tenantId===tenantId&&(!moduleId||x.moduleId===moduleId)&&(!groupId||x.groupId===groupId)).map(x=>structuredClone(x)); }
 }
@@ -614,28 +622,28 @@ export class D1PlatformRepository implements PlatformRepository {
 
   async commitMarketRecordMutation(plan:MarketRecordMutationPlan):Promise<WorkspaceRecord>{
     const r=plan.record,m=plan.movement;
-    if(Number(r.data.version)!==plan.expectedVersion+1||m&&(m.tenantId!==r.tenantId||m.subjectId!==r.id||m.data.groupId!==r.groupId))throw Error('MARKET_ORDER_PLAN_INVALID');
-    const update=this.db.prepare(`UPDATE platform_records SET data_json=?,updated_at=? WHERE record_type='workspace_record' AND record_id=? AND tenant_id=? AND group_id=? AND COALESCE(CAST(json_extract(data_json,'$.data.version') AS INTEGER),1)=?`).bind(JSON.stringify(r),r.updatedAt,r.id,r.tenantId,r.groupId,plan.expectedVersion);
+    if(Number(r.data.version)!==plan.expectedVersion+1||m&&(m.tenantId!==r.tenantId||m.subjectId!==r.id||m.data.groupId!==r.groupId||String(m.data.marketScopeId??m.data.groupId??'')!==marketScope(r)))throw Error('MARKET_ORDER_PLAN_INVALID');
+    const update=this.db.prepare(`UPDATE platform_records SET data_json=?,updated_at=? WHERE record_type='workspace_record' AND record_id=? AND tenant_id=? AND group_id IS ? AND COALESCE(CAST(json_extract(data_json,'$.data.version') AS INTEGER),1)=?`).bind(JSON.stringify(r),r.updatedAt,r.id,r.tenantId,r.groupId??null,plan.expectedVersion);
     if(!m){const result=await update.run() as {changes?:number|bigint;meta?:{changes?:number}};if(Number(result.meta?.changes??result.changes)!==1)throw Error('MARKET_RECORD_CONFLICT');return r;}
     // The NOT NULL scalar guard makes a stale update abort the whole D1 batch.
-    const guard=this.db.prepare(`INSERT INTO platform_records(record_type,record_id,tenant_id,group_id,assignee_id,idempotency_key,data_json,updated_at) VALUES('market_mutation_guard',?,?,?,?,?,(SELECT json_object('operationId',?) FROM platform_records WHERE record_type='workspace_record' AND record_id=? AND tenant_id=? AND group_id=? AND json_extract(data_json,'$.data.lastMarketOperationId')=?),?)`).bind(m.id,r.tenantId,r.groupId,null,m.id,m.id,r.id,r.tenantId,r.groupId,m.id,r.updatedAt);
-    const evidence=this.db.prepare(`INSERT INTO platform_records(record_type,record_id,tenant_id,group_id,assignee_id,idempotency_key,data_json,updated_at) VALUES('evidence',?,?,?,?,?,?,?)`).bind(m.id,r.tenantId,r.groupId,null,m.id,JSON.stringify(m),m.createdAt);
+    const guard=this.db.prepare(`INSERT INTO platform_records(record_type,record_id,tenant_id,group_id,assignee_id,idempotency_key,data_json,updated_at) VALUES('market_mutation_guard',?,?,?,?,?,(SELECT json_object('operationId',?) FROM platform_records WHERE record_type='workspace_record' AND record_id=? AND tenant_id=? AND group_id IS ? AND json_extract(data_json,'$.data.lastMarketOperationId')=?),?)`).bind(m.id,r.tenantId,r.groupId??null,null,m.id,m.id,r.id,r.tenantId,r.groupId??null,m.id,r.updatedAt);
+    const evidence=this.db.prepare(`INSERT INTO platform_records(record_type,record_id,tenant_id,group_id,assignee_id,idempotency_key,data_json,updated_at) VALUES('evidence',?,?,?,?,?,?,?)`).bind(m.id,r.tenantId,r.groupId??null,null,m.id,JSON.stringify(m),m.createdAt);
     try{await this.db.batch([update,guard,evidence]);}catch(error){const current=await this.getWorkspaceRecord(r.tenantId,r.id);if(Number(current?.data.version??1)!==plan.expectedVersion)throw Error('MARKET_RECORD_CONFLICT',{cause:error});throw error;}
     return r;
   }
 
   async commitMarketOrderTransition(plan:MarketOrderTransitionPlan):Promise<{stock:WorkspaceRecord;order:WorkspaceRecord;movement:EvidenceRecord}>{
-    if(plan.stock.tenantId!==plan.tenantId||plan.order.tenantId!==plan.tenantId||plan.stock.groupId!==plan.groupId||plan.order.groupId!==plan.groupId||plan.movement.tenantId!==plan.tenantId||plan.movement.subjectId!==plan.stock.id||plan.movement.data.sourceId!==plan.order.id||plan.stock.data.lastMarketOperationId!==plan.operationId||plan.order.data.lastMarketOperationId!==plan.operationId)throw Error('MARKET_ORDER_PLAN_INVALID');
+    if(plan.stock.tenantId!==plan.tenantId||plan.order.tenantId!==plan.tenantId||plan.stock.groupId!==plan.groupId||plan.order.groupId!==plan.groupId||plan.movement.tenantId!==plan.tenantId||plan.movement.subjectId!==plan.stock.id||plan.movement.data.sourceId!==plan.order.id||plan.stock.data.lastMarketOperationId!==plan.operationId||plan.order.data.lastMarketOperationId!==plan.operationId||marketScope(plan.stock)!==marketScope(plan.order))throw Error('MARKET_ORDER_PLAN_INVALID');
     const update=(record:WorkspaceRecord,version:number)=>this.db.prepare(`UPDATE platform_records SET data_json=?,updated_at=?
-      WHERE record_type='workspace_record' AND record_id=? AND tenant_id=? AND group_id=? AND COALESCE(CAST(json_extract(data_json,'$.data.version') AS INTEGER),1)=?`)
-      .bind(JSON.stringify(record),record.updatedAt,record.id,plan.tenantId,plan.groupId,version);
+      WHERE record_type='workspace_record' AND record_id=? AND tenant_id=? AND group_id IS ? AND COALESCE(CAST(json_extract(data_json,'$.data.version') AS INTEGER),1)=?`)
+      .bind(JSON.stringify(record),record.updatedAt,record.id,plan.tenantId,plan.groupId??null,version);
     const guard=this.db.prepare(`INSERT INTO platform_records(record_type,record_id,tenant_id,group_id,assignee_id,idempotency_key,data_json,updated_at)
-      VALUES('market_transition_guard',?,?,?,?,?,(SELECT json_object('operationId',?) FROM platform_records s JOIN platform_records o ON o.tenant_id=s.tenant_id AND o.group_id=s.group_id
-      WHERE s.record_type='workspace_record' AND s.record_id=? AND o.record_type='workspace_record' AND o.record_id=? AND s.tenant_id=? AND s.group_id=?
+      VALUES('market_transition_guard',?,?,?,?,?,(SELECT json_object('operationId',?) FROM platform_records s JOIN platform_records o ON o.tenant_id=s.tenant_id AND o.group_id IS s.group_id
+      WHERE s.record_type='workspace_record' AND s.record_id=? AND o.record_type='workspace_record' AND o.record_id=? AND s.tenant_id=? AND s.group_id IS ?
       AND json_extract(s.data_json,'$.data.lastMarketOperationId')=? AND json_extract(o.data_json,'$.data.lastMarketOperationId')=? LIMIT 1),?)`)
-      .bind(plan.operationId,plan.tenantId,plan.groupId,null,plan.operationId,plan.operationId,plan.stock.id,plan.order.id,plan.tenantId,plan.groupId,plan.operationId,plan.operationId,plan.order.updatedAt);
+      .bind(plan.operationId,plan.tenantId,plan.groupId??null,null,plan.operationId,plan.operationId,plan.stock.id,plan.order.id,plan.tenantId,plan.groupId??null,plan.operationId,plan.operationId,plan.order.updatedAt);
     const evidence=this.db.prepare(`INSERT INTO platform_records(record_type,record_id,tenant_id,group_id,assignee_id,idempotency_key,data_json,updated_at) VALUES('evidence',?,?,?,?,?,?,?)`)
-      .bind(plan.movement.id,plan.tenantId,plan.groupId,null,plan.operationId,JSON.stringify(plan.movement),plan.movement.createdAt);
+      .bind(plan.movement.id,plan.tenantId,plan.groupId??null,null,plan.operationId,JSON.stringify(plan.movement),plan.movement.createdAt);
     try{await this.db.batch([update(plan.stock,plan.expectedStockVersion),update(plan.order,plan.expectedOrderVersion),guard,evidence]);}
     catch(error){
       const [prior,stock,order]=await Promise.all([this.getEvidence(plan.tenantId,plan.movement.id),this.getWorkspaceRecord(plan.tenantId,plan.stock.id),this.getWorkspaceRecord(plan.tenantId,plan.order.id)]);
@@ -646,34 +654,35 @@ export class D1PlatformRepository implements PlatformRepository {
   }
 
   async commitMarketStockReservation(plan:MarketStockReservationPlan):Promise<{stock:WorkspaceRecord;order:WorkspaceRecord;movement:EvidenceRecord}>{
+    if(marketScope(plan.stock)!==marketScope(plan.order))throw Error('MARKET_ORDER_PLAN_INVALID');
     const updatedAt=plan.stock.updatedAt;
     const stockUpdate=this.db.prepare(`UPDATE platform_records
       SET data_json=?,updated_at=?
-      WHERE record_type='workspace_record' AND record_id=? AND tenant_id=? AND group_id=?
+      WHERE record_type='workspace_record' AND record_id=? AND tenant_id=? AND group_id IS ?
         AND CAST(json_extract(data_json,'$.data.version') AS INTEGER)=?
         AND (CAST(json_extract(data_json,'$.data.quantity') AS INTEGER)-CAST(json_extract(data_json,'$.data.reserved') AS INTEGER)-COALESCE(CAST(json_extract(data_json,'$.data.quarantine') AS INTEGER),0))>=?`)
-      .bind(JSON.stringify(plan.stock),updatedAt,plan.stock.id,plan.tenantId,plan.groupId,plan.expectedVersion,plan.reservationQuantity);
+      .bind(JSON.stringify(plan.stock),updatedAt,plan.stock.id,plan.tenantId,plan.groupId??null,plan.expectedVersion,plan.reservationQuantity);
     const guard=this.db.prepare(`INSERT INTO platform_records
       (record_type,record_id,tenant_id,group_id,assignee_id,idempotency_key,data_json,updated_at)
       VALUES('market_reservation_guard',?,?,?,?,?,(
         SELECT json_object('operationId',?) FROM platform_records
-        WHERE record_type='workspace_record' AND record_id=? AND tenant_id=? AND group_id=?
+        WHERE record_type='workspace_record' AND record_id=? AND tenant_id=? AND group_id IS ?
           AND json_extract(data_json,'$.data.lastReservationOperationId')=?
         LIMIT 1
       ),?)`)
-      .bind(plan.operationId,plan.tenantId,plan.groupId,null,plan.operationId,plan.operationId,plan.stock.id,plan.tenantId,plan.groupId,plan.operationId,updatedAt);
+      .bind(plan.operationId,plan.tenantId,plan.groupId??null,null,plan.operationId,plan.operationId,plan.stock.id,plan.tenantId,plan.groupId??null,plan.operationId,updatedAt);
     const orderInsert=this.db.prepare(`INSERT INTO platform_records
       (record_type,record_id,tenant_id,group_id,assignee_id,idempotency_key,data_json,updated_at)
       SELECT 'workspace_record',?,?,?,?,?,?,? WHERE EXISTS (
-        SELECT 1 FROM platform_records WHERE record_type='market_reservation_guard' AND record_id=? AND tenant_id=? AND group_id=?
+        SELECT 1 FROM platform_records WHERE record_type='market_reservation_guard' AND record_id=? AND tenant_id=? AND group_id IS ?
       )`)
-      .bind(plan.order.id,plan.tenantId,plan.groupId,plan.order.createdBy,plan.operationId,JSON.stringify(plan.order),plan.order.updatedAt,plan.operationId,plan.tenantId,plan.groupId);
+      .bind(plan.order.id,plan.tenantId,plan.groupId??null,plan.order.createdBy,plan.operationId,JSON.stringify(plan.order),plan.order.updatedAt,plan.operationId,plan.tenantId,plan.groupId??null);
     const evidenceInsert=this.db.prepare(`INSERT INTO platform_records
       (record_type,record_id,tenant_id,group_id,assignee_id,idempotency_key,data_json,updated_at)
       SELECT 'evidence',?,?,?,?,?,?,? WHERE EXISTS (
-        SELECT 1 FROM platform_records WHERE record_type='market_reservation_guard' AND record_id=? AND tenant_id=? AND group_id=?
+        SELECT 1 FROM platform_records WHERE record_type='market_reservation_guard' AND record_id=? AND tenant_id=? AND group_id IS ?
       )`)
-      .bind(plan.movement.id,plan.tenantId,plan.groupId,null,plan.operationId,JSON.stringify(plan.movement),plan.movement.createdAt,plan.operationId,plan.tenantId,plan.groupId);
+      .bind(plan.movement.id,plan.tenantId,plan.groupId??null,null,plan.operationId,JSON.stringify(plan.movement),plan.movement.createdAt,plan.operationId,plan.tenantId,plan.groupId??null);
     try{await this.db.batch([stockUpdate,guard,orderInsert,evidenceInsert]);}catch(error){
       const current=await this.getWorkspaceRecord(plan.tenantId,plan.stock.id),version=Number(current?.data.version??0);
       if(version!==Number(plan.stock.data.version??0)||String(current?.data.lastReservationOperationId??'')!==plan.operationId)throw new Error('MARKET_STOCK_RESERVATION_CONFLICT',{cause:error});
@@ -905,6 +914,12 @@ export class D1PlatformRepository implements PlatformRepository {
   saveGovernanceKnowledgeClaim(x:GovernanceKnowledgeClaim){return this.saveRecord('governance_claim',x,{tenantId:x.tenantId,groupId:x.groupId});}
   listGovernanceKnowledgeClaims(t:Id,g?:Id){return this.list<GovernanceKnowledgeClaim>('governance_claim',g?'tenant_id=? AND group_id=?':'tenant_id=?',g?[t,g]:[t]);}
   saveWorkspaceRecord(x:WorkspaceRecord){return this.saveRecord('workspace_record',x,{tenantId:x.tenantId,groupId:x.groupId,assigneeId:x.createdBy});}
+  async getMarketRecordById(id:Id){const r=await this.byId<WorkspaceRecord>('workspace_record',id);return r?.tags.includes('market-engine')?r:undefined;}
+  listMarketShops(actorId?:Id){
+    const base="group_id IS NULL AND json_extract(data_json,'$.data.marketKind')='SHOP' AND json_extract(data_json,'$.data.ownerType')='PERSON' AND json_extract(data_json,'$.status')='ACTIVE'";
+    return this.list<WorkspaceRecord>('workspace_record',base+(actorId?" AND (assignee_id=? OR EXISTS(SELECT 1 FROM json_each(json_extract(data_json,'$.data.collaboratorsJson')) j WHERE json_extract(j.value,'$.userId')=?))":" AND json_extract(data_json,'$.data.visibility')='PUBLIC'"),actorId?[actorId,actorId]:[]).then(rows=>rows.filter(r=>r.tags.includes('market-engine')));
+  }
+  listMarketPurchases(actorId:Id){return this.list<WorkspaceRecord>('workspace_record',"json_extract(data_json,'$.data.marketKind')='MARKET_ORDER' AND json_extract(data_json,'$.data.buyerUserId')=?",[actorId]).then(rows=>rows.filter(r=>r.tags.includes('market-engine')));}
   async getWorkspaceRecord(t:Id,id:Id){const x=await this.byId<WorkspaceRecord>('workspace_record',id);return x?.tenantId===t?x:undefined;}
   listWorkspaceRecords(t:Id,moduleId?:string,g?:Id){
     if(moduleId&&g)return this.list<WorkspaceRecord>('workspace_record','tenant_id=? AND group_id=?',[t,g]).then(xs=>xs.filter(x=>x.moduleId===moduleId));

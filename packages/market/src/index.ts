@@ -1,4 +1,4 @@
-import type {EvidenceRecord,Id,Membership,WorkspaceRecord} from '../../contracts/src/index.js';
+import type {CaseRecord,EvidenceRecord,Id,Membership,WorkspaceRecord} from '../../contracts/src/index.js';
 import {makeId} from '../../contracts/src/index.js';
 import type {PlatformRepository} from '../../repositories/src/index.js';
 import type {PlatformKernel} from '../../platform-kernel/src/index.js';
@@ -19,9 +19,108 @@ export interface MarketRecord extends WorkspaceRecord{data:WorkspaceRecord['data
 export interface MarketOrderOptions {idempotencyKey?:string;evidenceRef?:string;disposition?:'RESTOCK'|'QUARANTINE';}
 
 export class MarketService{
-  constructor(public repo:PlatformRepository,public kernel:PlatformKernel){}
+  constructor(public repo:PlatformRepository,public kernel:PlatformKernel,private reportingTenantId?:Id){}
+  private scopeOf(record:WorkspaceRecord){return String(record.data.marketScopeId??record.groupId??'');}
+  private async personalShop(id:Id){
+    const c=this.kernel.context.get(),r=await this.repo.getWorkspaceRecord(c.tenantId,id);
+    if(!r||!r.id.startsWith('market_shop_')||r.groupId||r.data.marketKind!=='SHOP'||r.data.ownerType!=='PERSON'||r.data.ownerUserId!==r.createdBy||r.status!=='ACTIVE')throw Error('SHOP_NOT_FOUND');
+    return r as MarketRecord;
+  }
+  private collaborators(shop:MarketRecord):Array<{userId:string;role:'READ'|'SELL';expiresAt:string}>{
+    try{return JSON.parse(String(shop.data.collaboratorsJson??'[]'));}catch{return [];}
+  }
+  private async scopeGroupId(scopeId:Id){const c=this.kernel.context.get(),g=await this.repo.getGroup(c.tenantId,scopeId);if(g)return g.id;await this.personalShop(scopeId);return undefined;}
+  private async publicShop(id:Id){const shop=await this.personalShop(id);if(shop.data.visibility!=='PUBLIC')throw Error('SHOP_NOT_AVAILABLE');return shop;}
+  async canReadScope(id:Id){try{await this.access(id);return true;}catch{return false;}}
+  async createPersonalShop(input:{name:string;tagline?:string;visibility?:'PRIVATE'|'PUBLIC';locality?:string;profile?:string;idempotencyKey:string}){
+    const c=this.kernel.context.get(),name=input.name.trim().slice(0,160);if(!name)throw Error('SHOP_NAME_REQUIRED');
+    if(!/^[a-zA-Z0-9_-]{8,120}$/.test(input.idempotencyKey))throw Error('INVALID_IDEMPOTENCY_KEY');
+    const visibility=input.visibility??'PRIVATE';if(!['PRIVATE','PUBLIC'].includes(visibility))throw Error('INVALID_SHOP_VISIBILITY');
+    const id='market_shop_'+await operationKey([c.tenantId,c.actorId,input.idempotencyKey]),fingerprint=JSON.stringify([name,input.tagline??'',visibility,input.locality??'',input.profile??'MEMBER']);
+    const existing=await this.repo.getWorkspaceRecord(c.tenantId,id);if(existing){if(existing.createdBy!==c.actorId||existing.data.creationFingerprint!==fingerprint)throw Error('MARKET_IDEMPOTENCY_CONFLICT');return existing;}
+    const stamp=now(),record:MarketRecord={id,tenantId:c.tenantId,moduleId:'MARKETPLACE.CORE',title:name,status:'ACTIVE',tags:['market-engine','kind:SHOP','personal-shop'],data:{marketKind:'SHOP',marketScopeId:id,ownerType:'PERSON',ownerUserId:c.actorId,profile:String(input.profile??'MEMBER').slice(0,40),businessWorkspaceRef:'business_workspace_'+encodeURIComponent(c.actorId),tagline:String(input.tagline??'').trim().slice(0,240),locality:String(input.locality??'').trim().slice(0,160),visibility,collaboratorsJson:'[]',creationFingerprint:fingerprint,version:1},createdBy:c.actorId,createdAt:stamp,updatedAt:stamp};
+    await this.repo.saveWorkspaceRecord(record);return record;
+  }
+  async personalShops(){
+    const c=this.kernel.context.get(),rows=await this.repo.listMarketShops(c.actorId);
+    return rows.filter(r=>r.data.marketKind==='SHOP'&&r.data.ownerType==='PERSON'&&!r.groupId&&r.status==='ACTIVE'&&(r.createdBy===c.actorId||this.collaborators(r as MarketRecord).some(x=>x.userId===c.actorId&&(!x.expiresAt||Date.parse(x.expiresAt)>Date.now()))));
+  }
+  async configurePersonalShop(id:Id,input:{name?:string;tagline?:string;locality?:string;visibility?:'PRIVATE'|'PUBLIC'}){
+    const shop=await this.personalShop(id),c=this.kernel.context.get();if(shop.createdBy!==c.actorId)throw Error('SHOP_OWNER_REQUIRED');
+    if(input.visibility&&!['PRIVATE','PUBLIC'].includes(input.visibility))throw Error('INVALID_SHOP_VISIBILITY');
+    if(input.name!==undefined&&!input.name.trim())throw Error('SHOP_NAME_REQUIRED');
+    return this.update({...shop,title:input.name?.trim().slice(0,160)??shop.title},{tagline:input.tagline?.trim().slice(0,240)??shop.data.tagline??'',locality:input.locality?.trim().slice(0,160)??shop.data.locality??'',visibility:input.visibility??shop.data.visibility??'PRIVATE'});
+  }
+  async setShopCollaborator(id:Id,input:{userId:Id;role:'READ'|'SELL'|'REVOKED';expiresAt?:string}){
+    const shop=await this.personalShop(id),c=this.kernel.context.get();if(shop.createdBy!==c.actorId)throw Error('SHOP_OWNER_REQUIRED');
+    if(input.userId===c.actorId)throw Error('SHOP_OWNER_CANNOT_BE_COLLABORATOR');
+    if(!['READ','SELL','REVOKED'].includes(input.role))throw Error('INVALID_SHOP_ROLE');
+    if(input.role!=='REVOKED'&&!await this.repo.getUser(input.userId))throw Error('SHOP_COLLABORATOR_NOT_FOUND');
+    if(input.expiresAt&&(!Number.isFinite(Date.parse(input.expiresAt))||Date.parse(input.expiresAt)<=Date.now()))throw Error('INVALID_MANDATE_EXPIRY');
+    const people=this.collaborators(shop).filter(x=>x.userId!==input.userId);if(input.role!=='REVOKED')people.push({userId:input.userId,role:input.role,expiresAt:input.expiresAt?new Date(input.expiresAt).toISOString():''});
+    if(people.length>30)throw Error('SHOP_COLLABORATOR_LIMIT');
+    return this.update(shop,{collaboratorsJson:JSON.stringify(people)});
+  }
+  async shopWorkspace(id:Id){await this.access(id);const shop=await this.personalShop(id),records=await this.list(id),actorId=this.kernel.context.get().actorId;return{shop,records,owner:shop.createdBy===actorId,canSell:shop.createdBy===actorId||this.collaborators(shop).some(x=>x.userId===actorId&&x.role==='SELL'&&(!x.expiresAt||Date.parse(x.expiresAt)>Date.now()))};}
+  async orderScope(id:Id){const order=await this.authorizedOrder(id);await this.access(this.scopeOf(order),true);return this.scopeOf(order);}
+  async shopDirectory(){
+    const c=this.kernel.context.get(),rows=await this.repo.listMarketShops();
+    return rows.filter(r=>r.data.marketKind==='SHOP'&&r.data.ownerType==='PERSON'&&!r.groupId&&r.status==='ACTIVE'&&r.data.visibility==='PUBLIC').map(r=>({id:r.id,name:r.title,tagline:String(r.data.tagline??''),locality:String(r.data.locality??'')}));
+  }
+  async publicStorefront(id:Id){
+    const shop=await this.publicShop(id),c=this.kernel.context.get(),rows=await this.repo.listWorkspaceRecords(c.tenantId,'MARKETPLACE.CORE');
+    const items=rows.filter(r=>this.scopeOf(r)===id&&r.data.marketKind==='STOCK_ITEM'&&r.status==='ACTIVE'&&r.data.published&&r.data.ownership!=='POT_RESERVED').map(r=>({id:r.id,name:r.title,sku:String(r.data.sku),unitPrice:Number(r.data.unitPrice??0),currency:String(r.data.currency??'XAF'),unit:String(r.data.unit??'unit'),variant:String(r.data.variant??''),description:String(r.data.description??''),deliveryTerms:String(r.data.deliveryTerms??''),available:Math.max(0,Number(r.data.quantity)-Number(r.data.reserved??0)-Number(r.data.quarantine??0)),availableNow:(!r.data.availableAt||Date.parse(String(r.data.availableAt))<=Date.now())&&(!r.data.availableUntil||Date.parse(String(r.data.availableUntil))>Date.now())}));
+    return{shop:{id:shop.id,name:shop.title,tagline:String(shop.data.tagline??''),locality:String(shop.data.locality??'')},items};
+  }
+  async purchaseFromShop(id:Id,input:{stockItemId:Id;quantity:number;idempotencyKey:string}){
+    if(!input.idempotencyKey)throw Error('INVALID_IDEMPOTENCY_KEY');
+    return this.createOrder(id,{stockItemId:input.stockItemId,quantity:input.quantity,customerRef:this.kernel.context.get().actorId,idempotencyKey:input.idempotencyKey},true,undefined,true);
+  }
+  private async authorizedOrder(id:Id){
+    const c=this.kernel.context.get(),r=await this.repo.getWorkspaceRecord(c.tenantId,id);if(!r||r.data.marketKind!=='MARKET_ORDER'||!r.tags.includes('market-engine'))throw Error('ORDER_NOT_FOUND');
+    if(String(r.data.buyerUserId??'')!==c.actorId)await this.access(this.scopeOf(r),true);
+    return r as MarketRecord;
+  }
+  async myPurchases(){
+    const c=this.kernel.context.get(),rows=await this.repo.listMarketPurchases(c.actorId);
+    return rows.filter(r=>r.data.marketKind==='MARKET_ORDER'&&r.data.buyerUserId===c.actorId).map(r=>this.buyerProjection(r as MarketRecord));
+  }
+  private buyerProjection(r:MarketRecord){
+    const fields=['marketKind','marketScopeId','buyerUserId','stockItemId','quantity','unitPrice','acceptedUnitPrice','acceptedTotal','currency','unit','variant','deliveryTerms','state','deliveredQuantity','returnedQuantity','cancelledQuantity','receivedQuantity','disputed'];
+    const data:WorkspaceRecord['data']={};for(const key of fields)if(r.data[key]!==undefined)data[key]=r.data[key]!;
+    return{id:r.id,tenantId:r.tenantId,groupId:r.groupId,title:r.title,status:r.status,data,createdAt:r.createdAt,updatedAt:r.updatedAt};
+  }
+  async buyerOrderHistory(id:Id){
+    const r=await this.authorizedOrder(id),c=this.kernel.context.get();if(r.data.buyerUserId!==c.actorId)throw Error('BUYER_REQUIRED');
+    const events=(await this.repo.listEvidence(c.tenantId)).filter(e=>e.data.sourceId===id||e.subjectType==='MARKET_ORDER'&&e.subjectId===id).filter(e=>['MARKET_STOCK_MOVEMENT','MARKET_BUYER_RECEIPT'].includes(e.type));
+    return{order:this.buyerProjection(r),events,paymentStatus:'NOT_INFERRED'};
+  }
+  async confirmReceipt(id:Id,input:{quantity:number;idempotencyKey:string;evidenceRef?:string}){
+    qty(input.quantity);if(!/^[a-zA-Z0-9_-]{8,120}$/.test(input.idempotencyKey))throw Error('INVALID_IDEMPOTENCY_KEY');
+    const order=await this.authorizedOrder(id),c=this.kernel.context.get();if(order.data.buyerUserId!==c.actorId)throw Error('BUYER_REQUIRED');
+    const operationId='market_buyer_receipt_'+await operationKey([c.actorId,id,input.idempotencyKey]),evidenceRef=String(input.evidenceRef??'').trim().slice(0,240),fingerprint=JSON.stringify([input.quantity,evidenceRef]);
+    const replay=async()=>{const prior=await this.repo.getEvidence(c.tenantId,operationId);if(prior){if(prior.type!=='MARKET_BUYER_RECEIPT'||prior.createdBy!==c.actorId||prior.subjectId!==id||prior.data.requestFingerprint!==fingerprint)throw Error('MARKET_IDEMPOTENCY_CONFLICT');return true;}return false;};
+    if(await replay())return this.buyerOrderHistory(id);
+    const received=Number(order.data.receivedQuantity??0)+input.quantity,netDelivered=Number(order.data.deliveredQuantity??0)-Number(order.data.returnedQuantity??0);if(received>netDelivered)throw Error('RECEIPT_EXCEEDS_DELIVERY');
+    const stamp=now(),record:MarketRecord={...order,data:{...order.data,receivedQuantity:received,lastMarketOperationId:operationId,version:Number(order.data.version??1)+1},updatedAt:stamp};
+    const proof:EvidenceRecord={id:operationId,tenantId:c.tenantId,type:'MARKET_BUYER_RECEIPT',subjectType:'MARKET_ORDER',subjectId:id,createdAt:stamp,createdBy:c.actorId,immutable:true,data:{...(order.groupId?{groupId:order.groupId}:{}),marketScopeId:this.scopeOf(order),kind:'BUYER_RECEIPT',quantity:input.quantity,evidenceRef,requestFingerprint:fingerprint,paymentConfirmed:false}};
+    try{await this.repo.commitMarketRecordMutation({record,expectedVersion:Number(order.data.version??1),movement:proof});}catch(error){if(!await replay())throw error;}
+    return this.buyerOrderHistory(id);
+  }
+  async openOrderSupport(id:Id,input:{summary:string;idempotencyKey:string}):Promise<CaseRecord>{
+    const order=await this.authorizedOrder(id),c=this.kernel.context.get(),summary=input.summary.trim().slice(0,3000);if(!summary)throw Error('CASE_SUMMARY_REQUIRED');
+    if(!/^[a-zA-Z0-9_-]{8,120}$/.test(input.idempotencyKey))throw Error('INVALID_IDEMPOTENCY_KEY');
+    const caseTenantId=this.reportingTenantId??c.tenantId,caseId='case_market_'+await operationKey([caseTenantId,c.actorId,id,input.idempotencyKey]),prior=(await this.repo.listCases(caseTenantId,c.actorId)).find(x=>x.id===caseId);
+    if(prior){if(prior.subjectId!==id||prior.summary!==summary)throw Error('MARKET_IDEMPOTENCY_CONFLICT');return prior;}
+    // Kernel.Cases owns the case lifecycle. This is only its authorized reference adapter.
+    const record=this.kernel.cases.open({id:caseId,tenantId:caseTenantId,groupId:caseTenantId===order.tenantId?order.groupId:undefined,type:'MARKET_ORDER_SUPPORT',subjectType:'MARKET_ORDER',subjectId:id,openedBy:c.actorId,summary});
+    await this.repo.saveCase(record);return record;
+  }
   private async access(groupId:Id,manage=false):Promise<Membership|undefined>{
-    const ctx=this.kernel.context.get(),group=await this.repo.getGroup(ctx.tenantId,groupId);if(!group)throw Error('GROUP_NOT_FOUND');
+    const ctx=this.kernel.context.get(),group=await this.repo.getGroup(ctx.tenantId,groupId);if(!group){
+      if(!groupId.startsWith('market_shop_'))throw Error('GROUP_NOT_FOUND');const shop=await this.personalShop(groupId);if(shop.createdBy===ctx.actorId)return;
+      const grant=this.collaborators(shop).find(x=>x.userId===ctx.actorId&&(!x.expiresAt||Date.parse(x.expiresAt)>Date.now()));if(!grant||manage&&grant.role!=='SELL')throw Error('FORBIDDEN_SCOPE');return;
+    }
     if(group.createdBy===ctx.actorId)return;
     const member=(await this.repo.listMemberships(ctx.tenantId,groupId)).find(m=>m.userId===ctx.actorId&&m.status==='active');
     if(!member)throw Error('FORBIDDEN_SCOPE');
@@ -29,13 +128,13 @@ export class MarketService{
     return member;
   }
   private async list(groupId:Id,kind?:MarketKind){
-    await this.access(groupId,false);const ctx=this.kernel.context.get();
-    return (await this.repo.listWorkspaceRecords(ctx.tenantId,undefined,groupId)).filter(r=>r.tags.includes('market-engine')&&(!kind||r.data.marketKind===kind)) as MarketRecord[];
+    await this.access(groupId,false);const ctx=this.kernel.context.get(),recordGroupId=await this.scopeGroupId(groupId);
+    return (await this.repo.listWorkspaceRecords(ctx.tenantId,undefined,recordGroupId)).filter(r=>r.tags.includes('market-engine')&&this.scopeOf(r)===groupId&&(!kind||r.data.marketKind===kind)) as MarketRecord[];
   }
   private async save(groupId:Id,kind:MarketKind,title:string,data:Record<string,string|number|boolean|null>,status:WorkspaceRecord['status']='ACTIVE'){
-    await this.access(groupId,true);const ctx=this.kernel.context.get(),stamp=now();
-    const record:MarketRecord={id:makeId('market'),tenantId:ctx.tenantId,groupId,moduleId:kind==='GROUP_BUY'?'MARKETPLACE.GROUP_BUY':'MARKETPLACE.CORE',
-      title,status,tags:['market-engine','kind:'+kind],data:{...data,marketKind:kind,version:1},createdBy:ctx.actorId,createdAt:stamp,updatedAt:stamp};
+    await this.access(groupId,true);const ctx=this.kernel.context.get(),stamp=now(),recordGroupId=await this.scopeGroupId(groupId);
+    const record:MarketRecord={id:makeId('market'),tenantId:ctx.tenantId,groupId:recordGroupId,moduleId:kind==='GROUP_BUY'?'MARKETPLACE.GROUP_BUY':'MARKETPLACE.CORE',
+      title,status,tags:['market-engine','kind:'+kind],data:{...data,marketScopeId:groupId,marketKind:kind,version:1},createdBy:ctx.actorId,createdAt:stamp,updatedAt:stamp};
     await this.repo.saveWorkspaceRecord(record);return record;
   }
   private async update(record:MarketRecord,patch:Record<string,string|number|boolean|null>,status?:WorkspaceRecord['status']){
@@ -43,13 +142,13 @@ export class MarketService{
     await this.repo.commitMarketRecordMutation({record:next,expectedVersion:Number(record.data.version??1)});return next;
   }
   private async stockMovement(groupId:Id,itemId:Id,input:{kind:'INITIAL'|'ADJUSTMENT'|'RESERVATION'|'DELIVERY'|'CUSTOMER_RETURN'|'PROCUREMENT_RECEIPT'|'SUPPLIER_RETURN';quantityDelta:number;reservedDelta:number;sourceType:string;sourceId:string;note?:string;operationId?:string}):Promise<EvidenceRecord>{
-    const ctx=this.kernel.context.get(),stamp=now();
-    const record:EvidenceRecord={id:makeId('evidence'),tenantId:ctx.tenantId,type:'MARKET_STOCK_MOVEMENT',subjectType:'MARKET_STOCK_ITEM',subjectId:itemId,createdAt:stamp,createdBy:ctx.actorId,immutable:true,data:{groupId,kind:input.kind,quantityDelta:input.quantityDelta,reservedDelta:input.reservedDelta,sourceType:input.sourceType,sourceId:input.sourceId,note:input.note?.trim()??'',operationId:input.operationId??'',at:stamp}};
+    const ctx=this.kernel.context.get(),stamp=now(),recordGroupId=await this.scopeGroupId(groupId);
+    const record:EvidenceRecord={id:makeId('evidence'),tenantId:ctx.tenantId,type:'MARKET_STOCK_MOVEMENT',subjectType:'MARKET_STOCK_ITEM',subjectId:itemId,createdAt:stamp,createdBy:ctx.actorId,immutable:true,data:{...(recordGroupId?{groupId:recordGroupId}:{}),marketScopeId:groupId,kind:input.kind,quantityDelta:input.quantityDelta,reservedDelta:input.reservedDelta,sourceType:input.sourceType,sourceId:input.sourceId,note:input.note?.trim()??'',operationId:input.operationId??'',at:stamp}};
     await this.repo.saveEvidence(record);return record;
   }
   async stockMovements(groupId:Id,itemId?:Id){
     await this.access(groupId,false);const ctx=this.kernel.context.get(),rows=await this.repo.listEvidence(ctx.tenantId,'MARKET_STOCK_ITEM');
-    return rows.filter(x=>String(x.data.groupId??'')===groupId&&(!itemId||x.subjectId===itemId)).sort((a,b)=>a.createdAt.localeCompare(b.createdAt));
+    return rows.filter(x=>String(x.data.marketScopeId??x.data.groupId??'')===groupId&&(!itemId||x.subjectId===itemId)).sort((a,b)=>a.createdAt.localeCompare(b.createdAt));
   }
   async stockProjection(groupId:Id,itemId:Id){
     const item=(await this.list(groupId,'STOCK_ITEM')).find(x=>x.id===itemId);if(!item)throw Error('STOCK_ITEM_NOT_FOUND');
@@ -58,7 +157,7 @@ export class MarketService{
   }
   async createOrUpdateShop(groupId:Id,input:{name:string;tagline?:string;visibility?:'GROUP_ONLY'|'PUBLIC';locality?:string;categories?:string[]}){
     await this.access(groupId,true);const ctx=this.kernel.context.get(),name=input.name.trim();if(!name)throw Error('SHOP_NAME_REQUIRED');
-    const existing=(await this.list(groupId,'SHOP'))[0],categories=[...new Set((input.categories??[]).map(x=>x.trim().toLowerCase()).filter(Boolean))].slice(0,20),patch={tagline:input.tagline?.trim().slice(0,240)??'',visibility:input.visibility??'GROUP_ONLY',locality:input.locality?.trim().slice(0,160)??'',categoriesJson:JSON.stringify(categories),ownerGroupId:groupId};
+    const existing=(await this.list(groupId,'SHOP'))[0],categories=[...new Set((input.categories??[]).map(x=>x.trim().toLowerCase()).filter(Boolean))].slice(0,20),patch={tagline:input.tagline?.trim().slice(0,240)??'',visibility:input.visibility??'GROUP_ONLY',locality:input.locality?.trim().slice(0,160)??'',categoriesJson:JSON.stringify(categories),ownerGroupId:groupId,ownerType:'GROUP'};
     if(existing)return this.update({...existing,title:name},patch);
     return this.save(groupId,'SHOP',name,patch);
   }
@@ -90,7 +189,7 @@ export class MarketService{
     const ctx=this.kernel.context.get(),stamp=now(),id=makeId('market_stock'),quantity=Number(item.data.quantity)+quantityDelta;
     if(quantity<Number(item.data.reserved??0)+Number(item.data.quarantine??0))throw Error('INSUFFICIENT_STOCK');
     const record:MarketRecord={...item,data:{...item.data,quantity,lastAdjustmentReason:note,lastMarketOperationId:id,version:Number(item.data.version??1)+1},updatedAt:stamp};
-    const movement:EvidenceRecord={id,tenantId:ctx.tenantId,type:'MARKET_STOCK_MOVEMENT',subjectType:'MARKET_STOCK_ITEM',subjectId:item.id,createdAt:stamp,createdBy:ctx.actorId,immutable:true,data:{groupId:item.groupId!,kind,quantityDelta,reservedDelta:0,sourceType,sourceId,note,at:stamp}};
+    const movement:EvidenceRecord={id,tenantId:ctx.tenantId,type:'MARKET_STOCK_MOVEMENT',subjectType:'MARKET_STOCK_ITEM',subjectId:item.id,createdAt:stamp,createdBy:ctx.actorId,immutable:true,data:{...(item.groupId?{groupId:item.groupId}:{}),marketScopeId:this.scopeOf(item),kind,quantityDelta,reservedDelta:0,sourceType,sourceId,note,at:stamp}};
     return await this.repo.commitMarketRecordMutation({record,expectedVersion:Number(item.data.version??1),movement}) as MarketRecord;
   }
   async adjustStock(groupId:Id,itemId:Id,delta:number,reason:string){
@@ -118,31 +217,32 @@ export class MarketService{
     await this.access(groupId,true);const quote=(await this.list(groupId,'MARKET_QUOTE')).find(x=>x.id===quoteId);if(!quote)throw Error('QUOTE_NOT_FOUND');
     return this.createOrder(groupId,{stockItemId:String(quote.data.stockItemId),quantity:Number(quote.data.quantity),customerRef:String(quote.data.customerRef),unitPrice:Number(quote.data.unitPrice)},false,quote);
   }
-  async createOrder(groupId:Id,input:{stockItemId:Id;quantity:number;customerRef:string;unitPrice?:number;idempotencyKey?:string},allowMember=false,quote?:MarketRecord){
-    qty(input.quantity);await this.access(groupId,!allowMember);const ctx=this.kernel.context.get();
+  async createOrder(groupId:Id,input:{stockItemId:Id;quantity:number;customerRef:string;unitPrice?:number;idempotencyKey?:string;buyerUserId?:Id},allowMember=false,quote?:MarketRecord,publicBuyer=false){
+    qty(input.quantity);if(publicBuyer)await this.publicShop(groupId);else await this.access(groupId,!allowMember);const ctx=this.kernel.context.get(),recordGroupId=await this.scopeGroupId(groupId);
     if(input.idempotencyKey!==undefined&&!/^[a-zA-Z0-9_-]{8,120}$/.test(input.idempotencyKey))throw Error('INVALID_IDEMPOTENCY_KEY');
     const operationId=quote?'market_quote_reserve_'+quote.id:input.idempotencyKey?'market_reserve_'+await operationKey([ctx.actorId,groupId,input.idempotencyKey]):makeId('market_reserve'),orderId=input.idempotencyKey||quote?operationId+'_order':makeId('market');
-    const requestFingerprint=JSON.stringify([input.stockItemId,input.quantity,input.customerRef.trim(),input.unitPrice??null,quote?.id??null]);
-    const replay=async()=>{if(!input.idempotencyKey&&!quote)return;const prior=await this.repo.getWorkspaceRecord(ctx.tenantId,orderId);if(prior){if(prior.groupId!==groupId||!quote&&prior.createdBy!==ctx.actorId||prior.data.requestFingerprint!==requestFingerprint)throw Error('MARKET_IDEMPOTENCY_CONFLICT');return prior as MarketRecord;}};
+    const requestFingerprint=JSON.stringify([input.stockItemId,input.quantity,input.customerRef.trim(),input.unitPrice??null,quote?.id??null,...(input.buyerUserId?[input.buyerUserId]:[])]);
+    const replay=async()=>{if(!input.idempotencyKey&&!quote)return;const prior=await this.repo.getWorkspaceRecord(ctx.tenantId,orderId);if(prior){if(this.scopeOf(prior)!==groupId||!quote&&prior.createdBy!==ctx.actorId||prior.data.requestFingerprint!==requestFingerprint)throw Error('MARKET_IDEMPOTENCY_CONFLICT');return prior as MarketRecord;}};
     const prior=await replay();if(prior)return prior;
-    if(quote){if(quote.tenantId!==ctx.tenantId||quote.groupId!==groupId||quote.data.marketKind!=='MARKET_QUOTE')throw Error('QUOTE_NOT_FOUND');if(quote.data.total===null)throw Error('QUOTE_COSTS_UNKNOWN');if(Date.parse(String(quote.data.validUntil))<=Date.now())throw Error('QUOTE_EXPIRED');}
-    const item=(await this.list(groupId,'STOCK_ITEM')).find(x=>x.id===input.stockItemId);if(!item)throw Error('STOCK_ITEM_NOT_FOUND');
+    if(quote){if(quote.tenantId!==ctx.tenantId||this.scopeOf(quote)!==groupId||quote.data.marketKind!=='MARKET_QUOTE')throw Error('QUOTE_NOT_FOUND');if(quote.data.total===null)throw Error('QUOTE_COSTS_UNKNOWN');if(Date.parse(String(quote.data.validUntil))<=Date.now())throw Error('QUOTE_EXPIRED');}
+    const item=publicBuyer?await this.repo.getWorkspaceRecord(ctx.tenantId,input.stockItemId) as MarketRecord|undefined:(await this.list(groupId,'STOCK_ITEM')).find(x=>x.id===input.stockItemId);if(!item||item.data.marketKind!=='STOCK_ITEM'||this.scopeOf(item)!==groupId)throw Error('STOCK_ITEM_NOT_FOUND');
     if(String(item.data.ownership??'COMMERCIAL')==='POT_RESERVED')throw Error('POT_STOCK_NOT_SELLABLE');
     if(item.status!=='ACTIVE'||(allowMember||quote)&&!Boolean(item.data.published))throw Error('STOCK_NOT_AVAILABLE');
     if(item.data.availableAt&&Date.parse(String(item.data.availableAt))>Date.now()||item.data.availableUntil&&Date.parse(String(item.data.availableUntil))<=Date.now())throw Error('STOCK_NOT_AVAILABLE');
     const available=Number(item.data.quantity)-Number(item.data.reserved??0)-Number(item.data.quarantine??0);if(available<input.quantity)throw Error('INSUFFICIENT_STOCK');
     const customerRef=input.customerRef.trim();if(!customerRef)throw Error('CUSTOMER_REFERENCE_REQUIRED');
     const unitPrice=input.unitPrice??Number(item.data.unitPrice??0);if(!Number.isSafeInteger(unitPrice)||unitPrice<0)throw Error('INVALID_UNIT_PRICE');
+    const buyerUserId=allowMember?ctx.actorId:input.buyerUserId??'';if(buyerUserId&&!allowMember){if(!await this.repo.getUser(buyerUserId))throw Error('BUYER_NOT_FOUND');if(recordGroupId&&!(await this.repo.listMemberships(ctx.tenantId,recordGroupId)).some(m=>m.userId===buyerUserId&&m.status==='active'))throw Error('BUYER_NOT_FOUND');}
     const stamp=now(),expectedVersion=Number(item.data.version??1);
     const stock:MarketRecord={...item,data:{...item.data,reserved:Number(item.data.reserved??0)+input.quantity,version:expectedVersion+1,lastReservationOperationId:operationId},updatedAt:stamp};
-    const order:MarketRecord={id:orderId,tenantId:ctx.tenantId,groupId,moduleId:'MARKETPLACE.CORE',title:'Order '+String(item.data.sku),status:'ACTIVE',tags:['market-engine','kind:MARKET_ORDER'],data:{stockItemId:item.id,quantity:input.quantity,customerRef,unitPrice,acceptedUnitPrice:unitPrice,sourceQuoteId:quote?.id??'',acceptedFreight:quote?.data.freight??null,acceptedOtherCosts:quote?.data.otherCosts??null,acceptedTotal:quote?.data.total??null,currency:String(item.data.currency??'XAF'),unit:String(item.data.unit??'unit'),variant:String(item.data.variant??''),deliveryTerms:quote?String(quote.data.deliveryTerms):String(item.data.deliveryTerms??''),state:'CONFIRMED',deliveredQuantity:0,returnedQuantity:0,disputed:false,marketKind:'MARKET_ORDER',version:1,reservationOperationId:operationId,requestFingerprint},createdBy:ctx.actorId,createdAt:stamp,updatedAt:stamp};
-    const movement:EvidenceRecord={id:makeId('evidence'),tenantId:ctx.tenantId,type:'MARKET_STOCK_MOVEMENT',subjectType:'MARKET_STOCK_ITEM',subjectId:item.id,createdAt:stamp,createdBy:ctx.actorId,immutable:true,data:{groupId,kind:'RESERVATION',quantityDelta:0,reservedDelta:input.quantity,sourceType:'MARKET_ORDER',sourceId:order.id,note:'Réservation atomique',operationId,at:stamp}};
-    try{await this.repo.commitMarketStockReservation({operationId,tenantId:ctx.tenantId,groupId,stock,order,movement,expectedVersion,reservationQuantity:input.quantity});}
+    const order:MarketRecord={id:orderId,tenantId:ctx.tenantId,groupId:recordGroupId,moduleId:'MARKETPLACE.CORE',title:'Order '+String(item.data.sku),status:'ACTIVE',tags:['market-engine','kind:MARKET_ORDER'],data:{marketScopeId:groupId,buyerUserId,stockItemId:item.id,quantity:input.quantity,customerRef,unitPrice,acceptedUnitPrice:unitPrice,sourceQuoteId:quote?.id??'',acceptedFreight:quote?.data.freight??null,acceptedOtherCosts:quote?.data.otherCosts??null,acceptedTotal:quote?.data.total??null,currency:String(item.data.currency??'XAF'),unit:String(item.data.unit??'unit'),variant:String(item.data.variant??''),deliveryTerms:quote?String(quote.data.deliveryTerms):String(item.data.deliveryTerms??''),state:'CONFIRMED',deliveredQuantity:0,returnedQuantity:0,disputed:false,marketKind:'MARKET_ORDER',version:1,reservationOperationId:operationId,requestFingerprint},createdBy:ctx.actorId,createdAt:stamp,updatedAt:stamp};
+    const movement:EvidenceRecord={id:makeId('evidence'),tenantId:ctx.tenantId,type:'MARKET_STOCK_MOVEMENT',subjectType:'MARKET_STOCK_ITEM',subjectId:item.id,createdAt:stamp,createdBy:ctx.actorId,immutable:true,data:{...(recordGroupId?{groupId:recordGroupId}:{}),marketScopeId:groupId,kind:'RESERVATION',quantityDelta:0,reservedDelta:input.quantity,sourceType:'MARKET_ORDER',sourceId:order.id,note:'Réservation atomique',operationId,at:stamp}};
+    try{await this.repo.commitMarketStockReservation({operationId,tenantId:ctx.tenantId,groupId:recordGroupId,stock,order,movement,expectedVersion,reservationQuantity:input.quantity});}
     catch(error){const prior=await replay();if(prior)return prior;if(error instanceof Error&&error.message==='MARKET_STOCK_RESERVATION_CONFLICT')throw Error('INSUFFICIENT_STOCK');throw error;}
     return order;
   }
   private async orderTransition(groupId:Id,orderId:Id,kind:'DELIVERY'|'CUSTOMER_RETURN'|'CANCELLATION',value:number,reason:string,options:MarketOrderOptions={}){
-    qty(value);await this.access(groupId,true);const ctx=this.kernel.context.get();
+    qty(value);await this.access(groupId,true);const ctx=this.kernel.context.get(),recordGroupId=await this.scopeGroupId(groupId);
     if(options.idempotencyKey!==undefined&&!/^[a-zA-Z0-9_-]{8,120}$/.test(options.idempotencyKey))throw Error('INVALID_IDEMPOTENCY_KEY');
     const disposition=options.disposition??'RESTOCK';if(!['RESTOCK','QUARANTINE'].includes(disposition))throw Error('INVALID_RETURN_DISPOSITION');
     const note=reason.trim().slice(0,500),evidenceRef=String(options.evidenceRef??'').trim().slice(0,240);if(kind!=='DELIVERY'&&!note)throw Error('REASON_REQUIRED');
@@ -162,8 +262,8 @@ export class MarketService{
     const state=nextRemaining>0?'PARTIAL':nextCancelled===ordered?'CANCELLED':nextCancelled>0?'PARTIAL_CLOSED':nextReturned>0?'RETURNED':'DELIVERED';
     const stamp=now(),stock:MarketRecord={...item,data:{...item.data,quantity,reserved,quarantine,version:Number(item.data.version??1)+1,lastMarketOperationId:operationId},updatedAt:stamp};
     const updated:MarketRecord={...order,data:{...order.data,deliveredQuantity:nextDelivered,returnedQuantity:nextReturned,cancelledQuantity:nextCancelled,state,lastMarketOperationId:operationId,version:Number(order.data.version??1)+1},updatedAt:stamp};
-    const movement:EvidenceRecord={id:operationId,tenantId:ctx.tenantId,type:'MARKET_STOCK_MOVEMENT',subjectType:'MARKET_STOCK_ITEM',subjectId:item.id,createdAt:stamp,createdBy:ctx.actorId,immutable:true,data:{groupId,kind,quantityDelta,reservedDelta,quarantineDelta,quantity:value,sourceType:'MARKET_ORDER',sourceId:orderId,note,evidenceRef,disposition,operationId,requestFingerprint:fingerprint,at:stamp}};
-    const result=await this.repo.commitMarketOrderTransition({operationId,tenantId:ctx.tenantId,groupId,stock,order:updated,movement,expectedStockVersion:Number(item.data.version??1),expectedOrderVersion:Number(order.data.version??1)});return result.order as MarketRecord;
+    const movement:EvidenceRecord={id:operationId,tenantId:ctx.tenantId,type:'MARKET_STOCK_MOVEMENT',subjectType:'MARKET_STOCK_ITEM',subjectId:item.id,createdAt:stamp,createdBy:ctx.actorId,immutable:true,data:{...(recordGroupId?{groupId:recordGroupId}:{}),marketScopeId:groupId,kind,quantityDelta,reservedDelta,quarantineDelta,quantity:value,sourceType:'MARKET_ORDER',sourceId:orderId,note,evidenceRef,disposition,operationId,requestFingerprint:fingerprint,at:stamp}};
+    const result=await this.repo.commitMarketOrderTransition({operationId,tenantId:ctx.tenantId,groupId:recordGroupId,stock,order:updated,movement,expectedStockVersion:Number(item.data.version??1),expectedOrderVersion:Number(order.data.version??1)});return result.order as MarketRecord;
   }
   async deliver(groupId:Id,orderId:Id,value:number,options:MarketOrderOptions={}){return this.orderTransition(groupId,orderId,'DELIVERY',value,'Livraison client',options);}
   async returnItems(groupId:Id,orderId:Id,value:number,reason:string,options:MarketOrderOptions={}){return this.orderTransition(groupId,orderId,'CUSTOMER_RETURN',value,reason,options);}
@@ -171,7 +271,8 @@ export class MarketService{
   async orderHistory(groupId:Id,orderId:Id){
     await this.access(groupId,true);const order=(await this.list(groupId,'MARKET_ORDER')).find(x=>x.id===orderId);if(!order)throw Error('ORDER_NOT_FOUND');
     const events=(await this.stockMovements(groupId,String(order.data.stockItemId))).filter(x=>x.data.sourceId===orderId);
-    return{order,events,remaining:Math.max(0,Number(order.data.quantity)-Number(order.data.deliveredQuantity??0)-Number(order.data.cancelledQuantity??0)),netDelivered:Number(order.data.deliveredQuantity??0)-Number(order.data.returnedQuantity??0),paymentStatus:'NOT_INFERRED'};
+    const receipts=(await this.repo.listEvidence(this.kernel.context.get().tenantId,'MARKET_ORDER')).filter(e=>e.type==='MARKET_BUYER_RECEIPT'&&e.subjectId===orderId);
+    return{order,events,receipts,remaining:Math.max(0,Number(order.data.quantity)-Number(order.data.deliveredQuantity??0)-Number(order.data.cancelledQuantity??0)),netDelivered:Number(order.data.deliveredQuantity??0)-Number(order.data.returnedQuantity??0),paymentStatus:'NOT_INFERRED'};
   }
   async dispute(groupId:Id,orderId:Id,summary:string){
     await this.access(groupId,true);const order=(await this.list(groupId,'MARKET_ORDER')).find(x=>x.id===orderId);if(!order)throw Error('ORDER_NOT_FOUND');

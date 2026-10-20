@@ -12,6 +12,7 @@ export function mountBusinessStudioUI({app,navigate=()=>{},notify=()=>{},showErr
   const root=el('details',undefined,'panel');root.id='businessStudioOperational';root.open=false;
   const summary=document.createElement('summary');summary.append(el('strong','Business Studio · gestionnaire entrepreneur'),el('span',' Rentabilité · mandats · clients · fournisseurs · coûts · temps · marge','hint'));root.append(summary);
   root.append(el('p','Cockpit privé du gestionnaire. Les cotisations et fonds collectifs ne deviennent jamais automatiquement son chiffre d’affaires. Un revenu issu du groupe ne peut être repris ici qu’avec une référence Ledger collective immuable.','truth-notice'));
+  const shopsLink=el('button','Mes boutiques et mes achats','secondary');shopsLink.type='button';shopsLink.onclick=()=>{navigate('ecosystem',{anchor:'personalShopsPanel',force:true});const panel=document.getElementById('personalShopsPanel');if(panel)panel.open=true;};root.append(shopsLink);
   const metrics=el('div',undefined,'metrics'),guidance=el('section',undefined,'stack'),actions=el('div',undefined,'actions'),list=el('div',undefined,'stack');
   guidance.append(el('h3','Pilotage de l’activité et du groupe'));root.append(metrics,guidance,actions,list);
   marketHub.closest('section')?.insertAdjacentElement('afterend',root);
