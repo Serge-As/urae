@@ -1,7 +1,7 @@
 Eco-System 1.5.2.26 lot10 commercial orders delivery authorized
 release: 1.5.2.26-commercial-orders
 date: 2026-10-20
-db_mutation: no production migration or data edit; runtime business events use existing records
+db_mutation: none
 mode: code-only-with-verified-readonly-backup-no-migration
 qualified_baseline_source: 71a30e65f1cc1a4f0d9476e9e10462bce65ae16a
 qualified_baseline_delivery: 39457082605 attempt2 SUCCESS
