@@ -1759,4 +1759,35 @@ body.eco-cockpit-shell .cockpit-intent span{font-size:13px;font-weight:400;color
 body.eco-cockpit-shell.ui-mode-senior .workspace-tabs button{font-size:17px;min-height:48px}
 body.eco-cockpit-shell.ui-mode-senior .cockpit-welcome h1{font-size:36px}
 body.eco-cockpit-shell.ui-mode-assisted .workspace-tabs button{min-height:46px}
+
+/* L01: scoped navigation chrome. Financial density tokens and editors retain
+   their existing owner and layout. The complete menu delegates to mainNav. */
+.eco-skip-link{position:fixed;left:12px;top:-100px;z-index:10001;padding:12px 18px;background:#fff;color:#14533e;border:2px solid #14533e;border-radius:10px}
+.eco-skip-link:focus{top:12px}
+body.eco-cockpit-shell .eco-navigation-context{--nav-font:13px;--nav-control:40px;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px 16px;align-items:center;margin:0 0 20px;padding:12px 14px;background:#fff;border:1px solid #d9e5dc;border-radius:13px;font-size:var(--nav-font);box-shadow:0 3px 12px #173e2910;position:sticky;top:var(--eco-header-height,76px);z-index:12}
+body.eco-cockpit-shell.ui-mode-senior .eco-navigation-context{--nav-font:17px;--nav-control:48px}
+body.eco-cockpit-shell.ui-mode-assisted .eco-navigation-context{--nav-font:15px;--nav-control:46px}
+.eco-navigation-trail,.eco-navigation-actions,.eco-navigation-favorites{display:flex;gap:8px;align-items:center;flex-wrap:wrap;min-width:0}
+.eco-navigation-trail>*{min-width:0;overflow-wrap:anywhere}.eco-navigation-group{color:#566c5e}.eco-navigation-group::before,.eco-navigation-current::before{content:' / ';color:#819488;margin-right:6px}
+.eco-navigation-role{font-size:.8em;color:#315942;background:#edf4e8;padding:3px 7px;border-radius:6px}
+body.eco-cockpit-shell .eco-navigation-context button{min-height:var(--nav-control);padding:6px 10px;font-size:var(--nav-font);border:1px solid #d6e3d7;background:#f8fbf6;border-radius:8px;color:#24533f;line-height:1.3}
+body.eco-cockpit-shell .eco-navigation-context .eco-navigation-home{border:0;background:transparent;padding-inline:0}
+body.eco-cockpit-shell .eco-navigation-context .eco-navigation-open{background:#165c44;border-color:#165c44;color:#fff}
+.eco-navigation-shortcut{display:inline-block;margin-left:10px;font-size:.75em;opacity:.8}.eco-navigation-favorites{grid-column:1/-1;padding-top:8px;border-top:1px solid #edf2e9}.eco-navigation-favorites[hidden]{display:none}
+.eco-navigation-guide{display:none;grid-column:1/-1;margin:0;padding:7px 10px;background:#edf4ff;border-radius:7px;color:#28557e}
+body.ui-mode-assisted .eco-navigation-guide{display:block}
+body.eco-cockpit-shell.ui-mode-assisted .side-nav .nav-btn b{font-size:14px}
+.eco-navigation-dialog{width:min(660px,calc(100vw - 24px));max-width:calc(100vw - 24px);max-height:calc(100dvh - 24px);padding:22px;border:1px solid #cbded0;border-radius:18px;box-shadow:0 24px 100px #123c3240;color:#203b2c;background:#fff;overflow:auto;font-size:14px}
+.eco-navigation-dialog::backdrop{background:#102e2866}.eco-navigation-dialog-head{display:flex;justify-content:space-between;gap:12px;align-items:center}.eco-navigation-dialog-head h2{font-size:22px;margin:0}.eco-navigation-search-label{display:grid;gap:6px;margin-top:20px;font-size:14px}
+.eco-navigation-dialog .hint{font-size:12px;line-height:1.5}.eco-navigation-status{font-size:12px;color:#586d5d;margin:14px 0 6px}.eco-navigation-list{display:grid;gap:4px;max-height:min(48dvh,420px);overflow:auto;overscroll-behavior:contain}
+.eco-navigation-row{display:grid;grid-template-columns:minmax(0,1fr) 44px;gap:6px;border-bottom:1px solid #edf1e9;padding-block:3px}
+body.eco-cockpit-shell .eco-navigation-dialog button{min-height:44px;font-size:14px}
+.eco-navigation-destination{background:#fff;border:0;text-align:left;padding:8px 10px;color:#24503a;border-radius:8px;overflow-wrap:anywhere}.eco-navigation-destination:hover{background:#eff6e9}.eco-navigation-star{border:1px solid #dce5d6;background:#f8faf6;border-radius:8px;color:#5c6027}.eco-navigation-star[aria-pressed=true]{background:#f4f0d1;border-color:#d2c47e}
+body.eco-cockpit-shell.ui-mode-senior .eco-navigation-dialog{font-size:18px}
+body.eco-cockpit-shell.ui-mode-senior .eco-navigation-dialog :is(button,input,label){font-size:18px;min-height:48px}
+body.eco-cockpit-shell.ui-mode-senior .eco-navigation-dialog :is(.hint,.eco-navigation-status){font-size:16px}
+body.eco-cockpit-shell.ui-mode-assisted .eco-navigation-dialog :is(button,input,label){font-size:16px;min-height:46px}
+.eco-navigation-context :focus-visible,.eco-navigation-dialog :focus-visible,.search-hit[aria-selected=true]{outline:3px solid #376cbb;outline-offset:2px}
+@media(max-width:860px){body.eco-cockpit-shell .eco-navigation-context{position:relative;top:auto;grid-template-columns:minmax(0,1fr);padding:10px;margin-bottom:14px}.eco-navigation-actions{justify-content:flex-end}.eco-navigation-trail{gap:5px}.eco-navigation-shortcut{display:none}.eco-navigation-favorites{flex-wrap:nowrap;overflow:auto;padding-bottom:4px}.eco-navigation-favorite{white-space:nowrap;flex-shrink:0}.eco-navigation-dialog{padding:16px}.eco-navigation-dialog-head h2{font-size:19px}}
+@media(prefers-reduced-motion:reduce){.eco-navigation-dialog,.eco-navigation-context{scroll-behavior:auto}}
 @media(max-width:680px){body.eco-cockpit-shell .workspace-tabs button{font-size:12px;padding:8px 10px}.cockpit-welcome .actions{flex-wrap:wrap}body.eco-cockpit-shell .cockpit-intent{min-height:100px}}

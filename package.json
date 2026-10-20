@@ -1,9 +1,9 @@
 {
   "name": "tontine-platform",
-  "version": "1.5.2-19",
+  "version": "1.5.2-20",
   "private": true,
   "type": "module",
-  "description": "Eco-System 1.5.2.15: bounded outage recovery, durable financial intents, event-driven Live convergence and immutable PWA rollback.",
+  "description": "Eco-System 1.5.2.20: coherent accessible navigation, local bilingual search, scoped favorites and preserved financial continuity.",
   "engines": {
     "node": ">=24"
   },
