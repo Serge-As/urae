@@ -26,6 +26,18 @@
   ],
   "records": [
     {
+      "id": "lot10-commercial-orders-20261020",
+      "scope": "canonical commercial quotes, stock and order fulfilment, group-buy commitments",
+      "status": "IN_PROGRESS",
+      "statement": "29 new service tests pass in memory and real SQLite/D1. Complete browser and integrated qualification plus public delivery still required. Standalone personal storefronts are not claimed newly available.",
+      "evidence": [
+        "docs/change-impact/CIR-2026-10-20-LOT10-COMMERCIAL-ORDERS.md",
+        "docs/memory/recalls/RECALL-2026-10-20-LOT10-COMMERCIAL-ORDERS.md"
+      ],
+      "observedOn": "2026-10-20",
+      "next": "Qualify exact SHA, restore readonly backup, deploy and compare public assets. Close actual scope before next lot."
+    },
+    {
       "id": "lot23-assistant-tools-20261020",
       "scope": "existing local assistant, optional topic memory, draft templates and authorized search owner",
       "status": "VERIFIED_REMOTE",

@@ -78,11 +78,11 @@ interface WorkersAILike {
   run?(model:string,input:Record<string,unknown>,options?:Record<string,unknown>):Promise<unknown>;
 }
 
-const RELEASE_VERSION='1.5.2.25-assistant-tools';
-const RELEASE_BUILD_ID='eco-system-1.5.2.25-20261020-assistant-tools';
+const RELEASE_VERSION='1.5.2.26-commercial-orders';
+const RELEASE_BUILD_ID='eco-system-1.5.2.26-20261020-commercial-orders';
 const RELEASE_SCHEMA_VERSION='d1-additive-20260923';
 const RELEASE_POLICY_VERSION='live-finance-policy-20261007-event-push-repayment';
-const RELEASE_PWA_CACHE='eco-system-v15225-assistant-tools-20261020';
+const RELEASE_PWA_CACHE='eco-system-v15226-commercial-orders-20261020';
 
 const defaultRepo = new InMemoryPlatformRepository();
 const defaultReferralBudgets = new InMemoryReferralBudgetStore();
@@ -2696,15 +2696,25 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
     if(stockListing&&request.method==='POST'){const body=await readJson<Record<string,unknown>>(request);return json(await market.setStockListing(stockListing[1]!,stockListing[2]!,{published:Boolean(body.published),unitPrice:body.unitPrice===undefined?undefined:finite(body.unitPrice),description:body.description?String(body.description):undefined}),200,cors);}
 
     const stockRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/market\/stock$/);
-    if(stockRoute&&request.method==='POST'){const body=await readJson<Record<string,unknown>>(request);return json(await market.createStock(stockRoute[1]!,{sku:String(body.sku??''),name:String(body.name??''),quantity:finite(body.quantity),unit:body.unit?String(body.unit):undefined,unitPrice:body.unitPrice===undefined?undefined:finite(body.unitPrice),description:body.description?String(body.description):undefined,published:Boolean(body.published),ownership:body.ownership?String(body.ownership) as any:undefined,ownerRef:body.ownerRef?String(body.ownerRef):undefined}),201,cors);}
+    if(stockRoute&&request.method==='POST'){const body=await readJson<Record<string,unknown>>(request);return json(await market.createStock(stockRoute[1]!,{sku:String(body.sku??''),name:String(body.name??''),quantity:finite(body.quantity),unit:body.unit?String(body.unit):undefined,unitPrice:body.unitPrice===undefined?undefined:finite(body.unitPrice),description:body.description?String(body.description):undefined,published:Boolean(body.published),ownership:body.ownership?String(body.ownership) as any:undefined,ownerRef:body.ownerRef?String(body.ownerRef):undefined,variant:body.variant?String(body.variant):undefined,availableAt:body.availableAt?String(body.availableAt):undefined,availableUntil:body.availableUntil?String(body.availableUntil):undefined,deliveryTerms:body.deliveryTerms?String(body.deliveryTerms):undefined,currency:body.currency?String(body.currency):undefined}),201,cors);}
     const stockAdjust=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/market\/stock\/([^/]+)\/adjust$/);
     if(stockAdjust&&request.method==='POST'){const body=await readJson<Record<string,unknown>>(request);return json(await market.adjustStock(stockAdjust[1]!,stockAdjust[2]!,finite(body.delta),String(body.reason??'')),200,cors);}
+    const quotesRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/market\/quotes$/);
+    if(quotesRoute&&request.method==='POST')return json(await market.createQuote(quotesRoute[1]!,await readJson<any>(request)),201,cors);
+    const quoteCompare=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/market\/quotes\/compare$/);
+    if(quoteCompare&&request.method==='POST'){const body=await readJson<{ids?:unknown}>(request);if(!Array.isArray(body.ids)||body.ids.some(x=>typeof x!=='string'))throw Error('SELECT_TWO_TO_FOUR_QUOTES');return json(await market.compareQuotes(quoteCompare[1]!,body.ids as string[]),200,cors);}
+    const quoteAccept=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/market\/quotes\/([^/]+)\/accept$/);
+    if(quoteAccept&&request.method==='POST')return json(await market.acceptQuote(quoteAccept[1]!,quoteAccept[2]!),200,cors);
     const orderRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/market\/orders$/);
-    if(orderRoute&&request.method==='POST'){const body=await readJson<Record<string,unknown>>(request);return json(await market.createOrder(orderRoute[1]!,{stockItemId:String(body.stockItemId??''),quantity:finite(body.quantity),customerRef:String(body.customerRef??''),unitPrice:body.unitPrice===undefined?undefined:finite(body.unitPrice)}),201,cors);}
+    if(orderRoute&&request.method==='POST'){const body=await readJson<Record<string,unknown>>(request);return json(await market.createOrder(orderRoute[1]!,{stockItemId:String(body.stockItemId??''),quantity:finite(body.quantity),customerRef:String(body.customerRef??''),unitPrice:body.unitPrice===undefined?undefined:finite(body.unitPrice),idempotencyKey:body.idempotencyKey===undefined?undefined:String(body.idempotencyKey)}),201,cors);}
     const deliverRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/market\/orders\/([^/]+)\/deliver$/);
-    if(deliverRoute&&request.method==='POST'){const body=await readJson<Record<string,unknown>>(request);return json(await market.deliver(deliverRoute[1]!,deliverRoute[2]!,finite(body.quantity)),200,cors);}
+    if(deliverRoute&&request.method==='POST'){const body=await readJson<Record<string,unknown>>(request);return json(await market.deliver(deliverRoute[1]!,deliverRoute[2]!,finite(body.quantity),{idempotencyKey:body.idempotencyKey===undefined?undefined:String(body.idempotencyKey),evidenceRef:body.evidenceRef===undefined?undefined:String(body.evidenceRef)}),200,cors);}
     const returnRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/market\/orders\/([^/]+)\/return$/);
-    if(returnRoute&&request.method==='POST'){const body=await readJson<Record<string,unknown>>(request);return json(await market.returnItems(returnRoute[1]!,returnRoute[2]!,finite(body.quantity),String(body.reason??'')),200,cors);}
+    if(returnRoute&&request.method==='POST'){const body=await readJson<Record<string,unknown>>(request);return json(await market.returnItems(returnRoute[1]!,returnRoute[2]!,finite(body.quantity),String(body.reason??''),{idempotencyKey:body.idempotencyKey===undefined?undefined:String(body.idempotencyKey),evidenceRef:body.evidenceRef===undefined?undefined:String(body.evidenceRef),disposition:body.disposition===undefined?undefined:String(body.disposition) as any}),200,cors);}
+    const cancelMarketOrder=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/market\/orders\/([^/]+)\/cancel-remainder$/);
+    if(cancelMarketOrder&&request.method==='POST'){const body=await readJson<Record<string,unknown>>(request);return json(await market.cancelOrderRemainder(cancelMarketOrder[1]!,cancelMarketOrder[2]!,finite(body.quantity),String(body.reason??''),{idempotencyKey:body.idempotencyKey===undefined?undefined:String(body.idempotencyKey),evidenceRef:body.evidenceRef===undefined?undefined:String(body.evidenceRef)}),200,cors);}
+    const marketOrderHistory=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/market\/orders\/([^/]+)\/history$/);
+    if(marketOrderHistory&&request.method==='GET')return json(await market.orderHistory(marketOrderHistory[1]!,marketOrderHistory[2]!),200,cors);
     const disputeRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/market\/orders\/([^/]+)\/dispute$/);
     if(disputeRoute&&request.method==='POST'){const body=await readJson<Record<string,unknown>>(request);return json(await market.dispute(disputeRoute[1]!,disputeRoute[2]!,String(body.summary??'')),200,cors);}
     const supplierRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/market\/suppliers$/);
@@ -2733,9 +2743,11 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
     const supplierCreditPayment=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/market\/supplier-credits\/([^/]+)\/payments$/);
     if(supplierCreditPayment&&request.method==='POST'){const body=await readJson<any>(request);return json(await market.paySupplierCredit(supplierCreditPayment[1]!,supplierCreditPayment[2]!,body),200,cors);}
     const groupBuyRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/market\/group-buys$/);
-    if(groupBuyRoute&&request.method==='POST'){const body=await readJson<Record<string,unknown>>(request);return json(await market.createGroupBuy(groupBuyRoute[1]!,{title:String(body.title??''),stockItemId:body.stockItemId?String(body.stockItemId):undefined,thresholdQuantity:finite(body.thresholdQuantity),deadline:String(body.deadline??'')}),201,cors);}
+    if(groupBuyRoute&&request.method==='POST'){const body=await readJson<Record<string,unknown>>(request);return json(await market.createGroupBuy(groupBuyRoute[1]!,{title:String(body.title??''),stockItemId:body.stockItemId?String(body.stockItemId):undefined,thresholdQuantity:finite(body.thresholdQuantity),deadline:String(body.deadline??''),sharedCosts:body.sharedCosts==null?null:finite(body.sharedCosts)}),201,cors);}
     const groupBuyCommit=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/market\/group-buys\/([^/]+)\/commit$/);
-    if(groupBuyCommit&&request.method==='POST'){const body=await readJson<Record<string,unknown>>(request);return json(await market.commitGroupBuy(groupBuyCommit[1]!,groupBuyCommit[2]!,String(body.membershipId??''),finite(body.quantity)),200,cors);}
+    if(groupBuyCommit&&request.method==='POST'){const body=await readJson<Record<string,unknown>>(request);return json(await market.commitGroupBuy(groupBuyCommit[1]!,groupBuyCommit[2]!,String(body.membershipId??''),finite(body.quantity),{idempotencyKey:body.idempotencyKey===undefined?undefined:String(body.idempotencyKey),withdraw:body.withdraw===true}),200,cors);}
+    const groupBuySummary=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/market\/group-buys\/([^/]+)\/summary$/);
+    if(groupBuySummary&&request.method==='GET')return json(await market.groupBuySummary(groupBuySummary[1]!,groupBuySummary[2]!),200,cors);
     const socialCommerceRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/market\/social-commerce$/);
     if(socialCommerceRoute&&request.method==='GET')return json(await market.socialCommerce(socialCommerceRoute[1]!),200,cors);
     const flashOfferRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/market\/flash-offers$/);
@@ -3518,7 +3530,7 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
     }
 
     return json({error:'NOT_FOUND'},404,cors);
-  } catch(error){const message=error instanceof Error?error.message:'UNKNOWN_ERROR';const status=['FORBIDDEN_SCOPE','FOUNDER_TEAM_ONLY'].includes(message)?403:message==='VOICE_TRANSCRIPTION_UNAVAILABLE'?503:['IDEMPOTENCY_CONFLICT','CELL_VALUE_CONFLICT','CELL_VERSION_CONFLICT'].includes(message)?409:message.endsWith('_NOT_FOUND')?404:400;return json({error:message,requestId:ctx.requestId},status,cors);}
+  } catch(error){const message=error instanceof Error?error.message:'UNKNOWN_ERROR';const status=['FORBIDDEN_SCOPE','FOUNDER_TEAM_ONLY'].includes(message)?403:message==='VOICE_TRANSCRIPTION_UNAVAILABLE'?503:['IDEMPOTENCY_CONFLICT','CELL_VALUE_CONFLICT','CELL_VERSION_CONFLICT','MARKET_ORDER_CONFLICT','MARKET_IDEMPOTENCY_CONFLICT','MARKET_RECORD_CONFLICT'].includes(message)?409:message.endsWith('_NOT_FOUND')?404:400;return json({error:message,requestId:ctx.requestId},status,cors);}
 };
 
 export const handleRequest=createApiHandler(defaultRepo);

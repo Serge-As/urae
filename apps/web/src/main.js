@@ -183,7 +183,7 @@ let launchStudio;
 let modules = [];
 let selectedLot = 'ALL';
 let deferredInstallPrompt;
-const CAHIER_VERSION = '1.5.2.25-assistant-tools';
+const CAHIER_VERSION = '1.5.2.26-commercial-orders';
 const $ = (s) => { const e = document.querySelector(s); if (!e)
     throw new Error(`UI_ELEMENT_NOT_FOUND:${s}`); return e; };
 const val = (id) => document.getElementById(id).value.trim();
@@ -1969,6 +1969,13 @@ const openModule = async (id) => {
     const m = modules.find(x => x.id === id);
     if (!m)
         return;
+    if(m.status==='FOUNDATION_ACTIVE'&&['MARKETPLACE.CORE','MARKETPLACE.GROUP_BUY'].includes(id)){
+        const captured=JSON.stringify([app.currentActor(),app.currentTenant(),app.activeGroup()]);
+        await go('ecosystem',{anchor:'marketEnginePanel',force:true});
+        if(captured!==JSON.stringify([app.currentActor(),app.currentTenant(),app.activeGroup()]))return;
+        const panel=document.getElementById('marketEnginePanel');if(panel)panel.open=true;
+        await advancedUI.openMarket();return;
+    }
     if(m.status==='FOUNDATION_ACTIVE'&&id==='SEARCH.UNIVERSAL'){await go('ecosystem',{anchor:'universalSearchPanel',force:true});const panel=document.getElementById('universalSearchPanel');if(panel?.tagName==='DETAILS')panel.open=true;return;}
     if(m.status === 'FOUNDATION_ACTIVE' && id === 'CALENDAR.UNIFIED'){go('ecosystem',{anchor:'unifiedCalendarPanel',force:true});const panel=document.querySelector('#unifiedCalendarPanel');if(panel?.tagName==='DETAILS')panel.open=true;void renderUnifiedCalendar();return;}
     if(m.status === 'FOUNDATION_ACTIVE' && id === 'GOVERNANCE.DOCUMENT_STUDIO'){go('documents',{force:true});void documentsUI.refresh();return;}

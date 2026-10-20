@@ -10,8 +10,8 @@
   <meta name="format-detection" content="telephone=no">
   <meta id="metaDescription" name="description" content="Eco-System — plateforme de gestion de tontines, associations et communautés">
   <link rel="manifest" href="/manifest.webmanifest">
-  <link rel="stylesheet" href="/styles.css?v=15225">
-  <title>Eco-System — 1.5.2.25 · Cockpit personnel · Eco IA</title>
+  <link rel="stylesheet" href="/styles.css?v=15226">
+  <title>Eco-System — 1.5.2.26 · Cockpit personnel · Eco IA</title>
   <meta name="application-name" content="Éco-System">
 </head>
 <body class="auth-restoring ui-mode-visual eco-cockpit-shell">
@@ -37,7 +37,7 @@
 <header class="topbar">
     <div class="brand">
       <div class="logo">E</div>
-      <div><strong>Eco-System</strong><small>Plateforme Tontines · Associations · Communautés</small><span class="version-badge">ECO-SYSTEM · 1.5.2.25</span><span id="previewEnvBadge" class="preview-env-badge" hidden>PRÉPRODUCTION · données de test séparées</span></div>
+      <div><strong>Eco-System</strong><small>Plateforme Tontines · Associations · Communautés</small><span class="version-badge">ECO-SYSTEM · 1.5.2.26</span><span id="previewEnvBadge" class="preview-env-badge" hidden>PRÉPRODUCTION · données de test séparées</span></div>
     </div>
     <div class="top-context">
       <select id="activeGroupSelect" aria-label="Groupe actif"><option value="">Aucun groupe actif</option></select>
@@ -101,7 +101,7 @@
     <main class="content">
       <section id="view-dashboard" class="view active">
         <header class="cockpit-welcome">
-          <div><span class="eyebrow">MON ESPACE ECO</span><h1 id="cockpitGreeting">Votre journée, vos possibilités</h1><p id="cockpitContext">Vos groupes, vos activités et vos opportunités au même endroit.</p><small class="cahier-code">1.5.2.25 · Cockpit personnel</small></div>
+          <div><span class="eyebrow">MON ESPACE ECO</span><h1 id="cockpitGreeting">Votre journée, vos possibilités</h1><p id="cockpitContext">Vos groupes, vos activités et vos opportunités au même endroit.</p><small class="cahier-code">1.5.2.26 · Cockpit personnel</small></div>
           <div class="actions"><button class="primary" type="button" data-go="assistant">✦ Parler à Eco IA</button><button class="secondary" type="button" data-go="launch">＋ Créer / intégrer</button></div>
         </header>
         <div class="cockpit-workbench">
@@ -1053,7 +1053,11 @@
           <div class="two-col">
             <form id="stockForm" class="form-grid">
               <h3>Article / stock</h3><label>SKU<input id="stockSku" required></label><label>Nom<input id="stockName" required></label>
-              <label>Quantité<input id="stockQuantity" type="number" min="1" step="1" required></label><button class="primary">Ajouter au stock</button>
+              <label>Quantité<input id="stockQuantity" type="number" min="1" step="1" required></label>
+              <label>Unité<input id="stockUnit" value="pièce" maxlength="60"></label><label>Variante<input id="stockVariant" placeholder="Taille, couleur, conditionnement" maxlength="160"></label>
+              <label>Prix unitaire XAF<input id="stockPrice" type="number" min="0" step="1" required></label><label>Conditions de remise<input id="stockDelivery" maxlength="500" placeholder="Retrait convenu, lieu et délai"></label>
+              <label>Disponible à partir du<input id="stockAvailableAt" type="datetime-local"></label><label>Disponible jusqu'au<input id="stockAvailableUntil" type="datetime-local"></label>
+              <label><input id="stockPublished" type="checkbox"> Publier dans la vitrine</label><button class="primary">Ajouter au stock</button>
             </form>
             <form id="marketOrderForm" class="form-grid">
               <h3>Nouvelle commande</h3><label>Article<select id="orderStockItem"></select></label><label>Quantité<input id="orderQuantity" type="number" min="1" step="1" required></label>
@@ -1061,11 +1065,12 @@
               <button class="primary">Confirmer la commande</button>
             </form>
           </div>
+          <section id="marketQuoteBoard" class="stack" aria-label="Devis et comparaison"></section>
           <div id="marketRecords" class="stack"></div>
           <div class="two-col">
             <form id="groupBuyForm" class="form-grid">
               <h3>Achat groupé</h3><label>Titre<input id="groupBuyTitle" required></label><label>Article<select id="groupBuyStock"><option value="">Sans article lié</option></select></label>
-              <label>Seuil quantité<input id="groupBuyThreshold" type="number" min="1" step="1" required></label><label>Date limite<input id="groupBuyDeadline" type="datetime-local" required></label>
+              <label>Seuil quantité<input id="groupBuyThreshold" type="number" min="1" step="1" required></label><label>Date limite<input id="groupBuyDeadline" type="datetime-local" required></label><label>Frais à répartir XAF<input id="groupBuySharedCosts" type="number" min="0" step="1" placeholder="Inconnus si vide"></label>
               <button class="primary">Ouvrir la campagne</button>
             </form>
             <div><h3>Campagnes</h3><div id="groupBuyList" class="stack"></div></div>
@@ -1476,8 +1481,8 @@
     </main>
   </div>
 
-  <footer class="footer">Eco-System 1.5.2.25 · Cahier Maître 2.3.4 + Blueprint 5.0.0 · UX unifiée</footer>
-  <script type="module" src="/src/ui-modes.js?v=15225"></script>
-  <script type="module" src="/src/main.js?v=15225"></script>
+  <footer class="footer">Eco-System 1.5.2.26 · Cahier Maître 2.3.4 + Blueprint 5.0.0 · UX unifiée</footer>
+  <script type="module" src="/src/ui-modes.js?v=15226"></script>
+  <script type="module" src="/src/main.js?v=15226"></script>
 </body>
 </html>

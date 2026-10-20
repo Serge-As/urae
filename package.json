@@ -1,9 +1,9 @@
 {
   "name": "tontine-platform",
-  "version": "1.5.2-25",
+  "version": "1.5.2-26",
   "private": true,
   "type": "module",
-  "description": "Eco-System 1.5.2.25: local bilingual assistant tools, voluntary topic memory, negotiation drafts and verified authorized search; canonical owners and offline guarantees preserved.",
+  "description": "Eco-System 1.5.2.26: canonical commercial quotes, atomic order fulfilment, stock terms and exact group-buy commitments; acquired financial and offline owners preserved.",
   "engines": {
     "node": ">=24"
   },

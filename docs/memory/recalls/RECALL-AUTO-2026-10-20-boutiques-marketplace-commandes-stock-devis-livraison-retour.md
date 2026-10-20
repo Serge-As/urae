@@ -1,0 +1,148 @@
+# Memory Recall — boutiques marketplace commandes stock devis livraison retour
+
+Date: 2026-10-20
+Terms élargis: boutiques, commandes, devis, livraison, marketplace, retour, stock
+
+## Sources les plus pertinentes
+- **docs/memory/CURRENT_TRUTH.md** — score 46; concepts: marketplace, commandes, stock, livraison, retour
+  - 3: Production **1.5.2.25-assistant-tools**, source `71a30e65f1cc1a4f0d9476e9e10462bce65ae16a`, build `eco-system-1.5.2.25-20261020-assistant-tools`, cache `eco-system-v15225-assistant-tools-20261020`, Worker `fb2fb045-955b-4541-9f52-e55f5af1fcae`. Livraison [3945
+  - 9: Historique de qualification conservé : la première tentative de livraison a bloqué avant publication sur un timeout30s de scanImage QR WebKit, tandis que les5 autres WebKit,779 natifs et27 Chromium passaient. La qualification indépendante du même source a pass
+  - 17: Production **1.5.2.24-cockpit-continuity**, source `9575e84df3d710a3723d8979ca547f900a1b474d`, build `eco-system-1.5.2.24-20261020-cockpit-continuity`, cache `eco-system-v15224-cockpit-continuity-20261020`, Worker `3f65248a-57e0-45a1-b7fc-f08a30f09293`. Livrai
+  - 23: Historique exact : le premier candidat9910be4 n’a pas été publié. Son nouveau scénario403 était contourné par le SW du navigateur de test, qui envoyait réellement au serveur une requête autorisée. Le diagnostic a corrigé la fixture et ajouté la preuve d’interc
+  - 29: Production **1.5.2.23-resource-proof**, source `12fe2f01b3cdfe08cf845ea9d7104fbb9026cc23`, build `eco-system-1.5.2.23-20261020-resource-proof`, cache `eco-system-v15223-resource-proof-20261020`, Worker `7ad6527f-66f8-40b5-b63b-e646721e08cc`. Livraison [3941614
+- **NEXT_RUN.md** — score 37; concepts: marketplace, commandes, stock, livraison, retour
+  - 3: Production **1.5.2.25-assistant-tools**, source `71a30e65f1cc1a4f0d9476e9e10462bce65ae16a`, build `eco-system-1.5.2.25-20261020-assistant-tools`, cache `eco-system-v15225-assistant-tools-20261020`, Worker `fb2fb045-955b-4541-9f52-e55f5af1fcae`. Livraison [3945
+  - 9: Historique de qualification conservé : la première tentative de livraison a bloqué avant publication sur un timeout30s de scanImage QR WebKit, tandis que les5 autres WebKit,779 natifs et27 Chromium passaient. La qualification indépendante du même source a pass
+  - 17: Production **1.5.2.24-cockpit-continuity**, source `9575e84df3d710a3723d8979ca547f900a1b474d`, build `eco-system-1.5.2.24-20261020-cockpit-continuity`, cache `eco-system-v15224-cockpit-continuity-20261020`, Worker `3f65248a-57e0-45a1-b7fc-f08a30f09293`. Livrai
+  - 23: Historique exact : le premier candidat9910be4 n’a pas été publié. Son nouveau scénario403 était contourné par le SW du navigateur de test, qui envoyait réellement au serveur une requête autorisée. Le diagnostic a corrigé la fixture et ajouté la preuve d’interc
+  - 29: Production **1.5.2.23-resource-proof**, source `12fe2f01b3cdfe08cf845ea9d7104fbb9026cc23`, build `eco-system-1.5.2.23-20261020-resource-proof`, cache `eco-system-v15223-resource-proof-20261020`, Worker `7ad6527f-66f8-40b5-b63b-e646721e08cc`. Livraison [3941614
+- **PROJECT_STATE.md** — score 36; concepts: marketplace, commandes, stock, livraison, retour
+  - 3: Production **1.5.2.25-assistant-tools**, source `71a30e65f1cc1a4f0d9476e9e10462bce65ae16a`, build `eco-system-1.5.2.25-20261020-assistant-tools`, cache `eco-system-v15225-assistant-tools-20261020`, Worker `fb2fb045-955b-4541-9f52-e55f5af1fcae`. Livraison [3945
+  - 9: Historique de qualification conservé : la première tentative de livraison a bloqué avant publication sur un timeout30s de scanImage QR WebKit, tandis que les5 autres WebKit,779 natifs et27 Chromium passaient. La qualification indépendante du même source a pass
+  - 17: Production **1.5.2.24-cockpit-continuity**, source `9575e84df3d710a3723d8979ca547f900a1b474d`, build `eco-system-1.5.2.24-20261020-cockpit-continuity`, cache `eco-system-v15224-cockpit-continuity-20261020`, Worker `3f65248a-57e0-45a1-b7fc-f08a30f09293`. Livrai
+  - 23: Historique exact : le premier candidat9910be4 n’a pas été publié. Son nouveau scénario403 était contourné par le SW du navigateur de test, qui envoyait réellement au serveur une requête autorisée. Le diagnostic a corrigé la fixture et ajouté la preuve d’interc
+  - 29: Production **1.5.2.23-resource-proof**, source `12fe2f01b3cdfe08cf845ea9d7104fbb9026cc23`, build `eco-system-1.5.2.23-20261020-resource-proof`, cache `eco-system-v15223-resource-proof-20261020`, Worker `7ad6527f-66f8-40b5-b63b-e646721e08cc`. Livraison [3941614
+- **docs/memory/MASTER_CAPABILITY_INDEX.json** — score 17; concepts: boutiques, marketplace, stock, devis, livraison, retour
+  - 380: "summary": "Paramétrer identité, devise, localisation, langue, calendrier, statuts, gouvernance et règles financières",
+  - 554: "summary": "Micro-annonces “je cherche / je propose” reliables au marketplace",
+  - 560: "summary": "Boutiques partenaires et ventes membre-à-membre",
+  - 578: "summary": "Commande simple, réservation, retrait/livraison",
+  - 1309: "status": "Le domaine, les événements et contrats publics sont stabilisés autant que possible ; stockage, UI ou fournisseur externe peuvent évoluer derrière des interfaces.",
+- **docs/change-impact/CIR-2026-10-20-LOT01-NAVIGATION.md** — score 11; concepts: stock, livraison, retour
+  - 7: Référence distante observée : branche de livraison fix/1.5.2.10-offline-conflicts-loans-20261003, tête 5cba15abc3e5d61f2ad35d40fefb5d320e3f28d2. Dernière livraison attestée avant travail : 5e7044e / 1.5.2.19. Copie isolée issue de l’archive GitHub de ce SHA, h
+  - 13: Fichiers : nouveau composant, raccords bornés dans main.js, styles ciblés, contrat de version/PWA et preuves. Réutilisation du mode UI existant ; aucune nouvelle bibliothèque. Les favoris stockent seulement identifiant de destination et date, maximum huit, exp
+  - 24: ## Recette et retour arrière
+  - 26: Tests de recherche multilingue et favoris avec séparation A/B, expiration et stockage refusé. Navigateur synthétique : clavier, favori, compte/groupe, trois densités, largeur et zoom, champs conservés et reprise. Suites financières, conflits, hors ligne et PWA
+  - 28: Aucune migration D1/R2, purge, activation d’argent réel ou rotation de clé. Retrait du raccord du composant et retour à une livraison cohérente possible ; les anciennes routes et boutons demeurent disponibles. La nouvelle préférence locale n’a pas d’effet comp
+- **docs/change-impact/CIR-2026-10-08-BOUNDED-TRANSPORT-RECOVERY.md** — score 10; concepts: livraison, retour
+  - 13: Étendre Application/Outbox et son shell actuel. Ajouter un verrou de réveil par épisode de panne ; l'alarme ne le réinitialise pas et ne rouvre pas les tentatives épuisées. Une vraie réponse HTTP réussie annule le réveil restant et réarme un futur épisode. Ret
+  - 21: Réutiliser le workflow de qualification existant ; y inclure le scénario multi-manager déjà exigé par la livraison. Archive git de la source exacte, SHA-256 vérifié et lecture tar vérifiée, conservée comme artefact GitHub 30 jours. Ceci sauvegarde code/mémoire
+  - 28: - Chromium, deux comptes distincts : API inaccessible pendant que navigator.onLine reste true, saisie durable, période inactive sans requêtes répétées, retour réseau, convergence et même clé ; aucune confirmation serveur fictive.
+  - 31: Qualification et livraison : **pas encore attestées dans ce premier checkpoint**. Les vrais résultats seront ajoutés après lecture des runs. FIELD_ACCEPTED demeure NOT_ACCEPTED. Une recette physique Android 6/iOS/2G et les intégrations externes ne se déduisent
+  - 35: Run `37819377867`, SHA `12e452865f127a210d2c1f55b45b20be74ffa4fb` : gates gouvernés/build exécutés, Node **648/650**, dont les trois tests fonctionnels de transport PASS. Deux fixtures SW échouent : ancien nom de cache courant codé en dur dans le test de prédé
+- **docs/change-impact/CIR-2026-10-13-LIVE-MODES-REFONTE-PRODUCTION.md** — score 10; concepts: commandes, stock, livraison, retour
+  - 11: PR92, run38387973137 : 7 Chromium PASS, 1 FAIL. Après une projection distante à3000, le rechargement hors connexion retourne0. Une qualification verte distincte ne ferme pas ce défaut. Aucun succès terrain déduit de ce run.
+  - 24: Choix Réunion/Hors réunion avant première validation ; détection de plusieurs responsables distincts ; commit et réception immédiats dans les deux modes ; contrôle léger nominal1Hz en réunion, aucun rechargement complet ; reprise automatique. Synthèse unique p
+  - 26: ## Vérification et livraison
+  - 27: Reproduire le défaut avant/après ; tester vrais services/SQLite, stockage navigateur, concurrence, rejouages, rôles, vues1/2/5, langues, restauration et PWA. Qualifier la source exacte, archiver/contrôler une sauvegarde restaurable avant promotion par le workf
+  - 34: Après 720 tests natifs verts, la recette Chromiumce631534 termine6PASS2FAIL : CLOCK_REVIEW avec ancre mais sans séquence. Cause reproduite avant correction : le drainage observe une commande encore en préparation IndexedDB. Réutilisation Outbox/IndexedDbOutbox
+- **docs/change-impact/CIR-2026-10-15-financial-workspace-repair.md** — score 10; concepts: commandes, stock, livraison
+  - 1: # CIR — réparation de la livraison visuelle et collaborative du 15 octobre 2026
+  - 5: Le fondateur signale sur la production 1.5.2.17 des saisies en attente, la disparition de la présence de frappe, un mode Réunion sans effet visible, des partitions trop larges, des modes Visuel/Senior peu distincts et des lignes démesurément hautes. Les tests
+  - 20: Le délai de 2,2 secondes des écritures peut interrompre une réponse sur réseau lent. Le court-circuit réseau peut également retarder un nouveau ticket Live. Une frappe démarrée pendant la connexion du socket n'est pas rejouée ; l'affichage du brouillon peut ma
+  - 22: ## Recette requise avant livraison
+  - 32: La recette synthétique a reproduit une course : l'outbox prend aussi les commandes ajoutées pendant un envoi, mais la projection d'acquittement du shell ne traitait que son instantané initial. Le propriétaire Application émet désormais un événement interne pou
+- **docs/constitution/ECO_SYSTEM_Cahier_des_Charges_Maitre_Exhaustif_3.2.0_2026-09-16.md** — score 10; concepts: marketplace, stock, livraison, retour
+  - 12: > La 3.2.0 **n'abrège pas** la sauvegarde exhaustive 2.3.4. La 2.3.4 reste le socle constitutionnel intégral : mémoire, taxonomie, rubriques, terrain, architecture organique, garde-fous, Service Solidarity Protocol, Discovery, Forum, Marketplace, AdManager, ON
+  - 114: - retour à une étape sans destruction des suivantes.
+  - 549: - marketplace ;
+  - 587: 4. Marketplace sponsorisée.
+  - 598: - marketplace : sponsor clairement marqué, <= 15 % des résultats ;
+- **FEATURE_REGISTRY.yaml** — score 8; concepts: marketplace, stock
+  - 1239: - id: MARKETPLACE.HARVEST_LOCAL.BLUEPRINT
+  - 1242: authority: blueprint_workspace_then_marketplace_owner_when_transactional
+  - 1243: rule: forecast_stock_and_confirmed_stock_must_remain_distinct
+  - 1245: - id: MARKETPLACE.GROUP_BUY.BLUEPRINT_HANDOFF
+  - 1248: authority: MARKETPLACE.GROUP_BUY
+- **docs/change-impact/CIR-2026-10-20-LOT05-SESSION-REHEARSAL.md** — score 7; concepts: stock, livraison, retour
+  - 9: Ajouter l'innovation I02 : une répétition pédagogique accessible depuis la barre de la feuille. Trois personnes fictives et vingt rubriques, valeurs totales locales, découpage calculé par le même planificateur visuel, synthèse figée avant le passage au membre
+  - 21: Retrait du seul bouton et du module ou retour au Worker précédent avec son shell cohérent ; aucune donnée métier à annuler et aucune migration. D1/R2 existants et clé de signature conservés. `realMoneyEnabled=false`, `FIELD_ACCEPTED=NOT_ACCEPTED`. État initial
+  - 23: Qualification du candidat a8040ae : 751 tests natifs et 22 Chromium passent ; la qualification indépendante passe également. La livraison est bloquée avant publication par RATE_LIMITED lors de la dernière création de compte WebKit, les comptes synthétiques Chr
+  - 28: Production **1.5.2.22-session-rehearsal**, source `61c939d6c6fe68b23ca2c015fdc269460469e591`, build `eco-system-1.5.2.22-20261020-session-rehearsal`, cache `eco-system-v15222-session-rehearsal-20261020`, Worker `34249960-2dcb-49f7-b200-fa56752d2e23`. Livraison
+  - 32: Incident de qualification conservé : a8040ae avait passé 751 natifs et 22 Chromium, mais la dernière inscription WebKit atteignait la limite de comptes de la base de test partagée. Publication bloquée. Correction du dispositif seulement : serveur et SQLite Web
+- **docs/constitution/ECO_SYSTEM_Cahier_des_Charges_Maitre_Exhaustif_3.0.0_2026-09-16.md** — score 7; concepts: marketplace, stock, livraison, retour
+  - 87: Les dix étapes de création, les multi-tontines, l'offline, les Living Rules, le Ledger, les communautés, le Marketplace, le RECAP et les autres acquis disposent progressivement de tests de contrat anti-régression.
+  - 769: Eco-System ne stocke pas le numéro brut dans le mécanisme de rapprochement.
+  - 970: - retours négatifs ;
+  - 1083: - livraison ;
+  - 1211: - marketplace_order ;
+- **docs/memory/recalls/RECALL-2026-10-20-LOT01-NAVIGATION.md** — score 7; concepts: livraison, retour
+  - 5: Base distante : `5cba15abc3e5d61f2ad35d40fefb5d320e3f28d2`, branche active `fix/1.5.2.10-offline-conflicts-loans-20261003`. Production avant ce lot : `5e7044ee2a8c346c0a36f905d74d41a2a2dfab0d`, 1.5.2.19. La copie de travail a été reconstruite depuis l'archive
+  - 9: Qualification prévue : recherche bilingue, isolation et expiration ; clavier et petits écrans ; trois modes distincts ; brouillon et retour à la cellule ; régressions financières complètes Node, Chromium et WebKit ; fermeture du graphe PWA. Utiliser uniquement
+  - 11: Statut de ce rappel : candidat en qualification. La livraison ne sera déclarée qu'avec un run réussi et une santé publique au SHA exact. `FIELD_ACCEPTED=NOT_ACCEPTED`.
+  - 15: La version 1.5.2.20 est publiée au SHA `302c108795352cb4aaaaff283b935a681ce26c1a` ; livraison 39402988571 SUCCESS : 744 tests natifs, 20 Chromium et 6 WebKit, sauvegarde restaurée avec intégrité et onze empreintes publiques conformes. Worker `4cc48269-1435-493
+  - 28: Production **1.5.2.21-navigation-stability**, source `5c9366445d6699b7a608f06a49a4efb61ec7d1ff`, build `eco-system-1.5.2.21-20261020-navigation-stability`, cache `eco-system-v15221-navigation-stability-20261020`, Worker `44612486-e62b-480f-820c-134f98ffc617`.
+- **docs/memory/recalls/RECALL-2026-10-20-LOT28-RESOURCE-PROOF.md** — score 7; concepts: commandes, livraison
+  - 3: Le fondateur demande des lots complets déployés suivant le classement, sans nouvel audit général. L01 et L05 sont publiés et clos ; dernière production attestée 1.5.2.22, source `61c939d6c6fe68b23ca2c015fdc269460469e591`, livraison 39411571048 et qualification
+  - 5: Candidat 1.5.2.23-resource-proof : mesure locale explicite dans Réglages et regroupement de GET secondaires simultanés. `ConnectedApplication` conserve le transport ; aucun propriétaire financier dupliqué. Pas de cache temporel, polling, modification d'ACK, d'
+  - 7: Neuf tests natifs du lot passent : limites et vie privée de la mesure, allowlist, clones, absence de cache, contexte/langue/options, invalidation avant mutation, panne/reprise, comparaison bloquante et signature externe ECO-LOCK. Le vrai Worker/SQLite donne mê
+  - 11: Checkout courant `implementation-lot01-20261020`, branche locale `codex/lot-28-resource-proof-20261020`. Le Git local d'import n'est pas un historique à pousser. Déploiement exclusivement sur la branche de livraison active et par workflow qualifié. Après clôtu
+  - 13: Correction de qualification du lot : conserver le focus de la destination du menu lors des rafraîchissements concurrents ; test acquis renforcé par un rafraîchissement pendant le parcours clavier. Chaque fichier navigateur dispose maintenant d’une SQLite et d’
+- **docs/change-impact/CIR-2026-09-17-master-2.3.4-closure.md** — score 6; concepts: marketplace, stock
+  - 20: - Marketplace: Market service and canonical stock/order records.
+  - 41: - Replacing canonical ledger/stock/membership/loan truth with generic workspace records.
+  - 57: - marketplace/group shop;
+  - 134: - modifier les moteurs Épargne, AdManager, Forum, Marketplace, Discovery ou autres domaines non cités ;
+  - 158: - modifier Épargne, Tontines hors matrice de consultation demandée, AdManager, Forum, Marketplace, Discovery ou autres domaines non cités ;
+- **docs/change-impact/CIR-2026-10-08-SOVEREIGN-CONVERGENCE.md** — score 6; concepts: commandes, stock, livraison, retour
+  - 13: - La confrontation de retour en ligne ne traite pas les identifiants « appliquer » et une annulation n'hydrate pas la valeur retenue. L'import Relay recalcule les conflits après intégration des commandes.
+  - 21: L'adaptateur WebSocket de développement réutilise le GroupLiveHub de production et l'authentification Worker ; son stockage concerne exclusivement la diffusion locale de test. Les preuves locales, CI et déploiement seront rapportées séparément, avec leur SHA.
+  - 38: ## Cache réellement installé — garde-fou de livraison
+  - 44: Source publique `d027f09a1382cd29054b33e274f3fd3bf9f8d9f3`, Worker `98d720dd-6364-436e-9a00-38809e4a3925`. Qualification `37765653443 SUCCESS` (646/646) ; livraison code-only `37765653486 SUCCESS` (Chromium 7/7, WebKit 6/6, smoke strict). Vérification publique
+- **docs/change-impact/CIR-2026-10-20-LOT02-COCKPIT-CONTINUITY.md** — score 6; concepts: commandes, stock, livraison
+  - 7: Changements : un poste de travail en quatre voies, classement explicable selon échéance/blocage/mandat/choix ; épingler, masquer, désactiver et réinitialiser les seules préférences de présentation. Références de séances interrompues mémorisées par Journey Cont
+  - 11: Fichiers propres : projection et préférences du cockpit, tests et ce CIR/Recall/livraison. Raccords partagés contrôlés : Personal Cockpit, Journey Context, routeur pour passer les callbacks et effacer les projections ; styles strictement limités au nouveau pan
+  - 13: Preuves prévues : classement et explications ; isolement et expiration ; OFF et erreurs stockage ; suppression/fermeture/révocation vérifiées au clic ; service indisponible ; action exacte ; aucune commande financière depuis le cockpit ; mise à jour de métadon
+  - 21: Renfort du contrat : GroupMe garde son secours local historique par défaut. Une option additive requireServer sur GroupMe, Meeting, Inbox et Financial Notices impose une réponse réseau dans ces seuls contrôles explicites. ConnectedApplication interdit le secou
+  - 25: Production **1.5.2.24-cockpit-continuity**, source `9575e84df3d710a3723d8979ca547f900a1b474d`, build `eco-system-1.5.2.24-20261020-cockpit-continuity`, cache `eco-system-v15224-cockpit-continuity-20261020`, Worker `3f65248a-57e0-45a1-b7fc-f08a30f09293`. Livrai
+- **docs/memory/recalls/RECALL-2026-10-08-SOVEREIGN-CONVERGENCE.md** — score 6; concepts: commandes, livraison
+  - 5: Réutiliser Application/Outbox, Ledger/D1, GroupLiveHub, Eco Relay et les vues financières actuelles. Conserver les dates des intentions originales, l'idempotence et les portées de politique. Une reconfirmation explicite crée une nouvelle intention auditée. Les
+  - 7: Base vérifiée : 0f0deacf6428cf841cd25634f732dd2f41d02e66. HEAD distant de la branche de livraison observé le 8 octobre : c6d4339ebde367aa3c01ece97e142c1851135cac. Le serveur navigateur de qualification doit réutiliser le vrai GroupLiveHub avec upgrade WebSocke
+  - 9: Les preuves locales, CI, livraison et terrain sont distinctes. FIELD_ACCEPTED reste NOT_ACCEPTED. Pas de suppression de cache/outbox utilisateur, de migration, de création D1/R2 ou d'activation d'argent réel.
+  - 13: Source publique `d027f09a1382cd29054b33e274f3fd3bf9f8d9f3`, Worker `98d720dd-6364-436e-9a00-38809e4a3925`. Qualification `37765653443 SUCCESS` (646/646) ; livraison code-only `37765653486 SUCCESS` (Chromium 7/7, WebKit 6/6, smoke strict). Vérification publique
+- **AGENTS.md** — score 5; concepts: marketplace, livraison, retour
+  - 7: - production attestée : `1.5.2.14-live-sync`, SHA `d027f09a1382cd29054b33e274f3fd3bf9f8d9f3`, livraison GitHub Actions `37765653486 SUCCESS` ;
+  - 8: - branche de livraison active : `fix/1.5.2.10-offline-conflicts-loans-20261003` ;
+  - 49: - Marketplace ;
+  - 163: - Forums/Hubs restent `COMMUNITY.FORUM` / `COMMUNITY.PRO_HUBS`; Group Buy reste `MARKETPLACE.GROUP_BUY`; Partners reste le moteur programmes existant.
+  - 164: - PWA 1.4.3 : scripts/styles network-first `cache:no-store`; aucun retour volontaire au cache v142.
+- **docs/memory/checkpoints/CHECKPOINT-2026-10-13-LIVE-MODES-REFONTE.md** — score 5; concepts: commandes, livraison
+  - 3: Au SHAce631534 : gouvernance native PASS, Chromium6/8PASS ; deux FAIL, zéro skip, pas de livraison. Le diagnostic sélectionné montrait CLOCK_REVIEW avec une ancre présente mais sans deviceSequence. Un test natif de concurrence reproduit l'envoi d'une intention
+  - 5: Correction : Outbox expose les commandes en préparation uniquement à la projection locale ; elles sont exclues du drainage et de persistOutbox jusqu'au commit. Le marqueur est libéré après la vraie transaction IndexedDB ; le drainer relit la commande canonisée
+  - 9: Suite native complète : **720/720 PASS, aucun skip** ; le test ajouté lie les décaissements et remboursements à leurs véritables écritures et notices, sans doubler la finance. Synthèses spécialisées raccordées, reprise événementielle des projections non diffus
+  - 24: ## Livraison finale constatée — 14 octobre 2026
+  - 26: Source c3b7b589086d4d9439612d6cf6a5e959c8d1080f, livraison38522445853 SUCCESS, qualification38522445843 SUCCESS. 723Node/11Chromium/6WebKit PASS. Le HTML public et /health ont été relus indépendamment : identité de version cohérente et source exacte. Sauvegard
+- **docs/memory/recalls/RECALL-2026-10-03-code-only-release-no-d1-mutation.md** — score 5; concepts: livraison
+  - 1: # RECALL — 2026-10-03 — Livraison code-only sans mutation D1
+  - 8: Le quota D1 ayant été signalé comme critique, la livraison ne doit pas exécuter d'export D1, de migration D1 ni de reconstruction de données. Le schéma D1 reste inchangé.
+  - 10: ## Décision de livraison
+  - 13: - aucun `wrangler d1 export` avant ou après livraison ;
+  - 30: ## Preuves avant livraison
+- **docs/memory/recalls/RECALL-2026-10-08-BOUNDED-TRANSPORT-RECOVERY.md** — score 5; concepts: livraison
+  - 3: Le fondateur demande un audit des documents/conversations/livraisons et l'amélioration directe de la plateforme, avec liberté de proposer des innovations gratuites. Les fichiers de Bibliothèque non récupérés restent signalés ; ne pas déclarer tous les cahiers
+  - 5: Base réelle : branche de livraison `fix/1.5.2.10-offline-conflicts-loans-20261003`, HEAD de mémoire `25ad23f3bdd39ac82c0529cf1b0dfa15d30acc0e`, production 1.5.2.14 `d027f09a1382cd29054b33e274f3fd3bf9f8d9f3` attestée par Actions. Main est un socle documentaire,
+  - 15: ## Qualification validée — 1.5.2.15, avant livraison
+  - 17: Source qualifiée : `3f7ea03457bbd936a87e299270843043e2826a24`, PR **#71 fusionnée** dans la branche de livraison par `754a8cef153b7ebe92b993de3b68f7a2c42d9f2d`. Runs **37820287689 SUCCESS** et **37820287701 SUCCESS** : **650/650 Node**, **Chromium 8/8**, **Web
+  - 21: **Production 1.5.2.15 : NON ENCORE ATTESTÉE**. La source est qualifiée, la livraison code-only doit encore prouver /health du SHA livré. La production antérieure 1.5.2.14 reste la dernière attestée à ce point. FIELD_ACCEPTED=NOT_ACCEPTED ; realMoneyEnabled=fal
+- **docs/memory/recalls/RECALL-2026-10-20-LOT23-ASSISTANT-TOOLS.md** — score 5; concepts: stock, livraison
+  - 7: Mémoire OFF par défaut, douze codes de thèmes maximum, trente jours, choix de détail des guides, oubli unitaire ou global ; aucun texte, audio, montant ou nom saisi enregistré. Le OFF global existant prime et efface les thèmes. Les mémoires sont séparées acteu
+  - 17: Production **1.5.2.25-assistant-tools**, source `71a30e65f1cc1a4f0d9476e9e10462bce65ae16a`, build `eco-system-1.5.2.25-20261020-assistant-tools`, cache `eco-system-v15225-assistant-tools-20261020`, Worker `fb2fb045-955b-4541-9f52-e55f5af1fcae`. Livraison [3945
+  - 23: Historique de qualification conservé : la première tentative de livraison a bloqué avant publication sur un timeout30s de scanImage QR WebKit, tandis que les5 autres WebKit,779 natifs et27 Chromium passaient. La qualification indépendante du même source a pass
+- **docs/change-impact/CIR-2026-10-09-EXPENSE-RECAP-OBSERVER.md** — score 4; concepts: livraison, retour
+  - 5: **Suite :** laisser l'opération native qui progresse se terminer ; après message final/retour au prompt, sauvegarder les travaux puis faire un redémarrage Windows normal pour les changements de composants en attente. Après ce redémarrage, vérifier les distribu
+  - 11: ÉTAT DU PROJET APRÈS ÉTAPE : diagnostic système acquis, activation toujours en cours, redémarrage composants signalé, Linux utilisable non confirmé, qualification complète et livraison toujours en attente.
+  - 23: - **WebKit 4 PASS / 2 FAIL (1,4 min)**. QR decoder, assets offline, rechargement origine arrêtée et override Recap passent. DataChannel échoue avec ECO_LOCAL_ROOM_WEBRTC_UNAVAILABLE ; callback A01 s'arrête sur Partager le signal désactivé. Le guard ecoLocalRoo
+  - 29: ÉTAT DU PROJET APRÈS ÉTAPE : boucle de dépenses corrigée et prouvée avant/après en Node réel + navigateur ; finances 657 Node/8 Chromium PASS ; compatibilité WebKit complète non acquise ; qualification totale FAIL ; livraison en attente du gate compatible, arc
+
+## Gate
+Ce rapport est un index de rappel, pas une décision métier. Toute contradiction doit être rapprochée avec la Constitution, l'état réel du code, les CIR/ADR et les tests avant implémentation.

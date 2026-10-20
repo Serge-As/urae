@@ -3,6 +3,8 @@ import {messages} from './i18n.js';
 export type RuntimeLocale = 'fr'|'en';
 
 const EXTRA_FR_EN: Record<string,string> = {
+  'Disponible à partir du':'Available from',
+  "Disponible jusqu'au":'Available until',
   'Affichage':'Display',
   'Visuel · compact':'Visual · compact',
   'Senior · agrandi':'Senior · enlarged',

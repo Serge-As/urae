@@ -93,10 +93,19 @@ export interface MarketStockReservationPlan {
   reservationQuantity: number;
 }
 
+export interface MarketOrderTransitionPlan {
+  operationId:Id;tenantId:Id;groupId:Id;stock:WorkspaceRecord;order:WorkspaceRecord;movement:EvidenceRecord;
+  expectedStockVersion:number;expectedOrderVersion:number;
+}
+
+export interface MarketRecordMutationPlan {record:WorkspaceRecord;expectedVersion:number;movement?:EvidenceRecord;}
+
 export interface PlatformRepository {
+  commitMarketRecordMutation(plan:MarketRecordMutationPlan):WorkspaceRecord|Promise<WorkspaceRecord>;
   commitFinancialOperation(operation: FinancialOperation): FinancialOperation | Promise<FinancialOperation>;
   commitFinancialCorrection(plan: FinancialCorrectionPlan): FinancialCorrectionPlan | Promise<FinancialCorrectionPlan>;
   commitFinancialCellStamp(plan:FinancialCellStampPlan):FinancialCellStampPlan|Promise<FinancialCellStampPlan>;
+  commitMarketOrderTransition(plan:MarketOrderTransitionPlan):{stock:WorkspaceRecord;order:WorkspaceRecord;movement:EvidenceRecord}|Promise<{stock:WorkspaceRecord;order:WorkspaceRecord;movement:EvidenceRecord}>;
   commitMarketStockReservation(plan:MarketStockReservationPlan): {stock:WorkspaceRecord;order:WorkspaceRecord;movement:EvidenceRecord} | Promise<{stock:WorkspaceRecord;order:WorkspaceRecord;movement:EvidenceRecord}>;
   getFinancialCellRevision(tenantId:Id,groupId:Id,meetingId:Id,membershipId:Id,rubricId:Id,currency:string): FinancialCellRevision | undefined | Promise<FinancialCellRevision | undefined>;
   listFinancialCellRevisions(tenantId:Id,groupId:Id): FinancialCellRevision[] | Promise<FinancialCellRevision[]>;
@@ -232,10 +241,30 @@ export class InMemoryPlatformRepository implements PlatformRepository {
     return structuredClone(plan);
   }
 
+  commitMarketRecordMutation(plan:MarketRecordMutationPlan):WorkspaceRecord{
+    const current=this.workspaceRecords.get(plan.record.id);
+    if(!current||current.tenantId!==plan.record.tenantId||current.groupId!==plan.record.groupId)throw Error('FORBIDDEN_SCOPE');
+    if(Number(current.data.version??1)!==plan.expectedVersion)throw Error('MARKET_RECORD_CONFLICT');
+    if(plan.movement&&(plan.movement.tenantId!==current.tenantId||plan.movement.subjectId!==current.id||plan.movement.data.groupId!==current.groupId))throw Error('MARKET_ORDER_PLAN_INVALID');
+    this.workspaceRecords.set(current.id,structuredClone(plan.record));
+    if(plan.movement)this.evidences.set(plan.movement.id,structuredClone(plan.movement));
+    return structuredClone(plan.record);
+  }
+
+  commitMarketOrderTransition(plan:MarketOrderTransitionPlan):{stock:WorkspaceRecord;order:WorkspaceRecord;movement:EvidenceRecord}{
+    const stock=this.workspaceRecords.get(plan.stock.id),order=this.workspaceRecords.get(plan.order.id),prior=this.evidences.get(plan.movement.id);
+    if(!stock||!order||stock.tenantId!==plan.tenantId||order.tenantId!==plan.tenantId||stock.groupId!==plan.groupId||order.groupId!==plan.groupId)throw Error('FORBIDDEN_SCOPE');
+    if(prior){if(prior.type!=='MARKET_STOCK_MOVEMENT'||prior.data.requestFingerprint!==plan.movement.data.requestFingerprint)throw Error('MARKET_IDEMPOTENCY_CONFLICT');return{stock:structuredClone(stock),order:structuredClone(order),movement:structuredClone(prior)};}
+    if(Number(stock.data.version??1)!==plan.expectedStockVersion||Number(order.data.version??1)!==plan.expectedOrderVersion)throw Error('MARKET_ORDER_CONFLICT');
+    if(plan.movement.subjectId!==stock.id||plan.movement.data.sourceId!==order.id||String(plan.stock.data.lastMarketOperationId)!==plan.operationId||String(plan.order.data.lastMarketOperationId)!==plan.operationId)throw Error('MARKET_ORDER_PLAN_INVALID');
+    this.workspaceRecords.set(stock.id,structuredClone(plan.stock));this.workspaceRecords.set(order.id,structuredClone(plan.order));this.evidences.set(plan.movement.id,structuredClone(plan.movement));
+    return{stock:structuredClone(plan.stock),order:structuredClone(plan.order),movement:structuredClone(plan.movement)};
+  }
+
   commitMarketStockReservation(plan:MarketStockReservationPlan):{stock:WorkspaceRecord;order:WorkspaceRecord;movement:EvidenceRecord}{
     const current=this.workspaceRecords.get(plan.stock.id);
     if(!current||current.tenantId!==plan.tenantId||current.groupId!==plan.groupId)throw new Error('STOCK_ITEM_NOT_FOUND');
-    const version=Number(current.data.version??1),available=Number(current.data.quantity??0)-Number(current.data.reserved??0);
+    const version=Number(current.data.version??1),available=Number(current.data.quantity??0)-Number(current.data.reserved??0)-Number(current.data.quarantine??0);
     if(version!==plan.expectedVersion||available<plan.reservationQuantity)throw new Error('MARKET_STOCK_RESERVATION_CONFLICT');
     if(String(plan.stock.data.lastReservationOperationId??'')!==plan.operationId)throw new Error('MARKET_STOCK_RESERVATION_PLAN_INVALID');
     this.workspaceRecords.set(plan.stock.id,structuredClone(plan.stock));
@@ -583,13 +612,46 @@ export class D1PlatformRepository implements PlatformRepository {
     return plan;
   }
 
+  async commitMarketRecordMutation(plan:MarketRecordMutationPlan):Promise<WorkspaceRecord>{
+    const r=plan.record,m=plan.movement;
+    if(Number(r.data.version)!==plan.expectedVersion+1||m&&(m.tenantId!==r.tenantId||m.subjectId!==r.id||m.data.groupId!==r.groupId))throw Error('MARKET_ORDER_PLAN_INVALID');
+    const update=this.db.prepare(`UPDATE platform_records SET data_json=?,updated_at=? WHERE record_type='workspace_record' AND record_id=? AND tenant_id=? AND group_id=? AND COALESCE(CAST(json_extract(data_json,'$.data.version') AS INTEGER),1)=?`).bind(JSON.stringify(r),r.updatedAt,r.id,r.tenantId,r.groupId,plan.expectedVersion);
+    if(!m){const result=await update.run() as {changes?:number|bigint;meta?:{changes?:number}};if(Number(result.meta?.changes??result.changes)!==1)throw Error('MARKET_RECORD_CONFLICT');return r;}
+    // The NOT NULL scalar guard makes a stale update abort the whole D1 batch.
+    const guard=this.db.prepare(`INSERT INTO platform_records(record_type,record_id,tenant_id,group_id,assignee_id,idempotency_key,data_json,updated_at) VALUES('market_mutation_guard',?,?,?,?,?,(SELECT json_object('operationId',?) FROM platform_records WHERE record_type='workspace_record' AND record_id=? AND tenant_id=? AND group_id=? AND json_extract(data_json,'$.data.lastMarketOperationId')=?),?)`).bind(m.id,r.tenantId,r.groupId,null,m.id,m.id,r.id,r.tenantId,r.groupId,m.id,r.updatedAt);
+    const evidence=this.db.prepare(`INSERT INTO platform_records(record_type,record_id,tenant_id,group_id,assignee_id,idempotency_key,data_json,updated_at) VALUES('evidence',?,?,?,?,?,?,?)`).bind(m.id,r.tenantId,r.groupId,null,m.id,JSON.stringify(m),m.createdAt);
+    try{await this.db.batch([update,guard,evidence]);}catch(error){const current=await this.getWorkspaceRecord(r.tenantId,r.id);if(Number(current?.data.version??1)!==plan.expectedVersion)throw Error('MARKET_RECORD_CONFLICT',{cause:error});throw error;}
+    return r;
+  }
+
+  async commitMarketOrderTransition(plan:MarketOrderTransitionPlan):Promise<{stock:WorkspaceRecord;order:WorkspaceRecord;movement:EvidenceRecord}>{
+    if(plan.stock.tenantId!==plan.tenantId||plan.order.tenantId!==plan.tenantId||plan.stock.groupId!==plan.groupId||plan.order.groupId!==plan.groupId||plan.movement.tenantId!==plan.tenantId||plan.movement.subjectId!==plan.stock.id||plan.movement.data.sourceId!==plan.order.id||plan.stock.data.lastMarketOperationId!==plan.operationId||plan.order.data.lastMarketOperationId!==plan.operationId)throw Error('MARKET_ORDER_PLAN_INVALID');
+    const update=(record:WorkspaceRecord,version:number)=>this.db.prepare(`UPDATE platform_records SET data_json=?,updated_at=?
+      WHERE record_type='workspace_record' AND record_id=? AND tenant_id=? AND group_id=? AND COALESCE(CAST(json_extract(data_json,'$.data.version') AS INTEGER),1)=?`)
+      .bind(JSON.stringify(record),record.updatedAt,record.id,plan.tenantId,plan.groupId,version);
+    const guard=this.db.prepare(`INSERT INTO platform_records(record_type,record_id,tenant_id,group_id,assignee_id,idempotency_key,data_json,updated_at)
+      VALUES('market_transition_guard',?,?,?,?,?,(SELECT json_object('operationId',?) FROM platform_records s JOIN platform_records o ON o.tenant_id=s.tenant_id AND o.group_id=s.group_id
+      WHERE s.record_type='workspace_record' AND s.record_id=? AND o.record_type='workspace_record' AND o.record_id=? AND s.tenant_id=? AND s.group_id=?
+      AND json_extract(s.data_json,'$.data.lastMarketOperationId')=? AND json_extract(o.data_json,'$.data.lastMarketOperationId')=? LIMIT 1),?)`)
+      .bind(plan.operationId,plan.tenantId,plan.groupId,null,plan.operationId,plan.operationId,plan.stock.id,plan.order.id,plan.tenantId,plan.groupId,plan.operationId,plan.operationId,plan.order.updatedAt);
+    const evidence=this.db.prepare(`INSERT INTO platform_records(record_type,record_id,tenant_id,group_id,assignee_id,idempotency_key,data_json,updated_at) VALUES('evidence',?,?,?,?,?,?,?)`)
+      .bind(plan.movement.id,plan.tenantId,plan.groupId,null,plan.operationId,JSON.stringify(plan.movement),plan.movement.createdAt);
+    try{await this.db.batch([update(plan.stock,plan.expectedStockVersion),update(plan.order,plan.expectedOrderVersion),guard,evidence]);}
+    catch(error){
+      const [prior,stock,order]=await Promise.all([this.getEvidence(plan.tenantId,plan.movement.id),this.getWorkspaceRecord(plan.tenantId,plan.stock.id),this.getWorkspaceRecord(plan.tenantId,plan.order.id)]);
+      if(prior){if(prior.type!=='MARKET_STOCK_MOVEMENT'||prior.data.requestFingerprint!==plan.movement.data.requestFingerprint)throw Error('MARKET_IDEMPOTENCY_CONFLICT');if(stock&&order)return{stock,order,movement:prior};}
+      if(Number(stock?.data.version??1)!==plan.expectedStockVersion||Number(order?.data.version??1)!==plan.expectedOrderVersion)throw new Error('MARKET_ORDER_CONFLICT',{cause:error});throw error;
+    }
+    return{stock:plan.stock,order:plan.order,movement:plan.movement};
+  }
+
   async commitMarketStockReservation(plan:MarketStockReservationPlan):Promise<{stock:WorkspaceRecord;order:WorkspaceRecord;movement:EvidenceRecord}>{
     const updatedAt=plan.stock.updatedAt;
     const stockUpdate=this.db.prepare(`UPDATE platform_records
       SET data_json=?,updated_at=?
       WHERE record_type='workspace_record' AND record_id=? AND tenant_id=? AND group_id=?
         AND CAST(json_extract(data_json,'$.data.version') AS INTEGER)=?
-        AND (CAST(json_extract(data_json,'$.data.quantity') AS INTEGER)-CAST(json_extract(data_json,'$.data.reserved') AS INTEGER))>=?`)
+        AND (CAST(json_extract(data_json,'$.data.quantity') AS INTEGER)-CAST(json_extract(data_json,'$.data.reserved') AS INTEGER)-COALESCE(CAST(json_extract(data_json,'$.data.quarantine') AS INTEGER),0))>=?`)
       .bind(JSON.stringify(plan.stock),updatedAt,plan.stock.id,plan.tenantId,plan.groupId,plan.expectedVersion,plan.reservationQuantity);
     const guard=this.db.prepare(`INSERT INTO platform_records
       (record_type,record_id,tenant_id,group_id,assignee_id,idempotency_key,data_json,updated_at)
