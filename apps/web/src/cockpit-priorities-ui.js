@@ -18,7 +18,7 @@ export function mountCockpitPriorities({app,journey,navigate,openDetail,openGrou
  const date=x=>{const d=new Date(x);return Number.isFinite(d.valueOf())?d.toLocaleString(document.documentElement.lang==='en'?'en-GB':'fr-FR',{dateStyle:'short',timeStyle:'short'}):tx('Date inconnue','Unknown date');};
  const button=(text,fn,cls='secondary')=>{const b=el('button',text,cls);b.type='button';b.onclick=fn;return b;};
  const storageResult=ok=>{message=ok?'':tx('Cet appareil ne peut pas enregistrer la préférence.','This device cannot save the preference.');render();};
- const resetData=()=>{scope=cockpitScope(context());generation++;data={};meta={};message='';showAll=new Set();render();};
+ const resetData=()=>{const next=cockpitScope(context()),changed=scope!==next;scope=next;generation++;data={};meta={};if(changed)message='';showAll=new Set();render();};
  const activate=async(card,b)=>{
   const captured=context(),key=cockpitScope(captured);b.disabled=true;message=tx('Vérification des droits et de la cible…','Checking permissions and target…');status.textContent=message;
   try{

@@ -29,7 +29,7 @@
       "id": "lot02-cockpit-continuity-20261020",
       "scope": "personal cockpit projections and minimal journey references",
       "status": "IN_PROGRESS",
-      "statement": "Four-lane read-only priorities, isolated presentation preferences and minimal meeting continuity references implemented. Nine native tests pass. Same-source full qualification and public deployment pending.",
+      "statement": "Candidate9910be4 blocked before deployment: controlling SW prevented injected403 in new browser test. New test blocks SW for its HTTP fixture only and proves interception. Acquired PWA suites remain. Explicit server-only verification and same-context feedback preservation added. Ten native cockpit cases plus three offline snapshot cases pass; full770Node25Chromium6WebKit qualification required.",
       "evidence": [
         "docs/change-impact/CIR-2026-10-20-LOT02-COCKPIT-CONTINUITY.md",
         "docs/memory/recalls/RECALL-2026-10-20-LOT02-COCKPIT-CONTINUITY.md"

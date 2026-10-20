@@ -39,15 +39,15 @@ export async function revalidateCockpitTarget({app,context,card,now=Date.now}={}
  requireSame();
  if(card.groupRequired){
   if(!context.group)throw Error('COCKPIT_TARGET_UNAVAILABLE');
-  const path='/api/v1/groups/'+encodeURIComponent(context.group),since=now(),access=await app.groupMe();requireSame();await fresh(path+'/me',since);
+  const path='/api/v1/groups/'+encodeURIComponent(context.group),since=now(),access=await app.groupMe({requireServer:true});requireSame();await fresh(path+'/me',since);
   if(!access?.isManager&&(!access?.membership||String(access.membership.status).toLowerCase()!=='active'))throw Error('COCKPIT_TARGET_UNAVAILABLE');
-  if(['meeting','resume'].includes(card.kind)){const started=now(),rows=await app.listMeetings();requireSame();await fresh(path+'/meetings',started);const m=rows.find(x=>x.id===card.targetId);if(!m||closed(m.status))throw Error('COCKPIT_TARGET_UNAVAILABLE');return m;}
+  if(['meeting','resume'].includes(card.kind)){const started=now(),rows=await app.listMeetings({requireServer:true});requireSame();await fresh(path+'/meetings',started);const m=rows.find(x=>x.id===card.targetId);if(!m||closed(m.status))throw Error('COCKPIT_TARGET_UNAVAILABLE');return m;}
   if(card.kind==='notice'){
    if(access?.membership?.id!==card.memberId)throw Error('COCKPIT_TARGET_UNAVAILABLE');
-   const started=now(),rows=await app.financialNotices(card.memberId);requireSame();await fresh(path+'/members/'+encodeURIComponent(card.memberId)+'/financial-notices',started);
+   const started=now(),rows=await app.financialNotices(card.memberId,{requireServer:true});requireSame();await fresh(path+'/members/'+encodeURIComponent(card.memberId)+'/financial-notices',started);
    if(!rows.some(x=>x.id===card.targetId&&!['CONFIRMED','APPROVED_AFTER_REVIEW','CANCELLED'].includes(String(x.status))))throw Error('COCKPIT_TARGET_UNAVAILABLE');
   }
  }
- if(card.kind==='inbox'){const started=now(),rows=await app.inboxItems();requireSame();await fresh('/api/v1/inbox',started);if(!rows.some(x=>x.id===card.targetId&&!closed(x.status)&&(!x.groupId||x.groupId===context.group)))throw Error('COCKPIT_TARGET_UNAVAILABLE');}
+ if(card.kind==='inbox'){const started=now(),rows=await app.inboxItems({requireServer:true});requireSame();await fresh('/api/v1/inbox',started);if(!rows.some(x=>x.id===card.targetId&&!closed(x.status)&&(!x.groupId||x.groupId===context.group)))throw Error('COCKPIT_TARGET_UNAVAILABLE');}
  requireSame();return true;
 }

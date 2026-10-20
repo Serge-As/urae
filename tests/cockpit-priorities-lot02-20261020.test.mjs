@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createJourneyContext} from '../apps/web/src/journey-context.js';
 import {buildCockpitPriorities,createCockpitPreferences,revalidateCockpitTarget} from '../apps/web/src/cockpit-priorities.js';
+import {ConnectedApplication} from '../.build/packages/application/src/index.js';
 const storage=()=>{const values=new Map();return{values,getItem:k=>values.get(k),setItem:(k,v)=>values.set(k,v)};};
 test('continuity passport stores bounded references only, preserves old views and isolates actor/group',()=>{
  const store=storage();let actor='a',group='g',time=1000;const journey=createJourneyContext({storage:store,scope:()=>({actor,group}),now:()=>time});
@@ -50,4 +51,18 @@ test('context switched during access verification cannot navigate with the prior
 test('completed inbox actions and approved notices disappear after canonical revalidation',async()=>{
  const f=fixture();assert.equal(await revalidateCockpitTarget({app:f.app,context:f.context,card:{kind:'inbox',targetId:'i',groupRequired:true},now:()=>1000}),true);f.setInbox([{id:'i',status:'DONE'}]);await assert.rejects(()=>revalidateCockpitTarget({app:f.app,context:f.context,card:{kind:'inbox',targetId:'i',groupRequired:true},now:()=>1000}),/TARGET_UNAVAILABLE/);
  f.setNotices([{id:'n',status:'CONFIRMED'}]);await assert.rejects(()=>revalidateCockpitTarget({app:f.app,context:f.context,card:{kind:'notice',targetId:'n',memberId:'self',groupRequired:true},now:()=>1000}),/TARGET_UNAVAILABLE/);
+});
+
+test('explicit server verification never borrows a cached grant or target after refusal or network loss; default offline reads remain available',async()=>{
+ const oldFetch=globalThis.fetch,oldIndexed=globalThis.indexedDB;
+ try{
+  globalThis.indexedDB={};
+  const create=()=>{const app=new ConnectedApplication({actorId:'a',tenantId:'t'});app.activeGroupId='g';app.readSnapshots.get=async()=>({body:{isManager:true,membership:{id:'self',status:'active'}},source:'SERVER',lastSyncedAt:new Date(Date.now()+1000).toISOString()});return app;};
+  globalThis.fetch=async()=>Response.json({error:'FORBIDDEN_SCOPE'},{status:403});
+  assert.equal((await create().groupMe()).isManager,true,'the previous best-effort display contract remains unchanged');
+  for(const failure of ['denied','unavailable','offline']){
+   globalThis.fetch=async()=>{if(failure==='offline')throw Error('NETWORK_DOWN');return Response.json({error:failure==='denied'?'FORBIDDEN_SCOPE':'TEMPORARILY_UNAVAILABLE'},{status:failure==='denied'?403:503});};
+   for(const read of [app=>app.groupMe({requireServer:true}),app=>app.listMeetings({requireServer:true}),app=>app.financialNotices('self',{requireServer:true}),app=>app.inboxItems({requireServer:true})])await assert.rejects(()=>read(create()),failure==='denied'?/FORBIDDEN_SCOPE/:/NETWORK_UNAVAILABLE/);
+  }
+ }finally{globalThis.fetch=oldFetch;if(oldIndexed===undefined)delete globalThis.indexedDB;else globalThis.indexedDB=oldIndexed;}
 });

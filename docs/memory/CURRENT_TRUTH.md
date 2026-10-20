@@ -2,9 +2,11 @@
 
 Dernière production attestée **1.5.2.23-resource-proof**, source 12fe2f01b3cdfe08cf845ea9d7104fbb9026cc23 ; L01/L05/L28 clos et vérifiés. L02 prépare **1.5.2.24-cockpit-continuity** : quatre voies de priorités expliquées dans Accueil, préférences locales isolées et passeport minimal de séances interrompues. Reuse Before Build : résultats et callbacks des propriétaires existants, aucun solde ni transaction dans ce panneau. Les anciens cockpits, répertoires multi-groupes, feuilles et parcours restent présents.
 
-Neuf tests natifs du lot et les cinq tests de continuité précédents passent. La qualification intégrée et la publication restent à acquérir : attendus 769 natifs, 25 Chromium, 6 WebKit et vingt empreintes publiques. Droits et existence revérifiés au clic ; réponse locale de secours ≠ autorisation fraîche. Aucune lecture réseau automatique ajoutée au panneau, aucune collecte périodique, aucune migration ou dépendance payante. FIELD_ACCEPTED=NOT_ACCEPTED, coût exact des crédits non mesurable.
+Dix tests natifs propres au lot sont prévus, dont le renfort de vérification sans secours ; les cinq tests de continuité précédents restent conservés. La qualification intégrée et la publication restent à acquérir : attendus 770 natifs, 25 Chromium, 6 WebKit et vingt empreintes publiques. Droits et existence revérifiés au clic ; réponse locale de secours ≠ autorisation fraîche. Aucune lecture réseau automatique ajoutée au panneau, aucune collecte périodique, aucune migration ou dépendance payante. FIELD_ACCEPTED=NOT_ACCEPTED, coût exact des crédits non mesurable.
 
 Après clôture réelle : L23, L10, L24, L25. Les informations suivantes sont l’historique daté.
+
+Premier SHA distant9910be4 bloqué avant publication : le SW empêchait l’injection du403 dans le nouveau test. Interception maintenant prouvée ; suites PWA acquises conservées. Vérification serveur explicite et maintien du message renforcés, CIR/Recall actualisés ; aucune assertion abaissée.
 
 ## Lot 28 terminé, publié et vérifié — 20 octobre 2026
 

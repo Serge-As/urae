@@ -6,7 +6,7 @@ mode: code-only-with-verified-readonly-backup-no-migration
 qualified_baseline_source: 12fe2f01b3cdfe08cf845ea9d7104fbb9026cc23
 qualified_baseline_delivery: 39416149450
 qualification: baseline passed 760 native, 23 Chromium, 6 WebKit; candidate must pass all exact-SHA gates
-candidate_native: 769 expected including nine cockpit continuity tests; mandatory before deploy
+candidate_native: 770 expected including nine cockpit continuity tests; mandatory before deploy
 candidate_chromium: 25 expected including two new cockpit scenarios; mandatory before deploy
 candidate_webkit: 6 mandatory before deploy
 production_ancestry: preserve 5c9366445d6699b7a608f06a49a4efb61ec7d1ff and all prior deliveries
@@ -16,7 +16,7 @@ financial_signing: preserve existing key, never rotate, provision only proven ab
 real_money_enabled: false
 field_acceptance: NOT_ACCEPTED
 historical_pr72_hold: preserved; no merge or override of PR72
-trigger_nonce: 2026-10-20-lot02-cockpit-continuity-exact-sha-gated
+trigger_nonce: 2026-10-20-lot02-cockpit-continuity-server-verification-v2
 authorization: current user requested implementation and deployment of complete lots by agreed priority
 qualification: separate synthetic SQLite and process for every browser file; retain production authentication rate limits
 scope: read-only prioritized cockpit, scoped presentation preferences and minimal continuity references; preserve acquired financial owners

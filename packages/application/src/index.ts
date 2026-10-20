@@ -403,18 +403,18 @@ export class ConnectedApplication {
     if(path==='/api/v1/auth/session'&&this.windowSessionId){try{if(sessionStorage.getItem('eco.window.session.bound.v1')!==this.windowSessionId)headers.set('x-eco-window-adopt-legacy','1');}catch{}}
     for(const [k,v] of new Headers(init.headers??{}))headers.set(k,v);
     if(typeof FormData!=='undefined'&&init.body instanceof FormData)headers.delete('content-type');
-    const method=String(init.method??'GET').toUpperCase(),cacheable=method==='GET'&&this.offlineReadAllowed(path),securityCritical=path.startsWith('/api/v1/auth/');
+    const method=String(init.method??'GET').toUpperCase(),cacheable=method==='GET'&&this.offlineReadAllowed(path),serverRequired=init.cache==='no-store',securityCritical=path.startsWith('/api/v1/auth/');
     // A slow optional panel must not prevent the independent Live handshake
     // or clock anchor from recovering. Explicit server quota blocks still apply.
     const recoveryControl=/\/(?:live\/ticket|financial-clock-anchor)$/.test(path);
     if(!securityCritical&&!recoveryControl&&this.transportUnavailableUntil>Date.now()){
-      if(cacheable&&IndexedDbReadSnapshotAdapter.supported()){
+      if(cacheable&&!serverRequired&&IndexedDbReadSnapshotAdapter.supported()){
         try{const snapshot=await this.readSnapshots.get<T>(this.offlineReadKey(path));if(snapshot){this.requestMeter.local(measurement);this.announceOfflineSnapshot(path,snapshot.updatedAt);return structuredClone(snapshot.body);}}catch{}
       }
       throw new Error('NETWORK_UNAVAILABLE');
     }
     if(this.serverBudgetBlocked()){
-      if(cacheable&&IndexedDbReadSnapshotAdapter.supported()){
+      if(cacheable&&!serverRequired&&IndexedDbReadSnapshotAdapter.supported()){
         try{const snapshot=await this.readSnapshots.get<T>(this.offlineReadKey(path));if(snapshot){this.requestMeter.local(measurement);this.announceOfflineSnapshot(path,snapshot.updatedAt);return structuredClone(snapshot.body);}}catch{}
       }
       throw new Error('NETWORK_UNAVAILABLE');
@@ -439,7 +439,7 @@ export class ConnectedApplication {
       })]);
     }catch(error){
       this.markTransportUnavailable();
-      if(cacheable&&IndexedDbReadSnapshotAdapter.supported()){
+      if(cacheable&&!serverRequired&&IndexedDbReadSnapshotAdapter.supported()){
         try{const snapshot=await this.readSnapshots.get<T>(this.offlineReadKey(path));if(snapshot){this.requestMeter.local(measurement);this.announceOfflineSnapshot(path,snapshot.updatedAt);return structuredClone(snapshot.body);}}catch{}
       }
       throw new Error('NETWORK_UNAVAILABLE',{cause:error});
@@ -454,7 +454,7 @@ export class ConnectedApplication {
       const transient=[503,504].includes(response.status)||quotaSignal;
       if(quotaSignal)this.markServerBudgetBlocked(/daily|per.day/i.test(errorCode)?429:503);
       if(response.status===429&&!quotaSignal)throw new Error(errorCode==='HTTP_429'?'RATE_LIMITED':errorCode);
-      if(transient&&cacheable&&IndexedDbReadSnapshotAdapter.supported()){
+      if(transient&&cacheable&&!serverRequired&&IndexedDbReadSnapshotAdapter.supported()){
         try{const snapshot=await this.readSnapshots.get<T>(this.offlineReadKey(path));if(snapshot){this.requestMeter.local(measurement);this.announceOfflineSnapshot(path,snapshot.updatedAt);return structuredClone(snapshot.body);}}catch{}
       }
       if(transient)throw new Error('NETWORK_UNAVAILABLE');
@@ -862,7 +862,7 @@ export class ConnectedApplication {
     return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/meetings/${encodeURIComponent(meetingId)}/member-envelope${q}`);
   }
   async financialBundles(membershipId:string):Promise<any[]>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');const r=await this.request<any>('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/members/'+encodeURIComponent(membershipId)+'/financial-bundles');return r.items??[];}
-  async financialNotices(membershipId:string):Promise<any[]>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/members/${encodeURIComponent(membershipId)}/financial-notices`);}
+  async financialNotices(membershipId:string,options:{requireServer?:boolean}={}):Promise<any[]>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/members/${encodeURIComponent(membershipId)}/financial-notices`,options.requireServer?{cache:'no-store'}:{});}
   async confirmFinancialNotice(noticeId:string,membershipId?:string):Promise<any>{
     if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');
     if(!this.isOffline())try{return await this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/financial-notices/${encodeURIComponent(noticeId)}/confirm`,{method:'POST',body:'{}'});}catch(error){if(!(error instanceof Error)||error.message!=='NETWORK_UNAVAILABLE')throw error;}
@@ -898,14 +898,15 @@ export class ConnectedApplication {
     return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/members/'+encodeURIComponent(membershipId)+'/financial-history?'+p.toString());
   }
   async memberStatement(membershipId:string):Promise<import('../../contracts/src/index.js').MemberStatement>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/members/${encodeURIComponent(membershipId)}/statement`);}
-  async groupMe():Promise<any>{
+  async groupMe(options:{requireServer?:boolean}={}):Promise<any>{
     if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');
     const path=`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/me`,key='eco.groupMe.v1:'+this.actorId+':'+this.activeGroupId;
     try{
-      const result=await this.request<any>(path);
+      const result=await this.request<any>(path,options.requireServer?{cache:'no-store'}:{});
       if(result?.membership||result?.isManager){try{localStorage.setItem(key,JSON.stringify({...result,savedAt:new Date().toISOString()}));}catch{}}
       return result;
     }catch(error){
+      if(options.requireServer)throw error;
       try{const saved=JSON.parse(localStorage.getItem(key)||'null');if(saved&&(saved.membership||saved.isManager))return saved;}catch{}
       const cached=await this.cached<any>(path);if(cached)return cached;throw error;
     }
@@ -1121,7 +1122,7 @@ export class ConnectedApplication {
     await this.queueLocal('MEMBER_NAME_V1',{groupId:this.activeGroupId,membershipId,displayName:clean,reason:why});return updated;
   }
   async listMembers():Promise<MembershipView[]>{if(!this.activeGroupId)return[];return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/members`);}
-  async listMeetings():Promise<MeetingSession[]>{if(!this.activeGroupId)return[];return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/meetings`);}
+  async listMeetings(options:{requireServer?:boolean}={}):Promise<MeetingSession[]>{if(!this.activeGroupId)return[];return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/meetings`,options.requireServer?{cache:'no-store'}:{});}
   async meetingHistory(meetingId:string):Promise<any[]>{if(!this.activeGroupId)return[];const r=await this.request<any>(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/meetings/${encodeURIComponent(meetingId)}/history`);return r.items??[];}
   async meetingAttendance(meetingId:string):Promise<any[]>{if(!this.activeGroupId)return[];return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/meetings/${encodeURIComponent(meetingId)}/attendance`);}
   async recordMeetingAttendance(meetingId:string,input:{membershipId:string;attendance:'PRESENT'|'ABSENT'|'EXCUSED'|'REPRESENTED'|'LATE';note?:string}):Promise<any>{
@@ -1571,7 +1572,7 @@ export class ConnectedApplication {
   }
   async expenses(input:{meetingId?:string;membershipId?:string;rubricId?:string;scope?:string}={}):Promise<any[]>{if(!this.activeGroupId)return[];const q=new URLSearchParams();for(const [k,v] of Object.entries(input))if(v)q.set(k,String(v));return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/expenses?${q}`);}
   async openSupportCase(summary:string):Promise<CaseRecord>{return this.request('/api/v1/cases',{method:'POST',body:JSON.stringify({summary,groupId:this.activeGroupId})});}
-  async inboxItems():Promise<Array<{id:string;kind:string;title:string;priority:string;status:string;groupId?:string;dueAt?:string;sourceType?:string;sourceId?:string}>>{return this.request('/api/v1/inbox');}
+  async inboxItems(options:{requireServer?:boolean}={}):Promise<Array<{id:string;kind:string;title:string;priority:string;status:string;groupId?:string;dueAt?:string;sourceType?:string;sourceId?:string}>>{return this.request('/api/v1/inbox',options.requireServer?{cache:'no-store'}:{});}
 
   async productCatalog():Promise<{version:string;count:number;capabilities:ReturnType<ConnectedApplication['productModules']>}>{
     try{return await this.request('/api/v1/product/capabilities');}
