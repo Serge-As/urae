@@ -1,3 +1,13 @@
+## Lot 01 — navigation publiée, stabilisation Windows du 20 octobre 2026
+
+La version 1.5.2.20 est publiée au SHA `302c108795352cb4aaaaff283b935a681ce26c1a` ; livraison 39402988571 SUCCESS : 744 tests natifs, 20 Chromium et 6 WebKit, sauvegarde restaurée avec intégrité et onze empreintes publiques conformes. Worker `4cc48269-1435-493a-ab75-5ea447d81fba`. Reçu : `docs/release/evidence/LOT01-NAVIGATION-PUBLIC-2026-10-20.json`.
+
+Un contrôle Windows complémentaire a relevé un décalage de défilement après F5 (19/20 scénarios locaux passent). Le contrôle avec l'ancienne interface passe ; retirer seulement la reprise de focus ne résout pas l'écart. Le candidat **1.5.2.21-navigation-stability** restaure immédiatement la position et exclut le bandeau fixe de l'ancrage automatique. Qualification ciblée puis workflow intégral exact-SHA requis avant de déclarer le lot clos. Aucun moteur financier, schéma, abonnement ou nouvelle dépendance.
+
+Après fermeture de L01, poursuivre le classement : L05 → L28 → L02 → L23 → L10 → L24 → L25. FIELD_ACCEPTED=NOT_ACCEPTED. Coût exact des crédits non mesurable.
+
+Les informations suivantes sont historiques et datées.
+
 ## Lot 01 — navigation cohérente, candidat du 20 octobre 2026
 
 Autorisation explicite : implémenter et déployer le lot 1 puis poursuivre. Candidat **1.5.2.20-navigation-coherence** ; qualification en cours, **aucun nouveau déploiement attesté à ce stade**. La dernière production prouvée reste 1.5.2.19 (`5e7044ee2a8c346c0a36f905d74d41a2a2dfab0d`).

@@ -2,7 +2,7 @@ import { rm, mkdir, cp, access, readFile, writeFile } from 'node:fs/promises';
 import { spawnSync } from 'node:child_process';
 import path from 'node:path';
 
-const RELEASE_VERSION='1.5.2.20-navigation-coherence';
+const RELEASE_VERSION='1.5.2.21-navigation-stability';
 const compiler=path.resolve('node_modules/typescript/bin/tsc');
 try{await access(compiler);}catch{await import('./build-portable.mjs');process.exit(0);}
 const output=path.resolve('.build');
@@ -37,9 +37,9 @@ for (const target of ['.build/apps/web/src/completion-ui.js','.build/src/complet
 // before main.js so stale click semantics cannot win the event race.
 for (const target of ['.build/index.html','.build/apps/web/index.html']) {
   let html=await readFile(target,'utf8');
-  const main='<script type="module" src="/src/main.js?v=15220"></script>';
+  const main='<script type="module" src="/src/main.js?v=15221"></script>';
   if(!html.includes(main))throw Error('MAIN_SCRIPT_ANCHOR_NOT_FOUND');
-  html=html.replace(main,'<script type="module" src="/src/field-hardening.js?v=15220"></script>\n  <script type="module" src="/src/voice-entry-bootstrap.js?v=15220"></script>\n  '+main);
+  html=html.replace(main,'<script type="module" src="/src/field-hardening.js?v=15221"></script>\n  <script type="module" src="/src/voice-entry-bootstrap.js?v=15221"></script>\n  '+main);
   html=html
     .replaceAll('Eco-System — 1.3.3 Fairness Lab · AdOps · Doctor','Eco-System — 1.3.4 Voice · Two-Sheet · Documents')
     .replaceAll('ECO-SYSTEM · 1.3.3','ECO-SYSTEM · 1.3.4')

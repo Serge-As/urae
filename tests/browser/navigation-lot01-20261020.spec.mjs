@@ -39,11 +39,16 @@ test('opening the menu and visiting commerce preserve the financial draft and re
  const members=await api(page,'/api/v1/groups/'+groupId+'/members','GET',undefined,groupId),membershipId=members.find(x=>x.userId===account.account.id).id;
  const rubric=await api(page,'/api/v1/groups/'+groupId+'/rubrics','POST',{name:'Secours navigation',facets:{direction:'INFLOW',obligation:'CUSTOM',medium:'CASH',refundability:'CONDITIONAL',replenishment:'CUSTOM',interestMode:'NONE',eligibilityMode:'RULE_BASED'},source:'GROUP_CUSTOM',operatingModel:{ruleRealityStatus:'ALIGNED',targetMode:'OPEN',mandatoryForAbsentees:false,shortfallHandling:'LEAVE_SHORT',payoutMode:'COLLECTED_ONLY',immediateFullPayout:false}},groupId);
  const meeting=await api(page,'/api/v1/groups/'+groupId+'/meetings','POST',{title:'Séance navigation',scheduledAt:new Date().toISOString()},groupId);
- await page.reload();await expect(page.locator('#activeGroupSelect option[value="'+groupId+'"]').first()).toHaveCount(1);await page.locator('#activeGroupSelect').selectOption(groupId);await page.locator('#mainNav [data-view="operations"]').first().click();
+ await page.reload();await expect(page.locator('#activeGroupSelect option[value="'+groupId+'"]').first()).toHaveCount(1);await page.locator('#activeGroupSelect').selectOption(groupId);
+ await expect(page.locator('#toast')).toHaveText('Groupe actif changé.',{timeout:20000});await page.locator('#mainNav [data-view="operations"]').first().click();
  console.log('LOT01 finance: sheet ready');
  const input=page.locator(`#meetingMatrix .matrix-cell-entry[data-membership-id="${membershipId}"][data-rubric-id="${rubric.id}"][data-meeting-id="${meeting.id}"] .cell-target-input`);
  let financialWrites=0;page.on('request',r=>{if(r.method()==='POST'&&/\/outbox\/apply$|\/financial-cells$/.test(r.url()))financialWrites++;});
  await input.fill('5432');await page.keyboard.press('Control+k');await expect(menu(page)).toBeVisible();await expect(input).toHaveValue('5432');
+ // The canonical owner may rebuild the sheet during an incoming refresh while
+ // the menu is open. Closing it must resolve the new input, not a detached node.
+ await page.evaluate(meetingId=>window.dispatchEvent(new CustomEvent('eco:restore-financial-sheet',{detail:{sheetMode:'meeting',matrixMeetingId:meetingId}})),meeting.id);
+ await expect(input).toHaveValue('5432');await expect(menu(page)).toBeVisible();
  console.log('LOT01 finance: menu retained draft');
  await page.keyboard.press('Escape');await expect(input).toBeFocused();await expect(input).toHaveValue('5432');
  await page.locator('#ecoNavigationOpen').click();await page.locator('#ecoNavigationFilter').fill('marketplace');await menu(page).locator('.eco-navigation-destination').first().click();

@@ -1,3 +1,4 @@
+# L01: 1.5.2.20 published at 302c108; 1.5.2.21 navigation stability candidate, exact-SHA deployment gates required.
 # 2026-10-20 Lot01: navigation/search/favorites presentation candidate, not yet deployed.
 # Owners and finance unchanged; CIR/Recall LOT01-NAVIGATION; qualified evidence required.
 # CURRENT 2026-10-16: 1.5.2.19 deployed at 5e7044ee2a8c346c0a36f905d74d41a2a2dfab0d; delivery38921072914 and qualification38921072892 SUCCESS, native738/Chromium17/WebKit6. Backup restored/R2 readback; ten public asset hashes match same-SHA build. FIELD_ACCEPTED=NOT_ACCEPTED; no capability maturity promotion. Earlier checkpoints below are historical.

@@ -29,13 +29,15 @@
       "id": "lot01-navigation-20261020",
       "status": "IN_PROGRESS",
       "scope": "presentation/navigation",
-      "statement": "Navigation candidate 1.5.2.20 implemented; not yet qualified or deployed. Existing financial owners, drafts and Live preserved. Explicit founder authorization for implementation and deployment.",
+      "statement": "1.5.2.20 navigation deployed at 302c108 with 744 native, 20 Chromium and 6 WebKit; backup and eleven public hashes verified. Additional Windows scroll restoration discrepancy under investigation in 1.5.2.21-navigation-stability; lot closure remains pending that qualification.",
       "evidence": [
         "docs/change-impact/CIR-2026-10-20-LOT01-NAVIGATION.md",
-        "docs/memory/recalls/RECALL-2026-10-20-LOT01-NAVIGATION.md"
+        "docs/memory/recalls/RECALL-2026-10-20-LOT01-NAVIGATION.md",
+        "https://github.com/Serge-As/urae/actions/runs/39402988571",
+        "docs/release/evidence/LOT01-NAVIGATION-PUBLIC-2026-10-20.json"
       ],
       "observedOn": "2026-10-20",
-      "next": "Qualify complete regression suites, publish via guarded workflow and verify exact production SHA."
+      "next": "Qualify and publish navigation position stability repair, then L05 by priority."
     },
     {
       "id": "member-financial-continuity-20261016",

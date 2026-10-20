@@ -1764,7 +1764,7 @@ body.eco-cockpit-shell.ui-mode-assisted .workspace-tabs button{min-height:46px}
    their existing owner and layout. The complete menu delegates to mainNav. */
 .eco-skip-link{position:fixed;left:12px;top:-100px;z-index:10001;padding:12px 18px;background:#fff;color:#14533e;border:2px solid #14533e;border-radius:10px}
 .eco-skip-link:focus{top:12px}
-body.eco-cockpit-shell .eco-navigation-context{--nav-font:13px;--nav-control:40px;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px 16px;align-items:center;margin:0 0 20px;padding:12px 14px;background:#fff;border:1px solid #d9e5dc;border-radius:13px;font-size:var(--nav-font);box-shadow:0 3px 12px #173e2910;position:sticky;top:var(--eco-header-height,76px);z-index:12}
+body.eco-cockpit-shell .eco-navigation-context{overflow-anchor:none;--nav-font:13px;--nav-control:40px;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px 16px;align-items:center;margin:0 0 20px;padding:12px 14px;background:#fff;border:1px solid #d9e5dc;border-radius:13px;font-size:var(--nav-font);box-shadow:0 3px 12px #173e2910;position:sticky;top:var(--eco-header-height,76px);z-index:12}
 body.eco-cockpit-shell.ui-mode-senior .eco-navigation-context{--nav-font:17px;--nav-control:48px}
 body.eco-cockpit-shell.ui-mode-assisted .eco-navigation-context{--nav-font:15px;--nav-control:46px}
 .eco-navigation-trail,.eco-navigation-actions,.eco-navigation-favorites{display:flex;gap:8px;align-items:center;flex-wrap:wrap;min-width:0}

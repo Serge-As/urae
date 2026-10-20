@@ -181,7 +181,7 @@ let launchStudio;
 let modules = [];
 let selectedLot = 'ALL';
 let deferredInstallPrompt;
-const CAHIER_VERSION = '1.5.2.20-navigation-coherence';
+const CAHIER_VERSION = '1.5.2.21-navigation-stability';
 const $ = (s) => { const e = document.querySelector(s); if (!e)
     throw new Error(`UI_ELEMENT_NOT_FOUND:${s}`); return e; };
 const val = (id) => document.getElementById(id).value.trim();
@@ -333,12 +333,15 @@ const resolveRequestedNavState=()=>{
     return saved??captureNavState();
 };
 let startupNavState=resolveRequestedNavState();
+let cancelNavigationRestoration=()=>{},navigationRestorationId=0;
 const restoreNavState=state=>{
     if(!state)return;
+    cancelNavigationRestoration();const restorationId=++navigationRestorationId;
     if(state.meetingId){const pick=document.querySelector('#sessionsMeetingSelect');if(pick&&[...pick.options].some(o=>o.value===state.meetingId)){pick.value=state.meetingId;pick.dispatchEvent(new Event('change',{bubbles:true}));}}
     if(state.sessionTab){const tab=document.querySelector(`#sessionsTabs [data-session-tab="${state.sessionTab}"]`);if(tab&&!tab.classList.contains('active'))tab.click();}
     for(const id of state.openDetails??[]){const node=document.getElementById(id);if(node?.tagName==='DETAILS')node.open=true;}
     requestAnimationFrame(()=>{
+        if(restorationId!==navigationRestorationId)return;
         if(state.openTarget){const node=document.getElementById(state.openTarget);if(node){if(node.tagName==='DETAILS')node.open=true;node.hidden=false;node.setAttribute('aria-hidden','false');}}
         if(state.sheetMode||state.matrixMeetingId||state.membershipId||state.rubricId)window.dispatchEvent(new CustomEvent('eco:restore-financial-sheet',{detail:{sheetMode:state.sheetMode,matrixMeetingId:state.matrixMeetingId,membershipId:state.membershipId,rubricId:state.rubricId}}));
         const anchor=state.anchor?document.getElementById(state.anchor):undefined;
@@ -347,8 +350,8 @@ const restoreNavState=state=>{
           // mounted Business/Academy/Kit details. Reveal ancestors before scrolling.
           let owner=anchor instanceof Element?anchor.closest('details'):null;
           while(owner){owner.open=true;owner=owner.parentElement?.closest('details')??null;}
-          anchor.scrollIntoView({behavior:'auto',block:'start'});
-        }else window.scrollTo({top:Number(state.scrollY)||0,behavior:'auto'});
+          anchor.scrollIntoView({behavior:'instant',block:'start'});
+        }else window.scrollTo({top:Number(state.scrollY)||0,behavior:'instant'});
         const restoredWrappers=new WeakSet();
         const restoreOne=(wrap,left,top)=>{if(!wrap||wrap.clientWidth===0||restoredWrappers.has(wrap))return;if(wrap.scrollLeft!==0||wrap.scrollTop!==0){restoredWrappers.add(wrap);return;}wrap.scrollLeft=left;wrap.scrollTop=top;restoredWrappers.add(wrap);};
         const restoreMatrixScroll=()=>{
@@ -363,6 +366,18 @@ const restoreNavState=state=>{
           const f=state.financialFocus,host=f.hostId?document.getElementById(f.hostId):document.querySelector('#view-'+state.view);
           const selector=`.matrix-cell-entry[data-meeting-id="${CSS.escape(String(f.meetingId??''))}"][data-membership-id="${CSS.escape(String(f.membershipId??''))}"][data-rubric-id="${CSS.escape(String(f.rubricId??''))}"] .cell-target-input`;
           host?.querySelector(selector)?.focus({preventScroll:true});
+        }
+        // Initial financial panels can settle after the first frame. Preserve
+        // the requested viewport during that bounded layout phase, and yield
+        // immediately to the user's next navigation, wheel, pointer or key.
+        if(!anchor&&typeof ResizeObserver==='function'){
+          let stopped=false,frame=0,timer=0;
+          const restoreViewport=()=>{if(!stopped&&restorationId===navigationRestorationId)window.scrollTo({top:Number(state.scrollY)||0,behavior:'instant'});};
+          const observer=new ResizeObserver(()=>{cancelAnimationFrame(frame);frame=requestAnimationFrame(restoreViewport);});
+          const stop=()=>{if(stopped)return;stopped=true;observer.disconnect();cancelAnimationFrame(frame);clearTimeout(timer);for(const type of ['pointerdown','keydown','wheel','touchstart'])window.removeEventListener(type,stop,true);};
+          const view=document.getElementById('view-'+state.view);if(view)observer.observe(view);
+          for(const type of ['pointerdown','keydown','wheel','touchstart'])window.addEventListener(type,stop,{capture:true,passive:true});
+          timer=setTimeout(stop,1500);cancelNavigationRestoration=stop;
         }
     });
 };

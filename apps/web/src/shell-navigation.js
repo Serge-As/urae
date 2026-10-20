@@ -44,6 +44,8 @@ export function mountShellNavigation({getContext=()=>({}),getCurrentState=()=>({
   const button=(text,cls='secondary')=>{const b=el('button',cls,text);b.type='button';return b;};
   const favorites=createNavigationFavorites({storage:{getItem:k=>localStorage.getItem(k),setItem:(k,v)=>localStorage.setItem(k,v)},scope:getContext});
   let lastScope='',lastEditor=null,returnEditor=null,navigated=false;
+  const describeEditor=node=>{if(!(node instanceof HTMLElement))return null;const cell=node.closest('.matrix-cell-entry');return{node,id:node.id,cell:cell?{meeting:cell.dataset.meetingId,member:cell.dataset.membershipId,rubric:cell.dataset.rubricId,host:cell.closest('#meetingMatrix,#sessionsWorkspace,#individualSheetMatrix')?.id}:null};};
+  const resolveEditor=reference=>{if(reference?.node?.isConnected&&reference.node.getClientRects().length)return reference.node;if(reference?.cell){const c=reference.cell,host=c.host?document.getElementById(c.host):content;return host?.querySelector(`.matrix-cell-entry[data-meeting-id="${CSS.escape(c.meeting||'')}"][data-membership-id="${CSS.escape(c.member||'')}"][data-rubric-id="${CSS.escape(c.rubric||'')}"] .cell-target-input`);}return reference?.id?document.getElementById(reference.id):null;};
   const resumptions=new Map();
   const scopeKey=()=>{const c=getContext();return c.actor?JSON.stringify([c.actor,c.group||'']):'';};
   const entries=()=>[...nav.querySelectorAll('button[data-view],button[data-module-open]')].filter(b=>!b.hidden&&!b.disabled&&!b.closest('[hidden]')).map(b=>({
@@ -110,11 +112,11 @@ export function mountShellNavigation({getContext=()=>({}),getCurrentState=()=>({
   };
   const openDialog=()=>{
     if(!getContext().actor||document.body.classList.contains('signed-out')||document.querySelector('dialog[open]'))return;
-    returnEditor=lastEditor?.isConnected&&lastEditor.getClientRects().length?lastEditor:document.activeElement;navigated=false;filter.value='';refresh();renderDialog();
+    returnEditor=lastEditor||describeEditor(document.activeElement);navigated=false;filter.value='';refresh();renderDialog();
     document.body.append(dialog);dialog.showModal();open.setAttribute('aria-expanded','true');filter.focus();
   };
   open.onclick=openDialog;close.onclick=()=>dialog.close();filter.oninput=renderDialog;
-  dialog.addEventListener('close',()=>{if(dialog.open)return;dialog.remove();open.setAttribute('aria-expanded','false');if(!navigated&&returnEditor?.isConnected&&returnEditor.getClientRects().length)returnEditor.focus({preventScroll:true});});
+  dialog.addEventListener('close',()=>{if(dialog.open)return;dialog.remove();open.setAttribute('aria-expanded','false');if(!navigated)resolveEditor(returnEditor)?.focus({preventScroll:true});});
   dialog.addEventListener('click',e=>{if(e.target!==dialog)return;const r=dialog.getBoundingClientRect();if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)dialog.close();});
   dialog.addEventListener('keydown',e=>{if(e.key==='Escape'){e.preventDefault();e.stopPropagation();dialog.close();}});
   filter.addEventListener('keydown',e=>{if(e.key==='ArrowDown'){const first=list.querySelector('.eco-navigation-destination');if(first){e.preventDefault();first.focus();}}});
@@ -124,7 +126,7 @@ export function mountShellNavigation({getContext=()=>({}),getCurrentState=()=>({
     e.preventDefault();const next=e.key==='Home'?0:e.key==='End'?bs.length-1:(index+(e.key==='ArrowDown'?1:-1)+bs.length)%bs.length;bs[next]?.focus();
   });
   document.addEventListener('keydown',e=>{if((e.ctrlKey||e.metaKey)&&!e.altKey&&!e.isComposing&&e.key.toLowerCase()==='k'){if(getContext().actor&&!document.querySelector('dialog[open]')){e.preventDefault();openDialog();}}});
-  document.addEventListener('focusin',e=>{if(e.target instanceof HTMLElement&&content.contains(e.target)&&!bar.contains(e.target))lastEditor=e.target;});
+  document.addEventListener('focusin',e=>{if(e.target instanceof HTMLElement&&content.contains(e.target)&&!bar.contains(e.target))lastEditor=describeEditor(e.target);});
   pin.onclick=()=>{const row=selected();if(row){if(!favorites.toggle(row.id)){openDialog();storageNotice();return;}refresh();}};
   clear.onclick=()=>{if(!favorites.clear()){storageNotice();return;}refresh();filter.focus();};
   resume.onclick=()=>{const previous=resumptions.get(scopeKey());if(previous)navigate(previous.view,{...previous,force:true});};

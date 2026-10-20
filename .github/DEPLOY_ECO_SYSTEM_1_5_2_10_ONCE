@@ -1,14 +1,14 @@
-Eco-System 1.5.2.20 lot 01 navigation delivery authorized
-release: 1.5.2.20-navigation-coherence
+Eco-System 1.5.2.21 lot 01 navigation delivery authorized
+release: 1.5.2.21-navigation-stability
 date: 2026-10-20
 db_mutation: none
 mode: code-only-with-verified-readonly-backup-no-migration
-qualified_source: 611baffaba9f937d8fe9ae413b67bd7753f8f15f
-qualification: two independent successful workflows on qualified_source
-native: 744 PASS
+qualified_baseline_source: 302c108795352cb4aaaaff283b935a681ce26c1a
+qualification: baseline deployed and qualified; navigation-only restoration fix must pass all exact-SHA gates before deploy
+native: 744 baseline PASS; all mandatory on candidate deployment SHA
 chromium: 17 existing scenarios PASS in both independent workflows; 3 added navigation scenarios PASS locally; all 20 mandatory on deployment SHA
 webkit: 6 PASS in both independent workflows; mandatory again on deployment SHA
-qualification_runs: 39401856044 39401856043
+qualified_baseline_delivery: 39402988571
 production_ancestry: preserve 5e7044ee2a8c346c0a36f905d74d41a2a2dfab0d and all prior deliveries
 backup: mandatory D1 export, verified SQLite restore, private R2 archive download/hash before deploy
 storage: existing eco-system-db and eco-system-backups, no replacement or migration
@@ -16,8 +16,8 @@ financial_signing: preserve existing key, never rotate, provision only proven ab
 real_money_enabled: false
 field_acceptance: NOT_ACCEPTED
 historical_pr72_hold: preserved; no merge or override of PR72
-trigger_nonce: 2026-10-20-lot01-navigation-qualified-744-20-6
+trigger_nonce: 2026-10-20-lot01-navigation-stability-exact-sha-gated
 authorization: current user explicitly requested implementation and production deployment, then continuation by priority
-scope: contextual shell navigation, existing-route menu, local bilingual search, account/group favorites, keyboard access and financial draft/focus continuity
+scope: preserve lot 01 navigation and financial continuity; instant position restoration and exclude sticky context from scroll anchoring
 qualification_same_deployment_sha: mandatory full gates before publication, no relaxation
 public_verification: exact health catalog release plus SHA-256 comparison of eleven deployed PWA assets with same-SHA build

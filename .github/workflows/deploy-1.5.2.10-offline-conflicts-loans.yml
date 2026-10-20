@@ -1,4 +1,4 @@
-name: Eco-System 1.5.2.20 — Live and Refonte Cloudflare Delivery
+name: Eco-System 1.5.2.21 — Live and Refonte Cloudflare Delivery
 
 on:
   workflow_dispatch:
@@ -20,9 +20,9 @@ env:
   ECO_SYSTEM_ROOT: https://eco-system.sergemimf.workers.dev/
   ECO_SYSTEM_HEALTH: https://eco-system.sergemimf.workers.dev/health
   ECO_SYSTEM_CATALOG: https://eco-system.sergemimf.workers.dev/api/v1/product/capabilities
-  EXPECTED_VERSION: 1.5.2.20-navigation-coherence
-  EXPECTED_BUILD: eco-system-1.5.2.20-20261020-navigation-coherence
-  EXPECTED_CACHE: eco-system-v15220-navigation-coherence-20261020
+  EXPECTED_VERSION: 1.5.2.21-navigation-stability
+  EXPECTED_BUILD: eco-system-1.5.2.21-20261020-navigation-stability
+  EXPECTED_CACHE: eco-system-v15221-navigation-stability-20261020
   MIN_CAPABILITIES: 164
 
 jobs:
