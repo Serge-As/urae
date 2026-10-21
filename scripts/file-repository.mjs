@@ -85,6 +85,9 @@ export class FilePlatformRepository {
   saveObligation(v){return this.#write(()=>this.#upsert('obligations',v));}
   listObligations(t,a){return this.#read(()=>this.#values('obligations').filter(x=>x.tenantId===t&&(!a||x.assigneeId===a)));}
   saveCase(v){return this.#write(()=>this.#upsert('cases',v));}
+  getCaseById(id){return this.#read(()=>this.data.cases[id]);}
+  listCareCasesForActor(a){return this.#read(()=>this.#values('cases').filter(x=>x.openedBy===a||x.care?.participantIds.includes(a)));}
+  saveCaseRevision(v,revision){return this.#write(()=>{const prior=this.data.cases[v.id];if(revision===null?Boolean(prior):!prior||prior.tenantId!==v.tenantId||prior.openedBy!==v.openedBy||(prior.care?.revision??0)!==revision)return false;this.#upsert('cases',v);return true;});}
   listCases(t,a){return this.#read(()=>this.#values('cases').filter(x=>x.tenantId===t&&(!a||x.openedBy===a)));}
   saveAudit(v){return this.#write(()=>this.#upsert('audits',v));}
   listAudit(t){return this.#read(()=>this.#values('audits').filter(x=>x.tenantId===t));}

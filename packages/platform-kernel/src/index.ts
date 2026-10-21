@@ -108,7 +108,11 @@ export class ReconciliationEngine {
   }
 }
 
+export {caseOperationKey} from './case-care.js';
+import {createCaseCare,applyCaseCare} from './case-care.js';
 export class CaseEngine {
+  readonly createCare = createCaseCare;
+  readonly applyCare = applyCaseCare;
   private cases = new Map<Id, CaseRecord>();
   open(input: Omit<CaseRecord, 'id' | 'openedAt' | 'status'> & Partial<Pick<CaseRecord, 'id' | 'openedAt' | 'status'>>): CaseRecord {
     const item: CaseRecord = { ...input, id: input.id ?? makeId('case'), openedAt: input.openedAt ?? new Date().toISOString(), status: input.status ?? 'OPEN' };

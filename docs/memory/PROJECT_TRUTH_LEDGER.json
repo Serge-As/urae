@@ -1506,15 +1506,33 @@
     {
       "id": "delivery.lot24.notification_inbox.2026_10_21",
       "scope": "Recipient authorized immutable notification inbox and canonical waiting projection",
-      "status": "IN_PROGRESS",
+      "status": "VERIFIED_REMOTE",
       "observedOn": "2026-10-21",
       "evidence": [
-        "docs/release/evidence/LOT24-NOTIFICATION-INBOX-LOCAL-2026-10-21.json",
-        "868 native and 3 new Chromium passed; no skipped",
-        "docs/release/DELIVERY-2026-10-21-LOT24-NOTIFICATION-INBOX.md"
+        "docs/release/evidence/LOT24-NOTIFICATION-INBOX-PUBLIC-2026-10-21.json",
+        "source:0266e1b895d4a91a4bc57d189608aae360393c24",
+        "Actions:39617145115 SUCCESS; independent:39617145012 SUCCESS",
+        "delivery:868native36Chromium6WebKitPASS; independent34Chromium6WebKitPASS",
+        "31 public hashes and independent readback",
+        "privateR2SHA256:60c5f6e49a4feb0cb3d113497c708d601ea6ba3b24f0f284e80e408566111d6f"
       ],
-      "statement": "Not deployed. Local browser qualification PARTIAL: Chromium 8 passed/2 failed; WebKit 4 passed/2 failed. Existing Live startup, F5 repayment visibility and Local Room RTC checks failed. Baseline F5 failure differs; candidate regression not excluded. Assertions unchanged. Production remains 1.5.2.27. GitHub read access restored; isolated remote qualification pending; no external provider or real money inference.",
-      "next": "Publish exact contents to isolated candidate branch with remote expected-head check; full same-SHA remote qualification before delivery, preserving all local failures. L25 after L24 delivery closure."
+      "statement": "Programmed L24 delivered with documented limits. Canonical recipient-authorized Inbox, immutable events/read/attempts, quiet preferences, private return and waiting projection. Windows failures preserved; no provider receipt guarantee, no field acceptance.",
+      "next": "L25 Eco Care/SAV via Kernel.Cases; preserve acquired finance, offline and commerce."
+    },
+    {
+      "id": "delivery.lot25.eco_care.2026_10_21",
+      "status": "IN_PROGRESS",
+      "scope": "L25 Kernel.Cases support lifecycle",
+      "observedOn": "2026-10-21",
+      "statement": "898 native and 3 new Care Chromium pass locally; acquired governance gates pass. Initial retry, i18n and rollback-cache failures retained. Exact-source remote qualification and deployment pending. Legacy privacy and financial owners preserved.",
+      "evidence": [
+        "docs/change-impact/CIR-2026-10-21-LOT25-ECO-CARE.md",
+        "docs/memory/recalls/RECALL-2026-10-21-LOT25-ECO-CARE.md",
+        "tests/care-lot25-20261021.test.mjs",
+        "tests/browser/care-lot25-20261021.spec.mjs",
+        "docs/release/evidence/LOT25-ECO-CARE-LOCAL-2026-10-21.json"
+      ],
+      "next": "Qualify frozen source remotely, then verified recovery/public delivery. No deployment or field acceptance inferred from local results."
     }
   ]
 }

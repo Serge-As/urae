@@ -237,27 +237,29 @@
     {
       "id": "A24",
       "title": "Une Inbox qui distingue envoyé, reçu, lu et traité · lot 24",
-      "status": "IMPLEMENTED_LOCAL_PARTIAL_QUALIFICATION_PUBLICATION_BLOCKED",
+      "status": "DELIVERED_WITH_DOCUMENTED_LIMITS",
       "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md",
       "targetLots": [
         24
       ],
       "evidence": [
-        "docs/release/evidence/LOT24-NOTIFICATION-INBOX-LOCAL-2026-10-21.json",
-        "docs/release/DELIVERY-2026-10-21-LOT24-NOTIFICATION-INBOX.md",
-        "tests/notification-inbox-lot24-20261021.test.mjs",
-        "tests/browser/notification-inbox-lot24-20261021.spec.mjs"
+        "docs/release/evidence/LOT24-NOTIFICATION-INBOX-PUBLIC-2026-10-21.json",
+        "docs/release/DELIVERY-2026-10-21-LOT24-NOTIFICATION-INBOX.md"
       ],
-      "limits": "Not deployed; acquired Chromium and WebKit failures remain unresolved; no provider receipt proof, no automatic business completion, no new polling. Unknown waiting party remains explicit; transversal SAV is L25. Field acceptance NOT_ACCEPTED."
+      "limits": "Same-source Linux qualification/delivery and31 hashes pass; Windows failures retained. No guaranteed external transport, automatic business completion, new polling or server pagination claim. Unknown waiting party remains explicit. Transversal SAV is L25; FIELD_ACCEPTED=NOT_ACCEPTED."
     },
     {
       "id": "A25",
       "title": "Eco Care et SAV avec responsabilité et prochaine étape visibles · lot 25",
-      "status": "PLANNED_OR_REQUIRES_DETAILED_COVERAGE",
+      "status": "IN_PROGRESS",
       "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md",
       "targetLots": [
         25
-      ]
+      ],
+      "evidence": [
+        "docs/change-impact/CIR-2026-10-21-LOT25-ECO-CARE.md"
+      ],
+      "limits": "Implementation and tests written; qualification and deployment pending. Existing private cases stay private. No automatic universal commercial integration or financial correction."
     },
     {
       "id": "A26",
@@ -395,21 +397,23 @@
     {
       "id": "I18",
       "title": "Le SAV préventif par accord sur les attentes · propriétaire L25",
-      "status": "PLANNED_OR_REQUIRES_DETAILED_COVERAGE",
-      "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md"
+      "status": "IN_PROGRESS",
+      "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md",
+      "evidence": [
+        "docs/change-impact/CIR-2026-10-21-LOT25-ECO-CARE.md"
+      ],
+      "limits": "Implementation and tests written; qualification and deployment pending. Existing private cases stay private. No automatic universal commercial integration or financial correction."
     },
     {
       "id": "I19",
       "title": "Qui attend quoi, de qui et depuis quand ? · propriétaire L24",
-      "status": "IMPLEMENTED_LOCAL_PARTIAL_QUALIFICATION_PUBLICATION_BLOCKED",
+      "status": "DELIVERED_WITH_DOCUMENTED_LIMITS",
       "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md",
       "evidence": [
-        "docs/release/evidence/LOT24-NOTIFICATION-INBOX-LOCAL-2026-10-21.json",
-        "docs/release/DELIVERY-2026-10-21-LOT24-NOTIFICATION-INBOX.md",
-        "tests/notification-inbox-lot24-20261021.test.mjs",
-        "tests/browser/notification-inbox-lot24-20261021.spec.mjs"
+        "docs/release/evidence/LOT24-NOTIFICATION-INBOX-PUBLIC-2026-10-21.json",
+        "docs/release/DELIVERY-2026-10-21-LOT24-NOTIFICATION-INBOX.md"
       ],
-      "limits": "Not deployed; acquired Chromium and WebKit failures remain unresolved; no provider receipt proof, no automatic business completion, no new polling. Unknown waiting party remains explicit; transversal SAV is L25. Field acceptance NOT_ACCEPTED."
+      "limits": "Same-source Linux qualification/delivery and31 hashes pass; Windows failures retained. No guaranteed external transport, automatic business completion, new polling or server pagination claim. Unknown waiting party remains explicit. Transversal SAV is L25; FIELD_ACCEPTED=NOT_ACCEPTED."
     },
     {
       "id": "I20",

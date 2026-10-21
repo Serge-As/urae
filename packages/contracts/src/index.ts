@@ -181,6 +181,33 @@ export interface CaseRecord {
   openedBy: Id;
   openedAt: string;
   summary: string;
+  care?: CaseCareState;
+}
+
+export type CaseCareCategory = 'SUPPORT' | 'ISSUE' | 'DISPUTE' | 'PREVENTION';
+export type CaseCareAction = 'COMMENT' | 'ASSIGN' | 'UNASSIGN' | 'START_REVIEW' | 'UPDATE_PLAN' | 'PROPOSE_RESOLUTION' | 'ACCEPT_RESOLUTION' | 'REFUSE_RESOLUTION' | 'ESCALATE' | 'APPEAL' | 'REOPEN' | 'CLOSE' | 'WITHDRAW' | 'PROPOSE_EXPECTATIONS' | 'ACCEPT_EXPECTATIONS';
+export interface CaseExpectationItem {label:string;value:string;notApplicable:boolean;}
+export interface CaseExpectation {revision:number;items:CaseExpectationItem[];proposedBy:Id;proposedAt:string;acceptedBy:Id[];acceptedAt?:string;}
+export interface CaseCareEvent {id:string;fingerprint:string;kind:string;actorId:Id;at:string;note:string;data:Record<string,unknown>;}
+export interface CaseCareState {
+  revision:number;
+  category:CaseCareCategory;
+  visibility:'PRIVATE'|'GROUP_SUPPORT'|'ORDER_PARTIES';
+  sourceTenantId?:Id;
+  participantIds:Id[];
+  assignedTo?:Id;
+  nextAction:string;
+  waitingFor:'UNASSIGNED'|'RESPONSIBLE'|'REQUESTER'|'EXTERNAL'|'NONE';
+  indicativeDueAt?:string;
+  resolution?:{state:'PROPOSED'|'ACCEPTED'|'REFUSED';text:string;proposedBy:Id;proposedAt:string;decidedBy?:Id;decidedAt?:string;};
+  expectationDraft?:CaseExpectation;
+  acceptedExpectation?:CaseExpectation;
+  events:CaseCareEvent[];
+}
+export interface CaseCareCommand {
+  action:CaseCareAction; expectedRevision:number; idempotencyKey:string; note?:string;
+  assignedTo?:Id;nextAction?:string;indicativeDueAt?:string|null;waitingFor?:CaseCareState['waitingFor'];
+  evidenceIds?:Id[];items?:CaseExpectationItem[];expectationRevision?:number;
 }
 
 export type ProjectCapability = 'SIMULATE' | 'EDIT' | 'CONVERT' | 'GRANT_ACCESS';

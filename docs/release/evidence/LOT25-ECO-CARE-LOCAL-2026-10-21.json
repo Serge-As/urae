@@ -1,0 +1,47 @@
+{
+  "lot": 25,
+  "version": "1.5.2.29-eco-care",
+  "observedAt": "2026-10-21T18:16:50.341424+00:00",
+  "qualification": "VERIFIED_LOCAL_TARGETED_AND_NATIVE_FULL",
+  "deployment": "NOT_YET_DEPLOYED",
+  "native": {
+    "passed": 898,
+    "failed": 0,
+    "skipped": 0
+  },
+  "chromiumCare": {
+    "startTime": "2026-10-21T18:30:14.645Z",
+    "duration": 77019.02399999999,
+    "expected": 3,
+    "skipped": 0,
+    "unexpected": 0,
+    "flaky": 0
+  },
+  "fullBuild": "Normal TypeScript/PWA build succeeded; later UI and runtime translation refresh used the same TypeScript target/module options and regenerated PWA closure. Remote frozen-SHA CI must run the complete normal build.",
+  "acquiredBrowserQualification": "PENDING_SAME_SHA_REMOTE; prior Windows L24 failures retained, not silently waived.",
+  "failuresRetained": [
+    "Initial mobile explicit retry: 2 passed/1 failed; product now reuses existing bounded critical transport recovery, without quota or outbox reset.",
+    "Initial full native: 897 passed/1 failed; common runtime translation dictionary corrected, unchanged assertion now passes.",
+    "Release truth gate rejected wrong previous cache; corrected to actual v28 predecessor, v27 recovery also retained."
+  ],
+  "finance": "NO_NEW_FINANCIAL_AUTHORITY_OR_WRITE",
+  "realMoneyEnabled": false,
+  "fieldAcceptance": "NOT_ACCEPTED",
+  "evidenceSha256": {
+    "lot25-build-final.log": "34f6c647bb48ef12aae502435f3c750aacfa1a52eb4300917cc4302e3a461f33",
+    "lot25-native-targeted.log": "dbcb7a61b0ef3700bbf8d5dab22e8cdc25e4003bebec819162c2cc8e04c9d4cc",
+    "lot25-native-final.log": "221fa1e50970cbe7af471f85244f0cf8f46f584a1b2234e40dc9b01307fe4c39",
+    "lot25-native-full.log": "45319b7fcb9e2e012d5761dd4a3300f493208d9b7c715ad8c5a82531a3ed863b",
+    "lot25-native-full-final.log": "aade994ab2d99803ada7e35d1d2f1f4e6c03e4a2cfa904badf54da7158c087a9",
+    "lot25-browser-targeted.log": "36963140c0ff9ce4824d05455d25831ea5b20a49a8e9e533345cd19469224396",
+    "lot25-browser-targeted.json": "7c8829652758f667095a2b0bc0fd270ac8183e14ebc9f72a98e5d8aada724e37",
+    "lot25-browser-final.log": "388b8fde26e9fa5b7fb0d0865dd493b3f36415aa885e06377b3849c7fc726707",
+    "lot25-browser-final.json": "12bcfdde2ae465eba72e0f8b0ec260bc7f571af0a77e161a1b7c15f24c7893ba",
+    "lot25-bilingual-final.log": "cc13d61ba8589dd567b16e79cf793e088cb31ac906a3b763be555f3fd3f18000",
+    "lot25-governance-final.log": "997947126a495278e5546e4c95f513383f8918b6bb0a1c707a0f71e3b52df541",
+    "lot25-browser-closure.log": "cc485ddc475a103ca7b0d8e182ba7f89735af979235893d9b35239868b9ea2c6",
+    "lot25-browser-closure.json": "28c68a703545766c5565f5d5aeb7e292788e05a310c6c6f2fa32b339c9a9aae3",
+    "artifacts/lot25-care-mobile.png": "edf2400208db4323e16c7798dc74f7f5cb8f431a93f9859ce808591ebf5f402c"
+  },
+  "uiClosure": "After explicit retry success, clear only the matching Care error message, preserving any unrelated error. Context clear also removes its own old Care message. Existing financial error handling unchanged. Final browser asserts confirmed action, immediately hidden old error, exactly one comment, no polling and logout privacy."
+}

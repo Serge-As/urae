@@ -1573,6 +1573,10 @@ export class ConnectedApplication {
   }
   async expenses(input:{meetingId?:string;membershipId?:string;rubricId?:string;scope?:string}={}):Promise<any[]>{if(!this.activeGroupId)return[];const q=new URLSearchParams();for(const [k,v] of Object.entries(input))if(v)q.set(k,String(v));return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/expenses?${q}`);}
   async openSupportCase(summary:string):Promise<CaseRecord>{return this.request('/api/v1/cases',{method:'POST',body:JSON.stringify({summary,groupId:this.activeGroupId})});}
+  async careCases():Promise<any>{return this.request('/api/v1/care/cases',{cache:'no-store'});}
+  async createCareCase(input:{summary:string;category:string;groupId?:string;idempotencyKey:string}):Promise<CaseRecord>{if(!await this.canAttemptCriticalWrite())throw Error('NETWORK_UNAVAILABLE');return this.request('/api/v1/care/cases',{method:'POST',body:JSON.stringify(input)});}
+  async careCase(id:string):Promise<any>{return this.request(`/api/v1/care/cases/${encodeURIComponent(id)}`,{cache:'no-store'});}
+  async commandCareCase(id:string,input:Record<string,unknown>):Promise<any>{if(!await this.canAttemptCriticalWrite())throw Error('NETWORK_UNAVAILABLE');return this.request(`/api/v1/care/cases/${encodeURIComponent(id)}/commands`,{method:'POST',body:JSON.stringify(input)});}
   async inboxItems(options:{requireServer?:boolean}={}):Promise<Array<{id:string;kind:string;title:string;priority:string;status:string;groupId?:string;dueAt?:string;openedAt?:string;waitingFor?:'YOU'|'CASE_REVIEW'|'PARTY_NOT_SPECIFIED';sourceType?:string;sourceId?:string}>>{return this.request('/api/v1/inbox',options.requireServer?{cache:'no-store'}:{});}
 
   async productCatalog():Promise<{version:string;count:number;capabilities:ReturnType<ConnectedApplication['productModules']>}>{

@@ -1,4 +1,5 @@
 import {mountNotificationCenterUI} from './notification-center-ui.js';
+import {mountEcoCareUI} from './eco-care-ui.js';
 import {createJourneyContext,mountJourneyUI} from './journey-context.js';
 import {mountWorkspaceNavigation} from './workspace-navigation.js';
 import {mountShellNavigation} from './shell-navigation.js';
@@ -186,7 +187,7 @@ let modules = [];
 let applicationStartup = Promise.resolve();
 let selectedLot = 'ALL';
 let deferredInstallPrompt;
-const CAHIER_VERSION = '1.5.2.28-notification-inbox';
+const CAHIER_VERSION = '1.5.2.29-eco-care';
 const $ = (s) => { const e = document.querySelector(s); if (!e)
     throw new Error(`UI_ELEMENT_NOT_FOUND:${s}`); return e; };
 const val = (id) => document.getElementById(id).value.trim();
@@ -304,7 +305,9 @@ const openAuthorizedNotice=async notice=>{
     if(!(verified.action.view==='trash'&&verified.action.entityKind==='GROUP')&&app.activeGroup()!==notice.groupId){app.selectGroup(notice.groupId);await refreshGroupContext();}
     if(actor===app.currentActor()&&tenant===app.currentTenant())openNoticeAction(verified.action);
 };
-const notificationCenterUI=mountNotificationCenterUI({app,loadNotices:()=>app.notificationsAcrossGroups(),openNotice:openAuthorizedNotice,openWaiting:async item=>{const actor=app.currentActor(),tenant=app.currentTenant();await renderInbox(item.id);if(actor===app.currentActor()&&tenant===app.currentTenant())go('inbox',{anchor:'eco-inbox-item-'+item.id,force:true});},showError:fail,notify:toast,date});
+const notificationCenterUI=mountNotificationCenterUI({app,loadNotices:()=>app.notificationsAcrossGroups(),openNotice:openAuthorizedNotice,openWaiting:async item=>{const actor=app.currentActor(),tenant=app.currentTenant();await renderInbox(item.id);if(actor===app.currentActor()&&tenant===app.currentTenant()){go('inbox',{anchor:'eco-inbox-item-'+item.id,force:true});if(item.kind==='case')await ecoCareUI.open(item.id);}},showError:fail,notify:toast,date});
+let careErrorMessage='';
+const ecoCareUI=mountEcoCareUI({app,showError:error=>{careErrorMessage=error.message;fail(error);},clearError:()=>{if(careErrorMessage&&$('#errorBox .error-message')?.textContent.includes(careErrorMessage))hideError();careErrorMessage='';},notify:toast,changed:()=>renderInbox(),date});
 
 const miscRubricUI = mountMiscRubricUI({ app, notify: toast, showError: fail, getMembers: () => members, getMeetings: () => meetings, isManager, fmt });
 const pairingUI = mountPairingUI({ app, notify: toast, showError: fail, getMembers: () => members, isManager, afterMembershipChanged: async groupId => { await renderGroups(); if(groupId){ app.selectGroup(groupId); await refreshGroupContext(); } } });
@@ -2254,7 +2257,7 @@ const renderNotificationCenter=async(options={})=>{
 };
 document.querySelector('#notificationCenterRefreshBtn')?.addEventListener('click',()=>void renderNotificationCenter());
 window.addEventListener('eco:view-changed',event=>{
-  if(event.detail?.view==='inbox')void renderNotificationCenter();
+  if(event.detail?.view==='inbox'){void renderNotificationCenter();void ecoCareUI.refresh();}
 });
 
 const DISMISSED_FINANCIAL_ALERTS='eco.dismissedFinancialAlerts';
@@ -2499,6 +2502,7 @@ const refreshGroupContext = async () => {
     personalCockpitUI.clearForContext?.();
     personalShopsUI.clearForContext?.();
     notificationCenterUI.clearForContext?.();
+    ecoCareUI.clearForContext?.();
     universalSearchRevision++;document.getElementById('universalSearchFullResults')?.replaceChildren();const searchScope=JSON.stringify([app.currentActor(),app.currentTenant(),app.activeGroup()]);if(searchScope!==universalSearchScope){universalSearchScope=searchScope;const input=document.getElementById('universalSearchFull');if(input)input.value='';}
     // Account navigation does not wait for optional group/financial panels.
     // Reuse this same membership-checked directory in the personal cockpit.
@@ -2976,16 +2980,7 @@ catch (e) {
     fail(e);
 } });
 $('#catalogSearch').addEventListener('input', renderModules);
-onSubmit('#supportForm', async (e) => { e.preventDefault(); try {
-    const c = await app.openSupportCase(val('supportSummary'));
-    document.getElementById('supportSummary').value = '';
-    $('#caseLog').textContent = `Dossier ${c.id} ouvert.`;
-    await renderInbox();
-    toast('Dossier de support ouvert.');
-}
-catch (e) {
-    fail(e);
-} });
+// Eco Care delegates this form to Kernel.Cases through its versioned adapter.
 $('#queueBtn').addEventListener('click', async () => { await app.queueDemoIntent('Note hors ligne Cahier App 1.1'); renderOutbox(); toast('Note mise en file.'); });
 $('#syncBtn').addEventListener('click', async () => { if (!navigator.onLine) {
     fail(new Error('Hors ligne'));
@@ -3036,6 +3031,7 @@ $('#languageSelect').addEventListener('change', async e => {
     applyRuntimeLocale(uiLocale);
     await personalShopsUI.setLocale?.();
     await notificationCenterUI.setLocale?.();
+    await ecoCareUI.setLocale?.();
     completionUI.setLocale();
     advancedUI.setLocale();
     renderConnectivity(); renderModules(); renderEcosystemHighlights(); renderDomainHubs(); renderActiveGroup(); renderGroupSelector();
@@ -3342,7 +3338,7 @@ document.querySelector('#claimLocalAccountBtn')?.addEventListener('click',()=>vo
     catch(e){fail(e);}
     finally{if(button)button.disabled=false;}
 })());
-$('#logoutBtn').addEventListener('click',async()=>{try{await app.logout();notificationCenterUI.clearForContext(true);journeyUI.refresh();localAssistantUI.refreshContext();document.body.classList.add('signed-out');$('#authScreen').hidden=false;$('#accountName').textContent='';const claim=document.querySelector('#claimLocalAccountBtn');if(claim)claim.hidden=true;showAuth(tx('Compte fermé sur cet appareil. Vos données locales ne sont pas supprimées.','Account signed out on this device. Your local data was not deleted.'));}catch(e){fail(e);}});
+$('#logoutBtn').addEventListener('click',async()=>{try{await app.logout();notificationCenterUI.clearForContext(true);ecoCareUI.clearForContext(true);journeyUI.refresh();localAssistantUI.refreshContext();document.body.classList.add('signed-out');$('#authScreen').hidden=false;$('#accountName').textContent='';const claim=document.querySelector('#claimLocalAccountBtn');if(claim)claim.hidden=true;showAuth(tx('Compte fermé sur cet appareil. Vos données locales ne sont pas supprimées.','Account signed out on this device. Your local data was not deleted.'));}catch(e){fail(e);}});
 // Online recovery is serialized by resumeOnline() above: sync durable outbox first, then restart projections.
 window.addEventListener('offline',()=>{renderConnectivity();const claim=document.querySelector('#claimLocalAccountBtn');if(claim&&!claim.hidden){claim.disabled=true;claim.textContent=tx('Compte local · Internet requis pour finaliser','Local account · Internet needed to finalize');}});
 void ensureCurrentServiceWorker();

@@ -1,0 +1,9 @@
+# Recall — L25 Eco Care / SAV
+
+Reprise après clôture réelle de L24, pas nouvel audit général. L25 réutilise Kernel.Cases pour son cycle de vie, les dépôts mémoire/D1/fichier existants, MarketService pour les parties d’une commande et Kernel.Evidence pour les pièces. CIR : docs/change-impact/CIR-2026-10-21-LOT25-ECO-CARE.md.
+
+Acquis à conserver : finance Ledger/D1 et deux feuilles normales, résumé FinancialWorkCoordinator au passage au membre suivant, outbox et ACK, Live, prêts/épargne, boutiques et stocks, droits privés, préférences OFF, démarrage protégé et centre d’alertes L24. Une lecture, affectation ou résolution de dossier ne réalise aucun remboursement ni mouvement de stock.
+
+Propositions concernées : A25 et I18 seulement. Liste d’attentes préventive acceptée par deux parties distinctes ; une proposition ultérieure ne réécrit pas l’accord précédent. Aucune prétention de validité juridique, de permanence SAV ou d’intégration automatique universelle aux commandes. Qualification et publication restent à prouver sur la source finale. FIELD_ACCEPTED=NOT_ACCEPTED.
+
+Qualification locale et corrections constatées : 30 scénarios natifs ciblés, les **898 tests natifs complets** et les **3 scénarios Chromium Care** passent sans ignoré. Les contrôles architecture, gouvernance, constitution, vérité, mémoire et couverture passent. Défauts initiaux conservés dans le reçu local : reprise réseau mobile, couverture du dictionnaire anglais et cache précédent de récupération. Corrections effectuées chez les propriétaires existants, sans affaiblir les assertions. Reçu : docs/release/evidence/LOT25-ECO-CARE-LOCAL-2026-10-21.json. La qualification complète distante du même SHA, la sauvegarde restaurable et les empreintes publiques restent obligatoires avant publication. FIELD_ACCEPTED=NOT_ACCEPTED ; coût exact du chat non mesurable.

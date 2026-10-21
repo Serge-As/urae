@@ -139,6 +139,9 @@ export interface PlatformRepository {
 
   saveCase(record: CaseRecord): void | Promise<void>;
   listCases(tenantId: Id, openedBy?: Id): CaseRecord[] | Promise<CaseRecord[]>;
+  getCaseById(id:Id):CaseRecord|undefined|Promise<CaseRecord|undefined>;
+  listCareCasesForActor(actorId:Id):CaseRecord[]|Promise<CaseRecord[]>;
+  saveCaseRevision(record:CaseRecord,expectedRevision:number|null):boolean|Promise<boolean>;
 
   saveEvidence(record: EvidenceRecord): void | Promise<void>;
   getEvidence(tenantId: Id, id: Id): EvidenceRecord | undefined | Promise<EvidenceRecord | undefined>;
@@ -378,6 +381,9 @@ export class InMemoryPlatformRepository implements PlatformRepository {
   listObligations(tenantId: Id, assigneeId?: Id): Obligation[] { return [...this.obligations.values()].filter(x => x.tenantId === tenantId && (!assigneeId || x.assigneeId === assigneeId)).map(x => structuredClone(x)); }
 
   saveCase(record: CaseRecord): void { this.cases.set(record.id, structuredClone(record)); }
+  getCaseById(id:Id){const x=this.cases.get(id);return x?structuredClone(x):undefined;}
+  listCareCasesForActor(actorId:Id){return [...this.cases.values()].filter(x=>x.openedBy===actorId||x.care?.participantIds.includes(actorId)).map(x=>structuredClone(x));}
+  saveCaseRevision(record:CaseRecord,expectedRevision:number|null){const prior=this.cases.get(record.id);if(expectedRevision===null?Boolean(prior):!prior||prior.tenantId!==record.tenantId||prior.openedBy!==record.openedBy||(prior.care?.revision??0)!==expectedRevision)return false;this.cases.set(record.id,structuredClone(record));return true;}
   listCases(tenantId: Id, openedBy?: Id): CaseRecord[] { return [...this.cases.values()].filter(x => x.tenantId === tenantId && (!openedBy || x.openedBy === openedBy)).map(x => structuredClone(x)); }
 
   saveEvidence(record: EvidenceRecord): void {
@@ -877,6 +883,14 @@ export class D1PlatformRepository implements PlatformRepository {
   saveObligation(x:Obligation){return this.saveRecord('obligation',x,{tenantId:x.tenantId,groupId:x.groupId,assigneeId:x.assigneeId});}
   listObligations(t:Id,a?:Id){return this.list<Obligation>('obligation',a?'tenant_id=? AND assignee_id=?':'tenant_id=?',a?[t,a]:[t]);}
   saveCase(x:CaseRecord){return this.saveRecord('case',x,{tenantId:x.tenantId,groupId:x.groupId,assigneeId:x.openedBy});}
+  getCaseById(id:Id){return this.byId<CaseRecord>('case',id);}
+  listCareCasesForActor(actorId:Id){return this.list<CaseRecord>('case',"(assignee_id=? OR EXISTS (SELECT 1 FROM json_each(data_json,'$.care.participantIds') AS p WHERE p.value=?))",[actorId,actorId]);}
+  async saveCaseRevision(x:CaseRecord,expectedRevision:number|null){
+    const result=expectedRevision===null
+      ?await this.db.prepare("INSERT INTO platform_records(record_type,record_id,tenant_id,group_id,assignee_id,data_json,updated_at) VALUES('case',?,?,?,?,?,?) ON CONFLICT(record_type,record_id) DO NOTHING").bind(x.id,x.tenantId,x.groupId??null,x.openedBy,JSON.stringify(x),new Date().toISOString()).run()
+      :await this.db.prepare("UPDATE platform_records SET data_json=?,updated_at=? WHERE record_type='case' AND record_id=? AND tenant_id=? AND assignee_id=? AND COALESCE(json_extract(data_json,'$.care.revision'),0)=?").bind(JSON.stringify(x),new Date().toISOString(),x.id,x.tenantId,x.openedBy,expectedRevision).run();
+    const changes=result as {meta?:{changes?:number};changes?:number};return Number(changes.meta?.changes??changes.changes??0)===1;
+  }
   listCases(t:Id,o?:Id){return this.list<CaseRecord>('case',o?'tenant_id=? AND assignee_id=?':'tenant_id=?',o?[t,o]:[t]);}
   async saveEvidence(x:EvidenceRecord){
     const previous=await this.byId<EvidenceRecord>('evidence',x.id);

@@ -1,0 +1,188 @@
+{
+  "verifiedAt": "2026-10-21T14:40:29.524Z",
+  "version": "1.5.2.28-notification-inbox",
+  "sourceSha": "0266e1b895d4a91a4bc57d189608aae360393c24",
+  "buildId": "eco-system-1.5.2.28-20261021-notification-inbox",
+  "pwaCache": "eco-system-v15228-notification-inbox-20261021",
+  "capabilities": 164,
+  "realMoneyEnabled": false,
+  "assets": [
+    {
+      "path": "/",
+      "sha256": "6614fc75a9182ef6cb5793ad604b988b2cfeaadf1e974cb01d22bdd3f58e8ade"
+    },
+    {
+      "path": "/styles.css",
+      "sha256": "2c5bc7a211153d6d35b0db634f1d6ae48e0dc54bc0dc7ff839168e57325f5107"
+    },
+    {
+      "path": "/sw.js",
+      "sha256": "406ae3b9bb5fa6dbd56d6c7e7ca1bb9f9a9723f3909cb627f1106e5a54d18074"
+    },
+    {
+      "path": "/eco-shell-manifest.json",
+      "sha256": "7c4bbfb7fe275dea08bf9312613386e980b95476beab19b878e83d8fe64bdde5"
+    },
+    {
+      "path": "/src/main.js",
+      "sha256": "05f184b91d474c7c2a8b1e919cb2a3143c4ea8a82798ca48b89d1ce49aeaff0f"
+    },
+    {
+      "path": "/src/financial-work-ui.js",
+      "sha256": "4968d4ec17afca3faebe4416a2b91e318f04b544a988d63f0947e8891b779e1b"
+    },
+    {
+      "path": "/src/completion-ui.js",
+      "sha256": "08b6bc67eb6c77c2065ae3c983523b21d4d223190b4a6f82d0eff999aedc5fa1"
+    },
+    {
+      "path": "/src/ui-modes.js",
+      "sha256": "795339401f0eaa42a9822a918cf3982bedfaea02c68f4669a845372bb711ee81"
+    },
+    {
+      "path": "/src/field-hardening.js",
+      "sha256": "6c4284d33ac9441a847fc504f18d9bf079ded736c05656b287dcd96e9f4efb01"
+    },
+    {
+      "path": "/src/runtime-i18n.js",
+      "sha256": "7a1212d2e247f1d5cafdf234101fb99048dd329a66c4ae492f664d1f4ad117fa"
+    },
+    {
+      "path": "/src/shell-navigation.js",
+      "sha256": "5bc9ec6d5a9c17ab0190370c464e79cd0029b25009b168b7486c0acb30865b72"
+    },
+    {
+      "path": "/src/session-rehearsal.js",
+      "sha256": "57b6e41c3b7381f0b86e8569d9bf45d64616f1dd8af353295061d611b3d31b63"
+    },
+    {
+      "path": "/src/request-budget-ui.js",
+      "sha256": "62dccfab867860795b77df2936bf02a8fef7e21e10f4842be6f3545a8322e83d"
+    },
+    {
+      "path": "/packages/application/src/index.js",
+      "sha256": "e1d1e139a1f31361ab892b996e2780da0b4dfc7a17b8969fe1e2d422baca3d29"
+    },
+    {
+      "path": "/packages/application/src/request-budget.js",
+      "sha256": "00f39471099cc69127ae301660d22694c5b8097e6be7ea42fbed040aede498d5"
+    },
+    {
+      "path": "/src/cockpit-priorities.js",
+      "sha256": "dfb2678284d5fcb3269bb366a4c4e7e1dfd25ab694bba6c5005a70c502014de3"
+    },
+    {
+      "path": "/src/cockpit-priorities-ui.js",
+      "sha256": "86ce0a26c0573893e81a2c1d20b64994a90a091b53524aa6992abe2c97bc53f2"
+    },
+    {
+      "path": "/src/journey-context.js",
+      "sha256": "5199dd16542efa8434e15e6a5f96f1e018f2963d49ce4b0c10d3a71d23f2a9ae"
+    },
+    {
+      "path": "/src/personal-cockpit-ui.js",
+      "sha256": "25d59daffbb6ebc36a6d913341b661bfb0c24d887a633cb468804233769a4a43"
+    },
+    {
+      "path": "/src/workspace-navigation.js",
+      "sha256": "4eef9756b38fb5e9d0dee5a8af7d4a904f7ce01ae2de9d2ba93bb3349d20c7d1"
+    },
+    {
+      "path": "/src/assistant-actions.js",
+      "sha256": "49844001277c862414e566446cb9ea7db4f0ddd73e456a2c17545f27e113779e"
+    },
+    {
+      "path": "/src/local-assistant.js",
+      "sha256": "f4d7722f9efbc3f810ad8f13f10fc12e3e60f74edd67e7ffb7076092dd76acd4"
+    },
+    {
+      "path": "/src/universal-search.js",
+      "sha256": "4364b14d1067f1091c47e9da28a07312f82cebaae4d911d04fb1bd96580e5c07"
+    },
+    {
+      "path": "/src/advanced-ui.js",
+      "sha256": "5e15c0426ca21e2c8a26592ec3cff8aa7b8dd04b916199b06f79ca98b576cc57"
+    },
+    {
+      "path": "/src/community-shop-ui.js",
+      "sha256": "ef6e532681c3edeb222bb18adc2ceb50d28bc90b50de2ca83056c5d78846ad00"
+    },
+    {
+      "path": "/src/market-order-board.js",
+      "sha256": "b8bf9d49bdc2dcf7c228a74fe3b911dff7dd0521afa0e71b76f3223deab76b16"
+    },
+    {
+      "path": "/src/market-quotes-ui.js",
+      "sha256": "f095fc06476416d841409c2523ced172e0f2ef08d73611bf679481d7b5338bc7"
+    },
+    {
+      "path": "/src/personal-shops-ui.js",
+      "sha256": "1bd054bc18ee0295c7d0494c6d8b0955d55d6f222125db348444aef6fe8f20b5"
+    },
+    {
+      "path": "/src/business-studio-ui.js",
+      "sha256": "6c2fa695eecb81263fbd6bb095adbc4f7be8d191ec50fddeb0a0d3f50b3a319e"
+    },
+    {
+      "path": "/src/notification-center-ui.js",
+      "sha256": "bc9fd70613a47878cd0ec75391f2693667a53cdecb667b8654dc7344a5571f86"
+    },
+    {
+      "path": "/packages/notifications/src/policy.js",
+      "sha256": "f4f044f4b77c980e09d6446d5de8180c5f2f9fe25810ff45c3e304f08c07e1f9"
+    }
+  ],
+  "status": "DEPLOYED_VERIFIED_AUTOMATED_FIELD_NOT_ACCEPTED",
+  "delivery": {
+    "source": "0266e1b895d4a91a4bc57d189608aae360393c24",
+    "deliveryConclusion": "success",
+    "independentConclusion": "success",
+    "deliveryRun": 39617145115,
+    "independentRun": 39617145012,
+    "previousIndependentRun": 39615412218,
+    "native": 868,
+    "chromium": 36,
+    "webkit": 6,
+    "workerId": "cdbd805c-cce8-4057-acb5-8b2238842655",
+    "backupSha256": "60c5f6e49a4feb0cb3d113497c708d601ea6ba3b24f0f284e80e408566111d6f",
+    "deliveryAttempt": 1,
+    "deliveryUrl": "https://github.com/Serge-As/urae/actions/runs/39617145115",
+    "independentUrl": "https://github.com/Serge-As/urae/actions/runs/39617145012"
+  },
+  "independentPublicVerifiedAt": "2026-10-21T14:44:51.8540688Z",
+  "windowsLocalQualification": "PARTIAL; original failures retained in local receipt; same-source Linux suites passed",
+  "fieldAcceptance": "NOT_ACCEPTED",
+  "independentHealth": {
+    "ok": true,
+    "service": "tontine-api",
+    "version": "1.5.2.28-notification-inbox",
+    "buildId": "eco-system-1.5.2.28-20261021-notification-inbox",
+    "commitSha": "0266e1b895d4a91a4bc57d189608aae360393c24",
+    "schemaVersion": "d1-additive-20260923",
+    "policyVersion": "live-finance-policy-20261007-event-push-repayment",
+    "pwaCache": "eco-system-v15228-notification-inbox-20261021",
+    "now": "2026-10-21T14:42:43.665Z",
+    "realMoneyEnabled": false,
+    "manualCashLedgerEnabled": true,
+    "premiumLiveEnabled": true,
+    "founderControlBound": true,
+    "communityRealtimeBound": true,
+    "artifactStorageBound": true,
+    "artifactStorageMode": "R2",
+    "contextScope": "request"
+  },
+  "recoveryManifest": {
+    "protocol": "ECO_RECOVERY_1",
+    "sourceSha": "0266e1b895d4a91a4bc57d189608aae360393c24",
+    "createdAt": "2026-10-21T14:39:57.860Z",
+    "database": "eco-system-db",
+    "bucket": "eco-system-backups",
+    "verification": {
+      "integrity": "ok",
+      "foreignKeys": "ok",
+      "tables": 50,
+      "sqlBytes": 2936766,
+      "sqlSha256": "209f536b2c6af897f58c1e4b35b4bc0c3bbae8a86b27b3156a0e85159b26254e"
+    }
+  }
+}

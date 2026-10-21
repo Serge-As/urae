@@ -1855,3 +1855,18 @@ body.ui-mode-assisted .eco-workbench :is(button,p,small,span,label){font-size:15
 
 /* Keep the notification workspace readable across the full Inbox grid. */
 #notificationCenterPanel{grid-column:1/-1}
+
+/* Eco Care projects Kernel.Cases; scoped styles preserve finance table density. */
+#ecoCarePanel{grid-column:1/-1;min-width:0}
+#ecoCarePanel .care-layout{display:grid;grid-template-columns:minmax(230px,.7fr) minmax(0,1.3fr);gap:18px;margin-top:16px;align-items:start}
+#ecoCarePanel .care-case-card,#ecoCarePanel .care-detail{min-width:0;border:1px solid var(--line,#d1ded7);border-radius:14px;background:var(--surface,#fff);padding:16px;overflow-wrap:anywhere}
+#ecoCarePanel .care-case-card h3,#ecoCarePanel .care-detail h3{font-size:1.05rem;line-height:1.4;margin:0 0 10px}
+#ecoCarePanel .care-state{display:inline-block;background:#e7f3ed;color:#145c46;padding:5px 9px;border-radius:8px;font-size:.82rem;font-weight:700}
+#ecoCarePanel .care-resolution,#ecoCarePanel .care-expectation{border-inline-start:3px solid #19715a;background:#f2f7f3;padding:12px;margin:12px 0}
+#ecoCarePanel .care-history li{border-bottom:1px solid var(--line,#d1ded7);padding:10px 0}
+#ecoCarePanel .care-history small{display:block}
+#ecoCarePanel .care-reference{font-size:.8rem;overflow-wrap:anywhere}
+#ecoCarePanel [hidden]{display:none!important}
+#ecoCareFilters{margin:14px 0}
+#ecoCareFilters button[aria-pressed=true]{background:#17674f;color:#fff}
+@media(max-width:1000px){#ecoCarePanel .care-layout{grid-template-columns:minmax(0,1fr)}}

@@ -10,8 +10,8 @@
   <meta name="format-detection" content="telephone=no">
   <meta id="metaDescription" name="description" content="Eco-System — plateforme de gestion de tontines, associations et communautés">
   <link rel="manifest" href="/manifest.webmanifest">
-  <link rel="stylesheet" href="/styles.css?v=15228">
-  <title>Eco-System — 1.5.2.28 · Cockpit personnel · Eco IA</title>
+  <link rel="stylesheet" href="/styles.css?v=15229">
+  <title>Eco-System — 1.5.2.29 · Cockpit personnel · Eco IA</title>
   <meta name="application-name" content="Éco-System">
 </head>
 <body class="auth-restoring ui-mode-visual eco-cockpit-shell">
@@ -37,7 +37,7 @@
 <header class="topbar">
     <div class="brand">
       <div class="logo">E</div>
-      <div><strong>Eco-System</strong><small>Plateforme Tontines · Associations · Communautés</small><span class="version-badge">ECO-SYSTEM · 1.5.2.28</span><span id="previewEnvBadge" class="preview-env-badge" hidden>PRÉPRODUCTION · données de test séparées</span></div>
+      <div><strong>Eco-System</strong><small>Plateforme Tontines · Associations · Communautés</small><span class="version-badge">ECO-SYSTEM · 1.5.2.29</span><span id="previewEnvBadge" class="preview-env-badge" hidden>PRÉPRODUCTION · données de test séparées</span></div>
     </div>
     <div class="top-context">
       <select id="activeGroupSelect" aria-label="Groupe actif"><option value="">Aucun groupe actif</option></select>
@@ -101,7 +101,7 @@
     <main class="content">
       <section id="view-dashboard" class="view active">
         <header class="cockpit-welcome">
-          <div><span class="eyebrow">MON ESPACE ECO</span><h1 id="cockpitGreeting">Votre journée, vos possibilités</h1><p id="cockpitContext">Vos groupes, vos activités et vos opportunités au même endroit.</p><small class="cahier-code">1.5.2.28 · Cockpit personnel</small></div>
+          <div><span class="eyebrow">MON ESPACE ECO</span><h1 id="cockpitGreeting">Votre journée, vos possibilités</h1><p id="cockpitContext">Vos groupes, vos activités et vos opportunités au même endroit.</p><small class="cahier-code">1.5.2.29 · Cockpit personnel</small></div>
           <div class="actions"><button class="primary" type="button" data-go="assistant">✦ Parler à Eco IA</button><button class="secondary" type="button" data-go="launch">＋ Créer / intégrer</button></div>
         </header>
         <div class="cockpit-workbench">
@@ -1377,7 +1377,7 @@
         <div class="two-col">
           <section class="panel"><h2>Boîte universelle</h2><ul id="inboxList" class="list"></ul></section>
           <section class="panel" id="notificationCenterPanel"><div class="panel-head"><div><h2>Centre d’alertes</h2><p id="notificationCenterMeta">Notifications du groupe actif, triées par priorité et fraîcheur.</p></div><button id="notificationCenterRefreshBtn" type="button" class="secondary">Actualiser</button></div><div id="notificationCenterList" class="stack"></div></section>
-          <section class="panel"><h2>Support / litige / recours</h2><form id="supportForm"><textarea id="supportSummary" rows="4" required placeholder="Décrivez la situation…"></textarea><button class="primary">Ouvrir un dossier</button></form><p id="caseLog" class="hint"></p></section>
+          <section class="panel" id="ecoCarePanel"><div class="panel-head"><div><h2>Eco Care · Support et SAV</h2><p id="ecoCareIntro">Dossier privé ou partagé avec les gestionnaires du groupe choisi. Délais indicatifs, sans permanence garantie.</p></div><button id="ecoCareRefresh" type="button" class="secondary">Actualiser les dossiers</button></div><form id="supportForm" class="form-grid"><label>Type<select name="category"><option value="SUPPORT">Aide et clarification</option><option value="ISSUE">Incident ou SAV</option><option value="DISPUTE">Litige et recours</option><option value="PREVENTION">Attentes avant engagement</option></select></label><label>Audience<select name="scope"><option value="PRIVATE">Mon dossier privé</option><option value="GROUP">Gestionnaires du groupe actif</option></select></label><label class="full">Situation<textarea id="supportSummary" name="summary" rows="3" maxlength="3000" required placeholder="Décrivez la situation…"></textarea></label><button class="primary" type="submit">Ouvrir un dossier</button></form><p id="caseLog" class="hint" role="status"></p><div id="ecoCareFilters" class="actions"></div><div class="care-layout"><div id="ecoCareList" class="stack"></div><section id="ecoCareDetail" class="care-detail" hidden></section></div></section>
         </div>
         <section class="panel"><h2>File offline</h2><div class="actions"><button id="queueBtn">Ajouter une note de test</button><button id="syncBtn" class="primary">Synchroniser</button></div><ul id="outboxList" class="list"></ul></section>
       </section>
@@ -1485,8 +1485,8 @@
     </main>
   </div>
 
-  <footer class="footer">Eco-System 1.5.2.28 · Cahier Maître 2.3.4 + Blueprint 5.0.0 · UX unifiée</footer>
-  <script type="module" src="/src/ui-modes.js?v=15228"></script>
-  <script type="module" src="/src/main.js?v=15228"></script>
+  <footer class="footer">Eco-System 1.5.2.29 · Cahier Maître 2.3.4 + Blueprint 5.0.0 · UX unifiée</footer>
+  <script type="module" src="/src/ui-modes.js?v=15229"></script>
+  <script type="module" src="/src/main.js?v=15229"></script>
 </body>
 </html>

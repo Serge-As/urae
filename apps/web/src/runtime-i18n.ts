@@ -3,6 +3,17 @@ import {messages} from './i18n.js';
 export type RuntimeLocale = 'fr'|'en';
 
 const EXTRA_FR_EN: Record<string,string> = {
+  'Eco Care · Support et SAV':'Eco Care · Support and after-sales',
+  'Dossier privé ou partagé avec les gestionnaires du groupe choisi. Délais indicatifs, sans permanence garantie.':'Private case or shared with the selected group managers. Indicative dates, without guaranteed support availability.',
+  'Actualiser les dossiers':'Refresh cases',
+  'Aide et clarification':'Help and clarification',
+  'Incident ou SAV':'Incident or after-sales',
+  'Litige et recours':'Dispute and appeal',
+  'Attentes avant engagement':'Expectations before commitment',
+  'Mon dossier privé':'My private case',
+  'Gestionnaires du groupe actif':'Current group managers',
+  'Décrivez la situation…':'Describe the situation…',
+  'Ouvrir un dossier':'Open a case',
   'Compte acheteur pour la réception':'Buyer account for receipt',
   'Aucun compte lié':'No linked account',
   'Mes boutiques · découvrir · mes achats':'My shops · discover · my purchases',

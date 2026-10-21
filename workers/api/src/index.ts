@@ -1,4 +1,6 @@
 import { PlatformKernel } from '../../../packages/platform-kernel/src/index.js';
+import {caseCareAdapter} from './care.js';
+import type {CaseCareCommand,CaseCareCategory} from '../../../packages/contracts/src/index.js';
 import { D1PlatformRepository, InMemoryPlatformRepository, type D1DatabaseLike, type PlatformRepository } from '../../../packages/repositories/src/index.js';
 import { FoundationService, LedgerService, MeetingService, starterGroupOperatingPolicy, compareNormalizedCellIntents, financialCellWinnerRecordId, financialCellIntentRecordId } from '../../../packages/domain/src/index.js';
 import { DiscoveryService, MembershipGatewayService } from '../../../packages/discovery/src/index.js';
@@ -78,11 +80,11 @@ interface WorkersAILike {
   run?(model:string,input:Record<string,unknown>,options?:Record<string,unknown>):Promise<unknown>;
 }
 
-const RELEASE_VERSION='1.5.2.28-notification-inbox';
-const RELEASE_BUILD_ID='eco-system-1.5.2.28-20261021-notification-inbox';
+const RELEASE_VERSION='1.5.2.29-eco-care';
+const RELEASE_BUILD_ID='eco-system-1.5.2.29-20261021-eco-care';
 const RELEASE_SCHEMA_VERSION='d1-additive-20260923';
 const RELEASE_POLICY_VERSION='live-finance-policy-20261007-event-push-repayment';
-const RELEASE_PWA_CACHE='eco-system-v15228-notification-inbox-20261021';
+const RELEASE_PWA_CACHE='eco-system-v15229-eco-care-20261021';
 
 const defaultRepo = new InMemoryPlatformRepository();
 const defaultReferralBudgets = new InMemoryReferralBudgetStore();
@@ -3039,6 +3041,18 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
     }
     if(request.method==='GET'&&url.pathname==='/api/v1/cases') return json(await repo.listCases(ctx.tenantId,ctx.actorId),200,cors);
 
+    if(url.pathname==='/api/v1/care/cases'){
+      const care=caseCareAdapter(repo,kernel);
+      if(request.method==='GET')return json(await care.list(),200,cors);
+      if(request.method==='POST'){const body=await readJson<{summary:string;category?:CaseCareCategory;groupId?:string;idempotencyKey:string}>(request);return json(await care.create(body),201,cors);}
+    }
+    const careRoute=url.pathname.match(/^\/api\/v1\/care\/cases\/([^/]+)(\/commands)?$/);
+    if(careRoute){
+      const care=caseCareAdapter(repo,kernel),id=decodeURIComponent(careRoute[1]!);
+      if(request.method==='GET'&&!careRoute[2])return json(await care.detail(id),200,cors);
+      if(request.method==='POST'&&careRoute[2])return json(await care.command(id,await readJson<CaseCareCommand>(request)),200,cors);
+    }
+
     if(request.method==='GET'&&url.pathname==='/api/v1/workspaces'){
       const moduleId=url.searchParams.get('moduleId')??undefined;
       const groupId=url.searchParams.get('groupId')??undefined;
@@ -3583,7 +3597,7 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
     }
 
     return json({error:'NOT_FOUND'},404,cors);
-  } catch(error){const message=error instanceof Error?error.message:'UNKNOWN_ERROR';const status=['FORBIDDEN_SCOPE','FOUNDER_TEAM_ONLY','SHOP_OWNER_REQUIRED','BUYER_REQUIRED','CANONICAL_MARKET_ROUTE_REQUIRED','CANONICAL_NOTIFICATION_ROUTE_REQUIRED'].includes(message)?403:message==='VOICE_TRANSCRIPTION_UNAVAILABLE'?503:['IDEMPOTENCY_CONFLICT','CELL_VALUE_CONFLICT','CELL_VERSION_CONFLICT','MARKET_ORDER_CONFLICT','MARKET_IDEMPOTENCY_CONFLICT','MARKET_RECORD_CONFLICT','NOTIFICATION_EVENT_CONFLICT','NOTIFICATION_ATTEMPT_CONFLICT'].includes(message)?409:message.endsWith('_NOT_FOUND')?404:400;return json({error:message,requestId:ctx.requestId},status,cors);}
+  } catch(error){const message=error instanceof Error?error.message:'UNKNOWN_ERROR';const status=['FORBIDDEN_SCOPE','FOUNDER_TEAM_ONLY','SHOP_OWNER_REQUIRED','BUYER_REQUIRED','CANONICAL_MARKET_ROUTE_REQUIRED','CANONICAL_NOTIFICATION_ROUTE_REQUIRED','FORBIDDEN_CASE_EVIDENCE'].includes(message)?403:message==='VOICE_TRANSCRIPTION_UNAVAILABLE'?503:['IDEMPOTENCY_CONFLICT','CELL_VALUE_CONFLICT','CELL_VERSION_CONFLICT','MARKET_ORDER_CONFLICT','MARKET_IDEMPOTENCY_CONFLICT','MARKET_RECORD_CONFLICT','NOTIFICATION_EVENT_CONFLICT','NOTIFICATION_ATTEMPT_CONFLICT','CASE_VERSION_CONFLICT','CASE_IDEMPOTENCY_CONFLICT','CASE_EXPECTATION_VERSION_CONFLICT'].includes(message)?409:message.endsWith('_NOT_FOUND')?404:400;return json({error:message,requestId:ctx.requestId},status,cors);}
 };
 
 export const handleRequest=createApiHandler(defaultRepo);

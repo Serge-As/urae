@@ -1,13 +1,13 @@
-Eco-System 1.5.2.28 notification inbox delivery authorized
-release: 1.5.2.28-notification-inbox
+Eco-System 1.5.2.29 Eco Care delivery authorized
+release: 1.5.2.29-eco-care
 date: 2026-10-21
 db_mutation: none
 mode: code-only-with-verified-readonly-backup-no-migration
-qualified_baseline_source: ec6b459f0afebbde1108ed92cdf01a7d9d88c69a
-qualified_baseline_delivery: 39513045816 attempt1 SUCCESS
-qualification: baseline passed835 native32 Chromium6 WebKit; candidate must pass full exact-SHA gates
-candidate_native: 868 expected including33 notification contracts; mandatory before deploy
-candidate_chromium: 36 expected including4 notification/startup browser scenarios; mandatory before deploy
+qualified_baseline_source: 0266e1b895d4a91a4bc57d189608aae360393c24
+qualified_baseline_delivery: 39617145115 attempt1 SUCCESS
+qualification: baseline passed868 native36 Chromium6 WebKit; candidate must pass full exact-SHA gates
+candidate_native: 898 expected including30 EcoCare contracts; mandatory before deploy
+candidate_chromium: 39 expected including3 EcoCare browser scenarios; mandatory before deploy
 candidate_webkit: 6 mandatory before deploy
 production_ancestry: preserve5c9366445d6699b7a608f06a49a4efb61ec7d1ff and all prior deliveries
 backup: mandatory readonly D1 export, verified SQLite restore, private R2 archive download/hash before deploy
@@ -16,8 +16,8 @@ financial_signing: preserve existing key, never rotate, provision only proven ab
 real_money_enabled: false
 field_acceptance: NOT_ACCEPTED
 historical_pr72_hold: preserved; no merge or override of PR72
-trigger_nonce: 2026-10-21-lot24-notification-inbox-exact-source
+trigger_nonce: 2026-10-21-lot25-eco-care-exact-source
 authorization: current user requested implementation and deployment of complete lots by agreed priority
-scope: canonical NotificationService recipient-authorized inbox; immutable event/read/attempt history; preferences and quiet time; private deep return; Kernel.Inbox pending projection; acquired finance and commerce preserved
+scope: Kernel.Cases canonical lifecycle and conditional persistence; explicit support audiences; proposals separated from requester acceptance; versioned preventive expectations; acquired finance and commerce preserved
 qualification_same_deployment_sha: mandatory full gates before publication, no relaxation
-public_verification: exact health and catalogue plus31 deployed asset SHA256 comparisons with same-SHA build
+public_verification: exact health and catalogue plus33 deployed asset SHA256 comparisons with same-SHA build

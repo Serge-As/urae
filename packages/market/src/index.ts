@@ -81,6 +81,11 @@ export class MarketService{
     if(String(r.data.buyerUserId??'')!==c.actorId)await this.access(this.scopeOf(r),true);
     return r as MarketRecord;
   }
+  async supportContext(id:Id){
+    const order=await this.authorizedOrder(id),c=this.kernel.context.get(),scope=this.scopeOf(order),group=await this.repo.getGroup(c.tenantId,scope),ownerId=group?.createdBy??(await this.personalShop(scope)).createdBy;
+    let canManage=false;try{await this.access(scope,true);canManage=true;}catch{}
+    return{sourceTenantId:order.tenantId,groupId:order.groupId,orderId:order.id,buyerId:String(order.data.buyerUserId??''),ownerId,canManage,participantIds:[...new Set([String(order.data.buyerUserId??''),ownerId].filter(Boolean))]};
+  }
   async myPurchases(){
     const c=this.kernel.context.get(),rows=await this.repo.listMarketPurchases(c.actorId);
     return rows.filter(r=>r.data.marketKind==='MARKET_ORDER'&&r.data.buyerUserId===c.actorId).map(r=>this.buyerProjection(r as MarketRecord));
@@ -113,8 +118,9 @@ export class MarketService{
     const caseTenantId=this.reportingTenantId??c.tenantId,caseId='case_market_'+await operationKey([caseTenantId,c.actorId,id,input.idempotencyKey]),prior=(await this.repo.listCases(caseTenantId,c.actorId)).find(x=>x.id===caseId);
     if(prior){if(prior.subjectId!==id||prior.summary!==summary)throw Error('MARKET_IDEMPOTENCY_CONFLICT');return prior;}
     // Kernel.Cases owns the case lifecycle. This is only its authorized reference adapter.
-    const record=this.kernel.cases.open({id:caseId,tenantId:caseTenantId,groupId:caseTenantId===order.tenantId?order.groupId:undefined,type:'MARKET_ORDER_SUPPORT',subjectType:'MARKET_ORDER',subjectId:id,openedBy:c.actorId,summary});
-    await this.repo.saveCase(record);return record;
+    const source=await this.supportContext(id),record=this.kernel.cases.createCare(this.kernel.cases.open({id:caseId,tenantId:caseTenantId,groupId:caseTenantId===order.tenantId?order.groupId:undefined,type:'MARKET_ORDER_SUPPORT',subjectType:'MARKET_ORDER',subjectId:id,openedBy:c.actorId,summary}),{category:'ISSUE',participantIds:source.participantIds,sourceTenantId:order.tenantId,visibility:'ORDER_PARTIES'});
+    if(await this.repo.saveCaseRevision(record,null))return record;
+    const existing=await this.repo.getCaseById(caseId);if(!existing||existing.openedBy!==c.actorId||existing.subjectId!==id||existing.summary!==summary)throw Error('MARKET_IDEMPOTENCY_CONFLICT');return existing;
   }
   private async access(groupId:Id,manage=false):Promise<Membership|undefined>{
     const ctx=this.kernel.context.get(),group=await this.repo.getGroup(ctx.tenantId,groupId);if(!group){

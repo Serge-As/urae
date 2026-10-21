@@ -1,0 +1,20 @@
+{
+  "status": "STARTUP_FIX_BROWSER_VERIFIED_LOCAL_REMOTE_QUALIFICATION_PENDING",
+  "localCommit": "d578c8a8cde188f2dc1d646eb623c93423816fe2",
+  "remoteCandidate": "0266e1b895d4a91a4bc57d189608aae360393c24",
+  "productionDeployed": false,
+  "browserStats": {
+    "startTime": "2026-10-21T14:16:25.981Z",
+    "duration": 101304.772,
+    "expected": 4,
+    "skipped": 0,
+    "unexpected": 0,
+    "flaky": 0
+  },
+  "browserReportSha256": "ab2eec6cfef8d935eaf82f63055a21508b7625d0c8de8b85fb33a1d09ea05653",
+  "mainSourceSha256": "411bdbef99f42001edae6aeb6fd100f7f144ef0bdc177007fdec3e2c4455b471",
+  "beforeFixReport": "lot24-startup-before.json; lost early module click reproduced",
+  "nativeQualification": "Earlier868 passed before this UI fix; same-source remote868 required; not rerun locally for this fix",
+  "windowsAcquiredFailures": "Previous F5/Live and RTC failures preserved; no broader Windows acceptance inferred",
+  "fieldAcceptance": "NOT_ACCEPTED"
+}
