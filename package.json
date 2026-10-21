@@ -1,9 +1,9 @@
 {
   "name": "tontine-platform",
-  "version": "1.5.2-27",
+  "version": "1.5.2-28",
   "private": true,
   "type": "module",
-  "description": "Eco-System 1.5.2.27: personal and group commerce, current seller mandates, independent buyer receipt and referenced canonical support; acquired finance/offline preserved.",
+  "description": "Eco-System 1.5.2.28 candidate: recipient-authorized notification inbox, immutable event/read/attempt history, quiet preferences and private return links; acquired finance, commerce and offline preserved.",
   "engines": {
     "node": ">=24"
   },

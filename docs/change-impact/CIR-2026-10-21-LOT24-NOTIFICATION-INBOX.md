@@ -1,0 +1,23 @@
+# CIR — L24 Notifications, Inbox et partage
+
+Autorisation : poursuivre les lots classés, leurs améliorations et innovations gratuites, après L10. Base publiée et relue : 1.5.2.27-personal-commerce, source ec6b459f0afebbde1108ed92cdf01a7d9d88c69a. Le connecteur GitHub est actuellement indisponible au modèle ; cela n'autorise aucun contournement ni annonce de nouveau déploiement. La qualification locale peut continuer.
+
+Réemploi : NotificationService conserve les notifications, destinataires et lectures ; FinancialWorkCoordinator conserve le déclenchement et le regroupement des synthèses ; Kernel.Inbox conserve dossiers et obligations ; GrowthReferral conserve attribution et récompenses ; share-out conserve le retour profond. Aucune notification ne vaut écriture Ledger, paiement, approbation ou résolution d'un dossier.
+
+Changement préparé : insertion de notification immuable et déduplication stable, états de tentative séparés, lecture limitée au destinataire actuel, ouverture réautorisée des objets, préférences et silence temporaire, Inbox lisible FR/EN et frise « qui attend quoi ». Un état traité se lit chez son propriétaire, jamais dans un bouton qui réécrit le métier. Aucun polling ou fournisseur payant ajouté.
+
+Impacts et risques : anciens liens devenus privés, mandat révoqué, événement répété ou révisé, concurrence de publication, état de transport présenté à tort comme livraison, fuite après changement de compte/groupe, cache hors ligne ancien, préférence désactivée ignorée. La projection reste bornée et actualisée explicitement ; les alertes critiques restent consultables. Les anciennes notifications et API demeurent compatibles ; les accès illégitimes sont refusés.
+
+Vérification prévue : mémoire et SQLite/D1, concurrence et répétition, droits destinataire et groupe, révision distincte, aucun effet Ledger/case, préférence explicite et heures silencieuses, limite de statut de transport ; parcours navigateur comptes distincts, mobile et changement de contexte. Qualification complète du même source avant publication, sauvegarde/restauration read-only et contrôle public requis. Aucun test acquis assoupli.
+
+Récupération : pas de migration, D1/R2/clé conservés, realMoneyEnabled=false. Retirer la nouvelle surface si nécessaire en gardant notices, lectures, tentatives et liens ; corriger vers l'avant. Aucune remise à zéro du stockage navigateur ou outbox financière. FIELD_ACCEPTED=NOT_ACCEPTED. Coût exact des crédits du chat non mesurable.
+
+Qualification locale des nouveaux parcours : compilation TypeScript/PWA normale réussie, 868/868 natifs et 3/3 nouveaux Chromium sans ignoré. Reçu `docs/release/evidence/LOT24-NOTIFICATION-INBOX-LOCAL-2026-10-21.json`. La panne de notification est effectivement injectée dans le nouveau dépôt ; les assertions de conservation financière restent intactes. Les liens de corbeille acquis passent. Rafraîchissements concurrents protégés, connexion réellement terminée avant contrôle du retour, mesure sans polling après les lectures explicites. Aucun test acquis retiré.
+
+Statut : IMPLEMENTED_LOCAL_PARTIAL_QUALIFICATION_PUBLICATION_BLOCKED. Chromium 8 réussis / 2 échoués ; WebKit 4 réussis / 2 échoués, aucun ignoré. Les échecs acquis de connexion Live, visibilité de remboursement après F5 et Local Room RTC sont conservés. Le comparatif v27 échoue sur une autre assertion F5 et ne disculpe pas la candidate. Ne pas publier avant qualification complète du SHA exact.
+
+Production indépendante relue 1.5.2.27. Plugin installé/activé/autorisé mais appels de dépôt indisponibles, ce qui n’est pas une preuve de déconnexion. La reprise relit le HEAD distant et applique un overlay exact avec contrôle de concurrence ; pas de push du Git importé. Portes 868/35/6 + backup/restauration/R2 +31 empreintes conservées, même source obligatoire. L25 pas commencé. FIELD_ACCEPTED=NOT_ACCEPTED ; coût exact du chat non mesurable.
+
+## Mise à jour de l’accès et qualification séparée
+
+Accès GitHub rétabli le 21 octobre 2026 : lecture effective du HEAD distant `ec6b459f0afebbde1108ed92cdf01a7d9d88c69a`. La qualification complète est préparée sur la branche séparée `codex/lot-24-notification-inbox-20261021`. Cette branche ne satisfait pas la condition de déploiement du workflow de production. Les échecs locaux restent consignés ; aucune publication en production avant qualification complète du même SHA. Les mentions antérieures d’outils indisponibles décrivent les tentatives précédentes et ne sont plus le blocage actuel. Le déclencheur de qualification ajoute uniquement cette branche candidate ; les assertions et la condition de déploiement restent conservées.

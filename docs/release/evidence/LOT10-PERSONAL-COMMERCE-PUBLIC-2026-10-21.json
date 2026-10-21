@@ -1,0 +1,127 @@
+{
+  "verifiedAt": "2026-10-20T23:16:56.493Z",
+  "version": "1.5.2.27-personal-commerce",
+  "sourceSha": "ec6b459f0afebbde1108ed92cdf01a7d9d88c69a",
+  "buildId": "eco-system-1.5.2.27-20261020-personal-commerce",
+  "pwaCache": "eco-system-v15227-personal-commerce-20261020",
+  "capabilities": 164,
+  "realMoneyEnabled": false,
+  "assets": [
+    {
+      "path": "/",
+      "sha256": "8f4b22cbdf72f66e697df133e47a9517577bbff66508ebb741101808cef34e2e"
+    },
+    {
+      "path": "/styles.css",
+      "sha256": "98782adda97d3433d7f14c714751da31fd49599490ca3290f8e95141e3cb6a2c"
+    },
+    {
+      "path": "/sw.js",
+      "sha256": "070c5663e8d9b42c996786a18a11357e772a004aafb3d89fc152bc2f39024ded"
+    },
+    {
+      "path": "/eco-shell-manifest.json",
+      "sha256": "9513a341c545e2a0d4c7c8515952e6f1f15a550a0aa87a3c5715232b990b56d1"
+    },
+    {
+      "path": "/src/main.js",
+      "sha256": "89a7b48d3597a9f6c8b497ab66113c9f77e88439f4e6939fb5d9e55ff3894a31"
+    },
+    {
+      "path": "/src/financial-work-ui.js",
+      "sha256": "4968d4ec17afca3faebe4416a2b91e318f04b544a988d63f0947e8891b779e1b"
+    },
+    {
+      "path": "/src/completion-ui.js",
+      "sha256": "08b6bc67eb6c77c2065ae3c983523b21d4d223190b4a6f82d0eff999aedc5fa1"
+    },
+    {
+      "path": "/src/ui-modes.js",
+      "sha256": "795339401f0eaa42a9822a918cf3982bedfaea02c68f4669a845372bb711ee81"
+    },
+    {
+      "path": "/src/field-hardening.js",
+      "sha256": "6c4284d33ac9441a847fc504f18d9bf079ded736c05656b287dcd96e9f4efb01"
+    },
+    {
+      "path": "/src/runtime-i18n.js",
+      "sha256": "7a1212d2e247f1d5cafdf234101fb99048dd329a66c4ae492f664d1f4ad117fa"
+    },
+    {
+      "path": "/src/shell-navigation.js",
+      "sha256": "5bc9ec6d5a9c17ab0190370c464e79cd0029b25009b168b7486c0acb30865b72"
+    },
+    {
+      "path": "/src/session-rehearsal.js",
+      "sha256": "57b6e41c3b7381f0b86e8569d9bf45d64616f1dd8af353295061d611b3d31b63"
+    },
+    {
+      "path": "/src/request-budget-ui.js",
+      "sha256": "62dccfab867860795b77df2936bf02a8fef7e21e10f4842be6f3545a8322e83d"
+    },
+    {
+      "path": "/packages/application/src/index.js",
+      "sha256": "87fed0fe05b9d15f6edb6851ca4afeb3b6c3602b1a36a1f674ffc6f2bc206b7d"
+    },
+    {
+      "path": "/packages/application/src/request-budget.js",
+      "sha256": "00f39471099cc69127ae301660d22694c5b8097e6be7ea42fbed040aede498d5"
+    },
+    {
+      "path": "/src/cockpit-priorities.js",
+      "sha256": "dfb2678284d5fcb3269bb366a4c4e7e1dfd25ab694bba6c5005a70c502014de3"
+    },
+    {
+      "path": "/src/cockpit-priorities-ui.js",
+      "sha256": "86ce0a26c0573893e81a2c1d20b64994a90a091b53524aa6992abe2c97bc53f2"
+    },
+    {
+      "path": "/src/journey-context.js",
+      "sha256": "5199dd16542efa8434e15e6a5f96f1e018f2963d49ce4b0c10d3a71d23f2a9ae"
+    },
+    {
+      "path": "/src/personal-cockpit-ui.js",
+      "sha256": "25d59daffbb6ebc36a6d913341b661bfb0c24d887a633cb468804233769a4a43"
+    },
+    {
+      "path": "/src/workspace-navigation.js",
+      "sha256": "4eef9756b38fb5e9d0dee5a8af7d4a904f7ce01ae2de9d2ba93bb3349d20c7d1"
+    },
+    {
+      "path": "/src/assistant-actions.js",
+      "sha256": "49844001277c862414e566446cb9ea7db4f0ddd73e456a2c17545f27e113779e"
+    },
+    {
+      "path": "/src/local-assistant.js",
+      "sha256": "f4d7722f9efbc3f810ad8f13f10fc12e3e60f74edd67e7ffb7076092dd76acd4"
+    },
+    {
+      "path": "/src/universal-search.js",
+      "sha256": "4364b14d1067f1091c47e9da28a07312f82cebaae4d911d04fb1bd96580e5c07"
+    },
+    {
+      "path": "/src/advanced-ui.js",
+      "sha256": "5e15c0426ca21e2c8a26592ec3cff8aa7b8dd04b916199b06f79ca98b576cc57"
+    },
+    {
+      "path": "/src/community-shop-ui.js",
+      "sha256": "ef6e532681c3edeb222bb18adc2ceb50d28bc90b50de2ca83056c5d78846ad00"
+    },
+    {
+      "path": "/src/market-order-board.js",
+      "sha256": "b8bf9d49bdc2dcf7c228a74fe3b911dff7dd0521afa0e71b76f3223deab76b16"
+    },
+    {
+      "path": "/src/market-quotes-ui.js",
+      "sha256": "f095fc06476416d841409c2523ced172e0f2ef08d73611bf679481d7b5338bc7"
+    },
+    {
+      "path": "/src/personal-shops-ui.js",
+      "sha256": "1bd054bc18ee0295c7d0494c6d8b0955d55d6f222125db348444aef6fe8f20b5"
+    },
+    {
+      "path": "/src/business-studio-ui.js",
+      "sha256": "6c2fa695eecb81263fbd6bb095adbc4f7be8d191ec50fddeb0a0d3f50b3a319e"
+    }
+  ]
+}

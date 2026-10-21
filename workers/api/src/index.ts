@@ -78,11 +78,11 @@ interface WorkersAILike {
   run?(model:string,input:Record<string,unknown>,options?:Record<string,unknown>):Promise<unknown>;
 }
 
-const RELEASE_VERSION='1.5.2.27-personal-commerce';
-const RELEASE_BUILD_ID='eco-system-1.5.2.27-20261020-personal-commerce';
+const RELEASE_VERSION='1.5.2.28-notification-inbox';
+const RELEASE_BUILD_ID='eco-system-1.5.2.28-20261021-notification-inbox';
 const RELEASE_SCHEMA_VERSION='d1-additive-20260923';
 const RELEASE_POLICY_VERSION='live-finance-policy-20261007-event-push-repayment';
-const RELEASE_PWA_CACHE='eco-system-v15227-personal-commerce-20261020';
+const RELEASE_PWA_CACHE='eco-system-v15228-notification-inbox-20261021';
 
 const defaultRepo = new InMemoryPlatformRepository();
 const defaultReferralBudgets = new InMemoryReferralBudgetStore();
@@ -162,8 +162,12 @@ const createRequestScope = (request:Request,repo:PlatformRepository,artifacts?:A
 };
 
 const inboxFor = async (repo:PlatformRepository,tenantId:string,actorId:string) => {
-  const obligations=(await repo.listObligations(tenantId,actorId)).filter(x=>x.status==='open'||x.status==='overdue').map(x=>({id:x.id,kind:'obligation',title:x.title,priority:x.priority,status:x.status,groupId:x.groupId,dueAt:x.dueAt,sourceType:x.sourceType,sourceId:x.sourceId}));
-  const cases=(await repo.listCases(tenantId,actorId)).filter(x=>x.status!=='CLOSED').map(x=>({id:x.id,kind:'case',title:x.summary,priority:'normal',status:x.status,groupId:x.groupId}));
+  const [groupRows,memberships]=await Promise.all([repo.listGroups(tenantId),repo.listMembershipsForUser(actorId)]);
+  const active=new Set(memberships.filter(x=>x.tenantId===tenantId&&x.status==='active').map(x=>x.groupId));
+  const visible=new Set(groupRows.filter(x=>x.status!=='archived'&&(x.createdBy===actorId||active.has(x.id))).map(x=>x.id));
+  const allowed=(g:string|undefined)=>!g||visible.has(g);
+  const obligations=(await repo.listObligations(tenantId,actorId)).filter(x=>allowed(x.groupId)&&(x.status==='open'||x.status==='overdue')).map(x=>({id:x.id,kind:'obligation',title:x.title,priority:x.priority,status:x.status,groupId:x.groupId,dueAt:x.dueAt,sourceType:x.sourceType,sourceId:x.sourceId,waitingFor:'YOU'}));
+  const cases=(await repo.listCases(tenantId,actorId)).filter(x=>allowed(x.groupId)&&!['CLOSED','RESOLVED'].includes(x.status)).map(x=>({id:x.id,kind:'case',title:x.summary,priority:'normal',status:x.status,groupId:x.groupId,openedAt:x.openedAt,sourceType:x.subjectType,sourceId:x.subjectId,waitingFor:x.status==='WAITING_PARTY'?'PARTY_NOT_SPECIFIED':'CASE_REVIEW'}));
   return [...obligations,...cases];
 };
 
@@ -908,6 +912,7 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
     return out.sort((a,b)=>String(b.data.deletedAt??b.createdAt).localeCompare(String(a.data.deletedAt??a.createdAt)));
   };
   const visibleWorkspace=async(record:WorkspaceRecord)=>{
+    if(record.moduleId.startsWith('NOTIFY.'))return notifications.canReadRecord(record);
     if(record.tags.includes('market-engine')&&record.data.marketScopeId&&!record.groupId)return market.canReadScope(String(record.data.marketScopeId));
     if(!record.groupId)return record.createdBy===ctx.actorId;
     try{await requireGroup(record.groupId,true);return true;}catch{return false;}
@@ -3044,6 +3049,7 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
     if(request.method==='POST'&&url.pathname==='/api/v1/workspaces'){
       const body=await readJson<Record<string,unknown>>(request);
       const moduleId=String(body.moduleId??'').trim(); const title=String(body.title??'').trim();
+      if(moduleId.startsWith('NOTIFY.'))throw Error('CANONICAL_NOTIFICATION_ROUTE_REQUIRED');
       if(!moduleId||!PRODUCT_MODULES.some(x=>x.id===moduleId)) throw new Error('INVALID_MODULE_ID');
       if(!title) throw new Error('WORKSPACE_TITLE_REQUIRED');
       if(body.groupId)await requireGroup(String(body.groupId),true);
@@ -3064,6 +3070,7 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
     if(workspaceRoute&&request.method==='PUT'){
       const existing=await repo.getWorkspaceRecord(ctx.tenantId,workspaceRoute[1]!); if(!existing)return json({error:'NOT_FOUND'},404,cors);
       if(!await visibleWorkspace(existing))throw Error('FORBIDDEN_SCOPE');
+      if(existing.moduleId.startsWith('NOTIFY.'))throw Error('CANONICAL_NOTIFICATION_ROUTE_REQUIRED');
       if(existing.tags.includes('market-engine'))throw Error('CANONICAL_MARKET_ROUTE_REQUIRED');
       if(existing.moduleId==='FINANCE.MEMBER_BUNDLE')throw Error('IMMUTABLE_FINANCIAL_SNAPSHOT');
       const body=await readJson<Record<string,unknown>>(request);
@@ -3513,7 +3520,13 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
     if(groupNotifications&&request.method==='GET')return json(await notifications.inbox(groupNotifications[1]!),200,cors);
     if(groupNotifications&&request.method==='POST'){const body=await readJson<any>(request);return json(await notifications.publish(groupNotifications[1]!,body),201,cors);}
     const readNotification=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/notifications\/([^/]+)\/read$/);
-    if(readNotification&&request.method==='POST')return json(await notifications.markRead(readNotification[1]!,readNotification[2]!),200,cors);
+    if(readNotification&&request.method==='POST')return json(await notifications.markRead(decodeURIComponent(readNotification[1]!),decodeURIComponent(readNotification[2]!)),200,cors);
+    const notificationAction=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/notifications\/([^/]+)\/(action|history|attempts)$/);
+    if(notificationAction){const groupId=decodeURIComponent(notificationAction[1]!),id=decodeURIComponent(notificationAction[2]!),kind=notificationAction[3];
+      if(request.method==='GET'&&kind==='action')return json(await notifications.resolveAction(groupId,id),200,cors);
+      if(request.method==='GET'&&kind==='history')return json(await notifications.history(groupId,id),200,cors);
+      if(request.method==='POST'&&kind==='attempts')return json(await notifications.recordAttempt(groupId,id,await readJson<any>(request)),201,cors);
+    }
 
     const myMembershipRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/me$/);
     if(myMembershipRoute&&request.method==='GET'){
@@ -3570,7 +3583,7 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
     }
 
     return json({error:'NOT_FOUND'},404,cors);
-  } catch(error){const message=error instanceof Error?error.message:'UNKNOWN_ERROR';const status=['FORBIDDEN_SCOPE','FOUNDER_TEAM_ONLY','SHOP_OWNER_REQUIRED','BUYER_REQUIRED','CANONICAL_MARKET_ROUTE_REQUIRED'].includes(message)?403:message==='VOICE_TRANSCRIPTION_UNAVAILABLE'?503:['IDEMPOTENCY_CONFLICT','CELL_VALUE_CONFLICT','CELL_VERSION_CONFLICT','MARKET_ORDER_CONFLICT','MARKET_IDEMPOTENCY_CONFLICT','MARKET_RECORD_CONFLICT'].includes(message)?409:message.endsWith('_NOT_FOUND')?404:400;return json({error:message,requestId:ctx.requestId},status,cors);}
+  } catch(error){const message=error instanceof Error?error.message:'UNKNOWN_ERROR';const status=['FORBIDDEN_SCOPE','FOUNDER_TEAM_ONLY','SHOP_OWNER_REQUIRED','BUYER_REQUIRED','CANONICAL_MARKET_ROUTE_REQUIRED','CANONICAL_NOTIFICATION_ROUTE_REQUIRED'].includes(message)?403:message==='VOICE_TRANSCRIPTION_UNAVAILABLE'?503:['IDEMPOTENCY_CONFLICT','CELL_VALUE_CONFLICT','CELL_VERSION_CONFLICT','MARKET_ORDER_CONFLICT','MARKET_IDEMPOTENCY_CONFLICT','MARKET_RECORD_CONFLICT','NOTIFICATION_EVENT_CONFLICT','NOTIFICATION_ATTEMPT_CONFLICT'].includes(message)?409:message.endsWith('_NOT_FOUND')?404:400;return json({error:message,requestId:ctx.requestId},status,cors);}
 };
 
 export const handleRequest=createApiHandler(defaultRepo);

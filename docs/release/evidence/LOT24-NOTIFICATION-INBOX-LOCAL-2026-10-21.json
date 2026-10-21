@@ -1,0 +1,216 @@
+{
+  "status": "IMPLEMENTED_LOCAL_PARTIAL_QUALIFICATION_PUBLICATION_BLOCKED",
+  "observedAt": "2026-10-21T13:10:07.851402+00:00",
+  "version": "1.5.2.28-notification-inbox",
+  "productionVerified": {
+    "observedAt": "2026-10-21T12:03:34.0255119Z",
+    "health": {
+      "ok": true,
+      "service": "tontine-api",
+      "version": "1.5.2.27-personal-commerce",
+      "buildId": "eco-system-1.5.2.27-20261020-personal-commerce",
+      "commitSha": "ec6b459f0afebbde1108ed92cdf01a7d9d88c69a",
+      "schemaVersion": "d1-additive-20260923",
+      "policyVersion": "live-finance-policy-20261007-event-push-repayment",
+      "pwaCache": "eco-system-v15227-personal-commerce-20261020",
+      "now": "2026-10-21T12:01:55.961Z",
+      "realMoneyEnabled": false,
+      "manualCashLedgerEnabled": true,
+      "premiumLiveEnabled": true,
+      "founderControlBound": true,
+      "communityRealtimeBound": true,
+      "artifactStorageBound": true,
+      "artifactStorageMode": "R2",
+      "contextScope": "request"
+    }
+  },
+  "remoteCandidateCommit": null,
+  "deploymentRun": null,
+  "fieldAcceptance": "NOT_ACCEPTED",
+  "qualification": {
+    "native": {
+      "passed": 868,
+      "failed": 0,
+      "skipped": 0,
+      "logSha256": "3a309ca54dbc4f172dc60545839931a34b63fa5a22b7a897a2b60cfcf1e05075"
+    },
+    "newChromium": {
+      "startTime": "2026-10-21T12:38:37.184Z",
+      "duration": 147888.214,
+      "expected": 3,
+      "skipped": 0,
+      "unexpected": 0,
+      "flaky": 0
+    },
+    "browserReportSha256": "e86000da2112e02f6e6d88172ac14f53df8877f0f23cb53b03b52ca3e1a9b22f",
+    "chromiumRegression": {
+      "passed": 5,
+      "failed": 2,
+      "skipped": 0,
+      "flaky": 0,
+      "files": [
+        {
+          "file": "chromium-window-account-finance-20261010",
+          "passed": 1,
+          "failed": 1,
+          "skipped": 0,
+          "flaky": 0,
+          "reportSha256": "15c5431cddd409b223c36c9e57c2d6e5c8b4349a18c2550c5a6705dd7bf2f940",
+          "stats": {
+            "startTime": "2026-10-21T12:41:16.710Z",
+            "duration": 163728.18600000002,
+            "expected": 1,
+            "skipped": 0,
+            "unexpected": 1,
+            "flaky": 0
+          }
+        },
+        {
+          "file": "chromium-financial-cell-consensus-persistence-1.5.2.6",
+          "passed": 2,
+          "failed": 1,
+          "skipped": 0,
+          "flaky": 0,
+          "reportSha256": "62e176a69e459aa749b55b174f1ad6a038fae58c36e613611e6e89fbcaf66e39",
+          "stats": {
+            "startTime": "2026-10-21T12:46:30.030Z",
+            "duration": 177831.031,
+            "expected": 2,
+            "skipped": 0,
+            "unexpected": 1,
+            "flaky": 0
+          }
+        },
+        {
+          "file": "chromium-browser-shell-mobile-1.5.2.6",
+          "passed": 2,
+          "failed": 0,
+          "skipped": 0,
+          "flaky": 0,
+          "reportSha256": "81884fab154b9bf5425eddc8086c2271ed6587e506241a164cd9dc0d23740234",
+          "stats": {
+            "startTime": "2026-10-21T13:07:25.842Z",
+            "duration": 31304.687000000005,
+            "expected": 2,
+            "skipped": 0,
+            "unexpected": 0,
+            "flaky": 0
+          }
+        }
+      ]
+    },
+    "webkitRegression": {
+      "passed": 4,
+      "failed": 2,
+      "skipped": 0,
+      "flaky": 0,
+      "files": [
+        {
+          "file": "webkit-eco-system-webkit-sovereign-offline-1.5.2.9",
+          "passed": 4,
+          "failed": 2,
+          "skipped": 0,
+          "flaky": 0,
+          "reportSha256": "642f5feacf51f6281a8e928dd8744ba052df5a031c6380d24c0c19e3cf0da750",
+          "stats": {
+            "startTime": "2026-10-21T12:49:44.698Z",
+            "duration": 110230.42499999999,
+            "expected": 4,
+            "skipped": 0,
+            "unexpected": 2,
+            "flaky": 0
+          }
+        }
+      ]
+    }
+  },
+  "sourceSha256": {
+    "apps/web/src/main.js": "5461d4f3a51c8f784d8b1ce73d484af0552dfa41366a186bbd00fc1f422657cb",
+    "apps/web/src/notification-center-ui.js": "5b276e2361bd6515e2db7668e62b7bd70f595d34fd5a55b87b68d55efa889ff1",
+    "apps/web/styles.css": "2c5bc7a211153d6d35b0db634f1d6ae48e0dc54bc0dc7ff839168e57325f5107",
+    "apps/web/index.html": "fadaeea22c2af1d03f0bf6c9f41535333900ac532b3932d5d10b6ae8aaa3ef20",
+    "apps/web/sw.js": "c99f4d9f56e541ee32f0a04a686d0dc7ae4a2f61329f750af62dc8574368ecb7",
+    "packages/notifications/src/index.ts": "97d791f12a662d26c2b6929cd61b13c98f274b794d7fc2c0dff9a06ef269fe23",
+    "packages/notifications/src/policy.ts": "7e5df8548d8b4c587da8efcd1790356ba93cf9d258325e60af9abe3ebd4e776a",
+    "packages/repositories/src/index.ts": "d25da1bb82ecf60d899a48d28db934188e7d05e4b572c1130ce4e4db9445ea9a",
+    "packages/application/src/index.ts": "612aa2903f0c6c1a99f133f33c05296eb9e7066ddaa4f7b221208e3aa97870f6",
+    "workers/api/src/index.ts": "d19c4af1de50d1df9c3a5ba6088e8ea31f816ad65278b30fcc958aa4ee1a7104",
+    "tests/notification-inbox-lot24-20261021.test.mjs": "39246bf30de08f5dea0311e9a4853c771b155485815daf8bdb0e7fc0c4e1b6a9",
+    "tests/browser/notification-inbox-lot24-20261021.spec.mjs": "9322c4007dfc30bc94043e255fd6cb12e7cc3eca0d83d8f77e1daffe65f6321f",
+    "tests/live-commit-delivery-20261012.test.mjs": "0ba17ed0d54a8693f4e701847a505dd9efc46f0356e451d402692e99c1a8dba2"
+  },
+  "compiledSha256": {
+    ".build/src/main.js": "30933304831c4b683dfe0ae161a5451e66866e629ac65992edee75389d8bf34a",
+    ".build/src/notification-center-ui.js": "bc9fd70613a47878cd0ec75391f2693667a53cdecb667b8654dc7344a5571f86",
+    ".build/styles.css": "09673d7cd77a02619f58f7631c45249adbd63b1fc62853185f18162215de06ee",
+    ".build/sw.js": "d253d106185ec76f1f0f59b07ea946c2a9c4018520aef324bd423effcdfdf14f",
+    ".build/packages/notifications/src/index.js": "1c7391ee53ae8ecdf1358fc6a2efd73fbec5bf23c255a35363ca342e24727fd0",
+    ".build/packages/notifications/src/policy.js": "f4f044f4b77c980e09d6446d5de8180c5f2f9fe25810ff45c3e304f08c07e1f9",
+    ".build/workers/api/src/index.js": "008acf98a5da7a5218a6d4bd3ed00e665f005463112d916c2c3cd22a63305a2d"
+  },
+  "canonicalOwners": [
+    "NotificationService",
+    "FinancialWorkCoordinator",
+    "Kernel.Inbox",
+    "Kernel.Cases",
+    "GrowthReferral",
+    "MarketService"
+  ],
+  "invariants": {
+    "dbMutation": "none",
+    "migrations": false,
+    "realMoneyEnabled": false,
+    "newPaidService": false,
+    "newNotificationPolling": false
+  },
+  "limitations": [
+    "Local qualification is not remote same-SHA qualification or field acceptance.",
+    "No new email, SMS, WhatsApp or Telegram provider or push delivery guarantee.",
+    "History returns at most 20 attempts but currently reads then filters group attempt records; no constant D1 cost claim.",
+    "L25 transversal support and other planned proposals remain separate.",
+    "Acquired browser scenarios are not all green. Current two-account run did not connect Live within10seconds, repayment table did not reappear within acquired5seconds after reload, two WebKit Local Room scenarios require RTC support. A prior run differed on F5 viewport. Assertions unchanged; release blocked until exact-source qualification passes. The cause of Chromium failures is not established.",
+    "GitHub read access restored; full remote qualification pending on isolated candidate branch. Local browser failures remain recorded, production deployment not authorized by test success alone."
+  ],
+  "allRequiredLocalChecksPassed": false,
+  "baselineComparison": {
+    "localSource": "d289c270636de5e011059723356e52ce77c41e7d",
+    "publishedEquivalent": "ec6b459f0afebbde1108ed92cdf01a7d9d88c69a",
+    "normalTypeScriptBuild": true,
+    "stats": {
+      "startTime": "2026-10-21T12:59:39.762Z",
+      "duration": 151745.239,
+      "expected": 2,
+      "skipped": 0,
+      "unexpected": 1,
+      "flaky": 0
+    },
+    "reportSha256": "95f25d89e2dab7ad685caec700cd8882246e43b16e5584e0483a92da0d2ef844",
+    "observation": "Baseline repayment scenario also fails after F5, but at horizontal scroll restoration (line274); candidate latest failure is earlier at cell visibility (line272). This does not establish identical cause or exclude a candidate regression."
+  },
+  "webkitRuntimeProbe": {
+    "observedAt": "2026-10-21T12:55:04.649Z",
+    "browserVersion": "26.0",
+    "runtime": "win32",
+    "applicationCodeLoaded": false,
+    "url": "about:blank",
+    "RTCPeerConnection": "undefined",
+    "webkitRTCPeerConnection": "undefined"
+  },
+  "webkitSecureLocalhostProbe": {
+    "observedAt": "2026-10-21T13:09:18.719Z",
+    "browserVersion": "26.0",
+    "runtime": "win32",
+    "isSecureContext": true,
+    "RTCPeerConnection": "undefined",
+    "webkitRTCPeerConnection": "undefined",
+    "applicationCodeLoaded": false,
+    "location": "http://127.0.0.1:64442"
+  },
+  "githubAccess": {
+    "status": "RESTORED_READ_VERIFIED",
+    "observedAt": "2026-10-21T13:12:25.911631+00:00",
+    "remoteHead": "ec6b459f0afebbde1108ed92cdf01a7d9d88c69a",
+    "qualificationBranch": "codex/lot-24-notification-inbox-20261021",
+    "productionDeployment": false
+  }
+}

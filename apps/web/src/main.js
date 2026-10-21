@@ -1,3 +1,4 @@
+import {mountNotificationCenterUI} from './notification-center-ui.js';
 import {createJourneyContext,mountJourneyUI} from './journey-context.js';
 import {mountWorkspaceNavigation} from './workspace-navigation.js';
 import {mountShellNavigation} from './shell-navigation.js';
@@ -184,7 +185,7 @@ let launchStudio;
 let modules = [];
 let selectedLot = 'ALL';
 let deferredInstallPrompt;
-const CAHIER_VERSION = '1.5.2.27-personal-commerce';
+const CAHIER_VERSION = '1.5.2.28-notification-inbox';
 const $ = (s) => { const e = document.querySelector(s); if (!e)
     throw new Error(`UI_ELEMENT_NOT_FOUND:${s}`); return e; };
 const val = (id) => document.getElementById(id).value.trim();
@@ -296,6 +297,14 @@ const advancedUI = mountAdvancedUI({
 const identityLiveUI = mountIdentityLiveUI({ app, notify: toast, showError: fail, conservationMode: FREE_CONSERVATION_MODE });
 const communityShopUI = mountCommunityShopUI({ app, notify: toast, showError: fail, isManager, fmt, actorName: actorDisplayName });
 const personalShopsUI = mountPersonalShopsUI({app,notify:toast,showError:fail,fmt});
+const openAuthorizedNotice=async notice=>{
+    const actor=app.currentActor(),tenant=app.currentTenant(),verified=await app.resolveGroupNotificationAction(String(notice.groupId),String(notice.id));
+    if(actor!==app.currentActor()||tenant!==app.currentTenant())return;
+    if(!(verified.action.view==='trash'&&verified.action.entityKind==='GROUP')&&app.activeGroup()!==notice.groupId){app.selectGroup(notice.groupId);await refreshGroupContext();}
+    if(actor===app.currentActor()&&tenant===app.currentTenant())openNoticeAction(verified.action);
+};
+const notificationCenterUI=mountNotificationCenterUI({app,loadNotices:()=>app.notificationsAcrossGroups(),openNotice:openAuthorizedNotice,openWaiting:async item=>{const actor=app.currentActor(),tenant=app.currentTenant();await renderInbox(item.id);if(actor===app.currentActor()&&tenant===app.currentTenant())go('inbox',{anchor:'eco-inbox-item-'+item.id,force:true});},showError:fail,notify:toast,date});
+
 const miscRubricUI = mountMiscRubricUI({ app, notify: toast, showError: fail, getMembers: () => members, getMeetings: () => meetings, isManager, fmt });
 const pairingUI = mountPairingUI({ app, notify: toast, showError: fail, getMembers: () => members, isManager, afterMembershipChanged: async groupId => { await renderGroups(); if(groupId){ app.selectGroup(groupId); await refreshGroupContext(); } } });
 const clearFail = hideError;
@@ -2225,7 +2234,7 @@ const renderUrgentNotifications=async()=>{
         const h=document.createElement('strong');h.textContent=(n.priority==='CRITICAL'?'🔴 ':'🟠 ')+n.title;
         const p=document.createElement('p');p.textContent=n.message??'';const meta=document.createElement('small');meta.textContent=tx('Auteur : ','Author: ')+actorDisplayName(n.createdBy)+' · '+date(n.createdAt);
         const actions=document.createElement('div');actions.className='actions';
-        if(n.action?.view){const open=document.createElement('button');open.type='button';open.className='primary';open.textContent=n.action.label||tx('Voir le détail','View details');open.onclick=()=>openNoticeAction(n.action);actions.append(open);}
+        if(n.action?.view){const open=document.createElement('button');open.type='button';open.className='primary';open.textContent=n.action.label||tx('Voir le détail','View details');open.onclick=()=>void openAuthorizedNotice({...n,groupId:app.activeGroup()}).catch(fail);actions.append(open);}
         const seen=document.createElement('button');seen.type='button';seen.className='secondary';seen.textContent=tx('Marquer comme lu','Mark as read');seen.onclick=()=>void(async()=>{try{await app.markGroupNotificationRead(n.id);await renderUrgentNotifications();await renderFinancialAlerts();}catch(e){fail(e);}})();actions.append(seen);
         article.append(h,p,meta,actions);root.append(article);
       }
@@ -2233,78 +2242,9 @@ const renderUrgentNotifications=async()=>{
 };
 document.querySelector('#urgentNotificationsRefreshBtn')?.addEventListener('click',()=>void renderUrgentNotifications());
 document.querySelector('#urgentNotificationsAllBtn')?.addEventListener('click',()=>{go('inbox',{anchor:'notificationCenterPanel',force:true});setTimeout(()=>document.querySelector('#notificationCenterPanel')?.scrollIntoView({behavior:'smooth',block:'start'}),120);});
-const renderNotificationCenter=async()=>{
-  const root=document.querySelector('#notificationCenterList'),meta=document.querySelector('#notificationCenterMeta');
-  if(!root)return;
-  // Do not request every group's inbox during routine group refreshes or
-  // financial work. Only query when the personal inbox is actually open.
+const renderNotificationCenter=async(options={})=>{
   if(!document.querySelector('#view-inbox.active'))return;
-  root.replaceChildren();
-  if(meta)meta.textContent=tx('Lecture des alertes autorisées de mes groupes…','Loading authorized alerts from my groups…');
-  try{
-    const result=await app.notificationsAcrossGroups();
-    const rank={CRITICAL:4,HIGH:3,NORMAL:2,LOW:1};
-    const notices=result.items.slice().sort((a,b)=>Number(Boolean(a.read))-Number(Boolean(b.read))||(rank[String(b.priority)]??0)-(rank[String(a.priority)]??0)||String(b.createdAt??'').localeCompare(String(a.createdAt??'')));
-    const unread=notices.filter(x=>!x.read).length,missing=result.unavailable.length;
-    if(meta)meta.textContent=tx(
-      unread+' non lue(s) · '+notices.length+' notification(s) de mes groupes'+(missing?' · '+missing+' groupe(s) indisponible(s)':'')+'. Les autres services y apparaissent lorsqu’ils émettent une notification via le moteur existant.',
-      unread+' unread · '+notices.length+' group notification(s)'+(missing?' · '+missing+' group(s) unavailable':'')+'. Other services appear when they publish an alert through the existing notification owner.'
-    );
-    if(missing){
-      const warning=document.createElement('p');warning.className='truth-notice';warning.setAttribute('role','status');
-      warning.textContent=tx('Chargement partiel : certaines alertes ne sont pas accessibles ou le réseau est indisponible. Aucune notification manquante n’est déclarée lue.',
-        'Partial loading: some alerts could not be accessed or the network is unavailable. Missing alerts are not marked as read.');
-      root.append(warning);
-    }
-    if(!notices.length){
-      const empty=document.createElement('p');empty.className='empty-state';
-      empty.textContent=tx('Aucune notification de groupe accessible pour le moment.','No accessible group notifications yet.');
-      root.append(empty);return;
-    }
-    for(const n of notices.slice(0,100)){
-      const article=document.createElement('article');
-      article.className='item notification-center-item '+(n.read?'is-read':'is-unread')+' priority-'+String(n.priority??'NORMAL').toLowerCase();
-      const name=document.createElement('small');name.className='notification-origin';name.textContent=String(n.groupName??'');
-      const h=document.createElement('strong');h.textContent=(n.priority==='CRITICAL'?'🔴 ':n.priority==='HIGH'?'🟠 ':n.priority==='LOW'?'⚪ ':'🔵 ')+String(n.title??tx('Notification','Notification'));
-      const message=document.createElement('p');message.textContent=String(n.message??'');
-      const stamp=document.createElement('small');stamp.textContent=date(n.createdAt);
-      const actions=document.createElement('div');actions.className='actions';
-      if(n.action?.view){
-        const open=document.createElement('button');open.type='button';open.className='primary';
-        open.textContent=n.action.label||tx('Ouvrir dans ce groupe','Open in this group');
-        open.onclick=()=>void(async()=>{
-          try{
-            if(n.groupId&&app.activeGroup()!==n.groupId){
-              app.selectGroup(n.groupId);
-              await refreshGroupContext();
-            }
-            openNoticeAction(n.action);
-          }catch(error){fail(error);}
-        })();
-        actions.append(open);
-      }
-      if(!n.read){
-        const seen=document.createElement('button');seen.type='button';seen.className='secondary';
-        seen.textContent=tx('Marquer comme lu','Mark as read');
-        seen.onclick=()=>void(async()=>{
-          try{
-            seen.disabled=true;
-            await app.markNotificationReadInGroup(String(n.groupId),String(n.id));
-            await renderNotificationCenter();
-            if(app.activeGroup()===n.groupId)await renderUrgentNotifications();
-          }catch(error){seen.disabled=false;fail(error);}
-        })();
-        actions.append(seen);
-      }
-      article.append(name,h,message,stamp,actions);root.append(article);
-    }
-  }catch(error){
-    if(navigator.onLine)fail(error);
-    const message=document.createElement('p');message.className='truth-notice';
-    message.textContent=tx('Alertes non disponibles. Réessayez lorsque votre connexion revient ; aucun état de lecture n’a été modifié.',
-      'Alerts unavailable. Retry when your connection returns; no read state has been changed.');
-    root.append(message);
-  }
+  await notificationCenterUI.refresh(options);
 };
 document.querySelector('#notificationCenterRefreshBtn')?.addEventListener('click',()=>void renderNotificationCenter());
 window.addEventListener('eco:view-changed',event=>{
@@ -2552,6 +2492,7 @@ const refreshGroupContext = async () => {
     const requestedGroup=app.activeGroup();
     personalCockpitUI.clearForContext?.();
     personalShopsUI.clearForContext?.();
+    notificationCenterUI.clearForContext?.();
     universalSearchRevision++;document.getElementById('universalSearchFullResults')?.replaceChildren();const searchScope=JSON.stringify([app.currentActor(),app.currentTenant(),app.activeGroup()]);if(searchScope!==universalSearchScope){universalSearchScope=searchScope;const input=document.getElementById('universalSearchFull');if(input)input.value='';}
     // Account navigation does not wait for optional group/financial panels.
     // Reuse this same membership-checked directory in the personal cockpit.
@@ -2606,7 +2547,7 @@ const refreshGroupContext = async () => {
     await refreshOptionalOfflineSafe('financial-alerts',renderFinancialAlerts);
     if(active&&manage)ensureFinancialSnapshotPolling();
     await refreshOptionalOfflineSafe('urgent-notifications',renderUrgentNotifications);
-    await refreshOptionalOfflineSafe('notification-center',renderNotificationCenter);
+    await refreshOptionalOfflineSafe('notification-center',()=>renderNotificationCenter({background:true}));
     await refreshOptionalOfflineSafe('community-shop',()=>communityShopUI.refresh());
     if(document.getElementById('personalShopsPanel')?.open)await refreshOptionalOfflineSafe('personal-shops',()=>personalShopsUI.refresh());
     await refreshOptionalOfflineSafe('misc-rubrics',()=>miscRubricUI.refresh());
@@ -2636,6 +2577,13 @@ const openEcoShareIntent=async intent=>{
     if(intent.groupId&&app.activeGroup()!==intent.groupId){
         if(!groups.some(g=>g.id===intent.groupId)){toast(tx('Ce partage concerne un groupe auquel ce compte n’a pas accès.','This share belongs to a group this account cannot access.'));return false;}
         app.selectGroup(intent.groupId);await refreshGroupContext();
+    }
+    if(intent.kind==='notification'){
+        const actor=app.currentActor(),tenant=app.currentTenant();
+        await app.resolveGroupNotificationAction(String(intent.groupId),String(intent.objectId));
+        if(actor!==app.currentActor()||tenant!==app.currentTenant())return false;
+        go('inbox',{anchor:'eco-notice-'+intent.objectId,force:true});
+        return true;
     }
     go(intent.view||'ecosystem',{anchor:intent.anchor||undefined,force:true});
     window.dispatchEvent(new CustomEvent('eco:share-intent',{detail:intent}));
@@ -3081,6 +3029,7 @@ $('#languageSelect').addEventListener('change', async e => {
     app.setLocale(uiLocale);
     applyRuntimeLocale(uiLocale);
     await personalShopsUI.setLocale?.();
+    await notificationCenterUI.setLocale?.();
     completionUI.setLocale();
     advancedUI.setLocale();
     renderConnectivity(); renderModules(); renderEcosystemHighlights(); renderDomainHubs(); renderActiveGroup(); renderGroupSelector();
@@ -3384,7 +3333,7 @@ document.querySelector('#claimLocalAccountBtn')?.addEventListener('click',()=>vo
     catch(e){fail(e);}
     finally{if(button)button.disabled=false;}
 })());
-$('#logoutBtn').addEventListener('click',async()=>{try{await app.logout();journeyUI.refresh();localAssistantUI.refreshContext();document.body.classList.add('signed-out');$('#authScreen').hidden=false;$('#accountName').textContent='';const claim=document.querySelector('#claimLocalAccountBtn');if(claim)claim.hidden=true;showAuth(tx('Compte fermé sur cet appareil. Vos données locales ne sont pas supprimées.','Account signed out on this device. Your local data was not deleted.'));}catch(e){fail(e);}});
+$('#logoutBtn').addEventListener('click',async()=>{try{await app.logout();notificationCenterUI.clearForContext(true);journeyUI.refresh();localAssistantUI.refreshContext();document.body.classList.add('signed-out');$('#authScreen').hidden=false;$('#accountName').textContent='';const claim=document.querySelector('#claimLocalAccountBtn');if(claim)claim.hidden=true;showAuth(tx('Compte fermé sur cet appareil. Vos données locales ne sont pas supprimées.','Account signed out on this device. Your local data was not deleted.'));}catch(e){fail(e);}});
 // Online recovery is serialized by resumeOnline() above: sync durable outbox first, then restart projections.
 window.addEventListener('offline',()=>{renderConnectivity();const claim=document.querySelector('#claimLocalAccountBtn');if(claim&&!claim.hidden){claim.disabled=true;claim.textContent=tx('Compte local · Internet requis pour finaliser','Local account · Internet needed to finalize');}});
 void ensureCurrentServiceWorker();

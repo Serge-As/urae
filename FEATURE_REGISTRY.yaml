@@ -1,4 +1,5 @@
-# 2026-10-20 L10 personal commerce candidate1.5.2.27: implementation pending exact-source qualification/publication; group commerce acquired, no maturity promotion; FIELD_ACCEPTED=NOT_ACCEPTED.
+# L24 local candidate 1.5.2.28: notification recipient rights, immutable events/read/attempts, preferences and private links; NOT DEPLOYED. No maturity promotion.
+# L10 programmed scope VERIFIED_REMOTE:1.5.2.27 /ec6b459f /Actions39513045816 and39513045782 SUCCESS /835Node32Chrome6WebKit /29 hashes. Remaining advanced ideas explicitly limited; FIELD_ACCEPTED=NOT_ACCEPTED.
 # L10 commercial cycle VERIFIED_REMOTE:1.5.2.26 /1c012c47 /Actions39478003645 and39478003625 SUCCESS /808Node29Chrome6WebKit /27 hashes. Global lot remains IN_PROGRESS; FIELD_ACCEPTED=NOT_ACCEPTED.
 # L23 VERIFIED_REMOTE:1.5.2.25 /71a30e65 /Actions39457082605 and39457082597 SUCCESS /779Node27Chrome6WebKit /23 public hashes; FIELD_ACCEPTED=NOT_ACCEPTED.
 # L02 VERIFIED_REMOTE: 1.5.2.24 / 9575e84d / Actions39437509472 and39437509841 SUCCESS / 770Node25Chrome6WebKit / 20 public hashes; FIELD_ACCEPTED=NOT_ACCEPTED.
@@ -26,7 +27,7 @@
 # CURRENT 2026-10-08: publication HOLD; full 4000/5000 convergence still unqualified; Actions quota exhausted; prepared private local qualification runner. See recovery handoff.
 # 2026-10-08 CURRENT: 1.5.2.15 publication HOLD; offline reconfirmation clock defect under qualification. Current deployed proof remains 1.5.2.14. See CURRENT_TRUTH.
 registry_version: 1
-project_version: 1.5.2.19-member-continuity
+project_version: 1.5.2.28-notification-inbox
 source_of_truth: docs/constitution + verified_code
 
 capabilities:

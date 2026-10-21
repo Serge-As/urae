@@ -1573,7 +1573,7 @@ export class ConnectedApplication {
   }
   async expenses(input:{meetingId?:string;membershipId?:string;rubricId?:string;scope?:string}={}):Promise<any[]>{if(!this.activeGroupId)return[];const q=new URLSearchParams();for(const [k,v] of Object.entries(input))if(v)q.set(k,String(v));return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/expenses?${q}`);}
   async openSupportCase(summary:string):Promise<CaseRecord>{return this.request('/api/v1/cases',{method:'POST',body:JSON.stringify({summary,groupId:this.activeGroupId})});}
-  async inboxItems(options:{requireServer?:boolean}={}):Promise<Array<{id:string;kind:string;title:string;priority:string;status:string;groupId?:string;dueAt?:string;sourceType?:string;sourceId?:string}>>{return this.request('/api/v1/inbox',options.requireServer?{cache:'no-store'}:{});}
+  async inboxItems(options:{requireServer?:boolean}={}):Promise<Array<{id:string;kind:string;title:string;priority:string;status:string;groupId?:string;dueAt?:string;openedAt?:string;waitingFor?:'YOU'|'CASE_REVIEW'|'PARTY_NOT_SPECIFIED';sourceType?:string;sourceId?:string}>>{return this.request('/api/v1/inbox',options.requireServer?{cache:'no-store'}:{});}
 
   async productCatalog():Promise<{version:string;count:number;capabilities:ReturnType<ConnectedApplication['productModules']>}>{
     try{return await this.request('/api/v1/product/capabilities');}
@@ -1711,6 +1711,11 @@ export class ConnectedApplication {
     return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/meetings/${encodeURIComponent(meetingId)}/financial-cells/${encodeURIComponent(cellKey)}/apply`,{method:'POST',body:JSON.stringify({reason})});
   }
   async groupNotifications():Promise<any[]>{if(!this.activeGroupId)return[];return this.request(`/api/v1/groups/${encodeURIComponent(this.activeGroupId)}/notifications`);}
+  async notificationPreferences():Promise<any>{return this.request('/api/v1/notifications/preferences',{cache:'no-store'});}
+  async saveNotificationPreferences(input:Record<string,unknown>):Promise<any>{if(this.isOffline())throw Error('NETWORK_UNAVAILABLE');return this.request('/api/v1/notifications/preferences',{method:'PUT',body:JSON.stringify(input)});}
+  async resolveGroupNotificationAction(groupId:string,id:string):Promise<any>{if(this.isOffline())throw Error('NETWORK_UNAVAILABLE');return this.request(`/api/v1/groups/${encodeURIComponent(groupId)}/notifications/${encodeURIComponent(id)}/action`,{cache:'no-store'});}
+  async notificationHistory(groupId:string,id:string):Promise<any>{if(this.isOffline())throw Error('NETWORK_UNAVAILABLE');return this.request(`/api/v1/groups/${encodeURIComponent(groupId)}/notifications/${encodeURIComponent(id)}/history`,{cache:'no-store'});}
+  async recordNotificationAttempt(groupId:string,id:string,input:Record<string,unknown>):Promise<any>{if(this.isOffline())throw Error('NETWORK_UNAVAILABLE');return this.request(`/api/v1/groups/${encodeURIComponent(groupId)}/notifications/${encodeURIComponent(id)}/attempts`,{method:'POST',body:JSON.stringify(input)});}
   /** Read-only personal projection of the existing group NotificationService.
    * Each scoped request is independently authorized by the API. Nothing switches
    * activeGroupId, invents a notification, or starts background polling.
@@ -1721,7 +1726,7 @@ export class ConnectedApplication {
       const batch=groups.slice(offset,offset+3);
       await Promise.all(batch.map(async group=>{
         try{
-          const notices=await this.request<any[]>('/api/v1/groups/'+encodeURIComponent(group.id)+'/notifications');
+          const notices=await this.request<any[]>('/api/v1/groups/'+encodeURIComponent(group.id)+'/notifications',{cache:'no-store'});
           for(const notice of notices)items.push({...notice,groupId:group.id,groupName:group.name});
         }catch{
           unavailable.push({groupId:group.id,groupName:group.name});

@@ -1,13 +1,13 @@
-Eco-System 1.5.2.27 personal commerce delivery authorized
-release: 1.5.2.27-personal-commerce
-date: 2026-10-20
+Eco-System 1.5.2.28 notification inbox delivery authorized
+release: 1.5.2.28-notification-inbox
+date: 2026-10-21
 db_mutation: none
 mode: code-only-with-verified-readonly-backup-no-migration
-qualified_baseline_source: 1c012c47567a3f8eba8fc3fff22fa6dba658d4cf
-qualified_baseline_delivery: 39478003645 attempt1 SUCCESS
-qualification: baseline passed808 native29 Chromium6 WebKit; candidate must pass full exact-SHA gates
-candidate_native: 835 expected including27 new personal commerce contracts; mandatory before deploy
-candidate_chromium: 32 expected including3 new cross-account commerce scenarios; mandatory before deploy
+qualified_baseline_source: ec6b459f0afebbde1108ed92cdf01a7d9d88c69a
+qualified_baseline_delivery: 39513045816 attempt1 SUCCESS
+qualification: baseline passed835 native32 Chromium6 WebKit; candidate must pass full exact-SHA gates
+candidate_native: 868 expected including33 notification contracts; mandatory before deploy
+candidate_chromium: 35 expected including3 notification browser scenarios; mandatory before deploy
 candidate_webkit: 6 mandatory before deploy
 production_ancestry: preserve5c9366445d6699b7a608f06a49a4efb61ec7d1ff and all prior deliveries
 backup: mandatory readonly D1 export, verified SQLite restore, private R2 archive download/hash before deploy
@@ -16,8 +16,8 @@ financial_signing: preserve existing key, never rotate, provision only proven ab
 real_money_enabled: false
 field_acceptance: NOT_ACCEPTED
 historical_pr72_hold: preserved; no merge or override of PR72
-trigger_nonce: 2026-10-20-lot10-personal-commerce-exact-source
+trigger_nonce: 2026-10-21-lot24-notification-inbox-exact-source
 authorization: current user requested implementation and deployment of complete lots by agreed priority
-scope: personal shop ownership and limited current collaborator rights; canonical Market reservation/delivery; independent buyer receipt; Kernel.Cases reference; acquired finance untouched
+scope: canonical NotificationService recipient-authorized inbox; immutable event/read/attempt history; preferences and quiet time; private deep return; Kernel.Inbox pending projection; acquired finance and commerce preserved
 qualification_same_deployment_sha: mandatory full gates before publication, no relaxation
-public_verification: exact health and catalogue plus29 deployed asset SHA256 comparisons with same-SHA build
+public_verification: exact health and catalogue plus31 deployed asset SHA256 comparisons with same-SHA build

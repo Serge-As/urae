@@ -27,13 +27,14 @@ async function fixture(){
 }
 
 test('a non-financial notification failure cannot suppress the committed cell push',async()=>{
-  const x=await fixture(),save=x.repo.saveWorkspaceRecord.bind(x.repo);
-  x.repo.saveWorkspaceRecord=async row=>{if(row.moduleId==='NOTIFY.MESSAGE')throw Error('SYNTHETIC_NOTIFICATION_UNAVAILABLE');return save(row);};
+  const x=await fixture(),save=x.repo.insertNotificationRecord.bind(x.repo);let injected=0;
+  x.repo.insertNotificationRecord=async row=>{if(row.moduleId==='NOTIFY.MESSAGE'){injected++;throw Error('SYNTHETIC_NOTIFICATION_UNAVAILABLE');}return save(row);};
   const result=await x.request(x.cell,x.target());
   assert.equal(result.status,201);assert.equal(result.data.status,'APPLIED');
   assert.equal(x.events().filter(e=>e.type==='MEETING_UPDATE'&&e.payload.newAmount===2000).length,1,'confirmed amount must be pushed independently of notification rendering');
   const pending=await x.repo.listWorkspaceRecords(x.ids.tenant,'FINANCE.CORRECTION_OUTBOX',x.ids.group);
   assert.equal(pending[0].status,'ACTIVE','failed ancillary delivery stays retryable');
+  assert.ok(injected>0,'the canonical notification insertion really encountered the injected outage');
 });
 
 test('a persisted manager reserve with real-sized identifiers is acknowledged and delivered without changing money',async()=>{

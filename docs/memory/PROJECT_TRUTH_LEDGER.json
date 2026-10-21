@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedOn": "2026-10-20",
+  "generatedOn": "2026-10-21",
   "purpose": "Anti-regression operational truth. Read before asking founder to recreate/configure anything.",
   "allowedStatuses": [
     "ACQUIRED",
@@ -44,15 +44,18 @@
     {
       "id": "lot10-commercial-orders-20261020",
       "scope": "canonical commercial quotes, stock and order fulfilment, group-buy commitments",
-      "status": "IN_PROGRESS",
-      "statement": "Group-shop commercial cycle published and verified in1.5.2.26. Global lot remains partial: standalone personal storefront mandates, distinct buyer receipt and referenced SAV handoff are not newly delivered.",
+      "status": "VERIFIED_REMOTE",
+      "statement": "Programmed L10 scope closed across v26 group commerce and v27 personal scopes/mandates/buyer receipt/support reference. Not all future Bible variants delivered; no field acceptance.",
       "evidence": [
-        "source:1c012c47567a3f8eba8fc3fff22fa6dba658d4cf",
-        "github-actions:39478003645 SUCCESS; independent39478003625 SUCCESS",
-        "public-receipt:docs/release/evidence/LOT10-COMMERCIAL-CYCLE-PUBLIC-2026-10-20.json"
+        "source:ec6b459f0afebbde1108ed92cdf01a7d9d88c69a",
+        "github-actions:39513045816 SUCCESS; independent39513045782 SUCCESS",
+        "qualification:835Node32Chromium6WebKitPASS",
+        "public-receipt:docs/release/evidence/LOT10-PERSONAL-COMMERCE-PUBLIC-2026-10-21.json",
+        "health-independent:2026-10-20T23:48:21.8630564Z",
+        "private-R2-readback-sha256:754ef841a78ca3899778739876b0f0c3d9bf93423d4a3648adf41e0085ab0d5a; restored integrityok"
       ],
-      "observedOn": "2026-10-20",
-      "next": "Continue missing profile/mandate and handoff coverage from this deployed baseline; no new general audit, do not mark global lot complete. FIELD_ACCEPTED remains NOT_ACCEPTED."
+      "observedOn": "2026-10-21",
+      "next": "L24 notifications, then L25 transversal support. No second owner or real payment inferred."
     },
     {
       "id": "lot23-assistant-tools-20261020",
@@ -1486,14 +1489,32 @@
     },
     {
       "id": "delivery.lot10.personal_commerce.2026_10_20",
-      "scope": "Personal Market scopes, current mandates, buyer receipt and canonical support reference; candidate1.5.2.27; global L10 in progress",
-      "status": "IMPLEMENTED_UNVERIFIED",
-      "observedOn": "2026-10-20",
+      "scope": "Personal shops, current mandates, independent buyer receipt and canonical support reference",
+      "status": "VERIFIED_REMOTE",
+      "observedOn": "2026-10-21",
       "evidence": [
-        "docs/change-impact/CIR-2026-10-20-LOT10-PERSONAL-SHOPS.md",
-        "tests/market-personal-shops-lot10-20261020.test.mjs",
-        "tests/browser/personal-shops-lot10-20261020.spec.mjs"
-      ]
+        "source:ec6b459f0afebbde1108ed92cdf01a7d9d88c69a",
+        "github-actions:39513045816 SUCCESS; independent39513045782 SUCCESS",
+        "qualification:835Node32Chromium6WebKitPASS",
+        "public-receipt:docs/release/evidence/LOT10-PERSONAL-COMMERCE-PUBLIC-2026-10-21.json",
+        "health-independent:2026-10-20T23:48:21.8630564Z",
+        "private-R2-readback-sha256:754ef841a78ca3899778739876b0f0c3d9bf93423d4a3648adf41e0085ab0d5a; restored integrityok"
+      ],
+      "statement": "Programmed L10 closure gaps delivered and verified. Advanced personal quote/procurement variants, full transversal SAV, paid monetization and real payment integration are not claimed.",
+      "next": "L24 then L25. Preserve all acquired financial paths; FIELD_ACCEPTED=NOT_ACCEPTED."
+    },
+    {
+      "id": "delivery.lot24.notification_inbox.2026_10_21",
+      "scope": "Recipient authorized immutable notification inbox and canonical waiting projection",
+      "status": "IN_PROGRESS",
+      "observedOn": "2026-10-21",
+      "evidence": [
+        "docs/release/evidence/LOT24-NOTIFICATION-INBOX-LOCAL-2026-10-21.json",
+        "868 native and 3 new Chromium passed; no skipped",
+        "docs/release/DELIVERY-2026-10-21-LOT24-NOTIFICATION-INBOX.md"
+      ],
+      "statement": "Not deployed. Local browser qualification PARTIAL: Chromium 8 passed/2 failed; WebKit 4 passed/2 failed. Existing Live startup, F5 repayment visibility and Local Room RTC checks failed. Baseline F5 failure differs; candidate regression not excluded. Assertions unchanged. Production remains 1.5.2.27. GitHub read access restored; isolated remote qualification pending; no external provider or real money inference.",
+      "next": "Publish exact contents to isolated candidate branch with remote expected-head check; full same-SHA remote qualification before delivery, preserving all local failures. L25 after L24 delivery closure."
     }
   ]
 }

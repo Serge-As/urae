@@ -1839,3 +1839,19 @@ body.ui-mode-assisted .eco-workbench :is(button,p,small,span,label){font-size:15
 #personalShopsPanel input,#personalShopsPanel select{min-width:0;max-width:100%;box-sizing:border-box}
 #personalShopsPanel input[type=checkbox]{width:auto;justify-self:start}
 #personalShopsPanel .market-order-card .form-grid{grid-template-columns:repeat(auto-fit,minmax(min(100%,12rem),1fr))}
+
+/* L24: scoped notification cards inherit visual / senior / assisted typography. */
+#notificationCenterPanel{min-width:0;}
+#notificationCenterPanel .notification-controls,#notificationCenterPanel .notification-waiting{margin-block:1rem;min-width:0;}
+#notificationCenterPanel .notification-center-item,#notificationCenterPanel .notification-waiting-item{min-width:0;overflow-wrap:anywhere;}
+#notificationCenterPanel .notification-state{padding:.45rem .6rem;background:var(--soft,#f0f6f3);border-radius:.5rem;}
+#notificationCenterPanel .notification-preferences{padding:.7rem;border:1px solid var(--border,#d0e1d9);border-radius:.7rem;}
+#notificationCenterPanel .notification-preferences summary{cursor:pointer;font-weight:700;}
+#notificationCenterPanel .notification-preference-form{grid-template-columns:repeat(auto-fit,minmax(min(100%,14rem),1fr));margin-block:.8rem;}
+#notificationCenterPanel .notification-preference-form label{min-width:0;}
+#notificationCenterPanel .notification-preference-form input[type=checkbox]{width:auto;margin-inline-end:.5rem;}
+#notificationCenterPanel .actions{flex-wrap:wrap;gap:.45rem;}
+#notificationCenterPanel details>div{overflow-wrap:anywhere;}
+
+/* Keep the notification workspace readable across the full Inbox grid. */
+#notificationCenterPanel{grid-column:1/-1}
