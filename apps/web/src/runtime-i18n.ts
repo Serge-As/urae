@@ -13,7 +13,6 @@ const EXTRA_FR_EN: Record<string,string> = {
   'Mon dossier privé':'My private case',
   'Gestionnaires du groupe actif':'Current group managers',
   'Décrivez la situation…':'Describe the situation…',
-  'Ouvrir un dossier':'Open a case',
   'Compte acheteur pour la réception':'Buyer account for receipt',
   'Aucun compte lié':'No linked account',
   'Mes boutiques · découvrir · mes achats':'My shops · discover · my purchases',

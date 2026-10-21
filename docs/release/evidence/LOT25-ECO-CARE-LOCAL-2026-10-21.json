@@ -41,7 +41,16 @@
     "lot25-governance-final.log": "997947126a495278e5546e4c95f513383f8918b6bb0a1c707a0f71e3b52df541",
     "lot25-browser-closure.log": "cc485ddc475a103ca7b0d8e182ba7f89735af979235893d9b35239868b9ea2c6",
     "lot25-browser-closure.json": "28c68a703545766c5565f5d5aeb7e292788e05a310c6c6f2fa32b339c9a9aae3",
-    "artifacts/lot25-care-mobile.png": "edf2400208db4323e16c7798dc74f7f5cb8f431a93f9859ce808591ebf5f402c"
+    "artifacts/lot25-care-mobile.png": "edf2400208db4323e16c7798dc74f7f5cb8f431a93f9859ce808591ebf5f402c",
+    "lot25-initial-remote-governed-ci.log": "a76c066f246da355ab63aaddaa1aba36c42844a02b507af8fcdd3eb0133c8988",
+    "lot25-initial-remote-browser-critical.log": "ddbdef5f3a7b70367ebf2db3b5e67c34d0d55716f956c06fe72fd488120cad2c",
+    "lot25-typecheck-fix.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
   },
-  "uiClosure": "After explicit retry success, clear only the matching Care error message, preserving any unrelated error. Context clear also removes its own old Care message. Existing financial error handling unchanged. Final browser asserts confirmed action, immediately hidden old error, exactly one comment, no polling and logout privacy."
+  "uiClosure": "After explicit retry success, clear only the matching Care error message, preserving any unrelated error. Context clear also removes its own old Care message. Existing financial error handling unchanged. Final browser asserts confirmed action, immediately hidden old error, exactly one comment, no polling and logout privacy.",
+  "remoteInitialQualification": {
+    "sha": "2f7f65956f2c6f73c870c42cfd968402dec5347f",
+    "runId": 39657662164,
+    "conclusion": "failure",
+    "cause": "Duplicate runtime i18n object key TS1117; additional key removed, existing translation retained. Full local normal typecheck passes. New remote full qualification mandatory."
+  }
 }
