@@ -18,6 +18,23 @@ async function publish(page,groupId,extra={}){return api(page,'/api/v1/groups/'+
 const cardFor=(root,id)=>root.locator('[data-notice-id="'+id+'"]');
 async function open(page,noticeId){await page.locator('#mainNav [data-view="inbox"]').first().click();const root=page.locator('#notificationCenterPanel');await expect(cardFor(root,noticeId)).toHaveCount(1);return root;}
 
+test('module click during catalogue startup is retained and shop creation survives initialization',async({page})=>{
+ await page.goto(base);await expect.poll(()=>page.evaluate(()=>sessionStorage.getItem('eco.window.session.v1'))).toMatch(/^[a-f0-9]{32}$/);
+ await api(page,'/api/v1/auth/register','POST',{username:'startup_'+Date.now(),password,displayName:'Synthetic startup owner'});
+ let release;const held=new Promise(resolve=>{release=resolve;});let intercepted=false;
+ await page.route('**/api/v1/product/capabilities',async route=>{intercepted=true;await held;await route.continue();});
+ try{
+  await page.reload();await expect.poll(()=>intercepted).toBe(true);
+  await page.locator('#mainNav [data-module-open="MARKETPLACE.CORE"]').click();
+  release();await page.waitForLoadState('networkidle');
+  const root=page.locator('#personalShopsPanel');await expect(root).toHaveAttribute('open','');
+  await root.locator('.personal-shop-create [name=name]').fill('Synthetic startup shop');
+  await root.getByRole('button',{name:'Créer ma boutique privée',exact:true}).click();
+  await expect(root.locator('.shop-settings')).toBeVisible();
+  const rows=await api(page,'/api/v1/market/shops/mine');expect(rows).toHaveLength(1);expect(rows[0].groupId).toBeUndefined();expect(rows[0].data.visibility).toBe('PRIVATE');
+ }finally{release();}
+});
+
 test('logical event retry, explicit reading and source action stay separate in the real inbox',async({page})=>{
  const f=await setup(page),notice=await publish(page,f.groupId);expect((await publish(page,f.groupId)).id).toBe(notice.id);const source=await api(page,'/api/v1/cases','POST',{groupId:f.groupId,summary:'Dossier synthétique en attente'}),before=await api(page,'/api/v1/cases');
  const root=await open(page,notice.id),card=cardFor(root,notice.id);await expect(root.locator('.notification-center-item')).toHaveCount((await api(page,'/api/v1/groups/'+f.groupId+'/notifications')).length);await expect(card).toContainText('Traitement métier non déduit');await expect(root.locator('[data-waiting-id="'+source.id+'"]').first()).toBeVisible();

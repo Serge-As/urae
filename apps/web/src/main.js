@@ -183,6 +183,7 @@ let projectRevision=0;
 const launchEditors=[];
 let launchStudio;
 let modules = [];
+let applicationStartup = Promise.resolve();
 let selectedLot = 'ALL';
 let deferredInstallPrompt;
 const CAHIER_VERSION = '1.5.2.28-notification-inbox';
@@ -1977,6 +1978,11 @@ const specializedRoute = (id) => {
     return undefined;
 };
 const openModule = async (id) => {
+    // Retain an early menu click until this account's startup has finished.
+    // Its catalogue starts empty, and startup refreshes must not replace a form
+    // opened while the initial account/group context is still being restored.
+    let startup;
+    do { startup=applicationStartup; await startup; } while(startup!==applicationStartup);
     const m = modules.find(x => x.id === id);
     if (!m)
         return;
@@ -3216,6 +3222,8 @@ async function start() {
     document.body.classList.add('auth-restoring');
     renderConnectivity();
     renderKernel();
+    let settleStartup;
+    applicationStartup=new Promise(resolve=>{settleStartup=resolve;});
     let authenticatedSession=false;
     try {
         const session=await app.authStatus();
@@ -3269,6 +3277,7 @@ async function start() {
         }
         fail(e);
     }
+    finally { settleStartup(); }
 }
 
 async function showStatement(membershipId){

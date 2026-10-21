@@ -7,7 +7,7 @@ qualified_baseline_source: ec6b459f0afebbde1108ed92cdf01a7d9d88c69a
 qualified_baseline_delivery: 39513045816 attempt1 SUCCESS
 qualification: baseline passed835 native32 Chromium6 WebKit; candidate must pass full exact-SHA gates
 candidate_native: 868 expected including33 notification contracts; mandatory before deploy
-candidate_chromium: 35 expected including3 notification browser scenarios; mandatory before deploy
+candidate_chromium: 36 expected including4 notification/startup browser scenarios; mandatory before deploy
 candidate_webkit: 6 mandatory before deploy
 production_ancestry: preserve5c9366445d6699b7a608f06a49a4efb61ec7d1ff and all prior deliveries
 backup: mandatory readonly D1 export, verified SQLite restore, private R2 archive download/hash before deploy

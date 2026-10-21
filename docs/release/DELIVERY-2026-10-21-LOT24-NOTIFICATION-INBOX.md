@@ -1,5 +1,7 @@
 # L24 — Inbox, notifications et liens privés
 
+Point courant après les runs 39609454413 et 39609454216 : les contrôles ont bloqué la publication sur une course du démarrage de la boutique personnelle. Production v27 préservée. Un quatrième scénario L24 reproduit le clic Marketplace pendant le chargement retenu du catalogue ; il échoue bien sur la compilation précédente avec le panneau resté fermé. Une attente du démarrage dans le contrôleur existant est ajoutée avant la résolution des modules. Nouvelle qualification obligatoire : 868 natifs, 36 Chromium à la livraison, 34 dans la qualification séparée et 6 WebKit. Les résultats ci-dessous sur la source précédente sont historiques, pas une preuve de la nouvelle source.
+
 État : code implémenté, **qualification globale partielle et publication bloquée**. Version préparée `1.5.2.28-notification-inbox`. La production vérifiée demeure `1.5.2.27-personal-commerce`, source `ec6b459f0afebbde1108ed92cdf01a7d9d88c69a`. L'autorisation de livrer existe ; les outils du plugin GitHub installé sont actuellement indisponibles dans ce chat. Aucun contournement, nouvelle clé ou installation n'est nécessaire pour qualifier le code localement.
 
 ## Ce qui est implémenté
