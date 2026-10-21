@@ -37,13 +37,21 @@ test('connected cockpit, direct destinations, memory and Eco IA remain usable on
  await expect(page.locator('#activeGroupSelect')).toHaveValue(rotating.id);
 });
 test('cell dictation waits for stop and review, never submits finance, and rejects stale context',async({page})=>{
- await page.goto(base,{waitUntil:'domcontentloaded'});
- await page.evaluate(async()=>{
+ await page.goto(base,{waitUntil:'load'});
+ await expect(page.locator('body')).not.toHaveClass(/auth-restoring/);
+ await page.addScriptTag({type:'module',url:base+'/src/voice-entry-ui.js'});
+ await page.evaluate(()=>{
   window.SpeechRecognition=class{start(){this.onstart?.();window.testRecognition=this;}stop(){this.onresult?.({resultIndex:0,results:[Object.assign([{transcript:'cinq mille',confidence:.98}],{isFinal:true})]});this.onend?.();}};
-  const {createCellDictationButton}=await import('/src/voice-entry-ui.js');window.testScope='one';window.testFinancialWrites=0;
+  // Keep module loading in the browser; wait below for the real mounted fixture.
+  // Returning a dynamic-import promise through DevTools was intermittently
+  // rejected as a destroyed execution context without a new document request.
+  void import('/src/voice-entry-ui.js').then(({createCellDictationButton})=>{window.testScope='one';window.testFinancialWrites=0;
   document.body.classList.remove('signed-out','auth-restoring');document.getElementById('authScreen').hidden=true;
   const host=document.createElement('section');host.id='dictationFixture';host.style.cssText='position:fixed;top:10px;left:10px;z-index:10000;background:white;padding:10px';const input=document.createElement('input');input.id='dictationTarget';input.type='number';const validate=document.createElement('button');validate.textContent='Commit';validate.onclick=()=>window.testFinancialWrites++;host.append(input,createCellDictationButton(input,{label:'Camille · Épargne',getScope:()=>window.testScope}),validate);document.body.append(host);
+  }).catch(error=>{window.testFixtureError=String(error);});
  });
+ await expect(page.locator('#dictationFixture')).toBeVisible();
+ expect(await page.evaluate(()=>window.testFixtureError??null)).toBeNull();
  await page.locator('#dictationFixture .cell-dictate').click();await page.locator('dialog button').filter({hasText:'Écouter'}).click();await expect(page.locator('dialog textarea')).toHaveValue('');await page.locator('dialog button').filter({hasText:'Arrêter'}).click();await expect(page.locator('dialog textarea')).toHaveValue('cinq mille');await expect(page.locator('dialog input')).toHaveValue('5000');await expect(page.locator('#dictationTarget')).toHaveValue('');
  await page.locator('dialog button').filter({hasText:'Reporter'}).click();await expect(page.locator('#dictationTarget')).toHaveValue('5000');expect(await page.evaluate(()=>window.testFinancialWrites)).toBe(0);
  await page.locator('#dictationFixture .cell-dictate').click();await page.locator('dialog input').fill('6000');await page.evaluate(()=>window.testScope='two');await page.locator('dialog button').filter({hasText:'Reporter'}).click();await expect(page.locator('#dictationTarget')).toHaveValue('5000');await expect(page.locator('dialog')).toContainText('changé');

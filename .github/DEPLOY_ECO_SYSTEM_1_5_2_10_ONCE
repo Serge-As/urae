@@ -16,8 +16,10 @@ financial_signing: preserve existing key, never rotate, provision only proven ab
 real_money_enabled: false
 field_acceptance: NOT_ACCEPTED
 historical_pr72_hold: preserved; no merge or override of PR72
-trigger_nonce: 2026-10-21-lot25-eco-care-exact-source
+trigger_nonce: 2026-10-21-lot25-eco-care-dictation-fixture-exact-source
 authorization: current user requested implementation and deployment of complete lots by agreed priority
 scope: Kernel.Cases canonical lifecycle and conditional persistence; explicit support audiences; proposals separated from requester acceptance; versioned preventive expectations; acquired finance and commerce preserved
 qualification_same_deployment_sha: mandatory full gates before publication, no relaxation
 public_verification: exact health and catalogue plus33 deployed asset SHA256 comparisons with same-SHA build
+
+qualification_extension: acquired cockpit continuity and dictation now mandatory in candidate gate too; no assertion removed

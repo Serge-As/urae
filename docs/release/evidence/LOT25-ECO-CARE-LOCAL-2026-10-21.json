@@ -44,7 +44,11 @@
     "artifacts/lot25-care-mobile.png": "edf2400208db4323e16c7798dc74f7f5cb8f431a93f9859ce808591ebf5f402c",
     "lot25-initial-remote-governed-ci.log": "a76c066f246da355ab63aaddaa1aba36c42844a02b507af8fcdd3eb0133c8988",
     "lot25-initial-remote-browser-critical.log": "ddbdef5f3a7b70367ebf2db3b5e67c34d0d55716f956c06fe72fd488120cad2c",
-    "lot25-typecheck-fix.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    "lot25-typecheck-fix.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "lot25-first-remote-delivery.log": "178603b8dd63b299e330dcaa7f22a31c197e0a8dedb49c4142ff2d69f9b75eb9",
+    "lot25-second-remote-delivery.log": "dbf745238b554fff5cf769a1ec37605ab8d605e2458f314f9876cc8df2f76df3",
+    "lot25-dictation-dom-ready.log": "15cfb6403ec6fcc262cb599d08f287436645c0c7209efbfcc07e2f0ba9dfaad0",
+    "lot25-dictation-dom-ready.json": "d2b7fc6b7c94a66a03961452a4df46ecd45f26aa9a15b9952ba2d110010c930d"
   },
   "uiClosure": "After explicit retry success, clear only the matching Care error message, preserving any unrelated error. Context clear also removes its own old Care message. Existing financial error handling unchanged. Final browser asserts confirmed action, immediately hidden old error, exactly one comment, no polling and logout privacy.",
   "remoteInitialQualification": {
@@ -52,5 +56,25 @@
     "runId": 39657662164,
     "conclusion": "failure",
     "cause": "Duplicate runtime i18n object key TS1117; additional key removed, existing translation retained. Full local normal typecheck passes. New remote full qualification mandatory."
+  },
+  "deliveryInterruption": {
+    "source": "008d987458e4e451c94fa9bef704b65b7f43345c",
+    "run": 39664351959,
+    "attemptsFailed": [
+      1,
+      2
+    ],
+    "published": false,
+    "failure": "Synthetic dictation setup rejected awaited dynamic import through DevTools; no financial write reached.",
+    "repair": "Browser-native asynchronous module mount, explicit fixture and error assertions; business assertions/timeouts retained. Add acquired cockpit file to candidate gate.",
+    "localUtf8Diagnostic": {
+      "startTime": "2026-10-21T20:50:22.659Z",
+      "duration": 32310.505,
+      "expected": 3,
+      "skipped": 0,
+      "unexpected": 0,
+      "flaky": 0
+    },
+    "newRequiredCandidateChromium": 39
   }
 }
