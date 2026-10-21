@@ -1,5 +1,7 @@
 # Recall — L25 Eco Care / SAV
 
+Correction de qualification : le doublon de traduction ajouté pour « Ouvrir un dossier » a été supprimé ; sa clé commune acquise est réutilisée, et sa valeur anglaise « Open a case » est alignée sur la projection Care. Le typecheck normal passe. Le run 39659898550 sur ebef349 a ensuite signalé que le commit de correction ne modifiait pas son Recall, bien que le Recall du lot soit présent dans l’ancêtre. Cette mise à jour consigne donc explicitement la correction et ses dépendances dans le même changement que l’alignement anglais. Ne pas modifier le memory-gate pour contourner cette exigence. La première candidate 2f7f659/run39657662164 a été refusée avant déploiement ; la production reste v28 jusqu’à une nouvelle qualification complète et une livraison vérifiée. Aucun changement Ledger, outbox ou droit commercial.
+
 Reprise après clôture réelle de L24, pas nouvel audit général. L25 réutilise Kernel.Cases pour son cycle de vie, les dépôts mémoire/D1/fichier existants, MarketService pour les parties d’une commande et Kernel.Evidence pour les pièces. CIR : docs/change-impact/CIR-2026-10-21-LOT25-ECO-CARE.md.
 
 Acquis à conserver : finance Ledger/D1 et deux feuilles normales, résumé FinancialWorkCoordinator au passage au membre suivant, outbox et ACK, Live, prêts/épargne, boutiques et stocks, droits privés, préférences OFF, démarrage protégé et centre d’alertes L24. Une lecture, affectation ou résolution de dossier ne réalise aucun remboursement ni mouvement de stock.

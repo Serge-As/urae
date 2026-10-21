@@ -174,7 +174,7 @@ const EXTRA_FR_EN: Record<string,string> = {
   'Nouveau dossier':'New record','Service':'Service','Statut':'Status','Actif':'Active','Brouillon':'Draft','Terminé':'Done','Archivé':'Archived',
   'Enregistrer le dossier':'Save record','Dossiers':'Records','Persistants sur D1 pour le tenant actif.':'Persistent in D1 for the active tenant.',
   'Inbox · Support · Offline':'Inbox · Support · Offline','Une interdiction raisonnable doit proposer une voie d’autorisation, de recours ou de régularisation lorsque c’est possible.':'A reasonable restriction should provide an authorization, appeal or regularization path when possible.',
-  'Boîte universelle':'Universal inbox','Support / litige / recours':'Support / dispute / appeal','Ouvrir un dossier':'Open case','File offline':'Offline queue',
+  'Boîte universelle':'Universal inbox','Support / litige / recours':'Support / dispute / appeal','Ouvrir un dossier':'Open a case','File offline':'Offline queue',
   'Ajouter une note de test':'Add a test note','Synchroniser':'Synchronize',
   'Réglages · Sécurité · Compatibilité':'Settings · Security · Compatibility','Préparer le pilote sans activer l’argent réel.':'Prepare the pilot without enabling real money.',
   'Préférences':'Preferences','Langue':'Language','Français':'French','Mode Ultra Simple':'Ultra Simple mode',

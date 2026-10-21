@@ -1,5 +1,7 @@
 # CIR — L25 Eco Care / SAV et attentes convenues
 
+Fermeture de correction : une seule clé commune « Ouvrir un dossier » est conservée ; sa valeur anglaise est alignée sur « Open a case » dans le panneau Care. Risque indirect contrôlé : dictionnaire commun et observation runtime FR/EN ; aucune modification de parcours ou de stockage. Le Recall de ce même commit documente le doublon initial et le refus memory-gate du run39659898550. La porte reste intacte ; tous les contrôles sont relancés sur la source résultante.
+
 Autorisation directe : poursuivre les lots classés et leurs améliorations et innovations gratuites. L24 est publié et vérifié : source 0266e1b895d4a91a4bc57d189608aae360393c24, livraison 39617145115 SUCCESS, 868 natifs / 36 Chromium / 6 WebKit / 31 empreintes publiques. La clôture documentaire locale d468fa9 ne change pas cette source en production.
 
 Réemploi : Kernel.Cases reste propriétaire du dossier et de son cycle de vie ; le dépôt existant assure sa persistance. MarketService reste propriétaire des commandes, des parties habilitées et des corrections commerciales. Kernel.Evidence garde les pièces immuables. NotificationService et Ledger ne sont pas réécrits. Le panneau Eco Care est une projection et un adaptateur de commandes auprès de ces propriétaires.
