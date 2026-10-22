@@ -86,7 +86,8 @@ for(const sql of [false,true]){const label=sql?'SQLite/D1':'memory';
  });
  test(label+' expiration is enforced when reading pooled matches and the opportunity graph without a scheduler',async()=>{
   const f=await setup(sql),r=await f.pool();await f.value('alice').contributePool('g',r.id,{quantity:1,unit:'kg',consent:true});const offer=await f.value().createOffer({kind:'NOW',title:'Short availability',category:'rice',availableQuantity:2,unit:'kg',locality:'Yaoundé',expiresAt:f.end});
-  assert.ok((await new OpportunityGraphService(f.repo,f.kernel('owner')).projection()).nodes.some(n=>n.ref===offer.id));const original=Date.now;Date.now=()=>original()+2*86400000;
-  try{assert.equal((await f.value().poolView('g',r.id)).state,'EXPIRED');await assert.rejects(()=>f.value().poolMatches('g',r.id),/POOL_NOT_OPEN/);assert.ok(!(await new OpportunityGraphService(f.repo,f.kernel('owner')).projection()).nodes.some(n=>n.ref===offer.id));}finally{Date.now=original;}
+  await f.repo.saveWorkspaceRecord({...offer,id:'legacy-undated-offer',data:{...offer.data,expiresAt:''}});
+  const initial=await new OpportunityGraphService(f.repo,f.kernel('owner')).projection();assert.ok(initial.nodes.some(n=>n.ref===offer.id));assert.equal(initial.nodes.find(n=>n.ref==='legacy-undated-offer').meta.expiryKnown,false);const original=Date.now;Date.now=()=>original()+2*86400000;
+  try{assert.equal((await f.value().poolView('g',r.id)).state,'EXPIRED');await assert.rejects(()=>f.value().poolMatches('g',r.id),/POOL_NOT_OPEN/);const expired=await new OpportunityGraphService(f.repo,f.kernel('owner')).projection();assert.ok(!expired.nodes.some(n=>n.ref===offer.id));assert.ok(expired.nodes.some(n=>n.ref==='legacy-undated-offer'&&n.meta.expiryKnown===false));}finally{Date.now=original;}
  });
 }

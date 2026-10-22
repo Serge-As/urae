@@ -24,6 +24,8 @@ L'assemblage et la réservation exclusive des ressources I16, les lots Harvest I
 
 ## Preuves et récupération
 
+Premier passage intégré e25c2f1c :940/941 tests natifs passent. Le refus concerne une offre historique sans date d'expiration, masquée par le nouveau filtre du graphe. Le correctif conserve sa visibilité et indique que sa validité est inconnue, sans assouplir le test acquis ; les échéances dépassées restent exclues. Les deux cas sont vérifiés sur les deux dépôts. Les3 nouveaux parcours Chromium passent déjà en local, dont deux comptes réels synthétiques et le mobile anglais. La source corrigée doit repasser la qualification complète. L'incident GitHub Actions concomitant peut retarder ses résultats, sans transformer cet échec réel en réussite.
+
 Les22 scénarios métier ciblés passent sur mémoire etSQLite/D1 avant qualification intégrée. Compilation de la candidate réussie :73ressources initiales,55transitives. Contrôles architecture, gouvernance, solidarité, vérité et mémoire passent. Les contrôles navigateur nouveaux et l'ensemble des acquis, la sauvegarde restaurée et l'identité publique doivent encore être consignés sur la source publiée réelle. Les premiers refus de syntaxe lors de la préparation sont conservés dans les logs locaux ; aucun de ces états n'a été publié.
 
 Revenir sur les raccords d'interface ne supprime ni observation, ni consentement, ni retrait. Aucun effacement de base/navigateur, aucune recréation D1/R2 ni rotation de clé financière. BIR+ / ÉTAT DU PROJET APRÈS ÉTAPE : candidat en qualification ; les autres lots et innovations ne changent pas de statut par association. Consommation exacte des crédits non mesurable.
