@@ -214,9 +214,11 @@ test('A01 Recap cell override persists after reload and does not rewrite canonic
   test.setTimeout(120_000);
   const password='Synthetic-a01-recap-2026!';
   await page.goto(base+'/',{waitUntil:'domcontentloaded'});
+  await expect.poll(()=>page.evaluate(()=>sessionStorage.getItem('eco.window.session.v1'))).toMatch(/^[a-f0-9]{32}$/);
+  await page.waitForLoadState('networkidle');
   const ids=await page.evaluate(async({password})=>{
     const json=async(path,method='GET',body,groupId)=>{
-      const response=await fetch(path,{method,headers:{...(body===undefined?{}:{'content-type':'application/json'}),...(groupId?{'x-active-group-id':groupId}:{})},body:body===undefined?undefined:JSON.stringify(body)});
+      const response=await fetch(path,{method,headers:{'x-eco-window-id':sessionStorage.getItem('eco.window.session.v1'),...(body===undefined?{}:{'content-type':'application/json'}),...(groupId?{'x-active-group-id':groupId}:{})},body:body===undefined?undefined:JSON.stringify(body)});
       const text=await response.text();let data;try{data=JSON.parse(text);}catch{data=text;}
       if(!response.ok)throw new Error(method+' '+path+' -> '+response.status+' '+text);
       return data;
@@ -238,6 +240,7 @@ test('A01 Recap cell override persists after reload and does not rewrite canonic
   },{password});
 
   const openRecap=async()=>{
+    await page.waitForLoadState('networkidle');
     await page.evaluate(async groupId=>{
       document.body.innerHTML='<select id="languageSelect"><option value="fr" selected>FR</option></select><select id="activeGroupSelect"><option value="'+groupId+'" selected>Groupe A01</option></select><div id="view-operations"><div class="page-head"></div></div>';
       const module=await import('/src/master-governance-ui.js');
@@ -263,7 +266,7 @@ test('A01 Recap cell override persists after reload and does not rewrite canonic
   page.off('dialog',dialogHandler);
 
   const persisted=await page.evaluate(async({groupId,membershipId})=>{
-    const response=await fetch('/api/v1/groups/'+encodeURIComponent(groupId)+'/recap/global',{headers:{'x-active-group-id':groupId}});
+    const response=await fetch('/api/v1/groups/'+encodeURIComponent(groupId)+'/recap/global',{headers:{'x-active-group-id':groupId,'x-eco-window-id':sessionStorage.getItem('eco.window.session.v1')}});
     if(!response.ok)throw new Error('recap '+response.status);
     const recap=await response.json();
     const row=recap.rows.find(x=>x.membershipId===membershipId);
