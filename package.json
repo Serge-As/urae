@@ -1,9 +1,9 @@
 {
   "name": "tontine-platform",
-  "version": "1.5.2-31",
+  "version": "1.5.2-32",
   "private": true,
   "type": "module",
-  "description": "Eco-System: private immutable business experiments with canonical outcomes and consented pooled needs; acquired finance, governance, rights and offline preserved.",
+  "description": "Eco-System: canonical temporal availability, traceable Harvest changes, consented free internal ad pilots and qualified public asking prices; acquired finance and offline preserved.",
   "engines": {
     "node": ">=24"
   },

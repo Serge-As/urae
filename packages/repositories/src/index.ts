@@ -100,12 +100,19 @@ export interface MarketOrderTransitionPlan {
 
 const marketScope=(r:WorkspaceRecord)=>String(r.data.marketScopeId??r.groupId??'');
 
-export interface MarketRecordMutationPlan {record:WorkspaceRecord;expectedVersion:number;movement?:EvidenceRecord;}
+export interface MarketRecordMutationPlan {record:WorkspaceRecord;expectedVersion:number;movement?:EvidenceRecord;createdStock?:WorkspaceRecord;createdMovement?:EvidenceRecord;}
+
+// Optional conversion extends the existing stock CAS; old mutation plans are unchanged.
+function validateCreatedStock(plan:MarketRecordMutationPlan){
+ const x=plan.createdStock,e=plan.createdMovement,m=plan.movement,r=plan.record;if(!x&&!e)return;
+ if(!x||!e||!m||r.data.marketKind!=='STOCK_ITEM'||x.data.marketKind!=='STOCK_ITEM'||x.moduleId!=='MARKETPLACE.CORE'||x.tenantId!==r.tenantId||x.groupId!==r.groupId||marketScope(x)!==marketScope(r)||x.id===r.id||!x.tags.includes('market-engine')||Number(x.data.version)!==1||!Number.isSafeInteger(x.data.quantity)||Number(x.data.quantity)<=0||Number(x.data.reserved)!==0||e.tenantId!==x.tenantId||e.subjectId!==x.id||e.data.sourceId!==r.id||e.data.marketScopeId!==marketScope(r)||m.type!=='MARKET_STOCK_MOVEMENT'||e.type!=='MARKET_STOCK_MOVEMENT'||m.data.kind!=='HARVEST_TRANSFORMATION'||e.data.kind!=='HARVEST_OUTPUT')throw Error('MARKET_CONVERSION_PLAN_INVALID');
+}
 
 export interface NotificationInsertResult {record:WorkspaceRecord;inserted:boolean;}
 
 export interface PlatformRepository {
   commitMarketRecordMutation(plan:MarketRecordMutationPlan):WorkspaceRecord|Promise<WorkspaceRecord>;
+  commitWorkspaceRecordRevision(record:WorkspaceRecord,expectedVersion:number):WorkspaceRecord|Promise<WorkspaceRecord>;
   commitFinancialOperation(operation: FinancialOperation): FinancialOperation | Promise<FinancialOperation>;
   commitFinancialCorrection(plan: FinancialCorrectionPlan): FinancialCorrectionPlan | Promise<FinancialCorrectionPlan>;
   commitFinancialCellStamp(plan:FinancialCellStampPlan):FinancialCellStampPlan|Promise<FinancialCellStampPlan>;
@@ -255,13 +262,17 @@ export class InMemoryPlatformRepository implements PlatformRepository {
     return structuredClone(plan);
   }
 
+  commitWorkspaceRecordRevision(record:WorkspaceRecord,expectedVersion:number){return this.commitMarketRecordMutation({record,expectedVersion});}
   commitMarketRecordMutation(plan:MarketRecordMutationPlan):WorkspaceRecord{
+    validateCreatedStock(plan);if(plan.createdStock&&this.workspaceRecords.has(plan.createdStock.id))throw Error('MARKET_IDEMPOTENCY_CONFLICT');
     const current=this.workspaceRecords.get(plan.record.id);
     if(!current||current.tenantId!==plan.record.tenantId||current.groupId!==plan.record.groupId||marketScope(current)!==marketScope(plan.record))throw Error('FORBIDDEN_SCOPE');
     if(Number(current.data.version??1)!==plan.expectedVersion)throw Error('MARKET_RECORD_CONFLICT');
     if(plan.movement&&(plan.movement.tenantId!==current.tenantId||plan.movement.subjectId!==current.id||plan.movement.data.groupId!==current.groupId||String(plan.movement.data.marketScopeId??plan.movement.data.groupId??'')!==marketScope(current)))throw Error('MARKET_ORDER_PLAN_INVALID');
     this.workspaceRecords.set(current.id,structuredClone(plan.record));
     if(plan.movement)this.evidences.set(plan.movement.id,structuredClone(plan.movement));
+    if(plan.createdStock)this.workspaceRecords.set(plan.createdStock.id,structuredClone(plan.createdStock));
+    if(plan.createdMovement)this.evidences.set(plan.createdMovement.id,structuredClone(plan.createdMovement));
     return structuredClone(plan.record);
   }
 
@@ -452,7 +463,7 @@ export class InMemoryPlatformRepository implements PlatformRepository {
     this.workspaceRecords.set(record.id,structuredClone(record));return {record:structuredClone(record),inserted:true};
   }
   insertGovernedRecord(record:WorkspaceRecord):NotificationInsertResult{
-    if(!['TRUST.VERIFICATION','GOVERNANCE.VOTE.ACTION','GOVERNANCE.VOTE.BALLOT'].includes(record.moduleId)&&!(record.moduleId==='MANAGER.BUSINESS_STUDIO'&&record.tags.includes('business-experiment'))&&!(record.moduleId==='OPPORTUNITY.NEED'&&record.tags.includes('consensual-pool')))throw Error('INVALID_GOVERNED_RECORD');
+    if(!['TRUST.VERIFICATION','GOVERNANCE.VOTE.ACTION','GOVERNANCE.VOTE.BALLOT'].includes(record.moduleId)&&!(record.moduleId==='MANAGER.BUSINESS_STUDIO'&&record.tags.includes('business-experiment'))&&!(record.moduleId==='OPPORTUNITY.NEED'&&record.tags.includes('consensual-pool'))&&! (record.moduleId==='ADS.MANAGER'&&record.tags.includes('ad-pilot')))throw Error('INVALID_GOVERNED_RECORD');
     const previous=this.workspaceRecords.get(record.id);
     if(previous){if(previous.tenantId!==record.tenantId||previous.moduleId!==record.moduleId||previous.groupId!==record.groupId)throw Error('GOVERNED_RECORD_CONFLICT');return{record:structuredClone(previous),inserted:false};}
     this.workspaceRecords.set(record.id,structuredClone(record));return{record:structuredClone(record),inserted:true};
@@ -644,7 +655,9 @@ export class D1PlatformRepository implements PlatformRepository {
     return plan;
   }
 
+  commitWorkspaceRecordRevision(record:WorkspaceRecord,expectedVersion:number){return this.commitMarketRecordMutation({record,expectedVersion});}
   async commitMarketRecordMutation(plan:MarketRecordMutationPlan):Promise<WorkspaceRecord>{
+    validateCreatedStock(plan);
     const r=plan.record,m=plan.movement;
     if(Number(r.data.version)!==plan.expectedVersion+1||m&&(m.tenantId!==r.tenantId||m.subjectId!==r.id||m.data.groupId!==r.groupId||String(m.data.marketScopeId??m.data.groupId??'')!==marketScope(r)))throw Error('MARKET_ORDER_PLAN_INVALID');
     const update=this.db.prepare(`UPDATE platform_records SET data_json=?,updated_at=? WHERE record_type='workspace_record' AND record_id=? AND tenant_id=? AND group_id IS ? AND COALESCE(CAST(json_extract(data_json,'$.data.version') AS INTEGER),1)=?`).bind(JSON.stringify(r),r.updatedAt,r.id,r.tenantId,r.groupId??null,plan.expectedVersion);
@@ -652,7 +665,12 @@ export class D1PlatformRepository implements PlatformRepository {
     // The NOT NULL scalar guard makes a stale update abort the whole D1 batch.
     const guard=this.db.prepare(`INSERT INTO platform_records(record_type,record_id,tenant_id,group_id,assignee_id,idempotency_key,data_json,updated_at) VALUES('market_mutation_guard',?,?,?,?,?,(SELECT json_object('operationId',?) FROM platform_records WHERE record_type='workspace_record' AND record_id=? AND tenant_id=? AND group_id IS ? AND json_extract(data_json,'$.data.lastMarketOperationId')=?),?)`).bind(m.id,r.tenantId,r.groupId??null,null,m.id,m.id,r.id,r.tenantId,r.groupId??null,m.id,r.updatedAt);
     const evidence=this.db.prepare(`INSERT INTO platform_records(record_type,record_id,tenant_id,group_id,assignee_id,idempotency_key,data_json,updated_at) VALUES('evidence',?,?,?,?,?,?,?)`).bind(m.id,r.tenantId,r.groupId??null,null,m.id,JSON.stringify(m),m.createdAt);
-    try{await this.db.batch([update,guard,evidence]);}catch(error){const current=await this.getWorkspaceRecord(r.tenantId,r.id);if(Number(current?.data.version??1)!==plan.expectedVersion)throw Error('MARKET_RECORD_CONFLICT',{cause:error});throw error;}
+    const statements=[update,guard,evidence];
+    if(plan.createdStock){const x=plan.createdStock,e=plan.createdMovement!;
+      statements.push(this.db.prepare("INSERT INTO platform_records(record_type,record_id,tenant_id,group_id,assignee_id,idempotency_key,data_json,updated_at) VALUES('workspace_record',?,?,?,?,NULL,?,?)").bind(x.id,x.tenantId,x.groupId??null,x.createdBy,JSON.stringify(x),x.updatedAt));
+      statements.push(this.db.prepare("INSERT INTO platform_records(record_type,record_id,tenant_id,group_id,assignee_id,idempotency_key,data_json,updated_at) VALUES('evidence',?,?,?,?,?,?,?)").bind(e.id,e.tenantId,x.groupId??null,null,e.id,JSON.stringify(e),e.createdAt));
+    }
+    try{await this.db.batch(statements);}catch(error){const current=await this.getWorkspaceRecord(r.tenantId,r.id);if(Number(current?.data.version??1)!==plan.expectedVersion)throw Error('MARKET_RECORD_CONFLICT',{cause:error});throw error;}
     return r;
   }
 
@@ -953,7 +971,7 @@ export class D1PlatformRepository implements PlatformRepository {
     if(!stored||stored.moduleId!==x.moduleId)throw Error('NOTIFICATION_ID_CONFLICT');const changes=result as {meta?:{changes?:number};changes?:number};return {record:stored,inserted:Number(changes.meta?.changes??changes.changes??0)===1};
   }
   async insertGovernedRecord(x:WorkspaceRecord):Promise<NotificationInsertResult>{
-    if(!['TRUST.VERIFICATION','GOVERNANCE.VOTE.ACTION','GOVERNANCE.VOTE.BALLOT'].includes(x.moduleId)&&!(x.moduleId==='MANAGER.BUSINESS_STUDIO'&&x.tags.includes('business-experiment'))&&!(x.moduleId==='OPPORTUNITY.NEED'&&x.tags.includes('consensual-pool')))throw Error('INVALID_GOVERNED_RECORD');
+    if(!['TRUST.VERIFICATION','GOVERNANCE.VOTE.ACTION','GOVERNANCE.VOTE.BALLOT'].includes(x.moduleId)&&!(x.moduleId==='MANAGER.BUSINESS_STUDIO'&&x.tags.includes('business-experiment'))&&!(x.moduleId==='OPPORTUNITY.NEED'&&x.tags.includes('consensual-pool'))&&! (x.moduleId==='ADS.MANAGER'&&x.tags.includes('ad-pilot')))throw Error('INVALID_GOVERNED_RECORD');
     const result=await this.db.prepare(`INSERT INTO platform_records(record_type,record_id,tenant_id,group_id,assignee_id,idempotency_key,data_json,updated_at) VALUES('workspace_record',?,?,?,?,NULL,?,?) ON CONFLICT(record_type,record_id) DO NOTHING`).bind(x.id,x.tenantId,x.groupId??null,x.createdBy,JSON.stringify(x),x.updatedAt).run();
     const stored=await this.getWorkspaceRecord(x.tenantId,x.id);if(!stored||stored.moduleId!==x.moduleId||stored.groupId!==x.groupId)throw Error('GOVERNED_RECORD_CONFLICT');
     const changes=result as {meta?:{changes?:number};changes?:number};return{record:stored,inserted:Number(changes.meta?.changes??changes.changes??0)===1};

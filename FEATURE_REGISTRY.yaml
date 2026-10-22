@@ -1,3 +1,5 @@
+# L13/L20/I06/I08 candidate v32; production v31 verified; exact-SHA qualification pending.
+# L11/L12/I04 VERIFIED_REMOTE: v31 /98f5a71d /941native48Chromium6WebKit /39 public hashes. FIELD_ACCEPTED=NOT_ACCEPTED.
 # Grouped L11/L12 candidate: private experiment evidence and consented pooled need quantities, not yet publicly verified.
 # L03/L04/L21 VERIFIED_REMOTE:1.5.2.30 /8f553482 /Actions39783822953 and39783431942 SUCCESS /919Node45Chromium6WebKit /38 public hashes. FIELD_ACCEPTED=NOT_ACCEPTED.
 # Grouped candidate L03/L04/L21: launch recovery, decision follow-up, revocable selective assertions. Not yet deployed or field accepted.
@@ -31,7 +33,7 @@
 # CURRENT 2026-10-08: publication HOLD; full 4000/5000 convergence still unqualified; Actions quota exhausted; prepared private local qualification runner. See recovery handoff.
 # 2026-10-08 CURRENT: 1.5.2.15 publication HOLD; offline reconfirmation clock defect under qualification. Current deployed proof remains 1.5.2.14. See CURRENT_TRUTH.
 registry_version: 1
-project_version: 1.5.2.30-groups-governance-trust
+project_version: 1.5.2.32-temporal-commerce-pilots
 source_of_truth: docs/constitution + verified_code
 
 capabilities:

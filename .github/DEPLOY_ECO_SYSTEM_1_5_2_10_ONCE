@@ -1,25 +1,22 @@
 Eco-System grouped delivery authorized by founder 2026-10-22
-release: 1.5.2.31-business-value-network
+release: 1.5.2.32-temporal-commerce-pilots
 date: 2026-10-22
 db_mutation: none
 mode: code-only-with-verified-readonly-backup-no-migration
-qualified_baseline_source: 8f553482e1a676a493885b4b7deecafc4727d2bf
-qualified_baseline_delivery: 39783822953 attempt1 SUCCESS
-qualification: baseline919native45Chromium6WebKit; candidate exact-SHA gates mandatory
-candidate_native: expected941, actual counts must be read from evidence
-candidate_chromium: expected48, actual counts must be read from evidence
+qualified_baseline_source: 98f5a71d9221368ab96a417898887d890d36ad69
+qualified_baseline_delivery: 39798502924 attempt1 SUCCESS
+qualification: baseline941native48Chromium6WebKit; candidate exact-SHA gates mandatory
+candidate_native: expected969, actual counts must be read from evidence
+candidate_chromium: expected51, actual counts must be read from evidence
 candidate_webkit: acquired6 mandatory
 production_ancestry: preserve all prior deliveries, no force push
-backup: mandatory readonly D1 export, verified SQLite restore, private R2 download and hash before deploy
+backup: mandatory readonly D1 export, verified SQLite restore, private R2 readback hash before deploy
 storage: existing eco-system-db and eco-system-backups, no recreation or migration
 financial_signing: preserve existing key, no rotation
 real_money_enabled: false
 field_acceptance: NOT_ACCEPTED
-legacy_compatibility: keep undated offers visible with unknown expiry; known expired offers excluded; acquired graph test retained
-corrected_native_targeted: 24 passed including acquired Opportunity Graph; full941 and browsers mandatory on delivery source
-historical_pr72_hold: preserved
-trigger_nonce: 2026-10-22-business-value-network-exact-source
+trigger_nonce: 2026-10-22-temporal-commerce-pilots-exact-source
 authorization: founder requested grouped implementation and deployment including improvements and innovations
-scope: L11 private immutable business experiments; L12 consensual pooled needs and current Opportunity Graph expiry
+scope: L13 NOW/Deals/Harvest availability; L20 free moderated internal pilots; I06 traceable loss/transformation; I08 privacy-threshold public asking prices
 qualification_same_deployment_sha: mandatory full gates before publication, no relaxation
-public_verification: exact health, catalogue and deployed asset SHA256 with same-SHA build
+public_verification: exact health, catalogue and 40 deployed asset hashes with same-SHA build

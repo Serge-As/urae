@@ -1,3 +1,4 @@
+import { mountTemporalCommerceUI } from './temporal-commerce-ui.js';
 import {mountNotificationCenterUI} from './notification-center-ui.js';
 import {mountEcoCareUI} from './eco-care-ui.js';
 import {createJourneyContext,mountJourneyUI} from './journey-context.js';
@@ -189,7 +190,7 @@ let modules = [];
 let applicationStartup = Promise.resolve();
 let selectedLot = 'ALL';
 let deferredInstallPrompt;
-const CAHIER_VERSION = '1.5.2.31-business-value-network';
+const CAHIER_VERSION = '1.5.2.32-temporal-commerce-pilots';
 const $ = (s) => { const e = document.querySelector(s); if (!e)
     throw new Error(`UI_ELEMENT_NOT_FOUND:${s}`); return e; };
 const val = (id) => document.getElementById(id).value.trim();
@@ -546,6 +547,7 @@ const externalProgramsUI = mountExternalProgramsUI({ app, notify: toast, showErr
 const businessStudioUI = mountBusinessStudioUI({app,navigate:go,notify:toast,showError:fail});
 const coreEconomicLearningUI = mountCoreEconomicLearningUI({app,notify:toast,showError:fail,isManager});
 const economicExperimentsUI=mountEconomicExperimentsUI({app,isManager,notify:toast});
+const temporalCommerceUI=mountTemporalCommerceUI({app,isManager,notify:toast});
 const founderControlUI = mountFounderControlUI({ app, notify: toast, showError: fail });
 const assistanceRulebookUI = mountAssistanceRulebookUI({ app, notify: toast, showError: fail, isManager });
 const groupHomeUI = mountGroupHomeUI({ app, getGroups:()=>groups, getMembers:()=>members, getMeetings:()=>meetings, navigate:go, fmt });
@@ -2579,6 +2581,7 @@ const refreshGroupContext = async () => {
     if(activeViewName()==='recap'&&requestedGroup===app.activeGroup())await refreshOptionalOfflineSafe('recap',()=>recapUI.refresh());
     await refreshOptionalOfflineSafe('interest-community',()=>interestCommunityUI.refresh());
     await refreshOptionalOfflineSafe('ad-manager',()=>adManagerUI.refresh());
+    await refreshOptionalOfflineSafe('temporal-commerce',()=>temporalCommerceUI.refresh());
     await refreshOptionalOfflineSafe('visual-media',()=>visualMediaStudio.refresh());
     await refreshOptionalOfflineSafe('partner-ads',()=>partnerAdsUI.refresh());
     await refreshOptionalOfflineSafe('ad-surfaces',()=>adSurfacesUI.refresh());
@@ -3061,6 +3064,7 @@ $('#languageSelect').addEventListener('change', async e => {
     await ecoCareUI.setLocale?.();
     governedGroupUI.setLocale?.();
     economicExperimentsUI.setLocale?.();
+    temporalCommerceUI.setLocale?.();
     launchStudio?.setLocale();
     completionUI.setLocale();
     advancedUI.setLocale();

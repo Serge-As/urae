@@ -4,7 +4,7 @@ import path from 'node:path';
 const empty = () => ({
   version: 1,
   users: {}, projects: {}, groups: {}, memberships: {}, obligations: {}, cases: {}, audits: {}, meetings: {},
-  ledgerAccounts: {}, ledgerEntries: {}, receipts: {}, cashboxReconciliations: {},
+  evidences: {}, ledgerAccounts: {}, ledgerEntries: {}, receipts: {}, cashboxReconciliations: {},
   publicGroupListings: {}, membershipApplications: {}, rubricDefinitions: {}, governanceKnowledgeClaims: {},
   workspaceRecords: {}, financialOperations: {}
 });
@@ -70,6 +70,18 @@ export class FilePlatformRepository {
     });
   }
 
+  commitWorkspaceRecordRevision(record,expectedVersion){return this.commitMarketRecordMutation({record,expectedVersion});}
+  commitMarketRecordMutation(plan){return this.#write(()=>{
+    const r=plan.record,current=this.data.workspaceRecords[r.id],scope=x=>String(x.data.marketScopeId??x.groupId??'');
+    if(!current||current.tenantId!==r.tenantId||current.groupId!==r.groupId||scope(current)!==scope(r))throw Error('FORBIDDEN_SCOPE');
+    if(Number(current.data.version??1)!==plan.expectedVersion||Number(r.data.version)!==plan.expectedVersion+1)throw Error('MARKET_RECORD_CONFLICT');
+    if(plan.createdStock||plan.createdMovement){const x=plan.createdStock,e=plan.createdMovement,m=plan.movement;if(!x||!e||!m||r.data.marketKind!=='STOCK_ITEM'||x.data.marketKind!=='STOCK_ITEM'||x.moduleId!=='MARKETPLACE.CORE'||x.tenantId!==r.tenantId||x.groupId!==r.groupId||scope(x)!==scope(r)||x.id===r.id||!x.tags.includes('market-engine')||Number(x.data.version)!==1||!Number.isSafeInteger(x.data.quantity)||Number(x.data.quantity)<=0||Number(x.data.reserved)!==0||e.tenantId!==x.tenantId||e.subjectId!==x.id||e.data.sourceId!==r.id||e.data.marketScopeId!==scope(r)||m.type!=='MARKET_STOCK_MOVEMENT'||e.type!=='MARKET_STOCK_MOVEMENT'||m.data.kind!=='HARVEST_TRANSFORMATION'||e.data.kind!=='HARVEST_OUTPUT')throw Error('MARKET_CONVERSION_PLAN_INVALID');if(this.data.workspaceRecords[x.id])throw Error('MARKET_IDEMPOTENCY_CONFLICT');}
+    this.#upsert('workspaceRecords',r);if(plan.movement)this.#upsert('evidences',plan.movement);
+    if(plan.createdStock)this.#upsert('workspaceRecords',plan.createdStock);if(plan.createdMovement)this.#upsert('evidences',plan.createdMovement);return r;
+  });}
+  saveEvidence(v){return this.#write(()=>this.#upsert('evidences',v));}
+  getEvidence(t,id){return this.#read(()=>{const x=this.data.evidences[id];return x?.tenantId===t?x:undefined;});}
+  listEvidence(t,type){return this.#read(()=>this.#values('evidences').filter(x=>x.tenantId===t&&(!type||x.subjectType===type)));}
   saveUser(v){return this.#write(()=>this.#upsert('users',v));}
   getUser(id){return this.#read(()=>this.data.users[id]);}
   saveProject(v){return this.#write(()=>this.#upsert('projects',v));}
@@ -118,7 +130,7 @@ export class FilePlatformRepository {
   listGovernanceKnowledgeClaims(t,g){return this.#read(()=>this.#values('governanceKnowledgeClaims').filter(x=>x.tenantId===t&&(!g||x.groupId===g)));}
   saveWorkspaceRecord(v){return this.#write(()=>this.#upsert('workspaceRecords',v));}
   insertGovernedRecord(v){return this.#write(()=>{
-    if(!['TRUST.VERIFICATION','GOVERNANCE.VOTE.ACTION','GOVERNANCE.VOTE.BALLOT'].includes(v.moduleId)&&!(v.moduleId==='MANAGER.BUSINESS_STUDIO'&&v.tags.includes('business-experiment'))&&!(v.moduleId==='OPPORTUNITY.NEED'&&v.tags.includes('consensual-pool')))throw Error('INVALID_GOVERNED_RECORD');
+    if(!['TRUST.VERIFICATION','GOVERNANCE.VOTE.ACTION','GOVERNANCE.VOTE.BALLOT'].includes(v.moduleId)&&!(v.moduleId==='MANAGER.BUSINESS_STUDIO'&&v.tags.includes('business-experiment'))&&!(v.moduleId==='OPPORTUNITY.NEED'&&v.tags.includes('consensual-pool'))&&!(v.moduleId==='ADS.MANAGER'&&v.tags.includes('ad-pilot')))throw Error('INVALID_GOVERNED_RECORD');
     const prior=this.data.workspaceRecords[v.id];
     if(prior){if(prior.tenantId!==v.tenantId||prior.moduleId!==v.moduleId||prior.groupId!==v.groupId)throw Error('GOVERNED_RECORD_CONFLICT');return{record:prior,inserted:false};}
     this.#upsert('workspaceRecords',v);return{record:v,inserted:true};

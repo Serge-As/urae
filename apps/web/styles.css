@@ -1897,3 +1897,16 @@ body.ui-mode-assisted .eco-workbench :is(button,p,small,span,label){font-size:15
 #businessExperimentsPanel .experiment-review { overflow-x: auto; }
 #businessExperimentsPanel table { width: 100%; font-variant-numeric: tabular-nums; }
 #businessExperimentsPanel th, #businessExperimentsPanel td { overflow-wrap: normal; padding: .6rem; }
+
+/* Temporal commerce and pilot panels reuse the product shell without changing financial cells. */
+.temporal-commerce{margin-block:14px;padding:14px;border:1px solid var(--line,#cbded5);border-radius:16px;background:var(--panel,#fff);min-width:0;overflow-wrap:anywhere}
+.temporal-commerce>summary{font-weight:750;cursor:pointer;padding:8px 0;color:var(--ink,#103c31)}
+.temporal-commerce .temporal-form{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(220px,100%),1fr));gap:12px;margin:14px 0;padding:14px;border:1px solid #dce8e1;border-radius:12px}
+.temporal-commerce .temporal-form h4,.temporal-commerce .temporal-form>button,.temporal-commerce .temporal-form>[role=status]{grid-column:1/-1}
+.temporal-commerce .temporal-form label{display:flex;flex-direction:column;gap:6px;min-width:0;font-size:.875rem}
+.temporal-commerce input,.temporal-commerce select,.temporal-commerce textarea{box-sizing:border-box;min-width:0;max-width:100%;width:100%;font:inherit}
+.temporal-commerce input[type=checkbox]{width:20px;height:20px}
+.temporal-commerce .temporal-cards{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(min(320px,100%),1fr))}
+.temporal-commerce .temporal-filters{display:flex;gap:10px;margin:14px 0;flex-wrap:wrap}.temporal-commerce .temporal-filters>*{flex:1;min-width:140px}
+.temporal-commerce .internal-pilot-creative{padding:16px;border-radius:12px;background:#edf7ef;border:1px solid #c7dfcf}
+@media(max-width:600px){.temporal-commerce{padding:10px}.temporal-commerce .temporal-form{padding:10px}.temporal-commerce button{max-width:100%;white-space:normal}}

@@ -1,0 +1,34 @@
+# CIR — Offres temporelles, Harvest et pilotes internes
+
+Autorisation : instructions persistantes du fondateur d'implémenter et déployer, puis de regrouper les lots proches ; dernière confirmation du 22 octobre. Base publique vérifiée : `98f5a71d9221368ab96a417898887d890d36ad69`, v31. La livraison antérieure et sa reprise sont conservées.
+
+Propriétaires : MarketService pour stock, réservation, perte et transformation ; AdManagerService pour campagne et mesure. Les prix sont une projection des seules annonces publiques comparables, jamais un second marché ni un prix certain. Ledger/D1 reste propriétaire financier. Aucune dépendance, migration, dépense, publicité externe, transport ou cartographie payante.
+
+Raccord : méthodes additives et panneaux dédiés dans Eco NOW/AdManager ; API autorisée, FR/EN, consultation bornée et rafraîchissement explicite. Extension facultative de la mutation CAS existante pour insérer atomiquement un stock transformé et son mouvement ; aucun changement des plans existants. Alias de révision générique vers ce CAS pour les pilotes, sans nouvel algorithme concurrent de persistance.
+
+Risques et protection : concurrence réservation/perte/transformation, réponse perdue, unité ou rendement impossible ; vérification sur mémoire et SQLite/D1 avec idempotence, épuisement et rollback. Une fermeture du retrait doit bloquer la réservation côté serveur. Les campagnes historiques gardent leur cycle et leurs compteurs ; les nouveaux résultats mesurés restent distincts des anciennes déclarations. Plafond strict des impressions par CAS, consentement personnel et collectif relu avant mesure, compte propriétaire/test exclu, attribution déclarée par acheteur dans une fenêtre bornée ; commande et livraison ne prouvent aucun paiement.
+
+Limites prévues : une transformation conserve l'unité physique et ne peut produire plus que la quantité consommée ; estimations agricoles, conversions de recettes et certification sanitaire restent hors preuve. Périmètre initial d'annuaire par groupe/boutique autorisés ; pas de localisation permanente. Les pilotes gratuits ne créent ni facture ni récompense automatique. Mesure limitée par campagne et événements bornés ; les offres publiques n'établissent pas des ventes constatées.
+
+Contrôles : tests nouveaux et acquis commerce/AdManager/consentement, build/typecheck/gouvernance, parcours navigateur multi-comptes, limites, erreurs, mobile, hors ligne et absence de polling ; qualification intégrée complète sur la source exacte, sauvegarde D1 relue et restaurée, déploiement puis relecture publique. Une suite locale ne vaut pas publication.
+
+Récupération : désactiver les panneaux/routes nouveaux ou revenir au code v31 à condition de conserver la lecture des mouvements Harvest. Les écritures de stock valides restent conservées ; une correction utilise des mouvements compensatoires autorisés, jamais l'effacement du Ledger, du stock ou de l'outbox. Recette terrain `NOT_ACCEPTED`, argent réel désactivé.
+
+## Ensemble L13 / L20 / I06 / I08 — candidat commun du 22 octobre 2026
+
+Production acquise : **1.5.2.31-business-value-network**, source `98f5a71d9221368ab96a417898887d890d36ad69`, livraison39798502924 SUCCESS ; qualification séparée39798502810 SUCCESS, 941 natifs/48 Chromium/6 WebKit, 39 empreintes publiques. La candidate **1.5.2.32-temporal-commerce-pilots** reste non publiée tant que ses contrôles sur la source exacte, sa sauvegarde et sa vérification publique ne sont pas établis.
+
+Périmètre commun : disponibilités NOW/Deals/Harvest et créneaux de service sur le stock canonique existant ; confirmation du point/horaires/zone/échéance ; réservation réutilisant MarketService ; pertes et transformation dans la même unité avec insertion atomique du produit obtenu, non publié par défaut. Réservation et transformation concurrentes ne consomment pas deux fois la dernière quantité libre. Exemple qualifié :100kg dont60réservés,10perdus,20transformés en16 ; restent70kg physiques,10libres,60réservés,14perdus/écartés,16kg de produit obtenu distinct. Aucune écriture Ledger.
+
+AdManager : brouillon gratuit, modération et activation explicites, maximum100diffusions et10par personne sur7jours, même campagne et CAS canonique. Une diffusion servie, une vue confirmée par le navigateur, une ouverture, une intention de contact et une commande reliée sont cinq faits distincts. Compte propriétaire/test exclu ; consentement personnel ET collectif relu avant chaque mesure, OFF prioritaire. Jusqu'à20commandes actuellement autorisées sont relues par bilan, retours déduits ; unités distinctes non additionnées ; valeur contractuelle séparée du paiement inconnu. Aucun débit, facture, revenu ou message envoyé inféré.
+
+I08 : prix demandés sur les seules annonces personnelles publiques du tenant, comparables par catégorie/qualité/zone/unité/devise et confirmation récente ; au moins cinq vendeurs distincts, médiane par vendeur puis entre vendeurs. Aucun prix individuel, identité ou échantillon insuffisant exposé. Ce n'est ni le prix des ventes constatées ni une garantie de marché.
+
+Accès prévu : **Eco NOW → Offres du moment**, **AdManager → Pilotes internes gratuits**. FR/EN,360px, chargements à l'ouverture ou à la demande ; aucun polling ajouté, champs conservés après erreur et panneaux privés retirés à déconnexion/changement de compte. Propriétaires MarketService/AdManagerService ; Ledger/D1 et les parcours financiers acquis conservés. Pas de dépendance, migration, service payant, carte ou transport ajouté.
+
+Qualification locale actuelle : compilation TypeScript complète,64/64tests ciblés dont28nouveaux sur mémoire et SQLite/D1, rollback réel en cas de collision de sortie, absence de mélange kg/pièces et routes HTTP/consentement. Les trois nouveaux scénarios navigateur restent à consigner avant publication. Qualification complète prévue969natifs/51Chromium/6WebKit, nombres à relire dans les preuves ; une cible n'est pas un résultat.
+
+Limites :100stocks récents ; annuaire initial du groupe/boutique autorisés, pas un réseau national cartographique ; points, qualité et pertes déclarés, non certifiés. Transformations physiques enkg/g sans conversion de recette ni gain de masse. Pilotes internes seulement,500événements/20commandes par campagne ; attribution volontaire sur7jours et non exclusive entre pilotes, non vérification d'une personne humaine. Les lectures sont bornées en appels ; leur coût en lignes dépend de l'historique. Les prix ne couvrent pas les groupes privés et ne permettent pas de prévoir les revenus.
+
+BIR+ / **ÉTAT DU PROJET APRÈS ÉTAPE** :13lots ont un périmètre publié,15restent à qualifier ; L13/L20 et I06/I08 sont en cours, pas réputés entièrement livrés. `realMoneyEnabled=false`, `FIELD_ACCEPTED=NOT_ACCEPTED`. Crédits exacts non mesurables. Conserver l'historique et les preuves v31 ; prochaine action : qualification puis superposition bornée au HEAD distant avec contrôle du SHA.
+

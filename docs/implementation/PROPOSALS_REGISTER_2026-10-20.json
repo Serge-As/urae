@@ -126,37 +126,43 @@
     {
       "id": "A11",
       "title": "Un Business Studio qui confronte l’idée aux résultats · lot 11",
-      "status": "IMPLEMENTED_PENDING_INTEGRATED_QUALIFICATION",
+      "status": "DELIVERED_WITH_DOCUMENTED_LIMITS",
       "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md",
       "targetLots": [
         11
       ],
       "evidence": [
-        "docs/change-impact/CIR-2026-10-22-BUSINESS-VALUE-NETWORK.md"
+        "docs/release/evidence/BUSINESS-VALUE-NETWORK-PUBLIC-2026-10-22.json",
+        "docs/release/DELIVERY-2026-10-22-BUSINESS-VALUE-NETWORK.md"
       ],
-      "limits": "Candidate only; existing authorities preserved. Resource booking I16 and Harvest I06 not included. No automatic publication/order/payment or field acceptance."
+      "limits": "Private immutable hypotheses/observations, two prices, current canonical deliveries net of returns, declared costs/cash kept distinct, voluntary sanitized price draft.20 order references/100 recent files; no certified accounting, I16 resource booking or automatic publication."
     },
     {
       "id": "A12",
       "title": "Un rapprochement entre besoins et ressources qui explique ses raisons · lot 12",
-      "status": "IMPLEMENTED_PENDING_INTEGRATED_QUALIFICATION",
+      "status": "DELIVERED_WITH_DOCUMENTED_LIMITS",
       "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md",
       "targetLots": [
         12
       ],
       "evidence": [
-        "docs/change-impact/CIR-2026-10-22-BUSINESS-VALUE-NETWORK.md"
+        "docs/release/evidence/BUSINESS-VALUE-NETWORK-PUBLIC-2026-10-22.json",
+        "docs/release/DELIVERY-2026-10-22-BUSINESS-VALUE-NETWORK.md"
       ],
-      "limits": "Candidate only; existing authorities preserved. Resource booking I16 and Harvest I06 not included. No automatic publication/order/payment or field acceptance."
+      "limits": "Existing hard-constraint matching reused for current aggregate needs, with unknown costs and explicit expiration. No duplicated inventory or automatic procurement/order commitment; I06 Harvest not included."
     },
     {
       "id": "A13",
       "title": "Des offres NOW réellement fraîches et une logistique de proximité · lot 13",
-      "status": "PLANNED_OR_REQUIRES_DETAILED_COVERAGE",
+      "status": "IMPLEMENTED_UNVERIFIED",
       "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md",
       "targetLots": [
         13
-      ]
+      ],
+      "evidence": [
+        "docs/release/DELIVERY-2026-10-22-TEMPORAL-COMMERCE-PILOTS.md"
+      ],
+      "limits": "Bounded initial scope; same-SHA deployment and field acceptance not established yet. See CIR for distinct undeveloped variants."
     },
     {
       "id": "A14",
@@ -215,11 +221,15 @@
     {
       "id": "A20",
       "title": "AdManager et intelligence de marché à budget maîtrisé · lot 20",
-      "status": "PLANNED_OR_REQUIRES_DETAILED_COVERAGE",
+      "status": "IMPLEMENTED_UNVERIFIED",
       "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md",
       "targetLots": [
         20
-      ]
+      ],
+      "evidence": [
+        "docs/release/DELIVERY-2026-10-22-TEMPORAL-COMMERCE-PILOTS.md"
+      ],
+      "limits": "Bounded initial scope; same-SHA deployment and field acceptance not established yet. See CIR for distinct undeveloped variants."
     },
     {
       "id": "A21",
@@ -337,12 +347,13 @@
     {
       "id": "I04",
       "title": "Les besoins mutualisés avec consentement · propriétaire L12",
-      "status": "IMPLEMENTED_PENDING_INTEGRATED_QUALIFICATION",
+      "status": "DELIVERED_WITH_DOCUMENTED_LIMITS",
       "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md",
       "evidence": [
-        "docs/change-impact/CIR-2026-10-22-BUSINESS-VALUE-NETWORK.md"
+        "docs/release/evidence/BUSINESS-VALUE-NETWORK-PUBLIC-2026-10-22.json",
+        "docs/release/DELIVERY-2026-10-22-BUSINESS-VALUE-NETWORK.md"
       ],
-      "limits": "Candidate only; existing authorities preserved. Resource booking I16 and Harvest I06 not included. No automatic publication/order/payment or field acceptance."
+      "limits": "Group-only current-member aggregates from explicit own contributions, compatible units, immutable first confirmation, absorbing withdrawal including after leaving, closure/expiration.100 recent pools, three batched repository reads for ten pools; not constant row cost."
     },
     {
       "id": "I05",
@@ -353,8 +364,12 @@
     {
       "id": "I06",
       "title": "La chaîne anti-gaspillage Harvest · propriétaire L13",
-      "status": "PLANNED_OR_REQUIRES_DETAILED_COVERAGE",
-      "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md"
+      "status": "IMPLEMENTED_UNVERIFIED",
+      "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md",
+      "evidence": [
+        "docs/release/DELIVERY-2026-10-22-TEMPORAL-COMMERCE-PILOTS.md"
+      ],
+      "limits": "Bounded initial scope; same-SHA deployment and field acceptance not established yet. See CIR for distinct undeveloped variants."
     },
     {
       "id": "I07",
@@ -370,8 +385,12 @@
     {
       "id": "I08",
       "title": "Le prix expliqué, avec ses limites · propriétaire L20",
-      "status": "PLANNED_OR_REQUIRES_DETAILED_COVERAGE",
-      "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md"
+      "status": "IMPLEMENTED_UNVERIFIED",
+      "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md",
+      "evidence": [
+        "docs/release/DELIVERY-2026-10-22-TEMPORAL-COMMERCE-PILOTS.md"
+      ],
+      "limits": "Bounded initial scope; same-SHA deployment and field acceptance not established yet. See CIR for distinct undeveloped variants."
     },
     {
       "id": "I09",

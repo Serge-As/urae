@@ -1,3 +1,4 @@
+import {InternalPilotOperations,pilotSummary} from "./internal-pilots.js";
 import type {PlatformRepository} from '../../repositories/src/index.js';
 import type {PlatformKernel} from '../../platform-kernel/src/index.js';
 import type {WorkspaceRecord} from '../../contracts/src/index.js';
@@ -25,6 +26,7 @@ export interface AdCampaign {
   budgetSandbox:number;currency:string;startsAt?:string;endsAt?:string;
   placements:string[];frequencyCapPer7Days:number;targeting:AdTargeting;creative:AdCreative;
   impressions:number;opens:number;actions:number;negativeFeedback:number;
+  internalPilot?:ReturnType<typeof pilotSummary>;
   createdAt:string;updatedAt:string;createdBy:string;moderationNote?:string;
 }
 const MODULE='ADS.MANAGER';
@@ -47,12 +49,20 @@ const decode=(r:WorkspaceRecord):AdCampaign=>({
   placements:JSON.parse(String(r.data.placementsJson??'[]')),frequencyCapPer7Days:Number(r.data.frequencyCapPer7Days??3),
   targeting:JSON.parse(String(r.data.targetingJson??'{}')),creative:JSON.parse(String(r.data.creativeJson??'{}')),
   impressions:Number(r.data.impressions??0),opens:Number(r.data.opens??0),actions:Number(r.data.actions??0),negativeFeedback:Number(r.data.negativeFeedback??0),
+  internalPilot:pilotSummary(r),
   createdAt:r.createdAt,updatedAt:r.updatedAt,createdBy:r.createdBy,moderationNote:r.data.moderationNote?String(r.data.moderationNote):undefined
 });
 
 export interface HouseAdAILike{run?(model:string,input:Record<string,unknown>,options?:Record<string,unknown>):Promise<unknown>;}
 export class AdManagerService{
-  constructor(public repo:PlatformRepository,public kernel:PlatformKernel,public houseAI?:HouseAdAILike){}
+  constructor(public repo:PlatformRepository,public kernel:PlatformKernel,public houseAI?:HouseAdAILike,public measurementConsent?:(groupId:string,actorId:string)=>Promise<boolean>){}
+  private pilots(){return new InternalPilotOperations(this.repo,this.kernel,this);}
+  createInternalPilot(groupId:string,input:any){return this.pilots().create(groupId,input);}
+  availableInternalPilots(groupId:string){return this.pilots().available(groupId);}
+  deliverInternalPilot(groupId:string,id:string,input:any){return this.pilots().delivery(groupId,id,input);}
+  interactInternalPilot(groupId:string,id:string,input:any){return this.pilots().interact(groupId,id,input);}
+  linkInternalPilotOrder(groupId:string,id:string,input:any){return this.pilots().linkOrder(groupId,id,input);}
+  internalPilotReport(groupId:string,id:string){return this.pilots().report(groupId,id);}
   private async requireManager(groupId:string){
     const ctx=this.kernel.context.get(),group=await this.repo.getGroup(ctx.tenantId,groupId);if(!group)throw new Error('GROUP_NOT_FOUND');
     if(group.createdBy===ctx.actorId)return group;
@@ -87,7 +97,8 @@ export class AdManagerService{
     const allowed:Record<AdCampaignState,AdCampaignState[]>={DRAFT:['PENDING_REVIEW'],PENDING_REVIEW:['APPROVED','REJECTED'],APPROVED:['ACTIVE','DRAFT'],ACTIVE:['PAUSED','COMPLETED'],PAUSED:['ACTIVE','COMPLETED'],COMPLETED:[],REJECTED:['DRAFT']};
     if(!(allowed[from]??[]).includes(to))throw new Error('INVALID_AD_CAMPAIGN_TRANSITION');
     const next={...x.campaign,state:to,moderationNote:note.trim().slice(0,500)||x.campaign.moderationNote,updatedAt:now()};
-    await this.repo.saveWorkspaceRecord({...x.record,status:to==='COMPLETED'?'DONE':to==='REJECTED'?'ARCHIVED':to==='DRAFT'?'DRAFT':'ACTIVE',tags:['ad-campaign','sandbox','state:'+to],data:encode(next),updatedAt:next.updatedAt});
+    const revision:WorkspaceRecord={...x.record,status:to==='COMPLETED'?'DONE':to==='REJECTED'?'ARCHIVED':to==='DRAFT'?'DRAFT':'ACTIVE',tags:[...x.record.tags.filter(t=>!t.startsWith('state:')),'state:'+to],data:{...x.record.data,...encode(next),version:Number(x.record.data.version??1)+1},updatedAt:next.updatedAt};
+    if(x.record.tags.includes('ad-pilot'))await this.repo.commitWorkspaceRecordRevision(revision,Number(x.record.data.version??1));else await this.repo.saveWorkspaceRecord(revision);
     await this.repo.saveAudit(this.kernel.audit.append({tenantId:ctx.tenantId,actorId:ctx.actorId,action:'AD_CAMPAIGN_STATE_CHANGED',targetType:'ad_campaign',targetId:id,requestId:ctx.requestId,metadata:{from,to,note:note.trim().slice(0,200)}}));return next;
   }
 
@@ -162,7 +173,7 @@ export class AdManagerService{
     if(!['HOME_AFTER_PRIORITIES','FEED_NATIVE','FORUM_NATIVE','MARKETPLACE_SPONSORED'].includes(placementId))
       throw Error('AD_PLACEMENT_NOT_PUBLIC');
     const records=await this.repo.listWorkspaceRecords(ctx.tenantId,MODULE,groupId);
-    const campaigns=records.filter(r=>r.data.state==='ACTIVE').map(decode);
+    const campaigns=records.filter(r=>r.data.state==='ACTIVE'&&!r.tags.includes('ad-pilot')).map(decode);
     const decision=selectAdDelivery(campaigns,{placementId,groupKind:group.kind});
     if(decision.kind==='PAID'){
       const campaign=campaigns.find(x=>x.id===decision.campaignId);
@@ -221,9 +232,9 @@ export class AdManagerService{
   }
 
   async metric(groupId:string,id:string,event:'IMPRESSION'|'OPEN'|'ACTION'|'NEGATIVE_FEEDBACK'){
-    const x=await this.get(groupId,id);if(x.campaign.state!=='ACTIVE')throw new Error('AD_CAMPAIGN_NOT_ACTIVE');
+    const x=await this.get(groupId,id);if(x.record.tags.includes('ad-pilot'))throw Error('PILOT_CANONICAL_MEASUREMENT_REQUIRED');if(x.campaign.state!=='ACTIVE')throw new Error('AD_CAMPAIGN_NOT_ACTIVE');
     const next={...x.campaign,updatedAt:now()};if(event==='IMPRESSION')next.impressions++;else if(event==='OPEN')next.opens++;else if(event==='ACTION')next.actions++;else next.negativeFeedback++;
-    await this.repo.saveWorkspaceRecord({...x.record,data:encode(next),updatedAt:next.updatedAt});return next;
+    await this.repo.saveWorkspaceRecord({...x.record,data:{...x.record.data,...encode(next),version:Number(x.record.data.version??1)+1},updatedAt:next.updatedAt});return next;
   }
 }
 
@@ -312,6 +323,7 @@ export function selectAdDelivery(campaigns:AdCampaign[],request:AdDeliveryReques
   const spec=AD_PLACEMENT_CATALOG.find(x=>x.id===request.placementId);if(!spec)throw new Error('UNKNOWN_AD_PLACEMENT');
   const nowMs=Date.now();
   const eligible=campaigns.filter(c=>{
+    if(c.internalPilot)return false; // Pilots use their bounded consented delivery route.
     if(c.state!=='ACTIVE'||!c.placements.includes(request.placementId))return false;
     if(c.startsAt&&Date.parse(c.startsAt)>nowMs)return false;if(c.endsAt&&Date.parse(c.endsAt)<nowMs)return false;
     if((request.viewerFrequency7d?.[c.id]??0)>=c.frequencyCapPer7Days)return false;

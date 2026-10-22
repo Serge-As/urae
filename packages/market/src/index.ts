@@ -151,6 +151,60 @@ export class MarketService{
     const next:MarketRecord={...record,status:status??record.status,data:{...record.data,...patch,version:Number(record.data.version??1)+1},updatedAt:now()};
     await this.repo.commitMarketRecordMutation({record:next,expectedVersion:Number(record.data.version??1)});return next;
   }
+  async configureTemporalStock(scopeId:Id,itemId:Id,input:{kind:'NOW'|'DEAL'|'HARVEST'|'SERVICE';category:string;quality:string;locality:string;pickupPoint:string;pickupWindow:string;startsAt?:string;endsAt:string;pointOpen:boolean;confirmed:boolean}){
+    await this.access(scopeId,true);const item=(await this.list(scopeId,'STOCK_ITEM')).find(r=>r.id===itemId);
+    if(!item||item.status!=='ACTIVE')throw Error('STOCK_ITEM_NOT_FOUND');
+    if(item.data.ownership==='POT_RESERVED')throw Error('POT_STOCK_NOT_SELLABLE');
+    if(!['NOW','DEAL','HARVEST','SERVICE'].includes(input.kind)||input.confirmed!==true||typeof input.pointOpen!=='boolean')throw Error('TEMPORAL_CONFIRMATION_REQUIRED');
+    const end=Date.parse(input.endsAt),start=input.startsAt?Date.parse(input.startsAt):Date.now();
+    if(!Number.isFinite(start)||!Number.isFinite(end)||end<=Date.now()||end<=start||end-Date.now()>31*86400000)throw Error('INVALID_TEMPORAL_PERIOD');
+    const text=(v:string,n:number)=>String(v??'').trim().slice(0,n),category=text(input.category,80).toLowerCase(),quality=text(input.quality,120),locality=text(input.locality,120),pickupPoint=text(input.pickupPoint,160),pickupWindow=text(input.pickupWindow,200);
+    if(!category||!quality||!locality||!pickupPoint||!pickupWindow)throw Error('TEMPORAL_PICKUP_FIELDS_REQUIRED');
+    return this.update(item,{temporalKind:input.kind,temporalCategory:category,quality,locality,pickupPoint,pickupWindow,pickupClosed:!input.pointOpen,confirmedAt:now(),availableAt:new Date(start).toISOString(),availableUntil:new Date(end).toISOString(),published:true,harvestInitialQuantity:item.data.harvestInitialQuantity??Number(item.data.quantity),harvestRemovedQuantity:item.data.harvestRemovedQuantity??0,harvestWasteQuantity:item.data.harvestWasteQuantity??0});
+  }
+  async temporalStockCandidates(scopeId:Id){await this.access(scopeId,true);return{items:(await this.list(scopeId,'STOCK_ITEM')).filter(x=>x.status==='ACTIVE'&&x.data.ownership!=='POT_RESERVED').slice(0,100).map(x=>({id:x.id,name:x.title,quantity:Number(x.data.quantity),unit:String(x.data.unit),published:Boolean(x.data.published)}))};}
+  async temporalDirectory(scopeId:Id,filter:{kind?:string;locality?:string}={}){
+    const rows=await this.list(scopeId,'STOCK_ITEM'),stamp=Date.now(),items=rows.filter(r=>r.status==='ACTIVE'&&r.data.temporalKind&&r.data.published&&(!filter.kind||r.data.temporalKind===filter.kind)&&(!filter.locality||String(r.data.locality).toLowerCase()===String(filter.locality).trim().toLowerCase())).slice(0,100).map(r=>{
+      const d=r.data,physical=Number(d.quantity),reserved=Number(d.reserved??0),quarantine=Number(d.quarantine??0),remaining=Math.max(0,physical-reserved-quarantine);
+      const state=d.pickupClosed?'PICKUP_CLOSED':Date.parse(String(d.availableUntil))<=stamp?'EXPIRED':Date.parse(String(d.availableAt))>stamp?'UPCOMING':remaining===0?'SOLD_OUT':'AVAILABLE';
+      return{id:r.id,name:r.title,kind:String(d.temporalKind),category:String(d.temporalCategory),quality:String(d.quality),unit:String(d.unit),unitPrice:Number(d.unitPrice),currency:String(d.currency??'XAF'),locality:String(d.locality),pickupPoint:String(d.pickupPoint),pickupWindow:String(d.pickupWindow),startsAt:String(d.availableAt),endsAt:String(d.availableUntil),confirmedAt:String(d.confirmedAt),state,physical,reserved,quarantine,remaining,available:state==='AVAILABLE'?remaining:0,initial:Number(d.harvestInitialQuantity??physical),removed:Number(d.harvestRemovedQuantity??0),waste:Number(d.harvestWasteQuantity??0),parentStockId:String(d.harvestParentId??'')};
+    });return{items,scopeId,generatedAt:now(),locationMode:'USER_SELECTED_ZONE',inventoryOwner:'MarketService',limit:100};
+  }
+  async reserveTemporalStock(scopeId:Id,itemId:Id,input:{quantity:number;idempotencyKey:string}){
+    const c=this.kernel.context.get();await this.access(scopeId,false);
+    const item=(await this.list(scopeId,'STOCK_ITEM')).find(r=>r.id===itemId);if(!item?.data.temporalKind)throw Error('TEMPORAL_STOCK_NOT_FOUND');
+    // The canonical order owns capacity, idempotency, expiration and stock CAS.
+    return this.createOrder(scopeId,{stockItemId:itemId,quantity:input.quantity,customerRef:c.actorId,idempotencyKey:input.idempotencyKey},true);
+  }
+  async changeHarvest(scopeId:Id,itemId:Id,input:{kind:'LOSS'|'TRANSFORM';quantity:number;outputQuantity?:number;outputName?:string;reason:string;idempotencyKey:string}){
+    await this.access(scopeId,true);qty(input.quantity);if(!['LOSS','TRANSFORM'].includes(input.kind))throw Error('INVALID_HARVEST_CHANGE');
+    if(!/^[A-Za-z0-9_-]{8,120}$/.test(input.idempotencyKey))throw Error('INVALID_IDEMPOTENCY_KEY');
+    const c=this.kernel.context.get(),reason=String(input.reason??'').trim().slice(0,500),name=String(input.outputName??'').trim().slice(0,160),out=input.kind==='TRANSFORM'?input.outputQuantity??0:0;
+    if(!reason||input.kind==='TRANSFORM'&&(!name||!Number.isSafeInteger(out)||out<=0||out>input.quantity))throw Error('INVALID_HARVEST_YIELD');
+    const id='harvest_'+await operationKey([c.tenantId,c.actorId,scopeId,itemId,input.idempotencyKey]),fingerprint=JSON.stringify([input.kind,input.quantity,out,name,reason]);
+    const replay=async()=>{const p=await this.repo.getEvidence(c.tenantId,id);if(p){if(p.createdBy!==c.actorId||p.subjectId!==itemId||p.data.requestFingerprint!==fingerprint)throw Error('MARKET_IDEMPOTENCY_CONFLICT');return p;}};
+    const prior=await replay();if(prior)return prior;
+    const item=(await this.list(scopeId,'STOCK_ITEM')).find(r=>r.id===itemId);if(!item||item.data.temporalKind!=='HARVEST'||item.status!=='ACTIVE')throw Error('HARVEST_STOCK_NOT_FOUND');
+    if(!['kg','g'].includes(String(item.data.unit).toLowerCase()))throw Error('HARVEST_MASS_UNIT_REQUIRED');
+    if(input.kind==='TRANSFORM'&&Date.parse(String(item.data.availableUntil))<=Date.now())throw Error('HARVEST_EXPIRED');
+    const free=Number(item.data.quantity)-Number(item.data.reserved??0)-Number(item.data.quarantine??0);if(input.quantity>free)throw Error('INSUFFICIENT_STOCK');
+    const stamp=now(),record:MarketRecord={...item,data:{...item.data,quantity:Number(item.data.quantity)-input.quantity,harvestRemovedQuantity:Number(item.data.harvestRemovedQuantity??0)+input.quantity,harvestWasteQuantity:Number(item.data.harvestWasteQuantity??0)+input.quantity-out,lastMarketOperationId:id,version:Number(item.data.version??1)+1},updatedAt:stamp};
+    const movement:EvidenceRecord={id,tenantId:c.tenantId,type:'MARKET_STOCK_MOVEMENT',subjectType:'MARKET_STOCK_ITEM',subjectId:item.id,createdAt:stamp,createdBy:c.actorId,immutable:true,data:{...(item.groupId?{groupId:item.groupId}:{}),marketScopeId:scopeId,kind:input.kind==='LOSS'?'HARVEST_LOSS':'HARVEST_TRANSFORMATION',quantityDelta:-input.quantity,reservedDelta:0,sourceType:'HARVEST',sourceId:item.id,note:reason,requestFingerprint:fingerprint,outputStockId:out?id+'_output':'',inputQuantity:input.quantity,outputQuantity:out,wasteQuantity:input.quantity-out,unit:String(item.data.unit),at:stamp}};
+    let createdStock:MarketRecord|undefined,createdMovement:EvidenceRecord|undefined;
+    if(out){createdStock={...item,id:id+'_output',title:name,data:{...item.data,sku:'HARVEST-'+id.slice(-24),quantity:out,reserved:0,quarantine:0,published:false,quality:'DECLARED_TRANSFORMED',description:reason,harvestParentId:item.id,harvestInitialQuantity:out,harvestRemovedQuantity:0,harvestWasteQuantity:0,lastMarketOperationId:id,version:1},createdBy:c.actorId,createdAt:stamp,updatedAt:stamp};createdMovement={...movement,id:id+'_movement',subjectId:createdStock.id,data:{...movement.data,kind:'HARVEST_OUTPUT',quantityDelta:out,sourceId:item.id}};}
+    try{await this.repo.commitMarketRecordMutation({record,expectedVersion:Number(item.data.version??1),movement,createdStock,createdMovement});}catch(error){const p=await replay();if(p)return p;throw error;}
+    return movement;
+  }
+  async explainedPublicPrices(input:{category:string;quality:string;unit:string;currency:string;locality:string}){
+    const text=(v:string)=>String(v??'').trim().toLowerCase(),category=text(input.category),quality=text(input.quality),unit=text(input.unit),locality=text(input.locality),currency=String(input.currency??'').trim().toUpperCase();
+    if(!category||!quality||!unit||!locality||!/^[A-Z]{3}$/.test(currency))throw Error('PRICE_COMPARISON_FIELDS_REQUIRED');
+    const c=this.kernel.context.get(),rows=await this.repo.listWorkspaceRecords(c.tenantId,'MARKETPLACE.CORE'),shops=new Map(rows.filter(r=>r.data.marketKind==='SHOP'&&r.status==='ACTIVE'&&r.data.ownerType==='PERSON'&&r.data.visibility==='PUBLIC').map(r=>[r.id,r]));
+    const sellers=new Map<string,number[]>(),times:number[]=[];
+    for(const r of rows){const d=r.data,shop=shops.get(this.scopeOf(r)),at=Date.parse(String(d.confirmedAt??''));if(!shop||r.status!=='ACTIVE'||d.marketKind!=='STOCK_ITEM'||d.ownership==='POT_RESERVED'||!d.published||d.pickupClosed||!d.temporalKind||text(String(d.temporalCategory))!==category||text(String(d.quality))!==quality||text(String(d.unit))!==unit||text(String(d.locality))!==locality||d.currency!==currency||!Number.isSafeInteger(d.unitPrice)||Number(d.unitPrice)<=0||Number(d.quantity)-Number(d.reserved??0)-Number(d.quarantine??0)<=0||Date.parse(String(d.availableUntil))<=Date.now()||Date.parse(String(d.availableAt))>Date.now()||!Number.isFinite(at)||at>Date.now()||Date.now()-at>30*86400000)continue;const values=sellers.get(shop.createdBy)??[];values.push(Number(d.unitPrice));sellers.set(shop.createdBy,values);times.push(at);}
+    const median=(a:number[])=>{const v=[...a].sort((a,b)=>a-b),m=Math.floor(v.length/2);return v.length%2?v[m]!:(v[m-1]!+v[m]!)/2;},count=sellers.size;
+    return{status:count>=5?'COMPARABLE_PUBLIC_OFFERS':'INSUFFICIENT_SAMPLE',sellerCount:count>=5?count:null,minimumSellers:5,observations:count>=5?times.length:null,medianUnitPrice:count>=5?median([...sellers.values()].map(median)):null,unit,currency,category,quality,locality,source:'CURRENT_PUBLIC_ASKING_PRICES_NOT_SALES',oldestConfirmation:count>=5?new Date(Math.min(...times)).toISOString():null,generatedAt:now(),scope:'CURRENT_TENANT_PUBLIC_SHOPS',caveat:'Same declared unit and quality only; each seller has equal weight. Not a guaranteed transaction price.'};
+  }
+
   private async stockMovement(groupId:Id,itemId:Id,input:{kind:'INITIAL'|'ADJUSTMENT'|'RESERVATION'|'DELIVERY'|'CUSTOMER_RETURN'|'PROCUREMENT_RECEIPT'|'SUPPLIER_RETURN';quantityDelta:number;reservedDelta:number;sourceType:string;sourceId:string;note?:string;operationId?:string}):Promise<EvidenceRecord>{
     const ctx=this.kernel.context.get(),stamp=now(),recordGroupId=await this.scopeGroupId(groupId);
     const record:EvidenceRecord={id:makeId('evidence'),tenantId:ctx.tenantId,type:'MARKET_STOCK_MOVEMENT',subjectType:'MARKET_STOCK_ITEM',subjectId:itemId,createdAt:stamp,createdBy:ctx.actorId,immutable:true,data:{...(recordGroupId?{groupId:recordGroupId}:{}),marketScopeId:groupId,kind:input.kind,quantityDelta:input.quantityDelta,reservedDelta:input.reservedDelta,sourceType:input.sourceType,sourceId:input.sourceId,note:input.note?.trim()??'',operationId:input.operationId??'',at:stamp}};
@@ -238,6 +292,7 @@ export class MarketService{
     const item=publicBuyer?await this.repo.getWorkspaceRecord(ctx.tenantId,input.stockItemId) as MarketRecord|undefined:(await this.list(groupId,'STOCK_ITEM')).find(x=>x.id===input.stockItemId);if(!item||item.data.marketKind!=='STOCK_ITEM'||this.scopeOf(item)!==groupId)throw Error('STOCK_ITEM_NOT_FOUND');
     if(String(item.data.ownership??'COMMERCIAL')==='POT_RESERVED')throw Error('POT_STOCK_NOT_SELLABLE');
     if(item.status!=='ACTIVE'||(allowMember||quote)&&!Boolean(item.data.published))throw Error('STOCK_NOT_AVAILABLE');
+    if(item.data.temporalKind&&item.data.pickupClosed===true)throw Error("PICKUP_POINT_CLOSED");
     if(item.data.availableAt&&Date.parse(String(item.data.availableAt))>Date.now()||item.data.availableUntil&&Date.parse(String(item.data.availableUntil))<=Date.now())throw Error('STOCK_NOT_AVAILABLE');
     const available=Number(item.data.quantity)-Number(item.data.reserved??0)-Number(item.data.quarantine??0);if(available<input.quantity)throw Error('INSUFFICIENT_STOCK');
     const customerRef=input.customerRef.trim();if(!customerRef)throw Error('CUSTOMER_REFERENCE_REQUIRED');

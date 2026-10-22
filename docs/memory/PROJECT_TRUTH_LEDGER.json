@@ -28,13 +28,19 @@
     {
       "id": "business-value-network-20261022",
       "scope": "L11/L12 grouped business experiments and consented pooled needs",
-      "status": "IN_PROGRESS",
-      "statement": "Candidate uses existing BusinessStudioService/ValueNetworkService and owner-authorized Market projections; no financial or stock side effects. Full same-SHA qualification and public deployment proof pending.",
+      "status": "VERIFIED_REMOTE",
+      "statement": "L11/L12/I04 v31 published at98f5a71d;941native48Chromium6WebKit on exact source;39 public hashes independently verified;readonly backup restored50tables;exact847-source blobs verified. Private experiments and aggregate consent; no financial or field acceptance inferred.",
       "evidence": [
-        "docs/change-impact/CIR-2026-10-22-BUSINESS-VALUE-NETWORK.md"
+        "source:98f5a71d9221368ab96a417898887d890d36ad69",
+        "github-actions:39798502924 SUCCESS; independent39798502810 SUCCESS",
+        "docs/release/evidence/BUSINESS-VALUE-NETWORK-PUBLIC-2026-10-22.json",
+        "docs/release/DELIVERY-2026-10-22-BUSINESS-VALUE-NETWORK.md",
+        "private-R2-readback-sha256:dc7f81b71742daf3aca2ff2b3b17db95bb091769abddd762cdc32f9cd7f7f963"
       ],
       "observedOn": "2026-10-22",
-      "next": "Qualify complete acquired suite; preserve v30 baseline; publish and verify exact source."
+      "next": "Continue grouped remaining15 lots; I16/I06 not delivered; field acceptance NOT_ACCEPTED.",
+      "workerVersionId": "3efbf42d-4d40-493d-817b-ef79b9263504",
+      "backupArchiveSha256": "dc7f81b71742daf3aca2ff2b3b17db95bb091769abddd762cdc32f9cd7f7f963"
     },
     {
       "id": "groups-governance-trust-20261022",
@@ -1562,6 +1568,19 @@
         "privateR2SHA256:d2c22eb94b164edce81025e6436cf05ff58243fc716357d954e8294df944569a"
       ],
       "next": "Continue approved remaining lots; preserve financial owners, roles, offline and explicit scoped integration."
+    },
+    {
+      "id": "temporal-commerce-pilots-20261022",
+      "scope": "L13/L20/I06/I08 additive temporal commerce and free internal pilots",
+      "status": "IMPLEMENTED_UNVERIFIED",
+      "statement": "Candidate v32; production v31 remains verified.64 targeted tests pass, browser and same-source full gates pending. Canonical stock/CAS, consent rechecked, no inferred cash or delivered acceptance.",
+      "evidence": [
+        "docs/change-impact/CIR-2026-10-22-TEMPORAL-COMMERCE-PILOTS.md",
+        "tests/temporal-commerce-pilots-20261022.test.mjs",
+        "tests/browser/temporal-commerce-pilots-20261022.spec.mjs"
+      ],
+      "observedOn": "2026-10-22",
+      "next": "Qualify exact deployment source; readonly backup and public asset proof mandatory; field acceptance NOT_ACCEPTED."
     }
   ]
 }

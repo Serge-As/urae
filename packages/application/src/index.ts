@@ -2004,6 +2004,17 @@ export class ConnectedApplication {
       return await response.blob();
     }finally{clearTimeout(timeout);}
   }
+  private temporalPath(path=''){if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return '/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+path;}
+  async temporalStockCandidates():Promise<any>{return this.request(this.temporalPath('/market/temporal-candidates'));}
+  async temporalStock():Promise<any>{return this.request(this.temporalPath('/market/temporal'));}
+  async configureTemporalStock(id:string,input:any):Promise<any>{return this.request(this.temporalPath('/market/temporal/'+encodeURIComponent(id)+'/configure'),{method:'POST',body:JSON.stringify(input)});}
+  async reserveTemporalStock(id:string,input:any):Promise<any>{return this.request(this.temporalPath('/market/temporal/'+encodeURIComponent(id)+'/reserve'),{method:'POST',body:JSON.stringify(input)});}
+  async changeHarvest(id:string,input:any):Promise<any>{return this.request(this.temporalPath('/market/temporal/'+encodeURIComponent(id)+'/harvest'),{method:'POST',body:JSON.stringify(input)});}
+  async explainedPublicPrices(input:any):Promise<any>{return this.request('/api/v1/market/explained-prices',{method:'POST',body:JSON.stringify(input)});}
+  async internalPilots():Promise<any>{return this.request(this.temporalPath('/ads/pilots'));}
+  async createInternalPilot(input:any):Promise<any>{return this.request(this.temporalPath('/ads/pilots'),{method:'POST',body:JSON.stringify(input)});}
+  async internalPilotAction(id:string,action:'delivery'|'events'|'order',input:any):Promise<any>{return this.request(this.temporalPath('/ads/pilots/'+encodeURIComponent(id)+'/'+action),{method:'POST',body:JSON.stringify(input)});}
+  async internalPilotReport(id:string):Promise<any>{return this.request(this.temporalPath('/ads/pilots/'+encodeURIComponent(id)+'/report'));}
   async adDashboard():Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/ads/dashboard');}
   async adHousePlan():Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/ads/house-plan');}
   async adHouseVariants():Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/ads/house-variants',{method:'POST',body:'{}'});}

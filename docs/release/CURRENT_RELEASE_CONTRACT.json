@@ -1,12 +1,12 @@
 {
   "contractVersion": 1,
   "release": {
-    "version": "1.5.2.31-business-value-network",
-    "buildId": "eco-system-1.5.2.31-20261022-business-value-network",
+    "version": "1.5.2.32-temporal-commerce-pilots",
+    "buildId": "eco-system-1.5.2.32-20261022-temporal-commerce-pilots",
     "schemaVersion": "d1-additive-20260923",
     "policyVersion": "live-finance-policy-20261007-event-push-repayment",
-    "pwaCache": "eco-system-v15231-business-value-network-20261022",
-    "previousPwaCache": "eco-system-v15230-groups-governance-trust-20261022",
+    "pwaCache": "eco-system-v15232-temporal-commerce-pilots-20261022",
+    "previousPwaCache": "eco-system-v15231-business-value-network-20261022",
     "commitShaAuthority": "DEPLOYMENT_WORKFLOW_GITHUB_SHA_AND_PRODUCTION_HEALTH"
   },
   "truthAxes": {

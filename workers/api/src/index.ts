@@ -80,11 +80,11 @@ interface WorkersAILike {
   run?(model:string,input:Record<string,unknown>,options?:Record<string,unknown>):Promise<unknown>;
 }
 
-const RELEASE_VERSION='1.5.2.31-business-value-network';
-const RELEASE_BUILD_ID='eco-system-1.5.2.31-20261022-business-value-network';
+const RELEASE_VERSION='1.5.2.32-temporal-commerce-pilots';
+const RELEASE_BUILD_ID='eco-system-1.5.2.32-20261022-temporal-commerce-pilots';
 const RELEASE_SCHEMA_VERSION='d1-additive-20260923';
 const RELEASE_POLICY_VERSION='live-finance-policy-20261007-event-push-repayment';
-const RELEASE_PWA_CACHE='eco-system-v15231-business-value-network-20261022';
+const RELEASE_PWA_CACHE='eco-system-v15232-temporal-commerce-pilots-20261022';
 
 const defaultRepo = new InMemoryPlatformRepository();
 const defaultReferralBudgets = new InMemoryReferralBudgetStore();
@@ -181,6 +181,11 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
   }
   const {kernel,foundation,ledger,meetings,discovery,membershipGateway,rubrics,completion,explainability,documents,receivables,treasury,riskFinance,market,community,imports,artifactStore,memberControl,memberEnvelopes,groupIdentity,conciergeLearning,miscRubrics,adManager,partnerAds,externalAds,economicIntelligence,externalPrograms,operationalCockpit,businessStudio,knowledgeAcademy,valueNetwork,creatorTalent,quietWatch}=createRequestScope(request,repo,options.artifacts,options.dataUseDefaultMode??'BETA_OPEN',options.documentAI);
   let ctx=kernel.context.get();
+  adManager.measurementConsent=async(groupId,actorId)=>{
+    if(!options.commercialPreferences)return false;
+    const [personal,collective]=await Promise.all([options.commercialPreferences.consent(actorId,groupId),conciergeLearning.consent(groupId)]);
+    return personal.granted===true&&collective.purposes.COMMERCIAL_PERSONALIZATION===true;
+  };
   const trustedLiveTicket=request.headers.get('x-live-ticket-authenticated')==='1';
   if(!trustedLiveTicket)try{
     const at=Date.now(),rows=await repo.listWorkspaceRecords(ctx.tenantId,'MANAGER.BUSINESS_STUDIO'),grants=rows.filter(r=>r.data.businessKind==='MANDATE'&&r.status==='ACTIVE'&&r.data.mandateState==='ACTIVE'&&String(r.data.delegateUserId??'')===ctx.actorId&&Date.parse(String(r.data.startsAt??''))<=at&&(!r.data.endsAt||Date.parse(String(r.data.endsAt))>at)).map(r=>{let permissions:string[]=[];try{permissions=JSON.parse(String(r.data.delegatedRightsJson??'[]'));}catch{}return{mandateId:r.id,groupId:String(r.data.groupId??''),permissions:[...new Set(permissions.map(x=>String(x).toUpperCase()))],startsAt:String(r.data.startsAt??''),endsAt:r.data.endsAt?String(r.data.endsAt):undefined};}).filter(g=>g.groupId&&g.permissions.length);
@@ -2723,6 +2728,25 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
       if(!(file instanceof File))throw Error('MEDIA_FILE_REQUIRED');
       return json(await externalAds.upload(externalPhoto[1]!,String(request.headers.get('x-external-ad-token')??''),file),201,cors);
     }
+    const temporalCandidates=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/market\/temporal-candidates$/);
+    if(temporalCandidates&&request.method==='GET')return json(await market.temporalStockCandidates(temporalCandidates[1]!),200,cors);
+    const temporal=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/market\/temporal$/);
+    if(temporal&&request.method==='GET')return json(await market.temporalDirectory(temporal[1]!,{kind:url.searchParams.get('kind')??undefined,locality:url.searchParams.get('locality')??undefined}),200,cors);
+    const temporalAction=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/market\/temporal\/([^/]+)\/(configure|reserve|harvest)$/);
+    if(temporalAction&&request.method==='POST'){
+      const scope=temporalAction[1]!,id=temporalAction[2]!,body=await readJson<any>(request);
+      return json(temporalAction[3]==='configure'?await market.configureTemporalStock(scope,id,body):temporalAction[3]==='reserve'?await market.reserveTemporalStock(scope,id,body):await market.changeHarvest(scope,id,body),200,cors);
+    }
+    if(url.pathname==='/api/v1/market/explained-prices'&&request.method==='POST')return json(await market.explainedPublicPrices(await readJson<any>(request)),200,cors);
+    const pilots=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/ads\/pilots$/);
+    if(pilots&&request.method==='GET')return json({items:await adManager.availableInternalPilots(pilots[1]!)},200,cors);
+    if(pilots&&request.method==='POST')return json(await adManager.createInternalPilot(pilots[1]!,await readJson<any>(request)),201,cors);
+    const pilotAction=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/ads\/pilots\/([^/]+)\/(delivery|events|order|report)$/);
+    if(pilotAction){const group=pilotAction[1]!,id=pilotAction[2]!,action=pilotAction[3];
+      if(action==='report'&&request.method==='GET')return json(await adManager.internalPilotReport(group,id),200,cors);
+      if(request.method==='POST'&&action!=='report'){const body=await readJson<any>(request);return json(action==='delivery'?await adManager.deliverInternalPilot(group,id,body):action==='events'?await adManager.interactInternalPilot(group,id,body):await adManager.linkInternalPilotOrder(group,id,body),200,cors);}
+    }
+
     const adDashboard=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/ads\/dashboard$/);
     if(adDashboard&&request.method==='GET')return json(await adManager.dashboard(adDashboard[1]!),200,cors);
     const adHousePlan=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/ads\/house-plan$/);
@@ -3086,7 +3110,7 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
       const moduleId=url.searchParams.get('moduleId')??undefined;
       const groupId=url.searchParams.get('groupId')??undefined;
       const records=await repo.listWorkspaceRecords(ctx.tenantId,moduleId,groupId);const visible=[];
-      for(const record of records)if(!record.tags.some(x=>['verification-fact','governance-follow-up','business-experiment','consensual-pool'].includes(x))&&await visibleWorkspace(record))visible.push(record);
+      for(const record of records)if(!record.tags.some(x=>['verification-fact','governance-follow-up','business-experiment','consensual-pool','ad-pilot'].includes(x))&&await visibleWorkspace(record))visible.push(record);
       return json(visible,200,cors);
     }
     if(request.method==='POST'&&url.pathname==='/api/v1/workspaces'){
@@ -3099,7 +3123,7 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
       const timestamp=new Date().toISOString();
       const rawData=body.data&&typeof body.data==='object'&&!Array.isArray(body.data)?body.data as Record<string,unknown>:{};
       if(strArray(body.tags).includes('market-engine')||rawData.marketScopeId||rawData.marketKind)throw Error('CANONICAL_MARKET_ROUTE_REQUIRED');
-      if(strArray(body.tags).some(x=>['verification-fact','governance-follow-up','poll','ballot','business-experiment','consensual-pool'].includes(x)))throw Error('CANONICAL_GOVERNED_ROUTE_REQUIRED');
+      if(strArray(body.tags).some(x=>['verification-fact','governance-follow-up','poll','ballot','business-experiment','consensual-pool','ad-pilot'].includes(x)))throw Error('CANONICAL_GOVERNED_ROUTE_REQUIRED');
       const data:Record<string,string|number|boolean|null>={};
       for(const [k,v] of Object.entries(rawData)){if(typeof v==='string'||typeof v==='number'||typeof v==='boolean'||v===null)data[k]=v;}
       const status=String(body.status??'ACTIVE') as WorkspaceStatus;
@@ -3116,13 +3140,13 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
       if(!await visibleWorkspace(existing))throw Error('FORBIDDEN_SCOPE');
       if(existing.moduleId.startsWith('NOTIFY.'))throw Error('CANONICAL_NOTIFICATION_ROUTE_REQUIRED');
       if(existing.tags.includes('market-engine'))throw Error('CANONICAL_MARKET_ROUTE_REQUIRED');
-      if(existing.tags.some(x=>['verification-fact','governance-follow-up','poll','ballot','business-experiment','consensual-pool'].includes(x)))throw Error('CANONICAL_GOVERNED_ROUTE_REQUIRED');
+      if(existing.tags.some(x=>['verification-fact','governance-follow-up','poll','ballot','business-experiment','consensual-pool','ad-pilot'].includes(x)))throw Error('CANONICAL_GOVERNED_ROUTE_REQUIRED');
       if(existing.moduleId==='FINANCE.MEMBER_BUNDLE')throw Error('IMMUTABLE_FINANCIAL_SNAPSHOT');
       const body=await readJson<Record<string,unknown>>(request);
       const status=String(body.status??existing.status) as WorkspaceStatus; if(!['DRAFT','ACTIVE','DONE','ARCHIVED'].includes(status)) throw new Error('INVALID_WORKSPACE_STATUS');
       const rawData=body.data&&typeof body.data==='object'&&!Array.isArray(body.data)?body.data as Record<string,unknown>:existing.data;
       const data:Record<string,string|number|boolean|null>={}; for(const [k,v] of Object.entries(rawData)){if(typeof v==='string'||typeof v==='number'||typeof v==='boolean'||v===null)data[k]=v;}
-      if(strArray(body.tags).some(x=>['verification-fact','governance-follow-up','poll','ballot','business-experiment','consensual-pool'].includes(x)))throw Error('CANONICAL_GOVERNED_ROUTE_REQUIRED');
+      if(strArray(body.tags).some(x=>['verification-fact','governance-follow-up','poll','ballot','business-experiment','consensual-pool','ad-pilot'].includes(x)))throw Error('CANONICAL_GOVERNED_ROUTE_REQUIRED');
       const updated:WorkspaceRecord={...existing,title:body.title===undefined?existing.title:String(body.title).trim()||existing.title,summary:body.summary===undefined?existing.summary:String(body.summary),status,tags:body.tags===undefined?existing.tags:strArray(body.tags),data,updatedAt:new Date().toISOString()};
       await repo.saveWorkspaceRecord(updated);
       const audit=kernel.audit.append({tenantId:ctx.tenantId,actorId:ctx.actorId,action:'WORKSPACE_RECORD_UPDATED',targetType:'workspace_record',targetId:updated.id,after:{moduleId:updated.moduleId,status:updated.status},requestId:ctx.requestId}); await repo.saveAudit(audit);
