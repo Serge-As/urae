@@ -15,7 +15,7 @@ storage: existing eco-system-db and eco-system-backups, no recreation or migrati
 financial_signing: preserve existing key, no rotation
 real_money_enabled: false
 field_acceptance: NOT_ACCEPTED
-trigger_nonce: 2026-10-22-temporal-commerce-pilots-visible-confirmation-v2
+trigger_nonce: 2026-10-22-temporal-commerce-pilots-visible-confirmation-recall-v3
 authorization: founder requested grouped implementation and deployment including improvements and innovations
 scope: L13 NOW/Deals/Harvest availability; L20 free moderated internal pilots; I06 traceable loss/transformation; I08 privacy-threshold public asking prices
 qualification_same_deployment_sha: mandatory full gates before publication, no relaxation

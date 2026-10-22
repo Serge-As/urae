@@ -22,3 +22,9 @@ Limites :100stocks récents ; annuaire initial du groupe/boutique autorisés, pa
 
 BIR+ / **ÉTAT DU PROJET APRÈS ÉTAPE** :13lots ont un périmètre publié,15restent à qualifier ; L13/L20 et I06/I08 sont en cours, pas réputés entièrement livrés. `realMoneyEnabled=false`, `FIELD_ACCEPTED=NOT_ACCEPTED`. Crédits exacts non mesurables. Conserver l'historique et les preuves v31 ; prochaine action : qualification puis superposition bornée au HEAD distant avec contrôle du SHA.
 
+
+## Correctif de cohérence et preuve de visibilité — 22 octobre
+
+La source2cda05f0 a passé969/969tests natifs. Les nouveaux formulaires ont reçu une sélection initiale correcte et le raccord de langue canonique. Le scénario publicitaire doit faire défiler la création dans le viewport avant de demander une vue confirmée ; aucune impression hors écran n'est fabriquée. Le correctif d1abb3a4 met aussi à indisponible les vitrines Boutique lorsque le point de retrait temporel est fermé, conserve la quantité physique et ajoute l'assertion acquise sur mémoire/SQLite.
+
+La qualification d1abb3a4 a été bloquée par le contrôle MEMORY BEFORE CODE parce que ce correctif substantiel ne modifiait pas encore le présent Recall. La trace est complétée ; aucun contrôle n'est supprimé, relaxé ni réputé passé. La source et les scénarios applicatifs restent inchangés dans ce complément documentaire. Relancer les deux workflows sur le nouveau SHA exact avec sauvegarde et vérification publique. Production acquise v31, FIELD_ACCEPTED=NOT_ACCEPTED ; aucun redémarrage PC exécuté ni autorisé sans demande explicite.
