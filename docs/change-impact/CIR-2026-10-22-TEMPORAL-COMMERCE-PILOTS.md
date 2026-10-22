@@ -32,3 +32,5 @@ Limites :100stocks récents ; annuaire initial du groupe/boutique autorisés, pa
 
 BIR+ / **ÉTAT DU PROJET APRÈS ÉTAPE** :13lots ont un périmètre publié,15restent à qualifier ; L13/L20 et I06/I08 sont en cours, pas réputés entièrement livrés. `realMoneyEnabled=false`, `FIELD_ACCEPTED=NOT_ACCEPTED`. Crédits exacts non mesurables. Conserver l'historique et les preuves v31 ; prochaine action : qualification puis superposition bornée au HEAD distant avec contrôle du SHA.
 
+
+Qualification intermédiaire :969/969 natifs sur source2cda05f0. Les formulaires nouveaux ont reçu une sélection initiale correcte et le raccord au changement de langue acquis. Le scénario de vue publicitaire doit faire défiler la création dans le viewport : aucun comptage hors écran ne doit être ajouté pour faire passer un test. Une fermeture du retrait met aussi les projections Boutique existantes à indisponible, en conservant la quantité physique. Les assertions de stock, droits et comptage restent requises.
