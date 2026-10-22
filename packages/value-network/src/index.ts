@@ -37,6 +37,83 @@ const clamp=(n:number,min=0,max=100)=>Math.max(min,Math.min(max,n));
 
 export class ValueNetworkService{
   constructor(public repo:PlatformRepository,public kernel:PlatformKernel){}
+private async appendPool(groupId:Id,kind:string,key:string,values:WorkspaceRecord['data']){
+    const c=this.ctx();if(!/^[a-zA-Z0-9_.:-]{8,160}$/.test(key))throw Error('POOL_REQUEST_KEY_REQUIRED');
+    const hash=async(s:string)=>[...new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(s)))].map(x=>x.toString(16).padStart(2,'0')).join('');
+    const payload={poolKind:kind,...values},fingerprint=await hash(JSON.stringify(payload)),id='vp_'+await hash(JSON.stringify([c.tenantId,groupId,c.actorId,kind,key])),at=now();
+    const result=await this.repo.insertGovernedRecord({id,tenantId:c.tenantId,groupId,moduleId:'OPPORTUNITY.NEED',title:String(values.title??'Voluntary pooled need'),status:'ACTIVE',tags:['consensual-pool','immutable'],data:{...payload,fingerprint},createdBy:c.actorId,createdAt:at,updatedAt:at});
+    if(result.record.data.fingerprint!==fingerprint)throw Error('GOVERNED_RECORD_CONFLICT');
+    if(result.inserted)await this.repo.saveAudit(this.kernel.audit.append({tenantId:c.tenantId,actorId:c.actorId,action:'VALUE_POOL_'+kind,targetType:'pooled-need',targetId:id,requestId:c.requestId}));
+    return result.record;
+  }
+  private async poolRecord(groupId:Id,id:Id){
+    const r=await this.repo.getWorkspaceRecord(this.ctx().tenantId,id);
+    if(!r||r.groupId!==groupId||r.moduleId!=='OPPORTUNITY.NEED'||!r.tags.includes('consensual-pool')||r.data.poolKind!=='POOL')throw Error('POOL_NOT_FOUND');
+    return r;
+  }
+  async createPool(groupId:Id,input:{title:string;category:string;unit:string;locality?:string;neededBy:string;specification?:string;quality?:string;idempotencyKey:string}){
+    const group=await this.groupAccess(groupId,true);
+    if(group.status!=='active')throw Error('GROUP_NOT_ACTIVE');
+    if(!clean(input.title,240)||!clean(input.category,160)||!clean(input.unit,80))throw Error('POOL_FIELDS_REQUIRED');
+    if(!Number.isFinite(Date.parse(input.neededBy))||Date.parse(input.neededBy)<=Date.now())throw Error('INVALID_NEEDED_BY');
+    return this.appendPool(groupId,'POOL',input.idempotencyKey,{title:clean(input.title,240),category:clean(input.category,160),categoryKey:norm(input.category),unit:clean(input.unit,80),locality:clean(input.locality,180),neededBy:new Date(input.neededBy).toISOString(),specification:clean(input.specification,600),quality:clean(input.quality,160),currency:'XAF',publicationScope:'GROUP_AGGREGATE_ONLY',createsOrder:false});
+  }
+  private async poolContext(groupId:Id){
+    const c=this.ctx(),group=await this.repo.getGroup(c.tenantId,groupId);if(!group)throw Error('GROUP_NOT_FOUND');
+    const members=await this.repo.listMemberships(c.tenantId,groupId);
+    if(group.createdBy!==c.actorId&&!members.some(m=>m.userId===c.actorId&&m.status==='active'))throw Error('FORBIDDEN_SCOPE');
+    const records=(await this.repo.listWorkspaceRecords(c.tenantId,'OPPORTUNITY.NEED',groupId)).filter(x=>x.tags.includes('consensual-pool'));
+    return{group,members,records};
+  }
+  private projectPool(context:Awaited<ReturnType<ValueNetworkService['poolContext']>>,r:WorkspaceRecord){
+    const {group,members,records}=context,c=this.ctx(),id=r.id;
+    const rows=records.filter(x=>x.data.poolId===id);
+    const active=new Set(members.filter(x=>x.status==='active').map(x=>x.userId));active.add(group.createdBy);
+    const withdrawn=new Set(rows.filter(x=>x.data.poolKind==='WITHDRAW').map(x=>String(x.data.contributionId)));
+    const closed=group.status!=='active'||rows.some(x=>x.data.poolKind==='CLOSE'),expired=Date.parse(String(r.data.neededBy))<=Date.now();
+    const all=rows.filter(x=>x.data.poolKind==='CONTRIBUTION');
+    const effective=closed||expired?[]:all.filter(x=>active.has(x.createdBy)&&!withdrawn.has(x.id));
+    const base=unitInfo(r.data.unit),scaled=effective.reduce((n,x)=>n+Number(x.data.scaledQuantity),0);
+    if(!Number.isSafeInteger(scaled))throw Error('POOL_QUANTITY_OVERFLOW');
+    const own=all.find(x=>x.createdBy===c.actorId);
+    return{record:r,state:closed?'CLOSED':expired?'EXPIRED':'OPEN',quantity:scaled/1e6/base.factor,unit:String(r.data.unit),participants:effective.length,ownContribution:own?{id:own.id,quantity:Number(own.data.quantity),unit:String(own.data.unit),withdrawn:withdrawn.has(own.id),effective:effective.some(x=>x.id===own.id)}:null,consentScope:'AGGREGATE_ONLY',createsOrder:false};
+  }
+  async poolView(groupId:Id,id:Id){
+    const context=await this.poolContext(groupId),r=context.records.find(x=>x.id===id&&x.data.poolKind==='POOL');if(!r)throw Error('POOL_NOT_FOUND');return this.projectPool(context,r);
+  }
+  async pools(groupId:Id){
+    const context=await this.poolContext(groupId),records=context.records.filter(x=>x.data.poolKind==='POOL').sort((a,b)=>b.createdAt.localeCompare(a.createdAt)||b.id.localeCompare(a.id));
+    return{items:records.slice(0,100).map(r=>this.projectPool(context,r)),total:records.length,limit:100};
+  }
+  async contributePool(groupId:Id,id:Id,input:{quantity:number;unit:string;consent:boolean}){
+    const view=await this.poolView(groupId,id);if(view.state!=='OPEN')throw Error('POOL_NOT_OPEN');
+    if(input.consent!==true)throw Error('POOL_AGGREGATE_CONSENT_REQUIRED');
+    const a=unitInfo(input.unit),b=unitInfo(view.unit);if(!compatible(a,b))throw Error('POOL_UNIT_NOT_COMPARABLE');
+    if(typeof input.quantity!=='number')throw Error('INVALID_QUANTITY');
+    const quantity=qty(input.quantity),scaled=quantity*a.factor*1e6;
+    if(!Number.isSafeInteger(scaled)||scaled>1e12)throw Error('POOL_QUANTITY_OVERFLOW');
+    if(view.ownContribution?.withdrawn)throw Error('POOL_CONSENT_WITHDRAWN');
+    if(!view.ownContribution&&view.participants>=1000)throw Error('POOL_PARTICIPANT_LIMIT');
+    await this.appendPool(groupId,'CONTRIBUTION',id,{poolId:id,quantity,unit:clean(input.unit,80),scaledQuantity:scaled,consentScope:'AGGREGATE_ONLY',createsOrder:false});
+    return this.poolView(groupId,id);
+  }
+  async withdrawPool(groupId:Id,id:Id){
+    await this.poolRecord(groupId,id);const c=this.ctx(),rows=await this.repo.listWorkspaceRecords(c.tenantId,'OPPORTUNITY.NEED',groupId);
+    const own=rows.find(x=>x.tags.includes('consensual-pool')&&x.data.poolKind==='CONTRIBUTION'&&x.data.poolId===id&&x.createdBy===c.actorId);
+    if(!own)throw Error('POOL_CONTRIBUTION_NOT_FOUND');
+    const event=await this.appendPool(groupId,'WITHDRAW',id,{poolId:id,contributionId:own.id,createsOrder:false});
+    return{withdrawn:true,eventId:event.id};
+  }
+  async closePool(groupId:Id,id:Id){
+    await this.groupAccess(groupId,true);await this.poolRecord(groupId,id);
+    await this.appendPool(groupId,'CLOSE',id,{poolId:id,createsOrder:false});return this.poolView(groupId,id);
+  }
+  async poolMatches(groupId:Id,id:Id){
+    const view=await this.poolView(groupId,id);
+    if(view.state!=='OPEN')throw Error('POOL_NOT_OPEN');if(view.quantity<=0)throw Error('POOL_NO_ACTIVE_QUANTITY');
+    const need={...view.record,data:{...view.record.data,state:'VALIDATED',quantity:view.quantity,substitutionsAllowed:false,budgetMax:null}};
+    return{pool:{id,quantity:view.quantity,unit:view.unit,participants:view.participants},items:await this.matchProjection(need,false),createsOrder:false};
+  }
   private ctx(){return this.kernel.context.get();}
   private async groupAccess(groupId:Id,manage=false){
     const c=this.ctx(),g=await this.repo.getGroup(c.tenantId,groupId);if(!g)throw new Error('GROUP_NOT_FOUND');
@@ -87,6 +164,10 @@ export class ValueNetworkService{
   async matchNeed(needId:Id){
     const need=await this.get(needId,'OPPORTUNITY.NEED');if(!need.groupId)throw new Error('GROUP_REQUIRED');await this.groupAccess(need.groupId,false);
     if(!['VALIDATED','PUBLISHED','MATCHED'].includes(String(need.data.state)))throw new Error('NEED_NOT_MATCHABLE');
+    return this.matchProjection(need,true);
+  }
+  private async matchProjection(need:WorkspaceRecord,persist:boolean){
+    if(need.data.neededBy&&Date.parse(String(need.data.neededBy))<=Date.now())throw Error('NEED_EXPIRED');
     const c=this.ctx(),offers=(await this.repo.listWorkspaceRecords(c.tenantId,'OPPORTUNITY.OFFER')).filter(x=>x.status==='ACTIVE'&&x.data.state==='ACTIVE');
     const required=Number(need.data.quantity),needUnit=unitInfo(need.data.unit),requiredCanonical=required*needUnit.factor,locality=norm(need.data.locality),category=norm(need.data.categoryKey||need.data.category);
     const needSpec=tokens(need.data.specification),needQuality=norm(need.data.quality),neededBy=Date.parse(String(need.data.neededBy??'')),currency=clean(need.data.currency||'XAF',12).toUpperCase();
@@ -157,7 +238,7 @@ export class ValueNetworkService{
       return{...x,score,scoreBreakdown:{base:x.baseScore,price:Math.round(priceScore*10)/10},rankingIndependentOfSponsorship:true};
     }).sort((a,b)=>b.score-a.score||(a.landedTotal??Infinity)-(b.landedTotal??Infinity)||b.freshness-a.freshness);
 
-    if(matches.length&&String(need.data.state)!=='MATCHED')await this.mutate(need,{state:'MATCHED',lastMatchedAt:now(),matchCount:matches.length,matchPolicyVersion:MATCH_POLICY_VERSION});
+    if(persist&&matches.length&&String(need.data.state)!=='MATCHED')await this.mutate(need,{state:'MATCHED',lastMatchedAt:now(),matchCount:matches.length,matchPolicyVersion:MATCH_POLICY_VERSION});
     return matches;
   }
 
@@ -171,6 +252,6 @@ export class ValueNetworkService{
     },['procurement','handoff','draft']);
     await this.mutate(need,{state:'PROCUREMENT_DRAFTED',procurementDraftId:draft.id});return draft;
   }
-  async listNeeds(groupId:Id){await this.groupAccess(groupId,false);const c=this.ctx();return this.repo.listWorkspaceRecords(c.tenantId,'OPPORTUNITY.NEED',groupId);}
+  async listNeeds(groupId:Id){await this.groupAccess(groupId,false);const c=this.ctx();return (await this.repo.listWorkspaceRecords(c.tenantId,'OPPORTUNITY.NEED',groupId)).filter(x=>!x.tags.includes('consensual-pool'));}
   async listOffers(){const c=this.ctx();return this.repo.listWorkspaceRecords(c.tenantId,'OPPORTUNITY.OFFER');}
 }

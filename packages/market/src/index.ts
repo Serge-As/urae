@@ -63,6 +63,10 @@ export class MarketService{
   }
   async shopWorkspace(id:Id){await this.access(id);const shop=await this.personalShop(id),records=await this.list(id),actorId=this.kernel.context.get().actorId;return{shop,records,owner:shop.createdBy===actorId,canSell:shop.createdBy===actorId||this.collaborators(shop).some(x=>x.userId===actorId&&x.role==='SELL'&&(!x.expiresAt||Date.parse(x.expiresAt)>Date.now()))};}
   async orderScope(id:Id){const order=await this.authorizedOrder(id);await this.access(this.scopeOf(order),true);return this.scopeOf(order);}
+  async businessOrderProjection(id:Id){
+    const order=await this.authorizedOrder(id);if(order.data.buyerUserId===this.kernel.context.get().actorId)await this.access(this.scopeOf(order),true);
+    return{order,scopeId:this.scopeOf(order),netDelivered:Number(order.data.deliveredQuantity??0)-Number(order.data.returnedQuantity??0),paymentStatus:'NOT_INFERRED'};
+  }
   async shopDirectory(){
     const c=this.kernel.context.get(),rows=await this.repo.listMarketShops();
     return rows.filter(r=>r.data.marketKind==='SHOP'&&r.data.ownerType==='PERSON'&&!r.groupId&&r.status==='ACTIVE'&&r.data.visibility==='PUBLIC').map(r=>({id:r.id,name:r.title,tagline:String(r.data.tagline??''),locality:String(r.data.locality??'')}));

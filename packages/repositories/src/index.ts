@@ -452,7 +452,7 @@ export class InMemoryPlatformRepository implements PlatformRepository {
     this.workspaceRecords.set(record.id,structuredClone(record));return {record:structuredClone(record),inserted:true};
   }
   insertGovernedRecord(record:WorkspaceRecord):NotificationInsertResult{
-    if(!['TRUST.VERIFICATION','GOVERNANCE.VOTE.ACTION','GOVERNANCE.VOTE.BALLOT'].includes(record.moduleId))throw Error('INVALID_GOVERNED_RECORD');
+    if(!['TRUST.VERIFICATION','GOVERNANCE.VOTE.ACTION','GOVERNANCE.VOTE.BALLOT'].includes(record.moduleId)&&!(record.moduleId==='MANAGER.BUSINESS_STUDIO'&&record.tags.includes('business-experiment'))&&!(record.moduleId==='OPPORTUNITY.NEED'&&record.tags.includes('consensual-pool')))throw Error('INVALID_GOVERNED_RECORD');
     const previous=this.workspaceRecords.get(record.id);
     if(previous){if(previous.tenantId!==record.tenantId||previous.moduleId!==record.moduleId||previous.groupId!==record.groupId)throw Error('GOVERNED_RECORD_CONFLICT');return{record:structuredClone(previous),inserted:false};}
     this.workspaceRecords.set(record.id,structuredClone(record));return{record:structuredClone(record),inserted:true};
@@ -953,7 +953,7 @@ export class D1PlatformRepository implements PlatformRepository {
     if(!stored||stored.moduleId!==x.moduleId)throw Error('NOTIFICATION_ID_CONFLICT');const changes=result as {meta?:{changes?:number};changes?:number};return {record:stored,inserted:Number(changes.meta?.changes??changes.changes??0)===1};
   }
   async insertGovernedRecord(x:WorkspaceRecord):Promise<NotificationInsertResult>{
-    if(!['TRUST.VERIFICATION','GOVERNANCE.VOTE.ACTION','GOVERNANCE.VOTE.BALLOT'].includes(x.moduleId))throw Error('INVALID_GOVERNED_RECORD');
+    if(!['TRUST.VERIFICATION','GOVERNANCE.VOTE.ACTION','GOVERNANCE.VOTE.BALLOT'].includes(x.moduleId)&&!(x.moduleId==='MANAGER.BUSINESS_STUDIO'&&x.tags.includes('business-experiment'))&&!(x.moduleId==='OPPORTUNITY.NEED'&&x.tags.includes('consensual-pool')))throw Error('INVALID_GOVERNED_RECORD');
     const result=await this.db.prepare(`INSERT INTO platform_records(record_type,record_id,tenant_id,group_id,assignee_id,idempotency_key,data_json,updated_at) VALUES('workspace_record',?,?,?,?,NULL,?,?) ON CONFLICT(record_type,record_id) DO NOTHING`).bind(x.id,x.tenantId,x.groupId??null,x.createdBy,JSON.stringify(x),x.updatedAt).run();
     const stored=await this.getWorkspaceRecord(x.tenantId,x.id);if(!stored||stored.moduleId!==x.moduleId||stored.groupId!==x.groupId)throw Error('GOVERNED_RECORD_CONFLICT');
     const changes=result as {meta?:{changes?:number};changes?:number};return{record:stored,inserted:Number(changes.meta?.changes??changes.changes??0)===1};

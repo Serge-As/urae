@@ -43,13 +43,13 @@ export class OpportunityGraphService{
     }
 
     const tenantRecords=await this.repo.listWorkspaceRecords(c.tenantId);
-    for(const need of tenantRecords.filter(x=>x.moduleId==='OPPORTUNITY.NEED'&&x.data.state==='PUBLISHED'&&x.data.publicationConsent===true)){
+    for(const need of tenantRecords.filter(x=>x.moduleId==='OPPORTUNITY.NEED'&&x.data.state==='PUBLISHED'&&x.data.publicationConsent===true&&(!x.data.neededBy||Date.parse(String(x.data.neededBy))>Date.now()))){
       if(!need.groupId)continue;const visibility=memberGroupIds.has(need.groupId)?'MEMBER':'PUBLIC',nid=nodeId('NEED',need.id),gid=nodeId('GROUP',need.groupId);
       this.addNode(nodes,{id:nid,kind:'NEED',label:need.title,visibility,ref:need.id,meta:{category:String(need.data.category??''),locality:String(need.data.locality??''),quantity:Number(need.data.quantity??0),unit:String(need.data.unit??'')}});
       this.addEdge(edges,gid,nid,'HAS_NEED',visibility,['PUBLISHED','PUBLICATION_CONSENT']);
       const category=clean(need.data.category);if(category){const cid=nodeId('CATEGORY',category.toLowerCase());this.addNode(nodes,{id:cid,kind:'CATEGORY',label:category,visibility:'PUBLIC'});this.addEdge(edges,nid,cid,'IN_CATEGORY',visibility,['DECLARED_CATEGORY']);}
     }
-    for(const offer of tenantRecords.filter(x=>x.moduleId==='OPPORTUNITY.OFFER'&&x.status==='ACTIVE'&&x.data.state==='ACTIVE')){
+    for(const offer of tenantRecords.filter(x=>x.moduleId==='OPPORTUNITY.OFFER'&&x.status==='ACTIVE'&&x.data.state==='ACTIVE'&&Date.parse(String(x.data.expiresAt))>Date.now())){
       const oid=nodeId('OFFER',offer.id);this.addNode(nodes,{id:oid,kind:'OFFER',label:offer.title,visibility:'PUBLIC',ref:offer.id,meta:{category:String(offer.data.category??''),locality:String(offer.data.locality??''),availableQuantity:Number(offer.data.availableQuantity??0),unit:String(offer.data.unit??'')}});
       const category=clean(offer.data.category);if(category){const cid=nodeId('CATEGORY',category.toLowerCase());this.addNode(nodes,{id:cid,kind:'CATEGORY',label:category,visibility:'PUBLIC'});this.addEdge(edges,oid,cid,'IN_CATEGORY','PUBLIC',['DECLARED_CATEGORY']);}
       const locality=clean(offer.data.locality);if(locality){const lid=nodeId('LOCALITY',locality.toLowerCase());this.addNode(nodes,{id:lid,kind:'LOCALITY',label:locality,visibility:'PUBLIC'});this.addEdge(edges,oid,lid,'AVAILABLE_IN','PUBLIC',['DECLARED_LOCALITY']);}

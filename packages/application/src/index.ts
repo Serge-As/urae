@@ -2195,6 +2195,16 @@ export class ConnectedApplication {
   async addTalentEvidence(input:any):Promise<any>{return this.request('/api/v1/talent/evidence',{method:'POST',body:JSON.stringify(input)});}
   async businessSummary():Promise<any>{return this.request('/api/v1/business/summary');}
   async businessRecords():Promise<any[]>{const r=await this.request('/api/v1/business/records') as any;return r.items??[];}
+  async businessExperiments():Promise<any>{return this.request('/api/v1/business/experiments',{cache:'no-store'});}
+  async createBusinessExperiment(input:any):Promise<any>{return this.request('/api/v1/business/experiments',{method:'POST',body:JSON.stringify(input)});}
+  async reviewBusinessExperiment(id:string,observationId?:string):Promise<any>{return this.request('/api/v1/business/experiments/'+encodeURIComponent(id)+(observationId?'?observationId='+encodeURIComponent(observationId):''),{cache:'no-store'});}
+  async observeBusinessExperiment(id:string,input:any):Promise<any>{return this.request('/api/v1/business/experiments/'+encodeURIComponent(id)+'/observations',{method:'POST',body:JSON.stringify(input)});}
+  async linkBusinessExperimentOrder(id:string,orderId:string):Promise<any>{return this.request('/api/v1/business/experiments/'+encodeURIComponent(id)+'/orders',{method:'POST',body:JSON.stringify({orderId})});}
+  async businessExperimentDraft(id:string,priceIndex:number):Promise<any>{return this.request('/api/v1/business/experiments/'+encodeURIComponent(id)+'/draft',{method:'POST',body:JSON.stringify({priceIndex})});}
+  async valuePools():Promise<any>{if(!this.activeGroupId)return{items:[],total:0};return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/value/pools',{cache:'no-store'});}
+  async createValuePool(input:any):Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/value/pools',{method:'POST',body:JSON.stringify(input)});}
+  async actOnValuePool(id:string,action:'contribute'|'withdraw'|'close',input:any={}):Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/value/pools/'+encodeURIComponent(id)+'/'+action,{method:'POST',body:JSON.stringify(input)});}
+  async valuePoolMatches(id:string):Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/value/pools/'+encodeURIComponent(id)+'/matches',{cache:'no-store'});}
   async configureBusiness(input:{name:string;currency?:string;services?:string[];locality?:string;monthlyFixedCosts?:number}):Promise<any>{return this.request('/api/v1/business/workspace',{method:'PUT',body:JSON.stringify(input)});}
   async createBusinessMandate(input:any):Promise<any>{return this.request('/api/v1/business/mandates',{method:'POST',body:JSON.stringify(input)});}
   async businessMandatesForGroup(groupId=this.activeGroupId):Promise<any[]>{if(!groupId)return[];const r=await this.request('/api/v1/groups/'+encodeURIComponent(groupId)+'/business/mandates') as any;return r.items??[];}

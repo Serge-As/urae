@@ -26,16 +26,32 @@
   ],
   "records": [
     {
-      "id": "groups-governance-trust-20261022",
-      "scope": "L03/L04/L21 grouped implementation",
+      "id": "business-value-network-20261022",
+      "scope": "L11/L12 grouped business experiments and consented pooled needs",
       "status": "IN_PROGRESS",
-      "statement": "Candidate adds scoped launch recovery, canonical poll execution evidence and selective revocable trust cards. Previous production v29 remains authoritative. No new paid service or migration. Exact-SHA integrated qualification and public proof required.",
+      "statement": "Candidate uses existing BusinessStudioService/ValueNetworkService and owner-authorized Market projections; no financial or stock side effects. Full same-SHA qualification and public deployment proof pending.",
       "evidence": [
-        "docs/change-impact/CIR-2026-10-22-GROUPS-GOVERNANCE-TRUST.md",
-        "docs/memory/recalls/RECALL-2026-10-22-GROUPS-GOVERNANCE-TRUST.md"
+        "docs/change-impact/CIR-2026-10-22-BUSINESS-VALUE-NETWORK.md"
       ],
       "observedOn": "2026-10-22",
-      "next": "Qualify complete candidate, publish with current remote HEAD lease, verify public assets and readonly backup. Continue grouped remaining domains."
+      "next": "Qualify complete acquired suite; preserve v30 baseline; publish and verify exact source."
+    },
+    {
+      "id": "groups-governance-trust-20261022",
+      "scope": "L03/L04/L21 grouped implementation",
+      "status": "VERIFIED_REMOTE",
+      "statement": "L03/L04/L21 and I07 published as v30 at8f553482;919native45Chromium6WebKit pass on same source;38 public hashes independently reread;readonly backup restored50tables;exact source839files verified. Scope and limits in delivery. No financial, institutional or field acceptance inferred.",
+      "evidence": [
+        "source:8f553482e1a676a493885b4b7deecafc4727d2bf",
+        "github-actions:39783822953 SUCCESS; independent39783431942 SUCCESS",
+        "docs/release/evidence/GROUPS-GOVERNANCE-TRUST-PUBLIC-2026-10-22.json",
+        "docs/release/DELIVERY-2026-10-22-GROUPS-GOVERNANCE-TRUST.md",
+        "private-R2-readback-sha256:011e2b8d85e7e80d6d009384b747332103e3a8fc5432b919e3d057afebb1cbe6"
+      ],
+      "observedOn": "2026-10-22",
+      "next": "Continue remaining17 lots by grouped existing owners. FIELD_ACCEPTED=NOT_ACCEPTED.",
+      "workerVersionId": "13cebc64-a4f0-4649-9c26-2cf1f2f852ec",
+      "backupArchiveSha256": "011e2b8d85e7e80d6d009384b747332103e3a8fc5432b919e3d057afebb1cbe6"
     },
     {
       "id": "lot10-commercial-cycle-20261020",

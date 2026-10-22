@@ -33,28 +33,30 @@
     {
       "id": "A03",
       "title": "Un Kit qui vérifie la compréhension avant de créer le groupe · lot 03",
-      "status": "IMPLEMENTED_PENDING_INTEGRATED_QUALIFICATION",
+      "status": "DELIVERED_WITH_DOCUMENTED_LIMITS",
       "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md",
       "targetLots": [
         3
       ],
       "evidence": [
-        "docs/change-impact/CIR-2026-10-22-GROUPS-GOVERNANCE-TRUST.md"
+        "docs/release/evidence/GROUPS-GOVERNANCE-TRUST-PUBLIC-2026-10-22.json",
+        "docs/release/DELIVERY-2026-10-22-GROUPS-GOVERNANCE-TRUST.md"
       ],
-      "limits": "Candidate only. Specialized existing authorities retained. Full integrated qualification, exact public delivery and field acceptance remain distinct."
+      "limits": "10 steps/fictional canonical simulation/scoped optional draft and same-project Kit recovery. No raw identity files or atomic cross-tab lock. Field acceptance pending."
     },
     {
       "id": "A04",
       "title": "Un journal des décisions relié à leurs effets · lot 04",
-      "status": "IMPLEMENTED_PENDING_INTEGRATED_QUALIFICATION",
+      "status": "DELIVERED_WITH_DOCUMENTED_LIMITS",
       "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md",
       "targetLots": [
         4
       ],
       "evidence": [
-        "docs/change-impact/CIR-2026-10-22-GROUPS-GOVERNANCE-TRUST.md"
+        "docs/release/evidence/GROUPS-GOVERNANCE-TRUST-PUBLIC-2026-10-22.json",
+        "docs/release/DELIVERY-2026-10-22-GROUPS-GOVERNANCE-TRUST.md"
       ],
-      "limits": "Candidate only. Specialized existing authorities retained. Full integrated qualification, exact public delivery and field acceptance remain distinct."
+      "limits": "Adopted closed decision tasks, current assignee, immutable reports/review with evidence. No automatic finance, mandate, federation or succession effects."
     },
     {
       "id": "A05",
@@ -124,20 +126,28 @@
     {
       "id": "A11",
       "title": "Un Business Studio qui confronte l’idée aux résultats · lot 11",
-      "status": "PLANNED_OR_REQUIRES_DETAILED_COVERAGE",
+      "status": "IMPLEMENTED_PENDING_INTEGRATED_QUALIFICATION",
       "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md",
       "targetLots": [
         11
-      ]
+      ],
+      "evidence": [
+        "docs/change-impact/CIR-2026-10-22-BUSINESS-VALUE-NETWORK.md"
+      ],
+      "limits": "Candidate only; existing authorities preserved. Resource booking I16 and Harvest I06 not included. No automatic publication/order/payment or field acceptance."
     },
     {
       "id": "A12",
       "title": "Un rapprochement entre besoins et ressources qui explique ses raisons · lot 12",
-      "status": "PLANNED_OR_REQUIRES_DETAILED_COVERAGE",
+      "status": "IMPLEMENTED_PENDING_INTEGRATED_QUALIFICATION",
       "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md",
       "targetLots": [
         12
-      ]
+      ],
+      "evidence": [
+        "docs/change-impact/CIR-2026-10-22-BUSINESS-VALUE-NETWORK.md"
+      ],
+      "limits": "Candidate only; existing authorities preserved. Resource booking I16 and Harvest I06 not included. No automatic publication/order/payment or field acceptance."
     },
     {
       "id": "A13",
@@ -214,15 +224,16 @@
     {
       "id": "A21",
       "title": "Un passeport de confiance fondé sur des faits limités · lot 21",
-      "status": "IMPLEMENTED_PENDING_INTEGRATED_QUALIFICATION",
+      "status": "DELIVERED_WITH_DOCUMENTED_LIMITS",
       "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md",
       "targetLots": [
         21
       ],
       "evidence": [
-        "docs/change-impact/CIR-2026-10-22-GROUPS-GOVERNANCE-TRUST.md"
+        "docs/release/evidence/GROUPS-GOVERNANCE-TRUST-PUBLIC-2026-10-22.json",
+        "docs/release/DELIVERY-2026-10-22-GROUPS-GOVERNANCE-TRUST.md"
       ],
-      "limits": "Candidate only. Specialized existing authorities retained. Full integrated qualification, exact public delivery and field acceptance remain distinct."
+      "limits": "Dated limited assertions; current rights, withdrawal and expiry revalidated. Human manager review is not institutional certification. No identity-owner replacement."
     },
     {
       "id": "A22",
@@ -326,8 +337,12 @@
     {
       "id": "I04",
       "title": "Les besoins mutualisés avec consentement · propriétaire L12",
-      "status": "PLANNED_OR_REQUIRES_DETAILED_COVERAGE",
-      "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md"
+      "status": "IMPLEMENTED_PENDING_INTEGRATED_QUALIFICATION",
+      "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md",
+      "evidence": [
+        "docs/change-impact/CIR-2026-10-22-BUSINESS-VALUE-NETWORK.md"
+      ],
+      "limits": "Candidate only; existing authorities preserved. Resource booking I16 and Harvest I06 not included. No automatic publication/order/payment or field acceptance."
     },
     {
       "id": "I05",
@@ -344,12 +359,13 @@
     {
       "id": "I07",
       "title": "La carte de preuve partageable et révocable · propriétaire L21",
-      "status": "IMPLEMENTED_PENDING_INTEGRATED_QUALIFICATION",
+      "status": "DELIVERED_WITH_DOCUMENTED_LIMITS",
       "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md",
       "evidence": [
-        "docs/change-impact/CIR-2026-10-22-GROUPS-GOVERNANCE-TRUST.md"
+        "docs/release/evidence/GROUPS-GOVERNANCE-TRUST-PUBLIC-2026-10-22.json",
+        "docs/release/DELIVERY-2026-10-22-GROUPS-GOVERNANCE-TRUST.md"
       ],
-      "limits": "Candidate only. Specialized existing authorities retained. Full integrated qualification, exact public delivery and field acceptance remain distinct."
+      "limits": "Subject-chosen summary and revocable random-secret card, effective minimum expiry. Requires Eco account/online; lost secret cannot be recovered; private evidence is not disclosed."
     },
     {
       "id": "I08",

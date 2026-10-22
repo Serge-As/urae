@@ -48,6 +48,7 @@ import { mountBlueprintExecutableUI } from './blueprint-executable-ui.js';
 import { mountCommunityBlueprintPresets } from './community-blueprint-presets.js';
 import { mountFinancialLabUI } from './financial-lab-ui.js';
 import { mountBusinessStudioUI } from './business-studio-ui.js';
+import { mountEconomicExperimentsUI } from './economic-experiments-ui.js';
 import { mountCoreEconomicLearningUI } from './core-economic-learning-ui.js';
 import { mountResilienceUI } from './resilience-ui.js';
 import { parseEcoShareIntent } from './share-out.js';
@@ -188,7 +189,7 @@ let modules = [];
 let applicationStartup = Promise.resolve();
 let selectedLot = 'ALL';
 let deferredInstallPrompt;
-const CAHIER_VERSION = '1.5.2.30-groups-governance-trust';
+const CAHIER_VERSION = '1.5.2.31-business-value-network';
 const $ = (s) => { const e = document.querySelector(s); if (!e)
     throw new Error(`UI_ELEMENT_NOT_FOUND:${s}`); return e; };
 const val = (id) => document.getElementById(id).value.trim();
@@ -544,6 +545,7 @@ const savingsYieldUI = mountSavingsYieldUI({ app, getMembers: () => members, not
 const externalProgramsUI = mountExternalProgramsUI({ app, notify: toast, showError: fail, isManager, fmt });
 const businessStudioUI = mountBusinessStudioUI({app,navigate:go,notify:toast,showError:fail});
 const coreEconomicLearningUI = mountCoreEconomicLearningUI({app,notify:toast,showError:fail,isManager});
+const economicExperimentsUI=mountEconomicExperimentsUI({app,isManager,notify:toast});
 const founderControlUI = mountFounderControlUI({ app, notify: toast, showError: fail });
 const assistanceRulebookUI = mountAssistanceRulebookUI({ app, notify: toast, showError: fail, isManager });
 const groupHomeUI = mountGroupHomeUI({ app, getGroups:()=>groups, getMembers:()=>members, getMeetings:()=>meetings, navigate:go, fmt });
@@ -2015,6 +2017,8 @@ const openModule = async (id) => {
     if(m.status === 'FOUNDATION_ACTIVE' && id === 'FINANCE.WALLET'){go('dashboard',{anchor:'walletCenter',force:true});walletUI.open();return;}
     if(m.status === 'FOUNDATION_ACTIVE' && id === 'FINANCE.ENVELOPES'){go('dashboard',{anchor:'memberEnvelopeCenter',force:true});memberEnvelopeUI.open();return;}
     if(m.status === 'FOUNDATION_ACTIVE' && id === 'OPPORTUNITY.GRAPH'){go('ecosystem',{anchor:'opportunityGraphCenter',force:true});opportunityGraphUI.open();return;}
+    if(m.status === 'FOUNDATION_ACTIVE' && id === 'MANAGER.BUSINESS_STUDIO'){go('ecosystem',{anchor:'businessStudioOperational',force:true});economicExperimentsUI.open('experiments');return;}
+    if(m.status === 'FOUNDATION_ACTIVE' && ['OPPORTUNITY.NEED','OPPORTUNITY.OFFER'].includes(id)){go('ecosystem',{anchor:'valueNetworkOperational',force:true});economicExperimentsUI.open('pools');return;}
     if(m.status === 'FOUNDATION_ACTIVE' && ['CREATOR.STUDIO','LEARNING.TALENT'].includes(id)){go('ecosystem',{anchor:'creatorTalentCenter',force:true});creatorTalentUI.open();return;}
     if(m.status === 'FOUNDATION_ACTIVE' && id === 'MANAGER.PUBLIC_PROFILE'){go('discovery',{anchor:'managerPublicProfileCenter',force:true});managerPublicProfileUI.open();return;}
     if(m.status === 'FOUNDATION_ACTIVE' && id === 'MARKETPLACE.MARKET_INTELLIGENCE'){go('ecosystem',{anchor:'opportunityIntelligence',force:true});opportunityIntelligenceUI.open();return;}
@@ -2508,6 +2512,7 @@ const refreshGroupContext = async () => {
     notificationCenterUI.clearForContext?.();
     ecoCareUI.clearForContext?.();
     governedGroupUI.clearForContext?.();
+    economicExperimentsUI.clearForContext?.();
     launchStudio?.refreshContext();
     identityVerificationUI.clearForContext?.();
     universalSearchRevision++;document.getElementById('universalSearchFullResults')?.replaceChildren();const searchScope=JSON.stringify([app.currentActor(),app.currentTenant(),app.activeGroup()]);if(searchScope!==universalSearchScope){universalSearchScope=searchScope;const input=document.getElementById('universalSearchFull');if(input)input.value='';}
@@ -3055,6 +3060,7 @@ $('#languageSelect').addEventListener('change', async e => {
     await notificationCenterUI.setLocale?.();
     await ecoCareUI.setLocale?.();
     governedGroupUI.setLocale?.();
+    economicExperimentsUI.setLocale?.();
     launchStudio?.setLocale();
     completionUI.setLocale();
     advancedUI.setLocale();
@@ -3363,7 +3369,7 @@ document.querySelector('#claimLocalAccountBtn')?.addEventListener('click',()=>vo
     catch(e){fail(e);}
     finally{if(button)button.disabled=false;}
 })());
-$('#logoutBtn').addEventListener('click',async()=>{try{await app.logout();notificationCenterUI.clearForContext(true);ecoCareUI.clearForContext(true);governedGroupUI.clearForContext(true);launchStudio?.refreshContext(true);identityVerificationUI.clearForContext?.(true);journeyUI.refresh();localAssistantUI.refreshContext();document.body.classList.add('signed-out');$('#authScreen').hidden=false;$('#accountName').textContent='';const claim=document.querySelector('#claimLocalAccountBtn');if(claim)claim.hidden=true;showAuth(tx('Compte fermé sur cet appareil. Vos données locales ne sont pas supprimées.','Account signed out on this device. Your local data was not deleted.'));}catch(e){fail(e);}});
+$('#logoutBtn').addEventListener('click',async()=>{try{await app.logout();notificationCenterUI.clearForContext(true);ecoCareUI.clearForContext(true);governedGroupUI.clearForContext(true);economicExperimentsUI.clearForContext(true);launchStudio?.refreshContext(true);identityVerificationUI.clearForContext?.(true);journeyUI.refresh();localAssistantUI.refreshContext();document.body.classList.add('signed-out');$('#authScreen').hidden=false;$('#accountName').textContent='';const claim=document.querySelector('#claimLocalAccountBtn');if(claim)claim.hidden=true;showAuth(tx('Compte fermé sur cet appareil. Vos données locales ne sont pas supprimées.','Account signed out on this device. Your local data was not deleted.'));}catch(e){fail(e);}});
 // Online recovery is serialized by resumeOnline() above: sync durable outbox first, then restart projections.
 window.addEventListener('offline',()=>{renderConnectivity();const claim=document.querySelector('#claimLocalAccountBtn');if(claim&&!claim.hidden){claim.disabled=true;claim.textContent=tx('Compte local · Internet requis pour finaliser','Local account · Internet needed to finalize');}});
 void ensureCurrentServiceWorker();

@@ -118,7 +118,7 @@ export class FilePlatformRepository {
   listGovernanceKnowledgeClaims(t,g){return this.#read(()=>this.#values('governanceKnowledgeClaims').filter(x=>x.tenantId===t&&(!g||x.groupId===g)));}
   saveWorkspaceRecord(v){return this.#write(()=>this.#upsert('workspaceRecords',v));}
   insertGovernedRecord(v){return this.#write(()=>{
-    if(!['TRUST.VERIFICATION','GOVERNANCE.VOTE.ACTION','GOVERNANCE.VOTE.BALLOT'].includes(v.moduleId))throw Error('INVALID_GOVERNED_RECORD');
+    if(!['TRUST.VERIFICATION','GOVERNANCE.VOTE.ACTION','GOVERNANCE.VOTE.BALLOT'].includes(v.moduleId)&&!(v.moduleId==='MANAGER.BUSINESS_STUDIO'&&v.tags.includes('business-experiment'))&&!(v.moduleId==='OPPORTUNITY.NEED'&&v.tags.includes('consensual-pool')))throw Error('INVALID_GOVERNED_RECORD');
     const prior=this.data.workspaceRecords[v.id];
     if(prior){if(prior.tenantId!==v.tenantId||prior.moduleId!==v.moduleId||prior.groupId!==v.groupId)throw Error('GOVERNED_RECORD_CONFLICT');return{record:prior,inserted:false};}
     this.#upsert('workspaceRecords',v);return{record:v,inserted:true};

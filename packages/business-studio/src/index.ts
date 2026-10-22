@@ -2,6 +2,7 @@ import type {PlatformRepository} from '../../repositories/src/index.js';
 import type {PlatformKernel} from '../../platform-kernel/src/index.js';
 import type {Id,WorkspaceRecord} from '../../contracts/src/index.js';
 import {makeId} from '../../contracts/src/index.js';
+import * as experiment from './experiments.js';
 
 type BusinessKind='WORKSPACE'|'MANDATE'|'CLIENT'|'OFFER'|'REQUEST'|'QUOTE'|'ORDER'|'CONTRACT'|'INVOICE'|'EXPENSE'|'PAYMENT'|'REVENUE'|'TIME'|'COMMUNICATION'|'ACTION'|'SCENARIO';
 type Money={amount:number;currency:string};
@@ -21,6 +22,12 @@ export interface BusinessSummary{
 
 export class BusinessStudioService{
   constructor(public repo:PlatformRepository,public kernel:PlatformKernel){}
+  createExperiment(input:experiment.ExperimentInput){return experiment.createExperiment(this.repo,this.kernel,input);}
+  observeExperiment(id:string,input:experiment.ExperimentObservationInput){return experiment.observeExperiment(this.repo,this.kernel,id,input);}
+  linkExperimentOrder(id:string,orderId:string){return experiment.linkExperimentOrder(this.repo,this.kernel,id,orderId);}
+  experiments(){return experiment.listExperiments(this.repo,this.kernel);}
+  reviewExperiment(id:string,observationId?:string){return experiment.reviewExperiment(this.repo,this.kernel,id,observationId);}
+  experimentPublicationDraft(id:string,priceIndex:number){return experiment.experimentPublicationDraft(this.repo,this.kernel,id,priceIndex);}
 
   private async actorWorkspace():Promise<WorkspaceRecord>{
     const ctx=this.kernel.context.get(),id='business_workspace_'+encodeURIComponent(ctx.actorId),existing=await this.repo.getWorkspaceRecord(ctx.tenantId,id);

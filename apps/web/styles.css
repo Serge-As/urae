@@ -1886,3 +1886,14 @@ body.ui-mode-assisted .eco-workbench :is(button,p,small,span,label){font-size:15
 .governed-group input,.governed-group textarea,.governed-group select{min-width:0;max-width:100%}
 .governed-group .item{overflow-wrap:anywhere;min-width:0}
 .governed-group .truth-notice{line-height:1.45}
+
+/* Economic experiments and consented needs only; existing financial grids are unchanged. */
+#businessExperimentsPanel, #pooledNeedsPanel { min-width: 0; }
+#businessExperimentsPanel .form-grid, #pooledNeedsPanel .form-grid { grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr)); }
+#businessExperimentsPanel .form-grid h3, #pooledNeedsPanel .form-grid h3 { grid-column: 1 / -1; }
+#businessExperimentsPanel label, #pooledNeedsPanel label { min-width: 0; overflow-wrap: anywhere; }
+#businessExperimentsPanel input, #businessExperimentsPanel select, #businessExperimentsPanel textarea,
+#pooledNeedsPanel input, #pooledNeedsPanel select, #pooledNeedsPanel textarea { max-width: 100%; box-sizing: border-box; }
+#businessExperimentsPanel .experiment-review { overflow-x: auto; }
+#businessExperimentsPanel table { width: 100%; font-variant-numeric: tabular-nums; }
+#businessExperimentsPanel th, #businessExperimentsPanel td { overflow-wrap: normal; padding: .6rem; }
