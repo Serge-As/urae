@@ -67,7 +67,7 @@ import { WalletService } from '../../../packages/wallet/src/index.js';
 import { OpportunityGraphService } from '../../../packages/opportunity-graph/src/index.js';
 import { StarterKitService } from '../../../packages/starter-kit/src/index.js';
 import { GroupModelRegistryService, GroupCaseLawService } from '../../../packages/group-learning-registry/src/index.js';
-import { SafetyCaseService, CommitmentTrustGraphService, assessReferralStructure, type SafetyCategory, type SafetyCaseState, type SafetyAction } from '../../../packages/trust/src/index.js';
+import { TrustVerificationService, SafetyCaseService, CommitmentTrustGraphService, assessReferralStructure, type SafetyCategory, type SafetyCaseState, type SafetyAction } from '../../../packages/trust/src/index.js';
 import { ExpenseService } from '../../../packages/expenses/src/index.js';
 import { authenticatedApi } from './authenticated.js';
 export { GroupLiveHub } from './group-live-hub.js';
@@ -80,11 +80,11 @@ interface WorkersAILike {
   run?(model:string,input:Record<string,unknown>,options?:Record<string,unknown>):Promise<unknown>;
 }
 
-const RELEASE_VERSION='1.5.2.29-eco-care';
-const RELEASE_BUILD_ID='eco-system-1.5.2.29-20261021-eco-care';
+const RELEASE_VERSION='1.5.2.30-groups-governance-trust';
+const RELEASE_BUILD_ID='eco-system-1.5.2.30-20261022-groups-governance-trust';
 const RELEASE_SCHEMA_VERSION='d1-additive-20260923';
 const RELEASE_POLICY_VERSION='live-finance-policy-20261007-event-push-repayment';
-const RELEASE_PWA_CACHE='eco-system-v15229-eco-care-20261021';
+const RELEASE_PWA_CACHE='eco-system-v15230-groups-governance-trust-20261022';
 
 const defaultRepo = new InMemoryPlatformRepository();
 const defaultReferralBudgets = new InMemoryReferralBudgetStore();
@@ -187,6 +187,7 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
     kernel.context.set({...ctx,mandateIds:grants.map(g=>g.mandateId),mandateGrants:grants});ctx=kernel.context.get();
   }catch{}
   const governanceVotes=new GovernanceVoteService(repo,kernel,options.governanceSecret??'eco-system-nonproduction-governance-secret');
+  const trustVerification=new TrustVerificationService(repo,kernel);
   const notifications=new NotificationService(repo,kernel);
   const growthReferral=new GrowthReferralService(repo,kernel,options.referralBudgets??defaultReferralBudgets);
   const reconstitution=new GroupReconstitutionService(repo,kernel);
@@ -3057,7 +3058,7 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
       const moduleId=url.searchParams.get('moduleId')??undefined;
       const groupId=url.searchParams.get('groupId')??undefined;
       const records=await repo.listWorkspaceRecords(ctx.tenantId,moduleId,groupId);const visible=[];
-      for(const record of records)if(await visibleWorkspace(record))visible.push(record);
+      for(const record of records)if(!record.tags.includes('verification-fact')&&!record.tags.includes('governance-follow-up')&&await visibleWorkspace(record))visible.push(record);
       return json(visible,200,cors);
     }
     if(request.method==='POST'&&url.pathname==='/api/v1/workspaces'){
@@ -3070,6 +3071,7 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
       const timestamp=new Date().toISOString();
       const rawData=body.data&&typeof body.data==='object'&&!Array.isArray(body.data)?body.data as Record<string,unknown>:{};
       if(strArray(body.tags).includes('market-engine')||rawData.marketScopeId||rawData.marketKind)throw Error('CANONICAL_MARKET_ROUTE_REQUIRED');
+      if(strArray(body.tags).some(x=>['verification-fact','governance-follow-up','poll','ballot'].includes(x)))throw Error('CANONICAL_GOVERNED_ROUTE_REQUIRED');
       const data:Record<string,string|number|boolean|null>={};
       for(const [k,v] of Object.entries(rawData)){if(typeof v==='string'||typeof v==='number'||typeof v==='boolean'||v===null)data[k]=v;}
       const status=String(body.status??'ACTIVE') as WorkspaceStatus;
@@ -3086,11 +3088,13 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
       if(!await visibleWorkspace(existing))throw Error('FORBIDDEN_SCOPE');
       if(existing.moduleId.startsWith('NOTIFY.'))throw Error('CANONICAL_NOTIFICATION_ROUTE_REQUIRED');
       if(existing.tags.includes('market-engine'))throw Error('CANONICAL_MARKET_ROUTE_REQUIRED');
+      if(existing.tags.some(x=>['verification-fact','governance-follow-up','poll','ballot'].includes(x)))throw Error('CANONICAL_GOVERNED_ROUTE_REQUIRED');
       if(existing.moduleId==='FINANCE.MEMBER_BUNDLE')throw Error('IMMUTABLE_FINANCIAL_SNAPSHOT');
       const body=await readJson<Record<string,unknown>>(request);
       const status=String(body.status??existing.status) as WorkspaceStatus; if(!['DRAFT','ACTIVE','DONE','ARCHIVED'].includes(status)) throw new Error('INVALID_WORKSPACE_STATUS');
       const rawData=body.data&&typeof body.data==='object'&&!Array.isArray(body.data)?body.data as Record<string,unknown>:existing.data;
       const data:Record<string,string|number|boolean|null>={}; for(const [k,v] of Object.entries(rawData)){if(typeof v==='string'||typeof v==='number'||typeof v==='boolean'||v===null)data[k]=v;}
+      if(strArray(body.tags).some(x=>['verification-fact','governance-follow-up','poll','ballot'].includes(x)))throw Error('CANONICAL_GOVERNED_ROUTE_REQUIRED');
       const updated:WorkspaceRecord={...existing,title:body.title===undefined?existing.title:String(body.title).trim()||existing.title,summary:body.summary===undefined?existing.summary:String(body.summary),status,tags:body.tags===undefined?existing.tags:strArray(body.tags),data,updatedAt:new Date().toISOString()};
       await repo.saveWorkspaceRecord(updated);
       const audit=kernel.audit.append({tenantId:ctx.tenantId,actorId:ctx.actorId,action:'WORKSPACE_RECORD_UPDATED',targetType:'workspace_record',targetId:updated.id,after:{moduleId:updated.moduleId,status:updated.status},requestId:ctx.requestId}); await repo.saveAudit(audit);
@@ -3515,11 +3519,26 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
     }
 
 
+    const assertionsRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/verification\/assertions$/);
+    if(assertionsRoute&&request.method==='GET')return json({items:await trustVerification.list(assertionsRoute[1]!,url.searchParams.get('membershipId')??undefined)},200,cors);
+    if(assertionsRoute&&request.method==='POST')return json(await trustVerification.issue(assertionsRoute[1]!,await readJson<any>(request)),201,cors);
+    const assertionCommand=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/verification\/assertions\/([^/]+)\/(actions|shares)$/);
+    if(assertionCommand&&request.method==='POST'){const body=await readJson<any>(request);return json(assertionCommand[3]==='actions'?await trustVerification.act(assertionCommand[1]!,assertionCommand[2]!,body):await trustVerification.share(assertionCommand[1]!,assertionCommand[2]!,body),201,cors);}
+    const revokeCard=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/verification\/assertions\/([^/]+)\/shares\/([^/]+)\/revoke$/);
+    if(revokeCard&&request.method==='POST'){const body=await readJson<any>(request);return json(await trustVerification.revokeShare(revokeCard[1]!,revokeCard[2]!,revokeCard[3]!,String(body.idempotencyKey??'')),201,cors);}
+    if(url.pathname==='/api/v1/verification/cards/verify'&&request.method==='POST'){const body=await readJson<any>(request);return json(await trustVerification.verify(String(body.token??'')),200,{...cors,'cache-control':'no-store'});}
+    const executionRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/governance\/execution$/);
+    if(executionRoute&&request.method==='GET')return json({items:await governanceVotes.execution(executionRoute[1]!,url.searchParams.get('pollId')??undefined)},200,cors);
+    const planExecution=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/governance\/polls\/([^/]+)\/execution$/);
+    if(planExecution&&request.method==='POST')return json(await governanceVotes.planExecution(planExecution[1]!,planExecution[2]!,await readJson<any>(request)),201,cors);
+    const executionAction=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/governance\/execution\/([^/]+)\/actions$/);
+    if(executionAction&&request.method==='POST')return json(await governanceVotes.actOnExecution(executionAction[1]!,executionAction[2]!,await readJson<any>(request)),201,cors);
+
     const pollsRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/governance\/polls$/);
     if(pollsRoute&&request.method==='GET')return json(await governanceVotes.list(pollsRoute[1]!),200,cors);
     if(pollsRoute&&request.method==='POST'){
       const body=await readJson<Record<string,unknown>>(request);
-      return json(await governanceVotes.open(pollsRoute[1]!,{title:String(body.title??''),question:String(body.question??''),options:strArray(body.options),mode:String(body.mode??'NAMED') as any,kind:String(body.kind??'YES_NO') as any,quorumBps:finite(body.quorumBps,5000),majority:String(body.majority??'SIMPLE') as any,qualifiedThresholdBps:body.qualifiedThresholdBps===undefined?undefined:finite(body.qualifiedThresholdBps),closesAt:body.closesAt?String(body.closesAt):undefined}),201,cors);
+      return json(await governanceVotes.open(pollsRoute[1]!,{title:String(body.title??''),question:String(body.question??''),options:strArray(body.options),mode:String(body.mode??'NAMED') as any,kind:String(body.kind??'YES_NO') as any,quorumBps:finite(body.quorumBps,5000),majority:String(body.majority??'SIMPLE') as any,qualifiedThresholdBps:body.qualifiedThresholdBps===undefined?undefined:finite(body.qualifiedThresholdBps),closesAt:body.closesAt?String(body.closesAt):undefined,rulesVersion:body.rulesVersion?String(body.rulesVersion):undefined,discussionRef:body.discussionRef?String(body.discussionRef):undefined,evidenceRefs:strArray(body.evidenceRefs)}),201,cors);
     }
     const ballotRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/governance\/polls\/([^/]+)\/ballots$/);
     if(ballotRoute&&request.method==='POST'){const body=await readJson<Record<string,unknown>>(request);return json(await governanceVotes.cast(ballotRoute[1]!,ballotRoute[2]!,strArray(body.selections)),201,cors);}
@@ -3597,7 +3616,7 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
     }
 
     return json({error:'NOT_FOUND'},404,cors);
-  } catch(error){const message=error instanceof Error?error.message:'UNKNOWN_ERROR';const status=['FORBIDDEN_SCOPE','FOUNDER_TEAM_ONLY','SHOP_OWNER_REQUIRED','BUYER_REQUIRED','CANONICAL_MARKET_ROUTE_REQUIRED','CANONICAL_NOTIFICATION_ROUTE_REQUIRED','FORBIDDEN_CASE_EVIDENCE'].includes(message)?403:message==='VOICE_TRANSCRIPTION_UNAVAILABLE'?503:['IDEMPOTENCY_CONFLICT','CELL_VALUE_CONFLICT','CELL_VERSION_CONFLICT','MARKET_ORDER_CONFLICT','MARKET_IDEMPOTENCY_CONFLICT','MARKET_RECORD_CONFLICT','NOTIFICATION_EVENT_CONFLICT','NOTIFICATION_ATTEMPT_CONFLICT','CASE_VERSION_CONFLICT','CASE_IDEMPOTENCY_CONFLICT','CASE_EXPECTATION_VERSION_CONFLICT'].includes(message)?409:message.endsWith('_NOT_FOUND')?404:400;return json({error:message,requestId:ctx.requestId},status,cors);}
+  } catch(error){const message=error instanceof Error?error.message:'UNKNOWN_ERROR';const status=['FORBIDDEN_SCOPE','FOUNDER_TEAM_ONLY','SHOP_OWNER_REQUIRED','BUYER_REQUIRED','CANONICAL_MARKET_ROUTE_REQUIRED','CANONICAL_NOTIFICATION_ROUTE_REQUIRED','CANONICAL_GOVERNED_ROUTE_REQUIRED','FORBIDDEN_CASE_EVIDENCE'].includes(message)?403:message==='VOICE_TRANSCRIPTION_UNAVAILABLE'?503:['IDEMPOTENCY_CONFLICT','CELL_VALUE_CONFLICT','CELL_VERSION_CONFLICT','MARKET_ORDER_CONFLICT','MARKET_IDEMPOTENCY_CONFLICT','MARKET_RECORD_CONFLICT','NOTIFICATION_EVENT_CONFLICT','NOTIFICATION_ATTEMPT_CONFLICT','CASE_VERSION_CONFLICT','CASE_IDEMPOTENCY_CONFLICT','CASE_EXPECTATION_VERSION_CONFLICT','GOVERNED_RECORD_CONFLICT'].includes(message)?409:message.endsWith('_NOT_FOUND')?404:400;return json({error:message,requestId:ctx.requestId},status,cors);}
 };
 
 export const handleRequest=createApiHandler(defaultRepo);

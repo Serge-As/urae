@@ -11,7 +11,7 @@ const safeNonNegative=(v:unknown,name:string)=>{const n=Number(v??0);if(!Number.
 const safeFinite=(v:unknown,name:string)=>{const n=Number(v??0);if(!Number.isFinite(n))throw Error('INVALID_STARTER_KIT_'+name);return n;};
 
 export interface StarterKitInput{
-  kitVersion?:string;generatedAt?:string;family:string;governance:string;members:number;sessions:number;
+  kitVersion?:string;guideVersion?:string;generatedAt?:string;family:string;governance:string;members:number;sessions:number;
   monetaryVolume?:number;managerFees?:number;estimatedExternal?:number;fixedCosts?:number;estimatedMargin?:number;
   rubricRowsJson:string;checklistJson:string;calendarJson:string;risksJson:string;rulesJson:string;
   recommendedModel?:string;indicativeAmount?:number;feeExampleJson:string;orderPolicy?:string;latePolicyJson:string;
@@ -35,6 +35,7 @@ export class StarterKitService{
     if(members>100000||sessions>10000)throw Error('STARTER_KIT_DIMENSION_OUT_OF_RANGE');
     return{
       kitVersion:text(input.kitVersion||'1.5.2.7',40),generatedAt,family:text(input.family,80),governance:text(input.governance,120),members,sessions,
+      ...(input.guideVersion?{guideVersion:text(input.guideVersion,80)}:{}),
       monetaryVolume:safeNonNegative(input.monetaryVolume,'VOLUME'),managerFees:safeNonNegative(input.managerFees,'FEES'),
       estimatedExternal:safeNonNegative(input.estimatedExternal,'EXTERNAL'),fixedCosts:safeNonNegative(input.fixedCosts,'FIXED_COSTS'),
       estimatedMargin:safeFinite(input.estimatedMargin,'MARGIN'),rubricRowsJson:safeJson(input.rubricRowsJson,120000),

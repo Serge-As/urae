@@ -2,6 +2,7 @@ import type { CommitmentBandId, CommitmentReliabilityProfile, Id, ReliabilityEvi
 import type {PlatformRepository} from '../../repositories/src/index.js';
 import type {PlatformKernel} from '../../platform-kernel/src/index.js';
 import {makeId} from '../../contracts/src/index.js';
+export {TrustVerificationService} from './verification.js';
 
 const points:Record<ReliabilityEvidence['kind'],number>={
   FULFILLED_ON_TIME:1,FULFILLED_LATE:0.35,MISSED_CONFIRMED:-1,RECOVERED_ARREARS:0.5,DISPUTE_RESOLVED:0.25,RULE_BREACH_CONFIRMED:-1.25

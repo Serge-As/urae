@@ -1,0 +1,78 @@
+import {createLaunchDraftStore,assessLaunchSteps,findLaunchNameResemblances,LAUNCH_GUIDE_VERSION} from './launch-draft.js';
+import {validateLaunchRubrics,simulateRubricPlan} from '../../../packages/rubrics/src/launch-config.js';
+
+const el=(tag,text,cls)=>{const n=document.createElement(tag);if(text!==undefined)n.textContent=String(text);if(cls)n.className=cls;return n;};
+const hints=[
+ ['Distinguez nouveau groupe, reprise historique et transformation. Une reprise ne réécrit pas les anciennes opérations.','Distinguish a new group, historical onboarding and transformation. Onboarding does not rewrite historical operations.'],
+ ['Une association peut contenir plusieurs tontines distinctes. Le nom du groupe ne remplace pas son identifiant.','An association may contain several distinct rotating funds. Its name does not replace its identifier.'],
+ ['Les rôles et mandats donnent les pouvoirs réels. Un modèle proposé ne vaut pas décision adoptée.','Actual roles and mandates grant powers. A suggested template is not an adopted decision.'],
+ ['Une fréquence et un nombre de séances définissent le calendrier prévu, sans constater de versement.','Frequency and session count define a planned calendar, without confirming any contribution.'],
+ ['Un nom ou téléphone commun ne suffit jamais pour fusionner deux personnes. Les rapprochements historiques passent par examen et appairage autorisés.','A shared name or phone never authorizes merging people. Historical linking requires review and authorized pairing.'],
+ ['Chaque rubrique garde ses montants, unités, participants, parts et règles. Les exemples ne deviennent pas des règles adoptées.','Each rubric retains its amounts, units, participants, shares and rules. Examples do not become adopted rules.'],
+ ['La faisabilité est relue par le simulateur existant. Un volume collectif simulé ne constitue pas un revenu du gestionnaire.','The existing simulator checks feasibility. Simulated collective volume is not manager revenue.'],
+ ['Les canaux externes restent conditionnés à leurs adaptateurs réels. Le Kit ne prouve aucun envoi.','External channels depend on their actual adapters. The kit proves no delivery.'],
+ ['Les choix de langue et d’accessibilité ne changent ni les montants ni les pouvoirs. Une saisie manuelle reste possible.','Language and accessibility choices change neither amounts nor powers. Manual input remains available.'],
+ ['Relisez les choix et les règles avant confirmation. Un règlement proposé doit encore être adopté selon la procédure du groupe.','Review choices and rules before confirmation. Proposed rules still require adoption through the group procedure.']
+];
+
+export function mountLaunchGuide({app,getStep,setStep,getEditors,restoreEditors,resumeCreation,kitSnapshot,persistKit,notify=()=>{}}){
+ const host=document.getElementById('launchJourney')?.parentElement,form=document.getElementById('projectForm');if(!host||!form)return{refresh:()=>{},changed:()=>{},rememberCreation:()=>{},completeCreation:()=>{},pendingCreation:()=>null};
+ const tx=(fr,en)=>document.documentElement.lang==='en'?en:fr;
+ const scope=()=>({actor:app.currentActor?.(),tenant:app.currentTenant?.()});
+ const store=createLaunchDraftStore({storage:{getItem:k=>localStorage.getItem(k),setItem:(k,v)=>localStorage.setItem(k,v),removeItem:k=>localStorage.removeItem(k)},scope});
+ const root=el('section',undefined,'launch-guide');root.id='launchGuide';host.append(root);
+ const title=el('h2'),intro=el('p',undefined,'hint'),actions=el('div',undefined,'actions'),state=el('p',undefined,'truth-notice'),help=el('p',undefined,'hint'),progress=el('div',undefined,'launch-guide-progress'),example=el('div',undefined,'launch-guide-example'),duplicates=el('div',undefined,'truth-notice');
+ state.id='launchDraftStatus';state.setAttribute('role','status');state.setAttribute('aria-live','polite');duplicates.id='launchNameReview';
+ const button=(id,handler)=>{const b=el('button',undefined,'secondary');b.id=id;b.type='button';b.onclick=handler;actions.append(b);return b;};
+ let revision=0,loadedScope='',dirty=false,saved=null,suppress=false;
+ const autoLabel=el('label',undefined,'inline-check'),auto=document.createElement('input'),autoText=el('span');auto.type='checkbox';auto.id='launchDraftAuto';autoLabel.append(auto,autoText);
+ const fieldNodes=()=>[...form.querySelectorAll('input[id],select[id],textarea[id]')].filter(n=>n.type!=='file'&&n.type!=='hidden'&&n.id!=='previewConfirmed'&&!n.closest('#launchRubrics'));
+ const defaults=new Map(fieldNodes().map(n=>[n.id,{value:n.value,checked:n.checked}]));
+ const capture=()=>({step:getStep(),fields:Object.fromEntries(fieldNodes().map(n=>[n.id,{value:n.value,checked:n.type==='checkbox'?n.checked:undefined}])),rubrics:getEditors().map(e=>({plan:e.read(),controls:[...e.card.querySelectorAll('input,select,textarea')].map(n=>({value:n.value,checked:n.type==='checkbox'?n.checked:undefined}))})),guideVersion:LAUNCH_GUIDE_VERSION});
+ const fail=e=>{state.textContent=tx('Brouillon non enregistré : ','Draft not saved: ')+String(e?.message??e);};
+ const currentScope=()=>JSON.stringify(scope());
+ const saveSnapshot=()=>{const payload={...capture(),autoSave:auto.checked};revision=store.save(payload,revision);saved=store.load();dirty=false;state.textContent=tx('Brouillon enregistré sur cet appareil.','Draft saved on this device.');};
+ const save=button('launchDraftSave',()=>{try{saveSnapshot();refresh(false);}catch(e){auto.checked=false;fail(e);}});
+ const restore=button('launchDraftRestore',()=>{let previous=null;try{
+   if(dirty&&!window.confirm(tx('Remplacer les choix actuels par le brouillon enregistré ?','Replace current choices with the saved draft?')))return;
+   const record=store.load();if(!record)return;const payload=record.payload;if(!payload||!Array.isArray(payload.rubrics)||payload.rubrics.length>100||!payload.fields)throw Error('LAUNCH_DRAFT_INVALID');
+   previous=capture();const known=new Map(fieldNodes().map(n=>[n.id,n]));
+   for(const [id,v]of Object.entries(payload.fields)){const n=known.get(id);if(!n)continue;if(typeof v.value==='string')n.value=v.value;if(n.type==='checkbox')n.checked=Boolean(v.checked);}
+   suppress=true;restoreEditors(payload.rubrics);document.getElementById('previewConfirmed').checked=false;document.getElementById('projectForm').dispatchEvent(new Event('input',{bubbles:true}));
+   revision=record.revision;saved=record;dirty=false;auto.checked=Boolean(payload.autoSave);setStep(Math.max(1,Math.min(10,Number(payload.step)||1)));state.textContent=tx('Brouillon repris. Relisez puis confirmez de nouveau ; aucune création automatique.','Draft restored. Review and confirm again; no automatic creation.');suppress=false;refresh(false);
+ }catch(e){if(previous){suppress=true;try{restoreEditors(previous.rubrics);const known=new Map(fieldNodes().map(n=>[n.id,n]));for(const [id,v]of Object.entries(previous.fields)){const n=known.get(id);if(n){n.value=v.value;if(n.type==='checkbox')n.checked=Boolean(v.checked);}}document.getElementById('previewConfirmed').checked=false;setStep(previous.step);}catch{state.textContent=tx('Reprise interrompue. Conservez le brouillon et relisez les champs.','Restore interrupted. Keep the draft and review the fields.');}}suppress=false;fail(e);}});
+ const clear=button('launchDraftClear',()=>{try{if(!saved)return;if(!window.confirm(tx('Effacer uniquement le brouillon enregistré sur cet appareil ?','Delete only the draft saved on this device?')))return;store.clear();saved=null;revision=0;auto.checked=false;state.textContent=tx('Brouillon enregistré effacé. Les choix à l’écran sont conservés.','Saved draft deleted. Current on-screen choices remain.');refresh(false);}catch(e){fail(e);}});
+ const resume=button('launchCreationResume',()=>{try{const p=store.pending();if(p&&!p.completedGroupId)resumeCreation(p.projectId);}catch(e){fail(e);}});
+ const acknowledge=button('launchCreationNew',()=>{try{store.acknowledgeCompleted();refresh(false);}catch(e){fail(e);}});
+ const retryKit=button('launchKitRetry',()=>{const context=currentScope();void(async()=>{try{retryKit.disabled=true;const p=store.pending();if(!p?.completedGroupId||!p.kit)throw Error('LAUNCH_KIT_REQUIRED');await persistKit(p.completedGroupId,p.kit);if(context!==currentScope())return;store.markKitSaved(p.completedGroupId);state.textContent=tx('Kit archivé dans le groupe.','Kit archived in the group.');refresh(false);}catch(e){if(context===currentScope())fail(e);}finally{retryKit.disabled=false;}})();});
+ auto.onchange=()=>{if(auto.checked)try{saveSnapshot();}catch(e){auto.checked=false;fail(e);}};
+ const stepButtons=Array.from({length:10},(_,i)=>{const b=el('button',undefined,'secondary');b.type='button';b.onclick=()=>setStep(i+1);progress.append(b);return b;});
+ root.append(title,intro,autoLabel,actions,state,progress,help,example,duplicates);
+ function refresh(checkScope=true,forceClear=false){
+   if(checkScope&&(forceClear||loadedScope!==currentScope())){
+     const prior=loadedScope;loadedScope=currentScope();if(prior||forceClear){suppress=true;auto.checked=false;for(const n of fieldNodes()){const d=defaults.get(n.id);if(d){n.value=d.value;if(n.type==='checkbox')n.checked=Boolean(d.checked);}}restoreEditors([]);document.getElementById('previewConfirmed').checked=false;document.getElementById('launchPreview')?.replaceChildren();document.getElementById('simulationResult')?.replaceChildren();setStep(1);suppress=false;}
+     dirty=false;state.textContent='';try{saved=store.load();revision=saved?.revision??0;}catch(e){saved=null;revision=0;fail(e);}
+   }
+   title.textContent=tx('Préparer, comprendre et reprendre','Prepare, understand and resume');intro.textContent=tx('Brouillon volontaire sur cet appareil, séparé par compte. Une création conserve aussi son reçu et son Kit pour permettre la reprise. Les fichiers et pièces d’identité brutes ne sont pas copiés ; rattachez les originaux après reprise.','Optional on-device draft, separated by account. A creation attempt also retains its receipt and kit for recovery. Files and raw identity documents are not copied; attach originals again after recovery.');
+   autoText.textContent=tx('Garder mon brouillon à jour sur cet appareil','Keep my draft up to date on this device');retryKit.textContent=tx('Réessayer l’archivage du Kit','Retry kit archiving');
+   save.textContent=tx('Enregistrer mon brouillon','Save my draft');restore.textContent=tx('Reprendre mon brouillon','Restore my draft');clear.textContent=tx('Effacer le brouillon enregistré','Delete saved draft');resume.textContent=tx('Reprendre la tentative de création','Resume the creation attempt');acknowledge.textContent=tx('Préparer un autre groupe','Prepare another group');restore.disabled=clear.disabled=!saved;
+   let pending=null;try{pending=store.pending();}catch(e){fail(e);}resume.hidden=!pending||Boolean(pending.completedGroupId);acknowledge.hidden=!pending?.completedGroupId;retryKit.hidden=!pending?.completedGroupId||pending.kitSaved||!pending.kit;
+   if(pending)state.textContent=pending.completedGroupId?tx('Cette tentative a abouti. Son brouillon ne sera pas proposé pour créer un doublon.','This attempt completed. Its draft will not be offered to create a duplicate.'):tx('Une création attend sa confirmation. Reprenez cette même tentative avant de préparer une nouvelle création.','A creation awaits confirmation. Resume this same attempt before starting a new creation.');
+   const snapshot=capture(),plans=snapshot.rubrics.map(r=>r.plan),steps=assessLaunchSteps({...snapshot,rubrics:plans});
+   let validPlans;try{validPlans=validateLaunchRubrics(plans);steps[5].state='COMPLETE';}catch{if(plans.length)steps[5].state='INCONSISTENT';}
+   if(window.__ecoLastProjectReady)steps[6].state='COMPLETE';
+   if(document.getElementById('previewConfirmed').checked)steps[9].state='COMPLETE';
+   // Keep each button mounted: an input's blur/change event can run between
+   // pointerdown and click. Replacing the button then would swallow that click.
+   for(const s of steps){const b=stepButtons[s.step-1];b.textContent=s.step+' · '+tx(...({COMPLETE:['Renseigné','Entered'],INCOMPLETE:['À compléter','Incomplete'],INCONSISTENT:['À vérifier','Review']}[s.state]));b.dataset.state=s.state;b.setAttribute('aria-current',String(s.step===getStep()));}
+   help.textContent=tx(...hints[Math.max(0,getStep()-1)]);example.replaceChildren(el('strong',tx('Exemple fictif · trois personnes','Fictional example · three people')));
+   if(validPlans?.length){const source=validPlans[0];try{const p={...source,key:'synthetic_3',memberCount:3,shareCount:source.amountBasis==='PER_SHARE'?3:undefined,potCount:source.kind==='TONTINE'?1:undefined,participants:undefined,sessions:Math.max(3,source.sessions)},r=simulateRubricPlan(p);const money=p.contributionMode!=='IN_KIND'?r.unitsPerSession+' × '+p.nominalAmount.amount+' '+r.currency+' × '+r.sessions+' = '+r.totalNominalContributions+' '+r.currency:undefined,quantity=p.contributionMode!=='MONEY'?r.unitsPerSession+' × '+p.contributionQuantity+' '+p.contributionUnit+' × '+r.sessions+' = '+(r.unitsPerSession*p.contributionQuantity*r.sessions)+' '+p.contributionUnit:undefined;example.append(el('p',tx('Trois personnes, une unité chacune : ','Three people, one unit each: ')+[money,quantity].filter(Boolean).join(' + ')+'. '+tx('Prévision, sans versement enregistré. Les participants réels gardent leur configuration.','Forecast, with no recorded contribution. Actual participants retain their own configuration.')));}catch{example.append(el('p',tx('Montants trop élevés pour un exemple exact.','Amounts exceed exact example limits.')));}}
+   else example.append(el('p',tx('Trois personnes peuvent partager un nom ou un téléphone tout en restant trois identités distinctes. Configurez une rubrique pour voir son exemple chiffré.','Three people can share a name or phone while remaining three distinct identities. Configure a rubric to see its numerical example.')));
+   const same=findLaunchNameResemblances(plans);duplicates.replaceChildren();duplicates.hidden=!same.length;if(same.length){duplicates.append(el('strong',tx('Ressemblances à examiner, sans fusion automatique','Similarities to review, without automatic merging')));for(const group of same)duplicates.append(el('p',group.map(p=>p.name+' · '+p.rubricName).join(' / ')));duplicates.append(el('p',tx('La même personne peut participer à plusieurs tontines. Confirmez ses références avec le parcours d’appairage historique et les preuves habilitées ; ne rapprochez jamais sur le seul nom ou téléphone.','The same person may join several rotating funds. Confirm references through historical pairing and authorized evidence; never link by name or phone alone.')));}
+ }
+ const changed=()=>{if(suppress)return;if(loadedScope!==currentScope()){refresh();return;}dirty=true;if(auto.checked)try{saveSnapshot();}catch(e){auto.checked=false;fail(e);}refresh(false);};
+ form.addEventListener('input',changed);form.addEventListener('change',changed);
+ window.addEventListener('storage',event=>{if(event.key?.startsWith('eco.launch.v1.')){try{const newest=store.load();if(newest?.revision!==revision){saved=newest;state.textContent=tx('Le brouillon a changé dans un autre onglet. Reprenez-le avant tout nouvel enregistrement.','The draft changed in another tab. Restore it before saving again.');refresh(false);}}catch(e){fail(e);}}});
+ refresh();
+ return{refresh,changed,pendingCreation:()=>store.pending(),rememberCreation:projectId=>{store.rememberCreation(projectId,kitSnapshot?.());refresh(false);},completeCreation:groupId=>{store.completeCreation(groupId);saved=null;revision=0;auto.checked=false;refresh(false);},markKitSaved:groupId=>{store.markKitSaved(groupId);refresh(false);}};
+}

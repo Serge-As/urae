@@ -28,7 +28,8 @@ async function seed(){
 
 test('Starter Kit owner persists the complete governed pack without touching the Ledger',async()=>{
   const {repo,group,service}=await seed(),before=(await repo.listLedgerEntries('tenant_kit',group.id)).length;
-  const first=await service.save(group.id,payload());
+  const first=await service.save(group.id,{...payload(),guideVersion:'kit-guide-20261022-v1'});
+  assert.equal(first.data.guideVersion,'kit-guide-20261022-v1');
   assert.equal(first.moduleId,'RUBRIC.STARTER_KITS');
   assert.equal(first.data.rubricRowsJson,payload().rubricRowsJson);
   assert.equal(first.data.checklistJson,payload().checklistJson);

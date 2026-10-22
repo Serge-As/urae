@@ -2148,6 +2148,17 @@ export class ConnectedApplication {
   async decideSafetyCase(id:string,input:any):Promise<any>{return this.request('/api/v1/safety/cases/'+encodeURIComponent(id)+'/decision',{method:'POST',body:JSON.stringify(input)});}
   async appealSafetyCase(id:string,input:any):Promise<any>{return this.request('/api/v1/safety/cases/'+encodeURIComponent(id)+'/appeal',{method:'POST',body:JSON.stringify(input)});}
   async assessReferralStructure(input:any):Promise<any>{return this.request('/api/v1/safety/referral-structure-assessment',{method:'POST',body:JSON.stringify(input)});}
+  private governedPath(suffix:string):string{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return'/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+suffix;}
+  async verificationAssertions():Promise<any>{return this.request(this.governedPath('/verification/assertions'));}
+  async issueVerificationAssertion(input:Record<string,unknown>):Promise<any>{return this.request(this.governedPath('/verification/assertions'),{method:'POST',body:JSON.stringify(input)});}
+  async actOnVerification(id:string,input:Record<string,unknown>):Promise<any>{return this.request(this.governedPath('/verification/assertions/'+encodeURIComponent(id)+'/actions'),{method:'POST',body:JSON.stringify(input)});}
+  async shareVerification(id:string,input:Record<string,unknown>):Promise<any>{return this.request(this.governedPath('/verification/assertions/'+encodeURIComponent(id)+'/shares'),{method:'POST',body:JSON.stringify(input)});}
+  async revokeVerificationShare(id:string,shareId:string,idempotencyKey:string):Promise<any>{return this.request(this.governedPath('/verification/assertions/'+encodeURIComponent(id)+'/shares/'+encodeURIComponent(shareId)+'/revoke'),{method:'POST',body:JSON.stringify({idempotencyKey})});}
+  async verifyProofCard(token:string):Promise<any>{if(typeof navigator!=='undefined'&&navigator.onLine===false)throw Error('ONLINE_CARD_CHECK_REQUIRED');return this.request('/api/v1/verification/cards/verify',{method:'POST',body:JSON.stringify({token})});}
+  async governancePolls():Promise<any>{return this.request(this.governedPath('/governance/polls'));}
+  async governanceExecution():Promise<any>{return this.request(this.governedPath('/governance/execution'));}
+  async planGovernanceExecution(pollId:string,input:Record<string,unknown>):Promise<any>{return this.request(this.governedPath('/governance/polls/'+encodeURIComponent(pollId)+'/execution'),{method:'POST',body:JSON.stringify(input)});}
+  async actOnGovernanceExecution(id:string,input:Record<string,unknown>):Promise<any>{return this.request(this.governedPath('/governance/execution/'+encodeURIComponent(id)+'/actions'),{method:'POST',body:JSON.stringify(input)});}
   async trustGraph(membershipId:string):Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/trust/'+encodeURIComponent(membershipId));}
   async trustProfile(membershipId:string,band='SMALL'):Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/trust/'+encodeURIComponent(membershipId)+'/profile?band='+encodeURIComponent(band));}
   async trustEvidence(membershipId:string):Promise<any[]>{if(!this.activeGroupId)return[];const r=await this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/trust/'+encodeURIComponent(membershipId)+'/evidence') as any;return r.items??[];}

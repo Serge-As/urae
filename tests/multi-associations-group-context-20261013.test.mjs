@@ -45,12 +45,29 @@ test('client keeps all verified groups and their canonical tenant mapping withou
   assert.equal(app.groupTenants.get('g25'),'tenant_home');
 });
 
-test('creation opens real group immediately, with optional Kit not blocking group context',()=>{
+test('creation opens real group immediately, with optional Kit not blocking group context',async()=>{
   const ui=fs.readFileSync('apps/web/src/main.js','utf8');
   const client=fs.readFileSync('packages/application/src/index.ts','utf8');
   assert.match(ui,/groups = await app\.listGroups\(\)/);
   assert.match(ui,/await renderGroups\(\);\s*renderActiveGroup\(\);\s*renderGroupSelector\(\);\s*go\('operations'/);
-  assert.match(ui,/void launchStudio\.persistStarterKit\?\.\(group\.id\)\.catch/);
+  // Execute the creation handler with an unresolved optional archive. Its
+  // parameter list may evolve; the acquired non-blocking behavior must not.
+  const begin=ui.indexOf('const createLaunchGroup=async'),end=ui.indexOf("$('#createGroupBtn').addEventListener",begin);
+  assert.ok(begin>=0&&end>begin);
+  const source=ui.slice(begin,end).trim().replace(/^const createLaunchGroup=/,'').replace(/;$/,'');
+  const order=[],errors=[],button={disabled:false,textContent:'Create'},form={},status={};let resolveKit;
+  const kit=new Promise(resolve=>{resolveKit=resolve;});
+  const dependencies={
+    $:id=>id==='#createGroupBtn'?button:id==='#projectForm'?form:status,
+    app:{currentActor:()=> 'actor',currentTenant:()=> 'tenant',createGroupFromProject:async id=>{assert.equal(id,'existing_project');order.push('created');return{id:'new_group',name:'Synthetic'};}},
+    launchStudio:{pendingCreation:()=>null,rememberCreation:()=>{},completeCreation:()=>{},persistStarterKit:()=>{order.push('kit');return kit;},markKitSaved:()=>order.push('kit_saved'),renderPreview:()=>{}},
+    renderGroups:async()=>{order.push('groups');},renderActiveGroup:()=>order.push('active'),renderGroupSelector:()=>order.push('selector'),
+    go:()=>order.push('navigate'),toast:()=>{},refreshGroupContext:async()=>{order.push('refresh');},fail:e=>errors.push(e),tx:fr=>fr,launchError:e=>e,
+    simulateCurrentLaunch:()=>{throw Error('UNEXPECTED_RESIMULATION');},window:{}
+  };
+  const run=new Function('d',`const {$,app,launchStudio,renderGroups,renderActiveGroup,renderGroupSelector,go,toast,refreshGroupContext,fail,tx,launchError,simulateCurrentLaunch,window}=d;let launchCreationPending=false,lastProjectId='existing_project';return (${source});`)(dependencies);
+  await run();assert.deepEqual(errors,[]);assert.deepEqual(order,['created','groups','active','selector','navigate','kit','refresh']);assert.equal(form.inert,false);assert.equal(button.disabled,false);
+  resolveKit({id:'kit'});await new Promise(resolve=>setImmediate(resolve));assert.equal(order.at(-1),'kit_saved');
   assert.match(ui,/void refreshGroupContext\(\)\.catch\(fail\)/);
   assert.match(client,/const groups=await this\.listGroups\(\)/);
   assert.match(client,/path==='\/api\/v1\/groups\/mine'/);

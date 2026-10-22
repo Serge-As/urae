@@ -99,10 +99,12 @@ test('Business Studio records private income but rejects undocumented extraction
 });
 
 test('starter kit is persisted by its dedicated owner and surfaced from group home',()=>{
-  assert.match(launch,/const persistStarterKit=async\(groupId\)=>/);
+  // Recovery can supply an optional retained Kit; the dedicated owner and
+  // the acquired one-argument API remain available.
+  assert.match(launch,/const persistStarterKit=async\(groupId(?:,[^)]+)?\)=>/);
   assert.match(launch,/app\.saveStarterKit\(groupId,data\)/);
   assert.doesNotMatch(launch,/GROUP\.STARTER_KIT/);
-  assert.match(main,/launchStudio\.persistStarterKit\?\.\(group\.id\)/);
+  assert.match(main,/launchStudio\.persistStarterKit\?\.\(group\.id(?:,[^\n]+)?\)/);
   assert.match(groupHome,/app\.starterKit\(group\.id\)/);
   assert.doesNotMatch(groupHome,/GROUP\.STARTER_KIT/);
   assert.match(groupHome,/Kit prêt à l’emploi du groupe/);

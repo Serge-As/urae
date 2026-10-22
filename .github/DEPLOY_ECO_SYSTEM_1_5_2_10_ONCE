@@ -1,25 +1,23 @@
-Eco-System 1.5.2.29 Eco Care delivery authorized
-release: 1.5.2.29-eco-care
-date: 2026-10-21
+Eco-System grouped delivery authorized by founder 2026-10-22
+release: 1.5.2.30-groups-governance-trust
+date: 2026-10-22
 db_mutation: none
 mode: code-only-with-verified-readonly-backup-no-migration
-qualified_baseline_source: 0266e1b895d4a91a4bc57d189608aae360393c24
-qualified_baseline_delivery: 39617145115 attempt1 SUCCESS
-qualification: baseline passed868 native36 Chromium6 WebKit; candidate must pass full exact-SHA gates
-candidate_native: 898 expected including30 EcoCare contracts; mandatory before deploy
-candidate_chromium: 39 expected including3 EcoCare browser scenarios; mandatory before deploy
-candidate_webkit: 6 mandatory before deploy
-production_ancestry: preserve5c9366445d6699b7a608f06a49a4efb61ec7d1ff and all prior deliveries
-backup: mandatory readonly D1 export, verified SQLite restore, private R2 archive download/hash before deploy
-storage: existing eco-system-db and eco-system-backups, no replacement or migration
-financial_signing: preserve existing key, never rotate, provision only proven absent first key after backup
+qualified_baseline_source: 8b864abda6b1d92af8dfd290edf1e3e41ed2c791
+qualified_baseline_delivery: 39676400467 attempt1 SUCCESS
+qualification: baseline 898 native39 Chromium6 WebKit; candidate exact-SHA gates mandatory
+candidate_native: expected919, actual counts must be read from evidence
+candidate_chromium: expected45, actual counts must be read from evidence
+candidate_webkit: acquired6 mandatory
+production_ancestry: preserve all prior deliveries, no force push
+backup: mandatory readonly D1 export, verified SQLite restore, private R2 download and hash before deploy
+storage: existing eco-system-db and eco-system-backups, no recreation or migration
+financial_signing: preserve existing key, no rotation
 real_money_enabled: false
 field_acceptance: NOT_ACCEPTED
-historical_pr72_hold: preserved; no merge or override of PR72
-trigger_nonce: 2026-10-21-lot25-eco-care-dictation-fixture-exact-source
-authorization: current user requested implementation and deployment of complete lots by agreed priority
-scope: Kernel.Cases canonical lifecycle and conditional persistence; explicit support audiences; proposals separated from requester acceptance; versioned preventive expectations; acquired finance and commerce preserved
+historical_pr72_hold: preserved
+trigger_nonce: 2026-10-22-groups-governance-trust-exact-source
+authorization: founder requested grouped implementation and deployment including improvements and innovations
+scope: L03 launch recovery and scoped draft; L04 evidence follow-up from canonical polls; L21 fact-specific assertions and I07 revocable selective cards
 qualification_same_deployment_sha: mandatory full gates before publication, no relaxation
-public_verification: exact health and catalogue plus33 deployed asset SHA256 comparisons with same-SHA build
-
-qualification_extension: acquired cockpit continuity and dictation now mandatory in candidate gate too; no assertion removed
+public_verification: exact health, catalogue and deployed asset SHA256 with same-SHA build

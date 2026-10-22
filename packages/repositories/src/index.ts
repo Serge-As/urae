@@ -190,6 +190,8 @@ export interface PlatformRepository {
   saveWorkspaceRecord(record: WorkspaceRecord): void | Promise<void>;
   /** Notification-owned append-only publication/read/attempt; a replay never overwrites the first payload. */
   insertNotificationRecord(record: WorkspaceRecord): NotificationInsertResult | Promise<NotificationInsertResult>;
+  /** Immutable, append-only facts owned by verification and poll follow-up. */
+  insertGovernedRecord(record: WorkspaceRecord): NotificationInsertResult | Promise<NotificationInsertResult>;
   getWorkspaceRecord(tenantId: Id, id: Id): WorkspaceRecord | undefined | Promise<WorkspaceRecord | undefined>;
   listWorkspaceRecords(tenantId: Id, moduleId?: string, groupId?: Id): WorkspaceRecord[] | Promise<WorkspaceRecord[]>;
 }
@@ -448,6 +450,12 @@ export class InMemoryPlatformRepository implements PlatformRepository {
     const previous=this.workspaceRecords.get(record.id);
     if(previous){if(previous.tenantId!==record.tenantId||previous.moduleId!==record.moduleId)throw Error('NOTIFICATION_ID_CONFLICT');return {record:structuredClone(previous),inserted:false};}
     this.workspaceRecords.set(record.id,structuredClone(record));return {record:structuredClone(record),inserted:true};
+  }
+  insertGovernedRecord(record:WorkspaceRecord):NotificationInsertResult{
+    if(!['TRUST.VERIFICATION','GOVERNANCE.VOTE.ACTION','GOVERNANCE.VOTE.BALLOT'].includes(record.moduleId))throw Error('INVALID_GOVERNED_RECORD');
+    const previous=this.workspaceRecords.get(record.id);
+    if(previous){if(previous.tenantId!==record.tenantId||previous.moduleId!==record.moduleId||previous.groupId!==record.groupId)throw Error('GOVERNED_RECORD_CONFLICT');return{record:structuredClone(previous),inserted:false};}
+    this.workspaceRecords.set(record.id,structuredClone(record));return{record:structuredClone(record),inserted:true};
   }
   getMarketRecordById(id:Id):WorkspaceRecord|undefined{const r=this.workspaceRecords.get(id);return r?.tags.includes('market-engine')?structuredClone(r):undefined;}
   listMarketShops(actorId?:Id):WorkspaceRecord[]{return [...this.workspaceRecords.values()].filter(r=>r.tags.includes('market-engine')&&r.data.marketKind==='SHOP'&&r.data.ownerType==='PERSON'&&!r.groupId&&r.status==='ACTIVE'&&(actorId?r.createdBy===actorId||JSON.parse(String(r.data.collaboratorsJson??'[]')).some((x:{userId:string})=>x.userId===actorId):r.data.visibility==='PUBLIC')).map(r=>structuredClone(r));}
@@ -943,6 +951,12 @@ export class D1PlatformRepository implements PlatformRepository {
     const result=await this.db.prepare(`INSERT INTO platform_records(record_type,record_id,tenant_id,group_id,assignee_id,idempotency_key,data_json,updated_at) VALUES('workspace_record',?,?,?,?,NULL,?,?) ON CONFLICT(record_type,record_id) DO NOTHING`).bind(x.id,x.tenantId,x.groupId??null,x.createdBy,JSON.stringify(x),x.updatedAt).run();
     const stored=await this.getWorkspaceRecord(x.tenantId,x.id);
     if(!stored||stored.moduleId!==x.moduleId)throw Error('NOTIFICATION_ID_CONFLICT');const changes=result as {meta?:{changes?:number};changes?:number};return {record:stored,inserted:Number(changes.meta?.changes??changes.changes??0)===1};
+  }
+  async insertGovernedRecord(x:WorkspaceRecord):Promise<NotificationInsertResult>{
+    if(!['TRUST.VERIFICATION','GOVERNANCE.VOTE.ACTION','GOVERNANCE.VOTE.BALLOT'].includes(x.moduleId))throw Error('INVALID_GOVERNED_RECORD');
+    const result=await this.db.prepare(`INSERT INTO platform_records(record_type,record_id,tenant_id,group_id,assignee_id,idempotency_key,data_json,updated_at) VALUES('workspace_record',?,?,?,?,NULL,?,?) ON CONFLICT(record_type,record_id) DO NOTHING`).bind(x.id,x.tenantId,x.groupId??null,x.createdBy,JSON.stringify(x),x.updatedAt).run();
+    const stored=await this.getWorkspaceRecord(x.tenantId,x.id);if(!stored||stored.moduleId!==x.moduleId||stored.groupId!==x.groupId)throw Error('GOVERNED_RECORD_CONFLICT');
+    const changes=result as {meta?:{changes?:number};changes?:number};return{record:stored,inserted:Number(changes.meta?.changes??changes.changes??0)===1};
   }
   async getMarketRecordById(id:Id){const r=await this.byId<WorkspaceRecord>('workspace_record',id);return r?.tags.includes('market-engine')?r:undefined;}
   listMarketShops(actorId?:Id){

@@ -1,9 +1,9 @@
 {
   "name": "tontine-platform",
-  "version": "1.5.2-29",
+  "version": "1.5.2-30",
   "private": true,
   "type": "module",
-  "description": "Eco-System 1.5.2.29 candidate: canonical Eco Care support lifecycle, explicit audiences, versioned prevention agreements and requester-decided resolution; acquired finance, notification inbox and commerce preserved.",
+  "description": "Eco-System: ten-step launch recovery, evidence-based decision follow-up and revocable selective verification cards; acquired finance, rights, offline and commerce preserved.",
   "engines": {
     "node": ">=24"
   },

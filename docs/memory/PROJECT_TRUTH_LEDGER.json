@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedOn": "2026-10-21",
+  "generatedOn": "2026-10-22",
   "purpose": "Anti-regression operational truth. Read before asking founder to recreate/configure anything.",
   "allowedStatuses": [
     "ACQUIRED",
@@ -25,6 +25,18 @@
     "Update this ledger whenever a remote verification, deployment, abandonment or supersession changes project truth."
   ],
   "records": [
+    {
+      "id": "groups-governance-trust-20261022",
+      "scope": "L03/L04/L21 grouped implementation",
+      "status": "IN_PROGRESS",
+      "statement": "Candidate adds scoped launch recovery, canonical poll execution evidence and selective revocable trust cards. Previous production v29 remains authoritative. No new paid service or migration. Exact-SHA integrated qualification and public proof required.",
+      "evidence": [
+        "docs/change-impact/CIR-2026-10-22-GROUPS-GOVERNANCE-TRUST.md",
+        "docs/memory/recalls/RECALL-2026-10-22-GROUPS-GOVERNANCE-TRUST.md"
+      ],
+      "observedOn": "2026-10-22",
+      "next": "Qualify complete candidate, publish with current remote HEAD lease, verify public assets and readonly backup. Continue grouped remaining domains."
+    },
     {
       "id": "lot10-commercial-cycle-20261020",
       "scope": "group-shop quotes, canonical atomic orders and group-buy exceptions",
@@ -1521,18 +1533,19 @@
     },
     {
       "id": "delivery.lot25.eco_care.2026_10_21",
-      "status": "IN_PROGRESS",
+      "status": "VERIFIED_REMOTE",
       "scope": "L25 Kernel.Cases support lifecycle",
       "observedOn": "2026-10-21",
-      "statement": "898 native and 3 new Care Chromium pass locally; acquired governance gates pass. Initial retry, i18n and rollback-cache failures retained. Exact-source remote qualification and deployment pending. Legacy privacy and financial owners preserved.",
+      "statement": "Programmed Care case lifecycle and scoped I18 prevention delivered with documented limits. Canonical owners, legacy privacy and acquired financial paths preserved. Field acceptance remains separate.",
       "evidence": [
-        "docs/change-impact/CIR-2026-10-21-LOT25-ECO-CARE.md",
-        "docs/memory/recalls/RECALL-2026-10-21-LOT25-ECO-CARE.md",
-        "tests/care-lot25-20261021.test.mjs",
-        "tests/browser/care-lot25-20261021.spec.mjs",
-        "docs/release/evidence/LOT25-ECO-CARE-LOCAL-2026-10-21.json"
+        "docs/release/evidence/LOT25-ECO-CARE-PUBLIC-2026-10-21.json",
+        "source:8b864abda6b1d92af8dfd290edf1e3e41ed2c791",
+        "Actions:39676400467 SUCCESS; independent:39676400462 SUCCESS",
+        "delivery:898native39Chromium6WebKitPASS; independent39Chromium6WebKitPASS",
+        "33 public hashes and independent readback",
+        "privateR2SHA256:d2c22eb94b164edce81025e6436cf05ff58243fc716357d954e8294df944569a"
       ],
-      "next": "Qualify frozen source remotely, then verified recovery/public delivery. No deployment or field acceptance inferred from local results."
+      "next": "Continue approved remaining lots; preserve financial owners, roles, offline and explicit scoped integration."
     }
   ]
 }

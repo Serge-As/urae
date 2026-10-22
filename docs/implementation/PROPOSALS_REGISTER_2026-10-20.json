@@ -33,20 +33,28 @@
     {
       "id": "A03",
       "title": "Un Kit qui vérifie la compréhension avant de créer le groupe · lot 03",
-      "status": "PLANNED_OR_REQUIRES_DETAILED_COVERAGE",
+      "status": "IMPLEMENTED_PENDING_INTEGRATED_QUALIFICATION",
       "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md",
       "targetLots": [
         3
-      ]
+      ],
+      "evidence": [
+        "docs/change-impact/CIR-2026-10-22-GROUPS-GOVERNANCE-TRUST.md"
+      ],
+      "limits": "Candidate only. Specialized existing authorities retained. Full integrated qualification, exact public delivery and field acceptance remain distinct."
     },
     {
       "id": "A04",
       "title": "Un journal des décisions relié à leurs effets · lot 04",
-      "status": "PLANNED_OR_REQUIRES_DETAILED_COVERAGE",
+      "status": "IMPLEMENTED_PENDING_INTEGRATED_QUALIFICATION",
       "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md",
       "targetLots": [
         4
-      ]
+      ],
+      "evidence": [
+        "docs/change-impact/CIR-2026-10-22-GROUPS-GOVERNANCE-TRUST.md"
+      ],
+      "limits": "Candidate only. Specialized existing authorities retained. Full integrated qualification, exact public delivery and field acceptance remain distinct."
     },
     {
       "id": "A05",
@@ -206,11 +214,15 @@
     {
       "id": "A21",
       "title": "Un passeport de confiance fondé sur des faits limités · lot 21",
-      "status": "PLANNED_OR_REQUIRES_DETAILED_COVERAGE",
+      "status": "IMPLEMENTED_PENDING_INTEGRATED_QUALIFICATION",
       "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md",
       "targetLots": [
         21
-      ]
+      ],
+      "evidence": [
+        "docs/change-impact/CIR-2026-10-22-GROUPS-GOVERNANCE-TRUST.md"
+      ],
+      "limits": "Candidate only. Specialized existing authorities retained. Full integrated qualification, exact public delivery and field acceptance remain distinct."
     },
     {
       "id": "A22",
@@ -251,15 +263,16 @@
     {
       "id": "A25",
       "title": "Eco Care et SAV avec responsabilité et prochaine étape visibles · lot 25",
-      "status": "IN_PROGRESS",
+      "status": "DELIVERED_WITH_DOCUMENTED_LIMITS",
       "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md",
       "targetLots": [
         25
       ],
       "evidence": [
-        "docs/change-impact/CIR-2026-10-21-LOT25-ECO-CARE.md"
+        "docs/release/evidence/LOT25-ECO-CARE-PUBLIC-2026-10-21.json",
+        "docs/release/DELIVERY-2026-10-21-LOT25-ECO-CARE.md"
       ],
-      "limits": "Implementation and tests written; qualification and deployment pending. Existing private cases stay private. No automatic universal commercial integration or financial correction."
+      "limits": "Same-source qualification/delivery and33 public hashes passed. Group two-party prevention agreement is a standalone reference; no universal checkout insertion, guaranteed staffing, automatic reminder, recurring-causes analytics, binary evidence host, implicit financial correction or constant-cost server pagination. FIELD_ACCEPTED=NOT_ACCEPTED."
     },
     {
       "id": "A26",
@@ -331,8 +344,12 @@
     {
       "id": "I07",
       "title": "La carte de preuve partageable et révocable · propriétaire L21",
-      "status": "PLANNED_OR_REQUIRES_DETAILED_COVERAGE",
-      "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md"
+      "status": "IMPLEMENTED_PENDING_INTEGRATED_QUALIFICATION",
+      "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md",
+      "evidence": [
+        "docs/change-impact/CIR-2026-10-22-GROUPS-GOVERNANCE-TRUST.md"
+      ],
+      "limits": "Candidate only. Specialized existing authorities retained. Full integrated qualification, exact public delivery and field acceptance remain distinct."
     },
     {
       "id": "I08",
@@ -397,12 +414,13 @@
     {
       "id": "I18",
       "title": "Le SAV préventif par accord sur les attentes · propriétaire L25",
-      "status": "IN_PROGRESS",
+      "status": "DELIVERED_WITH_DOCUMENTED_LIMITS",
       "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md",
       "evidence": [
-        "docs/change-impact/CIR-2026-10-21-LOT25-ECO-CARE.md"
+        "docs/release/evidence/LOT25-ECO-CARE-PUBLIC-2026-10-21.json",
+        "docs/release/DELIVERY-2026-10-21-LOT25-ECO-CARE.md"
       ],
-      "limits": "Implementation and tests written; qualification and deployment pending. Existing private cases stay private. No automatic universal commercial integration or financial correction."
+      "limits": "Same-source qualification/delivery and33 public hashes passed. Group two-party prevention agreement is a standalone reference; no universal checkout insertion, guaranteed staffing, automatic reminder, recurring-causes analytics, binary evidence host, implicit financial correction or constant-cost server pagination. FIELD_ACCEPTED=NOT_ACCEPTED."
     },
     {
       "id": "I19",

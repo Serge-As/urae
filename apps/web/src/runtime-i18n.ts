@@ -3,6 +3,8 @@ import {messages} from './i18n.js';
 export type RuntimeLocale = 'fr'|'en';
 
 const EXTRA_FR_EN: Record<string,string> = {
+  'Un nom ou téléphone commun est un indice à examiner, jamais une preuve suffisante pour fusionner des personnes. Le rattachement demande les preuves et la validation du parcours d’appairage historique.':'A shared name or phone is a clue to review, never sufficient proof to merge people. Linking requires evidence and validation through the historical pairing procedure.',
+  'Les preuves sont vérifiées par le serveur ; aucun rapprochement automatique.':'Evidence is checked by the server; there is no automatic identity linking.',
   'Eco Care · Support et SAV':'Eco Care · Support and after-sales',
   'Dossier privé ou partagé avec les gestionnaires du groupe choisi. Délais indicatifs, sans permanence garantie.':'Private case or shared with the selected group managers. Indicative dates, without guaranteed support availability.',
   'Actualiser les dossiers':'Refresh cases',

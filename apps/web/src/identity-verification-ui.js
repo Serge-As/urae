@@ -12,14 +12,19 @@ export function mountIdentityVerificationUI({app,getGroups=()=>[],navigate,notif
   const notice=el('p','Aucune valeur en clair n’est conservée par ce panneau.','hint');notice.id='identityProofNotice';
   form.append(typeLabel,valueLabel,submit,notice);left.append(el('h3','Mes preuves de rapprochement'),form);
   const refresh=el('button','Actualiser les rapprochements','secondary');refresh.type='button';const list=el('div',undefined,'stack');list.id='identityProofMatches';right.append(el('h3','Rapprochements exacts'),refresh,list);grid.append(left,right);panel.append(grid);
+  right.append(el('p','Un nom ou téléphone commun est un indice à examiner, jamais une preuve suffisante pour fusionner des personnes. Le rattachement demande les preuves et la validation du parcours d’appairage historique.','truth-notice'));
+  const scope=()=>JSON.stringify([app.currentActor?.(),app.currentTenant?.()]);let identity=scope(),generation=0;
+  const clearForContext=(force=false)=>{if(!force&&identity===scope())return;identity=scope();generation++;value.value='';list.replaceChildren();notice.textContent='Les preuves sont vérifiées par le serveur ; aucun rapprochement automatique.';};
   const hardening=document.querySelector('#hardeningHub')?.closest('section.panel');settings.insertBefore(panel,hardening??null);
 
   const renderMatches=async()=>{
+    clearForContext();const token=generation,current=identity;
     list.replaceChildren();
     if(typeof navigator!=='undefined'&&navigator.onLine===false){list.append(el('p','Connexion requise pour vérifier les empreintes. Aucune vérification locale approximative n’est effectuée.','empty-state'));return;}
     try{
       const visible=new Map((getGroups()??[]).map(g=>[g.id,g]));
       const rows=await app.identityProofMatches();
+      if(token!==generation||current!==scope())return;
       const authorized=rows.filter(x=>visible.has(x.groupId));
       if(!authorized.length){list.append(el('p','Aucun rapprochement exact visible pour ce compte.','empty-state'));return;}
       for(const row of authorized){
@@ -27,18 +32,20 @@ export function mountIdentityVerificationUI({app,getGroups=()=>[],navigate,notif
         card.append(el('strong',group?.name??'Groupe'),el('small',row.proofType+' · correspondance exacte par empreinte'));
         const open=el('button','Ouvrir le groupe','link-btn');open.type='button';open.onclick=async()=>{app.selectGroup(row.groupId);if(navigate)navigate('members',{force:true});};card.append(open);list.append(card);
       }
-    }catch(error){list.append(el('p','Centre indisponible : '+String(error?.message??error),'hint'));}
+    }catch(error){if(token===generation&&current===scope())list.append(el('p','Centre indisponible : '+String(error?.message??error),'hint'));}
   };
   form.addEventListener('submit',event=>{event.preventDefault();void(async()=>{
+    clearForContext();const token=generation,current=identity;
     const raw=value.value;value.value='';
     try{
       if(typeof navigator!=='undefined'&&navigator.onLine===false)throw Error('NETWORK_UNAVAILABLE');
       const result=await app.registerIdentityProof(type.value,raw,'USER_PRESENTED_VERIFICATION_CENTER');
+      if(token!==generation||current!==scope())return;
       notice.textContent='Preuve indexée : '+String(result.proofType)+' · état '+String(result.state)+'. La valeur saisie a été effacée.';
       notify('Preuve d’identité indexée sans conserver la valeur en clair dans l’interface.');
       await renderMatches();
-    }catch(error){notice.textContent=String(error?.message??error);showError(error);}
+    }catch(error){if(token===generation&&current===scope()){notice.textContent=String(error?.message??error);showError(error);}}
   })();});
   refresh.onclick=()=>void renderMatches();
-  return{refresh:renderMatches};
+  return{refresh:renderMatches,clearForContext};
 }

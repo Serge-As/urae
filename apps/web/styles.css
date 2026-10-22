@@ -1870,3 +1870,19 @@ body.ui-mode-assisted .eco-workbench :is(button,p,small,span,label){font-size:15
 #ecoCareFilters{margin:14px 0}
 #ecoCareFilters button[aria-pressed=true]{background:#17674f;color:#fff}
 @media(max-width:1000px){#ecoCarePanel .care-layout{grid-template-columns:minmax(0,1fr)}}
+#launchGuide{margin-block:1rem;padding:1rem;border:1px solid var(--line,#c9dcd4);border-radius:14px;background:var(--surface,#fff);overflow-wrap:anywhere}
+#launchGuide .actions{flex-wrap:wrap;gap:.5rem}
+#launchGuide .launch-guide-progress{display:grid;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));gap:.4rem;margin-block:.75rem}
+#launchGuide .launch-guide-progress button{min-width:0;white-space:normal;padding:.5rem}
+#launchGuide .launch-guide-progress [data-state=COMPLETE]{border-color:#3c8c6b}
+#launchGuide .launch-guide-progress [data-state=INCONSISTENT]{border-color:#ac6b10;background:#fff6df;color:#614000}
+#launchGuide .launch-guide-progress [aria-current=true]{outline:2px solid var(--primary,#176b50);outline-offset:1px}
+#launchGuide .launch-guide-example{padding:.75rem;border-radius:10px;background:var(--soft,#f0f7f3)}
+#launchGuide h2{font-size:1.15rem;margin-top:0}
+#launchGuide button{max-width:100%}
+
+/* Group decision and selective proof projections; no global table override. */
+.governed-group .form-grid{grid-template-columns:repeat(auto-fit,minmax(min(220px,100%),1fr));align-items:end}
+.governed-group input,.governed-group textarea,.governed-group select{min-width:0;max-width:100%}
+.governed-group .item{overflow-wrap:anywhere;min-width:0}
+.governed-group .truth-notice{line-height:1.45}

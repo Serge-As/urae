@@ -1,11 +1,14 @@
 import {createRubricEditor,readRubricEditors} from './launch-rubrics.js';
+import {mountLaunchGuide} from './launch-guide-ui.js';
+import {LAUNCH_GUIDE_VERSION} from './launch-draft.js';
 const byId=id=>document.getElementById(id);
 const value=id=>String(byId(id)?.value??'').trim();
 const checked=id=>Boolean(byId(id)?.checked);
 const option=(value,label)=>{const o=document.createElement('option');o.value=value;o.textContent=label;return o;};
 
-export function mountLaunchStudio({app,getGroups,getRubrics,addRubric,invalidate,toast,showError}){
+export function mountLaunchStudio({app,getGroups,getRubrics,getEditors,restoreEditors,resumeCreation,addRubric,invalidate,toast,showError}){
   let step=1;
+  let guide=null;
   const fingerprints=new Set();
   const panels=[...document.querySelectorAll('[data-launch-step]')];
   const indicators=[...document.querySelectorAll('[data-launch-indicator]')];
@@ -27,6 +30,7 @@ export function mountLaunchStudio({app,getGroups,getRubrics,addRubric,invalidate
     byId('launchNextBtn').hidden=step===10;
     byId('launchStepStatus').textContent='Étape '+step+' sur 10';
     if(step===10)renderPreview();
+    guide?.changed();
   };
 
   const syncOrigin=()=>{
@@ -178,11 +182,12 @@ export function mountLaunchStudio({app,getGroups,getRubrics,addRubric,invalidate
     const html='<!doctype html><meta charset="utf-8"><title>Starter Kit - '+escapeHtml(kit.groupName)+'</title><style>body{font-family:system-ui,sans-serif;max-width:900px;margin:30px auto;padding:0 20px;line-height:1.45}h1,h2{margin-top:1.4em}table{border-collapse:collapse;width:100%;font-size:13px}th,td{border:1px solid #bbb;padding:7px;text-align:left}.tag{font-weight:700}pre{white-space:pre-wrap;border:1px solid #ccc;padding:12px}@media print{button{display:none}}</style><h1>Kit prêt à l\'emploi — '+escapeHtml(kit.groupName)+'</h1><p>Famille : '+escapeHtml(kit.family)+' · Gouvernance : '+escapeHtml(kit.governance)+' · Membres : '+escapeHtml(kit.members||'—')+' · Séances : '+escapeHtml(kit.sessions||'—')+'</p>'+'<h2>Modèle recommandé — à valider</h2><p>'+escapeHtml(kit.recommendedModel)+'</p><p><strong>Montant indicatif :</strong> '+escapeHtml(kit.indicativeAmount?kit.indicativeAmount+' XAF':'À définir par rubrique')+'</p><p><strong>Ordre / tirage :</strong> '+escapeHtml(kit.orderPolicy)+'</p><p><strong>Retard :</strong> '+escapeHtml(kit.latePolicy.text)+'</p>'+section('Conseils de démarrage',kit.advice)+section('Checklist',kit.checklist.map(x=>'['+x[0]+'] '+x[1]))+section('Règlement type — clauses à adapter',kit.rules)+'<h2>Rubriques et chiffrage</h2><table><tr><th>Rubrique</th><th>Mode</th><th>Montant</th><th>Cycle collectif</th><th>Frais gestion</th></tr>'+kit.rubricRows.map(r=>'<tr><td>'+escapeHtml(r.name)+'</td><td>'+escapeHtml(r.mode)+'</td><td>'+escapeHtml(r.amount)+'</td><td>'+escapeHtml(r.nominalCycle)+'</td><td>'+escapeHtml(r.fees)+'</td></tr>').join('')+'</table><h2>Calendrier</h2><table><tr><th>#</th><th>Date</th></tr>'+kit.calendar.map(x=>'<tr><td>'+x.index+'</td><td>'+escapeHtml(x.date)+'</td></tr>').join('')+'</table>'+section('Risques / points à compléter',kit.risks.length?kit.risks:['Aucun point bloquant détecté par le kit ; relire néanmoins le RI et la simulation.'])+'<h2>Message d\'invitation</h2><pre>'+escapeHtml(kit.invitation)+'</pre><h2>Modèle de PV</h2><pre>'+escapeHtml(kit.minutes)+'</pre>'+section('Guide première réunion',['Vérifier la liste des membres et les rôles.','Présenter les rubriques et confirmer qui participe à quoi.','Relire frais, calendrier, retards, prêts et règles de correction.','Faire les saisies dans la feuille canonique puis vérifier les totaux de colonnes.','Rapprocher caisse / Ledger / preuves avant clôture.','Émettre et conserver le PV ; distribuer le résumé aux membres.'])+section('Guide trésorerie',['Ne jamais confondre cotisation, frais externes, honoraires et marge.','Compter la caisse physique avant et après séance.','Conserver la preuve de chaque sortie et identifier le bénéficiaire.','Traiter une correction par remplacement exact, jamais par addition implicite.','Séparer argent privé du gestionnaire et argent collectif.'])+section('Paper Bridge — modèles à préparer',['Feuille mensuelle / feuille de séance membres × rubriques.','Fiches individuelles par membre.','Feuille d’émargement.','Registre Président / Secrétaire / Trésorier / Commissaire aux comptes selon le RI.','Registre prêts / remboursements / intérêts.','Registre assistances / secours.','Cartes ou fiches membres.','PV et dossier des preuves.'])+'<button onclick="print()">Imprimer / Enregistrer en PDF</button>';
     w.document.open();w.document.write(html);w.document.close();
   };
-  const persistStarterKit=async(groupId)=>{
-    if(!lastStarterKit||!groupId)return null;
-    const kit=lastStarterKit;
+  const persistStarterKit=async(groupId,recoveredKit)=>{
+    if(!(recoveredKit??lastStarterKit)||!groupId)return null;
+    const kit=recoveredKit??lastStarterKit;
     const data={
       kitVersion:'1.5.1',
+      guideVersion:LAUNCH_GUIDE_VERSION,
       generatedAt:new Date().toISOString(),
       family:String(kit.family??''),
       governance:String(kit.governance??''),
@@ -227,7 +232,7 @@ export function mountLaunchStudio({app,getGroups,getRubrics,addRubric,invalidate
     actions.append(print,copyInvite,copyPv);d.append(actions);
     const grid=document.createElement('div');grid.className='two-col';
     const check=document.createElement('section');check.append(Object.assign(document.createElement('h3'),{textContent:'Checklist de lancement'}));
-    const key='eco.starter-kit.'+kit.groupName;let saved={};try{saved=JSON.parse(localStorage.getItem(key)||'{}');}catch{}
+    const key='eco.starter-kit.'+JSON.stringify([app.currentTenant(),app.currentActor(),kit.groupName]);let saved={};try{saved=JSON.parse(localStorage.getItem(key)||'{}');}catch{}
     kit.checklist.forEach((x,i)=>{const label=document.createElement('label');label.className='inline-check';const box=document.createElement('input');box.type='checkbox';box.checked=Boolean(saved[i]);box.onchange=()=>{saved[i]=box.checked;try{localStorage.setItem(key,JSON.stringify(saved));}catch{}};const span=document.createElement('span');span.textContent='['+x[0]+'] '+x[1];label.append(box,span);check.append(label);});
     const risk=document.createElement('section');risk.append(Object.assign(document.createElement('h3'),{textContent:'Risques / décisions manquantes'}));const ul=document.createElement('ul');for(const x of kit.risks.length?kit.risks:['Aucun point bloquant détecté par le Kit. Relisez néanmoins le RI et la simulation avant création.'])ul.append(Object.assign(document.createElement('li'),{textContent:x}));risk.append(ul);grid.append(check,risk);d.append(grid);
     const rules=document.createElement('details');rules.open=true;rules.append(Object.assign(document.createElement('summary'),{textContent:'Règlement type adaptable'}));const ol=document.createElement('ol');kit.rules.forEach(x=>ol.append(Object.assign(document.createElement('li'),{textContent:x})));rules.append(ol);d.append(rules);
@@ -431,6 +436,7 @@ export function mountLaunchStudio({app,getGroups,getRubrics,addRubric,invalidate
   byId('previewConfirmed')?.addEventListener('change',renderPreview);
   for(const p of panels)p.addEventListener('input',()=>{invalidate();if(step===10)renderPreview();});
   refreshGroups();syncOrigin();showStep(1);
-  return{readProfile,refreshGroups,showStep,renderPreview,persistStarterKit,starterKitSnapshot:()=>lastStarterKit?structuredClone(lastStarterKit):null,afterSimulation:()=>{window.__ecoLastProjectReady=true;renderPreview();},invalidateSimulation:()=>{window.__ecoLastProjectReady=false;if(byId('createGroupBtn'))byId('createGroupBtn').disabled=true;}};
+  guide=mountLaunchGuide({app,getStep:()=>step,setStep:showStep,getEditors,restoreEditors:rows=>{restoreEditors(rows);fingerprints.clear();lastStarterKit=null;window.__ecoLastProjectReady=false;invalidate();},resumeCreation,kitSnapshot:()=>lastStarterKit,persistKit:persistStarterKit,notify:toast});
+  return{readProfile,refreshGroups,showStep,renderPreview,persistStarterKit,refreshContext:(forceClear=false)=>{launchVoiceActive=false;try{launchVoiceRecognition?.stop?.();}catch{}guide.refresh(true,forceClear);},setLocale:()=>guide.refresh(),pendingCreation:guide.pendingCreation,rememberCreation:guide.rememberCreation,completeCreation:guide.completeCreation,markKitSaved:guide.markKitSaved,starterKitSnapshot:()=>lastStarterKit?structuredClone(lastStarterKit):null,afterSimulation:()=>{window.__ecoLastProjectReady=true;renderPreview();guide.refresh(false);},invalidateSimulation:()=>{window.__ecoLastProjectReady=false;if(byId('createGroupBtn'))byId('createGroupBtn').disabled=true;}};
 }
 

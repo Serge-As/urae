@@ -69,6 +69,7 @@ import { mountQuietWatchUI } from './quiet-watch-ui.js';
 import { mountFounderAIUI } from './founder-ai-ui.js';
 import { mountManagerPublicProfileUI } from './manager-public-profile-ui.js';
 import { mountTrustCenterUI } from './trust-center.js';
+import { mountGovernedGroupUI } from './governed-group-ui.js';
 import { mountStarterKitUI } from './starter-kit-ui.js';
 import { mountMeetingFinanceGovernanceUI } from './meeting-finance-governance-ui.js';
 import { mountAnticipationUI } from './anticipation-ui.js';
@@ -187,7 +188,7 @@ let modules = [];
 let applicationStartup = Promise.resolve();
 let selectedLot = 'ALL';
 let deferredInstallPrompt;
-const CAHIER_VERSION = '1.5.2.29-eco-care';
+const CAHIER_VERSION = '1.5.2.30-groups-governance-trust';
 const $ = (s) => { const e = document.querySelector(s); if (!e)
     throw new Error(`UI_ELEMENT_NOT_FOUND:${s}`); return e; };
 const val = (id) => document.getElementById(id).value.trim();
@@ -481,6 +482,7 @@ const quietWatchUI=mountQuietWatchUI({app,isManager,notify:toast,showError:fail}
 const founderAIUI=mountFounderAIUI({app,showError:fail});
 const managerPublicProfileUI=mountManagerPublicProfileUI({app,notify:toast,showError:fail});
 const trustCenterUI=mountTrustCenterUI({app,getMembers:()=>members,isManager,notify:toast,showError:fail});
+const governedGroupUI=mountGovernedGroupUI({app,getMembers:()=>members,isManager,navigate:go,notify:toast,showError:fail});
 const starterKitUI=mountStarterKitUI({app,notify:toast,showError:fail});
 const meetingFinanceGovernanceUI=mountMeetingFinanceGovernanceUI({app,getMembers:()=>members,getMeetings:()=>meetings,getRubrics:()=>rubrics,isManager,notify:toast,showError:fail});
 const anticipationUI=mountAnticipationUI({app,isManager,notify:toast,showError:fail});
@@ -492,6 +494,7 @@ const sovereignOfflineUI=mountSovereignOfflineUI({app,getMembers:()=>members,get
 const opportunityGraphUI=mountOpportunityGraphUI({app,showError:fail});
 window.addEventListener('popstate',event=>{
     const state=event.state?.ecoNav,hash=location.hash.slice(1);
+    if(hash.startsWith('eco-proof=')){governedGroupUI.openLinkIfPresent();return;}
     navDepth=Math.max(0,Number(event.state?.ecoDepth??Math.max(0,navDepth-1)));
     if(state?.view)showView(state.view,state);
     else if(hash){const target=document.getElementById(hash),view=target?.closest('.view')?.id?.replace(/^view-/,'')||hash;showView(view,{view,anchor:target?hash:undefined,scrollY:0});}
@@ -2000,7 +2003,8 @@ const openModule = async (id) => {
     if(m.status==='FOUNDATION_ACTIVE'&&id==='SEARCH.UNIVERSAL'){await go('ecosystem',{anchor:'universalSearchPanel',force:true});const panel=document.getElementById('universalSearchPanel');if(panel?.tagName==='DETAILS')panel.open=true;return;}
     if(m.status === 'FOUNDATION_ACTIVE' && id === 'CALENDAR.UNIFIED'){go('ecosystem',{anchor:'unifiedCalendarPanel',force:true});const panel=document.querySelector('#unifiedCalendarPanel');if(panel?.tagName==='DETAILS')panel.open=true;void renderUnifiedCalendar();return;}
     if(m.status === 'FOUNDATION_ACTIVE' && id === 'GOVERNANCE.DOCUMENT_STUDIO'){go('documents',{force:true});void documentsUI.refresh();return;}
-    if(m.status === 'FOUNDATION_ACTIVE' && id === 'TRUST.VERIFICATION'){go('settings',{anchor:'identityVerificationCenter',force:true});void identityVerificationUI.refresh();return;}
+    if(m.status === 'FOUNDATION_ACTIVE' && id === 'TRUST.VERIFICATION'){go('settings',{anchor:'verificationAssertionsPanel',force:true});governedGroupUI.open('trust');return;}
+    if(m.status === 'FOUNDATION_ACTIVE' && id === 'GOVERNANCE.VOTE'){go('operations',{anchor:'governanceExecutionPanel',force:true});governedGroupUI.open('governance');return;}
     if(m.status === 'FOUNDATION_ACTIVE' && id === 'DATA.QUALITY'){go('settings',{anchor:'dataQualityCenter',force:true});void dataQualityUI.refresh();return;}
     if(m.status === 'FOUNDATION_ACTIVE' && id === 'PAPER.BRIDGE'){go('documents',{force:true});void documentsUI.refresh();return;}
     if(m.status === 'FOUNDATION_ACTIVE' && id === 'RUBRIC.STARTER_KITS'){go('launch',{anchor:'savedStarterKitPanel',force:true});starterKitUI.open();return;}
@@ -2503,6 +2507,9 @@ const refreshGroupContext = async () => {
     personalShopsUI.clearForContext?.();
     notificationCenterUI.clearForContext?.();
     ecoCareUI.clearForContext?.();
+    governedGroupUI.clearForContext?.();
+    launchStudio?.refreshContext();
+    identityVerificationUI.clearForContext?.();
     universalSearchRevision++;document.getElementById('universalSearchFullResults')?.replaceChildren();const searchScope=JSON.stringify([app.currentActor(),app.currentTenant(),app.activeGroup()]);if(searchScope!==universalSearchScope){universalSearchScope=searchScope;const input=document.getElementById('universalSearchFull');if(input)input.value='';}
     // Account navigation does not wait for optional group/financial panels.
     // Reuse this same membership-checked directory in the personal cockpit.
@@ -2760,6 +2767,9 @@ $('#groupKind').addEventListener('change',syncLaunchFamily);
 $('#tontineVariant')?.addEventListener('change',syncLaunchFamily);
 launchStudio=mountLaunchStudio({
   app,getGroups:()=>groups,getRubrics:()=>{try{return readRubricEditors(launchEditors);}catch{return launchEditors.map(e=>e.read());}},
+  getEditors:()=>launchEditors,
+  restoreEditors:rows=>{for(const editor of launchEditors.splice(0))editor.card.remove();for(const row of rows){const editor=addLaunchRubric({plan:row.plan,skipFocus:true});const controls=[...editor.card.querySelectorAll('input,select,textarea')];if(controls.length!==(row.controls??[]).length)throw Error('LAUNCH_DRAFT_CONTROL_VERSION');row.controls.forEach((saved,i)=>{controls[i].value=String(saved.value??'');if(controls[i].type==='checkbox')controls[i].checked=Boolean(saved.checked);});editor.card.dispatchEvent(new Event('input',{bubbles:true}));}},
+  resumeCreation:projectId=>void createLaunchGroup(projectId),
   addRubric:addLaunchRubric,invalidate:invalidateProject,toast,showError:fail
 });
 syncLaunchFamily();
@@ -2823,18 +2833,29 @@ onSubmit('#projectForm', async event=>{
   await simulateLaunchFromUserAction();
 });
 $('#simulateProjectBtn').addEventListener('click',()=>void simulateLaunchFromUserAction());
-$('#createGroupBtn').addEventListener('click',async()=>{
-  const button=$('#createGroupBtn');if(button.disabled)return;
+let launchCreationPending=false;
+const createLaunchGroup=async(resumeProjectId)=>{
+  const button=$('#createGroupBtn');if(launchCreationPending||(button.disabled&&!resumeProjectId))return;
+  launchCreationPending=true;
+  const creator=app.currentActor(),creatorTenant=app.currentTenant();
+  const assertCreator=()=>{if(creator!==app.currentActor()||creatorTenant!==app.currentTenant())throw Error('LAUNCH_CREATION_CONTEXT_CHANGED');};
   const originalLabel=button.textContent;button.disabled=true;$('#projectForm').inert=true;
   const status=$('#launchStepStatus');const say=(message)=>{button.textContent=message;status.textContent=message;toast(message);};
   try{
-    let project=lastProjectId;
+    const pending=launchStudio.pendingCreation();
+    if(pending&&!resumeProjectId)throw Error(tx('Une tentative de création existe déjà. Utilisez sa reprise dans le Studio pour éviter un doublon.','A creation attempt already exists. Resume it in the Studio to avoid a duplicate.'));
+    if(resumeProjectId&&(!pending||pending.completedGroupId||pending.projectId!==resumeProjectId))throw Error('LAUNCH_CREATION_CONTEXT_CHANGED');
+    let project=resumeProjectId??lastProjectId;
     if(!project){
       say('1/3 · Vérification de la faisabilité…');
       const simulated=await simulateCurrentLaunch({silent:true});project=simulated.projectId;button.disabled=true;
     }
+    assertCreator();
     say('2/3 · Création du groupe et de ses rubriques…');
+    launchStudio.rememberCreation(project);
     const group=await app.createGroupFromProject(project);
+    assertCreator();
+    launchStudio.completeCreation(group.id);
     lastProjectId=undefined;window.__ecoLastProjectReady=false;
     // A completed canonical group must be visible before optional Kit/media
     // work. Never leave users on a loading wizard while 20+ dashboards refresh.
@@ -2846,7 +2867,7 @@ $('#createGroupBtn').addEventListener('click',async()=>{
     toast(`Groupe créé : ${group.name}. Ses espaces se chargent sans bloquer la navigation.`);
     // Preserve both operations; failure is visible, never mistaken for an
     // unsuccessful group conversion or silently swallowed.
-    void launchStudio.persistStarterKit?.(group.id).catch(error=>{
+    void launchStudio.persistStarterKit?.(group.id,resumeProjectId?pending.kit:undefined).then(kit=>{if(kit&&creator===app.currentActor()&&creatorTenant===app.currentTenant())launchStudio.markKitSaved(group.id);}).catch(error=>{
       const message=error instanceof Error?error.message:String(error);
       console.warn('KIT_STARTER_PERSISTENCE_PENDING',message);
       toast(tx('Groupe créé ; Kit prêt à l’emploi à réessayer depuis le groupe.','Group created; starter kit must be retried from the group.'));
@@ -2854,8 +2875,9 @@ $('#createGroupBtn').addEventListener('click',async()=>{
     void refreshGroupContext().catch(fail);
   }catch(error){
     launchStudio.renderPreview();fail(Error(launchError(error)));
-  }finally{$('#projectForm').inert=false;button.disabled=false;button.textContent=originalLabel;}
-});
+  }finally{$('#projectForm').inert=false;button.disabled=false;button.textContent=originalLabel;launchCreationPending=false;}
+};
+$('#createGroupBtn').addEventListener('click',()=>void createLaunchGroup());
 onSubmit('#memberForm', async (e) => { e.preventDefault(); try {
     await app.addMember(val('memberName'));
     document.getElementById('memberName').value = '';
@@ -3032,6 +3054,8 @@ $('#languageSelect').addEventListener('change', async e => {
     await personalShopsUI.setLocale?.();
     await notificationCenterUI.setLocale?.();
     await ecoCareUI.setLocale?.();
+    governedGroupUI.setLocale?.();
+    launchStudio?.setLocale();
     completionUI.setLocale();
     advancedUI.setLocale();
     renderConnectivity(); renderModules(); renderEcosystemHighlights(); renderDomainHubs(); renderActiveGroup(); renderGroupSelector();
@@ -3225,7 +3249,7 @@ async function start() {
         const session=await app.authStatus();
         if(!session.authenticated||!session.account){showAuth(session.offline?tx('Aucun compte local n’existe encore. Créez votre compte maintenant : Internet n’est pas nécessaire.','No local account exists yet. Create your account now: Internet is not required.'):undefined,session.offline?'register':undefined);return;}
         authenticatedSession=true;
-        $('#authScreen').hidden=true;document.body.classList.remove('signed-out','auth-restoring');
+        launchStudio?.refreshContext();identityVerificationUI.clearForContext?.();$('#authScreen').hidden=true;document.body.classList.remove('signed-out','auth-restoring');
         $('#accountName').textContent=session.account.displayName+(session.registrationState==='LOCAL_PENDING_REGISTRATION'?tx(' · local',' · local'):'');
         const claim=document.querySelector('#claimLocalAccountBtn');
         if(claim){
@@ -3250,12 +3274,13 @@ async function start() {
         if(requested?.view)showView(requested.view,requested);
         renderPersistedFinancialConflicts();startupNavState=null;
         if(shareIntent)await refreshOptionalOfflineSafe('share-intent',()=>openEcoShareIntent(shareIntent));
+        governedGroupUI.openLinkIfPresent?.();
         await refreshOptionalOfflineSafe('workspaces',loadWorkspaces);
     }
     catch (e) {
         if(e instanceof Error&&e.message==='NETWORK_UNAVAILABLE'){
             if(authenticatedSession){
-                $('#authScreen').hidden=true;document.body.classList.remove('signed-out','auth-restoring');renderConnectivity();
+                launchStudio?.refreshContext();identityVerificationUI.clearForContext?.();$('#authScreen').hidden=true;document.body.classList.remove('signed-out','auth-restoring');renderConnectivity();
                 try{await renderGroups();}catch(error){console.info('Offline groups restore skipped',error);}
                 if(app.activeGroup()){
                   try{await renderMembers();}catch(error){console.info('Offline members restore skipped',error);}
@@ -3338,7 +3363,7 @@ document.querySelector('#claimLocalAccountBtn')?.addEventListener('click',()=>vo
     catch(e){fail(e);}
     finally{if(button)button.disabled=false;}
 })());
-$('#logoutBtn').addEventListener('click',async()=>{try{await app.logout();notificationCenterUI.clearForContext(true);ecoCareUI.clearForContext(true);journeyUI.refresh();localAssistantUI.refreshContext();document.body.classList.add('signed-out');$('#authScreen').hidden=false;$('#accountName').textContent='';const claim=document.querySelector('#claimLocalAccountBtn');if(claim)claim.hidden=true;showAuth(tx('Compte fermé sur cet appareil. Vos données locales ne sont pas supprimées.','Account signed out on this device. Your local data was not deleted.'));}catch(e){fail(e);}});
+$('#logoutBtn').addEventListener('click',async()=>{try{await app.logout();notificationCenterUI.clearForContext(true);ecoCareUI.clearForContext(true);governedGroupUI.clearForContext(true);launchStudio?.refreshContext(true);identityVerificationUI.clearForContext?.(true);journeyUI.refresh();localAssistantUI.refreshContext();document.body.classList.add('signed-out');$('#authScreen').hidden=false;$('#accountName').textContent='';const claim=document.querySelector('#claimLocalAccountBtn');if(claim)claim.hidden=true;showAuth(tx('Compte fermé sur cet appareil. Vos données locales ne sont pas supprimées.','Account signed out on this device. Your local data was not deleted.'));}catch(e){fail(e);}});
 // Online recovery is serialized by resumeOnline() above: sync durable outbox first, then restart projections.
 window.addEventListener('offline',()=>{renderConnectivity();const claim=document.querySelector('#claimLocalAccountBtn');if(claim&&!claim.hidden){claim.disabled=true;claim.textContent=tx('Compte local · Internet requis pour finaliser','Local account · Internet needed to finalize');}});
 void ensureCurrentServiceWorker();
