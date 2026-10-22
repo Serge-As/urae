@@ -81,11 +81,11 @@ interface WorkersAILike {
   run?(model:string,input:Record<string,unknown>,options?:Record<string,unknown>):Promise<unknown>;
 }
 
-const RELEASE_VERSION='1.5.2.33-financial-explanations';
-const RELEASE_BUILD_ID='eco-system-1.5.2.33-20261022-financial-explanations';
+const RELEASE_VERSION='1.5.2.34-productive-community';
+const RELEASE_BUILD_ID='eco-system-1.5.2.34-20261023-productive-community';
 const RELEASE_SCHEMA_VERSION='d1-additive-20260923';
 const RELEASE_POLICY_VERSION='live-finance-policy-20261007-event-push-repayment';
-const RELEASE_PWA_CACHE='eco-system-v15233-financial-explanations-20261022';
+const RELEASE_PWA_CACHE='eco-system-v15234-productive-community-20261023';
 
 const defaultRepo = new InMemoryPlatformRepository();
 const defaultReferralBudgets = new InMemoryReferralBudgetStore();
@@ -1182,6 +1182,48 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
     if(trustProfileRoute&&request.method==='GET')return json(await trustGraph.profile(trustProfileRoute[1]!,trustProfileRoute[2]!,url.searchParams.get('band')??'SMALL'),200,cors);
     const trustGraphRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/trust\/([^/]+)$/);
     if(trustGraphRoute&&request.method==='GET')return json(await trustGraph.graph(trustGraphRoute[1]!,trustGraphRoute[2]!),200,cors);
+
+    const solutionSource=async(groupId:string,hubId:string,ref:{id:string;engine:'LIVE'|'LEGACY'})=>{
+      const hubs=await community.listHubs(groupId),hub=hubs.find(h=>h.id===hubId&&h.status==='ACTIVE');if(!hub)return undefined;
+      if(ref.engine==='LIVE')return options.communityRealtime?.messageReference(ctx.tenantId,groupId,hubId,ref.id);
+      const p=await repo.getWorkspaceRecord(ctx.tenantId,ref.id);return p&&p.groupId===groupId&&p.status==='ACTIVE'&&p.tags.includes('community-engine')&&p.data.communityKind==='POST'&&p.data.hubId===hubId&&p.data.moderationState==='PUBLISHED'?{id:p.id,title:p.title,body:p.summary??'',version:p.data.version}:undefined;
+    };
+    if(url.pathname==='/api/v1/academy/practices'){
+      if(request.method==='GET')return json(await knowledgeAcademy.practices(),200,cors);
+      if(request.method==='POST'){const r=await knowledgeAcademy.createPractice(await readJson<any>(request));return json(await knowledgeAcademy.practice(r.id),201,cors);}
+    }
+    const practiceRoute=url.pathname.match(/^\/api\/v1\/academy\/practices\/([^/]+)(\/commands)?$/);
+    if(practiceRoute){const id=decodeURIComponent(practiceRoute[1]!);if(request.method==='GET'&&!practiceRoute[2])return json(await knowledgeAcademy.practice(id),200,cors);if(request.method==='POST'&&practiceRoute[2])return json(await knowledgeAcademy.updatePractice(id,await readJson<any>(request)),200,cors);}
+    const solutionsRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/forum-solutions$/);
+    if(solutionsRoute){const groupId=decodeURIComponent(solutionsRoute[1]!);if(request.method==='GET')return json(await knowledgeAcademy.forumSolutions(groupId,solutionSource),200,cors);if(request.method==='POST'){const body=await readJson<any>(request);return json(await knowledgeAcademy.createForumSolution({...body,groupId},solutionSource),201,cors);}}
+    const solutionReview=url.pathname.match(/^\/api\/v1\/forum-solutions\/([^/]+)\/review$/);
+    if(solutionReview&&request.method==='POST')return json(await knowledgeAcademy.reviewForumSolution(decodeURIComponent(solutionReview[1]!),await readJson<any>(request),solutionSource),200,cors);
+    if(url.pathname==='/api/v1/discovery/notebook'){
+      if(request.method==='GET')return json(await discovery.notebook(),200,cors);
+      if(request.method==='PUT')return json(await discovery.saveNotebook(await readJson<any>(request)),200,cors);
+    }
+    if(url.pathname==='/api/v1/discovery/notebook/preview'&&request.method==='POST')return json(await discovery.notebookPreview(await readJson<any>(request)),200,cors);
+    const notebookSearch=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/notebooks$/);
+    if(notebookSearch&&request.method==='GET')return json(await discovery.searchNotebooks(decodeURIComponent(notebookSearch[1]!),url.searchParams.get('q')??''),200,cors);
+    if(url.pathname==='/api/v1/business-studio/acquisitions'){
+      if(request.method==='GET')return json(await businessStudio.acquisitionRooms(),200,cors);
+      if(request.method==='POST')return json(await businessStudio.createAcquisition(await readJson<any>(request)),201,cors);
+    }
+    if(url.pathname==='/api/v1/business-studio/acquisition-listings'&&request.method==='GET')return json(await businessStudio.acquisitionListings(),200,cors);
+    const acquisitionRoute=url.pathname.match(/^\/api\/v1\/business-studio\/acquisitions\/([^/]+)(\/commands)?$/);
+    if(acquisitionRoute){const id=decodeURIComponent(acquisitionRoute[1]!);if(request.method==='GET'&&!acquisitionRoute[2])return json(await businessStudio.acquisitionRoom(id),200,cors);if(request.method==='POST'&&acquisitionRoute[2])return json(await businessStudio.updateAcquisition(id,await readJson<any>(request)),200,cors);}
+    if(url.pathname==='/api/v1/business-studio/launch-plans'){
+      if(request.method==='GET')return json(await businessStudio.launchPlans(),200,cors);
+      if(request.method==='POST')return json(await businessStudio.createLaunchPlan(await readJson<any>(request)),201,cors);
+    }
+    const launchPlanRoute=url.pathname.match(/^\/api\/v1\/business-studio\/launch-plans\/([^/]+)(\/commands)?$/);
+    if(launchPlanRoute){const id=decodeURIComponent(launchPlanRoute[1]!);if(request.method==='GET'&&!launchPlanRoute[2])return json(await businessStudio.launchPlan(id),200,cors);if(request.method==='POST'&&launchPlanRoute[2])return json(await businessStudio.updateLaunchPlan(id,await readJson<any>(request)),200,cors);}
+    if(url.pathname==='/api/v1/business-studio/jobs'){
+      if(request.method==='GET')return json(await businessStudio.jobs(url.searchParams.get('q')??''),200,cors);
+      if(request.method==='POST')return json(await businessStudio.createJob(await readJson<any>(request)),201,cors);
+    }
+    const jobRoute=url.pathname.match(/^\/api\/v1\/business-studio\/jobs\/([^/]+)(\/commands)?$/);
+    if(jobRoute){const id=decodeURIComponent(jobRoute[1]!);if(request.method==='GET'&&!jobRoute[2])return json(await businessStudio.job(id),200,cors);if(request.method==='POST'&&jobRoute[2])return json(await businessStudio.updateJob(id,await readJson<any>(request)),200,cors);}
 
     if(request.method==='GET'&&url.pathname==='/api/v1/knowledge'){return json({items:await knowledgeAcademy.searchKnowledge(url.searchParams.get('q')??'',url.searchParams.get('groupId')??undefined)},200,cors);}
     if(request.method==='POST'&&url.pathname==='/api/v1/knowledge'){const body=await readJson<any>(request);return json(await knowledgeAcademy.createKnowledge(body),201,cors);}
@@ -3113,7 +3155,7 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
       const moduleId=url.searchParams.get('moduleId')??undefined;
       const groupId=url.searchParams.get('groupId')??undefined;
       const records=await repo.listWorkspaceRecords(ctx.tenantId,moduleId,groupId);const visible=[];
-      for(const record of records)if(!record.tags.some(x=>['verification-fact','governance-follow-up','business-experiment','consensual-pool','ad-pilot'].includes(x))&&await visibleWorkspace(record))visible.push(record);
+      for(const record of records)if(!record.tags.some(x=>['verification-fact','governance-follow-up','business-experiment','consensual-pool','ad-pilot','governed-productive'].includes(x))&&record.data.kind!=='PRACTICE_ATTEMPT'&&await visibleWorkspace(record))visible.push(record);
       return json(visible,200,cors);
     }
     if(request.method==='POST'&&url.pathname==='/api/v1/workspaces'){
@@ -3125,6 +3167,7 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
       if(body.groupId)await requireGroup(String(body.groupId),true);
       const timestamp=new Date().toISOString();
       const rawData=body.data&&typeof body.data==='object'&&!Array.isArray(body.data)?body.data as Record<string,unknown>:{};
+      if(strArray(body.tags).includes('governed-productive')||['PRACTICE_ATTEMPT','DISCOVERY_NOTEBOOK','FORUM_SOLUTION'].includes(String(rawData.kind))||['JOB','ACQUISITION_ROOM','LAUNCH_PLAN'].includes(String(rawData.businessKind)))throw Error('CANONICAL_PRODUCTIVE_ROUTE_REQUIRED');
       if(strArray(body.tags).includes('market-engine')||rawData.marketScopeId||rawData.marketKind)throw Error('CANONICAL_MARKET_ROUTE_REQUIRED');
       if(strArray(body.tags).some(x=>['verification-fact','governance-follow-up','poll','ballot','business-experiment','consensual-pool','ad-pilot'].includes(x)))throw Error('CANONICAL_GOVERNED_ROUTE_REQUIRED');
       const data:Record<string,string|number|boolean|null>={};
@@ -3140,6 +3183,7 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
     const workspaceRoute=url.pathname.match(/^\/api\/v1\/workspaces\/([^/]+)$/);
     if(workspaceRoute&&request.method==='PUT'){
       const existing=await repo.getWorkspaceRecord(ctx.tenantId,workspaceRoute[1]!); if(!existing)return json({error:'NOT_FOUND'},404,cors);
+      if(existing.tags.includes('governed-productive')||existing.data.kind==='PRACTICE_ATTEMPT')throw Error('CANONICAL_PRODUCTIVE_ROUTE_REQUIRED');
       if(!await visibleWorkspace(existing))throw Error('FORBIDDEN_SCOPE');
       if(existing.moduleId.startsWith('NOTIFY.'))throw Error('CANONICAL_NOTIFICATION_ROUTE_REQUIRED');
       if(existing.tags.includes('market-engine'))throw Error('CANONICAL_MARKET_ROUTE_REQUIRED');
@@ -3148,6 +3192,7 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
       const body=await readJson<Record<string,unknown>>(request);
       const status=String(body.status??existing.status) as WorkspaceStatus; if(!['DRAFT','ACTIVE','DONE','ARCHIVED'].includes(status)) throw new Error('INVALID_WORKSPACE_STATUS');
       const rawData=body.data&&typeof body.data==='object'&&!Array.isArray(body.data)?body.data as Record<string,unknown>:existing.data;
+      if(strArray(body.tags).includes('governed-productive')||['PRACTICE_ATTEMPT','DISCOVERY_NOTEBOOK','FORUM_SOLUTION'].includes(String(rawData.kind))||['JOB','ACQUISITION_ROOM','LAUNCH_PLAN'].includes(String(rawData.businessKind)))throw Error('CANONICAL_PRODUCTIVE_ROUTE_REQUIRED');
       const data:Record<string,string|number|boolean|null>={}; for(const [k,v] of Object.entries(rawData)){if(typeof v==='string'||typeof v==='number'||typeof v==='boolean'||v===null)data[k]=v;}
       if(strArray(body.tags).some(x=>['verification-fact','governance-follow-up','poll','ballot','business-experiment','consensual-pool','ad-pilot'].includes(x)))throw Error('CANONICAL_GOVERNED_ROUTE_REQUIRED');
       const updated:WorkspaceRecord={...existing,title:body.title===undefined?existing.title:String(body.title).trim()||existing.title,summary:body.summary===undefined?existing.summary:String(body.summary),status,tags:body.tags===undefined?existing.tags:strArray(body.tags),data,updatedAt:new Date().toISOString()};

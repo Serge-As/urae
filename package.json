@@ -1,9 +1,9 @@
 {
   "name": "tontine-platform",
-  "version": "1.5.2-33",
+  "version": "1.5.2-34",
   "private": true,
   "type": "module",
-  "description": "Eco-System: authorized financial explanations, policy-based loan scenarios, verifiable savings calculation copies and tontine resilience; acquired financial commands unchanged.",
+  "description": "Eco-System: private practical skills and mentor review, field-scoped discovery notebooks, sourced forum solutions, jobs, granular acquisition rooms and evidence-aware personal launch plans.",
   "engines": {
     "node": ">=24"
   },

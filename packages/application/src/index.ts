@@ -2181,6 +2181,30 @@ export class ConnectedApplication {
   async reviewKnowledge(id:string,state:'VALIDATED'|'TO_REVALIDATE',note=''):Promise<any>{return this.request('/api/v1/knowledge/'+encodeURIComponent(id)+'/review',{method:'POST',body:JSON.stringify({state,note})});}
   async encyclopedia(q=''):Promise<any[]>{const r=await this.request('/api/v1/encyclopedia?q='+encodeURIComponent(q)) as any;return r.items??[];}
   async founderAiContext(q=''):Promise<any>{return this.request('/api/v1/founder-ai/context?q='+encodeURIComponent(q));}
+  async academyPractices():Promise<any>{return this.request('/api/v1/academy/practices');}
+  async createAcademyPractice(input:any):Promise<any>{return this.request('/api/v1/academy/practices',{method:'POST',body:JSON.stringify(input)});}
+  async academyPractice(id:string):Promise<any>{return this.request('/api/v1/academy/practices/'+encodeURIComponent(id));}
+  async updateAcademyPractice(id:string,input:any):Promise<any>{return this.request('/api/v1/academy/practices/'+encodeURIComponent(id)+'/commands',{method:'POST',body:JSON.stringify(input)});}
+  async discoveryNotebook():Promise<any>{return this.request('/api/v1/discovery/notebook');}
+  async saveDiscoveryNotebook(input:any):Promise<any>{return this.request('/api/v1/discovery/notebook',{method:'PUT',body:JSON.stringify(input)});}
+  async previewDiscoveryNotebook(input:any):Promise<any>{return this.request('/api/v1/discovery/notebook/preview',{method:'POST',body:JSON.stringify(input)});}
+  async searchDiscoveryNotebooks(q:string):Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/notebooks?q='+encodeURIComponent(q));}
+  async forumSolutions():Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/forum-solutions');}
+  async createForumSolution(input:any):Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/forum-solutions',{method:'POST',body:JSON.stringify(input)});}
+  async reviewForumSolution(id:string,input:any):Promise<any>{return this.request('/api/v1/forum-solutions/'+encodeURIComponent(id)+'/review',{method:'POST',body:JSON.stringify(input)});}
+  async productiveJobs(q=''):Promise<any>{return this.request('/api/v1/business-studio/jobs?q='+encodeURIComponent(q));}
+  async acquisitionRooms():Promise<any>{return this.request('/api/v1/business-studio/acquisitions');}
+  async acquisitionListings():Promise<any>{return this.request('/api/v1/business-studio/acquisition-listings');}
+  async createAcquisition(input:any):Promise<any>{return this.request('/api/v1/business-studio/acquisitions',{method:'POST',body:JSON.stringify(input)});}
+  async acquisitionRoom(id:string):Promise<any>{return this.request('/api/v1/business-studio/acquisitions/'+encodeURIComponent(id));}
+  async updateAcquisition(id:string,input:any):Promise<any>{return this.request('/api/v1/business-studio/acquisitions/'+encodeURIComponent(id)+'/commands',{method:'POST',body:JSON.stringify(input)});}
+  async launchPlans():Promise<any>{return this.request('/api/v1/business-studio/launch-plans');}
+  async createLaunchPlan(input:any):Promise<any>{return this.request('/api/v1/business-studio/launch-plans',{method:'POST',body:JSON.stringify(input)});}
+  async launchPlan(id:string):Promise<any>{return this.request('/api/v1/business-studio/launch-plans/'+encodeURIComponent(id));}
+  async updateLaunchPlan(id:string,input:any):Promise<any>{return this.request('/api/v1/business-studio/launch-plans/'+encodeURIComponent(id)+'/commands',{method:'POST',body:JSON.stringify(input)});}
+  async createProductiveJob(input:any):Promise<any>{return this.request('/api/v1/business-studio/jobs',{method:'POST',body:JSON.stringify(input)});}
+  async productiveJob(id:string):Promise<any>{return this.request('/api/v1/business-studio/jobs/'+encodeURIComponent(id));}
+  async updateProductiveJob(id:string,input:any):Promise<any>{return this.request('/api/v1/business-studio/jobs/'+encodeURIComponent(id)+'/commands',{method:'POST',body:JSON.stringify(input)});}
   async academy():Promise<any>{return this.request('/api/v1/academy');}
   async createAcademyCourse(input:any):Promise<any>{return this.request('/api/v1/academy/courses',{method:'POST',body:JSON.stringify(input)});}
   async enrollAcademy(courseId:string):Promise<any>{return this.request('/api/v1/academy/courses/'+encodeURIComponent(courseId)+'/enroll',{method:'POST',body:'{}'});}

@@ -1,3 +1,19 @@
+## L06/L07/L08/L09 et I11/I13 publiés et vérifiés — 22 octobre 2026
+
+Production **1.5.2.33-financial-explanations**, source `dc3e285bdeac1c6f0ce5376d457ccf52826945d8`, Worker `9043380f-e8e1-4b14-9d60-a9c7af40c28b`. Livraison [39860843689 SUCCESS](https://github.com/Serge-As/urae/actions/runs/39860843689) : **979 tests natifs, 54 Chromium, 6 WebKit**, sans échec ni ignoré. Les **41 empreintes publiques** concordent avec la compilation de livraison et leur relecture indépendante. Preuve : `docs/release/evidence/FINANCIAL-EXPLANATIONS-PUBLIC-2026-10-22.json`.
+
+Qualification indépendante39860843716 : **SUCCESS, tentative2, même source**. La première tentative avait été interrompue après45minutes ; son état est conservé dans les preuves. La relance est terminée, sans modification applicative ou relâchement des assertions.
+
+Accès : **Finances → Comprendre mes finances · preuves et scénarios**. Rapprochement des mouvements Ledger et chaînes de corrections ; filtres et export de la lecture autorisée. Prêts : politique effective, périodes, capital et intérêts séparés, aperçu refusé si son empreinte est caduque. Épargne : copies de calcul déclarées, reproductibles avec empreinte, provenance et arrondis exacts. Tontines et solidarité : engagements personnels autorisés, preuve Ledger relue et scénario hypothétique de retard/rattrapage. Aucune commande financière supplémentaire.
+
+Limites : mouvements/export par page100 ;20clôtures récentes ; copie de calcul1000dépôts/120coefficients ; prêts1à24périodes ; tontines1à120tours ;XAF seulement. Absence d'entrées historiques signalée sans reconstitution fictive. Une cotisation ne décrit pas tout le patrimoine ; une simulation ne prouve ni accord ni paiement. Aucun nouveau polling, service payant, schéma, migration, effacement d'outbox ou rotation de signature.
+
+Sauvegarde D1 en lecture seule, restauration50tables avec intégrité et clés étrangères ok ; archive privée R2 relueSHA256 `7089ee1b7dbf1c17c5a31bcd425f8a6f2b3cdd7f4bcc8fcf204f9dcb702717c8`. Source exacte récupérée :866empreintes Git et modes vérifiés ; ZIP SHA256 `9b47fb8d7679d7fad1f43bb0b136fa165e6615202f3a033fe199d8cda7cac80f`. Ledger/D1 conserve l'autorité financière ; `realMoneyEnabled=false`, `FIELD_ACCEPTED=NOT_ACCEPTED`.
+
+BIR+ / **ÉTAT DU PROJET APRÈS ÉTAPE** : **19lots publiés dans leurs périmètres documentés**. Restent14,15,16,17,18,19,22,26,27, puis les compléments des propositions des lots acquis. Le rapprochement des92propositions aux28lots est contrôlé ;44références techniques ou modèles ne sont pas44dépendances automatiquement installées. Le groupe14–19 est en travail local, non encore publié. Aucun redémarrage du PC exécuté par ce chantier ; toute commande de redémarrage exige l'autorisation explicite. Consommation exacte de crédits non mesurable.
+
+## Périmètre initial conservé
+
 ## L06/L07/L08/L09 et I11/I13 — candidat du 22 octobre 2026
 
 Production acquise : **1.5.2.32-temporal-commerce-pilots**, source `3661a369620e4c881b1342f826071431af53458a`, livraison39828022308 et qualification39828022343 SUCCESS,969natifs/51Chromium/6WebKit. Le candidat **1.5.2.33-financial-explanations** est implémenté localement ; sa publication exige les contrôles complets sur son SHA exact et une vérification publique. Aucun succès de déploiement n'est déduit des seuls essais locaux.

@@ -1,0 +1,251 @@
+{
+  "verifiedAt": "2026-10-22T22:08:20.886Z",
+  "version": "1.5.2.33-financial-explanations",
+  "sourceSha": "dc3e285bdeac1c6f0ce5376d457ccf52826945d8",
+  "buildId": "eco-system-1.5.2.33-20261022-financial-explanations",
+  "pwaCache": "eco-system-v15233-financial-explanations-20261022",
+  "capabilities": 164,
+  "realMoneyEnabled": false,
+  "assets": [
+    {
+      "path": "/",
+      "sha256": "8a05361e2bf24d8d5d5dec425b8394ce8883d540fdb96a66403b6a7e8bf87d39"
+    },
+    {
+      "path": "/styles.css",
+      "sha256": "7965fc204da05b25680d5deb05f0c4f2259e01b007c90d8312180948fef185ee"
+    },
+    {
+      "path": "/sw.js",
+      "sha256": "6d2f261d636e987e320fc8af7dfb6626ac2713a69fafdd2d979f4efa54f5b85a"
+    },
+    {
+      "path": "/eco-shell-manifest.json",
+      "sha256": "83fb0ac7b838d25ff74c3ea53dfa96846e8e0b231638d566a17242a1eb53df88"
+    },
+    {
+      "path": "/src/main.js",
+      "sha256": "b321da93eca965ce118c55c011e4113b966de6a22153c88ab2eba30dd34d9841"
+    },
+    {
+      "path": "/src/financial-work-ui.js",
+      "sha256": "4968d4ec17afca3faebe4416a2b91e318f04b544a988d63f0947e8891b779e1b"
+    },
+    {
+      "path": "/src/completion-ui.js",
+      "sha256": "08b6bc67eb6c77c2065ae3c983523b21d4d223190b4a6f82d0eff999aedc5fa1"
+    },
+    {
+      "path": "/src/ui-modes.js",
+      "sha256": "795339401f0eaa42a9822a918cf3982bedfaea02c68f4669a845372bb711ee81"
+    },
+    {
+      "path": "/src/field-hardening.js",
+      "sha256": "6c4284d33ac9441a847fc504f18d9bf079ded736c05656b287dcd96e9f4efb01"
+    },
+    {
+      "path": "/src/runtime-i18n.js",
+      "sha256": "799a4f1705e5fd924d1bccb5313173c9880c63a27465f3e5831050c7b03a29a3"
+    },
+    {
+      "path": "/src/shell-navigation.js",
+      "sha256": "5bc9ec6d5a9c17ab0190370c464e79cd0029b25009b168b7486c0acb30865b72"
+    },
+    {
+      "path": "/src/session-rehearsal.js",
+      "sha256": "57b6e41c3b7381f0b86e8569d9bf45d64616f1dd8af353295061d611b3d31b63"
+    },
+    {
+      "path": "/src/request-budget-ui.js",
+      "sha256": "62dccfab867860795b77df2936bf02a8fef7e21e10f4842be6f3545a8322e83d"
+    },
+    {
+      "path": "/packages/application/src/index.js",
+      "sha256": "3c5dde74eedb167dada5381469acd5fe666412265dd434844b1988089a0651ab"
+    },
+    {
+      "path": "/packages/application/src/request-budget.js",
+      "sha256": "00f39471099cc69127ae301660d22694c5b8097e6be7ea42fbed040aede498d5"
+    },
+    {
+      "path": "/src/cockpit-priorities.js",
+      "sha256": "dfb2678284d5fcb3269bb366a4c4e7e1dfd25ab694bba6c5005a70c502014de3"
+    },
+    {
+      "path": "/src/cockpit-priorities-ui.js",
+      "sha256": "86ce0a26c0573893e81a2c1d20b64994a90a091b53524aa6992abe2c97bc53f2"
+    },
+    {
+      "path": "/src/journey-context.js",
+      "sha256": "5199dd16542efa8434e15e6a5f96f1e018f2963d49ce4b0c10d3a71d23f2a9ae"
+    },
+    {
+      "path": "/src/personal-cockpit-ui.js",
+      "sha256": "25d59daffbb6ebc36a6d913341b661bfb0c24d887a633cb468804233769a4a43"
+    },
+    {
+      "path": "/src/workspace-navigation.js",
+      "sha256": "4eef9756b38fb5e9d0dee5a8af7d4a904f7ce01ae2de9d2ba93bb3349d20c7d1"
+    },
+    {
+      "path": "/src/assistant-actions.js",
+      "sha256": "49844001277c862414e566446cb9ea7db4f0ddd73e456a2c17545f27e113779e"
+    },
+    {
+      "path": "/src/local-assistant.js",
+      "sha256": "f4d7722f9efbc3f810ad8f13f10fc12e3e60f74edd67e7ffb7076092dd76acd4"
+    },
+    {
+      "path": "/src/universal-search.js",
+      "sha256": "4364b14d1067f1091c47e9da28a07312f82cebaae4d911d04fb1bd96580e5c07"
+    },
+    {
+      "path": "/src/advanced-ui.js",
+      "sha256": "5e15c0426ca21e2c8a26592ec3cff8aa7b8dd04b916199b06f79ca98b576cc57"
+    },
+    {
+      "path": "/src/community-shop-ui.js",
+      "sha256": "ef6e532681c3edeb222bb18adc2ceb50d28bc90b50de2ca83056c5d78846ad00"
+    },
+    {
+      "path": "/src/market-order-board.js",
+      "sha256": "b8bf9d49bdc2dcf7c228a74fe3b911dff7dd0521afa0e71b76f3223deab76b16"
+    },
+    {
+      "path": "/src/market-quotes-ui.js",
+      "sha256": "f095fc06476416d841409c2523ced172e0f2ef08d73611bf679481d7b5338bc7"
+    },
+    {
+      "path": "/src/personal-shops-ui.js",
+      "sha256": "75f97f83a22ca3259799e54de0da553f4f515cc7ceb9ead69fa2a6e5b209a1c8"
+    },
+    {
+      "path": "/src/business-studio-ui.js",
+      "sha256": "6c2fa695eecb81263fbd6bb095adbc4f7be8d191ec50fddeb0a0d3f50b3a319e"
+    },
+    {
+      "path": "/src/notification-center-ui.js",
+      "sha256": "bc9fd70613a47878cd0ec75391f2693667a53cdecb667b8654dc7344a5571f86"
+    },
+    {
+      "path": "/packages/notifications/src/policy.js",
+      "sha256": "f4f044f4b77c980e09d6446d5de8180c5f2f9fe25810ff45c3e304f08c07e1f9"
+    },
+    {
+      "path": "/src/eco-care-ui.js",
+      "sha256": "35a66d7b2cc06bf701a544463a771ac49359b9f66b798beac7ed400c11d7ea53"
+    },
+    {
+      "path": "/packages/platform-kernel/src/case-care.js",
+      "sha256": "943724c1337e84059c7b21ccf33ddf3710e56a33449983bdd446e1f1ec1d7798"
+    },
+    {
+      "path": "/src/launch-studio.js",
+      "sha256": "ae34cb5658d288f360b2ab2de9865595210fd6217a0797f417b55a44e6c2a21e"
+    },
+    {
+      "path": "/src/launch-draft.js",
+      "sha256": "f31c90dab115546d060f402bb57740cd75c3f7f2940c08811e41d59b101c902c"
+    },
+    {
+      "path": "/src/launch-guide-ui.js",
+      "sha256": "77cd42d69fc6b221bbc4ce258c17b8303d7263420b366d70506118cedbc78545"
+    },
+    {
+      "path": "/src/identity-verification-ui.js",
+      "sha256": "bca7d85f16129354ed5cf8ec5e718ce6ca5a927353b8f1a0f74cf74f5d8f49d3"
+    },
+    {
+      "path": "/src/governed-group-ui.js",
+      "sha256": "3e56d9880f6a02b467387856118321dd11a9ac054b61763ae832469fb5680e2f"
+    },
+    {
+      "path": "/src/economic-experiments-ui.js",
+      "sha256": "ddb4f6188e889595ae3cd8018e0e67e58ce81fc85f11d1dd5a2f2fa76b147b20"
+    },
+    {
+      "path": "/src/temporal-commerce-ui.js",
+      "sha256": "9ae4e47893570152ed3106cd131bdcf1dd76024709c926b53fbc9f94f58663b4"
+    },
+    {
+      "path": "/src/financial-explanations-ui.js",
+      "sha256": "76c00a5914d2ff33d0c256c3fdcef096032d8fe4881671c7b48d0ad0f3d196be"
+    }
+  ],
+  "independentVerifiedAt": "2026-10-22T22:27:12.110Z",
+  "independentAssetCount": 41,
+  "independentHealth": {
+    "ok": true,
+    "service": "tontine-api",
+    "version": "1.5.2.33-financial-explanations",
+    "buildId": "eco-system-1.5.2.33-20261022-financial-explanations",
+    "commitSha": "dc3e285bdeac1c6f0ce5376d457ccf52826945d8",
+    "schemaVersion": "d1-additive-20260923",
+    "policyVersion": "live-finance-policy-20261007-event-push-repayment",
+    "pwaCache": "eco-system-v15233-financial-explanations-20261022",
+    "now": "2026-10-22T22:24:25.694Z",
+    "realMoneyEnabled": false,
+    "manualCashLedgerEnabled": true,
+    "premiumLiveEnabled": true,
+    "founderControlBound": true,
+    "communityRealtimeBound": true,
+    "artifactStorageBound": true,
+    "artifactStorageMode": "R2",
+    "contextScope": "request"
+  },
+  "fieldAcceptance": "NOT_ACCEPTED",
+  "independentNetworkRetries": [
+    {
+      "path": "/src/personal-shops-ui.js",
+      "attempt": 1,
+      "error": "TimeoutError"
+    }
+  ],
+  "deliveryRun": "39860843689",
+  "deliveryConclusion": "SUCCESS",
+  "qualification": {
+    "native": 979,
+    "chromium": 54,
+    "webkit": 6,
+    "failed": 0,
+    "skipped": 0
+  },
+  "workerVersionId": "9043380f-e8e1-4b14-9d60-a9c7af40c28b",
+  "independentQualificationRun": "39860843716",
+  "independentQualificationConclusion": "SUCCESS",
+  "backupManifest": {
+    "protocol": "ECO_RECOVERY_1",
+    "sourceSha": "dc3e285bdeac1c6f0ce5376d457ccf52826945d8",
+    "createdAt": "2026-10-22T22:07:55.352Z",
+    "database": "eco-system-db",
+    "bucket": "eco-system-backups",
+    "verification": {
+      "integrity": "ok",
+      "foreignKeys": "ok",
+      "tables": 50,
+      "sqlBytes": 2936766,
+      "sqlSha256": "209f536b2c6af897f58c1e4b35b4bc0c3bbae8a86b27b3156a0e85159b26254e"
+    }
+  },
+  "backupArchiveSha256": "7089ee1b7dbf1c17c5a31bcd425f8a6f2b3cdd7f4bcc8fcf204f9dcb702717c8",
+  "exactSourceArchive": {
+    "source": "dc3e285bdeac1c6f0ce5376d457ccf52826945d8",
+    "path": "C:\\Users\\Admin\\Documents\\ChatGPT\\Eco\\evidence\\financial-12460464532.zip",
+    "zipSha256": "9b47fb8d7679d7fad1f43bb0b136fa165e6615202f3a033fe199d8cda7cac80f",
+    "archiveSha256": "35c2185d26b55ed3752da07206cb8aea43c393fd0bd4bea75de1f273f3b162c2",
+    "gitBlobHashesVerified": 866
+  },
+  "independentQualificationAttempt": 2,
+  "qualificationHistory": [
+    {
+      "attempt": 1,
+      "result": "CANCELLED_AFTER_45_MINUTES",
+      "native": "SUCCESS"
+    },
+    {
+      "attempt": 2,
+      "result": "SUCCESS",
+      "sourceSha": "dc3e285bdeac1c6f0ce5376d457ccf52826945d8"
+    }
+  ]
+}

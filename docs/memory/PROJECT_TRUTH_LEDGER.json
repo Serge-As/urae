@@ -1589,15 +1589,31 @@
     {
       "id": "financial-explanations-20261022",
       "scope": "L06/L07/L08/L09 I11/I13 authorized finance explanations",
-      "status": "IMPLEMENTED_UNVERIFIED",
-      "statement": "v33 candidate, v32 remains published. Read projections and hypothetical calculations reuse Ledger/Completion/SavingsYield.92 proposals mapped to28lots; mapping is not delivery.",
+      "status": "VERIFIED_REMOTE",
+      "statement": "v33 deployed and public-verified:979native54Chromium6WebKit in delivery; separate qualification39860843716 SUCCESS attempt2 unchanged source after initial45minute interruption. FIELD_ACCEPTED=NOT_ACCEPTED.",
       "evidence": [
-        "docs/change-impact/CIR-2026-10-22-FINANCIAL-EXPLANATIONS.md",
-        "tests/financial-explanations-20261022.test.mjs",
-        "tests/browser/financial-explanations-20261022.spec.mjs"
+        "source:dc3e285bdeac1c6f0ce5376d457ccf52826945d8",
+        "github-actions:39860843689 SUCCESS",
+        "docs/release/evidence/FINANCIAL-EXPLANATIONS-PUBLIC-2026-10-22.json",
+        "github-actions:39860843716 SUCCESS attempt2"
       ],
       "observedOn": "2026-10-22",
-      "next": "Complete same-source gates, readonly backup, deployment and public proof. Then L14-L19/L22/L26/L27; finally common completion of prior-lot proposals."
+      "next": "Finish grouped14–19,22/26/27 then remaining proposals common cohort; verify independent rerun outcome.",
+      "workerVersionId": "9043380f-e8e1-4b14-9d60-a9c7af40c28b"
+    },
+    {
+      "id": "productive-community-20261023",
+      "scope": "L14–19 private productive journeys",
+      "status": "IMPLEMENTED_UNVERIFIED",
+      "statement": "v34 local initial scope; private practices/notebooks, sourced forum solutions, jobs, acquisition rooms and launch plans. Remote qualification required. Variants and92proposals are not automatically all delivered.",
+      "observedOn": "2026-10-23",
+      "evidence": [
+        "docs/change-impact/CIR-2026-10-22-PRODUCTIVE-COMMUNITY.md",
+        "tests/productive-community-20261022.test.mjs",
+        "tests/acquisition-launch-20261022.test.mjs",
+        "tests/browser/productive-community-20261022.spec.mjs"
+      ],
+      "next": "Same-source CI, browsers, readonly backup, production and public proof; then L22/26/27 and final common improvements."
     }
   ]
 }

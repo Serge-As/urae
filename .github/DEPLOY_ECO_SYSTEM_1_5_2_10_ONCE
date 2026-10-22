@@ -1,21 +1,18 @@
-Eco-System grouped delivery authorized by founder 2026-10-22
-release: 1.5.2.33-financial-explanations
-date: 2026-10-22
-db_mutation: none
+Eco-System grouped delivery authorized by founder, continued23October2026
+release: 1.5.2.34-productive-community
+date: 2026-10-23
 mode: code-only-with-verified-readonly-backup-no-migration
-qualified_baseline_source: 3661a369620e4c881b1342f826071431af53458a
-qualified_baseline_delivery: 39828022308 SUCCESS
-qualification: baseline969native51Chromium6WebKit; candidate exact-SHA full gates mandatory
-candidate_native: expected979, read actual counts from logs
-candidate_chromium: expected54, read actual counts from logs
+qualified_baseline_source: dc3e285bdeac1c6f0ce5376d457ccf52826945d8
+qualified_baseline_delivery: 39860843689 SUCCESS,979native54Chromium6WebKit
+qualification: candidate same-SHA full governed CI and both browsers mandatory
+candidate_native: expected996, read actual evidence
+candidate_chromium: expected60, read actual evidence
 candidate_webkit: acquired6 mandatory
-production_ancestry: preserve all previous releases; no force push
-backup: readonly D1 export, verified SQLite restore, private R2 readback before deploy
-storage: existing D1/R2; no recreation, migration or signing-key rotation
+scope: L14/L15/L16/L17/L18/L19; I05/I15/I17/I20 within documented bounded scope
+backup: readonly D1 export, verified SQLite restore, private R2 readback
+storage: existing D1/R2; no recreation, destructive migration or signature rotation
 real_money_enabled: false
 field_acceptance: NOT_ACCEPTED
-trigger_nonce: 2026-10-22-financial-explanations-exact-source
-authorization: founder requested remaining grouped lots with innovations, then common completion of prior proposals
-scope: L06/L07/L08/L09; I11 conditional loan preview and I13 tontine timing stress; complete92-to28 mapping
-qualification_same_deployment_sha: mandatory; no relaxed assertions
-public_verification: exact health, catalogue and41 asset hashes against delivery build
+public_verification: exact health, catalogue and43 asset hashes
+trigger_nonce: 2026-10-23-productive-community-exact-source
+authorization: founder requests all grouped remaining lots then common improvements of acquired lots

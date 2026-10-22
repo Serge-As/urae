@@ -3,6 +3,8 @@ import type {PlatformKernel} from '../../platform-kernel/src/index.js';
 import type {Id,WorkspaceRecord} from '../../contracts/src/index.js';
 import {makeId} from '../../contracts/src/index.js';
 import {PRODUCT_MODULES} from '../../module-registry/src/index.js';
+import * as practice from './practice.js';
+import * as solutions from './forum-solutions.js';
 
 export type KnowledgeKind='OBSERVATION'|'HYPOTHESIS'|'VALIDATED_RULE'|'CASE'|'EXTERNAL_SOURCE'|'PRODUCT_MEMORY';
 export type KnowledgeState='DRAFT'|'IN_REVIEW'|'VALIDATED'|'TO_REVALIDATE'|'SUPERSEDED'|'RETIRED';
@@ -14,6 +16,13 @@ const managers=new Set(['founder','manager','admin','president','treasurer','sec
 
 export class KnowledgeAcademyService{
   constructor(public repo:PlatformRepository,public kernel:PlatformKernel){}
+  createPractice(input:Parameters<typeof practice.createPractice>[2]){return practice.createPractice(this.repo,this.kernel,input);}
+  practices(){return practice.practices(this.repo,this.kernel);}
+  practice(id:string){return practice.readPractice(this.repo,this.kernel,id);}
+  updatePractice(id:string,input:Parameters<typeof practice.updatePractice>[3]){return practice.updatePractice(this.repo,this.kernel,id,input);}
+  createForumSolution(input:solutions.SolutionInput,load:solutions.SourceLoader){return solutions.createForumSolution(this.repo,this.kernel,input,load);}
+  forumSolutions(groupId:string,load:solutions.SourceLoader){return solutions.forumSolutions(this.repo,this.kernel,groupId,load);}
+  reviewForumSolution(id:string,input:Parameters<typeof solutions.reviewForumSolution>[3],load:solutions.SourceLoader){return solutions.reviewForumSolution(this.repo,this.kernel,id,input,load);}
   private ctx(){return this.kernel.context.get();}
   private async groupMembership(groupId:Id){
     const c=this.ctx(),g=await this.repo.getGroup(c.tenantId,groupId);if(!g)throw new Error('GROUP_NOT_FOUND');
@@ -42,6 +51,7 @@ export class KnowledgeAcademyService{
 
   async reviseKnowledge(id:Id,input:{body:string;sourceRef?:string;reason:string;validFrom?:string;validUntil?:string;nextReviewAt?:string}){
     const c=this.ctx(),old=await this.repo.getWorkspaceRecord(c.tenantId,id);if(!old||old.moduleId!=='LEARNING.KNOWLEDGE_BANK')throw new Error('KNOWLEDGE_NOT_FOUND');
+    if(old.tags.includes('governed-productive'))throw Error('CANONICAL_SOLUTION_ROUTE_REQUIRED');
     await this.canManageGroup(old.groupId);const body=clean(input.body,12000),reason=clean(input.reason,500);if(!body||!reason)throw new Error('REVISION_REASON_REQUIRED');
     for(const value of [input.validFrom,input.validUntil,input.nextReviewAt])if(value&&!Number.isFinite(Date.parse(value)))throw new Error('INVALID_KNOWLEDGE_DATE');
     const itemId=String(old.data.knowledgeItemId??old.id),next=await this.save('LEARNING.KNOWLEDGE_BANK',old.title,{
@@ -53,6 +63,7 @@ export class KnowledgeAcademyService{
 
   async reviewKnowledge(id:Id,state:'VALIDATED'|'TO_REVALIDATE',note=''){
     const c=this.ctx(),r=await this.repo.getWorkspaceRecord(c.tenantId,id);if(!r||r.moduleId!=='LEARNING.KNOWLEDGE_BANK')throw new Error('KNOWLEDGE_NOT_FOUND');await this.canManageGroup(r.groupId);
+    if(r.tags.includes('governed-productive'))throw Error('CANONICAL_SOLUTION_ROUTE_REQUIRED');
     if(String(r.data.knowledgeState)==='SUPERSEDED'||r.status==='ARCHIVED')throw new Error('KNOWLEDGE_VERSION_NOT_REVIEWABLE');
     if(state==='VALIDATED'&&r.data.validUntil&&Date.parse(String(r.data.validUntil))<=Date.now())throw new Error('KNOWLEDGE_ALREADY_EXPIRED');
     const next={...r,data:{...r.data,knowledgeState:state,reviewedBy:c.actorId,reviewedAt:now(),reviewNote:clean(note,800)},updatedAt:now()};await this.repo.saveWorkspaceRecord(next);return next;
@@ -60,7 +71,7 @@ export class KnowledgeAcademyService{
 
   async searchKnowledge(q:string,groupId?:Id){
     const c=this.ctx();if(groupId)await this.canReadGroup(groupId);
-    const query=toks(q),rows=(await this.repo.listWorkspaceRecords(c.tenantId,'LEARNING.KNOWLEDGE_BANK')).filter(x=>x.status!=='ARCHIVED'&&String(x.data.knowledgeState)!=='SUPERSEDED'&&String(x.data.knowledgeState)!=='RETIRED');
+    const query=toks(q),rows=(await this.repo.listWorkspaceRecords(c.tenantId,'LEARNING.KNOWLEDGE_BANK')).filter(x=>!x.tags.includes('governed-productive')&&x.status!=='ARCHIVED'&&String(x.data.knowledgeState)!=='SUPERSEDED'&&String(x.data.knowledgeState)!=='RETIRED');
     const scoped=rows.filter(r=>{
       const sensitivity=String(r.data.sensitivity??(r.groupId?'GROUP':'PRIVATE'));
       if(sensitivity==='PRIVATE')return r.createdBy===c.actorId;

@@ -3,6 +3,9 @@ import type {PlatformKernel} from '../../platform-kernel/src/index.js';
 import type {Id,WorkspaceRecord} from '../../contracts/src/index.js';
 import {makeId} from '../../contracts/src/index.js';
 import * as experiment from './experiments.js';
+import * as jobs from './jobs.js';
+import * as acquisition from './acquisition.js';
+import * as plans from './launch-plans.js';
 
 type BusinessKind='WORKSPACE'|'MANDATE'|'CLIENT'|'OFFER'|'REQUEST'|'QUOTE'|'ORDER'|'CONTRACT'|'INVOICE'|'EXPENSE'|'PAYMENT'|'REVENUE'|'TIME'|'COMMUNICATION'|'ACTION'|'SCENARIO';
 type Money={amount:number;currency:string};
@@ -22,6 +25,19 @@ export interface BusinessSummary{
 
 export class BusinessStudioService{
   constructor(public repo:PlatformRepository,public kernel:PlatformKernel){}
+  createJob(input:jobs.JobInput){return jobs.createJob(this.repo,this.kernel,input);}
+  jobs(q=''){return jobs.jobs(this.repo,this.kernel,q);}
+  job(id:string){return jobs.readJob(this.repo,this.kernel,id);}
+  updateJob(id:string,input:jobs.JobCommand){return jobs.updateJob(this.repo,this.kernel,id,input);}
+  createAcquisition(input:acquisition.AcquisitionInput){return acquisition.createAcquisition(this.repo,this.kernel,input);}
+  acquisitionRooms(){return acquisition.acquisitionRooms(this.repo,this.kernel);}
+  acquisitionListings(){return acquisition.acquisitionListings(this.repo,this.kernel);}
+  acquisitionRoom(id:string){return acquisition.readAcquisition(this.repo,this.kernel,id);}
+  updateAcquisition(id:string,input:acquisition.AcquisitionCommand){return acquisition.updateAcquisition(this.repo,this.kernel,id,input);}
+  createLaunchPlan(input:plans.LaunchPlanInput){return plans.createLaunchPlan(this.repo,this.kernel,input);}
+  launchPlans(){return plans.launchPlans(this.repo,this.kernel);}
+  launchPlan(id:string){return plans.readLaunchPlan(this.repo,this.kernel,id);}
+  updateLaunchPlan(id:string,input:plans.LaunchPlanCommand){return plans.updateLaunchPlan(this.repo,this.kernel,id,input);}
   createExperiment(input:experiment.ExperimentInput){return experiment.createExperiment(this.repo,this.kernel,input);}
   observeExperiment(id:string,input:experiment.ExperimentObservationInput){return experiment.observeExperiment(this.repo,this.kernel,id,input);}
   linkExperimentOrder(id:string,orderId:string){return experiment.linkExperimentOrder(this.repo,this.kernel,id,orderId);}
@@ -68,6 +84,7 @@ export class BusinessStudioService{
   }
   private async mutate(id:Id,patch:Record<string,string|number|boolean|null>,status?:WorkspaceRecord['status']){
     const ctx=this.kernel.context.get(),r=await this.repo.getWorkspaceRecord(ctx.tenantId,id);if(!r||r.createdBy!==ctx.actorId||!r.tags.includes('business-studio'))throw new Error('BUSINESS_RECORD_NOT_FOUND');
+    if(r.tags.includes('governed-productive'))throw Error('CANONICAL_PRODUCTIVE_ROUTE_REQUIRED');
     const next={...r,status:status??r.status,data:{...r.data,...patch,version:Number(r.data.version??1)+1},updatedAt:now()};await this.repo.saveWorkspaceRecord(next);return next;
   }
 

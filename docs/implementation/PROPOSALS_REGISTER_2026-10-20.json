@@ -134,7 +134,7 @@
     {
       "id": "A06",
       "title": "Un solde que l’on peut expliquer et rapprocher · lot 06",
-      "status": "IMPLEMENTED_UNVERIFIED",
+      "status": "DELIVERED_WITH_DOCUMENTED_LIMITS",
       "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md",
       "targetLots": [
         6
@@ -152,14 +152,15 @@
       ],
       "integrationMeaning": "PRODUCT_CAPABILITY_WITH_EXPLICIT_ACCEPTANCE_CRITERIA",
       "evidence": [
+        "docs/release/evidence/FINANCIAL-EXPLANATIONS-PUBLIC-2026-10-22.json",
         "docs/release/DELIVERY-2026-10-22-FINANCIAL-EXPLANATIONS.md"
       ],
-      "limits": "Authorized initial read/simulation scope; full same-SHA deployment qualification pending. Historical missing inputs are not invented, no financial posting."
+      "limits": "Authorized canonical read projections and hypothetical calculations; no financial commands. XAF,100movements/page,20recent closures,1000declared deposits,120coefficients,24loan periods,120tontine rounds. Missing historical inputs not invented. Independent browser rerun outcome tracked separately from successful full delivery."
     },
     {
       "id": "A07",
       "title": "Un prêt expliqué échéance par échéance et composante par composante · lot 07",
-      "status": "IMPLEMENTED_UNVERIFIED",
+      "status": "DELIVERED_WITH_DOCUMENTED_LIMITS",
       "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md",
       "targetLots": [
         7
@@ -177,14 +178,15 @@
       ],
       "integrationMeaning": "PRODUCT_CAPABILITY_WITH_EXPLICIT_ACCEPTANCE_CRITERIA",
       "evidence": [
+        "docs/release/evidence/FINANCIAL-EXPLANATIONS-PUBLIC-2026-10-22.json",
         "docs/release/DELIVERY-2026-10-22-FINANCIAL-EXPLANATIONS.md"
       ],
-      "limits": "Authorized initial read/simulation scope; full same-SHA deployment qualification pending. Historical missing inputs are not invented, no financial posting."
+      "limits": "Authorized canonical read projections and hypothetical calculations; no financial commands. XAF,100movements/page,20recent closures,1000declared deposits,120coefficients,24loan periods,120tontine rounds. Missing historical inputs not invented. Independent browser rerun outcome tracked separately from successful full delivery."
     },
     {
       "id": "A08",
       "title": "Un reçu détaillé de répartition des rendements · lot 08",
-      "status": "IMPLEMENTED_UNVERIFIED",
+      "status": "DELIVERED_WITH_DOCUMENTED_LIMITS",
       "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md",
       "targetLots": [
         8
@@ -202,14 +204,15 @@
       ],
       "integrationMeaning": "PRODUCT_CAPABILITY_WITH_EXPLICIT_ACCEPTANCE_CRITERIA",
       "evidence": [
+        "docs/release/evidence/FINANCIAL-EXPLANATIONS-PUBLIC-2026-10-22.json",
         "docs/release/DELIVERY-2026-10-22-FINANCIAL-EXPLANATIONS.md"
       ],
-      "limits": "Authorized initial read/simulation scope; full same-SHA deployment qualification pending. Historical missing inputs are not invented, no financial posting."
+      "limits": "Authorized canonical read projections and hypothetical calculations; no financial commands. XAF,100movements/page,20recent closures,1000declared deposits,120coefficients,24loan periods,120tontine rounds. Missing historical inputs not invented. Independent browser rerun outcome tracked separately from successful full delivery."
     },
     {
       "id": "A09",
       "title": "Un calendrier de tontine et de solidarité compréhensible · lot 09",
-      "status": "IMPLEMENTED_UNVERIFIED",
+      "status": "DELIVERED_WITH_DOCUMENTED_LIMITS",
       "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md",
       "targetLots": [
         9
@@ -227,9 +230,10 @@
       ],
       "integrationMeaning": "PRODUCT_CAPABILITY_WITH_EXPLICIT_ACCEPTANCE_CRITERIA",
       "evidence": [
+        "docs/release/evidence/FINANCIAL-EXPLANATIONS-PUBLIC-2026-10-22.json",
         "docs/release/DELIVERY-2026-10-22-FINANCIAL-EXPLANATIONS.md"
       ],
-      "limits": "Authorized initial read/simulation scope; full same-SHA deployment qualification pending. Historical missing inputs are not invented, no financial posting."
+      "limits": "Authorized canonical read projections and hypothetical calculations; no financial commands. XAF,100movements/page,20recent closures,1000declared deposits,120coefficients,24loan periods,120tontine rounds. Missing historical inputs not invented. Independent browser rerun outcome tracked separately from successful full delivery."
     },
     {
       "id": "A10",
@@ -340,7 +344,7 @@
     {
       "id": "A14",
       "title": "Des Foras qui transforment les échanges en connaissances et en actions · lot 14",
-      "status": "PLANNED_OR_REQUIRES_DETAILED_COVERAGE",
+      "status": "IMPLEMENTED_UNVERIFIED",
       "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md",
       "targetLots": [
         14
@@ -356,12 +360,16 @@
         "Permettre une synthèse rédigée ou assistée, relue avant publication, avec liens vers les éléments probants et mention des désaccords.",
         "Transformer une conclusion en tâche ou proposition via le propriétaire concerné ; une réponse de forum ne vaut ni décision de groupe ni avis financier certifié."
       ],
-      "integrationMeaning": "PRODUCT_CAPABILITY_WITH_EXPLICIT_ACCEPTANCE_CRITERIA"
+      "integrationMeaning": "PRODUCT_CAPABILITY_WITH_EXPLICIT_ACCEPTANCE_CRITERIA",
+      "evidence": [
+        "docs/release/DELIVERY-2026-10-23-PRODUCTIVE-COMMUNITY.md"
+      ],
+      "limits": "Initial bounded implementation under same canonical owners. Same-source release pending; contact-specific notebooks, cross-group solution adaptation, automated employment reminders and multi-party launch programs remain future variants."
     },
     {
       "id": "A15",
       "title": "Des Carnets utiles pour être découvert sans tout exposer · lot 15",
-      "status": "PLANNED_OR_REQUIRES_DETAILED_COVERAGE",
+      "status": "IMPLEMENTED_UNVERIFIED",
       "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md",
       "targetLots": [
         15
@@ -377,12 +385,16 @@
         "Définir une visibilité par rubrique : privé, groupe, contact choisi ou public. Prévisualiser exactement ce que verra chaque audience.",
         "Relier Discover au carnet et aux offres en cours ; permettre une suspension temporaire sans supprimer l’historique privé."
       ],
-      "integrationMeaning": "PRODUCT_CAPABILITY_WITH_EXPLICIT_ACCEPTANCE_CRITERIA"
+      "integrationMeaning": "PRODUCT_CAPABILITY_WITH_EXPLICIT_ACCEPTANCE_CRITERIA",
+      "evidence": [
+        "docs/release/DELIVERY-2026-10-23-PRODUCTIVE-COMMUNITY.md"
+      ],
+      "limits": "Initial bounded implementation under same canonical owners. Same-source release pending; contact-specific notebooks, cross-group solution adaptation, automated employment reminders and multi-party launch programs remain future variants."
     },
     {
       "id": "A16",
       "title": "Un parcours apprendre, pratiquer, prouver et contribuer · lot 16",
-      "status": "PLANNED_OR_REQUIRES_DETAILED_COVERAGE",
+      "status": "IMPLEMENTED_UNVERIFIED",
       "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md",
       "targetLots": [
         16
@@ -398,12 +410,16 @@
         "Créer des missions d’essai sans accès aux données réelles ; prévoir relecture, correction et contestation du résultat.",
         "Délivrer une preuve avec émetteur, critères, date et statut de validité ; distinguer contribution bénévole, compétence et rémunération commerciale."
       ],
-      "integrationMeaning": "PRODUCT_CAPABILITY_WITH_EXPLICIT_ACCEPTANCE_CRITERIA"
+      "integrationMeaning": "PRODUCT_CAPABILITY_WITH_EXPLICIT_ACCEPTANCE_CRITERIA",
+      "evidence": [
+        "docs/release/DELIVERY-2026-10-23-PRODUCTIVE-COMMUNITY.md"
+      ],
+      "limits": "Initial bounded implementation under same canonical owners. Same-source release pending; contact-specific notebooks, cross-group solution adaptation, automated employment reminders and multi-party launch programs remain future variants."
     },
     {
       "id": "A17",
       "title": "Eco Jobs avec candidatures suivies et critères transparents · lot 17",
-      "status": "PLANNED_OR_REQUIRES_DETAILED_COVERAGE",
+      "status": "IMPLEMENTED_UNVERIFIED",
       "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md",
       "targetLots": [
         17
@@ -419,12 +435,16 @@
         "Créer un suivi des candidatures par étapes avec raison de refus communicable, pièces minimales et contrôle des accès.",
         "Proposer des disponibilités et un rendez-vous confirmé côté serveur ; les rappels passent d’abord par l’Inbox Eco."
       ],
-      "integrationMeaning": "PRODUCT_CAPABILITY_WITH_EXPLICIT_ACCEPTANCE_CRITERIA"
+      "integrationMeaning": "PRODUCT_CAPABILITY_WITH_EXPLICIT_ACCEPTANCE_CRITERIA",
+      "evidence": [
+        "docs/release/DELIVERY-2026-10-23-PRODUCTIVE-COMMUNITY.md"
+      ],
+      "limits": "Initial bounded implementation under same canonical owners. Same-source release pending; contact-specific notebooks, cross-group solution adaptation, automated employment reminders and multi-party launch programs remain future variants."
     },
     {
       "id": "A18",
       "title": "Une Data Room organisée par questions de vérification · lot 18",
-      "status": "PLANNED_OR_REQUIRES_DETAILED_COVERAGE",
+      "status": "IMPLEMENTED_UNVERIFIED",
       "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md",
       "targetLots": [
         18
@@ -440,12 +460,16 @@
         "Accorder des accès par dossier, section et document, avec durée, journal et retrait ; produire des liens courts et contrôlés depuis le stockage existant.",
         "Préparer une liste des questions non résolues et une exportation autorisée, avec versions des pièces et réserves."
       ],
-      "integrationMeaning": "PRODUCT_CAPABILITY_WITH_EXPLICIT_ACCEPTANCE_CRITERIA"
+      "integrationMeaning": "PRODUCT_CAPABILITY_WITH_EXPLICIT_ACCEPTANCE_CRITERIA",
+      "evidence": [
+        "docs/release/DELIVERY-2026-10-23-PRODUCTIVE-COMMUNITY.md"
+      ],
+      "limits": "Initial bounded implementation under same canonical owners. Same-source release pending; contact-specific notebooks, cross-group solution adaptation, automated employment reminders and multi-party launch programs remain future variants."
     },
     {
       "id": "A19",
       "title": "Launch Boost organisé en résultats vérifiables · lot 19",
-      "status": "PLANNED_OR_REQUIRES_DETAILED_COVERAGE",
+      "status": "IMPLEMENTED_UNVERIFIED",
       "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md",
       "targetLots": [
         19
@@ -461,7 +485,11 @@
         "Créer des jalons avec responsable, preuve attendue et révision possible ; ne pas rendre obligatoire un chiffre d’affaires inventé.",
         "Lier les résultats autorisés aux offres, missions et commandes existantes ; clôturer, prolonger ou réorienter avec explication."
       ],
-      "integrationMeaning": "PRODUCT_CAPABILITY_WITH_EXPLICIT_ACCEPTANCE_CRITERIA"
+      "integrationMeaning": "PRODUCT_CAPABILITY_WITH_EXPLICIT_ACCEPTANCE_CRITERIA",
+      "evidence": [
+        "docs/release/DELIVERY-2026-10-23-PRODUCTIVE-COMMUNITY.md"
+      ],
+      "limits": "Initial bounded implementation under same canonical owners. Same-source release pending; contact-specific notebooks, cross-group solution adaptation, automated employment reminders and multi-party launch programs remain future variants."
     },
     {
       "id": "A20",
@@ -756,7 +784,7 @@
     {
       "id": "I05",
       "title": "Le parcours productif personnel sur une période choisie · propriétaire L19",
-      "status": "PLANNED_OR_REQUIRES_DETAILED_COVERAGE",
+      "status": "IMPLEMENTED_UNVERIFIED",
       "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md",
       "targetLots": [
         19
@@ -768,7 +796,11 @@
         "Décomposer en actions datées, expliquer les suggestions et permettre leur modification.",
         "Mesurer actions achevées et résultats vérifiés séparément ; réviser le plan au bilan."
       ],
-      "integrationMeaning": "PRODUCT_CAPABILITY_WITH_EXPLICIT_ACCEPTANCE_CRITERIA"
+      "integrationMeaning": "PRODUCT_CAPABILITY_WITH_EXPLICIT_ACCEPTANCE_CRITERIA",
+      "evidence": [
+        "docs/release/DELIVERY-2026-10-23-PRODUCTIVE-COMMUNITY.md"
+      ],
+      "limits": "Initial bounded implementation under same canonical owners. Same-source release pending; contact-specific notebooks, cross-group solution adaptation, automated employment reminders and multi-party launch programs remain future variants."
     },
     {
       "id": "I06",
@@ -873,7 +905,7 @@
     {
       "id": "I11",
       "title": "Le laboratoire « que se passe-t-il si… » · propriétaire L07",
-      "status": "IMPLEMENTED_UNVERIFIED",
+      "status": "DELIVERED_WITH_DOCUMENTED_LIMITS",
       "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md",
       "targetLots": [
         7
@@ -887,9 +919,10 @@
       ],
       "integrationMeaning": "PRODUCT_CAPABILITY_WITH_EXPLICIT_ACCEPTANCE_CRITERIA",
       "evidence": [
+        "docs/release/evidence/FINANCIAL-EXPLANATIONS-PUBLIC-2026-10-22.json",
         "docs/release/DELIVERY-2026-10-22-FINANCIAL-EXPLANATIONS.md"
       ],
-      "limits": "Authorized initial read/simulation scope; full same-SHA deployment qualification pending. Historical missing inputs are not invented, no financial posting."
+      "limits": "Authorized canonical read projections and hypothetical calculations; no financial commands. XAF,100movements/page,20recent closures,1000declared deposits,120coefficients,24loan periods,120tontine rounds. Missing historical inputs not invented. Independent browser rerun outcome tracked separately from successful full delivery."
     },
     {
       "id": "I12",
@@ -911,7 +944,7 @@
     {
       "id": "I13",
       "title": "Le scénario de résistance d’une tontine · propriétaire L09",
-      "status": "IMPLEMENTED_UNVERIFIED",
+      "status": "DELIVERED_WITH_DOCUMENTED_LIMITS",
       "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md",
       "targetLots": [
         9
@@ -925,9 +958,10 @@
       ],
       "integrationMeaning": "PRODUCT_CAPABILITY_WITH_EXPLICIT_ACCEPTANCE_CRITERIA",
       "evidence": [
+        "docs/release/evidence/FINANCIAL-EXPLANATIONS-PUBLIC-2026-10-22.json",
         "docs/release/DELIVERY-2026-10-22-FINANCIAL-EXPLANATIONS.md"
       ],
-      "limits": "Authorized initial read/simulation scope; full same-SHA deployment qualification pending. Historical missing inputs are not invented, no financial posting."
+      "limits": "Authorized canonical read projections and hypothetical calculations; no financial commands. XAF,100movements/page,20recent closures,1000declared deposits,120coefficients,24loan periods,120tontine rounds. Missing historical inputs not invented. Independent browser rerun outcome tracked separately from successful full delivery."
     },
     {
       "id": "I14",
@@ -949,7 +983,7 @@
     {
       "id": "I15",
       "title": "La carte des questions, preuves et contradictions · propriétaire L18",
-      "status": "PLANNED_OR_REQUIRES_DETAILED_COVERAGE",
+      "status": "IMPLEMENTED_UNVERIFIED",
       "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md",
       "targetLots": [
         18
@@ -961,7 +995,11 @@
         "Détecter d’abord des contradictions structurées simples : date, montant, identité ou référence.",
         "Soumettre les divergences à un lecteur autorisé et conserver sa conclusion motivée."
       ],
-      "integrationMeaning": "PRODUCT_CAPABILITY_WITH_EXPLICIT_ACCEPTANCE_CRITERIA"
+      "integrationMeaning": "PRODUCT_CAPABILITY_WITH_EXPLICIT_ACCEPTANCE_CRITERIA",
+      "evidence": [
+        "docs/release/DELIVERY-2026-10-23-PRODUCTIVE-COMMUNITY.md"
+      ],
+      "limits": "Initial bounded implementation under same canonical owners. Same-source release pending; contact-specific notebooks, cross-group solution adaptation, automated employment reminders and multi-party launch programs remain future variants."
     },
     {
       "id": "I16",
@@ -983,7 +1021,7 @@
     {
       "id": "I17",
       "title": "La première mission accompagnée · propriétaire L16",
-      "status": "PLANNED_OR_REQUIRES_DETAILED_COVERAGE",
+      "status": "IMPLEMENTED_UNVERIFIED",
       "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md",
       "targetLots": [
         16
@@ -995,7 +1033,11 @@
         "Affecter un mentor volontaire et prévoir correction puis contestation.",
         "Produire une preuve de réalisation limitée au travail effectivement observé."
       ],
-      "integrationMeaning": "PRODUCT_CAPABILITY_WITH_EXPLICIT_ACCEPTANCE_CRITERIA"
+      "integrationMeaning": "PRODUCT_CAPABILITY_WITH_EXPLICIT_ACCEPTANCE_CRITERIA",
+      "evidence": [
+        "docs/release/DELIVERY-2026-10-23-PRODUCTIVE-COMMUNITY.md"
+      ],
+      "limits": "Initial bounded implementation under same canonical owners. Same-source release pending; contact-specific notebooks, cross-group solution adaptation, automated employment reminders and multi-party launch programs remain future variants."
     },
     {
       "id": "I18",
@@ -1044,7 +1086,7 @@
     {
       "id": "I20",
       "title": "La bibliothèque de solutions éprouvées dans leur contexte · propriétaire L14",
-      "status": "PLANNED_OR_REQUIRES_DETAILED_COVERAGE",
+      "status": "IMPLEMENTED_UNVERIFIED",
       "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md",
       "targetLots": [
         14
@@ -1056,7 +1098,11 @@
         "Faire relire méthode, conditions et résultat ; conserver les expériences contradictoires.",
         "Permettre une adaptation dans un autre groupe avec retour d’expérience, sans modifier la fiche originale."
       ],
-      "integrationMeaning": "PRODUCT_CAPABILITY_WITH_EXPLICIT_ACCEPTANCE_CRITERIA"
+      "integrationMeaning": "PRODUCT_CAPABILITY_WITH_EXPLICIT_ACCEPTANCE_CRITERIA",
+      "evidence": [
+        "docs/release/DELIVERY-2026-10-23-PRODUCTIVE-COMMUNITY.md"
+      ],
+      "limits": "Initial bounded implementation under same canonical owners. Same-source release pending; contact-specific notebooks, cross-group solution adaptation, automated employment reminders and multi-party launch programs remain future variants."
     },
     {
       "id": "T01",

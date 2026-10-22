@@ -16,6 +16,11 @@ const now=()=>new Date().toISOString();
 export class CommunityRealtimeStore{
   constructor(public db:D1DatabaseLike){}
 
+  async messageReference(tenantId:string,groupId:string,hubId:string,id:string){
+    const r=await this.db.prepare("SELECT id,title,body,edited_at,moderation_state FROM community_messages WHERE tenant_id=? AND group_id=? AND hub_id=? AND id=? AND moderation_state='PUBLISHED'").bind(tenantId,groupId,hubId,id).first<Row>();
+    return r?{id:String(r.id),title:String(r.title??''),body:String(r.body),editedAt:String(r.edited_at??''),moderationState:String(r.moderation_state)}:undefined;
+  }
+
   async createMessage(input:{tenantId:string;groupId:string;hubId:string;authorId:string;kind?:ForumMessage['kind'];title?:string;body:string;parentId?:string}):Promise<ForumMessage>{
     const body=clean(input.body,10000);if(!body)throw new Error('COMMUNITY_MESSAGE_REQUIRED');
     const kind=input.kind??'DISCUSSION';if(!['DISCUSSION','ANNOUNCEMENT','OFFER','REQUEST'].includes(kind))throw new Error('INVALID_COMMUNITY_POST_KIND');

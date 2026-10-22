@@ -1926,3 +1926,13 @@ body.ui-mode-assisted .eco-workbench :is(button,p,small,span,label){font-size:15
 .finance-proof-reference{overflow-wrap:anywhere;font-size:.85em;}
 .finance-explanations textarea{width:100%;font-family:ui-monospace,monospace;}
 @media(max-width:520px){.finance-explain-tabs button{flex:1 1 45%;}.finance-explanations .actions{flex-wrap:wrap;}.finance-explanations .actions button{max-width:100%;white-space:normal;}}
+
+/* Productive journeys: locally scoped, no financial-table overrides. */
+.productive-community{min-width:0;max-width:100%;}
+.productive-community .productive-text{white-space:pre-wrap;overflow-wrap:anywhere;}
+.productive-community .productive-notebook-row{display:grid;grid-template-columns:minmax(100px,1fr) minmax(160px,2fr) minmax(130px,1fr);gap:10px;padding:12px;border:1px solid var(--line,#d7e2de);border-radius:12px;}
+.productive-community input,.productive-community select,.productive-community textarea{min-width:0;max-width:100%;}
+.productive-community nav{display:flex;flex-wrap:wrap;gap:8px;}
+.productive-community nav [aria-pressed=true]{background:var(--primary,#17684f);color:#fff;}
+.productive-community .item{min-width:0;overflow-wrap:anywhere;}
+@media(max-width:760px){.productive-community .productive-notebook-row{grid-template-columns:minmax(0,1fr);}.productive-community .form-grid{grid-template-columns:minmax(0,1fr);}.productive-community nav button{flex:1 1 135px;white-space:normal;}}
