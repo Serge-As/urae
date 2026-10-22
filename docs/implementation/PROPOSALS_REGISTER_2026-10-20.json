@@ -15,7 +15,19 @@
       "limits": "Automated delivery evidence, not field acceptance or completion of all future refinements.",
       "targetLots": [
         1
-      ]
+      ],
+      "ownerLot": 1,
+      "acceptanceCriteria": [
+        "Accès direct, actualisation et Retour aboutissent au même objet et respectent les droits.",
+        "Menu, dialogue et mascotte ne recouvrent aucun bouton de validation à 360, 768 et 1366 pixels ; le zoom à 200 % reste utilisable.",
+        "Un brouillon, son montant et le focus survivent à une ouverture de menu ; les trois modes sont perceptiblement distincts."
+      ],
+      "integrationPlan": [
+        "Inventorier les routes réellement autorisées et leurs libellés ; bâtir une recherche locale de fonctions avec synonymes français et anglais, sans appel réseau à chaque lettre.",
+        "Créer une barre de contexte, des favoris choisis et un menu complet consultable. Réutiliser les actions existantes ; un raccourci ne doit pas créer un deuxième formulaire métier.",
+        "Fixer des dimensions cohérentes pour compact, sénior et assisté ; adapter largeur des cellules, espaces et libellés. Tester les composants sur les écrans actuels avant toute généralisation des styles."
+      ],
+      "integrationMeaning": "PRODUCT_CAPABILITY_WITH_EXPLICIT_ACCEPTANCE_CRITERIA"
     },
     {
       "id": "A02",
@@ -28,7 +40,19 @@
       "limits": "Automated delivery evidence, not field acceptance or completion of all future refinements.",
       "targetLots": [
         2
-      ]
+      ],
+      "ownerLot": 2,
+      "acceptanceCriteria": [
+        "Un indicateur financier égale sa source canonique ; aucun solde n’est recalculé indépendamment dans le cockpit.",
+        "Après changement de compte, aucun favori privé ni historique du précédent utilisateur n’apparaît.",
+        "Une source absente laisse les autres cartes utilisables et indique précisément ce qui manque."
+      ],
+      "integrationPlan": [
+        "Assembler des projections en lecture seule depuis les propriétaires existants ; séparer état confirmé, intention locale et information indisponible.",
+        "Classer les cartes avec des règles simples : échéance, mandat, blocage et choix personnels. Permettre de masquer, épingler ou réinitialiser une recommandation.",
+        "Mémoriser des références de reprise par utilisateur et groupe ; recontrôler les droits lors du retour. Regrouper les lectures nécessaires, sans actualiser tous les modules en permanence."
+      ],
+      "integrationMeaning": "PRODUCT_CAPABILITY_WITH_EXPLICIT_ACCEPTANCE_CRITERIA"
     },
     {
       "id": "A03",
@@ -42,7 +66,19 @@
         "docs/release/evidence/GROUPS-GOVERNANCE-TRUST-PUBLIC-2026-10-22.json",
         "docs/release/DELIVERY-2026-10-22-GROUPS-GOVERNANCE-TRUST.md"
       ],
-      "limits": "10 steps/fictional canonical simulation/scoped optional draft and same-project Kit recovery. No raw identity files or atomic cross-tab lock. Field acceptance pending."
+      "limits": "10 steps/fictional canonical simulation/scoped optional draft and same-project Kit recovery. No raw identity files or atomic cross-tab lock. Field acceptance pending.",
+      "ownerLot": 3,
+      "acceptanceCriteria": [
+        "Une interruption à chaque étape reprend les choix et la version sans créer deux groupes.",
+        "Deux personnes portant le même nom ou partageant un téléphone ne sont jamais fusionnées automatiquement.",
+        "Le règlement final correspond aux choix confirmés ; une invitation expirée ne donne pas accès au groupe."
+      ],
+      "integrationPlan": [
+        "Ajouter à chaque étape un exemple local sur données fictives et une explication courte des conséquences ; garder le modèle et sa version.",
+        "Enregistrer le brouillon du Kit et afficher les étapes complètes, incomplètes et incohérentes. Les suggestions restent séparées des règles adoptées.",
+        "Introduire un contrôle des ressemblances de profils avant rattachement, avec examen humain des preuves et conservation des identifiants historiques."
+      ],
+      "integrationMeaning": "PRODUCT_CAPABILITY_WITH_EXPLICIT_ACCEPTANCE_CRITERIA"
     },
     {
       "id": "A04",
@@ -56,7 +92,19 @@
         "docs/release/evidence/GROUPS-GOVERNANCE-TRUST-PUBLIC-2026-10-22.json",
         "docs/release/DELIVERY-2026-10-22-GROUPS-GOVERNANCE-TRUST.md"
       ],
-      "limits": "Adopted closed decision tasks, current assignee, immutable reports/review with evidence. No automatic finance, mandate, federation or succession effects."
+      "limits": "Adopted closed decision tasks, current assignee, immutable reports/review with evidence. No automatic finance, mandate, federation or succession effects.",
+      "ownerLot": 4,
+      "acceptanceCriteria": [
+        "Un vote répété, une délégation expirée et un quorum absent donnent les résultats prévus.",
+        "L’adoption d’une décision ne décaisse pas automatiquement une somme.",
+        "Le retrait d’un mandat ferme les futurs accès et conserve l’historique légitime."
+      ],
+      "integrationPlan": [
+        "Créer une fiche de décision avec objet, version des règles, électeurs admissibles, quorum, échéance et preuves.",
+        "Présenter le résultat, les réserves, les délégations et les recours sans réécrire les votes. Affecter une tâche d’exécution avec responsable et état.",
+        "Pour les effets métier, transmettre une référence de décision au propriétaire compétent ; distinguer décision adoptée, commande demandée et effet réellement enregistré."
+      ],
+      "integrationMeaning": "PRODUCT_CAPABILITY_WITH_EXPLICIT_ACCEPTANCE_CRITERIA"
     },
     {
       "id": "A05",
@@ -69,43 +117,119 @@
       "limits": "Automated delivery evidence, not field acceptance or completion of all future refinements.",
       "targetLots": [
         5
-      ]
+      ],
+      "ownerLot": 5,
+      "acceptanceCriteria": [
+        "Sur plusieurs largeurs et nombres de rubriques, leur union est complète, sans doublon ni rubrique inaccessible ; les totaux généraux couvrent toutes les parties.",
+        "Deux navigateurs, coupure et reconnexion : pas de perte, pas de double effet, conflit visible et présence qui expire.",
+        "Pointer B, tabuler vers B, puis saisir rapidement produit une synthèse A unique et conserve exactement la première valeur de B."
+      ],
+      "integrationPlan": [
+        "Calculer la capacité depuis la largeur disponible, les colonnes fixes et la largeur minimale lisible d’une rubrique ; répartir toutes les rubriques, avec titres et totaux clairement distingués.",
+        "Capturer le changement de membre par pointeur ET clavier ; persister une intention de synthèse liée à la révision de A avant de basculer le contexte. Le traitement réseau ne doit pas bloquer ni avaler le premier caractère de B.",
+        "Conserver un seul cycle de commande existant : brouillon local, demande en attente, résultat serveur ou conflit. Afficher la présence avec expiration, sans assimiler « écrit » à « validé »."
+      ],
+      "integrationMeaning": "PRODUCT_CAPABILITY_WITH_EXPLICIT_ACCEPTANCE_CRITERIA"
     },
     {
       "id": "A06",
       "title": "Un solde que l’on peut expliquer et rapprocher · lot 06",
-      "status": "PLANNED_OR_REQUIRES_DETAILED_COVERAGE",
+      "status": "IMPLEMENTED_UNVERIFIED",
       "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md",
       "targetLots": [
         6
-      ]
+      ],
+      "ownerLot": 6,
+      "acceptanceCriteria": [
+        "La somme des mouvements confirmés et des ajustements autorisés explique le total à la précision monétaire définie.",
+        "Rejouer une commande ne crée qu’un effet ; une annulation conserve la référence originale.",
+        "La même période donne les mêmes montants sur la fiche membre, la séance et l’export."
+      ],
+      "integrationPlan": [
+        "Lire la projection canonique puis présenter une décomposition filtrable par période, rubrique et état, sans nouveau moteur de solde.",
+        "Relier chaque mouvement à sa commande, sa séance et son éventuelle contre-écriture ; afficher les montants locaux en attente à part.",
+        "Créer un écran de rapprochement qui compare les vues autorisées et produit un dossier d’écart ; une réparation passe par le parcours existant, avec motif et trace."
+      ],
+      "integrationMeaning": "PRODUCT_CAPABILITY_WITH_EXPLICIT_ACCEPTANCE_CRITERIA",
+      "evidence": [
+        "docs/release/DELIVERY-2026-10-22-FINANCIAL-EXPLANATIONS.md"
+      ],
+      "limits": "Authorized initial read/simulation scope; full same-SHA deployment qualification pending. Historical missing inputs are not invented, no financial posting."
     },
     {
       "id": "A07",
       "title": "Un prêt expliqué échéance par échéance et composante par composante · lot 07",
-      "status": "PLANNED_OR_REQUIRES_DETAILED_COVERAGE",
+      "status": "IMPLEMENTED_UNVERIFIED",
       "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md",
       "targetLots": [
         7
-      ]
+      ],
+      "ownerLot": 7,
+      "acceptanceCriteria": [
+        "Cas de paiement partiel, anticipé, date ancienne autorisée et remboursement répété : dette et Ledger concordent.",
+        "Une règle modifiée entre aperçu et validation impose une nouvelle confirmation ou une erreur compréhensible.",
+        "Le garant ne peut consulter les autres dettes privées du membre."
+      ],
+      "integrationPlan": [
+        "Construire une frise des événements à partir du prêt existant, en indiquant la version des règles et les dates de valeur.",
+        "Ajouter une prévisualisation en lecture seule par le moteur canonique, puis revalider les paramètres lors de la commande réelle.",
+        "Présenter garanties, échéances manquées et recours dans des panneaux séparés ; les accès des garants sont limités aux informations nécessaires."
+      ],
+      "integrationMeaning": "PRODUCT_CAPABILITY_WITH_EXPLICIT_ACCEPTANCE_CRITERIA",
+      "evidence": [
+        "docs/release/DELIVERY-2026-10-22-FINANCIAL-EXPLANATIONS.md"
+      ],
+      "limits": "Authorized initial read/simulation scope; full same-SHA deployment qualification pending. Historical missing inputs are not invented, no financial posting."
     },
     {
       "id": "A08",
       "title": "Un reçu détaillé de répartition des rendements · lot 08",
-      "status": "PLANNED_OR_REQUIRES_DETAILED_COVERAGE",
+      "status": "IMPLEMENTED_UNVERIFIED",
       "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md",
       "targetLots": [
         8
-      ]
+      ],
+      "ownerLot": 8,
+      "acceptanceCriteria": [
+        "La somme des parts et du reliquat égale exactement le montant distribuable.",
+        "Ordre différent des lectures, même jeu d’entrées et même version produisent le même résultat.",
+        "Une reprise après interruption ne distribue pas deux fois ; une correction conserve le premier calcul."
+      ],
+      "integrationPlan": [
+        "Conserver une photographie versionnée des entrées de calcul : périodes, mouvements admissibles, arrondis et règle de reliquat.",
+        "Afficher aperçu, explication individuelle et distribution globale ; la confirmation reste chez le propriétaire de l’épargne.",
+        "Émettre un reçu avec références et méthode, puis permettre un contrôle sur copie sans rejouer la distribution."
+      ],
+      "integrationMeaning": "PRODUCT_CAPABILITY_WITH_EXPLICIT_ACCEPTANCE_CRITERIA",
+      "evidence": [
+        "docs/release/DELIVERY-2026-10-22-FINANCIAL-EXPLANATIONS.md"
+      ],
+      "limits": "Authorized initial read/simulation scope; full same-SHA deployment qualification pending. Historical missing inputs are not invented, no financial posting."
     },
     {
       "id": "A09",
       "title": "Un calendrier de tontine et de solidarité compréhensible · lot 09",
-      "status": "PLANNED_OR_REQUIRES_DETAILED_COVERAGE",
+      "status": "IMPLEMENTED_UNVERIFIED",
       "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md",
       "targetLots": [
         9
-      ]
+      ],
+      "ownerLot": 9,
+      "acceptanceCriteria": [
+        "Les vues membre et gestionnaire correspondent au tour canonique et au règlement adopté.",
+        "Un décalage proposé ne modifie aucune attribution tant qu’il n’est pas autorisé.",
+        "Une pièce sensible n’apparaît ni dans le calendrier partagé ni dans une notification publique."
+      ],
+      "integrationPlan": [
+        "Projeter les tours et engagements existants sur un calendrier, avec distinction confirmé, prévu et en attente.",
+        "Présenter pour chaque aide les critères, les pièces manquantes, le décideur et le recours ; masquer les pièces médicales ou privées aux personnes non habilitées.",
+        "Ajouter une simulation de calendrier séparée de l’exécution ; toute modification réelle suit les décisions et validations existantes."
+      ],
+      "integrationMeaning": "PRODUCT_CAPABILITY_WITH_EXPLICIT_ACCEPTANCE_CRITERIA",
+      "evidence": [
+        "docs/release/DELIVERY-2026-10-22-FINANCIAL-EXPLANATIONS.md"
+      ],
+      "limits": "Authorized initial read/simulation scope; full same-SHA deployment qualification pending. Historical missing inputs are not invented, no financial posting."
     },
     {
       "id": "A10",
@@ -121,7 +245,19 @@
       "limits": "Canonical group quotes/order/returns and personal shops/mandates/buyer receipt/support reference qualified. Future personal quote/procurement variants are not newly delivered. Transversal SAV L25; no real payment/reimbursement inferred.",
       "targetLots": [
         10
-      ]
+      ],
+      "ownerLot": 10,
+      "acceptanceCriteria": [
+        "Deux acheteurs demandant le dernier article ne reçoivent pas chacun une réservation confirmée.",
+        "Une livraison partielle, un retour et un double clic maintiennent les quantités et montants cohérents.",
+        "Une offre retirée cesse d’être commandable depuis Marketplace, NOW et une ancienne notification."
+      ],
+      "integrationPlan": [
+        "Définir les transitions permises à partir du moteur de commande existant ; distinguer vendeur, gestionnaire de boutique, acheteur et responsable du groupe.",
+        "Ajouter variantes, unités, disponibilité datée, conditions de livraison et devis lisible. Utiliser le propriétaire du stock pour toute réservation.",
+        "Conserver les preuves de livraison et l’historique du retour ; ouvrir un dossier SAV référencé sans dupliquer la commande ni la donnée de paiement."
+      ],
+      "integrationMeaning": "PRODUCT_CAPABILITY_WITH_EXPLICIT_ACCEPTANCE_CRITERIA"
     },
     {
       "id": "A11",
@@ -135,7 +271,19 @@
         "docs/release/evidence/BUSINESS-VALUE-NETWORK-PUBLIC-2026-10-22.json",
         "docs/release/DELIVERY-2026-10-22-BUSINESS-VALUE-NETWORK.md"
       ],
-      "limits": "Private immutable hypotheses/observations, two prices, current canonical deliveries net of returns, declared costs/cash kept distinct, voluntary sanitized price draft.20 order references/100 recent files; no certified accounting, I16 resource booking or automatic publication."
+      "limits": "Private immutable hypotheses/observations, two prices, current canonical deliveries net of returns, declared costs/cash kept distinct, voluntary sanitized price draft.20 order references/100 recent files; no certified accounting, I16 resource booking or automatic publication.",
+      "ownerLot": 11,
+      "acceptanceCriteria": [
+        "Un coût inconnu reste inconnu ; il n’est pas remplacé par zéro dans un bénéfice présenté comme acquis.",
+        "Le passage d’idée à offre ne publie ni coordonnées ni prix sans confirmation.",
+        "Un retour de marchandise est intégré au bilan à partir de la commande canonique."
+      ],
+      "integrationPlan": [
+        "Créer une fiche d’expérience : client visé, problème, offre, hypothèses de coût, seuil de décision et durée choisie.",
+        "Importer par référence les commandes autorisées et permettre une saisie manuelle explicitement déclarative des coûts absents ; distinguer marge brute, trésorerie et temps de travail.",
+        "Produire un bilan simple : confirmé, non confirmé et prochaine expérience. Exporter le dossier et proposer une publication volontaire vers la boutique ou les opportunités."
+      ],
+      "integrationMeaning": "PRODUCT_CAPABILITY_WITH_EXPLICIT_ACCEPTANCE_CRITERIA"
     },
     {
       "id": "A12",
@@ -149,20 +297,45 @@
         "docs/release/evidence/BUSINESS-VALUE-NETWORK-PUBLIC-2026-10-22.json",
         "docs/release/DELIVERY-2026-10-22-BUSINESS-VALUE-NETWORK.md"
       ],
-      "limits": "Existing hard-constraint matching reused for current aggregate needs, with unknown costs and explicit expiration. No duplicated inventory or automatic procurement/order commitment; I06 Harvest not included."
+      "limits": "Existing hard-constraint matching reused for current aggregate needs, with unknown costs and explicit expiration. No duplicated inventory or automatic procurement/order commitment; I06 Harvest not included.",
+      "ownerLot": 12,
+      "acceptanceCriteria": [
+        "Une condition indispensable absente ne devient pas satisfaite grâce à un bon score global.",
+        "Un retrait de consentement supprime les futures recommandations et invalide les références exposées.",
+        "Un besoin sans réponse propose de corriger les critères, sans inventer des fournisseurs."
+      ],
+      "integrationPlan": [
+        "Décrire chaque besoin avec type, unité, quantité, zone approximative, échéance et contraintes indispensables ; séparer préférences et exclusions.",
+        "Commencer par des règles déterministes et un index local de données autorisées. Éliminer les offres expirées ; produire une explication du rapprochement.",
+        "Créer une proposition que les participants peuvent accepter, refuser ou corriger. Enregistrer le résultat pour améliorer les critères, avec possibilité d’effacer les préférences."
+      ],
+      "integrationMeaning": "PRODUCT_CAPABILITY_WITH_EXPLICIT_ACCEPTANCE_CRITERIA"
     },
     {
       "id": "A13",
       "title": "Des offres NOW réellement fraîches et une logistique de proximité · lot 13",
-      "status": "IMPLEMENTED_UNVERIFIED",
+      "status": "DELIVERED_WITH_DOCUMENTED_LIMITS",
       "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md",
       "targetLots": [
         13
       ],
       "evidence": [
+        "docs/release/evidence/TEMPORAL-COMMERCE-PILOTS-PUBLIC-2026-10-22.json",
         "docs/release/DELIVERY-2026-10-22-TEMPORAL-COMMERCE-PILOTS.md"
       ],
-      "limits": "Bounded initial scope; same-SHA deployment and field acceptance not established yet. See CIR for distinct undeveloped variants."
+      "limits": "Canonical dated group/shop availability and reservation, closed pickup and explicit local terms;100 recent items. No certified location, national map or transport.",
+      "ownerLot": 13,
+      "acceptanceCriteria": [
+        "Une offre expirée est refusée côté serveur même si l’ancien écran reste ouvert.",
+        "Deux réservations concurrentes respectent le stock canonique.",
+        "Une panne de carte ou de géolocalisation n’empêche pas la consultation ni le retrait convenu."
+      ],
+      "integrationPlan": [
+        "Ajouter une durée de validité et une date de dernière confirmation, avec expiration automatique à la lecture même si aucun traitement programmé n’a tourné.",
+        "Référencer le stock et les commandes existants ; afficher les créneaux de retrait et les engagements du vendeur.",
+        "Présenter une liste locale filtrable avant d’ajouter une carte. Réutiliser des zones choisies par l’utilisateur, sans géolocalisation permanente."
+      ],
+      "integrationMeaning": "PRODUCT_CAPABILITY_WITH_EXPLICIT_ACCEPTANCE_CRITERIA"
     },
     {
       "id": "A14",
@@ -171,7 +344,19 @@
       "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md",
       "targetLots": [
         14
-      ]
+      ],
+      "ownerLot": 14,
+      "acceptanceCriteria": [
+        "Une publication privée n’entre pas dans l’index public ni dans le résumé d’un autre groupe.",
+        "La suppression ou correction d’une source signale que la fiche solution doit être revue.",
+        "La modération conserve motif et recours ; une action externe exige sa propre validation."
+      ],
+      "integrationPlan": [
+        "Organiser les discussions par sujet et objet métier, en conservant recherche, suivi et modération.",
+        "Permettre une synthèse rédigée ou assistée, relue avant publication, avec liens vers les éléments probants et mention des désaccords.",
+        "Transformer une conclusion en tâche ou proposition via le propriétaire concerné ; une réponse de forum ne vaut ni décision de groupe ni avis financier certifié."
+      ],
+      "integrationMeaning": "PRODUCT_CAPABILITY_WITH_EXPLICIT_ACCEPTANCE_CRITERIA"
     },
     {
       "id": "A15",
@@ -180,7 +365,19 @@
       "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md",
       "targetLots": [
         15
-      ]
+      ],
+      "ownerLot": 15,
+      "acceptanceCriteria": [
+        "La prévisualisation publique égale les données réellement accessibles sans compte.",
+        "Une compétence non vérifiée n’obtient pas le même libellé qu’une preuve contrôlée.",
+        "Une modification de visibilité retire les données des résultats et caches concernés."
+      ],
+      "integrationPlan": [
+        "Composer un carnet avec compétences, réalisations, besoins, disponibilités et preuves facultatives ; distinguer déclaration et vérification.",
+        "Définir une visibilité par rubrique : privé, groupe, contact choisi ou public. Prévisualiser exactement ce que verra chaque audience.",
+        "Relier Discover au carnet et aux offres en cours ; permettre une suspension temporaire sans supprimer l’historique privé."
+      ],
+      "integrationMeaning": "PRODUCT_CAPABILITY_WITH_EXPLICIT_ACCEPTANCE_CRITERIA"
     },
     {
       "id": "A16",
@@ -189,7 +386,19 @@
       "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md",
       "targetLots": [
         16
-      ]
+      ],
+      "ownerLot": 16,
+      "acceptanceCriteria": [
+        "Un badge renvoie à sa preuve et peut être révoqué avec motif.",
+        "La même personne ne s’autoattribue pas une validation nécessitant un tiers.",
+        "Une contribution ne déclenche ni dette ni cashback sans le moteur et la règle correspondants."
+      ],
+      "integrationPlan": [
+        "Décrire chaque compétence par des critères observables, des exemples et les pièces acceptables.",
+        "Créer des missions d’essai sans accès aux données réelles ; prévoir relecture, correction et contestation du résultat.",
+        "Délivrer une preuve avec émetteur, critères, date et statut de validité ; distinguer contribution bénévole, compétence et rémunération commerciale."
+      ],
+      "integrationMeaning": "PRODUCT_CAPABILITY_WITH_EXPLICIT_ACCEPTANCE_CRITERIA"
     },
     {
       "id": "A17",
@@ -198,7 +407,19 @@
       "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md",
       "targetLots": [
         17
-      ]
+      ],
+      "ownerLot": 17,
+      "acceptanceCriteria": [
+        "Deux personnes ne reçoivent pas simultanément le même créneau exclusif confirmé.",
+        "Un recruteur ne consulte que les candidatures qui lui sont autorisées.",
+        "Une offre close ne reçoit pas de candidature confirmée depuis une page périmée."
+      ],
+      "integrationPlan": [
+        "Structurer les annonces, distinguer emploi, prestation et stage, et exiger les conditions essentielles avant publication.",
+        "Créer un suivi des candidatures par étapes avec raison de refus communicable, pièces minimales et contrôle des accès.",
+        "Proposer des disponibilités et un rendez-vous confirmé côté serveur ; les rappels passent d’abord par l’Inbox Eco."
+      ],
+      "integrationMeaning": "PRODUCT_CAPABILITY_WITH_EXPLICIT_ACCEPTANCE_CRITERIA"
     },
     {
       "id": "A18",
@@ -207,7 +428,19 @@
       "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md",
       "targetLots": [
         18
-      ]
+      ],
+      "ownerLot": 18,
+      "acceptanceCriteria": [
+        "Un accès expiré ou retiré interdit une nouvelle lecture serveur et ne révèle pas le nom d’un document confidentiel.",
+        "Deux versions contradictoires restent identifiables et n’obtiennent pas automatiquement un statut vérifié.",
+        "Le paquet exporté contient uniquement les pièces autorisées pour le destinataire."
+      ],
+      "integrationPlan": [
+        "Créer des sections de vérification avec question, réponse déclarée, pièce, périmètre et validité ; autoriser des états « absent », « fourni », « examiné » et « contesté ».",
+        "Accorder des accès par dossier, section et document, avec durée, journal et retrait ; produire des liens courts et contrôlés depuis le stockage existant.",
+        "Préparer une liste des questions non résolues et une exportation autorisée, avec versions des pièces et réserves."
+      ],
+      "integrationMeaning": "PRODUCT_CAPABILITY_WITH_EXPLICIT_ACCEPTANCE_CRITERIA"
     },
     {
       "id": "A19",
@@ -216,20 +449,45 @@
       "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md",
       "targetLots": [
         19
-      ]
+      ],
+      "ownerLot": 19,
+      "acceptanceCriteria": [
+        "Une ressource non confirmée n’apparaît pas comme un financement acquis.",
+        "Un participant peut consulter ses engagements, corriger son dossier et quitter selon les règles prévues.",
+        "Les indicateurs distinguent activité réalisée, résultat vérifié et simple déclaration."
+      ],
+      "integrationPlan": [
+        "Définir un programme avec conditions d’entrée, engagements réciproques, ressources réellement disponibles et critères de sortie.",
+        "Créer des jalons avec responsable, preuve attendue et révision possible ; ne pas rendre obligatoire un chiffre d’affaires inventé.",
+        "Lier les résultats autorisés aux offres, missions et commandes existantes ; clôturer, prolonger ou réorienter avec explication."
+      ],
+      "integrationMeaning": "PRODUCT_CAPABILITY_WITH_EXPLICIT_ACCEPTANCE_CRITERIA"
     },
     {
       "id": "A20",
       "title": "AdManager et intelligence de marché à budget maîtrisé · lot 20",
-      "status": "IMPLEMENTED_UNVERIFIED",
+      "status": "DELIVERED_WITH_DOCUMENTED_LIMITS",
       "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md",
       "targetLots": [
         20
       ],
       "evidence": [
+        "docs/release/evidence/TEMPORAL-COMMERCE-PILOTS-PUBLIC-2026-10-22.json",
         "docs/release/DELIVERY-2026-10-22-TEMPORAL-COMMERCE-PILOTS.md"
       ],
-      "limits": "Bounded initial scope; same-SHA deployment and field acceptance not established yet. See CIR for distinct undeveloped variants."
+      "limits": "Free moderated internal pilots with CAS caps, live consent, viewport-confirmed views and20 authorized canonical orders; contact is intent, delivered value is not cash. No billing, external advertising or rewards.",
+      "ownerLot": 20,
+      "acceptanceCriteria": [
+        "Un rechargement répété ne produit pas plusieurs conversions ; une commande annulée est distinguée.",
+        "Un plafond configuré bloque les nouvelles dépenses si une phase payante est autorisée ultérieurement.",
+        "Un faible échantillon n’est pas présenté comme le prix certain du marché et ne révèle pas un vendeur isolé."
+      ],
+      "integrationPlan": [
+        "Définir des emplacements internes et des règles de visibilité ; lancer le pilote sans achat publicitaire externe ni facturation automatique.",
+        "Mesurer les événements utiles avec déduplication, période d’attribution et consentement approprié ; écarter les tests et les événements manifestement dupliqués.",
+        "Afficher des agrégats de prix et demande lorsque l’échantillon le permet ; conserver unité, date, qualité et nombre d’observations."
+      ],
+      "integrationMeaning": "PRODUCT_CAPABILITY_WITH_EXPLICIT_ACCEPTANCE_CRITERIA"
     },
     {
       "id": "A21",
@@ -243,7 +501,19 @@
         "docs/release/evidence/GROUPS-GOVERNANCE-TRUST-PUBLIC-2026-10-22.json",
         "docs/release/DELIVERY-2026-10-22-GROUPS-GOVERNANCE-TRUST.md"
       ],
-      "limits": "Dated limited assertions; current rights, withdrawal and expiry revalidated. Human manager review is not institutional certification. No identity-owner replacement."
+      "limits": "Dated limited assertions; current rights, withdrawal and expiry revalidated. Human manager review is not institutional certification. No identity-owner replacement.",
+      "ownerLot": 21,
+      "acceptanceCriteria": [
+        "Une assertion expirée ou révoquée disparaît des nouvelles vérifications publiques.",
+        "Un document privé reste inaccessible depuis le badge public.",
+        "La réputation ne confère aucun mandat financier ni droit administratif."
+      ],
+      "integrationPlan": [
+        "Définir un type d’assertion avec émetteur, sujet, preuve accessible selon droits, date, portée et expiration.",
+        "Prévoir revue contradictoire, suspension, révocation et recours ; séparer réputation déclarative et vérification documentée.",
+        "Permettre un partage sélectif du passeport ; recalculer la présentation depuis les assertions actives, sans score universel de valeur humaine."
+      ],
+      "integrationMeaning": "PRODUCT_CAPABILITY_WITH_EXPLICIT_ACCEPTANCE_CRITERIA"
     },
     {
       "id": "A22",
@@ -252,7 +522,19 @@
       "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md",
       "targetLots": [
         22
-      ]
+      ],
+      "ownerLot": 22,
+      "acceptanceCriteria": [
+        "Une information manquante n’est pas assimilée à une preuve d’escroquerie.",
+        "Une simulation affiche ses hypothèses et donne le même résultat à entrées identiques.",
+        "Un signalement privé ne devient pas public sans le parcours de modération prévu."
+      ],
+      "integrationPlan": [
+        "Créer des questionnaires versionnés et des fiches de signaux avec source, date et explication ; permettre « information inconnue ».",
+        "Calculer localement des scénarios pédagogiques de flux sur hypothèses explicites, sans conseiller un placement ni noter une personne comme coupable.",
+        "Produire un dossier privé de vérification, un plan de questions et un signalement modéré si l’utilisateur le demande ; offrir un recours aux personnes concernées."
+      ],
+      "integrationMeaning": "PRODUCT_CAPABILITY_WITH_EXPLICIT_ACCEPTANCE_CRITERIA"
     },
     {
       "id": "A23",
@@ -265,7 +547,19 @@
       "limits": "Automated delivery evidence, not field acceptance or completion of all future refinements.",
       "targetLots": [
         23
-      ]
+      ],
+      "ownerLot": 23,
+      "acceptanceCriteria": [
+        "Même intention en français et anglais : même cible et mêmes droits.",
+        "Une transcription ambiguë, un changement de membre et un montant incertain imposent une relecture ; rien n’est validé en silence.",
+        "Une instruction malveillante présente dans un document n’élargit pas les outils ni les autorisations de l’assistant."
+      ],
+      "integrationPlan": [
+        "Créer un registre d’intentions et de guides bilingues avec sources internes et contexte autorisé ; répondre « non disponible » quand l’information manque.",
+        "Relier les actions à des outils typés : lire, naviguer, préparer et demander confirmation. Recontrôler les droits au moment de l’exécution ; ne jamais laisser un texte généré construire une commande libre.",
+        "Ajouter facultativement des modèles locaux ou la dictée après mesure sur le matériel cible. Garder le clavier, le guide déterministe et un bouton d’effacement de la mémoire."
+      ],
+      "integrationMeaning": "PRODUCT_CAPABILITY_WITH_EXPLICIT_ACCEPTANCE_CRITERIA"
     },
     {
       "id": "A24",
@@ -279,7 +573,19 @@
         "docs/release/evidence/LOT24-NOTIFICATION-INBOX-PUBLIC-2026-10-21.json",
         "docs/release/DELIVERY-2026-10-21-LOT24-NOTIFICATION-INBOX.md"
       ],
-      "limits": "Same-source Linux qualification/delivery and31 hashes pass; Windows failures retained. No guaranteed external transport, automatic business completion, new polling or server pagination claim. Unknown waiting party remains explicit. Transversal SAV is L25; FIELD_ACCEPTED=NOT_ACCEPTED."
+      "limits": "Same-source Linux qualification/delivery and31 hashes pass; Windows failures retained. No guaranteed external transport, automatic business completion, new polling or server pagination claim. Unknown waiting party remains explicit. Transversal SAV is L25; FIELD_ACCEPTED=NOT_ACCEPTED.",
+      "ownerLot": 24,
+      "acceptanceCriteria": [
+        "Le même événement reçu plusieurs fois n’apparaît qu’une fois ; deux révisions distinctes restent distinguables.",
+        "Marquer lu n’approuve ni ne paie ; une ressource supprimée ou interdite n’est pas accessible via un ancien lien.",
+        "Hors ligne, le statut indique l’attente et ne prétend pas que le destinataire a reçu."
+      ],
+      "integrationPlan": [
+        "Définir un événement logique stable, ses destinataires autorisés et une règle de regroupement ; conserver séparément tentative de transport et résultat métier.",
+        "Construire des cartes résumées avec lien revalidé vers l’objet ; permettre préférences, silence temporaire et historique limité.",
+        "Acheminer d’abord dans l’Inbox intégrée ; ajouter une notification navigateur uniquement avec permission et sans présumer une disponibilité universelle."
+      ],
+      "integrationMeaning": "PRODUCT_CAPABILITY_WITH_EXPLICIT_ACCEPTANCE_CRITERIA"
     },
     {
       "id": "A25",
@@ -293,7 +599,19 @@
         "docs/release/evidence/LOT25-ECO-CARE-PUBLIC-2026-10-21.json",
         "docs/release/DELIVERY-2026-10-21-LOT25-ECO-CARE.md"
       ],
-      "limits": "Same-source qualification/delivery and33 public hashes passed. Group two-party prevention agreement is a standalone reference; no universal checkout insertion, guaranteed staffing, automatic reminder, recurring-causes analytics, binary evidence host, implicit financial correction or constant-cost server pagination. FIELD_ACCEPTED=NOT_ACCEPTED."
+      "limits": "Same-source qualification/delivery and33 public hashes passed. Group two-party prevention agreement is a standalone reference; no universal checkout insertion, guaranteed staffing, automatic reminder, recurring-causes analytics, binary evidence host, implicit financial correction or constant-cost server pagination. FIELD_ACCEPTED=NOT_ACCEPTED.",
+      "ownerLot": 25,
+      "acceptanceCriteria": [
+        "Un dossier non affecté apparaît dans une file responsable, sans faux délai garanti.",
+        "Un tiers ne consulte pas les pièces privées du litige.",
+        "Une résolution proposée peut être refusée ou rouverte selon les règles, sans effacer l’historique."
+      ],
+      "integrationPlan": [
+        "Créer le dossier depuis une référence métier et une description ; ne joindre que les champs utiles et les pièces autorisées.",
+        "Définir les transitions, responsables, délais indicatifs selon calendrier et relances internes ; distinguer réponse, résolution proposée et résolution acceptée.",
+        "Prévoir médiation, réouverture et bilan des causes récurrentes ; une correction financière passe par son propriétaire canonique."
+      ],
+      "integrationMeaning": "PRODUCT_CAPABILITY_WITH_EXPLICIT_ACCEPTANCE_CRITERIA"
     },
     {
       "id": "A26",
@@ -302,7 +620,19 @@
       "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md",
       "targetLots": [
         26
-      ]
+      ],
+      "ownerLot": 26,
+      "acceptanceCriteria": [
+        "Une confusion entre 1 000 et 10 000 ne déclenche aucune écriture avant validation.",
+        "Un fichier malformé, volumineux ou contenant du HTML hostile est traité sans exécuter son contenu.",
+        "Export, filtres et totaux concordent avec les données sources ; les lignes masquées par l’écran ne disparaissent pas de l’export complet demandé."
+      ],
+      "integrationPlan": [
+        "Définir des modèles de document avec données sources, version et droits ; afficher un aperçu avant diffusion.",
+        "Pour l’OCR, traiter une image ou des pages PDF rendues en images, puis présenter une grille de validation humaine ; conserver la pièce et les corrections autorisées.",
+        "Pour l’import, analyser dans une zone de préparation, montrer erreurs et doublons, puis transmettre les commandes validées au propriétaire métier."
+      ],
+      "integrationMeaning": "PRODUCT_CAPABILITY_WITH_EXPLICIT_ACCEPTANCE_CRITERIA"
     },
     {
       "id": "A27",
@@ -311,7 +641,19 @@
       "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md",
       "targetLots": [
         27
-      ]
+      ],
+      "ownerLot": 27,
+      "acceptanceCriteria": [
+        "Une restauration vierge retrouve les relations et totaux attendus, pas seulement le nombre de fichiers.",
+        "Une sauvegarde partielle est identifiée comme telle et ne reçoit pas un statut complet.",
+        "Un compte retiré ne récupère pas ses droits après restauration sans la règle prévue."
+      ],
+      "integrationPlan": [
+        "Définir ce qui est sauvegardé, la cohérence entre fichiers et données, la durée de conservation et l’emplacement autorisé.",
+        "Construire une procédure de restauration sur copie avec contrôles d’intégrité et scénarios métier représentatifs ; conserver un compte rendu daté.",
+        "Ajouter un diagnostic en lecture seule des anomalies et un dossier de réparation proposé. Toute correction réelle suit ECO-LOCK et garde une trace."
+      ],
+      "integrationMeaning": "PRODUCT_CAPABILITY_WITH_EXPLICIT_ACCEPTANCE_CRITERIA"
     },
     {
       "id": "A28",
@@ -324,25 +666,70 @@
       "limits": "Automated delivery evidence, not field acceptance or completion of all future refinements.",
       "targetLots": [
         28
-      ]
+      ],
+      "ownerLot": 28,
+      "acceptanceCriteria": [
+        "Le gain de requêtes est reproductible et ne provient pas de validations abandonnées ou de présence supprimée.",
+        "Les scénarios acquis de bout en bout passent, avec conflits, coupure et reprise sur deux appareils.",
+        "L’accord porte sur le périmètre et le commit examinés ; une modification ultérieure significative invalide les preuves concernées."
+      ],
+      "integrationPlan": [
+        "Mesurer par scénario les lectures, écritures, reconnexions, volumes et minutes de CI ; commencer par les rafraîchissements périphériques et les doublons démontrés.",
+        "Comparer une référence et un candidat sur les mêmes données : résultats, ordre des états, idempotence et temps utile. Préparer une fiche d’impact avant de toucher un acquis.",
+        "Introduire un changement borné et réversible, une vérification du candidat intégré puis une vérification de l’artefact effectivement publié. Documenter le retour arrière et le traitement des données nouvelles."
+      ],
+      "integrationMeaning": "PRODUCT_CAPABILITY_WITH_EXPLICIT_ACCEPTANCE_CRITERIA"
     },
     {
       "id": "I01",
       "title": "Le passeport de continuité personnelle · propriétaire L02",
       "status": "PLANNED_OR_REQUIRES_DETAILED_COVERAGE",
-      "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md"
+      "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md",
+      "targetLots": [
+        2
+      ],
+      "ownerLot": 2,
+      "acceptanceCriteria": "Supprimer une ressource ou retirer un mandat invalide sa reprise ; changer de compte ne révèle aucun souvenir précédent.",
+      "integrationPlan": [
+        "Définir des points de reprise publiés par chaque parcours existant.",
+        "Conserver référence, étape, date et contexte minimal ; vérifier la ressource au clic.",
+        "Permettre oubli sélectif, durée de conservation et désactivation par appareil ou compte."
+      ],
+      "integrationMeaning": "PRODUCT_CAPABILITY_WITH_EXPLICIT_ACCEPTANCE_CRITERIA"
     },
     {
       "id": "I02",
       "title": "La répétition générale d’une séance · propriétaire L05",
       "status": "PLANNED_OR_REQUIRES_DETAILED_COVERAGE",
-      "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md"
+      "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md",
+      "targetLots": [
+        5
+      ],
+      "ownerLot": 5,
+      "acceptanceCriteria": "Aucune route de la répétition ne peut écrire dans les données réelles ; les résultats attendus restent vérifiés par les tests des moteurs.",
+      "integrationPlan": [
+        "Créer un jeu synthétique couvrant les exceptions connues et appeler les mêmes moteurs dans une instance isolée.",
+        "Proposer des incidents reproductibles, avec chronologie et résultat attendu.",
+        "Comparer les résultats aux invariants et exporter un rapport d’apprentissage."
+      ],
+      "integrationMeaning": "PRODUCT_CAPABILITY_WITH_EXPLICIT_ACCEPTANCE_CRITERIA"
     },
     {
       "id": "I03",
       "title": "Le budget de requêtes par parcours · propriétaire L28",
       "status": "PLANNED_OR_REQUIRES_DETAILED_COVERAGE",
-      "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md"
+      "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md",
+      "targetLots": [
+        28
+      ],
+      "ownerLot": 28,
+      "acceptanceCriteria": "Même résultat métier avant/après, requêtes mesurées par catégorie et aucun acquittement perdu.",
+      "integrationPlan": [
+        "Tracer les catégories de requêtes sans enregistrer montants ni secrets.",
+        "Mesurer une référence répétable, puis définir un budget cible justifié par cette mesure.",
+        "Réduire d’abord lectures secondaires, doublons et rafraîchissements sans changement ; conserver les invariants des commandes."
+      ],
+      "integrationMeaning": "PRODUCT_CAPABILITY_WITH_EXPLICIT_ACCEPTANCE_CRITERIA"
     },
     {
       "id": "I04",
@@ -353,23 +740,57 @@
         "docs/release/evidence/BUSINESS-VALUE-NETWORK-PUBLIC-2026-10-22.json",
         "docs/release/DELIVERY-2026-10-22-BUSINESS-VALUE-NETWORK.md"
       ],
-      "limits": "Group-only current-member aggregates from explicit own contributions, compatible units, immutable first confirmation, absorbing withdrawal including after leaving, closure/expiration.100 recent pools, three batched repository reads for ten pools; not constant row cost."
+      "limits": "Group-only current-member aggregates from explicit own contributions, compatible units, immutable first confirmation, absorbing withdrawal including after leaving, closure/expiration.100 recent pools, three batched repository reads for ten pools; not constant row cost.",
+      "targetLots": [
+        12
+      ],
+      "ownerLot": 12,
+      "acceptanceCriteria": "Retrait d’un participant, unités incompatibles et double confirmation ne faussent ni quantité ni engagements.",
+      "integrationPlan": [
+        "Collecter unité, quantité, délai et autorisation de regroupement.",
+        "Proposer un groupe de demande ; masquer les petits agrégats susceptibles d’identifier une personne.",
+        "Demander une confirmation individuelle avant devis ou réservation réels."
+      ],
+      "integrationMeaning": "PRODUCT_CAPABILITY_WITH_EXPLICIT_ACCEPTANCE_CRITERIA"
     },
     {
       "id": "I05",
       "title": "Le parcours productif personnel sur une période choisie · propriétaire L19",
       "status": "PLANNED_OR_REQUIRES_DETAILED_COVERAGE",
-      "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md"
+      "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md",
+      "targetLots": [
+        19
+      ],
+      "ownerLot": 19,
+      "acceptanceCriteria": "Aucune mission indisponible n’est annoncée comme prête ; reporter un objectif ne modifie pas les engagements métier.",
+      "integrationPlan": [
+        "Choisir un objectif et les moyens disponibles sans promettre de revenu.",
+        "Décomposer en actions datées, expliquer les suggestions et permettre leur modification.",
+        "Mesurer actions achevées et résultats vérifiés séparément ; réviser le plan au bilan."
+      ],
+      "integrationMeaning": "PRODUCT_CAPABILITY_WITH_EXPLICIT_ACCEPTANCE_CRITERIA"
     },
     {
       "id": "I06",
       "title": "La chaîne anti-gaspillage Harvest · propriétaire L13",
-      "status": "IMPLEMENTED_UNVERIFIED",
+      "status": "DELIVERED_WITH_DOCUMENTED_LIMITS",
       "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md",
       "evidence": [
+        "docs/release/evidence/TEMPORAL-COMMERCE-PILOTS-PUBLIC-2026-10-22.json",
         "docs/release/DELIVERY-2026-10-22-TEMPORAL-COMMERCE-PILOTS.md"
       ],
-      "limits": "Bounded initial scope; same-SHA deployment and field acceptance not established yet. See CIR for distinct undeveloped variants."
+      "limits": "Atomic same-unit kg/g loss/transformation with source/output evidence and no automatic output publication. No recipe conversion, certified quality or agricultural yield estimate.",
+      "targetLots": [
+        13
+      ],
+      "ownerLot": 13,
+      "acceptanceCriteria": "Le même surplus n’est pas promis deux fois ; une transformation ne crée pas artificiellement une quantité impossible.",
+      "integrationPlan": [
+        "Décrire lots, unités, état déclaré, délai et conditions de conservation.",
+        "Créer une proposition de transformation, sans réserver avant acceptation.",
+        "Enregistrer les références des lots et les rendements déclarés ; vérifier les conversions d’unités."
+      ],
+      "integrationMeaning": "PRODUCT_CAPABILITY_WITH_EXPLICIT_ACCEPTANCE_CRITERIA"
     },
     {
       "id": "I07",
@@ -380,71 +801,201 @@
         "docs/release/evidence/GROUPS-GOVERNANCE-TRUST-PUBLIC-2026-10-22.json",
         "docs/release/DELIVERY-2026-10-22-GROUPS-GOVERNANCE-TRUST.md"
       ],
-      "limits": "Subject-chosen summary and revocable random-secret card, effective minimum expiry. Requires Eco account/online; lost secret cannot be recovered; private evidence is not disclosed."
+      "limits": "Subject-chosen summary and revocable random-secret card, effective minimum expiry. Requires Eco account/online; lost secret cannot be recovered; private evidence is not disclosed.",
+      "targetLots": [
+        21
+      ],
+      "ownerLot": 21,
+      "acceptanceCriteria": "Une carte révoquée devient invalide en ligne ; une copie hors ligne n’est jamais présentée comme vérifiée à l’instant.",
+      "integrationPlan": [
+        "Créer un jeton limité à l’assertion et à son audience, avec expiration.",
+        "Vérifier le statut au serveur à chaque nouvelle consultation ; limiter les champs publics.",
+        "Afficher la date du dernier contrôle pour une copie hors ligne et permettre révocation."
+      ],
+      "integrationMeaning": "PRODUCT_CAPABILITY_WITH_EXPLICIT_ACCEPTANCE_CRITERIA"
     },
     {
       "id": "I08",
       "title": "Le prix expliqué, avec ses limites · propriétaire L20",
-      "status": "IMPLEMENTED_UNVERIFIED",
+      "status": "DELIVERED_WITH_DOCUMENTED_LIMITS",
       "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md",
       "evidence": [
+        "docs/release/evidence/TEMPORAL-COMMERCE-PILOTS-PUBLIC-2026-10-22.json",
         "docs/release/DELIVERY-2026-10-22-TEMPORAL-COMMERCE-PILOTS.md"
       ],
-      "limits": "Bounded initial scope; same-SHA deployment and field acceptance not established yet. See CIR for distinct undeveloped variants."
+      "limits": "Minimum5 distinct current-tenant public personal sellers with equal declared category/quality/unit/locality/currency; median per seller then median across sellers. Asking prices only, no individual prices or identities.",
+      "targetLots": [
+        20
+      ],
+      "ownerLot": 20,
+      "acceptanceCriteria": "Une variation d’unité ou un faible échantillon ne produit pas un faux prix de référence.",
+      "integrationPlan": [
+        "Normaliser unités et caractéristiques sans écraser les données d’origine.",
+        "Calculer des agrégats sur observations autorisées, exclure doublons et données trop anciennes.",
+        "Montrer dispersion et données manquantes, pas un prix recommandé obligatoire."
+      ],
+      "integrationMeaning": "PRODUCT_CAPABILITY_WITH_EXPLICIT_ACCEPTANCE_CRITERIA"
     },
     {
       "id": "I09",
       "title": "Eco Mirror : comparer les effets avant de remplacer un acquis · propriétaire L28",
       "status": "PLANNED_OR_REQUIRES_DETAILED_COVERAGE",
-      "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md"
+      "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md",
+      "targetLots": [
+        28
+      ],
+      "ownerLot": 28,
+      "acceptanceCriteria": "Une différence volontaire est documentée et autorisée ; une différence inexpliquée bloque le changement concerné.",
+      "integrationPlan": [
+        "Préparer des entrées synthétiques et des sorties canoniques normalisées.",
+        "Exécuter référence et candidat dans deux environnements isolés ; ne jamais doubler des écritures de production.",
+        "Comparer les invariants, expliquer chaque différence et joindre le résultat à la demande ECO-LOCK."
+      ],
+      "integrationMeaning": "PRODUCT_CAPABILITY_WITH_EXPLICIT_ACCEPTANCE_CRITERIA"
     },
     {
       "id": "I10",
       "title": "Le dossier d’incident reproductible sans données privées · propriétaire L27",
       "status": "PLANNED_OR_REQUIRES_DETAILED_COVERAGE",
-      "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md"
+      "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md",
+      "targetLots": [
+        27
+      ],
+      "ownerLot": 27,
+      "acceptanceCriteria": "Le dossier reproduit le défaut attendu et une inspection ne trouve ni secret, ni pièce privée, ni identifiant personnel réel.",
+      "integrationPlan": [
+        "Recueillir version, étapes, états et erreurs en minimisant les données.",
+        "Remplacer identités, pièces et valeurs par un jeu synthétique qui conserve le phénomène.",
+        "Rejouer localement et conserver le cas comme protection contre le retour du défaut."
+      ],
+      "integrationMeaning": "PRODUCT_CAPABILITY_WITH_EXPLICIT_ACCEPTANCE_CRITERIA"
     },
     {
       "id": "I11",
       "title": "Le laboratoire « que se passe-t-il si… » · propriétaire L07",
-      "status": "PLANNED_OR_REQUIRES_DETAILED_COVERAGE",
-      "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md"
+      "status": "IMPLEMENTED_UNVERIFIED",
+      "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md",
+      "targetLots": [
+        7
+      ],
+      "ownerLot": 7,
+      "acceptanceCriteria": "Aucune simulation ne crée d’écriture ; une modification de règle rend l’ancien aperçu caduc.",
+      "integrationPlan": [
+        "Appeler le calculateur existant en mode lecture sur une copie de contexte.",
+        "Comparer scénarios avec les mêmes règles et signaler les paramètres variables.",
+        "Pour passer à l’action, recalculer sur l’état courant et appliquer la confirmation métier."
+      ],
+      "integrationMeaning": "PRODUCT_CAPABILITY_WITH_EXPLICIT_ACCEPTANCE_CRITERIA",
+      "evidence": [
+        "docs/release/DELIVERY-2026-10-22-FINANCIAL-EXPLANATIONS.md"
+      ],
+      "limits": "Authorized initial read/simulation scope; full same-SHA deployment qualification pending. Historical missing inputs are not invented, no financial posting."
     },
     {
       "id": "I12",
       "title": "La parité entre modes compact, sénior et assisté · propriétaire L01",
       "status": "PLANNED_OR_REQUIRES_DETAILED_COVERAGE",
-      "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md"
+      "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md",
+      "targetLots": [
+        1
+      ],
+      "ownerLot": 1,
+      "acceptanceCriteria": "Aucun mode ne supprime une action indispensable ni ne change le montant ou le droit associé.",
+      "integrationPlan": [
+        "Définir les différences de densité, langage, espacement et aide.",
+        "Établir une matrice des actions accessibles dans les trois modes.",
+        "Tester clavier, lecture à voix haute disponible, zoom et reprise de brouillon lors du changement de mode."
+      ],
+      "integrationMeaning": "PRODUCT_CAPABILITY_WITH_EXPLICIT_ACCEPTANCE_CRITERIA"
     },
     {
       "id": "I13",
       "title": "Le scénario de résistance d’une tontine · propriétaire L09",
-      "status": "PLANNED_OR_REQUIRES_DETAILED_COVERAGE",
-      "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md"
+      "status": "IMPLEMENTED_UNVERIFIED",
+      "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md",
+      "targetLots": [
+        9
+      ],
+      "ownerLot": 9,
+      "acceptanceCriteria": "Retirer le scénario rétablit exactement la projection de référence ; les données réelles restent inchangées.",
+      "integrationPlan": [
+        "Charger une copie des engagements autorisés.",
+        "Appliquer des scénarios explicitement choisis et présenter les écarts de trésorerie et de calendrier.",
+        "Exporter les questions à discuter ; aucune proposition ne modifie automatiquement les tours."
+      ],
+      "integrationMeaning": "PRODUCT_CAPABILITY_WITH_EXPLICIT_ACCEPTANCE_CRITERIA",
+      "evidence": [
+        "docs/release/DELIVERY-2026-10-22-FINANCIAL-EXPLANATIONS.md"
+      ],
+      "limits": "Authorized initial read/simulation scope; full same-SHA deployment qualification pending. Historical missing inputs are not invented, no financial posting."
     },
     {
       "id": "I14",
       "title": "L’assistant de négociation qui prépare sans agir à la place · propriétaire L23",
       "status": "PLANNED_OR_REQUIRES_DETAILED_COVERAGE",
-      "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md"
+      "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md",
+      "targetLots": [
+        23
+      ],
+      "ownerLot": 23,
+      "acceptanceCriteria": "Aucun message ni engagement n’est envoyé à l’ouverture du modèle ; une donnée absente reste un champ à compléter.",
+      "integrationPlan": [
+        "Créer des modèles structurés avec prix, unité, délai, conditions et inconnues.",
+        "Remplir uniquement les champs autorisés ; mettre en évidence ce qui est proposé ou manquant.",
+        "Présenter un aperçu et confier l’envoi au parcours de communication existant après confirmation."
+      ],
+      "integrationMeaning": "PRODUCT_CAPABILITY_WITH_EXPLICIT_ACCEPTANCE_CRITERIA"
     },
     {
       "id": "I15",
       "title": "La carte des questions, preuves et contradictions · propriétaire L18",
       "status": "PLANNED_OR_REQUIRES_DETAILED_COVERAGE",
-      "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md"
+      "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md",
+      "targetLots": [
+        18
+      ],
+      "ownerLot": 18,
+      "acceptanceCriteria": "Un document volumineux ne ferme pas toutes les questions ; un signal automatique ne constitue pas une preuve de fraude.",
+      "integrationPlan": [
+        "Créer des liens typés entre question, assertion, pièce et vérification.",
+        "Détecter d’abord des contradictions structurées simples : date, montant, identité ou référence.",
+        "Soumettre les divergences à un lecteur autorisé et conserver sa conclusion motivée."
+      ],
+      "integrationMeaning": "PRODUCT_CAPABILITY_WITH_EXPLICIT_ACCEPTANCE_CRITERIA"
     },
     {
       "id": "I16",
       "title": "L’assemblage de moyens disponibles · propriétaire L11",
       "status": "PLANNED_OR_REQUIRES_DETAILED_COVERAGE",
-      "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md"
+      "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md",
+      "targetLots": [
+        11
+      ],
+      "ownerLot": 11,
+      "acceptanceCriteria": "La même machine n’est pas réservée sur deux créneaux incompatibles ; une ressource non acceptée reste provisoire.",
+      "integrationPlan": [
+        "Décrire besoin et ressource dans des unités compatibles, avec durée et conditions.",
+        "Composer un plan provisoire avec acceptation séparée de chaque propriétaire.",
+        "Transmettre les engagements confirmés aux parcours existants ; gérer désistement et alternative."
+      ],
+      "integrationMeaning": "PRODUCT_CAPABILITY_WITH_EXPLICIT_ACCEPTANCE_CRITERIA"
     },
     {
       "id": "I17",
       "title": "La première mission accompagnée · propriétaire L16",
       "status": "PLANNED_OR_REQUIRES_DETAILED_COVERAGE",
-      "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md"
+      "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md",
+      "targetLots": [
+        16
+      ],
+      "ownerLot": 16,
+      "acceptanceCriteria": "Le mentor ne peut valider sans voir le livrable ; le refus de publication ne supprime pas l’accès au service.",
+      "integrationPlan": [
+        "Définir une mission bornée, ses critères et les conditions de rémunération ou bénévolat.",
+        "Affecter un mentor volontaire et prévoir correction puis contestation.",
+        "Produire une preuve de réalisation limitée au travail effectivement observé."
+      ],
+      "integrationMeaning": "PRODUCT_CAPABILITY_WITH_EXPLICIT_ACCEPTANCE_CRITERIA"
     },
     {
       "id": "I18",
@@ -455,7 +1006,18 @@
         "docs/release/evidence/LOT25-ECO-CARE-PUBLIC-2026-10-21.json",
         "docs/release/DELIVERY-2026-10-21-LOT25-ECO-CARE.md"
       ],
-      "limits": "Same-source qualification/delivery and33 public hashes passed. Group two-party prevention agreement is a standalone reference; no universal checkout insertion, guaranteed staffing, automatic reminder, recurring-causes analytics, binary evidence host, implicit financial correction or constant-cost server pagination. FIELD_ACCEPTED=NOT_ACCEPTED."
+      "limits": "Same-source qualification/delivery and33 public hashes passed. Group two-party prevention agreement is a standalone reference; no universal checkout insertion, guaranteed staffing, automatic reminder, recurring-causes analytics, binary evidence host, implicit financial correction or constant-cost server pagination. FIELD_ACCEPTED=NOT_ACCEPTED.",
+      "targetLots": [
+        25
+      ],
+      "ownerLot": 25,
+      "acceptanceCriteria": "Une nouvelle condition n’est pas ajoutée rétroactivement à une commande acceptée.",
+      "integrationPlan": [
+        "Créer des listes de contrôle par catégorie, avec champs utiles et options « non applicable ».",
+        "Conserver la version acceptée par les parties et montrer toute modification ultérieure.",
+        "Réutiliser cette référence dans le SAV, sans rendre automatiquement une partie fautive."
+      ],
+      "integrationMeaning": "PRODUCT_CAPABILITY_WITH_EXPLICIT_ACCEPTANCE_CRITERIA"
     },
     {
       "id": "I19",
@@ -466,277 +1028,969 @@
         "docs/release/evidence/LOT24-NOTIFICATION-INBOX-PUBLIC-2026-10-21.json",
         "docs/release/DELIVERY-2026-10-21-LOT24-NOTIFICATION-INBOX.md"
       ],
-      "limits": "Same-source Linux qualification/delivery and31 hashes pass; Windows failures retained. No guaranteed external transport, automatic business completion, new polling or server pagination claim. Unknown waiting party remains explicit. Transversal SAV is L25; FIELD_ACCEPTED=NOT_ACCEPTED."
+      "limits": "Same-source Linux qualification/delivery and31 hashes pass; Windows failures retained. No guaranteed external transport, automatic business completion, new polling or server pagination claim. Unknown waiting party remains explicit. Transversal SAV is L25; FIELD_ACCEPTED=NOT_ACCEPTED.",
+      "targetLots": [
+        24
+      ],
+      "ownerLot": 24,
+      "acceptanceCriteria": "Une action déjà traitée ne continue pas de relancer ; aucun rôle ne voit une pièce privée par la frise.",
+      "integrationPlan": [
+        "Projeter les étapes depuis les objets canoniques et les événements autorisés.",
+        "Définir une prochaine action, un responsable et une date connue ou inconnue.",
+        "Revalider l’état avant toute relance et regrouper les notifications qui décrivent le même blocage."
+      ],
+      "integrationMeaning": "PRODUCT_CAPABILITY_WITH_EXPLICIT_ACCEPTANCE_CRITERIA"
     },
     {
       "id": "I20",
       "title": "La bibliothèque de solutions éprouvées dans leur contexte · propriétaire L14",
       "status": "PLANNED_OR_REQUIRES_DETAILED_COVERAGE",
-      "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md"
+      "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md",
+      "targetLots": [
+        14
+      ],
+      "ownerLot": 14,
+      "acceptanceCriteria": "Une fiche sans preuve porte le statut « proposition » ; une source retirée déclenche une révision de sa diffusion.",
+      "integrationPlan": [
+        "Proposer une fiche issue d’un échange, avec consentement et références accessibles.",
+        "Faire relire méthode, conditions et résultat ; conserver les expériences contradictoires.",
+        "Permettre une adaptation dans un autre groupe avec retour d’expérience, sans modifier la fiche originale."
+      ],
+      "integrationMeaning": "PRODUCT_CAPABILITY_WITH_EXPLICIT_ACCEPTANCE_CRITERIA"
     },
     {
       "id": "T01",
       "title": "Lit",
       "status": "REFERENCE_MODEL_NOT_IMPORTED",
-      "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md"
+      "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md",
+      "targetLots": [
+        1,
+        2
+      ],
+      "ownerLot": 1,
+      "acceptanceCriteria": "Comparer taille chargée, temps d’affichage, focus et conservation des brouillons avant/après.",
+      "integrationPlan": "Prototyper une carte de cockpit indépendante, puis un composant de navigation. Conserver les contrats et événements de l’écran hôte ; charger seulement les composants nécessaires.",
+      "integrationMeaning": "REFERENCE_TO_EVALUATE_WITHIN_TARGET_LOTS_NOT_AUTOMATIC_DEPENDENCY_INSTALL",
+      "adoptionDecision": "KEEP_EXISTING_OWNER_UNTIL_MEASURED_BENEFIT",
+      "sourceUrl": "https://github.com/lit/lit",
+      "limits": "Un composant réinitialisé peut perdre son état. Ne pas réécrire toute l’application pour adopter une bibliothèque.",
+      "freeUseScope": "Navigateur ; aucun service externe requis."
     },
     {
       "id": "T02",
       "title": "TanStack Table",
       "status": "REFERENCE_MODEL_NOT_IMPORTED",
-      "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md"
+      "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md",
+      "targetLots": [
+        5
+      ],
+      "ownerLot": 5,
+      "acceptanceCriteria": "Comparer toutes les rubriques, totaux, tris et exports à la même source, puis tester clavier et lecteurs d’écran.",
+      "integrationPlan": "Essayer le cœur JavaScript/TypeScript sur une projection en lecture seule. Construire explicitement le rendu HTML, les colonnes fixes et les partitions ; garder la saisie et les calculs dans leurs propriétaires.",
+      "integrationMeaning": "REFERENCE_TO_EVALUATE_WITHIN_TARGET_LOTS_NOT_AUTOMATIC_DEPENDENCY_INSTALL",
+      "adoptionDecision": "KEEP_EXISTING_OWNER_UNTIL_MEASURED_BENEFIT",
+      "sourceUrl": "https://github.com/TanStack/table",
+      "limits": "La bibliothèque ne résout pas à elle seule la synchronisation, les partitions complètes ni l’accessibilité du rendu.",
+      "freeUseScope": "Navigateur ; pas de licence commerciale obligatoire."
     },
     {
       "id": "T03",
       "title": "TanStack Virtual",
       "status": "REFERENCE_MODEL_NOT_IMPORTED",
-      "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md"
+      "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md",
+      "targetLots": [
+        5,
+        15
+      ],
+      "ownerLot": 5,
+      "acceptanceCriteria": "Défiler pendant une édition, revenir, changer de filtre et exporter : aucune valeur perdue ni ligne oubliée.",
+      "integrationPlan": "Commencer par une liste consultative de membres. Conserver les données hors du DOM ; protéger une ligne éditée contre un démontage qui détruirait son brouillon.",
+      "integrationMeaning": "REFERENCE_TO_EVALUATE_WITHIN_TARGET_LOTS_NOT_AUTOMATIC_DEPENDENCY_INSTALL",
+      "adoptionDecision": "KEEP_EXISTING_OWNER_UNTIL_MEASURED_BENEFIT",
+      "sourceUrl": "https://github.com/TanStack/virtual",
+      "limits": "La virtualisation n’est pas une partition métier. Elle peut compliquer recherche navigateur, lecture assistée et impression ; prévoir une vue complète adaptée.",
+      "freeUseScope": "Calcul dans le navigateur ; adoption uniquement si le gain est mesuré."
     },
     {
       "id": "T04",
       "title": "Lucide",
       "status": "REFERENCE_MODEL_NOT_IMPORTED",
-      "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md"
+      "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md",
+      "targetLots": [
+        1
+      ],
+      "ownerLot": 1,
+      "acceptanceCriteria": "Contraste, nom accessible, rendu à plusieurs tailles et absence de changement de signification entre écrans.",
+      "integrationPlan": "Créer une petite table action→icône et importer seulement les symboles utilisés. Conserver un libellé visible sur les actions importantes et un nom accessible pour chaque bouton.",
+      "integrationMeaning": "REFERENCE_TO_EVALUATE_WITHIN_TARGET_LOTS_NOT_AUTOMATIC_DEPENDENCY_INSTALL",
+      "adoptionDecision": "KEEP_EXISTING_OWNER_UNTIL_MEASURED_BENEFIT",
+      "sourceUrl": "https://github.com/lucide-icons/lucide",
+      "limits": "Une icône seule ne suffit pas à expliquer « annuler avec trace », « approuver » ou « enregistrer ». Respecter les notices des éléments dérivés.",
+      "freeUseScope": "Fichiers servis avec Eco ; pas de police distante ni CDN obligatoire."
     },
     {
       "id": "T05",
       "title": "Floating UI",
       "status": "REFERENCE_MODEL_NOT_IMPORTED",
-      "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md"
+      "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md",
+      "targetLots": [
+        1,
+        5
+      ],
+      "ownerLot": 1,
+      "acceptanceCriteria": "Tester bord d’écran, défilement, zoom, clavier et ouverture au-dessus d’une cellule en cours de saisie.",
+      "integrationPlan": "Essayer un menu contextuel de tableau avec déplacement et retournement près des bords. Définir fermeture, échappement et retour du focus dans le composant Eco.",
+      "integrationMeaning": "REFERENCE_TO_EVALUATE_WITHIN_TARGET_LOTS_NOT_AUTOMATIC_DEPENDENCY_INSTALL",
+      "adoptionDecision": "KEEP_EXISTING_OWNER_UNTIL_MEASURED_BENEFIT",
+      "sourceUrl": "https://github.com/floating-ui/floating-ui",
+      "limits": "Le placement ne garantit ni un dialogue accessible ni une bonne gestion des droits. Éviter les panneaux qui recouvrent les validations.",
+      "freeUseScope": "Navigateur ; aucun abonnement."
     },
     {
       "id": "T06",
       "title": "DOMPurify",
       "status": "REFERENCE_MODEL_NOT_IMPORTED",
-      "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md"
+      "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md",
+      "targetLots": [
+        14,
+        26
+      ],
+      "ownerLot": 14,
+      "acceptanceCriteria": "Tester liens malveillants, attributs d’événement, SVG hostile et modifications du contenu après nettoyage.",
+      "integrationPlan": "Privilégier du texte brut ; limiter le HTML des Foras aux éléments nécessaires et le nettoyer au point d’affichage. Valider aussi les données côté serveur selon les règles métier.",
+      "integrationMeaning": "REFERENCE_TO_EVALUATE_WITHIN_TARGET_LOTS_NOT_AUTOMATIC_DEPENDENCY_INSTALL",
+      "adoptionDecision": "KEEP_EXISTING_OWNER_UNTIL_MEASURED_BENEFIT",
+      "sourceUrl": "https://github.com/cure53/DOMPurify",
+      "limits": "Ne remplace ni les droits ni toute la sécurité applicative. Le DOM du navigateur ne doit pas être supposé présent dans un Worker ; éviter une intégration serveur non qualifiée.",
+      "freeUseScope": "Traitement local dans le navigateur pour ce premier usage."
     },
     {
       "id": "T07",
       "title": "axe-core",
       "status": "REFERENCE_MODEL_NOT_IMPORTED",
-      "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md"
+      "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md",
+      "targetLots": [
+        1
+      ],
+      "ownerLot": 1,
+      "acceptanceCriteria": "Associer le rapport à un essai manuel clavier, zoom et lecteur d’écran sur les actions essentielles.",
+      "integrationPlan": "Lancer sur les écrans représentatifs déjà couverts par les tests de navigateur, dans les trois modes d’affichage. Conserver une référence des défauts connus et traiter les nouveaux défauts pertinents.",
+      "integrationMeaning": "REFERENCE_TO_EVALUATE_WITHIN_TARGET_LOTS_NOT_AUTOMATIC_DEPENDENCY_INSTALL",
+      "adoptionDecision": "KEEP_EXISTING_OWNER_UNTIL_MEASURED_BENEFIT",
+      "sourceUrl": "https://github.com/dequelabs/axe-core",
+      "limits": "Un rapport sans erreur ne prouve pas toute l’accessibilité. La licence et ses obligations doivent être conservées pour les fichiers distribués concernés.",
+      "freeUseScope": "Exécution locale ou CI existante, avec durée maîtrisée."
     },
     {
       "id": "T08",
       "title": "Dexie.js",
       "status": "REFERENCE_MODEL_NOT_IMPORTED",
-      "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md"
+      "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md",
+      "targetLots": [
+        3,
+        11
+      ],
+      "ownerLot": 3,
+      "acceptanceCriteria": "Reprise après fermeture, migration interrompue, espace insuffisant et changement de compte.",
+      "integrationPlan": "Commencer par un nouveau brouillon non financier de Kit ou de Studio. Cloisonner par compte et groupe ; définir version du schéma, migration, purge et comportement si stockage refusé.",
+      "integrationMeaning": "REFERENCE_TO_EVALUATE_WITHIN_TARGET_LOTS_NOT_AUTOMATIC_DEPENDENCY_INSTALL",
+      "adoptionDecision": "KEEP_EXISTING_OWNER_UNTIL_MEASURED_BENEFIT",
+      "sourceUrl": "https://github.com/dexie/Dexie.js",
+      "limits": "Ne pas remplacer l’outbox financière existante sous prétexte d’unifier le stockage. Le navigateur peut évincer des données ; expliquer ce qui n’est pas encore synchronisé.",
+      "freeUseScope": "Stockage de l’appareil ; aucune offre Dexie Cloud obligatoire."
     },
     {
       "id": "T09",
       "title": "Yjs",
       "status": "REFERENCE_MODEL_NOT_IMPORTED",
-      "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md"
+      "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md",
+      "targetLots": [
+        4,
+        14
+      ],
+      "ownerLot": 4,
+      "acceptanceCriteria": "Éditer hors ligne des paragraphes distincts, reconnecter et vérifier convergence, suppression autorisée et accès retiré.",
+      "integrationPlan": "Prototyper un brouillon de procès-verbal ou de synthèse sur deux appareils, avec transport local d’essai. Qualifier ensuite le transport existant, les droits et la conservation.",
+      "integrationMeaning": "REFERENCE_TO_EVALUATE_WITHIN_TARGET_LOTS_NOT_AUTOMATIC_DEPENDENCY_INSTALL",
+      "adoptionDecision": "KEEP_EXISTING_OWNER_UNTIL_MEASURED_BENEFIT",
+      "sourceUrl": "https://github.com/yjs/yjs",
+      "limits": "Réserver aux textes et brouillons. Ne pas fusionner avec Yjs des montants, dettes ou validations. Un transport réseau de production consomme des ressources, même avec bibliothèque gratuite.",
+      "freeUseScope": "Démonstration locale gratuite ; production seulement sur transport existant qualifié."
     },
     {
       "id": "T10",
       "title": "XState",
       "status": "REFERENCE_MODEL_NOT_IMPORTED",
-      "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md"
+      "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md",
+      "targetLots": [
+        4,
+        7,
+        9,
+        10,
+        13,
+        16,
+        17,
+        19,
+        24,
+        25
+      ],
+      "ownerLot": 4,
+      "acceptanceCriteria": "Vérifier transitions interdites, double clic, événement retardé et reprise après actualisation.",
+      "integrationPlan": "Modéliser d’abord un nouveau dossier SAV : ouvert, affecté, réponse attendue, résolution proposée, clos et rouvert. Réutiliser les droits et commandes canoniques.",
+      "integrationMeaning": "REFERENCE_TO_EVALUATE_WITHIN_TARGET_LOTS_NOT_AUTOMATIC_DEPENDENCY_INSTALL",
+      "adoptionDecision": "KEEP_EXISTING_OWNER_UNTIL_MEASURED_BENEFIT",
+      "sourceUrl": "https://github.com/statelyai/xstate",
+      "limits": "Ce n’est pas une base de données ni une autorisation de remplacer tous les workflows acquis. Les outils payants de l’éditeur ne sont pas requis.",
+      "freeUseScope": "Bibliothèque exécutée dans le code existant ; aucun compte SaaS nécessaire."
     },
     {
       "id": "T11",
       "title": "Zod",
       "status": "REFERENCE_MODEL_NOT_IMPORTED",
-      "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md"
+      "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md",
+      "targetLots": [
+        3,
+        4,
+        10,
+        17,
+        21,
+        22,
+        23,
+        26
+      ],
+      "ownerLot": 3,
+      "acceptanceCriteria": "Champs absents, types incohérents, champs inattendus et versions anciennes produisent une réponse maîtrisée.",
+      "integrationPlan": "Définir un schéma pour une nouvelle commande avec erreurs lisibles. Valider côté serveur même si le formulaire valide déjà ; référencer les règles financières existantes plutôt que les recopier.",
+      "integrationMeaning": "REFERENCE_TO_EVALUATE_WITHIN_TARGET_LOTS_NOT_AUTOMATIC_DEPENDENCY_INSTALL",
+      "adoptionDecision": "KEEP_EXISTING_OWNER_UNTIL_MEASURED_BENEFIT",
+      "sourceUrl": "https://github.com/colinhacks/zod",
+      "limits": "Un schéma valide la forme ; il ne prouve pas le mandat, le stock disponible ou la solvabilité. Éviter deux schémas métier contradictoires.",
+      "freeUseScope": "Dans le navigateur ou serveur existant ; coût de calcul à mesurer sur les gros imports."
     },
     {
       "id": "T12",
       "title": "MiniSearch",
       "status": "REFERENCE_MODEL_NOT_IMPORTED",
-      "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md"
+      "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md",
+      "targetLots": [
+        2,
+        12,
+        13,
+        14,
+        15,
+        23
+      ],
+      "ownerLot": 2,
+      "acceptanceCriteria": "Requêtes accentuées, fautes courantes, résultats absents et changement de groupe ; vérifier que les données privées n’arrivent jamais dans un index global public.",
+      "integrationPlan": "Indexer d’abord les guides et noms de fonctions. Ajouter des synonymes FR/EN ; pour des données privées, indexer uniquement ce que le compte peut recevoir et purger lors du retrait des droits.",
+      "integrationMeaning": "REFERENCE_TO_EVALUATE_WITHIN_TARGET_LOTS_NOT_AUTOMATIC_DEPENDENCY_INSTALL",
+      "adoptionDecision": "KEEP_EXISTING_OWNER_UNTIL_MEASURED_BENEFIT",
+      "sourceUrl": "https://github.com/lucaong/minisearch",
+      "limits": "Un moteur de recherche n’est pas une réponse générative. Des documents sensibles déjà téléchargés doivent suivre une politique de stockage local explicite.",
+      "freeUseScope": "Navigateur ; un bon candidat initial sans serveur de recherche supplémentaire."
     },
     {
       "id": "T13",
       "title": "FlexSearch",
       "status": "REFERENCE_MODEL_NOT_IMPORTED",
-      "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md"
+      "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md",
+      "targetLots": [
+        12,
+        15,
+        23
+      ],
+      "ownerLot": 12,
+      "acceptanceCriteria": "Mesurer sur téléphone modeste, pas seulement sur ordinateur ; tester accents, FR/EN et mise à jour d’index.",
+      "integrationPlan": "Comparer avec MiniSearch sur les mêmes documents autorisés : pertinence, mémoire, indexation et latence. Isoler le travail lourd dans un Web Worker si nécessaire.",
+      "integrationMeaning": "REFERENCE_TO_EVALUATE_WITHIN_TARGET_LOTS_NOT_AUTOMATIC_DEPENDENCY_INSTALL",
+      "adoptionDecision": "KEEP_EXISTING_OWNER_UNTIL_MEASURED_BENEFIT",
+      "sourceUrl": "https://github.com/nextapps-de/flexsearch",
+      "limits": "Choisir MiniSearch OU FlexSearch selon les résultats ; ne pas installer les deux par principe. Les performances annoncées par un projet ne prouvent pas celles d’Eco.",
+      "freeUseScope": "Alternative locale ; pas de service hébergé obligatoire."
     },
     {
       "id": "T14",
       "title": "CASL",
       "status": "REFERENCE_MODEL_NOT_IMPORTED",
-      "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md"
+      "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md",
+      "targetLots": [
+        12,
+        15,
+        17,
+        18,
+        21,
+        25
+      ],
+      "ownerLot": 12,
+      "acceptanceCriteria": "Matrice compte/groupe/mandat/ressource, révocation et appel direct à l’API ; tout refus serveur reste un refus même si un bouton apparaît.",
+      "integrationPlan": "Commencer par comparer en lecture les décisions proposées aux droits canoniques actuels. Si adopté, centraliser la règle utilisée côté serveur et sa projection d’affichage, sans créer un second système concurrent.",
+      "integrationMeaning": "REFERENCE_TO_EVALUATE_WITHIN_TARGET_LOTS_NOT_AUTOMATIC_DEPENDENCY_INSTALL",
+      "adoptionDecision": "KEEP_EXISTING_OWNER_UNTIL_MEASURED_BENEFIT",
+      "sourceUrl": "https://github.com/stalniy/casl",
+      "limits": "Cacher un bouton ne protège pas les données. Une bibliothèque ne remplace pas l’authentification et ne doit pas élargir les mandats existants.",
+      "freeUseScope": "Code dans l’infrastructure actuelle ; aucun serveur d’identité nouveau requis."
     },
     {
       "id": "T15",
       "title": "OpenTelemetry JavaScript",
       "status": "REFERENCE_MODEL_NOT_IMPORTED",
-      "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md"
+      "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md",
+      "targetLots": [
+        28
+      ],
+      "ownerLot": 28,
+      "acceptanceCriteria": "Mesurer le surcoût, vérifier que l’export peut être désactivé et qu’aucun secret, pièce privée ou montant individuel n’est journalisé.",
+      "integrationPlan": "Instrumenter un parcours pilote avec échantillonnage et export local de compteurs ou fichier. Vérifier explicitement la compatibilité du runtime Cloudflare ; ne pas supposer que toute instrumentation Node fonctionne dans un Worker.",
+      "integrationMeaning": "REFERENCE_TO_EVALUATE_WITHIN_TARGET_LOTS_NOT_AUTOMATIC_DEPENDENCY_INSTALL",
+      "adoptionDecision": "KEEP_EXISTING_OWNER_UNTIL_MEASURED_BENEFIT",
+      "sourceUrl": "https://github.com/open-telemetry/opentelemetry-js",
+      "limits": "Un service de monitoring hébergé peut être payant ; il n’est pas requis. Des compteurs existants suffisent si cette bibliothèque ajoute trop de poids.",
+      "freeUseScope": "Export local ou endpoint existant borné ; pas de collecteur permanent obligatoire."
     },
     {
       "id": "T16",
       "title": "Playwright",
       "status": "REFERENCE_MODEL_NOT_IMPORTED",
-      "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md"
+      "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md",
+      "targetLots": [
+        5,
+        27,
+        28
+      ],
+      "ownerLot": 5,
+      "acceptanceCriteria": "Montrer conflit, première frappe, synthèse au changement de membre, réseau absent puis reprise et séparation des comptes.",
+      "integrationPlan": "Réutiliser la dépendance existante pour une séance sur deux contextes de navigateur, plus les parcours de lecture et droits. Capturer les erreurs et l’état persistant, pas seulement une image.",
+      "integrationMeaning": "REFERENCE_TO_EVALUATE_WITHIN_TARGET_LOTS_NOT_AUTOMATIC_DEPENDENCY_INSTALL",
+      "adoptionDecision": "KEEP_EXISTING_OWNER_UNTIL_MEASURED_BENEFIT",
+      "sourceUrl": "https://github.com/microsoft/playwright",
+      "limits": "Le snapshot documentaire contient @playwright/test 1.56.1 ; ce n’est pas une vérification de la version aujourd’hui déployée. Aucun abonnement de navigateur distant n’est nécessaire.",
+      "freeUseScope": "Exécution locale ; limiter les matrices CI aux besoins de la modification."
     },
     {
       "id": "T17",
       "title": "fast-check",
       "status": "REFERENCE_MODEL_NOT_IMPORTED",
-      "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md"
+      "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md",
+      "targetLots": [
+        5,
+        6,
+        7,
+        8,
+        27,
+        28
+      ],
+      "ownerLot": 5,
+      "acceptanceCriteria": "Une série générée en échec doit être reproductible et réduite à un cas compréhensible.",
+      "integrationPlan": "Exprimer des invariants : conservation des sommes, idempotence, partitions complètes et absence de double distribution. Conserver les graines qui révèlent un défaut.",
+      "integrationMeaning": "REFERENCE_TO_EVALUATE_WITHIN_TARGET_LOTS_NOT_AUTOMATIC_DEPENDENCY_INSTALL",
+      "adoptionDecision": "KEEP_EXISTING_OWNER_UNTIL_MEASURED_BENEFIT",
+      "sourceUrl": "https://github.com/dubzzz/fast-check",
+      "limits": "Tester des résultats métier, pas réécrire le même algorithme comme oracle. Borner le nombre de cas pour protéger le temps de CI.",
+      "freeUseScope": "Tests locaux ; aucun service externe."
     },
     {
       "id": "T18",
       "title": "Pact JS",
       "status": "REFERENCE_MODEL_NOT_IMPORTED",
-      "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md"
+      "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md",
+      "targetLots": [
+        10,
+        24,
+        28
+      ],
+      "ownerLot": 10,
+      "acceptanceCriteria": "Une modification incompatible échoue côté producteur et consommateur ; vérifier aussi le scénario intégré réel.",
+      "integrationPlan": "Commencer par les messages séance→notification ou les lectures de commande. Échanger des fichiers de contrat versionnés et vérifier le producteur réel dans un test local.",
+      "integrationMeaning": "REFERENCE_TO_EVALUATE_WITHIN_TARGET_LOTS_NOT_AUTOMATIC_DEPENDENCY_INSTALL",
+      "adoptionDecision": "KEEP_EXISTING_OWNER_UNTIL_MEASURED_BENEFIT",
+      "sourceUrl": "https://github.com/pact-foundation/pact-js",
+      "limits": "Aucun broker payant n’est obligatoire. Pact ne prouve pas seul les règles financières ni l’ordre réel des effets ; les contrats simples du dépôt peuvent suffire.",
+      "freeUseScope": "Fichiers locaux et tests existants ; licence confirmée dans LICENSE du dépôt."
     },
     {
       "id": "T19",
       "title": "PDF.js",
       "status": "REFERENCE_MODEL_NOT_IMPORTED",
-      "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md"
+      "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md",
+      "targetLots": [
+        16,
+        18,
+        26
+      ],
+      "ownerLot": 16,
+      "acceptanceCriteria": "PDF invalide, document volumineux, accès expiré et navigation clavier ; aucune pièce privée dans un cache public.",
+      "integrationPlan": "Charger le lecteur à l’ouverture d’une pièce autorisée ; borner taille et pages. Pour OCR, rendre une page en image avant de la transmettre à l’étape de reconnaissance.",
+      "integrationMeaning": "REFERENCE_TO_EVALUATE_WITHIN_TARGET_LOTS_NOT_AUTOMATIC_DEPENDENCY_INSTALL",
+      "adoptionDecision": "KEEP_EXISTING_OWNER_UNTIL_MEASURED_BENEFIT",
+      "sourceUrl": "https://github.com/mozilla/pdf.js",
+      "limits": "Ce lecteur n’est ni un générateur complet de PDF ni une protection contre la copie d’un document déjà consulté.",
+      "freeUseScope": "Navigateur ; chargement à la demande pour limiter réseau et mémoire."
     },
     {
       "id": "T20",
       "title": "Tesseract.js",
       "status": "REFERENCE_MODEL_NOT_IMPORTED",
-      "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md"
+      "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md",
+      "targetLots": [
+        18,
+        26
+      ],
+      "ownerLot": 18,
+      "acceptanceCriteria": "Mesurer erreurs sur montants et dates, durée et mémoire ; une faible qualité impose une saisie manuelle.",
+      "integrationPlan": "Essayer sur reçus synthétiques FR/EN : recadrage proposé à l’utilisateur, reconnaissance puis validation champ par champ. Pour PDF, passer auparavant par un rendu de page avec PDF.js.",
+      "integrationMeaning": "REFERENCE_TO_EVALUATE_WITHIN_TARGET_LOTS_NOT_AUTOMATIC_DEPENDENCY_INSTALL",
+      "adoptionDecision": "KEEP_EXISTING_OWNER_UNTIL_MEASURED_BENEFIT",
+      "sourceUrl": "https://github.com/naptha/tesseract.js",
+      "limits": "Pas de prise en charge native des PDF par la bibliothèque ; manuscrit et photos floues restent difficiles. Aucun montant reconnu n’entre directement dans le Ledger.",
+      "freeUseScope": "Calcul local ; prévoir téléchargement des langues et éviter le chargement automatique sur chaque page."
     },
     {
       "id": "T21",
       "title": "Transformers.js",
       "status": "REFERENCE_MODEL_NOT_IMPORTED",
-      "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md"
+      "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md",
+      "targetLots": [
+        23
+      ],
+      "ownerLot": 23,
+      "acceptanceCriteria": "Évaluer sur des exemples Eco FR/EN, sur matériel modeste et sans réseau après installation ; conserver une alternative déterministe.",
+      "integrationPlan": "Tester une tâche bornée, par exemple classer une demande d’aide ou retrouver un guide. Choisir des poids autorisant l’usage prévu, mesurer téléchargement et mémoire, puis demander le téléchargement volontaire.",
+      "integrationMeaning": "REFERENCE_TO_EVALUATE_WITHIN_TARGET_LOTS_NOT_AUTOMATIC_DEPENDENCY_INSTALL",
+      "adoptionDecision": "KEEP_EXISTING_OWNER_UNTIL_MEASURED_BENEFIT",
+      "sourceUrl": "https://github.com/huggingface/transformers.js",
+      "limits": "Aucun modèle précis n’est déclaré qualifié dans ce dossier. Pas de remplacement automatique par une API payante, pas de calcul financier confié au modèle.",
+      "freeUseScope": "Option sans GPU acheté ni serveur nouveau ; à écarter si le matériel existant ne suffit pas."
     },
     {
       "id": "T22",
       "title": "Vosk",
       "status": "REFERENCE_MODEL_NOT_IMPORTED",
-      "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md"
+      "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md",
+      "targetLots": [
+        23
+      ],
+      "ownerLot": 23,
+      "acceptanceCriteria": "Évaluer accents, bruit, « mille »/« dix mille », changement de membre et refus du micro ; le clavier reste utilisable.",
+      "integrationPlan": "Faire un premier essai sur un ordinateur existant avec un modèle FR ou EN dont la licence est vérifiée dans le catalogue officiel. Transcrire vers un brouillon, normaliser le montant puis demander relecture.",
+      "integrationMeaning": "REFERENCE_TO_EVALUATE_WITHIN_TARGET_LOTS_NOT_AUTOMATIC_DEPENDENCY_INSTALL",
+      "adoptionDecision": "KEEP_EXISTING_OWNER_UNTIL_MEASURED_BENEFIT",
+      "sourceUrl": "https://github.com/alphacep/vosk-api",
+      "limits": "L’API native n’est pas un composant web directement déployable dans Cloudflare Workers. Une intégration navigateur demande un adaptateur séparé qualifié ; ne pas la promettre comme déjà disponible.",
+      "freeUseScope": "Prototype local sans API payante ; pas d’achat de microphone ou machine imposé."
     },
     {
       "id": "T23",
       "title": "DuckDB",
       "status": "REFERENCE_MODEL_NOT_IMPORTED",
-      "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md"
+      "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md",
+      "targetLots": [
+        6,
+        8,
+        11,
+        20,
+        27
+      ],
+      "ownerLot": 6,
+      "acceptanceCriteria": "Les agrégats concordent avec les exports sources ; données manquantes, doublons et unités incohérentes sont signalés.",
+      "integrationPlan": "Charger une copie autorisée de données, calculer rapprochements et indicateurs en lecture seule, puis produire un rapport avec date et provenance.",
+      "integrationMeaning": "REFERENCE_TO_EVALUATE_WITHIN_TARGET_LOTS_NOT_AUTOMATIC_DEPENDENCY_INSTALL",
+      "adoptionDecision": "KEEP_EXISTING_OWNER_UNTIL_MEASURED_BENEFIT",
+      "sourceUrl": "https://github.com/duckdb/duckdb",
+      "limits": "Ne pas remplacer D1 ou le Ledger. Un rapport local n’est pas un tableau de bord toujours à jour ; protéger les fichiers exportés et leur durée de conservation.",
+      "freeUseScope": "Ordinateur existant ; aucun entrepôt de données hébergé obligatoire."
     },
     {
       "id": "T24",
       "title": "Apache ECharts",
       "status": "REFERENCE_MODEL_NOT_IMPORTED",
-      "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md"
+      "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md",
+      "targetLots": [
+        2,
+        6,
+        7,
+        8,
+        9,
+        11,
+        19,
+        20,
+        22
+      ],
+      "ownerLot": 2,
+      "acceptanceCriteria": "Vérifier unités, périodes, données absentes, comparaison au total et navigation sur petit écran.",
+      "integrationPlan": "Choisir deux graphiques utiles : évolution d’une mesure canonique et répartition avec total vérifiable. Importer les éléments nécessaires et joindre une table textuelle accessible.",
+      "integrationMeaning": "REFERENCE_TO_EVALUATE_WITHIN_TARGET_LOTS_NOT_AUTOMATIC_DEPENDENCY_INSTALL",
+      "adoptionDecision": "KEEP_EXISTING_OWNER_UNTIL_MEASURED_BENEFIT",
+      "sourceUrl": "https://github.com/apache/echarts",
+      "limits": "Un beau graphique ne prouve pas la qualité de la donnée. Éviter 3D, échelles trompeuses et actualisation permanente ; les calculs restent chez leur propriétaire.",
+      "freeUseScope": "Rendu local à partir de données déjà autorisées."
     },
     {
       "id": "M01",
       "title": "ERPNext : relier les documents opérationnels",
       "status": "REFERENCE_MODEL_NOT_IMPORTED",
-      "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md"
+      "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md",
+      "targetLots": [
+        6,
+        7,
+        8,
+        11
+      ],
+      "ownerLot": 6,
+      "acceptanceCriteria": "Une correction est visible de la commande au reçu et au total concerné.",
+      "integrationPlan": [
+        "Définir les références entre objets déjà présents.",
+        "Afficher leur chronologie et les états confirmés.",
+        "Ouvrir les écrans propriétaires pour agir, sans importer un second moteur comptable."
+      ],
+      "integrationMeaning": "REFERENCE_TO_EVALUATE_WITHIN_TARGET_LOTS_NOT_AUTOMATIC_DEPENDENCY_INSTALL",
+      "adoptionDecision": "KEEP_EXISTING_OWNER_UNTIL_MEASURED_BENEFIT",
+      "sourceUrl": "https://github.com/frappe/erpnext",
+      "limits": "Inspiration fonctionnelle gratuite ; installer tout l’ERP n’est ni nécessaire ni proposé. Les règles des tontines restent celles d’Eco.",
+      "freeUseScope": "Reference design only; no hosted paid service authorized."
     },
     {
       "id": "M02",
       "title": "Odoo Community : continuité du dossier commercial",
       "status": "REFERENCE_MODEL_NOT_IMPORTED",
-      "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md"
+      "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md",
+      "targetLots": [
+        10
+      ],
+      "ownerLot": 10,
+      "acceptanceCriteria": "Changer une commande actualise ses projections sans créer une deuxième vérité de stock.",
+      "integrationPlan": [
+        "Choisir les données communes minimales et leurs propriétaires.",
+        "Relier les écrans par références plutôt que recopier les documents.",
+        "Conserver un état par objet et une lecture cohérente de l’ensemble."
+      ],
+      "integrationMeaning": "REFERENCE_TO_EVALUATE_WITHIN_TARGET_LOTS_NOT_AUTOMATIC_DEPENDENCY_INSTALL",
+      "adoptionDecision": "KEEP_EXISTING_OWNER_UNTIL_MEASURED_BENEFIT",
+      "sourceUrl": "https://github.com/odoo/odoo",
+      "limits": "S’inspirer du fonctionnement documenté, sans supposer gratuites toutes les fonctions Enterprise ni reprendre marques et écrans à l’identique.",
+      "freeUseScope": "Reference design only; no hosted paid service authorized."
     },
     {
       "id": "M03",
       "title": "Discourse : une discussion qui reste retrouvable",
       "status": "REFERENCE_MODEL_NOT_IMPORTED",
-      "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md"
+      "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md",
+      "targetLots": [
+        14
+      ],
+      "ownerLot": 14,
+      "acceptanceCriteria": "Une solution reste retrouvable sans exposer une discussion privée ; un contenu corrigé conserve une trace appropriée.",
+      "integrationPlan": [
+        "Structurer sujet, catégorie, objet lié et visibilité.",
+        "Ajouter suivi, résumé relu et solution contextualisée.",
+        "Prévoir signalement, examen, décision et recours."
+      ],
+      "integrationMeaning": "REFERENCE_TO_EVALUATE_WITHIN_TARGET_LOTS_NOT_AUTOMATIC_DEPENDENCY_INSTALL",
+      "adoptionDecision": "KEEP_EXISTING_OWNER_UNTIL_MEASURED_BENEFIT",
+      "sourceUrl": "https://www.discourse.org/features",
+      "limits": "Les niveaux de confiance communautaire ne doivent jamais donner automatiquement un pouvoir financier dans Eco. Aucun abonnement Discourse requis pour reprendre ces idées.",
+      "freeUseScope": "Reference design only; no hosted paid service authorized."
     },
     {
       "id": "M04",
       "title": "Zulip : organiser les échanges par sujet",
       "status": "REFERENCE_MODEL_NOT_IMPORTED",
-      "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md"
+      "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md",
+      "targetLots": [
+        14,
+        24
+      ],
+      "ownerLot": 14,
+      "acceptanceCriteria": "Deux commandes différentes ne partagent pas accidentellement le même historique privé.",
+      "integrationPlan": [
+        "Définir un sujet court et une référence métier facultative.",
+        "Conserver les droits propres à l’objet et à la discussion.",
+        "Regrouper les notifications du même sujet sans masquer les événements importants."
+      ],
+      "integrationMeaning": "REFERENCE_TO_EVALUATE_WITHIN_TARGET_LOTS_NOT_AUTOMATIC_DEPENDENCY_INSTALL",
+      "adoptionDecision": "KEEP_EXISTING_OWNER_UNTIL_MEASURED_BENEFIT",
+      "sourceUrl": "https://zulip.com/help/introduction-to-topics",
+      "limits": "Le sujet sert au classement ; il ne vaut ni commande ni décision. Réalisation possible dans les échanges existants, sans nouvelle messagerie à héberger.",
+      "freeUseScope": "Reference design only; no hosted paid service authorized."
     },
     {
       "id": "M05",
       "title": "Open Collective : séparer demande, approbation et paiement",
       "status": "REFERENCE_MODEL_NOT_IMPORTED",
-      "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md"
+      "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md",
+      "targetLots": [
+        4,
+        6,
+        9
+      ],
+      "ownerLot": 4,
+      "acceptanceCriteria": "Une approbation ne s’affiche pas comme un décaissement et un paiement refusé ne devient pas réussi.",
+      "integrationPlan": [
+        "Montrer montant demandé, autorisation obtenue et effet comptable réel séparément.",
+        "Présenter pièces et décideurs selon les droits.",
+        "Relier rejet ou correction à son motif sans effacer la demande initiale."
+      ],
+      "integrationMeaning": "REFERENCE_TO_EVALUATE_WITHIN_TARGET_LOTS_NOT_AUTOMATIC_DEPENDENCY_INSTALL",
+      "adoptionDecision": "KEEP_EXISTING_OWNER_UNTIL_MEASURED_BENEFIT",
+      "sourceUrl": "https://documentation.opencollective.com/getting-started/understanding-expenses",
+      "limits": "Ne pas copier une politique de transparence publique pour des données privées de membres. Le modèle d’hébergement ou de frais du service n’est pas nécessaire à l’idée.",
+      "freeUseScope": "Reference design only; no hosted paid service authorized."
     },
     {
       "id": "M06",
       "title": "Open Food Network : relier producteurs et distribution locale",
       "status": "REFERENCE_MODEL_NOT_IMPORTED",
-      "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md"
+      "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md",
+      "targetLots": [
+        10,
+        12,
+        13
+      ],
+      "ownerLot": 10,
+      "acceptanceCriteria": "Quantités confirmées, retrait et disponibilité restent cohérents pour tous les participants.",
+      "integrationPlan": [
+        "Décrire offre, unité, disponibilité et point de retrait.",
+        "Regrouper les demandes volontaires sans réserver prématurément.",
+        "Confirmer les engagements via les commandes et stocks canoniques."
+      ],
+      "integrationMeaning": "REFERENCE_TO_EVALUATE_WITHIN_TARGET_LOTS_NOT_AUTOMATIC_DEPENDENCY_INSTALL",
+      "adoptionDecision": "KEEP_EXISTING_OWNER_UNTIL_MEASURED_BENEFIT",
+      "sourceUrl": "https://github.com/openfoodfoundation/openfoodnetwork",
+      "limits": "La coopération locale n’efface ni coûts de transport ni contraintes de conservation. Réutiliser l’idée sans déployer une seconde boutique concurrente.",
+      "freeUseScope": "Reference design only; no hosted paid service authorized."
     },
     {
       "id": "M07",
       "title": "Medusa : séparer les responsabilités du commerce",
       "status": "REFERENCE_MODEL_NOT_IMPORTED",
-      "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md"
+      "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md",
+      "targetLots": [
+        10
+      ],
+      "ownerLot": 10,
+      "acceptanceCriteria": "L’indisponibilité d’un écran de catalogue ne crée ni stock parallèle ni commande fictive.",
+      "integrationPlan": [
+        "Identifier quel module décide le prix applicable, réserve et annule.",
+        "Exposer des commandes et lectures compatibles.",
+        "Tester les contrats et les effets intégrés avant activation."
+      ],
+      "integrationMeaning": "REFERENCE_TO_EVALUATE_WITHIN_TARGET_LOTS_NOT_AUTOMATIC_DEPENDENCY_INSTALL",
+      "adoptionDecision": "KEEP_EXISTING_OWNER_UNTIL_MEASURED_BENEFIT",
+      "sourceUrl": "https://github.com/medusajs/medusa",
+      "limits": "Le cœur libre inspire la conception ; aucun service cloud Medusa ou module Enterprise n’est nécessaire. Ne pas remplacer le commerce actuel sans motif démontré.",
+      "freeUseScope": "Reference design only; no hosted paid service authorized."
     },
     {
       "id": "M08",
       "title": "Decidim : rendre la participation traçable",
       "status": "REFERENCE_MODEL_NOT_IMPORTED",
-      "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md"
+      "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md",
+      "targetLots": [
+        4
+      ],
+      "ownerLot": 4,
+      "acceptanceCriteria": "Le groupe peut expliquer comment une proposition a abouti ou été rejetée ; la procédure applicable est identifiable.",
+      "integrationPlan": [
+        "Créer une fiche de proposition avec procédure et participants autorisés.",
+        "Conserver arguments, versions et résultat selon le règlement.",
+        "Associer responsable et preuves d’exécution."
+      ],
+      "integrationMeaning": "REFERENCE_TO_EVALUATE_WITHIN_TARGET_LOTS_NOT_AUTOMATIC_DEPENDENCY_INSTALL",
+      "adoptionDecision": "KEEP_EXISTING_OWNER_UNTIL_MEASURED_BENEFIT",
+      "sourceUrl": "https://github.com/decidim/decidim",
+      "limits": "Un dispositif participatif générique ne remplace pas les statuts d’une association. Adapter les mécanismes au cadre adopté, sans installation obligatoire de Decidim.",
+      "freeUseScope": "Reference design only; no hosted paid service authorized."
     },
     {
       "id": "M09",
       "title": "Loomio : décider avec le contexte et les raisons",
       "status": "REFERENCE_MODEL_NOT_IMPORTED",
-      "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md"
+      "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md",
+      "targetLots": [
+        4
+      ],
+      "ownerLot": 4,
+      "acceptanceCriteria": "Un nouvel arrivant habilité comprend le résultat sans lire des centaines de messages.",
+      "integrationPlan": [
+        "Formuler question, options, délai et règle de décision.",
+        "Recueillir positions et réserves autorisées.",
+        "Publier résultat et suite opérationnelle avec leurs références."
+      ],
+      "integrationMeaning": "REFERENCE_TO_EVALUATE_WITHIN_TARGET_LOTS_NOT_AUTOMATIC_DEPENDENCY_INSTALL",
+      "adoptionDecision": "KEEP_EXISTING_OWNER_UNTIL_MEASURED_BENEFIT",
+      "sourceUrl": "https://www.loomio.com/",
+      "limits": "Reprendre le principe est gratuit ; ne pas présumer que toutes les offres hébergées du produit le sont. La décision n’exécute pas automatiquement une opération financière.",
+      "freeUseScope": "Reference design only; no hosted paid service authorized."
     },
     {
       "id": "M10",
       "title": "KoboToolbox : préparer et reprendre une collecte hors ligne",
       "status": "REFERENCE_MODEL_NOT_IMPORTED",
-      "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md"
+      "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md",
+      "targetLots": [
+        3,
+        5
+      ],
+      "ownerLot": 3,
+      "acceptanceCriteria": "Fermer, rouvrir et reconnecter ne transforme pas un brouillon en faux succès ni en double opération.",
+      "integrationPlan": [
+        "Vérifier la préparation hors ligne et la version du formulaire.",
+        "Persister les brouillons avec statut explicite et reprise.",
+        "Confirmer la réception réelle et traiter les conflits selon le métier."
+      ],
+      "integrationMeaning": "REFERENCE_TO_EVALUATE_WITHIN_TARGET_LOTS_NOT_AUTOMATIC_DEPENDENCY_INSTALL",
+      "adoptionDecision": "KEEP_EXISTING_OWNER_UNTIL_MEASURED_BENEFIT",
+      "sourceUrl": "https://support.kobotoolbox.org/data_through_webforms.html",
+      "limits": "L’idée n’autorise pas à remplacer la synchronisation financière existante par un formulaire générique. Les quotas d’un service hébergé ne sont pas annoncés illimités.",
+      "freeUseScope": "Reference design only; no hosted paid service authorized."
     },
     {
       "id": "M11",
       "title": "Ushahidi : recueillir, qualifier et situer des signalements",
       "status": "REFERENCE_MODEL_NOT_IMPORTED",
-      "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md"
+      "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md",
+      "targetLots": [
+        22
+      ],
+      "ownerLot": 22,
+      "acceptanceCriteria": "Un signalement non vérifié ne reçoit pas un libellé de fait établi ; les coordonnées privées restent protégées.",
+      "integrationPlan": [
+        "Collecter faits allégués, date, source et zone utile.",
+        "Faire examiner la portée et les preuves par un rôle habilité.",
+        "Diffuser seulement les éléments autorisés, avec statut et recours."
+      ],
+      "integrationMeaning": "REFERENCE_TO_EVALUATE_WITHIN_TARGET_LOTS_NOT_AUTOMATIC_DEPENDENCY_INSTALL",
+      "adoptionDecision": "KEEP_EXISTING_OWNER_UNTIL_MEASURED_BENEFIT",
+      "sourceUrl": "https://github.com/ushahidi/platform",
+      "limits": "Aucune carte externe payante n’est nécessaire : une liste par zone suffit. Éviter la publication automatique d’accusations nominatives.",
+      "freeUseScope": "Reference design only; no hosted paid service authorized."
     },
     {
       "id": "M12",
       "title": "Moodle : relier compétences, apprentissage et preuve",
       "status": "REFERENCE_MODEL_NOT_IMPORTED",
-      "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md"
+      "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md",
+      "targetLots": [
+        15,
+        16,
+        17
+      ],
+      "ownerLot": 15,
+      "acceptanceCriteria": "Une compétence déclarée, un cours terminé et une pratique validée sont trois états distincts.",
+      "integrationPlan": [
+        "Définir compétence, niveau et preuve attendue.",
+        "Proposer un exercice adapté et une relecture.",
+        "Présenter progression, corrections et limites de la validation."
+      ],
+      "integrationMeaning": "REFERENCE_TO_EVALUATE_WITHIN_TARGET_LOTS_NOT_AUTOMATIC_DEPENDENCY_INSTALL",
+      "adoptionDecision": "KEEP_EXISTING_OWNER_UNTIL_MEASURED_BENEFIT",
+      "sourceUrl": "https://docs.moodle.org/en/Competencies",
+      "limits": "Un module suivi ne constitue pas automatiquement une qualification professionnelle. On peut réaliser ce parcours dans Eco sans héberger Moodle.",
+      "freeUseScope": "Reference design only; no hosted paid service authorized."
     },
     {
       "id": "M13",
       "title": "Open Badges : une preuve portable et décrite",
       "status": "REFERENCE_MODEL_NOT_IMPORTED",
-      "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md"
+      "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md",
+      "targetLots": [
+        15,
+        16,
+        21
+      ],
+      "ownerLot": 15,
+      "acceptanceCriteria": "Le lecteur distingue qui atteste quoi, sur quelle base et à quelle date.",
+      "integrationPlan": [
+        "Définir les champs et la règle de validité.",
+        "Relier la preuve à une consultation autorisée et à une révocation possible.",
+        "Tester un export documenté avant de prétendre à une interopérabilité complète."
+      ],
+      "integrationMeaning": "REFERENCE_TO_EVALUATE_WITHIN_TARGET_LOTS_NOT_AUTOMATIC_DEPENDENCY_INSTALL",
+      "adoptionDecision": "KEEP_EXISTING_OWNER_UNTIL_MEASURED_BENEFIT",
+      "sourceUrl": "https://www.1edtech.org/standards/open-badges",
+      "limits": "Une signature ne garantit pas la vérité d’une assertion. La consultation du standard et l’inspiration sont gratuites ; une certification officielle éventuelle est un sujet séparé.",
+      "freeUseScope": "Reference design only; no hosted paid service authorized."
     },
     {
       "id": "M14",
       "title": "OpenStreetMap : contribuer des faits vérifiables",
       "status": "REFERENCE_MODEL_NOT_IMPORTED",
-      "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md"
+      "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md",
+      "targetLots": [
+        13,
+        21
+      ],
+      "ownerLot": 13,
+      "acceptanceCriteria": "Une fermeture signalée corrige les nouvelles propositions ; une observation ne vérifie pas toutes les activités du lieu.",
+      "integrationPlan": [
+        "Décrire le fait observé et sa date sans publier un domicile privé.",
+        "Conserver les modifications et leur auteur autorisé.",
+        "Marquer les informations anciennes à reconfirmer."
+      ],
+      "integrationMeaning": "REFERENCE_TO_EVALUATE_WITHIN_TARGET_LOTS_NOT_AUTOMATIC_DEPENDENCY_INSTALL",
+      "adoptionDecision": "KEEP_EXISTING_OWNER_UNTIL_MEASURED_BENEFIT",
+      "sourceUrl": "https://wiki.openstreetmap.org/wiki/Good_practice",
+      "limits": "Le modèle de contribution est réutilisable ; les tuiles et services géographiques ne sont pas gratuits sans limite. Aucun usage de données OSM n’est imposé par cette proposition.",
+      "freeUseScope": "Reference design only; no hosted paid service authorized."
     },
     {
       "id": "M15",
       "title": "Metabase : des tableaux de bord qui mènent à la question suivante",
       "status": "REFERENCE_MODEL_NOT_IMPORTED",
-      "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md"
+      "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md",
+      "targetLots": [
+        2,
+        20
+      ],
+      "ownerLot": 2,
+      "acceptanceCriteria": "Un clic sur une carte retrouve les mêmes filtres et le même total ; une source absente est signalée.",
+      "integrationPlan": [
+        "Choisir les décisions réellement aidées par chaque carte.",
+        "Afficher période, filtre, source et fraîcheur.",
+        "Ouvrir le détail canonique sans inventer un second calcul."
+      ],
+      "integrationMeaning": "REFERENCE_TO_EVALUATE_WITHIN_TARGET_LOTS_NOT_AUTOMATIC_DEPENDENCY_INSTALL",
+      "adoptionDecision": "KEEP_EXISTING_OWNER_UNTIL_MEASURED_BENEFIT",
+      "sourceUrl": "https://www.metabase.com/docs/latest/dashboards/introduction",
+      "limits": "Reprendre ces idées avec les composants Eco et ECharts est gratuit. Aucune fonctionnalité Enterprise ou intégration payante de Metabase n’est présumée incluse.",
+      "freeUseScope": "Reference design only; no hosted paid service authorized."
     },
     {
       "id": "M16",
       "title": "Plane : une tâche avec responsable et état",
       "status": "REFERENCE_MODEL_NOT_IMPORTED",
-      "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md"
+      "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md",
+      "targetLots": [
+        2,
+        11,
+        19
+      ],
+      "ownerLot": 2,
+      "acceptanceCriteria": "Une tâche marquée finie ne remplace pas la preuve que la commande ou la décision référencée a abouti.",
+      "integrationPlan": [
+        "Définir responsable, prochaine action et échéance connue ou non.",
+        "Relier les documents de contexte et les résultats métier.",
+        "Clore sur preuve, permettre réouverture et garder une trace."
+      ],
+      "integrationMeaning": "REFERENCE_TO_EVALUATE_WITHIN_TARGET_LOTS_NOT_AUTOMATIC_DEPENDENCY_INSTALL",
+      "adoptionDecision": "KEEP_EXISTING_OWNER_UNTIL_MEASURED_BENEFIT",
+      "sourceUrl": "https://github.com/makeplane/plane",
+      "limits": "S’inspirer de la gestion de travail ne nécessite ni nouvel outil hébergé ni migration de toutes les tâches Eco.",
+      "freeUseScope": "Reference design only; no hosted paid service authorized."
     },
     {
       "id": "M17",
       "title": "Easy!Appointments : réserver un créneau compréhensible",
       "status": "REFERENCE_MODEL_NOT_IMPORTED",
-      "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md"
+      "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md",
+      "targetLots": [
+        13,
+        17
+      ],
+      "ownerLot": 13,
+      "acceptanceCriteria": "Concurrence, changement de date et annulation ne produisent pas deux réservations exclusives valides.",
+      "integrationPlan": [
+        "Définir fuseau, durée, capacité et périodes indisponibles.",
+        "Recontrôler la disponibilité lors de la confirmation serveur.",
+        "Permettre annulation et nouvelle proposition avec notification interne."
+      ],
+      "integrationMeaning": "REFERENCE_TO_EVALUATE_WITHIN_TARGET_LOTS_NOT_AUTOMATIC_DEPENDENCY_INSTALL",
+      "adoptionDecision": "KEEP_EXISTING_OWNER_UNTIL_MEASURED_BENEFIT",
+      "sourceUrl": "https://github.com/alextselegidis/easyappointments",
+      "limits": "Pas besoin d’installer sa pile PHP et base de données dans Eco. Les idées de réservation sont à réaliser dans l’architecture actuelle ; aucun module premium obligatoire.",
+      "freeUseScope": "Reference design only; no hosted paid service authorized."
     },
     {
       "id": "M18",
       "title": "Nextcloud : partager un document avec une portée explicite",
       "status": "REFERENCE_MODEL_NOT_IMPORTED",
-      "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md"
+      "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md",
+      "targetLots": [
+        18,
+        26
+      ],
+      "ownerLot": 18,
+      "acceptanceCriteria": "Un lien expiré ou révoqué ne donne plus de nouvelle lecture ; une pièce voisine reste inaccessible.",
+      "integrationPlan": [
+        "Créer des permissions limitées au document ou à la section.",
+        "Vérifier les droits à chaque nouvelle lecture et journaliser l’accès autorisé.",
+        "Permettre retrait et renouvellement sans publier un dossier entier."
+      ],
+      "integrationMeaning": "REFERENCE_TO_EVALUATE_WITHIN_TARGET_LOTS_NOT_AUTOMATIC_DEPENDENCY_INSTALL",
+      "adoptionDecision": "KEEP_EXISTING_OWNER_UNTIL_MEASURED_BENEFIT",
+      "sourceUrl": "https://docs.nextcloud.com/server/latest/user_manual/en/files/sharing.html",
+      "limits": "Masquer le bouton Télécharger n’empêche pas toute copie. Reprendre le modèle sur le stockage existant évite un nouveau serveur Nextcloud obligatoire.",
+      "freeUseScope": "Reference design only; no hosted paid service authorized."
     },
     {
       "id": "M19",
       "title": "Gitea : conditionner l’intégration à des vérifications",
       "status": "REFERENCE_MODEL_NOT_IMPORTED",
-      "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md"
+      "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md",
+      "targetLots": [
+        28
+      ],
+      "ownerLot": 28,
+      "acceptanceCriteria": "Une modification sans dossier d’impact ou avec preuve périmée est détectée ; les possibilités de contournement sont connues.",
+      "integrationPlan": [
+        "Traduire la règle dans un formulaire d’impact et des contrôles locaux.",
+        "Configurer les protections réellement disponibles sur chaque dépôt existant.",
+        "Exiger revue des changements significatifs et requalification après modification du candidat."
+      ],
+      "integrationMeaning": "REFERENCE_TO_EVALUATE_WITHIN_TARGET_LOTS_NOT_AUTOMATIC_DEPENDENCY_INSTALL",
+      "adoptionDecision": "KEEP_EXISTING_OWNER_UNTIL_MEASURED_BENEFIT",
+      "sourceUrl": "https://docs.gitea.com/1.27/usage/access-control/protected-branches/",
+      "limits": "Les capacités Gitea ne prouvent pas celles du forfait GitHub de chaque compte. Le dossier ne configure aucun compte ; le contrôle local gratuit reste contournable par un administrateur.",
+      "freeUseScope": "Reference design only; no hosted paid service authorized."
     },
     {
       "id": "M20",
       "title": "Zammad : suivre réponse, résolution et escalade",
       "status": "REFERENCE_MODEL_NOT_IMPORTED",
-      "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md"
+      "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md",
+      "targetLots": [
+        25
+      ],
+      "ownerLot": 25,
+      "acceptanceCriteria": "Une réponse automatique ne clôt pas un problème ; une échéance dépassée devient visible au bon responsable.",
+      "integrationPlan": [
+        "Définir calendrier de disponibilité et catégories de priorité.",
+        "Distinguer attente de l’utilisateur, attente d’un tiers et travail de l’équipe.",
+        "Relancer dans Eco et proposer une escalade selon une règle explicite."
+      ],
+      "integrationMeaning": "REFERENCE_TO_EVALUATE_WITHIN_TARGET_LOTS_NOT_AUTOMATIC_DEPENDENCY_INSTALL",
+      "adoptionDecision": "KEEP_EXISTING_OWNER_UNTIL_MEASURED_BENEFIT",
+      "sourceUrl": "https://admin-docs.zammad.org/en/7.0/manage/slas.html",
+      "limits": "Un outil ne remplace pas les personnes disponibles. Les rappels internes et les règles peuvent être réalisés sans abonnement Zammad ni SMS payants.",
+      "freeUseScope": "Reference design only; no hosted paid service authorized."
     }
-  ]
+  ],
+  "lotCount": 28,
+  "coverageMeaning": "All 92 proposals are assigned to the 28 implementation lots. Assignment is not implementation. T/M are evaluated references, not automatically imported libraries or complete installed products.",
+  "executionOrder": {
+    "remainingCohorts": [
+      [
+        6,
+        7,
+        8,
+        9
+      ],
+      [
+        14,
+        15,
+        16,
+        17
+      ],
+      [
+        18,
+        19
+      ],
+      [
+        22,
+        26,
+        27
+      ]
+    ],
+    "finalCohort": "Remaining improvements and innovations of previously delivered lots; individual proof required",
+    "requestedOn": "2026-10-22"
+  }
 }

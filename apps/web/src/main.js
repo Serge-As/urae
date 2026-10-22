@@ -1,4 +1,5 @@
 import { mountTemporalCommerceUI } from './temporal-commerce-ui.js';
+import {mountFinancialExplanationsUI} from './financial-explanations-ui.js';
 import {mountNotificationCenterUI} from './notification-center-ui.js';
 import {mountEcoCareUI} from './eco-care-ui.js';
 import {createJourneyContext,mountJourneyUI} from './journey-context.js';
@@ -190,7 +191,7 @@ let modules = [];
 let applicationStartup = Promise.resolve();
 let selectedLot = 'ALL';
 let deferredInstallPrompt;
-const CAHIER_VERSION = '1.5.2.32-temporal-commerce-pilots';
+const CAHIER_VERSION = '1.5.2.33-financial-explanations';
 const $ = (s) => { const e = document.querySelector(s); if (!e)
     throw new Error(`UI_ELEMENT_NOT_FOUND:${s}`); return e; };
 const val = (id) => document.getElementById(id).value.trim();
@@ -548,6 +549,7 @@ const businessStudioUI = mountBusinessStudioUI({app,navigate:go,notify:toast,sho
 const coreEconomicLearningUI = mountCoreEconomicLearningUI({app,notify:toast,showError:fail,isManager});
 const economicExperimentsUI=mountEconomicExperimentsUI({app,isManager,notify:toast});
 const temporalCommerceUI=mountTemporalCommerceUI({app,isManager,notify:toast});
+const financialExplanationsUI=mountFinancialExplanationsUI({app,isManager});
 const founderControlUI = mountFounderControlUI({ app, notify: toast, showError: fail });
 const assistanceRulebookUI = mountAssistanceRulebookUI({ app, notify: toast, showError: fail, isManager });
 const groupHomeUI = mountGroupHomeUI({ app, getGroups:()=>groups, getMembers:()=>members, getMeetings:()=>meetings, navigate:go, fmt });
@@ -2515,6 +2517,7 @@ const refreshGroupContext = async () => {
     ecoCareUI.clearForContext?.();
     governedGroupUI.clearForContext?.();
     economicExperimentsUI.clearForContext?.();
+    financialExplanationsUI.clearForContext?.();
     launchStudio?.refreshContext();
     identityVerificationUI.clearForContext?.();
     universalSearchRevision++;document.getElementById('universalSearchFullResults')?.replaceChildren();const searchScope=JSON.stringify([app.currentActor(),app.currentTenant(),app.activeGroup()]);if(searchScope!==universalSearchScope){universalSearchScope=searchScope;const input=document.getElementById('universalSearchFull');if(input)input.value='';}
@@ -3065,6 +3068,7 @@ $('#languageSelect').addEventListener('change', async e => {
     governedGroupUI.setLocale?.();
     economicExperimentsUI.setLocale?.();
     temporalCommerceUI.setLocale?.();
+    financialExplanationsUI.setLocale?.();
     launchStudio?.setLocale();
     completionUI.setLocale();
     advancedUI.setLocale();
@@ -3373,7 +3377,7 @@ document.querySelector('#claimLocalAccountBtn')?.addEventListener('click',()=>vo
     catch(e){fail(e);}
     finally{if(button)button.disabled=false;}
 })());
-$('#logoutBtn').addEventListener('click',async()=>{try{await app.logout();notificationCenterUI.clearForContext(true);ecoCareUI.clearForContext(true);governedGroupUI.clearForContext(true);economicExperimentsUI.clearForContext(true);launchStudio?.refreshContext(true);identityVerificationUI.clearForContext?.(true);journeyUI.refresh();localAssistantUI.refreshContext();document.body.classList.add('signed-out');$('#authScreen').hidden=false;$('#accountName').textContent='';const claim=document.querySelector('#claimLocalAccountBtn');if(claim)claim.hidden=true;showAuth(tx('Compte fermé sur cet appareil. Vos données locales ne sont pas supprimées.','Account signed out on this device. Your local data was not deleted.'));}catch(e){fail(e);}});
+$('#logoutBtn').addEventListener('click',async()=>{try{await app.logout();notificationCenterUI.clearForContext(true);ecoCareUI.clearForContext(true);governedGroupUI.clearForContext(true);economicExperimentsUI.clearForContext(true);financialExplanationsUI.clearForContext(true);launchStudio?.refreshContext(true);identityVerificationUI.clearForContext?.(true);journeyUI.refresh();localAssistantUI.refreshContext();document.body.classList.add('signed-out');$('#authScreen').hidden=false;$('#accountName').textContent='';const claim=document.querySelector('#claimLocalAccountBtn');if(claim)claim.hidden=true;showAuth(tx('Compte fermé sur cet appareil. Vos données locales ne sont pas supprimées.','Account signed out on this device. Your local data was not deleted.'));}catch(e){fail(e);}});
 // Online recovery is serialized by resumeOnline() above: sync durable outbox first, then restart projections.
 window.addEventListener('offline',()=>{renderConnectivity();const claim=document.querySelector('#claimLocalAccountBtn');if(claim&&!claim.hidden){claim.disabled=true;claim.textContent=tx('Compte local · Internet requis pour finaliser','Local account · Internet needed to finalize');}});
 void ensureCurrentServiceWorker();

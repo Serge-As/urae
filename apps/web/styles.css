@@ -1910,3 +1910,19 @@ body.ui-mode-assisted .eco-workbench :is(button,p,small,span,label){font-size:15
 .temporal-commerce .temporal-filters{display:flex;gap:10px;margin:14px 0;flex-wrap:wrap}.temporal-commerce .temporal-filters>*{flex:1;min-width:140px}
 .temporal-commerce .internal-pilot-creative{padding:16px;border-radius:12px;background:#edf7ef;border:1px solid #c7dfcf}
 @media(max-width:600px){.temporal-commerce{padding:10px}.temporal-commerce .temporal-form{padding:10px}.temporal-commerce button{max-width:100%;white-space:normal}}
+
+/* Financial explanation projections v33: local table scrolling, no global density override. */
+.finance-explanations{min-width:0;max-width:100%;margin-block:1rem;}
+.finance-explain-tabs{display:flex;gap:.5rem;flex-wrap:wrap;margin-block:1rem;}
+.finance-explain-tabs button[aria-pressed=true]{background:var(--eco-primary,#176b52);color:#fff;}
+.finance-explain-filter{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,11rem),1fr));gap:.75rem;align-items:end;}
+.finance-explain-filter label{display:flex;flex-direction:column;gap:.35rem;min-width:0;}
+.finance-explain-filter h3{grid-column:1/-1;}
+.finance-explanations input,.finance-explanations select,.finance-explanations textarea{max-width:100%;min-width:0;box-sizing:border-box;}
+.finance-explain-table-wrap{max-width:100%;overflow:auto;overscroll-behavior-inline:contain;border:1px solid var(--eco-border,#d4e1da);border-radius:.65rem;}
+.finance-explain-table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums;}
+.finance-explain-table th,.finance-explain-table td{padding:.55rem .7rem;vertical-align:top;text-align:start;}
+.finance-explain-table td{white-space:nowrap;}
+.finance-proof-reference{overflow-wrap:anywhere;font-size:.85em;}
+.finance-explanations textarea{width:100%;font-family:ui-monospace,monospace;}
+@media(max-width:520px){.finance-explain-tabs button{flex:1 1 45%;}.finance-explanations .actions{flex-wrap:wrap;}.finance-explanations .actions button{max-width:100%;white-space:normal;}}

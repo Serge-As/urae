@@ -1,9 +1,9 @@
 {
   "name": "tontine-platform",
-  "version": "1.5.2-32",
+  "version": "1.5.2-33",
   "private": true,
   "type": "module",
-  "description": "Eco-System: canonical temporal availability, traceable Harvest changes, consented free internal ad pilots and qualified public asking prices; acquired finance and offline preserved.",
+  "description": "Eco-System: authorized financial explanations, policy-based loan scenarios, verifiable savings calculation copies and tontine resilience; acquired financial commands unchanged.",
   "engines": {
     "node": ">=24"
   },
@@ -13,7 +13,7 @@
     "test": "node scripts/build.mjs && node --test tests/*.test.mjs",
     "lint:architecture": "node scripts/architecture-fitness.mjs",
     "lint:constitution": "node scripts/constitution-lint.mjs",
-    "ci": "npm run audit:dependencies && npm run typecheck && npm run lint:architecture && npm run lint:shared-governance && npm run lint:constitution && npm run lint:truth && npm run lint:memory && npm run lint:memory-index && npm run lint:source-coverage && npm run test",
+    "ci": "npm run audit:dependencies && npm run typecheck && npm run lint:architecture && npm run lint:shared-governance && npm run lint:constitution && npm run lint:truth && npm run lint:memory && npm run lint:memory-index && npm run lint:source-coverage && npm run lint:proposals && npm run test",
     "demo": "node scripts/dev-server.mjs",
     "demo:rebuild": "node scripts/build.mjs && node scripts/dev-server.mjs",
     "start": "node scripts/dev-server.mjs",
@@ -24,7 +24,8 @@
     "lint:source-coverage": "node scripts/source-coverage-lint.mjs",
     "lint:truth": "node scripts/project-truth-gate.mjs",
     "lint:shared-governance": "node scripts/shared-governance-lint.mjs && node scripts/service-solidarity-lint.mjs",
-    "audit:dependencies": "npm audit --audit-level=high"
+    "audit:dependencies": "npm audit --audit-level=high",
+    "lint:proposals": "node scripts/proposal-coverage-gate.mjs"
   },
   "devDependencies": {
     "@playwright/test": "1.56.1",

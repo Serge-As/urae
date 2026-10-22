@@ -1,5 +1,6 @@
 import { PlatformKernel } from '../../../packages/platform-kernel/src/index.js';
 import {caseCareAdapter} from './care.js';
+import {financialExplanationRoute} from './financial-explanations.js';
 import type {CaseCareCommand,CaseCareCategory} from '../../../packages/contracts/src/index.js';
 import { D1PlatformRepository, InMemoryPlatformRepository, type D1DatabaseLike, type PlatformRepository } from '../../../packages/repositories/src/index.js';
 import { FoundationService, LedgerService, MeetingService, starterGroupOperatingPolicy, compareNormalizedCellIntents, financialCellWinnerRecordId, financialCellIntentRecordId } from '../../../packages/domain/src/index.js';
@@ -80,11 +81,11 @@ interface WorkersAILike {
   run?(model:string,input:Record<string,unknown>,options?:Record<string,unknown>):Promise<unknown>;
 }
 
-const RELEASE_VERSION='1.5.2.32-temporal-commerce-pilots';
-const RELEASE_BUILD_ID='eco-system-1.5.2.32-20261022-temporal-commerce-pilots';
+const RELEASE_VERSION='1.5.2.33-financial-explanations';
+const RELEASE_BUILD_ID='eco-system-1.5.2.33-20261022-financial-explanations';
 const RELEASE_SCHEMA_VERSION='d1-additive-20260923';
 const RELEASE_POLICY_VERSION='live-finance-policy-20261007-event-push-repayment';
-const RELEASE_PWA_CACHE='eco-system-v15232-temporal-commerce-pilots-20261022';
+const RELEASE_PWA_CACHE='eco-system-v15233-financial-explanations-20261022';
 
 const defaultRepo = new InMemoryPlatformRepository();
 const defaultReferralBudgets = new InMemoryReferralBudgetStore();
@@ -2125,6 +2126,8 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
       const groupId=financialSnapshotRoute[1]!;await requireGroup(groupId,false);
       return json(await memberEnvelopes.canonicalCells(groupId),200,cors);
     }
+    const explanation=await financialExplanationRoute(request,url,{repo,ledger,completion,ctx,requireGroup,resolveLoanPolicy:resolveLoanPolicyForOperation});
+    if(explanation!==undefined)return json(explanation,200,cors);
     const ledgerRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/ledger$/);
     if(ledgerRoute&&request.method==='GET') return json({summary:await ledger.summary(ctx.tenantId,ledgerRoute[1]!),entries:await repo.listLedgerEntries(ctx.tenantId,ledgerRoute[1]!),receipts:await ledger.receiptPositions(ctx.tenantId,ledgerRoute[1]!),cellRevisions:await repo.listFinancialCellRevisions(ctx.tenantId,ledgerRoute[1]!)},200,cors);
     const reverseRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/ledger\/([^/]+)\/reverse$/);

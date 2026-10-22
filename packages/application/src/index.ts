@@ -2481,6 +2481,13 @@ export class ConnectedApplication {
   async approveGovernanceDecision(id:string,expectedVersion:number):Promise<CompletionRecord>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/governance/decisions/'+encodeURIComponent(id)+'/approve',{method:'POST',body:JSON.stringify({expectedVersion})});}
   async createReadinessPassport():Promise<CompletionRecord>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/readiness',{method:'POST',body:'{}'});}
   async compareRules(before:Record<string,unknown>,after:Record<string,unknown>):Promise<{differences:Array<{field:string;before:unknown;after:unknown}>}>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/rules/compare',{method:'POST',body:JSON.stringify({before,after})});}
+  async financialExplanation(action:string,query:Record<string,string>={},body?:unknown):Promise<any>{
+    if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');
+    if(!/^(explanation|loans(?:\/[^/]+(?:\/scenario)?)?|yield-receipts|yield-copy(?:\/verify)?|calendar(?:\/stress)?)$/.test(action))throw Error('INVALID_FINANCE_EXPLANATION_ACTION');
+    const suffix=new URLSearchParams(query).toString(),path='/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/finance/'+action+(suffix?'?'+suffix:'');
+    const result=await this.request<any>(path,body===undefined?undefined:{method:'POST',body:JSON.stringify(body)});
+    return {...result,clientOffline:this.isOffline()||this.usingOfflineSnapshot};
+  }
   async ledgerAnomalies():Promise<Array<{code:string;entryId?:string;details:string}>>{if(!this.activeGroupId)return[];return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/ledger/anomalies');}
   calendarIcsUrl():string{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.baseUrl+'/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/calendar.ics';}
 

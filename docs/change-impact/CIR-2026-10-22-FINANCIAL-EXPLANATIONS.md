@@ -1,0 +1,19 @@
+# CIR — L06/L07/L08/L09 : explication financière et simulations
+
+Autorisation : poursuite explicite du fondateur, lots similaires regroupés, 92 propositions et innovations intégrées au programme. Base publiée v32, source 3661a369620e4c881b1342f826071431af53458a ; HEAD distant 8121698e4874ece94185af3e64eaa38840450076, descendant ne modifiant que le marqueur de livraison. La clôture documentaire locale v32 est conservée.
+
+Propriétaires réutilisés : LedgerService pour les soldes, mouvements et relevés ; CompletionSuite pour les prêts et cycles/parts ; moteur de prêt existant pour les calculs ; moteur SavingsYield pour les répartitions ; clôture d’exercice pour les enveloppes déjà arrêtées. Le nouveau module est une projection autorisée en lecture et un adaptateur de simulation. Il ne possède aucun solde, taux opérationnel, ordre de remboursement ou distribution.
+
+Périmètre : décomposition et filtres de mouvements confirmés, contre-écritures et rapprochement ; frise de prêt et comparaison conditionnelle I11 ; copie de calcul d’épargne exportable avec provenance et vérification ; enveloppes de clôture sans nouvelle distribution ; tours et obligations autorisés, résistance hypothétique I13 sans déplacer les tours. Rattachement exhaustif des 92 propositions aux 28 lots avec critères de recette, sans déclarer tous les outils installés.
+
+Risques indirects : lectures historiques D1, confusion entre sommes en attente et confirmées, exposition de données d’autrui, simulation interprétée comme un paiement, affichage d’un ancien aperçu après changement de règle ou de compte. Réponses : chargement à l’ouverture ou sur action ; aucune boucle ; contrôles de droits côté serveur ; compteur local séparé ; génération de contexte ; empreinte de l’état/politique pour refuser l’aperçu caduc ; provenance explicite des calculs déclarés. Une empreinte de contenu n’est pas une certification de résultat financier.
+
+Les endpoints et commandes financiers acquis, les deux feuilles, outbox, Live, les signatures et propriétaires D1/R2 sont conservés. Aucun nouveau stockage, migration, dépendance, service payant ou argent réel. Un changement de langue ou de groupe doit préserver les saisies du contexte légitime ou effacer les données privées selon le changement ; aucune donnée privée de l’ancien compte ne réapparaît.
+
+Recette : mémoire et SQLite/D1 ; idempotence/annulation acquises ; sommes de contrôle ; droits membre/gestionnaire/tiers ; refus de contexte caduc ; invariance du Ledger et workspace avant/après les simulations ; arrondis exacts et contrôle d’un export altéré ; référence calendrier inchangée après simulation ; navigateur ordinateur/mobile/FR/EN/offline ; mêmes SHA des gates et livraison puis empreintes publiques. Correction ciblée du test Business Studio : attendre sa lecture initiale avant de mesurer zéro requête au repos.
+
+Repli : désactiver les seuls nouveaux panneaux/lectures ; aucun mouvement ni schéma ajouté à reprendre. Ne pas revenir aveuglément en amont de v32, qui protège les retraits fermés et journaux de pilotes. FIELD_ACCEPTED=NOT_ACCEPTED ; crédits exacts non mesurables. Aucun redémarrage du poste sans autorisation explicite.
+
+## Qualification locale finale : ordonnanceur de travail
+
+Les3nouveaux scénarios Chromium ont réussi sur la première compilation. L'essai suivant de Business Studio a perdu le jeton de fenêtre pendant que la compilation finale remplaçait la copie locale `.build` servie au navigateur. La collision de travaux rend cet essai non concluant pour l'application ; son rapport d'échec est conservé. Requalification après fin de compilation, sans modifier les assertions ni les droits de production. Les tests complets, la livraison et les empreintes publiques doivent ensuite porter sur le même SHA. Aucun redémarrage du poste, suppression de données utilisateur ou contournement de contrôle.

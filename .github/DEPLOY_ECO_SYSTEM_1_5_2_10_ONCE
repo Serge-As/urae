@@ -1,24 +1,21 @@
 Eco-System grouped delivery authorized by founder 2026-10-22
-release: 1.5.2.32-temporal-commerce-pilots
+release: 1.5.2.33-financial-explanations
 date: 2026-10-22
 db_mutation: none
 mode: code-only-with-verified-readonly-backup-no-migration
-qualified_baseline_source: 98f5a71d9221368ab96a417898887d890d36ad69
-qualified_baseline_delivery: 39798502924 attempt1 SUCCESS
-qualification: baseline941native48Chromium6WebKit; candidate exact-SHA gates mandatory
-candidate_native: expected969, actual counts must be read from evidence
-candidate_chromium: expected51, actual counts must be read from evidence
+qualified_baseline_source: 3661a369620e4c881b1342f826071431af53458a
+qualified_baseline_delivery: 39828022308 SUCCESS
+qualification: baseline969native51Chromium6WebKit; candidate exact-SHA full gates mandatory
+candidate_native: expected979, read actual counts from logs
+candidate_chromium: expected54, read actual counts from logs
 candidate_webkit: acquired6 mandatory
-production_ancestry: preserve all prior deliveries, no force push
-backup: mandatory readonly D1 export, verified SQLite restore, private R2 readback hash before deploy
-storage: existing eco-system-db and eco-system-backups, no recreation or migration
-financial_signing: preserve existing key, no rotation
+production_ancestry: preserve all previous releases; no force push
+backup: readonly D1 export, verified SQLite restore, private R2 readback before deploy
+storage: existing D1/R2; no recreation, migration or signing-key rotation
 real_money_enabled: false
 field_acceptance: NOT_ACCEPTED
-trigger_nonce: 2026-10-22-temporal-commerce-pilots-visible-confirmation-recall-v4
-authorization: founder requested grouped implementation and deployment including improvements and innovations
-scope: L13 NOW/Deals/Harvest availability; L20 free moderated internal pilots; I06 traceable loss/transformation; I08 privacy-threshold public asking prices
-qualification_same_deployment_sha: mandatory full gates before publication, no relaxation
-public_verification: exact health, catalogue and 40 deployed asset hashes with same-SHA build
-
-qualification_retrigger: local969native3criticalChromium passed; exact-source remote gates retained; application unchanged
+trigger_nonce: 2026-10-22-financial-explanations-exact-source
+authorization: founder requested remaining grouped lots with innovations, then common completion of prior proposals
+scope: L06/L07/L08/L09; I11 conditional loan preview and I13 tontine timing stress; complete92-to28 mapping
+qualification_same_deployment_sha: mandatory; no relaxed assertions
+public_verification: exact health, catalogue and41 asset hashes against delivery build

@@ -1572,15 +1572,32 @@
     {
       "id": "temporal-commerce-pilots-20261022",
       "scope": "L13/L20/I06/I08 additive temporal commerce and free internal pilots",
-      "status": "IMPLEMENTED_UNVERIFIED",
-      "statement": "Candidate v32; production v31 remains verified.64 targeted tests pass, browser and same-source full gates pending. Canonical stock/CAS, consent rechecked, no inferred cash or delivered acceptance.",
+      "status": "VERIFIED_REMOTE",
+      "statement": "L13/L20/I06/I08 v32 published at3661a369620e4c881b1342f826071431af53458a;969native51Chromium6WebKit on same source;40 public hashes;readonly backup restored50tables;855 exact Git blobs verified. Canonical stock and measured free internal pilots; cash and field acceptance not inferred.",
       "evidence": [
-        "docs/change-impact/CIR-2026-10-22-TEMPORAL-COMMERCE-PILOTS.md",
-        "tests/temporal-commerce-pilots-20261022.test.mjs",
-        "tests/browser/temporal-commerce-pilots-20261022.spec.mjs"
+        "source:3661a369620e4c881b1342f826071431af53458a",
+        "github-actions:39828022308 SUCCESS; independent39828022343 SUCCESS",
+        "docs/release/evidence/TEMPORAL-COMMERCE-PILOTS-PUBLIC-2026-10-22.json",
+        "docs/release/DELIVERY-2026-10-22-TEMPORAL-COMMERCE-PILOTS.md",
+        "private-R2-readback-sha256:30aaf30c01aabf9380b46d3638b8dddb9908998029ccec4fb4b47e87b121bd5c"
       ],
       "observedOn": "2026-10-22",
-      "next": "Qualify exact deployment source; readonly backup and public asset proof mandatory; field acceptance NOT_ACCEPTED."
+      "next": "Continue grouped remaining13 lots and undeveloped variants; field NOT_ACCEPTED. No PC reboot without explicit authorization.",
+      "workerVersionId": "7f1813fa-dc73-47f8-b25c-fe53471f850c",
+      "backupArchiveSha256": "30aaf30c01aabf9380b46d3638b8dddb9908998029ccec4fb4b47e87b121bd5c"
+    },
+    {
+      "id": "financial-explanations-20261022",
+      "scope": "L06/L07/L08/L09 I11/I13 authorized finance explanations",
+      "status": "IMPLEMENTED_UNVERIFIED",
+      "statement": "v33 candidate, v32 remains published. Read projections and hypothetical calculations reuse Ledger/Completion/SavingsYield.92 proposals mapped to28lots; mapping is not delivery.",
+      "evidence": [
+        "docs/change-impact/CIR-2026-10-22-FINANCIAL-EXPLANATIONS.md",
+        "tests/financial-explanations-20261022.test.mjs",
+        "tests/browser/financial-explanations-20261022.spec.mjs"
+      ],
+      "observedOn": "2026-10-22",
+      "next": "Complete same-source gates, readonly backup, deployment and public proof. Then L14-L19/L22/L26/L27; finally common completion of prior-lot proposals."
     }
   ]
 }
