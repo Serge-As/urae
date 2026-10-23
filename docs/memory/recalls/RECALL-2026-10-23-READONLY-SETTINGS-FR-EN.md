@@ -1,0 +1,7 @@
+# Recall — Réglages en lecture seule et traduction FR/EN
+
+La qualification de fe73b327b281d56538e21b777d4cd24aacaf53d9 a détecté une émission de cookie commercial à l’ouverture des réglages. Le rafraîchissement utilise désormais seulement commercialPreferenceContext() en GET ; l’émission reste disponible par une commande utilisateur explicite sous les consentements canoniques. Le diagnostic et son export doivent produire zéro écriture métier, puis le clic sur le bouton une seule émission de cookie. Les textes du bouton, de l’explication et du statut possèdent leur traduction runtime FR/EN.
+
+La source 1f085150f0290489043243c3abd289204b106934 a été bloquée sur une traduction absente ; les deux tests locaux de complétude bilingue passent après correction. La source 8409e0fbab195182ad3cfa8f56025fddd25a8090 a ensuite été bloquée par le contrôle mémoire : le commit de traduction modifiait le CIR mais pas le Recall. Ce rappel complète la trace demandée ; aucune barrière n’est désactivée.
+
+Les essais et la livraison doivent repartir sur la même source finale. Ledger/D1, Live, outbox, droits, données et schémas acquis demeurent préservés. realMoneyEnabled=false ; FIELD_ACCEPTED=NOT_ACCEPTED. Aucun redémarrage ni réparation de données n’est autorisé ou effectué par ce correctif. Production attestée avant validation : v33. Clôture : preuve publique des47assets, qualification indépendante, reçu de sauvegarde et archive source vérifiée.
