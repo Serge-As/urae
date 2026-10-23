@@ -33,3 +33,8 @@ La source `fe73b327b281d56538e21b777d4cd24aacaf53d9` a passé la qualification i
 
 
 Complément bilingue : la source `1f085150f0290489043243c3abd289204b106934` a été refusée avant déploiement par le contrôle de traduction statique (1007/1008). Les trois nouveaux libellés ont désormais leur traduction runtime FR/EN ; le scénario anglais attend le libellé réellement traduit. La barrière et ses assertions restent intactes.
+
+
+### Qualification Linux reproductible
+
+La source6395b3be4c196060df11e7ac3ac9cd1d4865b88b a validé1008/1008tests natifs, mais les deux tâches navigateur39969708536/39969708561 ont atteint45minutes pendant les190paquets APT du miroir Azure Ubuntu, avant toute exécution navigateur ou mutation de production. Les journaux sont conservés. Les deux jobs utilisent désormais l’image officielle `mcr.microsoft.com/playwright:v1.55.0-noble`, correspondant exactement à la version du moteur de tests déjà acquise. Python3.12est fourni par setup-python, Node24reste fourni par setup-node. Un précontrôle lance réellement Chromium et WebKit ; les listes de suites, workers, assertions, limites, sauvegarde et barrières de livraison sont inchangés. Aucun paquet ou navigateur de l’application déployée n’est modifié ; la modification concerne l’environnement de qualification. Aucun abonnement supplémentaire, contournement de test ni relance aveugle. Sources officielles : https://playwright.dev/docs/ci#via-containers et https://raw.githubusercontent.com/microsoft/playwright/v1.55.0/utils/docker/Dockerfile.noble .

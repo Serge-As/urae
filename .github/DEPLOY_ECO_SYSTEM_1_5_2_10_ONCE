@@ -16,3 +16,5 @@ trigger_nonce: 2026-10-23-review-recovery-exact-source
 reviewed_settings_correction: read-only-refresh-explicit-cookie-complete-fr-en
 
 recall_complete: read-only-settings-fr-en-20261023
+
+qualification_environment: official-playwright-1.55.0-noble-preinstalled
