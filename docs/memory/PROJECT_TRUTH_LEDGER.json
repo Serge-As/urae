@@ -1614,6 +1614,20 @@
         "tests/browser/productive-community-20261022.spec.mjs"
       ],
       "next": "Same-source CI, browsers, readonly backup, production and public proof; then L22/26/27 and final common improvements."
+    },
+    {
+      "id": "review-recovery-20261023",
+      "scope": "L22/L26/L27 and bounded I10 preparation",
+      "status": "IMPLEMENTED_UNVERIFIED",
+      "statement": "v35 local canonical private lab dossier, human text/number document review, honest D1+source backup scope and read-only diagnostics. Build passed; full qualification/deployment pending. No universal OCR or full binary/device recovery claim.",
+      "observedOn": "2026-10-23",
+      "evidence": [
+        "docs/change-impact/CIR-2026-10-23-REVIEW-RECOVERY.md",
+        "docs/release/DELIVERY-2026-10-23-REVIEW-RECOVERY.md",
+        "tests/review-recovery-20261023.test.mjs",
+        "tests/browser/review-recovery-20261023.spec.mjs"
+      ],
+      "next": "Complete native and browser tests, exact-source CI, backup, public verification; then final common improvements."
     }
   ]
 }

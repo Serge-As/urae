@@ -24,6 +24,7 @@ export async function maybeHandleFinancialExtension(repo:PlatformRepository,requ
       const service=new GroupDocumentService(repo,kernel);
       if(documentsRoute&&request.method==='GET')return json(await service.list(groupId),200);
       if(documentsRoute&&request.method==='POST')return json(await service.create(groupId,await request.json() as any),201);
+      if(documentRoute&&request.method==='GET')return json(await service.read(groupId,documentRoute[2]!),200);
       if(documentRoute&&request.method==='PUT'){const body=await request.json() as Record<string,unknown>;if(String(body.action??'')!=='archive')throw Error('INVALID_DOCUMENT_ACTION');return json(await service.archive(groupId,documentRoute[2]!),200);}
       return json({error:'METHOD_NOT_ALLOWED'},405);
     }

@@ -9,7 +9,7 @@ mkdirSync('.recovery',{recursive:true});
 run('npx',['--yes','wrangler@4','d1','export',database,'--remote','--config','workers/api/wrangler.ci.toml','--output','.recovery/production.sql']);
 const verification=JSON.parse(run('python3',['scripts/verify-d1-backup.py','.recovery/production.sql','.recovery/restored.sqlite']));
 run('git',['archive','--format=tar.gz','-o','.recovery/source.tar.gz','HEAD']);
-writeFileSync('.recovery/manifest.json',JSON.stringify({protocol:'ECO_RECOVERY_1',sourceSha:sha,createdAt:new Date().toISOString(),database,bucket,verification},null,2));
+writeFileSync('.recovery/manifest.json',JSON.stringify({protocol:'ECO_RECOVERY_2',sourceSha:sha,createdAt:new Date().toISOString(),database,bucket,scope:'D1_AND_EXACT_SOURCE_ONLY',completeApplicationBackup:false,excluded:['R2_ATTACHMENT_OBJECTS','DEVICE_INDEXEDDB_AND_PENDING_OUTBOX','EXTERNAL_PROVIDER_STATE'],verification},null,2));
 run('tar',['-czf','.recovery/recovery.tar.gz','-C','.recovery','production.sql','source.tar.gz','manifest.json']);
 const hash=path=>createHash('sha256').update(readFileSync(path)).digest('hex'),expected=hash('.recovery/recovery.tar.gz');
 const key=bucket+'/production-recovery/'+sha+'.tar.gz';

@@ -1,19 +1,14 @@
-Eco-System grouped delivery authorized by founder, continued23October2026
-release: 1.5.2.34-productive-community
+Eco-System grouped continuation authorized by founder
+release: 1.5.2.35-review-recovery
 date: 2026-10-23
 mode: code-only-with-verified-readonly-backup-no-migration
-qualified_baseline_source: dc3e285bdeac1c6f0ce5376d457ccf52826945d8
-qualified_baseline_delivery: 39860843689 SUCCESS,979native54Chromium6WebKit
-qualification: candidate same-SHA full governed CI and both browsers mandatory
-candidate_native: expected996, read actual evidence
-candidate_chromium: expected60, read actual evidence
-candidate_webkit: acquired6 mandatory
-scope: L14/L15/L16/L17/L18/L19; I05/I15/I17/I20 within documented bounded scope
-backup: readonly D1 export, verified SQLite restore, private R2 readback
-storage: existing D1/R2; no recreation, destructive migration or signature rotation
+db_mutation: none
+baseline_source: 461a7b6965fa098437afc3a9534fac93c20ccb06
+qualification: complete governed CI and both browsers on exact same source mandatory
+scope: L22/L26/L27 initial bounded scope; I10 minimal package remains partial until actual fault replay
+backup: readonly D1 export, verified fresh SQLite copy with expected schema and data fingerprints; private R2 readback
+backup_scope: D1_AND_EXACT_SOURCE_ONLY; not a full attachment or device backup
 real_money_enabled: false
 field_acceptance: NOT_ACCEPTED
-public_verification: exact health, catalogue and43 asset hashes
-trigger_nonce: 2026-10-23-productive-community-exact-source
-authorization: founder requests all grouped remaining lots then common improvements of acquired lots
-db_mutation: none
+public_verification: health, catalogue and47 asset hashes
+trigger_nonce: 2026-10-23-review-recovery-exact-source

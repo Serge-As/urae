@@ -1936,3 +1936,7 @@ body.ui-mode-assisted .eco-workbench :is(button,p,small,span,label){font-size:15
 .productive-community nav [aria-pressed=true]{background:var(--primary,#17684f);color:#fff;}
 .productive-community .item{min-width:0;overflow-wrap:anywhere;}
 @media(max-width:760px){.productive-community .productive-notebook-row{grid-template-columns:minmax(0,1fr);}.productive-community .form-grid{grid-template-columns:minmax(0,1fr);}.productive-community nav button{flex:1 1 135px;white-space:normal;}}
+
+.document-review{min-width:0}.document-review textarea{width:100%;min-width:0;box-sizing:border-box}.document-review pre{white-space:pre-wrap;overflow-wrap:anywhere;max-height:18rem;overflow:auto}
+
+.safety-review{min-width:0}.safety-review .form-grid>*{min-width:0}.safety-review input,.safety-review select{max-width:100%;box-sizing:border-box}.safety-review .table-wrap{overflow:auto}.safety-review td,.safety-review th{padding:.5rem;white-space:nowrap}#recoveryReadOnlyPanel pre{white-space:pre-wrap;overflow-wrap:anywhere}

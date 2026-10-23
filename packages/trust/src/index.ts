@@ -3,6 +3,9 @@ import type {PlatformRepository} from '../../repositories/src/index.js';
 import type {PlatformKernel} from '../../platform-kernel/src/index.js';
 import {makeId} from '../../contracts/src/index.js';
 export {TrustVerificationService} from './verification.js';
+import {reviewLabAnswers,simulateLabFlow,LAB_REVIEW_VERSION,type LabAnswer,type LabFlow} from './lab-review.js';
+export {LAB_QUESTIONS,LAB_REVIEW_VERSION,reviewLabAnswers,simulateLabFlow} from './lab-review.js';
+export const isProtectedSafetyRecord=(r:{moduleId?:string;data?:Record<string,unknown>})=>r.moduleId==='SAFETY.ANTISCAM'&&['SAFETY_CASE','EVIDENCE_REF','REVIEW_DECISION','APPEAL','LAB_REVIEW'].includes(String(r.data?.kind));
 
 const points:Record<ReliabilityEvidence['kind'],number>={
   FULFILLED_ON_TIME:1,FULFILLED_LATE:0.35,MISSED_CONFIRMED:-1,RECOVERED_ARREARS:0.5,DISPUTE_RESOLVED:0.25,RULE_BREACH_CONFIRMED:-1.25
@@ -129,8 +132,14 @@ export class SafetyCaseService{
   }
   private canManage(groupId?:Id){return this.access(groupId,true);}
   private async get(id:Id){
-    const r=await this.repo.getWorkspaceRecord(this.ctx().tenantId,id);if(!r||r.moduleId!=='SAFETY.ANTISCAM'||r.data.kind!=='SAFETY_CASE')throw new Error('SAFETY_CASE_NOT_FOUND');return r;
+    const r=await this.repo.getWorkspaceRecord(this.ctx().tenantId,id);if(!r||r.moduleId!=='SAFETY.ANTISCAM'||r.data.kind!=='SAFETY_CASE')throw new Error('SAFETY_CASE_NOT_FOUND');if(!r.groupId&&r.createdBy!==this.ctx().actorId)throw Error('SAFETY_CASE_NOT_FOUND');return r;
   }
+  async saveLabReview(input:{title:string;answers:LabAnswer[];flow:LabFlow;consent:boolean}){
+    if(input.consent!==true)throw Error('LAB_PRIVATE_SAVE_CONFIRMATION_REQUIRED');const title=clean(input.title,180);if(!title)throw Error('LAB_TITLE_REQUIRED');const review=reviewLabAnswers(input.answers),flow=simulateLabFlow(input.flow),c=this.ctx(),stamp=now(),record:WorkspaceRecord={id:makeId('lab_review'),tenantId:c.tenantId,moduleId:'SAFETY.ANTISCAM',title,status:'DONE',tags:['lab-private-review','immutable','not-legal-verdict'],data:{kind:'LAB_REVIEW',protocol:LAB_REVIEW_VERSION,reviewJson:JSON.stringify(review),flowJson:JSON.stringify(flow),legalVerdict:false,publicAccusation:false,financialScoreEffect:false},createdBy:c.actorId,createdAt:stamp,updatedAt:stamp};await this.repo.saveWorkspaceRecord(record);return this.readLabReview(record.id);
+  }
+  async readLabReview(id:Id){const c=this.ctx(),r=await this.repo.getWorkspaceRecord(c.tenantId,id);if(!r||r.moduleId!=='SAFETY.ANTISCAM'||r.data.kind!=='LAB_REVIEW'||r.createdBy!==c.actorId)throw Error('LAB_REVIEW_NOT_FOUND');return{id:r.id,title:r.title,createdAt:r.createdAt,review:JSON.parse(String(r.data.reviewJson)),flow:JSON.parse(String(r.data.flowJson)),private:true,financialWrites:false};}
+  async listLabReviews(){const c=this.ctx(),rows=(await this.repo.listWorkspaceRecords(c.tenantId,'SAFETY.ANTISCAM')).filter(x=>x.createdBy===c.actorId&&x.data.kind==='LAB_REVIEW').sort((a,b)=>b.createdAt.localeCompare(a.createdAt));return{items:rows.slice(0,30).map(r=>({id:r.id,title:r.title,createdAt:r.createdAt})),limit:30,hasMore:rows.length>30};}
+  async reportLabReview(id:Id,input:{groupId:Id;summary:string}){await this.readLabReview(id);if(!input.groupId)throw Error('GROUP_REQUIRED');return this.report({groupId:input.groupId,subjectType:'DECLARED_SCENARIO',subjectRef:id,category:'PYRAMID_PONZI',summary:input.summary,evidenceRef:'Private review reference: '+id,source:LAB_REVIEW_VERSION});}
   async report(input:{groupId?:Id;subjectType:string;subjectRef:string;category:SafetyCategory;summary:string;evidenceRef?:string;source?:string}){
     if(input.groupId)await this.access(input.groupId,false);
     const subjectType=clean(input.subjectType,80).toUpperCase(),subjectRef=clean(input.subjectRef,240),summary=clean(input.summary,1800);
@@ -142,7 +151,7 @@ export class SafetyCaseService{
   }
   async list(groupId?:Id){
     if(groupId)await this.canManage(groupId);const c=this.ctx(),rows=await this.repo.listWorkspaceRecords(c.tenantId,'SAFETY.ANTISCAM',groupId);
-    return rows.filter(x=>x.data.kind==='SAFETY_CASE').sort((a,b)=>b.updatedAt.localeCompare(a.updatedAt));
+    const visible:WorkspaceRecord[]=[];for(const record of rows.filter(x=>x.data.kind==='SAFETY_CASE')){if(!record.groupId){if(record.createdBy===c.actorId)visible.push(record);}else{try{await this.canManage(record.groupId);visible.push(record);}catch{}}}return visible.sort((a,b)=>b.updatedAt.localeCompare(a.updatedAt));
   }
   async transition(id:Id,to:SafetyCaseState,note='',evidenceRef=''){
     const r=await this.get(id);await this.canManage(r.groupId);const from=String(r.data.caseState) as SafetyCaseState;
@@ -167,7 +176,7 @@ export class SafetyCaseService{
     const next={...r,data:{...r.data,caseState:'ACTIONED',lastDecisionId:decision.id,findingStatus:input.findingStatus??'UNVERIFIED_SUSPICION',publicAccusation:false,automaticLegalVerdict:false},updatedAt:stamp};await this.repo.saveWorkspaceRecord(next);return{case:next,decision};
   }
   async appeal(id:Id,input:{reason:string;evidenceRef?:string}){
-    const r=await this.get(id);if(String(r.data.caseState)!=='ACTIONED')throw new Error('SAFETY_CASE_NOT_APPEALABLE');const reason=clean(input.reason,1200);if(!reason)throw new Error('APPEAL_REASON_REQUIRED');
+    const r=await this.get(id);if(r.groupId){await this.access(r.groupId);const c=this.ctx(),members=await this.repo.listMemberships(c.tenantId,r.groupId),subject=String(r.data.subjectRef??''),isSubject=(r.data.subjectType==='USER'&&subject===c.actorId)||(r.data.subjectType==='MEMBERSHIP'&&members.some(m=>m.id===subject&&m.userId===c.actorId&&m.status==='active'));let manager=false;try{await this.canManage(r.groupId);manager=true;}catch{}if(!manager&&r.createdBy!==c.actorId&&!isSubject)throw Error('FORBIDDEN_SCOPE');}if(String(r.data.caseState)!=='ACTIONED')throw new Error('SAFETY_CASE_NOT_APPEALABLE');const reason=clean(input.reason,1200);if(!reason)throw new Error('APPEAL_REASON_REQUIRED');
     const c=this.ctx(),stamp=now(),appeal:WorkspaceRecord={id:makeId('safety_appeal'),tenantId:c.tenantId,groupId:r.groupId,moduleId:'SAFETY.ANTISCAM',title:'Recours · '+r.title,status:'ACTIVE',tags:['safety-appeal','case:'+r.id],data:{kind:'APPEAL',caseId:r.id,reason,evidenceRef:clean(input.evidenceRef,500),appealState:'OPEN'},createdBy:c.actorId,createdAt:stamp,updatedAt:stamp};await this.repo.saveWorkspaceRecord(appeal);
     const next={...r,data:{...r.data,caseState:'APPEALED',lastAppealId:appeal.id},updatedAt:stamp};await this.repo.saveWorkspaceRecord(next);return{case:next,appeal};
   }

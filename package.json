@@ -1,9 +1,9 @@
 {
   "name": "tontine-platform",
-  "version": "1.5.2-34",
+  "version": "1.5.2-35",
   "private": true,
   "type": "module",
-  "description": "Eco-System: private practical skills and mentor review, field-scoped discovery notebooks, sourced forum solutions, jobs, granular acquisition rooms and evidence-aware personal launch plans.",
+  "description": "Eco-System: private financial-education dossiers, human document text and number review, explicit backup scope and read-only recovery diagnostics.",
   "engines": {
     "node": ">=24"
   },

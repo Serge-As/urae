@@ -49,6 +49,7 @@ import { splitFinancialRubrics, planFinancialRubricLayout } from './smart-grid-v
 import { mountBlueprintExecutableUI } from './blueprint-executable-ui.js';
 import { mountCommunityBlueprintPresets } from './community-blueprint-presets.js';
 import { mountFinancialLabUI } from './financial-lab-ui.js';
+import { mountSafetyReviewUI } from './safety-review-ui.js';
 import { mountBusinessStudioUI } from './business-studio-ui.js';
 import { mountEconomicExperimentsUI } from './economic-experiments-ui.js';
 import { mountCoreEconomicLearningUI } from './core-economic-learning-ui.js';
@@ -192,7 +193,7 @@ let modules = [];
 let applicationStartup = Promise.resolve();
 let selectedLot = 'ALL';
 let deferredInstallPrompt;
-const CAHIER_VERSION = '1.5.2.34-productive-community';
+const CAHIER_VERSION = '1.5.2.35-review-recovery';
 const $ = (s) => { const e = document.querySelector(s); if (!e)
     throw new Error(`UI_ELEMENT_NOT_FOUND:${s}`); return e; };
 const val = (id) => document.getElementById(id).value.trim();
@@ -459,11 +460,11 @@ document.addEventListener('click',event=>{
     event.preventDefault();go(view,{anchor:id,openTarget:link.dataset.openTarget,force:true});
 });
 document.querySelector('#appBackBtn')?.addEventListener('click',goBack);
-const documentsUI=mountDocumentsUI({navigate:go});
+const documentsUI=mountDocumentsUI({navigate:go,getContext:()=>JSON.stringify([app.currentActor(),app.currentTenant(),app.activeGroup()])});
 const printCenterUI=mountPrintCenterUI({app,getGroups:()=>groups,getMembers:()=>members,getMeetings:()=>meetings,getRubrics:()=>rubrics,isManager,notify:toast,showError:fail});
 mountMemberDossierUI();
 const identityVerificationUI=mountIdentityVerificationUI({app,getGroups:()=>groups,navigate:go,notify:toast,showError:fail});
-const dataQualityUI=mountDataQualityUI({app,navigate:go,notify:toast,showError:fail});
+const dataQualityUI=mountDataQualityUI({app,navigate:go,notify:toast,showError:fail,getReleaseVersion:()=>CAHIER_VERSION});
 const opportunityIntelligenceUI=mountOpportunityIntelligenceUI({app,notify:toast,showError:fail,isManager});
 const operationalRegistryUI=mountOperationalRegistryUI({app,getGroups:()=>groups,getMembers:()=>members,getRubrics:()=>rubrics,isManager,notify:toast,showError:fail});
 const groupLearningRegistryUI=mountGroupLearningRegistryUI({app,getGroups:()=>groups,notify:toast,showError:fail});
@@ -563,6 +564,7 @@ const sessionsUI = mountSessionsUI({
 const blueprintExecutableUI = mountBlueprintExecutableUI({app,getGroups:()=>groups,getMeetings:()=>meetings,navigate:go,notify:toast,showError:fail});
 mountCommunityBlueprintPresets();
 const financialLabUI = mountFinancialLabUI({app,notify:toast,showError:fail});
+const safetyReviewUI=mountSafetyReviewUI({app});
 const resilienceUI = mountResilienceUI({app,notify:toast,showError:fail});
 mountWorkspaceNavigation({getScope:()=>[app.currentActor(),app.activeGroup()].map(encodeURIComponent).join('.'),navigate:go});
 let liveChannelConnected=false;
@@ -1992,9 +1994,9 @@ const specializedRoute = (id) => {
     return undefined;
 };
 const openModule = async (id) => {
-    // Retain an early menu click until this account's startup has finished.
-    // Its catalogue starts empty, and startup refreshes must not replace a form
-    // opened while the initial account/group context is still being restored.
+    // Retain an early menu click until account, group and catalogue are ready.
+    // Secondary panel reads must not block navigation; startup restores the
+    // latest history state so it preserves the destination chosen meanwhile.
     let startup;
     do { startup=applicationStartup; await startup; } while(startup!==applicationStartup);
     const m = modules.find(x => x.id === id);
@@ -2522,6 +2524,9 @@ const refreshGroupContext = async () => {
     economicExperimentsUI.clearForContext?.();
     financialExplanationsUI.clearForContext?.();
     productiveCommunityUI.clearForContext?.();
+    safetyReviewUI.clearForContext?.();
+    dataQualityUI.clearForContext?.();
+    documentsUI.clearForContext?.();
     launchStudio?.refreshContext();
     identityVerificationUI.clearForContext?.();
     universalSearchRevision++;document.getElementById('universalSearchFullResults')?.replaceChildren();const searchScope=JSON.stringify([app.currentActor(),app.currentTenant(),app.activeGroup()]);if(searchScope!==universalSearchScope){universalSearchScope=searchScope;const input=document.getElementById('universalSearchFull');if(input)input.value='';}
@@ -3288,6 +3293,7 @@ async function start() {
         renderLotFilters();
         renderEcosystemHighlights();
         renderDomainHubs();
+        settleStartup();
         await refreshAll();
         const requested=history.state?.ecoNav?.view?history.state.ecoNav:startupNavState??readPersistedNavState();
         if(requested?.view)showView(requested.view,requested);
@@ -3382,7 +3388,7 @@ document.querySelector('#claimLocalAccountBtn')?.addEventListener('click',()=>vo
     catch(e){fail(e);}
     finally{if(button)button.disabled=false;}
 })());
-$('#logoutBtn').addEventListener('click',async()=>{try{await app.logout();notificationCenterUI.clearForContext(true);ecoCareUI.clearForContext(true);governedGroupUI.clearForContext(true);economicExperimentsUI.clearForContext(true);financialExplanationsUI.clearForContext(true);productiveCommunityUI.clearForContext(true);launchStudio?.refreshContext(true);identityVerificationUI.clearForContext?.(true);journeyUI.refresh();localAssistantUI.refreshContext();document.body.classList.add('signed-out');$('#authScreen').hidden=false;$('#accountName').textContent='';const claim=document.querySelector('#claimLocalAccountBtn');if(claim)claim.hidden=true;showAuth(tx('Compte fermé sur cet appareil. Vos données locales ne sont pas supprimées.','Account signed out on this device. Your local data was not deleted.'));}catch(e){fail(e);}});
+$('#logoutBtn').addEventListener('click',async()=>{try{await app.logout();documentsUI.clearForContext();notificationCenterUI.clearForContext(true);ecoCareUI.clearForContext(true);governedGroupUI.clearForContext(true);economicExperimentsUI.clearForContext(true);financialExplanationsUI.clearForContext(true);productiveCommunityUI.clearForContext(true);safetyReviewUI.clearForContext(true);dataQualityUI.clearForContext(true);launchStudio?.refreshContext(true);identityVerificationUI.clearForContext?.(true);journeyUI.refresh();localAssistantUI.refreshContext();document.body.classList.add('signed-out');$('#authScreen').hidden=false;$('#accountName').textContent='';const claim=document.querySelector('#claimLocalAccountBtn');if(claim)claim.hidden=true;showAuth(tx('Compte fermé sur cet appareil. Vos données locales ne sont pas supprimées.','Account signed out on this device. Your local data was not deleted.'));}catch(e){fail(e);}});
 // Online recovery is serialized by resumeOnline() above: sync durable outbox first, then restart projections.
 window.addEventListener('offline',()=>{renderConnectivity();const claim=document.querySelector('#claimLocalAccountBtn');if(claim&&!claim.hidden){claim.disabled=true;claim.textContent=tx('Compte local · Internet requis pour finaliser','Local account · Internet needed to finalize');}});
 void ensureCurrentServiceWorker();

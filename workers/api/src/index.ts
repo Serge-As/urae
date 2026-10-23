@@ -68,7 +68,7 @@ import { WalletService } from '../../../packages/wallet/src/index.js';
 import { OpportunityGraphService } from '../../../packages/opportunity-graph/src/index.js';
 import { StarterKitService } from '../../../packages/starter-kit/src/index.js';
 import { GroupModelRegistryService, GroupCaseLawService } from '../../../packages/group-learning-registry/src/index.js';
-import { TrustVerificationService, SafetyCaseService, CommitmentTrustGraphService, assessReferralStructure, type SafetyCategory, type SafetyCaseState, type SafetyAction } from '../../../packages/trust/src/index.js';
+import { TrustVerificationService, SafetyCaseService, CommitmentTrustGraphService, assessReferralStructure, isProtectedSafetyRecord, type SafetyCategory, type SafetyCaseState, type SafetyAction } from '../../../packages/trust/src/index.js';
 import { ExpenseService } from '../../../packages/expenses/src/index.js';
 import { authenticatedApi } from './authenticated.js';
 export { GroupLiveHub } from './group-live-hub.js';
@@ -81,11 +81,11 @@ interface WorkersAILike {
   run?(model:string,input:Record<string,unknown>,options?:Record<string,unknown>):Promise<unknown>;
 }
 
-const RELEASE_VERSION='1.5.2.34-productive-community';
-const RELEASE_BUILD_ID='eco-system-1.5.2.34-20261023-productive-community';
+const RELEASE_VERSION='1.5.2.35-review-recovery';
+const RELEASE_BUILD_ID='eco-system-1.5.2.35-20261023-review-recovery';
 const RELEASE_SCHEMA_VERSION='d1-additive-20260923';
 const RELEASE_POLICY_VERSION='live-finance-policy-20261007-event-push-repayment';
-const RELEASE_PWA_CACHE='eco-system-v15234-productive-community-20261023';
+const RELEASE_PWA_CACHE='eco-system-v15235-review-recovery-20261023';
 
 const defaultRepo = new InMemoryPlatformRepository();
 const defaultReferralBudgets = new InMemoryReferralBudgetStore();
@@ -1156,6 +1156,12 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
       if(action==='procurement'&&request.method==='POST'){const body=await readJson<any>(request);return json(await valueNetwork.prepareProcurement(needId,String(body.offerId??'')),201,cors);}
     }
 
+    if(url.pathname==='/api/v1/safety/lab/reviews'){
+      if(request.method==='GET')return json(await safety.listLabReviews(),200,cors);
+      if(request.method==='POST')return json(await safety.saveLabReview(await readJson<any>(request)),201,cors);
+    }
+    const labReviewRoute=url.pathname.match(/^\/api\/v1\/safety\/lab\/reviews\/([^/]+)(\/report)?$/);
+    if(labReviewRoute){const id=decodeURIComponent(labReviewRoute[1]!);if(request.method==='GET'&&!labReviewRoute[2])return json(await safety.readLabReview(id),200,cors);if(request.method==='POST'&&labReviewRoute[2])return json(await safety.reportLabReview(id,await readJson<any>(request)),201,cors);}
     if(request.method==='GET'&&url.pathname==='/api/v1/safety/cases'){
       const groupId=url.searchParams.get('groupId')??undefined;return json({items:await safety.list(groupId)},200,cors);
     }
@@ -3155,7 +3161,7 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
       const moduleId=url.searchParams.get('moduleId')??undefined;
       const groupId=url.searchParams.get('groupId')??undefined;
       const records=await repo.listWorkspaceRecords(ctx.tenantId,moduleId,groupId);const visible=[];
-      for(const record of records)if(!record.tags.some(x=>['verification-fact','governance-follow-up','business-experiment','consensual-pool','ad-pilot','governed-productive'].includes(x))&&record.data.kind!=='PRACTICE_ATTEMPT'&&await visibleWorkspace(record))visible.push(record);
+      for(const record of records)if(!isProtectedSafetyRecord(record)&&!record.tags.some(x=>['verification-fact','governance-follow-up','business-experiment','consensual-pool','ad-pilot','governed-productive'].includes(x))&&record.data.kind!=='PRACTICE_ATTEMPT'&&await visibleWorkspace(record))visible.push(record);
       return json(visible,200,cors);
     }
     if(request.method==='POST'&&url.pathname==='/api/v1/workspaces'){
@@ -3167,6 +3173,7 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
       if(body.groupId)await requireGroup(String(body.groupId),true);
       const timestamp=new Date().toISOString();
       const rawData=body.data&&typeof body.data==='object'&&!Array.isArray(body.data)?body.data as Record<string,unknown>:{};
+      if(isProtectedSafetyRecord({moduleId,data:rawData}))throw Error('CANONICAL_SAFETY_ROUTE_REQUIRED');
       if(strArray(body.tags).includes('governed-productive')||['PRACTICE_ATTEMPT','DISCOVERY_NOTEBOOK','FORUM_SOLUTION'].includes(String(rawData.kind))||['JOB','ACQUISITION_ROOM','LAUNCH_PLAN'].includes(String(rawData.businessKind)))throw Error('CANONICAL_PRODUCTIVE_ROUTE_REQUIRED');
       if(strArray(body.tags).includes('market-engine')||rawData.marketScopeId||rawData.marketKind)throw Error('CANONICAL_MARKET_ROUTE_REQUIRED');
       if(strArray(body.tags).some(x=>['verification-fact','governance-follow-up','poll','ballot','business-experiment','consensual-pool','ad-pilot'].includes(x)))throw Error('CANONICAL_GOVERNED_ROUTE_REQUIRED');
@@ -3183,6 +3190,7 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
     const workspaceRoute=url.pathname.match(/^\/api\/v1\/workspaces\/([^/]+)$/);
     if(workspaceRoute&&request.method==='PUT'){
       const existing=await repo.getWorkspaceRecord(ctx.tenantId,workspaceRoute[1]!); if(!existing)return json({error:'NOT_FOUND'},404,cors);
+      if(isProtectedSafetyRecord(existing))throw Error('CANONICAL_SAFETY_ROUTE_REQUIRED');
       if(existing.tags.includes('governed-productive')||existing.data.kind==='PRACTICE_ATTEMPT')throw Error('CANONICAL_PRODUCTIVE_ROUTE_REQUIRED');
       if(!await visibleWorkspace(existing))throw Error('FORBIDDEN_SCOPE');
       if(existing.moduleId.startsWith('NOTIFY.'))throw Error('CANONICAL_NOTIFICATION_ROUTE_REQUIRED');
@@ -3192,6 +3200,7 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
       const body=await readJson<Record<string,unknown>>(request);
       const status=String(body.status??existing.status) as WorkspaceStatus; if(!['DRAFT','ACTIVE','DONE','ARCHIVED'].includes(status)) throw new Error('INVALID_WORKSPACE_STATUS');
       const rawData=body.data&&typeof body.data==='object'&&!Array.isArray(body.data)?body.data as Record<string,unknown>:existing.data;
+      if(isProtectedSafetyRecord({moduleId:existing.moduleId,data:rawData}))throw Error('CANONICAL_SAFETY_ROUTE_REQUIRED');
       if(strArray(body.tags).includes('governed-productive')||['PRACTICE_ATTEMPT','DISCOVERY_NOTEBOOK','FORUM_SOLUTION'].includes(String(rawData.kind))||['JOB','ACQUISITION_ROOM','LAUNCH_PLAN'].includes(String(rawData.businessKind)))throw Error('CANONICAL_PRODUCTIVE_ROUTE_REQUIRED');
       const data:Record<string,string|number|boolean|null>={}; for(const [k,v] of Object.entries(rawData)){if(typeof v==='string'||typeof v==='number'||typeof v==='boolean'||v===null)data[k]=v;}
       if(strArray(body.tags).some(x=>['verification-fact','governance-follow-up','poll','ballot','business-experiment','consensual-pool','ad-pilot'].includes(x)))throw Error('CANONICAL_GOVERNED_ROUTE_REQUIRED');

@@ -546,7 +546,7 @@
     {
       "id": "A22",
       "title": "Un Labo anti-arnaques qui explique et accompagne · lot 22",
-      "status": "PLANNED_OR_REQUIRES_DETAILED_COVERAGE",
+      "status": "IMPLEMENTED_UNVERIFIED",
       "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md",
       "targetLots": [
         22
@@ -562,7 +562,11 @@
         "Calculer localement des scénarios pédagogiques de flux sur hypothèses explicites, sans conseiller un placement ni noter une personne comme coupable.",
         "Produire un dossier privé de vérification, un plan de questions et un signalement modéré si l’utilisateur le demande ; offrir un recours aux personnes concernées."
       ],
-      "integrationMeaning": "PRODUCT_CAPABILITY_WITH_EXPLICIT_ACCEPTANCE_CRITERIA"
+      "integrationMeaning": "PRODUCT_CAPABILITY_WITH_EXPLICIT_ACCEPTANCE_CRITERIA",
+      "evidence": [
+        "docs/release/DELIVERY-2026-10-23-REVIEW-RECOVERY.md"
+      ],
+      "limits": "Initial scope only, qualification pending. Human review declaration not certified OCR. Backup excludes R2 objects/device outbox/external state. Minimal incident template does not yet reproduce actual fault. No automatic repair, legal verdict or financial write."
     },
     {
       "id": "A23",
@@ -644,7 +648,7 @@
     {
       "id": "A26",
       "title": "Des documents fiables avec OCR relu et exports vérifiables · lot 26",
-      "status": "PLANNED_OR_REQUIRES_DETAILED_COVERAGE",
+      "status": "IMPLEMENTED_UNVERIFIED",
       "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md",
       "targetLots": [
         26
@@ -660,12 +664,16 @@
         "Pour l’OCR, traiter une image ou des pages PDF rendues en images, puis présenter une grille de validation humaine ; conserver la pièce et les corrections autorisées.",
         "Pour l’import, analyser dans une zone de préparation, montrer erreurs et doublons, puis transmettre les commandes validées au propriétaire métier."
       ],
-      "integrationMeaning": "PRODUCT_CAPABILITY_WITH_EXPLICIT_ACCEPTANCE_CRITERIA"
+      "integrationMeaning": "PRODUCT_CAPABILITY_WITH_EXPLICIT_ACCEPTANCE_CRITERIA",
+      "evidence": [
+        "docs/release/DELIVERY-2026-10-23-REVIEW-RECOVERY.md"
+      ],
+      "limits": "Initial scope only, qualification pending. Human review declaration not certified OCR. Backup excludes R2 objects/device outbox/external state. Minimal incident template does not yet reproduce actual fault. No automatic repair, legal verdict or financial write."
     },
     {
       "id": "A27",
       "title": "Une reprise prouvée et un contrôle de qualité des données · lot 27",
-      "status": "PLANNED_OR_REQUIRES_DETAILED_COVERAGE",
+      "status": "IMPLEMENTED_UNVERIFIED",
       "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md",
       "targetLots": [
         27
@@ -681,7 +689,11 @@
         "Construire une procédure de restauration sur copie avec contrôles d’intégrité et scénarios métier représentatifs ; conserver un compte rendu daté.",
         "Ajouter un diagnostic en lecture seule des anomalies et un dossier de réparation proposé. Toute correction réelle suit ECO-LOCK et garde une trace."
       ],
-      "integrationMeaning": "PRODUCT_CAPABILITY_WITH_EXPLICIT_ACCEPTANCE_CRITERIA"
+      "integrationMeaning": "PRODUCT_CAPABILITY_WITH_EXPLICIT_ACCEPTANCE_CRITERIA",
+      "evidence": [
+        "docs/release/DELIVERY-2026-10-23-REVIEW-RECOVERY.md"
+      ],
+      "limits": "Initial scope only, qualification pending. Human review declaration not certified OCR. Backup excludes R2 objects/device outbox/external state. Minimal incident template does not yet reproduce actual fault. No automatic repair, legal verdict or financial write."
     },
     {
       "id": "A28",
@@ -888,7 +900,7 @@
     {
       "id": "I10",
       "title": "Le dossier d’incident reproductible sans données privées · propriétaire L27",
-      "status": "PLANNED_OR_REQUIRES_DETAILED_COVERAGE",
+      "status": "IMPLEMENTED_UNVERIFIED",
       "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md",
       "targetLots": [
         27
@@ -900,7 +912,11 @@
         "Remplacer identités, pièces et valeurs par un jeu synthétique qui conserve le phénomène.",
         "Rejouer localement et conserver le cas comme protection contre le retour du défaut."
       ],
-      "integrationMeaning": "PRODUCT_CAPABILITY_WITH_EXPLICIT_ACCEPTANCE_CRITERIA"
+      "integrationMeaning": "PRODUCT_CAPABILITY_WITH_EXPLICIT_ACCEPTANCE_CRITERIA",
+      "evidence": [
+        "docs/release/DELIVERY-2026-10-23-REVIEW-RECOVERY.md"
+      ],
+      "limits": "Initial scope only, qualification pending. Human review declaration not certified OCR. Backup excludes R2 objects/device outbox/external state. Minimal incident template does not yet reproduce actual fault. No automatic repair, legal verdict or financial write."
     },
     {
       "id": "I11",

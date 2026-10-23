@@ -1,3 +1,4 @@
+# L22/L26/L27 review/recovery candidate v35, full qualification pending.
 # L14–19 productive community candidate v34, qualification pending; production v33 verified.
 # L06/L07/L08/L09 I11/I13 VERIFIED_REMOTE: v33/dc3e285bdeac1c6f0ce5376d457ccf52826945d8/979native54Chromium6WebKit/41 public hashes; independent rerun pending; field NOT_ACCEPTED.
 # L06/L07/L08/L09 I11/I13 candidate v33; production v32 verified; exact-SHA qualification pending.
@@ -37,7 +38,7 @@
 # CURRENT 2026-10-08: publication HOLD; full 4000/5000 convergence still unqualified; Actions quota exhausted; prepared private local qualification runner. See recovery handoff.
 # 2026-10-08 CURRENT: 1.5.2.15 publication HOLD; offline reconfirmation clock defect under qualification. Current deployed proof remains 1.5.2.14. See CURRENT_TRUTH.
 registry_version: 1
-project_version: 1.5.2.34-productive-community
+project_version: 1.5.2.35-review-recovery
 source_of_truth: docs/constitution + verified_code
 
 capabilities:

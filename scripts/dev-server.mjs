@@ -13,7 +13,14 @@ const db = new SQLiteD1(dataFile);db.migrate();
 // Ephemeral signing key: test/development only, generated per process and never persisted.
 const localSignedClockKey=randomBytes(32).toString('base64url');
 const liveNamespace=createLocalLiveNamespace({DB:db});
-const handleRequest = request => worker.fetch(request,{DB:db,AUTH_LIVE_SIGNING_SECRET:localSignedClockKey,GROUP_LIVE_HUB:liveNamespace,PREMIUM_LIVE_LEDGER:'true'});
+// Local qualification only. Source files stay in this process, never in production D1.
+const localArtifactBytes=new Map();let artifactBytes=0;
+const localArtifacts={
+ async put(key,value){const bytes=Buffer.from(typeof value==='string'?new TextEncoder().encode(value):value),next=artifactBytes-(localArtifactBytes.get(key)?.length??0)+bytes.length;if(next>32*1024*1024)throw Error('LOCAL_ARTIFACT_CAPACITY');localArtifactBytes.set(key,bytes);artifactBytes=next;},
+ async get(key){const bytes=localArtifactBytes.get(key);if(!bytes)return null;return{size:bytes.length,text:async()=>bytes.toString('utf-8'),arrayBuffer:async()=>Uint8Array.from(bytes).buffer};},
+ async delete(key){artifactBytes-=localArtifactBytes.get(key)?.length??0;localArtifactBytes.delete(key);}
+};
+const handleRequest = request => worker.fetch(request,{DB:db,ARTIFACTS:localArtifacts,AUTH_LIVE_SIGNING_SECRET:localSignedClockKey,GROUP_LIVE_HUB:liveNamespace,PREMIUM_LIVE_LEDGER:'true'});
 const mime = {
   '.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8',
   '.json':'application/json; charset=utf-8','.webmanifest':'application/manifest+json','.map':'application/json'
