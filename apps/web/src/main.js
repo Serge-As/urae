@@ -2518,6 +2518,7 @@ const refreshGroupContext = async () => {
     const requestedGroup=app.activeGroup();
     personalCockpitUI.clearForContext?.();
     personalShopsUI.clearForContext?.();
+    const refreshPersonalShops=personalShopsUI.captureRefresh?.();
     notificationCenterUI.clearForContext?.();
     ecoCareUI.clearForContext?.();
     governedGroupUI.clearForContext?.();
@@ -2585,7 +2586,7 @@ const refreshGroupContext = async () => {
     await refreshOptionalOfflineSafe('urgent-notifications',renderUrgentNotifications);
     await refreshOptionalOfflineSafe('notification-center',()=>renderNotificationCenter({background:true}));
     await refreshOptionalOfflineSafe('community-shop',()=>communityShopUI.refresh());
-    if(document.getElementById('personalShopsPanel')?.open)await refreshOptionalOfflineSafe('personal-shops',()=>personalShopsUI.refresh());
+    if(document.getElementById('personalShopsPanel')?.open)await refreshOptionalOfflineSafe('personal-shops',()=>refreshPersonalShops?.());
     await refreshOptionalOfflineSafe('misc-rubrics',()=>miscRubricUI.refresh());
     await refreshOptionalOfflineSafe('pairing',()=>pairingUI.refresh());
     await refreshOptionalOfflineSafe('sovereign-offline',()=>sovereignOfflineUI.refresh());

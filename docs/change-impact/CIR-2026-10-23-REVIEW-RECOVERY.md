@@ -1,5 +1,11 @@
 # CIR — L22 / L26 / L27, relecture et reprise contrôlées
 
+### Correction de la qualification du conteneur et du chevauchement de démarrage
+
+La source6b1c801474212cf384872691638b2c6b51970ec6 a validé les1008tests natifs, mais la livraison39980223145 a refusé l'archive Git pour propriété du dossier CI. Chaque job conteneur déclare maintenant uniquement `$GITHUB_WORKSPACE` comme dossier Git sûr, après checkout et avant toute barrière ; aucune exception globale `*` n'est ajoutée. Le job navigateur39980223175 a détecté l'absence des réglages de la boutique après sa création. L'inspection a identifié un rafraîchissement facultatif du démarrage capable d'invalider le formulaire pendant la commande. Le rafraîchissement de groupe capture désormais le contexte, la génération et l'activité de la projection de boutique avant ses lectures asynchrones ; une navigation, saisie ou soumission plus récente rend cette intention caduque. Les rafraîchissements explicites et les effacements à changement de compte/groupe restent acquis. Le service canonique et les transactions ne changent pas.
+
+Un essai navigateur déterministe retient séparément la lecture Inbox et la commande de création, libère la fin du démarrage, exige la conservation du nom et de la commande en cours, puis une seule boutique privée et ses réglages après confirmation serveur. Les suites acquises restent intégralement exécutées. Les échecs précédents sont conservés ; la source corrigée doit obtenir ses propres qualifications et sa preuve publique avant d'être dite déployée.
+
 Autorisation : poursuite explicite des lots et innovations demandée par le fondateur ; aucun redémarrage. Base applicative locale v34, publication v34 qualifiée séparément. Cette note ne vaut pas preuve de déploiement de v35.
 
 ## Périmètre et propriétaires

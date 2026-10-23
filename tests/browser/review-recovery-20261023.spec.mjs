@@ -25,3 +25,19 @@ test('an early module click remains usable while an optional Inbox read is pause
   await expect(page.locator('#view-ecosystem')).toBeVisible();await expect(root.locator('[name=title]')).toHaveValue('PRIVATE-NAVIGATION-DRAFT');
  }finally{release();await page.unroute('**/api/v1/inbox');}
 });
+
+test('late startup cannot discard a personal shop command already submitted by its owner',async({page})=>{
+ await account(page,'shop-startup');
+ let releaseInbox,releaseCreate;const inboxGate=new Promise(resolve=>{releaseInbox=resolve;}),createGate=new Promise(resolve=>{releaseCreate=resolve;});let inboxReads=0,creates=0;
+ await page.route('**/api/v1/inbox',async route=>{inboxReads++;await inboxGate;await route.continue();});
+ await page.route('**/api/v1/market/shops',async route=>{if(route.request().method()==='POST'){creates++;await createGate;}await route.continue();});
+ try{
+  await page.reload();await expect.poll(()=>inboxReads,{timeout:30000}).toBeGreaterThan(0);await ecosystem(page);
+  const root=page.locator('#personalShopsPanel'),input=root.locator('.personal-shop-create [name=name]');
+  await expect(input).toBeVisible();await input.fill('PRIVATE-PENDING-STARTUP-SHOP');await root.getByRole('button',{name:'Créer ma boutique privée',exact:true}).click();await expect.poll(()=>creates).toBe(1);
+  const startupTail=page.waitForResponse(r=>new URL(r.url()).pathname==='/api/v1/founder/control');releaseInbox();await startupTail;
+  await expect(input).toHaveValue('PRIVATE-PENDING-STARTUP-SHOP');await expect(input).toBeDisabled();
+  releaseCreate();await expect(root.locator('.shop-settings')).toBeVisible();await expect(root.locator('.shop-settings [name=name]')).toHaveValue('PRIVATE-PENDING-STARTUP-SHOP');
+  const shops=await api(page,'market/shops/mine');expect(shops).toHaveLength(1);expect(shops[0].data.visibility).toBe('PRIVATE');expect(creates).toBe(1);
+ }finally{releaseInbox();releaseCreate();await page.unroute('**/api/v1/inbox');await page.unroute('**/api/v1/market/shops');}
+});

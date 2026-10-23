@@ -8,7 +8,10 @@ export function mountPersonalShopsUI({app,notify=()=>{},showError=()=>{},fmt=Str
  const amount=(n,currency='XAF')=>new Intl.NumberFormat(document.documentElement.lang.startsWith('en')?'en-GB':'fr-FR',{maximumFractionDigits:0}).format(Number(n))+' '+currency;
  const context=()=>JSON.stringify([app.currentActor(),app.currentTenant(),app.activeGroup()]);
  const content=node('div',undefined,'stack'),status=node('p',undefined,'hint'),tabs=node('div',undefined,'actions');status.setAttribute('role','status');root.append(tabs,status,content);
- let mode='mine',selected='',generation=0,lastContext='';
+ let mode='mine',selected='',generation=0,activity=0,lastContext='';
+ root.addEventListener('input',()=>{activity++;});
+ root.addEventListener('change',()=>{activity++;});
+ root.addEventListener('submit',()=>{activity++;});
  const button=(parent,text,cb,cls='secondary')=>{const b=node('button',text,cls);b.type='button';b.onclick=()=>void Promise.resolve().then(cb).catch(error=>{status.textContent=tx('Action non confirmée. Vérifiez le contexte et réessayez.','Action not confirmed. Check the context and retry.');showError(error);});parent.append(b);return b;};
  const bindForm=(form,submit,fn)=>{let attempt;form.onsubmit=event=>{event.preventDefault();if(!form.reportValidity())return;const captured=context(),signature=JSON.stringify([...new FormData(form)]);if(!attempt||attempt.signature!==signature)attempt={signature,key:crypto.randomUUID()};const fields=[...form.elements];for(const e of fields)e.disabled=true;status.textContent=tx('Vérification et enregistrement…','Checking and recording…');void Promise.resolve().then(()=>fn(attempt.key,()=>captured===context())).then(()=>{if(captured===context())status.textContent=tx('Enregistrement confirmé.','Record confirmed.');}).catch(error=>{if(captured===context()){status.textContent=tx('Confirmation non obtenue. Réessayer les mêmes champs conserve la même clé.','Confirmation not received. Retrying the same fields keeps the same key.');showError(error);}}).finally(()=>{if(captured===context())for(const e of fields)e.disabled=false;});};submit.type='submit';form.append(submit);};
  const submit=(label)=>node('button',label,'primary');
@@ -59,5 +62,8 @@ export function mountPersonalShopsUI({app,notify=()=>{},showError=()=>{},fmt=Str
  document.addEventListener('eco:language-changed',()=>{if(root.open)void refresh();});
  // Account changes also clear private projections before an asynchronous refresh.
  const accountObserver=new MutationObserver(()=>{if(lastContext&&lastContext!==context()){++generation;content.replaceChildren();selected='';lastContext=context();if(root.open)void refresh();}});accountObserver.observe(document.getElementById('activeGroupSelect')||root,{attributes:true,childList:true,subtree:true});
- return{clearForContext:()=>{if(lastContext&&lastContext!==context()){++generation;content.replaceChildren();selected='';lastContext=context();}},open:async()=>{if(!root.open)root.open=true;else await refresh();root.scrollIntoView({block:'start'});},setLocale:()=>root.open?refresh():Promise.resolve(),refresh};
+ // A background refresh captures its intent before optional startup reads.
+ // Later navigation, edits or submission own the current projection instead.
+ const captureRefresh=()=>{const captured=context(),token=generation,revision=activity;return()=>root.open&&captured===context()&&token===generation&&revision===activity?refresh():Promise.resolve();};
+ return{captureRefresh,clearForContext:()=>{if(lastContext&&lastContext!==context()){++generation;content.replaceChildren();selected='';lastContext=context();}},open:async()=>{if(!root.open)root.open=true;else await refresh();root.scrollIntoView({block:'start'});},setLocale:()=>root.open?refresh():Promise.resolve(),refresh};
 }
