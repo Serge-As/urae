@@ -30,3 +30,6 @@ Navigation : la promesse de démarrage est résolue après restauration du compt
 ### Contrôle de livraison v35 — correction complémentaire
 
 La source `fe73b327b281d56538e21b777d4cd24aacaf53d9` a passé la qualification indépendante (1008 tests natifs,64 Chromium,6 WebKit), mais la livraison `39940630722` a refusé le déploiement : l’ouverture des réglages déclenchait un POST de cookie commercial pendant le diagnostic en lecture seule. Ce n’est pas un échec ignoré ni un motif de relance aveugle. Le rafraîchissement lit désormais seulement le contexte ; un bouton explicite conserve l’émission du cookie avec les consentements existants, sans passer outre un OFF. Le test observe les écritures avant l’ouverture des réglages, exige zéro écriture pour diagnostic et export, puis une seule commande après clic explicite. La source corrigée doit repasser les qualifications et obtenir sa propre preuve publique. La production reste v33 tant que ces contrôles ne sont pas clos.
+
+
+Complément bilingue : la source `1f085150f0290489043243c3abd289204b106934` a été refusée avant déploiement par le contrôle de traduction statique (1007/1008). Les trois nouveaux libellés ont désormais leur traduction runtime FR/EN ; le scénario anglais attend le libellé réellement traduit. La barrière et ses assertions restent intactes.

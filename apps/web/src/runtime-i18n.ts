@@ -3,6 +3,9 @@ import {messages} from './i18n.js';
 export type RuntimeLocale = 'fr'|'en';
 
 const EXTRA_FR_EN: Record<string,string> = {
+  'Connecter mon profil de préférences':'Connect my preference profile',
+  'Ouvrir cette page ne crée aucun cookie commercial. Cette commande utilise les consentements existants ; un refus reste prioritaire.':'Opening this page creates no commercial cookie. This action uses existing consents; a refusal still takes priority.',
+  'Lecture seule · connexion sur demande':'Read only · connect on request',
   'Un nom ou téléphone commun est un indice à examiner, jamais une preuve suffisante pour fusionner des personnes. Le rattachement demande les preuves et la validation du parcours d’appairage historique.':'A shared name or phone is a clue to review, never sufficient proof to merge people. Linking requires evidence and validation through the historical pairing procedure.',
   'Les preuves sont vérifiées par le serveur ; aucun rapprochement automatique.':'Evidence is checked by the server; there is no automatic identity linking.',
   'Eco Care · Support et SAV':'Eco Care · Support and after-sales',

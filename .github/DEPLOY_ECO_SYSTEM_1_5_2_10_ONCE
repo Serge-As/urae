@@ -12,3 +12,5 @@ real_money_enabled: false
 field_acceptance: NOT_ACCEPTED
 public_verification: health, catalogue and47 asset hashes
 trigger_nonce: 2026-10-23-review-recovery-exact-source
+
+reviewed_settings_correction: read-only-refresh-explicit-cookie-complete-fr-en
