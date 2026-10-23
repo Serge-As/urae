@@ -13,3 +13,8 @@ Qualité : lecture explicite des anomalies sans ouvrir de workflow ou réparer u
 Préservation : Ledger/D1, synchronisation, signatures, outbox, modes d'affichage et capacitésv34 restent acquis. Pas de nouveau polling, dépendance payante, schéma, migration ou redémarrage. Adaptateur de fichiers local32MiB pour la qualification, détruit avec le processus ; aucune substitution de stockage en production. `realMoneyEnabled=false`, `FIELD_ACCEPTED=NOT_ACCEPTED`.
 
 BIR+ / **ÉTAT DU PROJET APRÈS ÉTAPE** : finir les qualifications exactes et la preuve publiquev34, qualifier puis publierv35 ; réaliser ensuite en un ensemble commun les compléments des propositions déjà acquises.92propositions rattachées aux28lots ne signifie pas92propositions achevées. Le rapprochement final reste exigé proposition par proposition. Consommation exacte de crédits non mesurable.
+
+
+### Contrôle de livraison v35 — correction complémentaire
+
+La source `fe73b327b281d56538e21b777d4cd24aacaf53d9` a passé la qualification indépendante (1008 tests natifs,64 Chromium,6 WebKit), mais la livraison `39940630722` a refusé le déploiement : l’ouverture des réglages déclenchait un POST de cookie commercial pendant le diagnostic en lecture seule. Ce n’est pas un échec ignoré ni un motif de relance aveugle. Le rafraîchissement lit désormais seulement le contexte ; un bouton explicite conserve l’émission du cookie avec les consentements existants, sans passer outre un OFF. Le test observe les écritures avant l’ouverture des réglages, exige zéro écriture pour diagnostic et export, puis une seule commande après clic explicite. La source corrigée doit repasser les qualifications et obtenir sa propre preuve publique. La production reste v33 tant que ces contrôles ne sont pas clos.

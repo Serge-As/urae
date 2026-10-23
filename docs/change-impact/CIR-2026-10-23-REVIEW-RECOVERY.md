@@ -25,3 +25,8 @@ Qualification des téléversements : le serveur de développement reçoit un ada
 
 
 Navigation : la promesse de démarrage est résolue après restauration du compte/groupe et chargement du catalogue, avant les lectures secondaires. L’historique courant reste prioritaire à la fin du démarrage. Un test bloque explicitement la lecture Inbox, ouvre le Labo, conserve un brouillon puis libère la lecture ; il doit confirmer le maintien de la destination et du brouillon. Les contrôles d’absence d’écriture métier du diagnostic excluent seulement les commandes de transport Live `retry-pending`, `signal` et `publish` ; toute autre écriture API reste un échec. La suite financière acquise demeure obligatoire sur la source finale.
+
+
+### Contrôle de livraison v35 — correction complémentaire
+
+La source `fe73b327b281d56538e21b777d4cd24aacaf53d9` a passé la qualification indépendante (1008 tests natifs,64 Chromium,6 WebKit), mais la livraison `39940630722` a refusé le déploiement : l’ouverture des réglages déclenchait un POST de cookie commercial pendant le diagnostic en lecture seule. Ce n’est pas un échec ignoré ni un motif de relance aveugle. Le rafraîchissement lit désormais seulement le contexte ; un bouton explicite conserve l’émission du cookie avec les consentements existants, sans passer outre un OFF. Le test observe les écritures avant l’ouverture des réglages, exige zéro écriture pour diagnostic et export, puis une seule commande après clic explicite. La source corrigée doit repasser les qualifications et obtenir sa propre preuve publique. La production reste v33 tant que ces contrôles ne sont pas clos.

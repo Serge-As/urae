@@ -195,13 +195,14 @@ export function mountIdentityLiveUI({app,notify=()=>{},showError=console.error,c
       dnaRoot?.replaceChildren(row('Algorithme',dna.algorithmId),row('Empreinte mémoire',dna.memoryFingerprint),row('Mémoire privée',dna.privateMemoryCount),row('Mémoire partageable',dna.shareableMemoryCount),row('Confiance moyenne',Math.round(Number(dna.confidenceAverage)*100)+'%'),row('Politique','Conseil + règles ; aucune finance autonome'));
       const preferenceStatus=document.getElementById('commercialPreferenceStatus');
       try{
-        const issued=await app.ensureCommercialPreferenceCookie(),context=await app.commercialPreferenceContext();
+        // Viewing Settings is a read. Issuing an opaque token requires the explicit button.
+        const context=await app.commercialPreferenceContext();
         preferenceStatus?.replaceChildren(
           row('Profil bêta','BETA_OPEN · actif pour tous'),
           row('Apprentissage collectif','Actif · catégories non sensibles seulement'),
           row('Communautés & partenaires','Actifs'),
-          row('Profil first-party','Cookie opaque / HttpOnly'),
-          row('Affinités sûres',context.affinities?.length??issued.affinityCount??0)
+          row('Profil first-party','Lecture seule · connexion sur demande'),
+          row('Affinités sûres',context.affinities?.length??0)
         );
       }catch(e){
         preferenceStatus?.replaceChildren(row('Profil bêta','BETA_OPEN'),row('Profil first-party','En attente de synchronisation'));
@@ -243,6 +244,13 @@ export function mountIdentityLiveUI({app,notify=()=>{},showError=console.error,c
     if(liveRoot)liveRoot.append(row('Réseau','Hors ligne · outbox active'));
   });
   document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&wantConnection&&(!socket||socket.readyState!==WebSocket.OPEN)){reconnectAttempt=0;connect();}});
+  document.getElementById('commercialPreferenceConnectBtn')?.addEventListener('click',event=>void(async()=>{
+    const button=event.currentTarget,group=app.activeGroup(),actor=String(app.currentActor?.()??'');
+    if(!group||button.disabled)return;button.disabled=true;
+    try{await app.ensureCommercialPreferenceCookie();if(group!==app.activeGroup()||actor!==String(app.currentActor?.()??''))return;notify(document.documentElement.lang==='en'?'Preference profile connected.':'Profil de préférences connecté.');await refresh();}
+    catch(error){if(group===app.activeGroup()&&actor===String(app.currentActor?.()??''))showError(error);}
+    finally{button.disabled=false;}
+  })());
   document.getElementById('refreshPassportBtn')?.addEventListener('click',()=>void (async()=>{try{await app.groupIdentityPassport(true);notify('Passeport identitaire rafraîchi.');await refresh();}catch(e){showError(e);}})());
   document.getElementById('conciergeMemoryForm')?.addEventListener('submit',e=>{e.preventDefault();void (async()=>{try{
     await app.learnConciergeMemory({category:value('conciergeMemoryCategory'),key:value('conciergeMemoryKey'),value:value('conciergeMemoryValue'),sourceRef:value('conciergeMemorySource'),confidence:Number(value('conciergeMemoryConfidence')||0),privacy:value('conciergeMemoryPrivacy'),visibility:value('conciergeMemoryVisibility')});
