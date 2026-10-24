@@ -1,0 +1,35 @@
+{
+  "protocol": "ECO_RECOVERY_CLOSURE_1",
+  "sourceSha": "a07f96edcc49b6132d00e292edf222d47034b12e",
+  "version": "1.5.2.37-engine-rehearsal",
+  "createdAt": "2026-10-24T14:03:57.960Z",
+  "scope": "D1_AND_EXACT_SOURCE_ONLY",
+  "completeApplicationBackup": false,
+  "excluded": [
+    "R2_ATTACHMENT_OBJECTS",
+    "DEVICE_INDEXEDDB_AND_PENDING_OUTBOX",
+    "EXTERNAL_PROVIDER_STATE"
+  ],
+  "restoredCopy": {
+    "integrity": "ok",
+    "foreignKeys": "ok",
+    "tables": 50,
+    "expectedTables": 48,
+    "expectedSchemaPresent": true,
+    "sqlBytes": 2936766,
+    "sqlSha256": "209f536b2c6af897f58c1e4b35b4bc0c3bbae8a86b27b3156a0e85159b26254e",
+    "dataSha256": "015c72c23714c5f382b8f70d3d62eb90f742af0c1af5dcd4f76e1acd86251ee6"
+  },
+  "productionRestored": false,
+  "privateArchiveReadbackSha256": "e07176747fe4e806064b9aaf03ec294c1f53088f0e6978a3bad21c2c9a8bb1ce",
+  "exactSource": {
+    "source": "a07f96edcc49b6132d00e292edf222d47034b12e",
+    "tree": "226a2d71b80e9602b4f70ad4b2479cae94471137",
+    "gitBlobHashesVerified": 914,
+    "zipSha256": "6825d2c2fb026ec4c9bd61b6533c133fd7d026100a074f8908f2bd4eaa998226",
+    "zipBytes": 3314246,
+    "origin": "LOCAL_RAW_SOURCE_MATCHES_PRIVATE_REMOTE_TREE_MERKLE_SHA; no private source archive downloaded"
+  },
+  "exactSourceFile": "Eco-System_1.5.2.37_Source_Verifiee_a07f96ed_2026-10-24.zip",
+  "fieldAcceptance": "NOT_ACCEPTED"
+}

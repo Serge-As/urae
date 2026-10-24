@@ -1,13 +1,13 @@
-Eco-System canonical engine rehearsal authorized by founder
-release: 1.5.2.37-engine-rehearsal
+Eco-System productive continuity authorized by founder
+release: 1.5.2.38-productive-continuity
 date: 2026-10-24
 mode: code-only-with-verified-readonly-backup-no-migration
 db_mutation: none
-baseline_source: 93ed895af495425d7963dc4dbd8b9cf4dc7f123d
+baseline_source: a07f96edcc49b6132d00e292edf222d47034b12e
 qualification: complete governed CI, Chromium and WebKit on exact source
-scope: I02 canonical loan/Live/outbox rehearsal and I10 normalized incident import/replay
+scope: chosen notebook recipients, consented cross-group method adaptations, voluntary private calendar snapshots
 backup_scope: D1_AND_EXACT_SOURCE_ONLY
 real_money_enabled: false
 field_acceptance: NOT_ACCEPTED
-public_verification: health, catalogue and 50 asset hashes
-trigger_nonce: 2026-10-24-engine-rehearsal-exact-source
+public_verification: health, catalogue and 52 asset hashes
+trigger_nonce: 2026-10-24-productive-continuity-exact-source

@@ -23,6 +23,9 @@ export class KnowledgeAcademyService{
   createForumSolution(input:solutions.SolutionInput,load:solutions.SourceLoader){return solutions.createForumSolution(this.repo,this.kernel,input,load);}
   forumSolutions(groupId:string,load:solutions.SourceLoader){return solutions.forumSolutions(this.repo,this.kernel,groupId,load);}
   reviewForumSolution(id:string,input:Parameters<typeof solutions.reviewForumSolution>[3],load:solutions.SourceLoader){return solutions.reviewForumSolution(this.repo,this.kernel,id,input,load);}
+  transmitForumSolution(id:string,input:Parameters<typeof solutions.transmitForumSolution>[3],load:solutions.SourceLoader){return solutions.transmitForumSolution(this.repo,this.kernel,id,input,load);}
+  receivedForumSolutions(groupId:string,load:solutions.SourceLoader){return solutions.receivedForumSolutions(this.repo,this.kernel,groupId,load);}
+  adaptForumSolution(groupId:string,input:Parameters<typeof solutions.adaptForumSolution>[3],load:solutions.SourceLoader){return solutions.adaptForumSolution(this.repo,this.kernel,groupId,input,load);}
   private ctx(){return this.kernel.context.get();}
   private async groupMembership(groupId:Id){
     const c=this.ctx(),g=await this.repo.getGroup(c.tenantId,groupId);if(!g)throw new Error('GROUP_NOT_FOUND');
@@ -37,6 +40,7 @@ export class KnowledgeAcademyService{
   }
 
   async createKnowledge(input:{title:string;kind:KnowledgeKind;body:string;groupId?:Id;sourceRef?:string;validFrom?:string;validUntil?:string;nextReviewAt?:string;sensitivity?:KnowledgeSensitivity;consentScope?:string;tags?:string[]}){
+    if(['FORUM_SOLUTION','FORUM_SOLUTION_TRANSMISSION'].includes(String(input.kind))||(input.tags??[]).some(t=>String(t).trim().toLowerCase()==='governed-productive'))throw Error('CANONICAL_SOLUTION_ROUTE_REQUIRED');
     await this.canManageGroup(input.groupId);const title=clean(input.title,240),body=clean(input.body,12000);if(!title||!body)throw new Error('KNOWLEDGE_CONTENT_REQUIRED');
     for(const [name,value] of [['VALID_FROM',input.validFrom],['VALID_UNTIL',input.validUntil],['NEXT_REVIEW_AT',input.nextReviewAt]] as const)if(value&&!Number.isFinite(Date.parse(value)))throw new Error('INVALID_'+name);
     if(input.validFrom&&input.validUntil&&Date.parse(input.validUntil)<=Date.parse(input.validFrom))throw new Error('INVALID_KNOWLEDGE_VALIDITY');

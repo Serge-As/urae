@@ -1,0 +1,11 @@
+## Candidat v38 — continuité productive consentie
+
+Base vérifiée : v37, source a07f96edcc49b6132d00e292edf222d47034b12e. Candidat 1.5.2.38-productive-continuity : compléments A14/A15/A17/A19/I05/I20 sous les propriétaires existants. Chaque champ de carnet peut être réservé à des personnes explicitement choisies du groupe ; aperçu exact, accès courant et retrait vérifiés. Les destinataires ne reçoivent ni la liste des autres audiences ni les champs privés.
+
+Une solution de Fora validée peut être transmise par son auteur à un autre de ses groupes, même dans un tenant distinct. La cible possède seulement un pointeur de découverte ; le consentement et le contenu restent dans la source canonique. Une adaptation conserve sa propre méthode, conditions et résultat, commence en proposition et requiert une revue locale indépendante. Source masquée, auteur sorti du groupe ou consentement retiré : contenus dérivés masqués à la prochaine lecture. Une autorisation ultérieure ne réactive pas les anciennes adaptations. Aucun message brut, document privé ou règle financière transmis.
+
+L’export calendrier privé est volontaire, après relecture autorisée du dossier courant : rendez-vous attribués, échéance de candidature ou jalons non achevés. Dates UTC, identifiants opaques stables, texte échappé et lignes UTF-8 bornées. Le logiciel de calendrier choisi est responsable de ses alarmes. Le fichier est une copie datée, sans synchronisation automatique, notification externe garantie ou changement métier. Les groupes autorisés sont retrouvés depuis les adhésions courantes de l’acteur, sans catalogue étranger.
+
+Qualification finale et publication non encore attestées. Les preuves v37 ne qualifient pas v38. Reprendre les tests ciblés puis la compilation et les suites acquises sur la source finale, sauvegarde vérifiée, publication privée groupée et contrôle des 52 empreintes. Aucun polling, abonnement, migration, purge ou redémarrage. Les fichiers calendrier déjà téléchargés et copies déjà vues ne sont pas rétractables à distance. Partage carnet limité aux membres d’un groupe commun ; pas de répertoire public de contacts, programme Launch multiparti ou rappel serveur autonome revendiqué.
+
+ÉTAT DU PROJET APRÈS ÉTAPE : candidat en qualification, non déployé. realMoneyEnabled=false ; FIELD_ACCEPTED=NOT_ACCEPTED. Consommation exacte de crédits non mesurable.

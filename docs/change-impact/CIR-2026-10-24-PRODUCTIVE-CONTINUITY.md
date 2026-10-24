@@ -1,0 +1,17 @@
+# Continuité productive — compléments des lots 14, 15, 17 et 19
+
+Autorisation : poursuite et finalisation des lots et innovations demandées par le fondateur. Base de travail : v37, source a07f96edcc49b6132d00e292edf222d47034b12e. Les preuves existantes sont réutilisées pour cette base ; elles ne qualifient pas le nouveau code.
+
+Le registre signale encore des variantes incomplètes. Ce lot commun étend les propriétaires existants : DiscoveryService pour les champs de carnet adressés à des personnes choisies, KnowledgeAcademyService pour une adaptation consentie d'une solution vers un autre groupe, BusinessStudioService pour le suivi daté des entretiens et jalons. Il n'introduit aucune autorité financière, base parallèle ou dépendance payante.
+
+Chaque audience sélectionnée doit être explicite et relue à l'accès. Les personnes choisies restent des membres actuels du groupe d'origine ; un identifiant ne donne aucun droit. Une adaptation ne publie aucun message source privé. Elle requiert une fiche validée, l'accord de son auteur et une revue indépendante pour son nouveau contexte. Une source devenue indisponible ou une transmission retirée masque les contenus dérivés. La fiche originale reste inchangée par l'adaptation.
+
+Les échéances sont proposées par les propriétaires canoniques ; un export calendrier reste volontaire et ne signifie ni notification reçue, ni entretien réalisé, ni engagement financier. Les horaires exportés sont explicites. Aucun polling, nouvelle tâche planifiée ou transport externe implicite. Les champs privés ne sont pas introduits dans une URL ni une synthèse publique.
+
+Risques indirects : fuite vers un mauvais destinataire, version de source périmée, écrasement d'un formulaire par une réponse tardive, confusion entre rappel et résultat métier. Protections : audience vérifiée à chaque lecture, CAS des révisions, contrôle de source et de consentement, invalidation par compte/groupe, rendu texte, fichiers de calendrier bornés et échappés, tests concurrents Memory/SQLite et parcours réels Chromium/WebKit. Les voies workspace génériques ne doivent ni lire ni réécrire les nouveaux états gouvernés.
+
+Qualification requise : tests ciblés d'accès et de retrait, calendrier et absence d'écriture financière, puis suites acquises sur la source finale, sauvegarde vérifiée, publication privée groupée et empreintes publiques. Ledger/D1, prêts, Live, outbox et leurs répétitions restent obligatoires. Aucune migration, purge ou restauration de production. realMoneyEnabled=false ; FIELD_ACCEPTED=NOT_ACCEPTED.
+
+ÉTAT DU PROJET APRÈS ÉTAPE : candidat en préparation ; aucune livraison v38 revendiquée.
+
+Le contrôle à deux comptes de tenants distincts a identifié un manque du répertoire de groupes : `groups/mine` lisait uniquement le catalogue du tenant courant. L’extension conserve cette sélection et son ordre, puis ajoute seulement les groupes dont une adhésion actuelle de cet acteur est retrouvée par le repository canonique. Le tenant de l’adhésion doit correspondre à celui du groupe ; aucun catalogue étranger n’est exposé. Les tests couvrent l’acteur sans adhésion, le fondateur limité à son groupe et le membre réellement inscrit dans deux tenants. Cette projection n’accorde aucun rôle et les commandes relisent toujours leurs droits.

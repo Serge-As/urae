@@ -1,6 +1,7 @@
 // A new cache identity is mandatory, even for a patch-level app release.
-const CACHE = 'eco-system-v15237-engine-rehearsal-20261024';
-const PREVIOUS_CACHE = 'eco-system-v15236-common-innovations-20261023';
+const CACHE = 'eco-system-v15238-productive-continuity-20261024';
+const PREVIOUS_CACHE = 'eco-system-v15237-engine-rehearsal-20261024';
+const PRIOR_COMMON_CACHE = 'eco-system-v15236-common-innovations-20261023';
 const PRIOR_REVIEW_CACHE = 'eco-system-v15235-review-recovery-20261023';
 const PRIOR_PRODUCTIVE_CACHE = 'eco-system-v15234-productive-community-20261023';
 const PRIOR_FINANCIAL_CACHE = 'eco-system-v15233-financial-explanations-20261022';
@@ -34,8 +35,8 @@ const RELEASE_READY = '/__eco_release_ready__';
 // before this worker may install. Optional business/community panels can fail
 // independently without replacing an already-working release.
 const ESSENTIAL_SHELL = [
-  '/', '/index.html', '/styles.css?v=15237', '/manifest.webmanifest',
-  '/src/ui-modes.js?v=15237', '/src/field-hardening.js?v=15237', '/src/main.js?v=15237', '/src/i18n.js', '/src/runtime-i18n.js',
+  '/', '/index.html', '/styles.css?v=15238', '/manifest.webmanifest',
+  '/src/ui-modes.js?v=15238', '/src/field-hardening.js?v=15238', '/src/main.js?v=15238', '/src/i18n.js', '/src/runtime-i18n.js',
   '/src/resilience-ui.js', '/src/group-home-ui.js', '/src/sessions-ui.js',
   '/src/detail-ui.js', '/src/member-control-ui.js', '/src/loan-simulation-ui.js', '/src/business-studio-ui.js', '/src/core-economic-learning-ui.js',
   '/packages/application/src/index.js', '/packages/contracts/src/index.js',
@@ -51,7 +52,7 @@ const ESSENTIAL_SHELL = [
 ];
 
 const OPTIONAL_SHELL = [
-  '/src/voice-entry-bootstrap.js?v=15237', '/src/voice-entry-ui.js', '/src/expense-recap-ui.js',
+  '/src/voice-entry-bootstrap.js?v=15238', '/src/voice-entry-ui.js', '/src/expense-recap-ui.js',
   '/src/member-dossier-ui.js', '/src/documents-ui.js', '/src/contextual-group-ui.js',
   '/src/blueprint-executable-ui.js', '/src/community-blueprint-presets.js',
   '/src/financial-lab-ui.js', '/src/completion-ui.js', '/src/advanced-ui.js',
@@ -144,7 +145,7 @@ self.addEventListener('activate', event => {
     // Keep one known previous coherent release for operator rollback/recovery.
     // Never delete the immediately previous cache during the same activation.
     for (const name of names) {
-      if (name.startsWith('eco-system-') && name !== CACHE && name !== PREVIOUS_CACHE && name !== PRIOR_REVIEW_CACHE && name !== PRIOR_PRODUCTIVE_CACHE && name !== PRIOR_FINANCIAL_CACHE && name !== PRIOR_TEMPORAL_PILOTS_CACHE && name !== PRIOR_BUSINESS_CACHE && name !== PRIOR_GROUPS_CACHE && name !== PRIOR_CARE_CACHE && name !== PRIOR_NOTIFICATION_CACHE && name !== PRIOR_PERSONAL_COMMERCE_CACHE && name !== PRIOR_COMMERCIAL_CACHE && name !== PRIOR_ASSISTANT_CACHE && name !== PRIOR_PERSONAL_COCKPIT_CACHE && name !== PRIOR_RESOURCE_CACHE && name !== PRIOR_REHEARSAL_CACHE && name !== PRIOR_STABLE_NAVIGATION_CACHE && name !== PRIOR_NAVIGATION_RELEASE_CACHE && name !== PRIOR_NAVIGATION_CACHE && name !== PRIOR_WORKSPACE_CACHE && name !== PRIOR_REDESIGN_CACHE && name !== PRIOR_COCKPIT_CACHE && name !== LEGACY_RECOVERY_CACHE && name !== INSTALLED_RECOVERY_CACHE && name !== PRIOR_SOURCE_RECOVERY_CACHE && name !== PRIOR_CONVERGENCE_CACHE) {
+      if (name.startsWith('eco-system-') && name !== CACHE && name !== PREVIOUS_CACHE && name !== PRIOR_COMMON_CACHE && name !== PRIOR_REVIEW_CACHE && name !== PRIOR_PRODUCTIVE_CACHE && name !== PRIOR_FINANCIAL_CACHE && name !== PRIOR_TEMPORAL_PILOTS_CACHE && name !== PRIOR_BUSINESS_CACHE && name !== PRIOR_GROUPS_CACHE && name !== PRIOR_CARE_CACHE && name !== PRIOR_NOTIFICATION_CACHE && name !== PRIOR_PERSONAL_COMMERCE_CACHE && name !== PRIOR_COMMERCIAL_CACHE && name !== PRIOR_ASSISTANT_CACHE && name !== PRIOR_PERSONAL_COCKPIT_CACHE && name !== PRIOR_RESOURCE_CACHE && name !== PRIOR_REHEARSAL_CACHE && name !== PRIOR_STABLE_NAVIGATION_CACHE && name !== PRIOR_NAVIGATION_RELEASE_CACHE && name !== PRIOR_NAVIGATION_CACHE && name !== PRIOR_WORKSPACE_CACHE && name !== PRIOR_REDESIGN_CACHE && name !== PRIOR_COCKPIT_CACHE && name !== LEGACY_RECOVERY_CACHE && name !== INSTALLED_RECOVERY_CACHE && name !== PRIOR_SOURCE_RECOVERY_CACHE && name !== PRIOR_CONVERGENCE_CACHE) {
         try { await caches.delete(name); } catch (_) {}
       }
     }
@@ -155,7 +156,7 @@ const cachedShell = async request => {
   const cache = await caches.open(CACHE);
   const url = new URL(request.url);
   // A versioned request must only match that exact version. Falling back from
-  // main.js?v=15237 to an older /main.js was the source of mixed-release UI.
+  // main.js?v=15238 to an older /main.js was the source of mixed-release UI.
   if(url.search)return await cache.match(request);
   return await cache.match(url.pathname);
 };

@@ -770,7 +770,7 @@
     {
       "id": "I02",
       "title": "La répétition générale d’une séance · propriétaire L05",
-      "status": "IMPLEMENTED_UNVERIFIED",
+      "status": "DELIVERED_WITH_DOCUMENTED_LIMITS",
       "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md",
       "targetLots": [
         5
@@ -786,9 +786,12 @@
       "evidence": [
         "docs/release/DELIVERY-2026-10-23-COMMON-INNOVATIONS.md",
         "docs/release/evidence/COMMON-INNOVATIONS-PUBLIC-2026-10-24.json",
-        "docs/release/evidence/COMMON-INNOVATIONS-QUALIFICATION-2026-10-24.json"
+        "docs/release/evidence/COMMON-INNOVATIONS-QUALIFICATION-2026-10-24.json",
+        "docs/release/evidence/ENGINE-REHEARSAL-INCIDENT-PUBLIC-2026-10-24.json",
+        "docs/release/evidence/ENGINE-REHEARSAL-INCIDENT-QUALIFICATION-2026-10-24.json",
+        "docs/release/DELIVERY-2026-10-24-ENGINE-REHEARSAL-INCIDENT.md"
       ],
-      "limits": "Bounded implementation published and automatically qualified at 93ed895af495425d7963dc4dbd8b9cf4dc7f123d; field acceptance pending. PARTIAL: guided fictional correction/review and export, not full canonical financial/loan/Live/outbox rehearsal."
+      "limits": "Published and automatically qualified at a07f96edcc49b6132d00e292edf222d47034b12e; FIELD_ACCEPTED=NOT_ACCEPTED. Actual canonical loans, ledger, sheet outbox and GroupLiveHub; two injected faults, six loan policies, durable fictional browser queue, Memory/SQLite qualification. Not exhaustive for all engine states or every failure; intermediate server FAILED snapshot is restored separately from browser initial/final persistence."
     },
     {
       "id": "I03",
@@ -951,7 +954,7 @@
     {
       "id": "I10",
       "title": "Le dossier d’incident reproductible sans données privées · propriétaire L27",
-      "status": "IMPLEMENTED_UNVERIFIED",
+      "status": "DELIVERED_WITH_DOCUMENTED_LIMITS",
       "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md",
       "targetLots": [
         27
@@ -967,9 +970,12 @@
       "evidence": [
         "docs/release/DELIVERY-2026-10-23-REVIEW-RECOVERY.md",
         "docs/release/evidence/REVIEW-RECOVERY-PUBLIC-2026-10-23.json",
-        "docs/release/evidence/REVIEW-RECOVERY-QUALIFICATION-2026-10-23.json"
+        "docs/release/evidence/REVIEW-RECOVERY-QUALIFICATION-2026-10-23.json",
+        "docs/release/evidence/ENGINE-REHEARSAL-INCIDENT-PUBLIC-2026-10-24.json",
+        "docs/release/evidence/ENGINE-REHEARSAL-INCIDENT-QUALIFICATION-2026-10-24.json",
+        "docs/release/DELIVERY-2026-10-24-ENGINE-REHEARSAL-INCIDENT.md"
       ],
-      "limits": "Minimal incident preview/export deployed and qualified at dd1e7388; PARTIAL: actual fault reproduction remains unverified. Initial scope only, qualification pending. Human review declaration not certified OCR. Backup excludes R2 objects/device outbox/external state. Minimal incident template does not yet reproduce actual fault. No automatic repair, legal verdict or financial write."
+      "limits": "Published and automatically qualified at a07f96edcc49b6132d00e292edf222d47034b12e; FIELD_ACCEPTED=NOT_ACCEPTED. Strict normalized synthetic recipes for LOST_ACK and LIVE_OUTAGE, fresh canonical replay and untrusted prior observations. No arbitrary personal trace/secret capture, universal incident reproduction or acceptance of real customer data."
     },
     {
       "id": "I11",
@@ -2135,6 +2141,6 @@
     "finalCohort": "Remaining improvements and innovations of previously delivered lots; individual proof required",
     "requestedOn": "2026-10-22"
   },
-  "lastVerifiedSource": "93ed895af495425d7963dc4dbd8b9cf4dc7f123d",
+  "lastVerifiedSource": "a07f96edcc49b6132d00e292edf222d47034b12e",
   "lastVerificationDate": "2026-10-24"
 }

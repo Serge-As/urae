@@ -2193,9 +2193,13 @@ export class ConnectedApplication {
   async saveDiscoveryNotebook(input:any):Promise<any>{return this.request('/api/v1/discovery/notebook',{method:'PUT',body:JSON.stringify(input)});}
   async previewDiscoveryNotebook(input:any):Promise<any>{return this.request('/api/v1/discovery/notebook/preview',{method:'POST',body:JSON.stringify(input)});}
   async searchDiscoveryNotebooks(q:string):Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/notebooks?q='+encodeURIComponent(q));}
+  async receivedDiscoveryNotebooks():Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/notebooks/received',{cache:'no-store'});}
   async forumSolutions():Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/forum-solutions');}
   async createForumSolution(input:any):Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/forum-solutions',{method:'POST',body:JSON.stringify(input)});}
   async reviewForumSolution(id:string,input:any):Promise<any>{return this.request('/api/v1/forum-solutions/'+encodeURIComponent(id)+'/review',{method:'POST',body:JSON.stringify(input)});}
+  async transmitForumSolution(id:string,input:any):Promise<any>{return this.request('/api/v1/forum-solutions/'+encodeURIComponent(id)+'/transmission',{method:'POST',body:JSON.stringify(input)});}
+  async receivedForumSolutions():Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/forum-solution-transmissions',{cache:'no-store'});}
+  async adaptForumSolution(input:any):Promise<any>{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/forum-solutions/adapt',{method:'POST',body:JSON.stringify(input)});}
   async productiveJobs(q=''):Promise<any>{return this.request('/api/v1/business-studio/jobs?q='+encodeURIComponent(q));}
   async acquisitionRooms():Promise<any>{return this.request('/api/v1/business-studio/acquisitions');}
   async acquisitionListings():Promise<any>{return this.request('/api/v1/business-studio/acquisition-listings');}

@@ -82,11 +82,11 @@ interface WorkersAILike {
   run?(model:string,input:Record<string,unknown>,options?:Record<string,unknown>):Promise<unknown>;
 }
 
-const RELEASE_VERSION='1.5.2.37-engine-rehearsal';
-const RELEASE_BUILD_ID='eco-system-1.5.2.37-20261024-engine-rehearsal';
+const RELEASE_VERSION='1.5.2.38-productive-continuity';
+const RELEASE_BUILD_ID='eco-system-1.5.2.38-20261024-productive-continuity';
 const RELEASE_SCHEMA_VERSION='d1-additive-20260923';
 const RELEASE_POLICY_VERSION='live-finance-policy-20261007-event-push-repayment';
-const RELEASE_PWA_CACHE='eco-system-v15237-engine-rehearsal-20261024';
+const RELEASE_PWA_CACHE='eco-system-v15238-productive-continuity-20261024';
 
 const defaultRepo = new InMemoryPlatformRepository();
 const defaultReferralBudgets = new InMemoryReferralBudgetStore();
@@ -1202,9 +1202,11 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
     if(trustGraphRoute&&request.method==='GET')return json(await trustGraph.graph(trustGraphRoute[1]!,trustGraphRoute[2]!),200,cors);
 
     const solutionSource=async(groupId:string,hubId:string,ref:{id:string;engine:'LIVE'|'LEGACY'})=>{
-      const hubs=await community.listHubs(groupId),hub=hubs.find(h=>h.id===hubId&&h.status==='ACTIVE');if(!hub)return undefined;
-      if(ref.engine==='LIVE')return options.communityRealtime?.messageReference(ctx.tenantId,groupId,hubId,ref.id);
-      const p=await repo.getWorkspaceRecord(ctx.tenantId,ref.id);return p&&p.groupId===groupId&&p.status==='ACTIVE'&&p.tags.includes('community-engine')&&p.data.communityKind==='POST'&&p.data.hubId===hubId&&p.data.moderationState==='PUBLISHED'?{id:p.id,title:p.title,body:p.summary??'',version:p.data.version}:undefined;
+      // Called only by the governed solution owner after group or explicit transmission access.
+      // A target group receives the reviewed method, never the private messages loaded here.
+      const group=await repo.getGroupById(groupId);if(group?.status!=='active')return undefined;const hub=await repo.getWorkspaceRecord(group.tenantId,hubId);if(!hub||hub.groupId!==groupId||hub.data.communityKind!=='HUB'||!hub.tags.includes('community-engine')||hub.status!=='ACTIVE')return undefined;
+      if(ref.engine==='LIVE')return options.communityRealtime?.messageReference(group.tenantId,groupId,hubId,ref.id);
+      const p=await repo.getWorkspaceRecord(group.tenantId,ref.id);return p&&p.groupId===groupId&&p.status==='ACTIVE'&&p.tags.includes('community-engine')&&p.data.communityKind==='POST'&&p.data.hubId===hubId&&p.data.moderationState==='PUBLISHED'?{id:p.id,title:p.title,body:p.summary??'',version:p.data.version}:undefined;
     };
     if(url.pathname==='/api/v1/academy/practices'){
       if(request.method==='GET')return json(await knowledgeAcademy.practices(),200,cors);
@@ -1216,6 +1218,12 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
     if(solutionsRoute){const groupId=decodeURIComponent(solutionsRoute[1]!);if(request.method==='GET')return json(await knowledgeAcademy.forumSolutions(groupId,solutionSource),200,cors);if(request.method==='POST'){const body=await readJson<any>(request);return json(await knowledgeAcademy.createForumSolution({...body,groupId},solutionSource),201,cors);}}
     const solutionReview=url.pathname.match(/^\/api\/v1\/forum-solutions\/([^/]+)\/review$/);
     if(solutionReview&&request.method==='POST')return json(await knowledgeAcademy.reviewForumSolution(decodeURIComponent(solutionReview[1]!),await readJson<any>(request),solutionSource),200,cors);
+    const solutionTransmission=url.pathname.match(/^\/api\/v1\/forum-solutions\/([^/]+)\/transmission$/);
+    if(solutionTransmission&&request.method==='POST')return json(await knowledgeAcademy.transmitForumSolution(decodeURIComponent(solutionTransmission[1]!),await readJson<any>(request),solutionSource),200,cors);
+    const receivedSolutions=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/forum-solution-transmissions$/);
+    if(receivedSolutions&&request.method==='GET')return json(await knowledgeAcademy.receivedForumSolutions(decodeURIComponent(receivedSolutions[1]!),solutionSource),200,cors);
+    const adaptSolution=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/forum-solutions\/adapt$/);
+    if(adaptSolution&&request.method==='POST')return json(await knowledgeAcademy.adaptForumSolution(decodeURIComponent(adaptSolution[1]!),await readJson<any>(request),solutionSource),201,cors);
     if(url.pathname==='/api/v1/discovery/notebook'){
       if(request.method==='GET')return json(await discovery.notebook(),200,cors);
       if(request.method==='PUT')return json(await discovery.saveNotebook(await readJson<any>(request)),200,cors);
@@ -1223,6 +1231,8 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
     if(url.pathname==='/api/v1/discovery/notebook/preview'&&request.method==='POST')return json(await discovery.notebookPreview(await readJson<any>(request)),200,cors);
     const notebookSearch=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/notebooks$/);
     if(notebookSearch&&request.method==='GET')return json(await discovery.searchNotebooks(decodeURIComponent(notebookSearch[1]!),url.searchParams.get('q')??''),200,cors);
+    const receivedNotebooks=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/notebooks\/received$/);
+    if(receivedNotebooks&&request.method==='GET')return json(await discovery.receivedNotebooks(decodeURIComponent(receivedNotebooks[1]!)),200,cors);
     if(url.pathname==='/api/v1/business-studio/acquisitions'){
       if(request.method==='GET')return json(await businessStudio.acquisitionRooms(),200,cors);
       if(request.method==='POST')return json(await businessStudio.createAcquisition(await readJson<any>(request)),201,cors);
@@ -1674,6 +1684,15 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
           return membership?group:null;
         }));
         for(const group of batch)if(group)visible.push(group);
+      }
+      // An account can be an active member of groups hosted by other tenants.
+      // Resolve only its own current memberships, never a foreign tenant catalogue.
+      const known=new Set(visible.map(g=>g.id)),memberships=await repo.listMembershipsForUser(ctx.actorId);
+      for(const membership of memberships){
+        if(membership.status!=='active'||known.has(membership.groupId))continue;
+        const group=await repo.getGroupById(membership.groupId);
+        if(!group||group.status!=='active'||group.tenantId!==membership.tenantId)continue;
+        known.add(group.id);visible.push(group);
       }
       return json(visible,200,cors);
     }
@@ -3192,7 +3211,7 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
       const timestamp=new Date().toISOString();
       const rawData=body.data&&typeof body.data==='object'&&!Array.isArray(body.data)?body.data as Record<string,unknown>:{};
       if(isProtectedSafetyRecord({moduleId,data:rawData}))throw Error('CANONICAL_SAFETY_ROUTE_REQUIRED');
-      if(strArray(body.tags).includes('governed-productive')||['PRACTICE_ATTEMPT','DISCOVERY_NOTEBOOK','FORUM_SOLUTION'].includes(String(rawData.kind))||['JOB','ACQUISITION_ROOM','LAUNCH_PLAN','RESOURCE_ASSEMBLY','RESOURCE_ALLOCATION_CLAIM'].includes(String(rawData.businessKind)))throw Error('CANONICAL_PRODUCTIVE_ROUTE_REQUIRED');
+      if(strArray(body.tags).includes('governed-productive')||['PRACTICE_ATTEMPT','DISCOVERY_NOTEBOOK','FORUM_SOLUTION','FORUM_SOLUTION_TRANSMISSION'].includes(String(rawData.kind))||['JOB','ACQUISITION_ROOM','LAUNCH_PLAN','RESOURCE_ASSEMBLY','RESOURCE_ALLOCATION_CLAIM'].includes(String(rawData.businessKind)))throw Error('CANONICAL_PRODUCTIVE_ROUTE_REQUIRED');
       if(strArray(body.tags).includes('market-engine')||rawData.marketScopeId||rawData.marketKind)throw Error('CANONICAL_MARKET_ROUTE_REQUIRED');
       if(strArray(body.tags).some(x=>['verification-fact','governance-follow-up','poll','ballot','business-experiment','consensual-pool','ad-pilot'].includes(x)))throw Error('CANONICAL_GOVERNED_ROUTE_REQUIRED');
       const data:Record<string,string|number|boolean|null>={};
@@ -3219,7 +3238,7 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
       const status=String(body.status??existing.status) as WorkspaceStatus; if(!['DRAFT','ACTIVE','DONE','ARCHIVED'].includes(status)) throw new Error('INVALID_WORKSPACE_STATUS');
       const rawData=body.data&&typeof body.data==='object'&&!Array.isArray(body.data)?body.data as Record<string,unknown>:existing.data;
       if(isProtectedSafetyRecord({moduleId:existing.moduleId,data:rawData}))throw Error('CANONICAL_SAFETY_ROUTE_REQUIRED');
-      if(strArray(body.tags).includes('governed-productive')||['PRACTICE_ATTEMPT','DISCOVERY_NOTEBOOK','FORUM_SOLUTION'].includes(String(rawData.kind))||['JOB','ACQUISITION_ROOM','LAUNCH_PLAN','RESOURCE_ASSEMBLY','RESOURCE_ALLOCATION_CLAIM'].includes(String(rawData.businessKind)))throw Error('CANONICAL_PRODUCTIVE_ROUTE_REQUIRED');
+      if(strArray(body.tags).includes('governed-productive')||['PRACTICE_ATTEMPT','DISCOVERY_NOTEBOOK','FORUM_SOLUTION','FORUM_SOLUTION_TRANSMISSION'].includes(String(rawData.kind))||['JOB','ACQUISITION_ROOM','LAUNCH_PLAN','RESOURCE_ASSEMBLY','RESOURCE_ALLOCATION_CLAIM'].includes(String(rawData.businessKind)))throw Error('CANONICAL_PRODUCTIVE_ROUTE_REQUIRED');
       const data:Record<string,string|number|boolean|null>={}; for(const [k,v] of Object.entries(rawData)){if(typeof v==='string'||typeof v==='number'||typeof v==='boolean'||v===null)data[k]=v;}
       if(strArray(body.tags).some(x=>['verification-fact','governance-follow-up','poll','ballot','business-experiment','consensual-pool','ad-pilot'].includes(x)))throw Error('CANONICAL_GOVERNED_ROUTE_REQUIRED');
       const updated:WorkspaceRecord={...existing,title:body.title===undefined?existing.title:String(body.title).trim()||existing.title,summary:body.summary===undefined?existing.summary:String(body.summary),status,tags:body.tags===undefined?existing.tags:strArray(body.tags),data,updatedAt:new Date().toISOString()};

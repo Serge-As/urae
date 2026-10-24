@@ -1665,15 +1665,33 @@
     {
       "id": "engine-rehearsal-incident-20261024",
       "scope": "I02 canonical engine rehearsal and I10 normalized known failure replay",
-      "status": "IN_PROGRESS",
+      "status": "VERIFIED_REMOTE",
       "observedOn": "2026-10-24",
-      "statement": "v37 candidate: isolated canonical loans, Live and durable outbox, two injected known failure patterns, six policy probes; current qualification and deployment not yet proved. Imported observations never count as fresh proof.",
+      "statement": "v37 exact-source delivery verified: canonical loan/Live/outbox rehearsal on isolated synthetic data; six policies; strict normalized replay for two known fault patterns. IndexedDB exercise survives reload and real storage remains unchanged. Arbitrary personal incident reproduction and field acceptance not claimed.",
       "evidence": [
         "docs/change-impact/CIR-2026-10-24-ENGINE-REHEARSAL-INCIDENT.md",
         "tests/engine-rehearsal-incident-20261024.test.mjs",
-        "tests/browser/engine-rehearsal-incident-20261024.spec.mjs"
+        "tests/browser/engine-rehearsal-incident-20261024.spec.mjs",
+        "source:a07f96edcc49b6132d00e292edf222d47034b12e",
+        "docs/release/evidence/ENGINE-REHEARSAL-INCIDENT-PUBLIC-2026-10-24.json",
+        "docs/release/evidence/ENGINE-REHEARSAL-INCIDENT-QUALIFICATION-2026-10-24.json",
+        "docs/release/evidence/ENGINE-REHEARSAL-INCIDENT-BACKUP-SOURCE-2026-10-24.json"
       ],
-      "next": "Qualify the exact source, preserve financial owners, verify backup and public fingerprints; FIELD_ACCEPTED=NOT_ACCEPTED."
+      "next": "Preserve this exact source and proof. Do not repeat audits or reopen completed bounded lots without a concrete defect. Field acceptance requires separately observed real-account evidence.",
+      "workerVersionId": "1adcb094-87d1-4404-9c67-054298ecff76"
+    },
+    {
+      "id": "productive-continuity-20261024",
+      "scope": "A14/A15/A17/A19/I05/I20 consented productive continuity",
+      "status": "IN_PROGRESS",
+      "observedOn": "2026-10-24",
+      "statement": "v38 candidate: selected notebook audiences, source-authorized cross-tenant method transmissions and independent local adaptations, voluntary calendar snapshots after current access reread. No financial effects, guaranteed external reminders or field acceptance.",
+      "evidence": [
+        "docs/change-impact/CIR-2026-10-24-PRODUCTIVE-CONTINUITY.md",
+        "tests/productive-continuity-20261024.test.mjs",
+        "tests/browser/productive-continuity-20261024.spec.mjs"
+      ],
+      "next": "Complete exact-source qualification, backup, deployment and independent public proof."
     }
   ]
 }

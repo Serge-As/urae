@@ -72,6 +72,7 @@ export class DiscoveryService {
   saveNotebook(input:Parameters<typeof notebooks.saveNotebook>[2]){return notebooks.saveNotebook(this.repo,this.kernel,input);}
   notebookPreview(input:Parameters<typeof notebooks.notebookPreview>[2]){return notebooks.notebookPreview(this.repo,this.kernel,input);}
   searchNotebooks(groupId:string,q:string){return notebooks.searchNotebooks(this.repo,this.kernel,groupId,q);}
+  receivedNotebooks(groupId:string){return notebooks.receivedNotebooks(this.repo,this.kernel,groupId);}
 
   private managerProjection(row:WorkspaceRecord):PublicManagerProfile{
     const groups=(()=>{try{const x=JSON.parse(String(row.data.managedPublicGroupsJson??'[]'));return Array.isArray(x)?x.map((g:any)=>({groupId:String(g.groupId??''),name:String(g.name??'')})).filter((g:any)=>g.groupId&&g.name):[];}catch{return[];}})();

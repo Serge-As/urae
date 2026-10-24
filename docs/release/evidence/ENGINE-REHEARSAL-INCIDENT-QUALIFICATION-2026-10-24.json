@@ -1,0 +1,59 @@
+{
+  "protocol": "ECO_RELEASE_QUALIFICATION_1",
+  "sourceSha": "a07f96edcc49b6132d00e292edf222d47034b12e",
+  "native": 1030,
+  "chromium": 70,
+  "webkit": 8,
+  "failed": 0,
+  "skipped": 0,
+  "workerVersionId": "1adcb094-87d1-4404-9c67-054298ecff76",
+  "runs": [
+    {
+      "runId": 40099643613,
+      "status": "completed",
+      "conclusion": "success",
+      "jobs": [
+        {
+          "id": 120888963558,
+          "name": "governed-ci",
+          "status": "completed",
+          "conclusion": "success",
+          "activeStep": null,
+          "failedSteps": []
+        },
+        {
+          "id": 120888963826,
+          "name": "browser-critical",
+          "status": "completed",
+          "conclusion": "success",
+          "activeStep": null,
+          "failedSteps": []
+        }
+      ]
+    },
+    {
+      "runId": 40099643726,
+      "status": "completed",
+      "conclusion": "success",
+      "jobs": [
+        {
+          "id": 120888964320,
+          "name": "qualify-deploy-smoke",
+          "status": "completed",
+          "conclusion": "success",
+          "activeStep": null,
+          "failedSteps": []
+        }
+      ]
+    }
+  ],
+  "checkedAt": "2026-10-24T14:07:36.248950+00:00",
+  "treeSha": "226a2d71b80e9602b4f70ad4b2479cae94471137",
+  "version": "1.5.2.37-engine-rehearsal",
+  "sameSource": true,
+  "publicVerification": "docs/release/evidence/ENGINE-REHEARSAL-INCIDENT-PUBLIC-2026-10-24.json",
+  "realMoneyEnabled": false,
+  "fieldAcceptance": "NOT_ACCEPTED",
+  "incidentScope": "TWO_KNOWN_FAILURE_PATTERNS_REPLAYED_WITH_SYNTHETIC_DATA",
+  "arbitraryUserIncidentReproduced": false
+}
