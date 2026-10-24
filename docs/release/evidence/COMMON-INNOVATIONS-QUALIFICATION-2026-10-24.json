@@ -1,0 +1,57 @@
+{
+  "protocol": "ECO_RELEASE_QUALIFICATION_1",
+  "sourceSha": "93ed895af495425d7963dc4dbd8b9cf4dc7f123d",
+  "native": 1022,
+  "chromium": 68,
+  "webkit": 6,
+  "failed": 0,
+  "skipped": 0,
+  "workerVersionId": "cbda5abd-ed2c-4c02-9c5a-66220b8015fa",
+  "runs": [
+    {
+      "runId": 40082831564,
+      "status": "completed",
+      "conclusion": "success",
+      "jobs": [
+        {
+          "id": 120839722324,
+          "name": "governed-ci",
+          "status": "completed",
+          "conclusion": "success",
+          "activeStep": null,
+          "failedSteps": []
+        },
+        {
+          "id": 120839722480,
+          "name": "browser-critical",
+          "status": "completed",
+          "conclusion": "success",
+          "activeStep": null,
+          "failedSteps": []
+        }
+      ]
+    },
+    {
+      "runId": 40082831572,
+      "status": "completed",
+      "conclusion": "success",
+      "jobs": [
+        {
+          "id": 120839722346,
+          "name": "qualify-deploy-smoke",
+          "status": "completed",
+          "conclusion": "success",
+          "activeStep": null,
+          "failedSteps": []
+        }
+      ]
+    }
+  ],
+  "checkedAt": "2026-10-24T10:02:36.240461+00:00",
+  "treeSha": "7f4f55e9bdbba1c4d45d48ab091463c369c2159b",
+  "version": "1.5.2.36-common-innovations",
+  "sameSource": true,
+  "publicVerification": "docs/release/evidence/COMMON-INNOVATIONS-PUBLIC-2026-10-24.json",
+  "realMoneyEnabled": false,
+  "fieldAcceptance": "NOT_ACCEPTED"
+}

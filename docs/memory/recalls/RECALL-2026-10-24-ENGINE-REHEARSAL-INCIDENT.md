@@ -1,0 +1,11 @@
+## Candidat v37 — répétition canonique et incidents rejouables
+
+La production vérifiée reste **1.5.2.36-common-innovations**, source `93ed895af495425d7963dc4dbd8b9cf4dc7f123d`. Le candidat **1.5.2.37-engine-rehearsal** ajoute les routes de diagnostic strictement isolées et une file IndexedDB fictive distincte ; les moteurs réutilisés sont les routes canoniques Ledger/prêts/feuille, Outbox et GroupLiveHub. Aucune migration ou nouvelle autorité financière.
+
+I02 : préparation de deux commandes fictives durables, reprise après rechargement, perte d'accusé après commit ou panne Live après commit, récupération idempotente, comparaison de deux observateurs et six combinaisons de politique de prêt. Les six politiques sont regroupées dans le seul rejeu exécuté par l’hôte de calcul isolé ; deux appels du navigateur en tout, aucun polling. I10 : export/import d'une recette synthétique fermée, chronologie normalisée, observation d'une panne injectée et rejeu obligatoire. Les résultats importés restent non vérifiés. Un incident utilisateur sans signature normalisée n'est jamais déclaré reproduit.
+
+Accès : **Paramètres → qualité / récupération → Répétition complète** et **feuille financière → exercice local**. Le montage ne lance aucune requête de répétition. La file d'exercice utilise uniquement une base `eco-sandbox-outbox-` ; la base historique `tontine-platform` conserve son nom, son schéma et ses commandes. Toute erreur conserve l'exercice pour reprise explicite. Changement de groupe/compte : résultats invalidés, réponse tardive écartée.
+
+Qualification du candidat encore en cours : compilation, tests natifs Memory et SQLite/D1, Chromium et WebKit, gardes de gouvernance, livraison et contrôle public du même SHA. Les tests déjà attestés v36 ne valent pas preuve de v37. Les preuves nouvelles seront enregistrées avant de déclarer une livraison. La répétition ne certifie ni tout défaut réel inconnu, ni la recette du compte Delor.
+
+**ÉTAT DU PROJET APRÈS ÉTAPE** : implémentation candidate, aucun déploiement v37 revendiqué. `realMoneyEnabled=false`, `FIELD_ACCEPTED=NOT_ACCEPTED`. Pas de redémarrage, purge d'outbox réelle ou modification de politique métier. Consommation exacte de crédits non mesurable.

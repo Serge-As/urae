@@ -135,12 +135,17 @@ const FINANCE_JOURNAL = 'financial_cell_journal';
 const DEVICE_SEQUENCE = 'financial_device_sequences';
 
 export class IndexedDbOutboxAdapter {
+  private readonly databaseName:string;
+  constructor(options?:{sandboxId:string}){
+    if(options&&!/^[a-f0-9]{32}$/.test(options.sandboxId))throw Error('OUTBOX_SANDBOX_ID_INVALID');
+    this.databaseName=options?'eco-sandbox-outbox-'+options.sandboxId:DB_NAME;
+  }
   static supported(): boolean { return typeof indexedDB !== 'undefined'; }
 
   private async open(): Promise<IDBDatabase> {
     if (!IndexedDbOutboxAdapter.supported()) throw new Error('INDEXEDDB_UNAVAILABLE');
     return await new Promise((resolve, reject) => {
-      const request = indexedDB.open(DB_NAME, DB_VERSION);
+      const request = indexedDB.open(this.databaseName, DB_VERSION);
       request.onupgradeneeded = () => {
         const db = request.result;
         if (!db.objectStoreNames.contains(STORE)) db.createObjectStore(STORE, { keyPath: 'id' });

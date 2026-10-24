@@ -1,6 +1,7 @@
 import { PlatformKernel } from '../../../packages/platform-kernel/src/index.js';
 import {caseCareAdapter} from './care.js';
 import {financialExplanationRoute} from './financial-explanations.js';
+import {prepareEngineRehearsal,executeEngineRehearsal,forwardEngineRehearsal} from './engine-rehearsal.js';
 import type {CaseCareCommand,CaseCareCategory} from '../../../packages/contracts/src/index.js';
 import { D1PlatformRepository, InMemoryPlatformRepository, type D1DatabaseLike, type PlatformRepository } from '../../../packages/repositories/src/index.js';
 import { FoundationService, LedgerService, MeetingService, starterGroupOperatingPolicy, compareNormalizedCellIntents, financialCellWinnerRecordId, financialCellIntentRecordId } from '../../../packages/domain/src/index.js';
@@ -81,11 +82,11 @@ interface WorkersAILike {
   run?(model:string,input:Record<string,unknown>,options?:Record<string,unknown>):Promise<unknown>;
 }
 
-const RELEASE_VERSION='1.5.2.36-common-innovations';
-const RELEASE_BUILD_ID='eco-system-1.5.2.36-20261023-common-innovations';
+const RELEASE_VERSION='1.5.2.37-engine-rehearsal';
+const RELEASE_BUILD_ID='eco-system-1.5.2.37-20261024-engine-rehearsal';
 const RELEASE_SCHEMA_VERSION='d1-additive-20260923';
 const RELEASE_POLICY_VERSION='live-finance-policy-20261007-event-push-repayment';
-const RELEASE_PWA_CACHE='eco-system-v15236-common-innovations-20261023';
+const RELEASE_PWA_CACHE='eco-system-v15237-engine-rehearsal-20261024';
 
 const defaultRepo = new InMemoryPlatformRepository();
 const defaultReferralBudgets = new InMemoryReferralBudgetStore();
@@ -179,6 +180,17 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
   if(request.method==='OPTIONS'){
     const allowed=Boolean((cors as Record<string,string>)['access-control-allow-origin']);
     return new Response(null,{status:allowed?204:403,headers:{...baseSecurityHeaders,...cors,'access-control-allow-methods':'GET,POST,PUT,DELETE,OPTIONS','access-control-allow-headers':'content-type,x-tenant-id,x-actor-id,x-group-roles,x-active-group-id,x-device-id,x-session-id,x-request-id,x-timezone,x-external-ad-token,x-eco-window-id,x-eco-window-adopt-legacy'}});
+  }
+  if(url.pathname==='/api/v1/diagnostics/rehearsal'){
+    if(!request.headers.get('x-actor-id'))return json({error:'AUTHENTICATION_REQUIRED'},401,cors);
+    if(request.method!=='POST')return json({error:'METHOD_NOT_ALLOWED'},405,cors);
+    try{
+      const text=await request.text();if(text.length>16000)throw Error('REHEARSAL_INPUT_LIMIT');
+      const body=JSON.parse(text);if(!body||typeof body!=='object'||Array.isArray(body)||Object.keys(body).some(key=>!['phase','scenario','items'].includes(key)))throw Error('REHEARSAL_INPUT_INVALID');
+      if(body.phase==='prepare'&&body.items===undefined)return json(prepareEngineRehearsal(body.scenario),200,cors);
+      if(body.phase==='execute')return json(await executeEngineRehearsal(createApiHandler,body),200,cors);
+      throw Error('REHEARSAL_PHASE_INVALID');
+    }catch(error){const code=error instanceof Error&&/^REHEARSAL_[A-Z_]+$/.test(error.message)?error.message:'REHEARSAL_EXECUTION_FAILED';return json({error:code},400,cors);}
   }
   const {kernel,foundation,ledger,meetings,discovery,membershipGateway,rubrics,completion,explainability,documents,receivables,treasury,riskFinance,market,community,imports,artifactStore,memberControl,memberEnvelopes,groupIdentity,conciergeLearning,miscRubrics,adManager,partnerAds,externalAds,economicIntelligence,externalPrograms,operationalCockpit,businessStudio,knowledgeAcademy,valueNetwork,creatorTalent,quietWatch}=createRequestScope(request,repo,options.artifacts,options.dataUseDefaultMode??'BETA_OPEN',options.documentAI);
   let ctx=kernel.context.get();
@@ -3766,6 +3778,7 @@ export default {async fetch(request:Request,env:WorkerEnv={}){
   const pairingKernel=new PlatformKernel();
   const groupPairing=new GroupPairingService(env.DB,repository,pairingKernel);
   return authenticatedApi(repository,env.DB,async authenticatedRequest=>{
+    if(url.pathname==='/api/v1/diagnostics/rehearsal')return env.GROUP_LIVE_HUB?forwardEngineRehearsal(env.GROUP_LIVE_HUB,authenticatedRequest):json({error:'REHEARSAL_HOST_UNAVAILABLE'},503);
     const h=authenticatedRequest.headers;
     pairingKernel.context.set({actorId:h.get('x-actor-id')??'unknown',tenantId:h.get('x-tenant-id')??'unknown',activeGroupId:h.get('x-active-group-id')||undefined,groupRoles:(h.get('x-group-roles')??'').split(',').filter(Boolean),mandateIds:[],mandateGrants:[],deviceId:h.get('x-device-id')??'device_web',sessionId:h.get('x-session-id')??'server-authenticated',locale:h.get('accept-language')?.toLowerCase().startsWith('en')?'en':'fr',timezone:h.get('x-timezone')??'Africa/Douala',connectivity:'online',requestId:h.get('x-request-id')??crypto.randomUUID()});
     return createApiHandler(repository,{artifacts:env.ARTIFACTS,documentAI:env.AI,liveNamespace:env.GROUP_LIVE_HUB,premiumLive:env.PREMIUM_LIVE_LEDGER==='true',referralBudgets:new D1ReferralBudgetStore(env.DB!),founderLearning,founderControl,communityRealtime,founderTeamActors,commercialPreferences,groupPairing,interestCommunities,ecoPulse,identityProof,dataUseDefaultMode,governanceSecret:env.COLLECTIVE_LEARNING_PEPPER??env.IDENTITY_MATCH_PEPPER,releaseCommitSha:env.RELEASE_COMMIT_SHA})(authenticatedRequest);

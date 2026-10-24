@@ -2520,6 +2520,7 @@ export class ConnectedApplication {
     const result=await this.request<any>(path,body===undefined?undefined:{method:'POST',body:JSON.stringify(body)});
     return {...result,clientOffline:this.isOffline()||this.usingOfflineSnapshot};
   }
+  async engineRehearsal(input:{phase:'prepare'|'execute';scenario:string;items?:unknown[]}):Promise<any>{return this.request('/api/v1/diagnostics/rehearsal',{method:'POST',body:JSON.stringify(input)});}
   async ledgerAnomalies():Promise<Array<{code:string;entryId?:string;details:string}>>{if(!this.activeGroupId)return[];return this.request('/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/ledger/anomalies');}
   calendarIcsUrl():string{if(!this.activeGroupId)throw Error('ACTIVE_GROUP_REQUIRED');return this.baseUrl+'/api/v1/groups/'+encodeURIComponent(this.activeGroupId)+'/calendar.ics';}
 

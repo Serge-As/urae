@@ -747,7 +747,7 @@
     {
       "id": "I01",
       "title": "Le passeport de continuité personnelle · propriétaire L02",
-      "status": "IMPLEMENTED_UNVERIFIED",
+      "status": "DELIVERED_WITH_DOCUMENTED_LIMITS",
       "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md",
       "targetLots": [
         2
@@ -761,9 +761,11 @@
       ],
       "integrationMeaning": "PRODUCT_CAPABILITY_WITH_EXPLICIT_ACCEPTANCE_CRITERIA",
       "evidence": [
-        "docs/release/DELIVERY-2026-10-23-COMMON-INNOVATIONS.md"
+        "docs/release/DELIVERY-2026-10-23-COMMON-INNOVATIONS.md",
+        "docs/release/evidence/COMMON-INNOVATIONS-PUBLIC-2026-10-24.json",
+        "docs/release/evidence/COMMON-INNOVATIONS-QUALIFICATION-2026-10-24.json"
       ],
-      "limits": "Candidate local references and device controls only; no cross-device or full-object memory."
+      "limits": "Bounded implementation published and automatically qualified at 93ed895af495425d7963dc4dbd8b9cf4dc7f123d; field acceptance pending. Local reference retention, selective forget and per-account device pause; no cross-device/full-object memory."
     },
     {
       "id": "I02",
@@ -782,9 +784,11 @@
       ],
       "integrationMeaning": "PRODUCT_CAPABILITY_WITH_EXPLICIT_ACCEPTANCE_CRITERIA",
       "evidence": [
-        "docs/release/DELIVERY-2026-10-23-COMMON-INNOVATIONS.md"
+        "docs/release/DELIVERY-2026-10-23-COMMON-INNOVATIONS.md",
+        "docs/release/evidence/COMMON-INNOVATIONS-PUBLIC-2026-10-24.json",
+        "docs/release/evidence/COMMON-INNOVATIONS-QUALIFICATION-2026-10-24.json"
       ],
-      "limits": "PARTIAL: guided fictional correction/review and report; not full canonical financial, loan, Live or outbox rehearsal."
+      "limits": "Bounded implementation published and automatically qualified at 93ed895af495425d7963dc4dbd8b9cf4dc7f123d; field acceptance pending. PARTIAL: guided fictional correction/review and export, not full canonical financial/loan/Live/outbox rehearsal."
     },
     {
       "id": "I03",
@@ -1084,7 +1088,7 @@
     {
       "id": "I16",
       "title": "L’assemblage de moyens disponibles · propriétaire L11",
-      "status": "IMPLEMENTED_UNVERIFIED",
+      "status": "DELIVERED_WITH_DOCUMENTED_LIMITS",
       "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md",
       "targetLots": [
         11
@@ -1098,9 +1102,11 @@
       ],
       "integrationMeaning": "PRODUCT_CAPABILITY_WITH_EXPLICIT_ACCEPTANCE_CRITERIA",
       "evidence": [
-        "docs/release/DELIVERY-2026-10-23-COMMON-INNOVATIONS.md"
+        "docs/release/DELIVERY-2026-10-23-COMMON-INNOVATIONS.md",
+        "docs/release/evidence/COMMON-INNOVATIONS-PUBLIC-2026-10-24.json",
+        "docs/release/evidence/COMMON-INNOVATIONS-QUALIFICATION-2026-10-24.json"
       ],
-      "limits": "Candidate four-resource plans, independent agreements, one canonical order assignment across group tenants; no rental calendar, automatic release, purchase or cancellation. Exact-source qualification and publication pending."
+      "limits": "Bounded implementation published and automatically qualified at 93ed895af495425d7963dc4dbd8b9cf4dc7f123d; field acceptance pending. Four-resource plans, independent owner agreements and unique canonical order assignment across group tenants; no rental calendar, atomic multi-owner purchase, automatic release/cancellation/payment."
     },
     {
       "id": "I17",
@@ -2129,6 +2135,6 @@
     "finalCohort": "Remaining improvements and innovations of previously delivered lots; individual proof required",
     "requestedOn": "2026-10-22"
   },
-  "lastVerifiedSource": "dd1e7388829afe29cde453f1cdbefd6caedf98a8",
-  "lastVerificationDate": "2026-10-23"
+  "lastVerifiedSource": "93ed895af495425d7963dc4dbd8b9cf4dc7f123d",
+  "lastVerificationDate": "2026-10-24"
 }

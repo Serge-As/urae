@@ -112,6 +112,12 @@ export class GroupLiveHub{
 
   async fetch(request:Request):Promise<Response>{
     const url=new URL(request.url);
+    if(url.pathname==='/internal/engine-rehearsal'){
+      if(request.headers.get('x-eco-rehearsal')!=='synthetic-v1')return json({error:'FORBIDDEN_REHEARSAL_HOST'},403);
+      const [{createApiHandler},{InMemoryPlatformRepository}]=await Promise.all([import('./index.js'),import('../../../packages/repositories/src/index.js')]);
+      const isolated=new Request('https://rehearsal.invalid/api/v1/diagnostics/rehearsal',request);isolated.headers.set('x-actor-id','rehearsal_authorized');
+      return createApiHandler(new InMemoryPlatformRepository())(isolated);
+    }
     if(url.pathname.endsWith('/connect')){
       if(request.headers.get('Upgrade')?.toLowerCase()!=='websocket')return json({error:'WEBSOCKET_UPGRADE_REQUIRED'},426);
       if(!this.state.acceptWebSocket)return json({error:'HIBERNATION_UNAVAILABLE'},503);

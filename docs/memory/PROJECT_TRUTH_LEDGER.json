@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedOn": "2026-10-23",
+  "generatedOn": "2026-10-24",
   "purpose": "Anti-regression operational truth. Read before asking founder to recreate/configure anything.",
   "allowedStatuses": [
     "ACQUIRED",
@@ -1644,18 +1644,36 @@
     {
       "id": "common-innovations-20261023",
       "scope": "I01/I02/I16 common complements and acquired I03/I09/I12/I14 coverage",
-      "status": "IMPLEMENTED_UNVERIFIED",
-      "statement": "Local candidate v36; controlled local navigation retention; fictional guided rehearsal/export; private four-resource plans with current independent owner decisions and canonical Market proof. Group-scoped lightweight lists. One canonical order cannot back plans in different tenants. No second inventory or money authority. I02/I10 remain partial.",
-      "observedOn": "2026-10-23",
+      "status": "VERIFIED_REMOTE",
+      "statement": "Common v36 exact-source delivery verified: controlled local journey memory, guided fictional practice/report and four-resource plans delegated to canonical Market. Rights, consent, stock concurrency and unique cross-tenant order assignment qualified. I02 full-engine practice and I10 real fault replay remain partial.",
+      "observedOn": "2026-10-24",
       "evidence": [
         "docs/release/DELIVERY-2026-10-23-COMMON-INNOVATIONS.md",
         "docs/change-impact/CIR-2026-10-23-COMMON-INNOVATIONS.md",
         "tests/resource-assemblies-20261023.test.mjs",
         "tests/browser/common-innovations-20261023.spec.mjs",
         "tests/cockpit-continuity-20261015.test.mjs",
-        "tests/session-rehearsal-20261020.test.mjs"
+        "tests/session-rehearsal-20261020.test.mjs",
+        "source:93ed895af495425d7963dc4dbd8b9cf4dc7f123d",
+        "docs/release/evidence/COMMON-INNOVATIONS-PUBLIC-2026-10-24.json",
+        "docs/release/evidence/COMMON-INNOVATIONS-QUALIFICATION-2026-10-24.json",
+        "docs/release/evidence/COMMON-INNOVATIONS-BACKUP-SOURCE-2026-10-24.json"
       ],
-      "next": "Qualify exact final source in complete governed CI, Chromium and WebKit; verified backup and public hashes before deployment claim."
+      "next": "Preserve exact source proof; field acceptance remains NOT_ACCEPTED. Group remaining concrete variants by canonical owner, avoid repeated audits or mandatory installation of reference tools.",
+      "workerVersionId": "cbda5abd-ed2c-4c02-9c5a-66220b8015fa"
+    },
+    {
+      "id": "engine-rehearsal-incident-20261024",
+      "scope": "I02 canonical engine rehearsal and I10 normalized known failure replay",
+      "status": "IN_PROGRESS",
+      "observedOn": "2026-10-24",
+      "statement": "v37 candidate: isolated canonical loans, Live and durable outbox, two injected known failure patterns, six policy probes; current qualification and deployment not yet proved. Imported observations never count as fresh proof.",
+      "evidence": [
+        "docs/change-impact/CIR-2026-10-24-ENGINE-REHEARSAL-INCIDENT.md",
+        "tests/engine-rehearsal-incident-20261024.test.mjs",
+        "tests/browser/engine-rehearsal-incident-20261024.spec.mjs"
+      ],
+      "next": "Qualify the exact source, preserve financial owners, verify backup and public fingerprints; FIELD_ACCEPTED=NOT_ACCEPTED."
     }
   ]
 }

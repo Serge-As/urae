@@ -1,9 +1,9 @@
 {
   "name": "tontine-platform",
-  "version": "1.5.2-36",
+  "version": "1.5.2-37",
   "private": true,
   "type": "module",
-  "description": "Eco-System: controlled local journey memory, isolated guided session practice and private resource assemblies delegating reservations to canonical Market.",
+  "description": "Eco-System: canonical loan, Live and durable outbox rehearsal with normalized replayable incidents.",
   "engines": {
     "node": ">=24"
   },

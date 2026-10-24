@@ -19,7 +19,7 @@ export function createFinancialWorkUI({app,tx,notify,summary,edit,resume,waitFor
       const indicator=node('strong',label+' · '+status);indicator.setAttribute('role','status');bar.append(indicator);
       const review=node('button',tx('Vérifier le membre et terminer','Review member and finish'),'secondary');review.type='button';review.disabled=!current||Boolean(meetingId&&current.meetingId!==meetingId);review.onclick=()=>void finish().catch(e=>notify(String(e.message)));bar.append(review);
       const change=node('button',tx('Choisir le mode','Choose mode'),'secondary');change.type='button';change.disabled=!meetingId;change.onclick=()=>void choose(meetingId,true).catch(e=>notify(String(e.message)));bar.append(change);
-      const practice=node('button',tx('S’entraîner sans toucher la caisse','Practice without changing the cashbook'),'secondary eco-session-practice-open');practice.type='button';practice.onclick=()=>openSessionRehearsal({tx});bar.append(practice);
+      const practice=node('button',tx('S’entraîner sans toucher la caisse','Practice without changing the cashbook'),'secondary eco-session-practice-open');practice.type='button';practice.onclick=()=>openSessionRehearsal({tx,engineRequest:input=>app.engineRehearsal(input),scope:()=>JSON.stringify([app.currentActor(),app.currentTenant(),app.activeGroup()]),getReleaseVersion:()=>document.querySelector('meta[name="eco-release"]')?.content||'1.5.2.37-engine-rehearsal'});bar.append(practice);
     }
   };
   const choose=async(meetingId,change=false)=>{

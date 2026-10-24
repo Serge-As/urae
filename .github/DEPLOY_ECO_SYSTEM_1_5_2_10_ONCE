@@ -1,15 +1,13 @@
-Eco-System common complements authorized by founder
-release: 1.5.2.36-common-innovations
-date: 2026-10-23
+Eco-System canonical engine rehearsal authorized by founder
+release: 1.5.2.37-engine-rehearsal
+date: 2026-10-24
 mode: code-only-with-verified-readonly-backup-no-migration
 db_mutation: none
-baseline_source: dd1e7388829afe29cde453f1cdbefd6caedf98a8
-qualification: complete governed CI, Chromium and WebKit on exact same source mandatory
-scope: I01 controlled local memory; I02 guided isolated practice and export; I16 canonical resource plans; acquired I03/I09/I12/I14 mapped without duplicate services
-backup: readonly D1 export, verified fresh SQLite copy with expected schema and fingerprints, private R2 readback
-backup_scope: D1_AND_EXACT_SOURCE_ONLY; not a complete attachment or device backup
+baseline_source: 93ed895af495425d7963dc4dbd8b9cf4dc7f123d
+qualification: complete governed CI, Chromium and WebKit on exact source
+scope: I02 canonical loan/Live/outbox rehearsal and I10 normalized incident import/replay
+backup_scope: D1_AND_EXACT_SOURCE_ONLY
 real_money_enabled: false
 field_acceptance: NOT_ACCEPTED
-public_verification: health, catalogue and 48 asset hashes
-trigger_nonce: 2026-10-23-common-innovations-exact-source
-CONTINUITY_OBSERVER_SCOPE_20261024
+public_verification: health, catalogue and 50 asset hashes
+trigger_nonce: 2026-10-24-engine-rehearsal-exact-source

@@ -1,7 +1,8 @@
 import {planFinancialRubricLayout,splitFinancialRubrics,sumFinancialRubrics} from './smart-grid-view.js';
 
-// Educational values only. This module receives no application, repository,
-// authentication, transport or storage port. It cannot post financial commands.
+// The table model uses educational values only and has no application ports.
+// The dialog can additionally mount the explicitly requested, isolated engine
+// rehearsal. Neither surface submits commands to the user's financial group.
 export const REHEARSAL_MEMBERS=Object.freeze(['Amina','Boris','Chloé']);
 export const REHEARSAL_RUBRICS=Object.freeze(['Solidarité','Collation','Transport','Projet commun','Adhésion','Épargne exemple','Culture','Sport','Formation','Entraide','Communication','Événement','Équipement','Bibliothèque','Jardin','Atelier','Jeunesse','Rencontre','Entretien','Réserve collective'].map((name,index)=>Object.freeze({id:'practice-r'+index,name})));
 export function parseRehearsalAmount(raw){
@@ -26,7 +27,7 @@ export function createSessionRehearsal(){
   };
 }
 
-export function openSessionRehearsal({tx=(fr)=>fr}={}){
+export function openSessionRehearsal({tx=(fr)=>fr,engineRequest,scope,getReleaseVersion}={}){
   if(document.querySelector('dialog[open]'))return;
   const model=createSessionRehearsal(),drafts=new Map(),previous=document.activeElement,hostId=previous?.closest('[data-canonical-financial-host]')?.id;
   const node=(tag,text,cls)=>{const e=document.createElement(tag);if(text!==undefined)e.textContent=text;if(cls)e.className=cls;return e;};
@@ -48,6 +49,8 @@ export function openSessionRehearsal({tx=(fr)=>fr}={}){
   for(const who of REHEARSAL_MEMBERS){const p=node('p',who+' · '),strong=node('strong',money(0));strong.dataset.practiceTotal=who;p.append(strong);totals.append(p);}
   const explanation=node('p',tx('Total des valeurs de l’exercice : ce n’est ni un solde de caisse ni une dette. La présence, les conflits, les prêts et les acquittements serveur de votre feuille réelle restent gérés par leurs mécanismes habituels.','Sum of exercise values: this is neither cash balance nor debt. Presence, conflicts, loans and server acknowledgments in your real sheet keep their usual mechanisms.'),'hint');
   dialog.append(header,notice,guide,controls,coverage,review,status,tableHost,totals,explanation);
+  let engines=null;
+  if(engineRequest)void import('./engine-rehearsal-ui.js').then(({mountEngineRehearsalPanel})=>{if(dialog.isConnected)engines=mountEngineRehearsalPanel({host:dialog,request:engineRequest,scope,getReleaseVersion,tx});});
   let parts=null,index=0,pendingInput=null,layoutSignature='',visited=new Set();
   const refreshTotals=()=>{for(const target of totals.querySelectorAll('[data-practice-total]'))target.textContent=money(model.total(target.dataset.practiceTotal));for(const target of tableHost.querySelectorAll('[data-practice-row-total]'))target.textContent=money(model.total(target.dataset.practiceRowTotal));};
   const showReview=(frozen,input)=>{
@@ -83,5 +86,5 @@ export function openSessionRehearsal({tx=(fr)=>fr}={}){
   layoutSelect.onchange=()=>{parts=Number(layoutSelect.value);index=0;render();};partSelect.onchange=()=>{index=Number(partSelect.value);render();};
   document.body.append(dialog);dialog.showModal();render();
   let scheduled=0,observedWidth=tableHost.clientWidth;const observer=new ResizeObserver(()=>{const width=tableHost.clientWidth;if(width===observedWidth)return;observedWidth=width;cancelAnimationFrame(scheduled);scheduled=requestAnimationFrame(render);});observer.observe(tableHost);
-  dialog.addEventListener('close',()=>{observer.disconnect();cancelAnimationFrame(scheduled);model.reset();drafts.clear();dialog.remove();const owner=hostId?document.getElementById(hostId)?.querySelector('.eco-session-practice-open'):null;(previous?.isConnected?previous:owner||document.getElementById('ecoNavigationOpen'))?.focus({preventScroll:true});},{once:true});
+  dialog.addEventListener('close',()=>{observer.disconnect();cancelAnimationFrame(scheduled);engines?.dispose();model.reset();drafts.clear();dialog.remove();const owner=hostId?document.getElementById(hostId)?.querySelector('.eco-session-practice-open'):null;(previous?.isConnected?previous:owner||document.getElementById('ecoNavigationOpen'))?.focus({preventScroll:true});},{once:true});
 }
