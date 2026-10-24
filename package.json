@@ -1,9 +1,9 @@
 {
   "name": "tontine-platform",
-  "version": "1.5.2-35",
+  "version": "1.5.2-36",
   "private": true,
   "type": "module",
-  "description": "Eco-System: private financial-education dossiers, human document text and number review, explicit backup scope and read-only recovery diagnostics.",
+  "description": "Eco-System: controlled local journey memory, isolated guided session practice and private resource assemblies delegating reservations to canonical Market.",
   "engines": {
     "node": ">=24"
   },

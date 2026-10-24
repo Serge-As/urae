@@ -1,22 +1,14 @@
-Eco-System grouped continuation authorized by founder
-release: 1.5.2.35-review-recovery
+Eco-System common complements authorized by founder
+release: 1.5.2.36-common-innovations
 date: 2026-10-23
 mode: code-only-with-verified-readonly-backup-no-migration
 db_mutation: none
-baseline_source: 461a7b6965fa098437afc3a9534fac93c20ccb06
-qualification: complete governed CI and both browsers on exact same source mandatory
-scope: L22/L26/L27 initial bounded scope; I10 minimal package remains partial until actual fault replay
-backup: readonly D1 export, verified fresh SQLite copy with expected schema and data fingerprints; private R2 readback
-backup_scope: D1_AND_EXACT_SOURCE_ONLY; not a full attachment or device backup
+baseline_source: dd1e7388829afe29cde453f1cdbefd6caedf98a8
+qualification: complete governed CI, Chromium and WebKit on exact same source mandatory
+scope: I01 controlled local memory; I02 guided isolated practice and export; I16 canonical resource plans; acquired I03/I09/I12/I14 mapped without duplicate services
+backup: readonly D1 export, verified fresh SQLite copy with expected schema and fingerprints, private R2 readback
+backup_scope: D1_AND_EXACT_SOURCE_ONLY; not a complete attachment or device backup
 real_money_enabled: false
 field_acceptance: NOT_ACCEPTED
-public_verification: health, catalogue and47 asset hashes
-trigger_nonce: 2026-10-23-review-recovery-exact-source
-
-reviewed_settings_correction: read-only-refresh-explicit-cookie-complete-fr-en
-
-recall_complete: read-only-settings-fr-en-20261023
-
-qualification_environment: official-playwright-1.56.1-noble-preinstalled-matches-package-lock
-container_git_scope: exact-GITHUB_WORKSPACE-only
-startup_shop_projection: preserve-newer-navigation-edits-and-pending-command
+public_verification: health, catalogue and 48 asset hashes
+trigger_nonce: 2026-10-23-common-innovations-exact-source

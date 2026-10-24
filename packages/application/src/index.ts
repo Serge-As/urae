@@ -2202,6 +2202,10 @@ export class ConnectedApplication {
   async createAcquisition(input:any):Promise<any>{return this.request('/api/v1/business-studio/acquisitions',{method:'POST',body:JSON.stringify(input)});}
   async acquisitionRoom(id:string):Promise<any>{return this.request('/api/v1/business-studio/acquisitions/'+encodeURIComponent(id));}
   async updateAcquisition(id:string,input:any):Promise<any>{return this.request('/api/v1/business-studio/acquisitions/'+encodeURIComponent(id)+'/commands',{method:'POST',body:JSON.stringify(input)});}
+  async resourceAssemblies():Promise<any>{return this.request('/api/v1/business-studio/resource-assemblies',{cache:'no-store'});}
+  async createResourceAssembly(input:any):Promise<any>{return this.request('/api/v1/business-studio/resource-assemblies',{method:'POST',body:JSON.stringify(input)});}
+  async resourceAssembly(id:string):Promise<any>{return this.request('/api/v1/business-studio/resource-assemblies/'+encodeURIComponent(id),{cache:'no-store'});}
+  async updateResourceAssembly(id:string,input:any):Promise<any>{return this.request('/api/v1/business-studio/resource-assemblies/'+encodeURIComponent(id)+'/commands',{method:'POST',body:JSON.stringify(input)});}
   async launchPlans():Promise<any>{return this.request('/api/v1/business-studio/launch-plans');}
   async createLaunchPlan(input:any):Promise<any>{return this.request('/api/v1/business-studio/launch-plans',{method:'POST',body:JSON.stringify(input)});}
   async launchPlan(id:string):Promise<any>{return this.request('/api/v1/business-studio/launch-plans/'+encodeURIComponent(id));}

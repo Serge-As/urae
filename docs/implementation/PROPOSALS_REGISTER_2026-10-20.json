@@ -344,7 +344,7 @@
     {
       "id": "A14",
       "title": "Des Foras qui transforment les échanges en connaissances et en actions · lot 14",
-      "status": "IMPLEMENTED_UNVERIFIED",
+      "status": "DELIVERED_WITH_DOCUMENTED_LIMITS",
       "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md",
       "targetLots": [
         14
@@ -362,14 +362,17 @@
       ],
       "integrationMeaning": "PRODUCT_CAPABILITY_WITH_EXPLICIT_ACCEPTANCE_CRITERIA",
       "evidence": [
-        "docs/release/DELIVERY-2026-10-23-PRODUCTIVE-COMMUNITY.md"
+        "docs/release/DELIVERY-2026-10-23-PRODUCTIVE-COMMUNITY.md",
+        "docs/release/evidence/REVIEW-RECOVERY-PUBLIC-2026-10-23.json",
+        "docs/release/evidence/REVIEW-RECOVERY-QUALIFICATION-2026-10-23.json",
+        "docs/release/DELIVERY-2026-10-23-REVIEW-RECOVERY.md"
       ],
-      "limits": "Initial bounded implementation under same canonical owners. Same-source release pending; contact-specific notebooks, cross-group solution adaptation, automated employment reminders and multi-party launch programs remain future variants."
+      "limits": "Published v35 source dd1e7388; automatic qualification only, field acceptance pending. Initial bounded implementation under same canonical owners. Same-source release verified; contact-specific notebooks, cross-group solution adaptation, automated employment reminders and multi-party launch programs remain future variants."
     },
     {
       "id": "A15",
       "title": "Des Carnets utiles pour être découvert sans tout exposer · lot 15",
-      "status": "IMPLEMENTED_UNVERIFIED",
+      "status": "DELIVERED_WITH_DOCUMENTED_LIMITS",
       "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md",
       "targetLots": [
         15
@@ -387,14 +390,17 @@
       ],
       "integrationMeaning": "PRODUCT_CAPABILITY_WITH_EXPLICIT_ACCEPTANCE_CRITERIA",
       "evidence": [
-        "docs/release/DELIVERY-2026-10-23-PRODUCTIVE-COMMUNITY.md"
+        "docs/release/DELIVERY-2026-10-23-PRODUCTIVE-COMMUNITY.md",
+        "docs/release/evidence/REVIEW-RECOVERY-PUBLIC-2026-10-23.json",
+        "docs/release/evidence/REVIEW-RECOVERY-QUALIFICATION-2026-10-23.json",
+        "docs/release/DELIVERY-2026-10-23-REVIEW-RECOVERY.md"
       ],
-      "limits": "Initial bounded implementation under same canonical owners. Same-source release pending; contact-specific notebooks, cross-group solution adaptation, automated employment reminders and multi-party launch programs remain future variants."
+      "limits": "Published v35 source dd1e7388; automatic qualification only, field acceptance pending. Initial bounded implementation under same canonical owners. Same-source release verified; contact-specific notebooks, cross-group solution adaptation, automated employment reminders and multi-party launch programs remain future variants."
     },
     {
       "id": "A16",
       "title": "Un parcours apprendre, pratiquer, prouver et contribuer · lot 16",
-      "status": "IMPLEMENTED_UNVERIFIED",
+      "status": "DELIVERED_WITH_DOCUMENTED_LIMITS",
       "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md",
       "targetLots": [
         16
@@ -412,14 +418,17 @@
       ],
       "integrationMeaning": "PRODUCT_CAPABILITY_WITH_EXPLICIT_ACCEPTANCE_CRITERIA",
       "evidence": [
-        "docs/release/DELIVERY-2026-10-23-PRODUCTIVE-COMMUNITY.md"
+        "docs/release/DELIVERY-2026-10-23-PRODUCTIVE-COMMUNITY.md",
+        "docs/release/evidence/REVIEW-RECOVERY-PUBLIC-2026-10-23.json",
+        "docs/release/evidence/REVIEW-RECOVERY-QUALIFICATION-2026-10-23.json",
+        "docs/release/DELIVERY-2026-10-23-REVIEW-RECOVERY.md"
       ],
-      "limits": "Initial bounded implementation under same canonical owners. Same-source release pending; contact-specific notebooks, cross-group solution adaptation, automated employment reminders and multi-party launch programs remain future variants."
+      "limits": "Published v35 source dd1e7388; automatic qualification only, field acceptance pending. Initial bounded implementation under same canonical owners. Same-source release verified; contact-specific notebooks, cross-group solution adaptation, automated employment reminders and multi-party launch programs remain future variants."
     },
     {
       "id": "A17",
       "title": "Eco Jobs avec candidatures suivies et critères transparents · lot 17",
-      "status": "IMPLEMENTED_UNVERIFIED",
+      "status": "DELIVERED_WITH_DOCUMENTED_LIMITS",
       "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md",
       "targetLots": [
         17
@@ -437,14 +446,17 @@
       ],
       "integrationMeaning": "PRODUCT_CAPABILITY_WITH_EXPLICIT_ACCEPTANCE_CRITERIA",
       "evidence": [
-        "docs/release/DELIVERY-2026-10-23-PRODUCTIVE-COMMUNITY.md"
+        "docs/release/DELIVERY-2026-10-23-PRODUCTIVE-COMMUNITY.md",
+        "docs/release/evidence/REVIEW-RECOVERY-PUBLIC-2026-10-23.json",
+        "docs/release/evidence/REVIEW-RECOVERY-QUALIFICATION-2026-10-23.json",
+        "docs/release/DELIVERY-2026-10-23-REVIEW-RECOVERY.md"
       ],
-      "limits": "Initial bounded implementation under same canonical owners. Same-source release pending; contact-specific notebooks, cross-group solution adaptation, automated employment reminders and multi-party launch programs remain future variants."
+      "limits": "Published v35 source dd1e7388; automatic qualification only, field acceptance pending. Initial bounded implementation under same canonical owners. Same-source release verified; contact-specific notebooks, cross-group solution adaptation, automated employment reminders and multi-party launch programs remain future variants."
     },
     {
       "id": "A18",
       "title": "Une Data Room organisée par questions de vérification · lot 18",
-      "status": "IMPLEMENTED_UNVERIFIED",
+      "status": "DELIVERED_WITH_DOCUMENTED_LIMITS",
       "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md",
       "targetLots": [
         18
@@ -462,14 +474,17 @@
       ],
       "integrationMeaning": "PRODUCT_CAPABILITY_WITH_EXPLICIT_ACCEPTANCE_CRITERIA",
       "evidence": [
-        "docs/release/DELIVERY-2026-10-23-PRODUCTIVE-COMMUNITY.md"
+        "docs/release/DELIVERY-2026-10-23-PRODUCTIVE-COMMUNITY.md",
+        "docs/release/evidence/REVIEW-RECOVERY-PUBLIC-2026-10-23.json",
+        "docs/release/evidence/REVIEW-RECOVERY-QUALIFICATION-2026-10-23.json",
+        "docs/release/DELIVERY-2026-10-23-REVIEW-RECOVERY.md"
       ],
-      "limits": "Initial bounded implementation under same canonical owners. Same-source release pending; contact-specific notebooks, cross-group solution adaptation, automated employment reminders and multi-party launch programs remain future variants."
+      "limits": "Published v35 source dd1e7388; automatic qualification only, field acceptance pending. Initial bounded implementation under same canonical owners. Same-source release verified; contact-specific notebooks, cross-group solution adaptation, automated employment reminders and multi-party launch programs remain future variants."
     },
     {
       "id": "A19",
       "title": "Launch Boost organisé en résultats vérifiables · lot 19",
-      "status": "IMPLEMENTED_UNVERIFIED",
+      "status": "DELIVERED_WITH_DOCUMENTED_LIMITS",
       "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md",
       "targetLots": [
         19
@@ -487,9 +502,12 @@
       ],
       "integrationMeaning": "PRODUCT_CAPABILITY_WITH_EXPLICIT_ACCEPTANCE_CRITERIA",
       "evidence": [
-        "docs/release/DELIVERY-2026-10-23-PRODUCTIVE-COMMUNITY.md"
+        "docs/release/DELIVERY-2026-10-23-PRODUCTIVE-COMMUNITY.md",
+        "docs/release/evidence/REVIEW-RECOVERY-PUBLIC-2026-10-23.json",
+        "docs/release/evidence/REVIEW-RECOVERY-QUALIFICATION-2026-10-23.json",
+        "docs/release/DELIVERY-2026-10-23-REVIEW-RECOVERY.md"
       ],
-      "limits": "Initial bounded implementation under same canonical owners. Same-source release pending; contact-specific notebooks, cross-group solution adaptation, automated employment reminders and multi-party launch programs remain future variants."
+      "limits": "Published v35 source dd1e7388; automatic qualification only, field acceptance pending. Initial bounded implementation under same canonical owners. Same-source release verified; contact-specific notebooks, cross-group solution adaptation, automated employment reminders and multi-party launch programs remain future variants."
     },
     {
       "id": "A20",
@@ -546,7 +564,7 @@
     {
       "id": "A22",
       "title": "Un Labo anti-arnaques qui explique et accompagne · lot 22",
-      "status": "IMPLEMENTED_UNVERIFIED",
+      "status": "DELIVERED_WITH_DOCUMENTED_LIMITS",
       "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md",
       "targetLots": [
         22
@@ -564,9 +582,11 @@
       ],
       "integrationMeaning": "PRODUCT_CAPABILITY_WITH_EXPLICIT_ACCEPTANCE_CRITERIA",
       "evidence": [
-        "docs/release/DELIVERY-2026-10-23-REVIEW-RECOVERY.md"
+        "docs/release/DELIVERY-2026-10-23-REVIEW-RECOVERY.md",
+        "docs/release/evidence/REVIEW-RECOVERY-PUBLIC-2026-10-23.json",
+        "docs/release/evidence/REVIEW-RECOVERY-QUALIFICATION-2026-10-23.json"
       ],
-      "limits": "Initial scope only, qualification pending. Human review declaration not certified OCR. Backup excludes R2 objects/device outbox/external state. Minimal incident template does not yet reproduce actual fault. No automatic repair, legal verdict or financial write."
+      "limits": "Published v35 source dd1e7388; automatic qualification only, field acceptance pending. Initial bounded scope only. Human review declaration not certified OCR. Backup excludes R2 objects/device outbox/external state. Minimal incident template does not yet reproduce actual fault. No automatic repair, legal verdict or financial write."
     },
     {
       "id": "A23",
@@ -648,7 +668,7 @@
     {
       "id": "A26",
       "title": "Des documents fiables avec OCR relu et exports vérifiables · lot 26",
-      "status": "IMPLEMENTED_UNVERIFIED",
+      "status": "DELIVERED_WITH_DOCUMENTED_LIMITS",
       "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md",
       "targetLots": [
         26
@@ -666,14 +686,16 @@
       ],
       "integrationMeaning": "PRODUCT_CAPABILITY_WITH_EXPLICIT_ACCEPTANCE_CRITERIA",
       "evidence": [
-        "docs/release/DELIVERY-2026-10-23-REVIEW-RECOVERY.md"
+        "docs/release/DELIVERY-2026-10-23-REVIEW-RECOVERY.md",
+        "docs/release/evidence/REVIEW-RECOVERY-PUBLIC-2026-10-23.json",
+        "docs/release/evidence/REVIEW-RECOVERY-QUALIFICATION-2026-10-23.json"
       ],
-      "limits": "Initial scope only, qualification pending. Human review declaration not certified OCR. Backup excludes R2 objects/device outbox/external state. Minimal incident template does not yet reproduce actual fault. No automatic repair, legal verdict or financial write."
+      "limits": "Published v35 source dd1e7388; automatic qualification only, field acceptance pending. Initial bounded scope only. Human review declaration not certified OCR. Backup excludes R2 objects/device outbox/external state. Minimal incident template does not yet reproduce actual fault. No automatic repair, legal verdict or financial write."
     },
     {
       "id": "A27",
       "title": "Une reprise prouvée et un contrôle de qualité des données · lot 27",
-      "status": "IMPLEMENTED_UNVERIFIED",
+      "status": "DELIVERED_WITH_DOCUMENTED_LIMITS",
       "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md",
       "targetLots": [
         27
@@ -691,9 +713,11 @@
       ],
       "integrationMeaning": "PRODUCT_CAPABILITY_WITH_EXPLICIT_ACCEPTANCE_CRITERIA",
       "evidence": [
-        "docs/release/DELIVERY-2026-10-23-REVIEW-RECOVERY.md"
+        "docs/release/DELIVERY-2026-10-23-REVIEW-RECOVERY.md",
+        "docs/release/evidence/REVIEW-RECOVERY-PUBLIC-2026-10-23.json",
+        "docs/release/evidence/REVIEW-RECOVERY-QUALIFICATION-2026-10-23.json"
       ],
-      "limits": "Initial scope only, qualification pending. Human review declaration not certified OCR. Backup excludes R2 objects/device outbox/external state. Minimal incident template does not yet reproduce actual fault. No automatic repair, legal verdict or financial write."
+      "limits": "Published v35 source dd1e7388; automatic qualification only, field acceptance pending. Initial bounded scope only. Human review declaration not certified OCR. Backup excludes R2 objects/device outbox/external state. Minimal incident template does not yet reproduce actual fault. No automatic repair, legal verdict or financial write."
     },
     {
       "id": "A28",
@@ -723,7 +747,7 @@
     {
       "id": "I01",
       "title": "Le passeport de continuité personnelle · propriétaire L02",
-      "status": "PLANNED_OR_REQUIRES_DETAILED_COVERAGE",
+      "status": "IMPLEMENTED_UNVERIFIED",
       "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md",
       "targetLots": [
         2
@@ -735,12 +759,16 @@
         "Conserver référence, étape, date et contexte minimal ; vérifier la ressource au clic.",
         "Permettre oubli sélectif, durée de conservation et désactivation par appareil ou compte."
       ],
-      "integrationMeaning": "PRODUCT_CAPABILITY_WITH_EXPLICIT_ACCEPTANCE_CRITERIA"
+      "integrationMeaning": "PRODUCT_CAPABILITY_WITH_EXPLICIT_ACCEPTANCE_CRITERIA",
+      "evidence": [
+        "docs/release/DELIVERY-2026-10-23-COMMON-INNOVATIONS.md"
+      ],
+      "limits": "Candidate local references and device controls only; no cross-device or full-object memory."
     },
     {
       "id": "I02",
       "title": "La répétition générale d’une séance · propriétaire L05",
-      "status": "PLANNED_OR_REQUIRES_DETAILED_COVERAGE",
+      "status": "IMPLEMENTED_UNVERIFIED",
       "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md",
       "targetLots": [
         5
@@ -752,12 +780,16 @@
         "Proposer des incidents reproductibles, avec chronologie et résultat attendu.",
         "Comparer les résultats aux invariants et exporter un rapport d’apprentissage."
       ],
-      "integrationMeaning": "PRODUCT_CAPABILITY_WITH_EXPLICIT_ACCEPTANCE_CRITERIA"
+      "integrationMeaning": "PRODUCT_CAPABILITY_WITH_EXPLICIT_ACCEPTANCE_CRITERIA",
+      "evidence": [
+        "docs/release/DELIVERY-2026-10-23-COMMON-INNOVATIONS.md"
+      ],
+      "limits": "PARTIAL: guided fictional correction/review and report; not full canonical financial, loan, Live or outbox rehearsal."
     },
     {
       "id": "I03",
       "title": "Le budget de requêtes par parcours · propriétaire L28",
-      "status": "PLANNED_OR_REQUIRES_DETAILED_COVERAGE",
+      "status": "DELIVERED_WITH_DOCUMENTED_LIMITS",
       "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md",
       "targetLots": [
         28
@@ -769,7 +801,13 @@
         "Mesurer une référence répétable, puis définir un budget cible justifié par cette mesure.",
         "Réduire d’abord lectures secondaires, doublons et rafraîchissements sans changement ; conserver les invariants des commandes."
       ],
-      "integrationMeaning": "PRODUCT_CAPABILITY_WITH_EXPLICIT_ACCEPTANCE_CRITERIA"
+      "integrationMeaning": "PRODUCT_CAPABILITY_WITH_EXPLICIT_ACCEPTANCE_CRITERIA",
+      "evidence": [
+        "tests/request-budget-lot28-20261020.test.mjs",
+        "docs/release/DELIVERY-2026-10-23-COMMON-INNOVATIONS.md",
+        "docs/release/evidence/REVIEW-RECOVERY-QUALIFICATION-2026-10-23.json"
+      ],
+      "limits": "Explicit application HTTP budget; not D1/WebSocket/provider billing. Acquired v35 automatically qualified; field acceptance pending."
     },
     {
       "id": "I04",
@@ -796,7 +834,7 @@
     {
       "id": "I05",
       "title": "Le parcours productif personnel sur une période choisie · propriétaire L19",
-      "status": "IMPLEMENTED_UNVERIFIED",
+      "status": "DELIVERED_WITH_DOCUMENTED_LIMITS",
       "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md",
       "targetLots": [
         19
@@ -810,9 +848,12 @@
       ],
       "integrationMeaning": "PRODUCT_CAPABILITY_WITH_EXPLICIT_ACCEPTANCE_CRITERIA",
       "evidence": [
-        "docs/release/DELIVERY-2026-10-23-PRODUCTIVE-COMMUNITY.md"
+        "docs/release/DELIVERY-2026-10-23-PRODUCTIVE-COMMUNITY.md",
+        "docs/release/evidence/REVIEW-RECOVERY-PUBLIC-2026-10-23.json",
+        "docs/release/evidence/REVIEW-RECOVERY-QUALIFICATION-2026-10-23.json",
+        "docs/release/DELIVERY-2026-10-23-REVIEW-RECOVERY.md"
       ],
-      "limits": "Initial bounded implementation under same canonical owners. Same-source release pending; contact-specific notebooks, cross-group solution adaptation, automated employment reminders and multi-party launch programs remain future variants."
+      "limits": "Published v35 source dd1e7388; automatic qualification only, field acceptance pending. Initial bounded implementation under same canonical owners. Same-source release verified; contact-specific notebooks, cross-group solution adaptation, automated employment reminders and multi-party launch programs remain future variants."
     },
     {
       "id": "I06",
@@ -883,7 +924,7 @@
     {
       "id": "I09",
       "title": "Eco Mirror : comparer les effets avant de remplacer un acquis · propriétaire L28",
-      "status": "PLANNED_OR_REQUIRES_DETAILED_COVERAGE",
+      "status": "DELIVERED_WITH_DOCUMENTED_LIMITS",
       "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md",
       "targetLots": [
         28
@@ -895,7 +936,13 @@
         "Exécuter référence et candidat dans deux environnements isolés ; ne jamais doubler des écritures de production.",
         "Comparer les invariants, expliquer chaque différence et joindre le résultat à la demande ECO-LOCK."
       ],
-      "integrationMeaning": "PRODUCT_CAPABILITY_WITH_EXPLICIT_ACCEPTANCE_CRITERIA"
+      "integrationMeaning": "PRODUCT_CAPABILITY_WITH_EXPLICIT_ACCEPTANCE_CRITERIA",
+      "evidence": [
+        "scripts/compare-lot-effects.mjs",
+        "docs/release/DELIVERY-2026-10-23-COMMON-INNOVATIONS.md",
+        "docs/release/evidence/REVIEW-RECOVERY-QUALIFICATION-2026-10-23.json"
+      ],
+      "limits": "Worker/SQLite financial effect mirror for the qualified scenarios, not universal replay. Acquired v35 automatically qualified; field acceptance pending."
     },
     {
       "id": "I10",
@@ -914,9 +961,11 @@
       ],
       "integrationMeaning": "PRODUCT_CAPABILITY_WITH_EXPLICIT_ACCEPTANCE_CRITERIA",
       "evidence": [
-        "docs/release/DELIVERY-2026-10-23-REVIEW-RECOVERY.md"
+        "docs/release/DELIVERY-2026-10-23-REVIEW-RECOVERY.md",
+        "docs/release/evidence/REVIEW-RECOVERY-PUBLIC-2026-10-23.json",
+        "docs/release/evidence/REVIEW-RECOVERY-QUALIFICATION-2026-10-23.json"
       ],
-      "limits": "Initial scope only, qualification pending. Human review declaration not certified OCR. Backup excludes R2 objects/device outbox/external state. Minimal incident template does not yet reproduce actual fault. No automatic repair, legal verdict or financial write."
+      "limits": "Minimal incident preview/export deployed and qualified at dd1e7388; PARTIAL: actual fault reproduction remains unverified. Initial scope only, qualification pending. Human review declaration not certified OCR. Backup excludes R2 objects/device outbox/external state. Minimal incident template does not yet reproduce actual fault. No automatic repair, legal verdict or financial write."
     },
     {
       "id": "I11",
@@ -943,7 +992,7 @@
     {
       "id": "I12",
       "title": "La parité entre modes compact, sénior et assisté · propriétaire L01",
-      "status": "PLANNED_OR_REQUIRES_DETAILED_COVERAGE",
+      "status": "DELIVERED_WITH_DOCUMENTED_LIMITS",
       "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md",
       "targetLots": [
         1
@@ -955,7 +1004,13 @@
         "Établir une matrice des actions accessibles dans les trois modes.",
         "Tester clavier, lecture à voix haute disponible, zoom et reprise de brouillon lors du changement de mode."
       ],
-      "integrationMeaning": "PRODUCT_CAPABILITY_WITH_EXPLICIT_ACCEPTANCE_CRITERIA"
+      "integrationMeaning": "PRODUCT_CAPABILITY_WITH_EXPLICIT_ACCEPTANCE_CRITERIA",
+      "evidence": [
+        "tests/browser/navigation-lot01-20261020.spec.mjs",
+        "docs/release/DELIVERY-2026-10-23-COMMON-INNOVATIONS.md",
+        "docs/release/evidence/REVIEW-RECOVERY-QUALIFICATION-2026-10-23.json"
+      ],
+      "limits": "Shared modes and preserved acquired actions/drafts in qualified browser scenarios, not universal coverage of future screens. Acquired v35 automatically qualified; field acceptance pending."
     },
     {
       "id": "I13",
@@ -982,7 +1037,7 @@
     {
       "id": "I14",
       "title": "L’assistant de négociation qui prépare sans agir à la place · propriétaire L23",
-      "status": "PLANNED_OR_REQUIRES_DETAILED_COVERAGE",
+      "status": "DELIVERED_WITH_DOCUMENTED_LIMITS",
       "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md",
       "targetLots": [
         23
@@ -994,12 +1049,18 @@
         "Remplir uniquement les champs autorisés ; mettre en évidence ce qui est proposé ou manquant.",
         "Présenter un aperçu et confier l’envoi au parcours de communication existant après confirmation."
       ],
-      "integrationMeaning": "PRODUCT_CAPABILITY_WITH_EXPLICIT_ACCEPTANCE_CRITERIA"
+      "integrationMeaning": "PRODUCT_CAPABILITY_WITH_EXPLICIT_ACCEPTANCE_CRITERIA",
+      "evidence": [
+        "tests/browser/assistant-tools-lot23-20261020.spec.mjs",
+        "docs/release/DELIVERY-2026-10-23-COMMON-INNOVATIONS.md",
+        "docs/release/evidence/REVIEW-RECOVERY-QUALIFICATION-2026-10-23.json"
+      ],
+      "limits": "FR/EN negotiation draft preparation only; no autonomous sending, acceptance or commitment. Acquired v35 automatically qualified; field acceptance pending."
     },
     {
       "id": "I15",
       "title": "La carte des questions, preuves et contradictions · propriétaire L18",
-      "status": "IMPLEMENTED_UNVERIFIED",
+      "status": "DELIVERED_WITH_DOCUMENTED_LIMITS",
       "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md",
       "targetLots": [
         18
@@ -1013,14 +1074,17 @@
       ],
       "integrationMeaning": "PRODUCT_CAPABILITY_WITH_EXPLICIT_ACCEPTANCE_CRITERIA",
       "evidence": [
-        "docs/release/DELIVERY-2026-10-23-PRODUCTIVE-COMMUNITY.md"
+        "docs/release/DELIVERY-2026-10-23-PRODUCTIVE-COMMUNITY.md",
+        "docs/release/evidence/REVIEW-RECOVERY-PUBLIC-2026-10-23.json",
+        "docs/release/evidence/REVIEW-RECOVERY-QUALIFICATION-2026-10-23.json",
+        "docs/release/DELIVERY-2026-10-23-REVIEW-RECOVERY.md"
       ],
-      "limits": "Initial bounded implementation under same canonical owners. Same-source release pending; contact-specific notebooks, cross-group solution adaptation, automated employment reminders and multi-party launch programs remain future variants."
+      "limits": "Published v35 source dd1e7388; automatic qualification only, field acceptance pending. Initial bounded implementation under same canonical owners. Same-source release verified; contact-specific notebooks, cross-group solution adaptation, automated employment reminders and multi-party launch programs remain future variants."
     },
     {
       "id": "I16",
       "title": "L’assemblage de moyens disponibles · propriétaire L11",
-      "status": "PLANNED_OR_REQUIRES_DETAILED_COVERAGE",
+      "status": "IMPLEMENTED_UNVERIFIED",
       "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md",
       "targetLots": [
         11
@@ -1032,12 +1096,16 @@
         "Composer un plan provisoire avec acceptation séparée de chaque propriétaire.",
         "Transmettre les engagements confirmés aux parcours existants ; gérer désistement et alternative."
       ],
-      "integrationMeaning": "PRODUCT_CAPABILITY_WITH_EXPLICIT_ACCEPTANCE_CRITERIA"
+      "integrationMeaning": "PRODUCT_CAPABILITY_WITH_EXPLICIT_ACCEPTANCE_CRITERIA",
+      "evidence": [
+        "docs/release/DELIVERY-2026-10-23-COMMON-INNOVATIONS.md"
+      ],
+      "limits": "Candidate four-resource plans, independent agreements, one canonical order assignment across group tenants; no rental calendar, automatic release, purchase or cancellation. Exact-source qualification and publication pending."
     },
     {
       "id": "I17",
       "title": "La première mission accompagnée · propriétaire L16",
-      "status": "IMPLEMENTED_UNVERIFIED",
+      "status": "DELIVERED_WITH_DOCUMENTED_LIMITS",
       "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md",
       "targetLots": [
         16
@@ -1051,9 +1119,12 @@
       ],
       "integrationMeaning": "PRODUCT_CAPABILITY_WITH_EXPLICIT_ACCEPTANCE_CRITERIA",
       "evidence": [
-        "docs/release/DELIVERY-2026-10-23-PRODUCTIVE-COMMUNITY.md"
+        "docs/release/DELIVERY-2026-10-23-PRODUCTIVE-COMMUNITY.md",
+        "docs/release/evidence/REVIEW-RECOVERY-PUBLIC-2026-10-23.json",
+        "docs/release/evidence/REVIEW-RECOVERY-QUALIFICATION-2026-10-23.json",
+        "docs/release/DELIVERY-2026-10-23-REVIEW-RECOVERY.md"
       ],
-      "limits": "Initial bounded implementation under same canonical owners. Same-source release pending; contact-specific notebooks, cross-group solution adaptation, automated employment reminders and multi-party launch programs remain future variants."
+      "limits": "Published v35 source dd1e7388; automatic qualification only, field acceptance pending. Initial bounded implementation under same canonical owners. Same-source release verified; contact-specific notebooks, cross-group solution adaptation, automated employment reminders and multi-party launch programs remain future variants."
     },
     {
       "id": "I18",
@@ -1102,7 +1173,7 @@
     {
       "id": "I20",
       "title": "La bibliothèque de solutions éprouvées dans leur contexte · propriétaire L14",
-      "status": "IMPLEMENTED_UNVERIFIED",
+      "status": "DELIVERED_WITH_DOCUMENTED_LIMITS",
       "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md",
       "targetLots": [
         14
@@ -1116,9 +1187,12 @@
       ],
       "integrationMeaning": "PRODUCT_CAPABILITY_WITH_EXPLICIT_ACCEPTANCE_CRITERIA",
       "evidence": [
-        "docs/release/DELIVERY-2026-10-23-PRODUCTIVE-COMMUNITY.md"
+        "docs/release/DELIVERY-2026-10-23-PRODUCTIVE-COMMUNITY.md",
+        "docs/release/evidence/REVIEW-RECOVERY-PUBLIC-2026-10-23.json",
+        "docs/release/evidence/REVIEW-RECOVERY-QUALIFICATION-2026-10-23.json",
+        "docs/release/DELIVERY-2026-10-23-REVIEW-RECOVERY.md"
       ],
-      "limits": "Initial bounded implementation under same canonical owners. Same-source release pending; contact-specific notebooks, cross-group solution adaptation, automated employment reminders and multi-party launch programs remain future variants."
+      "limits": "Published v35 source dd1e7388; automatic qualification only, field acceptance pending. Initial bounded implementation under same canonical owners. Same-source release verified; contact-specific notebooks, cross-group solution adaptation, automated employment reminders and multi-party launch programs remain future variants."
     },
     {
       "id": "T01",
@@ -2054,5 +2128,7 @@
     ],
     "finalCohort": "Remaining improvements and innovations of previously delivered lots; individual proof required",
     "requestedOn": "2026-10-22"
-  }
+  },
+  "lastVerifiedSource": "dd1e7388829afe29cde453f1cdbefd6caedf98a8",
+  "lastVerificationDate": "2026-10-23"
 }

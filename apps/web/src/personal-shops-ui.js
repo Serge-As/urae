@@ -65,5 +65,5 @@ export function mountPersonalShopsUI({app,notify=()=>{},showError=()=>{},fmt=Str
  // A background refresh captures its intent before optional startup reads.
  // Later navigation, edits or submission own the current projection instead.
  const captureRefresh=()=>{const captured=context(),token=generation,revision=activity;return()=>root.open&&captured===context()&&token===generation&&revision===activity?refresh():Promise.resolve();};
- return{captureRefresh,clearForContext:()=>{if(lastContext&&lastContext!==context()){++generation;content.replaceChildren();selected='';lastContext=context();}},open:async()=>{if(!root.open)root.open=true;else await refresh();root.scrollIntoView({block:'start'});},setLocale:()=>root.open?refresh():Promise.resolve(),refresh};
+ return{openStorefront:async id=>{mode='directory';selected=id;if(!root.open)root.open=true;else await refresh();root.scrollIntoView({block:'start'});},captureRefresh,clearForContext:()=>{if(lastContext&&lastContext!==context()){++generation;content.replaceChildren();selected='';lastContext=context();}},open:async()=>{if(!root.open)root.open=true;else await refresh();root.scrollIntoView({block:'start'});},setLocale:()=>root.open?refresh():Promise.resolve(),refresh};
 }

@@ -1,4 +1,30 @@
+## Instruction dépôts du 24 octobre 2026
 
+ECO-REPO-001 est inscrite dans AGENTS et `docs/governance/ECO_REPOSITORIES_CONFIDENTIALITY_EFFICIENCY_2026-10-24.md` : URAE privé canonique ; UTRAE public auxiliaire à privilégier uniquement pour les contenus explicitement revus comme publics et les essais synthétiques. Aucune donnée sensible/confidentielle, source propriétaire ou histoire privée dans le dépôt public, ses PR, issues, logs, caches ou artefacts. Secrets et données réelles brutes restent hors Git. Travail local, cache par SHA, publication groupée et suivi utile de la CI ; aucun contrôle de non-régression supprimé. Clone public distinct `../utrae-public`, garde staged/commits et protection locale avant push. Cette consigne ne livre pas le candidat v36 et ne modifie aucune donnée métier.
+
+## Compléments communs v36 — candidat
+
+Le complément `1.5.2.36-common-innovations` est implémenté localement : I01 mémoire locale 1/7/30 jours, oubli ciblé et pause par compte sur cet appareil ; I02 exemple guidé de correction/revue et export fictif ; I16 plans Business Studio de quatre ressources, accords indépendants et preuve d'une commande Market réelle. Liste de plans légère, sans relecture des stocks ; relecture explicite du plan choisi. Affectation unique d'une commande, y compris entre tenants de groupes, sans second stock ni achat automatique. Droits, dates, source, unités et versions revérifiés. I03/I09/I12/I14 réutilisent leurs propriétaires acquis. I02 reste partiel pour le moteur financier complet, I10 pour la reproduction d'un vrai défaut. Voir `docs/release/DELIVERY-2026-10-23-COMMON-INNOVATIONS.md`.
+
+La production attestée reste v35/dd1e7388. La compilation et les premiers essais ciblés ne prouvent pas la livraison v36. Qualification intégrale, sauvegarde vérifiée et 48 empreintes publiques sur le SHA final restent obligatoires. Aucune migration, dépendance payante, purge locale ou commande de redémarrage. `realMoneyEnabled=false`, `FIELD_ACCEPTED=NOT_ACCEPTED`.
+
+## Clôture vérifiée v35 — 23 octobre 2026
+
+Production **1.5.2.35-review-recovery**, source `dd1e7388829afe29cde453f1cdbefd6caedf98a8`, arbre `f225c86138282b9eb0bd6f24e757430f323c809d`, Worker `72206ce3-430c-459b-91ee-1cfc7c40ed03`. Livraison [40003282141 SUCCESS](https://github.com/Serge-As/urae/actions/runs/40003282141) et qualification indépendante [40003281769 SUCCESS](https://github.com/Serge-As/urae/actions/runs/40003281769), même source : **1008/1008 tests natifs, 65/65 Chromium, 6/6 WebKit**, sans échec ni ignoré. Les 47 empreintes publiques correspondent à la compilation et à leur relecture indépendante. L'horodatage de cette relecture figure dans `docs/release/evidence/REVIEW-RECOVERY-PUBLIC-2026-10-23.json`.
+
+Les neuf périmètres initiaux L14–L19/L22/L26/L27 sont publiés avec les limites décrites ci-dessous ; les 28 lots initiaux ont désormais un périmètre publié. **Cela ne signifie pas que les 92 propositions, toutes leurs variantes ou la recette terrain sont achevées.** Le travail suivant regroupe les compléments des innovations des lots acquis, en réutilisant leurs propriétaires canoniques.
+
+Accès : Marketplace / Eco Business → « Compétences · Opportunités · Data Room · Launch Boost » ; Academy / Portfolio → pratique accompagnée et carnets ; Labo financier → analyse pédagogique privée ; Documents → relecture du texte et des nombres ; Réglages → diagnostic en lecture seule et paquet d'incident minimal. Le cookie de préférence commerciale n'est émis qu'après l'action explicite conservant les consentements.
+
+Deux courses de démarrage sont corrigées : les lectures secondaires ne reprennent plus la navigation choisie ; le rafraîchissement tardif de la boutique ne remplace plus un formulaire ou une commande en cours. Les parcours acquis et le nouveau scénario déterministe de réponse tardive ont passé les qualifications. Les échecs intermédiaires sont conservés dans l'historique ; ils n'ont pas été promus en succès. L'image de qualification et le paquet npm sont tous deux Playwright **1.56.1** ; aucun remplacement temporaire ou filtrage d'assertion d'inactivité.
+
+BIR+ : export D1 en lecture seule, restauration dans une copie vierge, intégrité et clés étrangères ok, 50 tables pour 48 attendues ; archive privée R2 relue SHA256 `3cb651e100fe9ed16bae7be8ee26d65bad879a96b3ff97290af32aa7dfb25cdd`. Portée **D1_AND_EXACT_SOURCE_ONLY**, `completeApplicationBackup=false` : objets de pièces R2, IndexedDB/outbox d'un appareil et fournisseurs externes exclus. Aucune restauration de production. Source exacte : 892 empreintes Git et arbre vérifiés ; ZIP SHA256 `7326f3ea6edc59923fa880445c1a6664b54ed1515e2ef962160af6dc5f1b5512`, 3293690 octets. La clôture documentaire est postérieure à la source déployée et ne change pas son SHA.
+
+Limites : pas d'OCR universel ni de diffusion des pièces binaires par les nouveaux panneaux ; la relecture papier est humaine. Dossiers du Labo privés et pédagogiques, aucun verdict légal. I10 reste partiel : le paquet minimal est livré, mais aucun défaut réel n'a encore été reproduit depuis cet export. Carnets limités aux groupes explicitement choisis ; programme Launch personnel ; emplois sans contrat ou paiement automatique. Les plafonds documentés de chaque parcours restent applicables.
+
+**ÉTAT DU PROJET APRÈS ÉTAPE** : v35 déployée et qualifiée automatiquement, 28 périmètres initiaux publiés ; poursuivre l'ensemble commun de compléments avec rapprochement proposition par proposition. Ledger/D1, signatures, outbox, droits, synchronisation et modes restent acquis. `realMoneyEnabled=false`, `FIELD_ACCEPTED=NOT_ACCEPTED`. Aucune migration, dépendance payante, purge locale ou commande de redémarrage. Consommation exacte de crédits non mesurable.
+
+## Historique antérieur conservé
 
 ### Contrôle de livraison v35 — correction complémentaire
 

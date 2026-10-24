@@ -5,6 +5,13 @@
   --radius:18px;--radius-sm:12px;--tap:48px;--sidebar:250px;
 }
 *{box-sizing:border-box}
+#resourceAssemblyPanel,#resourceAssemblyPanel .resource-assembly-line,#resourceAssemblyPanel .resource-assembly-card{min-width:0;max-width:100%;overflow-wrap:anywhere}
+#resourceAssemblyPanel .resource-assembly-line{grid-column:1/-1;border:1px solid var(--line);border-radius:var(--radius-sm);padding:14px}
+#resourceAssemblyPanel .resource-assembly-line legend{padding:0 6px;font-weight:600}
+#resourceAssemblyPanel form>div.stack{grid-column:1/-1;min-width:0}
+#resourceAssemblyPanel label,#resourceAssemblyPanel button,#resourceAssemblyPanel input,#resourceAssemblyPanel textarea,#resourceAssemblyPanel select{min-width:0;max-width:100%}
+#resourceAssemblyPanel .resource-assembly-card{border-left:3px solid var(--brand);padding:16px}
+@media(max-width:600px){#resourceAssemblyPanel form,#resourceAssemblyPanel .resource-assembly-line{grid-template-columns:minmax(0,1fr)}#resourceAssemblyPanel button{width:100%;white-space:normal}}
 html{background:var(--bg);scroll-behavior:smooth}
 body{margin:0;background:var(--bg);color:var(--ink);font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;font-size:16px;line-height:1.5}
 button,input,select,textarea{font:inherit}

@@ -1,4 +1,5 @@
 import {test,expect} from '@playwright/test';
+import {readFile} from 'node:fs/promises';
 const base='http://127.0.0.1:4173';
 test.setTimeout(120000);
 test.beforeEach(async({page})=>{page.setDefaultTimeout(20000);page.on('pageerror',error=>console.log('LOT05_PAGE_ERROR',error.message));});
@@ -12,7 +13,8 @@ async function setup(page){
  const members=await api(page,'/api/v1/groups/'+groupId+'/members','GET',undefined,groupId),membershipId=members.find(x=>x.userId===account.account.id).id;
  const rubric=await api(page,'/api/v1/groups/'+groupId+'/rubrics','POST',{name:'Secours recette',facets:{direction:'INFLOW',obligation:'CUSTOM',medium:'CASH',refundability:'CONDITIONAL',replenishment:'CUSTOM',interestMode:'NONE',eligibilityMode:'RULE_BASED'},source:'GROUP_CUSTOM',operatingModel:{ruleRealityStatus:'ALIGNED',targetMode:'OPEN',mandatoryForAbsentees:false,shortfallHandling:'LEAVE_SHORT',payoutMode:'COLLECTED_ONLY',immediateFullPayout:false}},groupId);
  const meeting=await api(page,'/api/v1/groups/'+groupId+'/meetings','POST',{title:'Séance fictive L05',scheduledAt:new Date().toISOString()},groupId);
- await page.reload();await expect(page.locator('#activeGroupSelect option[value="'+groupId+'"]').first()).toHaveCount(1);await page.locator('#activeGroupSelect').selectOption(groupId);await expect(page.locator('#toast')).toHaveText('Groupe actif changé.',{timeout:20000});await page.locator('#mainNav [data-view="operations"]').first().click();
+ await page.reload();await expect(page.locator('#activeGroupSelect option[value="'+groupId+'"]').first()).toHaveCount(1);await page.locator('#activeGroupSelect').selectOption(groupId);await expect(page.locator('#activeGroupSelect')).toHaveValue(groupId);await page.locator('#mainNav [data-view="operations"]').first().click();
+ await expect(page.locator('#meetingMatrixScope option[value="'+meeting.id+'"]')).toHaveCount(1);await page.locator('#meetingMatrixScope').selectOption(meeting.id);await page.locator('#meetingMatrix').getByRole('button',{name:'Vue intégrale',exact:true}).click();
  const input=page.locator(`#meetingMatrix .matrix-cell-entry[data-membership-id="${membershipId}"][data-rubric-id="${rubric.id}"][data-meeting-id="${meeting.id}"] .cell-target-input`);await input.fill('5432');
  return{input,groupId,open:page.locator('#meetingMatrix .eco-session-practice-open')};
 }
@@ -28,6 +30,8 @@ test('rehearsal freezes the prior member, keeps complete parts and never writes 
  const part=practice(page).getByRole('combobox',{name:'Partie de l’exercice',exact:true}),count=await part.locator('option').count(),covered=new Set();expect(count).toBeGreaterThan(1);
  for(let i=0;i<count;i++){await part.selectOption(String(i));for(const label of (await practice(page).locator('thead th').allTextContents()).slice(1,-1))covered.add(label);await expect.poll(()=>total(page,'Amina')).toBe(1000);await expect.poll(()=>total(page,'Boris')).toBe(750);}
  expect(covered.size).toBe(20);await page.screenshot({path:'artifacts/lot05-session-rehearsal-desktop.png',fullPage:false});
+  await practice(page).getByRole('button',{name:'Exemple guidé : correction puis synthèse',exact:true}).click();await expect(review).toBeVisible();await expect(review).toContainText('Amina');await expect.poll(()=>total(page,'Amina')).toBe(2000);await expect(inputFor(page,'Boris')).toHaveJSProperty('readOnly',true);
+  const downloaded=page.waitForEvent('download');await practice(page).getByRole('button',{name:'Exporter le rapport de cet exercice',exact:true}).click();const download=await downloaded,report=JSON.parse(await readFile(await download.path(),'utf8'));expect(download.suggestedFilename()).toBe('eco-exercice-seance.json');expect(report.syntheticExerciseOnly).toBe(true);expect(report.canonicalFinancialPosting).toBe(false);expect(report.members[0].total).toBe(2000);expect(report.pendingMemberReview.nextMember).toBe('Boris');expect(report.layout.allRubricsIncluded).toBe(true);
  await practice(page).getByRole('button',{name:'Fermer',exact:true}).click();await expect(practice(page)).toHaveCount(0);await expect(real.input).toHaveValue('5432');expect(writes).toEqual([]);
 });
 test('small-screen senior exercise remains readable offline and reopening starts a separate exercise',async({page,context})=>{

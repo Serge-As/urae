@@ -52,6 +52,7 @@ import { mountFinancialLabUI } from './financial-lab-ui.js';
 import { mountSafetyReviewUI } from './safety-review-ui.js';
 import { mountBusinessStudioUI } from './business-studio-ui.js';
 import { mountEconomicExperimentsUI } from './economic-experiments-ui.js';
+import {mountResourceAssembliesUI} from './resource-assemblies-ui.js';
 import { mountCoreEconomicLearningUI } from './core-economic-learning-ui.js';
 import { mountResilienceUI } from './resilience-ui.js';
 import { parseEcoShareIntent } from './share-out.js';
@@ -193,7 +194,7 @@ let modules = [];
 let applicationStartup = Promise.resolve();
 let selectedLot = 'ALL';
 let deferredInstallPrompt;
-const CAHIER_VERSION = '1.5.2.35-review-recovery';
+const CAHIER_VERSION = '1.5.2.36-common-innovations';
 const $ = (s) => { const e = document.querySelector(s); if (!e)
     throw new Error(`UI_ELEMENT_NOT_FOUND:${s}`); return e; };
 const val = (id) => document.getElementById(id).value.trim();
@@ -551,6 +552,7 @@ const externalProgramsUI = mountExternalProgramsUI({ app, notify: toast, showErr
 const businessStudioUI = mountBusinessStudioUI({app,navigate:go,notify:toast,showError:fail});
 const coreEconomicLearningUI = mountCoreEconomicLearningUI({app,notify:toast,showError:fail,isManager});
 const economicExperimentsUI=mountEconomicExperimentsUI({app,isManager,notify:toast});
+const resourceAssembliesUI=mountResourceAssembliesUI({app,openShop:id=>personalShopsUI.openStorefront(id),notify:toast});
 const temporalCommerceUI=mountTemporalCommerceUI({app,isManager,notify:toast});
 const financialExplanationsUI=mountFinancialExplanationsUI({app,isManager});
 const founderControlUI = mountFounderControlUI({ app, notify: toast, showError: fail });
@@ -2523,6 +2525,7 @@ const refreshGroupContext = async () => {
     ecoCareUI.clearForContext?.();
     governedGroupUI.clearForContext?.();
     economicExperimentsUI.clearForContext?.();
+    resourceAssembliesUI.clearForContext();
     financialExplanationsUI.clearForContext?.();
     productiveCommunityUI.clearForContext?.();
     safetyReviewUI.clearForContext?.();
@@ -3077,6 +3080,7 @@ $('#languageSelect').addEventListener('change', async e => {
     await ecoCareUI.setLocale?.();
     governedGroupUI.setLocale?.();
     economicExperimentsUI.setLocale?.();
+    resourceAssembliesUI.setLocale();
     temporalCommerceUI.setLocale?.();
     financialExplanationsUI.setLocale?.();
     productiveCommunityUI.setLocale?.();
@@ -3389,7 +3393,7 @@ document.querySelector('#claimLocalAccountBtn')?.addEventListener('click',()=>vo
     catch(e){fail(e);}
     finally{if(button)button.disabled=false;}
 })());
-$('#logoutBtn').addEventListener('click',async()=>{try{await app.logout();documentsUI.clearForContext();notificationCenterUI.clearForContext(true);ecoCareUI.clearForContext(true);governedGroupUI.clearForContext(true);economicExperimentsUI.clearForContext(true);financialExplanationsUI.clearForContext(true);productiveCommunityUI.clearForContext(true);safetyReviewUI.clearForContext(true);dataQualityUI.clearForContext(true);launchStudio?.refreshContext(true);identityVerificationUI.clearForContext?.(true);journeyUI.refresh();localAssistantUI.refreshContext();document.body.classList.add('signed-out');$('#authScreen').hidden=false;$('#accountName').textContent='';const claim=document.querySelector('#claimLocalAccountBtn');if(claim)claim.hidden=true;showAuth(tx('Compte fermé sur cet appareil. Vos données locales ne sont pas supprimées.','Account signed out on this device. Your local data was not deleted.'));}catch(e){fail(e);}});
+$('#logoutBtn').addEventListener('click',async()=>{try{await app.logout();documentsUI.clearForContext();notificationCenterUI.clearForContext(true);ecoCareUI.clearForContext(true);governedGroupUI.clearForContext(true);economicExperimentsUI.clearForContext(true);resourceAssembliesUI.clearForContext(true);financialExplanationsUI.clearForContext(true);productiveCommunityUI.clearForContext(true);safetyReviewUI.clearForContext(true);dataQualityUI.clearForContext(true);launchStudio?.refreshContext(true);identityVerificationUI.clearForContext?.(true);journeyUI.refresh();localAssistantUI.refreshContext();document.body.classList.add('signed-out');$('#authScreen').hidden=false;$('#accountName').textContent='';const claim=document.querySelector('#claimLocalAccountBtn');if(claim)claim.hidden=true;showAuth(tx('Compte fermé sur cet appareil. Vos données locales ne sont pas supprimées.','Account signed out on this device. Your local data was not deleted.'));}catch(e){fail(e);}});
 // Online recovery is serialized by resumeOnline() above: sync durable outbox first, then restart projections.
 window.addEventListener('offline',()=>{renderConnectivity();const claim=document.querySelector('#claimLocalAccountBtn');if(claim&&!claim.hidden){claim.disabled=true;claim.textContent=tx('Compte local · Internet requis pour finaliser','Local account · Internet needed to finalize');}});
 void ensureCurrentServiceWorker();

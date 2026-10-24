@@ -6,6 +6,7 @@ import * as experiment from './experiments.js';
 import * as jobs from './jobs.js';
 import * as acquisition from './acquisition.js';
 import * as plans from './launch-plans.js';
+import * as assemblies from './resource-assemblies.js';
 
 type BusinessKind='WORKSPACE'|'MANDATE'|'CLIENT'|'OFFER'|'REQUEST'|'QUOTE'|'ORDER'|'CONTRACT'|'INVOICE'|'EXPENSE'|'PAYMENT'|'REVENUE'|'TIME'|'COMMUNICATION'|'ACTION'|'SCENARIO';
 type Money={amount:number;currency:string};
@@ -25,6 +26,10 @@ export interface BusinessSummary{
 
 export class BusinessStudioService{
   constructor(public repo:PlatformRepository,public kernel:PlatformKernel){}
+  createResourceAssembly(input:assemblies.ResourceAssemblyInput){return assemblies.createResourceAssembly(this.repo,this.kernel,input);}
+  resourceAssemblies(){return assemblies.resourceAssemblies(this.repo,this.kernel);}
+  resourceAssembly(id:string){return assemblies.readResourceAssembly(this.repo,this.kernel,id);}
+  updateResourceAssembly(id:string,input:assemblies.ResourceAssemblyCommand){return assemblies.updateResourceAssembly(this.repo,this.kernel,id,input);}
   createJob(input:jobs.JobInput){return jobs.createJob(this.repo,this.kernel,input);}
   jobs(q=''){return jobs.jobs(this.repo,this.kernel,q);}
   job(id:string){return jobs.readJob(this.repo,this.kernel,id);}

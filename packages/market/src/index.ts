@@ -67,6 +67,17 @@ export class MarketService{
     const order=await this.authorizedOrder(id);if(order.data.buyerUserId===this.kernel.context.get().actorId)await this.access(this.scopeOf(order),true);
     return{order,scopeId:this.scopeOf(order),netDelivered:Number(order.data.deliveredQuantity??0)-Number(order.data.returnedQuantity??0),paymentStatus:'NOT_INFERRED'};
   }
+  async resourceOfferProjection(shopId:Id,stockItemId:Id){
+    const shop=await this.publicShop(shopId),c=this.kernel.context.get(),item=await this.repo.getWorkspaceRecord(c.tenantId,stockItemId);
+    if(!item||item.moduleId!=='MARKETPLACE.CORE'||item.data.marketKind!=='STOCK_ITEM'||this.scopeOf(item)!==shopId||item.status!=='ACTIVE'||!item.data.published||item.data.ownership==='POT_RESERVED'||item.data.pickupClosed===true)throw Error('RESOURCE_OFFER_NOT_AVAILABLE');
+    const availableAt=String(item.data.availableAt??''),availableUntil=String(item.data.availableUntil??'');
+    if(availableUntil&&Date.parse(availableUntil)<=Date.now())throw Error('RESOURCE_OFFER_NOT_AVAILABLE');
+    return{shopId,stockItemId,ownerId:shop.createdBy,name:item.title,unit:String(item.data.unit??'unit'),unitPrice:Number(item.data.unitPrice??0),currency:String(item.data.currency??'XAF'),deliveryTerms:String(item.data.deliveryTerms??''),availableAt,availableUntil,available:availableAt&&Date.parse(availableAt)>Date.now()?0:Math.max(0,Number(item.data.quantity)-Number(item.data.reserved??0)-Number(item.data.quarantine??0))};
+  }
+  async resourceOrderProjection(id:Id){
+    const order=await this.authorizedOrder(id),shop=await this.personalShop(this.scopeOf(order));
+    return{orderId:order.id,tenantId:order.tenantId,shopId:shop.id,stockItemId:String(order.data.stockItemId),ownerId:shop.createdBy,buyerId:String(order.data.buyerUserId??''),unit:String(order.data.unit??'unit'),activeQuantity:['CONFIRMED','PARTIAL','DELIVERED'].includes(String(order.data.state))?Math.max(0,Number(order.data.quantity)-Number(order.data.cancelledQuantity??0)-Number(order.data.returnedQuantity??0)):0,disputed:order.data.disputed===true,state:String(order.data.state),version:Number(order.data.version??1)};
+  }
   async shopDirectory(){
     const c=this.kernel.context.get(),rows=await this.repo.listMarketShops();
     return rows.filter(r=>r.data.marketKind==='SHOP'&&r.data.ownerType==='PERSON'&&!r.groupId&&r.status==='ACTIVE'&&r.data.visibility==='PUBLIC').map(r=>({id:r.id,name:r.title,tagline:String(r.data.tagline??''),locality:String(r.data.locality??'')}));

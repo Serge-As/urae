@@ -1,0 +1,35 @@
+{
+  "protocol": "ECO_RECOVERY_CLOSURE_1",
+  "sourceSha": "dd1e7388829afe29cde453f1cdbefd6caedf98a8",
+  "version": "1.5.2.35-review-recovery",
+  "createdAt": "2026-10-23T18:38:55.512Z",
+  "scope": "D1_AND_EXACT_SOURCE_ONLY",
+  "completeApplicationBackup": false,
+  "excluded": [
+    "R2_ATTACHMENT_OBJECTS",
+    "DEVICE_INDEXEDDB_AND_PENDING_OUTBOX",
+    "EXTERNAL_PROVIDER_STATE"
+  ],
+  "restoredCopy": {
+    "integrity": "ok",
+    "foreignKeys": "ok",
+    "tables": 50,
+    "expectedTables": 48,
+    "expectedSchemaPresent": true,
+    "sqlBytes": 2936766,
+    "sqlSha256": "209f536b2c6af897f58c1e4b35b4bc0c3bbae8a86b27b3156a0e85159b26254e",
+    "dataSha256": "015c72c23714c5f382b8f70d3d62eb90f742af0c1af5dcd4f76e1acd86251ee6"
+  },
+  "productionRestored": false,
+  "privateArchiveReadbackSha256": "3cb651e100fe9ed16bae7be8ee26d65bad879a96b3ff97290af32aa7dfb25cdd",
+  "exactSource": {
+    "source": "dd1e7388829afe29cde453f1cdbefd6caedf98a8",
+    "tree": "f225c86138282b9eb0bd6f24e757430f323c809d",
+    "gitBlobHashesVerified": 892,
+    "zipSha256": "7326f3ea6edc59923fa880445c1a6664b54ed1515e2ef962160af6dc5f1b5512",
+    "zipBytes": 3293690,
+    "origin": "LOCAL_FILES_VERIFIED_AGAINST_REMOTE_GIT_TREE"
+  },
+  "exactSourceFile": "Eco-System_1.5.2.35_Source_Verifiee_2026-10-23.zip",
+  "fieldAcceptance": "NOT_ACCEPTED"
+}

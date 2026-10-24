@@ -81,11 +81,11 @@ interface WorkersAILike {
   run?(model:string,input:Record<string,unknown>,options?:Record<string,unknown>):Promise<unknown>;
 }
 
-const RELEASE_VERSION='1.5.2.35-review-recovery';
-const RELEASE_BUILD_ID='eco-system-1.5.2.35-20261023-review-recovery';
+const RELEASE_VERSION='1.5.2.36-common-innovations';
+const RELEASE_BUILD_ID='eco-system-1.5.2.36-20261023-common-innovations';
 const RELEASE_SCHEMA_VERSION='d1-additive-20260923';
 const RELEASE_POLICY_VERSION='live-finance-policy-20261007-event-push-repayment';
-const RELEASE_PWA_CACHE='eco-system-v15235-review-recovery-20261023';
+const RELEASE_PWA_CACHE='eco-system-v15236-common-innovations-20261023';
 
 const defaultRepo = new InMemoryPlatformRepository();
 const defaultReferralBudgets = new InMemoryReferralBudgetStore();
@@ -1218,6 +1218,12 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
     if(url.pathname==='/api/v1/business-studio/acquisition-listings'&&request.method==='GET')return json(await businessStudio.acquisitionListings(),200,cors);
     const acquisitionRoute=url.pathname.match(/^\/api\/v1\/business-studio\/acquisitions\/([^/]+)(\/commands)?$/);
     if(acquisitionRoute){const id=decodeURIComponent(acquisitionRoute[1]!);if(request.method==='GET'&&!acquisitionRoute[2])return json(await businessStudio.acquisitionRoom(id),200,cors);if(request.method==='POST'&&acquisitionRoute[2])return json(await businessStudio.updateAcquisition(id,await readJson<any>(request)),200,cors);}
+    if(url.pathname==='/api/v1/business-studio/resource-assemblies'){
+      if(request.method==='GET')return json(await businessStudio.resourceAssemblies(),200,cors);
+      if(request.method==='POST')return json(await businessStudio.createResourceAssembly(await readJson<any>(request)),201,cors);
+    }
+    const assemblyRoute=url.pathname.match(/^\/api\/v1\/business-studio\/resource-assemblies\/([^/]+)(\/commands)?$/);
+    if(assemblyRoute){const id=decodeURIComponent(assemblyRoute[1]!);if(request.method==='GET'&&!assemblyRoute[2])return json(await businessStudio.resourceAssembly(id),200,cors);if(request.method==='POST'&&assemblyRoute[2])return json(await businessStudio.updateResourceAssembly(id,await readJson<any>(request)),200,cors);}
     if(url.pathname==='/api/v1/business-studio/launch-plans'){
       if(request.method==='GET')return json(await businessStudio.launchPlans(),200,cors);
       if(request.method==='POST')return json(await businessStudio.createLaunchPlan(await readJson<any>(request)),201,cors);
@@ -3174,7 +3180,7 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
       const timestamp=new Date().toISOString();
       const rawData=body.data&&typeof body.data==='object'&&!Array.isArray(body.data)?body.data as Record<string,unknown>:{};
       if(isProtectedSafetyRecord({moduleId,data:rawData}))throw Error('CANONICAL_SAFETY_ROUTE_REQUIRED');
-      if(strArray(body.tags).includes('governed-productive')||['PRACTICE_ATTEMPT','DISCOVERY_NOTEBOOK','FORUM_SOLUTION'].includes(String(rawData.kind))||['JOB','ACQUISITION_ROOM','LAUNCH_PLAN'].includes(String(rawData.businessKind)))throw Error('CANONICAL_PRODUCTIVE_ROUTE_REQUIRED');
+      if(strArray(body.tags).includes('governed-productive')||['PRACTICE_ATTEMPT','DISCOVERY_NOTEBOOK','FORUM_SOLUTION'].includes(String(rawData.kind))||['JOB','ACQUISITION_ROOM','LAUNCH_PLAN','RESOURCE_ASSEMBLY','RESOURCE_ALLOCATION_CLAIM'].includes(String(rawData.businessKind)))throw Error('CANONICAL_PRODUCTIVE_ROUTE_REQUIRED');
       if(strArray(body.tags).includes('market-engine')||rawData.marketScopeId||rawData.marketKind)throw Error('CANONICAL_MARKET_ROUTE_REQUIRED');
       if(strArray(body.tags).some(x=>['verification-fact','governance-follow-up','poll','ballot','business-experiment','consensual-pool','ad-pilot'].includes(x)))throw Error('CANONICAL_GOVERNED_ROUTE_REQUIRED');
       const data:Record<string,string|number|boolean|null>={};
@@ -3201,7 +3207,7 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
       const status=String(body.status??existing.status) as WorkspaceStatus; if(!['DRAFT','ACTIVE','DONE','ARCHIVED'].includes(status)) throw new Error('INVALID_WORKSPACE_STATUS');
       const rawData=body.data&&typeof body.data==='object'&&!Array.isArray(body.data)?body.data as Record<string,unknown>:existing.data;
       if(isProtectedSafetyRecord({moduleId:existing.moduleId,data:rawData}))throw Error('CANONICAL_SAFETY_ROUTE_REQUIRED');
-      if(strArray(body.tags).includes('governed-productive')||['PRACTICE_ATTEMPT','DISCOVERY_NOTEBOOK','FORUM_SOLUTION'].includes(String(rawData.kind))||['JOB','ACQUISITION_ROOM','LAUNCH_PLAN'].includes(String(rawData.businessKind)))throw Error('CANONICAL_PRODUCTIVE_ROUTE_REQUIRED');
+      if(strArray(body.tags).includes('governed-productive')||['PRACTICE_ATTEMPT','DISCOVERY_NOTEBOOK','FORUM_SOLUTION'].includes(String(rawData.kind))||['JOB','ACQUISITION_ROOM','LAUNCH_PLAN','RESOURCE_ASSEMBLY','RESOURCE_ALLOCATION_CLAIM'].includes(String(rawData.businessKind)))throw Error('CANONICAL_PRODUCTIVE_ROUTE_REQUIRED');
       const data:Record<string,string|number|boolean|null>={}; for(const [k,v] of Object.entries(rawData)){if(typeof v==='string'||typeof v==='number'||typeof v==='boolean'||v===null)data[k]=v;}
       if(strArray(body.tags).some(x=>['verification-fact','governance-follow-up','poll','ballot','business-experiment','consensual-pool','ad-pilot'].includes(x)))throw Error('CANONICAL_GOVERNED_ROUTE_REQUIRED');
       const updated:WorkspaceRecord={...existing,title:body.title===undefined?existing.title:String(body.title).trim()||existing.title,summary:body.summary===undefined?existing.summary:String(body.summary),status,tags:body.tags===undefined?existing.tags:strArray(body.tags),data,updatedAt:new Date().toISOString()};

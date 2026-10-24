@@ -14,6 +14,15 @@ Continuer Eco-System sans recommencer, simplifier ou remplacer silencieusement l
 ## Préférence persistante du fondateur
 À la fin de chaque réponse de travail, préciser la consommation de crédits si elle est mesurable. Ne jamais inventer un coût exact : solde et quotas partagés ne mesurent pas le coût du chat. Indiquer explicitement l'absence d'une mesure exacte lorsque c'est le cas.
 
+## Public / privé et sobriété GitHub — instruction du 24 octobre 2026
+- `Serge-As/urae` : dépôt privé canonique du produit, code propriétaire, historique et documentation interne. Aucun transfert automatique vers le public.
+- `Serge-As/utrae` : dépôt public auxiliaire à privilégier pour les outils génériques explicitement revus, procédures publiques et essais exclusivement synthétiques. **Aucune donnée sensible ou confidentielle, aucun code privé ni historique URAE dans UTRAE**, y compris PR, issues, logs, caches, artefacts, bundles, archives ou encodages.
+- Ne jamais mettre de secret ou de donnée réelle brute dans Git, même privé. Les stockages privés autorisés restent propriétaires de ces données.
+- Local d'abord ; lectures ciblées et mises en cache par SHA ; publication groupée ; suivi des runs seulement lorsqu'une action ou un résultat nouveau est attendu. Ne jamais relancer sans diagnostic ou réduire les contrôles de non-régression pour économiser du quota.
+- Les checkpoints sont locaux ; ils n'imposent pas un push ni une CI à chaque sous-lot. Réutiliser les reçus du SHA exact et conserver les checks privés nécessaires à la livraison.
+- Procédure obligatoire : `docs/governance/ECO_REPOSITORIES_CONFIDENTIALITY_EFFICIENCY_2026-10-24.md`.
+- Aucun redémarrage de l'ordinateur sans autorisation explicite.
+
 ## MEMORY BEFORE CODE
 Avant tout lot substantiel, lire dans cet ordre :
 1. `AGENTS.md` ;
@@ -27,7 +36,7 @@ Avant tout lot substantiel, lire dans cet ordre :
 9. `FEATURE_REGISTRY.yaml` ;
 10. `NEXT_RUN.md` ;
 11. CIR/ADR/Recall pertinents ;
-12. vérifier le HEAD distant et les derniers runs GitHub avant de coder.
+12. vérifier une fois le HEAD distant et les runs pertinents au début d'un lot ; réutiliser ces informations pendant le travail local, puis revérifier le HEAD avant publication. Pas de nouvelle vérification réseau sans raison concrète, changement attendu ou reprise après interruption.
 
 Un prompt, une capture ou un résumé n'est jamais la totalité du besoin. **Absence visible ≠ suppression autorisée.**
 
@@ -113,7 +122,7 @@ Un OFF explicite de consentement/préférence l'emporte toujours sur BETA_OPEN.
 ## Checkpoint anti-interruption
 Un chat peut s'arrêter sans prévenir. Pour rendre cela sans conséquence :
 - après 3–5 sous-lots ou tout changement d'architecture : commit ;
-- laisser CI s'exécuter ;
+- regrouper les publications distantes ; laisser la CI nécessaire s'exécuter au checkpoint de livraison, sans pousser chaque sous-lot uniquement pour déclencher une CI ;
 - si la vérité change : mettre à jour Current Truth/Truth Ledger/NEXT_RUN ;
 - ne jamais garder une décision critique uniquement dans le chat ;
 - avant une longue phase : préférer plusieurs commits atomiques à un énorme commit final.

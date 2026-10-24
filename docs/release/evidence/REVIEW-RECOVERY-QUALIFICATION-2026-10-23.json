@@ -1,0 +1,62 @@
+{
+  "protocol": "ECO_RELEASE_QUALIFICATION_1",
+  "sourceSha": "dd1e7388829afe29cde453f1cdbefd6caedf98a8",
+  "treeSha": "f225c86138282b9eb0bd6f24e757430f323c809d",
+  "version": "1.5.2.35-review-recovery",
+  "workerVersionId": "72206ce3-430c-459b-91ee-1cfc7c40ed03",
+  "checkedAt": "2026-10-23T19:07:42.082Z",
+  "qualification": {
+    "native": {
+      "passed": 1008,
+      "failed": 0,
+      "skipped": 0
+    },
+    "chromium": {
+      "passed": 65,
+      "failed": 0,
+      "skipped": 0
+    },
+    "webkit": {
+      "passed": 6,
+      "failed": 0,
+      "skipped": 0
+    }
+  },
+  "runs": [
+    {
+      "runId": 40003281769,
+      "url": "https://github.com/Serge-As/urae/actions/runs/40003281769",
+      "jobs": [
+        {
+          "id": 120584650081,
+          "name": "governed-ci",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "id": 120584650459,
+          "name": "browser-critical",
+          "status": "completed",
+          "conclusion": "success"
+        }
+      ]
+    },
+    {
+      "runId": 40003282141,
+      "url": "https://github.com/Serge-As/urae/actions/runs/40003282141",
+      "jobs": [
+        {
+          "id": 120584652014,
+          "name": "qualify-deploy-smoke",
+          "status": "completed",
+          "conclusion": "success"
+        }
+      ]
+    }
+  ],
+  "sameSource": true,
+  "publicVerification": "docs/release/evidence/REVIEW-RECOVERY-PUBLIC-2026-10-23.json",
+  "realMoneyEnabled": false,
+  "fieldAcceptance": "NOT_ACCEPTED",
+  "scopeNote": "Automatic qualification and public deployment only; no real-account acceptance inferred."
+}

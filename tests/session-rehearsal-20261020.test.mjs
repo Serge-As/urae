@@ -27,3 +27,8 @@ test('cancelling review preserves prior values and continues to require the expl
 test('restarting and opening a separate exercise share no values or review state',()=>{
   const a=createSessionRehearsal(),b=createSessionRehearsal();a.save('Amina',first,2000);a.visit('Boris');assert.equal(b.total('Amina'),0);assert.equal(b.pending,null);a.reset();assert.equal(a.total('Amina'),0);assert.equal(a.pending,null);assert.equal(a.revision,0);assert.equal(a.reviewCount,0);
 });
+test('the exercise report freezes fictional corrections and the pending review without acknowledging real finance',()=>{
+  const x=createSessionRehearsal();x.save('Amina',first,1000);x.save('Amina',first,1500);x.save('Amina',REHEARSAL_RUBRICS[1].id,500);x.visit('Boris');
+  const report=x.report();assert.equal(report.protocol,'ECO_SESSION_REHEARSAL_1');assert.equal(report.syntheticExerciseOnly,true);assert.equal(report.realDataRead,false);assert.equal(report.financialWrites,false);assert.equal(report.canonicalFinancialPosting,false);assert.equal(report.rubricCount,20);assert.equal(report.members.length,3);assert.equal(report.members[0].total,2000);assert.equal(report.members[0].lines[0].amount,1500);assert.equal(report.pendingMemberReview.nextMember,'Boris');assert.equal(report.reviewCount,0);
+  assert.throws(()=>{report.members[0].lines[0].amount=9000;},TypeError);x.confirmReview(report.revision);x.save('Boris',first,750);assert.equal(report.members[1].total,0);assert.equal(x.report().reviewCount,1);x.reset();assert.ok(x.report().members.every(row=>row.total===0));assert.equal(report.members[0].total,2000);
+});
