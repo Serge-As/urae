@@ -61,5 +61,5 @@ export function mountProductiveCommunityUI({app,getMembers=()=>[]}){
  function remember(){for(const f of content.querySelectorAll('[data-memo]'))for(const n of f.querySelectorAll('input,select,textarea'))if(n.name)memo[f.dataset.memo+'|'+n.name]=n.type==='checkbox'?n.checked:n.value;}
  function clearForContext(force=false){if(!force&&scope()===context)return;context=scope();generation++;revision++;memo={};notebookDraft=null;tab='practice';mount();}
  function setLocale(){remember();generation++;const open=root.open;mount();if(open){root.open=true;void run(root,()=>select(tab));}}
- mount();return{clearForContext,setLocale,open(next='practice'){root.open=true;void run(root,()=>select(next));root.scrollIntoView({block:'start',behavior:'smooth'});}};
+  mount();return{clearForContext,setLocale,open(next='practice'){root.open=true;void run(root,()=>select(next));root.scrollIntoView({block:'start',behavior:'instant'});}};
 }

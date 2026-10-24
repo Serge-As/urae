@@ -1943,7 +1943,11 @@ body.ui-mode-assisted .eco-workbench :is(button,p,small,span,label){font-size:15
 @media(max-width:520px){.finance-explain-tabs button{flex:1 1 45%;}.finance-explanations .actions{flex-wrap:wrap;}.finance-explanations .actions button{max-width:100%;white-space:normal;}}
 
 /* Productive journeys: locally scoped, no financial-table overrides. */
-.productive-community{min-width:0;max-width:100%;}
+/* Native programmatic scrolling must settle before a pointer targets a form.
+   Keep the sticky header and context strip clear without altering finance views. */
+html:has(#view-ecosystem.active #productiveCommunityCenter){scroll-behavior:auto;}
+.productive-community{min-width:0;max-width:100%;scroll-margin-block:calc(var(--eco-header-height,76px) + 100px) 120px;}
+.productive-community :is(summary,button,input,select,textarea){scroll-margin-block:calc(var(--eco-header-height,76px) + 100px) 120px;}
 .productive-community .productive-text{white-space:pre-wrap;overflow-wrap:anywhere;}
 .productive-community .productive-notebook-row{display:grid;grid-template-columns:minmax(100px,1fr) minmax(160px,2fr) minmax(130px,1fr);gap:10px;padding:12px;border:1px solid var(--line,#d7e2de);border-radius:12px;}
 .productive-community input,.productive-community select,.productive-community textarea{min-width:0;max-width:100%;}

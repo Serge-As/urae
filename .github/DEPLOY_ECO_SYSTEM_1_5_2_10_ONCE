@@ -10,4 +10,6 @@ backup_scope: D1_AND_EXACT_SOURCE_ONLY
 real_money_enabled: false
 field_acceptance: NOT_ACCEPTED
 public_verification: health, catalogue and 52 asset hashes
-trigger_nonce: 2026-10-24-productive-continuity-exact-source
+trigger_nonce: 2026-10-24-productive-continuity-exact-source-scroll-correction
+correction_source: 1f0448964a45f9bbbe857f3d6cb9eeb7b8a31af9
+correction: member-fixture-refresh-and-productive-scroll-stability

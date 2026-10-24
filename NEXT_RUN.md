@@ -1,3 +1,11 @@
+## Publication v38 en qualification — point de reprise du 24 octobre
+
+Source déjà publiée sans force dans URAE privé : `1f0448964a45f9bbbe857f3d6cb9eeb7b8a31af9`, arbre `55c1516b74a49bbce894e26dc374c5ee79e5bf8f`. Livraison `40116855456` et qualification indépendante `40116855500` sur cette même source, encore en cours au dernier contrôle. Ne pas republier ni relancer la CI sans défaut identifié. Les 1040 tests natifs locaux passent. Les trois nouveaux parcours Chromium ont chacun passé (2 au premier passage et le scénario inter-tenant dans un passage ciblé) ; ne pas transformer ce constat en une qualification globale 3/3 du dernier fichier de test. Qualification WebKit locale encore en cours, suites complètes sur CI obligatoires.
+
+Archive exacte créée et relue : `../Eco-System_1.5.2.38_Source_Verifiee_1f044896_2026-10-24.zip`, 924 fichiers, SHA256 `c435da04a8e353f52eea8854454c35718399b1fa1c222d8e15b5475d1cb192a8`. Reçus et outils de poursuite : `../evidence/CONTINUITY_RELEASE.json`, `CONTINUITY_RUNS.json`, `CONTINUITY_JOB_SUMMARY.json`, `continuity-release-evidence.py`, `verify-continuity-public-curl.py`, `close-continuity-v38.py`. Le contrôle public des 52 empreintes et la sauvegarde de livraison restent à attester avant clôture. Réutiliser l'archive et les reçus. `realMoneyEnabled=false`, `FIELD_ACCEPTED=NOT_ACCEPTED` ; aucune livraison v38 revendiquée par ce point de reprise.
+
+## Historique conservé
+
 ## Candidat v38 — continuité productive consentie
 
 Base vérifiée : v37, source a07f96edcc49b6132d00e292edf222d47034b12e. Candidat 1.5.2.38-productive-continuity : compléments A14/A15/A17/A19/I05/I20 sous les propriétaires existants. Chaque champ de carnet peut être réservé à des personnes explicitement choisies du groupe ; aperçu exact, accès courant et retrait vérifiés. Les destinataires ne reçoivent ni la liste des autres audiences ni les champs privés.
